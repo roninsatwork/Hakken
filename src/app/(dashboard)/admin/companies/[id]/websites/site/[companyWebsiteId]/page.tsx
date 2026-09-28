@@ -1,37 +1,35 @@
 "use client";
 
+import { useEffect } from "react";
 import { useQuery } from "convex/react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowRight, Compass, Link2 } from "lucide-react";
+import { ArrowRight, ListChecks } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { formatDate } from "@/src/lib/dates";
-import { SiteDataLimits } from "./SiteDataLimits";
 import { SiteMoves } from "./SiteMoves";
-import { TrackedPairing } from "./TrackedPairing";
 import { siteBase } from "./siteView";
 
 /**
- * The Overview: how this site is doing, and what to do next.
+ * To do: how this site is doing, and what to do next
+ * (docs/plans/active/websites-section-menu-plan.md).
  *
  * Three cards — Google searches, AI questions, competitors — each a count and
  * one plain line, opening the results behind it; then the next steps each
- * collection draws. Searches and questions belong to the website and are
- * shared by every company watching it, so one line under the cards says so
- * and opens the website record, the only place they are edited.
- * No prices here: cost is a setting's business, not a reason to read a page.
- * Last, how much is kept about the site (`SiteDataLimits`).
+ * collection draws. No prices here: cost is a setting's business, not a
+ * reason to read a page. How much is kept about the site moved to its
+ * Schedule and limits on 2026-09-28, with the rest of its settings.
  *
- * A tracked site has no lists of its own, so this route is its overview
- * instead: what it is compared with, how it is collected, and how much of it
- * is kept.
+ * A competitor has no lists of its own and no next steps, so its address
+ * opens its rankings instead.
  */
-export default function CompanySiteOverviewPage() {
+export default function CompanySiteTodoPage() {
   const t = useTranslations("admin.siteView");
+  const router = useRouter();
   const params = useParams();
   const companyId = params.id as Id<"companies">;
   const companyWebsiteId = params.companyWebsiteId as Id<"companyWebsites">;
@@ -42,39 +40,14 @@ export default function CompanySiteOverviewPage() {
     api.websiteClientView.getSitePortfolio,
     owned ? { companyWebsiteId } : "skip",
   );
-
-  if (!header) return null;
   const base = siteBase(companyId, companyWebsiteId);
+  const isCompetitor = header !== undefined && header !== null && !owned;
 
-  if (!owned) {
-    return (
-      <div className="flex flex-col gap-6">
-        <PageHeader
-          icon={<Link2 className="h-5 w-5 text-brand" />}
-          title={t("paired.title")}
-          description={t("paired.subtitle")}
-        />
-        <TrackedPairing
-          companyId={companyId}
-          companyWebsiteId={companyWebsiteId}
-          pairedWith={header.pairedWith ? { ...header.pairedWith, locationLabel: header.placeLabel } : null}
-          nextRunAt={header.schedule.nextRunAt}
-        />
-        {header.pairedWith ? (
-          <Link
-            href={`${siteBase(companyId, header.pairedWith.companyWebsiteId)}/competitors`}
-            className="flex w-fit items-center gap-2 text-[13px] text-brand hover:underline"
-          >
-            {t("paired.compare", { host: header.pairedWith.displayHost })}
-            <ArrowRight className="h-3.5 w-3.5" />
-          </Link>
-        ) : (
-          <p className="text-[13px] text-secondary">{t("paired.alone")}</p>
-        )}
-        <SiteDataLimits companyWebsiteId={companyWebsiteId} />
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (isCompetitor) router.replace(`${base}/keywords`);
+  }, [isCompetitor, base, router]);
+
+  if (!header || !owned) return null;
 
   /*
     Only what is true, in the order somebody would act on it. A line of zeros
@@ -143,11 +116,11 @@ export default function CompanySiteOverviewPage() {
   return (
     <div className="flex flex-col gap-8">
       <PageHeader
-        icon={<Compass className="h-5 w-5 text-brand" />}
+        icon={<ListChecks className="h-6 w-6 text-brand" />}
         title={t("overview.title")}
         description={header.lastCollectedAt
-          ? t("overview.lastChecked", { when: formatDate(header.lastCollectedAt) })
-          : t("overview.neverChecked")}
+          ? t("overview.lastChecked", { host: header.displayHost, when: formatDate(header.lastCollectedAt) })
+          : t("overview.neverChecked", { host: header.displayHost })}
       />
 
       <div className="grid gap-3 md:grid-cols-3">
@@ -178,8 +151,6 @@ export default function CompanySiteOverviewPage() {
       </p>
 
       <SiteMoves companyId={companyId} companyWebsiteId={companyWebsiteId} />
-
-      <SiteDataLimits companyWebsiteId={companyWebsiteId} />
     </div>
   );
 }

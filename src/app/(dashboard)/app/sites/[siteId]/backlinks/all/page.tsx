@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Link2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -17,6 +18,7 @@ import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../_components/useSiteSort";
+import { ListHeldLine } from "../../../_components/SiteCoverage";
 
 type Status = "LIVE" | "NEW" | "LOST";
 type Follow = "FOLLOW" | "NOFOLLOW";
@@ -55,6 +57,8 @@ export default function SiteAllBacklinksPage() {
     sort: order.key,
     direction: order.direction,
   }, every ? [{ siteId, list: "links" }] : []);
+  // The whole list's length, for what the rows kept are of (sites-data-completeness-plan.md, §4.E).
+  const totals = useQuery(api.siteLinks.linkListTotals, { siteId });
 
   return (
     <div className="flex flex-col gap-6">
@@ -63,6 +67,7 @@ export default function SiteAllBacklinksPage() {
         title={t("title")}
         description={every ? t("descriptionEvery") : t("description")}
       />
+      <ListHeldLine held={!term && !status && !follow ? table.result?.total : undefined} total={totals?.[every ? "backlinks" : "oneEach"]} />
       <DataTable
         rows={table.pageRows}
         rowKey={(row) => row._id}

@@ -18,7 +18,6 @@ import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import useDebounce from "@/src/hooks/useDebounce";
-import { ResultsSwitcher } from "../ResultsSwitcher";
 import { SEARCH_TONE } from "../siteView";
 import { RemoveSearchDialog, type SearchToRemove } from "../RemoveSearchDialog";
 
@@ -85,7 +84,6 @@ export default function CompanySiteSearchesPage() {
 
   return (
     <div className="flex w-full flex-col gap-5">
-      <ResultsSwitcher active="searches" />
       <PageHeader
         icon={<Search className="h-5 w-5 text-brand" />}
         title={t("title")}

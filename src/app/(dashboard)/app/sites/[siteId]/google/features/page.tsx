@@ -58,6 +58,14 @@ export default function SiteFeaturesPage() {
   // searches on its list: the newest check's figures from the day summaries.
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
   const across = [...(series?.[0]?.points ?? [])].reverse().find((point) => point.aiOverviewRefs !== undefined) ?? null;
+  // DataForSEO's counts across everything the site ranks for open the
+  // searches behind them only when the keyword list holds them all
+  // (docs/plans/active/sites-audit-fixes-plan.md, 1.3).
+  // Whole only when the supplier's own count is known and every search is held
+  // (sites-data-completeness-plan.md, §4.E): a count missing is not a list whole.
+  const total = site?.coverage?.searches.total ?? null;
+  const stored = site?.coverage?.searches.held ?? null;
+  const listComplete = site?.coverage?.whole ?? false;
   const [search, setSearch, term] = useSiteSearch();
   const [feature, setFeature] = useSiteParam<string>("feature", "");
   const router = useRouter();
@@ -88,9 +96,12 @@ export default function SiteFeaturesPage() {
               ["inLocalPacks", across.localPacks, "local_pack"],
               ["inSnippets", across.featuredSnippets, "featured_snippet"],
             ] as const).map(([key, value, feature]) => (
-              <SiteFigure key={key} label={t(key)} value={formatNumber(value)} href={recordHref({ kind: "feature", feature })} />
+              <SiteFigure key={key} label={t(key)} value={formatNumber(value)} href={listComplete ? recordHref({ kind: "feature", feature }) : undefined} />
             ))}
           </div>
+          {total !== null && stored !== null && !listComplete
+            ? <p className="text-[12px] text-secondary">{t("partial", { total: formatNumber(total), stored: formatNumber(stored) })}</p>
+            : null}
         </section>
       ) : null}
 

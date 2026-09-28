@@ -46,6 +46,13 @@ export function findSeoLocation(code: number): SeoLocation | null {
   return SEO_LOCATIONS.find((location) => location.code === code) ?? null;
 }
 
+/** The country a place is in, as its code: the place itself for a country, or for one not on the list. */
+export function countryCodeOf(code: number): number {
+  const place = findSeoLocation(code);
+  if (!place?.city) return code;
+  return SEO_LOCATIONS.find((entry) => entry.countryIso === place.countryIso && !entry.city)?.code ?? code;
+}
+
 /**
  * The code to send for a website, once inheritance is applied.
  *

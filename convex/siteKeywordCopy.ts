@@ -76,6 +76,8 @@ export type KeywordCopy = {
   rankingDay: string | null;
   /** The day of the latest keyword check that has fully arrived (T9), or null when there is none to judge by. */
   latestCheckDay: string | null;
+  /** The check before it, of the same kind: a search held then and not at the latest left the list (§4.C). */
+  previousCheckDay: string | null;
 };
 
 /** A site's keyword copy from one place, or null while it has none yet. */
@@ -84,7 +86,8 @@ export async function readKeywordCopy(ctx: QueryCtx, websiteId: Id<"websites">, 
   if (!copy) return null;
   const rankingDay = typeof copy.meta.rankingDay === "string" ? copy.meta.rankingDay : null;
   const latestCheckDay = typeof copy.meta.latestCheckDay === "string" ? copy.meta.latestCheckDay : null;
-  return { rows: copy.rows.map(decode), rankingDay, latestCheckDay };
+  const previousCheckDay = typeof copy.meta.previousCheckDay === "string" ? copy.meta.previousCheckDay : null;
+  return { rows: copy.rows.map(decode), rankingDay, latestCheckDay, previousCheckDay };
 }
 
 /**

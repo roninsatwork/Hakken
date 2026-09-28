@@ -85,6 +85,8 @@ const text = (value: unknown): string | undefined => (typeof value === "string" 
 export type CrawlSummary = {
   pagesCrawled: number;
   maxPages?: number;
+  /** Pages the crawl found and never reached: none when it crawled every page it found (B8). */
+  pagesInQueue?: number;
   onPageScore?: number;
   linksInternal?: number;
   linksExternal?: number;
@@ -111,6 +113,7 @@ export function parseCrawlSummary(result: unknown): CrawlSummary | null {
   return {
     pagesCrawled: number(status?.pages_crawled) ?? 0,
     ...optional("maxPages", number(status?.max_crawl_pages)),
+    ...optional("pagesInQueue", number(status?.pages_in_queue)),
     ...optional("onPageScore", number(metrics?.onpage_score)),
     ...optional("linksInternal", number(metrics?.links_internal)),
     ...optional("linksExternal", number(metrics?.links_external)),
@@ -125,7 +128,7 @@ export function parseCrawlSummary(result: unknown): CrawlSummary | null {
 export async function fileSiteCrawlPull(
   ctx: ActionCtx,
   pullId: Id<"seoDataPulls">,
-  pull: { websiteId: Id<"websites"> | null; resultJson: string | null; completedAt: number | null },
+  pull: { websiteId: Id<"websites"> | null; resultJson: string | null; runDay: string },
 ): Promise<null> {
   if (!pull.resultJson || !pull.websiteId) return null;
   try {
@@ -134,7 +137,7 @@ export async function fileSiteCrawlPull(
       await ctx.runMutation(internal.siteCrawl.writeCrawl, {
         websiteId: pull.websiteId,
         pullId,
-        day: new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10),
+        day: pull.runDay,
         summary,
       });
     }
@@ -147,6 +150,7 @@ export async function fileSiteCrawlPull(
 const summaryValidator = v.object({
   pagesCrawled: v.number(),
   maxPages: v.optional(v.number()),
+  pagesInQueue: v.optional(v.number()),
   onPageScore: v.optional(v.number()),
   linksInternal: v.optional(v.number()),
   linksExternal: v.optional(v.number()),
@@ -191,6 +195,8 @@ export const siteAudit = tenantQuery({
     day: v.string(),
     pagesCrawled: v.number(),
     maxPages: v.union(v.number(), v.null()),
+    /** Pages found in all, crawled or not: "1,000 of 3,412 found". Null for a crawl from before it was kept. */
+    pagesFound: v.union(v.number(), v.null()),
     onPageScore: v.union(v.number(), v.null()),
     linksInternal: v.union(v.number(), v.null()),
     linksExternal: v.union(v.number(), v.null()),
@@ -214,6 +220,7 @@ export const siteAudit = tenantQuery({
       day: newest.day,
       pagesCrawled: newest.pagesCrawled,
       maxPages: newest.maxPages ?? null,
+      pagesFound: newest.pagesInQueue !== undefined ? newest.pagesCrawled + newest.pagesInQueue : null,
       onPageScore: newest.onPageScore ?? null,
       linksInternal: newest.linksInternal ?? null,
       linksExternal: newest.linksExternal ?? null,

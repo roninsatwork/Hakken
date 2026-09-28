@@ -16,7 +16,6 @@ import {
   Building2,
   CircleDollarSign,
   ClipboardCheck,
-  Clock,
   Code2,
   Cpu,
   FileText,
@@ -33,7 +32,6 @@ import {
   Palette,
   PhoneCall,
   Puzzle,
-  Receipt,
   Scale,
   ShieldCheck,
   TerminalSquare,
@@ -87,42 +85,14 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
     { label: t("tabs.dashboard"), href: companyHref, icon: LayoutDashboard },
     { label: t("tabs.overview"), href: `${companyHref}/overview`, icon: FileText },
     {
-      // The company's estate: the websites it owns, each holding the
-      // competitors it is measured against. A rival is only meaningful
-      // relative to the site it is compared with, so competitors live inside
-      // a website rather than beside it.
+      // The company's estate: the websites it owns and the competitors each
+      // is compared with. A link, not a menu: the section carries its own
+      // menu down the left, with a website chooser that narrows every page
+      // (docs/plans/active/websites-section-menu-plan.md).
       label: t("tabs.websites"),
       href: websitesHref,
       icon: Globe,
       matches: (pathname: string) => matchesCompanyRoute(pathname, websitesHref),
-      dropdownItems: [
-        {
-          label: t("tabs.companyWebsites"),
-          href: websitesHref,
-          icon: Globe,
-          matches: (pathname: string) => (
-            pathname === websitesHref
-            || matchesCompanyRoute(pathname, `${websitesHref}/site`)
-          ),
-        },
-        {
-          // How often DataForSEO is asked for this company's numbers. Here
-          // rather than on Overview because it is a setting about websites,
-          // and that is where someone looks for it.
-          label: t("tabs.dataCollection"),
-          href: `${websitesHref}/data`,
-          icon: Clock,
-        },
-        {
-          // What each collection run for this company cost, and where the
-          // money went (`convex/seoRunReports.ts`). Beside Data collection,
-          // which decides how often a run happens.
-          label: t("tabs.collectionRuns"),
-          href: `${websitesHref}/runs`,
-          icon: Receipt,
-          matches: (pathname: string) => matchesCompanyRoute(pathname, `${websitesHref}/runs`),
-        },
-      ],
     },
     {
       label: t("tabs.directory"),

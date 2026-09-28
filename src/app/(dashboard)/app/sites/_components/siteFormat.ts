@@ -20,6 +20,11 @@ export function formatNumber(value: number | null | undefined): string {
   return Math.round(value).toLocaleString(siteLocale());
 }
 
+/** Money the supplier gives in US dollars, whole: "$1,240" — what visits would cost as adverts, a month's spend. */
+export function formatDollars(value: number | null | undefined): string {
+  return value === null || value === undefined ? "–" : `$${formatNumber(value)}`;
+}
+
 /** A cost per click, which comes in US dollars: "$11.82". */
 export function formatCpc(value: number | null | undefined): string {
   return value === null || value === undefined ? "–" : `$${value.toFixed(2)}`;

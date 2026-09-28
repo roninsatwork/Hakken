@@ -257,6 +257,12 @@ export const listReferringDomains = tenantQuery({
     ...listPageArgs,
     search: v.optional(v.string()),
     status: v.optional(status),
+    /**
+     * Only the websites with at least one nofollow link here: what Link
+     * quality's "Nofollow linking websites" counts, as DataForSEO does
+     * (docs/plans/active/sites-audit-fixes-plan.md, 4.13).
+     */
+    follow: v.optional(v.literal("NOFOLLOW")),
     sort: v.optional(v.union(v.literal("domain"), v.literal("rank"), v.literal("backlinks"), v.literal("spam"), v.literal("firstSeen"))),
     direction: sortDirectionArg,
   },
@@ -280,6 +286,7 @@ export const listReferringDomains = tenantQuery({
     const name = (row: Doc<"siteReferringDomains">) => row.domain;
     const list = newestPerKey(held, name)
       .filter((row) => (!args.status || row.status === args.status) && (!matches || matches(row.domain)))
+      .filter((row) => !args.follow || (row.nofollowPages ?? 0) > 0)
       .sort(listOrder(DOMAIN_SORTS, args.sort ?? "rank", args.direction, name));
     const page = pageOfList(list, args.page, args.rows, cut);
     return {

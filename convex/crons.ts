@@ -304,4 +304,15 @@ crons.daily(
   { job: "sites-list-copy-refresh" }
 );
 
+// Every connected site's Search Console figures
+// (docs/plans/active/search-console-plan.md, SC5): the days since the last,
+// and the last four again while Google's figures settle. Google's days are
+// Pacific time: by nine in the morning UTC, yesterday has ended there too.
+crons.daily(
+  "search-console-daily",
+  { hourUTC: 9, minuteUTC: 0 },
+  internal.jobLedger.runJob,
+  { job: "search-console-daily" }
+);
+
 export default crons;

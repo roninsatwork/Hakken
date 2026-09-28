@@ -5,16 +5,17 @@ import { internal } from "./_generated/api";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { normaliseKeyword } from "./seoJudgments";
 import { appError } from "./utils/appError";
-import { MAX_BRAND_NAMES } from "./utils/websiteBrands";
 import { isTrackedHold } from "./utils/websitePairing";
 import { AI_ENGINES, fanOutPlace } from "./seoAiEngines";
-import { VERDICT_THRESHOLDS, daysBetween } from "./utils/trackingVerdicts";
+import { daysBetween } from "./utils/trackingVerdicts";
 import { trackCompetitorCore } from "./websiteAttachments";
-import { addWebsiteKeywordCore } from "./websiteCanonical";
+import { addWebsiteKeywordCore, requireFanOutRoom } from "./websiteCanonical";
 import { loadQuestionRows, loadSearchRows, loadSite, untrackedNamed } from "./websiteSiteRows";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { holdQuestions, holdSearch } from "./holdLists";
+import { readFanOutLimits } from "./fanOutLimits";
+import { addHoldMisspelling } from "./holdProfiles";
 
 /**
  * The moves: what is worth doing next for one of a company's sites.
@@ -31,6 +32,8 @@ import { holdQuestions, holdSearch } from "./holdLists";
  * - **Slipping search** — down more than the threshold since the check before.
  * - **Dead question** — asked long enough to judge and never named once.
  * - **Untracked search** — a buying search the engines ran that nobody tracks.
+ * - **Missing angle** — an angle of a question the engines searched that no
+ *   page on the site answers (docs/plans/active/fan-out-angles-plan.md, FA6).
  *
  * **Derived when a cycle closes, never on read**, from the same rows the
  * Tracking screen shows, so a move and the row it points at cannot disagree.
@@ -51,9 +54,6 @@ const MOVES_SHOWN = 8;
 /** Moves read per site: every one it has ever had, at a ceiling far above use. */
 const MOVES_READ = 500;
 
-/** Citation rows read for near-miss names: eight weeks of one site's mentions. */
-const CITATIONS_READ = 500;
-
 /** Questions and fan-out rows read for untracked buying searches. */
 const QUESTIONS_READ = 200;
 const FAN_OUT_READ = 2_000;
@@ -70,6 +70,7 @@ const KIND_ORDER: Record<MoveKind, number> = {
   SLIPPING_SEARCH: 2,
   DEAD_QUESTION: 3,
   UNTRACKED_SEARCH: 4,
+  MISSING_ANGLE: 5,
 };
 
 type Evidence = {
@@ -78,13 +79,11 @@ type Evidence = {
   SLIPPING_SEARCH: { keyword: string; from: number; to: number | null; day: string };
   DEAD_QUESTION: { questionId: Id<"websiteQuestions">; prompt: string; asked: number; weeks: number };
   UNTRACKED_SEARCH: { query: string; timesSeen: number; prompt: string };
+  MISSING_ANGLE: { angle: string; query: string; timesSeen: number; prompt: string };
 };
 
 type Candidate = { [K in MoveKind]: { kind: K; subject: string; evidence: Evidence[K] } }[MoveKind];
 
-function daysAgo(today: string, days: number): string {
-  return new Date(Date.parse(`${today}T00:00:00Z`) - days * 86_400_000).toISOString().slice(0, 10);
-}
 
 // ---------------------------------------------------------------------------
 // Drawing them
@@ -109,26 +108,11 @@ async function candidatesFor(ctx: MutationCtx, companyWebsiteId: Id<"companyWebs
     });
   }
 
-  // Near misses: a spelling the matcher accepted as close but that is not one
-  // of the site's names. Adding it counts those answers properly from the next
-  // collection.
-  const known = new Set((site.website.brandNames ?? []).map((entry) => entry.name.trim().toLowerCase()));
-  const since = daysAgo(site.today, VERDICT_THRESHOLDS.neverLandedDays);
-  const mentions = await ctx.db
-    .query("aiCitations")
-    .withIndex("by_website_day", (q) => q.eq("mentionedWebsiteId", site.website._id).gte("day", since))
-    .take(CITATIONS_READ);
-  const misspellings = new Map<string, { text: string; times: number }>();
-  for (const mention of mentions) {
-    if (mention.kind !== "BRAND" || mention.variantKind !== "MISSPELLING") continue;
-    const key = mention.mentionedText.trim().toLowerCase();
-    if (!key || known.has(key)) continue;
-    const held = misspellings.get(key);
-    misspellings.set(key, { text: held?.text ?? mention.mentionedText.trim(), times: (held?.times ?? 0) + 1 });
-  }
-  for (const [key, seen] of misspellings) {
-    candidates.push({ kind: "NAME", subject: key, evidence: seen });
-  }
+  // No *Name* move is drawn since names became each company's own
+  // (docs/plans/active/company-level-website-facts-plan.md): a spelling found
+  // in an answer that is not one of this company's names can only be another
+  // company's name for the site, which is that company's to keep. Moves raised
+  // before stay as they were decided.
 
   for (const row of searches) {
     if (row.verdict !== "SLIPPING" || row.previousPosition === null || !row.lastCheckedDay) continue;
@@ -154,11 +138,95 @@ async function candidatesFor(ctx: MutationCtx, companyWebsiteId: Id<"companyWebs
   }
 
   const watcherPlace = (site.pair ?? site.hold).locationCode;
-  for (const search of await untrackedBuyingSearches(ctx, site.hold._id, watcherPlace, new Set(searches.map((row) => row.keyword)))) {
+  const untracked = await untrackedBuyingSearches(ctx, site.hold._id, watcherPlace, new Set(searches.map((row) => row.keyword)));
+  for (const search of untracked) {
     candidates.push({ kind: "UNTRACKED_SEARCH", subject: search.query, evidence: search });
   }
 
+  for (const missing of await missingAngles(ctx, site.hold, new Set(untracked.map((search) => search.query)))) {
+    candidates.push({ kind: "MISSING_ANGLE", subject: missing.angle, evidence: missing });
+  }
+
   return { site, candidates };
+}
+
+/** Angles read, most seen first, to find the missing ones. */
+const MISSING_ANGLES_READ = 500;
+
+/**
+ * The angles of the company's questions that no page on the site answers, as
+ * the page judge said (`fanOutPageJudge.ts`), most seen first — the company's
+ * choice of how many a collection (`fanOutLimits.ts`), three unless it chose
+ * otherwise. An angle judged "none" without being sure of it is left out:
+ * "None" must mean none. One already raised as an *Untracked search*, now or
+ * still open, is that move rather than a second; one decided before — done
+ * or dismissed — is never raised again, and the next most seen takes its place.
+ */
+async function missingAngles(
+  ctx: MutationCtx,
+  hold: Doc<"companyWebsites">,
+  untrackedNow: ReadonlySet<string>,
+): Promise<Array<Evidence["MISSING_ANGLE"]>> {
+  const { missingAnglesSuggested } = await readFanOutLimits(ctx, hold.companyId, hold._id);
+  const rows = await ctx.db
+    .query("fanOutAngles")
+    .withIndex("by_hold_seen", (q) => q.eq("holdId", hold._id))
+    .order("desc")
+    .take(MISSING_ANGLES_READ);
+
+  // One angle from several questions is one move, counted across them all.
+  const byAngle = new Map<string, { angle: string; query: string; timesSeen: number; prompt: string; lastSeenDay: string; queries: string[]; best: number }>();
+  for (const row of rows) {
+    const held = byAngle.get(row.angle);
+    const queries = row.wordings.map((wording) => wording.query);
+    if (!held) {
+      byAngle.set(row.angle, {
+        angle: row.angle, query: row.wordings[0]?.queryText ?? row.angle, timesSeen: row.timesSeen, prompt: row.prompt,
+        lastSeenDay: row.lastSeenDay, queries, best: row.timesSeen,
+      });
+      continue;
+    }
+    held.timesSeen += row.timesSeen;
+    held.queries.push(...queries);
+    if (row.lastSeenDay > held.lastSeenDay) held.lastSeenDay = row.lastSeenDay;
+    // Named for the question it came up in most.
+    if (row.timesSeen > held.best) {
+      held.best = row.timesSeen;
+      held.prompt = row.prompt;
+      held.query = row.wordings[0]?.queryText ?? held.query;
+    }
+  }
+
+  const ordered = [...byAngle.values()].sort((left, right) => right.timesSeen - left.timesSeen || right.lastSeenDay.localeCompare(left.lastSeenDay));
+  const found: Array<Evidence["MISSING_ANGLE"]> = [];
+  for (const entry of ordered) {
+    if (found.length >= missingAnglesSuggested) break;
+    const judged = await ctx.db
+      .query("fanOutPageJudgments")
+      .withIndex("by_hold_angle", (q) => q.eq("holdId", hold._id).eq("angle", entry.angle))
+      .unique();
+    if (judged?.verdict !== "NONE" || judged.certainty === "NOT_SURE") continue;
+    if (entry.queries.some((query) => untrackedNow.has(query))) continue;
+    const decided = await ctx.db
+      .query("websiteMoves")
+      .withIndex("by_key", (q) => q.eq("companyWebsiteId", hold._id).eq("kind", "MISSING_ANGLE").eq("subject", entry.angle))
+      .first();
+    if (decided && decided.state !== "OPEN") continue;
+    let untrackedOpen = false;
+    for (const query of entry.queries) {
+      const open = await ctx.db
+        .query("websiteMoves")
+        .withIndex("by_key", (q) => q.eq("companyWebsiteId", hold._id).eq("kind", "UNTRACKED_SEARCH").eq("subject", query))
+        .first();
+      if (open?.state === "OPEN") {
+        untrackedOpen = true;
+        break;
+      }
+    }
+    if (untrackedOpen) continue;
+    found.push({ angle: entry.angle, query: entry.query, timesSeen: entry.timesSeen, prompt: entry.prompt });
+  }
+  return found;
 }
 
 /**
@@ -330,6 +398,10 @@ export const deriveCycleMoves = internalMutation({
         companyWebsiteId: hold._id,
         cycleId: args.cycleId,
       });
+      // The collection's fan-out searches, as angles with where the site
+      // stands; once their pages are judged the moves are drawn again, with
+      // the missing angles (docs/plans/active/fan-out-angles-plan.md).
+      await ctx.scheduler.runAfter(0, internal.fanOutAngles.rebuildHoldAngles, { holdId: hold._id });
     }
     return null;
   },
@@ -378,6 +450,12 @@ const moveShape = v.union(
     kind: v.literal("UNTRACKED_SEARCH"),
     raisedAt: v.number(),
     evidence: v.object({ query: v.string(), timesSeen: v.number(), prompt: v.string() }),
+  }),
+  v.object({
+    _id: v.id("websiteMoves"),
+    kind: v.literal("MISSING_ANGLE"),
+    raisedAt: v.number(),
+    evidence: v.object({ angle: v.string(), query: v.string(), timesSeen: v.number(), prompt: v.string() }),
   }),
 );
 
@@ -433,8 +511,9 @@ export async function countOpenMoves(
  * Taking it does the thing the move offered, here on the server, so the
  * screen never has to know how: a rival is tracked against this site, a
  * spelling is added to the brand names, a dead question is paused, a search is
- * added to the list. A slip has nothing to do but look, so taking it marks it
- * handled. Dismissing is remembered, and the same move never returns.
+ * added to the list. A slip has nothing to do but look, and a missing angle
+ * is answered by writing the page, so taking either marks it handled.
+ * Dismissing is remembered, and the same move never returns.
  */
 export const actOnMove = superAdminMutation({
   args: {
@@ -496,30 +575,8 @@ async function takeMove(
   }
 
   if (move.kind === "NAME") {
-    const website = await ctx.db.get(hold.websiteId);
-    if (!website) return;
-    const names = website.brandNames ?? [];
-    const text = String(evidence.text).trim();
-    if (names.some((entry) => entry.name.trim().toLowerCase() === text.toLowerCase())) return;
-    if (names.length >= MAX_BRAND_NAMES) {
-      throw appError("INVALID_INPUT", `A website can have at most ${MAX_BRAND_NAMES} brand names. Remove one on the website record first.`);
-    }
-    const after = [...names, { name: text, isPrimary: names.length === 0, kind: "MISSPELLING" as const }];
-    await ctx.db.patch(website._id, { brandNames: after, hasBrandNames: true });
-    // The same entry the brand names screen writes: the list is shared across
-    // every client watching this host, so each change has to be readable.
-    await ctx.db.insert("auditLogs", {
-      actorId: userId,
-      actionType: "SET_WEBSITE_BRAND_NAMES",
-      entityId: website._id,
-      entityType: "websites",
-      metadata: JSON.stringify({
-        host: website.host,
-        before: names.map((entry) => entry.name),
-        after: after.map((entry) => entry.name),
-      }),
-      timestamp: Date.now(),
-    });
+    // Onto this company's own names for its site (holdProfiles.ts).
+    await addHoldMisspelling(ctx, hold, String(evidence.text), userId);
     return;
   }
 
@@ -548,6 +605,8 @@ async function takeMove(
     const existing = await holdSearch(ctx, hold._id, keyword);
     if (existing) {
       if (!existing.isActive) {
+        // A fan-out query resumed is ticked again, within its website's limit (fan-out-opt-in-plan.md).
+        if (existing.addedFrom === "AI_SEARCH") await requireFanOutRoom(ctx, hold);
         await ctx.db.patch(existing._id, { isActive: true });
         await ctx.db.insert("auditLogs", {
           actorId: userId,
@@ -560,9 +619,10 @@ async function takeMove(
       }
       return;
     }
-    await addWebsiteKeywordCore(ctx, { companyWebsiteId: hold._id, keyword, userId });
+    await addWebsiteKeywordCore(ctx, { companyWebsiteId: hold._id, keyword, userId, addedFrom: "AI_SEARCH" });
   }
-  // A slipping search has nothing to take but a look; handling it is the act.
+  // A slipping search has nothing to take but a look, and a missing angle is
+  // answered by writing its page; for both, handling it is the act.
 }
 
 /**

@@ -37,8 +37,10 @@ const hosts = () => within(card()).getAllByRole("link").map((link) => link.textC
 
 /**
  * The Competitors card's two views (Anthony, 2026-09-26): Searches, as it
- * was, and Traffic — the visits each competitor gets from the searches both
- * rank for — with the words, the columns and the order following the view.
+ * was, and Traffic, the most visits first — each drawing every site at its
+ * totals, every search it ranks for against its visits, the site among them
+ * (2026-09-27: "it should be total traffic vs total keywords") — with the
+ * words, the columns and the order following the view.
  */
 describe("the Competitors card", () => {
   it("opens on Searches: most searches shared first", () => {
@@ -61,8 +63,8 @@ describe("the Competitors card", () => {
     expect(within(card()).getByText("sites.overview.competitors.hintTraffic")).toBeInTheDocument();
     expect(within(card()).getByText("sites.overview.competitors.columns.sharedVisits")).toBeInTheDocument();
     expect(within(card()).queryByText("sites.overview.competitors.columns.shared")).not.toBeInTheDocument();
-    // The most visits taken on shared searches first; one not known, last.
-    expect(hosts()).toEqual(["lightflows.co.uk", "chilliapple.co.uk", "pixelfield.co.uk", "plugandplaydesign.co.uk"]);
+    // The most visits in all first — the market's leaders, as its totals show them (Anthony, 2026-09-27).
+    expect(hosts()).toEqual(["chilliapple.co.uk", "lightflows.co.uk", "pixelfield.co.uk", "plugandplaydesign.co.uk"]);
     expect(within(card()).getByText("sites.overview.competitors.sharedVisitsUnknown")).toBeInTheDocument();
   });
 });

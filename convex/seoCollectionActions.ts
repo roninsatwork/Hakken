@@ -15,7 +15,7 @@ import {
   type DataForSeoCredentials,
   type DataForSeoEnvelope,
 } from "./dataForSeoRest";
-import { findSeoOperation, seoResultPath } from "./dataForSeoRegistry";
+import { argsToSend, findSeoOperation, seoResultPath } from "./dataForSeoRegistry";
 import { rowsLeftOffIn, slimSeoResult } from "./dataForSeoSlim";
 import { isCrawlUnfinished } from "./dataForSeoCrawlOperations";
 import { splitAnswer } from "./seoPullAnswers";
@@ -121,7 +121,8 @@ export async function sendNextBatch(
 
   const pingbackUrl = seoPingbackUrl();
   const tasks = sending.map((pull) => ({
-    ...JSON.parse(pull.taskArgsJson) as Record<string, unknown>,
+    // As asked, but for the country where the Labs answer only for countries (B10).
+    ...argsToSend(operation, JSON.parse(pull.taskArgsJson) as Record<string, unknown>),
     // Our own pull id, echoed back in the task's data. It is how a result
     // finds its row, and it is what the pingback is checked against.
     tag: pull.tag,

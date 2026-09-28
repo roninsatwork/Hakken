@@ -88,6 +88,8 @@ export async function fileKeywordRank(
     keyword: string;
     day: string;
     position: number;
+    /** Its place on the whole page, when `position` is among the normal results (G2). */
+    pagePosition?: number;
     url?: string;
     volume?: number;
     extras?: RankExtras;
@@ -104,13 +106,26 @@ export async function fileKeywordRank(
   if (existing && existing.day > entry.day) return;
 
   const sameDay = existing?.day === entry.day;
+  // Counted the same way as the row it follows: both among the normal
+  // results, or both on the whole page. The day the counting changed
+  // (sites-data-completeness-plan.md, G2) is no move — 5th on the page and
+  // 3rd of the normal results is the same place.
+  const sameCounting = existing?.position === undefined || (existing.pagePosition !== undefined) === (entry.pagePosition !== undefined);
   // Two checks on one day — the ranked-keywords pull and the page-one check —
   // are one day's facts, and the better place is the one the site holds.
-  const position = sameDay && existing?.position !== undefined
-    ? Math.min(existing.position, entry.position)
-    : entry.position;
-  const previousPosition = sameDay ? existing?.previousPosition : existing?.position;
+  const better = sameDay && existing?.position !== undefined && sameCounting && existing.position < entry.position;
+  const position = better ? existing.position! : entry.position;
+  const pagePosition = better ? existing.pagePosition : entry.pagePosition;
+  // The place it moved from, counted as the row it came with was: a second
+  // filing the same day counted the other way — the morning's run the old
+  // way, the afternoon's the new — cannot move from it either.
+  const previousPosition = !sameCounting ? undefined : sameDay ? existing?.previousPosition : existing?.position;
   const previousDay = sameDay ? existing?.previousDay : existing?.day;
+  // Ranking before and counted another way: held, not moved — and still so
+  // when a second check that day files again.
+  const switched = sameDay
+    ? previousDay !== undefined && (!sameCounting || (existing?.status === "SAME" && existing.previousPosition === undefined))
+    : !sameCounting;
   const previousPage = sameDay ? existing?.previousPage : existing?.page || undefined;
   const url = entry.url ?? existing?.url;
   const page = pagePath(url);
@@ -129,13 +144,14 @@ export async function fileKeywordRank(
 
   const fields = {
     position,
+    ...(pagePosition !== undefined ? { pagePosition } : {}),
     band: bandForPosition(position),
     ...(url ? { url } : {}),
     page,
     volume,
     volumeKnown,
     intent,
-    status: statusFor(position, previousPosition, previousDay !== undefined),
+    status: switched ? "SAME" as const : statusFor(position, previousPosition, previousDay !== undefined),
     change: previousPosition !== undefined ? previousPosition - position : 0,
     ...(previousPosition !== undefined ? { previousPosition } : {}),
     ...(previousDay !== undefined ? { previousDay } : {}),

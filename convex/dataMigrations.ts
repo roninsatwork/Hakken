@@ -19,16 +19,16 @@ import {
 } from "./aiModelService";
 import { appError } from "./utils/appError";
 import { clearPoundNames, copyPoundNamesToDollars } from "./costCurrencyMigration";
-import {
-  attachTrackedFromRivals,
-  markExistingHoldsOwned,
-} from "./websiteAttachmentMigration";
+import { markExistingHoldsOwned } from "./websiteAttachmentMigration";
 import { backfillPositionPlaces } from "./seoPositionPlaceMigration";
+import { clearCountingSwitchMoves } from "./sitePositionRepair";
 import { moveAnswersOffRequests } from "./seoPullAnswers";
 import { backfillAnswerIndex } from "./siteAnswers";
 import { dropCheckOnlyKeywordRows } from "./privateListsMigration";
+import { recountEveryList } from "./siteListAi";
+import { untickAutomaticQueries } from "./promptFanOut";
+import { followPlatformWhereStartingNumber } from "./companyDataLimits";
 import { detachCompanySchedules } from "./scheduler";
-import { backfillBrandedFlag } from "./websites";
 import {
   rebuildAnswerSummaries,
   rebuildOperationCosts,
@@ -125,23 +125,25 @@ type MigrationRunner = (
  * (listed in `privateListsMigration.ts`): recovering a deployment that still
  * has list rows without a hold, `siteDaySummaries.ai` or `siteRivalAiDays`
  * means the commit before their removal, then those four, then forward.
+ * And on 2026-09-28 with five that made a website's names, business profile
+ * and competitors each company's own (company-level-website-facts-plan.md):
+ * `2026-09-22-branded-websites` and `2026-09-22-attach-tracked-from-rivals`,
+ * which read what went, then `2026-09-28-hold-profiles` (every company's copy
+ * of the shared names and profile), `2026-09-28-clear-website-facts` and
+ * `2026-09-28-clear-website-rivals`. All five ran on dev before the websites
+ * fields and the `websiteRivals` table left the schema; recovering a
+ * deployment that still has them means the commit before their removal, then
+ * the last three in that order, then forward.
  */
 const MIGRATIONS: Record<string, MigrationRunner> = {
   "2026-09-22-costs-in-dollars": copyPoundNamesToDollars,
   "2026-09-22-clear-pound-names": clearPoundNames,
 
   /**
-   * Puts tracked websites back on the companies that chose them, and writes
-   * down that every older hold was an owned one
-   * (websites-screens-rebuild plan, stage 4).
-   *
-   * Corrects a wrong turn taken earlier the same day: a tracked competitor
-   * briefly became an edge in the host's competition graph, and the collection
-   * cycle read that graph, so one company's assertion spent another's money.
-   * Run the two together and in this order — the second is a no-op on rows the
-   * first has just written.
+   * Writes down that every older hold was an owned one (websites-screens-
+   * rebuild plan, stage 4). It ran after `2026-09-22-attach-tracked-from-rivals`,
+   * removed since (see the note above this list).
    */
-  "2026-09-22-attach-tracked-from-rivals": attachTrackedFromRivals,
   "2026-09-22-mark-existing-holds-owned": markExistingHoldsOwned,
 
   /**
@@ -150,6 +152,7 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
    * be read by place through an index rather than filtered after a read.
    */
   "2026-09-22-position-places": backfillPositionPlaces,
+  "2026-09-27-counting-switch-moves": clearCountingSwitchMoves,
 
   /**
    * Takes every stored DataForSEO answer off its request and into
@@ -169,6 +172,12 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
 
   /** Tracked searches' check-only rows out of All keywords (`privateListsMigration.ts`). */
   "2026-09-26-check-only-keyword-rows": dropCheckOnlyKeywordRows,
+  /** Each company's list counted from the answers already held (`siteListAi.ts`). */
+  "2026-09-26-list-ai-summaries": recountEveryList,
+  /** Fan-out queries no person put on Tracked keywords come off, each with its first check (fan-out-opt-in-plan.md). */
+  "2026-09-28-untick-fan-out-queries": untickAutomaticQueries,
+  /** A company's saved 1,000s use the platform's number (platform-limits-plan.md). */
+  "2026-09-28-company-limits-follow-platform": followPlatformWhereStartingNumber,
 
   /**
    * Takes the Collector off each company's Collection schedule, and the next
@@ -189,8 +198,6 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
   "2026-09-22-search-summaries": rebuildSearchSummaries,
   /** The running cost per operation, rebuilt from every charge already on file. */
   "2026-09-22-operation-costs": rebuildOperationCosts,
-  /** Which websites have brand names, for the index every AI answer reads. */
-  "2026-09-22-branded-websites": backfillBrandedFlag,
 
 
   /**

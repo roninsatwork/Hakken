@@ -5,6 +5,7 @@ import { aiEngineValidator } from "./seoAiEngines";
 import { billingTables } from "./billingSchema";
 import { uploadTables } from "./uploadSchema";
 import { siteTables } from "./siteSchema";
+import { searchConsoleTables } from "./searchConsoleSchema";
 import { decisionCertaintyValidator, decisionFallbackReasonValidator, decisionModeValidator, decisionOutcomeValidator, decisionSourceValidator } from "./utils/decisionShapes";
 
 
@@ -26,6 +27,7 @@ export default defineSchema({
   ...billingTables,
   ...uploadTables,
   ...siteTables,
+  ...searchConsoleTables,
   
   companies: defineTable({
     name: v.string(),
@@ -82,9 +84,11 @@ export default defineSchema({
    * and each would mean two companies need two rows, at which point the dedupe
    * is gone and nothing on screen would show it.
    *
-   * All of those live on `companyWebsites`, or on `trackedCompetitors` for a
-   * rival. If you are about to add a column here, check first whether it is
-   * true of the website itself or only of one company's interest in it.
+   * All of those live on `companyWebsites`, and what a company calls the
+   * website and says its business is on `holdProfiles` — both moved off this
+   * row on 2026-09-28 for exactly this reason. If you are about to add a column
+   * here, check first whether it is true of the website itself or only of one
+   * company's interest in it.
    */
   websites: defineTable({
     /**
@@ -96,63 +100,9 @@ export default defineSchema({
     host: v.string(),
     /** The same host as a person reads it — `münchen.de`, not `xn--mnchen-3ya.de`. */
     displayHost: v.string(),
-    /**
-     * What this site calls itself. At most five, one of them primary.
-     *
-     * **The one company-neutral thing this row has ever gained, and it belongs
-     * here for the same reason the host does.** The test the dedupe rule sets
-     * is whether two companies would need different values: for an owning
-     * company, yes; for brand names, no. Anyone tracking one host would write
-     * down the same trading name, group name and shortened name, because those
-     * are facts about the site rather than about who is watching it.
-     *
-     * It is also what makes AI citation tracking affordable. With the names
-     * here, one purchase can ask "who is mentioned for this prompt" and every
-     * tracked site whose name appears reads its own citation out of the answer.
-     * On a join row the same response would be matched per customer for no
-     * benefit at all.
-     *
-     * Shared means shared: one operator editing this changes what every company
-     * tracking the host sees, which is why editing is super-admin only and
-     * audited. See docs/plans/active/brands-places-and-ai-citations-plan.md.
-     */
-    brandNames: v.optional(v.array(v.object({
-      name: v.string(),
-      /** Exactly one is primary — a screen needs a name to print. */
-      isPrimary: v.boolean(),
-      /**
-       * What this variant is. A citation under a misspelling is a different
-       * fact from one under the right name: "mentioned 40 times, 6 of them
-       * under the wrong name" is something a client can act on. Absent reads
-       * as a correct name, so entries saved before this existed need no move.
-       */
-      kind: v.optional(v.union(v.literal("NAME"), v.literal("MISSPELLING"))),
-    }))),
-    /**
-     * Whether `brandNames` holds any, kept beside it so every AI answer can find
-     * the sites worth matching through an index rather than a scan: the answer
-     * parser read the first two thousand websites per answer and never saw a
-     * brand beyond them.
-     */
-    hasBrandNames: v.optional(v.boolean()),
-    /**
-     * What this business does and where it sells, when anyone has said.
-     *
-     * Facts about the site by the same test brand names pass: two companies
-     * watching one host would write down the same answer. They exist so a host
-     * can be handed a sensible starting set of searches and questions instead
-     * of a blank box, which is the whole reason a new client attaching to a
-     * known host is worth anything.
-     */
-    sector: v.optional(v.string()),
-    /** The market as a person reads it — "Yorkshire, United Kingdom". */
-    marketLabel: v.optional(v.string()),
-    /** What the business does, in a sentence or two, written by an admin so the AI judgments know the trade. */
-    businessDescription: v.optional(v.string()),
     firstSeenAt: v.number(),
   })
     .index("by_host", ["host"])
-    .index("by_has_brand_names", ["hasBrandNames"])
     .searchIndex("search_host", { searchField: "displayHost" }),
 
   /*
@@ -166,8 +116,10 @@ export default defineSchema({
     `websiteTenancyGuard.test.ts` holds it. Buying stays shared: a purchase is
     keyed on the search or question, the place and the day, never on a list.
     Only the writers that find everyone who asked read across companies
-    (`by_keyword`, `by_prompt`, `by_website`). The competition graph and the
-    brand names stay the host's. docs/plans/active/private-tracking-lists-plan.md.
+    (`by_keyword`, `by_prompt`, `by_website`). Since 2026-09-28 the brand
+    names and business profile are each company's too (`holdProfiles`), and
+    the shared competition graph is gone. docs/plans/active/private-tracking-lists-plan.md,
+    company-level-website-facts-plan.md.
   */
 
   /**
@@ -206,6 +158,8 @@ export default defineSchema({
     keyword: v.string(),
     isActive: v.boolean(),
     createdAt: v.number(),
+    /** Typed in, or tracked from a search the AI ran (fan-out-angles-plan.md, FA9); absent before 2026-09-28. */
+    addedFrom: v.optional(v.union(v.literal("HAND"), v.literal("AI_SEARCH"))),
   })
     /** Every company's rows, and everyone tracking one phrase: writers and purges only, never a screen. */
     .index("by_website", ["websiteId"])
@@ -216,30 +170,6 @@ export default defineSchema({
     .index("by_hold", ["companyWebsiteId"])
     .index("by_hold_active", ["companyWebsiteId", "isActive"])
     .index("by_hold_keyword", ["companyWebsiteId", "keyword"]),
-
-  /**
-   * An edge in the competition graph: this host competes with that one.
-   *
-   * Replaces the per-client `trackedCompetitors`. "Who competes with this
-   * business" is a claim about a market, not about a client, and most of these
-   * edges are derived from what the answers and rankings already show rather
-   * than asserted by anyone.
-   *
-   * Directed, because rivalry is not always mutual: a national brand is a rival
-   * to a local firm more often than the reverse, and collapsing the pair would
-   * lose that. The reverse index exists so "who names this host as a rival" is
-   * one read.
-   */
-  websiteRivals: defineTable({
-    websiteId: v.id("websites"),
-    rivalWebsiteId: v.id("websites"),
-    /** Whether a person put it there or the collected answers did. */
-    source: v.union(v.literal("ASSERTED"), v.literal("DISCOVERED")),
-    createdAt: v.number(),
-  })
-    .index("by_website", ["websiteId"])
-    .index("by_website_rival", ["websiteId", "rivalWebsiteId"])
-    .index("by_rival", ["rivalWebsiteId"]),
 
   /**
    * Where a host stands on one of its searches, from one place.
@@ -326,6 +256,7 @@ export default defineSchema({
       v.literal("SLIPPING_SEARCH"),
       v.literal("DEAD_QUESTION"),
       v.literal("UNTRACKED_SEARCH"),
+      v.literal("MISSING_ANGLE"),
     ),
     subject: v.string(),
     evidenceJson: v.string(),
@@ -403,7 +334,8 @@ export default defineSchema({
      * read the graph — so a rivalry one company asserted decided what another
      * company pulled. That conflated two different things: who competes with
      * whom is a fact about a market, and what I have chosen to watch is my list.
-     * `websiteRivals` still holds the first and never decides a purchase.
+     * The shared graph that held the first went on 2026-09-28: which rivals
+     * count is each company's own too (company-level-website-facts-plan.md).
      *
      * Absent reads as owned, because every row written before this existed was
      * a company's own website.
@@ -499,6 +431,10 @@ export default defineSchema({
     /** Steps of the website after the cursor already written, when a page stopped inside it. */
     cursorStep: v.optional(v.number()),
     expandRestarts: v.optional(v.number()),
+    /** Began after where the last run stopped at its ceiling, and goes round to there (B6). */
+    startedAfter: v.optional(v.number()),
+    /** Websites with more competitors than a run collects, for the run report (B6). */
+    competitorsCut: v.optional(v.array(v.id("websites"))),
   })
     .index("by_company_started", ["companyId", "startedAt"])
     .index("by_status", ["status"]),
@@ -578,15 +514,12 @@ export default defineSchema({
     keyword: v.string(),
     day: v.string(),
     position: v.optional(v.number()),
+    /** Its place among everything on Google's page, `position` being among the normal results; absent on a row counted on the page (G2). */
+    pagePosition: v.optional(v.number()),
     url: v.optional(v.string()),
     searchVolume: v.optional(v.number()),
     pullId: v.id("seoDataPulls"),
-    /**
-     * Where the search was made from, as DataForSEO's location code. Always
-     * written now; absent only on rows from before places were passed, which
-     * were all asked from the registry default, the United Kingdom, and which
-     * `2026-09-22-position-places` fills in.
-     */
+    /** DataForSEO's location code; absent only on rows from before places were sent — all the UK, filled in by `2026-09-22-position-places`. */
     locationCode: v.optional(v.number()),
     createdAt: v.number(),
   })
@@ -745,6 +678,14 @@ export default defineSchema({
     rawTruncated: v.optional(v.boolean()),
     /** Rows left off the end of a list answer to keep it inside that ceiling: counted, so it is said. */
     rowsLeftOff: v.optional(v.number()),
+    /**
+     * How far a list page's run meant to buy the list, in rows — the everyday
+     * check, or the whole list kept when the week's was due: the pages its
+     * first answer queues stop there (`queueListPages` in `sitePagedLists.ts`).
+     */
+    listReach: v.optional(v.number()),
+    /** A keyword list page bought on every run as the everyday check, which the monthly estimate prices per run. */
+    eachRun: v.optional(v.boolean()),
     /** DataForSEO's task id, once they have given us one. */
     taskId: v.optional(v.string()),
     /** What DataForSEO charged, in USD, as reported by DataForSEO. */
@@ -1030,6 +971,8 @@ export default defineSchema({
     mentionedWebsiteId: v.optional(v.id("websites")),
     /** The brand variant that matched, or the cited domain. Never prose. */
     mentionedText: v.string(),
+    /** Every one of the website's names found, lowercased — each company counts the mention under its own (holdProfiles.ts). */
+    mentionedTexts: v.optional(v.array(v.string())),
     /** For a BRAND match: whether the variant was a known misspelling. */
     variantKind: v.optional(v.union(v.literal("NAME"), v.literal("MISSPELLING"))),
     /**
@@ -1081,6 +1024,8 @@ export default defineSchema({
     named: v.array(v.id("websites")),
     recommended: v.array(v.id("websites")),
     warnedAgainst: v.array(v.id("websites")),
+    /** Every name found per website, since names are each company's (holdProfiles.ts): a company counts its own. */
+    mentions: v.optional(v.array(v.object({ websiteId: v.id("websites"), texts: v.array(v.string()) }))),
     createdAt: v.number(),
   })
     .index("by_question", ["prompt", "engine", "locationCode", "day"])

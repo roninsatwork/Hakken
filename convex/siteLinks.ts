@@ -43,6 +43,10 @@ export const linkProfile = tenantQuery({
     brokenPages: numberOrNull,
     spamScore: numberOrNull,
     nofollowReferringDomains: numberOrNull,
+    /** The servers, networks and pages linking here in all: what the lists kept are of (§4.G). */
+    referringIps: numberOrNull,
+    referringSubnets: numberOrNull,
+    referringPages: numberOrNull,
     countries: breakdownValidator,
     tlds: breakdownValidator,
     platforms: breakdownValidator,
@@ -75,11 +79,61 @@ export const linkProfile = tenantQuery({
       brokenPages: number("brokenPages"),
       spamScore: number("spamScore"),
       nofollowReferringDomains: number("nofollowReferringDomains"),
+      referringIps: number("referringIps"),
+      referringSubnets: number("referringSubnets"),
+      referringPages: number("referringPages"),
       countries: readBreakdown(figures.countriesJson),
       tlds: readBreakdown(figures.tldsJson),
       platforms: readBreakdown(figures.platformsJson),
       linkTypes: readBreakdown(figures.linkTypesJson),
       attributes: readBreakdown(figures.attributesJson),
     };
+  },
+});
+
+/** The lists whose totals the screens say, by the request that buys each. */
+const LIST_TOTALS = {
+  referringDomains: "referring_domains_list",
+  backlinks: "backlinks_all",
+  oneEach: "backlinks_list",
+  broken: "backlinks_broken",
+  anchors: "anchors_list",
+  ips: "referring_ips_list",
+} as const;
+
+/** A list's newest pages read for its total: ten at most a list, from a few runs. */
+const LIST_PAGES_READ = 30;
+
+/**
+ * How long each link list is in all, as the supplier counted it when the
+ * newest list was bought — what the rows kept are "of" (sites-data-completeness-plan.md,
+ * §4.E and §4.G). Null for a list bought before its total was kept.
+ */
+export const linkListTotals = tenantQuery({
+  args: { siteId: v.id("companyWebsites") },
+  returns: v.object(Object.fromEntries(Object.keys(LIST_TOTALS).map((key) => [key, numberOrNull])) as Record<keyof typeof LIST_TOTALS, typeof numberOrNull>),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    const totals = {} as Record<keyof typeof LIST_TOTALS, number | null>;
+    for (const [key, operationId] of Object.entries(LIST_TOTALS) as Array<[keyof typeof LIST_TOTALS, string]>) {
+      const pages = await ctx.db
+        .query("seoWebsiteMetrics")
+        .withIndex("by_website_operation_day", (q) => q.eq("websiteId", site.website._id).eq("operationId", operationId))
+        .order("desc")
+        .take(LIST_PAGES_READ);
+      const newest = pages[0]?.day;
+      let total: number | null = null;
+      for (const page of pages) {
+        if (page.day !== newest) break;
+        try {
+          const figures = JSON.parse(page.metricsJson) as { listTotal?: unknown };
+          if (typeof figures.listTotal === "number") total = Math.max(total ?? 0, figures.listTotal);
+        } catch {
+          // A page whose figures cannot be read says nothing of the total.
+        }
+      }
+      totals[key] = total;
+    }
+    return totals;
   },
 });

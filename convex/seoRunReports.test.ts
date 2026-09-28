@@ -4,7 +4,8 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
-import { attentionOf, cadenceOf, collectsEveryRun, estimateMonthly, repeatDays, spendCategoryOf, stoppedOf } from "./seoRunReports";
+import { attentionOf, spendCategoryOf, stoppedOf } from "./seoRunReports";
+import { cadenceOf, collectsEveryRun, estimateMonthly, repeatDays } from "./seoRunEstimate";
 
 /**
  * The Collection runs screens (Anthony, 2026-09-24): what each run for a
@@ -81,6 +82,7 @@ async function pull(t: Harness, s: Seeded, fields: {
   status: "PENDING" | "SUBMITTED" | "READY" | "FAILED";
   costUsd: number;
   sentAt?: number;
+  eachRun?: boolean;
 }) {
   return await t.run(async (ctx) => await ctx.db.insert("seoDataPulls", {
     family: "DataForSEO", mode: "LIVE", companyId: s.korda, cycleId: s.run, taskArgsJson: "{}",
@@ -395,5 +397,66 @@ describe("what needs a look", () => {
     expect(await admin.query(api.seoRunReports.readHourlyCheck, {})).toMatchObject({
       ok: false, error: "Too many bytes read in a single function execution", failuresInARow: 3, overdue: true,
     });
+  });
+});
+
+describe("a month from now, with the everyday check (2026-09-27)", () => {
+  test("a run's report keeps apart what its keyword list bought as the everyday check", async () => {
+    const t = harness();
+    const s = await seed(t);
+    await pull(t, s, { operationId: "domain_ranked_keywords_list", websiteId: s.own, target: "kordatackle.com", status: "READY", costUsd: 0.13, eachRun: true });
+    await pull(t, s, { operationId: "domain_ranked_keywords_list", websiteId: s.own, target: "kordatackle.com", status: "READY", costUsd: 0.13 });
+    await t.action(internal.seoRunReports.buildRunReport, { cycleId: s.run });
+    const report = await t.run(async (ctx) => await ctx.db.query("seoRunReports").withIndex("by_cycle", (q) => q.eq("cycleId", s.run)).unique());
+    expect(report!.byOperation.find((entry) => entry.operationId === "domain_ranked_keywords_list")).toMatchObject({ costUsd: 0.26, everyRunCostUsd: 0.13 });
+  });
+
+  test("the everyday check's pages are priced per run, the rest of the list on its own cadence", () => {
+    const daily = estimateMonthly([{ operationId: "domain_ranked_keywords_list", costUsd: 1.1, everyRunCostUsd: 0.6 }], "daily");
+    expect(daily.lines.map((line) => line.every)).toEqual(["DAY", "WEEK"]);
+    expect(daily.lines[0].costUsd).toBeCloseTo(0.6, 8);
+    expect(daily.lines[1].costUsd).toBeCloseTo(0.5, 8);
+    expect(daily.perMonthUsd).toBeCloseTo(0.6 * 30.44 + (0.5 * 30.44) / 7, 6);
+    // Collected weekly, every run is the week's list: the same either way.
+    expect(estimateMonthly([{ operationId: "domain_ranked_keywords_list", costUsd: 1.1, everyRunCostUsd: 0.6 }], "weekly").perMonthUsd)
+      .toBeCloseTo((1.1 * 30.44) / 7, 6);
+  });
+
+  test("a daily company: each kind at the price it last cost, the weekly list from the run that bought it", async () => {
+    const t = harness();
+    const { companyId, adminId } = await t.run(async (ctx) => {
+      const adminId = await ctx.db.insert("users", { name: "Admin", email: "admin@test.com", role: "SUPER_ADMIN" as const, createdAt: NOW });
+      const companyId = await ctx.db.insert("companies", { name: "Ronins", createdAt: NOW });
+      await ctx.db.insert("schedules", {
+        name: "SEO data — Ronins", companyId, intervalStr: JSON.stringify({ version: 2, kind: "recurring", cadence: "daily", timeLocal: "01:00", timezone: "UTC" }),
+        isActive: true, createdAt: NOW,
+      } as never);
+      return { companyId, adminId };
+    });
+    const runWith = async (daysAgo: number, byOperation: Array<{ operationId: string; costUsd: number; everyRunCostUsd?: number }>) =>
+      await t.run(async (ctx) => {
+        const cycleId = await ctx.db.insert("seoCollectionCycles", {
+          companyId, trigger: "SCHEDULE", status: "DONE", plannedCount: 1, reusedCount: 0, sentCount: 1, readyCount: 1, failedCount: 0,
+          totalCostUsd: 0, startedAt: NOW - daysAgo * 86_400_000,
+        });
+        await ctx.db.insert("seoRunReports", {
+          cycleId, companyId, builtAt: NOW, final: true, requests: byOperation.length, costUsd: 0, waiting: 0, answering: 0,
+          filed: byOperation.length, failed: 0, aiJudgements: 0, aiCostUsd: 0,
+          byOperation: byOperation.map((entry) => ({ requests: 1, answering: 0, ...entry })),
+          bySite: [], byCollectorRun: [], ai: [],
+        });
+      });
+    // Ten days ago: a call no longer bought, since.
+    await runWith(10, [{ operationId: "bulk_ranks", costUsd: 0.3 }]);
+    // Six days ago, the week's list: the everyday pages and the rest of it.
+    await runWith(6, [{ operationId: "domain_ranked_keywords_list", costUsd: 1.1, everyRunCostUsd: 0.6 }, { operationId: "domain_ranked_keywords", costUsd: 0.12 }]);
+    // Yesterday, an ordinary run: the everyday pages alone.
+    await runWith(1, [{ operationId: "domain_ranked_keywords_list", costUsd: 0.61, everyRunCostUsd: 0.61 }, { operationId: "domain_ranked_keywords", costUsd: 0.12 }]);
+
+    const summary = await t.withIdentity({ subject: adminId }).query(api.seoRunReports.getCompanyRunSummary, { companyId });
+    expect(summary.estimate?.perMonthUsd).toBeCloseTo(estimateMonthly([
+      { operationId: "domain_ranked_keywords_list", costUsd: 0.61 + 0.5, everyRunCostUsd: 0.61 },
+      { operationId: "domain_ranked_keywords", costUsd: 0.12 },
+    ], "daily").perMonthUsd, 6);
   });
 });

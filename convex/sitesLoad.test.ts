@@ -134,24 +134,18 @@ describe("a very large site", () => {
     await t.action(internal.siteSummaries.rebuildSite, { websiteId, locationCode: UK });
     await t.action(internal.siteListCopyBuilders.buildListCopy, { kind: "pages", key: `${websiteId}:${UK}` });
     await t.action(internal.siteListCopyBuilders.buildListCopy, { kind: "links", key: websiteId });
-    // The company's own questions — eight, a real client's list — five
-    // competitors watched against the site, and two years of its list's AI
-    // lines, the site's and each competitor's, as the day sync writes them, so
-    // the charts, the calendar, the header and the Sites list are timed reading
-    // them (docs/plans/active/private-tracking-lists-plan.md, §4.4). After the
-    // rebuild, which would otherwise rewrite the last fortnight's from answers.
-    // Eight, not a hundred: the AI screens read one row per question and
-    // engine, a few hundred small reads for a long list, which this in-memory
-    // backend charges far above the real one's cost — that read is the plan's
-    // follow-up, not something a table scan can stand in for.
+    // Five competitors watched against the site, the company's own questions
+    // with what their answers said (`siteListAi.ts`), and two years of its
+    // list's AI lines, the site's and each competitor's, as the day sync
+    // writes them, so the charts, the calendar, the header and the Sites list
+    // are timed reading them (docs/plans/active/private-tracking-lists-plan.md,
+    // §4.4). After the rebuild, which would otherwise rewrite the last
+    // fortnight's from answers. Twenty-five questions, the list the AI screens
+    // were timed at before they read a row per question and engine and had to
+    // drop to eight; a thousand, the most a list may hold, after the rest
+    // (docs/plans/active/sites-ai-list-summaries-plan.md).
     const named = await t.run(async (ctx) => {
       const hold = (await ctx.db.get(holdId))!;
-      for (let index = 0; index < 8; index += 1) {
-        await ctx.db.insert("websiteQuestions", {
-          websiteId, companyWebsiteId: holdId, prompt: `question number ${index}`,
-          engines: [...AI_ENGINES], isActive: true, createdAt: Date.now(),
-        });
-      }
       const rivals = [];
       for (let index = 0; index < 5; index += 1) {
         const rival = await ctx.db.insert("websites", { host: `rival-${index}.co.uk`, displayHost: `rival-${index}.co.uk`, firstSeenAt: Date.now() });
@@ -162,6 +156,32 @@ describe("a very large site", () => {
       }
       return [websiteId, ...rivals];
     });
+    // Each question as its answers left it: four engines, thirty answers each,
+    // naming the site and two of its competitors.
+    const ask = async (from: number, to: number) => {
+      for (let start = from; start < to; start += 250) {
+        await t.run(async (ctx) => {
+          for (let index = start; index < Math.min(to, start + 250); index += 1) {
+            const prompt = `question number ${index}`;
+            await ctx.db.insert("websiteQuestions", {
+              websiteId, companyWebsiteId: holdId, prompt, engines: [...AI_ENGINES], isActive: true, createdAt: Date.now(),
+            });
+            await ctx.db.insert("siteListQuestions", {
+              companyWebsiteId: holdId, locationCode: UK, prompt, updatedAt: Date.now(),
+              engines: AI_ENGINES.map((engine) => ({
+                engine, asked: 30, lastDay: "2026-09-23",
+                sites: named.slice(0, 3).map((site, rank) => ({
+                  websiteId: site, named: 10 + rank, recommended: 5, warnedAgainst: 0, lastNamedDay: "2026-09-23",
+                  ...(rank === 0 ? { newest: "RECOMMENDED" as const } : {}),
+                })),
+              })),
+            });
+          }
+        });
+      }
+      await t.action(internal.siteListAi.summariseList, { holdId });
+    };
+    await ask(0, 25);
     for (const [line, lineWebsiteId] of named.entries()) {
       await t.run(async (ctx) => {
         const start = Date.parse("2024-09-24T00:00:00Z");
@@ -217,7 +237,14 @@ describe("a very large site", () => {
       ["two years, with five rivals", () => asMember.query(api.siteCharts.siteSeries, { siteId: holdId, ...range, step: "week", withRivals: true })],
       ["AI mentions", () => asMember.query(api.siteAi.listMentions, { siteId: holdId })],
       ["share of voice", () => asMember.query(api.siteAi.shareOfVoice, { siteId: holdId })],
+      ["side by side", () => asMember.query(api.siteCompetitors.listRivals, { siteId: holdId })],
+      ["the Overview's extras", () => asMember.query(api.siteOverview.overviewExtras, { siteId: holdId })],
       ["a month's calendar", () => asMember.query(api.siteCharts.siteCalendar, { siteId: holdId, month: "2026-09" })],
+      // The Keywords screens redesigned on 2026-09-27: Position bands' moves
+      // and the searches behind them, and New and lost keywords' checks.
+      ["moves between bands", () => asMember.query(api.siteBands.bandMoves, { siteId: holdId })],
+      ["the searches that changed band", () => asMember.query(api.siteBands.listBandMoves, { siteId: holdId })],
+      ["two years of checks, daily", () => asMember.query(api.siteChecks.siteChecks, { siteId: holdId, ...range, step: "day" })],
       ["every link, strongest", () => asMember.query(api.siteLinkLists.listBacklinks, { siteId: holdId, ...first, every: true })],
       ["every link, the last page", () => asMember.query(api.siteLinkLists.listBacklinks, { siteId: holdId, page: 800, rows: 25, every: true })],
       ["every link, lost", () => asMember.query(api.siteLinkLists.listBacklinks, { siteId: holdId, ...first, every: true, status: "LOST" })],
@@ -235,14 +262,26 @@ describe("a very large site", () => {
     expect(scan.result).toBe(50_000);
 
     const slow: string[] = [];
-    for (const [name, run] of timed) {
+    const time = async (name: string, run: () => Promise<unknown>) => {
       const { took, result } = await fastest(run, RUNS);
       expect(result).toBeDefined();
       // SITES_LOAD_REPORT=1 prints every timing, for a record of where each query stands.
       if (process.env.SITES_LOAD_REPORT) console.log(`${name}: ${Math.round(took)}ms (${Math.round((took / fullScan) * 100)}% of a ${Math.round(fullScan)}ms scan)`);
       if (took > fullScan * SHARE_OF_A_SCAN) slow.push(`${name}: ${Math.round(took)}ms against a ${Math.round(fullScan)}ms scan`);
-    }
+    };
+    for (const [name, run] of timed) await time(name, run);
+    // The list at its longest: every screen that reads what the answers said,
+    // on a thousand questions asked of every engine.
+    await ask(25, 1_000);
+    const answerScreens = new Set(["AI mentions", "share of voice", "side by side", "the Overview's extras", "the site's header", "the Sites list"]);
+    for (const [name, run] of timed.filter(([name]) => answerScreens.has(name))) await time(`${name}, a thousand questions`, run);
+    await time("suggested competitors, a thousand questions", () => asMember.query(api.siteCompetitors.listSuggested, { siteId: holdId }));
     expect(slow).toEqual([]);
+    const mentions = await asMember.query(api.siteAi.listMentions, { siteId: holdId });
+    expect(mentions).toHaveLength(1_000 * AI_ENGINES.length);
+    expect(mentions[0]).toMatchObject({ asked: 30, named: 10, lastStance: "RECOMMENDED" });
+    const voice = await asMember.query(api.siteAi.shareOfVoice, { siteId: holdId });
+    expect(voice[0].asked).toBe(30_000);
 
     // The exact total, however large the table, and any page of it at once.
     const top = await asMember.query(api.siteKeywords.listKeywords, { siteId: holdId, ...first, sort: "traffic" });

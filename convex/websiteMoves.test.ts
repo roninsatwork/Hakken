@@ -37,11 +37,13 @@ async function world(t: Harness) {
     const companyId = await ctx.db.insert("companies", { name: "Test Agency", createdAt: Date.now() });
     const websiteId = await ctx.db.insert("websites", {
       host: "ourshop.com", displayHost: "ourshop.com", firstSeenAt: Date.now(),
-      hasBrandNames: true,
-      brandNames: [{ name: "Our Shop", isPrimary: true }],
     });
     const holdId = await ctx.db.insert("companyWebsites", {
       companyId, websiteId, relationship: "OWNED", createdAt: Date.now() - 90 * 86_400_000,
+    });
+    await ctx.db.insert("holdProfiles", {
+      companyWebsiteId: holdId, companyId, websiteId, hasBrandNames: true, updatedAt: Date.now(),
+      brandNames: [{ name: "Our Shop", isPrimary: true }],
     });
     return { companyId, websiteId, holdId };
   });
@@ -152,34 +154,39 @@ describe("drawing the moves", () => {
     expect(await moves(t)).toHaveLength(0);
   });
 
-  test("a near-miss spelling becomes a move, and taking it adds the name", async () => {
+  test("no Name move comes from a spelling that is another company's name, and an old one taken adds to the company's own names", async () => {
     const t = harness();
     const admin = await superAdmin(t);
-    const { websiteId, holdId } = await world(t);
+    // The company knows its site as "Our Shop" (the world's own profile).
+    const { websiteId, holdId, companyId } = await world(t);
     await t.run(async (ctx) => {
       const pullId = await ctx.db.insert("seoDataPulls", {
         operationId: "ai_citation_claude", family: "AI Optimization", mode: "LIVE", taskArgsJson: "{}",
         status: "READY", tag: "t", attempts: 0, costUsd: 0, sandbox: false, submittedAt: Date.now(),
       } as never);
+      // Found under a spelling only another company lists: that company's to keep.
       for (const day of [daysAgo(7), daysAgo(1)]) {
         await ctx.db.insert("aiCitations", {
           prompt: "who is the best shop in town", engine: "claude", day, pullId, kind: "BRAND",
-          mentionedWebsiteId: websiteId, mentionedText: "Our Shopp", variantKind: "MISSPELLING",
+          mentionedWebsiteId: websiteId, mentionedText: "Our Shopp", mentionedTexts: ["our shopp"], variantKind: "MISSPELLING",
           position: 1, createdAt: Date.now(),
         });
       }
     });
 
     await derive(t, holdId);
-    const [move] = await moves(t);
-    expect(move).toMatchObject({ kind: "NAME", subject: "our shopp" });
-    expect(JSON.parse(move.evidenceJson)).toEqual({ text: "Our Shopp", times: 2 });
+    expect((await moves(t)).filter((move) => move.kind === "NAME")).toEqual([]);
 
-    await admin.mutation(api.websiteMoves.actOnMove, { moveId: move._id, action: "TAKE" });
-    const website = await t.run(async (ctx) => await ctx.db.get(websiteId));
-    expect(website?.brandNames?.map((entry) => entry.name)).toEqual(["Our Shop", "Our Shopp"]);
+    // A Name move raised before names were each company's, taken now: onto this company's own names.
+    const moveId = await t.run(async (ctx) => await ctx.db.insert("websiteMoves", {
+      companyWebsiteId: holdId, companyId, kind: "NAME", subject: "our shopp",
+      evidenceJson: JSON.stringify({ text: "Our Shopp", times: 2 }), state: "OPEN", raisedAt: Date.now(), updatedAt: Date.now(),
+    }));
+    await admin.mutation(api.websiteMoves.actOnMove, { moveId, action: "TAKE" });
+    const profile = await t.run(async (ctx) => await ctx.db.query("holdProfiles").withIndex("by_hold", (q) => q.eq("companyWebsiteId", holdId)).unique());
+    expect(profile?.brandNames.map((entry) => [entry.name, entry.kind])).toEqual([["Our Shop", "NAME"], ["Our Shopp", "MISSPELLING"]]);
     const audit = await t.run(async (ctx) => await ctx.db.query("auditLogs").collect());
-    const named = audit.find((row) => row.actionType === "SET_WEBSITE_BRAND_NAMES");
+    const named = audit.find((row) => row.actionType === "SET_HOLD_BRAND_NAMES");
     expect(JSON.parse(named!.metadata!)).toMatchObject({ before: ["Our Shop"], after: ["Our Shop", "Our Shopp"] });
   });
 
@@ -347,7 +354,7 @@ describe("taking an untracked search", () => {
     const moveId = await untrackedMove(t, companyId, holdId, "best shop near me");
 
     await expect(admin.mutation(api.websiteMoves.actOnMove, { moveId, action: "TAKE" }))
-      .rejects.toThrow(/at most 1000 searches/);
+      .rejects.toThrow(/at most 1000 keywords/);
     const move = await t.run(async (ctx) => await ctx.db.get(moveId));
     expect(move?.state).toBe("OPEN");
   });

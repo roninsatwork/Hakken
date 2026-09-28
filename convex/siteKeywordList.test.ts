@@ -5,7 +5,7 @@ import { listDayComplete } from "./siteSummaries";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
-import { listPages } from "./sitePagedLists";
+import { joinedSegments, pagesForRows, rowsForSearches, type ListShape } from "./sitePagedLists";
 import { parseDomainRankedKeywords } from "./dataForSeoParsers";
 import { expandSeoResult, slimSeoResult } from "./dataForSeoSlim";
 import { ANSWER_PART_BYTES, utf8Length } from "./seoPullAnswers";
@@ -58,16 +58,52 @@ const answer = (items: unknown[], organicCount: number, total = items.length) =>
 }];
 
 describe("the full keyword list", () => {
-  test("asks a thousand keywords a request, up to the company's limit and the site's own count", () => {
-    expect(listPages(10_000, 25_000)).toHaveLength(10);
-    expect(listPages(10_000, 807)).toEqual([{ offset: 0, limit: 1_000 }]);
-    expect(listPages(2_000, 1_898)).toEqual([{ offset: 0, limit: 1_000 }, { offset: 1_000, limit: 1_000 }]);
-    expect(listPages(10_000, null)).toEqual([{ offset: 0, limit: 1_000 }]);
-    expect(listPages(100, 5_000)).toEqual([{ offset: 0, limit: 100 }]);
-    // The finer steps (2026-09-25): the last page asks only what is left of the limit.
-    expect(listPages(250, 5_000)).toEqual([{ offset: 0, limit: 250 }]);
-    expect(listPages(2_500, 25_000)).toEqual([{ offset: 0, limit: 1_000 }, { offset: 1_000, limit: 1_000 }, { offset: 2_000, limit: 500 }]);
-    expect(listPages(7_500, 25_000)).toHaveLength(8);
+  test("asks for the rows a number of searches takes, read from the site's last list", () => {
+    expect(pagesForRows(2_989)).toEqual([{ offset: 0, limit: 1_000 }, { offset: 1_000, limit: 1_000 }, { offset: 2_000, limit: 989 }]);
+    expect(pagesForRows(250)).toEqual([{ offset: 0, limit: 250 }]);
+    expect(pagesForRows(0)).toEqual([]);
+
+    // kordatackle.com's list: its first 1,000 rows held 827 searches, AI
+    // Overview mentions and answer boxes taking the rest.
+    const korda: ListShape = {
+      segments: [
+        { offset: 0, limit: 1_000, rows: 1_000, searches: 827 },
+        { offset: 1_000, limit: 1_000, rows: 1_000, searches: 781 },
+        { offset: 2_000, limit: 1_000, rows: 989, searches: 937 },
+      ],
+      totalRows: 2_989,
+      totalSearches: 2_545,
+    };
+    // A thousand searches reach into the second page, with a little over.
+    expect(rowsForSearches(1_000, korda)).toBe(1_344);
+    expect(rowsForSearches(500, korda)).toBe(666);
+    // More than the site has: the whole list, where the last one ended.
+    expect(rowsForSearches(10_000, korda)).toBe(2_989);
+
+    // chilliapple.co.uk's list, held to its first 1,000 rows: 629 searches.
+    // Past them, at the rows per search the list has shown.
+    const chilli: ListShape = { segments: [{ offset: 0, limit: 1_000, rows: 1_000, searches: 629 }], totalRows: 2_393, totalSearches: 1_857 };
+    expect(rowsForSearches(1_000, chilli)).toBe(1_749);
+    expect(rowsForSearches(10_000, chilli)).toBe(2_393);
+
+    // Never listed: nothing to go on.
+    expect(rowsForSearches(1_000, { segments: [], totalRows: null, totalSearches: null })).toBeNull();
+    // Only the supplier's totals: in proportion.
+    expect(rowsForSearches(1_000, { segments: [], totalRows: 2_393, totalSearches: 1_857 })).toBe(1_418);
+  });
+
+  test("joins a day's pages from the first row, the longest where two start at one row", () => {
+    expect(joinedSegments([
+      { offset: 1_000, limit: 344, rows: 344, searches: 270 },
+      { offset: 0, limit: 1_000, rows: 1_000, searches: 827 },
+      { offset: 1_000, limit: 1_000, rows: 1_000, searches: 781 },
+      { offset: 3_000, limit: 1_000, rows: 1_000, searches: 900 },
+    ]).map((segment) => [segment.offset, segment.limit])).toEqual([[0, 1_000], [1_000, 1_000]]);
+    // A short page ends the list.
+    expect(joinedSegments([
+      { offset: 0, limit: 1_000, rows: 943, searches: 807 },
+      { offset: 1_000, limit: 1_000, rows: 1_000, searches: 800 },
+    ])).toHaveLength(1);
   });
 
   test("a thousand keywords with every fact fit the stored copy, and read back as they came — without the page's words", () => {
@@ -159,10 +195,22 @@ describe("the full keyword list", () => {
       await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", locationCode: UK, createdAt: Date.now() });
       await ctx.db.insert("companyDataLimits", { companyId, keywordsPerSite: 10_000, backlinksPerSite: 100, updatedAt: Date.now() });
       await ctx.db.insert("schedules", { name: "Collection", companyId, intervalStr: "daily", isActive: true, createdAt: Date.now() } as never);
-      // The site's last count: two and a half thousand keywords, three pages.
       await ctx.db.insert("siteDaySummaries", {
-        websiteId, locationCode: UK, day: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10), rankedKeywordsTotal: 2_500, updatedAt: Date.now(),
+        websiteId, locationCode: UK, day: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10), rankedKeywordsTotal: 2_550, updatedAt: Date.now(),
       } as never);
+      // The site's last list, ten days ago: three pages, the last one short.
+      const listDay = new Date(Date.now() - 10 * 86_400_000).toISOString().slice(0, 10);
+      for (const [offset, rows, searches] of [[0, 1_000, 1_000], [1_000, 1_000, 1_000], [2_000, 600, 550]]) {
+        const pullId = await ctx.db.insert("seoDataPulls", {
+          operationId: KEYWORD_LIST_OPERATION_ID, family: "DataForSEO Labs", mode: "LIVE", websiteId, status: "READY", tag: `old-${offset}`,
+          attempts: 0, costUsd: 0.13, sandbox: false, submittedAt: Date.now() - 10 * 86_400_000, completedAt: Date.now() - 10 * 86_400_000,
+          taskArgsJson: JSON.stringify({ target: "big.co.uk", limit: 1_000, offset, location_code: UK }),
+        } as never);
+        await ctx.db.insert("seoWebsiteMetrics", {
+          websiteId, day: listDay, operationId: KEYWORD_LIST_OPERATION_ID, pullId, locationCode: UK, createdAt: Date.now(),
+          metricsJson: JSON.stringify({ listOffset: offset, listLimit: 1_000, listItems: rows, listDropped: 0, listTotal: 2_600, returnedKeywords: offset + searches, rankedKeywords: 2_550 }),
+        });
+      }
       return { companyId, websiteId };
     });
     const cycleId = await t.run(async (ctx) => await ctx.db.insert("seoCollectionCycles", {
@@ -172,8 +220,10 @@ describe("the full keyword list", () => {
     await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
 
     const listPulls = async () => (await t.run(async (ctx) => await ctx.db.query("seoDataPulls").collect()))
-      .filter((pull) => pull.operationId === KEYWORD_LIST_OPERATION_ID && pull.websiteId === websiteId);
-    expect((await listPulls()).map((pull) => JSON.parse(pull.taskArgsJson).offset).sort((a, b) => a - b)).toEqual([0, 1_000, 2_000]);
+      .filter((pull) => pull.operationId === KEYWORD_LIST_OPERATION_ID && pull.websiteId === websiteId && pull.cycleId === cycleId);
+    const offsets = async () => (await listPulls()).map((pull) => JSON.parse(pull.taskArgsJson).offset).sort((a, b) => a - b);
+    // The whole list, sized from the last one: three pages.
+    expect(await offsets()).toEqual([0, 1_000, 2_000]);
 
     // The first page comes back, saying the list runs to 2,600 rows.
     const first = (await listPulls()).find((pull) => JSON.parse(pull.taskArgsJson).offset === 0)!;
@@ -186,7 +236,7 @@ describe("the full keyword list", () => {
     await t.action(internal.seoCollectionParse.parseSeoResult, { pullId: first._id });
 
     // Pages two and three were already planned: nothing is bought twice.
-    expect((await listPulls()).map((pull) => JSON.parse(pull.taskArgsJson).offset).sort((a, b) => a - b)).toEqual([0, 1_000, 2_000]);
+    expect(await offsets()).toEqual([0, 1_000, 2_000]);
   });
 
   test("a list is whole only when its pages cover it: no gap, nothing dropped, every row it should have", () => {
@@ -204,6 +254,14 @@ describe("the full keyword list", () => {
     expect(listDayComplete([page(0, 1_000), page(1_000, 1_000)])).toBe(false);
     // No total to measure against.
     expect(listDayComplete([page(0, 400, { listTotal: 0 })])).toBe(false);
+
+    // Every row there, and a search short of the supplier's count: pages
+    // bought on different days shifted a row between them, and a skipped
+    // search must not read as lost (sites-data-completeness-plan.md, B9).
+    const counted = (listOffset: number, listItems: number, searches: number) =>
+      ({ ...page(listOffset, listItems), searches, rankedKeywords: 2_000 });
+    expect(listDayComplete([counted(0, 1_000, 800), counted(1_000, 1_000, 800), counted(2_000, 500, 400)])).toBe(true);
+    expect(listDayComplete([counted(0, 1_000, 800), counted(1_000, 1_000, 800), counted(2_000, 500, 399)])).toBe(false);
   });
 
   test("a page's keywords do not count towards the list until the whole page is filed", async () => {
@@ -236,12 +294,12 @@ describe("the full keyword list", () => {
       const { readSiteDataLimits } = await import("./companyDataLimits");
       return await readSiteDataLimits(ctx, companyId as Id<"companies">, holdId as Id<"companyWebsites">);
     });
-    expect(await read()).toEqual({ keywordsPerSite: 1_000, backlinksPerSite: 1_000 });
+    expect(await read()).toEqual({ keywordsPerSite: 1_000, backlinksPerSite: 1_000, everydayKeywords: 1_000 });
 
     const asAdmin = t.withIdentity({ subject: userId });
     await asAdmin.mutation(api.companyDataLimits.setCompanyDataLimits, { companyId, keywordsPerSite: 10_000, backlinksPerSite: 10_000 });
     await asAdmin.mutation(api.companyDataLimits.setSiteDataLimits, { companyWebsiteId: holdId, keywordsPerSite: 2_500, backlinksPerSite: null });
-    expect(await read()).toEqual({ keywordsPerSite: 2_500, backlinksPerSite: 10_000 });
+    expect(await read()).toEqual({ keywordsPerSite: 2_500, backlinksPerSite: 10_000, everydayKeywords: 1_000 });
 
     // A limit off the list is refused rather than bought.
     await expect(asAdmin.mutation(api.companyDataLimits.setSiteDataLimits, { companyWebsiteId: holdId, keywordsPerSite: 50_000, backlinksPerSite: null }))
@@ -249,7 +307,7 @@ describe("the full keyword list", () => {
 
     // Following the company on both keeps no row at all.
     await asAdmin.mutation(api.companyDataLimits.setSiteDataLimits, { companyWebsiteId: holdId, keywordsPerSite: null, backlinksPerSite: null });
-    expect(await read()).toEqual({ keywordsPerSite: 10_000, backlinksPerSite: 10_000 });
+    expect(await read()).toEqual({ keywordsPerSite: 10_000, backlinksPerSite: 10_000, everydayKeywords: 1_000 });
     expect(await t.run(async (ctx) => await ctx.db.query("websiteDataLimits").collect())).toEqual([]);
   });
 });

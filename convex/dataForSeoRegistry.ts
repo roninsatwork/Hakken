@@ -8,7 +8,9 @@ import {
 import { SITE_LINK_OPERATIONS } from "./dataForSeoLinkOperations";
 import { CRAWL_OPERATIONS } from "./dataForSeoCrawlOperations";
 import { KEYWORD_LIST_OPERATIONS } from "./dataForSeoKeywordListOperations";
+import { AI_OVERVIEW_OPERATIONS } from "./dataForSeoAiOverviewOperations";
 import { appError } from "./utils/appError";
+import { countryCodeOf } from "./utils/seoLocations";
 
 /**
  * What Hakken can ask DataForSEO, as a list.
@@ -160,6 +162,7 @@ export const SEO_OPERATIONS: readonly SeoOperation[] = [
   ...SITE_LINK_OPERATIONS,
   ...CRAWL_OPERATIONS,
   ...KEYWORD_LIST_OPERATIONS,
+  ...AI_OVERVIEW_OPERATIONS,
   {
     id: "serp_google_organic",
     question: "Where does a website rank on Google for a given search, and who else is on that page?",
@@ -174,7 +177,10 @@ export const SEO_OPERATIONS: readonly SeoOperation[] = [
     // results is charged as one page: $0.0006 a page in the standard queue,
     // so a check of a hundred is up to $0.006 — read from their docs and
     // pricing page on 2026-09-24, to be confirmed on the first charged check.
-    fixed: { depth: 100 },
+    // An AI Overview Google loads after the page is waited for, or the check
+    // misses it: $0.0006 more a check (docs, 2026-09-27; Anthony, "do them
+    // all", sites-data-completeness-plan.md §8.5).
+    fixed: { depth: 100, load_async_ai_overview: true },
     params: {
       keyword: {
         kind: "keyword",
@@ -231,6 +237,10 @@ export const SEO_OPERATIONS: readonly SeoOperation[] = [
     mode: "LIVE",
     path: "/v3/dataforseo_labs/google/ranked_keywords/live",
     costBand: "medium",
+    // The hundred bringing the most visits, as the full list is ordered, so
+    // the everyday call is the list's first rows rather than any hundred
+    // (sites-data-completeness-plan.md, B7).
+    fixed: { order_by: ["ranked_serp_element.serp_item.etv,desc"] },
     params: {
       target: {
         kind: "host",
@@ -240,7 +250,7 @@ export const SEO_OPERATIONS: readonly SeoOperation[] = [
       limit: {
         kind: "number",
         required: false,
-        description: "How many keywords to return. Leave unset for 100.",
+        description: "How many rows to return. Leave unset for 100.",
         default: 100,
       },
       location_code: {
@@ -346,6 +356,12 @@ export const SEO_OPERATIONS: readonly SeoOperation[] = [
     mode: "LIVE",
     path: "/v3/backlinks/summary/live",
     costBand: "medium",
+    // Each breakdown — countries, domain endings, kinds of site, link types and
+    // attributes — whole, not the supplier's ten largest: "Where links come
+    // from" gives shares of every link. Charged per request, so free
+    // (docs.dataforseo.com/v3/backlinks/summary/live, read 2026-09-27;
+    // sites-data-completeness-plan.md, §4.H).
+    fixed: { internal_list_limit: 1000 },
     params: {
       target: {
         kind: "host",
@@ -496,6 +512,21 @@ export function seoSiteOperationParams(
  * as it always was, and its old pulls are still the same question.
  */
 export type SeoPlace = { locationCode?: number };
+
+/**
+ * What goes to DataForSEO for what was asked. The Labs answer for countries
+ * only — "Country is the only supported location_type"
+ * (docs.dataforseo.com/v3/dataforseo_labs/locations_and_languages, read
+ * 2026-09-27) — so a site placed in a city is asked the city's country. What
+ * was asked stays the city: it is the purchase the request is one of, and the
+ * place its answer is filed under, where the site's screens read it
+ * (sites-data-completeness-plan.md, B10).
+ */
+export function argsToSend(operation: Pick<SeoOperation, "family">, asked: Record<string, unknown>): Record<string, unknown> {
+  if (operation.family !== "DataForSEO Labs" || typeof asked.location_code !== "number") return asked;
+  const country = countryCodeOf(asked.location_code);
+  return country === asked.location_code ? asked : { ...asked, location_code: country };
+}
 
 /** The operation that checks where every site ranks for one search. */
 export const SEO_KEYWORD_CHECK_OPERATION = "serp_google_organic";

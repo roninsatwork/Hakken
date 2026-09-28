@@ -32,7 +32,9 @@ export type SiteRecord =
   | { kind: "rival"; rivalId: string }
   | { kind: "domain"; domain: string }
   | { kind: "anchor"; anchor: string }
-  | { kind: "problem"; check: string };
+  | { kind: "problem"; check: string }
+  /** One square of Position bands' grid: the searches that moved from one band to another, `from.to`. */
+  | { kind: "bandMove"; move: string };
 
 type RecordAddress = { segment: string; key: string; parent: SitePage["id"] };
 
@@ -46,6 +48,7 @@ const RECORDS: Record<SiteRecord["kind"], RecordAddress> = {
   domain: { segment: "backlinks/domains/domain", key: "domain", parent: "backlinksDomains" },
   anchor: { segment: "backlinks/anchors/anchor", key: "anchor", parent: "backlinksAnchors" },
   problem: { segment: "audit/problem", key: "check", parent: "siteAudit" },
+  bandMove: { segment: "keywords/bands/moved", key: "move", parent: "keywordsBands" },
 };
 
 /** The address key holding the way back. */
@@ -76,6 +79,8 @@ function identityOf(record: SiteRecord): string {
       return record.anchor;
     case "problem":
       return record.check;
+    case "bandMove":
+      return record.move;
   }
 }
 

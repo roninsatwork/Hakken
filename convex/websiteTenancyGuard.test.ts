@@ -76,11 +76,11 @@ describe("the shared website record stays behind its join rows", () => {
     expect(source).toContain("export async function requireCompanyWebsite");
     expect(source).toContain('.query("companyWebsites")');
     // Entitlement is what the company holds, owned or tracked, and nothing
-    // else. It walked the competition graph for a while, so a rival another
-    // company had asserted against a shared host was entitled too — and this
-    // door is what lets the agent ask for a pull, so that assertion could spend
-    // this company's money. The graph is for reading and suggesting.
-    expect(source).not.toContain('.query("websiteRivals")');
+    // else. It walked a shared competition graph for a while, so a rival
+    // another company had asserted against a shared host was entitled too —
+    // and this door is what lets the agent ask for a pull, so that assertion
+    // could spend this company's money. The graph itself went on 2026-09-28.
+    expect(source).not.toMatch(/websiteRivals/);
   });
 });
 
@@ -96,9 +96,7 @@ describe("the shared website record stays behind its join rows", () => {
  * belong to, and every screen reads them through it. Two checks, one on the
  * shape of the rows and one on the direction of every read:
  *
- * - the list tables and the AI lines name their hold, and the competition
- *   graph — a fact about a market, never shown to another company — still
- *   names no company;
+ * - the list tables and the AI lines name their hold;
  * - a read of them that is not through a hold (`by_hold…`) happens only in
  *   the writers and purges that must find everyone who asked, which show
  *   nothing to anybody. A query that reads a list by website, search or
@@ -121,17 +119,9 @@ describe("a company's lists are read only through its own hold", () => {
     return schemaSource.slice(start, end > start ? end : start + 2000);
   };
 
-  test.each(["websiteQuestions", "websiteKeywords", "siteListAiDays"])("%s names the hold it belongs to", (table) => {
+  test.each(["websiteQuestions", "websiteKeywords", "siteListAiDays", "siteListQuestions", "siteListAiSummary"])("%s names the hold it belongs to", (table) => {
     expect(bodyOf(table), `${table} must carry companyWebsiteId, the hold its list belongs to.`)
       .toMatch(/\bcompanyWebsiteId: /);
-  });
-
-  test("the competition graph names no company", () => {
-    expect(
-      /\b(companyId|companyWebsiteId|tenantId|clientId|createdBy|ownerId)\b/.test(bodyOf("websiteRivals")),
-      "websiteRivals has a field naming a company. Who competes with whom is a fact about a market, "
-      + "shared on the host; which rivals a company watches belongs on companyWebsites.",
-    ).toBe(false);
   });
 
   /**
@@ -143,13 +133,12 @@ describe("a company's lists are read only through its own hold", () => {
     "seoKeywordChecks.ts",
     "websiteTrackingStats.ts",
     "siteKeywordList.ts",
-    "siteSummaries.ts",
     "websitePurge.ts",
     "privateListsMigration.ts",
     "websiteTrackingStatsMigration.ts",
   ]);
 
-  const READS_A_LIST = /\.query\(\s*["'](websiteQuestions|websiteKeywords|siteListAiDays)["']\s*\)([\s\S]{0,200})/g;
+  const READS_A_LIST = /\.query\(\s*["'](websiteQuestions|websiteKeywords|siteListAiDays|siteListQuestions|siteListAiSummary)["']\s*\)([\s\S]{0,200})/g;
 
   test("every other read of a list goes through a hold", () => {
     const files = readdirSync(CONVEX, { recursive: true, encoding: "utf8" })
@@ -168,6 +157,145 @@ describe("a company's lists are read only through its own hold", () => {
       offenders,
       "A list read by website, search or question outside the writers and purges. Read a company's "
       + "list through its hold with holdLists.ts, so no screen can reach another company's.",
+    ).toEqual([]);
+  });
+});
+
+/**
+ * The third rule: a website's Search Console is its company's alone
+ * (docs/plans/active/search-console-plan.md §3). Unlike what is collected
+ * about a host, Google's figures for a site belong to whoever connected it —
+ * another company holding the same host has no right to them — so every table
+ * names the hold it belongs to, and is read through it.
+ *
+ * The connection is also found by its sign-in's state (the return from
+ * Google), by its status (the daily job) and by its Google account (whether a
+ * grant is still in use before it is revoked). Those lookups live in the two
+ * Search Console modules and show nothing to anybody. The tokens are read by
+ * those two modules alone.
+ */
+describe("Search Console is read only through the company's own hold", () => {
+  const schemaSource = readFileSync(join(CONVEX, "searchConsoleSchema.ts"), "utf8");
+  const files = readdirSync(CONVEX, { recursive: true, encoding: "utf8" })
+    .filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts") && !file.startsWith("_generated"));
+
+  test.each(["searchConsoleConnections", "searchConsoleDays", "searchConsoleRows", "searchConsoleRuns"])("%s names the hold it belongs to", (table) => {
+    const start = schemaSource.indexOf(`${table}: defineTable({`);
+    expect(start, `${table} is not in searchConsoleSchema.ts. If it was renamed, rename it here too.`).toBeGreaterThan(-1);
+    const body = schemaSource.slice(start, schemaSource.indexOf(".index(", start));
+    expect(body, `${table} must carry companyWebsiteId, the hold it belongs to.`).toMatch(/\bcompanyWebsiteId: /);
+  });
+
+  const MODULES = new Set(["searchConsoleConnect.ts", "searchConsoleSync.ts"]);
+  const LOOKUPS = new Set(["by_pending_state", "by_status", "by_google_account"]);
+  const READS = /\.query\(\s*["'](searchConsoleConnections|searchConsoleDays|searchConsoleRows|searchConsoleRuns)["']\s*\)([\s\S]{0,200})/g;
+
+  test("every read goes through a hold, but the connection's own lookups", () => {
+    expect(files.length).toBeGreaterThan(200);
+    const offenders = files.flatMap((file) => {
+      const source = readFileSync(join(CONVEX, file), "utf8");
+      return Array.from(source.matchAll(READS)).flatMap((match) => {
+        const index = /withIndex\(\s*["']([a-z_]+)["']/.exec(match[2])?.[1] ?? "(no index)";
+        if (index.startsWith("by_hold") || (MODULES.has(file) && LOOKUPS.has(index))) return [];
+        return [`${file}: ${match[1]} read by ${index}`];
+      });
+    });
+    expect(
+      offenders,
+      "A Search Console read that is not through the company's hold. Find the site with requireMySite "
+      + "and read by its hold, so no screen can reach another company's Search Console.",
+    ).toEqual([]);
+  });
+
+  test("the tokens are read by the Search Console modules alone", () => {
+    const readers = files.filter((file) => /\.query\(\s*["']searchConsoleTokens["']\s*\)/.test(readFileSync(join(CONVEX, file), "utf8")));
+    expect(readers.sort()).toEqual([...MODULES].sort());
+  });
+});
+
+/**
+ * The fourth rule: what a company calls a website, and what it says its own
+ * business is, are its own (docs/plans/active/company-level-website-facts-plan.md).
+ * Anthony, 2026-09-28: *"i think these need to be set at the company level"* —
+ * until then they sat on the shared website record, set once for everyone
+ * watching the host.
+ *
+ * A profile names its hold and is read through it. The one read across
+ * companies is the answer parser's: an answer is bought once, read against
+ * every name any company holds, and each company counts only its own names'
+ * mentions (`answersSeenBy`, `holdNamedIn`). Nothing else may read them by
+ * website or across companies — that read is one careless edit from printing
+ * another company's names for a shared competitor.
+ */
+describe("a company's names and profile for a website are its own", () => {
+  const schemaSource = readFileSync(join(CONVEX, "holdProfileSchema.ts"), "utf8");
+  const files = readdirSync(CONVEX, { recursive: true, encoding: "utf8" })
+    .filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts") && !file.startsWith("_generated"));
+
+  test("a profile names the hold it belongs to", () => {
+    const start = schemaSource.indexOf("holdProfiles: defineTable({");
+    expect(start, "holdProfiles is not in holdProfileSchema.ts. If it was renamed, rename it here too.").toBeGreaterThan(-1);
+    expect(schemaSource.slice(start, schemaSource.indexOf(".index(", start))).toMatch(/\bcompanyWebsiteId: /);
+  });
+
+  test("every read goes through a hold, but the answer parser's one", () => {
+    expect(files.length).toBeGreaterThan(200);
+    const reads = /\.query\(\s*["']holdProfiles["']\s*\)([\s\S]{0,200})/g;
+    const offenders = files.flatMap((file) => Array.from(readFileSync(join(CONVEX, file), "utf8").matchAll(reads))
+      .flatMap((match) => {
+        const index = /withIndex\(\s*["']([a-z_]+)["']/.exec(match[1])?.[1] ?? "(no index)";
+        if (index === "by_hold" || (file === "holdProfiles.ts" && index === "by_has_brand_names")) return [];
+        return [`${file}: holdProfiles read by ${index}`];
+      }));
+    expect(
+      offenders,
+      "A profile read that is not through the company's hold. Read one with holdProfileOf or "
+      + "holdBrandNames in holdProfiles.ts, so no screen can reach another company's names.",
+    ).toEqual([]);
+  });
+
+  test("the shared website record carries none of them", () => {
+    const websites = readFileSync(join(CONVEX, "schema.ts"), "utf8");
+    const start = websites.indexOf("websites: defineTable({");
+    expect(start).toBeGreaterThan(-1);
+    const body = websites.slice(start, websites.indexOf(".index(", start));
+    expect(body, "The shared website record is the same for every company watching it: names and profile belong on holdProfiles.")
+      .not.toMatch(/\b(brandNames|sector|marketLabel|businessDescription): /);
+  });
+});
+
+/**
+ * The fifth rule: a fan-out query's first check is its company's own record
+ * (docs/plans/active/fan-out-opt-in-plan.md). The check itself is filed
+ * against the website for everyone, like any search's; the record of who
+ * asked is what lets a company read the result (`holdFirstCheck`), so it
+ * names its hold and is read through it — but by the filing, which finds
+ * every website a check answers for and shows nothing to anybody.
+ */
+describe("a fan-out query's first check is read only through its company's own hold", () => {
+  const schemaSource = readFileSync(join(CONVEX, "fanOutSchema.ts"), "utf8");
+  const files = readdirSync(CONVEX, { recursive: true, encoding: "utf8" })
+    .filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts") && !file.startsWith("_generated"));
+
+  test("the record names the hold it belongs to", () => {
+    const start = schemaSource.indexOf("fanOutFirstChecks: defineTable({");
+    expect(start, "fanOutFirstChecks is not in fanOutSchema.ts. If it was renamed, rename it here too.").toBeGreaterThan(-1);
+    expect(schemaSource.slice(start, schemaSource.indexOf(".index(", start))).toMatch(/\bholdId: /);
+  });
+
+  test("every read goes through a hold, but the filing's", () => {
+    expect(files.length).toBeGreaterThan(200);
+    const reads = /\.query\(\s*["']fanOutFirstChecks["']\s*\)([\s\S]{0,200})/g;
+    const offenders = files.flatMap((file) => Array.from(readFileSync(join(CONVEX, file), "utf8").matchAll(reads))
+      .flatMap((match) => {
+        const index = /withIndex\(\s*["']([a-z_]+)["']/.exec(match[1])?.[1] ?? "(no index)";
+        if (index.startsWith("by_hold") || (file === "seoKeywordChecks.ts" && index === "by_pull")) return [];
+        return [`${file}: fanOutFirstChecks read by ${index}`];
+      }));
+    expect(
+      offenders,
+      "A first check read that is not through the company's hold. Read one with holdFirstCheck in holdLists.ts, "
+      + "so no screen can show a company another company's fan-out queries.",
     ).toEqual([]);
   });
 });

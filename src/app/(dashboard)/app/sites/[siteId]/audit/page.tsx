@@ -76,6 +76,12 @@ export default function SiteAuditPage() {
   const pager = useSitePager(sorted, { isLoading: audit === undefined });
   const count = (wanted: Severity) => issues.filter((issue) => issue.severity === wanted).length;
   const points = (series?.[0]?.points ?? []).filter((point) => point.crawledPages !== undefined);
+  // What the crawl reached of the site: every page it found, or how many it
+  // found in all, as the supplier counted them (sites-data-completeness-plan.md, B8).
+  const pagesDetail = !audit ? null
+    : audit.pagesFound !== null
+      ? (audit.pagesFound > audit.pagesCrawled ? t("pagesFound", { found: formatNumber(audit.pagesFound) }) : t("pagesEvery"))
+      : audit.maxPages ? t("pagesOf", { max: formatNumber(audit.maxPages) }) : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -98,7 +104,7 @@ export default function SiteAuditPage() {
           <SiteFigure
             label={t("pages")}
             value={formatNumber(audit?.pagesCrawled)}
-            detail={audit?.maxPages ? <span className="text-muted">{t("pagesOf", { max: formatNumber(audit.maxPages) })}</span> : undefined}
+            detail={pagesDetail === null ? undefined : <span className="text-muted">{pagesDetail}</span>}
           />
           <SiteFigure label={t("errors")} value={audit ? String(count("ERROR")) : "–"} href={severityHref("ERROR")} />
           <SiteFigure label={t("warnings")} value={audit ? String(count("WARNING")) : "–"} href={severityHref("WARNING")} />

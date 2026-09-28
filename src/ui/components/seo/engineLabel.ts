@@ -22,6 +22,8 @@ export function useEngineLabel() {
     if (engine === "claude") return t("claude");
     if (engine === "gemini") return t("gemini");
     if (engine === "perplexity") return t("perplexity");
+    // Not an engine asked our questions: the searches Google's AI Overviews ran (FA8).
+    if (engine === "google_ai_overview") return t("googleAiOverview");
     return engine;
   };
 }

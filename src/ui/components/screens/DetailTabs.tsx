@@ -67,6 +67,9 @@ function isActiveDropdownItem(
 
 const MENU_WIDTH = 240;
 
+/** As wide as a menu grows for a long entry's name, rather than cutting it short. */
+const MENU_MAX_WIDTH = 320;
+
 export function DetailTabs({ tabs, rootHref }: AdminDetailTabsProps) {
   const t = useTranslations("ui.detailTabs");
   const pathname = usePathname() || rootHref;
@@ -93,7 +96,7 @@ export function DetailTabs({ tabs, rootHref }: AdminDetailTabsProps) {
     const rect = trigger.getBoundingClientRect();
     setAnchor({
       top: rect.bottom + 8,
-      left: Math.max(8, Math.min(rect.left, window.innerWidth - MENU_WIDTH - 8)),
+      left: Math.max(8, Math.min(rect.left, window.innerWidth - MENU_MAX_WIDTH - 8)),
     });
   }, []);
 
@@ -183,7 +186,7 @@ export function DetailTabs({ tabs, rootHref }: AdminDetailTabsProps) {
                 <div
                   ref={menuRef}
                   role="menu"
-                  style={{ top: anchor.top, left: anchor.left, width: MENU_WIDTH }}
+                  style={{ top: anchor.top, left: anchor.left, minWidth: MENU_WIDTH, maxWidth: MENU_MAX_WIDTH }}
                   className={cn(
                     "fixed overflow-hidden rounded-[10px] border border-border-dim bg-card shadow-2xl",
                     // A menu opened out of page chrome, so it must clear every

@@ -100,7 +100,10 @@ describe("a company's searches and questions are its own", () => {
     });
     for (const websiteId of [site, nashOwn.websiteId]) {
       await t.mutation(internal.siteSummaries.syncDays, { websiteId, locationCode: UK, fromDay: "2026-09-01", toDay: DAY });
+      await t.action(internal.siteListAiDays.syncWindow, { websiteId, locationCode: UK, fromDay: "2026-09-01", toDay: DAY });
     }
+    // And each list counted from its answers, as filing them would have (`siteListAi.ts`).
+    for (const list of [kordaHold, agencyHold, nashOwn]) await t.action(internal.siteListAi.recountList, { holdId: list.holdId });
 
     const asKorda = await member(t, korda);
     const asAgency = await member(t, agency);

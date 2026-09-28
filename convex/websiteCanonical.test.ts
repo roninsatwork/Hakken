@@ -92,6 +92,31 @@ describe("a company's questions", () => {
     expect(await listed(theirs)).toBe(1);
   });
 
+  test("a question's words and assistants can be changed, the assistants kept in the house order, never none", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const website = await seedWebsite(t, "ronins.co.uk");
+    const hold = await seedHold(t, website, "Ronins");
+    const questionId = await admin.mutation(api.websiteCanonical.addWebsiteQuestion, {
+      companyWebsiteId: hold, prompt: "who is the best branding agency in Leeds", engines: ["chatgpt"],
+    });
+
+    await admin.mutation(api.websiteCanonical.editWebsiteQuestion, {
+      questionId, prompt: "who is the best branding agency in Leeds", engines: ["claude", "chatgpt"],
+    });
+    let row = await t.run(async (ctx) => await ctx.db.get(questionId));
+    expect([row?.prompt, row?.engines]).toEqual(["who is the best branding agency in Leeds", ["chatgpt", "claude"]]);
+
+    await admin.mutation(api.websiteCanonical.editWebsiteQuestion, { questionId, prompt: "who is the best branding agency in  Leeds, UK" });
+    row = await t.run(async (ctx) => await ctx.db.get(questionId));
+    expect([row?.prompt, row?.engines]).toEqual(["who is the best branding agency in Leeds, UK", ["chatgpt", "claude"]]);
+
+    await expect(admin.mutation(api.websiteCanonical.editWebsiteQuestion, { questionId, prompt: "who is the best branding agency in Leeds, UK", engines: [] }))
+      .rejects.toThrow(/at least one assistant/);
+    const edits = await t.run(async (ctx) => (await ctx.db.query("auditLogs").collect()).filter((entry) => entry.actionType === "EDIT_WEBSITE_QUESTION"));
+    expect(edits).toHaveLength(2);
+  });
+
   test("a company sees only its own questions", async () => {
     const t = harness();
     const admin = await superAdmin(t);

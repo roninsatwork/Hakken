@@ -7,7 +7,6 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { GAP_KEYWORDS_PER_RIVAL } from "@/convex/utils/siteShapes";
 import { CUT_COLUMN, IntentPill, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { formatNumber } from "../../../_components/siteFormat";
@@ -61,7 +60,7 @@ export default function SiteContentGapPage() {
         icon={<Puzzle className="h-5 w-5 text-brand" />}
         title={t("title")}
         description={t("description")}
-        pills={<span className="text-[12px] text-secondary">{t("ceiling", { count: formatNumber(GAP_KEYWORDS_PER_RIVAL) })}</span>}
+        pills={<span className="text-[12px] text-secondary">{t("ceiling")}</span>}
       />
       <DataTable
         rows={table.pageRows}

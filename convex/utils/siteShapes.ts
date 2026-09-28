@@ -90,6 +90,95 @@ export const engineDayValidator = v.object({
 });
 export type EngineDay = Infer<typeof engineDayValidator>;
 
+/**
+ * The last entry of a links breakdown in which each link is counted once —
+ * by country, domain ending or kind of link — adding up every group past the
+ * largest few, so shares of it are shares of all the links
+ * (docs/plans/active/sites-audit-fixes-plan.md, 2.3).
+ */
+export const BREAKDOWN_REST = "(rest)";
+
+/** How the newest answer to a question treated a website it named. */
+export const newestStanceValidator = v.union(v.literal("RECOMMENDED"), v.literal("NAMED"), v.literal("WARNED_AGAINST"));
+export type NewestStance = Infer<typeof newestStanceValidator>;
+
+/**
+ * How an answer treated a website, in one order everywhere: the warning
+ * first, as Mentions has always read it, then a recommendation, then a plain
+ * mention. An answer can recommend a website and warn against it at once, and
+ * Mentions, Full answers and the answers download used to call that answer
+ * two different things (docs/plans/active/sites-audit-fixes-plan.md, 4.6).
+ */
+export function answerStance(
+  answer: { named: readonly string[]; recommended: readonly string[]; warnedAgainst: readonly string[] } | null | undefined,
+  websiteId: string,
+): NewestStance | "NOT_NAMED" {
+  if (answer?.warnedAgainst.includes(websiteId)) return "WARNED_AGAINST";
+  if (answer?.recommended.includes(websiteId)) return "RECOMMENDED";
+  if (answer?.named.includes(websiteId)) return "NAMED";
+  return "NOT_NAMED";
+}
+
+/**
+ * How one engine's latest answers to one of a company's questions treated one
+ * website of its group (`siteListQuestions`): how many named it, recommended
+ * it and warned against it, and how the newest answer did.
+ */
+export const questionSiteValidator = v.object({
+  websiteId: v.id("websites"),
+  named: v.number(),
+  recommended: v.number(),
+  warnedAgainst: v.number(),
+  /** The day of the newest answer that named it. */
+  lastNamedDay: v.optional(v.string()),
+  /** How the newest answer treated it, when that answer named it. */
+  newest: v.optional(newestStanceValidator),
+});
+export type QuestionSite = Infer<typeof questionSiteValidator>;
+
+/** One engine's latest answers to one of a company's questions: how many, the newest's day, and the group's websites they named. */
+export const questionEngineValidator = v.object({
+  engine: aiEngineValidator,
+  asked: v.number(),
+  lastDay: v.string(),
+  sites: v.array(questionSiteValidator),
+});
+export type QuestionEngine = Infer<typeof questionEngineValidator>;
+
+/**
+ * One engine's answers to a company's whole list (`siteListAiSummary`): how
+ * many, the newest day, how often each website of the group was named, and
+ * which of them the newest answer to any question named.
+ */
+export const listEngineValidator = v.object({
+  engine: aiEngineValidator,
+  asked: v.number(),
+  lastDay: v.string(),
+  named: v.array(v.object({ websiteId: v.id("websites"), times: v.number() })),
+  newestNamed: v.array(v.id("websites")),
+});
+export type ListEngine = Infer<typeof listEngineValidator>;
+
+/**
+ * A website outside a list's group that its answers keep naming: how often,
+ * and when last — what Suggested competitors offers as "named by AI".
+ */
+export const namedOtherValidator = v.object({
+  websiteId: v.id("websites"),
+  host: v.string(),
+  times: v.number(),
+  lastDay: v.string(),
+});
+export type NamedOther = Infer<typeof namedOtherValidator>;
+
+/** How many of one website's pages the answers to a company's questions link to, in all and per engine. */
+export const listCitedValidator = v.object({
+  websiteId: v.id("websites"),
+  pages: v.number(),
+  engines: v.array(v.object({ engine: aiEngineValidator, pages: v.number() })),
+});
+export type ListCited = Infer<typeof listCitedValidator>;
+
 /** One group of a site's searches: how many, and the visits a month they bring. */
 const intentShareValidator = v.object({ searches: v.number(), visits: v.number() });
 
@@ -184,6 +273,7 @@ export function kdBandFor(difficulty: number | undefined): KdBand | undefined {
 export const rankedPositionValidator = v.object({
   keyword: v.string(),
   position: v.optional(v.number()),
+  pagePosition: v.optional(v.number()),
   url: v.optional(v.string()),
   searchVolume: v.optional(v.number()),
   cpc: v.optional(v.number()),
@@ -325,6 +415,8 @@ export const runReportFields = {
     requests: v.number(),
     costUsd: v.number(),
     answering: v.number(),
+    /** Of its cost, what was bought on every run as the everyday check, rather than on its own cadence. */
+    everyRunCostUsd: v.optional(v.number()),
   })),
   /** A website's requests; the ones asked about several websites at once have no website. */
   bySite: v.array(v.object({

@@ -65,10 +65,14 @@ export default function SiteRivalPage() {
   const asked = useRecordKey("rival");
   const [lead, setLead] = useSiteParam<Lead>("lead", "THEM", LEADS);
 
-  const hold = site?.holds.find((entry) => entry.siteId === asked && entry.siteId !== site.siteId) ?? null;
+  // Only a website beside this one — its group — has a comparison; any other,
+  // even one the company holds, is not found here rather than an error.
+  const hold = site?.rivals.find((entry) => entry.siteId === asked) ?? null;
   const rivalId = hold ? (hold.siteId as Id<"companyWebsites">) : null;
   const figures = useQuery(api.siteCharts.siteAndRivals, rivalId ? { siteId } : "skip");
   const rivals = useQuery(api.siteCompetitors.listRivals, rivalId ? { siteId } : "skip");
+  // Searches shared across everything both rank for: the list below is the part in both kept lists (§4.D3).
+  const sharedInAll = useQuery(api.siteDiscovery.sharedWithRival, rivalId ? { siteId, rivalId } : "skip");
   const order = useSiteSort(SORTS, "theirVisits");
   const table = useSiteListPage(
     api.siteRecords.sharedSearches,
@@ -123,7 +127,16 @@ export default function SiteRivalPage() {
             onChange={setLead}
           />
         }
-        cardHeader={<SiteTableBar footer={table.footer} noun="searches" title={t("tableTitle")} description={t("tableHint")} />}
+        cardHeader={<SiteTableBar
+          footer={table.footer}
+          noun="searches"
+          title={t("tableTitle")}
+          description={sharedInAll && hold
+            ? (lead === "ALL" && table.result && table.result.total < sharedInAll
+              ? t("sharedHeldOf", { held: formatNumber(table.result.total), total: formatNumber(sharedInAll) })
+              : t("sharedOf", { total: formatNumber(sharedInAll), rival: hold.host }))
+            : t("tableHint")}
+        />}
         empty={{ icon: <Swords className="h-8 w-8 text-muted/30" />, label: t("empty") }}
         footer={table.footer}
         sort={order.tableSort}
@@ -132,7 +145,7 @@ export default function SiteRivalPage() {
             key: "keyword",
             header: t("columns.keyword"),
             sortable: true,
-            className: CUT_COLUMN.only,
+            className: CUT_COLUMN.first,
             cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell>,
           },
           { key: "theirs", header: t("columns.theirs"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[13px] text-foreground">{row.theirPosition}</span> },

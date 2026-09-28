@@ -704,7 +704,7 @@ row that says so must not be described as though it exists.
 | DataForSEO connection | Not built. No AI Optimization, SERP, Keywords or Labs integration. Phase 0's sandbox test (billable rows, UK coverage, cited-versus-chosen) has not been run. |
 | Cited vs chosen monitoring | Not built. No per-engine monitoring record, no "share of AI decisions" metric. |
 | Prompt panels | Not built. No buyer-intent derivation, no target-blind variant generation, no contamination QA, no panel versioning with separate aided/unaided denominators. |
-| Search Console / GA4 / Bing Webmaster | Not built. No OAuth connection, no query/click/impression or session/conversion ingestion. These are the results column of the P&L and are ring-one, phase-one scope. |
+| Search Console / GA4 / Bing Webmaster | Search Console started 2026-09-27 (docs/plans/active/search-console-plan.md): an owned website's admin can connect its Search Console with Google, and a daily job collects its clicks, impressions, click-through rate and position — totals, and every search, page, country and device by day, sixteen months back. A Search Console section in the main navigation shows it: each own website's performance, searches, pages, countries and devices. Nothing is connected until the Google app is set up. GA4 and Bing Webmaster not built: no session/conversion ingestion. These are the results column of the P&L and are ring-one, phase-one scope. |
 | Google Business Profile | Not built. The API access application (60-day verified profile, approval lead time) has not been started and is a day-one action per the data-sources report. |
 | Own-site crawler | Not built. Knowledge ingestion can fetch a URL; there is no owned-site crawl, no change detection, no schema or llms.txt audit. |
 | Directory and listing read/write | Not built. No scrapers, no browser agents, no credential vault beyond the existing connector token storage, and no session-model alternative. The solicitor questions in the research-gaps report are unanswered. |
@@ -779,6 +779,24 @@ running against the Sonae deployment.
 ---
 
 ## Change Log
+
+* **2026-09-28** — **Limits on three levels: platform, company, website.**
+  System Settings gained a Limits tab holding the platform's number for every
+  limit — how much is bought, kept and shown — where every company starts; a
+  company uses the platform's until it picks its own, and a website its
+  company's. A company's and a website's Schedule and limits became two
+  screens, Schedules and Limits, the Limits screens reading word for word like
+  the platform's. The seven caps that were fixed in code are choices too:
+  competitors collected per website on all three levels, and six the platform
+  alone sets because every company shares what they limit.
+  Fan-out "angles" are called topics on every screen
+  (docs/plans/active/platform-limits-plan.md).
+
+* **2026-09-27** — **Search Console**, the first real results for an owned
+  website, started: connecting with Google from the site, and a daily job that
+  collects every search and page by day, sixteen months back, and its own
+  section in the main navigation to read them. Nothing is connected until the
+  Google app is set up.
 
 * **2026-09-21 (later)** — The first piece of Hakken's own product surface: the
   **website record**. A website is stored once, keyed on its normalised host, so

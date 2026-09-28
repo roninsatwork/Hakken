@@ -605,7 +605,8 @@
     "roninsRun3D": "Ronin's Run 3D",
     "badgeWaiting": "{count} in attesa",
     "billing": "Fatturazione",
-    "sites": "Siti"
+    "sites": "Siti",
+    "searchConsole": "Search Console"
   },
   "header": {
     "adminOverview": "Protocollo Infrastruttura",
@@ -1116,9 +1117,6 @@
           "dashboard": "Pannello",
           "overview": "Panoramica",
           "websites": "Siti web",
-          "companyWebsites": "Siti web",
-          "dataCollection": "Programma di raccolta",
-          "collectionRuns": "Esecuzioni della raccolta",
           "directory": "Rubrica",
           "invites": "Inviti",
           "ai": "AI",
@@ -1375,14 +1373,14 @@
     },
     "companyWebsites": {
       "title": "Siti web",
-      "subtitle": "Tutti i siti che questa azienda possiede o osserva. Aprine uno per vedere come sta andando.",
+      "subtitle": "Ogni sito che questa azienda possiede o segue: prima i suoi, ognuno seguito dai concorrenti confrontati con esso. Aprine uno per vedere come va.",
       "addWebsite": "Aggiungi sito web",
       "searchPlaceholder": "Cerca siti web...",
       "empty": "Nessun sito web. Aggiungi il primo di questa azienda.",
       "emptySearch": "Nessun sito web corrisponde alla ricerca.",
       "websiteColumn": "Sito web",
       "heldAsColumn": "Tipo",
-      "collectionColumn": "Controllo",
+      "collectionColumn": "Prossimo controllo",
       "limitsColumn": "Limiti",
       "limitKeywords": "{count, number} parole chiave",
       "limitBacklinks": "{count, number} backlink",
@@ -1394,7 +1392,6 @@
       "sourceCompany": "programma dell'azienda",
       "sourceWebsite": "programma proprio",
       "sourcePair": "insieme a {host}",
-      "addedColumn": "Aggiunto il",
       "actionsColumn": "Azioni",
       "competitors": "{count, plural, =0 {ancora nessun concorrente} one {1 concorrente} other {# concorrenti}}",
       "notCollecting": "Non viene controllato",
@@ -1428,21 +1425,6 @@
       "movesColumn": "Da fare"
     },
     "companyWebsiteDetail": {
-      "limits": {
-        "title": "Limiti dei dati per questo sito",
-        "subtitle": "Quanti dati si conservano su questo sito. Lasciato su “Come l'azienda”, conserva ciò che indica la schermata Raccolta dati dell'azienda.",
-        "keywordsLabel": "Parole chiave conservate",
-        "keywordsDescription": "Le ricerche che portano più visite a questo sito, aggiornate ogni settimana.",
-        "backlinksLabel": "Backlink conservati",
-        "backlinksDescription": "Ogni link verso questo sito, dai più forti, aggiornati ogni settimana.",
-        "follow": "Come l'azienda ({count, number})",
-        "keywordsChoice": "{count, number} parole chiave",
-        "backlinksChoice": "{count, number} backlink",
-        "appliesNext": "Le modifiche valgono dal prossimo aggiornamento settimanale di questo sito.",
-        "save": "Salva i limiti",
-        "saved": "Limiti salvati",
-        "saveFailed": "Non è stato possibile salvare i limiti."
-      },
       "loading": "Caricamento sito web...",
       "notFound": "Sito web non trovato",
       "settingsTitle": "Con quale frequenza, e da dove",
@@ -1500,38 +1482,23 @@
       "summaryOwn": "{host} e i suoi concorrenti vengono raccolti {schedule}.",
       "summaryFollows": "{host} segue {company}: {schedule}.",
       "nothingScheduled": "Non viene raccolto nulla per {host}.",
+      "saved": "Salvato",
       "askedLive": "Ogni motore viene interrogato in diretta, quattro volte più economico della coda: non c'è un metodo da scegliere."
     },
     "siteView": {
       "loading": "Caricamento sito...",
       "notFound": "Questo sito non appartiene più a questa azienda.",
-      "back": "Torna ai siti",
-      "settings": "Impostazioni",
-      "record": "Scheda del sito",
-      "notCollecting": "Non viene controllato",
-      "collectingNext": "{schedule} · prossimo {when}",
-      "collectedWith": "Controllato con {host}",
-      "watchedFrom": "Osservato da {place}",
-      "trackedPaired": "Confrontato con {host}, controllato lo stesso giorno e dallo stesso luogo.",
       "competitorsOwnedOnly": "Questo sito è a sua volta un concorrente, quindi qui non ha concorrenti propri.",
-      "tabs": {
-        "overview": "Panoramica",
-        "competitors": "Concorrenti",
-        "results": "Risultati",
-        "rankings": "Posizionamenti"
-      },
       "paired": {
-        "title": "Come viene osservato",
-        "subtitle": "Il sito di un concorrente che questa azienda osserva. Viene confrontato sulle ricerche e sulle domande del tuo sito.",
         "compare": "Guarda il confronto con {host}",
         "alone": "Non ancora confrontato con nessuno dei tuoi siti. Abbinalo a uno per confrontarli."
       },
       "overview": {
-        "title": "Come sta andando",
-        "lastChecked": "Ultimo controllo {when}.",
-        "neverChecked": "Non ancora controllato.",
-        "searches": "Ricerche Google",
-        "questions": "Domande all'AI",
+        "title": "Da fare",
+        "lastChecked": "Come va {host}, e cosa fare dopo. Ultimo controllo {when}.",
+        "neverChecked": "Come va {host}, e cosa fare dopo. Non ancora controllato.",
+        "searches": "Parole chiave seguite",
+        "questions": "I tuoi prompt",
         "rivals": "Concorrenti",
         "searchesEmpty": "Nessuna. Aggiungi le ricerche che i tuoi clienti fanno su Google.",
         "questionsEmpty": "Nessuna. Aggiungi le domande che i tuoi clienti fanno a ChatGPT e agli altri.",
@@ -1541,7 +1508,7 @@
         "seeAnswers": "Vedi le risposte",
         "seeCompetitors": "Vedi i concorrenti",
         "ownLists": "Queste ricerche e domande sono di questa azienda: nessun'altra azienda che osserva {host} può vederle.",
-        "editLists": "Aggiungile o modificale in Risultati",
+        "editLists": "Aggiungile o cambiale in Cosa seguiamo",
         "parts": {
           "dropping": "{count} in calo",
           "pageOne": "{count} in prima pagina",
@@ -1558,16 +1525,8 @@
           "quiet": "{count} non compaiono più"
         }
       },
-      "results": {
-        "label": "Risultati",
-        "searches": "Le tue ricerche",
-        "questions": "Domande all'AI",
-        "answers": "Risposte AI",
-        "rankings": "Tutto ciò per cui si posiziona",
-        "fanOut": "Cosa ha cercato l'AI"
-      },
       "searches": {
-        "title": "Le tue ricerche Google",
+        "title": "Parole chiave seguite",
         "subtitle": "Le ricerche di questa azienda, controllate da {place}: nessun'altra azienda che osserva il sito le vede. Prima quelle in calo.",
         "searchPlaceholder": "Trova una ricerca...",
         "noMatch": "Nessuna ricerca corrisponde.",
@@ -1602,38 +1561,6 @@
         "errors": {
           "addFailed": "Non è stato possibile seguire quella ricerca. Riprova.",
           "toggleFailed": "Non è stato possibile modificare quella ricerca. Riprova."
-        }
-      },
-      "questions": {
-        "title": "Domande all'AI",
-        "subtitle": "Le domande che facciamo a ChatGPT, Perplexity, Gemini e Claude per vedere se menzionano questa attività. Sono di questa azienda: nessun'altra azienda che osserva il sito le vede.",
-        "addLabel": "Una domanda che un cliente potrebbe fare a un'AI",
-        "addPlaceholder": "qual è la migliore agenzia di branding a Leeds",
-        "add": "Aggiungi",
-        "searchPlaceholder": "Cerca fra queste domande...",
-        "empty": "Nessuna domanda, quindi a nessuna AI viene chiesto di questo sito per questa azienda.",
-        "noMatch": "Nessuna domanda corrisponde.",
-        "promptColumn": "Domanda",
-        "enginesColumn": "Chiesta a",
-        "stateColumn": "Stato",
-        "actionsColumn": "Azioni",
-        "active": "In corso",
-        "paused": "In pausa",
-        "pause": "Metti in pausa",
-        "resume": "Riprendi",
-        "remove": "Rimuovi questa domanda",
-        "asked": "{count, plural, =0 {Non si chiede nulla} one {# risposta raccolta ogni volta} other {# risposte raccolte ogni volta}}",
-        "live": "Ogni AI selezionata viene interrogata separatamente.",
-        "engines": {
-          "chatgpt": "ChatGPT",
-          "perplexity": "Perplexity",
-          "gemini": "Gemini",
-          "claude": "Claude"
-        },
-        "errors": {
-          "addFailed": "Non è stato possibile aggiungere quella domanda. Riprova.",
-          "toggleFailed": "Non è stato possibile modificare quella domanda. Riprova.",
-          "removeFailed": "Non è stato possibile rimuovere quella domanda. Riprova."
         }
       },
       "competitors": {
@@ -1684,7 +1611,8 @@
           "NAME": "Nome",
           "SLIPPING_SEARCH": "In calo",
           "DEAD_QUESTION": "Non funziona",
-          "UNTRACKED_SEARCH": "Ricerca mancata"
+          "UNTRACKED_SEARCH": "Ricerca mancata",
+          "MISSING_ANGLE": "Argomento mancante"
         },
         "rival": {
           "title": "{host} è stato menzionato in {times} risposte AI",
@@ -1720,6 +1648,12 @@
         },
         "errors": {
           "failed": "Impossibile farlo. Riprova."
+        },
+        "missing": {
+          "title": "Nessuna pagina per “{query}”",
+          "detail": "L'IA l'ha cercata {times, plural, one {una volta} other {# volte}} per “{prompt}”. Nessuna pagina del sito risponde.",
+          "take": "Pagina scritta",
+          "dismiss": "Ignora"
         }
       },
       "removeSearch": {
@@ -1729,6 +1663,52 @@
         "confirm": "Smetti di controllare",
         "removing": "Rimozione in corso...",
         "failed": "Impossibile rimuovere la ricerca. Riprova."
+      },
+      "profile": {
+        "title": "Nomi e profilo",
+        "subtitle": "I nomi con cui è conosciuta questa attività, cercati nelle risposte delle IA, e cos'è l'attività, letto dalle valutazioni IA.",
+        "subtitleCompetitor": "I nomi con cui è conosciuto {host}, cercati nelle risposte delle IA: una menzione con uno di questi conta per questo concorrente.",
+        "ownNotice": "Solo di questa azienda: nessun'altra azienda che segue {host} vede questi nomi o questo profilo, e ciascuna imposta i propri.",
+        "notFound": "Questo sito non è più tra quelli di questa azienda.",
+        "brands": {
+          "title": "Nomi del marchio",
+          "subtitle": "I nomi che le persone usano per questa attività. Li cerchiamo nelle risposte delle IA. Segna come errore di ortografia una grafia sbagliata, e verrà contata a parte.",
+          "nameLabel": "Nome {number}",
+          "placeholder": "Il nome con cui si chiama questo sito",
+          "makePrimary": "Rendilo il nome principale",
+          "removeName": "Rimuovi questo nome",
+          "markMisspelling": "Segna come errore di ortografia",
+          "mainIsCorrect": "Il nome principale è sempre corretto",
+          "addName": "Aggiungi un nome ({used} di {max})",
+          "shortNameWarning": "Due parole sono molto più sicure di una. Una sola parola breve trova testo che parla d'altro.",
+          "save": "Salva i nomi",
+          "saved": "Salvati",
+          "errors": {
+            "saveFailed": "Impossibile salvare questi nomi. Riprova."
+          }
+        },
+        "business": {
+          "title": "Cos'è questa attività",
+          "subtitle": "Letto dalle valutazioni IA: se un sito è un vero concorrente, e quale pagina risponde a una ricerca.",
+          "sectorLabel": "Settore",
+          "sectorPlaceholder": "Branding e design",
+          "marketLabel": "Dove vende",
+          "marketPlaceholder": "Yorkshire, Regno Unito",
+          "descriptionLabel": "Cosa fa l'attività",
+          "descriptionHint": "Una o due frasi: cosa vende, e a chi. Le valutazioni IA fatte per questa azienda la leggono.",
+          "descriptionPlaceholder": "Agenzia di crescita digitale: web design, prodotti IA e creazione di startup per aziende britanniche.",
+          "save": "Salva il profilo",
+          "saved": "Salvato",
+          "errors": {
+            "saveFailed": "Impossibile salvare questo profilo. Riprova."
+          }
+        }
+      },
+      "schedulesPage": {
+        "title": "Programmi",
+        "subtitle": "Quanto spesso {host} viene raccolto, e da dove. Ciò che segue l’azienda mantiene il programma dell’azienda.",
+        "subtitleCompetitor": "Con quale dei siti propri dell’azienda {host} viene confrontato, e quindi quando viene raccolto.",
+        "record": "Chi altro segue {host}: la sua scheda condivisa"
       }
     },
     "companyDataCollection": {
@@ -1787,20 +1767,6 @@
         "standaloneHint": "Quanto costerebbe senza altri clienti che condividono i dati. Basa il prezzo su questo.",
         "saving": "Risparmiato · 30gg",
         "savingHint": "Servito con dati già pagati da un altro cliente."
-      },
-      "limits": {
-        "title": "Limiti dei dati",
-        "intro": "Quanti dati si conservano per ogni sito di questa azienda: i suoi siti e ogni concorrente che osserva. Più righe danno elenchi più completi da aprire nelle schermate Siti, e costano di più.",
-        "keywordsLabel": "Parole chiave conservate per sito",
-        "keywordsDescription": "Le ricerche che portano più visite a ogni sito, aggiornate ogni settimana. Circa 0,13 $ ogni 1.000 parole chiave a settimana; un sito con meno parole chiave costa solo quelle che ha.",
-        "backlinksLabel": "Backlink conservati per sito",
-        "backlinksDescription": "Ogni link verso ogni sito, dal più forte, aggiornati ogni settimana. Circa 0,04 $ ogni 1.000 link a settimana.",
-        "choice": "{count, number} per sito",
-        "usingDefaults": "Valori predefiniti: 1.000 parole chiave e 1.000 backlink per sito.",
-        "costNote": "Le modifiche valgono dal prossimo aggiornamento settimanale di ogni sito.",
-        "save": "Salva i limiti",
-        "saved": "Limiti salvati",
-        "saveFailed": "Non è stato possibile salvare i limiti."
       }
     },
     "collectionRuns": {
@@ -1992,6 +1958,11 @@
             "NOT_FILED": "Risposta arrivata, ma non archiviata",
             "TOO_LARGE": "Risposta troppo grande da conservare: non è stato archiviato nulla",
             "ROWS_LEFT_OFF": "{rows, plural, one {# riga lasciata} other {# righe lasciate}} fuori dalla fine dell’elenco per farlo stare"
+          },
+          "caps": {
+            "ceiling": "Questa esecuzione si è fermata al suo tetto di {ceiling} richieste, quindi alcuni siti non sono stati raccolti. La prossima esecuzione comincia da loro.",
+            "startedAfter": "Questa esecuzione è partita dai siti che l’ultima non aveva raggiunto al suo tetto, poi è passata agli altri.",
+            "competitors": "Più concorrenti di quanti un’esecuzione ne raccolga: {hosts}. Si raccolgono i primi {count} aggiunti per ciascuno; gli altri no."
           }
         }
       },
@@ -2031,7 +2002,7 @@
       },
       "newWebsite": "Nuovo: non ancora nel sistema.",
       "nextPull": "Prossimo scarico {when}",
-      "inherits": "Questo cliente parte da ciò che c'è già: {rivals, plural, =0 {nessun rivale} one {1 rivale} other {# rivali}} e {weeks, plural, =0 {ancora nessuno storico} one {1 settimana di storico} other {# settimane di storico}} — già pagato.",
+      "inherits": "Questo cliente parte da ciò che c'è già: {weeks, plural, =0 {ancora nessuno storico} one {1 settimana di storico} other {# settimane di storico}} — già pagato.",
       "watchersMany": "{count}+ aziende"
     },
     "websiteDetail": {
@@ -2064,63 +2035,10 @@
       },
       "nextPullAt": "Prossimo controllo {when}",
       "scheduled": "Pianificato",
-      "brands": {
-        "title": "Nomi del brand",
-        "subtitle": "I nomi con cui le persone chiamano questa attività. Li cerchiamo nelle risposte AI. Condivisi da tutte le aziende che osservano questo sito.",
-        "nameLabel": "Nome {number}",
-        "placeholder": "Il nome con cui si conosce il sito",
-        "makePrimary": "Imposta come nome principale",
-        "removeName": "Rimuovi questo nome",
-        "addName": "Aggiungi un nome ({used} di {max})",
-        "shortNameWarning": "Due parole sono molto più sicure di una. Una sola parola breve corrisponderà a testi che parlano d'altro.",
-        "save": "Salva i nomi",
-        "saved": "Salvato",
-        "errors": {
-          "saveFailed": "Non è stato possibile salvare questi nomi. Riprova."
-        }
-      },
       "tabs": {
-        "profile": "Profilo",
-        "competition": "Concorrenti noti",
         "watchers": "Osservato da"
       },
-      "sharedNotice": "Tutto qui è condiviso da tutte le aziende che osservano questo sito. Non vedono chi altro lo osserva. Le ricerche su Google e le domande all'AI di ogni azienda sono sue, e si impostano nella schermata di quell'azienda per il sito.",
-      "profile": {
-        "title": "Che cosa fa questa impresa",
-        "subtitle": "Ci aiuta a suggerire un primo insieme di ricerche e domande.",
-        "sectorLabel": "Settore",
-        "sectorPlaceholder": "Branding e design",
-        "marketLabel": "Dove vende",
-        "marketPlaceholder": "Yorkshire, Regno Unito",
-        "descriptionLabel": "Cosa fa l'attività",
-        "descriptionHint": "Una o due frasi: cosa vende e a chi. I giudizi dell'AI lo leggono per distinguere concorrenti reali, directory e ricerche pertinenti — per questo sito, e per lui ovunque compaia come concorrente di qualcuno.",
-        "descriptionPlaceholder": "Agenzia di crescita digitale: siti web, prodotti AI e venture building per aziende del Regno Unito, soprattutto a Londra e nel Surrey.",
-        "save": "Salva il profilo",
-        "saved": "Salvato",
-        "errors": {
-          "saveFailed": "Non è stato possibile salvare questo profilo. Riprova."
-        }
-      },
-      "competition": {
-        "title": "Concorrenti noti",
-        "subtitle": "Concorrenti visti per questo sito su tutta la piattaforma. Solo come riferimento — ogni azienda sceglie i propri concorrenti nella sua scheda Concorrenti.",
-        "addLabel": "Un concorrente già presente nel sistema",
-        "add": "Aggiungi",
-        "searchPlaceholder": "Cerca fra questi rivali...",
-        "empty": "Nessun concorrente noto per questo sito.",
-        "noMatch": "Nessun rivale corrisponde.",
-        "hostColumn": "Rivale",
-        "sourceColumn": "Come lo sappiamo",
-        "addedColumn": "Registrata",
-        "actionsColumn": "Azioni",
-        "asserted": "Aggiunto a mano",
-        "discovered": "Visto nei risultati",
-        "remove": "Rimuovi",
-        "errors": {
-          "addFailed": "Non è stato possibile registrare quella rivalità. Riprova.",
-          "removeFailed": "Non è stato possibile rimuovere quella rivalità. Riprova."
-        }
-      }
+      "factsMovedNotice": "Ogni azienda imposta i propri nomi, profilo dell'attività e concorrenti per questo sito, nella propria schermata del sito (Aziende → l'azienda → Siti → il sito → Profilo). Qui non c'è nulla di condiviso tra loro."
     },
     "workflows": {
       "title": "Workflow Autonomi",
@@ -4589,7 +4507,8 @@
         "diagnostics": "Diagnostica Sviluppatore",
         "selfImprovement": "Auto-Miglioramento",
         "approvals": "Finestra di Approvazione Agente",
-        "purgeHistory": "Cronologia Purge"
+        "purgeHistory": "Cronologia Purge",
+        "limits": "Limiti"
       },
       "selfImprovement": {
         "title": "Auto-miglioramento",
@@ -5630,6 +5549,7 @@
         "ai_citation_claude": "Chiesto a Claude",
         "ai_citation_gemini": "Chiesto a Gemini",
         "ai_citation_perplexity": "Chiesto a Perplexity",
+        "ai_overview_fan_out": "Cosa hanno cercato le AI Overview di Google",
         "backlinks_list": "Ogni sito che la collega",
         "backlinks_all": "Ogni link verso il sito",
         "backlinks_broken": "Link alle sue pagine non funzionanti",
@@ -5682,7 +5602,7 @@
     },
     "websiteCitations": {
       "subtitle": "Se questo sito viene nominato nelle risposte dell'AI, e come.",
-      "title": "Dove viene citato nelle risposte dell'IA",
+      "title": "Risposte IA",
       "searchPlaceholder": "Cerca per domanda...",
       "empty": "Nessuna risposta raccolta. Aggiungi una domanda al sito e la prossima raccolta la porrà.",
       "noMatch": "Nessun risultato per questa ricerca.",
@@ -5700,7 +5620,7 @@
     },
     "websiteKeywords": {
       "subtitle": "Le ricerche per cui questo sito si posiziona, dalla posizione migliore.",
-      "title": "Dove si posiziona",
+      "title": "Posizionamenti",
       "subtitlePlace": "Le ricerche per cui questo sito si posiziona da {place}, dalla posizione migliore.",
       "searchPlaceholder": "Cerca tra questi termini...",
       "empty": "Nulla di raccolto. La prossima raccolta leggerà per cosa si posiziona il sito.",
@@ -5720,32 +5640,436 @@
       "lastCheckedColumn": "Ultimo controllo"
     },
     "websiteFanOut": {
-      "subtitle": "Le ricerche che i motori AI eseguono quando ricevono le domande di questo sito.",
-      "title": "Cosa hanno cercato i motori",
-      "searchPlaceholder": "Cerca fra queste ricerche...",
-      "empty": "Ancora nulla. La prossima raccolta registrerà che cosa hanno cercato i motori.",
-      "noMatch": "Nessuna ricerca corrisponde.",
-      "queryColumn": "Che cosa ha cercato il motore",
-      "intentColumn": "Che cosa vogliono",
-      "enginesColumn": "Motori",
-      "timesColumn": "Volte viste",
-      "unjudged": "Non valutata",
       "intents": {
         "BUYING": "Pronto all'acquisto",
         "RESEARCHING": "Sta facendo ricerche",
         "BRANDED": "Cerca un'azienda",
         "IRRELEVANT": "Non c'entra nulla",
         "OTHER": "Troppo vaga per dirlo"
+      }
+    },
+    "companyAiLists": {
+      "websiteLabel": "Per quale sito",
+      "cut": "Mostrati i primi {count} tra i siti di questa azienda. Scegli un sito in cima al menu per vederli tutti.",
+      "questions": {
+        "addLabel": "Una domanda che un cliente potrebbe fare a un'IA",
+        "addPlaceholder": "qual è la migliore agenzia di branding a Leeds",
+        "add": "Aggiungi",
+        "asked": "{count, plural, =0 {Non viene chiesto nulla} one {# risposta raccolta ogni volta} other {# risposte raccolte ogni volta}}",
+        "live": "Ogni assistente scelto viene interrogato separatamente.",
+        "searchPlaceholder": "Cerca tra queste domande...",
+        "empty": "Nessuna domanda ancora, quindi nessuna IA viene interrogata sui siti di questa azienda.",
+        "noMatch": "Nessuna domanda corrisponde.",
+        "columns": {
+          "question": "Domanda",
+          "website": "Sito",
+          "askedOf": "Chiesta a",
+          "fanOut": "Query fan-out",
+          "added": "Aggiunta",
+          "state": "Stato",
+          "actions": "Azioni"
+        },
+        "fanOutCount": "{total} · {ticked} a ogni raccolta",
+        "asking": "Attiva",
+        "paused": "In pausa",
+        "pause": "Metti in pausa",
+        "resume": "Riprendi",
+        "remove": "Rimuovi questa domanda",
+        "errors": {
+          "addFailed": "Impossibile aggiungere la domanda. Riprova.",
+          "toggleFailed": "Impossibile modificare la domanda. Riprova.",
+          "removeFailed": "Impossibile rimuovere la domanda. Riprova.",
+          "editFailed": "Impossibile modificare la domanda. Riprova."
+        },
+        "description": "Cosa questa azienda chiede a ChatGPT, Perplexity, Gemini e Claude, per tutti i suoi siti. Solo di questa azienda: nessun'altra le vede.",
+        "descriptionOne": "Cosa questa azienda chiede a ChatGPT, Perplexity, Gemini e Claude su {host}. Solo di questa azienda: nessun'altra le vede.",
+        "askedOfLabel": "Chiesto a",
+        "showingOpen": "{start}–{end} di {total} · clicca una domanda per vedere e modificare le sue query fan-out",
+        "allowance": {
+          "title": "Prompt per {host}",
+          "of": "su {limit} usati",
+          "left": "{count, plural, one {Se ne può aggiungere ancora #.} other {Se ne possono aggiungere ancora #.}}",
+          "paused": "{count, plural, one {# prompt in pausa conta comunque.} other {# prompt in pausa contano comunque.}}",
+          "full": "Tutti i {limit} usati. Rimuovi un prompt, o alza il limite in Limiti, per aggiungerne un altro.",
+          "over": "{count} prompt, e il limite è {limit}: vengono posti solo i primi {limit}. Rimuovine {extra}, o alza il limite in Limiti.",
+          "fullTip": "{host} ha usato tutti i suoi {limit} prompt. Rimuovine uno, o alza il limite in Limiti.",
+          "fullPlaceholder": "Questo sito ha usato tutti i suoi prompt",
+          "change": "Cambia il limite",
+          "changeTip": "Apre i Limiti di {host}, dove si imposta Prompt per sito",
+          "meter": "Prompt usati"
+        },
+        "edit": "Modifica la domanda o i suoi assistenti",
+        "editLabel": "Nuove parole per “{prompt}”",
+        "save": "Salva",
+        "edited": "Salvato. Dalla prossima raccolta le IA ricevono “{prompt}”. Ciò che è arrivato per le parole vecchie resta con quelle.",
+        "editedEngines": "Salvato. Dalla prossima raccolta “{prompt}” viene posto a {engines}."
       },
-      "buyingUntracked": "{count, plural, =0 {Nessuna ricerca d'acquisto non monitorata} one {1 ricerca d'acquisto che non monitori} other {# ricerche d'acquisto che non monitori}}",
-      "trackColumn": "Monitora",
-      "track": "Monitorala",
-      "alreadyTracked": "Monitorata",
+      "searches": {
+        "addLabel": "Una ricerca da controllare su Google",
+        "addPlaceholder": "agenzia branding leeds",
+        "add": "Aggiungi",
+        "limit": "Controllata su Google a ogni raccolta, entro il limite dei controlli quotidiani del sito ({count, number}).",
+        "searchPlaceholder": "Trova una ricerca...",
+        "empty": "Nessuna ricerca seguita per questa azienda. Aggiungine una qui sopra, oppure segui quelle fatte dall'IA.",
+        "noMatch": "Nessuna ricerca corrisponde.",
+        "columns": {
+          "search": "Ricerca",
+          "website": "Sito",
+          "from": "Da dove viene",
+          "state": "Stato",
+          "actions": "Azioni"
+        },
+        "from": {
+          "HAND": "Aggiunta qui",
+          "AI_SEARCH": "L'ha cercata l'IA"
+        },
+        "checking": "In controllo",
+        "paused": "In pausa",
+        "remove": "Smetti di controllare questa ricerca",
+        "errors": {
+          "addFailed": "Impossibile seguire questa ricerca. Riprova."
+        },
+        "description": "Cosa questa azienda controlla su Google, per tutti i suoi siti, e da dove viene ogni ricerca. Scegli un sito in cima al menu per vedere la posizione di ogni ricerca."
+      },
+      "fanOut": {
+        "note": "Arrivano dalle risposte ai prompt di questa azienda. Ognuna viene controllata su Google una volta; quelle spuntate nell'elenco del loro prompt vengono controllate a ogni raccolta. Per spuntarne, aggiungerne, modificarne o eliminarne una, apri il prompt in I tuoi prompt.",
+        "searchPlaceholder": "Cerca tra queste ricerche...",
+        "questionFilter": "Domanda",
+        "anyQuestion": "Qualsiasi domanda",
+        "intentFilter": "Cosa vogliono",
+        "anyIntent": "Qualsiasi intento",
+        "columns": {
+          "search": "Cosa ha cercato l'IA",
+          "website": "Sito",
+          "intent": "Cosa vogliono",
+          "engines": "Motori",
+          "times": "Volte vista",
+          "onGoogle": "Su Google",
+          "checked": "Controllata"
+        },
+        "asked": "Domanda: {question}",
+        "unjudged": "Non ancora valutata",
+        "empty": "Niente ancora. La prossima raccolta registra cosa ha cercato l'IA.",
+        "noMatch": "Nessuna ricerca corrisponde a questi filtri.",
+        "description": "Le ricerche che gli assistenti AI hanno fatto per rispondere ai prompt di questa azienda, per tutti i suoi siti, le più viste per prime.",
+        "descriptionOne": "Le ricerche che gli assistenti AI hanno fatto per rispondere ai prompt di questa azienda su {host}, le più viste per prime.",
+        "everyRun": "A ogni raccolta",
+        "once": "Una volta",
+        "notCheckedYet": "Non ancora controllata",
+        "notInTop": "Non nei primi 100",
+        "position": "{position}°"
+      }
+    },
+    "limits": {
+      "platformTitle": "Limiti predefiniti",
+      "platformSubtitle": "Quanto viene acquistato, conservato e mostrato per ogni azienda, a meno che un’azienda o un sito non abbia un proprio numero.",
+      "companySubtitle": "Quanto viene acquistato, conservato e mostrato per i siti di {company}. Ogni limite usa il valore predefinito della piattaforma, a meno che tu non scelga un numero qui.",
+      "siteSubtitle": "Quanto viene acquistato, conservato e mostrato per {host}. Ogni limite usa l’impostazione della sua azienda, a meno che tu non scelga un numero qui.",
+      "siteSubtitleCompetitor": "Quanto viene conservato di {host}, un concorrente. Ogni limite usa l’impostazione della sua azienda, a meno che tu non scelga un numero qui.",
+      "notFound": "Impossibile trovare questi limiti.",
+      "levels": {
+        "thisPage": "Questa pagina",
+        "platformPage": "Impostazioni di sistema → Limiti",
+        "itsLimits": "La sua pagina Limiti",
+        "platform": {
+          "name": "{number} · Piattaforma",
+          "text": "Ogni azienda parte da questi numeri.",
+          "note": "Cambia un numero qui e cambia per ogni azienda e sito che non ne ha uno proprio."
+        },
+        "company": {
+          "name": "{number} · Azienda",
+          "text": "Usa i numeri della piattaforma, a meno che tu non gliene dia di propri.",
+          "note": "Cambia un numero qui e cambia per ogni sito di questa azienda che non ne ha uno proprio."
+        },
+        "website": {
+          "name": "{number} · Sito",
+          "text": "Usa i numeri della sua azienda, a meno che tu non gliene dia di propri.",
+          "note": "Un numero scelto qui è di questo sito. Gli altri usano quelli della sua azienda."
+        }
+      },
+      "usePlatform": "Usa il valore predefinito della piattaforma ({value})",
+      "useCompany": "Usa l’impostazione dell’azienda ({value})",
+      "hasOwn": "ha un proprio numero: {value}",
+      "setOnPlatform": "Impostato in Impostazioni di sistema",
+      "off": "Disattivato",
+      "save": "Salva",
+      "saved": "Salvato",
+      "saveFailed": "Impossibile salvare questi limiti. Riprova.",
+      "units": {
+        "keywords": "{count, plural, one {# parola chiave} other {# parole chiave}}",
+        "backlinks": "{count, plural, one {# backlink} other {# backlink}}",
+        "days": "{count, plural, one {# giorno} other {# giorni}}",
+        "prompts": "{count, plural, one {# prompt} other {# prompt}}",
+        "fanOutQueries": "{count, plural, one {# query fan-out} other {# query fan-out}}",
+        "searches": "{count, plural, one {# ricerca} other {# ricerche}}",
+        "wordings": "{count, plural, one {# formulazione} other {# formulazioni}}",
+        "topics": "{count, plural, one {# argomento} other {# argomenti}}",
+        "overviews": "{count, plural, one {# AI Overview} other {# AI Overview}}",
+        "pages": "{count, plural, one {# pagina} other {# pagine}}",
+        "suggestions": "{count, plural, one {# suggerimento} other {# suggerimenti}}",
+        "purchases": "{count, plural, one {# acquisto} other {# acquisti}}",
+        "rows": "{count, plural, one {# riga} other {# righe}}",
+        "competitors": "{count, plural, one {# concorrente} other {# concorrenti}}",
+        "sources": "{count, plural, one {# fonte} other {# fonti}}",
+        "businesses": "{count, plural, one {# attività} other {# attività}}",
+        "websites": "{count, plural, one {# sito} other {# siti}}"
+      },
+      "topics": {
+        "google": {
+          "title": "Dati Google per ogni sito",
+          "intro": "Ciò che la piattaforma acquista da Google, tramite DataForSEO, per ogni sito: i siti dell’azienda e ogni concorrente che segue. Numeri più alti danno elenchi più completi nelle schermate Siti, e costano di più.",
+          "footer": "Le modifiche valgono dalla prossima raccolta di ogni sito, o dal suo prossimo aggiornamento settimanale."
+        },
+        "ai": {
+          "title": "Prompt IA",
+          "intro": "Un prompt è una domanda che poniamo a ChatGPT, Perplexity, Gemini e Claude per un’azienda, come “chi sono i migliori web designer del Surrey?”. Prima di rispondere, ogni IA cerca su Google: quelle ricerche sono le sue query fan-out. Le ricerche che cercano la stessa cosa, scritte in modi diversi, contano come un solo argomento.",
+          "footer": "Le modifiche valgono dalla prossima raccolta. Ciò che mostra la pagina Ricerche IA cambia subito."
+        },
+        "matching": {
+          "title": "Abbinare le ricerche IA alle pagine",
+          "intro": "Dopo ogni raccolta, l’IA controlla quale pagina del sito risponde a ogni argomento. Un argomento senza pagina è un argomento mancante, e può essere suggerito come nuova pagina nella lista Da fare del sito.",
+          "footer": "Le modifiche valgono dalla prossima raccolta."
+        },
+        "company": {
+          "title": "Tutta l’azienda",
+          "intro": "Questi due valgono per tutti i siti di un’azienda insieme, quindi un sito non può averne di propri.",
+          "footer": "Gli acquisti cambiano dalla prossima raccolta; le righe mostrate cambiano subito."
+        },
+        "shared": {
+          "title": "Uguali per ogni azienda",
+          "intro": "Una risposta IA o un acquisto serve ogni azienda che chiede la stessa cosa, quindi ognuno di questi è un solo numero per tutte, impostato in Impostazioni di sistema → Limiti.",
+          "footer": "Le modifiche valgono per le prossime risposte e i prossimi acquisti letti; i download cambiano subito."
+        }
+      },
+      "fields": {
+        "keywordsPerSite": {
+          "label": "Parole chiave conservate per sito",
+          "description": "Le ricerche Google per cui un sito compare già, prima le più frequentate. Aggiornate ogni settimana.",
+          "cost": "Circa $0,15–$0,22 a settimana ogni 1.000. Un sito con meno parole chiave costa meno."
+        },
+        "everydayKeywords": {
+          "label": "Parole chiave ricontrollate a ogni raccolta",
+          "description": "Delle parole chiave conservate, quante ricevono una nuova posizione Google a ogni raccolta. Le altre aspettano l’aggiornamento settimanale.",
+          "cost": "Circa $0,15–$0,22 ogni 1.000, a ogni raccolta."
+        },
+        "trackedPerSite": {
+          "label": "Parole chiave seguite per sito",
+          "description": "Parole chiave controllate su Google a ogni raccolta per vedere dove si posiziona il sito: le query fan-out spuntate nei suoi prompt, più quelle inserite a mano in Parole chiave seguite. Quando è pieno, non se ne possono aggiungere altre.",
+          "cost": "Circa $0,003 a parola chiave, a ogni raccolta: $3 a raccolta con 1.000."
+        },
+        "fanOutTrackedPerSite": {
+          "label": "Query fan-out controllate a ogni raccolta",
+          "description": "Quante query fan-out di un sito si possono spuntare, su tutti i suoi prompt, per controllarle su Google a ogni raccolta. Ogni nuova viene comunque controllata una volta, senza spunta. Quando è pieno, non se ne possono spuntare altre.",
+          "cost": "Circa $0,003 a query, a ogni raccolta: $0,60 a raccolta con 200."
+        },
+        "backlinksPerSite": {
+          "label": "Backlink conservati per sito",
+          "description": "Link al sito da altri siti, prima i più forti. Il numero vale per ogni elenco di backlink: link, siti che linkano, link interrotti, testi di ancoraggio e server.",
+          "cost": "Fino a circa $0,06 ogni 1.000, per elenco."
+        },
+        "competitorsPerSite": {
+          "label": "Concorrenti raccolti per sito",
+          "description": "Quanti dei concorrenti seguiti rispetto a un sito vengono raccolti a ogni raccolta, prima i primi aggiunti. Oltre questo numero, il resoconto della raccolta nomina il sito.",
+          "cost": "Ogni concorrente raccolto si paga come un sito a sé."
+        },
+        "consoleDays": {
+          "label": "Giorni di una posizione Search Console",
+          "description": "Search Console dà la posizione media di un sito su Google in un certo numero di giorni. Questo è quanti.",
+          "cost": "Nessun costo."
+        },
+        "promptsPerSite": {
+          "label": "Prompt per sito",
+          "description": "Quante domande ogni sito può porre alle IA. Quando è pieno, non se ne possono aggiungere altre. Se impostato sotto quelle che un sito ha già, vengono poste solo le più vecchie.",
+          "cost": "Circa $0,07 a prompt, a ogni raccolta, posto a tutte e quattro le IA."
+        },
+        "searchesPerEngine": {
+          "label": "Query fan-out lette per prompt e IA",
+          "description": "Per ogni prompt e ogni IA, quante delle sue ricerche Google leggiamo, prima le più ripetute. Oltre questo numero, la pagina Ricerche IA dice che ce ne sono altre.",
+          "cost": "Leggerle non costa nulla. Ogni nuova viene controllata su Google una volta, circa $0,003; dopo, solo quelle spuntate, a ogni raccolta."
+        },
+        "wordingsPerAngle": {
+          "label": "Formulazioni conservate per argomento",
+          "description": "Un argomento è una cosa che l’IA ha cercato, comunque sia stata scritta: “best lead system for carp fishing” e “best lead systems for carp fishing” sono due formulazioni di un argomento. Questo è quante formulazioni conserviamo per ogni argomento, prima le più usate.",
+          "cost": "Nessun costo."
+        },
+        "anglesShown": {
+          "label": "Argomenti nella pagina Ricerche IA",
+          "description": "Quanti argomenti elenca la pagina, prima i più usati. Solo questi vengono abbinati a una pagina (vedi Abbinare le ricerche IA alle pagine).",
+          "cost": "Nessun costo per elencarli. L’abbinamento usa l’IA."
+        },
+        "googleSearchesRead": {
+          "label": "AI Overview di Google acquistate per prompt",
+          "description": "Le risposte IA di Google sul tema di ogni prompt, con le ricerche che Google ha fatto per scriverle, aggiunte come argomenti in più. Acquistate ogni 30 giorni. Disattivato non acquista nulla.",
+          "cost": "$0,10 a prompt più $0,001 per AI Overview: circa $0,20 a prompt con 100."
+        },
+        "anglesJudgedPerRun": {
+          "label": "Argomenti controllati in un lotto",
+          "description": "Quanti argomenti l’IA esamina in una volta.",
+          "cost": "Usa l’IA. Cambia come si divide il lavoro, non quanto se ne fa."
+        },
+        "anglesJudgedPerCollection": {
+          "label": "Argomenti controllati per raccolta",
+          "description": "Il massimo di argomenti controllati dopo una raccolta. Gli altri aspettano la raccolta successiva.",
+          "cost": "Usa l’IA: più argomenti, più costo IA."
+        },
+        "pagesOffered": {
+          "label": "Pagine proposte per argomento",
+          "description": "Le pagine del sito più simili all’argomento, proposte all’IA perché scelga. Al massimo 12.",
+          "cost": "Usa l’IA: più pagine rendono ogni controllo più grande."
+        },
+        "auditPagesRead": {
+          "label": "Pagine dell’audit del sito esaminate",
+          "description": "Delle pagine trovate dall’audit del sito, quante vengono esaminate per scegliere le pagine da proporre.",
+          "cost": "Nessun costo."
+        },
+        "rankedPagesRead": {
+          "label": "Pagine posizionate esaminate",
+          "description": "Delle pagine con cui il sito si posiziona su Google, quante delle più frequentate vengono esaminate.",
+          "cost": "Nessun costo."
+        },
+        "missingAnglesSuggested": {
+          "label": "Argomenti mancanti suggeriti per raccolta",
+          "description": "Nuove pagine suggerite nella lista Da fare del sito dopo ogni raccolta, prima le più cercate. Una scartata o fatta non torna più.",
+          "cost": "Nessun costo."
+        },
+        "purchasesPerCollection": {
+          "label": "Acquisti per raccolta",
+          "description": "Il massimo che una raccolta può acquistare per l’azienda, tutti i siti insieme. Ogni richiesta a DataForSEO è un acquisto. Se viene raggiunto, la raccolta smette di acquistare e il suo resoconto lo dice.",
+          "cost": "Un tetto a quanto può spendere una raccolta."
+        },
+        "companyRowsRead": {
+          "label": "Righe mostrate per tutti i siti",
+          "description": "Quante righe mostrano I tuoi prompt, Parole chiave seguite e Ricerche IA per tutti i siti di un’azienda insieme. Oltre questo numero la schermata lo dice; scegliendo un sito si vede tutto.",
+          "cost": "Nessun costo."
+        },
+        "fanOutPerAnswer": {
+          "label": "Query fan-out conservate da una risposta IA",
+          "description": "Le ricerche Google salvate da una singola risposta IA. Di solito un’IA ne fa poche, quindi è una rete di sicurezza.",
+          "cost": "Nessun costo: arrivano con la risposta."
+        },
+        "sourcesPerAnswer": {
+          "label": "Fonti conservate da una risposta IA",
+          "description": "Le pagine web a cui rimanda una risposta IA. Raramente le IA ne citano più di una dozzina.",
+          "cost": "Nessun costo: arrivano con la risposta."
+        },
+        "businessesPerAnswer": {
+          "label": "Attività conservate da una risposta IA",
+          "description": "Le aziende e i marchi che una risposta IA nomina, nell’ordine in cui li nomina.",
+          "cost": "Usa l’IA: per ognuna si valuta come ne parla la risposta."
+        },
+        "newWebsitesPerPurchase": {
+          "label": "Nuovi siti notati per acquisto",
+          "description": "Siti che un acquisto sui concorrenti incontra per la prima volta, suggeriti come possibili concorrenti. Oltre questo numero sono raramente utili.",
+          "cost": "Usa l’IA: ognuno viene valutato come possibile concorrente."
+        },
+        "overviewSearchesPerPurchase": {
+          "label": "Ricerche delle AI Overview di Google conservate per acquisto",
+          "description": "Le ricerche che Google ha fatto per le sue AI Overview sul tema di un prompt, prima le più usate.",
+          "cost": "Nessun acquisto in più. Ogni nuova ricerca viene valutata una volta dall’IA."
+        },
+        "rowsPerDownload": {
+          "label": "Righe in un download",
+          "description": "Il massimo di righe che contiene un file scaricato. La scelta più alta è circa quanto può contenere un file.",
+          "cost": "Nessun costo."
+        }
+      }
+    },
+    "websitesSection": {
+      "label": "Sezione siti",
+      "chooser": {
+        "label": "Sito",
+        "all": "Tutti i siti",
+        "competitor": "{host} · concorrente",
+        "alone": "Concorrenti seguiti da soli"
+      },
+      "groups": {
+        "websites": "Siti",
+        "track": "Cosa seguiamo",
+        "results": "Cosa è tornato",
+        "collection": "Raccolta"
+      },
+      "pages": {
+        "websites": "Tutti i siti",
+        "searches": "Parole chiave seguite",
+        "questions": "I tuoi prompt",
+        "competitors": "Concorrenti",
+        "names": "Nomi e profili",
+        "todo": "Da fare",
+        "rankings": "Posizionamenti",
+        "answers": "Risposte IA",
+        "fanOut": "Ricerche IA",
+        "schedules": "Programmi",
+        "limits": "Limiti",
+        "runs": "Raccolte e costi"
+      },
+      "choose": {
+        "competitors": "Ogni sito proprio di questa azienda ha i suoi concorrenti. Scegline uno per vederli e cambiarli — qui, o in cima al menu.",
+        "names": "Ogni sito ha i suoi nomi, e ogni sito proprio di questa azienda la sua attività. Scegline uno — qui, o in cima al menu.",
+        "todo": "Ogni sito proprio di questa azienda ha la sua lista di cose da fare: come va e cosa fare dopo. Scegline uno — qui, o in cima al menu.",
+        "rankings": "I posizionamenti di ogni sito sono suoi. Scegline uno per vedere tutto ciò per cui si posiziona — qui, o in cima al menu.",
+        "answers": "Ogni sito proprio di questa azienda viene cercato nelle risposte ai suoi prompt. Scegline uno — qui, o in cima al menu.",
+        "empty": "Ancora nessun sito qui. Aggiungine uno in Tutti i siti.",
+        "columns": {
+          "website": "Sito",
+          "type": "Tipo"
+        },
+        "owned": "Proprio",
+        "competitor": "Concorrente",
+        "of": "di {host}",
+        "onItsOwn": "da solo"
+      }
+    },
+    "enginePicker": {
+      "all": "{count, plural, =4 {Tutti e quattro gli assistenti} other {Tutti i # assistenti}}",
+      "none": "Scegline almeno uno",
+      "each": "Ogni assistente spuntato viene interrogato separatamente: una risposta acquistata a ogni raccolta."
+    },
+    "promptFanOut": {
+      "back": "I tuoi prompt",
+      "title": "Query fan-out",
+      "forPrompt": "Per il prompt “{prompt}”",
+      "description": "Ogni ricerca che le IA hanno fatto prima di rispondere. Ognuna viene controllata su Google una volta per {host}; spunta quelle da controllare a ogni raccolta.",
+      "paused": "In pausa: non viene chiesto, quindi non arrivano nuove query fan-out",
+      "generate": "Genera ora le query fan-out",
+      "generateTip": "Fa ora il prompt a {engines}: circa {price}",
+      "generateTipUnknown": "Fa ora il prompt a {engines}",
+      "generateOff": "La raccolta è spenta per questa azienda, quindi Genera non acquista nulla. Attivala in Programmi.",
+      "generating": "Stiamo facendo la domanda a {engines}. Le nuove query fan-out entrano nell'elenco, senza spunta, tra un minuto o due.",
+      "generated": "Chiesto alle {time}. Le nuove query fan-out sono entrate nell'elenco, senza spunta: ognuna viene controllata su Google una volta, alla prossima raccolta.",
+      "generatedReused": "Già chiesto oggi, quindi si usano le risposte di oggi: nulla viene acquistato due volte.",
+      "generateFailed": "{count, plural, one {# risposta non riuscita} other {# risposte non riuscite}}. Riprova più tardi.",
+      "addLabel": "Aggiungi una query fan-out",
+      "addPlaceholder": "agenzia web design Guildford",
+      "add": "Aggiungi",
+      "searchPlaceholder": "Cerca in queste query fan-out...",
+      "columns": {
+        "tick": "Controlla su Google",
+        "query": "Query fan-out",
+        "seen": "Quante volte le IA l'hanno cercata",
+        "actions": "Azioni"
+      },
+      "everyRun": "A ogni raccolta",
+      "onceOnly": "Solo una volta",
+      "tickLabel": "Controlla “{query}” su Google a ogni raccolta",
+      "full": "{count} su {limit} controllate a ogni raccolta per {host}. Togli una spunta o alza il limite in Limiti.",
+      "over": "Per {host} sono spuntate {count} query fan-out, e il suo limite è {limit}. Togli {extra} spunte o alza il limite in Limiti. Fino ad allora vengono controllate le prime {limit} spuntate.",
+      "notTicked": "“{query}” non è spuntata: {host} ha già {limit} query fan-out controllate a ogni raccolta. Viene controllata su Google una volta, alla prossima raccolta.",
+      "seen": "{count, plural, one {una volta} other {# volte}}",
+      "yourOwn": "Tua",
+      "editRow": "Modifica “{query}”",
+      "editLabel": "Nuove parole per “{query}”",
+      "save": "Salva",
+      "deleteRow": "Elimina “{query}”: fuori da questo elenco per sempre",
+      "deleted": "“{query}” eliminata. Non verrà più controllata e non tornerà, anche se un'IA la cercherà di nuovo.",
+      "undo": "Annulla",
+      "showing": "{start}–{end} di {total} · {here} spuntate qui, circa {price} a raccolta · {count} su {limit} spuntate per {host}",
+      "showingUnknown": "{start}–{end} di {total} · {here} spuntate qui · {count} su {limit} spuntate per {host}",
+      "empty": "Ancora nessuna query fan-out. Generale ora, oppure arrivano con la prossima raccolta.",
+      "noMatch": "Nessuna query fan-out corrisponde.",
+      "cut": "Questo prompt ha più query fan-out di quante ne vengano lette; sono elencate le prime.",
       "errors": {
-        "trackFailed": "Impossibile monitorare la ricerca. Riprova."
-      },
-      "untrack": "Non monitorare più",
-      "lastCheckedColumn": "Ultimo controllo"
+        "failed": "Impossibile salvare. Riprova."
+      }
     }
   },
   "ai": {
@@ -7553,6 +7877,28 @@
           "legal": "Pagina legale",
           "other": "Non determinabile"
         }
+      },
+      "seoAnglePage": {
+        "name": "Quale pagina risponde a questa ricerca?",
+        "description": "Per ogni ricerca che gli assistenti IA hanno fatto per le domande di un sito, indica la pagina del sito che risponde, oppure nessuna: in quel caso è un argomento mancante nella pagina delle query fan-out e nell'elenco delle cose da fare del sito.",
+        "rule": "Senza questa decisione, La tua pagina appare come non ancora valutata e non viene suggerito alcun argomento mancante.",
+        "answers": {
+          "page-a": "La pagina A risponde",
+          "page-b": "La pagina B risponde",
+          "page-c": "La pagina C risponde",
+          "page-d": "La pagina D risponde",
+          "page-e": "La pagina E risponde",
+          "page-f": "La pagina F risponde",
+          "page-g": "La pagina G risponde",
+          "page-h": "La pagina H risponde",
+          "page-i": "La pagina I risponde",
+          "page-j": "La pagina J risponde",
+          "page-k": "La pagina K risponde",
+          "page-l": "La pagina L risponde",
+          "none": "Nessuna pagina risponde",
+          "off-topic": "Non riguarda questa attività",
+          "other": "Impossibile dirlo"
+        }
       }
     }
   },
@@ -8060,7 +8406,8 @@
         "toDo": "Da fare",
         "checked": "Ultimo controllo",
         "added": "Aggiunto"
-      }
+      },
+      "amongHeld": "tra le {count} conservate"
     },
     "site": {
       "back": "Torna ai siti",
@@ -8170,7 +8517,13 @@
       "weeks": "{count, plural, =1 {# settimana} other {# settimane}}",
       "groups": "{count, plural, =1 {# gruppo} other {# gruppi}}",
       "adverts": "{count, plural, =1 {# annuncio} other {# annunci}}",
-      "questionsAndSearches": "{count, plural, =1 {# domanda o ricerca} other {# domande e ricerche}}"
+      "questionsAndSearches": "{count, plural, =1 {# domanda o ricerca} other {# domande e ricerche}}",
+      "days": "{count, plural, =1 {# giorno} other {# giorni}}",
+      "months": "{count, plural, =1 {# mese} other {# mesi}}",
+      "folders": "{count, plural, =1 {# cartella} other {# cartelle}}",
+      "countries": "{count, plural, =1 {# paese} other {# paesi}}",
+      "devices": "{count, plural, =1 {# dispositivo} other {# dispositivi}}",
+      "angles": "{count, plural, =1 {# argomento} other {# argomenti}}"
     },
     "chart": {
       "download": "Scarica",
@@ -8317,7 +8670,7 @@
           "links": "Link",
           "broken": "Non funzionanti · {count}",
           "linkingWebsites": "Siti che rimandano",
-          "mainWebsites": "Siti principali · {count}"
+          "withSubdomains": "{count} contando ogni sottodominio"
         },
         "ai": {
           "title": "Risposte AI",
@@ -8328,7 +8681,8 @@
           "naming": "Ti citano",
           "pages": "Pagine",
           "namedOf": "{named} su {asked}",
-          "addQuestions": "Aggiungi le domande che fanno i tuoi clienti e questi quattro si riempiono."
+          "addQuestions": "Aggiungi le domande che fanno i tuoi clienti e questi quattro si riempiono.",
+          "namedIn": "Citato in {count, plural, =1 {# risposta} other {# risposte}}"
         }
       },
       "readout": {
@@ -8345,7 +8699,8 @@
         "pagesShare": "Quota di pagine",
         "visitsShare": "Quota di visite",
         "row": "{count, plural, one {# pagina} other {# pagine}} ({pagesShare}) · {visitsShare} delle visite",
-        "capped": "Contate sulle {count} pagine posizionate per più ricerche."
+        "capped": "Contate sulle {count} pagine posizionate per più ricerche.",
+        "hintHeld": "Le {count} pagine delle ricerche conservate, ciascuna classificata per tipo: la sua quota di quelle pagine, e di tutte le visite del sito."
       },
       "pageVisits": {
         "title": "Pagine per visite",
@@ -8363,7 +8718,8 @@
           "to1000": "101–1.000",
           "to10000": "1.001–10.000",
           "over10000": "Oltre 10.000"
-        }
+        },
+        "hintHeld": "Le pagine delle ricerche conservate, raggruppate per visite al mese, e la quota di tutte le visite del sito di ciascun gruppo."
       },
       "branded": {
         "title": "Ricerche di marca e altre",
@@ -8378,36 +8734,44 @@
         "group": "Ricerche",
         "searches": "Ricerche",
         "visits": "Visite al mese",
-        "share": "Quota di visite"
+        "share": "Quota di visite",
+        "hintHeld": "Da dove arrivano le {visits} visite al mese del sito: ricerche che nominano il tuo marchio, ricerche pronte all’acquisto, persone che si informano, il resto delle ricerche conservate e le ricerche fuori da queste."
       },
       "competitors": {
         "title": "Concorrenti",
-        "hint": "{count, plural, one {Un sito} other {# siti}} con cui questa azienda confronta {host}. Più a destra si posiziona su più ricerche; più in alto riceve più visite.",
-        "hintTraffic": "{count, plural, one {Un sito} other {# siti}} con cui questa azienda confronta {host}. Più a destra prende più visite dalle ricerche in comune; più in alto riceve più visite in tutto.",
+        "hint": "{count, plural, one {L’unico sito} other {I # siti}} con cui questa azienda confronta {host}, e {host} stesso. Più a destra si posiziona per più ricerche in tutto; più in alto riceve più visite in tutto. Stime come osservate da {place}.",
+        "hintTraffic": "{count, plural, one {L’unico sito} other {I # siti}} con cui questa azienda confronta {host}, prima quelli con più visite, e {host} stesso. Più a destra si posiziona per più ricerche in tutto; più in alto riceve più visite in tutto. Stime come osservate da {place}.",
         "view": "Mostra i concorrenti per",
         "views": {
           "searches": "Ricerche",
           "traffic": "Traffico"
         },
         "sharedUnknown": "Un trattino sotto Ricerche in comune significa che quel sito non è tra quelli trovati sulle tue ricerche, quindi non si sa quante ricerche condividete.",
-        "sharedVisitsUnknown": "Un trattino sotto Visite sulle ricerche in comune significa che quel sito non è tra quelli trovati sulle tue ricerche, quindi non si sa quante visite ne riceve.",
+        "sharedVisitsUnknown": "Un trattino sotto Le tue visite sulle ricerche condivise significa che quel sito non è tra quelli trovati per le tue ricerche, quindi non si sa quante delle tue visite arrivino da ricerche per cui si posiziona anche lui.",
         "you": "{host} (tu)",
         "xAxis": "Ricerche per cui si posiziona",
-        "xAxisTraffic": "Visite dalle ricerche in comune",
         "yAxis": "Visite al mese",
         "columns": {
           "website": "Sito",
           "overlap": "Sovrapposizione",
           "shared": "Ricerche in comune",
           "ofYours": "Delle tue",
-          "sharedVisits": "Visite sulle ricerche in comune",
-          "ofYourVisits": "Delle tue visite",
+          "sharedVisits": "Le tue visite sulle ricerche condivise",
           "theirSearches": "Le loro ricerche",
-          "theirVisits": "Le loro visite"
+          "theirVisits": "Le loro visite",
+          "ofYourVisits": "Delle tue visite"
         },
         "found": "{count} concorrenti trovati sulle tue ricerche",
-        "seeAll": "Vedili tutti"
-      }
+        "seeAll": "Vedili tutti",
+        "foundOf": "{count} concorrenti trovati tra i {read} siti letti dei {total} che si posizionano per le tue ricerche",
+        "readout": {
+          "searches": "ricerche",
+          "visits": "visite al mese"
+        }
+      },
+      "competitorsHintSome": "Questo sito accanto ai {shown} dei suoi {total} concorrenti con più traffico all'ultimo controllo, su una sola misura e una sola scala. Le linee tratteggiate sono gli altri.",
+      "outsideHeld": "Il {share} delle visite del sito arriva da ricerche fuori da quelle conservate, mostrate come il resto.",
+      "outsideGroup": "Fuori dalle ricerche conservate"
     },
     "calendar": {
       "title": "Calendario",
@@ -8430,7 +8794,12 @@
       "named": "Nominato dall'AI {named} su {asked}",
       "linksGained": "+{count} siti che linkano",
       "linksLost": "−{count} siti che linkano",
-      "empty": "Nessun controllo in questo mese."
+      "empty": "Nessun controllo in questo mese.",
+      "firstCheck": "Primo controllo · {count} ricerche",
+      "namedIn": "Nominato dall'AI in {count, plural, =1 {# risposta} other {# risposte}}",
+      "firstList": "Primo elenco · {count} ricerche",
+      "left": "{count} uscite dall’elenco",
+      "amongHeld": "I movimenti sono contati tra le ricerche conservate; una ricerca uscita dall’elenco può ancora posizionarsi più in basso."
     },
     "aiMentions": {
       "title": "Menzioni",
@@ -8491,7 +8860,7 @@
     },
     "aiSearched": {
       "title": "Query fan-out",
-      "description": "Quali ricerche hanno fatto gli assistenti AI dietro le quinte per rispondere alle domande di questo sito? Sono le loro query fan-out, prima le più ripetute: ognuna è una ricerca su cui vale la pena posizionarsi.",
+      "description": "Quali ricerche hanno fatto dietro le quinte gli assistenti IA per rispondere alle domande di questo sito? Sono le loro query fan-out, le più ripetute prima. Le formulazioni che dicono la stessa cosa contano una volta, come un solo argomento. La tua posizione e La tua pagina mostrano se il sito risponde già a ogni argomento; Argomenti mancanti elenca quelli per cui non ha una pagina.",
       "searchPlaceholder": "Cerca tra le query fan-out…",
       "trackedFilter": "Seguite",
       "anyTracked": "Seguite o no",
@@ -8503,11 +8872,48 @@
         "engines": "Motori",
         "times": "Volte vista",
         "lastChecked": "Ultima volta",
-        "tracked": "Seguita"
+        "tracked": "Seguita",
+        "position": "La tua posizione",
+        "page": "La tua pagina",
+        "otherWordings": "Altre formulazioni",
+        "question": "Domanda",
+        "positionFrom": "Posizione da"
       },
       "fromQuestion": "Domanda: {question}",
       "empty": "Ancora nessuna query fan-out. Il prossimo controllo le registra.",
-      "noMatch": "Nessuna query fan-out corrisponde."
+      "noMatch": "Nessuna query fan-out corrisponde.",
+      "descriptionCompetitor": "Quali ricerche hanno fatto dietro le quinte gli assistenti IA per rispondere alle domande su cui questo sito viene confrontato? Sono le loro query fan-out, le più ripetute prima. Le formulazioni che dicono la stessa cosa contano una volta, come un solo argomento.",
+      "questionFilter": "Domanda",
+      "anyQuestion": "Qualsiasi domanda",
+      "pageFilter": "La tua pagina",
+      "anyPage": "Qualsiasi pagina",
+      "pageFilters": {
+        "missing": "Argomenti mancanti",
+        "answered": "Ha una pagina",
+        "offTopic": "Fuori tema",
+        "unjudged": "Non ancora valutato"
+      },
+      "positionFrom": {
+        "RANKED": "Elenco posizionamenti",
+        "CHECKED": "Controllata il {day}",
+        "SEARCH_CONSOLE": "Media di Search Console"
+      },
+      "notInTop100": "Non nei primi 100",
+      "notTracked": "Non seguita",
+      "notCheckedYet": "Non ancora controllata",
+      "pageVerdict": {
+        "NONE": "Nessuna",
+        "OFF_TOPIC": "Fuori tema",
+        "UNSURE": "Non si può dire",
+        "unjudged": "Non ancora valutata"
+      },
+      "alsoSearchedAs": "Cercata anche come {wordings}",
+      "fromQueries": "da {count, plural, =1 {# query fan-out} other {# query fan-out}}",
+      "mostSeenFirst": "i più visti prima",
+      "judgedAgainst": "La tua pagina è valutata sulle {crawled, number} pagine lette dall'audit del sito (il suo limite è {limit, number}) e sulle {ranked, number} pagine con cui Google posiziona il sito. Una pagina non raggiunta da nessuno dei due risulta Nessuna.",
+      "judgedAgainstNoLimit": "La tua pagina è valutata sulle {crawled, number} pagine lette dall'audit del sito e sulle {ranked, number} pagine con cui Google posiziona il sito. Una pagina non raggiunta da nessuno dei due risulta Nessuna.",
+      "judgedAgainstNoAudit": "La tua pagina è valutata sulle {ranked, number} pagine con cui Google posiziona il sito; l'audit del sito non l'ha ancora letto. Una pagina non tra queste risulta Nessuna.",
+      "notBuilt": "Queste ricerche vengono raggruppate in argomenti dopo ogni raccolta; il primo raggruppamento non è ancora stato fatto."
     },
     "googleSearches": {
       "title": "Le tue ricerche",
@@ -8546,7 +8952,8 @@
         "UP": "Salite",
         "DOWN": "Scese",
         "NEW": "Nuove",
-        "LOST": "Perse"
+        "LOST": "Perse",
+        "LEFT": "Uscite dall’elenco"
       },
       "columns": {
         "keyword": "Parola chiave",
@@ -8561,12 +8968,14 @@
       "down": "Scese",
       "empty": "Nulla si è mosso in questo modo all'ultimo controllo.",
       "searchPlaceholder": "Cerca parole chiave…",
-      "noMatch": "Nessuna parola chiave con questo movimento corrisponde."
+      "noMatch": "Nessuna parola chiave con questo movimento corrisponde.",
+      "firstCheckTitle": "Questo è il suo primo controllo",
+      "firstCheckBody": "Nulla si è ancora mosso: i movimenti si contano dal prossimo controllo, rispetto a questo.",
+      "amongHeld": "I movimenti riguardano le ricerche conservate. Una ricerca può risultare nuova perché vi è entrata, e una che ne è uscita può ancora posizionarsi più in basso: nessuna è detta persa."
     },
     "keywords": {
       "title": "Parole chiave",
       "description": "Quali ricerche portano visite a questo sito? Ogni ricerca per cui si posiziona su Google. Aprine una per la sua storia, la sua pagina e i suoi concorrenti.",
-      "listing": "Sono mostrate {stored} delle {total} ricerche per cui questo sito si posiziona: quelle che gli portano più visite.",
       "searchPlaceholder": "Cerca parole chiave o pagine…",
       "bandFilter": "Posizione",
       "anyBand": "Qualsiasi posizione",
@@ -8611,7 +9020,11 @@
       "cpcHint": "Quanto pagano gli inserzionisti per un clic su questa ricerca, in dollari USA",
       "trafficHint": "Visite al mese stimate che questa ricerca porta al sito",
       "trendHint": "Ricerche al mese nell'ultimo anno",
-      "featuresCount": "{count, plural, =0 {Nessuna} =1 {1 funzione} other {# funzioni}}"
+      "featuresCount": "{count, plural, =0 {Nessuna} =1 {1 funzione} other {# funzioni}}",
+      "bandOfEvery": "Conserviamo {held} delle {total} ricerche in {band} tra tutte quelle per cui questo sito si posiziona.",
+      "moveOfEvery": "Conserviamo {held} delle {total} ricerche segnate «{move}» tra tutte quelle per cui questo sito si posiziona.",
+      "newToHeld": "Una ricerca può risultare nuova qui anche perché è entrata tra quelle conservate.",
+      "notInListThatDay": "Non nell’elenco di quel giorno"
     },
     "pages": {
       "title": "Pagine principali",
@@ -8642,7 +9055,8 @@
       "anyType": "Qualsiasi tipo",
       "pageRankHint": "Quanto è forte questa pagina, in base ai link che puntano a essa: da 0 a 1.000",
       "shareOf": "{share} del traffico",
-      "backlinksTitle": "{count} backlink"
+      "backlinksTitle": "{count} backlink",
+      "ofHeld": "Queste sono le pagine delle ricerche conservate, e i loro conteggi riguardano quelle ricerche. Una pagina che si posiziona solo per ricerche fuori da queste non è elencata."
     },
     "record": {
       "back": "Indietro",
@@ -8652,11 +9066,13 @@
     "setup": {
       "questions": {
         "title": "Nessuna domanda AI impostata",
-        "body": "Queste schermate mostrano come assistenti AI come ChatGPT, Gemini e Perplexity rispondono alle domande dei tuoi clienti, e se citano questo sito. Per ora non c'è nessuna domanda impostata. Quando ci saranno, le prime risposte arriveranno con la prossima raccolta."
+        "body": "Queste schermate mostrano come assistenti AI come ChatGPT, Gemini e Perplexity rispondono alle domande dei tuoi clienti, e se citano questo sito. Per ora non c'è nessuna domanda impostata. Quando ci saranno, le prime risposte arriveranno con la prossima raccolta.",
+        "paused": "Tutte le domande nell'elenco di questo sito sono in pausa, quindi non arriveranno nuove risposte. Quello che vedi qui è arrivato prima della pausa."
       },
       "trackedSearches": {
         "title": "Nessuna ricerca monitorata",
-        "body": "Questa schermata segue le ricerche su Google più importanti per questo sito, controllate una per una: dove si posiziona, chi è sopra di lui e cos'altro mostra Google. Per ora non ce n'è nessuna. Quando ci saranno, il primo controllo arriverà con la prossima raccolta."
+        "body": "Questa schermata segue le ricerche su Google più importanti per questo sito, controllate una per una: dove si posiziona, chi è sopra di lui e cos'altro mostra Google. Per ora non ce n'è nessuna. Quando ci saranno, il primo controllo arriverà con la prossima raccolta.",
+        "paused": "Tutte le ricerche nell'elenco di questo sito sono in pausa, quindi non arriveranno nuovi controlli. Quello che vedi qui è stato controllato prima della pausa."
       }
     },
     "keywordRecord": {
@@ -8677,7 +9093,8 @@
         "traffic": "Visite al mese",
         "trafficDetail": "Visite stimate che porta a questo sito",
         "cpc": "Costo per clic",
-        "cpcDetail": "Quanto pagano gli inserzionisti, in dollari USA"
+        "cpcDetail": "Quanto pagano gli inserzionisti, in dollari USA",
+        "notInHeld": "Non nell’elenco conservato"
       },
       "chartTitle": "Posizione nel tempo",
       "chartHint": "Dove si trovava questo sito a ogni controllo. Più in alto nel grafico è meglio: 1 è il primo posto su Google.",
@@ -8730,7 +9147,7 @@
       "rivals": {
         "title": "I tuoi concorrenti su questa ricerca",
         "thisWebsite": "Questo sito",
-        "notRanking": "Non trovato nei loro posizionamenti",
+        "notRanking": "Non nel loro elenco conservato",
         "none": "Nessun concorrente impostato per questo sito."
       },
       "tracked": {
@@ -8750,7 +9167,8 @@
         "showTop": "Mostra i primi dieci",
         "questions": "Le domande che le persone fanno",
         "related": "Ricerche correlate"
-      }
+      },
+      "notInHeld": "Questa ricerca non è nell’elenco conservato per questo sito all’ultimo controllo. Potrebbe comunque posizionarsi sotto le ricerche conservate."
     },
     "pageRecord": {
       "description": "Per cosa si posiziona questa pagina, le visite che porta, cosa ha trovato il controllo del sito e i siti che rimandano a essa.",
@@ -8812,7 +9230,8 @@
         "notFollowed": "Non seguito",
         "strength": "Forza {rank}",
         "none": "Nessun link verso questa pagina nell'ultimo elenco."
-      }
+      },
+      "notInHeld": "Questa pagina non si posiziona per nessuna delle ricerche conservate all’ultimo controllo. Potrebbe posizionarsi per ricerche fuori da queste."
     },
     "featureRecord": {
       "titles": {
@@ -8830,7 +9249,8 @@
         "volume": "Ricerche al mese",
         "page": "Pagina"
       },
-      "empty": "Nessuna ricerca dell'elenco di questo sito lo mostra ancora qui."
+      "empty": "Nessuna ricerca dell'elenco di questo sito lo mostra ancora qui.",
+      "heldOf": "{held} delle {total} ricerche che mostrano qui questo sito, tra tutte quelle per cui si posiziona, sono nell’elenco conservato."
     },
     "answerRecord": {
       "description": "Cosa ha detto {engine}, parola per parola, a questa domanda il {day}.",
@@ -8876,7 +9296,9 @@
         "volume": "Ricerche al mese",
         "theirVisits": "Le loro visite"
       },
-      "empty": "Ancora nessuna ricerca in comune qui."
+      "empty": "Ancora nessuna ricerca in comune qui.",
+      "sharedOf": "Questo sito e {rival} condividono {total} ricerche tra tutte quelle per cui si posizionano. Qui sotto quelle presenti in entrambi gli elenchi conservati, prima le più preziose per loro.",
+      "sharedHeldOf": "{held} delle {total} ricerche che condividete sono in entrambi gli elenchi conservati e vengono confrontate qui, prima le più preziose per loro."
     },
     "domainRecord": {
       "description": "Un sito che rimanda a questo: quanto è forte, e ciascuno dei suoi link qui per intero.",
@@ -8951,19 +9373,48 @@
     "structure": {
       "title": "Struttura del sito",
       "description": "Quali parti di questo sito si posizionano meglio? Ricerche, pagine e visite per cartella. Apri una cartella per vederne le pagine.",
+      "summary": "{sections, plural, =1 {# cartella} other {# cartelle}} · {pages, plural, =1 {# pagina} other {# pagine}} · {keywords, plural, =1 {# ricerca} other {# ricerche}} · {traffic} visite al mese",
       "columns": {
-        "section": "Sezione",
+        "section": "Cartella",
         "pages": "Pagine",
-        "keywords": "Parole chiave",
+        "keywords": "Ricerche",
         "top3": "Prime 3",
-        "share": "Quota di parole chiave",
-        "traffic": "Traffico"
+        "traffic": "Visite",
+        "share": "Quota"
       },
-      "home": "Livello principale del sito",
-      "chartTitle": "Parole chiave per sezione",
-      "empty": "Nessuna sezione per ora.",
-      "searchPlaceholder": "Cerca una sezione…",
-      "noMatch": "Nessuna sezione corrisponde."
+      "shareOf": {
+        "keywords": "ricerche",
+        "traffic": "visite"
+      },
+      "shareLine": "{share} delle {what} del sito",
+      "home": "Cima del sito",
+      "mapTitle": "Cartelle per {measure}",
+      "mapHint": "Ogni riquadro è una cartella, grande quanto le sue {measure}. Più il colore è intenso, più delle sue ricerche sono tra le prime 3.",
+      "measure": "Dimensiona i riquadri per",
+      "measures": {
+        "traffic": "visite al mese",
+        "keywords": "ricerche",
+        "pages": "pagine"
+      },
+      "switch": {
+        "traffic": "Visite",
+        "keywords": "Ricerche",
+        "pages": "Pagine"
+      },
+      "mapNote": "Le cartelle troppo piccole per un nome sono nella tabella qui sotto. Passa sopra un riquadro per i suoi numeri.",
+      "readout": {
+        "traffic": "visite al mese",
+        "keywords": "ricerche",
+        "pages": "pagine",
+        "top3": "delle sue ricerche tra le prime 3"
+      },
+      "empty": "Ancora nessuna cartella.",
+      "searchPlaceholder": "Trova una cartella…",
+      "noMatch": "Nessuna cartella corrisponde.",
+      "summaryHeld": "{sections, plural, =1 {# cartella} other {# cartelle}} · {pages, plural, =1 {# pagina} other {# pagine}} · delle {keywords, plural, =1 {# ricerca conservata} other {# ricerche conservate}} · {traffic} visite al mese",
+      "shareLineHeld": "{share} delle {what} conservate",
+      "outside": "Insieme, queste cartelle hanno il {searches} delle ricerche del sito e il {visits} delle sue visite. Il resto è fuori dalle ricerche conservate.",
+      "outsideAllVisits": "Insieme, queste cartelle hanno il {searches} delle ricerche del sito e, secondo le stime, tutte le sue visite: le ricerche fuori da quelle conservate ne portano quasi nessuna."
     },
     "sideBySide": {
       "title": "Confronto diretto",
@@ -8991,11 +9442,12 @@
       },
       "chartTitle": "Traffico stimato",
       "chartHint": "Questo sito e gli altri del suo gruppo nelle date scelte.",
-      "empty": "Ancora nessun altro sito in questo gruppo."
+      "empty": "Ancora nessun altro sito in questo gruppo.",
+      "chartHintSome": "Questo sito e i {shown} dei suoi {total} concorrenti con più traffico all'ultimo controllo, nelle date scelte."
     },
     "organic": {
       "title": "Concorrenti organici",
-      "description": "Chi altro si posiziona sulle stesse ricerche? Ogni sito che lo fa, dalla sovrapposizione maggiore.",
+      "description": "Chi altro si posiziona per le stesse ricerche? I siti che ne condividono di più con questo, prima quelli con più sovrapposizione.",
       "searchPlaceholder": "Trova un sito…",
       "kindFilter": "Tipo",
       "anyKind": "Qualsiasi tipo",
@@ -9011,18 +9463,19 @@
         "kind": "Tipo",
         "shared": "Parole chiave in comune",
         "position": "Posizione media",
-        "traffic": "Traffico sulle parole chiave in comune",
+        "traffic": "Il tuo traffico sulle parole chiave condivise",
         "tracked": "Seguito",
         "domainKeywords": "Tutte le loro parole chiave",
         "domainTraffic": "Tutto il loro traffico"
       },
       "empty": "Nessun concorrente organico trovato per ora.",
-      "noMatch": "Nessun sito corrisponde."
+      "noMatch": "Nessun sito corrisponde.",
+      "readOf": "{count} dei {total} siti che si posizionano per le stesse ricerche: quelli che ne condividono di più con questo. Gli altri non vengono letti."
     },
     "gap": {
       "title": "Divario di contenuti",
       "description": "Per quali ricerche si posizionano i concorrenti e questo sito no? Prima le più cercate: le lacune da colmare.",
-      "ceiling": "Letto dalle {count} parole chiave più cercate di ogni concorrente.",
+      "ceiling": "Letto dalle ricerche conservate per ogni concorrente, quelle che gli portano più visite. Una ricerca per cui questo sito si posiziona fuori dal proprio elenco conservato può comparire qui come mancante.",
       "searchPlaceholder": "Cerca parole chiave…",
       "rivalsFilter": "Concorrenti posizionati",
       "anyRivals": "Almeno uno",
@@ -9100,7 +9553,9 @@
         "answer": "Risposta",
         "sources": "Fonti"
       },
-      "readFull": "Leggi la risposta completa"
+      "readFull": "Leggi la risposta completa",
+      "questionMissingTitle": "Quella domanda non è nell'elenco di questo sito",
+      "questionMissingBody": "Potrebbe essere stata rimossa. Scegli una delle sue domande da Menzioni, o apri Risposte complete dal menu."
     },
     "googleAbove": {
       "title": "Chi si posiziona sopra di te",
@@ -9155,7 +9610,8 @@
       "inAiOverviews": "Nelle Panoramiche AI",
       "inLocalPacks": "Nei riquadri mappa",
       "inSnippets": "Negli snippet in primo piano",
-      "acrossAllHint": "All'ultimo controllo: ricerche la cui pagina dei risultati mostra questo sito nella funzione."
+      "acrossAllHint": "All'ultimo controllo: ricerche la cui pagina dei risultati mostra questo sito nella funzione.",
+      "partial": "Conteggiati su tutte le {total} ricerche per cui questo sito è posizionato. L'elenco delle parole chiave ne contiene {stored}, quindi questi conteggi non lo aprono."
     },
     "googleQuestions": {
       "title": "Domande che le persone fanno",
@@ -9180,36 +9636,155 @@
     },
     "bands": {
       "title": "Fasce di posizione",
-      "description": "Quanto in alto si posiziona questo sito su Google? Quante delle sue ricerche sono in prima pagina e più in basso, nel tempo.",
-      "chartTitle": "Parole chiave per posizione",
-      "chartHint": "Impilate, la fascia migliore in basso.",
-      "columns": {
-        "day": "Controllato",
-        "total": "Tutte le parole chiave",
-        "pageOne": "Prima pagina"
+      "description": "Quanto in alto si posiziona questo sito su Google? Quante delle sue ricerche stanno in prima pagina e più in basso, nel tempo.",
+      "asOf": "Al {day} · {count} ricerche",
+      "asOfCompared": "Al {day} · {count} ricerche · confrontate con il {before}",
+      "pageOne": "In prima pagina",
+      "pageOneShare": "{share} di {total} ricerche",
+      "inTop3": "{count} tra le prime 3",
+      "inRestOfPageOne": "{count} tra 4 e 10",
+      "pageTwo": "In seconda pagina",
+      "pageTwoMeaning": "Le più vicine alla prima pagina",
+      "further": "Più in basso",
+      "furtherMeaning": "Dalla posizione 21 in giù",
+      "up": "▲ {count} dal {day}",
+      "down": "▼ {count} dal {day}",
+      "same": "Nessun cambiamento dal {day}",
+      "noBefore": "Nessun controllo precedente da confrontare",
+      "chartTitle": "La prima pagina nel tempo",
+      "chartHint": "Prima pagina, seconda pagina e più in basso a ogni controllo.",
+      "series": {
+        "pageOne": "Prima pagina",
+        "pageTwo": "Seconda pagina",
+        "further": "Più in basso"
       },
-      "empty": "Nessuna fascia di posizione registrata in queste date."
+      "early": "I controlli prima del {day} coprivano solo le ricerche controllate a ogni esecuzione, quindi restano fuori dalle fasce.",
+      "moves": {
+        "title": "Cosa si è spostato tra le fasce",
+        "first": "Questo è il primo controllo del sito: ancora nulla da confrontare.",
+        "firstList": "L'intero elenco di parole chiave è stato controllato per la prima volta il {day}: ancora nulla da confrontare.",
+        "none": "Nessuna ricerca ha cambiato fascia tra il {before} e il {day}. Ogni ricerca è rimasta dov'era.",
+        "someSame": "Tra il {before} e il {day}, {count, plural, =1 {# ricerca ha} other {# ricerche hanno}} cambiato fascia. {into} sono entrate tra le prime 3 e {out} ne sono uscite, quindi le prime 3 restano {now}.",
+        "someChanged": "Tra il {before} e il {day}, {count, plural, =1 {# ricerca ha} other {# ricerche hanno}} cambiato fascia. {into} sono entrate tra le prime 3 e {out} ne sono uscite, quindi le prime 3 ora sono {now}, da {was}.",
+        "from": "da {band}",
+        "to": "a {band}",
+        "notRanking": "Non posizionata",
+        "cell": "{count, plural, =1 {# ricerca} other {# ricerche}} da {from} a {to}",
+        "stayed": "{count, plural, =1 {# ricerca rimasta} other {# ricerche rimaste}} in {band}",
+        "legendUp": "Salita di fascia",
+        "legendDown": "Scesa di fascia",
+        "legendNew": "Nuova in classifica",
+        "legendStayed": "Rimasta",
+        "amongHeld": "Contate tra le {count} ricerche conservate: una ricerca fuori da queste non viene controllata, quindi non si sa se si è mossa.",
+        "newToList": "Nuove nell’elenco",
+        "legendNewToList": "Nuove nell’elenco conservato",
+        "someHeld": "Tra il {before} e il {day}, {count, plural, =1 {# delle ricerche conservate ha} other {# delle ricerche conservate hanno}} cambiato fascia, {fresh} delle quali nuove nell’elenco. Le prime 3 dell’elenco ora sono {now}."
+      },
+      "moved": {
+        "title": "Ricerche che hanno cambiato fascia",
+        "empty": "Nessuna ricerca ha cambiato fascia all'ultimo controllo.",
+        "columns": {
+          "keyword": "Ricerca",
+          "was": "Prima",
+          "now": "Ora",
+          "band": "Fascia",
+          "volume": "Ricerche al mese"
+        },
+        "fresh": "nuova"
+      },
+      "closest": {
+        "title": "Le più vicine alla prima pagina",
+        "description": "Posizioni da 11 a 13, le più cercate per prime.",
+        "all": "Vedi tutte le {count} in seconda pagina",
+        "empty": "Nessuna ricerca è nelle posizioni da 11 a 13.",
+        "columns": {
+          "keyword": "Ricerca",
+          "position": "Posizione",
+          "volume": "Ricerche al mese",
+          "traffic": "Visite",
+          "page": "Pagina"
+        },
+        "descriptionHeld": "Posizioni da 11 a 13 tra le ricerche conservate, le più cercate per prime."
+      },
+      "cell": {
+        "title": "Da {from} a {to}",
+        "titleNew": "Nuove in classifica in {to}",
+        "description": "Le ricerche che si sono spostate tra queste fasce all'ultimo controllo, il {day}.",
+        "missingTitle": "Non è uno spostamento tra fasce",
+        "missingBody": "Questo indirizzo non indica due fasce. Torna a Fasce di posizione e scegli un riquadro della griglia."
+      },
+      "empty": "Nessuna fascia di posizione registrata in queste date.",
+      "held": "{count} conservate"
     },
     "newLost": {
       "title": "Parole chiave nuove e perse",
-      "description": "Questo sito sta guadagnando o perdendo ricerche? Per quante si posiziona per la prima volta, sale o scende, o le perde, a ogni controllo.",
-      "chartTitle": "Nuove, in salita, in discesa e perse",
-      "chartHint": "A ogni controllo. Le frecce indicano la direzione.",
+      "description": "Questo sito sta guadagnando o perdendo ricerche? Per quante si posiziona per la prima volta, sale o scende, o che ha perso, da un controllo al successivo.",
+      "newest": "{day} confrontato con il controllo precedente",
+      "newestStart": "{day}, senza un controllo precedente da confrontare",
+      "covered": "{kind} · {count, plural, =1 {# ricerca} other {# ricerche}}",
+      "kinds": {
+        "FIRST": "Primo controllo",
+        "FIRST_LIST": "Elenco intero, la prima volta",
+        "WHOLE": "Elenco intero",
+        "EVERYDAY": "Controllo quotidiano",
+        "KEPT": "L’elenco conservato",
+        "FIRST_KEPT": "L’elenco conservato, prima volta"
+      },
+      "startLabels": {
+        "FIRST": "primo",
+        "FIRST_LIST": "primo elenco"
+      },
+      "startNotes": {
+        "FIRST": "Il primo controllo: ancora nulla da confrontare.",
+        "FIRST_LIST": "{count, plural, =1 {# ricerca conservata} other {# ricerche conservate}} per la prima volta. Non sono posizionamenti nuovi: questo elenco non era mai stato controllato."
+      },
+      "chartTitle": "Guadagnate e perse a ogni controllo",
+      "chartHint": "Sopra la linea: nuove e salite. Sotto: scese e perse. Il numero accanto a ogni barra è il saldo.",
+      "startLegend": "Non confrontato: un primo controllo, o l’elenco conservato per la prima volta",
       "series": {
         "new": "▲ Nuove",
-        "up": "↑ In salita",
-        "down": "↓ In discesa",
-        "lost": "▼ Perse"
+        "up": "↑ Salite",
+        "down": "↓ Scese",
+        "lost": "▼ Perse",
+        "left": "▼ Uscite dall’elenco"
       },
-      "columns": {
-        "day": "Controllato",
-        "new": "▲ Nuove",
-        "up": "↑ In salita",
-        "down": "↓ In discesa",
-        "lost": "▼ Perse"
+      "net": "Saldo",
+      "tabs": "Spostamenti all'ultimo controllo",
+      "moves": {
+        "columns": {
+          "keyword": "Ricerca",
+          "fromTo": "Prima → ora",
+          "change": "Variazione",
+          "volume": "Ricerche al mese",
+          "page": "Pagina"
+        },
+        "empty": "Nessuna ricerca si è spostata così a questo controllo."
       },
-      "seeKeywords": "Vedi le parole chiave che si sono mosse",
-      "empty": "Nessun conteggio registrato in queste date."
+      "checks": {
+        "columns": {
+          "day": "Controllato",
+          "new": "▲ Nuove",
+          "up": "↑ Salite",
+          "down": "↓ Scese",
+          "lost": "▼ Perse",
+          "net": "Saldo",
+          "covered": "Cosa è stato controllato",
+          "left": "▼ Uscite dall’elenco"
+        },
+        "several": "{count} controlli",
+        "severalWithFirst": "{count} controlli, tra cui il primo",
+        "severalWithFirstList": "{count} controlli, tra cui il primo dell'elenco intero"
+      },
+      "empty": "Nessun conteggio registrato in queste date.",
+      "tabNames": {
+        "NEW": "Nuove",
+        "UP": "Salite",
+        "DOWN": "Scese",
+        "LOST": "Perse",
+        "LEFT": "Uscite dall’elenco"
+      },
+      "amongHeld": "Contate tra le {count} ricerche conservate. Una ricerca uscita dall’elenco può ancora posizionarsi più in basso, quindi nessuna è detta persa.",
+      "everySearch": "Tra tutte le ricerche per cui questo sito si posiziona, dall’aggiornamento precedente dei dati di posizionamento, non dal nostro controllo precedente: {fresh} nuove, {up} in salita, {down} in discesa e {lost} perse."
     },
     "marketMap": {
       "title": "Mappa del mercato",
@@ -9278,7 +9853,10 @@
       "unknown": "Sconosciuto",
       "empty": "Nessun riepilogo dei backlink ancora. Si riempie dopo il primo controllo dei link.",
       "noMatch": "Nessun gruppo corrisponde.",
-      "worldwide": "Tutto il mondo"
+      "worldwide": "Tutto il mondo",
+      "rest": "Tutto il resto",
+      "overlapping": "Un link può rientrare in più di questi gruppi, o in nessuno: ogni quota è su tutti i {links} link.",
+      "largestOnly": "Quote dei {count} gruppi più grandi: questo riepilogo non ha conservato il resto."
     },
     "linkLists": {
       "statuses": {
@@ -9376,7 +9954,9 @@
         "lastChecked": "Ultimo controllo"
       },
       "empty": "Nessun server raccolto ancora.",
-      "noMatch": "Nessun indirizzo corrisponde."
+      "noMatch": "Nessun indirizzo corrisponde.",
+      "chartHintHeld": "Ogni barra è una rete (le prime tre parti dell’indirizzo), contata sui {held} server conservati su {total}.",
+      "networksInAll": "I link verso questo sito arrivano da {count} reti in tutto."
     },
     "backlinksBroken": {
       "title": "Backlink non funzionanti",
@@ -9411,11 +9991,13 @@
         "domains": "Siti che rimandano"
       },
       "columns": {
-        "day": "Settimana del",
+        "day": "Giorno",
         "newBacklinks": "▲ Link nuovi",
         "lostBacklinks": "▼ Link persi",
         "newReferringDomains": "▲ Siti nuovi",
-        "lostReferringDomains": "▼ Siti persi"
+        "lostReferringDomains": "▼ Siti persi",
+        "week": "Settimana del",
+        "month": "Mese di"
       },
       "empty": "Nessun cambiamento dei link registrato in queste date."
     },
@@ -9430,6 +10012,8 @@
       "scoreScale": "su 100",
       "pages": "Pagine scansionate",
       "pagesOf": "su {max} richieste",
+      "pagesFound": "su {found} trovate — la scansione si ferma al suo limite di pagine",
+      "pagesEvery": "tutte le pagine trovate dalla scansione",
       "errors": "Errori",
       "warnings": "Avvisi",
       "notices": "Note",
@@ -9535,7 +10119,9 @@
         "lastChecked": "Ultimo controllo"
       },
       "empty": "Nessun annuncio trovato. Questo sito non sembra comprare annunci su Google al momento.",
-      "noMatch": "Nessuna ricerca corrisponde."
+      "noMatch": "Nessuna ricerca corrisponde.",
+      "listing": "Mostra {listed} delle {reported} ricerche su cui fa pubblicità: quelle tra le cento controllate per gli annunci a ogni raccolta.",
+      "emptyReported": "Fa pubblicità su {reported} ricerche, ma nessuna è tra le cento controllate per gli annunci a ogni raccolta, che è tutto ciò che questo elenco contiene."
     },
     "downloads": {
       "csv": "Scarica CSV",
@@ -9543,12 +10129,251 @@
       "building": "Preparazione del file…",
       "failed": "Impossibile creare il file: riprova",
       "cutShort": "Il file contiene le prime {rows} righe: il massimo per un singolo download."
+    },
+    "coverage": {
+      "part": "Conserviamo {held} delle {total} ricerche per cui questo sito si posiziona: quelle che gli portano più visite.",
+      "unknown": "{held} ricerche conservate. Quante siano in tutto quelle per cui questo sito si posiziona non si sa ancora.",
+      "listHeld": "Di questo elenco ne conserviamo {held} su {total}, fino al numero impostato per questo sito. Gli altri non vengono raccolti."
+    }
+  },
+  "searchConsole": {
+    "list": {
+      "title": "Search Console",
+      "description": "Quello che Google stesso ha contato per i tuoi siti: clic e impressioni reali per ogni ricerca e pagina. Aprine uno per vederli.",
+      "searchPlaceholder": "Trova un sito…",
+      "empty": "La tua azienda non ha ancora siti propri.",
+      "noMatch": "Nessun sito corrisponde alla ricerca.",
+      "period": "Gli ultimi 30 giorni fino al giorno più recente di Google",
+      "columns": {
+        "website": "Sito",
+        "status": "Search Console",
+        "clicks": "Clic",
+        "impressions": "Impressioni",
+        "ctr": "Percentuale di clic",
+        "position": "Posizione",
+        "updated": "Aggiornato"
+      }
+    },
+    "status": {
+      "NOT_CONNECTED": "Non collegato",
+      "CONNECTING": "Non collegato",
+      "CHOOSING": "Scelta della proprietà",
+      "CONNECTED": "Collegato",
+      "NEEDS_RECONNECT": "Da ricollegare",
+      "DISCONNECTED": "Scollegato"
+    },
+    "site": {
+      "back": "Torna a Search Console",
+      "yourWebsite": "Il tuo sito",
+      "withProperty": "Il tuo sito · Proprietà di Search Console {property}",
+      "switch": "Scegli un sito",
+      "updated": "Aggiornato {when}",
+      "notFoundTitle": "Sito non trovato",
+      "notFoundDescription": "Quel sito non è tra quelli della tua azienda.",
+      "notOwnedTitle": "Search Console è per i tuoi siti",
+      "notOwnedDescription": "La tua azienda osserva questo sito ma non ne è proprietaria, quindi qui non ha Search Console.",
+      "figuresTo": "Dati di Google fino al {day}; gli ultimi tre giorni possono ancora cambiare.",
+      "historyComing": "I sedici mesi prima del {day} stanno ancora arrivando, dai più recenti.",
+      "clearing": "I dati della proprietà precedente vengono cancellati; poi arrivano quelli della nuova."
+    },
+    "menu": {
+      "label": "Pagine di Search Console",
+      "performance": "Rendimento",
+      "searches": "Ricerche",
+      "pages": "Pagine",
+      "places": "Paesi e dispositivi",
+      "connection": "Collegamento"
+    },
+    "kinds": {
+      "label": "Tipo di risultato",
+      "web": "Web",
+      "image": "Immagini",
+      "video": "Video",
+      "news": "Notizie",
+      "discover": "Discover",
+      "googleNews": "Google News"
+    },
+    "noKind": {
+      "title": "Niente nei risultati {kind} in queste date",
+      "body": "Google non ha mostrato nessuna pagina di questo sito nei risultati {kind} tra il {from} e il {to}."
+    },
+    "figures": {
+      "clicks": "Clic",
+      "impressions": "Impressioni",
+      "ctr": "Percentuale di clic",
+      "position": "Posizione media",
+      "positionNote": "La media di Google",
+      "shown": "Volte in cui Google l'ha mostrata",
+      "ctrNote": "Clic per ogni volta che è mostrata",
+      "up": "▲ {change} rispetto ai {days} giorni precedenti",
+      "down": "▼ {change} rispetto ai {days} giorni precedenti",
+      "same": "Come nei {days} giorni precedenti",
+      "better": "▲ {change} posizioni meglio dei {days} giorni precedenti",
+      "worse": "▼ {change} posizioni peggio dei {days} giorni precedenti",
+      "points": "{change} punti",
+      "noBefore": "I giorni precedenti non sono ancora disponibili",
+      "new": "Nuova in queste date"
+    },
+    "named": "{named} dei {total} clic vengono da ricerche che Google nomina. Gli altri {hidden} vengono da ricerche che Google nasconde per la privacy: sono nei totali, mai in un elenco.",
+    "chart": {
+      "title": "Clic e impressioni nel tempo",
+      "searchTitle": "Questa ricerca nel tempo",
+      "pageTitle": "Questa pagina nel tempo",
+      "hint": "Spunta le misure da disegnare. Ogni linea ha la sua scala, così numeri piccoli e grandi si leggono insieme.",
+      "clicks": "Clic",
+      "impressions": "Impressioni",
+      "ctr": "Percentuale di clic",
+      "position": "Posizione media",
+      "download": "Scarica",
+      "png": "Immagine (PNG)",
+      "svg": "Disegno (SVG)",
+      "csv": "Foglio di calcolo (CSV)",
+      "day": "Giorno",
+      "nothing": "In queste date non è stato mostrato niente."
+    },
+    "performance": {
+      "title": "Rendimento",
+      "description": "Quello che Google stesso ha contato per questo sito: clic e impressioni reali, dove Siti mostra stime."
+    },
+    "searches": {
+      "title": "Ricerche",
+      "description": "Ogni ricerca per cui Google ha mostrato questo sito, e i clic che ha portato. Aprine una per i suoi giorni e le pagine che Google ha mostrato.",
+      "searchPlaceholder": "Trova una ricerca…"
+    },
+    "pages": {
+      "title": "Pagine",
+      "description": "Ogni pagina che Google ha mostrato nei risultati, e i clic che ha portato. Aprine una per i suoi giorni e le ricerche per cui è stata mostrata.",
+      "searchPlaceholder": "Trova una pagina…"
+    },
+    "places": {
+      "title": "Paesi e dispositivi",
+      "description": "Da dove sono arrivati i clic, e su cosa: la quota dei clic di questo sito per ogni paese e dispositivo.",
+      "countries": "Paesi",
+      "devices": "Dispositivi",
+      "unknownCountry": "Sconosciuto",
+      "deviceNames": {
+        "DESKTOP": "Computer",
+        "MOBILE": "Cellulare",
+        "TABLET": "Tablet"
+      }
+    },
+    "table": {
+      "search": "Ricerca",
+      "page": "Pagina",
+      "country": "Paese",
+      "device": "Dispositivo",
+      "clicks": "Clic",
+      "change": "Variazione",
+      "impressions": "Impressioni",
+      "ctr": "Percentuale di clic",
+      "position": "Posizione",
+      "share": "Quota dei clic",
+      "new": "Nuova",
+      "versus": "Variazione rispetto ai {days} giorni precedenti",
+      "noVersus": "Nessuna variazione: i giorni precedenti non sono disponibili",
+      "preparing": "Sto sommando queste date. L'elenco appare appena è pronto.",
+      "behind": "Mostro l'elenco di prima del giorno più recente di Google; il più recente si sta aggiungendo ora.",
+      "cut": "I {count} con più clic",
+      "empty": "Niente in queste date.",
+      "noMatch": "Niente corrisponde alla ricerca.",
+      "download": "Scarica tutto (CSV)",
+      "downloading": "Preparo il file…",
+      "downloadFailed": "Non è stato possibile preparare il file. Riprova.",
+      "downloadCut": "Il file contiene i {rows} con più clic."
+    },
+    "record": {
+      "searchDescription": "Quello che Google ha contato per questa ricerca, giorno per giorno, e quali tue pagine ha mostrato.",
+      "pageDescription": "Quello che Google ha contato per questa pagina, giorno per giorno, e le ricerche per cui è stata mostrata.",
+      "backToSearches": "Torna a Ricerche",
+      "backToPages": "Torna a Pagine",
+      "openInSites": "Aprila in Siti",
+      "openPage": "Apri la pagina",
+      "pagesFor": "Pagine che Google ha mostrato",
+      "searchesFor": "Ricerche per cui Google l'ha mostrata",
+      "asked": "Chiesto a Google quando si apre questa schermata, per le date scelte.",
+      "asking": "Chiedo a Google…",
+      "notConnected": "Collega Search Console per vederle.",
+      "busy": "Google non ha risposto in tempo. Riprova tra un momento.",
+      "refused": "Google non ha voluto rispondere a questa domanda.",
+      "noneNamed": "Google non ne ha nominata nessuna: sono tutte nascoste per la privacy.",
+      "cut": "Le {count} con più clic.",
+      "tryAgain": "Riprova"
+    },
+    "connect": {
+      "title": "Collega Google Search Console",
+      "body": "Vedi quello che Google stesso ha contato per {host}: i clic e le impressioni di ogni ricerca e ogni pagina, giorno per giorno, fino a sedici mesi fa. Solo in lettura: in Search Console non viene mai cambiato niente.",
+      "button": "Collega Google Search Console",
+      "hint": "Accederai con l'account Google che vede {host} in Search Console.",
+      "askAdmin": "Chiedi a un amministratore della tua azienda di collegarlo. Solo loro possono farlo.",
+      "notSetUpTitle": "Search Console non è ancora configurato",
+      "notSetUpBody": "Prima va configurata l'app Google con cui si accede. Fino ad allora qui non c'è niente da fare.",
+      "failed": "Non è stato possibile avviare il collegamento. Riprova."
+    },
+    "connection": {
+      "title": "Collegamento",
+      "description": "Come {host} è collegato a Google Search Console.",
+      "chooseTitle": "Scegli la proprietà",
+      "chooseDescription": "{account} può leggere queste proprietà di Search Console per {host}. Scegli quella che copre tutto il sito.",
+      "use": "Usa questa proprietà",
+      "another": "Usa un altro account Google",
+      "domain": "Proprietà di dominio: ogni indirizzo del dominio, con o senza www, http o https",
+      "prefix": "Indirizzo: questo indirizzo e tutto ciò che c'è sotto",
+      "permissions": {
+        "siteOwner": "Proprietario",
+        "siteFullUser": "Utente completo",
+        "siteRestrictedUser": "Utente limitato"
+      },
+      "property": "Proprietà",
+      "account": "Account Google",
+      "connected": "Collegato",
+      "lastUpdated": "Ultimo aggiornamento",
+      "history": "Storico",
+      "collected": "Raccolta",
+      "updatedDetail": "{when} · Dati di Google fino al {day}",
+      "notYet": "Non ancora",
+      "historyAll": "Sedici mesi, dal {day}: tutto arrivato",
+      "historyPart": "Dal {day} per ora; il resto sta arrivando",
+      "collectedDetail": "Ogni mattina: il nuovo giorno, e di nuovo gli ultimi quattro finché i dati di Google si assestano",
+      "disconnect": "Scollega",
+      "confirm": "Scollegando si ferma la raccolta e si restituisce l'accesso a Google. I dati raccolti finora restano, segnati con il giorno dello scollegamento.",
+      "confirmDisconnect": "Scollega",
+      "keep": "Lascialo collegato",
+      "reconnect": "Collega di nuovo",
+      "failed": "Non ha funzionato. Riprova.",
+      "someone": "quell'account Google",
+      "attemptTitle": {
+        "DECLINED": "Non collegato",
+        "MISSING_SCOPE": "Non collegato",
+        "NO_PROPERTY": "Nessuna proprietà per {host} in {account}",
+        "UNVERIFIED": "Nessuna proprietà per {host} in {account}",
+        "FAILED": "Non collegato"
+      },
+      "attempt": {
+        "DECLINED": "L'accesso è stato rifiutato su Google, quindi non è stato collegato niente.",
+        "MISSING_SCOPE": "L'accesso a Search Console non è stato spuntato su Google, quindi non è stato collegato niente. Collega di nuovo e lascialo spuntato.",
+        "NO_PROPERTY": "{account} non vede {host} in Search Console. Accedi con l'account che lo vede, oppure chiedi a chi gestisce Search Console di {host} di aggiungere {account} come utente, poi collega di nuovo.",
+        "UNVERIFIED": "{account} non è verificato per {host} in Search Console, quindi non può leggerne i dati. Chiedi a un proprietario della proprietà di aggiungerlo come utente, poi collega di nuovo.",
+        "FAILED": "L'accesso non è andato a buon fine. Riprova."
+      },
+      "tryAnother": "Prova un altro account Google",
+      "problem": {
+        "REVOKED": "Google non permette più a {account} di leggere questa proprietà.",
+        "NO_ACCESS": "{account} non può più leggere {property} in Search Console.",
+        "UNREADABLE": "L'accesso salvato non si può più leggere.",
+        "NOT_CONFIGURED": "Search Console non è più configurato, quindi non si raccoglie niente.",
+        "GOOGLE_BUSY": "Google era occupato durante l'ultima raccolta. Si riprova più tardi.",
+        "NOT_OWNED": "Questo sito non è più segnato come tuo, quindi non si raccoglie niente."
+      },
+      "disconnectedOn": "Scollegato il {day}",
+      "keptTo": "I dati fino al {day} sono ancora qui. Non arriva niente di nuovo finché non viene ricollegato.",
+      "keptNone": "Non arriva niente di nuovo finché non viene ricollegato."
     }
   },
   "aiEngines": {
     "chatgpt": "ChatGPT",
     "perplexity": "Perplexity",
     "gemini": "Gemini",
-    "claude": "Claude"
+    "claude": "Claude",
+    "googleAiOverview": "AI Overview di Google"
   }
 }

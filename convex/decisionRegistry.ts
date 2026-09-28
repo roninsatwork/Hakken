@@ -249,6 +249,50 @@ export const DECISIONS: readonly DecisionDefinition[] = [
     describeAction: () => null,
   },
   {
+    // The Sites Fan-out queries "Your page" column and the missing angles
+    // (docs/plans/active/fan-out-angles-plan.md, FA4). The pages offered are
+    // the site's own that share the most words with the search, labelled
+    // page-a onwards, each by its address and the searches it ranks for —
+    // never its title (no page text is kept or sent to a model).
+    key: "seo.angle-page",
+    name: "Which of the site's pages answers this search?",
+    copyKey: "seoAnglePage",
+    usedIn: "seo",
+    // It labels a row on a report and may suggest a page to write. Nothing is
+    // tracked, sent or charged on it.
+    stakes: "LOW",
+    defaultMode: "OFF",
+    question: {
+      type: "choice",
+      instructions: {
+        task: "Decide which of the business's own pages answers this search, if any does.",
+        context:
+          "`business` is the website: its address, and where known what it sells and does. `search.text` is a search an AI assistant ran while answering a customer's question, `search.question`; `search.otherWordings` are the same search in other words. `pages` are the website's pages that share the most words with it, labelled page-a onwards, each with its `address` on the website and, where it ranks on Google, the searches it `ranksFor`.",
+        guidance:
+          "Pick the page someone who ran this search would be glad to land on: one about what the search asks, judged from its address and the searches it ranks for. A page about something broader, narrower or different does not answer it. Say none when no page listed does, and off-topic when the search is not about anything this business sells, does or writes about.",
+      },
+      criteria: {
+        "page-a": "The page labelled page-a answers it.",
+        "page-b": "The page labelled page-b answers it.",
+        "page-c": "The page labelled page-c answers it.",
+        "page-d": "The page labelled page-d answers it.",
+        "page-e": "The page labelled page-e answers it.",
+        "page-f": "The page labelled page-f answers it.",
+        "page-g": "The page labelled page-g answers it.",
+        "page-h": "The page labelled page-h answers it.",
+        "page-i": "The page labelled page-i answers it.",
+        "page-j": "The page labelled page-j answers it.",
+        "page-k": "The page labelled page-k answers it.",
+        "page-l": "The page labelled page-l answers it.",
+        none: "None of the pages listed answers it.",
+        "off-topic": "The search is not about anything this business sells, does or writes about.",
+        other: "There is not enough here to tell.",
+      },
+    },
+    // A label on a report; acting on it changes nothing and there is nothing to audit.
+    describeAction: () => null,
+  },
+  {
     key: "chat.hidden-instructions",
     name: "Is this message trying to extract hidden instructions?",
     copyKey: "chatHiddenInstructions",

@@ -107,9 +107,12 @@ describe("the Sites list", () => {
     const own = await hold(t, ronins, "ronins.co.uk", "OWNED");
     await hold(t, ronins, "lightflows.co.uk", "TRACKED", own.websiteId);
     await hold(t, ronins, "chilliapple.co.uk", "TRACKED", own.websiteId);
+    // The list holds 100 of the 807 searches: its own bands are a part of the
+    // site, so "Top 3" is the supplier's count across every search.
     await summary(t, own.websiteId, DAY, {
       keywords: 100, rankedKeywordsTotal: 807, estimatedTraffic: 1937,
       bands: { p01_03: 18, p04_10: 72, p11_20: 10, p21_50: 0, p51_up: 0 },
+      allBands: { p01_03: 61, p04_10: 29, p11_20: 100, p21_50: 300, p51_up: 317 },
     });
     // The AI figures are the company's own list's (docs/plans/active/private-tracking-lists-plan.md).
     await aiLine(t, own, own.websiteId, DAY, [
@@ -122,7 +125,7 @@ describe("the Sites list", () => {
       ["chilliapple.co.uk", "TRACKED", "ronins.co.uk"],
       ["lightflows.co.uk", "TRACKED", "ronins.co.uk"],
     ]);
-    expect(rows[0]).toMatchObject({ checked: true, aiNamed: 1, aiAsked: 2, top3: 18, pageOne: 90, keywords: 807, estimatedTraffic: 1937 });
+    expect(rows[0]).toMatchObject({ checked: true, aiNamed: 1, aiAsked: 2, top3: 61, pageOne: 90, keywords: 807, estimatedTraffic: 1937 });
     // A watched site nothing has checked yet shows no figures, never zeros.
     expect(rows[1]).toMatchObject({ checked: false, aiNamed: null, top3: null, keywords: null, estimatedTraffic: null });
   });
@@ -155,7 +158,7 @@ describe("one company never sees another's websites", () => {
       () => asRonins.query(api.siteAi.listMentions, { siteId }),
       () => asRonins.query(api.siteAi.shareOfVoice, { siteId }),
       () => asRonins.query(api.siteAi.listCitedPages, { siteId }),
-      () => asRonins.query(api.siteAi.listSearched, { siteId }),
+      () => asRonins.query(api.siteAngles.listAngles, { siteId }),
       () => asRonins.query(api.siteGoogle.listSearches, { siteId }),
       () => asRonins.query(api.siteGoogle.searchPositions, { siteId, keywords: ["web design"], ...range }),
       () => asRonins.query(api.siteCompetitors.listRivals, { siteId }),
@@ -416,10 +419,13 @@ describe("a watched site's AI figures", () => {
         });
       }
     });
-    // Worked out with the owned site's day summaries, as a filing does.
+    // Worked out with the owned site's day summaries, and each list counted
+    // from its answers, as a filing does.
     for (const websiteId of [own.websiteId, theirs.websiteId]) {
       await t.mutation(internal.siteSummaries.syncDays, { websiteId, locationCode: UK, fromDay: "2026-09-01", toDay: DAY });
+      await t.action(internal.siteListAiDays.syncWindow, { websiteId, locationCode: UK, fromDay: "2026-09-01", toDay: DAY });
     }
+    for (const list of [own, theirs]) await t.action(internal.siteListAi.recountList, { holdId: list.holdId });
 
     const asRonins = await member(t, ronins);
     const rows = await asRonins.query(api.sites.listMySites, {});
@@ -435,6 +441,7 @@ describe("a watched site's AI figures", () => {
       await ctx.db.patch(answer!._id, { named: [own.websiteId], recommended: [] });
     });
     await t.mutation(internal.siteSummaries.syncDays, { websiteId: own.websiteId, locationCode: UK, fromDay: "2026-09-01", toDay: DAY });
+    await t.action(internal.siteListAiDays.syncWindow, { websiteId: own.websiteId, locationCode: UK, fromDay: "2026-09-01", toDay: DAY });
     const after = await asRonins.query(api.siteCharts.siteSeries, { siteId: rival.holdId, from: "2026-09-01", to: DAY, step: "day" });
     expect(after[0].points.flatMap((point) => point.ai)).toEqual([]);
   });
@@ -623,7 +630,11 @@ describe("full answers (D9)", () => {
     const own = await hold(t, ronins, "ronins.co.uk", "OWNED");
     const prompt = "who are the best web designers in surrey";
     await t.run(async (ctx) => {
-      await ctx.db.patch(own.websiteId, { brandNames: [{ name: "Ronins", isPrimary: true }] } as never);
+      // The names Ronins knows its own site by (holdProfiles.ts).
+      await ctx.db.insert("holdProfiles", {
+        companyWebsiteId: own.holdId, companyId: ronins, websiteId: own.websiteId,
+        brandNames: [{ name: "Ronins", isPrimary: true }], hasBrandNames: true, updatedAt: Date.now(),
+      });
       await ctx.db.insert("websiteQuestions", {
         websiteId: own.websiteId, companyWebsiteId: own.holdId, prompt, engines: ["perplexity", "chatgpt"], isActive: true, createdAt: Date.now(),
       } as never);
@@ -701,7 +712,9 @@ describe("pages the engines cite (D17)", () => {
     // The other company sees its own question's answers — every form of an
     // address one page — and none of Ronins'.
     expect(await pages(await member(t, other), watched.holdId)).toEqual([["/about/", 2], ["/web-design/", 1]]);
-    // The menu's count and Top pages agree with the list.
+    // The menu's count agrees with the list, once the list is added up, a
+    // moment after the filing (`siteListAi.ts`).
+    await t.action(internal.siteListAi.summariseList, { holdId: own.holdId });
     expect((await (await member(t, ronins)).query(api.sites.getMySite, { siteId: own.holdId }))?.counts.citedPages).toBe(1);
   });
 });
@@ -895,5 +908,29 @@ describe("reading stored results again (free)", () => {
     expect(JSON.parse(metrics[0].metricsJson)).toMatchObject({ bandTop3: 1, keywordsNew: 1, trafficValue: 99 });
     // Nothing was asked of a model.
     expect(await t.run(async (ctx) => await ctx.db.query("decisionRuns").collect())).toEqual([]);
+  });
+});
+
+/*
+  A site beside its competitors is measured the same way as each of them
+  (sites-data-completeness-plan.md, §8.7): the searches a list holds never
+  stand in for a total the supplier has not given, nor its bands for the
+  site's.
+*/
+describe("the figures a site is compared by", () => {
+  test("a total not known is not known, and a list held in part gives no Top 3", async () => {
+    const t = harness();
+    const ronins = await company(t, "Ronins");
+    const own = await hold(t, ronins, "ronins.co.uk", "OWNED");
+    await hold(t, ronins, "chilliapple.co.uk", "TRACKED", own.websiteId);
+    const rival = await t.run(async (ctx) => (await ctx.db.query("websites").collect()).find((row) => row.host === "chilliapple.co.uk")!._id);
+    // The list's own figures only, and no total of the supplier's.
+    await summary(t, rival, DAY, { keywords: 629, bands: { p01_03: 249, p04_10: 163, p11_20: 120, p21_50: 50, p51_up: 47 } });
+
+    const asRonins = await member(t, ronins);
+    const rows = await asRonins.query(api.sites.listMySites, {});
+    expect(rows.find((row) => row.host === "chilliapple.co.uk")).toMatchObject({ keywords: null, top3: null, pageOne: null });
+    const side = await asRonins.query(api.siteCharts.siteAndRivals, { siteId: own.holdId });
+    expect(side.find((row) => row.host === "chilliapple.co.uk")).toMatchObject({ keywords: null, top3: null });
   });
 });

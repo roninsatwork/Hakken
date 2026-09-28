@@ -32,6 +32,14 @@ import { utf8Length } from "./seoPullAnswers";
 
 export type CopyKind = "keywords" | "pages" | "links" | "gap";
 
+/**
+ * Every kind of copy these tables hold: the Sites lists', and Search Console's
+ * own (`searchConsoleCopies.ts`, docs/plans/active/search-console-plan.md
+ * §4.3) — one copy per list, dimension and range, built when a table asks for
+ * it rather than by the Sites rebuilds and sweep, which leave it alone.
+ */
+export type AnyCopyKind = CopyKind | "gsc";
+
 /** A part's budget, in bytes of JSON: under a document's 1 MiB with room to spare. */
 const PART_BYTES = 700_000;
 
@@ -67,7 +75,7 @@ export type ListCopy = {
  * layout the reader expects, so a copy from before a column was added is
  * rebuilt rather than misread.
  */
-export async function readListCopy(ctx: QueryCtx, kind: CopyKind, key: string, fields: readonly string[]): Promise<ListCopy | null> {
+export async function readListCopy(ctx: QueryCtx, kind: AnyCopyKind, key: string, fields: readonly string[]): Promise<ListCopy | null> {
   const header = await ctx.db
     .query("siteListCopies")
     .withIndex("by_kind_key", (q) => q.eq("kind", kind).eq("key", key))
@@ -105,7 +113,7 @@ function partsOf(rows: readonly unknown[][]): string[] {
 /** Write a list's copy beside its last one, then switch to it and drop the last one. */
 export async function writeListCopy(
   ctx: ActionCtx,
-  copy: { kind: CopyKind; key: string; fields: readonly string[]; rows: readonly unknown[][]; cut?: number | null; meta?: Record<string, string | number | null> },
+  copy: { kind: AnyCopyKind; key: string; fields: readonly string[]; rows: readonly unknown[][]; cut?: number | null; meta?: Record<string, string | number | null> },
 ): Promise<void> {
   const buildId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const parts = partsOf(copy.rows);
@@ -128,7 +136,11 @@ export async function writeListCopy(
   }
 }
 
-const kindValidator = v.union(v.literal("keywords"), v.literal("pages"), v.literal("links"), v.literal("gap"));
+/** The Sites lists' kinds: what the Sites builders and requests deal in. */
+const siteKindValidator = v.union(v.literal("keywords"), v.literal("pages"), v.literal("links"), v.literal("gap"));
+
+/** Every kind a copy is written under: the Sites lists', and Search Console's. */
+const kindValidator = v.union(v.literal("keywords"), v.literal("pages"), v.literal("links"), v.literal("gap"), v.literal("gsc"));
 
 export const writeCopyPart = internalMutation({
   args: { kind: kindValidator, key: v.string(), buildId: v.string(), part: v.number(), data: v.string() },
@@ -213,7 +225,7 @@ export async function requestListCopy(ctx: MutationCtx, kind: CopyKind, key: str
  * rather than importing it.
  */
 export const requestCopies = internalMutation({
-  args: { requests: v.array(v.object({ kind: kindValidator, key: v.string() })) },
+  args: { requests: v.array(v.object({ kind: siteKindValidator, key: v.string() })) },
   returns: v.null(),
   handler: async (ctx, args) => {
     for (const request of args.requests) await requestListCopy(ctx, request.kind, request.key);
@@ -232,6 +244,8 @@ export const refreshListCopies = internalMutation({
     const page = await ctx.db.query("siteListCopies").paginate({ cursor: args.cursor, numItems: 50 });
     const stale = Date.now() - COPY_MAX_AGE_MS;
     for (const copy of page.page) {
+      // Search Console's copies are rebuilt when a table finds them behind, never here.
+      if (copy.kind === "gsc") continue;
       if (copy.builtAt < stale) await requestListCopy(ctx, copy.kind as CopyKind, copy.key);
     }
     if (!page.isDone) await ctx.scheduler.runAfter(0, internal.siteListCopies.refreshListCopies, { cursor: page.continueCursor });
@@ -245,7 +259,7 @@ export const refreshListCopies = internalMutation({
  * copy half gone, then the parts a few at a time. Answers whether any remain,
  * for the purge to come back for them.
  */
-export async function dropCopies(ctx: MutationCtx, kind: CopyKind, keyPrefix: string): Promise<boolean> {
+export async function dropCopies(ctx: MutationCtx, kind: AnyCopyKind, keyPrefix: string): Promise<boolean> {
   const end = `${keyPrefix}￿`;
   const headers = await ctx.db
     .query("siteListCopies")
@@ -266,7 +280,7 @@ export async function dropCopies(ctx: MutationCtx, kind: CopyKind, keyPrefix: st
  * after it; finding nobody, it removes the copy rather than writing one.
  */
 export const copyOwnerExists = internalQuery({
-  args: { kind: kindValidator, key: v.string() },
+  args: { kind: siteKindValidator, key: v.string() },
   returns: v.boolean(),
   handler: async (ctx, args) => {
     const id = args.key.split(":")[0];
@@ -281,7 +295,7 @@ export const copyOwnerExists = internalQuery({
 
 /** One step of removing a list's copy whose owner is gone: answers whether more remains. */
 export const dropCopyStep = internalMutation({
-  args: { kind: kindValidator, key: v.string() },
+  args: { kind: siteKindValidator, key: v.string() },
   returns: v.boolean(),
   handler: async (ctx, args) => await dropCopies(ctx, args.kind, args.key),
 });

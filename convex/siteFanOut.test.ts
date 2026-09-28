@@ -1,8 +1,9 @@
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
+import { finishScheduled } from "@/src/test/finishScheduled";
 import { AI_ENGINE_CALLS, AI_ENGINES, answerPlace, fanOutPlace, type AiEngine } from "./seoAiEngines";
 
 /**
@@ -63,6 +64,12 @@ async function fanOut(t: Harness, pullId: Id<"seoDataPulls">, prompt: string, en
   }));
 }
 
+/** The angles built from what was filed, as a collection closing builds them. */
+async function rebuild(t: Harness, holdId: Id<"companyWebsites">) {
+  await t.mutation(internal.fanOutAngles.rebuildHoldAngles, { holdId });
+  await finishScheduled(t);
+}
+
 describe("fan-out searches on the Sites screens", () => {
   test("show every engine's, for a website with no place chosen", async () => {
     const t = harness();
@@ -74,8 +81,9 @@ describe("fan-out searches on the Sites screens", () => {
     await fanOut(t, own.pullId, prompt, "chatgpt", "best web designers surrey");
     await fanOut(t, own.pullId, prompt, "claude", "award winning web design surrey");
 
+    await rebuild(t, own.holdId);
     const asRonins = await member(t, ronins);
-    const found = (await asRonins.query(api.siteAi.listSearched, { siteId: own.holdId })).rows
+    const found = (await asRonins.query(api.siteAngles.listAngles, { siteId: own.holdId })).rows
       .map((row) => [row.query, row.engines.join(",")]).sort();
     expect(found).toEqual([
       ["award winning web design surrey", "claude"],
@@ -93,8 +101,9 @@ describe("fan-out searches on the Sites screens", () => {
     // One engine takes no place, so it is asked, and filed, with none.
     await fanOut(t, own.pullId, prompt, PLACELESS, "top web design agencies london", LONDON);
 
+    await rebuild(t, own.holdId);
     const asRonins = await member(t, ronins);
-    const found = (await asRonins.query(api.siteAi.listSearched, { siteId: own.holdId })).rows
+    const found = (await asRonins.query(api.siteAngles.listAngles, { siteId: own.holdId })).rows
       .map((row) => [row.query, row.engines.join(",")]).sort();
     expect(found).toEqual([["best web designers london", "chatgpt"], ["top web design agencies london", PLACELESS]]);
   });

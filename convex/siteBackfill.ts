@@ -100,6 +100,7 @@ export const replayRankings = internalMutation({
         keyword: row.keyword,
         day: row.day,
         position: row.position,
+        ...(row.pagePosition !== undefined ? { pagePosition: row.pagePosition } : {}),
         ...(row.url ? { url: row.url } : {}),
         ...(row.searchVolume !== undefined ? { volume: row.searchVolume } : {}),
       });

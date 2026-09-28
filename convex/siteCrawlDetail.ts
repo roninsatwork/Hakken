@@ -9,6 +9,7 @@ import { tenantQuery } from "./tenantFunctions";
 import { getErrorMessage } from "./utils/lang";
 import { pagePath } from "./utils/siteShapes";
 import { heldTo, listWithCut } from "./siteListPages";
+import { runDayOf } from "./seoRunDay";
 
 /**
  * The page-by-page detail of a site crawl (Anthony, 2026-09-24: "store
@@ -139,7 +140,7 @@ export const crawlOf = internalQuery({
   handler: async (ctx, args) => {
     const pull = await ctx.db.get(args.pullId);
     if (!pull?.taskId || !pull.websiteId || pull.operationId !== "site_crawl") return null;
-    return { taskId: pull.taskId, websiteId: pull.websiteId, day: new Date(pull.completedAt ?? pull.submittedAt).toISOString().slice(0, 10) };
+    return { taskId: pull.taskId, websiteId: pull.websiteId, day: await runDayOf(ctx, pull) };
   },
 });
 
@@ -175,7 +176,7 @@ export const fetchCrawlDetail = internalAction({
         path: string,
         extra: Record<string, unknown>,
         parse: (result: unknown) => Row[],
-      ): Promise<{ rows: Row[] } | { failure: string }> => {
+      ): Promise<{ rows: Row[]; cut: boolean } | { failure: string }> => {
         const rows: Row[] = [];
         for (let request = 0; request < MAX_DETAIL_REQUESTS; request += 1) {
           const envelope = await postDataForSeoTask(path, { id: crawl.taskId, limit: DETAIL_PAGE, offset: request * DETAIL_PAGE, ...extra }, credentials);
@@ -186,9 +187,10 @@ export const fetchCrawlDetail = internalAction({
           }
           const page = parse(task.result);
           rows.push(...page);
-          if (page.length < DETAIL_PAGE) break;
+          if (page.length < DETAIL_PAGE) return { rows, cut: false };
         }
-        return { rows };
+        // Every request came back full: there may be more, never fetched.
+        return { rows, cut: true };
       };
       const pages = await collect("/v3/on_page/pages", {}, parseCrawlPages);
       const links = "failure" in pages ? pages : await collect("/v3/on_page/links", { filters: [["is_broken", "=", true]] }, parseBrokenLinks);
@@ -209,6 +211,7 @@ export const fetchCrawlDetail = internalAction({
         for (let more = true; more;) {
           more = (await ctx.runMutation(internal.siteCrawlDetail.clearOlderCrawlDetail, { websiteId: crawl.websiteId, pullId: args.pullId })).more;
         }
+        await ctx.runMutation(internal.siteCrawlDetail.recordDetailCut, { pullId: args.pullId, cut: pages.cut || links.cut });
       }
     } catch (error) {
       failure = getErrorMessage(error);
@@ -224,6 +227,18 @@ export const fetchCrawlDetail = internalAction({
       pullId: args.pullId,
       error: `The crawl's page detail could not be fetched: ${failure}`,
     });
+    return null;
+  },
+});
+
+/** Whether the crawl's detail stopped at its request cap, on the crawl, so its lists say they are the first part. */
+export const recordDetailCut = internalMutation({
+  args: { pullId: v.id("seoDataPulls"), cut: v.boolean() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    for (const row of await ctx.db.query("siteCrawls").withIndex("by_pull", (q) => q.eq("pullId", args.pullId)).take(5)) {
+      await ctx.db.patch(row._id, { detailCut: args.cut ? true : undefined });
+    }
     return null;
   },
 });
@@ -358,6 +373,6 @@ export const crawlProblemPages = tenantQuery({
           .filter((link) => link.from === row.url)
           .map((link) => ({ to: link.to, statusCode: link.statusCode ?? null })),
       }));
-    return { rows, cut: crawled.cut !== null || links.cut !== null ? rows.length : null };
+    return { rows, cut: crawled.cut !== null || links.cut !== null || newest.detailCut === true ? rows.length : null };
   },
 });

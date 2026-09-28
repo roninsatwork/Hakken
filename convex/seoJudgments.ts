@@ -74,13 +74,14 @@ export async function judgeStances(
     pullId: Id<"seoDataPulls">;
     prompt: string;
     answer: string;
-    hits: Array<{ websiteId: Id<"websites">; text: string; variantKind: "NAME" | "MISSPELLING"; at: number }>;
+    hits: Array<{ websiteId: Id<"websites">; text: string; texts?: string[]; variantKind: "NAME" | "MISSPELLING"; at: number }>;
   },
   /** A test hands in its own asker; production asks whatever the job resolves to. */
   deps: RunDecisionsDeps = {},
 ): Promise<Array<{
   websiteId: Id<"websites">;
   text: string;
+  texts?: string[];
   variantKind: "NAME" | "MISSPELLING";
   stance?: "RECOMMENDED" | "MENTIONED" | "WARNED_AGAINST";
   stanceCertainty?: "SURE" | "FAIRLY_SURE" | "NOT_SURE";
@@ -100,7 +101,7 @@ export async function judgeStances(
   const judged = [];
   for (const [index, hit] of args.hits.entries()) {
     const result = answers[index];
-    const base = { websiteId: hit.websiteId, text: hit.text, variantKind: hit.variantKind };
+    const base = { websiteId: hit.websiteId, text: hit.text, variantKind: hit.variantKind, ...(hit.texts ? { texts: hit.texts } : {}) };
 
     // The rules answered, so nothing was judged and nothing is claimed.
     if (!result || result.source === "RULES" || result.answer.kind !== "pick-one") {
@@ -223,8 +224,6 @@ export async function judgeCompetitors(
       host: string; intersections: number; averagePosition: number | null; estimatedTraffic: number | null;
       domainKeywords?: number | null; domainTraffic?: number | null;
     }>;
-    /** What known candidates do, by host, where an admin has written it down. */
-    knownCandidates?: Record<string, { sector?: string; does?: string }>;
   },
   deps: RunDecisionsDeps = {},
 ): Promise<Array<{
@@ -263,9 +262,9 @@ export async function judgeCompetitors(
     state: {
       ours,
       candidate: {
+        // Its address alone: what another company says a candidate does is
+        // that company's (company-level-website-facts-plan.md, CL4).
         address: row.host,
-        ...(args.knownCandidates?.[row.host]?.sector ? { sells: args.knownCandidates[row.host]!.sector } : {}),
-        ...(args.knownCandidates?.[row.host]?.does ? { does: args.knownCandidates[row.host]!.does } : {}),
         searchesInCommon: row.intersections,
         ...(row.averagePosition !== null ? { averageGooglePosition: row.averagePosition } : {}),
       },
@@ -418,5 +417,5 @@ const KEYWORDS_PER_ROUND = 50;
 /** Meanings written per mutation (`writeKeywordIntents`). */
 const INTENTS_PER_WRITE = 10;
 
-/** What a watched business does, from `describeBusinessForJudging` in websiteCanonical.ts. */
+/** What a watched business does, as one company says it (`describeHoldForJudging` in holdProfiles.ts). */
 export type BusinessForJudging = { sector?: string; market?: string; does?: string; names: string[]; searches: string[] };

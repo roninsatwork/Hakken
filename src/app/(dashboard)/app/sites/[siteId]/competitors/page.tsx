@@ -63,7 +63,8 @@ export default function SiteSideBySidePage() {
     traffic: { value: (row) => row.estimatedTraffic, first: "desc" },
     keywords: { value: (row) => row.keywords, first: "desc" },
     linking: { value: (row) => row.referringDomains, first: "desc" },
-    beats: { value: (row) => compare.get(row.websiteId)?.beatsYouOn ?? null, first: "desc" },
+    // Blank, and last, for a competitor with no place on any search compared: it shows "–".
+    beats: { value: (row) => { const entry = compare.get(row.websiteId); return entry && entry.rankedOn > 0 ? entry.beatsYouOn : null; }, first: "desc" },
   }), [compare]);
   const { rows: sorted, tableSort } = useSiteSortedList(shownFigures, columns, { opening: "traffic", name: hostOf });
   // Paged like every table, however many rivals a group holds.
@@ -73,12 +74,15 @@ export default function SiteSideBySidePage() {
   // A competitor opens its own comparison with this site; this site is the one being read.
   const rivalHref = (row: { host: string; isYou: boolean }): string | null => {
     if (row.isYou) return null;
-    const hold = site?.holds.find((entry) => entry.host === row.host);
+    const hold = site?.rivals.find((entry) => entry.host === row.host);
     return hold ? recordHref({ kind: "rival", rivalId: hold.siteId }) : null;
   };
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step, withRivals: true });
 
   const lines = series ?? [];
+  // A group of more than five draws the five with the most traffic, and says so (4.11).
+  const drawn = lines.filter((line) => !line.isYou).length;
+  const groupSize = site?.rivals.length ?? 0;
   const days = [...new Set(lines.flatMap((line) => line.points.map((point) => point.day)))].sort();
   const traffic = (line: (typeof lines)[number], day: string) => line.points.find((point) => point.day === day)?.estimatedTraffic ?? null;
 
@@ -88,7 +92,7 @@ export default function SiteSideBySidePage() {
 
       <SiteChartCard
         title={t("chartTitle")}
-        hint={t("chartHint")}
+        hint={series !== undefined && groupSize > drawn ? t("chartHintSome", { shown: drawn, total: groupSize }) : t("chartHint")}
         exportName={`${site?.host ?? "site"}-traffic-side-by-side-${range.from}-to-${range.to}`}
         csv={() => toCsv(["day", ...lines.map((line) => line.host)], days.map((day) => [day, ...lines.map((line) => traffic(line, day))]))}
         enoughData={days.length > 0}
@@ -138,7 +142,10 @@ export default function SiteSideBySidePage() {
             sortable: true,
             cell: (row) => {
               const entry = compare.get(row.websiteId);
-              return entry ? <span className="font-mono text-[12px]">{t("searchesOf", { count: entry.beatsYouOn, total: entry.comparedOn })}</span> : <span className="text-muted">–</span>;
+              // A competitor with no place on any search compared has nothing to count (4.9).
+              return entry && entry.rankedOn > 0
+                ? <span className="font-mono text-[12px]">{t("searchesOf", { count: entry.beatsYouOn, total: entry.comparedOn })}</span>
+                : <span className="text-muted">–</span>;
             },
           },
           {

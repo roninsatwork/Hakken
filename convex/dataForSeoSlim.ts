@@ -187,7 +187,7 @@ export function expandSeoResult(result: unknown): unknown {
  * Every fact the parser reads is kept; the page's words are not.
  */
 const RANKED_FIELDS = [
-  "keyword", "type", "rank_absolute", "url", "etv", "estimated_paid_traffic_cost",
+  "keyword", "type", "rank_group", "rank_absolute", "url", "etv", "estimated_paid_traffic_cost",
   "search_volume", "cpc", "competition", "competition_level", "keyword_difficulty",
   "trend_from", "trend", "serp_item_types", "main_intent", "se_results_count",
   "previous_rank_absolute", "is_new", "is_up", "is_down", "page_rank", "referring_domains", "backlinks",
@@ -211,6 +211,7 @@ function rankedRow(item: Unknown): unknown[] {
   const values: Record<(typeof RANKED_FIELDS)[number], unknown> = {
     keyword: data?.keyword,
     type: serp?.type,
+    rank_group: serp?.rank_group,
     rank_absolute: serp?.rank_absolute,
     url: serp?.url,
     etv: serp?.etv,
@@ -284,6 +285,7 @@ function expandRankedRow(fields: string[], row: unknown[]): Unknown {
     ranked_serp_element: {
       serp_item: compact({
         type: value("type"),
+        rank_group: value("rank_group"),
         rank_absolute: value("rank_absolute"),
         url: value("url"),
         etv: value("etv"),

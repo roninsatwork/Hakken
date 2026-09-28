@@ -1,58 +1,35 @@
 "use client";
 
-import { useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Building2, Share2 } from "lucide-react";
+import { Globe, Info, Users } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
-import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
-import { useAdminAction } from "@/src/hooks/useAdminAction";
-import { BrandNames } from "./BrandNames";
+import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { useScheduleSummary } from "@/src/app/(dashboard)/admin/_lib/useScheduleSummary";
 
 /**
- * What this website is: its names, and what it does.
+ * The website record: every company holding or tracking this website.
  *
- * Both are facts about the host by the same test — two companies watching it
- * would write down the same answer — so both are shared with every client
- * attached, and the notice at the top says so rather than leaving anyone to
- * find out. What is *not* shared is who is watching, which is why that list is
- * a tab of its own and nothing here names a company.
+ * Since 2026-09-28 the record holds nothing a company sets — its names, its
+ * profile and its competitors are each company's own, set on that company's
+ * screen for the website (docs/plans/active/company-level-website-facts-plan.md,
+ * CL6) — so who is watching is all that is left to show, with the delete on
+ * the frame. It crosses companies where no other page does, which is why the
+ * whole route is closed to everyone but a platform administrator.
  */
-export default function WebsiteProfilePage() {
+export default function WebsiteWatchersPage() {
   const t = useTranslations("admin.websiteDetail");
-  const tProfile = useTranslations("admin.websiteDetail.profile");
-  const tCommon = useTranslations("common");
+  const scheduleSummary = useScheduleSummary();
   const params = useParams();
   const websiteId = params.websiteId as Id<"websites">;
 
   const website = useQuery(api.websites.getWebsiteById, { id: websiteId });
-  const setProfile = useMutation(api.websiteCanonical.setWebsiteProfile);
-  const action = useAdminAction({ scope: "admin-website-profile" });
-
-  const [sector, setSector] = useState("");
-  const [marketLabel, setMarketLabel] = useState("");
-  const [description, setDescription] = useState("");
-  const [error, setError] = useState("");
-  const [isSaved, setIsSaved] = useState(false);
-
-  // Adopted during render, keyed on the values themselves, rather than in an
-  // effect: the effect version paints a frame of the stale profile first, and
-  // cascades a second render to correct it.
-  const [seenKey, setSeenKey] = useState<string | null>(null);
-  const savedKey = website === undefined
-    ? null
-    : `${website?.sector ?? ""}|${website?.marketLabel ?? ""}|${website?.businessDescription ?? ""}`;
-  if (savedKey !== null && savedKey !== seenKey) {
-    setSeenKey(savedKey);
-    setSector(website?.sector ?? "");
-    setMarketLabel(website?.marketLabel ?? "");
-    setDescription(website?.businessDescription ?? "");
-  }
 
   if (website === undefined) {
     return <p className="text-[13px] text-secondary">{t("loading")}</p>;
@@ -61,96 +38,87 @@ export default function WebsiteProfilePage() {
     return <p className="text-[13px] text-destructive">{t("notFound")}</p>;
   }
 
-  const handleSave = async () => {
-    setError("");
-    setIsSaved(false);
-
-    const outcome = await action.run(
-      () => setProfile({
-        websiteId,
-        // Empty clears it. Somebody who does not know the sector should be
-        // able to say so, and a wrong one is worse than none.
-        sector: sector.trim().length > 0 ? sector : null,
-        marketLabel: marketLabel.trim().length > 0 ? marketLabel : null,
-        description: description.trim().length > 0 ? description : null,
-      }),
-      { suppressErrorToast: true, fallbackMessage: tProfile("errors.saveFailed") },
-    );
-
-    if (outcome.ok) setIsSaved(true);
-    else setError(outcome.message);
-  };
-
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
-      <div className="flex items-start gap-3 rounded-[12px] border border-border-dim bg-card/40 px-4 py-3">
-        <Share2 className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
-        <p className="text-[13px] leading-relaxed text-secondary">{t("sharedNotice")}</p>
-      </div>
-
-      <BrandNames websiteId={websiteId} saved={website.brandNames ?? []} />
-
       <PageHeader
-        icon={<Building2 className="h-6 w-6 text-brand" />}
-        title={tProfile("title")}
-        description={tProfile("subtitle")}
+        icon={<Users className="h-6 w-6 text-brand" />}
+        title={t("watchersTitle")}
+        description={t("watchersSubtitle")}
       />
 
-      <div className="flex flex-col gap-4 rounded-[12px] border border-border-dim bg-card/40 p-5">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            id="website-sector"
-            label={tProfile("sectorLabel")}
-            value={sector}
-            placeholder={tProfile("sectorPlaceholder")}
-            onChange={(event) => {
-              setSector(event.target.value);
-              setIsSaved(false);
-            }}
-          />
-          <Field
-            id="website-market"
-            label={tProfile("marketLabel")}
-            value={marketLabel}
-            placeholder={tProfile("marketPlaceholder")}
-            onChange={(event) => {
-              setMarketLabel(event.target.value);
-              setIsSaved(false);
-            }}
-          />
-        </div>
-
-        {/* Anthony, 2026-09-23: the AI judgments were guessing a business's
-            trade from its web address. A sentence here is handed to every one
-            of them — for this site, and for it wherever it turns up as
-            somebody else's competitor. */}
-        <TextAreaField
-          id="website-description"
-          label={tProfile("descriptionLabel")}
-          hint={tProfile("descriptionHint")}
-          rows={3}
-          maxLength={600}
-          value={description}
-          placeholder={tProfile("descriptionPlaceholder")}
-          onChange={(event) => {
-            setDescription(event.target.value);
-            setIsSaved(false);
-          }}
-        />
-
-        <SaveError>{error}</SaveError>
-
-        <div className="flex justify-end">
-          <SaveAction
-            onClick={handleSave}
-            isSaving={action.isBusy()}
-            label={tProfile("save")}
-            savingLabel={tCommon("saving")}
-            successLabel={tProfile("saved")}
-            showSuccess={isSaved}
-          />
-        </div>
+      {/* Where the names and profile went, for anyone who looks for them here. */}
+      <div className="flex items-start gap-3 rounded-[12px] border border-border-dim bg-card/40 px-4 py-3">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
+        <p className="text-[13px] leading-relaxed text-secondary">{t("factsMovedNotice")}</p>
       </div>
+
+      <DataTable
+        rows={website.watchers}
+        rowKey={(watcher) => watcher.key}
+        minWidthClassName="min-w-[760px]"
+        empty={{ icon: <Globe className="h-8 w-8 text-muted/30" />, label: t("noWatchers") }}
+        footer={{
+          // `loadMore` rather than `paged`: the watchers arrive with the
+          // website in one read, so there is no second page to fetch — what the
+          // footer is here for is the count and the empty state's wording.
+          mode: "loadMore",
+          visibleCount: website.watchers.length,
+          canLoadMore: false,
+          isLoading: false,
+          onLoadMore: () => undefined,
+          labels: { empty: t("noWatchers") },
+        }}
+        columns={[
+          {
+            key: "company",
+            header: t("companyColumn"),
+            cell: (watcher) => (
+              <Link
+                href={`/admin/companies/${watcher.companyId}`}
+                className="text-[13px] font-medium text-foreground hover:text-brand"
+              >
+                {watcher.companyName}
+              </Link>
+            ),
+          },
+          {
+            key: "against",
+            header: t("againstColumn"),
+            cell: (watcher) => (
+              watcher.againstHost ? (
+                <Link
+                  href={`/admin/companies/${watcher.companyId}/websites/site/${watcher.companyWebsiteId}`}
+                  className="text-[13px] text-secondary hover:text-brand"
+                >
+                  {watcher.againstHost}
+                </Link>
+              ) : (
+                <span className="text-[12px] text-muted">{t("theirOwnSite")}</span>
+              )
+            ),
+          },
+          {
+            key: "type",
+            header: t("typeColumn"),
+            cell: (watcher) => (
+              <StatusPill tone={watcher.relationship === "OWNED" ? "success" : "neutral"}>
+                {watcher.relationship === "OWNED" ? t("owned") : t("tracked")}
+              </StatusPill>
+            ),
+          },
+          {
+            key: "schedule",
+            header: t("cadenceColumn"),
+            cell: (watcher) => (
+              <span className="text-[12px] text-secondary">
+                {watcher.collecting && watcher.intervalStr
+                  ? scheduleSummary(watcher.intervalStr)
+                  : t("paused")}
+              </span>
+            ),
+          },
+        ]}
+      />
     </div>
   );
 }

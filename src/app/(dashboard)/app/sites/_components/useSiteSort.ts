@@ -3,7 +3,7 @@
 import { useCallback, useMemo } from "react";
 import type { DataTableSort } from "@/src/ui/components/screens/DataTable";
 import { byValue, type SortDirection, type SortValue } from "@/convex/utils/sortOrder";
-import { useSetSiteParams, useSiteParam } from "./useSiteParam";
+import { tableKey, useSetSiteParams, useSiteParam } from "./useSiteParam";
 
 const DIRECTIONS = ["asc", "desc"] as const;
 
@@ -25,16 +25,21 @@ const DIRECTIONS = ["asc", "desc"] as const;
  * Only the columns in `firsts` sort, so a view without a column can leave it
  * out: an address asking for it then opens on the table's own order. Pass
  * `firsts` from outside the component, so it is the same object each time.
+ * A page's second table names itself (`table`), and keeps its order apart
+ * from the first's (`tableKey`).
  */
 export function useSiteSort<Key extends string>(
   firsts: Readonly<Partial<Record<Key, SortDirection>>>,
   opening: Key,
   openingDirection?: SortDirection,
+  table?: string,
 ): { key: Key; direction: SortDirection; tableSort: DataTableSort } {
   const keys = useMemo(() => Object.keys(firsts) as Key[], [firsts]);
-  const [key] = useSiteParam<Key>("sort", opening, keys);
-  const [chosen] = useSiteParam<SortDirection | "">("dir", "", DIRECTIONS);
-  const setParams = useSetSiteParams();
+  const sortKey = tableKey("sort", table);
+  const dirKey = tableKey("dir", table);
+  const [key] = useSiteParam<Key>(sortKey, opening, keys);
+  const [chosen] = useSiteParam<SortDirection | "">(dirKey, "", DIRECTIONS);
+  const setParams = useSetSiteParams(table);
   const unmarked = useCallback(
     (column: Key): SortDirection => (column === opening && openingDirection ? openingDirection : firsts[column] ?? "desc"),
     [firsts, opening, openingDirection],
@@ -44,8 +49,8 @@ export function useSiteSort<Key extends string>(
     if (!keys.includes(pressed as Key)) return;
     const column = pressed as Key;
     const next = column === key ? (direction === "asc" ? "desc" : "asc") : firsts[column] ?? "desc";
-    setParams({ sort: column === opening ? null : column, dir: next === unmarked(column) ? null : next });
-  }, [keys, key, direction, firsts, opening, unmarked, setParams]);
+    setParams({ [sortKey]: column === opening ? null : column, [dirKey]: next === unmarked(column) ? null : next });
+  }, [keys, key, direction, firsts, opening, unmarked, setParams, sortKey, dirKey]);
   return { key, direction, tableSort: { key, direction, onSort } };
 }
 
@@ -69,13 +74,13 @@ export type SiteSortColumns<Row, Key extends string> = Readonly<Partial<Record<K
 export function useSiteSortedList<Row, Key extends string>(
   rows: readonly Row[] | undefined,
   columns: SiteSortColumns<Row, Key>,
-  options: { opening: Key; openingDirection?: SortDirection; name: (row: Row) => string; group?: (row: Row) => number },
+  options: { opening: Key; openingDirection?: SortDirection; name: (row: Row) => string; group?: (row: Row) => number; table?: string },
 ): { rows: Row[] | undefined; tableSort: DataTableSort } {
   const firsts = useMemo(
     () => Object.fromEntries(Object.entries(columns).map(([column, spec]) => [column, (spec as { first: SortDirection }).first])) as Partial<Record<Key, SortDirection>>,
     [columns],
   );
-  const { key, direction, tableSort } = useSiteSort(firsts, options.opening, options.openingDirection);
+  const { key, direction, tableSort } = useSiteSort(firsts, options.opening, options.openingDirection, options.table);
   const { name, group } = options;
   const sorted = useMemo(() => {
     if (!rows) return undefined;

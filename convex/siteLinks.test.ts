@@ -57,6 +57,170 @@ const link = (domain: string, extra: Record<string, unknown> = {}) => ({
   dofollow: true, domain_from_rank: 100, first_seen: "2026-01-01 00:00:00 +00:00", ...extra,
 });
 
+describe("link lists bought past a thousand (sites-data-completeness-plan.md, B2 and B5)", () => {
+  /** One page of a link list, bought for a company on a day, filed as the parser files it. */
+  async function listPage(
+    t: Harness,
+    websiteId: Id<"websites">,
+    companyId: Id<"companies">,
+    operationId: string,
+    day: string,
+    offset: number,
+    items: unknown[],
+    total: number,
+    listReach?: number,
+  ) {
+    const when = Date.parse(`${day}T10:00:00Z`);
+    const pullId = await t.run(async (ctx) => await ctx.db.insert("seoDataPulls", {
+      operationId, family: "Backlinks", mode: "LIVE", websiteId, companyId, target: "ronins.co.uk",
+      taskArgsJson: JSON.stringify({ target: "ronins.co.uk", limit: 1_000, ...(offset > 0 ? { offset } : {}) }),
+      status: "READY", tag: `${operationId}-${day}-${offset}`, idempotencyKey: `${operationId}-${day}-${offset}`, attempts: 0,
+      costUsd: 0.05, sandbox: false, submittedAt: when, completedAt: when + 60_000,
+      ...(listReach !== undefined ? { listReach } : {}),
+      resultJson: JSON.stringify([{ total_count: total, items }]),
+    } as never));
+    await t.action(internal.seoCollectionParse.parseSeoResult, { pullId });
+    return pullId;
+  }
+  const domain = (name: string) => ({ domain: name, rank: 100, backlinks: 3, first_seen: "2026-01-01 00:00:00 +00:00" });
+  const domains = (prefix: string, count: number) => Array.from({ length: count }, (_, index) => domain(`${prefix}${index}.com`));
+
+  test("keeps the standing list until the new one is whole, then replaces it — never with a shorter one", async () => {
+    const t = harness();
+    const korda = await company(t, "Korda");
+    const own = await hold(t, korda, "anglingdirect.co.uk");
+    await t.run(async (ctx) => {
+      await ctx.db.insert("companyDataLimits", { companyId: korda, keywordsPerSite: 1_000, backlinksPerSite: 2_500, updatedAt: Date.now() });
+    });
+    const held = async () => (await t.run(async (ctx) => await ctx.db.query("siteReferringDomains").collect())).map((row) => `${row.day}:${row.domain.slice(0, 3)}`);
+    const count = async (day: string) => (await held()).filter((row) => row.startsWith(day)).length;
+
+    // Last week's list: 1,500 linking websites in two pages.
+    await listPage(t, own.websiteId, korda, "referring_domains_list", "2026-09-14", 0, domains("old", 1_000), 1_500, 2_500);
+    await listPage(t, own.websiteId, korda, "referring_domains_list", "2026-09-14", 1_000, domains("olf", 500), 1_500, 2_500);
+    expect(await count("2026-09-14")).toBe(1_500);
+
+    // Last week's pages all answered.
+    await t.run(async (ctx) => {
+      for (const pull of await ctx.db.query("seoDataPulls").collect()) if (pull.status === "PENDING") await ctx.db.delete(pull._id);
+    });
+    // This week's first page: the list is 2,100 long. Last week's stays until this one is whole.
+    await listPage(t, own.websiteId, korda, "referring_domains_list", "2026-09-21", 0, domains("new", 1_000), 2_100, 2_500);
+    expect(await count("2026-09-14")).toBe(1_500);
+    expect(await count("2026-09-21")).toBe(1_000);
+    // The rest asked for, up to the 2,500 kept.
+    const queued = (await t.run(async (ctx) => await ctx.db.query("seoDataPulls").collect()))
+      .filter((pull) => pull.status === "PENDING" && pull.operationId === "referring_domains_list")
+      .map((pull) => JSON.parse(pull.taskArgsJson) as { offset: number; limit: number })
+      .map((sent) => [sent.offset, sent.limit]);
+    expect(queued).toEqual([[1_000, 1_000], [2_000, 500]]);
+
+    await listPage(t, own.websiteId, korda, "referring_domains_list", "2026-09-21", 1_000, domains("nex", 1_000), 2_100, 2_500);
+    await listPage(t, own.websiteId, korda, "referring_domains_list", "2026-09-21", 2_000, domains("nez", 100), 2_100, 2_500);
+    // Whole, and longer: last week's gone.
+    expect(await count("2026-09-14")).toBe(0);
+    expect(await count("2026-09-21")).toBe(2_100);
+
+    // A list bought for a company keeping a thousand does not replace it.
+    await listPage(t, own.websiteId, korda, "referring_domains_list", "2026-09-28", 0, domains("sho", 1_000), 2_100, 1_000);
+    expect(await count("2026-09-21")).toBe(2_100);
+    expect(await count("2026-09-28")).toBe(1_000);
+
+    // Each page kept the list's total, for the screens' "X of Y".
+    const totals = (await t.run(async (ctx) => await ctx.db.query("seoWebsiteMetrics").collect()))
+      .filter((row) => row.operationId === "referring_domains_list" && row.day === "2026-09-21")
+      .map((row) => JSON.parse(row.metricsJson) as { listTotal: number; listOffset: number })
+      .map((figures) => [figures.listOffset, figures.listTotal])
+      .sort((left, right) => left[0] - right[0]);
+    expect(totals).toEqual([[0, 2_100], [1_000, 2_100], [2_000, 2_100]]);
+  });
+
+  test("counts a list's networks across all its pages", async () => {
+    const t = harness();
+    const korda = await company(t, "Korda");
+    const own = await hold(t, korda, "anglingdirect.co.uk");
+    await t.run(async (ctx) => {
+      await ctx.db.insert("companyDataLimits", { companyId: korda, keywordsPerSite: 1_000, backlinksPerSite: 2_000, updatedAt: Date.now() });
+    });
+    const server = (index: number) => ({ network_address: `10.0.${Math.floor(index / 250)}.${index % 250}`, backlinks: 2, referring_domains: 1, first_seen: "2026-01-01 00:00:00 +00:00" });
+    await listPage(t, own.websiteId, korda, "referring_ips_list", "2026-09-21", 0, Array.from({ length: 1_000 }, (_, index) => server(index)), 1_200, 2_000);
+    await listPage(t, own.websiteId, korda, "referring_ips_list", "2026-09-21", 1_000, Array.from({ length: 200 }, (_, index) => server(1_000 + index)), 1_200, 2_000);
+    const networks = await t.run(async (ctx) => await ctx.db.query("siteReferringSubnets").collect());
+    expect(networks.reduce((sum, row) => sum + row.ips, 0)).toBe(1_200);
+  });
+
+  test("plans past a thousand when the website keeps more, and never fewer than a thousand", async () => {
+    const t = harness();
+    const korda = await company(t, "Korda");
+    const own = await hold(t, korda, "kordatackle.com");
+    const rival = await hold(t, korda, "anglingdirect.co.uk");
+    await t.run(async (ctx) => {
+      await ctx.db.insert("companyDataLimits", { companyId: korda, keywordsPerSite: 1_000, backlinksPerSite: 3_000, updatedAt: Date.now() });
+      // The competitor keeps a hundred links: its lists still get their thousand.
+      await ctx.db.insert("websiteDataLimits", { companyWebsiteId: rival.holdId, companyId: korda, backlinksPerSite: 100, updatedAt: Date.now() });
+      await ctx.db.insert("schedules", { name: "Collection", companyId: korda, intervalStr: "daily", isActive: true, createdAt: Date.now() } as never);
+      for (const websiteId of [own.websiteId, rival.websiteId]) {
+        await ctx.db.insert("siteDaySummaries", {
+          websiteId, locationCode: UK, day: "2026-09-20", referringDomains: 2_645, referringMainDomains: 2_129, backlinks: 97_637, brokenBacklinks: 50, updatedAt: Date.now(),
+        } as never);
+      }
+    });
+    const cycleId = await t.run(async (ctx) => await ctx.db.insert("seoCollectionCycles", {
+      companyId: korda, trigger: "SCHEDULE", status: "EXPANDING", plannedCount: 0, reusedCount: 0, sentCount: 0,
+      readyCount: 0, failedCount: 0, totalCostUsd: 0, startedAt: Date.now(),
+    }));
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
+    const pages = async (websiteId: Id<"websites">, operationId: string) => (await t.run(async (ctx) => await ctx.db.query("seoDataPulls").collect()))
+      .filter((pull) => pull.websiteId === websiteId && pull.operationId === operationId)
+      .map((pull) => JSON.parse(pull.taskArgsJson) as { offset?: number; limit: number })
+      .map((sent) => [sent.offset ?? 0, sent.limit])
+      .sort((left, right) => left[0] - right[0]);
+    // 2,129 main websites, 3,000 kept: three pages.
+    expect(await pages(own.websiteId, "referring_domains_list")).toEqual([[0, 1_000], [1_000, 1_000], [2_000, 1_000]]);
+    // The competitor keeps a hundred: its first thousand, as before.
+    expect(await pages(rival.websiteId, "referring_domains_list")).toEqual([[0, 1_000]]);
+    // Asked as it always was, so a week's answer still holds it.
+    const first = (await t.run(async (ctx) => await ctx.db.query("seoDataPulls").collect()))
+      .find((pull) => pull.websiteId === rival.websiteId && pull.operationId === "anchors_list");
+    expect(JSON.parse(first!.taskArgsJson)).not.toHaveProperty("offset");
+  });
+});
+
+/*
+  "Linking websites" is main websites everywhere, the count with each
+  subdomain apart beside it; and every kept list says what it is of
+  (sites-data-completeness-plan.md, §4.D2, §4.E and §4.G).
+*/
+describe("linking websites, and what each list is of", () => {
+  test("the menu, the charts and a list's total count linking websites as websites", async () => {
+    const t = harness();
+    const korda = await company(t, "Korda");
+    const own = await hold(t, korda, "anglingdirect.co.uk");
+    await t.run(async (ctx) => {
+      await ctx.db.insert("siteDaySummaries", {
+        websiteId: own.websiteId, locationCode: UK, day: "2026-09-20", referringDomains: 2_645, referringMainDomains: 2_129, backlinks: 97_637, updatedAt: Date.now(),
+      } as never);
+      const pullId = await ctx.db.insert("seoDataPulls", {
+        operationId: "referring_domains_list", family: "Backlinks", mode: "LIVE", websiteId: own.websiteId, taskArgsJson: "{}",
+        status: "READY", tag: "t", costUsd: 0.05, sandbox: false, submittedAt: Date.now(),
+      } as never);
+      for (const [day, total] of [["2026-09-13", 2_000], ["2026-09-20", 2_129]] as const) {
+        await ctx.db.insert("seoWebsiteMetrics", {
+          websiteId: own.websiteId, day, operationId: "referring_domains_list", pullId, createdAt: Date.now(),
+          metricsJson: JSON.stringify({ listOffset: 0, listLimit: 1_000, listItems: 1_000, listTotal: total }),
+        });
+      }
+    });
+
+    const asKorda = await member(t, korda);
+    expect((await asKorda.query(api.sites.getMySite, { siteId: own.holdId }))?.counts.referringDomains).toBe(2_129);
+    const [series] = await asKorda.query(api.siteCharts.siteSeries, { siteId: own.holdId, from: "2026-09-01", to: "2026-09-30", step: "day" });
+    expect(series.points.find((point) => point.day === "2026-09-20")).toMatchObject({ referringDomains: 2_129, linkingDomains: 2_645 });
+    // The newest list's total, what the 1,000 kept are of.
+    expect(await asKorda.query(api.siteLinks.linkListTotals, { siteId: own.holdId })).toMatchObject({ referringDomains: 2_129, anchors: null });
+  });
+});
+
 describe("link lists", () => {
   test("a new list replaces the last of its kind, and an older one filed again changes nothing", async () => {
     const t = harness();

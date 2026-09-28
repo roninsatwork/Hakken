@@ -14,10 +14,13 @@ import { filePaidKeywords, paidPositionValidator } from "./sitePaid";
 import { fileSiteCrawlPull } from "./siteCrawl";
 import { fileKeywordListPull, fileRankedPositions } from "./siteKeywordList";
 import { isKeywordListOperation } from "./dataForSeoKeywordListOperations";
+import { AI_OVERVIEW_FAN_OUT_OPERATION } from "./dataForSeoAiOverviewOperations";
+import { fileAiOverviewPull } from "./aiOverviewFanOuts";
 import { serpSnapshotOf } from "./siteSerp";
 import { rankedPositionValidator } from "./utils/siteShapes";
-import { findBrandMention } from "./utils/websiteBrands";
+import { findBrandMentions } from "./utils/websiteBrands";
 import {
+  discoveryTotal,
   parseDomainCompetitors,
   parseLlmResponse,
   parseSeoResultFor,
@@ -33,6 +36,8 @@ import { getErrorMessage } from "./utils/lang";
 import type { Id } from "./_generated/dataModel";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { readLocationCode, readSentLocationCode } from "./utils/seoSentPlace";
+import { runDayOf } from "./seoRunDay";
+import { readSharedLimits, sharedLimitCeiling } from "./sharedLimits";
 
 
 /**
@@ -74,6 +79,8 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
   if (pull.operationId === "site_crawl") return await fileSiteCrawlPull(ctx, args.pullId, pull);
   // The full keyword list files a page at a time (`siteKeywordList.ts`).
   if (isKeywordListOperation(pull.operationId)) return await fileKeywordListPull(ctx, args.pullId, pull);
+  // Google's AI Overviews' searches for a question topic (`aiOverviewFanOuts.ts`, FA8).
+  if (pull.operationId === AI_OVERVIEW_FAN_OUT_OPERATION) return await fileAiOverviewPull(ctx, args.pullId, pull);
 
   // An AI answer is read for who it names, and its text is kept for the
   // Sites Full answers page (D9, docs/plans/active/user-sites-plan.md). The
@@ -81,31 +88,27 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
   const engine = engineForOperationId(pull.operationId);
   if (engine) {
     try {
+      const shared = await ctx.runQuery(internal.sharedLimits.getSharedLimits, {});
       const parsed = parseLlmResponse(JSON.parse(pull.resultJson));
       const sent = JSON.parse(pull.taskArgsJson ?? "{}") as Record<string, unknown>;
       const prompt = typeof sent.user_prompt === "string" ? sent.user_prompt : "";
 
-      const branded = await ctx.runQuery(internal.websites.listBrandedWebsitesInternal, {
+      // Every name any company holds for each website (`holdProfiles.ts`): the
+      // answer names whoever it names, one purchase serves every watcher, and
+      // each company counts a mention only under its own names.
+      const branded = await ctx.runQuery(internal.holdProfiles.listNamedWebsitesInternal, {
         limit: MAX_BRANDED_WEBSITES,
       });
-
-      // Every brand we hold, not just the one who asked: the answer names
-      // whoever it names and one purchase should serve every watcher.
       const hits = [];
       for (const website of branded) {
-        const found = findBrandMention(parsed.answer, website.brandNames);
+        const found = findBrandMentions(parsed.answer, website.brandNames);
         if (found) {
-          hits.push({
-            websiteId: website.websiteId,
-            text: found.matched,
-            variantKind: found.kind,
-            at: found.at,
-          });
+          hits.push({ websiteId: website.websiteId, text: found.matched, variantKind: found.kind, at: found.at, texts: found.found });
         }
       }
       hits.sort((left, right) => left.at - right.at);
 
-      const sources = parsed.sources.slice(0, MAX_SOURCES);
+      const sources = parsed.sources.slice(0, shared.sourcesPerAnswer);
       const sourceHosts = sources.map((source) => {
         const host = readWebsiteHost(source.url);
         return host.ok ? host.host : null;
@@ -120,7 +123,7 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
         pullId: args.pullId,
         prompt,
         answer: parsed.answer,
-        hits: hits.slice(0, MAX_CITATION_ROWS),
+        hits: hits.slice(0, shared.businessesPerAnswer),
       });
 
       const linked = await linkCitedAddresses(ctx, {
@@ -136,7 +139,7 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
         })),
       });
 
-      const day = new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10);
+      const day = pull.runDay;
 
       await ctx.runMutation(internal.seoCollectionParse.writeAiCitations, {
         pullId: args.pullId,
@@ -151,7 +154,8 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
       // The engine's own expansion of the question. These arrive in every
       // answer we already buy, and they are searches rather than prose, so
       // they are kept and then judged like any other search.
-      if (parsed.fanOutQueries.length > 0) {
+      const fanOutQueries = parsed.fanOutQueries.slice(0, shared.fanOutPerAnswer);
+      if (fanOutQueries.length > 0) {
         // The place as sent, which for these endpoints is a country and an
         // optional city rather than a location code.
         const country = typeof sent.web_search_country_iso_code === "string"
@@ -166,7 +170,7 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
           engine,
           ...(place !== undefined ? { place } : {}),
           day,
-          queries: parsed.fanOutQueries,
+          queries: fanOutQueries,
         });
 
         // A fan-out search is a search: judged once per phrase and shared
@@ -175,7 +179,7 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
         await ctx.scheduler.runAfter(0, internal.seoFiling.judgeKeywordsLater, {
           ...(pull.companyId ? { companyId: pull.companyId } : {}),
           pullId: args.pullId,
-          keywords: parsed.fanOutQueries,
+          keywords: fanOutQueries,
         });
       }
     } catch (error) {
@@ -191,37 +195,39 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
   // as suggestions against the company's hold rather than as metrics.
   if (pull.operationId === "domain_competitors" && pull.websiteId) {
     try {
+      const shared = await ctx.runQuery(internal.sharedLimits.getSharedLimits, {});
       const found = parseDomainCompetitors(JSON.parse(pull.resultJson))
         .filter((row) => row.host !== pull.target)
-        .slice(0, MAX_DISCOVERED);
-      const ours = await ctx.runQuery(internal.websiteCanonical.describeBusinessForJudging, {
+        .slice(0, shared.newWebsitesPerPurchase);
+      // Judged for each company holding the site, on what that company says
+      // its business is — never another company's words — and filed for it
+      // alone (docs/plans/active/company-level-website-facts-plan.md, CL4).
+      const views = await ctx.runQuery(internal.holdProfiles.describeWebsiteHoldsForJudging, {
         websiteId: pull.websiteId as Id<"websites">,
       });
-      // Competitors the platform already holds, described by an admin, are
-      // judged on what they sell rather than on their address alone.
-      const held = await ctx.runQuery(internal.websites.resolveWebsiteIdsByHostInternal, {
-        hosts: found.map((row) => row.host),
-      });
-      const described = await ctx.runQuery(internal.websiteCanonical.describeWebsitesForJudging, {
-        websiteIds: held.map((row) => row.websiteId),
-      });
-      const hostById = new Map(held.map((row) => [row.websiteId, row.host]));
-      const knownCandidates = Object.fromEntries(described.map((row) => [
-        hostById.get(row.websiteId)!,
-        { ...(row.sector ? { sector: row.sector } : {}), ...(row.does ? { does: row.does } : {}) },
-      ]));
-      const judged = await judgeCompetitors(ctx, {
-        ...(pull.companyId ? { companyId: pull.companyId } : {}),
-        pullId: args.pullId,
-        ourHost: pull.target ?? "",
-        ours,
-        knownCandidates,
-        found,
-      });
-      await ctx.runMutation(internal.seoCollectionParse.writeDiscoveredCompetitors, {
+      for (const view of views) {
+        const judged = await judgeCompetitors(ctx, {
+          ...(pull.companyId ? { companyId: pull.companyId } : {}),
+          pullId: args.pullId,
+          ourHost: pull.target ?? "",
+          ours: view.business,
+          found,
+        });
+        await ctx.runMutation(internal.seoCollectionParse.writeDiscoveredCompetitors, {
+          pullId: args.pullId,
+          websiteId: pull.websiteId as Id<"websites">,
+          holdIds: view.holdIds,
+          found: judged,
+        });
+      }
+      // How many the supplier found, for "49 of N" (sites-data-completeness-plan.md, B3).
+      await ctx.runMutation(internal.siteDiscovery.recordDiscoveryTotal, {
         pullId: args.pullId,
         websiteId: pull.websiteId as Id<"websites">,
-        found: judged,
+        day: pull.runDay,
+        found: found.length,
+        total: discoveryTotal(JSON.parse(pull.resultJson), pull.target ?? undefined),
+        ...(readSentLocationCode(pull.taskArgsJson ?? undefined) !== undefined ? { locationCode: readSentLocationCode(pull.taskArgsJson ?? undefined) } : {}),
       });
     } catch (error) {
       await ctx.runMutation(internal.seoCollectionParse.recordParseFailure, {
@@ -255,11 +261,11 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
         pullId: args.pullId,
         keyword,
         ...(locationCode !== undefined ? { locationCode } : {}),
-        day: new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10),
+        day: pull.runDay,
         found: onPage.flatMap((row) => {
           const websiteId = byHost.get(row.host);
           return websiteId
-            ? [{ websiteId, position: row.position, ...(row.url ? { url: row.url } : {}) }]
+            ? [{ websiteId, position: row.position, ...(row.pagePosition !== undefined ? { pagePosition: row.pagePosition } : {}), ...(row.url ? { url: row.url } : {}) }]
             : [];
         }),
         serp: serpSnapshotOf(page),
@@ -295,7 +301,7 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
       pullId: args.pullId,
       websiteId: pull.websiteId as Id<"websites">,
       operationId: pull.operationId,
-      day: new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10),
+      day: pull.runDay,
       ...(sentPlace !== undefined ? { locationCode: sentPlace } : {}),
       metricsJson: JSON.stringify(parsed.metrics),
       positions,
@@ -355,6 +361,8 @@ export type PullForParse = {
   resultJson: string | null;
   taskArgsJson: string | null;
   completedAt: number | null;
+  /** The day its results belong to (`runDayOf`). */
+  runDay: string;
   companyId: Id<"companies"> | null;
 };
 
@@ -379,6 +387,8 @@ export const getPullForParse = internalQuery({
     resultParts: v.union(v.array(v.string()), v.null()),
     taskArgsJson: v.union(v.string(), v.null()),
     completedAt: v.union(v.number(), v.null()),
+    /** The day its results belong to: its run's (`runDayOf`). */
+    runDay: v.string(),
     /** Whose cadence caused this, so a Decision is asked in their name. */
     companyId: v.union(v.id("companies"), v.null()),
   })),
@@ -392,6 +402,7 @@ export const getPullForParse = internalQuery({
       resultParts: await readPullAnswerParts(ctx, row),
       taskArgsJson: row.taskArgsJson ?? null,
       completedAt: row.completedAt ?? null,
+      runDay: await runDayOf(ctx, row),
       companyId: row.companyId ?? null,
     };
   },
@@ -513,9 +524,10 @@ export const writeFanOutQueries = internalMutation({
     queries: v.array(v.string()),
   },
   returns: v.null(),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<null> => {
     const now = Date.now();
-    for (const queryText of args.queries.slice(0, MAX_FAN_OUT_QUERIES)) {
+    const { fanOutPerAnswer } = await readSharedLimits(ctx);
+    for (const queryText of args.queries.slice(0, fanOutPerAnswer)) {
       const query = normaliseKeyword(queryText);
       if (!query) continue;
 
@@ -576,6 +588,12 @@ export const writeFanOutQueries = internalMutation({
         ...(newest ? { queryText, lastSeenAt: now, lastSeenDay: args.day, lastPullId: args.pullId } : {}),
       });
     }
+    // Bought by a question's "Generate fan-out queries now", not a collection:
+    // grouped at once rather than at the next collection's end.
+    const pull = await ctx.db.get(args.pullId);
+    if (pull && !pull.cycleId && pull.companyId) {
+      await ctx.scheduler.runAfter(0, internal.promptFanOut.afterFanOutFiled, { pullId: args.pullId, prompt: args.prompt });
+    }
     return null;
   },
 });
@@ -590,6 +608,8 @@ export const writeAiCitations = internalMutation({
     brands: v.array(v.object({
       websiteId: v.id("websites"),
       text: v.string(),
+      /** Every one of the website's names found, lowercased. */
+      texts: v.optional(v.array(v.string())),
       variantKind: v.union(v.literal("NAME"), v.literal("MISSPELLING")),
       stance: v.optional(v.union(
         v.literal("RECOMMENDED"), v.literal("MENTIONED"), v.literal("WARNED_AGAINST"),
@@ -623,7 +643,7 @@ export const writeAiCitations = internalMutation({
     const existing = await ctx.db
       .query("aiCitations")
       .withIndex("by_pull", (q) => q.eq("pullId", args.pullId))
-      .take(MAX_CITATION_ROWS + 100);
+      .take(sharedLimitCeiling("businessesPerAnswer") + 100);
     for (const row of existing) await ctx.db.delete(row._id);
     // Pages this answer cited before and after this parse, recounted below, so
     // a page a corrected parse no longer finds loses the citation.
@@ -648,6 +668,7 @@ export const writeAiCitations = internalMutation({
         kind: "BRAND",
         mentionedWebsiteId: hit.websiteId,
         mentionedText: hit.text,
+        ...(hit.texts ? { mentionedTexts: hit.texts } : {}),
         variantKind: hit.variantKind,
         ...(hit.stance ? { stance: hit.stance } : {}),
         ...(hit.stanceCertainty ? { stanceCertainty: hit.stanceCertainty } : {}),
@@ -705,25 +726,15 @@ export const writeAiCitations = internalMutation({
   },
 });
 
-/** Discovered websites kept per pull. Beyond this the tail is noise. */
-const MAX_DISCOVERED = 50;
-
-/** Cited sources kept per answer; an engine rarely cites more than a dozen. */
-const MAX_SOURCES = 40;
-
-/** Named brands kept per answer. */
-const MAX_CITATION_ROWS = 200;
+/*
+ * How many new websites one purchase suggests, and how many sources,
+ * businesses and fan-out queries one answer keeps, are the platform's
+ * settings since 2026-09-28 (`sharedLimits.ts`, System Settings → Limits):
+ * each answer and purchase serves every company, so only the platform sets them.
+ */
 
 /** A ceiling on the platform's branded estate, not on this feature. */
 const MAX_BRANDED_WEBSITES = 2_000;
-
-/**
- * Fan-out searches kept per answer.
- *
- * An engine publishes a handful; this is a guard against a payload that is not
- * what the docs describe, not a judgment about how many are worth having.
- */
-const MAX_FAN_OUT_QUERIES = 50;
 
 /**
  * File one bulk response against every website it covered.
@@ -787,6 +798,8 @@ export const writeDiscoveredCompetitors = internalMutation({
   args: {
     pullId: v.id("seoDataPulls"),
     websiteId: v.id("websites"),
+    /** The companies this judgment was made for; every holder when left out. */
+    holdIds: v.optional(v.array(v.id("companyWebsites"))),
     found: v.array(v.object({
       host: v.string(),
       intersections: v.number(),
@@ -808,14 +821,15 @@ export const writeDiscoveredCompetitors = internalMutation({
     const now = Date.now();
     await ctx.db.patch(args.pullId, { error: undefined });
     const pull = await ctx.db.get(args.pullId);
-    const day = new Date(pull?.completedAt ?? now).toISOString().slice(0, 10);
+    const day = pull ? await runDayOf(ctx, pull) : new Date(now).toISOString().slice(0, 10);
 
     // One pull, many holders: the website is shared, so everyone watching it
     // gets the suggestions from the one purchase.
-    const holds = await ctx.db
+    const holds = (await ctx.db
       .query("companyWebsites")
       .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
-      .take(MAX_HOLDERS);
+      .take(MAX_HOLDERS))
+      .filter((hold) => !args.holdIds || args.holdIds.includes(hold._id));
 
     for (const hold of holds) {
       for (const row of args.found) {

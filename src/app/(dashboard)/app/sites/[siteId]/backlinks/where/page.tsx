@@ -19,12 +19,19 @@ import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
+import { BREAKDOWN_REST } from "@/convex/utils/siteShapes";
 
 const BREAKDOWNS = ["countries", "tlds", "platforms", "linkTypes", "attributes"] as const;
 type Breakdown = (typeof BREAKDOWNS)[number];
 
 /** Groups drawn on the chart; the table lists them all. */
 const CHARTED = 12;
+
+/** A link can be on several kinds of site, and carry several attributes or none: their groups overlap. */
+const OVERLAPPING: readonly Breakdown[] = ["platforms", "attributes"];
+
+/** The largest groups a backlinks summary keeps of each breakdown (`topCounts` in `dataForSeoParsers.ts`). */
+const KEPT = 15;
 
 type Group = { key: string; count: number };
 
@@ -33,6 +40,9 @@ type Group = { key: string; count: number };
  * domain ending, kind of site, kind of link and link attribute — one
  * breakdown at a time, chosen from a picker that stays in the address.
  */
+/** "Everything else" after the named groups, whatever the order. */
+const restLast = (row: Group) => (row.key === BREAKDOWN_REST ? 1 : 0);
+
 export default function SiteLinkSourcesPage() {
   const t = useTranslations("sites.linkSources");
   const tc = useTranslations("sites.common");
@@ -45,6 +55,7 @@ export default function SiteLinkSourcesPage() {
 
   const regions = useMemo(() => (typeof Intl.DisplayNames === "function" ? new Intl.DisplayNames([locale], { type: "region" }) : null), [locale]);
   const nameOf = useCallback((key: string) => {
+    if (key === BREAKDOWN_REST) return t("rest");
     if (key === "(none)" || key === "") return t("unknown");
     if (breakdown === "countries" && key === "WW") return t("worldwide");
     if (breakdown === "countries" && /^[A-Z]{2}$/.test(key)) {
@@ -59,7 +70,13 @@ export default function SiteLinkSourcesPage() {
   }, [breakdown, regions, t]);
 
   const groups = profile ? profile[breakdown] : [];
-  const total = groups.reduce((sum, row) => sum + row.count, 0);
+  // A share is of every link (docs/plans/active/sites-audit-fixes-plan.md,
+  // 2.3): a breakdown counting each link once adds up to them, the rest of it
+  // included; one whose groups overlap is set against all the links.
+  const overlapping = OVERLAPPING.includes(breakdown);
+  const total = overlapping ? profile?.backlinks ?? 0 : groups.reduce((sum, row) => sum + row.count, 0);
+  // Filed before the rest was kept: shares of the largest groups only.
+  const largestOnly = !overlapping && groups.length >= KEPT && !groups.some((row) => row.key === BREAKDOWN_REST);
   const matches = wordStartMatcher(term);
   const matching = profile === undefined ? undefined : groups.filter((row) => !matches || matches(nameOf(row.key), row.key));
   // The columns that sort (docs/plans/active/sites-table-sorting-plan.md):
@@ -71,13 +88,20 @@ export default function SiteLinkSourcesPage() {
     share: { value: (row) => row.count, first: "desc" },
   }), [nameOf]);
   const groupName = useCallback((row: Group) => nameOf(row.key), [nameOf]);
-  const { rows: sorted, tableSort } = useSiteSortedList(matching, columns, { opening: "links", name: groupName });
+  const { rows: sorted, tableSort } = useSiteSortedList(matching, columns, { opening: "links", name: groupName, group: restLast });
   const pager = useSitePager(sorted, { isLoading: profile === undefined });
-  const charted = groups.slice(0, CHARTED);
+  const charted = groups.filter((row) => row.key !== BREAKDOWN_REST).slice(0, CHARTED);
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader icon={<Globe2 className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <PageHeader
+        icon={<Globe2 className="h-5 w-5 text-brand" />}
+        title={t("title")}
+        description={t("description")}
+        pills={profile && (overlapping || largestOnly)
+          ? <span className="text-[12px] text-secondary">{overlapping ? t("overlapping", { links: formatNumber(profile.backlinks) }) : t("largestOnly", { count: KEPT })}</span>
+          : null}
+      />
 
       {profile === null ? (
         <p className="rounded-2xl border border-border-dim bg-card/40 px-5 py-10 text-center text-[13px] text-secondary">{t("empty")}</p>

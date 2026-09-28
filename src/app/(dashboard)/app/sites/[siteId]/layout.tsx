@@ -12,7 +12,7 @@ import { formatDateTime } from "@/src/lib/dates";
 import { SiteDateRange } from "../_components/SiteDateRange";
 import { formatDay } from "../_components/siteFormat";
 import { SiteMenu } from "../_components/SiteMenu";
-import { isSiteMenuPath, setupMet, sitePageForPath } from "../_components/sitePages";
+import { isSiteMenuPath, setupMet, setupPaused, sitePageForPath } from "../_components/sitePages";
 import { useListBack } from "../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../_components/useSite";
 import { sharedSiteQuery } from "../_components/useSiteParam";
@@ -129,7 +129,15 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                 title={ts(`${reading.needs}.title`)}
                 description={ts(`${reading.needs}.body`)}
               />
-            ) : children}
+            ) : (
+              <>
+                {/* Everything on the list paused: what came in before stays, and nothing new is coming. */}
+                {reading.needs && setupPaused(reading, site.counts) ? (
+                  <p className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-[13px] text-secondary">{ts(`${reading.needs}.paused`)}</p>
+                ) : null}
+                {children}
+              </>
+            )}
           </section>
         </div>
       </div>

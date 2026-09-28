@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Unlink } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -15,6 +16,7 @@ import { useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../_components/useSiteSort";
+import { ListHeldLine } from "../../../_components/SiteCoverage";
 
 /**
  * The columns that sort, over every broken link (docs/plans/active/
@@ -36,10 +38,13 @@ export default function SiteBrokenBacklinksPage() {
   const [search, setSearch, term] = useSiteSearch();
   const order = useSiteSort(SORTS, "domainRank");
   const table = useSiteListPage(api.siteLinkLists.listBrokenBacklinks, { siteId, ...(term ? { search: term } : {}), sort: order.key, direction: order.direction });
+  // The whole list's length, for what the rows kept are of (sites-data-completeness-plan.md, §4.E).
+  const totals = useQuery(api.siteLinks.linkListTotals, { siteId });
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Unlink className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <ListHeldLine held={!term ? table.result?.total : undefined} total={totals?.broken} />
       <DataTable
         rows={table.pageRows}
         rowKey={(row) => row._id}

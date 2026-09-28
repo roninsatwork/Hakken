@@ -2,8 +2,10 @@ import { v } from "convex/values";
 import { tenantQuery } from "./tenantFunctions";
 import { aiEngineValidator, AI_ENGINES } from "./seoAiEngines";
 import { listHold, myRivals, requireMySite } from "./siteAccess";
-import { citedPagesOf, latestFigures, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
+import { citedPagesIn, latestFigures, searchTotalOf } from "./siteFigures";
+import { holdAiSummary } from "./holdLists";
 import { pageTypeValidator } from "./utils/siteShapes";
+import { discoveredTotal } from "./siteDiscovery";
 
 /**
  * The parts of a site's Overview that no day summary holds (docs/plans/
@@ -59,7 +61,8 @@ export const overviewExtras = tenantQuery({
     aiOverviewPages: v.number(),
     /** More AI Overview searches than were read: the page count is at least `aiOverviewPages`. */
     aiOverviewCapped: v.boolean(),
-    assistants: v.array(v.object({ engine: aiEngineValidator, pages: v.number() })),
+    /** Each assistant's pages linked to; null before it has answered any question on the list (4.9). */
+    assistants: v.array(v.object({ engine: aiEngineValidator, pages: nullableNumber })),
     pages: v.object({
       total: v.number(),
       visits: v.number(),
@@ -70,6 +73,13 @@ export const overviewExtras = tenantQuery({
     competitors: v.object({
       /** Found ranking for the same searches and judged competitors: what Organic competitors lists under that kind. */
       found: v.number(),
+      /**
+       * The websites the newest discovery read, of how many rank for the same
+       * searches in all — "the top 49 of 1,296" (sites-data-completeness-plan.md,
+       * B3); null before a discovery said.
+       */
+      read: v.number(),
+      readOf: v.union(v.number(), v.null()),
       /** The site itself, for its place on the chart. */
       you: v.object({ keywords: nullableNumber, visits: nullableNumber }),
       /** The rest of the site's group: for an owned site, every competitor the company set up. */
@@ -81,10 +91,12 @@ export const overviewExtras = tenantQuery({
         /** Searches both rank for, when either one's found list holds the other; null when neither does. */
         shared: nullableNumber,
         /**
-         * The visits a month it gets from those searches, as this site's own
-         * found list has them; null when that list does not hold it. The
-         * competitor's own list holds this site's visits on them instead — not
-         * the same figure — so it is not borrowed the way `shared` is.
+         * This site's own visits a month from those searches, as its found list
+         * has them; null when that list does not hold it. The supplier's figures
+         * on the searches two sites share are the asking site's — youtube.com's
+         * "visits on shared searches" sit just under each Korda site's own total
+         * (2026-09-27) — so the competitor's own list, which holds the
+         * competitor's visits on them, is not borrowed the way `shared` is.
          */
         sharedVisits: nullableNumber,
       })),
@@ -95,7 +107,7 @@ export const overviewExtras = tenantQuery({
     const websiteId = site.website._id;
     const place = site.place;
 
-    const [pageRows, home, aiRows, cited, found, rivals, own] = await Promise.all([
+    const [pageRows, home, aiRows, summary, found, rivals, own, readOf] = await Promise.all([
       ctx.db
         .query("sitePageRanks")
         .withIndex("by_site_keywords", (q) => q.eq("websiteId", websiteId).eq("locationCode", place))
@@ -110,14 +122,19 @@ export const overviewExtras = tenantQuery({
         .withIndex("by_site_feature_keyword", (q) =>
           q.eq("websiteId", websiteId).eq("locationCode", place).eq("feature", "ai_overview_reference"))
         .take(FEATURE_ROWS_READ),
-      citedPagesOf(ctx, websiteId, listHold(site), place, QUESTIONS_FOR_CITED_PAGES),
+      // How many of its pages each assistant links to, from the list's summary.
+      holdAiSummary(ctx, listHold(site), place),
       ctx.db
         .query("discoveredCompetitors")
         .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", args.siteId))
         .take(COMPETITORS_READ),
       myRivals(ctx, site),
       latestFigures(ctx, websiteId, place),
+      discoveredTotal(ctx, websiteId, place),
     ]);
+
+    const cited = citedPagesIn(summary, websiteId);
+    const answered = new Set(summary?.engines.map((entry) => entry.engine));
 
     // Pages by kind, and by the visits a month each brings.
     const kinds = new Map<string, { pageType: NonNullable<(typeof pageRows)[number]["pageType"]> | "UNJUDGED"; pages: number; visits: number }>();
@@ -156,7 +173,7 @@ export const overviewExtras = tenantQuery({
       return {
         siteId: rival.hold._id,
         host: rival.website.displayHost,
-        keywords: latest.metrics?.rankedKeywordsTotal ?? latest.ranking?.keywords ?? null,
+        keywords: searchTotalOf(latest),
         visits: latest.metrics?.estimatedTraffic ?? null,
         shared: mine?.intersections ?? theirs?.intersections ?? null,
         sharedVisits: mine?.estimatedTraffic ?? null,
@@ -167,7 +184,7 @@ export const overviewExtras = tenantQuery({
       homePageRank: home?.pageRank ?? null,
       aiOverviewPages: new Set(aiRows.flatMap((row) => (row.page ? [row.page] : []))).size,
       aiOverviewCapped: aiRows.length === FEATURE_ROWS_READ,
-      assistants: AI_ENGINES.map((engine) => ({ engine, pages: cited.filter((page) => page.engines.includes(engine)).length })),
+      assistants: AI_ENGINES.map((engine) => ({ engine, pages: answered.has(engine) ? cited.engines.get(engine) ?? 0 : null })),
       pages: {
         total: pageRows.length,
         visits,
@@ -177,8 +194,10 @@ export const overviewExtras = tenantQuery({
       },
       competitors: {
         found: found.filter((row) => row.host !== site.website.host && row.kind === "COMPETITOR").length,
+        read: found.filter((row) => row.host !== site.website.host).length,
+        readOf,
         you: {
-          keywords: own.metrics?.rankedKeywordsTotal ?? own.ranking?.keywords ?? null,
+          keywords: searchTotalOf(own),
           visits: own.metrics?.estimatedTraffic ?? null,
         },
         // Most searches shared first; those neither list holds after, biggest first.

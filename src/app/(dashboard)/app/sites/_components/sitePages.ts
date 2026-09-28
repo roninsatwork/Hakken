@@ -34,18 +34,30 @@ export type SitePage = {
    * by one on Google. Unmet, the page shows one note saying so instead of an
    * empty screen (docs/plans/active/sites-ux-updates-plan.md §3, "an empty
    * section says so once"). Never a mark on the menu: Anthony, 2026-09-25,
-   * "not on a menu never".
+   * "not on a menu never". A list with every entry paused is still set up:
+   * the page keeps its history and says above it that nothing new is coming
+   * (docs/plans/active/sites-audit-fixes-plan.md, 4.2).
    */
   needs?: SiteSetup;
 };
 
 export type SiteSetup = "questions" | "trackedSearches";
 
-/** Whether a page's setup is in place, from the counts in the site's header. */
-export function setupMet(page: SitePage, counts: { questionsSetUp: boolean; trackedSearches: number }): boolean {
+/** The counts in the site's header that say what is set up. */
+type SetupCounts = { questionsSetUp: boolean; questionsPaused: boolean; trackedSearches: number; searchesPaused: boolean };
+
+/** Whether a page's setup is in place, from the counts in the site's header: switched on or paused. */
+export function setupMet(page: SitePage, counts: SetupCounts): boolean {
   if (page.needs === "questions") return counts.questionsSetUp;
-  if (page.needs === "trackedSearches") return counts.trackedSearches > 0;
+  if (page.needs === "trackedSearches") return counts.trackedSearches > 0 || counts.searchesPaused;
   return true;
+}
+
+/** Whether everything a page's setup holds is paused: it still shows what came in before. */
+export function setupPaused(page: SitePage, counts: SetupCounts): boolean {
+  if (page.needs === "questions") return counts.questionsPaused;
+  if (page.needs === "trackedSearches") return counts.searchesPaused;
+  return false;
 }
 
 export const SITE_PAGE_GROUPS: SitePageGroup[] = ["site", "ai", "google", "keywords", "paid", "competitors", "backlinks"];

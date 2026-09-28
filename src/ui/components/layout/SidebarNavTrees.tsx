@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Building2,
   Globe,
+  SearchCheck,
   Bot,
   Workflow,
   ShieldCheck,
@@ -325,6 +326,15 @@ export function UserNavTree({
     href="/app/sites"
     isActive={activeItem === 'Sites' || pathname.startsWith('/app/sites')}
     onClick={() => setActiveItem('Sites')}
+  />
+
+  {/* Each own website's real clicks from Google (docs/plans/active/search-console-plan.md, SC1). */}
+  <NavItem
+    icon={SearchCheck}
+    label={t('searchConsole')}
+    href="/app/search-console"
+    isActive={activeItem === 'Search Console' || pathname.startsWith('/app/search-console')}
+    onClick={() => setActiveItem('Search Console')}
   />
 
   {hasCapability(CORE_MODULES.reception) && (

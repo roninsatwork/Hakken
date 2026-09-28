@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Sparkles } from "lucide-react";
+import { MessageSquareQuote } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -14,7 +14,6 @@ import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
 import { useEngineLabel } from "@/src/app/(dashboard)/admin/_components/EngineChoice";
-import { ResultsSwitcher } from "../ResultsSwitcher";
 
 /**
  * Where this website gets named inside AI answers.
@@ -53,9 +52,8 @@ export default function WebsiteCitationsPage() {
 
   return (
     <div className="flex w-full flex-col gap-5">
-      <ResultsSwitcher active="answers" />
       <PageHeader
-        icon={<Sparkles className="h-5 w-5 text-brand" />}
+        icon={<MessageSquareQuote className="h-5 w-5 text-brand" />}
         title={t("title")}
         description={t("subtitle")}
       />
@@ -73,7 +71,7 @@ export default function WebsiteCitationsPage() {
           placeholder: t("searchPlaceholder"),
         }}
         empty={{
-          icon: <Sparkles className="h-8 w-8 text-muted/30" />,
+          icon: <MessageSquareQuote className="h-8 w-8 text-muted/30" />,
           label: searchTerm ? t("noMatch") : t("empty"),
         }}
         footer={{

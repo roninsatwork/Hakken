@@ -118,7 +118,9 @@ export function seoBackoffMs(attempt: number): number {
 export const SEO_MAX_SENDS_PER_CYCLE = 25_000;
 
 /**
- * Competitors collected for one website in a cycle.
+ * The most competitors a run collects for one website: the top choice of
+ * "Competitors collected per website" (`competitorsPerSite` in
+ * `fanOutLimits.ts`), which each company and website sets below it.
  *
  * Every one of them is a paid pull at the parent website's own rate, so this
  * is a cost ceiling as much as a transaction one. A hundred rivals against a

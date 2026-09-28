@@ -10,7 +10,7 @@ import { CUT_COLUMN, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { formatCpc, formatNumber } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
-import { useSiteId } from "../../../_components/useSite";
+import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
@@ -32,15 +32,28 @@ const SORTS = { keyword: "asc", position: "asc", volume: "desc", cpc: "desc", tr
 export default function SitePaidKeywordsPage() {
   const t = useTranslations("sites.paidKeywords");
   const siteId = useSiteId();
+  const site = useSite();
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
   const [search, setSearch, term] = useSiteSearch();
   const order = useSiteSort(SORTS, "traffic");
   const table = useSiteListPage(api.sitePaid.listPaidKeywords, { siteId, ...(term ? { search: term } : {}), sort: order.key, direction: order.direction });
+  // The table holds the adverts among the hundred searches the everyday call
+  // brings on every run — the keyword list asks for no adverts; DataForSEO
+  // counts every search the site advertises on, which can be far more
+  // (docs/plans/active/sites-audit-fixes-plan.md, 2.2).
+  const reported = site?.counts.paidKeywords ?? null;
+  const listed = table.result?.total ?? null;
+  const partial = reported !== null && listed !== null && !term && reported > listed;
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader icon={<Megaphone className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <PageHeader
+        icon={<Megaphone className="h-5 w-5 text-brand" />}
+        title={t("title")}
+        description={t("description")}
+        pills={partial ? <span className="text-[12px] text-secondary">{t("listing", { listed: formatNumber(listed), reported: formatNumber(reported) })}</span> : null}
+      />
       <DataTable
         rows={table.pageRows}
         rowKey={(row) => row._id}
@@ -48,16 +61,16 @@ export default function SitePaidKeywordsPage() {
         minWidthClassName="min-w-[720px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         cardHeader={<SiteTableBar footer={table.footer} noun="adverts" actions={<TableDownload siteId={siteId} kind="paid" sort={order.tableSort} />} />}
-        empty={{ icon: <Megaphone className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}
+        empty={{ icon: <Megaphone className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : reported ? t("emptyReported", { reported: formatNumber(reported) }) : t("empty") }}
         footer={table.footer}
         sort={order.tableSort}
         columns={[
-          { key: "keyword", header: t("columns.keyword"), sortable: true, className: CUT_COLUMN.only, cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
+          { key: "keyword", header: t("columns.keyword"), sortable: true, className: CUT_COLUMN.first, cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
           { key: "position", header: t("columns.position"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.position ?? "–"}</span> },
           { key: "volume", header: t("columns.volume"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.volume)}</span> },
           { key: "cpc", header: t("columns.cpc"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatCpc(row.cpc)}</span> },
           { key: "traffic", header: t("columns.traffic"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.traffic)}</span> },
-          { key: "cost", header: t("columns.cost"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">${formatNumber(row.trafficCost)}</span> },
+          { key: "cost", header: t("columns.cost"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{row.trafficCost === null ? "–" : `$${formatNumber(row.trafficCost)}`}</span> },
         ]}
       />
     </div>

@@ -1,11 +1,17 @@
 import { defineTable } from "convex/server";
 import { v } from "convex/values";
 import { aiEngineValidator } from "./seoAiEngines";
+import { fanOutTables } from "./fanOutSchema";
+import { holdProfileTables } from "./holdProfileSchema";
 import {
   bandCountsValidator,
   engineDayValidator,
   kdBandValidator,
+  listCitedValidator,
+  listEngineValidator,
+  namedOtherValidator,
   pageTypeValidator,
+  questionEngineValidator,
   rankBandValidator,
   rankIntentValidator,
   intentSplitValidator,
@@ -39,9 +45,15 @@ const linkStatusValidator = v.union(v.literal("LIVE"), v.literal("NEW"), v.liter
  *
  * The website-level tables name no company: a host's rankings are the same
  * whoever watches it, which is the whole reason it is collected once. Only the
- * content gap is per hold, because it depends on which rivals a company chose.
+ * content gap and what the answers to a company's own questions said
+ * (`siteListAiDays`, `siteListQuestions`, `siteListAiSummary`) are per hold,
+ * because they depend on which rivals and questions a company chose — and so
+ * are the fan-out angles (`fanOutSchema.ts`), from the answers to its questions.
  */
 export const siteTables = {
+  ...fanOutTables,
+  ...holdProfileTables,
+
   /**
    * The latest check of every search a website ranks for, from one place.
    *
@@ -55,7 +67,9 @@ export const siteTables = {
     locationCode: v.number(),
     /** Normalised, as `seoKeywordIntents` keys it. */
     keyword: v.string(),
+    /** Among Google's normal results; `pagePosition` is its place among everything on the page, absent on a row counted on the page (G2). */
     position: v.optional(v.number()),
+    pagePosition: v.optional(v.number()),
     band: rankBandValidator,
     url: v.optional(v.string()),
     /** The ranking page's path, or "" when there is none. */
@@ -206,6 +220,12 @@ export const siteTables = {
     rankedDown: v.optional(v.number()),
     rankedNew: v.optional(v.number()),
     rankedLost: v.optional(v.number()),
+    /**
+     * On a list held in part, the searches that left it at this check — held
+     * at the check before, not at this one. Never "lost": each may still rank
+     * below the list's limit (sites-data-completeness-plan.md, §4.C).
+     */
+    rankedLeft: v.optional(v.number()),
     buying: v.optional(v.number()),
     researching: v.optional(v.number()),
     branded: v.optional(v.number()),
@@ -520,6 +540,10 @@ export const siteTables = {
     day: v.string(),
     pagesCrawled: v.number(),
     maxPages: maybeNumber,
+    /** Pages found and not crawled, as the supplier said (sites-data-completeness-plan.md, B8). */
+    pagesInQueue: maybeNumber,
+    /** The page detail stopped at its request cap, so its lists are the first part only. */
+    detailCut: v.optional(v.boolean()),
     onPageScore: maybeNumber,
     linksInternal: maybeNumber,
     linksExternal: maybeNumber,
@@ -547,11 +571,12 @@ export const siteTables = {
     position: maybeNumber,
     url: v.optional(v.string()),
     page: v.string(),
-    volume: v.number(),
+    /** Unknown is left out, never 0 (docs/plans/active/sites-audit-fixes-plan.md, 2.2); rows before 2026-09-26 hold 0 for it. */
+    volume: maybeNumber,
     cpc: maybeNumber,
     /** Visits a month DataForSEO estimates the advert brings, and what they cost. */
-    traffic: v.number(),
-    trafficCost: v.number(),
+    traffic: maybeNumber,
+    trafficCost: maybeNumber,
     searchText: v.string(),
   })
     .index("by_site_traffic", ["websiteId", "locationCode", "traffic"])
@@ -671,10 +696,59 @@ export const siteTables = {
    */
   companyDataLimits: defineTable({
     companyId: v.id("companies"),
-    keywordsPerSite: v.number(),
-    backlinksPerSite: v.number(),
+    /**
+     * Each absent field uses the platform's number (System Settings → Limits,
+     * `platformLimits`), one limit at a time; a company using the platform's
+     * on all three keeps no row (docs/plans/active/platform-limits-plan.md).
+     */
+    keywordsPerSite: v.optional(v.number()),
+    backlinksPerSite: v.optional(v.number()),
+    /**
+     * Of the keywords kept, how many are checked again on every run; the rest
+     * are refreshed weekly (Anthony, 2026-09-27).
+     */
+    everydayKeywords: v.optional(v.number()),
     updatedAt: v.number(),
   }).index("by_company", ["companyId"]),
+
+  /**
+   * The platform's own limits — where every company starts — set in System
+   * Settings → Limits (docs/plans/active/platform-limits-plan.md). Anthony,
+   * 2026-09-28: "it should be Platform - company - website". One row at most;
+   * an absent field is Hakken's starting number in code, so a platform nobody
+   * has touched keeps no row.
+   */
+  platformLimits: defineTable({
+    keywordsPerSite: v.optional(v.number()),
+    everydayKeywords: v.optional(v.number()),
+    backlinksPerSite: v.optional(v.number()),
+    promptsPerSite: v.optional(v.number()),
+    trackedPerSite: v.optional(v.number()),
+    fanOutTrackedPerSite: v.optional(v.number()),
+    purchasesPerCollection: v.optional(v.number()),
+    searchesPerEngine: v.optional(v.number()),
+    wordingsPerAngle: v.optional(v.number()),
+    anglesShown: v.optional(v.number()),
+    consoleDays: v.optional(v.number()),
+    anglesJudgedPerRun: v.optional(v.number()),
+    anglesJudgedPerCollection: v.optional(v.number()),
+    pagesOffered: v.optional(v.number()),
+    auditPagesRead: v.optional(v.number()),
+    rankedPagesRead: v.optional(v.number()),
+    missingAnglesSuggested: v.optional(v.number()),
+    companyRowsRead: v.optional(v.number()),
+    googleSearchesRead: v.optional(v.number()),
+    competitorsPerSite: v.optional(v.number()),
+    // Only the platform sets these: each is about something every company
+    // shares (`sharedLimits.ts`).
+    fanOutPerAnswer: v.optional(v.number()),
+    sourcesPerAnswer: v.optional(v.number()),
+    businessesPerAnswer: v.optional(v.number()),
+    newWebsitesPerPurchase: v.optional(v.number()),
+    overviewSearchesPerPurchase: v.optional(v.number()),
+    rowsPerDownload: v.optional(v.number()),
+    updatedAt: v.number(),
+  }),
 
   /**
    * A website's own data limits, where they differ from its company's
@@ -687,6 +761,7 @@ export const siteTables = {
     companyId: v.id("companies"),
     keywordsPerSite: v.optional(v.number()),
     backlinksPerSite: v.optional(v.number()),
+    everydayKeywords: v.optional(v.number()),
     updatedAt: v.number(),
   })
     .index("by_hold", ["companyWebsiteId"])
@@ -702,7 +777,8 @@ export const siteTables = {
    * Kept per list, so one company's questions never count towards another's
    * figures: two companies asking about one website each get their own lines,
    * and a company watching it as a competitor reads its own questions' lines.
-   * Written by `syncDays` in `siteSummaries.ts`. It replaced, on 2026-09-26,
+   * Written a list at a time by `syncListAiLines` (`siteListAiDays.ts`), from
+   * every question on the list (sites-audit-fixes-plan.md, 3.1). It replaced, on 2026-09-26,
    * the website-wide `siteDaySummaries.ai` and `siteRivalAiDays`, which counted
    * every company's questions together.
    */
@@ -728,11 +804,63 @@ export const siteTables = {
     .index("by_site", ["websiteId"]),
 
   /**
+   * How each engine's latest answers to one of a company's questions treated
+   * the websites of its group — the owned site and the competitors watched
+   * against it — so Mentions and Side by side read one list's rows instead of
+   * a row, or thirty, per question and engine each time they open
+   * (docs/plans/active/sites-ai-list-summaries-plan.md).
+   *
+   * The latest 200 answers per engine (`ANSWER_WINDOW`), the ones the question
+   * stats count. Written as each answer is filed (`recordAnswer`), and worked
+   * out again for the whole list when its questions, competitors or place
+   * change (`siteListAi.ts`). Only the group's websites are kept: the other
+   * firms an answer names are nobody this company tracks.
+   */
+  siteListQuestions: defineTable({
+    /** The hold whose question it is: the company's own website. */
+    companyWebsiteId: v.id("companyWebsites"),
+    /** Where the list is asked from: its hold's place. */
+    locationCode: v.number(),
+    prompt: v.string(),
+    /** Each engine the question asks that has answered it. */
+    engines: v.array(questionEngineValidator),
+    updatedAt: v.number(),
+  })
+    .index("by_hold_prompt", ["companyWebsiteId", "locationCode", "prompt"]),
+
+  /**
+   * One company's list added up (docs/plans/active/sites-ai-list-summaries-plan.md):
+   * per engine, the answers counted and how often each website of the group
+   * was named, and which the newest answers named; and how many of each
+   * website's pages the answers cite. Share of voice, the header, the Sites
+   * list and the Overview read this one row. Worked out from the list's
+   * `siteListQuestions` and cited pages a little after either changes.
+   */
+  siteListAiSummary: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    locationCode: v.number(),
+    engines: v.array(listEngineValidator),
+    /** The group's websites with a page cited; a website missing here has none. */
+    cited: v.array(listCitedValidator),
+    /**
+     * The websites outside the group its answers name most, most first, from
+     * the question stats' "others named" (docs/plans/active/
+     * sites-audit-fixes-plan.md, 3.4). Absent on a summary written before it.
+     */
+    othersNamed: v.optional(v.array(namedOtherValidator)),
+    updatedAt: v.number(),
+  })
+    .index("by_hold", ["companyWebsiteId", "locationCode"]),
+
+  /**
    * A rebuild asked for and not yet run. Several filings in a minute ask once,
    * so a SERP page naming ten known sites does not start ten rebuilds of each.
    */
   siteSummaryRequests: defineTable({
-    /** `site:<websiteId>:<locationCode>`, `gap:<companyWebsiteId>`, or `copy:<kind>:<key>` for a list's compact copy. */
+    /**
+     * `site:<websiteId>:<locationCode>`, `gap:<companyWebsiteId>`, `copy:<kind>:<key>` for a list's compact copy, or
+     * `listAi:<companyWebsiteId>` / `listAiAll:<companyWebsiteId>` for a company list's AI summary (`siteListAi.ts`).
+     */
     key: v.string(),
     pending: v.boolean(),
     requestedAt: v.number(),

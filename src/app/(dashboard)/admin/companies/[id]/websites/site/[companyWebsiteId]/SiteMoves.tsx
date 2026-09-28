@@ -18,7 +18,8 @@ import { siteBase } from "./siteView";
  *
  * Each card says what was seen and offers the one action that answers it,
  * which the server carries out — track the rival, add the spelling, pause the
- * question, add the search. Dismissing is remembered, so the same card never
+ * question, add the search; a missing angle is answered by writing its page,
+ * so taking it marks it done. Dismissing is remembered, so the same card never
  * returns; the next collection brings new ones. That is what makes this the
  * week-forty screen as much as the day-one one: a worklist, never a checklist.
  */
@@ -98,11 +99,18 @@ export function SiteMoves({
       title = t("dead.title", { prompt: move.evidence.prompt, weeks: move.evidence.weeks });
       detail = t("dead.detail", { asked: move.evidence.asked });
       actions = <>{go(`${base}/questions`, t("dead.rewrite"))}{take(t("dead.take"))}{dismiss(t("dead.dismiss"))}</>;
-    } else {
+    } else if (move.kind === "UNTRACKED_SEARCH") {
       label = t("kinds.UNTRACKED_SEARCH");
       title = t("gap.title", { query: move.evidence.query, times: move.evidence.timesSeen });
       detail = t("gap.detail", { prompt: move.evidence.prompt });
       actions = <>{take(t("gap.take"))}{dismiss(t("gap.dismiss"))}</>;
+    } else {
+      // A missing angle (docs/plans/active/fan-out-angles-plan.md, FA6): answered by writing its page.
+      tone = "border-info/35 bg-info/5";
+      label = t("kinds.MISSING_ANGLE");
+      title = t("missing.title", { query: move.evidence.query });
+      detail = t("missing.detail", { times: move.evidence.timesSeen, prompt: move.evidence.prompt });
+      actions = <>{take(t("missing.take"))}{dismiss(t("missing.dismiss"))}</>;
     }
 
     return (

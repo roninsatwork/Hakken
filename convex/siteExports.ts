@@ -9,10 +9,11 @@ import { holdQuestions } from "./holdLists";
 import { citedPagesOf, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
 import { tenantAction } from "./tenantFunctions";
 import { appError } from "./utils/appError";
-import { siteExportKindValidator, type SiteExportKind } from "./utils/siteShapes";
+import { answerStance, siteExportKindValidator, type SiteExportKind } from "./utils/siteShapes";
 import { compareSortValues, ipSortKey, type SortValue } from "./utils/sortOrder";
 import { sortDirectionArg } from "./siteListPages";
 import { loadSite } from "./websiteSiteRows";
+import { MAX_LIST } from "./websiteSiteRows";
 
 /**
  * Downloading a whole Sites table as CSV (docs/plans/active/user-sites-plan.md,
@@ -32,11 +33,14 @@ const EXPORT_PAGE = 1_000;
 /** Answers read per page: each carries its whole text, so fewer at a time. */
 const ANSWERS_PAGE = 200;
 
-/** The site's questions, capped on its record. */
-const QUESTIONS_READ = 200;
+/** Every question on the list, as Full answers offers (docs/plans/active/sites-audit-fixes-plan.md, 3.2). */
+const QUESTIONS_READ = MAX_LIST;
 
-/** Rows one file holds at most: every keyword of a very large site. */
-const MAX_EXPORT_ROWS = 50_000;
+/*
+ * Rows one file holds at most is the platform's setting since 2026-09-28
+ * (`rowsPerDownload`, `sharedLimits.ts`); its largest choice is every keyword
+ * of a very large site, and about what the byte ceiling below lets through.
+ */
 
 /** Bytes one file holds at most, well under what a function may return. */
 const MAX_EXPORT_BYTES = 6_000_000;
@@ -63,6 +67,9 @@ const line = (values: Array<string | number | boolean | null | undefined>) => va
 
 /** Dollars to the cent: DataForSEO's prices arrive with float noise (14.960000038146973). */
 const cents = (value: number | null | undefined) => (value === null || value === undefined ? null : Math.round(value * 100) / 100);
+
+/** How an answer treated the site, in the words of the answers file, by the one rule every screen reads (`answerStance`). */
+const STANCE_WORDS = { WARNED_AGAINST: "warned against", RECOMMENDED: "recommended", NAMED: "named", NOT_NAMED: "not named" } as const;
 
 /** Each table's columns, in the order the page shows them. Headings in English, like every CSV here. */
 const HEADERS: Record<ExportKind, string[]> = {
@@ -188,6 +195,7 @@ export const exportSiteTable = tenantAction({
   handler: async (ctx, args): Promise<{ fileName: string; csv: string; rows: number; complete: boolean }> => {
     const companyId = getActiveCompanyId(ctx.user);
     if (!companyId) throw appError("NOT_FOUND", "That website is not one your company holds.");
+    const { rowsPerDownload } = await ctx.runQuery(internal.sharedLimits.getSharedLimits, {});
     const encoder = new TextEncoder();
     const header = line(HEADERS[args.kind]);
     const kept: ExportLine[] = [];
@@ -196,14 +204,15 @@ export const exportSiteTable = tenantAction({
     let host = "site";
     let complete = true;
     for (;;) {
-      const page: { host: string; lines: ExportLine[]; cursor: string; isDone: boolean } = await ctx.runQuery(
+      const page: { host: string; lines: ExportLine[]; cursor: string; isDone: boolean; cut?: boolean } = await ctx.runQuery(
         internal.siteExports.exportPage,
         { siteId: args.siteId, companyId, kind: args.kind, cursor, ...(args.sort ? { sort: args.sort } : {}) },
       );
       host = page.host;
+      if (page.cut) complete = false;
       for (const next of page.lines) {
         const bytes = encoder.encode(next.line).length + 1;
-        if (kept.length >= MAX_EXPORT_ROWS || size + bytes > MAX_EXPORT_BYTES) {
+        if (kept.length >= rowsPerDownload || size + bytes > MAX_EXPORT_BYTES) {
           complete = false;
           break;
         }
@@ -238,7 +247,14 @@ export const exportPage = internalQuery({
     /** The table's column the file will be ordered by: each line carries its value. */
     sort: v.optional(v.string()),
   },
-  returns: v.object({ host: v.string(), lines: v.array(exportLine), cursor: v.string(), isDone: v.boolean() }),
+  returns: v.object({
+    host: v.string(),
+    lines: v.array(exportLine),
+    cursor: v.string(),
+    isDone: v.boolean(),
+    /** The list was longer than it reads, and the file says so. */
+    cut: v.optional(v.boolean()),
+  }),
   handler: async (ctx, args) => {
     const site = await loadSite(ctx, args.siteId);
     if (!site || site.hold.companyId !== args.companyId) throw appError("NOT_FOUND", "That website is not one your company holds.");
@@ -275,9 +291,7 @@ export const exportPage = internalQuery({
       for (const row of result.page) {
         if (!places.some((entry) => entry.engine === row.engine && entry.place === row.locationCode)) continue;
         const answer = await ctx.db.query("aiAnswers").withIndex("by_pull", (q) => q.eq("pullId", row.pullId)).first();
-        const stance = answer?.recommended.includes(websiteId) ? "recommended"
-          : answer?.warnedAgainst.includes(websiteId) ? "warned against"
-            : answer?.named.includes(websiteId) ? "named" : "not named";
+        const stance = STANCE_WORDS[answerStance(answer, websiteId)];
         lines.push({ line: line([row.day, row.engine, row.prompt, stance, row.text, row.sources.join(" ")]), group: row.prompt, order: row.day, name: row.engine });
       }
       const lastQuestion = at >= questions.length - 1;
@@ -315,7 +329,8 @@ export const exportPage = internalQuery({
         ]), (row) => row.keyword);
       case "cited": {
         // A bounded list added up from the site's own questions (D17), whole in one page.
-        const cited = await citedPagesOf(ctx, websiteId, listHold(site), place, QUESTIONS_FOR_CITED_PAGES);
+        const coverage = { cut: false };
+        const cited = await citedPagesOf(ctx, websiteId, listHold(site), place, QUESTIONS_FOR_CITED_PAGES, coverage);
         const order = (row: (typeof cited)[number]): SortValue =>
           args.sort === "page" ? row.page : args.sort === "engines" ? row.engines.length : args.sort === "times" ? row.times : args.sort === "last" ? row.lastDay : null;
         return {
@@ -323,6 +338,7 @@ export const exportPage = internalQuery({
           lines: cited.map((row) => ({ line: line([row.page, row.times, row.engines.join(" "), row.firstDay, row.lastDay]), group: "", order: order(row) ?? null, name: row.page })),
           cursor: "",
           isDone: true,
+          ...(coverage.cut ? { cut: true } : {}),
         };
       }
       case "backlinks":
@@ -363,7 +379,8 @@ export const exportPage = internalQuery({
         return done(await ctx.db.query("sitePaidKeywords")
           .withIndex("by_site_traffic", (q) => q.eq("websiteId", websiteId).eq("locationCode", place))
           .order("desc").paginate(page), (row: Doc<"sitePaidKeywords">) => line([
-          row.keyword, row.position, row.volume, cents(row.cpc), Math.round(row.traffic), Math.round(row.trafficCost), row.page, row.day,
+          row.keyword, row.position, row.volume, cents(row.cpc),
+          row.traffic === undefined ? null : Math.round(row.traffic), row.trafficCost === undefined ? null : Math.round(row.trafficCost), row.page, row.day,
         ]), (row) => row.keyword);
     }
   },

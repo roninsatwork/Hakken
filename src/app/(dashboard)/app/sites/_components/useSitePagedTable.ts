@@ -34,13 +34,14 @@ function useCountLabels(cut: number | null | undefined): NonNullable<PagedFooter
  * The page and the rows are kept in the address (`useSiteTablePaging`): Back
  * from a record's screen opens the page that was left, and a search or filter
  * kept in the address starts again at page one. `isLoading` is for a screen
- * whose list reads as empty while its query is still out.
+ * whose list reads as empty while its query is still out; `table` names a
+ * page's second table, which pages apart from the first (`tableKey`).
  */
 export function useSitePager<Row>(
   list: readonly Row[] | undefined,
-  options: { isLoading?: boolean; cut?: number | null } = {},
+  options: { isLoading?: boolean; cut?: number | null; table?: string } = {},
 ): { pageRows: Row[] | undefined; footer: PagedFooterSpec } {
-  const { page, setPage, rows, setRows } = useSiteTablePaging();
+  const { page, setPage, rows, setRows } = useSiteTablePaging(options.table);
   const labels = useCountLabels(options.cut);
   const isLoading = options.isLoading ?? list === undefined;
   const total = list?.length ?? 0;

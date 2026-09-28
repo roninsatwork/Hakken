@@ -70,7 +70,7 @@ export default function SeoCostsPage() {
         rowKey={(row) => row.companyId}
         minWidthClassName="min-w-[760px]"
         onRowClick={(row) =>
-          router.push(`/admin/companies/${row.companyId}/websites/data`)}
+          router.push(`/admin/companies/${row.companyId}/websites/schedules`)}
         search={{
           value: searchTerm,
           onChange: (value) => {

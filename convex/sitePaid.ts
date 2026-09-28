@@ -75,10 +75,11 @@ export async function filePaidKeywords(
       ...(row.position !== undefined ? { position: row.position } : {}),
       ...(row.url ? { url: row.url } : {}),
       page,
-      volume: row.searchVolume ?? 0,
+      // What DataForSEO did not say is left out, never written as 0.
+      ...(row.searchVolume !== undefined ? { volume: row.searchVolume } : {}),
       ...(row.cpc !== undefined ? { cpc: row.cpc } : {}),
-      traffic: row.traffic ?? 0,
-      trafficCost: row.trafficCost ?? 0,
+      ...(row.traffic !== undefined ? { traffic: row.traffic } : {}),
+      ...(row.trafficCost !== undefined ? { trafficCost: row.trafficCost } : {}),
       searchText: `${keyword} ${page}`.trim(),
     });
   }
@@ -103,7 +104,10 @@ const PAID_SORTS: ListSorts<Doc<"sitePaidKeywords">, "keyword" | "position" | "v
  * The searches the site advertises on: most visits first unless a heading
  * asks otherwise. A list is one answer's worth, replaced whole when a newer
  * answer is filed, so it is read whole and its total is exact
- * (docs/plans/active/sites-table-pages-plan.md §5.1).
+ * (docs/plans/active/sites-table-pages-plan.md §5.1) — exact for what it
+ * holds: the adverts among the everyday answer's hundred searches, which can
+ * be far fewer than DataForSEO's own count of searches with adverts. The
+ * screen says so (docs/plans/active/sites-audit-fixes-plan.md, 2.2).
  */
 export const listPaidKeywords = tenantQuery({
   args: {
@@ -121,10 +125,10 @@ export const listPaidKeywords = tenantQuery({
     position: v.union(v.number(), v.null()),
     url: v.union(v.string(), v.null()),
     page: v.string(),
-    volume: v.number(),
+    volume: v.union(v.number(), v.null()),
     cpc: v.union(v.number(), v.null()),
-    traffic: v.number(),
-    trafficCost: v.number(),
+    traffic: v.union(v.number(), v.null()),
+    trafficCost: v.union(v.number(), v.null()),
     day: v.string(),
   })),
   handler: async (ctx, args) => {
@@ -148,10 +152,10 @@ export const listPaidKeywords = tenantQuery({
         position: row.position ?? null,
         url: row.url ?? null,
         page: row.page,
-        volume: row.volume,
+        volume: row.volume ?? null,
         cpc: row.cpc ?? null,
-        traffic: row.traffic,
-        trafficCost: row.trafficCost,
+        traffic: row.traffic ?? null,
+        trafficCost: row.trafficCost ?? null,
         day: row.day,
       })),
     };

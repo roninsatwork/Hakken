@@ -19,6 +19,16 @@ describe("the Overview's headline figures", () => {
     expect(latest).toEqual({ day: "2026-09-25", aiOverviewRefs: 444, estimatedTraffic: 13_733 });
   });
 
+  it("takes the AI answers from the newest day that has any, when the newest day has none", () => {
+    const named = [{ engine: "chatgpt", asked: 20, named: 2, recommended: 1 }];
+    // A crawl filed on the 26th, with no answers that day.
+    const latest = newestOfEach([
+      { day: "2026-09-25", ai: named, crawledPages: 90 },
+      { day: "2026-09-26", ai: [] as typeof named, crawledPages: 120 },
+    ]);
+    expect(latest).toEqual({ day: "2026-09-26", ai: named, crawledPages: 120 });
+  });
+
   it("keeps a real zero, and has nothing to show for no days", () => {
     expect(newestOfEach([{ day: "a", paidKeywords: 5 }, { day: "b", paidKeywords: 0 }])).toEqual({ day: "b", paidKeywords: 0 });
     expect(newestOfEach([])).toBeNull();

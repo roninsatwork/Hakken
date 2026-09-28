@@ -154,6 +154,16 @@ export async function openSeoCycle(
       };
     }
 
+    // The last run stopped at its ceiling: this one starts with the websites it
+    // never reached, and goes round to the rest, so the same websites do not
+    // miss out every run (sites-data-completeness-plan.md, B6).
+    const last = await ctx.db
+      .query("seoCollectionCycles")
+      .withIndex("by_company_started", (q) => q.eq("companyId", args.companyId))
+      .order("desc")
+      .first();
+    const startedAfter = last?.status === "CAPPED_PLAN" ? last.cursorCreatedAt : undefined;
+
     const cycleId = await ctx.db.insert("seoCollectionCycles", {
       companyId: args.companyId,
       ...(schedule ? { scheduleId: schedule._id } : {}),
@@ -167,9 +177,13 @@ export async function openSeoCycle(
       failedCount: 0,
       totalCostUsd: 0,
       startedAt: Date.now(),
+      ...(startedAfter !== undefined ? { startedAfter, cursorCreatedAt: startedAfter } : {}),
     });
 
-    await ctx.scheduler.runAfter(0, internal.seoCollection.expandSeoCycle, { cycleId });
+    await ctx.scheduler.runAfter(0, internal.seoCollection.expandSeoCycle, {
+      cycleId,
+      ...(startedAfter !== undefined ? { cursorCreatedAt: startedAfter } : {}),
+    });
 
     return {
       ok: true,

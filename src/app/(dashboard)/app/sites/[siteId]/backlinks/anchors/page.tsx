@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Anchor } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -17,6 +18,7 @@ import { useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../_components/useSiteSort";
+import { ListHeldLine } from "../../../_components/SiteCoverage";
 
 /** Bars drawn: the first of the page on screen, as many as a page held before rows per page could grow to 100. */
 const CHARTED = 15;
@@ -41,12 +43,15 @@ export default function SiteAnchorsPage() {
   const [search, setSearch, term] = useSiteSearch();
   const order = useSiteSort(SORTS, "backlinks");
   const table = useSiteListPage(api.siteLinkLists.listAnchors, { siteId, ...(term ? { search: term } : {}), sort: order.key, direction: order.direction });
+  // The whole list's length, for what the rows kept are of (sites-data-completeness-plan.md, §4.E).
+  const totals = useQuery(api.siteLinks.linkListTotals, { siteId });
   const words = (anchor: string) => anchor || t("noAnchor");
   const charted = (table.pageRows ?? []).slice(0, CHARTED);
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Anchor className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <ListHeldLine held={!term ? table.result?.total : undefined} total={totals?.anchors} />
 
       <SiteChartCard
         dated={false}

@@ -42,7 +42,9 @@ async function seedCheck(t: Harness, keyword: string, locationCode: number, item
     attempts: 0,
     costUsd: 0,
     sandbox: false,
-    submittedAt: Date.now(),
+    // Filed under the day it was sent — a run's day, never the day it came
+    // back (docs/plans/active/sites-audit-fixes-plan.md, 2.1).
+    submittedAt: Date.parse("2026-09-21T08:00:00Z"),
     completedAt: Date.parse("2026-09-21T09:00:00Z"),
   } as never));
 }

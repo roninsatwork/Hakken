@@ -36,6 +36,16 @@ export const SITE_SHARED_KEYS = ["from", "to", "step", "range", "compare"] as co
  */
 export const TABLE_PAGE_KEY = "p";
 
+/**
+ * A key of one table's own, when a page holds two. The page's first table
+ * keeps the plain keys; a second names itself — `closest.p`, `closest.sort` —
+ * so paging or sorting one leaves the other where it was. Position bands and
+ * New and lost keywords each hold two tables since 2026-09-27.
+ */
+export function tableKey(key: string, table?: string): string {
+  return table ? `${table}.${key}` : key;
+}
+
 /** The shared part of a query string, with a leading "?" when there is any. */
 export function sharedSiteQuery(params: URLSearchParams): string {
   const shared = new URLSearchParams();
@@ -66,11 +76,16 @@ function wroteRecently(pathname: string, key: string, value: string): boolean {
   return recentWrites.some((entry) => entry.pathname === pathname && (new URLSearchParams(entry.query).get(key) ?? "") === value);
 }
 
-/** Set some keys in the address and leave the rest as they are. Empty removes a key. */
-export function useSetSiteParams(): (changes: Record<string, string | null>) => void {
+/**
+ * Set some keys in the address and leave the rest as they are. Empty removes
+ * a key. Any change but the table's own page starts that table again at page
+ * one: the page's first table, or the one named by `table`.
+ */
+export function useSetSiteParams(table?: string): (changes: Record<string, string | null>) => void {
   const params = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
+  const pageKey = tableKey(TABLE_PAGE_KEY, table);
   return useCallback((changes: Record<string, string | null>) => {
     const now = Date.now();
     recentWrites = recentWrites.filter((entry) => now - entry.at < WRITE_LANDS_MS);
@@ -80,11 +95,11 @@ export function useSetSiteParams(): (changes: Record<string, string | null>) => 
       if (value) next.set(key, value);
       else next.delete(key);
     }
-    if (!(TABLE_PAGE_KEY in changes)) next.delete(TABLE_PAGE_KEY);
+    if (!(pageKey in changes)) next.delete(pageKey);
     const text = next.toString();
     recentWrites.push({ pathname, query: text, at: now });
     router.replace(`${pathname}${text ? `?${text}` : ""}`, { scroll: false });
-  }, [params, router, pathname]);
+  }, [params, router, pathname, pageKey]);
 }
 
 /**
@@ -146,12 +161,13 @@ export function useSiteSearch(key = "q"): [string, (next: string) => void, strin
 }
 
 /** The table's page from the address — 1 when there is none — and a setter that writes it there. */
-export function useSiteTablePage(): [number, (next: number) => void] {
+export function useSiteTablePage(table?: string): [number, (next: number) => void] {
   const params = useSearchParams();
-  const set = useSetSiteParams();
-  const raw = Number(params.get(TABLE_PAGE_KEY));
+  const set = useSetSiteParams(table);
+  const key = tableKey(TABLE_PAGE_KEY, table);
+  const raw = Number(params.get(key));
   const page = Number.isInteger(raw) && raw > 1 ? raw : 1;
-  const setPage = useCallback((next: number) => set({ [TABLE_PAGE_KEY]: next > 1 ? String(next) : null }), [set]);
+  const setPage = useCallback((next: number) => set({ [key]: next > 1 ? String(next) : null }), [set, key]);
   return [page, setPage];
 }
 
@@ -167,9 +183,11 @@ export const TABLE_ROWS_KEY = "rows";
  *
  * The rows are not one of the shared keys: the side menu carries only the
  * dates and "compare with" (`sharedSiteQuery`), so each page keeps its own.
- * Changing them keeps the first row being read on screen.
+ * Changing them keeps the first row being read on screen. A page's second
+ * table (`table`) keeps its page and rows apart from the first's, remembered
+ * apart too.
  */
-export function useSiteTablePaging(): {
+export function useSiteTablePaging(table?: string): {
   page: number;
   setPage: (next: number) => void;
   rows: SiteRows;
@@ -177,9 +195,11 @@ export function useSiteTablePaging(): {
 } {
   const params = useSearchParams();
   const pathname = usePathname();
-  const set = useSetSiteParams();
-  const [page, setPage] = useSiteTablePage();
-  const pageKey = siteRowsPageKey(pathname);
+  const set = useSetSiteParams(table);
+  const [page, setPage] = useSiteTablePage(table);
+  const pageKey = table ? `${siteRowsPageKey(pathname)}#${table}` : siteRowsPageKey(pathname);
+  const rowsKey = tableKey(TABLE_ROWS_KEY, table);
+  const pageParam = tableKey(TABLE_PAGE_KEY, table);
 
   // Restored after mount so the server and the first client render agree,
   // as the composer restores its thinking level.
@@ -189,7 +209,7 @@ export function useSiteTablePaging(): {
     return () => clearTimeout(restore);
   }, [pageKey]);
 
-  const rows = siteRowsFromText(params.get(TABLE_ROWS_KEY))
+  const rows = siteRowsFromText(params.get(rowsKey))
     ?? (remembered.pageKey === pageKey ? remembered.rows : null)
     ?? SITE_DEFAULT_ROWS;
 
@@ -199,10 +219,10 @@ export function useSiteTablePaging(): {
     setRemembered({ pageKey, rows: next });
     const nextPage = pageKeepingPlace(page, rows, next);
     set({
-      [TABLE_ROWS_KEY]: next === SITE_DEFAULT_ROWS ? null : String(next),
-      [TABLE_PAGE_KEY]: nextPage > 1 ? String(nextPage) : null,
+      [rowsKey]: next === SITE_DEFAULT_ROWS ? null : String(next),
+      [pageParam]: nextPage > 1 ? String(nextPage) : null,
     });
-  }, [page, pageKey, rows, set]);
+  }, [page, pageKey, rows, set, rowsKey, pageParam, setRemembered]);
 
   return { page, setPage, rows, setRows };
 }

@@ -13,6 +13,7 @@ import {
   isConnectorTokenEncryptionConfigured,
 } from "./connectorTokenCrypto";
 import { appError } from "./utils/appError";
+import { exchangeAuthorizationCode, refreshAccessToken, revokeOAuthToken } from "./oauthTokenCalls";
 
 /**
  * The consent flow: the platform's first real OAuth plumbing.
@@ -123,32 +124,14 @@ export const handleConnectorOAuthCallback = httpAction(async (ctx, request) => {
   }
 
   // Exchange the code — the one step that must never happen in a browser.
-  let tokens: {
-    access_token?: string;
-    refresh_token?: string;
-    expires_in?: number;
-    scope?: string;
-  };
-  try {
-    const response = await fetch(provider.tokenEndpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "authorization_code",
-        code,
-        client_id: credentials.clientId,
-        client_secret: credentials.clientSecret,
-        redirect_uri: `${url.origin}/api/connectors/oauth/callback`,
-      }).toString(),
-    });
-    if (!response.ok) {
-      const detail = (await response.text()).slice(0, 300);
-      return await fail(`Token exchange failed (${response.status}): ${detail}`);
-    }
-    tokens = await response.json();
-  } catch {
-    return await fail("Token exchange failed: the provider could not be reached.");
-  }
+  const exchanged = await exchangeAuthorizationCode({
+    provider,
+    credentials,
+    code,
+    redirectUri: `${url.origin}/api/connectors/oauth/callback`,
+  });
+  if (!exchanged.ok) return await fail(exchanged.message);
+  const tokens = exchanged.tokens;
 
   if (!tokens.access_token) return await fail("The provider returned no access token.");
 
@@ -343,34 +326,21 @@ async function refreshTokenRow(
     return { ok: false, error: "Stored connector credentials could not be read. Reconnect the mailbox." };
   }
 
-  let tokens: { access_token?: string; refresh_token?: string; expires_in?: number };
-  try {
-    const response = await fetch(provider.tokenEndpoint, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        refresh_token: refreshToken,
-        client_id: credentials.clientId,
-        client_secret: credentials.clientSecret,
-      }).toString(),
+  const renewed = await refreshAccessToken({ provider, credentials, refreshToken });
+  if (!renewed.ok && renewed.refused) {
+    // A revoked grant (password change, admin revoke) answers 400 here.
+    // Surface it as the honest disconnected state the design promises.
+    await ctx.runMutation(internal.connectorOAuth.markConnectionDead, {
+      tokenRowId: row._id,
+      reason: `The provider refused to renew the connection (${renewed.status}).`,
     });
-    if (!response.ok) {
-      // A revoked grant (password change, admin revoke) answers 400 here.
-      // Surface it as the honest disconnected state the design promises.
-      await ctx.runMutation(internal.connectorOAuth.markConnectionDead, {
-        tokenRowId: row._id,
-        reason: `The provider refused to renew the connection (${response.status}).`,
-      });
-      return {
-        ok: false,
-        error: "The mailbox connection was revoked at the provider. Reconnect it from the admin screen.",
-      };
-    }
-    tokens = await response.json();
-  } catch {
-    return { ok: false, error: "The provider could not be reached to renew the connection." };
+    return {
+      ok: false,
+      error: "The mailbox connection was revoked at the provider. Reconnect it from the admin screen.",
+    };
   }
+  if (!renewed.ok) return { ok: false, error: "The provider could not be reached to renew the connection." };
+  const tokens = renewed.tokens;
 
   if (!tokens.access_token) {
     return { ok: false, error: "The provider returned no renewed token. Reconnect the mailbox." };
@@ -473,14 +443,9 @@ export const revokeAndDisconnect = internalAction({
         // Prefer the refresh token: revoking it kills the whole grant.
         const ciphertext = row.refreshTokenCiphertext ?? row.accessTokenCiphertext;
         try {
-          const token = await decryptConnectorToken(ciphertext);
-          await fetch(provider.revocationEndpoint, {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams({ token }).toString(),
-          });
+          await revokeOAuthToken(provider, await decryptConnectorToken(ciphertext));
         } catch {
-          // Unreachable or undecryptable: the local deletion below still runs.
+          // Undecryptable: the local deletion below still runs.
         }
       }
     }

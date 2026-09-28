@@ -135,7 +135,7 @@ async function readOne(ctx: ActionCtx, pullId: Id<"seoDataPulls">, counts: Count
     return;
   }
   counts.results += 1;
-  const day = new Date(pull.completedAt ?? Date.now()).toISOString().slice(0, 10);
+  const day = pull.runDay;
   const sent = readSent(pull.taskArgsJson);
 
   if (engineForOperationId(pull.operationId)) {

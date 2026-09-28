@@ -17,6 +17,7 @@ import {
   handleConnectorOAuthAuthorize,
   handleConnectorOAuthCallback,
 } from "./connectorOAuth";
+import { handleSearchConsoleAuthorize, handleSearchConsoleCallback } from "./searchConsoleConnect";
 
 const http = httpRouter();
 http.route({ path: "/api/uploads", method: "POST", handler: handleUpload });
@@ -128,6 +129,22 @@ http.route({
   path: "/api/connectors/oauth/callback",
   method: "GET",
   handler: handleConnectorOAuthCallback,
+});
+
+// An owned website's Search Console: the admin is sent on to Google's sign-in
+// from here, and Google sends them back with a code, exchanged server-side.
+// Both legs are authenticated by the connection's own single-use state
+// (docs/plans/active/search-console-plan.md §3).
+http.route({
+  path: "/api/search-console/oauth/authorize",
+  method: "GET",
+  handler: handleSearchConsoleAuthorize,
+});
+
+http.route({
+  path: "/api/search-console/oauth/callback",
+  method: "GET",
+  handler: handleSearchConsoleCallback,
 });
 
 // Attach `@convex-dev/auth` endpoints to the Convex HTTP router

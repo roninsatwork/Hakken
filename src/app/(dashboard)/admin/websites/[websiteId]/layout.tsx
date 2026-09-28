@@ -4,7 +4,7 @@ import { lazy, Suspense, useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, FileText, Globe, Swords, Trash2, Users } from "lucide-react";
+import { ArrowLeft, Globe, Trash2, Users } from "lucide-react";
 import Link from "next/link";
 
 import { api } from "@/convex/_generated/api";
@@ -76,13 +76,11 @@ export default function WebsiteRecordLayout({ children }: { children: ReactNode 
   };
 
   const rootHref = `/admin/websites/${websiteId}`;
+  // Only who watches it: its searches, questions, names, profile and
+  // competitors are each company's own, set on that company's screen for the
+  // website (docs/plans/active/company-level-website-facts-plan.md, CL6).
   const tabs = [
-    { label: t("tabs.profile"), href: rootHref, icon: FileText },
-    // The searches and questions are each company's own, set on that
-    // company's screen for the website (docs/plans/active/
-    // private-tracking-lists-plan.md, V4), so the record has no tab for them.
-    { label: t("tabs.competition"), href: `${rootHref}/competition`, icon: Swords },
-    { label: t("tabs.watchers"), href: `${rootHref}/watchers`, icon: Users },
+    { label: t("tabs.watchers"), href: rootHref, icon: Users },
   ];
 
   return (

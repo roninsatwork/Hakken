@@ -4,11 +4,14 @@ import { deletePullAnswers } from "./seoPullAnswers";
 import { internalMutation, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { purgeHoldDataLimits } from "./companyDataLimits";
+import { purgeCompanyFanOutLimits, purgeHoldFanOutLimits } from "./fanOutLimits";
+import { purgeHoldProfile } from "./holdProfiles";
 import { citedPageOf, recountCitedPages, type CitedPage } from "./siteRankings";
 import { purgeHoldMoves } from "./websiteMoves";
 import type { Id } from "./_generated/dataModel";
 import { dropCopies } from "./siteListCopies";
 import { deleteAnswerText } from "./siteAnswers";
+import { purgeHoldListAi } from "./siteListAi";
 
 /**
  * Rows removed per pass, so one purge is one bounded transaction and chains
@@ -41,13 +44,22 @@ export const purgeWebsiteHoldingsInternal = internalMutation({
       // What discovery found for this company's hold goes with the hold,
       // dated history included. A hold is only deleted once both are clear,
       // so a large list is finished on the next pass rather than orphaned.
-      const cleared = await purgeHoldDiscoveries(ctx, owner._id);
+      // And its list's AI figures (`siteListAi.ts`).
+      const cleared = (await purgeHoldDiscoveries(ctx, owner._id)) && (await purgeHoldListAi(ctx, owner._id, ENTRY_PURGE_BATCH));
       if (!cleared) {
         holdsLeft = true;
         continue;
       }
       await purgeHoldMoves(ctx, owner._id);
       await purgeHoldDataLimits(ctx, owner._id);
+      await purgeHoldFanOutLimits(ctx, owner._id);
+      await purgeHoldProfile(ctx, owner._id);
+      // Its Search Console connection and figures, the company's alone, and the angles of its questions' searches.
+      await ctx.scheduler.runAfter(0, internal.searchConsoleConnect.forgetHold, { companyWebsiteId: owner._id });
+      await ctx.scheduler.runAfter(0, internal.fanOutAngles.purgeHoldAngles, { holdId: owner._id });
+      // A competitor's counts stay in the rows of the list it was watched
+      // against, read by nobody once it is out of the group; that list's next
+      // recount drops them.
       await ctx.db.delete(owner._id);
     }
 
@@ -69,22 +81,8 @@ export const purgeWebsiteHoldingsInternal = internalMutation({
       await ctx.db.patch(row._id, { againstWebsiteId: undefined });
     }
 
-    /*
-      Both directions of the competition graph.
-
-      An edge names two hosts, so deleting one host has to clear the edges it
-      points at *and* the edges pointing at it — otherwise a deleted site stays
-      on somebody else's rival list as an id that resolves to nothing.
-    */
-    const asRival = await ctx.db
-      .query("websiteRivals")
-      .withIndex("by_rival", (q) => q.eq("rivalWebsiteId", args.websiteId))
-      .take(ENTRY_PURGE_BATCH);
-    for (const edge of asRival) await ctx.db.delete(edge._id);
-
     if (holdsLeft
       || owners.length === ENTRY_PURGE_BATCH
-      || asRival.length === ENTRY_PURGE_BATCH
       || paired.length === ENTRY_PURGE_BATCH) {
       await ctx.scheduler.runAfter(0, internal.websitePurge.purgeWebsiteHoldingsInternal, {
         websiteId: args.websiteId,
@@ -315,15 +313,8 @@ export const purgeWebsiteListsInternal = internalMutation({
       await ctx.db.delete(row._id);
     }
 
-    const rivals = await ctx.db
-      .query("websiteRivals")
-      .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
-      .take(ENTRY_PURGE_BATCH);
-    for (const row of rivals) await ctx.db.delete(row._id);
-
     if (questions.length === ENTRY_PURGE_BATCH
-      || keywords.length === ENTRY_PURGE_BATCH
-      || rivals.length === ENTRY_PURGE_BATCH) {
+      || keywords.length === ENTRY_PURGE_BATCH) {
       await ctx.scheduler.runAfter(0, internal.websitePurge.purgeWebsiteListsInternal, {
         websiteId: args.websiteId,
       });
@@ -491,8 +482,9 @@ export const purgeHoldListsInternal = internalMutation({
       .withIndex("by_hold_day", (q) => q.eq("companyWebsiteId", args.companyWebsiteId))
       .take(HOLD_LIST_BATCH);
     for (const row of lines) await ctx.db.delete(row._id);
+    const summariesCleared = await purgeHoldListAi(ctx, args.companyWebsiteId, HOLD_LIST_BATCH);
 
-    if (questions.length === HOLD_LIST_BATCH || searches.length === HOLD_LIST_BATCH || lines.length === HOLD_LIST_BATCH) {
+    if (questions.length === HOLD_LIST_BATCH || searches.length === HOLD_LIST_BATCH || lines.length === HOLD_LIST_BATCH || !summariesCleared) {
       await ctx.scheduler.runAfter(0, internal.websitePurge.purgeHoldListsInternal, args);
     }
     return null;
@@ -501,9 +493,9 @@ export const purgeHoldListsInternal = internalMutation({
 
 /**
  * A deleted company's holds, with each hold's own searches, questions and AI
- * lines (docs/plans/active/private-tracking-lists-plan.md, V9). The hosts and
- * everything collected about them survive it; so does rivalry, a fact about a
- * market that lives on the host.
+ * lines (docs/plans/active/private-tracking-lists-plan.md, V9), and what it
+ * called each website (its profiles). The hosts and everything collected about
+ * them survive it.
  */
 export const purgeCompanyWebsitesInternal = internalMutation({
   args: { companyId: v.id("companies") },
@@ -516,14 +508,19 @@ export const purgeCompanyWebsitesInternal = internalMutation({
     for (const row of owned) {
       await purgeHoldMoves(ctx, row._id);
       await purgeHoldDataLimits(ctx, row._id);
-      // Its own searches, questions and AI lines go with it (V9).
+      await purgeHoldFanOutLimits(ctx, row._id);
+      await purgeHoldProfile(ctx, row._id);
+      // Its own searches, questions and AI lines go with it (V9), and its Search Console.
       await ctx.scheduler.runAfter(0, internal.websitePurge.purgeHoldListsInternal, { companyWebsiteId: row._id });
+      await ctx.scheduler.runAfter(0, internal.searchConsoleConnect.forgetHold, { companyWebsiteId: row._id });
+      await ctx.scheduler.runAfter(0, internal.fanOutAngles.purgeHoldAngles, { holdId: row._id });
       await ctx.db.delete(row._id);
     }
-    // How much it collected per website goes with it.
+    // How much it collected per website goes with it, and its fan-out limits.
     for (const row of await ctx.db.query("companyDataLimits").withIndex("by_company", (q) => q.eq("companyId", args.companyId)).take(5)) {
       await ctx.db.delete(row._id);
     }
+    await purgeCompanyFanOutLimits(ctx, args.companyId);
 
     if (owned.length === ENTRY_PURGE_BATCH) {
       await ctx.scheduler.runAfter(0, internal.websitePurge.purgeCompanyWebsitesInternal, {

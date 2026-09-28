@@ -66,6 +66,37 @@ export async function holdQuestion(
     .first();
 }
 
+/**
+ * How the answers to a company's questions treated its group, a row per
+ * question, from the place the list is asked from (`siteListQuestions`, kept
+ * by `siteListAi.ts`). A question nothing has answered yet has no row.
+ */
+export async function holdQuestionAnswers(
+  ctx: Reader,
+  holdId: Id<"companyWebsites"> | null,
+  place: number,
+  cap: number,
+): Promise<Doc<"siteListQuestions">[]> {
+  if (!holdId) return [];
+  return await ctx.db
+    .query("siteListQuestions")
+    .withIndex("by_hold_prompt", (q) => q.eq("companyWebsiteId", holdId).eq("locationCode", place))
+    .take(cap);
+}
+
+/** A company's list added up (`siteListAiSummary`), or null before anything has answered it. */
+export async function holdAiSummary(
+  ctx: Reader,
+  holdId: Id<"companyWebsites"> | null,
+  place: number,
+): Promise<Doc<"siteListAiSummary"> | null> {
+  if (!holdId) return null;
+  return await ctx.db
+    .query("siteListAiSummary")
+    .withIndex("by_hold", (q) => q.eq("companyWebsiteId", holdId).eq("locationCode", place))
+    .first();
+}
+
 /** One search on a company's list, or null when it is not on it. */
 export async function holdSearch(
   ctx: Reader,
@@ -77,4 +108,35 @@ export async function holdSearch(
     .query("websiteKeywords")
     .withIndex("by_hold_keyword", (q) => q.eq("companyWebsiteId", holdId).eq("keyword", keyword))
     .first();
+}
+
+/**
+ * The first Google check a company asked for one of its fan-out queries
+ * (docs/plans/active/fan-out-opt-in-plan.md), or null when it has not. The
+ * check is filed against the website for everyone; this record is what lets
+ * the company read it, as a tracked search's own row does.
+ */
+export async function holdFirstCheck(
+  ctx: Reader,
+  holdId: Id<"companyWebsites"> | null,
+  query: string,
+): Promise<Doc<"fanOutFirstChecks"> | null> {
+  if (!holdId) return null;
+  return await ctx.db
+    .query("fanOutFirstChecks")
+    .withIndex("by_hold_query", (q) => q.eq("holdId", holdId).eq("query", query))
+    .first();
+}
+
+/** A company's first checks for a website not filed yet, oldest first, up to `cap`: what its next collection may buy. */
+export async function holdFirstChecksDue(
+  ctx: Reader,
+  holdId: Id<"companyWebsites"> | null,
+  cap: number,
+): Promise<Doc<"fanOutFirstChecks">[]> {
+  if (!holdId || cap <= 0) return [];
+  return await ctx.db
+    .query("fanOutFirstChecks")
+    .withIndex("by_hold_checked", (q) => q.eq("holdId", holdId).eq("checkedDay", undefined))
+    .take(cap);
 }

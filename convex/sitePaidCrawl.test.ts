@@ -124,8 +124,9 @@ describe("the site crawl", () => {
   }];
 
   test("a crawl reads up to a thousand pages (2026-09-24): a hundred stopped short on ronins.co.uk", () => {
+    // Its pages' JavaScript run first, as a browser shows them (sites-data-completeness-plan.md, §8.5).
     expect(seoSiteOperationParams(findSeoOperation("site_crawl")!, "ronins.co.uk")).toEqual({
-      target: "ronins.co.uk", max_crawl_pages: 1000,
+      target: "ronins.co.uk", max_crawl_pages: 1000, enable_javascript: true,
     });
   });
 
@@ -153,12 +154,27 @@ describe("the site crawl", () => {
 
     const asAcme = await member(t, acme);
     const audit = await asAcme.query(api.siteCrawl.siteAudit, { siteId: own.holdId });
-    expect(audit).toMatchObject({ day: "2026-09-23", pagesCrawled: 64, onPageScore: 88.4, cms: "WordPress 6.6" });
+    expect(audit).toMatchObject({ day: "2026-09-23", pagesCrawled: 64, pagesFound: 64, onPageScore: 88.4, cms: "WordPress 6.6" });
     expect(audit?.issues.map((issue) => [issue.check, issue.severity])).toEqual([
       ["no_description", "WARNING"], ["broken_links", "ERROR"], ["duplicate_title", "WARNING"], ["no_title", "ERROR"],
     ]);
     const days = await t.run(async (ctx) => await ctx.db.query("siteDaySummaries").collect());
     expect(days).toEqual([expect.objectContaining({ day: "2026-09-23", crawledPages: 64, onPageScore: 88 })]);
+  });
+
+  // A crawl stops at its page limit; the pages it found and never reached are
+  // kept, so the audit says "1,000 of 3,412 found" (sites-data-completeness-plan.md, B8).
+  test("a crawl that stopped at its limit says how many pages it found in all", async () => {
+    const t = harness();
+    const acme = await company(t, "Acme");
+    const own = await hold(t, acme, "advertiser.co.uk");
+    const stopped = summary("finished");
+    stopped[0].crawl_status = { max_crawl_pages: 1_000, pages_in_queue: 2_412, pages_crawled: 1_000 };
+    expect(parseCrawlSummary(stopped)).toMatchObject({ pagesCrawled: 1_000, maxPages: 1_000, pagesInQueue: 2_412 });
+    await file(t, own.websiteId, "site_crawl", stopped, "2026-09-23");
+
+    const audit = await (await member(t, acme)).query(api.siteCrawl.siteAudit, { siteId: own.holdId });
+    expect(audit).toMatchObject({ pagesCrawled: 1_000, maxPages: 1_000, pagesFound: 3_412 });
   });
 
   test("another company's site answers not found, for paid search and the audit alike", async () => {

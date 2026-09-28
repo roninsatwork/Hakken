@@ -1,18 +1,17 @@
 import { v } from "convex/values";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
-import { listHold, listWebsiteId, myRivals, requireMySite } from "./siteAccess";
-import { holdQuestions } from "./holdLists";
+import { companyHolds, listHold, listWebsiteId, myRivals, requireMySite } from "./siteAccess";
+import { holdAiSummary, holdQuestionAnswers, holdQuestions } from "./holdLists";
 import { gapCopyKey, readListCopy } from "./siteListCopies";
 import { listOrder, listPageArgs, listPageResult, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { wordStartMatcher } from "./utils/wordStarts";
-import { answerPlace } from "./seoAiEngines";
-import { latestFigures } from "./siteFigures";
-import { searchStandings } from "./siteGoogle";
-import { rankIntentValidator, type RankIntent } from "./utils/siteShapes";
+import { latestFigures, searchTotalOf } from "./siteFigures";
+import { asOfListCheck, searchStandings, searchStats } from "./siteGoogle";
+import { rankIntentValidator, type NamedOther, type RankIntent } from "./utils/siteShapes";
 import { rivalVerdict, rivalVerdictValidator } from "./utils/trackingVerdicts";
-import { loadQuestionRows, MAX_LIST, untrackedNamed } from "./websiteSiteRows";
+import { MAX_LIST } from "./websiteSiteRows";
 
 /**
  * The site against its competitors, for the client's Sites screens.
@@ -26,7 +25,36 @@ import { loadQuestionRows, MAX_LIST, untrackedNamed } from "./websiteSiteRows";
 type Reader = { db: QueryCtx["db"] };
 
 /** Discovered competitors per hold; DataForSEO returns a few hundred at most. */
-const MAX_DISCOVERED = 300;
+export const MAX_DISCOVERED = 300;
+
+/** Websites the AI answers keep naming that Suggested competitors offers, at most. */
+const NAMED_SUGGESTIONS = 10;
+
+/**
+ * What Suggested competitors lists, and the menu counts beside it — one rule
+ * for both (docs/plans/active/sites-audit-fixes-plan.md, 2.4): the websites
+ * the answers to the company's questions keep naming, most-named first, then
+ * those discovery found ranking for the same searches, most overlap first.
+ * Never one the company already holds, beside this site or anywhere else — it
+ * could never be added — nor one it has decided about.
+ */
+export function pickSuggestions(
+  othersNamed: readonly NamedOther[],
+  discovered: readonly Doc<"discoveredCompetitors">[],
+  held: { websiteIds: ReadonlySet<Id<"websites">>; hosts: ReadonlySet<string> },
+): { named: NamedOther[]; found: Array<Doc<"discoveredCompetitors">> } {
+  const named = othersNamed
+    .filter((entry) => !held.websiteIds.has(entry.websiteId) && !held.hosts.has(entry.host))
+    .slice(0, NAMED_SUGGESTIONS);
+  const offered = new Set(named.map((entry) => entry.host));
+  const found: Array<Doc<"discoveredCompetitors">> = [];
+  for (const row of [...discovered].sort((left, right) => right.intersections - left.intersections)) {
+    if (row.decidedAt || held.hosts.has(row.host) || offered.has(row.host)) continue;
+    offered.add(row.host);
+    found.push(row);
+  }
+  return { named, found };
+}
 
 /**
  * The content gap's copy (`siteListCopyBuilders.ts` writes it). Each row's
@@ -46,6 +74,16 @@ export const GAP_COPY_MAX = 50_000;
 /** Searches a rival is compared on. Enough to rank it; bounded so a big list stays one query. */
 const COMPARED_SEARCHES = 100;
 
+/** The site's searches still checked read to find the ones it is compared on, at most. */
+const STANDINGS_READ = 3 * COMPARED_SEARCHES;
+
+/**
+ * Lookups shared out among the rivals, each compared on its share: with the
+ * site's own standings, a thousand searches and thirty competitors stay
+ * inside what one request may read (docs/plans/active/sites-audit-fixes-plan.md, 3.5).
+ */
+const RIVAL_READS = 2_500;
+
 /**
  * Each rival beside the site — the rest of its group (D17) — compared on the
  * searches and questions the company measures the site on: who is above whom
@@ -60,6 +98,8 @@ export const listRivals = tenantQuery({
     beatsYouOn: v.number(),
     youBeatOn: v.number(),
     comparedOn: v.number(),
+    /** Of the searches compared, how many the website held a place on: none, and there is nothing to compare (4.9). */
+    rankedOn: v.number(),
     namedInAnswers: v.number(),
     answersCounted: v.number(),
     lastSeenDay: v.union(v.string(), v.null()),
@@ -67,53 +107,54 @@ export const listRivals = tenantQuery({
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const askerId = listWebsiteId(site);
-    const [ours, rivals, questions] = await Promise.all([
-      searchStandings(ctx, site),
+    const [ours, rivals, questions, answered] = await Promise.all([
+      searchStandings(ctx, site, { activeOnly: true, cap: STANDINGS_READ }),
       myRivals(ctx, site),
       holdQuestions(ctx, listHold(site), MAX_LIST),
+      holdQuestionAnswers(ctx, listHold(site), site.place, MAX_LIST),
     ]);
+    const perRival = Math.max(1, Math.min(COMPARED_SEARCHES, Math.floor(RIVAL_READS / Math.max(1, rivals.length))));
     const compared = ours
       .filter((row) => row.isActive && row.stats?.lastCheckedDay)
-      .slice(0, COMPARED_SEARCHES);
+      .slice(0, perRival);
 
-    // How often the answers to the asker's questions named each website: the
-    // asker's own count, and everyone else's from what the answers named.
+    // How often the answers to the questions still asked named each website
+    // of the group, from the list's rows (`siteListAi.ts`): one read, however
+    // long the list.
     let answersCounted = 0;
     const named = new Map<Id<"websites">, { times: number; lastDay: string | null }>();
+    const byPrompt = new Map(answered.map((row) => [row.prompt, row]));
     for (const question of questions) {
       if (!question.isActive) continue;
+      const row = byPrompt.get(question.prompt);
       for (const engine of question.engines) {
-        const stats = await ctx.db
-          .query("websiteQuestionStats")
-          .withIndex("by_key", (q) =>
-            q.eq("websiteId", askerId).eq("prompt", question.prompt).eq("engine", engine)
-              .eq("locationCode", answerPlace(engine, site.place)))
-          .unique();
-        if (!stats) continue;
-        answersCounted += stats.asked;
-        const self = named.get(askerId) ?? { times: 0, lastDay: null };
-        self.times += stats.named;
-        if (stats.lastNamedDay && (!self.lastDay || stats.lastNamedDay > self.lastDay)) self.lastDay = stats.lastNamedDay;
-        named.set(askerId, self);
-        for (const other of stats.othersNamed) {
-          const held = named.get(other.websiteId) ?? { times: 0, lastDay: null };
-          held.times += other.times;
-          if (!held.lastDay || other.lastDay > held.lastDay) held.lastDay = other.lastDay;
-          named.set(other.websiteId, held);
+        const entry = row?.engines.find((held) => held.engine === engine);
+        if (!entry) continue;
+        answersCounted += entry.asked;
+        for (const seen of entry.sites) {
+          if (seen.named === 0) continue;
+          const held = named.get(seen.websiteId) ?? { times: 0, lastDay: null };
+          held.times += seen.named;
+          if (seen.lastNamedDay && (!held.lastDay || seen.lastNamedDay > held.lastDay)) held.lastDay = seen.lastNamedDay;
+          named.set(seen.websiteId, held);
         }
       }
     }
 
+    // Each competitor read as of the list's newest check, like the site's own
+    // row (`asOfListCheck`): a competitor off the page keeps no stale place.
+    const listSite = listWebsiteId(site);
+    const listStats = listSite === site.website._id
+      ? compared.map((row) => row.stats)
+      : await Promise.all(compared.map((row) => searchStats(ctx, listSite, row.keyword, site.place)));
     return await Promise.all(rivals.map(async (rival) => {
-      const theirs = await Promise.all(compared.map((row) =>
-        ctx.db
-          .query("websiteSearchStats")
-          .withIndex("by_key", (q) =>
-            q.eq("websiteId", rival.website._id).eq("keyword", row.keyword).eq("locationCode", site.place))
-          .unique()));
+      const theirs = await Promise.all(compared.map(async (row, index) => {
+        const raw = await searchStats(ctx, rival.website._id, row.keyword, site.place);
+        return rival.website._id === listSite ? raw : asOfListCheck(raw, listStats[index]);
+      }));
       let beatsYouOn = 0;
       let youBeatOn = 0;
+      let rankedOn = 0;
       // Widened by hand: assignments inside the callback below are invisible to
       // narrowing, which would otherwise pin this at null.
       let lastSeenDay = null as string | null;
@@ -121,6 +162,7 @@ export const listRivals = tenantQuery({
         const their = theirs[index];
         const them = their?.lastPosition;
         const us = row.stats?.lastPosition;
+        if (them !== undefined) rankedOn += 1;
         if (them !== undefined && (us === undefined || them < us)) beatsYouOn += 1;
         if (us !== undefined && (them === undefined || us < them)) youBeatOn += 1;
         if (their && them !== undefined && (!lastSeenDay || their.lastCheckedDay > lastSeenDay)) {
@@ -137,6 +179,7 @@ export const listRivals = tenantQuery({
         beatsYouOn,
         youBeatOn,
         comparedOn: compared.length,
+        rankedOn,
         namedInAnswers: answers?.times ?? 0,
         answersCounted,
         lastSeenDay,
@@ -249,7 +292,7 @@ export const marketMap = tenantQuery({
         host: website.displayHost,
         role,
         kind: null,
-        keywords: latest.metrics?.rankedKeywordsTotal ?? latest.ranking?.keywords ?? null,
+        keywords: searchTotalOf(latest),
         traffic: latest.metrics?.estimatedTraffic ?? null,
         sharedKeywords: role === "YOU" ? null : shared.get(website.host) ?? null,
         day: latest.metrics?.day ?? latest.ranking?.day ?? null,
@@ -368,49 +411,33 @@ export const listSuggested = tenantQuery({
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    // The questions the site is measured on: its own, or its owned site's.
-    const asker = await ctx.db.get(listWebsiteId(site));
-    const [questions, found, rivals] = await Promise.all([
-      loadQuestionRows(ctx, asker ? { ...site, website: asker } : site, new Map()),
+    // The answers' most-named websites come from the list's summary — one read,
+    // however long the list (docs/plans/active/sites-audit-fixes-plan.md, 3.4).
+    const [summary, discovered, holds] = await Promise.all([
+      holdAiSummary(ctx, listHold(site), site.place),
       ctx.db
         .query("discoveredCompetitors")
         .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", args.siteId))
         .take(MAX_DISCOVERED),
-      myRivals(ctx, site),
+      companyHolds(ctx, site.hold.companyId),
     ]);
-    const watched = new Set([site.website.host, ...rivals.map((rival) => rival.website.host)]);
-    const named = await untrackedNamed(ctx, site, questions);
-
-    const rows: Array<{
-      host: string;
-      reason: "NAMED_BY_AI" | "RANKS_FOR_YOUR_SEARCHES";
-      times: number | null;
-      intersections: number | null;
-      kind: "COMPETITOR" | "DIRECTORY" | "PUBLISHER" | "SUPPLIER" | "OTHER" | null;
-      day: string | null;
-    }> = [];
-    const seen = new Set<string>();
-    for (const row of named) {
-      if (seen.has(row.displayHost)) continue;
-      seen.add(row.displayHost);
-      rows.push({ host: row.displayHost, reason: "NAMED_BY_AI", times: row.times, intersections: null, kind: null, day: row.lastDay });
-    }
-    const offered = found
-      .sort((left, right) => right.intersections - left.intersections)
-      .filter((row) => !row.decidedAt && !watched.has(row.host) && !seen.has(row.host));
-    const days = await lastSeenDays(ctx, args.siteId, offered.map((row) => row.host));
-    for (const row of offered) {
-      if (seen.has(row.host)) continue;
-      seen.add(row.host);
-      rows.push({
+    const { named, found } = pickSuggestions(summary?.othersNamed ?? [], discovered, {
+      websiteIds: new Set(holds.map((entry) => entry.website._id)),
+      hosts: new Set(holds.map((entry) => entry.website.host)),
+    });
+    const days = await lastSeenDays(ctx, args.siteId, found.map((row) => row.host));
+    return [
+      ...named.map((entry) => ({
+        host: entry.host, reason: "NAMED_BY_AI" as const, times: entry.times, intersections: null, kind: null, day: entry.lastDay,
+      })),
+      ...found.map((row) => ({
         host: row.host,
-        reason: "RANKS_FOR_YOUR_SEARCHES",
+        reason: "RANKS_FOR_YOUR_SEARCHES" as const,
         times: null,
         intersections: row.intersections,
         kind: row.kind ?? null,
         day: days.get(row.host) ?? null,
-      });
-    }
-    return rows;
+      })),
+    ];
   },
 });

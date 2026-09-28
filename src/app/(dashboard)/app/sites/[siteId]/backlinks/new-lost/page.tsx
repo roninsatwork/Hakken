@@ -22,8 +22,11 @@ import { ListDownload } from "../../../_components/SiteDownloads";
 const KEYS = ["newBacklinks", "lostBacklinks", "newReferringDomains", "lostReferringDomains"] as const;
 type Key = (typeof KEYS)[number];
 
-/** The columns that sort: the week, newest first, and each count, the most first. */
+/** The columns that sort: the day, week or month, newest first, and each count, the most first. */
 const SORTS = dayTableSorts<{ day: string } & Record<Key, number | null>, Key>(KEYS, (row, key) => row[key]);
+
+/** What a row of this table is, as the dates are stepped. */
+const STEP_NOUNS = { day: "days", week: "weeks", month: "months" } as const;
 
 /**
  * New and lost links: links and linking websites gained and lost in the
@@ -74,12 +77,13 @@ export default function SiteLinksNewLostPage() {
         rows={pager.pageRows}
         rowKey={(row) => row.day}
         minWidthClassName="min-w-[720px]"
-        cardHeader={<SiteTableBar footer={pager.footer} noun="weeks" actions={<ListDownload fileName={`${site?.host ?? "site"}-links-gained-lost`} rows={sorted} columns={[{ header: t("columns.day"), value: (row) => row.day }, ...KEYS.map((key) => ({ header: t(`columns.${key}`), value: (row: NonNullable<typeof points>[number]) => row[key] }))]} />} />}
+        cardHeader={<SiteTableBar footer={pager.footer} noun={STEP_NOUNS[range.step]} actions={<ListDownload fileName={`${site?.host ?? "site"}-links-gained-lost`} rows={sorted} columns={[{ header: t(`columns.${range.step}`), value: (row) => row.day }, ...KEYS.map((key) => ({ header: t(`columns.${key}`), value: (row: NonNullable<typeof points>[number]) => row[key] }))]} />} />}
         empty={{ icon: <ArrowLeftRight className="h-8 w-8 text-muted/30" />, label: t("empty") }}
         footer={pager.footer}
         sort={tableSort}
         columns={[
-          { key: "day", header: t("columns.day"), sortable: true, cell: (row) => <CheckedCell day={row.day} /> },
+          // Each row is a day, a week or a month, as the dates are stepped (4.3).
+          { key: "day", header: t(`columns.${range.step}`), sortable: true, cell: (row) => <CheckedCell day={row.day} /> },
           ...KEYS.map((key) => ({
             key,
             header: t(`columns.${key}`),

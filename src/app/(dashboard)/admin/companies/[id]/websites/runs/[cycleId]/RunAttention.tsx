@@ -32,6 +32,14 @@ type WaitingLong = {
 
 type Row = { key: string; operationId: string; about: string; why: string; detail: string | null; at: number | null };
 
+/** The run's caps (sites-data-completeness-plan.md, B6): what it could not plan, said where the run is read. */
+type Caps = {
+  ceiling: number | null;
+  startedWhereLastStopped: boolean;
+  competitorsCut: readonly string[];
+  competitorsPerWebsite: number;
+};
+
 const HOUR_MS = 60 * 60 * 1000;
 
 /**
@@ -46,18 +54,27 @@ export function RunAttention({
   attention,
   attentionTotal,
   waitingLong,
+  caps,
 }: {
   attention: readonly Attention[];
   attentionTotal: number;
   waitingLong: WaitingLong;
+  caps?: Caps;
 }) {
   const t = useTranslations("admin.collectionRuns.detail.attention");
   const tOperation = useTranslations("admin.seoCollection.operation");
   const { when } = useRunFormat();
   const now = useNow();
 
+  const notes = [
+    ...(caps?.ceiling ? [t("caps.ceiling", { ceiling: caps.ceiling })] : []),
+    ...(caps?.startedWhereLastStopped ? [t("caps.startedAfter")] : []),
+    ...(caps && caps.competitorsCut.length > 0
+      ? [t("caps.competitors", { hosts: caps.competitorsCut.join(", "), count: caps.competitorsPerWebsite })]
+      : []),
+  ];
   const total = waitingLong.total + attentionTotal;
-  if (total === 0) return null;
+  if (total === 0 && notes.length === 0) return null;
 
   const rows: Row[] = [
     ...waitingLong.rows.map((row) => ({
@@ -80,8 +97,9 @@ export function RunAttention({
 
   return (
     <SettingsCard title={t("title")}>
-      <p className="text-[12px] text-secondary">{t("subtitle", { count: total })}</p>
-      <CompactList
+      {notes.map((note) => <p key={note} className="text-[12px] leading-relaxed text-warning">{note}</p>)}
+      {total > 0 ? <p className="text-[12px] text-secondary">{t("subtitle", { count: total })}</p> : null}
+      {total > 0 ? <CompactList
         rows={rows}
         rowKey={(row) => row.key}
         empty={null}
@@ -114,7 +132,7 @@ export function RunAttention({
             cell: (row) => (row.at ? when(row.at) : null),
           },
         ]}
-      />
+      /> : null}
       {rows.length < total ? <p className="text-[11px] text-muted">{t("more", { shown: rows.length, total })}</p> : null}
     </SettingsCard>
   );

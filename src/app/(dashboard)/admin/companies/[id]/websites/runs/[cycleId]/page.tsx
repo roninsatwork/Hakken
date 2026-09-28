@@ -166,7 +166,7 @@ export default function CollectionRunPage() {
     return (
       <div className="flex w-full flex-col gap-6 pb-12">
         {header}
-        <RunAttention attention={[]} attentionTotal={0} waitingLong={data.waitingLong} />
+        <RunAttention attention={[]} attentionTotal={0} waitingLong={data.waitingLong} caps={data.caps} />
         <p className="text-[13px] text-secondary">{tDetail("notReady")}</p>
       </div>
     );
@@ -215,7 +215,7 @@ export default function CollectionRunPage() {
     <div className="flex w-full flex-col gap-6 pb-12">
       {header}
 
-      <RunAttention attention={report.attention ?? []} attentionTotal={report.attentionTotal ?? 0} waitingLong={data.waitingLong} />
+      <RunAttention attention={report.attention ?? []} attentionTotal={report.attentionTotal ?? 0} waitingLong={data.waitingLong} caps={data.caps} />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <CostFigure

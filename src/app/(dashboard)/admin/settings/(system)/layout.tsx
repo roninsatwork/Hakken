@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import {
   Building2,
   Database,
+  Gauge,
   Hourglass,
   Palette,
   Settings as SettingsIcon,
@@ -66,6 +67,10 @@ export default function SystemSettingsLayout({ children }: { children: React.Rea
         { label: t("nav.approvals"), href: `${SETTINGS_ROOT}/options/approvals`, icon: Hourglass },
       ],
     },
+    // One page, so no dropdown: the platform's limits, where every company
+    // starts (docs/plans/active/platform-limits-plan.md). Anthony, 2026-09-28:
+    // "the platform defaults should be another option on the system settings menu".
+    { label: t("nav.limits"), href: `${SETTINGS_ROOT}/limits`, icon: Gauge },
   ];
 
   return (

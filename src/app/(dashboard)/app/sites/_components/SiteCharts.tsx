@@ -32,7 +32,7 @@ import {
   CHART_SERIES_TEAL,
   CHART_SERIES_VIOLET,
 } from "@/src/ui/components/charts/chartPalette";
-import { formatCompact } from "./siteFormat";
+import { formatCompact, formatNumber } from "./siteFormat";
 
 /**
  * The Sites screens' charts: lines over time, stacked bands, and bars — drawn
@@ -65,6 +65,11 @@ export type SiteSeries = {
   colour: string;
   /** A rival's line beside the site's own. */
   dashed?: boolean;
+  /**
+   * This line's own scale runs upwards from the top: a position among others
+   * that are not (Search Console's average position beside its clicks).
+   */
+  reversed?: boolean;
 };
 
 /**
@@ -115,7 +120,7 @@ export function SiteLineChart({
             orientation={index === 1 ? "right" : "left"}
             hide={index > 1}
             width={48}
-            reversed={reversed}
+            reversed={reversed || entry.reversed}
             allowDecimals={false}
             tickFormatter={formatCompact}
             {...AXIS_PROPS}
@@ -380,11 +385,14 @@ export function SiteScatterChart({
   groups,
   xLabel,
   yLabel,
+  readout,
   height = 340,
 }: {
   groups: SiteScatterGroup[];
   xLabel: string;
   yLabel: string;
+  /** Short names for the two numbers in the hover readout, where an axis's own name is too long to fit it. */
+  readout?: { x: string; y: string };
   height?: number;
 }) {
   const onChart = (point: { x: number; y: number }) => point.x > 0 && point.y > 0;
@@ -403,7 +411,17 @@ export function SiteScatterChart({
           label={{ value: yLabel, angle: -90, position: "insideLeft", fontSize: 11, fill: "currentColor" }} />
         <ZAxis range={[90, 90]} />
         {/* The website leads the readout: the axes already say what the numbers are. */}
-        <Tooltip cursor={CHART_CROSSHAIR} content={<ChartTooltip title={(_, entries) => String(entries[0]?.payload?.label ?? "")} />} />
+        <Tooltip
+          cursor={CHART_CROSSHAIR}
+          content={(
+            <ChartTooltip
+              title={(_, entries) => String(entries[0]?.payload?.label ?? "")}
+              // Whole numbers, in the site's own way of writing them: an estimate's decimals read as thousands in Italian.
+              formatValue={(value) => formatNumber(value)}
+              seriesLabel={(entry) => (entry.dataKey === "x" ? readout?.x ?? xLabel : readout?.y ?? yLabel)}
+            />
+          )}
+        />
         {legend ? (
           <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} itemSorter={(item) => groups.findIndex((group) => group.name === item.value)} />
         ) : null}

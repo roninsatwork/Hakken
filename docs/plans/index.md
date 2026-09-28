@@ -7,6 +7,87 @@ completed work.
 
 ## Active Plans
 
+- [Fan-out queries: checked once, then only the ticked ones](./active/fan-out-opt-in-plan.md) —
+  every fan-out query is checked on Google once, then only if ticked; at most
+  200 ticked per owned website (a platform → company → website limit); the 87
+  switched on automatically are unticked. Built on dev 2026-09-28, awaiting
+  review.
+- [Your prompts → each prompt's fan-out queries](./active/prompt-fan-out-queries-plan.md) —
+  click a prompt to open its fan-out queries: an admin list, checked on Google
+  by itself — add your own, edit, delete (never back on its own), or generate
+  them now from the assistants. Every cap on prompts, tracked keywords and
+  purchases is a company and website setting. Built on dev 2026-09-28,
+  awaiting review.
+- [Admin → company → Websites: one menu for the whole section](./active/websites-section-menu-plan.md) —
+  the company's Websites screens rebuilt around one menu down the left, with
+  a website chooser that narrows every page to one site: the websites, what
+  the company tracks, what came back, and collection — every page one click
+  away, one name per idea, and a website's settings in one place. Chosen by
+  Anthony from three options drawn on a canvas with Korda's real rows ("a i
+  think lets build it"). **Built on dev 2026-09-28, awaiting review.**
+- [Brand names, business profile and known competitors — set by each company](./active/company-level-website-facts-plan.md) —
+  the three things the shared website record still holds for every company
+  watching a host, moved to the company level at Anthony's word (2026-09-28).
+  Brand names decide which AI answers count as naming a site: an answer is
+  read once against every company's names and each company counts only its
+  own — still bought once; the business profile feeds only the AI judgments;
+  known competitors are retired, each company's Competitors tab being the
+  company-level version already. **Plan written 2026-09-28; CL0 decided,
+  CL1–CL7 taken as recommended ("keep going i will review at the end"). Built
+  on dev 2026-09-28, awaiting review — answers already held are not read
+  again, and Name moves are no longer drawn (§7).**
+- [Sites — Missing angles: the fan-out searches you have no page for](./active/fan-out-angles-plan.md) —
+  for each question a company asks, which of the searches the AI assistants
+  ran to answer it the site already ranks for, and which angles it has no page
+  for: a to-do list of missing angles, on the Fan-out queries page and the
+  site's moves. Real counts from dev: nine in ten fan-out searches are not in
+  a site's ranked list, so positions come from a Google check or Search
+  Console and pages from a judgment; Google AI Overview fan-outs from
+  DataForSEO's LLM Mentions as a last step; and an input screen inside the
+  company in Admin — its AI questions, Google searches and the searches the AI
+  ran, to add, pause and track — drawn and agreed (FA9), tracking being how a
+  fan-out search is checked on Google (FA2). **Every decision agreed
+  2026-09-28 ("yes do it all"), FA3 dropped. Built on dev 2026-09-28, awaiting
+  review; FA8 built switched off and never run, its search by the site's
+  domain left for review (§6).**
+
+- [Sites — Search Console for your own websites](./active/search-console-plan.md) —
+  connecting an owned website's Google Search Console and showing its real
+  clicks, impressions, click-through rate and position in a new Search Console
+  menu group: how the API works (no official MCP server; the read-only scope,
+  the Google app that must be published or connections die in seven days),
+  what Hakken already has from the Gmail connector, collecting daily with
+  sixteen months on connecting, four screens, and what Anthony sets up in
+  Google. **All nine decisions agreed 2026-09-27. Built 2026-09-27 but for
+  Phase 4: connecting, collecting, and the Search Console section in the main
+  navigation, tested with Google faked. Nothing collected until Anthony's
+  Google setup (§7).**
+
+- [Sites — every number whole, or saying which part it is](./active/sites-data-completeness-plan.md) —
+  a full audit of what we buy from DataForSEO and what every Sites screen shows
+  against the supplier's own totals, on all 17 websites on dev: limits that
+  count rows instead of searches, lists cut at 1,000 whatever the setting,
+  moves that can never show a loss on a cut-short site, two meanings for "top
+  3" and for "linking websites", and screens that show part of a list as the
+  whole. Two bugs in the uncommitted everyday check. **Audit done 2026-09-27;
+  approved the same day, all of it; built the same day, not committed — three
+  decisions left (§8.5).**
+
+- [Sites — fixing what the screen audit found](./active/sites-audit-fixes-plan.md) —
+  every Sites screen opened in Chrome on Korda and Ronins, and the code behind
+  them reviewed: a crash, contradictory movement figures, charts that never
+  fill in, figures that mislead, and limits no client has reached yet, in four
+  phases with four decisions for Anthony. **Agreed 2026-09-26; built and
+  checked in Chrome 2026-09-26, each fix with a test. Position bands, New and
+  lost keywords and Site structure redesigned 2026-09-27 (§10), which settles
+  G1; G2 and the commit to come.**
+
+- [Sites — the AI figures from one summary per list](./active/sites-ai-list-summaries-plan.md) —
+  Mentions, Share of voice, the header's counts and the Sites list read one
+  summary per list, written when answers are filed, instead of a row or two
+  per question and engine each time a page opens. **Built 2026-09-26
+  on dev; not pushed.**
+
 - [Sites — every table sorts the same way, by its headings](./active/sites-table-sorting-plan.md) —
   all 36 Sites tables sort like Keywords: press a heading for its best first,
   again for the other way, over the whole list; the six sort dropdowns go.

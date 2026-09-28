@@ -45,6 +45,8 @@ describe("system settings menu", () => {
       "/admin/settings/options",
       "/admin/settings/options/self-improvement",
       "/admin/settings/options/approvals",
+      // A tab of its own, with no dropdown: the platform's limits.
+      "/admin/settings/limits",
     ]));
   });
 

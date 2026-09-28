@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Search } from "lucide-react";
+import { LineChart } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -13,7 +13,6 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
-import { ResultsSwitcher } from "../ResultsSwitcher";
 
 /**
  * What this website ranks for.
@@ -56,9 +55,8 @@ export default function WebsiteKeywordsPage() {
 
   return (
     <div className="flex w-full flex-col gap-5">
-      {header?.relationship === "OWNED" ? <ResultsSwitcher active="rankings" /> : null}
       <PageHeader
-        icon={<Search className="h-5 w-5 text-brand" />}
+        icon={<LineChart className="h-5 w-5 text-brand" />}
         title={t("title")}
         description={header ? t("subtitlePlace", { place: header.placeLabel }) : t("subtitle")}
       />
@@ -76,7 +74,7 @@ export default function WebsiteKeywordsPage() {
           placeholder: t("searchPlaceholder"),
         }}
         empty={{
-          icon: <Search className="h-8 w-8 text-muted/30" />,
+          icon: <LineChart className="h-8 w-8 text-muted/30" />,
           label: searchTerm ? t("noMatch") : t("empty"),
         }}
         footer={{

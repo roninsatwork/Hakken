@@ -138,6 +138,25 @@ export function findBrandMention(
 }
 
 /**
+ * Every one of a site's names that appears, lowercased, beside the longest
+ * (`findBrandMention`). Names are each company's own since 2026-09-28
+ * (`holdProfiles.ts`): an answer is read once against every company's names,
+ * and each company counts the mention only under one of its own.
+ */
+export function findBrandMentions(
+  text: string,
+  names: ReadonlyArray<BrandName>,
+): { matched: string; kind: BrandVariantKind; at: number; found: string[] } | null {
+  const best = findBrandMention(text, names);
+  if (!best) return null;
+  const haystack = collapse(text).toLowerCase();
+  const found = names
+    .map((entry) => entry.name.toLowerCase())
+    .filter((needle, index, all) => all.indexOf(needle) === index && indexOfWholeWord(haystack, needle) !== -1);
+  return { ...best, found };
+}
+
+/**
  * A whole-word search that does not need a regular expression.
  *
  * Built by hand because a brand name is user text: turning it into a pattern

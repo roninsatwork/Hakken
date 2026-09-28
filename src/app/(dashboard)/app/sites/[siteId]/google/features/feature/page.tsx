@@ -10,7 +10,8 @@ import { CUT_COLUMN, PositionCell, RecordLinkCell } from "../../../../_component
 import { SiteTableBar } from "../../../../_components/SiteTableBar";
 import { formatNumber } from "../../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
-import { useSiteId } from "../../../../_components/useSite";
+import { useSite, useSiteId } from "../../../../_components/useSite";
+import { isPartHeld } from "../../../../_components/SiteCoverage";
 import { useSiteListPage } from "../../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../../_components/useSiteSort";
 
@@ -52,6 +53,10 @@ export default function SiteFeatureKeywordsPage() {
     [{ siteId, list: "keywords" }],
   );
 
+  const site = useSite();
+  const partHeld = isPartHeld(site?.coverage);
+  const everyInFeature = feature ? site?.coverage?.features[feature] ?? null : null;
+
   if (!feature) {
     return <DetailHeader back={back} icon={<Sparkles className="h-6 w-6 text-brand" />} title={t("missingTitle")} description={t("missingBody")} />;
   }
@@ -59,6 +64,12 @@ export default function SiteFeatureKeywordsPage() {
   return (
     <div className="flex flex-col gap-6">
       <DetailHeader back={back} icon={<Sparkles className="h-6 w-6 text-brand" />} title={t(`titles.${feature}`)} description={t("description")} />
+      {/* A list held in part: how many of every such search it holds (sites-data-completeness-plan.md, §4.E). */}
+      {partHeld && table.result && everyInFeature !== null && table.result.total < everyInFeature ? (
+        <p className="text-[12px] leading-relaxed text-secondary">
+          {t("heldOf", { held: formatNumber(table.result.total), total: formatNumber(everyInFeature) })}
+        </p>
+      ) : null}
 
       <DataTable
         rows={table.pageRows}

@@ -22,9 +22,23 @@ import { formatNumber, toCsv } from "../_components/siteFormat";
 import { useSiteListHref, useSiteRecordHref } from "../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../_components/useSite";
 import { SiteViewSwitch } from "../_components/SiteViewSwitch";
+import { isPartHeld } from "../_components/SiteCoverage";
 
 type Point = FunctionReturnType<typeof api.siteCharts.siteSeries>[number]["points"][number];
 type Extras = FunctionReturnType<typeof api.siteOverview.overviewExtras>;
+
+/**
+ * The visits a panel's shares are of: the whole site's, as estimated across
+ * everything it ranks for, when the list holds only part of it — the rest
+ * then named, outside the searches held (sites-data-completeness-plan.md,
+ * §4.D4) — else the visits held.
+ */
+function useVisitsOf(held: number): { of: number; outside: number | null } {
+  const coverage = useSite()?.coverage;
+  const whole = isPartHeld(coverage) && coverage?.visits.total ? Math.max(coverage.visits.total, held) : null;
+  // The visits held can pass the site's own estimate, worked out apart: then nothing is left outside.
+  return { of: whole ?? held, outside: whole !== null && whole > held ? whole - held : null };
+}
 
 /** A share as a percentage to one place, or "<0.1%" for a sliver that is not nothing. */
 function percent(part: number, whole: number): string {
@@ -59,6 +73,7 @@ export function OverviewSections({ latest, extras }: { latest: Point | null; ext
  */
 function PagesByKind({ extras }: { extras: Extras | undefined }) {
   const t = useTranslations("sites.overview.pageKinds");
+  const to = useTranslations("sites.overview");
   const tr = useTranslations("sites.overview.readout");
   const tp = useTranslations("sites.common.pageTypes");
   const router = useRouter();
@@ -70,8 +85,10 @@ function PagesByKind({ extras }: { extras: Extras | undefined }) {
   const { hover, bind } = useHoverReadout<string>();
   const pages = extras?.pages;
   const kinds = pages?.kinds ?? [];
+  const visitsOf = useVisitsOf(pages?.visits ?? 0);
+  const partHeld = isPartHeld(site?.coverage);
   const pagesShare = (row: (typeof kinds)[number]) => (row.pages / Math.max(1, pages?.total ?? 1)) * 100;
-  const visitsShare = (row: (typeof kinds)[number]) => (row.visits / Math.max(1, pages?.visits ?? 1)) * 100;
+  const visitsShare = (row: (typeof kinds)[number]) => (row.visits / Math.max(1, visitsOf.of)) * 100;
   // The bars share one scale: the largest share on show fills the track.
   const top = Math.max(1, ...kinds.flatMap((row) => [showPages ? pagesShare(row) : 0, showVisits ? visitsShare(row) : 0]));
 
@@ -79,11 +96,11 @@ function PagesByKind({ extras }: { extras: Extras | undefined }) {
     <SiteChartCard
       dated={false}
       title={t("title")}
-      hint={pages ? t("hint", { count: formatNumber(pages.total) }) : undefined}
+      hint={pages ? t(partHeld ? "hintHeld" : "hint", { count: formatNumber(pages.total) }) : undefined}
       exportName={`${site?.host ?? "site"}-pages-by-kind`}
       csv={() => toCsv(
         [t("kind"), t("pages"), t("pagesShare"), t("visits"), t("visitsShare")],
-        kinds.map((row) => [tp(row.pageType), row.pages, percent(row.pages, pages?.total ?? 0), Math.round(row.visits), percent(row.visits, pages?.visits ?? 0)]),
+        kinds.map((row) => [tp(row.pageType), row.pages, percent(row.pages, pages?.total ?? 0), Math.round(row.visits), percent(row.visits, visitsOf.of)]),
       )}
       enoughData={kinds.length > 0}
       controls={
@@ -102,7 +119,7 @@ function PagesByKind({ extras }: { extras: Extras | undefined }) {
           return (
             <ChartTooltipSurface heading={tp(row.pageType)}>
               <ChartTooltipRow colour={CHART_SERIES_BLUE} value={formatNumber(row.pages)} label={tr("pages", { count: row.pages, share: percent(row.pages, pages?.total ?? 0) })} />
-              <ChartTooltipRow colour={CHART_SERIES_ORANGE} value={formatNumber(Math.round(row.visits))} label={tr("visits", { share: percent(row.visits, pages?.visits ?? 0) })} />
+              <ChartTooltipRow colour={CHART_SERIES_ORANGE} value={formatNumber(Math.round(row.visits))} label={tr("visits", { share: percent(row.visits, visitsOf.of) })} />
             </ChartTooltipSurface>
           );
         }}
@@ -125,13 +142,14 @@ function PagesByKind({ extras }: { extras: Extras | undefined }) {
                 {t("row", {
                   count: row.pages,
                   pagesShare: percent(row.pages, pages?.total ?? 0),
-                  visitsShare: percent(row.visits, pages?.visits ?? 0),
+                  visitsShare: percent(row.visits, visitsOf.of),
                 })}
               </span>
             </div>
           );
         })}
         {pages?.capped ? <p className="px-2 text-[12px] text-muted">{t("capped", { count: formatNumber(pages.total) })}</p> : null}
+        {visitsOf.outside !== null ? <p className="px-2 text-[12px] text-muted">{to("outsideHeld", { share: percent(visitsOf.outside, visitsOf.of) })}</p> : null}
       </HoverArea>
     </SiteChartCard>
   );
@@ -142,23 +160,25 @@ const VISIT_BANDS = ["none", "to100", "to1000", "to10000", "over10000"] as const
 /** Pages grouped by the visits a month each brings, with each group's share of all the visits — or the counts themselves. */
 function PagesByVisits({ extras }: { extras: Extras | undefined }) {
   const t = useTranslations("sites.overview.pageVisits");
+  const to = useTranslations("sites.overview");
   const tr = useTranslations("sites.overview.readout");
   const site = useSite();
   const [mode, setMode] = useState<"percentage" | "number">("percentage");
   const [showPages, setShowPages] = useState(true);
   const [showVisits, setShowVisits] = useState(true);
   const pages = extras?.pages;
+  const visitsOf = useVisitsOf(pages?.visits ?? 0);
   const bands = VISIT_BANDS.map((band) => pages?.visitBands.find((row) => row.band === band) ?? { band, pages: 0, visits: 0 });
   const value = (part: number, whole: number) => (mode === "percentage" ? (whole > 0 ? Number(((part / whole) * 100).toFixed(1)) : 0) : Math.round(part));
   const rows = bands.map((row) => ({
     label: t(`bands.${row.band}`),
     pages: value(row.pages, pages?.total ?? 0),
-    visits: value(row.visits, pages?.visits ?? 0),
+    visits: value(row.visits, visitsOf.of),
     // What the hover reads out, whichever way the bars are drawn: the count, then its share.
     pagesCount: row.pages,
     visitsCount: Math.round(row.visits),
     pagesPercent: percent(row.pages, pages?.total ?? 0),
-    visitsPercent: percent(row.visits, pages?.visits ?? 0),
+    visitsPercent: percent(row.visits, visitsOf.of),
   }));
   const readValue = (_: number, entry: ChartTooltipEntry) => formatNumber(Number(entry.payload?.[`${entry.dataKey}Count`] ?? 0));
   const readLabel = (entry: ChartTooltipEntry) => {
@@ -176,11 +196,11 @@ function PagesByVisits({ extras }: { extras: Extras | undefined }) {
     <SiteChartCard
       dated={false}
       title={t("title")}
-      hint={t("hint")}
+      hint={t(isPartHeld(site?.coverage) ? "hintHeld" : "hint")}
       exportName={`${site?.host ?? "site"}-pages-by-visits`}
       csv={() => toCsv(
         [t("group"), t("pages"), t("pagesShare"), t("visits"), t("visitsShare")],
-        bands.map((row) => [t(`bands.${row.band}`), row.pages, percent(row.pages, pages?.total ?? 0), Math.round(row.visits), percent(row.visits, pages?.visits ?? 0)]),
+        bands.map((row) => [t(`bands.${row.band}`), row.pages, percent(row.pages, pages?.total ?? 0), Math.round(row.visits), percent(row.visits, visitsOf.of)]),
       )}
       enoughData={(pages?.total ?? 0) > 0 && series.length > 0}
       controls={
@@ -197,6 +217,7 @@ function PagesByVisits({ extras }: { extras: Extras | undefined }) {
       }
     >
       <SiteBarChart data={rows} series={series} height={300} formatValue={readValue} seriesLabel={readLabel} />
+      {visitsOf.outside !== null ? <p className="mt-2 text-[12px] text-muted">{to("outsideHeld", { share: percent(visitsOf.outside, visitsOf.of) })}</p> : null}
     </SiteChartCard>
   );
 }
@@ -216,18 +237,26 @@ function BrandedSearches({ latest }: { latest: Point | null }) {
   const siteId = useSiteId();
   const site = useSite();
   const listHref = useSiteListHref(siteId);
+  const to = useTranslations("sites.overview");
   const split = latest?.intentSplit ?? null;
-  const total = split ? GROUPS.reduce((sum, group) => sum + split[group.key].visits, 0) : 0;
+  const held = split ? GROUPS.reduce((sum, group) => sum + split[group.key].visits, 0) : 0;
+  // Of the whole site's visits, the rest named, for a list held in part (§4.D4).
+  const { of: total, outside } = useVisitsOf(held);
 
   return (
     <SiteChartCard
       dated={false}
       title={t("title")}
-      hint={split ? t("hint", { visits: formatNumber(total) }) : undefined}
+      hint={split ? t(outside !== null ? "hintHeld" : "hint", { visits: formatNumber(total) }) : undefined}
       exportName={`${site?.host ?? "site"}-branded-and-other-searches`}
       csv={() => toCsv(
         [t("group"), t("searches"), t("visits"), t("share")],
-        split ? GROUPS.map((group) => [t(`groups.${group.key}`), split[group.key].searches, Math.round(split[group.key].visits), percent(split[group.key].visits, total)]) : [],
+        split
+          ? [
+            ...GROUPS.map((group) => [t(`groups.${group.key}`), split[group.key].searches, Math.round(split[group.key].visits), percent(split[group.key].visits, total)]),
+            ...(outside !== null ? [[to("outsideGroup"), null, Math.round(outside), percent(outside, total)]] : []),
+          ]
+          : [],
       )}
       enoughData={split !== null && total > 0}
     >
@@ -255,6 +284,7 @@ function BrandedSearches({ latest }: { latest: Point | null }) {
                   style={{ width: `${(split[group.key].visits / total) * 100}%`, background: group.colour }}
                 />
               ))}
+              {outside !== null ? <span className="block h-full bg-hover" style={{ width: `${(outside / total) * 100}%` }} /> : null}
             </div>
           </HoverArea>
           <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
@@ -273,6 +303,7 @@ function BrandedSearches({ latest }: { latest: Point | null }) {
               </div>
             ))}
           </div>
+          {outside !== null ? <p className="text-[12px] text-muted">{to("outsideHeld", { share: percent(outside, total) })}</p> : null}
         </div>
       ) : null}
     </SiteChartCard>
@@ -305,38 +336,39 @@ function Competitors({ extras }: { extras: Extras | undefined }) {
   const traffic = view === "traffic";
   const competitors = extras?.competitors;
   const bySearches = competitors?.rivals ?? [];
-  // Most visits on shared searches first; those not known after, biggest first.
+  // Traffic: the most visits in all first, as a market's leaders are read.
   const rivals = traffic
-    ? [...bySearches].sort((left, right) =>
-      (right.sharedVisits ?? -1) - (left.sharedVisits ?? -1) || (right.visits ?? -1) - (left.visits ?? -1))
+    ? [...bySearches].sort((left, right) => (right.visits ?? -1) - (left.visits ?? -1) || (right.keywords ?? -1) - (left.keywords ?? -1))
     : bySearches;
   const yourKeywords = competitors?.you.keywords ?? 0;
   const yourVisits = competitors?.you.visits ?? 0;
   const you = t("you", { host: site?.host ?? "" });
-  // Traffic: across, the visits from searches both rank for — all of the
-  // site's own; up, the visits in all. A competitor whose visits on the shared
-  // searches are not known has no place across, and is left off the chart.
+  // Every site at its totals, the site among them, whichever the view: across,
+  // every search it ranks for; up, its visits a month (Anthony, 2026-09-27:
+  // "it should be total traffic vs total keywords"). The Traffic view once
+  // drew, across, the site's own visits from the searches each competitor
+  // shares — no competitor's total — and read as the site ahead of
+  // chilliapple.co.uk, which gets more.
   const groups: SiteScatterGroup[] = [
     {
       key: "you",
       name: you,
       colour: SITE_SERIES_COLOURS[0],
       labelled: true,
-      points: [traffic
-        ? { x: yourVisits, y: yourVisits, label: you }
-        : { x: yourKeywords, y: yourVisits, label: you }],
+      points: [{ x: yourKeywords, y: Math.round(yourVisits), label: you }],
     },
     {
       key: "rivals",
       name: t("title"),
       colour: CHART_SERIES_BLUE,
       labelled: true,
-      points: rivals.map((row) => (traffic
-        ? { x: row.sharedVisits ?? 0, y: row.visits ?? 0, label: row.host }
-        : { x: row.keywords ?? 0, y: row.visits ?? 0, label: row.host })),
+      // Whole visits, as the table shows them: the supplier's estimates carry
+      // decimals, and "126.513" reads as thousands in Italian.
+      points: rivals.map((row) => ({ x: row.keywords ?? 0, y: Math.round(row.visits ?? 0), label: row.host })),
     },
   ];
   const share = (part: number | null, whole: number) => (part === null ? "–" : percent(part, whole));
+  // Traffic: how much of the site's own visits come from searches the competitor ranks for too.
   const overlap = (row: (typeof rivals)[number]) => (traffic
     ? (row.sharedVisits === null ? null : row.sharedVisits / Math.max(1, yourVisits))
     : (row.shared === null ? null : row.shared / Math.max(1, yourKeywords)));
@@ -349,7 +381,7 @@ function Competitors({ extras }: { extras: Extras | undefined }) {
     <SiteChartCard
       dated={false}
       title={t("title")}
-      hint={t(traffic ? "hintTraffic" : "hint", { count: rivals.length, host: site?.host ?? "" })}
+      hint={t(traffic ? "hintTraffic" : "hint", { count: rivals.length, host: site?.host ?? "", place: site?.placeLabel ?? "" })}
       controls={(
         <SiteViewSwitch
           label={t("view")}
@@ -361,8 +393,8 @@ function Competitors({ extras }: { extras: Extras | undefined }) {
       exportName={`${site?.host ?? "site"}-competitors-${view}`}
       csv={() => (traffic
         ? toCsv(
-          [t("columns.website"), t("columns.sharedVisits"), t("columns.ofYourVisits"), t("columns.theirVisits"), t("columns.theirSearches")],
-          rivals.map((row) => [row.host, visits(row.sharedVisits), row.sharedVisits === null ? null : share(row.sharedVisits, yourVisits), visits(row.visits), row.keywords]),
+          [t("columns.website"), t("columns.theirVisits"), t("columns.theirSearches"), t("columns.sharedVisits"), t("columns.ofYourVisits")],
+          rivals.map((row) => [row.host, visits(row.visits), row.keywords, visits(row.sharedVisits), row.sharedVisits === null ? null : share(row.sharedVisits, yourVisits)]),
         )
         : toCsv(
           [t("columns.website"), t("columns.shared"), t("columns.ofYours"), t("columns.theirSearches"), t("columns.theirVisits")],
@@ -371,7 +403,13 @@ function Competitors({ extras }: { extras: Extras | undefined }) {
       enoughData={rivals.length > 0}
     >
       <div className="flex flex-col gap-5">
-        <SiteScatterChart groups={groups} xLabel={t(traffic ? "xAxisTraffic" : "xAxis")} yLabel={t("yAxis")} height={360} />
+        <SiteScatterChart
+          groups={groups}
+          xLabel={t("xAxis")}
+          yLabel={t("yAxis")}
+          readout={{ x: t("readout.searches"), y: t("readout.visits") }}
+          height={360}
+        />
         <CompactList
           rows={rivals}
           rowKey={(row) => row.siteId}
@@ -397,10 +435,10 @@ function Competitors({ extras }: { extras: Extras | undefined }) {
             },
             ...(traffic
               ? [
-                { key: "sharedVisits", header: t("columns.sharedVisits"), align: "right" as const, className: "whitespace-nowrap", cell: (row: (typeof rivals)[number]) => numberCell(row.sharedVisits, true) },
-                { key: "ofYourVisits", header: t("columns.ofYourVisits"), align: "right" as const, className: "whitespace-nowrap", cell: (row: (typeof rivals)[number]) => <span className="font-mono text-[12px] text-secondary">{share(row.sharedVisits, yourVisits)}</span> },
-                { key: "theirVisits", header: t("columns.theirVisits"), align: "right" as const, className: "whitespace-nowrap", cell: (row: (typeof rivals)[number]) => numberCell(row.visits) },
+                { key: "theirVisits", header: t("columns.theirVisits"), align: "right" as const, className: "whitespace-nowrap", cell: (row: (typeof rivals)[number]) => numberCell(row.visits, true) },
                 { key: "theirSearches", header: t("columns.theirSearches"), align: "right" as const, className: "whitespace-nowrap", cell: (row: (typeof rivals)[number]) => numberCell(row.keywords) },
+                { key: "sharedVisits", header: t("columns.sharedVisits"), align: "right" as const, className: "whitespace-nowrap", cell: (row: (typeof rivals)[number]) => numberCell(row.sharedVisits) },
+                { key: "ofYourVisits", header: t("columns.ofYourVisits"), align: "right" as const, className: "whitespace-nowrap", cell: (row: (typeof rivals)[number]) => <span className="font-mono text-[12px] text-secondary">{share(row.sharedVisits, yourVisits)}</span> },
               ]
               : [
                 { key: "shared", header: t("columns.shared"), align: "right" as const, className: "whitespace-nowrap", cell: (row: (typeof rivals)[number]) => numberCell(row.shared, true) },
@@ -414,7 +452,11 @@ function Competitors({ extras }: { extras: Extras | undefined }) {
           ? (rivals.some((row) => row.sharedVisits === null) ? <p className="text-[12px] text-muted">{t("sharedVisitsUnknown")}</p> : null)
           : (rivals.some((row) => row.shared === null) ? <p className="text-[12px] text-muted">{t("sharedUnknown")}</p> : null)}
         <div className="flex flex-wrap items-center justify-between gap-2 text-[12px]">
-          <span className="text-secondary">{t("found", { count: formatNumber(competitors?.found ?? 0) })}</span>
+          <span className="text-secondary">
+            {competitors && competitors.readOf !== null && competitors.readOf > competitors.read
+              ? t("foundOf", { count: formatNumber(competitors.found), read: formatNumber(competitors.read), total: formatNumber(competitors.readOf) })
+              : t("found", { count: formatNumber(competitors?.found ?? 0) })}
+          </span>
           <RecordLinkCell href={listHref("competitors/organic", { kind: "COMPETITOR" })} className="text-[12px] text-info">{t("seeAll")} →</RecordLinkCell>
         </div>
       </div>

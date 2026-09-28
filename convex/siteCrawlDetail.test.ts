@@ -73,6 +73,15 @@ describe("the crawl's page detail", () => {
     });
     await expect(t.withIdentity({ subject: otherUserId }).query(api.siteCrawlDetail.crawlProblemPages, { siteId: holdId, check: "no_title" }))
       .rejects.toThrow(/not one your company holds/);
+
+    // A detail that stopped at its request cap is the first part of the list,
+    // and the problem's page says so (sites-data-completeness-plan.md, B8).
+    const pullId = await t.run(async (ctx) => (await ctx.db.query("siteCrawls").first())!.pullId);
+    await t.mutation(internal.siteCrawlDetail.recordDetailCut, { pullId, cut: true });
+    const cut = await t.withIdentity({ subject: userId }).query(api.siteCrawlDetail.crawlProblemPages, { siteId: holdId, check: "broken_links" });
+    expect(cut.cut).toBe(1);
+    await t.mutation(internal.siteCrawlDetail.recordDetailCut, { pullId, cut: false });
+    expect((await t.withIdentity({ subject: userId }).query(api.siteCrawlDetail.crawlProblemPages, { siteId: holdId, check: "broken_links" })).cut).toBeNull();
   });
 });
 

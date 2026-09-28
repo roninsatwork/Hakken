@@ -551,11 +551,18 @@ function isGoing(run: Doc<"agentRuns">, now: number): boolean {
 /**
  * Start a Collector run to send what is queued — unless one is already
  * sending, which then sends this too. One Collector at a time: two would draw
- * on the same spend limit at once.
+ * on the same spend limit at once. Also how a question's "Generate fan-out
+ * queries now" sends its answers (`promptFanOut.ts`).
  */
-async function startCollector(
+export async function startCollector(
   ctx: MutationCtx,
-  args: { companyId: Id<"companies">; companyName: string; userId?: Id<"users"> },
+  args: {
+    companyId: Id<"companies">;
+    companyName: string;
+    userId?: Id<"users">;
+    /** What the run is for, when it is not Collect now: "Generate fan-out queries". */
+    purpose?: string;
+  },
 ): Promise<boolean> {
   const collector = await requireRoleAgent(ctx, "DATAFORSEO_COLLECTOR");
   const now = Date.now();
@@ -566,12 +573,13 @@ async function startCollector(
     .take(RECENT_COLLECTOR_RUNS);
   if (recent.some((run) => isGoing(run, now))) return false;
 
-  const objective = `Send the queue: collect now for ${args.companyName}.`;
+  const purpose = args.purpose ?? "Collect now";
+  const objective = `Send the queue: ${purpose.toLowerCase()} for ${args.companyName}.`;
   const runId = await ctx.db.insert("agentRuns", {
     agentId: collector._id,
     triggerType: "MANUAL",
     objective,
-    title: `Collect now — ${args.companyName}`,
+    title: `${purpose} — ${args.companyName}`,
     status: "QUEUED",
     companyId: args.companyId,
     userId: args.userId,

@@ -5,6 +5,7 @@ import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { MessageSquareQuote } from "lucide-react";
 import { api } from "@/convex/_generated/api";
+import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
@@ -60,8 +61,14 @@ export default function SiteAnswersPage() {
   const recordHref = useSiteRecordHref(siteId);
 
   const questions = catalogue?.questions ?? [];
-  const chosen = questions.find((entry) => entry.prompt === question) ?? questions[0] ?? null;
+  // A question asked for by name that is not on the list is said to be so,
+  // never swapped silently for the first (docs/plans/active/sites-audit-fixes-plan.md, 3.2).
+  const named = question ? questions.find((entry) => entry.prompt === question) ?? null : null;
+  const missing = catalogue !== undefined && question !== "" && named === null;
+  const chosen = missing ? null : named ?? questions[0] ?? null;
   const engines = chosen?.engines ?? [];
+  // An engine the chosen question is not asked of is not applied, so it is not shown as chosen (4.7).
+  const appliedEngine = engine && engines.includes(engine) ? engine : "";
   const order = useSiteSort(SORTS, "day");
   const table = useSiteListPage(
     api.siteAnswers.listAnswers,
@@ -71,7 +78,7 @@ export default function SiteAnswersPage() {
         prompt: chosen.prompt,
         from: range.from,
         to: range.to,
-        ...(engine && engines.includes(engine) ? { engine } : {}),
+        ...(appliedEngine ? { engine: appliedEngine } : {}),
         ...(term ? { search: term } : {}),
         sort: order.key,
         direction: order.direction,
@@ -84,7 +91,9 @@ export default function SiteAnswersPage() {
       <PageHeader icon={<MessageSquareQuote className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
       <p className="rounded-xl border border-border-dim bg-card/40 px-4 py-3 text-[13px] text-secondary">{t("keptFrom")}</p>
 
-      {catalogue !== undefined && questions.length === 0 ? (
+      {missing ? (
+        <HakkenEmptyState icon={MessageSquareQuote} title={t("questionMissingTitle")} description={t("questionMissingBody")} />
+      ) : catalogue !== undefined && questions.length === 0 ? (
         <p className="rounded-2xl border border-border-dim bg-card/40 px-5 py-10 text-center text-[13px] text-secondary">{t("noQuestions")}</p>
       ) : (
         <DataTable
@@ -98,7 +107,7 @@ export default function SiteAnswersPage() {
               <Select chip={{ label: chosen?.prompt ?? t("questionLabel") }} aria-label={t("questionLabel")} className="max-w-[420px]" value={chosen?.prompt ?? ""} onChange={(value) => setQuestion(value)}>
                 {questions.map((entry) => <option key={entry.prompt} value={entry.prompt}>{entry.prompt}</option>)}
               </Select>
-              <Select chip={{ label: t("engineFilter"), choice: engine ? engineLabel(engine) : null }} value={engine} onChange={(value) => setEngine(value as Engine | "")}>
+              <Select chip={{ label: t("engineFilter"), choice: appliedEngine ? engineLabel(appliedEngine) : null }} value={appliedEngine} onChange={(value) => setEngine(value as Engine | "")}>
                 <option value="">{t("allEngines")}</option>
                 {engines.map((entry) => <option key={entry} value={entry}>{engineLabel(entry)}</option>)}
               </Select>

@@ -68,9 +68,6 @@ export const judgePageTypes = internalAction({
         locationCode: args.locationCode,
       });
     if (!work || work.pages.length === 0) return null;
-    const business = await ctx.runQuery(internal.websiteCanonical.describeBusinessForJudging, {
-      websiteId: args.websiteId,
-    });
 
     const judged: Array<{ page: string; pageType: PageType; certainty?: "SURE" | "FAIRLY_SURE" | "NOT_SURE" }> = [];
     for (let start = 0; start < work.pages.length; start += JUDGMENTS_AT_ONCE) {
@@ -80,11 +77,10 @@ export const judgePageTypes = internalAction({
           result = (await runDecisions(ctx, {
             subject: { kind: "seo-pages", id: args.websiteId },
             state: {
-              business: {
-                address: work.host,
-                ...(business?.sector ? { sells: business.sector } : {}),
-                ...(business?.does ? { does: business.does } : {}),
-              },
+              // A page's kind is kept once for every company watching the site,
+              // so no one company's account of the business goes into it
+              // (docs/plans/active/company-level-website-facts-plan.md, CL4).
+              business: { address: work.host },
               page: { address: page.page, topSearch: page.topKeyword },
             },
             requests: [{

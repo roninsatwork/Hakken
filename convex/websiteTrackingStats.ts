@@ -1,6 +1,7 @@
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import type { AiEngine } from "./seoAiEngines";
+import { recordListAnswer } from "./siteListAi";
 import { requestRebuildEverywhere } from "./siteRankings";
 
 /**
@@ -23,8 +24,8 @@ import { requestRebuildEverywhere } from "./siteRankings";
 /** Position rows read per recompute. Months of weekly checks, a few weeks of daily ones. */
 const SEARCH_WINDOW = 30;
 
-/** Answers read per recompute: years of weekly asking. */
-const ANSWER_WINDOW = 200;
+/** Answers read per recompute: years of weekly asking. Each company's list counts the same ones (`siteListAi.ts`). */
+export const ANSWER_WINDOW = 200;
 
 /** Others kept per question: enough to find a rival nobody tracks, not a leaderboard. */
 const OTHERS_NAMED_KEPT = 20;
@@ -80,7 +81,11 @@ export async function recomputeSearchStats(
     lastCheckedDay: last.day,
     ...(last.position !== undefined ? { lastPosition: last.position } : {}),
     ...(previous ? { previousCheckedDay: previous.day } : {}),
-    ...(previous?.position !== undefined ? { previousPosition: previous.position } : {}),
+    // Not a place to move from when counted another way: among the normal
+    // results against the whole page (sites-data-completeness-plan.md, G2).
+    ...(previous?.position !== undefined && (last.position === undefined || (last.pagePosition !== undefined) === (previous.pagePosition !== undefined))
+      ? { previousPosition: previous.position }
+      : {}),
     ...(bestCandidates.length > 0 ? { bestPosition: Math.min(...bestCandidates) } : {}),
     everRanked: windowBest !== undefined || Boolean(carried?.everRanked),
     updatedAt: Date.now(),
@@ -106,7 +111,7 @@ export async function recordAnswer(
     engine: AiEngine;
     locationCode: number;
     day: string;
-    brands: ReadonlyArray<{ websiteId: Id<"websites">; stance?: "RECOMMENDED" | "MENTIONED" | "WARNED_AGAINST" }>;
+    brands: ReadonlyArray<{ websiteId: Id<"websites">; texts?: string[]; stance?: "RECOMMENDED" | "MENTIONED" | "WARNED_AGAINST" }>;
   },
 ): Promise<void> {
   const prior = await ctx.db
@@ -124,6 +129,9 @@ export async function recordAnswer(
     if (brand.stance === "WARNED_AGAINST" && !warnedAgainst.includes(brand.websiteId)) warnedAgainst.push(brand.websiteId);
   }
 
+  // Every name found per website: each company counts the website as named
+  // only under one of its own names (`holdProfiles.ts`, `answersSeenBy`).
+  const mentions = answer.brands.flatMap((brand) => (brand.texts ? [{ websiteId: brand.websiteId, texts: brand.texts }] : []));
   await ctx.db.insert("aiAnswers", {
     prompt: answer.prompt,
     engine: answer.engine,
@@ -133,6 +141,7 @@ export async function recordAnswer(
     named,
     recommended,
     warnedAgainst,
+    ...(mentions.length > 0 ? { mentions } : {}),
     createdAt: Date.now(),
   });
 
@@ -140,12 +149,12 @@ export async function recordAnswer(
   // are facts about the website and the answers, shared; which company sees
   // them is decided by its own list when a screen reads them
   // (docs/plans/active/private-tracking-lists-plan.md, §4.3).
-  const askers = [...new Set((await ctx.db
+  const asking = (await ctx.db
     .query("websiteQuestions")
     .withIndex("by_prompt", (q) => q.eq("prompt", answer.prompt))
     .take(HOSTS_PER_QUESTION))
-    .filter((question) => question.engines.includes(answer.engine))
-    .map((question) => question.websiteId))];
+    .filter((question) => question.engines.includes(answer.engine));
+  const askers = [...new Set(asking.map((question) => question.websiteId))];
   if (askers.length === 0) return;
 
   const answers = await ctx.db
@@ -160,6 +169,9 @@ export async function recordAnswer(
     // Each list's AI lines count its answers per day and engine.
     await requestRebuildEverywhere(ctx, websiteId);
   }
+  // And each company's own list asking it, from the same answers
+  // (docs/plans/active/sites-ai-list-summaries-plan.md).
+  await recordListAnswer(ctx, asking.map((question) => question.companyWebsiteId), answer, answers);
 }
 
 async function rebuildQuestionStats(

@@ -168,10 +168,13 @@ export default function SitesPage() {
               header: t("columns.moved"),
               cell: (row) =>
                 row.rankedUp === null && row.rankedDown === null ? dash : (
-                  <span className="text-[12px]">
-                    <span className="text-success">▲ {row.rankedUp ?? 0}</span>
-                    <span className="text-muted"> · </span>
-                    <span className="text-destructive">▼ {row.rankedDown ?? 0}</span>
+                  <span className="flex flex-col text-[12px]">
+                    <span>
+                      <span className="text-success">▲ {row.rankedUp ?? 0}</span>
+                      <span className="text-muted"> · </span>
+                      <span className="text-destructive">▼ {row.rankedDown ?? 0}</span>
+                    </span>
+                    {row.movesAmongHeld !== null ? <span className="text-[11px] text-muted">{t("amongHeld", { count: formatNumber(row.movesAmongHeld) })}</span> : null}
                   </span>
                 ),
             },

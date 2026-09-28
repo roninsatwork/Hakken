@@ -1,14 +1,14 @@
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 
-import { internalQuery } from "./_generated/server";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQueryService";
 import { appError } from "./utils/appError";
 import { AI_ENGINES, DEFAULT_AI_ENGINES, aiEngineValidator, isAiEngine } from "./seoAiEngines";
 import { MAX_PROMPT_LENGTH, MIN_PROMPT_LENGTH } from "./utils/promptLimits";
-import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { isTrackedHold } from "./utils/websitePairing";
 import { holdQuestions, holdSearch, holdSearches } from "./holdLists";
+import { readFanOutLimits } from "./fanOutLimits";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 
@@ -31,8 +31,6 @@ import type { MutationCtx } from "./_generated/server";
  * every edit is audited with the company it was made for.
  */
 
-/** What the business does: room for two or three sentences, and no more. */
-const MAX_BUSINESS_DESCRIPTION = 600;
 
 /** A generous ceiling per company's list, not a plan allowance. The allowance question is deferred. */
 const MAX_CANONICAL_ROWS = 1_000;
@@ -46,14 +44,25 @@ function readText(raw: string): string {
 }
 
 /**
- * One phrase, one row.
+ * One phrase, one row: a search phrase as the lists keep it, and as typed for
+ * the screen — refused when no search is that short or that long.
  *
  * The same normalisation `seoKeywordIntents` uses, so a phrase judged for one
  * host is the same string when the next host tracks it and the judgment is
- * reused rather than bought again.
+ * reused rather than bought again. Shared by the tracked searches and a
+ * question's own fan-out queries (`promptFanOut.ts`), so a phrase meets one
+ * rule wherever it is written.
  */
-function readKeyword(raw: string): string {
-  return readText(raw).toLowerCase();
+export function readSearchPhrase(raw: string): { keyword: string; text: string } {
+  const text = readText(raw);
+  const keyword = text.toLowerCase();
+  if (keyword.length < MIN_KEYWORD_LENGTH) {
+    throw appError("INVALID_INPUT", "Write the search as somebody would type it.");
+  }
+  if (keyword.length > MAX_KEYWORD_LENGTH) {
+    throw appError("INVALID_INPUT", `A search can be at most ${MAX_KEYWORD_LENGTH} characters.`);
+  }
+  return { keyword, text };
 }
 
 async function requireWebsite(
@@ -80,6 +89,24 @@ async function requireListHold(
     throw appError("INVALID_INPUT", "A competitor is measured on the searches and questions of the company's own website.");
   }
   return hold;
+}
+
+/**
+ * Refused when a website already has as many fan-out queries ticked as its
+ * limit allows (`fanOutTrackedPerSite`, docs/plans/active/fan-out-opt-in-plan.md):
+ * a fan-out query is ticked when it is running on the tracked searches, having
+ * come from a prompt's list. A keyword typed in here does not count (Anthony,
+ * 2026-09-28: "only for fan outs").
+ */
+export async function requireFanOutRoom(ctx: { db: MutationCtx["db"] }, hold: Doc<"companyWebsites">): Promise<void> {
+  const { fanOutTrackedPerSite } = await readFanOutLimits(ctx, hold.companyId, hold._id);
+  const running = await holdSearches(ctx, hold._id, MAX_CANONICAL_ROWS, { activeOnly: true });
+  if (running.filter((row) => row.addedFrom === "AI_SEARCH").length < fanOutTrackedPerSite) return;
+  const website = await ctx.db.get(hold.websiteId);
+  throw appError(
+    "INVALID_INPUT",
+    `${website?.displayHost ?? "This website"} already checks ${fanOutTrackedPerSite} fan-out queries every run: its limit in Limits. Untick one, or raise the limit.`,
+  );
 }
 
 /** The company a list row was made for, for its audit entry. */
@@ -162,12 +189,13 @@ export const addWebsiteQuestion = superAdminMutation({
     }
 
     const existing = await holdQuestions(ctx, hold._id, MAX_CANONICAL_ROWS + 1);
+    const { promptsPerSite } = await readFanOutLimits(ctx, hold.companyId, hold._id);
 
     if (existing.some((row) => row.prompt.toLowerCase() === prompt.toLowerCase())) {
       throw appError("INVALID_INPUT", "That question is already asked for this website.");
     }
-    if (existing.length >= MAX_CANONICAL_ROWS) {
-      throw appError("INVALID_INPUT", `A website can hold at most ${MAX_CANONICAL_ROWS} questions.`);
+    if (existing.length >= promptsPerSite) {
+      throw appError("INVALID_INPUT", `This website can ask at most ${promptsPerSite} prompts: its limit in Limits.`);
     }
 
     const chosen = (args.engines ?? []).filter(isAiEngine);
@@ -181,6 +209,10 @@ export const addWebsiteQuestion = superAdminMutation({
       isActive: true,
       createdAt: Date.now(),
     });
+
+    // The answers others' asking already filed count from the start
+    // (docs/plans/active/sites-ai-list-summaries-plan.md).
+    await ctx.scheduler.runAfter(0, internal.siteListAi.recountQuestion, { holdId: hold._id, prompt });
 
     await ctx.db.insert("auditLogs", {
       actorId: ctx.userId,
@@ -215,6 +247,82 @@ export const setWebsiteQuestionActive = superAdminMutation({
   },
 });
 
+/**
+ * What leaves with a question's words — removed, or edited into others: its
+ * answers leave the company's AI figures, what the company chose for its
+ * fan-out queries goes (with their first checks not yet bought), and its
+ * fan-out queries leave AI searches now rather than at the next collection.
+ * The rebuild waits a moment, so the choices are read before it clears them.
+ */
+async function forgetWords(ctx: MutationCtx, holdId: Id<"companyWebsites">, prompt: string) {
+  await ctx.scheduler.runAfter(0, internal.siteListAi.recountQuestion, { holdId, prompt });
+  await ctx.scheduler.runAfter(0, internal.promptFanOut.forgetQuestion, { holdId, prompt });
+  await ctx.scheduler.runAfter(FORGET_BEFORE_REBUILD_MS, internal.fanOutAngles.rebuildHoldAngles, { holdId });
+}
+
+/** How long a rebuild waits after a question's words are forgotten. */
+const FORGET_BEFORE_REBUILD_MS = 5_000;
+
+/**
+ * Change a question's words — a spelling mistake, say — and which assistants
+ * it is asked of (Anthony, 2026-09-28: "if it made a spelling mistake i had to
+ * delete and re-enter and there was no edit"; "edit also needs to edit the
+ * assistants"). The AIs are asked the exact words and everything collected
+ * is filed under them, so new words start fresh from the next collection, and
+ * what came back for the old words stays with those words, off this list, as
+ * when a question is removed. Other assistants are asked from the next
+ * collection; the list's AI figures and fan-out queries follow the assistants
+ * chosen. The question keeps its place in the list and whether it is paused,
+ * and uses no more of the website's limit.
+ */
+export const editWebsiteQuestion = superAdminMutation({
+  args: { questionId: v.id("websiteQuestions"), prompt: v.string(), engines: v.optional(v.array(v.string())) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const question = await ctx.db.get(args.questionId);
+    if (!question) throw appError("NOT_FOUND", "That question is no longer asked.");
+    const hold = await requireListHold(ctx, question.companyWebsiteId);
+
+    const prompt = readText(args.prompt);
+    if (prompt.length < MIN_PROMPT_LENGTH) {
+      throw appError("INVALID_INPUT", "Write the question as somebody would actually ask it.");
+    }
+    if (prompt.length > MAX_PROMPT_LENGTH) {
+      throw appError("INVALID_INPUT", `A question can be at most ${MAX_PROMPT_LENGTH} characters.`);
+    }
+    // In the house order, whatever order they were ticked in.
+    const engines = args.engines === undefined ? question.engines : AI_ENGINES.filter((engine) => args.engines?.includes(engine));
+    if (engines.length === 0) throw appError("INVALID_INPUT", "Choose at least one assistant to ask.");
+
+    const sameWords = prompt === question.prompt;
+    const sameEngines = engines.length === question.engines.length && engines.every((engine) => question.engines.includes(engine));
+    if (sameWords && sameEngines) return null;
+    if (!sameWords) {
+      const existing = await holdQuestions(ctx, hold._id, MAX_CANONICAL_ROWS + 1);
+      if (existing.some((row) => row._id !== question._id && row.prompt.toLowerCase() === prompt.toLowerCase())) {
+        throw appError("INVALID_INPUT", "That question is already asked for this website.");
+      }
+    }
+
+    await ctx.db.patch(question._id, { prompt, engines });
+    if (!sameWords) await forgetWords(ctx, hold._id, question.prompt);
+    // Its fan-out queries are read from the assistants it is asked of: the list follows them now.
+    else await ctx.scheduler.runAfter(0, internal.fanOutAngles.rebuildHoldAngles, { holdId: hold._id });
+    // The AI figures count the answers of the words and assistants it has now, others' asking already filed too.
+    await ctx.scheduler.runAfter(0, internal.siteListAi.recountQuestion, { holdId: hold._id, prompt });
+
+    await ctx.db.insert("auditLogs", {
+      actorId: ctx.userId,
+      actionType: "EDIT_WEBSITE_QUESTION",
+      entityId: question._id,
+      entityType: "websiteQuestions",
+      metadata: JSON.stringify({ from: question.prompt, to: prompt, enginesFrom: question.engines, enginesTo: engines, companyId: hold.companyId }),
+      timestamp: Date.now(),
+    });
+    return null;
+  },
+});
+
 export const removeWebsiteQuestion = superAdminMutation({
   args: { questionId: v.id("websiteQuestions") },
   returns: v.null(),
@@ -223,6 +331,7 @@ export const removeWebsiteQuestion = superAdminMutation({
     if (!question) return null;
 
     await ctx.db.delete(args.questionId);
+    await forgetWords(ctx, question.companyWebsiteId, question.prompt);
     await ctx.db.insert("auditLogs", {
       actorId: ctx.userId,
       actionType: "REMOVE_WEBSITE_QUESTION",
@@ -295,31 +404,37 @@ export const listWebsiteKeywords = superAdminQuery({
  * Add one search to a company's list for one of its websites, with every
  * check the list keeps.
  *
- * Shared by the screen's add button, the fan-out screen's "Track it" and
- * taking an "untracked search" move, so a search added any way meets the same
- * length rules, the same ceiling and leaves the same audit entry.
+ * Shared by the screen's add button, the tick on a prompt's fan-out queries
+ * and taking an "untracked search" move, so a search added any way meets the
+ * same length rules, the same ceilings and leaves the same audit entry.
  */
 export async function addWebsiteKeywordCore(
   ctx: MutationCtx,
-  args: { companyWebsiteId: Id<"companyWebsites">; keyword: string; userId: Id<"users"> },
+  args: {
+    companyWebsiteId: Id<"companyWebsites">;
+    keyword: string;
+    /** Absent when no person did it: the lists' automatic tracking of 2026-09-28, since undone (`promptFanOut.ts`). */
+    userId?: Id<"users">;
+    /** Typed in by hand, or ticked on a prompt's fan-out queries — the AI's, or one the company added there. */
+    addedFrom: "HAND" | "AI_SEARCH";
+    /** How long the list is, when the caller has just read it: adding many then reads it once, not once each. */
+    listSize?: number;
+  },
 ): Promise<Id<"websiteKeywords">> {
   const hold = await requireListHold(ctx, args.companyWebsiteId);
-  const keyword = readKeyword(args.keyword);
-  if (keyword.length < MIN_KEYWORD_LENGTH) {
-    throw appError("INVALID_INPUT", "Write the search as somebody would type it.");
-  }
-  if (keyword.length > MAX_KEYWORD_LENGTH) {
-    throw appError("INVALID_INPUT", `A search can be at most ${MAX_KEYWORD_LENGTH} characters.`);
-  }
+  const { keyword } = readSearchPhrase(args.keyword);
 
   if (await holdSearch(ctx, hold._id, keyword)) {
     throw appError("INVALID_INPUT", "That search is already tracked for this website.");
   }
 
-  const existing = await holdSearches(ctx, hold._id, MAX_CANONICAL_ROWS + 1);
-  if (existing.length >= MAX_CANONICAL_ROWS) {
-    throw appError("INVALID_INPUT", `A website can track at most ${MAX_CANONICAL_ROWS} searches.`);
+  const size = args.listSize ?? (await holdSearches(ctx, hold._id, MAX_CANONICAL_ROWS + 1)).length;
+  const { trackedPerSite } = await readFanOutLimits(ctx, hold.companyId, hold._id);
+  if (size >= trackedPerSite) {
+    throw appError("INVALID_INPUT", `This website can track at most ${trackedPerSite} keywords: its limit in Limits.`);
   }
+  // Ticked on a prompt's fan-out queries: that list has a limit of its own.
+  if (args.addedFrom === "AI_SEARCH") await requireFanOutRoom(ctx, hold);
 
   const keywordId = await ctx.db.insert("websiteKeywords", {
     websiteId: hold.websiteId,
@@ -327,6 +442,7 @@ export async function addWebsiteKeywordCore(
     keyword,
     isActive: true,
     createdAt: Date.now(),
+    addedFrom: args.addedFrom,
   });
 
   await ctx.db.insert("auditLogs", {
@@ -334,19 +450,32 @@ export async function addWebsiteKeywordCore(
     actionType: "ADD_WEBSITE_KEYWORD",
     entityId: keywordId,
     entityType: "websiteKeywords",
-    metadata: JSON.stringify({ keyword, companyId: hold.companyId }),
+    metadata: JSON.stringify({ keyword, companyId: hold.companyId, addedFrom: args.addedFrom }),
     timestamp: Date.now(),
   });
 
   return keywordId;
 }
 
-/** Add a search to one company's list for one of its websites. */
+/**
+ * Add a search to one company's list for one of its websites: typed in, or
+ * tracked from a search the AI assistants ran (`addedFrom`, "HAND" when not
+ * said).
+ */
 export const addWebsiteKeyword = superAdminMutation({
-  args: { companyWebsiteId: v.id("companyWebsites"), keyword: v.string() },
+  args: {
+    companyWebsiteId: v.id("companyWebsites"),
+    keyword: v.string(),
+    addedFrom: v.optional(v.union(v.literal("HAND"), v.literal("AI_SEARCH"))),
+  },
   returns: v.id("websiteKeywords"),
   handler: async (ctx, args) => {
-    return await addWebsiteKeywordCore(ctx, { ...args, userId: ctx.userId });
+    return await addWebsiteKeywordCore(ctx, {
+      companyWebsiteId: args.companyWebsiteId,
+      keyword: args.keyword,
+      userId: ctx.userId,
+      addedFrom: args.addedFrom ?? "HAND",
+    });
   },
 });
 
@@ -356,6 +485,11 @@ export const setWebsiteKeywordActive = superAdminMutation({
   handler: async (ctx, args) => {
     const keyword = await ctx.db.get(args.keywordId);
     if (!keyword) throw appError("NOT_FOUND", "That search is no longer tracked.");
+    // Resuming a fan-out query ticks it again, within its website's limit for them.
+    if (args.isActive && !keyword.isActive && keyword.addedFrom === "AI_SEARCH") {
+      const hold = await ctx.db.get(keyword.companyWebsiteId);
+      if (hold) await requireFanOutRoom(ctx, hold);
+    }
 
     await ctx.db.patch(args.keywordId, { isActive: args.isActive });
     await ctx.db.insert("auditLogs", {
@@ -378,6 +512,8 @@ export const removeWebsiteKeyword = superAdminMutation({
     if (!keyword) return null;
 
     await ctx.db.delete(args.keywordId);
+    // One of a prompt's fan-out queries is unticked there, and stays listed (fan-out-opt-in-plan.md).
+    await ctx.scheduler.runAfter(0, internal.promptFanOut.afterSearchRemoved, { holdId: keyword.companyWebsiteId, keyword: keyword.keyword });
     await ctx.db.insert("auditLogs", {
       actorId: ctx.userId,
       actionType: "REMOVE_WEBSITE_KEYWORD",
@@ -397,280 +533,4 @@ export const listEngines = superAdminQuery({
   args: {},
   returns: v.array(aiEngineValidator),
   handler: async () => [...AI_ENGINES],
-});
-
-/* ---------------------------------------------------------------- competition */
-
-export const listWebsiteRivals = superAdminQuery({
-  args: {
-    websiteId: v.id("websites"),
-    searchTerm: v.optional(v.string()),
-    page: v.number(),
-    pageSize: v.number(),
-  },
-  returns: v.object({
-    data: v.array(v.object({
-      _id: v.id("websiteRivals"),
-      rivalWebsiteId: v.id("websites"),
-      displayHost: v.string(),
-      source: v.union(v.literal("ASSERTED"), v.literal("DISCOVERED")),
-      createdAt: v.number(),
-    })),
-    totalCount: v.number(),
-    totalPages: v.number(),
-  }),
-  handler: async (ctx, args) => {
-    const edges = await ctx.db
-      .query("websiteRivals")
-      .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
-      .take(MAX_CANONICAL_ROWS + 1);
-
-    // Resolved by id, never by querying the table: the host is already named
-    // by the edge, so nothing here walks outward looking for one.
-    const name = async (edge: (typeof edges)[number]) => {
-      const rival = await ctx.db.get(edge.rivalWebsiteId);
-      return {
-        _id: edge._id,
-        rivalWebsiteId: edge.rivalWebsiteId,
-        displayHost: rival?.displayHost ?? "",
-        source: edge.source,
-        createdAt: edge.createdAt,
-      };
-    };
-
-    // Only a search needs every rival named before the page is cut. Without
-    // one, the page is cut first and only its rows are named — fifteen reads
-    // rather than a thousand.
-    const term = normalizeSearchTerm(args.searchTerm);
-    const paged = term
-      ? paginateItems(
-        (await Promise.all(edges.map(name))).filter((row) => includesSearchTerm(row.displayHost, term)),
-        args.page,
-        args.pageSize,
-      )
-      : await (async () => {
-        const cut = paginateItems(edges, args.page, args.pageSize);
-        return { ...cut, data: await Promise.all(cut.data.map(name)) };
-      })();
-
-    return {
-      data: paged.data,
-      totalCount: paged.totalCount,
-      totalPages: paged.totalPages,
-    };
-  },
-});
-
-/**
- * Claim that one host competes with another.
- *
- * Takes two website ids rather than a URL, because a rival that is not in the
- * system yet is a different job — `createWebsite` owns making a row, and
- * splitting the two keeps this function from being a second place a host can be
- * born.
- */
-export const addWebsiteRival = superAdminMutation({
-  args: { websiteId: v.id("websites"), rivalWebsiteId: v.id("websites") },
-  returns: v.id("websiteRivals"),
-  handler: async (ctx, args) => {
-    if (args.websiteId === args.rivalWebsiteId) {
-      throw appError("INVALID_INPUT", "A website cannot compete with itself.");
-    }
-    await requireWebsite(ctx, args.websiteId);
-    await requireWebsite(ctx, args.rivalWebsiteId);
-
-    const existing = await ctx.db
-      .query("websiteRivals")
-      .withIndex("by_website_rival", (q) =>
-        q.eq("websiteId", args.websiteId).eq("rivalWebsiteId", args.rivalWebsiteId))
-      .first();
-    if (existing) {
-      throw appError("INVALID_INPUT", "That rivalry is already recorded.");
-    }
-
-    const edgeId = await ctx.db.insert("websiteRivals", {
-      websiteId: args.websiteId,
-      rivalWebsiteId: args.rivalWebsiteId,
-      source: "ASSERTED",
-      createdAt: Date.now(),
-    });
-
-    await ctx.db.insert("auditLogs", {
-      actorId: ctx.userId,
-      actionType: "ADD_WEBSITE_RIVAL",
-      entityId: edgeId,
-      entityType: "websiteRivals",
-      metadata: JSON.stringify({ rivalWebsiteId: args.rivalWebsiteId }),
-      timestamp: Date.now(),
-    });
-
-    return edgeId;
-  },
-});
-
-export const removeWebsiteRival = superAdminMutation({
-  args: { edgeId: v.id("websiteRivals") },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const edge = await ctx.db.get(args.edgeId);
-    if (!edge) return null;
-
-    await ctx.db.delete(args.edgeId);
-    await ctx.db.insert("auditLogs", {
-      actorId: ctx.userId,
-      actionType: "REMOVE_WEBSITE_RIVAL",
-      entityId: args.edgeId,
-      entityType: "websiteRivals",
-      metadata: JSON.stringify({ rivalWebsiteId: edge.rivalWebsiteId }),
-      timestamp: Date.now(),
-    });
-    return null;
-  },
-});
-
-/* ------------------------------------------------------------------- profile */
-
-/**
- * What this business does and where it sells.
- *
- * Here rather than beside brand names in `websites.ts`, which crossed the
- * thousand-line ceiling when this was added to it. A fair seam as well as a
- * forced one: the profile is host-record content like the three lists above,
- * and it exists for the same reason they do. It passes the same test brand
- * names pass: two companies watching one host would write down the same
- * answer. It exists so a host can be handed
- * a starting set of searches and questions rather than a blank box, which is
- * most of what a new client attaching to a known host is worth.
- *
- * Empty clears the field. Somebody who does not know the sector should be able
- * to say so, and a wrong sector is worse than none — it would suggest the wrong
- * searches with the same confidence as a right one.
- */
-export const setWebsiteProfile = superAdminMutation({
-  args: {
-    websiteId: v.id("websites"),
-    sector: v.union(v.string(), v.null()),
-    marketLabel: v.union(v.string(), v.null()),
-    /** Optional so a caller that predates it leaves the description alone. */
-    description: v.optional(v.union(v.string(), v.null())),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const website = await ctx.db.get(args.websiteId);
-    if (!website) throw appError("NOT_FOUND", "That website no longer exists.");
-
-    const trim = (value: string | null) => {
-      const read = (value ?? "").replace(/\s+/g, " ").trim();
-      if (read.length > 120) {
-        throw appError("INVALID_INPUT", "That is too long for a sector or a market.");
-      }
-      return read.length > 0 ? read : undefined;
-    };
-
-    const sector = trim(args.sector);
-    const marketLabel = trim(args.marketLabel);
-    // A sentence or two, not an essay: every judgment about this site carries it.
-    let businessDescription = website.businessDescription;
-    if (args.description !== undefined) {
-      const read = (args.description ?? "").replace(/\s+/g, " ").trim();
-      if (read.length > MAX_BUSINESS_DESCRIPTION) {
-        throw appError("INVALID_INPUT", `Keep what the business does to ${MAX_BUSINESS_DESCRIPTION} characters.`);
-      }
-      businessDescription = read.length > 0 ? read : undefined;
-    }
-    await ctx.db.patch(args.websiteId, { sector, marketLabel, businessDescription });
-
-    await ctx.db.insert("auditLogs", {
-      actorId: ctx.userId,
-      actionType: "SET_WEBSITE_PROFILE",
-      entityId: args.websiteId,
-      entityType: "websites",
-      // Shared like the names are, so an edit is readable afterwards.
-      metadata: JSON.stringify({ host: website.host, sector, marketLabel, businessDescription }),
-      timestamp: Date.now(),
-    });
-
-    return null;
-  },
-});
-
-/* ------------------------------------------------------- for judging rivals */
-
-/** Searches named to the judge, the ones it earns most visits from: enough to show the trade, few enough to stay a hint. */
-const SEARCHES_FOR_JUDGING = 10;
-
-/**
- * What a website's business does, for a judgment about its competitors.
- *
- * From its own record when it has one. A tracked rival rarely does — its
- * sector is nobody's to fill in — so it borrows the profile of the site it is
- * compared with, which is in the same trade by definition.
- */
-export const describeBusinessForJudging = internalQuery({
-  args: { websiteId: v.id("websites") },
-  returns: v.union(v.null(), v.object({
-    sector: v.optional(v.string()),
-    market: v.optional(v.string()),
-    does: v.optional(v.string()),
-    names: v.array(v.string()),
-    searches: v.array(v.string()),
-  })),
-  handler: async (ctx, args) => {
-    let website = await ctx.db.get(args.websiteId);
-    if (!website) return null;
-    if (!website.sector && !website.businessDescription) {
-      const pairing = (await ctx.db
-        .query("companyWebsites")
-        .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
-        .take(20))
-        .find((hold) => hold.againstWebsiteId);
-      const pairedWith = pairing?.againstWebsiteId ? await ctx.db.get(pairing.againstWebsiteId) : null;
-      if (pairedWith?.sector || pairedWith?.businessDescription) website = pairedWith;
-    }
-    // What it ranks for, from its keyword list — facts every watcher can see
-    // — rather than any company's tracked searches, which are that company's
-    // own (docs/plans/active/private-tracking-lists-plan.md, §4.3).
-    const described = website;
-    const searches = (await ctx.db
-      .query("siteKeywordRanks")
-      .withIndex("by_site_traffic", (q) => q.eq("websiteId", described._id).eq("locationCode", DEFAULT_LOCATION_CODE))
-      .order("desc")
-      .take(SEARCHES_FOR_JUDGING * 2))
-      .filter((row) => row.position !== undefined)
-      .slice(0, SEARCHES_FOR_JUDGING);
-    return {
-      ...(website.sector ? { sector: website.sector } : {}),
-      ...(website.marketLabel ? { market: website.marketLabel } : {}),
-      ...(website.businessDescription ? { does: website.businessDescription } : {}),
-      names: (website.brandNames ?? []).map((entry) => entry.name),
-      searches: searches.map((row) => row.keyword),
-    };
-  },
-});
-
-/**
- * What each of these websites does, where an admin has written it down —
- * so a discovered competitor the platform already knows is judged on what it
- * sells, not on its address alone. Ids only: the caller resolved them.
- */
-export const describeWebsitesForJudging = internalQuery({
-  args: { websiteIds: v.array(v.id("websites")) },
-  returns: v.array(v.object({
-    websiteId: v.id("websites"),
-    sector: v.optional(v.string()),
-    does: v.optional(v.string()),
-  })),
-  handler: async (ctx, args) => {
-    const described = [];
-    for (const websiteId of args.websiteIds.slice(0, 200)) {
-      const website = await ctx.db.get(websiteId);
-      if (!website || (!website.sector && !website.businessDescription)) continue;
-      described.push({
-        websiteId,
-        ...(website.sector ? { sector: website.sector } : {}),
-        ...(website.businessDescription ? { does: website.businessDescription } : {}),
-      });
-    }
-    return described;
-  },
 });

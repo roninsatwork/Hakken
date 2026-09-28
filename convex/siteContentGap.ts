@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type ActionCtx } from "./_generated/server";
+import { keywordStanding } from "./siteKeywordCopy";
 import { gapRebuildKey } from "./siteRankings";
 import { REBUILD_WAIT_MS } from "./siteSummaries";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
@@ -21,6 +22,12 @@ import { GAP_KEYWORDS_PER_RIVAL, rankIntentValidator, type RankIntent } from "./
  * and checked against the site's own a page at a time, so no read grows with
  * the size of either site.
  *
+ * "Ranks for" means at the latest check, on both sides, as a competitor's
+ * shared searches read it (`sharedSearches`, `keywordStanding`): a search a
+ * rival was last seen on before its latest check is not one it ranks for,
+ * and one the site held only before its own latest check is not one the site
+ * has (docs/plans/active/sites-audit-fixes-plan.md, 4.10).
+ *
  * **Bounded, and says so.** A rival is read to its `KEYWORDS_PER_RIVAL`
  * most-searched keywords. A site that ranks for fifty thousand searches has a
  * long tail nobody writes content for; the gap is about the searches worth
@@ -38,6 +45,11 @@ const PAGE = 500;
 
 /** Gap rows written or removed per mutation. */
 const WRITE_BATCH = 400;
+
+/** Whether a ranking row stands at the website's latest keyword check (`keywordStanding`). */
+function rankingNow(row: Pick<Doc<"siteKeywordRanks">, "status" | "position" | "day">, latestCheckDay: string | null): boolean {
+  return keywordStanding({ status: row.status, position: row.position ?? null, day: row.day }, latestCheckDay) === "current";
+}
 
 type GapRow = {
   keyword: string;
@@ -72,23 +84,28 @@ async function rebuildGapNow(ctx: ActionCtx, args: { companyWebsiteId: Id<"compa
     await ctx.runQuery(internal.siteContentGap.gapContext, { companyWebsiteId: args.companyWebsiteId });
   if (!context) return null;
 
+  const latestCheckOf = async (websiteId: Id<"websites">): Promise<string | null> =>
+    await ctx.runQuery(internal.siteSummaries.latestKeywordCheck, { websiteId, locationCode: context.locationCode });
+  const siteCheck = await latestCheckOf(context.websiteId);
   const gaps = new Map<string, GapRow>();
   for (const rivalId of context.rivals) {
+    const rivalCheck = await latestCheckOf(rivalId);
     let cursor: string | null = null;
     let read = 0;
     while (read < KEYWORDS_PER_RIVAL) {
-      const page: { rows: Array<Pick<Doc<"siteKeywordRanks">, "keyword" | "position" | "volume" | "volumeKnown" | "intent">>; cursor: string; isDone: boolean } =
+      const page: { rows: Array<Pick<Doc<"siteKeywordRanks">, "keyword" | "position" | "volume" | "volumeKnown" | "intent" | "status" | "day">>; cursor: string; isDone: boolean } =
         await ctx.runQuery(internal.siteContentGap.rivalKeywords, {
           websiteId: rivalId,
           locationCode: context.locationCode,
           cursor,
         });
       read += page.rows.length;
-      const ranking = page.rows.filter((row) => row.position !== undefined);
+      const ranking = page.rows.filter((row) => rankingNow(row, rivalCheck));
       const ours: string[] = await ctx.runQuery(internal.siteContentGap.keywordsSiteRanksFor, {
         websiteId: context.websiteId,
         locationCode: context.locationCode,
         keywords: ranking.map((row) => row.keyword),
+        latestCheckDay: siteCheck,
       });
       const held = new Set(ours);
       for (const row of ranking) {
@@ -179,6 +196,8 @@ export const rivalKeywords = internalQuery({
         volume: row.volume,
         volumeKnown: row.volumeKnown,
         intent: row.intent,
+        status: row.status,
+        day: row.day,
       })),
       cursor: result.continueCursor,
       isDone: result.isDone,
@@ -186,9 +205,15 @@ export const rivalKeywords = internalQuery({
   },
 });
 
-/** Which of these keywords the site currently ranks for. One point read each. */
+/** Which of these keywords the site ranks for at its latest check. One point read each. */
 export const keywordsSiteRanksFor = internalQuery({
-  args: { websiteId: v.id("websites"), locationCode: v.number(), keywords: v.array(v.string()) },
+  args: {
+    websiteId: v.id("websites"),
+    locationCode: v.number(),
+    keywords: v.array(v.string()),
+    /** The site's latest keyword check (`latestKeywordCheck`): a search held only from before it is not one it ranks for. */
+    latestCheckDay: v.optional(v.union(v.string(), v.null())),
+  },
   returns: v.array(v.string()),
   handler: async (ctx, args) => {
     const found = await Promise.all(args.keywords.slice(0, PAGE).map((keyword) =>
@@ -197,7 +222,7 @@ export const keywordsSiteRanksFor = internalQuery({
         .withIndex("by_site_keyword", (q) =>
           q.eq("websiteId", args.websiteId).eq("locationCode", args.locationCode).eq("keyword", keyword))
         .unique()));
-    return found.flatMap((row) => (row && row.position !== undefined ? [row.keyword] : []));
+    return found.flatMap((row) => (row && rankingNow(row, args.latestCheckDay ?? null) ? [row.keyword] : []));
   },
 });
 

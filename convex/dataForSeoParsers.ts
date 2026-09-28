@@ -1,3 +1,5 @@
+import { BREAKDOWN_REST } from "./utils/siteShapes";
+
 /**
  * Turning a DataForSEO payload into the few numbers a screen plots.
  *
@@ -54,7 +56,9 @@ export type PaidPosition = {
  */
 export type RankedPosition = {
   keyword: string;
+  /** Its place among Google's normal results, as the supplier's own counts are; `pagePosition` is its place among everything on the page. */
   position?: number;
+  pagePosition?: number;
   url?: string;
   searchVolume?: number;
   cpc?: number;
@@ -135,24 +139,51 @@ export function parseBacklinksSummary(result: unknown): ParsedSeoResult {
       spamScore: asNumber(item.backlinks_spam_score) ?? null,
       brokenPages: asNumber(item.broken_pages) ?? null,
       nofollowReferringDomains: asNumber(item.referring_domains_nofollow) ?? null,
-      tldsJson: topCounts(item.referring_links_tld),
-      countriesJson: topCounts(item.referring_links_countries),
-      platformsJson: topCounts(item.referring_links_platform_types),
-      linkTypesJson: topCounts(item.referring_links_types),
-      attributesJson: topCounts(item.referring_links_attributes),
+      // The totals a servers list, its networks and the linking pages are "of".
+      referringIps: asNumber(item.referring_ips) ?? null,
+      referringSubnets: asNumber(item.referring_subnets) ?? null,
+      referringPages: asNumber(item.referring_pages) ?? null,
+      // Each link has one country, domain ending and kind: those carry the
+      // rest added up. A link can be on several kinds of site, and carry
+      // several attributes or none, so those have no "rest" to add.
+      tldsJson: topCounts(item.referring_links_tld, true),
+      countriesJson: topCounts(item.referring_links_countries, true),
+      platformsJson: topCounts(item.referring_links_platform_types, false),
+      linkTypesJson: topCounts(item.referring_links_types, true),
+      attributesJson: topCounts(item.referring_links_attributes, false),
     },
   };
 }
 
-/** A breakdown map's largest entries, as JSON text: `[["com", 3333], …]`. */
-function topCounts(value: unknown, keep = 15): string | null {
+/**
+ * A breakdown map's largest entries, as JSON text: `[["com", 3333], …]` —
+ * and, where each link is counted once, the rest added up as one last entry
+ * (`BREAKDOWN_REST`), so its shares are of every link, not of the largest few.
+ */
+function topCounts(value: unknown, withRest: boolean, keep = 15): string | null {
   const record = asRecord(value);
   if (!record) return null;
   const entries = Object.entries(record)
     .flatMap(([key, count]) => (typeof count === "number" && count > 0 ? [[key || "(none)", count] as [string, number]] : []))
-    .sort((left, right) => right[1] - left[1])
-    .slice(0, keep);
-  return JSON.stringify(entries);
+    .sort((left, right) => right[1] - left[1]);
+  const rest = entries.slice(keep).reduce((sum, [, count]) => sum + count, 0);
+  const kept = entries.slice(0, keep);
+  return JSON.stringify(withRest && rest > 0 ? [...kept, [BREAKDOWN_REST, rest]] : kept);
+}
+
+/**
+ * A ranking's place, counted as the supplier's own totals count it: among the
+ * normal results, not every item on Google's page — "ai agency" is 3rd of the
+ * normal results and 5th on the page (sites-data-completeness-plan.md, G2).
+ * Its place on the page is kept beside it. An answer stored before the normal
+ * place was kept has only the page's, and is counted on the page, saying so by
+ * having no `pagePosition`.
+ */
+export function placesOf(item: Record<string, unknown> | null): { position?: number; pagePosition?: number } {
+  const normal = asNumber(item?.rank_group);
+  const onPage = asNumber(item?.rank_absolute);
+  if (normal === undefined) return onPage === undefined ? {} : { position: onPage };
+  return { position: normal, ...(onPage !== undefined ? { pagePosition: onPage } : {}) };
 }
 
 /** DataForSEO's own move for a ranking since its previous check, from `rank_changes`. */
@@ -248,7 +279,7 @@ export function parseDomainRankedKeywords(result: unknown): ParsedSeoResult {
     const optional = <T>(key: string, value: T | undefined) => (value === undefined ? {} : { [key]: value });
     positions.push({
       keyword,
-      ...optional("position", asNumber(serpElement?.rank_absolute)),
+      ...placesOf(serpElement),
       ...optional("url", asString(serpElement?.url)),
       ...optional("searchVolume", asNumber(keywordInfo?.search_volume)),
       ...optional("cpc", asNumber(keywordInfo?.cpc)),
@@ -323,19 +354,21 @@ export function parseSerpGoogleOrganic(result: unknown, target?: string): Parsed
   const keyword = asString(item.keyword);
   const rows = asArray(item.items);
 
-  let position: number | undefined;
+  let places: { position?: number; pagePosition?: number } = {};
   let url: string | undefined;
 
   if (target) {
     for (const row of rows) {
       const record = asRecord(row);
       const domain = asString(record?.domain);
-      if (!domain || !domain.endsWith(target)) continue;
-      position = asNumber(record?.rank_absolute);
+      const type = asString(record?.type);
+      if (!domain || !domain.endsWith(target) || (type !== undefined && type !== "organic")) continue;
+      places = placesOf(record);
       url = asString(record?.url);
       break;
     }
   }
+  const position = places.position;
 
   return {
     metrics: {
@@ -349,7 +382,7 @@ export function parseSerpGoogleOrganic(result: unknown, target?: string): Parsed
       ? {
         positions: [{
           keyword,
-          ...(position !== undefined ? { position } : {}),
+          ...places,
           ...(url ? { url } : {}),
         }],
       }
@@ -524,6 +557,11 @@ export function parseDomainCompetitors(result: unknown): Array<{
   host: string;
   intersections: number;
   averagePosition: number | null;
+  /**
+   * The asked-about site's own visits from the searches it shares with this
+   * one — the supplier's `metrics` are the target's on the intersecting
+   * keywords, not the competitor's (checked against the data, 2026-09-27).
+   */
   estimatedTraffic: number | null;
   /** The whole domain's figures, for the Market map: every keyword it ranks for, and its traffic. */
   domainKeywords: number | null;
@@ -574,7 +612,7 @@ export function parseDomainCompetitors(result: unknown): Array<{
  */
 export function parseSerpPage(result: unknown): {
   resultCount: number;
-  rows: Array<{ domain: string; position: number; url?: string }>;
+  rows: Array<{ domain: string; position: number; pagePosition?: number; url?: string }>;
   /** What else the page carries, for the Sites screens (Phase 2). */
   page: SerpPageExtras;
 } {
@@ -582,20 +620,21 @@ export function parseSerpPage(result: unknown): {
   if (!item) return { resultCount: 0, rows: [], page: emptyExtras() };
 
   const page = emptyExtras();
-  const best = new Map<string, { domain: string; position: number; url?: string }>();
+  const best = new Map<string, { domain: string; position: number; pagePosition?: number; url?: string }>();
   for (const row of asArray(item.items)) {
     const record = asRecord(row);
     const type = asString(record?.type);
     if (record && type && type !== "organic") collectExtras(page, type, record);
     if (!record || type !== "organic") continue;
     const domain = asString(record.domain)?.toLowerCase();
-    const position = asNumber(record.rank_absolute);
+    // Among the normal results, as every other position is counted (G2).
+    const { position, pagePosition } = placesOf(record);
     if (!domain || position === undefined) continue;
 
     const held = best.get(domain);
     if (held && held.position <= position) continue;
     const url = asString(record.url);
-    best.set(domain, { domain, position, ...(url ? { url } : {}) });
+    best.set(domain, { domain, position, ...(pagePosition !== undefined ? { pagePosition } : {}), ...(url ? { url } : {}) });
   }
 
   return {
@@ -664,6 +703,14 @@ function collectExtras(page: SerpPageExtras, type: string, record: Unknown): voi
       if (search && page.related.length < 20 && !page.related.includes(search)) page.related.push(search);
     }
   }
+}
+
+/** How many competitors the supplier found, the site itself left out: what the few read are "of". */
+export function discoveryTotal(result: unknown, target?: string): number | null {
+  const total = asNumber(firstItem(result)?.total_count);
+  if (total === undefined) return null;
+  const itself = parseDomainCompetitors(result).some((row) => row.host === target);
+  return Math.max(0, total - (itself ? 1 : 0));
 }
 
 export function parseSeoResultFor(

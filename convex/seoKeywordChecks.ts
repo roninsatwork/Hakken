@@ -3,9 +3,10 @@ import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { recomputeSearchStats } from "./websiteTrackingStats";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { fileSerpPage, serpSnapshotValidator } from "./siteSerp";
+import { runDayOf } from "./seoRunDay";
 
 /**
  * Filing one checked search against every site it answers for.
@@ -21,6 +22,11 @@ import { fileSerpPage, serpSnapshotValidator } from "./siteSerp";
  * what makes a verdict like *never ranked* possible; a search that was never
  * checked has no row at all. Charting the missing week at position 100 would
  * be inventing a ranking nobody had.
+ *
+ * A fan-out query's first check (docs/plans/active/fan-out-opt-in-plan.md)
+ * counts as a host that asked: it is not tracked, but its website gets the
+ * "checked, not found" row too, and the record of the check is marked done.
+ * Without it the check would find nothing to say and be bought again.
  *
  * Its own module because it is its own kind of write: `seoCollectionParse.ts`
  * files what came back about one website, and this files what came back about
@@ -74,6 +80,7 @@ export const writeKeywordCheck = internalMutation({
     found: v.array(v.object({
       websiteId: v.id("websites"),
       position: v.number(),
+      pagePosition: v.optional(v.number()),
       url: v.optional(v.string()),
     })),
     /** The page itself, for the Sites screens (`siteSerp.ts`). */
@@ -99,13 +106,17 @@ export const writeKeywordCheck = internalMutation({
     for (const row of prior) await ctx.db.delete(row._id);
     await ctx.db.patch(args.pullId, { error: undefined });
 
-    const rows = new Map<Id<"websites">, { position?: number; url?: string }>();
+    const rows = new Map<Id<"websites">, { position?: number; pagePosition?: number; url?: string }>();
     for (const entry of args.found) {
       const held = rows.get(entry.websiteId);
       // Two domains can be one website — a bare host and its www form — so
       // the better of their places is the site's.
       if (held?.position !== undefined && held.position <= entry.position) continue;
-      rows.set(entry.websiteId, { position: entry.position, ...(entry.url ? { url: entry.url } : {}) });
+      rows.set(entry.websiteId, {
+        position: entry.position,
+        ...(entry.pagePosition !== undefined ? { pagePosition: entry.pagePosition } : {}),
+        ...(entry.url ? { url: entry.url } : {}),
+      });
     }
 
     // Every website any company tracks this for, once each: a site missing
@@ -118,6 +129,14 @@ export const writeKeywordCheck = internalMutation({
       .take(MAX_TRACKERS);
     for (const tracker of trackers) {
       if (tracker.isActive && !rows.has(tracker.websiteId)) rows.set(tracker.websiteId, {});
+    }
+    // And every website this check is a fan-out query's first check for.
+    const firsts = await ctx.db
+      .query("fanOutFirstChecks")
+      .withIndex("by_pull", (q) => q.eq("pullId", args.pullId))
+      .take(MAX_TRACKERS);
+    for (const first of firsts) {
+      if (!rows.has(first.websiteId)) rows.set(first.websiteId, {});
     }
 
     for (const [websiteId, entry] of [...rows.entries()].slice(0, MAX_ROWS_PER_CHECK)) {
@@ -132,6 +151,7 @@ export const writeKeywordCheck = internalMutation({
         keyword: args.keyword,
         day: args.day,
         ...(entry.position !== undefined ? { position: entry.position } : {}),
+        ...(entry.pagePosition !== undefined ? { pagePosition: entry.pagePosition } : {}),
         ...(entry.url ? { url: entry.url } : {}),
         // Always written, so a watcher's view can be read through the place
         // index. Unset means the registry default was sent.
@@ -151,6 +171,39 @@ export const writeKeywordCheck = internalMutation({
       // read through the list that tracks it
       // (docs/plans/active/private-tracking-lists-plan.md, V5).
     }
+    for (const first of firsts) await ctx.db.patch(first._id, { checkedDay: args.day });
     return null;
   },
 });
+
+/**
+ * A first check that reused a Google check filed before its website asked —
+ * another company's, the same day, from the same place. The website gets the
+ * "checked, not found" row the filing would have given it, when the page did
+ * not have it, and the check is marked done. A later re-filing of the check
+ * writes the same row again, since the record now names it.
+ */
+export async function fileFirstCheckLate(
+  ctx: MutationCtx,
+  first: Doc<"fanOutFirstChecks">,
+  pull: Doc<"seoDataPulls">,
+): Promise<void> {
+  const day = await runDayOf(ctx, pull);
+  const held = await ctx.db
+    .query("seoKeywordPositions")
+    .withIndex("by_website_keyword_place_day", (q) =>
+      q.eq("websiteId", first.websiteId).eq("keyword", first.query).eq("locationCode", first.locationCode).eq("day", day))
+    .first();
+  if (!held) {
+    await ctx.db.insert("seoKeywordPositions", {
+      websiteId: first.websiteId,
+      keyword: first.query,
+      day,
+      locationCode: first.locationCode,
+      pullId: pull._id,
+      createdAt: Date.now(),
+    });
+    await recomputeSearchStats(ctx, { websiteId: first.websiteId, keyword: first.query, locationCode: first.locationCode });
+  }
+  await ctx.db.patch(first._id, { checkedDay: day });
+}

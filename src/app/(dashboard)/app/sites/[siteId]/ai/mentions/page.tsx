@@ -124,7 +124,7 @@ export default function SiteMentionsPage() {
             </Select>
           </>
         }
-        cardHeader={<SiteTableBar footer={pager.footer} noun="results" actions={<ListDownload fileName={`${site?.host ?? "site"}-ai-mentions`} rows={sorted} columns={[{ header: t("columns.question"), value: (row) => row.prompt }, { header: t("columns.engine"), value: (row) => engineLabel(row.engine) }, { header: t("columns.latest"), value: (row) => t(`stances.${row.lastStance ?? "NOT_ASKED"}`) }, { header: t("columns.named"), value: (row) => row.named }, { header: t("columns.recommended"), value: (row) => row.recommended }, { header: t("columns.lastChecked"), value: (row) => row.lastAskedDay }]} />} />}
+        cardHeader={<SiteTableBar footer={pager.footer} noun="results" actions={<ListDownload fileName={`${site?.host ?? "site"}-ai-mentions`} rows={sorted} columns={[{ header: t("columns.question"), value: (row) => row.prompt }, { header: t("columns.engine"), value: (row) => engineLabel(row.engine) }, { header: t("columns.latest"), value: (row) => t(`stances.${row.lastStance ?? "NOT_ASKED"}`) }, { header: t("columns.named"), value: (row) => (row.asked > 0 ? row.named : null) }, { header: t("columns.recommended"), value: (row) => (row.asked > 0 ? row.recommended : null) }, { header: t("columns.lastChecked"), value: (row) => row.lastAskedDay }]} />} />}
         empty={{ icon: <Sparkles className="h-8 w-8 text-muted/30" />, label: term || engine || stance ? t("noMatch") : t("empty") }}
         footer={pager.footer}
         sort={tableSort}
@@ -139,8 +139,9 @@ export default function SiteMentionsPage() {
               return <StatusPill tone={STANCE_TONES[key]}>{t(`stances.${key}`)}</StatusPill>;
             },
           },
-          { key: "named", header: t("columns.named"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{t("namedOf", { named: row.named, asked: row.asked })}</span> },
-          { key: "recommended", header: t("columns.recommended"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.recommended}</span> },
+          // Before an engine has answered there is nothing to count: "–", never "0 of 0" (4.9).
+          { key: "named", header: t("columns.named"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{row.asked > 0 ? t("namedOf", { named: row.named, asked: row.asked }) : "–"}</span> },
+          { key: "recommended", header: t("columns.recommended"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.asked > 0 ? row.recommended : "–"}</span> },
         ]}
       />
     </div>

@@ -1,10 +1,10 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
-import { SEO_MAX_SENDS_PER_CYCLE } from "./seoCollectionPolicy";
+import { SEO_COMPETITORS_PER_WEBSITE, SEO_MAX_SENDS_PER_CYCLE } from "./seoCollectionPolicy";
 import { findSeoOperation, seoSiteOperationParams } from "./dataForSeoRegistry";
 import { companyHasWorkDue } from "./seoCollectionDue";
 
@@ -142,6 +142,13 @@ async function openCycle(
       totalCostUsd: 0,
       startedAt,
     }));
+}
+
+async function superAdmin(t: Harness) {
+  const userId = await t.run(async (ctx) => await ctx.db.insert("users", {
+    name: "Super", email: `su-${Math.random()}@test.com`, role: "SUPER_ADMIN", createdAt: Date.now(),
+  } as never));
+  return t.withIdentity({ subject: userId });
 }
 
 const pulls = (t: Harness) => t.run(async (ctx) => await ctx.db.query("seoDataPulls").collect());
@@ -1037,6 +1044,94 @@ describe("one website too big for one page", () => {
     expect(new Set(rivalCounts).size).toBe(1);
     expect((await cycle(t, cycleId))?.status).toBe("SENDING");
   }, WHOLE_COMPANY_TIMEOUT_MS);
+});
+
+/*
+  The caps nobody saw (sites-data-completeness-plan.md, B6). A run that stopped
+  planning at its ceiling started again from the same website next time, so
+  the same websites missed out every run; and a site's 101st competitor
+  onwards was never collected, with nothing to say so.
+*/
+describe("the caps on a run", () => {
+  test("a run after one stopped at its ceiling starts where it stopped and goes round to the rest", async () => {
+    const t = harness();
+    const company = await seedCompany(t, "Ronins Agency");
+    await seedSchedule(t, company, DAILY);
+    const first = await seedCompanyWebsite(t, company, await seedWebsite(t, "first.com"));
+    await seedCompanyWebsite(t, company, await seedWebsite(t, "second.com"));
+    await seedCompanyWebsite(t, company, await seedWebsite(t, "third.com"));
+    const stoppedAt = await t.run(async (ctx) => (await ctx.db.get(first))!._creationTime);
+    const last = await openCycle(t, company, Date.now() - 86_400_000);
+    await t.run(async (ctx) => await ctx.db.patch(last, { status: "CAPPED_PLAN", cursorCreatedAt: stoppedAt }));
+
+    const opened = await t.mutation(internal.seoTools.startSeoCollection, { companyId: company, trigger: "MANUAL" });
+    const cycleId = opened.cycleId!;
+    expect(await cycle(t, cycleId)).toMatchObject({ startedAfter: stoppedAt, cursorCreatedAt: stoppedAt });
+
+    // The websites after where it stopped, then round to the first.
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId, cursorCreatedAt: stoppedAt });
+    expect((await cycle(t, cycleId))?.status).toBe("EXPANDING");
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
+    expect((await cycle(t, cycleId))?.status).toBe("SENDING");
+
+    const hosts = new Map(await t.run(async (ctx) => (await ctx.db.query("websites").collect()).map((row) => [row._id as string, row.host])));
+    const firstDue = new Map<string, number>();
+    for (const pull of (await pulls(t)).sort((left, right) => (left.dueAt ?? 0) - (right.dueAt ?? 0))) {
+      const host = hosts.get(pull.websiteId as string);
+      if (host && !firstDue.has(host)) firstDue.set(host, pull.dueAt ?? 0);
+    }
+    expect([...firstDue.keys()]).toEqual(["second.com", "third.com", "first.com"]);
+
+    // Its report says it began where the last one stopped.
+    const report = await (await superAdmin(t)).query(api.seoRunReports.getRunReport, { cycleId });
+    expect(report?.caps).toEqual({ ceiling: null, startedWhereLastStopped: true, competitorsCut: [], competitorsPerWebsite: SEO_COMPETITORS_PER_WEBSITE });
+  });
+
+  test("a site with more competitors than a run collects is named on the run", async () => {
+    const t = harness();
+    const company = await seedCompany(t, "Ronins Agency");
+    await seedSchedule(t, company, DAILY);
+    const own = await seedWebsite(t, "ourshop.com");
+    await seedCompanyWebsite(t, company, own);
+    // Only the count against the site matters here, so the holds are not
+    // tracked and plan nothing of their own.
+    await t.run(async (ctx) => {
+      for (let index = 0; index <= SEO_COMPETITORS_PER_WEBSITE; index += 1) {
+        const websiteId = await ctx.db.insert("websites", { host: `rival-${index}.com`, displayHost: `rival-${index}.com`, firstSeenAt: Date.now() });
+        await ctx.db.insert("companyWebsites", { companyId: company, websiteId, againstWebsiteId: own, createdAt: Date.now() });
+      }
+    });
+    const cycleId = await openCycle(t, company);
+
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
+
+    expect((await cycle(t, cycleId))?.competitorsCut).toEqual([own]);
+    const report = await (await superAdmin(t)).query(api.seoRunReports.getRunReport, { cycleId });
+    expect(report?.caps.competitorsCut).toEqual(["ourshop.com"]);
+  });
+
+  test("a company that collects fewer competitors per website is cut at its own number", async () => {
+    const t = harness();
+    const company = await seedCompany(t, "Ronins Agency");
+    await seedSchedule(t, company, DAILY);
+    const own = await seedWebsite(t, "ourshop.com");
+    await seedCompanyWebsite(t, company, own);
+    // "Competitors collected per website" on its Limits (platform-limits-plan.md).
+    const admin = await superAdmin(t);
+    await admin.mutation(api.platformLimits.setCompanyLimits, { companyId: company, limits: { competitorsPerSite: 10 } });
+    await t.run(async (ctx) => {
+      for (let index = 0; index <= 10; index += 1) {
+        const websiteId = await ctx.db.insert("websites", { host: `rival-${index}.com`, displayHost: `rival-${index}.com`, firstSeenAt: Date.now() });
+        await ctx.db.insert("companyWebsites", { companyId: company, websiteId, againstWebsiteId: own, createdAt: Date.now() });
+      }
+    });
+    const cycleId = await openCycle(t, company);
+
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
+
+    expect((await cycle(t, cycleId))?.competitorsCut).toEqual([own]);
+    expect((await admin.query(api.seoRunReports.getRunReport, { cycleId }))?.caps.competitorsPerWebsite).toBe(10);
+  });
 });
 
 describe("asking the AI engines", () => {

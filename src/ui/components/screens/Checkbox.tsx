@@ -38,6 +38,11 @@ type CheckboxProps = {
    * still exists and is still tied to the box; only the visible text goes.
    */
   labelHidden?: boolean;
+  /**
+   * A tooltip on the box: why it cannot be ticked, when it is disabled for a
+   * reason worth saying — a limit reached (a prompt's fan-out queries, 2026-09-28).
+   */
+  title?: string;
   className?: string;
   id?: string;
 };
@@ -48,6 +53,7 @@ export function Checkbox({
   onChange,
   disabled,
   labelHidden,
+  title,
   className,
   id,
 }: CheckboxProps) {
@@ -67,7 +73,7 @@ export function Checkbox({
 
   if (labelHidden) {
     return (
-      <span className={cn("inline-flex items-center", className)}>
+      <span title={title} className={cn("inline-flex items-center", className)}>
         <label htmlFor={boxId} className="sr-only">{label}</label>
         {box}
       </span>
@@ -77,6 +83,7 @@ export function Checkbox({
   return (
     <label
       htmlFor={boxId}
+      title={title}
       className={cn(
         "flex w-fit items-center gap-2 text-[13px] text-foreground",
         disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer",

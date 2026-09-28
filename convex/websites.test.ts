@@ -256,15 +256,15 @@ describe("A company's own websites", () => {
     })).page.map((row) => [row.displayHost, row.limits]));
 
     // Nothing set: the defaults, followed from the company.
-    expect((await limitsOf())["rival.com"]).toEqual({ keywordsPerSite: 1_000, backlinksPerSite: 1_000, keywordsOwn: false, backlinksOwn: false });
+    expect((await limitsOf())["rival.com"]).toEqual({ keywordsPerSite: 1_000, backlinksPerSite: 1_000, everydayKeywords: 1_000, keywordsOwn: false, backlinksOwn: false, everydayOwn: false });
 
     await admin.mutation(api.companyDataLimits.setCompanyDataLimits, { companyId: company, keywordsPerSite: 10_000, backlinksPerSite: 1_000 });
     const rivalHold = await t.run(async (ctx) => (await ctx.db.query("companyWebsites").collect()).find((row) => row._id !== site)!._id);
     await admin.mutation(api.companyDataLimits.setSiteDataLimits, { companyWebsiteId: rivalHold, keywordsPerSite: 2_500, backlinksPerSite: null });
 
     const limits = await limitsOf();
-    expect(limits["ours.com"]).toEqual({ keywordsPerSite: 10_000, backlinksPerSite: 1_000, keywordsOwn: false, backlinksOwn: false });
-    expect(limits["rival.com"]).toEqual({ keywordsPerSite: 2_500, backlinksPerSite: 1_000, keywordsOwn: true, backlinksOwn: false });
+    expect(limits["ours.com"]).toEqual({ keywordsPerSite: 10_000, backlinksPerSite: 1_000, everydayKeywords: 1_000, keywordsOwn: false, backlinksOwn: false, everydayOwn: false });
+    expect(limits["rival.com"]).toEqual({ keywordsPerSite: 2_500, backlinksPerSite: 1_000, everydayKeywords: 1_000, keywordsOwn: true, backlinksOwn: false, everydayOwn: false });
   });
 
   test("the list shows only that company's websites", async () => {
@@ -359,7 +359,7 @@ describe("Competitors live inside a website", () => {
     ).rejects.toThrow("cannot compete with itself");
   });
 
-  test("the list is scoped to its own website and searchable", async () => {
+  test("each of a company's sites lists only the competitors tracked against it", async () => {
     const t = harness();
     const admin = await superAdmin(t);
     const company = await seedCompany(t);
@@ -371,17 +371,12 @@ describe("Competitors live inside a website", () => {
     }
     await admin.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: trade, url: "elsewhere.com" });
 
-    const shopWebsiteId = await t.run(async (ctx) => (await ctx.db.get(shop))!.websiteId);
-
-    const all = await admin.query(api.websiteCanonical.listWebsiteRivals, {
-      websiteId: shopWebsiteId, page: 1, pageSize: 15,
-    });
-    expect(all.data.map((row) => row.displayHost).sort()).toEqual(["other.co.uk", "rival.com"]);
-
-    const searched = await admin.query(api.websiteCanonical.listWebsiteRivals, {
-      websiteId: shopWebsiteId, page: 1, pageSize: 15, searchTerm: "riv",
-    });
-    expect(searched.data.map((row) => row.displayHost)).toEqual(["rival.com"]);
+    // The company's own list, on its screen for each site — the shared list
+    // of who competes with a host went on 2026-09-28 (company-level-website-facts-plan.md, CL5).
+    const shopList = await admin.query(api.websiteClientView.listTrackedCompetitors, { companyWebsiteId: shop });
+    expect(shopList.rivals.map((row) => row.displayHost).sort()).toEqual(["other.co.uk", "rival.com"]);
+    const tradeList = await admin.query(api.websiteClientView.listTrackedCompetitors, { companyWebsiteId: trade });
+    expect(tradeList.rivals.map((row) => row.displayHost)).toEqual(["elsewhere.com"]);
   });
 
   test("stopping tracking leaves the rival's record and other companies alone", async () => {
@@ -994,99 +989,34 @@ describe("Sweeps do not run away", () => {
   });
 });
 
-describe("The names a site goes by", () => {
-  test("two companies tracking one host read the same names", async () => {
+describe("The Websites section's order", () => {
+  test("its own sites first, each followed by its competitors by name, then those watched on their own", async () => {
     const t = harness();
     const admin = await superAdmin(t);
-    const ronins = await seedCompany(t, "Ronins Agency");
-    const acme = await seedCompany(t, "Acme Ltd");
+    const company = await seedCompany(t, "Korda");
+    const own = await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "kordatackle.com" });
+    await admin.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: own, url: "nashtackle.co.uk" });
+    await admin.mutation(api.websiteAttachments.addTrackedWebsite, { companyId: company, url: "decathlon.co.uk" });
+    await admin.mutation(api.websiteAttachments.addTrackedCompetitor, { companyWebsiteId: own, url: "foxint.com" });
+    const second = await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "kaizenrods.com" });
 
-    await admin.mutation(api.websites.addCompanyWebsite, {
-      companyId: ronins,
-      url: "shared.com",
-    });
-    await admin.mutation(api.websites.addCompanyWebsite, {
-      companyId: acme,
-      url: "shared.com",
-    });
+    // docs/plans/active/websites-section-menu-plan.md: the list and the chooser agree.
+    const listed = await admin.query(api.websites.listCompanyWebsiteRows, { companyId: company });
+    expect(listed.rows.map((row) => row.displayHost)).toEqual([
+      "kordatackle.com", "foxint.com", "nashtackle.co.uk", "kaizenrods.com", "decathlon.co.uk",
+    ]);
+    expect(listed.cut).toBe(false);
 
-    const websiteId = (await t.run(async (ctx) =>
-      await ctx.db.query("websites").first()))!._id;
-
-    await admin.mutation(api.websites.setWebsiteBrandNames, {
-      websiteId,
-      names: [{ name: "Shared Co", isPrimary: true }, { name: "Shared Group" }],
-    });
-
-    // The point of putting them on the shared row: entered once, true for
-    // everyone. It is also what lets one citation purchase answer every
-    // watcher.
-    const website = await t.run(async (ctx) => await ctx.db.get(websiteId));
-    expect(website?.brandNames?.map((entry) => entry.name))
-      .toEqual(["Shared Co", "Shared Group"]);
-    expect(await allCompanyWebsites(t)).toHaveLength(2);
-  });
-
-  test("refuses a sixth name rather than silently dropping it", async () => {
-    const t = harness();
-    const admin = await superAdmin(t);
-    const company = await seedCompany(t, "Ronins Agency");
-    await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "a.com" });
-    const websiteId = (await t.run(async (ctx) =>
-      await ctx.db.query("websites").first()))!._id;
-
-    // The cap lives here and not only in the form, because a limit living in a
-    // screen is a limit the next caller does not have.
-    await expect(admin.mutation(api.websites.setWebsiteBrandNames, {
-      websiteId,
-      names: ["one", "two", "three", "four", "five", "six"].map((name) => ({ name: `Name ${name}` })),
-    })).rejects.toThrow(/at most 5/);
-  });
-
-  test("records both sides of a change to a shared list", async () => {
-    const t = harness();
-    const admin = await superAdmin(t);
-    const company = await seedCompany(t, "Ronins Agency");
-    await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "a.com" });
-    const websiteId = (await t.run(async (ctx) =>
-      await ctx.db.query("websites").first()))!._id;
-
-    await admin.mutation(api.websites.setWebsiteBrandNames, {
-      websiteId,
-      names: [{ name: "First Name" }, { name: "Second Name" }],
-    });
-    await admin.mutation(api.websites.setWebsiteBrandNames, {
-      websiteId,
-      names: [{ name: "First Name" }],
-    });
-
-    // Someone else was relying on "Second Name". A shared record that was
-    // blanked has to be recoverable from the trail rather than from memory.
-    const entries = await t.run(async (ctx) =>
-      await ctx.db.query("auditLogs")
-        .filter((q) => q.eq(q.field("actionType"), "SET_WEBSITE_BRAND_NAMES"))
-        .collect());
-    const last = JSON.parse(entries[entries.length - 1].metadata ?? "{}") as {
-      before: string[]; after: string[];
-    };
-    expect(last.before).toEqual(["First Name", "Second Name"]);
-    expect(last.after).toEqual(["First Name"]);
-  });
-
-  test("an ordinary admin cannot touch a record everyone shares", async () => {
-    const t = harness();
-    const admin = await superAdmin(t);
-    const company = await seedCompany(t, "Ronins Agency");
-    await admin.mutation(api.websites.addCompanyWebsite, { companyId: company, url: "a.com" });
-    const websiteId = (await t.run(async (ctx) =>
-      await ctx.db.query("websites").first()))!._id;
-
-    const tenantAdmin = t.withIdentity({ subject: await seedUser(t, "ADMIN", company) });
-
-    await expect(tenantAdmin.mutation(api.websites.setWebsiteBrandNames, {
-      websiteId,
-      names: [{ name: "Their Own Name" }],
-    })).rejects.toThrow();
+    const choices = await admin.query(api.websites.listWebsiteChoices, { companyId: company });
+    expect(choices.map((choice) => [choice.host, choice.relationship, choice.againstHost])).toEqual([
+      ["kordatackle.com", "OWNED", null],
+      ["foxint.com", "TRACKED", "kordatackle.com"],
+      ["nashtackle.co.uk", "TRACKED", "kordatackle.com"],
+      ["kaizenrods.com", "OWNED", null],
+      ["decathlon.co.uk", "TRACKED", null],
+    ]);
+    expect(choices[1].againstCompanyWebsiteId).toBe(own);
+    expect(choices[3].companyWebsiteId).toBe(second);
   });
 });
 

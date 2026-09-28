@@ -10,7 +10,8 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { useSiteRange } from "../../_components/SiteDateRange";
 import { formatMonth } from "../../_components/siteFormat";
 import { shiftMonth } from "../../_components/siteRange";
-import { useSiteId } from "../../_components/useSite";
+import { useSite, useSiteId } from "../../_components/useSite";
+import { HeldLine, isPartHeld } from "../../_components/SiteCoverage";
 
 const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 
@@ -22,6 +23,7 @@ const WEEKDAYS = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const;
 export default function SiteCalendarPage() {
   const t = useTranslations("sites.calendar");
   const siteId = useSiteId();
+  const site = useSite();
   const range = useSiteRange();
   const [month, setMonth] = useState(range.to.slice(0, 7));
   const days = useQuery(api.siteCharts.siteCalendar, { siteId, month });
@@ -54,6 +56,14 @@ export default function SiteCalendarPage() {
         }
       />
 
+      {/* A list held in part: its moves are among the searches held (sites-data-completeness-plan.md, §4.C). */}
+      {isPartHeld(site?.coverage) ? (
+        <div className="flex flex-col gap-1">
+          <HeldLine coverage={site?.coverage} />
+          <p className="text-[12px] leading-relaxed text-secondary">{t("amongHeld")}</p>
+        </div>
+      ) : null}
+
       {days !== undefined && days.length === 0 ? (
         <p className="rounded-xl border border-border-dim bg-card/40 px-4 py-6 text-center text-[13px] text-secondary">{t("empty")}</p>
       ) : null}
@@ -73,8 +83,14 @@ export default function SiteCalendarPage() {
                   {entry.rankedUp > 0 ? <span className="text-success">{t("up", { count: entry.rankedUp })}</span> : null}
                   {entry.rankedDown > 0 ? <span className="text-destructive">{t("down", { count: entry.rankedDown })}</span> : null}
                   {entry.rankedNew > 0 ? <span className="text-info">{t("new", { count: entry.rankedNew })}</span> : null}
+                  {entry.firstCheck && entry.keywords !== null ? <span className="text-info">{t("firstCheck", { count: entry.keywords })}</span> : null}
+                  {/* The first day the list was held: its searches were new to the list, not new rankings. */}
+                  {entry.firstList && entry.keywords !== null ? <span className="text-info">{t("firstList", { count: entry.keywords })}</span> : null}
                   {entry.rankedLost > 0 ? <span className="text-warning">{t("lost", { count: entry.rankedLost })}</span> : null}
+                  {entry.rankedLeft > 0 ? <span className="text-warning">{t("left", { count: entry.rankedLeft })}</span> : null}
                   {entry.aiAsked > 0 ? <span className="text-brand">{t("named", { named: entry.aiNamed, asked: entry.aiAsked })}</span> : null}
+                  {/* A competitor asks nothing: the answers to the owned site's questions that named it (4.8). */}
+                  {entry.aiAsked === 0 && entry.aiNamed > 0 ? <span className="text-brand">{t("namedIn", { count: entry.aiNamed })}</span> : null}
                   {entry.referringDomainsChange ? (
                     <span className={entry.referringDomainsChange > 0 ? "text-success" : "text-destructive"}>
                       {entry.referringDomainsChange > 0

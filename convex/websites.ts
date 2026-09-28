@@ -6,10 +6,6 @@ import { internal } from "./_generated/api";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import {
-  BRAND_NAME_MESSAGES,
-  readBrandNames,
-} from "./utils/websiteBrands";
-import {
   WEBSITE_IDENTITY_MESSAGES,
   readWebsiteHost,
   type WebsiteIdentity,
@@ -21,12 +17,15 @@ import {
   type ResolvedWebsiteSchedule,
 } from "./seoScheduleService";
 import * as websiteShapes from "./utils/websiteShapes";
-import { pairedOwnedHold, refuseIfPaired } from "./utils/websitePairing";
+import { isTrackedHold, pairedOwnedHold, refuseIfPaired } from "./utils/websitePairing";
 import { countOpenMoves, purgeHoldMoves } from "./websiteMoves";
 import { requestGroupGapRebuilds } from "./siteRankings";
+import { requestListRecount } from "./siteListAi";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { purgeHoldDataLimits, readCompanyDataLimits, resolveSiteDataLimits } from "./companyDataLimits";
+import { purgeHoldFanOutLimits } from "./fanOutLimits";
+import { purgeHoldProfile } from "./holdProfiles";
 
 /**
  * A company's websites, and the competitors tracked against each.
@@ -84,9 +83,6 @@ async function websiteByHost(ctx: QueryCtx | MutationCtx, host: string) {
     .first();
 }
 
-/** Enough to say "lots" without reading a whole host's list to say it. */
-const INHERITED_CAP = 200;
-
 /**
  * What an add form is told before anything is written.
  *
@@ -125,13 +121,9 @@ export const previewWebsiteHost = superAdminQuery({
       questions — they are each company's own, and how many another company
       has is not this one's to know (docs/plans/active/private-tracking-lists-plan.md).
     */
-    const [rivals, firstDay] = await Promise.all([
-      ctx.db.query("websiteRivals")
-        .withIndex("by_website", (q) => q.eq("websiteId", existing._id)).take(INHERITED_CAP),
-      ctx.db.query("seoWebsiteMetrics")
-        .withIndex("by_website_day", (q) => q.eq("websiteId", existing._id))
-        .order("asc").first(),
-    ]);
+    const firstDay = await ctx.db.query("seoWebsiteMetrics")
+      .withIndex("by_website_day", (q) => q.eq("websiteId", existing._id))
+      .order("asc").first();
 
     return {
       ok: true as const,
@@ -139,7 +131,6 @@ export const previewWebsiteHost = superAdminQuery({
       displayHost: result.displayHost,
       alreadyKnown: true,
       inherits: {
-        rivals: rivals.length,
         // From the first day anything was collected, not from first-seen: a
         // host added and never pulled has no history to inherit.
         weeksOfHistory: firstDay
@@ -321,6 +312,41 @@ async function countCompetitors(
   };
 }
 
+/** One row of a company's websites list, with its schedule and limits resolved against the company's. */
+async function companyWebsiteRow(
+  ctx: QueryCtx,
+  companyId: Id<"companies">,
+  schedule: Doc<"schedules"> | null,
+  companyLimits: Awaited<ReturnType<typeof readCompanyDataLimits>>,
+  companyWebsite: Doc<"companyWebsites">,
+) {
+  const website = await ctx.db.get(companyWebsite.websiteId);
+  const pair = await pairedOwnedHold(ctx, companyWebsite);
+  const against = pair ? await ctx.db.get(pair.websiteId) : null;
+  // A paired tracked site runs when its pair does, so that is the date
+  // its row shows — and says why, rather than implying a schedule of its own.
+  const resolved = resolveWebsiteSchedule(schedule, pair ?? companyWebsite);
+  const counts = companyWebsite.relationship === "TRACKED"
+    ? { competitorCount: 0, competitorCountIsCapped: false }
+    : await countCompetitors(ctx, companyId, companyWebsite.websiteId);
+  const movesWaiting = companyWebsite.relationship === "TRACKED"
+    ? 0
+    : await countOpenMoves(ctx, companyWebsite._id);
+
+  return {
+    ...companyWebsite,
+    host: website?.host ?? "",
+    displayHost: website?.displayHost ?? "",
+    againstHost: against?.displayHost ?? null,
+    ...counts,
+    movesWaiting,
+    collecting: resolved.active,
+    scheduleSource: pair ? ("PAIR" as const) : resolved.source,
+    nextRunAt: resolved.nextRunAt,
+    limits: await resolveSiteDataLimits(ctx, companyLimits, companyWebsite._id),
+  };
+}
+
 /** One company's own websites, newest first, paged on the server. */
 export const getCompanyWebsites = superAdminQuery({
   args: {
@@ -341,38 +367,105 @@ export const getCompanyWebsites = superAdminQuery({
       .paginate(args.paginationOpts);
 
     const rows = await Promise.all(
-      page.page.map(async (companyWebsite) => {
-        const website = await ctx.db.get(companyWebsite.websiteId);
-        const pair = await pairedOwnedHold(ctx, companyWebsite);
-        const against = pair ? await ctx.db.get(pair.websiteId) : null;
-        // A paired tracked site runs when its pair does, so that is the date
-        // its row shows — and says why, rather than implying a schedule of its own.
-        const resolved = resolveWebsiteSchedule(schedule, pair ?? companyWebsite);
-        const counts = companyWebsite.relationship === "TRACKED"
-          ? { competitorCount: 0, competitorCountIsCapped: false }
-          : await countCompetitors(ctx, args.companyId, companyWebsite.websiteId);
-        const movesWaiting = companyWebsite.relationship === "TRACKED"
-          ? 0
-          : await countOpenMoves(ctx, companyWebsite._id);
-
-        return {
-          ...companyWebsite,
-          host: website?.host ?? "",
-          displayHost: website?.displayHost ?? "",
-          againstHost: against?.displayHost ?? null,
-          ...counts,
-          movesWaiting,
-          collecting: resolved.active,
-          scheduleSource: pair ? ("PAIR" as const) : resolved.source,
-          nextRunAt: resolved.nextRunAt,
-          limits: await resolveSiteDataLimits(ctx, companyLimits, companyWebsite._id),
-        };
-      }),
+      page.page.map((companyWebsite) => companyWebsiteRow(ctx, args.companyId, schedule, companyLimits, companyWebsite)),
     );
 
     return { ...page, page: rows };
   },
 });
+
+/** Websites one company holds, read whole for its list: more than any company holds. */
+const MAX_LISTED_HOLDS = 200;
+
+/**
+ * Every website a company holds, whole, in the order the Websites section
+ * lists them (docs/plans/active/websites-section-menu-plan.md): its own sites
+ * in the order it added them, each followed by the competitors watched against
+ * it, then the competitors watched on their own. Read whole so the list can be
+ * grouped; the screen pages it, fifteen rows at a time.
+ */
+export const listCompanyWebsiteRows = superAdminQuery({
+  args: { companyId: v.id("companies") },
+  returns: v.object({ rows: v.array(websiteShapes.companyWebsiteRow), cut: v.boolean() }),
+  handler: async (ctx, args) => {
+    const schedule = await companySchedule(ctx, args.companyId);
+    const companyLimits = await readCompanyDataLimits(ctx, args.companyId);
+    const holds = await ctx.db
+      .query("companyWebsites")
+      .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
+      .take(MAX_LISTED_HOLDS + 1);
+    const rows = await Promise.all(
+      holds.slice(0, MAX_LISTED_HOLDS).map((hold) => companyWebsiteRow(ctx, args.companyId, schedule, companyLimits, hold)),
+    );
+    return { rows: inSectionOrder(rows), cut: holds.length > MAX_LISTED_HOLDS };
+  },
+});
+
+/**
+ * The websites a company holds, as the Websites section's chooser offers them
+ * (docs/plans/active/websites-section-menu-plan.md): each own site followed by
+ * the competitors watched against it, then those watched on their own. Light
+ * — a host and a pairing each — because every page in the section asks.
+ */
+export const listWebsiteChoices = superAdminQuery({
+  args: { companyId: v.id("companies") },
+  returns: v.array(v.object({
+    companyWebsiteId: v.id("companyWebsites"),
+    host: v.string(),
+    relationship: v.union(v.literal("OWNED"), v.literal("TRACKED")),
+    /** For a competitor watched against one of the company's own sites: that site. */
+    againstCompanyWebsiteId: v.union(v.id("companyWebsites"), v.null()),
+    againstHost: v.union(v.string(), v.null()),
+  })),
+  handler: async (ctx, args) => {
+    const holds = await ctx.db
+      .query("companyWebsites")
+      .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
+      .take(MAX_LISTED_HOLDS);
+    const rows = await Promise.all(holds.map(async (hold) => ({
+      ...hold,
+      displayHost: (await ctx.db.get(hold.websiteId))?.displayHost ?? "",
+    })));
+    const ownedByWebsite = new Map(rows.filter((row) => !isTrackedHold(row)).map((row) => [row.websiteId, row]));
+    return inSectionOrder(rows).map((row) => {
+      const against = isTrackedHold(row) && row.againstWebsiteId ? ownedByWebsite.get(row.againstWebsiteId) ?? null : null;
+      return {
+        companyWebsiteId: row._id,
+        host: row.displayHost,
+        relationship: isTrackedHold(row) ? ("TRACKED" as const) : ("OWNED" as const),
+        againstCompanyWebsiteId: against?._id ?? null,
+        againstHost: against?.displayHost ?? null,
+      };
+    });
+  },
+});
+
+type SectionRow = {
+  _creationTime: number;
+  websiteId: Id<"websites">;
+  relationship?: "OWNED" | "TRACKED";
+  againstWebsiteId?: Id<"websites">;
+  displayHost: string;
+};
+
+/**
+ * A company's websites in the order the section lists them: each own site
+ * (oldest first) followed by the competitors watched against it, by name,
+ * then the competitors watched on their own.
+ */
+export function inSectionOrder<Row extends SectionRow>(rows: readonly Row[]): Row[] {
+  const owned = rows
+    .filter((row) => row.relationship !== "TRACKED")
+    .sort((left, right) => left._creationTime - right._creationTime);
+  const tracked = rows
+    .filter((row) => row.relationship === "TRACKED")
+    .sort((left, right) => left.displayHost.localeCompare(right.displayHost));
+  const ownedWebsites = new Set(owned.map((row) => row.websiteId));
+  return [
+    ...owned.flatMap((own) => [own, ...tracked.filter((row) => row.againstWebsiteId === own.websiteId)]),
+    ...tracked.filter((row) => !row.againstWebsiteId || !ownedWebsites.has(row.againstWebsiteId)),
+  ];
+}
 
 /** One of a company's websites, with its settings resolved against the company's. */
 export const getCompanyWebsiteById = superAdminQuery({
@@ -596,16 +689,25 @@ export const removeCompanyWebsite = superAdminMutation({
     const website = await ctx.db.get(companyWebsite.websiteId);
     await purgeHoldMoves(ctx, args.id);
     await purgeHoldDataLimits(ctx, args.id);
+    await purgeHoldFanOutLimits(ctx, args.id);
+    await purgeHoldProfile(ctx, args.id);
     // The company's own searches, questions and AI lines for it go too; what
     // was collected stays with the website (docs/plans/active/
     // private-tracking-lists-plan.md, V9).
     await ctx.scheduler.runAfter(0, internal.websitePurge.purgeHoldListsInternal, { companyWebsiteId: args.id });
+    // Its Search Console connection and figures are the company's alone, and go too, as do its fan-out angles.
+    await ctx.scheduler.runAfter(0, internal.searchConsoleConnect.forgetHold, { companyWebsiteId: args.id });
+    await ctx.scheduler.runAfter(0, internal.fanOutAngles.purgeHoldAngles, { holdId: args.id });
     // The hold's content gap goes with it; a rival that goes changes the gap
     // of the site it was tracked against.
     await ctx.scheduler.runAfter(0, internal.siteContentGap.purgeHoldGaps, { companyWebsiteId: args.id });
     const pairedWith = await pairedOwnedHold(ctx, companyWebsite);
     await ctx.db.delete(args.id);
-    if (pairedWith) await requestGroupGapRebuilds(ctx, pairedWith);
+    if (pairedWith) {
+      await requestGroupGapRebuilds(ctx, pairedWith);
+      // Nor is it counted in the answers to that site's questions any more.
+      await requestListRecount(ctx, pairedWith._id);
+    }
 
     await ctx.db.insert("auditLogs", {
       actorId: ctx.userId,
@@ -699,57 +801,6 @@ export const deleteWebsite = superAdminMutation({
 // Sweeps
 // ---------------------------------------------------------------------------
 
-/**
- * Set the names this website is known by.
- *
- * **Super admin only, and deliberately so.** The list sits on the shared
- * `websites` row, so one operator editing it changes what every company
- * tracking that host sees. Anthony, 2026-09-21: *"let's make it super admin for
- * now as I don't fully understand it yet."* Every edit is audited, including
- * what the list was before, because a shared record that someone blanked needs
- * to be recoverable from the trail rather than from memory.
- *
- * It is on the website rather than on a company's hold of it because two
- * companies would not disagree: anyone tracking a host writes down the same
- * names for it. The dedupe rule's test is disagreement, not ownership.
- */
-export const setWebsiteBrandNames = superAdminMutation({
-  args: {
-    websiteId: v.id("websites"),
-    names: v.array(v.object({
-      name: v.string(),
-      isPrimary: v.optional(v.boolean()),
-    })),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const website = await ctx.db.get(args.websiteId);
-    if (!website) throw appError("NOT_FOUND", "That website no longer exists.");
-
-    const read = readBrandNames(args.names);
-    if (!read.ok) throw appError("INVALID_INPUT", BRAND_NAME_MESSAGES[read.problem]);
-
-    const now = Date.now();
-    await ctx.db.patch(args.websiteId, { brandNames: read.names, hasBrandNames: read.names.length > 0 });
-
-    await ctx.db.insert("auditLogs", {
-      actorId: ctx.userId,
-      actionType: "SET_WEBSITE_BRAND_NAMES",
-      entityId: args.websiteId,
-      entityType: "websites",
-      // Both sides of the change: this list is shared, so an edit that removed
-      // somebody else's name has to be readable afterwards.
-      metadata: JSON.stringify({
-        host: website.host,
-        before: (website.brandNames ?? []).map((entry) => entry.name),
-        after: read.names.map((entry) => entry.name),
-      }),
-      timestamp: now,
-    });
-
-    return null;
-  },
-});
 
 /**
  * Set where this company watches this website from.
@@ -784,6 +835,8 @@ export const setCompanyWebsiteLocation = superAdminMutation({
       locationLabel: args.locationCode === null ? undefined : label,
       updatedAt: Date.now(),
     });
+    // Its questions are answered from the new place: its AI figures are those answers'.
+    if (!isTrackedHold(companyWebsite)) await requestListRecount(ctx, args.companyWebsiteId);
 
     await ctx.db.insert("auditLogs", {
       actorId: ctx.userId,
@@ -832,63 +885,6 @@ export async function resolveWebsiteIdsByHost(
 }
 
 
-/**
- * Every website that has brand names, for matching an AI answer against.
- *
- * This is the read that makes one purchase serve every watcher: an answer
- * names whoever it names, and we look for every name we know. Here rather than
- * in the parse path for the same reason as `resolveWebsiteIdsByHost` — the
- * tenancy guard allows exactly two files to read this table, and it walks
- * nowhere towards a watcher.
- *
- * Bounded, and by a number that is a ceiling on the platform's tracked estate
- * rather than on this feature. When the estate outgrows it, the answer is an
- * index on "has brand names", not a bigger number.
- */
-export async function listBrandedWebsites(
-  ctx: QueryCtx | MutationCtx,
-  limit: number,
-): Promise<Array<{ _id: Id<"websites">; host: string; brandNames: NonNullable<Doc<"websites">["brandNames"]> }>> {
-  // Through the flag's index: only sites with names are read at all, so the
-  // ceiling is on branded sites rather than on every site ever added.
-  const rows = await ctx.db
-    .query("websites")
-    .withIndex("by_has_brand_names", (q) => q.eq("hasBrandNames", true))
-    .take(limit);
-  return rows
-    .filter((row): row is Doc<"websites"> & { brandNames: NonNullable<Doc<"websites">["brandNames"]> } =>
-      Array.isArray(row.brandNames) && row.brandNames.length > 0)
-    .map((row) => ({ _id: row._id, host: row.host, brandNames: row.brandNames }));
-}
-
-
-/**
- * Branded websites, for an action that has to match an AI answer against them.
- *
- * A thin wrapper over `listBrandedWebsites` because the matching now happens in
- * an action — it has to, so the stance Decision can be asked about each hit
- * before anything is written. The answer text therefore never reaches a
- * mutation at all, which is a stronger version of the rule that none of it is
- * stored.
- */
-export const listBrandedWebsitesInternal = internalQuery({
-  args: { limit: v.number() },
-  returns: v.array(v.object({
-    websiteId: v.id("websites"),
-    host: v.string(),
-    brandNames: v.array(v.object({
-      name: v.string(),
-      isPrimary: v.boolean(),
-      kind: v.optional(v.union(v.literal("NAME"), v.literal("MISSPELLING"))),
-    })),
-  })),
-  handler: async (ctx, args) => {
-    const rows = await listBrandedWebsites(ctx, args.limit);
-    return rows.map((row) => ({ websiteId: row._id, host: row.host, brandNames: row.brandNames }));
-  },
-});
-
-
 /** Host to website id, for an action that must resolve before it judges. */
 export const resolveWebsiteIdsByHostInternal = internalQuery({
   args: { hosts: v.array(v.string()) },
@@ -898,33 +894,3 @@ export const resolveWebsiteIdsByHostInternal = internalQuery({
     return [...found.entries()].map(([host, websiteId]) => ({ host, websiteId }));
   },
 });
-
-/**
- * Writing down which websites have brand names, for the index the answer
- * parser now reads. Idempotent: a row whose flag already says the truth is
- * left alone.
- *
- * Here rather than beside the other backfills because it reads the `websites`
- * table, and the tenancy guard allows exactly two files to — this one owns the
- * records. It walks every host and names no watcher.
- */
-export async function backfillBrandedFlag(
-  ctx: MutationCtx,
-  cursor: string | null,
-  batchSize: number,
-): Promise<{ cursor: string | null; isDone: boolean; processed: number; updated: number }> {
-  const page = await ctx.db.query("websites").paginate({ numItems: batchSize, cursor });
-  let updated = 0;
-  for (const website of page.page) {
-    const branded = (website.brandNames?.length ?? 0) > 0;
-    if (website.hasBrandNames === branded) continue;
-    await ctx.db.patch(website._id, { hasBrandNames: branded });
-    updated += 1;
-  }
-  return {
-    cursor: page.isDone ? null : page.continueCursor,
-    isDone: page.isDone,
-    processed: page.page.length,
-    updated,
-  };
-}

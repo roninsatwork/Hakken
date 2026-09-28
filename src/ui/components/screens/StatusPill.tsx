@@ -24,7 +24,8 @@ export function StatusPill({ tone, children, size = "sm", icon, className }: Sta
   return (
     <span
       className={cn(
-        "inline-flex w-fit items-center gap-1 rounded-full border font-semibold",
+        // A pill is a word or two, never wrapped a word to a line in a narrow column.
+        "inline-flex w-fit items-center gap-1 whitespace-nowrap rounded-full border font-semibold",
         size === "sm" ? "px-2 py-0.5 text-[10px]" : "px-2.5 py-1 text-[11px]",
         STATUS_TONE_CLASSES[tone],
         className,

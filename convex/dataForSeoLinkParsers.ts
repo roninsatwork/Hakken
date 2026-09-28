@@ -39,6 +39,12 @@ function firstResult(result: unknown): { items: Unknown[]; total: number | undef
   };
 }
 
+/** How many rows a list's answer brought, and its total: what a page says of the whole list. */
+export function listAnswerFacts(result: unknown): { items: number; total: number | undefined } {
+  const { items, total } = firstResult(result);
+  return { items: items.length, total };
+}
+
 /** `2019-11-15 12:57:46 +00:00` as `2019-11-15`; anything else as undefined. */
 export function dayOf(value: unknown): string | undefined {
   const text = asString(value);

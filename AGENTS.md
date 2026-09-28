@@ -303,6 +303,9 @@ npm run convex:dev
   Read them only through `convex/holdLists.ts`, by the company's hold, never
   by website, search or question; buying stays shared.
   `convex/websiteTenancyGuard.test.ts` fails a read that goes round it.
+  What the answers to a list said is counted as they are filed, per list
+  (`convex/siteListAi.ts`): a Sites screen reads the list's rows, never a row
+  per question and engine (`docs/plans/active/sites-ai-list-summaries-plan.md`).
 - Mutations that manage users must prevent privilege escalation. Admins must not create, edit, or delete super-admin privileges.
 - Resolve AI model choices from stored configuration instead of hardcoding model literals in runtime paths.
 - Never hardcode colours in dashboard UI. No raw Tailwind palette classes

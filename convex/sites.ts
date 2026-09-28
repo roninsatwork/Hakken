@@ -3,18 +3,11 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
 import { companyHolds, findMySite, listHold, myRivals, placeName, type HoldSummary } from "./siteAccess";
-import {
-  citedPagesOf,
-  enginesNamedIn,
-  latestFigures,
-  latestListAi,
-  newestAnswerEngines,
-  newestAnswers,
-  QUESTIONS_FOR_CITED_PAGES,
-} from "./siteFigures";
-import { holdQuestions, holdSearches } from "./holdLists";
+import { citedPagesIn, coverageOf, coverageValidator, enginesNamingIn, latestBands, latestFigures, latestListAi, linkingWebsitesOf, searchTotalOf } from "./siteFigures";
+import { holdAiSummary, holdQuestions, holdSearches } from "./holdLists";
 import type { EngineDay } from "./utils/siteShapes";
 import { isTrackedHold } from "./utils/websitePairing";
+import { MAX_DISCOVERED, pickSuggestions } from "./siteCompetitors";
 import { loadSite, MAX_LIST } from "./websiteSiteRows";
 
 /**
@@ -34,9 +27,6 @@ const MOVES_COUNTED = 100;
 /** Days offered to compare against: a year and a bit of checks. */
 const CHECK_DAYS = 400;
 
-/** Suggestions counted for the menu, at most. */
-const COUNT_CEILING = 500;
-
 type Reader = { db: QueryCtx["db"] };
 
 /** Engines that named the site, of the engines asked, on its newest day of answers. */
@@ -48,14 +38,30 @@ function enginesNamed(ai: EngineDay[] | undefined): { named: number; asked: numb
   };
 }
 
-/** When the company's collection last filed anything for this website. */
+/** The searches held, for a site whose list holds only part of what it ranks for; null for a whole one. */
+function heldOnlyOf(latest: Parameters<typeof coverageOf>[0]): number | null {
+  const coverage = coverageOf(latest);
+  return coverage.whole ? null : coverage.searches.held;
+}
+
+/** A website's newest lines of the company's collection read to find one whose request came back. */
+const LINES_READ = 25;
+
+/**
+ * When the company's collection last brought something back for this website:
+ * the newest of its requests that came back with data. A line is written when
+ * a request is planned, so it moved on for a run still going, or one whose
+ * every request failed (docs/plans/active/sites-audit-fixes-plan.md, 2.6).
+ */
 async function lastCollectedAt(ctx: Reader, companyId: Id<"companies">, websiteId: Id<"websites">) {
-  const line = await ctx.db
+  const lines = await ctx.db
     .query("seoCycleLines")
     .withIndex("by_company_website", (q) => q.eq("companyId", companyId).eq("websiteId", websiteId))
     .order("desc")
-    .first();
-  return line?.createdAt ?? null;
+    .take(LINES_READ);
+  const pulls = await Promise.all(lines.map((line) => ctx.db.get(line.pullId)));
+  const back = pulls.flatMap((pull) => (pull?.status === "READY" && pull.completedAt !== undefined ? [pull.completedAt] : []));
+  return back.length > 0 ? Math.max(...back) : null;
 }
 
 async function openMoves(ctx: Reader, hold: Doc<"companyWebsites">) {
@@ -90,6 +96,8 @@ export const listMySites = tenantQuery({
     estimatedTraffic: numberOrNull,
     rankedUp: numberOrNull,
     rankedDown: numberOrNull,
+    /** The searches held, for a list held in part: its moves are among those (§4.C). Null for a whole list. */
+    movesAmongHeld: numberOrNull,
     toDo: v.number(),
     toDoCapped: v.boolean(),
     lastCheckedAt: numberOrNull,
@@ -101,13 +109,13 @@ export const listMySites = tenantQuery({
     const companyId = ctx.companyId;
     if (!companyId) return [];
     const holds = await companyHolds(ctx, companyId);
-    // Each owned site's newest answers, read once however many competitors
+    // Each owned site's list summary, read once however many competitors
     // are measured on its questions — this company's own questions only.
-    const answersOf = new Map<string, ReturnType<typeof newestAnswers>>();
-    const answersFor = (holdId: Id<"companyWebsites">, place: number) => {
+    const summaries = new Map<string, ReturnType<typeof holdAiSummary>>();
+    const summaryFor = (holdId: Id<"companyWebsites">, place: number) => {
       const key = `${holdId}|${place}`;
-      const held = answersOf.get(key) ?? newestAnswers(ctx, holdId, place);
-      answersOf.set(key, held);
+      const held = summaries.get(key) ?? holdAiSummary(ctx, holdId, place);
+      summaries.set(key, held);
       return held;
     };
     return await Promise.all(holds.map(async ({ hold, website, summary }) => {
@@ -122,12 +130,10 @@ export const listMySites = tenantQuery({
         lastCollectedAt(ctx, companyId, website._id),
         openMoves(ctx, hold),
         isAsker ? latestListAi(ctx, holdId, place, website._id) : Promise.resolve(null),
-        !isAsker && holdId ? answersFor(holdId, place).then((answers) => enginesNamedIn(answers, website._id)) : Promise.resolve(null),
+        !isAsker && holdId ? summaryFor(holdId, place).then((list) => enginesNamingIn(list, website._id)) : Promise.resolve(null),
       ]);
       const ai = isAsker ? enginesNamed(ownAi?.ai) : watchedAi;
-      // DataForSEO's bands over everything the site ranks for, where read out
-      // (Phase 2); the stored keywords' own bands before that.
-      const bands = latest.metrics?.allBands ?? latest.ranking?.bands;
+      const bands = latestBands(latest);
       return {
         ...summary,
         checked: latest.lastDay !== null,
@@ -135,10 +141,12 @@ export const listMySites = tenantQuery({
         aiAsked: ai?.asked ?? null,
         top3: bands ? bands.p01_03 : null,
         pageOne: bands ? bands.p01_03 + bands.p04_10 : null,
-        keywords: latest.metrics?.rankedKeywordsTotal ?? latest.ranking?.keywords ?? null,
+        keywords: searchTotalOf(latest),
         estimatedTraffic: latest.metrics?.estimatedTraffic ?? null,
         rankedUp: latest.ranking?.rankedUp ?? null,
         rankedDown: latest.ranking?.rankedDown ?? null,
+        // A list held in part: its moves are among the searches held, and the list says so (§4.C).
+        movesAmongHeld: heldOnlyOf(latest),
         ...moves,
         lastCheckedAt: collectedAt,
         lastCheckedDay: latest.lastDay,
@@ -179,14 +187,23 @@ export const getMySite = tenantQuery({
       brokenBacklinks: numberOrNull,
       aiNamed: numberOrNull,
       aiAsked: numberOrNull,
+      /** The searches on the list switched on: the menu's count beside Your searches. */
       trackedSearches: v.number(),
-      /** Whether any question the site is measured on in AI answers is switched on: none means AI answers is not set up. */
+      /** Searches on the list, and every one of them paused: still set up, so their pages keep their history and say so. */
+      searchesPaused: v.boolean(),
+      /** Whether the list holds any question the site is measured on in AI answers, on or paused: none means AI answers is not set up. */
       questionsSetUp: v.boolean(),
+      /** Questions on the list, and every one of them paused (docs/plans/active/sites-audit-fixes-plan.md, 4.2). */
+      questionsPaused: v.boolean(),
       rankedUp: numberOrNull,
       rankedDown: numberOrNull,
       suggestions: v.number(),
       citedPages: v.number(),
+      /** DataForSEO's count of the searches it shows adverts on; Paid keywords holds only the everyday answer's. */
+      paidKeywords: numberOrNull,
     }),
+    /** What the keyword list holds of the site against the supplier's totals: every screen's "X of Y". */
+    coverage: coverageValidator,
   })),
   handler: async (ctx, args) => {
     const site = await findMySite(ctx, args.siteId);
@@ -197,7 +214,7 @@ export const getMySite = tenantQuery({
     // The list the site is measured on — this company's own (see `listHold`).
     const holdId = listHold(site);
     const isAsker = holdId === site.hold._id;
-    const [holds, rivals, latest, collectedAt, days, searches, suggestions, cited, ownAi, watchedAi, questions] = await Promise.all([
+    const [holds, rivals, latest, collectedAt, days, searches, suggestions, summary, ownAi, anyQuestion, onQuestion] = await Promise.all([
       companyHolds(ctx, companyId),
       myRivals(ctx, site),
       latestFigures(ctx, websiteId, site.place),
@@ -211,10 +228,13 @@ export const getMySite = tenantQuery({
       ctx.db
         .query("discoveredCompetitors")
         .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", args.siteId))
-        .take(COUNT_CEILING),
-      citedPagesOf(ctx, websiteId, holdId, site.place, QUESTIONS_FOR_CITED_PAGES),
+        .take(MAX_DISCOVERED),
+      // The list's AI summary: the menu's count of cited pages, and a
+      // competitor's engines naming it (docs/plans/active/sites-ai-list-summaries-plan.md).
+      holdAiSummary(ctx, holdId, site.place),
       isAsker ? latestListAi(ctx, holdId, site.place, websiteId) : Promise.resolve(null),
-      isAsker || !holdId ? Promise.resolve(null) : newestAnswerEngines(ctx, holdId, websiteId, site.place),
+      // Paused still counts as set up (4.2): a paused list keeps its history.
+      holdQuestions(ctx, holdId, 1),
       holdQuestions(ctx, holdId, 1, { activeOnly: true }),
     ]);
 
@@ -224,9 +244,13 @@ export const getMySite = tenantQuery({
       relationship: isTrackedHold(site.hold) ? "TRACKED" : "OWNED",
       ofHost: site.pairHost,
     };
-    const watched = new Set([site.website.host, ...holds.map((entry) => entry.website.host)]);
-    const ai = isAsker ? enginesNamed(ownAi?.ai) : watchedAi;
-    const bands = latest.metrics?.allBands ?? latest.ranking?.bands;
+    const suggested = pickSuggestions(summary?.othersNamed ?? [], suggestions, {
+      websiteIds: new Set([websiteId, ...holds.map((entry) => entry.website._id)]),
+      hosts: new Set([site.website.host, ...holds.map((entry) => entry.website.host)]),
+    });
+    const ai = isAsker ? enginesNamed(ownAi?.ai) : enginesNamingIn(summary, websiteId);
+    const searchesOn = searches.filter((row) => row.isActive).length;
+    const bands = latestBands(latest);
     return {
       ...me,
       websiteId,
@@ -242,22 +266,26 @@ export const getMySite = tenantQuery({
         // DataForSEO's own count of what the site ranks for; `keywordsStored`
         // is how many of them the Keywords page can list, which a pull capped
         // at its first few hundred leaves smaller.
-        keywords: latest.metrics?.rankedKeywordsTotal ?? latest.ranking?.keywords ?? null,
+        keywords: searchTotalOf(latest),
         keywordsStored: latest.ranking?.keywords ?? null,
         pages: latest.ranking?.pages ?? null,
         top3: bands ? bands.p01_03 : null,
-        referringDomains: latest.links?.referringDomains ?? null,
+        referringDomains: linkingWebsitesOf(latest.links),
         brokenBacklinks: latest.links?.brokenBacklinks ?? null,
         aiNamed: ai?.named ?? null,
         aiAsked: ai?.asked ?? null,
-        trackedSearches: searches.filter((row) => row.isActive).length,
-        questionsSetUp: questions.length > 0,
+        trackedSearches: searchesOn,
+        searchesPaused: searches.length > 0 && searchesOn === 0,
+        questionsSetUp: anyQuestion.length > 0,
+        questionsPaused: anyQuestion.length > 0 && onQuestion.length === 0,
         rankedUp: latest.ranking?.rankedUp ?? null,
         rankedDown: latest.ranking?.rankedDown ?? null,
-        // What the Suggested page shows: not decided, and not already held.
-        suggestions: suggestions.filter((row) => !row.decidedAt && !watched.has(row.host)).length,
-        citedPages: cited.length,
+        // What the Suggested page lists, by its own rule (`pickSuggestions`).
+        suggestions: suggested.named.length + suggested.found.length,
+        citedPages: citedPagesIn(summary, websiteId).pages,
+        paidKeywords: latest.metrics?.paidKeywords ?? null,
       },
+      coverage: coverageOf(latest),
     };
   },
 });

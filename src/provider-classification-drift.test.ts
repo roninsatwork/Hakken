@@ -65,6 +65,12 @@ describe('Provider Classification Drift', () => {
       // The Sites plan lists the engines whose answers the client's AI pages
       // show. Naming them is the subject, as in the citations plan above.
       'docs/plans/active/user-sites-plan.md',
+      // The fan-out plan counts which engines ran the searches it groups into
+      // angles. Naming them is the subject, as in the two plans above.
+      'docs/plans/active/fan-out-angles-plan.md',
+      // A prompt's fan-out queries plan prices each assistant's answer, which
+      // is why a company would untick one: naming them is the subject.
+      'docs/plans/active/prompt-fan-out-queries-plan.md',
       'src/provider-classification-drift.test.ts',
     ]);
 

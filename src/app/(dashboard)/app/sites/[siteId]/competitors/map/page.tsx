@@ -66,7 +66,7 @@ export default function SiteMarketMapPage() {
   // websites only found have nothing more than their row.
   const rivalHref = (row: { role: string; host: string }): string | null => {
     if (row.role !== "RIVAL") return null;
-    const hold = site?.holds.find((entry) => entry.host === row.host);
+    const hold = site?.rivals.find((entry) => entry.host === row.host);
     return hold ? recordHref({ kind: "rival", rivalId: hold.siteId }) : null;
   };
 

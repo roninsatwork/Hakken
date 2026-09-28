@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
 import { listHold, myRivals, requireMySite } from "./siteAccess";
-import { aiTotals, dayBefore, latestFigures, overlayListAi, pointValidator, seriesFor, stepValidator } from "./siteFigures";
+import { aiTotals, checkStarts, dayBefore, latestBands, latestFigures, linkingWebsitesOf, overlayListAi, pointValidator, searchTotalOf, seriesFor, stepValidator } from "./siteFigures";
 
 /**
  * The figures behind the Sites charts: a site over time, its rivals beside it,
@@ -27,7 +27,7 @@ const lineValidator = v.object({
   host: v.string(),
   isYou: v.boolean(),
   points: v.array(pointValidator),
-  /** The last day before the range, for "what changed since". Null when there is none. */
+  /** The figures before the range, each from the newest earlier day with it, for "what changed since". Null when there is none. */
   before: v.union(pointValidator, v.null()),
 });
 
@@ -48,7 +48,8 @@ export const siteSeries = tenantQuery({
     // website's is how often those answers named it (D17).
     const holdId = listHold(site);
     const pointsFor = async (websiteId: typeof site.website._id) => {
-      const points = await seriesFor(ctx, websiteId, site.place, args.from, args.to, args.step);
+      const starts = await checkStarts(ctx, websiteId, site.place);
+      const points = await seriesFor(ctx, websiteId, site.place, args.from, args.to, args.step, starts);
       return await overlayListAi(ctx, points, holdId, websiteId, site.place, args.from, args.to, args.step);
     };
     const lines = [{
@@ -61,8 +62,19 @@ export const siteSeries = tenantQuery({
     if (!args.withRivals) return lines;
 
     // Each rival from the place this site is read from: it is collected there,
-    // on this site's day, so the lines compare like with like.
-    const rivals = (await myRivals(ctx, site)).slice(0, MAX_OVERLAY_RIVALS);
+    // on this site's day, so the lines compare like with like. A group of
+    // more than five draws the five with the most traffic at their newest
+    // check, and the chart says so (4.11).
+    const group = await myRivals(ctx, site);
+    const rivals = group.length <= MAX_OVERLAY_RIVALS
+      ? group
+      : (await Promise.all(group.map(async (rival) => ({
+        rival,
+        traffic: (await latestFigures(ctx, rival.website._id, site.place)).metrics?.estimatedTraffic ?? -1,
+      }))))
+        .sort((left, right) => right.traffic - left.traffic || left.rival.website.host.localeCompare(right.rival.website.host))
+        .slice(0, MAX_OVERLAY_RIVALS)
+        .map((entry) => entry.rival);
     for (const rival of rivals) {
       lines.push({
         websiteId: rival.website._id,
@@ -85,6 +97,13 @@ export const siteCalendar = tenantQuery({
     rankedDown: v.number(),
     rankedNew: v.number(),
     rankedLost: v.number(),
+    /** Searches that left a list held in part: never lost (sites-data-completeness-plan.md, §4.C). */
+    rankedLeft: v.number(),
+    /** The site's first ranking check: its searches are counted, not called new (`firstCheckDay`). */
+    firstCheck: v.boolean(),
+    /** The first day the site's whole keyword list was held: counted, not called new either (`checkStarts`). */
+    firstList: v.boolean(),
+    keywords: v.union(v.number(), v.null()),
     aiNamed: v.number(),
     aiAsked: v.number(),
     referringDomainsChange: v.union(v.number(), v.null()),
@@ -92,15 +111,12 @@ export const siteCalendar = tenantQuery({
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
+    const starts = await checkStarts(ctx, site.website._id, site.place);
     const first = `${args.month}-01`;
     const last = `${args.month}-31`;
-    // The day before the month too, so the 1st has something to change from.
-    const before = await ctx.db
-      .query("siteDaySummaries")
-      .withIndex("by_site_day", (q) =>
-        q.eq("websiteId", site.website._id).eq("locationCode", site.place).lt("day", first))
-      .order("desc")
-      .first();
+    // The figures before the month too, so the 1st has something to change
+    // from — each from the newest earlier day that has it (4.5).
+    const before = await dayBefore(ctx, site.website._id, site.place, first);
     const rows = await ctx.db
       .query("siteDaySummaries")
       .withIndex("by_site_day", (q) =>
@@ -129,18 +145,27 @@ export const siteCalendar = tenantQuery({
       const row = rowOf.get(day) ?? { day };
       const ai = aiTotals(aiOf.get(day) ?? null);
       const figures: Partial<Doc<"siteDaySummaries">> = row;
-      const referringDomainsChange = figures.referringDomains !== undefined && referringDomains !== undefined
-        ? figures.referringDomains - referringDomains
+      // Linking websites gained or lost, as main websites (§4.D2).
+      const linking = linkingWebsitesOf(figures);
+      const referringDomainsChange = linking !== null && referringDomains !== null && referringDomains !== undefined
+        ? linking - referringDomains
         : null;
       const backlinksChange = figures.backlinks !== undefined && backlinks !== undefined ? figures.backlinks - backlinks : null;
-      if (figures.referringDomains !== undefined) referringDomains = figures.referringDomains;
+      if (linking !== null) referringDomains = linking;
       if (figures.backlinks !== undefined) backlinks = figures.backlinks;
+      const isFirst = day === starts.firstCheck;
+      const isFirstList = day === starts.firstList;
+      const start = isFirst || isFirstList;
       return {
         day,
-        rankedUp: figures.rankedUp ?? 0,
-        rankedDown: figures.rankedDown ?? 0,
-        rankedNew: figures.rankedNew ?? 0,
-        rankedLost: figures.rankedLost ?? 0,
+        rankedUp: start ? 0 : figures.rankedUp ?? 0,
+        rankedDown: start ? 0 : figures.rankedDown ?? 0,
+        rankedNew: start ? 0 : figures.rankedNew ?? 0,
+        rankedLost: start ? 0 : figures.rankedLost ?? 0,
+        rankedLeft: start ? 0 : figures.rankedLeft ?? 0,
+        firstCheck: isFirst,
+        firstList: isFirstList,
+        keywords: figures.keywords ?? null,
         aiNamed: ai.named,
         aiAsked: ai.asked,
         referringDomainsChange,
@@ -180,11 +205,11 @@ export const siteAndRivals = tenantQuery({
         host: website.displayHost,
         isYou,
         day: latest.lastDay,
-        keywords: latest.metrics?.rankedKeywordsTotal ?? latest.ranking?.keywords ?? null,
-        top3: latest.ranking?.bands?.p01_03 ?? null,
+        keywords: searchTotalOf(latest),
+        top3: latestBands(latest)?.p01_03 ?? null,
         estimatedTraffic: latest.metrics?.estimatedTraffic ?? null,
         backlinks: latest.links?.backlinks ?? null,
-        referringDomains: latest.links?.referringDomains ?? null,
+        referringDomains: linkingWebsitesOf(latest.links),
         domainRank: latest.links?.domainRank ?? null,
       };
     }));

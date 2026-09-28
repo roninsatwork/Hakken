@@ -35,18 +35,23 @@ async function seedWorld(t: Harness) {
     const acme = await ctx.db.insert("companies", { name: "Acme Ltd", createdAt: Date.now() });
     const ours = await ctx.db.insert("websites", {
       host: "ronins-test.co.uk", displayHost: "ronins-test.co.uk", firstSeenAt: Date.now(),
-      hasBrandNames: true,
-      brandNames: [{ name: "Ronins Agency", isPrimary: true, kind: "NAME" }, { name: "Ronnins", isPrimary: false, kind: "MISSPELLING" }],
     });
     const rival = await ctx.db.insert("websites", {
       host: "rival.com", displayHost: "rival.com", firstSeenAt: Date.now(),
-      hasBrandNames: true,
-      brandNames: [{ name: "Rival Plumbing", isPrimary: true, kind: "NAME" }],
     });
     const hold = await ctx.db.insert("companyWebsites", {
       companyId: ronins, websiteId: ours, createdAt: Date.now(), locationCode: 1006925,
     });
-    await ctx.db.insert("companyWebsites", { companyId: acme, websiteId: rival, createdAt: Date.now() });
+    const acmeHold = await ctx.db.insert("companyWebsites", { companyId: acme, websiteId: rival, createdAt: Date.now() });
+    // The names each company knows its website by (holdProfiles.ts).
+    await ctx.db.insert("holdProfiles", {
+      companyWebsiteId: hold, companyId: ronins, websiteId: ours, hasBrandNames: true, updatedAt: Date.now(),
+      brandNames: [{ name: "Ronins Agency", isPrimary: true, kind: "NAME" }, { name: "Ronnins", isPrimary: false, kind: "MISSPELLING" }],
+    });
+    await ctx.db.insert("holdProfiles", {
+      companyWebsiteId: acmeHold, companyId: acme, websiteId: rival, hasBrandNames: true, updatedAt: Date.now(),
+      brandNames: [{ name: "Rival Plumbing", isPrimary: true, kind: "NAME" }],
+    });
     return { ronins, acme, ours, rival, hold };
   });
 }

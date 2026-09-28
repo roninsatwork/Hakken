@@ -2,11 +2,12 @@ import { v } from "convex/values";
 
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
-import { isTrackedHold } from "./utils/websitePairing";
+import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
 import { findOrCreateWebsite, requireHost } from "./websites";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { requestGroupGapRebuilds } from "./siteRankings";
+import { requestListRecount } from "./siteListAi";
 
 /**
  * A company's choice of which websites it owns and which it watches.
@@ -100,23 +101,14 @@ export async function trackWebsiteCore(
   });
 
   if (args.against) {
-    const againstWebsiteId = args.against.websiteId;
-    const edge = await ctx.db
-      .query("websiteRivals")
-      .withIndex("by_website_rival", (q) =>
-        q.eq("websiteId", againstWebsiteId).eq("rivalWebsiteId", websiteId))
-      .first();
-    if (!edge) {
-      await ctx.db.insert("websiteRivals", {
-        websiteId: againstWebsiteId,
-        rivalWebsiteId: websiteId,
-        source: args.via === "discovered" ? "DISCOVERED" : "ASSERTED",
-        createdAt: now,
-      });
-    }
+    // No shared record of who competes with whom is written: which rivals a
+    // company watches is its own (docs/plans/active/
+    // company-level-website-facts-plan.md, CL5).
     // A new rival changes what every site in the group is missing, on the
-    // client's Sites screens — its own gap included.
+    // client's Sites screens — its own gap included — and is counted in the
+    // answers to the owned site's questions.
     await requestGroupGapRebuilds(ctx, args.against);
+    await requestListRecount(ctx, args.against._id);
   }
 
   await ctx.db.insert("auditLogs", {
@@ -230,6 +222,7 @@ export const setTrackedPairing = superAdminMutation({
     if (against && against.websiteId === hold.websiteId) {
       throw appError("INVALID_INPUT", "A website cannot compete with itself.");
     }
+    const before = await pairedOwnedHold(ctx, hold);
 
     // Pairing takes the pair's day and place, so any schedule or place this
     // site had of its own stops meaning anything. Cleared rather than kept:
@@ -247,6 +240,8 @@ export const setTrackedPairing = superAdminMutation({
         : {}),
       updatedAt: Date.now(),
     });
+    // It leaves one owned site's group and joins another's: both lists count again.
+    for (const owner of [before, against]) if (owner) await requestListRecount(ctx, owner._id);
 
     await ctx.db.insert("auditLogs", {
       actorId: ctx.userId,

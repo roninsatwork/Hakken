@@ -32,12 +32,24 @@ function useSeries(from: string, to: string, step: "day" | "week" | "month", wit
   return useQuery(api.siteCharts.siteSeries, skip ? "skip" : { siteId, from, to, step, withRivals });
 }
 
-/** A measure's value at a point: DataForSEO's own keyword count where it has one. */
+/**
+ * The measures a site can be set beside its competitors on: each counted the
+ * same way for every site. Ranking pages are the pages of the searches a
+ * list holds, and a competitor's list holds part of it
+ * (sites-data-completeness-plan.md, §8.7).
+ */
+const COMPARABLE: Measure[] = MEASURES.filter((measure) => measure !== "pages");
+
+/**
+ * A measure's value at a point. Keywords are the supplier's count of every
+ * search the site ranks for, and nothing else: the searches a list holds
+ * would put a part of one site beside the whole of another.
+ */
 function valueOf(point: Point | null | undefined, measure: Measure): number | null {
   if (!point) return null;
   switch (measure) {
     case "keywords":
-      return point.rankedKeywordsTotal ?? point.keywords ?? null;
+      return point.rankedKeywordsTotal ?? null;
     case "aiNamed":
       return point.ai.length === 0 ? null : point.ai.reduce((sum, engine) => sum + engine.named, 0);
     default:
@@ -75,13 +87,19 @@ export default function SiteOverviewPage() {
     aiNamed: false,
     crawledPages: false,
   });
-  const [compared, setCompared] = useState<Measure>("estimatedTraffic");
+  const [chosenMeasure, setCompared] = useState<Measure>("estimatedTraffic");
+  const compared: Measure = tab === "competitors" && !COMPARABLE.includes(chosenMeasure) ? "estimatedTraffic" : chosenMeasure;
 
   const own = useSeries(range.from, range.to, range.step, false);
   const everyone = useSeries(range.from, range.to, range.step, true, tab !== "competitors");
   const twoYears = useSeries(shiftDay(range.to, -729), range.to, "month", false, tab !== "years");
 
   const exportBase = `${site?.host ?? "site"}-${range.from}-to-${range.to}`;
+  // A group of more than five draws the five with the most traffic, and says so (4.11).
+  const drawn = (everyone ?? []).filter((line) => !line.isYou).length;
+  const competitorsHint = everyone !== undefined && (site?.rivals.length ?? 0) > drawn
+    ? t("competitorsHintSome", { shown: drawn, total: site?.rivals.length ?? 0 })
+    : t("competitorsHint");
 
   if (own === undefined) {
     return (
@@ -103,9 +121,11 @@ export default function SiteOverviewPage() {
     label: formatShortDay(point.day),
     ...Object.fromEntries(MEASURES.map((measure) => [measure, valueOf(point, measure)])),
   }));
-  // DataForSEO's bands over everything the site ranks for, where read out.
+  // DataForSEO's bands over everything the site ranks for, where read out;
+  // the list's own only for a list that is the whole site.
+  const listWhole = site?.coverage?.whole ?? false;
   const bandRows = points.flatMap((point) => {
-    const bands = point.allBands ?? point.bands;
+    const bands = point.allBands ?? (listWhole ? point.bands : undefined);
     return bands ? [{ label: formatShortDay(point.day), ...bands }] : [];
   });
   const chosen = MEASURES.filter((measure) => shown[measure]);
@@ -120,7 +140,7 @@ export default function SiteOverviewPage() {
       />
       {tab !== "metrics" ? (
         <Select chip={{ label: `${t("measure")}: ${tm(compared)}` }} aria-label={t("measure")} value={compared} onChange={(value) => setCompared(value as Measure)}>
-          {MEASURES.map((measure) => <option key={measure} value={measure}>{tm(measure)}</option>)}
+          {(tab === "competitors" ? COMPARABLE : MEASURES).map((measure) => <option key={measure} value={measure}>{tm(measure)}</option>)}
         </Select>
       ) : null}
     </div>
@@ -202,7 +222,7 @@ export default function SiteOverviewPage() {
       <div id="performance">
         <SiteChartCard
           title={t("performance")}
-          hint={tab === "metrics" ? t("performanceHint") : tab === "competitors" ? t("competitorsHint") : t("yearsHint")}
+          hint={tab === "metrics" ? t("performanceHint") : tab === "competitors" ? competitorsHint : t("yearsHint")}
           exportName={`${exportBase}-performance-${tab}`}
           csv={csv}
           enoughData={enough}

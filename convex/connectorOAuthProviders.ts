@@ -70,8 +70,41 @@ const GOOGLE_PROVIDER: ConnectorOAuthProviderConfig = {
   },
 };
 
+/**
+ * Google again, for Search Console (docs/plans/active/search-console-plan.md):
+ * a separate Google app with its own client pair and no fallback to the
+ * sign-in app's. Gmail's scopes are restricted and reviewed by Google before
+ * an app using them may be published; Search Console's read-only scope is
+ * not, and its app must be published — connections from an app left in
+ * testing die after seven days.
+ */
+export const SEARCH_CONSOLE_PROVIDER = "google-search-console";
+
+const GOOGLE_SEARCH_CONSOLE_PROVIDER: ConnectorOAuthProviderConfig = {
+  provider: SEARCH_CONSOLE_PROVIDER,
+  authorizationEndpoint: GOOGLE_PROVIDER.authorizationEndpoint,
+  tokenEndpoint: GOOGLE_PROVIDER.tokenEndpoint,
+  revocationEndpoint: GOOGLE_PROVIDER.revocationEndpoint,
+  clientIdEnv: "SEARCH_CONSOLE_GOOGLE_CLIENT_ID",
+  clientSecretEnv: "SEARCH_CONSOLE_GOOGLE_CLIENT_SECRET",
+  // Offline and consent as for Gmail; and the account picker every time, since
+  // the person connecting often has several Google accounts and the site's
+  // Search Console may be in any of them.
+  extraAuthorizationParams: { access_type: "offline", prompt: "select_account consent" },
+  resolveAccountEmail: async (accessToken: string) => {
+    // Google's own account answer, from the `openid email` scopes asked with Search Console's.
+    const response = await fetch("https://openidconnect.googleapis.com/v1/userinfo", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!response.ok) return null;
+    const account = (await response.json()) as { email?: string };
+    return account.email ?? null;
+  },
+};
+
 const PROVIDERS: Record<string, ConnectorOAuthProviderConfig> = {
   google: GOOGLE_PROVIDER,
+  [SEARCH_CONSOLE_PROVIDER]: GOOGLE_SEARCH_CONSOLE_PROVIDER,
 };
 
 export function getConnectorOAuthProvider(provider: string): ConnectorOAuthProviderConfig | null {

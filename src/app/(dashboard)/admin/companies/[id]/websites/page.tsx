@@ -12,10 +12,10 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader, PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { StatusPill } from "@/src/ui/components/screens/StatusPill";
-import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
-import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
+import { TABLE_PAGE_SIZE, matchesSearchTerm } from "@/src/ui/components/screens/pagination";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
-import { formatDate, formatDateTime } from "@/src/lib/dates";
+import { formatDateTime } from "@/src/lib/dates";
+import { sectionHref } from "./_components/websitesSection";
 
 const loadDialogs = () => import("./CompanyWebsiteDialogs");
 const AddCompanyWebsiteDialog = lazy(() =>
@@ -41,11 +41,18 @@ type Holding = "OWNED" | "TRACKED";
  * from this company" and never "delete". Deleting a website outright lives on
  * All Websites, worded so the two cannot be confused.
  *
+ * Its own sites come first, each followed by the competitors watched against
+ * it, then those watched on their own (docs/plans/active/
+ * websites-section-menu-plan.md): the list is read whole — no company holds
+ * more than a couple of hundred — so it can be grouped, and paged here.
+ * Opening a site opens its to-do list; opening a competitor, its rankings.
+ *
  * Super admin only for now, and shaped so the customer-facing version is a
  * second door onto the same functions rather than a rewrite.
  */
 export default function CompanyWebsitesPage() {
   const t = useTranslations("admin.companyWebsites");
+  const tSection = useTranslations("admin.websitesSection");
   const params = useParams();
   const router = useRouter();
   const companyId = params.id as Id<"companies">;
@@ -65,11 +72,17 @@ export default function CompanyWebsitesPage() {
   const [submitError, setSubmitError] = useState("");
   const [dialogsActivated, setDialogsActivated] = useState(false);
 
-  const websitesTable = useServerPagedTable(
-    api.websites.getCompanyWebsites,
-    { companyId },
-    TABLE_PAGE_SIZE,
-  );
+  const listed = useQuery(api.websites.listCompanyWebsiteRows, { companyId });
+  const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const matching = listed?.rows.filter((row) => matchesSearchTerm(searchTerm, [row.displayHost]));
+  const totalPages = Math.max(1, Math.ceil((matching?.length ?? 0) / TABLE_PAGE_SIZE));
+  const shown = matching?.slice((page - 1) * TABLE_PAGE_SIZE, page * TABLE_PAGE_SIZE);
+  /** Where a row opens: a company's own site on its to-do list, a competitor on its rankings. */
+  const openRow = (row: { _id: Id<"companyWebsites">; relationship?: "OWNED" | "TRACKED" }) => {
+    const relationship = row.relationship === "TRACKED" ? "TRACKED" as const : "OWNED" as const;
+    return sectionHref(companyId, relationship === "OWNED" ? "todo" : "rankings", { siteId: row._id, relationship });
+  };
 
   // Only asked for once the dialog is open: it feeds one select box.
   const ownedSites = useQuery(
@@ -111,7 +124,7 @@ export default function CompanyWebsitesPage() {
       setIsAddOpen(false);
       // Straight into it: adding the site is half the job and the next thing
       // anyone wants is what it is producing.
-      router.push(`/admin/companies/${companyId}/websites/site/${outcome.data}`);
+      router.push(openRow({ _id: outcome.data, relationship: holding }));
     } else {
       setSubmitError(outcome.message);
     }
@@ -142,7 +155,7 @@ export default function CompanyWebsitesPage() {
     <div className="flex w-full flex-col gap-6 pb-12">
       <PageHeader
         icon={<Globe className="h-6 w-6 text-brand" />}
-        title={t("title")}
+        title={tSection("pages.websites")}
         description={t("subtitle")}
         action={
           <PagePrimaryAction icon={<Plus className="h-4 w-4" />} onClick={handleOpenAdd}>
@@ -152,29 +165,36 @@ export default function CompanyWebsitesPage() {
       />
 
       <DataTable
-        rows={websitesTable.isLoading ? undefined : websitesTable.rows}
+        rows={shown}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[820px]"
-        onRowClick={(row) =>
-          router.push(`/admin/companies/${companyId}/websites/site/${row._id}`)
-        }
-        empty={{ icon: <Globe className="h-8 w-8 text-muted/30" />, label: t("empty") }}
+        minWidthClassName="min-w-[760px]"
+        onRowClick={(row) => router.push(openRow(row))}
+        search={{
+          value: searchTerm,
+          onChange: (value) => {
+            setSearchTerm(value);
+            setPage(1);
+          },
+          placeholder: t("searchPlaceholder"),
+        }}
+        empty={{ icon: <Globe className="h-8 w-8 text-muted/30" />, label: searchTerm ? t("emptySearch") : t("empty") }}
         footer={{
           mode: "paged",
-          page: websitesTable.page,
-          totalPages: websitesTable.totalPages,
-          totalCount: websitesTable.loadedCount,
+          page,
+          totalPages,
+          totalCount: matching?.length ?? 0,
           pageSize: TABLE_PAGE_SIZE,
-          isLoading: websitesTable.isBusy,
-          onPageChange: websitesTable.goToPage,
-          labels: { empty: t("empty") },
+          isLoading: listed === undefined,
+          onPageChange: setPage,
+          labels: { empty: searchTerm ? t("emptySearch") : t("empty") },
         }}
         columns={[
           {
             key: "website",
             header: t("websiteColumn"),
             cell: (row) => (
-              <span className="block text-[13px] font-medium leading-tight text-foreground">
+              // A competitor sits under the site it is compared with, set in.
+              <span className={`block text-[13px] leading-tight text-foreground ${row.relationship === "TRACKED" && row.againstHost ? "pl-5 font-normal" : "font-medium"}`}>
                 {row.displayHost}
               </span>
             ),
@@ -246,13 +266,6 @@ export default function CompanyWebsitesPage() {
                   {row.limits.backlinksOwn ? ` · ${t("ownLimit")}` : ""}
                 </span>
               </div>
-            ),
-          },
-          {
-            key: "added",
-            header: t("addedColumn"),
-            cell: (row) => (
-              <span className="text-[12px] text-secondary">{formatDate(row.createdAt)}</span>
             ),
           },
           {

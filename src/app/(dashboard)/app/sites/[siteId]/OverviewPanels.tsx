@@ -14,7 +14,7 @@ import {
 } from "@/src/ui/components/charts/chartPalette";
 import { RecordLinkCell } from "../_components/SiteCells";
 import { SiteFigure } from "../_components/SiteFigure";
-import { formatNumber, movement, movementClass } from "../_components/siteFormat";
+import { formatDollars, formatNumber, movement, movementClass } from "../_components/siteFormat";
 import { useSiteListHref, useSiteRecordHref } from "../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../_components/useSite";
 
@@ -27,11 +27,6 @@ type Extras = FunctionReturnType<typeof api.siteOverview.overviewExtras>;
  * guard), so this panel takes their order from the query.
  */
 const ASSISTANT_COLOURS = [CHART_SERIES_TEAL, CHART_SERIES_BLUE, CHART_SERIES_VIOLET, CHART_SERIES_ORANGE] as const;
-
-/** Dollars, whole. */
-function dollars(value: number | null | undefined): string {
-  return value === null || value === undefined ? "–" : `$${formatNumber(value)}`;
-}
 
 /** How far a figure moved since the day before the dates chosen, with an arrow that carries the meaning without the colour. */
 export function Change({ now, before }: { now: number | null | undefined; before: number | null | undefined }) {
@@ -135,7 +130,7 @@ export function OverviewPanels({ latest, before, extras }: { latest: Point | nul
             label={t("search.visits")}
             value={formatNumber(latest?.estimatedTraffic)}
             href={listHref("keywords/pages", { sort: "traffic" })}
-            detail={<Detail now={latest?.estimatedTraffic} before={before?.estimatedTraffic} extra={latest?.trafficValue !== undefined ? t("search.worth", { value: dollars(latest.trafficValue) }) : undefined} />}
+            detail={<Detail now={latest?.estimatedTraffic} before={before?.estimatedTraffic} extra={latest?.trafficValue !== undefined ? t("search.worth", { value: formatDollars(latest.trafficValue) }) : undefined} />}
           />
           <SiteFigure
             framed={false}
@@ -149,7 +144,7 @@ export function OverviewPanels({ latest, before, extras }: { latest: Point | nul
             label={t("search.paidVisits")}
             value={formatNumber(latest?.paidTraffic)}
             href={listHref("paid/keywords", { sort: "cost" })}
-            detail={<Detail now={latest?.paidTraffic} before={before?.paidTraffic} extra={t("search.cost", { value: latest?.paidTrafficCost ? dollars(latest.paidTrafficCost) : "–" })} />}
+            detail={<Detail now={latest?.paidTraffic} before={before?.paidTraffic} extra={t("search.cost", { value: latest?.paidTrafficCost ? formatDollars(latest.paidTrafficCost) : "–" })} />}
           />
         </div>
       </Panel>
@@ -177,7 +172,7 @@ export function OverviewPanels({ latest, before, extras }: { latest: Point | nul
             label={t("links.linkingWebsites")}
             value={formatNumber(latest?.referringDomains)}
             href={listHref("backlinks/domains")}
-            detail={<Detail now={latest?.referringDomains} before={before?.referringDomains} extra={latest?.referringMainDomains !== undefined ? t("links.mainWebsites", { count: formatNumber(latest.referringMainDomains) }) : undefined} />}
+            detail={<Detail now={latest?.referringDomains} before={before?.referringDomains} extra={latest?.linkingDomains !== undefined && latest.linkingDomains !== latest.referringDomains ? t("links.withSubdomains", { count: formatNumber(latest.linkingDomains) }) : undefined} />}
           />
         </div>
       </Panel>
@@ -209,13 +204,20 @@ export function OverviewPanels({ latest, before, extras }: { latest: Point | nul
               key: "named",
               header: t("ai.naming"),
               align: "right",
-              cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.day ? t("ai.namedOf", { named: row.day.named, asked: row.day.asked }) : "–"}</span>,
+              // A website that asks nothing — a competitor — is named in answers
+              // to the owned site's questions: a count, never "1 of 0" (4.8).
+              cell: (row) => (
+                <span className="font-mono text-[12px] text-secondary">
+                  {!row.day ? "–" : row.day.asked > 0 ? t("ai.namedOf", { named: row.day.named, asked: row.day.asked }) : t("ai.namedIn", { count: row.day.named })}
+                </span>
+              ),
             },
             {
               key: "pages",
               header: t("ai.pages"),
               align: "right",
-              cell: (row) => <span className="font-mono text-[12px] text-secondary">{site?.counts.questionsSetUp ? formatNumber(row.pages) : "–"}</span>,
+              // Nothing to count before the assistant has answered (4.9).
+              cell: (row) => <span className="font-mono text-[12px] text-secondary">{site?.counts.questionsSetUp && row.pages !== null ? formatNumber(row.pages) : "–"}</span>,
             },
           ]}
         />

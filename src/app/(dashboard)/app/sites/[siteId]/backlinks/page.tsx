@@ -14,14 +14,18 @@ import { formatNumber, formatShortDay, toCsv } from "../../_components/siteForma
 import { SiteFigure } from "../../_components/SiteFigure";
 import { useSiteListHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
+import { newestOfEach } from "../newestOfEach";
 
 type Measure = "referringDomains" | "backlinks" | "domainRank";
 const MEASURES: Measure[] = ["referringDomains", "backlinks", "domainRank"];
 
-
 /**
  * Backlinks › Summary: the site's domain rank, backlinks and linking websites
  * as they stand, and over the dates chosen, with tick boxes for the chart.
+ *
+ * All four figures by one rule (docs/plans/active/sites-audit-fixes-plan.md,
+ * 4.12): as each stood at the end of the dates — the newest in them, else the
+ * newest before them. Two used to fall back to today's while two showed "–".
  */
 export default function SiteBacklinksPage() {
   const t = useTranslations("sites.backlinks");
@@ -33,7 +37,8 @@ export default function SiteBacklinksPage() {
   const [shown, setShown] = useState<Record<Measure, boolean>>({ referringDomains: true, backlinks: false, domainRank: true });
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
   const points = (series?.[0]?.points ?? []).filter((point) => point.referringDomains !== undefined || point.backlinks !== undefined);
-  const latest = points.length > 0 ? points[points.length - 1] : null;
+  const before = series?.[0]?.before ?? null;
+  const latest = newestOfEach(before ? [before, ...points] : points);
   const chosen = MEASURES.filter((measure) => shown[measure]);
 
   return (
@@ -43,8 +48,8 @@ export default function SiteBacklinksPage() {
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         <SiteFigure label={t("domainRank")} value={formatNumber(latest?.domainRank)} detail={<span className="text-muted">{t("rankScale")}</span>} />
         <SiteFigure label={t("backlinks")} value={formatNumber(latest?.backlinks)} href={listHref("backlinks/all", { links: "every" })} />
-        <SiteFigure label={t("referringDomains")} value={formatNumber(latest?.referringDomains ?? site?.counts.referringDomains)} href={listHref("backlinks/domains")} />
-        <SiteFigure label={t("broken")} value={formatNumber(latest?.brokenBacklinks ?? site?.counts.brokenBacklinks)} href={listHref("backlinks/broken")} />
+        <SiteFigure label={t("referringDomains")} value={formatNumber(latest?.referringDomains)} href={listHref("backlinks/domains")} />
+        <SiteFigure label={t("broken")} value={formatNumber(latest?.brokenBacklinks)} href={listHref("backlinks/broken")} />
       </div>
 
       <SiteChartCard

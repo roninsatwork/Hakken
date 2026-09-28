@@ -53,7 +53,8 @@ function matchesPosition(position: number | null, filter: PositionFilter | ""): 
   if (!filter) return true;
   if (filter === "notOnPage") return position === null;
   if (filter === "top3") return position !== null && position <= 3;
-  return position !== null && position > 3;
+  // "Lower on page one": the rest of the first ten, never the eleventh to the hundredth (4.1).
+  return position !== null && position > 3 && position <= 10;
 }
 
 /**

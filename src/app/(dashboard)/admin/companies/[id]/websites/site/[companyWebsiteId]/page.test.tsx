@@ -6,23 +6,28 @@ import { renderWithProviders } from "@/src/test/renderWithProviders";
 import CompanySiteOverviewPage from "./page";
 import { answerQueries, ownedHeader, trackedHeader } from "@/src/test/siteViewFixtures";
 
+const { replace } = vi.hoisted(() => ({ replace: vi.fn() }));
+
 vi.mock("convex/react", async () => (await import("@/src/test/screenMocks")).convexReact());
 vi.mock("next-intl", async () => (await import("@/src/test/screenMocks")).nextIntl());
 vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
-vi.mock("next/navigation", async () =>
-  (await import("@/src/test/screenMocks")).nextNavigation({ id: "company_1", companyWebsiteId: "companyWebsite_1" }));
+vi.mock("next/navigation", async () => ({
+  ...(await import("@/src/test/screenMocks")).nextNavigation({ id: "company_1", companyWebsiteId: "companyWebsite_1" }),
+  useRouter: () => ({ push: vi.fn(), replace, back: vi.fn(), prefetch: vi.fn() }),
+}));
 
 const base = "/admin/companies/company_1/websites/site/companyWebsite_1";
 
 /**
- * The Overview: how the site is doing, and what to do next.
+ * To do: how the site is doing, and what to do next
+ * (docs/plans/active/websites-section-menu-plan.md).
  *
  * What it holds is that **every card opens the results behind it**, that the
- * searches and questions are this company's own and edited here, under
- * Results, and that no price appears on it. A tracked site gets its pairing instead. Both keep
- * limits of their own on how much is collected about them.
+ * searches and questions are this company's own and edited under What we
+ * track, and that no price appears on it. A competitor has no to-do list: its
+ * address opens its rankings. Limits moved to Schedule and limits.
  */
-describe("the Overview", () => {
+describe("To do", () => {
   beforeEach(() => {
     vi.mocked(useQuery).mockImplementation(answerQueries({
       "websiteClientView:getSiteHeader": ownedHeader,
@@ -68,16 +73,11 @@ describe("the Overview", () => {
     expect(screen.getByText("admin.siteView.overview.rivalsEmpty")).toBeInTheDocument();
   });
 
-  it("shows a tracked site its pairing, and where to compare it", async () => {
-    vi.mocked(useQuery).mockImplementation(answerQueries({
-      "websiteClientView:getSiteHeader": trackedHeader,
-      "websiteAttachments:listCompanyOwnedWebsites": [],
-    }));
+  it("opens a competitor's rankings instead, since it has no to-do list", async () => {
+    vi.mocked(useQuery).mockImplementation(answerQueries({ "websiteClientView:getSiteHeader": trackedHeader }));
     renderWithProviders(<CompanySiteOverviewPage />);
 
-    expect(await screen.findByText("admin.siteView.paired.title")).toBeInTheDocument();
-    expect(screen.getByText("admin.siteView.paired.compare").closest("a"))
-      .toHaveAttribute("href", `${base}/competitors`);
+    await waitFor(() => expect(replace).toHaveBeenCalledWith(`${base}/keywords`));
     expect(screen.queryByText("admin.siteView.overview.searches")).not.toBeInTheDocument();
   });
 
@@ -104,49 +104,5 @@ describe("the Overview", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "admin.siteView.moves.rival.take" }));
     expect(actOnMove).toHaveBeenCalledWith({ moveId: "move_1", action: "TAKE" });
-  });
-
-  it("keeps limits of its own on a competitor, following the company until one is chosen", async () => {
-    const saveLimits = vi.fn(async () => null);
-    vi.mocked(useMutation).mockImplementation(() => saveLimits as never);
-    vi.mocked(useQuery).mockImplementation(answerQueries({
-      "websiteClientView:getSiteHeader": trackedHeader,
-      "websiteAttachments:listCompanyOwnedWebsites": [],
-      "companyDataLimits:getSiteDataLimits": {
-        own: { keywordsPerSite: null, backlinksPerSite: 5000 },
-        company: { keywordsPerSite: 10000, backlinksPerSite: 1000 },
-        choices: [100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000],
-      },
-    }));
-    renderWithProviders(<CompanySiteOverviewPage />);
-
-    const keywords = await screen.findByRole("combobox", { name: "admin.companyWebsiteDetail.limits.keywordsLabel" });
-    expect(keywords).toHaveValue("");
-    expect(screen.getByRole("combobox", { name: "admin.companyWebsiteDetail.limits.backlinksLabel" })).toHaveValue("5000");
-
-    fireEvent.change(keywords, { target: { value: "2500" } });
-    fireEvent.click(screen.getByRole("button", { name: "admin.companyWebsiteDetail.limits.save" }));
-    await waitFor(() => expect(saveLimits).toHaveBeenCalledWith({
-      companyWebsiteId: "companyWebsite_1",
-      keywordsPerSite: 2500,
-      backlinksPerSite: 5000,
-    }));
-  });
-
-  it("puts the same limits on the company's own site", async () => {
-    vi.mocked(useQuery).mockImplementation(answerQueries({
-      "websiteClientView:getSiteHeader": ownedHeader,
-      "websiteClientView:getSitePortfolio": { searches: {}, questions: {}, rivals: {}, untrackedNamed: 0 },
-      "companyDataLimits:getSiteDataLimits": {
-        own: { keywordsPerSite: null, backlinksPerSite: null },
-        company: { keywordsPerSite: 1000, backlinksPerSite: 1000 },
-        choices: [100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000],
-      },
-    }));
-    renderWithProviders(<CompanySiteOverviewPage />);
-
-    expect(await screen.findByText("admin.companyWebsiteDetail.limits.title")).toBeInTheDocument();
-    // Nothing chosen yet, so there is nothing to save.
-    expect(screen.getByRole("button", { name: "admin.companyWebsiteDetail.limits.save" })).toBeDisabled();
   });
 });

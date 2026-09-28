@@ -944,3 +944,20 @@ Added 2026-09-23 (night), for Anthony in the morning:
   list or on Health, and the company screen's "No collecting agent yet" box is
   gone. Korda's and Ronins' switch and cadence were kept as set
   (`2026-09-25-company-schedules-wake-nothing`).
+- 2026-09-27 — **Keywords checked every run** (Anthony, on finding every run
+  re-checked only a site's first hundred searches — DataForSEO's default,
+  left in place when collection was built and never raised with him: "this
+  should be 1,000 and configurable on each website and company default in our
+  limits section", "it could be 10,000 from the drop down"). A new data limit,
+  beside "Keywords kept" on the company's Data limits and on each website's:
+  how many of the keywords kept every run checks again, 100 to 10,000,
+  1,000 by default. Above the everyday call's hundred they are the keyword
+  list's first pages, bought on every run, the rest of the list still weekly
+  (`everyRunReach` in `sitePagedLists.ts`); the latest check stays the newest
+  whole list, so a day holding only those pages never shrinks a site's counts
+  (`latestKeywordCheck`). Adverts still come from the everyday call's hundred.
+  The monthly estimate prices those pages per run, and prices each kind of
+  request at what it last cost — a daily company's weekly lists and monthly
+  crawl from the run that last bought them, where it used to read the last
+  run alone and leave them out on an ordinary day (`estimateMonthly`,
+  `newestPrices` in `seoRunReports.ts`).

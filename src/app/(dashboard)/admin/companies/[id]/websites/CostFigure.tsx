@@ -36,3 +36,14 @@ export function CostFigure({
 export function dollars(value: number): string {
   return `$${value.toFixed(2)}`;
 }
+
+/**
+ * Dollars too small for cents alone — $0.003 a Google check, $0.067 a press
+ * of Generate — written the way `dollars` writes them, with no "US" in front
+ * (a prompt's fan-out queries, prompt-fan-out-queries-plan.md).
+ */
+export function smallDollars(value: number): string {
+  if (value === 0) return "$0";
+  const digits = value < 0.01 ? 4 : value < 1 ? 3 : 2;
+  return `$${Number(value.toFixed(digits))}`;
+}

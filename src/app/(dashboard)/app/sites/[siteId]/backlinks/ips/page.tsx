@@ -18,6 +18,7 @@ import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../_components/useSiteSort";
+import { ListHeldLine } from "../../../_components/SiteCoverage";
 
 /**
  * The columns that sort, over every address (docs/plans/active/
@@ -48,15 +49,22 @@ export default function SiteReferringIpsPage() {
     sort: order.key,
     direction: order.direction,
   });
+  // The whole list's length, for what the rows kept are of (sites-data-completeness-plan.md, §4.E).
+  const totals = useQuery(api.siteLinks.linkListTotals, { siteId });
+  const profile = useQuery(api.siteLinks.linkProfile, { siteId });
+  const heldIps = !term && !subnet ? table.result?.total : undefined;
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Server className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <ListHeldLine held={!term && !subnet ? table.result?.total : undefined} total={totals?.ips} />
 
       <SiteChartCard
         dated={false}
         title={t("chartTitle")}
-        hint={t("chartHint")}
+        hint={heldIps !== undefined && totals?.ips && heldIps < totals.ips
+          ? t("chartHintHeld", { held: formatNumber(heldIps), total: formatNumber(totals.ips) })
+          : t("chartHint")}
         exportName={`${site?.host ?? "site"}-networks`}
         csv={() => toCsv([t("columns.subnet"), t("seriesDomains"), t("seriesIps")], (subnets ?? []).map((row) => [row.subnet, row.referringDomains, row.ips]))}
         enoughData={(subnets?.length ?? 0) > 0}
@@ -70,6 +78,7 @@ export default function SiteReferringIpsPage() {
             { key: "ips", name: t("seriesIps"), colour: SITE_SERIES_COLOURS[5] },
           ]}
         />
+        {profile?.referringSubnets ? <p className="mt-2 text-[12px] text-muted">{t("networksInAll", { count: formatNumber(profile.referringSubnets) })}</p> : null}
       </SiteChartCard>
 
       <DataTable

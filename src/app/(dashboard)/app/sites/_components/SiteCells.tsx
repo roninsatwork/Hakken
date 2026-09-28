@@ -30,7 +30,7 @@ export function IntentPill({ intent }: { intent: string | null }) {
 /** A position, or "not on page one" when there is none. */
 export function PositionCell({ position }: { position: number | null }) {
   const t = useTranslations("sites.common");
-  if (position === null) return <span className="text-[12px] text-muted">{t("notOnPageOne")}</span>;
+  if (position === null) return <span className="whitespace-nowrap text-[12px] text-muted">{t("notOnPageOne")}</span>;
   return <span className="font-mono text-[13px] text-foreground">{position}</span>;
 }
 
@@ -182,11 +182,12 @@ export function RecordLinkCell({ href, children, className = "text-[13px] text-f
  * addresses — the whole of each on hover (Anthony, 2026-09-26). `max-w-0` lets
  * the column give way to the figures beside it however long its words are;
  * the width is the share of the table it keeps. Pair with `cut` on the cell.
+ * No column takes all the width: the figures and pills beside it were
+ * squeezed until they wrapped a word to a line (docs/plans/active/
+ * sites-audit-fixes-plan.md, 1.5).
  */
 export const CUT_COLUMN = {
-  /** A table's one column of words: all the width the figures leave. */
-  only: "w-full max-w-0",
-  /** The first of two, a keyword or search beside a page address, or a table's words beside other text. */
+  /** A table's column of words: a keyword or search, alone or beside a page address or other text. */
   first: "w-[36%] max-w-0",
   /** The second of two: the page address. */
   second: "w-[28%] max-w-0",

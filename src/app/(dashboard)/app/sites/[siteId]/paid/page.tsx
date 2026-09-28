@@ -10,7 +10,7 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { SiteChartCard } from "../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../_components/SiteCharts";
 import { useSiteRange } from "../../_components/SiteDateRange";
-import { formatDay, formatNumber, formatShortDay, toCsv } from "../../_components/siteFormat";
+import { formatDay, formatDollars, formatNumber, formatShortDay, toCsv } from "../../_components/siteFormat";
 import { SiteFigure } from "../../_components/SiteFigure";
 import { useSiteListHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
@@ -37,7 +37,9 @@ export default function SitePaidPage() {
   const points = (series?.[0]?.points ?? []).filter((point) => point.paidKeywords !== undefined);
   const latest = points.length > 0 ? points[points.length - 1] : null;
   const chosen = MEASURES.filter((measure) => shown[measure]);
-  const advertising = (latest?.paidKeywords ?? 0) > 0;
+  // Said only of a check that found no adverts: dates holding no check say
+  // nothing either way (docs/plans/active/sites-audit-fixes-plan.md, 2.2).
+  const notAdvertising = latest !== null && latest.paidKeywords === 0;
 
   return (
     <div className="flex flex-col gap-6">
@@ -48,14 +50,14 @@ export default function SitePaidPage() {
         pills={latest ? <span className="text-[12px] text-secondary">{t("asOf", { day: formatDay(latest.lastDay) })}</span> : null}
       />
 
-      {series !== undefined && !advertising ? (
+      {notAdvertising ? (
         <p className="rounded-xl border border-border-dim bg-card/40 px-4 py-3 text-[13px] text-secondary">{t("notAdvertising")}</p>
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <SiteFigure label={t("keywords")} value={formatNumber(latest?.paidKeywords)} href={listHref("paid/keywords")} />
         <SiteFigure label={t("traffic")} value={formatNumber(latest?.paidTraffic)} href={listHref("paid/keywords", { sort: "traffic" })} />
-        <SiteFigure label={t("spend")} value={latest?.paidTrafficCost === undefined ? "–" : `${formatNumber(latest.paidTrafficCost)}`} href={listHref("paid/keywords", { sort: "cost" })} />
+        <SiteFigure label={t("spend")} value={formatDollars(latest?.paidTrafficCost)} href={listHref("paid/keywords", { sort: "cost" })} />
       </div>
 
       <SiteChartCard

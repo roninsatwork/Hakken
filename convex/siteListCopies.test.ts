@@ -95,6 +95,40 @@ describe("what All keywords counts (T9)", () => {
   });
 });
 
+/*
+  A list held in part (sites-data-completeness-plan.md, §4.C): a search that
+  left it is never called lost — it may still rank below the list's limit —
+  but it did leave, and New and lost, Wins and losses and the Calendar say so.
+  The site's screens say how much of it the list is, against the supplier's
+  own count (rule 3).
+*/
+describe("a list held in part", () => {
+  test("counts the searches that left it, lists them, and says how much of the site it is", async () => {
+    const t = harness();
+    const korda = await company(t, "Korda");
+    const own = await hold(t, korda, "kordatackle.com");
+    await fileRanks(t, own.websiteId, "2026-09-20", [
+      { keyword: "carp rods", position: 3 }, { keyword: "bait boats", position: 5 }, { keyword: "bivvies", position: 8 },
+    ]);
+    await fileRanks(t, own.websiteId, "2026-09-23", [{ keyword: "carp rods", position: 2 }, { keyword: "bait boats", position: 5 }]);
+    await rebuild(t, own.websiteId);
+
+    const day = await t.run(async (ctx) =>
+      (await ctx.db.query("siteDaySummaries").collect()).find((row) => row.websiteId === own.websiteId && row.day === "2026-09-23"));
+    expect(day).toMatchObject({ rankedLost: 0, rankedLeft: 1 });
+
+    const asKorda = await member(t, korda);
+    const left = await asKorda.query(api.siteKeywords.listMoves, { siteId: own.holdId, status: "LEFT", page: 1, rows: 25 });
+    expect(left.rows.map((row) => row.keyword)).toEqual(["bivvies"]);
+
+    // Two of the fifty searches the supplier counts are held.
+    const site = await asKorda.query(api.sites.getMySite, { siteId: own.holdId });
+    expect(site?.coverage).toMatchObject({ searches: { held: 2, total: 50 }, whole: false });
+    const sites = await asKorda.query(api.sites.listMySites, {});
+    expect(sites.find((row) => row.siteId === own.holdId)?.movesAmongHeld).toBe(2);
+  });
+});
+
 describe("Wins and losses (T10)", () => {
   test("list the moves at the latest check, the ones the menu counts", async () => {
     const t = harness();

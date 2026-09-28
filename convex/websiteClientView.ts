@@ -1,3 +1,4 @@
+import { holdBrandNames } from "./holdProfiles";
 import { v } from "convex/values";
 
 import { superAdminQuery } from "./tenantFunctions";
@@ -149,7 +150,7 @@ export const getSiteHeader = superAdminQuery({
         searches: liveSearches.length,
         questions: liveQuestions.length,
         rivals: rivals.length,
-        brandNames: site.website.brandNames?.length ?? 0,
+        brandNames: (await holdBrandNames(ctx, site.hold._id)).length,
       },
       monthly: {
         site: siteMonthly,

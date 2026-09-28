@@ -100,6 +100,20 @@ describe("CompanyDashboardLayout navigation", () => {
     expect(screen.queryByRole("button", { name: /AI section/i })).not.toBeInTheDocument();
   });
 
+  it("opens Websites straight away: a link, its menu down the left of the section", () => {
+    vi.mocked(usePathname).mockReturnValue("/admin/companies/company123/websites/site/hold_1/keywords");
+
+    render(
+      <CompanyDashboardLayout>
+        <section>Company body</section>
+      </CompanyDashboardLayout>
+    );
+
+    // docs/plans/active/websites-section-menu-plan.md: no drop-down to open first.
+    expect(screen.getByRole("link", { name: "Websites" })).toHaveAttribute("href", "/admin/companies/company123/websites");
+    expect(screen.queryByRole("button", { name: "Websites" })).not.toBeInTheDocument();
+  });
+
   it("uses dropdowns for directory and widget sections too", () => {
     vi.mocked(usePathname).mockReturnValue("/admin/companies/company123/widget");
     vi.mocked(useSearchParams).mockReturnValue(new URLSearchParams("section=integration") as never);

@@ -12,18 +12,22 @@ import {
   type SeoOperation,
 } from "./dataForSeoRegistry";
 import { aiCitationOperationId } from "./seoAiEngines";
+import { AI_OVERVIEW_FAN_OUT_OPERATION, aiOverviewFanOutParams, aiOverviewPeriodStart, googleTopicOf } from "./dataForSeoAiOverviewOperations";
+import { readFanOutLimits } from "./fanOutLimits";
 import { DEFAULT_LOCATION_CODE, findSeoLocation } from "./utils/seoLocations";
+import { readSentLocationCode } from "./utils/seoSentPlace";
 import { MAX_PROMPTS_PER_WEBSITE } from "./utils/promptLimits";
 import { buildSeoIdempotencyKey } from "./seoIdempotency";
 import { finishSeoCycle } from "./seoCollectionQueue";
-import { collectsEveryRun, everyDaysOf } from "./seoRunReports";
+import { collectsEveryRun, everyDaysOf } from "./seoRunEstimate";
 import { readSiteDataLimits } from "./companyDataLimits";
-import { LIST_COUNT_DAYS, listPages, pagedListOf, pagedListParams } from "./sitePagedLists";
+import { everyRunReach, LIST_COUNT_DAYS, listLimitOf, listPagesFor, pagedListOf, pagedListParams, readListShape, sentOffset } from "./sitePagedLists";
 import { isWebsiteDue } from "./seoScheduleService";
 import { collectedOnItsOwn, dueByCadence } from "./seoCollectionDue";
 import { countingReads } from "./utils/countingReads";
 import { isTrackedHold } from "./utils/websitePairing";
 import { holdQuestions, holdSearches } from "./holdLists";
+import { counted, firstCheckSteps, withinFanOutLimit, type PlannedCheck } from "./fanOutFirstCheckSteps";
 import {
   SEO_DUE_SPACING_MS,
   SEO_EXPANSION_PAGE,
@@ -102,7 +106,10 @@ export const expandSeoCycle = internalMutation({
 
     const after = args.cursorCreatedAt
       ?? (args.cursor ? (await ctx.db.get(args.cursor))?._creationTime : undefined);
-    const outcome = await expandPage(ctx, cycle, schedule, args.cursor, after, args.step ?? 0);
+    // A run begun where the last stopped (B6) goes from there to the last
+    // website, then round from the first to there: its second lap.
+    const secondLap = cycle.startedAfter !== undefined && (after === undefined || after < cycle.startedAfter);
+    const outcome = await expandPage(ctx, cycle, schedule, args.cursor, after, args.step ?? 0, secondLap ? cycle.startedAfter : undefined);
 
     const plannedCount = cycle.plannedCount + outcome.planned;
     const reusedCount = cycle.reusedCount + outcome.reused;
@@ -116,8 +123,19 @@ export const expandSeoCycle = internalMutation({
         plannedCount,
         reusedCount,
         cursor: outcome.lastCursor ?? cycle.cursor,
-        cappedReason: `Planned ${plannedCount} pulls, which is this cycle's ceiling of ${SEO_MAX_SENDS_PER_CYCLE}.`,
+        // Where it stopped, for the next run to start from (B6).
+        ...(outcome.lastCreatedAt !== null ? { cursorCreatedAt: outcome.lastCreatedAt } : {}),
+        cappedReason: `Planned ${plannedCount} pulls, which is this cycle's ceiling of ${await cycleCeiling(ctx, cycle.companyId)}.`,
       });
+      return null;
+    }
+
+    if (outcome.exhausted && cycle.startedAfter !== undefined && !secondLap) {
+      // The first lap reached the last website: round to the first.
+      await ctx.db.patch(args.cycleId, {
+        plannedCount, reusedCount, cursor: undefined, cursorCreatedAt: undefined, cursorStep: 0, expandedAt: Date.now(),
+      });
+      await ctx.scheduler.runAfter(0, internal.seoCollection.expandSeoCycle, { cycleId: args.cycleId });
       return null;
     }
 
@@ -156,6 +174,11 @@ export const expandSeoCycle = internalMutation({
 });
 
 
+/** What one collection may buy for a company: its own limit, never past the platform's ceiling. */
+export async function cycleCeiling(ctx: Parameters<typeof readFanOutLimits>[0], companyId: Id<"companies">): Promise<number> {
+  return Math.min(SEO_MAX_SENDS_PER_CYCLE, (await readFanOutLimits(ctx, companyId)).purchasesPerCollection);
+}
+
 async function expandPage(
   txn: MutationCtx,
   cycle: Doc<"seoCollectionCycles">,
@@ -163,9 +186,13 @@ async function expandPage(
   cursor: Id<"companyWebsites"> | undefined,
   cursorCreatedAt: number | undefined,
   startStep: number,
+  /** On a second lap, the last website it goes round to. */
+  until?: number,
 ): Promise<ExpansionOutcome> {
   const { ctx, reads } = countingReads(txn);
   const now = new Date(cycle.startedAt);
+  // What one collection may buy for the whole company: its own limit (`fanOutLimits.ts`).
+  const ceiling = await cycleCeiling(ctx, cycle.companyId);
 
   /*
     Read from where the last page stopped, in the index itself.
@@ -179,9 +206,12 @@ async function expandPage(
   */
   const page = await ctx.db
     .query("companyWebsites")
-    .withIndex("by_company", (q) => cursorCreatedAt !== undefined
-      ? q.eq("companyId", cycle.companyId).gt("_creationTime", cursorCreatedAt)
-      : q.eq("companyId", cycle.companyId))
+    .withIndex("by_company", (q) => {
+      const company = q.eq("companyId", cycle.companyId);
+      if (cursorCreatedAt === undefined) return until !== undefined ? company.lte("_creationTime", until) : company;
+      const from = company.gt("_creationTime", cursorCreatedAt);
+      return until !== undefined ? from.lte("_creationTime", until) : from;
+    })
     .take(SEO_EXPANSION_PAGE + PAGE_SLACK);
   const websites = page.slice(0, SEO_EXPANSION_PAGE);
 
@@ -204,7 +234,7 @@ async function expandPage(
       // Stop between two steps rather than past what a transaction may read;
       // the next page begins this website again at this step.
       if (reads() >= PAGE_READ_BUDGET) return stopped(at);
-      const room = SEO_MAX_SENDS_PER_CYCLE - cycle.plannedCount - planned;
+      const room = ceiling - cycle.plannedCount - planned;
       if (room <= 0) return stopped(at, true);
       const done = await steps[at](sendIndex, room);
       planned += done.planned;
@@ -290,16 +320,26 @@ async function websiteSteps(
 
     Bounded rather than collected: a website with more rivals than this is a
     plan question, not something one transaction should discover the hard way
-    at the moment it runs out of room.
+    at the moment it runs out of room. How many is the website's setting, else
+    its company's, else the platform's ("Competitors collected per website",
+    2026-09-28), never past `SEO_COMPETITORS_PER_WEBSITE`.
   */
-  const tracked = isTrackedHold(companyWebsite)
+  const rivalsKept = isTrackedHold(companyWebsite)
+    ? 0
+    : Math.min(SEO_COMPETITORS_PER_WEBSITE, (await readFanOutLimits(ctx, cycle.companyId, companyWebsite._id)).competitorsPerSite);
+  const against = isTrackedHold(companyWebsite)
     ? []
-    : (await ctx.db
+    : await ctx.db
       .query("companyWebsites")
       .withIndex("by_company_against", (q) =>
         q.eq("companyId", cycle.companyId).eq("againstWebsiteId", companyWebsite.websiteId))
-      .take(SEO_COMPETITORS_PER_WEBSITE))
-      .filter(isTrackedHold);
+      .take(rivalsKept + 1);
+  // More than a run collects: the first added are, and the run report says so (B6).
+  if (against.length > rivalsKept) {
+    const cut = (await ctx.db.get(cycle._id))?.competitorsCut ?? [];
+    if (!cut.includes(companyWebsite.websiteId)) await ctx.db.patch(cycle._id, { competitorsCut: [...cut, companyWebsite.websiteId] });
+  }
+  const tracked = against.slice(0, rivalsKept).filter(isTrackedHold);
 
   // A tracked site is collected at the rate of the one it is measured
   // against. Numbers from different weeks are not a comparison.
@@ -356,7 +396,7 @@ async function websiteSteps(
  * re-posting it is buying the same data twice, so that one is left alone and
  * the sweep fetches its result instead.
  */
-async function reusableByKey(
+export async function reusableByKey(
   ctx: MutationCtx,
   idempotencyKey: string,
 ): Promise<Doc<"seoDataPulls"> | null> {
@@ -417,12 +457,18 @@ async function questionSteps(
     the watcher's: the same question asked for Leeds and for London is two
     different purchases, and that is what the key carries.
   */
-  const prompts = await holdQuestions(ctx, companyWebsite._id, MAX_PROMPTS_PER_WEBSITE, { activeOnly: true });
+  // As many as the website's limit asks for (`fanOutLimits.ts`), never more than a page can plan.
+  const limits = await readFanOutLimits(ctx, companyWebsite.companyId, companyWebsite._id);
+  const prompts = await holdQuestions(ctx, companyWebsite._id, Math.min(MAX_PROMPTS_PER_WEBSITE, limits.promptsPerSite), { activeOnly: true });
 
   const place = companyWebsite.locationCode !== undefined
     ? findSeoLocation(companyWebsite.locationCode)
     : null;
   const location = place ? { countryIso: place.countryIso, city: place.city } : null;
+  // Google's own fan-outs for each question's topic (FA8): off unless the
+  // company or the website chose how many of Google's AI Overviews to buy.
+  const googleRows = limits.googleSearchesRead;
+  const google = googleRows > 0 ? findSeoOperation(AI_OVERVIEW_FAN_OUT_OPERATION) : null;
 
   return prompts.map((prompt) => async (startIndex: number, room: number) => {
     let planned = 0;
@@ -441,7 +487,22 @@ async function questionSteps(
         websiteId: companyWebsite.websiteId,
         sendIndex: startIndex + planned,
       });
-      if (outcome === "REUSED") reused += 1;
+      if (outcome.reused) reused += 1;
+      else planned += 1;
+    }
+    const topic = google ? googleTopicOf(prompt.prompt) : "";
+    if (google && topic) {
+      if (planned >= room) return { planned, reused, capped: true };
+      const outcome = await planSharedPull(ctx, cycle, {
+        operation: google,
+        params: aiOverviewFanOutParams(topic, companyWebsite.locationCode, googleRows),
+        sentinel: "prompt",
+        websiteId: companyWebsite.websiteId,
+        sendIndex: startIndex + planned,
+        // Held for its 30 days, not a day: one purchase a period, shared.
+        keyStartedAt: aiOverviewPeriodStart(cycle.startedAt),
+      });
+      if (outcome.reused) reused += 1;
       else planned += 1;
     }
     return { planned, reused };
@@ -458,8 +519,10 @@ async function questionSteps(
  * companies — or two hosts — tracking one phrase in one town share the page,
  * and the parse files a position for every known site on it.
  *
- * Paused searches are not asked. Running out of the cycle's ceiling stops
- * here and says so, like every other planner.
+ * Paused searches are not asked, nor fan-out queries ticked past their limit;
+ * each fan-out query's first check follows (`fanOutFirstCheckSteps.ts`).
+ * Running out of the cycle's ceiling stops here and says so, like every other
+ * planner.
  */
 async function searchSteps(
   ctx: MutationCtx,
@@ -469,18 +532,17 @@ async function searchSteps(
   const operation = findSeoOperation(SEO_KEYWORD_CHECK_OPERATION);
   if (!operation) return [];
 
-  const searches = await holdSearches(ctx, companyWebsite._id, SEO_KEYWORD_CHECKS_PER_WEBSITE, { activeOnly: true });
-
-  return searches.map((search) => async (sendIndex: number) => {
-    const outcome = await planSharedPull(ctx, cycle, {
-      operation,
-      params: seoKeywordCheckParams(search.keyword, { locationCode: companyWebsite.locationCode }),
-      sentinel: "keyword",
-      websiteId: companyWebsite.websiteId,
-      sendIndex,
-    });
-    return outcome === "REUSED" ? { planned: 0, reused: 1 } : { planned: 1, reused: 0 };
+  // The website's tracked keywords limit (`fanOutLimits.ts`): lowered below the list, its oldest that many.
+  const { trackedPerSite, fanOutTrackedPerSite } = await readFanOutLimits(ctx, companyWebsite.companyId, companyWebsite._id);
+  const searches = await holdSearches(ctx, companyWebsite._id, Math.min(SEO_KEYWORD_CHECKS_PER_WEBSITE, trackedPerSite), { activeOnly: true });
+  const checked = withinFanOutLimit(searches, fanOutTrackedPerSite);
+  const check = async (keyword: string, sendIndex: number) => await planSharedPull(ctx, cycle, {
+    operation, params: seoKeywordCheckParams(keyword, { locationCode: companyWebsite.locationCode }), sentinel: "keyword", websiteId: companyWebsite.websiteId, sendIndex,
   });
+  return [
+    ...checked.map((search) => async (sendIndex: number) => counted(await check(search.keyword, sendIndex))),
+    ...await firstCheckSteps(ctx, companyWebsite, SEO_KEYWORD_CHECKS_PER_WEBSITE - checked.length, check),
+  ];
 }
 
 /**
@@ -500,13 +562,15 @@ async function planSharedPull(
     sentinel: "prompt" | "keyword";
     websiteId: Id<"websites">;
     sendIndex: number;
+    /** What the key is dated by, when a purchase holds longer than a day; the run's start otherwise. */
+    keyStartedAt?: number;
   },
-): Promise<"PLANNED" | "REUSED"> {
+): Promise<PlannedCheck> {
   const idempotencyKey = buildSeoIdempotencyKey({
     operationId: args.operation.id,
     websiteId: args.sentinel,
     params: args.params,
-    cycleStartedAt: cycle.startedAt,
+    cycleStartedAt: args.keyStartedAt ?? cycle.startedAt,
   });
 
   const existing = await reusableByKey(ctx, idempotencyKey);
@@ -539,7 +603,7 @@ async function planSharedPull(
     createdAt: Date.now(),
   });
 
-  return existing ? "REUSED" : "PLANNED";
+  return { reused: Boolean(existing), pullId, pull: existing };
 }
 
 /**
@@ -655,10 +719,12 @@ async function planPull(
 /**
  * A website's long list for this cycle — every keyword, or every link: nothing
  * when its limit (its own, else its company's) is no more than an everyday
- * call already brings, the week's list when one is held or on its way, and
- * otherwise a request per thousand rows up to the limit — as many as the
- * site's last count says it has, or the first alone when that is not known
- * yet (`listPages` and `queueListPages` in `sitePagedLists.ts`).
+ * call already brings; else the site's whole list when it is due, or only
+ * the everyday check's first pages when it is not. A list is sized in its own
+ * unit — the keyword list's limits count searches, however many rows they
+ * take (`listPagesFor` in `sitePagedLists.ts`) — and whatever the estimate,
+ * the pages still short are asked for as each answer lands
+ * (`queueListPages`).
  */
 async function planPagedList(
   ctx: MutationCtx,
@@ -681,36 +747,47 @@ async function planPagedList(
   const list = pagedListOf(operation.id);
   const website = await ctx.db.get(args.websiteId);
   if (!list || !website) return { planned: 0, reused: 0 };
-  const limit = (await readSiteDataLimits(ctx, args.cycle.companyId, args.hold._id))[list.limit];
+  const limits = await readSiteDataLimits(ctx, args.cycle.companyId, args.hold._id);
+  const limit = listLimitOf(list, limits);
   if (limit <= list.coveredUpTo) return { planned: 0, reused: 0 };
 
   const lineArgs = { cycle: args.cycle, websiteId: args.websiteId, operationId: operation.id };
   const place = args.companyWebsite.locationCode ?? DEFAULT_LOCATION_CODE;
-  const counted = (await ctx.db
+  const countField = list.count;
+  const counted = countField === null ? null : (await ctx.db
     .query("siteDaySummaries")
     .withIndex("by_site_day", (q) => q.eq("websiteId", args.websiteId).eq("locationCode", place))
     .order("desc")
     .take(LIST_COUNT_DAYS))
-    .map((row) => row[list.count])
+    .map((row) => row[countField])
     .find((count): count is number => typeof count === "number") ?? null;
+  // The site's last list says how many rows its searches take; its latest
+  // count says, at least, how many there are.
+  const shape = list.unit === "searches"
+    ? await readListShape(ctx, args.websiteId, place)
+    : { segments: [], totalRows: counted, totalSearches: null };
+  if (list.unit === "searches" && shape.totalSearches === null) shape.totalSearches = counted;
+
+  // The whole list when it is due — a site never counted, or no whole list
+  // at this company's limit inside the list's cadence — else the everyday
+  // check's first pages alone.
+  const everyday = everyRunReach(list, limits);
+  const due = !list.everyRun || counted === null || await wholeListDue(ctx, operation, args.websiteId, place, limit, args.now, args.runDays);
+  const reach = due ? limit : everyday;
+  const everydayEnds = listPagesFor(list, everyday, shape).reduce((end, page) => Math.max(end, page.offset + page.limit), 0);
+  const pages = listPagesFor(list, reach, shape).map((page) => ({ page, eachRun: everyday > 0 && page.offset < everydayEnds }));
 
   let planned = 0;
   let reused = 0;
-  for (const page of listPages(limit, counted)) {
+  for (const { page, eachRun } of pages) {
     const params = pagedListParams(operation.id, website.host, args.companyWebsite.locationCode, page);
     if (!params) break;
-    const idempotencyKey = buildSeoIdempotencyKey({
-      operationId: operation.id,
-      websiteId: args.websiteId,
-      params,
-      cycleStartedAt: args.cycle.startedAt,
-    });
     // Each page is held on its own: this page, from this place, answered or on
-    // its way inside the list's cadence. Held for the whole list, any page
-    // bought by anyone stood for every page — another place's, or a company
-    // with a smaller limit's — for a week (reliability plan 3.6). A sandbox
-    // answer or a failure is never served.
-    const held = await heldByOwnCadence(ctx, operation, args.websiteId, args.now, JSON.stringify(params), args.runDays)
+    // its way inside the list's cadence. A sandbox answer or a failure is
+    // never served. A page bought every run holds no answer, as a call bought
+    // every run holds none, but one still on its way is shared rather than
+    // bought twice.
+    const held = await heldByOwnCadence(ctx, operation, args.websiteId, args.now, JSON.stringify(params), eachRun && !due ? operation.refresh?.everyDays : args.runDays)
       // Bought every run by this company, a page still fresh by its cadence —
       // today's, for another company; the last hour's, for a second press — is
       // shared as a single call's answer is (`findFreshPull`).
@@ -720,6 +797,12 @@ async function planPagedList(
       reused += 1;
       continue;
     }
+    const idempotencyKey = buildSeoIdempotencyKey({
+      operationId: operation.id,
+      websiteId: args.websiteId,
+      params,
+      cycleStartedAt: args.cycle.startedAt,
+    });
     const pullId = await ctx.db.insert("seoDataPulls", {
       operationId: operation.id,
       family: operation.family,
@@ -737,12 +820,56 @@ async function planPagedList(
       costUsd: 0,
       sandbox: false,
       agentRunId: args.cycle.agentRunId,
+      // How far this run means to buy the list, in its own unit: the pages
+      // each answer queues stop there.
+      listReach: reach,
+      ...(eachRun ? { eachRun: true } : {}),
       submittedAt: Date.now(),
     });
     await writeLine(ctx, lineArgs, pullId, false);
     planned += 1;
   }
   return { planned, reused };
+}
+
+/**
+ * Whether a site's whole list is due this run: unless a whole list at this
+ * company's limit or more — a first page bought to reach it — was answered,
+ * or is on its way, for this website from this place inside the list's
+ * cadence. A first page bought for an everyday check, or for a company that
+ * keeps fewer, is not this company's whole list (docs/plans/active/
+ * sites-data-completeness-plan.md, B4). A company collecting as seldom as the
+ * list is bought buys it every run.
+ */
+async function wholeListDue(
+  ctx: MutationCtx,
+  operation: SeoOperation,
+  websiteId: Id<"websites">,
+  place: number,
+  limit: number,
+  now: Date,
+  runDays: number,
+): Promise<boolean> {
+  if (!operation.refresh || collectsEveryRun(operation.refresh.everyDays, runDays)) return true;
+  const window = (operation.refresh.everyDays - runDays / 2) * DAY_MS;
+  const recent = await ctx.db
+    .query("seoDataPulls")
+    .withIndex("by_website_operation_submitted", (q) => q.eq("websiteId", websiteId).eq("operationId", operation.id))
+    .order("desc")
+    .take(PULLS_READ_FOR_HOLD);
+  for (const pull of recent) {
+    if (pull.sandbox === true || pull.status === "FAILED") continue;
+    if (sentOffset(pull.taskArgsJson) !== 0) continue;
+    if ((readSentLocationCode(pull.taskArgsJson) ?? DEFAULT_LOCATION_CODE) !== place) continue;
+    // Pages planned before a page carried its reach were each the whole list.
+    if (pull.listReach !== undefined && pull.listReach < limit) continue;
+    if (pull.status === "READY") {
+      if (pull.completedAt !== undefined && now.getTime() - pull.completedAt < window) return false;
+      continue;
+    }
+    if (now.getTime() - pull.submittedAt < window) return false;
+  }
+  return true;
 }
 
 /**

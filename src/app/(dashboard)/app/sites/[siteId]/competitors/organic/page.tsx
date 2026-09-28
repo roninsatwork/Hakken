@@ -48,15 +48,18 @@ export default function SiteOrganicCompetitorsPage() {
   const tc = useTranslations("sites.common");
   const siteId = useSiteId();
   const rows = useQuery(api.siteCompetitors.listOrganicCompetitors, { siteId });
+  // How many rank for the same searches in all: a discovery reads the top 49 (sites-data-completeness-plan.md, B3).
+  const everyOne = useQuery(api.siteDiscovery.siteDiscoveryTotal, { siteId });
   const [search, setSearch, term] = useSiteSearch();
   const [kind, setKind] = useSiteParam<Kind | "">("kind", "", KINDS);
   const router = useRouter();
   const site = useSite();
   const recordHref = useSiteRecordHref(siteId);
-  // Only a competitor the company tracks has its rankings collected, so only
-  // those open a comparison; the others are everything we know in the row.
+  // Only a competitor beside this site — its group — has a comparison with
+  // it; the others are everything we know in the row. The company may hold a
+  // website outside the group (its other own site), which compares with none.
   const rivalHref = (host: string): string | null => {
-    const hold = site?.holds.find((entry) => entry.host === host && entry.siteId !== site.siteId);
+    const hold = site?.rivals.find((entry) => entry.host === host);
     return hold ? recordHref({ kind: "rival", rivalId: hold.siteId }) : null;
   };
 
@@ -68,6 +71,9 @@ export default function SiteOrganicCompetitorsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Radar className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      {rows && everyOne && everyOne > rows.length ? (
+        <p className="text-[12px] leading-relaxed text-secondary">{t("readOf", { count: formatNumber(rows.length), total: formatNumber(everyOne) })}</p>
+      ) : null}
       <DataTable
         rows={pager.pageRows}
         rowKey={(row) => row.host}

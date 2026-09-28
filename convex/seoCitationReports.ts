@@ -1,3 +1,4 @@
+import { holdBrandNames, holdNamedIn } from "./holdProfiles";
 import { v } from "convex/values";
 
 import { superAdminQuery } from "./tenantFunctions";
@@ -111,6 +112,7 @@ export const listCompanyWebsiteCitations = superAdminQuery({
 
     const start = (args.page - 1) * args.pageSize;
     const pageAnswers = answers.slice(start, start + args.pageSize);
+    const ownNames = await holdBrandNames(ctx, companyWebsite._id);
 
     const data = await Promise.all(pageAnswers.map(async (answer) => {
       const [pull, mentions] = await Promise.all([
@@ -121,8 +123,11 @@ export const listCompanyWebsiteCitations = superAdminQuery({
           .take(MAX_MENTIONS),
       ]);
 
-      const ours = mentions.find((row) =>
+      // Under one of this company's own names for the site, or not at all (holdProfiles.ts).
+      const found = mentions.find((row) =>
         row.kind === "BRAND" && row.mentionedWebsiteId === companyWebsite.websiteId);
+      const underOwn = found ? holdNamedIn(ownNames, found) : null;
+      const ours = underOwn ? found : undefined;
 
       return {
         _id: answer.pullId,
@@ -130,7 +135,7 @@ export const listCompanyWebsiteCitations = superAdminQuery({
         engine: answer.engine,
         day: answer.day,
         named: ours !== undefined,
-        ...(ours?.variantKind ? { ourVariantKind: ours.variantKind } : {}),
+        ...(underOwn ? { ourVariantKind: underOwn.kind ?? "NAME" } : {}),
         ...(ours?.stance ? { ourStance: ours.stance } : {}),
         status: pull?.status ?? "READY",
       };

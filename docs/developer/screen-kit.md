@@ -83,11 +83,12 @@ Use:
 
 - A list paged on the server takes `sort` and `direction` and orders the whole list before `pageOfList` cuts it: its columns are a `ListSorts` beside the query and `listOrder` builds the comparator (`convex/siteListPages.ts`). A column only filled in for the rows on screen cannot sort; hold it in the list's compact copy first, as Top pages holds its best position.
 - A screen asks through `useSiteSort` (`src/app/(dashboard)/app/sites/_components/useSiteSort.ts`), which gives the order to ask for and the table's `sort`. A list a page holds whole goes through `useSiteSortedList`, which sorts every row before `useSitePager` cuts the page — hand the sorted rows to the download too — and a day-by-day table's columns come from `dayTableSorts`.
+- A page with two tables (Position bands, New and lost keywords, since 2026-09-27) names its second: `table: "closest"` to `useSiteSortedList` and `useSitePager`, or `useSiteSort`'s last argument. That table keeps its order, page and rows under keys of its own — `closest.sort`, `closest.p` (`tableKey` in `useSiteParam.ts`) — so paging or sorting one never moves the other. The first table keeps the plain keys.
 - `src/pagination-drift.test.ts` fails a Sites `DataTable` without `sort`, a sort dropdown, and a right-aligned figure column that does not sort, unless it is named there with why; that list may shrink, never grow.
 
 **Filters on the search row.** A list with several filters gives each one `Select`'s `chip` rather than a full-width dropdown, so the search box and the filters share one line; the list's own count, comparison or download go in the card's top bar (`cardHeader`) rather than on that row. The native select is laid invisibly over the chip, so the keyboard, a screen reader and a phone's own picker behave as any dropdown does. A chip that narrows the list (`choice`) turns the brand tint once one is chosen; a chip that only picks a view — which question, which breakdown, every link or one per website — stays quiet and says what it shows. A long choice is cut short with "…" when the chip is given a width to keep to.
 
-**Every Sites table does both** (Anthony, 2026-09-26, "yes please to both"): its filters are chips, and its card opens with `SiteTableBar` (`src/app/(dashboard)/app/sites/_components/SiteTableBar.tsx`) — the list's exact total from its own footer, in the table's words (`sites.tableCounts`: "807 keywords", "531 linking websites"), anything it is compared with, and its download on the right. A table on a record's screen keeps its title there, with the count beside it. `src/pagination-drift.test.ts` fails a Sites table without the bar, a full-width dropdown on one, and a download on the filter row. Keywords, searches, questions and page addresses are cut short with "…" on one line rather than wrapped, the whole of each on hover: the column wears a `CUT_COLUMN` share (`SiteCells.tsx`) — `max-w-0` lets it give way to the figures beside it however long its words — and the cell `cut`.
+**Every Sites table does both** (Anthony, 2026-09-26, "yes please to both"): its filters are chips, and its card opens with `SiteTableBar` (`src/app/(dashboard)/app/sites/_components/SiteTableBar.tsx`) — the list's exact total from its own footer, in the table's words (`sites.tableCounts`: "807 keywords", "531 linking websites"), anything it is compared with, and its download on the right. A table on a record's screen keeps its title there, with the count beside it. `src/pagination-drift.test.ts` fails a Sites table without the bar, a full-width dropdown on one, and a download on the filter row. Keywords, searches, questions and page addresses are cut short with "…" on one line rather than wrapped, the whole of each on hover: the column wears a `CUT_COLUMN` share (`SiteCells.tsx`) — `max-w-0` lets it give way to the figures beside it however long its words — and the cell `cut`. No column takes all the width: one did, and squeezed the figures and pills beside it until they wrapped a word to a line; a `StatusPill` never wraps.
 
 When building new tables, prefer table semantics instead of div grids for dense admin records. Keep row actions labelled with `aria-label` or `title` and route destructive actions through confirmation modals.
 
@@ -105,7 +106,9 @@ every other table keeps Previous, Page X of Y, Next. `pageSlots` in
 `useSitePager` (`src/app/(dashboard)/app/sites/_components/useSitePagedTable.ts`),
 which keeps the page and rows in the address and remembers the rows per page in
 the browser; build a Sites table on it, or on the Sites server pager, never on
-`TABLE_PAGE_SIZE`.
+`TABLE_PAGE_SIZE`. The Search Console section's tables (`/app/search-console`,
+2026-09-27) are reporting tables of the same kind, built on the same parts, and
+`src/pagination-drift.test.ts` holds them to every Sites table rule.
 
 `paginateItems` safely clamps page values and returns:
 

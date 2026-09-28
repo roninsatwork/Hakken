@@ -20,6 +20,7 @@ import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../_components/useSiteSort";
+import { HeldLine, isPartHeld } from "../../../_components/SiteCoverage";
 
 /**
  * The columns that sort, over every page (docs/plans/active/
@@ -58,7 +59,7 @@ export default function SitePagesPage() {
   const [pageType, setPageType] = useSiteParam<PageType | "">("type", "", PAGE_TYPES);
   const order = useSiteSort(SORTS, "keywords");
 
-  const sections = useQuery(api.siteKeywords.listSections, { siteId });
+  const sections = useQuery(api.siteKeywords.listSections, { siteId })?.rows;
   const table = useSiteListPage(api.siteKeywords.listPages, {
     siteId,
     ...(term ? { search: term } : {}),
@@ -75,6 +76,13 @@ export default function SitePagesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<FileText className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      {/* A list held in part (sites-data-completeness-plan.md, §4.E): the pages are those of the searches held. */}
+      {isPartHeld(site?.coverage) ? (
+        <div className="flex flex-col gap-1">
+          <HeldLine coverage={site?.coverage} />
+          <p className="text-[12px] leading-relaxed text-secondary">{t("ofHeld")}</p>
+        </div>
+      ) : null}
 
       <SiteChartCard
         title={t("chartTitle")}

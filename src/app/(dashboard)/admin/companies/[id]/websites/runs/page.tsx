@@ -35,6 +35,7 @@ type Period = keyof typeof PERIODS;
  */
 export default function CompanyCollectionRunsPage() {
   const t = useTranslations("admin.collectionRuns");
+  const tSection = useTranslations("admin.websitesSection");
   const params = useParams();
   const router = useRouter();
   const companyId = params.id as Id<"companies">;
@@ -52,7 +53,7 @@ export default function CompanyCollectionRunsPage() {
     <div className="flex w-full flex-col gap-6 pb-12">
       <PageHeader
         icon={<Receipt className="h-6 w-6 text-brand" />}
-        title={t("title")}
+        title={tSection("pages.runs")}
         description={t("subtitle")}
       />
 

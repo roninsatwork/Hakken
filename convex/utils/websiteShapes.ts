@@ -47,8 +47,11 @@ export const companyWebsiteRow = v.object({
   limits: v.object({
     keywordsPerSite: v.number(),
     backlinksPerSite: v.number(),
+    /** Of the keywords kept, how many every run checks again (`everydayKeywords`). */
+    everydayKeywords: v.number(),
     keywordsOwn: v.boolean(),
     backlinksOwn: v.boolean(),
+    everydayOwn: v.boolean(),
   }),
 });
 
@@ -159,7 +162,6 @@ export const websitePreviewShape = v.union(
      * Absent when the host is new, because there is nothing to inherit.
      */
     inherits: v.optional(v.object({
-      rivals: v.number(),
       weeksOfHistory: v.number(),
     })),
   }),

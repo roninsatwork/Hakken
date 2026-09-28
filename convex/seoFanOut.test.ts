@@ -1,7 +1,7 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { parseLlmResponse } from "./dataForSeoParsers";
@@ -17,14 +17,6 @@ import { parseLlmResponse } from "./dataForSeoParsers";
 
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
-
-async function superAdmin(t: Harness) {
-  const userId = await t.run(async (ctx) =>
-    await ctx.db.insert("users", {
-      name: "Super", email: `su-${Math.random()}@test.com`, role: "SUPER_ADMIN", createdAt: Date.now(),
-    } as never));
-  return t.withIdentity({ subject: userId });
-}
 
 const payload = (queries: string[]) => ([{
   items: [{
@@ -155,87 +147,5 @@ describe("fan-out searches", () => {
     const rows = await t.run(async (ctx) => await ctx.db.query("promptFanOutQueries").collect());
     expect(rows).toHaveLength(2);
     expect(rows.map((row) => row.place).sort()).toEqual(["GB/Leeds", "GB/London"]);
-  });
-
-  test("a watcher sees the searches made from its own place, and those made from none", async () => {
-    const t = harness();
-    const pull = await pullId(t);
-    const prompt = "who is the best plumber in leeds";
-    const { companyWebsiteId } = await t.run(async (ctx) => {
-      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now() } as never);
-      const websiteId = await ctx.db.insert("websites", {
-        host: "acme.example", displayHost: "acme.example", firstSeenAt: Date.now(),
-      } as never);
-      const companyWebsiteId = await ctx.db.insert("companyWebsites", {
-        companyId, websiteId, locationCode: 1006925, locationLabel: "Leeds, England", createdAt: Date.now(),
-      } as never);
-      await ctx.db.insert("websiteQuestions", {
-        websiteId, companyWebsiteId, prompt, engines: ["chatgpt", "perplexity"], isActive: true, createdAt: Date.now(),
-      } as never);
-      return { companyWebsiteId: companyWebsiteId as Id<"companyWebsites"> };
-    });
-
-    const write = (engine: "chatgpt" | "perplexity", place: string | undefined, query: string) =>
-      t.mutation(internal.seoCollectionParse.writeFanOutQueries, {
-        pullId: pull, prompt, engine, ...(place ? { place } : {}), day: "2026-09-22", queries: [query],
-      });
-    await write("chatgpt", "GB/Leeds", "plumber leeds city centre");
-    await write("chatgpt", "GB/London", "plumber london bridge");
-    // Perplexity takes no place, so its searches were made from none.
-    await write("perplexity", undefined, "emergency plumber near me");
-
-    const asAdmin = await superAdmin(t);
-    const result = await asAdmin.query(api.seoFanOutReports.listWebsiteFanOutQueries, {
-      companyWebsiteId, page: 1, pageSize: 25,
-    });
-    expect(result.data.map((row) => row.queryText).sort())
-      .toEqual(["emergency plumber near me", "plumber leeds city centre"]);
-  });
-
-  test("the screen reads a site's fan-out through its own questions", async () => {
-    const t = harness();
-    const pull = await pullId(t);
-    const prompt = "who is the best plumber in leeds";
-
-    const { companyWebsiteId } = await t.run(async (ctx) => {
-      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now() } as never);
-      const websiteId = await ctx.db.insert("websites", {
-        host: "acme.example", displayHost: "acme.example", firstSeenAt: Date.now(),
-      } as never);
-      const companyWebsiteId = await ctx.db.insert("companyWebsites", {
-        companyId, websiteId, createdAt: Date.now(),
-      } as never);
-      // The question is this company's own, read through its hold.
-      await ctx.db.insert("websiteQuestions", {
-        websiteId, companyWebsiteId, prompt, engines: ["chatgpt"], isActive: true, createdAt: Date.now(),
-      } as never);
-      await ctx.db.insert("seoKeywordIntents", {
-        keyword: "best emergency plumber leeds", intent: "BUYING", judgedAt: Date.now(),
-      } as never);
-      return { companyWebsiteId: companyWebsiteId as Id<"companyWebsites"> };
-    });
-
-    // Two engines reaching the same search is one row that names both.
-    for (const engine of ["chatgpt", "perplexity"] as const) {
-      await t.mutation(internal.seoCollectionParse.writeFanOutQueries, {
-        pullId: pull, prompt, engine, day: "2026-09-22",
-        queries: ["best emergency plumber leeds", "plumber call out cost leeds"],
-      });
-    }
-
-    const asAdmin = await superAdmin(t);
-    const result = await asAdmin.query(api.seoFanOutReports.listWebsiteFanOutQueries, {
-      companyWebsiteId, page: 1, pageSize: 25,
-    });
-
-    expect(result.totalCount).toBe(2);
-    const top = result.data[0]!;
-    expect(top.queryText).toBe("best emergency plumber leeds");
-    expect(top.engines).toEqual(["chatgpt", "perplexity"]);
-    expect(top.timesSeen).toBe(2);
-    // The same judgment and the same store the rankings screen reads, so a
-    // phrase met on both screens is judged once and paid for once.
-    expect(top.intent).toBe("BUYING");
-    expect(result.data[1]!.intent).toBeNull();
   });
 });

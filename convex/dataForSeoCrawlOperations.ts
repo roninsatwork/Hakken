@@ -29,6 +29,12 @@ export const CRAWL_OPERATIONS: readonly SeoOperation[] = [
     resultPath: "/v3/on_page/summary/$id",
     costBand: "low",
     refresh: { everyDays: 30 },
+    // Pages run their JavaScript before they are read, as a browser shows
+    // them: a site built in JavaScript read as its bare code showed false
+    // "no title" problems. Nine times the plain crawl — $0.0015 a page, so
+    // $1.50 a crawl of 1,000 (pricing page, 2026-09-27; Anthony, "do them
+    // all", sites-data-completeness-plan.md §8.5).
+    fixed: { enable_javascript: true },
     params: {
       target: {
         kind: "host",

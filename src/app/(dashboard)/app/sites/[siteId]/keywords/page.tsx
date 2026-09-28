@@ -21,6 +21,7 @@ import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
 import { useSiteSort } from "../../_components/useSiteSort";
 import { TableDownload } from "../../_components/SiteDownloads";
 import { useSiteListPage } from "../../_components/useSitePagedTable";
+import { HeldLine, isPartHeld } from "../../_components/SiteCoverage";
 
 const BANDS = ["p01_03", "p04_10", "p11_20", "p21_50", "p51_up"] as const;
 const INTENTS = ["BUYING", "RESEARCHING", "BRANDED", "IRRELEVANT", "OTHER", "UNJUDGED"] as const;
@@ -98,15 +99,27 @@ export default function SiteKeywordsPage() {
     api.siteKeywords.keywordsOnDay,
     compareDay && shownRows.length > 0 ? { siteId, day: compareDay, keywords: shownRows.map((row) => row.keyword) } : "skip",
   );
-  const onDay = new Map((compared ?? []).map((row) => [row.keyword, row.position]));
+  const onDay = new Map((compared ?? []).map((row) => [row.keyword, row]));
 
   const series = useQuery(api.siteCharts.siteSeries, { siteId, from: range.from, to: range.to, step: range.step });
-  // DataForSEO's bands over everything the site ranks for where it has them.
+  // DataForSEO's bands over everything the site ranks for where it has them;
+  // the list's own only for a list that is the whole site (§8.7).
+  const listWhole = site?.coverage?.whole ?? false;
   const points = (series?.[0]?.points ?? []).flatMap((point) => {
-    const bands = point.allBands ?? point.bands;
+    const bands = point.allBands ?? (listWhole ? point.bands : undefined);
     return bands ? [{ day: point.day, bands }] : [];
   });
   const filtered = Boolean(term || band || intent || status || kdBand);
+
+  // A list held in part (sites-data-completeness-plan.md, §4.E): a band or a
+  // movement chosen alone says how many of every such search are held.
+  const coverage = site?.coverage;
+  const heldCount = table.result?.total;
+  const moveKey = status === "NEW" ? "fresh" : status === "UP" ? "up" : status === "DOWN" ? "down" : status === "LOST" ? "lost" : null;
+  const everyOfFilter = !isPartHeld(coverage) || term || intent || kdBand || (band && status) ? null
+    : band ? coverage?.bands?.[band] ?? null
+      : moveKey ? coverage?.moves?.[moveKey] ?? null
+        : null;
 
   return (
     <div className="flex flex-col gap-6">
@@ -114,11 +127,7 @@ export default function SiteKeywordsPage() {
         icon={<KeyRound className="h-5 w-5 text-brand" />}
         title={t("title")}
         description={t("description")}
-        pills={
-          site?.counts.keywords !== null && site?.counts.keywordsStored !== null && site?.counts.keywords !== undefined
-            ? <span className="text-[12px] text-secondary">{t("listing", { stored: formatNumber(site.counts.keywordsStored), total: formatNumber(site.counts.keywords) })}</span>
-            : null
-        }
+        pills={isPartHeld(coverage) ? <HeldLine coverage={coverage} className="text-[12px] text-secondary" /> : null}
       />
 
       <SiteChartCard
@@ -133,6 +142,15 @@ export default function SiteKeywordsPage() {
           series={BANDS.map((entry, index) => ({ key: entry, name: tb(entry), colour: SITE_SERIES_COLOURS[index] }))}
         />
       </SiteChartCard>
+
+      {everyOfFilter !== null && heldCount !== undefined ? (
+        <p className="text-[12px] leading-relaxed text-secondary">
+          {band
+            ? t("bandOfEvery", { held: formatNumber(heldCount), total: formatNumber(everyOfFilter), band: tb(band) })
+            : t("moveOfEvery", { held: formatNumber(heldCount), total: formatNumber(everyOfFilter), move: t(`statuses.${status}`) })}
+          {status === "NEW" && !band ? ` ${t("newToHeld")}` : null}
+        </p>
+      ) : null}
 
       <DataTable
         rows={table.pageRows}
@@ -189,9 +207,10 @@ export default function SiteKeywordsPage() {
               cell: (row: (typeof shownRows)[number]) => {
                 const then = onDay.get(row.keyword);
                 if (compared === undefined) return <span className="text-muted">…</span>;
-                return then === undefined || then === null
-                  ? <span className="text-[12px] text-muted">{tc("notOnPageOne")}</span>
-                  : <span className="font-mono text-[12px] text-secondary">{then}{row.position !== null ? <ChangeCell change={then - row.position} /> : null}</span>;
+                // Not in that day's list says nothing of where it stood; a check that found it nowhere does.
+                if (!then?.checked) return <span className="text-[12px] text-muted">{t("notInListThatDay")}</span>;
+                if (then.position === null) return <span className="text-[12px] text-muted">{tc("notOnPageOne")}</span>;
+                return <span className="font-mono text-[12px] text-secondary">{then.position}{row.position !== null && then.comparable ? <ChangeCell change={then.position - row.position} /> : null}</span>;
               },
             }]
             : [{ key: "change", header: t("columns.change"), align: "right" as const, sortable: true, cell: (row: (typeof shownRows)[number]) => <ChangeCell change={row.change} /> }]),

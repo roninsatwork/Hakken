@@ -5,6 +5,7 @@ import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { ArrowUpDown } from "lucide-react";
 import { api } from "@/convex/_generated/api";
+import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { CUT_COLUMN, ChangeCell, CheckedCell, PageLinkCell, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
@@ -20,9 +21,17 @@ import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../_components/useSiteSort";
 import { SiteViewSwitch } from "../../../_components/SiteViewSwitch";
+import { HeldLine, isPartHeld } from "../../../_components/SiteCoverage";
 
-type Direction = "UP" | "DOWN" | "NEW" | "LOST";
-const DIRECTIONS: Direction[] = ["UP", "DOWN", "NEW", "LOST"];
+/**
+ * The fourth move is lost from a list that held everything the site ranks
+ * for, and left the list from one held in part — never lost, for such a
+ * search may still rank below its limit (sites-data-completeness-plan.md, §4.C).
+ */
+type Direction = "UP" | "DOWN" | "NEW" | "LOST" | "LEFT";
+const WHOLE_DIRECTIONS: Direction[] = ["UP", "DOWN", "NEW", "LOST"];
+const HELD_DIRECTIONS: Direction[] = ["UP", "DOWN", "NEW", "LEFT"];
+const ALL_DIRECTIONS: Direction[] = ["UP", "DOWN", "NEW", "LOST", "LEFT"];
 
 /**
  * The columns that sort, over every move (docs/plans/active/
@@ -45,10 +54,16 @@ export default function SiteMovesPage() {
   const range = useSiteRange();
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
-  const [direction, setDirection] = useSiteParam<Direction>("direction", "UP", DIRECTIONS);
+  const partHeld = isPartHeld(site?.coverage);
+  const [chosenDirection, setDirection] = useSiteParam<Direction>("direction", "UP", ALL_DIRECTIONS);
+  const direction: Direction = chosenDirection === "LOST" && partHeld ? "LEFT" : chosenDirection === "LEFT" && !partHeld ? "LOST" : chosenDirection;
   const [search, setSearch, settled] = useSiteSearch();
   const order = useSiteSort(SORTS, direction === "UP" || direction === "DOWN" ? "change" : "keyword");
-  const table = useSiteListPage(api.siteKeywords.listMoves, {
+  // A site checked once has nothing to compare with: every search it ranks
+  // for is "new" only because no check came before, so none is listed as a
+  // move (docs/plans/active/sites-audit-fixes-plan.md, 1.3).
+  const firstCheckOnly = site?.checkDays.length === 1;
+  const table = useSiteListPage(api.siteKeywords.listMoves, firstCheckOnly ? "skip" : {
     siteId,
     status: direction,
     ...(settled ? { search: settled } : {}),
@@ -61,6 +76,12 @@ export default function SiteMovesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<ArrowUpDown className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      {partHeld ? (
+        <div className="flex flex-col gap-1">
+          <HeldLine coverage={site?.coverage} />
+          <p className="text-[12px] leading-relaxed text-secondary">{t("amongHeld")}</p>
+        </div>
+      ) : null}
 
       <SiteChartCard
         title={t("chartTitle")}
@@ -78,6 +99,9 @@ export default function SiteMovesPage() {
         />
       </SiteChartCard>
 
+      {firstCheckOnly ? (
+        <HakkenEmptyState icon={ArrowUpDown} title={t("firstCheckTitle")} description={t("firstCheckBody")} />
+      ) : (
       <DataTable
         rows={table.pageRows}
         rowKey={(row) => row._id}
@@ -88,7 +112,7 @@ export default function SiteMovesPage() {
           <>
             <SiteViewSwitch
               label={t("title")}
-              options={DIRECTIONS.map((entry) => ({ value: entry, label: t(`tabs.${entry}`) }))}
+              options={(partHeld ? HELD_DIRECTIONS : WHOLE_DIRECTIONS).map((entry) => ({ value: entry, label: t(`tabs.${entry}`) }))}
               value={direction}
               onChange={setDirection}
             />
@@ -123,6 +147,7 @@ export default function SiteMovesPage() {
           { key: "checked", header: t("columns.lastChecked"), cell: (row) => <CheckedCell day={row.day} /> },
         ]}
       />
+      )}
     </div>
   );
 }

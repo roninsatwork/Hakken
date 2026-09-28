@@ -3,11 +3,14 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { aiEngineValidator, answerPlace, fanOutPlace, type AiEngine } from "./seoAiEngines";
 import { askedPlace, listHold, requireMySite } from "./siteAccess";
+import { holdBrandNames } from "./holdProfiles";
 import { holdQuestion, holdQuestions } from "./holdLists";
 import { heldTo, listOrder, listPageArgs, listPageResult, pageOfList, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { tenantQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
+import { answerStance } from "./utils/siteShapes";
 import { wordStartMatcher, wordsOf } from "./utils/wordStarts";
+import { MAX_LIST } from "./websiteSiteRows";
 
 /**
  * Keeping what each AI engine said, word for word (D9).
@@ -95,8 +98,6 @@ export async function deleteAnswerText(ctx: MutationCtx, textId: Id<"aiAnswerTex
   await ctx.db.delete(textId);
 }
 
-/** Questions offered on the Full answers page: the site's list, capped on its record. */
-const QUESTIONS_READ = 200;
 
 const stanceValidator = v.union(
   v.literal("RECOMMENDED"),
@@ -115,12 +116,14 @@ export const answerQuestions = tenantQuery({
   }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const questions = await holdQuestions(ctx, listHold(site), QUESTIONS_READ);
+    // The whole list, as Mentions links to any of it (docs/plans/active/sites-audit-fixes-plan.md, 3.2).
+    const questions = await holdQuestions(ctx, listHold(site), MAX_LIST);
     return {
       questions: questions
         .map((question) => ({ prompt: question.prompt, engines: question.engines, isActive: question.isActive }))
         .sort((left, right) => Number(right.isActive) - Number(left.isActive) || left.prompt.localeCompare(right.prompt)),
-      names: (site.website.brandNames ?? []).map((entry) => entry.name),
+      // The names this company knows the site by (holdProfiles.ts).
+      names: (await holdBrandNames(ctx, site.hold._id)).map((entry) => entry.name),
     };
   },
 });
@@ -238,10 +241,7 @@ export const listAnswers = tenantQuery({
         .query("aiAnswers")
         .withIndex("by_pull", (q) => q.eq("pullId", entry.pullId))
         .first();
-      const stance = answer?.recommended.includes(id) ? "RECOMMENDED" as const
-        : answer?.warnedAgainst.includes(id) ? "WARNED_AGAINST" as const
-          : answer?.named.includes(id) ? "NAMED" as const
-            : "NOT_NAMED" as const;
+      const stance = answerStance(answer, id);
       return { _id: text._id, engine: text.engine, day: text.day, text: text.text, sources: text.sources, stance };
     }));
     return { ...shown, rows: rows.flatMap((row) => (row ? [row] : [])) };
@@ -291,10 +291,7 @@ export const answerRecord = tenantQuery({
         .take(SEARCHES_SHOWN),
     ]);
     const id = site.website._id;
-    const stance = answer?.recommended.includes(id) ? "RECOMMENDED" as const
-      : answer?.warnedAgainst.includes(id) ? "WARNED_AGAINST" as const
-        : answer?.named.includes(id) ? "NAMED" as const
-          : "NOT_NAMED" as const;
+    const stance = answerStance(answer, id);
     const host = site.website.host;
     // A source on this site opens its page's screen: the path, when the address is the site's own.
     const pageOf = (url: string): string | null => {
@@ -313,7 +310,7 @@ export const answerRecord = tenantQuery({
       text: row.text,
       sources: row.sources.map((url) => ({ url, page: pageOf(url) })),
       stance,
-      names: (site.website.brandNames ?? []).map((entry) => entry.name),
+      names: (await holdBrandNames(ctx, site.hold._id)).map((entry) => entry.name),
       searches: searches.map((entry) => ({
         query: entry.query,
         queryText: entry.queryText,

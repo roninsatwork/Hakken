@@ -2,14 +2,14 @@ import { v, type Infer } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx } from "./_generated/server";
-import { answerPlace, type AiEngine } from "./seoAiEngines";
 import { requestGapRebuild, siteRebuildKey } from "./siteRankings";
+import { syncListAiLines } from "./siteListAiDays";
 import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
 import { KEYWORD_COPY_FIELDS, keywordCopyTuple } from "./siteKeywordCopy";
 import { dropCopyOf, keywordsCopyKey, pagesCopyKey, writeListCopy } from "./siteListCopies";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
-import { bandCountsValidator, emptyBandCounts, pageTypeByAddress, sectionOf, type BandCounts, type EngineDay, intentSplitValidator, type IntentSplit } from "./utils/siteShapes";
+import { bandCountsValidator, emptyBandCounts, pageTypeByAddress, sectionOf, type BandCounts, intentSplitValidator, type IntentSplit } from "./utils/siteShapes";
 
 /**
  * Rebuilding a site's summaries from its latest rankings.
@@ -34,12 +34,6 @@ const WRITE_BATCH = 400;
 
 /** Days of metrics and answers copied into the day summaries on an ordinary rebuild. */
 const SYNC_DAYS = 14;
-
-/** Every company's questions about a site read when counting their answers, each list apart. */
-const QUESTIONS_READ = 200;
-
-/** Answers read per question and engine for one window of days. */
-const ANSWERS_PER_WINDOW = 400;
 
 /** Metrics rows read for one window of days. */
 const METRICS_PER_WINDOW = 2_000;
@@ -149,6 +143,14 @@ async function rebuildSiteNow(
     websiteId: args.websiteId,
     locationCode: args.locationCode,
   });
+  // The check before it, of the same kind: a search held then and not now
+  // left a list held in part (§4.C) — one marked lost is counted as lost.
+  const previousCheckDay: string | null = latestCheckDay === null ? null : await ctx.runQuery(internal.siteSummaries.checkBefore, {
+    websiteId: args.websiteId,
+    locationCode: args.locationCode,
+    day: latestCheckDay,
+  });
+  let left = 0;
 
   // One pass over the latest rankings: the headline counts, the pages, the
   // rows a complete pull shows the site no longer ranks for, and the compact
@@ -189,7 +191,10 @@ async function rebuildSiteNow(
       const position = row.position as number;
       statusRows.push({ status: row.status, day: row.day });
       // Not seen at the latest check (T9): listed under its own filter, counted nowhere.
-      if (latestCheckDay !== null && row.day < latestCheckDay) continue;
+      if (latestCheckDay !== null && row.day < latestCheckDay) {
+        if (previousCheckDay !== null && row.day >= previousCheckDay) left += 1;
+        continue;
+      }
       keywords += 1;
       if (row.band !== "zz_none") bands[row.band] += 1;
       if (row.intent === "BUYING") intents.buying += 1;
@@ -248,7 +253,7 @@ async function rebuildSiteNow(
     key: keywordsCopyKey(args.websiteId, args.locationCode),
     fields: KEYWORD_COPY_FIELDS,
     rows: copyRows,
-    meta: { rankingDay: rankingDay || null, latestCheckDay },
+    meta: { rankingDay: rankingDay || null, latestCheckDay, previousCheckDay },
   });
 
   // Pages and folders, written under this rebuild's id; whatever an older
@@ -314,6 +319,7 @@ async function rebuildSiteNow(
       rankedDown: moved.down,
       rankedNew: moved.fresh,
       rankedLost: moved.lost,
+      rankedLeft: left,
       ...intents,
       intentSplit: split,
     });
@@ -326,12 +332,9 @@ async function rebuildSiteNow(
     ? await ctx.runQuery(internal.siteSummaries.firstRecordedDay, { websiteId: args.websiteId })
     : shiftDay(today, -SYNC_DAYS);
   for (let from = firstDay ?? today; from <= today; from = shiftDay(from, 31)) {
-    await ctx.runMutation(internal.siteSummaries.syncDays, {
-      websiteId: args.websiteId,
-      locationCode: args.locationCode,
-      fromDay: from,
-      toDay: shiftDay(from, 30),
-    });
+    const window = { websiteId: args.websiteId, locationCode: args.locationCode, fromDay: from, toDay: shiftDay(from, 30) };
+    await ctx.runMutation(internal.siteSummaries.syncDays, window);
+    await syncListAiLines(ctx, window);
   }
 
   // A few holds a step: a website watched by many companies, each with its
@@ -449,6 +452,42 @@ export const completeRankedDay = internalQuery({
 /** A site's newest list requests read to find those still out: a list is up to ten pages, from each place. */
 const LIST_PULLS_READ = 100;
 
+/** How far back a list day's reach is compared: a limit lowered is followed after this long. */
+const LIST_REACH_DAYS = 14;
+
+/**
+ * How far one day's pages of a keyword list reached, in rows: to the end of
+ * the site's list when a page came back short, else as far as its pages went.
+ * Unknown for pages filed before they recorded their figures.
+ */
+export function listDayReach(pages: ListPageFigures[]): number | null {
+  if (pages.length === 0) return null;
+  if (pages.some((page) => page.listItems < page.listLimit)) return Number.POSITIVE_INFINITY;
+  return Math.max(...pages.map((page) => page.listOffset + page.listItems));
+}
+
+/**
+ * The newest day of a keyword list that reached as far as any recent one:
+ * the latest check of the whole list kept. A day that bought only the
+ * everyday check's first pages is newer and shorter, and is not the latest
+ * check — taken as it, every search past its pages would read as not in the
+ * latest check, and the site's counts would shrink to the everyday check on
+ * every run between the weekly lists (`everyRunReach` in `sitePagedLists.ts`).
+ * With no figures to judge by, the newest day, as before.
+ */
+function latestWholeListDay(rows: Doc<"seoWebsiteMetrics">[]): string | null {
+  const byDay = pagesByDay(rows);
+  const days = [...new Set(rows.map((row) => row.day))].sort().reverse();
+  const newest = days[0];
+  if (!newest) return null;
+  const since = shiftDay(newest, -LIST_REACH_DAYS);
+  const reaches = days.filter((day) => day >= since).map((day) => ({ day, reach: listDayReach(byDay.get(day) ?? []) }));
+  const known = reaches.filter((entry): entry is { day: string; reach: number } => entry.reach !== null);
+  if (known.length === 0) return newest;
+  const furthest = Math.max(...known.map((entry) => entry.reach));
+  return known.find((entry) => entry.reach >= furthest)?.day ?? newest;
+}
+
 /** A list page still out after this long is stuck, and no longer holds its list back. */
 const LIST_PAGE_STUCK_MS = 14 * 24 * 60 * 60 * 1000;
 
@@ -482,14 +521,13 @@ export const latestKeywordCheck = internalQuery({
       const cycle = pull.cycleId ? await ctx.db.get(pull.cycleId) : null;
       unfinished.add(new Date(cycle?.startedAt ?? pull.submittedAt).toISOString().slice(0, 10));
     }
-    const listDays = (await ctx.db
+    const listRows = (await ctx.db
       .query("seoWebsiteMetrics")
       .withIndex("by_website_operation_day", (q) => q.eq("websiteId", args.websiteId).eq("operationId", KEYWORD_LIST_OPERATION_ID))
       .order("desc")
       .take(LIST_PAGES_READ_FOR_COMPLETE_DAY))
-      .filter((row) => isThisPlace(row, args.locationCode))
-      .map((row) => row.day);
-    const landed = listDays.find((day) => !unfinished.has(day));
+      .filter((row) => isThisPlace(row, args.locationCode));
+    const landed = latestWholeListDay(listRows.filter((row) => !unfinished.has(row.day)));
     if (landed) return landed;
     const everyday = (await ctx.db
       .query("seoWebsiteMetrics")
@@ -498,6 +536,26 @@ export const latestKeywordCheck = internalQuery({
       .take(PLACES_READ_FOR_COMPLETE_DAY))
       .find((row) => isThisPlace(row, args.locationCode));
     return everyday?.day ?? null;
+  },
+});
+
+/**
+ * The keyword check before a day, of the same kind: the list before it, for
+ * a day a list landed; else the everyday check before it. Null when none.
+ */
+export const checkBefore = internalQuery({
+  args: { websiteId: v.id("websites"), locationCode: v.number(), day: v.string() },
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx, args) => {
+    const before = async (operationId: string) => (await ctx.db
+      .query("seoWebsiteMetrics")
+      .withIndex("by_website_operation_day", (q) => q.eq("websiteId", args.websiteId).eq("operationId", operationId).lte("day", args.day))
+      .order("desc")
+      .take(LIST_PAGES_READ_FOR_COMPLETE_DAY))
+      .filter((row) => isThisPlace(row, args.locationCode));
+    const lists = await before(KEYWORD_LIST_OPERATION_ID);
+    const rows = lists.some((row) => row.day === args.day) ? lists : await before("domain_ranked_keywords");
+    return rows.find((row) => row.day < args.day)?.day ?? null;
   },
 });
 
@@ -682,6 +740,7 @@ export const writeRankingDay = internalMutation({
     rankedDown: v.number(),
     rankedNew: v.number(),
     rankedLost: v.number(),
+    rankedLeft: v.optional(v.number()),
     buying: v.number(),
     researching: v.number(),
     branded: v.number(),
@@ -698,7 +757,8 @@ export const writeRankingDay = internalMutation({
 
 /**
  * Copy the website's figures for a window of days into the day rows of one
- * place, and each company's AI lines about it into its own (`syncListAiDays`).
+ * place. Each company's AI lines about it are counted apart, a list at a time
+ * (`syncListAiLines`, `siteListAiDays.ts`).
  */
 export const syncDays = internalMutation({
   args: { websiteId: v.id("websites"), locationCode: v.number(), fromDay: v.string(), toDay: v.string() },
@@ -769,120 +829,9 @@ export const syncDays = internalMutation({
       await ctx.db.patch(row._id, { ...fields, updatedAt: now });
     }
 
-    await syncListAiDays(ctx, { ...args, now });
     return null;
   },
 });
-
-/**
- * Each company's AI lines about this website for a window of days
- * (docs/plans/active/private-tracking-lists-plan.md, §4.4): per list, per day,
- * per engine, how many answers to its questions came back and how often they
- * named the site, and a line for every other website they named. One
- * company's questions never count towards another's lines; an answer asked by
- * two lists is read once and credited to both.
- *
- * Only the lists watched from this place: the same question asked from
- * another place is another answer, and that place's own sync counts it.
- */
-async function syncListAiDays(
-  ctx: MutationCtx,
-  args: { websiteId: Id<"websites">; locationCode: number; fromDay: string; toDay: string; now: number },
-): Promise<void> {
-  const questions = await ctx.db
-    .query("websiteQuestions")
-    .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
-    .take(QUESTIONS_READ);
-  const lists = new Map<Id<"companyWebsites">, Array<{ prompt: string; engines: AiEngine[] }>>();
-  for (const holdId of new Set(questions.map((question) => question.companyWebsiteId))) {
-    const hold = await ctx.db.get(holdId);
-    if (!hold || (hold.locationCode ?? DEFAULT_LOCATION_CODE) !== args.locationCode) continue;
-    lists.set(holdId, questions.filter((question) => question.companyWebsiteId === holdId));
-  }
-
-  // Each question and engine read once, however many lists ask it.
-  const answersOf = new Map<string, Doc<"aiAnswers">[]>();
-  for (const list of lists.values()) {
-    for (const question of list) {
-      for (const engine of question.engines) {
-        const key = `${question.prompt}\u0000${engine}`;
-        if (answersOf.has(key)) continue;
-        answersOf.set(key, await ctx.db
-          .query("aiAnswers")
-          .withIndex("by_question", (q) =>
-            q.eq("prompt", question.prompt).eq("engine", engine)
-              .eq("locationCode", answerPlace(engine, args.locationCode))
-              .gte("day", args.fromDay).lte("day", args.toDay))
-          .take(ANSWERS_PER_WINDOW));
-      }
-    }
-  }
-
-  // The window's lines, per list: the site's own, and every other site named.
-  const lines = new Map<string, { holdId: Id<"companyWebsites">; websiteId: Id<"websites">; day: string; engines: Map<AiEngine, EngineDay> }>();
-  const lineOf = (holdId: Id<"companyWebsites">, websiteId: Id<"websites">, day: string) => {
-    const key = `${holdId}|${day}|${websiteId}`;
-    const line = lines.get(key) ?? { holdId, websiteId, day, engines: new Map<AiEngine, EngineDay>() };
-    lines.set(key, line);
-    return line;
-  };
-  for (const [holdId, list] of lists) {
-    for (const question of list) {
-      for (const engine of question.engines) {
-        for (const answer of answersOf.get(`${question.prompt}\u0000${engine}`) ?? []) {
-          const own = lineOf(holdId, args.websiteId, answer.day);
-          const counts = own.engines.get(engine) ?? { engine, asked: 0, named: 0, recommended: 0 };
-          counts.asked += 1;
-          if (answer.named.includes(args.websiteId)) counts.named += 1;
-          if (answer.recommended.includes(args.websiteId)) counts.recommended += 1;
-          own.engines.set(engine, counts);
-
-          for (const named of new Set(answer.named)) {
-            if (named === args.websiteId) continue;
-            const rival = lineOf(holdId, named, answer.day);
-            // "Asked" stays at nought: the questions were this site's, not the rival's.
-            const rivalCounts = rival.engines.get(engine) ?? { engine, asked: 0, named: 0, recommended: 0 };
-            rivalCounts.named += 1;
-            if (answer.recommended.includes(named)) rivalCounts.recommended += 1;
-            rival.engines.set(engine, rivalCounts);
-          }
-        }
-      }
-    }
-  }
-
-  // The window's rows made to match what the answers say now: a row no list
-  // supports any more goes — a question removed, a hold gone — and an
-  // unchanged one is left alone.
-  const standing = await ctx.db
-    .query("siteListAiDays")
-    .withIndex("by_asker_day", (q) =>
-      q.eq("askerWebsiteId", args.websiteId).eq("locationCode", args.locationCode)
-        .gte("day", args.fromDay).lte("day", args.toDay))
-    .take(LIST_AI_ROWS_PER_WINDOW);
-  const unclaimed = new Map(standing.map((row) => [`${row.companyWebsiteId}|${row.day}|${row.websiteId}`, row]));
-  for (const [key, line] of lines) {
-    const ai = [...line.engines.values()];
-    const row = unclaimed.get(key);
-    unclaimed.delete(key);
-    if (row && JSON.stringify(row.ai) === JSON.stringify(ai)) continue;
-    const fields = {
-      companyWebsiteId: line.holdId,
-      askerWebsiteId: args.websiteId,
-      locationCode: args.locationCode,
-      websiteId: line.websiteId,
-      day: line.day,
-      ai,
-      updatedAt: args.now,
-    };
-    if (row) await ctx.db.replace(row._id, fields);
-    else await ctx.db.insert("siteListAiDays", fields);
-  }
-  for (const row of unclaimed.values()) await ctx.db.delete(row._id);
-}
-
-/** A window's AI lines: a month of days, each naming a few dozen websites at most, for the lists asking. */
-const LIST_AI_ROWS_PER_WINDOW = 4_000;
 
 /** Whether a metrics row speaks for this place: a site-wide figure, or an older row, speaks for every place. */
 function isThisPlace(row: Doc<"seoWebsiteMetrics">, locationCode: number): boolean {
@@ -895,8 +844,18 @@ const PLACES_READ_FOR_COMPLETE_DAY = 50;
 /** A list's newest page figures read: a list is up to a few dozen pages a day, from each place. */
 const LIST_PAGES_READ_FOR_COMPLETE_DAY = 200;
 
-/** What a list page recorded about the whole list, for `listDayComplete`. */
-type ListPageFigures = { listOffset: number; listLimit: number; listItems: number; listDropped: number; listTotal?: number };
+/** What a list page recorded about the whole list, for `listDayComplete`: its rows, and the searches among them. */
+export type ListPageFigures = {
+  listOffset: number;
+  listLimit: number;
+  listItems: number;
+  listDropped: number;
+  listTotal?: number;
+  /** The searches among the page's rows; absent on pages filed before they were counted. */
+  searches?: number;
+  /** The searches the supplier says the site ranks for. */
+  rankedKeywords?: number;
+};
 
 /**
  * Whether one day's pages of a full keyword list cover the whole of it: from
@@ -910,32 +869,57 @@ type ListPageFigures = { listOffset: number; listLimit: number; listItems: numbe
 export function listDayComplete(pages: ListPageFigures[]): boolean {
   const total = Math.max(0, ...pages.map((page) => page.listTotal ?? 0));
   if (total <= 0) return false;
-  const byOffset = new Map(pages.map((page) => [page.listOffset, page]));
+  // Two pages from one place can start at one row — an everyday check cut
+  // short of a thousand, and the week's full page — and the longer speaks.
+  const byOffset = new Map<number, ListPageFigures>();
+  for (const page of pages) {
+    const held = byOffset.get(page.listOffset);
+    if (!held || page.listLimit > held.listLimit) byOffset.set(page.listOffset, page);
+  }
+  let searches = 0;
+  let counted = true;
   for (let offset = 0; offset < total;) {
     const page = byOffset.get(offset);
     if (!page || page.listDropped > 0 || page.listLimit <= 0) return false;
     if (page.listItems < Math.min(page.listLimit, total - offset)) return false;
+    if (page.searches === undefined) counted = false;
+    searches += page.searches ?? 0;
     offset += page.listLimit;
   }
-  return true;
+  // Every search the supplier counts, too: pages bought on different days can
+  // shift where a row falls, and a search skipped between two of them would
+  // otherwise read as lost (sites-data-completeness-plan.md, B9).
+  const ranked = Math.max(0, ...pages.map((page) => page.rankedKeywords ?? 0));
+  return !counted || ranked === 0 || searches >= ranked;
 }
 
-/** The newest day whose list pages cover the whole list, or null. Pages filed before they recorded their figures never count. */
-function newestCompleteListDay(rows: Doc<"seoWebsiteMetrics">[]): string | null {
+/** A keyword list's pages by day, with the figures each recorded; pages filed before they recorded them are left out. */
+export function pagesByDay(rows: Doc<"seoWebsiteMetrics">[]): Map<string, ListPageFigures[]> {
   const byDay = new Map<string, ListPageFigures[]>();
   for (const row of rows) {
     const figures = JSON.parse(row.metricsJson) as Partial<ListPageFigures>;
     if (typeof figures.listOffset !== "number" || typeof figures.listLimit !== "number" || typeof figures.listItems !== "number") continue;
     const pages = byDay.get(row.day) ?? [];
+    const through = (figures as { returnedKeywords?: unknown }).returnedKeywords;
+    const ranked = (figures as { rankedKeywords?: unknown }).rankedKeywords;
     pages.push({
       listOffset: figures.listOffset,
       listLimit: figures.listLimit,
       listItems: figures.listItems,
       listDropped: figures.listDropped ?? 0,
       ...(typeof figures.listTotal === "number" ? { listTotal: figures.listTotal } : {}),
+      // A page records its searches as how far they reach: its first row's place and its own.
+      ...(typeof through === "number" ? { searches: Math.max(0, through - figures.listOffset) } : {}),
+      ...(typeof ranked === "number" ? { rankedKeywords: ranked } : {}),
     });
     byDay.set(row.day, pages);
   }
+  return byDay;
+}
+
+/** The newest day whose list pages cover the whole list, or null. Pages filed before they recorded their figures never count. */
+function newestCompleteListDay(rows: Doc<"seoWebsiteMetrics">[]): string | null {
+  const byDay = pagesByDay(rows);
   for (const day of [...byDay.keys()].sort().reverse()) {
     if (listDayComplete(byDay.get(day) ?? [])) return day;
   }

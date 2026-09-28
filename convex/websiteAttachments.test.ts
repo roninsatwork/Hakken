@@ -47,7 +47,7 @@ async function seedCompany(t: Harness, name: string) {
 const holdOf = (t: Harness, id: Id<"companyWebsites">) => t.run(async (ctx) => await ctx.db.get(id));
 
 describe("tracking a website", () => {
-  test("paired with one of the company's own sites, it records the pair and the rivalry", async () => {
+  test("paired with one of the company's own sites, it records the pair and nothing for anyone else", async () => {
     const t = harness();
     const admin = await superAdmin(t);
     const ronins = await seedCompany(t, "Ronins Agency");
@@ -63,12 +63,12 @@ describe("tracking a website", () => {
     const ownHold = await holdOf(t, own);
     expect(tracked?.relationship).toBe("TRACKED");
     expect(tracked?.againstWebsiteId).toBe(ownHold?.websiteId);
-    // The market fact goes on the host for everyone; it decides nothing.
-    const edges = await t.run(async (ctx) => await ctx.db.query("websiteRivals").collect());
-    expect(edges).toHaveLength(1);
+    // Which rivals count is this company's own (company-level-website-facts-plan.md,
+    // CL5): the two holds are all that was written.
+    expect(await t.run(async (ctx) => await ctx.db.query("companyWebsites").collect())).toHaveLength(2);
   });
 
-  test("with no pair, it is held on its own and asserts no rivalry", async () => {
+  test("with no pair, it is held on its own", async () => {
     const t = harness();
     const admin = await superAdmin(t);
     const ronins = await seedCompany(t, "Ronins Agency");
@@ -81,7 +81,6 @@ describe("tracking a website", () => {
     const tracked = await holdOf(t, trackedId);
     expect(tracked?.relationship).toBe("TRACKED");
     expect(tracked?.againstWebsiteId).toBeUndefined();
-    expect(await t.run(async (ctx) => await ctx.db.query("websiteRivals").collect())).toHaveLength(0);
   });
 
   test("it cannot be paired with a site the company only tracks", async () => {

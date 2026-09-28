@@ -5,7 +5,7 @@ import { useAction, useQuery } from "convex/react";
 import { answerQueries } from "@/src/test/siteViewFixtures";
 import SiteSourcesPage from "./ai/sources/page";
 import SiteLinksComparedPage from "./backlinks/compared/page";
-import SitePositionBandsPage from "./keywords/bands/page";
+import SiteNewLostPage from "./keywords/new-lost/page";
 
 const nav = vi.hoisted(() => ({ pathname: "/app/sites/site_1/table", search: "", replace: vi.fn() }));
 
@@ -118,24 +118,31 @@ describe("a day-by-day table", () => {
     vi.mocked(useQuery).mockReset();
   });
 
-  const point = (day: string, bands: [number, number, number, number, number]) => ({
-    day,
-    allBands: { p01_03: bands[0], p04_10: bands[1], p11_20: bands[2], p21_50: bands[3], p51_up: bands[4] },
+  // New and lost keywords' checks, the page's second table: it keeps its
+  // order under keys of its own (`checks.sort`), apart from the moves above it.
+  const step = (day: string, fresh: number) => ({
+    day, lastDay: day, checks: 1, start: null, kind: "WHOLE", checked: 500, held: 500,
+    rankedNew: fresh, rankedUp: 1, rankedDown: 1, rankedLost: 1,
   });
-  const SERIES = [{ points: [point("2026-09-01", [50, 200, 150, 200, 190]), point("2026-09-23", [58, 221, 144, 198, 186]), point("2026-09-12", [70, 180, 140, 190, 180])] }];
+  const CHECKS = { steps: [step("2026-09-01", 5), step("2026-09-23", 7), step("2026-09-12", 9)], newest: null };
 
   it("opens on the newest day, and sorts by any figure", () => {
-    openAt("", { "siteCharts:siteSeries": SERIES });
-    const { unmount } = render(<SitePositionBandsPage />);
-    expect(screen.getByRole("columnheader", { name: "sites.bands.columns.day" })).toHaveAttribute("aria-sort", "descending");
+    openAt("", { "siteChecks:siteChecks": CHECKS });
+    const { unmount } = render(<SiteNewLostPage />);
+    expect(screen.getByRole("columnheader", { name: "sites.newLost.checks.columns.day" })).toHaveAttribute("aria-sort", "descending");
     const days = () => screen.getAllByRole("row").slice(1).map((row) => within(row).getAllByRole("cell")[0].textContent);
     const opening = days();
     unmount();
 
-    openAt("sort=p01_03", { "siteCharts:siteSeries": SERIES });
-    render(<SitePositionBandsPage />);
-    // Most in the top three first: 12 Sept's 70, then 23 Sept's 58, then 1 Sept's 50.
+    openAt("checks.sort=new", { "siteChecks:siteChecks": CHECKS });
+    render(<SiteNewLostPage />);
+    // The most new first: 12 Sept's 9, then 23 Sept's 7, then 1 Sept's 5.
     expect(days()).toEqual([opening[1], opening[0], opening[2]]);
+
+    // A heading pressed writes the table's own keys, and leaves the first table's alone.
+    fireEvent.click(within(screen.getByRole("columnheader", { name: "sites.newLost.checks.columns.up" })).getByRole("button"));
+    expect(lastWrite().get("checks.sort")).toBe("up");
+    expect(lastWrite().get("sort")).toBeNull();
   });
 });
 

@@ -7,8 +7,12 @@ import type { PagedFooterSpec } from "@/src/ui/components/screens/DataTable";
 /** What a table's rows are, for its count: "807 keywords", "531 linking websites". */
 export type SiteTableNoun =
   | "keywords" | "searches" | "pages" | "websites" | "linkingWebsites" | "links" | "anchors" | "addresses"
-  | "results" | "answers" | "queries" | "problems" | "sections" | "checks" | "weeks" | "groups" | "adverts"
-  | "questionsAndSearches";
+  | "results" | "answers" | "queries" | "problems" | "sections" | "folders" | "checks" | "days" | "weeks" | "months" | "groups" | "adverts"
+  | "questionsAndSearches"
+  // Search Console's countries and devices tables (docs/plans/active/search-console-plan.md §5).
+  | "countries" | "devices"
+  // The fan-out searches grouped into angles (docs/plans/active/fan-out-angles-plan.md, FA5).
+  | "angles";
 
 /**
  * The bar across the top of every Sites table, inside its card (`DataTable`'s

@@ -7,8 +7,8 @@ import type { Id } from "./_generated/dataModel";
 import type { ActionCtx } from "./_generated/server";
 import type { TypesafeAskResult } from "./typesafeProviderService";
 import { judgeCompetitors } from "./seoJudgments";
-import { parseDomainCompetitors } from "./dataForSeoParsers";
-import { listOwnerOf } from "@/src/test/listOwner";
+import { discoveryTotal, parseDomainCompetitors } from "./dataForSeoParsers";
+import { discoveredTotal } from "./siteDiscovery";
 
 /**
  * Websites discovery says compete with one of a company's own.
@@ -66,6 +66,35 @@ describe("reading a discovery response", () => {
   test("survives a shape it does not recognise", () => {
     expect(parseDomainCompetitors(null)).toEqual([]);
     expect(parseDomainCompetitors([{ items: [{ intersections: 5 }] }])).toEqual([]);
+  });
+
+  // A discovery answer holds 50 rows of however many the supplier found: the
+  // screens say "49 of N", so N is kept (sites-data-completeness-plan.md, B3).
+  test("keeps how many the supplier found, the site itself left out", () => {
+    const answer = [{ total_count: 1_297, items: [{ domain: "ourshop.com", intersections: 900 }, { domain: "rival.com", intersections: 412 }] }];
+    expect(discoveryTotal(answer, "ourshop.com")).toBe(1_296);
+    expect(discoveryTotal(answer, "elsewhere.com")).toBe(1_297);
+    expect(discoveryTotal([{ items: [] }], "ourshop.com")).toBeNull();
+  });
+
+  test("the total is kept per place, and a parse run again replaces its own", async () => {
+    const t = harness();
+    const { websiteId, pullId } = await seedWorld(t);
+    const record = (total: number | null, locationCode?: number) => t.mutation(internal.siteDiscovery.recordDiscoveryTotal, {
+      pullId, websiteId, day: "2026-09-27", found: 49, total, ...(locationCode !== undefined ? { locationCode } : {}),
+    });
+    const read = (place: number) => t.run(async (ctx) => await discoveredTotal(ctx, websiteId, place));
+
+    expect(await read(2826)).toBeNull();
+    await record(1_296, 2826);
+    await record(1_310, 2826);
+    expect(await read(2826)).toBe(1_310);
+    expect(await read(2840)).toBeNull();
+    expect(await t.run(async (ctx) => (await ctx.db.query("seoWebsiteMetrics").collect()).length)).toBe(1);
+
+    // No total in the answer: the found count is kept, and no total is claimed.
+    await record(null, 2826);
+    expect(await read(2826)).toBeNull();
   });
 });
 
@@ -227,11 +256,8 @@ describe("filing and deciding suggestions", () => {
     const tracked = await t.run(async (ctx) => (await ctx.db.query("companyWebsites").collect())
       .filter((row) => row.relationship === "TRACKED"));
     expect(tracked).toHaveLength(1);
-    // And the rivalry is recorded on the host as observed rather than claimed,
-    // which is the distinction the two sources exist to keep. That record is
-    // market knowledge; it decides no purchase.
-    const edges = await t.run(async (ctx) => await ctx.db.query("websiteRivals").collect());
-    expect(edges[0].source).toBe("DISCOVERED");
+    // The trail says it was found rather than typed, the distinction a
+    // suggestion exists to keep.
     const audit = await t.run(async (ctx) =>
       await ctx.db.query("auditLogs")
         .filter((q) => q.eq(q.field("actionType"), "ADD_TRACKED_WEBSITE")).collect());
@@ -285,17 +311,12 @@ describe("filing and deciding suggestions", () => {
 });
 
 describe("what the judge is told about the business", () => {
-  test("its own profile, or the one of the site it is compared with", async () => {
+  test("the company's own profile, or for a competitor the company's own site's — never another company's", async () => {
     const t = harness();
-    const { own, rival } = await t.run(async (ctx) => {
-      const own = await ctx.db.insert("websites", {
-        host: "ourshop.com", displayHost: "ourshop.com", firstSeenAt: Date.now(),
-        sector: "Digital agency", marketLabel: "London, England",
-        brandNames: [{ name: "Our Shop", isPrimary: true }],
-      });
+    const { ownHold, rivalHold, otherHold } = await t.run(async (ctx) => {
+      const own = await ctx.db.insert("websites", { host: "ourshop.com", displayHost: "ourshop.com", firstSeenAt: Date.now() });
       // What it ranks for, most visits first — facts every watcher can see —
-      // never a company's own tracked searches, which a judgment filed for
-      // everyone must not carry (docs/plans/active/private-tracking-lists-plan.md).
+      // never a company's own tracked searches.
       const ranked = (keyword: string, position: number | undefined, traffic: number) => ctx.db.insert("siteKeywordRanks", {
         websiteId: own, locationCode: 2826, keyword, ...(position !== undefined ? { position } : {}),
         band: position !== undefined ? "p01_03" : "zz_none", page: "/", volume: 100, volumeKnown: true, intent: "UNJUDGED",
@@ -304,39 +325,78 @@ describe("what the judge is told about the business", () => {
       } as never);
       await ranked("web design surrey", 2, 90);
       await ranked("no longer ranking", undefined, 500);
-      await ctx.db.insert("websiteKeywords", { websiteId: own, companyWebsiteId: await listOwnerOf(ctx, own), keyword: "a private tracked search", isActive: true, createdAt: Date.now() });
       const rival = await ctx.db.insert("websites", { host: "rival.com", displayHost: "rival.com", firstSeenAt: Date.now() });
       const companyId = await ctx.db.insert("companies", { name: "Ronins Agency", createdAt: Date.now() });
-      await ctx.db.insert("companyWebsites", { companyId, websiteId: rival, relationship: "TRACKED", againstWebsiteId: own, createdAt: Date.now() });
-      return { own, rival };
+      const ownHold = await ctx.db.insert("companyWebsites", { companyId, websiteId: own, relationship: "OWNED", createdAt: Date.now() });
+      const rivalHold = await ctx.db.insert("companyWebsites", { companyId, websiteId: rival, relationship: "TRACKED", againstWebsiteId: own, createdAt: Date.now() });
+      await ctx.db.insert("holdProfiles", {
+        companyWebsiteId: ownHold, companyId, websiteId: own, brandNames: [{ name: "Our Shop", isPrimary: true }], hasBrandNames: true,
+        sector: "Digital agency", marketLabel: "London, England", updatedAt: Date.now(),
+      });
+      // Another company owning the same site describes it its own way.
+      const otherCompany = await ctx.db.insert("companies", { name: "Other", createdAt: Date.now() });
+      const otherHold = await ctx.db.insert("companyWebsites", { companyId: otherCompany, websiteId: own, relationship: "OWNED", createdAt: Date.now() });
+      await ctx.db.insert("holdProfiles", {
+        companyWebsiteId: otherHold, companyId: otherCompany, websiteId: own, brandNames: [], hasBrandNames: false,
+        sector: "Something else entirely", updatedAt: Date.now(),
+      });
+      return { ownHold, rivalHold, otherHold };
     });
 
     const expected = { sector: "Digital agency", market: "London, England", names: ["Our Shop"], searches: ["web design surrey"] };
-    expect(await t.query(internal.websiteCanonical.describeBusinessForJudging, { websiteId: own })).toEqual(expected);
-    // A tracked rival has no profile of its own; it is in the same trade as
-    // the site it is compared with, so it borrows that one.
-    expect(await t.query(internal.websiteCanonical.describeBusinessForJudging, { websiteId: rival })).toEqual(expected);
+    expect(await t.query(internal.holdProfiles.describeHoldForJudgingInternal, { companyWebsiteId: ownHold })).toEqual(expected);
+    // A competitor has no profile of its own; it is in the trade of the company's own site it is compared with.
+    expect(await t.query(internal.holdProfiles.describeHoldForJudgingInternal, { companyWebsiteId: rivalHold }))
+      .toEqual({ ...expected, names: [], searches: [] });
+    expect(await t.query(internal.holdProfiles.describeHoldForJudgingInternal, { companyWebsiteId: otherHold }))
+      .toMatchObject({ sector: "Something else entirely", names: [] });
   });
 
-  test("an admin's description of what the business does is saved and handed to the judge", async () => {
+  test("a company's description of what its business does is saved and handed to the judge", async () => {
     const t = harness();
     const admin = await superAdmin(t);
-    const websiteId = await t.run(async (ctx) => await ctx.db.insert("websites", {
-      host: "ourshop.com", displayHost: "ourshop.com", firstSeenAt: Date.now(),
-    }));
+    const holdId = await t.run(async (ctx) => {
+      const websiteId = await ctx.db.insert("websites", { host: "ourshop.com", displayHost: "ourshop.com", firstSeenAt: Date.now() });
+      const companyId = await ctx.db.insert("companies", { name: "Ronins Agency", createdAt: Date.now() });
+      return await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: Date.now() });
+    });
 
-    await admin.mutation(api.websiteCanonical.setWebsiteProfile, {
-      websiteId, sector: "Digital agency", marketLabel: null,
+    await admin.mutation(api.holdProfiles.setHoldBusinessProfile, {
+      companyWebsiteId: holdId, sector: "Digital agency", marketLabel: null,
       description: "  Web design and AI products   for UK businesses. ",
     });
-    expect(await t.query(internal.websiteCanonical.describeBusinessForJudging, { websiteId }))
+    expect(await t.query(internal.holdProfiles.describeHoldForJudgingInternal, { companyWebsiteId: holdId }))
       .toMatchObject({ sector: "Digital agency", does: "Web design and AI products for UK businesses." });
-    expect(await t.query(internal.websiteCanonical.describeWebsitesForJudging, { websiteIds: [websiteId] }))
-      .toEqual([{ websiteId, sector: "Digital agency", does: "Web design and AI products for UK businesses." }]);
+  });
+});
 
-    // Saving the profile without the field leaves the description alone.
-    await admin.mutation(api.websiteCanonical.setWebsiteProfile, { websiteId, sector: "Digital agency", marketLabel: "London" });
-    expect((await t.run(async (ctx) => await ctx.db.get(websiteId)))?.businessDescription)
-      .toBe("Web design and AI products for UK businesses.");
+/*
+  A competitor's page lists the searches in both kept lists, and says how many
+  the two share across everything both rank for, as discovery counted them
+  (sites-data-completeness-plan.md, §4.D3).
+*/
+describe("the searches a site shares with a competitor", () => {
+  test("from the site's own discovery, else the competitor's, and only the company's own", async () => {
+    const t = harness();
+    const { companyId, websiteId, hold } = await seedWorld(t);
+    const { rivalHold, otherHold, userId } = await t.run(async (ctx) => {
+      const rivalSite = await ctx.db.insert("websites", { host: "rival.com", displayHost: "rival.com", firstSeenAt: Date.now() });
+      const rivalHold = await ctx.db.insert("companyWebsites", { companyId, websiteId: rivalSite, relationship: "TRACKED", againstWebsiteId: websiteId, createdAt: Date.now() });
+      const otherCompany = await ctx.db.insert("companies", { name: "Someone Else", createdAt: Date.now() });
+      const otherHold = await ctx.db.insert("companyWebsites", { companyId: otherCompany, websiteId: rivalSite, createdAt: Date.now() });
+      const userId = await ctx.db.insert("users", { name: "M", email: "m@test.com", role: "ADMIN" as const, companyId, createdAt: Date.now() });
+      // Found by the competitor's discovery, not the site's own.
+      await ctx.db.insert("discoveredCompetitors", { companyWebsiteId: rivalHold, companyId, host: "ourshop.com", intersections: 412, discoveredAt: Date.now() });
+      return { rivalHold, otherHold, userId };
+    });
+    const asMember = t.withIdentity({ subject: userId });
+    expect(await asMember.query(api.siteDiscovery.sharedWithRival, { siteId: hold, rivalId: rivalHold })).toBe(412);
+
+    await t.run(async (ctx) => {
+      await ctx.db.insert("discoveredCompetitors", { companyWebsiteId: hold, companyId, host: "rival.com", intersections: 420, discoveredAt: Date.now() });
+    });
+    expect(await asMember.query(api.siteDiscovery.sharedWithRival, { siteId: hold, rivalId: rivalHold })).toBe(420);
+    // Another company's hold of the same website is its own.
+    expect(await asMember.query(api.siteDiscovery.sharedWithRival, { siteId: hold, rivalId: otherHold })).toBeNull();
   });
 });

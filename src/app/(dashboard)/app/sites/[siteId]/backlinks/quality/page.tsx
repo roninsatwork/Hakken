@@ -66,8 +66,10 @@ export default function SiteLinkQualityPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <SiteFigure label={t("spamScore")} value={formatNumber(profile?.spamScore)} detail={<span className="text-muted">{t("spamScale")}</span>} />
           <SiteFigure label={t("brokenBacklinks")} value={formatNumber(profile?.brokenBacklinks)} detail={<span className="text-muted">{t("brokenBacklinksHint")}</span>} href={listHref("backlinks/broken")} />
-          <SiteFigure label={t("brokenPages")} value={formatNumber(profile?.brokenPages)} detail={<span className="text-muted">{t("brokenPagesHint")}</span>} href={listHref("backlinks/broken")} />
-          <SiteFigure label={t("nofollow")} value={formatNumber(profile?.nofollowReferringDomains)} detail={<span className="text-muted">{t("nofollowHint")}</span>} href={listHref("backlinks/all", { follow: "NOFOLLOW" })} />
+          {/* A count of pages, not links: it opens nothing rather than the list of broken links (§4.D6). */}
+          <SiteFigure label={t("brokenPages")} value={formatNumber(profile?.brokenPages)} detail={<span className="text-muted">{t("brokenPagesHint")}</span>} />
+          {/* The linking websites this count is of — live, with a nofollow link here — not every nofollow link (4.13). */}
+          <SiteFigure label={t("nofollow")} value={formatNumber(profile?.nofollowReferringDomains)} detail={<span className="text-muted">{t("nofollowHint")}</span>} href={listHref("backlinks/domains", { status: "LIVE", follow: "NOFOLLOW" })} />
         </div>
       )}
 

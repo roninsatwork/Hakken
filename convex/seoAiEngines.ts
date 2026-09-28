@@ -137,6 +137,23 @@ export function fanOutPlace(engine: AiEngine, locationCode: number | undefined):
   return place.city ? `${place.countryIso}/${place.city}` : place.countryIso;
 }
 
+/**
+ * Where a fan-out search came from: one of the engines above, asked one of our
+ * questions — or Google's AI Overviews, the searches Google ran for its own
+ * searches on a question's topic, bought from DataForSEO's LLM Mentions
+ * (docs/plans/active/fan-out-angles-plan.md, FA8). Google is not an engine
+ * here: nobody asks it one of our questions, so it never joins `AI_ENGINES`.
+ */
+export const GOOGLE_AI_OVERVIEW = "google_ai_overview";
+export type FanOutSource = AiEngine | typeof GOOGLE_AI_OVERVIEW;
+export const fanOutSourceValidator = v.union(
+  v.literal("chatgpt"),
+  v.literal("perplexity"),
+  v.literal("gemini"),
+  v.literal("claude"),
+  v.literal("google_ai_overview"),
+);
+
 /** The registry operation id that asks one engine. One per engine. */
 export function aiCitationOperationId(engine: AiEngine): string {
   return `ai_citation_${engine}`;

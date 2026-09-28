@@ -44,7 +44,7 @@ export const PAGE_COPY_FIELDS = ["id", "page", "section", "pageType", "keywords"
  */
 const CITED_ROWS_PER_PAGE = 400;
 
-/** A site's folders. A structure, not a list of pages. */
+/** A site's folders. A structure, not a list of pages: past this many, the page says the list is longer (4.4). */
 const MAX_SECTIONS = 300;
 
 type Rank = Doc<"siteKeywordRanks">;
@@ -225,6 +225,14 @@ export const keywordsOnDay = tenantQuery({
     keyword: v.string(),
     position: v.union(v.number(), v.null()),
     url: v.union(v.string(), v.null()),
+    /** Whether that day's checks held the search at all: without it, its place that day is not known. */
+    checked: v.boolean(),
+    /**
+     * Counted the same way as today's place, so the two can be compared: a
+     * place counted on the whole page is not one among the normal results
+     * (sites-data-completeness-plan.md, G2).
+     */
+    comparable: v.boolean(),
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
@@ -237,13 +245,19 @@ export const keywordsOnDay = tenantQuery({
         .query("siteKeywordRanks")
         .withIndex("by_site_keyword", (q) => q.eq("websiteId", site.website._id).eq("locationCode", site.place).eq("keyword", keyword))
         .first();
-      if (!listed) return { keyword, position: null, url: null };
+      if (!listed) return { keyword, position: null, url: null, checked: false, comparable: false };
       const row = await ctx.db
         .query("seoKeywordPositions")
         .withIndex("by_website_keyword_place_day", (q) =>
           q.eq("websiteId", site.website._id).eq("keyword", keyword).eq("locationCode", site.place).eq("day", args.day))
         .first();
-      return { keyword, position: row?.position ?? null, url: row?.url ?? null };
+      return {
+        keyword,
+        position: row?.position ?? null,
+        url: row?.url ?? null,
+        checked: row !== null,
+        comparable: row?.position !== undefined && (row.pagePosition !== undefined) === (listed.pagePosition !== undefined),
+      };
     }));
     return found;
   },
@@ -255,10 +269,12 @@ export const keywordsOnDay = tenantQuery({
  * and the change by the size of the move, the biggest first, a rise or a
  * drop alike.
  */
-const MOVE_SORTS: ListSorts<KeywordCopyRow, "keyword" | "fromTo" | "change"> = {
+const MOVE_SORTS: ListSorts<KeywordCopyRow, "keyword" | "fromTo" | "change" | "volume"> = {
   keyword: { value: (row) => row.keyword, first: "asc" },
   fromTo: { value: (row) => row.position, first: "asc" },
   change: { value: (row) => Math.abs(row.change), first: "desc" },
+  // New and lost keywords lists the moves the most searched first (2026-09-27).
+  volume: { value: (row) => row.volume, first: "desc" },
 };
 
 /**
@@ -273,9 +289,10 @@ export const listMoves = tenantQuery({
   args: {
     siteId: v.id("companyWebsites"),
     ...listPageArgs,
-    status: v.union(v.literal("UP"), v.literal("DOWN"), v.literal("NEW"), v.literal("LOST")),
+    /** `LEFT`: held at the check before and not at the latest, on a list held in part (§4.C). */
+    status: v.union(v.literal("UP"), v.literal("DOWN"), v.literal("NEW"), v.literal("LOST"), v.literal("LEFT")),
     search: v.optional(v.string()),
-    sort: v.optional(v.union(v.literal("keyword"), v.literal("fromTo"), v.literal("change"))),
+    sort: v.optional(v.union(v.literal("keyword"), v.literal("fromTo"), v.literal("change"), v.literal("volume"))),
     direction: sortDirectionArg,
   },
   returns: listPageResult(keywordRowValidator),
@@ -285,8 +302,11 @@ export const listMoves = tenantQuery({
     if (!copy) return preparingPage(args.rows);
     const matches = wordStartMatcher(args.search);
     const opening = args.status === "UP" || args.status === "DOWN" ? "change" : "keyword";
+    const moved = (row: KeywordCopyRow) => (args.status === "LEFT"
+      ? copy.previousCheckDay !== null && row.day >= copy.previousCheckDay && keywordStanding(row, copy.latestCheckDay) === "older"
+      : row.status === args.status && row.day === copy.rankingDay);
     const list = copy.rows
-      .filter((row) => row.status === args.status && row.day === copy.rankingDay && (!matches || matches(row.keyword, row.page)))
+      .filter((row) => moved(row) && (!matches || matches(row.keyword, row.page)))
       .sort(listOrder(MOVE_SORTS, args.sort ?? opening, args.direction, byKeyword));
     const page = pageOfList(list, args.page, args.rows);
     return { ...page, rows: await fullKeywordRows(ctx, page.rows) };
@@ -409,23 +429,28 @@ export const listPages = tenantQuery({
 /** The site's folders: pages, keywords and page-one results in each. */
 export const listSections = tenantQuery({
   args: { siteId: v.id("companyWebsites") },
-  returns: v.array(v.object({
-    section: v.string(),
-    pages: v.number(),
-    keywords: v.number(),
-    top3: v.number(),
-    volumeSum: v.number(),
-    traffic: v.union(v.number(), v.null()),
-    day: v.union(v.string(), v.null()),
-  })),
+  returns: v.object({
+    rows: v.array(v.object({
+      section: v.string(),
+      pages: v.number(),
+      keywords: v.number(),
+      top3: v.number(),
+      volumeSum: v.number(),
+      traffic: v.union(v.number(), v.null()),
+      day: v.union(v.string(), v.null()),
+    })),
+    /** How many folders are shown when the site has more, the most keywords first; null when every folder is here. */
+    cut: v.union(v.number(), v.null()),
+  }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const rows = await ctx.db
+    // One past the limit, to know whether there are more.
+    const read = await ctx.db
       .query("siteSections")
       .withIndex("by_site_keywords", (q) => q.eq("websiteId", site.website._id).eq("locationCode", site.place))
       .order("desc")
-      .take(MAX_SECTIONS);
-    return rows.map((row) => ({
+      .take(MAX_SECTIONS + 1);
+    const rows = read.slice(0, MAX_SECTIONS).map((row) => ({
       section: row.section,
       pages: row.pages,
       keywords: row.keywords,
@@ -434,5 +459,6 @@ export const listSections = tenantQuery({
       traffic: row.traffic ?? null,
       day: row.day ?? null,
     }));
+    return { rows, cut: read.length > MAX_SECTIONS ? rows.length : null };
   },
 });

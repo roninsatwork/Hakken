@@ -11,6 +11,14 @@ import {
   readRepoFile,
 } from './test/driftUtils';
 
+/**
+ * The reporting sections whose tables keep the Sites standard: Sites, and
+ * Search Console, built on the same parts (docs/plans/active/
+ * search-console-plan.md §5).
+ */
+const REPORTING_ROOTS = ['src/app/(dashboard)/app/sites', 'src/app/(dashboard)/app/search-console'];
+const reportingFiles = () => REPORTING_ROOTS.flatMap((root) => walkFiles(path.join(repoRoot, root), new Set(['.tsx'])));
+
 describe('Pagination And Shared Table Drift', () => {
   test('admin pagination standard stays at 15 rows', () => {
     expect(TABLE_PAGE_SIZE).toBe(15);
@@ -53,7 +61,7 @@ describe('Pagination And Shared Table Drift', () => {
     expect(SITE_ROW_CHOICES).toEqual([25, 50, 75, 100]);
     expect(SITE_DEFAULT_ROWS).toBe(25);
 
-    const sitesFiles = walkFiles(path.join(repoRoot, 'src/app/(dashboard)/app/sites'), new Set(['.tsx']))
+    const sitesFiles = reportingFiles()
       .filter((filePath) => !filePath.endsWith('.test.tsx'));
     const tables = sitesFiles.filter((filePath) => /<DataTable[\s<>]/.test(fs.readFileSync(filePath, 'utf8')));
     expect(tables.length).toBeGreaterThanOrEqual(36);
@@ -65,7 +73,8 @@ describe('Pagination And Shared Table Drift', () => {
         [/\b(usePagedRows|useServerPagedTable|usePaginatedQuery)\b/, 'a pager of its own'],
         [/mode:\s*"paged"/, 'a footer built by hand'],
       ].filter(([pattern]) => (pattern as RegExp).test(contents)).map(([, what]) => `${relativePath(filePath)}: ${what}`);
-      if (!/\b(useSitePager|useSiteListPage)\b/.test(contents)) drift.push(`${relativePath(filePath)}: no Sites pager`);
+      // `useSearchConsoleList` is Search Console's Searches and Pages lists, paged by `useSiteListPage`.
+      if (!/\b(useSitePager|useSiteListPage|useSearchConsoleList)\b/.test(contents)) drift.push(`${relativePath(filePath)}: no Sites pager`);
       return drift;
     });
     expect(offenders, `Sites tables drifted off the Sites pagers:\n${offenders.join('\n')}`).toEqual([]);
@@ -75,7 +84,7 @@ describe('Pagination And Shared Table Drift', () => {
     // docs/plans/active/sites-table-sorting-plan.md §4.8 (Anthony, 2026-09-26:
     // "it's really key we have consistency across all reporting tables").
     const sitesRoot = path.join(repoRoot, 'src/app/(dashboard)/app/sites');
-    const tables = walkFiles(sitesRoot, new Set(['.tsx']))
+    const tables = reportingFiles()
       .filter((filePath) => !filePath.endsWith('.test.tsx'))
       .filter((filePath) => /<DataTable[\s<>]/.test(fs.readFileSync(filePath, 'utf8')));
     expect(tables.length).toBeGreaterThanOrEqual(36);
@@ -113,8 +122,7 @@ describe('Pagination And Shared Table Drift', () => {
     // Anthony, 2026-09-26, after the Keywords page: "yes please to both" —
     // the count and download in the table's top bar, and the filters as
     // compact buttons on the search box's row, on every Sites table.
-    const sitesRoot = path.join(repoRoot, 'src/app/(dashboard)/app/sites');
-    const tables = walkFiles(sitesRoot, new Set(['.tsx']))
+    const tables = reportingFiles()
       .filter((filePath) => !filePath.endsWith('.test.tsx'))
       .filter((filePath) => /<DataTable[\s<>]/.test(fs.readFileSync(filePath, 'utf8')));
     expect(tables.length).toBeGreaterThanOrEqual(36);

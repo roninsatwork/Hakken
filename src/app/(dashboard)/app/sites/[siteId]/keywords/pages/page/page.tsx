@@ -19,9 +19,10 @@ import { SiteFacts, type SiteFact } from "../../../../_components/SiteRecordPart
 import { formatDay, formatNumber } from "../../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
 import { sharedSiteQuery } from "../../../../_components/useSiteParam";
-import { useSiteId } from "../../../../_components/useSite";
+import { useSite, useSiteId } from "../../../../_components/useSite";
 import { useSiteListPage } from "../../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../../_components/useSiteSort";
+import { isPartHeld } from "../../../../_components/SiteCoverage";
 
 /** Dollars, whole: what visits would cost as adverts. */
 function formatUsd(value: number | null): string {
@@ -54,6 +55,9 @@ export default function SitePageRecordPage() {
   const router = useRouter();
   const params = useSearchParams();
   const siteId = useSiteId();
+  const site = useSite();
+  // A list held in part cannot say a page ranks for nothing: only for none of the searches held (§4.F).
+  const partHeld = isPartHeld(site?.coverage);
   const back = useRecordBack("page");
   const recordHref = useSiteRecordHref(siteId);
   const engineLabel = useEngineLabel();
@@ -160,7 +164,7 @@ export default function SitePageRecordPage() {
       ) : (
         <>
           {!rank ? (
-            <p className="rounded-xl border border-border-dim bg-card/40 px-4 py-3 text-[13px] text-secondary">{t("notRanking")}</p>
+            <p className="rounded-xl border border-border-dim bg-card/40 px-4 py-3 text-[13px] text-secondary">{t(partHeld ? "notInHeld" : "notRanking")}</p>
           ) : null}
 
           {rank ? (
@@ -195,14 +199,14 @@ export default function SitePageRecordPage() {
               rowKey={(row) => row._id}
               onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
               cardHeader={<SiteTableBar footer={table.footer} noun="keywords" title={t("keywordsTitle")} />}
-              empty={{ icon: <FileText className="h-8 w-8 text-muted/30" />, label: t("notRanking") }}
+              empty={{ icon: <FileText className="h-8 w-8 text-muted/30" />, label: t(partHeld ? "notInHeld" : "notRanking") }}
               footer={table.footer}
               columns={[
                 {
                   key: "keyword",
                   header: tk("columns.keyword"),
                   sortable: true,
-                  className: CUT_COLUMN.only,
+                  className: CUT_COLUMN.first,
                   cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell>,
                 },
                 { key: "position", header: tk("columns.position"), align: "right", sortable: true, cell: (row) => <PositionCell position={row.position} /> },
@@ -216,7 +220,7 @@ export default function SitePageRecordPage() {
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
             {rank ? (
               <SettingsCard title={t("ranks.title")}>
-                <SiteFacts facts={rankFacts} empty={t("notRanking")} />
+                <SiteFacts facts={rankFacts} empty={t(partHeld ? "notInHeld" : "notRanking")} />
               </SettingsCard>
             ) : null}
 

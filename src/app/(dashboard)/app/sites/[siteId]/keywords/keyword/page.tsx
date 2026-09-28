@@ -19,6 +19,7 @@ import { SiteFacts, type SiteFact } from "../../../_components/SiteRecordParts";
 import { formatCpc, formatDay, formatNumber, formatShortDay, movement, movementClass, toCsv } from "../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { isPartHeld } from "../../../_components/SiteCoverage";
 
 /** Results shown before "Show all": Google's first page. */
 const PAGE_ONE = 10;
@@ -44,6 +45,8 @@ export default function SiteKeywordPage() {
   const tr = useTranslations("sites.record");
   const siteId = useSiteId();
   const site = useSite();
+  // A list held in part cannot say a search does not rank: only that it is not among those held (§4.F).
+  const partHeld = isPartHeld(site?.coverage);
   const range = useSiteRange();
   const back = useRecordBack("keyword");
   const recordHref = useSiteRecordHref(siteId);
@@ -180,13 +183,13 @@ export default function SiteKeywordPage() {
       ) : (
         <>
           {!ranking ? (
-            <p className="rounded-xl border border-border-dim bg-card/40 px-4 py-3 text-[13px] text-secondary">{t("notRanking")}</p>
+            <p className="rounded-xl border border-border-dim bg-card/40 px-4 py-3 text-[13px] text-secondary">{t(partHeld ? "notInHeld" : "notRanking")}</p>
           ) : null}
 
           <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
             <SiteFigure
               label={t("figures.position")}
-              value={rankedAt ?? t("figures.notRanking")}
+              value={rankedAt ?? t(partHeld ? "figures.notInHeld" : "figures.notRanking")}
               detail={positionDetail ?? undefined}
             />
             <SiteFigure label={t("figures.volume")} value={formatNumber(search?.volume)} detail={<span className="text-muted">{t("figures.volumeDetail")}</span>} />
@@ -210,7 +213,7 @@ export default function SiteKeywordPage() {
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
             <SettingsCard title={t("about.title")}>
-              <SiteFacts facts={aboutFacts} empty={t("notRanking")} />
+              <SiteFacts facts={aboutFacts} empty={t(partHeld ? "notInHeld" : "notRanking")} />
             </SettingsCard>
 
             <SettingsCard title={t("rankingPage.title")}>
@@ -234,7 +237,7 @@ export default function SiteKeywordPage() {
                     key: "position",
                     align: "right",
                     cell: (row) => row.position === null
-                      ? <span className="text-[12px] text-muted">{row.siteId === null ? t("figures.notRanking") : t("rivals.notRanking")}</span>
+                      ? <span className="text-[12px] text-muted">{row.siteId === null ? t(partHeld ? "figures.notInHeld" : "figures.notRanking") : t("rivals.notRanking")}</span>
                       : <span className="font-mono text-[13px] text-foreground">{row.position}</span>,
                   },
                 ]}

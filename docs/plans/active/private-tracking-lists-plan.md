@@ -440,3 +440,6 @@ list, like the AI lines. Proposed separately.
   Three departures, each in §9: no `companyId` on a list row, the competitor
   lines folded into `siteListAiDays`, and four migrations retired after they
   ran on dev.
+- **2026-09-26** — The speed test's eight questions are back to twenty-five,
+  with a list of a thousand besides: the AI screens now read one summary per
+  list ([sites-ai-list-summaries-plan.md](sites-ai-list-summaries-plan.md) §7).

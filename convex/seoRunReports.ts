@@ -11,6 +11,9 @@ import { claimSchedule } from "./siteRankings";
 import { superAdminQuery } from "./tenantFunctions";
 import { attentionRow, runReportFields } from "./utils/siteShapes";
 import { PARSE_FAILED } from "./seoFiling";
+import { cadenceOf, DAY_MS, estimateMonthly, estimateShape, everyDaysOf, newestPrices, repeatDays, reportOf } from "./seoRunEstimate";
+import { SEO_COMPETITORS_PER_WEBSITE, SEO_MAX_SENDS_PER_CYCLE } from "./seoCollectionPolicy";
+import { readFanOutLimits } from "./fanOutLimits";
 
 /**
  * What each collection run for a company cost, and where the money went: the
@@ -72,8 +75,6 @@ const KEYWORD_LIST = "domain_ranked_keywords_list";
 /** Runs read to add up a month. A company collecting daily has about thirty. */
 const MONTH_RUNS_READ = 200;
 const HOLDS_READ = 500;
-const DAYS_PER_MONTH = 30.44;
-const DAY_MS = 86_400_000;
 
 export function runReportKey(cycleId: Id<"seoCollectionCycles">): string {
   return `run:${cycleId}`;
@@ -112,6 +113,8 @@ const pullForReport = v.object({
   error: v.optional(v.string()),
   rawTruncated: v.optional(v.boolean()),
   rowsLeftOff: v.optional(v.number()),
+  /** A keyword list page bought on every run as the site's everyday check. */
+  eachRun: v.optional(v.boolean()),
 });
 type PullForReport = Infer<typeof pullForReport>;
 
@@ -173,6 +176,7 @@ export const pullsForReport = internalQuery({
         ...(pull.error ? { error: pull.error.slice(0, DETAIL_CHARS) } : {}),
         ...(pull.rawTruncated ? { rawTruncated: true } : {}),
         ...(pull.rowsLeftOff ? { rowsLeftOff: pull.rowsLeftOff } : {}),
+        ...(pull.eachRun ? { eachRun: true } : {}),
       })),
       cursor: result.continueCursor,
       isDone: result.isDone,
@@ -388,7 +392,7 @@ type SiteTally = {
 
 /** A run's requests added up as they are read. */
 export function tallyRequests(rows: readonly PullForReport[]) {
-  const byOperation = new Map<string, { operationId: string; requests: number; costUsd: number; answering: number }>();
+  const byOperation = new Map<string, { operationId: string; requests: number; costUsd: number; answering: number; everyRunCostUsd?: number }>();
   const bySite = new Map<string, SiteTally>();
   const siteOfPull = new Map<string, string>();
   const pullIds = new Set<string>();
@@ -410,6 +414,8 @@ export function tallyRequests(rows: readonly PullForReport[]) {
     const operation = byOperation.get(row.operationId) ?? { operationId: row.operationId, requests: 0, costUsd: 0, answering: 0 };
     operation.requests += 1;
     operation.costUsd += row.costUsd;
+    // The everyday check's pages are bought on every run, whatever the list's own cadence.
+    if (row.eachRun) operation.everyRunCostUsd = (operation.everyRunCostUsd ?? 0) + row.costUsd;
     if (row.status === "SUBMITTED") operation.answering += 1;
     byOperation.set(row.operationId, operation);
 
@@ -576,11 +582,6 @@ export const buildRunReport = internalAction({
 // ---------------------------------------------------------------------------
 
 type Reader = { db: QueryCtx["db"] };
-type Cadence = "daily" | "weekly" | "fortnightly" | "monthly";
-
-async function reportOf(ctx: Reader, cycleId: Id<"seoCollectionCycles">) {
-  return await ctx.db.query("seoRunReports").withIndex("by_cycle", (q) => q.eq("cycleId", cycleId)).unique();
-}
 
 /** What a run cost: its report when it has one, else what its requests have cost so far. */
 function totalOf(cycle: Doc<"seoCollectionCycles">, report: Doc<"seoRunReports"> | null): number {
@@ -595,100 +596,13 @@ async function runBefore(ctx: Reader, cycle: Doc<"seoCollectionCycles">) {
     .first();
 }
 
-/** A schedule's cadence, as the Data collection screen offers it; anything else reads as weekly. */
-export function cadenceOf(intervalStr: string | undefined): Cadence {
-  const plain = (intervalStr ?? "").trim();
-  let cadence: unknown = plain;
-  try {
-    cadence = (JSON.parse(plain) as Record<string, unknown>).cadence;
-  } catch {
-    // An old plain-word schedule: "daily", "weekly".
-  }
-  if (cadence === "daily" || cadence === "hourly") return "daily";
-  if (cadence === "fortnightly") return "fortnightly";
-  if (cadence === "monthly") return "monthly";
-  return "weekly";
-}
-
-const EVERY_DAYS: Record<Cadence, number> = { daily: 1, weekly: 7, fortnightly: 14, monthly: DAYS_PER_MONTH };
-
-/** How many days apart a schedule's runs come, from its cadence. */
-export function everyDaysOf(intervalStr: string | undefined): number {
-  return EVERY_DAYS[cadenceOf(intervalStr)];
-}
-
-/**
- * How often a call with its own cadence of `ownDays` is bought when its
- * company collects every `runDays`: on the run nearest its own cadence — held
- * until it is within half a run of due (`heldByOwnCadence`). Null: every run,
- * because the company collects no more often than the call — a monthly
- * company's run buys everything (Anthony, 2026-09-25: "if we run once a month
- * it's always the full scan").
- *
- * Daily: a weekly list every 7th run, a monthly crawl every 30th. Weekly: the
- * lists every run, the crawl every 4th. Fortnightly: the lists every run, the
- * crawl every other. Monthly: everything, every run.
- */
-export function repeatDays(ownDays: number, runDays: number): number | null {
-  if (collectsEveryRun(ownDays, runDays)) return null;
-  const runs = Math.ceil((ownDays - runDays / 2) / runDays);
-  return runs <= 1 ? null : runs * runDays;
-}
-
-/**
- * Whether a company whose runs come every `runDays` buys a call with its own
- * cadence of `ownDays` on every run: it collects about as seldom as the call,
- * or more seldom — a monthly company and a monthly crawl, a weekly one and a
- * weekly list — so every run is due one, however the months fall.
- */
-export function collectsEveryRun(ownDays: number, runDays: number): boolean {
-  return runDays >= ownDays * 0.9;
-}
-
-const estimateShape = v.object({
-  perMonthUsd: v.number(),
-  lines: v.array(v.object({
-    every: v.union(v.literal("DAY"), v.literal("WEEK"), v.literal("FORTNIGHT"), v.literal("MONTH")),
-    costUsd: v.number(),
-    perMonthUsd: v.number(),
-  })),
-});
-type Estimate = Infer<typeof estimateShape>;
-
-/**
- * What a company will cost a month, from a run's requests: each kind as often
- * as it is bought — on the run nearest its own cadence where it has one (a
- * weekly list, a monthly crawl), and never more often than the company
- * collects (`repeatDays`).
- */
-export function estimateMonthly(
-  byOperation: ReadonlyArray<{ operationId: string; costUsd: number }>,
-  cadence: Cadence,
-): Estimate {
-  const lines = new Map<Estimate["lines"][number]["every"], { costUsd: number; perMonthUsd: number }>();
-  for (const { operationId, costUsd } of byOperation) {
-    const ownDays = findSeoOperation(operationId)?.refresh?.everyDays;
-    const everyDays = (ownDays !== undefined ? repeatDays(ownDays, EVERY_DAYS[cadence]) : null) ?? EVERY_DAYS[cadence];
-    const every = everyDays <= 1 ? "DAY" : everyDays <= 7 ? "WEEK" : everyDays <= 14 ? "FORTNIGHT" : "MONTH";
-    const line = lines.get(every) ?? { costUsd: 0, perMonthUsd: 0 };
-    line.costUsd += costUsd;
-    line.perMonthUsd += (costUsd * DAYS_PER_MONTH) / everyDays;
-    lines.set(every, line);
-  }
-  const order = ["DAY", "WEEK", "FORTNIGHT", "MONTH"] as const;
-  const listed = order.flatMap((every) => {
-    const line = lines.get(every);
-    return line ? [{ every, ...line }] : [];
-  });
-  return { perMonthUsd: listed.reduce((sum, line) => sum + line.perMonthUsd, 0), lines: listed };
-}
-
 /** Where each kind of request sits in the "where the money went" bar. */
 export function spendCategoryOf(operationId: string) {
   if (operationId === "site_crawl") return "SITE_AUDIT" as const;
   if (operationId === KEYWORD_LIST) return "KEYWORD_LISTS" as const;
   if (operationId.startsWith("bulk_")) return "COMPARISONS" as const;
-  if (operationId.startsWith("ai_citation_")) return "AI_ANSWERS" as const;
+  // Google's AI Overviews' searches (FA8) are bought about AI answers too.
+  if (operationId.startsWith("ai_citation_") || operationId === "ai_overview_fan_out") return "AI_ANSWERS" as const;
   if (operationId === "serp_google_organic" || operationId === "keyword_search_volume") return "SEARCHES" as const;
   if (["backlinks_summary", "domain_ranked_keywords", "domain_competitors", "ranking_history"].includes(operationId)) return "SUMMARIES" as const;
   if (operationId.startsWith("backlinks_") || operationId.startsWith("referring_") || operationId === "anchors_list") return "BACKLINKS" as const;
@@ -801,7 +715,8 @@ export const getCompanyRunSummary = superAdminQuery({
       monthUsd,
       monthRuns: month.length,
       lastRun: latest ? { cycleId: latest._id, startedAt: latest.startedAt, totalUsd: totalOf(latest, latestReport) } : null,
-      estimate: schedule?.isActive && latestReport ? estimateMonthly(latestReport.byOperation, cadence) : null,
+      // Each kind at its newest price, not the last run's alone (2026-09-27).
+      estimate: schedule?.isActive && latestReport ? estimateMonthly(await newestPrices(ctx, args.companyId, cadence, now.getTime()), cadence) : null,
       nextRun: next.at !== null ? { at: next.at, cadence } : null,
     };
   },
@@ -879,6 +794,18 @@ export const getRunReport = superAdminQuery({
     open: v.boolean(),
     /** Who closed it by hand, when, and how many unsent requests came off the queue. */
     closedByHand: v.union(v.null(), v.object({ name: v.string(), at: v.number(), unsent: v.number() })),
+    /**
+     * The caps nobody saw (sites-data-completeness-plan.md, B6): the ceiling
+     * this run stopped planning at, if it did; whether it began where the
+     * last one stopped; and the websites with more competitors than a run
+     * collects.
+     */
+    caps: v.object({
+      ceiling: v.union(v.null(), v.number()),
+      startedWhereLastStopped: v.boolean(),
+      competitorsCut: v.array(v.string()),
+      competitorsPerWebsite: v.number(),
+    }),
     /**
      * Its requests sent over an hour ago and still unanswered, read as the
      * page is — the longest out first — with the last word on each (V2).
@@ -966,6 +893,17 @@ export const getRunReport = superAdminQuery({
       closedByHand: cycle.closedUnsent !== undefined
         ? { name: closer?.name ?? "", at: cycle.finishedAt ?? cycle.startedAt, unsent: cycle.closedUnsent }
         : null,
+      caps: {
+        // The company's own limit on what one collection buys (`fanOutLimits.ts`), never past the platform's.
+        ceiling: cycle.status === "CAPPED_PLAN"
+          ? Math.min(SEO_MAX_SENDS_PER_CYCLE, (await readFanOutLimits(ctx, cycle.companyId)).purchasesPerCollection)
+          : null,
+        startedWhereLastStopped: cycle.startedAfter !== undefined,
+        competitorsCut: (await Promise.all((cycle.competitorsCut ?? []).map((websiteId) => ctx.db.get(websiteId))))
+          .flatMap((website) => (website ? [website.displayHost ?? website.host] : [])),
+        // The company's number; a website of its own may set a different one.
+        competitorsPerWebsite: Math.min(SEO_COMPETITORS_PER_WEBSITE, (await readFanOutLimits(ctx, cycle.companyId)).competitorsPerSite),
+      },
       waitingLong: {
         rows: outLong.slice(0, WAITING_SHOWN).map((pull) => ({
           pullId: pull._id,

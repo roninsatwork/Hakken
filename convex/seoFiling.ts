@@ -66,21 +66,20 @@ export const judgeKeywordsLater = internalAction({
     pullId: v.id("seoDataPulls"),
     companyId: v.optional(v.id("companies")),
     host: v.optional(v.string()),
-    /** The site the searches came from, so "irrelevant to this business" can be judged. */
+    /** The site the searches came from. */
     websiteId: v.optional(v.id("websites")),
     keywords: v.array(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
     try {
-      const business = args.websiteId
-        ? await ctx.runQuery(internal.websiteCanonical.describeBusinessForJudging, { websiteId: args.websiteId })
-        : null;
+      // What a search is for is judged once for every company, so no one
+      // company's account of its business goes into it
+      // (docs/plans/active/company-level-website-facts-plan.md, CL4).
       await judgeNewKeywords(ctx, {
         ...(args.companyId ? { companyId: args.companyId } : {}),
         pullId: args.pullId,
         ...(args.host !== undefined ? { host: args.host } : {}),
-        ...(business ? { business } : {}),
         keywords: args.keywords,
       });
     } catch (error) {

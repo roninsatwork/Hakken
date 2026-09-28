@@ -1,8 +1,9 @@
 import { v } from "convex/values";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
+import { SEO_KEYWORD_CHECK_OPERATION } from "./dataForSeoRegistry";
 import { tenantQuery } from "./tenantFunctions";
-import { listHold, requireMySite } from "./siteAccess";
+import { listHold, listWebsiteId, requireMySite } from "./siteAccess";
 import { holdSearch, holdSearches } from "./holdLists";
 import { searchVerdict, searchVerdictValidator } from "./utils/trackingVerdicts";
 import { MAX_LIST, type Site } from "./websiteSiteRows";
@@ -27,24 +28,73 @@ const DAYS_PER_SEARCH = 800;
 
 type Reader = { db: QueryCtx["db"] };
 
+/** Where a website stands on a search, as its summary holds it. */
+export type StandingStats = Pick<
+  Doc<"websiteSearchStats">,
+  "firstCheckedDay" | "lastCheckedDay" | "lastPosition" | "previousCheckedDay" | "previousPosition" | "bestPosition" | "everRanked"
+>;
+
 export type SearchStanding = {
   keyword: string;
   isActive: boolean;
-  stats: Doc<"websiteSearchStats"> | null;
+  stats: StandingStats | null;
 };
 
-/** The site's standing on each search in the list it is measured on: this company's own. */
-export async function searchStandings(ctx: Reader, site: Site): Promise<SearchStanding[]> {
-  const searches = await holdSearches(ctx, listHold(site), MAX_LIST);
-  return await Promise.all(searches.map(async (search) => ({
-    keyword: search.keyword,
-    isActive: search.isActive,
-    stats: await ctx.db
-      .query("websiteSearchStats")
-      .withIndex("by_key", (q) =>
-        q.eq("websiteId", site.website._id).eq("keyword", search.keyword).eq("locationCode", site.place))
-      .unique(),
-  })));
+/**
+ * A competitor's standing on a search, as of the newest check of the list it
+ * is measured on (docs/plans/active/sites-audit-fixes-plan.md, 1.4).
+ *
+ * A "checked, not found" row is written only for the website whose list
+ * tracks the search (`seoKeywordChecks.ts`), so a competitor that drops off
+ * the results page keeps its last place as though it were current. The list's
+ * own website is checked on the very same pages, so where it was checked
+ * later, the competitor was not on them: not in the top 100 since, and down
+ * from its place only if the check before found it.
+ */
+export function asOfListCheck(own: StandingStats | null, list: StandingStats | null): StandingStats | null {
+  if (!list) return own;
+  if (own && own.lastCheckedDay >= list.lastCheckedDay) return own;
+  const foundAtCheckBefore = own !== null && list.previousCheckedDay !== undefined && own.lastCheckedDay === list.previousCheckedDay;
+  return {
+    firstCheckedDay: own && own.firstCheckedDay < list.firstCheckedDay ? own.firstCheckedDay : list.firstCheckedDay,
+    lastCheckedDay: list.lastCheckedDay,
+    ...(list.previousCheckedDay !== undefined ? { previousCheckedDay: list.previousCheckedDay } : {}),
+    ...(foundAtCheckBefore && own.lastPosition !== undefined ? { previousPosition: own.lastPosition } : {}),
+    ...(own?.bestPosition !== undefined ? { bestPosition: own.bestPosition } : {}),
+    everRanked: own?.everRanked ?? false,
+  };
+}
+
+/** A website's summary on one search from one place. */
+export async function searchStats(ctx: Reader, websiteId: Id<"websites">, keyword: string, place: number): Promise<StandingStats | null> {
+  return await ctx.db
+    .query("websiteSearchStats")
+    .withIndex("by_key", (q) => q.eq("websiteId", websiteId).eq("keyword", keyword).eq("locationCode", place))
+    .unique();
+}
+
+/**
+ * The site's standing on each search in the list it is measured on: this
+ * company's own. A competitor's is read as of the list's newest check. A
+ * screen that compares on a few asks for the searches still checked, and no
+ * more than it can use.
+ */
+export async function searchStandings(
+  ctx: Reader,
+  site: Site,
+  options: { activeOnly?: boolean; cap?: number } = {},
+): Promise<SearchStanding[]> {
+  const listed = await holdSearches(ctx, listHold(site), MAX_LIST, { activeOnly: options.activeOnly });
+  const searches = options.cap === undefined ? listed : listed.slice(0, options.cap);
+  const listSite = listWebsiteId(site);
+  const isListSite = listSite === site.website._id;
+  return await Promise.all(searches.map(async (search) => {
+    const [own, list] = await Promise.all([
+      searchStats(ctx, site.website._id, search.keyword, site.place),
+      isListSite ? Promise.resolve(null) : searchStats(ctx, listSite, search.keyword, site.place),
+    ]);
+    return { keyword: search.keyword, isActive: search.isActive, stats: isListSite ? own : asOfListCheck(own, list) };
+  }));
 }
 
 export const listSearches = tenantQuery({
@@ -89,21 +139,41 @@ export const searchPositions = tenantQuery({
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    // Only searches on this company's own list: a "checked, not found" row
-    // exists only because somebody tracks the search, so answering for any
-    // other would say that someone does.
+    // A search on this company's own list reads every check of it. Any other
+    // search the site ranks for reads only what the site's own keyword lists
+    // recorded — facts DataForSEO sends about the website to whoever asks —
+    // and never a one-by-one check: those, "checked, not found" rows among
+    // them, exist only because some company tracks the search, so showing them
+    // would say that someone does (docs/plans/active/sites-audit-fixes-plan.md,
+    // 1.2 and F1).
     const holdId = listHold(site);
-    const mine = [];
+    const charted: Array<{ keyword: string; tracked: boolean }> = [];
     for (const keyword of args.keywords.slice(0, MAX_CHARTED)) {
-      if (await holdSearch(ctx, holdId, keyword)) mine.push(keyword);
+      if (await holdSearch(ctx, holdId, keyword)) {
+        charted.push({ keyword, tracked: true });
+        continue;
+      }
+      const ranked = await ctx.db
+        .query("siteKeywordRanks")
+        .withIndex("by_site_keyword", (q) => q.eq("websiteId", site.website._id).eq("locationCode", site.place).eq("keyword", keyword))
+        .first();
+      if (ranked) charted.push({ keyword, tracked: false });
     }
-    return await Promise.all(mine.map(async (keyword) => {
-      const rows = await ctx.db
+    const checks = new Map<Id<"seoDataPulls">, Promise<boolean>>();
+    const isCheck = (pullId: Id<"seoDataPulls">) => {
+      const held = checks.get(pullId) ?? ctx.db.get(pullId).then((pull) => pull?.operationId === SEO_KEYWORD_CHECK_OPERATION);
+      checks.set(pullId, held);
+      return held;
+    };
+    return await Promise.all(charted.map(async ({ keyword, tracked }) => {
+      const read = await ctx.db
         .query("seoKeywordPositions")
         .withIndex("by_website_keyword_place_day", (q) =>
           q.eq("websiteId", site.website._id).eq("keyword", keyword).eq("locationCode", site.place)
             .gte("day", args.from).lte("day", args.to))
         .take(DAYS_PER_SEARCH);
+      const kept = tracked ? read : await Promise.all(read.map(async (row) => ((await isCheck(row.pullId)) ? null : row)));
+      const rows = kept.filter((row): row is Doc<"seoKeywordPositions"> => row !== null);
       // One point per day: the better of two checks on the same day.
       const byDay = new Map<string, number | null>();
       for (const row of rows) {

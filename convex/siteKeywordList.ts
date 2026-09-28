@@ -6,6 +6,7 @@ import { KEYWORD_LIST_OPERATION_ID, KEYWORD_LIST_PAGE } from "./dataForSeoKeywor
 import { parseDomainRankedKeywords } from "./dataForSeoParsers";
 import { expandSeoResult } from "./dataForSeoSlim";
 import { replaceSameDayPosition } from "./seoKeywordChecks";
+import { readSiteDataLimits } from "./companyDataLimits";
 import { sentLimit, sentOffset } from "./sitePagedLists";
 import { fileKeywordRank, requestSiteRebuild, type RankExtras } from "./siteRankings";
 import { getErrorMessage } from "./utils/lang";
@@ -38,6 +39,9 @@ const POSITIONS_PER_WRITE = 100;
 
 /** Feature appearances cleared per filing from older lists; the rest go next time. */
 const OLD_FEATURES_CLEARED = 500;
+
+/** One search's feature sightings read to clear the older ones: a few kinds, a few days. */
+const FEATURES_PER_SEARCH = 50;
 
 /** A host's own tracked searches, read so the ones in the list update their summaries. */
 const TRACKED_SEARCHES_READ = 1_000;
@@ -101,6 +105,7 @@ export async function fileRankedPositions(
       keyword: entry.keyword,
       day: args.day,
       ...(entry.position !== undefined ? { position: entry.position } : {}),
+      ...(entry.pagePosition !== undefined ? { pagePosition: entry.pagePosition } : {}),
       ...(entry.url ? { url: entry.url } : {}),
       ...(entry.searchVolume !== undefined ? { searchVolume: entry.searchVolume } : {}),
       // Always written, so a watcher's view can be read through the place
@@ -120,6 +125,7 @@ export async function fileRankedPositions(
         keyword: entry.keyword,
         day: args.day,
         position: entry.position,
+        ...(entry.pagePosition !== undefined ? { pagePosition: entry.pagePosition } : {}),
         ...(entry.url ? { url: entry.url } : {}),
         ...(entry.searchVolume !== undefined ? { volume: entry.searchVolume } : {}),
         extras: rankExtrasOf(entry),
@@ -158,12 +164,18 @@ export const writeListPage = internalMutation({
     await ctx.db.patch(args.pullId, { error: undefined });
 
     // Where the site shows in AI Overviews, answer boxes and map packs: this
-    // list's, with an older list's cleared a batch at a time.
-    const older = await ctx.db
-      .query("siteKeywordFeatures")
-      .withIndex("by_site_day", (q) => q.eq("websiteId", args.websiteId).eq("locationCode", args.locationCode).lt("day", args.day))
-      .take(OLD_FEATURES_CLEARED);
-    for (const row of older) await ctx.db.delete(row._id);
+    // page's, replacing the older sightings of the searches it brought. A page
+    // refreshing the whole list kept also clears an older list's sightings, a
+    // batch at a time; an everyday check's page never does, or it would wipe
+    // the week's list past it until the next (sites-data-completeness-plan.md, A1).
+    await clearOlderFeatures(ctx, args, [...args.positions.map((row) => row.keyword), ...args.features.map((row) => row.keyword)]);
+    if (await refreshesWholeList(ctx, args.pullId, args.websiteId)) {
+      const older = await ctx.db
+        .query("siteKeywordFeatures")
+        .withIndex("by_site_day", (q) => q.eq("websiteId", args.websiteId).eq("locationCode", args.locationCode).lt("day", args.day))
+        .take(OLD_FEATURES_CLEARED);
+      for (const row of older) await ctx.db.delete(row._id);
+    }
     for (const feature of args.features) {
       await ctx.db.insert("siteKeywordFeatures", {
         websiteId: args.websiteId,
@@ -244,10 +256,43 @@ export const writeListPositions = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    await clearOlderFeatures(ctx, args, args.positions.map((row) => row.keyword));
     await fileRankedPositions(ctx, args);
     return null;
   },
 });
+
+/** The older feature sightings of these searches, from this place: this page's replace them. */
+async function clearOlderFeatures(
+  ctx: MutationCtx,
+  args: { websiteId: Id<"websites">; locationCode: number; day: string },
+  keywords: string[],
+): Promise<void> {
+  for (const keyword of new Set(keywords)) {
+    const older = await ctx.db
+      .query("siteKeywordFeatures")
+      .withIndex("by_site_keyword", (q) => q.eq("websiteId", args.websiteId).eq("locationCode", args.locationCode).eq("keyword", keyword))
+      .take(FEATURES_PER_SEARCH);
+    for (const row of older) {
+      if (row.day < args.day) await ctx.db.delete(row._id);
+    }
+  }
+}
+
+/**
+ * Whether a page is part of a refresh of the whole list kept: planned before
+ * pages carried their reach, or bought to reach the site's whole limit —
+ * not an everyday check's page alone.
+ */
+async function refreshesWholeList(ctx: MutationCtx, pullId: Id<"seoDataPulls">, websiteId: Id<"websites">): Promise<boolean> {
+  const pull = await ctx.db.get(pullId);
+  if (!pull || pull.listReach === undefined) return true;
+  const hold = pull.companyId
+    ? await ctx.db.query("companyWebsites").withIndex("by_company_website", (q) => q.eq("companyId", pull.companyId!).eq("websiteId", websiteId)).first()
+    : null;
+  const limits = await readSiteDataLimits(ctx, pull.companyId ?? undefined, hold?._id);
+  return pull.listReach >= limits.keywordsPerSite;
+}
 
 /** File one page of a full keyword list. Failures are recorded on the pull, as every parse does. */
 export async function fileKeywordListPull(
@@ -308,7 +353,9 @@ export async function fileKeywordListPull(
       pullId, websiteId, day: listPage.day, locationCode, metricsJson: JSON.stringify(metrics),
     });
 
-    if (offset === 0 && total !== null) {
+    // The next page, while the searches held are short of how far the run
+    // meant to buy and the list goes on (`queueListPages`).
+    if (total !== null) {
       await ctx.runMutation(internal.sitePagedLists.queueListPages, { pullId, total });
     }
     // Judged after the filing, on its own (`judgeKeywordsLater`): a judging

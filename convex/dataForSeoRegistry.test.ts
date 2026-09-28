@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 
 import {
   SEO_OPERATIONS,
+  argsToSend,
   buildSeoTask,
   describeSeoOperation,
   findSeoOperation,
@@ -16,6 +17,7 @@ import {
   seoAiCitationParams,
   seoKeywordCheckParams,
 } from "./dataForSeoRegistry";
+import { countryCodeOf } from "./utils/seoLocations";
 
 /**
  * The registry is what stands between an agent and a wasted charge.
@@ -207,7 +209,8 @@ describe("building a task — what it produces", () => {
     // If these ever disagree, a pull cannot be matched to the website it was
     // for, and the ledger stops meaning anything.
     const result = buildSeoTask("backlinks_summary", { target: "https://www.Example.com/uk?a=1" });
-    expect(result.ok && result.task).toEqual({ target: "example.com" });
+    // With its breakdowns asked for whole, as every summary is (sites-data-completeness-plan.md, §8.4).
+    expect(result.ok && result.task).toEqual({ target: "example.com", internal_list_limit: 1000 });
   });
 
   test("optional parameters fall back to their defaults", () => {
@@ -217,6 +220,7 @@ describe("building a task — what it produces", () => {
       location_code: 2826,
       language_code: "en",
       depth: 100,
+      load_async_ai_overview: true,
     });
   });
 
@@ -228,7 +232,25 @@ describe("building a task — what it produces", () => {
       location_code: 1006886,
       language_code: "en",
       depth: 100,
+      // An AI Overview Google loads late is waited for (sites-data-completeness-plan.md, §8.5).
+      load_async_ai_overview: true,
     });
+  });
+
+  // The Labs answer for countries only (B10): a site placed in a city is sent
+  // its country, while what was asked — the purchase and where its answer is
+  // filed — stays the city. Every other kind of request takes the city.
+  test("a Labs request for a city is sent its country, and nothing else changes", () => {
+    const labs = findSeoOperation("domain_ranked_keywords")!;
+    const serp = findSeoOperation("serp_google_organic")!;
+    const leeds = { target: "ourshop.com", location_code: 1006925, language_code: "en" };
+    expect(countryCodeOf(1006925)).toBe(2826);
+    expect(countryCodeOf(2826)).toBe(2826);
+    expect(countryCodeOf(123)).toBe(123);
+    expect(argsToSend(labs, leeds)).toEqual({ ...leeds, location_code: 2826 });
+    expect(argsToSend(labs, { ...leeds, location_code: 2826 })).toEqual({ ...leeds, location_code: 2826 });
+    expect(argsToSend(serp, { keyword: "carp rods", location_code: 1006925 })).toEqual({ keyword: "carp rods", location_code: 1006925 });
+    expect(argsToSend(findSeoOperation("backlinks_summary")!, { target: "ourshop.com" })).toEqual({ target: "ourshop.com" });
   });
 
   test("the default location is the United Kingdom", () => {
@@ -258,7 +280,8 @@ describe("building a task — what it produces", () => {
 
   test("nothing the agent did not ask for is added", () => {
     const result = buildSeoTask("backlinks_summary", { target: "example.com", nonsense: "ignored" });
-    expect(result.ok && Object.keys(result.task)).toEqual(["target"]);
+    // Only what the operation takes, and the settings it always sends.
+    expect(result.ok && Object.keys(result.task)).toEqual(["target", "internal_list_limit"]);
   });
 });
 

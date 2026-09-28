@@ -4,8 +4,9 @@ import { tenantQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import { aiEngineValidator } from "./seoAiEngines";
 import { normaliseKeyword } from "./seoJudgments";
-import { listHold, myRivals, requireMySite } from "./siteAccess";
+import { listHold, listWebsiteId, myRivals, requireMySite } from "./siteAccess";
 import { holdSearch } from "./holdLists";
+import { asOfListCheck, searchStats } from "./siteGoogle";
 import { keywordStanding, readKeywordCopy } from "./siteKeywordCopy";
 import { heldTo, listOrder, listPageArgs, listPageResult, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { bare, isHost } from "./siteGoogleSerp";
@@ -203,10 +204,11 @@ export const keywordRecord = tenantQuery({
       myRivals(ctx, site),
       // On this company's own list, or not: never another company's.
       holdSearch(ctx, listHold(site), keyword),
-      ctx.db
-        .query("websiteSearchStats")
-        .withIndex("by_key", (q) => q.eq("websiteId", websiteId).eq("keyword", keyword).eq("locationCode", place))
-        .first(),
+      // A competitor's as of the list's newest check (`asOfListCheck`).
+      Promise.all([
+        searchStats(ctx, websiteId, keyword, place),
+        listWebsiteId(site) === websiteId ? Promise.resolve(null) : searchStats(ctx, listWebsiteId(site), keyword, place),
+      ]).then(([own, list]) => (listWebsiteId(site) === websiteId ? own : asOfListCheck(own, list))),
       ctx.db
         .query("siteSerpPages")
         .withIndex("by_keyword_place_day", (q) => q.eq("keyword", keyword).eq("locationCode", place))

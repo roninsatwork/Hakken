@@ -605,7 +605,8 @@
     "roninsRun3D": "Ronin's Run 3D",
     "badgeWaiting": "{count} waiting",
     "billing": "Billing",
-    "sites": "Sites"
+    "sites": "Sites",
+    "searchConsole": "Search Console"
   },
   "header": {
     "adminOverview": "Platform Management",
@@ -1116,9 +1117,6 @@
           "dashboard": "Dashboard",
           "overview": "Overview",
           "websites": "Websites",
-          "companyWebsites": "Websites",
-          "dataCollection": "Collection schedule",
-          "collectionRuns": "Collection runs",
           "directory": "Directory",
           "invites": "Invites",
           "ai": "AI",
@@ -1375,14 +1373,14 @@
     },
     "companyWebsites": {
       "title": "Websites",
-      "subtitle": "Every website this company owns or watches. Open one to see how it's doing.",
+      "subtitle": "Every website this company owns or watches: its own first, each followed by the competitors compared with it. Open one to see how it's doing.",
       "addWebsite": "Add Website",
       "searchPlaceholder": "Search websites...",
       "empty": "No websites yet. Add this company's first one.",
       "emptySearch": "No websites match that search.",
       "websiteColumn": "Website",
       "heldAsColumn": "Type",
-      "collectionColumn": "Checked",
+      "collectionColumn": "Next check",
       "limitsColumn": "Limits",
       "limitKeywords": "{count, number} keywords",
       "limitBacklinks": "{count, number} backlinks",
@@ -1394,7 +1392,6 @@
       "sourceCompany": "company schedule",
       "sourceWebsite": "own schedule",
       "sourcePair": "with {host}",
-      "addedColumn": "Added",
       "actionsColumn": "Actions",
       "competitors": "{count, plural, =0 {no competitors yet} one {1 competitor} other {# competitors}}",
       "notCollecting": "Not being checked",
@@ -1428,21 +1425,6 @@
       "movesColumn": "To do"
     },
     "companyWebsiteDetail": {
-      "limits": {
-        "title": "Data limits for this website",
-        "subtitle": "How much is kept about this website. Left on “Follow the company”, it keeps whatever the company's Data collection screen says.",
-        "keywordsLabel": "Keywords kept",
-        "keywordsDescription": "The searches that bring this site the most visits, refreshed weekly.",
-        "backlinksLabel": "Backlinks kept",
-        "backlinksDescription": "Every link to this site, strongest first, refreshed weekly.",
-        "follow": "Follow the company ({count, number})",
-        "keywordsChoice": "{count, number} keywords",
-        "backlinksChoice": "{count, number} backlinks",
-        "appliesNext": "Changes apply from this website’s next weekly refresh.",
-        "save": "Save limits",
-        "saved": "Limits saved",
-        "saveFailed": "The limits could not be saved."
-      },
       "loading": "Loading website...",
       "notFound": "Website not found",
       "settingsTitle": "How often, and from where",
@@ -1500,38 +1482,23 @@
       "summaryOwn": "{host} and its competitors are pulled {schedule}.",
       "summaryFollows": "{host} follows {company}: {schedule}.",
       "nothingScheduled": "Nothing is pulled for {host}.",
+      "saved": "Saved",
       "askedLive": "Every engine is asked live, which is four times cheaper than queueing — so there is no method to choose."
     },
     "siteView": {
       "loading": "Loading website...",
       "notFound": "That website is no longer held by this company.",
-      "back": "Back to Websites",
-      "settings": "Settings",
-      "record": "Website record",
-      "notCollecting": "Not being checked",
-      "collectingNext": "{schedule} · next {when}",
-      "collectedWith": "Checked with {host}",
-      "watchedFrom": "Watched from {place}",
-      "trackedPaired": "Compared with {host}, checked on the same day from the same place.",
       "competitorsOwnedOnly": "This site is itself a competitor, so it has no competitors of its own here.",
-      "tabs": {
-        "overview": "Overview",
-        "competitors": "Competitors",
-        "results": "Results",
-        "rankings": "Rankings"
-      },
       "paired": {
-        "title": "How it is watched",
-        "subtitle": "A competitor's site this company watches. It is compared on the searches and questions of your site.",
         "compare": "See how it compares with {host}",
         "alone": "Not compared with any of your sites yet. Pair it with one to compare the two."
       },
       "overview": {
-        "title": "How it's doing",
-        "lastChecked": "Last checked {when}.",
-        "neverChecked": "Not checked yet.",
-        "searches": "Google searches",
-        "questions": "AI questions",
+        "title": "To do",
+        "lastChecked": "How {host} is doing, and what to do next. Last checked {when}.",
+        "neverChecked": "How {host} is doing, and what to do next. Not checked yet.",
+        "searches": "Tracked keywords",
+        "questions": "Your prompts",
         "rivals": "Competitors",
         "searchesEmpty": "None yet. Add the searches your customers type into Google.",
         "questionsEmpty": "None yet. Add the questions your customers ask ChatGPT and the others.",
@@ -1541,7 +1508,7 @@
         "seeAnswers": "See the answers",
         "seeCompetitors": "See competitors",
         "ownLists": "These searches and questions are this company's own: no other company watching {host} can see them.",
-        "editLists": "Add or change them under Results",
+        "editLists": "Add or change them under What we track",
         "parts": {
           "dropping": "{count} dropping",
           "pageOne": "{count} on page one",
@@ -1558,16 +1525,8 @@
           "quiet": "{count} no longer showing up"
         }
       },
-      "results": {
-        "label": "Results",
-        "searches": "Your searches",
-        "questions": "AI questions",
-        "answers": "AI answers",
-        "rankings": "Everything it ranks for",
-        "fanOut": "What the AI searched"
-      },
       "searches": {
-        "title": "Your Google searches",
+        "title": "Tracked keywords",
         "subtitle": "This company's own searches, checked from {place}: no other company watching the website sees them. Dropping ones come first.",
         "searchPlaceholder": "Find a search...",
         "noMatch": "No search matches that.",
@@ -1602,38 +1561,6 @@
         "errors": {
           "addFailed": "Could not track that search. Try again.",
           "toggleFailed": "Could not change that search. Try again."
-        }
-      },
-      "questions": {
-        "title": "AI questions",
-        "subtitle": "The questions we ask ChatGPT, Perplexity, Gemini and Claude, to see whether they mention this business. This company's own: no other company watching the website sees them.",
-        "addLabel": "A question a customer might ask an AI",
-        "addPlaceholder": "who is the best branding agency in Leeds",
-        "add": "Add",
-        "searchPlaceholder": "Search these questions...",
-        "empty": "No questions yet, so no AI is asked about this website for this company.",
-        "noMatch": "No question matches that.",
-        "promptColumn": "Question",
-        "enginesColumn": "Asked of",
-        "stateColumn": "State",
-        "actionsColumn": "Actions",
-        "active": "Asking",
-        "paused": "Paused",
-        "pause": "Pause",
-        "resume": "Resume",
-        "remove": "Remove this question",
-        "asked": "{count, plural, =0 {Nothing is asked} one {# answer collected each time} other {# answers collected each time}}",
-        "live": "Each AI you tick is asked separately.",
-        "engines": {
-          "chatgpt": "ChatGPT",
-          "perplexity": "Perplexity",
-          "gemini": "Gemini",
-          "claude": "Claude"
-        },
-        "errors": {
-          "addFailed": "Could not add that question. Try again.",
-          "toggleFailed": "Could not change that question. Try again.",
-          "removeFailed": "Could not remove that question. Try again."
         }
       },
       "competitors": {
@@ -1684,7 +1611,8 @@
           "NAME": "Name",
           "SLIPPING_SEARCH": "Dropping",
           "DEAD_QUESTION": "Not working",
-          "UNTRACKED_SEARCH": "Missed search"
+          "UNTRACKED_SEARCH": "Missed search",
+          "MISSING_ANGLE": "Missing topic"
         },
         "rival": {
           "title": "{host} was mentioned in {times} AI answers",
@@ -1720,6 +1648,12 @@
         },
         "errors": {
           "failed": "Could not do that. Try again."
+        },
+        "missing": {
+          "title": "No page for “{query}”",
+          "detail": "The AI searched it {times, plural, one {once} other {# times}} for “{prompt}”. None of the site's pages answers it.",
+          "take": "Page written",
+          "dismiss": "Dismiss"
         }
       },
       "removeSearch": {
@@ -1729,6 +1663,52 @@
         "confirm": "Stop checking",
         "removing": "Removing...",
         "failed": "Could not remove that search. Try again."
+      },
+      "profile": {
+        "title": "Names and profile",
+        "subtitle": "The names this business goes by, which AI answers are read for, and what the business is, which the AI judgments read.",
+        "subtitleCompetitor": "The names {host} goes by, which AI answers are read for: a mention under one of them counts for this competitor.",
+        "ownNotice": "This company's own: no other company watching {host} sees these names or this profile, and each sets its own.",
+        "notFound": "This website is no longer held by this company.",
+        "brands": {
+          "title": "Brand names",
+          "subtitle": "The names people use for this business. We look for them in AI answers. Mark a spelling people get wrong as a misspelling, and it is counted apart.",
+          "nameLabel": "Name {number}",
+          "placeholder": "The name people call this site",
+          "makePrimary": "Make this the main name",
+          "removeName": "Remove this name",
+          "markMisspelling": "Mark as a misspelling",
+          "mainIsCorrect": "The main name is always a correct one",
+          "addName": "Add a name ({used} of {max})",
+          "shortNameWarning": "Two words is far safer than one. A single short word will match text about something else.",
+          "save": "Save names",
+          "saved": "Saved",
+          "errors": {
+            "saveFailed": "Could not save these names. Try again."
+          }
+        },
+        "business": {
+          "title": "What this business is",
+          "subtitle": "Read by the AI judgments: whether a site is a real competitor, and which page answers a search.",
+          "sectorLabel": "Sector",
+          "sectorPlaceholder": "Branding and design",
+          "marketLabel": "Where it sells",
+          "marketPlaceholder": "Yorkshire, United Kingdom",
+          "descriptionLabel": "What the business does",
+          "descriptionHint": "A sentence or two: what it sells, and to whom. The AI judgments made for this company read it.",
+          "descriptionPlaceholder": "Digital growth agency: web design, AI products and venture building for UK businesses.",
+          "save": "Save profile",
+          "saved": "Saved",
+          "errors": {
+            "saveFailed": "Could not save this profile. Try again."
+          }
+        }
+      },
+      "schedulesPage": {
+        "title": "Schedules",
+        "subtitle": "How often {host} is collected, and from where. Anything left to follow the company keeps the company’s schedule.",
+        "subtitleCompetitor": "Which of the company’s own sites {host} is watched against, and so when it is collected.",
+        "record": "Who else watches {host}: its shared website record"
       }
     },
     "companyDataCollection": {
@@ -1787,20 +1767,6 @@
         "standaloneHint": "What they would cost with no other client sharing the data. Price against this.",
         "saving": "Saved by sharing · 30d",
         "savingHint": "Served from data another client had already paid for."
-      },
-      "limits": {
-        "title": "Data limits",
-        "intro": "How much is kept about each website this company holds — its own sites and every competitor it watches. More rows mean fuller lists to open on the Sites screens, and cost more.",
-        "keywordsLabel": "Keywords kept per website",
-        "keywordsDescription": "The searches that bring each site the most visits, refreshed weekly. About $0.13 per 1,000 keywords a week; a site with fewer keywords costs only what it has.",
-        "backlinksLabel": "Backlinks kept per website",
-        "backlinksDescription": "Every link to each site, strongest first, refreshed weekly. About $0.04 per 1,000 links a week.",
-        "choice": "{count, number} per website",
-        "usingDefaults": "Using the defaults: 1,000 keywords and 1,000 backlinks per website.",
-        "costNote": "Changes apply from each website's next weekly refresh.",
-        "save": "Save limits",
-        "saved": "Limits saved",
-        "saveFailed": "The limits could not be saved."
       }
     },
     "collectionRuns": {
@@ -1992,6 +1958,11 @@
             "NOT_FILED": "Answered, but could not be filed",
             "TOO_LARGE": "Answered, but too large to keep, so nothing was filed",
             "ROWS_LEFT_OFF": "{rows, plural, one {# row} other {# rows}} left off the end of the list to fit"
+          },
+          "caps": {
+            "ceiling": "This run stopped planning at its ceiling of {ceiling} requests, so some websites were not collected. The next run starts with them.",
+            "startedAfter": "This run began with the websites the last run did not reach at its ceiling, then went round to the rest.",
+            "competitors": "More competitors than a run collects: {hosts}. The first {count} added to each are collected; the rest are not."
           }
         }
       },
@@ -2031,7 +2002,7 @@
       },
       "newWebsite": "New — not in the system yet.",
       "nextPull": "Next pull {when}",
-      "inherits": "This client starts with what is already here: {rivals, plural, =0 {no rivals} one {1 rival} other {# rivals}} and {weeks, plural, =0 {no history yet} one {1 week of history} other {# weeks of history}} — already paid for.",
+      "inherits": "This client starts with what is already here: {weeks, plural, =0 {no history yet} one {1 week of history} other {# weeks of history}} — already paid for.",
       "watchersMany": "{count}+ companies"
     },
     "websiteDetail": {
@@ -2064,63 +2035,10 @@
       },
       "nextPullAt": "Next check {when}",
       "scheduled": "Scheduled",
-      "brands": {
-        "title": "Brand names",
-        "subtitle": "The names people use for this business. We look for them in AI answers. Shared by every company watching this website.",
-        "nameLabel": "Name {number}",
-        "placeholder": "The name people call this site",
-        "makePrimary": "Make this the main name",
-        "removeName": "Remove this name",
-        "addName": "Add a name ({used} of {max})",
-        "shortNameWarning": "Two words is far safer than one. A single short word will match text about something else.",
-        "save": "Save names",
-        "saved": "Saved",
-        "errors": {
-          "saveFailed": "Could not save these names. Try again."
-        }
-      },
       "tabs": {
-        "profile": "Profile",
-        "competition": "Known competitors",
         "watchers": "Watched by"
       },
-      "sharedNotice": "Everything here is shared by every company watching this website. They can't see who else is watching. The Google searches and AI questions each company tracks are its own, set on that company's screen for the website.",
-      "profile": {
-        "title": "What this business is",
-        "subtitle": "Helps us suggest a starting set of searches and questions.",
-        "sectorLabel": "Sector",
-        "sectorPlaceholder": "Branding and design",
-        "marketLabel": "Where it sells",
-        "marketPlaceholder": "Yorkshire, United Kingdom",
-        "descriptionLabel": "What the business does",
-        "descriptionHint": "A sentence or two: what it sells, and to whom. The AI judgments read this to tell real competitors, directories and relevant searches apart — for this site, and for it wherever it turns up as someone's competitor.",
-        "descriptionPlaceholder": "Digital growth agency: web design, AI products and venture building for UK businesses, mostly in London and Surrey.",
-        "save": "Save profile",
-        "saved": "Saved",
-        "errors": {
-          "saveFailed": "Could not save this profile. Try again."
-        }
-      },
-      "competition": {
-        "title": "Known competitors",
-        "subtitle": "Competitors seen for this website across the platform. For reference only — each company chooses its own competitors on its Competitors tab.",
-        "addLabel": "A competitor already in the system",
-        "add": "Add",
-        "searchPlaceholder": "Search these rivals...",
-        "empty": "No known competitors for this website yet.",
-        "noMatch": "No rival matches that.",
-        "hostColumn": "Rival",
-        "sourceColumn": "How we know",
-        "addedColumn": "Recorded",
-        "actionsColumn": "Actions",
-        "asserted": "Added by hand",
-        "discovered": "Seen in results",
-        "remove": "Remove",
-        "errors": {
-          "addFailed": "Could not record that rivalry. Try again.",
-          "removeFailed": "Could not remove that rivalry. Try again."
-        }
-      }
+      "factsMovedNotice": "Each company sets its own names, business profile and competitors for this website, on its own screen for it (Companies → the company → Websites → the website → Profile). Nothing here is shared between them."
     },
     "workflows": {
       "title": "Workflows",
@@ -4589,7 +4507,8 @@
         "diagnostics": "Developer Diagnostics",
         "selfImprovement": "Self-Improvement",
         "approvals": "Agent Approval Window",
-        "purgeHistory": "Purge History"
+        "purgeHistory": "Purge History",
+        "limits": "Limits"
       },
       "selfImprovement": {
         "title": "Self-Improvement",
@@ -5630,6 +5549,7 @@
         "ai_citation_claude": "Asked Claude",
         "ai_citation_gemini": "Asked Gemini",
         "ai_citation_perplexity": "Asked Perplexity",
+        "ai_overview_fan_out": "What Google's AI Overviews searched",
         "backlinks_list": "Every site linking to it",
         "backlinks_all": "Every link to it",
         "backlinks_broken": "Links to its broken pages",
@@ -5682,7 +5602,7 @@
     },
     "websiteCitations": {
       "subtitle": "Whether this website gets named inside AI answers, and how.",
-      "title": "Where it is named in AI answers",
+      "title": "AI answers",
       "searchPlaceholder": "Search by question...",
       "empty": "No answers collected yet. Add a question on the website, and the next collection will ask it.",
       "noMatch": "Nothing matches that search.",
@@ -5700,7 +5620,7 @@
     },
     "websiteKeywords": {
       "subtitle": "The searches this website ranks for, best position first.",
-      "title": "Where it ranks",
+      "title": "Rankings",
       "subtitlePlace": "The searches this website ranks for from {place}, best position first.",
       "searchPlaceholder": "Search these terms...",
       "empty": "Nothing collected yet. The next collection reads what this website ranks for.",
@@ -5720,32 +5640,436 @@
       "lastCheckedColumn": "Last checked"
     },
     "websiteFanOut": {
-      "subtitle": "The searches the AI engines run when asked this website's questions.",
-      "title": "What the engines searched",
-      "searchPlaceholder": "Search these searches...",
-      "empty": "Nothing yet. The next collection records what the engines searched for.",
-      "noMatch": "No search matches that.",
-      "queryColumn": "What the engine searched",
-      "intentColumn": "What they want",
-      "enginesColumn": "Engines",
-      "timesColumn": "Times seen",
-      "unjudged": "Not judged",
       "intents": {
         "BUYING": "Ready to buy",
         "RESEARCHING": "Researching",
         "BRANDED": "Looking for a business",
         "IRRELEVANT": "Nothing to do with it",
         "OTHER": "Too vague to tell"
+      }
+    },
+    "companyAiLists": {
+      "websiteLabel": "For which website",
+      "cut": "Showing the first {count} across this company's websites. Choose one website at the top of the menu to see all of its own.",
+      "questions": {
+        "addLabel": "A question a customer might ask an AI",
+        "addPlaceholder": "who is the best branding agency in Leeds",
+        "add": "Add",
+        "asked": "{count, plural, =0 {Nothing is asked} one {# answer collected each time} other {# answers collected each time}}",
+        "live": "Each assistant chosen is asked separately.",
+        "searchPlaceholder": "Search these questions...",
+        "empty": "No questions yet, so no AI is asked about this company's websites.",
+        "noMatch": "No question matches that.",
+        "columns": {
+          "question": "Question",
+          "website": "Website",
+          "askedOf": "Asked of",
+          "fanOut": "Fan-out queries",
+          "added": "Added",
+          "state": "State",
+          "actions": "Actions"
+        },
+        "fanOutCount": "{total} · {ticked} every run",
+        "asking": "Asking",
+        "paused": "Paused",
+        "pause": "Pause",
+        "resume": "Resume",
+        "remove": "Remove this question",
+        "errors": {
+          "addFailed": "Could not add that question. Try again.",
+          "toggleFailed": "Could not change that question. Try again.",
+          "removeFailed": "Could not remove that question. Try again.",
+          "editFailed": "Could not change that question. Try again."
+        },
+        "description": "What this company asks ChatGPT, Perplexity, Gemini and Claude, for all its own websites. This company's own: no other company sees them.",
+        "descriptionOne": "What this company asks ChatGPT, Perplexity, Gemini and Claude about {host}. This company's own: no other company sees them.",
+        "askedOfLabel": "Asked of",
+        "showingOpen": "Showing {start}–{end} of {total} · click a question to see and change its fan-out queries",
+        "allowance": {
+          "title": "Prompts for {host}",
+          "of": "of {limit} used",
+          "left": "{count, plural, one {# more can be added.} other {# more can be added.}}",
+          "paused": "{count, plural, one {# paused prompt still counts.} other {# paused prompts still count.}}",
+          "full": "All {limit} used. Remove a prompt, or raise the limit in Limits, to add another.",
+          "over": "{count} prompts, and the limit is {limit}: only the first {limit} are asked. Remove {extra}, or raise the limit in Limits.",
+          "fullTip": "{host} has used all {limit} of its prompts. Remove one, or raise the limit in Limits.",
+          "fullPlaceholder": "This website has used all its prompts",
+          "change": "Change the limit",
+          "changeTip": "Opens {host}'s Limits, where Prompts per website is set",
+          "meter": "Prompts used"
+        },
+        "edit": "Edit the question or its assistants",
+        "editLabel": "New words for “{prompt}”",
+        "save": "Save",
+        "edited": "Saved. From the next collection the AIs are asked “{prompt}”. What came back for the old words stays with them.",
+        "editedEngines": "Saved. From the next collection “{prompt}” is asked of {engines}."
       },
-      "buyingUntracked": "{count, plural, =0 {No untracked buying searches} one {1 buying search you don't track} other {# buying searches you don't track}}",
-      "trackColumn": "Track",
-      "track": "Track it",
-      "alreadyTracked": "Tracked",
+      "searches": {
+        "addLabel": "A search to check on Google",
+        "addPlaceholder": "branding agency leeds",
+        "add": "Add",
+        "limit": "Checked on Google every collection, within the website's everyday check limit ({count, number}).",
+        "searchPlaceholder": "Find a search...",
+        "empty": "No searches tracked for this company yet. Add one above, or track the ones the AI ran.",
+        "noMatch": "No search matches that.",
+        "columns": {
+          "search": "Search",
+          "website": "Website",
+          "from": "Where it came from",
+          "state": "State",
+          "actions": "Actions"
+        },
+        "from": {
+          "HAND": "Added here",
+          "AI_SEARCH": "The AI searched it"
+        },
+        "checking": "Checking",
+        "paused": "Paused",
+        "remove": "Stop checking this search",
+        "errors": {
+          "addFailed": "Could not track that search. Try again."
+        },
+        "description": "What this company checks on Google, for all its own websites, and where each search came from. Choose one website at the top of the menu to see each search's position."
+      },
+      "fanOut": {
+        "note": "These come from the answers to this company's prompts. Each is checked on Google once; the ones ticked on their prompt's list are checked every run. To tick, add, change or delete one, open the prompt on Your prompts.",
+        "searchPlaceholder": "Search these searches...",
+        "questionFilter": "Question",
+        "anyQuestion": "Any question",
+        "intentFilter": "What they want",
+        "anyIntent": "Any intent",
+        "columns": {
+          "search": "What the AI searched",
+          "website": "Website",
+          "intent": "What they want",
+          "engines": "Engines",
+          "times": "Times seen",
+          "onGoogle": "On Google",
+          "checked": "Checked"
+        },
+        "asked": "Asked: {question}",
+        "unjudged": "Not judged yet",
+        "empty": "Nothing yet. The next collection records what the AI searched for.",
+        "noMatch": "No search matches these filters.",
+        "description": "The searches the AI assistants ran to answer this company's prompts, for all its own websites, most seen first.",
+        "descriptionOne": "The searches the AI assistants ran to answer this company's prompts about {host}, most seen first.",
+        "everyRun": "Every run",
+        "once": "Once",
+        "notCheckedYet": "Not checked yet",
+        "notInTop": "Not in the top 100",
+        "position": "{position, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}"
+      }
+    },
+    "limits": {
+      "platformTitle": "Default limits",
+      "platformSubtitle": "How much is bought, kept and shown for every company, unless a company or a website is given its own number.",
+      "companySubtitle": "How much is bought, kept and shown for {company}’s websites. Each limit uses the platform default unless you pick a number here.",
+      "siteSubtitle": "How much is bought, kept and shown for {host}. Each limit uses its company’s setting unless you pick a number here.",
+      "siteSubtitleCompetitor": "How much is kept about {host}, a competitor. Each limit uses its company’s setting unless you pick a number here.",
+      "notFound": "These limits could not be found.",
+      "levels": {
+        "thisPage": "This page",
+        "platformPage": "System Settings → Limits",
+        "itsLimits": "Its Limits page",
+        "platform": {
+          "name": "{number} · Platform",
+          "text": "Every company starts with these numbers.",
+          "note": "Change a number here and it changes for every company and website that doesn’t have its own."
+        },
+        "company": {
+          "name": "{number} · Company",
+          "text": "Uses the platform’s numbers, unless you give it its own.",
+          "note": "Change a number here and it changes for every website of this company that doesn’t have its own."
+        },
+        "website": {
+          "name": "{number} · Website",
+          "text": "Uses its company’s numbers, unless you give it its own.",
+          "note": "A number picked here is this website’s own. The rest use its company’s."
+        }
+      },
+      "usePlatform": "Use platform default ({value})",
+      "useCompany": "Use company setting ({value})",
+      "hasOwn": "has its own number: {value}",
+      "setOnPlatform": "Set in System Settings",
+      "off": "Off",
+      "save": "Save",
+      "saved": "Saved",
+      "saveFailed": "Could not save these limits. Try again.",
+      "units": {
+        "keywords": "{count, plural, one {# keyword} other {# keywords}}",
+        "backlinks": "{count, plural, one {# backlink} other {# backlinks}}",
+        "days": "{count, plural, one {# day} other {# days}}",
+        "prompts": "{count, plural, one {# prompt} other {# prompts}}",
+        "fanOutQueries": "{count, plural, one {# fan-out query} other {# fan-out queries}}",
+        "searches": "{count, plural, one {# search} other {# searches}}",
+        "wordings": "{count, plural, one {# wording} other {# wordings}}",
+        "topics": "{count, plural, one {# topic} other {# topics}}",
+        "overviews": "{count, plural, one {# AI Overview} other {# AI Overviews}}",
+        "pages": "{count, plural, one {# page} other {# pages}}",
+        "suggestions": "{count, plural, one {# suggestion} other {# suggestions}}",
+        "purchases": "{count, plural, one {# purchase} other {# purchases}}",
+        "rows": "{count, plural, one {# row} other {# rows}}",
+        "competitors": "{count, plural, one {# competitor} other {# competitors}}",
+        "sources": "{count, plural, one {# source} other {# sources}}",
+        "businesses": "{count, plural, one {# business} other {# businesses}}",
+        "websites": "{count, plural, one {# website} other {# websites}}"
+      },
+      "topics": {
+        "google": {
+          "title": "Google data for each website",
+          "intro": "What the platform buys from Google, through DataForSEO, for each website: a company’s own sites and every competitor it watches. Higher numbers give fuller lists on the Sites screens, and cost more.",
+          "footer": "Changes apply from each website’s next run, or its next weekly refresh."
+        },
+        "ai": {
+          "title": "AI prompts",
+          "intro": "A prompt is a question we ask ChatGPT, Perplexity, Gemini and Claude for a company, such as “who are the best web designers in Surrey?”. Before answering, each AI searches Google: those searches are its fan-out queries. Searches that look up the same thing, typed in different ways, count as one topic.",
+          "footer": "Changes apply from the next run. What the AI searches page shows changes straight away."
+        },
+        "matching": {
+          "title": "Matching AI searches to pages",
+          "intro": "After each run, AI checks which of the website’s pages answers each topic. A topic with no page is a missing topic, and can be suggested as a new page on the website’s To do list.",
+          "footer": "Changes apply from the next run."
+        },
+        "company": {
+          "title": "Whole company",
+          "intro": "These two cover all of a company’s websites together, so a website can’t have its own.",
+          "footer": "Purchases change from the next run; rows shown change straight away."
+        },
+        "shared": {
+          "title": "Same for every company",
+          "intro": "One AI answer or one purchase serves every company that asks the same thing, so each of these is one number for all of them, set in System Settings → Limits.",
+          "footer": "Changes apply to the next answers and purchases read; downloads change straight away."
+        }
+      },
+      "fields": {
+        "keywordsPerSite": {
+          "label": "Keywords kept per website",
+          "description": "The Google searches a website already shows up for, busiest first. Refreshed every week.",
+          "cost": "About $0.15 to $0.22 a week for every 1,000. A site with fewer costs less."
+        },
+        "everydayKeywords": {
+          "label": "Keywords re-checked every run",
+          "description": "Of the keywords kept, how many get a fresh Google position on every run. The rest wait for the weekly refresh.",
+          "cost": "About $0.15 to $0.22 for every 1,000, on every run."
+        },
+        "trackedPerSite": {
+          "label": "Tracked keywords per website",
+          "description": "Keywords checked on Google every run to see where the website ranks: the fan-out queries ticked on its prompts, plus any typed in on Tracked keywords. When it's full, nothing more can be added.",
+          "cost": "About $0.003 a keyword, every run: $3 a run at 1,000."
+        },
+        "fanOutTrackedPerSite": {
+          "label": "Fan-out queries checked every run",
+          "description": "How many of a website's fan-out queries can be ticked, across all its prompts, to be checked on Google every run. Each new one is still checked once without a tick. When it's full, no more can be ticked.",
+          "cost": "About $0.003 a query, every run: $0.60 a run at 200."
+        },
+        "backlinksPerSite": {
+          "label": "Backlinks kept per website",
+          "description": "Links to the website from other websites, strongest first. The number applies to each backlink list: links, linking sites, broken links, anchor text and servers.",
+          "cost": "Up to about $0.06 for every 1,000, per list."
+        },
+        "competitorsPerSite": {
+          "label": "Competitors collected per website",
+          "description": "How many of the competitors watched against a website are collected each run, the first added first. Past this, the run report names the website.",
+          "cost": "Each competitor collected is paid for like a website of its own."
+        },
+        "consoleDays": {
+          "label": "Days in a Search Console position",
+          "description": "Search Console gives a website’s average Google position over a number of days. This is how many.",
+          "cost": "No cost."
+        },
+        "promptsPerSite": {
+          "label": "Prompts per website",
+          "description": "How many questions each website can ask the AIs. When it’s full, no more can be added. Set lower than a website already has, only its oldest are asked.",
+          "cost": "About $0.07 a prompt, every run, asked of all four AIs."
+        },
+        "searchesPerEngine": {
+          "label": "Fan-out queries read per prompt and AI",
+          "description": "For each prompt and each AI, how many of its Google searches we read, most repeated first. Past this, the AI searches page says there are more.",
+          "cost": "No cost to read. Each new one is checked on Google once, about $0.003; after that only the ticked ones are, every run."
+        },
+        "wordingsPerAngle": {
+          "label": "Wordings kept per topic",
+          "description": "A topic is one thing the AI looked up, however it was typed: “best lead system for carp fishing” and “best lead systems for carp fishing” are two wordings of one topic. This is how many wordings we keep for each topic, most used first.",
+          "cost": "No cost."
+        },
+        "anglesShown": {
+          "label": "Topics on the AI searches page",
+          "description": "How many topics the page lists, most used first. Only these are matched to a page (see Matching AI searches to pages).",
+          "cost": "No cost to list. Matching uses AI."
+        },
+        "googleSearchesRead": {
+          "label": "Google AI Overviews bought per prompt",
+          "description": "Google’s own AI answers on each prompt’s subject, with the searches Google ran for them, added as extra topics. Bought every 30 days. Off buys nothing.",
+          "cost": "$0.10 a prompt plus $0.001 an AI Overview: about $0.20 a prompt at 100."
+        },
+        "anglesJudgedPerRun": {
+          "label": "Topics checked in one batch",
+          "description": "How many topics the AI looks at in one go.",
+          "cost": "Uses AI. Changes how the work is split, not how much is done."
+        },
+        "anglesJudgedPerCollection": {
+          "label": "Topics checked per run",
+          "description": "The most topics checked after one run. The rest wait for the next run.",
+          "cost": "Uses AI: more topics, more AI cost."
+        },
+        "pagesOffered": {
+          "label": "Pages offered per topic",
+          "description": "The website’s pages most like the topic, offered to the AI to choose from. 12 at most.",
+          "cost": "Uses AI: more pages make each check bigger."
+        },
+        "auditPagesRead": {
+          "label": "Site audit pages looked through",
+          "description": "Of the pages the site audit found, how many are looked through when choosing pages to offer.",
+          "cost": "No cost."
+        },
+        "rankedPagesRead": {
+          "label": "Ranking pages looked through",
+          "description": "Of the pages the website ranks with on Google, how many of the busiest are looked through.",
+          "cost": "No cost."
+        },
+        "missingAnglesSuggested": {
+          "label": "Missing topics suggested per run",
+          "description": "New pages suggested on the website’s To do list after each run, most searched first. One dismissed or done never comes back.",
+          "cost": "No cost."
+        },
+        "purchasesPerCollection": {
+          "label": "Purchases per run",
+          "description": "The most one run can buy for the company, all websites together. Each request to DataForSEO is one purchase. If it’s reached, the run stops buying and its report says so.",
+          "cost": "A ceiling on what one run can spend."
+        },
+        "companyRowsRead": {
+          "label": "Rows shown across all websites",
+          "description": "How many rows Your prompts, Tracked keywords and AI searches show for all of a company’s websites at once. Past this, the screen says so; choosing one website shows everything.",
+          "cost": "No cost."
+        },
+        "fanOutPerAnswer": {
+          "label": "Fan-out queries kept from one AI answer",
+          "description": "The Google searches saved from a single AI answer. An AI normally runs a handful, so this is a safety net.",
+          "cost": "No cost: they come with the answer."
+        },
+        "sourcesPerAnswer": {
+          "label": "Sources kept from one AI answer",
+          "description": "Web pages an AI answer links to. AIs rarely link to more than a dozen.",
+          "cost": "No cost: they come with the answer."
+        },
+        "businessesPerAnswer": {
+          "label": "Businesses kept from one AI answer",
+          "description": "Companies and brands an AI answer mentions, in the order it names them.",
+          "cost": "Uses AI: each one is judged for how the answer speaks of it."
+        },
+        "newWebsitesPerPurchase": {
+          "label": "New websites noticed per purchase",
+          "description": "Websites a competitor purchase meets for the first time, suggested as possible competitors. Past this, they are rarely useful.",
+          "cost": "Uses AI: each one is judged as a possible competitor."
+        },
+        "overviewSearchesPerPurchase": {
+          "label": "Google AI Overview searches kept per purchase",
+          "description": "Searches Google ran for its AI Overviews on one prompt’s subject, most used first.",
+          "cost": "No extra purchase. Each new search is judged once by AI."
+        },
+        "rowsPerDownload": {
+          "label": "Rows in one download",
+          "description": "The most rows one downloaded file holds. The largest choice is about as much as one file can carry.",
+          "cost": "No cost."
+        }
+      }
+    },
+    "websitesSection": {
+      "label": "Websites section",
+      "chooser": {
+        "label": "Website",
+        "all": "All websites",
+        "competitor": "{host} · competitor",
+        "alone": "Competitors watched on their own"
+      },
+      "groups": {
+        "websites": "Websites",
+        "track": "What we track",
+        "results": "What came back",
+        "collection": "Collection"
+      },
+      "pages": {
+        "websites": "All websites",
+        "searches": "Tracked keywords",
+        "questions": "Your prompts",
+        "competitors": "Competitors",
+        "names": "Names and profiles",
+        "todo": "To do",
+        "rankings": "Rankings",
+        "answers": "AI answers",
+        "fanOut": "AI searches",
+        "schedules": "Schedules",
+        "limits": "Limits",
+        "runs": "Runs and cost"
+      },
+      "choose": {
+        "competitors": "Each of this company's own websites has its own competitors. Choose one to see and change them — here, or at the top of the menu.",
+        "names": "Each website has its own names, and each of this company's own sites its business. Choose one — here, or at the top of the menu.",
+        "todo": "Each of this company's own websites has its own to-do list: how it is doing, and what to do next. Choose one — here, or at the top of the menu.",
+        "rankings": "Each website's rankings are its own. Choose one to see everything it ranks for — here, or at the top of the menu.",
+        "answers": "Each of this company's own websites is looked for in the answers to its prompts. Choose one — here, or at the top of the menu.",
+        "empty": "No websites here yet. Add one on All websites.",
+        "columns": {
+          "website": "Website",
+          "type": "Type"
+        },
+        "owned": "Owned",
+        "competitor": "Competitor",
+        "of": "of {host}",
+        "onItsOwn": "on its own"
+      }
+    },
+    "enginePicker": {
+      "all": "{count, plural, =4 {All four assistants} other {All # assistants}}",
+      "none": "Choose at least one",
+      "each": "Each one ticked is asked separately: an answer bought every collection."
+    },
+    "promptFanOut": {
+      "back": "Your prompts",
+      "title": "Fan-out queries",
+      "forPrompt": "For the prompt “{prompt}”",
+      "description": "Every search the AIs ran before answering it. Each is checked on Google once for {host}; tick the ones to check every run.",
+      "paused": "Paused: not asked, so no new fan-out queries come in",
+      "generate": "Generate fan-out queries now",
+      "generateTip": "Asks {engines} the prompt now — about {price}",
+      "generateTipUnknown": "Asks {engines} the prompt now",
+      "generateOff": "Collection is switched off for this company, so Generate buys nothing. Switch it on in Schedules.",
+      "generating": "Asking {engines} the prompt now. New fan-out queries join the list, unticked, in a minute or two.",
+      "generated": "Asked at {time}. Any new fan-out queries have joined the list, unticked: each is checked on Google once, at the next collection.",
+      "generatedReused": "Already asked today, so today's answers are used — nothing is bought twice.",
+      "generateFailed": "{count, plural, one {# answer failed} other {# answers failed}}. Try again later.",
+      "addLabel": "Add a fan-out query",
+      "addPlaceholder": "web design agency Guildford",
+      "add": "Add",
+      "searchPlaceholder": "Search these fan-out queries...",
+      "columns": {
+        "tick": "Check on Google",
+        "query": "Fan-out query",
+        "seen": "The AIs searched it",
+        "actions": "Actions"
+      },
+      "everyRun": "Every run",
+      "onceOnly": "Once only",
+      "tickLabel": "Check “{query}” on Google every run",
+      "full": "{count} of {limit} checked every run for {host}. Untick one, or raise the limit in Limits.",
+      "over": "{count} fan-out queries are ticked for {host}, and its limit is {limit}. Untick {extra}, or raise the limit in Limits. Until then, the first {limit} ticked are checked.",
+      "notTicked": "“{query}” isn't ticked: {host} already has {limit} fan-out queries checked every run. It is checked on Google once, at the next collection.",
+      "seen": "{count, plural, one {once} other {# times}}",
+      "yourOwn": "Your own",
+      "editRow": "Edit “{query}”",
+      "editLabel": "New words for “{query}”",
+      "save": "Save",
+      "deleteRow": "Delete “{query}”: off this list for good",
+      "deleted": "Deleted “{query}”. It won't be checked again, and it won't come back even if an AI searches it again.",
+      "undo": "Undo",
+      "showing": "Showing {start}–{end} of {total} · {here} ticked here, about {price} a run · {count} of {limit} ticked for {host}",
+      "showingUnknown": "Showing {start}–{end} of {total} · {here} ticked here · {count} of {limit} ticked for {host}",
+      "empty": "No fan-out queries yet. Generate them now, or they arrive with the next collection.",
+      "noMatch": "No fan-out query matches that.",
+      "cut": "This prompt has more fan-out queries than are read; the first are listed.",
       "errors": {
-        "trackFailed": "Could not track that search. Try again."
-      },
-      "untrack": "Untrack",
-      "lastCheckedColumn": "Last checked"
+        "failed": "Could not save that. Try again."
+      }
     }
   },
   "ai": {
@@ -7553,6 +7877,28 @@
           "legal": "Legal page",
           "other": "Cannot tell"
         }
+      },
+      "seoAnglePage": {
+        "name": "Which page answers this search?",
+        "description": "For each search the AI assistants ran for a site's questions, names the site's own page that answers it — or none, which makes it a missing topic on the Fan-out queries page and the site's to-do list.",
+        "rule": "Without it, Your page shows as not judged yet and no missing topics are suggested.",
+        "answers": {
+          "page-a": "Page A answers it",
+          "page-b": "Page B answers it",
+          "page-c": "Page C answers it",
+          "page-d": "Page D answers it",
+          "page-e": "Page E answers it",
+          "page-f": "Page F answers it",
+          "page-g": "Page G answers it",
+          "page-h": "Page H answers it",
+          "page-i": "Page I answers it",
+          "page-j": "Page J answers it",
+          "page-k": "Page K answers it",
+          "page-l": "Page L answers it",
+          "none": "No page answers it",
+          "off-topic": "Not about this business",
+          "other": "Cannot tell"
+        }
       }
     }
   },
@@ -8060,7 +8406,8 @@
         "toDo": "To do",
         "checked": "Last checked",
         "added": "Added"
-      }
+      },
+      "amongHeld": "among the {count} held"
     },
     "site": {
       "back": "Back to Sites",
@@ -8170,7 +8517,13 @@
       "weeks": "{count, plural, =1 {# week} other {# weeks}}",
       "groups": "{count, plural, =1 {# group} other {# groups}}",
       "adverts": "{count, plural, =1 {# advert} other {# adverts}}",
-      "questionsAndSearches": "{count, plural, =1 {# question or search} other {# questions and searches}}"
+      "questionsAndSearches": "{count, plural, =1 {# question or search} other {# questions and searches}}",
+      "days": "{count, plural, =1 {# day} other {# days}}",
+      "months": "{count, plural, =1 {# month} other {# months}}",
+      "folders": "{count, plural, =1 {# folder} other {# folders}}",
+      "countries": "{count, plural, =1 {# country} other {# countries}}",
+      "devices": "{count, plural, =1 {# device} other {# devices}}",
+      "angles": "{count, plural, =1 {# topic} other {# topics}}"
     },
     "chart": {
       "download": "Download",
@@ -8317,7 +8670,7 @@
           "links": "Links",
           "broken": "Broken · {count}",
           "linkingWebsites": "Linking websites",
-          "mainWebsites": "Main websites · {count}"
+          "withSubdomains": "{count} counting each subdomain"
         },
         "ai": {
           "title": "AI answers",
@@ -8328,7 +8681,8 @@
           "naming": "Naming you",
           "pages": "Pages",
           "namedOf": "{named} of {asked}",
-          "addQuestions": "Add the questions your customers ask, and these four fill in."
+          "addQuestions": "Add the questions your customers ask, and these four fill in.",
+          "namedIn": "Named in {count, plural, =1 {# answer} other {# answers}}"
         }
       },
       "readout": {
@@ -8345,7 +8699,8 @@
         "pagesShare": "Share of pages",
         "visitsShare": "Share of visits",
         "row": "{count, plural, one {# page} other {# pages}} ({pagesShare}) · {visitsShare} of visits",
-        "capped": "Counted over the {count} pages ranking for the most searches."
+        "capped": "Counted over the {count} pages ranking for the most searches.",
+        "hintHeld": "The {count} pages of the searches held, each sorted into a kind: its share of those pages, and of all the site's visits."
       },
       "pageVisits": {
         "title": "Pages by visits",
@@ -8363,7 +8718,8 @@
           "to1000": "101–1,000",
           "to10000": "1,001–10,000",
           "over10000": "10,001+"
-        }
+        },
+        "hintHeld": "The pages of the searches held, grouped by the visits a month each brings, and each group's share of all the site's visits."
       },
       "branded": {
         "title": "Branded and other searches",
@@ -8378,36 +8734,44 @@
         "group": "Searches",
         "searches": "Searches",
         "visits": "Visits a month",
-        "share": "Share of visits"
+        "share": "Share of visits",
+        "hintHeld": "Where the site's {visits} visits a month come from: searches naming your brand, searches ready to buy, people researching, the rest of the searches held, and searches outside them."
       },
       "competitors": {
         "title": "Competitors",
-        "hint": "{count, plural, one {The one website} other {The # websites}} this company compares {host} with. Further right ranks for more searches; higher gets more visits.",
-        "hintTraffic": "{count, plural, one {The one website} other {The # websites}} this company compares {host} with. Further right takes more visits from searches you both rank for; higher gets more visits in all.",
+        "hint": "{count, plural, one {The one website} other {The # websites}} this company compares {host} with, and {host} itself. Further right ranks for more searches in all; higher gets more visits in all. Estimated as watched from {place}.",
+        "hintTraffic": "{count, plural, one {The one website} other {The # websites}} this company compares {host} with, the most visits first, and {host} itself. Further right ranks for more searches in all; higher gets more visits in all. Estimated as watched from {place}.",
         "view": "Show competitors by",
         "views": {
           "searches": "Searches",
           "traffic": "Traffic"
         },
         "sharedUnknown": "A dash under Shared searches means that website is not among those found ranking for your searches, so how many searches you share is not known.",
-        "sharedVisitsUnknown": "A dash under Visits on shared searches means that website is not among those found ranking for your searches, so the visits it gets from them are not known.",
+        "sharedVisitsUnknown": "A dash under Your visits on shared searches means that website is not among those found ranking for your searches, so how many of your visits come from searches it ranks for too is not known.",
         "you": "{host} (you)",
         "xAxis": "Searches it ranks for",
-        "xAxisTraffic": "Visits from searches you both rank for",
         "yAxis": "Visits a month",
         "columns": {
           "website": "Website",
           "overlap": "Overlap",
           "shared": "Shared searches",
           "ofYours": "Of yours",
-          "sharedVisits": "Visits on shared searches",
-          "ofYourVisits": "Of your visits",
+          "sharedVisits": "Your visits on shared searches",
           "theirSearches": "Their searches",
-          "theirVisits": "Their visits"
+          "theirVisits": "Their visits",
+          "ofYourVisits": "Of your visits"
         },
         "found": "{count} competitors found ranking for your searches",
-        "seeAll": "See them all"
-      }
+        "seeAll": "See them all",
+        "foundOf": "{count} competitors found among the {read} websites read of the {total} ranking for your searches",
+        "readout": {
+          "searches": "searches",
+          "visits": "visits a month"
+        }
+      },
+      "competitorsHintSome": "This website beside the {shown} of its {total} competitors with the most traffic at their newest check, on one measure and one scale. The dashed lines are the others.",
+      "outsideHeld": "{share} of the site's visits come from searches outside those held, shown as the rest.",
+      "outsideGroup": "Outside the searches held"
     },
     "calendar": {
       "title": "Calendar",
@@ -8430,7 +8794,12 @@
       "named": "AI named it {named} of {asked}",
       "linksGained": "+{count} linking websites",
       "linksLost": "−{count} linking websites",
-      "empty": "Nothing was checked this month."
+      "empty": "Nothing was checked this month.",
+      "firstCheck": "First check · {count} searches",
+      "namedIn": "AI named it in {count, plural, =1 {# answer} other {# answers}}",
+      "firstList": "First list · {count} searches",
+      "left": "{count} left the list",
+      "amongHeld": "Moves are counted among the searches held; a search that left the list may still rank below it."
     },
     "aiMentions": {
       "title": "Mentions",
@@ -8491,7 +8860,7 @@
     },
     "aiSearched": {
       "title": "Fan-out queries",
-      "description": "Which searches did the AI assistants run behind the scenes to answer this website's questions? These are their fan-out queries, most repeated first: each one a search worth ranking for.",
+      "description": "Which searches did the AI assistants run behind the scenes to answer this website's questions? These are their fan-out queries, most repeated first. Wordings that say the same thing count once, as one topic. Your position and Your page show whether the site already answers each topic; Missing topics lists the ones it has no page for.",
       "searchPlaceholder": "Search fan-out queries…",
       "trackedFilter": "Tracked",
       "anyTracked": "Tracked or not",
@@ -8503,11 +8872,48 @@
         "engines": "Engines",
         "times": "Times seen",
         "lastChecked": "Last seen",
-        "tracked": "Tracked"
+        "tracked": "Tracked",
+        "position": "Your position",
+        "page": "Your page",
+        "otherWordings": "Other wordings",
+        "question": "Question",
+        "positionFrom": "Position from"
       },
       "fromQuestion": "Asked: {question}",
       "empty": "No fan-out queries yet. The next check records them.",
-      "noMatch": "No fan-out query matches that."
+      "noMatch": "No fan-out query matches that.",
+      "descriptionCompetitor": "Which searches did the AI assistants run behind the scenes to answer the questions this website is compared on? These are their fan-out queries, most repeated first. Wordings that say the same thing count once, as one topic.",
+      "questionFilter": "Question",
+      "anyQuestion": "Any question",
+      "pageFilter": "Your page",
+      "anyPage": "Any page",
+      "pageFilters": {
+        "missing": "Missing topics",
+        "answered": "Has a page",
+        "offTopic": "Off topic",
+        "unjudged": "Not judged yet"
+      },
+      "positionFrom": {
+        "RANKED": "Ranked list",
+        "CHECKED": "Checked {day}",
+        "SEARCH_CONSOLE": "Search Console average"
+      },
+      "notInTop100": "Not in the top 100",
+      "notTracked": "Not tracked",
+      "notCheckedYet": "Not checked yet",
+      "pageVerdict": {
+        "NONE": "None",
+        "OFF_TOPIC": "Off topic",
+        "UNSURE": "Can't tell",
+        "unjudged": "Not judged yet"
+      },
+      "alsoSearchedAs": "Also searched as {wordings}",
+      "fromQueries": "from {count, plural, =1 {# fan-out query} other {# fan-out queries}}",
+      "mostSeenFirst": "most seen first",
+      "judgedAgainst": "Your page is judged against the {crawled, number} pages the site audit read ({limit, number} is its limit) and the {ranked, number} pages Google ranks the site with. A page neither reached shows as None.",
+      "judgedAgainstNoLimit": "Your page is judged against the {crawled, number} pages the site audit read and the {ranked, number} pages Google ranks the site with. A page neither reached shows as None.",
+      "judgedAgainstNoAudit": "Your page is judged against the {ranked, number} pages Google ranks the site with; the site audit has not read the site yet. A page not among them shows as None.",
+      "notBuilt": "These searches are grouped into topics after each collection; the first grouping has not run yet."
     },
     "googleSearches": {
       "title": "Your searches",
@@ -8546,7 +8952,8 @@
         "UP": "Moved up",
         "DOWN": "Moved down",
         "NEW": "New",
-        "LOST": "Lost"
+        "LOST": "Lost",
+        "LEFT": "Left the list"
       },
       "columns": {
         "keyword": "Keyword",
@@ -8561,12 +8968,14 @@
       "down": "Moved down",
       "empty": "Nothing moved this way at the last check.",
       "searchPlaceholder": "Search keywords…",
-      "noMatch": "No keyword that moved this way matches that."
+      "noMatch": "No keyword that moved this way matches that.",
+      "firstCheckTitle": "This is its first check",
+      "firstCheckBody": "Nothing has moved yet: moves are counted from the next check, against this one.",
+      "amongHeld": "Moves are among the searches held. A search can be new here because it moved into them, and one that left them may still rank below, so none is called lost."
     },
     "keywords": {
       "title": "Keywords",
       "description": "Which searches bring this website visits? Every search it ranks for on Google. Open one for its history, its page and its competitors.",
-      "listing": "Showing {stored} of the {total} searches this website ranks for — the ones that bring it the most visits.",
       "searchPlaceholder": "Search keywords or pages…",
       "bandFilter": "Position",
       "anyBand": "Any position",
@@ -8611,7 +9020,11 @@
       "cpcHint": "What advertisers pay for a click on this search, in US dollars",
       "trafficHint": "Estimated visits a month this search brings the website",
       "trendHint": "Searches a month over the last year",
-      "featuresCount": "{count, plural, =0 {None} =1 {1 feature} other {# features}}"
+      "featuresCount": "{count, plural, =0 {None} =1 {1 feature} other {# features}}",
+      "bandOfEvery": "{held} of the {total} searches in {band} across everything this website ranks for are held.",
+      "moveOfEvery": "{held} of the {total} searches marked “{move}” across everything this website ranks for are held.",
+      "newToHeld": "A search can also be new here because it moved into the searches held.",
+      "notInListThatDay": "Not in that day’s list"
     },
     "pages": {
       "title": "Top pages",
@@ -8642,7 +9055,8 @@
       "anyType": "Any type",
       "pageRankHint": "How strong this page is, from the links pointing at it: 0 to 1,000",
       "shareOf": "{share} of traffic",
-      "backlinksTitle": "{count} backlinks"
+      "backlinksTitle": "{count} backlinks",
+      "ofHeld": "These are the pages of the searches held, and their counts are of those searches. A page that ranks only for searches outside them is not listed."
     },
     "record": {
       "back": "Back",
@@ -8652,11 +9066,13 @@
     "setup": {
       "questions": {
         "title": "No AI questions set up yet",
-        "body": "These screens show how AI assistants such as ChatGPT, Gemini and Perplexity answer the questions your customers ask, and whether they mention this website. No questions are set up for it yet. Once they are, the first answers arrive with the next collection."
+        "body": "These screens show how AI assistants such as ChatGPT, Gemini and Perplexity answer the questions your customers ask, and whether they mention this website. No questions are set up for it yet. Once they are, the first answers arrive with the next collection.",
+        "paused": "Every question on this website's list is paused, so no new answers are coming. What is shown here came in before they were paused."
       },
       "trackedSearches": {
         "title": "No searches tracked yet",
-        "body": "This screen follows the Google searches that matter most to this website, checked one by one: where it ranks, who ranks above it, and what else Google shows. None are tracked for it yet. Once they are, the first check arrives with the next collection."
+        "body": "This screen follows the Google searches that matter most to this website, checked one by one: where it ranks, who ranks above it, and what else Google shows. None are tracked for it yet. Once they are, the first check arrives with the next collection.",
+        "paused": "Every search on this website's list is paused, so no new checks are coming. What is shown here was checked before they were paused."
       }
     },
     "keywordRecord": {
@@ -8677,7 +9093,8 @@
         "traffic": "Visits a month",
         "trafficDetail": "Estimated visits it brings this website",
         "cpc": "Cost per click",
-        "cpcDetail": "What advertisers pay, in US dollars"
+        "cpcDetail": "What advertisers pay, in US dollars",
+        "notInHeld": "Not in the list held"
       },
       "chartTitle": "Position over time",
       "chartHint": "Where this website stood at each check. Higher on the chart is better: 1 is the top of Google.",
@@ -8730,7 +9147,7 @@
       "rivals": {
         "title": "Your competitors on this search",
         "thisWebsite": "This website",
-        "notRanking": "Not found in their rankings",
+        "notRanking": "Not in their keyword list held",
         "none": "No competitors are set up for this website yet."
       },
       "tracked": {
@@ -8750,7 +9167,8 @@
         "showTop": "Show the top ten",
         "questions": "What people also ask",
         "related": "Related searches"
-      }
+      },
+      "notInHeld": "This search is not in the keyword list held for this website at its newest check. It may still rank below the searches held."
     },
     "pageRecord": {
       "description": "What this page ranks for, the visits it brings, what the site audit found on it, and the websites linking to it.",
@@ -8812,7 +9230,8 @@
         "notFollowed": "Not followed",
         "strength": "Strength {rank}",
         "none": "No links to this page in the newest list."
-      }
+      },
+      "notInHeld": "This page ranks for none of the searches held at the newest check. It may still rank for searches outside them."
     },
     "featureRecord": {
       "titles": {
@@ -8830,7 +9249,8 @@
         "volume": "Searches a month",
         "page": "Page"
       },
-      "empty": "No search in this website's keyword list shows it here yet."
+      "empty": "No search in this website's keyword list shows it here yet.",
+      "heldOf": "{held} of the {total} searches showing this website here, across everything it ranks for, are in the keyword list held."
     },
     "answerRecord": {
       "description": "What {engine} said, word for word, when asked this on {day}.",
@@ -8876,7 +9296,9 @@
         "volume": "Searches a month",
         "theirVisits": "Their visits"
       },
-      "empty": "No shared searches here yet."
+      "empty": "No shared searches here yet.",
+      "sharedOf": "This website and {rival} share {total} searches across everything both rank for. Those below are the ones in both keyword lists held, their most valuable first.",
+      "sharedHeldOf": "{held} of the {total} searches you share are in both keyword lists held, and are compared here, their most valuable first."
     },
     "domainRecord": {
       "description": "A website linking to this one: how strong it is, and each of its links here in full.",
@@ -8951,19 +9373,48 @@
     "structure": {
       "title": "Site structure",
       "description": "Which parts of this website rank best? Searches, pages and visits by folder. Open a folder to see its pages.",
+      "summary": "{sections, plural, =1 {# folder} other {# folders}} · {pages, plural, =1 {# page} other {# pages}} · {keywords, plural, =1 {# search} other {# searches}} · {traffic} visits a month",
       "columns": {
-        "section": "Section",
+        "section": "Folder",
         "pages": "Pages",
-        "keywords": "Keywords",
+        "keywords": "Searches",
         "top3": "Top 3",
-        "share": "Share of keywords",
-        "traffic": "Traffic"
+        "traffic": "Visits",
+        "share": "Share"
       },
+      "shareOf": {
+        "keywords": "searches",
+        "traffic": "visits"
+      },
+      "shareLine": "{share} of the site's {what}",
       "home": "Top of the site",
-      "chartTitle": "Keywords by section",
-      "empty": "No sections yet.",
-      "searchPlaceholder": "Find a section…",
-      "noMatch": "No section matches that."
+      "mapTitle": "Folders by {measure}",
+      "mapHint": "Each box is a folder, sized by its {measure}. The stronger its colour, the more of its searches are in the top 3.",
+      "measure": "Size the boxes by",
+      "measures": {
+        "traffic": "visits a month",
+        "keywords": "searches",
+        "pages": "pages"
+      },
+      "switch": {
+        "traffic": "Visits",
+        "keywords": "Searches",
+        "pages": "Pages"
+      },
+      "mapNote": "Folders too small to label are in the table below. Hover a box for its figures.",
+      "readout": {
+        "traffic": "visits a month",
+        "keywords": "searches",
+        "pages": "pages",
+        "top3": "of its searches in the top 3"
+      },
+      "empty": "No folders yet.",
+      "searchPlaceholder": "Find a folder…",
+      "noMatch": "No folder matches that.",
+      "summaryHeld": "{sections, plural, =1 {# folder} other {# folders}} · {pages, plural, =1 {# page} other {# pages}} · of the {keywords, plural, =1 {# search} other {# searches}} held · {traffic} visits a month",
+      "shareLineHeld": "{share} of the {what} held",
+      "outside": "Between them, these folders have {searches} of the site's searches and {visits} of its visits. The rest are outside the searches held.",
+      "outsideAllVisits": "Between them, these folders have {searches} of the site's searches and, as estimated, all of its visits: the searches outside those held bring almost none."
     },
     "sideBySide": {
       "title": "Side by side",
@@ -8991,11 +9442,12 @@
       },
       "chartTitle": "Estimated traffic",
       "chartHint": "This website and the others in its group over the dates chosen.",
-      "empty": "No other websites in this group yet."
+      "empty": "No other websites in this group yet.",
+      "chartHintSome": "This website and the {shown} of its {total} competitors with the most traffic at their newest check, over the dates chosen."
     },
     "organic": {
       "title": "Organic competitors",
-      "description": "Who else ranks for the same searches? Every website that does, most overlap first.",
+      "description": "Who else ranks for the same searches? The websites sharing the most searches with this one, most overlap first.",
       "searchPlaceholder": "Find a website…",
       "kindFilter": "Kind",
       "anyKind": "Any kind",
@@ -9011,18 +9463,19 @@
         "kind": "Kind",
         "shared": "Shared keywords",
         "position": "Average position",
-        "traffic": "Traffic on shared keywords",
+        "traffic": "Your traffic on shared keywords",
         "tracked": "Tracked",
         "domainKeywords": "All their keywords",
         "domainTraffic": "All their traffic"
       },
       "empty": "No organic competitors found yet.",
-      "noMatch": "No website matches that."
+      "noMatch": "No website matches that.",
+      "readOf": "{count} of the {total} websites ranking for the same searches: those sharing the most with this one. The rest are not read."
     },
     "gap": {
       "title": "Content gap",
       "description": "Which searches do competitors rank for that this website does not? Most searched first: the gaps worth filling.",
-      "ceiling": "Read from each competitor's {count} most-searched keywords.",
+      "ceiling": "Read from the searches kept for each competitor, those bringing it the most visits. A search this website ranks for outside its own kept list can show here as a gap.",
       "searchPlaceholder": "Search keywords…",
       "rivalsFilter": "Competitors ranking",
       "anyRivals": "At least one",
@@ -9100,7 +9553,9 @@
         "answer": "Answer",
         "sources": "Sources"
       },
-      "readFull": "Read the full answer"
+      "readFull": "Read the full answer",
+      "questionMissingTitle": "That question is not on this website's list",
+      "questionMissingBody": "It may have been removed. Choose one of its questions from Mentions, or open Full answers from the menu."
     },
     "googleAbove": {
       "title": "Who ranks above you",
@@ -9155,7 +9610,8 @@
       "inAiOverviews": "In AI Overviews",
       "inLocalPacks": "In map packs",
       "inSnippets": "In featured snippets",
-      "acrossAllHint": "At the newest check: searches whose results page shows this website in the feature."
+      "acrossAllHint": "At the newest check: searches whose results page shows this website in the feature.",
+      "partial": "Counted across all {total} searches this website ranks for. The keyword list holds {stored} of them, so these counts do not open it."
     },
     "googleQuestions": {
       "title": "Questions people ask",
@@ -9181,35 +9637,154 @@
     "bands": {
       "title": "Position bands",
       "description": "How high up Google does this website rank? How many of its searches sit on page one and further down, over time.",
-      "chartTitle": "Keywords by position",
-      "chartHint": "Stacked, best band at the bottom.",
-      "columns": {
-        "day": "Checked",
-        "total": "All keywords",
-        "pageOne": "Page one"
+      "asOf": "As of {day} · {count} searches",
+      "asOfCompared": "As of {day} · {count} searches · compared with {before}",
+      "pageOne": "On page one",
+      "pageOneShare": "{share} of {total} searches",
+      "inTop3": "{count} in the top 3",
+      "inRestOfPageOne": "{count} in 4–10",
+      "pageTwo": "On page two",
+      "pageTwoMeaning": "The closest to page one",
+      "further": "Further down",
+      "furtherMeaning": "Position 21 and below",
+      "up": "▲ {count} since {day}",
+      "down": "▼ {count} since {day}",
+      "same": "No change since {day}",
+      "noBefore": "No check before to compare",
+      "chartTitle": "Page one over time",
+      "chartHint": "Page one, page two and further down at each check.",
+      "series": {
+        "pageOne": "Page one",
+        "pageTwo": "Page two",
+        "further": "Further down"
       },
-      "empty": "No position bands recorded in these dates."
+      "early": "Checks before {day} covered only the searches checked on every run, so they are left out of the bands.",
+      "moves": {
+        "title": "What moved between bands",
+        "first": "This is the site's first check: nothing to compare with yet.",
+        "firstList": "The whole keyword list was checked for the first time on {day}: nothing to compare with yet.",
+        "none": "No search changed band between {before} and {day}. Every search stayed where it was.",
+        "someSame": "Between {before} and {day}, {count, plural, =1 {# search} other {# searches}} changed band. {into} moved into the top 3 and {out} left it, so the top 3 still holds {now}.",
+        "someChanged": "Between {before} and {day}, {count, plural, =1 {# search} other {# searches}} changed band. {into} moved into the top 3 and {out} left it, so the top 3 now holds {now}, from {was}.",
+        "from": "from {band}",
+        "to": "to {band}",
+        "notRanking": "Not ranking",
+        "cell": "{count, plural, =1 {# search} other {# searches}} from {from} to {to}",
+        "stayed": "{count, plural, =1 {# search} other {# searches}} stayed in {band}",
+        "legendUp": "Moved up a band",
+        "legendDown": "Moved down a band",
+        "legendNew": "Newly ranking",
+        "legendStayed": "Stayed",
+        "amongHeld": "Counted among the {count} searches held: a search outside them is not checked, so whether it moved is not known.",
+        "newToList": "New to the list",
+        "legendNewToList": "New to the list held",
+        "someHeld": "Between {before} and {day}, {count, plural, =1 {# of the searches held} other {# of the searches held}} changed band, {fresh} of them new to the list. The list's top 3 now holds {now}."
+      },
+      "moved": {
+        "title": "Searches that changed band",
+        "empty": "No search changed band at the newest check.",
+        "columns": {
+          "keyword": "Search",
+          "was": "Was",
+          "now": "Now",
+          "band": "Band",
+          "volume": "Searches a month"
+        },
+        "fresh": "new"
+      },
+      "closest": {
+        "title": "Closest to page one",
+        "description": "Positions 11 to 13, the most searched first.",
+        "all": "See all {count} on page two",
+        "empty": "No search sits at positions 11 to 13.",
+        "columns": {
+          "keyword": "Search",
+          "position": "Position",
+          "volume": "Searches a month",
+          "traffic": "Visits",
+          "page": "Page"
+        },
+        "descriptionHeld": "Positions 11 to 13 among the searches held, the most searched first."
+      },
+      "cell": {
+        "title": "From {from} to {to}",
+        "titleNew": "Newly ranking in {to}",
+        "description": "The searches that moved between these bands at the newest check, {day}.",
+        "missingTitle": "Not a move between bands",
+        "missingBody": "This address does not name two bands. Go back to Position bands and choose a square of the grid."
+      },
+      "empty": "No position bands recorded in these dates.",
+      "held": "{count} of them held"
     },
     "newLost": {
       "title": "New and lost keywords",
-      "description": "Is this website gaining or losing searches? How many it newly ranks for, moved up or down on, or lost, at each check.",
-      "chartTitle": "New, up, down and lost",
-      "chartHint": "At each check. The arrows carry the direction.",
+      "description": "Is this website gaining or losing searches? How many it newly ranks for, moved up or down on, or lost, from one check to the next.",
+      "newest": "{day} compared with the check before",
+      "newestStart": "{day}, with nothing before it to compare",
+      "covered": "{kind} · {count, plural, =1 {# search} other {# searches}}",
+      "kinds": {
+        "FIRST": "First check",
+        "FIRST_LIST": "Whole list, first time",
+        "WHOLE": "Whole list",
+        "EVERYDAY": "Everyday check",
+        "KEPT": "The list kept",
+        "FIRST_KEPT": "The list kept, first time"
+      },
+      "startLabels": {
+        "FIRST": "first",
+        "FIRST_LIST": "first list"
+      },
+      "startNotes": {
+        "FIRST": "The first check: nothing to compare with yet.",
+        "FIRST_LIST": "{count, plural, =1 {# search} other {# searches}} held for the first time. Not new rankings: this list had not been checked before."
+      },
+      "chartTitle": "Gained and lost at each check",
+      "chartHint": "Above the line: new and up. Below it: down and lost. The number beside each bar is the net.",
+      "startLegend": "Not compared: a first check, or the list held for the first time",
       "series": {
         "new": "▲ New",
         "up": "↑ Up",
         "down": "↓ Down",
-        "lost": "▼ Lost"
+        "lost": "▼ Lost",
+        "left": "▼ Left the list"
       },
-      "columns": {
-        "day": "Checked",
-        "new": "▲ New",
-        "up": "↑ Up",
-        "down": "↓ Down",
-        "lost": "▼ Lost"
+      "net": "Net",
+      "tabs": "Moves at the newest check",
+      "moves": {
+        "columns": {
+          "keyword": "Search",
+          "fromTo": "Was → now",
+          "change": "Change",
+          "volume": "Searches a month",
+          "page": "Page"
+        },
+        "empty": "No search moved this way at this check."
       },
-      "seeKeywords": "See the keywords that moved",
-      "empty": "No counts recorded in these dates."
+      "checks": {
+        "columns": {
+          "day": "Checked",
+          "new": "▲ New",
+          "up": "↑ Up",
+          "down": "↓ Down",
+          "lost": "▼ Lost",
+          "net": "Net",
+          "covered": "What was checked",
+          "left": "▼ Left the list"
+        },
+        "several": "{count} checks",
+        "severalWithFirst": "{count} checks, the first among them",
+        "severalWithFirstList": "{count} checks, the whole list's first among them"
+      },
+      "empty": "No counts recorded in these dates.",
+      "tabNames": {
+        "NEW": "New",
+        "UP": "Up",
+        "DOWN": "Down",
+        "LOST": "Lost",
+        "LEFT": "Left the list"
+      },
+      "amongHeld": "Counted among the {count} searches held. A search that left the list may still rank below it, so none is called lost.",
+      "everySearch": "Across everything this website ranks for, since the ranking data's own previous update — not our check before: {fresh} new, {up} up, {down} down and {lost} lost."
     },
     "marketMap": {
       "title": "Market map",
@@ -9278,7 +9853,10 @@
       "unknown": "Unknown",
       "empty": "No backlinks summary yet. It fills in after the first link check.",
       "noMatch": "No group matches that.",
-      "worldwide": "Worldwide"
+      "worldwide": "Worldwide",
+      "rest": "Everything else",
+      "overlapping": "A link can count in several of these groups, or none: each share is of all {links} links.",
+      "largestOnly": "Shares of the {count} largest groups: this summary did not keep the rest."
     },
     "linkLists": {
       "statuses": {
@@ -9376,7 +9954,9 @@
         "lastChecked": "Last checked"
       },
       "empty": "No servers collected yet.",
-      "noMatch": "No address matches that."
+      "noMatch": "No address matches that.",
+      "chartHintHeld": "Each bar is one network (the first three parts of the address), counted over the {held} servers kept of {total}.",
+      "networksInAll": "Links to this website come from {count} networks in all."
     },
     "backlinksBroken": {
       "title": "Broken backlinks",
@@ -9411,11 +9991,13 @@
         "domains": "Linking websites"
       },
       "columns": {
-        "day": "Week of",
+        "day": "Day",
         "newBacklinks": "▲ New links",
         "lostBacklinks": "▼ Lost links",
         "newReferringDomains": "▲ New websites",
-        "lostReferringDomains": "▼ Lost websites"
+        "lostReferringDomains": "▼ Lost websites",
+        "week": "Week of",
+        "month": "Month of"
       },
       "empty": "No link changes recorded in these dates."
     },
@@ -9430,6 +10012,8 @@
       "scoreScale": "of 100",
       "pages": "Pages crawled",
       "pagesOf": "of {max} asked for",
+      "pagesFound": "of {found} found — the crawl stops at its page limit",
+      "pagesEvery": "every page the crawl found",
       "errors": "Errors",
       "warnings": "Warnings",
       "notices": "Notices",
@@ -9535,7 +10119,9 @@
         "lastChecked": "Last checked"
       },
       "empty": "No adverts found. This website does not appear to buy Google adverts at the moment.",
-      "noMatch": "No search matches that."
+      "noMatch": "No search matches that.",
+      "listing": "Showing {listed} of the {reported} searches it advertises on: the ones among the hundred checked for adverts on every run.",
+      "emptyReported": "It advertises on {reported} searches, but none is among the hundred checked for adverts on every run, which is all this list holds."
     },
     "downloads": {
       "csv": "Download CSV",
@@ -9543,12 +10129,251 @@
       "building": "Preparing the file…",
       "failed": "Could not make the file — try again",
       "cutShort": "The file holds the first {rows} rows — the most one download carries."
+    },
+    "coverage": {
+      "part": "{held} of the {total} searches this website ranks for are held — the ones bringing it the most visits.",
+      "unknown": "{held} searches held. How many this website ranks for in all is not known yet.",
+      "listHeld": "{held} of the {total} in this list are kept, up to the number set for this website. The rest are not collected."
+    }
+  },
+  "searchConsole": {
+    "list": {
+      "title": "Search Console",
+      "description": "What Google itself counted for your own websites: real clicks and impressions for every search and page. Open one to see them.",
+      "searchPlaceholder": "Find a website…",
+      "empty": "Your company has no websites of its own yet.",
+      "noMatch": "No website matches that search.",
+      "period": "The last 30 days to Google's newest day",
+      "columns": {
+        "website": "Website",
+        "status": "Search Console",
+        "clicks": "Clicks",
+        "impressions": "Impressions",
+        "ctr": "Click-through",
+        "position": "Position",
+        "updated": "Updated"
+      }
+    },
+    "status": {
+      "NOT_CONNECTED": "Not connected",
+      "CONNECTING": "Not connected",
+      "CHOOSING": "Choosing the property",
+      "CONNECTED": "Connected",
+      "NEEDS_RECONNECT": "Needs connecting again",
+      "DISCONNECTED": "Disconnected"
+    },
+    "site": {
+      "back": "Back to Search Console",
+      "yourWebsite": "Your website",
+      "withProperty": "Your website · Search Console property {property}",
+      "switch": "Choose a website",
+      "updated": "Updated {when}",
+      "notFoundTitle": "Website not found",
+      "notFoundDescription": "That website is not one your company holds.",
+      "notOwnedTitle": "Search Console is for your own websites",
+      "notOwnedDescription": "Your company watches this website rather than owning it, so it has no Search Console here.",
+      "figuresTo": "Google's figures to {day}; the last three days can still change.",
+      "historyComing": "The sixteen months before {day} are still coming in, newest first.",
+      "clearing": "The last property's figures are being cleared; the new property's come in next."
+    },
+    "menu": {
+      "label": "Search Console pages",
+      "performance": "Performance",
+      "searches": "Searches",
+      "pages": "Pages",
+      "places": "Countries and devices",
+      "connection": "Connection"
+    },
+    "kinds": {
+      "label": "Kind of result",
+      "web": "Web",
+      "image": "Image",
+      "video": "Video",
+      "news": "News",
+      "discover": "Discover",
+      "googleNews": "Google News"
+    },
+    "noKind": {
+      "title": "Nothing in {kind} results in these dates",
+      "body": "Google showed none of this website's pages in {kind} results between {from} and {to}."
+    },
+    "figures": {
+      "clicks": "Clicks",
+      "impressions": "Impressions",
+      "ctr": "Click-through rate",
+      "position": "Average position",
+      "positionNote": "Google's own average",
+      "shown": "Times Google showed it",
+      "ctrNote": "Clicks for each time shown",
+      "up": "▲ {change} on the {days} days before",
+      "down": "▼ {change} on the {days} days before",
+      "same": "The same as the {days} days before",
+      "better": "▲ {change} places better than the {days} days before",
+      "worse": "▼ {change} places worse than the {days} days before",
+      "points": "{change} points",
+      "noBefore": "The days before aren't held yet",
+      "new": "New in these dates"
+    },
+    "named": "{named} of {total} clicks came from searches Google names. The other {hidden} came from searches Google hides for privacy: they are in the totals, never in a list.",
+    "chart": {
+      "title": "Clicks and impressions over time",
+      "searchTitle": "This search over time",
+      "pageTitle": "This page over time",
+      "hint": "Tick the measures to draw. Each line has its own scale, so small and large numbers can be read together.",
+      "clicks": "Clicks",
+      "impressions": "Impressions",
+      "ctr": "Click-through rate",
+      "position": "Average position",
+      "download": "Download",
+      "png": "Picture (PNG)",
+      "svg": "Drawing (SVG)",
+      "csv": "Spreadsheet (CSV)",
+      "day": "Day",
+      "nothing": "Nothing was shown in these dates."
+    },
+    "performance": {
+      "title": "Performance",
+      "description": "What Google itself counted for this website: real clicks and impressions, where Sites shows estimates."
+    },
+    "searches": {
+      "title": "Searches",
+      "description": "Every search Google showed this website for, and the clicks each brought. Open one for its days and the pages Google showed for it.",
+      "searchPlaceholder": "Find a search…"
+    },
+    "pages": {
+      "title": "Pages",
+      "description": "Every page Google showed in its results, and the clicks each brought. Open one for its days and the searches it was shown for.",
+      "searchPlaceholder": "Find a page…"
+    },
+    "places": {
+      "title": "Countries and devices",
+      "description": "Where the clicks came from, and on what: each country's and device's share of this website's clicks.",
+      "countries": "Countries",
+      "devices": "Devices",
+      "unknownCountry": "Unknown",
+      "deviceNames": {
+        "DESKTOP": "Desktop",
+        "MOBILE": "Mobile",
+        "TABLET": "Tablet"
+      }
+    },
+    "table": {
+      "search": "Search",
+      "page": "Page",
+      "country": "Country",
+      "device": "Device",
+      "clicks": "Clicks",
+      "change": "Change",
+      "impressions": "Impressions",
+      "ctr": "Click-through",
+      "position": "Position",
+      "share": "Share of clicks",
+      "new": "New",
+      "versus": "Change against the {days} days before",
+      "noVersus": "No change shown: the days before aren't held",
+      "preparing": "Adding these dates up. The list appears as soon as it's ready.",
+      "behind": "Showing the list from before Google's newest day; the newest is being added now.",
+      "cut": "The {count} with the most clicks",
+      "empty": "Nothing in these dates.",
+      "noMatch": "Nothing matches that search.",
+      "download": "Download all (CSV)",
+      "downloading": "Building the file…",
+      "downloadFailed": "The file couldn't be built. Try again.",
+      "downloadCut": "The file holds the {rows} with the most clicks."
+    },
+    "record": {
+      "searchDescription": "What Google counted for this search, day by day, and which of your pages it showed.",
+      "pageDescription": "What Google counted for this page, day by day, and the searches it was shown for.",
+      "backToSearches": "Back to Searches",
+      "backToPages": "Back to Pages",
+      "openInSites": "Open it in Sites",
+      "openPage": "Open the page",
+      "pagesFor": "Pages Google showed for it",
+      "searchesFor": "Searches Google showed it for",
+      "asked": "Asked of Google when this screen opens, for the dates chosen.",
+      "asking": "Asking Google…",
+      "notConnected": "Connect Search Console to see these.",
+      "busy": "Google didn't answer in time. Try again in a moment.",
+      "refused": "Google wouldn't answer this question.",
+      "noneNamed": "Google named none of them: every one is hidden for privacy.",
+      "cut": "The {count} with the most clicks.",
+      "tryAgain": "Try again"
+    },
+    "connect": {
+      "title": "Connect Google Search Console",
+      "body": "See what Google itself counted for {host}: the clicks and impressions of every search and every page, day by day, sixteen months back. Only read: nothing in Search Console is ever changed.",
+      "button": "Connect Google Search Console",
+      "hint": "You'll sign in with the Google account that can see {host} in Search Console.",
+      "askAdmin": "Ask one of your company's admins to connect it. Only they can.",
+      "notSetUpTitle": "Search Console isn't set up yet",
+      "notSetUpBody": "The Google app it signs in through has to be set up first. There's nothing to do here until then.",
+      "failed": "The connection couldn't be started. Try again."
+    },
+    "connection": {
+      "title": "Connection",
+      "description": "How {host} is connected to Google Search Console.",
+      "chooseTitle": "Choose the property",
+      "chooseDescription": "{account} can read these Search Console properties for {host}. Choose the one that covers the whole website.",
+      "use": "Use this property",
+      "another": "Use another Google account",
+      "domain": "Domain property: every address on the domain, with or without www, http or https",
+      "prefix": "Address: this address and everything under it",
+      "permissions": {
+        "siteOwner": "Owner",
+        "siteFullUser": "Full user",
+        "siteRestrictedUser": "Restricted user"
+      },
+      "property": "Property",
+      "account": "Google account",
+      "connected": "Connected",
+      "lastUpdated": "Last updated",
+      "history": "History",
+      "collected": "Collected",
+      "updatedDetail": "{when} · Google's figures to {day}",
+      "notYet": "Not yet",
+      "historyAll": "Sixteen months, from {day}: all in",
+      "historyPart": "From {day} so far; the rest is coming in",
+      "collectedDetail": "Every morning: the new day, and the last four days again while Google's figures settle",
+      "disconnect": "Disconnect",
+      "confirm": "Disconnecting stops collecting and gives Google's access back. The figures collected so far stay, marked with the day it was disconnected.",
+      "confirmDisconnect": "Disconnect",
+      "keep": "Keep it connected",
+      "reconnect": "Connect again",
+      "failed": "That didn't work. Try again.",
+      "someone": "that Google account",
+      "attemptTitle": {
+        "DECLINED": "Not connected",
+        "MISSING_SCOPE": "Not connected",
+        "NO_PROPERTY": "No property for {host} in {account}",
+        "UNVERIFIED": "No property for {host} in {account}",
+        "FAILED": "Not connected"
+      },
+      "attempt": {
+        "DECLINED": "The sign-in was declined at Google, so nothing was connected.",
+        "MISSING_SCOPE": "Search Console access was left unticked at Google, so nothing was connected. Connect again and leave it ticked.",
+        "NO_PROPERTY": "{account} can't see {host} in Search Console. Sign in with the account that can, or ask whoever manages {host}'s Search Console to add {account} as a user, then connect again.",
+        "UNVERIFIED": "{account} isn't verified for {host} in Search Console, so it can't read its figures. Ask an owner of the property to add it as a user, then connect again.",
+        "FAILED": "The sign-in didn't finish. Try again."
+      },
+      "tryAnother": "Try another Google account",
+      "problem": {
+        "REVOKED": "Google stopped letting {account} read this property.",
+        "NO_ACCESS": "{account} can no longer read {property} in Search Console.",
+        "UNREADABLE": "The stored sign-in can't be read any more.",
+        "NOT_CONFIGURED": "Search Console isn't set up any more, so nothing is being collected.",
+        "GOOGLE_BUSY": "Google was busy at the last collection. It's tried again later.",
+        "NOT_OWNED": "This website is no longer marked as your own, so nothing is collected."
+      },
+      "disconnectedOn": "Disconnected on {day}",
+      "keptTo": "The figures to {day} are still here. Nothing new comes in until it's connected again.",
+      "keptNone": "Nothing new comes in until it's connected again."
     }
   },
   "aiEngines": {
     "chatgpt": "ChatGPT",
     "perplexity": "Perplexity",
     "gemini": "Gemini",
-    "claude": "Claude"
+    "claude": "Claude",
+    "googleAiOverview": "Google AI Overviews"
   }
 }

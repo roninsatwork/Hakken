@@ -206,7 +206,7 @@ export class OptionalNavSection extends Component<
  * It used to match `/admin/settings` exactly, which stopped working when the
  * one tabbed page became a route per section.
  */
-const SYSTEM_SETTINGS_SECTIONS = ['identity', 'security', 'white-label', 'options'];
+const SYSTEM_SETTINGS_SECTIONS = ['identity', 'security', 'white-label', 'options', 'limits'];
 
 export function isSystemSettingsRoute(pathname: string) {
   if (pathname === '/admin/settings') return true;
@@ -244,6 +244,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/app/tasks')) return 'Tasks';
   if (pathname.startsWith('/app/calls')) return 'Calls';
   if (pathname.startsWith('/app/sites')) return 'Sites';
+  if (pathname.startsWith('/app/search-console')) return 'Search Console';
   if (pathname.startsWith('/app/reception')) return 'Reception';
   if (pathname.startsWith('/app/profile')) return 'Profile';
   if (pathname === '/app/settings') return 'Organization Dashboard';
