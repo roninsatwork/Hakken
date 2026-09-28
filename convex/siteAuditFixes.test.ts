@@ -454,6 +454,13 @@ describe("fan-out queries (3.3)", () => {
   }, 60_000);
 });
 
+// Looks up every competitor's positions for a full list of searches. Under
+// three seconds on a laptop; the two-core CI runner, with coverage and the
+// whole suite beside it, took it past 30s (run of b9f3e320, 2026-09-28)
+// without a failed check — the room the whole-company planning test was given
+// (e91f77fa).
+const SIDE_BY_SIDE_TIMEOUT_MS = 120_000;
+
 describe("side by side at its limits (3.5)", () => {
   test("shares its lookups among the competitors, and says on how many searches each is compared", async () => {
     const t = harness();
@@ -479,7 +486,7 @@ describe("side by side at its limits (3.5)", () => {
     // Two and a half thousand lookups among thirty-one: eighty searches each, and each says so.
     expect(new Set(sideBySide.map((rival) => rival.comparedOn))).toEqual(new Set([80]));
     expect(sideBySide[0]).toMatchObject({ beatsYouOn: 80, rankedOn: 80 });
-  });
+  }, SIDE_BY_SIDE_TIMEOUT_MS);
 });
 
 describe("the AI day lines (3.1)", () => {
