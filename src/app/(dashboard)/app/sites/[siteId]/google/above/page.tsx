@@ -8,7 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { CUT_COLUMN, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
@@ -152,7 +152,7 @@ export default function SiteAbovePage() {
                     <li key={`${result.position}-${result.domain}`} className="flex items-center gap-2 text-[12px]">
                       <span className="w-6 text-right font-mono text-muted">{result.position}</span>
                       <span className={result.isRival ? "text-foreground" : "text-secondary"}>{result.domain}</span>
-                      {result.isRival ? <StatusPill tone="warning">{t("rival")}</StatusPill> : null}
+                      {result.isRival ? <StatusLabel tone="warning">{t("rival")}</StatusLabel> : null}
                     </li>
                   ))}
                   {row.above.length > SHOWN_ABOVE ? (

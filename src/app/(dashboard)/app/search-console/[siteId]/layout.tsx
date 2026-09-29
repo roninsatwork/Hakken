@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import Header from "@/src/ui/components/layout/Header";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { formatDateTime } from "@/src/lib/dates";
 import { SiteDateRange } from "../../sites/_components/SiteDateRange";
@@ -72,9 +72,9 @@ export default function SearchConsoleSiteLayout({ children }: { children: React.
           description={shown ? t("withProperty", { property: shown }) : t("yourWebsite")}
           pills={
             state === "CONNECTED" && connection?.lastCollectedAt ? (
-              <StatusPill tone="success">{t("updated", { when: formatDateTime(connection.lastCollectedAt) })}</StatusPill>
+              <StatusLabel tone="success">{t("updated", { when: formatDateTime(connection.lastCollectedAt) })}</StatusLabel>
             ) : (
-              <StatusPill tone={state === "NEEDS_RECONNECT" ? "warning" : state === "CONNECTED" ? "success" : "neutral"}>{ts(state)}</StatusPill>
+              <StatusLabel tone={state === "NEEDS_RECONNECT" ? "warning" : state === "CONNECTED" ? "success" : "neutral"}>{ts(state)}</StatusLabel>
             )
           }
           action={

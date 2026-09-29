@@ -4,9 +4,10 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { use, useState } from "react";
-import { FileText, ArrowLeft, Loader2, CheckCircle2, XCircle, Copy, Check } from "lucide-react";
+import { FileText, ArrowLeft, Loader2, Copy, Check } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 
 export default function ExecutionTraceDetailPage({ params }: { params: Promise<{ id: Id<"agents">, logId: Id<"agentLogs"> }> }) {
   const t = useTranslations("admin.agents.details.logs.detail");
@@ -37,7 +38,7 @@ export default function ExecutionTraceDetailPage({ params }: { params: Promise<{
 
   if (log === null) {
     return (
-      <div className="flex w-full min-h-[40vh] items-center text-rose-500 font-mono tracking-wide">
+      <div className="flex w-full min-h-[40vh] items-center text-destructive font-mono tracking-wide">
         {t("notFound")}
       </div>
     );
@@ -64,12 +65,9 @@ export default function ExecutionTraceDetailPage({ params }: { params: Promise<{
           </span>
           <div className="h-4 w-[1px] bg-border-dim/50" />
           
-          <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-[4px] border text-[10px] uppercase tracking-widest font-bold ${
-            isFailed ? "text-rose-500 border-rose-500/20 bg-rose-500/10" : "text-[#10b981] border-[#10b981]/20 bg-[#10b981]/10"
-          }`}>
-            {isFailed ? <XCircle className="w-3.5 h-3.5" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-            <span>{log.interactionType}</span>
-          </div>
+          <StatusLabel tone={isFailed ? "danger" : "success"} size="md">
+            {log.interactionType}
+          </StatusLabel>
         </div>
 
         <Link

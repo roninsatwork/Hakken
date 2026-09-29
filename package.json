@@ -15,7 +15,7 @@
     "preconvex:dev": "npm run verify:env",
     "test": "vitest",
     "pretest": "npm run verify:env",
-    "test:run": "vitest run",
+    "test:run": "vitest run --reporter=default --reporter=json --outputFile.json=test-results/test-timings.json && node scripts/check-test-speed.mjs",
     "pretest:run": "npm run verify:env",
     "test:coverage": "vitest run --coverage",
     "pretest:coverage": "npm run verify:env",

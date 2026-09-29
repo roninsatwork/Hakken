@@ -18,7 +18,7 @@ import {
   ModalTextAreaField,
 } from "./ModalForm";
 import { PageHeader, PagePrimaryAction } from "./PageHeader";
-import { FeedbackPill, SaveAction, SaveError, SaveFeedback } from "./SaveControls";
+import { FeedbackLabel, SaveAction, SaveError, SaveFeedback } from "./SaveControls";
 import { Select } from "./Select";
 import {
   FieldHint,
@@ -319,7 +319,7 @@ describe("the kit passes axe", () => {
           errorTitle="Not saved"
           errorMessage="Try again."
         />
-        <FeedbackPill tone="success">Saved</FeedbackPill>
+        <FeedbackLabel tone="success">Saved</FeedbackLabel>
         <WriteButton onClick={() => {}}>Approve</WriteButton>
       </div>
     );

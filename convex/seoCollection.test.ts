@@ -942,11 +942,6 @@ describe("chunking", () => {
   });
 });
 
-// Plans a whole 230-website company, page by page. About four seconds on a
-// laptop; coverage on the two-core CI runner took it past 45s (run #14,
-// 2026-09-24) without a planning failure — the same slowdown the Arcade's
-// whole-map simulations were given room for.
-const WHOLE_COMPANY_TIMEOUT_MS = 120_000;
 
 // Run here, not on GitHub, where its time limit failed a push without a
 // planning fault (Anthony, 2026-09-25: "just remove these new ones that are
@@ -983,7 +978,7 @@ describe("a company too big for one page", () => {
 
     const reached = new Set((await lines(t)).map((row) => row.websiteId));
     expect(reached.size).toBe(total);
-  }, WHOLE_COMPANY_TIMEOUT_MS);
+  });
 });
 
 describe("one website too big for one page", () => {
@@ -1043,7 +1038,7 @@ describe("one website too big for one page", () => {
     const rivalCounts = [...perSite.entries()].filter(([websiteId]) => websiteId !== own).map(([, count]) => count);
     expect(new Set(rivalCounts).size).toBe(1);
     expect((await cycle(t, cycleId))?.status).toBe("SENDING");
-  }, WHOLE_COMPANY_TIMEOUT_MS);
+  });
 });
 
 /*
@@ -1313,7 +1308,7 @@ describe("a refused pull", () => {
     expect(gemini[0].error).toBeUndefined();
   });
 
-  test("is left alone once it has a task id, because that one was paid for", async () => {
+  test("is left alone once it has a task id and a charge, because that one was paid for", async () => {
     const t = harness();
     const company = await seedCompany(t, "Ronins Agency");
     await seedSchedule(t, company, DAILY);
@@ -1331,7 +1326,8 @@ describe("a refused pull", () => {
     await t.run(async (ctx) => {
       const pull = (await ctx.db.query("seoDataPulls").collect())
         .find((row) => row.operationId === "ai_citation_chatgpt")!;
-      await ctx.db.patch(pull._id, { status: "FAILED", taskId: "task-1", error: "never returned", completedAt: Date.now() });
+      // Charged: a live call refused at no charge carries a task id too, and is asked again.
+      await ctx.db.patch(pull._id, { status: "FAILED", taskId: "task-1", costUsd: 0.0206, error: "never returned", completedAt: Date.now() });
       for (const line of await ctx.db.query("seoCycleLines").collect()) await ctx.db.delete(line._id);
     });
     await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: await openCycle(t, company, startedAt) });

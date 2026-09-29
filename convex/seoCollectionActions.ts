@@ -74,7 +74,12 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
  */
 export async function sendNextBatch(
   ctx: ActionCtx,
-  args: { workerId: string; runId: Id<"agentRuns"> },
+  args: {
+    workerId: string;
+    runId: Id<"agentRuns">;
+    /** When the Collector's run ends: a supplier's refusal is asked again only before it. */
+    runEndsAt: number;
+  },
 ): Promise<SendOutcome> {
   const claim = await ctx.runMutation(internal.seoCollectionQueue.claimSeoBatch, {
     workerId: args.workerId,
@@ -174,8 +179,10 @@ export async function sendNextBatch(
   }> = [];
   const unmentioned: Id<"seoDataPulls">[] = [];
   const notTaken: Id<"seoDataPulls">[] = [];
+  const askAgain: Id<"seoDataPulls">[] = [];
   let accountReason: string | null = null;
   let refusedReason: string | null = null;
+  let supplierReason: string | null = null;
 
   for (const pull of sending) {
     const outcome = outcomes.get(pull.tag);
@@ -189,6 +196,14 @@ export async function sendNextBatch(
       notTaken.push(pull.pullId);
       if (kind === "ACCOUNT") accountReason ??= outcome.error ?? "the account was refused";
       else refusedReason ??= outcome.error ?? "the rate limit was reached";
+      continue;
+    }
+    // Their supplier refused and nothing was charged: asked again slowly,
+    // later in this run, while the rest carries on. One that was charged is
+    // recorded below as the failure it is: never bought twice.
+    if (kind === "SUPPLIER_BUSY" && (credentials.sandbox || outcome.costUsd === 0)) {
+      askAgain.push(pull.pullId);
+      supplierReason ??= outcome.error ?? "DataForSEO's supplier was unavailable.";
       continue;
     }
     const isLive = operation.mode === "LIVE";
@@ -216,6 +231,14 @@ export async function sendNextBatch(
     });
   }
   await release(notTaken, accountReason ?? refusedReason ?? "not taken", false);
+  if (askAgain.length > 0) {
+    await ctx.runMutation(internal.seoSupplierRetry.retrySupplierRefusals, {
+      pullIds: askAgain,
+      reason: supplierReason ?? "DataForSEO's supplier was unavailable.",
+      retryUntil: args.runEndsAt,
+      runId: args.runId,
+    });
+  }
 
   if (accountReason) return { kind: "ACCOUNT", reason: accountReason };
   if (refusedReason && results.length === 0) return { kind: "REFUSED", reason: refusedReason };

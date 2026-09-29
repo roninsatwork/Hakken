@@ -280,7 +280,7 @@ describe("anthropic assistant streaming", () => {
 
     expect(calls).toBe(2);
     expect(response.text).toBe("Recovered.");
-  }, 15_000);
+  });
 
   test("a stream that dies after the first fragment is not retried", async () => {
     let calls = 0;

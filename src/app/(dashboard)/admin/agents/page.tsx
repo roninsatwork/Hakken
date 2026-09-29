@@ -23,6 +23,8 @@ import {
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 
 type Agent = Doc<"agents">;
 
@@ -156,11 +158,7 @@ export default function AgentsPage() {
                     {agent.name}
                     {/* The wiki's staff (wiki-agents plan, phase 0): built in,
                         switchable, never deletable. */}
-                    {agent.systemKey && (
-                      <span className="px-1.5 py-0.5 rounded-full bg-brand/10 border border-brand/30 text-brand text-[10px] font-medium">
-                        {t("wikiStaff")}
-                      </span>
-                    )}
+                    {agent.systemKey && <TagLabel>{t("wikiStaff")}</TagLabel>}
                   </span>
                   {agent.description && (
                     <span className="text-[11px] text-secondary mt-0.5 line-clamp-1 max-w-[300px]">
@@ -175,26 +173,24 @@ export default function AgentsPage() {
             key: "model",
             header: t('table.model'),
             cell: (agent) => (
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
-                {/* Not lowercased: a published model name such as
-                    "MoonshotAI: Kimi K3" is not the platform's to restyle, and
-                    the label is now a phrase. */}
-                <span className="text-[10px] font-mono tracking-widest text-foreground/80">
-                  {describeAgentModel(agent)}
-                </span>
-              </div>
+              // Not lowercased: a published model name such as
+              // "MoonshotAI: Kimi K3" is not the platform's to restyle, and
+              // the label is now a phrase.
+              <TagLabel>{describeAgentModel(agent)}</TagLabel>
             ),
           },
           {
             key: "status",
             header: t('table.status'),
             cell: (agent) => (
-              <div className={`flex items-center gap-2 text-[12px] font-medium ${isWorking(agent._id) ? 'text-brand' : agent.isActive ? 'text-green-500' : 'text-neutral-500'}`}>
-                <div className={`w-1.5 h-1.5 rounded-full ${isWorking(agent._id) ? 'bg-brand animate-pulse' : agent.isActive ? 'bg-green-500' : 'bg-neutral-500'}`} />
+              <StatusLabel
+                tone={isWorking(agent._id) ? "info" : agent.isActive ? "success" : "neutral"}
+                icon={isWorking(agent._id) ? "working" : undefined}
+              >
                 {isWorking(agent._id)
                   ? t('table.working')
                   : agent.isActive ? t('table.active') : t('table.draft')}
-              </div>
+              </StatusLabel>
             ),
           },
           {

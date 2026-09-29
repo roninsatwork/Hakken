@@ -16,6 +16,7 @@ import { fileKeywordListPull, fileRankedPositions } from "./siteKeywordList";
 import { isKeywordListOperation } from "./dataForSeoKeywordListOperations";
 import { AI_OVERVIEW_FAN_OUT_OPERATION } from "./dataForSeoAiOverviewOperations";
 import { fileAiOverviewPull } from "./aiOverviewFanOuts";
+import { SEARCH_VOLUME_OPERATION, fileSearchVolumePull } from "./searchVolumes";
 import { serpSnapshotOf } from "./siteSerp";
 import { rankedPositionValidator } from "./utils/siteShapes";
 import { findBrandMentions } from "./utils/websiteBrands";
@@ -81,6 +82,8 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
   if (isKeywordListOperation(pull.operationId)) return await fileKeywordListPull(ctx, args.pullId, pull);
   // Google's AI Overviews' searches for a question topic (`aiOverviewFanOuts.ts`, FA8).
   if (pull.operationId === AI_OVERVIEW_FAN_OUT_OPERATION) return await fileAiOverviewPull(ctx, args.pullId, pull);
+  // How many search for the fan-out queries, and what a click costs (`searchVolumes.ts`).
+  if (pull.operationId === SEARCH_VOLUME_OPERATION) return await fileSearchVolumePull(ctx, args.pullId, pull);
 
   // An AI answer is read for who it names, and its text is kept for the
   // Sites Full answers page (D9, docs/plans/active/user-sites-plan.md). The

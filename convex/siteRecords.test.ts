@@ -77,8 +77,65 @@ describe("a keyword's own screen", () => {
     expect(record.keyword).toBe("carp rods");
     expect(record.rank).toMatchObject({ position: 3, cpc: 0.8, difficulty: 42, competitionLevel: "HIGH", searchIntent: "commercial", trend: [100, 200] });
     expect(record.features).toEqual([{ feature: "ai_overview_reference", position: 2, page: "/rods", day: DAY }]);
-    expect(record.rivals).toEqual([{ siteId: rival.holdId, host: "nashtackle.co.uk", relationship: "TRACKED", position: 1, page: "/carp-rods", day: DAY }]);
+    expect(record.rivals).toEqual([{ siteId: rival.holdId, host: "nashtackle.co.uk", relationship: "TRACKED", position: 1, page: "/carp-rods", day: DAY, checked: false }]);
     expect(record.tracked).toBeNull();
+    expect(record.checkedOnce).toBeNull();
+  });
+
+  test("shows a fan-out query's one Google check, for the company that asked for it only", async () => {
+    // "ai automation agency london uk" on ronins.co.uk, 2026-09-29: second on
+    // Google's check, but in no keyword list, so the screen said "Not ranking".
+    const t = harness();
+    const korda = await company(t, "Korda");
+    const other = await company(t, "Other");
+    const own = await hold(t, korda, "kordatackle.com");
+    const rival = await hold(t, korda, "nashtackle.co.uk", own.websiteId);
+    const theirs = await hold(t, other, "kordatackle.com");
+    const keyword = "carp tackle shop london";
+    const checkPull = await t.run(async (ctx) => await ctx.db.insert("seoDataPulls", {
+      operationId: "serp_google_organic", family: "SERP", mode: "LIVE", websiteId: own.websiteId, taskArgsJson: "{}",
+      status: "READY", tag: `t-${Math.random()}`, attempts: 0, costUsd: 0, sandbox: false, submittedAt: Date.now(), completedAt: Date.now(),
+    } as never));
+    await t.run(async (ctx) => {
+      await ctx.db.insert("fanOutFirstChecks", {
+        holdId: own.holdId, websiteId: own.websiteId, query: keyword, locationCode: UK, pullId: checkPull, checkedDay: DAY, createdAt: Date.now(),
+      });
+      await ctx.db.insert("websiteSearchStats", {
+        websiteId: own.websiteId, keyword, locationCode: UK, firstCheckedDay: DAY, lastCheckedDay: DAY,
+        lastPosition: 2, bestPosition: 2, everRanked: true, updatedAt: Date.now(),
+      });
+      await ctx.db.insert("seoKeywordPositions", {
+        websiteId: own.websiteId, keyword, day: DAY, position: 2, pullId: checkPull, locationCode: UK, createdAt: Date.now(),
+      });
+      await ctx.db.insert("siteSerpPages", {
+        keyword, locationCode: UK, day: DAY, pullId: checkPull, resultCount: 3,
+        results: [
+          { position: 1, domain: "www.example.com" },
+          { position: 2, domain: "www.kordatackle.com", url: "https://www.kordatackle.com/shop/" },
+          { position: 3, domain: "www.example.org" },
+        ],
+        features: ["local_pack"], aiOverviewDomains: [], localPackDomains: [], questions: ["Where to buy carp tackle?"], related: [], createdAt: Date.now(),
+      });
+    });
+
+    const asKorda = await member(t, korda);
+    const record = await asKorda.query(api.siteRecords.keywordRecord, { siteId: own.holdId, keyword });
+    expect(record.rank).toBeNull();
+    expect(record.tracked).toBeNull();
+    expect(record.checkedOnce).toEqual({ position: 2, day: DAY });
+    expect(record.serp?.results.find((row) => row.isYou)).toMatchObject({ position: 2, url: "https://www.kordatackle.com/shop/" });
+    // The competitor is in no keyword list for it, and not on the page the check read.
+    expect(record.rivals).toEqual([{ siteId: rival.holdId, host: "nashtackle.co.uk", relationship: "TRACKED", position: null, page: null, day: DAY, checked: true }]);
+    const range = { from: "2026-09-01", to: "2026-09-30" };
+    expect(await asKorda.query(api.siteGoogle.searchPositions, { siteId: own.holdId, keywords: [keyword], ...range }))
+      .toEqual([{ keyword, points: [{ day: DAY, position: 2 }] }]);
+
+    // Another company owning the same website did not ask: none of it is theirs.
+    const asOther = await member(t, other);
+    const theirRecord = await asOther.query(api.siteRecords.keywordRecord, { siteId: theirs.holdId, keyword });
+    expect(theirRecord.checkedOnce).toBeNull();
+    expect(theirRecord.serp).toBeNull();
+    expect(await asOther.query(api.siteGoogle.searchPositions, { siteId: theirs.holdId, keywords: [keyword], ...range })).toEqual([]);
   });
 
   test("is only ever read through the caller's own hold", async () => {

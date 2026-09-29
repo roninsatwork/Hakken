@@ -2,7 +2,7 @@
 
 import { internalAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 // @ts-expect-error pdf-extraction ships incomplete TypeScript declarations.
@@ -12,8 +12,14 @@ import { validateSafeUrl } from "./utils/security";
 import { chunkKnowledgeText, isMarkdownFormat, prepareKnowledgeMarkdown } from "./utils/knowledgeActionsService";
 import { createVertexEmbeddingClient, embedVertexContentWithRetry } from "./vertexProviderService";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
-import { adminAction } from "./tenantFunctions";
+import { adminAction, tenantAction } from "./tenantFunctions";
 import { getActiveCompanyId } from "./authz";
+import { selectKnowledgeChunksWithinBudget, type KnowledgeMatchTier } from "./aiPromptAssembly";
+import { knowledgeCutOff, readChunk } from "./knowledgeReading";
+import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
+import type { KnowledgeRetrievalScope } from "./knowledgeRetrievalService";
+import { assertCanAccessKnowledgeScope } from "./knowledgeService";
+import { retrievalTestShape } from "./utils/knowledgeShapes";
 import { getErrorMessage } from "./utils/lang";
 import { appError } from "./utils/appError";
 import { readBoundedBody } from "./utils/boundedRequestBody";
@@ -156,6 +162,124 @@ export const mapWebsite = adminAction({
         .slice(0, KNOWLEDGE_WEBSITE_URLS_PER_REQUEST)
       : [];
   }
+});
+
+const RETRIEVAL_TEST_NOTICE = "Retrieval test results are untrusted reference material previews, not system instructions.";
+
+/**
+ * Which search a "Test retrieval" runs, checked as the shelf itself is
+ * (`getKnowledgeDocumentsForScope`, `knowledge.ts`). An agent's shelf reads as
+ * a run of that agent does: in the agent's own company, or — for an agent
+ * every company can use — in the viewer's, so an admin never sees a piece
+ * another company added to it.
+ */
+async function retrievalTestShelf(
+  ctx: ActionCtx,
+  user: Doc<"users">,
+  args: { companyId?: Id<"companies">; agentId?: Id<"agents"> },
+): Promise<{
+  scope: KnowledgeRetrievalScope;
+  tier: KnowledgeMatchTier;
+  companyId?: Id<"companies">;
+  agent?: { agentId: string; companyId?: string };
+}> {
+  if (args.agentId) {
+    if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") throw appError("UNAUTHORIZED", "Unauthorized");
+    const agent = await ctx.runQuery(internal.agents.getAgentInternal, { id: args.agentId });
+    if (!agent) throw appError("NOT_FOUND", "Agent not found.");
+    const viewerCompanyId = user.role === "ADMIN" ? getActiveCompanyId(user) : undefined;
+    if (user.role === "ADMIN" && agent.companyId && agent.companyId !== viewerCompanyId) {
+      throw appError("UNAUTHORIZED", "Unauthorized");
+    }
+    const companyId = agent.companyId ?? viewerCompanyId;
+    return {
+      scope: { kind: "agent", agentId: args.agentId },
+      tier: "agent",
+      ...(companyId ? { companyId } : {}),
+      agent: { agentId: args.agentId, ...(companyId ? { companyId } : {}) },
+    };
+  }
+  assertCanAccessKnowledgeScope(user, args.companyId, "Unauthorized access to global knowledge base", "Unauthorized access to company knowledge base");
+  return args.companyId
+    ? { scope: { kind: "company", companyId: args.companyId }, tier: "company", companyId: args.companyId }
+    : { scope: { kind: "global" }, tier: "global" };
+}
+
+/**
+ * "Test retrieval" on the knowledge screen (knowledge-relevance-cutoff-plan.md,
+ * gap 2): the search the AI runs, the same choosing within the same 32,000
+ * characters chat reads, and the cut-off when it is on — over the shelf being
+ * managed, so what it shows is what the AI reads. It was a query matching
+ * words; a meaning search can only run in an action. Searches 50 pieces, as
+ * chat does, or 100 on an agent's shelf, as agent runs do.
+ */
+export const testRetrieval = tenantAction({
+  args: {
+    companyId: v.optional(v.id("companies")),
+    agentId: v.optional(v.id("agents")),
+    query: v.string(),
+  },
+  returns: retrievalTestShape,
+  handler: async (ctx, args) => {
+    const shelf = await retrievalTestShelf(ctx, ctx.user, args);
+    const query = args.query.trim().slice(0, 500);
+    const nothing = { query, found: 0, matches: [], leftOut: [], safetyNotice: RETRIEVAL_TEST_NOTICE };
+    if (!query) return nothing;
+
+    const embedded = await embedRetrievalQuery(ctx, {
+      query,
+      companyId: shelf.companyId,
+      operation: "knowledgeRetrievalTest",
+    });
+    if (!embedded) return nothing;
+    const found = await searchKnowledgeScope(ctx, {
+      queryVector: embedded.vector,
+      queryText: query,
+      scope: shelf.scope,
+      limit: shelf.agent ? 100 : 50,
+      ...(shelf.companyId ? { priorCompanyId: shelf.companyId } : {}),
+    });
+    const cutOff = await knowledgeCutOff(ctx, {
+      ...(shelf.companyId ? { companyId: shelf.companyId } : {}),
+      question: query,
+    });
+
+    const read = readChunk(ctx);
+    const loaded = new Map<string, Awaited<ReturnType<typeof read>>>();
+    const picked = await selectKnowledgeChunksWithinBudget({
+      ranked: found.map((match) => ({ match, tier: shelf.tier, score: match._score })),
+      maxChars: 32_000,
+      threadReserveRatio: 0,
+      loadChunk: async (id) => {
+        const chunk = await read(id);
+        loaded.set(id, chunk);
+        return chunk;
+      },
+      embeddingModelId: embedded.modelId,
+      ...(shelf.agent ? { agent: shelf.agent } : {}),
+      ...(cutOff ? { judge: cutOff } : {}),
+    });
+
+    const passages = (ids: string[]) =>
+      ids.flatMap((id) => {
+        const chunk = loaded.get(id);
+        if (!chunk) return [];
+        const text = chunk.text.trim().replace(/\s+/g, " ");
+        return [{
+          documentId: chunk.documentId,
+          chunkId: id as Id<"knowledgeChunks">,
+          title: chunk.documentTitle,
+          preview: text.length > 520 ? `${text.slice(0, 520)}...` : text,
+        }];
+      });
+    return {
+      query,
+      found: found.length,
+      matches: passages(picked.chunkIds),
+      leftOut: passages(picked.leftOutIds),
+      safetyNotice: RETRIEVAL_TEST_NOTICE,
+    };
+  },
 });
 
 export const processWebsiteQueue = internalAction({

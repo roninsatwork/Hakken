@@ -98,7 +98,7 @@ describe('Provider Classification Drift', () => {
       offenders,
       `Unclassified Gemini-era references found. Keep actual model IDs/provider docs allowlisted, but rename stale platform language:\n${offenders.join('\n')}`
     ).toEqual([]);
-  }, 15_000);
+  });
 
 
   /**
@@ -156,7 +156,7 @@ describe('Provider Classification Drift', () => {
       offenders,
       `A tool's model-facing name is hardcoded outside its definition. It will go stale silently the next time that tool is renamed — read it from the tool instead:\n${offenders.join('\n')}`
     ).toEqual([]);
-  }, 15_000);
+  });
 
 
   test('provider SDK imports remain classified while adapters mature', () => {
@@ -295,5 +295,5 @@ describe('Provider Classification Drift', () => {
       offenders,
       `Unclassified provider model ID literals found. Store runtime model choices in the model catalogue/defaults instead of hardcoding IDs:\n${offenders.join('\n')}`
     ).toEqual([]);
-  }, 15_000);
+  });
 });

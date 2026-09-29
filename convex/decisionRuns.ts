@@ -123,6 +123,8 @@ export const listRegisteredInternal = internalQuery({
 
 const runInsertValidator = v.object({
   decisionKey: v.string(),
+  /** This run's own subject, when each run of one request judged a different thing. */
+  subjectId: v.optional(v.string()),
   answer: v.string(),
   probabilities: v.optional(v.string()),
   certainty: v.optional(certaintyValidator),
@@ -183,7 +185,9 @@ export const recordRunsInternal = internalMutation({
       await ctx.db.insert("agentTransactions", {
         agentId,
         ...(args.companyId ? { companyId: args.companyId } : {}),
-        actionContext: `decision:${args.runs.map((run) => run.decisionKey).join(",")}`,
+        // Each Decision named once: one search asks the knowledge cut-off
+        // about forty passages in a request.
+        actionContext: `decision:${[...new Set(args.runs.map((run) => run.decisionKey))].join(",")}`,
         modelUsed: args.usage.modelId,
         providerKey: args.usage.providerKey,
         providerModelId: args.usage.providerModelId,
@@ -210,7 +214,7 @@ export const recordRunsInternal = internalMutation({
           ...run,
           ...links,
           subjectKind: args.subjectKind,
-          subjectId: args.subjectId,
+          subjectId: run.subjectId ?? args.subjectId,
           costUsd: run.source === "RULES" ? 0 : share,
           createdAt: now,
         }),

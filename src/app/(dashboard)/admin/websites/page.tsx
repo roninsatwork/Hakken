@@ -10,7 +10,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader, PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { RowIconButton } from "@/src/ui/components/screens/Table";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
@@ -195,7 +195,7 @@ export default function AllWebsitesPage() {
             cell: (website) => (
               website.nextPullAt ? (
                 <div className="flex flex-col gap-0.5">
-                  <StatusPill tone="info">{formatDateTime(website.nextPullAt)}</StatusPill>
+                  <StatusLabel tone="info">{formatDateTime(website.nextPullAt)}</StatusLabel>
                   {website.fetchedFor ? (
                     <span className="text-[11px] text-muted">
                       {t("fetchedFor", {
@@ -206,7 +206,7 @@ export default function AllWebsitesPage() {
                   ) : null}
                 </div>
               ) : (
-                <StatusPill tone="neutral">{t("notFetched")}</StatusPill>
+                <StatusLabel tone="neutral">{t("notFetched")}</StatusLabel>
               )
             ),
           },

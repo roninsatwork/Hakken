@@ -84,4 +84,4 @@ it.each(LEVELS)("keeps $id scenery finite and bounded after spatial batching", (
   expect(counts.triangles).toBeLessThan(1_200_000);
   expect(counts.meshes).toBeLessThan(430);
   dispose(root, mats);
-}, 30_000);
+});

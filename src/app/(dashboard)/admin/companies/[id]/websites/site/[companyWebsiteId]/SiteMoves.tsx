@@ -9,6 +9,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/src/ui/components/screens/Button";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { cn } from "@/src/ui/lib/utils";
 import { siteBase } from "./siteView";
@@ -118,9 +119,7 @@ export function SiteMoves({
         key={move._id}
         className={cn("flex flex-col gap-3 rounded-[13px] border p-4 sm:flex-row sm:items-center sm:gap-4", tone)}
       >
-        <span className="w-fit shrink-0 rounded-full bg-foreground/5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.07em] text-secondary">
-          {label}
-        </span>
+        <TagLabel className="shrink-0">{label}</TagLabel>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="text-[14px] font-semibold text-foreground">{title}</span>
           <span className="text-[12px] text-secondary">{detail}</span>

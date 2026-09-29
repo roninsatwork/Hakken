@@ -459,3 +459,110 @@ describe("a prompt's fan-out queries", () => {
     expect(await firstChecks(t, ronins.holdId)).toEqual([]);
   });
 });
+
+/**
+ * The Track tick on the Sites Fan-out queries page (Anthony, 2026-09-29):
+ * the company's own people choose which searches are checked every run, by
+ * the same rule as admin's tick, on their own website only.
+ */
+describe("tracking a fan-out query from Sites", () => {
+  const member = async (t: Harness, companyId: Id<"companies">) => {
+    const userId = await t.run(async (ctx) =>
+      await ctx.db.insert("users", { name: "Staff", email: `s-${Math.random()}@test.com`, role: "USER" as const, companyId, createdAt: Date.now() }));
+    return t.withIdentity({ subject: userId });
+  };
+
+  test("a tick tracks it every run and counts it; unticked, it waits for its one first check", async () => {
+    const t = harness();
+    const ronins = await asking(t, "Ronins", "ronins.co.uk", [["best web designers surrey england", 8]]);
+    const staff = await member(t, ronins.companyId);
+    const read = async () => await staff.query(api.siteAngles.listAngles, { siteId: ronins.holdId });
+    expect((await read()).tracking).toEqual({ count: 0, limit: 200 });
+    const row = (await read()).rows[0];
+
+    await staff.mutation(api.siteFanOutTracking.trackSiteFanOutQuery, { siteId: ronins.holdId, prompt: row.prompt, queries: [row.query, ...row.otherWordings], track: true });
+    expect(await tracked(t, ronins.holdId)).toEqual([["best web designers surrey england", true, "AI_SEARCH"]]);
+    expect((await read()).rows[0].tracked).toBe(true);
+    expect((await read()).tracking).toEqual({ count: 1, limit: 200 });
+
+    await staff.mutation(api.siteFanOutTracking.trackSiteFanOutQuery, { siteId: ronins.holdId, prompt: row.prompt, queries: [row.query], track: false });
+    expect(await tracked(t, ronins.holdId)).toEqual([]);
+    expect(await firstChecks(t, ronins.holdId)).toContainEqual(["best web designers surrey england", false, null]);
+    expect((await read()).tracking).toEqual({ count: 0, limit: 200 });
+  });
+
+  test("the page a row opens reads the search as a fan-out query: its question, assistants and times seen", async () => {
+    const t = harness();
+    const ronins = await asking(t, "Ronins", "ronins.co.uk", [["best web designers surrey england", 8]]);
+    const staff = await member(t, ronins.companyId);
+
+    expect(await staff.query(api.siteAngles.keywordAngle, { siteId: ronins.holdId, keyword: "best web designers surrey england" })).toMatchObject({
+      questions: [PROMPT],
+      engines: ["claude"],
+      timesSeen: 8,
+      lastSeenDay: DAY,
+      otherWordings: [],
+      intent: null,
+      page: null,
+    });
+    expect(await staff.query(api.siteAngles.keywordAngle, { siteId: ronins.holdId, keyword: "cheap websites anywhere" })).toBeNull();
+  });
+
+  test("the page a row opens shows the answer in which the AI ran the search, and who it named", async () => {
+    const t = harness();
+    const ronins = await asking(t, "Ronins", "ronins.co.uk", [["best web designers surrey england", 8]]);
+    const staff = await member(t, ronins.companyId);
+    const lightflows = await t.run(async (ctx) => {
+      const websiteId = await ctx.db.insert("websites", { host: "lightflows.co.uk", displayHost: "lightflows.co.uk", firstSeenAt: Date.now() });
+      await ctx.db.insert("companyWebsites", {
+        companyId: ronins.companyId, websiteId, relationship: "TRACKED", againstWebsiteId: ronins.websiteId, createdAt: Date.now(),
+      });
+      // The answer Claude was writing when it ran the search: the one its search record points at.
+      const ran = (await ctx.db.query("promptFanOutQueries").collect()).find((row) => row.query === "best web designers surrey england")!;
+      await ctx.db.insert("aiAnswerTexts", {
+        pullId: ran.lastPullId, prompt: PROMPT, engine: "claude", locationCode: 2826, day: DAY,
+        text: "Try **Lightflows** in Surrey.", sources: [], createdAt: Date.now(),
+      });
+      await ctx.db.insert("aiAnswers", {
+        pullId: ran.lastPullId, prompt: PROMPT, engine: "claude", locationCode: 2826, day: DAY,
+        named: [websiteId], recommended: [websiteId], warnedAgainst: [], mentions: [{ websiteId, texts: ["Lightflows"] }], createdAt: Date.now(),
+      } as never);
+      return websiteId;
+    });
+    expect(lightflows).toBeDefined();
+
+    const read = await staff.query(api.siteAngles.keywordAngle, { siteId: ronins.holdId, keyword: "best web designers surrey england" });
+    expect(read?.answers).toEqual([expect.objectContaining({
+      engine: "claude",
+      day: DAY,
+      text: "Try **Lightflows** in Surrey.",
+      stance: "NOT_NAMED",
+      rivals: [{ host: "lightflows.co.uk", stance: "RECOMMENDED" }],
+      rivalNames: ["Lightflows"],
+    })]);
+  });
+
+  test("never past the website's limit, never a search off its list, never another company's website", async () => {
+    const t = harness();
+    const ronins = await asking(t, "Ronins", "ronins.co.uk", [["best web designers surrey england", 8]]);
+    const other = await asking(t, "Other", "other.co.uk", [["best web designers surrey england", 3]]);
+    const staff = await member(t, ronins.companyId);
+    const admin = await superAdmin(t);
+    const track = (siteId: Id<"companyWebsites">, query: string) =>
+      staff.mutation(api.siteFanOutTracking.trackSiteFanOutQuery, { siteId, prompt: PROMPT, queries: [query], track: true });
+
+    await expect(track(ronins.holdId, "cheap websites anywhere")).rejects.toThrow(/not on this website's list/);
+    await expect(track(other.holdId, "best web designers surrey england")).rejects.toThrow(/not one your company holds/);
+
+    await admin.mutation(api.fanOutLimits.setSiteFanOutLimits, { companyWebsiteId: ronins.holdId, limits: { fanOutTrackedPerSite: 50 } });
+    await t.run(async (ctx) => {
+      for (let index = 0; index < 50; index += 1) {
+        await ctx.db.insert("websiteKeywords", {
+          websiteId: ronins.websiteId, companyWebsiteId: ronins.holdId, keyword: `search ${index}`, isActive: true, createdAt: Date.now(), addedFrom: "AI_SEARCH",
+        });
+      }
+    });
+    expect((await staff.query(api.siteAngles.listAngles, { siteId: ronins.holdId })).tracking).toEqual({ count: 50, limit: 50 });
+    await expect(track(ronins.holdId, "best web designers surrey england")).rejects.toThrow(/its limit in Limits/);
+  });
+});

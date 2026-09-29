@@ -23,6 +23,7 @@ import {
   KnowledgeStatsGrid,
   KnowledgeTabSwitcher,
   type KnowledgeTab,
+  type RetrievalTestResult,
 } from "./KnowledgeManagerSections";
 import {
   KnowledgeFilesPanel,
@@ -95,6 +96,7 @@ export function KnowledgeManager({
   const retryDocumentIngestion = useMutation(api.knowledge.retryDocumentIngestion);
   const repairFlaggedDocuments = useMutation(api.knowledge.repairFlaggedDocuments);
   const mapWebsite = useAction(api.knowledgeActions.mapWebsite);
+  const testRetrieval = useAction(api.knowledgeActions.testRetrieval);
 
   const action = useAdminAction({ scope: "admin-knowledge" });
   const [activeTab, setActiveTab] = useState<KnowledgeTab>("Website");
@@ -126,6 +128,8 @@ export function KnowledgeManager({
   const [qualityActionError, setQualityActionError] = useState("");
   const [retrievalQuery, setRetrievalQuery] = useState("");
   const [submittedRetrievalQuery, setSubmittedRetrievalQuery] = useState("");
+  const [retrievalTest, setRetrievalTest] = useState<RetrievalTestResult | undefined>(undefined);
+  const [retrievalError, setRetrievalError] = useState("");
   const [repairingDocumentIds, setRepairingDocumentIds] = useState<Record<string, boolean>>({});
   const [isBulkRepairing, setIsBulkRepairing] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState<Doc<"knowledgeDocuments"> | null>(null);
@@ -135,10 +139,6 @@ export function KnowledgeManager({
   const documentInspection = useQuery(
     api.knowledge.inspectDocument,
     documentToInspect ? { documentId: documentToInspect._id } : "skip"
-  );
-  const retrievalTest = useQuery(
-    api.knowledge.testRetrieval,
-    submittedRetrievalQuery.trim() ? { ...scopeArgs, query: submittedRetrievalQuery.trim() } : "skip"
   );
   const isLoadingDocuments = paged.isLoading;
 
@@ -402,9 +402,25 @@ export function KnowledgeManager({
     setIsDeletingBulk(false);
   };
 
-  const handleRunRetrievalTest = (event: FormEvent<HTMLFormElement>) => {
+  // An action, not a live query: it runs the AI's own search, which only an
+  // action can (knowledge-relevance-cutoff-plan.md, gap 2).
+  const handleRunRetrievalTest = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setSubmittedRetrievalQuery(retrievalQuery.trim());
+    const query = retrievalQuery.trim();
+    setSubmittedRetrievalQuery(query);
+    setRetrievalTest(undefined);
+    setRetrievalError("");
+    const outcome = await action.run(() => testRetrieval({ ...scopeArgs, query }), {
+      key: "retrieval-test",
+      suppressErrorToast: true,
+      fallbackMessage: t("errors.unknown"),
+    });
+    if (outcome.ok) {
+      setRetrievalTest(outcome.data);
+    } else if (!outcome.deduplicated) {
+      setSubmittedRetrievalQuery("");
+      setRetrievalError(outcome.message);
+    }
   };
 
   const handleRetryDocument = async (documentId: Id<"knowledgeDocuments">) => {
@@ -514,7 +530,7 @@ export function KnowledgeManager({
           onSubmit={handleRunRetrievalTest}
           submittedQuery={submittedRetrievalQuery}
           result={retrievalTest}
-          actionError={qualityActionError}
+          actionError={retrievalError || qualityActionError}
           documents={documents}
           renderInspectAction={renderInspectAction}
         />

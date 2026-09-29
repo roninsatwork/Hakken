@@ -11,7 +11,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader, PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TABLE_PAGE_SIZE, matchesSearchTerm } from "@/src/ui/components/screens/pagination";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { formatDateTime } from "@/src/lib/dates";
@@ -205,14 +205,14 @@ export default function CompanyWebsitesPage() {
             cell: (row) => (
               row.relationship === "TRACKED" ? (
                 <div className="flex flex-col gap-1">
-                  <StatusPill tone="neutral">{t("tracked")}</StatusPill>
+                  <StatusLabel tone="neutral">{t("tracked")}</StatusLabel>
                   <span className="text-[11px] text-muted">
                     {row.againstHost ? t("against", { host: row.againstHost }) : t("onItsOwn")}
                   </span>
                 </div>
               ) : (
                 <div className="flex flex-col gap-1">
-                  <StatusPill tone="info">{t("owned")}</StatusPill>
+                  <StatusLabel tone="info">{t("owned")}</StatusLabel>
                   <span className="text-[11px] text-muted">
                     {t("competitors", { count: row.competitorCount })}
                     {row.competitorCountIsCapped ? "+" : ""}
@@ -246,7 +246,7 @@ export default function CompanyWebsitesPage() {
                   <span className="text-[11px] text-muted">{sourceLine(row)}</span>
                 </div>
               ) : (
-                <StatusPill tone="neutral">{t("notCollecting")}</StatusPill>
+                <StatusLabel tone="neutral">{t("notCollecting")}</StatusLabel>
               )
             ),
           },

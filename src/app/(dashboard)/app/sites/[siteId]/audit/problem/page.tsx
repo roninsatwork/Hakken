@@ -7,7 +7,7 @@ import { Stethoscope } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { CUT_COLUMN, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
@@ -80,7 +80,7 @@ export default function SiteAuditProblemPage() {
         description={t("description")}
         pills={issue ? (
           <>
-            <StatusPill tone={SEVERITY_TONES[issue.severity] ?? "neutral"}>{ta(`severities.${issue.severity}`)}</StatusPill>
+            <StatusLabel tone={SEVERITY_TONES[issue.severity] ?? "neutral"}>{ta(`severities.${issue.severity}`)}</StatusLabel>
             {audit ? <span className="text-[12px] text-secondary">{ta("asOf", { day: formatDay(audit.day) })}</span> : null}
           </>
         ) : undefined}

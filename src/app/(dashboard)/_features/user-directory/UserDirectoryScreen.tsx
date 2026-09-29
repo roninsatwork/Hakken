@@ -12,10 +12,11 @@ import { Users } from "lucide-react";
 import {
   DirectoryInviteAwaitingActions,
   DirectoryInviteIdentityCell,
-  DirectoryInviteRolePill,
+  DirectoryInviteRoleLabel,
   DirectoryTextCell,
   DirectoryUserIdentityCell,
-  DirectoryUserRolePill,
+  DirectoryUserRoleLabel,
+  useRoleWord,
 } from "./DirectoryTableCells";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
@@ -111,7 +112,7 @@ export function UserDirectoryScreen({
   extraColumns?: DataTableColumn<UserDirectoryRow>[];
   /** Where a person's name links, on a page with a profile to open. */
   userHref?: (user: DirectoryUser) => string;
-  /** The word in a person's role pill. */
+  /** The word in a person's role label. */
   userRoleLabel: (user: DirectoryUser) => string;
   /** A person's row buttons; `edit` and `remove` open the shared modals. */
   userActions: (user: DirectoryUser, controls: { edit: () => void; remove: () => void }) => ReactNode;
@@ -125,6 +126,7 @@ export function UserDirectoryScreen({
   ) => Omit<UserDirectoryFormData, "companyId"> & { companyId?: Id<"companies"> };
 }) {
   const { platformName } = useSystemSettings();
+  const roleWord = useRoleWord();
   const action = useAdminAction({ scope: "admin-user-directory" });
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -299,11 +301,11 @@ export function UserDirectoryScreen({
             header: tCommon('table.role'),
             cell: (row) =>
               row.kind === "invite" ? (
-                <DirectoryInviteRolePill>
-                  {t('table.pending')} {row.invite.role}
-                </DirectoryInviteRolePill>
+                <DirectoryInviteRoleLabel>
+                  {t('table.pending')} · {roleWord(row.invite.role)}
+                </DirectoryInviteRoleLabel>
               ) : (
-                <DirectoryUserRolePill
+                <DirectoryUserRoleLabel
                   isAdmin={row.user.role === 'ADMIN'}
                   label={userRoleLabel(row.user)}
                 />

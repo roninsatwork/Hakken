@@ -1,3 +1,4 @@
+import { searchVolumeOf } from "./searchVolumes";
 import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
@@ -5,7 +6,7 @@ import { appError } from "./utils/appError";
 import { aiEngineValidator } from "./seoAiEngines";
 import { normaliseKeyword } from "./seoJudgments";
 import { listHold, listWebsiteId, myRivals, requireMySite } from "./siteAccess";
-import { holdSearch } from "./holdLists";
+import { holdFirstCheck, holdSearch } from "./holdLists";
 import { asOfListCheck, searchStats } from "./siteGoogle";
 import { keywordStanding, readKeywordCopy } from "./siteKeywordCopy";
 import { heldTo, listOrder, listPageArgs, listPageResult, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
@@ -16,6 +17,7 @@ import {
   pageTypeValidator,
   rankBandValidator,
   rankIntentValidator,
+  pagePath,
   rankStatusValidator,
 } from "./utils/siteShapes";
 
@@ -149,6 +151,17 @@ export const keywordRecord = tenantQuery({
       serpFeatures: v.array(v.string()),
       intent: rankIntentValidator,
     }), v.null()),
+    /**
+     * Google Ads' figures for a search no keyword list measures — a fan-out
+     * query's (`searchVolumes.ts`) — when the search above has no volume.
+     */
+    bought: v.union(v.null(), v.object({
+      volume: nullableNumber,
+      cpc: nullableNumber,
+      competition: nullableString,
+      trend: v.array(v.number()),
+      day: v.string(),
+    })),
     features: v.array(v.object({
       feature: keywordFeatureValidator,
       position: nullableNumber,
@@ -162,6 +175,8 @@ export const keywordRecord = tenantQuery({
       position: nullableNumber,
       page: nullableString,
       day: nullableString,
+      /** Where it stood on the Google check shown below, not in its keyword list: null there means not on the page. */
+      checked: v.boolean(),
     })),
     tracked: v.union(v.object({
       isActive: v.boolean(),
@@ -170,8 +185,11 @@ export const keywordRecord = tenantQuery({
       firstCheckedDay: nullableString,
       lastCheckedDay: nullableString,
     }), v.null()),
+    // The one Google check this company gave a fan-out query it does not
+    // track (docs/plans/active/fan-out-opt-in-plan.md): where the site stood.
+    checkedOnce: v.union(v.object({ position: nullableNumber, day: v.string() }), v.null()),
     // Google's page for the search as its newest check found it — kept for the
-    // searches the site is measured on.
+    // searches the site is measured on, and those given a first check.
     serp: v.union(v.object({
       day: v.string(),
       results: v.array(v.object({
@@ -191,8 +209,9 @@ export const keywordRecord = tenantQuery({
     const keyword = normaliseKeyword(args.keyword).slice(0, MAX_KEYWORD);
     const websiteId = site.website._id;
     const place = site.place;
+    const holdId = listHold(site);
 
-    const [rank, features, rivals, listed, stats, serp] = await Promise.all([
+    const [rank, features, rivals, listed, firstCheck, stats, serp] = await Promise.all([
       ctx.db
         .query("siteKeywordRanks")
         .withIndex("by_site_keyword", (q) => q.eq("websiteId", websiteId).eq("locationCode", place).eq("keyword", keyword))
@@ -203,7 +222,8 @@ export const keywordRecord = tenantQuery({
         .take(20),
       myRivals(ctx, site),
       // On this company's own list, or not: never another company's.
-      holdSearch(ctx, listHold(site), keyword),
+      holdSearch(ctx, holdId, keyword),
+      holdFirstCheck(ctx, holdId, keyword),
       // A competitor's as of the list's newest check (`asOfListCheck`).
       Promise.all([
         searchStats(ctx, websiteId, keyword, place),
@@ -216,6 +236,11 @@ export const keywordRecord = tenantQuery({
         .first(),
     ]);
 
+    // A first check is the company's own asking, so its result is the
+    // company's to read, as the fan-out queries screen reads it (`ownCheck`).
+    const checkedOnce = !listed && firstCheck && stats ? { position: stats.lastPosition ?? null, day: stats.lastCheckedDay } : null;
+    const shownSerp = serp && (listed || checkedOnce) ? serp : null;
+
     // Each competitor's own latest ranking for the same search, from the same place.
     const rivalRanks = await Promise.all(rivals.slice(0, MAX_RIVALS).map(async (rival) => ({
       rival,
@@ -226,8 +251,23 @@ export const keywordRecord = tenantQuery({
         .first(),
     })));
     const facts = rank ?? rivalRanks.find((entry) => entry.row !== null)?.row ?? null;
+    const bought = facts?.volumeKnown ? null : await searchVolumeOf(ctx, keyword, place);
     const rivalRows = rivalRanks.map(({ rival, row }) => {
       const ranking = row && row.status !== "LOST" ? row : null;
+      if (!ranking && shownSerp) {
+        // Not in its keyword list, but the results page shown below says
+        // where it stood that day, or that it was not on it.
+        const found = shownSerp.results.find((result) => isHost(result.domain, rival.website.host));
+        return {
+          siteId: rival.hold._id,
+          host: rival.summary.host,
+          relationship: rival.summary.relationship,
+          position: found?.position ?? null,
+          page: found?.url ? pagePath(found.url) : null,
+          day: shownSerp.day,
+          checked: true,
+        };
+      }
       return {
         siteId: rival.hold._id,
         host: rival.summary.host,
@@ -235,6 +275,7 @@ export const keywordRecord = tenantQuery({
         position: ranking?.position ?? null,
         page: ranking?.page ?? null,
         day: row?.day ?? null,
+        checked: false,
       };
     });
 
@@ -253,6 +294,9 @@ export const keywordRecord = tenantQuery({
           serpFeatures: facts.serpFeatures ?? [],
           intent: facts.intent,
         }
+        : null,
+      bought: bought
+        ? { volume: bought.volume, cpc: bought.cpc, competition: bought.competition, trend: bought.trend, day: bought.checkedDay }
         : null,
       features: features.map((row) => ({
         feature: row.feature,
@@ -274,10 +318,11 @@ export const keywordRecord = tenantQuery({
           lastCheckedDay: stats?.lastCheckedDay ?? null,
         }
         : null,
-      serp: serp && listed
+      checkedOnce,
+      serp: shownSerp
         ? {
-          day: serp.day,
-          results: serp.results.slice(0, SERP_RESULTS).map((result) => {
+          day: shownSerp.day,
+          results: shownSerp.results.slice(0, SERP_RESULTS).map((result) => {
             const rival = rivals.find((entry) => isHost(result.domain, entry.website.host));
             return {
               position: result.position,
@@ -287,9 +332,9 @@ export const keywordRecord = tenantQuery({
               rivalSiteId: rival ? rival.hold._id : null,
             };
           }),
-          features: serp.features,
-          questions: serp.questions,
-          related: serp.related,
+          features: shownSerp.features,
+          questions: shownSerp.questions,
+          related: shownSerp.related,
         }
         : null,
     };

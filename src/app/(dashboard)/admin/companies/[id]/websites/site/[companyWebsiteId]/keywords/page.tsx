@@ -10,7 +10,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
 
@@ -102,9 +102,9 @@ export default function WebsiteKeywordsPage() {
               row.intent === null ? (
                 <span className="text-[12px] text-muted">{t("unjudged")}</span>
               ) : (
-                <StatusPill tone={row.intent === "BUYING" ? "success" : "neutral"}>
+                <StatusLabel tone={row.intent === "BUYING" ? "success" : "neutral"}>
                   {intentLabel(row.intent)}
-                </StatusPill>
+                </StatusLabel>
               )
             ),
           },

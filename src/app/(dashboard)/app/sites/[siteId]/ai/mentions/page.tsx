@@ -8,7 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
 import { CUT_COLUMN, RecordLinkCell } from "../../../_components/SiteCells";
@@ -136,7 +136,7 @@ export default function SiteMentionsPage() {
             header: t("columns.latest"),
             cell: (row) => {
               const key = row.lastStance ?? "NOT_ASKED";
-              return <StatusPill tone={STANCE_TONES[key]}>{t(`stances.${key}`)}</StatusPill>;
+              return <StatusLabel tone={STANCE_TONES[key]}>{t(`stances.${key}`)}</StatusLabel>;
             },
           },
           // Before an engine has answered there is nothing to count: "–", never "0 of 0" (4.9).

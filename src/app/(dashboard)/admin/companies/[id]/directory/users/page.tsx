@@ -8,13 +8,16 @@ import Image from "next/image";
 import { 
   Users, 
   Plus, 
-  ShieldCheck,
-  User,
   Trash2,
   Edit2,
   ChevronDown,
   RefreshCw
 } from "lucide-react";
+import {
+  DirectoryInviteRoleLabel,
+  DirectoryUserRoleLabel,
+  useRoleWord,
+} from "@/src/app/(dashboard)/_features/user-directory/DirectoryTableCells";
 import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { Button } from "@/src/ui/components/screens/Button";
 import Link from "next/link";
@@ -47,6 +50,8 @@ type UserFormData = {
 
 export default function CompanyUsersPage() {
   const t = useTranslations('companyUsers');
+  const tUsers = useTranslations('admin.users');
+  const roleWord = useRoleWord();
   const action = useAdminAction({ scope: "admin-company-users" });
   const params = useParams();
   const router = useRouter();
@@ -287,18 +292,9 @@ export default function CompanyUsersPage() {
             header: "Role",
             cell: (row) =>
               row.kind === "invite" ? (
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand/10 border border-brand/20 w-fit">
-                  <span className="text-[10px] font-mono tracking-widest text-brand uppercase">
-                    PENDING {row.invite.role}
-                  </span>
-                </div>
+                <DirectoryInviteRoleLabel>{tUsers('table.pending')} · {roleWord(row.invite.role)}</DirectoryInviteRoleLabel>
               ) : (
-                <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
-                  {row.user.role === 'ADMIN' ? <ShieldCheck className="w-3 h-3 text-brand" /> : <User className="w-3 h-3 text-foreground/70" />}
-                  <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
-                    {row.user.role || 'USER'}
-                  </span>
-                </div>
+                <DirectoryUserRoleLabel isAdmin={row.user.role === 'ADMIN' || row.user.role === 'SUPER_ADMIN'} label={roleWord(row.user.role)} />
               ),
           },
           {

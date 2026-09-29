@@ -551,11 +551,11 @@ describe("the shadows rule", () => {
   });
 
   it("catches the arrow form as well as the function form", () => {
-    write('const StatusPill = () => <span />;\nexport const Probe = () => <StatusPill />;\n');
+    write('const StatusLabel = () => <span />;\nexport const Probe = () => <StatusLabel />;\n');
 
     expect(
       findHandWrittenParts().some(
-        (offender) => offender.rule === "shadows" && offender.name === "StatusPill"
+        (offender) => offender.rule === "shadows" && offender.name === "StatusLabel"
       )
     ).toBe(true);
   });
@@ -575,11 +575,11 @@ describe("the shadows rule", () => {
   // it adds, so a reader who sees a familiar name is not misled.
   it("leaves a differently-named wrapper alone", () => {
     write(
-      'import { StatusPill } from "@/src/ui/components/screens/StatusPill";\n' +
-        "function RunStatusPill() {\n" +
-        '  return <StatusPill tone="info">Running</StatusPill>;\n' +
+      'import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";\n' +
+        "function RunStatusLabel() {\n" +
+        '  return <StatusLabel tone="info">Running</StatusLabel>;\n' +
         "}\n" +
-        "export const Probe = () => <RunStatusPill />;\n"
+        "export const Probe = () => <RunStatusLabel />;\n"
     );
 
     expect(
@@ -697,6 +697,87 @@ describe("the dividers rule", () => {
       rule: "dividers",
       file: probeRelative,
       reason: "no longer hand-writes a divided list",
+    });
+  });
+});
+
+/**
+ * Every pill went on 2026-09-29 (Anthony: "a give away it's AI designed"); a
+ * status became a StatusLabel, a kind a TagLabel. These probes are the two ways
+ * a pill would come back: drawn in a class string, or declared as a part.
+ */
+describe("the pill rules", () => {
+  const pill =
+    'export const Probe = () => <span className="rounded-full border border-success/20 bg-success/10 px-2 py-0.5 text-[10px] text-success">Done</span>;\n';
+
+  it("catches a pill drawn by hand", () => {
+    write(pill);
+
+    expect(findHandWrittenParts()).toContainEqual({ rule: "pills", file: probeRelative, count: 1, frozen: 0 });
+  });
+
+  it("catches one split across a template literal", () => {
+    write(
+      "export const Probe = ({ on }: { on: boolean }) => (\n" +
+        "  <span className={`rounded-md px-2 py-1 text-[11px] ${\n" +
+        '    on ? "bg-warning/10 text-warning" : "bg-foreground/5 text-muted"\n' +
+        "  }`}>State</span>\n" +
+        ");\n"
+    );
+
+    expect(findHandWrittenParts().some((offender) => offender.rule === "pills")).toBe(true);
+  });
+
+  it("leaves a button, a panel and the kit's labels alone", () => {
+    write(
+      'import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";\n' +
+        "export const Probe = () => (\n" +
+        "  <>\n" +
+        '    <a className="rounded-full bg-brand/10 px-3 py-1 text-[11px] hover:bg-brand/20">Open</a>\n' +
+        '    <div className="rounded-[12px] border border-warning/20 bg-warning/10 px-3 py-2 text-[13px]">A notice</div>\n' +
+        '    <StatusLabel tone="success">Done</StatusLabel>\n' +
+        "  </>\n" +
+        ");\n"
+    );
+
+    expect(findHandWrittenParts().filter((offender) => offender.rule === "pills")).toEqual([]);
+  });
+
+  it("lets a file keep the pill-shaped things it had, and no more", () => {
+    write(pill);
+
+    expect(findHandWrittenParts(loadFrozen({ pills: { [probeRelative]: 1 } })).some((o) => o.rule === "pills")).toBe(false);
+    expect(findStaleFreezes(loadFrozen({ pills: { [probeRelative]: 2 } }))).toEqual([]);
+
+    write('export const Probe = () => <span>Done</span>;\n');
+    expect(findStaleFreezes(loadFrozen({ pills: { [probeRelative]: 1 } }))).toContainEqual({
+      rule: "pills",
+      file: probeRelative,
+      reason: "no longer draws a pill",
+    });
+  });
+
+  it("catches a part named as a pill, a badge or a chip", () => {
+    write(
+      "export function PlanBadge() { return null; }\n" +
+        "const RoleChip = () => null;\n" +
+        "export function RunStatusLabel() { return null; }\n"
+    );
+
+    const named = findHandWrittenParts().filter((offender) => offender.rule === "pillNames");
+    expect(named.map((offender) => offender.name)).toEqual(["PlanBadge", "RoleChip"]);
+    expect(named[0]).toMatchObject({ file: probeRelative, line: 1 });
+  });
+
+  it("lets a frozen name stay, and reports it once it is gone", () => {
+    write("export function PlanBadge() { return null; }\n");
+    expect(findHandWrittenParts(loadFrozen({ pillNames: ["PlanBadge"] })).some((o) => o.rule === "pillNames")).toBe(false);
+
+    write("export function PlanLabel() { return null; }\n");
+    expect(findStaleFreezes(loadFrozen({ pillNames: ["PlanBadge"] }))).toContainEqual({
+      rule: "pillNames",
+      file: "PlanBadge",
+      reason: "is no longer declared",
     });
   });
 });

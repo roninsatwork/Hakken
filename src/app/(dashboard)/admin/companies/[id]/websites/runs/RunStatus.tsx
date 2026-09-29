@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 
 /** A run is flagged when it costs this much more than the one before (`COST_WARNING_RATIO` in `seoRunReports.ts`). */
 const COST_WARNING_RATIO = 1.25;
@@ -39,11 +39,11 @@ export function RunStatus({
   const rise = costRise(totalUsd, previousTotalUsd);
   return (
     <span className="flex flex-wrap gap-1.5">
-      {rise !== null ? <StatusPill tone="warning">{t("costUp", { percent: rise })}</StatusPill> : null}
-      {waiting > 0 ? <StatusPill tone="neutral">{t("waiting", { count: waiting })}</StatusPill> : null}
-      {answering > 0 ? <StatusPill tone="info">{t("answering", { count: answering })}</StatusPill> : null}
-      {failed > 0 ? <StatusPill tone="danger">{t("failed", { count: failed })}</StatusPill> : null}
-      {final && failed === 0 ? <StatusPill tone="success">{t("complete")}</StatusPill> : null}
+      {rise !== null ? <StatusLabel tone="warning">{t("costUp", { percent: rise })}</StatusLabel> : null}
+      {waiting > 0 ? <StatusLabel tone="neutral">{t("waiting", { count: waiting })}</StatusLabel> : null}
+      {answering > 0 ? <StatusLabel tone="info">{t("answering", { count: answering })}</StatusLabel> : null}
+      {failed > 0 ? <StatusLabel tone="danger">{t("failed", { count: failed })}</StatusLabel> : null}
+      {final && failed === 0 ? <StatusLabel tone="success">{t("complete")}</StatusLabel> : null}
     </span>
   );
 }

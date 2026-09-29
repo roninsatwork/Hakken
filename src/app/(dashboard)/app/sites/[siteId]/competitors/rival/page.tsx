@@ -9,7 +9,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { CUT_COLUMN, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
@@ -100,7 +100,7 @@ export default function SiteRivalPage() {
         icon={<Swords className="h-6 w-6 text-brand" />}
         title={hold?.host ?? ""}
         description={hold && site ? t("description", { rival: hold.host, site: site.host }) : undefined}
-        pills={verdict ? <StatusPill tone={VERDICT_TONES[verdict] ?? "neutral"}>{ts(`verdicts.${verdict}`)}</StatusPill> : undefined}
+        pills={verdict ? <StatusLabel tone={VERDICT_TONES[verdict] ?? "neutral"}>{ts(`verdicts.${verdict}`)}</StatusLabel> : undefined}
         action={hold ? (
           <Link href={`/app/sites/${hold.siteId}${sharedSiteQuery(params)}`} className="text-[13px] text-info hover:underline">
             {t("openTheirs")} →

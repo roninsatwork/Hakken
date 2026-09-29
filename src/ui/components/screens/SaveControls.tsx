@@ -4,6 +4,7 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { AlertCircle, CheckCircle2, Save } from "lucide-react";
 import { useCanWriteHere } from "./AccessLevel";
+import { StatusLabel } from "./StatusLabel";
 
 type AdminSaveActionProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, "children"> & {
   isSaving: boolean;
@@ -121,24 +122,22 @@ export function SaveFeedback({
   );
 }
 
-type AdminFeedbackPillProps = {
+type AdminFeedbackLabelProps = {
   children: ReactNode;
   tone: "success" | "error";
 };
 
-export function FeedbackPill({ children, tone }: AdminFeedbackPillProps) {
-  const Icon = tone === "success" ? CheckCircle2 : AlertCircle;
-  const toneClassName =
-    tone === "success"
-      ? "bg-[#10b981]/10 border-[#10b981]/20 rounded-full text-[#10b981] items-center gap-2"
-      : "bg-red-500/10 border-red-500/20 rounded-[12px] text-red-500 items-start gap-2.5";
-
+/**
+ * What happened after an action — "Sent", or why it was not — as a status
+ * label that may wrap: a tick or a crossed circle, then the words. It was a
+ * tinted pill until every pill went (docs/plans/active/status-labels-plan.md).
+ */
+export function FeedbackLabel({ children, tone }: AdminFeedbackLabelProps) {
   return (
-    <div
-      className={`px-5 py-2 border text-[13px] flex animate-in slide-in-from-bottom-2 fade-in ${toneClassName}`}
-    >
-      <Icon className={`w-4 h-4 shrink-0 ${tone === "error" ? "mt-0.5" : ""}`} />
-      <span className={tone === "error" ? "leading-snug text-center" : ""}>{children}</span>
+    <div role="status" className="animate-in slide-in-from-bottom-2 fade-in">
+      <StatusLabel tone={tone === "success" ? "success" : "danger"} size="md" wrap>
+        {children}
+      </StatusLabel>
     </div>
   );
 }

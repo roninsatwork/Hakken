@@ -9,6 +9,8 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useState } from "react";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { toneForStatus } from "@/src/ui/components/screens/statusTone";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import { usePagedRows } from "@/src/hooks/usePagedRows";
@@ -94,9 +96,9 @@ export default function UserProfilePage() {
           </div>
 
           <div className="flex flex-col gap-1.5 w-full">
-            <label className="text-[11px] font-medium text-secondary uppercase tracking-widest flex items-center justify-between">
-              <span>{t("email")}</span>
-              <span className="text-[9px] bg-foreground/10 px-2 py-0.5 rounded-sm text-foreground/70 tracking-normal">{t("verified")}</span>
+            <label className="text-[11px] font-medium text-secondary flex items-center justify-between">
+              <span className="uppercase tracking-widest">{t("email")}</span>
+              <StatusLabel tone="success">{t("verified")}</StatusLabel>
             </label>
             <div className="text-[15px] text-foreground flex items-center">
               {user.email || t("noEmail")}
@@ -233,16 +235,10 @@ export default function UserProfilePage() {
                 key: "status",
                 header: t("columnStatus"),
                 cell: (login) => (
-                  <div className="flex items-center gap-1.5">
-                    {/* Blue for a sign-in that worked, amber for one that did
-                        not. Green against red is the one pairing this platform
-                        does not use, and the word beside it carries the answer
-                        regardless. */}
-                    <div className={`w-1.5 h-1.5 rounded-full ${login.status === 'SUCCESS' ? 'bg-info' : 'bg-warning'}`} />
-                    <span className="text-[12px] text-secondary font-medium tracking-wide">
-                      {login.status}
-                    </span>
-                  </div>
+                  // The word carries the answer; the tick or crossed circle beside
+                  // it differs in shape as well as colour, so a red/green
+                  // colour-blind reader still tells them apart.
+                  <StatusLabel tone={toneForStatus(login.status)}>{login.status}</StatusLabel>
                 ),
               },
               {

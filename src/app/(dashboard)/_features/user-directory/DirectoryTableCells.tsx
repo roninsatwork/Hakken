@@ -3,7 +3,9 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { ShieldCheck, Trash2, User } from "lucide-react";
+import { Trash2 } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 
 /**
@@ -78,27 +80,32 @@ export function DirectoryUserIdentityCell({
   );
 }
 
-/** The brand-tinted pill on an invitation's role. */
-export function DirectoryInviteRolePill({ children }: { children: ReactNode }) {
-  return (
-    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand/10 border border-brand/20 w-fit">
-      <span className="text-[10px] font-mono tracking-widest text-brand uppercase">
-        {children}
-      </span>
-    </div>
-  );
+/** A role said in words — "Administrator", not the stored `ADMIN`. */
+export function useRoleWord() {
+  const t = useTranslations("admin.users.roles");
+  return (role: string | undefined) => {
+    switch (role) {
+      case "SUPER_ADMIN": return t("superAdmin");
+      case "ADMIN": return t("admin");
+      case "READ_ONLY": return t("readOnly");
+      case "AUDITOR": return t("auditor");
+      default: return t("user");
+    }
+  };
 }
 
-/** The neutral pill on a person's role, with the shield for admins. */
-export function DirectoryUserRolePill({ isAdmin, label }: { isAdmin: boolean; label: ReactNode }) {
-  return (
-    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
-      {isAdmin ? <ShieldCheck className="w-3 h-3 text-brand" /> : <User className="w-3 h-3 text-foreground/70" />}
-      <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
-        {label}
-      </span>
-    </div>
-  );
+/**
+ * An invitation's role while it waits to be accepted: a clock, then the
+ * words. Every people list — the directory, Team, a company's users, super
+ * admins — draws its roles with these two, never a pill of its own.
+ */
+export function DirectoryInviteRoleLabel({ children }: { children: ReactNode }) {
+  return <StatusLabel tone="info" icon="waiting">{children}</StatusLabel>;
+}
+
+/** A person's role: the shield for an admin, a person otherwise, then the words. */
+export function DirectoryUserRoleLabel({ isAdmin, label }: { isAdmin: boolean; label: ReactNode }) {
+  return <StatusLabel tone="neutral" icon={isAdmin ? "admin" : "member"}>{label}</StatusLabel>;
 }
 
 /** Muted secondary text in a cell — joined dates, workspace names. */

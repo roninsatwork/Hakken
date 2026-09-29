@@ -552,14 +552,31 @@ an e-commerce workspace before phase 1.
 
 ## 24. Knowledge & Retrieval (RAG)
 
-* **Vector retrieval.** Documents are chunked and embedded as 768-dimension
-  vectors in a Convex vector index, filtered by tenant, agent, document, thread,
-  and global scope.
-* **Three-tier scoping.** Global knowledge is available to every tenant;
-  tenant knowledge is restricted to its workspace; thread knowledge belongs to a
-  single conversation. Matches from all three are ranked together by relevance,
-  with a reserved share of the prompt budget for files uploaded into the current
+* **Hybrid retrieval.** Documents are cut into 1,000-character pieces (200
+  overlapping) and embedded as 768-dimension vectors in a Convex vector index.
+  Each search runs by meaning and by keywords at once and merges the two
+  rankings, nudged by how pieces fared in rated answers
+  (`knowledgeRetrieval.ts`, `knowledgeRetrievalService.ts`,
+  `knowledgeEvidence.ts`). A piece embedded by a different model than the
+  question is never read: the two vectors are not comparable.
+* **Four levels.** Global knowledge is available to every tenant; company
+  knowledge is restricted to its workspace; an agent's knowledge is read only
+  by that agent's runs, and never a piece another company added to it; thread
+  knowledge belongs to a single conversation. Matches are ranked together by
+  relevance and read best first until the space is full (32,000 characters for
+  chat and agent runs, 6,000 for calls and email replies, 4,000 for the swarm's
+  Architect), with a reserved share for files uploaded into the current
   conversation so they cannot be crowded out.
+* **A relevance cut-off, shipped Off.** The Decision "Does this passage help
+  answer the question?" can judge the 40 best-ranked passages of a search in
+  one request and leave out the ones it is sure do not help, so the next
+  passages down take their room (`knowledgeReading.ts`,
+  docs/plans/active/knowledge-relevance-cutoff-plan.md). Switched per company
+  on the Decisions screens; "Ask a person" records its answers without
+  leaving anything out.
+* **Test retrieval.** The knowledge screen runs the AI's own search and
+  reading for a question and shows what would be read, and what the cut-off
+  left out.
 * **Ephemeral thread knowledge.** Files uploaded to a conversation (up to 50MB)
   are vectorised for that conversation only and garbage-collected on a schedule.
 * **Supported formats.** PDF, DOCX, XLSX, and plain text, plus URL ingestion
@@ -569,9 +586,9 @@ an e-commerce workspace before phase 1.
   instruction states that retrieved documents cannot override safety or tenant
   policy.
 
-Retrieval is vector similarity only — there is no keyword/vector hybrid and no
-reranking model. Large documents are embedded chunk-by-chunk, so very large
-files can exceed a single ingestion run.
+There is no ranking model of our own; the cut-off is a Decision, answered by
+whichever model the Decisions job uses. Large documents are embedded
+chunk-by-chunk, so very large files can exceed a single ingestion run.
 
 *For Hakken:* the untrusted-context construction is exactly the rule in §10 that
 page text and AI answers are kept separate from the record and the instructions.
@@ -779,6 +796,18 @@ running against the Sonae deployment.
 ---
 
 ## Change Log
+
+* **2026-09-28 (later)** — **Knowledge search: a relevance cut-off, and five
+  gaps closed.** §24 said retrieval was vector similarity only; it has been
+  hybrid (meaning and keywords) for some time, and now says so. New: the
+  Decision "Does this passage help answer the question?", shipped Off, which
+  can leave out passages a search found that do not help. Closed: pieces
+  embedded by an older model are no longer read beside new ones; "Test
+  retrieval" runs the real search rather than matching words; the swarm's
+  Architect reads knowledge through the same step as chat, marked as
+  untrusted and kept to 4,000 characters; and an agent's runs no longer read
+  a piece another company added to that agent
+  (docs/plans/active/knowledge-relevance-cutoff-plan.md).
 
 * **2026-09-28** — **Limits on three levels: platform, company, website.**
   System Settings gained a Limits tab holding the platform's number for every

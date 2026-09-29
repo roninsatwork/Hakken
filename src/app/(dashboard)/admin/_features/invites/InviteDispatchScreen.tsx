@@ -14,7 +14,7 @@ import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import {
-  FeedbackPill,
+  FeedbackLabel,
   SaveAction,
 } from "@/src/ui/components/screens/SaveControls";
 
@@ -327,12 +327,12 @@ export function InviteDispatchScreen({
              {/* Functional Feedback Stream */}
              <div className="h-[40px] mt-4 flex items-center justify-center w-full max-w-md">
                {sendSuccess && (
-                  <FeedbackPill tone="success">
+                  <FeedbackLabel tone="success">
                     {tx("sendSuccess")}
-                  </FeedbackPill>
+                  </FeedbackLabel>
                )}
                {sendError && (
-                  <FeedbackPill tone="error">{sendError}</FeedbackPill>
+                  <FeedbackLabel tone="error">{sendError}</FeedbackLabel>
                )}
              </div>
           </div>

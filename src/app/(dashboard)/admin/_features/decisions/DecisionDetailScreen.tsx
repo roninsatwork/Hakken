@@ -8,9 +8,9 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { formatCurrencyUsd } from "@/src/lib/currency";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
-import { DecisionPill } from "@/src/ui/components/screens/DecisionPill";
+import { DecisionLabel } from "@/src/ui/components/screens/DecisionLabel";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TABLE_PAGE_SIZE, paginateItems } from "@/src/ui/components/screens/pagination";
 
 type RunRow = {
@@ -50,7 +50,7 @@ function formatWhen(value: number, locale: string) {
 
 /**
  * One Decision: the question in the words the model sees, the answers it can
- * give, and its last runs with the pill on each. A record page, so a
+ * give, and its last runs with the label on each. A record page, so a
  * `DetailHeader` with the quiet back row. Nothing here edits the question:
  * questions are code (plan, "Out of scope").
  */
@@ -89,7 +89,7 @@ export function DecisionDetailScreen({
         description={copyKey ? tDecisions(`catalogue.${copyKey}.description`) : ""}
         pills={
           data ? (
-            <StatusPill tone="neutral">{t("detail.modeLine", { mode: tDecisions(`modes.${data.decision.effectiveMode}`) })}</StatusPill>
+            <StatusLabel tone="neutral">{t("detail.modeLine", { mode: tDecisions(`modes.${data.decision.effectiveMode}`) })}</StatusLabel>
           ) : undefined
         }
       />
@@ -181,7 +181,7 @@ export function DecisionDetailScreen({
               header: t("detail.columnCertainty"),
               className: "w-[22%]",
               cell: (row) => (
-                <DecisionPill
+                <DecisionLabel
                   name={name}
                   certainty={row.certainty ?? null}
                   probabilities={parseSpread(row.probabilities)}

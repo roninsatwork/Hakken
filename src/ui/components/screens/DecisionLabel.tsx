@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "./Button";
-import { StatusPill } from "./StatusPill";
+import { StatusLabel } from "./StatusLabel";
 import type { StatusTone } from "./statusTone";
 import { LAYER } from "@/src/ui/lib/layers";
 import { cn } from "@/src/ui/lib/utils";
@@ -13,10 +13,11 @@ export type DecisionCertainty = "SURE" | "FAIRLY_SURE" | "NOT_SURE";
 /**
  * The one marker for a Decision, wherever its result shows.
  *
- * A name and a certainty word: "Is this email from a customer? · Sure". Blue
- * for handled, amber for worth a look, always with the word — never a colour
- * carrying the meaning alone, and never a number. A run the simple rule
- * answered has no certainty and shows the neutral tone with "Rule".
+ * A name and a certainty word: "Is this email from a customer? · Sure",
+ * drawn as a status label — an "i" for handled, a warning triangle for worth
+ * a look, always with the word, never a colour carrying the meaning alone,
+ * and never a number. A run the simple rule answered has no certainty and
+ * shows the neutral dash with "Rule".
  *
  * Click it and the spread opens: one short bar per answer, brand for the
  * chosen one, muted for the rest, each labelled. That is the whole of what
@@ -24,7 +25,7 @@ export type DecisionCertainty = "SURE" | "FAIRLY_SURE" | "NOT_SURE";
  *
  * docs/plans/active/decisions-typesafe-plan.md, commitment 8.
  */
-export function DecisionPill({
+export function DecisionLabel({
   name,
   certainty,
   probabilities,
@@ -67,13 +68,13 @@ export function DecisionPill({
   const word = certainty === null ? t("pill.rule") : t(`certainty.${certainty}`);
   const label = `${name} · ${word}`;
 
-  const pill = (
-    <StatusPill tone={tone} className={cn("max-w-full", className)}>
+  const marker = (
+    <StatusLabel tone={tone} className={cn("max-w-full", className)}>
       <span className="truncate">{label}</span>
-    </StatusPill>
+    </StatusLabel>
   );
 
-  if (!hasSpread) return pill;
+  if (!hasSpread) return marker;
 
   const entries = Object.entries(probabilities ?? {}).sort((a, b) => b[1] - a[1]);
 
@@ -87,7 +88,7 @@ export function DecisionPill({
         onClick={() => setIsOpen((current) => !current)}
         className="inline-flex h-auto max-w-full rounded-full p-0"
       >
-        {pill}
+        {marker}
       </Button>
       {isOpen && (
         <span

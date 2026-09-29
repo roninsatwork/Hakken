@@ -7,7 +7,6 @@ import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import {
   AlertCircle,
-  AlertTriangle,
   AlignLeft,
   CheckCircle2,
   ChevronDown,
@@ -24,7 +23,7 @@ import { Button } from "@/src/ui/components/screens/Button";
 import { InlineSearchInput } from "@/src/ui/components/screens/Table";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { formatDate } from "@/src/lib/dates";
 import type { RenderInspectAction } from "./KnowledgeManagerSections";
 
@@ -292,9 +291,9 @@ export function KnowledgeWebsitePanel({
                         {document.sourceUrl}
                       </a>
                       <div className="flex items-center gap-3">
-                        {document.status === "pending" && <StatusPill tone="warning" className="rounded-sm border-0 uppercase font-bold">{t("website.pending")}</StatusPill>}
-                        {document.status === "processing" && <StatusPill tone="warning" icon={<Loader2 className="w-3 h-3 animate-spin" />} className="rounded-sm border-0 uppercase font-bold">{t("website.processing")}</StatusPill>}
-                        {document.status === "failed" && <StatusPill tone="danger" icon={<AlertTriangle className="w-3 h-3" />} className="rounded-sm border-0 uppercase font-bold">{t("website.failed")}</StatusPill>}
+                        {document.status === "pending" && <StatusLabel tone="warning">{t("website.pending")}</StatusLabel>}
+                        {document.status === "processing" && <StatusLabel tone="warning" icon="working">{t("website.processing")}</StatusLabel>}
+                        {document.status === "failed" && <StatusLabel tone="danger">{t("website.failed")}</StatusLabel>}
                         {renderInspectAction(
                           document._id,
                           document,
@@ -407,19 +406,19 @@ export function KnowledgeFilesPanel({
 
               <div className="flex items-center gap-4">
                 {document.status === "processing" && (
-                  <StatusPill tone="warning" size="md" icon={<Loader2 className="w-3.5 h-3.5 animate-spin" />} className="gap-2 px-3 py-1.5 font-bold tracking-widest uppercase font-mono">
+                  <StatusLabel tone="warning" size="md" icon="working">
                     {t("file.ingesting")}
-                  </StatusPill>
+                  </StatusLabel>
                 )}
                 {document.status === "ready" && (
-                  <StatusPill tone="success" size="md" icon={<CheckCircle2 className="w-3.5 h-3.5" />} className="gap-2 px-3 py-1.5 font-bold tracking-widest uppercase font-mono">
+                  <StatusLabel tone="success" size="md">
                     {t("file.ready")}
-                  </StatusPill>
+                  </StatusLabel>
                 )}
                 {document.status === "failed" && (
-                  <StatusPill tone="danger" size="md" icon={<AlertTriangle className="w-3.5 h-3.5" />} className="gap-2 px-3 py-1.5 font-bold tracking-widest uppercase font-mono">
+                  <StatusLabel tone="danger" size="md">
                     {t("file.failed")}
-                  </StatusPill>
+                  </StatusLabel>
                 )}
 
                 {renderInspectAction(

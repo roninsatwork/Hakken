@@ -7,7 +7,7 @@ import { Quote } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { SettingsCard } from "@/src/ui/components/screens/SettingsCard";
-import { LinkStatusPill } from "../../../../_components/SiteCells";
+import { LinkStatusLabel } from "../../../../_components/SiteCells";
 import { SiteFigure } from "../../../../_components/SiteFigure";
 import { SiteLinkList } from "../../../../_components/SiteLinkList";
 import { formatDay, formatNumber } from "../../../../_components/siteFormat";
@@ -45,7 +45,7 @@ export default function SiteAnchorPage() {
         icon={<Quote className="h-6 w-6 text-brand" />}
         title={anchor === "" ? t("noWords") : `“${anchor}”`}
         description={t("description")}
-        pills={summary ? <LinkStatusPill status={summary.status} /> : undefined}
+        pills={summary ? <LinkStatusLabel status={summary.status} /> : undefined}
       />
 
       {record === undefined ? (

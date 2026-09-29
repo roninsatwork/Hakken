@@ -51,6 +51,13 @@ export type DecisionRequest = {
    * its own result, in one provider request rather than four.
    */
   id?: string;
+  /**
+   * Set when each request judges a different thing (the passages a
+   * knowledge search found): its run row names that thing as the subject,
+   * so the Decision's page says which one each answer was about. Absent,
+   * the call's subject stands.
+   */
+  subjectId?: string;
   /** The rule the platform used before this Decision existed. */
   fallback: () => DecisionAnswer | Promise<DecisionAnswer>;
 };
@@ -230,6 +237,7 @@ export async function runDecisions(
           : result.answer.probabilities;
       return {
         decisionKey: request.key,
+        ...(request.subjectId ? { subjectId: request.subjectId } : {}),
         answer: answerText(result.answer),
         ...(probabilities ? { probabilities: JSON.stringify(probabilities) } : {}),
         ...(result.certainty ? { certainty: result.certainty } : {}),

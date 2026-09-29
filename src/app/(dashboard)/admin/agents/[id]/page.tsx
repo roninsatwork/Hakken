@@ -20,6 +20,7 @@ import { useState } from "react";
 import { usePagedRows } from "@/src/hooks/usePagedRows";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate, formatTime } from "@/src/lib/dates";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 
 export default function AgentDashboard() {
   const t = useTranslations("admin.agents.details.dashboard");
@@ -169,9 +170,7 @@ export default function AgentDashboard() {
             cell: (tx) => {
               const model = activeModels.find((activeModel) => activeModel.modelId === tx.modelUsed);
               return (
-                <div className="flex items-center gap-1.5 text-[11px] font-mono tracking-wide text-secondary/70 bg-foreground/5 px-2 py-1 rounded-[6px] w-max border border-border-dim/50">
-                  {model?.friendlyName || model?.displayName || tx.modelUsed}
-                </div>
+                <TagLabel>{model?.friendlyName || model?.displayName || tx.modelUsed}</TagLabel>
               );
             },
           },

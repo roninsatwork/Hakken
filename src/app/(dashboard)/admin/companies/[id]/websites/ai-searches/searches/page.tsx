@@ -10,7 +10,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Button } from "@/src/ui/components/screens/Button";
 import { Field } from "@/src/ui/components/screens/Field";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
@@ -144,9 +144,9 @@ export default function CompanyTrackedSearchesPage() {
             key: "state",
             header: ts("columns.state"),
             cell: (row) => (
-              <StatusPill tone={row.isActive ? "success" : "neutral"}>
+              <StatusLabel tone={row.isActive ? "success" : "neutral"}>
                 {row.isActive ? ts("checking") : ts("paused")}
-              </StatusPill>
+              </StatusLabel>
             ),
           },
           {

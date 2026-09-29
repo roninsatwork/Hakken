@@ -30,7 +30,8 @@ import {
 import { useNow } from "@/src/hooks/useNow";
 import type { AdminActionRunner } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/components/screens/Button";
-import { STATUS_TONE_CLASSES } from "@/src/ui/components/screens/statusTone";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { useToast } from "@/src/context/ToastContext";
 import { LAYER } from "@/src/ui/lib/layers";
 import type { FeedbackRecord } from "./FeedbackModal";
@@ -215,11 +216,15 @@ export function RunsTable({
         {
           key: "outcome",
           header: t("columns.outcome"),
-          className: "w-[110px] align-top",
+          // Wide enough for "Handed over" beside its icon, the longest status.
+          className: "w-[128px] align-top",
           cell: (run) => (
-            <span className={`inline-block text-[11px] px-2 py-1 rounded-md border whitespace-nowrap ${STATUS_TONE_CLASSES[getStatusTone(run.status, Boolean(run.continuedByRunId))]}`}>
+            <StatusLabel
+              tone={getStatusTone(run.status, Boolean(run.continuedByRunId))}
+              icon={run.status === "PENDING_APPROVAL" ? "approval" : undefined}
+            >
               {label(describeRunStatus(run.status, Boolean(run.continuedByRunId)))}
-            </span>
+            </StatusLabel>
           ),
         },
         {
@@ -271,9 +276,7 @@ export function RunsTable({
                 {run.isRehearsal && (
                   // Text, not colour: a drill must be readable as a drill
                   // by everyone, on every screen.
-                  <span className="ml-1.5 rounded-[4px] border border-info/40 bg-info/10 px-1.5 py-0.5 text-[10px] font-semibold text-info">
-                    {t("rehearsal")}
-                  </span>
+                  <StatusLabel tone="info" className="ml-1.5 align-middle">{t("rehearsal")}</StatusLabel>
                 )}
               </span>
             </>
@@ -339,7 +342,9 @@ export function RunsTable({
  *
  * Two tones only. The old list gave each marker its own colour, so a row could
  * carry blue, indigo, sky and green at once and none of them meant anything;
- * colour should say "this wants you" or nothing at all.
+ * colour should say "this wants you" or nothing at all. A quiet note is plain
+ * words; one that wants you is a status waiting on a person's decision, which
+ * the row menu offers first.
  */
 function RowMarker({
   children,
@@ -348,15 +353,10 @@ function RowMarker({
   children: React.ReactNode;
   tone?: "quiet" | "attention";
 }) {
-  return (
-    <span
-      className={`text-[10.5px] px-2 py-0.5 rounded-full whitespace-nowrap ${
-        tone === "attention" ? "bg-brand/10 text-brand" : "bg-foreground/5 text-muted"
-      }`}
-    >
-      {children}
-    </span>
-  );
+  if (tone === "attention") {
+    return <StatusLabel tone="warning" icon="approval">{children}</StatusLabel>;
+  }
+  return <TagLabel>{children}</TagLabel>;
 }
 
 /**

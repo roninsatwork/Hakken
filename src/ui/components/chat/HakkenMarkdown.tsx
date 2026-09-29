@@ -13,13 +13,20 @@ interface HakkenMarkdownProps {
    * renderer is exactly what it was.
    */
   highlight?: readonly string[];
+  /**
+   * Other names to pick out, marked differently: a website's competitors, on
+   * the page of a search the AI ran (Sites, 2026-09-29). Absent, only
+   * `highlight` is marked, as before.
+   */
+  highlightOthers?: readonly string[];
 }
 
 type HastNode = { type: string; value?: string; tagName?: string; properties?: Record<string, unknown>; children?: HastNode[] };
 
-/** A rehype step that wraps each occurrence of the words in a `mark`, outside code. */
-function markWords(words: readonly string[]) {
-  const escaped = words.filter((word) => word.trim().length > 1)
+/** A rehype step that wraps each occurrence of the words in a `mark`, outside code; `others` are marked as such. */
+function markWords(words: readonly string[], others: readonly string[] = []) {
+  const otherWords = new Set(others.map((word) => word.trim().toLowerCase()));
+  const escaped = [...words, ...others].filter((word) => word.trim().length > 1)
     .map((word) => word.trim().replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
     .sort((left, right) => right.length - left.length);
   const pattern = escaped.length > 0 ? new RegExp(`(${escaped.join("|")})`, "gi") : null;
@@ -36,7 +43,7 @@ function markWords(words: readonly string[]) {
       return parts.flatMap((part, index): HastNode[] => {
         if (!part) return [];
         return index % 2 === 1
-          ? [{ type: "element", tagName: "mark", properties: {}, children: [{ type: "text", value: part }] }]
+          ? [{ type: "element", tagName: "mark", properties: otherWords.has(part.toLowerCase()) ? { dataOther: "true" } : {}, children: [{ type: "text", value: part }] }]
           : [{ type: "text", value: part }];
       });
     });
@@ -44,7 +51,7 @@ function markWords(words: readonly string[]) {
   return () => (tree: HastNode) => walk(tree);
 }
 
-export function HakkenMarkdown({ content, highlight }: HakkenMarkdownProps) {
+export function HakkenMarkdown({ content, highlight, highlightOthers }: HakkenMarkdownProps) {
   type MarkdownCodeProps = ComponentProps<"code"> & {
     node?: unknown;
     inline?: boolean;
@@ -59,9 +66,12 @@ export function HakkenMarkdown({ content, highlight }: HakkenMarkdownProps) {
   return (
     <ReactMarkdown
       remarkPlugins={[remarkGfm]}
-      rehypePlugins={highlight && highlight.length > 0 ? [markWords(highlight)] : []}
+      rehypePlugins={(highlight?.length ?? 0) + (highlightOthers?.length ?? 0) > 0 ? [markWords(highlight ?? [], highlightOthers)] : []}
       components={{
-        mark: (props) => <mark className="rounded-[3px] bg-brand/20 px-0.5 text-foreground" {...omitMarkdownNode(props)} />,
+        mark: (props) => {
+          const { "data-other": other, ...rest } = omitMarkdownNode(props) as ComponentProps<"mark"> & { "data-other"?: string };
+          return <mark className={other ? "rounded-[3px] bg-warning/20 px-0.5 text-foreground" : "rounded-[3px] bg-brand/20 px-0.5 text-foreground"} {...rest} />;
+        },
         p: (props) => <p className="mb-3 last:mb-0 leading-[1.6] opacity-90" {...omitMarkdownNode(props)} />,
         a: (props) => (
           <a className="text-brand font-medium hover:underline underline-offset-4 decoration-brand/30 transition-all" target="_blank" rel="noopener noreferrer" {...omitMarkdownNode(props)} />

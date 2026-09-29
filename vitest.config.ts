@@ -49,6 +49,22 @@ const coverageConfig = {
   thresholds: coverageThresholds,
 } satisfies HakkenCoverageConfig
 
+/*
+ * One time limit for every test, set here and nowhere else (AGENTS.md, "Test
+ * time limits"). A timeout exists to catch a hang, not to police speed.
+ *
+ * On GitHub it is three minutes. Its runner, with coverage instrumentation and
+ * the whole suite at once, runs these tests 10 to 12 times slower than a
+ * laptop — 1.25s became over 15s, 3.4s over 30s, 4s became 45s — and every CI
+ * run that failed in its tests from 2026-09-21 to 2026-09-28 (runs 6, 7, 14, 15
+ * and 18) failed on a clock alone, each fixed one test at a time until the
+ * next. Here it is thirty seconds, and speed itself is checked by the speed
+ * budget `npm run test:run` applies (`scripts/check-test-speed.mjs`): a test
+ * over five seconds here fails the local check, which on GitHub is about a
+ * minute, well inside three.
+ */
+const TEST_TIMEOUT_MS = process.env.GITHUB_ACTIONS ? 180_000 : 30_000
+
 export default defineConfig({
   plugins: [reactPlugin],
   resolve: {
@@ -70,20 +86,15 @@ export default defineConfig({
           include: ['src/**/*.test.{ts,tsx}'],
           setupFiles: ['./vitest.setup.ts'],
           /*
-           * The same reasoning as the backend project below, for the same
-           * reason: the Arcade engine tests here are integration tests, not
-           * unit tests. They build a district's geometry or play a whole map
-           * to completion, and on the two-core CI runner with coverage
-           * instrumentation they exceed Vitest's 5s default while passing in
-           * about two seconds on a laptop.
-           *
-           * Raising them one test at a time did not hold: three separate CI
-           * runs each surfaced a different pair, because the slowness belongs
-           * to the class of test, not to any particular one. A hang still
-           * fails here, thirty seconds later.
+           * The same reasoning as the backend project below: the Arcade engine
+           * tests here are integration tests, not unit tests. They build a
+           * district's geometry or play a whole map to completion. Raising them
+           * one test at a time did not hold — the slowness belongs to the class
+           * of test, not to any particular one — so the limit is the one above,
+           * for every test.
            */
-          testTimeout: 30_000,
-          hookTimeout: 30_000,
+          testTimeout: TEST_TIMEOUT_MS,
+          hookTimeout: TEST_TIMEOUT_MS,
         },
       },
       {
@@ -119,11 +130,11 @@ export default defineConfig({
            * test, which then failed instantly on a response it never asked for. One
            * slow test, two red results, neither of them a real defect.
            *
-           * A genuine deadlock still fails here, thirty seconds later, and stands out
-           * against a suite whose full wall-clock is around twenty-five.
+           * A genuine deadlock still fails, thirty seconds later here and three minutes
+           * on GitHub (`TEST_TIMEOUT_MS` above).
            */
-          testTimeout: 30_000,
-          hookTimeout: 30_000,
+          testTimeout: TEST_TIMEOUT_MS,
+          hookTimeout: TEST_TIMEOUT_MS,
         },
       },
     ],

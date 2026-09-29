@@ -9,7 +9,7 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { CUT_COLUMN, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
@@ -97,7 +97,7 @@ export default function SiteQuestionsPage() {
               ? <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.text })}>{row.text}</RecordLinkCell>
               : <span title={row.text} className="block truncate text-[13px] text-foreground">{row.text}</span>,
           },
-          { key: "kind", header: t("columns.kind"), cell: (row) => <StatusPill tone={row.kind === "QUESTION" ? "info" : "neutral"}>{t(`kinds.${row.kind}`)}</StatusPill> },
+          { key: "kind", header: t("columns.kind"), cell: (row) => <StatusLabel tone={row.kind === "QUESTION" ? "info" : "neutral"}>{t(`kinds.${row.kind}`)}</StatusLabel> },
           {
             key: "from",
             header: t("columns.from"),

@@ -9,7 +9,7 @@ import { api } from "@/convex/_generated/api";
 import Header from "@/src/ui/components/layout/Header";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { formatDateTime } from "@/src/lib/dates";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
@@ -103,7 +103,7 @@ export default function SearchConsolePage() {
           sort={tableSort}
           columns={[
             { key: "host", header: t("columns.website"), sortable: true, cell: (row) => <span className="font-medium text-foreground">{row.host}</span> },
-            { key: "status", header: t("columns.status"), cell: (row) => <StatusPill tone={TONES[row.status]}>{ts(row.status)}</StatusPill> },
+            { key: "status", header: t("columns.status"), cell: (row) => <StatusLabel tone={TONES[row.status]}>{ts(row.status)}</StatusLabel> },
             { key: "clicks", header: t("columns.clicks"), align: "right", sortable: true, cell: (row) => (row.figures ? <span className="font-mono text-[12px] text-foreground">{formatNumber(row.figures.clicks)}</span> : dash) },
             { key: "impressions", header: t("columns.impressions"), align: "right", sortable: true, cell: (row) => (row.figures ? <span className="font-mono text-[12px] text-secondary">{formatNumber(row.figures.impressions)}</span> : dash) },
             { key: "ctr", header: t("columns.ctr"), align: "right", sortable: true, cell: (row) => (row.figures ? <span className="font-mono text-[12px] text-secondary">{formatRate(row.figures.ctr)}</span> : dash) },

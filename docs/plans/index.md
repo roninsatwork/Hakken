@@ -7,6 +7,18 @@ completed work.
 
 ## Active Plans
 
+- [Status labels: icon and words, no pills](./active/status-labels-plan.md) —
+  every rounded, tinted status pill on the dashboard (104 kit uses, about
+  nine parts built on it, about 70 drawn by hand) becomes a small line icon
+  in the status's colour and plain words, drawn by one kit part,
+  `StatusLabel`; guards stop a pill being drawn again. Chosen 2026-09-29
+  (option C); all six steps built on dev the same day.
+- [Knowledge search: a relevance cut-off, and five gaps closed](./active/knowledge-relevance-cutoff-plan.md) —
+  one more Decision, "does this passage help answer the question?", asked of
+  Jev once per search over the top 40 pieces, shipped off and trialled in
+  "Ask a person" first; plus five gaps in the knowledge search, and an
+  agent's runs no longer reading another company's pieces. Built 2026-09-28,
+  shipped Off; the trial waits for knowledge on Ronins.
 - [Fan-out queries: checked once, then only the ticked ones](./active/fan-out-opt-in-plan.md) —
   every fan-out query is checked on Google once, then only if ticked; at most
   200 ticked per owned website (a platform → company → website limit); the 87

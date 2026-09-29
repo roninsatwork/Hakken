@@ -160,3 +160,20 @@ Overall: 100%. Stages 1–3 and V1–V3: 100%.
   skipped the crawl after every month of 30 days or fewer. Paged lists reuse a
   still-fresh page as single calls do, so a second press or a second company
   on the same day does not buy one twice.
+- 2026-09-29 — **A supplier's refusal is asked again, slowly.** Overnight,
+  Google refused DataForSEO's own access to its AI engine, and all ten of
+  Ronins' questions to it came back as DataForSEO's 50301 "3rd Party API
+  Service Unavailable (rate_limit_exceeded)": each refused in under half a second,
+  charged nothing, and failed at once. They were not sent too fast — one
+  about every 20 seconds, against DataForSEO's 2,000 a minute — and the
+  other three engines at the same pace all answered. Anthony: "don't we
+  retry but slower". Now 50301, 50302 and 50303 (supplier unavailable,
+  update in progress) are "not now" when nothing was charged: the request
+  is asked again after a minute, two, then three
+  (`SEO_SUPPLIER_RETRY_WAITS_MS`), inside the Collector's 7-minute run,
+  while the rest of the queue carries on; refused after the last, or with no
+  run left for the next wait, it is failed, and the next night's run asks
+  again. A retry never outlives its run (`retryUntil`): a later run would buy
+  it beside that night's own request. A live call that failed at no charge
+  can be asked again the same day, so Collect now retries it (before, its
+  task id counted it as bought).

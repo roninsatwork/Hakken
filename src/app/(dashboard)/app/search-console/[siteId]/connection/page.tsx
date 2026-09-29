@@ -8,7 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/components/screens/Button";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { formatDate, formatDateTime } from "@/src/lib/dates";
 import { SiteFacts } from "../../../sites/_components/SiteRecordParts";
 import { formatDay } from "../../../sites/_components/siteFormat";
@@ -104,7 +104,7 @@ function ChooseProperty({ status }: { status: SearchConsoleStatus }) {
               <span className="truncate font-mono text-[13px] text-foreground">{choice.property}</span>
               <span className="text-[12px] text-secondary">{choice.property.startsWith("sc-domain:") ? t("domain") : t("prefix")}</span>
             </span>
-            <StatusPill tone="neutral">{t(`permissions.${choice.permission as "siteOwner"}`)}</StatusPill>
+            <StatusLabel tone="neutral">{t(`permissions.${choice.permission as "siteOwner"}`)}</StatusLabel>
           </label>
         ))}
       </fieldset>
@@ -140,7 +140,7 @@ function ConnectionDetails({ status }: { status: SearchConsoleStatus }) {
       value: (
         <span className="inline-flex items-center gap-2">
           <span className="font-mono">{connection.property ?? "–"}</span>
-          {connection.permission ? <StatusPill tone="neutral">{t(`permissions.${connection.permission as "siteOwner"}`)}</StatusPill> : null}
+          {connection.permission ? <StatusLabel tone="neutral">{t(`permissions.${connection.permission as "siteOwner"}`)}</StatusLabel> : null}
         </span>
       ),
     },

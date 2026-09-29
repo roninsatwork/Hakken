@@ -7,7 +7,8 @@ import { Edit2, Power, Trash2 } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
-import { STATUS_TONE_CLASSES, toneForStatus, type StatusTone } from "@/src/ui/components/screens/statusTone";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { toneForStatus, type StatusTone } from "@/src/ui/components/screens/statusTone";
 
 export type AdminRuleTableRow = {
   _id: Id<"aiRules">;
@@ -97,9 +98,9 @@ export function AdminRulesTable({
           header: labels.priority,
           className: "w-[120px]",
           cell: (rule) => (
-            <div className={`w-max px-2 py-0.5 rounded-[4px] text-[10px] font-bold tracking-[0.1em] uppercase border flex-shrink-0 ${STATUS_TONE_CLASSES[priorityTone(rule.priority)]}`}>
+            <StatusLabel tone={priorityTone(rule.priority)} className="shrink-0">
               {rule.priority}
-            </div>
+            </StatusLabel>
           ),
         },
         {

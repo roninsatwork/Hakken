@@ -8,7 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { CUT_COLUMN, ChangeCell, CheckedCell, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
@@ -148,8 +148,8 @@ export default function SiteSearchesPage() {
             key: "verdict",
             header: t("columns.verdict"),
             cell: (row) => row.isActive
-              ? <StatusPill tone={VERDICT_TONES[row.verdict]}>{t(`verdicts.${row.verdict}`)}</StatusPill>
-              : <StatusPill tone="neutral">{t("paused")}</StatusPill>,
+              ? <StatusLabel tone={VERDICT_TONES[row.verdict]}>{t(`verdicts.${row.verdict}`)}</StatusLabel>
+              : <StatusLabel tone="neutral">{t("paused")}</StatusLabel>,
           },
           { key: "checked", header: t("columns.lastChecked"), sortable: true, cell: (row) => <CheckedCell day={row.lastCheckedDay} /> },
         ]}

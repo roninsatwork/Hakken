@@ -12,7 +12,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
 import { formatDate } from "@/src/lib/dates";
@@ -79,7 +79,7 @@ export function CompanyFanOut({ companyWebsiteId, host }: { companyWebsiteId?: I
   const intentPill = (value: string | null) => {
     if (!value) return <span className="text-[12px] text-muted">{tf("unjudged")}</span>;
     const label = tIntent(value as Exclude<IntentChoice, "UNJUDGED">);
-    return <StatusPill tone={value === "BUYING" ? "success" : "neutral"}>{label}</StatusPill>;
+    return <StatusLabel tone={value === "BUYING" ? "success" : "neutral"}>{label}</StatusLabel>;
   };
 
   const questions = list?.questions ?? [];
@@ -197,7 +197,7 @@ export function CompanyFanOut({ companyWebsiteId, host }: { companyWebsiteId?: I
             header: tf("columns.checked"),
             align: "right",
             cell: (row) => (
-              <StatusPill tone={row.everyRun ? "success" : "neutral"}>{row.everyRun ? tf("everyRun") : tf("once")}</StatusPill>
+              <StatusLabel tone={row.everyRun ? "success" : "neutral"}>{row.everyRun ? tf("everyRun") : tf("once")}</StatusLabel>
             ),
           },
         ]}

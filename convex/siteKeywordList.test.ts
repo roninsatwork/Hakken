@@ -10,11 +10,6 @@ import { parseDomainRankedKeywords } from "./dataForSeoParsers";
 import { expandSeoResult, slimSeoResult } from "./dataForSeoSlim";
 import { ANSWER_PART_BYTES, utf8Length } from "./seoPullAnswers";
 
-// Files a page of a 1,500-keyword list and judges the whole list. About five
-// seconds under coverage on two workers here, which the CI runner has run
-// about four times slower — the whole-company planning test timed out that
-// way (run #14, 2026-09-24).
-const FULL_PAGE_TIMEOUT_MS = 90_000;
 
 /**
  * The full keyword list (Anthony, 2026-09-24: "store whatever we can"):
@@ -182,7 +177,7 @@ describe("the full keyword list", () => {
     const rest = Array.from({ length: 500 }, (_, index) => item(`tail search ${index}`, "organic", 60));
     await filePage(1_000, rest, 1_480, 1_500);
     expect(await t.query(internal.siteSummaries.completeRankedDay, { websiteId, locationCode: UK })).toBe("2026-09-21");
-  }, FULL_PAGE_TIMEOUT_MS);
+  });
 
   test("the pages a run planned are not bought again when its first page says how long the list is", async () => {
     // On 2026-09-25 the planner's requests carried the run in their key for

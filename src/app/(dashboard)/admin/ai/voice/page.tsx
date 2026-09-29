@@ -4,12 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useTranslations } from "next-intl";
-import { AudioLines, Check, Loader2, Play, Square } from "lucide-react";
+import { AudioLines, Loader2, Play, Square } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { SaveError, SaveFeedback } from "@/src/ui/components/screens/SaveControls";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
 import { cn } from "@/src/ui/lib/utils";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
@@ -219,10 +220,7 @@ export default function SpokenVoicePage() {
               <span className="flex items-center gap-2 text-[14px] font-medium text-foreground">
                 {option.key}
                 {option.key === setting?.voice && (
-                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand/10 text-brand text-[11px] font-medium">
-                    <Check className="w-3 h-3" />
-                    {t("current")}
-                  </span>
+                  <StatusLabel tone="success">{t("current")}</StatusLabel>
                 )}
               </span>
             ),

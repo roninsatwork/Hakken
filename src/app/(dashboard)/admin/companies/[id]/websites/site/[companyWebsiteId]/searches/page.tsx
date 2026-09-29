@@ -13,7 +13,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { Field } from "@/src/ui/components/screens/Field";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
@@ -183,8 +183,8 @@ export default function CompanySiteSearchesPage() {
             header: t("verdictColumn"),
             cell: (row) => (
               row.isActive
-                ? <StatusPill tone={SEARCH_TONE[row.verdict]}>{t(`verdicts.${row.verdict}`)}</StatusPill>
-                : <StatusPill tone="neutral">{t("paused")}</StatusPill>
+                ? <StatusLabel tone={SEARCH_TONE[row.verdict]}>{t(`verdicts.${row.verdict}`)}</StatusLabel>
+                : <StatusLabel tone="neutral">{t("paused")}</StatusLabel>
             ),
           },
           {

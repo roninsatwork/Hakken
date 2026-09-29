@@ -14,6 +14,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import useDebounce from "@/src/hooks/useDebounce";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { isModelCostMeasurable } from "@/convex/utils/modelPricing";
@@ -259,7 +260,7 @@ export default function AIModelCataloguePage() {
               isModelCostMeasurable(model) ? (
                 <span className="text-[12px] text-secondary">{tc("pricingAdded")}</span>
               ) : (
-                <span className="text-[12px] text-[#f59e0b]">{tc("pricingMissing")}</span>
+                <span className="text-[12px] text-warning">{tc("pricingMissing")}</span>
               ),
           },
           {
@@ -273,11 +274,12 @@ export default function AIModelCataloguePage() {
             cell: (model) => {
               const defaultJobs = defaultJobsByModelId.get(model.modelId) ?? [];
               return defaultJobs.length > 0 ? (
+                // The label takes no title, so this wrapper carries the list of jobs.
                 <span
                   title={tc("handlesTitle", { jobs: defaultJobs.map(formatModelTag).join(", ") })}
-                  className="inline-flex rounded-full border border-brand/30 bg-brand/10 px-2.5 py-0.5 text-[11px] font-semibold text-brand"
+                  className="inline-flex"
                 >
-                  {tc("yes")}
+                  <StatusLabel tone="success">{tc("yes")}</StatusLabel>
                 </span>
               ) : (
                 <span className="text-[12px] text-muted">{tc("no")}</span>

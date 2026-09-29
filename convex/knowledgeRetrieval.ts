@@ -1,17 +1,22 @@
 /**
  * The one retrieval spine, shared by every prompt-building action.
  *
- * Four sites (assistant chat, agent runtime, swarm, sales reports) each grew
- * their own copy of the same sequence — resolve the embedding model, embed the
- * query, vector-search `knowledgeChunks`, load and budget the winners. Four
- * copies meant a retrieval improvement landed wherever someone remembered to
- * paste it; the swarm's copy had also drifted into searching with no filter
- * when it lacked a company, which would read every tenant's chunks.
+ * Its readers are the assistant chat (`aiChat.ts`), agent runs
+ * (`agentRuntime.ts`), voice calls, email replies and the wiki's test
+ * questions (`aiVoiceSession.ts`), the swarm's Architect (`swarmActions.ts`)
+ * and the knowledge screen's "Test retrieval" (`knowledgeActions.ts`). Each
+ * once grew its own copy of the same sequence — resolve the embedding model,
+ * embed the query, vector-search `knowledgeChunks`, load and budget the
+ * winners — so an improvement landed wherever someone remembered to paste
+ * it, and the swarm's copy drifted into searching with no filter when it
+ * lacked a company, which would have read every tenant's chunks.
  *
  * This module is that spine, once. Sites keep what is genuinely theirs — which
- * scopes to search, how to budget, how to wrap the result — and share what is
- * not: embedding, the vector+keyword hybrid search, and the fusion of the two
- * rankings (see `knowledgeRetrievalService.ts` for why hybrid).
+ * scopes to search, how much to read, how to wrap the result — and share what
+ * is not: embedding, the vector+keyword hybrid search, and the fusion of the
+ * two rankings (see `knowledgeRetrievalService.ts` for why hybrid). What is
+ * read from the ranking is shared too: `selectKnowledgeChunksWithinBudget`
+ * (`aiPromptAssembly.ts`), with the relevance cut-off (`knowledgeReading.ts`).
  *
  * Scoping is closed by construction: a search happens per
  * `KnowledgeRetrievalScope`, and no unscoped variant exists.
@@ -42,6 +47,9 @@ type RetrievalCtx = GenericActionCtx<DataModel>;
  * "retrieval unavailable" and continue without knowledge, which is the
  * established failure posture at every site (a broken RAG pipeline must not
  * take the reply down with it).
+ *
+ * The model comes back with the vector: a piece embedded by any other model is
+ * not comparable with it, and the selection skips it (`knowledgeReembed.ts`).
  */
 export async function embedRetrievalQuery(
   ctx: RetrievalCtx,
@@ -51,7 +59,7 @@ export async function embedRetrievalQuery(
     /** Telemetry label, e.g. "assistantRagEmbedding". */
     operation: string;
   }
-): Promise<number[] | null> {
+): Promise<{ vector: number[]; modelId: string } | null> {
   const embeddingModel = await ctx.runQuery(
     internal.aiModels.resolveEmbeddingModelConfigForExecution,
     { companyId: args.companyId }
@@ -65,7 +73,7 @@ export async function embedRetrievalQuery(
 
   const vector = response.embeddings?.[0]?.values;
   if (!vector || vector.length !== embeddingModel.embeddingDimensions) return null;
-  return vector as number[];
+  return { vector: vector as number[], modelId: embeddingModel.modelId };
 }
 
 function runScopedVectorSearch(

@@ -14,6 +14,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_components/AiRuleSafetyWarning";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { useTranslations } from "next-intl";
 
 const DeferredSaveFeedback = lazy(async () => {
@@ -135,11 +136,9 @@ export default function CompanySystemPromptPage() {
              <span className="text-foreground text-[14px] font-bold tracking-wide">{t("sectionTitle")}</span>
           </div>
            
-           <div className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-mono tracking-widest transition-colors ${
-             hasUnsavedChanges ? "bg-amber-500/10 text-amber-500 font-bold" : "bg-border-dim text-muted"
-           }`}>
+           <StatusLabel tone={hasUnsavedChanges ? "warning" : "neutral"}>
              {hasUnsavedChanges ? t("unsaved") : t("synced")}
-           </div>
+           </StatusLabel>
         </div>
 
         <div className="flex flex-col gap-2 flex-1 relative group">

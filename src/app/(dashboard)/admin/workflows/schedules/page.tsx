@@ -19,6 +19,7 @@ import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useScheduleSummary } from "@/src/app/(dashboard)/admin/_lib/useScheduleSummary";
@@ -161,9 +162,7 @@ export default function SchedulesPage() {
           <span className="truncate text-[13px] text-foreground/80 font-medium">
             {schedule.targetName || schedule.workflowName || schedule.agentName}
           </span>
-          <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded-sm bg-border-dim/50 text-muted">
-            {schedule.agentId ? 'Agent' : 'Workflow'}
-          </span>
+          <TagLabel className="shrink-0">{schedule.agentId ? 'Agent' : 'Workflow'}</TagLabel>
         </div>
       ),
     },
@@ -171,11 +170,7 @@ export default function SchedulesPage() {
       key: "interval",
       header: t('table.interval'),
       cell: (schedule) => (
-        <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-foreground/5 border border-border-dim w-fit">
-          <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
-            {scheduleSummary(schedule.intervalStr)}
-          </span>
-        </div>
+        <TagLabel>{scheduleSummary(schedule.intervalStr)}</TagLabel>
       ),
     },
     {

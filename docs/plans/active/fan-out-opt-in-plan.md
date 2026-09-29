@@ -302,6 +302,60 @@ Decided while building, within the plan:
   Ronins' Surrey prompt was removed with its 7 still waiting; they were
   cleared on dev before its next collection.
 
+## Built — 2026-09-29: tracking from Sites
+
+Anthony, 2026-09-29: "This is not an admin thing this is user front end
+thing", "The users need to be able to select which searches that they want
+to track", "it should be on existing screens … and it should say track". The
+client's Sites **Fan-out queries** page now has a **Track** tick on each row
+of the company's own website, in place of the Tracked column, and "{count} of
+{limit} tracked" above the table. The same rule as admin's tick
+(`siteFanOutTracking.ts`): ticked, the search is on Tracked keywords and
+checked every run, up to the website's limit (200 unless changed in Limits);
+unticked, it comes off and waits for its one first check. A row is a topic:
+ticking tracks the wording shown first, unticking stops every tracked
+wording. Full, an untracked row's tick is greyed and says why. Anyone in the
+company who can open the site may tick; a competitor's page keeps the plain
+Tracked column. Admin's screens are unchanged.
+
+The "What they want" labels were renamed everywhere the same day, at his word:
+Commercial, Informational, Brand, Irrelevant, Unknown, Not judged yet.
+
+**Later the same day: a narrower table.** Anthony: "its getting very wide … we
+can do this on the page it clicks to"; of three drawn alternatives he chose C
+"with the times seen column". The Sites Fan-out queries table is four columns:
+Track; the search, with what the searcher wants and the assistants that
+searched it on a small second line; Times seen; Your position. The question
+it answered, its other wordings, the day it was checked and the site's page
+for it moved to the page each row opens, in a new "From the AI's answers" box
+(`siteAngles.keywordAngle`). The download keeps every column. The table's
+"Your page" filter (and with it the Missing topics view) and the note on what
+"None" was judged against went with the column, as drawn.
+
+**Then: the AI's answers on the search's own page.** Anthony: "add the full
+response on this screen too", placed "where they are … accordions, one on each
+row", with whether Ronins is mentioned made plain. Under "From the AI's
+answers", one closed row per assistant that ran the search — the answer it was
+writing when it did (the search's own record, `promptFanOutQueries`) — saying
+on the row whether it named the site and which competitors it named; opened,
+the answer word for word, the site's names and its competitors' picked out in
+two colours (`HakkenMarkdown`'s `highlightOthers`). The box above gains
+"{site} mentioned: No, in neither answer" or "Yes, in n of m".
+
+**And: searches a month for fan-out queries.** Anthony: "won't Data for
+SEO give us this", then "build it". A fan-out query no website's keyword list
+holds showed "Searches a month: Not known". Now the Planner buys Google Ads'
+figures for them from DataForSEO (`keyword_search_volume`, queued) —
+volume, cost per click, competition and the last twelve months — for every
+wording of every topic on the website's list, less those its keyword list
+measures and those with figures younger than 30 days; up to 1,000 searches
+a request (DataForSEO's ceiling, charged per request); from the website's
+place; never for a competitor. Kept once per search and place for everyone
+(`searchVolumes`). The search's page shows them at the top and in "About
+this search", with "Figures from Google Ads, {day}"; a search Google reports
+too few for says so. First bought on the next nightly run; the price shows
+on Runs and cost.
+
 ## Not in this plan
 
 - Dropping queries the AIs stopped searching: nothing is checked unless
@@ -310,3 +364,15 @@ Decided while building, within the plan:
   Korda 80 so far), and any beyond a website's 1,000 Google checks a run wait
   for the next. Name one and it joins Limits.
 - Spending budgets: each agent's own cost limit per run is the control.
+
+**2026-09-29 — a search's page gets a designed header.** Anthony, on the
+header: "it looks grown over time and not designed". Three alternatives were
+drawn on the canvas "A search's page header"; he chose B. The way back is a
+quiet path above the title ("Fan-out queries /"), the labels share the
+title's row on the right ("Checked once on Google", then what the searcher
+wants — the keyword list's judgement, or the AI answers' for a search only
+they ran), and one sentence about this search sits under it where the stock
+sentence was. The box that repeated "checked once" is gone; its sentence is
+now that line. No icon. Built as `DetailHeader`'s `path` layout, on this page
+only — "I only asked about one page" — so every other record page keeps its
+header.

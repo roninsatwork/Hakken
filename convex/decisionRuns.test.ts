@@ -129,6 +129,28 @@ describe("recording runs", () => {
     });
   });
 
+  test("runs that each judged their own passage name it, and the ledger names the Decision once", async () => {
+    const t = setup();
+    await t.mutation(internal.decisionRuns.recordRunsInternal, {
+      subjectKind: "knowledgeChunk",
+      subjectId: "chunk-1|chunk-2",
+      usage: { modelId: "typesafe:jev-latest", providerKey: "typesafe", providerModelId: "jev-latest", inputTokens: 900, outputTokens: 10 },
+      runs: [
+        { decisionKey: "knowledge.passage-answers-question", subjectId: "chunk-1", answer: "yes", mode: "ASK_A_PERSON", outcome: "RECORDED", source: "TYPESAFE" },
+        { decisionKey: "knowledge.passage-answers-question", subjectId: "chunk-2", answer: "no", mode: "ASK_A_PERSON", outcome: "HANDED_TO_PERSON", source: "TYPESAFE" },
+      ],
+    });
+    await t.run(async (ctx) => {
+      const runs = await ctx.db.query("decisionRuns").collect();
+      expect(runs.map((run) => [run.subjectKind, run.subjectId, run.answer])).toEqual([
+        ["knowledgeChunk", "chunk-1", "yes"],
+        ["knowledgeChunk", "chunk-2", "no"],
+      ]);
+      const transactions = await ctx.db.query("agentTransactions").collect();
+      expect(transactions.map((row) => row.actionContext)).toEqual(["decision:knowledge.passage-answers-question"]);
+    });
+  });
+
   test("a rule-answered request writes runs at no cost and no ledger row", async () => {
     const t = setup();
     await t.mutation(internal.decisionRuns.recordRunsInternal, {

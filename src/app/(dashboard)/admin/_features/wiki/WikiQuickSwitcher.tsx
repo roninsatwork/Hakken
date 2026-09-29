@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { InlineSearchInput } from "@/src/ui/components/screens/Table";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { LAYER } from "@/src/ui/lib/layers";
@@ -120,9 +121,7 @@ export function WikiQuickSwitcher({
                   >
                     <span className="text-[14px] font-medium text-foreground">
                       {hit.title.replace(/^https?:\/\//, "")}
-                      <span className="ml-2 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim/60 text-secondary text-[11px] font-normal">
-                        {t(`kinds.${hit.kind}`)}
-                      </span>
+                      <TagLabel className="ml-2">{t(`kinds.${hit.kind}`)}</TagLabel>
                     </span>
                     {hit.snippet && (
                       <span className="text-[12.5px] text-muted line-clamp-1">{hit.snippet}</span>

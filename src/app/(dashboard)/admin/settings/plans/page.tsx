@@ -12,8 +12,6 @@ import {
   Plus,
   Trash2,
   Edit2,
-  CheckCircle2,
-  XCircle,
   Info
 } from "lucide-react";
 import type { Doc } from "@/convex/_generated/dataModel";
@@ -23,6 +21,8 @@ import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { RowActions, RowIconButton, SearchBar } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import {
   TABLE_PAGE_SIZE,
 } from "@/src/ui/components/screens/pagination";
@@ -210,9 +210,7 @@ export default function SubscriptionPlansPage() {
             header: t('table.limit'),
             cell: (plan) =>
               plan.messageLimit === -1 ? (
-                <span className="text-brand bg-brand/10 px-2 py-0.5 rounded-full text-[11px]">
-                  {t('unlimited')}
-                </span>
+                <TagLabel>{t('unlimited')}</TagLabel>
               ) : (
                 <span className="text-[13px] text-foreground font-mono">
                   {plan.messageLimit.toLocaleString()}
@@ -231,18 +229,13 @@ export default function SubscriptionPlansPage() {
           {
             key: "status",
             header: t('table.status'),
-            /* The word carries the state; the tick and cross are decoration
+            /* The word carries the state; the tone's icon is decoration
                beside it rather than the signal. */
-            cell: (plan) =>
-              plan.isActive ? (
-                <div className="flex items-center gap-1.5 text-[11px] text-foreground font-medium">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Active
-                </div>
-              ) : (
-                <div className="flex items-center gap-1.5 text-[11px] text-secondary font-medium">
-                  <XCircle className="w-3.5 h-3.5" /> Inactive
-                </div>
-              ),
+            cell: (plan) => (
+              <StatusLabel tone={plan.isActive ? "success" : "neutral"}>
+                {plan.isActive ? "Active" : "Inactive"}
+              </StatusLabel>
+            ),
           },
           {
             key: "actions",

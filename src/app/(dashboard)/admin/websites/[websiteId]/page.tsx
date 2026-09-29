@@ -10,7 +10,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { useScheduleSummary } from "@/src/app/(dashboard)/admin/_lib/useScheduleSummary";
 
 /**
@@ -101,9 +101,9 @@ export default function WebsiteWatchersPage() {
             key: "type",
             header: t("typeColumn"),
             cell: (watcher) => (
-              <StatusPill tone={watcher.relationship === "OWNED" ? "success" : "neutral"}>
+              <StatusLabel tone={watcher.relationship === "OWNED" ? "success" : "neutral"}>
                 {watcher.relationship === "OWNED" ? t("owned") : t("tracked")}
-              </StatusPill>
+              </StatusLabel>
             ),
           },
           {

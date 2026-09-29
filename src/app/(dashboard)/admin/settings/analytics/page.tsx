@@ -6,7 +6,6 @@ import {
   Activity,
   AlertTriangle,
   CalendarDays,
-  CheckCircle2,
   Database,
   LineChart, 
   MessageSquare,
@@ -18,6 +17,7 @@ import { api } from "@/convex/_generated/api";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field } from "@/src/ui/components/screens/Field";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { useTranslations } from "next-intl";
 
 const DeferredSaveFeedback = lazy(async () => {
@@ -159,22 +159,15 @@ export default function AnalyticsPage() {
             </div>
           </div>
 
-          <div className={`inline-flex items-center gap-2 self-start sm:self-auto px-3 py-1.5 rounded-full border text-[10px] uppercase font-mono tracking-widest ${
-            isHealthLoading
-              ? "border-border-dim text-muted bg-card"
-              : isHealthy
-                ? "border-emerald-500/20 text-emerald-500 bg-emerald-500/10"
-                : "border-amber-500/20 text-amber-500 bg-amber-500/10"
-          }`}>
-            {isHealthLoading ? (
-              <RefreshCcw className="w-3 h-3 animate-spin" />
-            ) : isHealthy ? (
-              <CheckCircle2 className="w-3 h-3" />
-            ) : (
-              <AlertTriangle className="w-3 h-3" />
-            )}
-            <span>{isHealthLoading ? t("checking") : isHealthy ? t("healthy") : t("signals", { count: healthIssueCount })}</span>
-          </div>
+          {isHealthLoading ? (
+            <StatusLabel tone="info" icon="working" className="self-start sm:self-auto">
+              {t("checking")}
+            </StatusLabel>
+          ) : (
+            <StatusLabel tone={isHealthy ? "success" : "warning"} className="self-start sm:self-auto">
+              {isHealthy ? t("healthy") : t("signals", { count: healthIssueCount })}
+            </StatusLabel>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
@@ -278,11 +271,9 @@ export default function AnalyticsPage() {
              <span className="text-foreground text-[14px] font-bold tracking-wide">{t("containerTitle")}</span>
           </div>
            
-           <div className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-mono tracking-widest transition-colors ${
-             hasUnsavedChanges ? "bg-amber-500/10 text-amber-500 font-bold" : "bg-border-dim text-muted"
-           }`}>
+           <StatusLabel tone={hasUnsavedChanges ? "warning" : "neutral"}>
              {hasUnsavedChanges ? t("unsaved") : t("synced")}
-           </div>
+           </StatusLabel>
         </div>
 
         <div className="flex flex-col gap-2 relative group max-w-xl">

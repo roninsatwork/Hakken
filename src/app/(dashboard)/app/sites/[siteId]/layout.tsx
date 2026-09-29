@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl";
 import Header from "@/src/ui/components/layout/Header";
 import { BackRow, DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { formatDateTime } from "@/src/lib/dates";
 import { SiteDateRange } from "../_components/SiteDateRange";
@@ -84,15 +84,15 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           pills={
             <>
               {site.checked && site.lastCheckedAt ? (
-                <StatusPill tone="success">{t("lastChecked", { when: formatDateTime(site.lastCheckedAt) })}</StatusPill>
+                <StatusLabel tone="success">{t("lastChecked", { when: formatDateTime(site.lastCheckedAt) })}</StatusLabel>
               ) : site.checked && site.latestDay ? (
-                <StatusPill tone="success">{t("lastCheckedDay", { day: formatDay(site.latestDay) })}</StatusPill>
+                <StatusLabel tone="success">{t("lastCheckedDay", { day: formatDay(site.latestDay) })}</StatusLabel>
               ) : site.nextRunAt ? (
-                <StatusPill tone="warning">{t("firstCheck", { when: formatDateTime(site.nextRunAt) })}</StatusPill>
+                <StatusLabel tone="warning">{t("firstCheck", { when: formatDateTime(site.nextRunAt) })}</StatusLabel>
               ) : (
-                <StatusPill tone="neutral">{t("notChecked")}</StatusPill>
+                <StatusLabel tone="neutral">{t("notChecked")}</StatusLabel>
               )}
-              <StatusPill tone="neutral">{t("rivals", { count: site.rivals.length })}</StatusPill>
+              <StatusLabel tone="neutral">{t("rivals", { count: site.rivals.length })}</StatusLabel>
             </>
           }
           action={

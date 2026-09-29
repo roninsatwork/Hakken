@@ -133,7 +133,7 @@ export class DataForSeoUncertain extends Error {
 }
 
 /** What one of DataForSEO's status codes means for the request it came with. */
-export type DataForSeoCodeKind = "OK" | "IN_PROGRESS" | "RATE_LIMITED" | "ACCOUNT" | "REFUSED";
+export type DataForSeoCodeKind = "OK" | "IN_PROGRESS" | "RATE_LIMITED" | "SUPPLIER_BUSY" | "ACCOUNT" | "REFUSED";
 
 /**
  * DataForSEO's own status codes, read (https://docs.dataforseo.com/v3/appendix/errors/).
@@ -145,6 +145,10 @@ export function dataForSeoCodeKind(code: number | undefined): DataForSeoCodeKind
   if (code === 40601 || code === 40602) return "IN_PROGRESS";
   // Per-minute rate limit, and the hourly and daily duplicate-task limits.
   if (code === 40202 || code === 40205 || code === 40206) return "RATE_LIMITED";
+  // Their supplier unavailable — Google refusing DataForSEO's own access on
+  // 2026-09-29 came as 50301 "3rd Party API Service Unavailable
+  // (rate_limit_exceeded)" — or an update in progress, "try after a few minutes".
+  if (code === 50301 || code === 50302 || code === 50303) return "SUPPLIER_BUSY";
   // Not authorised, not verified, payment required, daily cost limit, address
   // not allowed, insufficient funds.
   if (code === 40100 || code === 40104 || code === 40200 || code === 40203 || code === 40207 || code === 40210) {

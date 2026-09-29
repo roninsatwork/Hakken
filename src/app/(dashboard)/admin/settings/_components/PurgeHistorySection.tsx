@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { usePaginatedQuery } from "convex/react";
 import { useTranslations } from "next-intl";
-import { History, Loader2 } from "lucide-react";
+import { History } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { toneForStatus } from "@/src/ui/components/screens/statusTone";
 import {
   purgePipelineKeys,
@@ -166,12 +166,12 @@ export function PurgeHistorySection() {
             header: t("purges.history.table.status"),
             className: "w-[130px]",
             cell: (log) => (
-              <StatusPill
+              <StatusLabel
                 tone={log.status === "SUCCESS" ? "success" : toneForStatus(log.status)}
-                icon={log.status === "RUNNING" ? <Loader2 className="w-3 h-3 animate-spin" /> : undefined}
+                icon={log.status === "RUNNING" ? "working" : undefined}
               >
                 {t(`purges.history.table.${log.status.toLowerCase()}`)}
-              </StatusPill>
+              </StatusLabel>
             ),
           },
           {

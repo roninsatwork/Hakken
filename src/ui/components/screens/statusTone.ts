@@ -11,16 +11,15 @@
 
 export type StatusTone = "success" | "warning" | "danger" | "info" | "neutral";
 
-/** The standard pill recipe per tone: text + tinted background + border. */
-export const STATUS_TONE_CLASSES: Record<StatusTone, string> = {
-  success: "text-success bg-success/10 border-success/20",
-  warning: "text-warning bg-warning/10 border-warning/20",
-  danger: "text-destructive bg-destructive/10 border-destructive/20",
-  info: "text-info bg-info/10 border-info/20",
-  neutral: "text-secondary bg-foreground/5 border-border-dim",
-};
+/*
+ * There is no pill recipe here any more. `STATUS_TONE_CLASSES` — text, tinted
+ * background and border together — went on 2026-09-29 with every pill
+ * (docs/plans/active/status-labels-plan.md): a status is a `StatusLabel`, which
+ * colours only its icon, and leaving the recipe would leave a pill one import
+ * away.
+ */
 
-/** Text-only variant, for inline status words that are not pills. */
+/** A tone's colour as text: `StatusLabel`'s icon, or a word coloured on its own. */
 export const STATUS_TONE_TEXT_CLASSES: Record<StatusTone, string> = {
   success: "text-success",
   warning: "text-warning",

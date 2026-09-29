@@ -11,7 +11,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { SettingsCard } from "@/src/ui/components/screens/SettingsCard";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import {
   CHART_SERIES_AMBER,
   CHART_SERIES_BLUE,
@@ -120,7 +120,7 @@ export default function CollectionRunPage() {
       description={description}
       pills={report ? (
         <>
-          <StatusPill tone="neutral">{tDetail("filed", { filed: count(report.filed), requests: count(report.requests) })}</StatusPill>
+          <StatusLabel tone="neutral">{tDetail("filed", { filed: count(report.filed), requests: count(report.requests) })}</StatusLabel>
           <RunStatus
             totalUsd={totalUsd}
             previousTotalUsd={previous?.totalUsd ?? null}
@@ -130,11 +130,11 @@ export default function CollectionRunPage() {
             final={report.final}
           />
           {data.closedByHand ? (
-            <StatusPill tone="neutral">
+            <StatusLabel tone="neutral">
               {data.closedByHand.name
                 ? tDetail("close.closedBy", { name: data.closedByHand.name, count: data.closedByHand.unsent })
                 : tDetail("close.closedByHand", { count: data.closedByHand.unsent })}
-            </StatusPill>
+            </StatusLabel>
           ) : null}
         </>
       ) : null}

@@ -28,6 +28,8 @@ import { countingReads } from "./utils/countingReads";
 import { isTrackedHold } from "./utils/websitePairing";
 import { holdQuestions, holdSearches } from "./holdLists";
 import { counted, firstCheckSteps, withinFanOutLimit, type PlannedCheck } from "./fanOutFirstCheckSteps";
+import { reusableByKey } from "./seoPullReuse";
+import { SEARCH_VOLUME_OPERATION, volumeSteps } from "./searchVolumes";
 import {
   SEO_DUE_SPACING_MS,
   SEO_EXPANSION_PAGE,
@@ -364,6 +366,10 @@ async function websiteSteps(
     // files a position for every known site on it — which is how a rival's
     // position for the same search arrives without a pull of its own.
     ...await searchSteps(ctx, cycle, companyWebsite),
+    // How many search for its fan-out queries, where no keyword list says (`searchVolumes.ts`).
+    ...await volumeSteps(ctx, cycle, companyWebsite, (params, sendIndex) => planSharedPull(ctx, cycle, {
+      operation: findSeoOperation(SEARCH_VOLUME_OPERATION)!, params, sentinel: "keyword", websiteId: companyWebsite.websiteId, sendIndex,
+    })),
   ];
   for (const websiteId of targets) {
     for (const operation of seoSiteOperations()) {
@@ -384,47 +390,8 @@ async function websiteSteps(
   return steps;
 }
 
-/**
- * A pull with this key that can still be used, re-opening one that was refused.
- *
- * Reuse must never hand back a failure as if it were an answer: a cycle that
- * found yesterday-style FAILED rows by key and pointed its lines at them would
- * be blocked from retrying for the rest of the day. So a failed pull is
- * re-opened in place — status back to pending, attempts and error cleared —
- * **but only when it never received a task id.** A refused request was never
- * charged and asking again is free; a submitted task was paid for, and
- * re-posting it is buying the same data twice, so that one is left alone and
- * the sweep fetches its result instead.
- */
-export async function reusableByKey(
-  ctx: MutationCtx,
-  idempotencyKey: string,
-): Promise<Doc<"seoDataPulls"> | null> {
-  // A sandbox answer is made up, so it is never served to a live run — the
-  // switch can be flipped mid-day, and the key carries only the date.
-  const existing = await ctx.db
-    .query("seoDataPulls")
-    .withIndex("by_idempotency", (q) => q.eq("idempotencyKey", idempotencyKey))
-    .filter((q) => q.neq(q.field("sandbox"), true))
-    .first();
-  if (!existing) return null;
-  if (existing.status !== "FAILED") return existing;
-  if (existing.taskId) return existing;
-
-  await ctx.db.patch(existing._id, {
-    status: "PENDING",
-    attempts: 0,
-    error: undefined,
-    dueAt: Date.now(),
-    sentAt: undefined,
-    // The refusal's completion time would otherwise outlive the refusal and
-    // show as "when" on the screen for the retry.
-    completedAt: undefined,
-    claimedBy: undefined,
-    claimedAt: undefined,
-  });
-  return { ...existing, status: "PENDING", error: undefined, completedAt: undefined };
-}
+// Where a failed request may be asked again the same day: `seoPullReuse.ts`.
+export { reusableByKey };
 
 /**
  * One paid call per question per engine, for one website — one step a question.

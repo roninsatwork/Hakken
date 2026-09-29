@@ -14,7 +14,7 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { Button } from "@/src/ui/components/screens/Button";
 import { SettingsCard, SettingSwitch } from "@/src/ui/components/screens/SettingsCard";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 
 type SettingsData = FunctionReturnType<typeof api.billingAdmin.getSettings>;
 export default function BillingSetupPage() {
@@ -42,17 +42,17 @@ function SetupForm({ settings }: { settings: SettingsData }) {
     <SettingsCard title={t("connection")}>
       <p className="text-sm text-secondary">{t("credentialsHelp")}</p>
       <div className="flex flex-wrap gap-3">
-        <StatusPill tone={settings.secretKeyPresent && settings.secretKeyModeMatches ? "success" : "warning"}>{t(settings.secretKeyPresent && settings.secretKeyModeMatches ? "keyReady" : "keyMissing")}</StatusPill>
-        <StatusPill tone={settings.webhookSecretPresent ? "success" : "warning"}>{t(settings.webhookSecretPresent ? "webhookKeyReady" : "webhookKeyMissing")}</StatusPill>
+        <StatusLabel tone={settings.secretKeyPresent && settings.secretKeyModeMatches ? "success" : "warning"}>{t(settings.secretKeyPresent && settings.secretKeyModeMatches ? "keyReady" : "keyMissing")}</StatusLabel>
+        <StatusLabel tone={settings.webhookSecretPresent ? "success" : "warning"}>{t(settings.webhookSecretPresent ? "webhookKeyReady" : "webhookKeyMissing")}</StatusLabel>
       </div>
       <p className="text-sm text-secondary">{t("webhookHelp")}</p>
       <Field label={t("webhookUrl")} readOnly value={settings.webhookUrl || t("urlUnavailable")} />
       <p className="text-sm text-secondary">{settings.lastWebhookAt ? t("lastWebhook", { date: new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(settings.lastWebhookAt) }) : t("noWebhook")}</p>
       <Button variant="quiet" className="self-start" disabled={action.isBusy()} onClick={() => void action.run(() => check({}), { fallbackMessage: t("failed"), suppressErrorToast: true }).then(result => { if (result.ok) setConnection(result.data); })}>{t("checkConnection")}</Button>
       {connection && <div role="status" className="flex flex-wrap gap-3">
-        <StatusPill tone="success">{t("connected")}</StatusPill>
-        <StatusPill tone={connection.portalReady ? "success" : "warning"}>{t(connection.portalReady ? "portalReady" : "portalMissing")}</StatusPill>
-        <StatusPill tone={connection.recoveryReady ? "success" : "warning"}>{t(connection.recoveryReady ? "recoveryReady" : "recoveryMissing")}</StatusPill>
+        <StatusLabel tone="success">{t("connected")}</StatusLabel>
+        <StatusLabel tone={connection.portalReady ? "success" : "warning"}>{t(connection.portalReady ? "portalReady" : "portalMissing")}</StatusLabel>
+        <StatusLabel tone={connection.recoveryReady ? "success" : "warning"}>{t(connection.recoveryReady ? "recoveryReady" : "recoveryMissing")}</StatusLabel>
       </div>}
     </SettingsCard>
     <SettingsCard title={t("productSettings")}>

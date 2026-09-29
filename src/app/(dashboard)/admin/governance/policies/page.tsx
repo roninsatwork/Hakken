@@ -18,6 +18,7 @@ import { Button } from "@/src/ui/components/screens/Button";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TABLE_PAGE_SIZE, paginateItems } from "@/src/ui/components/screens/pagination";
 
 /**
@@ -162,7 +163,7 @@ export default function GovernancePoliciesPage() {
                   /* An unnamed rule is not a display problem to paper over — a
                      critical rule governing everything that nobody has named is
                      a small governance gap of its own. */
-                  <span className="block text-[13px] font-medium text-[#b45309] dark:text-[#fbbf24]">
+                  <span className="block text-[13px] font-medium text-warning">
                     {t("table.unnamed")}
                   </span>
                 ) : (
@@ -184,16 +185,12 @@ export default function GovernancePoliciesPage() {
           {
             key: "priority",
             header: t("table.priority"),
+            /* Only a critical rule is flagged; the other priorities have
+               nothing to say beyond their word. */
             cell: (rule) => (
-              <span
-                className={`flex w-fit items-center rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest ${
-                  rule.priority === "CRITICAL"
-                    ? "border-[#fbbf24]/40 bg-[#fbbf24]/10 text-[#b45309] dark:text-[#fbbf24]"
-                    : "border-border-dim bg-foreground/5 text-foreground/80"
-                }`}
-              >
+              <StatusLabel tone={rule.priority === "CRITICAL" ? "warning" : "neutral"}>
                 {t(`priority.${rule.priority}`)}
-              </span>
+              </StatusLabel>
             ),
           },
           {

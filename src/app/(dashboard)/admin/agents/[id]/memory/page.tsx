@@ -33,15 +33,15 @@ import {
   modalTextareaClassName,
 } from "@/src/ui/components/screens/ModalForm";
 import {
-  MemoryApplyModeBadge,
+  MemoryApplyModeLabel,
   MemoryApplyModeChoice,
   MemoryContentField,
   type MemoryApplyMode,
 } from "@/src/app/(dashboard)/admin/_components/MemoryFields";
 import { formatDateTime } from "@/src/lib/dates";
 import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
-import { STATUS_TONE_CLASSES, toneForStatus } from "@/src/ui/components/screens/statusTone";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { toneForStatus, type StatusTone } from "@/src/ui/components/screens/statusTone";
 import { MAX_ALWAYS_MEMORIES } from "@/convex/utils/memoryApplication";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
@@ -113,7 +113,7 @@ function MemoryTrackRecord({ memory }: { memory: AgentMemory }) {
 
   return (
     <div className="flex flex-col gap-1">
-      <StatusPill tone={tone}>{label}</StatusPill>
+      <StatusLabel tone={tone}>{label}</StatusLabel>
       <span className="text-[11px] text-secondary">
         {t("trackRecord.summary", { success: successCount, trouble: troubleCount })}
       </span>
@@ -162,9 +162,7 @@ function SourceRunDetail({ sourceRun, agentId }: { sourceRun: SourceRunSummary |
     <div className="rounded-[8px] border border-border-dim bg-black/20 px-3 py-2 flex flex-col gap-1">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[10px] uppercase font-mono tracking-widest text-muted">{sourceRun.triggerType}</span>
-        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-md border ${STATUS_TONE_CLASSES[toneForStatus(sourceRun.status)]}`}>
-          {sourceRun.status}
-        </span>
+        <StatusLabel tone={toneForStatus(sourceRun.status)}>{sourceRun.status}</StatusLabel>
         <span className="text-[10px] font-mono text-muted">{formatDateTime(sourceRun.startedAt)}</span>
       </div>
       <p className="text-[11px] text-secondary leading-relaxed">{sourceRun.objective}</p>
@@ -196,9 +194,7 @@ function SourceSkillDetail({ sourceSkill }: { sourceSkill?: SourceSkillSummary |
     <div className="rounded-[8px] border border-info/20 bg-info/10 px-3 py-2 flex flex-col gap-1">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-[10px] uppercase font-mono tracking-widest text-info">{t("sourceSkill.attribution")}</span>
-        <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-md border ${STATUS_TONE_CLASSES[toneForStatus(sourceSkill.riskLevel)]}`}>
-          {sourceSkill.riskLevel}
-        </span>
+        <StatusLabel tone={toneForStatus(sourceSkill.riskLevel)}>{sourceSkill.riskLevel}</StatusLabel>
         <span className="text-[10px] font-mono text-muted">{versionLabel}</span>
       </div>
       <Link
@@ -215,11 +211,12 @@ function SourceSkillDetail({ sourceSkill }: { sourceSkill?: SourceSkillSummary |
   );
 }
 
-function getOperationColor(operation: PatchPreviewRow["operation"]) {
-  if (operation === "APPEND") return STATUS_TONE_CLASSES.info;
-  if (operation === "CREATE") return STATUS_TONE_CLASSES.success;
-  if (operation === "REVIEW") return STATUS_TONE_CLASSES.warning;
-  return STATUS_TONE_CLASSES.neutral;
+/** The tone a patch OPERATION (not a status) is labelled in. */
+function getOperationTone(operation: PatchPreviewRow["operation"]): StatusTone {
+  if (operation === "APPEND") return "info";
+  if (operation === "CREATE") return "success";
+  if (operation === "REVIEW") return "warning";
+  return "neutral";
 }
 
 function PatchPreview({
@@ -242,9 +239,7 @@ function PatchPreview({
           {patchPreview.slice(0, 6).map((row, index) => (
             <div key={`${row.operation}:${row.target}:${index}`} className="px-3 py-2 flex flex-col gap-2">
               <div className="flex flex-wrap items-center gap-2">
-                <span className={`text-[10px] uppercase tracking-widest font-mono px-2 py-0.5 rounded-md border ${getOperationColor(row.operation)}`}>
-                  {row.operation}
-                </span>
+                <StatusLabel tone={getOperationTone(row.operation)}>{row.operation}</StatusLabel>
                 <span className="text-[11px] font-semibold text-foreground">{row.target}</span>
               </div>
               {row.before && <p className="text-[11px] text-muted leading-relaxed">{t("patch.before", { value: row.before })}</p>}
@@ -565,9 +560,9 @@ export default function AgentMemoryPage() {
             cell: (memory) => (
               <>
                 {memory.autoApplied && (
-                  <StatusPill tone="warning" className="mb-1">
+                  <StatusLabel tone="warning" className="mb-1">
                     {t("savedByAi")}
-                  </StatusPill>
+                  </StatusLabel>
                 )}
                 <p className="whitespace-pre-line text-[12px] leading-relaxed text-secondary line-clamp-3">
                   {memory.content}
@@ -579,7 +574,7 @@ export default function AgentMemoryPage() {
             key: "applies",
             header: t("columns.applies"),
             className: "w-[150px]",
-            cell: (memory) => <MemoryApplyModeBadge applyMode={resolveApplyMode(memory)} />,
+            cell: (memory) => <MemoryApplyModeLabel applyMode={resolveApplyMode(memory)} />,
           },
           {
             key: "trackRecord",
@@ -652,9 +647,7 @@ export default function AgentMemoryPage() {
               <div key={candidate.candidateId} className="flex flex-col gap-3 px-4 py-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-[10px] uppercase font-mono tracking-widest text-muted">{t("suggestions.memoryTag")}</span>
-                  <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-md border ${STATUS_TONE_CLASSES[toneForStatus(candidate.riskLevel)]}`}>
-                    {candidate.riskLevel}
-                  </span>
+                  <StatusLabel tone={toneForStatus(candidate.riskLevel)}>{candidate.riskLevel}</StatusLabel>
                 </div>
                 <p className="whitespace-pre-wrap text-[12px] leading-relaxed text-secondary">{candidate.content}</p>
                 <SourceSkillDetail sourceSkill={candidate.sourceSkill} />
@@ -700,9 +693,7 @@ export default function AgentMemoryPage() {
                   <span className="text-[10px] uppercase font-mono tracking-widest text-muted">
                     {getReviewTypeLabel(suggestion.type)}
                   </span>
-                  <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-md border ${STATUS_TONE_CLASSES[toneForStatus(suggestion.riskLevel)]}`}>
-                    {suggestion.riskLevel}
-                  </span>
+                  <StatusLabel tone={toneForStatus(suggestion.riskLevel)}>{suggestion.riskLevel}</StatusLabel>
                 </div>
                 <div>
                   <div className="text-[13px] font-semibold leading-snug text-foreground">{suggestion.title}</div>
@@ -749,9 +740,7 @@ export default function AgentMemoryPage() {
                   <span className="text-[10px] uppercase font-mono tracking-widest text-muted">
                     {getReviewTypeLabel(reflection.category)}
                   </span>
-                  <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-0.5 rounded-md border ${STATUS_TONE_CLASSES[toneForStatus(reflection.riskLevel)]}`}>
-                    {reflection.riskLevel}
-                  </span>
+                  <StatusLabel tone={toneForStatus(reflection.riskLevel)}>{reflection.riskLevel}</StatusLabel>
                 </div>
                 <p className="text-[12px] leading-relaxed text-secondary">{reflection.rootCause}</p>
                 <SourceRunDetail sourceRun={reflection.sourceRun} agentId={agentId} />

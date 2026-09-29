@@ -10,7 +10,7 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
-import { DecisionPill } from "@/src/ui/components/screens/DecisionPill";
+import { DecisionLabel } from "@/src/ui/components/screens/DecisionLabel";
 import { formatDateTime } from "@/src/lib/dates";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
@@ -133,12 +133,12 @@ export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies">
             cell: (row) => (
               <>
                 <span className="line-clamp-2 text-[13px] text-foreground">{row.subject}</span>
-                {/* The Decisions that judged this email, one pill each; the
+                {/* The Decisions that judged this email, one label each; the
                     written reason stands in until a Decision has run. */}
                 {row.decisions.length > 0 ? (
                   <span className="mt-1 flex flex-wrap gap-1">
                     {row.decisions.map((run) => (
-                      <DecisionPill
+                      <DecisionLabel
                         key={run.key}
                         name={answerLabel(run.copyKey, run.answer)}
                         certainty={run.certainty ?? null}

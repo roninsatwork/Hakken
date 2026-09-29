@@ -39,7 +39,10 @@ Core components live under `src/ui/components/screens/`:
 - `src/ui/components/screens/Leaderboard.tsx`: ranked or unranked compact lists for repeated "who used the most" panels.
 - `src/ui/components/screens/SettingsCard.tsx`: settings card, field label, field hint, segmented choice, setting switch, and setting row (label and explanation on the left, any control on the right — the agent Settings page is built from it).
 - `src/ui/components/screens/AccessLevel.tsx`: the read/write context, `useCanWriteHere`, and the write-gated button. Table, page header, modal form and save controls all consult it, so a read-only viewer loses write affordances without each screen checking.
-- `src/ui/components/screens/SaveControls.tsx`: save button, inline error, animated success/error feedback, and feedback pill.
+- `src/ui/components/screens/SaveControls.tsx`: save button, inline error, animated success/error feedback, and the feedback label.
+- `src/ui/components/screens/StatusLabel.tsx`: a status as a small line icon in the status's colour, then plain words — the only way a status is drawn. See Status Labels below.
+- `src/ui/components/screens/TagLabel.tsx`: a kind rather than a status (a category, a count, a plan's name) as plain words in the quiet colour.
+- `src/ui/components/screens/DecisionLabel.tsx`: a Decision's name and certainty as a status label, opening to the spread of answers.
 - `src/ui/components/screens/TableControls.tsx`: table-search controls used where a page needs the kit's input styling without a full `DataTable`.
 - `src/ui/components/screens/CursorPagination.tsx`: cursor-based pagination helper for lists that page by cursor rather than count.
 
@@ -168,7 +171,7 @@ Use `SaveError` for inline save failures. It returns `null` with no children, so
 
 Use `SaveFeedback` for animated success/error banners with title and message. It is used by settings-like pages where the user needs confirmation that a configuration change was persisted.
 
-Use `FeedbackPill` for smaller success or error messages. Success pills are rounded; error pills use a larger rounded rectangle and top-aligned icon.
+Use `FeedbackLabel` for smaller success or error messages: a status label — a tick or a crossed circle, then the words — that wraps when the message is a sentence. No box.
 
 ## Empty States
 
@@ -257,6 +260,38 @@ When adding a new screen, under `/admin` or `/app`:
 
 Do not put UI cards inside other UI cards unless the component already owns that framing. Avoid page-specific table/modal variants unless the existing shared components cannot express the behavior.
 
+## Status Labels
+
+**There are no pills.** On 2026-09-29 Anthony, looking at "Checked once on Google" and "Commercial" on a search's page, said *"I really don't like lozenges … it's a give away it's AI designed"*, and from four drawn alternatives chose a small line icon in the status's colour followed by plain words. Every rounded, tinted chip on the dashboard went that day. The plan and its record: `docs/plans/active/status-labels-plan.md`.
+
+**A status is a `StatusLabel`.** The tone picks the icon; only the icon is coloured; the words stay the page's text colour.
+
+| Tone | Means | Icon | Examples |
+|---|---|---|---|
+| `success` | Good | tick | Commercial, Tracked, Done, Active |
+| `info` | Information, in motion | "i" | Checked once on Google, Running |
+| `warning` | Worth a look | triangle | ronins.co.uk not mentioned, Needs a decision |
+| `danger` | Failed | crossed circle | Failed, Refused |
+| `neutral` | Nothing to say | dash | Not judged yet, Off, Draft |
+
+```tsx
+<StatusLabel tone={toneForStatus(run.status)}>{t(`status.${run.status}`)}</StatusLabel>
+<StatusLabel tone="warning" icon="working">{t("processing")}</StatusLabel>
+```
+
+- **`size`**: `sm` (12px words, 14px icon) in tables and lists, the default; `md` (13px, 15px) in page headers and detail rows. Nothing else.
+- **`icon`** only from the named list in `StatusLabel.tsx` — `working` (a turning circle, for work under way), `approval` (waiting on a person's decision), `waiting` (a clock, for someone else to act — an invitation), `admin` and `member` (a person's role), `pinned` (how many facts are pinned to a wiki page). A new meaning adds a named icon there with a line on why, and a row here; a screen never passes an icon of its own, and the type will not let it.
+- **`wrap`** for a sentence rather than a word or two — what happened after an action, a long identifier — so it wraps beside its icon instead of running off a phone.
+- **`className`** for layout only: margin, width, alignment. Never a colour, a box, a font, capitals or letter-spacing.
+- **Colour is never the only signal.** Anthony is red/green colour blind; the five shapes differ, and the words say it on their own. The icon is hidden from screen readers for that reason.
+- Pick the tone with `toneForStatus` for status strings, or pass it when the meaning is known at the call site. Never a local colour map.
+
+**A kind is a `TagLabel`** — "Wiki staff", a category, "3 users", a model's name, "Unlimited": plain words in the quiet colour, no icon and no box.
+
+**Parts built on them are named `…Label`** — `IntentLabel`, `PageTypeLabel`, `LinkStatusLabel`, `RunStatusLabel`, `DecisionLabel`, `DirectoryUserRoleLabel`, `FeedbackLabel` — and render the kit's part inside them.
+
+**What stays rounded and tinted, because it is not a label:** a button (anything pressed), a code snippet or an ID in monospace, a numbered step circle, an avatar's initials, a notice box, an attached file with its × button. The build counts those per file and freezes them (see below).
+
 ## Headers
 
 Every screen wears one of three headers. Which one is decided by what the page *is*, not by how it looks — settled on 2026-08-22, when the admin section had two headers pretending to be one: the rule under the title appeared on the AI pages and Connections and nowhere else, the main action was white on some pages and orange on others, and forty-three screens drew the title block by hand, each copy having drifted a token at a time.
@@ -279,7 +314,7 @@ Orange means *this page's action*, and nothing else. Filters, pickers, secondary
 
 **A page inside such a section** — a tab's own content. Its own `PageHeader`, with **no** `divider`: the section's `DetailLayout` has already drawn the rule, and a second one reads as two headers stacked. The company Dashboard, Calls and Features tabs are the examples to copy. A tab whose content is a list needs this — the anatomy rule below requires a header above any `DataTable`.
 
-**A record-level page** — one that opens on top of a record: a rule editor, a script, a schedule, a document. `DetailHeader`. It draws a quiet back row on its own line, *then* the standard title block, so the title starts at the left edge exactly like every other page. Status pills go under the description via `pills`, never woven into the title row.
+**A record-level page** — one that opens on top of a record: a rule editor, a script, a schedule, a document. `DetailHeader`. It draws a quiet back row on its own line, *then* the standard title block, so the title starts at the left edge exactly like every other page. Status labels go under the description via `pills`, never woven into the title row.
 
 ```tsx
 <DetailHeader
@@ -287,7 +322,19 @@ Orange means *this page's action*, and nothing else. Filters, pickers, secondary
   icon={<FileCode className="w-6 h-6 text-brand" />}
   title={script.name}
   description={script.summary}
-  pills={<><StatusPill …/><StatusPill …/></>}
+  pills={<><StatusLabel …/><StatusLabel …/></>}
+/>
+```
+
+**A search's page in Sites** — the one record page with a header of its own. `DetailHeader` with `layout="path"`, chosen by Anthony on 2026-09-29 ("B", from a drawing of that page, after *"it looks grown over time and not designed"*). The way back is a quiet path above the title — "Fan-out queries /", from `useRecordBack`'s `page` — the labels share the title's row on the right (`size="md"`), and the sentence under the title is about *this* search, not the kind of page: a search checked once says when and why, and the box that used to repeat its label is gone. No icon. It was asked for on that page alone ("I only asked about one page"): every other record page keeps the stacked header until he says otherwise.
+
+```tsx
+<DetailHeader
+  layout="path"
+  back={back} // { label: "Back to Fan-out queries", href, page: "Fan-out queries" }
+  title={record.keyword}
+  description={t("checkedOnceNotice", { day })}
+  pills={<><StatusLabel size="md" tone="info">…</StatusLabel><IntentLabel size="md" intent={…} /></>}
 />
 ```
 
@@ -319,18 +366,20 @@ This order was a habit copied between screens and written down nowhere until 202
 
 `scripts/check-screen-kit.mjs` fails the build when a file under `src/app/(dashboard)` hand-writes a part the kit already owns, or assembles a list screen in the wrong order. It runs in `npm run check:guards`, which is CI's first step, and has its own test in `scripts/check-screen-kit.test.mjs`.
 
-Eleven rules. Most ask whether a part was drawn by hand; three count parts that cannot reach zero in one sitting; one asks whether the screen is *assembled* right, which is a different question and the one the others kept missing; and one asks whether two screens copied *each other*, which every other rule answers no to by construction.
+Thirteen rules. Most ask whether a part was drawn by hand; three count parts per file because they cannot reach zero in one sitting; one asks whether the screen is *assembled* right, which is a different question and the one the others kept missing; and one asks whether two screens copied *each other*, which every other rule answers no to by construction.
 
 - **A hand-written `<table>`.** Use `TableShell` with `TableHeaderRow`, `TableHeaderCell`, `TableLoadingRow` and `TableEmptyRow`. `TableShell` renders the `<table>` element itself — pass it a `<thead>`/`<tbody>`, never another `<table>`. Two governance screens did the latter and shipped a table nested inside an empty one; that defect is the reason this check exists.
 - **A hand-written `<input>` that a person types into.** Use `Field`, or `TableSearchInput` for a table's search box, or `ModalFormField` inside a modal. `Field` ties the label to the input and will not let a caller skip it.
 - **A table assembled from the loose parts instead of `DataTable`.** Added 2026-08-17. A screen can import every shared part, write no `<table>` and no `<input>`, pass both rules above, and still be one more assembly that drifts. Triggered by a `<thead>` or by importing `TableShell`, `TableHeaderRow`, `TableHeaderCell`, `TableLoadingRow` or `TableEmptyRow` in a file that does not render `DataTable`. `SearchBar`, `PaginationFooter` and `LoadMoreFooter` are deliberately excluded — a screen may legitimately page a list of cards.
 - **A hand-written tick box.** Added 2026-08-22. Use `Checkbox` (`src/ui/components/screens/Checkbox.tsx`), with `labelHidden` for a box in a table cell whose row already names it. This rule was deliberately absent until the part existed: flagging a tick box with no shared tick box to move onto would have been a build failure with no correct fix.
 - **An on/off switch drawn from `ToggleLeft`/`ToggleRight` glyphs.** Added 2026-08-23. There are two right answers. A **list** of things that are on or off is a table: use `DataTable` with `Checkbox` in the last column, as System Security and Self-Improvement do. A **single setting inside a form** is not a list, and a one-row table would be its own kind of wrong: use `SettingSwitch` (`src/ui/components/screens/SettingsCard.tsx`) inside a `SettingsCard`, as the agent settings and API Keys screens do. Either way a glyph pair is a switch redrawn by eye, and it states itself in colour alone — unreadable to anyone who cannot separate the two colours it picked. Four files frozen: the retention modal's status switch, which is one control in a dialog, and the three schedule screens.
-- **A component declared under a name the kit already exports.** Added 2026-08-23, and the first rule about two screens copying *each other* rather than either copying the kit — which is exactly why nothing caught it for months. API Keys and the connector detail screen each held a private `SettingSwitch`, identical to the kit's character for character except that one used `py-3` where the others used `py-4`. The agent observability screen declared its own `StatusPill`, which was not a copy but something different wearing a familiar name. The kit's exported names are read from `src/ui/components/screens/` and `src/ui/components/screens/` at check time, so adding a component protects its name the same day. If yours genuinely is different, name it for what it adds — `RunStatusPill` — and render the kit's part inside it. **This list starts empty.**
+- **A component declared under a name the kit already exports.** Added 2026-08-23, and the first rule about two screens copying *each other* rather than either copying the kit — which is exactly why nothing caught it for months. API Keys and the connector detail screen each held a private `SettingSwitch`, identical to the kit's character for character except that one used `py-3` where the others used `py-4`. The agent observability screen declared its own `StatusPill`, which was not a copy but something different wearing a familiar name. The kit's exported names are read from `src/ui/components/screens/` and `src/ui/components/screens/` at check time, so adding a component protects its name the same day. If yours genuinely is different, name it for what it adds — `RunStatusLabel` — and render the kit's part inside it. **This list starts empty.**
 - **A divided list drawn by hand.** Added 2026-08-23. `last:border-0` or `last:border-b-0` on a mapped row is a screen announcing that it draws its own list — "except the last one" is only something you say about a repetition, and both `CompactList` and `DataTable` own their dividers. Use `CompactList` (`src/ui/components/screens/CompactList.tsx`) for a run of rows inside a panel that has already introduced itself — a run history, a list of changes, a page's backlinks — or `DataTable` for a screen's own records. Twelve files carried it when the sweep began; six are frozen, and the six that came off became one shared `Leaderboard` and three `CompactList`s.
 - **More raw `<button>`s than a file's frozen count.** Added 2026-08-19. Use `Button` (`src/ui/components/screens/Button.tsx`). Counted per file rather than listed, because a file with eleven raw buttons cannot be asked to reach zero in one sitting — only never to reach twelve. Reads all of `src/app` and `src/ui`, except the movement demos and `Button` itself.
 - **More hand-written page headings than a file's frozen count.** Use `PageHeader`, `DetailHeader` or `DetailLayout`, which own the title recipe.
 - **The header's underline drawn by hand.** `border-b border-border-dim pb-6` is the header components' own line. Pass `divider` to `PageHeader`, or use `DetailHeader`/`DetailLayout`.
+- **A pill.** Added 2026-09-29, when every pill went (Status Labels, above). A class string with the whole recipe — rounded ends or a tag's small radius, a tinted fill, a small word or a chip's tight padding — that nothing can press. Counted per file like buttons, over `src/app/(dashboard)` and `src/ui` (the Arcade games keep their own look): what still matched that day is not a status — code snippets, step circles, an avatar's initials, attached files, the workflow canvas's field names, the side menu's count — and is frozen. One more is the failure. Use `StatusLabel` for a status, `TagLabel` for a kind.
+- **A part named as a pill.** Added 2026-09-29. A component declared `…Pill`, `…Badge` or `…Chip` fails by name: that is how the next pill would arrive looking like a shared part. Two names are frozen because neither draws a pill — `AssistantStagePill`, the assistant's turning "Thinking…" line, and `PhotoActionChip`, the photo action card.
 - **A table on a page with no header above it.** Added 2026-08-22, and the first rule about a screen's shape rather than its parts. A file rendering `DataTable` must render `PageHeader`, `DetailHeader` or `DetailLayout` earlier in the file. 46 of the 55 screens rendering `DataTable` already did; the nine frozen are sub-tables whose header lives in the parent page.
 
 A radio, file picker, colour swatch, slider or hidden input is not covered. The kit has no part for those, so flagging one would be a build failure with no correct fix.

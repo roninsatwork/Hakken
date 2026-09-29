@@ -147,6 +147,24 @@ runner is small, busy and slowed by coverage — so they skip when
 `GITHUB_ACTIONS` is set. The local `npm run check` above is therefore the only
 place they run: never push without it. Every other test still runs on GitHub.
 
+**Test time limits** (Anthony, 2026-09-28, after every CI run that failed in
+its tests since 2026-09-21 — runs 6, 7, 14, 15 and 18 — failed on a clock, not
+a result):
+
+- **One time limit, set in `vitest.config.ts` and nowhere else**: three minutes
+  on GitHub, where it only catches a test that hangs, and thirty seconds here.
+  Never give a test or a hook its own limit (`}, 15_000);`, `{ timeout }`):
+  it overrides the config on GitHub too. `src/test-time-limits-drift.test.ts`
+  fails one.
+- **Speed is judged here, not on GitHub.** GitHub's runner is small and shared,
+  measures coverage and starts every file at once: it runs this suite 10 to 12
+  times slower than a laptop, and in any full run most of a slow time is
+  waiting to load the app's code (a 57ms test measured 6.4s). So
+  `npm run test:run` — inside `npm run check` — times every test, times again
+  on its own any test over five seconds, and fails if it is still over
+  (`scripts/check-test-speed.mjs`). Make a slow test lighter. The list of
+  tests slow on purpose in that script may shrink, never grow.
+
 Two different things run on GitHub, and it matters which one you are about to
 trigger.
 
@@ -320,6 +338,14 @@ npm run convex:dev
   `src/ui/components/screens/statusTone.ts` instead. Sanctioned exceptions: the public
   site's own palette, `movementPalette.ts`, `chartPalette.ts`. See
   `docs/plans/active/theme-compliance-plan.md`.
+- **No pills** (Anthony, 2026-09-29: "a give away it's AI designed"). A status
+  is a `StatusLabel` — a small line icon in the status's colour, then plain
+  words, no box, fill, border or rounded ends; a kind (a category, a count) is
+  a `TagLabel`, plain grey words. Both in `src/ui/components/screens/`. Never
+  draw a rounded, tinted chip and never name a part `…Pill`, `…Badge` or
+  `…Chip`: `npm run check:guards` fails both. He is red/green colour blind, so
+  the icon's shape and the words carry the meaning, never the colour alone.
+  See "Status Labels" in `docs/developer/screen-kit.md`.
 - Avoid committing generated reports, build output, local caches, or scratch artifacts.
 
 ## Code Quality Priorities

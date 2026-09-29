@@ -21,6 +21,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { formatDate } from "@/src/lib/dates";
 
@@ -238,9 +239,7 @@ export default function UserDirectoryPage() {
                  * ancient timestamps would read as "logged in long ago", which is
                  * a different and more reassuring claim.
                  */
-                <span className="text-[11px] uppercase tracking-[0.08em] px-2 py-1 rounded-full bg-foreground/5 text-muted">
-                  {t("table.never")}
-                </span>
+                <StatusLabel tone="neutral">{t("table.never")}</StatusLabel>
               ) : (
                 <span className="text-[13px] text-secondary" title={formatDate(person.lastLoginAt)}>
                   {relativeDays(person.lastLoginAt)}

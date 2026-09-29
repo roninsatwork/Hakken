@@ -10,7 +10,7 @@ import type { Doc } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { HakkenMarkdown } from "@/src/ui/components/chat/HakkenMarkdown";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
@@ -124,7 +124,7 @@ export default function SiteAnswersPage() {
               key: "stance",
               header: t("columns.stance"),
               className: "align-top",
-              cell: (row) => <StatusPill tone={STANCE_TONES[row.stance]}>{t(`stances.${row.stance}`)}</StatusPill>,
+              cell: (row) => <StatusLabel tone={STANCE_TONES[row.stance]}>{t(`stances.${row.stance}`)}</StatusLabel>,
             },
             {
               key: "answer",

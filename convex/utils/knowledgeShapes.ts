@@ -122,24 +122,26 @@ export const documentInspectionShape = v.object({
   safetyNotice: v.string(),
 });
 
+const retrievalTestPassageShape = v.object({
+  documentId: v.id("knowledgeDocuments"),
+  chunkId: v.id("knowledgeChunks"),
+  title: documentFields.title,
+  preview: v.string(),
+});
+
+/**
+ * "Test retrieval": what the AI would read from one shelf for a question —
+ * the same search and the same choosing (knowledge-relevance-cutoff-plan.md,
+ * gap 2), not the word match it once was.
+ */
 export const retrievalTestShape = v.object({
   query: v.string(),
-  inspectedDocuments: v.number(),
-  inspectedChunks: v.number(),
-  matches: v.array(v.object({
-    documentId: v.id("knowledgeDocuments"),
-    chunkId: v.id("knowledgeChunks"),
-    title: documentFields.title,
-    status: documentStatusShape,
-    format: documentFields.format,
-    sourceUrl: documentFields.sourceUrl,
-    score: v.number(),
-    matchedTerms: v.array(v.string()),
-    phraseHit: v.boolean(),
-    preview: v.string(),
-    embeddingModelId: v.optional(v.string()),
-    embeddingDimensions: v.number(),
-  })),
+  /** Pieces the search found, before any were chosen. */
+  found: v.number(),
+  /** What would be read, in the order it is read. */
+  matches: v.array(retrievalTestPassageShape),
+  /** What the relevance cut-off left out, best-ranked first; none while it is Off or asking a person. */
+  leftOut: v.array(retrievalTestPassageShape),
   safetyNotice: v.string(),
 });
 

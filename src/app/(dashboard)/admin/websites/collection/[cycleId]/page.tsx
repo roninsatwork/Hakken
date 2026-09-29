@@ -11,7 +11,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
 import { formatDateTime } from "@/src/lib/dates";
@@ -100,21 +100,21 @@ export default function SeoCycleDetailPage() {
         })}
         pills={
           <>
-            <StatusPill tone={CYCLE_TONES[cycle.status] ?? "neutral"}>
+            <StatusLabel tone={CYCLE_TONES[cycle.status] ?? "neutral"}>
               {t(`status.${cycle.status}`)}
-            </StatusPill>
-            <StatusPill tone="neutral">
+            </StatusLabel>
+            <StatusLabel tone="neutral">
               {t("readyOfPlanned", { ready: cycle.ready, planned: cycle.planned })}
-            </StatusPill>
+            </StatusLabel>
             {cycle.reused > 0 ? (
-              <StatusPill tone="success">{t("reused", { count: cycle.reused })}</StatusPill>
+              <StatusLabel tone="success">{t("reused", { count: cycle.reused })}</StatusLabel>
             ) : null}
             {cycle.failed > 0 ? (
-              <StatusPill tone="warning">{t("failed", { count: cycle.failed })}</StatusPill>
+              <StatusLabel tone="warning">{t("failed", { count: cycle.failed })}</StatusLabel>
             ) : null}
-            <StatusPill tone="neutral">
+            <StatusLabel tone="neutral">
               {t("runCost", { cost: cycle.costUsd.toFixed(4) })}
-            </StatusPill>
+            </StatusLabel>
           </>
         }
       />
@@ -184,9 +184,9 @@ export default function SeoCycleDetailPage() {
             header: t("stateColumn"),
             cell: (row) => (
               <div className="flex flex-col gap-1">
-                <StatusPill tone={row.status === "READY" ? "success" : row.status === "FAILED" ? "danger" : "info"}>
+                <StatusLabel tone={row.status === "READY" ? "success" : row.status === "FAILED" ? "danger" : "info"}>
                   {t(`pull.${row.status}`)}
-                </StatusPill>
+                </StatusLabel>
                 {row.error ? (
                   <span className="max-w-sm text-[11px] leading-relaxed text-warning">{row.error}</span>
                 ) : null}

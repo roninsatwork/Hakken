@@ -4,7 +4,7 @@ import type { QueryCtx } from "./_generated/server";
 import { SEO_KEYWORD_CHECK_OPERATION } from "./dataForSeoRegistry";
 import { tenantQuery } from "./tenantFunctions";
 import { listHold, listWebsiteId, requireMySite } from "./siteAccess";
-import { holdSearch, holdSearches } from "./holdLists";
+import { holdFirstCheck, holdSearch, holdSearches } from "./holdLists";
 import { searchVerdict, searchVerdictValidator } from "./utils/trackingVerdicts";
 import { MAX_LIST, type Site } from "./websiteSiteRows";
 
@@ -145,11 +145,12 @@ export const searchPositions = tenantQuery({
     // and never a one-by-one check: those, "checked, not found" rows among
     // them, exist only because some company tracks the search, so showing them
     // would say that someone does (docs/plans/active/sites-audit-fixes-plan.md,
-    // 1.2 and F1).
+    // 1.2 and F1). A fan-out query this company gave its first check is its own
+    // asking, so its checks are read as a tracked search's are.
     const holdId = listHold(site);
     const charted: Array<{ keyword: string; tracked: boolean }> = [];
     for (const keyword of args.keywords.slice(0, MAX_CHARTED)) {
-      if (await holdSearch(ctx, holdId, keyword)) {
+      if ((await holdSearch(ctx, holdId, keyword)) || (await holdFirstCheck(ctx, holdId, keyword))) {
         charted.push({ keyword, tracked: true });
         continue;
       }

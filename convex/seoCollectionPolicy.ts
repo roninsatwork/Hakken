@@ -97,6 +97,16 @@ export const SEO_CYCLE_RETENTION_DAYS = 90;
  */
 export const SEO_BACKOFF_MS = [10_000, 60_000, 300_000] as const;
 
+/**
+ * The waits before asking again when DataForSEO's own supplier refused and
+ * charged nothing — Google over its limit for DataForSEO, all ten of Ronins'
+ * questions to its engine on 2026-09-29 (Anthony: "don't we retry but slower"). A
+ * minute, two, then three, inside the Collector's run while the rest of the
+ * queue carries on; refused after the last, or with no run left for the next
+ * wait, the request is failed and the next night's run asks again.
+ */
+export const SEO_SUPPLIER_RETRY_WAITS_MS = [60_000, 120_000, 180_000] as const;
+
 export function seoBackoffMs(attempt: number): number {
   const index = Math.min(Math.max(attempt, 0), SEO_BACKOFF_MS.length - 1);
   return SEO_BACKOFF_MS[index];

@@ -236,7 +236,7 @@ beforeAll(async () => {
     import("./aiModels"),
     import("./chat"),
   ]);
-}, 60_000);
+});
 
 /**
  * Seed the minimum an agent run needs: a tenant, a user, an enabled model, an

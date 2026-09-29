@@ -9,7 +9,7 @@ import { Layers } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TableFilterSelect } from "@/src/ui/components/screens/TableControls";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
@@ -176,9 +176,9 @@ export default function SeoCollectionPage() {
               return (
                 <div className="flex flex-col gap-1">
                   {/* Answered but not filed reads as a problem, not as collected (V1). */}
-                  <StatusPill tone={row.notFiled ? "warning" : TONES[row.status] ?? "neutral"}>
+                  <StatusLabel tone={row.notFiled ? "warning" : TONES[row.status] ?? "neutral"}>
                     {row.notFiled ? t("notFiled") : t(`pull.${row.status}`)}
-                  </StatusPill>
+                  </StatusLabel>
                   {outHours > 0 ? <span className="text-[11px] text-warning">{t("outLong", { hours: outHours })}</span> : null}
                   {row.lastFetch ? (
                     <span className="max-w-sm text-[11px] leading-relaxed text-secondary">

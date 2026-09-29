@@ -353,6 +353,30 @@ export const siteTables = {
     .index("by_pull", ["pullId"]),
 
   /**
+   * How many people search for a phrase each month from one place, what
+   * advertisers pay for it and how hard they compete — Google Ads' figures,
+   * bought from DataForSEO for the searches no website's keyword list holds:
+   * the AI's fan-out queries (`searchVolumes.ts`, Anthony, 2026-09-29). A fact
+   * about the search, the same for everyone who meets it, so shared like
+   * Google's results pages. Null where Google reports too few searches.
+   */
+  searchVolumes: defineTable({
+    keyword: v.string(),
+    locationCode: v.number(),
+    volume: v.union(v.number(), v.null()),
+    /** US dollars per click. */
+    cpc: v.union(v.number(), v.null()),
+    /** LOW, MEDIUM or HIGH. */
+    competition: v.union(v.string(), v.null()),
+    /** The last twelve months' searches, oldest first. */
+    trend: v.array(v.number()),
+    checkedDay: v.string(),
+    pullId: v.id("seoDataPulls"),
+    updatedAt: v.number(),
+  })
+    .index("by_keyword_place", ["keyword", "locationCode"]),
+
+  /**
    * What an AI engine said, word for word (D9, "Stored answers").
    *
    * Beside the answer rather than on it: `aiAnswers` is read many times over

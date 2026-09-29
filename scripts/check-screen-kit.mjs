@@ -112,6 +112,21 @@ import { fileURLToPath } from "node:url";
  *   differently: the divider, the row rhythm, and what the list said when it was
  *   empty.
  *
+ * - A pill. Added 2026-09-29, when Anthony, looking at "Checked once on
+ *   Google" and "Commercial" on a search's page, said *"I really don't like
+ *   lozenges … it's a give away it's AI designed"* and chose, from four drawn
+ *   alternatives, a small line icon in the status's colour followed by plain
+ *   words. Every pill on the dashboard went the same day: a status became a
+ *   `StatusLabel`, a kind a `TagLabel` (both src/ui/components/screens/). A
+ *   pill is recognised by its recipe — rounded ends, a tinted fill, a small
+ *   word — in one class string that nothing can click, and counted per file
+ *   like buttons, because what matched that day and stayed is not a status at
+ *   all: a code snippet, a numbered step circle, an avatar's initials. Those
+ *   are frozen; one more is the failure. With it goes a part *named* as one —
+ *   a component declared `…Pill`, `…Badge` or `…Chip` — which is how the next
+ *   pill would arrive looking like a shared part. Two keep their names, being
+ *   no pill: the assistant's stage line and the photo action card.
+ *
  * A file picker, a colour swatch and a slider are still deliberately not
  * covered. The kit has no replacement for them, so flagging one would be a
  * build failure with no correct fix.
@@ -230,7 +245,7 @@ const RULES = {
       "If yours is genuinely a different component, give it a different name: a reader\n" +
       "who sees a familiar name and gets something else has been misled by the file.\n" +
       "If it wraps the kit's — a run status turned into a tone, say — name it for what\n" +
-      "it adds (RunStatusPill) and render the kit's part inside it.",
+      "it adds (RunStatusLabel) and render the kit's part inside it.",
   },
   switches: {
     part: "an on/off switch",
@@ -300,6 +315,26 @@ const RULES = {
       "whose tabs live in a layout. All three own the same title recipe, so a heading\n" +
       "written by hand is a copy that will drift from it.",
   },
+  pills: {
+    part: "a pill",
+    headline: "These draw more pills than their frozen count allows:",
+    fix:
+      "A status is a StatusLabel (src/ui/components/screens/StatusLabel.tsx): a small line\n" +
+      "icon in the status's colour, then plain words — no box, fill, border or rounded ends.\n" +
+      "Pick the tone (success, info, warning, danger, neutral) and the tone picks the icon.\n" +
+      "A kind rather than a status — a category, a count, a plan's name — is a TagLabel\n" +
+      "(screens/TagLabel.tsx): plain words in the quiet colour. Anthony chose this on\n" +
+      "2026-09-29 to replace every pill; see \"Status labels\" in docs/developer/screen-kit.md.",
+  },
+  pillNames: {
+    part: "a part named as a pill",
+    headline: "These declare a component named as a pill, badge or chip:",
+    fix:
+      "There are no pills any more, so there is nothing for a new …Pill, …Badge or …Chip to\n" +
+      "be. A part that says a status is a …Label drawing StatusLabel inside it (IntentLabel,\n" +
+      "RunStatusLabel); a part that says a kind draws TagLabel. See \"Status labels\" in\n" +
+      "docs/developer/screen-kit.md.",
+  },
   headerRule: {
     part: "the header's rule",
     headline: "These draw the header's underline by hand:",
@@ -367,6 +402,11 @@ export function loadFrozen(source = ALLOWLIST_FILE) {
     // had?".
     headings: new Map(Object.entries(allowlist.headings ?? {})),
     headerRule: new Set(allowlist.headerRule ?? []),
+    // Counted per file like buttons: what still matched the pill recipe the
+    // day every pill went is not a status (a code snippet, a step circle).
+    pills: new Map(Object.entries(allowlist.pills ?? {})),
+    // Names, not files: a name is what would mislead the next reader.
+    pillNames: new Set(allowlist.pillNames ?? []),
   };
 }
 
@@ -515,6 +555,75 @@ const TOGGLE_GLYPHS = /<Toggle(Left|Right)\b/;
  * so a screen on the kit never needs to write it.
  */
 const HAND_DRAWN_DIVIDER = /\blast:border-(?:b-)?0\b/;
+
+/**
+ * Where the pill rules read: every dashboard screen and every shared component,
+ * because the pills lived in both. The Arcade games keep their own look, and
+ * the public site and the embedded widget are outside these folders.
+ */
+const PILL_SCAN_DIRS = [path.join("src", "app", "(dashboard)"), path.join("src", "ui")];
+const PILL_EXEMPT = [path.join("src", "app", "(dashboard)", "app", "arcade") + path.sep];
+
+/** Rounded ends, or the small radius a tag wears; an 8px box or a 12px card is a panel, not a pill. */
+const PILL_ROUNDED = /(?:^|\s)rounded(?:-full|-sm|-md|-\[[2-6]px\])?(?=\s|$)/;
+const PILL_TINT =
+  /(?:^|\s)(?:dark:)?bg-(?:(?:success|warning|info|destructive|brand|primary|foreground|secondary|muted|white|black)\/[\d.]+|\[#[0-9a-fA-F]{3,8}\](?:\/[\d.]+)?|(?:red|green|emerald|amber|yellow|blue|sky|rose|orange|purple|violet|indigo|teal|cyan|lime|pink|zinc|gray|slate|neutral|stone)-\d{2,3}\/[\d.]+)(?=\s|$)/;
+/** A word or two: small type, or the tight padding a chip has and a panel does not. */
+const PILL_SMALL_TEXT = /(?:^|\s)(?:text-\[(?:8|9|10|10\.5|11|11\.5)px\]|text-xs)(?=\s|$)/;
+const PILL_TIGHT = /(?:^|\s)px-(?:1|1\.5|2|2\.5|3)(?=\s|$)[\s\S]*?(?:^|\s)py-(?:0|px|0\.5|1)(?=\s|$)|(?:^|\s)py-(?:0|px|0\.5|1)(?=\s|$)[\s\S]*?(?:^|\s)px-(?:1|1\.5|2|2\.5|3)(?=\s|$)/;
+/** A class string something can press or type into is a button's or a field's question. */
+const PILL_INTERACTIVE = /(?:^|\s)(?:hover:|focus:|focus-visible:|disabled:|cursor-pointer|file:|placeholder:)/;
+
+/**
+ * How many pills a file draws: class strings carrying the whole recipe —
+ * rounded ends, a tinted fill, a small word — that nothing can press.
+ *
+ * Read string by string rather than line by line, so a recipe split across a
+ * template literal's lines is still one string. Quotes are not allowed to
+ * cross a line, which keeps an apostrophe in a sentence from swallowing the
+ * code after it.
+ */
+export function countPills(text) {
+  let count = 0;
+  for (const quoted of text.match(/"[^"\n]*"|'[^'\n]*'|`[^`]*`/g) ?? []) {
+    // Quotes and template punctuation read as spaces, so a class at either end
+    // of a string, or inside a ternary within a template, still meets a boundary.
+    const literal = quoted.replace(/["'`${}()]/g, " ");
+    if (
+      PILL_ROUNDED.test(literal) &&
+      PILL_TINT.test(literal) &&
+      (PILL_SMALL_TEXT.test(literal) || PILL_TIGHT.test(literal)) &&
+      !PILL_INTERACTIVE.test(literal)
+    ) {
+      count += 1;
+    }
+  }
+  return count;
+}
+
+/** The components a file declares under a pill's name. */
+export function pillNamesIn(text) {
+  const names = [];
+  for (const match of text.matchAll(new RegExp(COMPONENT_DECLARATION.source, "gm"))) {
+    if (/(?:Pill|Badge|Chip)$/.test(match[1])) names.push(match[1]);
+  }
+  return names;
+}
+
+/** Every file the pill rules read, already relative to the root it was given. */
+function listPillFiles(root = rootDir) {
+  const files = [];
+  for (const dir of PILL_SCAN_DIRS) {
+    const full = path.join(root, dir);
+    if (!fs.existsSync(full)) continue;
+    for (const file of listFiles(full)) {
+      const relative = path.relative(root, file);
+      if (PILL_EXEMPT.some((exempt) => relative.startsWith(exempt))) continue;
+      files.push(relative);
+    }
+  }
+  return files;
+}
 
 /** Every file the buttons rule reads, already relative to the root it was given. */
 function listButtonFiles(root = rootDir) {
@@ -722,6 +831,24 @@ export function findHandWrittenParts(frozen = loadFrozen(), root = rootDir) {
     }
   }
 
+  // Pills count per file the way buttons do, and a part named as one fails by
+  // name wherever it is declared.
+  for (const relative of listPillFiles(root)) {
+    const text = readIfPresent(path.join(root, relative));
+    if (text === null) continue;
+
+    const count = countPills(text);
+    const ceiling = frozen.pills.get(relative) ?? 0;
+    if (count > ceiling) {
+      offenders.push({ rule: "pills", file: relative, count, frozen: ceiling });
+    }
+
+    for (const name of pillNamesIn(text)) {
+      if (frozen.pillNames.has(name)) continue;
+      offenders.push({ rule: "pillNames", file: relative, line: text.slice(0, text.search(new RegExp(`(?:function|const)\\s+${name}\\b`))).split("\n").length, name });
+    }
+  }
+
   return offenders;
 }
 
@@ -748,6 +875,28 @@ export function findStaleFreezes(frozen = loadFrozen(), root = rootDir) {
     }
     if (countHandWrittenHeadings(fs.readFileSync(full, "utf8")) === 0) {
       stale.push({ rule: "headings", file: relative, reason: "no longer draws a heading by hand" });
+    }
+  }
+
+  for (const relative of frozen.pills.keys()) {
+    const full = path.join(root, relative);
+    if (!fs.existsSync(full)) {
+      stale.push({ rule: "pills", file: relative, reason: "no longer exists" });
+      continue;
+    }
+    if (countPills(fs.readFileSync(full, "utf8")) === 0) {
+      stale.push({ rule: "pills", file: relative, reason: "no longer draws a pill" });
+    }
+  }
+
+  if (frozen.pillNames.size > 0) {
+    const declared = new Set();
+    for (const relative of listPillFiles(root)) {
+      const text = readIfPresent(path.join(root, relative));
+      if (text !== null) for (const name of pillNamesIn(text)) declared.add(name);
+    }
+    for (const name of frozen.pillNames) {
+      if (!declared.has(name)) stale.push({ rule: "pillNames", file: name, reason: "is no longer declared" });
     }
   }
 
@@ -796,8 +945,10 @@ function main() {
         `${frozen.controls.size} footerless tables, ` +
         `${frozen.assembled.size} hand-assembled tables, ${buttonCount} raw buttons ` +
         `(across ${frozen.buttons.size} files), ${headingCount} hand-written headings ` +
-        `(across ${frozen.headings.size} files) and ${frozen.headerRule.size} hand-drawn ` +
-        `header rules frozen, no new ones.`
+        `(across ${frozen.headings.size} files), ${frozen.headerRule.size} hand-drawn ` +
+        `header rules, ${[...frozen.pills.values()].reduce((sum, count) => sum + count, 0)} ` +
+        `pill-shaped non-statuses (across ${frozen.pills.size} files) and ` +
+        `${frozen.pillNames.size} pill-named parts frozen, no new ones.`
     );
     return;
   }

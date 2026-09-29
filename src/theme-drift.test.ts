@@ -87,7 +87,7 @@ function countDrift() {
  * The recorded baseline. Lower it whenever a migration lands; never raise it.
  * If this test fails on your change, you added a hardcoded colour — use the
  * theme tokens (text-success/destructive/warning/info, bg-card, text-muted,
- * border-border-dim, …) or the StatusPill atom instead. See
+ * border-border-dim, …) or the StatusLabel atom instead. See
  * docs/plans/active/theme-compliance-plan.md.
  */
 /*
@@ -102,18 +102,17 @@ function countDrift() {
  * palette work that should have lowered it left it alone deliberately.
  */
 // 2026-09-12: the Night Heist arcade replacement removes 21 colour literals.
+// 2026-09-29: every pill went (status-labels plan), and 89 colour literals with them: 772 → 683.
 const DRIFT_BASELINE = ratchets.theme;
 
 /**
- * Files allowed to keep a local `get*Color`-style helper: one maps patch
- * OPERATIONS (not statuses) through the shared tone classes, the other maps
- * a numeric score inside the frozen movement demo's domain palette. A new
- * helper anywhere else is the copy-paste pattern that produced eighteen
- * divergent status colour maps — extend `src/ui/components/screens/statusTone.ts` instead.
+ * Files allowed to keep a local `get*Color`-style helper. None now: the last,
+ * the agent memory screen's operation colours, became a tone helper feeding
+ * `StatusLabel` when the pills went (2026-09-29). A new helper anywhere is the
+ * copy-paste pattern that produced eighteen divergent status colour maps —
+ * extend `src/ui/components/screens/statusTone.ts` instead.
  */
-const ALLOWED_COLOR_HELPER_FILES = [
-  "src/app/(dashboard)/admin/agents/[id]/memory/page.tsx",
-];
+const ALLOWED_COLOR_HELPER_FILES: string[] = [];
 
 describe("status colour helpers stay consolidated", () => {
   it("no new local get*Color helpers appear outside the allowed files", () => {
@@ -157,7 +156,7 @@ describe("theme drift ratchet", () => {
         .join("\n");
       throw new Error(
         `Theme drift rose to ${total} (baseline ${DRIFT_BASELINE}).\n` +
-        `Use theme tokens or StatusPill instead of hardcoded colours.\n` +
+        `Use theme tokens or StatusLabel instead of hardcoded colours.\n` +
         `Worst files:\n${worst}`,
       );
     }

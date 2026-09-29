@@ -3,14 +3,13 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
-import { KeyRound } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { Button } from "@/src/ui/components/screens/Button";
 import { SettingsCard } from "@/src/ui/components/screens/SettingsCard";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
-import { ExternalUrlCell, IntentPill, PositionCell, RecordLinkCell, TrendCell, useFeatureLabel } from "../../../_components/SiteCells";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { ExternalUrlCell, IntentLabel, PositionCell, RecordLinkCell, TrendCell, useFeatureLabel } from "../../../_components/SiteCells";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
@@ -20,6 +19,9 @@ import { formatCpc, formatDay, formatNumber, formatShortDay, movement, movementC
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { isPartHeld } from "../../../_components/SiteCoverage";
+import { pagePath } from "@/convex/utils/siteShapes";
+import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
+import { SearchAnswers } from "./SearchAnswers";
 
 /** Results shown before "Show all": Google's first page. */
 const PAGE_ONE = 10;
@@ -42,6 +44,8 @@ function formatUsd(value: number | null): string {
  */
 export default function SiteKeywordPage() {
   const t = useTranslations("sites.keywordRecord");
+  const tv = useTranslations("sites.aiSearched.pageVerdict");
+  const engineLabel = useEngineLabel();
   const tr = useTranslations("sites.record");
   const siteId = useSiteId();
   const site = useSite();
@@ -55,13 +59,15 @@ export default function SiteKeywordPage() {
   const [allResults, setAllResults] = useState(false);
 
   const record = useQuery(api.siteRecords.keywordRecord, asked ? { siteId, keyword: asked } : "skip");
+  // The search as a fan-out query: what the Fan-out queries table left to this page.
+  const fromAi = useQuery(api.siteAngles.keywordAngle, asked ? { siteId, keyword: asked } : "skip");
   const positions = useQuery(
     api.siteGoogle.searchPositions,
     record ? { siteId, keywords: [record.keyword], from: range.from, to: range.to } : "skip",
   );
 
   if (!asked) {
-    return <DetailHeader back={back} icon={<KeyRound className="h-6 w-6 text-brand" />} title={t("missingTitle")} description={t("missingBody")} />;
+    return <DetailHeader layout="path" back={back} title={t("missingTitle")} description={t("missingBody")} />;
   }
 
   const rank = record?.rank ?? null;
@@ -71,7 +77,17 @@ export default function SiteKeywordPage() {
   // Where it ranks now, and with which page; nothing for a search it lost.
   const rankedAt = rank && rank.status !== "LOST" ? rank.position : null;
   const rankedPage = rank && rank.status !== "LOST" && rank.page !== "" ? rank.page : null;
-  const ranking = rankedAt !== null;
+  // A search this company tracks, or gave its one first check as a fan-out
+  // query, was checked on Google itself: where that check found the site
+  // stands in for a search the site's keyword list does not hold.
+  const checkedOnce = record?.checkedOnce ?? null;
+  const check = record?.tracked?.lastCheckedDay
+    ? { position: record.tracked.lastPosition, day: record.tracked.lastCheckedDay }
+    : checkedOnce;
+  const checkedAt = rankedAt === null ? check?.position ?? null : null;
+  const shownAt = rankedAt ?? checkedAt;
+  const ranking = shownAt !== null;
+  const checkedResult = checkedAt !== null ? record?.serp?.results.find((row) => row.isYou && row.url) ?? null : null;
 
   const positionDetail = (() => {
     if (!rank) return null;
@@ -84,6 +100,10 @@ export default function SiteKeywordPage() {
       : <span className={movementClass(moved.tone)}>{t("figures.movedSince", { moved: moved.text, day: formatDay(rank.previousDay) })}</span>;
   })();
 
+  // Google Ads' figures for a search the keyword list does not measure: a fan-out query's (`searchVolumes.ts`).
+  const bought = record?.bought ?? null;
+  const boughtLow = bought && bought.trend.length > 0 ? Math.min(...bought.trend) : null;
+  const boughtHigh = bought && bought.trend.length > 0 ? Math.max(...bought.trend) : null;
   const trendLow = search && search.trend.length > 0 ? Math.min(...search.trend) : null;
   const trendHigh = search && search.trend.length > 0 ? Math.max(...search.trend) : null;
   const aboutFacts: SiteFact[] = search
@@ -99,7 +119,7 @@ export default function SiteKeywordPage() {
         label: t("about.searchIntent"),
         value: search.searchIntent ? (t.has(`about.searchIntents.${search.searchIntent}`) ? t(`about.searchIntents.${search.searchIntent}`) : search.searchIntent) : "–",
       },
-      { key: "ourIntent", label: t("about.ourIntent"), value: <IntentPill intent={search.intent} /> },
+      { key: "ourIntent", label: t("about.ourIntent"), value: <IntentLabel intent={search.intent} /> },
       { key: "results", label: t("about.results"), value: formatNumber(search.resultsCount) },
       {
         key: "features",
@@ -123,8 +143,44 @@ export default function SiteKeywordPage() {
         ]
         : []),
     ]
-    : [];
+    : record?.serp || bought
+      // Not in the keyword list: what the results page itself showed, and
+      // Google Ads' figures where they were bought (`searchVolumes.ts`).
+      ? [
+        ...(record?.serp ? [{
+          key: "features",
+          label: t("about.features"),
+          value: record.serp.features.length === 0 ? "–" : record.serp.features.map(featureLabel).join(", "),
+        }] : []),
+        {
+          key: "volume",
+          label: t("figures.volume"),
+          value: !bought
+            ? <span className="text-muted">{t("about.notInList")}</span>
+            : bought.volume === null ? <span className="text-muted">{t("about.tooFew")}</span> : formatNumber(bought.volume),
+        },
+        ...(bought ? [
+          {
+            key: "competition",
+            label: t("about.competition"),
+            value: bought.competition && t.has(`about.competitionLevels.${bought.competition}`) ? t(`about.competitionLevels.${bought.competition}`) : "–",
+          },
+          ...(boughtLow !== null && boughtHigh !== null ? [{
+            key: "trend",
+            label: t("about.trend"),
+            value: (
+              <span className="inline-flex items-center gap-3">
+                <TrendCell trend={bought.trend} label={`${t("about.trend")}: ${bought.trend.join(", ")}`} />
+                <span className="text-secondary">{t("about.trendRange", { low: formatNumber(boughtLow), high: formatNumber(boughtHigh) })}</span>
+              </span>
+            ),
+          }] : []),
+          { key: "from", label: t("about.volumeFrom"), value: <span className="text-muted">{t("about.googleAds", { day: formatDay(bought.day) })}</span> },
+        ] : []),
+      ]
+      : [];
 
+  const checkedPage = checkedResult?.url ? pagePath(checkedResult.url) : null;
   const pageFacts: SiteFact[] = rank && rankedPage !== null
     ? [
       {
@@ -144,13 +200,23 @@ export default function SiteKeywordPage() {
       { key: "links", label: t("rankingPage.links"), value: formatNumber(rank.pageBacklinks) },
       { key: "value", label: t("rankingPage.value"), value: formatUsd(rank.trafficValue) },
     ]
-    : [];
+    : checkedResult && checkedPage !== null && check
+      ? [
+        {
+          key: "page",
+          label: t("rankingPage.page"),
+          value: <RecordLinkCell href={recordHref({ kind: "page", page: checkedPage })} className="break-all text-[13px] text-info">{checkedPage}</RecordLinkCell>,
+        },
+        { key: "position", label: t("figures.position"), value: checkedResult.position },
+        { key: "from", label: t("rankingPage.from"), value: t("rankingPage.fromCheck", { day: formatDay(check.day) }) },
+      ]
+      : [];
 
   // This website among its competitors on the same search, best placed first.
   const standings = record
     ? [
-      { siteId: null, host: site?.host ?? "", position: rankedAt, page: rankedPage },
-      ...record.rivals.map((rival) => ({ siteId: rival.siteId, host: rival.host, position: rival.position, page: rival.page })),
+      { siteId: null, host: site?.host ?? "", position: shownAt, page: rankedPage ?? checkedPage, checked: false },
+      ...record.rivals.map((rival) => ({ siteId: rival.siteId, host: rival.host, position: rival.position, page: rival.page, checked: rival.checked })),
     ].sort((left, right) => (left.position ?? 999) - (right.position ?? 999))
     : undefined;
 
@@ -163,17 +229,62 @@ export default function SiteKeywordPage() {
     ]
     : [];
 
+  // Whether any answer that ran this search named the site: said plainly, as a tag.
+  const mentionedValue = (answers: Array<{ stance: string }>) => {
+    const named = answers.filter((answer) => answer.stance !== "NOT_NAMED").length;
+    return named > 0
+      ? <StatusLabel tone="success">{t("fromAi.mentionedYes", { named, count: answers.length })}</StatusLabel>
+      : <StatusLabel tone="warning">{t("fromAi.mentionedNo", { count: answers.length })}</StatusLabel>;
+  };
+
+  const fromAiPage = (() => {
+    if (!fromAi?.page) return <span className="text-muted">{tv("unjudged")}</span>;
+    if (fromAi.page.verdict === "ANSWERED" && fromAi.page.page) {
+      return <RecordLinkCell href={recordHref({ kind: "page", page: fromAi.page.page })} className="text-[13px] text-info">{fromAi.page.page}</RecordLinkCell>;
+    }
+    if (fromAi.page.verdict === "NONE") return <StatusLabel tone="warning">{tv("NONE")}</StatusLabel>;
+    return <span className="text-muted">{tv(fromAi.page.verdict === "OFF_TOPIC" ? "OFF_TOPIC" : "UNSURE")}</span>;
+  })();
+  const fromAiFacts: SiteFact[] = fromAi
+    ? [
+      { key: "asked", label: t("fromAi.asked"), value: fromAi.questions.map((question) => `“${question}”`).join(", ") },
+      { key: "engines", label: t("fromAi.searchedBy"), value: fromAi.engines.map(engineLabel).join(", ") },
+      { key: "times", label: t("fromAi.timesSeen"), value: t("fromAi.timesSeenValue", { count: fromAi.timesSeen, day: formatDay(fromAi.lastSeenDay) }) },
+      ...(fromAi.otherWordings.length > 0
+        ? [{ key: "wordings", label: t("fromAi.otherWordings"), value: fromAi.otherWordings.map((wording) => `“${wording}”`).join(", ") }]
+        : []),
+      { key: "intent", label: t("fromAi.intent"), value: <IntentLabel intent={fromAi.intent} /> },
+      ...(site?.relationship === "TRACKED" ? [] : [{ key: "page", label: t("fromAi.page"), value: fromAiPage }]),
+      ...(fromAi.answers.length > 0 ? [{ key: "mentioned", label: t("fromAi.mentioned", { host: site?.host ?? "" }), value: mentionedValue(fromAi.answers) }] : []),
+    ]
+    : [];
+
+  const checkedOnceFacts: SiteFact[] = checkedOnce
+    ? [
+      { key: "position", label: t("checkedOnce.position"), value: <PositionCell position={checkedOnce.position} /> },
+      { key: "checked", label: t("checkedOnce.checked"), value: formatDay(checkedOnce.day) },
+      { key: "again", label: t("checkedOnce.again"), value: <span className="text-muted">{t("checkedOnce.onlyIfTracked")}</span> },
+    ]
+    : [];
+
   return (
     <div className="flex flex-col gap-6">
       <DetailHeader
+        layout="path"
         back={back}
-        icon={<KeyRound className="h-6 w-6 text-brand" />}
         title={record?.keyword ?? asked}
-        description={t("description")}
-        pills={search || record?.tracked ? (
+        // One sentence about this search, where a stock one used to be, and
+        // the box that repeated it gone (Anthony chose header "B", 2026-09-29).
+        description={record === undefined ? undefined
+          : checkedOnce ? t("checkedOnceNotice", { day: formatDay(checkedOnce.day) })
+          : !ranking ? t(partHeld ? "notInHeld" : "notRanking")
+          : undefined}
+        pills={search || fromAi || record?.tracked || checkedOnce ? (
           <>
-            {search ? <IntentPill intent={search.intent} /> : null}
-            {record?.tracked ? <StatusPill tone="info">{t("trackedPill")}</StatusPill> : null}
+            {record?.tracked ? <StatusLabel size="md" tone="info">{t("trackedPill")}</StatusLabel> : null}
+            {checkedOnce ? <StatusLabel size="md" tone="info">{t("checkedOncePill")}</StatusLabel> : null}
+            {/* What the searcher wants: the keyword list's judgement, or the AI answers' for a search only they ran. */}
+            {search || fromAi ? <IntentLabel size="md" intent={search ? search.intent : fromAi?.intent ?? null} /> : null}
           </>
         ) : undefined}
       />
@@ -182,20 +293,25 @@ export default function SiteKeywordPage() {
         <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" aria-label={tr("loading")} />
       ) : (
         <>
-          {!ranking ? (
-            <p className="rounded-xl border border-border-dim bg-card/40 px-4 py-3 text-[13px] text-secondary">{t(partHeld ? "notInHeld" : "notRanking")}</p>
-          ) : null}
-
           <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
             <SiteFigure
               label={t("figures.position")}
-              value={rankedAt ?? t(partHeld ? "figures.notInHeld" : "figures.notRanking")}
-              detail={positionDetail ?? undefined}
+              value={shownAt ?? t(partHeld ? "figures.notInHeld" : "figures.notRanking")}
+              detail={check && checkedAt !== null
+                ? <span className="text-muted">{t("figures.checkedOn", { day: formatDay(check.day) })}</span>
+                : positionDetail ?? undefined}
             />
-            <SiteFigure label={t("figures.volume")} value={formatNumber(search?.volume)} detail={<span className="text-muted">{t("figures.volumeDetail")}</span>} />
+            <SiteFigure label={t("figures.volume")} value={formatNumber(search?.volume ?? bought?.volume)} detail={<span className="text-muted">{t("figures.volumeDetail")}</span>} />
             <SiteFigure label={t("figures.traffic")} value={formatNumber(rank?.traffic)} detail={<span className="text-muted">{t("figures.trafficDetail")}</span>} />
-            <SiteFigure label={t("figures.cpc")} value={formatCpc(search?.cpc ?? null)} detail={<span className="text-muted">{t("figures.cpcDetail")}</span>} />
+            <SiteFigure label={t("figures.cpc")} value={formatCpc(search?.cpc ?? bought?.cpc ?? null)} detail={<span className="text-muted">{t("figures.cpcDetail")}</span>} />
           </div>
+
+          {fromAi ? (
+            <SettingsCard title={t("fromAi.title")}>
+              <SiteFacts facts={fromAiFacts} empty="–" />
+            </SettingsCard>
+          ) : null}
+          {fromAi && fromAi.answers.length > 0 ? <SearchAnswers answers={fromAi.answers} names={fromAi.names} host={site?.host ?? ""} /> : null}
 
           <SiteChartCard
             title={t("chartTitle")}
@@ -213,7 +329,7 @@ export default function SiteKeywordPage() {
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
             <SettingsCard title={t("about.title")}>
-              <SiteFacts facts={aboutFacts} empty={t(partHeld ? "notInHeld" : "notRanking")} />
+              <SiteFacts facts={aboutFacts} empty={ranking ? t("about.notInList") : t(partHeld ? "notInHeld" : "notRanking")} />
             </SettingsCard>
 
             <SettingsCard title={t("rankingPage.title")}>
@@ -237,7 +353,13 @@ export default function SiteKeywordPage() {
                     key: "position",
                     align: "right",
                     cell: (row) => row.position === null
-                      ? <span className="text-[12px] text-muted">{row.siteId === null ? t(partHeld ? "figures.notInHeld" : "figures.notRanking") : t("rivals.notRanking")}</span>
+                      ? (
+                        <span className="text-[12px] text-muted">
+                          {row.siteId === null
+                            ? t(partHeld ? "figures.notInHeld" : "figures.notRanking")
+                            : row.checked ? t("rivals.notOnPage", { count: record.serp?.results.length ?? 0 }) : t("rivals.notRanking")}
+                        </span>
+                      )
                       : <span className="font-mono text-[13px] text-foreground">{row.position}</span>,
                   },
                 ]}
@@ -272,6 +394,12 @@ export default function SiteKeywordPage() {
               <SettingsCard title={t("tracked.title")}>
                 {!record.tracked.isActive ? <p className="text-[12px] text-muted">{t("tracked.paused")}</p> : null}
                 <SiteFacts facts={trackedFacts} empty="–" />
+              </SettingsCard>
+            ) : null}
+
+            {checkedOnce ? (
+              <SettingsCard title={t("checkedOnce.title")}>
+                <SiteFacts facts={checkedOnceFacts} empty="–" />
               </SettingsCard>
             ) : null}
 
@@ -310,8 +438,8 @@ export default function SiteKeywordPage() {
                       cell: (row) => (
                         <span className="flex flex-wrap items-center gap-2">
                           <span className={row.isYou || row.rivalSiteId ? "text-foreground" : "text-secondary"}>{row.domain}</span>
-                          {row.isYou ? <StatusPill tone="success">{t("serp.thisWebsite")}</StatusPill> : null}
-                          {row.rivalSiteId ? <StatusPill tone="warning">{t("serp.competitor")}</StatusPill> : null}
+                          {row.isYou ? <StatusLabel tone="success">{t("serp.thisWebsite")}</StatusLabel> : null}
+                          {row.rivalSiteId ? <StatusLabel tone="warning">{t("serp.competitor")}</StatusLabel> : null}
                         </span>
                       ),
                     },

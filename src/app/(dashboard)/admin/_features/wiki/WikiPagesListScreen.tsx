@@ -6,7 +6,7 @@ import { useConvex, useMutation, useQuery } from "convex/react";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, BookOpen, Download, Network, Pin, Target, Trash2, X } from "lucide-react";
+import { AlertTriangle, BookOpen, Download, Network, Target, Trash2, X } from "lucide-react";
 import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { Button } from "@/src/ui/components/screens/Button";
 import { api } from "@/convex/_generated/api";
@@ -21,7 +21,9 @@ import { WikiImportBox } from "./WikiImportBox";
 import { WikiQuickSwitcher } from "./WikiQuickSwitcher";
 import { WikiAskBox } from "./WikiAskBox";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
-import { DecisionPill } from "@/src/ui/components/screens/DecisionPill";
+import { DecisionLabel } from "@/src/ui/components/screens/DecisionLabel";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 
 const PAGE_SIZE = 15;
 
@@ -369,10 +371,10 @@ export function WikiPagesListScreen({
             <span>{t("progress.written", { count: progress.pagesWritten })}</span>
             <span>{t("progress.improved", { count: progress.pagesImproved })}</span>
             {progress.lastDocumentTitle && (
-              <span className="flex items-center gap-2">
-                <i className="w-[7px] h-[7px] rounded-full bg-brand inline-block" />
+              // A long title may wrap here, as it did before the dot became a label.
+              <StatusLabel tone="info" icon="working" className="whitespace-normal">
                 {t("progress.nowReading", { title: progress.lastDocumentTitle })}
-              </span>
+              </StatusLabel>
             )}
           </div>
         </div>
@@ -466,7 +468,7 @@ export function WikiPagesListScreen({
                     )}
                     {question.decisionCopyKey && (
                       <span className="mt-1 flex">
-                        <DecisionPill
+                        <DecisionLabel
                           name={tDecisions(`catalogue.${question.decisionCopyKey}.name`)}
                           certainty={question.certainty}
                         />
@@ -579,14 +581,10 @@ export function WikiPagesListScreen({
                 className="flex items-center gap-2 text-[14px] font-medium text-foreground hover:text-brand transition-colors"
               >
                 {row.title}
-                <span className="px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim/60 text-secondary text-[11px] font-medium">
-                  {t(`kinds.${row.kind}`)}
-                </span>
+                <TagLabel>{t(`kinds.${row.kind}`)}</TagLabel>
                 {row.pinnedCount > 0 && (
-                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand/10 text-brand text-[11px] font-medium">
-                    <Pin className="w-3 h-3" />
-                    {row.pinnedCount}
-                  </span>
+                  // A count of pinned facts: the pin is the word, so it stays beside the number.
+                  <StatusLabel tone="neutral" icon="pinned">{row.pinnedCount}</StatusLabel>
                 )}
               </Link>
             ),
@@ -636,9 +634,7 @@ export function WikiPagesListScreen({
                   {t("used.count", { count: row.usageCount })}
                 </span>
               ) : Date.now() - row.createdAt > NEVER_USED_AGE_MS ? (
-                <span className="px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim/60 text-muted text-[11px]">
-                  {t("used.never")}
-                </span>
+                <StatusLabel tone="neutral">{t("used.never")}</StatusLabel>
               ) : (
                 <span className="text-[13px] text-secondary">—</span>
               ),

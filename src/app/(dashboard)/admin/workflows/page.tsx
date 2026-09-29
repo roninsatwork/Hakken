@@ -26,6 +26,8 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 
 const loadWorkflowDialogs = () => import("./WorkflowDialogs");
 const WorkflowDialogs = dynamic(() =>
@@ -166,21 +168,16 @@ export default function WorkflowsPage() {
             key: "trigger",
             header: t('table.trigger'),
             cell: (workflow) => (
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] bg-foreground/5 border border-border-dim w-fit">
-                <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
-                  {workflow.triggerType}
-                </span>
-              </div>
+              <TagLabel>{workflow.triggerType}</TagLabel>
             ),
           },
           {
             key: "status",
             header: t('table.status'),
             cell: (workflow) => (
-              <div className={`flex items-center gap-2 text-[12px] font-medium ${workflow.isActive ? 'text-green-500' : 'text-neutral-500'}`}>
-                <div className={`w-1.5 h-1.5 rounded-full ${workflow.isActive ? 'bg-green-500' : 'bg-neutral-500'}`} />
+              <StatusLabel tone={workflow.isActive ? "success" : "neutral"}>
                 {workflow.isActive ? t('table.active') : t('table.draft')}
-              </div>
+              </StatusLabel>
             ),
           },
           {

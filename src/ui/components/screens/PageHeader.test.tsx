@@ -112,6 +112,39 @@ describe("DetailHeader", () => {
 
     expect(onClick).toHaveBeenCalledTimes(1);
   });
+
+  // Header "B", chosen for a search's page in Sites on 2026-09-29.
+  describe("the path layout", () => {
+    it("shows the way back as a path, the labels on the title row, and one sentence under it", () => {
+      render(
+        <DetailHeader
+          layout="path"
+          back={{ label: "Back to Fan-out queries", href: "/app/sites/s/ai/searched", page: "Fan-out queries" }}
+          title="best seo agency surrey uk"
+          description="Not one of your tracked searches."
+          pills={<span>Checked once on Google</span>}
+        />
+      );
+
+      const back = screen.getByRole("link", { name: "Back to Fan-out queries" });
+      const heading = screen.getByRole("heading", { name: "best seo agency surrey uk" });
+
+      expect(back).toHaveTextContent("Fan-out queries/");
+      expect(back).toHaveAttribute("href", "/app/sites/s/ai/searched");
+      expect(back.compareDocumentPosition(heading)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      // The labels share the title's row rather than sitting under the sentence.
+      expect(heading.parentElement).toContainElement(screen.getByText("Checked once on Google"));
+      expect(heading.parentElement).not.toContainElement(screen.getByText("Not one of your tracked searches."));
+      expect(screen.getByText("Not one of your tracked searches.")).not.toHaveClass("tracking-wide");
+      expect(heading.closest(".border-b")).toHaveClass(...HEADER_RULE);
+    });
+
+    it("falls back to the back row when the way back is not a page with a name", () => {
+      render(<DetailHeader layout="path" back={{ label: "Back", href: "/app/sites/s/keywords/keyword?keyword=x" }} title="A page" />);
+
+      expect(screen.getByRole("link", { name: /Back/ })).toHaveTextContent("Back");
+    });
+  });
 });
 
 describe("PagePrimaryAction", () => {

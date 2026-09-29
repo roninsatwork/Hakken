@@ -22,7 +22,7 @@ import { formatDate } from "@/src/lib/dates";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { toneForStatus } from "@/src/ui/components/screens/statusTone";
 
 type KnowledgeDocumentContentProps = {
@@ -86,13 +86,14 @@ export function KnowledgeDocumentContent({
         title={<span className="truncate">{document.title}</span>}
         pills={
           <>
-            <StatusPill
+            <StatusLabel
               // PROCESSING is not yet in the shared status map; keep its amber semantics.
               tone={document.status === "processing" ? "warning" : toneForStatus(document.status)}
-              className="rounded-md px-2 py-1 font-normal uppercase font-mono tracking-widest"
+              // The stored status word, which has no translation yet.
+              className="capitalize"
             >
               {document.status}
-            </StatusPill>
+            </StatusLabel>
             <span className="text-[10px] uppercase font-mono tracking-widest text-muted">
               {document.format}
             </span>

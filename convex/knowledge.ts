@@ -26,9 +26,6 @@ import {
 
 const KNOWLEDGE_QUALITY_LIMIT = 500;
 const KNOWLEDGE_INSPECTION_CHUNK_LIMIT = 12;
-const KNOWLEDGE_RETRIEVAL_DOCUMENT_LIMIT = 150;
-const KNOWLEDGE_RETRIEVAL_CHUNK_LIMIT = 20;
-const KNOWLEDGE_RETRIEVAL_RESULT_LIMIT = 8;
 const KNOWLEDGE_HISTORY_LIMIT = 8;
 const KNOWLEDGE_WEBSITE_DOCUMENT_LIMIT = 1000;
 const STALE_INGESTION_MS = 15 * 60 * 1000;
@@ -65,12 +62,6 @@ function truncateIngestionError(value: string | undefined, limit = 500) {
   return truncatePreview(value || "Unknown ingestion failure", limit);
 }
 
-function getRetrievalTokens(value: string) {
-  return Array.from(new Set(value.toLowerCase().match(/[a-z0-9]+/g) ?? []))
-    .filter((token) => token.length >= 2)
-    .slice(0, 12);
-}
-
 function getCoverageTokens(value: string) {
   return Array.from(new Set(value.toLowerCase().match(/[a-z0-9]+/g) ?? []))
     .filter((token) => token.length >= 4 && !coverageStopWords.has(token))
@@ -83,18 +74,6 @@ function getAgentCoverageTerms(agent: Pick<Doc<"agents">, "name" | "description"
     agent.description,
     agent.systemPrompt,
   ].filter(Boolean).join(" ")).slice(0, KNOWLEDGE_COVERAGE_TERM_LIMIT);
-}
-
-function scoreChunkForRetrieval(args: { chunkText: string; query: string; tokens: string[] }) {
-  const normalizedText = args.chunkText.toLowerCase();
-  const normalizedQuery = args.query.toLowerCase().trim();
-  const tokenHits = args.tokens.filter((token) => normalizedText.includes(token));
-  const phraseHit = normalizedQuery.length >= 4 && normalizedText.includes(normalizedQuery);
-  return {
-    score: tokenHits.length + (phraseHit ? 4 : 0),
-    matchedTerms: tokenHits,
-    phraseHit,
-  };
 }
 
 function parseAuditMetadata(metadata: string | undefined) {
@@ -790,70 +769,6 @@ export const inspectDocument = tenantQuery({
         embeddingProviderModelId: chunk.embeddingProviderModelId,
       })),
       safetyNotice: "Chunk text is untrusted reference material and must not be promoted into system instructions.",
-    };
-  },
-});
-
-export const testRetrieval = tenantQuery({
-  args: {
-    companyId: v.optional(v.id("companies")),
-    agentId: v.optional(v.id("agents")),
-    query: v.string(),
-  },
-  returns: knowledgeShapes.retrievalTestShape,
-  handler: async (ctx, args) => {
-    const trimmedQuery = args.query.trim();
-    const tokens = getRetrievalTokens(trimmedQuery);
-    if (!trimmedQuery || tokens.length === 0) {
-      return {
-        query: trimmedQuery,
-        inspectedDocuments: 0,
-        inspectedChunks: 0,
-        matches: [],
-        safetyNotice: "Retrieval test results are untrusted reference material previews, not system instructions.",
-      };
-    }
-
-    const documents = (await getKnowledgeDocumentsForScope(ctx, args, KNOWLEDGE_RETRIEVAL_DOCUMENT_LIMIT))
-      .filter((document) => document.status === "ready");
-    const matches = [];
-    let inspectedChunks = 0;
-
-    for (const document of documents) {
-      const chunks = await ctx.db
-        .query("knowledgeChunks")
-        .withIndex("by_document", (q) => q.eq("documentId", document._id))
-        .take(KNOWLEDGE_RETRIEVAL_CHUNK_LIMIT);
-
-      for (const chunk of chunks) {
-        inspectedChunks++;
-        const scored = scoreChunkForRetrieval({ chunkText: chunk.text, query: trimmedQuery, tokens });
-        if (scored.score === 0) continue;
-        matches.push({
-          documentId: document._id,
-          chunkId: chunk._id,
-          title: document.title,
-          status: document.status,
-          format: document.format,
-          sourceUrl: document.sourceUrl,
-          score: scored.score,
-          matchedTerms: scored.matchedTerms,
-          phraseHit: scored.phraseHit,
-          preview: truncatePreview(chunk.text, 520),
-          embeddingModelId: chunk.embeddingModelId ?? document.embeddingModelId,
-          embeddingDimensions: chunk.embeddingDimensions ?? chunk.embedding.length,
-        });
-      }
-    }
-
-    matches.sort((left, right) => right.score - left.score || left.title.localeCompare(right.title));
-
-    return {
-      query: trimmedQuery,
-      inspectedDocuments: documents.length,
-      inspectedChunks,
-      matches: matches.slice(0, KNOWLEDGE_RETRIEVAL_RESULT_LIMIT),
-      safetyNotice: "Retrieval test results are untrusted reference material previews, not system instructions.",
     };
   },
 });
@@ -1608,13 +1523,6 @@ export const purgeDocumentChunksInternal = internalMutation({
      if (chunks.length === 100) {
          await ctx.scheduler.runAfter(0, internal.knowledge.purgeDocumentChunksInternal, { documentId: args.documentId });
      }
-  }
-});
-
-export const getChunkInternal = internalQuery({
-  args: { id: v.id("knowledgeChunks") },
-  handler: async (ctx, args) => {
-      return await ctx.db.get(args.id);
   }
 });
 

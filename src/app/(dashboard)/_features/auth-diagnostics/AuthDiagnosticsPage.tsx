@@ -9,6 +9,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { AUTH_EVENT_TYPES } from "@/convex/utils/authEventTypes";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { TABLE_PAGE_SIZE, matchesSearchTerm, paginateItems } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
@@ -213,11 +214,7 @@ export function AuthDiagnosticsPage() {
           {
             key: "event",
             header: t("table.event"),
-            cell: (event) => (
-              <span className="rounded-[4px] border border-border-dim bg-foreground/5 px-2 py-1 text-[10px] font-medium uppercase tracking-widest text-foreground">
-                {formatCode(event.eventType)}
-              </span>
-            ),
+            cell: (event) => <TagLabel>{formatCode(event.eventType)}</TagLabel>,
           },
           {
             key: "email",

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "convex/react";
-import { DecisionPill } from "@/src/ui/components/screens/DecisionPill";
+import { DecisionLabel } from "@/src/ui/components/screens/DecisionLabel";
 import { ChevronDown, FileText, Lightbulb, Wrench, BookOpen, Scale } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
@@ -95,7 +95,7 @@ export function AnswerEvidence({ messageId }: { messageId: Id<"messages"> }) {
             <EvidenceGroup icon={<Scale className="h-3 w-3" />} label={t("checks")}>
               {evidence.checks.map((check) => (
                 <li key={check.key} className="flex">
-                  <DecisionPill
+                  <DecisionLabel
                     name={tDecisions(`catalogue.${check.copyKey}.name`)}
                     certainty={check.certainty ?? null}
                     probabilities={parseSpread(check.probabilities)}

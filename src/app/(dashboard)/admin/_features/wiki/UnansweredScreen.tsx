@@ -10,6 +10,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
@@ -166,12 +167,12 @@ export function UnansweredScreen({
                         {row.companyName}
                       </Link>
                     ) : (
-                      <span className="px-2 py-0.5 rounded-full bg-brand/10 text-brand text-[11px] font-medium">
+                      <TagLabel>
                         {t("platform")}
                         {(row.companyCount ?? 0) > 0 && (
                           <> · {t("acrossCompanies", { count: row.companyCount ?? 0 })}</>
                         )}
-                      </span>
+                      </TagLabel>
                     ),
                 },
               ]),

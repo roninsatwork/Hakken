@@ -3,7 +3,7 @@
     "convex/schema.ts": 4500,
     "convex/agentEvalFixtures.ts": 2000,
     "convex/wikiPages.ts": 1850,
-    "convex/knowledge.ts": 1800,
+    "convex/knowledge.ts": 1700,
     "convex/aiModels.ts": 1550,
     "convex/agents.ts": 1400,
     "convex/agentRuns.ts": 1350,
@@ -30,5 +30,5 @@
       "floor": 22
     }
   ],
-  "theme": 772
+  "theme": 683
 }

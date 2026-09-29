@@ -642,7 +642,8 @@
       "subjectKinds": {
         "email": "Email",
         "message": "Messaggio",
-        "wikiPage": "Pagina wiki"
+        "wikiPage": "Pagina wiki",
+        "knowledgeChunk": "Brano della conoscenza"
       },
       "detail": {
         "back": "Torna alle Decisioni",
@@ -5355,7 +5356,7 @@
       "columnAdmin": "Amministratore di sistema",
       "pendingInvitation": "Invito in sospeso",
       "columnJoined": "Data di ingresso",
-      "pendingRole": "IN SOSPESO {role}",
+      "pendingRole": "Invito in Attesa · {role}",
       "columnActions": "Azioni",
       "awaitingLogin": "In attesa di accesso",
       "revokeInvitation": "Revoca l'invito",
@@ -5631,21 +5632,21 @@
       "volumeColumn": "Ricerche al mese",
       "unjudged": "Non valutata",
       "intents": {
-        "BUYING": "Pronto ad acquistare",
-        "RESEARCHING": "Sta informandosi",
-        "BRANDED": "Cerca questa attività",
-        "IRRELEVANT": "Non c'entra",
-        "OTHER": "Troppo vaga"
+        "BUYING": "Commerciale",
+        "RESEARCHING": "Informativa",
+        "BRANDED": "Brand",
+        "IRRELEVANT": "Irrilevante",
+        "OTHER": "Sconosciuto"
       },
       "lastCheckedColumn": "Ultimo controllo"
     },
     "websiteFanOut": {
       "intents": {
-        "BUYING": "Pronto all'acquisto",
-        "RESEARCHING": "Sta facendo ricerche",
-        "BRANDED": "Cerca un'azienda",
-        "IRRELEVANT": "Non c'entra nulla",
-        "OTHER": "Troppo vaga per dirlo"
+        "BUYING": "Commerciale",
+        "RESEARCHING": "Informativa",
+        "BRANDED": "Brand",
+        "IRRELEVANT": "Irrilevante",
+        "OTHER": "Sconosciuto"
       }
     },
     "companyAiLists": {
@@ -6659,14 +6660,15 @@
         },
         "retrieval": {
           "title": "Test di recupero",
-          "searchLabel": "Cerca nel testo memorizzato",
+          "searchLabel": "Fai una domanda",
           "test": "Prova",
-          "checking": "Controllo dei frammenti memorizzati...",
-          "readyDocs": "{count} documenti pronti",
-          "chunksChecked": "{count} frammenti controllati",
-          "matches": "{count} corrispondenze",
-          "noMatches": "Nessun frammento memorizzato corrisponde a questa frase.",
-          "score": "punteggio {score} * {dimensions} dimensioni"
+          "checking": "Ricerca come la fa l'AI...",
+          "found": "{count} trovati",
+          "read": "{count} letti",
+          "leftOut": "{count} lasciati fuori",
+          "noMatches": "Per questa domanda l'AI non leggerebbe nulla da questa conoscenza.",
+          "readPosition": "Letto {position} di {count}",
+          "leftOutLabel": "Lasciato fuori: non riguarda la domanda"
         },
         "flagged": {
           "title": "Elementi di qualità della conoscenza da rivedere",
@@ -7685,7 +7687,8 @@
       "mailbox": "Casella di posta",
       "chat": "Chat",
       "wiki": "Wiki",
-      "seo": "SEO"
+      "seo": "SEO",
+      "knowledge": "Conoscenza"
     },
     "certainty": {
       "SURE": "Sicuro",
@@ -7731,6 +7734,15 @@
         "rule": "Senza, il modello che sceglie le pagine viene preso per buono.",
         "answers": {
           "yes": "Risponde",
+          "no": "Non c'entra"
+        }
+      },
+      "knowledgePassageAnswersQuestion": {
+        "name": "Questo brano aiuta a rispondere alla domanda?",
+        "description": "Controlla i 40 brani migliori trovati da una ricerca nella conoscenza, in una sola richiesta, e lascia fuori quelli che hanno in comune con la domanda solo una parola, così i brani successivi prendono il loro posto. Usata da chat, agenti, chiamate, risposte email e swarm.",
+        "rule": "Senza, ogni brano che la ricerca mette in classifica viene letto finché lo spazio non è pieno.",
+        "answers": {
+          "yes": "Aiuta a rispondere",
           "no": "Non c'entra"
         }
       },
@@ -7852,11 +7864,11 @@
         "description": "Interpreta l'intenzione dietro una ricerca, così si distinguono le ricerche che vale la pena seguire dalle migliaia per cui un sito si posiziona per caso.",
         "rule": "Senza, ogni ricerca sembra ugualmente utile da seguire.",
         "answers": {
-          "buying": "Pronto ad acquistare",
-          "researching": "Sta informandosi",
-          "branded": "Cerca questa attività",
-          "irrelevant": "Non c'entra con l'attività",
-          "other": "Troppo vaga"
+          "buying": "Commerciale",
+          "researching": "Informativa",
+          "branded": "Brand",
+          "irrelevant": "Irrilevante",
+          "other": "Sconosciuto"
         }
       },
       "seoPageType": {
@@ -8558,11 +8570,11 @@
       "none": "–",
       "you": "{host} (questo sito)",
       "intents": {
-        "BUYING": "Pronto ad acquistare",
-        "RESEARCHING": "Si informa",
-        "BRANDED": "Cerca un'azienda",
-        "IRRELEVANT": "Non c'entra",
-        "OTHER": "Troppo vago per dirlo",
+        "BUYING": "Commerciale",
+        "RESEARCHING": "Informativa",
+        "BRANDED": "Brand",
+        "IRRELEVANT": "Irrilevante",
+        "OTHER": "Sconosciuto",
         "UNJUDGED": "Non ancora valutato"
       },
       "anyIntent": "Qualsiasi intento",
@@ -8725,9 +8737,9 @@
         "title": "Ricerche di marca e altre",
         "hint": "Da dove arrivano le {visits} visite al mese: ricerche che nominano il tuo marchio, ricerche pronte all'acquisto, persone che si informano e il resto.",
         "groups": {
-          "branded": "Nominano il tuo marchio",
-          "buying": "Pronte all'acquisto",
-          "researching": "Si informano",
+          "branded": "Brand",
+          "buying": "Commerciale",
+          "researching": "Informativa",
           "other": "Altre"
         },
         "row": "{visits} visite · {searches} ricerche",
@@ -8860,7 +8872,7 @@
     },
     "aiSearched": {
       "title": "Query fan-out",
-      "description": "Quali ricerche hanno fatto dietro le quinte gli assistenti IA per rispondere alle domande di questo sito? Sono le loro query fan-out, le più ripetute prima. Le formulazioni che dicono la stessa cosa contano una volta, come un solo argomento. La tua posizione e La tua pagina mostrano se il sito risponde già a ogni argomento; Argomenti mancanti elenca quelli per cui non ha una pagina.",
+      "description": "Le ricerche che gli assistenti AI hanno fatto dietro le quinte per rispondere alle domande di questo sito, le più ripetute prima. Spunta quelle da monitorare su Google a ogni raccolta. Aprine una per vedere da dove viene e la pagina che le risponde.",
       "searchPlaceholder": "Cerca tra le query fan-out…",
       "trackedFilter": "Seguite",
       "anyTracked": "Seguite o no",
@@ -8877,27 +8889,14 @@
         "page": "La tua pagina",
         "otherWordings": "Altre formulazioni",
         "question": "Domanda",
-        "positionFrom": "Posizione da"
+        "positionFrom": "Posizione da",
+        "track": "Monitora"
       },
-      "fromQuestion": "Domanda: {question}",
       "empty": "Ancora nessuna query fan-out. Il prossimo controllo le registra.",
       "noMatch": "Nessuna query fan-out corrisponde.",
       "descriptionCompetitor": "Quali ricerche hanno fatto dietro le quinte gli assistenti IA per rispondere alle domande su cui questo sito viene confrontato? Sono le loro query fan-out, le più ripetute prima. Le formulazioni che dicono la stessa cosa contano una volta, come un solo argomento.",
       "questionFilter": "Domanda",
       "anyQuestion": "Qualsiasi domanda",
-      "pageFilter": "La tua pagina",
-      "anyPage": "Qualsiasi pagina",
-      "pageFilters": {
-        "missing": "Argomenti mancanti",
-        "answered": "Ha una pagina",
-        "offTopic": "Fuori tema",
-        "unjudged": "Non ancora valutato"
-      },
-      "positionFrom": {
-        "RANKED": "Elenco posizionamenti",
-        "CHECKED": "Controllata il {day}",
-        "SEARCH_CONSOLE": "Media di Search Console"
-      },
       "notInTop100": "Non nei primi 100",
       "notTracked": "Non seguita",
       "notCheckedYet": "Non ancora controllata",
@@ -8907,13 +8906,13 @@
         "UNSURE": "Non si può dire",
         "unjudged": "Non ancora valutata"
       },
-      "alsoSearchedAs": "Cercata anche come {wordings}",
       "fromQueries": "da {count, plural, =1 {# query fan-out} other {# query fan-out}}",
-      "mostSeenFirst": "i più visti prima",
-      "judgedAgainst": "La tua pagina è valutata sulle {crawled, number} pagine lette dall'audit del sito (il suo limite è {limit, number}) e sulle {ranked, number} pagine con cui Google posiziona il sito. Una pagina non raggiunta da nessuno dei due risulta Nessuna.",
-      "judgedAgainstNoLimit": "La tua pagina è valutata sulle {crawled, number} pagine lette dall'audit del sito e sulle {ranked, number} pagine con cui Google posiziona il sito. Una pagina non raggiunta da nessuno dei due risulta Nessuna.",
-      "judgedAgainstNoAudit": "La tua pagina è valutata sulle {ranked, number} pagine con cui Google posiziona il sito; l'audit del sito non l'ha ancora letto. Una pagina non tra queste risulta Nessuna.",
-      "notBuilt": "Queste ricerche vengono raggruppate in argomenti dopo ogni raccolta; il primo raggruppamento non è ancora stato fatto."
+      "notBuilt": "Queste ricerche vengono raggruppate in argomenti dopo ogni raccolta; il primo raggruppamento non è ancora stato fatto.",
+      "trackedCount": "{count} di {limit} monitorate",
+      "trackLabel": "Monitora “{query}” su Google a ogni raccolta",
+      "untrackLabel": "Smetti di monitorare “{query}” su Google",
+      "full": "Tutte le {limit} sono monitorate. Togli la spunta a una per monitorare “{query}”.",
+      "trackFailed": "Non è stato possibile modificarla. Riprova."
     },
     "googleSearches": {
       "title": "Le tue ricerche",
@@ -9076,7 +9075,6 @@
       }
     },
     "keywordRecord": {
-      "description": "Dove questo sito si posiziona per questa ricerca, come è cambiato e quanto vale la ricerca.",
       "missingTitle": "Nessuna ricerca scelta",
       "missingBody": "Apri una ricerca da uno degli elenchi di parole chiave per vederla qui.",
       "notRanking": "All'ultimo controllo questo sito non si posiziona per questa ricerca.",
@@ -9094,7 +9092,8 @@
         "trafficDetail": "Visite stimate che porta a questo sito",
         "cpc": "Costo per clic",
         "cpcDetail": "Quanto pagano gli inserzionisti, in dollari USA",
-        "notInHeld": "Non nell’elenco conservato"
+        "notInHeld": "Non nell’elenco conservato",
+        "checkedOn": "Controllata su Google, {day}"
       },
       "chartTitle": "Posizione nel tempo",
       "chartHint": "Dove si trovava questo sito a ogni controllo. Più in alto nel grafico è meglio: 1 è il primo posto su Google.",
@@ -9121,7 +9120,11 @@
         "trend": "Ricerche nell'ultimo anno",
         "trendRange": "Da {low} a {high} al mese",
         "firstSeen": "Posizionata la prima volta",
-        "lastChecked": "Ultimo controllo"
+        "lastChecked": "Ultimo controllo",
+        "notInList": "Non noto: questa ricerca non è nell'elenco delle parole chiave del sito",
+        "tooFew": "Troppo poche: Google non dà una cifra",
+        "volumeFrom": "Dati da",
+        "googleAds": "Google Ads, il {day}"
       },
       "rankingPage": {
         "title": "La pagina che si posiziona",
@@ -9132,7 +9135,9 @@
         "linkingWebsites": "Siti che rimandano a essa",
         "links": "Link verso di essa",
         "value": "Quanto costerebbero le sue visite in annunci",
-        "none": "Nessuna pagina di questo sito si posiziona per questa ricerca."
+        "none": "Nessuna pagina di questo sito si posiziona per questa ricerca.",
+        "from": "Fonte",
+        "fromCheck": "Controllo su Google, {day}"
       },
       "features": {
         "title": "Dove altro compare su Google",
@@ -9148,7 +9153,8 @@
         "title": "I tuoi concorrenti su questa ricerca",
         "thisWebsite": "Questo sito",
         "notRanking": "Non nel loro elenco conservato",
-        "none": "Nessun concorrente impostato per questo sito."
+        "none": "Nessun concorrente impostato per questo sito.",
+        "notOnPage": "Non tra i primi {count} di Google"
       },
       "tracked": {
         "title": "Controllata come una delle tue ricerche",
@@ -9168,7 +9174,42 @@
         "questions": "Le domande che le persone fanno",
         "related": "Ricerche correlate"
       },
-      "notInHeld": "Questa ricerca non è nell’elenco conservato per questo sito all’ultimo controllo. Potrebbe comunque posizionarsi sotto le ricerche conservate."
+      "notInHeld": "Questa ricerca non è nell’elenco conservato per questo sito all’ultimo controllo. Potrebbe comunque posizionarsi sotto le ricerche conservate.",
+      "checkedOncePill": "Controllata una volta su Google",
+      "checkedOnceNotice": "Non è tra le tue ricerche monitorate: è stata controllata su Google una volta, il {day}, quando è emersa come query fan-out.",
+      "checkedOnce": {
+        "title": "Controllata una volta su Google",
+        "position": "Posizione al controllo",
+        "checked": "Controllata",
+        "again": "Controllata di nuovo",
+        "onlyIfTracked": "Solo se la monitori"
+      },
+      "fromAi": {
+        "title": "Dalle risposte dell'AI",
+        "asked": "Domanda",
+        "searchedBy": "Cercata da",
+        "timesSeen": "Volte vista",
+        "timesSeenValue": "{count}, l’ultima il {day}",
+        "otherWordings": "Cercata anche come",
+        "intent": "Che cosa vogliono",
+        "page": "La tua pagina",
+        "mentioned": "{host} citato",
+        "mentionedYes": "Sì, in {named} su {count}",
+        "mentionedNo": "{count, plural, =1 {No} =2 {No, in nessuna delle due risposte} other {No, in nessuna delle # risposte}}",
+        "answerTitle": "La risposta di {engine}",
+        "answerDay": "{day} · ha fatto questa ricerca mentre rispondeva",
+        "you": {
+          "RECOMMENDED": "Consiglia {host}",
+          "NAMED": "Cita {host}",
+          "WARNED_AGAINST": "Sconsiglia {host}",
+          "NOT_NAMED": "{host} non citato"
+        },
+        "rival": {
+          "RECOMMENDED": "Consiglia {host}",
+          "NAMED": "Cita {host}",
+          "WARNED_AGAINST": "Sconsiglia {host}"
+        }
+      }
     },
     "pageRecord": {
       "description": "Per cosa si posiziona questa pagina, le visite che porta, cosa ha trovato il controllo del sito e i siti che rimandano a essa.",

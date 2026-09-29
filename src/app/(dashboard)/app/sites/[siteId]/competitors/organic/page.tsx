@@ -8,7 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { formatNumber } from "../../../_components/siteFormat";
@@ -106,12 +106,12 @@ export default function SiteOrganicCompetitorsPage() {
           {
             key: "kind",
             header: t("columns.kind"),
-            cell: (row) => <StatusPill tone={row.kind === "COMPETITOR" ? "warning" : "neutral"}>{t(`kinds.${row.kind ?? "OTHER"}`)}</StatusPill>,
+            cell: (row) => <StatusLabel tone={row.kind === "COMPETITOR" ? "warning" : "neutral"}>{t(`kinds.${row.kind ?? "OTHER"}`)}</StatusLabel>,
           },
           { key: "shared", header: t("columns.shared"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.intersections)}</span> },
           { key: "position", header: t("columns.position"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.averagePosition === null ? "–" : row.averagePosition.toFixed(1)}</span> },
           { key: "domainTraffic", header: t("columns.domainTraffic"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.domainTraffic)}</span> },
-          { key: "tracked", header: t("columns.tracked"), cell: (row) => (row.tracked ? <StatusPill tone="success">{tc("yes")}</StatusPill> : <span className="text-muted">–</span>) },
+          { key: "tracked", header: t("columns.tracked"), cell: (row) => (row.tracked ? <StatusLabel tone="success">{tc("yes")}</StatusLabel> : <span className="text-muted">–</span>) },
         ]}
       />
     </div>

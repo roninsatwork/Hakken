@@ -85,6 +85,17 @@ export const claimSeoBatch = internalMutation({
     const due: typeof waitingNow = [];
     let dropped = 0;
     for (const row of waitingNow) {
+      // A retry whose Collector run ended before it was asked again — the
+      // run stopped early — is failed, never sent in a later run beside that
+      // night's own request (`retrySupplierRefusals`).
+      if (row.retryUntil !== undefined && now > row.retryUntil) {
+        await ctx.db.patch(row._id, {
+          status: "FAILED", error: RETRY_RUN_ENDED, completedAt: now, retryUntil: undefined,
+        });
+        await countSettled(ctx, row, "FAILED", 0, "SEND");
+        dropped += 1;
+        continue;
+      }
       if (await stillWanted(ctx, row)) {
         due.push(row);
         continue;
@@ -139,6 +150,9 @@ export const claimSeoBatch = internalMutation({
 
 /** Why a waiting call was not bought, on its row. */
 const SWITCHED_OFF = "Not bought: data collection was switched off for this company or website before it was sent.";
+
+/** Why a request waiting to be asked again was failed instead. */
+export const RETRY_RUN_ENDED = "Not asked again: DataForSEO's supplier had refused it, and the Collector run that was to ask again ended first. The next run asks afresh.";
 
 /**
  * Whether anyone still collecting wants this call (Anthony, 2026-09-24:
@@ -475,7 +489,7 @@ async function scheduleFiling(ctx: MutationCtx, row: Doc<"seoDataPulls">): Promi
  * log line, so the agent's Observability shows what it spent and on what —
  * the reason collection runs through an agent at all.
  */
-async function recordCollectorCall(
+export async function recordCollectorCall(
   ctx: MutationCtx,
   runId: Id<"agentRuns">,
   row: Doc<"seoDataPulls">,

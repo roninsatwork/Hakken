@@ -13,7 +13,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { Field } from "@/src/ui/components/screens/Field";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
@@ -162,7 +162,7 @@ export function TrackedCompetitors({
           {
             key: "verdict",
             header: t("verdictColumn"),
-            cell: (row) => <StatusPill tone={RIVAL_TONE[row.verdict]}>{t(`verdicts.${row.verdict}`)}</StatusPill>,
+            cell: (row) => <StatusLabel tone={RIVAL_TONE[row.verdict]}>{t(`verdicts.${row.verdict}`)}</StatusLabel>,
           },
           {
             key: "beats",

@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { ModalFormField, modalTextareaClassName } from "@/src/ui/components/screens/ModalForm";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 
 /**
  * The one thing that changes what a memory does.
@@ -30,20 +31,10 @@ export const MEMORY_APPLY_MODE_OPTIONS: Array<{
   },
 ];
 
-export function MemoryApplyModeBadge({ applyMode }: { applyMode: MemoryApplyMode }) {
+/** When a memory is applied — a kind of memory, not a status, so plain words. */
+export function MemoryApplyModeLabel({ applyMode }: { applyMode: MemoryApplyMode }) {
   const t = useTranslations("admin.memoryFields");
-  const isAlways = applyMode === "ALWAYS";
-  return (
-    <span
-      className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[11px] font-medium ${
-        isAlways
-          ? "border-brand/30 bg-brand/10 text-brand"
-          : "border-border-dim bg-foreground/5 text-secondary"
-      }`}
-    >
-      {isAlways ? t("always") : t("whenRelevant")}
-    </span>
-  );
+  return <TagLabel>{applyMode === "ALWAYS" ? t("always") : t("whenRelevant")}</TagLabel>;
 }
 
 type MemoryApplyModeChoiceProps = {

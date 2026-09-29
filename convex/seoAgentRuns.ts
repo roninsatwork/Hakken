@@ -251,7 +251,7 @@ async function collect(ctx: ActionCtx, runId: Id<"agentRuns">): Promise<string> 
       stoppedBecause = "this run's time was up; the rest waits for the next run";
       break;
     }
-    const outcome = await sendNextBatch(ctx, { workerId, runId });
+    const outcome = await sendNextBatch(ctx, { workerId, runId, runEndsAt: started + SEO_COLLECTOR_RUN_MS });
     if (outcome.kind === "CAPPED") {
       stoppedBecause = "the spend limit was reached; the rest waits for the next run";
       break;

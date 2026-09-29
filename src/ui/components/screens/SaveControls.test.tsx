@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import {
-  FeedbackPill,
+  FeedbackLabel,
   SaveAction,
   SaveError,
   SaveFeedback,
@@ -110,14 +110,16 @@ describe("SaveFeedback", () => {
   });
 });
 
-describe("FeedbackPill", () => {
-  it("renders compact success and error feedback", () => {
-    const { rerender } = render(<FeedbackPill tone="success">Sent</FeedbackPill>);
+describe("FeedbackLabel", () => {
+  it("says success with a tick and failure with a crossed circle, as words that may wrap", () => {
+    const { container, rerender } = render(<FeedbackLabel tone="success">Sent</FeedbackLabel>);
 
-    expect(screen.getByText("Sent").parentElement).toHaveClass("text-[#10b981]");
+    expect(screen.getByRole("status")).toHaveTextContent("Sent");
+    expect(container.querySelector("svg")).toHaveClass("lucide-check", "text-success");
 
-    rerender(<FeedbackPill tone="error">Send failed</FeedbackPill>);
+    rerender(<FeedbackLabel tone="error">Send failed</FeedbackLabel>);
 
-    expect(screen.getByText("Send failed")).toHaveClass("leading-snug");
+    expect(container.querySelector("svg")).toHaveClass("lucide-circle-x", "text-destructive");
+    expect(screen.getByText("Send failed")).not.toHaveClass("whitespace-nowrap");
   });
 });

@@ -30,6 +30,7 @@ import {
   selectKnowledgeChunksWithinBudget,
 } from "./aiPromptAssembly";
 import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
+import { knowledgeCutOff, readChunk } from "./knowledgeReading";
 import { getOpenAIApiKey } from "./openaiProviderService";
 import { companyAnswersFromWiki } from "./wikiRewriteService";
 import { getActiveCompanyId } from "./authz";
@@ -140,12 +141,18 @@ export const searchKnowledgeForVoiceInternal = internalAction({
       args.forceKnowledgeMode ?? (companyAnswersFromWiki(company) ? "wiki" : "chunks");
 
     try {
-      const queryVector = await embedRetrievalQuery(ctx, {
+      const embedded = await embedRetrievalQuery(ctx, {
         query,
         companyId,
         operation: "voiceRagEmbedding",
       });
-      if (!queryVector) return { context: "" };
+      if (!embedded) return { context: "" };
+      const queryVector = embedded.vector;
+      const cutOff = await knowledgeCutOff(ctx, {
+        ...(companyId ? { companyId } : {}),
+        question: query,
+        ...(args.threadId ? { links: { threadId: args.threadId } } : {}),
+      });
 
       // Spoken answers retire the global chunk arm on the same content-
       // carried cutover as typed ones (global-wiki-plan, phase 2).
@@ -196,7 +203,9 @@ export const searchKnowledgeForVoiceInternal = internalAction({
               ranked,
               maxChars: 6000,
               threadReserveRatio: 0.3,
-              loadChunk: (id) => ctx.runQuery(internal.knowledge.getChunkInternal, { id }),
+              loadChunk: readChunk(ctx),
+              embeddingModelId: embedded.modelId,
+              ...(cutOff ? { judge: cutOff } : {}),
             })
           : { chunkTexts: [] as string[] };
 
@@ -267,7 +276,9 @@ export const searchKnowledgeForVoiceInternal = internalAction({
               }),
               maxChars: 6000,
               threadReserveRatio: 0,
-              loadChunk: (id) => ctx.runQuery(internal.knowledge.getChunkInternal, { id }),
+              loadChunk: readChunk(ctx),
+              embeddingModelId: embedded.modelId,
+              ...(cutOff ? { judge: cutOff } : {}),
             });
             voiceFallbackTexts = picked.chunkTexts;
           }

@@ -10,7 +10,7 @@ import Header from "@/src/ui/components/layout/Header";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { formatDate, formatDateTime } from "@/src/lib/dates";
 import { formatDay, formatNumber } from "./_components/siteFormat";
 import { SiteTableBar } from "./_components/SiteTableBar";
@@ -140,9 +140,9 @@ export default function SitesPage() {
               header: t("columns.type"),
               cell: (row) => (
                 <div className="flex flex-col gap-1">
-                  <StatusPill tone={row.relationship === "OWNED" ? "info" : "neutral"}>
+                  <StatusLabel tone={row.relationship === "OWNED" ? "info" : "neutral"}>
                     {row.relationship === "OWNED" ? t("owned") : t("competitor")}
-                  </StatusPill>
+                  </StatusLabel>
                   {row.ofHost ? <span className="text-[12px] text-secondary">{t("of", { host: row.ofHost })}</span> : null}
                 </div>
               ),

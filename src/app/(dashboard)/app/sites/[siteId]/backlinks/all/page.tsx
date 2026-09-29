@@ -8,8 +8,8 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
-import { CUT_COLUMN, ExternalUrlCell, LinkStatusPill, RecordLinkCell } from "../../../_components/SiteCells";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { CUT_COLUMN, ExternalUrlCell, LinkStatusLabel, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { formatDay, formatNumber } from "../../../_components/siteFormat";
@@ -122,11 +122,11 @@ export default function SiteAllBacklinksPage() {
           {
             key: "follow",
             header: t("columns.follow"),
-            cell: (row) => <StatusPill tone={row.dofollow ? "success" : "neutral"}>{row.dofollow ? tl("follow") : tl("nofollow")}</StatusPill>,
+            cell: (row) => <StatusLabel tone={row.dofollow ? "success" : "neutral"}>{row.dofollow ? tl("follow") : tl("nofollow")}</StatusLabel>,
           },
           { key: "domainRank", header: t("columns.domainRank"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.domainRank)}</span> },
           { key: "firstSeen", header: t("columns.firstSeen"), sortable: true, cell: (row) => <span className="whitespace-nowrap text-[12px] text-secondary">{formatDay(row.firstSeen)}</span> },
-          { key: "status", header: t("columns.status"), cell: (row) => <LinkStatusPill status={row.status} /> },
+          { key: "status", header: t("columns.status"), cell: (row) => <LinkStatusLabel status={row.status} /> },
         ]}
       />
     </div>

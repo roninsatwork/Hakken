@@ -18,6 +18,8 @@ import type { Doc, Id } from "@/convex/_generated/dataModel";
 import HakkenModal from "@/src/ui/components/feedback/HakkenModal";
 import { Button } from "@/src/ui/components/screens/Button";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { toneForStatus } from "@/src/ui/components/screens/statusTone";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import {
   MAX_BULK_UPLOAD_FILES,
@@ -296,9 +298,10 @@ export function KnowledgeDocumentInspectModal({
           <>
             <div className="rounded-[8px] border border-border-dim bg-white/[0.02] px-4 py-3 flex flex-col gap-2">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-black/20 text-secondary">
+                {/* The stored status word, which has no translation yet. */}
+                <StatusLabel tone={toneForStatus(inspection.document.status)} className="capitalize">
                   {inspection.document.status}
-                </span>
+                </StatusLabel>
                 <span className="text-[10px] uppercase font-mono tracking-widest text-muted">
                   {inspection.document.format}
                 </span>

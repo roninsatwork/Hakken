@@ -120,7 +120,7 @@ export async function questionQueries(ctx: Reader, holdId: Id<"companyWebsites">
 }
 
 /** A website's fan-out queries ticked, across all its prompts: running on its tracked searches, from a prompt's list. */
-function tickedCount(searches: ReadonlyArray<Doc<"websiteKeywords">>): number {
+export function tickedCount(searches: ReadonlyArray<Doc<"websiteKeywords">>): number {
   return searches.filter((search) => search.isActive && search.addedFrom === "AI_SEARCH").length;
 }
 
@@ -228,7 +228,7 @@ export const getPromptFanOut = superAdminQuery({
  * typed in on Tracked keywords and paused there is resumed outside the
  * fan-out limit: it was never one of the fan-out queries'.
  */
-async function tick(ctx: MutationCtx, hold: Doc<"companyWebsites">, text: string, userId?: Id<"users">) {
+export async function tick(ctx: MutationCtx, hold: Doc<"companyWebsites">, text: string, userId?: Id<"users">) {
   const { keyword } = readSearchPhrase(text);
   const search = await holdSearch(ctx, hold._id, keyword);
   if (search?.isActive) return;
@@ -268,7 +268,7 @@ async function tickIfRoom(ctx: MutationCtx, hold: Doc<"companyWebsites">, text: 
  * keywords is only paused, so the company's own typing is not lost. What its
  * checks found stays.
  */
-async function untick(ctx: MutationCtx, hold: Doc<"companyWebsites">, keyword: string, userId?: Id<"users">, why?: string) {
+export async function untick(ctx: MutationCtx, hold: Doc<"companyWebsites">, keyword: string, userId?: Id<"users">, why?: string) {
   const search = await holdSearch(ctx, hold._id, keyword);
   if (!search) return;
   const entry = {
@@ -388,7 +388,7 @@ async function audit(ctx: MutationCtx & { userId: Id<"users"> }, hold: Doc<"comp
 }
 
 /** Whether a phrase is already on the prompt's list — the AI's, or the company's own. */
-async function listedAlready(ctx: Reader, hold: Doc<"companyWebsites">, prompt: string, query: string): Promise<boolean> {
+export async function listedAlready(ctx: Reader, hold: Doc<"companyWebsites">, prompt: string, query: string): Promise<boolean> {
   const limits = await readFanOutLimits(ctx, hold.companyId, hold._id);
   const found = await questionQueries(ctx, hold._id, prompt, limits.anglesShown);
   return found.listed.some((wording) => wording.query === query) || found.own.some((choice) => choice.query === query);

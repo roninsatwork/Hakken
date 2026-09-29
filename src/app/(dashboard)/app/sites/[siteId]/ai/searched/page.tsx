@@ -1,20 +1,22 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useTranslations } from "next-intl";
-import { Info, Telescope } from "lucide-react";
+import { Telescope } from "lucide-react";
 import { api } from "@/convex/_generated/api";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
-import { CUT_COLUMN, IntentPill, RecordLinkCell } from "../../../_components/SiteCells";
+import { CUT_COLUMN, IntentText, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
-import { formatDay, formatNumber } from "../../../_components/siteFormat";
-import { useSite, useSiteId } from "../../../_components/useSite";
+import { formatNumber } from "../../../_components/siteFormat";
+import { useSiteId } from "../../../_components/useSite";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
@@ -23,61 +25,56 @@ import { ListDownload } from "../../../_components/SiteDownloads";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 
 const INTENTS = ["BUYING", "RESEARCHING", "BRANDED", "IRRELEVANT", "OTHER", "UNJUDGED"] as const;
-const PAGE_FILTERS = ["missing", "answered", "offTopic", "unjudged"] as const;
-type PageFilter = (typeof PAGE_FILTERS)[number];
 
 type Angle = FunctionReturnType<typeof api.siteAngles.listAngles>["rows"][number];
 
 /**
  * The columns that sort (docs/plans/active/sites-table-sorting-plan.md): the
- * search A to Z, the most engines running it, the most times seen — the order
- * it opens on — and the site's position, top first, a search with none last.
+ * search A to Z, the most times seen — the order it opens on — and the site's
+ * position, top first, a search with none last.
  */
-const SORTS: SiteSortColumns<Angle, "search" | "engines" | "times" | "position"> = {
+const SORTS: SiteSortColumns<Angle, "search" | "times" | "position"> = {
   search: { value: (row) => row.queryText, first: "asc" },
-  engines: { value: (row) => row.engines.length, first: "desc" },
   times: { value: (row) => row.timesSeen, first: "desc" },
   position: { value: (row) => row.position?.value ?? null, first: "asc" },
 };
 const queryOf = (row: Angle) => row.queryText;
 
-/** Which of the page filters a row falls under. */
-function pageKind(row: Angle): PageFilter {
-  if (!row.page || row.page.verdict === "UNSURE") return "unjudged";
-  if (row.page.verdict === "NONE") return "missing";
-  if (row.page.verdict === "OFF_TOPIC") return "offTopic";
-  return "answered";
-}
-
 /**
  * Fan-out queries: the searches the AI assistants ran behind the scenes for
  * the site's questions, most persistent first — named with the industry's own
- * term (Anthony, 2026-09-25). Since 2026-09-28 (docs/plans/active/
- * fan-out-angles-plan.md, FA1 and FA5) wordings that say the same thing are
- * one row, an angle, with the site's position for it and the page that
- * answers it; *Missing angles* turns the table into the list of angles the
- * site has no page for. Read-only: tracking a search is done in admin. For a
- * competitor the angles are shown without the two columns, which are about
- * the company's own site. The list is bounded on the server, so the search
- * and filters narrow it in place.
+ * term (Anthony, 2026-09-25) — wordings that say the same thing one row, a
+ * topic (docs/plans/active/fan-out-angles-plan.md, FA5).
+ *
+ * Four columns since 2026-09-29 (Anthony: "its getting very wide … we can do
+ * this on the page it clicks to"): Track, the search with what the searcher
+ * wants and which assistants searched it on a second line, Times seen and the
+ * site's position. The question it answered, its other wordings, the day it
+ * was checked and the site's page for it are on the page each row opens
+ * (`keywordAngle`); the download keeps them all. The Track tick chooses which
+ * are checked on Google every run, up to the website's limit — the same rule
+ * as admin's (`siteFanOutTracking.ts`). A competitor's topics are shown
+ * without the tick or a position, which are about the company's own site. The
+ * list is bounded on the server, so the search and filters narrow it in place.
  */
 export default function SiteSearchedPage() {
   const t = useTranslations("sites.aiSearched");
   const tc = useTranslations("sites.common");
   const siteId = useSiteId();
-  const site = useSite();
   const engineLabel = useEngineLabel();
   const [search, setSearch, settled] = useSiteSearch();
   const [question, setQuestion] = useSiteParam<string>("question", "");
   const [intent, setIntent] = useSiteParam<string>("intent", "");
   const [tracked, setTracked] = useSiteParam<string>("tracked", "");
-  const [pageFilter, setPageFilter] = useSiteParam<string>("page", "");
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
   const answer = useQuery(api.siteAngles.listAngles, { siteId });
+  const trackQuery = useMutation(api.siteFanOutTracking.trackSiteFanOutQuery);
+  const action = useAdminAction({ scope: "site-fan-out-track" });
+  const tracking = answer?.tracking ?? null;
+  const full = tracking !== null && tracking.count >= tracking.limit;
   const rows = answer?.rows;
   const own = answer?.own ?? false;
-  const missingOnly = own && pageFilter === "missing";
 
   const term = settled.toLowerCase();
   const matches = wordStartMatcher(term);
@@ -85,8 +82,7 @@ export default function SiteSearchedPage() {
     (!matches || matches(row.queryText, row.prompt, ...row.otherWordings))
     && (!question || row.prompt === question)
     && (!intent || (row.intent ?? "UNJUDGED") === intent)
-    && (!tracked || (tracked === "yes") === row.tracked)
-    && (!own || !pageFilter || pageKind(row) === pageFilter));
+    && (!tracked || (tracked === "yes") === row.tracked));
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "times", name: queryOf });
   const pager = useSitePager(sorted, { isLoading: rows === undefined, cut: answer?.cut });
   const questions = [...new Set((rows ?? []).map((row) => row.prompt))].sort();
@@ -95,57 +91,54 @@ export default function SiteSearchedPage() {
     if (!row.position) {
       return <span className="whitespace-nowrap text-[12px] text-muted">{row.tracked ? t("notCheckedYet") : t("notTracked")}</span>;
     }
-    const from = row.position.from === "CHECKED"
-      ? t("positionFrom.CHECKED", { day: formatDay(row.position.day) })
-      : t(`positionFrom.${row.position.from}`);
+    return row.position.value === null
+      ? <span className="whitespace-nowrap text-[12px] text-secondary">{t("notInTop100")}</span>
+      : <span className="font-mono text-[13px] text-foreground">{formatNumber(row.position.value)}</span>;
+  };
+
+  const changeTracking = (row: Angle, track: boolean) =>
+    void action.run(() => trackQuery({ siteId, prompt: row.prompt, queries: [row.query, ...row.otherWordings], track }), {
+      key: `track:${row.key}`,
+      fallbackMessage: t("trackFailed"),
+    });
+
+  const trackCell = (row: Angle) => {
+    // Full: an empty box cannot be ticked, and says why.
+    const reason = !row.tracked && full && tracking ? t("full", { limit: tracking.limit, query: row.queryText }) : undefined;
     return (
-      <span className="flex flex-col items-end gap-0.5">
-        {row.position.value === null
-          ? <span className="whitespace-nowrap text-[12px] text-secondary">{t("notInTop100")}</span>
-          : <span className="font-mono text-[13px] text-foreground">{formatNumber(row.position.value)}</span>}
-        <span className="whitespace-nowrap text-[11px] text-muted">{from}</span>
+      // The tick is the row's own control: its click must not open the search.
+      <span className="flex" title={reason} onClick={(event) => event.stopPropagation()}>
+        <Checkbox
+          label={row.tracked ? t("untrackLabel", { query: row.queryText }) : t("trackLabel", { query: row.queryText })}
+          labelHidden
+          checked={row.tracked}
+          disabled={Boolean(reason) || action.isBusy(`track:${row.key}`)}
+          title={reason}
+          onChange={(next) => changeTracking(row, next)}
+        />
       </span>
     );
   };
 
-  const pageCell = (row: Angle) => {
-    if (!row.page) return <span className="text-[12px] text-muted">{t("pageVerdict.unjudged")}</span>;
-    if (row.page.verdict === "NONE") return <StatusPill tone="warning">{t("pageVerdict.NONE")}</StatusPill>;
-    if (row.page.verdict !== "ANSWERED" || !row.page.page) {
-      return <span className="text-[12px] text-muted">{t(`pageVerdict.${row.page.verdict === "OFF_TOPIC" ? "OFF_TOPIC" : "UNSURE"}`)}</span>;
-    }
-    return (
-      <RecordLinkCell cut href={recordHref({ kind: "page", page: row.page.page })} className="text-[13px] text-info">
-        {row.page.page}
-      </RecordLinkCell>
-    );
-  };
-
-  const judgedAgainst = () => {
-    const ranked = site?.counts.pages ?? 0;
-    if (!answer?.audit) return t("judgedAgainstNoAudit", { ranked });
-    return answer.audit.maxPages === null
-      ? t("judgedAgainstNoLimit", { crawled: answer.audit.pagesCrawled, ranked })
-      : t("judgedAgainst", { crawled: answer.audit.pagesCrawled, limit: answer.audit.maxPages, ranked });
-  };
+  const searchCell = (row: Angle) => (
+    <span className="flex min-w-0 flex-col gap-0.5">
+      <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.query })}>{row.queryText}</RecordLinkCell>
+      <span className="truncate text-[11px] text-muted">
+        <IntentText intent={row.intent} /> · {row.engines.map(engineLabel).join(", ")}
+      </span>
+    </span>
+  );
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Telescope className="h-5 w-5 text-brand" />} title={t("title")} description={t(own ? "description" : "descriptionCompetitor")} />
       {answer && !answer.built ? <p className="text-[12px] text-muted">{t("notBuilt")}</p> : null}
-      {/* What "None" was judged against, before the search box, as a list screen's explanation sits. */}
-      {own ? (
-        <p className="flex items-start gap-2 text-[12px] text-muted">
-          <Info className="mt-0.5 h-3.5 w-3.5 flex-shrink-0" aria-hidden="true" />
-          {judgedAgainst()}
-        </p>
-      ) : null}
       <div className="flex flex-col gap-3">
         <DataTable
           rows={pager.pageRows}
           rowKey={(row) => row.key}
           onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.query }))}
-          minWidthClassName={own ? "min-w-[1040px]" : "min-w-[760px]"}
+          minWidthClassName="min-w-[720px]"
           search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
           filters={
             <>
@@ -167,16 +160,6 @@ export default function SiteSearchedPage() {
                 <option value="yes">{t("onlyTracked")}</option>
                 <option value="no">{t("onlyUntracked")}</option>
               </Select>
-              {own ? (
-                <Select
-                  chip={{ label: t("pageFilter"), choice: pageFilter ? t(`pageFilters.${pageFilter as PageFilter}`) : null }}
-                  value={pageFilter}
-                  onChange={setPageFilter}
-                >
-                  <option value="">{t("anyPage")}</option>
-                  {PAGE_FILTERS.map((entry) => <option key={entry} value={entry}>{t(`pageFilters.${entry}`)}</option>)}
-                </Select>
-              ) : null}
             </>
           }
           cardHeader={
@@ -185,7 +168,7 @@ export default function SiteSearchedPage() {
               noun="angles"
               actions={
                 <ListDownload
-                  fileName={missingOnly ? "missing-topics" : "fan-out-queries"}
+                  fileName="fan-out-queries"
                   rows={sorted}
                   columns={[
                     { header: t("columns.search"), value: (row) => row.queryText },
@@ -205,40 +188,25 @@ export default function SiteSearchedPage() {
                 />
               }
             >
-              <span className="text-[12px] text-secondary">
-                {missingOnly ? t("mostSeenFirst") : t("fromQueries", { count: answer?.wordings ?? 0 })}
-              </span>
+              <span className="text-[12px] text-secondary">{t("fromQueries", { count: answer?.wordings ?? 0 })}</span>
+              {tracking ? (
+                <span className="text-[12px] text-foreground">· {t("trackedCount", { count: tracking.count, limit: tracking.limit })}</span>
+              ) : null}
             </SiteTableBar>
           }
-          empty={{ icon: <Telescope className="h-8 w-8 text-muted/30" />, label: term || question || intent || tracked || pageFilter ? t("noMatch") : t("empty") }}
+          empty={{ icon: <Telescope className="h-8 w-8 text-muted/30" />, label: term || question || intent || tracked ? t("noMatch") : t("empty") }}
           footer={pager.footer}
           sort={tableSort}
-          columns={[
-            {
-              key: "search",
-              header: t("columns.search"),
-              sortable: true,
-              className: CUT_COLUMN.first,
-              cell: (row) => (
-                <span className="flex min-w-0 flex-col gap-0.5">
-                  <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.query })}>{row.queryText}</RecordLinkCell>
-                  <span title={row.prompt} className="truncate text-[11px] text-muted">{t("fromQuestion", { question: row.prompt })}</span>
-                  {row.otherWordings.length > 0 ? (
-                    <span title={row.otherWordings.join(", ")} className="truncate text-[11px] text-secondary">
-                      {t("alsoSearchedAs", { wordings: row.otherWordings.map((wording) => `“${wording}”`).join(", ") })}
-                    </span>
-                  ) : null}
-                </span>
-              ),
-            },
-            { key: "intent", header: t("columns.intent"), cell: (row) => <IntentPill intent={row.intent} /> },
-            { key: "engines", header: t("columns.engines"), sortable: true, cell: (row) => <span className="text-[12px] text-secondary">{row.engines.map(engineLabel).join(", ")}</span> },
+          rowClassName={(row) => (row.tracked && own ? "bg-brand/5" : "")}
+          columns={own ? [
+            { key: "track", header: t("columns.track"), className: "w-[72px]", cell: trackCell },
+            { key: "search", header: t("columns.search"), sortable: true, className: CUT_COLUMN.first, cell: searchCell },
             { key: "times", header: t("columns.times"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.timesSeen)}</span> },
-            ...(own ? [
-              { key: "position", header: t("columns.position"), align: "right" as const, sortable: true, cell: positionCell },
-              { key: "page", header: t("columns.page"), className: CUT_COLUMN.second, cell: pageCell },
-            ] : []),
-            { key: "tracked", header: t("columns.tracked"), cell: (row) => (row.tracked ? <StatusPill tone="success">{tc("yes")}</StatusPill> : <span className="text-muted">–</span>) },
+            { key: "position", header: t("columns.position"), align: "right", sortable: true, cell: positionCell },
+          ] : [
+            { key: "search", header: t("columns.search"), sortable: true, className: CUT_COLUMN.first, cell: searchCell },
+            { key: "times", header: t("columns.times"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.timesSeen)}</span> },
+            { key: "tracked", header: t("columns.tracked"), cell: (row) => (row.tracked ? <StatusLabel tone="success">{tc("yes")}</StatusLabel> : <span className="text-muted">–</span>) },
           ]}
         />
       </div>

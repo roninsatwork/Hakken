@@ -14,6 +14,7 @@ import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_component
 import { AiWorkspaceNav } from "../_components/AiWorkspaceNav";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 
 const DeferredSaveFeedback = lazy(async () => {
   const { SaveFeedback: Component } = await import("@/src/ui/components/screens/SaveControls");
@@ -128,10 +129,9 @@ export default function SystemPromptPage() {
             <span className="text-foreground text-[14px] font-bold tracking-wide">{t("section.title")}</span>
           </div>
 
-          <div className={`px-2 py-0.5 rounded-full text-[10px] uppercase font-mono tracking-widest transition-colors ${hasUnsavedChanges ? "bg-amber-500/10 text-amber-500 font-bold" : "bg-border-dim text-muted"
-            }`}>
+          <StatusLabel tone={hasUnsavedChanges ? "warning" : "neutral"}>
             {hasUnsavedChanges ? t("section.unsaved") : t("section.synced")}
-          </div>
+          </StatusLabel>
         </div>
 
         <div className="flex flex-col gap-2 flex-1 relative group">

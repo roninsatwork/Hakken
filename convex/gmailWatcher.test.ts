@@ -676,5 +676,5 @@ describe("the mailbox's Decisions, switched on", () => {
     expect(runs.filter((run) => run.fallbackReason === "PROVIDER_FAILED").map((run) => run.decisionKey).sort())
       .toEqual(["mailbox.message-kind", "mailbox.needs-a-person"]);
     expect(transactions).toHaveLength(0);
-  }, 30_000);
+  });
 });

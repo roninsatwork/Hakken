@@ -642,7 +642,8 @@
       "subjectKinds": {
         "email": "Email",
         "message": "Message",
-        "wikiPage": "Wiki page"
+        "wikiPage": "Wiki page",
+        "knowledgeChunk": "Knowledge passage"
       },
       "detail": {
         "back": "Back to Decisions",
@@ -5355,7 +5356,7 @@
       "columnAdmin": "System Administrator",
       "pendingInvitation": "Pending Invitation",
       "columnJoined": "Joined Date",
-      "pendingRole": "PENDING {role}",
+      "pendingRole": "Invite Pending · {role}",
       "columnActions": "Actions",
       "awaitingLogin": "Awaiting Login",
       "revokeInvitation": "Revoke invitation",
@@ -5631,21 +5632,21 @@
       "volumeColumn": "Searches a month",
       "unjudged": "Not judged",
       "intents": {
-        "BUYING": "Ready to buy",
-        "RESEARCHING": "Researching",
-        "BRANDED": "Looking for this business",
-        "IRRELEVANT": "Nothing to do with it",
-        "OTHER": "Too vague to tell"
+        "BUYING": "Commercial",
+        "RESEARCHING": "Informational",
+        "BRANDED": "Brand",
+        "IRRELEVANT": "Irrelevant",
+        "OTHER": "Unknown"
       },
       "lastCheckedColumn": "Last checked"
     },
     "websiteFanOut": {
       "intents": {
-        "BUYING": "Ready to buy",
-        "RESEARCHING": "Researching",
-        "BRANDED": "Looking for a business",
-        "IRRELEVANT": "Nothing to do with it",
-        "OTHER": "Too vague to tell"
+        "BUYING": "Commercial",
+        "RESEARCHING": "Informational",
+        "BRANDED": "Brand",
+        "IRRELEVANT": "Irrelevant",
+        "OTHER": "Unknown"
       }
     },
     "companyAiLists": {
@@ -6659,14 +6660,15 @@
         },
         "retrieval": {
           "title": "Retrieval test",
-          "searchLabel": "Search the stored text",
+          "searchLabel": "Ask a question",
           "test": "Test",
-          "checking": "Checking stored chunks...",
-          "readyDocs": "{count} ready docs",
-          "chunksChecked": "{count} chunks checked",
-          "matches": "{count} matches",
-          "noMatches": "No stored chunks matched this phrase.",
-          "score": "score {score} * {dimensions} dimensions"
+          "checking": "Searching the way the AI does...",
+          "found": "{count} found",
+          "read": "{count} read",
+          "leftOut": "{count} left out",
+          "noMatches": "The AI would read nothing from this knowledge for this question.",
+          "readPosition": "Read {position} of {count}",
+          "leftOutLabel": "Left out: not about this question"
         },
         "flagged": {
           "title": "Knowledge quality items need review",
@@ -7685,7 +7687,8 @@
       "mailbox": "Mailbox",
       "chat": "Chat",
       "wiki": "Wiki",
-      "seo": "SEO"
+      "seo": "SEO",
+      "knowledge": "Knowledge"
     },
     "certainty": {
       "SURE": "Sure",
@@ -7731,6 +7734,15 @@
         "rule": "Without it, the model that picks the pages is trusted as it is.",
         "answers": {
           "yes": "Answers it",
+          "no": "Not about this"
+        }
+      },
+      "knowledgePassageAnswersQuestion": {
+        "name": "Does this passage help answer the question?",
+        "description": "Checks the 40 best passages a knowledge search finds, in one request, and leaves out the ones that only share a word with the question, so the next passages down take their room. Used by chat, agents, calls, email replies and the swarm.",
+        "rule": "Without it, every passage the search ranks is read until the space is full.",
+        "answers": {
+          "yes": "Helps answer it",
           "no": "Not about this"
         }
       },
@@ -7852,11 +7864,11 @@
         "description": "Reads the purpose behind a search, so the searches worth paying to track can be told from the thousands a site happens to rank for.",
         "rule": "Without it, every search a site ranks for looks equally worth tracking.",
         "answers": {
-          "buying": "Ready to buy",
-          "researching": "Researching",
-          "branded": "Looking for this business",
-          "irrelevant": "Nothing to do with the business",
-          "other": "Too vague to tell"
+          "buying": "Commercial",
+          "researching": "Informational",
+          "branded": "Brand",
+          "irrelevant": "Irrelevant",
+          "other": "Unknown"
         }
       },
       "seoPageType": {
@@ -8558,11 +8570,11 @@
       "none": "–",
       "you": "{host} (this site)",
       "intents": {
-        "BUYING": "Ready to buy",
-        "RESEARCHING": "Researching",
-        "BRANDED": "Looking for a business",
-        "IRRELEVANT": "Nothing to do with it",
-        "OTHER": "Too vague to tell",
+        "BUYING": "Commercial",
+        "RESEARCHING": "Informational",
+        "BRANDED": "Brand",
+        "IRRELEVANT": "Irrelevant",
+        "OTHER": "Unknown",
         "UNJUDGED": "Not judged yet"
       },
       "anyIntent": "Any intent",
@@ -8725,9 +8737,9 @@
         "title": "Branded and other searches",
         "hint": "Where the {visits} visits a month come from: searches naming your brand, searches ready to buy, people researching, and the rest.",
         "groups": {
-          "branded": "Naming your brand",
-          "buying": "Ready to buy",
-          "researching": "Researching",
+          "branded": "Brand",
+          "buying": "Commercial",
+          "researching": "Informational",
           "other": "Other"
         },
         "row": "{visits} visits · {searches} searches",
@@ -8860,7 +8872,7 @@
     },
     "aiSearched": {
       "title": "Fan-out queries",
-      "description": "Which searches did the AI assistants run behind the scenes to answer this website's questions? These are their fan-out queries, most repeated first. Wordings that say the same thing count once, as one topic. Your position and Your page show whether the site already answers each topic; Missing topics lists the ones it has no page for.",
+      "description": "The searches the AI assistants ran behind the scenes to answer this website's questions, most repeated first. Tick the ones to track on Google every run. Open one for where it came from and the page that answers it.",
       "searchPlaceholder": "Search fan-out queries…",
       "trackedFilter": "Tracked",
       "anyTracked": "Tracked or not",
@@ -8877,27 +8889,14 @@
         "page": "Your page",
         "otherWordings": "Other wordings",
         "question": "Question",
-        "positionFrom": "Position from"
+        "positionFrom": "Position from",
+        "track": "Track"
       },
-      "fromQuestion": "Asked: {question}",
       "empty": "No fan-out queries yet. The next check records them.",
       "noMatch": "No fan-out query matches that.",
       "descriptionCompetitor": "Which searches did the AI assistants run behind the scenes to answer the questions this website is compared on? These are their fan-out queries, most repeated first. Wordings that say the same thing count once, as one topic.",
       "questionFilter": "Question",
       "anyQuestion": "Any question",
-      "pageFilter": "Your page",
-      "anyPage": "Any page",
-      "pageFilters": {
-        "missing": "Missing topics",
-        "answered": "Has a page",
-        "offTopic": "Off topic",
-        "unjudged": "Not judged yet"
-      },
-      "positionFrom": {
-        "RANKED": "Ranked list",
-        "CHECKED": "Checked {day}",
-        "SEARCH_CONSOLE": "Search Console average"
-      },
       "notInTop100": "Not in the top 100",
       "notTracked": "Not tracked",
       "notCheckedYet": "Not checked yet",
@@ -8907,13 +8906,13 @@
         "UNSURE": "Can't tell",
         "unjudged": "Not judged yet"
       },
-      "alsoSearchedAs": "Also searched as {wordings}",
       "fromQueries": "from {count, plural, =1 {# fan-out query} other {# fan-out queries}}",
-      "mostSeenFirst": "most seen first",
-      "judgedAgainst": "Your page is judged against the {crawled, number} pages the site audit read ({limit, number} is its limit) and the {ranked, number} pages Google ranks the site with. A page neither reached shows as None.",
-      "judgedAgainstNoLimit": "Your page is judged against the {crawled, number} pages the site audit read and the {ranked, number} pages Google ranks the site with. A page neither reached shows as None.",
-      "judgedAgainstNoAudit": "Your page is judged against the {ranked, number} pages Google ranks the site with; the site audit has not read the site yet. A page not among them shows as None.",
-      "notBuilt": "These searches are grouped into topics after each collection; the first grouping has not run yet."
+      "notBuilt": "These searches are grouped into topics after each collection; the first grouping has not run yet.",
+      "trackedCount": "{count} of {limit} tracked",
+      "trackLabel": "Track “{query}” on Google every run",
+      "untrackLabel": "Stop tracking “{query}” on Google",
+      "full": "All {limit} tracked. Untick one to track “{query}”.",
+      "trackFailed": "Could not change that. Try again."
     },
     "googleSearches": {
       "title": "Your searches",
@@ -9076,7 +9075,6 @@
       }
     },
     "keywordRecord": {
-      "description": "Where this website ranks for this search, how that has moved, and what the search is worth.",
       "missingTitle": "No search chosen",
       "missingBody": "Open a search from one of the keyword lists to see it here.",
       "notRanking": "This website does not rank for this search at its newest check.",
@@ -9094,7 +9092,8 @@
         "trafficDetail": "Estimated visits it brings this website",
         "cpc": "Cost per click",
         "cpcDetail": "What advertisers pay, in US dollars",
-        "notInHeld": "Not in the list held"
+        "notInHeld": "Not in the list held",
+        "checkedOn": "Checked on Google, {day}"
       },
       "chartTitle": "Position over time",
       "chartHint": "Where this website stood at each check. Higher on the chart is better: 1 is the top of Google.",
@@ -9121,7 +9120,11 @@
         "trend": "Searches over the last year",
         "trendRange": "From {low} to {high} a month",
         "firstSeen": "First seen ranking",
-        "lastChecked": "Last checked"
+        "lastChecked": "Last checked",
+        "notInList": "Not known: this search is not in the website's keyword list",
+        "tooFew": "Too few to report: Google gives no figure",
+        "volumeFrom": "Figures from",
+        "googleAds": "Google Ads, {day}"
       },
       "rankingPage": {
         "title": "The page that ranks",
@@ -9132,7 +9135,9 @@
         "linkingWebsites": "Websites linking to it",
         "links": "Links to it",
         "value": "What its visits would cost as adverts",
-        "none": "No page of this website ranks for this search."
+        "none": "No page of this website ranks for this search.",
+        "from": "From",
+        "fromCheck": "Google check, {day}"
       },
       "features": {
         "title": "Where else it shows on Google",
@@ -9148,7 +9153,8 @@
         "title": "Your competitors on this search",
         "thisWebsite": "This website",
         "notRanking": "Not in their keyword list held",
-        "none": "No competitors are set up for this website yet."
+        "none": "No competitors are set up for this website yet.",
+        "notOnPage": "Not in Google's top {count}"
       },
       "tracked": {
         "title": "Checked as one of your searches",
@@ -9168,7 +9174,42 @@
         "questions": "What people also ask",
         "related": "Related searches"
       },
-      "notInHeld": "This search is not in the keyword list held for this website at its newest check. It may still rank below the searches held."
+      "notInHeld": "This search is not in the keyword list held for this website at its newest check. It may still rank below the searches held.",
+      "checkedOncePill": "Checked once on Google",
+      "checkedOnceNotice": "Not one of your tracked searches: Google was checked for it once, on {day}, when it came up as a fan-out query.",
+      "checkedOnce": {
+        "title": "Checked once on Google",
+        "position": "Position at the check",
+        "checked": "Checked",
+        "again": "Checked again",
+        "onlyIfTracked": "Only if you track it"
+      },
+      "fromAi": {
+        "title": "From the AI's answers",
+        "asked": "Asked",
+        "searchedBy": "Searched by",
+        "timesSeen": "Times seen",
+        "timesSeenValue": "{count}, last on {day}",
+        "otherWordings": "Also searched as",
+        "intent": "What they want",
+        "page": "Your page for it",
+        "mentioned": "{host} mentioned",
+        "mentionedYes": "Yes, in {named} of {count}",
+        "mentionedNo": "{count, plural, =1 {No} =2 {No, in neither answer} other {No, in none of the # answers}}",
+        "answerTitle": "{engine}'s answer",
+        "answerDay": "{day} · it ran this search while answering",
+        "you": {
+          "RECOMMENDED": "Recommends {host}",
+          "NAMED": "Mentions {host}",
+          "WARNED_AGAINST": "Warns against {host}",
+          "NOT_NAMED": "{host} not mentioned"
+        },
+        "rival": {
+          "RECOMMENDED": "Recommends {host}",
+          "NAMED": "Mentions {host}",
+          "WARNED_AGAINST": "Warns against {host}"
+        }
+      }
     },
     "pageRecord": {
       "description": "What this page ranks for, the visits it brings, what the site audit found on it, and the websites linking to it.",

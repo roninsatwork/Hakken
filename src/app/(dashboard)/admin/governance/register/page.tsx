@@ -17,6 +17,7 @@ import {
 import { Button } from "@/src/ui/components/screens/Button";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { Select } from "@/src/ui/components/screens/Select";
 import { TABLE_PAGE_SIZE, paginateItems } from "@/src/ui/components/screens/pagination";
 import { formatDate } from "@/src/lib/dates";
@@ -266,7 +267,7 @@ export default function AiRegisterPage() {
                 </span>
                 <span
                   className={`mt-0.5 block truncate text-[12px] ${
-                    entry.purpose ? "text-secondary" : "text-[#b45309] dark:text-[#fbbf24]"
+                    entry.purpose ? "text-secondary" : "text-warning"
                   }`}
                 >
                   {entry.purpose || t("noPurpose")}
@@ -293,20 +294,14 @@ export default function AiRegisterPage() {
             key: "risk",
             header: <SortableHeader label={t("table.risk")} by="RISK" />,
             /*
-              The platform's chip, with the amber kept for the ratings that
-              actually ask for something. A text label always — colour on its
-              own would be carrying meaning nobody can rely on.
+              The platform's status label, with the warning kept for the
+              ratings that actually ask for something. Words always — colour
+              on its own would be carrying meaning nobody can rely on.
             */
             cell: (entry) => (
-              <span
-                className={`flex w-fit items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-mono uppercase tracking-widest ${
-                  entry.risk === "HIGH" || entry.risk === "UNRATED"
-                    ? "border-[#fbbf24]/40 bg-[#fbbf24]/10 text-[#b45309] dark:text-[#fbbf24]"
-                    : "border-border-dim bg-foreground/5 text-foreground/80"
-                }`}
-              >
+              <StatusLabel tone={entry.risk === "HIGH" || entry.risk === "UNRATED" ? "warning" : "neutral"}>
                 {t(`risk.${entry.risk}`)}
-              </span>
+              </StatusLabel>
             ),
           },
           {
@@ -316,7 +311,7 @@ export default function AiRegisterPage() {
               entry.ownerName ? (
                 <span className="text-[12px] text-secondary">{entry.ownerName}</span>
               ) : (
-                <span className="text-[12px] text-[#b45309] dark:text-[#fbbf24]">{t("noOwner")}</span>
+                <span className="text-[12px] text-warning">{t("noOwner")}</span>
               ),
           },
           {

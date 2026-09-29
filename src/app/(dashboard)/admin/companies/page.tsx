@@ -20,7 +20,8 @@ import {
 } from "@/src/ui/components/screens/PageHeader";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { toneForStatus } from "@/src/ui/components/screens/statusTone";
 import {
   TABLE_PAGE_SIZE,
@@ -222,9 +223,9 @@ export default function CompaniesPage() {
             header: t('collection'),
             cell: (company) => (
               <span className="flex flex-col gap-1.5">
-                <StatusPill tone={company.collection.isActive ? "success" : "neutral"}>
+                <StatusLabel tone={company.collection.isActive ? "success" : "neutral"}>
                   {company.collection.isActive ? t('collectionOn') : t('collectionOff')}
-                </StatusPill>
+                </StatusLabel>
                 {company.collection.intervalStr ? (
                   <span className="text-[12px] text-secondary">{scheduleSummary(company.collection.intervalStr)}</span>
                 ) : null}
@@ -237,9 +238,9 @@ export default function CompaniesPage() {
             cell: (company) => company.collection.last ? (
               <span className="flex flex-col gap-1.5">
                 <span className="text-[12px] text-foreground">{when(company.collection.last.startedAt)}</span>
-                <StatusPill tone={toneForStatus(company.collection.last.status)}>
+                <StatusLabel tone={toneForStatus(company.collection.last.status)}>
                   {tCollection(`status.${company.collection.last.status}`)}
-                </StatusPill>
+                </StatusLabel>
               </span>
             ) : (
               <span className="text-[12px] text-secondary">{t('neverCollected')}</span>
@@ -260,11 +261,9 @@ export default function CompaniesPage() {
             key: "users",
             header: t('assignedUsers'),
             cell: (company) => (
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
-                <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
-                  {t('users', { count: company.userCount || 0 })}{company.userCountIsCapped ? "+" : ""}
-                </span>
-              </div>
+              <TagLabel>
+                {t('users', { count: company.userCount || 0 })}{company.userCountIsCapped ? "+" : ""}
+              </TagLabel>
             ),
           },
           {

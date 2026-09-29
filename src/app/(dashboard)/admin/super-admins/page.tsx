@@ -10,12 +10,15 @@ import type { FormEvent } from "react";
 import { 
   Users, 
   Plus, 
-  ShieldCheck,
-  User,
   Trash2,
   Edit2,
   Loader2
 } from "lucide-react";
+import {
+  DirectoryInviteRoleLabel,
+  DirectoryUserRoleLabel,
+  useRoleWord,
+} from "@/src/app/(dashboard)/_features/user-directory/DirectoryTableCells";
 import Link from "next/link";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { useRouter } from "next/navigation";
@@ -48,8 +51,9 @@ function buildDirectoryColumns(actions: {
   onRevoke: (invite: ClientInvite) => void;
   onPrepareDialogs: () => void;
   t: (key: string, values?: Record<string, string | number>) => string;
+  roleWord: (role: string | undefined) => string;
 }): DataTableColumn<DirectoryRow>[] {
-  const { t } = actions;
+  const { t, roleWord } = actions;
   return [
     {
       key: "administrator",
@@ -94,22 +98,9 @@ function buildDirectoryColumns(actions: {
       header: t("columnJoined"),
       cell: (row) =>
         row.kind === "invite" ? (
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-brand/10 border border-brand/20 w-fit">
-            <span className="text-[10px] font-mono tracking-widest text-brand uppercase">
-              {t("pendingRole", { role: row.invite.role })}
-            </span>
-          </div>
+          <DirectoryInviteRoleLabel>{t("pendingRole", { role: roleWord(row.invite.role) })}</DirectoryInviteRoleLabel>
         ) : (
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-foreground/5 border border-border-dim w-fit">
-            {row.user.role === "ADMIN" ? (
-              <ShieldCheck className="w-3 h-3 text-brand" />
-            ) : (
-              <User className="w-3 h-3 text-foreground/70" />
-            )}
-            <span className="text-[10px] font-mono tracking-widest text-foreground/80 uppercase">
-              {row.user.role || "USER"}
-            </span>
-          </div>
+          <DirectoryUserRoleLabel isAdmin={row.user.role === "ADMIN" || row.user.role === "SUPER_ADMIN"} label={roleWord(row.user.role)} />
         ),
     },
     {
@@ -157,6 +148,7 @@ function buildDirectoryColumns(actions: {
 
 export default function ManageSuperAdminsPage() {
   const t = useTranslations("admin.superAdmins");
+  const roleWord = useRoleWord();
   const action = useAdminAction({ scope: "admin-super-admins" });
   const router = useRouter();
   const currentUser = useQuery(api.users.getMe);
@@ -312,6 +304,7 @@ export default function ManageSuperAdminsPage() {
           onRevoke: handleOpenRevoke,
           onPrepareDialogs: prepareSuperAdminDialogs,
           t,
+          roleWord,
         })}
         search={{
           value: searchTerm,

@@ -12,6 +12,7 @@ import { Button } from "@/src/ui/components/screens/Button";
 import { useCanWriteHere } from "@/src/ui/components/screens/AccessLevel";
 import { Database, Play, Settings2, Square, ToggleLeft, ToggleRight } from "lucide-react";
 import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import {
   purgePipelineKeys,
   type PurgeConfigMap,
@@ -161,10 +162,9 @@ export function RetentionRulesSection() {
       cell: (key) => {
         const isEnabled = configs[key]?.enabled;
         return (
-          <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-[6px] text-[11px] font-medium tracking-wide uppercase ${isEnabled ? 'bg-brand/10 text-brand' : 'bg-foreground/5 text-muted'}`}>
-            <div className={`w-1.5 h-1.5 rounded-full ${isEnabled ? 'bg-brand' : 'bg-muted'}`} />
+          <StatusLabel tone={isEnabled ? "success" : "neutral"}>
             {isEnabled ? t('purges.modals.config.enabled') : t('purges.modals.config.disabled')}
-          </div>
+          </StatusLabel>
         );
       },
     },

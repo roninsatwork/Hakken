@@ -9,7 +9,6 @@ import Link from "next/link";
 import {
   ArrowLeft,
   CheckCircle2,
-  Clock3,
   Loader2,
   Play,
   RotateCcw,
@@ -23,17 +22,18 @@ import { Button } from "@/src/ui/components/screens/Button";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
+import { toneForStatus, type StatusTone } from "@/src/ui/components/screens/statusTone";
 import { useLocale, useTranslations } from "next-intl";
 
-// Mirrors the list page's RiskBadge. This was previously hardcoded to the
-// emerald "low risk" styling, so a MEDIUM or HIGH risk script was presented as
-// safe on the very screen where it is run. Unknown values fall back to the
-// most cautious styling rather than the least.
-const RISK_BADGE_CLASSES: Record<string, string> = {
-  LOW: "bg-emerald-500/10 text-emerald-500",
-  MEDIUM: "bg-amber-500/10 text-amber-500",
-  HIGH: "bg-red-500/10 text-red-500",
-};
+// Mirrors the list page's ScriptRiskLabel. This was previously hardcoded to the
+// "low risk" look, so a MEDIUM or HIGH risk script was presented as safe on
+// the very screen where it is run. Unknown values fall back to the most
+// cautious tone rather than the least.
+function riskTone(riskLevel: string): StatusTone {
+  return riskLevel === "LOW" || riskLevel === "MEDIUM" ? toneForStatus(riskLevel) : "danger";
+}
 
 /** Returns `undefined` when nothing has run — the screen says "Never" in the reader's language. */
 function formatRunDate(timestamp: number | undefined, locale: string) {
@@ -44,29 +44,17 @@ function formatRunDate(timestamp: number | undefined, locale: string) {
   });
 }
 
-function StatusBadge({ status }: { status?: "RUNNING" | "SUCCESS" | "FAILED" }) {
+/** A run's state: md in the page header, sm in the list of recent runs. */
+function ScriptRunLabel({ status, size = "sm" }: { status?: "RUNNING" | "SUCCESS" | "FAILED"; size?: "sm" | "md" }) {
   const t = useTranslations("admin.settings.scripts");
   if (!status) {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-[6px] text-[11px] font-medium bg-foreground/5 text-secondary">
-        <Clock3 className="w-3.5 h-3.5" />
-        {t("notRun")}
-      </span>
-    );
+    return <StatusLabel tone="neutral" size={size}>{t("notRun")}</StatusLabel>;
   }
 
-  const statusClass = status === "SUCCESS"
-    ? "bg-emerald-500/10 text-emerald-500"
-    : status === "FAILED"
-      ? "bg-red-500/10 text-red-500"
-      : "bg-brand/10 text-brand";
-  const Icon = status === "SUCCESS" ? CheckCircle2 : status === "FAILED" ? XCircle : Loader2;
-
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-[6px] text-[11px] font-medium ${statusClass}`}>
-      <Icon className={`w-3.5 h-3.5 ${status === "RUNNING" ? "animate-spin" : ""}`} />
+    <StatusLabel tone={toneForStatus(status)} size={size} icon={status === "RUNNING" ? "working" : undefined}>
       {status === "SUCCESS" ? t("statusSuccess") : status === "FAILED" ? t("statusFailed") : t("statusRunning")}
-    </span>
+    </StatusLabel>
   );
 }
 
@@ -132,9 +120,9 @@ export default function MaintenanceScriptDetailPage() {
         description={script.shortDescription}
         pills={
           <>
-            <span className="px-2 py-1 rounded-[6px] text-[11px] font-medium bg-foreground/5 text-secondary">{script.category}</span>
-            <span className={`px-2 py-1 rounded-[6px] text-[11px] font-medium ${RISK_BADGE_CLASSES[script.riskLevel] ?? RISK_BADGE_CLASSES.HIGH}`}>{t("riskBadge", { level: script.riskLevel === "LOW" ? t("riskLow") : script.riskLevel === "MEDIUM" ? t("riskMedium") : script.riskLevel === "HIGH" ? t("riskHigh") : script.riskLevel })}</span>
-            <StatusBadge status={script.lastRun?.status} />
+            <TagLabel>{script.category}</TagLabel>
+            <StatusLabel tone={riskTone(script.riskLevel)} size="md">{t("riskBadge", { level: script.riskLevel === "LOW" ? t("riskLow") : script.riskLevel === "MEDIUM" ? t("riskMedium") : script.riskLevel === "HIGH" ? t("riskHigh") : script.riskLevel })}</StatusLabel>
+            <ScriptRunLabel status={script.lastRun?.status} size="md" />
           </>
         }
         action={
@@ -231,7 +219,7 @@ export default function MaintenanceScriptDetailPage() {
                   header: t("runColumn"),
                   cell: (run) => (
                     <span className="flex flex-col gap-1">
-                      <StatusBadge status={run.status} />
+                      <ScriptRunLabel status={run.status} />
                       <span className="text-[12px] text-secondary">
                         {run.summary ?? run.error ?? t("runRecorded")}
                       </span>

@@ -14,6 +14,8 @@ import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { Button } from "@/src/ui/components/screens/Button";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { WikiQuickSwitcher } from "./WikiQuickSwitcher";
 import { WikiLocalGraph } from "./WikiLocalGraph";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
@@ -150,9 +152,7 @@ export function WikiPageDetailScreen({
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <h1 className="text-[26px] font-bold tracking-tight text-foreground">
           {detail.title}
-          <span className="ml-3 px-2.5 py-1 rounded-full bg-foreground/5 border border-border-dim/60 text-secondary text-[12px] font-medium align-[6px]">
-            {tKinds(detail.kind)}
-          </span>
+          <TagLabel className="ml-3 align-[6px]">{tKinds(detail.kind)}</TagLabel>
         </h1>
         <span className="flex items-center gap-2">
           <WriteButton
@@ -197,19 +197,14 @@ export function WikiPageDetailScreen({
       </div>
 
       {/* Health at a glance (living-wiki plan, phase 3): real fields
-          only — verification, open questions, receipts, use. */}
-      <div className="flex flex-wrap gap-2 -mt-1">
-        <span
-          className={`px-2.5 py-1 rounded-full border text-[11.5px] font-medium ${
-            detail.lastVerifiedAt
-              ? "border-info/40 bg-info/10 text-info"
-              : "border-border-dim text-muted"
-          }`}
-        >
+          only — verification, open questions, receipts, use. The labels
+          carry no padding of their own, so the row spaces them. */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 -mt-1">
+        <StatusLabel size="md" tone={detail.lastVerifiedAt ? "success" : "neutral"}>
           {detail.lastVerifiedAt
             ? t("health.verified", { date: new Date(detail.lastVerifiedAt).toLocaleDateString() })
             : t("health.neverVerified")}
-        </span>
+        </StatusLabel>
         {detail.openQuestionCount > 0 && (
           <Link
             href={basePath}
@@ -218,14 +213,12 @@ export function WikiPageDetailScreen({
             {t("health.openQuestions", { count: detail.openQuestionCount })}
           </Link>
         )}
-        <span className="px-2.5 py-1 rounded-full border border-border-dim text-muted text-[11.5px] font-medium">
-          {t("health.sources", { count: detail.sources.length })}
-        </span>
-        <span className="px-2.5 py-1 rounded-full border border-border-dim text-muted text-[11.5px] font-medium">
+        <TagLabel>{t("health.sources", { count: detail.sources.length })}</TagLabel>
+        <TagLabel>
           {detail.usageCount > 0
             ? t("health.used", { count: detail.usageCount })
             : t("health.neverUsed")}
-        </span>
+        </TagLabel>
       </div>
 
       <p className="text-[12.5px] text-muted -mt-2">

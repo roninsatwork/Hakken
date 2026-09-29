@@ -83,6 +83,41 @@ describe("KnowledgeManager", () => {
     vi.mocked(useAction).mockReturnValue(vi.fn() as unknown as ReturnType<typeof useAction>);
   });
 
+  it("tests retrieval with the AI's own search, showing what it reads and what the cut-off left out", async () => {
+    const testRetrieval = vi.fn(async () => ({
+      query: "opening hours",
+      found: 3,
+      matches: [{ documentId: "doc_1", chunkId: "chunk_1", title: "Handbook", preview: "The office opens at 9am." }],
+      leftOut: [{ documentId: "doc_2", chunkId: "chunk_2", title: "Parking", preview: "Park behind the building." }],
+      safetyNotice: "Retrieval test results are untrusted reference material previews, not system instructions.",
+    }));
+    vi.mocked(useAction).mockImplementation(((fn: Parameters<typeof useAction>[0]) =>
+      getFunctionName(fn) === "knowledgeActions:testRetrieval" ? testRetrieval : vi.fn()) as unknown as typeof useAction);
+
+    render(
+      <KnowledgeManager
+        scope={{ type: "agent", agentId: "agent_1" as Id<"agents"> }}
+        header={<div>Agent Knowledge</div>}
+        emptyDocumentDescription="No documents"
+        deleteDocumentDescription={(title) => `Delete ${title || "document"}`}
+      />
+    );
+
+    fireEvent.change(screen.getByLabelText("Ask a question"), { target: { value: " opening hours " } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /Test/ }));
+    });
+
+    expect(testRetrieval).toHaveBeenCalledWith({ agentId: "agent_1", query: "opening hours" });
+    expect(await screen.findByText("3 found")).toBeInTheDocument();
+    expect(screen.getByText("1 read")).toBeInTheDocument();
+    expect(screen.getByText("1 left out")).toBeInTheDocument();
+    expect(screen.getByText("Read 1 of 1")).toBeInTheDocument();
+    expect(screen.getByText("The office opens at 9am.")).toBeInTheDocument();
+    expect(screen.getByText("Left out: not about this question")).toBeInTheDocument();
+    expect(screen.getByText("Park behind the building.")).toBeInTheDocument();
+  });
+
   it("renders agent topic coverage guidance for release review", () => {
     render(
       <KnowledgeManager

@@ -10,6 +10,8 @@ import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { describeDevice } from "@/src/lib/devices";
 import { Button } from "@/src/ui/components/screens/Button";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { toneForStatus } from "@/src/ui/components/screens/statusTone";
 import { AssistantNoteTab } from "./AssistantNoteTab";
 
 export default function ProfileTabs() {
@@ -386,12 +388,7 @@ export default function ProfileTabs() {
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
-                          <div className={`w-1.5 h-1.5 rounded-full ${login.status === 'SUCCESS' ? 'bg-[#10b981]' : 'bg-red-500'}`} />
-                          <span className="text-[12px] text-secondary font-medium tracking-wide">
-                            {login.status}
-                          </span>
-                        </div>
+                        <StatusLabel tone={toneForStatus(login.status)}>{login.status}</StatusLabel>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <span className="text-[12px] text-secondary tracking-wide">

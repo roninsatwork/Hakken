@@ -16,13 +16,13 @@ import {
 } from "lucide-react";
 import { Field } from "@/src/ui/components/screens/Field";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
-import { STATUS_TONE_CLASSES } from "@/src/ui/components/screens/statusTone";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { formatDate } from "@/src/lib/dates";
 
 type KnowledgeDocument = Doc<"knowledgeDocuments">;
 type KnowledgeDocumentId = Id<"knowledgeDocuments">;
 type QualitySummary = FunctionReturnType<typeof api.knowledge.getQualitySummary>;
-type RetrievalTestResult = FunctionReturnType<typeof api.knowledge.testRetrieval>;
+export type RetrievalTestResult = FunctionReturnType<typeof api.knowledgeActions.testRetrieval>;
 
 export type KnowledgeTab = "Website" | "File" | "Text";
 
@@ -83,16 +83,12 @@ export function KnowledgeCoveragePanel({
           <div className="text-[20px] font-semibold text-foreground">{formatCoveragePercent(coverage.score)}</div>
         </div>
       </div>
-      <div className="flex flex-wrap gap-1.5">
+      {/* Each topic ticked when a ready document covers it, flagged when none does. */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1.5">
         {coverage.terms.map((term) => (
-          <span
-            key={term.term}
-            className={`px-2 py-1 rounded-[6px] border text-[11px] ${
-              STATUS_TONE_CLASSES[term.covered ? "success" : "warning"]
-            }`}
-          >
+          <StatusLabel key={term.term} tone={term.covered ? "success" : "warning"}>
             {term.term}
-          </span>
+          </StatusLabel>
         ))}
       </div>
       <div className="text-[12px] text-secondary">
@@ -176,40 +172,43 @@ export function KnowledgeRetrievalPanel({
       {result && (
         <div className="flex flex-col gap-3">
           <div className="flex flex-wrap items-center gap-3 text-[11px] uppercase tracking-widest font-mono text-muted">
-            <span>{t("retrieval.readyDocs", { count: result.inspectedDocuments })}</span>
-            <span>{t("retrieval.chunksChecked", { count: result.inspectedChunks })}</span>
-            <span>{t("retrieval.matches", { count: result.matches.length })}</span>
+            <span>{t("retrieval.found", { count: result.found })}</span>
+            <span>{t("retrieval.read", { count: result.matches.length })}</span>
+            {result.leftOut.length > 0 && <span>{t("retrieval.leftOut", { count: result.leftOut.length })}</span>}
           </div>
-          {result.matches.length === 0 ? (
+          {result.matches.length === 0 && result.leftOut.length === 0 ? (
             <div className="rounded-[8px] border border-border-dim bg-black/20 px-4 py-3 text-[13px] text-secondary">
               {t("retrieval.noMatches")}
             </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              {result.matches.map((match) => (
-                <div key={match.chunkId} className="rounded-[8px] border border-border-dim bg-black/20 px-4 py-3 flex flex-col gap-2">
+              {/* What is read, in reading order, then what the relevance
+                  cut-off left out — dimmed, so the difference shows. */}
+              {[
+                ...result.matches.map((passage, index) => ({
+                  passage,
+                  leftOut: false,
+                  label: t("retrieval.readPosition", { position: index + 1, count: result.matches.length }),
+                })),
+                ...result.leftOut.map((passage) => ({ passage, leftOut: true, label: t("retrieval.leftOutLabel") })),
+              ].map(({ passage, leftOut, label }) => (
+                <div
+                  key={passage.chunkId}
+                  className={`rounded-[8px] border border-border-dim bg-black/20 px-4 py-3 flex flex-col gap-2${leftOut ? " opacity-60" : ""}`}
+                >
                   <div className="flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-[13px] font-semibold text-foreground truncate">{match.title}</div>
-                      <div className="text-[10px] uppercase tracking-widest font-mono text-muted mt-1">
-                        {t("retrieval.score", { score: match.score, dimensions: match.embeddingDimensions })}
-                      </div>
+                      <div className="text-[13px] font-semibold text-foreground truncate">{passage.title}</div>
+                      <div className="text-[10px] uppercase tracking-widest font-mono text-muted mt-1">{label}</div>
                     </div>
                     {renderInspectAction(
-                      match.documentId,
-                      documents.find((entry) => entry._id === match.documentId),
+                      passage.documentId,
+                      documents.find((entry) => entry._id === passage.documentId),
                       "p-2 rounded-lg border border-transparent text-secondary hover:text-brand hover:bg-brand/10 transition-colors shrink-0 disabled:opacity-40",
                     )}
                   </div>
-                  <div className="flex flex-wrap gap-1">
-                    {match.matchedTerms.map((term) => (
-                      <span key={term} className="px-2 py-0.5 rounded-md border border-brand/20 bg-brand/10 text-brand text-[10px] font-mono">
-                        {term}
-                      </span>
-                    ))}
-                  </div>
                   <pre className="text-[12px] text-secondary whitespace-pre-wrap break-words leading-relaxed max-h-28 overflow-auto">
-                    {match.preview}
+                    {passage.preview}
                   </pre>
                 </div>
               ))}

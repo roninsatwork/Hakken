@@ -9,6 +9,7 @@ import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { CompanyBillingCard } from "@/src/ui/components/billing/CompanyBillingCard";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { useTranslations } from "next-intl";
 
 type CompanyOverviewContentProps = {
@@ -196,9 +197,12 @@ export default function CompanyOverviewContent({
                   key={plan._id}
                   className={`flex flex-col gap-1 p-4 rounded-[16px] border ${plan.name === planStatus?.planName ? "border-brand/40 bg-brand/5" : "border-border-dim bg-background/30"} min-w-[160px] cursor-default transition-all hover:border-brand/20`}
                 >
-                  <span className="text-[14px] font-bold tracking-wide text-foreground">
-                    {plan.name} {plan.name === planStatus?.planName && (
-                      <span className="text-[10px] ml-2 text-brand uppercase tracking-widest rounded-full bg-brand/10 px-2 py-0.5">{t("active")}</span>
+                  {/* The label sits beside the name, not inside it, so it does
+                      not take on the name's weight and letter-spacing. */}
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <span className="text-[14px] font-bold tracking-wide text-foreground">{plan.name}</span>
+                    {plan.name === planStatus?.planName && (
+                      <StatusLabel tone="success">{t("active")}</StatusLabel>
                     )}
                   </span>
                   <span className="text-[13px] font-medium text-secondary">{t("pricePerMonth", { price: plan.priceGBP })}</span>

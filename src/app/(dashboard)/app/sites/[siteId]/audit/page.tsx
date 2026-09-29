@@ -9,7 +9,7 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { CheckedCell, RecordLinkCell } from "../../_components/SiteCells";
 import { SiteTableBar } from "../../_components/SiteTableBar";
@@ -148,7 +148,7 @@ export default function SiteAuditPage() {
         sort={tableSort}
         columns={[
           { key: "issue", header: t("columns.issue"), sortable: true, cell: (row) => <RecordLinkCell href={recordHref({ kind: "problem", check: row.check })}>{label(row.check)}</RecordLinkCell> },
-          { key: "severity", header: t("columns.severity"), sortable: true, cell: (row) => <StatusPill tone={SEVERITY_TONES[row.severity]}>{t(`severities.${row.severity}`)}</StatusPill> },
+          { key: "severity", header: t("columns.severity"), sortable: true, cell: (row) => <StatusLabel tone={SEVERITY_TONES[row.severity]}>{t(`severities.${row.severity}`)}</StatusLabel> },
           { key: "pages", header: t("columns.pages"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.pages)}</span> },
           { key: "checked", header: t("columns.lastChecked"), cell: () => <CheckedCell day={audit?.day ?? null} /> },
         ]}

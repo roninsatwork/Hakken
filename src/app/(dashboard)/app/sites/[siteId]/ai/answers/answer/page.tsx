@@ -8,7 +8,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { SettingsCard } from "@/src/ui/components/screens/SettingsCard";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { HakkenMarkdown } from "@/src/ui/components/chat/HakkenMarkdown";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
@@ -64,7 +64,7 @@ export default function SiteAnswerPage() {
         icon={<MessageSquareQuote className="h-6 w-6 text-brand" />}
         title={record?.prompt ?? tr("loading")}
         description={record ? t("description", { engine: engineLabel(record.engine), day: formatDay(record.day) }) : undefined}
-        pills={record ? <StatusPill tone={STANCE_TONES[record.stance]}>{ta(`stances.${record.stance}`)}</StatusPill> : undefined}
+        pills={record ? <StatusLabel tone={STANCE_TONES[record.stance]}>{ta(`stances.${record.stance}`)}</StatusLabel> : undefined}
       />
 
       {record === undefined ? (
@@ -92,7 +92,7 @@ export default function SiteAnswerPage() {
                         {row.page !== null
                           ? <RecordLinkCell href={recordHref({ kind: "page", page: row.page })} className="break-all text-[12px] text-info">{row.url}</RecordLinkCell>
                           : <ExternalUrlCell url={row.url} />}
-                        {row.page !== null ? <StatusPill tone="success">{t("onThisWebsite")}</StatusPill> : null}
+                        {row.page !== null ? <StatusLabel tone="success">{t("onThisWebsite")}</StatusLabel> : null}
                       </span>
                     ),
                   },

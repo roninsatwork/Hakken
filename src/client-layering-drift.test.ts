@@ -121,5 +121,5 @@ describe('Client Layering Drift', () => {
       offenders,
       `Client code reaches a Convex module that defines functions, which ships the backend to the browser. Move the shared value into convex/utils/ and import it from there:\n\n${offenders.join('\n\n')}`
     ).toEqual([]);
-  }, 30_000);
+  });
 });

@@ -8,11 +8,6 @@ import { cameraInput, yawToward } from "./WorldLayout";
 // Stable player routes exercise the original live patrols. No teleports, enemy
 // removal, extended power, modified balancing, or scene-only success flags.
 
-// A level walked end to end takes about a second on a laptop; the two-core CI
-// runner, with coverage and the whole suite beside it, took 'courtyard' past
-// 15s (run of b9f3e320, 2026-09-28) without a failed step — the room the
-// whole-map simulations were given for the same reason (db156b0b).
-const CAMPAIGN_TIMEOUT_MS = 60_000;
 const ROUTES = {
   courtyard: ["spirit", 1, 0, 2, "treasure"],
   market: ["spirit", 0, 1, 2, "treasure"],
@@ -84,5 +79,4 @@ it.each(LEVELS)(
       knockouts: 0,
     });
   },
-  CAMPAIGN_TIMEOUT_MS,
 );

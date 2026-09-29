@@ -11,6 +11,7 @@ import { AiRuleSafetyWarningPanel } from "@/src/app/(dashboard)/admin/_component
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 
 type RulePriority = "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
@@ -135,9 +136,7 @@ export function EditRuleScreen({
              </div>
 
              {/* Read-Only Identity Tag */}
-             <div className="px-3 py-1 rounded-full border border-border-dim bg-foreground/5 text-muted text-[10px] uppercase font-mono tracking-widest">
-               {t("idTag", { id: ruleId.slice(0, 8) })}
-             </div>
+             <TagLabel>{t("idTag", { id: ruleId.slice(0, 8) })}</TagLabel>
            </div>
 
            <div className="ml-1">

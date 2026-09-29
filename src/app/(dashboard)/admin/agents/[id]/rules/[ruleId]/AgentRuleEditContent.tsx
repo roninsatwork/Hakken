@@ -10,6 +10,7 @@ import { useTranslations } from "next-intl";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 
 type RulePriority = "LOW" | "NORMAL" | "HIGH" | "CRITICAL";
@@ -109,9 +110,7 @@ export default function AgentRuleEditContent({
               <div className="w-5 h-5 rounded-full bg-indigo-500 text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-indigo-500/20">1</div>
               <span className="text-foreground text-[14px] font-bold tracking-wide">{tCommon("table.name")}</span>
             </div>
-            <div className="px-3 py-1 rounded-full border border-border-dim bg-foreground/5 text-muted text-[10px] uppercase font-mono tracking-widest">
-              {t("edit.idLabel", { id: ruleId.slice(0, 8) })}...
-            </div>
+            <TagLabel>{t("edit.idLabel", { id: ruleId.slice(0, 8) })}...</TagLabel>
           </div>
           <div className="ml-1">
             <Field

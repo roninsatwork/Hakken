@@ -6,7 +6,7 @@ import { Globe } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { SettingsCard } from "@/src/ui/components/screens/SettingsCard";
-import { LinkStatusPill } from "../../../../_components/SiteCells";
+import { LinkStatusLabel } from "../../../../_components/SiteCells";
 import { SiteFigure } from "../../../../_components/SiteFigure";
 import { SiteLinkList } from "../../../../_components/SiteLinkList";
 import { SiteFacts, type SiteFact } from "../../../../_components/SiteRecordParts";
@@ -54,7 +54,7 @@ export default function SiteLinkingWebsitePage() {
         icon={<Globe className="h-6 w-6 text-brand" />}
         title={record?.domain ?? asked}
         description={t("description")}
-        pills={website ? <LinkStatusPill status={website.status} /> : undefined}
+        pills={website ? <LinkStatusLabel status={website.status} /> : undefined}
       />
 
       {record === undefined ? (

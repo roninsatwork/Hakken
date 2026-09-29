@@ -3,8 +3,8 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
-import type { StatusTone } from "@/src/ui/components/screens/statusTone";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { STATUS_TONE_TEXT_CLASSES, type StatusTone } from "@/src/ui/components/screens/statusTone";
 import { formatDay, movement, movementClass } from "./siteFormat";
 
 /**
@@ -21,10 +21,17 @@ const INTENT_TONES: Record<string, StatusTone> = {
   UNJUDGED: "neutral",
 };
 
-export function IntentPill({ intent }: { intent: string | null }) {
+export function IntentLabel({ intent, size }: { intent: string | null; size?: "sm" | "md" }) {
   const t = useTranslations("sites.common.intents");
   const key = intent ?? "UNJUDGED";
-  return <StatusPill tone={INTENT_TONES[key] ?? "neutral"}>{t(key in INTENT_TONES ? key : "OTHER")}</StatusPill>;
+  return <StatusLabel tone={INTENT_TONES[key] ?? "neutral"} size={size}>{t(key in INTENT_TONES ? key : "OTHER")}</StatusLabel>;
+}
+
+/** What the searcher wants as coloured words, for a row's second line where a label's icon would crowd it. */
+export function IntentText({ intent }: { intent: string | null }) {
+  const t = useTranslations("sites.common.intents");
+  const key = intent ?? "UNJUDGED";
+  return <span className={STATUS_TONE_TEXT_CLASSES[INTENT_TONES[key] ?? "neutral"]}>{t(key in INTENT_TONES ? key : "OTHER")}</span>;
 }
 
 /** A position, or "not on page one" when there is none. */
@@ -123,17 +130,17 @@ const PAGE_TYPE_TONES: Record<string, StatusTone> = {
 };
 
 /** What kind of page a page is, or "not sorted yet". */
-export function PageTypePill({ type }: { type: string }) {
+export function PageTypeLabel({ type, size }: { type: string; size?: "sm" | "md" }) {
   const t = useTranslations("sites.common.pageTypes");
-  return <StatusPill tone={PAGE_TYPE_TONES[type] ?? "neutral"}>{t.has(type) ? t(type) : t("OTHER")}</StatusPill>;
+  return <StatusLabel tone={PAGE_TYPE_TONES[type] ?? "neutral"} size={size}>{t.has(type) ? t(type) : t("OTHER")}</StatusLabel>;
 }
 
 const LINK_STATUS_TONES: Record<string, StatusTone> = { LIVE: "neutral", NEW: "info", LOST: "warning" };
 
 /** Whether a link, linking website, anchor or server is live, new or lost — in words, not colour alone. */
-export function LinkStatusPill({ status }: { status: "LIVE" | "NEW" | "LOST" }) {
+export function LinkStatusLabel({ status, size }: { status: "LIVE" | "NEW" | "LOST"; size?: "sm" | "md" }) {
   const t = useTranslations("sites.linkLists.statuses");
-  return <StatusPill tone={LINK_STATUS_TONES[status] ?? "neutral"}>{t(status)}</StatusPill>;
+  return <StatusLabel tone={LINK_STATUS_TONES[status] ?? "neutral"} size={size}>{t(status)}</StatusLabel>;
 }
 
 /** A page on another website, as a link a person can follow, never one a search engine should. */
@@ -182,7 +189,7 @@ export function RecordLinkCell({ href, children, className = "text-[13px] text-f
  * addresses — the whole of each on hover (Anthony, 2026-09-26). `max-w-0` lets
  * the column give way to the figures beside it however long its words are;
  * the width is the share of the table it keeps. Pair with `cut` on the cell.
- * No column takes all the width: the figures and pills beside it were
+ * No column takes all the width: the figures and labels beside it were
  * squeezed until they wrapped a word to a line (docs/plans/active/
  * sites-audit-fixes-plan.md, 1.5).
  */

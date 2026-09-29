@@ -13,7 +13,11 @@ import {
   executeRegisteredTool,
   normalizeAiRuntimeError,
 } from "./aiToolExecutionService";
-import { buildAgentSystemInstruction, buildUntrustedKnowledgeContext } from "./aiPromptAssembly";
+import {
+  buildAgentSystemInstruction,
+  buildUntrustedKnowledgeContext,
+  selectKnowledgeChunksWithinBudget,
+} from "./aiPromptAssembly";
 import {
   createModelTurnStream,
   guardModelTurn,
@@ -25,6 +29,7 @@ import {
 import { getGoogleVertexProviderModelId, GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
 import { PHOTO_ACTION_PROPOSAL_INSTRUCTION } from "./photoActionService";
 import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
+import { knowledgeCutOff, readChunk } from "./knowledgeReading";
 import { buildCompanyMemoryEvidence, buildCompanyRuntimeEvidence } from "./utils/messageEvidence";
 import {
 } from "./promptCacheService";
@@ -275,16 +280,16 @@ export const runAgentObjective = internalAction({
         // back to its sources.
         const includedChunkIds: string[] = [];
         try {
-            const queryVector = await embedRetrievalQuery(ctx, {
+            const embedded = await embedRetrievalQuery(ctx, {
                 query: args.content,
                 companyId: owner.companyId,
                 operation: "agentRagEmbedding",
             });
 
-            if (queryVector) {
+            if (embedded) {
                 // Hybrid (vector + keyword) search of the agent's own knowledge.
                 const vectorMatches = await searchKnowledgeScope(ctx, {
-                    queryVector,
+                    queryVector: embedded.vector,
                     queryText: args.content,
                     scope: { kind: "agent", agentId: args.agentId },
                     limit: 100, // Matching the maximum RAG boundary limit
@@ -293,23 +298,23 @@ export const runAgentObjective = internalAction({
                 
                 if (vectorMatches.length > 0) {
                     const MAX_RAG_CHARS = 32000;
-                    const chunkTexts: string[] = [];
-                    let chunkTextLength = 0;
-
-                    for (const res of vectorMatches) {
-                       if (chunkTextLength >= MAX_RAG_CHARS) {
-                          break;
-                       }
-                       const chunk = await ctx.runQuery(internal.knowledge.getChunkInternal, { id: res._id });
-                       if (chunk) {
-                          if (chunkTextLength + chunk.text.length > MAX_RAG_CHARS) {
-                             break;
-                          }
-                          chunkTexts.push(chunk.text);
-                          chunkTextLength += chunk.text.length;
-                          includedChunkIds.push(res._id);
-                       }
-                    }
+                    const cutOff = await knowledgeCutOff(ctx, {
+                        ...(owner.companyId ? { companyId: owner.companyId } : {}),
+                        question: args.content,
+                        links: { threadId: args.threadId, ...(agentRunId ? { agentRunId } : {}) },
+                    });
+                    // The shared selection, as chat reads: one tier, so the
+                    // search's own order stands.
+                    const { chunkTexts, chunkIds } = await selectKnowledgeChunksWithinBudget({
+                        ranked: vectorMatches.map((match) => ({ match, tier: "agent" as const, score: match._score })),
+                        maxChars: MAX_RAG_CHARS,
+                        threadReserveRatio: 0,
+                        loadChunk: readChunk(ctx),
+                        embeddingModelId: embedded.modelId,
+                        agent: { agentId: args.agentId, ...(owner.companyId ? { companyId: owner.companyId } : {}) },
+                        ...(cutOff ? { judge: cutOff } : {}),
+                    });
+                    includedChunkIds.push(...chunkIds);
 
                     if (chunkTexts.length > 0) {
                         ragContext = buildUntrustedKnowledgeContext({

@@ -208,7 +208,8 @@ ${configuredAgentPrompt}`;
   return instruction;
 }
 
-export type KnowledgeMatchTier = "thread" | "company" | "global";
+/** Where a matched piece of knowledge came from; an agent's own pieces are read only by that agent's runs. */
+export type KnowledgeMatchTier = "thread" | "company" | "global" | "agent";
 
 export type RankedKnowledgeMatch<T> = {
   match: T;
@@ -222,7 +223,7 @@ export type RankedKnowledgeMatch<T> = {
  * breaks ties without overriding relevance: a strongly matching company
  * document still outranks a weakly matching thread upload.
  */
-const KNOWLEDGE_TIER_WEIGHTS: Record<KnowledgeMatchTier, number> = {
+const KNOWLEDGE_TIER_WEIGHTS: Record<Exclude<KnowledgeMatchTier, "agent">, number> = {
   thread: 1.1,
   company: 1.05,
   global: 1,
@@ -257,6 +258,33 @@ export function rankAssistantKnowledgeMatches<T extends { _score: number }>(args
 }
 
 /**
+ * How many of the best-ranked passages the knowledge cut-off judges, in one
+ * request (docs/plans/active/knowledge-relevance-cutoff-plan.md): about 16,000
+ * tokens, inside TypeSafe's 64,000 a request. Passages ranked below it are
+ * read as they always were.
+ */
+export const JUDGED_PASSAGES = 40;
+
+/**
+ * The knowledge cut-off: given the best-ranked passages, best first, the ids
+ * of those that do not help answer the question, to be left out. Built by
+ * `knowledgePassageJudge.ts` over the `knowledge.passage-answers-question`
+ * Decision; switched off, it leaves nothing out.
+ */
+export type PassageJudge = (
+  passages: Array<{ id: string; text: string; document?: string }>,
+) => Promise<ReadonlySet<string>>;
+
+/** A stored piece of knowledge, as far as choosing what to read needs it. */
+type LoadedChunk = {
+  text: string;
+  agentId?: string;
+  companyId?: string;
+  embeddingModelId?: string;
+  documentTitle?: string;
+};
+
+/**
  * Fill the retrieval character budget from a ranked match list.
  *
  * Runs two passes over the same list: the first admits only thread matches, up
@@ -271,29 +299,82 @@ export function rankAssistantKnowledgeMatches<T extends { _score: number }>(args
  * previously computed here and thrown away, which meant nothing downstream could
  * say which documents reached the model — so a check asking "did it use the
  * handbook?" had nothing to compare against and could never pass.
+ *
+ * Three things are never read (knowledge-relevance-cutoff-plan.md). An
+ * agent's pieces, except by that agent's own runs — `agent` names the agent
+ * and the company the run is for, and even then a piece another company
+ * added to the agent is not read: an agent every company can use is searched
+ * by agent alone, so the company is checked here. A piece embedded by
+ * another model than the question was, since two models' vectors are not
+ * comparable (`knowledgeReembed.ts`); one without a model counts as another.
+ * And, when a `judge` is given, the best-ranked passages it is sure do not
+ * help — judged once, before the budget fills, so a relevant passage further
+ * down takes the room a stray one would have had.
  */
 export async function selectKnowledgeChunksWithinBudget<T extends { _id: string }>(args: {
   ranked: RankedKnowledgeMatch<T>[];
   maxChars: number;
   threadReserveRatio: number;
-  loadChunk: (id: T["_id"]) => Promise<{ text: string; agentId?: unknown } | null>;
-}): Promise<{ chunkTexts: string[]; chunkIds: string[] }> {
+  loadChunk: (id: T["_id"]) => Promise<LoadedChunk | null>;
+  /** The model the question was embedded with; pieces embedded by another are skipped. */
+  embeddingModelId?: string;
+  /** The agent whose own knowledge this run reads, and whose company the run is; absent, no agent's pieces are read. */
+  agent?: { agentId: string; companyId?: string };
+  judge?: PassageJudge;
+}): Promise<{ chunkTexts: string[]; chunkIds: string[]; leftOutIds: string[] }> {
   const chunkTexts: string[] = [];
   const chunkIds: string[] = [];
   const taken = new Set<string>();
   let used = 0;
+
+  const agentMayRead = (chunk: LoadedChunk) =>
+    chunk.agentId === args.agent?.agentId && (!chunk.companyId || chunk.companyId === args.agent?.companyId);
+
+  // Each piece read at most once, whether judged or admitted.
+  const loaded = new Map<string, LoadedChunk | null>();
+  const readable = async (id: T["_id"]): Promise<LoadedChunk | null> => {
+    if (!loaded.has(id)) {
+      const chunk = await args.loadChunk(id);
+      const usable = chunk
+        && (!chunk.agentId || agentMayRead(chunk))
+        && (args.embeddingModelId === undefined || chunk.embeddingModelId === args.embeddingModelId);
+      loaded.set(id, usable ? chunk : null);
+    }
+    return loaded.get(id) ?? null;
+  };
+
+  let leftOut: ReadonlySet<string> = new Set();
+  const judged: string[] = [];
+  if (args.judge) {
+    const passages: Array<{ id: string; text: string; document?: string }> = [];
+    for (const entry of args.ranked) {
+      if (passages.length >= JUDGED_PASSAGES) break;
+      const chunk = await readable(entry.match._id);
+      if (!chunk) continue;
+      passages.push({
+        id: entry.match._id,
+        text: chunk.text,
+        ...(chunk.documentTitle ? { document: chunk.documentTitle } : {}),
+      });
+      judged.push(entry.match._id);
+    }
+    try {
+      if (passages.length > 0) leftOut = await args.judge(passages);
+    } catch (error) {
+      // A cut-off that cannot answer leaves everything in: today's reading.
+      console.warn("Knowledge cut-off failed; reading every passage.", error);
+    }
+  }
 
   const collect = async (entries: RankedKnowledgeMatch<T>[], budget: number) => {
     for (const entry of entries) {
       if (used >= budget) break;
       // Checked before loading so the second pass never re-reads a chunk the
       // reserved pass already admitted.
-      if (taken.has(entry.match._id)) continue;
+      if (taken.has(entry.match._id) || leftOut.has(entry.match._id)) continue;
 
-      const chunk = await args.loadChunk(entry.match._id);
-      // Agent-scoped chunks belong to a specific agent's knowledge, not the
-      // assistant's shared retrieval.
-      if (!chunk || chunk.agentId) continue;
+      const chunk = await readable(entry.match._id);
+      if (!chunk) continue;
       if (used + chunk.text.length > budget) break;
 
       taken.add(entry.match._id);
@@ -309,7 +390,8 @@ export async function selectKnowledgeChunksWithinBudget<T extends { _id: string 
   );
   await collect(args.ranked, args.maxChars);
 
-  return { chunkTexts, chunkIds };
+  // In rank order, so a screen can show what was left out where it stood.
+  return { chunkTexts, chunkIds, leftOutIds: judged.filter((id) => leftOut.has(id)) };
 }
 
 function sanitizeHistoryRole(role: string) {

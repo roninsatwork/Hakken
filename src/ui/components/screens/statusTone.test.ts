@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  STATUS_TONE_CLASSES,
   STATUS_TONE_TEXT_CLASSES,
   toneForStatus,
 } from "./statusTone";
@@ -31,10 +30,7 @@ describe("tone classes", () => {
     // The whole point: these classes must route through the tokens the
     // Aesthetics screen controls, or its Status Colours stay decorative.
     const banned = /(red|rose|amber|yellow|emerald|green|sky|blue|indigo|orange)-\d|#[0-9a-fA-F]{3}/;
-    for (const classes of [
-      ...Object.values(STATUS_TONE_CLASSES),
-      ...Object.values(STATUS_TONE_TEXT_CLASSES),
-    ]) {
+    for (const classes of Object.values(STATUS_TONE_TEXT_CLASSES)) {
       expect(classes).not.toMatch(banned);
     }
   });

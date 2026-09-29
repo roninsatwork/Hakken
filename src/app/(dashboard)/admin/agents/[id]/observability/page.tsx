@@ -7,7 +7,7 @@ import { api } from "@/convex/_generated/api";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { useParams, useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { Activity, AlertTriangle, ArrowRight, Loader2, UserCheck } from "lucide-react";
+import { Activity, AlertTriangle, ArrowRight, Loader2 } from "lucide-react";
 import {
   describeRunStatus,
   describeToolName,
@@ -24,7 +24,8 @@ import {
   type LabelRef,
 } from "@/src/app/(dashboard)/admin/agents/_lib/observabilityFormat";
 import { Button } from "@/src/ui/components/screens/Button";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { toneForStatus } from "@/src/ui/components/screens/statusTone";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { useNow } from "@/src/hooks/useNow";
@@ -540,9 +541,9 @@ function FailureGroups({
                 <p className="text-[13.5px] font-medium text-foreground">
                   {group.label}
                   {index === 0 && (
-                    <span className="ml-2 align-middle text-[10.5px] font-semibold uppercase tracking-wide text-destructive">
+                    <StatusLabel tone="danger" className="ml-2 align-middle">
                       {t("worst")}
-                    </span>
+                    </StatusLabel>
                   )}
                 </p>
                 <p className="text-[11.5px] text-muted mt-0.5">
@@ -559,13 +560,9 @@ function FailureGroups({
                   </button>
                 )}
               </div>
-              <span
-                className={`text-[11.5px] font-medium px-2.5 py-1 rounded-full whitespace-nowrap tabular-nums shrink-0 ${
-                  index === 0 ? "bg-destructive/10 text-destructive" : "bg-warning/10 text-warning"
-                }`}
-              >
+              <TagLabel className="shrink-0">
                 {t("jobs", { formatted: formatCount(group.count), count: group.count })}
-              </span>
+              </TagLabel>
             </div>
           ))}
         </div>
@@ -722,7 +719,7 @@ function LatestJobs({
               onClick={() => onOpenRun(run._id)}
               className="flex items-center gap-3 py-3 border-t border-border-dim/40 first:border-t-0 first:pt-0 text-left group min-w-0"
             >
-              <RunStatusPill status={run.status} continued={Boolean(run.continuedByRunId)} />
+              <RunStatusLabel status={run.status} continued={Boolean(run.continuedByRunId)} />
               <span className="flex-1 min-w-0">
                 <span className="block text-[13.5px] text-foreground truncate">{run.objective}</span>
                 <span className="block text-[11.5px] text-muted truncate">
@@ -755,7 +752,7 @@ function LatestJobs({
 /**
  * A run's status, as the house pill.
  *
- * This was a local `StatusPill`, which shadowed the kit's own atom of that name:
+ * This was a local `StatusLabel`, which shadowed the kit's own atom of that name:
  * anyone reading this file saw a familiar name and got something else. It also
  * re-derived its own colour per status, which is the habit `toneForStatus`
  * exists to end — eighteen such helpers once split FAILED between red and rose
@@ -767,21 +764,20 @@ function LatestJobs({
  * job; a handover reads as information. It turns on a second prop, so no shared
  * status map can express it.
  */
-function RunStatusPill({ status, continued = false }: { status: string; continued?: boolean }) {
+function RunStatusLabel({ status, continued = false }: { status: string; continued?: boolean }) {
   const tLabels = useTranslations("admin.agents.labels");
   const statusRef = describeRunStatus(status, continued);
   const tone = status === "FAILED" && continued ? "info" : toneForStatus(status);
 
   return (
-    <StatusPill
+    <StatusLabel
       tone={tone}
-      size="md"
-      icon={status === "PENDING_APPROVAL" ? <UserCheck className="w-3 h-3" /> : undefined}
+      icon={status === "PENDING_APPROVAL" ? "approval" : undefined}
       // Fixed width so every job title on the list starts at the same place.
-      // Pills sized to their own text made the column ragged and hard to scan.
-      className="w-[86px] shrink-0 justify-center whitespace-nowrap"
+      // Labels sized to their own text made the column ragged and hard to scan.
+      className="w-[112px] shrink-0"
     >
       {tLabels(statusRef.key, statusRef.params)}
-    </StatusPill>
+    </StatusLabel>
   );
 }

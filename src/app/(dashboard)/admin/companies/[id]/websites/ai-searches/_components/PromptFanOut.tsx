@@ -13,7 +13,7 @@ import { DetailHeader, PagePrimaryAction } from "@/src/ui/components/screens/Pag
 import { Button } from "@/src/ui/components/screens/Button";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { Field } from "@/src/ui/components/screens/Field";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
@@ -161,7 +161,7 @@ export function PromptFanOut({ questionId, companyWebsiteId }: {
             <span className="mt-1 block max-w-2xl">{t("description", { host })}</span>
           </>
         ) : null}
-        pills={question && !question.isActive ? <StatusPill tone="neutral">{t("paused")}</StatusPill> : null}
+        pills={question && !question.isActive ? <StatusLabel tone="neutral">{t("paused")}</StatusLabel> : null}
         action={question ? (
           <PagePrimaryAction
             variant="brand"

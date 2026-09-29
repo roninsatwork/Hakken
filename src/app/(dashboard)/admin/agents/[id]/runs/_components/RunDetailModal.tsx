@@ -23,7 +23,8 @@ import { formatMoney, type LabelRef } from "@/src/app/(dashboard)/admin/agents/_
 import { describeStepKind, describeStepStatus } from "@/src/app/(dashboard)/admin/agents/_lib/jobWaterfall";
 import type { AdminActionRunner } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/components/screens/Button";
-import { STATUS_TONE_CLASSES } from "@/src/ui/components/screens/statusTone";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 
 /**
@@ -82,14 +83,16 @@ export function RunDetailModal({
             <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${STATUS_TONE_CLASSES[getStatusTone(runDetail.run.status)]}`}>
+                  <StatusLabel
+                    tone={getStatusTone(runDetail.run.status)}
+                    icon={runDetail.run.status === "PENDING_APPROVAL" ? "approval" : undefined}
+                    size="md"
+                  >
                     {runDetail.run.status.replace("_", " ")}
-                  </span>
+                  </StatusLabel>
                   <span className="text-[11px] font-mono text-muted">{runDetail.run.triggerType}</span>
                   {runDetail.run.isRehearsal && (
-                    <span className="rounded-[4px] border border-info/40 bg-info/10 px-1.5 py-0.5 text-[10px] font-semibold text-info">
-                      {t("rehearsalNote")}
-                    </span>
+                    <StatusLabel tone="info" size="md">{t("rehearsalNote")}</StatusLabel>
                   )}
                   <span className="text-[11px] font-mono text-muted">{formatDateTime(runDetail.run.startedAt)}</span>
                   {runDetail.run.completedAt && (
@@ -143,13 +146,9 @@ export function RunDetailModal({
               {runDetail.evalFixtureContext.fixtures.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-2">
                   {runDetail.evalFixtureContext.fixtures.map((fixture) => (
-                    <span key={fixture.fixtureId} className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${
-                      fixture.status === "ACTIVE"
-                        ? "border-info/20 bg-info/10 text-info"
-                        : "border-border-dim bg-white/[0.03] text-muted"
-                    }`}>
+                    <StatusLabel key={fixture.fixtureId} tone={fixture.status === "ACTIVE" ? "info" : "neutral"} className="capitalize">
                       {fixture.type.toLowerCase().replaceAll("_", " ")} {fixture.status.toLowerCase()}
-                    </span>
+                    </StatusLabel>
                   ))}
                 </div>
               )}
@@ -214,9 +213,9 @@ export function RunDetailModal({
                   </p>
                 </div>
                 {runDetail.run.replayMode && (
-                  <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-info/20 bg-info/10 text-info self-start">
+                  <TagLabel className="self-start capitalize">
                     {runDetail.run.replayMode.replace("_", " ").toLowerCase()}
-                  </span>
+                  </TagLabel>
                 )}
               </div>
 
@@ -235,12 +234,12 @@ export function RunDetailModal({
                       </button>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${STATUS_TONE_CLASSES[getStatusTone(runDetail.replayContext.sourceRun.status)]}`}>
-                        {t("originalStatus", { status: runDetail.replayContext.sourceRun.status.replace("_", " ") })}
-                      </span>
-                      <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${STATUS_TONE_CLASSES[getStatusTone(runDetail.replayContext.comparison.replayStatus)]}`}>
-                        {t("replayStatus", { status: runDetail.replayContext.comparison.replayStatus.replace("_", " ") })}
-                      </span>
+                      <StatusLabel tone={getStatusTone(runDetail.replayContext.sourceRun.status)} className="capitalize">
+                        {t("originalStatus", { status: runDetail.replayContext.sourceRun.status.replace("_", " ").toLowerCase() })}
+                      </StatusLabel>
+                      <StatusLabel tone={getStatusTone(runDetail.replayContext.comparison.replayStatus)} className="capitalize">
+                        {t("replayStatus", { status: runDetail.replayContext.comparison.replayStatus.replace("_", " ").toLowerCase() })}
+                      </StatusLabel>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 lg:grid-cols-5 gap-2">
@@ -267,16 +266,12 @@ export function RunDetailModal({
                         <div key={diff.stepIndex} className="rounded-[8px] border border-border-dim bg-black/20 px-3 py-3 flex flex-col gap-3">
                           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                             <div className="flex flex-wrap items-center gap-2">
-                              <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-white/[0.03] text-secondary">
-                                {t("step", { index: diff.stepIndex })}
-                              </span>
-                              <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${STATUS_TONE_CLASSES[getStepDiffTone(diff.changeType)]}`}>
+                              <TagLabel className="capitalize">{t("step", { index: diff.stepIndex })}</TagLabel>
+                              <StatusLabel tone={getStepDiffTone(diff.changeType)} className="capitalize">
                                 {diff.changeType.toLowerCase()}
-                              </span>
+                              </StatusLabel>
                               {diff.durationDeltaMs !== undefined && (
-                                <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-white/[0.03] text-muted">
-                                  {formatSignedDurationDelta(diff.durationDeltaMs)}
-                                </span>
+                                <TagLabel>{formatSignedDurationDelta(diff.durationDeltaMs)}</TagLabel>
                               )}
                             </div>
                             <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-widest font-mono text-muted">
@@ -291,11 +286,9 @@ export function RunDetailModal({
                               <div className="text-[10px] uppercase tracking-widest font-mono text-muted mb-1">{t("original")}</div>
                               {diff.source ? (
                                 <div className="flex flex-col gap-1">
-                                  <div className="flex flex-wrap gap-2">
+                                  <div className="flex flex-wrap items-center gap-2">
                                     <span className="text-[10px] uppercase font-mono tracking-widest text-muted">{diff.source.kind.replace("_", " ")}</span>
-                                    <span className={`text-[10px] uppercase font-mono tracking-widest ${diff.source.status === "FAILED" ? "text-destructive" : "text-secondary"}`}>
-                                      {diff.source.status}
-                                    </span>
+                                    <StatusLabel tone={getStepTone(diff.source.status)}>{diff.source.status}</StatusLabel>
                                   </div>
                                   <p className="text-[11px] text-secondary leading-relaxed whitespace-pre-wrap">{diff.source.summary}</p>
                                 </div>
@@ -307,11 +300,9 @@ export function RunDetailModal({
                               <div className="text-[10px] uppercase tracking-widest font-mono text-muted mb-1">{t("replay")}</div>
                               {diff.replay ? (
                                 <div className="flex flex-col gap-1">
-                                  <div className="flex flex-wrap gap-2">
+                                  <div className="flex flex-wrap items-center gap-2">
                                     <span className="text-[10px] uppercase font-mono tracking-widest text-muted">{diff.replay.kind.replace("_", " ")}</span>
-                                    <span className={`text-[10px] uppercase font-mono tracking-widest ${diff.replay.status === "FAILED" ? "text-destructive" : "text-secondary"}`}>
-                                      {diff.replay.status}
-                                    </span>
+                                    <StatusLabel tone={getStepTone(diff.replay.status)}>{diff.replay.status}</StatusLabel>
                                   </div>
                                   <p className="text-[11px] text-secondary leading-relaxed whitespace-pre-wrap">{diff.replay.summary}</p>
                                 </div>
@@ -331,7 +322,7 @@ export function RunDetailModal({
                 <div className="flex flex-col gap-2">
                   <div className="text-[11px] uppercase tracking-widest font-mono text-muted">{t("recentReplays")}</div>
                   {runDetail.replayContext.replayRuns.map((replay) => (
-                    // Stays raw: a whole card row made clickable, status chip inside — matches no variant.
+                    // Stays raw: a whole card row made clickable, status label inside — matches no variant.
                     <button
                       key={replay.runId}
                       type="button"
@@ -339,9 +330,13 @@ export function RunDetailModal({
                       className="rounded-[8px] border border-border-dim bg-white/[0.02] px-3 py-2 text-left hover:bg-white/[0.05] transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2"
                     >
                       <span className="text-[12px] text-secondary break-all">{replay.runId}</span>
-                      <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border self-start sm:self-auto ${STATUS_TONE_CLASSES[getStatusTone(replay.status)]}`}>
+                      <StatusLabel
+                        tone={getStatusTone(replay.status)}
+                        icon={replay.status === "PENDING_APPROVAL" ? "approval" : undefined}
+                        className="self-start sm:self-auto"
+                      >
                         {replay.status.replace("_", " ")}
-                      </span>
+                      </StatusLabel>
                     </button>
                   ))}
                 </div>
@@ -375,16 +370,12 @@ export function RunDetailModal({
                 <div key={step.stepId} className="border border-border-dim rounded-[8px] bg-white/[0.02] px-4 py-3 flex flex-col gap-3">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-white/[0.03] text-secondary">
-                        {step.stepIndex}. {label(describeStepKind(step.kind))}
-                      </span>
-                      <span className={`text-[11px] px-2 py-1 rounded-md border ${STATUS_TONE_CLASSES[getStepTone(step.status)]}`}>
+                      <TagLabel>{step.stepIndex}. {label(describeStepKind(step.kind))}</TagLabel>
+                      <StatusLabel tone={getStepTone(step.status)}>
                         {label(describeStepStatus(step.status))}
-                      </span>
+                      </StatusLabel>
                       {step.durationMs !== undefined && (
-                        <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-black/20 text-muted">
-                          {formatRunDuration(step.durationMs)}
-                        </span>
+                        <TagLabel>{formatRunDuration(step.durationMs)}</TagLabel>
                       )}
                     </div>
                     <span className="text-[11px] font-mono text-muted">{formatDateTime(step.startedAt)}</span>
@@ -424,14 +415,15 @@ export function RunDetailModal({
                   {(step.linkedToolCalls.length > 0 || step.linkedApprovals.length > 0) && (
                     <div className="flex flex-wrap gap-2">
                       {step.linkedToolCalls.map((toolCall) => (
-                        <span key={toolCall.toolCallId} className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-info/20 bg-info/10 text-info">
+                        // Not capitalised: the handler mapping is an identifier ("knowledge.search").
+                        <StatusLabel key={toolCall.toolCallId} tone="info">
                           {t("toolBadge", { mapping: toolCall.handlerMapping, status: toolCall.status.toLowerCase().replace("_", " ") })}
-                        </span>
+                        </StatusLabel>
                       ))}
                       {step.linkedApprovals.map((approval) => (
-                        <span key={approval.approvalId} className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-info/20 bg-info/10 text-info">
+                        <StatusLabel key={approval.approvalId} tone="info" className="capitalize">
                           {t("approvalBadge", { status: approval.status.toLowerCase() })}
-                        </span>
+                        </StatusLabel>
                       ))}
                     </div>
                   )}
@@ -450,9 +442,9 @@ export function RunDetailModal({
                       <div className="text-[13px] font-semibold text-foreground truncate">{toolCall.normalizedToolName}</div>
                       <div className="text-[11px] font-mono text-muted truncate">{toolCall.handlerMapping}</div>
                     </div>
-                    <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${STATUS_TONE_CLASSES[toolCall.status === "SUCCESS" ? "success" : toolCall.status === "FAILED" || toolCall.status === "DENIED" ? "danger" : "info"]}`}>
+                    <StatusLabel tone={toolCall.status === "SUCCESS" ? "success" : toolCall.status === "FAILED" || toolCall.status === "DENIED" ? "danger" : "info"}>
                       {toolCall.status.replace("_", " ")}
-                    </span>
+                    </StatusLabel>
                   </div>
                   <div className="flex flex-wrap gap-3 text-[11px] font-mono text-muted">
                     <span>{toolCall.sideEffectLevel.toLowerCase()}</span>
@@ -491,9 +483,9 @@ export function RunDetailModal({
               {runDetail.approvals.map((approval) => (
                 <div key={approval._id} className="border border-border-dim rounded-[8px] bg-white/[0.02] px-4 py-3 flex flex-col gap-2">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border w-fit ${STATUS_TONE_CLASSES[approval.status === "APPROVED" ? "success" : approval.status === "REJECTED" ? "danger" : "info"]}`}>
+                    <StatusLabel tone={approval.status === "APPROVED" ? "success" : approval.status === "REJECTED" ? "danger" : "info"}>
                       {approval.status}
-                    </span>
+                    </StatusLabel>
                     <span className="text-[11px] font-mono text-muted">{formatDateTime(approval.requestedAt)}</span>
                   </div>
                   {approval.message && <p className="text-[12px] text-secondary leading-relaxed">{approval.message}</p>}

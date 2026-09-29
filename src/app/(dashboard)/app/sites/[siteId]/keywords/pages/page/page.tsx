@@ -10,9 +10,9 @@ import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { SettingsCard } from "@/src/ui/components/screens/SettingsCard";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
-import { CUT_COLUMN, ChangeCell, ExternalUrlCell, LinkStatusPill, PageTypePill, PositionCell, RecordLinkCell } from "../../../../_components/SiteCells";
+import { CUT_COLUMN, ChangeCell, ExternalUrlCell, LinkStatusLabel, PageTypeLabel, PositionCell, RecordLinkCell } from "../../../../_components/SiteCells";
 import { SiteTableBar } from "../../../../_components/SiteTableBar";
 import { SiteFigure } from "../../../../_components/SiteFigure";
 import { SiteFacts, type SiteFact } from "../../../../_components/SiteRecordParts";
@@ -117,7 +117,7 @@ export default function SitePageRecordPage() {
         key: "answered",
         label: t("crawl.answered"),
         value: crawl.statusCode === null ? "–" : (
-          <StatusPill tone={crawl.statusCode >= 400 ? "danger" : crawl.statusCode >= 300 ? "warning" : "success"}>{crawl.statusCode}</StatusPill>
+          <StatusLabel tone={crawl.statusCode >= 400 ? "danger" : crawl.statusCode >= 300 ? "warning" : "success"}>{crawl.statusCode}</StatusLabel>
         ),
       },
       {
@@ -152,8 +152,8 @@ export default function SitePageRecordPage() {
         description={t("description")}
         pills={rank || (record?.cited.times ?? 0) > 0 ? (
           <>
-            {rank ? <PageTypePill type={rank.pageType} /> : null}
-            {(record?.cited.times ?? 0) > 0 ? <StatusPill tone="info">{t("citedPill")}</StatusPill> : null}
+            {rank ? <PageTypeLabel type={rank.pageType} /> : null}
+            {(record?.cited.times ?? 0) > 0 ? <StatusLabel tone="info">{t("citedPill")}</StatusLabel> : null}
           </>
         ) : undefined}
         action={address ? <ExternalUrlCell url={address} label={`${t("openPage")} ↗`} /> : undefined}
@@ -237,7 +237,7 @@ export default function SitePageRecordPage() {
                 empty={t("cited.none")}
                 columns={[
                   { key: "prompt", className: "text-[13px] text-foreground", cell: (row) => row.prompt },
-                  { key: "engine", cell: (row) => <StatusPill tone="info">{engineLabel(row.engine)}</StatusPill> },
+                  { key: "engine", cell: (row) => <StatusLabel tone="info">{engineLabel(row.engine)}</StatusLabel> },
                   { key: "times", align: "right", className: "font-mono text-[12px] text-secondary", cell: (row) => formatNumber(row.times) },
                 ]}
               />
@@ -261,7 +261,7 @@ export default function SitePageRecordPage() {
                   },
                   { key: "anchor", className: "text-[12px] text-secondary", cell: (row) => row.anchor ?? "–" },
                   { key: "follow", className: "text-[12px] text-secondary", cell: (row) => (row.dofollow ? t("links.followed") : t("links.notFollowed")) },
-                  { key: "status", cell: (row) => <LinkStatusPill status={row.status} /> },
+                  { key: "status", cell: (row) => <LinkStatusLabel status={row.status} /> },
                   { key: "rank", align: "right", className: "font-mono text-[12px] text-secondary", cell: (row) => t("links.strength", { rank: row.domainRank }) },
                 ]}
               />

@@ -6,12 +6,27 @@ import type { GenerateContentConfig } from "@google/genai";
 import { internal } from "./_generated/api";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
 import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
+import { knowledgeCutOff, readChunk } from "./knowledgeReading";
+import {
+  buildUntrustedKnowledgeContext,
+  rankAssistantKnowledgeMatches,
+  selectKnowledgeChunksWithinBudget,
+} from "./aiPromptAssembly";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import { guardModelTurn } from "./modelTurnService";
 import {
   createVertexGenAIClient,
   generateVertexContentWithRetry,
 } from "./vertexProviderService";
+
+/**
+ * How much of the Architect's reading is knowledge, in characters. Every
+ * swarm agent is sent at most the first 10,000 characters of the growing
+ * notes (`safePayload` below); the Architect's reading had no limit, so
+ * fifty pieces pushed every later agent's findings past that cut. At 4,000,
+ * the objective and the findings before and after it still fit.
+ */
+const ARCHITECT_KNOWLEDGE_CHARS = 4_000;
 
 export const executeSwarmObjective = internalAction({
   args: {
@@ -103,31 +118,51 @@ export const executeSwarmObjective = internalAction({
 
        try {
            if (agent.name.includes("Architect")) {
-               const queryVector = await embedRetrievalQuery(ctx, {
+               const companyId = tenantContext.companyId ?? undefined;
+               const embedded = await embedRetrievalQuery(ctx, {
                  query: args.content,
-                 companyId: tenantContext.companyId ?? undefined,
+                 companyId,
                  operation: "swarmRagEmbedding",
                });
 
-               if (queryVector) {
+               if (embedded) {
                  // A swarm without a company reads global knowledge only. The
                  // old fallback here searched with no filter at all, which
                  // would have read every tenant's chunks; the closed scope
                  // type makes that unfiltered search inexpressible now.
                  const results = await searchKnowledgeScope(ctx, {
-                   queryVector,
+                   queryVector: embedded.vector,
                    queryText: args.content,
-                   scope: tenantContext.companyId
-                     ? { kind: "company", companyId: tenantContext.companyId }
-                     : { kind: "global" },
+                   scope: companyId ? { kind: "company", companyId } : { kind: "global" },
                    limit: 50,
                  });
-                 let ragContext = "";
-                 for (const res of results) {
-                   const chunk = await ctx.runQuery(internal.knowledge.getChunkInternal, { id: res._id });
-                   if (chunk) ragContext += chunk.text + "\\n\\n";
+                 // Read as chat reads (knowledge-relevance-cutoff-plan.md,
+                 // gap 4): the shared selection, the cut-off when it is on,
+                 // and the wrapper that marks it as reference, not orders.
+                 const cutOff = await knowledgeCutOff(ctx, {
+                   ...(companyId ? { companyId } : {}),
+                   question: args.content,
+                   links: { threadId: args.threadId },
+                 });
+                 const { chunkTexts } = await selectKnowledgeChunksWithinBudget({
+                   ranked: rankAssistantKnowledgeMatches({
+                     globalMatches: companyId ? [] : results,
+                     companyMatches: companyId ? results : [],
+                     threadMatches: [],
+                   }),
+                   maxChars: ARCHITECT_KNOWLEDGE_CHARS,
+                   threadReserveRatio: 0,
+                   loadChunk: readChunk(ctx),
+                   embeddingModelId: embedded.modelId,
+                   ...(cutOff ? { judge: cutOff } : {}),
+                 });
+                 if (chunkTexts.length > 0) {
+                   memoryPayload += buildUntrustedKnowledgeContext({
+                     sourceLabel: companyId ? "the company's knowledge" : "global knowledge",
+                     chunks: chunkTexts,
+                     maxChars: ARCHITECT_KNOWLEDGE_CHARS,
+                   });
                  }
-                 memoryPayload += `\\n[INTERNAL PLATFORM KNOWLEDGE CONTEXT]:\\n${ragContext}\\n\\n`;
                }
            }
 

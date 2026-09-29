@@ -8,7 +8,7 @@ import { Swords } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { SiteChartCard } from "../../_components/SiteChartCard";
 import { SiteTableBar } from "../../_components/SiteTableBar";
@@ -153,7 +153,7 @@ export default function SiteSideBySidePage() {
             header: t("columns.verdict"),
             cell: (row) => {
               const entry = compare.get(row.websiteId);
-              return entry ? <StatusPill tone={VERDICT_TONES[entry.verdict] ?? "neutral"}>{t(`verdicts.${entry.verdict}`)}</StatusPill> : <span className="text-muted">–</span>;
+              return entry ? <StatusLabel tone={VERDICT_TONES[entry.verdict] ?? "neutral"}>{t(`verdicts.${entry.verdict}`)}</StatusLabel> : <span className="text-muted">–</span>;
             },
           },
         ]}

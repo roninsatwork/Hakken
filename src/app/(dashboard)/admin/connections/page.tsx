@@ -4,11 +4,12 @@ import { useState } from "react";
 import { useAction, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
-import { AlertTriangle, CircleCheck, HelpCircle, Loader2, PlugZap } from "lucide-react";
+import { AlertTriangle, CircleCheck, Loader2, PlugZap } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { WriteButton } from "@/src/ui/components/screens/AccessLevel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TABLE_PAGE_SIZE, paginateItems } from "@/src/ui/components/screens/pagination";
 import { formatDateTime } from "@/src/lib/dates";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
@@ -135,28 +136,13 @@ export default function ConnectionsPage() {
             header: t("columns.state"),
             className: "whitespace-nowrap",
             cell: (row) => (
-              <span
-                className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                  row.working === false
-                    ? "bg-warning/15 text-warning"
-                    : row.working === null
-                      ? "bg-foreground/5 text-muted"
-                      : "bg-info/15 text-info"
-                }`}
-              >
-                {row.working === false ? (
-                  <AlertTriangle className="w-3 h-3" />
-                ) : row.working === null ? (
-                  <HelpCircle className="w-3 h-3" />
-                ) : (
-                  <CircleCheck className="w-3 h-3" />
-                )}
+              <StatusLabel tone={row.working === false ? "warning" : row.working === null ? "neutral" : "success"}>
                 {row.working === false
                   ? t("state.attention")
                   : row.working === null
                     ? t("state.unknown")
                     : t("state.working")}
-              </span>
+              </StatusLabel>
             ),
           },
           {
@@ -219,17 +205,15 @@ export default function ConnectionsPage() {
             header: t("jobs.columns.state"),
             className: "whitespace-nowrap",
             cell: (job) => {
-              const bad = job.lastOk === false || job.isOverdue;
+              const tone = job.lastOk === false
+                ? "danger"
+                : job.isOverdue
+                  ? "warning"
+                  : job.lastRanAt === null
+                    ? "neutral"
+                    : "success";
               return (
-                <span
-                  className={`px-2 py-0.5 rounded-full text-[11px] font-medium ${
-                    bad
-                      ? "bg-warning/15 text-warning"
-                      : job.lastRanAt === null
-                        ? "bg-foreground/5 text-muted"
-                        : "bg-info/15 text-info"
-                  }`}
-                >
+                <StatusLabel tone={tone}>
                   {job.lastOk === false
                     ? t("jobs.state.failed", { count: job.consecutiveFailures })
                     : job.isOverdue
@@ -237,7 +221,7 @@ export default function ConnectionsPage() {
                       : job.lastRanAt === null
                         ? t("jobs.state.neverRan")
                         : t("jobs.state.ran")}
-                </span>
+                </StatusLabel>
               );
             },
           },

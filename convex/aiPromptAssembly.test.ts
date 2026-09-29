@@ -1,4 +1,4 @@
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 import {
   ASK_HAKKEN_PLATFORM_SAFETY_CONTRACT,
   FALLBACK_ASSISTANT_SYSTEM_PROMPT,
@@ -6,8 +6,11 @@ import {
   buildAssistantSystemInstruction,
   buildUntrustedConversationHistory,
   buildUntrustedKnowledgeContext,
+  JUDGED_PASSAGES,
   rankAssistantKnowledgeMatches,
   selectKnowledgeChunksWithinBudget,
+  type KnowledgeMatchTier,
+  type PassageJudge,
 } from "./aiPromptAssembly";
 
 describe("assistant prompt assembly", () => {
@@ -391,5 +394,145 @@ describe("the who-is-asking section (personal-layer-and-goals-plan.md, part 2)",
       userMemories: [],
     });
     expect(withEmptyNote).not.toContain("WHO IS ASKING");
+  });
+});
+
+/**
+ * What a knowledge search reads (docs/plans/active/knowledge-relevance-cutoff-plan.md):
+ * the cut-off, the question's embedding model and an agent's own pieces.
+ * Every piece here is 100 characters, so a budget counts pieces.
+ */
+describe("what a knowledge search reads", () => {
+  const ranked = (ids: string[], tier: KnowledgeMatchTier = "company", from = 1) =>
+    ids.map((id, index) => ({ match: { _id: id }, tier, score: from - index / 1000 }));
+  const piece = (id: string, extra: Record<string, string | undefined> = {}) => ({
+    text: id.padEnd(100, "."),
+    embeddingModelId: "model-now",
+    documentTitle: "Handbook",
+    ...extra,
+  });
+  const read = (chunkTexts: string[]) => chunkTexts.map((text) => text.replace(/\.+$/, ""));
+
+  test("with no cut-off, pieces are read best first until the space is full, as before it", async () => {
+    const selected = await selectKnowledgeChunksWithinBudget({
+      ranked: ranked(["a", "b", "c", "d", "e"]),
+      maxChars: 300,
+      threadReserveRatio: 0,
+      loadChunk: async (id) => piece(id),
+      embeddingModelId: "model-now",
+    });
+
+    expect(read(selected.chunkTexts)).toEqual(["a", "b", "c"]);
+    expect(selected.leftOutIds).toEqual([]);
+  });
+
+  test("a piece the cut-off leaves out gives its room to the next one down", async () => {
+    const selected = await selectKnowledgeChunksWithinBudget({
+      ranked: ranked(["a", "b", "c", "d", "e"]),
+      maxChars: 300,
+      threadReserveRatio: 0,
+      loadChunk: async (id) => piece(id),
+      embeddingModelId: "model-now",
+      judge: async () => new Set(["b"]),
+    });
+
+    expect(read(selected.chunkTexts)).toEqual(["a", "c", "d"]);
+    expect(selected.chunkIds).toEqual(["a", "c", "d"]);
+    expect(selected.leftOutIds).toEqual(["b"]);
+  });
+
+  test("the cut-off is asked once, about at most 40 passages, best first, each with its document", async () => {
+    const asked: Parameters<PassageJudge>[0][] = [];
+    await selectKnowledgeChunksWithinBudget({
+      ranked: ranked(Array.from({ length: 50 }, (_, index) => `p${index}`)),
+      maxChars: 32_000,
+      threadReserveRatio: 0,
+      loadChunk: async (id) => piece(id),
+      embeddingModelId: "model-now",
+      judge: async (passages) => {
+        asked.push(passages);
+        return new Set();
+      },
+    });
+
+    expect(JUDGED_PASSAGES).toBe(40);
+    expect(asked).toHaveLength(1);
+    expect(asked[0]).toHaveLength(40);
+    expect(asked[0][0]).toEqual({ id: "p0", text: piece("p0").text, document: "Handbook" });
+    expect(asked[0][39].id).toBe("p39");
+  });
+
+  test("the share kept for this chat's uploads still holds when the cut-off leaves pieces out", async () => {
+    const selected = await selectKnowledgeChunksWithinBudget({
+      ranked: [
+        ...ranked(Array.from({ length: 20 }, (_, index) => `g${index}`), "global", 0.99),
+        ...ranked(["t0", "t1", "t2", "t3", "t4"], "thread", 0.2),
+      ],
+      maxChars: 1_000,
+      threadReserveRatio: 0.3,
+      loadChunk: async (id) => piece(id),
+      embeddingModelId: "model-now",
+      judge: async () => new Set(["g0", "t0"]),
+    });
+
+    // 300 characters held for uploads: three of them, t0 left out.
+    expect(selected.chunkIds.slice(0, 3)).toEqual(["t1", "t2", "t3"]);
+    expect(selected.chunkIds.slice(3)).toEqual(["g1", "g2", "g3", "g4", "g5", "g6", "g7"]);
+  });
+
+  test("a cut-off that fails leaves everything in", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const selected = await selectKnowledgeChunksWithinBudget({
+      ranked: ranked(["a", "b", "c"]),
+      maxChars: 300,
+      threadReserveRatio: 0,
+      loadChunk: async (id) => piece(id),
+      embeddingModelId: "model-now",
+      judge: async () => {
+        throw new Error("TypeSafe did not answer");
+      },
+    });
+
+    expect(read(selected.chunkTexts)).toEqual(["a", "b", "c"]);
+    expect(warn).toHaveBeenCalledTimes(1);
+    warn.mockRestore();
+  });
+
+  test("a piece embedded by another model, or by none, is never read", async () => {
+    const selected = await selectKnowledgeChunksWithinBudget({
+      ranked: ranked(["a", "old", "unknown", "d"]),
+      maxChars: 1_000,
+      threadReserveRatio: 0,
+      loadChunk: async (id) =>
+        id === "old" ? piece(id, { embeddingModelId: "model-before" })
+        : id === "unknown" ? piece(id, { embeddingModelId: undefined })
+        : piece(id),
+      embeddingModelId: "model-now",
+    });
+
+    expect(selected.chunkIds).toEqual(["a", "d"]);
+  });
+
+  test("an agent's pieces are read by its own runs only, and never ones another company added", async () => {
+    const pieces: Record<string, ReturnType<typeof piece>> = {
+      shared: piece("shared"),
+      platform: piece("platform", { agentId: "agent-1" }),
+      ours: piece("ours", { agentId: "agent-1", companyId: "company-1" }),
+      theirs: piece("theirs", { agentId: "agent-1", companyId: "company-2" }),
+      other: piece("other", { agentId: "agent-2" }),
+    };
+    const selectFor = (agent?: { agentId: string; companyId?: string }) =>
+      selectKnowledgeChunksWithinBudget({
+        ranked: ranked(Object.keys(pieces)),
+        maxChars: 1_000,
+        threadReserveRatio: 0,
+        loadChunk: async (id) => pieces[id],
+        embeddingModelId: "model-now",
+        ...(agent ? { agent } : {}),
+      });
+
+    expect((await selectFor({ agentId: "agent-1", companyId: "company-1" })).chunkIds).toEqual(["shared", "platform", "ours"]);
+    expect((await selectFor({ agentId: "agent-1" })).chunkIds).toEqual(["shared", "platform"]);
+    expect((await selectFor()).chunkIds).toEqual(["shared"]);
   });
 });

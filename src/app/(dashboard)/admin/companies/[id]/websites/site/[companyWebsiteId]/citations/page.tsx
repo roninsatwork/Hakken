@@ -10,7 +10,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
 import { useEngineLabel } from "@/src/app/(dashboard)/admin/_components/EngineChoice";
@@ -114,11 +114,11 @@ export default function WebsiteCitationsPage() {
                 // Not "waiting": nothing is coming. The reason sits on the
                 // collection screen; here the client only needs to know the
                 // engine could not be asked this time.
-                <StatusPill tone="danger">{t("couldNotAsk")}</StatusPill>
+                <StatusLabel tone="danger">{t("couldNotAsk")}</StatusLabel>
               ) : row.status !== "READY" ? (
-                <StatusPill tone="neutral">{t("waiting")}</StatusPill>
+                <StatusLabel tone="neutral">{t("waiting")}</StatusLabel>
               ) : !row.named ? (
-                <StatusPill tone="neutral">{t("notNamed")}</StatusPill>
+                <StatusLabel tone="neutral">{t("notNamed")}</StatusLabel>
               ) : (
                 <div className="flex flex-col gap-1">
                   {/*
@@ -126,13 +126,13 @@ export default function WebsiteCitationsPage() {
                     that warns against a business still names it, and without
                     the stance that reads as a win.
                   */}
-                  <StatusPill tone={row.ourStance === "WARNED_AGAINST" ? "danger" : "success"}>
+                  <StatusLabel tone={row.ourStance === "WARNED_AGAINST" ? "danger" : "success"}>
                     {row.ourStance === "RECOMMENDED"
                       ? t("recommended")
                       : row.ourStance === "WARNED_AGAINST"
                         ? t("warnedAgainst")
                         : t("named")}
-                  </StatusPill>
+                  </StatusLabel>
                   {/*
                     A citation under the wrong name is a different fact from
                     one under the right name, and the one a client can act on.

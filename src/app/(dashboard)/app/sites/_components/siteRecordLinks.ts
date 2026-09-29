@@ -153,11 +153,26 @@ export function useSiteBackHref(siteId: string, kind: SiteRecord["kind"]): strin
  * that is one of the menu's pages — "Back to Keywords" — and from one
  * record to another just says "Back", since a record is not a page with a name.
  */
-export function useRecordBack(kind: SiteRecord["kind"]): { label: string; href: string } {
+export function useRecordBack(kind: SiteRecord["kind"]): { label: string; href: string; page?: string } {
   const siteId = useSiteId();
   const href = useSiteBackHref(siteId, kind);
   const label = useBackLabel()(href);
-  return { label, href };
+  const page = useBackPage()(href);
+  return { label, href, ...(page ? { page } : {}) };
+}
+
+/**
+ * The name of the menu page a way back leads to — "Fan-out queries" — which a
+ * record's header shows as its path; none when it leads to another record.
+ */
+function useBackPage(): (href: string) => string | null {
+  const tm = useTranslations("sites.menu.pages");
+  const siteId = useSiteId();
+  return (href) => {
+    const path = href.split("?")[0];
+    const onSite = path.match(/^\/app\/sites\/([^/?]+)/)?.[1] ?? siteId;
+    return isSiteMenuPath(path, onSite) ? tm(sitePageForPath(path, onSite).id) : null;
+  };
 }
 
 /** What a back row says for where it leads: "Back to Keywords" for a menu page of any site, "Back" for a record. */

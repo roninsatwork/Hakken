@@ -7,6 +7,8 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useTranslations } from "next-intl";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { ArrowRight } from "lucide-react";
 import Header from "@/src/ui/components/layout/Header";
 
@@ -260,12 +262,16 @@ function LoopFigure({ value, label, names }: { value: string; label: string; nam
   );
 }
 
-/** The audit trail, shown as itself. Describing it convinces nobody. */
-function LedgerTagTone(tone: string) {
-  if (tone === "waiting") return "text-warning border-warning/40";
-  if (tone === "approved") return "text-success border-success/40";
-  if (tone === "action") return "text-brand border-brand/40";
-  return "text-secondary border-border-dim";
+/**
+ * The audit trail, shown as itself. Describing it convinces nobody. A plain
+ * row's tag is a kind (System, Tool, Model); the rest say a state — waiting on
+ * a person, approved, an action taken — so they wear a status label.
+ */
+function LedgerTag({ tag, tone }: Pick<LedgerRow, "tag" | "tone">) {
+  if (tone === "waiting") return <StatusLabel tone="warning" icon="approval">{tag}</StatusLabel>;
+  if (tone === "approved") return <StatusLabel tone="success">{tag}</StatusLabel>;
+  if (tone === "action") return <StatusLabel tone="info">{tag}</StatusLabel>;
+  return <TagLabel>{tag}</TagLabel>;
 }
 
 /* ------------------------------------------------------------------ *
@@ -385,11 +391,9 @@ export default function AppDashboardPage() {
                 {capabilities[0].title}
               </h3>
               <p className="max-w-[62ch] text-[16px] leading-relaxed text-secondary">{capabilities[0].body}</p>
-              <div className="flex flex-wrap gap-1.5 pt-0.5">
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5 pt-0.5">
                 {capabilities[0].tags.map((tag) => (
-                  <span key={tag} className="rounded-full border border-brand/30 bg-brand/10 px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.1em] text-brand">
-                    {tag}
-                  </span>
+                  <TagLabel key={tag}>{tag}</TagLabel>
                 ))}
               </div>
             </div>
@@ -409,11 +413,9 @@ export default function AppDashboardPage() {
                 <h3 className="text-[18px] font-semibold tracking-tight text-foreground">{item.title}</h3>
                 <p className="max-w-[42ch] text-[16px] leading-relaxed text-secondary">{item.body}</p>
                 {item.tags.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  <div className="flex flex-wrap gap-x-4 gap-y-1.5 pt-0.5">
                     {item.tags.map((tag) => (
-                      <span key={tag} className="rounded-full border border-brand/30 bg-brand/10 px-2.5 py-1 font-mono text-[11px] uppercase tracking-[0.1em] text-brand">
-                        {tag}
-                      </span>
+                      <TagLabel key={tag}>{tag}</TagLabel>
                     ))}
                   </div>
                 ) : null}
@@ -464,12 +466,9 @@ export default function AppDashboardPage() {
               </span>
               <h3 className="text-[16px] font-semibold tracking-tight text-foreground">{gate.title}</h3>
               <p className="text-[15px] leading-relaxed text-secondary">{gate.body}</p>
-              <span className={`mt-auto flex items-center gap-1.5 pt-2.5 font-mono text-[12px] tracking-[0.08em] ${
-                gate.clean ? "text-success" : "text-destructive"
-              }`}>
-                <span className="h-1 w-1 rounded-full bg-current" />
-                {gate.verdict}
-              </span>
+              <div className="mt-auto pt-2.5">
+                <StatusLabel tone={gate.clean ? "success" : "danger"}>{gate.verdict}</StatusLabel>
+              </div>
               <span className="absolute inset-x-0 bottom-0 h-0.5 bg-brand" />
             </div>
           ))}
@@ -499,12 +498,13 @@ export default function AppDashboardPage() {
                 <dd className="m-0">
                   <h3 className="mb-1 text-[16px] font-semibold tracking-tight text-foreground">{step.title}</h3>
                   <p className="text-[15px] leading-relaxed text-secondary">{step.body}</p>
-                  <span className={`mt-2 inline-flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.1em] ${
-                    step.auto ? "text-success" : "text-warning"
-                  }`}>
-                    <span className="h-1 w-1 rounded-full bg-current" />
+                  <StatusLabel
+                    tone={step.auto ? "success" : "warning"}
+                    icon={step.auto ? undefined : "approval"}
+                    className="mt-2"
+                  >
                     {step.auto ? t("learning.autoLabel") : t("learning.askLabel")}
-                  </span>
+                  </StatusLabel>
                 </dd>
               </div>
             ))}
@@ -576,13 +576,7 @@ export default function AppDashboardPage() {
                     key: "tag",
                     align: "right",
                     className: "w-px",
-                    cell: (row) => (
-                      <span
-                        className={`whitespace-nowrap rounded-full border px-2 py-1 font-mono text-[11px] uppercase tracking-[0.1em] ${LedgerTagTone(row.tone)}`}
-                      >
-                        {row.tag}
-                      </span>
-                    ),
+                    cell: (row) => <LedgerTag tag={row.tag} tone={row.tone} />,
                   },
                 ]}
               />

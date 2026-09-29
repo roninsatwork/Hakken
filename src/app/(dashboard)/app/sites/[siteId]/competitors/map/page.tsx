@@ -9,7 +9,7 @@ import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
@@ -144,7 +144,7 @@ export default function SiteMarketMapPage() {
               return href ? <RecordLinkCell href={href} className={className}>{row.host}</RecordLinkCell> : <span className={className}>{row.host}</span>;
             },
           },
-          { key: "role", header: t("columns.role"), cell: (row) => <StatusPill tone={ROLE_TONES[row.role]}>{t(`roles.${row.role}`)}</StatusPill> },
+          { key: "role", header: t("columns.role"), cell: (row) => <StatusLabel tone={ROLE_TONES[row.role]}>{t(`roles.${row.role}`)}</StatusLabel> },
           {
             key: "kind",
             header: t("columns.kind"),

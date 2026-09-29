@@ -6,7 +6,7 @@ import { Lightbulb } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { CheckedCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { formatNumber } from "../../../_components/siteFormat";
@@ -74,7 +74,7 @@ export default function SiteSuggestedPage() {
                 {row.reason === "NAMED_BY_AI"
                   ? t("namedByAi", { times: row.times ?? 0 })
                   : t("ranksFor", { count: formatNumber(row.intersections) })}
-                {row.kind ? <StatusPill tone={row.kind === "COMPETITOR" ? "warning" : "neutral"}>{to(row.kind)}</StatusPill> : null}
+                {row.kind ? <StatusLabel tone={row.kind === "COMPETITOR" ? "warning" : "neutral"}>{to(row.kind)}</StatusLabel> : null}
               </span>
             ),
           },

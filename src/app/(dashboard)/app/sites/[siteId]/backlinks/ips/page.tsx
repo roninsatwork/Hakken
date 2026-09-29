@@ -7,7 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { LinkStatusPill, RecordLinkCell } from "../../../_components/SiteCells";
+import { LinkStatusLabel, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
@@ -110,7 +110,7 @@ export default function SiteReferringIpsPage() {
           },
           { key: "domains", header: t("columns.domains"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.referringDomains)}</span> },
           { key: "backlinks", header: t("columns.backlinks"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.backlinks)}</span> },
-          { key: "status", header: t("columns.status"), cell: (row) => <LinkStatusPill status={row.status} /> },
+          { key: "status", header: t("columns.status"), cell: (row) => <LinkStatusLabel status={row.status} /> },
         ]}
       />
     </div>

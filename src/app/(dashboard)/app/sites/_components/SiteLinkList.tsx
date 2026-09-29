@@ -3,8 +3,8 @@
 import { useTranslations } from "next-intl";
 import type { FunctionReturnType } from "convex/server";
 import type { api } from "@/convex/_generated/api";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
-import { ExternalUrlCell, LinkStatusPill, RecordLinkCell } from "./SiteCells";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { ExternalUrlCell, LinkStatusLabel, RecordLinkCell } from "./SiteCells";
 import { formatDay, formatNumber } from "./siteFormat";
 import { useSiteRecordHref } from "./siteRecordLinks";
 import { useSiteId } from "./useSite";
@@ -50,9 +50,9 @@ export function SiteLinkList({ links, showWebsite = true }: { links: Link[] | un
                   {link.domainFrom}
                 </RecordLinkCell>
               ) : null}
-              <StatusPill tone={link.dofollow ? "success" : "neutral"}>{link.dofollow ? t("followed") : t("notFollowed")}</StatusPill>
-              <LinkStatusPill status={link.status} />
-              {link.isBroken ? <StatusPill tone="warning">{t("broken", { code: link.statusCode ?? "–" })}</StatusPill> : null}
+              <StatusLabel tone={link.dofollow ? "success" : "neutral"}>{link.dofollow ? t("followed") : t("notFollowed")}</StatusLabel>
+              <LinkStatusLabel status={link.status} />
+              {link.isBroken ? <StatusLabel tone="warning">{t("broken", { code: link.statusCode ?? "–" })}</StatusLabel> : null}
             </div>
             <ExternalUrlCell url={link.urlFrom} />
             <div className="flex flex-wrap items-baseline gap-x-2 text-[12px] text-secondary">

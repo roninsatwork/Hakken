@@ -703,6 +703,13 @@ export default defineSchema({
      */
     resultJson: v.optional(v.string()),
     error: v.optional(v.string()),
+    /**
+     * Until when a request DataForSEO's supplier refused may be asked again
+     * (`SEO_SUPPLIER_RETRY_WAITS_MS`): the end of the Collector run that put
+     * it back. Past it the queue fails it rather than send it, because a
+     * later run would buy it beside that night's own request.
+     */
+    retryUntil: v.optional(v.number()),
     /** The agent run that asked, when an agent asked. */
     agentRunId: v.optional(v.id("agentRuns")),
     requestedBy: v.optional(v.id("users")),

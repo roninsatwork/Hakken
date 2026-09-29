@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePaginatedQuery, useQuery } from "convex/react";
-import { DecisionPill } from "@/src/ui/components/screens/DecisionPill";
+import { DecisionLabel } from "@/src/ui/components/screens/DecisionLabel";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
@@ -421,7 +421,7 @@ export function ChatLogsScreen({ scope }: { scope: ChatLogsScope }) {
                               {judged.length > 0 && (
                                 <span className="mt-1 flex flex-wrap gap-1">
                                   {judged.map((run) => (
-                                    <DecisionPill
+                                    <DecisionLabel
                                       key={`${run.key}-${run.createdAt}`}
                                       name={tDecisions(`catalogue.${run.copyKey}.name`)}
                                       certainty={run.certainty ?? null}

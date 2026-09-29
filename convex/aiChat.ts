@@ -28,6 +28,7 @@ import {
   shouldInjectPersonalNote,
 } from "./aiPromptAssembly";
 import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
+import { knowledgeCutOff, readChunk } from "./knowledgeReading";
 import {
   createModelTurnStream,
   finishAssistantReply,
@@ -247,18 +248,25 @@ export const generateHakkenResponse = internalAction({
         let retrievedChunkIds: string[] = [];
         // Held beyond this block: when the wiki comes back with nothing, the
         // company's own documents are searched below, and the question should
-        // only ever be embedded once per turn.
-        let queryVector: number[] | null = null;
+        // only ever be embedded once per turn — as is the cut-off's mode.
+        let embedded: { vector: number[]; modelId: string } | null = null;
+        let cutOff: Awaited<ReturnType<typeof knowledgeCutOff>> = undefined;
 
         try {
             await setStage("SEARCHING_KNOWLEDGE");
-            queryVector = await embedRetrievalQuery(ctx, {
+            embedded = await embedRetrievalQuery(ctx, {
                 query: args.content,
                 companyId: thread?.companyId,
                 operation: "assistantRagEmbedding",
             });
 
-            if (queryVector) {
+            if (embedded) {
+                const queryVector = embedded.vector;
+                cutOff = await knowledgeCutOff(ctx, {
+                    ...(thread?.companyId ? { companyId: thread.companyId } : {}),
+                    question: args.content,
+                    links: { threadId: args.threadId },
+                });
                 // Multi-tier hybrid search (vector + keyword, fused per scope).
                 // Company knowledge is the wiki's job when the stage-three
                 // switch is on (wiki-replaces-knowledge plan); the chunk
@@ -322,7 +330,9 @@ export const generateHakkenResponse = internalAction({
                        ranked: allChunks,
                        maxChars: MAX_RAG_CHARS,
                        threadReserveRatio: 0.3,
-                       loadChunk: (id) => ctx.runQuery(internal.knowledge.getChunkInternal, { id }),
+                       loadChunk: readChunk(ctx),
+                       embeddingModelId: embedded.modelId,
+                       ...(cutOff ? { judge: cutOff } : {}),
                     });
 
                     if (chunkTexts.length > 0) {
@@ -377,11 +387,11 @@ export const generateHakkenResponse = internalAction({
         // "I don't have access" about a document sitting on its own shelf.
         // Uploaded knowledge is answerable knowledge; that is the contract.
         let companyFallbackContext = "";
-        if (!wikiAnswerContext && queryVector && thread?.companyId && companyAnswersFromWiki(company)) {
+        if (!wikiAnswerContext && embedded && thread?.companyId && companyAnswersFromWiki(company)) {
             try {
                 const FALLBACK_MAX_CHARS = 32000;
                 const companyChunks = await searchKnowledgeScope(ctx, {
-                    queryVector,
+                    queryVector: embedded.vector,
                     queryText: args.content,
                     scope: { kind: "company", companyId: thread.companyId },
                     limit: 50,
@@ -397,7 +407,9 @@ export const generateHakkenResponse = internalAction({
                         maxChars: FALLBACK_MAX_CHARS,
                         // No thread arm in this pass, so nothing to hold back for.
                         threadReserveRatio: 0,
-                        loadChunk: (id) => ctx.runQuery(internal.knowledge.getChunkInternal, { id }),
+                        loadChunk: readChunk(ctx),
+                        embeddingModelId: embedded.modelId,
+                        ...(cutOff ? { judge: cutOff } : {}),
                     });
                     if (chunkTexts.length > 0) {
                         // Added to, never replacing: chunks the pass above

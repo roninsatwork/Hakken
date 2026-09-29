@@ -8,7 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { CUT_COLUMN, RecordLinkCell, useFeatureLabel } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
@@ -80,7 +80,7 @@ export default function SiteFeaturesPage() {
 
   const yesNo = (present: boolean, inIt: boolean) => {
     if (!present) return <span className="text-[12px] text-muted">{t("notShown")}</span>;
-    return inIt ? <StatusPill tone="success">{tc("yes")}</StatusPill> : <span className="text-[12px] text-secondary">–</span>;
+    return inIt ? <StatusLabel tone="success">{tc("yes")}</StatusLabel> : <span className="text-[12px] text-secondary">–</span>;
   };
 
   return (
@@ -155,7 +155,7 @@ export default function SiteFeaturesPage() {
             cell: (row) => (
               <span className="flex flex-wrap gap-1">
                 {row.features.map((entry) => (
-                  <StatusPill key={entry} tone={NAMING.has(entry) ? "info" : "neutral"}>{label(entry)}</StatusPill>
+                  <StatusLabel key={entry} tone={NAMING.has(entry) ? "info" : "neutral"}>{label(entry)}</StatusLabel>
                 ))}
               </span>
             ),

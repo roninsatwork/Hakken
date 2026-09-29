@@ -4,7 +4,9 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { RESULT_GAVE_UP, SEND_UNCERTAIN } from "./seoCollectionQueue";
+import { RESULT_GAVE_UP, RETRY_RUN_ENDED, SEND_UNCERTAIN } from "./seoCollectionQueue";
+import { dataForSeoCodeKind } from "./dataForSeoRest";
+import { reusableByKey } from "./seoCollection";
 
 /**
  * The collection's money rules, against a stand-in for DataForSEO.
@@ -17,6 +19,10 @@ import { RESULT_GAVE_UP, SEND_UNCERTAIN } from "./seoCollectionQueue";
  */
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
+
+/** A real pause, taken before the fake timers below replace `setTimeout`. */
+const realSetTimeout = globalThis.setTimeout;
+const pauseForReal = () => new Promise((resolve) => realSetTimeout(resolve, 0));
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -169,6 +175,120 @@ describe("sending", () => {
 
     // $0.10 left at $0.05 each.
     expect(claim.pulls).toHaveLength(2);
+  });
+});
+
+/**
+ * DataForSEO's own supplier refusing — Google, over its limit for DataForSEO,
+ * refused all ten of Ronins' questions to its engine on 2026-09-29, and each
+ * was failed at once. Now asked again slowly, inside the same Collector run.
+ */
+describe("a supplier's refusal", () => {
+  const SUPPLIER_REFUSAL = "3rd Party API Service Unavailable (rate_limit_exceeded).";
+  const refusal = (tag: string, cost = 0) => Response.json({
+    status_code: 20000,
+    tasks: [{ id: `task-${Math.random()}`, status_code: 50301, status_message: SUPPLIER_REFUSAL, cost, data: { tag } }],
+  });
+
+  test("is DataForSEO's 50301, 50302 or 50303, and nothing else", () => {
+    expect([50301, 50302, 50303].map(dataForSeoCodeKind)).toEqual(["SUPPLIER_BUSY", "SUPPLIER_BUSY", "SUPPLIER_BUSY"]);
+    expect(dataForSeoCodeKind(50000)).toBe("REFUSED");
+    expect(dataForSeoCodeKind(40202)).toBe("RATE_LIMITED");
+  });
+
+  test("at no charge is asked again after a minute, two, then three, and then failed", async () => {
+    const t = harness();
+    const { runId } = await collector(t);
+    const pullId = await request(t);
+    const tag = (await get(t, pullId))!.tag;
+    const sentAt: number[] = [];
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      sentAt.push(Date.now());
+      return refusal(tag);
+    }));
+
+    // The clock moves only to the Collector's next wait, never past it: moved
+    // by fixed steps, it outran a run still loading and ended it early.
+    let finished = false;
+    const running = t.action(internal.seoAgentRuns.runSeoRoleNow, { role: "DATAFORSEO_COLLECTOR", runId })
+      .finally(() => { finished = true; });
+    for (let step = 0; step < 2_000 && !finished; step++) {
+      await vi.advanceTimersToNextTimerAsync();
+      await pauseForReal();
+    }
+    await running;
+
+    expect(sentAt).toHaveLength(4);
+    expect(sentAt.slice(1).map((at, index) => Math.round((at - sentAt[index]) / 60_000))).toEqual([1, 2, 3]);
+    const pull = await get(t, pullId);
+    expect(pull).toMatchObject({ status: "FAILED", attempts: 4, costUsd: 0 });
+    expect(pull?.error).toBe(`${SUPPLIER_REFUSAL} Asked 4 times in this run; the next run asks again.`);
+    expect(pull?.retryUntil).toBeUndefined();
+  });
+
+  test("that was charged is failed at once, never bought twice", async () => {
+    const t = harness();
+    const { runId } = await collector(t);
+    const pullId = await request(t);
+    const tag = (await get(t, pullId))!.tag;
+    const fetchSpy = vi.fn(async () => refusal(tag, 0.01));
+    vi.stubGlobal("fetch", fetchSpy);
+
+    await t.action(internal.seoAgentRuns.runSeoRoleNow, { role: "DATAFORSEO_COLLECTOR", runId });
+
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(await get(t, pullId)).toMatchObject({ status: "FAILED", costUsd: 0.01, error: SUPPLIER_REFUSAL });
+  });
+
+  test("is failed at once when the run cannot wait for the next try", async () => {
+    const t = harness();
+    const waiting = await request(t, { status: "CLAIMED" });
+    const endingNow = await request(t, { status: "CLAIMED" });
+
+    await t.mutation(internal.seoSupplierRetry.retrySupplierRefusals, {
+      pullIds: [waiting], reason: SUPPLIER_REFUSAL, retryUntil: Date.now() + 7 * 60_000,
+    });
+    await t.mutation(internal.seoSupplierRetry.retrySupplierRefusals, {
+      pullIds: [endingNow], reason: SUPPLIER_REFUSAL, retryUntil: Date.now() + 30_000,
+    });
+
+    const put = await get(t, waiting);
+    expect(put).toMatchObject({ status: "PENDING", attempts: 1 });
+    expect(put!.dueAt! - Date.now()).toBeGreaterThan(55_000);
+    expect(put!.retryUntil).toBeDefined();
+    expect(await get(t, endingNow)).toMatchObject({ status: "FAILED", attempts: 1 });
+  });
+
+  test("left waiting by a run that stopped early is failed by the next, never sent", async () => {
+    const t = harness();
+    const { runId } = await collector(t);
+    const pullId = await request(t);
+    await t.run(async (ctx) => { await ctx.db.patch(pullId, { attempts: 1, retryUntil: Date.now() - 1_000 }); });
+
+    const claim = await t.mutation(internal.seoCollectionQueue.claimSeoBatch, { workerId: "w", runId });
+
+    expect(claim.pulls).toEqual([]);
+    expect(await get(t, pullId)).toMatchObject({ status: "FAILED", error: RETRY_RUN_ENDED });
+  });
+
+  test("that cost nothing is asked again the same day; one that was paid for is not", async () => {
+    const t = harness();
+    const failed = (idempotencyKey: string, costUsd: number) => t.run(async (ctx) => await ctx.db.insert("seoDataPulls", {
+      operationId: "ai_citation_chatgpt", family: "AI", mode: "LIVE", taskArgsJson: "{}", status: "FAILED",
+      tag: idempotencyKey, idempotencyKey, taskId: "task-refused", attempts: 4, costUsd, sandbox: false,
+      error: SUPPLIER_REFUSAL, submittedAt: Date.now(), completedAt: Date.now(),
+    }));
+    const free = await failed("free-today", 0);
+    const paid = await failed("paid-today", 0.02);
+
+    const reopened = await t.run(async (ctx) => await reusableByKey(ctx, "free-today"));
+    const kept = await t.run(async (ctx) => await reusableByKey(ctx, "paid-today"));
+
+    expect(reopened?._id).toBe(free);
+    expect(await get(t, free)).toMatchObject({ status: "PENDING", attempts: 0 });
+    expect((await get(t, free))?.taskId).toBeUndefined();
+    expect(kept?._id).toBe(paid);
+    expect(await get(t, paid)).toMatchObject({ status: "FAILED", taskId: "task-refused" });
   });
 });
 

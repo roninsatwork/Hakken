@@ -12,7 +12,8 @@ import {
 } from "@/src/app/(dashboard)/admin/agents/_lib/runStatusRules";
 import type { AdminActionRunner } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/components/screens/Button";
-import { STATUS_TONE_CLASSES } from "@/src/ui/components/screens/statusTone";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { useToast } from "@/src/context/ToastContext";
 
 // The suite is page-level rather than per-row, so it needs a key of its own
@@ -111,12 +112,10 @@ export function EvalHealthPanel({
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className={`text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border ${STATUS_TONE_CLASSES[getSmokeEvalTone(entry.status)]}`}>
+                    <StatusLabel tone={getSmokeEvalTone(entry.status)}>
                       {entry.status.replace("_", " ")}
-                    </span>
-                    <span className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-border-dim bg-white/[0.03] text-secondary">
-                      {tLabels(getSmokeEvalModeKey(entry.gradingMode))}
-                    </span>
+                    </StatusLabel>
+                    <TagLabel>{tLabels(getSmokeEvalModeKey(entry.gradingMode))}</TagLabel>
                   </div>
                   <p className="text-[13px] text-foreground mt-2 leading-relaxed line-clamp-2">
                     {entry.fixture?.objective || entry.objective}
@@ -140,21 +139,23 @@ export function EvalHealthPanel({
               )}
 
               {entry.missingToolMappings.length > 0 && (
+                // Not capitalised, and free to wrap: each mapping is an identifier ("crm.lookup").
                 <div className="flex flex-wrap gap-2">
                   {entry.missingToolMappings.map((mapping) => (
-                    <span key={mapping} className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-destructive/20 bg-destructive/10 text-destructive">
+                    <StatusLabel key={mapping} tone="danger" wrap>
                       {t("missing", { mapping })}
-                    </span>
+                    </StatusLabel>
                   ))}
                 </div>
               )}
 
               {entry.expectedBlockedActionSummaries.length > 0 && (
+                // Not capitalised, and free to wrap: each summary is an identifier ("policy:deny_tool:crm.lookup").
                 <div className="flex flex-wrap gap-2">
                   {entry.expectedBlockedActionSummaries.map((summary) => (
-                    <span key={summary} className="text-[10px] uppercase font-mono tracking-widest px-2 py-1 rounded-md border border-warning/20 bg-warning/10 text-warning">
+                    <StatusLabel key={summary} tone="warning" wrap>
                       {t("blocked", { summary })}
-                    </span>
+                    </StatusLabel>
                   ))}
                 </div>
               )}

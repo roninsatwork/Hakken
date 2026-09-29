@@ -14,6 +14,7 @@ import {
 } from "@/convex/governanceRegisterService";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { Select } from "@/src/ui/components/screens/Select";
 import { TABLE_PAGE_SIZE, paginateItems } from "@/src/ui/components/screens/pagination";
 import { formatDate } from "@/src/lib/dates";
@@ -239,22 +240,15 @@ export default function AiRegisterPage() {
             key: "risk",
             header: t("table.risk"),
             /*
-              A text label always, with the amber reserved for the rating that
-              actually restrains something. Colour on its own would be carrying
-              meaning nobody can rely on.
+              Words always, with the warning kept for the ratings that ask for
+              something: a high rating restrains what the system may do, and
+              an unrated one has not been judged. Colour on its own would be
+              carrying meaning nobody can rely on.
             */
             cell: (entry) => (
-              <span
-                className={`inline-block rounded-[6px] px-2 py-1 text-[11px] ${
-                  entry.risk === "HIGH"
-                    ? "bg-[#fef3c7] text-[#78350f] dark:bg-[#78350f] dark:text-[#fef3c7]"
-                    : entry.risk === "UNRATED"
-                      ? "text-[#b45309] dark:text-[#fbbf24]"
-                      : "bg-sidebar/60 text-secondary"
-                }`}
-              >
+              <StatusLabel tone={entry.risk === "HIGH" || entry.risk === "UNRATED" ? "warning" : "neutral"}>
                 {t(`risk.${entry.risk}`)}
-              </span>
+              </StatusLabel>
             ),
           },
           {
@@ -263,7 +257,7 @@ export default function AiRegisterPage() {
             cell: (entry) => (
               <span className="text-[13px] text-secondary">
                 {entry.ownerName || (
-                  <span className="text-[#b45309] dark:text-[#fbbf24]">{t("noOwner")}</span>
+                  <span className="text-warning">{t("noOwner")}</span>
                 )}
               </span>
             ),

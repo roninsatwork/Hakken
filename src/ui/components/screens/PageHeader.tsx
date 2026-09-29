@@ -46,9 +46,24 @@ export function PageHeader({ icon, title, description, action, pills, divider = 
   );
 }
 
-type AdminDetailHeaderProps = Omit<AdminPageHeaderProps, "divider"> & {
-  /** Where the quiet "← Back to …" row leads; `onClick` for history-driven backs. */
-  back: { label: string; href?: string; onClick?: () => void };
+type AdminDetailHeaderProps = Omit<AdminPageHeaderProps, "divider" | "icon"> & {
+  /**
+   * Where the quiet "← Back to …" row leads; `onClick` for history-driven
+   * backs. `page` is the name of the page it leads to, which the `path`
+   * layout shows as "Fan-out queries /"; without one it falls back to the row.
+   */
+  back: { label: string; href?: string; onClick?: () => void; page?: string };
+  /** The record's icon, beside the title. The `path` layout has none. */
+  icon?: ReactNode;
+  /**
+   * `stacked`, the default: the back row, then the standard title block.
+   * `path`: a search's page in Sites (Anthony chose "B" on 2026-09-29, from
+   * a drawing of that page, for that page alone): the way back as a quiet path
+   * above the title, the labels on the title row to the right, and one
+   * sentence about this record under it — no icon, and no box repeating the
+   * labels.
+   */
+  layout?: "stacked" | "path";
 };
 
 const BACK_ROW_CLASSES =
@@ -63,11 +78,43 @@ const BACK_ROW_CLASSES =
  * lives up here rather than woven into the title row so the title starts at
  * the left edge exactly like every other admin page.
  */
-export function DetailHeader({ back, ...headerProps }: AdminDetailHeaderProps) {
+export function DetailHeader({ back, layout = "stacked", icon, ...headerProps }: AdminDetailHeaderProps) {
+  if (layout === "path") return <PathHeader back={back} {...headerProps} />;
   return (
     <div className="flex flex-col gap-3">
       <BackRow {...back} />
-      <PageHeader {...headerProps} divider />
+      <PageHeader icon={icon} {...headerProps} divider />
+    </div>
+  );
+}
+
+/**
+ * The `path` layout of `DetailHeader`. The labels share the title's row, on
+ * the right, and fall beneath it when the row is too narrow; the sentence
+ * under the title is about this record, so it carries none of the stock
+ * description's letter-spacing.
+ */
+function PathHeader({ back, title, description, pills, action }: Omit<AdminDetailHeaderProps, "layout" | "icon">) {
+  return (
+    <div className="flex flex-col gap-2 border-b border-border-dim pb-6">
+      {back.page && back.href ? (
+        <Link href={back.href} aria-label={back.label} className={cn(BACK_ROW_CLASSES, "gap-1.5")}>
+          {back.page}
+          <span aria-hidden="true" className="text-muted">/</span>
+        </Link>
+      ) : (
+        <BackRow {...back} />
+      )}
+      <div className="flex flex-col gap-x-6 gap-y-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <h1 className="min-w-0 break-words text-2xl font-bold tracking-tight text-foreground">{title}</h1>
+        {pills || action ? (
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
+            {pills}
+            {action}
+          </div>
+        ) : null}
+      </div>
+      {description ? <p className="max-w-2xl text-[13px] leading-relaxed text-secondary">{description}</p> : null}
     </div>
   );
 }

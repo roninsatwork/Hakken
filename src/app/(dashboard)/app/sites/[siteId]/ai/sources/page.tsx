@@ -7,7 +7,7 @@ import { Link2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { StatusPill } from "@/src/ui/components/screens/StatusPill";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
 import { CUT_COLUMN, CheckedCell, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
@@ -77,7 +77,7 @@ export default function SiteSourcesPage() {
             sortable: true,
             cell: (row) => (
               <div className="flex flex-wrap gap-1">
-                {row.engines.map((engine) => <StatusPill key={engine} tone="info">{engineLabel(engine)}</StatusPill>)}
+                {row.engines.map((engine) => <StatusLabel key={engine} tone="info">{engineLabel(engine)}</StatusLabel>)}
               </div>
             ),
           },

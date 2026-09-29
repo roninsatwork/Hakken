@@ -7,18 +7,16 @@ import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
-  CheckCircle2,
-  Clock3,
   FileWarning,
-  Loader2,
   SearchX,
   Wrench,
-  XCircle,
 } from "lucide-react";
 import { RowIconButton } from "@/src/ui/components/screens/Table";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { toneForStatus } from "@/src/ui/components/screens/statusTone";
 import { useLocale, useTranslations } from "next-intl";
 
 type ScriptRunStatus = "RUNNING" | "SUCCESS" | "FAILED";
@@ -32,44 +30,27 @@ function formatRunDate(timestamp: number | undefined, locale: string) {
   });
 }
 
-function StatusBadge({ status }: { status?: ScriptRunStatus }) {
+function ScriptRunLabel({ status }: { status?: ScriptRunStatus }) {
   const t = useTranslations("admin.settings.scripts");
   if (!status) {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-[6px] text-[11px] font-medium bg-foreground/5 text-secondary">
-        <Clock3 className="w-3.5 h-3.5" />
-        {t("notRun")}
-      </span>
-    );
+    return <StatusLabel tone="neutral">{t("notRun")}</StatusLabel>;
   }
 
-  const statusClass = status === "SUCCESS"
-    ? "bg-emerald-500/10 text-emerald-500"
-    : status === "FAILED"
-      ? "bg-red-500/10 text-red-500"
-      : "bg-brand/10 text-brand";
-  const Icon = status === "SUCCESS" ? CheckCircle2 : status === "FAILED" ? XCircle : Loader2;
-
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-[6px] text-[11px] font-medium ${statusClass}`}>
-      <Icon className={`w-3.5 h-3.5 ${status === "RUNNING" ? "animate-spin" : ""}`} />
+    <StatusLabel tone={toneForStatus(status)} icon={status === "RUNNING" ? "working" : undefined}>
       {status === "SUCCESS" ? t("statusSuccess") : status === "FAILED" ? t("statusFailed") : t("statusRunning")}
-    </span>
+    </StatusLabel>
   );
 }
 
-function RiskBadge({ riskLevel }: { riskLevel: string }) {
-  const className = riskLevel === "LOW"
-    ? "bg-emerald-500/10 text-emerald-500"
-    : riskLevel === "MEDIUM"
-      ? "bg-amber-500/10 text-amber-500"
-      : "bg-red-500/10 text-red-500";
-
+/** Unknown risk levels take the most cautious tone rather than the least. */
+function ScriptRiskLabel({ riskLevel }: { riskLevel: string }) {
   const t = useTranslations("admin.settings.scripts");
+  const tone = riskLevel === "LOW" || riskLevel === "MEDIUM" ? toneForStatus(riskLevel) : "danger";
   return (
-    <span className={`inline-flex items-center px-2 py-1 rounded-[6px] text-[11px] font-medium ${className}`}>
+    <StatusLabel tone={tone}>
       {riskLevel === "LOW" ? t("riskLow") : riskLevel === "MEDIUM" ? t("riskMedium") : riskLevel === "HIGH" ? t("riskHigh") : riskLevel}
-    </span>
+    </StatusLabel>
   );
 }
 
@@ -171,8 +152,8 @@ export default function MaintenanceScriptsPage() {
             header: t("columnCategory"),
             cell: (script) => <span className="text-[13px] text-secondary">{script.category}</span>,
           },
-          { key: "risk", header: t("columnRisk"), cell: (script) => <RiskBadge riskLevel={script.riskLevel} /> },
-          { key: "status", header: t("columnStatus"), cell: (script) => <StatusBadge status={script.lastRun?.status} /> },
+          { key: "risk", header: t("columnRisk"), cell: (script) => <ScriptRiskLabel riskLevel={script.riskLevel} /> },
+          { key: "status", header: t("columnStatus"), cell: (script) => <ScriptRunLabel status={script.lastRun?.status} /> },
           {
             key: "lastRun",
             header: t("columnLastRun"),
