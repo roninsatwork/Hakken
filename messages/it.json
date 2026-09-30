@@ -8975,7 +8975,7 @@
     "keywords": {
       "title": "Parole chiave",
       "description": "Quali ricerche portano visite a questo sito? Ogni ricerca per cui si posiziona su Google. Aprine una per la sua storia, la sua pagina e i suoi concorrenti.",
-      "searchPlaceholder": "Cerca parole chiave o pagine…",
+      "searchPlaceholder": "Cerca parole chiave…",
       "bandFilter": "Posizione",
       "anyBand": "Qualsiasi posizione",
       "statusFilter": "Variazione",
@@ -9017,7 +9017,7 @@
       },
       "kdHint": "Quanto è difficile arrivare in prima pagina per questa ricerca, da 0 (facile) a 100 (difficilissima)",
       "cpcHint": "Quanto pagano gli inserzionisti per un clic su questa ricerca, in dollari USA",
-      "trafficHint": "Visite al mese stimate che questa ricerca porta al sito",
+      "trafficHint": "Visite al mese stimate che questa ricerca porta al sito. “<1” significa meno di una visita al mese.",
       "trendHint": "Ricerche al mese nell'ultimo anno",
       "featuresCount": "{count, plural, =0 {Nessuna} =1 {1 funzione} other {# funzioni}}",
       "bandOfEvery": "Conserviamo {held} delle {total} ricerche in {band} tra tutte quelle per cui questo sito si posiziona.",
@@ -9028,7 +9028,7 @@
     "pages": {
       "title": "Pagine principali",
       "description": "Quali pagine di questo sito portano le visite? Le sue pagine per numero di ricerche per cui si posizionano. Aprine una per le sue ricerche, i link e i problemi.",
-      "searchPlaceholder": "Cerca pagine o parole chiave…",
+      "searchPlaceholder": "Cerca tra le pagine…",
       "sectionFilter": "Sezione",
       "allSections": "Tutte le sezioni",
       "columns": {

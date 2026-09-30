@@ -206,7 +206,8 @@ export const listKeywords = tenantQuery({
         && (!args.intent || row.intent === args.intent)
         && (args.path === undefined || row.page === args.path)
         && (!args.kdBand || row.kdBand === args.kdBand)
-        && (!matches || matches(row.keyword, row.page));
+        // The keyword only, never its page (Anthony, 2026-09-30): Top pages searches pages.
+        && (!matches || matches(row.keyword));
     }).sort(listOrder(KEYWORD_SORTS, args.sort ?? "position", args.direction, byKeyword));
     const page = pageOfList(list, args.page, args.rows);
     return { ...page, rows: await fullKeywordRows(ctx, page.rows) };
@@ -377,7 +378,8 @@ export const listPages = tenantQuery({
     const list = pagesHeld
       .filter((row) => (!args.section || row.section === args.section)
         && (!args.pageType || row.pageType === args.pageType)
-        && (!matches || matches(row.path, row.topKeyword)))
+        // The address only, never its keywords (Anthony, 2026-09-30): Keywords searches those.
+        && (!matches || matches(row.path)))
       .sort(listOrder(PAGE_SORTS, args.sort ?? "keywords", args.direction, name));
     const shown = pageOfList(list, args.page, args.rows);
     const result = {

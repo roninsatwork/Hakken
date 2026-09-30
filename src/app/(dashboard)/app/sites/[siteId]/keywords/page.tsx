@@ -14,7 +14,7 @@ import { SiteTableBar } from "../../_components/SiteTableBar";
 import { SiteChartCard } from "../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteStackedAreaChart } from "../../_components/SiteCharts";
 import { useSiteRange } from "../../_components/SiteDateRange";
-import { formatCpc, formatDay, formatNumber, formatShortDay, toCsv } from "../../_components/siteFormat";
+import { formatCpc, formatDay, formatNumber, formatShortDay, formatVisits, toCsv } from "../../_components/siteFormat";
 import { useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useCompareDay, useSite, useSiteId } from "../../_components/useSite";
 import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
@@ -227,7 +227,7 @@ export default function SiteKeywordsPage() {
             header: <span title={t("trafficHint")}>{t("columns.traffic")}</span>,
             align: "right",
             sortable: true,
-            cell: (row) => <span className="font-mono text-[12px] text-foreground">{row.traffic === null ? "–" : formatNumber(row.traffic)}</span>,
+            cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatVisits(row.traffic)}</span>,
           },
           ...(status === "OLDER"
             ? [{

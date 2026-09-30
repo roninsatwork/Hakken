@@ -518,6 +518,10 @@ describe("what the raw answers hold, read out (Phase 2)", () => {
     expect((await listPages({ sort: "linking" }))[0]).toBe("/");
     expect(await listPages({ sort: "page" })).toEqual(["/", "/ai-agency/", "/hub/what-is-a-web-app/"]);
     expect(await listPages({ sort: "traffic", direction: "asc" })).toEqual(["/", "/ai-agency/", "/hub/what-is-a-web-app/"]);
+    // A search reads the page's address only (Anthony, 2026-09-30): "ronins"
+    // is the home page's top keyword, not a word in any address.
+    expect(await listPages({ search: "hub" })).toEqual(["/hub/what-is-a-web-app/"]);
+    expect(await listPages({ search: "ronins" })).toEqual([]);
 
     const listKeywords = async (args: Record<string, unknown>) =>
       (await asRonins.query(api.siteKeywords.listKeywords, { siteId: own.holdId, ...first, ...args })).rows.map((row) => row.keyword);
@@ -532,6 +536,9 @@ describe("what the raw answers hold, read out (Phase 2)", () => {
     expect(await listKeywords({})).toEqual(["ronins", "ronins agency", "ai agency", "what is a web app"]);
     expect(await listKeywords({ kdBand: "kd11_30" })).toEqual(["what is a web app"]);
     expect(await listKeywords({ kdBand: "kd31_70", search: "agency" })).toEqual(["ai agency"]);
+    // And the keyword only: "hub" is in a ranking page's address, never in a keyword.
+    expect(await listKeywords({ search: "hub" })).toEqual([]);
+    expect(await listKeywords({ search: "web app" })).toEqual(["what is a web app"]);
 
     const [line] = await asRonins.query(api.siteCharts.siteSeries, { siteId: own.holdId, from: "2026-09-01", to: DAY, step: "day" });
     expect(line.points.at(-1)).toMatchObject({

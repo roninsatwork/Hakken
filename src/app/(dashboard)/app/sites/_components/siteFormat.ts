@@ -20,6 +20,18 @@ export function formatNumber(value: number | null | undefined): string {
   return Math.round(value).toLocaleString(siteLocale());
 }
 
+/**
+ * DataForSEO's estimate of visits a month: "<1" for a fraction under one,
+ * which rounding would show as 0 — no visits, and so a bug to the reader
+ * (Anthony, 2026-09-30: "how do we have zero traffic when we are in good
+ * positions"). Most of a local site's searches estimate under one, a map
+ * box above the results taking the clicks.
+ */
+export function formatVisits(value: number | null | undefined): string {
+  if (value !== null && value !== undefined && value > 0 && value < 1) return "<1";
+  return formatNumber(value);
+}
+
 /** Money the supplier gives in US dollars, whole: "$1,240" — what visits would cost as adverts, a month's spend. */
 export function formatDollars(value: number | null | undefined): string {
   return value === null || value === undefined ? "–" : `$${formatNumber(value)}`;

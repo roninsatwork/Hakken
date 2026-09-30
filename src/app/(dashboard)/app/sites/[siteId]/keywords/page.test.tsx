@@ -49,12 +49,12 @@ const SITE = { host: "ronins.co.uk", checkDays: ["2026-09-26", "2026-09-24"], co
 
 /** Each test its own page, so the address writes of one never reach the next. */
 let pageNumber = 0;
-function openAt(search = "") {
+function openAt(search = "", list = LIST) {
   pageNumber += 1;
   nav.pathname = `/app/sites/site_1/keywords-${pageNumber}`;
   nav.search = search;
   nav.replace.mockClear();
-  vi.mocked(useQuery).mockImplementation(answerQueries({ "sites:getMySite": SITE, "siteKeywords:listKeywords": LIST, "siteCharts:siteSeries": [] }));
+  vi.mocked(useQuery).mockImplementation(answerQueries({ "sites:getMySite": SITE, "siteKeywords:listKeywords": list, "siteCharts:siteSeries": [] }));
   return render(<SiteKeywordsPage />);
 }
 
@@ -167,5 +167,20 @@ describe("the Keywords page", () => {
     const [first, second] = screen.getAllByRole("row").slice(1).map((row) => within(row).getAllByRole("cell")[column]);
     expect(first).toHaveTextContent("$11.82");
     expect(second).toHaveTextContent("–");
+  });
+
+  it("shows a visit estimate under one as “<1”, never rounded to 0 (Anthony, 2026-09-30)", () => {
+    openAt("", {
+      ...LIST,
+      rows: [
+        ...LIST.rows,
+        // DataForSEO's 0.43 for 2nd place, a map box above the results.
+        keywordRow("logo design companies london", { volume: 170, cpc: 14.22, traffic: 0.43, page: "/logo-design-agency/" }),
+      ],
+    });
+
+    const column = screen.getAllByRole("columnheader").findIndex((cell) => cell.textContent === "sites.keywords.columns.traffic");
+    const cells = screen.getAllByRole("row").slice(1).map((row) => within(row).getAllByRole("cell")[column]);
+    expect(cells.map((cell) => cell.textContent)).toEqual(["38", "0", "<1"]);
   });
 });

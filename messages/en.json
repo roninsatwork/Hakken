@@ -8975,7 +8975,7 @@
     "keywords": {
       "title": "Keywords",
       "description": "Which searches bring this website visits? Every search it ranks for on Google. Open one for its history, its page and its competitors.",
-      "searchPlaceholder": "Search keywords or pages…",
+      "searchPlaceholder": "Search keywords…",
       "bandFilter": "Position",
       "anyBand": "Any position",
       "statusFilter": "Movement",
@@ -9017,7 +9017,7 @@
       },
       "kdHint": "How hard it is to reach page one for this search, from 0 (easy) to 100 (hardest)",
       "cpcHint": "What advertisers pay for a click on this search, in US dollars",
-      "trafficHint": "Estimated visits a month this search brings the website",
+      "trafficHint": "Estimated visits a month this search brings the website. “<1” means less than one visit a month.",
       "trendHint": "Searches a month over the last year",
       "featuresCount": "{count, plural, =0 {None} =1 {1 feature} other {# features}}",
       "bandOfEvery": "{held} of the {total} searches in {band} across everything this website ranks for are held.",
@@ -9028,7 +9028,7 @@
     "pages": {
       "title": "Top pages",
       "description": "Which of this website's pages bring the visits? Its pages by how many searches each ranks for. Open one for its searches, links and problems.",
-      "searchPlaceholder": "Search pages or keywords…",
+      "searchPlaceholder": "Search pages…",
       "sectionFilter": "Section",
       "allSections": "Every section",
       "columns": {
