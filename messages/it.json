@@ -9525,8 +9525,16 @@
         "keyword": "Parola chiave",
         "intent": "Cosa cercano",
         "volume": "Volume",
-        "rivals": "Chi si posiziona",
-        "best": "Posizione migliore"
+        "kd": "Diff.",
+        "position": "Posizione",
+        "traffic": "Traffico"
+      },
+      "hints": {
+        "volume": "Ricerche al mese",
+        "kd": "Quanto è difficile arrivare nella prima pagina di Google per questa ricerca, da 0 (facile) a 100 (difficilissimo)",
+        "position": "Dove si posiziona questo concorrente su Google per la ricerca. – significa che non si posiziona.",
+        "traffic": "Visite al mese stimate che questa ricerca porta al concorrente. “<1” significa meno di una visita al mese.",
+        "competitor": "Apri le pagine di {host}"
       },
       "empty": "Nessun divario trovato per ora. Si riempie quando questo sito e i suoi concorrenti sono stati controllati.",
       "noMatch": "Nessuna parola chiave corrisponde."

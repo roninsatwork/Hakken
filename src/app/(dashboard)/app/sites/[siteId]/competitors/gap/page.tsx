@@ -1,16 +1,19 @@
 "use client";
 
+import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Puzzle } from "lucide-react";
+import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
-import { DataTable } from "@/src/ui/components/screens/DataTable";
+import type { Id } from "@/convex/_generated/dataModel";
+import { DataTable, type DataTableColumn, type DataTableHeaderGroup } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
-import { CUT_COLUMN, IntentLabel, RecordLinkCell } from "../../../_components/SiteCells";
+import { IntentLabel, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
-import { formatNumber } from "../../../_components/siteFormat";
-import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
+import { formatNumber, formatVisits } from "../../../_components/siteFormat";
+import { useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
@@ -20,17 +23,38 @@ import { useSiteSort } from "../../../_components/useSiteSort";
 const INTENTS = ["BUYING", "RESEARCHING", "BRANDED", "IRRELEVANT", "OTHER", "UNJUDGED"] as const;
 type Intent = (typeof INTENTS)[number];
 
+type GapRow = FunctionReturnType<typeof api.siteCompetitors.listContentGap>["rows"][number];
+type RivalColumn = "position" | "traffic";
+
 /**
  * The columns that sort, over every gap (docs/plans/active/
  * sites-table-sorting-plan.md): the search A to Z, the most searched and the
- * most competitors ranking first, and the best of their positions from the top.
+ * easiest first; and each competitor's Position, the top first, and Traffic,
+ * the most first, a search it does not rank for last either way.
  */
-const SORTS = { keyword: "asc", volume: "desc", rivals: "desc", best: "asc" } as const;
+const SEARCH_SORTS = { keyword: "asc", volume: "desc", kd: "asc" } as const;
+const RIVAL_FIRSTS: Record<RivalColumn, "asc" | "desc"> = { position: "asc", traffic: "desc" };
+
+/** A competitor's column: which one, and whose — by its Sites page, as the address keeps it. */
+const rivalKey = (column: RivalColumn, siteId: string) => `${column}:${siteId}`;
+
+const numberCell = (value: string, strong = false) => (
+  <span className={`font-mono text-[12px] ${strong ? "text-foreground" : "text-secondary"}`}>{value}</span>
+);
+const blank = <span className="text-[12px] text-muted">–</span>;
 
 /**
  * Content gap: searches the other websites in the group rank for and this one
- * does not, most searched first unless a heading asks otherwise. Worked out for this company's hold when any
- * site in the group is filed, then searched, filtered and paged on the server.
+ * does not, most searched first unless a heading asks otherwise — laid out as
+ * Ahrefs lays out its content gap, organic search only (Anthony, 2026-09-30:
+ * "I prefer the layout of ahrefs … only organic search"; drawn, then "yes
+ * please build it"; docs/plans/active/content-gap-ahrefs-layout-plan.md).
+ * The search, what it is for, its volume and difficulty — its cost per click
+ * and its page's features were taken off the same day — then a Position and
+ * Traffic pair per competitor,
+ * the keyword kept in place as the table scrolls sideways. Worked out for
+ * this company's hold when any site in the group is filed, then searched,
+ * filtered, sorted and paged on the server.
  */
 export default function SiteContentGapPage() {
   const router = useRouter();
@@ -38,21 +62,90 @@ export default function SiteContentGapPage() {
   const tc = useTranslations("sites.common");
   const siteId = useSiteId();
   const recordHref = useSiteRecordHref(siteId);
+  const listHref = useSiteListHref(siteId);
   const site = useSite();
   const [search, setSearch, settled] = useSiteSearch();
   const [intent, setIntent] = useSiteParam<Intent | "">("intent", "", INTENTS);
   const [rivalsText, setRivalsText] = useSiteParam<string>("rivals", "1");
   const minRivals = Math.max(1, Number(rivalsText) || 1);
-  const order = useSiteSort(SORTS, "volume");
+  // Every competitor's pair sorts, named from the site's own list of them, so
+  // an address sorted by one opens in that order at once.
+  const firsts = useMemo<Record<string, "asc" | "desc">>(() => ({
+    ...SEARCH_SORTS,
+    ...Object.fromEntries((site?.rivals ?? []).flatMap((rival) =>
+      (Object.keys(RIVAL_FIRSTS) as RivalColumn[]).map((column) => [rivalKey(column, rival.siteId), RIVAL_FIRSTS[column]]))),
+  }), [site?.rivals]);
+  const order = useSiteSort<string>(firsts, "volume");
+  const [column, rivalId] = order.key.split(":");
   const table = useSiteListPage(api.siteCompetitors.listContentGap, {
     siteId,
     ...(settled ? { search: settled } : {}),
     ...(intent ? { intent } : {}),
     ...(minRivals > 1 ? { minRivals } : {}),
-    sort: order.key,
+    sort: column as keyof typeof SEARCH_SORTS | RivalColumn,
+    ...(rivalId ? { rivalId: rivalId as Id<"companyWebsites"> } : {}),
     direction: order.direction,
   }, [{ siteId, list: "gap" }]);
+  const competitors = table.result?.competitors ?? [];
   const most = Math.max(1, site?.rivals.length ?? 1);
+
+  const hinted = (key: "volume" | "kd" | "position" | "traffic") => (
+    <span title={t(`hints.${key}`)}>{t(`columns.${key}`)}</span>
+  );
+  const columns: DataTableColumn<GapRow>[] = [
+    // A set width, cut short with "…": a share of the width (`CUT_COLUMN`) is
+    // nothing in a table wider than the screen, which this one is by design.
+    { key: "keyword", header: t("columns.keyword"), sortable: true, className: "w-[220px] min-w-[220px] max-w-[220px]", cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
+    { key: "intent", header: t("columns.intent"), className: "whitespace-nowrap", cell: (row) => <IntentLabel intent={row.intent} /> },
+    { key: "volume", header: hinted("volume"), align: "right", sortable: true, className: "whitespace-nowrap", cell: (row) => numberCell(formatNumber(row.volume), true) },
+    { key: "kd", header: hinted("kd"), align: "right", sortable: true, className: "whitespace-nowrap", cell: (row) => numberCell(formatNumber(row.difficulty)) },
+    ...competitors.flatMap((rival): DataTableColumn<GapRow>[] => {
+      const ranking = (row: GapRow) => row.rivals.find((entry) => entry.websiteId === rival.websiteId);
+      return [
+        {
+          key: rivalKey("position", rival.siteId),
+          header: hinted("position"),
+          align: "right",
+          sortable: true,
+          className: "whitespace-nowrap border-l border-border-dim",
+          // Tinted where the competitor ranks, as Ahrefs tints it: the rows it is in stand out down its column.
+          cellClassName: (row) => (ranking(row) ? "bg-info/10" : ""),
+          cell: (row) => {
+            const found = ranking(row);
+            return found ? <span className="font-mono text-[13px] text-foreground">{found.position}</span> : blank;
+          },
+        },
+        {
+          key: rivalKey("traffic", rival.siteId),
+          header: hinted("traffic"),
+          align: "right",
+          sortable: true,
+          className: "whitespace-nowrap",
+          cell: (row) => {
+            const found = ranking(row);
+            return found ? numberCell(formatVisits(found.traffic), true) : blank;
+          },
+        },
+      ];
+    }),
+  ];
+  // The website each pair is for, over its two headings, opening its own pages.
+  const headerGroups: DataTableHeaderGroup[] | undefined = competitors.length > 0
+    ? [
+      { key: "keyword", span: 1 },
+      { key: "search", span: 3 },
+      ...competitors.map((rival) => ({
+        key: rival.siteId,
+        span: 2,
+        className: "border-l border-border-dim",
+        label: (
+          <span title={t("hints.competitor", { host: rival.host })}>
+            <RecordLinkCell href={listHref("", {}, rival.siteId)} className="text-[13px] font-medium text-foreground">{rival.host}</RecordLinkCell>
+          </span>
+        ),
+      })),
+    ]
+    : undefined;
 
   return (
     <div className="flex flex-col gap-6">
@@ -66,7 +159,9 @@ export default function SiteContentGapPage() {
         rows={table.pageRows}
         rowKey={(row) => row._id}
         onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
-        minWidthClassName="min-w-[720px]"
+        minWidthClassName="min-w-[1100px]"
+        stickyFirstColumn
+        headerGroups={headerGroups}
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
@@ -86,23 +181,7 @@ export default function SiteContentGapPage() {
         empty={{ icon: <Puzzle className="h-8 w-8 text-muted/30" />, label: settled || intent || minRivals > 1 ? t("noMatch") : t("empty") }}
         footer={table.footer}
         sort={order.tableSort}
-        columns={[
-          { key: "keyword", header: t("columns.keyword"), sortable: true, className: CUT_COLUMN.first, cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell> },
-          { key: "intent", header: t("columns.intent"), cell: (row) => <IntentLabel intent={row.intent} /> },
-          { key: "volume", header: t("columns.volume"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.volume)}</span> },
-          {
-            key: "rivals",
-            header: t("columns.rivals"),
-            // By how many competitors rank for it.
-            sortable: true,
-            cell: (row) => (
-              <span className="flex flex-col gap-0.5 text-[12px] text-secondary">
-                {row.rivals.map((rival) => <span key={rival.websiteId}>{rival.host} · <span className="font-mono">{rival.position}</span></span>)}
-              </span>
-            ),
-          },
-          { key: "best", header: t("columns.best"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{row.bestRivalPosition}</span> },
-        ]}
+        columns={columns}
       />
     </div>
   );

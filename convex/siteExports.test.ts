@@ -94,6 +94,46 @@ describe("downloading a whole table", () => {
       .rejects.toThrow(/not one your company holds/);
   });
 
+  test("the content gap file has a position and traffic pair per competitor, in the order on screen", async () => {
+    const t = harness();
+    const ronins = await company(t, "Ronins");
+    const own = await hold(t, ronins, "ronins.co.uk");
+    const rivals = await t.run(async (ctx) => {
+      const watch = async (host: string) => {
+        const websiteId = await ctx.db.insert("websites", { host, displayHost: host, firstSeenAt: Date.now() });
+        const holdId = await ctx.db.insert("companyWebsites", {
+          companyId: ronins, websiteId, relationship: "TRACKED", againstWebsiteId: own.websiteId, createdAt: Date.now(),
+        });
+        return { websiteId, holdId };
+      };
+      const chilli = await watch("chilliapple.co.uk");
+      const pixel = await watch("pixelfield.co.uk");
+      const gap = (keyword: string, volume: number, rivals: Array<{ websiteId: Id<"websites">; position: number; traffic?: number }>) =>
+        ctx.db.insert("siteContentGaps", {
+          companyWebsiteId: own.holdId, keyword, volume, volumeKnown: true, intent: "BUYING",
+          difficulty: 61,
+          rivalsRanking: rivals.length, bestRivalPosition: Math.min(...rivals.map((rival) => rival.position)), rivals,
+          rebuildId: "r1", updatedAt: Date.parse("2026-09-29T08:00:00Z"),
+        });
+      await gap("development website", 8100, [{ websiteId: chilli.websiteId, position: 2, traffic: 0.08 }, { websiteId: pixel.websiteId, position: 17, traffic: 12.6 }]);
+      await gap("single page app", 165000, [{ websiteId: pixel.websiteId, position: 27, traffic: 0.5 }]);
+      return { chilli, pixel };
+    });
+
+    const asRonins = await member(t, ronins);
+    const file = await asRonins.action(api.siteExports.exportSiteTable, {
+      siteId: own.holdId, kind: "gap", sort: `position:${rivals.pixel.holdId}`, direction: "asc",
+    });
+    const lines = file.csv.split("\n");
+    expect(lines[0]).toBe("keyword,intent,volume,difficulty,"
+      + "chilliapple.co.uk_position,chilliapple.co.uk_traffic,pixelfield.co.uk_position,pixelfield.co.uk_traffic,last_checked");
+    // By pixelfield's position, the top first, as the table was sorted.
+    expect(lines.slice(1)).toEqual([
+      "development website,BUYING,8100,61,2,0,17,13,2026-09-29",
+      "single page app,BUYING,165000,61,,,27,1,2026-09-29",
+    ]);
+  });
+
   test("the answers file walks every question's answers, one question after another", async () => {
     const t = harness();
     const ronins = await company(t, "Ronins");

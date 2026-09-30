@@ -9525,8 +9525,16 @@
         "keyword": "Keyword",
         "intent": "What they want",
         "volume": "Volume",
-        "rivals": "Who ranks",
-        "best": "Best position"
+        "kd": "KD",
+        "position": "Position",
+        "traffic": "Traffic"
+      },
+      "hints": {
+        "volume": "Searches a month",
+        "kd": "How hard it is to reach Google's first page for this search, from 0 (easy) to 100 (hardest)",
+        "position": "Where this competitor ranks on Google for the search. – means it does not rank for it.",
+        "traffic": "Estimated visits a month this search brings the competitor. “<1” means less than one visit a month.",
+        "competitor": "Open {host}'s pages"
       },
       "empty": "No gap found yet. It fills in once this website and its competitors have been checked.",
       "noMatch": "No keyword matches that."

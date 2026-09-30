@@ -7,6 +7,12 @@ completed work.
 
 ## Active Plans
 
+- [Content gap, laid out like Ahrefs](./active/content-gap-ahrefs-layout-plan.md) —
+  the keyword and what it is like (what they want, volume, KD), then a
+  Position and Traffic pair per competitor under its
+  name, tinted where it ranks, the keyword kept in place as the table scrolls
+  sideways; organic search only. Drawn and approved 2026-09-30 ("yes please
+  build it"); built on dev the same day, awaiting review.
 - [Status labels: icon and words, no pills](./active/status-labels-plan.md) —
   every rounded, tinted status pill on the dashboard (104 kit uses, about
   nine parts built on it, about 70 drawn by hand) becomes a small line icon

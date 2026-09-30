@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 
+import { LAYER } from "@/src/ui/lib/layers";
 import { cn } from "@/src/ui/lib/utils";
 import { Button } from "./Button";
 
@@ -68,6 +69,25 @@ export type DataTableColumn<Row> = {
   /** Whether pressing the heading orders the list by this column — with the table's `sort`. */
   sortable?: boolean;
   cell: (row: Row) => ReactNode;
+  /**
+   * A body cell's own classes, when they depend on the row — Content gap's
+   * position cell, tinted where the competitor ranks, as Ahrefs tints it.
+   */
+  cellClassName?: (row: Row) => string;
+};
+
+/**
+ * A heading over several columns, in a row above the column headings: the
+ * website each Position and Traffic pair of Content gap is for, as Ahrefs
+ * names its competitors (Anthony, 2026-09-30). The spans cover every column,
+ * in order; a group with no `label` heads its columns with nothing.
+ */
+export type DataTableHeaderGroup = {
+  key: string;
+  label?: ReactNode;
+  span: number;
+  /** Applied to the group's heading: a rule down its left edge, most often. */
+  className?: string;
 };
 
 /**
@@ -178,6 +198,14 @@ type DataTableProps<Row> = {
   cardHeader?: ReactNode;
   /** The list's order, which the `sortable` columns' headings show and change. */
   sort?: DataTableSort;
+  /** Headings over groups of columns, above the column headings. */
+  headerGroups?: DataTableHeaderGroup[];
+  /**
+   * Keep the first column in place while a table wider than the screen
+   * scrolls sideways — the search a row is about stays beside its figures,
+   * as Ahrefs keeps its keyword column. For a table that scrolls by design.
+   */
+  stickyFirstColumn?: boolean;
 };
 
 /**
@@ -192,6 +220,19 @@ const CONTROLS_GAP = "gap-5";
 /** Both reference screens agree on these, character for character. */
 const ROW_CLASSES = "border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors";
 const CELL_CLASSES = "px-4 py-3";
+
+/**
+ * The kept first column. It needs a solid ground, or the columns scrolling
+ * under it would show through: the table's own, the sidebar tint over the
+ * page, mixed from the theme's colours, with the row's hover laid over it.
+ */
+const STICKY_CELL = cn(
+  "sticky left-0",
+  LAYER.RAISED,
+  "bg-[color-mix(in_srgb,var(--color-sidebar)_20%,var(--color-background))]",
+  "group-hover:bg-[color-mix(in_srgb,var(--color-foreground)_2%,color-mix(in_srgb,var(--color-sidebar)_20%,var(--color-background)))]",
+  "shadow-[1px_0_0_var(--color-border-dim)]",
+);
 
 export function DataTable<Row>({
   rows,
@@ -210,6 +251,8 @@ export function DataTable<Row>({
   className = "",
   cardHeader,
   sort,
+  headerGroups,
+  stickyFirstColumn = false,
 }: DataTableProps<Row>) {
   const t = useTranslations("ui.table");
   const isLoading = rows === undefined;
@@ -239,8 +282,23 @@ export function DataTable<Row>({
         {...(minWidthClassName === undefined ? {} : { minWidthClassName })}
       >
         <thead>
+          {headerGroups ? (
+            <tr className="border-b border-border-dim/50">
+              {headerGroups.map((group, index) => {
+                // Kept in place with the first column only when it heads that column alone.
+                const kept = stickyFirstColumn && index === 0 && group.span === 1 ? STICKY_CELL : "";
+                return group.label ? (
+                  <th key={group.key} colSpan={group.span} scope="colgroup" className={cn("px-4 pt-3 pb-2 text-left text-[13px] font-medium text-foreground", kept, group.className)}>
+                    {group.label}
+                  </th>
+                ) : (
+                  <td key={group.key} colSpan={group.span} className={cn(kept, group.className)} />
+                );
+              })}
+            </tr>
+          ) : null}
           <TableHeaderRow variant={headerVariant}>
-            {columns.map((column) => {
+            {columns.map((column, index) => {
               const heading = visibleHeader(column);
               const sortable = Boolean(sort && column.sortable && heading !== null);
               const active = sortable && sort?.key === column.key;
@@ -248,7 +306,7 @@ export function DataTable<Row>({
                 <TableHeaderCell
                   key={column.key}
                   align={column.align}
-                  className={column.className}
+                  className={cn(column.className, stickyFirstColumn && index === 0 && STICKY_CELL)}
                   ariaSort={sortable ? (active ? (sort?.direction === "asc" ? "ascending" : "descending") : "none") : undefined}
                 >
                   {sortable && sort ? (
@@ -294,13 +352,15 @@ export function DataTable<Row>({
                   .filter(Boolean)
                   .join(" ")}
               >
-                {columns.map((column) => (
+                {columns.map((column, index) => (
                   <td
                     key={column.key}
                     className={[
                       CELL_CLASSES,
                       column.align === "right" ? "text-right" : "",
                       column.className ?? "",
+                      column.cellClassName?.(row) ?? "",
+                      stickyFirstColumn && index === 0 ? STICKY_CELL : "",
                     ]
                       .filter(Boolean)
                       .join(" ")}

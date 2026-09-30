@@ -93,7 +93,7 @@ describe("Wins and losses", () => {
 });
 
 describe("Content gap", () => {
-  test("sorts by the search, its volume, how many competitors rank and their best position", async () => {
+  test("sorts by the search, its volume and difficulty, and each competitor's position and traffic", async () => {
     const t = harness();
     const korda = await company(t, "Korda");
     const own = await hold(t, korda, "kordatackle.com");
@@ -101,11 +101,11 @@ describe("Content gap", () => {
     const fox = await hold(t, korda, "foxint.com", "TRACKED", own.websiteId);
     await fileRanks(t, own.websiteId, DAY, [{ keyword: "carp rods", position: 2 }]);
     await fileRanks(t, nash.websiteId, DAY, [
-      { keyword: "bivvies", position: 3, searchVolume: 900 },
-      { keyword: "bait boats", position: 7, searchVolume: 2400 },
+      { keyword: "bivvies", position: 3, searchVolume: 900, difficulty: 40, traffic: 30 },
+      { keyword: "bait boats", position: 7, searchVolume: 2400, difficulty: 12, traffic: 55 },
       { keyword: "zig rigs", position: 1 },
     ]);
-    await fileRanks(t, fox.websiteId, DAY, [{ keyword: "bivvies", position: 5, searchVolume: 900 }]);
+    await fileRanks(t, fox.websiteId, DAY, [{ keyword: "bivvies", position: 5, searchVolume: 900, difficulty: 40, traffic: 8 }]);
     await t.action(internal.siteContentGap.rebuildGap, { companyWebsiteId: own.holdId });
     await t.action(internal.siteListCopyBuilders.buildListCopy, { kind: "gap", key: own.holdId });
 
@@ -115,12 +115,19 @@ describe("Content gap", () => {
     // Most searched first; a search with no volume last, whichever way.
     expect(await gap()).toEqual(["bait boats", "bivvies", "zig rigs"]);
     expect(await gap({ direction: "asc" })).toEqual(["bivvies", "bait boats", "zig rigs"]);
-    expect(await gap({ sort: "rivals" })).toEqual(["bivvies", "bait boats", "zig rigs"]);
-    expect(await gap({ sort: "best" })).toEqual(["zig rigs", "bivvies", "bait boats"]);
     expect(await gap({ sort: "keyword", direction: "desc" })).toEqual(["zig rigs", "bivvies", "bait boats"]);
+    // The easiest first: a search with no known difficulty last.
+    expect(await gap({ sort: "kd" })).toEqual(["bait boats", "bivvies", "zig rigs"]);
+    expect(await gap({ sort: "kd", direction: "desc" })).toEqual(["bivvies", "bait boats", "zig rigs"]);
+    // A competitor's own columns: its best position first, its most visits first; a search it is not on last.
+    expect(await gap({ sort: "position", rivalId: nash.holdId })).toEqual(["zig rigs", "bivvies", "bait boats"]);
+    expect(await gap({ sort: "traffic", rivalId: nash.holdId })).toEqual(["bait boats", "bivvies", "zig rigs"]);
+    expect(await gap({ sort: "position", rivalId: fox.holdId, direction: "desc" })).toEqual(["bivvies", "bait boats", "zig rigs"]);
+    // A competitor's order with no competitor named opens on the list's own.
+    expect(await gap({ sort: "position" })).toEqual(["bait boats", "bivvies", "zig rigs"]);
     // A page at a time, the order the whole list's: the last page is its other end.
-    const last = await asKorda.query(api.siteCompetitors.listContentGap, { siteId: own.holdId, page: 2, rows: 2, sort: "best" });
-    expect(last.rows.map((row) => row.keyword)).toEqual(["bait boats"]);
+    const last = await asKorda.query(api.siteCompetitors.listContentGap, { siteId: own.holdId, page: 2, rows: 2, sort: "kd" });
+    expect(last.rows.map((row) => row.keyword)).toEqual(["zig rigs"]);
   });
 });
 

@@ -342,7 +342,10 @@ describe("the content gap", () => {
     await fileRanks(t, own.websiteId, DAY, [{ keyword: "ai agency", position: 2, searchVolume: 900 }]);
     await fileRanks(t, rival.websiteId, DAY, [
       { keyword: "ai agency", position: 5, searchVolume: 900 },
-      { keyword: "web design agency london", position: 6, searchVolume: 1900 },
+      {
+        keyword: "web design agency london", position: 6, searchVolume: 1900,
+        difficulty: 61, cpc: 16.26, traffic: 0.4, serpFeatures: ["local_pack", "people_also_ask"],
+      },
     ]);
 
     await t.action(internal.siteContentGap.rebuildGap, { companyWebsiteId: own.holdId });
@@ -356,6 +359,16 @@ describe("the content gap", () => {
     expect(gap.rows.map((row) => [row.keyword, row.rivals.map((entry) => entry.host)])).toEqual([
       ["web design agency london", ["lightflows.co.uk"]],
     ]);
+    // Laid out as Ahrefs lays it out (2026-09-30): the search's difficulty, and
+    // each competitor's position and traffic, under a column per competitor.
+    // Its cost per click and page features are not carried (taken off the same day).
+    expect(gap.rows[0]).toEqual(expect.objectContaining({
+      difficulty: 61,
+      rivals: [expect.objectContaining({ host: "lightflows.co.uk", position: 6, traffic: 0.4 })],
+    }));
+    expect(gap.rows[0]).not.toHaveProperty("cpc");
+    expect(gap.rows[0]).not.toHaveProperty("features");
+    expect(gap.competitors).toEqual([{ siteId: rival.holdId, websiteId: rival.websiteId, host: "lightflows.co.uk" }]);
     // The watched site's gap is read against the owned site it is watched with.
     const theirs = await asRonins.query(api.siteCompetitors.listContentGap, { siteId: rival.holdId, page: 1, rows: 25 });
     expect(theirs.rows).toEqual([]);

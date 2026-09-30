@@ -275,3 +275,46 @@ describe("headings that order the list", () => {
     expect(screen.getByRole("button", { name: "Name" }).className).toContain("[text-transform:inherit]");
   });
 });
+
+/**
+ * The three things Content gap needed to be laid out as Ahrefs lays out its
+ * content gap (Anthony, 2026-09-30): a heading over each competitor's pair of
+ * columns, the first column kept in place as a wide table scrolls, and a cell
+ * tinted by its own row.
+ */
+describe("a table laid out like a comparison", () => {
+  const WIDE: DataTableColumn<Person>[] = [
+    { key: "name", header: "Name", cell: (p) => p.name },
+    { key: "role", header: "Role", cell: (p) => p.role },
+    { key: "badge", header: "Badge", cell: (p) => p.id, cellClassName: (p) => (p.role === "Admin" ? "bg-info/10" : "") },
+  ];
+
+  it("names a group of columns in a row above their headings", () => {
+    renderTable({
+      columns: WIDE,
+      headerGroups: [{ key: "name", span: 1 }, { key: "rest", span: 2, label: "pixelfield.co.uk" }],
+    });
+
+    const group = screen.getByRole("columnheader", { name: "pixelfield.co.uk" });
+    expect(group).toHaveAttribute("colspan", "2");
+    expect(group).toHaveAttribute("scope", "colgroup");
+    // An unnamed group is no heading at all: an empty heading names nothing.
+    expect(screen.getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual(["pixelfield.co.uk", "Name", "Role", "Badge"]);
+  });
+
+  it("keeps the first column in place, heading and cells, and nothing else", () => {
+    renderTable({ columns: WIDE, stickyFirstColumn: true, headerGroups: [{ key: "name", span: 1 }, { key: "rest", span: 2, label: "Group" }] });
+
+    expect(screen.getByRole("columnheader", { name: "Name" }).className).toContain("sticky");
+    expect(screen.getByRole("cell", { name: "Ada Lovelace" }).className).toContain("sticky");
+    expect(screen.getByRole("cell", { name: "Admin" }).className).not.toContain("sticky");
+    expect(screen.getByRole("columnheader", { name: "Group" }).className).not.toContain("sticky");
+  });
+
+  it("tints a cell by its own row", () => {
+    renderTable({ columns: WIDE });
+
+    expect(screen.getByRole("cell", { name: "1" }).className).toContain("bg-info/10");
+    expect(screen.getByRole("cell", { name: "2" }).className).not.toContain("bg-info/10");
+  });
+});

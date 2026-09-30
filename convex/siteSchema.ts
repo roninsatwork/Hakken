@@ -308,9 +308,14 @@ export const siteTables = {
     volume: v.number(),
     volumeKnown: v.boolean(),
     intent: rankIntentValidator,
+    // How hard the search is (0–100), from the rivals' own rankings of it (the
+    // Content gap laid out like Ahrefs, 2026-09-30). Absent on a gap worked
+    // out before, until it is worked out again.
+    difficulty: v.optional(v.number()),
     rivalsRanking: v.number(),
     bestRivalPosition: v.number(),
-    rivals: v.array(v.object({ websiteId: v.id("websites"), position: v.number() })),
+    /** Each rival ranking for it: where, and the visits a month DataForSEO estimates it brings that rival. */
+    rivals: v.array(v.object({ websiteId: v.id("websites"), position: v.number(), traffic: v.optional(v.number()) })),
     rebuildId: v.string(),
     updatedAt: v.number(),
   })

@@ -56,8 +56,13 @@ type GapRow = {
   volume: number;
   volumeKnown: boolean;
   intent: RankIntent;
-  rivals: Array<{ websiteId: Id<"websites">; position: number }>;
+  difficulty?: number;
+  rivals: Array<{ websiteId: Id<"websites">; position: number; traffic?: number }>;
 };
+
+/** The rival row's fields a gap keeps, in the shape `rivalKeywords` reads them. */
+type RivalRow = Pick<Doc<"siteKeywordRanks">,
+  "keyword" | "position" | "volume" | "volumeKnown" | "intent" | "status" | "day" | "difficulty" | "traffic">;
 
 export const rebuildGap = internalAction({
   args: { companyWebsiteId: v.id("companyWebsites") },
@@ -93,7 +98,7 @@ async function rebuildGapNow(ctx: ActionCtx, args: { companyWebsiteId: Id<"compa
     let cursor: string | null = null;
     let read = 0;
     while (read < KEYWORDS_PER_RIVAL) {
-      const page: { rows: Array<Pick<Doc<"siteKeywordRanks">, "keyword" | "position" | "volume" | "volumeKnown" | "intent" | "status" | "day">>; cursor: string; isDone: boolean } =
+      const page: { rows: RivalRow[]; cursor: string; isDone: boolean } =
         await ctx.runQuery(internal.siteContentGap.rivalKeywords, {
           websiteId: rivalId,
           locationCode: context.locationCode,
@@ -117,7 +122,13 @@ async function rebuildGapNow(ctx: ActionCtx, args: { companyWebsiteId: Id<"compa
           intent: row.intent,
           rivals: [],
         };
-        gap.rivals.push({ websiteId: rivalId, position: row.position as number });
+        gap.rivals.push({
+          websiteId: rivalId,
+          position: row.position as number,
+          ...(row.traffic !== undefined ? { traffic: row.traffic } : {}),
+        });
+        // A search is as hard whoever ranks for it: the first ranking that knows says.
+        if (gap.difficulty === undefined && row.difficulty !== undefined) gap.difficulty = row.difficulty;
         if (row.volumeKnown && row.volume > gap.volume) {
           gap.volume = row.volume;
           gap.volumeKnown = true;
@@ -198,6 +209,8 @@ export const rivalKeywords = internalQuery({
         intent: row.intent,
         status: row.status,
         day: row.day,
+        difficulty: row.difficulty,
+        traffic: row.traffic,
       })),
       cursor: result.continueCursor,
       isDone: result.isDone,
@@ -235,7 +248,8 @@ export const writeGaps = internalMutation({
       volume: v.number(),
       volumeKnown: v.boolean(),
       intent: rankIntentValidator,
-      rivals: v.array(v.object({ websiteId: v.id("websites"), position: v.number() })),
+      difficulty: v.optional(v.number()),
+      rivals: v.array(v.object({ websiteId: v.id("websites"), position: v.number(), traffic: v.optional(v.number()) })),
     })),
   },
   returns: v.null(),
