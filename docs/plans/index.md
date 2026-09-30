@@ -12,7 +12,16 @@ completed work.
   Position and Traffic pair per competitor under its
   name, tinted where it ranks, the keyword kept in place as the table scrolls
   sideways; organic search only. Drawn and approved 2026-09-30 ("yes please
-  build it"); built on dev the same day, awaiting review.
+  build it"); built the same day — "this is a great screen now".
+- [Knowledge, News and the weekly digest](./active/knowledge-news-and-digest-plan.md) —
+  a Knowledge item and a News item on the main menu, after Search Console;
+  articles read by Ask Hakken, never shown in Sites; News collected by a News Collector
+  agent (blogs, YouTube, X accounts and Anthony's X bookmarks) plus Google
+  updates entered by hand; a weekly "Weekly News Digest" email queued by a
+  Weekly Digest agent into an outbox that an Email Sender agent (no AI) sends
+  through Resend. Three agents with roles, schedules, logs and costs. Ten
+  phases, 17.5 days, with Google updates marked on every dated Sites chart.
+  Planning, 2026-09-30; nothing built.
 - [Status labels: icon and words, no pills](./active/status-labels-plan.md) —
   every rounded, tinted status pill on the dashboard (104 kit uses, about
   nine parts built on it, about 70 drawn by hand) becomes a small line icon
