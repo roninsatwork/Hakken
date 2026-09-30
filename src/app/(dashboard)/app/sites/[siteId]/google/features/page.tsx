@@ -118,7 +118,6 @@ export default function SiteFeaturesPage() {
       >
         <SiteBarChart
           horizontal
-          height={Math.max(160, totals.length * 30)}
           data={totals.map((row) => ({ label: label(row.feature), searches: row.searches, withSite: row.withSite ?? undefined }))}
           series={[
             { key: "searches", name: t("seriesSearches"), colour: SITE_SERIES_COLOURS[1] },

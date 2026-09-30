@@ -63,7 +63,6 @@ export default function SiteAnchorsPage() {
       >
         <SiteBarChart
           horizontal
-          height={Math.max(160, charted.length * 28)}
           data={charted.map((row) => ({ label: words(row.anchor).slice(0, 40), backlinks: row.backlinks, domains: row.referringDomains }))}
           series={[
             { key: "backlinks", name: t("columns.backlinks"), colour: SITE_SERIES_COLOURS[1] },

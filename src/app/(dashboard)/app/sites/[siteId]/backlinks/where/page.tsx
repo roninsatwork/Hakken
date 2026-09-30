@@ -124,7 +124,6 @@ export default function SiteLinkSourcesPage() {
           >
             <SiteBarChart
               horizontal
-              height={Math.max(160, charted.length * 28)}
               data={charted.map((row) => ({ label: nameOf(row.key), links: row.count }))}
               series={[{ key: "links", name: t("columns.links"), colour: SITE_SERIES_COLOURS[1] }]}
             />

@@ -186,6 +186,17 @@ export function SiteStackedAreaChart({
   );
 }
 
+/**
+ * Bars along are as deep as the Overview's Pages by kind — 14px, 4px apart
+ * within a row — rather than whatever the chart's height left them (Anthony,
+ * 2026-09-30: "the line charts look a little thin and not in line with the
+ * overview page"). The chart grows with its rows instead.
+ */
+const ALONG_BAR = 14;
+const ALONG_BAR_GAP = 4;
+/** The room above and below each row's bars, as the Overview's rows have. */
+const ALONG_ROW_SPACE = 16;
+
 export function SiteBarChart({
   data,
   series,
@@ -199,6 +210,7 @@ export function SiteBarChart({
   data: Array<Record<string, unknown>>;
   series: SiteSeries[];
   xKey?: string;
+  /** Upright bars only: bars along size themselves to their rows. */
   height?: number;
   stacked?: boolean;
   /** Bars along, one per row — for comparing named things (sites, countries). */
@@ -208,11 +220,17 @@ export function SiteBarChart({
   /** What each readout line is called, when more than the series name. */
   seriesLabel?: (entry: ChartTooltipEntry) => ReactNode;
 }) {
+  const barsPerRow = stacked ? 1 : series.length;
+  const rowHeight = barsPerRow * ALONG_BAR + (barsPerRow - 1) * ALONG_BAR_GAP + ALONG_ROW_SPACE;
+  // The rows, then the margin, the scale along the bottom and the legend under it.
+  const alongHeight = data.length * rowHeight + 8 + 30 + (series.length > 1 ? 30 : 0);
   return (
-    <ResponsiveContainer width="100%" height={height} debounce={50}>
+    <ResponsiveContainer width="100%" height={horizontal ? alongHeight : height} debounce={50}>
       <BarChart
         data={data}
         layout={horizontal ? "vertical" : "horizontal"}
+        barSize={horizontal ? ALONG_BAR : undefined}
+        barGap={horizontal ? ALONG_BAR_GAP : undefined}
         margin={{ top: 8, right: 8, bottom: 0, left: horizontal ? 8 : 0 }}
       >
         <CartesianGrid strokeDasharray="3 3" vertical={horizontal} horizontal={!horizontal} stroke="currentColor" className="text-border-dim" />

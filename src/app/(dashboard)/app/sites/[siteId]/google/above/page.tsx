@@ -102,7 +102,6 @@ export default function SiteAbovePage() {
       >
         <SiteBarChart
           horizontal
-          height={Math.max(160, charted.length * 30)}
           data={charted.map((row) => ({ label: row.keyword, above: row.above.length, rivals: row.rivalsAbove }))}
           series={[
             { key: "above", name: t("columns.above"), colour: SITE_SERIES_COLOURS[1] },

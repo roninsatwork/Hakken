@@ -77,7 +77,6 @@ export default function SiteBacklinksComparedPage() {
       >
         <SiteBarChart
           horizontal
-          height={Math.max(160, (rows?.length ?? 0) * 44)}
           data={(rows ?? []).map((row) => ({ label: name(row), referringDomains: row.referringDomains }))}
           series={[{ key: "referringDomains", name: t("columns.referringDomains"), colour: SITE_SERIES_COLOURS[1] }]}
         />

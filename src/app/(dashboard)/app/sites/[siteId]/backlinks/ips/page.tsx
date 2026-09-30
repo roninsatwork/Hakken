@@ -71,7 +71,6 @@ export default function SiteReferringIpsPage() {
       >
         <SiteBarChart
           horizontal
-          height={Math.max(160, (subnets?.length ?? 0) * 28)}
           data={(subnets ?? []).map((row) => ({ label: row.subnet, domains: row.referringDomains, ips: row.ips }))}
           series={[
             { key: "domains", name: t("seriesDomains"), colour: SITE_SERIES_COLOURS[1] },
