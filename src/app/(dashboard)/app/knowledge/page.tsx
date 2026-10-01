@@ -11,25 +11,22 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { matchesSearchTerm, paginateItems } from "@/src/ui/components/screens/pagination";
 import { formatDate } from "@/src/lib/dates";
-import { inLanguage } from "./_components/articleLanguage";
 
 /**
  * Knowledge (docs/plans/active/knowledge-news-and-digest-plan.md, phase 1):
  * the articles every signed-in user can read, whatever their company (A14),
- * newest first. One opens on its own screen, never in a pop-up, as a site's
- * records do.
+ * newest first, in their language once the Translator has it. One opens on
+ * its own screen, never in a pop-up, as a site's records do.
  */
 export default function KnowledgePage() {
   const t = useTranslations("knowledgeArticles.list");
   const locale = useLocale();
   const router = useRouter();
-  const articles = useQuery(api.knowledgeArticles.listPublishedArticles, {});
+  const articles = useQuery(api.knowledgeArticles.listPublishedArticles, { language: locale });
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
-  const rows = articles
-    ?.map((article) => ({ ...article, title: inLanguage(article, locale).title }))
-    .filter((article) => matchesSearchTerm(search, [article.title]));
+  const rows = articles?.filter((article) => matchesSearchTerm(search, [article.title]));
   const paged = paginateItems(rows ?? [], page);
 
   return (

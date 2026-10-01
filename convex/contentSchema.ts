@@ -1,0 +1,16 @@
+import { knowledgeArticleTables } from "./knowledgeArticlesSchema";
+import { newsTables } from "./newsSchema";
+import { contentTranslationTables } from "./contentTranslationSchema";
+
+/**
+ * The tables behind Admin → Content (docs/plans/active/
+ * knowledge-news-and-digest-plan.md): Knowledge, News and their machine
+ * translations, and the outbox and digest as they arrive — spread into
+ * `schema.ts` once, so each phase adds its tables here rather than to the
+ * schema itself.
+ */
+export const contentTables = {
+  ...knowledgeArticleTables,
+  ...newsTables,
+  ...contentTranslationTables,
+};

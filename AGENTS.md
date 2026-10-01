@@ -260,6 +260,18 @@ npm run convex:dev
 
 - Keep English and Italian locale dictionaries in parity: `messages/en.json` and `messages/it.json`.
 - Do not use native browser dialogs (`alert`, `confirm`, `prompt`) in app UI. Use in-app feedback or the existing `HakkenModal` patterns.
+- **A pop-up is only for a yes or a no** (Anthony, 2026-10-01, said before and
+  forgotten): confirming a delete, discarding changes, approving. Anything with
+  fields — creating or editing a record, an article, a setting — is its own
+  page, opened from its list, never a `HakkenModal`. Admin → Content's editors
+  are the pattern (`admin/content/_components/ContentEditPage.tsx`).
+- **People write content once, in English; the machine translates it**
+  (Anthony, 2026-10-01). Hakken may be read in 10 to 15 languages, so never
+  build a field per language ("Title in Italian"), and never make publishing
+  wait for a person to write each one. Store the English and let the
+  Translator write the rest (`convex/contentTranslation.ts`; the languages are
+  `convex/utils/contentLanguages.ts`). This is about what people write; the
+  screens' own wording stays in `messages/<language>.json`.
 - Administrative tables and feeds should use 15 rows per page unless a specific product requirement says otherwise.
   The client's Sites tables (`/app/sites`) are that requirement (Anthony,
   2026-09-25): numbered pages like Ahrefs', a choice of 25, 50, 75 or 100 rows

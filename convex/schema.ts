@@ -6,7 +6,7 @@ import { billingTables } from "./billingSchema";
 import { uploadTables } from "./uploadSchema";
 import { siteTables } from "./siteSchema";
 import { searchConsoleTables } from "./searchConsoleSchema";
-import { knowledgeArticleTables } from "./knowledgeArticlesSchema";
+import { contentTables } from "./contentSchema";
 import { decisionCertaintyValidator, decisionFallbackReasonValidator, decisionModeValidator, decisionOutcomeValidator, decisionSourceValidator } from "./utils/decisionShapes";
 
 
@@ -29,7 +29,7 @@ export default defineSchema({
   ...uploadTables,
   ...siteTables,
   ...searchConsoleTables,
-  ...knowledgeArticleTables,
+  ...contentTables,
   
   companies: defineTable({
     name: v.string(),
@@ -4279,10 +4279,7 @@ export default defineSchema({
     // The list's search used to read five hundred pages into the browser and
     // sift them there, which silently hid page five hundred and one.
     searchText: v.optional(v.string()),
-    // Set on a global page that is a published Knowledge article's copy
-    // (knowledge-news-and-digest-plan.md, phase 2): a person's writing, kept
-    // in step with the article and never rewritten, tidied or relinked by
-    // the wiki staff (`utils/knowledgePageGuard.ts`).
+    // A published Knowledge article's copy: a person's writing the wiki staff never change (utils/knowledgePageGuard.ts).
     knowledgeArticleId: v.optional(v.id("knowledgeArticles")),
   })
     .index("by_company_kind_subject", ["companyId", "kind", "subjectKey"])

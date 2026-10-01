@@ -5,8 +5,9 @@ import { v } from "convex/values";
  * Knowledge articles: what the platform's own team writes for every signed-in user
  * (docs/plans/active/knowledge-news-and-digest-plan.md, phase 1). General
  * knowledge, the same for every company and every role (D1, A14), written and
- * changed only in Admin → Content → Knowledge. Each article is written in
- * English and Italian (A7); a reader sees the one in their language.
+ * changed only in Admin → Content → Knowledge — in English alone; the
+ * Translator writes every other language (`contentTranslation.ts`, revised
+ * 2026-10-01).
  */
 
 export const KNOWLEDGE_STATUSES = ["DRAFT", "PUBLISHED"] as const;
@@ -24,8 +25,6 @@ export const knowledgeArticleTables = {
     titleEn: v.string(),
     /** Plain text with simple formatting: paragraphs, bold, lists and links (Markdown). */
     bodyEn: v.string(),
-    titleIt: v.string(),
-    bodyIt: v.string(),
     /** Readers see only a published article; a draft is Admin's alone. */
     status: knowledgeStatusValidator,
     /** When it was first published; kept through later edits, cleared when it goes back to a draft. */

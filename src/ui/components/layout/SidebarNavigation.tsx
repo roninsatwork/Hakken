@@ -247,6 +247,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/app/sites')) return 'Sites';
   if (pathname.startsWith('/app/search-console')) return 'Search Console';
   if (pathname.startsWith('/app/knowledge')) return 'Knowledge';
+  if (pathname.startsWith('/app/news')) return 'News';
   if (pathname.startsWith('/app/reception')) return 'Reception';
   if (pathname.startsWith('/app/profile')) return 'Profile';
   if (pathname === '/app/settings') return 'Organization Dashboard';

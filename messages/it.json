@@ -609,7 +609,11 @@
     "searchConsole": "Search Console",
     "yourSites": "I tuoi siti",
     "knowledge": "Conoscenza",
-    "content": "Contenuti"
+    "content": "Contenuti",
+    "news": "Notizie",
+    "newsSources": "Fonti delle notizie",
+    "googleUpdates": "Aggiornamenti di Google",
+    "whoToFollow": "Chi seguire"
   },
   "header": {
     "adminOverview": "Protocollo Infrastruttura",
@@ -6077,20 +6081,15 @@
       "create": "Nuovo articolo",
       "createTitle": "Nuovo articolo",
       "editTitle": "Modifica articolo",
-      "editorSubtitle": "Scrivi il titolo e l'articolo in entrambe le lingue. Una bozza si vede solo qui; per pubblicare servono tutte e due le lingue.",
+      "editorSubtitle": "Scrivilo una volta, in inglese. Una volta pubblicato, viene tradotto in ogni altra lingua della piattaforma.",
       "statusLabel": "Chi può vederlo",
       "draft": "Bozza",
       "published": "Pubblicato",
-      "titleEnLabel": "Titolo in inglese",
-      "bodyEnLabel": "Articolo in inglese",
-      "titleItLabel": "Titolo in italiano",
-      "bodyItLabel": "Articolo in italiano",
       "bodyHint": "Testo semplice. Funzionano **grassetto**, - elenchi, [link](https://…) e ## titoli.",
       "save": "Salva articolo",
       "searchPlaceholder": "Cerca articoli…",
       "empty": "Ancora nessun articolo. Scrivi il primo.",
       "noMatch": "Nessun articolo corrisponde.",
-      "noItalian": "Italiano non ancora scritto",
       "edit": "Modifica articolo",
       "delete": "Elimina articolo",
       "deleteTitle": "Elimina articolo",
@@ -6100,11 +6099,170 @@
         "article": "Articolo",
         "status": "Stato",
         "updated": "Aggiornato",
-        "actions": "Azioni"
+        "actions": "Azioni",
+        "translations": "Traduzioni"
       },
       "errors": {
         "saveFailed": "Impossibile salvare l'articolo. Riprova.",
         "deleteFailed": "Impossibile eliminare l'articolo. Riprova."
+      },
+      "back": "Conoscenza",
+      "titleLabel": "Titolo",
+      "bodyLabel": "Articolo"
+    },
+    "googleUpdates": {
+      "title": "Aggiornamenti di Google",
+      "subtitle": "Gli aggiornamenti annunciati da Google, inseriti a mano. Ognuno compare subito in Notizie e su ogni grafico di Siti che copre le sue date.",
+      "create": "Nuovo aggiornamento",
+      "createTitle": "Nuovo aggiornamento di Google",
+      "editTitle": "Modifica aggiornamento di Google",
+      "editorSubtitle": "Scrivi cosa è cambiato in parole semplici, in inglese. Notizie e i segnali sui grafici lo mostrano tradotto in ogni lingua.",
+      "titlePlaceholder": "Core update di marzo 2025",
+      "startedLabel": "Iniziato",
+      "finishedLabel": "Terminato",
+      "finishedHint": "Lascia vuoto finché è ancora in corso.",
+      "urlLabel": "Annuncio di Google",
+      "save": "Salva aggiornamento",
+      "searchPlaceholder": "Cerca aggiornamenti…",
+      "empty": "Ancora nessun aggiornamento di Google.",
+      "noMatch": "Nessun aggiornamento corrisponde.",
+      "rollingOut": "Ancora in corso",
+      "open": "Apri l'annuncio di Google",
+      "edit": "Modifica aggiornamento",
+      "delete": "Elimina aggiornamento",
+      "deleteTitle": "Elimina aggiornamento di Google",
+      "deleteWarning": "Scompare subito da Notizie e dai grafici di Siti.",
+      "deleteConfirm": "Eliminare <highlight>{title}</highlight>?",
+      "columns": {
+        "update": "Aggiornamento",
+        "started": "Iniziato",
+        "finished": "Terminato",
+        "actions": "Azioni",
+        "translations": "Traduzioni"
+      },
+      "errors": {
+        "saveFailed": "Impossibile salvare l'aggiornamento. Riprova.",
+        "deleteFailed": "Impossibile eliminare l'aggiornamento. Riprova."
+      },
+      "back": "Aggiornamenti di Google",
+      "titleLabel": "Titolo",
+      "descriptionLabel": "Cosa è cambiato"
+    },
+    "newsSources": {
+      "title": "Fonti delle notizie",
+      "subtitle": "I siti, i canali YouTube e gli account X che il News Collector legge quando sono attivi.",
+      "create": "Nuova fonte",
+      "createTitle": "Nuova fonte di notizie",
+      "editTitle": "Modifica fonte di notizie",
+      "editorSubtitle": "Il nome è come Notizie la cita. Disattivala per smettere di leggerla; ciò che ha già portato resta.",
+      "kindLabel": "Tipo di fonte",
+      "kinds": {
+        "WEBSITE": "Sito web",
+        "YOUTUBE": "Canale YouTube",
+        "X_ACCOUNT": "Account X"
+      },
+      "nameLabel": "Nome",
+      "namePlaceholder": "Per esempio, Google Search Central",
+      "addressLabel": "Indirizzo",
+      "handleLabel": "Nome utente",
+      "addressHints": {
+        "WEBSITE": "La pagina o il feed da leggere, che inizia con https://.",
+        "YOUTUBE": "L'indirizzo del canale, che inizia con https://.",
+        "X_ACCOUNT": "Il nome utente dell'account, come @googlesearchc."
+      },
+      "isOnLabel": "Leggi questa fonte",
+      "save": "Salva fonte",
+      "searchPlaceholder": "Cerca fonti…",
+      "empty": "Ancora nessuna fonte. Aggiungi la prima.",
+      "noMatch": "Nessuna fonte corrisponde.",
+      "never": "Non ancora",
+      "on": "In lettura",
+      "off": "Disattivata",
+      "edit": "Modifica fonte",
+      "delete": "Elimina fonte",
+      "deleteTitle": "Elimina fonte di notizie",
+      "deleteWarning": "Non si legge più niente di nuovo da qui. Ciò che ha già portato resta in Notizie.",
+      "deleteConfirm": "Eliminare <highlight>{name}</highlight>?",
+      "columns": {
+        "source": "Fonte",
+        "kind": "Tipo",
+        "read": "Lettura",
+        "checked": "Ultima lettura",
+        "lastItem": "Ultima novità",
+        "actions": "Azioni"
+      },
+      "errors": {
+        "saveFailed": "Impossibile salvare la fonte. Riprova.",
+        "deleteFailed": "Impossibile eliminare la fonte. Riprova."
+      },
+      "back": "Fonti delle notizie"
+    },
+    "newsFollows": {
+      "title": "Chi seguire",
+      "subtitle": "Le persone e i canali che consigliamo, come li mostra la pagina Notizie.",
+      "create": "Nuova voce",
+      "createTitle": "Nuovo consiglio",
+      "editTitle": "Modifica consiglio",
+      "editorSubtitle": "Chi sono, dove seguirli e perché, in inglese. La pagina Notizie lo mostra tradotto in ogni lingua.",
+      "nameLabel": "Nome",
+      "kindLabel": "Si segue su",
+      "kinds": {
+        "X": "X",
+        "YOUTUBE": "YouTube",
+        "LINKEDIN": "LinkedIn",
+        "WEBSITE": "Sito web"
+      },
+      "urlLabel": "Link",
+      "save": "Salva",
+      "searchPlaceholder": "Cerca consigli…",
+      "empty": "Ancora nessun consiglio.",
+      "noMatch": "Nessuno corrisponde.",
+      "edit": "Modifica consiglio",
+      "delete": "Elimina consiglio",
+      "deleteTitle": "Elimina consiglio",
+      "deleteWarning": "Scompare subito dalla pagina Notizie.",
+      "deleteConfirm": "Eliminare <highlight>{name}</highlight>?",
+      "columns": {
+        "name": "Nome",
+        "why": "Perché",
+        "actions": "Azioni",
+        "translations": "Traduzioni"
+      },
+      "errors": {
+        "saveFailed": "Impossibile salvare il consiglio. Riprova.",
+        "deleteFailed": "Impossibile eliminare il consiglio. Riprova."
+      },
+      "back": "Chi seguire",
+      "whyLabel": "Perché li consigliamo"
+    },
+    "newsItems": {
+      "title": "Notizie",
+      "subtitle": "Tutto ciò che c'è nel feed Notizie, dal più recente. Le voci vanno online appena raccolte; rimuovi quella che non dovrebbe esserci.",
+      "kindFilter": "Mostra",
+      "allKinds": "Tutto",
+      "empty": "Ancora niente in Notizie.",
+      "open": "Apri l'originale",
+      "delete": "Rimuovi",
+      "deleteTitle": "Rimuovi notizia",
+      "deleteWarning": "Scompare da Notizie per tutti e non viene raccolta di nuovo.",
+      "deleteConfirm": "Rimuovere <highlight>{title}</highlight>?",
+      "columns": {
+        "item": "Notizia",
+        "kind": "Tipo",
+        "published": "Pubblicata",
+        "actions": "Azioni"
+      },
+      "errors": {
+        "deleteFailed": "Impossibile rimuovere la notizia. Riprova."
+      }
+    },
+    "contentEditor": {
+      "missingTitle": "Non c'è più",
+      "missingDescription": "Potrebbe essere stato eliminato. Torna all'elenco per trovare il resto.",
+      "translations": {
+        "done": "Tradotto in ogni lingua",
+        "waiting": "Traduzione in corso: {done} di {total} lingue pronte",
+        "notYet": "Tradotto una volta pubblicato"
       }
     }
   },
@@ -10473,6 +10631,39 @@
       "updated": "Aggiornato il {date}",
       "notFoundTitle": "Questo articolo non c'è",
       "notFoundDescription": "Potrebbe essere stato rimosso o sostituito. Gli altri sono in Conoscenza."
+    }
+  },
+  "news": {
+    "title": "Notizie",
+    "description": "Cosa è cambiato nella ricerca e nell'AI, in parole semplici, con cosa significa per te.",
+    "kindFilter": "Mostra",
+    "allKinds": "Tutto",
+    "kinds": {
+      "GOOGLE_UPDATE": "Aggiornamenti di Google",
+      "X": "X",
+      "YOUTUBE": "YouTube",
+      "WEBSITE": "Siti web"
+    },
+    "kind": {
+      "GOOGLE_UPDATE": "Aggiornamento di Google",
+      "X": "Post su X",
+      "YOUTUBE": "Video YouTube",
+      "WEBSITE": "Articolo"
+    },
+    "feedLabel": "Notizie, dalle più recenti",
+    "emptyTitle": "Ancora niente qui",
+    "empty": "Le notizie compariranno qui man mano che vengono pubblicate.",
+    "emptyKind": "Ancora niente di questo tipo. Mostra tutto per vedere il resto.",
+    "meaning": "Cosa significa per te",
+    "readOriginal": "Leggi l'originale",
+    "loadMore": "Mostra altre",
+    "whoToFollow": "Chi seguire",
+    "whoToFollowEmpty": "I nostri consigli compariranno qui.",
+    "followKinds": {
+      "X": "Su X",
+      "YOUTUBE": "Su YouTube",
+      "WEBSITE": "Sito web",
+      "LINKEDIN": "Su LinkedIn"
     }
   }
 }

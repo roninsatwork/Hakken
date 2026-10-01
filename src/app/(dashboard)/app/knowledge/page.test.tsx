@@ -22,8 +22,8 @@ vi.mock("next/navigation", () => ({
 vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
 vi.mock("@/src/ui/components/layout/Header", () => ({ default: () => null }));
 
-const TRAFFIC = { _id: "article_1", titleEn: "How is traffic worked out?", titleIt: "Come viene calcolato il traffico?", publishedAt: 1, updatedAt: Date.UTC(2026, 9, 1) };
-const RANKINGS = { _id: "article_2", titleEn: "Why rankings move", titleIt: "Perché le posizioni cambiano", publishedAt: 2, updatedAt: Date.UTC(2026, 9, 1) };
+const TRAFFIC = { _id: "article_1", title: "How is traffic worked out?", publishedAt: 1, updatedAt: Date.UTC(2026, 9, 1) };
+const RANKINGS = { _id: "article_2", title: "Why rankings move", publishedAt: 2, updatedAt: Date.UTC(2026, 9, 1) };
 
 /** Knowledge (docs/plans/active/knowledge-news-and-digest-plan.md, phase 1): every signed-in user's, in their language. */
 describe("Knowledge", () => {
@@ -42,11 +42,14 @@ describe("Knowledge", () => {
     expect(nav.push).toHaveBeenCalledWith("/app/knowledge/article_2");
   });
 
-  it("finds an article by its title, in Italian for an Italian reader", () => {
+  it("asks for the reader's language and finds an article by its title in it", () => {
     nav.locale = "it";
-    vi.mocked(useQuery).mockImplementation(answerQueries({ "knowledgeArticles:listPublishedArticles": [TRAFFIC, RANKINGS] }));
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "knowledgeArticles:listPublishedArticles": [{ ...TRAFFIC, title: "Come viene calcolato il traffico?" }, { ...RANKINGS, title: "Perché le posizioni cambiano" }],
+    }));
     render(<KnowledgePage />);
 
+    expect(vi.mocked(useQuery).mock.calls.some(([, args]) => (args as { language?: string })?.language === "it")).toBe(true);
     fireEvent.change(screen.getByPlaceholderText("knowledgeArticles.list.searchPlaceholder"), { target: { value: "traffico" } });
     expect(screen.getByText("Come viene calcolato il traffico?")).toBeInTheDocument();
     expect(screen.queryByText("Perché le posizioni cambiano")).not.toBeInTheDocument();
@@ -54,7 +57,7 @@ describe("Knowledge", () => {
 
   it("shows an article's words, with the way back to Knowledge", () => {
     vi.mocked(useQuery).mockImplementation(answerQueries({
-      "knowledgeArticles:getPublishedArticle": { ...TRAFFIC, bodyEn: "It is an **estimate**, not a count.", bodyIt: "È una stima." },
+      "knowledgeArticles:getPublishedArticle": { ...TRAFFIC, body: "It is an **estimate**, not a count." },
     }));
     render(<KnowledgeArticlePage />);
 

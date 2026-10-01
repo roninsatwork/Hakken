@@ -609,7 +609,11 @@
     "searchConsole": "Search Console",
     "yourSites": "Your sites",
     "knowledge": "Knowledge",
-    "content": "Content"
+    "content": "Content",
+    "news": "News",
+    "newsSources": "News sources",
+    "googleUpdates": "Google updates",
+    "whoToFollow": "Who to follow"
   },
   "header": {
     "adminOverview": "Platform Management",
@@ -6077,20 +6081,15 @@
       "create": "New article",
       "createTitle": "New article",
       "editTitle": "Edit article",
-      "editorSubtitle": "Write the title and the article in both languages. A draft is only seen here; publishing needs both languages.",
+      "editorSubtitle": "Write it once, in English. Once it is published, it is translated into every other language the platform is read in.",
       "statusLabel": "Who can see it",
       "draft": "Draft",
       "published": "Published",
-      "titleEnLabel": "Title in English",
-      "bodyEnLabel": "Article in English",
-      "titleItLabel": "Title in Italian",
-      "bodyItLabel": "Article in Italian",
       "bodyHint": "Plain text. **Bold**, - lists, [links](https://…) and ## headings work.",
       "save": "Save article",
       "searchPlaceholder": "Search articles…",
       "empty": "No articles yet. Write the first one.",
       "noMatch": "No article matches that.",
-      "noItalian": "No Italian yet",
       "edit": "Edit article",
       "delete": "Delete article",
       "deleteTitle": "Delete article",
@@ -6100,11 +6099,170 @@
         "article": "Article",
         "status": "Status",
         "updated": "Updated",
-        "actions": "Actions"
+        "actions": "Actions",
+        "translations": "Translations"
       },
       "errors": {
         "saveFailed": "Could not save the article. Try again.",
         "deleteFailed": "Could not delete the article. Try again."
+      },
+      "back": "Knowledge",
+      "titleLabel": "Title",
+      "bodyLabel": "Article"
+    },
+    "googleUpdates": {
+      "title": "Google updates",
+      "subtitle": "Google's announced updates, entered by hand. Each one shows in News straight away, and on every Sites chart that covers its dates.",
+      "create": "New update",
+      "createTitle": "New Google update",
+      "editTitle": "Edit Google update",
+      "editorSubtitle": "Write what changed in plain words, in English. News and the chart markers show it, translated into every language.",
+      "titlePlaceholder": "March 2025 core update",
+      "startedLabel": "Started",
+      "finishedLabel": "Finished",
+      "finishedHint": "Leave blank while it is still rolling out.",
+      "urlLabel": "Google's announcement",
+      "save": "Save update",
+      "searchPlaceholder": "Search updates…",
+      "empty": "No Google updates yet.",
+      "noMatch": "No update matches that.",
+      "rollingOut": "Still rolling out",
+      "open": "Open Google's announcement",
+      "edit": "Edit update",
+      "delete": "Delete update",
+      "deleteTitle": "Delete Google update",
+      "deleteWarning": "It leaves News and the Sites charts straight away.",
+      "deleteConfirm": "Delete <highlight>{title}</highlight>?",
+      "columns": {
+        "update": "Update",
+        "started": "Started",
+        "finished": "Finished",
+        "actions": "Actions",
+        "translations": "Translations"
+      },
+      "errors": {
+        "saveFailed": "Could not save the update. Try again.",
+        "deleteFailed": "Could not delete the update. Try again."
+      },
+      "back": "Google updates",
+      "titleLabel": "Title",
+      "descriptionLabel": "What changed"
+    },
+    "newsSources": {
+      "title": "News sources",
+      "subtitle": "The websites, YouTube channels and X accounts the News Collector reads while they are on.",
+      "create": "New source",
+      "createTitle": "New news source",
+      "editTitle": "Edit news source",
+      "editorSubtitle": "Its name is how News credits it. Turn it off to stop reading it; what it already brought stays.",
+      "kindLabel": "Kind of source",
+      "kinds": {
+        "WEBSITE": "Website",
+        "YOUTUBE": "YouTube channel",
+        "X_ACCOUNT": "X account"
+      },
+      "nameLabel": "Name",
+      "namePlaceholder": "For example, Google Search Central",
+      "addressLabel": "Address",
+      "handleLabel": "Handle",
+      "addressHints": {
+        "WEBSITE": "The page or feed to read, starting with https://.",
+        "YOUTUBE": "The channel's address, starting with https://.",
+        "X_ACCOUNT": "The account's handle, like @googlesearchc."
+      },
+      "isOnLabel": "Read this source",
+      "save": "Save source",
+      "searchPlaceholder": "Search sources…",
+      "empty": "No sources yet. Add the first one.",
+      "noMatch": "No source matches that.",
+      "never": "Not yet",
+      "on": "Reading",
+      "off": "Off",
+      "edit": "Edit source",
+      "delete": "Delete source",
+      "deleteTitle": "Delete news source",
+      "deleteWarning": "Nothing new is read from it. What it already brought stays in News.",
+      "deleteConfirm": "Delete <highlight>{name}</highlight>?",
+      "columns": {
+        "source": "Source",
+        "kind": "Kind",
+        "read": "Read",
+        "checked": "Last read",
+        "lastItem": "Last new item",
+        "actions": "Actions"
+      },
+      "errors": {
+        "saveFailed": "Could not save the source. Try again.",
+        "deleteFailed": "Could not delete the source. Try again."
+      },
+      "back": "News sources"
+    },
+    "newsFollows": {
+      "title": "Who to follow",
+      "subtitle": "The people and channels we recommend, as the News page shows them.",
+      "create": "New entry",
+      "createTitle": "New recommendation",
+      "editTitle": "Edit recommendation",
+      "editorSubtitle": "Who they are, where to follow them, and why, in English. The News page shows it translated into every language.",
+      "nameLabel": "Name",
+      "kindLabel": "Followed on",
+      "kinds": {
+        "X": "X",
+        "YOUTUBE": "YouTube",
+        "LINKEDIN": "LinkedIn",
+        "WEBSITE": "Website"
+      },
+      "urlLabel": "Link",
+      "save": "Save",
+      "searchPlaceholder": "Search recommendations…",
+      "empty": "No recommendations yet.",
+      "noMatch": "Nobody matches that.",
+      "edit": "Edit recommendation",
+      "delete": "Delete recommendation",
+      "deleteTitle": "Delete recommendation",
+      "deleteWarning": "It leaves the News page straight away.",
+      "deleteConfirm": "Delete <highlight>{name}</highlight>?",
+      "columns": {
+        "name": "Name",
+        "why": "Why",
+        "actions": "Actions",
+        "translations": "Translations"
+      },
+      "errors": {
+        "saveFailed": "Could not save the recommendation. Try again.",
+        "deleteFailed": "Could not delete the recommendation. Try again."
+      },
+      "back": "Who to follow",
+      "whyLabel": "Why we recommend them"
+    },
+    "newsItems": {
+      "title": "News",
+      "subtitle": "Everything in the News feed, newest first. Items go live as they are collected; take down one that should not be there.",
+      "kindFilter": "Show",
+      "allKinds": "Everything",
+      "empty": "Nothing in News yet.",
+      "open": "Open the original",
+      "delete": "Take down",
+      "deleteTitle": "Take down news item",
+      "deleteWarning": "It leaves News for everyone, and is not collected again.",
+      "deleteConfirm": "Take down <highlight>{title}</highlight>?",
+      "columns": {
+        "item": "Item",
+        "kind": "Kind",
+        "published": "Published",
+        "actions": "Actions"
+      },
+      "errors": {
+        "deleteFailed": "Could not take the item down. Try again."
+      }
+    },
+    "contentEditor": {
+      "missingTitle": "That is no longer here",
+      "missingDescription": "It may have been deleted. Go back to the list to find the rest.",
+      "translations": {
+        "done": "Translated into every language",
+        "waiting": "Translating: {done} of {total} languages ready",
+        "notYet": "Translated once published"
       }
     }
   },
@@ -10473,6 +10631,39 @@
       "updated": "Updated {date}",
       "notFoundTitle": "That article is not here",
       "notFoundDescription": "It may have been taken down or replaced. The rest are in Knowledge."
+    }
+  },
+  "news": {
+    "title": "News",
+    "description": "What has changed in search and AI, in plain words, with what it means for you.",
+    "kindFilter": "Show",
+    "allKinds": "Everything",
+    "kinds": {
+      "GOOGLE_UPDATE": "Google updates",
+      "X": "X",
+      "YOUTUBE": "YouTube",
+      "WEBSITE": "Websites"
+    },
+    "kind": {
+      "GOOGLE_UPDATE": "Google update",
+      "X": "X post",
+      "YOUTUBE": "YouTube video",
+      "WEBSITE": "Article"
+    },
+    "feedLabel": "News, newest first",
+    "emptyTitle": "Nothing here yet",
+    "empty": "News will appear here as it is published.",
+    "emptyKind": "Nothing of this kind yet. Show everything to see the rest.",
+    "meaning": "What this means for you",
+    "readOriginal": "Read the original",
+    "loadMore": "Show more",
+    "whoToFollow": "Who to follow",
+    "whoToFollowEmpty": "Our recommendations will appear here.",
+    "followKinds": {
+      "X": "On X",
+      "YOUTUBE": "On YouTube",
+      "WEBSITE": "Website",
+      "LINKEDIN": "On LinkedIn"
     }
   }
 }

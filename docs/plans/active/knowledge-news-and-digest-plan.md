@@ -1,14 +1,26 @@
 # Knowledge, News and the weekly digest — three agents and one outbox
 
-**Started 2026-09-30. Status: building — phases 1 and 2 built on dev
-2026-10-01 ("can we build this out please").** The decisions below
+**Started 2026-09-30. Status: building — phases 1, 2 and 3 built on dev
+2026-10-01 ("can we build this out please"), with the revision below.** The decisions below
 are Anthony's, in his words where he gave them; his answers to the first
 thirteen questions are under "Answered". Change a decision here, with a date,
 before building anything that disagrees with it. The questions still open are
 at the end, each with the phase that needs it.
 
-Overall: 17% (3 of 17.5 days). Phase 1, Knowledge, and phase 2, Ask Hakken
-reading it: built. Phases 3–10: not started.
+Overall: 29% (5 of 17.5 days, plus a day for the revision below). Phases 1–3
+— Knowledge, Ask Hakken reading it, and News — built; phases 4–10 not
+started.
+
+## Revised — Anthony, 2026-10-01
+
+Given on the Knowledge editor as first built, and confirmed ("Yes, rebuild
+it") before the rebuild. These win over anything below that disagrees.
+
+| # | Decision |
+|---|---|
+| R1 | **An editor is a page, never a pop-up.** A pop-up is for a yes or a no — confirming a delete — and nothing with fields. Every Admin → Content editor (an article, a Google update, a source, a recommendation) opens on its own page from its list (`ContentEditPage`, `useContentForm`). |
+| R2 | **People write in English only; the machine translates into every other language** Hakken is read in — 10 to 15 are planned, not just English and Italian. No field per language, and publishing never waits for a person to write each one. This replaces A7 for everything written in Admin or collected: Knowledge, Google updates, "Who to follow", News items and, in phase 9, the digest. |
+| R3 | **The Translator** (`CONTENT_TRANSLATOR`) is a seeded agent, as the wiki staff are: on the Agents screen, switchable off, its model calls in the cost ledger, its Run button translating whatever is missing. Each save that changes the English asks it at once; each translation keeps a fingerprint of the English it came from, and a reader sees their language only while it matches — the English otherwise, never a half-translated change (`contentTranslation.ts`, `contentTranslationActions.ts`). The languages are one list, `convex/utils/contentLanguages.ts`, held to the wording files by a test. |
 
 ### Built so far
 
@@ -29,6 +41,13 @@ reading it: built. Phases 3–10: not started.
   - An article's own table is styled by its screen
     (`[&_table]` on the article), since the kit forbids a hand-written
     `<table>` and the chat renderer stays as it is.
+- **The revision (2026-10-01).** Every Content editor became a page (R1);
+  Knowledge's Italian fields went, cleared on dev by a one-off migration
+  before they left the schema (R2); the Translator was added (R3). A real
+  translation on dev reached Google and was refused: the default fast model
+  dev has chosen is one Vertex does not offer the project in `us-central1` —
+  the model setting in Admin → AI, for Anthony at the end with the other
+  configuration.
 - **Phase 2, Ask Hakken reads published articles (2026-10-01).** Each write
   brings the shared brain in line (`convex/knowledgeArticleWiki.ts`): a
   published article is a global PRODUCT page, subject `knowledge-<id>`, in
@@ -42,6 +61,18 @@ reading it: built. Phases 3–10: not started.
   page holds 4,000 characters, so a longer article is read only that far.
   `2026-10-01-knowledge-articles-to-wiki` copied the traffic article across
   on dev.
+- **Phase 3, News (2026-10-01).** News on the main menu after Knowledge
+  (`/app/news`): every item newest first, filtered by kind, each with its
+  kind, source and date, a plain summary, "what this means for you" where
+  there is one, and the way to the original; "Who to follow" beside it.
+  Admin → Content gains News (take an item down; `newsTakenDown` keeps it
+  from being collected again), News sources, Google updates and Who to
+  follow, each listed with its editing page. A Google update is a News item
+  at once, kept in step with it and read through the update's own
+  translation; `listGoogleUpdatesBetween` is ready for the chart markers
+  (phase 10). Tables: `convex/newsSchema.ts`, gathered with Knowledge's and
+  the translations' in `convex/contentSchema.ts` so `schema.ts` stays inside
+  its size band.
 
 ## What was asked
 
@@ -227,9 +258,10 @@ last used (it lives only in their browser).
   a table of articles. Clicking one opens it on its own screen with a back row —
   a screen, never a pop-up, as in Sites.
 - **Admin → Content → Knowledge**: a table of articles with add, edit and
-  delete (pencil and trash icons, each with a tooltip). An article has a title,
-  a body (plain text with simple formatting), English and Italian, and draft
-  or published.
+  delete (pencil and trash icons, each with a tooltip), each opening on its
+  own page (R1). An article has a title and a body (plain text with simple
+  formatting), in English, translated by the Translator (R2), and draft or
+  published.
 - **The first article** is the traffic answer drafted in chat on 2026-09-30:
   estimate not count; searches × who clicks; position matters; maps, AI
   answers and adverts take clicks; "about 1 in 5 / 1 in 10 / 1 in 85" for the

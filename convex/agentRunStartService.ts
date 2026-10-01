@@ -3,6 +3,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { isAssignableAgentRole } from "./utils/agentRoles";
 import { WIKI_STAFF } from "./wikiStaff";
+import { TRANSLATOR } from "./utils/contentTranslator";
 
 /**
  * How an agent's run starts, once its run record exists: the one decision the
@@ -20,9 +21,10 @@ import { WIKI_STAFF } from "./wikiStaff";
  *
  * - A wiki agent does its round over every wiki, with no model call about it.
  * - A DataForSEO agent does its role's fixed job, with no model call.
+ * - The Translator translates whatever is still missing (`contentTranslation.ts`).
  * - Every other agent is given its objective on the model loop.
  */
-export type AgentRunStart = "WIKI_ROUND" | "SEO_JOB" | "MODEL";
+export type AgentRunStart = "WIKI_ROUND" | "SEO_JOB" | "TRANSLATION_ROUND" | "MODEL";
 
 export async function startAgentRun(
   ctx: Pick<MutationCtx, "scheduler">,
@@ -49,6 +51,11 @@ export async function startAgentRun(
       workflowExecutionId,
     });
     return "WIKI_ROUND";
+  }
+
+  if (agent.systemKey === TRANSLATOR.systemKey) {
+    await ctx.scheduler.runAfter(0, internal.contentTranslationActions.runTranslatorNow, { runId, workflowExecutionId });
+    return "TRANSLATION_ROUND";
   }
 
   if (isAssignableAgentRole(agent.systemKey)) {

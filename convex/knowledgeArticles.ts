@@ -1,10 +1,12 @@
 import { v } from "convex/values";
-import type { Doc, Id } from "./_generated/dataModel";
-import type { MutationCtx } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
 import { superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
+import { auditContentChange } from "./utils/contentAdmin";
 import { knowledgeStatusValidator, type KnowledgeStatus } from "./knowledgeArticlesSchema";
 import { removeArticleFromWiki, syncArticleToWiki } from "./knowledgeArticleWiki";
+import { readerFields, removeTranslations, requestTranslation, sourceFields, translationProgress, translationProgressValidator } from "./contentTranslation";
 
 /**
  * Knowledge articles (docs/plans/active/knowledge-news-and-digest-plan.md, phase 1):
@@ -13,9 +15,10 @@ import { removeArticleFromWiki, syncArticleToWiki } from "./knowledgeArticleWiki
  *
  * Nothing here is a company's: an article is general knowledge, so readers
  * enter through `tenantQuery` for the signed-in check alone and every write is
- * the super admin's. Every write brings Ask Hakken's copy in line
- * (`knowledgeArticleWiki.ts`, phase 2): published, it is on the shared brain;
- * otherwise it is not.
+ * the super admin's. An article is written in English; the Translator writes
+ * the other languages once it is published, and a reader sees theirs as soon
+ * as it is ready (`contentTranslation.ts`, revised 2026-10-01). Every write
+ * also brings Ask Hakken's copy in line (`knowledgeArticleWiki.ts`, phase 2).
  */
 
 /** Articles read in one go. Knowledge is a handful of pages, not a library. */
@@ -27,18 +30,15 @@ export const MAX_BODY_LENGTH = 40_000;
 
 const summaryValidator = v.object({
   _id: v.id("knowledgeArticles"),
-  titleEn: v.string(),
-  titleIt: v.string(),
+  title: v.string(),
   publishedAt: v.number(),
   updatedAt: v.number(),
 });
 
 const articleValidator = v.object({
   _id: v.id("knowledgeArticles"),
-  titleEn: v.string(),
-  bodyEn: v.string(),
-  titleIt: v.string(),
-  bodyIt: v.string(),
+  title: v.string(),
+  body: v.string(),
   publishedAt: v.number(),
   updatedAt: v.number(),
 });
@@ -48,61 +48,66 @@ const adminRowValidator = v.object({
   key: v.union(v.string(), v.null()),
   titleEn: v.string(),
   bodyEn: v.string(),
-  titleIt: v.string(),
-  bodyIt: v.string(),
   status: knowledgeStatusValidator,
   publishedAt: v.union(v.number(), v.null()),
   updatedAt: v.number(),
+  /** The other languages done from the English as it stands; none to do for a draft. */
+  translations: translationProgressValidator,
 });
 
-const articleInput = {
-  titleEn: v.string(),
-  bodyEn: v.string(),
-  titleIt: v.string(),
-  bodyIt: v.string(),
-  status: knowledgeStatusValidator,
-};
+const articleInput = { titleEn: v.string(), bodyEn: v.string(), status: knowledgeStatusValidator };
 
-type ArticleInput = { titleEn: string; bodyEn: string; titleIt: string; bodyIt: string; status: KnowledgeStatus };
+type ArticleInput = { titleEn: string; bodyEn: string; status: KnowledgeStatus };
 
-/** Every published article, newest first: the Knowledge list. */
+/** An article in the reader's language: theirs when the Translator has it, the English until then. */
+async function inLanguage(ctx: QueryCtx, row: Doc<"knowledgeArticles">, language: string) {
+  const english = sourceFields("knowledgeArticles", row) ?? { title: row.titleEn, body: row.bodyEn };
+  return await readerFields(ctx, "knowledgeArticles", row._id, english, language);
+}
+
+/** Every published article, newest first: the Knowledge list, in the reader's language. */
 export const listPublishedArticles = tenantQuery({
-  args: {},
+  args: { language: v.string() },
   returns: v.array(summaryValidator),
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
     const rows = await ctx.db
       .query("knowledgeArticles")
       .withIndex("by_status_published", (q) => q.eq("status", "PUBLISHED"))
       .order("desc")
       .take(MAX_ARTICLES);
-    return rows.map((row) => ({
+    return await Promise.all(rows.map(async (row) => ({
       _id: row._id,
-      titleEn: row.titleEn,
-      titleIt: row.titleIt,
+      title: (await inLanguage(ctx, row, args.language)).title,
       publishedAt: row.publishedAt ?? row.updatedAt,
       updatedAt: row.updatedAt,
-    }));
+    })));
   },
 });
 
-/** One published article; null for a draft, exactly as for one that never existed. */
+/** One published article in the reader's language; null for a draft, exactly as for one that never existed. */
 export const getPublishedArticle = tenantQuery({
-  args: { articleId: v.id("knowledgeArticles") },
+  args: { articleId: v.id("knowledgeArticles"), language: v.string() },
   returns: v.union(v.null(), articleValidator),
   handler: async (ctx, args) => {
     const row = await ctx.db.get(args.articleId);
     if (!row || row.status !== "PUBLISHED") return null;
-    return {
-      _id: row._id,
-      titleEn: row.titleEn,
-      bodyEn: row.bodyEn,
-      titleIt: row.titleIt,
-      bodyIt: row.bodyIt,
-      publishedAt: row.publishedAt ?? row.updatedAt,
-      updatedAt: row.updatedAt,
-    };
+    const { title, body } = await inLanguage(ctx, row, args.language);
+    return { _id: row._id, title, body, publishedAt: row.publishedAt ?? row.updatedAt, updatedAt: row.updatedAt };
   },
 });
+
+async function adminRow(ctx: QueryCtx, row: Doc<"knowledgeArticles">) {
+  return {
+    _id: row._id,
+    key: row.key ?? null,
+    titleEn: row.titleEn,
+    bodyEn: row.bodyEn,
+    status: row.status,
+    publishedAt: row.publishedAt ?? null,
+    updatedAt: row.updatedAt,
+    translations: await translationProgress(ctx, "knowledgeArticles", row._id, sourceFields("knowledgeArticles", row)),
+  };
+}
 
 /** Every article, drafts too, the most recently changed first: Admin → Content → Knowledge. */
 export const listArticles = superAdminQuery({
@@ -110,56 +115,29 @@ export const listArticles = superAdminQuery({
   returns: v.array(adminRowValidator),
   handler: async (ctx) => {
     const rows = await ctx.db.query("knowledgeArticles").take(MAX_ARTICLES);
-    return rows
-      .sort((left, right) => right.updatedAt - left.updatedAt)
-      .map((row) => ({
-        _id: row._id,
-        key: row.key ?? null,
-        titleEn: row.titleEn,
-        bodyEn: row.bodyEn,
-        titleIt: row.titleIt,
-        bodyIt: row.bodyIt,
-        status: row.status,
-        publishedAt: row.publishedAt ?? null,
-        updatedAt: row.updatedAt,
-      }));
+    rows.sort((left, right) => right.updatedAt - left.updatedAt);
+    return await Promise.all(rows.map((row) => adminRow(ctx, row)));
   },
 });
 
-/**
- * The article as it will be stored: trimmed, within its lengths, and — to be
- * published — whole in both languages, since a reader sees only theirs (A7).
- */
-export function checkedArticle(input: ArticleInput): ArticleInput {
-  const article = {
-    titleEn: input.titleEn.trim(),
-    bodyEn: input.bodyEn.trim(),
-    titleIt: input.titleIt.trim(),
-    bodyIt: input.bodyIt.trim(),
-    status: input.status,
-  };
-  if (!article.titleEn) throw appError("INVALID_INPUT", "An article needs an English title.");
-  for (const title of [article.titleEn, article.titleIt]) {
-    if (title.length > MAX_TITLE_LENGTH) throw appError("INVALID_INPUT", `A title is at most ${MAX_TITLE_LENGTH} characters.`);
-  }
-  for (const body of [article.bodyEn, article.bodyIt]) {
-    if (body.length > MAX_BODY_LENGTH) throw appError("INVALID_INPUT", `An article is at most ${MAX_BODY_LENGTH.toLocaleString("en-GB")} characters.`);
-  }
-  if (article.status === "PUBLISHED" && (!article.bodyEn || !article.titleIt || !article.bodyIt)) {
-    throw appError("INVALID_INPUT", "To publish, write the title and the article in both English and Italian.");
-  }
-  return article;
-}
+/** One article for its editing page; null when it has gone. */
+export const getArticle = superAdminQuery({
+  args: { articleId: v.id("knowledgeArticles") },
+  returns: v.union(v.null(), adminRowValidator),
+  handler: async (ctx, args) => {
+    const row = await ctx.db.get(args.articleId);
+    return row ? await adminRow(ctx, row) : null;
+  },
+});
 
-async function audit(ctx: MutationCtx & { userId: Id<"users"> }, actionType: string, articleId: Id<"knowledgeArticles">, metadata: Record<string, unknown>) {
-  await ctx.db.insert("auditLogs", {
-    actorId: ctx.userId,
-    actionType,
-    entityId: articleId,
-    entityType: "knowledgeArticles",
-    timestamp: Date.now(),
-    metadata: JSON.stringify(metadata),
-  });
+/** The article as it will be stored: trimmed, within its lengths, and — to be published — with something to read. */
+export function checkedArticle(input: ArticleInput): ArticleInput {
+  const article = { titleEn: input.titleEn.trim(), bodyEn: input.bodyEn.trim(), status: input.status };
+  if (!article.titleEn) throw appError("INVALID_INPUT", "An article needs a title.");
+  if (article.titleEn.length > MAX_TITLE_LENGTH) throw appError("INVALID_INPUT", `A title is at most ${MAX_TITLE_LENGTH} characters.`);
+  if (article.bodyEn.length > MAX_BODY_LENGTH) throw appError("INVALID_INPUT", `An article is at most ${MAX_BODY_LENGTH.toLocaleString("en-GB")} characters.`);
+  if (article.status === "PUBLISHED" && !article.bodyEn) throw appError("INVALID_INPUT", "To publish, write the article.");
+  return article;
 }
 
 /** When an article counts as published from: kept through edits, set on first publishing, gone on a draft. */
@@ -179,9 +157,10 @@ export const createArticle = superAdminMutation({
       publishedAt: publishedAtFor(article.status, null, now),
       updatedAt: now,
     });
-    await audit(ctx, "CREATE_KNOWLEDGE_ARTICLE", articleId, { title: article.titleEn, status: article.status });
+    await auditContentChange(ctx, "CREATE_KNOWLEDGE_ARTICLE", "knowledgeArticles", articleId, { title: article.titleEn, status: article.status });
     const created = await ctx.db.get(articleId);
     if (created) await syncArticleToWiki(ctx, created, ctx.userId);
+    if (article.status === "PUBLISHED") await requestTranslation(ctx, "knowledgeArticles", articleId);
     return articleId;
   },
 });
@@ -199,9 +178,10 @@ export const updateArticle = superAdminMutation({
       publishedAt: publishedAtFor(article.status, existing, now),
       updatedAt: now,
     });
-    await audit(ctx, "UPDATE_KNOWLEDGE_ARTICLE", articleId, { title: article.titleEn, status: article.status, was: existing.status });
+    await auditContentChange(ctx, "UPDATE_KNOWLEDGE_ARTICLE", "knowledgeArticles", articleId, { title: article.titleEn, status: article.status, was: existing.status });
     const updated = await ctx.db.get(articleId);
     if (updated) await syncArticleToWiki(ctx, updated, ctx.userId);
+    if (article.status === "PUBLISHED") await requestTranslation(ctx, "knowledgeArticles", articleId);
     return null;
   },
 });
@@ -214,7 +194,8 @@ export const deleteArticle = superAdminMutation({
     if (!existing) return null;
     await ctx.db.delete(args.articleId);
     await removeArticleFromWiki(ctx, args.articleId);
-    await audit(ctx, "DELETE_KNOWLEDGE_ARTICLE", args.articleId, { title: existing.titleEn, status: existing.status });
+    await removeTranslations(ctx, "knowledgeArticles", args.articleId);
+    await auditContentChange(ctx, "DELETE_KNOWLEDGE_ARTICLE", "knowledgeArticles", args.articleId, { title: existing.titleEn, status: existing.status });
     return null;
   },
 });

@@ -19,8 +19,6 @@ function harness() {
 const WHOLE = {
   titleEn: "How is traffic worked out?",
   bodyEn: "It is an estimate, not a count.",
-  titleIt: "Come viene calcolato il traffico?",
-  bodyIt: "È una stima, non un conteggio.",
 };
 
 async function setUp(t: ReturnType<typeof harness>) {
