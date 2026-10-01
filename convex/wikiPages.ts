@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { assertNotKnowledgeArticlePage, isKnowledgeArticlePage } from "./utils/knowledgePageGuard";
 import { paginationOptsValidator } from "convex/server";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -659,6 +660,17 @@ export const applyRewriteInternal = internalMutation({
     }
     const content = args.content.slice(0, WIKI_PAGE_MAX_CHARS);
     const existing = await getPage(ctx, args.companyId, kind, args.subjectKey);
+    if (existing && isKnowledgeArticlePage(existing)) {
+      // A Knowledge article's copy is a person's writing (knowledge-news-and-digest-plan.md, phase 2): no staff rewrite.
+      await ctx.db.insert("auditLogs", {
+        actionType: "WIKI_PAGE_REFUSED",
+        entityId: existing._id.toString(),
+        entityType: "wikiPages",
+        timestamp: now,
+        metadata: JSON.stringify({ reason: "Knowledge articles are changed in Admin → Content", source: args.source }),
+      });
+      return;
+    }
 
     if (!existing) {
       const pageId = await ctx.db.insert("wikiPages", {
@@ -769,6 +781,8 @@ export const listSparselyLinkedTopicsInternal = internalQuery({
         if (page.kind === "CUSTOMER") return false;
         // Source notes get their links mechanically from the distiller.
         if (page.kind === "SOURCE") return false;
+        // A Knowledge article is a person's writing, left as written.
+        if (isKnowledgeArticlePage(page)) return false;
         if (page.subjectKey.endsWith("-index")) return false;
         // Only links to *other topics* count as connections. A page's link
         // down to the document it came from is mechanical — the distiller
@@ -1374,6 +1388,7 @@ async function applyHumanEdit(
   args: { companyId: WikiScope; userId: Id<"users">; pageId: Id<"wikiPages">; content: string }
 ): Promise<void> {
   const page = await requirePageInCompany(ctx, args.companyId, args.pageId);
+  assertNotKnowledgeArticlePage(page);
   const content = args.content.trim().slice(0, WIKI_PAGE_MAX_CHARS);
   if (!content) throw appError("INVALID_INPUT", "A page cannot be emptied — pin a correction instead.");
   if (content === page.content) return;
@@ -1417,6 +1432,7 @@ async function applyPin(
   args: { companyId: WikiScope; userId: Id<"users">; pageId: Id<"wikiPages">; text: string }
 ): Promise<void> {
   const page = await requirePageInCompany(ctx, args.companyId, args.pageId);
+  assertNotKnowledgeArticlePage(page);
   const text = args.text.trim().slice(0, 500);
   if (!text) throw appError("INVALID_INPUT", "A pinned correction needs words.");
 
@@ -1476,6 +1492,7 @@ async function applyDelete(
   args: { companyId: WikiScope; userId: Id<"users">; pageId: Id<"wikiPages"> }
 ): Promise<void> {
   const page = await requirePageInCompany(ctx, args.companyId, args.pageId);
+  assertNotKnowledgeArticlePage(page);
   const receipts = await ctx.db
     .query("wikiPageSources")
     .withIndex("by_page", (q) => q.eq("pageId", args.pageId))

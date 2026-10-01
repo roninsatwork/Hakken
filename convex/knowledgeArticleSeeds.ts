@@ -1,4 +1,5 @@
 import type { MutationCtx } from "./_generated/server";
+import { syncArticleToWiki } from "./knowledgeArticleWiki";
 
 /**
  * The Knowledge articles the platform ships with (docs/plans/active/
@@ -87,7 +88,24 @@ export async function addTrafficArticle(ctx: MutationCtx) {
     .first();
   if (!existing) {
     const now = Date.now();
-    await ctx.db.insert("knowledgeArticles", { ...TRAFFIC_ARTICLE, status: "PUBLISHED", publishedAt: now, updatedAt: now });
+    const articleId = await ctx.db.insert("knowledgeArticles", { ...TRAFFIC_ARTICLE, status: "PUBLISHED", publishedAt: now, updatedAt: now });
+    const article = await ctx.db.get(articleId);
+    // Written by the platform's team, not by anyone signed in: the brain's copy says so.
+    if (article) await syncArticleToWiki(ctx, article, "platform");
   }
   return { cursor: null, isDone: true, processed: 1, updated: existing ? 0 : 1 };
+}
+
+/**
+ * Copies every published article to the shared brain (phase 2), for those
+ * published before Ask Hakken read them. Idempotent: an article whose copy is
+ * already in step is left as it is.
+ */
+export async function syncPublishedArticles(ctx: MutationCtx, cursor: string | null, batchSize: number) {
+  const page = await ctx.db
+    .query("knowledgeArticles")
+    .withIndex("by_status_published", (q) => q.eq("status", "PUBLISHED"))
+    .paginate({ cursor, numItems: batchSize });
+  for (const article of page.page) await syncArticleToWiki(ctx, article, "platform");
+  return { cursor: page.continueCursor, isDone: page.isDone, processed: page.page.length, updated: page.page.length };
 }

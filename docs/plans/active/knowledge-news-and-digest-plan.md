@@ -1,14 +1,14 @@
 # Knowledge, News and the weekly digest — three agents and one outbox
 
-**Started 2026-09-30. Status: building — phase 1 built on dev 2026-10-01
-("can we build this out please").** The decisions below
+**Started 2026-09-30. Status: building — phases 1 and 2 built on dev
+2026-10-01 ("can we build this out please").** The decisions below
 are Anthony's, in his words where he gave them; his answers to the first
 thirteen questions are under "Answered". Change a decision here, with a date,
 before building anything that disagrees with it. The questions still open are
 at the end, each with the phase that needs it.
 
-Overall: 11% (2 of 17.5 days). Phase 1, Knowledge: built. Phases 2–10: not
-started.
+Overall: 17% (3 of 17.5 days). Phase 1, Knowledge, and phase 2, Ask Hakken
+reading it: built. Phases 3–10: not started.
 
 ### Built so far
 
@@ -29,6 +29,19 @@ started.
   - An article's own table is styled by its screen
     (`[&_table]` on the article), since the kit forbids a hand-written
     `<table>` and the chat renderer stays as it is.
+- **Phase 2, Ask Hakken reads published articles (2026-10-01).** Each write
+  brings the shared brain in line (`convex/knowledgeArticleWiki.ts`): a
+  published article is a global PRODUCT page, subject `knowledge-<id>`, in
+  English (the brain's language; Ask Hakken answers in the reader's), which
+  every company's Ask Hakken already reads; a draft or a deleted article's
+  page is removed with its history. The page carries `knowledgeArticleId`
+  (`wikiPages`): `applyRewriteInternal` refuses any staff rewrite of it with
+  a `WIKI_PAGE_REFUSED` trace, the Tidier and the Linker leave it out, and
+  the Platform Wiki screen's edit, pin and delete refuse it, pointing to
+  Admin → Content → Knowledge (`convex/utils/knowledgePageGuard.ts`). A wiki
+  page holds 4,000 characters, so a longer article is read only that far.
+  `2026-10-01-knowledge-articles-to-wiki` copied the traffic article across
+  on dev.
 
 ## What was asked
 

@@ -4279,6 +4279,11 @@ export default defineSchema({
     // The list's search used to read five hundred pages into the browser and
     // sift them there, which silently hid page five hundred and one.
     searchText: v.optional(v.string()),
+    // Set on a global page that is a published Knowledge article's copy
+    // (knowledge-news-and-digest-plan.md, phase 2): a person's writing, kept
+    // in step with the article and never rewritten, tidied or relinked by
+    // the wiki staff (`utils/knowledgePageGuard.ts`).
+    knowledgeArticleId: v.optional(v.id("knowledgeArticles")),
   })
     .index("by_company_kind_subject", ["companyId", "kind", "subjectKey"])
     .index("by_company_updated", ["companyId", "updatedAt"])

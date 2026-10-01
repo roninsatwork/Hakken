@@ -25,7 +25,7 @@ import { clearCountingSwitchMoves } from "./sitePositionRepair";
 import { moveAnswersOffRequests } from "./seoPullAnswers";
 import { backfillAnswerIndex } from "./siteAnswers";
 import { dropCheckOnlyKeywordRows } from "./privateListsMigration";
-import { addTrafficArticle } from "./knowledgeArticleSeeds";
+import { addTrafficArticle, syncPublishedArticles } from "./knowledgeArticleSeeds";
 import { recountEveryList } from "./siteListAi";
 import { untickAutomaticQueries } from "./promptFanOut";
 import { followPlatformWhereStartingNumber } from "./companyDataLimits";
@@ -202,6 +202,8 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
 
   /** Knowledge's first article, how traffic is worked out (`knowledgeArticleSeeds.ts`), added once. */
   "2026-10-01-knowledge-traffic-article": (ctx) => addTrafficArticle(ctx),
+  /** Every published Knowledge article onto the shared brain, for Ask Hakken (`knowledgeArticleWiki.ts`). */
+  "2026-10-01-knowledge-articles-to-wiki": syncPublishedArticles,
 
 
   /**

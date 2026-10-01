@@ -4,6 +4,7 @@ import type { MutationCtx } from "./_generated/server";
 import { superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import { knowledgeStatusValidator, type KnowledgeStatus } from "./knowledgeArticlesSchema";
+import { removeArticleFromWiki, syncArticleToWiki } from "./knowledgeArticleWiki";
 
 /**
  * Knowledge articles (docs/plans/active/knowledge-news-and-digest-plan.md, phase 1):
@@ -12,7 +13,9 @@ import { knowledgeStatusValidator, type KnowledgeStatus } from "./knowledgeArtic
  *
  * Nothing here is a company's: an article is general knowledge, so readers
  * enter through `tenantQuery` for the signed-in check alone and every write is
- * the super admin's.
+ * the super admin's. Every write brings Ask Hakken's copy in line
+ * (`knowledgeArticleWiki.ts`, phase 2): published, it is on the shared brain;
+ * otherwise it is not.
  */
 
 /** Articles read in one go. Knowledge is a handful of pages, not a library. */
@@ -177,6 +180,8 @@ export const createArticle = superAdminMutation({
       updatedAt: now,
     });
     await audit(ctx, "CREATE_KNOWLEDGE_ARTICLE", articleId, { title: article.titleEn, status: article.status });
+    const created = await ctx.db.get(articleId);
+    if (created) await syncArticleToWiki(ctx, created, ctx.userId);
     return articleId;
   },
 });
@@ -195,6 +200,8 @@ export const updateArticle = superAdminMutation({
       updatedAt: now,
     });
     await audit(ctx, "UPDATE_KNOWLEDGE_ARTICLE", articleId, { title: article.titleEn, status: article.status, was: existing.status });
+    const updated = await ctx.db.get(articleId);
+    if (updated) await syncArticleToWiki(ctx, updated, ctx.userId);
     return null;
   },
 });
@@ -206,6 +213,7 @@ export const deleteArticle = superAdminMutation({
     const existing = await ctx.db.get(args.articleId);
     if (!existing) return null;
     await ctx.db.delete(args.articleId);
+    await removeArticleFromWiki(ctx, args.articleId);
     await audit(ctx, "DELETE_KNOWLEDGE_ARTICLE", args.articleId, { title: existing.titleEn, status: existing.status });
     return null;
   },

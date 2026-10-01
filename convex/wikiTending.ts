@@ -106,10 +106,11 @@ export const getTendingCandidatesInternal = internalQuery({
       .filter(
         (page) =>
           // Hub index pages are mechanical, source notes are full imports,
-          // and goals are human intent; the model never tidies (i.e.
-          // shortens) any of them.
+          // and goals and Knowledge articles are human writing; the model
+          // never tidies (i.e. shortens) any of them.
           page.kind !== "SOURCE" &&
           page.kind !== "GOAL" &&
+          page.knowledgeArticleId === undefined &&
           !page.subjectKey.endsWith("-index") &&
           page.content.length >= WIKI_TENDING_LENGTH_THRESHOLD &&
           now - (page.lastTendedAt ?? 0) >= WIKI_TENDING_MIN_INTERVAL_MS
