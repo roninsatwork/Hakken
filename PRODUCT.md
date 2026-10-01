@@ -800,7 +800,14 @@ running against the Sonae deployment.
 
 ## Change Log
 
-* **2026-10-01 (latest)** — **Built: Google updates on the Sites charts
+* **2026-10-01 (phase 4)** — **Built: the News agents' groundwork (phase 4).**
+  §31's News row: the News Collector, Weekly Digest and Email Sender roles
+  and templates in Admin → Agents, each run sent to its own job, one run at
+  a time, a model call's cost on the run so the agent's spend limit stops
+  it, and a run that died closed hourly. Their jobs are filled in phases 5, 7
+  and 9.
+
+* **2026-10-01 (phase 10)** — **Built: Google updates on the Sites charts
   (phase 10).** §31's News row: every Sites chart that runs over dates, and
   Search Console's, marks each Google update inside its dates in the look
   approved on 2026-09-30, from one part held by a look test and a drift

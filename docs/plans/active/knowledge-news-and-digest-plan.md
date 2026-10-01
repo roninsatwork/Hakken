@@ -1,15 +1,16 @@
 # Knowledge, News and the weekly digest — three agents and one outbox
 
-**Started 2026-09-30. Status: building — phases 1, 2, 3 and 10 built on dev
+**Started 2026-09-30. Status: building — phases 1, 2, 3, 4 and 10 built on dev
 2026-10-01 ("can we build this out please"), with the revision below.** The decisions below
 are Anthony's, in his words where he gave them; his answers to the first
 thirteen questions are under "Answered". Change a decision here, with a date,
 before building anything that disagrees with it. The questions still open are
 at the end, each with the phase that needs it.
 
-Overall: 34% (6 of 17.5 days, plus a day for the revision below). Phases 1–3
-— Knowledge, Ask Hakken reading it, and News — and phase 10, Google updates
-on the Sites charts, built; phases 4–9 not started.
+Overall: 40% (7 of 17.5 days, plus a day for the revision below). Phases 1–3
+— Knowledge, Ask Hakken reading it, and News — phase 4, the agents'
+groundwork, and phase 10, Google updates on the Sites charts, built; phases
+5–9 not started.
 
 ## Revised — Anthony, 2026-10-01
 
@@ -73,6 +74,22 @@ it") before the rebuild. These win over anything below that disagrees.
   (phase 10). Tables: `convex/newsSchema.ts`, gathered with Knowledge's and
   the translations' in `convex/contentSchema.ts` so `schema.ts` stays inside
   its size band.
+- **Phase 4, the agents' groundwork (2026-10-01).** Three roles that can be
+  given on an agent's Settings — `NEWS_COLLECTOR`, `WEEKLY_DIGEST`,
+  `EMAIL_SENDER` — under "News and email" in the Role dropdown
+  (`convex/utils/agentRoles.ts`), and a template for each in Admin → Agents,
+  whose instructions are what the two that write will follow. A run is now
+  sent by its role: the DataForSEO roles to their job, the News roles to
+  `newsAgentRunActions.runNewsRoleNow` (until now every role that could be
+  given went to the DataForSEO job). What a fixed-job run shares moved into
+  `convex/roleRuns.ts`, the DataForSEO agents' too: starting, steps, the
+  summary, one run of an agent at a time (`takeRoleTurn`), a model call's
+  cost added to the run itself so the agent's spend limit stops it
+  (`recordRunModelCall`, `runSpendLeft`), and the hourly closing of a run
+  that died, now for every role. Each News role's job says it is not built
+  yet until phases 5, 7 and 9 fill it. The Agents list names each agent's
+  role rather than calling every one "Wiki staff". Tests:
+  `convex/roleRuns.test.ts`.
 - **Phase 10, Google updates on the Sites charts (2026-10-01).** Built once
   into `SiteLineChart`, `SiteStackedAreaChart`, upright `SiteBarChart` and
   `SiteGainLossChart`: a chart whose rows are dated (`datedRow`,
@@ -495,9 +512,10 @@ markers' look is approved.
 
 ## Noticed in passing, not changed
 
-- The Admin agents list tags every agent that has a role as "Wiki staff"
-  (`admin/agents/page.tsx`), so the DataForSEO agents carry it too. Phase 4
-  fixes it for the new roles.
+- The Admin agents list tagged every agent that has a role as "Wiki staff"
+  (`admin/agents/page.tsx`), so the DataForSEO agents carried it too. Fixed in
+  phase 4 (2026-10-01): each agent's tag names its role, "Wiki staff" for the
+  wiki's, "Built in" for the Translator and the Decision Maker.
 - The manual Run button puts the impersonated company on a run
   (`ctx.companyId ?? user.companyId`), while the schedule dispatcher uses the
   creator's own company. Harmless for platform-wide agents, but worth a look.

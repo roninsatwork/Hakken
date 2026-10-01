@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 
 import type { Doc, Id } from "@/convex/_generated/dataModel";
-import { ASSIGNABLE_AGENT_ROLES, isAssignableAgentRole, type AgentRoleChoice } from "@/convex/utils/agentRoles";
+import { AGENT_ROLE_GROUPS, isAssignableAgentRole, type AgentRoleChoice } from "@/convex/utils/agentRoles";
 import { AdminAvatarPicker } from "@/src/app/(dashboard)/admin/_components/AdminAvatarPicker";
 import { formatModelDisplayName, formatTokenCost } from "@/src/app/(dashboard)/admin/ai/models/_components/modelAdminUtils";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
@@ -233,18 +233,20 @@ export function AgentFormSections({
             ) : (
               <>
                 <option value="NONE">{t("sections.role.general")}</option>
-                <optgroup label={t("sections.role.groups.dataforseo")}>
-                  {ASSIGNABLE_AGENT_ROLES.map((role) => {
-                    const holder = roleHolders.find((entry) => entry.systemKey === role && entry.agentId !== agentId);
-                    return (
-                      <option key={role} value={role} disabled={Boolean(holder)}>
-                        {holder
-                          ? t("sections.role.takenBy", { role: t(`sections.role.roles.${role}`), name: holder.name })
-                          : t(`sections.role.roles.${role}`)}
-                      </option>
-                    );
-                  })}
-                </optgroup>
+                {AGENT_ROLE_GROUPS.map(({ group, roles }) => (
+                  <optgroup key={group} label={t(`sections.role.groups.${group}`)}>
+                    {roles.map((role) => {
+                      const holder = roleHolders.find((entry) => entry.systemKey === role && entry.agentId !== agentId);
+                      return (
+                        <option key={role} value={role} disabled={Boolean(holder)}>
+                          {holder
+                            ? t("sections.role.takenBy", { role: t(`sections.role.roles.${role}`), name: holder.name })
+                            : t(`sections.role.roles.${role}`)}
+                        </option>
+                      );
+                    })}
+                  </optgroup>
+                ))}
                 {builtInHolders.length > 0 ? (
                   <optgroup label={t("sections.role.groups.builtIn")}>
                     {builtInHolders.map((entry) => (

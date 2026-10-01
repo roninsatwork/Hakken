@@ -14,19 +14,54 @@ import { v } from "convex/values";
  * the Decisions agent) is a fixed role: seeded, shown on the screen, never
  * reassigned, because the code that runs them finds them by that key.
  */
-export const ASSIGNABLE_AGENT_ROLES = ["DATAFORSEO_PLANNER", "DATAFORSEO_COLLECTOR"] as const;
+export const DATAFORSEO_ROLES = ["DATAFORSEO_PLANNER", "DATAFORSEO_COLLECTOR"] as const;
 
+/**
+ * The News and email agents (docs/plans/active/knowledge-news-and-digest-
+ * plan.md, "The three agents"): the News Collector reads the sources, the
+ * Weekly Digest writes the week's issue and queues it, and the Email Sender
+ * sends what is queued. Each does a fixed job, like the DataForSEO agents.
+ */
+export const NEWS_ROLES = ["NEWS_COLLECTOR", "WEEKLY_DIGEST", "EMAIL_SENDER"] as const;
+
+export const ASSIGNABLE_AGENT_ROLES = [...DATAFORSEO_ROLES, ...NEWS_ROLES] as const;
+
+export type DataForSeoRole = (typeof DATAFORSEO_ROLES)[number];
+export type NewsRole = (typeof NEWS_ROLES)[number];
 export type AssignableAgentRole = (typeof ASSIGNABLE_AGENT_ROLES)[number];
+
+/** The roles in the groups the Role dropdown shows them under. */
+export const AGENT_ROLE_GROUPS: ReadonlyArray<{ group: "dataforseo" | "news"; roles: readonly AssignableAgentRole[] }> = [
+  { group: "dataforseo", roles: DATAFORSEO_ROLES },
+  { group: "news", roles: NEWS_ROLES },
+];
+
+export const newsRoleValidator = v.union(
+  v.literal("NEWS_COLLECTOR"),
+  v.literal("WEEKLY_DIGEST"),
+  v.literal("EMAIL_SENDER"),
+);
 
 /** "NONE" is a general agent: it thinks with its model and holds no role. */
 export const agentRoleChoiceValidator = v.union(
   v.literal("NONE"),
   v.literal("DATAFORSEO_PLANNER"),
   v.literal("DATAFORSEO_COLLECTOR"),
+  v.literal("NEWS_COLLECTOR"),
+  v.literal("WEEKLY_DIGEST"),
+  v.literal("EMAIL_SENDER"),
 );
 
 export type AgentRoleChoice = "NONE" | AssignableAgentRole;
 
 export function isAssignableAgentRole(key: string | undefined): key is AssignableAgentRole {
   return key !== undefined && (ASSIGNABLE_AGENT_ROLES as readonly string[]).includes(key);
+}
+
+export function isDataForSeoRole(key: string | undefined): key is DataForSeoRole {
+  return key !== undefined && (DATAFORSEO_ROLES as readonly string[]).includes(key);
+}
+
+export function isNewsRole(key: string | undefined): key is NewsRole {
+  return key !== undefined && (NEWS_ROLES as readonly string[]).includes(key);
 }

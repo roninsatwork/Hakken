@@ -9,8 +9,8 @@ import { SEO_COLLECTOR_RUN_MS } from "./seoCollectionPolicy";
 import { companyCollectionSchedule } from "./seoScheduleService";
 import { openSeoCycle, openSeoCycleOf } from "./seoTools";
 import { companyHasWorkDue } from "./seoCollectionDue";
-import { appendRunStep } from "./agentRunStepWriter";
 import { startAgentRun } from "./agentRunStartService";
+import { runAhead } from "./roleRuns";
 import { superAdminMutation } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -64,16 +64,17 @@ export const runSeoRoleNow = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    await ctx.runMutation(internal.seoAgentRuns.markRunStarted, { runId: args.runId });
+    await ctx.runMutation(internal.roleRuns.markRunStarted, { runId: args.runId });
     try {
       const summary = args.role === "DATAFORSEO_PLANNER"
         ? await plan(ctx, args.runId)
         : await collect(ctx, args.runId);
-      await ctx.runMutation(internal.seoAgentRuns.finishSeoRun, { ...args, status: "SUCCESS", summary });
+      await ctx.runMutation(internal.roleRuns.finishRoleRun, { runId: args.runId, workflowExecutionId: args.workflowExecutionId, status: "SUCCESS", summary });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-      await ctx.runMutation(internal.seoAgentRuns.finishSeoRun, {
-        ...args,
+      await ctx.runMutation(internal.roleRuns.finishRoleRun, {
+        runId: args.runId,
+        workflowExecutionId: args.workflowExecutionId,
         status: "FAILED",
         summary: message.replace(/\s+/g, " ").trim().slice(0, 400) || "No detail given.",
       });
@@ -94,7 +95,7 @@ async function plan(ctx: ActionCtx, runId: Id<"agentRuns">): Promise<string> {
   }
   if (companies.length === 0) return "No company is collecting data, so nothing was added to the queue.";
   const mode = await ctx.runQuery(internal.seoAgentRuns.readPlannerMode, { runId });
-  await ctx.runMutation(internal.seoAgentRuns.recordObservation, {
+  await ctx.runMutation(internal.roleRuns.recordObservation, {
     runId,
     text: `${companies.length} ${companies.length === 1 ? "company is" : "companies are"} collecting data: `
       + `${companies.map((company) => company.name).join(", ")}. Mode: ${mode === "LIVE" ? "Live" : "Test"}.`,
@@ -124,7 +125,7 @@ async function plan(ctx: ActionCtx, runId: Id<"agentRuns">): Promise<string> {
       notDue.push(company.name);
       continue;
     }
-    await ctx.runMutation(internal.seoAgentRuns.logRunLine, {
+    await ctx.runMutation(internal.roleRuns.logRunLine, {
       runId,
       companyId: company.companyId,
       heading: `Planned ${company.name}`,
@@ -140,7 +141,7 @@ async function plan(ctx: ActionCtx, runId: Id<"agentRuns">): Promise<string> {
     const written = counts.get(company.cycleId) ?? null;
     queued += written?.plannedCount ?? 0;
     reused += written?.reusedCount ?? 0;
-    await ctx.runMutation(internal.seoAgentRuns.logRunLine, {
+    await ctx.runMutation(internal.roleRuns.logRunLine, {
       runId,
       companyId: company.companyId,
       heading: `Planned ${company.name}`,
@@ -238,7 +239,7 @@ async function collect(ctx: ActionCtx, runId: Id<"agentRuns">): Promise<string> 
   }
 
   const waiting = await ctx.runQuery(internal.seoAgentRuns.countWaiting, {});
-  await ctx.runMutation(internal.seoAgentRuns.recordObservation, {
+  await ctx.runMutation(internal.roleRuns.recordObservation, {
     runId,
     text: `Queue: ${waiting.count}${waiting.more ? "+" : ""} waiting to be sent.`,
   });
@@ -281,7 +282,7 @@ async function collect(ctx: ActionCtx, runId: Id<"agentRuns">): Promise<string> 
     await sleep(Math.max(wait, 250));
   }
 
-  const spent = await ctx.runQuery(internal.seoAgentRuns.readRunCost, { runId });
+  const spent = await ctx.runQuery(internal.roleRuns.readRunCost, { runId });
   return `Sent ${sent} ${sent === 1 ? "request" : "requests"} to DataForSEO and spent $${spent.toFixed(2)}. `
     + `Stopped because ${stoppedBecause}.`;
 }
@@ -298,16 +299,7 @@ export const takeCollectorTurn = internalMutation({
   handler: async (ctx, args) => {
     const run = await ctx.db.get(args.runId);
     if (!run) return { ok: false, message: "This run no longer exists." };
-    const now = Date.now();
-    const recent = await ctx.db
-      .query("agentRuns")
-      .withIndex("by_agent_started", (q) => q.eq("agentId", run.agentId))
-      .order("desc")
-      .take(RECENT_COLLECTOR_RUNS);
-    const ahead = recent.find((other) =>
-      other._id !== run._id
-      && isGoing(other, now)
-      && (other.startedAt < run.startedAt || (other.startedAt === run.startedAt && other._id < run._id)));
+    const ahead = await runAhead(ctx, run, LIVE_RUN_MS);
     if (!ahead) return { ok: true, message: "" };
     const at = new Date(ahead.startedAt).toISOString().slice(11, 16);
     return {
@@ -408,60 +400,6 @@ export const readCyclesCounts = internalQuery({
   },
 });
 
-export const readRunCost = internalQuery({
-  args: { runId: v.id("agentRuns") },
-  returns: v.number(),
-  handler: async (ctx, args) => (await ctx.db.get(args.runId))?.costUsd ?? 0,
-});
-
-export const logRunLine = internalMutation({
-  args: {
-    runId: v.id("agentRuns"),
-    companyId: v.optional(v.id("companies")),
-    heading: v.string(),
-    detail: v.string(),
-    failed: v.boolean(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const run = await ctx.db.get(args.runId);
-    if (!run) return null;
-    const stepId = await appendRunStep(ctx, {
-      runId: args.runId,
-      agentId: run.agentId,
-      ...(args.companyId ? { companyId: args.companyId } : {}),
-      kind: "PLAN",
-      status: args.failed ? "FAILED" : "SUCCESS",
-      input: args.heading,
-      output: args.detail,
-    });
-    await ctx.db.insert("agentLogs", {
-      agentId: run.agentId,
-      runId: args.runId,
-      stepId,
-      ...(args.companyId ? { companyId: args.companyId } : {}),
-      interactionType: args.heading,
-      promptContent: "",
-      responseContent: args.detail,
-      outcome: args.failed ? "FAILED" : "SUCCESS",
-      createdAt: Date.now(),
-    });
-    return null;
-  },
-});
-
-/** What a run found before it started — its first step. */
-export const recordObservation = internalMutation({
-  args: { runId: v.id("agentRuns"), text: v.string() },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const run = await ctx.db.get(args.runId);
-    if (!run) return null;
-    await appendRunStep(ctx, { runId: args.runId, agentId: run.agentId, kind: "OBSERVE", status: "SUCCESS", output: args.text });
-    return null;
-  },
-});
-
 /** Requests waiting to be sent, counted to a ceiling — enough to say how big the job is. */
 export const countWaiting = internalQuery({
   args: {},
@@ -473,51 +411,6 @@ export const countWaiting = internalQuery({
       .withIndex("by_status_due", (q) => q.eq("status", "PENDING"))
       .take(ceiling + 1);
     return { count: Math.min(rows.length, ceiling), more: rows.length > ceiling };
-  },
-});
-
-export const markRunStarted = internalMutation({
-  args: { runId: v.id("agentRuns") },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.runId, { status: "RUNNING", updatedAt: Date.now() });
-    return null;
-  },
-});
-
-export const finishSeoRun = internalMutation({
-  args: {
-    runId: v.id("agentRuns"),
-    workflowExecutionId: v.optional(v.id("workflowExecutions")),
-    role: v.string(),
-    status: v.union(v.literal("SUCCESS"), v.literal("FAILED")),
-    summary: v.string(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const run = await ctx.db.get(args.runId);
-    if (run) {
-      await appendRunStep(ctx, {
-        runId: args.runId,
-        agentId: run.agentId,
-        kind: "FINAL",
-        status: args.status,
-        output: args.summary,
-        ...(args.status === "FAILED" ? { error: args.summary } : {}),
-      });
-    }
-    const now = Date.now();
-    await ctx.db.patch(args.runId, {
-      status: args.status,
-      finalOutput: args.summary,
-      ...(args.status === "FAILED" ? { error: args.summary } : {}),
-      completedAt: now,
-      updatedAt: now,
-    });
-    if (args.workflowExecutionId) {
-      await ctx.db.patch(args.workflowExecutionId, { status: args.status, completedAt: now });
-    }
-    return null;
   },
 });
 
@@ -709,15 +602,15 @@ export const finishCollectNow = internalAction({
   returns: v.null(),
   handler: async (ctx, args) => {
     const { runId, workflowExecutionId, cycleId, ...who } = args;
-    await ctx.runMutation(internal.seoAgentRuns.markRunStarted, { runId });
+    await ctx.runMutation(internal.roleRuns.markRunStarted, { runId });
     try {
-      await ctx.runMutation(internal.seoAgentRuns.recordObservation, {
+      await ctx.runMutation(internal.roleRuns.recordObservation, {
         runId,
         text: `Collect now for ${who.companyName}, from its Collection schedule screen: everything for its websites `
           + "and competitors, whatever its schedule says is due.",
       });
       const counts = await waitForWorkList(ctx, cycleId);
-      await ctx.runMutation(internal.seoAgentRuns.logRunLine, {
+      await ctx.runMutation(internal.roleRuns.logRunLine, {
         runId,
         companyId: who.companyId,
         heading: `Planned ${who.companyName}`,
@@ -727,15 +620,12 @@ export const finishCollectNow = internalAction({
       const { started } = await ctx.runMutation(internal.seoAgentRuns.startCollectorRun, who);
       const summary = `Collect now for ${who.companyName}: ${plannedLine(counts)} `
         + (started ? "Started the DataForSEO Collector to send it." : "The DataForSEO Collector is already running and sends it.");
-      await ctx.runMutation(internal.seoAgentRuns.finishSeoRun, {
-        runId, workflowExecutionId, role: "DATAFORSEO_PLANNER", status: "SUCCESS", summary,
-      });
+      await ctx.runMutation(internal.roleRuns.finishRoleRun, { runId, workflowExecutionId, status: "SUCCESS", summary });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
-      await ctx.runMutation(internal.seoAgentRuns.finishSeoRun, {
+      await ctx.runMutation(internal.roleRuns.finishRoleRun, {
         runId,
         workflowExecutionId,
-        role: "DATAFORSEO_PLANNER",
         status: "FAILED",
         summary: message.replace(/\s+/g, " ").trim().slice(0, 400) || "No detail given.",
       });

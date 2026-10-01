@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { internal } from "./_generated/api";
 import schema from "./schema";
-import { RUN_STALLED } from "./seoCollectionSweep";
+import { RUN_STALLED } from "./roleRuns";
 
 /**
  * The hourly sweep's watch on answers that never came.

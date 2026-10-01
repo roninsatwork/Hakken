@@ -3156,12 +3156,16 @@
               "general": "Agente generico",
               "groups": {
                 "dataforseo": "DataForSEO",
-                "builtIn": "Ruoli integrati"
+                "builtIn": "Ruoli integrati",
+                "news": "Notizie ed email"
               },
               "takenBy": "{role} — assegnato a {name}",
               "roles": {
                 "DATAFORSEO_PLANNER": "Pianificatore DataForSEO",
-                "DATAFORSEO_COLLECTOR": "Raccoglitore DataForSEO"
+                "DATAFORSEO_COLLECTOR": "Raccoglitore DataForSEO",
+                "NEWS_COLLECTOR": "Raccoglitore di notizie",
+                "WEEKLY_DIGEST": "Digest settimanale",
+                "EMAIL_SENDER": "Invio email"
               },
               "mode": {
                 "label": "Modalità",
@@ -4103,6 +4107,7 @@
         "addSkill": "Aggiungi competenza"
       },
       "wikiStaff": "Staff del wiki",
+      "builtInRole": "Integrato",
       "labels": {
         "runStatus": {
           "done": "Fatto",

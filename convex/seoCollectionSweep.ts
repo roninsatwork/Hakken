@@ -16,7 +16,7 @@ import {
   RESULT_GAVE_UP,
 } from "./seoCollectionQueue";
 import { dropUnsentRequest } from "./seoCollectionClose";
-import { appendRunStep } from "./agentRunStepWriter";
+import { closeStalledRoleRuns } from "./roleRuns";
 
 /**
  * The hourly walk round the kitchen.
@@ -138,7 +138,8 @@ export const sweepDuty = internalMutation({
       case "refile":
         return await refileUnfiled(ctx, now, cursor, scheduled);
       case "stalledRuns":
-        await closeStalledRuns(ctx, now);
+        // Every role's runs, the News agents' too (`roleRuns.ts`).
+        await closeStalledRoleRuns(ctx, now);
         return FINISHED;
       case "purgeRaw":
         return await purgeExpiredRaw(ctx, now);
@@ -325,59 +326,6 @@ async function refileUnfiled(
     scheduled += 1;
   }
   return { more: !page.isDone, cursor: page.isDone ? null : page.continueCursor, scheduled };
-}
-
-/** The DataForSEO agents, whose runs do fixed work and say when they end. */
-const SEO_ROLES = ["DATAFORSEO_PLANNER", "DATAFORSEO_COLLECTOR"] as const;
-
-/** Past this, a run still "running" has died: an action is stopped at ten minutes. */
-const RUN_LIFE_MS = 20 * 60 * 1000;
-
-/** A role's newest runs past that life, looked at each hour. */
-const STALLED_RUNS_READ = 50;
-
-export const RUN_STALLED =
-  "This run stopped without finishing — the platform ended it, at its time limit or a restart — so it never said how it went.";
-
-/**
- * Close a Planner or Collector run that died without saying so. One stopped
- * by the platform — at an action's ten minutes, or by a restart — never
- * reached its own ending, and read "Running" for ever in its Observability
- * timeline and on the Scheduler (reliability plan 3.1). Closed as failed,
- * saying why, with its workflow execution.
- */
-async function closeStalledRuns(ctx: MutationCtx, now: number) {
-  for (const role of SEO_ROLES) {
-    const agent = await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", role)).first();
-    if (!agent) continue;
-    const old = await ctx.db
-      .query("agentRuns")
-      .withIndex("by_agent_started", (q) => q.eq("agentId", agent._id).lt("startedAt", now - RUN_LIFE_MS))
-      .order("desc")
-      .take(STALLED_RUNS_READ);
-    for (const run of old) {
-      if (run.status !== "QUEUED" && run.status !== "RUNNING") continue;
-      await appendRunStep(ctx, {
-        runId: run._id,
-        agentId: agent._id,
-        kind: "FINAL",
-        status: "FAILED",
-        output: RUN_STALLED,
-        error: RUN_STALLED,
-      });
-      await ctx.db.patch(run._id, { status: "FAILED", finalOutput: RUN_STALLED, error: RUN_STALLED, completedAt: now, updatedAt: now });
-      // Its workflow execution, started with it, is found by its start.
-      const executions = await ctx.db
-        .query("workflowExecutions")
-        .withIndex("by_startedAt", (q) => q.gte("startedAt", run.startedAt - 60_000).lte("startedAt", run.startedAt + 60_000))
-        .take(50);
-      for (const execution of executions) {
-        if (execution.agentRunId === run._id && execution.status === "RUNNING") {
-          await ctx.db.patch(execution._id, { status: "FAILED", completedAt: now });
-        }
-      }
-    }
-  }
 }
 
 /** A cycle with nothing left in flight is finished. */

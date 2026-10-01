@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { isAssignableAgentRole } from "@/convex/utils/agentRoles";
 import {
   PageHeader,
   PagePrimaryAction,
@@ -36,6 +37,9 @@ const AgentDeleteDialog = lazy(() =>
 export default function AgentsPage() {
   const router = useRouter();
   const t = useTranslations('admin.agents');
+  const tr = useTranslations('admin.agents.details.settings.sections.role');
+  const roleTag = (key: string) =>
+    isAssignableAgentRole(key) ? tr(`roles.${key}`) : key.startsWith("WIKI_") ? t("wikiStaff") : t("builtInRole");
   const activeModelsData = useQuery(api.aiModels.getActiveModels, { useCase: "agent" });
   const activeModels = activeModelsData || [];
   const deleteAgent = useMutation(api.agents.deleteAgent);
@@ -156,9 +160,10 @@ export default function AgentsPage() {
                 <div className="flex flex-col">
                   <span className="font-medium text-[13px] text-foreground leading-tight flex items-center gap-2">
                     {agent.name}
-                    {/* The wiki's staff (wiki-agents plan, phase 0): built in,
-                        switchable, never deletable. */}
-                    {agent.systemKey && <TagLabel>{t("wikiStaff")}</TagLabel>}
+                    {/* What the agent's role is: the wiki's staff (wiki-agents
+                        plan, phase 0), another built-in role, or a role given
+                        on its Settings — each switchable, never deletable. */}
+                    {agent.systemKey && <TagLabel>{roleTag(agent.systemKey)}</TagLabel>}
                   </span>
                   {agent.description && (
                     <span className="text-[11px] text-secondary mt-0.5 line-clamp-1 max-w-[300px]">
