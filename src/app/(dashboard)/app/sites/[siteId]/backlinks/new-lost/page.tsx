@@ -12,7 +12,8 @@ import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
-import { formatNumber, formatShortDay, toCsv } from "../../../_components/siteFormat";
+import { datedRow } from "../../../_components/datedRows";
+import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSiteParam } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
@@ -68,7 +69,7 @@ export default function SiteLinksNewLostPage() {
       >
         <SiteBarChart
           height={260}
-          data={(points ?? []).map((point) => ({ label: formatShortDay(point.day), ...Object.fromEntries(shownKeys.map((key) => [key, point[key]])) }))}
+          data={(points ?? []).map((point) => datedRow(point, Object.fromEntries(shownKeys.map((key) => [key, point[key]]))))}
           series={shownKeys.map((key, index) => ({ key, name: t(`series.${key}`), colour: index === 0 ? SITE_SERIES_COLOURS[1] : SITE_SERIES_COLOURS[3] }))}
         />
       </SiteChartCard>

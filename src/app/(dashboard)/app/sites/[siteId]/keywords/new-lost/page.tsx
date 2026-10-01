@@ -120,6 +120,7 @@ export default function SiteNewLostPage() {
   };
   const chartSteps: GainLossStep[] = steps.map((step) => ({
     day: step.day,
+    lastDay: step.lastDay,
     label: formatShortDay(step.day),
     detail: range.step === "day" ? kindLabel(step) : undefined,
     counts: step.rankedNew === null ? null : { new: step.rankedNew, up: step.rankedUp ?? 0, down: step.rankedDown ?? 0, lost: countOf(step, "lost") ?? 0 },

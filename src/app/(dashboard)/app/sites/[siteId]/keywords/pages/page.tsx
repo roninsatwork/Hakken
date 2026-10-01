@@ -13,7 +13,8 @@ import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
-import { formatNumber, formatShortDay, toCsv } from "../../../_components/siteFormat";
+import { datedRow } from "../../../_components/datedRows";
+import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
@@ -92,7 +93,7 @@ export default function SitePagesPage() {
         enoughData={points.length > 0}
       >
         <SiteLineChart
-          data={points.map((point) => ({ label: formatShortDay(point.day), pages: point.pages ?? null, traffic: point.estimatedTraffic ?? null }))}
+          data={points.map((point) => datedRow(point, { pages: point.pages ?? null, traffic: point.estimatedTraffic ?? null }))}
           series={[
             { key: "pages", name: t("chartTitle"), colour: SITE_SERIES_COLOURS[1] },
             { key: "traffic", name: tm("estimatedTraffic"), colour: SITE_SERIES_COLOURS[0] },

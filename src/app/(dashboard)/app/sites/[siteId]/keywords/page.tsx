@@ -14,7 +14,8 @@ import { SiteTableBar } from "../../_components/SiteTableBar";
 import { SiteChartCard } from "../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteStackedAreaChart } from "../../_components/SiteCharts";
 import { useSiteRange } from "../../_components/SiteDateRange";
-import { formatCpc, formatDay, formatNumber, formatShortDay, formatVisits, toCsv } from "../../_components/siteFormat";
+import { datedRow } from "../../_components/datedRows";
+import { formatCpc, formatDay, formatNumber, formatVisits, toCsv } from "../../_components/siteFormat";
 import { useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useCompareDay, useSite, useSiteId } from "../../_components/useSite";
 import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
@@ -138,7 +139,7 @@ export default function SiteKeywordsPage() {
         enoughData={points.length > 0}
       >
         <SiteStackedAreaChart
-          data={points.map((point) => ({ label: formatShortDay(point.day), ...point.bands }))}
+          data={points.map((point) => datedRow(point, { ...point.bands }))}
           series={BANDS.map((entry, index) => ({ key: entry, name: tb(entry), colour: SITE_SERIES_COLOURS[index] }))}
         />
       </SiteChartCard>

@@ -2,6 +2,7 @@
 
 import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis, useXAxisScale, useYAxisScale } from "recharts";
 import { CHART_ACTIVE_BAR, CHART_CURSOR, ChartTooltipRow, ChartTooltipSurface } from "@/src/ui/components/charts/ChartTooltip";
+import { GoogleUpdateFrame, GoogleUpdateKey, GoogleUpdateMarkers, useGoogleUpdates } from "./GoogleUpdateMarkers";
 import { formatCompact, formatNumber } from "./siteFormat";
 
 /**
@@ -11,6 +12,8 @@ import { formatCompact, formatNumber } from "./siteFormat";
  * A check with nothing before it to compare with — the site's first, or the
  * first day its whole list was held — is drawn as an empty outline and named,
  * never as a tall bar of "new" searches that were only new to the list.
+ * The Google updates inside its dates are marked on it, as on every dated
+ * Sites chart (`GoogleUpdateMarkers`).
  */
 
 export type GainLossKind = "new" | "up" | "down" | "lost";
@@ -18,6 +21,8 @@ export type GainLossKind = "new" | "up" | "down" | "lost";
 export type GainLossStep = {
   /** The step's day: the axis key, one per bar. */
   day: string;
+  /** The newest day the step covers, when more than its first. */
+  lastDay?: string;
   /** What the axis calls it. */
   label: string;
   /** Under it, stepping daily: what the check covered. */
@@ -170,35 +175,39 @@ export function SiteGainLossChart({ steps, series, netLabel, startLegend, height
   const detailed = steps.some((step) => step.detail);
   const ticks = gainLossTicks(Math.max(0, ...data.map((row) => row.new + row.up)), Math.max(0, ...data.map((row) => -(row.down + row.lost))));
   const ordered = [...GAINED, ...LOST].flatMap((key) => series.filter((entry) => entry.key === key));
+  const google = useGoogleUpdates(steps);
   return (
     <div>
-      <ResponsiveContainer width="100%" height={height} debounce={50}>
-        <BarChart data={data} stackOffset="sign" barCategoryGap="25%" maxBarSize={MAX_BAR} margin={{ top: 22, right: 28, bottom: detailed ? 16 : 0, left: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border-dim" />
-          <XAxis dataKey="day" {...AXIS_PROPS} interval="preserveStartEnd" minTickGap={16} tick={<StepTick steps={steps} />} />
-          {/*
-            The marks are set here rather than left to the chart: bars stacked
-            either side of the line draw no axis at all when every value is
-            nought (recharts 3.8), and its own marks skipped the line itself.
-          */}
-          <YAxis
-            width={48}
-            ticks={ticks}
-            domain={[ticks[0], ticks[ticks.length - 1]]}
-            allowDataOverflow
-            tickFormatter={(value: number) => formatCompact(Math.abs(value))}
-            {...AXIS_PROPS}
-            tick={{ fontSize: 11 }}
-          />
-          <ReferenceLine y={0} stroke="currentColor" className="text-secondary" strokeOpacity={0.5} />
-          <Tooltip cursor={CHART_CURSOR} content={<StepReadout steps={steps} series={series} netLabel={netLabel} />} />
-          {ordered.map((entry) => (
-            <Bar key={entry.key} dataKey={entry.key} name={entry.name} stackId="moves" fill={entry.colour} activeBar={CHART_ACTIVE_BAR} isAnimationActive={false} />
-          ))}
-          <StepMarks steps={steps} />
-        </BarChart>
-      </ResponsiveContainer>
-      {/* The key in the order the bars stack, and the outline when one is drawn. */}
+      <GoogleUpdateFrame google={google}>
+        <ResponsiveContainer width="100%" height={height} debounce={50}>
+          <BarChart data={data} stackOffset="sign" barCategoryGap="25%" maxBarSize={MAX_BAR} margin={{ top: 22, right: 28, bottom: detailed ? 16 : 0, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border-dim" />
+            <XAxis {...AXIS_PROPS} interval="preserveStartEnd" minTickGap={16} {...google.axis("day")} tick={<StepTick steps={steps} />} />
+            {/*
+              The marks are set here rather than left to the chart: bars stacked
+              either side of the line draw no axis at all when every value is
+              nought (recharts 3.8), and its own marks skipped the line itself.
+            */}
+            <YAxis
+              width={48}
+              ticks={ticks}
+              domain={[ticks[0], ticks[ticks.length - 1]]}
+              allowDataOverflow
+              tickFormatter={(value: number) => formatCompact(Math.abs(value))}
+              {...AXIS_PROPS}
+              tick={{ fontSize: 11 }}
+            />
+            <ReferenceLine y={0} stroke="currentColor" className="text-secondary" strokeOpacity={0.5} />
+            <Tooltip active={google.open ? false : undefined} cursor={CHART_CURSOR} content={<StepReadout steps={steps} series={series} netLabel={netLabel} />} />
+            {ordered.map((entry) => (
+              <Bar key={entry.key} dataKey={entry.key} name={entry.name} stackId="moves" fill={entry.colour} activeBar={CHART_ACTIVE_BAR} isAnimationActive={false} />
+            ))}
+            <StepMarks steps={steps} />
+            <GoogleUpdateMarkers google={google} />
+          </BarChart>
+        </ResponsiveContainer>
+      </GoogleUpdateFrame>
+      {/* The key in the order the bars stack, the outline when one is drawn, and Google's updates when one is marked. */}
       <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px] text-secondary">
         {ordered.map((entry) => (
           <span key={entry.key} className="inline-flex items-center gap-1.5">
@@ -212,6 +221,7 @@ export function SiteGainLossChart({ steps, series, netLabel, startLegend, height
             {startLegend}
           </span>
         ) : null}
+        {google.shown ? <GoogleUpdateKey label={google.keyLabel} /> : null}
       </div>
     </div>
   );

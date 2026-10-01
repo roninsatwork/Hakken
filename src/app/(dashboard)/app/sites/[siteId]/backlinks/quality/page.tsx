@@ -13,7 +13,8 @@ import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
-import { formatDay, formatNumber, formatShortDay, toCsv } from "../../../_components/siteFormat";
+import { datedRow } from "../../../_components/datedRows";
+import { formatDay, formatNumber, toCsv } from "../../../_components/siteFormat";
 import { SiteFigure } from "../../../_components/SiteFigure";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
@@ -93,7 +94,7 @@ export default function SiteLinkQualityPage() {
         enoughData={points.length > 0 && chosen.length > 0}
       >
         <SiteLineChart
-          data={points.map((point) => ({ label: formatShortDay(point.day), ...Object.fromEntries(chosen.map((measure) => [measure, point[measure] ?? null])) }))}
+          data={points.map((point) => datedRow(point, Object.fromEntries(chosen.map((measure) => [measure, point[measure] ?? null]))))}
           series={chosen.map((measure) => ({ key: measure, name: tm(measure), colour: SITE_SERIES_COLOURS[MEASURES.indexOf(measure) + 1] }))}
         />
       </SiteChartCard>

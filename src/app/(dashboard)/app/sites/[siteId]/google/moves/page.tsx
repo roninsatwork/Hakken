@@ -13,7 +13,8 @@ import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
-import { formatShortDay, toCsv } from "../../../_components/siteFormat";
+import { datedRow } from "../../../_components/datedRows";
+import { toCsv } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
@@ -91,7 +92,7 @@ export default function SiteMovesPage() {
         enoughData={points.length > 0}
       >
         <SiteBarChart
-          data={points.map((point) => ({ label: formatShortDay(point.day), up: point.rankedUp, down: point.rankedDown }))}
+          data={points.map((point) => datedRow(point, { up: point.rankedUp, down: point.rankedDown }))}
           series={[
             { key: "up", name: t("up"), colour: SITE_SERIES_COLOURS[1] },
             { key: "down", name: t("down"), colour: SITE_SERIES_COLOURS[0] },

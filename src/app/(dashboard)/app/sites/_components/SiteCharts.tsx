@@ -32,6 +32,7 @@ import {
   CHART_SERIES_TEAL,
   CHART_SERIES_VIOLET,
 } from "@/src/ui/components/charts/chartPalette";
+import { GoogleUpdateFrame, GoogleUpdateMarkers, googleLegend, useGoogleUpdates } from "./GoogleUpdateMarkers";
 import { formatCompact, formatNumber } from "./siteFormat";
 
 /**
@@ -42,6 +43,10 @@ import { formatCompact, formatNumber } from "./siteFormat";
  * chart: traffic in the thousands and a rank in the hundreds would otherwise
  * squash one into a flat line. The first two scales are labelled, left and
  * right, in their line's colour.
+ *
+ * A chart whose rows are dated (`datedRow`) runs over each row's day and
+ * marks the Google updates inside its dates (`GoogleUpdateMarkers`): every
+ * line, band and upright bar chart here, never a chart of named things.
  */
 
 /**
@@ -106,46 +111,50 @@ export function SiteLineChart({
   /** One scale for every line, when they measure the same thing (a site and its rivals). */
   sharedScale?: boolean;
 }) {
+  const google = useGoogleUpdates(data);
   return (
-    <ResponsiveContainer width="100%" height={height} debounce={50}>
-      <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border-dim" />
-        <XAxis dataKey={xKey} {...AXIS_PROPS} minTickGap={24} />
-        {sharedScale ? (
-          <YAxis yAxisId="shared" width={48} reversed={reversed} allowDecimals={false} tickFormatter={formatCompact} {...AXIS_PROPS} />
-        ) : series.map((entry, index) => (
-          <YAxis
-            key={entry.key}
-            yAxisId={entry.key}
-            orientation={index === 1 ? "right" : "left"}
-            hide={index > 1}
-            width={48}
-            reversed={reversed || entry.reversed}
-            allowDecimals={false}
-            tickFormatter={formatCompact}
-            {...AXIS_PROPS}
-            stroke={entry.colour}
-          />
-        ))}
-        <Tooltip cursor={CHART_CROSSHAIR} content={<ChartTooltip />} />
-        <Legend wrapperStyle={{ fontSize: 12 }} itemSorter={inSeriesOrder(series)} />
-        {series.map((entry) => (
-          <Line
-            key={entry.key}
-            yAxisId={sharedScale ? "shared" : entry.key}
-            type="monotone"
-            dataKey={entry.key}
-            name={entry.name}
-            stroke={entry.colour}
-            strokeWidth={entry.dashed ? 1.5 : 2.25}
-            strokeDasharray={entry.dashed ? "5 4" : undefined}
-            dot={data.length < 3}
-            connectNulls
-            isAnimationActive={false}
-          />
-        ))}
-      </LineChart>
-    </ResponsiveContainer>
+    <GoogleUpdateFrame google={google}>
+      <ResponsiveContainer width="100%" height={height} debounce={50}>
+        <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border-dim" />
+          <XAxis {...AXIS_PROPS} minTickGap={24} {...google.axis(xKey)} />
+          {sharedScale ? (
+            <YAxis yAxisId="shared" width={48} reversed={reversed} allowDecimals={false} tickFormatter={formatCompact} {...AXIS_PROPS} />
+          ) : series.map((entry, index) => (
+            <YAxis
+              key={entry.key}
+              yAxisId={entry.key}
+              orientation={index === 1 ? "right" : "left"}
+              hide={index > 1}
+              width={48}
+              reversed={reversed || entry.reversed}
+              allowDecimals={false}
+              tickFormatter={formatCompact}
+              {...AXIS_PROPS}
+              stroke={entry.colour}
+            />
+          ))}
+          <Tooltip active={google.open ? false : undefined} cursor={CHART_CROSSHAIR} content={<ChartTooltip title={google.readoutTitle} />} />
+          <Legend wrapperStyle={{ fontSize: 12 }} itemSorter={inSeriesOrder(series)} content={googleLegend(google)} />
+          {series.map((entry) => (
+            <Line
+              key={entry.key}
+              yAxisId={sharedScale ? "shared" : entry.key}
+              type="monotone"
+              dataKey={entry.key}
+              name={entry.name}
+              stroke={entry.colour}
+              strokeWidth={entry.dashed ? 1.5 : 2.25}
+              strokeDasharray={entry.dashed ? "5 4" : undefined}
+              dot={data.length < 3}
+              connectNulls
+              isAnimationActive={false}
+            />
+          ))}
+          <GoogleUpdateMarkers google={google} />
+        </LineChart>
+      </ResponsiveContainer>
+    </GoogleUpdateFrame>
   );
 }
 
@@ -160,29 +169,33 @@ export function SiteStackedAreaChart({
   xKey?: string;
   height?: number;
 }) {
+  const google = useGoogleUpdates(data);
   return (
-    <ResponsiveContainer width="100%" height={height} debounce={50}>
-      <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border-dim" />
-        <XAxis dataKey={xKey} {...AXIS_PROPS} minTickGap={24} />
-        <YAxis width={48} allowDecimals={false} tickFormatter={formatCompact} {...AXIS_PROPS} />
-        <Tooltip cursor={CHART_CROSSHAIR} content={<ChartTooltip />} />
-        <Legend wrapperStyle={{ fontSize: 12 }} itemSorter={inSeriesOrder(series)} />
-        {series.map((entry) => (
-          <Area
-            key={entry.key}
-            type="monotone"
-            dataKey={entry.key}
-            name={entry.name}
-            stackId="stack"
-            stroke={entry.colour}
-            fill={entry.colour}
-            fillOpacity={0.35}
-            isAnimationActive={false}
-          />
-        ))}
-      </AreaChart>
-    </ResponsiveContainer>
+    <GoogleUpdateFrame google={google}>
+      <ResponsiveContainer width="100%" height={height} debounce={50}>
+        <AreaChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border-dim" />
+          <XAxis {...AXIS_PROPS} minTickGap={24} {...google.axis(xKey)} />
+          <YAxis width={48} allowDecimals={false} tickFormatter={formatCompact} {...AXIS_PROPS} />
+          <Tooltip active={google.open ? false : undefined} cursor={CHART_CROSSHAIR} content={<ChartTooltip title={google.readoutTitle} />} />
+          <Legend wrapperStyle={{ fontSize: 12 }} itemSorter={inSeriesOrder(series)} content={googleLegend(google)} />
+          {series.map((entry) => (
+            <Area
+              key={entry.key}
+              type="monotone"
+              dataKey={entry.key}
+              name={entry.name}
+              stackId="stack"
+              stroke={entry.colour}
+              fill={entry.colour}
+              fillOpacity={0.35}
+              isAnimationActive={false}
+            />
+          ))}
+          <GoogleUpdateMarkers google={google} />
+        </AreaChart>
+      </ResponsiveContainer>
+    </GoogleUpdateFrame>
   );
 }
 
@@ -224,43 +237,54 @@ export function SiteBarChart({
   const rowHeight = barsPerRow * ALONG_BAR + (barsPerRow - 1) * ALONG_BAR_GAP + ALONG_ROW_SPACE;
   // The rows, then the margin, the scale along the bottom and the legend under it.
   const alongHeight = data.length * rowHeight + 8 + 30 + (series.length > 1 ? 30 : 0);
+  // Bars along compare named things; upright bars may run over dates.
+  const google = useGoogleUpdates(data, { dated: !horizontal });
   return (
-    <ResponsiveContainer width="100%" height={horizontal ? alongHeight : height} debounce={50}>
-      <BarChart
-        data={data}
-        layout={horizontal ? "vertical" : "horizontal"}
-        barSize={horizontal ? ALONG_BAR : undefined}
-        barGap={horizontal ? ALONG_BAR_GAP : undefined}
-        margin={{ top: 8, right: 8, bottom: 0, left: horizontal ? 8 : 0 }}
-      >
-        <CartesianGrid strokeDasharray="3 3" vertical={horizontal} horizontal={!horizontal} stroke="currentColor" className="text-border-dim" />
-        {horizontal ? (
-          <>
-            <XAxis type="number" allowDecimals={false} tickFormatter={formatCompact} {...AXIS_PROPS} />
-            <YAxis type="category" dataKey={xKey} width={140} {...AXIS_PROPS} />
-          </>
-        ) : (
-          <>
-            <XAxis dataKey={xKey} {...AXIS_PROPS} minTickGap={12} />
-            <YAxis width={48} allowDecimals={false} tickFormatter={formatCompact} {...AXIS_PROPS} />
-          </>
-        )}
-        <Tooltip cursor={CHART_CURSOR} content={<ChartTooltip formatValue={formatValue} seriesLabel={seriesLabel} />} />
-        {series.length > 1 ? <Legend wrapperStyle={{ fontSize: 12 }} itemSorter={inSeriesOrder(series)} /> : null}
-        {series.map((entry) => (
-          <Bar
-            key={entry.key}
-            dataKey={entry.key}
-            name={entry.name}
-            fill={entry.colour}
-            stackId={stacked ? "stack" : undefined}
-            radius={stacked ? 0 : 3}
-            activeBar={CHART_ACTIVE_BAR}
-            isAnimationActive={false}
+    <GoogleUpdateFrame google={google}>
+      <ResponsiveContainer width="100%" height={horizontal ? alongHeight : height} debounce={50}>
+        <BarChart
+          data={data}
+          layout={horizontal ? "vertical" : "horizontal"}
+          barSize={horizontal ? ALONG_BAR : undefined}
+          barGap={horizontal ? ALONG_BAR_GAP : undefined}
+          margin={{ top: 8, right: 8, bottom: 0, left: horizontal ? 8 : 0 }}
+        >
+          <CartesianGrid strokeDasharray="3 3" vertical={horizontal} horizontal={!horizontal} stroke="currentColor" className="text-border-dim" />
+          {horizontal ? (
+            <>
+              <XAxis type="number" allowDecimals={false} tickFormatter={formatCompact} {...AXIS_PROPS} />
+              <YAxis type="category" dataKey={xKey} width={140} {...AXIS_PROPS} />
+            </>
+          ) : (
+            <>
+              <XAxis {...AXIS_PROPS} minTickGap={12} {...google.axis(xKey)} />
+              <YAxis width={48} allowDecimals={false} tickFormatter={formatCompact} {...AXIS_PROPS} />
+            </>
+          )}
+          <Tooltip
+            active={google.open ? false : undefined}
+            cursor={CHART_CURSOR}
+            content={<ChartTooltip title={google.readoutTitle} formatValue={formatValue} seriesLabel={seriesLabel} />}
           />
-        ))}
-      </BarChart>
-    </ResponsiveContainer>
+          {series.length > 1 || google.shown ? (
+            <Legend wrapperStyle={{ fontSize: 12 }} itemSorter={inSeriesOrder(series)} content={googleLegend(google, { seriesShown: series.length > 1 })} />
+          ) : null}
+          {series.map((entry) => (
+            <Bar
+              key={entry.key}
+              dataKey={entry.key}
+              name={entry.name}
+              fill={entry.colour}
+              stackId={stacked ? "stack" : undefined}
+              radius={stacked ? 0 : 3}
+              activeBar={CHART_ACTIVE_BAR}
+              isAnimationActive={false}
+            />
+          ))}
+          <GoogleUpdateMarkers google={google} />
+        </BarChart>
+      </ResponsiveContainer>
+    </GoogleUpdateFrame>
   );
 }
 

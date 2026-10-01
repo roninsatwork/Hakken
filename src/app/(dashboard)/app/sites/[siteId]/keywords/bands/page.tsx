@@ -18,6 +18,7 @@ import { ListDownload } from "../../../_components/SiteDownloads";
 import { SiteFigure } from "../../../_components/SiteFigure";
 import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { isPartHeld } from "../../../_components/SiteCoverage";
+import { datedRow } from "../../../_components/datedRows";
 import { formatNumber, formatShortDay, toCsv } from "../../../_components/siteFormat";
 import { useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
@@ -203,7 +204,7 @@ export default function SiteBandsPage() {
         <SiteLineChart
           sharedScale
           height={240}
-          data={wholes.map((check) => ({ label: formatShortDay(check.step), pageOne: pageOne(check.bands), pageTwo: check.bands.p11_20, further: further(check.bands) }))}
+          data={wholes.map((check) => datedRow({ day: check.step, lastDay: check.day }, { pageOne: pageOne(check.bands), pageTwo: check.bands.p11_20, further: further(check.bands) }))}
           series={[
             { key: "pageOne", name: t("series.pageOne"), colour: CHART_SERIES_BLUE },
             { key: "pageTwo", name: t("series.pageTwo"), colour: CHART_SERIES_VIOLET },

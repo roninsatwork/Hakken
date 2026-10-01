@@ -16,7 +16,8 @@ import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
-import { formatShortDay, toCsv } from "../../../_components/siteFormat";
+import { datedRow } from "../../../_components/datedRows";
+import { toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
@@ -98,10 +99,10 @@ export default function SiteMentionsPage() {
       >
         <SiteLineChart
           sharedScale
-          data={points.map((point) => ({
-            label: formatShortDay(point.day),
-            ...Object.fromEntries(engines.map((name) => [name, point.ai.find((entry) => entry.engine === name)?.named ?? 0])),
-          }))}
+          data={points.map((point) => datedRow(
+            point,
+            Object.fromEntries(engines.map((name) => [name, point.ai.find((entry) => entry.engine === name)?.named ?? 0])),
+          ))}
           series={engines.map((name, index) => ({ key: name, name: engineLabel(name), colour: SITE_SERIES_COLOURS[index % SITE_SERIES_COLOURS.length] }))}
         />
       </SiteChartCard>

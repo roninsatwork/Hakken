@@ -14,7 +14,8 @@ import { SiteChartCard } from "../../_components/SiteChartCard";
 import { SiteTableBar } from "../../_components/SiteTableBar";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../_components/SiteCharts";
 import { useSiteRange } from "../../_components/SiteDateRange";
-import { formatNumber, formatShortDay, toCsv } from "../../_components/siteFormat";
+import { datedRow } from "../../_components/datedRows";
+import { formatNumber, toCsv } from "../../_components/siteFormat";
 import { RecordLinkCell } from "../../_components/SiteCells";
 import { useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
@@ -99,7 +100,7 @@ export default function SiteSideBySidePage() {
       >
         <SiteLineChart
           sharedScale
-          data={days.map((day) => ({ label: formatShortDay(day), ...Object.fromEntries(lines.map((line) => [line.host, traffic(line, day)])) }))}
+          data={days.map((day) => datedRow({ day }, Object.fromEntries(lines.map((line) => [line.host, traffic(line, day)]))))}
           series={lines.map((line, index) => ({
             key: line.host,
             name: line.isYou ? tc("you", { host: line.host }) : line.host,

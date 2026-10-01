@@ -1,15 +1,15 @@
 # Knowledge, News and the weekly digest — three agents and one outbox
 
-**Started 2026-09-30. Status: building — phases 1, 2 and 3 built on dev
+**Started 2026-09-30. Status: building — phases 1, 2, 3 and 10 built on dev
 2026-10-01 ("can we build this out please"), with the revision below.** The decisions below
 are Anthony's, in his words where he gave them; his answers to the first
 thirteen questions are under "Answered". Change a decision here, with a date,
 before building anything that disagrees with it. The questions still open are
 at the end, each with the phase that needs it.
 
-Overall: 29% (5 of 17.5 days, plus a day for the revision below). Phases 1–3
-— Knowledge, Ask Hakken reading it, and News — built; phases 4–10 not
-started.
+Overall: 34% (6 of 17.5 days, plus a day for the revision below). Phases 1–3
+— Knowledge, Ask Hakken reading it, and News — and phase 10, Google updates
+on the Sites charts, built; phases 4–9 not started.
 
 ## Revised — Anthony, 2026-10-01
 
@@ -73,6 +73,20 @@ it") before the rebuild. These win over anything below that disagrees.
   (phase 10). Tables: `convex/newsSchema.ts`, gathered with Knowledge's and
   the translations' in `convex/contentSchema.ts` so `schema.ts` stays inside
   its size band.
+- **Phase 10, Google updates on the Sites charts (2026-10-01).** Built once
+  into `SiteLineChart`, `SiteStackedAreaChart`, upright `SiteBarChart` and
+  `SiteGainLossChart`: a chart whose rows are dated (`datedRow`,
+  `sites/_components/datedRows.ts`) reads the updates inside its dates and
+  draws `GoogleUpdateMarkers`; the logo is `GoogleMark`, the only place
+  Google's colours are written. A dated chart's x-axis now runs over each
+  row's day and is named by the row's label, so two months' "1 Mar" no
+  longer share a place. Every Sites page's dated rows moved onto `datedRow`,
+  and Search Console's chart too; the Overview's Years view pairs months of
+  any year, carries no dates and so no markers. Held by the look test
+  (`GoogleUpdateMarkers.test.tsx`) and `src/google-update-markers-drift.test.ts`;
+  written into `docs/developer/screen-kit.md`. Checked in Chrome on dev with
+  test updates (removed after) on Overview, Organic positions, New and lost,
+  and Wins and losses, dark and light.
 
 ## What was asked
 
@@ -312,7 +326,7 @@ December 2024, March 2025, June 2025) with example descriptions.
 | Which updates | Each Google update whose **start date** falls inside the chart's dates. |
 | Where along the axis | At the start date's true place in time, between the two plotted points either side of it — a monthly chart puts 13 March about two-fifths of the way from March to April, never on a point. |
 | The line | Upright, from the top of the plot to the x-axis line; 1px; dashed 4 on, 4 off; the foreground colour at 55%. Drawn above the chart's areas, lines and bars. |
-| The logo | Google's four-colour "G", **14px**, centred on a **22px** circle filled with the card colour and edged 1px in white at 20%, the circle's centre **on the x-axis line** at the foot of the dashed line. Month labels stay below it, clear of the circle. |
+| The logo | Google's four-colour "G", **14px**, centred on a **22px** circle filled with the card colour and edged 1px in white at 20%, the circle's centre **on the x-axis line** at the foot of the dashed line. Month labels stay below it, clear of the circle. (2026-10-01, when built: the edge is the foreground colour at 20% — white at 20% on the dark theme, as approved, and dark at 20% on the light one, where white would vanish against the white card.) |
 | Two close together | Logos never overlap. When two would sit closer than 24px, the later logo moves right to 24px from the earlier; each line stays at its true date. |
 | The hover card | Shown while the pointer is on the logo (a tap on a phone). **300px** wide, card colour, 1px `border-dim` edge, 12px corners, the kit's popover shadow; 12px by 14px padding. Sits above the logo, kept inside the chart's edges. |
 | The card's contents, in order | 1. The 16px "G" and the **title**, 13px, medium weight. 2. **"Started 13 Mar 2025 · Finished 27 Mar 2025"**, 12px, secondary colour; "· Still rolling out" when no finish date is set. 3. The **description**, 12px, foreground colour, as entered in Admin. Nothing else. |

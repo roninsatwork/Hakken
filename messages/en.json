@@ -8744,6 +8744,13 @@
       "csv": "Numbers (CSV)",
       "notEnough": "Charts fill in as more checks run. Nothing has been recorded for these dates yet."
     },
+    "googleUpdates": {
+      "legend": "Google update",
+      "started": "Started {date}",
+      "finished": "Finished {date}",
+      "rollingOut": "Still rolling out",
+      "open": "Google update: {title}"
+    },
     "measures": {
       "estimatedTraffic": "Estimated traffic",
       "keywords": "Keywords",

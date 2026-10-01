@@ -64,6 +64,11 @@ export function formatShortDay(day: string): string {
   return new Date(`${day}T00:00:00Z`).toLocaleDateString(siteLocale(), { day: "numeric", month: "short", timeZone: "UTC" });
 }
 
+/** `2026-09` as "Sep": a month of any year, where the chart pairs each with the same month a year before. */
+export function formatMonthName(month: string): string {
+  return new Date(`${month}-01T00:00:00Z`).toLocaleDateString(siteLocale(), { month: "short", timeZone: "UTC" });
+}
+
 /** `2026-09` as "September 2026". */
 export function formatMonth(month: string): string {
   return new Date(`${month}-01T00:00:00Z`).toLocaleDateString(siteLocale(), { month: "long", year: "numeric", timeZone: "UTC" });

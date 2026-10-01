@@ -16,7 +16,8 @@ import { SiteTableBar } from "../../_components/SiteTableBar";
 import { SiteChartCard } from "../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../_components/SiteCharts";
 import { useSiteRange } from "../../_components/SiteDateRange";
-import { formatDay, formatNumber, formatShortDay, toCsv } from "../../_components/siteFormat";
+import { datedRow } from "../../_components/datedRows";
+import { formatDay, formatNumber, toCsv } from "../../_components/siteFormat";
 import { useSite, useSiteId } from "../../_components/useSite";
 import { SiteFigure } from "../../_components/SiteFigure";
 import { useSiteRecordHref } from "../../_components/siteRecordLinks";
@@ -120,7 +121,7 @@ export default function SiteAuditPage() {
         enoughData={points.length > 0}
       >
         <SiteLineChart
-          data={points.map((point) => ({ label: formatShortDay(point.day), crawled: point.crawledPages ?? null, score: point.onPageScore ?? null }))}
+          data={points.map((point) => datedRow(point, { crawled: point.crawledPages ?? null, score: point.onPageScore ?? null }))}
           series={[
             { key: "crawled", name: tm("crawledPages"), colour: SITE_SERIES_COLOURS[1] },
             { key: "score", name: tm("onPageScore"), colour: SITE_SERIES_COLOURS[0] },

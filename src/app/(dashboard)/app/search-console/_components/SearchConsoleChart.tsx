@@ -6,6 +6,7 @@ import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../sites/_components/SiteCharts";
+import { datedRow } from "../../sites/_components/datedRows";
 import { formatDay, formatMonth, formatShortDay, toCsv } from "../../sites/_components/siteFormat";
 import { shiftDay } from "../../sites/_components/siteRange";
 
@@ -38,10 +39,11 @@ function points(days: Day[], range: { from: string; to: string; step: "day" | "w
   const byDay = new Map(days.map((day) => [day.day, day]));
   const first = held.from && held.from > range.from ? held.from : range.from;
   const last = held.to && held.to < range.to ? held.to : range.to;
-  const buckets = new Map<string, { clicks: number; impressions: number; weighted: number }>();
+  const buckets = new Map<string, { lastDay: string; clicks: number; impressions: number; weighted: number }>();
   for (let day = first; day <= last; day = shiftDay(day, 1)) {
     const key = range.step === "day" ? day : range.step === "week" ? weekOf(day) : day.slice(0, 7);
-    const bucket = buckets.get(key) ?? { clicks: 0, impressions: 0, weighted: 0 };
+    const bucket = buckets.get(key) ?? { lastDay: day, clicks: 0, impressions: 0, weighted: 0 };
+    bucket.lastDay = day;
     const figures = byDay.get(day);
     if (figures) {
       bucket.clicks += figures.clicks;
@@ -50,9 +52,10 @@ function points(days: Day[], range: { from: string; to: string; step: "day" | "w
     }
     buckets.set(key, bucket);
   }
+  // Each dated by its first day, so the chart marks the Google updates inside them.
   return [...buckets].map(([key, bucket]) => ({
     key,
-    label: range.step === "month" ? formatMonth(key) : formatShortDay(key),
+    ...datedRow({ day: range.step === "month" ? `${key}-01` : key, lastDay: bucket.lastDay }, {}, range.step === "month" ? formatMonth(key) : formatShortDay(key)),
     clicks: bucket.clicks,
     impressions: bucket.impressions,
     // Percentage points, so the scale reads "2.1" rather than "0.021".

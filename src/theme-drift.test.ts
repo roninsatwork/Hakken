@@ -16,8 +16,9 @@ import { describe, expect, it } from "vitest";
  * - tests and e2e fixtures (assertions, not rendered UI);
  * - `src/app/(public)` — the marketing/login surface keeps its own deliberate
  *   cream palette (owner scope decision, 2026-08-10);
- * - the two sanctioned palette modules (movement pose colours and chart
- *   series colours), which are domain palettes typed once on purpose.
+ * - the sanctioned palette modules (movement pose colours, chart series
+ *   colours, and Google's own four colours in the Google update marker's
+ *   logo), which are domain palettes typed once on purpose.
  */
 
 const SRC_ROOT = join(__dirname);
@@ -25,6 +26,7 @@ const SRC_ROOT = join(__dirname);
 const EXCLUDED_PATH_PARTS = [
   "/app/(public)/",
   "/ui/components/charts/chartPalette.ts",
+  "/app/sites/_components/GoogleMark.tsx",
   "/e2e/",
   "/test/",
 ];

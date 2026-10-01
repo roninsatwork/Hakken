@@ -15,7 +15,8 @@ import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCha
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { SiteFigure } from "../../../_components/SiteFigure";
 import { SiteFacts, type SiteFact } from "../../../_components/SiteRecordParts";
-import { formatCpc, formatDay, formatNumber, formatShortDay, movement, movementClass, toCsv } from "../../../_components/siteFormat";
+import { datedRow } from "../../../_components/datedRows";
+import { formatCpc, formatDay, formatNumber, movement, movementClass, toCsv } from "../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { isPartHeld } from "../../../_components/SiteCoverage";
@@ -322,7 +323,7 @@ export default function SiteKeywordPage() {
           >
             <SiteLineChart
               reversed
-              data={points.map((point) => ({ label: formatShortDay(point.day), position: point.position }))}
+              data={points.map((point) => datedRow(point, { position: point.position }))}
               series={[{ key: "position", name: record.keyword, colour: SITE_SERIES_COLOURS[0] }]}
             />
           </SiteChartCard>

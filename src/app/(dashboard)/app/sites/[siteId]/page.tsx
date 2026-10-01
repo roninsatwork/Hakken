@@ -11,7 +11,8 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { SiteChartCard } from "../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart, SiteStackedAreaChart } from "../_components/SiteCharts";
 import { useSiteRange } from "../_components/SiteDateRange";
-import { formatShortDay, toCsv } from "../_components/siteFormat";
+import { datedRow } from "../_components/datedRows";
+import { formatMonthName, toCsv } from "../_components/siteFormat";
 import { shiftDay, shiftMonth } from "../_components/siteRange";
 import { useSite, useSiteId } from "../_components/useSite";
 import { SiteViewSwitch } from "../_components/SiteViewSwitch";
@@ -117,16 +118,13 @@ export default function SiteOverviewPage() {
   const latest = newestOfEach(points);
   const before = line?.before ?? null;
 
-  const metricRows = points.map((point) => ({
-    label: formatShortDay(point.day),
-    ...Object.fromEntries(MEASURES.map((measure) => [measure, valueOf(point, measure)])),
-  }));
+  const metricRows = points.map((point) => datedRow(point, Object.fromEntries(MEASURES.map((measure) => [measure, valueOf(point, measure)]))));
   // DataForSEO's bands over everything the site ranks for, where read out;
   // the list's own only for a list that is the whole site.
   const listWhole = site?.coverage?.whole ?? false;
   const bandRows = points.flatMap((point) => {
     const bands = point.allBands ?? (listWhole ? point.bands : undefined);
-    return bands ? [{ label: formatShortDay(point.day), ...bands }] : [];
+    return bands ? [datedRow(point, { ...bands })] : [];
   });
   const chosen = MEASURES.filter((measure) => shown[measure]);
 
@@ -165,10 +163,10 @@ export default function SiteOverviewPage() {
   } else if (tab === "competitors") {
     const lines = everyone ?? [];
     const days = [...new Set(lines.flatMap((entry) => entry.points.map((point) => point.day)))].sort();
-    const rows = days.map((day) => ({
-      label: formatShortDay(day),
-      ...Object.fromEntries(lines.map((entry) => [entry.host, valueOf(entry.points.find((point) => point.day === day), compared)])),
-    }));
+    const rows = days.map((day) => datedRow(
+      { day },
+      Object.fromEntries(lines.map((entry) => [entry.host, valueOf(entry.points.find((point) => point.day === day), compared)])),
+    ));
     chart = (
       <SiteLineChart
         data={rows}
@@ -188,12 +186,13 @@ export default function SiteOverviewPage() {
     const byMonth = new Map(monthly.map((point) => [point.day.slice(0, 7), point]));
     // The twelve months to the end of the range, each beside the same
     // calendar month a year before — matched by month, never by position,
-    // so a month with no data cannot shift the rest out of line.
+    // so a month with no data cannot shift the rest out of line. Months
+    // rather than dates along the axis: no Google update is marked on it.
     const lastMonth = range.to.slice(0, 7);
     const rows = Array.from({ length: 12 }, (_, index) => {
       const month = shiftMonth(lastMonth, index - 11);
       return {
-        label: formatShortDay(`${month}-01`).split(" ")[1],
+        label: formatMonthName(month),
         thisYear: valueOf(byMonth.get(month), compared),
         lastYear: valueOf(byMonth.get(shiftMonth(month, -12)), compared),
       };

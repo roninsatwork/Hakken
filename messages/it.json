@@ -8744,6 +8744,13 @@
       "csv": "Numeri (CSV)",
       "notEnough": "I grafici si riempiono con i prossimi controlli. Per queste date non è stato ancora registrato nulla."
     },
+    "googleUpdates": {
+      "legend": "Aggiornamento Google",
+      "started": "Iniziato il {date}",
+      "finished": "Terminato il {date}",
+      "rollingOut": "Ancora in distribuzione",
+      "open": "Aggiornamento Google: {title}"
+    },
     "measures": {
       "estimatedTraffic": "Traffico stimato",
       "keywords": "Parole chiave",

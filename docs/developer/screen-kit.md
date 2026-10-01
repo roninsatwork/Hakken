@@ -362,6 +362,14 @@ The wrapper is `flex flex-col gap-5`, or `flex w-full flex-col gap-6 pb-12` for 
 
 This order was a habit copied between screens and written down nowhere until 2026-08-22, when the workspace Features screen was rebuilt onto `DataTable`, drew nothing by hand, passed every check of the day, and still came out wrong — its title inside the table rather than above the search box. Anthony: *"why are you guessing when we have standards and rules — that's the gap we need to close."* This section and the anatomy rule are that gap closed.
 
+## Google Update Markers
+
+Every Sites chart that runs over dates marks the Google updates inside its dates: a dashed line on the day each started, Google's "G" on the x-axis line at its foot, and the update's title, dates and description on hover. The look was approved on 2026-09-30 and is binding — see "Google updates on the Sites charts" in `docs/plans/active/knowledge-news-and-digest-plan.md`, and the picture beside it. Change the plan's table first, with a date, then the code.
+
+- **Nothing to do on a page.** `SiteLineChart`, `SiteStackedAreaChart`, upright `SiteBarChart` and `SiteGainLossChart` read the updates and draw `GoogleUpdateMarkers` themselves. A page only builds its rows with `datedRow(point, values)` (`src/app/(dashboard)/app/sites/_components/datedRows.ts`), which carries each row's `day` and the newest day it covers; a chart whose every row carries a `day` runs over dates. A chart of named things — engines, sites, countries, bars along — carries none and gets no markers.
+- **One part draws them.** `GoogleUpdateMarkers.tsx` holds the line, the logo on its circle, the hover card and the key; `GoogleMark.tsx` is the only place Google's four colours are written, a sanctioned exception to the theme tokens beside `chartPalette.ts`. No chart draws its own marker, line, logo or card.
+- **Held by two tests.** `GoogleUpdateMarkers.test.tsx` holds every number of the look; `src/google-update-markers-drift.test.ts` fails when a dated chart part stops drawing the markers, a Sites page draws a chart with Recharts directly, a chart row is dated by its label alone, or Google's colours, the line or the card are written anywhere else.
+
 ## What The Build Enforces
 
 `scripts/check-screen-kit.mjs` fails the build when a file under `src/app/(dashboard)` hand-writes a part the kit already owns, or assembles a list screen in the wrong order. It runs in `npm run check:guards`, which is CI's first step, and has its own test in `scripts/check-screen-kit.test.mjs`.

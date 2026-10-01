@@ -15,7 +15,8 @@ import { SiteTableBar } from "../../../_components/SiteTableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
-import { formatShortDay, toCsv } from "../../../_components/siteFormat";
+import { datedRow } from "../../../_components/datedRows";
+import { toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
@@ -85,10 +86,10 @@ export default function SiteSearchesPage() {
   const pager = useSitePager(sorted, { isLoading: rows === undefined });
 
   const days = [...new Set((positions ?? []).flatMap((line) => line.points.map((point) => point.day)))].sort();
-  const chartRows = days.map((day) => ({
-    label: formatShortDay(day),
-    ...Object.fromEntries((positions ?? []).map((line) => [line.keyword, line.points.find((point) => point.day === day)?.position ?? null])),
-  }));
+  const chartRows = days.map((day) => datedRow(
+    { day },
+    Object.fromEntries((positions ?? []).map((line) => [line.keyword, line.points.find((point) => point.day === day)?.position ?? null])),
+  ));
 
   return (
     <div className="flex flex-col gap-6">
