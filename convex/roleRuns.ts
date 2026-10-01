@@ -4,6 +4,7 @@ import { internalMutation, internalQuery, type MutationCtx } from "./_generated/
 import type { Doc } from "./_generated/dataModel";
 import { appendRunStep } from "./agentRunStepWriter";
 import { calculateModelCostUsd } from "./aiCostService";
+import { appErrorMessage } from "./utils/appError";
 import { ASSIGNABLE_AGENT_ROLES } from "./utils/agentRoles";
 
 /**
@@ -86,8 +87,7 @@ export const logRunLine = internalMutation({
 
 /** What went wrong, as one readable line for a failed run's summary. */
 export function failureSummary(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.replace(/\s+/g, " ").trim().slice(0, 400) || "No detail given.";
+  return appErrorMessage(error, String(error)).replace(/\s+/g, " ").trim().slice(0, 400) || "No detail given.";
 }
 
 /** The run's summary, as its last step, on the run, and on its workflow execution. */

@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalAction, type ActionCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import { collectNews } from "./newsCollectorRun";
 import { failureSummary } from "./roleRuns";
 import { newsRoleValidator, type NewsRole } from "./utils/agentRoles";
 
@@ -23,9 +24,9 @@ import { newsRoleValidator, type NewsRole } from "./utils/agentRoles";
 
 type Job = (ctx: ActionCtx, runId: Id<"agentRuns">) => Promise<string>;
 
-/** Each role's job. Phase 4 built the agents; their work arrives in phases 5, 7 and 9. */
+/** Each role's job. The Weekly Digest's and the Email Sender's arrive in phases 9 and 7. */
 const JOBS: Record<NewsRole, Job> = {
-  NEWS_COLLECTOR: async () => "Reading the News sources isn't built yet, so this run read nothing.",
+  NEWS_COLLECTOR: collectNews,
   WEEKLY_DIGEST: async () => "Writing the weekly issue isn't built yet, so nothing was queued.",
   EMAIL_SENDER: async () => "Sending from the outbox isn't built yet, so nothing was sent.",
 };

@@ -21,6 +21,12 @@ export type SafeWorkflowFetchDependencies = {
   resolveHostname?: ResolveHostname;
   timeoutMs?: number;
   maxResponseBytes?: number;
+  /**
+   * Redirects to follow, each hop's address checked as the first was. None
+   * unless asked: an Action node refuses them. The News Collector follows a
+   * few, because feeds move (`/feed` to `/feed/`, http to https).
+   */
+  maxRedirects?: number;
 };
 
 function isBlockedIpv4(address: string): boolean {
@@ -215,8 +221,14 @@ export async function fetchWorkflowAction(
     });
 
     if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
       await response.body?.cancel();
-      throw appError("UPSTREAM_FAILURE", "Action Node redirects are not allowed.");
+      const left = dependencies.maxRedirects ?? 0;
+      if (dependencies.maxRedirects === undefined) {
+        throw appError("UPSTREAM_FAILURE", "Action Node redirects are not allowed.");
+      }
+      if (left <= 0 || !location) throw appError("UPSTREAM_FAILURE", "The address redirected too many times.");
+      return await fetchWorkflowAction(new URL(location, url).toString(), fetchOptions, { ...dependencies, maxRedirects: left - 1 });
     }
     if (response.headers.get("content-encoding") && response.headers.get("content-encoding") !== "identity") {
       await response.body?.cancel();

@@ -6171,7 +6171,7 @@
       "addressLabel": "Address",
       "handleLabel": "Handle",
       "addressHints": {
-        "WEBSITE": "The page or feed to read, starting with https://.",
+        "WEBSITE": "Its blog or news page, or its feed, starting with https://.",
         "YOUTUBE": "The channel's address, starting with https://.",
         "X_ACCOUNT": "The account's handle, like @googlesearchc."
       },

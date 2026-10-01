@@ -64,6 +64,38 @@ describe("safe workflow HTTP", () => {
     expect(fetchImplementation.mock.calls[0]?.[1]).toMatchObject({ redirect: "manual" });
   });
 
+  test("follows a redirect when asked, checking the new address as it checked the first", async () => {
+    const fetchImplementation = vi.fn(async (url: string) => url.endsWith("/feed")
+      ? new Response(null, { status: 301, headers: { location: "/feed/" } })
+      : new Response("<rss></rss>", { status: 200 }));
+    const resolveHostname = vi.fn(resolvePublic);
+
+    const response = await fetchWorkflowAction("https://blog.example/feed", {}, { fetchImplementation, resolveHostname, maxRedirects: 3 });
+
+    expect(response).toMatchObject({ status: 200, body: "<rss></rss>" });
+    expect(fetchImplementation.mock.calls.map(([url]) => url)).toEqual(["https://blog.example/feed", "https://blog.example/feed/"]);
+    expect(resolveHostname).toHaveBeenCalledTimes(2);
+  });
+
+  test("refuses a redirect to a restricted address even when following redirects", async () => {
+    const fetchImplementation = vi.fn(async (_url: string) => new Response(null, {
+      status: 302,
+      headers: { location: "http://169.254.169.254/latest/meta-data" },
+    }));
+
+    await expect(fetchWorkflowAction("https://blog.example/feed", {}, { fetchImplementation, resolveHostname: resolvePublic, maxRedirects: 3 }))
+      .rejects.toThrow(/SSRF Prevention/);
+    expect(fetchImplementation).toHaveBeenCalledOnce();
+  });
+
+  test("stops after the redirects it was allowed", async () => {
+    const fetchImplementation = vi.fn(async (url: string) => new Response(null, { status: 302, headers: { location: `${url}x` } }));
+
+    await expect(fetchWorkflowAction("https://blog.example/a", {}, { fetchImplementation, resolveHostname: resolvePublic, maxRedirects: 2 }))
+      .rejects.toThrow("redirected too many times");
+    expect(fetchImplementation).toHaveBeenCalledTimes(3);
+  });
+
   test("cancels a streamed response as soon as it exceeds the cap", async () => {
     const cancel = vi.fn();
     let reads = 0;

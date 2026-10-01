@@ -1,16 +1,16 @@
 # Knowledge, News and the weekly digest — three agents and one outbox
 
-**Started 2026-09-30. Status: building — phases 1, 2, 3, 4 and 10 built on dev
+**Started 2026-09-30. Status: building — phases 1–5 and 10 built on dev
 2026-10-01 ("can we build this out please"), with the revision below.** The decisions below
 are Anthony's, in his words where he gave them; his answers to the first
 thirteen questions are under "Answered". Change a decision here, with a date,
 before building anything that disagrees with it. The questions still open are
 at the end, each with the phase that needs it.
 
-Overall: 40% (7 of 17.5 days, plus a day for the revision below). Phases 1–3
-— Knowledge, Ask Hakken reading it, and News — phase 4, the agents'
-groundwork, and phase 10, Google updates on the Sites charts, built; phases
-5–9 not started.
+Overall: 54% (9.5 of 17.5 days, plus a day for the revision below). Phases
+1–3 — Knowledge, Ask Hakken reading it, and News — phase 4, the agents'
+groundwork, phase 5, the News Collector, and phase 10, Google updates on the
+Sites charts, built; phases 6–9 not started.
 
 ## Revised — Anthony, 2026-10-01
 
@@ -90,6 +90,26 @@ it") before the rebuild. These win over anything below that disagrees.
   yet until phases 5, 7 and 9 fill it. The Agents list names each agent's
   role rather than calling every one "Wiki staff". Tests:
   `convex/roleRuns.test.ts`.
+- **Phase 5, the News Collector (2026-10-01).** Each run reads every source
+  that is on, longest unread first (`convex/newsCollectorRun.ts`). A
+  website is read through its feed — the address itself, the feed its page
+  announces, or one at a usual place under the page's path or the site's
+  root — and a site with none through Firecrawl: the articles its page links
+  to, each fetched for its words. A YouTube channel is read through the feed
+  its page names. X accounts are skipped, saying so, until phase 6. Each new
+  item gets a plain English title, summary and "what this means for you"
+  from the agent's own instructions (its template's, editable) and model,
+  goes live in News at once, and asks the Translator for every other
+  language — R2 replaces the English-and-Italian of the original phase. Each
+  call's cost is on the run, so the spend limit stops it; it takes no new
+  item after seven minutes. Nothing is collected twice, and an item taken
+  down never returns. Feeds are read by hand-written RSS, RSS 1.0 and Atom
+  reading (`convex/utils/newsFeeds.ts`), checked against Google's Search
+  Central blog, Search Engine Roundtable and a YouTube channel on
+  2026-10-01; Search Engine Land refuses any fetch that is not a browser,
+  so it needs Firecrawl. Fetches go through the platform's checked fetch,
+  which now follows up to three redirects when asked, each address checked
+  again. Tests: `convex/newsCollector.test.ts`, `convex/utils/newsFeeds.test.ts`.
 - **Phase 10, Google updates on the Sites charts (2026-10-01).** Built once
   into `SiteLineChart`, `SiteStackedAreaChart`, upright `SiteBarChart` and
   `SiteGainLossChart`: a chart whose rows are dated (`datedRow`,
@@ -468,6 +488,9 @@ should be a setting in Admin → Limits, and which a constant.
 | Limit | Proposed | Where it bites |
 |---|---|---|
 | Items read per source per run | 50 | A source with more new items since the last run waits for the next. |
+| Items on a source's first read | 5, its newest (added 2026-10-01, when built) | News is not flooded with a new source's back catalogue. |
+| Articles fetched through Firecrawl per source per run | 10 (added 2026-10-01) | For a site with no feed, each is a paid page; the rest wait. |
+| Time a News Collector run takes new items | 7 minutes (added 2026-10-01) | An action stops at ten; the rest are read next run. |
 | X bookmarks read per run | 100 | The rest are read the next run. |
 | Items in one digest email | **8** — `renderEmail`'s card limit | The rest behind "See all on Hakken". |
 | Outbox rows claimed per batch | 50 | A bigger send takes more batches. |

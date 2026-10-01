@@ -27,6 +27,11 @@ export const scrapeUrl = internalAction({
     url: v.string(),
     /** Fetch only the main article, dropping navigation and footers. */
     mainContentOnly: v.optional(v.boolean()),
+    /**
+     * Return the page's links too: the News Collector finds a website's
+     * articles from its blog page this way when the site has no feed.
+     */
+    withLinks: v.optional(v.boolean()),
   },
   handler: async (_ctx, args) => {
     const apiKey = process.env.FIRECRAWL_API_KEY;
@@ -63,7 +68,7 @@ export const scrapeUrl = internalAction({
         },
         body: JSON.stringify({
           url: target.toString(),
-          formats: ["markdown"],
+          formats: args.withLinks ? ["markdown", "links"] : ["markdown"],
           onlyMainContent: args.mainContentOnly ?? true,
         }),
         signal: controller.signal,
@@ -78,7 +83,7 @@ export const scrapeUrl = internalAction({
       }
 
       const payload = await response.json() as {
-        data?: { markdown?: string; metadata?: { title?: string; description?: string } };
+        data?: { markdown?: string; links?: string[]; metadata?: { title?: string; description?: string } };
       };
 
       const markdown = payload.data?.markdown ?? "";
@@ -99,6 +104,7 @@ export const scrapeUrl = internalAction({
         // about part of a page and can say so.
         truncated,
         content: truncated ? markdown.slice(0, MAX_RETURNED_CHARACTERS) : markdown,
+        ...(args.withLinks ? { links: (payload.data?.links ?? []).filter((link): link is string => typeof link === "string") } : {}),
       };
     } catch (error: unknown) {
       const aborted = error instanceof Error && error.name === "AbortError";

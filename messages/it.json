@@ -6171,7 +6171,7 @@
       "addressLabel": "Indirizzo",
       "handleLabel": "Nome utente",
       "addressHints": {
-        "WEBSITE": "La pagina o il feed da leggere, che inizia con https://.",
+        "WEBSITE": "La sua pagina blog o notizie, o il suo feed, che inizia con https://.",
         "YOUTUBE": "L'indirizzo del canale, che inizia con https://.",
         "X_ACCOUNT": "Il nome utente dell'account, come @googlesearchc."
       },
