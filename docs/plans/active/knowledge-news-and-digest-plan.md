@@ -1,14 +1,33 @@
 # Knowledge, News and the weekly digest — three agents and one outbox
 
-**Started 2026-09-30. Status: building — every phase but 6 (X) built on dev
-2026-10-01 ("can we build this out please"), with the revision below.** The decisions below
+**Started 2026-09-30. Status: built on dev 2026-10-01 — every phase; what
+is left is configuration (below) ("can we build this out please"), with the revision below.** The decisions below
 are Anthony's, in his words where he gave them; his answers to the first
 thirteen questions are under "Answered". Change a decision here, with a date,
 before building anything that disagrees with it. The questions still open are
 at the end, each with the phase that needs it.
 
-Overall: 89% (15.5 of 17.5 days, plus a day for the revision below). Every
-phase built but phase 6, X, which waits for Anthony's X access.
+Overall: 100% built (17.5 of 17.5 days, plus a day for the revision below).
+Nothing has run for real yet: it waits for the settings in "Configuration
+left" below.
+
+### Configuration left (Anthony, when ready)
+
+- Admin → AI: a fast model that serves in the deployment's region (the dev
+  default does not), for the Translator, the summaries and the digest.
+- Resend: the sending domain verified; `NEWS_DIGEST_FROM_EMAIL`; a webhook
+  to `<deployment site>/api/webhooks/resend` for bounces and complaints, its
+  signing secret as `RESEND_WEBHOOK_SECRET`.
+- X: `X_BEARER_TOKEN` for watched accounts; `X_CLIENT_ID` and
+  `X_CLIENT_SECRET` from the X app (callback
+  `<deployment site>/api/x/oauth/callback`), then Connect X on News sources;
+  `X_READ_COST_USD`, X's price per post read; `CONNECTOR_TOKEN_ENCRYPTION_KEY`
+  if not already set.
+- Optional: `FIRECRAWL_API_KEY`, for websites with no feed.
+- Admin → Agents: the three agents from their templates, each given its
+  role; their schedules (the Collector every 6 hours, the Digest weekly, the
+  Sender hourly); the Digest's mode left on Test until its issue looks right.
+- Admin → Content → News sources: the websites, channels and accounts to read.
 
 ## Revised — Anthony, 2026-10-01
 
@@ -158,6 +177,19 @@ it") before the rebuild. These win over anything below that disagrees.
   everyone with it on, once a week — a second run in the same week writes
   and queues nothing (the idempotency key is the week's). A week with no
   News writes nothing. Tests: `convex/weeklyDigest.test.ts`.
+- **Phase 6, X (2026-10-01).** Watched X accounts are read through X's API
+  with the X app's token (`X_BEARER_TOKEN`): each account's id found from its
+  handle once, then its own posts — not replies or reposts — newer than the
+  last read, five on a first read. Anthony connects his own X account on
+  News sources (`convex/xConnect.ts`, Search Console's flow with the PKCE X
+  requires; the shared OAuth calls learned PKCE and X's Basic proof) and
+  approves reading bookmarks; a sign-in that may not is refused and its grant
+  handed back. Each run then imports the bookmarks it has not seen, oldest
+  first, credited to whoever wrote them (`convex/xRead.ts`), and renews the
+  access as it runs out, keeping X's new renewal. X's reads cost
+  `X_READ_COST_USD` a post, on the run beside its model calls
+  (`roleRuns.recordRunServiceCall`), so the spend limit counts them. Tests:
+  `convex/xNews.test.ts`.
 - **Phase 10, Google updates on the Sites charts (2026-10-01).** Built once
   into `SiteLineChart`, `SiteStackedAreaChart`, upright `SiteBarChart` and
   `SiteGainLossChart`: a chart whose rows are dated (`datedRow`,

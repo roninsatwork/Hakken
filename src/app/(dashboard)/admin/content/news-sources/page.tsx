@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
@@ -15,6 +15,7 @@ import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { matchesSearchTerm, paginateItems } from "@/src/ui/components/screens/pagination";
 import { ContentDeleteDialog } from "../_components/ContentDialogs";
 import { useContentDelete } from "../_components/useContentDelete";
+import { XConnectionPanel } from "./XConnectionPanel";
 
 type NewsSource = FunctionReturnType<typeof api.newsSources.listNewsSources>[number];
 
@@ -58,6 +59,11 @@ export default function NewsSourcesAdminPage() {
           </PagePrimaryAction>
         }
       />
+
+      {/* It reads how a sign-in came back from the address, so it waits for it. */}
+      <Suspense fallback={null}>
+        <XConnectionPanel />
+      </Suspense>
 
       <DataTable
         rows={sources === undefined ? undefined : paged.items}

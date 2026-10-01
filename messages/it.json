@@ -6203,7 +6203,32 @@
         "saveFailed": "Impossibile salvare la fonte. Riprova.",
         "deleteFailed": "Impossibile eliminare la fonte. Riprova."
       },
-      "back": "Fonti delle notizie"
+      "back": "Fonti delle notizie",
+      "x": {
+        "title": "X",
+        "accountsReady": "Gli account X seguiti vengono letti con il token dell'app X.",
+        "accountsWaiting": "Gli account X seguiti attendono che venga impostato X_BEARER_TOKEN, il token dell'app X.",
+        "bookmarksNone": "I tuoi segnalibri X non sono collegati.",
+        "bookmarksConnected": "Lettura dei segnalibri di {account}.",
+        "bookmarksBroken": "I segnalibri di {account} hanno smesso di funzionare.",
+        "bookmarksWhy": "Collega il tuo account X e ogni post che salvi nei segnalibri arriva in Notizie.",
+        "signInNotSetUp": "Per collegare X servono prima X_CLIENT_ID, X_CLIENT_SECRET e CONNECTOR_TOKEN_ENCRYPTION_KEY.",
+        "lastRead": "Ultima lettura {when}.",
+        "notReadYet": "Non ancora letti: il Raccoglitore di notizie li legge alla prossima esecuzione.",
+        "connect": "Collega X",
+        "reconnect": "Ricollega X",
+        "disconnect": "Scollega",
+        "connectFailed": "Impossibile avviare il collegamento a X. Riprova.",
+        "disconnectTitle": "Scollega X",
+        "disconnectBody": "Smettere di leggere i segnalibri di {account}? Ciò che hanno già portato resta in Notizie.",
+        "disconnectFailed": "Impossibile scollegare X. Riprova.",
+        "outcomes": {
+          "connected": "X è collegato. I tuoi segnalibri arrivano alla prossima esecuzione del Raccoglitore di notizie.",
+          "declined": "L'accesso a X è stato rifiutato, quindi non è cambiato nulla.",
+          "failed": "X non ha completato l'accesso, quindi non è cambiato nulla. Riprova.",
+          "missing-scope": "La lettura dei segnalibri non è stata consentita nell'accesso a X, quindi non è stato collegato nulla."
+        }
+      }
     },
     "newsFollows": {
       "title": "Chi seguire",

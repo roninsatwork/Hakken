@@ -177,7 +177,7 @@ describe("the News Collector", () => {
     expect(JSON.parse(generate.mock.calls[0][0].contents[0].text)).toMatchObject({ text: "Local search is changing fast, and here is how." });
   });
 
-  test("a source that cannot be read says so, and the rest are still read; an X account waits for X access", async () => {
+  test("a source that cannot be read says so, and the rest are still read; an X account waits for the X app's token", async () => {
     const t = harness();
     const agentId = await collector(t);
     await source(t, "WEBSITE", "Gone", "https://gone.example/feed", Date.now() - 2 * 86_400_000);
@@ -191,7 +191,7 @@ describe("the News Collector", () => {
     expect((await items(t)).map((item) => item.titleEn)).toEqual(["Post still-read"]);
     const steps = await t.run(async (ctx) => await ctx.db.query("agentRunSteps").collect());
     expect(steps.find((step) => step.input === "Could not read Gone")).toMatchObject({ status: "FAILED" });
-    expect(steps.find((step) => step.input === "Skipped Search Liaison")?.output).toMatch(/X access/);
+    expect(steps.find((step) => step.input === "Skipped Search Liaison")?.output).toMatch(/X_BEARER_TOKEN/);
   });
 
   test("stops at the agent's spend limit, saying so", async () => {

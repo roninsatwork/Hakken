@@ -307,6 +307,65 @@ export const recordRunModelCall = internalMutation({
   },
 });
 
+/**
+ * A paid call to a service other than a model — X's reads — on the run: its
+ * cost added to the run, so the spend limit counts it, a cost record, a step
+ * and a log line. Says whether the run has now reached its limit.
+ */
+export const recordRunServiceCall = internalMutation({
+  args: {
+    runId: v.id("agentRuns"),
+    providerKey: v.string(),
+    /** What was done, in a few words: "Read 12 posts from @searchliaison". */
+    actionContext: v.string(),
+    costUsd: v.number(),
+  },
+  returns: v.object({ runCostUsd: v.number(), limitReached: v.boolean() }),
+  handler: async (ctx, args) => {
+    const run = await ctx.db.get(args.runId);
+    if (!run) return { runCostUsd: 0, limitReached: true };
+    const now = Date.now();
+    const runCostUsd = (run.costUsd ?? 0) + args.costUsd;
+    if (args.costUsd > 0) {
+      await ctx.db.patch(args.runId, { costUsd: runCostUsd, updatedAt: now });
+      await ctx.db.insert("agentTransactions", {
+        agentId: run.agentId,
+        actionContext: args.actionContext,
+        modelUsed: args.providerKey,
+        providerKey: args.providerKey,
+        inputTokens: 0,
+        outputTokens: 0,
+        costUsd: args.costUsd,
+        status: "SUCCESS",
+        createdAt: now,
+      });
+    }
+    const stepId = await appendRunStep(ctx, {
+      runId: args.runId,
+      agentId: run.agentId,
+      kind: "TOOL_CALL",
+      status: "SUCCESS",
+      input: args.actionContext,
+      output: args.costUsd > 0 ? `$${args.costUsd.toFixed(4)}` : "No price entered, so no cost recorded.",
+      costUsd: args.costUsd,
+      providerKey: args.providerKey,
+    });
+    await ctx.db.insert("agentLogs", {
+      agentId: run.agentId,
+      runId: args.runId,
+      stepId,
+      interactionType: args.actionContext,
+      promptContent: "",
+      responseContent: `$${args.costUsd.toFixed(4)}`,
+      outcome: "SUCCESS",
+      createdAt: now,
+    });
+    const agent = await ctx.db.get(run.agentId);
+    const cap = agent?.maxCostUsd;
+    return { runCostUsd, limitReached: typeof cap === "number" && cap > 0 && runCostUsd >= cap };
+  },
+});
+
 /** Whether a run has spent its agent's limit, read before a call that costs. */
 export const runSpendLeft = internalQuery({
   args: { runId: v.id("agentRuns") },

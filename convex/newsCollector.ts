@@ -41,6 +41,8 @@ export const listSourcesToRead = internalQuery({
     name: v.string(),
     address: v.string(),
     firstRead: v.boolean(),
+    externalId: v.optional(v.string()),
+    sinceId: v.optional(v.string()),
   })),
   handler: async (ctx) => {
     const on = await ctx.db.query("newsSources").withIndex("by_on", (q) => q.eq("isOn", true)).take(SOURCES_PER_RUN);
@@ -52,6 +54,8 @@ export const listSourcesToRead = internalQuery({
         name: source.name,
         address: source.address,
         firstRead: source.lastCheckedAt === undefined,
+        ...(source.externalId ? { externalId: source.externalId } : {}),
+        ...(source.sinceId ? { sinceId: source.sinceId } : {}),
       }));
   },
 });
@@ -74,7 +78,8 @@ export const knownKeys = internalQuery({
 /** One collected item, live in News at once; nothing when it was collected meanwhile or taken down. */
 export const saveCollectedItem = internalMutation({
   args: {
-    sourceId: v.id("newsSources"),
+    /** Absent for an X bookmark, which belongs to no source. */
+    sourceId: v.optional(v.id("newsSources")),
     kind: v.union(v.literal("WEBSITE"), v.literal("YOUTUBE"), v.literal("X")),
     sourceName: v.string(),
     titleEn: v.string(),

@@ -7,6 +7,8 @@ import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import { appError, appErrorMessage } from "./utils/appError";
 import { parseTranslation } from "./utils/contentTranslator";
 import { fetchWorkflowAction } from "./utils/safeWorkflowHttp";
+import { isXAppTokenConfigured } from "./xConnect";
+import { BOOKMARKS_PER_RUN, connectedXAccess, readAccountPosts, readNewBookmarks, xReadCostPerPost } from "./xRead";
 import {
   articleLinks,
   feedGuesses,
@@ -32,7 +34,9 @@ import {
  *   site with none is read through Firecrawl: the articles linked from its
  *   page, each fetched for its words.
  * - **YouTube channels** through the channel's own feed, found from its page.
- * - **X accounts** wait for phase 6 and X access, and say so.
+ * - **X accounts** through X's API with the X app's token, and Anthony's own
+ *   **X bookmarks** through the account he connected (`xRead.ts`, phase 6);
+ *   X's reads cost, and the cost is on the run.
  *
  * Every model call's cost lands on the run (`roleRuns.recordRunModelCall`),
  * so the agent's spend limit stops it; it also stops taking new items well
@@ -120,41 +124,198 @@ const SUMMARY_FORMAT =
   "Reply with only a JSON object with three string keys: \"title\", the item's title in plain English; \"summary\", "
   + "your summary; and \"meaning\", what it means for a business owner, or \"\" when there is nothing for them to do or watch.";
 
+const OUT_OF_TIME = "its time ran out; the rest are read next run";
+
+type Run = {
+  ctx: ActionCtx;
+  runId: Id<"agentRuns">;
+  started: number;
+  instructions: string;
+  model: Awaited<ReturnType<typeof resolveModel>>;
+};
+
+async function resolveModel(ctx: ActionCtx, requestedModelId: string | undefined) {
+  return await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+    ...(requestedModelId ? { requestedModelId } : {}),
+    useCase: "agent",
+  });
+}
+
+/**
+ * Each entry summarised with the agent's own instructions and model, and
+ * saved live in News — the step every kind of source shares. Stops at the
+ * spend limit or when the run's time is up, saying which.
+ */
+async function summariseAndSave(
+  run: Run,
+  entries: FeedEntry[],
+  origin: { kind: "WEBSITE" | "YOUTUBE" | "X"; sourceId?: Id<"newsSources">; sourceName: (entry: FeedEntry) => string },
+  onDone?: (entry: FeedEntry) => void,
+): Promise<{ added: number; stoppedBecause: string | null }> {
+  const { ctx, runId, model } = run;
+  let added = 0;
+  for (const found of entries) {
+    if (Date.now() - run.started > RUN_WORK_MS) return { added, stoppedBecause: OUT_OF_TIME };
+    const entry = await withWords(ctx, found);
+    if (!entry) continue;
+    const sourceName = origin.sourceName(entry);
+    const prompt = JSON.stringify({ source: sourceName, title: entry.title, address: entry.url, text: entry.text });
+    const response = await generateTextWithResolvedModel({
+      model,
+      systemInstruction: `${run.instructions}\n\n${SUMMARY_FORMAT}`,
+      contents: [{ type: "text", text: prompt }],
+    });
+    const written = parseTranslation(response.text ?? "", ["title", "summary", "meaning"]);
+    const cost = await ctx.runMutation(internal.roleRuns.recordRunModelCall, {
+      runId,
+      actionContext: `Summarising "${(entry.title || entry.text).slice(0, 80)}" from ${sourceName}`,
+      modelId: model.modelId,
+      providerKey: model.providerKey,
+      providerModelId: model.providerModelId,
+      inputTokens: response.inputTokens ?? 0,
+      outputTokens: response.outputTokens ?? 0,
+      promptContent: prompt,
+      responseContent: response.text ?? "",
+      failed: !written,
+    });
+    if (written && written.summary.trim()) {
+      const saved = await ctx.runMutation(internal.newsCollector.saveCollectedItem, {
+        ...(origin.sourceId ? { sourceId: origin.sourceId } : {}),
+        kind: origin.kind,
+        sourceName,
+        titleEn: (written.title.trim() || entry.title || entry.text.slice(0, 80)).slice(0, 300),
+        summaryEn: written.summary.trim(),
+        meaningEn: written.meaning.trim(),
+        url: entry.url,
+        publishedAt: entry.publishedAt ?? Date.now(),
+        externalKey: entry.key,
+      });
+      if (saved) added += 1;
+    }
+    onDone?.(entry);
+    if (cost.limitReached) return { added, stoppedBecause: `it reached its spend limit, at $${cost.runCostUsd.toFixed(2)}` };
+  }
+  return { added, stoppedBecause: null };
+}
+
+/** What has not been collected before (or taken down), newest first, up to `limit`. */
+async function freshOf(ctx: ActionCtx, entries: FeedEntry[], limit: number): Promise<FeedEntry[]> {
+  const known = new Set(await ctx.runQuery(internal.newsCollector.knownKeys, { keys: entries.map((entry) => entry.key) }));
+  return entries.filter((entry) => !known.has(entry.key)).slice(0, limit);
+}
+
+/** X's reads on the run, at the price entered for this deployment. */
+async function chargeXReads(run: Run, posts: number, what: string) {
+  return await run.ctx.runMutation(internal.roleRuns.recordRunServiceCall, {
+    runId: run.runId,
+    providerKey: "x",
+    actionContext: `Read ${posts} ${posts === 1 ? "post" : "posts"} ${what}`,
+    costUsd: posts * xReadCostPerPost(),
+  });
+}
+
+/** A watched X account: its posts since the last read, through the app token. */
+async function readXAccount(run: Run, source: Source & { externalId?: string; sinceId?: string }) {
+  const bearer = process.env.X_BEARER_TOKEN?.trim() ?? "";
+  const read = await readAccountPosts({ bearer, handle: source.address, xUserId: source.externalId, sinceId: source.sinceId });
+  await run.ctx.runMutation(internal.xConnect.keepXAccountPlace, {
+    sourceId: source._id,
+    externalId: read.xUserId,
+    ...(read.newestId ? { sinceId: read.newestId } : {}),
+  });
+  const charged = await chargeXReads(run, read.postsRead, `from @${source.address.replace(/^@/, "")}`);
+  return { entries: read.entries, limitReached: charged.limitReached };
+}
+
+/**
+ * The connected account's new bookmarks (D11), oldest first so a run that
+ * stops leaves the rest for the next. A first read takes only the newest few.
+ */
+async function readBookmarks(run: Run): Promise<{ added: number; stoppedBecause: string | null } | null> {
+  const { ctx, runId } = run;
+  const connection = await ctx.runQuery(internal.xConnect.connectionForRun, {});
+  if (!connection) return null;
+  const access = await connectedXAccess(ctx, connection);
+  if (!access) {
+    await ctx.runMutation(internal.roleRuns.logRunLine, {
+      runId, heading: `Could not read ${connection.account}'s bookmarks`, detail: "X would not renew the access. Connect X again on News sources.", failed: true,
+    });
+    return null;
+  }
+  let read: Awaited<ReturnType<typeof readNewBookmarks>>;
+  try {
+    read = await readNewBookmarks({ accessToken: access, xUserId: connection.xUserId, lastBookmarkId: connection.lastBookmarkId });
+  } catch (error: unknown) {
+    await ctx.runMutation(internal.roleRuns.logRunLine, {
+      runId, heading: `Could not read ${connection.account}'s bookmarks`, detail: appErrorMessage(error, "No reason given."), failed: true,
+    });
+    return null;
+  }
+  const charged = await chargeXReads(run, read.postsRead, `from ${connection.account}'s bookmarks`);
+  const firstRead = connection.lastBookmarkId === null;
+  const fresh = (await freshOf(ctx, read.entries, firstRead ? FIRST_READ_ITEMS : BOOKMARKS_PER_RUN)).reverse();
+  const authors = new Map(read.entries.map((entry) => [entry.key, entry.author]));
+  let readTo: string | null = null;
+  const outcome = charged.limitReached
+    ? { added: 0, stoppedBecause: `it reached its spend limit, at $${charged.runCostUsd.toFixed(2)}` }
+    : await summariseAndSave(run, fresh, { kind: "X", sourceName: (entry) => authors.get(entry.key) ?? "X" }, (entry) => {
+      readTo = entry.key.split("/").pop() ?? readTo;
+    });
+  // A first read, or one that reached every new bookmark, is read up to the newest; one cut short, to where it got.
+  const lastBookmarkId = firstRead || !outcome.stoppedBecause ? read.newestId : readTo;
+  await ctx.runMutation(internal.xConnect.markBookmarksRead, { ...(lastBookmarkId ? { lastBookmarkId } : {}) });
+  await ctx.runMutation(internal.roleRuns.logRunLine, {
+    runId,
+    heading: `Read ${connection.account}'s bookmarks`,
+    detail: `${read.entries.length} new since the last read, ${outcome.added} added.`,
+    failed: false,
+  });
+  return outcome;
+}
+
 export async function collectNews(ctx: ActionCtx, runId: Id<"agentRuns">): Promise<string> {
   const started = Date.now();
   const agent = await ctx.runQuery(internal.newsCollector.readCollectorAgent, { runId });
   if (!agent) return "This run's agent no longer exists, so nothing was read.";
-  const sources: Source[] = await ctx.runQuery(internal.newsCollector.listSourcesToRead, {});
-  if (sources.length === 0) return "No News source is switched on, so nothing was read.";
+  const sources: Array<Source & { externalId?: string; sinceId?: string }> = await ctx.runQuery(internal.newsCollector.listSourcesToRead, {});
+  const bookmarks = await ctx.runQuery(internal.xConnect.connectionForRun, {});
+  if (sources.length === 0 && !bookmarks) return "No News source is switched on, so nothing was read.";
   await ctx.runMutation(internal.roleRuns.recordObservation, {
     runId,
-    text: `${sources.length} ${sources.length === 1 ? "source is" : "sources are"} on: ${sources.map((source) => source.name).join(", ")}.`,
+    text: `${sources.length} ${sources.length === 1 ? "source is" : "sources are"} on${sources.length ? `: ${sources.map((source) => source.name).join(", ")}` : ""}.`
+      + (bookmarks ? ` ${bookmarks.account}'s X bookmarks are connected.` : ""),
   });
 
-  const model = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
-    ...(agent.requestedModelId ? { requestedModelId: agent.requestedModelId } : {}),
-    useCase: "agent",
-  });
+  const run: Run = { ctx, runId, started, instructions: agent.instructions, model: await resolveModel(ctx, agent.requestedModelId) };
   let added = 0;
   let stoppedBecause: string | null = null;
 
   for (const source of sources) {
+    if (Date.now() - started > RUN_WORK_MS) stoppedBecause = OUT_OF_TIME;
     if (stoppedBecause) break;
-    if (Date.now() - started > RUN_WORK_MS) {
-      stoppedBecause = "its time ran out; the rest are read next run";
-      break;
-    }
-    if (source.kind === "X_ACCOUNT") {
+    if (source.kind === "X_ACCOUNT" && !isXAppTokenConfigured()) {
       await ctx.runMutation(internal.roleRuns.logRunLine, {
-        runId, heading: `Skipped ${source.name}`, detail: "X accounts are read once X access is set up (phase 6).", failed: false,
+        runId, heading: `Skipped ${source.name}`, detail: "X accounts are read once X_BEARER_TOKEN, the X app's token, is set.", failed: false,
       });
       continue;
     }
 
     let entries: FeedEntry[];
-    let fromPage: boolean;
+    let limit: number;
+    let what: string;
     try {
-      ({ entries, fromPage } = await readSource(ctx, source));
+      if (source.kind === "X_ACCOUNT") {
+        const read = await readXAccount(run, source);
+        if (read.limitReached) stoppedBecause = "it reached its spend limit reading X";
+        entries = read.entries;
+        limit = source.sinceId ? ITEMS_PER_SOURCE : FIRST_READ_ITEMS;
+        what = "new posts";
+      } else {
+        const read = await readSource(ctx, source);
+        entries = read.entries;
+        limit = source.firstRead ? FIRST_READ_ITEMS : read.fromPage ? PAGES_PER_SOURCE : ITEMS_PER_SOURCE;
+        what = read.fromPage ? "articles on its page" : "in its feed";
+      }
     } catch (error: unknown) {
       await ctx.runMutation(internal.roleRuns.logRunLine, {
         runId, heading: `Could not read ${source.name}`, detail: appErrorMessage(error, "No reason given."), failed: true,
@@ -162,66 +323,28 @@ export async function collectNews(ctx: ActionCtx, runId: Id<"agentRuns">): Promi
       await ctx.runMutation(internal.newsCollector.markSourceRead, { sourceId: source._id, foundNew: false });
       continue;
     }
+    if (stoppedBecause) break;
 
-    const known = new Set(await ctx.runQuery(internal.newsCollector.knownKeys, { keys: entries.map((entry) => entry.key) }));
-    const limit = source.firstRead ? FIRST_READ_ITEMS : fromPage ? PAGES_PER_SOURCE : ITEMS_PER_SOURCE;
-    const fresh = entries.filter((entry) => !known.has(entry.key)).slice(0, limit);
-
-    let fromSource = 0;
-    for (const found of fresh) {
-      if (Date.now() - started > RUN_WORK_MS) {
-        stoppedBecause = "its time ran out; the rest are read next run";
-        break;
-      }
-      const entry = await withWords(ctx, found);
-      if (!entry) continue;
-      const prompt = JSON.stringify({ source: source.name, title: entry.title, address: entry.url, text: entry.text });
-      const response = await generateTextWithResolvedModel({
-        model,
-        systemInstruction: `${agent.instructions}\n\n${SUMMARY_FORMAT}`,
-        contents: [{ type: "text", text: prompt }],
-      });
-      const written = parseTranslation(response.text ?? "", ["title", "summary", "meaning"]);
-      const cost = await ctx.runMutation(internal.roleRuns.recordRunModelCall, {
-        runId,
-        actionContext: `Summarising "${entry.title.slice(0, 80)}" from ${source.name}`,
-        modelId: model.modelId,
-        providerKey: model.providerKey,
-        providerModelId: model.providerModelId,
-        inputTokens: response.inputTokens ?? 0,
-        outputTokens: response.outputTokens ?? 0,
-        promptContent: prompt,
-        responseContent: response.text ?? "",
-        failed: !written,
-      });
-      if (written && written.summary.trim()) {
-        const saved = await ctx.runMutation(internal.newsCollector.saveCollectedItem, {
-          sourceId: source._id,
-          kind: source.kind === "YOUTUBE" ? "YOUTUBE" : "WEBSITE",
-          sourceName: source.name,
-          titleEn: (written.title.trim() || entry.title).slice(0, 300),
-          summaryEn: written.summary.trim(),
-          meaningEn: written.meaning.trim(),
-          url: entry.url,
-          publishedAt: entry.publishedAt ?? Date.now(),
-          externalKey: entry.key,
-        });
-        if (saved) fromSource += 1;
-      }
-      if (cost.limitReached) {
-        stoppedBecause = `it reached its spend limit, at $${cost.runCostUsd.toFixed(2)}`;
-        break;
-      }
-    }
-
-    added += fromSource;
-    await ctx.runMutation(internal.newsCollector.markSourceRead, { sourceId: source._id, foundNew: fromSource > 0 });
+    const fresh = await freshOf(ctx, entries, limit);
+    const kind = source.kind === "YOUTUBE" ? "YOUTUBE" : source.kind === "X_ACCOUNT" ? "X" : "WEBSITE";
+    const outcome = await summariseAndSave(run, fresh, { kind, sourceId: source._id, sourceName: () => source.name });
+    added += outcome.added;
+    stoppedBecause = outcome.stoppedBecause;
+    await ctx.runMutation(internal.newsCollector.markSourceRead, { sourceId: source._id, foundNew: outcome.added > 0 });
     await ctx.runMutation(internal.roleRuns.logRunLine, {
       runId,
       heading: `Read ${source.name}`,
-      detail: `${entries.length} ${fromPage ? "articles on its page" : "in its feed"}, ${fresh.length} new to News, ${fromSource} added.`,
+      detail: `${entries.length} ${what}, ${fresh.length} new to News, ${outcome.added} added.`,
       failed: false,
     });
+  }
+
+  if (!stoppedBecause && bookmarks) {
+    const outcome = await readBookmarks(run);
+    if (outcome) {
+      added += outcome.added;
+      stoppedBecause = outcome.stoppedBecause;
+    }
   }
 
   const spent = await ctx.runQuery(internal.roleRuns.readRunCost, { runId });

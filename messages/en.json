@@ -6203,7 +6203,32 @@
         "saveFailed": "Could not save the source. Try again.",
         "deleteFailed": "Could not delete the source. Try again."
       },
-      "back": "News sources"
+      "back": "News sources",
+      "x": {
+        "title": "X",
+        "accountsReady": "Watched X accounts are read with the X app's token.",
+        "accountsWaiting": "Watched X accounts wait for X_BEARER_TOKEN, the X app's token, to be set.",
+        "bookmarksNone": "Your X bookmarks are not connected.",
+        "bookmarksConnected": "Reading {account}'s bookmarks.",
+        "bookmarksBroken": "{account}'s bookmarks stopped working.",
+        "bookmarksWhy": "Connect your X account and each post you bookmark comes into News.",
+        "signInNotSetUp": "Connecting X needs X_CLIENT_ID, X_CLIENT_SECRET and CONNECTOR_TOKEN_ENCRYPTION_KEY set first.",
+        "lastRead": "Last read {when}.",
+        "notReadYet": "Not read yet: the News Collector reads them on its next run.",
+        "connect": "Connect X",
+        "reconnect": "Connect X again",
+        "disconnect": "Disconnect",
+        "connectFailed": "Could not start connecting X. Try again.",
+        "disconnectTitle": "Disconnect X",
+        "disconnectBody": "Stop reading {account}'s bookmarks? What they already brought stays in News.",
+        "disconnectFailed": "Could not disconnect X. Try again.",
+        "outcomes": {
+          "connected": "X is connected. Your bookmarks come in on the News Collector's next run.",
+          "declined": "The X sign-in was declined, so nothing changed.",
+          "failed": "X did not finish the sign-in, so nothing changed. Try again.",
+          "missing-scope": "Reading bookmarks was not allowed in the X sign-in, so nothing was connected."
+        }
+      }
     },
     "newsFollows": {
       "title": "Who to follow",

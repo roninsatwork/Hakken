@@ -40,6 +40,14 @@ export type ConnectorOAuthProviderConfig = {
   extraAuthorizationParams: Record<string, string>;
   /** Where to learn which account was connected, once a token is in hand. */
   resolveAccountEmail: (accessToken: string) => Promise<string | null>;
+  /**
+   * How the app proves itself to the token and revocation endpoints: in the
+   * form body (Google), or as an HTTP Basic header (X, which refuses a secret
+   * in the body). Body when absent.
+   */
+  clientAuth?: "body" | "basic";
+  /** Whether the sign-in must carry a PKCE challenge: X requires one. */
+  pkce?: boolean;
 };
 
 const GOOGLE_PROVIDER: ConnectorOAuthProviderConfig = {
@@ -102,9 +110,37 @@ const GOOGLE_SEARCH_CONSOLE_PROVIDER: ConnectorOAuthProviderConfig = {
   },
 };
 
+/**
+ * X, for Anthony's own bookmarks (docs/plans/active/knowledge-news-and-
+ * digest-plan.md, phase 6): X gives bookmarks only to a personal sign-in.
+ * OAuth 2.0 with PKCE, the app proving itself with a Basic header; its pair
+ * is `X_CLIENT_ID` and `X_CLIENT_SECRET`, from the X developer app. The
+ * "account" is the signed-in handle.
+ */
+export const X_PROVIDER = "x";
+
+const X_OAUTH_PROVIDER: ConnectorOAuthProviderConfig = {
+  provider: X_PROVIDER,
+  authorizationEndpoint: "https://x.com/i/oauth2/authorize",
+  tokenEndpoint: "https://api.x.com/2/oauth2/token",
+  revocationEndpoint: "https://api.x.com/2/oauth2/revoke",
+  clientIdEnv: "X_CLIENT_ID",
+  clientSecretEnv: "X_CLIENT_SECRET",
+  extraAuthorizationParams: {},
+  clientAuth: "basic",
+  pkce: true,
+  resolveAccountEmail: async (accessToken: string) => {
+    const response = await fetch("https://api.x.com/2/users/me", { headers: { Authorization: `Bearer ${accessToken}` } });
+    if (!response.ok) return null;
+    const me = (await response.json()) as { data?: { username?: string } };
+    return me.data?.username ? `@${me.data.username}` : null;
+  },
+};
+
 const PROVIDERS: Record<string, ConnectorOAuthProviderConfig> = {
   google: GOOGLE_PROVIDER,
   [SEARCH_CONSOLE_PROVIDER]: GOOGLE_SEARCH_CONSOLE_PROVIDER,
+  [X_PROVIDER]: X_OAUTH_PROVIDER,
 };
 
 export function getConnectorOAuthProvider(provider: string): ConnectorOAuthProviderConfig | null {

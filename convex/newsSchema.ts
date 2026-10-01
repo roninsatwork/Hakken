@@ -38,9 +38,41 @@ export const newsTables = {
     /** When the collector last read it, and when it last found something new: Admin's list says both. */
     lastCheckedAt: v.optional(v.number()),
     lastItemAt: v.optional(v.number()),
+    /** An X account's own id, found from its handle once (phase 6). */
+    externalId: v.optional(v.string()),
+    /** The newest X post already read, so a run reads — and pays for — only what is newer. */
+    sinceId: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_on", ["isOn"]),
+
+  /**
+   * Anthony's X account, connected once on the News sources screen so the
+   * News Collector can read his bookmarks (phase 6, D11): X gives bookmarks
+   * only to a personal sign-in. One row. Its access is kept encrypted here,
+   * renewed as it runs out, and never shown on any screen.
+   */
+  xConnections: defineTable({
+    status: v.union(v.literal("CONNECTING"), v.literal("CONNECTED"), v.literal("BROKEN")),
+    /** A sign-in under way: its single-use state, when it began, who began it, and its PKCE verifier. */
+    pendingState: v.optional(v.string()),
+    pendingAt: v.optional(v.number()),
+    pendingBy: v.optional(v.id("users")),
+    verifierCiphertext: v.optional(v.string()),
+    /** The signed-in handle, "@…", and its X id. */
+    account: v.optional(v.string()),
+    xUserId: v.optional(v.string()),
+    accessTokenCiphertext: v.optional(v.string()),
+    refreshTokenCiphertext: v.optional(v.string()),
+    expiresAt: v.optional(v.number()),
+    /** The newest bookmark already read: a run imports only those after it. */
+    lastBookmarkId: v.optional(v.string()),
+    lastReadAt: v.optional(v.number()),
+    /** Why it stopped working, or why the last sign-in did not connect, in plain words. */
+    problem: v.optional(v.string()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  }).index("by_pending_state", ["pendingState"]),
 
   /**
    * A Google update, entered by hand (D6): in News, and as a marker on every

@@ -19,6 +19,7 @@ import {
 } from "./connectorOAuth";
 import { handleSearchConsoleAuthorize, handleSearchConsoleCallback } from "./searchConsoleConnect";
 import { handleOneClickUnsubscribe, handleResendWebhook } from "./emailHttp";
+import { handleXAuthorize, handleXCallback } from "./xConnect";
 
 const http = httpRouter();
 http.route({ path: "/api/uploads", method: "POST", handler: handleUpload });
@@ -157,6 +158,9 @@ auth.addHttpRoutes(http);
 // mail client's one-click unsubscribe, and Resend's bounces and complaints.
 http.route({ path: "/api/email/unsubscribe", method: "POST", handler: handleOneClickUnsubscribe });
 http.route({ path: "/api/webhooks/resend", method: "POST", handler: handleResendWebhook });
+// Connecting Anthony's X account for his bookmarks (the same plan, phase 6).
+http.route({ path: "/api/x/oauth/authorize", method: "GET", handler: handleXAuthorize });
+http.route({ path: "/api/x/oauth/callback", method: "GET", handler: handleXCallback });
 
 http.route({
   path: "/apify-webhook",

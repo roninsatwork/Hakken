@@ -731,7 +731,7 @@ row that says so must not be described as though it exists.
 | Alerts with the four-part contract | Not built. Platform alerts exist for system health; there is no KPI band model and no "what changed, why, what to do, what to expect" alert contract. |
 | Weekly note and monthly report | Not built. The email system and layout service exist; the content does not. |
 | Knowledge | Built on dev 2026-10-01 (phase 1 of docs/plans/active/knowledge-news-and-digest-plan.md): a Knowledge item on the main menu, after Search Console, listing plain-English articles every signed-in user can read, each on its own screen in the reader's language; Admin → Content → Knowledge writes them in English on their own pages, as drafts or published (`knowledgeArticles`), and the Translator agent writes every other language. The first, how traffic is worked out, ships through a migration. Every company's Ask Hakken reads the published articles (phase 2): each is a global page on the shared brain that the wiki staff never rewrite, tidy or relink. Never shown inside Sites. |
-| News | Page and admin built on dev 2026-10-01 (phase 3 of the same plan): a News item on the main menu, after Knowledge, every item newest first with what it means for the reader and "Who to follow" beside it; Admin → Content manages News, its sources, Google updates (entered by hand, in News at once) and the recommendations, all written in English and translated. Google updates are marked on every dated Sites chart (phase 10, built on dev 2026-10-01): a dashed line on the day each started, the Google "G" on the x-axis line, and its title, dates and description on hover. The News Collector agent reads websites and YouTube channels (phase 5, built on dev 2026-10-01). Not yet built: reading X accounts and Anthony's X bookmarks (phase 6). |
+| News | Page and admin built on dev 2026-10-01 (phase 3 of the same plan): a News item on the main menu, after Knowledge, every item newest first with what it means for the reader and "Who to follow" beside it; Admin → Content manages News, its sources, Google updates (entered by hand, in News at once) and the recommendations, all written in English and translated. Google updates are marked on every dated Sites chart (phase 10, built on dev 2026-10-01): a dashed line on the day each started, the Google "G" on the x-axis line, and its title, dates and description on hover. The News Collector agent reads websites, YouTube channels, watched X accounts and Anthony's X bookmarks (phases 5 and 6, built on dev 2026-10-01). |
 | Weekly News Digest and the outbox | Not built; planned 2026-09-30 (same plan). A Weekly Digest agent queues one "Weekly News Digest" email per subscribed user into an outbox; an Email Sender agent, with no AI, sends it through Resend. Every user is subscribed and can unsubscribe on their profile. No outbox, sent-email log, unsubscribe, email preference or bounce handling exists today. |
 | Agency role and cross-workspace view | Not built. Tenancy has three roles (§21); the agency manager role, client invitation, agency-wide view and white-label report surfaces are phase-one scope. |
 | Corroboration / PR lane | Not built. Phase 4. |
@@ -799,6 +799,12 @@ running against the Sonae deployment.
 ---
 
 ## Change Log
+
+* **2026-10-01 (phase 6)** — **Built: X in News.** §31's News row: the
+  News Collector reads watched X accounts with the X app's token, and the
+  new bookmarks of Anthony's own X account once he connects it on News
+  sources, each run's X reads on its cost. Every phase of the Knowledge,
+  News and digest plan is now built on dev; it waits for its settings.
 
 * **2026-10-01 (phase 9)** — **Built: the Weekly Digest agent.** §31's
   News row: on its schedule it writes the week's issue once — a short

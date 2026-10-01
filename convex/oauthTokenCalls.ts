@@ -20,24 +20,38 @@ type Credentials = { clientId: string; clientSecret: string };
 
 const FORM = { "Content-Type": "application/x-www-form-urlencoded" };
 
+/**
+ * The app's own proof, as its provider wants it: an HTTP Basic header (X), or
+ * the pair in the form body (Google). One place, for all three calls.
+ */
+function withClient(provider: ConnectorOAuthProviderConfig, credentials: Credentials, form: Record<string, string>) {
+  if (provider.clientAuth === "basic") {
+    return {
+      headers: { ...FORM, Authorization: `Basic ${btoa(`${credentials.clientId}:${credentials.clientSecret}`)}` },
+      body: new URLSearchParams({ ...form, client_id: credentials.clientId }).toString(),
+    };
+  }
+  return { headers: FORM, body: new URLSearchParams({ ...form, client_id: credentials.clientId, client_secret: credentials.clientSecret }).toString() };
+}
+
 /** Exchange an authorization code, server-side only, or say why it failed. */
 export async function exchangeAuthorizationCode(args: {
   provider: ConnectorOAuthProviderConfig;
   credentials: Credentials;
   code: string;
   redirectUri: string;
+  /** The PKCE verifier the sign-in's challenge was made from, for a provider that asks for one. */
+  codeVerifier?: string;
 }): Promise<{ ok: true; tokens: OAuthTokens } | { ok: false; message: string }> {
   try {
     const response = await fetch(args.provider.tokenEndpoint, {
       method: "POST",
-      headers: FORM,
-      body: new URLSearchParams({
+      ...withClient(args.provider, args.credentials, {
         grant_type: "authorization_code",
         code: args.code,
-        client_id: args.credentials.clientId,
-        client_secret: args.credentials.clientSecret,
         redirect_uri: args.redirectUri,
-      }).toString(),
+        ...(args.codeVerifier ? { code_verifier: args.codeVerifier } : {}),
+      }),
     });
     if (!response.ok) {
       const detail = (await response.text()).slice(0, 300);
@@ -62,13 +76,7 @@ export async function refreshAccessToken(args: {
   try {
     const response = await fetch(args.provider.tokenEndpoint, {
       method: "POST",
-      headers: FORM,
-      body: new URLSearchParams({
-        grant_type: "refresh_token",
-        refresh_token: args.refreshToken,
-        client_id: args.credentials.clientId,
-        client_secret: args.credentials.clientSecret,
-      }).toString(),
+      ...withClient(args.provider, args.credentials, { grant_type: "refresh_token", refresh_token: args.refreshToken }),
     });
     if (!response.ok) return { ok: false, refused: true, status: response.status };
     return { ok: true, tokens: (await response.json()) as OAuthTokens };
@@ -77,13 +85,18 @@ export async function refreshAccessToken(args: {
   }
 }
 
-/** Revoke a grant at the provider. Unreachable is not an error: the caller forgets the token either way. */
-export async function revokeOAuthToken(provider: ConnectorOAuthProviderConfig, token: string): Promise<void> {
+/**
+ * Revoke a grant at the provider. Unreachable is not an error: the caller
+ * forgets the token either way. A provider that wants the app's proof here
+ * too (X) is given it.
+ */
+export async function revokeOAuthToken(provider: ConnectorOAuthProviderConfig, token: string, credentials?: Credentials): Promise<void> {
   try {
     await fetch(provider.revocationEndpoint, {
       method: "POST",
-      headers: FORM,
-      body: new URLSearchParams({ token }).toString(),
+      ...(provider.clientAuth === "basic" && credentials
+        ? withClient(provider, credentials, { token, token_type_hint: "refresh_token" })
+        : { headers: FORM, body: new URLSearchParams({ token }).toString() }),
     });
   } catch {
     // The local deletion that follows still runs.

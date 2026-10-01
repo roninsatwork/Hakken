@@ -532,6 +532,8 @@ import type * as workflowRuntime from "../workflowRuntime.js";
 import type * as workflowRuntimeService from "../workflowRuntimeService.js";
 import type * as workflowScheduleService from "../workflowScheduleService.js";
 import type * as workflows from "../workflows.js";
+import type * as xConnect from "../xConnect.js";
+import type * as xRead from "../xRead.js";
 
 import type {
   ApiFromModules,
@@ -1064,6 +1066,8 @@ declare const fullApi: ApiFromModules<{
   workflowRuntimeService: typeof workflowRuntimeService;
   workflowScheduleService: typeof workflowScheduleService;
   workflows: typeof workflows;
+  xConnect: typeof xConnect;
+  xRead: typeof xRead;
 }>;
 
 /**

@@ -17,6 +17,9 @@ export const PROVIDER_GROUPS = {
   voice: { label: "Voice sessions", keys: [["VOICE_RELAY_URL"], ["VOICE_RELAY_SECRET"]] },
   telephony: { label: "Telephone agent", keys: [["TWILIO_ACCOUNT_SID"], ["TWILIO_AUTH_TOKEN"], ["TELEPHONY_NUMBER_OWNERS"], ["TELEPHONY_PUBLIC_URL"], ["TELEPHONY_STATUS_PUBLIC_URL"], ["TELEPHONY_STREAM_URL"]] },
   widget: { label: "Embedded widget", keys: [["WIDGET_EMBED_SIGNING_SECRET"]] },
+  // News from X (knowledge-news-and-digest plan, phase 6): the app token reads
+  // watched accounts; the app's OAuth pair connects Anthony's bookmarks.
+  x: { label: "X news", keys: [["X_BEARER_TOKEN"], ["X_CLIENT_ID"], ["X_CLIENT_SECRET"]] },
 };
 
 // Convex Auth reads JWT keys inside its package, so source scanning alone misses them.
@@ -39,6 +42,8 @@ export const OPTIONAL_KEYS = [
   // its own sender address — the Email Sender refuses the digest and says so
   // until it is set — and the secret Resend signs its bounce webhook with.
   "NEWS_DIGEST_FROM_EMAIL", "RESEND_WEBHOOK_SECRET",
+  // What X charges per post read, so each run's X cost shows on the run.
+  "X_READ_COST_USD",
 ];
 export const IGNORED_KEYS = new Set([
   "NODE_ENV", "VITEST", "IS_TEST", "NEXT_PUBLIC_APP_URL",
