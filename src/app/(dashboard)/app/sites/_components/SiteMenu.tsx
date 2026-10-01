@@ -31,7 +31,7 @@ export type MenuCounts = {
 };
 
 /**
- * The side menu (D4, D5): Overview and Calendar, then one group per kind of
+ * The side menu (D4, D5): Overview and Site audit, then one group per kind of
  * data collected, each page with its key number beside it so the headline is
  * visible without opening anything. A page not built yet is listed, greyed,
  * and says so, so the menu is one shape from the first day. "Jump to a page"

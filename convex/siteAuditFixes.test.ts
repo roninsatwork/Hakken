@@ -141,12 +141,6 @@ describe("moves between checks (1.3)", () => {
     expect(weekly.map((point) => [point.lastDay, point.firstCheck, point.rankedNew, point.rankedDown, point.rankedLost])).toEqual([
       ["2026-09-24", true, 5, 2, 1],
     ]);
-
-    const calendar = await asKorda.query(api.siteCharts.siteCalendar, { siteId: own.holdId, month: "2026-09" });
-    expect(calendar.filter((day) => day.keywords !== null).map((day) => [day.day, day.firstCheck, day.keywords, day.rankedNew])).toEqual([
-      ["2026-09-22", true, 100, 0],
-      ["2026-09-24", false, 104, 5],
-    ]);
   });
 });
 
@@ -169,8 +163,6 @@ describe("a first check after years of history (1.3)", () => {
     });
     const asRonins = await member(t, ronins);
 
-    const calendar = await asRonins.query(api.siteCharts.siteCalendar, { siteId: own.holdId, month: "2026-09" });
-    expect(calendar.find((day) => day.day === "2026-09-23")).toMatchObject({ firstCheck: true, keywords: 101, rankedNew: 0 });
     const [line] = await asRonins.query(api.siteCharts.siteSeries, { siteId: own.holdId, from: "2026-08-28", to: "2026-09-26", step: "day" });
     expect(line.points.find((point) => point.day === "2026-09-23")).toMatchObject({ firstCheck: true, rankedNew: 0 });
   });
@@ -599,17 +591,10 @@ describe("change since (4.5)", () => {
       // The last day before the dates: a crawl and nothing else.
       await row("2026-09-19", { crawledPages: 12 });
       await row("2026-09-22", { keywords: 110, backlinks: 42 });
-      await row("2026-09-29", { backlinks: 40 });
-      // The last day of the month: a crawl only.
-      await row("2026-09-30", { crawledPages: 14 });
-      await row("2026-10-01", { backlinks: 45, referringDomains: 20 });
     });
 
     const [line] = await asRonins.query(api.siteCharts.siteSeries, { siteId: own.holdId, from: "2026-09-20", to: "2026-09-26", step: "day" });
     expect(line.before).toMatchObject({ day: "2026-09-19", crawledPages: 12, keywords: 100, estimatedTraffic: 400, backlinks: 30 });
-
-    const october = await asRonins.query(api.siteCharts.siteCalendar, { siteId: own.holdId, month: "2026-10" });
-    expect(october.find((entry) => entry.day === "2026-10-01")).toMatchObject({ backlinksChange: 5, referringDomainsChange: null });
   });
 });
 

@@ -8453,7 +8453,6 @@
       },
       "pages": {
         "overview": "Panoramica",
-        "calendar": "Calendario",
         "aiMentions": "Menzioni",
         "aiShareOfVoice": "Quota di voce",
         "aiAnswers": "Risposte complete",
@@ -8784,34 +8783,6 @@
       "competitorsHintSome": "Questo sito accanto ai {shown} dei suoi {total} concorrenti con più traffico all'ultimo controllo, su una sola misura e una sola scala. Le linee tratteggiate sono gli altri.",
       "outsideHeld": "Il {share} delle visite del sito arriva da ricerche fuori da quelle conservate, mostrate come il resto.",
       "outsideGroup": "Fuori dalle ricerche conservate"
-    },
-    "calendar": {
-      "title": "Calendario",
-      "description": "Cosa è cambiato, e quando? Per ogni giorno: posizioni guadagnate e perse, risposte AI che hanno citato questo sito, siti che rimandano qui guadagnati e persi.",
-      "previous": "Mese precedente",
-      "next": "Mese successivo",
-      "weekdays": {
-        "mon": "Lun",
-        "tue": "Mar",
-        "wed": "Mer",
-        "thu": "Gio",
-        "fri": "Ven",
-        "sat": "Sab",
-        "sun": "Dom"
-      },
-      "up": "▲ {count} in salita",
-      "down": "▼ {count} in discesa",
-      "new": "{count} nuove",
-      "lost": "{count} perse",
-      "named": "Nominato dall'AI {named} su {asked}",
-      "linksGained": "+{count} siti che linkano",
-      "linksLost": "−{count} siti che linkano",
-      "empty": "Nessun controllo in questo mese.",
-      "firstCheck": "Primo controllo · {count} ricerche",
-      "namedIn": "Nominato dall'AI in {count, plural, =1 {# risposta} other {# risposte}}",
-      "firstList": "Primo elenco · {count} ricerche",
-      "left": "{count} uscite dall’elenco",
-      "amongHeld": "I movimenti sono contati tra le ricerche conservate; una ricerca uscita dall’elenco può ancora posizionarsi più in basso."
     },
     "aiMentions": {
       "title": "Menzioni",

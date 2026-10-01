@@ -89,6 +89,13 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // The site Calendar was removed on 2026-10-01: most sites are checked
+      // weekly or monthly, so a month of day cells was mostly empty.
+      {
+        source: "/app/sites/:siteId/calendar",
+        destination: "/app/sites/:siteId",
+        permanent: false,
+      },
       {
         source: "/admin/companies/:id/users",
         destination: "/admin/companies/:id/directory/users",

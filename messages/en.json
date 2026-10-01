@@ -8453,7 +8453,6 @@
       },
       "pages": {
         "overview": "Overview",
-        "calendar": "Calendar",
         "aiMentions": "Mentions",
         "aiShareOfVoice": "Share of voice",
         "aiAnswers": "Full answers",
@@ -8784,34 +8783,6 @@
       "competitorsHintSome": "This website beside the {shown} of its {total} competitors with the most traffic at their newest check, on one measure and one scale. The dashed lines are the others.",
       "outsideHeld": "{share} of the site's visits come from searches outside those held, shown as the rest.",
       "outsideGroup": "Outside the searches held"
-    },
-    "calendar": {
-      "title": "Calendar",
-      "description": "What changed, and when? Each day's rankings won and lost, AI answers that named this website, and linking websites gained and lost.",
-      "previous": "Previous month",
-      "next": "Next month",
-      "weekdays": {
-        "mon": "Mon",
-        "tue": "Tue",
-        "wed": "Wed",
-        "thu": "Thu",
-        "fri": "Fri",
-        "sat": "Sat",
-        "sun": "Sun"
-      },
-      "up": "▲ {count} up",
-      "down": "▼ {count} down",
-      "new": "{count} new",
-      "lost": "{count} lost",
-      "named": "AI named it {named} of {asked}",
-      "linksGained": "+{count} linking websites",
-      "linksLost": "−{count} linking websites",
-      "empty": "Nothing was checked this month.",
-      "firstCheck": "First check · {count} searches",
-      "namedIn": "AI named it in {count, plural, =1 {# answer} other {# answers}}",
-      "firstList": "First list · {count} searches",
-      "left": "{count} left the list",
-      "amongHeld": "Moves are counted among the searches held; a search that left the list may still rank below it."
     },
     "aiMentions": {
       "title": "Mentions",

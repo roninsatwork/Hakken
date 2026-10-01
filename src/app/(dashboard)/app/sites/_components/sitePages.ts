@@ -64,7 +64,6 @@ export const SITE_PAGE_GROUPS: SitePageGroup[] = ["site", "ai", "google", "keywo
 
 export const SITE_PAGES: SitePage[] = [
   { id: "overview", group: "site", segment: "", built: true },
-  { id: "calendar", group: "site", segment: "calendar", built: true },
   { id: "siteAudit", group: "site", segment: "audit", built: true },
 
   { id: "aiMentions", group: "ai", segment: "ai/mentions", built: true, count: "aiNamed", needs: "questions" },

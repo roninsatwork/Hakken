@@ -276,7 +276,5 @@ describe("the first whole list on the charts and the Calendar", () => {
       ["2026-09-18", false, false, 2],
       ["2026-09-20", false, true, 0],
     ]);
-    const calendar = await asKorda.query(api.siteCharts.siteCalendar, { siteId: own.holdId, month: "2026-09" });
-    expect(calendar.find((day) => day.day === "2026-09-20")).toMatchObject({ firstList: true, keywords: 2_400, rankedNew: 0 });
   });
 });

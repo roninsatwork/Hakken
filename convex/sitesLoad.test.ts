@@ -239,7 +239,6 @@ describe("a very large site", () => {
       ["share of voice", () => asMember.query(api.siteAi.shareOfVoice, { siteId: holdId })],
       ["side by side", () => asMember.query(api.siteCompetitors.listRivals, { siteId: holdId })],
       ["the Overview's extras", () => asMember.query(api.siteOverview.overviewExtras, { siteId: holdId })],
-      ["a month's calendar", () => asMember.query(api.siteCharts.siteCalendar, { siteId: holdId, month: "2026-09" })],
       // The Keywords screens redesigned on 2026-09-27: Position bands' moves
       // and the searches behind them, and New and lost keywords' checks.
       ["moves between bands", () => asMember.query(api.siteBands.bandMoves, { siteId: holdId })],

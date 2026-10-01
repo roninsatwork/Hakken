@@ -13,7 +13,6 @@ import SitePaidKeywordsPage from "./paid/keywords/page";
 import SiteLinkSourcesPage from "./backlinks/where/page";
 import SiteAnswersPage from "./ai/answers/page";
 import SiteLayout from "./layout";
-import SiteCalendarPage from "./calendar/page";
 import SiteMentionsPage from "./ai/mentions/page";
 import SiteSideBySidePage from "./competitors/page";
 import { OverviewPanels } from "./OverviewPanels";
@@ -403,17 +402,6 @@ describe("nothing known yet, and a competitor's AI (4.8, 4.9, 4.11)", () => {
   beforeEach(() => {
     vi.mocked(useQuery).mockReset();
     window.localStorage.clear();
-  });
-
-  const calendarDay = { day: "2026-09-24", rankedUp: 0, rankedDown: 0, rankedNew: 0, rankedLost: 0, firstCheck: false, keywords: null, referringDomainsChange: null, backlinksChange: null };
-
-  it("a competitor's calendar says how many answers named it, never nothing", () => {
-    openAt("/app/sites/site_rival/calendar", "from=2026-09-01&to=2026-09-26", {
-      "siteCharts:siteCalendar": [{ ...calendarDay, aiNamed: 2, aiAsked: 0 }],
-    });
-    render(<SiteCalendarPage />);
-
-    expect(screen.getByText("sites.calendar.namedIn 2")).toBeTruthy();
   });
 
   it("a competitor's Overview says how many answers named it, never \"1 of 0\", and no pages before an answer", () => {

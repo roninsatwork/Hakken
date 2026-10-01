@@ -153,7 +153,6 @@ describe("one company never sees another's websites", () => {
       () => asRonins.query(api.siteKeywords.listPages, { siteId, page: 1, rows: 25 }),
       () => asRonins.query(api.siteKeywords.listSections, { siteId }),
       () => asRonins.query(api.siteCharts.siteSeries, { siteId, ...range, step: "day", withRivals: true }),
-      () => asRonins.query(api.siteCharts.siteCalendar, { siteId, month: "2026-09" }),
       () => asRonins.query(api.siteCharts.siteAndRivals, { siteId }),
       () => asRonins.query(api.siteAi.listMentions, { siteId }),
       () => asRonins.query(api.siteAi.shareOfVoice, { siteId }),

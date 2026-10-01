@@ -187,19 +187,6 @@ export async function latestListAi(
     .first();
 }
 
-/** Everything the engines said about the site on one day, added up. */
-export function aiTotals(row: { ai?: EngineDay[] } | null): { named: number; asked: number; recommended: number } {
-  let named = 0;
-  let asked = 0;
-  let recommended = 0;
-  for (const engine of row?.ai ?? []) {
-    named += engine.named;
-    asked += engine.asked;
-    recommended += engine.recommended;
-  }
-  return { named, asked, recommended };
-}
-
 export const STEPS = ["day", "week", "month"] as const;
 export type Step = (typeof STEPS)[number];
 export const stepValidator = v.union(v.literal("day"), v.literal("week"), v.literal("month"));

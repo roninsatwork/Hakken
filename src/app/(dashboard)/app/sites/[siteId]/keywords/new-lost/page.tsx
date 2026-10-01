@@ -68,7 +68,7 @@ const MOVE_SORTS = { keyword: "asc", fromTo: "asc", change: "desc", volume: "des
  * lost at each check, on one chart; the newest check's new, up, down and lost
  * searches, one list at a time; then every check in the dates with its counts.
  *
- * The counts are the same comparison Wins and losses lists and the Calendar
+ * The counts are the same comparison Wins and losses lists
  * counts, so a number and the searches it opens agree (docs/plans/active/
  * sites-audit-fixes-plan.md, 1.3). A check with nothing before it — the
  * site's first, or the first day its whole list was held — is marked as such
