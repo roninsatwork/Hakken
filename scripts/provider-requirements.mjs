@@ -40,6 +40,8 @@ export const IGNORED_KEYS = new Set([
   "LOCAL_DEMO_SEED_ENABLED", "LOCAL_DEMO_SEED_ENVIRONMENT", "LOCAL_DEMO_SEED_SECRET",
   // Allows clearing collected DataForSEO data (convex/seoTestDataReset.ts); dev only, never required.
   "SEO_TEST_DATA_RESET",
+  // Lets the website icon tests reach their stand-in for Google (convex/websiteIcons.ts); tests only.
+  "WEBSITE_ICONS_IN_TESTS",
 ]);
 export const CLASSIFIED_KEYS = new Set([
   ...BACKEND_REQUIRED_KEYS, ...PLATFORM_PROVIDED_KEYS, ...OPTIONAL_KEYS, ...IGNORED_KEYS,

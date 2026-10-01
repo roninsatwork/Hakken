@@ -375,6 +375,7 @@ import type * as utils_analyticsShapes from "../utils/analyticsShapes.js";
 import type * as utils_appError from "../utils/appError.js";
 import type * as utils_authEventTypes from "../utils/authEventTypes.js";
 import type * as utils_authIdentityPurge from "../utils/authIdentityPurge.js";
+import type * as utils_base64 from "../utils/base64.js";
 import type * as utils_boundedRequestBody from "../utils/boundedRequestBody.js";
 import type * as utils_chatAdminShapes from "../utils/chatAdminShapes.js";
 import type * as utils_companyEvalShapes from "../utils/companyEvalShapes.js";
@@ -456,6 +457,7 @@ import type * as websiteAttachmentMigration from "../websiteAttachmentMigration.
 import type * as websiteAttachments from "../websiteAttachments.js";
 import type * as websiteCanonical from "../websiteCanonical.js";
 import type * as websiteClientView from "../websiteClientView.js";
+import type * as websiteIcons from "../websiteIcons.js";
 import type * as websiteIdentity from "../websiteIdentity.js";
 import type * as websiteMoves from "../websiteMoves.js";
 import type * as websitePurge from "../websitePurge.js";
@@ -875,6 +877,7 @@ declare const fullApi: ApiFromModules<{
   "utils/appError": typeof utils_appError;
   "utils/authEventTypes": typeof utils_authEventTypes;
   "utils/authIdentityPurge": typeof utils_authIdentityPurge;
+  "utils/base64": typeof utils_base64;
   "utils/boundedRequestBody": typeof utils_boundedRequestBody;
   "utils/chatAdminShapes": typeof utils_chatAdminShapes;
   "utils/companyEvalShapes": typeof utils_companyEvalShapes;
@@ -956,6 +959,7 @@ declare const fullApi: ApiFromModules<{
   websiteAttachments: typeof websiteAttachments;
   websiteCanonical: typeof websiteCanonical;
   websiteClientView: typeof websiteClientView;
+  websiteIcons: typeof websiteIcons;
   websiteIdentity: typeof websiteIdentity;
   websiteMoves: typeof websiteMoves;
   websitePurge: typeof websitePurge;

@@ -261,14 +261,14 @@ export default function CompanyWebsitesPage() {
               if (line.kind === "competitor") {
                 return (
                   <span className={cn("flex min-w-0 items-center gap-2.5", line.row.ofSiteId && "pl-11")}>
-                    <SiteMark host={line.row.displayHost} owned={false} small />
+                    <SiteMark host={line.row.displayHost} iconUrl={line.row.iconUrl} owned={false} small />
                     <span className="truncate text-[13px] text-foreground/90">{line.row.displayHost}</span>
                   </span>
                 );
               }
               return (
                 <span className="flex min-w-0 items-center gap-3">
-                  <SiteMark host={line.row.displayHost} owned />
+                  <SiteMark host={line.row.displayHost} iconUrl={line.row.iconUrl} owned />
                   <span className="flex min-w-0 flex-col gap-0.5">
                     <span className="truncate text-[13px] font-medium text-foreground">{line.row.displayHost}</span>
                     <span className="text-[12px] text-secondary">{placeOf(line.row)}</span>

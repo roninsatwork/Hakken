@@ -26,6 +26,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { purgeHoldDataLimits, readCompanyDataLimits, resolveSiteDataLimits } from "./companyDataLimits";
 import { purgeHoldFanOutLimits } from "./fanOutLimits";
 import { purgeHoldProfile } from "./holdProfiles";
+import { forgetWebsiteIcon, iconAnswered, requestWebsiteIcon, websiteIconUrl } from "./websiteIcons";
 
 /**
  * A company's websites, and the competitors tracked against each.
@@ -165,6 +166,8 @@ export async function findOrCreateWebsite(
     displayHost: identity.displayHost,
     firstSeenAt: now,
   });
+  // Its icon, for the Sites lists — looked for once, here, for everyone.
+  await requestWebsiteIcon(ctx, websiteId);
   return { websiteId, created: true };
 }
 
@@ -337,6 +340,7 @@ async function companyWebsiteRow(
     ...companyWebsite,
     host: website?.host ?? "",
     displayHost: website?.displayHost ?? "",
+    iconUrl: await websiteIconUrl(ctx, website?._id),
     againstHost: against?.displayHost ?? null,
     ...counts,
     movesWaiting,
@@ -416,16 +420,18 @@ export const listWebsiteChoices = superAdminQuery({
     /** For a competitor watched against one of the company's own sites: that site. */
     againstCompanyWebsiteId: v.union(v.id("companyWebsites"), v.null()),
     againstHost: v.union(v.string(), v.null()),
+    /** The website's icon (`websiteIcons.ts`), or null to draw its letter. */
+    iconUrl: v.union(v.string(), v.null()),
   })),
   handler: async (ctx, args) => {
     const holds = await ctx.db
       .query("companyWebsites")
       .withIndex("by_company", (q) => q.eq("companyId", args.companyId))
       .take(MAX_LISTED_HOLDS);
-    const rows = await Promise.all(holds.map(async (hold) => ({
-      ...hold,
-      displayHost: (await ctx.db.get(hold.websiteId))?.displayHost ?? "",
-    })));
+    const rows = await Promise.all(holds.map(async (hold) => {
+      const website = await ctx.db.get(hold.websiteId);
+      return { ...hold, displayHost: website?.displayHost ?? "", iconUrl: await websiteIconUrl(ctx, hold.websiteId) };
+    }));
     const ownedByWebsite = new Map(rows.filter((row) => !isTrackedHold(row)).map((row) => [row.websiteId, row]));
     return inSectionOrder(rows).map((row) => {
       const against = isTrackedHold(row) && row.againstWebsiteId ? ownedByWebsite.get(row.againstWebsiteId) ?? null : null;
@@ -435,6 +441,7 @@ export const listWebsiteChoices = superAdminQuery({
         relationship: isTrackedHold(row) ? ("TRACKED" as const) : ("OWNED" as const),
         againstCompanyWebsiteId: against?._id ?? null,
         againstHost: against?.displayHost ?? null,
+        iconUrl: row.iconUrl,
       };
     });
   },
@@ -771,6 +778,7 @@ export const deleteWebsite = superAdminMutation({
     }));
 
     await ctx.db.delete(args.id);
+    await forgetWebsiteIcon(ctx, args.id);
     // The host's own lists go with it, as well as everyone's hold on it.
     await ctx.scheduler.runAfter(0, internal.websitePurge.purgeWebsiteListsInternal, {
       websiteId: args.id,
@@ -801,6 +809,31 @@ export const deleteWebsite = superAdminMutation({
 // Sweeps
 // ---------------------------------------------------------------------------
 
+/** Gap between the websites one icon backfill batch asks about, so the requests are spread out. */
+const ICON_BACKFILL_SPACING_MS = 200;
+
+/**
+ * Asks for the icon of every website never asked about: those added before
+ * icons were looked for (`websiteIcons.ts`, migration
+ * `2026-10-01-website-icons`). Here because only this file reads the whole
+ * table (`websiteTenancyGuard.test.ts`). Safe to run again — a website
+ * already answered is skipped here, and again by the request itself.
+ */
+export async function requestMissingIcons(
+  ctx: MutationCtx,
+  cursor: string | null,
+  batchSize: number,
+): Promise<{ cursor: string | null; isDone: boolean; processed: number; updated: number }> {
+  const page = await ctx.db.query("websites").paginate({ cursor, numItems: batchSize });
+  const unasked: Doc<"websites">[] = [];
+  for (const website of page.page) {
+    if (!(await iconAnswered(ctx, website._id))) unasked.push(website);
+  }
+  for (const [index, website] of unasked.entries()) {
+    await requestWebsiteIcon(ctx, website._id, index * ICON_BACKFILL_SPACING_MS);
+  }
+  return { cursor: page.isDone ? null : page.continueCursor, isDone: page.isDone, processed: page.page.length, updated: unasked.length };
+}
 
 /**
  * Set where this company watches this website from.

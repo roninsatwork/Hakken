@@ -53,6 +53,7 @@ export function WebsitesMenu({ companyId }: { companyId: Id<"companies"> }) {
     host: choice.host,
     relationship: choice.relationship,
     ofSiteId: choice.againstCompanyWebsiteId,
+    iconUrl: choice.iconUrl,
   }));
 
   return (

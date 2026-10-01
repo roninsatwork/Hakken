@@ -185,14 +185,14 @@ export default function SitesPage() {
                 if (line.kind === "competitor") {
                   return (
                     <span className="flex min-w-0 items-center gap-2.5 pl-11">
-                      <SiteMark host={line.row.host} owned={false} small />
+                      <SiteMark host={line.row.host} iconUrl={line.row.iconUrl} owned={false} small />
                       <span className="truncate text-foreground/90">{line.row.host}</span>
                     </span>
                   );
                 }
                 return (
                   <span className="flex min-w-0 items-center gap-3">
-                    <SiteMark host={line.row.host} owned />
+                    <SiteMark host={line.row.host} iconUrl={line.row.iconUrl} owned />
                     <span className="flex min-w-0 flex-col gap-0.5">
                       <span className="truncate font-medium text-foreground">{line.row.host}</span>
                       <span className="text-[12px] text-secondary">{aboutSite(line.row)}</span>

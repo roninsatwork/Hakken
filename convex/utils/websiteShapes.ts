@@ -30,6 +30,8 @@ export const companyWebsiteRow = v.object({
   _id: v.id("companyWebsites"),
   host: v.string(),
   displayHost: v.string(),
+  /** The website's icon (`websiteIcons.ts`), or null to draw its letter. */
+  iconUrl: v.union(v.string(), v.null()),
   /** For a paired tracked site, the company's own site it is watched against. */
   againstHost: v.union(v.string(), v.null()),
   competitorCount: v.number(),

@@ -961,4 +961,21 @@ export const siteTables = {
    * good intel and will help me a lot if I can view this kind of report".
    */
   seoRunReports: defineTable(runReportFields).index("by_cycle", ["cycleId"]),
+
+  /**
+   * Each website's icon (`websiteIcons.ts`), drawn in place of its letter in
+   * the Sites lists: one row per website once it has been asked about. True of
+   * the website rather than of who watches it, so it names no company. Kept as
+   * image data rather than a stored file: it is fetched by the server from one
+   * fixed source, never uploaded by a person, and a 64px icon is a few
+   * kilobytes — small enough to send with the list that draws it. Raster
+   * images only (no SVG), so nothing kept here can carry script.
+   */
+  websiteIcons: defineTable({
+    websiteId: v.id("websites"),
+    /** The icon as a `data:` address; absent when the website has none. */
+    dataUrl: v.optional(v.string()),
+    /** When the answer came back — an icon, or none. */
+    checkedAt: v.number(),
+  }).index("by_website", ["websiteId"]),
 };

@@ -13,7 +13,14 @@ import { cn } from "@/src/ui/lib/utils";
 import { SiteMark } from "./SiteMark";
 import { groupHolds } from "./siteGroups";
 
-export type PickerHold = { siteId: string; host: string; relationship: "OWNED" | "TRACKED"; ofSiteId: string | null };
+export type PickerHold = {
+  siteId: string;
+  host: string;
+  relationship: "OWNED" | "TRACKED";
+  ofSiteId: string | null;
+  /** The website's icon, or null to draw its letter (`SiteMark`). */
+  iconUrl?: string | null;
+};
 
 /** Competitors listed under a website before "Show N more". */
 const SHOWN = 5;
@@ -150,7 +157,7 @@ export function WebsitePicker({
           isCurrent && "bg-foreground/[0.07]",
         )}
       >
-        <SiteMark host={rival.host} owned={false} small />
+        <SiteMark host={rival.host} iconUrl={rival.iconUrl} owned={false} small />
         <span className="min-w-0 flex-1 truncate">{rival.host}</span>
         {isCurrent ? <Check className="h-4 w-4 shrink-0" aria-hidden="true" /> : null}
       </Link>
@@ -220,7 +227,7 @@ export function WebsitePicker({
                     aria-current={isCurrent ? "page" : undefined}
                     className="flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-[10px] px-3 transition-colors hover:bg-foreground/5"
                   >
-                    <SiteMark host={owner.host} owned />
+                    <SiteMark host={owner.host} iconUrl={owner.iconUrl} owned />
                     <span className="flex min-w-0 flex-1 flex-col">
                       <span className="truncate text-[14px] font-medium text-foreground">{owner.host}</span>
                       <span className="text-[12px] text-secondary">{t("competitors", { count: competitors.length })}</span>

@@ -27,6 +27,7 @@ import { backfillAnswerIndex } from "./siteAnswers";
 import { dropCheckOnlyKeywordRows } from "./privateListsMigration";
 import { addTrafficArticle, syncPublishedArticles } from "./knowledgeArticleSeeds";
 import { recountEveryList } from "./siteListAi";
+import { requestMissingIcons } from "./websites";
 import { untickAutomaticQueries } from "./promptFanOut";
 import { followPlatformWhereStartingNumber } from "./companyDataLimits";
 import { detachCompanySchedules } from "./scheduler";
@@ -204,6 +205,8 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
   "2026-10-01-knowledge-traffic-article": (ctx) => addTrafficArticle(ctx),
   /** Every published Knowledge article onto the shared brain, for Ask Hakken (`knowledgeArticleWiki.ts`). */
   "2026-10-01-knowledge-articles-to-wiki": syncPublishedArticles,
+  /** Each website added before icons were looked for asks for its icon (`websiteIcons.ts`, `websites.ts`). */
+  "2026-10-01-website-icons": requestMissingIcons,
 
 
   /**

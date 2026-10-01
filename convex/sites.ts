@@ -10,6 +10,7 @@ import { isTrackedHold } from "./utils/websitePairing";
 import { CADENCES, cadenceOf } from "./utils/trackingVerdicts";
 import { MAX_DISCOVERED, pickSuggestions } from "./siteCompetitors";
 import { loadSite, MAX_LIST } from "./websiteSiteRows";
+import { websiteIconUrl } from "./websiteIcons";
 
 /**
  * The client's Sites list, and the header and side menu every page of one
@@ -83,11 +84,18 @@ const holdSummaryValidator = v.object({
 
 const numberOrNull = v.union(v.number(), v.null());
 
+/** A hold as the lists draw it: its summary, and its icon (`websiteIcons.ts`) or null to draw its letter. */
+const pickerHoldValidator = v.object({ ...holdSummaryValidator.fields, iconUrl: v.union(v.string(), v.null()) });
+
+async function withIcon(ctx: Pick<QueryCtx, "db">, entry: { website: Doc<"websites">; summary: HoldSummary }) {
+  return { ...entry.summary, iconUrl: await websiteIconUrl(ctx, entry.website._id) };
+}
+
 /** Every website the company holds, owned first, with its headline figures. */
 export const listMySites = tenantQuery({
   args: {},
   returns: v.array(v.object({
-    ...holdSummaryValidator.fields,
+    ...pickerHoldValidator.fields,
     /** A first check has been filed; until then every figure is null, never 0. */
     checked: v.boolean(),
     aiNamed: numberOrNull,
@@ -131,17 +139,19 @@ export const listMySites = tenantQuery({
       // competitor, none for a competitor watched against nothing.
       const holdId = site ? listHold(site) : null;
       const isAsker = holdId === hold._id;
-      const [latest, collectedAt, moves, ownAi, watchedAi] = await Promise.all([
+      const [latest, collectedAt, moves, ownAi, watchedAi, iconUrl] = await Promise.all([
         latestFigures(ctx, website._id, place),
         lastCollectedAt(ctx, companyId, website._id),
         openMoves(ctx, hold),
         isAsker ? latestListAi(ctx, holdId, place, website._id) : Promise.resolve(null),
         !isAsker && holdId ? summaryFor(holdId, place).then((list) => enginesNamingIn(list, website._id)) : Promise.resolve(null),
+        websiteIconUrl(ctx, website._id),
       ]);
       const ai = isAsker ? enginesNamed(ownAi?.ai) : watchedAi;
       const bands = latestBands(latest);
       return {
         ...summary,
+        iconUrl,
         checked: latest.lastDay !== null,
         aiNamed: ai?.named ?? null,
         aiAsked: ai?.asked ?? null,
@@ -182,7 +192,7 @@ export const getMySite = tenantQuery({
     latestDay: v.union(v.string(), v.null()),
     lastCheckedAt: numberOrNull,
     nextRunAt: numberOrNull,
-    holds: v.array(holdSummaryValidator),
+    holds: v.array(pickerHoldValidator),
     rivals: v.array(holdSummaryValidator),
     /** Days with a ranking check, newest first: what "compare with" can offer. */
     checkDays: v.array(v.string()),
@@ -268,7 +278,7 @@ export const getMySite = tenantQuery({
       latestDay: latest.lastDay,
       lastCheckedAt: collectedAt,
       nextRunAt: site.schedule.nextRunAt,
-      holds: holds.map((entry) => entry.summary),
+      holds: await Promise.all(holds.map((entry) => withIcon(ctx, entry))),
       rivals: rivals.map((entry) => entry.summary),
       checkDays: days.filter((row) => row.keywords !== undefined).map((row) => row.day),
       counts: {
