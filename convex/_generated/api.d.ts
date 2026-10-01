@@ -493,6 +493,8 @@ import type * as websiteSiteRows from "../websiteSiteRows.js";
 import type * as websiteTrackingStats from "../websiteTrackingStats.js";
 import type * as websiteTrackingStatsMigration from "../websiteTrackingStatsMigration.js";
 import type * as websites from "../websites.js";
+import type * as weeklyDigest from "../weeklyDigest.js";
+import type * as weeklyDigestRun from "../weeklyDigestRun.js";
 import type * as widgets from "../widgets.js";
 import type * as wikiActions from "../wikiActions.js";
 import type * as wikiAsk from "../wikiAsk.js";
@@ -1023,6 +1025,8 @@ declare const fullApi: ApiFromModules<{
   websiteTrackingStats: typeof websiteTrackingStats;
   websiteTrackingStatsMigration: typeof websiteTrackingStatsMigration;
   websites: typeof websites;
+  weeklyDigest: typeof weeklyDigest;
+  weeklyDigestRun: typeof weeklyDigestRun;
   widgets: typeof widgets;
   wikiActions: typeof wikiActions;
   wikiAsk: typeof wikiAsk;

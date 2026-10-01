@@ -3173,7 +3173,9 @@
                 "test": "Prova",
                 "live": "Operativa",
                 "testHint": "Prova: ogni esecuzione aggiunge alla coda tutto, per ogni azienda, qualunque sia la sua cadenza.",
-                "liveHint": "Operativa: ogni esecuzione aggiunge solo ciò che è dovuto secondo la cadenza di ogni azienda."
+                "liveHint": "Operativa: ogni esecuzione aggiunge solo ciò che è dovuto secondo la cadenza di ogni azienda.",
+                "digestTestHint": "Test: ogni esecuzione scrive un numero e lo invia solo ai super admin, così lo vedi prima di qualsiasi cliente.",
+                "digestLiveHint": "Live: una volta a settimana, il numero va a ogni utente che ha attivo il Digest settimanale delle notizie."
               }
             },
             "status": {

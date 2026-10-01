@@ -800,6 +800,13 @@ running against the Sonae deployment.
 
 ## Change Log
 
+* **2026-10-01 (phase 9)** — **Built: the Weekly Digest agent.** §31's
+  News row: on its schedule it writes the week's issue once — a short
+  opening over the week's News, Google updates and new Knowledge — has it
+  translated, queues it for every user with the digest on in their
+  language, and starts the Email Sender. In Test, its starting mode, the
+  issue goes to super admins only. Only reading X (phase 6) is left.
+
 * **2026-10-01 (phase 8)** — **Built: subscribing, language, unsubscribing
   and bounces.** §31's News row: the Weekly News Digest is on for every
   user until they turn it off on their profile or from the email; it is

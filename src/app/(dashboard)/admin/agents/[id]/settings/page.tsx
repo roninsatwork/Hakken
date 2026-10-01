@@ -171,7 +171,7 @@ export default function AgentOverviewPage() {
         maxCostUsd: parseLimitInput(formData.maxCostUsd) ?? 0,
         // A built-in role is never sent: the server refuses to move it.
         ...(hasFixedRole ? {} : { role: formData.role }),
-        ...(formData.role === "DATAFORSEO_PLANNER" ? { plannerMode: formData.plannerMode } : {}),
+        ...(formData.role === "DATAFORSEO_PLANNER" || formData.role === "WEEKLY_DIGEST" ? { plannerMode: formData.plannerMode } : {}),
         storageId: formData.storageId
       }),
       { suppressErrorToast: true, fallbackMessage: t("errors.saveFailed") },

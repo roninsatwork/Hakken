@@ -259,12 +259,16 @@ export function AgentFormSections({
           </Select>
         </SettingRow>
         {/* Anthony, 2026-09-23: while testing, the Planner adds everything;
-            live, it respects each company's cadence. Only the Planner has it. */}
-        {values.role === "DATAFORSEO_PLANNER" && !builtInRoleName ? (
+            live, it respects each company's cadence. The Weekly Digest has a
+            mode too (knowledge-news-and-digest plan): in Test its issue goes
+            only to super admins. */}
+        {(values.role === "DATAFORSEO_PLANNER" || values.role === "WEEKLY_DIGEST") && !builtInRoleName ? (
           <div className="border-t border-border-dim/40">
             <SettingRow
               label={t("sections.role.mode.label")}
-              description={values.plannerMode === "LIVE" ? t("sections.role.mode.liveHint") : t("sections.role.mode.testHint")}
+              description={values.role === "WEEKLY_DIGEST"
+                ? (values.plannerMode === "LIVE" ? t("sections.role.mode.digestLiveHint") : t("sections.role.mode.digestTestHint"))
+                : (values.plannerMode === "LIVE" ? t("sections.role.mode.liveHint") : t("sections.role.mode.testHint"))}
             >
               <SegmentedChoice
                 label={t("sections.role.mode.label")}

@@ -5,7 +5,8 @@ import type { Doc } from "./_generated/dataModel";
 import { appendRunStep } from "./agentRunStepWriter";
 import { calculateModelCostUsd } from "./aiCostService";
 import { appErrorMessage } from "./utils/appError";
-import { ASSIGNABLE_AGENT_ROLES } from "./utils/agentRoles";
+import { startAgentRun } from "./agentRunStartService";
+import { ASSIGNABLE_AGENT_ROLES, type AssignableAgentRole } from "./utils/agentRoles";
 
 /**
  * The life of a run that does its role's fixed job rather than thinking with
@@ -180,6 +181,44 @@ export const takeRoleTurn = internalMutation({
     };
   },
 });
+
+/**
+ * Start a role's agent on a run of its own — one agent starting another, as
+ * the Weekly Digest starts the Email Sender — unless one of its runs is
+ * already going, which does the work too. Through the one dispatcher
+ * (`agentRunStartService.ts`), so the run is the role's job and shows in its
+ * agent's Runs and Observability like any other.
+ */
+export async function startRoleRun(
+  ctx: MutationCtx,
+  role: AssignableAgentRole,
+  args: { objective: string; title: string },
+): Promise<"STARTED" | "ALREADY_GOING" | "NO_AGENT" | "AGENT_OFF"> {
+  const agent = await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", role)).first();
+  if (!agent) return "NO_AGENT";
+  if (agent.isActive === false) return "AGENT_OFF";
+  const now = Date.now();
+  const recent = await ctx.db.query("agentRuns").withIndex("by_agent_started", (q) => q.eq("agentId", agent._id)).order("desc").take(RECENT_RUNS);
+  if (recent.some((run) => isGoing(run, now, ROLE_RUN_LIVE_MS))) return "ALREADY_GOING";
+  const runId = await ctx.db.insert("agentRuns", {
+    agentId: agent._id,
+    triggerType: "EVENT",
+    objective: args.objective,
+    title: args.title,
+    status: "QUEUED",
+    startedAt: now,
+    updatedAt: now,
+  });
+  const workflowExecutionId = await ctx.db.insert("workflowExecutions", {
+    agentId: agent._id,
+    agentRunId: runId,
+    triggerType: "EVENT",
+    status: "RUNNING",
+    startedAt: now,
+  });
+  await startAgentRun(ctx, { agent, runId, workflowExecutionId, objective: args.objective, triggerType: "MANUAL" });
+  return "STARTED";
+}
 
 // ── What a model call cost ─────────────────────────────────────────────────
 

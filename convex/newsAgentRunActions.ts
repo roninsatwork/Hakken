@@ -6,6 +6,7 @@ import { internalAction, type ActionCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { sendOutbox } from "./emailSenderRun";
 import { collectNews } from "./newsCollectorRun";
+import { writeWeeklyDigest } from "./weeklyDigestRun";
 import { failureSummary } from "./roleRuns";
 import { newsRoleValidator, type NewsRole } from "./utils/agentRoles";
 
@@ -25,10 +26,9 @@ import { newsRoleValidator, type NewsRole } from "./utils/agentRoles";
 
 type Job = (ctx: ActionCtx, runId: Id<"agentRuns">) => Promise<string>;
 
-/** Each role's job. The Weekly Digest's arrives in phase 9. */
 const JOBS: Record<NewsRole, Job> = {
   NEWS_COLLECTOR: collectNews,
-  WEEKLY_DIGEST: async () => "Writing the weekly issue isn't built yet, so nothing was queued.",
+  WEEKLY_DIGEST: writeWeeklyDigest,
   EMAIL_SENDER: sendOutbox,
 };
 

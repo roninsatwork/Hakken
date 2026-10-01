@@ -1,15 +1,14 @@
 # Knowledge, News and the weekly digest — three agents and one outbox
 
-**Started 2026-09-30. Status: building — phases 1–5, 7, 8 and 10 built on
-dev 2026-10-01 ("can we build this out please"), with the revision below.** The decisions below
+**Started 2026-09-30. Status: building — every phase but 6 (X) built on dev
+2026-10-01 ("can we build this out please"), with the revision below.** The decisions below
 are Anthony's, in his words where he gave them; his answers to the first
 thirteen questions are under "Answered". Change a decision here, with a date,
 before building anything that disagrees with it. The questions still open are
 at the end, each with the phase that needs it.
 
-Overall: 77% (13.5 of 17.5 days, plus a day for the revision below). Phases
-1–5, 7, 8 and 10 built; phase 9, the Weekly Digest agent, and phase 6, X,
-not started.
+Overall: 89% (15.5 of 17.5 days, plus a day for the revision below). Every
+phase built but phase 6, X, which waits for Anthony's X access.
 
 ## Revised — Anthony, 2026-10-01
 
@@ -145,6 +144,20 @@ it") before the rebuild. These win over anything below that disagrees.
   `RESEND_WEBHOOK_SECRET`, refused when older than five minutes) records
   bounces and complaints (`emailSuppressions`), and nothing is sent to those
   addresses again. Tests: `convex/readerPreferences.test.ts`.
+- **Phase 9, the Weekly Digest agent (2026-10-01).** When its schedule fires
+  (`convex/weeklyDigestRun.ts`) it reads the week's News — Google updates
+  first, then the newest, 20 at most — and the Knowledge articles published
+  in it, writes a short opening in English with its own instructions and
+  model (the cost on its run), saves the week's issue (`weeklyDigestIssues`,
+  ISO week), has the Translator write every other language at once, then
+  queues one outbox row per reader (`weeklyDigest.queueDigestPage`, 200 a
+  page) — never one who turned it off or has no address — and starts the
+  Email Sender (`roleRuns.startRoleRun`). It sends nothing itself. Its mode
+  is on the Role card, beside the Planner's (`plannerMode`): Test, until set,
+  writes an issue every run and sends it to super admins only; Live sends to
+  everyone with it on, once a week — a second run in the same week writes
+  and queues nothing (the idempotency key is the week's). A week with no
+  News writes nothing. Tests: `convex/weeklyDigest.test.ts`.
 - **Phase 10, Google updates on the Sites charts (2026-10-01).** Built once
   into `SiteLineChart`, `SiteStackedAreaChart`, upright `SiteBarChart` and
   `SiteGainLossChart`: a chart whose rows are dated (`datedRow`,

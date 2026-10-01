@@ -3457,7 +3457,7 @@ export default defineSchema({
     // never by name. An agent with a role is switchable via isActive above,
     // and never deletable.
     systemKey: v.optional(v.string()),
-    plannerMode: v.optional(v.union(v.literal("TEST"), v.literal("LIVE"))), // DataForSEO Planner: TEST queues everything, LIVE only what is due; absent reads as TEST.
+    plannerMode: v.optional(v.union(v.literal("TEST"), v.literal("LIVE"))), // DataForSEO Planner: TEST queues everything, LIVE only what is due. Weekly Digest: TEST sends to super admins only. Absent reads as TEST.
     // Inline Sandbox Configuration
     companyId: v.optional(v.id("companies")),
     isGlobal: v.optional(v.boolean()),
