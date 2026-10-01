@@ -135,6 +135,7 @@ export function AdminNavTree({
       <SubNavItem label={t('newsSources')} href="/admin/content/news-sources" isActive={pathname.startsWith('/admin/content/news-sources')} onClick={() => setActiveItem('Content')} />
       <SubNavItem label={t('googleUpdates')} href="/admin/content/google-updates" isActive={pathname.startsWith('/admin/content/google-updates')} onClick={() => setActiveItem('Content')} />
       <SubNavItem label={t('whoToFollow')} href="/admin/content/who-to-follow" isActive={pathname.startsWith('/admin/content/who-to-follow')} onClick={() => setActiveItem('Content')} />
+      <SubNavItem label={t('outbox')} href="/admin/content/outbox" isActive={pathname.startsWith('/admin/content/outbox')} onClick={() => setActiveItem('Content')} />
     </NavItem>
   )}
 

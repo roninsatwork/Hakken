@@ -1,16 +1,17 @@
 # Knowledge, News and the weekly digest — three agents and one outbox
 
-**Started 2026-09-30. Status: building — phases 1–5 and 10 built on dev
+**Started 2026-09-30. Status: building — phases 1–5, 7 and 10 built on dev
 2026-10-01 ("can we build this out please"), with the revision below.** The decisions below
 are Anthony's, in his words where he gave them; his answers to the first
 thirteen questions are under "Answered". Change a decision here, with a date,
 before building anything that disagrees with it. The questions still open are
 at the end, each with the phase that needs it.
 
-Overall: 54% (9.5 of 17.5 days, plus a day for the revision below). Phases
+Overall: 66% (11.5 of 17.5 days, plus a day for the revision below). Phases
 1–3 — Knowledge, Ask Hakken reading it, and News — phase 4, the agents'
-groundwork, phase 5, the News Collector, and phase 10, Google updates on the
-Sites charts, built; phases 6–9 not started.
+groundwork, phase 5, the News Collector, phase 7, the outbox and Email
+Sender, and phase 10, Google updates on the Sites charts, built; phases 6,
+8 and 9 not started. No email reaches a customer before phase 8.
 
 ## Revised — Anthony, 2026-10-01
 
@@ -110,6 +111,25 @@ it") before the rebuild. These win over anything below that disagrees.
   so it needs Firecrawl. Fetches go through the platform's checked fetch,
   which now follows up to three redirects when asked, each address checked
   again. Tests: `convex/newsCollector.test.ts`, `convex/utils/newsFeeds.test.ts`.
+- **Phase 7, the outbox and the Email Sender (2026-10-01).** One row per email
+  (`convex/outboxSchema.ts`, `outboxMessages`), queued by
+  `queueOutboxMessage` — the same idempotency key queues once — and the week's
+  issue the digest's rows point at (`weeklyDigestIssues`, its opening
+  translated by the Translator; phase 9 writes them). The Sender's job
+  (`convex/emailSenderRun.ts`) takes back claims that died (one whose send
+  had started is failed, never sent twice), claims 50 at a time, renders each
+  with its type's template in its reader's language (`outboxTemplates.ts`,
+  through `renderEmail`; fixed words in `utils/emailWording.ts`, one set per
+  language, held by type), marks it posting, sends it through Resend with its
+  idempotency key, and records the receipt; a failure is tried again 15
+  minutes later and fails for good after three tries; a reader no longer a
+  user is skipped. It sends about one email every 0.6 seconds, takes nothing
+  new after seven minutes, and gives back what it did not reach. A type whose
+  sender address is not set — `NEWS_DIGEST_FROM_EMAIL` for the digest — is
+  refused, and the run says so, as it does when `RESEND_API_KEY` is missing.
+  Admin → Content → Outbox lists every email by status, each on its own page
+  with the email as its reader gets it and links to the runs that queued and
+  sent it. Tests: `convex/outbox.test.ts`.
 - **Phase 10, Google updates on the Sites charts (2026-10-01).** Built once
   into `SiteLineChart`, `SiteStackedAreaChart`, upright `SiteBarChart` and
   `SiteGainLossChart`: a chart whose rows are dated (`datedRow`,

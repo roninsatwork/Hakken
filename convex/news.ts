@@ -43,8 +43,8 @@ const adminItemValidator = v.object({
   isGoogleUpdate: v.boolean(),
 });
 
-/** An item in the reader's language. */
-async function readerItem(ctx: QueryCtx, row: Doc<"newsItems">, language: string) {
+/** An item in the reader's language: on the News page, and in the Weekly News Digest (`outboxTemplates.ts`). */
+export async function readerItem(ctx: QueryCtx, row: Doc<"newsItems">, language: string) {
   let words = { title: row.titleEn, summary: row.summaryEn, meaning: row.meaningEn };
   if (row.googleUpdateId) {
     const update = await ctx.db.get(row.googleUpdateId);

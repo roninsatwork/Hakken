@@ -613,7 +613,8 @@
     "news": "News",
     "newsSources": "News sources",
     "googleUpdates": "Google updates",
-    "whoToFollow": "Who to follow"
+    "whoToFollow": "Who to follow",
+    "outbox": "Outbox"
   },
   "header": {
     "adminOverview": "Platform Management",
@@ -6239,6 +6240,55 @@
       },
       "back": "Who to follow",
       "whyLabel": "Why we recommend them"
+    },
+    "outbox": {
+      "title": "Outbox",
+      "subtitle": "Every email queued to be sent, newest first, and what became of it. The Email Sender agent sends what waits here.",
+      "statusFilter": "Status",
+      "allStatuses": "Every status",
+      "empty": "Nothing has been queued yet.",
+      "noMatch": "No email has this status.",
+      "notYet": "Not yet",
+      "none": "None",
+      "openRun": "Open the run",
+      "back": "Outbox",
+      "missingTitle": "Email not found",
+      "missingBody": "This email is no longer in the outbox.",
+      "detailSubtitle": "{type} for {email}.",
+      "previewTitle": "The email as its reader gets it",
+      "wouldSkip": "It would not be sent: {reason}",
+      "types": {
+        "WEEKLY_NEWS_DIGEST": "Weekly News Digest"
+      },
+      "statuses": {
+        "WAITING": "Waiting",
+        "CLAIMED": "Sending",
+        "SENT": "Sent",
+        "FAILED": "Failed",
+        "SKIPPED": "Skipped"
+      },
+      "columns": {
+        "to": "To",
+        "status": "Status",
+        "tries": "Tries",
+        "queued": "Queued",
+        "sent": "Sent"
+      },
+      "sections": {
+        "what": "What became of it",
+        "email": "The email"
+      },
+      "fields": {
+        "language": "Language",
+        "queued": "Queued",
+        "sent": "Sent",
+        "tries": "Tries",
+        "why": "Why",
+        "receipt": "Receipt",
+        "receiptHint": "The email service's own id for it.",
+        "queuedBy": "Queued by",
+        "sentBy": "Sent by"
+      }
     },
     "newsItems": {
       "title": "News",

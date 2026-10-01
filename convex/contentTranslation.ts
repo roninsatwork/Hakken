@@ -53,6 +53,8 @@ export function sourceFields(owner: TranslatedOwner, row: Doc<TranslatedOwner>):
       const item = row as Doc<"newsItems">;
       return item.googleUpdateId ? null : { title: item.titleEn, summary: item.summaryEn, meaning: item.meaningEn };
     }
+    case "weeklyDigestIssues":
+      return { intro: (row as Doc<"weeklyDigestIssues">).introEn };
   }
 }
 

@@ -800,6 +800,15 @@ running against the Sonae deployment.
 
 ## Change Log
 
+* **2026-10-01 (phase 7)** — **Built: the outbox and the Email Sender.**
+  §31's News row: one queued row per email, sent by the Email Sender agent
+  through Resend once each, in its reader's language, retried three times,
+  never twice; a type sends only from its own address
+  (`NEWS_DIGEST_FROM_EMAIL` for the digest). Admin → Content → Outbox shows
+  every email and what became of it. Nothing queues an email yet: the
+  Weekly Digest agent does in phase 9, after subscribing and unsubscribing
+  in phase 8.
+
 * **2026-10-01 (phase 5)** — **Built: the News Collector.** §31's News row:
   each run reads every website and YouTube channel that is on — a website
   through its feed, or through Firecrawl when it has none — and puts each new

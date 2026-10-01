@@ -613,7 +613,8 @@
     "news": "Notizie",
     "newsSources": "Fonti delle notizie",
     "googleUpdates": "Aggiornamenti di Google",
-    "whoToFollow": "Chi seguire"
+    "whoToFollow": "Chi seguire",
+    "outbox": "Posta in uscita"
   },
   "header": {
     "adminOverview": "Protocollo Infrastruttura",
@@ -6239,6 +6240,55 @@
       },
       "back": "Chi seguire",
       "whyLabel": "Perché li consigliamo"
+    },
+    "outbox": {
+      "title": "Posta in uscita",
+      "subtitle": "Ogni email in coda per l'invio, dalla più recente, e cosa ne è stato. L'agente Invio email invia ciò che aspetta qui.",
+      "statusFilter": "Stato",
+      "allStatuses": "Ogni stato",
+      "empty": "Non è ancora stato messo in coda nulla.",
+      "noMatch": "Nessuna email ha questo stato.",
+      "notYet": "Non ancora",
+      "none": "Nessuna",
+      "openRun": "Apri l'esecuzione",
+      "back": "Posta in uscita",
+      "missingTitle": "Email non trovata",
+      "missingBody": "Questa email non è più nella posta in uscita.",
+      "detailSubtitle": "{type} per {email}.",
+      "previewTitle": "L'email come la riceve il lettore",
+      "wouldSkip": "Non verrebbe inviata: {reason}",
+      "types": {
+        "WEEKLY_NEWS_DIGEST": "Digest settimanale delle notizie"
+      },
+      "statuses": {
+        "WAITING": "In attesa",
+        "CLAIMED": "In invio",
+        "SENT": "Inviata",
+        "FAILED": "Non riuscita",
+        "SKIPPED": "Saltata"
+      },
+      "columns": {
+        "to": "A",
+        "status": "Stato",
+        "tries": "Tentativi",
+        "queued": "In coda dal",
+        "sent": "Inviata"
+      },
+      "sections": {
+        "what": "Cosa ne è stato",
+        "email": "L'email"
+      },
+      "fields": {
+        "language": "Lingua",
+        "queued": "In coda dal",
+        "sent": "Inviata",
+        "tries": "Tentativi",
+        "why": "Perché",
+        "receipt": "Ricevuta",
+        "receiptHint": "L'identificativo del servizio email.",
+        "queuedBy": "Messa in coda da",
+        "sentBy": "Inviata da"
+      }
     },
     "newsItems": {
       "title": "Notizie",

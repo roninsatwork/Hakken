@@ -10,13 +10,14 @@ import { v } from "convex/values";
  */
 
 /** The tables whose rows are translated. */
-export const TRANSLATED_OWNERS = ["knowledgeArticles", "googleUpdates", "newsFollows", "newsItems"] as const;
+export const TRANSLATED_OWNERS = ["knowledgeArticles", "googleUpdates", "newsFollows", "newsItems", "weeklyDigestIssues"] as const;
 export type TranslatedOwner = (typeof TRANSLATED_OWNERS)[number];
 export const translatedOwnerValidator = v.union(
   v.literal("knowledgeArticles"),
   v.literal("googleUpdates"),
   v.literal("newsFollows"),
   v.literal("newsItems"),
+  v.literal("weeklyDigestIssues"),
 );
 
 export const contentTranslationTables = {

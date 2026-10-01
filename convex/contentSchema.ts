@@ -1,6 +1,7 @@
 import { knowledgeArticleTables } from "./knowledgeArticlesSchema";
 import { newsTables } from "./newsSchema";
 import { contentTranslationTables } from "./contentTranslationSchema";
+import { outboxTables } from "./outboxSchema";
 
 /**
  * The tables behind Admin → Content (docs/plans/active/
@@ -13,4 +14,5 @@ export const contentTables = {
   ...knowledgeArticleTables,
   ...newsTables,
   ...contentTranslationTables,
+  ...outboxTables,
 };
