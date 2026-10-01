@@ -28,6 +28,7 @@ import {
   planLoginCountUpdates,
   tallyLoginsByUser,
 } from "./userActivityService";
+import { recordLanguage } from "./readerPreferences";
 
 /**
  * How long one recorded login stands in for continued activity on a device.
@@ -596,11 +597,14 @@ export const recordLogin = softMutation({
     device: v.string(),
     ip: v.string(),
     location: v.string(),
+    /** The language the app is in: the Weekly News Digest is written in it (`readerPreferences.ts`). */
+    language: v.optional(v.string()),
   },
   returns: v.union(v.null(), v.id("logins")),
   empty: null,
   handler: async (ctx, args) => {
     const current = { user: ctx.user, userId: ctx.userId };
+    if (args.language) await recordLanguage(ctx, current.userId, args.language);
 
     const now = Date.now();
     const lastLogin = await ctx.db

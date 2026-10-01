@@ -800,6 +800,13 @@ running against the Sonae deployment.
 
 ## Change Log
 
+* **2026-10-01 (phase 8)** — **Built: subscribing, language, unsubscribing
+  and bounces.** §31's News row: the Weekly News Digest is on for every
+  user until they turn it off on their profile or from the email; it is
+  written in the language they last used; every digest carries a way to
+  stop that mail clients and Gmail's and Yahoo's bulk rules understand; and
+  an address that bounced or complained is never sent to again.
+
 * **2026-10-01 (phase 7)** — **Built: the outbox and the Email Sender.**
   §31's News row: one queued row per email, sent by the Email Sender agent
   through Resend once each, in its reader's language, retried three times,

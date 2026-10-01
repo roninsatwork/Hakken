@@ -18,6 +18,7 @@ import {
   handleConnectorOAuthCallback,
 } from "./connectorOAuth";
 import { handleSearchConsoleAuthorize, handleSearchConsoleCallback } from "./searchConsoleConnect";
+import { handleOneClickUnsubscribe, handleResendWebhook } from "./emailHttp";
 
 const http = httpRouter();
 http.route({ path: "/api/uploads", method: "POST", handler: handleUpload });
@@ -151,6 +152,11 @@ http.route({
 // This enables OAuth callbacks and Magic Link verification endpoints
 auth.addHttpRoutes(http);
 
+
+// Email (docs/plans/active/knowledge-news-and-digest-plan.md, phase 8): a
+// mail client's one-click unsubscribe, and Resend's bounces and complaints.
+http.route({ path: "/api/email/unsubscribe", method: "POST", handler: handleOneClickUnsubscribe });
+http.route({ path: "/api/webhooks/resend", method: "POST", handler: handleResendWebhook });
 
 http.route({
   path: "/apify-webhook",

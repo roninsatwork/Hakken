@@ -79,13 +79,16 @@ export const getOutboxMessageForAdmin = superAdminQuery({
     const row = messageId ? await ctx.db.get(messageId) : null;
     if (!row) return null;
     const rendered = await renderOutboxRow(ctx, row);
+    const preview: { skip: string } | { subject: string; html: string; text: string } = "skip" in rendered
+      ? { skip: rendered.skip }
+      : { subject: rendered.email.subject, html: rendered.email.html, text: rendered.email.text };
     return {
       ...listRow(row),
       dueAt: row.dueAt,
       resendId: row.resendId ?? null,
       queuedBy: await linkOf(ctx, row.queuedByRunId),
       sentBy: await linkOf(ctx, row.sentByRunId),
-      preview: "skip" in rendered ? { skip: rendered.skip } : rendered.email,
+      preview,
     };
   },
 });

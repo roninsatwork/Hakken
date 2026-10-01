@@ -17,6 +17,11 @@ export type ResendEmailPayload = {
    * cannot drift.
    */
   text?: string;
+  /**
+   * Extra headers: the Weekly News Digest's `List-Unsubscribe` and
+   * `List-Unsubscribe-Post`, which Gmail and Yahoo require of bulk senders.
+   */
+  headers?: Record<string, string>;
 };
 
 export type ResendEmailResponse = {

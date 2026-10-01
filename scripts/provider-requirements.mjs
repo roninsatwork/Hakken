@@ -33,7 +33,13 @@ export const BACKEND_REQUIRED_KEYS = ["SITE_URL", "INITIAL_SUPER_ADMIN_EMAIL", "
  * and the drift test is right to insist every such key is accounted for.
  */
 export const PLATFORM_PROVIDED_KEYS = ["CONVEX_SITE_URL"];
-export const OPTIONAL_KEYS = ["TELEPHONY_MAX_CONCURRENT_CALLS", "TELEPHONY_MAX_CALLS_PER_NUMBER_PER_HOUR", "PLATFORM_ALERT_EMAIL", "PLATFORM_ALERT_EMAILS", "ANALYTICS_ALERT_EMAIL", "ANALYTICS_ALERT_EMAILS"];
+export const OPTIONAL_KEYS = [
+  "TELEPHONY_MAX_CONCURRENT_CALLS", "TELEPHONY_MAX_CALLS_PER_NUMBER_PER_HOUR", "PLATFORM_ALERT_EMAIL", "PLATFORM_ALERT_EMAILS", "ANALYTICS_ALERT_EMAIL", "ANALYTICS_ALERT_EMAILS",
+  // The Weekly News Digest (docs/plans/active/knowledge-news-and-digest-plan.md):
+  // its own sender address — the Email Sender refuses the digest and says so
+  // until it is set — and the secret Resend signs its bounce webhook with.
+  "NEWS_DIGEST_FROM_EMAIL", "RESEND_WEBHOOK_SECRET",
+];
 export const IGNORED_KEYS = new Set([
   "NODE_ENV", "VITEST", "IS_TEST", "NEXT_PUBLIC_APP_URL",
   "LOCAL_TEST_AUTH_ENABLED", "LOCAL_TEST_AUTH_ENVIRONMENT", "LOCAL_TEST_AUTH_SECRET",

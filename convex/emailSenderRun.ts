@@ -114,7 +114,14 @@ export async function sendOutbox(ctx: ActionCtx, runId: Id<"agentRuns">): Promis
           apiKey,
           operation: `outbox:${row.messageType}`,
           idempotencyKey: row.idempotencyKey,
-          payload: { from: address, to: row.email, subject: rendered.email.subject, html: rendered.email.html, text: rendered.email.text },
+          payload: {
+            from: address,
+            to: row.email,
+            subject: rendered.email.subject,
+            html: rendered.email.html,
+            text: rendered.email.text,
+            ...(Object.keys(rendered.email.headers).length > 0 ? { headers: rendered.email.headers } : {}),
+          },
         });
         await ctx.runMutation(internal.outbox.settleOutboxMessage, {
           messageId: row._id, runId, outcome: "SENT", ...(receipt?.id ? { resendId: receipt.id } : {}),

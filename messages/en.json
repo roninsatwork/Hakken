@@ -7378,6 +7378,15 @@
         "en": "English (UK)",
         "it": "Italiano (IT)",
         "label": "Workspace Language"
+      },
+      "emails": {
+        "title": "Emails",
+        "description": "What we send you, in the language you use here.",
+        "saveFailed": "Could not save that. Try again.",
+        "newsDigest": {
+          "label": "Weekly News Digest",
+          "description": "Once a week: what changed in search, SEO and AI search, and what it means for you."
+        }
       }
     },
     "assistantNote": {
@@ -10727,5 +10736,17 @@
       "WEBSITE": "Website",
       "LINKEDIN": "On LinkedIn"
     }
+  },
+  "unsubscribe": {
+    "title": "Stop the weekly news emails?",
+    "body": "You will no longer get the Weekly News Digest. You can turn it back on from your profile at any time.",
+    "stop": "Stop these emails",
+    "working": "Stopping…",
+    "doneTitle": "Done",
+    "doneBody": "You will not get the Weekly News Digest any more. To have it again, turn it on in your profile.",
+    "failedTitle": "That link no longer works",
+    "failedBody": "It may have been changed in transit. You can turn the Weekly News Digest off from your profile instead.",
+    "incompleteTitle": "This link is incomplete",
+    "incompleteBody": "It may have been shortened in transit. You can turn the Weekly News Digest off from your profile instead."
   }
 }

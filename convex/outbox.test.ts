@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { MAY_HAVE_GONE, OUTBOX_CLAIM_MS, queueOutboxMessage } from "./outbox";
+import { ensureReaderPreferences } from "./readerPreferences";
 import schema from "./schema";
 
 /**
@@ -25,6 +26,9 @@ async function world(t: ReturnType<typeof harness>) {
     });
     const anna = await ctx.db.insert("users", { name: "Anna", email: "anna@korda.example", role: "USER" });
     const marco = await ctx.db.insert("users", { name: "Marco", email: "marco@korda.example", role: "USER" });
+    // Each digest carries its reader's way to stop, made with their preferences.
+    await ensureReaderPreferences(ctx, anna);
+    await ensureReaderPreferences(ctx, marco);
     const itemId = await ctx.db.insert("newsItems", {
       kind: "WEBSITE", sourceName: "The Blog", titleEn: "Google changes local results", summaryEn: "Maps answers moved up.",
       meaningEn: "Check your Business Profile.", url: "https://blog.example/news/local", publishedAt: Date.UTC(2026, 8, 29), externalKey: "k1", createdAt: now,
@@ -105,6 +109,13 @@ describe("the outbox", () => {
     expect(sent[1].body.subject).toMatch(/^Questa settimana nella ricerca, da /);
     expect(sent[0].body.text).toContain("Google changes local results");
     expect(sent[0].body.text).toContain("A quiet week, with one change to local results.");
+    // The way to stop: a link in the email, and the headers bulk senders must carry.
+    const token = await t.run(async (ctx) => (await ctx.db.query("readerPreferences").withIndex("by_user", (q) => q.eq("userId", anna)).first())!.unsubscribeToken);
+    expect(sent[0].body.text).toContain(`/unsubscribe?token=${token}`);
+    expect(sent[0].headers).toBeDefined();
+    expect((sent[0].body as unknown as { headers: Record<string, string> }).headers).toMatchObject({
+      "List-Unsubscribe": expect.stringContaining(`/unsubscribe?token=${token}`),
+    });
     expect((await rows(t)).map((row) => [row.status, row.resendId, row.attempts])).toEqual([["SENT", "re_1", 1], ["SENT", "re_2", 1]]);
 
     // Nothing is sent again.

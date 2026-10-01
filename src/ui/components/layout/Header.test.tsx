@@ -125,6 +125,7 @@ vi.mock("next-intl", () => ({
     if (key === "askPlatform") return `Ask ${values?.platformName ?? ""}`;
     return labels[key] ?? key;
   },
+  useLocale: () => "en",
 }));
 
 describe("Header route labels", () => {

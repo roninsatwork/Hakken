@@ -8,6 +8,8 @@ import { readerItem } from "./news";
 import type { OutboxMessageType } from "./outboxSchema";
 import { resolvePlatformName } from "./settingsService";
 import { emailWording } from "./utils/emailWording";
+import { suppressionOf } from "./emailSuppressions";
+import { readerPreferencesOf } from "./readerPreferences";
 
 /**
  * Each message type's template (docs/plans/active/knowledge-news-and-digest-
@@ -18,10 +20,12 @@ import { emailWording } from "./utils/emailWording";
  * entry here, and one more sender address below.
  */
 
-export type OutboxEmail = { subject: string; html: string; text: string };
+export type OutboxEmail = { subject: string; html: string; text: string; headers: Record<string, string> };
 
 type Brand = { platformName: string; appUrl: string };
-type Template = (ctx: QueryCtx, row: Doc<"outboxMessages">, brand: Brand) => Promise<{ subject: string; content: EmailContent } | { skip: string }>;
+type Template = (ctx: QueryCtx, row: Doc<"outboxMessages">, brand: Brand) => Promise<
+  { subject: string; content: EmailContent; headers?: Record<string, string> } | { skip: string }
+>;
 
 /**
  * The environment variable that holds each type's sender address. Until it is
@@ -31,6 +35,15 @@ type Template = (ctx: QueryCtx, row: Doc<"outboxMessages">, brand: Brand) => Pro
 export const SENDER_ADDRESS_VARIABLES: Record<OutboxMessageType, string> = {
   WEEKLY_NEWS_DIGEST: "NEWS_DIGEST_FROM_EMAIL",
 };
+
+/**
+ * Where a mail client's one-click unsubscribe goes (RFC 8058): the platform's
+ * own HTTP route (`emailHttp.ts`), which takes a POST and nothing else.
+ */
+function oneClickUnsubscribeUrl(token: string): string | null {
+  const site = process.env.CONVEX_SITE_URL?.trim().replace(/\/+$/, "");
+  return site ? `${site}/api/email/unsubscribe?token=${token}` : null;
+}
 
 /** Where links in an email lead: the app as its readers open it. */
 export function appUrl(): string {
@@ -46,8 +59,21 @@ function payloadOf(row: Doc<"outboxMessages">): Record<string, unknown> {
   }
 }
 
-/** The week's issue: its opening in the reader's language, then each News item it carries as a card. */
+/**
+ * The week's issue: its opening in the reader's language, then each News item
+ * it carries as a card, and the way to stop — a link in the email and the
+ * `List-Unsubscribe` headers Gmail and Yahoo require of bulk senders. Never
+ * sent to a reader who turned it off, and never without a way to stop.
+ */
 const weeklyNewsDigest: Template = async (ctx, row, brand) => {
+  const preferences = await readerPreferencesOf(ctx, row.userId);
+  if (!preferences.newsDigest) return { skip: "The reader turned the Weekly News Digest off." };
+  if (!preferences.unsubscribeToken) return { skip: "It has no way to unsubscribe yet, so it is not sent." };
+  const unsubscribeUrl = `${brand.appUrl}/unsubscribe?token=${preferences.unsubscribeToken}`;
+  const oneClick = oneClickUnsubscribeUrl(preferences.unsubscribeToken);
+  const headers: Record<string, string> = oneClick
+    ? { "List-Unsubscribe": `<${oneClick}>, <${unsubscribeUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" }
+    : { "List-Unsubscribe": `<${unsubscribeUrl}>` };
   const issueId = typeof payloadOf(row).issueId === "string" ? ctx.db.normalizeId("weeklyDigestIssues", payloadOf(row).issueId as string) : null;
   const issue = issueId ? await ctx.db.get(issueId) : null;
   if (!issue) return { skip: "Its week's issue no longer exists." };
@@ -76,8 +102,12 @@ const weeklyNewsDigest: Template = async (ctx, row, brand) => {
       })),
       overflow: { label: words.seeAll({ count: items.length, platformName: brand.platformName }), url: newsUrl },
       actions: [{ label: words.openNews, url: newsUrl, emphasis: "primary" }],
-      footer: { lines: [words.whyYouGetIt({ platformName: brand.platformName })] },
+      footer: {
+        lines: [words.whyYouGetIt({ platformName: brand.platformName })],
+        links: [{ label: words.unsubscribe, url: unsubscribeUrl }],
+      },
     },
+    headers,
   };
 };
 
@@ -93,18 +123,22 @@ const TEMPLATES: Record<OutboxMessageType, Template> = {
 export async function renderOutboxRow(ctx: QueryCtx, row: Doc<"outboxMessages">): Promise<{ email: OutboxEmail } | { skip: string }> {
   const user = await ctx.db.get(row.userId);
   if (!user) return { skip: "The reader is no longer a user." };
+  const suppressed = await suppressionOf(ctx, row.email);
+  if (suppressed) {
+    return { skip: suppressed === "BOUNCED" ? "This address bounced, so nothing more is sent to it." : "This reader marked an email as spam, so nothing more is sent to them." };
+  }
   const settings = await ctx.db.query("systemSettings").first();
   const brand = { platformName: resolvePlatformName(settings?.platformName), appUrl: appUrl() };
   const made = await TEMPLATES[row.messageType](ctx, row, brand);
   if ("skip" in made) return made;
   const { html, text } = renderEmail(made.content, { platformName: brand.platformName });
-  return { email: { subject: made.subject, html, text } };
+  return { email: { subject: made.subject, html, text, headers: made.headers ?? {} } };
 }
 
 export const renderOutboxMessage = internalQuery({
   args: { messageId: v.id("outboxMessages") },
   returns: v.union(
-    v.object({ email: v.object({ subject: v.string(), html: v.string(), text: v.string() }) }),
+    v.object({ email: v.object({ subject: v.string(), html: v.string(), text: v.string(), headers: v.record(v.string(), v.string()) }) }),
     v.object({ skip: v.string() }),
   ),
   handler: async (ctx, args) => {

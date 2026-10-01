@@ -10,7 +10,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
 import { useUI } from "@/src/context/UIContext";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Image from "next/image";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { LAYER } from "@/src/ui/lib/layers";
@@ -92,6 +92,8 @@ export default function Header({ onOpenModal }: HeaderProps) {
     assistantThreadId ? { threadId: assistantThreadId as Id<"threads"> } : "skip",
   );
   const recordLogin = useMutation(api.users.recordLogin);
+  // Recorded with the sign-in: the Weekly News Digest is written in it.
+  const locale = useLocale();
   const recordLogout = useMutation(api.users.recordLogout);
   const profileRef = useRef<HTMLDivElement>(null);
   const askLabel = sidebarT("askPlatform", { platformName: settings.platformName });
@@ -152,6 +154,7 @@ export default function Header({ onOpenModal }: HeaderProps) {
         .then((data: { ip?: string; city?: string; country_name?: string } | null) => {
           clearTimeout(deadline);
           recordLogin({
+            language: locale,
             device: navigator.userAgent,
             ip: data?.ip || tc("unknownIp"),
             location: data?.city ? `${data.city}, ${data.country_name}` : tc("unknownLocation"),
@@ -160,7 +163,7 @@ export default function Header({ onOpenModal }: HeaderProps) {
     }
     // `tc` is listed so the effect never reads a stale translator. A re-run is
     // harmless: the session flag above makes it a no-op after the first.
-  }, [user, recordLogin, tc]);
+  }, [user, recordLogin, tc, locale]);
 
   const handleLogout = async () => {
     setIsProfileOpen(false);

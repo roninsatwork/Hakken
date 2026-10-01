@@ -1,17 +1,15 @@
 # Knowledge, News and the weekly digest — three agents and one outbox
 
-**Started 2026-09-30. Status: building — phases 1–5, 7 and 10 built on dev
-2026-10-01 ("can we build this out please"), with the revision below.** The decisions below
+**Started 2026-09-30. Status: building — phases 1–5, 7, 8 and 10 built on
+dev 2026-10-01 ("can we build this out please"), with the revision below.** The decisions below
 are Anthony's, in his words where he gave them; his answers to the first
 thirteen questions are under "Answered". Change a decision here, with a date,
 before building anything that disagrees with it. The questions still open are
 at the end, each with the phase that needs it.
 
-Overall: 66% (11.5 of 17.5 days, plus a day for the revision below). Phases
-1–3 — Knowledge, Ask Hakken reading it, and News — phase 4, the agents'
-groundwork, phase 5, the News Collector, phase 7, the outbox and Email
-Sender, and phase 10, Google updates on the Sites charts, built; phases 6,
-8 and 9 not started. No email reaches a customer before phase 8.
+Overall: 77% (13.5 of 17.5 days, plus a day for the revision below). Phases
+1–5, 7, 8 and 10 built; phase 9, the Weekly Digest agent, and phase 6, X,
+not started.
 
 ## Revised — Anthony, 2026-10-01
 
@@ -130,6 +128,23 @@ it") before the rebuild. These win over anything below that disagrees.
   Admin → Content → Outbox lists every email by status, each on its own page
   with the email as its reader gets it and links to the runs that queued and
   sent it. Tests: `convex/outbox.test.ts`.
+- **Phase 8, subscribing, language, unsubscribing and bounces (2026-10-01).**
+  Each user's email choices are a row of their own (`readerPreferences`, made
+  when first needed; none reads as subscribed, in English): the Weekly News
+  Digest is on until they turn it off under Emails on their profile's
+  Preferences, and their language is recorded with each sign-in's record
+  (`users.recordLogin`) and whenever they switch it. Every digest carries an
+  unsubscribe link and the `List-Unsubscribe` and `List-Unsubscribe-Post`
+  headers (`sendResendEmail` gained headers); one without a way to stop is
+  never sent. The link opens `/unsubscribe`, which turns the digest off only
+  when its button is pressed — the sign-in link learned that company mail
+  systems open links before their readers do — while a mail client's
+  one-click is a POST to `/api/email/unsubscribe`, which scanners do not
+  send. Both carry an unguessable token, never the user's id. Resend's
+  webhook (`/api/webhooks/resend`, signed and checked with
+  `RESEND_WEBHOOK_SECRET`, refused when older than five minutes) records
+  bounces and complaints (`emailSuppressions`), and nothing is sent to those
+  addresses again. Tests: `convex/readerPreferences.test.ts`.
 - **Phase 10, Google updates on the Sites charts (2026-10-01).** Built once
   into `SiteLineChart`, `SiteStackedAreaChart`, upright `SiteBarChart` and
   `SiteGainLossChart`: a chart whose rows are dated (`datedRow`,

@@ -76,4 +76,30 @@ export const outboxTables = {
     writtenByRunId: v.optional(v.id("agentRuns")),
     createdAt: v.number(),
   }).index("by_week", ["weekKey", "createdAt"]),
+
+  /**
+   * Each user's email choices (phase 8): the Weekly News Digest until they
+   * turn it off (A5), in the language they last used the app in (A16).
+   * Made the first time it is needed; no row reads as subscribed, in English.
+   */
+  readerPreferences: defineTable({
+    userId: v.id("users"),
+    newsDigest: v.boolean(),
+    language: v.optional(v.string()),
+    languageAt: v.optional(v.number()),
+    /** Unguessable: the unsubscribe link carries it, never the user's id. */
+    unsubscribeToken: v.string(),
+    updatedAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_token", ["unsubscribeToken"]),
+
+  /** Addresses that bounced or complained, from Resend's webhook: never sent to again. */
+  emailSuppressions: defineTable({
+    /** Lower-cased. */
+    email: v.string(),
+    reason: v.union(v.literal("BOUNCED"), v.literal("COMPLAINED")),
+    resendEmailId: v.optional(v.string()),
+    at: v.number(),
+  }).index("by_email", ["email"]),
 };

@@ -1,17 +1,19 @@
 "use client";
 
 import React, { useState } from "react";
-import { usePaginatedQuery, useQuery } from "convex/react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { PaginationFooter, TableShell, TableHeaderRow, TableHeaderCell } from "@/src/ui/components/screens/Table";
 import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import { api } from "@/convex/_generated/api";
-import { Loader2, MonitorSmartphone, MapPin, Palette, Check, Globe } from "lucide-react";
+import { Loader2, MonitorSmartphone, MapPin, Palette, Check, Globe, Mail } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { describeDevice } from "@/src/lib/devices";
 import { Button } from "@/src/ui/components/screens/Button";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { toneForStatus } from "@/src/ui/components/screens/statusTone";
+import { SettingSwitch } from "@/src/ui/components/screens/SettingsCard";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { AssistantNoteTab } from "./AssistantNoteTab";
 
 export default function ProfileTabs() {
@@ -19,6 +21,11 @@ export default function ProfileTabs() {
   const tCommon = useTranslations('common');
   const tPrefs = useTranslations('user.preferences');
   const tNote = useTranslations('user.assistantNote');
+  const tEmails = useTranslations('user.preferences.emails');
+  const emailPreferences = useQuery(api.readerPreferences.getMyEmailPreferences);
+  const setNewsDigest = useMutation(api.readerPreferences.setMyNewsDigest);
+  const recordLanguage = useMutation(api.readerPreferences.recordMyLanguage);
+  const preferenceAction = useAdminAction({ scope: "profile-preferences" });
   const { theme, setTheme } = useTheme();
   const user = useQuery(api.users.getMe);
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
@@ -69,7 +76,9 @@ export default function ProfileTabs() {
     }
   }, []);
 
-  const handleLanguageChange = (newLocale: string) => {
+  const handleLanguageChange = async (newLocale: string) => {
+    // Kept on the user as well as the browser: their Weekly News Digest is written in it.
+    await preferenceAction.run(() => recordLanguage({ language: newLocale }), { fallbackMessage: tEmails("saveFailed"), suppressErrorToast: true });
     document.cookie = `locale=${newLocale}; path=/; max-age=31536000`;
     setLocale(newLocale);
     window.location.reload();
@@ -241,7 +250,7 @@ export default function ProfileTabs() {
               <div className="grid grid-cols-2 gap-3.5 max-w-[320px]">
                 {/* English UK Card */}
                 <div
-                  onClick={() => handleLanguageChange("en")}
+                  onClick={() => void handleLanguageChange("en")}
                   className={`bg-sidebar/30 border rounded-[16px] p-3 flex flex-col items-center justify-center gap-2.5 cursor-pointer transition-all hover:bg-foreground/5 hover:border-brand/40 group relative overflow-hidden ${
                     locale === "en" 
                       ? "border-brand/80 bg-brand/5 shadow-[0_0_15px_rgba(var(--brand),0.04)]" 
@@ -265,7 +274,7 @@ export default function ProfileTabs() {
 
                 {/* Italian Card */}
                 <div
-                  onClick={() => handleLanguageChange("it")}
+                  onClick={() => void handleLanguageChange("it")}
                   className={`bg-sidebar/30 border rounded-[16px] p-3 flex flex-col items-center justify-center gap-2.5 cursor-pointer transition-all hover:bg-foreground/5 hover:border-brand/40 group relative overflow-hidden ${
                     locale === "it" 
                       ? "border-brand/80 bg-brand/5 shadow-[0_0_15px_rgba(var(--brand),0.04)]" 
@@ -286,6 +295,30 @@ export default function ProfileTabs() {
                 </div>
               </div>
             </div>
+          </div>
+
+          <div className="h-px bg-border-dim/30 my-2" />
+
+          {/* Emails: the Weekly News Digest, on until the user turns it off
+              (docs/plans/active/knowledge-news-and-digest-plan.md, phase 8). */}
+          <div className="flex flex-col gap-1">
+            <div>
+              <h4 className="text-[13px] font-medium text-foreground tracking-wide flex items-center gap-2">
+                <Mail className="w-4 h-4 text-brand" />
+                {tEmails('title')}
+              </h4>
+              <p className="text-[11px] text-secondary mt-0.5">{tEmails('description')}</p>
+            </div>
+            {emailPreferences ? (
+              <div className="max-w-[560px]">
+                <SettingSwitch
+                  label={tEmails('newsDigest.label')}
+                  description={tEmails('newsDigest.description')}
+                  checked={emailPreferences.newsDigest}
+                  onChange={(subscribed) => void preferenceAction.run(() => setNewsDigest({ subscribed }), { fallbackMessage: tEmails('saveFailed') })}
+                />
+              </div>
+            ) : null}
           </div>
         </div>
       )}

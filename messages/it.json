@@ -7378,6 +7378,15 @@
         "en": "English (UK)",
         "it": "Italiano (IT)",
         "label": "Lingua dell'Area di Lavoro"
+      },
+      "emails": {
+        "title": "Email",
+        "description": "Cosa ti inviamo, nella lingua che usi qui.",
+        "saveFailed": "Non è stato possibile salvare. Riprova.",
+        "newsDigest": {
+          "label": "Digest settimanale delle notizie",
+          "description": "Una volta a settimana: cosa è cambiato nella ricerca, nella SEO e nella ricerca con l'IA, e cosa significa per te."
+        }
       }
     },
     "assistantNote": {
@@ -10727,5 +10736,17 @@
       "WEBSITE": "Sito web",
       "LINKEDIN": "Su LinkedIn"
     }
+  },
+  "unsubscribe": {
+    "title": "Vuoi interrompere le email settimanali?",
+    "body": "Non riceverai più il Digest settimanale delle notizie. Puoi riattivarlo dal tuo profilo in qualsiasi momento.",
+    "stop": "Interrompi queste email",
+    "working": "Interruzione in corso…",
+    "doneTitle": "Fatto",
+    "doneBody": "Non riceverai più il Digest settimanale delle notizie. Per riceverlo di nuovo, attivalo nel tuo profilo.",
+    "failedTitle": "Questo link non funziona più",
+    "failedBody": "Potrebbe essere stato modificato durante l'invio. Puoi disattivare il Digest settimanale delle notizie dal tuo profilo.",
+    "incompleteTitle": "Questo link è incompleto",
+    "incompleteBody": "Potrebbe essere stato accorciato durante l'invio. Puoi disattivare il Digest settimanale delle notizie dal tuo profilo."
   }
 }
