@@ -16,13 +16,14 @@ exports[`sidebar navigation characterisation > company admin navigation is uncha
     "policiesInForce -> /app/governance/policies",
     "reception -> /app/reception",
     "searchConsole -> /app/search-console",
-    "sites -> /app/sites",
     "tasks -> /app/tasks",
     "teamMembers -> /app/settings/team",
+    "yourSites -> /app/sites",
   ],
   "sections": [
     "governance",
     "organization",
+    "sites",
   ],
 }
 `;
@@ -34,9 +35,11 @@ exports[`sidebar navigation characterisation > signed-out navigation is unchange
     "askPlatform -> /app/assistant",
     "dashboard -> /app",
     "searchConsole -> /app/search-console",
-    "sites -> /app/sites",
+    "yourSites -> /app/sites",
   ],
-  "sections": [],
+  "sections": [
+    "sites",
+  ],
 }
 `;
 
@@ -49,10 +52,12 @@ exports[`sidebar navigation characterisation > standard user navigation is uncha
     "dashboard -> /app",
     "reception -> /app/reception",
     "searchConsole -> /app/search-console",
-    "sites -> /app/sites",
     "tasks -> /app/tasks",
+    "yourSites -> /app/sites",
   ],
-  "sections": [],
+  "sections": [
+    "sites",
+  ],
 }
 `;
 

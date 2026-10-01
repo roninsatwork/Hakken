@@ -38,6 +38,8 @@ export type HoldSummary = {
   relationship: "OWNED" | "TRACKED";
   /** The owned site a competitor is watched against, when it is. */
   ofHost: string | null;
+  /** That owned site's hold, so a list can hang each competitor under it. */
+  ofSiteId: Id<"companyWebsites"> | null;
 };
 
 export type CompanyHold = { hold: Doc<"companyWebsites">; website: Doc<"websites">; summary: HoldSummary };
@@ -78,11 +80,14 @@ export async function companyHolds(ctx: Reader, companyId: Id<"companies">): Pro
   for (const website of await Promise.all(holds.map((hold) => ctx.db.get(hold.websiteId)))) {
     if (website) websites.set(website._id, website);
   }
+  // A company holds each host once, so a website names at most one owned hold.
+  const ownedByWebsite = new Map(holds.filter((hold) => !isTrackedHold(hold)).map((hold) => [hold.websiteId, hold._id]));
   const rows = holds.flatMap((hold) => {
     const website = websites.get(hold.websiteId);
     if (!website) return [];
     const tracked = isTrackedHold(hold);
     const against = tracked && hold.againstWebsiteId ? websites.get(hold.againstWebsiteId) : undefined;
+    const ofSiteId = tracked && hold.againstWebsiteId ? ownedByWebsite.get(hold.againstWebsiteId) ?? null : null;
     return [{
       hold,
       website,
@@ -91,6 +96,7 @@ export async function companyHolds(ctx: Reader, companyId: Id<"companies">): Pro
         host: website.displayHost,
         relationship: tracked ? ("TRACKED" as const) : ("OWNED" as const),
         ofHost: against?.displayHost ?? null,
+        ofSiteId,
       },
     }];
   });

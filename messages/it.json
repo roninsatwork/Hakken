@@ -606,7 +606,8 @@
     "badgeWaiting": "{count} in attesa",
     "billing": "Fatturazione",
     "sites": "Siti",
-    "searchConsole": "Search Console"
+    "searchConsole": "Search Console",
+    "yourSites": "I tuoi siti"
   },
   "header": {
     "adminOverview": "Protocollo Infrastruttura",
@@ -1380,16 +1381,11 @@
       "empty": "Nessun sito web. Aggiungi il primo di questa azienda.",
       "emptySearch": "Nessun sito web corrisponde alla ricerca.",
       "websiteColumn": "Sito web",
-      "heldAsColumn": "Tipo",
       "collectionColumn": "Prossimo controllo",
       "limitsColumn": "Limiti",
       "limitKeywords": "{count, number} parole chiave",
       "limitBacklinks": "{count, number} backlink",
       "ownLimit": "limite proprio",
-      "owned": "Di proprietà",
-      "tracked": "Concorrente",
-      "against": "di {host}",
-      "onItsOwn": "da solo",
       "sourceCompany": "programma dell'azienda",
       "sourceWebsite": "programma proprio",
       "sourcePair": "insieme a {host}",
@@ -1423,7 +1419,10 @@
         "removeFailed": "Impossibile rimuovere questo sito web. Riprova."
       },
       "inherits": "Già raccolto: {weeks, plural, =0 {ancora nessuno storico} one {1 settimana di storico} other {# settimane di storico}}.",
-      "movesColumn": "Da fare"
+      "competitorsColumn": "Concorrenti",
+      "onTheirOwn": "Non abbinati",
+      "showCompetitors": "Mostra i concorrenti di {host}",
+      "hideCompetitors": "Nascondi i concorrenti di {host}"
     },
     "companyWebsiteDetail": {
       "loading": "Caricamento sito web...",
@@ -5979,9 +5978,7 @@
       "label": "Sezione siti",
       "chooser": {
         "label": "Sito",
-        "all": "Tutti i siti",
-        "competitor": "{host} · concorrente",
-        "alone": "Concorrenti seguiti da soli"
+        "all": "Tutti i siti"
       },
       "groups": {
         "websites": "Siti",
@@ -8393,20 +8390,15 @@
   },
   "sites": {
     "list": {
-      "title": "Siti",
-      "description": "Ogni sito che possiedi o che segui. Aprine uno per vedere come sta andando.",
+      "title": "I tuoi siti",
+      "description": "Ogni sito che possiedi, con i concorrenti con cui è confrontato. Aprine uno per vederne tutte le pagine.",
       "empty": "Nessun sito per ora. Chiedici di aggiungere quelli che possiedi e quelli che vuoi seguire.",
       "noMatch": "Nessun sito corrisponde.",
       "searchPlaceholder": "Trova un sito…",
-      "typeFilter": "Tipo",
-      "allTypes": "Tutti i siti",
       "owned": "Tuo",
       "competitor": "Concorrente",
       "competitors": "Concorrenti",
-      "of": "di {host}",
       "ofEngines": "{named} su {asked}",
-      "firstCheck": "Primo controllo {when}",
-      "notChecked": "Non ancora controllato",
       "columns": {
         "website": "Sito",
         "type": "Tipo",
@@ -8417,12 +8409,28 @@
         "moved": "Cosa è cambiato",
         "toDo": "Da fare",
         "checked": "Ultimo controllo",
-        "added": "Aggiunto"
+        "added": "Aggiunto",
+        "of": "Concorrente di",
+        "competitors": "Concorrenti"
       },
-      "amongHeld": "tra le {count} conservate"
+      "amongHeld": "tra le {count} conservate",
+      "alone": "Non abbinati",
+      "competitorCount": "{count, plural, =1 {1 concorrente} other {# concorrenti}}",
+      "cadence": {
+        "daily": "Giornaliero",
+        "weekly": "Settimanale",
+        "fortnightly": "Ogni due settimane",
+        "monthly": "Mensile"
+      },
+      "aboutChecked": "{place} · {cadence}, ultimo controllo {day}",
+      "aboutCheckedOnce": "{place} · Ultimo controllo {day}",
+      "aboutFirst": "{place} · Primo controllo {when}",
+      "aboutNotChecked": "{place} · Non ancora controllato",
+      "showCompetitors": "Mostra i concorrenti di {host}",
+      "hideCompetitors": "Nascondi i concorrenti di {host}"
     },
     "site": {
-      "back": "Torna ai siti",
+      "back": "I tuoi siti",
       "ownedFrom": "Il tuo sito · Seguito da {place}",
       "competitorOfFrom": "Concorrente di {host} · Seguito da {place}",
       "competitorFrom": "Concorrente · Seguito da {place}",
@@ -8430,9 +8438,6 @@
       "lastCheckedDay": "Ultimo controllo {day}",
       "firstCheck": "Primo controllo {when}",
       "notChecked": "Non ancora controllato",
-      "rivals": "{count, plural, =0 {Nessun concorrente accanto} =1 {1 sito accanto} other {# siti accanto}}",
-      "switch": "Cambia sito",
-      "switchCompetitor": "{host} (concorrente)",
       "notCheckedYet": "Non è ancora stato controllato nulla per questo sito. Ogni dato qui sotto si riempie dopo il primo controllo.",
       "notFoundTitle": "Questo sito non è qui",
       "notFoundDescription": "Non è uno dei siti della tua azienda, oppure è stato rimosso."
@@ -10154,6 +10159,23 @@
       "part": "Conserviamo {held} delle {total} ricerche per cui questo sito si posiziona: quelle che gli portano più visite.",
       "unknown": "{held} ricerche conservate. Quante siano in tutto quelle per cui questo sito si posiziona non si sa ancora.",
       "listHeld": "Di questo elenco ne conserviamo {held} su {total}, fino al numero impostato per questo sito. Gli altri non vengono raccolti."
+    },
+    "switcher": {
+      "open": "{host}: cambia sito",
+      "title": "Cambia sito",
+      "close": "Chiudi",
+      "findLabel": "Trova un sito",
+      "findPlaceholder": "Trova un sito…",
+      "yourSites": "I tuoi siti",
+      "totals": "{sites, plural, =1 {1 sito} other {# siti}} · {competitors, plural, =0 {nessun concorrente} =1 {1 concorrente} other {# concorrenti}}",
+      "websites": "Siti",
+      "alone": "Non abbinati",
+      "competitors": "{count, plural, =0 {Nessun concorrente} =1 {1 concorrente} other {# concorrenti}}",
+      "showCompetitors": "Mostra i concorrenti di {host}",
+      "hideCompetitors": "Nascondi i concorrenti di {host}",
+      "more": "Mostra altri {count}",
+      "noMatch": "Nessun sito corrisponde.",
+      "keepsPage": "Cambiando sito resti su {page}"
     }
   },
   "searchConsole": {

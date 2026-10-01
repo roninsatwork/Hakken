@@ -7,6 +7,7 @@ import { citedPagesIn, coverageOf, coverageValidator, enginesNamingIn, latestBan
 import { holdAiSummary, holdQuestions, holdSearches } from "./holdLists";
 import type { EngineDay } from "./utils/siteShapes";
 import { isTrackedHold } from "./utils/websitePairing";
+import { CADENCES, cadenceOf } from "./utils/trackingVerdicts";
 import { MAX_DISCOVERED, pickSuggestions } from "./siteCompetitors";
 import { loadSite, MAX_LIST } from "./websiteSiteRows";
 
@@ -77,6 +78,7 @@ const holdSummaryValidator = v.object({
   host: v.string(),
   relationship: v.union(v.literal("OWNED"), v.literal("TRACKED")),
   ofHost: v.union(v.string(), v.null()),
+  ofSiteId: v.union(v.id("companyWebsites"), v.null()),
 });
 
 const numberOrNull = v.union(v.number(), v.null());
@@ -103,6 +105,10 @@ export const listMySites = tenantQuery({
     lastCheckedAt: numberOrNull,
     lastCheckedDay: v.union(v.string(), v.null()),
     nextRunAt: numberOrNull,
+    /** How often the site is collected — a paired competitor at its owned site's — or null when nothing is. */
+    cadence: v.union(...CADENCES.map((cadence) => v.literal(cadence)), v.null()),
+    /** Where the site is watched from: its own place, or its owned site's. */
+    placeLabel: v.string(),
     addedAt: v.number(),
   })),
   handler: async (ctx) => {
@@ -151,6 +157,8 @@ export const listMySites = tenantQuery({
         lastCheckedAt: collectedAt,
         lastCheckedDay: latest.lastDay,
         nextRunAt: site?.schedule.nextRunAt ?? null,
+        cadence: site?.schedule.active ? cadenceOf(site.schedule.intervalStr) : null,
+        placeLabel: site ? placeName(site) : "",
         addedAt: hold.createdAt,
       };
     }));
@@ -243,6 +251,7 @@ export const getMySite = tenantQuery({
       host: site.website.displayHost,
       relationship: isTrackedHold(site.hold) ? "TRACKED" : "OWNED",
       ofHost: site.pairHost,
+      ofSiteId: site.pair?._id ?? null,
     };
     const suggested = pickSuggestions(summary?.othersNamed ?? [], suggestions, {
       websiteIds: new Set([websiteId, ...holds.map((entry) => entry.website._id)]),

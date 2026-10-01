@@ -49,14 +49,18 @@ describe("the Websites section's menu", () => {
       .toHaveAttribute("aria-current", "page");
     expect(within(menu).getByRole("link", { name: "admin.websitesSection.pages.searches" }))
       .toHaveAttribute("href", `${base}/ai-searches/searches`);
-    expect(screen.getByLabelText("admin.websitesSection.chooser.label")).toHaveValue("");
+    expect(screen.getByLabelText("admin.websitesSection.chooser.label")).toHaveTextContent("admin.websitesSection.chooser.all");
   });
 
-  it("narrows every page to the website chosen, keeping the page open", () => {
+  it("narrows every page to the website chosen, keeping the page open, from the searchable list", () => {
     renderWithProviders(<WebsitesMenu companyId={"company_1" as never} />);
 
-    fireEvent.change(screen.getByLabelText("admin.websitesSection.chooser.label"), { target: { value: "hold_1" } });
-    expect(push).toHaveBeenCalledWith(`${base}/site/hold_1/questions`);
+    fireEvent.click(screen.getByLabelText("admin.websitesSection.chooser.label"));
+    const list = screen.getByRole("dialog", { name: "sites.switcher.title" });
+    expect(within(list).getByRole("link", { name: /kordatackle\.com/ })).toHaveAttribute("href", `${base}/site/hold_1/questions`);
+    // Every website is chosen, so none is unfolded: its competitors wait under it.
+    expect(within(list).queryByRole("link", { name: /nashtackle\.co\.uk/ })).not.toBeInTheDocument();
+    expect(within(list).getByRole("link", { name: /admin\.websitesSection\.chooser\.all/ })).toHaveAttribute("aria-current", "page");
   });
 
   it("offers a competitor only what a competitor has", () => {
@@ -76,6 +80,9 @@ describe("the Websites section's menu", () => {
       .toHaveAttribute("href", `${base}/site/hold_2/schedules`);
     expect(within(menu).getByRole("link", { name: "admin.websitesSection.pages.limits" }))
       .toHaveAttribute("href", `${base}/site/hold_2/limits`);
-    expect(screen.getByLabelText("admin.websitesSection.chooser.label")).toHaveValue("hold_2");
+    expect(screen.getByLabelText("admin.websitesSection.chooser.label")).toHaveTextContent("nashtackle.co.uk");
+    // From a competitor's page, its own site opens on the same page.
+    fireEvent.click(screen.getByLabelText("admin.websitesSection.chooser.label"));
+    expect(screen.getByRole("link", { name: /kordatackle\.com/ })).toHaveAttribute("href", `${base}/site/hold_1/keywords`);
   });
 });

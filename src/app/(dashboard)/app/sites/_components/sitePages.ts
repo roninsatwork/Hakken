@@ -131,6 +131,17 @@ export function sitePageForPath(pathname: string, siteId: string): SitePage {
   return under[0] ?? SITE_PAGES[0];
 }
 
+/**
+ * The same page on another of the company's sites (docs/plans/active/
+ * sites-website-switcher-plan.md, W3): Paid keywords on one opens Paid keywords
+ * on the next. A record's screen opens the menu page it sits under, since the
+ * record belongs to the site being left. `query` carries the shared dates.
+ */
+export function switchHref(pathname: string, fromSiteId: string, toSiteId: string, query: string): string {
+  const segment = sitePageForPath(pathname, fromSiteId).segment;
+  return `/app/sites/${toSiteId}${segment ? `/${segment}` : ""}${query}`;
+}
+
 /** Whether a path is one of the menu's own pages, rather than a record's screen under one. */
 export function isSiteMenuPath(pathname: string, siteId: string): boolean {
   const rest = restOf(pathname, siteId);

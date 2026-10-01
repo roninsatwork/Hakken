@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "convex/react";
+import { ChevronDown } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
@@ -11,6 +12,7 @@ import { cn } from "@/src/ui/lib/utils";
 import { NAV_ACTIVE_PILL, NAV_ACTIVE_TEXT, NAV_IDLE_TEXT } from "@/src/ui/components/layout/navStyles";
 import { Select } from "@/src/ui/components/screens/Select";
 import { FieldLabel } from "@/src/ui/components/screens/SettingsCard";
+import { WebsitePicker, type PickerHold } from "@/src/app/(dashboard)/app/sites/_components/WebsitePicker";
 import {
   SECTION_GROUPS,
   pagesFor,
@@ -27,6 +29,13 @@ import {
  * it; the pages a competitor does not have are not offered for it. Names
  * only: nothing on a menu but where it goes (no-labels-on-menus). On a phone
  * the pages are one drop-down under the chooser.
+ *
+ * The chooser is the client's website picker (`WebsitePicker`, docs/plans/
+ * active/sites-website-switcher-plan.md, W9): searched, each of the company's
+ * own sites with its competitors folded beneath it. A native drop-down read as
+ * one long column once Korda held five sites and their competitors (Anthony,
+ * 2026-10-01: "not sure this works anymore in the admin when i add lots of
+ * competitors").
  */
 export function WebsitesMenu({ companyId }: { companyId: Id<"companies"> }) {
   const t = useTranslations("admin.websitesSection");
@@ -39,43 +48,31 @@ export function WebsitesMenu({ companyId }: { companyId: Id<"companies"> }) {
   const site = chosen ? { siteId: chosen.companyWebsiteId, relationship: chosen.relationship } : null;
   const pages = pagesFor(chosen?.relationship ?? null);
 
-  const choose = (value: string) => {
-    const next = choices?.find((choice) => choice.companyWebsiteId === value) ?? null;
-    router.push(switchHref(companyId, place.page, next ? { siteId: next.companyWebsiteId, relationship: next.relationship } : null));
-  };
-
-  // Each of the company's own sites, then the competitors watched against it; then those on their own.
-  const owned = (choices ?? []).filter((choice) => choice.relationship === "OWNED");
-  const alone = (choices ?? []).filter((choice) => choice.relationship === "TRACKED" && !choice.againstCompanyWebsiteId);
+  const holds = (choices ?? []).map((choice): PickerHold => ({
+    siteId: choice.companyWebsiteId,
+    host: choice.host,
+    relationship: choice.relationship,
+    ofSiteId: choice.againstCompanyWebsiteId,
+  }));
 
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-1.5">
         <FieldLabel htmlFor="websites-section-site">{t("chooser.label")}</FieldLabel>
-        <Select id="websites-section-site" value={place.siteId ?? ""} onChange={choose} className="w-full">
-          <option value="">{t("chooser.all")}</option>
-          {owned.map((own) => (
-            <optgroup key={own.companyWebsiteId} label={own.host}>
-              <option value={own.companyWebsiteId}>{own.host}</option>
-              {(choices ?? [])
-                .filter((choice) => choice.againstCompanyWebsiteId === own.companyWebsiteId)
-                .map((rival) => (
-                  <option key={rival.companyWebsiteId} value={rival.companyWebsiteId}>
-                    {t("chooser.competitor", { host: rival.host })}
-                  </option>
-                ))}
-            </optgroup>
-          ))}
-          {alone.length > 0 ? (
-            <optgroup label={t("chooser.alone")}>
-              {alone.map((rival) => (
-                <option key={rival.companyWebsiteId} value={rival.companyWebsiteId}>
-                  {t("chooser.competitor", { host: rival.host })}
-                </option>
-              ))}
-            </optgroup>
-          ) : null}
-        </Select>
+        <WebsitePicker
+          holds={holds}
+          currentId={place.siteId ?? null}
+          hrefFor={(hold) => switchHref(companyId, place.page, { siteId: hold.siteId, relationship: hold.relationship })}
+          all={{ label: t("chooser.all"), href: switchHref(companyId, place.page, null) }}
+          triggerId="websites-section-site"
+          triggerClassName="flex h-10 w-full items-center justify-between gap-2 rounded-[10px] border border-border-dim bg-background px-3 py-0 text-[13px] text-foreground hover:bg-foreground/5 hover:text-foreground"
+          renderTrigger={(isOpen) => (
+            <>
+              <span className="truncate">{chosen?.host ?? t("chooser.all")}</span>
+              <ChevronDown className={cn("h-4 w-4 shrink-0 text-secondary transition-transform", isOpen && "rotate-180")} aria-hidden="true" />
+            </>
+          )}
+        />
       </div>
 
       <div className="lg:hidden">

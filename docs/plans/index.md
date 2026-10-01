@@ -7,6 +7,14 @@ completed work.
 
 ## Active Plans
 
+- [Sites: moving between a company's own websites](./active/sites-website-switcher-plan.md) —
+  Sites opens on "Your websites", each owned site with its competitors folded
+  beneath it; the site's name in the header is the switcher, grouped the same
+  way, and switching keeps the page you are on; the left menu has one item
+  under Sites, "Your sites"; a sheet on a phone. Drawn for Korda's five
+  websites and chosen 2026-10-01 ("can we just use this i love this"); the
+  competitor chip row was rejected. **Built on dev 2026-10-01, awaiting
+  review.**
 - [Content gap, laid out like Ahrefs](./active/content-gap-ahrefs-layout-plan.md) —
   the keyword and what it is like (what they want, volume, KD), then a
   Position and Traffic pair per competitor under its

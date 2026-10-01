@@ -320,13 +320,22 @@ export function UserNavTree({
   />
   )}
 
+  {/*
+    One item under Sites, the company's websites with their competitors; a
+    website is switched from its own header (docs/plans/active/
+    sites-website-switcher-plan.md, W5 — Anthony, 2026-10-01).
+  */}
   <NavItem
     icon={Globe}
     label={t('sites')}
-    href="/app/sites"
     isActive={activeItem === 'Sites' || pathname.startsWith('/app/sites')}
     onClick={() => setActiveItem('Sites')}
-  />
+    hasChildren
+    isOpen={openSections.sites}
+    onToggle={() => toggleSection('sites')}
+  >
+    <SubNavItem label={t('yourSites')} href="/app/sites" isActive={pathname.startsWith('/app/sites')} onClick={() => setActiveItem('Sites')} />
+  </NavItem>
 
   {/* Each own website's real clicks from Google (docs/plans/active/search-console-plan.md, SC1). */}
   <NavItem

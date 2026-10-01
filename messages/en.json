@@ -606,7 +606,8 @@
     "badgeWaiting": "{count} waiting",
     "billing": "Billing",
     "sites": "Sites",
-    "searchConsole": "Search Console"
+    "searchConsole": "Search Console",
+    "yourSites": "Your sites"
   },
   "header": {
     "adminOverview": "Platform Management",
@@ -1380,16 +1381,11 @@
       "empty": "No websites yet. Add this company's first one.",
       "emptySearch": "No websites match that search.",
       "websiteColumn": "Website",
-      "heldAsColumn": "Type",
       "collectionColumn": "Next check",
       "limitsColumn": "Limits",
       "limitKeywords": "{count, number} keywords",
       "limitBacklinks": "{count, number} backlinks",
       "ownLimit": "own limit",
-      "owned": "Owned",
-      "tracked": "Competitor",
-      "against": "of {host}",
-      "onItsOwn": "on its own",
       "sourceCompany": "company schedule",
       "sourceWebsite": "own schedule",
       "sourcePair": "with {host}",
@@ -1423,7 +1419,10 @@
         "removeFailed": "Could not remove this website. Try again."
       },
       "inherits": "Already collected: {weeks, plural, =0 {no history yet} one {1 week of history} other {# weeks of history}}.",
-      "movesColumn": "To do"
+      "competitorsColumn": "Competitors",
+      "onTheirOwn": "On their own",
+      "showCompetitors": "Show the competitors of {host}",
+      "hideCompetitors": "Hide the competitors of {host}"
     },
     "companyWebsiteDetail": {
       "loading": "Loading website...",
@@ -5979,9 +5978,7 @@
       "label": "Websites section",
       "chooser": {
         "label": "Website",
-        "all": "All websites",
-        "competitor": "{host} · competitor",
-        "alone": "Competitors watched on their own"
+        "all": "All websites"
       },
       "groups": {
         "websites": "Websites",
@@ -8393,20 +8390,15 @@
   },
   "sites": {
     "list": {
-      "title": "Sites",
-      "description": "Every website you own or watch. Open one to see how it is doing.",
+      "title": "Your sites",
+      "description": "Each website you own, with the competitors it is measured against. Open one to see all of its pages.",
       "empty": "No websites yet. Ask us to add the ones you own and the ones you want to watch.",
       "noMatch": "No website matches that.",
       "searchPlaceholder": "Find a website…",
-      "typeFilter": "Type",
-      "allTypes": "All websites",
       "owned": "Owned",
       "competitor": "Competitor",
       "competitors": "Competitors",
-      "of": "of {host}",
       "ofEngines": "{named} of {asked}",
-      "firstCheck": "First check {when}",
-      "notChecked": "Not checked yet",
       "columns": {
         "website": "Website",
         "type": "Type",
@@ -8417,12 +8409,28 @@
         "moved": "What moved",
         "toDo": "To do",
         "checked": "Last checked",
-        "added": "Added"
+        "added": "Added",
+        "of": "Competitor of",
+        "competitors": "Competitors"
       },
-      "amongHeld": "among the {count} held"
+      "amongHeld": "among the {count} held",
+      "alone": "On their own",
+      "competitorCount": "{count, plural, =1 {1 competitor} other {# competitors}}",
+      "cadence": {
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "fortnightly": "Fortnightly",
+        "monthly": "Monthly"
+      },
+      "aboutChecked": "{place} · {cadence}, last checked {day}",
+      "aboutCheckedOnce": "{place} · Last checked {day}",
+      "aboutFirst": "{place} · First check {when}",
+      "aboutNotChecked": "{place} · Not checked yet",
+      "showCompetitors": "Show the competitors of {host}",
+      "hideCompetitors": "Hide the competitors of {host}"
     },
     "site": {
-      "back": "Back to Sites",
+      "back": "Your sites",
       "ownedFrom": "Your website · Watched from {place}",
       "competitorOfFrom": "Competitor of {host} · Watched from {place}",
       "competitorFrom": "Competitor · Watched from {place}",
@@ -8430,9 +8438,6 @@
       "lastCheckedDay": "Last checked {day}",
       "firstCheck": "First check {when}",
       "notChecked": "Not checked yet",
-      "rivals": "{count, plural, =0 {No competitors beside it} =1 {1 website beside it} other {# websites beside it}}",
-      "switch": "Switch website",
-      "switchCompetitor": "{host} (competitor)",
       "notCheckedYet": "Nothing has been checked for this website yet. Every figure below fills in after the first check.",
       "notFoundTitle": "That website is not here",
       "notFoundDescription": "It is not one your company holds, or it has been removed."
@@ -10154,6 +10159,23 @@
       "part": "{held} of the {total} searches this website ranks for are held — the ones bringing it the most visits.",
       "unknown": "{held} searches held. How many this website ranks for in all is not known yet.",
       "listHeld": "{held} of the {total} in this list are kept, up to the number set for this website. The rest are not collected."
+    },
+    "switcher": {
+      "open": "{host}: switch website",
+      "title": "Switch website",
+      "close": "Close",
+      "findLabel": "Find a website",
+      "findPlaceholder": "Find a website…",
+      "yourSites": "Your sites",
+      "totals": "{sites, plural, =1 {1 website} other {# websites}} · {competitors, plural, =0 {no competitors} =1 {1 competitor} other {# competitors}}",
+      "websites": "Websites",
+      "alone": "On their own",
+      "competitors": "{count, plural, =0 {No competitors} =1 {1 competitor} other {# competitors}}",
+      "showCompetitors": "Show the competitors of {host}",
+      "hideCompetitors": "Hide the competitors of {host}",
+      "more": "Show {count} more",
+      "noMatch": "No website matches that.",
+      "keepsPage": "Switching keeps you on {page}"
     }
   },
   "searchConsole": {

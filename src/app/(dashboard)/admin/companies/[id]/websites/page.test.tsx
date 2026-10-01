@@ -1,4 +1,4 @@
-import { fireEvent, screen } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useQuery } from "convex/react";
 
@@ -37,7 +37,7 @@ describe("All websites", () => {
       "websites:listCompanyWebsiteRows": {
         rows: [
           row("hold_1", "kordatackle.com", { relationship: "OWNED", competitorCount: 1, movesWaiting: 3 }),
-          row("hold_2", "nashtackle.co.uk", { relationship: "TRACKED", againstHost: "kordatackle.com", scheduleSource: "PAIR" }),
+          row("hold_2", "nashtackle.co.uk", { relationship: "TRACKED", againstHost: "kordatackle.com", againstWebsiteId: "website_hold_1", scheduleSource: "PAIR" }),
         ],
         cut: false,
       },
@@ -62,11 +62,45 @@ describe("All websites", () => {
     expect(push).toHaveBeenLastCalledWith("/admin/companies/company_1/websites/site/hold_2/keywords");
   });
 
-  it("finds a website by its address", async () => {
+  it("finds a competitor by its address, under the site it is watched against", async () => {
     renderWithProviders(<CompanyWebsitesPage />);
 
     fireEvent.change(await screen.findByPlaceholderText("admin.companyWebsites.searchPlaceholder"), { target: { value: "nash" } });
-    expect(screen.queryByText("kordatackle.com")).not.toBeInTheDocument();
+    expect(screen.getByText("kordatackle.com")).toBeInTheDocument();
     expect(screen.getByText("nashtackle.co.uk")).toBeInTheDocument();
+  });
+
+  it("folds a site's competitors from the arrow at the end of its row, without opening the site", async () => {
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "websites:listCompanyWebsiteRows": {
+        rows: [
+          row("hold_1", "kordatackle.com", { relationship: "OWNED", competitorCount: 1 }),
+          row("hold_3", "kordacarp.example", { relationship: "OWNED", competitorCount: 0, _creationTime: 2 }),
+          row("hold_2", "nashtackle.co.uk", { relationship: "TRACKED", againstHost: "kordatackle.com", againstWebsiteId: "website_hold_1", scheduleSource: "PAIR" }),
+        ],
+        cut: false,
+      },
+    }));
+    renderWithProviders(<CompanyWebsitesPage />);
+
+    // Two sites of its own: each folded until asked.
+    expect(await screen.findByText("kordacarp.example")).toBeInTheDocument();
+    expect(screen.queryByText("nashtackle.co.uk")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "admin.companyWebsites.showCompetitors" }));
+    expect(screen.getByText("nashtackle.co.uk")).toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("stays on the list once a website is added, rather than opening it", async () => {
+    renderWithProviders(<CompanyWebsitesPage />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /admin\.companyWebsites\.addWebsite/ }));
+    const address = await screen.findByLabelText("admin.companyWebsites.urlLabel");
+    fireEvent.change(address, { target: { value: "https://tackleguru.com" } });
+    fireEvent.submit(address.closest("form") as HTMLFormElement);
+
+    await waitFor(() => expect(screen.queryByLabelText("admin.companyWebsites.urlLabel")).not.toBeInTheDocument());
+    expect(push).not.toHaveBeenCalled();
+    expect(screen.getByText("kordatackle.com")).toBeInTheDocument();
   });
 });

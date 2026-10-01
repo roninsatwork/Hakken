@@ -166,6 +166,24 @@ export const RIVAL_ATTENTION: Record<RivalVerdict, number> = {
   NOT_CHECKED: 5,
 };
 
+/** The cadences the SEO schedule can produce. */
+export const CADENCES = ["daily", "weekly", "fortnightly", "monthly"] as const;
+export type Cadence = (typeof CADENCES)[number];
+
+const PULLS_PER_MONTH: Record<Cadence, number> = { daily: 365 / 12, weekly: 52 / 12, fortnightly: 26 / 12, monthly: 1 };
+
+/** How often a schedule collects, or null for anything the SEO schedule cannot produce. */
+export function cadenceOf(intervalStr: string | null | undefined): Cadence | null {
+  if (!intervalStr) return null;
+  try {
+    const parsed = JSON.parse(intervalStr) as { kind?: string; cadence?: string };
+    if (parsed.kind !== "recurring") return null;
+    return CADENCES.find((cadence) => cadence === parsed.cadence) ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * How many times a schedule collects in an average month.
  *
@@ -173,18 +191,6 @@ export const RIVAL_ATTENTION: Record<RivalVerdict, number> = {
  * anything the SEO schedule cannot produce, rather than a guess.
  */
 export function pullsPerMonth(intervalStr: string | null | undefined): number | null {
-  if (!intervalStr) return null;
-  try {
-    const parsed = JSON.parse(intervalStr) as { kind?: string; cadence?: string };
-    if (parsed.kind !== "recurring") return null;
-    switch (parsed.cadence) {
-      case "daily": return 365 / 12;
-      case "weekly": return 52 / 12;
-      case "fortnightly": return 26 / 12;
-      case "monthly": return 1;
-      default: return null;
-    }
-  } catch {
-    return null;
-  }
+  const cadence = cadenceOf(intervalStr);
+  return cadence ? PULLS_PER_MONTH[cadence] : null;
 }
