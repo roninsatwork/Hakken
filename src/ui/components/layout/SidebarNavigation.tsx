@@ -215,6 +215,13 @@ export function isSystemSettingsRoute(pathname: string) {
   ));
 }
 
+/** Learn's three parts, behind one menu item (knowledge-news-and-digest-plan.md, revised again 2026-10-01, R4). */
+const LEARN_PATHS = ['/app/news', '/app/knowledge', '/app/who-to-follow'];
+
+export function isLearnPath(pathname: string) {
+  return LEARN_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+}
+
 function getActiveItemFromPathname(pathname: string) {
   if (pathname === '/admin') return 'Admin Dashboard';
   if (pathname.startsWith('/admin/health')) return 'Health';
@@ -246,8 +253,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/app/calls')) return 'Calls';
   if (pathname.startsWith('/app/sites')) return 'Sites';
   if (pathname.startsWith('/app/search-console')) return 'Search Console';
-  if (pathname.startsWith('/app/knowledge')) return 'Knowledge';
-  if (pathname.startsWith('/app/news')) return 'News';
+  if (isLearnPath(pathname)) return 'Learn';
   if (pathname.startsWith('/app/reception')) return 'Reception';
   if (pathname.startsWith('/app/profile')) return 'Profile';
   if (pathname === '/app/settings') return 'Organization Dashboard';

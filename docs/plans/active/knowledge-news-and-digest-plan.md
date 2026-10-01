@@ -40,7 +40,47 @@ it") before the rebuild. These win over anything below that disagrees.
 | R2 | **People write in English only; the machine translates into every other language** Hakken is read in — 10 to 15 are planned, not just English and Italian. No field per language, and publishing never waits for a person to write each one. This replaces A7 for everything written in Admin or collected: Knowledge, Google updates, "Who to follow", News items and, in phase 9, the digest. |
 | R3 | **The Translator** (`CONTENT_TRANSLATOR`) is a seeded agent, as the wiki staff are: on the Agents screen, switchable off, its model calls in the cost ledger, its Run button translating whatever is missing. Each save that changes the English asks it at once; each translation keeps a fingerprint of the English it came from, and a reader sees their language only while it matches — the English otherwise, never a half-translated change (`contentTranslation.ts`, `contentTranslationActions.ts`). The languages are one list, `convex/utils/contentLanguages.ts`, held to the wording files by a test. |
 
+## Revised again — Learn and the News front page, Anthony, 2026-10-01
+
+Drawn, redrawn and approved the same afternoon ("this is really strong can
+we build this please"), with his answers to four questions. These win over
+anything above that disagrees — A1's two menu items among them.
+
+![Approved: the News front page with a Google update leading](../assets/knowledge-news-and-digest/news-front-page-approved.jpg)
+
+![Approved: the same page three weeks on, an ordinary story leading](../assets/knowledge-news-and-digest/news-front-page-ordinary-lead.jpg)
+
+| # | Decision |
+|---|---|
+| R4 | **One main-menu item, "Learn"**, in place of Knowledge and News. It opens News; News, Who to follow and Knowledge are its side menu — the Sites side menu, shared rather than copied (`SectionMenu`), every group open at first. The addresses stay `/app/news`, `/app/knowledge`, and `/app/who-to-follow` for Who to follow's own page. |
+| R5 | **The News front page, as drawn**: a dateline ("Thursday 1 October 2026 · Week 40", and the stories of the last seven days); the lead story, large; beside it the **last three Google updates** with how long each took and "All Google updates" (not the reader's websites — "I don't like the on your websites panel"; three, not this year's, so January is never empty); then three more stories in columns divided by rules; then every other story, one line each, and "Show more". No cards, no pills, no added colour. A Knowledge article published in the last seven days takes its place among the stories. |
+| R6 | **A Google update leading** draws its rollout line — the chart marker's own "G" where it started, today, and the latest it should finish — and says it is still rolling out. An ordinary story leads the same way, without the line. |
+| R7 | **Which story leads**: one pinned in Admin → Content → News, for seven days from pinning; otherwise a Google update while it rolls out (up to its expected days and a week more) and for seven days after it finishes; otherwise the newest story. |
+| R8 | **A Google update says how long it may take** ("Takes up to … days", 14 unless set) and, optionally, **what it means for you**, both in Admin, the second translated. |
+| R9 | **Every Knowledge article has a topic** — Traffic, Rankings, AI answers or Backlinks — chosen in its editor; the side menu lists the topics that have articles, beside All articles. The traffic article is Traffic. |
+| R10 | **A story opens on its own page in Hakken** — what it says, what it means for you, the original, Ask Hakken about it — as every row in Sites has a screen behind it. "Ask Hakken about this" opens Ask Hakken with the question typed and not sent. |
+| R11 | **Knowledge and Who to follow move into Learn as they are**; each is redrawn later, one screen at a time. |
+
 ### Built so far
+
+- **Learn and the News front page (2026-10-01, R4–R11).** The sidebar's
+  Learn item (`isLearnPath`) opens `/app/news`; every Learn page draws
+  `LearnShell` (`app/_learn/`), which carries the page's own header and the
+  side menu — `SectionMenu`, the Sites menu made one shared part
+  (`app/_components/`), with its numbers from `learnMenu.getLearnMenuCounts`.
+  The front page (`news/_components/NewsFrontPage.tsx`) reads
+  `news.getFrontPage` — the lead by `chooseLead`, and the week's count — the
+  feed, this week's articles and `googleUpdates.listLatestGoogleUpdates`; a
+  kind from the menu (`?kind=`) lists alone. A story's page is
+  `/app/news/[itemId]` (`news.getNewsItem`), its body shared with the lead
+  (`NewsStory.tsx`); Who to follow's is `/app/who-to-follow`. Google updates
+  gained `expectedDays` (14 unless set) and `meaningEn`, the latter joining
+  the translation only when written, so existing translations stand; News
+  items gained `leadUntil`, set by `pinLeadStory`; articles gained `topic`,
+  the traffic article's set by `2026-10-01-knowledge-traffic-topic`, and an
+  `excerpt` in the reader's list. Ask Hakken's welcome reads `?ask=` into its
+  box, unsent. Tests: `convex/newsFrontPage.test.ts`, the News, Knowledge,
+  Who to follow and Ask Hakken screen tests, `learnDates.test.ts`.
 
 - **Phase 1, Knowledge (2026-10-01).** `knowledgeArticles`
   (`convex/knowledgeArticlesSchema.ts`, `convex/knowledgeArticles.ts`): an

@@ -16,9 +16,11 @@ type HookMock = {
 
 const pushMock = vi.hoisted(() => vi.fn());
 const voiceState = vi.hoisted(() => ({ permissionError: false }));
+const navState = vi.hoisted(() => ({ search: "" }));
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: pushMock }),
+  useSearchParams: () => new URLSearchParams(navState.search),
 }));
 
 vi.mock("next-intl", () => ({
@@ -139,6 +141,17 @@ describe("AssistantWelcomePage", () => {
       });
       expect(pushMock).toHaveBeenCalledWith("/app/assistant/thread_1");
     });
+  });
+
+  // "Ask Hakken about this" on a News story (knowledge-news-and-digest-plan.md, R10).
+  it("arrives with a story's question typed, and sends nothing until asked to", () => {
+    navState.search = `ask=${encodeURIComponent("What does the September spam update mean for my websites?")}`;
+    render(<AssistantWelcomePage />);
+
+    expect(screen.getByLabelText("Message")).toHaveValue("What does the September spam update mean for my websites?");
+    expect(createThread).not.toHaveBeenCalled();
+    expect(sendMessage).not.toHaveBeenCalled();
+    navState.search = "";
   });
 
   it("loads error modals only when needed and keeps them mounted after first use", async () => {

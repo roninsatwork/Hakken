@@ -17,9 +17,8 @@ export const NEWS_SOURCE_KINDS = ["WEBSITE", "YOUTUBE", "X_ACCOUNT"] as const;
 export type NewsSourceKind = (typeof NEWS_SOURCE_KINDS)[number];
 export const newsSourceKindValidator = v.union(v.literal("WEBSITE"), v.literal("YOUTUBE"), v.literal("X_ACCOUNT"));
 
-/** What a News item is, and the filter it answers to on the News page. */
-export const NEWS_ITEM_KINDS = ["GOOGLE_UPDATE", "WEBSITE", "YOUTUBE", "X"] as const;
-export type NewsItemKind = (typeof NEWS_ITEM_KINDS)[number];
+/** What a News item is, and the side menu's kinds (`utils/learnLists.ts`, where a screen reads them). */
+export { NEWS_ITEM_KINDS, type NewsItemKind } from "./utils/learnLists";
 export const newsItemKindValidator = v.union(v.literal("GOOGLE_UPDATE"), v.literal("WEBSITE"), v.literal("YOUTUBE"), v.literal("X"));
 
 /** Who a "Who to follow" entry is followed on. */
@@ -85,6 +84,14 @@ export const newsTables = {
     startedOn: v.string(),
     /** Absent while it is still rolling out. */
     finishedOn: v.optional(v.string()),
+    /**
+     * The longest Google said it may take, in days — its "up to two weeks" —
+     * so a rollout's line knows where it should end (revised again,
+     * 2026-10-01, R8). Absent on an update entered before it: 14.
+     */
+    expectedDays: v.optional(v.number()),
+    /** "What it means for you", in plain words; optional, translated with the rest. */
+    meaningEn: v.optional(v.string()),
     url: v.string(),
     createdAt: v.number(),
     updatedAt: v.number(),
@@ -109,9 +116,15 @@ export const newsTables = {
     publishedAt: v.number(),
     /** What makes it the same item again — its address, or a post's id — so nothing is collected twice. */
     externalKey: v.string(),
+    /**
+     * Pinned in Admin → Content → News as the front page's lead story, until
+     * this moment (seven days from pinning, R7). One item at a time.
+     */
+    leadUntil: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_published", ["publishedAt"])
+    .index("by_lead_until", ["leadUntil"])
     .index("by_kind_published", ["kind", "publishedAt"])
     .index("by_external", ["externalKey"])
     .index("by_google_update", ["googleUpdateId"])

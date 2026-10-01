@@ -614,7 +614,8 @@
     "newsSources": "Fonti delle notizie",
     "googleUpdates": "Aggiornamenti di Google",
     "whoToFollow": "Chi seguire",
-    "outbox": "Posta in uscita"
+    "outbox": "Posta in uscita",
+    "learn": "Impara"
   },
   "header": {
     "adminOverview": "Protocollo Infrastruttura",
@@ -6085,7 +6086,7 @@
     },
     "knowledgeArticles": {
       "title": "Conoscenza",
-      "subtitle": "Gli articoli che ogni utente connesso legge in Conoscenza, in inglese e in italiano. Vedono solo quelli pubblicati.",
+      "subtitle": "Gli articoli che ogni utente connesso legge in Impara, sotto Conoscenza. Vedono solo quelli pubblicati.",
       "create": "Nuovo articolo",
       "createTitle": "Nuovo articolo",
       "editTitle": "Modifica articolo",
@@ -6116,7 +6117,9 @@
       },
       "back": "Conoscenza",
       "titleLabel": "Titolo",
-      "bodyLabel": "Articolo"
+      "bodyLabel": "Articolo",
+      "topicLabel": "Argomento",
+      "noTopic": "Nessun argomento"
     },
     "googleUpdates": {
       "title": "Aggiornamenti di Google",
@@ -6154,7 +6157,11 @@
       },
       "back": "Aggiornamenti di Google",
       "titleLabel": "Titolo",
-      "descriptionLabel": "Cosa è cambiato"
+      "descriptionLabel": "Cosa è cambiato",
+      "meaningLabel": "Cosa significa per te",
+      "meaningHint": "Facoltativo. Una o due frasi semplici su cosa un'azienda dovrebbe fare, o non fare.",
+      "expectedDaysLabel": "Dura fino a (giorni)",
+      "expectedDaysHint": "Dall'annuncio di Google: \"fino a due settimane\" è 14."
     },
     "newsSources": {
       "title": "Fonti delle notizie",
@@ -6335,8 +6342,12 @@
         "actions": "Azioni"
       },
       "errors": {
-        "deleteFailed": "Impossibile rimuovere la notizia. Riprova."
-      }
+        "deleteFailed": "Impossibile rimuovere la notizia. Riprova.",
+        "pinFailed": "Impossibile cambiare la notizia principale. Riprova."
+      },
+      "pin": "Apri la prima pagina di Notizie con questa per 7 giorni",
+      "unpin": "Non aprire più con questa",
+      "leadUntil": "Notizia principale fino al {date}"
     },
     "contentEditor": {
       "missingTitle": "Non c'è più",
@@ -10721,7 +10732,8 @@
       "noMatch": "Nessun articolo corrisponde.",
       "columns": {
         "article": "Articolo",
-        "updated": "Aggiornato"
+        "updated": "Aggiornato",
+        "topic": "Argomento"
       }
     },
     "article": {
@@ -10734,8 +10746,6 @@
   "news": {
     "title": "Notizie",
     "description": "Cosa è cambiato nella ricerca e nell'AI, in parole semplici, con cosa significa per te.",
-    "kindFilter": "Mostra",
-    "allKinds": "Tutto",
     "kinds": {
       "GOOGLE_UPDATE": "Aggiornamenti di Google",
       "X": "X",
@@ -10748,20 +10758,64 @@
       "YOUTUBE": "Video YouTube",
       "WEBSITE": "Articolo"
     },
-    "feedLabel": "Notizie, dalle più recenti",
-    "emptyTitle": "Ancora niente qui",
-    "empty": "Le notizie compariranno qui man mano che vengono pubblicate.",
-    "emptyKind": "Ancora niente di questo tipo. Mostra tutto per vedere il resto.",
-    "meaning": "Cosa significa per te",
-    "readOriginal": "Leggi l'originale",
-    "loadMore": "Mostra altre",
-    "whoToFollow": "Chi seguire",
-    "whoToFollowEmpty": "I nostri consigli compariranno qui.",
     "followKinds": {
       "X": "Su X",
       "YOUTUBE": "Su YouTube",
       "WEBSITE": "Sito web",
       "LINKEDIN": "Su LinkedIn"
+    },
+    "story": {
+      "kinds": {
+        "GOOGLE_UPDATE": "Aggiornamento di Google",
+        "WEBSITE": "Sito web",
+        "YOUTUBE": "YouTube",
+        "X": "X",
+        "KNOWLEDGE": "Conoscenza"
+      },
+      "meaning": "Cosa significa per te",
+      "readOriginal": "Leggi l'originale",
+      "readGoogle": "Leggi l'annuncio di Google",
+      "askHakken": "Chiedi a {platformName}",
+      "askQuestion": "Parlami di \"{title}\" e di cosa significa per i miei siti.",
+      "back": "Notizie",
+      "notFoundTitle": "Questa notizia non c'è",
+      "notFoundDescription": "Potrebbe essere stata rimossa. Le altre sono in Notizie."
+    },
+    "rollout": {
+      "started": "Iniziato il <strong>{day}</strong>",
+      "today": "<strong>Oggi</strong> · giorno {day}",
+      "doneBy": "Terminato entro il <strong>{day}</strong>",
+      "finished": "Terminato il <strong>{day}</strong> · {days, plural, one {# giorno} other {# giorni}}",
+      "rollingOut": "Ancora in corso · giorno {day} di massimo {days}",
+      "finishedStatus": "{days, plural, one {Terminato dopo # giorno} other {Terminato dopo # giorni}}"
+    },
+    "front": {
+      "emptyTitle": "Ancora niente qui",
+      "empty": "Le notizie compariranno qui man mano che vengono pubblicate.",
+      "emptyKind": "Ancora niente di questo tipo. Il resto è in Tutte le notizie.",
+      "leadLabel": "La notizia principale",
+      "moreLabel": "Altre notizie",
+      "earlier": "Prima",
+      "week": "Settimana {week}",
+      "weekCount": "{count, plural, =0 {Nessuna notizia negli ultimi 7 giorni} one {# notizia negli ultimi 7 giorni} other {# notizie negli ultimi 7 giorni}}",
+      "kindHeadings": {
+        "GOOGLE_UPDATE": "Aggiornamenti di Google",
+        "YOUTUBE": "Da YouTube",
+        "X": "Da X",
+        "WEBSITE": "Dai siti web"
+      },
+      "showMore": "Mostra altre"
+    },
+    "updates": {
+      "label": "Aggiornamenti di Google",
+      "title": "Gli ultimi tre",
+      "description": "Dal più recente, con quanto ha impiegato ciascuno per terminare.",
+      "empty": "Ancora nessun aggiornamento di Google.",
+      "all": "Tutti gli aggiornamenti di Google",
+      "dates": "Dal {from} al {to}",
+      "days": "{days, plural, one {# giorno} other {# giorni}}",
+      "startedOn": "Iniziato il {day}",
+      "dayOf": "Giorno {day}"
     }
   },
   "unsubscribe": {
@@ -10775,5 +10829,44 @@
     "failedBody": "Potrebbe essere stato modificato durante l'invio. Puoi disattivare il Digest settimanale delle notizie dal tuo profilo.",
     "incompleteTitle": "Questo link è incompleto",
     "incompleteBody": "Potrebbe essere stato accorciato durante l'invio. Puoi disattivare il Digest settimanale delle notizie dal tuo profilo."
+  },
+  "learn": {
+    "menu": {
+      "label": "Impara",
+      "jumpLabel": "Vai a una pagina",
+      "jumpPlaceholder": "Vai a una pagina…",
+      "groups": {
+        "news": "Notizie",
+        "people": "Persone",
+        "knowledge": "Conoscenza"
+      },
+      "allNews": "Tutte le notizie",
+      "kinds": {
+        "GOOGLE_UPDATE": "Aggiornamenti di Google",
+        "YOUTUBE": "Da YouTube",
+        "X": "Da X",
+        "WEBSITE": "Dai siti web"
+      },
+      "whoToFollow": "Chi seguire",
+      "allArticles": "Tutti gli articoli",
+      "topics": {
+        "TRAFFIC": "Traffico",
+        "RANKINGS": "Posizionamenti",
+        "AI_ANSWERS": "Risposte AI",
+        "BACKLINKS": "Backlink"
+      }
+    },
+    "follow": {
+      "title": "Chi seguire",
+      "description": "Le persone e i canali che consigliamo per restare aggiornati su ricerca e AI, e perché.",
+      "searchPlaceholder": "Trova qualcuno…",
+      "empty": "I nostri consigli compariranno qui.",
+      "noMatch": "Nessuno corrisponde.",
+      "columns": {
+        "name": "Nome",
+        "where": "Dove",
+        "why": "Perché seguirli"
+      }
+    }
   }
 }

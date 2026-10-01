@@ -3,7 +3,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import type { DragEvent, FormEvent } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
@@ -40,8 +40,12 @@ export default function AssistantWelcomePage() {
   const router = useRouter();
   const startAction = useAdminAction({ scope: "assistant-welcome-start" });
   const voiceAction = useAdminAction({ scope: "assistant-welcome-voice" });
+  // "Ask Hakken about this" on a News story arrives with its question typed
+  // and not sent: the reader reads it, changes it if they like, and presses
+  // send (knowledge-news-and-digest-plan.md, revised again 2026-10-01, R10).
+  const askedAbout = useSearchParams().get("ask");
 
-  const [content, setContent] = useState("");
+  const [content, setContent] = useState(() => askedAbout?.slice(0, 2_000) ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);

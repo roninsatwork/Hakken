@@ -4,7 +4,7 @@ import type { QueryCtx } from "./_generated/server";
 import { superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import { auditContentChange } from "./utils/contentAdmin";
-import { knowledgeStatusValidator, type KnowledgeStatus } from "./knowledgeArticlesSchema";
+import { knowledgeStatusValidator, knowledgeTopicValidator, type KnowledgeStatus, type KnowledgeTopic } from "./knowledgeArticlesSchema";
 import { removeArticleFromWiki, syncArticleToWiki } from "./knowledgeArticleWiki";
 import { readerFields, removeTranslations, requestTranslation, sourceFields, translationProgress, translationProgressValidator } from "./contentTranslation";
 
@@ -28,9 +28,14 @@ export const MAX_TITLE_LENGTH = 160;
 /** Longest body, in characters: room for a long article, with a ceiling on a pasted book. */
 export const MAX_BODY_LENGTH = 40_000;
 
+const topicOrNull = v.union(knowledgeTopicValidator, v.null());
+
 const summaryValidator = v.object({
   _id: v.id("knowledgeArticles"),
   title: v.string(),
+  /** Its opening, as plain words: what News shows under a new article's title (R5). */
+  excerpt: v.string(),
+  topic: topicOrNull,
   publishedAt: v.number(),
   updatedAt: v.number(),
 });
@@ -39,6 +44,7 @@ const articleValidator = v.object({
   _id: v.id("knowledgeArticles"),
   title: v.string(),
   body: v.string(),
+  topic: topicOrNull,
   publishedAt: v.number(),
   updatedAt: v.number(),
 });
@@ -49,15 +55,39 @@ const adminRowValidator = v.object({
   titleEn: v.string(),
   bodyEn: v.string(),
   status: knowledgeStatusValidator,
+  topic: topicOrNull,
   publishedAt: v.union(v.number(), v.null()),
   updatedAt: v.number(),
   /** The other languages done from the English as it stands; none to do for a draft. */
   translations: translationProgressValidator,
 });
 
-const articleInput = { titleEn: v.string(), bodyEn: v.string(), status: knowledgeStatusValidator };
+/** `topic` left out is no topic (R9): Learn lists the article under All articles alone. */
+const articleInput = { titleEn: v.string(), bodyEn: v.string(), status: knowledgeStatusValidator, topic: v.optional(knowledgeTopicValidator) };
 
-type ArticleInput = { titleEn: string; bodyEn: string; status: KnowledgeStatus };
+type ArticleInput = { titleEn: string; bodyEn: string; status: KnowledgeStatus; topic?: KnowledgeTopic };
+
+/** The longest opening shown under an article's title, in characters. */
+const EXCERPT_LENGTH = 220;
+
+/**
+ * An article's first paragraph as plain words — no heading, table or list,
+ * links and bold reduced to their words — cut at a word near `EXCERPT_LENGTH`.
+ */
+export function excerptOf(body: string): string {
+  const paragraph = body
+    .split(/\n\s*\n/)
+    .map((block) => block.trim())
+    .find((block) => block && !/^(#|\||-|\*\s|\d+\.)/.test(block)) ?? "";
+  const words = paragraph
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, "$1")
+    .replace(/(\*\*|__|\*|_|`)/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (words.length <= EXCERPT_LENGTH) return words;
+  const cut = words.slice(0, EXCERPT_LENGTH);
+  return `${cut.slice(0, Math.max(cut.lastIndexOf(" "), 1)).replace(/[,;:.]$/, "")}…`;
+}
 
 /** An article in the reader's language: theirs when the Translator has it, the English until then. */
 async function inLanguage(ctx: QueryCtx, row: Doc<"knowledgeArticles">, language: string) {
@@ -65,9 +95,9 @@ async function inLanguage(ctx: QueryCtx, row: Doc<"knowledgeArticles">, language
   return await readerFields(ctx, "knowledgeArticles", row._id, english, language);
 }
 
-/** Every published article, newest first: the Knowledge list, in the reader's language. */
+/** Every published article, newest first, or those on one topic: the Knowledge list, in the reader's language. */
 export const listPublishedArticles = tenantQuery({
-  args: { language: v.string() },
+  args: { language: v.string(), topic: v.optional(knowledgeTopicValidator) },
   returns: v.array(summaryValidator),
   handler: async (ctx, args) => {
     const rows = await ctx.db
@@ -75,12 +105,18 @@ export const listPublishedArticles = tenantQuery({
       .withIndex("by_status_published", (q) => q.eq("status", "PUBLISHED"))
       .order("desc")
       .take(MAX_ARTICLES);
-    return await Promise.all(rows.map(async (row) => ({
-      _id: row._id,
-      title: (await inLanguage(ctx, row, args.language)).title,
-      publishedAt: row.publishedAt ?? row.updatedAt,
-      updatedAt: row.updatedAt,
-    })));
+    const shown = args.topic ? rows.filter((row) => row.topic === args.topic) : rows;
+    return await Promise.all(shown.map(async (row) => {
+      const { title, body } = await inLanguage(ctx, row, args.language);
+      return {
+        _id: row._id,
+        title,
+        excerpt: excerptOf(body),
+        topic: row.topic ?? null,
+        publishedAt: row.publishedAt ?? row.updatedAt,
+        updatedAt: row.updatedAt,
+      };
+    }));
   },
 });
 
@@ -92,7 +128,7 @@ export const getPublishedArticle = tenantQuery({
     const row = await ctx.db.get(args.articleId);
     if (!row || row.status !== "PUBLISHED") return null;
     const { title, body } = await inLanguage(ctx, row, args.language);
-    return { _id: row._id, title, body, publishedAt: row.publishedAt ?? row.updatedAt, updatedAt: row.updatedAt };
+    return { _id: row._id, title, body, topic: row.topic ?? null, publishedAt: row.publishedAt ?? row.updatedAt, updatedAt: row.updatedAt };
   },
 });
 
@@ -103,6 +139,7 @@ async function adminRow(ctx: QueryCtx, row: Doc<"knowledgeArticles">) {
     titleEn: row.titleEn,
     bodyEn: row.bodyEn,
     status: row.status,
+    topic: row.topic ?? null,
     publishedAt: row.publishedAt ?? null,
     updatedAt: row.updatedAt,
     translations: await translationProgress(ctx, "knowledgeArticles", row._id, sourceFields("knowledgeArticles", row)),
@@ -132,7 +169,7 @@ export const getArticle = superAdminQuery({
 
 /** The article as it will be stored: trimmed, within its lengths, and — to be published — with something to read. */
 export function checkedArticle(input: ArticleInput): ArticleInput {
-  const article = { titleEn: input.titleEn.trim(), bodyEn: input.bodyEn.trim(), status: input.status };
+  const article = { titleEn: input.titleEn.trim(), bodyEn: input.bodyEn.trim(), status: input.status, topic: input.topic };
   if (!article.titleEn) throw appError("INVALID_INPUT", "An article needs a title.");
   if (article.titleEn.length > MAX_TITLE_LENGTH) throw appError("INVALID_INPUT", `A title is at most ${MAX_TITLE_LENGTH} characters.`);
   if (article.bodyEn.length > MAX_BODY_LENGTH) throw appError("INVALID_INPUT", `An article is at most ${MAX_BODY_LENGTH.toLocaleString("en-GB")} characters.`);

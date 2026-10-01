@@ -14,6 +14,10 @@ export const KNOWLEDGE_STATUSES = ["DRAFT", "PUBLISHED"] as const;
 export type KnowledgeStatus = (typeof KNOWLEDGE_STATUSES)[number];
 export const knowledgeStatusValidator = v.union(v.literal("DRAFT"), v.literal("PUBLISHED"));
 
+/** What an article is about (revised again, 2026-10-01, R9; the list is `utils/learnLists.ts`, where a screen reads it). */
+export { KNOWLEDGE_TOPICS, type KnowledgeTopic } from "./utils/learnLists";
+export const knowledgeTopicValidator = v.union(v.literal("TRAFFIC"), v.literal("RANKINGS"), v.literal("AI_ANSWERS"), v.literal("BACKLINKS"));
+
 export const knowledgeArticleTables = {
   knowledgeArticles: defineTable({
     /**
@@ -27,6 +31,8 @@ export const knowledgeArticleTables = {
     bodyEn: v.string(),
     /** Readers see only a published article; a draft is Admin's alone. */
     status: knowledgeStatusValidator,
+    /** Absent until one is chosen in its editor. */
+    topic: v.optional(knowledgeTopicValidator),
     /** When it was first published; kept through later edits, cleared when it goes back to a draft. */
     publishedAt: v.optional(v.number()),
     updatedAt: v.number(),

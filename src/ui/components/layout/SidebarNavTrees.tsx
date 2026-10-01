@@ -6,10 +6,9 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Building2,
-  BookOpen,
   FileText,
   Globe,
-  Newspaper,
+  GraduationCap,
   SearchCheck,
   Bot,
   Workflow,
@@ -34,6 +33,7 @@ import {
   NavItem,
 
   SubNavItem,
+  isLearnPath,
   isSystemSettingsRoute,
 } from "./SidebarNavigation";
 
@@ -373,22 +373,17 @@ export function UserNavTree({
     onClick={() => setActiveItem('Search Console')}
   />
 
-  {/* General knowledge for every signed-in user, after Search Console (knowledge-news-and-digest-plan.md, D1, A1, A14). */}
+  {/*
+    Learn, after Search Console, for every signed-in user: News, Who to follow
+    and Knowledge behind one item, with their own side menu
+    (knowledge-news-and-digest-plan.md, revised again 2026-10-01, R4).
+  */}
   <NavItem
-    icon={BookOpen}
-    label={t('knowledge')}
-    href="/app/knowledge"
-    isActive={activeItem === 'Knowledge' || pathname.startsWith('/app/knowledge')}
-    onClick={() => setActiveItem('Knowledge')}
-  />
-
-  {/* What has changed in search, for every signed-in user, after Knowledge (knowledge-news-and-digest-plan.md, D4, A1). */}
-  <NavItem
-    icon={Newspaper}
-    label={t('news')}
+    icon={GraduationCap}
+    label={t('learn')}
     href="/app/news"
-    isActive={activeItem === 'News' || pathname.startsWith('/app/news')}
-    onClick={() => setActiveItem('News')}
+    isActive={activeItem === 'Learn' || isLearnPath(pathname)}
+    onClick={() => setActiveItem('Learn')}
   />
 
   {hasCapability(CORE_MODULES.reception) && (

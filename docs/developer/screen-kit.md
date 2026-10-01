@@ -163,6 +163,18 @@ Use `DetailTabs` for top-level detail tabs. The root tab is active only on the e
 
 Use `PageHeader` and `PagePrimaryAction` for list pages. `PagePrimaryAction` defaults to `type="button"` and should receive an icon when a clear command exists.
 
+### A section's side menu
+
+A section whose pages are many, grouped and counted — Sites, and Learn since
+2026-10-01 — puts them in `SectionMenu`
+(`src/app/(dashboard)/app/_components/SectionMenu.tsx`) down the left, beside
+the page: "Jump to a page", groups that fold away, a number beside each page,
+the page being read lit with the sidebar's own pill, and one drop-down on a
+phone. The section says only what its groups, pages, numbers and addresses
+are (`SiteMenu`, `LearnShell`); never draw a second side menu by hand. The
+grid around it is the Sites layout's: `lg:grid-cols-[240px_minmax(0,1fr)]`,
+the menu sticky at the top.
+
 ## Save And Feedback States
 
 Use `SaveAction` for compact save buttons. It shows a save icon, disables while saving, and can show a short success label.

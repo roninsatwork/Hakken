@@ -6,7 +6,7 @@ import { answerQueries } from "@/src/test/siteViewFixtures";
 import KnowledgePage from "./page";
 import KnowledgeArticlePage from "./[articleId]/page";
 
-const nav = vi.hoisted(() => ({ push: vi.fn(), locale: "en" }));
+const nav = vi.hoisted(() => ({ push: vi.fn(), locale: "en", search: "" }));
 
 vi.mock("convex/react", async () => (await import("@/src/test/screenMocks")).convexReact());
 vi.mock("next-intl", async () => {
@@ -15,7 +15,7 @@ vi.mock("next-intl", async () => {
 });
 vi.mock("next/navigation", () => ({
   usePathname: () => "/app/knowledge",
-  useSearchParams: () => new URLSearchParams(""),
+  useSearchParams: () => new URLSearchParams(nav.search),
   useRouter: () => ({ replace: vi.fn(), push: nav.push, back: vi.fn(), prefetch: vi.fn() }),
   useParams: () => ({ articleId: "article_1" }),
 }));
@@ -31,6 +31,7 @@ describe("Knowledge", () => {
     vi.mocked(useQuery).mockReset();
     nav.push.mockReset();
     nav.locale = "en";
+    nav.search = "";
   });
 
   it("lists the published articles and opens one on its own screen", () => {
@@ -64,6 +65,30 @@ describe("Knowledge", () => {
     expect(screen.getByRole("heading", { name: /How is traffic worked out\?/ })).toBeInTheDocument();
     expect(screen.getByText("estimate")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /knowledgeArticles\.article\.back/ })).toHaveAttribute("href", "/app/knowledge");
+  });
+
+  // Learn's side menu lists Knowledge by topic (knowledge-news-and-digest-plan.md, revised again 2026-10-01, R9).
+  it("lists one topic's articles when the side menu asks for it, and names each article's topic", () => {
+    nav.search = "topic=TRAFFIC";
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "knowledgeArticles:listPublishedArticles": [{ ...TRAFFIC, topic: "TRAFFIC", excerpt: "" }],
+      "learnMenu:getLearnMenuCounts": { news: { all: 0, GOOGLE_UPDATE: 0, WEBSITE: 0, YOUTUBE: 0, X: 0 }, follows: 0, articles: { all: 2, TRAFFIC: 1, RANKINGS: 0, AI_ANSWERS: 0, BACKLINKS: 0 } },
+    }));
+    render(<KnowledgePage />);
+
+    expect(vi.mocked(useQuery).mock.calls.some(([, args]) => (args as { topic?: string })?.topic === "TRAFFIC")).toBe(true);
+    expect(screen.getAllByText("learn.menu.topics.TRAFFIC").length).toBeGreaterThan(1);
+    expect(screen.getByRole("link", { name: /learn\.menu\.topics\.TRAFFIC/ })).toHaveAttribute("aria-current", "page");
+  });
+
+  it("lights an article's topic in the side menu", () => {
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "knowledgeArticles:getPublishedArticle": { ...TRAFFIC, topic: "TRAFFIC", body: "An estimate." },
+      "learnMenu:getLearnMenuCounts": { news: { all: 0, GOOGLE_UPDATE: 0, WEBSITE: 0, YOUTUBE: 0, X: 0 }, follows: 0, articles: { all: 1, TRAFFIC: 1, RANKINGS: 0, AI_ANSWERS: 0, BACKLINKS: 0 } },
+    }));
+    render(<KnowledgeArticlePage />);
+
+    expect(screen.getByRole("link", { name: /learn\.menu\.topics\.TRAFFIC/ })).toHaveAttribute("aria-current", "page");
   });
 
   it("says a draft or a taken-down article is not here", () => {

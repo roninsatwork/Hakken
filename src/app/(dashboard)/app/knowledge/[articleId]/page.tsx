@@ -11,10 +11,12 @@ import { HakkenMarkdown } from "@/src/ui/components/chat/HakkenMarkdown";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { formatDate } from "@/src/lib/dates";
+import { LearnShell } from "../../_learn/LearnShell";
 
 /**
  * One Knowledge article, on its own screen with the way back to the list
- * (docs/plans/active/knowledge-news-and-digest-plan.md, phase 1), in the
+ * (docs/plans/active/knowledge-news-and-digest-plan.md, phase 1), in Learn
+ * since 2026-10-01 with its topic lit in the side menu (R4, R9), in the
  * reader's language once the Translator has it, the English until then. A
  * draft, or an article taken down, reads as not here.
  */
@@ -36,38 +38,33 @@ export default function KnowledgeArticlePage() {
 
   if (article === null) {
     return (
-      <>
-        <Header />
-        <div className="flex flex-col gap-6 pb-8">
-          <DetailHeader back={back} icon={<BookOpen className="h-6 w-6 text-brand" />} title={t("notFoundTitle")} />
-          <HakkenEmptyState icon={BookOpen} title={t("notFoundTitle")} description={t("notFoundDescription")} />
-        </div>
-      </>
+      <LearnShell header={<DetailHeader back={back} icon={<BookOpen className="h-6 w-6 text-brand" />} title={t("notFoundTitle")} />}>
+        <HakkenEmptyState icon={BookOpen} title={t("notFoundTitle")} description={t("notFoundDescription")} />
+      </LearnShell>
     );
   }
 
   return (
-    <>
-      <Header />
-      <div className="flex flex-col gap-6 pb-8">
+    <LearnShell
+      current={article.topic ? `topic-${article.topic}` : "articles"}
+      header={
         <DetailHeader
           back={back}
           icon={<BookOpen className="h-6 w-6 text-brand" />}
           title={article.title}
           description={t("updated", { date: formatDate(article.updatedAt) })}
         />
-        <article className="rounded-2xl border border-border-dim bg-card/40 px-6 py-6">
-          {/*
-            A long line is harder to read: the words keep a column, the card does
-            not (AGENTS.md, fluid layouts). An article's own table — the traffic
-            article's "who clicks" — is styled from here, so the renderer stays
-            as chat uses it.
-          */}
-          <div className="max-w-2xl text-[14px] leading-relaxed text-foreground [&_table]:mb-4 [&_table]:w-full [&_table]:border-collapse [&_table]:text-[13px] [&_td]:border-t [&_td]:border-border-dim [&_td]:px-3 [&_td]:py-2 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-[11px] [&_th]:font-medium [&_th]:uppercase [&_th]:tracking-[0.12em] [&_th]:text-secondary">
-            <HakkenMarkdown content={article.body} />
-          </div>
-        </article>
-      </div>
-    </>
+      }
+    >
+      {/*
+        No box around it (Anthony, 2026-10-01: no cards). A long line is harder
+        to read, so the words keep a column (AGENTS.md, fluid layouts). An
+        article's own table — the traffic article's "who clicks" — is styled
+        from here, so the renderer stays as chat uses it.
+      */}
+      <article className="max-w-2xl text-[14px] leading-relaxed text-foreground [&_table]:mb-4 [&_table]:w-full [&_table]:border-collapse [&_table]:text-[13px] [&_td]:border-t [&_td]:border-border-dim [&_td]:px-3 [&_td]:py-2 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-[11px] [&_th]:font-medium [&_th]:uppercase [&_th]:tracking-[0.12em] [&_th]:text-secondary">
+        <HakkenMarkdown content={article.body} />
+      </article>
+    </LearnShell>
   );
 }

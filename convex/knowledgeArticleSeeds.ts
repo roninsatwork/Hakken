@@ -1,4 +1,5 @@
 import type { MutationCtx } from "./_generated/server";
+import type { KnowledgeTopic } from "./knowledgeArticlesSchema";
 import { syncArticleToWiki } from "./knowledgeArticleWiki";
 import { requestTranslation } from "./contentTranslation";
 
@@ -10,7 +11,7 @@ import { requestTranslation } from "./contentTranslation";
  * running the migration again.
  */
 
-type SeedArticle = { key: string; titleEn: string; bodyEn: string };
+type SeedArticle = { key: string; titleEn: string; bodyEn: string; topic: KnowledgeTopic };
 
 /**
  * How traffic is worked out (D2): customer-facing, plain words, citing the
@@ -19,6 +20,7 @@ type SeedArticle = { key: string; titleEn: string; bodyEn: string };
  */
 export const TRAFFIC_ARTICLE: SeedArticle = {
   key: "traffic",
+  topic: "TRAFFIC",
   titleEn: "How is traffic worked out?",
   bodyEn: `The traffic figure you see against a search is our best estimate of the visits it sends your website each month, and it is worked out rather than counted because nobody outside Google can see every click.
 
@@ -82,4 +84,18 @@ export async function syncPublishedArticles(ctx: MutationCtx, cursor: string | n
     .paginate({ cursor, numItems: batchSize });
   for (const article of page.page) await syncArticleToWiki(ctx, article, "platform");
   return { cursor: page.continueCursor, isDone: page.isDone, processed: page.page.length, updated: page.page.length };
+}
+
+/**
+ * Gives the traffic article its topic, Traffic (revised again, 2026-10-01,
+ * R9), if it has none — an article given another topic in Admin keeps it.
+ */
+export async function giveTrafficArticleItsTopic(ctx: MutationCtx) {
+  const article = await ctx.db
+    .query("knowledgeArticles")
+    .withIndex("by_key", (q) => q.eq("key", TRAFFIC_ARTICLE.key))
+    .first();
+  const needed = article !== null && article.topic === undefined;
+  if (article && needed) await ctx.db.patch(article._id, { topic: TRAFFIC_ARTICLE.topic });
+  return { cursor: null, isDone: true, processed: article ? 1 : 0, updated: needed ? 1 : 0 };
 }

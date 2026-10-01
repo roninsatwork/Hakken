@@ -212,6 +212,7 @@ import type * as knowledgeRetrieval from "../knowledgeRetrieval.js";
 import type * as knowledgeRetrievalService from "../knowledgeRetrievalService.js";
 import type * as knowledgeService from "../knowledgeService.js";
 import type * as knowledgeWebsiteQueueService from "../knowledgeWebsiteQueueService.js";
+import type * as learnMenu from "../learnMenu.js";
 import type * as localDemoSeed from "../localDemoSeed.js";
 import type * as localTestAuth from "../localTestAuth.js";
 import type * as magicLinkUrlService from "../magicLinkUrlService.js";
@@ -423,6 +424,7 @@ import type * as utils_knowledgeActionsService from "../utils/knowledgeActionsSe
 import type * as utils_knowledgePageGuard from "../utils/knowledgePageGuard.js";
 import type * as utils_knowledgeShapes from "../utils/knowledgeShapes.js";
 import type * as utils_lang from "../utils/lang.js";
+import type * as utils_learnLists from "../utils/learnLists.js";
 import type * as utils_memoryApplication from "../utils/memoryApplication.js";
 import type * as utils_memoryRetrieval from "../utils/memoryRetrieval.js";
 import type * as utils_memoryText from "../utils/memoryText.js";
@@ -746,6 +748,7 @@ declare const fullApi: ApiFromModules<{
   knowledgeRetrievalService: typeof knowledgeRetrievalService;
   knowledgeService: typeof knowledgeService;
   knowledgeWebsiteQueueService: typeof knowledgeWebsiteQueueService;
+  learnMenu: typeof learnMenu;
   localDemoSeed: typeof localDemoSeed;
   localTestAuth: typeof localTestAuth;
   magicLinkUrlService: typeof magicLinkUrlService;
@@ -957,6 +960,7 @@ declare const fullApi: ApiFromModules<{
   "utils/knowledgePageGuard": typeof utils_knowledgePageGuard;
   "utils/knowledgeShapes": typeof utils_knowledgeShapes;
   "utils/lang": typeof utils_lang;
+  "utils/learnLists": typeof utils_learnLists;
   "utils/memoryApplication": typeof utils_memoryApplication;
   "utils/memoryRetrieval": typeof utils_memoryRetrieval;
   "utils/memoryText": typeof utils_memoryText;

@@ -51,9 +51,26 @@ describe("Admin Google updates", () => {
     fireEvent.change(link, { target: { value: "https://status.search.google.com/2" } });
     fireEvent.submit(link.closest("form") as HTMLFormElement);
 
+    // It may take up to Google's usual two weeks unless the announcement says otherwise (R8).
     await waitFor(() => expect(create).toHaveBeenCalledWith({
-      titleEn: "June 2025 core update", descriptionEn: "Another re-rank.", startedOn: "2025-06-30", finishedOn: "", url: "https://status.search.google.com/2",
+      titleEn: "June 2025 core update", descriptionEn: "Another re-rank.", meaningEn: "", startedOn: "2025-06-30", finishedOn: "", expectedDays: 14, url: "https://status.search.google.com/2",
     }));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/admin/content/google-updates"));
+  });
+
+  // What it means for the reader, and how long Google said it may take (knowledge-news-and-digest-plan.md, revised again 2026-10-01, R8).
+  it("says what an update means for the reader and how long it may take", async () => {
+    renderWithProviders(<GoogleUpdateEditor />);
+
+    fireEvent.change(screen.getByLabelText(/admin\.googleUpdates\.titleLabel/), { target: { value: "September 2026 spam update" } });
+    fireEvent.change(screen.getByLabelText(/admin\.googleUpdates\.descriptionLabel/), { target: { value: "A spam update." } });
+    fireEvent.change(screen.getByLabelText(/admin\.googleUpdates\.meaningLabel/), { target: { value: "Wait before changing pages." } });
+    fireEvent.change(screen.getByLabelText(/admin\.googleUpdates\.startedLabel/), { target: { value: "2026-09-24" } });
+    fireEvent.change(screen.getByLabelText(/admin\.googleUpdates\.expectedDaysLabel/), { target: { value: "10" } });
+    const link = screen.getByLabelText(/admin\.googleUpdates\.urlLabel/);
+    fireEvent.change(link, { target: { value: "https://status.search.google.com/3" } });
+    fireEvent.submit(link.closest("form") as HTMLFormElement);
+
+    await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ meaningEn: "Wait before changing pages.", expectedDays: 10 })));
   });
 });

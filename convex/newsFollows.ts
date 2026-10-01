@@ -14,7 +14,8 @@ import { readerFields, removeTranslations, requestTranslation, sourceFields, tra
  * → Content. A written list: nothing reads these.
  */
 
-const MAX_FOLLOWS = 100;
+/** "Who to follow" is a short written list, read whole. */
+export const MAX_FOLLOWS = 100;
 const MAX_NAME = 120;
 const MAX_WHY = 400;
 

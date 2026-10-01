@@ -44,8 +44,11 @@ export function sourceFields(owner: TranslatedOwner, row: Doc<TranslatedOwner>):
       return article.status === "PUBLISHED" ? { title: article.titleEn, body: article.bodyEn } : null;
     }
     case "googleUpdates": {
+      // "What it means for you" joins only when written, so an update without
+      // one keeps the fingerprint — and the translations — it already had.
       const update = row as Doc<"googleUpdates">;
-      return { title: update.titleEn, description: update.descriptionEn };
+      const meaning = update.meaningEn?.trim();
+      return meaning ? { title: update.titleEn, description: update.descriptionEn, meaning } : { title: update.titleEn, description: update.descriptionEn };
     }
     case "newsFollows":
       return { why: (row as Doc<"newsFollows">).whyEn };

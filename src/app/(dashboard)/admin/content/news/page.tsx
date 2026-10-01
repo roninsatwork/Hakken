@@ -3,14 +3,16 @@
 import { useState } from "react";
 import { useMutation, usePaginatedQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { ExternalLink, Newspaper, Trash2 } from "lucide-react";
+import { ExternalLink, Newspaper, Pin, PinOff, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { NewsItemKind } from "@/convex/newsSchema";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { formatDate } from "@/src/lib/dates";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { ContentDeleteDialog } from "../_components/ContentDialogs";
@@ -25,6 +27,8 @@ const KINDS: NewsItemKind[] = ["GOOGLE_UPDATE", "X", "YOUTUBE", "WEBSITE"];
  * phase 3): every item in the News feed, newest first. Items go live as they
  * are collected (A4); this is where the rare one that should not be there is
  * taken down. A Google update's item goes with the update, in Google updates.
+ * Any item can be pinned as the front page's lead story for seven days
+ * (revised again 2026-10-01, R7); unpinned, the rule chooses again.
  */
 export default function NewsItemsAdminPage() {
   const t = useTranslations("admin.newsItems");
@@ -32,6 +36,9 @@ export default function NewsItemsAdminPage() {
   const [kind, setKind] = useState<NewsItemKind | "">("");
   const items = usePaginatedQuery(api.news.listNewsItemsForAdmin, kind ? { kind } : {}, { initialNumItems: TABLE_PAGE_SIZE });
   const deleteItem = useMutation(api.news.deleteNewsItem);
+  const pinLead = useMutation(api.news.pinLeadStory);
+  const unpinLead = useMutation(api.news.unpinLeadStory);
+  const pinAction = useAdminAction({ scope: "admin-news-lead" });
   const remover = useContentDelete({
     scope: "admin-news-items",
     remove: deleteItem,
@@ -71,6 +78,9 @@ export default function NewsItemsAdminPage() {
               <span className="flex flex-col gap-0.5">
                 <span className="text-[13px] font-medium text-foreground">{item.titleEn}</span>
                 <span className="text-[12px] text-secondary">{item.sourceName}</span>
+                {item.leadUntil !== null ? (
+                  <StatusLabel tone="info" icon="pinned" className="mt-1">{t("leadUntil", { date: formatDate(item.leadUntil) })}</StatusLabel>
+                ) : null}
               </span>
             ),
           },
@@ -92,6 +102,21 @@ export default function NewsItemsAdminPage() {
                 >
                   <ExternalLink className="h-4 w-4" />
                 </a>
+                {item.leadUntil !== null ? (
+                  <RowIconButton
+                    label={t("unpin")}
+                    onClick={() => void pinAction.run(() => unpinLead({ itemId: item._id }), { key: item._id, fallbackMessage: t("errors.pinFailed") })}
+                  >
+                    <PinOff className="h-4 w-4" />
+                  </RowIconButton>
+                ) : (
+                  <RowIconButton
+                    label={t("pin")}
+                    onClick={() => void pinAction.run(() => pinLead({ itemId: item._id }), { key: item._id, fallbackMessage: t("errors.pinFailed") })}
+                  >
+                    <Pin className="h-4 w-4" />
+                  </RowIconButton>
+                )}
                 {item.isGoogleUpdate ? null : (
                   <RowIconButton label={t("delete")} tone="danger" onClick={() => remover.askDelete(item)}>
                     <Trash2 className="h-4 w-4" />

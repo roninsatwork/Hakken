@@ -614,7 +614,8 @@
     "newsSources": "News sources",
     "googleUpdates": "Google updates",
     "whoToFollow": "Who to follow",
-    "outbox": "Outbox"
+    "outbox": "Outbox",
+    "learn": "Learn"
   },
   "header": {
     "adminOverview": "Platform Management",
@@ -6085,7 +6086,7 @@
     },
     "knowledgeArticles": {
       "title": "Knowledge",
-      "subtitle": "The articles every signed-in user reads under Knowledge, in English and Italian. Only published articles are shown to them.",
+      "subtitle": "The articles every signed-in user reads in Learn, under Knowledge. Only published articles are shown to them.",
       "create": "New article",
       "createTitle": "New article",
       "editTitle": "Edit article",
@@ -6116,7 +6117,9 @@
       },
       "back": "Knowledge",
       "titleLabel": "Title",
-      "bodyLabel": "Article"
+      "bodyLabel": "Article",
+      "topicLabel": "Topic",
+      "noTopic": "No topic"
     },
     "googleUpdates": {
       "title": "Google updates",
@@ -6154,7 +6157,11 @@
       },
       "back": "Google updates",
       "titleLabel": "Title",
-      "descriptionLabel": "What changed"
+      "descriptionLabel": "What changed",
+      "meaningLabel": "What it means for you",
+      "meaningHint": "Optional. One or two plain sentences on what a business should do, or not do, about it.",
+      "expectedDaysLabel": "Takes up to (days)",
+      "expectedDaysHint": "From Google's announcement: \"up to two weeks\" is 14."
     },
     "newsSources": {
       "title": "News sources",
@@ -6335,8 +6342,12 @@
         "actions": "Actions"
       },
       "errors": {
-        "deleteFailed": "Could not take the item down. Try again."
-      }
+        "deleteFailed": "Could not take the item down. Try again.",
+        "pinFailed": "Could not change the lead story. Try again."
+      },
+      "pin": "Lead the News front page with this for 7 days",
+      "unpin": "Stop leading with this",
+      "leadUntil": "Lead story until {date}"
     },
     "contentEditor": {
       "missingTitle": "That is no longer here",
@@ -10721,7 +10732,8 @@
       "noMatch": "No article matches that.",
       "columns": {
         "article": "Article",
-        "updated": "Updated"
+        "updated": "Updated",
+        "topic": "Topic"
       }
     },
     "article": {
@@ -10734,8 +10746,6 @@
   "news": {
     "title": "News",
     "description": "What has changed in search and AI, in plain words, with what it means for you.",
-    "kindFilter": "Show",
-    "allKinds": "Everything",
     "kinds": {
       "GOOGLE_UPDATE": "Google updates",
       "X": "X",
@@ -10748,20 +10758,64 @@
       "YOUTUBE": "YouTube video",
       "WEBSITE": "Article"
     },
-    "feedLabel": "News, newest first",
-    "emptyTitle": "Nothing here yet",
-    "empty": "News will appear here as it is published.",
-    "emptyKind": "Nothing of this kind yet. Show everything to see the rest.",
-    "meaning": "What this means for you",
-    "readOriginal": "Read the original",
-    "loadMore": "Show more",
-    "whoToFollow": "Who to follow",
-    "whoToFollowEmpty": "Our recommendations will appear here.",
     "followKinds": {
       "X": "On X",
       "YOUTUBE": "On YouTube",
       "WEBSITE": "Website",
       "LINKEDIN": "On LinkedIn"
+    },
+    "story": {
+      "kinds": {
+        "GOOGLE_UPDATE": "Google update",
+        "WEBSITE": "Website",
+        "YOUTUBE": "YouTube",
+        "X": "X",
+        "KNOWLEDGE": "Knowledge"
+      },
+      "meaning": "What it means for you",
+      "readOriginal": "Read the original",
+      "readGoogle": "Read Google's post",
+      "askHakken": "Ask {platformName} about this",
+      "askQuestion": "Tell me about \"{title}\" and what it means for my websites.",
+      "back": "News",
+      "notFoundTitle": "That story is not here",
+      "notFoundDescription": "It may have been taken down. The rest are in News."
+    },
+    "rollout": {
+      "started": "Started <strong>{day}</strong>",
+      "today": "<strong>Today</strong> · day {day}",
+      "doneBy": "Done by <strong>{day}</strong> at the latest",
+      "finished": "Finished <strong>{day}</strong> · {days, plural, one {# day} other {# days}}",
+      "rollingOut": "Still rolling out · day {day} of up to {days}",
+      "finishedStatus": "{days, plural, one {Finished after # day} other {Finished after # days}}"
+    },
+    "front": {
+      "emptyTitle": "Nothing here yet",
+      "empty": "News will appear here as it is published.",
+      "emptyKind": "Nothing of this kind yet. All news has the rest.",
+      "leadLabel": "The lead story",
+      "moreLabel": "More stories",
+      "earlier": "Earlier",
+      "week": "Week {week}",
+      "weekCount": "{count, plural, =0 {No stories in the last 7 days} one {# story in the last 7 days} other {# stories in the last 7 days}}",
+      "kindHeadings": {
+        "GOOGLE_UPDATE": "Google updates",
+        "YOUTUBE": "From YouTube",
+        "X": "From X",
+        "WEBSITE": "From websites"
+      },
+      "showMore": "Show more"
+    },
+    "updates": {
+      "label": "Google updates",
+      "title": "The last three",
+      "description": "Newest first, with how long each took to finish.",
+      "empty": "No Google updates yet.",
+      "all": "All Google updates",
+      "dates": "{from} to {to}",
+      "days": "{days, plural, one {# day} other {# days}}",
+      "startedOn": "Started {day}",
+      "dayOf": "Day {day}"
     }
   },
   "unsubscribe": {
@@ -10775,5 +10829,44 @@
     "failedBody": "It may have been changed in transit. You can turn the Weekly News Digest off from your profile instead.",
     "incompleteTitle": "This link is incomplete",
     "incompleteBody": "It may have been shortened in transit. You can turn the Weekly News Digest off from your profile instead."
+  },
+  "learn": {
+    "menu": {
+      "label": "Learn",
+      "jumpLabel": "Jump to a page",
+      "jumpPlaceholder": "Jump to a page…",
+      "groups": {
+        "news": "News",
+        "people": "People",
+        "knowledge": "Knowledge"
+      },
+      "allNews": "All news",
+      "kinds": {
+        "GOOGLE_UPDATE": "Google updates",
+        "YOUTUBE": "From YouTube",
+        "X": "From X",
+        "WEBSITE": "From websites"
+      },
+      "whoToFollow": "Who to follow",
+      "allArticles": "All articles",
+      "topics": {
+        "TRAFFIC": "Traffic",
+        "RANKINGS": "Rankings",
+        "AI_ANSWERS": "AI answers",
+        "BACKLINKS": "Backlinks"
+      }
+    },
+    "follow": {
+      "title": "Who to follow",
+      "description": "The people and channels we recommend for keeping up with search and AI, and why.",
+      "searchPlaceholder": "Find someone…",
+      "empty": "Our recommendations will appear here.",
+      "noMatch": "No one matches that.",
+      "columns": {
+        "name": "Name",
+        "where": "Where",
+        "why": "Why follow them"
+      }
+    }
   }
 }
