@@ -607,7 +607,9 @@
     "billing": "Fatturazione",
     "sites": "Siti",
     "searchConsole": "Search Console",
-    "yourSites": "I tuoi siti"
+    "yourSites": "I tuoi siti",
+    "knowledge": "Conoscenza",
+    "content": "Contenuti"
   },
   "header": {
     "adminOverview": "Protocollo Infrastruttura",
@@ -6068,6 +6070,42 @@
       "errors": {
         "failed": "Impossibile salvare. Riprova."
       }
+    },
+    "knowledgeArticles": {
+      "title": "Conoscenza",
+      "subtitle": "Gli articoli che ogni utente connesso legge in Conoscenza, in inglese e in italiano. Vedono solo quelli pubblicati.",
+      "create": "Nuovo articolo",
+      "createTitle": "Nuovo articolo",
+      "editTitle": "Modifica articolo",
+      "editorSubtitle": "Scrivi il titolo e l'articolo in entrambe le lingue. Una bozza si vede solo qui; per pubblicare servono tutte e due le lingue.",
+      "statusLabel": "Chi può vederlo",
+      "draft": "Bozza",
+      "published": "Pubblicato",
+      "titleEnLabel": "Titolo in inglese",
+      "bodyEnLabel": "Articolo in inglese",
+      "titleItLabel": "Titolo in italiano",
+      "bodyItLabel": "Articolo in italiano",
+      "bodyHint": "Testo semplice. Funzionano **grassetto**, - elenchi, [link](https://…) e ## titoli.",
+      "save": "Salva articolo",
+      "searchPlaceholder": "Cerca articoli…",
+      "empty": "Ancora nessun articolo. Scrivi il primo.",
+      "noMatch": "Nessun articolo corrisponde.",
+      "noItalian": "Italiano non ancora scritto",
+      "edit": "Modifica articolo",
+      "delete": "Elimina articolo",
+      "deleteTitle": "Elimina articolo",
+      "deleteWarning": "I lettori smettono subito di vederlo. Non si può annullare.",
+      "deleteConfirm": "Eliminare <highlight>{title}</highlight>?",
+      "columns": {
+        "article": "Articolo",
+        "status": "Stato",
+        "updated": "Aggiornato",
+        "actions": "Azioni"
+      },
+      "errors": {
+        "saveFailed": "Impossibile salvare l'articolo. Riprova.",
+        "deleteFailed": "Impossibile eliminare l'articolo. Riprova."
+      }
     }
   },
   "ai": {
@@ -10417,5 +10455,24 @@
     "gemini": "Gemini",
     "claude": "Claude",
     "googleAiOverview": "AI Overview di Google"
+  },
+  "knowledgeArticles": {
+    "list": {
+      "title": "Conoscenza",
+      "description": "Risposte brevi alle domande che ci fanno più spesso, come il modo in cui vengono calcolati i dati in Siti.",
+      "searchPlaceholder": "Trova un articolo…",
+      "empty": "Ancora nessun articolo.",
+      "noMatch": "Nessun articolo corrisponde.",
+      "columns": {
+        "article": "Articolo",
+        "updated": "Aggiornato"
+      }
+    },
+    "article": {
+      "back": "Conoscenza",
+      "updated": "Aggiornato il {date}",
+      "notFoundTitle": "Questo articolo non c'è",
+      "notFoundDescription": "Potrebbe essere stato rimosso o sostituito. Gli altri sono in Conoscenza."
+    }
   }
 }

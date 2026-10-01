@@ -607,7 +607,9 @@
     "billing": "Billing",
     "sites": "Sites",
     "searchConsole": "Search Console",
-    "yourSites": "Your sites"
+    "yourSites": "Your sites",
+    "knowledge": "Knowledge",
+    "content": "Content"
   },
   "header": {
     "adminOverview": "Platform Management",
@@ -6068,6 +6070,42 @@
       "errors": {
         "failed": "Could not save that. Try again."
       }
+    },
+    "knowledgeArticles": {
+      "title": "Knowledge",
+      "subtitle": "The articles every signed-in user reads under Knowledge, in English and Italian. Only published articles are shown to them.",
+      "create": "New article",
+      "createTitle": "New article",
+      "editTitle": "Edit article",
+      "editorSubtitle": "Write the title and the article in both languages. A draft is only seen here; publishing needs both languages.",
+      "statusLabel": "Who can see it",
+      "draft": "Draft",
+      "published": "Published",
+      "titleEnLabel": "Title in English",
+      "bodyEnLabel": "Article in English",
+      "titleItLabel": "Title in Italian",
+      "bodyItLabel": "Article in Italian",
+      "bodyHint": "Plain text. **Bold**, - lists, [links](https://…) and ## headings work.",
+      "save": "Save article",
+      "searchPlaceholder": "Search articles…",
+      "empty": "No articles yet. Write the first one.",
+      "noMatch": "No article matches that.",
+      "noItalian": "No Italian yet",
+      "edit": "Edit article",
+      "delete": "Delete article",
+      "deleteTitle": "Delete article",
+      "deleteWarning": "Readers stop seeing it straight away. This cannot be undone.",
+      "deleteConfirm": "Delete <highlight>{title}</highlight>?",
+      "columns": {
+        "article": "Article",
+        "status": "Status",
+        "updated": "Updated",
+        "actions": "Actions"
+      },
+      "errors": {
+        "saveFailed": "Could not save the article. Try again.",
+        "deleteFailed": "Could not delete the article. Try again."
+      }
     }
   },
   "ai": {
@@ -10417,5 +10455,24 @@
     "gemini": "Gemini",
     "claude": "Claude",
     "googleAiOverview": "Google AI Overviews"
+  },
+  "knowledgeArticles": {
+    "list": {
+      "title": "Knowledge",
+      "description": "Short answers to the questions we get asked most, like how the figures in Sites are worked out.",
+      "searchPlaceholder": "Find an article…",
+      "empty": "No articles yet.",
+      "noMatch": "No article matches that.",
+      "columns": {
+        "article": "Article",
+        "updated": "Updated"
+      }
+    },
+    "article": {
+      "back": "Knowledge",
+      "updated": "Updated {date}",
+      "notFoundTitle": "That article is not here",
+      "notFoundDescription": "It may have been taken down or replaced. The rest are in Knowledge."
+    }
   }
 }

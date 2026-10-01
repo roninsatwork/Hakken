@@ -25,6 +25,7 @@ import { clearCountingSwitchMoves } from "./sitePositionRepair";
 import { moveAnswersOffRequests } from "./seoPullAnswers";
 import { backfillAnswerIndex } from "./siteAnswers";
 import { dropCheckOnlyKeywordRows } from "./privateListsMigration";
+import { addTrafficArticle } from "./knowledgeArticleSeeds";
 import { recountEveryList } from "./siteListAi";
 import { untickAutomaticQueries } from "./promptFanOut";
 import { followPlatformWhereStartingNumber } from "./companyDataLimits";
@@ -198,6 +199,9 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
   "2026-09-22-search-summaries": rebuildSearchSummaries,
   /** The running cost per operation, rebuilt from every charge already on file. */
   "2026-09-22-operation-costs": rebuildOperationCosts,
+
+  /** Knowledge's first article, how traffic is worked out (`knowledgeArticleSeeds.ts`), added once. */
+  "2026-10-01-knowledge-traffic-article": (ctx) => addTrafficArticle(ctx),
 
 
   /**

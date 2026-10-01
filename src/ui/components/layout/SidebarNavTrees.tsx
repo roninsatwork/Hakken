@@ -6,6 +6,8 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Building2,
+  BookOpen,
+  FileText,
   Globe,
   SearchCheck,
   Bot,
@@ -109,6 +111,25 @@ export function AdminNavTree({
       <SubNavItem label={t('allWebsites')} href="/admin/websites" isActive={pathname.startsWith('/admin/websites') && !pathname.startsWith('/admin/websites/collection') && !pathname.startsWith('/admin/websites/costs')} onClick={() => setActiveItem('Websites')} />
       <SubNavItem label={t('seoCollection')} href="/admin/websites/collection" isActive={pathname.startsWith('/admin/websites/collection')} onClick={() => setActiveItem('Websites')} />
       <SubNavItem label={t('seoCosts')} href="/admin/websites/costs" isActive={pathname.startsWith('/admin/websites/costs')} onClick={() => setActiveItem('Websites')} />
+    </NavItem>
+  )}
+
+  {/*
+    What every signed-in user reads, written here (docs/plans/active/
+    knowledge-news-and-digest-plan.md, A3): Knowledge first; News, its sources,
+    Google updates and the outbox join it in later phases.
+  */}
+  {canSeeAdminSections && (
+    <NavItem
+      icon={FileText}
+      label={t('content')}
+      isActive={activeItem === 'Content' || pathname.startsWith('/admin/content')}
+      onClick={() => setActiveItem('Content')}
+      hasChildren
+      isOpen={openSections.content}
+      onToggle={() => toggleSection('content')}
+    >
+      <SubNavItem label={t('knowledge')} href="/admin/content/knowledge" isActive={pathname.startsWith('/admin/content/knowledge')} onClick={() => setActiveItem('Content')} />
     </NavItem>
   )}
 
@@ -344,6 +365,15 @@ export function UserNavTree({
     href="/app/search-console"
     isActive={activeItem === 'Search Console' || pathname.startsWith('/app/search-console')}
     onClick={() => setActiveItem('Search Console')}
+  />
+
+  {/* General knowledge for every signed-in user, after Search Console (knowledge-news-and-digest-plan.md, D1, A1, A14). */}
+  <NavItem
+    icon={BookOpen}
+    label={t('knowledge')}
+    href="/app/knowledge"
+    isActive={activeItem === 'Knowledge' || pathname.startsWith('/app/knowledge')}
+    onClick={() => setActiveItem('Knowledge')}
   />
 
   {hasCapability(CORE_MODULES.reception) && (

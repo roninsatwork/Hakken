@@ -730,7 +730,7 @@ row that says so must not be described as though it exists.
 | Skills library | Not built for this domain. The agent skill system exists; the Cogny-derived SEO/GA4/ads/email playbooks and Newsjack-derived PR and panel skills have not been adapted or imported. |
 | Alerts with the four-part contract | Not built. Platform alerts exist for system health; there is no KPI band model and no "what changed, why, what to do, what to expect" alert contract. |
 | Weekly note and monthly report | Not built. The email system and layout service exist; the content does not. |
-| Knowledge | Not built; planned 2026-09-30 (docs/plans/active/knowledge-news-and-digest-plan.md). A Knowledge item on the main menu, after Search Console: plain-English articles for customers, written in English and Italian in a new Admin → Content group, the first on how traffic is worked out. Every signed-in user can read it; the content is managed in Admin. Published articles are to be read by Ask Hakken for every company. Never shown inside Sites. |
+| Knowledge | Built on dev 2026-10-01 (phase 1 of docs/plans/active/knowledge-news-and-digest-plan.md): a Knowledge item on the main menu, after Search Console, listing plain-English articles every signed-in user can read, each on its own screen in the reader's language; Admin → Content → Knowledge writes them in English and Italian, as drafts or published (`knowledgeArticles`). The first, how traffic is worked out, ships through a migration. Not yet read by Ask Hakken (phase 2). Never shown inside Sites. |
 | News | Not built; planned 2026-09-30 (same plan). A News item on the main menu: updates collected by a News Collector agent from X accounts, Anthony's X bookmarks, YouTube channels and websites, live at once, with Google updates entered by hand in Admin → Content and marked on every Sites chart that runs over dates. Nothing reads X, YouTube, RSS or web pages for news today. |
 | Weekly News Digest and the outbox | Not built; planned 2026-09-30 (same plan). A Weekly Digest agent queues one "Weekly News Digest" email per subscribed user into an outbox; an Email Sender agent, with no AI, sends it through Resend. Every user is subscribed and can unsubscribe on their profile. No outbox, sent-email log, unsubscribe, email preference or bounce handling exists today. |
 | Agency role and cross-workspace view | Not built. Tenancy has three roles (§21); the agency manager role, client invitation, agency-wide view and white-label report surfaces are phase-one scope. |
@@ -799,6 +799,11 @@ running against the Sonae deployment.
 ---
 
 ## Change Log
+
+* **2026-10-01** — **Built: Knowledge (phase 1 of the Knowledge, News and
+  digest plan).** §31's Knowledge row: the main-menu item and its article
+  screens, Admin → Content → Knowledge, and the traffic article. Ask Hakken
+  reading the articles is phase 2.
 
 * **2026-09-30** — **Planned, not built: Knowledge, News and the Weekly News
   Digest.** Three rows added to §31: a Knowledge item and a News item on the

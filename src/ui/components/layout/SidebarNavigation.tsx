@@ -227,6 +227,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/admin/ai/tools')) return 'Tools';
   if (pathname.startsWith('/admin/ai')) return 'Artificial Intelligence';
   if (pathname.startsWith('/admin/governance')) return 'Governance';
+  if (pathname.startsWith('/admin/content')) return 'Content';
   if (pathname.startsWith('/app/governance')) return 'Workspace Governance';
   if (pathname.startsWith('/admin/agents')) return 'Manage Agents';
   if (pathname.startsWith('/admin/auth-diagnostics')) return 'Auth Diagnostics';
@@ -245,6 +246,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/app/calls')) return 'Calls';
   if (pathname.startsWith('/app/sites')) return 'Sites';
   if (pathname.startsWith('/app/search-console')) return 'Search Console';
+  if (pathname.startsWith('/app/knowledge')) return 'Knowledge';
   if (pathname.startsWith('/app/reception')) return 'Reception';
   if (pathname.startsWith('/app/profile')) return 'Profile';
   if (pathname === '/app/settings') return 'Organization Dashboard';
@@ -268,6 +270,7 @@ function getDefaultOpenSections(pathname: string): Record<string, boolean> {
     governance: pathname.startsWith('/admin/governance'),
     workspaceGovernance: pathname.startsWith('/app/governance'),
     sites: pathname.startsWith('/app/sites'),
+    content: pathname.startsWith('/admin/content'),
     businessHub: false,
     clients: false,
     companies: pathname.startsWith('/admin/companies'),

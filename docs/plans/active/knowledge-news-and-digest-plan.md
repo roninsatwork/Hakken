@@ -1,12 +1,34 @@
 # Knowledge, News and the weekly digest — three agents and one outbox
 
-**Started 2026-09-30. Status: planning — nothing built.** The decisions below
+**Started 2026-09-30. Status: building — phase 1 built on dev 2026-10-01
+("can we build this out please").** The decisions below
 are Anthony's, in his words where he gave them; his answers to the first
 thirteen questions are under "Answered". Change a decision here, with a date,
 before building anything that disagrees with it. The questions still open are
 at the end, each with the phase that needs it.
 
-Overall: 0%. Every phase is unbuilt.
+Overall: 11% (2 of 17.5 days). Phase 1, Knowledge: built. Phases 2–10: not
+started.
+
+### Built so far
+
+- **Phase 1, Knowledge (2026-10-01).** `knowledgeArticles`
+  (`convex/knowledgeArticlesSchema.ts`, `convex/knowledgeArticles.ts`): an
+  article's title and body in English and Italian, draft or published, written
+  only by the super admin and read by any signed-in user (`tenantQuery`), a
+  draft reading as not there. Publishing needs both languages whole. The
+  screens are `/app/knowledge` and `/app/knowledge/[articleId]` (the reader's
+  language, English where the Italian is missing) and Admin → Content →
+  Knowledge (`/admin/content/knowledge`). The traffic article ships through
+  the `2026-10-01-knowledge-traffic-article` migration
+  (`convex/knowledgeArticleSeeds.ts`), added once and never over an edit; it
+  ran on dev the same day. Its text was written from the outline below —
+  yesterday's chat draft was not kept — and is Anthony's to change in Admin.
+  - Named "knowledge articles" in the code because "knowledge" is already the
+    company knowledge-documents feature (`convex/knowledge.ts`).
+  - An article's own table is styled by its screen
+    (`[&_table]` on the article), since the kit forbids a hand-written
+    `<table>` and the chat renderer stays as it is.
 
 ## What was asked
 
