@@ -102,3 +102,18 @@ export const trackSearchConsoleItem = tenantMutation({
     return null;
   },
 });
+
+/** Whether the company tracks one keyword or page on its website: the "Track this keyword" tick on its own screen. */
+export const searchConsoleIsTracked = tenantQuery({
+  args: { siteId: v.id("companyWebsites"), kind: kindValidator, key: v.string() },
+  returns: v.union(v.null(), v.boolean()),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    if (isTrackedHold(site.hold)) return null;
+    const held = await ctx.db
+      .query("searchConsoleTracked")
+      .withIndex("by_hold_kind_key", (q) => q.eq("companyWebsiteId", site.hold._id).eq("kind", args.kind).eq("key", args.key.trim()))
+      .unique();
+    return held !== null;
+  },
+});

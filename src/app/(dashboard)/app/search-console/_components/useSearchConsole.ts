@@ -20,17 +20,34 @@ export const RESULTS_KEY = "results";
 export const RESULT_KINDS = ["web", "image", "video", "news", "discover", "googleNews"] as const;
 export type ResultKind = (typeof RESULT_KINDS)[number];
 
+/** The menu's groups (search-console-plan.md §13.1): Google's own figures first, then what changed, what to do, and how it breaks down. */
+export const SEARCH_CONSOLE_GROUPS = ["figures", "changes", "opportunities", "breakdowns", "settings"] as const;
+export type SearchConsoleGroup = (typeof SEARCH_CONSOLE_GROUPS)[number];
+
 /** The section's pages, in the order its menu lists them. */
 export const SEARCH_CONSOLE_PAGES = [
-  { id: "performance", segment: "" },
-  { id: "searches", segment: "searches" },
-  { id: "pages", segment: "pages" },
-  { id: "places", segment: "countries-and-devices" },
-  { id: "connection", segment: "connection" },
-] as const;
+  { id: "performance", segment: "", group: "figures" },
+  { id: "keywords", segment: "keywords", group: "figures" },
+  { id: "pages", segment: "pages", group: "figures" },
+  { id: "places", segment: "countries-and-devices", group: "figures" },
+  { id: "bands", segment: "position-bands", group: "changes" },
+  { id: "newLost", segment: "new-and-lost", group: "changes" },
+  { id: "moves", segment: "wins-and-losses", group: "changes" },
+  { id: "updates", segment: "google-updates", group: "changes" },
+  { id: "almost", segment: "almost-there", group: "opportunities" },
+  { id: "lowCtr", segment: "shown-but-not-clicked", group: "opportunities" },
+  { id: "demand", segment: "missed-demand", group: "opportunities" },
+  { id: "competing", segment: "pages-competing", group: "opportunities" },
+  { id: "types", segment: "types", group: "breakdowns" },
+  { id: "brand", segment: "brand-and-non-brand", group: "breakdowns" },
+  { id: "ctrCurve", segment: "click-rate-by-position", group: "breakdowns" },
+  { id: "appearance", segment: "rich-results", group: "breakdowns" },
+  { id: "estimates", segment: "real-against-estimated", group: "breakdowns" },
+  { id: "connection", segment: "connection", group: "settings" },
+] as const satisfies readonly { id: string; segment: string; group: SearchConsoleGroup }[];
 export type SearchConsolePageId = (typeof SEARCH_CONSOLE_PAGES)[number]["id"];
 
-/** The page a path under the site belongs to: a search's own screen belongs to Searches, a page's to Pages. */
+/** The page a path under the site belongs to: a keyword's own screen belongs to Keywords, a page's to Pages. */
 export function pageForPath(pathname: string, siteId: string): SearchConsolePageId {
   const rest = pathname.replace(`/app/search-console/${siteId}`, "").replace(/^\/|\/$/g, "");
   const segment = rest.split("/")[0] ?? "";

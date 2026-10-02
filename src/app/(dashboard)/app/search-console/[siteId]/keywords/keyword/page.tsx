@@ -2,7 +2,7 @@
 
 import { SearchConsoleRecordScreen } from "../../../_components/SearchConsoleRecordScreen";
 
-/** One search's own screen: its days, and the pages Google showed for it. */
-export default function SearchConsoleSearchPage() {
+/** One keyword's own screen: its days, where its clicks came from, and the pages it brought people to. */
+export default function SearchConsoleKeywordPage() {
   return <SearchConsoleRecordScreen dimension="query" />;
 }

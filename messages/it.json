@@ -10546,7 +10546,31 @@
       "searches": "Ricerche",
       "pages": "Pagine",
       "places": "Paesi e dispositivi",
-      "connection": "Collegamento"
+      "connection": "Collegamento",
+      "jumpLabel": "Vai a una pagina",
+      "jumpPlaceholder": "Vai a una pagina…",
+      "groups": {
+        "figures": "I dati di Google",
+        "changes": "Cambiamenti",
+        "opportunities": "Opportunità",
+        "breakdowns": "Suddivisioni",
+        "settings": "Impostazioni"
+      },
+      "keywords": "Parole chiave",
+      "bands": "Fasce di posizione",
+      "newLost": "Nuove e perse",
+      "moves": "Guadagni e perdite",
+      "updates": "Aggiornamenti di Google",
+      "almost": "Quasi in cima",
+      "lowCtr": "Mostrate ma non cliccate",
+      "demand": "Domanda persa",
+      "competing": "Pagine in concorrenza",
+      "types": "Tipi",
+      "brand": "Brand e non brand",
+      "ctrCurve": "Tasso di clic per posizione",
+      "appearance": "Risultati avanzati",
+      "estimates": "Reali contro stimati",
+      "soon": "In arrivo"
     },
     "kinds": {
       "label": "Tipo di risultato",
@@ -10572,8 +10596,8 @@
       "up": "▲ {change} rispetto ai {days} giorni precedenti",
       "down": "▼ {change} rispetto ai {days} giorni precedenti",
       "same": "Come nei {days} giorni precedenti",
-      "better": "▲ {change} posizioni meglio dei {days} giorni precedenti",
-      "worse": "▼ {change} posizioni peggio dei {days} giorni precedenti",
+      "better": "▲ {change} posizioni meglio",
+      "worse": "▼ {change} posizioni peggio",
       "points": "{change} punti",
       "noBefore": "I giorni precedenti non sono ancora disponibili",
       "new": "Nuova in queste date"
@@ -10606,8 +10630,8 @@
     },
     "pages": {
       "title": "Pagine",
-      "description": "Ogni pagina che Google ha mostrato nei risultati, e i clic che ha portato. Aprine una per i suoi giorni e le ricerche per cui è stata mostrata.",
-      "searchPlaceholder": "Trova una pagina…"
+      "description": "Ogni pagina che Google ha mostrato in queste date. Spunta una pagina per seguirla. Cliccane una per vedere tutto su di lei e le parole chiave che le hanno portato visitatori.",
+      "searchPlaceholder": "Cerca pagine…"
     },
     "places": {
       "title": "Paesi e dispositivi",
@@ -10629,7 +10653,7 @@
       "clicks": "Clic",
       "change": "Variazione",
       "impressions": "Impressioni",
-      "ctr": "Percentuale di clic",
+      "ctr": "CTR",
       "position": "Posizione",
       "share": "Quota dei clic",
       "new": "Nuova",
@@ -10643,16 +10667,25 @@
       "download": "Scarica tutto (CSV)",
       "downloading": "Preparo il file…",
       "downloadFailed": "Non è stato possibile preparare il file. Riprova.",
-      "downloadCut": "Il file contiene i {rows} con più clic."
+      "downloadCut": "Il file contiene i {rows} con più clic.",
+      "keyword": "Parola chiave",
+      "pages": "Pagine",
+      "topPage": "Pagina principale",
+      "keywords": "Parole chiave",
+      "topKeyword": "Parola chiave principale",
+      "yourPages": "Tue pagine",
+      "asked": "Chiesto a Google per queste date",
+      "same": "Invariata",
+      "places": "{places} posizioni"
     },
     "record": {
       "searchDescription": "Quello che Google ha contato per questa ricerca, giorno per giorno, e quali tue pagine ha mostrato.",
-      "pageDescription": "Quello che Google ha contato per questa pagina, giorno per giorno, e le ricerche per cui è stata mostrata.",
+      "pageDescription": "Cosa ha contato Google per questa pagina, giorno per giorno, e le parole chiave che le hanno portato visitatori.",
       "backToSearches": "Torna a Ricerche",
       "backToPages": "Torna a Pagine",
       "openInSites": "Aprila in Siti",
       "openPage": "Apri la pagina",
-      "pagesFor": "Pagine che Google ha mostrato",
+      "pagesFor": "Pagine a cui ha portato visitatori",
       "searchesFor": "Ricerche per cui Google l'ha mostrata",
       "asked": "Chiesto a Google quando si apre questa schermata, per le date scelte.",
       "asking": "Chiedo a Google…",
@@ -10661,7 +10694,21 @@
       "refused": "Google non ha voluto rispondere a questa domanda.",
       "noneNamed": "Google non ne ha nominata nessuna: sono tutte nascoste per la privacy.",
       "cut": "Le {count} con più clic.",
-      "tryAgain": "Riprova"
+      "tryAgain": "Riprova",
+      "backTo": "Torna a {name}",
+      "keywordDescription": "Cosa ha contato Google per questa parola chiave, giorno per giorno, e ogni tua pagina a cui ha portato visitatori.",
+      "trackKeyword": "Segui questa parola chiave",
+      "trackPage": "Segui questa pagina",
+      "chartTitle": "Clic e impressioni giorno per giorno",
+      "cameFrom": "Da dove sono arrivati i clic",
+      "thisKeywordOnly": "Solo questa parola chiave, per le date scelte.",
+      "thisPageOnly": "Solo questa pagina, per le date scelte.",
+      "share": "Quota",
+      "noClicks": "Nessun clic in queste date.",
+      "keywordsFor": "Parole chiave che hanno portato visitatori a questa pagina",
+      "namedFor": "Google nomina le parole chiave dietro {named} dei {clicks} clic di questa pagina; le altre le nasconde per privacy. Spunta una parola chiave per seguirla; cliccane una per vedere ogni tua pagina a cui ha portato visitatori.",
+      "keywordsHint": "Spunta una parola chiave per seguirla; cliccane una per vedere ogni tua pagina a cui ha portato visitatori.",
+      "pagesHint": "Ogni tua pagina che Google ha mostrato per questa parola chiave. Spunta una pagina per seguirla; cliccane una per vedere tutto su di lei."
     },
     "connect": {
       "title": "Collega Google Search Console",
@@ -10733,6 +10780,61 @@
       "disconnectedOn": "Scollegato il {day}",
       "keptTo": "I dati fino al {day} sono ancora qui. Non arriva niente di nuovo finché non viene ricollegato.",
       "keptNone": "Non arriva niente di nuovo finché non viene ricollegato."
+    },
+    "keywords": {
+      "title": "Parole chiave",
+      "description": "Ogni parola chiave per cui Google ha mostrato il tuo sito in queste date. Spunta una parola chiave per seguirla. Cliccane una per vedere tutto su di lei e le pagine a cui ha portato visitatori.",
+      "searchPlaceholder": "Cerca parole chiave…"
+    },
+    "track": {
+      "column": "Segui",
+      "trackLabel": "Segui {name}",
+      "untrackLabel": "Smetti di seguire {name}",
+      "full": "Ne segui già {limit}. Togli la spunta a una per seguire “{name}”.",
+      "failed": "Non è stato possibile salvarlo. Riprova.",
+      "count": "{count} di {limit} seguite",
+      "keywordsOnSite": "{count} di {limit} parole chiave seguite su questo sito",
+      "pagesOnSite": "{count} di {limit} pagine seguite su questo sito"
+    },
+    "filters": {
+      "tracked": "Seguite",
+      "anyTracked": "Seguite o no",
+      "onlyTracked": "Seguite",
+      "onlyUntracked": "Non seguite",
+      "position": "Posizione",
+      "anyPosition": "Qualsiasi posizione",
+      "almostAny": "4–20",
+      "bands": {
+        "1-3": "1–3",
+        "4-10": "4–10",
+        "11-20": "11–20",
+        "21-50": "21–50",
+        "51+": "51 e oltre"
+      },
+      "pageType": "Tipo di pagina",
+      "anyPageType": "Qualsiasi tipo",
+      "brand": "Brand o no",
+      "anyBrand": "Brand o no",
+      "brandYes": "Brand",
+      "brandNo": "Non brand",
+      "move": "Guadagni o perdite",
+      "anyMove": "Guadagni e perdite",
+      "wins": "Guadagni",
+      "losses": "Perdite",
+      "verdict": "Stima",
+      "anyVerdict": "Qualsiasi stima",
+      "verdicts": {
+        "high": "Troppo alta",
+        "low": "Troppo bassa",
+        "close": "Corretta"
+      },
+      "missed": "Elenco",
+      "missedSearched": "Molto cercate, poco mostrate",
+      "missedUntracked": "Mostrate, non ancora seguite",
+      "country": "Paese",
+      "anyCountry": "Qualsiasi paese",
+      "device": "Dispositivo",
+      "anyDevice": "Qualsiasi dispositivo"
     }
   },
   "aiEngines": {

@@ -385,6 +385,9 @@ export const liveTarget = internalQuery({
 
 type LiveProblem = "NOT_CONNECTED" | "GOOGLE_REFUSED" | "GOOGLE_BUSY";
 
+/** A filter asked of Google with a list: one keyword, one page, one country or one device. */
+type Filter = { dimension: "query" | "page" | "country" | "device"; key: string };
+
 /** One of Google's lists for any dates, as rows a list adds up: the pairs, or the one split asked. */
 async function askGoogle(
   ctx: ActionCtx,
@@ -393,14 +396,16 @@ async function askGoogle(
   list: "pair" | "page" | "country" | "device" | "appearance",
   from: string,
   to: string,
-  filter?: { dimension: "query" | "page" | "country" | "device"; key: string },
+  filters: readonly Filter[] = [],
 ): Promise<{ ok: true; rows: PackedRow[] } | { ok: false; problem: LiveProblem }> {
   const ask = {
     startDate: from,
     endDate: to,
     type: searchType,
     dimensions: [...GOOGLE_DIMENSIONS[list]],
-    ...(filter ? { dimensionFilterGroups: [{ filters: [{ dimension: filter.dimension, operator: "equals", expression: filter.key }] }] } : {}),
+    ...(filters.length > 0
+      ? { dimensionFilterGroups: [{ filters: filters.map((filter) => ({ dimension: filter.dimension, operator: "equals", expression: filter.key })) }] }
+      : {}),
   };
   for (const renew of [false, true]) {
     const token = await accessTokenFor(ctx, target.connectionId, renew);
@@ -412,8 +417,6 @@ async function askGoogle(
   return { ok: false, problem: "NOT_CONNECTED" };
 }
 
-/** A filter on a country or a device, asked of Google with the list. */
-type Place = { dimension: "country" | "device"; key: string } | undefined;
 
 /**
  * A list's rows for any dates, added up as the ready-made periods are:
@@ -427,17 +430,28 @@ async function liveRows(
   dimension: ListKind,
   from: string,
   to: string,
-  place: Place,
+  filters: readonly Filter[],
+  within?: { kind: "query" | "page"; key: string },
 ): Promise<{ ok: true; rows: PeriodRow[]; pairs: PackedRow[] } | { ok: false; problem: LiveProblem }> {
   if (dimension === "country" || dimension === "device" || dimension === "appearance") {
-    const split = await askGoogle(ctx, target, searchType, dimension, from, to, place);
+    const split = await askGoogle(ctx, target, searchType, dimension, from, to, filters);
     return split.ok ? { ...split, pairs: [] } : split;
   }
-  const pairs = await askGoogle(ctx, target, searchType, "pair", from, to, place);
+  if (within) {
+    // One keyword's pages, or one page's keywords: its pairs, keyed by the other side.
+    const pairs = await askGoogle(ctx, target, searchType, "pair", from, to, [...filters, { dimension: within.kind, key: within.key }]);
+    if (!pairs.ok) return pairs;
+    return {
+      ok: true,
+      rows: pairs.rows.map((pair) => ({ ...pair, key: within.kind === "query" ? (pair.page ?? "") : pair.key, page: undefined })),
+      pairs: pairs.rows,
+    };
+  }
+  const pairs = await askGoogle(ctx, target, searchType, "pair", from, to, filters);
   if (!pairs.ok) return pairs;
   const side = bySide(pairs.rows, dimension);
   if (dimension === "query") return { ok: true, rows: [...side.values()].map((summed) => ({ ...summed })), pairs: pairs.rows };
-  const pages = await askGoogle(ctx, target, searchType, "page", from, to, place);
+  const pages = await askGoogle(ctx, target, searchType, "page", from, to, filters);
   if (!pages.ok) return pages;
   return {
     ok: true,
@@ -458,6 +472,7 @@ export const searchConsoleLiveList = tenantAction({
     searchType: searchTypeValidator,
     dimension: listKindValidator,
     view: viewValidator,
+    within: withinValidator,
     missed: v.optional(v.union(v.literal("searched"), v.literal("untracked"))),
     from: v.string(),
     to: v.string(),
@@ -473,15 +488,19 @@ export const searchConsoleLiveList = tenantAction({
     const companyId = getActiveCompanyId(ctx.user);
     if (!companyId) throw appError("NOT_FOUND", "That website is not one your company holds.");
     const view = args.view ?? "all";
-    const dimension = VIEW_LIST[view] ?? args.dimension;
+    const within = args.within;
+    const dimension = within ? (within.kind === "query" ? "page" : "query") : (VIEW_LIST[view] ?? args.dimension);
     const kind = dimension === "query" || dimension === "page" ? dimension : null;
     const target = await ctx.runQuery(internal.searchConsoleLists.liveTarget, { companyId, siteId: args.siteId, kind, view });
     if (!target) return { ok: false as const, problem: "NOT_CONNECTED" as const };
-    const place: Place = args.country ? { dimension: "country", key: args.country } : args.device ? { dimension: "device", key: args.device } : undefined;
-    const now = await liveRows(ctx, target, args.searchType, dimension, args.from, args.to, place);
+    const filters: Filter[] = [
+      ...(args.country ? [{ dimension: "country" as const, key: args.country }] : []),
+      ...(args.device ? [{ dimension: "device" as const, key: args.device }] : []),
+    ];
+    const now = await liveRows(ctx, target, args.searchType, dimension, args.from, args.to, filters, within);
     if (!now.ok) return now;
     const before = periodBefore(args.from, args.to);
-    const earlier = await liveRows(ctx, target, args.searchType, dimension, before.from, before.to, place);
+    const earlier = await liveRows(ctx, target, args.searchType, dimension, before.from, before.to, filters, within);
     const shaped = shapeRows(now.rows, earlier.ok ? earlier.rows : null, { tracked: new Set(target.tracked), brandWords: target.brandWords });
     const context: ViewContext = { missedList: args.missed ?? "searched", sitesKeywords: target.sitesKeywords };
     if (view === "lowCtr") {
@@ -518,10 +537,10 @@ export const searchConsoleKeySplits = tenantAction({
     if (!companyId) throw appError("NOT_FOUND", "That website is not one your company holds.");
     const target = await ctx.runQuery(internal.searchConsoleLists.liveTarget, { companyId, siteId: args.siteId, kind: null });
     if (!target) return { ok: false as const, problem: "NOT_CONNECTED" as const };
-    const filter = { dimension: args.dimension, key: args.key };
-    const countries = await askGoogle(ctx, target, args.searchType, "country", args.from, args.to, filter);
+    const filters: Filter[] = [{ dimension: args.dimension, key: args.key }];
+    const countries = await askGoogle(ctx, target, args.searchType, "country", args.from, args.to, filters);
     if (!countries.ok) return countries;
-    const devices = await askGoogle(ctx, target, args.searchType, "device", args.from, args.to, filter);
+    const devices = await askGoogle(ctx, target, args.searchType, "device", args.from, args.to, filters);
     if (!devices.ok) return devices;
     const shaped = (rows: PackedRow[]) => {
       const total = rows.reduce((sum, row) => sum + row.clicks, 0);
@@ -549,6 +568,24 @@ export const exportRows = internalQuery({
   },
 });
 
+/** The figures a download can hold, by the row's own names. */
+const EXPORT_FIELDS = [
+  "key", "clicks", "change", "impressions", "ctr", "position", "positionChange", "count", "top", "tracked", "kind",
+  "volume", "estimate", "brand", "usualCtr", "expected", "topShare", "next", "nextShare", "verdict", "gap", "previousClicks", "previousPosition",
+] as const;
+type ExportField = (typeof EXPORT_FIELDS)[number];
+
+/** A figure as a spreadsheet reads it: rates in per cent, positions to one place. */
+function exportValue(row: ListRow, field: ExportField): string | number | null {
+  const value = row[field];
+  if (value === null || value === undefined) return null;
+  if (typeof value === "boolean") return value ? "yes" : "";
+  if (typeof value === "string") return value;
+  if (field === "ctr" || field === "usualCtr" || field === "topShare" || field === "nextShare") return Math.round(value * 10_000) / 100;
+  if (field === "position" || field === "positionChange" || field === "previousPosition") return Math.round(value * 10) / 10;
+  return value;
+}
+
 /** A cell of a download: quoted where needed, and never read as a formula by a spreadsheet. */
 function cell(value: string | number | null): string {
   if (value === null) return "";
@@ -562,25 +599,23 @@ function cell(value: string | number | null): string {
  * its columns, in the reader's language.
  */
 export const exportSearchConsoleList = tenantAction({
-  args: { ...listArgs, headers: v.array(v.string()) },
+  args: {
+    ...listArgs,
+    headers: v.array(v.string()),
+    /** The row's figure under each heading, in the same order. */
+    fields: v.array(v.union(...EXPORT_FIELDS.map((field) => v.literal(field)))),
+  },
   returns: v.object({ fileName: v.string(), csv: v.string(), rows: v.number(), cut: v.union(v.number(), v.null()) }),
   handler: async (ctx, args): Promise<{ fileName: string; csv: string; rows: number; cut: number | null }> => {
     checkedRange(args.from, args.to);
     const companyId = getActiveCompanyId(ctx.user);
     if (!companyId) throw appError("NOT_FOUND", "That website is not one your company holds.");
-    const { headers, ...list } = args;
+    const { headers, fields, ...list } = args;
     const found = await ctx.runQuery(internal.searchConsoleLists.exportRows, { ...list, companyId });
     if (!found) throw appError("NOT_FOUND", "That website is not one your company holds.");
-    const lines = found.rows.map((row) => [
-      row.key,
-      row.clicks,
-      row.change,
-      row.impressions,
-      Math.round(row.ctr * 10_000) / 100,
-      Math.round(row.position * 10) / 10,
-    ].map(cell).join(","));
+    const lines = found.rows.map((row) => fields.map((field) => cell(exportValue(row, field))).join(","));
     return {
-      fileName: `${found.host}-search-console-${args.dimension}-${args.from}-${args.to}.csv`,
+      fileName: `${found.host}-search-console-${args.view && args.view !== "all" ? args.view : args.dimension}-${args.from}-${args.to}.csv`,
       csv: [headers.map(cell).join(","), ...lines].join("\n"),
       rows: lines.length,
       cut: found.cut,

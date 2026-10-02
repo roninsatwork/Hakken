@@ -10546,7 +10546,31 @@
       "searches": "Searches",
       "pages": "Pages",
       "places": "Countries and devices",
-      "connection": "Connection"
+      "connection": "Connection",
+      "jumpLabel": "Jump to a page",
+      "jumpPlaceholder": "Jump to a page…",
+      "groups": {
+        "figures": "Google's figures",
+        "changes": "Changes",
+        "opportunities": "Opportunities",
+        "breakdowns": "Breakdowns",
+        "settings": "Settings"
+      },
+      "keywords": "Keywords",
+      "bands": "Position bands",
+      "newLost": "New and lost",
+      "moves": "Wins and losses",
+      "updates": "Google updates",
+      "almost": "Almost there",
+      "lowCtr": "Shown but not clicked",
+      "demand": "Missed demand",
+      "competing": "Pages competing",
+      "types": "Types",
+      "brand": "Brand and non-brand",
+      "ctrCurve": "Click rate by position",
+      "appearance": "Rich results",
+      "estimates": "Real against estimated",
+      "soon": "Coming soon"
     },
     "kinds": {
       "label": "Kind of result",
@@ -10572,8 +10596,8 @@
       "up": "▲ {change} on the {days} days before",
       "down": "▼ {change} on the {days} days before",
       "same": "The same as the {days} days before",
-      "better": "▲ {change} places better than the {days} days before",
-      "worse": "▼ {change} places worse than the {days} days before",
+      "better": "▲ {change} places better",
+      "worse": "▼ {change} places worse",
       "points": "{change} points",
       "noBefore": "The days before aren't held yet",
       "new": "New in these dates"
@@ -10606,8 +10630,8 @@
     },
     "pages": {
       "title": "Pages",
-      "description": "Every page Google showed in its results, and the clicks each brought. Open one for its days and the searches it was shown for.",
-      "searchPlaceholder": "Find a page…"
+      "description": "Every page Google showed for these dates. Tick a page to track it. Click one to see everything about it, and the keywords that brought people to it.",
+      "searchPlaceholder": "Search pages…"
     },
     "places": {
       "title": "Countries and devices",
@@ -10629,7 +10653,7 @@
       "clicks": "Clicks",
       "change": "Change",
       "impressions": "Impressions",
-      "ctr": "Click-through",
+      "ctr": "CTR",
       "position": "Position",
       "share": "Share of clicks",
       "new": "New",
@@ -10643,16 +10667,25 @@
       "download": "Download all (CSV)",
       "downloading": "Building the file…",
       "downloadFailed": "The file couldn't be built. Try again.",
-      "downloadCut": "The file holds the {rows} with the most clicks."
+      "downloadCut": "The file holds the {rows} with the most clicks.",
+      "keyword": "Keyword",
+      "pages": "Pages",
+      "topPage": "Top page",
+      "keywords": "Keywords",
+      "topKeyword": "Top keyword",
+      "yourPages": "Your pages",
+      "asked": "Asked of Google for these dates",
+      "same": "The same",
+      "places": "{places} places"
     },
     "record": {
       "searchDescription": "What Google counted for this search, day by day, and which of your pages it showed.",
-      "pageDescription": "What Google counted for this page, day by day, and the searches it was shown for.",
+      "pageDescription": "What Google counted for this page, day by day, and the keywords that brought people to it.",
       "backToSearches": "Back to Searches",
       "backToPages": "Back to Pages",
       "openInSites": "Open it in Sites",
       "openPage": "Open the page",
-      "pagesFor": "Pages Google showed for it",
+      "pagesFor": "Pages it brought people to",
       "searchesFor": "Searches Google showed it for",
       "asked": "Asked of Google when this screen opens, for the dates chosen.",
       "asking": "Asking Google…",
@@ -10661,7 +10694,21 @@
       "refused": "Google wouldn't answer this question.",
       "noneNamed": "Google named none of them: every one is hidden for privacy.",
       "cut": "The {count} with the most clicks.",
-      "tryAgain": "Try again"
+      "tryAgain": "Try again",
+      "backTo": "Back to {name}",
+      "keywordDescription": "What Google counted for this keyword, day by day, and every page of yours it brought people to.",
+      "trackKeyword": "Track this keyword",
+      "trackPage": "Track this page",
+      "chartTitle": "Clicks and impressions by day",
+      "cameFrom": "Where the clicks came from",
+      "thisKeywordOnly": "This keyword only, for the dates chosen.",
+      "thisPageOnly": "This page only, for the dates chosen.",
+      "share": "Share",
+      "noClicks": "No clicks in these dates.",
+      "keywordsFor": "Keywords that brought people to this page",
+      "namedFor": "Google names the keywords behind {named} of this page's {clicks} clicks; it hides the rest for privacy. Tick a keyword to track it; click one to see every page of yours it brought people to.",
+      "keywordsHint": "Tick a keyword to track it; click one to see every page of yours it brought people to.",
+      "pagesHint": "Every page of yours Google showed for this keyword. Tick a page to track it; click one to see everything about it."
     },
     "connect": {
       "title": "Connect Google Search Console",
@@ -10733,6 +10780,61 @@
       "disconnectedOn": "Disconnected on {day}",
       "keptTo": "The figures to {day} are still here. Nothing new comes in until it's connected again.",
       "keptNone": "Nothing new comes in until it's connected again."
+    },
+    "keywords": {
+      "title": "Keywords",
+      "description": "Every keyword Google showed your website for in these dates. Tick a keyword to track it. Click one to see everything about it, and the pages it brought people to.",
+      "searchPlaceholder": "Search keywords…"
+    },
+    "track": {
+      "column": "Track",
+      "trackLabel": "Track {name}",
+      "untrackLabel": "Stop tracking {name}",
+      "full": "All {limit} tracked. Untick one to track “{name}”.",
+      "failed": "That couldn't be saved. Try again.",
+      "count": "{count} of {limit} tracked",
+      "keywordsOnSite": "{count} of {limit} keywords tracked on this website",
+      "pagesOnSite": "{count} of {limit} pages tracked on this website"
+    },
+    "filters": {
+      "tracked": "Tracked",
+      "anyTracked": "Tracked or not",
+      "onlyTracked": "Tracked",
+      "onlyUntracked": "Not tracked",
+      "position": "Position",
+      "anyPosition": "Any position",
+      "almostAny": "4–20",
+      "bands": {
+        "1-3": "1–3",
+        "4-10": "4–10",
+        "11-20": "11–20",
+        "21-50": "21–50",
+        "51+": "51 and below"
+      },
+      "pageType": "Page type",
+      "anyPageType": "Any type",
+      "brand": "Brand or not",
+      "anyBrand": "Brand or not",
+      "brandYes": "Brand",
+      "brandNo": "Non-brand",
+      "move": "Wins or losses",
+      "anyMove": "Wins and losses",
+      "wins": "Wins",
+      "losses": "Losses",
+      "verdict": "Estimate",
+      "anyVerdict": "Any estimate",
+      "verdicts": {
+        "high": "Too high",
+        "low": "Too low",
+        "close": "About right"
+      },
+      "missed": "List",
+      "missedSearched": "Searched a lot, barely shown",
+      "missedUntracked": "Shown, not tracked yet",
+      "country": "Country",
+      "anyCountry": "Any country",
+      "device": "Device",
+      "anyDevice": "Any device"
     }
   },
   "aiEngines": {

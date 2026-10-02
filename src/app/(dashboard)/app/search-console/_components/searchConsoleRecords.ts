@@ -7,7 +7,7 @@ import type { FunctionArgs, FunctionReference, FunctionReturnType } from "convex
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { useSearchConsoleHref, type ResultKind } from "./useSearchConsole";
+import { pageForPath, useSearchConsoleHref, type ResultKind } from "./useSearchConsole";
 
 /**
  * What a search's and a page's own screens share: the way back to the list
@@ -19,8 +19,11 @@ import { useSearchConsoleHref, type ResultKind } from "./useSearchConsole";
 /** The address key a record's screen carries its list's own address in. */
 export const BACK_KEY = "back";
 
-/** A link to a record's screen from the list on screen, carrying that list's address for the way back. */
-export function useRecordHref(siteId: string): (segment: "searches/search" | "pages/page", key: string) => string {
+/** A keyword's or a page's own screen, under the website's section. */
+export type RecordSegment = "keywords/keyword" | "pages/page";
+
+/** A link to a record's screen from the screen on show, carrying its address for the way back. */
+export function useRecordHref(siteId: string): (segment: RecordSegment, key: string) => string {
   const hrefFor = useSearchConsoleHref(siteId);
   const pathname = usePathname();
   const params = useSearchParams();
@@ -28,17 +31,26 @@ export function useRecordHref(siteId: string): (segment: "searches/search" | "pa
   return (segment, key) => hrefFor(segment, { key, [BACK_KEY]: here });
 }
 
-/** The way back from a record's screen: the list it came from, or the list itself for a link opened cold. */
-export function useRecordBack(siteId: string, list: "searches" | "pages"): { label: string; href: string } {
-  const t = useTranslations("searchConsole.record");
+/**
+ * The way back from a record's screen, named for where it goes (drawn as
+ * "Back to /ai-agency/"): the keyword or page it was opened from, or the
+ * list — kept as it was left — or the list itself for a link opened cold.
+ */
+export function useRecordBack(siteId: string, list: "keywords" | "pages", host: string): { label: string; href: string } {
+  const t = useTranslations("searchConsole");
   const params = useSearchParams();
   const hrefFor = useSearchConsoleHref(siteId);
   const back = params.get(BACK_KEY);
-  const fromList = back && back.startsWith(`/app/search-console/${siteId}/`) ? back : null;
-  return {
-    label: t(list === "searches" ? "backToSearches" : "backToPages"),
-    href: fromList ?? hrefFor(list),
-  };
+  const fromHere = back && back.startsWith(`/app/search-console/${siteId}/`) ? back : null;
+  if (!fromHere) return { label: t("record.backTo", { name: t(`menu.${list}`) }), href: hrefFor(list) };
+  const [path, query = ""] = fromHere.split("?");
+  const key = new URLSearchParams(query).get("key");
+  const name = path.endsWith("/keywords/keyword") && key
+    ? key
+    : path.endsWith("/pages/page") && key
+      ? pageLabel(key, host)
+      : t(`menu.${pageForPath(path, siteId)}`);
+  return { label: t("record.backTo", { name }), href: fromHere };
 }
 
 /** A page's address as the tables write it: its path on the site's own host, the host too on any other. */

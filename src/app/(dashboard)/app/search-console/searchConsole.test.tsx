@@ -5,7 +5,7 @@ import { useMutation, useQuery } from "convex/react";
 import { answerQueries, convexPath } from "@/src/test/siteViewFixtures";
 import SearchConsolePage from "./page";
 import SearchConsolePerformancePage from "./[siteId]/page";
-import SearchConsoleSearchesPage from "./[siteId]/searches/page";
+import SearchConsoleSearchesPage from "./[siteId]/keywords/page";
 import SearchConsoleConnectionPage from "./[siteId]/connection/page";
 
 const nav = vi.hoisted(() => ({ pathname: "/app/search-console/site_1", search: "", replace: vi.fn(), push: vi.fn() }));
@@ -163,26 +163,34 @@ describe("Performance", () => {
   });
 });
 
-describe("Searches", () => {
-  const row = { previousPosition: null, count: 1, top: "https://acme-shop.test/", tracked: false };
+describe("Keywords", () => {
+  const row = {
+    band: "1-3", previousPosition: null, positionChange: null, count: 2, top: "https://acme-shop.test/plumbers/", tracked: false,
+    kind: null, volume: null, estimate: null, brand: false, usualCtr: null, expected: null, topShare: null, next: null, nextShare: null, verdict: null, gap: null,
+  };
   const LIST = {
     rows: [
-      { key: "plumber leeds", clicks: 8, impressions: 100, ctr: 0.08, position: 3, previousClicks: 2, change: 6, share: 0.6, ...row },
-      { key: "emergency plumber", clicks: 3, impressions: 100, ctr: 0.03, position: 6, previousClicks: null, change: 3, share: 0.25, ...row },
+      { key: "plumber leeds", clicks: 8, impressions: 100, ctr: 0.08, position: 3, previousClicks: 2, change: 6, share: 0.6, ...row, tracked: true },
+      { key: "emergency plumber", clicks: 3, impressions: 100, ctr: 0.03, position: 6, previousClicks: null, change: 3, share: 0.25, ...row, band: "4-10" },
     ],
-    total: 2, page: 1, pages: 1, size: 25, cut: null, preparing: false, current: true, named: 11, comparable: true,
+    total: 2, page: 1, pages: 1, size: 25, cut: null, preparing: false, current: true, named: 11, listed: 2, comparable: true,
     live: false, from: "2026-08-28", to: "2026-09-26",
   };
+  const TRACKING = { keywords: { count: 1, limit: 200 }, pages: { count: 0, limit: 100 } };
 
-  it("reads the list a page at a time, ordered by the heading pressed, each search opening its own screen", () => {
-    at("/app/search-console/site_1/searches");
+  it("reads the list a page at a time, ordered by the heading pressed, each keyword with its Track tick and top page", () => {
+    at("/app/search-console/site_1/keywords");
     answer({
       "searchConsoleConnect:searchConsoleStatus": status(),
       "searchConsoleLists:searchConsoleListPage": LIST,
+      "searchConsoleTracking:searchConsoleTracking": TRACKING,
     });
     render(<SearchConsoleSearchesPage />);
     expect(screen.getByText("plumber leeds")).toBeInTheDocument();
-    expect(screen.getByText("searchConsole.table.new")).toBeInTheDocument();
+    expect(screen.getAllByText("/plumbers/")).toHaveLength(2);
+    expect(screen.getByRole("checkbox", { name: /searchConsole\.track\.untrackLabel plumber leeds/ })).toBeChecked();
+    expect(screen.getByRole("checkbox", { name: /searchConsole\.track\.trackLabel emergency plumber/ })).not.toBeChecked();
+    expect(screen.getByText(/searchConsole\.track\.count 1 200/)).toBeInTheDocument();
     const asked = vi.mocked(useQuery).mock.calls.filter(([reference]) => convexPath(reference).endsWith("searchConsoleListPage")).at(-1)?.[1];
     // The last thirty days, ending on Google's newest: a ready-made period, read on the server.
     expect(asked).toMatchObject({ dimension: "query", from: "2026-08-28", to: "2026-09-26", sort: "clicks", direction: "desc", page: 1, rows: 25 });
@@ -192,10 +200,10 @@ describe("Searches", () => {
   });
 
   it("says a newly connected website's lists are on their way", () => {
-    at("/app/search-console/site_1/searches");
+    at("/app/search-console/site_1/keywords");
     answer({
       "searchConsoleConnect:searchConsoleStatus": status(),
-      "searchConsoleLists:searchConsoleListPage": { ...LIST, rows: [], total: 0, pages: 0, preparing: true, named: null, comparable: false, from: null, to: null },
+      "searchConsoleLists:searchConsoleListPage": { ...LIST, rows: [], total: 0, pages: 0, preparing: true, named: null, listed: 0, comparable: false, from: null, to: null },
     });
     render(<SearchConsoleSearchesPage />);
     expect(screen.getByText("searchConsole.table.preparing")).toBeInTheDocument();

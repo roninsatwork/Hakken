@@ -299,14 +299,16 @@ describe("the tables", () => {
     await expect(otherReader.query(api.searchConsoleLists.searchConsoleListPage, { siteId, ...range, ...page })).rejects.toThrow("not one your company holds");
     await expect(otherReader.query(api.searchConsoleLists.searchConsoleSplitList, { siteId, ...range, dimension: "country" })).rejects.toThrow("not one your company holds");
     expect(await otherReader.action(api.searchConsoleLists.searchConsoleLiveList, { siteId, ...range, from: "2026-09-25" })).toEqual({ ok: false, problem: "NOT_CONNECTED" });
-    await expect(otherReader.action(api.searchConsoleLists.exportSearchConsoleList, { siteId, ...range, headers: ["Keyword"] })).rejects.toThrow("not one your company holds");
+    await expect(otherReader.action(api.searchConsoleLists.exportSearchConsoleList, { siteId, ...range, headers: ["Keyword"], fields: ["key"] })).rejects.toThrow("not one your company holds");
     expect(fetched).not.toHaveBeenCalled();
   });
 
   test("a download is the whole list in the order on screen, safe to open in a spreadsheet", async () => {
     const { t, siteId, reader } = await withSearches();
     await period(t, siteId, "query", now, [["=cmd", 2, 10, 1], ["plumber leeds", 8, 100, 3]]);
-    const file = await reader.action(api.searchConsoleLists.exportSearchConsoleList, { siteId, ...range, headers: ["Keyword", "Clicks", "Change", "Impressions", "CTR", "Position"] });
+    const file = await reader.action(api.searchConsoleLists.exportSearchConsoleList, {
+      siteId, ...range, headers: ["Keyword", "Clicks", "Change", "Impressions", "CTR", "Position"], fields: ["key", "clicks", "change", "impressions", "ctr", "position"],
+    });
     expect(file.fileName).toBe("acme-shop.test-search-console-query-2026-09-20-2026-09-26.csv");
     expect(file.csv.split("\n")).toEqual([
       "Keyword,Clicks,Change,Impressions,CTR,Position",

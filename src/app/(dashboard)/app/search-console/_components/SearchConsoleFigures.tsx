@@ -1,9 +1,12 @@
 "use client";
 
+import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
+import { api } from "@/convex/_generated/api";
 import { SiteFigure } from "../../sites/_components/SiteFigure";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { formatPosition, formatRate } from "./searchConsoleFormat";
+import { useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
 
 type Figures = { clicks: number; impressions: number; ctr: number; position: number };
 
@@ -62,4 +65,22 @@ export function SearchConsoleFigures({ totals, previous, days, isNew = false }: 
       <SiteFigure label={t("position")} value={formatPosition(totals?.position ?? null)} detail={positionChange()} />
     </div>
   );
+}
+
+/**
+ * The website's four headline figures for the dates chosen, against the days
+ * before: the hero boxes above the Keywords and Pages lists (§13.1). Read
+ * from the website's day totals — the rare searches Google hides included.
+ */
+export function SearchConsoleSiteFigures() {
+  const siteId = useSearchConsoleSiteId();
+  const status = useSearchConsoleStatus();
+  const [kind] = useResultKind();
+  const range = useSearchConsoleRange(status?.connection?.newestDay);
+  const performance = useQuery(
+    api.searchConsoleReads.searchConsolePerformance,
+    status?.connection?.newestDay ? { siteId, searchType: kind, from: range.from, to: range.to } : "skip",
+  );
+  if (performance === undefined) return <div className="h-[104px] animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />;
+  return <SearchConsoleFigures totals={performance.totals} previous={performance.previous} days={range.days} />;
 }

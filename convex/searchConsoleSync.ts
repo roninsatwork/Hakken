@@ -3,6 +3,7 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import type { ActionCtx, MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
+import { appError } from "./utils/appError";
 import { accessTokenFor, type ConnectionProblem } from "./searchConsoleConnect";
 import { GOOGLE_DIMENSIONS, LISTS_OF, queryAnalytics, type AnalyticsRow, type GoogleFailure } from "./searchConsoleApi";
 import {
@@ -792,7 +793,7 @@ export const keptBetween = internalQuery({
         .lte("start", args.to))
       .take(KEPT_READ + 1);
     // Asked a span short enough to hold far fewer: one this long is a website past what a run adds up (§14.3, item 9).
-    if (records.length > KEPT_READ) throw new Error(`More than ${KEPT_READ} kept records of one list from ${from} to ${args.to}: ask a shorter span.`);
+    if (records.length > KEPT_READ) throw appError("INVALID_INPUT", `More than ${KEPT_READ} kept records of one list from ${from} to ${args.to}: ask a shorter span.`);
     return records.map((record) => ({
       start: record.start,
       keys: record.keys,
