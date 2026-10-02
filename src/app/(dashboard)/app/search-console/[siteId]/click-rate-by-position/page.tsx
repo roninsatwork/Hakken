@@ -19,7 +19,7 @@ import { ResultKindSwitch, SearchConsoleGate } from "../../_components/SearchCon
 import { formatRate } from "../../_components/searchConsoleFormat";
 import { useLiveAsk } from "../../_components/searchConsoleRecords";
 import { SearchConsoleChips, type ChipId } from "../../_components/SearchConsoleTables";
-import { useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
+import { isReadyMade, useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
 
 const CHIPS: readonly ChipId[] = ["country", "device"];
 
@@ -47,16 +47,15 @@ export default function SearchConsoleCtrCurvePage() {
   const range = useSearchConsoleRange(status?.connection?.newestDay);
   const [search, setSearch, term] = useSiteSearch();
   const [country] = useSiteParam<string>("country", "");
-  const [device] = useSiteParam<string>("device", "");
+  const [device] = useSiteParam<string>("device", "", ["", "DESKTOP", "MOBILE", "TABLET"]);
   const held = Boolean(status?.connection?.newestDay);
   const ask = { siteId, searchType: kind, from: range.from, to: range.to };
-  const byPlace = Boolean(country || device);
-  const server = useQuery(api.searchConsoleChanges.searchConsoleCurve, held && !byPlace ? ask : "skip");
+  const fromLive = Boolean(country || device) || !isReadyMade(range, status?.connection?.newestDay);
+  const server = useQuery(api.searchConsoleChanges.searchConsoleCurve, held && !fromLive ? ask : "skip");
   const live = useLiveAsk(
     api.searchConsoleLists.searchConsoleLiveList,
-    held && (byPlace || server?.live) ? { ...ask, dimension: "query" as const, ...(country ? { country } : {}), ...(device ? { device } : {}) } : null,
+    held && fromLive ? { ...ask, dimension: "query" as const, ...(country ? { country } : {}), ...(device ? { device } : {}) } : null,
   );
-  const fromLive = byPlace || Boolean(server?.live);
   const points: CurvePoint[] | undefined = fromLive
     ? (live.answer === undefined ? undefined : live.answer.ok ? ctrCurve(live.answer.rows) : [])
     : server?.points;

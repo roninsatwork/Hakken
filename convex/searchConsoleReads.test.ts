@@ -226,6 +226,21 @@ describe("the tables", () => {
     expect(paged.rows.map((row) => row.key)).toEqual(["boiler repair"]);
   });
 
+  test("one keyword's pages over 90 days are asked of Google, not read from the whole period's pairs", async () => {
+    const { siteId, reader } = await withSearches();
+    const ninety = await reader.query(api.searchConsoleLists.searchConsoleListPage, {
+      siteId, ...range, from: "2026-06-29", within: { kind: "query", key: "plumber leeds" }, ...page,
+    });
+    expect(ninety).toMatchObject({ live: true, total: 0 });
+  });
+
+  test("a list asked of Google ticks its rows from the tracked list as it changes", async () => {
+    const { siteId, reader } = await withSearches();
+    await reader.mutation(api.searchConsoleTracking.trackSearchConsoleItem, { siteId, kind: "query", key: "boiler repair", track: true });
+    expect(await reader.query(api.searchConsoleTracking.searchConsoleTrackedKeys, { siteId, kind: "query" })).toEqual(["boiler repair"]);
+    expect(await reader.query(api.searchConsoleTracking.searchConsoleTrackedKeys, { siteId, kind: "page" })).toEqual([]);
+  });
+
   test("a tracked search says so, and the list filters to the tracked or the rest", async () => {
     const { siteId, reader } = await withSearches();
     await reader.mutation(api.searchConsoleTracking.trackSearchConsoleItem, { siteId, kind: "query", key: "boiler repair", track: true });

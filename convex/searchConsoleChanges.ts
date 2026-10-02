@@ -45,7 +45,33 @@ async function connectionOf(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"c
 
 type Seen = Doc<"searchConsoleSeen">;
 
-/** Register entries by when they were first, or last, shown — newest first, a page at a time, up to `SEEN_MOST`. */
+/** One page of register entries by when they were first, or last, shown: newest first, in a span of days or within one day. */
+async function seenPage(
+  ctx: { db: QueryCtx["db"] },
+  companyWebsiteId: Id<"companyWebsites">,
+  kind: "query" | "page",
+  by: "first" | "last",
+  span: { from: string; to: string } | { day: string; before: number },
+): Promise<Seen[]> {
+  const query = ctx.db.query("searchConsoleSeen");
+  const ordered = by === "first"
+    ? query.withIndex("by_hold_kind_first", (q) => {
+      const hold = q.eq("companyWebsiteId", companyWebsiteId).eq("kind", kind);
+      return "day" in span ? hold.eq("firstDay", span.day).lt("_creationTime", span.before) : hold.gte("firstDay", span.from).lte("firstDay", span.to);
+    })
+    : query.withIndex("by_hold_kind_last", (q) => {
+      const hold = q.eq("companyWebsiteId", companyWebsiteId).eq("kind", kind);
+      return "day" in span ? hold.eq("lastDay", span.day).lt("_creationTime", span.before) : hold.gte("lastDay", span.from).lte("lastDay", span.to);
+    });
+  return await ordered.order("desc").take(SEEN_PER_READ);
+}
+
+/**
+ * Register entries by when they were first, or last, shown — newest first, a
+ * page at a time, up to `SEEN_MOST`. A page that ends inside a day carries on
+ * within that day by when each entry was made, then with the days before, so
+ * a day of more than a page's entries loses none.
+ */
 async function seenBetween(
   ctx: { db: QueryCtx["db"] },
   companyWebsiteId: Id<"companyWebsites">,
@@ -55,28 +81,20 @@ async function seenBetween(
   to: string,
 ): Promise<Seen[]> {
   const out: Seen[] = [];
-  if (from > to) return out;
-  let upTo = to;
-  let skip = new Set<string>();
-  while (out.length < SEEN_MOST) {
-    const bound = upTo;
-    const page = by === "first"
-      ? await ctx.db
-        .query("searchConsoleSeen")
-        .withIndex("by_hold_kind_first", (q) => q.eq("companyWebsiteId", companyWebsiteId).eq("kind", kind).gte("firstDay", from).lte("firstDay", bound))
-        .order("desc")
-        .take(SEEN_PER_READ)
-      : await ctx.db
-        .query("searchConsoleSeen")
-        .withIndex("by_hold_kind_last", (q) => q.eq("companyWebsiteId", companyWebsiteId).eq("kind", kind).gte("lastDay", from).lte("lastDay", bound))
-        .order("desc")
-        .take(SEEN_PER_READ);
-    const fresh = page.filter((entry) => !skip.has(entry._id));
-    out.push(...fresh);
-    if (page.length < SEEN_PER_READ || fresh.length === 0) break;
-    // The next page starts on the last page's last day: its entries already read are skipped.
-    upTo = by === "first" ? page[page.length - 1].firstDay : page[page.length - 1].lastDay;
-    skip = new Set(page.filter((entry) => (by === "first" ? entry.firstDay : entry.lastDay) === upTo).map((entry) => entry._id));
+  let span: { from: string; to: string } | { day: string; before: number } | null = from <= to ? { from, to } : null;
+  while (span && out.length < SEEN_MOST) {
+    const page = await seenPage(ctx, companyWebsiteId, kind, by, span);
+    out.push(...page);
+    if (page.length === SEEN_PER_READ) {
+      const last = page[page.length - 1];
+      span = { day: by === "first" ? last.firstDay : last.lastDay, before: last._creationTime };
+    } else if ("day" in span) {
+      // That day is read: the days before it.
+      const earlier = shiftDay(span.day, -1);
+      span = earlier >= from ? { from, to: earlier } : null;
+    } else {
+      span = null;
+    }
   }
   return out.slice(0, SEEN_MOST);
 }

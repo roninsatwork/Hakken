@@ -117,3 +117,14 @@ export const searchConsoleIsTracked = tenantQuery({
     return held !== null;
   },
 });
+
+/** The keywords or pages the company tracks on its website, for a list asked of Google to show its ticks as they change. */
+export const searchConsoleTrackedKeys = tenantQuery({
+  args: { siteId: v.id("companyWebsites"), kind: kindValidator },
+  returns: v.array(v.string()),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    if (isTrackedHold(site.hold)) return [];
+    return await trackedKeys(ctx, site.hold._id, args.kind);
+  },
+});

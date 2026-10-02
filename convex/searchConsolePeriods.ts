@@ -118,6 +118,9 @@ function widestFrom(newest: string): string {
 /** Days of kept day records read per ask, so no one ask reads too much. */
 const DAYS_PER_READ = 15;
 
+/** Weeks of kept week records read per ask. */
+const WEEKS_PER_READ = 4;
+
 /** Every kept record of one list a website's periods could need, oldest first. */
 async function readKept(
   ctx: ActionCtx,
@@ -128,9 +131,16 @@ async function readKept(
 ): Promise<Kept[]> {
   const from = widestFrom(newest);
   const out: Kept[] = [];
-  for (const grain of ["MONTH", "WEEK"] as const) {
-    const records = await ctx.runQuery(internal.searchConsoleSync.keptBetween, { companyWebsiteId, searchType, list, grain, from, to: newest });
+  const read = async (grain: Kept["grain"], start: string, end: string) => {
+    const records = await ctx.runQuery(internal.searchConsoleSync.keptBetween, { companyWebsiteId, searchType, list, grain, from: start, to: end < newest ? end : newest });
     for (const record of records) out.push({ grain, start: record.start, packed: record });
+  };
+  // A month at a time, and four weeks at a time: a week of a busy website's pairs is about a megabyte.
+  for (let month = from; month <= newest; month = monthStart(shiftDay(month, 31))) {
+    await read("MONTH", month, shiftDay(monthStart(shiftDay(month, 31)), -1));
+  }
+  for (let week = weekStart(from); week <= newest; week = shiftDay(week, WEEKS_PER_READ * 7)) {
+    await read("WEEK", week, shiftDay(week, WEEKS_PER_READ * 7 - 1));
   }
   const span = daysBetween(from, newest);
   for (let offset = 0; offset < span; offset += DAYS_PER_READ) {

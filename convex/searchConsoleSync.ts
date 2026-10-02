@@ -75,7 +75,8 @@ const PARALLEL_ASKS = 4;
 const BUSY_WAITS_MS = [2_000, 8_000];
 
 /** Records removed per mutation when a site's figures are cleared: a kept list's record can be large. */
-const PURGE_BATCH = 20;
+/** Kept or ready-made parts cleared per mutation: each can be most of a megabyte. */
+const PURGE_BATCH = 5;
 const PURGE_ROWS = 500;
 
 /** Keys noted as seen per mutation. */
@@ -83,6 +84,9 @@ const SEEN_CHUNK = 500;
 
 /** Days rolled into weeks, or weeks into months, per site run at most; the rest roll next run. */
 export const ROLLUPS_PER_RUN = 200;
+
+/** Kept records one ask for due rollups reads, per kind of result, list and grain: whole records, so few. */
+const ROLLUP_SLOTS_PER_READ = 4;
 
 const kindValidator = v.union(v.literal("DAILY"), v.literal("HISTORY"));
 const figuresValidator = { clicks: v.number(), impressions: v.number(), ctr: v.number(), position: v.number() };
@@ -115,10 +119,11 @@ const packedValidator = {
  * to Google's newest whole day — or, with none held yet, the last 90 days
  * (§14.3, item 7). Never further back than the days kept as days.
  */
-export function recentWindow(newestDay: string | undefined, now: number): { from: string; top: string } {
+export function recentWindow(newestDay: string | undefined, now: number, oldestDay?: string): { from: string; top: string } {
   const top = newestWholeDay(now);
   const oldest = shiftDay(top, -(DAYS_KEPT - 1));
-  if (!newestDay) return { from: oldest, top };
+  // Nothing held, or a first 90 days that stopped part-way: the 90 days from their start.
+  if (!newestDay || (oldestDay !== undefined && oldestDay > oldest)) return { from: oldest, top };
   const newest = newestDay < top ? newestDay : top;
   return { from: laterDay(oldest, shiftDay(newest, -(REFETCH_DAYS - 1))), top };
 }
@@ -163,7 +168,7 @@ export const agentCollections = internalQuery({
         companyId: connection.companyId,
         host: website?.displayHost ?? website?.host ?? connection.property,
         property: connection.property,
-        ...recentWindow(connection.newestDay, now),
+        ...recentWindow(connection.newestDay, now, connection.oldestDay),
       });
     }
     return out;
@@ -699,7 +704,7 @@ export const rollUpsDue = internalQuery({
               .eq("list", list)
               .eq("grain", grain)
               .lt("start", line))
-            .take(ROLLUPS_PER_RUN);
+            .take(ROLLUP_SLOTS_PER_READ);
           for (const record of old) into.set(`${searchType}|${list}|${record.start}`, { searchType, list, start: record.start });
         }
       }
@@ -751,11 +756,20 @@ export const rollUp = internalMutation({
 
 /** The rollups a site's run makes after collecting: how many it made. */
 export async function rollUpSite(ctx: ActionCtx, companyWebsiteId: Id<"companyWebsites">, newest: string): Promise<number> {
-  const due = await ctx.runQuery(internal.searchConsoleSync.rollUpsDue, { companyWebsiteId, newest });
-  for (const slot of due.days) await ctx.runMutation(internal.searchConsoleSync.rollUp, { companyWebsiteId, ...slot, from: "DAY" });
-  for (const slot of due.weeks) await ctx.runMutation(internal.searchConsoleSync.rollUp, { companyWebsiteId, ...slot, from: "WEEK" });
-  return due.days.length + due.weeks.length;
+  let rolled = 0;
+  // A few at a time, asking again until none is due: after a long pause many days are, each a large record.
+  for (let round = 0; round < ROLLUP_ROUNDS; round += 1) {
+    const due = await ctx.runQuery(internal.searchConsoleSync.rollUpsDue, { companyWebsiteId, newest });
+    if (due.days.length + due.weeks.length === 0) break;
+    for (const slot of due.days) await ctx.runMutation(internal.searchConsoleSync.rollUp, { companyWebsiteId, ...slot, from: "DAY" });
+    for (const slot of due.weeks) await ctx.runMutation(internal.searchConsoleSync.rollUp, { companyWebsiteId, ...slot, from: "WEEK" });
+    rolled += due.days.length + due.weeks.length;
+  }
+  return rolled;
 }
+
+/** Rounds of rollups one settle makes at most: the rest wait for the next run. */
+const ROLLUP_ROUNDS = 100;
 
 // ---------------------------------------------------------------------------
 // Reading what is kept, for the ready-made periods

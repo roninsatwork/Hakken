@@ -27,7 +27,10 @@ export function useRecordHref(siteId: string): (segment: RecordSegment, key: str
   const hrefFor = useSearchConsoleHref(siteId);
   const pathname = usePathname();
   const params = useSearchParams();
-  const here = `${pathname}${params.toString() ? `?${params.toString()}` : ""}`;
+  // Only the screen it came from: that screen's own way back is dropped, so the address never grows hop by hop.
+  const kept = new URLSearchParams(params.toString());
+  kept.delete(BACK_KEY);
+  const here = `${pathname}${kept.toString() ? `?${kept.toString()}` : ""}`;
   return (segment, key) => hrefFor(segment, { key, [BACK_KEY]: here });
 }
 

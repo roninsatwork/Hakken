@@ -96,6 +96,21 @@ describe("New and lost", () => {
   });
 });
 
+describe("New and lost, on a busy day", () => {
+  test("more keywords first shown on one day than one read holds are all counted", async () => {
+    const { t, siteId, reader } = await setup();
+    await t.run(async (ctx) => {
+      for (let index = 0; index < 520; index += 1) {
+        await ctx.db.insert("searchConsoleSeen", { companyWebsiteId: siteId, kind: "query", key: `search ${index}`, firstDay: "2026-09-20", lastDay: NEWEST });
+      }
+      await ctx.db.insert("searchConsoleSeen", { companyWebsiteId: siteId, kind: "query", key: "the day before", firstDay: "2026-09-19", lastDay: NEWEST });
+    });
+    const answer = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, from: "2026-08-28", to: NEWEST, page: 1, rows: 25 });
+    expect(answer.counts.newKeywords).toBe(521);
+    expect(answer.total).toBe(521);
+  });
+});
+
 describe("Google updates", () => {
   test("each update's 14 days before against the 14 after it finished; one still rolling out, or finished too lately, has no after", async () => {
     const { t, siteId, reader } = await setup();

@@ -109,10 +109,23 @@ export type SourceRow = {
 const known = (value: number | undefined) => (value === undefined || value < 0 ? null : value);
 const positionOf = (row: { impressions: number; positionSum: number }) => (row.impressions > 0 ? row.positionSum / row.impressions : 0);
 
-/** Whether a keyword uses any of the website's brand words, as written or misspelt in its Profile. */
+/**
+ * Whether a keyword uses any of the website's brand words, as written or
+ * misspelt in its Profile: each word of the brand starting a word of the
+ * keyword, so "art" is not found inside "smart".
+ */
 export function isBrand(keyword: string, brandWords: readonly string[]): boolean {
-  const text = keyword.toLowerCase();
-  return brandWords.some((word) => word.trim() !== "" && text.includes(word.trim().toLowerCase()));
+  return brandWords.some((word) => wordStartMatcher(word)?.(keyword) ?? false);
+}
+
+/**
+ * The rows a list shows, with — for Wins and losses — every keyword shown in
+ * the period before and not at all now, as none: its clicks all lost.
+ */
+export function withGone(now: readonly SourceRow[], before: readonly SourceRow[] | null): SourceRow[] {
+  if (!before) return [...now];
+  const shown = new Set(now.map((row) => row.key));
+  return [...now, ...before.filter((row) => !shown.has(row.key) && row.clicks > 0).map((row) => ({ key: row.key, clicks: 0, impressions: 0, positionSum: 0 }))];
 }
 
 /** Rows as a list shows them: the figures, the change on the period before, the share, tracked or not. */
@@ -195,7 +208,14 @@ export function pagesByKeyword(pairs: readonly { key: string; page?: string; cli
 /** A keyword Sites holds for the website that Google barely shows it for: Missed demand. */
 export type SitesKeyword = { keyword: string; volume: number; kind: string };
 
+/** Days in an average month: Sites' estimated visits are a month's, read against the days chosen. */
+const DAYS_A_MONTH = 30.44;
+
 export type ViewContext = {
+  /** The days the list covers: Real against estimated scales Sites' monthly estimate to them. */
+  days?: number;
+  /** The company's tracked keywords: Missed demand's keywords Google never showed are ticked from these. */
+  tracked?: ReadonlySet<string>;
   curve?: readonly CurvePoint[];
   pages?: PairPages;
   /** Missed demand's first list: the website's most-searched keywords in Sites. */
@@ -242,15 +262,17 @@ export function applyView(view: View, rows: ListRow[], context: ViewContext = {}
         if (row && row.impressions >= BARELY_SHOWN) return [];
         return [row
           ? { ...row, volume: keyword.volume, kind: row.kind ?? keyword.kind }
-          : { ...emptyRow(keyword.keyword), volume: keyword.volume, kind: keyword.kind, tracked: false }];
+          : { ...emptyRow(keyword.keyword), volume: keyword.volume, kind: keyword.kind, tracked: context.tracked?.has(keyword.keyword) ?? false }];
       });
     }
     case "estimates":
       return rows.flatMap((row) => {
         if (row.estimate === null) return [];
-        const gap = row.estimate - row.clicks;
+        // Sites estimates a month's visits: the same span as the clicks it is read against.
+        const estimate = Math.round((row.estimate * (context.days ?? DAYS_A_MONTH)) / DAYS_A_MONTH);
+        const gap = estimate - row.clicks;
         const verdict: Verdict = Math.abs(gap) > ESTIMATE_OFF * row.clicks ? (gap > 0 ? "high" : "low") : "close";
-        return [{ ...row, gap: verdict === "close" ? 0 : gap, verdict }];
+        return [{ ...row, estimate, gap: verdict === "close" ? 0 : gap, verdict }];
       });
     default:
       return rows;
@@ -284,7 +306,8 @@ export function filterRows(rows: readonly ListRow[], filters: Filters): ListRow[
     (!matches || matches(row.key))
     && (!filters.tracked || (filters.tracked === "yes") === row.tracked)
     && (!filters.band || row.band === filters.band)
-    && (!filters.kind || row.kind === filters.kind)
+    // A row Sites has not judged reads as "Not judged yet", as the Types bars count it.
+    && (!filters.kind || (row.kind ?? "UNJUDGED") === filters.kind)
     && (!filters.brand || (filters.brand === "yes") === (row.brand === true))
     && (!filters.move || (filters.move === "win" ? (row.change ?? 0) > 0 : (row.change ?? 0) < 0))
     && (!filters.verdict || row.verdict === filters.verdict));

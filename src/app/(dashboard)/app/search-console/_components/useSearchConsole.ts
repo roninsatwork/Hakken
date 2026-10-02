@@ -106,3 +106,16 @@ export function useSearchConsoleRange(newestDay: string | null | undefined): { f
   const days = Number(range.preset);
   return { from: shiftDay(newestDay, -(days - 1)), to: newestDay, days, step: range.step, chosen: false };
 }
+
+/** The ready-made periods' lengths in days (search-console-plan.md §14.3, item 4), as the server's `periodOf` reads them. */
+const READY_MADE_DAYS: readonly number[] = [7, 30, 90, 365];
+
+/**
+ * Whether the dates chosen are a ready-made period — ending on Google's
+ * newest day held, 7, 30 or 90 days or 12 months long — read from the server
+ * a page at a time; any other dates are asked of Google. Worked out here from
+ * the dates alone, so a search, an order or a filter never asks Google again.
+ */
+export function isReadyMade(range: { to: string; days: number }, newestDay: string | null | undefined): boolean {
+  return Boolean(newestDay) && range.to === newestDay && READY_MADE_DAYS.includes(range.days);
+}

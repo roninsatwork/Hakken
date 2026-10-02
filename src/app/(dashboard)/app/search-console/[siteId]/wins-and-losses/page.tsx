@@ -62,7 +62,7 @@ export default function SearchConsoleWinsPage() {
             cell: (row) => <RecordLinkCell cut href={recordHref("keywords/keyword", row.key)}>{row.key}</RecordLinkCell>,
           },
           { key: "clicks", header: t("table.clicks"), align: "right", sortable: true, cell: (row) => <BeforeAfter before={row.previousClicks ?? 0} now={row.clicks} format={formatNumber} /> },
-          { key: "change", header: t("table.change"), align: "right", sortable: true, cell: (row) => <ClicksChange change={row.change} previousClicks={row.previousClicks ?? 0} clicks={row.clicks} /> },
+          { key: "change", header: t("table.change"), align: "right", sortable: true, cell: (row) => <ClicksChange change={row.change} previousClicks={row.previousClicks} clicks={row.clicks} /> },
           { key: "position", header: t("table.position"), align: "right", sortable: true, cell: (row) => <BeforeAfter before={row.previousPosition} now={row.impressions > 0 ? row.position : null} format={formatPosition} /> },
           { key: "positionChange", header: t("table.moved"), align: "right", sortable: true, cell: (row) => <PlacesMoved change={row.positionChange} /> },
         ],

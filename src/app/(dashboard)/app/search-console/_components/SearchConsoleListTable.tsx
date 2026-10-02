@@ -87,7 +87,7 @@ export function SearchConsoleListScreen({
               <SiteTableBar
                 footer={list.table.footer}
                 noun={table.noun}
-                actions={<SearchConsoleDownload ask={list.download} headers={table.download.map((entry) => entry.header)} fields={table.download.map((entry) => entry.field)} />}
+                actions={list.live ? undefined : <SearchConsoleDownload ask={list.download} headers={table.download.map((entry) => entry.header)} fields={table.download.map((entry) => entry.field)} />}
               >
                 {table.beside}
                 {list.live ? <span className="text-[12px] text-secondary">{t("table.asked")}</span> : null}

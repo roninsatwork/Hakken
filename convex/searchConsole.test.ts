@@ -5,6 +5,8 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { decryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { recentWindow } from "./searchConsoleSync";
+import { newestWholeDay, shiftDay } from "./searchConsoleDays";
 
 /**
  * An owned website's Search Console, end to end with Google faked at the
@@ -786,5 +788,17 @@ describe("disconnecting", () => {
     }));
     expect(left).toEqual({ connections: [], tokens: [], days: [], lists: [], periods: [], seen: [], runs: [] });
     expect(revokes(google)).toHaveLength(1);
+  });
+});
+
+describe("which days a run asks for", () => {
+  test("nothing held: the last 90 days; held: the newest and the last four again; a first 90 days that stopped part-way: all of them again", () => {
+    const now = Date.parse("2026-09-28T09:00:00Z");
+    const top = newestWholeDay(now);
+    const first = shiftDay(top, -89);
+    expect(recentWindow(undefined, now)).toEqual({ from: first, top });
+    expect(recentWindow(top, now, first)).toEqual({ from: shiftDay(top, -3), top });
+    // The first run stopped with only its newest 20 days in.
+    expect(recentWindow(top, now, shiftDay(top, -19))).toEqual({ from: first, top });
   });
 });

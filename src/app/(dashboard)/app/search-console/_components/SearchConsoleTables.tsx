@@ -21,7 +21,8 @@ import { useSiteSort, useSiteSortedList, type SiteSortColumns } from "../../site
 import { countryName } from "./countries";
 import { formatPosition, formatRate, readerLanguage } from "./searchConsoleFormat";
 import { useLiveAsk } from "./searchConsoleRecords";
-import { useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
+import { isReadyMade, useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
+import { shiftDay } from "../../sites/_components/siteRange";
 
 /**
  * What every Search Console table shares (search-console-plan.md §13.1,
@@ -73,6 +74,8 @@ const keyOf = (row: ListRow) => row.key;
 export type ChipId = "tracked" | "band" | "almostBand" | "intent" | "pageType" | "brand" | "move" | "verdict" | "missed" | "country" | "device";
 
 const DEVICES = ["DESKTOP", "MOBILE", "TABLET"] as const;
+/** Every intent and page type a Kind chip can hold: anything else in the address is ignored. */
+const KINDS: readonly string[] = ["", ...new Set<string>([...RANK_INTENTS, ...PAGE_TYPES])];
 const ALMOST_BANDS: readonly Band[] = ["4-10", "11-20"];
 
 /** The filters chosen, read from the address: only those of the chips the table shows. */
@@ -80,13 +83,13 @@ function useChosen(chips: readonly ChipId[]) {
   const has = (chip: ChipId) => chips.includes(chip);
   const [tracked] = useSiteParam<"" | "yes" | "no">("tracked", "", ["", "yes", "no"]);
   const [band] = useSiteParam<"" | Band>("band", "", ["", ...BANDS]);
-  const [kind] = useSiteParam<string>("kind", "");
+  const [kind] = useSiteParam<string>("kind", "", KINDS);
   const [brand] = useSiteParam<"" | "yes" | "no">("brand", "", ["", "yes", "no"]);
   const [move] = useSiteParam<"" | "win" | "loss">("move", "", ["", "win", "loss"]);
   const [verdict] = useSiteParam<"" | "high" | "low" | "close">("verdict", "", ["", "high", "low", "close"]);
   const [missed] = useSiteParam<"searched" | "untracked">("list", "searched", ["searched", "untracked"]);
   const [country] = useSiteParam<string>("country", "");
-  const [device] = useSiteParam<string>("device", "");
+  const [device] = useSiteParam<string>("device", "", ["", ...DEVICES]);
   const filters: Filters & { missed?: "searched" | "untracked" } = {
     ...(has("tracked") && tracked ? { tracked } : {}),
     ...((has("band") || has("almostBand")) && band ? { band } : {}),
@@ -130,19 +133,27 @@ export function useSearchConsoleList(options: {
     from: range.from,
     to: range.to,
   };
-  // One country or device is asked of Google: the periods are kept for the whole website.
+  // Other dates, or one country or device, are asked of Google: the periods are kept for the whole website.
   const byPlace = Boolean(country || device);
+  // One keyword's pages, one page's keywords and Pages competing read a period's pairs: past 30 days, Google is asked.
+  const readsPairs = Boolean(within) || options.view === "competing";
+  const isLive = byPlace || !isReadyMade(range, status?.connection?.newestDay) || (readsPairs && range.days > 30);
   const ready = held && (within === undefined || Boolean(within.key));
   const server = useSiteListPage(
     api.searchConsoleLists.searchConsoleListPage,
-    ready && !byPlace ? { ...base, ...filters, ...(term ? { q: term } : {}), sort: order.key, direction: order.direction } : "skip",
+    ready && !isLive ? { ...base, ...filters, ...(term ? { q: term } : {}), sort: order.key, direction: order.direction } : "skip",
   );
-  const isLive = byPlace || Boolean(server.result?.live);
   const live = useLiveAsk(
     api.searchConsoleLists.searchConsoleLiveList,
     isLive && ready ? { ...base, ...(filters.missed ? { missed: filters.missed } : {}), ...(country ? { country } : {}), ...(device ? { device } : {}) } : null,
   );
-  const liveRows = live.answer === undefined ? undefined : live.answer.ok ? filterRows(live.answer.rows, { ...filters, q: term }) : [];
+  // Google's answer is asked once; what the company tracks follows every tick.
+  const trackedNow = useQuery(api.searchConsoleTracking.searchConsoleTrackedKeys, isLive && ready ? { siteId, kind: within ? (within.kind === "query" ? "page" : "query") : options.dimension } : "skip");
+  const liveRows = live.answer === undefined
+    ? undefined
+    : live.answer.ok
+      ? filterRows(trackedNow ? live.answer.rows.map((row) => ({ ...row, tracked: trackedNow.includes(row.key) })) : live.answer.rows, { ...filters, q: term })
+      : [];
   const liveOrder = useSiteSortedList(liveRows, LIVE_SORTS, { opening, name: keyOf });
   const livePages = useSitePager(liveOrder.rows, { isLoading: liveRows === undefined, cut: live.answer?.ok ? live.answer.cut : null });
   const table = isLive
@@ -195,9 +206,10 @@ export function useSearchConsoleSummary(ask: { dimension: "query" | "page"; view
   const range = useSearchConsoleRange(status?.connection?.newestDay);
   const base = { siteId, searchType: kind, from: range.from, to: range.to, ...ask };
   const held = Boolean(status?.connection?.newestDay);
-  const server = useQuery(api.searchConsoleLists.searchConsoleListPage, held ? { ...base, page: 1, rows: 25 } : "skip");
-  const live = useLiveAsk(api.searchConsoleLists.searchConsoleLiveList, held && server?.live ? base : null);
-  if (server?.live) return live.answer?.ok ? live.answer.summary : null;
+  const readyMade = isReadyMade(range, status?.connection?.newestDay);
+  const server = useQuery(api.searchConsoleLists.searchConsoleListPage, held && readyMade ? { ...base, page: 1, rows: 25 } : "skip");
+  const live = useLiveAsk(api.searchConsoleLists.searchConsoleLiveList, held && !readyMade ? base : null);
+  if (!readyMade) return live.answer?.ok ? live.answer.summary : null;
   return server?.summary ?? null;
 }
 
@@ -283,10 +295,11 @@ function useCountryChoices(enabled: boolean): string[] {
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
   const [kind] = useResultKind();
-  const range = useSearchConsoleRange(status?.connection?.newestDay);
+  const newest = status?.connection?.newestDay;
+  // The website's countries over the ready-made 90 days, whatever the dates chosen: a list read, never an ask of Google.
   const answer = useQuery(
     api.searchConsoleLists.searchConsoleSplitList,
-    enabled && status?.connection?.newestDay ? { siteId, searchType: kind, dimension: "country", from: range.from, to: range.to } : "skip",
+    enabled && newest ? { siteId, searchType: kind, dimension: "country", from: shiftDay(newest, -89), to: newest } : "skip",
   );
   return (answer?.rows ?? []).slice(0, COUNTRY_CHOICES).map((row) => row.key);
 }
@@ -296,15 +309,15 @@ export function SearchConsoleChips({ chips }: { chips: readonly ChipId[] }) {
   const t = useTranslations("searchConsole.filters");
   const tc = useTranslations("sites.common");
   const tp = useTranslations("searchConsole.places");
-  const [tracked, setTracked] = useSiteParam<string>("tracked", "");
-  const [band, setBand] = useSiteParam<string>("band", "");
-  const [kind, setKind] = useSiteParam<string>("kind", "");
-  const [brand, setBrand] = useSiteParam<string>("brand", "");
-  const [move, setMove] = useSiteParam<string>("move", "");
-  const [verdict, setVerdict] = useSiteParam<string>("verdict", "");
-  const [missed, setMissed] = useSiteParam<string>("list", "searched");
+  const [tracked, setTracked] = useSiteParam<string>("tracked", "", ["", "yes", "no"]);
+  const [band, setBand] = useSiteParam<string>("band", "", ["", ...BANDS]);
+  const [kind, setKind] = useSiteParam<string>("kind", "", KINDS);
+  const [brand, setBrand] = useSiteParam<string>("brand", "", ["", "yes", "no"]);
+  const [move, setMove] = useSiteParam<string>("move", "", ["", "win", "loss"]);
+  const [verdict, setVerdict] = useSiteParam<string>("verdict", "", ["", "high", "low", "close"]);
+  const [missed, setMissed] = useSiteParam<string>("list", "searched", ["searched", "untracked"]);
   const [country, setCountry] = useSiteParam<string>("country", "");
-  const [device, setDevice] = useSiteParam<string>("device", "");
+  const [device, setDevice] = useSiteParam<string>("device", "", ["", ...DEVICES]);
   const countries = useCountryChoices(chips.includes("country"));
   const language = readerLanguage();
   const bandWord = (value: string) => t(`bands.${value}`);

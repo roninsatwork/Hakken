@@ -885,6 +885,47 @@ updates lists up to 100; the charts show 16 weeks.
 9. The Collector's schedule is off: switch it on, or run it once, to bring
    ronins.co.uk's 90 days in.
 
+**Reviewed the same night.** Two independent reviews of the code — the data
+layer, and the screens — and what they found put right before morning:
+
+- Adding the periods up runs in the Node runtime now: the default runtime's
+  memory is too small for 90 days of a website's keyword-and-page pairs at
+  about 28,000 rows a week (§10). Kept weeks are read four at a time and
+  months one at a time; rollups a few at a time; clearing five parts a time.
+- One keyword's pages, one page's keywords and Pages competing are asked of
+  Google for 90 days and 12 months, so no screen reads a whole period of pairs;
+  for 7 and 30 days they read the ready-made lists.
+- A first 90 days that stopped part-way is fetched again from its start on the
+  next run, instead of leaving a gap.
+- New and lost no longer drops keywords when more than 500 were first or last
+  shown on one day.
+- Real against estimated reads Sites' monthly estimate against the days
+  chosen; Wins and losses counts a keyword gone altogether as all its clicks
+  lost; a brand word matches whole words ("art" is not inside "smart").
+- On a list asked of Google, a tick stays a tick as soon as it is made, Sites'
+  facts are looked up for its 5,000 rows with the most clicks, and there is no
+  download (the file would be the ready-made list, not the one on screen). The
+  dates alone decide ready-made or asked of Google, so a search, an order or a
+  filter never asks Google again. Days before Google's sixteen months are not
+  compared.
+- Smaller: address values checked against what each chip offers; New and lost
+  says web results only (no kind-of-result switch); the way back no longer
+  grows with each hop; a keyword new in the dates reads "New" on Wins and
+  losses; the Country chip offers the website's countries whatever the dates.
+
+**Left, for Anthony:**
+
+10. A keyword's totals are added up from its pairs, as agreed. Where Google
+    showed two of the website's pages for one search, its impressions count
+    twice and its position is the average over both pages, unlike Google's own
+    Queries report. Exact figures would need a fourth ask a day, for keywords
+    on their own.
+11. Brand searches sit in the click rate by position, so the yardstick for
+    Shown but not clicked is higher at position 1 than non-brand pages reach.
+    It could be worked out from non-brand searches only.
+12. While the periods are rebuilt after a run, a list read at that moment can
+    show part of a period for a few seconds.
+
 ## Change log
 
 - **2026-09-27** — Plan written: how Search Console integration works, what
@@ -950,3 +991,6 @@ updates lists up to 100; the charts show 16 weeks.
   drawn screens (§15). Committed locally, data layer on dev; the Collector's
   schedule found switched off, so no figures yet. D7, S8 and nine decisions
   are the morning's.
+- **2026-10-03** — Two reviews of the night's code; what they found put right
+  (memory and size limits for a busy website, gaps, wrong answers on four
+  pages) and three things left for Anthony (§15, items 10–12).

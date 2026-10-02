@@ -202,7 +202,7 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
                 <SiteTableBar
                   footer={list.table.footer}
                   noun={other === "query" ? "keywords" : "pages"}
-                  actions={<SearchConsoleDownload ask={list.download} headers={download.map((entry) => entry.header)} fields={download.map((entry) => entry.field)} />}
+                  actions={list.live ? undefined : <SearchConsoleDownload ask={list.download} headers={download.map((entry) => entry.header)} fields={download.map((entry) => entry.field)} />}
                 >
                   <TrackedCount tracking={tracking} kind={other} wording={other === "query" ? "keywordsOnSite" : "pagesOnSite"} />
                   {list.live ? <span className="text-[12px] text-secondary">{t("table.asked")}</span> : null}

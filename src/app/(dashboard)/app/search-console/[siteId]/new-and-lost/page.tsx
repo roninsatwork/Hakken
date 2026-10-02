@@ -20,7 +20,7 @@ import { useSiteListPage } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSort } from "../../../sites/_components/useSiteSort";
 import { SearchConsoleChartCard } from "../../_components/SearchConsoleChartCard";
-import { ResultKindSwitch, SearchConsoleGate } from "../../_components/SearchConsoleNotices";
+import { SearchConsoleGate } from "../../_components/SearchConsoleNotices";
 import { formatPosition } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
 import { useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
@@ -31,8 +31,9 @@ const FIRSTS = { key: "asc", status: "asc", when: "desc", clicks: "desc", impres
  * New and lost (search-console-plan.md §13.3, drawn as "6 · New and lost"):
  * keywords Google started showing the website for in the dates chosen, and
  * keywords it stopped showing it for — lost when 14 days pass without one —
- * week by week, newest first. Web results; read on the server from when each
- * keyword and page was first and last shown.
+ * week by week, newest first. Web results only — the register of when each
+ * keyword and page was first and last shown is kept for them — so the page
+ * has no kind-of-result switch.
  */
 export default function SearchConsoleNewLostPage() {
   const t = useTranslations("searchConsole");
@@ -42,7 +43,7 @@ export default function SearchConsoleNewLostPage() {
   const range = useSearchConsoleRange(status?.connection?.newestDay);
   const [search, setSearch, term] = useSiteSearch();
   const [what, setWhat] = useSiteParam<"" | "new" | "lost">("what", "", ["", "new", "lost"]);
-  const [band, setBand] = useSiteParam<string>("band", "");
+  const [band, setBand] = useSiteParam<string>("band", "", ["", ...BANDS]);
   const order = useSiteSort<keyof typeof FIRSTS>(FIRSTS, "when");
   const recordHref = useRecordHref(siteId);
   const held = Boolean(status?.connection?.newestDay);
@@ -76,7 +77,6 @@ export default function SearchConsoleNewLostPage() {
       <PageHeader icon={<Sparkles className="h-5 w-5 text-brand" />} title={t("newLost.title")} description={t("newLost.description")} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <ResultKindSwitch />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <SiteFigure label={t("newLost.newKeywords")} value={counts ? formatNumber(counts.newKeywords) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
             <SiteFigure label={t("newLost.lostKeywords")} value={counts ? formatNumber(counts.lostKeywords) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />

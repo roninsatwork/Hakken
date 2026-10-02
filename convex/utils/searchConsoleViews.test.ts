@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { applyView, bandOf, ctrCurve, filterRows, isBrand, pagesByKeyword, shapeRows, summarise, type SourceRow } from "./searchConsoleViews";
+import { applyView, bandOf, ctrCurve, filterRows, isBrand, pagesByKeyword, shapeRows, summarise, withGone, type SourceRow } from "./searchConsoleViews";
 
 /**
  * The rules each Search Console page lists by (docs/plans/active/
@@ -158,5 +158,30 @@ describe("a page's hero boxes", () => {
     const all = shaped([row("ai agency", 43, 950, 4), row("solo", 5, 50, 3)]);
     const summary = summarise(applyView("competing", all, { pages }), all, null, { pages, brandWords: null });
     expect(summary).toMatchObject({ rows: 1, of: 2, pagesInvolved: 2, pagesShown: 3, bandsBefore: null, brand: null });
+  });
+});
+
+describe("found in review, 2026-10-03", () => {
+  test("a brand word matches whole words of a keyword, never inside one", () => {
+    expect(isBrand("smart watches", ["art"])).toBe(false);
+    expect(isBrand("art supplies", ["art"])).toBe(true);
+    expect(isBrand("acme shop leeds", ["Acme shop"])).toBe(true);
+  });
+
+  test("Sites' monthly estimate is read against the days chosen", () => {
+    // 100 visits a month is about 296 over 90 days: 300 clicks is about right, not too low.
+    const rows = shaped([row("/a/", 300, 1000, 4, { estimate: 100 })]);
+    expect(applyView("estimates", rows, { days: 90 })).toEqual([expect.objectContaining({ estimate: 296, verdict: "close", gap: 0 })]);
+    expect(applyView("estimates", rows, { days: 30 })).toEqual([expect.objectContaining({ estimate: 99, verdict: "low", gap: -201 })]);
+  });
+
+  test("Wins and losses counts a keyword shown before and not at all now as all its clicks lost", () => {
+    const before = [row("gone", 40, 400, 6), row("kept", 5, 50, 4), row("never clicked", 0, 9, 50)];
+    const rows = shapeRows(withGone([row("kept", 9, 60, 3)], before), before, { tracked: new Set(), brandWords: null });
+    expect(applyView("moves", rows).map((entry) => [entry.key, entry.clicks, entry.change, entry.previousClicks])).toEqual([
+      ["kept", 9, 4, 5],
+      ["gone", 0, -40, 40],
+    ]);
+    expect(summarise(applyView("moves", rows), rows, before, { brandWords: null })).toMatchObject({ gaining: 1, gained: 4, losing: 1, lost: 40 });
   });
 });

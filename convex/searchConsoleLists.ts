@@ -10,8 +10,9 @@ import { requireMySite } from "./siteAccess";
 import { listOrder, listPageArgs, pageOfList, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { SEARCH_CONSOLE_PERIODS, searchTypeValidator, type SearchConsolePeriod, type SearchType } from "./searchConsoleSchema";
 import { checkedRange } from "./searchConsoleReads";
-import { daysIn, periodBefore } from "./searchConsoleDays";
+import { daysIn, historyLimitDay, periodBefore } from "./searchConsoleDays";
 import { readPeriod, type PeriodRow } from "./searchConsolePeriods";
+import { factsFor } from "./searchConsoleFacts";
 import { holdBrandNames } from "./holdProfiles";
 import { loadSite } from "./websiteSiteRows";
 import {
@@ -24,6 +25,7 @@ import {
   pagesByKeyword,
   shapeRows,
   summarise,
+  withGone,
   type Filters,
   type ListRow,
   type SitesKeyword,
@@ -58,6 +60,9 @@ const MOST_ROWS = 25_000;
 
 /** Rows a short list (countries, devices, kinds of search appearance) holds whole. */
 const SPLIT_ROWS = 500;
+
+/** Periods whose keyword-and-page pairs are asked of Google rather than read whole. */
+export const LONG_PERIODS: readonly SearchConsolePeriod[] = ["90", "365"];
 
 /** Missed demand reads the website's most-searched keywords in Sites, this many at most. */
 const SITES_KEYWORDS_READ = 500;
@@ -302,6 +307,8 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   if (!period) return { ...empty, live: true, preparing: false };
   const view = args.view ?? "all";
   const within = args.within;
+  // A whole period of keyword-and-page pairs is too much to read for 90 days or 12 months: those are asked of Google.
+  if ((within || view === "competing") && LONG_PERIODS.includes(period)) return { ...empty, live: true, preparing: false };
   // One keyword's pages are rows keyed by page, one page's keywords by keyword.
   const dimension = within ? (within.kind === "query" ? "page" : "query") : (VIEW_LIST[view] ?? args.dimension);
   const read = async (which: "NOW" | "BEFORE") => (within
@@ -312,8 +319,8 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   const before = await read("BEFORE");
   const tracked = dimension === "query" || dimension === "page" ? await trackedOf(ctx, companyWebsiteId, dimension) : new Set<string>();
   const brandWords = dimension === "query" ? await brandWordsOf(ctx, companyWebsiteId) : null;
-  const shaped = shapeRows(now.rows, before?.rows ?? null, { tracked, brandWords });
-  const context: ViewContext = { missedList: args.missed ?? "searched" };
+  const shaped = shapeRows(view === "moves" ? withGone(now.rows, before?.rows ?? null) : now.rows, before?.rows ?? null, { tracked, brandWords });
+  const context: ViewContext = { missedList: args.missed ?? "searched", tracked, days: daysIn(args.from, args.to) };
   if (view === "lowCtr") {
     const keywords = await readPeriod(ctx, companyWebsiteId, args.searchType, "query", period, "NOW");
     context.curve = ctrCurve((keywords?.rows ?? []).map((row) => ({ clicks: row.clicks, impressions: row.impressions, position: positionOf(row) ?? 0 })));
@@ -409,6 +416,15 @@ export const searchConsoleSplitList = tenantQuery({
 
 export const liveTarget = internalQuery({
   args: { companyId: v.id("companies"), siteId: v.id("companyWebsites"), kind: v.union(v.literal("query"), v.literal("page"), v.null()), view: viewValidator },
+  returns: v.union(v.null(), v.object({
+    connectionId: v.id("searchConsoleConnections"),
+    property: v.string(),
+    host: v.string(),
+    facts: v.union(v.null(), v.object({ websiteId: v.id("websites"), place: v.number() })),
+    tracked: v.array(v.string()),
+    brandWords: v.union(v.array(v.string()), v.null()),
+    sitesKeywords: v.array(v.object({ keyword: v.string(), volume: v.number(), kind: v.string() })),
+  })),
   handler: async (ctx, args) => {
     const hold = await ctx.db.get(args.siteId);
     if (!hold || hold.companyId !== args.companyId) return null;
@@ -416,10 +432,12 @@ export const liveTarget = internalQuery({
     if (!connection || connection.status !== "CONNECTED" || !connection.property) return null;
     const website = await ctx.db.get(hold.websiteId);
     const tracked = args.kind ? [...(await trackedOf(ctx, hold._id, args.kind))] : [];
+    const site = await loadSite(ctx, hold._id);
     return {
       connectionId: connection._id,
       property: connection.property,
       host: website?.displayHost ?? "site",
+      facts: site ? { websiteId: site.website._id, place: site.place } : null,
       tracked,
       brandWords: args.kind === "query" ? await brandWordsOf(ctx, hold._id) : null,
       sitesKeywords: args.view === "missed" ? await sitesKeywordsOf(ctx, hold._id) : [],
@@ -428,6 +446,21 @@ export const liveTarget = internalQuery({
 });
 
 type LiveProblem = "NOT_CONNECTED" | "GOOGLE_REFUSED" | "GOOGLE_BUSY";
+
+/** What a live ask needs of the website: written out, as the actions in this file read it through `internal`. */
+type LiveTarget = {
+  connectionId: Id<"searchConsoleConnections">;
+  property: string;
+  host: string;
+  facts: { websiteId: Id<"websites">; place: number } | null;
+  tracked: string[];
+  brandWords: string[] | null;
+  sitesKeywords: SitesKeyword[];
+};
+
+type LiveListAnswer =
+  | { ok: true; rows: ListRow[]; cut: number | null; named: number; comparable: boolean; summary: Summary }
+  | { ok: false; problem: LiveProblem };
 
 /** A filter asked of Google with a list: one keyword, one page, one country or one device. */
 type Filter = { dimension: "query" | "page" | "country" | "device" | "searchAppearance"; key: string };
@@ -504,6 +537,25 @@ async function liveRows(
   };
 }
 
+/** Rows of a live list Sites' facts are looked up for: the most clicks first. */
+const LIVE_FACTS_ROWS = 5_000;
+
+/** A live list's rows with Sites' intent and searches a month, or page type and estimated visits, beside the first few thousand. */
+async function withFacts(
+  ctx: ActionCtx,
+  target: { websiteId: Id<"websites">; place: number },
+  kind: "query" | "page",
+  rows: PeriodRow[],
+): Promise<PeriodRow[]> {
+  const keys = [...rows].sort((left, right) => right.clicks - left.clicks).slice(0, LIVE_FACTS_ROWS).map((row) => row.key);
+  const facts = await factsFor(ctx, target, kind, keys);
+  return rows.map((row) => {
+    const known = facts.get(row.key);
+    if (!known) return row;
+    return { ...row, kind: known.kind, ...(kind === "query" ? { volume: known.number } : { estimate: known.number }) };
+  });
+}
+
 /**
  * A list for dates that are not a ready-made period — or for one country or
  * device — asked of Google when chosen and sent whole, put through the
@@ -534,7 +586,7 @@ export const searchConsoleLiveList = tenantAction({
     }),
     v.object({ ok: v.literal(false), problem: v.union(v.literal("NOT_CONNECTED"), v.literal("GOOGLE_REFUSED"), v.literal("GOOGLE_BUSY")) }),
   ),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<LiveListAnswer> => {
     checkedRange(args.from, args.to);
     const companyId = getActiveCompanyId(ctx.user);
     if (!companyId) throw appError("NOT_FOUND", "That website is not one your company holds.");
@@ -542,7 +594,7 @@ export const searchConsoleLiveList = tenantAction({
     const within = args.within;
     const dimension = within ? (within.kind === "query" ? "page" : "query") : (VIEW_LIST[view] ?? args.dimension);
     const kind = dimension === "query" || dimension === "page" ? dimension : null;
-    const target = await ctx.runQuery(internal.searchConsoleLists.liveTarget, { companyId, siteId: args.siteId, kind, view });
+    const target: LiveTarget | null = await ctx.runQuery(internal.searchConsoleLists.liveTarget, { companyId, siteId: args.siteId, kind, view });
     if (!target) return { ok: false as const, problem: "NOT_CONNECTED" as const };
     const filters: Filter[] = [
       ...(args.country ? [{ dimension: "country" as const, key: args.country }] : []),
@@ -551,9 +603,16 @@ export const searchConsoleLiveList = tenantAction({
     const now = await liveRows(ctx, target, args.searchType, dimension, args.from, args.to, filters, within);
     if (!now.ok) return now;
     const before = periodBefore(args.from, args.to);
-    const earlier = await liveRows(ctx, target, args.searchType, dimension, before.from, before.to, filters, within);
-    const shaped = shapeRows(now.rows, earlier.ok ? earlier.rows : null, { tracked: new Set(target.tracked), brandWords: target.brandWords });
-    const context: ViewContext = { missedList: args.missed ?? "searched", sitesKeywords: target.sitesKeywords };
+    // Google keeps sixteen months: days before it would read as nothing, not as a fall.
+    const earlier = before.from >= historyLimitDay(Date.now())
+      ? await liveRows(ctx, target, args.searchType, dimension, before.from, before.to, filters, within)
+      : { ok: false as const, problem: "GOOGLE_REFUSED" as const };
+    // Sites' facts beside the rows with the most clicks, as the ready-made periods carry them.
+    const rows = kind && target.facts ? await withFacts(ctx, target.facts, kind, now.rows) : now.rows;
+    const tracked = new Set(target.tracked);
+    const earlierRows = earlier.ok ? earlier.rows : null;
+    const shaped = shapeRows(view === "moves" ? withGone(rows, earlierRows) : rows, earlierRows, { tracked, brandWords: target.brandWords });
+    const context: ViewContext = { missedList: args.missed ?? "searched", sitesKeywords: target.sitesKeywords, tracked, days: daysIn(args.from, args.to) };
     if (view === "lowCtr") {
       const keywords = [...bySide(now.pairs, "query").values()];
       context.curve = ctrCurve(keywords.map((row) => ({ clicks: row.clicks, impressions: row.impressions, position: positionOf(row) ?? 0 })));
@@ -562,7 +621,7 @@ export const searchConsoleLiveList = tenantAction({
     const listed = applyView(view, shaped, context);
     const sorted = sortRows(listed, undefined, undefined);
     const named = listed.reduce((sum, row) => sum + row.clicks, 0);
-    const summary = summarise(listed, shaped, earlier.ok ? earlier.rows : null, { ...context, brandWords: target.brandWords });
+    const summary = summarise(listed, shaped, earlierRows, { ...context, brandWords: target.brandWords });
     return { ok: true as const, rows: sorted.slice(0, MOST_ROWS), cut: sorted.length > MOST_ROWS ? MOST_ROWS : null, named, comparable: earlier.ok, summary };
   },
 });

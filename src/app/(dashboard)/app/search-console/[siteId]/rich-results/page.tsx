@@ -18,7 +18,7 @@ import { ResultKindSwitch, SearchConsoleGate } from "../../_components/SearchCon
 import { formatPosition, formatRate } from "../../_components/searchConsoleFormat";
 import { useLiveAsk } from "../../_components/searchConsoleRecords";
 import { SearchConsoleChips, type ChipId, type ListRow } from "../../_components/SearchConsoleTables";
-import { useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
+import { isReadyMade, useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
 
 const CHIPS: readonly ChipId[] = ["country", "device"];
 
@@ -53,14 +53,13 @@ export default function SearchConsoleAppearancePage() {
   const [search, setSearch, term] = useSiteSearch();
   const held = Boolean(status?.connection?.newestDay);
   const [country] = useSiteParam<string>("country", "");
-  const [device] = useSiteParam<string>("device", "");
-  const byPlace = Boolean(country || device);
+  const [device] = useSiteParam<string>("device", "", ["", "DESKTOP", "MOBILE", "TABLET"]);
+  // Other dates, or one country or device: asked of Google.
+  const fromLive = Boolean(country || device) || !isReadyMade(range, status?.connection?.newestDay);
   const split = useQuery(
     api.searchConsoleLists.searchConsoleSplitList,
-    held && !byPlace ? { siteId, searchType: kind, dimension: "appearance", from: range.from, to: range.to } : "skip",
+    held && !fromLive ? { siteId, searchType: kind, dimension: "appearance", from: range.from, to: range.to } : "skip",
   );
-  // Other dates, or one country or device: asked of Google.
-  const fromLive = byPlace || Boolean(split?.live);
   const liveSplit = useLiveAsk(
     api.searchConsoleLists.searchConsoleLiveList,
     held && fromLive

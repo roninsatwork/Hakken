@@ -3,8 +3,7 @@ import { internal } from "./_generated/api";
 import { internalAction, internalMutation, type ActionCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { failureSummary } from "./roleRuns";
-import { STEP_BUDGET_MS, rollUpSite, runStep, type StepOutcome } from "./searchConsoleSync";
-import { buildSitePeriods } from "./searchConsolePeriods";
+import { STEP_BUDGET_MS, runStep, type StepOutcome } from "./searchConsoleSync";
 
 /**
  * The Search Console Collector's job (docs/plans/active/search-console-plan.md
@@ -24,7 +23,7 @@ import { buildSitePeriods } from "./searchConsolePeriods";
  * its last 90 days (plan §14.3, item 7). Nothing older, ever. Google charges
  * nothing, and no model is called, so a run costs nothing.
  *
- * **Then it settles** (`settleSite`): days past 90 roll into their weeks,
+ * **Then it settles** (`searchConsoleSettle.ts`): days past 90 roll into their weeks,
  * weeks past 12 months into their months, and the ready-made periods every
  * list reads are rebuilt — a step of its own, as a line on the run.
  *
@@ -47,13 +46,13 @@ const siteArgs = {
 const dayLabel = (day: string) =>
   new Date(`${day}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 
-const days = (from: string, to: string) => (from === to ? dayLabel(from) : `${dayLabel(from)} to ${dayLabel(to)}`);
+export const days = (from: string, to: string) => (from === to ? dayLabel(from) : `${dayLabel(from)} to ${dayLabel(to)}`);
 
-const count = (value: number) => value.toLocaleString("en-GB");
+export const count = (value: number) => value.toLocaleString("en-GB");
 
 const NOT_HISTORY = "The newest days and the last four again; a website with nothing held gets its last 90 days, and nothing older is fetched.";
 
-async function finishRun(
+export async function finishRun(
   ctx: ActionCtx,
   runId: Id<"agentRuns">,
   workflowExecutionId: Id<"workflowExecutions"> | undefined,
@@ -214,7 +213,7 @@ export const collectSiteStep = internalAction({
           await ctx.scheduler.runAfter(0, internal.searchConsoleAgentRun.collectSiteStep, { ...args, to: outcome.nextTo, rows, requests });
           return null;
         case "DONE":
-          await ctx.scheduler.runAfter(0, internal.searchConsoleAgentRun.settleSite, {
+          await ctx.scheduler.runAfter(0, internal.searchConsoleSettle.settleSite, {
             runId: args.runId,
             workflowExecutionId: args.workflowExecutionId,
             connectionId: args.connectionId,
@@ -251,36 +250,3 @@ export const collectSiteStep = internalAction({
  * weeks past 12 months into their months, and its ready-made periods rebuilt
  * (plan §14.3, items 3 and 4). A line on the run, then its summary.
  */
-export const settleSite = internalAction({
-  args: {
-    runId: v.id("agentRuns"),
-    workflowExecutionId: v.id("workflowExecutions"),
-    connectionId: v.id("searchConsoleConnections"),
-    companyId: v.id("companies"),
-    host: v.string(),
-    summary: v.string(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    try {
-      const state = await ctx.runQuery(internal.searchConsoleSync.stepState, { connectionId: args.connectionId });
-      if (!state || !state.newestDay || !state.oldestDay || state.clearing) {
-        await finishRun(ctx, args.runId, args.workflowExecutionId, "SUCCESS", args.summary);
-        return null;
-      }
-      const rolled = await rollUpSite(ctx, state.companyWebsiteId, state.newestDay);
-      const written = await buildSitePeriods(ctx, state.companyWebsiteId, state.newestDay, state.oldestDay);
-      await ctx.runMutation(internal.roleRuns.logRunLine, {
-        runId: args.runId,
-        companyId: args.companyId,
-        heading: "Kept and added up",
-        detail: `${count(rolled)} ${rolled === 1 ? "day or week" : "days and weeks"} rolled up; the 7-, 30- and 90-day and 12-month lists rebuilt (${count(written)} records), to ${days(state.newestDay, state.newestDay)}.`,
-        failed: false,
-      });
-      await finishRun(ctx, args.runId, args.workflowExecutionId, "SUCCESS", args.summary);
-    } catch (error: unknown) {
-      await finishRun(ctx, args.runId, args.workflowExecutionId, "FAILED", `The days came in, but adding them up stopped: ${failureSummary(error)} The next run adds them up again.`);
-    }
-    return null;
-  },
-});
