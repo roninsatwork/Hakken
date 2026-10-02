@@ -16,7 +16,7 @@ day, a run of its own for each website. Screens redesigned on a new canvas
 2026-10-02 — seventeen drawn, the §11 drawings dropped; nothing agreed or
 built yet (§13). How the data is collected and kept agreed the same day — as
 the screens read it, days for 90 days then weeks then months — with the build
-in phases, about 21 days (§14).** Change a decision here, with a date, before building anything that
+in phases, about 21.5 days (§14).** Change a decision here, with a date, before building anything that
 disagrees with it. Follow `AGENTS.md`: no code until Anthony agrees, and draw
 the screens first (§1, SC9).
 
@@ -739,10 +739,17 @@ entries. No screen reads Google's data at that grain.
 6. **Two small registers**: when each keyword and page was first and last
    seen (New and lost), and the types and intents (Sites' own judgments, and
    the Decision Maker's for pages and keywords Sites has not seen).
-7. **Collecting stays the Search Console Collector's** (§12), and still only
-   the newest days; **the history waits for Anthony's go** once the screens
-   are agreed. When it comes, it is asked of Google straight into weeks and
-   months, never as days.
+7. **Collecting stays the Search Console Collector's** (§12): each run the
+   newest days and the last four again. **A newly connected website gets its
+   last 90 days on the Collector's next scheduled run** (Anthony: "for the
+   backfill can we go back 90 days when we first connect a website", then "on
+   the next scheduled run") — never on connecting itself. The run finds a
+   website with no days held and asks for its 90 days, a week a step, each
+   step an action of its own, in that website's own run. Ninety days is
+   exactly what is kept as days, so its 30 days, the 30 before and its 90 days
+   all read from the first run. **Older history waits for Anthony's go** once
+   the screens are agreed: asked of Google straight into weeks and months,
+   never as days.
 8. **What goes**: the record-per-row tables (`searchConsoleRows`,
    `searchConsoleDays`) and the tables' compact copies of kind `gsc`, replaced
    by the day, week and month records and the ready-made period totals.
@@ -765,13 +772,13 @@ its tests and the full gate; days are working days, each phase its own go.
 | Phase | What | Days |
 |---|---|---|
 | **D1** | The storage: day, week and month records (pairs, pages, website totals, countries, devices, rich results), weighted position, 2,000-row records; the old record-per-row tables cleared out | 1.5 |
-| **D2** | Collecting: the Collector's per-website run makes the three asks for each kind of result and writes day records; the first- and last-seen register | 1.5 |
+| **D2** | Collecting: the Collector's per-website run makes the three asks for each kind of result and writes day records; a newly connected website's last 90 days on its next scheduled run; the first- and last-seen register | 2 |
 | **D3** | Rollups: days past 90 into weeks, weeks past 12 months into months, as part of each website's run | 1 |
 | **D4** | Ready-made period totals: 7, 30 and 90 days and 12 months, and the period before each, for keywords, pages and pairs, by type, intent and brand | 1.5 |
 | **D5** | Asked of Google when needed: other dates, and the detail screens' charts | 1 |
-| **D6** | The sixteen months, straight into weeks and months — **only on Anthony's go** | 0.5 |
+| **D6** | The history older than 90 days, back to Google's sixteen months, straight into weeks and months — **only on Anthony's go** | 0.5 |
 | **D7** | Measured on ronins.co.uk and kordatackle.com: records, size, time a run takes | 0.5 |
-| | **Data** | **7.5** |
+| | **Data** | **8** |
 | **S1** | Shared parts: the Search Console table on the kit's table and Sites' table bar, hero boxes, the grouped side menu, the website's icon | 1 |
 | **S2** | Pages and Keywords: search, filters, sorting, pager, the Track column | 1.5 |
 | **S3** | A page's and a keyword's detail: hero boxes, chart, where the clicks came from, their tables | 1.5 |
@@ -781,7 +788,7 @@ its tests and the full gate; days are working days, each phase its own go.
 | **S7** | Breakdowns: Types (sorting pages and keywords Sites has not seen), Brand and non-brand (where brand words are set), Click rate by position, Rich results, Real against estimated | 2.5 |
 | **S8** | Wording in English and Italian; the approved looks locked with drift and look tests; screen-kit entries; checked in Chrome on ronins.co.uk | 1.5 |
 | | **Screens** | **13.5** |
-| | **Total** | **21** |
+| | **Total** | **21.5** |
 
 ## Change log
 
@@ -832,3 +839,6 @@ its tests and the full gate; days are working days, each phase its own go.
   the default with ready-made period totals, detail charts asked of Google
   live. SC6 and §4.3 superseded. The build in phases: data 7.5 days, screens
   13.5, about 21 in all.
+- **2026-10-02** — A newly connected website's last 90 days come in on the
+  Collector's next scheduled run, as days (§14.3, item 7). D2 2 days; data 8,
+  about 21.5 in all.
