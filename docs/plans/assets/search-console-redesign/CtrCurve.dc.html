@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Click rate by position</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#222224}
+a{color:#ffffff;text-decoration:none}a:hover{color:#38bdf8}
+input::placeholder{color:rgba(115,115,115,0.6)}
+.hk-row:hover{background:rgba(255,255,255,0.02);color:#ffffff}
+@media (max-width:1180px){.hk-sidebar{display:none !important}}
+@media (max-width:900px){.hk-sidemenu{display:none !important}.hk-split{grid-template-columns:minmax(0,1fr) !important}.hk-head{flex-direction:column !important;align-items:flex-start !important}}
+</style>
+</helmet>
+<div style="display: flex; min-height: 100vh; background: #222224; color: #ffffff; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 13px; line-height: 1.4">
+
+<aside class="hk-sidebar" style="width: 232px; flex-shrink: 0; background: #18181A; border-right: 1px solid rgba(255,255,255,0.06); padding: 18px 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 30px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 6px">
+<span style="width: 28px; height: 28px; border-radius: 8px; background: #2C2C2E; display: flex; align-items: center; justify-content: center; color: #ff5a1f"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg></span>
+<span style="font-size: 17px; font-weight: 700; letter-spacing: -0.01em">Hakken</span>
+<button aria-label="Collapse the menu" style="margin-left: auto; background: none; border: 0; padding: 4px; color: #737373; display: flex; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path></svg></button>
+</div>
+<nav aria-label="Main navigation" style="display: flex; flex-direction: column; gap: 2px">
+<div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; letter-spacing: 0.14em; color: #737373; padding: 0 10px 10px">MAIN NAVIGATION</div>
+<a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: #A1A1A6"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"></rect><rect x="14" y="3" width="7" height="5" rx="1"></rect><rect x="14" y="12" width="7" height="9" rx="1"></rect><rect x="3" y="16" width="7" height="5" rx="1"></rect></svg>Dashboard</a>
+<a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: #A1A1A6"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8V4H8"></path><rect width="16" height="12" x="4" y="8" rx="2"></rect><path d="M2 14h2M20 14h2M15 13v2M9 13v2"></path></svg>Ask Hakken</a>
+<a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: #A1A1A6"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20"></path></svg>Sites</a>
+<a href="#" aria-current="page" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: #ffffff; background: rgba(255,255,255,0.08)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 11 2 2 4-4"></path><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>Search Console</a>
+<a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: #A1A1A6"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.42 10.92a1 1 0 0 0-.02-1.84L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.83l8.57 3.91a2 2 0 0 0 1.66 0zM22 10v6M6 12.5V16a6 3 0 0 0 12 0v-3.5"></path></svg>Learn</a>
+</nav>
+</aside>
+
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+<header style="height: 60px; display: flex; align-items: center; gap: 10px; padding: 0 28px; border-bottom: 1px solid rgba(255,255,255,0.06); box-sizing: border-box">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A1A1A6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 11 2 2 4-4"></path><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+<span style="font-weight: 500">Search Console</span>
+<button aria-label="Notifications" style="margin-left: auto; background: none; border: 0; padding: 6px; color: #A1A1A6; display: flex; cursor: pointer"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg></button>
+<div style="display: flex; align-items: center; gap: 10px; margin-left: 10px">
+<span style="width: 34px; height: 34px; border-radius: 17px; background: #3A3A3C; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600">AB</span>
+<div style="display: flex; flex-direction: column"><span style="font-weight: 500; letter-spacing: 0.02em">Anthony Basker</span><span style="font-size: 11px; color: #737373">anthony@ronins.co.uk</span></div>
+</div>
+</header>
+
+<main style="padding: 26px 28px 56px; display: flex; flex-direction: column; gap: 22px">
+<div class="hk-head" style="display: flex; justify-content: space-between; align-items: flex-end; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<a href="#" style="display: inline-flex; align-items: center; gap: 6px; color: #A1A1A6; font-size: 12px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7M19 12H5"></path></svg>Back to Search Console</a>
+<div style="display: flex; align-items: center; gap: 10px; margin-top: 4px"><span aria-hidden="true" style="width: 32px; height: 32px; flex-shrink: 0; border-radius: 8px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; overflow: hidden"><img src="/_blob/b70534786d216495d9720e4d04426153" alt="" style="width: 20px; height: 20px; object-fit: contain"></span><span style="font-size: 22px; font-weight: 700; letter-spacing: -0.015em">ronins.co.uk</span></div>
+<span style="font-size: 12.5px; color: #A1A1A6">Your website · Search Console property https://www.ronins.co.uk/</span>
+</div>
+<button style="height: 34px; padding: 0 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1C1C1E; color: #ffffff; font: inherit; display: flex; align-items: center; gap: 28px; cursor: pointer">Last 30 days<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A1A1A6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+</div>
+<div style="height: 1px; background: rgba(255,255,255,0.08)"></div>
+
+<div class="hk-split" style="display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 28px; align-items: start">
+
+<nav class="hk-sidemenu" aria-label="Search Console pages" style="display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<a href="#" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Performance</a>
+<a href="Keywords.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Keywords</a>
+<a href="Main.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Pages</a>
+<a href="#" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Countries and devices</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 0 10px 6px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; letter-spacing: 0.14em; color: #737373">CHANGES</div>
+<a href="Bands.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Position bands</a>
+<a href="NewLost.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">New and lost</a>
+<a href="Moves.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Wins and losses</a>
+<a href="Updates.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Google updates</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 0 10px 6px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; letter-spacing: 0.14em; color: #737373">OPPORTUNITIES</div>
+<a href="Almost.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Almost there</a>
+<a href="LowCtr.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Shown but not clicked</a>
+<a href="Demand.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Missed demand</a>
+<a href="Competing.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Pages competing</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 0 10px 6px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; letter-spacing: 0.14em; color: #737373">BREAKDOWNS</div>
+<a href="Types.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Types</a>
+<a href="Brand.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Brand and non-brand</a>
+<a href="CtrCurve.dc.html" aria-current="page" style="padding: 7px 10px; border-radius: 8px; color: #ffffff; background: rgba(255,255,255,0.08)">Click rate by position</a>
+<a href="Appearance.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Rich results</a>
+<a href="Estimates.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Real against estimated</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 0 10px 6px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; letter-spacing: 0.14em; color: #737373">SETTINGS</div>
+<a href="#" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Connection</a>
+</div>
+</nav>
+
+<div style="display: flex; flex-direction: column; gap: 20px; min-width: 0">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.015em">Click rate by position</h1>
+<p style="margin: 0; font-size: 13px; color: #A1A1A6; max-width: 720px; line-height: 1.55">How often people click your website at each of Google's positions, over the last 30 days. Shown but not clicked uses this as your yardstick.</p>
+</div>
+
+<div style="border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(44,44,46,0.4); padding: 20px; display: flex; flex-direction: column; gap: 16px; min-width: 0">
+<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap">
+<div style="display: flex; flex-direction: column; gap: 4px"><h2 style="margin: 0; font-size: 14px; font-weight: 500">Your click rate at each position</h2><p style="margin: 0; font-size: 12px; color: #A1A1A6">Clicks for each time Google showed you, at positions 1 to 20.</p></div>
+<div style="display: flex; align-items: center; gap: 16px; font-size: 12px; color: #A1A1A6; flex-wrap: wrap"><label style="display: inline-flex; align-items: center; gap: 6px"><input type="checkbox" checked aria-label="Show Click rate" style="accent-color: #3b82f6; margin: 0"><span style="width: 14px; height: 10px; border-radius: 2px; background: #3b82f6"></span>Click rate</label></div>
+</div>
+<div style="display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 8px">
+<div style="display: flex; flex-direction: column; justify-content: space-between; align-items: flex-end; font-size: 10px; color: #737373; height: 280px; font-variant-numeric: tabular-nums"><span>20%</span><span>10%</span><span>0%</span></div>
+<svg viewBox="0 0 1000 200" preserveAspectRatio="none" role="img" aria-label="Chart" style="width: 100%; height: 280px; display: block"><line x1="0" y1="1" x2="1000" y2="1" stroke="rgba(255,255,255,0.06)" stroke-width="1"></line><line x1="0" y1="50" x2="1000" y2="50" stroke="rgba(255,255,255,0.06)" stroke-width="1"></line><line x1="0" y1="100" x2="1000" y2="100" stroke="rgba(255,255,255,0.06)" stroke-width="1"></line><line x1="0" y1="150" x2="1000" y2="150" stroke="rgba(255,255,255,0.06)" stroke-width="1"></line><line x1="0" y1="199" x2="1000" y2="199" stroke="rgba(255,255,255,0.12)" stroke-width="1"></line><rect x="9.0" y="19.8" width="30.0" height="180.2" fill="#3b82f6"></rect><rect x="59.0" y="87.1" width="30.0" height="112.9" fill="#3b82f6"></rect><rect x="109.0" y="121.8" width="30.0" height="78.2" fill="#3b82f6"></rect><rect x="159.0" y="149.5" width="30.0" height="50.5" fill="#3b82f6"></rect><rect x="209.0" y="164.4" width="30.0" height="35.6" fill="#3b82f6"></rect><rect x="259.0" y="174.3" width="30.0" height="25.7" fill="#3b82f6"></rect><rect x="309.0" y="180.2" width="30.0" height="19.8" fill="#3b82f6"></rect><rect x="359.0" y="185.2" width="30.0" height="14.8" fill="#3b82f6"></rect><rect x="409.0" y="189.1" width="30.0" height="10.9" fill="#3b82f6"></rect><rect x="459.0" y="191.1" width="30.0" height="8.9" fill="#3b82f6"></rect><rect x="509.0" y="195.1" width="30.0" height="5.0" fill="#3b82f6"></rect><rect x="559.0" y="196.0" width="30.0" height="4.0" fill="#3b82f6"></rect><rect x="609.0" y="196.5" width="30.0" height="3.5" fill="#3b82f6"></rect><rect x="659.0" y="197.0" width="30.0" height="3.0" fill="#3b82f6"></rect><rect x="709.0" y="197.5" width="30.0" height="2.5" fill="#3b82f6"></rect><rect x="759.0" y="198.0" width="30.0" height="2.0" fill="#3b82f6"></rect><rect x="809.0" y="198.2" width="30.0" height="1.8" fill="#3b82f6"></rect><rect x="859.0" y="198.5" width="30.0" height="1.5" fill="#3b82f6"></rect><rect x="909.0" y="198.8" width="30.0" height="1.2" fill="#3b82f6"></rect><rect x="959.0" y="199.0" width="30.0" height="1.0" fill="#3b82f6"></rect></svg>
+</div>
+<div style="display: flex; justify-content: space-between; padding: 0 0 0 42px; font-size: 10px; color: #737373"><span>1</span><span>5</span><span>10</span><span>15</span><span>20</span></div>
+</div>
+
+<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+<div style="flex: 1; min-width: 240px; padding: 8px; background: rgba(44,44,46,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; align-items: center">
+<div style="flex: 1; display: flex; align-items: center; gap: 8px; padding: 0 12px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#737373" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg><input type="text" placeholder="Search positions…" aria-label="Search positions…" onChange="{{onSearch}}" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #ffffff; font: inherit; font-size: 13px; letter-spacing: 0.025em"></div>
+</div>
+<sc-for list="{{chips}}" as="chip" hint-placeholder-count="2">
+<div style="position: relative; display: inline-flex; height: 38px; box-sizing: border-box; align-items: center; gap: 6px; white-space: nowrap; border-radius: 10px; border: 1px solid {{chip.border}}; background: {{chip.bg}}; color: {{chip.color}}; padding: 0 12px; font-size: 13px">
+<span aria-hidden="true">{{chip.text}}</span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{chip.chevron}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+<select aria-label="{{chip.label}}" onChange="{{chip.pick}}" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; background: #222224; color: #ffffff; font-size: 13px">
+<sc-for list="{{chip.options}}" as="option" hint-placeholder-count="4"><option value="{{option.value}}" selected="{{option.on}}">{{option.text}}</option></sc-for>
+</select>
+</div>
+</sc-for>
+</div>
+
+<div style="border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; background: rgba(24,24,26,0.2); box-shadow: 0 1px 2px rgba(0,0,0,0.05); overflow: hidden">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(34,34,36,0.5); padding: 12px 16px">
+<div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap"><span aria-live="polite" style="font-size: 13px; font-weight: 500">{{count}}</span></div>
+<button style="height: 32px; padding: 0 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: #222224; color: #ffffff; font: inherit; font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>Download all (CSV)</button>
+</div>
+<div style="overflow-x: auto">
+<div style="min-width: 860px">
+<div style="display: grid; grid-template-columns: minmax(0, 1fr); border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #737373; font-weight: 500">
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) 116px 140px 96px 76px"><div style="padding: 12px 16px"><button onClick="{{h.position.sort}}" style="display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0; font: inherit; text-transform: inherit; letter-spacing: inherit; color: {{h.position.color}}; cursor: pointer">Position<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="opacity: {{h.position.op}}"><path d="{{h.position.d}}"></path></svg></button></div><div style="padding: 12px 16px; text-align: right"><button onClick="{{h.keywords.sort}}" style="display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0; font: inherit; text-transform: inherit; letter-spacing: inherit; color: {{h.keywords.color}}; cursor: pointer">Keywords<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="opacity: {{h.keywords.op}}"><path d="{{h.keywords.d}}"></path></svg></button></div><div style="padding: 12px 16px; text-align: right"><button onClick="{{h.impressions.sort}}" style="display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0; font: inherit; text-transform: inherit; letter-spacing: inherit; color: {{h.impressions.color}}; cursor: pointer">Impressions<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="opacity: {{h.impressions.op}}"><path d="{{h.impressions.d}}"></path></svg></button></div><div style="padding: 12px 16px; text-align: right"><button onClick="{{h.clicks.sort}}" style="display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0; font: inherit; text-transform: inherit; letter-spacing: inherit; color: {{h.clicks.color}}; cursor: pointer">Clicks<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="opacity: {{h.clicks.op}}"><path d="{{h.clicks.d}}"></path></svg></button></div><div style="padding: 12px 16px; text-align: right"><button onClick="{{h.ctr.sort}}" style="display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0; font: inherit; text-transform: inherit; letter-spacing: inherit; color: {{h.ctr.color}}; cursor: pointer">CTR<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="opacity: {{h.ctr.op}}"><path d="{{h.ctr.d}}"></path></svg></button></div></div>
+</div>
+<sc-for list="{{rows}}" as="row" hint-placeholder-count="20">
+<div class="hk-row" style="display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); background: {{row.tint}}">
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) 116px 140px 96px 76px; align-items: center">
+<div style="padding: 12px 16px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #ffffff">{{row.position}}</div>
+<div style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #A1A1A6">{{row.keywords}}</div>
+<div style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #A1A1A6">{{row.impressions}}</div>
+<div style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #ffffff">{{row.clicks}}</div>
+<div style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #A1A1A6">{{row.ctr}}</div>
+</div>
+</div>
+</sc-for>
+<sc-if value="{{none}}" hint-placeholder-val="{{false}}">
+<div style="padding: 64px 20px; text-align: center; color: #737373; font-size: 13px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase">Nothing matches that search.</div>
+</sc-if>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; border-top: 1px solid rgba(255,255,255,0.05); background: rgba(24,24,26,0.4)">
+<div style="display: flex; align-items: center; gap: 12px; margin-left: auto">
+<span style="font-size: 12px; font-weight: 500; color: #A1A1A6">{{showing}}</span>
+
+</div>
+</div>
+</div>
+
+</div>
+</div>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2050}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var self = this;
+    var s = Object.assign({"key": "position", "dir": "asc", "q": "", "country": "", "device": ""}, this.state || {});
+    var UPDOWN = 'm21 16-4 4-4-4M17 20V4M3 8l4-4 4 4M7 4v16';
+    var UP = 'm5 12 7-7 7 7M12 19V5';
+    var DOWN = 'M12 5v14M19 12l-7 7-7-7';
+    var FIRST = {"position": "asc", "keywords": "desc", "impressions": "desc", "clicks": "desc", "ctr": "desc"};
+    var head = function (key) {
+      var active = s.key === key;
+      return {
+        sort: function () { self.setState(active ? { key: key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key: key, dir: FIRST[key] }); },
+        d: active ? (s.dir === 'asc' ? UP : DOWN) : UPDOWN,
+        op: active ? 1 : 0.4,
+        color: active ? '#ffffff' : 'inherit'
+      };
+    };
+    var DATA = [{"d": {"position": "1", "keywords": "21", "impressions": "8,820", "clicks": "1,605", "ctr": "18.2%"}, "v": {"position": 1, "keywords": 21, "impressions": 8820, "clicks": 1605, "ctr": 18.2}, "f": {}}, {"d": {"position": "2", "keywords": "19", "impressions": "7,695", "clicks": "877", "ctr": "11.4%"}, "v": {"position": 2, "keywords": 19, "impressions": 7695, "clicks": 877, "ctr": 11.4}, "f": {}}, {"d": {"position": "3", "keywords": "24", "impressions": "9,360", "clicks": "739", "ctr": "7.9%"}, "v": {"position": 3, "keywords": 24, "impressions": 9360, "clicks": 739, "ctr": 7.9}, "f": {}}, {"d": {"position": "4", "keywords": "38", "impressions": "14,250", "clicks": "727", "ctr": "5.1%"}, "v": {"position": 4, "keywords": 38, "impressions": 14250, "clicks": 727, "ctr": 5.1}, "f": {}}, {"d": {"position": "5", "keywords": "44", "impressions": "15,840", "clicks": "570", "ctr": "3.6%"}, "v": {"position": 5, "keywords": 44, "impressions": 15840, "clicks": 570, "ctr": 3.6}, "f": {}}, {"d": {"position": "6", "keywords": "41", "impressions": "14,145", "clicks": "368", "ctr": "2.6%"}, "v": {"position": 6, "keywords": 41, "impressions": 14145, "clicks": 368, "ctr": 2.6}, "f": {}}, {"d": {"position": "7", "keywords": "37", "impressions": "12,210", "clicks": "244", "ctr": "2.0%"}, "v": {"position": 7, "keywords": 37, "impressions": 12210, "clicks": 244, "ctr": 2.0}, "f": {}}, {"d": {"position": "8", "keywords": "33", "impressions": "10,395", "clicks": "156", "ctr": "1.5%"}, "v": {"position": 8, "keywords": 33, "impressions": 10395, "clicks": 156, "ctr": 1.5}, "f": {}}, {"d": {"position": "9", "keywords": "29", "impressions": "8,700", "clicks": "96", "ctr": "1.1%"}, "v": {"position": 9, "keywords": 29, "impressions": 8700, "clicks": 96, "ctr": 1.1}, "f": {}}, {"d": {"position": "10", "keywords": "27", "impressions": "7,695", "clicks": "69", "ctr": "0.9%"}, "v": {"position": 10, "keywords": 27, "impressions": 7695, "clicks": 69, "ctr": 0.9}, "f": {}}, {"d": {"position": "11", "keywords": "31", "impressions": "8,370", "clicks": "42", "ctr": "0.5%"}, "v": {"position": 11, "keywords": 31, "impressions": 8370, "clicks": 42, "ctr": 0.5}, "f": {}}, {"d": {"position": "12", "keywords": "30", "impressions": "7,650", "clicks": "31", "ctr": "0.4%"}, "v": {"position": 12, "keywords": 30, "impressions": 7650, "clicks": 31, "ctr": 0.4}, "f": {}}, {"d": {"position": "13", "keywords": "28", "impressions": "6,720", "clicks": "24", "ctr": "0.3%"}, "v": {"position": 13, "keywords": 28, "impressions": 6720, "clicks": 24, "ctr": 0.35}, "f": {}}, {"d": {"position": "14", "keywords": "26", "impressions": "5,850", "clicks": "18", "ctr": "0.3%"}, "v": {"position": 14, "keywords": 26, "impressions": 5850, "clicks": 18, "ctr": 0.3}, "f": {}}, {"d": {"position": "15", "keywords": "25", "impressions": "5,250", "clicks": "13", "ctr": "0.2%"}, "v": {"position": 15, "keywords": 25, "impressions": 5250, "clicks": 13, "ctr": 0.25}, "f": {}}, {"d": {"position": "16", "keywords": "24", "impressions": "4,680", "clicks": "9", "ctr": "0.2%"}, "v": {"position": 16, "keywords": 24, "impressions": 4680, "clicks": 9, "ctr": 0.2}, "f": {}}, {"d": {"position": "17", "keywords": "23", "impressions": "4,140", "clicks": "7", "ctr": "0.2%"}, "v": {"position": 17, "keywords": 23, "impressions": 4140, "clicks": 7, "ctr": 0.18}, "f": {}}, {"d": {"position": "18", "keywords": "22", "impressions": "3,630", "clicks": "5", "ctr": "0.1%"}, "v": {"position": 18, "keywords": 22, "impressions": 3630, "clicks": 5, "ctr": 0.15}, "f": {}}, {"d": {"position": "19", "keywords": "21", "impressions": "3,150", "clicks": "4", "ctr": "0.1%"}, "v": {"position": 19, "keywords": 21, "impressions": 3150, "clicks": 4, "ctr": 0.12}, "f": {}}, {"d": {"position": "20", "keywords": "20", "impressions": "2,700", "clicks": "3", "ctr": "0.1%"}, "v": {"position": 20, "keywords": 20, "impressions": 2700, "clicks": 3, "ctr": 0.1}, "f": {}}];
+    var CHIPS = [{"key": "country", "label": "Country", "options": [{"value": "", "text": "Any country"}, {"value": "gbr", "text": "United Kingdom"}, {"value": "usa", "text": "United States"}, {"value": "irl", "text": "Ireland"}, {"value": "ind", "text": "India"}]}, {"key": "device", "label": "Device", "options": [{"value": "", "text": "Any device"}, {"value": "DESKTOP", "text": "Desktop"}, {"value": "MOBILE", "text": "Mobile"}, {"value": "TABLET", "text": "Tablet"}]}];
+    var q = s.q.trim().toLowerCase();
+    var rows = DATA.map(function (r) {
+      var row = Object.assign({}, r.d);
+      row._v = r.v;
+      row._f = r.f;
+      var name = r.d.position;
+      row.tint = 'transparent';
+      return row;
+    }).filter(function (row) {
+      if (q && String(row.position).toLowerCase().indexOf(q) < 0) return false;
+      return CHIPS.every(function (chip) {
+        var want = s[chip.key];
+        if (!want) return true;
+        if (chip.key === 'show') return (want === 'yes') === Boolean(row.tracked);
+        if (row._f[chip.key] === undefined) return true;
+        return row._f[chip.key] === want;
+      });
+    });
+    rows.sort(function (a, b) {
+      var x = a._v[s.key], y = b._v[s.key];
+      var order = typeof x === 'string' ? x.localeCompare(y) : x - y;
+      return s.dir === 'asc' ? order : -order;
+    });
+    var filtered = Boolean(q || CHIPS.some(function (chip) { return s[chip.key] && s[chip.key] !== {}[chip.key]; }));
+    var h = {};
+    ["position", "keywords", "impressions", "clicks", "ctr"].forEach(function (key) { h[key] = head(key); });
+    return {
+      onSearch: function (event) { self.setState({ q: event.target.value }); },
+      h: h,
+      chips: CHIPS.map(function (chip) {
+        var on = Boolean(s[chip.key]);
+        var chosen = chip.options.filter(function (option) { return option.value === s[chip.key]; })[0];
+        return {
+          label: chip.label,
+          text: on ? chip.label + ': ' + chosen.text : chip.label,
+          border: on ? 'rgba(255,90,31,0.3)' : 'rgba(255,255,255,0.1)',
+          bg: on ? 'rgba(255,90,31,0.15)' : '#222224',
+          color: on ? '#ff5a1f' : '#ffffff',
+          chevron: on ? '#ff5a1f' : '#737373',
+          options: chip.options.map(function (option) { return { value: option.value, text: option.text, on: option.value === s[chip.key] }; }),
+          pick: function (event) { var next = {}; next[chip.key] = event.target.value; self.setState(next); }
+        };
+      }),
+      rows: rows,
+      none: rows.length === 0,
+      paged: !filtered,
+      count: filtered ? rows.length + ' of 20 positions' : '20 positions',
+
+      showing: filtered || !false ? (rows.length ? 'Showing 1–' + rows.length + ' of ' + rows.length : 'Nothing to show') : 'Showing 1–25 of 20'
+    };
+  }
+}
+</script>
+</body>
+</html>

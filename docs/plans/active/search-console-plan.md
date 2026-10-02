@@ -612,8 +612,15 @@ data which I hate". §11's three boards are dropped. Rows in the drawings are
 made up: "we are only drawing a UX we don't need real data".
 
 **The canvas**: https://claude.ai/artifact/YSWaPwCuywp292S4rfeUQf
-("Search Console — keywords and pages", private to Anthony; version 12,
-"17 screens"). Every look below was asked for in his words on the way.
+("Search Console — keywords and pages", private to Anthony). Every look below
+was asked for in his words on the way. Of the drawings: "i love these", then
+"these are great can we save these".
+
+**Saved in the repo**: `docs/plans/assets/search-console-redesign/` — each
+screen's drawing (`<Screen>.dc.html`), the canvas layout (`canvas.json`) and
+the Ronins icon they use, as of 2026-10-02 (canvas version 14, "Tables fit").
+They are the canvas's own files: published to a Design canvas they draw
+again exactly as they are there.
 
 ### 13.1 What the screens share
 

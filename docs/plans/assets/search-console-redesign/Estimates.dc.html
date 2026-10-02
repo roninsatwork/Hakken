@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Real against estimated</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#222224}
+a{color:#ffffff;text-decoration:none}a:hover{color:#38bdf8}
+input::placeholder{color:rgba(115,115,115,0.6)}
+.hk-row:hover{background:rgba(255,255,255,0.02);color:#ffffff}
+@media (max-width:1180px){.hk-sidebar{display:none !important}}
+@media (max-width:900px){.hk-sidemenu{display:none !important}.hk-split{grid-template-columns:minmax(0,1fr) !important}.hk-head{flex-direction:column !important;align-items:flex-start !important}}
+</style>
+</helmet>
+<div style="display: flex; min-height: 100vh; background: #222224; color: #ffffff; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 13px; line-height: 1.4">
+
+<aside class="hk-sidebar" style="width: 232px; flex-shrink: 0; background: #18181A; border-right: 1px solid rgba(255,255,255,0.06); padding: 18px 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 30px">
+<div style="display: flex; align-items: center; gap: 10px; padding: 0 6px">
+<span style="width: 28px; height: 28px; border-radius: 8px; background: #2C2C2E; display: flex; align-items: center; justify-content: center; color: #ff5a1f"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"></path></svg></span>
+<span style="font-size: 17px; font-weight: 700; letter-spacing: -0.01em">Hakken</span>
+<button aria-label="Collapse the menu" style="margin-left: auto; background: none; border: 0; padding: 4px; color: #737373; display: flex; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path></svg></button>
+</div>
+<nav aria-label="Main navigation" style="display: flex; flex-direction: column; gap: 2px">
+<div style="font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; letter-spacing: 0.14em; color: #737373; padding: 0 10px 10px">MAIN NAVIGATION</div>
+<a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: #A1A1A6"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1"></rect><rect x="14" y="3" width="7" height="5" rx="1"></rect><rect x="14" y="12" width="7" height="9" rx="1"></rect><rect x="3" y="16" width="7" height="5" rx="1"></rect></svg>Dashboard</a>
+<a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: #A1A1A6"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 8V4H8"></path><rect width="16" height="12" x="4" y="8" rx="2"></rect><path d="M2 14h2M20 14h2M15 13v2M9 13v2"></path></svg>Ask Hakken</a>
+<a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: #A1A1A6"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20M2 12h20"></path></svg>Sites</a>
+<a href="#" aria-current="page" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: #ffffff; background: rgba(255,255,255,0.08)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 11 2 2 4-4"></path><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>Search Console</a>
+<a href="#" style="display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: #A1A1A6"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.42 10.92a1 1 0 0 0-.02-1.84L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.83l8.57 3.91a2 2 0 0 0 1.66 0zM22 10v6M6 12.5V16a6 3 0 0 0 12 0v-3.5"></path></svg>Learn</a>
+</nav>
+</aside>
+
+<div style="flex: 1; min-width: 0; display: flex; flex-direction: column">
+<header style="height: 60px; display: flex; align-items: center; gap: 10px; padding: 0 28px; border-bottom: 1px solid rgba(255,255,255,0.06); box-sizing: border-box">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#A1A1A6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 11 2 2 4-4"></path><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+<span style="font-weight: 500">Search Console</span>
+<button aria-label="Notifications" style="margin-left: auto; background: none; border: 0; padding: 6px; color: #A1A1A6; display: flex; cursor: pointer"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg></button>
+<div style="display: flex; align-items: center; gap: 10px; margin-left: 10px">
+<span style="width: 34px; height: 34px; border-radius: 17px; background: #3A3A3C; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600">AB</span>
+<div style="display: flex; flex-direction: column"><span style="font-weight: 500; letter-spacing: 0.02em">Anthony Basker</span><span style="font-size: 11px; color: #737373">anthony@ronins.co.uk</span></div>
+</div>
+</header>
+
+<main style="padding: 26px 28px 56px; display: flex; flex-direction: column; gap: 22px">
+<div class="hk-head" style="display: flex; justify-content: space-between; align-items: flex-end; gap: 16px">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<a href="#" style="display: inline-flex; align-items: center; gap: 6px; color: #A1A1A6; font-size: 12px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m12 19-7-7 7-7M19 12H5"></path></svg>Back to Search Console</a>
+<div style="display: flex; align-items: center; gap: 10px; margin-top: 4px"><span aria-hidden="true" style="width: 32px; height: 32px; flex-shrink: 0; border-radius: 8px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; overflow: hidden"><img src="/_blob/b70534786d216495d9720e4d04426153" alt="" style="width: 20px; height: 20px; object-fit: contain"></span><span style="font-size: 22px; font-weight: 700; letter-spacing: -0.015em">ronins.co.uk</span></div>
+<span style="font-size: 12.5px; color: #A1A1A6">Your website · Search Console property https://www.ronins.co.uk/</span>
+</div>
+<button style="height: 34px; padding: 0 12px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #1C1C1E; color: #ffffff; font: inherit; display: flex; align-items: center; gap: 28px; cursor: pointer">Last 30 days<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#A1A1A6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></button>
+</div>
+<div style="height: 1px; background: rgba(255,255,255,0.08)"></div>
+
+<div class="hk-split" style="display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 28px; align-items: start">
+
+<nav class="hk-sidemenu" aria-label="Search Console pages" style="display: flex; flex-direction: column; gap: 18px">
+<div style="display: flex; flex-direction: column; gap: 2px">
+<a href="#" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Performance</a>
+<a href="Keywords.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Keywords</a>
+<a href="Main.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Pages</a>
+<a href="#" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Countries and devices</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 0 10px 6px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; letter-spacing: 0.14em; color: #737373">CHANGES</div>
+<a href="Bands.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Position bands</a>
+<a href="NewLost.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">New and lost</a>
+<a href="Moves.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Wins and losses</a>
+<a href="Updates.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Google updates</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 0 10px 6px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; letter-spacing: 0.14em; color: #737373">OPPORTUNITIES</div>
+<a href="Almost.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Almost there</a>
+<a href="LowCtr.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Shown but not clicked</a>
+<a href="Demand.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Missed demand</a>
+<a href="Competing.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Pages competing</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 0 10px 6px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; letter-spacing: 0.14em; color: #737373">BREAKDOWNS</div>
+<a href="Types.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Types</a>
+<a href="Brand.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Brand and non-brand</a>
+<a href="CtrCurve.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Click rate by position</a>
+<a href="Appearance.dc.html" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Rich results</a>
+<a href="Estimates.dc.html" aria-current="page" style="padding: 7px 10px; border-radius: 8px; color: #ffffff; background: rgba(255,255,255,0.08)">Real against estimated</a>
+</div>
+<div style="display: flex; flex-direction: column; gap: 2px">
+<div style="padding: 0 10px 6px; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 10px; letter-spacing: 0.14em; color: #737373">SETTINGS</div>
+<a href="#" style="padding: 7px 10px; border-radius: 8px; color: #A1A1A6">Connection</a>
+</div>
+</nav>
+
+<div style="display: flex; flex-direction: column; gap: 20px; min-width: 0">
+<div style="display: flex; flex-direction: column; gap: 6px">
+<h1 style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.015em">Real against estimated</h1>
+<p style="margin: 0; font-size: 13px; color: #A1A1A6; max-width: 720px; line-height: 1.55">Clicks are what Google counted; Estimate is the visits Sites estimated for the same 30 days. Where they differ a lot, trust Google's.</p>
+</div>
+
+<div class="hk-figs" style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px"><div style="border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(44,44,46,0.4); padding: 16px 20px"><div style="font-size: 12px; color: #A1A1A6">Sites' estimate</div><div style="margin-top: 4px; font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums">3,840</div><div style="margin-top: 4px; font-size: 12px; color: #A1A1A6">Visits in the last 30 days</div></div><div style="border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(44,44,46,0.4); padding: 16px 20px"><div style="font-size: 12px; color: #A1A1A6">Google's clicks</div><div style="margin-top: 4px; font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums">476</div><div style="margin-top: 4px; font-size: 12px; color: #A1A1A6">In the last 30 days</div></div><div style="border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(44,44,46,0.4); padding: 16px 20px"><div style="font-size: 12px; color: #A1A1A6">Pages estimated too high</div><div style="margin-top: 4px; font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums">41</div><div style="margin-top: 4px; font-size: 12px; color: #A1A1A6">By more than a quarter</div></div><div style="border-radius: 16px; border: 1px solid rgba(255,255,255,0.1); background: rgba(44,44,46,0.4); padding: 16px 20px"><div style="font-size: 12px; color: #A1A1A6">Pages estimated too low</div><div style="margin-top: 4px; font-size: 24px; font-weight: 600; font-variant-numeric: tabular-nums">12</div><div style="margin-top: 4px; font-size: 12px; color: #A1A1A6">By more than a quarter</div></div></div>
+
+<div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap">
+<div style="flex: 1; min-width: 240px; padding: 8px; background: rgba(44,44,46,0.4); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); display: flex; align-items: center">
+<div style="flex: 1; display: flex; align-items: center; gap: 8px; padding: 0 12px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#737373" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg><input type="text" placeholder="Search pages…" aria-label="Search pages…" onChange="{{onSearch}}" style="flex: 1; min-width: 0; background: transparent; border: 0; outline: none; color: #ffffff; font: inherit; font-size: 13px; letter-spacing: 0.025em"></div>
+</div>
+<sc-for list="{{chips}}" as="chip" hint-placeholder-count="2">
+<div style="position: relative; display: inline-flex; height: 38px; box-sizing: border-box; align-items: center; gap: 6px; white-space: nowrap; border-radius: 10px; border: 1px solid {{chip.border}}; background: {{chip.bg}}; color: {{chip.color}}; padding: 0 12px; font-size: 13px">
+<span aria-hidden="true">{{chip.text}}</span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="{{chip.chevron}}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+<select aria-label="{{chip.label}}" onChange="{{chip.pick}}" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; background: #222224; color: #ffffff; font-size: 13px">
+<sc-for list="{{chip.options}}" as="option" hint-placeholder-count="4"><option value="{{option.value}}" selected="{{option.on}}">{{option.text}}</option></sc-for>
+</select>
+</div>
+</sc-for>
+</div>
+
+<div style="border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; background: rgba(24,24,26,0.2); box-shadow: 0 1px 2px rgba(0,0,0,0.05); overflow: hidden">
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(34,34,36,0.5); padding: 12px 16px">
+<div style="display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap"><span aria-live="polite" style="font-size: 13px; font-weight: 500">{{count}}</span></div>
+<button style="height: 32px; padding: 0 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: #222224; color: #ffffff; font: inherit; font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>Download all (CSV)</button>
+</div>
+<div style="overflow-x: auto">
+<div style="min-width: 860px">
+<div style="display: grid; grid-template-columns: minmax(0, 1fr); border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #737373; font-weight: 500">
+<div style="display: grid; grid-template-columns: minmax(0, 1fr) 104px 96px 116px 140px"><div style="padding: 12px 16px"><button onClick="{{h.page.sort}}" style="display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0; font: inherit; text-transform: inherit; letter-spacing: inherit; color: {{h.page.color}}; cursor: pointer">Page<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="opacity: {{h.page.op}}"><path d="{{h.page.d}}"></path></svg></button></div><div style="padding: 12px 16px"><button onClick="{{h.type.sort}}" style="display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0; font: inherit; text-transform: inherit; letter-spacing: inherit; color: {{h.type.color}}; cursor: pointer">Type<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="opacity: {{h.type.op}}"><path d="{{h.type.d}}"></path></svg></button></div><div style="padding: 12px 16px; text-align: right"><button onClick="{{h.real.sort}}" style="display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0; font: inherit; text-transform: inherit; letter-spacing: inherit; color: {{h.real.color}}; cursor: pointer">Clicks<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="opacity: {{h.real.op}}"><path d="{{h.real.d}}"></path></svg></button></div><div style="padding: 12px 16px; text-align: right"><button onClick="{{h.estimate.sort}}" style="display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0; font: inherit; text-transform: inherit; letter-spacing: inherit; color: {{h.estimate.color}}; cursor: pointer">Estimate<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="opacity: {{h.estimate.op}}"><path d="{{h.estimate.d}}"></path></svg></button></div><div style="padding: 12px 16px"><button onClick="{{h.gap.sort}}" style="display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding: 0; font: inherit; text-transform: inherit; letter-spacing: inherit; color: {{h.gap.color}}; cursor: pointer">Difference<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="opacity: {{h.gap.op}}"><path d="{{h.gap.d}}"></path></svg></button></div></div>
+</div>
+<sc-for list="{{rows}}" as="row" hint-placeholder-count="12">
+<div class="hk-row" style="display: grid; grid-template-columns: minmax(0, 1fr); align-items: center; border-bottom: 1px solid rgba(255,255,255,0.05); background: {{row.tint}}">
+<a href="Page.dc.html" aria-label="Open {{row.page}}" style="display: grid; grid-template-columns: minmax(0, 1fr) 104px 96px 116px 140px; align-items: center; color: #ffffff; cursor: pointer">
+<div style="padding: 12px 16px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #ffffff">{{row.page}}</div>
+<div style="padding: 12px 16px; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #A1A1A6">{{row.type}}</div>
+<div style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #ffffff">{{row.real}}</div>
+<div style="padding: 12px 16px; text-align: right; font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12px; color: #A1A1A6">{{row.estimate}}</div>
+<div style="padding: 12px 16px; white-space: nowrap; color: {{row.gap_tone}}">{{row.gap}}</div>
+</a>
+</div>
+</sc-for>
+<sc-if value="{{none}}" hint-placeholder-val="{{false}}">
+<div style="padding: 64px 20px; text-align: center; color: #737373; font-size: 13px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase">Nothing matches that search.</div>
+</sc-if>
+</div>
+</div>
+<div style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; padding: 16px; border-top: 1px solid rgba(255,255,255,0.05); background: rgba(24,24,26,0.4)">
+<sc-if value="{{paged}}" hint-placeholder-val="{{true}}">
+<nav aria-label="Pages of the table" style="display: flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 500">
+<button aria-label="Previous page" disabled style="display: flex; align-items: center; padding: 6px; border-radius: 6px; border: 1px solid transparent; background: none; color: #ffffff; opacity: 0.3"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></button>
+<button aria-current="page" style="min-width: 28px; padding: 6px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.1); color: #ffffff; font: inherit; box-shadow: 0 1px 2px rgba(0,0,0,0.05)">1</button>
+<button style="min-width: 28px; padding: 6px; border-radius: 6px; border: 1px solid transparent; background: none; color: #ffffff; font: inherit; cursor: pointer">2</button>
+<button style="min-width: 28px; padding: 6px; border-radius: 6px; border: 1px solid transparent; background: none; color: #ffffff; font: inherit; cursor: pointer">3</button>
+<span aria-hidden="true" style="padding: 0 4px; color: #737373">…</span>
+<button style="min-width: 28px; padding: 6px; border-radius: 6px; border: 1px solid transparent; background: none; color: #ffffff; font: inherit; cursor: pointer">11</button>
+<button aria-label="Next page" style="display: flex; align-items: center; padding: 6px; border-radius: 6px; border: 1px solid transparent; background: none; color: #ffffff; cursor: pointer"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button>
+</nav>
+</sc-if>
+<div style="display: flex; align-items: center; gap: 12px; margin-left: auto">
+<span style="font-size: 12px; font-weight: 500; color: #A1A1A6">{{showing}}</span>
+<select aria-label="Rows on a page" style="height: 32px; padding: 0 8px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: #222224; color: #ffffff; font: inherit; font-size: 12px"><option>25 rows</option><option>50 rows</option><option>75 rows</option><option>100 rows</option></select>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":1372}}'>
+class Component extends DCLogic {
+  renderVals() {
+    var self = this;
+    var s = Object.assign({"key": "gap", "dir": "desc", "q": "", "verdict": "", "type": ""}, this.state || {});
+    var UPDOWN = 'm21 16-4 4-4-4M17 20V4M3 8l4-4 4 4M7 4v16';
+    var UP = 'm5 12 7-7 7 7M12 19V5';
+    var DOWN = 'M12 5v14M19 12l-7 7-7-7';
+    var FIRST = {"page": "asc", "type": "asc", "real": "desc", "estimate": "desc", "gap": "asc"};
+    var head = function (key) {
+      var active = s.key === key;
+      return {
+        sort: function () { self.setState(active ? { key: key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key: key, dir: FIRST[key] }); },
+        d: active ? (s.dir === 'asc' ? UP : DOWN) : UPDOWN,
+        op: active ? 1 : 0.4,
+        color: active ? '#ffffff' : 'inherit'
+      };
+    };
+    var DATA = [{"d": {"page": "/hub/what-is-a-web-application/", "type": "Article", "real": "1", "estimate": "1,033", "gap": "1,032 too high", "gap_tone": "#f97316"}, "v": {"page": "/hub/what-is-a-web-application/", "type": "Article", "real": 1, "estimate": 1033, "gap": 1032}, "f": {"verdict": "high", "type": "ARTICLE"}}, {"d": {"page": "/ai-agency/", "type": "Service", "real": "160", "estimate": "244", "gap": "84 too high", "gap_tone": "#f97316"}, "v": {"page": "/ai-agency/", "type": "Service", "real": 160, "estimate": 244, "gap": 84}, "f": {"verdict": "high", "type": "SERVICE"}}, {"d": {"page": "/hub/kapferer-brand-identity-prism/", "type": "Article", "real": "141", "estimate": "132", "gap": "About right", "gap_tone": "#A1A1A6"}, "v": {"page": "/hub/kapferer-brand-identity-prism/", "type": "Article", "real": 141, "estimate": 132, "gap": 0}, "f": {"verdict": "close", "type": "ARTICLE"}}, {"d": {"page": "/", "type": "Home page", "real": "52", "estimate": "16", "gap": "36 too low", "gap_tone": "#3b82f6"}, "v": {"page": "/", "type": "Home page", "real": 52, "estimate": 16, "gap": -36}, "f": {"verdict": "low", "type": "HOME"}}, {"d": {"page": "/hub/bad-websites/", "type": "Article", "real": "40", "estimate": "36", "gap": "About right", "gap_tone": "#A1A1A6"}, "v": {"page": "/hub/bad-websites/", "type": "Article", "real": 40, "estimate": 36, "gap": 0}, "f": {"verdict": "close", "type": "ARTICLE"}}, {"d": {"page": "/venture-studio/", "type": "Service", "real": "21", "estimate": "39", "gap": "18 too high", "gap_tone": "#f97316"}, "v": {"page": "/venture-studio/", "type": "Service", "real": 21, "estimate": 39, "gap": 18}, "f": {"verdict": "high", "type": "SERVICE"}}, {"d": {"page": "/wordpress-agency/", "type": "Service", "real": "12", "estimate": "22", "gap": "10 too high", "gap_tone": "#f97316"}, "v": {"page": "/wordpress-agency/", "type": "Service", "real": 12, "estimate": 22, "gap": 10}, "f": {"verdict": "high", "type": "SERVICE"}}, {"d": {"page": "/web-design-london/", "type": "Location", "real": "2", "estimate": "11", "gap": "9 too high", "gap_tone": "#f97316"}, "v": {"page": "/web-design-london/", "type": "Location", "real": 2, "estimate": 11, "gap": 9}, "f": {"verdict": "high", "type": "LOCATION"}}, {"d": {"page": "/ai-consultancy/", "type": "Service", "real": "11", "estimate": "9", "gap": "About right", "gap_tone": "#A1A1A6"}, "v": {"page": "/ai-consultancy/", "type": "Service", "real": 11, "estimate": 9, "gap": 0}, "f": {"verdict": "close", "type": "SERVICE"}}, {"d": {"page": "/web-application-development/", "type": "Service", "real": "7", "estimate": "19", "gap": "12 too high", "gap_tone": "#f97316"}, "v": {"page": "/web-application-development/", "type": "Service", "real": 7, "estimate": 19, "gap": 12}, "f": {"verdict": "high", "type": "SERVICE"}}, {"d": {"page": "/mobile-app-developers/", "type": "Service", "real": "7", "estimate": "7", "gap": "About right", "gap_tone": "#A1A1A6"}, "v": {"page": "/mobile-app-developers/", "type": "Service", "real": 7, "estimate": 7, "gap": 0}, "f": {"verdict": "close", "type": "SERVICE"}}, {"d": {"page": "/hub/is-web-development-dying/", "type": "Article", "real": "6", "estimate": "214", "gap": "208 too high", "gap_tone": "#f97316"}, "v": {"page": "/hub/is-web-development-dying/", "type": "Article", "real": 6, "estimate": 214, "gap": 208}, "f": {"verdict": "high", "type": "ARTICLE"}}];
+    var CHIPS = [{"key": "verdict", "label": "Estimate", "options": [{"value": "", "text": "Any estimate"}, {"value": "high", "text": "Too high"}, {"value": "low", "text": "Too low"}, {"value": "close", "text": "About right"}]}, {"key": "type", "label": "Page type", "options": [{"value": "", "text": "Any type"}, {"value": "SERVICE", "text": "Service"}, {"value": "ARTICLE", "text": "Article"}, {"value": "LOCATION", "text": "Location"}, {"value": "HOME", "text": "Home page"}, {"value": "OTHER", "text": "Other"}]}];
+    var q = s.q.trim().toLowerCase();
+    var rows = DATA.map(function (r) {
+      var row = Object.assign({}, r.d);
+      row._v = r.v;
+      row._f = r.f;
+      var name = r.d.page;
+      row.tint = 'transparent';
+      return row;
+    }).filter(function (row) {
+      if (q && String(row.page).toLowerCase().indexOf(q) < 0) return false;
+      return CHIPS.every(function (chip) {
+        var want = s[chip.key];
+        if (!want) return true;
+        if (chip.key === 'show') return (want === 'yes') === Boolean(row.tracked);
+        if (row._f[chip.key] === undefined) return true;
+        return row._f[chip.key] === want;
+      });
+    });
+    rows.sort(function (a, b) {
+      var x = a._v[s.key], y = b._v[s.key];
+      var order = typeof x === 'string' ? x.localeCompare(y) : x - y;
+      return s.dir === 'asc' ? order : -order;
+    });
+    var filtered = Boolean(q || CHIPS.some(function (chip) { return s[chip.key] && s[chip.key] !== {}[chip.key]; }));
+    var h = {};
+    ["page", "type", "real", "estimate", "gap"].forEach(function (key) { h[key] = head(key); });
+    return {
+      onSearch: function (event) { self.setState({ q: event.target.value }); },
+      h: h,
+      chips: CHIPS.map(function (chip) {
+        var on = Boolean(s[chip.key]);
+        var chosen = chip.options.filter(function (option) { return option.value === s[chip.key]; })[0];
+        return {
+          label: chip.label,
+          text: on ? chip.label + ': ' + chosen.text : chip.label,
+          border: on ? 'rgba(255,90,31,0.3)' : 'rgba(255,255,255,0.1)',
+          bg: on ? 'rgba(255,90,31,0.15)' : '#222224',
+          color: on ? '#ff5a1f' : '#ffffff',
+          chevron: on ? '#ff5a1f' : '#737373',
+          options: chip.options.map(function (option) { return { value: option.value, text: option.text, on: option.value === s[chip.key] }; }),
+          pick: function (event) { var next = {}; next[chip.key] = event.target.value; self.setState(next); }
+        };
+      }),
+      rows: rows,
+      none: rows.length === 0,
+      paged: !filtered,
+      count: filtered ? rows.length + ' of 268 pages' : '268 pages',
+
+      showing: filtered || !true ? (rows.length ? 'Showing 1–' + rows.length + ' of ' + rows.length : 'Nothing to show') : 'Showing 1–25 of 268'
+    };
+  }
+}
+</script>
+</body>
+</html>
