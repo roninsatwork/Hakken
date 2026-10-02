@@ -14,7 +14,9 @@ agent's, on its own schedule, and nothing is collected in bulk until the
 screens are agreed (§12). The Search Console Collector role built the same
 day, a run of its own for each website. Screens redesigned on a new canvas
 2026-10-02 — seventeen drawn, the §11 drawings dropped; nothing agreed or
-built yet (§13).** Change a decision here, with a date, before building anything that
+built yet (§13). How the data is collected and kept agreed the same day — as
+the screens read it, days for 90 days then weeks then months — with the build
+in phases, about 21 days (§14).** Change a decision here, with a date, before building anything that
 disagrees with it. Follow `AGENTS.md`: no code until Anthony agrees, and draw
 the screens first (§1, SC9).
 
@@ -685,6 +687,102 @@ looked at; none agreed.
   no such type, and a live test on ronins.co.uk was refused for every AI type
   and search-appearance name. Anthony: "lets wait".
 
+## 14. The data: collected once, kept as the screens read it — agreed 2026-10-02
+
+Anthony, 2026-10-02: "2.16 million records is excessive and we need to make
+the use of rollups etc. Let's brainstorm the best way to get this data without
+doubling storage, let's get it the way we need it once." Then, of the proposal
+below: "keep 30 days", "yes to the 90 days then weeks months etc". This
+supersedes SC6 (every search and page stored by day, each its own record) and
+§4.3's storage.
+
+### 14.1 Why it reached 2.16 million
+
+One record per search, page, country, device and rich result, for every day
+and every kind of result, for sixteen months — each with its own index
+entries. No screen reads Google's data at that grain.
+
+### 14.2 What the screens read
+
+| Shape | Read by |
+|---|---|
+| The website's totals by day | Hero boxes, charts, Google updates |
+| Each keyword's and each page's totals for a period | Pages, Keywords, Types, Brand and non-brand, Almost there, Missed demand, Shown but not clicked, Real against estimated, Click rate by position |
+| Each keyword with each page, for a period | Keyword counts, top keyword and top page, Pages competing, the detail screens' tables |
+| Each keyword week by week | Position bands, New and lost, Wins and losses, the brand trend |
+| One page or keyword day by day | A detail screen's chart, only when it is opened |
+
+### 14.3 What is agreed
+
+1. **Three asks a day, for each kind of result**: the website's totals by day;
+   each page; each keyword with each page. Plus countries, devices and rich
+   results, all small. **Keyword totals are added up from the keyword-and-page
+   pairs, never collected on their own** — no doubling. Pages are collected on
+   their own because Google folds the rare keywords it hides into a page's
+   totals, so a page's real clicks cannot be rebuilt from the pairs.
+2. **A day is one record, not one per row**: one record per website, day and
+   kind of data, holding that day's whole list. Over 2,000 rows, it is split
+   into records of 2,000 — a Convex record holds 1MB at most.
+3. **Rolled up as it ages**: days kept for **90 days**, then merged into
+   **weeks** (Monday to Sunday, Google's own days, Pacific time); weeks older
+   than **12 months** merged into **months**. The website's totals stay daily
+   for good — they are tiny. Position is kept as a sum weighted by impressions,
+   so an average over any days, weeks or months is exactly Google's.
+4. **Thirty days stays the default** ("keep 30 days"). The lists' totals are
+   kept ready-made for the last **7, 30 and 90 days and 12 months**, with the
+   period before each for the change, rebuilt after each day's collection.
+   Thirty days and the thirty before both sit inside the 90 days held daily.
+   Any other dates are asked of Google when chosen — free — and a period older
+   than 90 days read from storage is counted in whole weeks.
+5. **A detail screen's chart asks Google when it opens**: one request, nothing
+   kept per page or keyword per day beyond the day records.
+6. **Two small registers**: when each keyword and page was first and last
+   seen (New and lost), and the types and intents (Sites' own judgments, and
+   the Decision Maker's for pages and keywords Sites has not seen).
+7. **Collecting stays the Search Console Collector's** (§12), and still only
+   the newest days; **the history waits for Anthony's go** once the screens
+   are agreed. When it comes, it is asked of Google straight into weeks and
+   months, never as days.
+8. **What goes**: the record-per-row tables (`searchConsoleRows`,
+   `searchConsoleDays`) and the tables' compact copies of kind `gsc`, replaced
+   by the day, week and month records and the ready-made period totals.
+
+**Every limit**: Google returns at most 50,000 rows a day for each kind of
+result; a record holds 2,000 rows (Convex: 1MB a record); days 90, weeks 12
+months, then months; ready-made periods 7, 30 and 90 days and 12 months. The
+search-and-page pairs undercount a little: Google drops some rare rows when
+asked for both together.
+
+**Size, estimated for ronins.co.uk**: a few thousand records and about 10–20MB,
+against 2.16 million records and about half a gigabyte. To be measured on
+ronins.co.uk and kordatackle.com in phase D7.
+
+### 14.4 Phases and days
+
+Data first — every screen reads it — then the screens. Each phase ends with
+its tests and the full gate; days are working days, each phase its own go.
+
+| Phase | What | Days |
+|---|---|---|
+| **D1** | The storage: day, week and month records (pairs, pages, website totals, countries, devices, rich results), weighted position, 2,000-row records; the old record-per-row tables cleared out | 1.5 |
+| **D2** | Collecting: the Collector's per-website run makes the three asks for each kind of result and writes day records; the first- and last-seen register | 1.5 |
+| **D3** | Rollups: days past 90 into weeks, weeks past 12 months into months, as part of each website's run | 1 |
+| **D4** | Ready-made period totals: 7, 30 and 90 days and 12 months, and the period before each, for keywords, pages and pairs, by type, intent and brand | 1.5 |
+| **D5** | Asked of Google when needed: other dates, and the detail screens' charts | 1 |
+| **D6** | The sixteen months, straight into weeks and months — **only on Anthony's go** | 0.5 |
+| **D7** | Measured on ronins.co.uk and kordatackle.com: records, size, time a run takes | 0.5 |
+| | **Data** | **7.5** |
+| **S1** | Shared parts: the Search Console table on the kit's table and Sites' table bar, hero boxes, the grouped side menu, the website's icon | 1 |
+| **S2** | Pages and Keywords: search, filters, sorting, pager, the Track column | 1.5 |
+| **S3** | A page's and a keyword's detail: hero boxes, chart, where the clicks came from, their tables | 1.5 |
+| **S4** | Tracking: the tracked lists, tick and untick, "Track this page / keyword", the two limits on the Limits screens at all three levels | 1.5 |
+| **S5** | Changes: Position bands, New and lost, Wins and losses, Google updates | 2 |
+| **S6** | Opportunities: Almost there, Shown but not clicked, Missed demand, Pages competing | 2 |
+| **S7** | Breakdowns: Types (sorting pages and keywords Sites has not seen), Brand and non-brand (where brand words are set), Click rate by position, Rich results, Real against estimated | 2.5 |
+| **S8** | Wording in English and Italian; the approved looks locked with drift and look tests; screen-kit entries; checked in Chrome on ronins.co.uk | 1.5 |
+| | **Screens** | **13.5** |
+| | **Total** | **21** |
+
 ## Change log
 
 - **2026-09-27** — Plan written: how Search Console integration works, what
@@ -728,3 +826,9 @@ looked at; none agreed.
 - **2026-10-02** — The screens redesigned on a new canvas, seventeen drawn:
   keywords and pages both ways, Sites' tables, tracking with limits, and
   thirteen more pages. §11's drawings dropped. Nothing agreed or built (§13).
+- **2026-10-02** — The data agreed (§14): three asks a day (website totals,
+  pages, keyword-and-page pairs; keyword totals added up from the pairs), a
+  day as one record, days for 90 days then weeks then months, 30 days kept as
+  the default with ready-made period totals, detail charts asked of Google
+  live. SC6 and §4.3 superseded. The build in phases: data 7.5 days, screens
+  13.5, about 21 in all.
