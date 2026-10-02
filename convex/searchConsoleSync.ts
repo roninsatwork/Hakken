@@ -50,7 +50,7 @@ const REFETCH_DAYS = 4;
 const DAYS_PER_STEP = 7;
 
 /** A step stops starting new days after this, and hands the rest to the next step. */
-const STEP_BUDGET_MS = 4 * 60 * 1000;
+export const STEP_BUDGET_MS = 4 * 60 * 1000;
 
 /** A history quiet this long has stopped: the next collection takes it up again. */
 const HISTORY_STALL_MS = 60 * 60 * 1000;
@@ -90,6 +90,16 @@ const laterDay = (left: string, right: string) => (left > right ? left : right);
 // Starting
 // ---------------------------------------------------------------------------
 
+/**
+ * The days a collection fetches: from the newest held — or Google's newest,
+ * with none held — and the last four again, up to Google's newest whole day.
+ */
+function recentWindow(newestDay: string | undefined, now: number): { from: string; top: string } {
+  const top = newestWholeDay(now);
+  const newest = newestDay && newestDay < top ? newestDay : top;
+  return { from: laterDay(historyLimitDay(now), shiftDay(newest, -(REFETCH_DAYS - 1))), top };
+}
+
 /** One collection: the days since the newest held, and the last four again, newest first; then the history. */
 export const collectRecent = internalMutation({
   args: { connectionId: v.id("searchConsoleConnections") },
@@ -97,10 +107,7 @@ export const collectRecent = internalMutation({
   handler: async (ctx, args) => {
     const connection = await ctx.db.get(args.connectionId);
     if (!connection || connection.status !== "CONNECTED" || !connection.property || connection.clearing) return null;
-    const now = Date.now();
-    const top = newestWholeDay(now);
-    const newest = connection.newestDay && connection.newestDay < top ? connection.newestDay : top;
-    const from = laterDay(historyLimitDay(now), shiftDay(newest, -(REFETCH_DAYS - 1)));
+    const { from, top } = recentWindow(connection.newestDay, Date.now());
     await ctx.scheduler.runAfter(0, internal.searchConsoleSync.collectStep, {
       connectionId: connection._id,
       property: connection.property,
@@ -111,6 +118,44 @@ export const collectRecent = internalMutation({
       attempt: 0,
     });
     return null;
+  },
+});
+
+/**
+ * What the Search Console Collector's run collects (§12): every connected
+ * website, with its recent days — the one longest since it was collected
+ * first, so one a run did not reach goes first in the next.
+ */
+export const agentCollections = internalQuery({
+  args: {},
+  returns: v.array(v.object({
+    connectionId: v.id("searchConsoleConnections"),
+    companyId: v.id("companies"),
+    host: v.string(),
+    property: v.string(),
+    from: v.string(),
+    top: v.string(),
+  })),
+  handler: async (ctx) => {
+    // One row per owned website at most, so the connected ones are read whole.
+    const connected = await ctx.db
+      .query("searchConsoleConnections")
+      .withIndex("by_status", (q) => q.eq("status", "CONNECTED"))
+      .collect();
+    const now = Date.now();
+    const out = [];
+    for (const connection of connected.sort((left, right) => (left.lastCollectedAt ?? 0) - (right.lastCollectedAt ?? 0))) {
+      if (!connection.property || connection.clearing) continue;
+      const website = await ctx.db.get(connection.websiteId);
+      out.push({
+        connectionId: connection._id,
+        companyId: connection.companyId,
+        host: website?.displayHost ?? website?.host ?? connection.property,
+        property: connection.property,
+        ...recentWindow(connection.newestDay, now),
+      });
+    }
+    return out;
   },
 });
 
@@ -220,35 +265,59 @@ async function inTurns<T>(items: readonly T[], width: number, run: (item: T) => 
   }));
 }
 
+type StepArgs = {
+  connectionId: Id<"searchConsoleConnections">;
+  property: string;
+  kind: "DAILY" | "HISTORY";
+  /** The oldest day this collection goes back to. */
+  from: string;
+  /** The newest day of the whole collection: what the held days reach once it is done. */
+  top: string;
+  /** The newest day of this step. */
+  to: string;
+  attempt: number;
+};
+
+/**
+ * How a step ended. `DONE`: the collection reached its oldest day. `MORE`:
+ * days are left, from `nextTo` down — the step covers a week at most, and
+ * stops starting days at its time budget. `BUSY`: Google or the sign-in was
+ * too busy. `NO_ACCESS`: the account can no longer read the property.
+ * `STOPPED`: the sign-in failed, or Google answered with an error. `SKIPPED`:
+ * the connection changed before the step began. `NOT_OWNED`: the website is
+ * no longer the company's own. The connection carries any problem already.
+ */
+export type StepOutcome = {
+  ended: "DONE" | "MORE" | "BUSY" | "NO_ACCESS" | "STOPPED" | "SKIPPED" | "NOT_OWNED";
+  fromDay: string;
+  toDay: string;
+  processedFrom: string | null;
+  nextTo: string;
+  requests: number;
+  rows: number;
+  refused: string[];
+  error: string | null;
+};
+
 /**
  * One step: up to a week of days, newest first — each kind of result's
  * totals for the step's days, then, day by day, every split of every kind
- * that had impressions. A step that runs long hands its remaining days to the
- * next; one Google refused or was too busy for is tried again later.
+ * that had impressions. Says how it ended: the chain of scheduled steps
+ * (`collectStep`) and the Search Console Collector's run (§12) each go on
+ * from there their own way.
  */
-export const collectStep = internalAction({
-  args: {
-    connectionId: v.id("searchConsoleConnections"),
-    property: v.string(),
-    kind: kindValidator,
-    /** The oldest day this collection goes back to. */
-    from: v.string(),
-    /** The newest day of the whole collection: what the held days reach once it is done. */
-    top: v.string(),
-    /** The newest day of this step. */
-    to: v.string(),
-    attempt: v.number(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const state = await ctx.runQuery(internal.searchConsoleSync.stepState, { connectionId: args.connectionId });
-    if (!state || state.status !== "CONNECTED" || state.property !== args.property || state.clearing) return null;
-    if (!state.owned) {
-      await ctx.runMutation(internal.searchConsoleConnect.noteProblem, { connectionId: args.connectionId, problem: "NOT_OWNED" });
-      return null;
-    }
+export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number): Promise<StepOutcome> {
+  const stepFrom = laterDay(args.from, shiftDay(args.to, -(DAYS_PER_STEP - 1)));
+  const ended = (end: StepOutcome["ended"]): StepOutcome =>
+    ({ ended: end, fromDay: stepFrom, toDay: args.to, processedFrom: null, nextTo: args.to, requests: 0, rows: 0, refused: [], error: null });
+  const state = await ctx.runQuery(internal.searchConsoleSync.stepState, { connectionId: args.connectionId });
+  if (!state || state.status !== "CONNECTED" || state.property !== args.property || state.clearing) return ended("SKIPPED");
+  if (!state.owned) {
+    await ctx.runMutation(internal.searchConsoleConnect.noteProblem, { connectionId: args.connectionId, problem: "NOT_OWNED" });
+    return ended("NOT_OWNED");
+  }
+  {
 
-    const stepFrom = laterDay(args.from, shiftDay(args.to, -(DAYS_PER_STEP - 1)));
     const startedAt = Date.now();
     const runId = await ctx.runMutation(internal.searchConsoleSync.startRun, {
       connectionId: args.connectionId,
@@ -273,8 +342,7 @@ export const collectStep = internalAction({
     const token = await accessTokenFor(ctx, args.connectionId);
     if (!token.ok) {
       await finish(null, token.problem, { requests: 0, rows: 0, refused: [] });
-      if (token.problem === "GOOGLE_BUSY") await retryLater(ctx, args, args.to);
-      return null;
+      return { ...ended(token.problem === "GOOGLE_BUSY" ? "BUSY" : "STOPPED"), error: token.problem };
     }
     const session: Session = { ctx, connectionId: args.connectionId, accessToken: token.accessToken, stopped: null };
     const counts = { requests: 0, rows: 0, refused: [] as string[] };
@@ -309,7 +377,7 @@ export const collectStep = internalAction({
 
     let processedFrom: string | null = null;
     for (const day of failure || session.stopped ? [] : daysNewestFirst(stepFrom, args.to)) {
-      if (Date.now() - startedAt > STEP_BUDGET_MS) break;
+      if (Date.now() - startedAt > budgetMs) break;
       const fetchedAt = Date.now();
       const again = held(day);
       const named = new Map<SearchType, number>();
@@ -378,37 +446,56 @@ export const collectStep = internalAction({
     const stoppedBy: GoogleFailure | null = failure;
     const error = session.stopped ?? (stoppedBy ? `${stoppedBy.reason} ${stoppedBy.status}: ${stoppedBy.detail}` : null);
     await finish(processedFrom, error, counts);
+    const outcome = { fromDay: stepFrom, toDay: args.to, processedFrom, ...counts, error };
+    const nextTo = processedFrom === null ? args.to : shiftDay(processedFrom, -1);
 
     if (stoppedBy?.reason === "ACCESS") {
       await ctx.runMutation(internal.searchConsoleConnect.noteProblem, { connectionId: args.connectionId, problem: "NO_ACCESS" });
-      return null;
+      return { ...outcome, ended: "NO_ACCESS", nextTo };
     }
     const busy = session.stopped === "GOOGLE_BUSY" || stoppedBy?.reason === "BUSY" || stoppedBy?.reason === "UNREACHABLE";
-    const nextTo = processedFrom === null ? args.to : shiftDay(processedFrom, -1);
     if (busy) {
       await ctx.runMutation(internal.searchConsoleConnect.noteProblem, { connectionId: args.connectionId, problem: "GOOGLE_BUSY" });
-      await retryLater(ctx, args, nextTo);
-      return null;
+      return { ...outcome, ended: "BUSY", nextTo };
     }
-    if (session.stopped || stoppedBy) return null;
+    if (session.stopped || stoppedBy) return { ...outcome, ended: "STOPPED", nextTo };
+    return { ...outcome, ended: nextTo >= args.from ? "MORE" : "DONE", nextTo };
+  }
+}
 
-    if (nextTo >= args.from) {
-      await ctx.scheduler.runAfter(0, internal.searchConsoleSync.collectStep, { ...args, to: nextTo, attempt: 0 });
-    } else if (args.kind === "DAILY") {
+/**
+ * A step in a chain of them: a step that runs long hands its remaining days
+ * to the next; one Google was too busy for is tried again later; a recent
+ * collection done goes on to the history.
+ */
+export const collectStep = internalAction({
+  args: {
+    connectionId: v.id("searchConsoleConnections"),
+    property: v.string(),
+    kind: kindValidator,
+    from: v.string(),
+    top: v.string(),
+    to: v.string(),
+    attempt: v.number(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const outcome = await runStep(ctx, args, STEP_BUDGET_MS);
+    if (outcome.ended === "BUSY") {
+      await retryLater(ctx, args, outcome.nextTo);
+    } else if (outcome.ended === "MORE") {
+      await ctx.scheduler.runAfter(0, internal.searchConsoleSync.collectStep, { ...args, to: outcome.nextTo, attempt: 0 });
+    } else if (outcome.ended === "DONE" && args.kind === "DAILY") {
       await ctx.runMutation(internal.searchConsoleSync.continueHistory, { connectionId: args.connectionId, property: args.property });
-    } else {
+    } else if (outcome.ended === "DONE") {
       await ctx.runMutation(internal.searchConsoleSync.historyDone, { connectionId: args.connectionId, property: args.property });
     }
     return null;
   },
 });
 
-async function retryLater(
-  ctx: ActionCtx,
-  args: { connectionId: Id<"searchConsoleConnections">; property: string; kind: "DAILY" | "HISTORY"; from: string; top: string; to: string; attempt: number },
-  to: string,
-) {
-  // Given up for today after this: the next daily run starts again from the newest held day.
+async function retryLater(ctx: ActionCtx, args: StepArgs, to: string) {
+  // Given up after this: the next collection starts again from the newest held day.
   if (args.attempt >= MAX_RETRIES || to < args.from) return;
   await ctx.scheduler.runAfter(RETRY_LATER_MS, internal.searchConsoleSync.collectStep, { ...args, to, attempt: args.attempt + 1 });
 }

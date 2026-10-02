@@ -1,7 +1,7 @@
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
-import { isDataForSeoRole, isNewsRole } from "./utils/agentRoles";
+import { isDataForSeoRole, isNewsRole, isSearchConsoleRole } from "./utils/agentRoles";
 import { WIKI_STAFF } from "./wikiStaff";
 import { TRANSLATOR } from "./utils/contentTranslator";
 
@@ -27,7 +27,7 @@ import { TRANSLATOR } from "./utils/contentTranslator";
  * - The Translator translates whatever is still missing (`contentTranslation.ts`).
  * - Every other agent is given its objective on the model loop.
  */
-export type AgentRunStart = "WIKI_ROUND" | "SEO_JOB" | "NEWS_JOB" | "TRANSLATION_ROUND" | "MODEL";
+export type AgentRunStart = "WIKI_ROUND" | "SEO_JOB" | "NEWS_JOB" | "SEARCH_CONSOLE_JOB" | "TRANSLATION_ROUND" | "MODEL";
 
 export async function startAgentRun(
   ctx: Pick<MutationCtx, "scheduler">,
@@ -77,6 +77,11 @@ export async function startAgentRun(
       workflowExecutionId,
     });
     return "NEWS_JOB";
+  }
+
+  if (isSearchConsoleRole(agent.systemKey)) {
+    await ctx.scheduler.runAfter(0, internal.searchConsoleAgentRun.runSearchConsoleCollectorNow, { runId, workflowExecutionId });
+    return "SEARCH_CONSOLE_JOB";
   }
 
   await ctx.scheduler.runAfter(0, internal.agentRuntime.runTriggeredAgentObjective, {

@@ -70,6 +70,18 @@ describe("running a News agent", () => {
     expect(names.some((name) => name.includes("runTriggeredAgentObjective"))).toBe(false);
   });
 
+  test("Run on the Search Console Collector starts its job, not a model or another role's", async () => {
+    const t = harness();
+    const { admin, agentId } = await setup(t, "SEARCH_CONSOLE_COLLECTOR");
+
+    await admin.mutation(api.scheduler.manualRunSchedule, { agentId });
+
+    const names = await scheduledNames(t);
+    expect(names.some((name) => name.includes("runSearchConsoleCollectorNow"))).toBe(true);
+    expect(names.some((name) => name.includes("runNewsRoleNow") || name.includes("runSeoRoleNow"))).toBe(false);
+    expect(names.some((name) => name.includes("runTriggeredAgentObjective"))).toBe(false);
+  });
+
   test("a run does its job and finishes with a summary on its timeline", async () => {
     const t = harness();
     const { agentId } = await setup(t, "NEWS_COLLECTOR");

@@ -24,16 +24,25 @@ export const DATAFORSEO_ROLES = ["DATAFORSEO_PLANNER", "DATAFORSEO_COLLECTOR"] a
  */
 export const NEWS_ROLES = ["NEWS_COLLECTOR", "WEEKLY_DIGEST", "EMAIL_SENDER"] as const;
 
-export const ASSIGNABLE_AGENT_ROLES = [...DATAFORSEO_ROLES, ...NEWS_ROLES] as const;
+/**
+ * The Search Console Collector (docs/plans/active/search-console-plan.md
+ * §12): each run starts a run of its own for every website connected to
+ * Search Console, which collects that website's newest days.
+ */
+export const SEARCH_CONSOLE_ROLES = ["SEARCH_CONSOLE_COLLECTOR"] as const;
+
+export const ASSIGNABLE_AGENT_ROLES = [...DATAFORSEO_ROLES, ...NEWS_ROLES, ...SEARCH_CONSOLE_ROLES] as const;
 
 export type DataForSeoRole = (typeof DATAFORSEO_ROLES)[number];
 export type NewsRole = (typeof NEWS_ROLES)[number];
+export type SearchConsoleRole = (typeof SEARCH_CONSOLE_ROLES)[number];
 export type AssignableAgentRole = (typeof ASSIGNABLE_AGENT_ROLES)[number];
 
 /** The roles in the groups the Role dropdown shows them under. */
-export const AGENT_ROLE_GROUPS: ReadonlyArray<{ group: "dataforseo" | "news"; roles: readonly AssignableAgentRole[] }> = [
+export const AGENT_ROLE_GROUPS: ReadonlyArray<{ group: "dataforseo" | "news" | "searchConsole"; roles: readonly AssignableAgentRole[] }> = [
   { group: "dataforseo", roles: DATAFORSEO_ROLES },
   { group: "news", roles: NEWS_ROLES },
+  { group: "searchConsole", roles: SEARCH_CONSOLE_ROLES },
 ];
 
 export const newsRoleValidator = v.union(
@@ -50,6 +59,7 @@ export const agentRoleChoiceValidator = v.union(
   v.literal("NEWS_COLLECTOR"),
   v.literal("WEEKLY_DIGEST"),
   v.literal("EMAIL_SENDER"),
+  v.literal("SEARCH_CONSOLE_COLLECTOR"),
 );
 
 export type AgentRoleChoice = "NONE" | AssignableAgentRole;
@@ -64,4 +74,8 @@ export function isDataForSeoRole(key: string | undefined): key is DataForSeoRole
 
 export function isNewsRole(key: string | undefined): key is NewsRole {
   return key !== undefined && (NEWS_ROLES as readonly string[]).includes(key);
+}
+
+export function isSearchConsoleRole(key: string | undefined): key is SearchConsoleRole {
+  return key !== undefined && (SEARCH_CONSOLE_ROLES as readonly string[]).includes(key);
 }

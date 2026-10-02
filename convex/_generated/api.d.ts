@@ -278,6 +278,7 @@ import type * as rehearsalEvalService from "../rehearsalEvalService.js";
 import type * as resendEmailService from "../resendEmailService.js";
 import type * as roleRuns from "../roleRuns.js";
 import type * as scheduler from "../scheduler.js";
+import type * as searchConsoleAgentRun from "../searchConsoleAgentRun.js";
 import type * as searchConsoleApi from "../searchConsoleApi.js";
 import type * as searchConsoleConnect from "../searchConsoleConnect.js";
 import type * as searchConsoleCopies from "../searchConsoleCopies.js";
@@ -814,6 +815,7 @@ declare const fullApi: ApiFromModules<{
   resendEmailService: typeof resendEmailService;
   roleRuns: typeof roleRuns;
   scheduler: typeof scheduler;
+  searchConsoleAgentRun: typeof searchConsoleAgentRun;
   searchConsoleApi: typeof searchConsoleApi;
   searchConsoleConnect: typeof searchConsoleConnect;
   searchConsoleCopies: typeof searchConsoleCopies;

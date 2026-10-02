@@ -10,14 +10,15 @@ import { ASSIGNABLE_AGENT_ROLES, type AssignableAgentRole } from "./utils/agentR
 
 /**
  * The life of a run that does its role's fixed job rather than thinking with
- * a model: the DataForSEO Planner and Collector, and the News Collector,
- * Weekly Digest and Email Sender (`utils/agentRoles.ts`). Each such run starts,
+ * a model: the DataForSEO Planner and Collector, the News Collector,
+ * Weekly Digest and Email Sender, and the Search Console Collector
+ * (`utils/agentRoles.ts`). Each such run starts,
  * says what it found and what it did as steps on its Observability timeline,
  * records what any model call cost on the run itself — so the agent's own
  * spend limit can stop it — and finishes with a summary. One of each runs at
  * a time, and one that dies without saying so is closed.
  *
- * Shared so the five cannot drift: these were the DataForSEO agents' own
+ * Shared so the six cannot drift: these were the DataForSEO agents' own
  * (`seoAgentRuns.ts`) until the News agents needed the same (docs/plans/
  * active/knowledge-news-and-digest-plan.md, phase 4).
  */

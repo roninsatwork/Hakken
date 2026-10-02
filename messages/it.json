@@ -3159,7 +3159,8 @@
               "groups": {
                 "dataforseo": "DataForSEO",
                 "builtIn": "Ruoli integrati",
-                "news": "Notizie ed email"
+                "news": "Notizie ed email",
+                "searchConsole": "Search Console"
               },
               "takenBy": "{role} — assegnato a {name}",
               "roles": {
@@ -3167,7 +3168,8 @@
                 "DATAFORSEO_COLLECTOR": "Raccoglitore DataForSEO",
                 "NEWS_COLLECTOR": "Raccoglitore di notizie",
                 "WEEKLY_DIGEST": "Digest settimanale",
-                "EMAIL_SENDER": "Invio email"
+                "EMAIL_SENDER": "Invio email",
+                "SEARCH_CONSOLE_COLLECTOR": "Raccoglitore Search Console"
               },
               "mode": {
                 "label": "Modalità",

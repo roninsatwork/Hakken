@@ -503,6 +503,122 @@ describe("collecting", () => {
   });
 });
 
+describe("the Search Console Collector agent", () => {
+  const SHOP = "sc-domain:acme-shop.test";
+  const BLOG = "sc-domain:acme-blog.test";
+
+  async function collector(t: Harness) {
+    const agentId = await t.run(async (ctx) => await ctx.db.insert("agents", {
+      name: "Search Console: Collector Agent", modelId: "model-test", thinkingMode: false, isActive: true,
+      systemKey: "SEARCH_CONSOLE_COLLECTOR", createdAt: Date.now(), updatedAt: Date.now(),
+    }));
+    const runId = await t.run(async (ctx) => await ctx.db.insert("agentRuns", {
+      agentId, triggerType: "SCHEDULE", objective: "Collect", status: "QUEUED", startedAt: Date.now(), updatedAt: Date.now(),
+    }));
+    return { agentId, runId };
+  }
+
+  const runsOf = (t: Harness, agentId: Id<"agents">) =>
+    t.run(async (ctx) => await ctx.db.query("agentRuns").withIndex("by_agent_started", (q) => q.eq("agentId", agentId)).collect());
+
+  async function twoSites() {
+    const { t, companyId, siteId, admin } = await setup();
+    const blogId = await hold(t, companyId, "acme-blog.test");
+    const google = fakeGoogle({
+      properties: [{ siteUrl: SHOP, permissionLevel: "siteOwner" }, { siteUrl: BLOG, permissionLevel: "siteOwner" }],
+      figures: {
+        [SHOP]: { web: {
+          [NEWEST]: { total: row("", 8, 300), query: [row("plumber leeds", 5), row("emergency plumber", 3)] },
+          // Well back in the history: never fetched by the agent.
+          "2025-06-01": { total: row("", 2, 60), query: [row("boiler repair", 2)] },
+        } },
+        [BLOG]: { web: { [NEWEST]: { total: row("", 2, 40), query: [row("how to fix a tap", 2)] } } },
+      },
+    });
+    await signIn(t, admin, siteId);
+    await signIn(t, admin, blogId);
+    await finishScheduled(t);
+    return { t, siteId, blogId, google };
+  }
+
+  test("each connected website gets a run of its own: the newest days and the last four again, never the history", async () => {
+    const { t, siteId, blogId } = await twoSites();
+    const { agentId, runId } = await collector(t);
+
+    await t.action(internal.searchConsoleAgentRun.runSearchConsoleCollectorNow, { runId });
+    await finishScheduled(t);
+
+    const runs = await runsOf(t, agentId);
+    const started = runs.find((run) => run._id === runId)!;
+    expect(started.status).toBe("SUCCESS");
+    expect(started.finalOutput).toContain("each of the 2 websites");
+    const own = runs.filter((run) => run._id !== runId);
+    expect(own.map((run) => run.title).sort()).toEqual(["Search Console: acme-blog.test", "Search Console: acme-shop.test"]);
+    expect(own.every((run) => run.status === "SUCCESS" && run.finalOutput?.includes("sixteen months before are not collected"))).toBe(true);
+    const lines = await t.run(async (ctx) => await ctx.db.query("agentLogs").collect());
+    expect(own.every((run) => lines.some((line) => line.runId === run._id && line.responseContent.includes("rows from")))).toBe(true);
+
+    expect(await rowsOf(t, siteId, "query", NEWEST)).toEqual([["emergency plumber", 3], ["plumber leeds", 5]]);
+    expect(await rowsOf(t, blogId, "query", NEWEST)).toEqual([["how to fix a tap", 2]]);
+    expect(await rowsOf(t, siteId, "query", "2025-06-01")).toEqual([]);
+    const collected = await t.run(async (ctx) => await ctx.db.query("searchConsoleRuns").collect());
+    expect(collected.every((run) => run.kind === "DAILY")).toBe(true);
+    expect((await connectionOf(t, siteId))?.backfilledAt).toBeUndefined();
+    expect(await connectionOf(t, siteId)).toMatchObject({ newestDay: NEWEST, oldestDay: "2026-09-23" });
+  });
+
+  test("a run started while another is still going stops, so nothing is collected twice", async () => {
+    const { t } = await twoSites();
+    const { agentId, runId } = await collector(t);
+    await t.run(async (ctx) => await ctx.db.insert("agentRuns", {
+      agentId, triggerType: "EVENT", objective: "Collect", title: "Search Console: acme-shop.test",
+      status: "RUNNING", startedAt: Date.now() - 60_000, updatedAt: Date.now(),
+    }));
+
+    await t.action(internal.searchConsoleAgentRun.runSearchConsoleCollectorNow, { runId });
+    await finishScheduled(t);
+
+    expect((await runsOf(t, agentId)).find((run) => run._id === runId)?.finalOutput).toContain("still going");
+    expect(await runsOf(t, agentId)).toHaveLength(2);
+    expect(await held(t)).toEqual({ days: 0, rows: 0 });
+  });
+
+  test("a website whose sign-in Google took back: its run fails saying what to do, the other still collects", async () => {
+    const { t, siteId, blogId, google } = await twoSites();
+    const { agentId, runId } = await collector(t);
+    // Two hours on the access tokens have expired, and Google refuses to renew them.
+    vi.setSystemTime(NOW + 2 * 60 * 60 * 1000);
+    google.refreshStatus = 400;
+    await t.run(async (ctx) => {
+      const blog = (await ctx.db.query("searchConsoleConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", blogId)).first())!;
+      // The blog's token was renewed by someone else just now: still good.
+      const token = (await ctx.db.query("searchConsoleTokens").withIndex("by_connection", (q) => q.eq("connectionId", blog._id)).first())!;
+      await ctx.db.patch(token._id, { expiresAt: Date.now() + 60 * 60 * 1000 });
+    });
+
+    await t.action(internal.searchConsoleAgentRun.runSearchConsoleCollectorNow, { runId });
+    await finishScheduled(t);
+
+    const own = (await runsOf(t, agentId)).filter((run) => run._id !== runId);
+    const shop = own.find((run) => run.title === "Search Console: acme-shop.test")!;
+    expect(shop.status).toBe("FAILED");
+    expect(shop.finalOutput).toContain("Connect it again");
+    expect(own.find((run) => run.title === "Search Console: acme-blog.test")?.status).toBe("SUCCESS");
+    expect(await connectionOf(t, siteId)).toMatchObject({ status: "NEEDS_RECONNECT" });
+    expect(await rowsOf(t, blogId, "query", NEWEST)).toEqual([["how to fix a tap", 2]]);
+  });
+
+  test("with nothing connected, a run says so and starts nothing", async () => {
+    const t = harness();
+    const { agentId, runId } = await collector(t);
+    await t.action(internal.searchConsoleAgentRun.runSearchConsoleCollectorNow, { runId });
+    await finishScheduled(t);
+    const runs = await runsOf(t, agentId);
+    expect(runs).toHaveLength(1);
+    expect(runs[0]).toMatchObject({ status: "SUCCESS", finalOutput: "No website is connected to Search Console, so there was nothing to collect." });
+  });
+});
+
 describe("disconnecting", () => {
   test("keeps the figures and gives Google's access back — once no other site uses the account", async () => {
     const { t, companyId, siteId, admin } = await setup();
