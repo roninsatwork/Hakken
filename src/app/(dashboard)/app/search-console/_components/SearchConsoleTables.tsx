@@ -161,7 +161,9 @@ export function useSearchConsoleList(options: {
       problem: null,
     };
   const filtered = Boolean(term) || Object.keys(filters).some((key) => key !== "missed") || byPlace;
+  const summary = isLive ? (live.answer?.ok ? live.answer.summary : null) : (server.result?.summary ?? null);
   return {
+    summary,
     siteId,
     status,
     kind,
@@ -177,6 +179,36 @@ export function useSearchConsoleList(options: {
     retry: live.retry,
     download: { ...base, ...filters, ...(term ? { q: term } : {}), sort: order.key, direction: order.direction },
   };
+}
+
+export type ListSummary = NonNullable<FunctionReturnType<typeof api.searchConsoleLists.searchConsoleListPage>["summary"]>;
+
+/**
+ * The hero boxes' figures for a list other than the one on screen (Missed
+ * demand's two lists): read from the ready-made period, or asked of Google
+ * for other dates.
+ */
+export function useSearchConsoleSummary(ask: { dimension: "query" | "page"; view?: View; missed?: "searched" | "untracked" }): ListSummary | null {
+  const siteId = useSearchConsoleSiteId();
+  const status = useSearchConsoleStatus();
+  const [kind] = useResultKind();
+  const range = useSearchConsoleRange(status?.connection?.newestDay);
+  const base = { siteId, searchType: kind, from: range.from, to: range.to, ...ask };
+  const held = Boolean(status?.connection?.newestDay);
+  const server = useQuery(api.searchConsoleLists.searchConsoleListPage, held ? { ...base, page: 1, rows: 25 } : "skip");
+  const live = useLiveAsk(api.searchConsoleLists.searchConsoleLiveList, held && server?.live ? base : null);
+  if (server?.live) return live.answer?.ok ? live.answer.summary : null;
+  return server?.summary ?? null;
+}
+
+/** A count against the same days before: "▲ 14 on the 30 days before". `neutral` for a count whose rise is not good news. */
+export function CountChange({ now, before, days, neutral = false }: { now: number | null; before: number | null; days: number; neutral?: boolean }) {
+  const t = useTranslations("searchConsole.figures");
+  if (now === null || before === null) return <span className="text-muted">{t("noBefore")}</span>;
+  const change = now - before;
+  if (change === 0) return <span className="text-muted">{t("same", { days })}</span>;
+  const tone = neutral ? "text-secondary" : change > 0 ? "text-success" : "text-destructive";
+  return <span className={tone}>{t(change > 0 ? "up" : "down", { change: formatNumber(Math.abs(change)), days })}</span>;
 }
 
 /** How many keywords and pages the company tracks on the website, against its limits. */

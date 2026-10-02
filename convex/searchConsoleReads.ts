@@ -52,7 +52,7 @@ async function connectionOf(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"c
 }
 
 /** A site's day totals for one kind of result, oldest first. */
-async function daysOf(
+export async function daysOf(
   ctx: { db: QueryCtx["db"] },
   companyWebsiteId: Id<"companyWebsites">,
   searchType: "web" | "image" | "video" | "news" | "discover" | "googleNews",

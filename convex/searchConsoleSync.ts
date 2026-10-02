@@ -848,7 +848,12 @@ async function clearSome(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites
     .withIndex("by_hold_kind_key", (q) => q.eq("companyWebsiteId", companyWebsiteId))
     .take(PURGE_ROWS);
   for (const row of seen) await ctx.db.delete(row._id);
-  return lists.length < PURGE_BATCH && periods.length < PURGE_BATCH && days.length < PURGE_ROWS && seen.length < PURGE_ROWS;
+  const weeks = await ctx.db
+    .query("searchConsoleWeeks")
+    .withIndex("by_hold_type_week", (q) => q.eq("companyWebsiteId", companyWebsiteId))
+    .take(PURGE_ROWS);
+  for (const row of weeks) await ctx.db.delete(row._id);
+  return lists.length < PURGE_BATCH && periods.length < PURGE_BATCH && days.length < PURGE_ROWS && seen.length < PURGE_ROWS && weeks.length < PURGE_ROWS;
 }
 
 /**

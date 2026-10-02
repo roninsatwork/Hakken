@@ -289,3 +289,114 @@ export function filterRows(rows: readonly ListRow[], filters: Filters): ListRow[
     && (!filters.move || (filters.move === "win" ? (row.change ?? 0) > 0 : (row.change ?? 0) < 0))
     && (!filters.verdict || row.verdict === filters.verdict));
 }
+
+
+export type BrandSplit = { brandClicks: number; nonBrandClicks: number; brandImpressions: number; nonBrandImpressions: number };
+export type BandCounts = Record<Band, number>;
+
+/**
+ * What a page's hero boxes read (§13.3): figures over every row its rule
+ * lists — never only the rows on screen, and never narrowed by a search or a
+ * filter — with the period before where one is held.
+ */
+export type Summary = {
+  /** Rows the page's rule lists, and rows the whole list holds ("38 of the 268 Google showed"). */
+  rows: number;
+  of: number;
+  clicks: number;
+  impressions: number;
+  tracked: number;
+  /** Wins and losses. */
+  gaining: number;
+  losing: number;
+  gained: number;
+  lost: number;
+  /** Sums of what Sites knows: searches a month behind the rows, and estimated visits. */
+  volume: number;
+  estimate: number;
+  /** Shown but not clicked: the clicks the rows would have had at the website's usual click rate. */
+  expected: number;
+  /** Real against estimated. */
+  high: number;
+  low: number;
+  /** Pages competing: the pages any listed keyword was shown with, of every page any keyword was. */
+  pagesInvolved: number | null;
+  pagesShown: number | null;
+  bands: BandCounts;
+  bandsBefore: BandCounts | null;
+  brand: { now: BrandSplit; before: BrandSplit | null } | null;
+  /** Each intent's or page type's rows and clicks, the most rows first. */
+  kinds: { kind: string; rows: number; clicks: number }[];
+};
+
+const emptyBands = (): BandCounts => ({ "1-3": 0, "4-10": 0, "11-20": 0, "21-50": 0, "51+": 0 });
+
+function brandSplit(rows: readonly { key: string; clicks: number; impressions: number }[], brandWords: readonly string[]): BrandSplit {
+  const split = { brandClicks: 0, nonBrandClicks: 0, brandImpressions: 0, nonBrandImpressions: 0 };
+  for (const row of rows) {
+    if (isBrand(row.key, brandWords)) {
+      split.brandClicks += row.clicks;
+      split.brandImpressions += row.impressions;
+    } else {
+      split.nonBrandClicks += row.clicks;
+      split.nonBrandImpressions += row.impressions;
+    }
+  }
+  return split;
+}
+
+export function summarise(
+  listed: readonly ListRow[],
+  all: readonly ListRow[],
+  before: readonly SourceRow[] | null,
+  context: ViewContext & { brandWords: readonly string[] | null },
+): Summary {
+  const bands = emptyBands();
+  const kinds = new Map<string, { kind: string; rows: number; clicks: number }>();
+  const summary: Summary = {
+    rows: listed.length, of: all.length, clicks: 0, impressions: 0, tracked: 0, gaining: 0, losing: 0, gained: 0, lost: 0,
+    volume: 0, estimate: 0, expected: 0, high: 0, low: 0, pagesInvolved: null, pagesShown: null, bands, bandsBefore: null, brand: null, kinds: [],
+  };
+  for (const row of listed) {
+    summary.clicks += row.clicks;
+    summary.impressions += row.impressions;
+    if (row.tracked) summary.tracked += 1;
+    const change = row.change ?? 0;
+    if (change > 0) {
+      summary.gaining += 1;
+      summary.gained += change;
+    } else if (change < 0) {
+      summary.losing += 1;
+      summary.lost -= change;
+    }
+    summary.volume += row.volume ?? 0;
+    summary.estimate += row.estimate ?? 0;
+    summary.expected += row.expected ?? 0;
+    if (row.verdict === "high") summary.high += 1;
+    if (row.verdict === "low") summary.low += 1;
+    if (row.impressions > 0) bands[row.band] += 1;
+    const kind = row.kind ?? "UNJUDGED";
+    const entry = kinds.get(kind) ?? { kind, rows: 0, clicks: 0 };
+    entry.rows += 1;
+    entry.clicks += row.clicks;
+    kinds.set(kind, entry);
+  }
+  summary.kinds = [...kinds.values()].sort((left, right) => right.rows - left.rows || right.clicks - left.clicks);
+  if (before) {
+    const counts = emptyBands();
+    for (const row of before) if (row.impressions > 0) counts[bandOf(row.positionSum / row.impressions)] += 1;
+    summary.bandsBefore = counts;
+  }
+  if (context.pages) {
+    const pages = new Set<string>();
+    for (const row of listed) for (const page of context.pages.get(row.key) ?? []) pages.add(page.page);
+    summary.pagesInvolved = pages.size;
+    const shown = new Set<string>();
+    for (const list of context.pages.values()) for (const page of list) shown.add(page.page);
+    summary.pagesShown = shown.size;
+  }
+  if (context.brandWords) {
+    summary.brand = { now: brandSplit(all, context.brandWords), before: before ? brandSplit(before, context.brandWords) : null };
+  }
+  return summary;
+}

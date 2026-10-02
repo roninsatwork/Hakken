@@ -23,9 +23,11 @@ import {
   filterRows,
   pagesByKeyword,
   shapeRows,
+  summarise,
   type Filters,
   type ListRow,
   type SitesKeyword,
+  type Summary,
   type View,
   type ViewContext,
 } from "./utils/searchConsoleViews";
@@ -124,6 +126,32 @@ const SORTS: ListSorts<ListRow, SortKey> = {
   gap: { value: (row) => row.gap, first: "desc" },
 };
 const sortValidator = v.optional(v.union(...SORT_KEYS.map((key) => v.literal(key))));
+
+const brandSplitValidator = v.object({ brandClicks: v.number(), nonBrandClicks: v.number(), brandImpressions: v.number(), nonBrandImpressions: v.number() });
+
+/** What a page's hero boxes read: figures over every row its rule lists (`summarise`). */
+const summaryValidator = v.object({
+  rows: v.number(),
+  of: v.number(),
+  clicks: v.number(),
+  impressions: v.number(),
+  tracked: v.number(),
+  gaining: v.number(),
+  losing: v.number(),
+  gained: v.number(),
+  lost: v.number(),
+  volume: v.number(),
+  estimate: v.number(),
+  expected: v.number(),
+  high: v.number(),
+  low: v.number(),
+  pagesInvolved: v.union(v.number(), v.null()),
+  pagesShown: v.union(v.number(), v.null()),
+  bands: v.record(v.string(), v.number()),
+  bandsBefore: v.union(v.record(v.string(), v.number()), v.null()),
+  brand: v.union(v.null(), v.object({ now: brandSplitValidator, before: v.union(brandSplitValidator, v.null()) })),
+  kinds: v.array(v.object({ kind: v.string(), rows: v.number(), clicks: v.number() })),
+});
 
 const filterArgs = {
   q: v.optional(v.string()),
@@ -261,11 +289,13 @@ type ListAnswer = {
   live: boolean;
   /** Connected but nothing built yet. */
   preparing: boolean;
+  /** The hero boxes' figures; null when nothing is listed yet. */
+  summary: Summary | null;
 };
 
 /** A ready-made list, shaped, put through the page's rule, searched, filtered and ordered — or what to say instead. Exported for its load test. */
 export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"companyWebsites">, args: Ask): Promise<ListAnswer> {
-  const empty = { rows: [], cut: null, from: null, to: null, named: null, listed: 0, comparable: false };
+  const empty = { rows: [], cut: null, from: null, to: null, named: null, listed: 0, comparable: false, summary: null };
   const connection = await connectionOf(ctx, companyWebsiteId);
   if (!connection?.newestDay) return { ...empty, live: false, preparing: false };
   const period = periodOf(args.from, args.to, connection.newestDay);
@@ -295,6 +325,7 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   if (view === "missed" && context.missedList === "searched") context.sitesKeywords = await sitesKeywordsOf(ctx, companyWebsiteId);
   const listed = applyView(view, shaped, context);
   const named = listed.reduce((sum, row) => sum + row.clicks, 0);
+  const summary = summarise(listed, shaped, before?.rows ?? null, { ...context, brandWords });
   const sorted = sortRows(filterRows(listed, args), args.sort, args.direction);
   const cut = sorted.length > MOST_ROWS ? MOST_ROWS : null;
   return {
@@ -307,6 +338,7 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
     comparable: before !== null,
     live: false,
     preparing: false,
+    summary,
   };
 }
 
@@ -336,6 +368,7 @@ export const searchConsoleListPage = tenantQuery({
     size: v.number(),
     cut: v.union(v.number(), v.null()),
     preparing: v.boolean(),
+    summary: v.union(summaryValidator, v.null()),
     ...answerFacts,
   }),
   handler: async (ctx, args) => {
@@ -343,7 +376,18 @@ export const searchConsoleListPage = tenantQuery({
     const site = await requireMySite(ctx, args.siteId);
     const list = await readList(ctx, site.hold._id, args);
     const page = pageOfList(list.rows, args.page, args.rows, list.cut);
-    return { ...page, preparing: list.preparing, current: true, named: list.named, listed: list.listed, comparable: list.comparable, live: list.live, from: list.from, to: list.to };
+    return {
+      ...page,
+      preparing: list.preparing,
+      summary: list.summary,
+      current: true,
+      named: list.named,
+      listed: list.listed,
+      comparable: list.comparable,
+      live: list.live,
+      from: list.from,
+      to: list.to,
+    };
   },
 });
 
@@ -386,7 +430,7 @@ export const liveTarget = internalQuery({
 type LiveProblem = "NOT_CONNECTED" | "GOOGLE_REFUSED" | "GOOGLE_BUSY";
 
 /** A filter asked of Google with a list: one keyword, one page, one country or one device. */
-type Filter = { dimension: "query" | "page" | "country" | "device"; key: string };
+type Filter = { dimension: "query" | "page" | "country" | "device" | "searchAppearance"; key: string };
 
 /** One of Google's lists for any dates, as rows a list adds up: the pairs, or the one split asked. */
 async function askGoogle(
@@ -480,7 +524,14 @@ export const searchConsoleLiveList = tenantAction({
     device: v.optional(v.string()),
   },
   returns: v.union(
-    v.object({ ok: v.literal(true), rows: v.array(rowValidator), cut: v.union(v.number(), v.null()), named: v.number(), comparable: v.boolean() }),
+    v.object({
+      ok: v.literal(true),
+      rows: v.array(rowValidator),
+      cut: v.union(v.number(), v.null()),
+      named: v.number(),
+      comparable: v.boolean(),
+      summary: summaryValidator,
+    }),
     v.object({ ok: v.literal(false), problem: v.union(v.literal("NOT_CONNECTED"), v.literal("GOOGLE_REFUSED"), v.literal("GOOGLE_BUSY")) }),
   ),
   handler: async (ctx, args) => {
@@ -511,11 +562,43 @@ export const searchConsoleLiveList = tenantAction({
     const listed = applyView(view, shaped, context);
     const sorted = sortRows(listed, undefined, undefined);
     const named = listed.reduce((sum, row) => sum + row.clicks, 0);
-    return { ok: true as const, rows: sorted.slice(0, MOST_ROWS), cut: sorted.length > MOST_ROWS ? MOST_ROWS : null, named, comparable: earlier.ok };
+    const summary = summarise(listed, shaped, earlier.ok ? earlier.rows : null, { ...context, brandWords: target.brandWords });
+    return { ok: true as const, rows: sorted.slice(0, MOST_ROWS), cut: sorted.length > MOST_ROWS ? MOST_ROWS : null, named, comparable: earlier.ok, summary };
   },
 });
 
 const splitRowValidator = v.object({ key: v.string(), clicks: v.number(), impressions: v.number(), share: v.number() });
+
+/** Kinds of rich result one ask counts the pages of, at most. */
+const APPEARANCES_ASKED = 20;
+
+/**
+ * How many of the website's pages Google showed in each kind of rich result
+ * (Rich results, drawn as "16 · Rich results"): Google will not list a kind
+ * beside its pages, so each kind's pages are asked for on their own when the
+ * page opens.
+ */
+export const searchConsoleAppearancePages = tenantAction({
+  args: { siteId: v.id("companyWebsites"), searchType: searchTypeValidator, from: v.string(), to: v.string(), kinds: v.array(v.string()) },
+  returns: v.union(
+    v.object({ ok: v.literal(true), pages: v.array(v.object({ kind: v.string(), pages: v.number() })) }),
+    v.object({ ok: v.literal(false), problem: v.union(v.literal("NOT_CONNECTED"), v.literal("GOOGLE_REFUSED"), v.literal("GOOGLE_BUSY")) }),
+  ),
+  handler: async (ctx, args) => {
+    checkedRange(args.from, args.to);
+    const companyId = getActiveCompanyId(ctx.user);
+    if (!companyId) throw appError("NOT_FOUND", "That website is not one your company holds.");
+    const target = await ctx.runQuery(internal.searchConsoleLists.liveTarget, { companyId, siteId: args.siteId, kind: null });
+    if (!target) return { ok: false as const, problem: "NOT_CONNECTED" as const };
+    const pages: { kind: string; pages: number }[] = [];
+    for (const kind of args.kinds.slice(0, APPEARANCES_ASKED)) {
+      const answer = await askGoogle(ctx, target, args.searchType, "page", args.from, args.to, [{ dimension: "searchAppearance", key: kind }]);
+      if (!answer.ok) return answer;
+      pages.push({ kind, pages: answer.rows.length });
+    }
+    return { ok: true as const, pages };
+  },
+});
 
 /** Where one keyword's or one page's clicks came from: its countries and devices, asked of Google when its screen opens. */
 export const searchConsoleKeySplits = tenantAction({

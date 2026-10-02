@@ -8854,7 +8854,10 @@
       "folders": "{count, plural, =1 {# folder} other {# folders}}",
       "countries": "{count, plural, =1 {# country} other {# countries}}",
       "devices": "{count, plural, =1 {# device} other {# devices}}",
-      "angles": "{count, plural, =1 {# topic} other {# topics}}"
+      "angles": "{count, plural, =1 {# topic} other {# topics}}",
+      "updates": "{count, plural, =1 {# update} other {# updates}}",
+      "positions": "{count, plural, =1 {# position} other {# positions}}",
+      "kinds": "{count, plural, =1 {# kind} other {# kinds}}"
     },
     "chart": {
       "download": "Download",
@@ -10537,7 +10540,6 @@
       "notOwnedTitle": "Search Console is for your own websites",
       "notOwnedDescription": "Your company watches this website rather than owning it, so it has no Search Console here.",
       "figuresTo": "Google's figures to {day}; the last three days can still change.",
-      "historyComing": "The sixteen months before {day} are still coming in, newest first.",
       "clearing": "The last property's figures are being cleared."
     },
     "menu": {
@@ -10569,8 +10571,7 @@
       "brand": "Brand and non-brand",
       "ctrCurve": "Click rate by position",
       "appearance": "Rich results",
-      "estimates": "Real against estimated",
-      "soon": "Coming soon"
+      "estimates": "Real against estimated"
     },
     "kinds": {
       "label": "Kind of result",
@@ -10617,7 +10618,8 @@
       "svg": "Drawing (SVG)",
       "csv": "Spreadsheet (CSV)",
       "day": "Day",
-      "nothing": "Nothing was shown in these dates."
+      "nothing": "Nothing was shown in these dates.",
+      "week": "Week"
     },
     "performance": {
       "title": "Performance",
@@ -10676,7 +10678,22 @@
       "yourPages": "Your pages",
       "asked": "Asked of Google for these dates",
       "same": "The same",
-      "places": "{places} places"
+      "places": "{places} places",
+      "band": "Band",
+      "brand": "Brand",
+      "dates": "Dates",
+      "difference": "Difference",
+      "estimate": "Estimate",
+      "expected": "Expected",
+      "moved": "Moved",
+      "nextPage": "Next page",
+      "richResult": "Rich result",
+      "status": "Status",
+      "type": "Type",
+      "update": "Update",
+      "usualCtr": "Usual CTR",
+      "volume": "Volume",
+      "when": "When"
     },
     "record": {
       "searchDescription": "What Google counted for this search, day by day, and which of your pages it showed.",
@@ -10742,11 +10759,9 @@
       "collected": "Collected",
       "updatedDetail": "{when} · Google's figures to {day}",
       "notYet": "Not yet",
-      "historyAll": "Sixteen months, from {day}: all in",
-      "historyPart": "From {day} so far; the rest is coming in",
-      "collectedDetail": "Not collecting for now: a Search Console agent will collect, on its own schedule",
+      "collectedDetail": "By the Search Console Collector agent, on its own schedule in Admin → Schedules",
       "nothingCollectedTitle": "Connected, with nothing collected yet",
-      "nothingCollectedBody": "{host} is connected to Google Search Console, but nothing is collected for now. A Search Console agent will collect it, on its own schedule.",
+      "nothingCollectedBody": "{host} is connected to Google Search Console. Its last 90 days come in on the Search Console agent's next scheduled run.",
       "disconnect": "Disconnect",
       "confirm": "Disconnecting stops collecting and gives Google's access back. The figures collected so far stay, marked with the day it was disconnected.",
       "confirmDisconnect": "Disconnect",
@@ -10779,7 +10794,8 @@
       },
       "disconnectedOn": "Disconnected on {day}",
       "keptTo": "The figures to {day} are still here. Nothing new comes in until it's connected again.",
-      "keptNone": "Nothing new comes in until it's connected again."
+      "keptNone": "Nothing new comes in until it's connected again.",
+      "historyKept": "From {day}. Days are kept for 90 days, then as weeks; after 12 months, as months."
     },
     "keywords": {
       "title": "Keywords",
@@ -10794,7 +10810,8 @@
       "failed": "That couldn't be saved. Try again.",
       "count": "{count} of {limit} tracked",
       "keywordsOnSite": "{count} of {limit} keywords tracked on this website",
-      "pagesOnSite": "{count} of {limit} pages tracked on this website"
+      "pagesOnSite": "{count} of {limit} pages tracked on this website",
+      "of": "{count} of {limit}"
     },
     "filters": {
       "tracked": "Tracked",
@@ -10835,6 +10852,170 @@
       "anyCountry": "Any country",
       "device": "Device",
       "anyDevice": "Any device"
+    },
+    "common": {
+      "inLast": "In the last {days} days"
+    },
+    "almost": {
+      "title": "Almost there",
+      "description": "Keywords Google already shows you for at positions 4 to 20, with how many people search for each a month, from Sites. These are the ones closest to the top three.",
+      "at4to10": "Keywords at 4–10",
+      "at11to20": "Keywords at 11–20",
+      "searches": "Searches a month behind them",
+      "sitesFigures": "Sites' figures",
+      "tracked": "Tracked",
+      "youTrack": "Keywords you track"
+    },
+    "lowCtr": {
+      "title": "Shown but not clicked",
+      "description": "Pages Google shows often that people rarely click, for where they sit. Usual CTR is your own click rate at that position, from Click rate by position; Expected is the clicks a page would have had at it. A low click rate usually means the title or description in Google needs work.",
+      "below": "Pages below your usual click rate",
+      "ofShown": "Of the {count} Google showed",
+      "impressions": "Impressions they had",
+      "clicks": "Clicks they had",
+      "atUsual": "At your usual click rate",
+      "wouldHave": "Clicks they would have had"
+    },
+    "demand": {
+      "title": "Missed demand",
+      "description": "Keywords many people search for that Google barely shows you for, from Sites' monthly searches. And keywords Google shows you for that you don't track yet: tick one to track it.",
+      "fewer": "Fewer than 50 impressions in these dates",
+      "ofShown": "Of the {count} keywords Google showed"
+    },
+    "competing": {
+      "title": "Pages competing",
+      "description": "Keywords where Google shows two or more of your pages, so they split the clicks between them.",
+      "split": "Keywords split between pages",
+      "ofShown": "Of the {count} Google showed",
+      "clicks": "Clicks they share",
+      "pages": "Pages involved"
+    },
+    "moves": {
+      "title": "Wins and losses",
+      "description": "The keywords whose clicks changed most. Clicks and position read the {days} days before → the last {days} days.",
+      "gaining": "Keywords gaining clicks",
+      "losing": "Keywords losing clicks",
+      "against": "Against the {days} days before",
+      "gained": "Clicks gained",
+      "byGaining": "By the keywords gaining",
+      "lost": "Clicks lost",
+      "byLosing": "By the keywords losing",
+      "clicksBefore": "Clicks before",
+      "positionBefore": "Position before"
+    },
+    "bands": {
+      "title": "Position bands",
+      "description": "How many of your keywords Google shows in each band of positions, week by week. The positions are Google's own averages.",
+      "top3": "Top 3",
+      "below": "21 and below",
+      "chartTitle": "Keywords in each band, week by week",
+      "chartHint": "Every keyword Google showed your website for, by its average position that week."
+    },
+    "newLost": {
+      "title": "New and lost",
+      "description": "Keywords Google started showing your website for, and keywords it stopped showing you for. A keyword is lost when Google has not shown you for it in 14 days.",
+      "newKeywords": "New keywords",
+      "lostKeywords": "Lost keywords",
+      "newPages": "New pages",
+      "lostPages": "Lost pages",
+      "firstTime": "Shown for the first time",
+      "notIn14": "Not shown in 14 days",
+      "watchedFrom": "A keyword counts as new from {day}: by then the website had been watched 14 days.",
+      "chartTitle": "Gained and lost each week",
+      "chartHint": "Keywords Google started showing you for (up) and stopped showing you for (down).",
+      "gained": "Gained",
+      "lost": "Lost",
+      "net": "Gained less lost",
+      "what": "What happened",
+      "newOrLost": "New or lost",
+      "new": "New",
+      "lostWord": "Lost"
+    },
+    "updates": {
+      "title": "Google updates",
+      "description": "What each of Google's updates did to your website: clicks and average position read the 14 days before it began → the 14 days after it finished. The updates are the ones kept in Admin → Content → Google updates, the same list the Sites charts mark.",
+      "chartTitle": "Clicks a day, with Google's updates",
+      "searchPlaceholder": "Search updates…",
+      "finishedOrNot": "Finished or not",
+      "finished": "Finished",
+      "rolling": "Still rolling out",
+      "rollingOut": "rolling out",
+      "notFinished": "Not finished",
+      "waiting": "14 days not yet passed",
+      "empty": "No Google update began in the days held."
+    },
+    "types": {
+      "title": "Types",
+      "description": "Your pages by kind, and your keywords by what the searcher wants: how much of each there is, and how many of the clicks each brings. Click a kind to see its pages or keywords.",
+      "fromArticles": "Clicks from articles",
+      "fromServices": "Clicks from service pages",
+      "fromBrand": "Clicks from brand searches",
+      "fromCommercial": "Clicks from commercial searches",
+      "ofClicks": "{share} of clicks",
+      "pagesTitle": "Pages by kind",
+      "pagesHint": "All {count} pages Google showed, each sorted into a kind: its share of the pages, and of the clicks.",
+      "keywordsTitle": "Keywords by what they want",
+      "keywordsHint": "All {count} keywords Google showed you for, each judged by what the searcher wants: its share of the keywords, and of the clicks.",
+      "pages": "Pages",
+      "keywords": "Keywords",
+      "clicks": "Clicks",
+      "kind": "Kind",
+      "count": "How many",
+      "pagesLine": "{count, plural, =1 {# page} other {{rows} pages}} ({share}) · {clicks} of clicks",
+      "keywordsLine": "{count, plural, =1 {# keyword} other {{rows} keywords}} ({share}) · {clicks} of clicks"
+    },
+    "brand": {
+      "title": "Brand and non-brand",
+      "description": "Clicks from searches that use your name, against those that don't.",
+      "yourWords": "Your brand words:",
+      "noWords": "Your website has no brand words yet.",
+      "change": "Change brand words",
+      "brandClicks": "Brand clicks",
+      "otherClicks": "Non-brand clicks",
+      "share": "Brand share of clicks",
+      "otherImpressions": "Non-brand impressions",
+      "chartTitle": "Brand and non-brand clicks, week by week",
+      "chartHint": "Clicks from searches with your brand words, and from every other search."
+    },
+    "ctrCurve": {
+      "title": "Click rate by position",
+      "description": "How often people click your website at each of Google's positions, over the last {days} days. Shown but not clicked uses this as your yardstick.",
+      "chartTitle": "Your click rate at each position",
+      "chartHint": "Clicks for each time Google showed you, at positions 1 to 20.",
+      "rate": "Click rate",
+      "searchPlaceholder": "Search positions…"
+    },
+    "appearance": {
+      "title": "Rich results",
+      "description": "The special kinds of result Google shows your pages in, such as review stars, videos or translated results, and the clicks each brings.",
+      "kinds": "Kinds of rich result",
+      "clicks": "Clicks from them",
+      "ofAll": "{share} of all clicks",
+      "impressions": "Impressions",
+      "searchPlaceholder": "Search rich results…",
+      "empty": "Google showed none of your pages as a rich result in these dates.",
+      "names": {
+        "TRANSLATED_RESULT": "Translated result",
+        "REVIEW_SNIPPET": "Review snippet",
+        "VIDEO": "Video",
+        "PRODUCT_SNIPPETS": "Product snippet",
+        "FAQ_RICH_RESULTS": "FAQ",
+        "AMP_BLUE_LINK": "AMP",
+        "RECIPE_FEATURE": "Recipe"
+      }
+    },
+    "estimates": {
+      "title": "Real against estimated",
+      "description": "Clicks are what Google counted; Estimate is the visits Sites estimated for the same {days} days. Where they differ a lot, trust Google's.",
+      "sites": "Sites' estimate",
+      "visitsIn": "Visits in the last {days} days",
+      "google": "Google's clicks",
+      "high": "Pages estimated too high",
+      "low": "Pages estimated too low",
+      "byAQuarter": "By more than a quarter",
+      "aboutRight": "About right",
+      "tooHigh": "{count} too high",
+      "tooLow": "{count} too low"
     }
   },
   "aiEngines": {

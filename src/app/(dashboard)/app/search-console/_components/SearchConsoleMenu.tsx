@@ -3,10 +3,7 @@
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { SectionMenu } from "../../_components/SectionMenu";
-import { SEARCH_CONSOLE_GROUPS, SEARCH_CONSOLE_PAGES, pageForPath, useSearchConsoleHref, type SearchConsolePageId } from "./useSearchConsole";
-
-/** The pages built so far: the rest are listed greyed, "Coming soon", until they are. */
-const BUILT: ReadonlySet<SearchConsolePageId> = new Set(["performance", "keywords", "pages", "places", "connection"]);
+import { SEARCH_CONSOLE_GROUPS, SEARCH_CONSOLE_PAGES, pageForPath, useSearchConsoleHref } from "./useSearchConsole";
 
 /**
  * A website's pages in the Search Console section, grouped as drawn
@@ -34,8 +31,7 @@ export function SearchConsoleMenu({ siteId }: { siteId: string }) {
         items: SEARCH_CONSOLE_PAGES.filter((page) => page.group === group).map((page) => ({
           id: page.id,
           label: t(page.id),
-          href: BUILT.has(page.id) ? hrefFor(page.segment) : null,
-          note: t("soon"),
+          href: hrefFor(page.segment),
         })),
       }))}
     />

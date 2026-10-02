@@ -24,9 +24,13 @@ import {
   monthStart,
   pack,
   rowsOf,
+  weekStart,
   type Packed,
   type Row,
 } from "./utils/searchConsolePacks";
+import { bandOf, isBrand } from "./utils/searchConsoleViews";
+import { tenantQuery } from "./tenantFunctions";
+import { requireMySite } from "./siteAccess";
 
 /**
  * The ready-made periods every Search Console list reads
@@ -146,6 +150,84 @@ async function readKept(
 }
 
 type Counts = Map<string, { count: number; top: string }>;
+
+/** Weeks the Position bands and Brand charts show. */
+export const CHART_WEEKS = 16;
+
+type Week = { week: string; top3: number; top10: number; top20: number; rest: number; brandClicks: number; otherClicks: number };
+
+/**
+ * Each of the last weeks held: its keywords by band of position, added up
+ * from the week's pairs, and its clicks from brand searches and the rest. A
+ * week's days and the part of it rolled up already count together.
+ */
+export function weekFigures(kept: readonly Kept[], newest: string, brandWords: readonly string[]): Week[] {
+  const first = weekStart(shiftDay(newest, -7 * (CHART_WEEKS - 1)));
+  const weeks = new Map<string, Packed[]>();
+  for (const record of kept) {
+    if (record.grain === "MONTH") continue;
+    const week = record.grain === "WEEK" ? record.start : weekStart(record.start);
+    if (week < first) continue;
+    weeks.set(week, [...(weeks.get(week) ?? []), record.packed]);
+  }
+  return [...weeks.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([week, records]) => {
+    const figures: Week = { week, top3: 0, top10: 0, top20: 0, rest: 0, brandClicks: 0, otherClicks: 0 };
+    for (const keyword of bySide(addUp(records), "query").values()) {
+      if (keyword.impressions > 0) {
+        const band = bandOf(keyword.positionSum / keyword.impressions);
+        if (band === "1-3") figures.top3 += 1;
+        else if (band === "4-10") figures.top10 += 1;
+        else if (band === "11-20") figures.top20 += 1;
+        else figures.rest += 1;
+      }
+      if (isBrand(keyword.key, brandWords)) figures.brandClicks += keyword.clicks;
+      else figures.otherClicks += keyword.clicks;
+    }
+    return figures;
+  });
+}
+
+const weekValidator = v.object({
+  week: v.string(),
+  top3: v.number(),
+  top10: v.number(),
+  top20: v.number(),
+  rest: v.number(),
+  brandClicks: v.number(),
+  otherClicks: v.number(),
+});
+
+/** A kind of result's weeks, all at once: the ones held before go. */
+export const writeWeeks = internalMutation({
+  args: { companyWebsiteId: v.id("companyWebsites"), searchType: searchTypeValidator, weeks: v.array(weekValidator), builtAt: v.number() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const old = await ctx.db
+      .query("searchConsoleWeeks")
+      .withIndex("by_hold_type_week", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("searchType", args.searchType))
+      .take(WEEKS_READ);
+    for (const week of old) await ctx.db.delete(week._id);
+    for (const week of args.weeks) await ctx.db.insert("searchConsoleWeeks", { companyWebsiteId: args.companyWebsiteId, searchType: args.searchType, ...week, builtAt: args.builtAt });
+    return null;
+  },
+});
+
+/** Weeks one read returns: far more than the 16 kept. */
+const WEEKS_READ = 200;
+
+/** A website's weeks for its Position bands and Brand charts, oldest first. */
+export const searchConsoleWeeks = tenantQuery({
+  args: { siteId: v.id("companyWebsites"), searchType: searchTypeValidator },
+  returns: v.array(weekValidator),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    const weeks = await ctx.db
+      .query("searchConsoleWeeks")
+      .withIndex("by_hold_type_week", (q) => q.eq("companyWebsiteId", site.hold._id).eq("searchType", args.searchType))
+      .take(WEEKS_READ);
+    return weeks.map(({ week, top3, top10, top20, rest, brandClicks, otherClicks }) => ({ week, top3, top10, top20, rest, brandClicks, otherClicks }));
+  },
+});
 type Slot = { period: SearchConsolePeriod; which: "NOW" | "BEFORE"; span: PeriodSpan | null; now: PeriodSpan };
 
 /** Every period and the period before it, as spans of days: null where the days before are not held. */
@@ -228,6 +310,12 @@ export async function buildSitePeriods(
     const pageCounts = new Map<string, Counts>();
     const pairsKept = lists.includes("pair") ? await readKept(ctx, companyWebsiteId, searchType, "pair", newest) : null;
     const queryFacts = pairsKept ? await factsOf("query", pairsKept) : undefined;
+    await ctx.runMutation(internal.searchConsolePeriods.writeWeeks, {
+      companyWebsiteId,
+      searchType,
+      weeks: pairsKept ? weekFigures(pairsKept, newest, target?.brandWords ?? []) : [],
+      builtAt,
+    });
     for (const slot of slots) {
       if (!pairsKept || !slot.span) {
         await write(searchType, "pair", slot, null);

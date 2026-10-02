@@ -242,6 +242,26 @@ export const searchConsoleTables = {
     builtAt: v.number(),
   }).index("by_hold_type_list_period", ["companyWebsiteId", "searchType", "list", "period", "which", "part"]),
 
+  /**
+   * Each week's keywords by band of Google's average position, and its clicks
+   * from searches using the website's brand words and from the rest — the
+   * Position bands and Brand and non-brand charts (plan §13.3). Worked out
+   * after each run from the kept lists, for the last 16 weeks held.
+   */
+  searchConsoleWeeks: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    searchType: searchTypeValidator,
+    /** The Monday the week starts on. */
+    week: v.string(),
+    top3: v.number(),
+    top10: v.number(),
+    top20: v.number(),
+    rest: v.number(),
+    brandClicks: v.number(),
+    otherClicks: v.number(),
+    builtAt: v.number(),
+  }).index("by_hold_type_week", ["companyWebsiteId", "searchType", "week"]),
+
   /** When each search and each page was first and last shown, for New and lost (plan §14.3, item 6). Web results. */
   searchConsoleSeen: defineTable({
     companyWebsiteId: v.id("companyWebsites"),

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { applyView, bandOf, ctrCurve, filterRows, isBrand, pagesByKeyword, shapeRows, type SourceRow } from "./searchConsoleViews";
+import { applyView, bandOf, ctrCurve, filterRows, isBrand, pagesByKeyword, shapeRows, summarise, type SourceRow } from "./searchConsoleViews";
 
 /**
  * The rules each Search Console page lists by (docs/plans/active/
@@ -122,5 +122,41 @@ describe("filters", () => {
     expect(filterRows(rows, { tracked: "no", band: "1-3" }).map((entry) => entry.key)).toEqual(["plumber leeds"]);
     expect(filterRows(rows, { kind: "RESEARCHING" }).map((entry) => entry.key)).toEqual(["emergency plumber"]);
     expect(filterRows(rows, { brand: "yes" }).map((entry) => entry.key)).toEqual(["ronins"]);
+  });
+});
+
+describe("a page's hero boxes", () => {
+  test("added up over every row the page's rule lists, never only the rows on screen, with the days before", () => {
+    const all = shaped(
+      [row("ronins agency", 9, 100, 1.5, { kind: "BRANDED" }), row("ai agency", 43, 1541, 4.3, { kind: "BUYING", volume: 2400 }), row("web design", 2, 900, 14, { kind: "BUYING", volume: 1000 })],
+      [row("ai agency", 31, 1000, 5.1), row("web design", 6, 800, 12), row("gone", 1, 10, 30)],
+      ["ai agency"],
+      ["ronins"],
+    );
+    const listed = applyView("almost", all);
+    const summary = summarise(listed, all, [row("ai agency", 31, 1000, 5.1), row("web design", 6, 800, 12), row("gone", 1, 10, 30)], { brandWords: ["ronins"] });
+    expect(summary).toMatchObject({
+      rows: 2, of: 3, clicks: 45, impressions: 2441, tracked: 1, gaining: 1, gained: 12, losing: 1, lost: 4, volume: 3400,
+      bands: { "1-3": 0, "4-10": 1, "11-20": 1, "21-50": 0, "51+": 0 },
+      bandsBefore: { "1-3": 0, "4-10": 1, "11-20": 1, "21-50": 1, "51+": 0 },
+      pagesInvolved: null,
+    });
+    expect(summary.kinds).toEqual([{ kind: "BUYING", rows: 2, clicks: 45 }]);
+    // Brand against the rest is the whole list's, whatever the page lists.
+    expect(summary.brand).toEqual({
+      now: { brandClicks: 9, nonBrandClicks: 45, brandImpressions: 100, nonBrandImpressions: 2441 },
+      before: { brandClicks: 0, nonBrandClicks: 38, brandImpressions: 0, nonBrandImpressions: 1810 },
+    });
+  });
+
+  test("Pages competing counts the pages its keywords split, of every page any keyword was shown with", () => {
+    const pages = pagesByKeyword([
+      { key: "ai agency", page: "/", clicks: 2, impressions: 50 },
+      { key: "ai agency", page: "/ai-agency/", clicks: 41, impressions: 900 },
+      { key: "solo", page: "/solo/", clicks: 5, impressions: 50 },
+    ]);
+    const all = shaped([row("ai agency", 43, 950, 4), row("solo", 5, 50, 3)]);
+    const summary = summarise(applyView("competing", all, { pages }), all, null, { pages, brandWords: null });
+    expect(summary).toMatchObject({ rows: 1, of: 2, pagesInvolved: 2, pagesShown: 3, bandsBefore: null, brand: null });
   });
 });

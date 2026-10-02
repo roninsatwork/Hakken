@@ -7,6 +7,8 @@ import SearchConsolePage from "./page";
 import SearchConsolePerformancePage from "./[siteId]/page";
 import SearchConsoleSearchesPage from "./[siteId]/keywords/page";
 import SearchConsoleConnectionPage from "./[siteId]/connection/page";
+import SearchConsoleWinsPage from "./[siteId]/wins-and-losses/page";
+import SearchConsoleTypesPage from "./[siteId]/types/page";
 
 const nav = vi.hoisted(() => ({ pathname: "/app/search-console/site_1", search: "", replace: vi.fn(), push: vi.fn() }));
 
@@ -207,6 +209,42 @@ describe("Keywords", () => {
     });
     render(<SearchConsoleSearchesPage />);
     expect(screen.getByText("searchConsole.table.preparing")).toBeInTheDocument();
+  });
+});
+
+describe("the pages beyond Google's own", () => {
+  const row = {
+    band: "4-10", previousPosition: 5.1, positionChange: 0.8, count: 2, top: "https://acme-shop.test/", tracked: false,
+    kind: "BUYING", volume: 2400, estimate: null, brand: false, usualCtr: null, expected: null, topShare: null, next: null, nextShare: null, verdict: null, gap: null,
+  };
+  const summary = {
+    rows: 1, of: 3, clicks: 43, impressions: 1541, tracked: 0, gaining: 1, losing: 0, gained: 12, lost: 0, volume: 2400, estimate: 0, expected: 0,
+    high: 0, low: 0, pagesInvolved: null, pagesShown: null, bands: { "1-3": 0, "4-10": 1, "11-20": 0, "21-50": 0, "51+": 0 }, bandsBefore: null, brand: null,
+    kinds: [{ kind: "BUYING", rows: 1, clicks: 43 }],
+  };
+  const LIST = {
+    rows: [{ key: "ai agency", clicks: 43, impressions: 1541, ctr: 0.028, position: 4.3, previousClicks: 31, change: 12, share: 1, ...row }],
+    total: 1, page: 1, pages: 1, size: 25, cut: null, preparing: false, current: true, named: 43, listed: 1, comparable: true,
+    live: false, from: "2026-08-28", to: "2026-09-26", summary,
+  };
+
+  it("Wins and losses reads the keywords whose clicks moved, before → now, the most gained first", () => {
+    at("/app/search-console/site_1/wins-and-losses");
+    answer({ "searchConsoleConnect:searchConsoleStatus": status(), "searchConsoleLists:searchConsoleListPage": LIST });
+    render(<SearchConsoleWinsPage />);
+    expect(screen.getByText("ai agency")).toBeInTheDocument();
+    expect(screen.getByText("+12")).toBeInTheDocument();
+    const asked = vi.mocked(useQuery).mock.calls.filter(([reference]) => convexPath(reference).endsWith("searchConsoleListPage")).at(-1)?.[1];
+    expect(asked).toMatchObject({ view: "moves", dimension: "query", sort: "change", direction: "desc" });
+  });
+
+  it("Types draws each kind's share of the pages and of the clicks, each opening its list", () => {
+    at("/app/search-console/site_1/types");
+    answer({ "searchConsoleConnect:searchConsoleStatus": status(), "searchConsoleLists:searchConsoleListPage": LIST });
+    render(<SearchConsoleTypesPage />);
+    const links = screen.getAllByRole("link").map((link) => link.getAttribute("href") ?? "");
+    expect(links.some((href) => href.includes("/keywords") && href.includes("kind=BUYING"))).toBe(true);
+    expect(links.some((href) => href.includes("/pages") && href.includes("kind=BUYING"))).toBe(true);
   });
 });
 

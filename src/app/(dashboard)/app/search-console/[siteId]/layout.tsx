@@ -106,7 +106,6 @@ export default function SearchConsoleSiteLayout({ children }: { children: React.
             {connection?.newestDay && state !== "CHOOSING" ? (
               <p className="text-[12px] text-muted">
                 {t("figuresTo", { day: formatDay(connection.newestDay) })}
-                {!connection.historyDone && connection.oldestDay ? ` ${t("historyComing", { day: formatDay(connection.oldestDay) })}` : null}
               </p>
             ) : null}
             {children}

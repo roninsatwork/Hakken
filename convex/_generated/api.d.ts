@@ -280,6 +280,7 @@ import type * as roleRuns from "../roleRuns.js";
 import type * as scheduler from "../scheduler.js";
 import type * as searchConsoleAgentRun from "../searchConsoleAgentRun.js";
 import type * as searchConsoleApi from "../searchConsoleApi.js";
+import type * as searchConsoleChanges from "../searchConsoleChanges.js";
 import type * as searchConsoleConnect from "../searchConsoleConnect.js";
 import type * as searchConsoleDays from "../searchConsoleDays.js";
 import type * as searchConsoleFacts from "../searchConsoleFacts.js";
@@ -822,6 +823,7 @@ declare const fullApi: ApiFromModules<{
   scheduler: typeof scheduler;
   searchConsoleAgentRun: typeof searchConsoleAgentRun;
   searchConsoleApi: typeof searchConsoleApi;
+  searchConsoleChanges: typeof searchConsoleChanges;
   searchConsoleConnect: typeof searchConsoleConnect;
   searchConsoleDays: typeof searchConsoleDays;
   searchConsoleFacts: typeof searchConsoleFacts;

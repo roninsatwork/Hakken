@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { keptIn, periodSpan, spanBefore, type Kept } from "./searchConsolePeriods";
+import { keptIn, periodSpan, spanBefore, weekFigures, type Kept } from "./searchConsolePeriods";
 import { pack, type Packed } from "./utils/searchConsolePacks";
 
 /**
@@ -60,5 +60,23 @@ describe("what counts towards a period", () => {
     const months = [kept("MONTH", "2025-09-01"), kept("MONTH", "2025-10-01")];
     expect(counted(months, { from: "2025-09-27", to: NEWEST })).toEqual(["MONTH 2025-10-01"]);
     expect(counted(months, { from: "2025-09-12", to: NEWEST })).toEqual(["MONTH 2025-09-01", "MONTH 2025-10-01"]);
+  });
+});
+
+describe("the weeks the charts read", () => {
+  test("each week's keywords by band and its brand clicks, a week's days and its rolled-up part together", () => {
+    const pairs = (rows: [string, string, number, number, number][]) =>
+      pack(rows.map(([key, page, clicks, impressions, position]) => ({ key, page, clicks, impressions, positionSum: position * impressions })), true)[0];
+    const kept: Kept[] = [
+      // The week of 21 September: Monday rolled up already, the rest kept as days.
+      { grain: "WEEK", start: "2026-09-21", packed: pairs([["ronins", "/", 4, 10, 1]]) },
+      { grain: "DAY", start: "2026-09-22", packed: pairs([["ronins", "/", 2, 10, 2], ["ai agency", "/ai/", 3, 100, 8]]) },
+      { grain: "DAY", start: "2026-09-26", packed: pairs([["web design", "/", 0, 50, 40]]) },
+      // Too old for the chart's sixteen weeks.
+      { grain: "WEEK", start: "2026-05-04", packed: pairs([["old", "/", 9, 9, 1]]) },
+    ];
+    expect(weekFigures(kept, NEWEST, ["Ronins"])).toEqual([
+      { week: "2026-09-21", top3: 1, top10: 1, top20: 0, rest: 1, brandClicks: 6, otherClicks: 3 },
+    ]);
   });
 });

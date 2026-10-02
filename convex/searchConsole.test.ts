@@ -463,6 +463,12 @@ describe("collecting", () => {
       .withIndex("by_hold_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("searchType", "web").eq("list", "page").eq("period", "365").eq("which", "NOW"))
       .first());
     expect(year).toMatchObject({ from: "2026-06-29", to: NEWEST, keys: ["https://acme-shop.test/"], counts: [2], tops: ["plumber leeds"] });
+    // The weeks the Position bands and Brand charts read: the website has no brand words yet, so every click is the rest's.
+    const weeks = await t.run(async (ctx) => await ctx.db
+      .query("searchConsoleWeeks")
+      .withIndex("by_hold_type_week", (q) => q.eq("companyWebsiteId", siteId).eq("searchType", "web"))
+      .collect());
+    expect(weeks.map((week) => [week.week, week.top3, week.top10, week.brandClicks, week.otherClicks])).toEqual([["2026-09-21", 0, 2, 0, 12]]);
     // Discover has no searches: no pairs or searches kept for it.
     const discover = await t.run(async (ctx) => await ctx.db
       .query("searchConsolePeriods")

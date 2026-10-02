@@ -208,6 +208,8 @@ describe("the tables", () => {
       ["boiler repair", 1, 10, 9, 1, 1, "https://acme-shop.test/boilers/"],
     ]);
     expect(list.rows[0]).toMatchObject({ previousClicks: 2, previousPosition: 3, ctr: 0.08 });
+    // The hero boxes' figures: over the whole list, with the days before.
+    expect(list.summary).toMatchObject({ rows: 3, of: 3, clicks: 12, gaining: 3, gained: 10, bands: { "1-3": 1, "4-10": 2 }, bandsBefore: { "1-3": 1 } });
     expect(list.rows[0].share).toBeCloseTo(8 / 12);
     expect(list.rows[1].previousClicks).toBeNull();
 

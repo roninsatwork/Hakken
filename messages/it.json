@@ -8854,7 +8854,10 @@
       "folders": "{count, plural, =1 {# cartella} other {# cartelle}}",
       "countries": "{count, plural, =1 {# paese} other {# paesi}}",
       "devices": "{count, plural, =1 {# dispositivo} other {# dispositivi}}",
-      "angles": "{count, plural, =1 {# argomento} other {# argomenti}}"
+      "angles": "{count, plural, =1 {# argomento} other {# argomenti}}",
+      "updates": "{count, plural, =1 {# aggiornamento} other {# aggiornamenti}}",
+      "positions": "{count, plural, =1 {# posizione} other {# posizioni}}",
+      "kinds": "{count, plural, =1 {# tipo} other {# tipi}}"
     },
     "chart": {
       "download": "Scarica",
@@ -10537,7 +10540,6 @@
       "notOwnedTitle": "Search Console è per i tuoi siti",
       "notOwnedDescription": "La tua azienda osserva questo sito ma non ne è proprietaria, quindi qui non ha Search Console.",
       "figuresTo": "Dati di Google fino al {day}; gli ultimi tre giorni possono ancora cambiare.",
-      "historyComing": "I sedici mesi prima del {day} stanno ancora arrivando, dai più recenti.",
       "clearing": "I dati della proprietà precedente vengono cancellati."
     },
     "menu": {
@@ -10569,8 +10571,7 @@
       "brand": "Brand e non brand",
       "ctrCurve": "Tasso di clic per posizione",
       "appearance": "Risultati avanzati",
-      "estimates": "Reali contro stimati",
-      "soon": "In arrivo"
+      "estimates": "Reali contro stimati"
     },
     "kinds": {
       "label": "Tipo di risultato",
@@ -10617,7 +10618,8 @@
       "svg": "Disegno (SVG)",
       "csv": "Foglio di calcolo (CSV)",
       "day": "Giorno",
-      "nothing": "In queste date non è stato mostrato niente."
+      "nothing": "In queste date non è stato mostrato niente.",
+      "week": "Settimana"
     },
     "performance": {
       "title": "Rendimento",
@@ -10676,7 +10678,22 @@
       "yourPages": "Tue pagine",
       "asked": "Chiesto a Google per queste date",
       "same": "Invariata",
-      "places": "{places} posizioni"
+      "places": "{places} posizioni",
+      "band": "Fascia",
+      "brand": "Brand",
+      "dates": "Date",
+      "difference": "Differenza",
+      "estimate": "Stima",
+      "expected": "Attesi",
+      "moved": "Spostamento",
+      "nextPage": "Pagina seguente",
+      "richResult": "Risultato avanzato",
+      "status": "Stato",
+      "type": "Tipo",
+      "update": "Aggiornamento",
+      "usualCtr": "CTR abituale",
+      "volume": "Volume",
+      "when": "Quando"
     },
     "record": {
       "searchDescription": "Quello che Google ha contato per questa ricerca, giorno per giorno, e quali tue pagine ha mostrato.",
@@ -10742,11 +10759,9 @@
       "collected": "Raccolta",
       "updatedDetail": "{when} · Dati di Google fino al {day}",
       "notYet": "Non ancora",
-      "historyAll": "Sedici mesi, dal {day}: tutto arrivato",
-      "historyPart": "Dal {day} per ora; il resto sta arrivando",
-      "collectedDetail": "Per ora non si raccoglie nulla: raccoglierà un agente Search Console, con la sua programmazione",
+      "collectedDetail": "Dall'agente Search Console Collector, secondo la sua pianificazione in Admin → Pianificazioni",
       "nothingCollectedTitle": "Collegato, ma non è stato ancora raccolto nulla",
-      "nothingCollectedBody": "{host} è collegato a Google Search Console, ma per ora non viene raccolto nulla. Lo raccoglierà un agente Search Console, con la sua programmazione.",
+      "nothingCollectedBody": "{host} è collegato a Google Search Console. I suoi ultimi 90 giorni arrivano alla prossima esecuzione pianificata dell'agente Search Console.",
       "disconnect": "Scollega",
       "confirm": "Scollegando si ferma la raccolta e si restituisce l'accesso a Google. I dati raccolti finora restano, segnati con il giorno dello scollegamento.",
       "confirmDisconnect": "Scollega",
@@ -10779,7 +10794,8 @@
       },
       "disconnectedOn": "Scollegato il {day}",
       "keptTo": "I dati fino al {day} sono ancora qui. Non arriva niente di nuovo finché non viene ricollegato.",
-      "keptNone": "Non arriva niente di nuovo finché non viene ricollegato."
+      "keptNone": "Non arriva niente di nuovo finché non viene ricollegato.",
+      "historyKept": "Dal {day}. I giorni si conservano per 90 giorni, poi come settimane; dopo 12 mesi, come mesi."
     },
     "keywords": {
       "title": "Parole chiave",
@@ -10794,7 +10810,8 @@
       "failed": "Non è stato possibile salvarlo. Riprova.",
       "count": "{count} di {limit} seguite",
       "keywordsOnSite": "{count} di {limit} parole chiave seguite su questo sito",
-      "pagesOnSite": "{count} di {limit} pagine seguite su questo sito"
+      "pagesOnSite": "{count} di {limit} pagine seguite su questo sito",
+      "of": "{count} di {limit}"
     },
     "filters": {
       "tracked": "Seguite",
@@ -10835,6 +10852,170 @@
       "anyCountry": "Qualsiasi paese",
       "device": "Dispositivo",
       "anyDevice": "Qualsiasi dispositivo"
+    },
+    "common": {
+      "inLast": "Negli ultimi {days} giorni"
+    },
+    "almost": {
+      "title": "Quasi in cima",
+      "description": "Parole chiave per cui Google ti mostra già nelle posizioni da 4 a 20, con quante persone le cercano ogni mese, da Sites. Sono le più vicine alle prime tre.",
+      "at4to10": "Parole chiave in 4–10",
+      "at11to20": "Parole chiave in 11–20",
+      "searches": "Ricerche al mese dietro di loro",
+      "sitesFigures": "Dati di Sites",
+      "tracked": "Seguite",
+      "youTrack": "Parole chiave che segui"
+    },
+    "lowCtr": {
+      "title": "Mostrate ma non cliccate",
+      "description": "Pagine che Google mostra spesso ma che si cliccano poco, per la posizione in cui sono. Il CTR abituale è il tuo tasso di clic in quella posizione, da Tasso di clic per posizione; Attesi sono i clic che una pagina avrebbe avuto con quel tasso. Un tasso di clic basso di solito significa che il titolo o la descrizione su Google vanno migliorati.",
+      "below": "Pagine sotto il tuo tasso di clic abituale",
+      "ofShown": "Delle {count} mostrate da Google",
+      "impressions": "Impressioni ricevute",
+      "clicks": "Clic ricevuti",
+      "atUsual": "Con il tuo tasso abituale",
+      "wouldHave": "Clic che avrebbero avuto"
+    },
+    "demand": {
+      "title": "Domanda persa",
+      "description": "Parole chiave che molte persone cercano ma per cui Google ti mostra appena, dalle ricerche mensili di Sites. E parole chiave per cui Google ti mostra ma che non segui ancora: spuntane una per seguirla.",
+      "fewer": "Meno di 50 impressioni in queste date",
+      "ofShown": "Delle {count} parole chiave mostrate da Google"
+    },
+    "competing": {
+      "title": "Pagine in concorrenza",
+      "description": "Parole chiave per cui Google mostra due o più delle tue pagine, che così si dividono i clic.",
+      "split": "Parole chiave divise tra pagine",
+      "ofShown": "Delle {count} mostrate da Google",
+      "clicks": "Clic che si dividono",
+      "pages": "Pagine coinvolte"
+    },
+    "moves": {
+      "title": "Guadagni e perdite",
+      "description": "Le parole chiave i cui clic sono cambiati di più. Clic e posizione si leggono: i {days} giorni prima → gli ultimi {days} giorni.",
+      "gaining": "Parole chiave che guadagnano clic",
+      "losing": "Parole chiave che perdono clic",
+      "against": "Rispetto ai {days} giorni prima",
+      "gained": "Clic guadagnati",
+      "byGaining": "Dalle parole chiave in crescita",
+      "lost": "Clic persi",
+      "byLosing": "Dalle parole chiave in calo",
+      "clicksBefore": "Clic prima",
+      "positionBefore": "Posizione prima"
+    },
+    "bands": {
+      "title": "Fasce di posizione",
+      "description": "Quante delle tue parole chiave Google mostra in ciascuna fascia di posizioni, settimana per settimana. Le posizioni sono le medie di Google.",
+      "top3": "Prime 3",
+      "below": "21 e oltre",
+      "chartTitle": "Parole chiave per fascia, settimana per settimana",
+      "chartHint": "Ogni parola chiave per cui Google ha mostrato il tuo sito, secondo la sua posizione media in quella settimana."
+    },
+    "newLost": {
+      "title": "Nuove e perse",
+      "description": "Parole chiave per cui Google ha iniziato a mostrare il tuo sito, e quelle per cui ha smesso. Una parola chiave è persa quando Google non ti mostra per lei da 14 giorni.",
+      "newKeywords": "Parole chiave nuove",
+      "lostKeywords": "Parole chiave perse",
+      "newPages": "Pagine nuove",
+      "lostPages": "Pagine perse",
+      "firstTime": "Mostrate per la prima volta",
+      "notIn14": "Non mostrate da 14 giorni",
+      "watchedFrom": "Una parola chiave conta come nuova dal {day}: da allora il sito era osservato da 14 giorni.",
+      "chartTitle": "Guadagnate e perse ogni settimana",
+      "chartHint": "Parole chiave per cui Google ha iniziato a mostrarti (sopra) e smesso di mostrarti (sotto).",
+      "gained": "Guadagnate",
+      "lost": "Perse",
+      "net": "Guadagnate meno perse",
+      "what": "Cosa è successo",
+      "newOrLost": "Nuove o perse",
+      "new": "Nuova",
+      "lostWord": "Persa"
+    },
+    "updates": {
+      "title": "Aggiornamenti di Google",
+      "description": "Cosa ha fatto al tuo sito ciascun aggiornamento di Google: clic e posizione media si leggono dai 14 giorni prima dell'inizio → ai 14 giorni dopo la fine. Gli aggiornamenti sono quelli in Admin → Contenuti → Aggiornamenti di Google, lo stesso elenco segnato sui grafici di Sites.",
+      "chartTitle": "Clic al giorno, con gli aggiornamenti di Google",
+      "searchPlaceholder": "Cerca aggiornamenti…",
+      "finishedOrNot": "Concluso o no",
+      "finished": "Concluso",
+      "rolling": "Ancora in corso",
+      "rollingOut": "in corso",
+      "notFinished": "Non concluso",
+      "waiting": "Non sono ancora passati 14 giorni",
+      "empty": "Nessun aggiornamento di Google è iniziato nei giorni disponibili."
+    },
+    "types": {
+      "title": "Tipi",
+      "description": "Le tue pagine per tipo, e le tue parole chiave per ciò che cerca chi cerca: quante ce ne sono di ciascuno e quanti clic porta ognuno. Clicca un tipo per vederne le pagine o le parole chiave.",
+      "fromArticles": "Clic dagli articoli",
+      "fromServices": "Clic dalle pagine di servizio",
+      "fromBrand": "Clic dalle ricerche di brand",
+      "fromCommercial": "Clic dalle ricerche commerciali",
+      "ofClicks": "{share} dei clic",
+      "pagesTitle": "Pagine per tipo",
+      "pagesHint": "Tutte le {count} pagine mostrate da Google, ciascuna con il suo tipo: la sua quota delle pagine e dei clic.",
+      "keywordsTitle": "Parole chiave per intento",
+      "keywordsHint": "Tutte le {count} parole chiave per cui Google ti ha mostrato, ciascuna giudicata per ciò che cerca chi cerca: la sua quota delle parole chiave e dei clic.",
+      "pages": "Pagine",
+      "keywords": "Parole chiave",
+      "clicks": "Clic",
+      "kind": "Tipo",
+      "count": "Quante",
+      "pagesLine": "{count, plural, =1 {# pagina} other {{rows} pagine}} ({share}) · {clicks} dei clic",
+      "keywordsLine": "{count, plural, =1 {# parola chiave} other {{rows} parole chiave}} ({share}) · {clicks} dei clic"
+    },
+    "brand": {
+      "title": "Brand e non brand",
+      "description": "Clic dalle ricerche che usano il tuo nome, rispetto a quelle che non lo usano.",
+      "yourWords": "Le tue parole di brand:",
+      "noWords": "Il tuo sito non ha ancora parole di brand.",
+      "change": "Cambia le parole di brand",
+      "brandClicks": "Clic di brand",
+      "otherClicks": "Clic non di brand",
+      "share": "Quota di clic di brand",
+      "otherImpressions": "Impressioni non di brand",
+      "chartTitle": "Clic di brand e non di brand, settimana per settimana",
+      "chartHint": "Clic dalle ricerche con le tue parole di brand, e da ogni altra ricerca."
+    },
+    "ctrCurve": {
+      "title": "Tasso di clic per posizione",
+      "description": "Quanto spesso le persone cliccano il tuo sito in ciascuna posizione di Google, negli ultimi {days} giorni. Mostrate ma non cliccate lo usa come tuo metro.",
+      "chartTitle": "Il tuo tasso di clic in ogni posizione",
+      "chartHint": "Clic per ogni volta che Google ti ha mostrato, nelle posizioni da 1 a 20.",
+      "rate": "Tasso di clic",
+      "searchPlaceholder": "Cerca posizioni…"
+    },
+    "appearance": {
+      "title": "Risultati avanzati",
+      "description": "I tipi speciali di risultato in cui Google mostra le tue pagine, come le stelle delle recensioni, i video o i risultati tradotti, e i clic che porta ciascuno.",
+      "kinds": "Tipi di risultato avanzato",
+      "clicks": "Clic da questi",
+      "ofAll": "{share} di tutti i clic",
+      "impressions": "Impressioni",
+      "searchPlaceholder": "Cerca risultati avanzati…",
+      "empty": "Google non ha mostrato nessuna tua pagina come risultato avanzato in queste date.",
+      "names": {
+        "TRANSLATED_RESULT": "Risultato tradotto",
+        "REVIEW_SNIPPET": "Snippet di recensione",
+        "VIDEO": "Video",
+        "PRODUCT_SNIPPETS": "Snippet di prodotto",
+        "FAQ_RICH_RESULTS": "FAQ",
+        "AMP_BLUE_LINK": "AMP",
+        "RECIPE_FEATURE": "Ricetta"
+      }
+    },
+    "estimates": {
+      "title": "Reali contro stimati",
+      "description": "I clic sono quelli contati da Google; la Stima sono le visite stimate da Sites per gli stessi {days} giorni. Dove differiscono molto, fidati di Google.",
+      "sites": "Stima di Sites",
+      "visitsIn": "Visite negli ultimi {days} giorni",
+      "google": "Clic di Google",
+      "high": "Pagine stimate troppo in alto",
+      "low": "Pagine stimate troppo in basso",
+      "byAQuarter": "Di oltre un quarto",
+      "aboutRight": "Corretta",
+      "tooHigh": "{count} troppo alta",
+      "tooLow": "{count} troppo bassa"
     }
   },
   "aiEngines": {

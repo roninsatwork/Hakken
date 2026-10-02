@@ -4,6 +4,7 @@ import type { ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { loadSite } from "./websiteSiteRows";
+import { holdBrandNames } from "./holdProfiles";
 import { normaliseKeyword } from "./seoJudgments";
 import { searchVolumeOf } from "./searchVolumes";
 import { pagePath, pageTypeByAddress } from "./utils/siteShapes";
@@ -29,13 +30,15 @@ const KEYS_PER_ASK = 200;
 /** Unknown, as a number kept beside the others (a period's arrays hold numbers only). */
 export const UNKNOWN = -1;
 
-/** The website and the place Sites watches it from, for the hold's lookups. */
+/** The website, the place Sites watches it from and its brand words (its Profile), for the hold's lookups. */
 export const factsTarget = internalQuery({
   args: { companyWebsiteId: v.id("companyWebsites") },
-  returns: v.union(v.null(), v.object({ websiteId: v.id("websites"), place: v.number() })),
+  returns: v.union(v.null(), v.object({ websiteId: v.id("websites"), place: v.number(), brandWords: v.array(v.string()) })),
   handler: async (ctx, args) => {
     const site = await loadSite(ctx, args.companyWebsiteId);
-    return site ? { websiteId: site.website._id, place: site.place } : null;
+    if (!site) return null;
+    const brandWords = (await holdBrandNames(ctx, args.companyWebsiteId)).map((brand) => brand.name);
+    return { websiteId: site.website._id, place: site.place, brandWords };
   },
 });
 
@@ -96,7 +99,7 @@ export async function factsFor(
   const facts: Facts = new Map();
   for (let start = 0; start < keys.length; start += KEYS_PER_ASK) {
     const slice = keys.slice(start, start + KEYS_PER_ASK);
-    const found = await ctx.runQuery(internal.searchConsoleFacts.keyFacts, { ...target, kind, keys: slice });
+    const found = await ctx.runQuery(internal.searchConsoleFacts.keyFacts, { websiteId: target.websiteId, place: target.place, kind, keys: slice });
     slice.forEach((key, index) => facts.set(key, { kind: found.kinds[index] ?? "UNJUDGED", number: found.numbers[index] ?? UNKNOWN }));
   }
   return facts;

@@ -1,0 +1,174 @@
+import { convexTest } from "convex-test";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { api, internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
+import schema from "./schema";
+import { encryptConnectorToken } from "./connectorTokenCrypto";
+
+/**
+ * Search Console's Changes and Breakdowns reads (docs/plans/active/
+ * search-console-plan.md §13.3): New and lost from when each keyword was
+ * first and last shown, Google updates against the website's day totals,
+ * the website's click rate at each position, its brand words, and the pages
+ * shown in each kind of rich result — asked of Google, faked at the network.
+ */
+
+const KEY = Buffer.from(new Uint8Array(32).fill(9)).toString("base64");
+const NEWEST = "2026-09-26";
+const OLDEST = "2026-06-29";
+
+const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
+type Harness = ReturnType<typeof harness>;
+
+beforeEach(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(Date.parse("2026-09-28T09:00:00Z"));
+  vi.stubEnv("CONNECTOR_TOKEN_ENCRYPTION_KEY", KEY);
+  vi.stubEnv("SEARCH_CONSOLE_GOOGLE_CLIENT_ID", "sc-client.apps.googleusercontent.com");
+  vi.stubEnv("SEARCH_CONSOLE_GOOGLE_CLIENT_SECRET", "sc-secret");
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
+
+async function setup(role: "USER" | "SUPER_ADMIN" = "USER") {
+  const t = harness();
+  const ids = await t.run(async (ctx) => {
+    const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: 1 });
+    const userId = await ctx.db.insert("users", { name: "Reader", email: "reader@acme-shop.test", role, companyId, createdAt: 1 });
+    const websiteId = await ctx.db.insert("websites", { host: "acme-shop.test", displayHost: "acme-shop.test", firstSeenAt: 1 });
+    const siteId = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: 1 });
+    const connectionId = await ctx.db.insert("searchConsoleConnections", {
+      companyId, companyWebsiteId: siteId, websiteId, status: "CONNECTED", property: "sc-domain:acme-shop.test", dataProperty: "sc-domain:acme-shop.test",
+      newestDay: NEWEST, oldestDay: OLDEST, createdAt: 1, updatedAt: 1,
+    });
+    await ctx.db.insert("searchConsoleTokens", {
+      connectionId, accessTokenCiphertext: await encryptConnectorToken("ya29.stored"), refreshTokenCiphertext: await encryptConnectorToken("1//refresh"),
+      expiresAt: Date.now() + 3_000_000, scopes: [], createdAt: 1, updatedAt: 1,
+    });
+    return { companyId, userId, websiteId, siteId };
+  });
+  return { t, ...ids, reader: t.withIdentity({ subject: ids.userId }) };
+}
+
+const seen = (t: Harness, siteId: Id<"companyWebsites">, kind: "query" | "page", key: string, firstDay: string, lastDay: string) =>
+  t.run(async (ctx) => await ctx.db.insert("searchConsoleSeen", { companyWebsiteId: siteId, kind, key, firstDay, lastDay }));
+
+async function period(t: Harness, siteId: Id<"companyWebsites">, period: "30" | "90", rows: [string, number, number, number][]) {
+  await t.mutation(internal.searchConsolePeriods.writePeriodPart, {
+    companyWebsiteId: siteId, searchType: "web", list: "query", period, which: "NOW", part: 0, from: "2026-06-29", to: NEWEST,
+    keys: rows.map((row) => row[0]), clicks: rows.map((row) => row[1]), impressions: rows.map((row) => row[2]),
+    positionSums: rows.map((row) => row[3] * row[2]), builtAt: 1,
+  });
+}
+
+describe("New and lost", () => {
+  test("keywords first shown in the dates, and those not shown for 14 days, with the page's counts and weeks", async () => {
+    const { t, siteId, reader } = await setup();
+    // Watched from 29 June, so a keyword counts as new from 13 July.
+    await seen(t, siteId, "query", "drain unblocking", "2026-09-20", NEWEST);
+    await seen(t, siteId, "query", "seen from the start", OLDEST, NEWEST);
+    await seen(t, siteId, "query", "boiler repair", "2026-07-20", "2026-09-05");
+    await seen(t, siteId, "query", "still around", "2026-07-20", "2026-09-20");
+    await seen(t, siteId, "page", "https://acme-shop.test/drains/", "2026-09-20", NEWEST);
+    await period(t, siteId, "90", [["drain unblocking", 6, 200, 4.5], ["boiler repair", 3, 90, 12]]);
+
+    const answer = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, from: "2026-08-28", to: NEWEST, page: 1, rows: 25 });
+    expect(answer.counts).toEqual({ newKeywords: 1, lostKeywords: 1, newPages: 1, lostPages: 0 });
+    expect(answer.rows.map((row) => [row.key, row.status, row.when, row.clicks, row.band])).toEqual([
+      ["drain unblocking", "new", "2026-09-20", 6, "4-10"],
+      // Last shown on 5 September: lost 14 days later.
+      ["boiler repair", "lost", "2026-09-19", 0, "11-20"],
+    ]);
+    expect(answer.watchedFrom).toBe("2026-07-13");
+    const lostOnly = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, from: "2026-08-28", to: NEWEST, what: "lost", page: 1, rows: 25 });
+    expect(lostOnly.rows.map((row) => row.key)).toEqual(["boiler repair"]);
+    const week = answer.weeks.find((entry) => entry.week === "2026-09-14");
+    expect(week).toEqual({ week: "2026-09-14", gained: 1, lost: 1 });
+
+    const otherReader = t.withIdentity({ subject: await t.run(async (ctx) => await ctx.db.insert("users", {
+      name: "Rival", email: "rival@rival.test", role: "USER", companyId: await ctx.db.insert("companies", { name: "Rival", createdAt: 1 }), createdAt: 1,
+    })) });
+    await expect(otherReader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, from: "2026-08-28", to: NEWEST, page: 1, rows: 25 })).rejects.toThrow("not one your company holds");
+  });
+});
+
+describe("Google updates", () => {
+  test("each update's 14 days before against the 14 after it finished; one still rolling out, or finished too lately, has no after", async () => {
+    const { t, siteId, reader } = await setup();
+    await t.run(async (ctx) => {
+      for (let day = 0; day < 90; day += 1) {
+        const date = new Date(Date.parse(`${OLDEST}T00:00:00Z`) + day * 86_400_000).toISOString().slice(0, 10);
+        // Ten clicks a day before 1 August, twenty after.
+        const clicks = date < "2026-08-01" ? 10 : 20;
+        await ctx.db.insert("searchConsoleDays", { companyWebsiteId: siteId, searchType: "web", day: date, clicks, impressions: 100, ctr: clicks / 100, position: date < "2026-08-01" ? 12 : 9, fetchedAt: 1 });
+      }
+      const update = (titleEn: string, startedOn: string, finishedOn?: string) => ctx.db.insert("googleUpdates", {
+        titleEn, descriptionEn: `${titleEn}, as Google said it.`, startedOn, ...(finishedOn ? { finishedOn } : {}), url: "https://status.search.google.com/", createdAt: 1, updatedAt: 1,
+      });
+      await update("July 2026 core update", "2026-07-20", "2026-07-31");
+      await update("September 2026 spam update", "2026-09-20", "2026-09-22");
+      await update("Rolling update", "2026-09-24");
+      await update("Before the days held", "2026-05-01", "2026-05-10");
+    });
+    const answer = await reader.query(api.searchConsoleChanges.searchConsoleUpdates, { siteId, searchType: "web", language: "en" });
+    expect(answer.from).toBe(OLDEST);
+    expect(answer.updates.map((update) => [update.title, update.state, update.before?.clicks ?? null, update.after?.clicks ?? null])).toEqual([
+      ["July 2026 core update", "done", 140, 280],
+      ["September 2026 spam update", "waiting", 280, null],
+      ["Rolling update", "rolling", 280, null],
+    ]);
+    expect(answer.updates[0].before?.position).toBe(12);
+    expect(answer.updates[0].after?.position).toBe(9);
+  });
+});
+
+describe("Click rate by position and brand words", () => {
+  test("the website's own rate at each whole position, from a ready-made period; other dates are the page's to work out", async () => {
+    const { t, siteId, reader } = await setup();
+    await period(t, siteId, "30", [["a", 18, 100, 1.2], ["b", 2, 100, 0.9], ["c", 1, 50, 7.4], ["far", 0, 500, 44]]);
+    const curve = await reader.query(api.searchConsoleChanges.searchConsoleCurve, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST });
+    expect(curve).toEqual({
+      live: false,
+      preparing: false,
+      points: [
+        { position: 1, keywords: 2, impressions: 200, clicks: 20, ctr: 0.1 },
+        { position: 7, keywords: 1, impressions: 50, clicks: 1, ctr: 0.02 },
+      ],
+    });
+    expect(await reader.query(api.searchConsoleChanges.searchConsoleCurve, { siteId, searchType: "web", from: "2026-09-01", to: "2026-09-10" })).toMatchObject({ live: true, points: [] });
+  });
+
+  test("the brand words come from the website's Profile; only the platform's team is offered the way to change them", async () => {
+    const user = await setup();
+    await user.t.run(async (ctx) => await ctx.db.insert("holdProfiles", {
+      companyWebsiteId: user.siteId, companyId: user.companyId, websiteId: user.websiteId,
+      brandNames: [{ name: "Acme", isPrimary: true }, { name: "Akme", isPrimary: false, kind: "MISSPELLING" }], hasBrandNames: true, updatedAt: 1,
+    }));
+    expect(await user.reader.query(api.searchConsoleChanges.searchConsoleBrandWords, { siteId: user.siteId })).toEqual({ names: ["Acme", "Akme"], profileHref: null });
+    const team = await setup("SUPER_ADMIN");
+    expect((await team.reader.query(api.searchConsoleChanges.searchConsoleBrandWords, { siteId: team.siteId })).profileHref)
+      .toBe(`/admin/companies/${team.companyId}/websites/site/${team.siteId}/profile`);
+  });
+});
+
+describe("Rich results", () => {
+  test("the pages Google showed in each kind of rich result, asked one kind at a time", async () => {
+    const { siteId, reader } = await setup();
+    const asks: Array<{ dimensions: string[]; dimensionFilterGroups: Array<{ filters: Array<{ dimension: string; expression: string }> }> }> = [];
+    vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const ask = JSON.parse(String(init?.body)) as (typeof asks)[number];
+      asks.push(ask);
+      const kind = ask.dimensionFilterGroups[0].filters[0].expression;
+      return Response.json({ rows: Array.from({ length: kind === "REVIEW_SNIPPET" ? 3 : 1 }, (_, index) => ({ keys: [`https://acme-shop.test/${index}/`], clicks: 1, impressions: 1, ctr: 1, position: 1 })) });
+    }));
+    const answer = await reader.action(api.searchConsoleLists.searchConsoleAppearancePages, {
+      siteId, searchType: "web", from: "2026-08-28", to: NEWEST, kinds: ["REVIEW_SNIPPET", "VIDEO"],
+    });
+    expect(answer).toEqual({ ok: true, pages: [{ kind: "REVIEW_SNIPPET", pages: 3 }, { kind: "VIDEO", pages: 1 }] });
+    expect(asks.map((ask) => [ask.dimensions.join("+"), ask.dimensionFilterGroups[0].filters[0].dimension])).toEqual([["page", "searchAppearance"], ["page", "searchAppearance"]]);
+  });
+});

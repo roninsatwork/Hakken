@@ -157,7 +157,7 @@ function ConnectionDetails({ status }: { status: SearchConsoleStatus }) {
       key: "history",
       label: t("history"),
       value: connection.oldestDay
-        ? t(connection.historyDone ? "historyAll" : "historyPart", { day: formatDay(connection.oldestDay) })
+        ? t("historyKept", { day: formatDay(connection.oldestDay) })
         : t("notYet"),
     },
     { key: "collected", label: t("collected"), value: t("collectedDetail") },

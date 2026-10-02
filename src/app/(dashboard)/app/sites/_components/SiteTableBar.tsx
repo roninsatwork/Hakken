@@ -8,7 +8,7 @@ import type { PagedFooterSpec } from "@/src/ui/components/screens/DataTable";
 export type SiteTableNoun =
   | "keywords" | "searches" | "pages" | "websites" | "linkingWebsites" | "links" | "anchors" | "addresses"
   | "results" | "answers" | "queries" | "problems" | "sections" | "folders" | "checks" | "days" | "weeks" | "months" | "groups" | "adverts"
-  | "questionsAndSearches"
+  | "questionsAndSearches" | "updates" | "positions" | "kinds"
   // Search Console's countries and devices tables (docs/plans/active/search-console-plan.md §5).
   | "countries" | "devices"
   // The fan-out searches grouped into angles (docs/plans/active/fan-out-angles-plan.md, FA5).
