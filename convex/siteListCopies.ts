@@ -34,9 +34,10 @@ export type CopyKind = "keywords" | "pages" | "links" | "gap";
 
 /**
  * Every kind of copy these tables hold: the Sites lists', and Search Console's
- * own (`searchConsoleCopies.ts`, docs/plans/active/search-console-plan.md
- * §4.3) — one copy per list, dimension and range, built when a table asks for
- * it rather than by the Sites rebuilds and sweep, which leave it alone.
+ * old ones (`gsc`). Search Console's lists are now its ready-made periods
+ * (docs/plans/active/search-console-plan.md §14.3) and no `gsc` copy is built
+ * any more; the kind stays so copies already held are left alone by the
+ * Sites rebuilds and sweep until they are cleared.
  */
 export type AnyCopyKind = CopyKind | "gsc";
 
@@ -244,7 +245,7 @@ export const refreshListCopies = internalMutation({
     const page = await ctx.db.query("siteListCopies").paginate({ cursor: args.cursor, numItems: 50 });
     const stale = Date.now() - COPY_MAX_AGE_MS;
     for (const copy of page.page) {
-      // Search Console's copies are rebuilt when a table finds them behind, never here.
+      // Search Console's old copies are no longer built: never rebuilt here.
       if (copy.kind === "gsc") continue;
       if (copy.builtAt < stale) await requestListCopy(ctx, copy.kind as CopyKind, copy.key);
     }

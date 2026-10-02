@@ -26,8 +26,13 @@ import { addUp, daysIn, isDay, periodBefore, shiftDay } from "./searchConsoleDay
 /** Days a range may span: Google keeps sixteen months, and the screens offer two years. */
 const MOST_DAYS = 800;
 
-/** Rows a live pairing shows: the pages Google showed for a search, or the searches a page was shown for. */
-const MOST_PAIRED = 250;
+/**
+ * Rows a live pairing shows: the pages Google showed for a search, or the
+ * searches a page was shown for — every one Google names, up to its 25,000
+ * an answer (plan §13: "I want to click on a page … and see the keywords that
+ * went to that page", all of them).
+ */
+const MOST_PAIRED = 25_000;
 
 const figuresValidator = v.object({ clicks: v.number(), impressions: v.number(), ctr: v.number(), position: v.number() });
 const dayValidator = v.object({ day: v.string(), clicks: v.number(), impressions: v.number(), ctr: v.number(), position: v.number() });
@@ -144,52 +149,6 @@ export const searchConsolePerformance = tenantQuery({
 // ---------------------------------------------------------------------------
 
 const splitValidator = v.union(v.literal("query"), v.literal("page"));
-
-/**
- * One search's or one page's own days: its figures each day it was shown in
- * the dates chosen, their totals, and the same number of days before.
- */
-export const searchConsoleKeyDays = tenantQuery({
-  args: {
-    siteId: v.id("companyWebsites"),
-    searchType: searchTypeValidator,
-    dimension: splitValidator,
-    key: v.string(),
-    from: v.string(),
-    to: v.string(),
-  },
-  returns: v.object({
-    days: v.array(dayValidator),
-    totals: v.union(figuresValidator, v.null()),
-    previous: v.union(figuresValidator, v.null()),
-    /** Whether the days before are held: with none shown then, it is new in these dates. */
-    previousHeld: v.boolean(),
-  }),
-  handler: async (ctx, args) => {
-    checkedRange(args.from, args.to);
-    const site = await requireMySite(ctx, args.siteId);
-    const connection = await connectionOf(ctx, site.hold._id);
-    const before = periodBefore(args.from, args.to);
-    const rows = await ctx.db
-      .query("searchConsoleRows")
-      .withIndex("by_hold_type_dimension_key_day", (q) => q
-        .eq("companyWebsiteId", site.hold._id)
-        .eq("searchType", args.searchType)
-        .eq("dimension", args.dimension)
-        .eq("key", args.key)
-        .gte("day", before.from)
-        .lte("day", args.to))
-      .take(MOST_DAYS * 2 + 2);
-    const inRange = rows.filter((row) => row.day >= args.from);
-    const previousHeld = Boolean(connection?.oldestDay && connection.oldestDay <= before.from);
-    return {
-      days: inRange.map((row) => ({ day: row.day, clicks: row.clicks, impressions: row.impressions, ctr: row.ctr, position: row.position })),
-      totals: addUp(inRange),
-      previous: previousHeld ? addUp(rows.filter((row) => row.day < args.from)) : null,
-      previousHeld,
-    };
-  },
-});
 
 /** The connection a live ask goes through, when the site is the caller's company's own and connected. */
 export const pairingTarget = internalQuery({

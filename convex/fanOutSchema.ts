@@ -74,6 +74,8 @@ export const fanOutTables = {
     companyRowsRead: maybeLimit,
     googleSearchesRead: maybeLimit,
     competitorsPerSite: maybeLimit,
+    consoleTrackedKeywordsPerSite: maybeLimit,
+    consoleTrackedPagesPerSite: maybeLimit,
     updatedAt: v.number(),
   })
     .index("by_company_hold", ["companyId", "companyWebsiteId"])

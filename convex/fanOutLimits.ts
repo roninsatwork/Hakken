@@ -89,6 +89,15 @@ export const FAN_OUT_LIMITS = {
    * choices stop there.
    */
   competitorsPerSite: { choices: [10, 25, 50, SEO_COMPETITORS_PER_WEBSITE], fallback: SEO_COMPETITORS_PER_WEBSITE, scope: "site" },
+  /**
+   * Searches a company may track on its website's Search Console, and pages
+   * (docs/plans/active/search-console-plan.md §13.2). Anthony, 2026-10-02:
+   * "yes please set these as long as I set these in a drop down in the UI in
+   * the same place as the other limits". Free: Search Console charges
+   * nothing. At the limit, nothing more can be ticked.
+   */
+  consoleTrackedKeywordsPerSite: { choices: [50, 100, 200, 500, 1_000], fallback: 200, scope: "site" },
+  consoleTrackedPagesPerSite: { choices: [25, 50, 100, 200, 500], fallback: 100, scope: "site" },
 } as const satisfies Record<string, LimitSpec>;
 
 export type FanOutLimitKey = keyof typeof FAN_OUT_LIMITS;
@@ -171,6 +180,8 @@ const limitsArg = v.object({
   companyRowsRead: limitValue,
   googleSearchesRead: limitValue,
   competitorsPerSite: limitValue,
+  consoleTrackedKeywordsPerSite: limitValue,
+  consoleTrackedPagesPerSite: limitValue,
 });
 
 /** Each limit's own value where set, null where it uses the level above. */

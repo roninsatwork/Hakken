@@ -1,7 +1,8 @@
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { holdFirstCheck, holdSearch } from "./holdLists";
-import { addUp, shiftDay } from "./searchConsoleDays";
+import { readPeriod } from "./searchConsolePeriods";
+import { positionOf } from "./utils/searchConsolePacks";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 
 /**
@@ -32,19 +33,31 @@ export type Lookups = {
   consoleTo: string | null;
   /** Days of Search Console averaged for a position. */
   consoleDays: number;
+  /** Google's average position for each search, from Search Console's ready-made list; empty when not connected. */
+  consolePositions: Map<string, number>;
 };
 
+/**
+ * Search Console's position for a search reads its ready-made list
+ * (search-console-plan.md §14.3, item 4), once for the website: the 7-day
+ * list for a 7-day setting, the 30-day list for 14 or 28 days — the
+ * ready-made periods are 7, 30 and 90 days and 12 months.
+ */
 export async function positionLookups(ctx: Reader, hold: Doc<"companyWebsites">, consoleDays: number): Promise<Lookups> {
   const connection = await ctx.db
     .query("searchConsoleConnections")
     .withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id))
     .first();
-  return {
-    hold,
-    place: hold.locationCode ?? DEFAULT_LOCATION_CODE,
-    consoleTo: connection?.status === "CONNECTED" && !connection.clearing && connection.newestDay ? connection.newestDay : null,
-    consoleDays,
-  };
+  const consoleTo = connection?.status === "CONNECTED" && !connection.clearing && connection.newestDay ? connection.newestDay : null;
+  const consolePositions = new Map<string, number>();
+  if (consoleTo) {
+    const list = await readPeriod(ctx, hold._id, "web", "query", consoleDays <= 7 ? "7" : "30", "NOW");
+    for (const row of list?.rows ?? []) {
+      const position = positionOf(row);
+      if (position !== null) consolePositions.set(row.key, position);
+    }
+  }
+  return { hold, place: hold.locationCode ?? DEFAULT_LOCATION_CODE, consoleTo, consoleDays, consolePositions };
 }
 
 /**
@@ -81,16 +94,9 @@ export async function wordingPosition(ctx: Reader, lookups: Lookups, wording: Pi
     return { value: ranked.position, from: "RANKED", day: ranked.day, query: wording.query };
   }
 
-  if (lookups.consoleTo) {
-    const to = lookups.consoleTo;
-    const rows = await ctx.db
-      .query("searchConsoleRows")
-      .withIndex("by_hold_type_dimension_key_day", (q) =>
-        q.eq("companyWebsiteId", lookups.hold._id).eq("searchType", "web").eq("dimension", "query").eq("key", wording.query)
-          .gte("day", shiftDay(to, 1 - lookups.consoleDays)).lte("day", to))
-      .take(lookups.consoleDays + 1);
-    const figures = addUp(rows);
-    if (figures) return { value: Math.round(figures.position * 10) / 10, from: "SEARCH_CONSOLE", day: to, query: wording.query };
+  const consolePosition = lookups.consoleTo ? lookups.consolePositions.get(wording.query) : undefined;
+  if (lookups.consoleTo && consolePosition !== undefined) {
+    return { value: Math.round(consolePosition * 10) / 10, from: "SEARCH_CONSOLE", day: lookups.consoleTo, query: wording.query };
   }
   return null;
 }

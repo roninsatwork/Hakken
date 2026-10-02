@@ -5847,6 +5847,11 @@
           "intro": "After each run, AI checks which of the website’s pages answers each topic. A topic with no page is a missing topic, and can be suggested as a new page on the website’s To do list.",
           "footer": "Changes apply from the next run."
         },
+        "searchConsole": {
+          "title": "Search Console",
+          "intro": "What a company can track on its own websites' Search Console: the keywords and the pages it ticks to keep an eye on. Google charges nothing for Search Console, so these only keep the lists a size people can work with.",
+          "footer": "Changes apply straight away. At the limit, nothing more can be ticked."
+        },
         "company": {
           "title": "Whole company",
           "intro": "These two cover all of a company’s websites together, so a website can’t have its own.",
@@ -5883,6 +5888,16 @@
           "label": "Backlinks kept per website",
           "description": "Links to the website from other websites, strongest first. The number applies to each backlink list: links, linking sites, broken links, anchor text and servers.",
           "cost": "Up to about $0.06 for every 1,000, per list."
+        },
+        "consoleTrackedKeywordsPerSite": {
+          "label": "Search Console keywords tracked per website",
+          "description": "How many of a website's Search Console keywords its company can tick to track. When it's full, no more can be ticked until one is unticked.",
+          "cost": "No cost."
+        },
+        "consoleTrackedPagesPerSite": {
+          "label": "Search Console pages tracked per website",
+          "description": "How many of a website's Search Console pages its company can tick to track. When it's full, no more can be ticked until one is unticked.",
+          "cost": "No cost."
         },
         "competitorsPerSite": {
           "label": "Competitors collected per website",

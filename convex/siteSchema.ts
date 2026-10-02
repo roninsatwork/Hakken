@@ -768,6 +768,8 @@ export const siteTables = {
     companyRowsRead: v.optional(v.number()),
     googleSearchesRead: v.optional(v.number()),
     competitorsPerSite: v.optional(v.number()),
+    consoleTrackedKeywordsPerSite: v.optional(v.number()),
+    consoleTrackedPagesPerSite: v.optional(v.number()),
     // Only the platform sets these: each is about something every company
     // shares (`sharedLimits.ts`).
     fanOutPerAnswer: v.optional(v.number()),

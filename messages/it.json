@@ -5847,6 +5847,11 @@
           "intro": "Dopo ogni raccolta, l’IA controlla quale pagina del sito risponde a ogni argomento. Un argomento senza pagina è un argomento mancante, e può essere suggerito come nuova pagina nella lista Da fare del sito.",
           "footer": "Le modifiche valgono dalla prossima raccolta."
         },
+        "searchConsole": {
+          "title": "Search Console",
+          "intro": "Cosa un'azienda può seguire nella Search Console dei propri siti: le parole chiave e le pagine che spunta per tenerle d'occhio. Google non fa pagare Search Console, quindi questi limiti servono solo a mantenere gli elenchi di una dimensione gestibile.",
+          "footer": "Le modifiche valgono subito. Al limite, non si può spuntare altro."
+        },
         "company": {
           "title": "Tutta l’azienda",
           "intro": "Questi due valgono per tutti i siti di un’azienda insieme, quindi un sito non può averne di propri.",
@@ -5883,6 +5888,16 @@
           "label": "Backlink conservati per sito",
           "description": "Link al sito da altri siti, prima i più forti. Il numero vale per ogni elenco di backlink: link, siti che linkano, link interrotti, testi di ancoraggio e server.",
           "cost": "Fino a circa $0,06 ogni 1.000, per elenco."
+        },
+        "consoleTrackedKeywordsPerSite": {
+          "label": "Parole chiave di Search Console seguite per sito",
+          "description": "Quante parole chiave della Search Console di un sito la sua azienda può spuntare per seguirle. Quando è pieno, non se ne possono spuntare altre finché non se ne toglie una.",
+          "cost": "Nessun costo."
+        },
+        "consoleTrackedPagesPerSite": {
+          "label": "Pagine di Search Console seguite per sito",
+          "description": "Quante pagine della Search Console di un sito la sua azienda può spuntare per seguirle. Quando è pieno, non se ne possono spuntare altre finché non se ne toglie una.",
+          "cost": "Nessun costo."
         },
         "competitorsPerSite": {
           "label": "Concorrenti raccolti per sito",

@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
 import { useParams, useSearchParams } from "next/navigation";
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useSiteRange } from "../../sites/_components/SiteDateRange";
@@ -89,30 +88,4 @@ export function useSearchConsoleRange(newestDay: string | null | undefined): { f
   }
   const days = Number(range.preset);
   return { from: shiftDay(newestDay, -(days - 1)), to: newestDay, days, step: range.step, chosen: false };
-}
-
-type CopyAsk = {
-  siteId: Id<"companyWebsites">;
-  searchType: ResultKind;
-  dimension: "query" | "page" | "country" | "device";
-  from: string;
-  to: string;
-};
-
-/**
- * A table's list worked out for its dates: asked for when the table finds it
- * missing or from before Google's newest day, once per list. Answers whether
- * it is being worked out, so the table can say so.
- */
-export function useSearchConsoleCopy(ask: CopyAsk | null): { building: boolean; behind: boolean } {
-  const status = useQuery(api.searchConsoleCopies.searchConsoleCopyStatus, ask ?? "skip");
-  const ensure = useMutation(api.searchConsoleCopies.ensureSearchConsoleCopy);
-  const needed = Boolean(status?.held && !status.current);
-  const askKey = ask ? JSON.stringify(ask) : null;
-  useEffect(() => {
-    if (!needed || !askKey) return;
-    // A failure leaves the table as it is; the next visit asks again.
-    void ensure(JSON.parse(askKey) as CopyAsk).catch(() => undefined);
-  }, [needed, askKey, ensure]);
-  return { building: Boolean(status?.held && !status.exists), behind: Boolean(status?.exists && !status.current) };
 }

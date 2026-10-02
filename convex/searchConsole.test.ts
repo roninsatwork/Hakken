@@ -9,14 +9,16 @@ import { finishScheduled } from "@/src/test/finishScheduled";
 /**
  * An owned website's Search Console, end to end with Google faked at the
  * network (docs/plans/active/search-console-plan.md §3–§4): connecting from
- * the site's page, the property chosen, sign-ins that cannot connect,
- * sixteen months of every search and page by day, the last four days fetched
- * again, access taken back, disconnecting, clearing what was collected, and a
- * website the company no longer holds. Nothing here reaches Google.
+ * the site's page, the property chosen, sign-ins that cannot connect, the
+ * Search Console Collector's runs (a new website's last 90 days, then the
+ * newest days and the last four again), the days kept packed (plan §14.3),
+ * rolled up into weeks and months, the ready-made periods, access taken back,
+ * disconnecting, clearing what was collected, and a website the company no
+ * longer holds. Nothing here reaches Google.
  *
  * Nothing starts collecting on its own (plan §12): connecting collects
- * nothing, and each test that needs figures starts a collection itself, as
- * the Search Console agent will.
+ * nothing; each test that needs figures runs the Collector, as its schedule
+ * does.
  */
 
 const KEY = Buffer.from(new Uint8Array(32).fill(7)).toString("base64");
@@ -31,7 +33,12 @@ type Harness = ReturnType<typeof harness>;
 
 type Row = { key: string; clicks: number; impressions: number };
 /** What the fake Google holds: per property, kind of result and day, the totals and each split's rows. */
-type Figures = Record<string, Record<string, Record<string, { total: Row; query?: Row[]; page?: Row[]; country?: Row[]; device?: Row[]; searchAppearance?: Row[] }>>>;
+type Pair = Row & { page: string };
+/**
+ * What the fake Google holds: per property, kind of result and day, the totals and each split's rows. The
+ * pairs a search with its page; without them, each search goes to the home page.
+ */
+type Figures = Record<string, Record<string, Record<string, { total: Row; query?: Row[]; pair?: Pair[]; page?: Row[]; country?: Row[]; device?: Row[]; searchAppearance?: Row[] }>>>;
 
 type Google = {
   account: string;
@@ -83,7 +90,12 @@ function fakeGoogle(overrides: Partial<Google> = {}): Google {
             .map(([day, entry]) => ({ keys: [day], ...figures(entry.total) })),
         });
       }
-      const split = days[ask.startDate]?.[ask.dimensions[0] as "query"] ?? [];
+      const day = days[ask.startDate];
+      if (ask.dimensions.length === 2) {
+        const pairs = day?.pair ?? (day?.query ?? []).map((row) => ({ ...row, page: "https://acme-shop.test/" }));
+        return Response.json({ rows: pairs.map((pair) => ({ keys: [pair.key, pair.page], ...figures(pair) })) });
+      }
+      const split = day?.[ask.dimensions[0] as "query"] ?? [];
       return Response.json({ rows: split.map((row) => ({ keys: [row.key], ...figures(row) })) });
     }
     throw new Error(`Unexpected fetch in test: ${url}`);
@@ -133,24 +145,41 @@ const connectionOf = (t: Harness, siteId: Id<"companyWebsites">) =>
 
 const tokensOf = (t: Harness) => t.run(async (ctx) => await ctx.db.query("searchConsoleTokens").collect());
 
-const rowsOf = (t: Harness, siteId: Id<"companyWebsites">, dimension: string, day: string) =>
-  t.run(async (ctx) => (await ctx.db
-    .query("searchConsoleRows")
-    .withIndex("by_hold_type_dimension_day", (q) => q.eq("companyWebsiteId", siteId).eq("searchType", "web").eq("dimension", dimension as "query").eq("day", day))
-    .collect())
-    .map((entry) => [entry.key, entry.clicks])
-    .sort());
+/** A list kept for one day, as [key, clicks] — a search's own clicks added up from its pairs. */
+const rowsOf = (t: Harness, siteId: Id<"companyWebsites">, list: "query" | "page" | "country" | "device" | "appearance", day: string, grain: "DAY" | "WEEK" | "MONTH" = "DAY") =>
+  t.run(async (ctx) => {
+    const records = await ctx.db
+      .query("searchConsoleLists")
+      .withIndex("by_hold_type_list_grain_start", (q) => q
+        .eq("companyWebsiteId", siteId).eq("searchType", "web").eq("list", list === "query" ? "pair" : list).eq("grain", grain).eq("start", day))
+      .collect();
+    const sums = new Map<string, number>();
+    for (const record of records) record.keys.forEach((key, index) => sums.set(key, (sums.get(key) ?? 0) + record.clicks[index]));
+    return [...sums].sort();
+  });
 
-/** One collection for a site, run to its end — what the Search Console agent will start. */
-async function collect(t: Harness, siteId: Id<"companyWebsites">) {
-  const connection = await connectionOf(t, siteId);
-  await t.mutation(internal.searchConsoleSync.collectRecent, { connectionId: connection!._id });
+/** A Collector agent and a run of it, as its schedule starts one. */
+async function collector(t: Harness) {
+  const agentId = await t.run(async (ctx) => await ctx.db.insert("agents", {
+    name: "Search Console: Collector Agent", modelId: "model-test", thinkingMode: false, isActive: true,
+    systemKey: "SEARCH_CONSOLE_COLLECTOR", createdAt: Date.now(), updatedAt: Date.now(),
+  }));
+  const runId = await t.run(async (ctx) => await ctx.db.insert("agentRuns", {
+    agentId, triggerType: "SCHEDULE", objective: "Collect", status: "QUEUED", startedAt: Date.now(), updatedAt: Date.now(),
+  }));
+  return { agentId, runId };
+}
+
+/** One Collector run, to its end: every connected website's own run, collected and settled. */
+async function collect(t: Harness) {
+  const { runId } = await collector(t);
+  await t.action(internal.searchConsoleAgentRun.runSearchConsoleCollectorNow, { runId });
   await finishScheduled(t);
 }
 
 const held = (t: Harness) => t.run(async (ctx) => ({
   days: (await ctx.db.query("searchConsoleDays").collect()).length,
-  rows: (await ctx.db.query("searchConsoleRows").collect()).length,
+  lists: (await ctx.db.query("searchConsoleLists").collect()).length,
 }));
 
 const revokes = (google: Google) => google.calls.filter((call) => call.url === "https://oauth2.googleapis.com/revoke");
@@ -352,76 +381,157 @@ describe("collecting", () => {
     await finishScheduled(t);
 
     expect(await connectionOf(t, siteId)).toMatchObject({ status: "CONNECTED", property });
-    expect(await held(t)).toEqual({ days: 0, rows: 0 });
+    expect(await held(t)).toEqual({ days: 0, lists: 0 });
     expect(await t.run(async (ctx) => await ctx.db.query("searchConsoleRuns").collect())).toEqual([]);
     expect(google.calls.some((call) => call.url.endsWith("/searchAnalytics/query"))).toBe(false);
   });
 
-  test("a collection brings sixteen months of every search and page by day, newest first", async () => {
+  test("a new website's first run brings its last 90 days, each day one record a list, and nothing older", async () => {
     const { t, siteId, admin } = await setup();
     fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
-    await collect(t, siteId);
+    await collect(t);
 
     const connection = await connectionOf(t, siteId);
-    expect(connection).toMatchObject({ newestDay: NEWEST, oldestDay: OLDEST });
-    expect(connection?.backfilledAt).toBeGreaterThan(0);
+    // Ninety days, Google's newest the last of them.
+    expect(connection).toMatchObject({ newestDay: NEWEST, oldestDay: "2026-06-29" });
     expect(connection?.problem).toBeUndefined();
 
     const days = await t.run(async (ctx) => await ctx.db.query("searchConsoleDays").collect());
     expect(days.map((entry) => `${entry.searchType} ${entry.day} ${entry.clicks}`).sort()).toEqual([
       "discover 2026-09-26 1",
-      "web 2025-06-01 2",
       "web 2026-09-25 4",
       "web 2026-09-26 12",
     ]);
-    // The searches add up to less than the day's total: the rest Google hides.
+    // A search's clicks are added up from its pairs; the rest of the day's total Google hides.
     expect(await rowsOf(t, siteId, "query", NEWEST)).toEqual([["emergency plumber", 3], ["plumber leeds", 5]]);
+    expect(await rowsOf(t, siteId, "page", NEWEST)).toEqual([["https://acme-shop.test/", 8]]);
     expect(await rowsOf(t, siteId, "country", NEWEST)).toEqual([["gbr", 11], ["irl", 1]]);
     expect(await rowsOf(t, siteId, "device", NEWEST)).toEqual([["DESKTOP", 3], ["MOBILE", 9]]);
     expect(await rowsOf(t, siteId, "appearance", NEWEST)).toEqual([["REVIEW_SNIPPET", 2]]);
-    expect(await rowsOf(t, siteId, "query", "2025-06-01")).toEqual([["boiler repair", 2]]);
+    expect(await rowsOf(t, siteId, "query", "2025-06-01")).toEqual([]);
+
+    // One record a day for each list: never one per row.
+    const lists = await t.run(async (ctx) => await ctx.db.query("searchConsoleLists").collect());
+    expect(lists.filter((record) => record.start === NEWEST && record.searchType === "web").map((record) => record.list).sort())
+      .toEqual(["appearance", "country", "device", "page", "pair"]);
+    expect(lists.every((record) => record.grain === "DAY" && record.part === 0)).toBe(true);
+    const pair = lists.find((record) => record.list === "pair" && record.start === NEWEST)!;
+    expect(pair.pages).toEqual(["https://acme-shop.test/", "https://acme-shop.test/"]);
+    // Position kept as a sum weighted by impressions: 3.5 for each of 50 impressions.
+    expect(pair.positionSums).toEqual([175, 105]);
 
     const runs = await t.run(async (ctx) => await ctx.db.query("searchConsoleRuns").collect());
-    // The newest days first, then the history back a week at a time.
-    expect(runs[0]).toMatchObject({ kind: "DAILY", fromDay: "2026-09-23", toDay: NEWEST });
-    expect(runs[1]).toMatchObject({ kind: "HISTORY", fromDay: "2026-09-16", toDay: "2026-09-22" });
-    expect(runs.at(-1)).toMatchObject({ kind: "HISTORY", fromDay: OLDEST });
-    expect(runs.every((run) => run.finishedAt !== undefined && run.error === undefined)).toBe(true);
+    expect(runs[0]).toMatchObject({ kind: "DAILY", fromDay: "2026-09-20", toDay: NEWEST });
+    expect(runs.at(-1)).toMatchObject({ fromDay: "2026-06-29" });
+    expect(runs.every((run) => run.kind === "DAILY" && run.finishedAt !== undefined && run.error === undefined)).toBe(true);
   });
 
-  test("the next collection brings the new day and the last four again, keeping only what Google still has", async () => {
+  test("when each search and page was first and last shown is kept", async () => {
+    const { t, siteId, admin } = await setup();
+    fakeGoogle({ figures: figures() });
+    await signIn(t, admin, siteId);
+    await collect(t);
+    const seen = await t.run(async (ctx) => await ctx.db.query("searchConsoleSeen").withIndex("by_hold_kind_key", (q) => q.eq("companyWebsiteId", siteId)).collect());
+    expect(seen.map((entry) => `${entry.kind} ${entry.key} ${entry.firstDay} ${entry.lastDay}`).sort()).toEqual([
+      "page https://acme-shop.test/ 2026-09-26 2026-09-26",
+      "query emergency plumber 2026-09-26 2026-09-26",
+      "query plumber leeds 2026-09-25 2026-09-26",
+    ]);
+  });
+
+  test("the ready-made periods are built after each run: searches from the pairs, with their pages", async () => {
+    const { t, siteId, admin } = await setup();
+    fakeGoogle({ figures: figures() });
+    await signIn(t, admin, siteId);
+    await collect(t);
+    const thirty = await t.run(async (ctx) => await ctx.db
+      .query("searchConsolePeriods")
+      .withIndex("by_hold_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("searchType", "web").eq("list", "query").eq("period", "30").eq("which", "NOW"))
+      .collect());
+    expect(thirty).toHaveLength(1);
+    expect(thirty[0]).toMatchObject({ from: "2026-08-28", to: NEWEST, keys: ["plumber leeds", "emergency plumber"], clicks: [9, 3], counts: [1, 1], tops: ["https://acme-shop.test/", "https://acme-shop.test/"] });
+    // The thirty days before are held, and had nothing: kept as held and empty, so the change reads as nothing gained.
+    const before = await t.run(async (ctx) => await ctx.db
+      .query("searchConsolePeriods")
+      .withIndex("by_hold_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("searchType", "web").eq("list", "query").eq("period", "30").eq("which", "BEFORE"))
+      .collect());
+    expect(before.map((part) => part.keys)).toEqual([[]]);
+    // Twelve months of a website held for 90 days counts the 90 days, and says so.
+    const year = await t.run(async (ctx) => await ctx.db
+      .query("searchConsolePeriods")
+      .withIndex("by_hold_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("searchType", "web").eq("list", "page").eq("period", "365").eq("which", "NOW"))
+      .first());
+    expect(year).toMatchObject({ from: "2026-06-29", to: NEWEST, keys: ["https://acme-shop.test/"], counts: [2], tops: ["plumber leeds"] });
+    // Discover has no searches: no pairs or searches kept for it.
+    const discover = await t.run(async (ctx) => await ctx.db
+      .query("searchConsolePeriods")
+      .withIndex("by_hold_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("searchType", "discover").eq("list", "query"))
+      .collect());
+    expect(discover).toEqual([]);
+  });
+
+  test("the next run brings the new day and the last four again, keeping only what Google still has", async () => {
     const { t, siteId, admin } = await setup();
     const google = fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
-    await collect(t, siteId);
+    await collect(t);
 
     // A day later: yesterday's figures settled, one search gone, and a new day.
     vi.setSystemTime(NOW + 24 * 60 * 60 * 1000);
     const web = google.figures[property].web;
     web[NEWEST] = { total: row("", 13, 420), query: [row("plumber leeds", 7)] };
     web["2026-09-27"] = { total: row("", 6, 200), query: [row("drain unblocking", 6)] };
-    await collect(t, siteId);
+    await collect(t);
 
     expect(await rowsOf(t, siteId, "query", NEWEST)).toEqual([["plumber leeds", 7]]);
     expect(await rowsOf(t, siteId, "page", NEWEST)).toEqual([]);
     expect(await rowsOf(t, siteId, "query", "2026-09-27")).toEqual([["drain unblocking", 6]]);
-    const connection = await connectionOf(t, siteId);
-    expect(connection).toMatchObject({ newestDay: "2026-09-27", oldestDay: OLDEST });
+    expect(await connectionOf(t, siteId)).toMatchObject({ newestDay: "2026-09-27", oldestDay: "2026-06-29" });
     const runs = await t.run(async (ctx) => await ctx.db.query("searchConsoleRuns").collect());
     expect(runs.at(-1)).toMatchObject({ kind: "DAILY", fromDay: "2026-09-23", toDay: "2026-09-27" });
+  });
+
+  test("days past 90 roll into their week, and weeks past 12 months into their month, figures and positions intact", async () => {
+    const { t, siteId } = await setup();
+    const put = (grain: "DAY" | "WEEK", start: string, keys: string[], clicks: number[], impressions: number[], positionSums: number[]) =>
+      t.run(async (ctx) => await ctx.db.insert("searchConsoleLists", {
+        companyWebsiteId: siteId, searchType: "web", list: "page", grain, start, part: 0, keys, clicks, impressions, positionSums, fetchedAt: 1,
+      }));
+    // 2026-06-01 is a Monday; with 2026-09-26 the newest, days before 2026-06-29 are past 90.
+    await put("DAY", "2026-06-01", ["/a", "/b"], [2, 1], [10, 10], [20, 50]);
+    await put("DAY", "2026-06-02", ["/a"], [3], [30], [30]);
+    await put("DAY", "2026-06-29", ["/a"], [9], [90], [90]);
+    // A week starting before 2025-09-26 is past 12 months.
+    await put("WEEK", "2025-09-15", ["/a"], [4], [40], [160]);
+    await put("WEEK", "2025-09-22", ["/a"], [5], [50], [100]);
+
+    const due = await t.query(internal.searchConsoleSync.rollUpsDue, { companyWebsiteId: siteId, newest: NEWEST });
+    expect(due.days.map((slot) => slot.start)).toEqual(["2026-06-01", "2026-06-02"]);
+    expect(due.weeks.map((slot) => slot.start)).toEqual(["2025-09-15", "2025-09-22"]);
+    for (const slot of due.days) await t.mutation(internal.searchConsoleSync.rollUp, { companyWebsiteId: siteId, ...slot, from: "DAY" });
+    for (const slot of due.weeks) await t.mutation(internal.searchConsoleSync.rollUp, { companyWebsiteId: siteId, ...slot, from: "WEEK" });
+
+    const kept = await t.run(async (ctx) => await ctx.db.query("searchConsoleLists").collect());
+    expect(kept.map((record) => `${record.grain} ${record.start}`).sort()).toEqual(["DAY 2026-06-29", "MONTH 2025-09-01", "WEEK 2026-06-01"]);
+    const week = kept.find((record) => record.grain === "WEEK")!;
+    expect(week.keys).toEqual(["/a", "/b"]);
+    expect(week.clicks).toEqual([5, 1]);
+    expect(week.positionSums).toEqual([50, 50]);
+    const month = kept.find((record) => record.grain === "MONTH")!;
+    expect(month).toMatchObject({ keys: ["/a"], clicks: [9], impressions: [90], positionSums: [260] });
   });
 
   test("Google taking the access back asks for connecting again, and the figures stay", async () => {
     const { t, siteId, admin } = await setup();
     const google = fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
-    await collect(t, siteId);
+    await collect(t);
 
     // Two hours on the access token has expired, and Google refuses to renew it.
     vi.setSystemTime(NOW + 2 * 60 * 60 * 1000);
     google.refreshStatus = 400;
-    await collect(t, siteId);
+    await collect(t);
 
     expect(await connectionOf(t, siteId)).toMatchObject({ status: "NEEDS_RECONNECT", problem: "REVOKED" });
     expect(await tokensOf(t)).toEqual([]);
@@ -434,12 +544,12 @@ describe("collecting", () => {
     const { t, siteId, admin } = await setup();
     const google = fakeGoogle({ figures: figures(), analyticsStatus: 403 });
     await signIn(t, admin, siteId);
-    await collect(t, siteId);
+    await collect(t);
     expect(await connectionOf(t, siteId)).toMatchObject({ status: "NEEDS_RECONNECT", problem: "NO_ACCESS" });
     expect(google.calls.some((call) => call.url.endsWith("/searchAnalytics/query"))).toBe(true);
   });
 
-  test("another property after a disconnect: the old figures go, and the next collection brings the new", async () => {
+  test("another property after a disconnect: the old figures go, and the next run brings the new", async () => {
     const { t, siteId, admin } = await setup();
     const google = fakeGoogle({
       figures: {
@@ -448,7 +558,7 @@ describe("collecting", () => {
       },
     });
     await signIn(t, admin, siteId);
-    await collect(t, siteId);
+    await collect(t);
     await admin.mutation(api.searchConsoleConnect.disconnectSearchConsole, { siteId });
     await finishScheduled(t);
 
@@ -461,44 +571,46 @@ describe("collecting", () => {
     await admin.mutation(api.searchConsoleConnect.chooseSearchConsoleProperty, { siteId, property: "https://www.acme-shop.test/" });
     await finishScheduled(t);
     // The old property's figures are gone, and nothing new came in by itself.
-    expect(await held(t)).toEqual({ days: 0, rows: 0 });
+    expect(await held(t)).toEqual({ days: 0, lists: 0 });
+    expect(await t.run(async (ctx) => await ctx.db.query("searchConsolePeriods").collect())).toEqual([]);
     expect((await connectionOf(t, siteId))?.clearing).toBeUndefined();
 
-    await collect(t, siteId);
+    await collect(t);
     expect(await rowsOf(t, siteId, "query", NEWEST)).toEqual([["acme shop", 3]]);
-    expect(await rowsOf(t, siteId, "query", "2025-06-01")).toEqual([]);
     expect(await connectionOf(t, siteId)).toMatchObject({ status: "CONNECTED", dataProperty: "https://www.acme-shop.test/", newestDay: NEWEST });
   });
 
-  test("clearing what was collected keeps the connection, and nothing comes back by itself", async () => {
+  test("clearing what was collected keeps the connection, its tracked lists and runs, and nothing comes back by itself", async () => {
     const { t, siteId, admin } = await setup();
     const google = fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
-    await collect(t, siteId);
-    expect((await held(t)).rows).toBeGreaterThan(0);
+    await collect(t);
+    await admin.mutation(api.searchConsoleTracking.trackSearchConsoleItem, { siteId, kind: "query", key: "plumber leeds", track: true });
+    expect((await held(t)).lists).toBeGreaterThan(0);
     const runs = (await t.run(async (ctx) => await ctx.db.query("searchConsoleRuns").collect())).length;
     const asked = google.calls.length;
 
     await t.mutation(internal.searchConsoleSync.clearCollected, { companyWebsiteId: siteId });
     await finishScheduled(t);
 
-    expect(await held(t)).toEqual({ days: 0, rows: 0 });
+    expect(await held(t)).toEqual({ days: 0, lists: 0 });
+    expect(await t.run(async (ctx) => (await ctx.db.query("searchConsolePeriods").collect()).length + (await ctx.db.query("searchConsoleSeen").collect()).length)).toBe(0);
     const connection = await connectionOf(t, siteId);
     expect(connection).toMatchObject({ status: "CONNECTED", property, dataProperty: property });
     expect(connection?.newestDay).toBeUndefined();
     expect(connection?.oldestDay).toBeUndefined();
-    expect(connection?.backfilledAt).toBeUndefined();
     expect(connection?.lastCollectedAt).toBeUndefined();
     expect(connection?.clearing).toBeUndefined();
-    // The sign-in stays and Google was not asked again; the run log stays.
+    // The sign-in stays and Google was not asked again; the run log and the tracked list stay.
     expect(await tokensOf(t)).toHaveLength(1);
     expect(google.calls.length).toBe(asked);
     expect(await t.run(async (ctx) => await ctx.db.query("searchConsoleRuns").collect())).toHaveLength(runs);
+    expect(await t.run(async (ctx) => await ctx.db.query("searchConsoleTracked").collect())).toHaveLength(1);
     const status = (await admin.query(api.searchConsoleConnect.searchConsoleStatus, { siteId }))!;
     expect(status.connection).toMatchObject({ status: "CONNECTED", newestDay: null, lastCollectedAt: null });
 
-    // A later collection needs no new sign-in.
-    await collect(t, siteId);
+    // The next run needs no new sign-in, and brings the 90 days again.
+    await collect(t);
     expect(await rowsOf(t, siteId, "query", NEWEST)).toEqual([["emergency plumber", 3], ["plumber leeds", 5]]);
   });
 });
@@ -506,17 +618,6 @@ describe("collecting", () => {
 describe("the Search Console Collector agent", () => {
   const SHOP = "sc-domain:acme-shop.test";
   const BLOG = "sc-domain:acme-blog.test";
-
-  async function collector(t: Harness) {
-    const agentId = await t.run(async (ctx) => await ctx.db.insert("agents", {
-      name: "Search Console: Collector Agent", modelId: "model-test", thinkingMode: false, isActive: true,
-      systemKey: "SEARCH_CONSOLE_COLLECTOR", createdAt: Date.now(), updatedAt: Date.now(),
-    }));
-    const runId = await t.run(async (ctx) => await ctx.db.insert("agentRuns", {
-      agentId, triggerType: "SCHEDULE", objective: "Collect", status: "QUEUED", startedAt: Date.now(), updatedAt: Date.now(),
-    }));
-    return { agentId, runId };
-  }
 
   const runsOf = (t: Harness, agentId: Id<"agents">) =>
     t.run(async (ctx) => await ctx.db.query("agentRuns").withIndex("by_agent_started", (q) => q.eq("agentId", agentId)).collect());
@@ -541,7 +642,7 @@ describe("the Search Console Collector agent", () => {
     return { t, siteId, blogId, google };
   }
 
-  test("each connected website gets a run of its own: the newest days and the last four again, never the history", async () => {
+  test("each connected website gets a run of its own: its last 90 days to start, never older, then settled", async () => {
     const { t, siteId, blogId } = await twoSites();
     const { agentId, runId } = await collector(t);
 
@@ -554,17 +655,18 @@ describe("the Search Console Collector agent", () => {
     expect(started.finalOutput).toContain("each of the 2 websites");
     const own = runs.filter((run) => run._id !== runId);
     expect(own.map((run) => run.title).sort()).toEqual(["Search Console: acme-blog.test", "Search Console: acme-shop.test"]);
-    expect(own.every((run) => run.status === "SUCCESS" && run.finalOutput?.includes("sixteen months before are not collected"))).toBe(true);
+    expect(own.every((run) => run.status === "SUCCESS" && run.finalOutput?.includes("nothing older is fetched"))).toBe(true);
     const lines = await t.run(async (ctx) => await ctx.db.query("agentLogs").collect());
     expect(own.every((run) => lines.some((line) => line.runId === run._id && line.responseContent.includes("rows from")))).toBe(true);
+    // Each website's run ends by adding up its periods, as a line of its own.
+    expect(own.every((run) => lines.some((line) => line.runId === run._id && line.interactionType === "Kept and added up"))).toBe(true);
 
     expect(await rowsOf(t, siteId, "query", NEWEST)).toEqual([["emergency plumber", 3], ["plumber leeds", 5]]);
     expect(await rowsOf(t, blogId, "query", NEWEST)).toEqual([["how to fix a tap", 2]]);
     expect(await rowsOf(t, siteId, "query", "2025-06-01")).toEqual([]);
     const collected = await t.run(async (ctx) => await ctx.db.query("searchConsoleRuns").collect());
     expect(collected.every((run) => run.kind === "DAILY")).toBe(true);
-    expect((await connectionOf(t, siteId))?.backfilledAt).toBeUndefined();
-    expect(await connectionOf(t, siteId)).toMatchObject({ newestDay: NEWEST, oldestDay: "2026-09-23" });
+    expect(await connectionOf(t, siteId)).toMatchObject({ newestDay: NEWEST, oldestDay: "2026-06-29" });
   });
 
   test("a run started while another is still going stops, so nothing is collected twice", async () => {
@@ -580,7 +682,7 @@ describe("the Search Console Collector agent", () => {
 
     expect((await runsOf(t, agentId)).find((run) => run._id === runId)?.finalOutput).toContain("still going");
     expect(await runsOf(t, agentId)).toHaveLength(2);
-    expect(await held(t)).toEqual({ days: 0, rows: 0 });
+    expect(await held(t)).toEqual({ days: 0, lists: 0 });
   });
 
   test("a website whose sign-in Google took back: its run fails saying what to do, the other still collects", async () => {
@@ -632,7 +734,7 @@ describe("disconnecting", () => {
     });
     await signIn(t, admin, siteId);
     await signIn(t, admin, second);
-    await collect(t, siteId);
+    await collect(t);
     expect(await tokensOf(t)).toHaveLength(2);
 
     await admin.mutation(api.searchConsoleConnect.disconnectSearchConsole, { siteId });
@@ -660,8 +762,8 @@ describe("disconnecting", () => {
       figures: { "sc-domain:acme-shop.test": { web: { [NEWEST]: { total: row("", 2, 20), query: [row("acme", 2)] } } } },
     });
     await signIn(t, admin, siteId);
-    await collect(t, siteId);
-    expect((await held(t)).rows).toBeGreaterThan(0);
+    await collect(t);
+    expect((await held(t)).lists).toBeGreaterThan(0);
 
     const superAdmin = await person(t, companyId, "SUPER_ADMIN");
     await superAdmin.mutation(api.websites.removeCompanyWebsite, { id: siteId });
@@ -671,10 +773,12 @@ describe("disconnecting", () => {
       connections: await ctx.db.query("searchConsoleConnections").collect(),
       tokens: await ctx.db.query("searchConsoleTokens").collect(),
       days: await ctx.db.query("searchConsoleDays").collect(),
-      rows: await ctx.db.query("searchConsoleRows").collect(),
+      lists: await ctx.db.query("searchConsoleLists").collect(),
+      periods: await ctx.db.query("searchConsolePeriods").collect(),
+      seen: await ctx.db.query("searchConsoleSeen").collect(),
       runs: await ctx.db.query("searchConsoleRuns").collect(),
     }));
-    expect(left).toEqual({ connections: [], tokens: [], days: [], rows: [], runs: [] });
+    expect(left).toEqual({ connections: [], tokens: [], days: [], lists: [], periods: [], seen: [], runs: [] });
     expect(revokes(google)).toHaveLength(1);
   });
 });

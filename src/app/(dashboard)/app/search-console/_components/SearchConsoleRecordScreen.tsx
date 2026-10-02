@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useQuery } from "convex/react";
 import { ExternalLink, FileText, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
@@ -18,7 +17,7 @@ import { SearchConsoleChart } from "./SearchConsoleChart";
 import { SearchConsoleFigures } from "./SearchConsoleFigures";
 import { NothingOfKind, ResultKindSwitch, SearchConsoleGate, hasFigures } from "./SearchConsoleNotices";
 import { formatPosition, formatRate } from "./searchConsoleFormat";
-import { pageLabel, usePairing, useRecordBack, useRecordHref } from "./searchConsoleRecords";
+import { pageLabel, useLiveAsk, usePairing, useRecordBack, useRecordHref } from "./searchConsoleRecords";
 import { useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
 
 type Pair = { key: string; clicks: number; impressions: number; ctr: number; position: number };
@@ -53,7 +52,8 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
   const recordHref = useRecordHref(siteId);
   const ready = Boolean(status && hasFigures(status) && key);
   const ask = { siteId, searchType: kind, dimension, key, from: range.from, to: range.to };
-  const days = useQuery(api.searchConsoleReads.searchConsoleKeyDays, ready ? ask : "skip");
+  const series = useLiveAsk(api.searchConsoleLists.searchConsoleKeySeries, ready ? ask : null);
+  const days = series.answer === undefined ? undefined : series.answer.ok ? series.answer : { days: [], totals: null, previous: null, previousHeld: false };
   const { answer, retry } = usePairing(ready ? ask : null);
   const pairs = answer === undefined ? undefined : answer.ok ? answer.rows : [];
   const { rows: sorted, tableSort } = useSiteSortedList(pairs, PAIR_SORTS, { opening: "clicks", name: keyOf, table: "pairs" });

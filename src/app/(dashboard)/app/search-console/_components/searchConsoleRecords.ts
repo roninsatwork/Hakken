@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useAction } from "convex/react";
-import type { FunctionReturnType } from "convex/server";
+import type { FunctionArgs, FunctionReference, FunctionReturnType } from "convex/server";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -54,6 +54,40 @@ export function pageLabel(url: string, host: string): string {
 }
 
 type Pairing = FunctionReturnType<typeof api.searchConsoleReads.searchConsolePairing>;
+
+type LiveAction = FunctionReference<"action", "public", Record<string, unknown>, { ok: true } | { ok: false; problem: "NOT_CONNECTED" | "GOOGLE_REFUSED" | "GOOGLE_BUSY" }>;
+
+/**
+ * Anything asked of Google while a screen is open (search-console-plan.md
+ * §14.3, items 4 and 5) — other dates' lists, one search's or page's days —
+ * asked again when what is asked changes. Google out of reach reads as busy.
+ */
+export function useLiveAsk<Action extends LiveAction>(
+  action: Action,
+  ask: FunctionArgs<Action> | null,
+): { answer: FunctionReturnType<Action> | undefined; retry: () => void } {
+  const run = useAction(action);
+  const askKey = ask ? JSON.stringify(ask) : null;
+  const [attempt, setAttempt] = useState(0);
+  const [answered, setAnswered] = useState<{ key: string; answer: FunctionReturnType<Action> } | null>(null);
+  useEffect(() => {
+    if (!askKey) return;
+    let live = true;
+    // The ask is the action's own arguments, carried as text so a new object each render asks nothing new.
+    void (run as unknown as (args: FunctionArgs<Action>) => Promise<FunctionReturnType<Action>>)(JSON.parse(askKey) as FunctionArgs<Action>)
+      .catch(() => ({ ok: false, problem: "GOOGLE_BUSY" }) as FunctionReturnType<Action>)
+      .then((answer) => {
+        if (live) setAnswered({ key: `${askKey}#${attempt}`, answer: answer as FunctionReturnType<Action> });
+      });
+    return () => {
+      live = false;
+    };
+  }, [askKey, attempt, run]);
+  return {
+    answer: answered?.key === `${askKey}#${attempt}` ? answered.answer : undefined,
+    retry: () => setAttempt((count) => count + 1),
+  };
+}
 
 /**
  * Which pages Google showed for a search, or which searches it showed a page

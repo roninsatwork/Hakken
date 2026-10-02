@@ -102,6 +102,8 @@ export function useSiteListPage<Query extends ListPageQuery>(
   pageRows: FunctionReturnType<Query>["rows"] | undefined;
   footer: PagedFooterSpec;
   result: FunctionReturnType<Query> | undefined;
+  /** The server is still building the list: its rows show as loading, and a page can say why. */
+  preparing: boolean;
 } {
   const { page, setPage, rows, setRows } = useSiteTablePaging();
   const listKey = args === "skip" ? "skip" : JSON.stringify(args);
@@ -131,6 +133,7 @@ export function useSiteListPage<Query extends ListPageQuery>(
   return {
     pageRows: shown?.rows,
     result: shown,
+    preparing,
     footer: {
       mode: "paged",
       page: shown?.page ?? page,

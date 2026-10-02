@@ -3,7 +3,8 @@ import { internal } from "./_generated/api";
 import { internalAction, internalMutation, type ActionCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { failureSummary } from "./roleRuns";
-import { STEP_BUDGET_MS, runStep, type StepOutcome } from "./searchConsoleSync";
+import { STEP_BUDGET_MS, rollUpSite, runStep, type StepOutcome } from "./searchConsoleSync";
+import { buildSitePeriods } from "./searchConsolePeriods";
 
 /**
  * The Search Console Collector's job (docs/plans/active/search-console-plan.md
@@ -19,9 +20,13 @@ import { STEP_BUDGET_MS, runStep, type StepOutcome } from "./searchConsoleSync";
  * websites, meets an action's ten minutes.
  *
  * **Only the newest days**: the days since the newest held, and the last four
- * again while Google's figures settle — never the sixteen months before,
- * which wait for Anthony's go. Google charges nothing, and no model is
- * called, so a run costs nothing.
+ * again while Google's figures settle; a website with nothing held yet gets
+ * its last 90 days (plan §14.3, item 7). Nothing older, ever. Google charges
+ * nothing, and no model is called, so a run costs nothing.
+ *
+ * **Then it settles** (`settleSite`): days past 90 roll into their weeks,
+ * weeks past 12 months into their months, and the ready-made periods every
+ * list reads are rebuilt — a step of its own, as a line on the run.
  *
  * One schedule's runs at a time: a run started while any of the agent's runs
  * is still going — another website's included — stops at once, saying so.
@@ -46,7 +51,7 @@ const days = (from: string, to: string) => (from === to ? dayLabel(from) : `${da
 
 const count = (value: number) => value.toLocaleString("en-GB");
 
-const NOT_HISTORY = "Only the newest days and the last four again: the sixteen months before are not collected.";
+const NOT_HISTORY = "The newest days and the last four again; a website with nothing held gets its last 90 days, and nothing older is fetched.";
 
 async function finishRun(
   ctx: ActionCtx,
@@ -188,11 +193,9 @@ export const collectSiteStep = internalAction({
       const outcome = await runStep(ctx, {
         connectionId: args.connectionId,
         property: args.property,
-        kind: "DAILY",
         from: args.from,
         top: args.top,
         to: args.to,
-        attempt: 0,
       }, STEP_BUDGET_MS);
       const rows = args.rows + outcome.rows;
       const requests = args.requests + outcome.requests;
@@ -211,7 +214,14 @@ export const collectSiteStep = internalAction({
           await ctx.scheduler.runAfter(0, internal.searchConsoleAgentRun.collectSiteStep, { ...args, to: outcome.nextTo, rows, requests });
           return null;
         case "DONE":
-          await finish("SUCCESS", `Collected ${args.host}, ${days(args.from, args.top)}: ${count(rows)} rows from ${count(requests)} asks to Google. ${NOT_HISTORY}`);
+          await ctx.scheduler.runAfter(0, internal.searchConsoleAgentRun.settleSite, {
+            runId: args.runId,
+            workflowExecutionId: args.workflowExecutionId,
+            connectionId: args.connectionId,
+            companyId: args.companyId,
+            host: args.host,
+            summary: `Collected ${args.host}, ${days(args.from, args.top)}: ${count(rows)} rows from ${count(requests)} asks to Google. ${NOT_HISTORY}`,
+          });
           return null;
         case "BUSY":
           await finish("FAILED", `Google was too busy to answer for ${args.host}, so not every day from ${days(args.from, args.top)} came in. The next run fetches them again.`);
@@ -231,6 +241,45 @@ export const collectSiteStep = internalAction({
       }
     } catch (error: unknown) {
       await finish("FAILED", failureSummary(error));
+    }
+    return null;
+  },
+});
+
+/**
+ * A website's run, once its days are in: days past 90 into their weeks,
+ * weeks past 12 months into their months, and its ready-made periods rebuilt
+ * (plan §14.3, items 3 and 4). A line on the run, then its summary.
+ */
+export const settleSite = internalAction({
+  args: {
+    runId: v.id("agentRuns"),
+    workflowExecutionId: v.id("workflowExecutions"),
+    connectionId: v.id("searchConsoleConnections"),
+    companyId: v.id("companies"),
+    host: v.string(),
+    summary: v.string(),
+  },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    try {
+      const state = await ctx.runQuery(internal.searchConsoleSync.stepState, { connectionId: args.connectionId });
+      if (!state || !state.newestDay || !state.oldestDay || state.clearing) {
+        await finishRun(ctx, args.runId, args.workflowExecutionId, "SUCCESS", args.summary);
+        return null;
+      }
+      const rolled = await rollUpSite(ctx, state.companyWebsiteId, state.newestDay);
+      const written = await buildSitePeriods(ctx, state.companyWebsiteId, state.newestDay, state.oldestDay);
+      await ctx.runMutation(internal.roleRuns.logRunLine, {
+        runId: args.runId,
+        companyId: args.companyId,
+        heading: "Kept and added up",
+        detail: `${count(rolled)} ${rolled === 1 ? "day or week" : "days and weeks"} rolled up; the 7-, 30- and 90-day and 12-month lists rebuilt (${count(written)} records), to ${days(state.newestDay, state.newestDay)}.`,
+        failed: false,
+      });
+      await finishRun(ctx, args.runId, args.workflowExecutionId, "SUCCESS", args.summary);
+    } catch (error: unknown) {
+      await finishRun(ctx, args.runId, args.workflowExecutionId, "FAILED", `The days came in, but adding them up stopped: ${failureSummary(error)} The next run adds them up again.`);
     }
     return null;
   },

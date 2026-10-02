@@ -179,7 +179,17 @@ describe("Search Console is read only through the company's own hold", () => {
   const files = readdirSync(CONVEX, { recursive: true, encoding: "utf8" })
     .filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts") && !file.startsWith("_generated"));
 
-  test.each(["searchConsoleConnections", "searchConsoleDays", "searchConsoleRows", "searchConsoleRuns"])("%s names the hold it belongs to", (table) => {
+  const TABLES = [
+    "searchConsoleConnections",
+    "searchConsoleDays",
+    "searchConsoleLists",
+    "searchConsolePeriods",
+    "searchConsoleSeen",
+    "searchConsoleTracked",
+    "searchConsoleRuns",
+  ];
+
+  test.each(TABLES)("%s names the hold it belongs to", (table) => {
     const start = schemaSource.indexOf(`${table}: defineTable({`);
     expect(start, `${table} is not in searchConsoleSchema.ts. If it was renamed, rename it here too.`).toBeGreaterThan(-1);
     const body = schemaSource.slice(start, schemaSource.indexOf(".index(", start));
@@ -188,7 +198,7 @@ describe("Search Console is read only through the company's own hold", () => {
 
   const MODULES = new Set(["searchConsoleConnect.ts", "searchConsoleSync.ts"]);
   const LOOKUPS = new Set(["by_pending_state", "by_status", "by_google_account"]);
-  const READS = /\.query\(\s*["'](searchConsoleConnections|searchConsoleDays|searchConsoleRows|searchConsoleRuns)["']\s*\)([\s\S]{0,200})/g;
+  const READS = new RegExp(`\\.query\\(\\s*["'](${TABLES.join("|")})["']\\s*\\)([\\s\\S]{0,200})`, "g");
 
   test("every read goes through a hold, but the connection's own lookups", () => {
     expect(files.length).toBeGreaterThan(200);

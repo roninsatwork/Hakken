@@ -65,7 +65,7 @@ function status(overrides: Record<string, unknown> = {}, connection: Record<stri
 
 const FIGURES = { clicks: 1284, impressions: 61920, ctr: 1284 / 61920, position: 21.4 };
 
-const mutations = { begin: vi.fn(), choose: vi.fn(), disconnect: vi.fn(), ensure: vi.fn() };
+const mutations = { begin: vi.fn(), choose: vi.fn(), disconnect: vi.fn() };
 
 function answer(queries: Record<string, unknown>) {
   vi.mocked(useQuery).mockImplementation(answerQueries(queries));
@@ -74,7 +74,6 @@ function answer(queries: Record<string, unknown>) {
     if (name.endsWith("beginSearchConsoleConnect")) return mutations.begin;
     if (name.endsWith("chooseSearchConsoleProperty")) return mutations.choose;
     if (name.endsWith("disconnectSearchConsole")) return mutations.disconnect;
-    if (name.endsWith("ensureSearchConsoleCopy")) return mutations.ensure;
     return vi.fn();
   }) as never);
 }
@@ -165,43 +164,41 @@ describe("Performance", () => {
 });
 
 describe("Searches", () => {
+  const row = { previousPosition: null, count: 1, top: "https://acme-shop.test/", tracked: false };
   const LIST = {
     rows: [
-      { key: "plumber leeds", clicks: 8, impressions: 100, ctr: 0.08, position: 3, previousClicks: 2, change: 6, share: 0.6 },
-      { key: "emergency plumber", clicks: 3, impressions: 100, ctr: 0.03, position: 6, previousClicks: null, change: 3, share: 0.25 },
+      { key: "plumber leeds", clicks: 8, impressions: 100, ctr: 0.08, position: 3, previousClicks: 2, change: 6, share: 0.6, ...row },
+      { key: "emergency plumber", clicks: 3, impressions: 100, ctr: 0.03, position: 6, previousClicks: null, change: 3, share: 0.25, ...row },
     ],
     total: 2, page: 1, pages: 1, size: 25, cut: null, preparing: false, current: true, named: 11, comparable: true,
+    live: false, from: "2026-08-28", to: "2026-09-26",
   };
 
   it("reads the list a page at a time, ordered by the heading pressed, each search opening its own screen", () => {
     at("/app/search-console/site_1/searches");
     answer({
       "searchConsoleConnect:searchConsoleStatus": status(),
-      "searchConsoleCopies:searchConsoleListPage": LIST,
-      "searchConsoleCopies:searchConsoleCopyStatus": { held: true, exists: true, current: true },
+      "searchConsoleLists:searchConsoleListPage": LIST,
     });
     render(<SearchConsoleSearchesPage />);
     expect(screen.getByText("plumber leeds")).toBeInTheDocument();
     expect(screen.getByText("searchConsole.table.new")).toBeInTheDocument();
     const asked = vi.mocked(useQuery).mock.calls.filter(([reference]) => convexPath(reference).endsWith("searchConsoleListPage")).at(-1)?.[1];
-    expect(asked).toMatchObject({ dimension: "query", sort: "clicks", direction: "desc", page: 1, rows: 25 });
+    // The last thirty days, ending on Google's newest: a ready-made period, read on the server.
+    expect(asked).toMatchObject({ dimension: "query", from: "2026-08-28", to: "2026-09-26", sort: "clicks", direction: "desc", page: 1, rows: 25 });
 
     fireEvent.click(screen.getByRole("button", { name: /searchConsole\.table\.position/ }));
     expect(new URLSearchParams(String(nav.replace.mock.calls.at(-1)?.[0]).split("?")[1]).get("sort")).toBe("position");
-    expect(mutations.ensure).not.toHaveBeenCalled();
   });
 
-  it("asks for a list not worked out yet, and says it is on its way", async () => {
+  it("says a newly connected website's lists are on their way", () => {
     at("/app/search-console/site_1/searches");
     answer({
       "searchConsoleConnect:searchConsoleStatus": status(),
-      "searchConsoleCopies:searchConsoleCopyStatus": { held: true, exists: false, current: false },
+      "searchConsoleLists:searchConsoleListPage": { ...LIST, rows: [], total: 0, pages: 0, preparing: true, named: null, comparable: false, from: null, to: null },
     });
     render(<SearchConsoleSearchesPage />);
     expect(screen.getByText("searchConsole.table.preparing")).toBeInTheDocument();
-    await waitFor(() => expect(mutations.ensure).toHaveBeenCalledWith({
-      siteId: "site_1", searchType: "web", dimension: "query", from: "2026-08-28", to: "2026-09-26",
-    }));
   });
 });
 

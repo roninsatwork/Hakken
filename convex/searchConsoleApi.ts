@@ -1,4 +1,4 @@
-import type { SearchConsoleDimension, SearchType } from "./searchConsoleSchema";
+import type { SearchConsoleList, SearchType } from "./searchConsoleSchema";
 
 /**
  * Google Search Console's API, as Hakken calls it
@@ -154,24 +154,29 @@ export function propertiesForHost(properties: Property[], siteHost: string): {
 
 export type AnalyticsRow = { keys: string[]; clicks: number; impressions: number; ctr: number; position: number };
 
-/** Google's name for each split Hakken keeps. */
-export const GOOGLE_DIMENSION: Record<SearchConsoleDimension, string> = {
-  query: "query",
-  page: "page",
-  country: "country",
-  device: "device",
-  appearance: "searchAppearance",
+/**
+ * What Hakken asks Google for each list it keeps (plan §14.3): a pair is a
+ * search with the page it brought people to, asked together; the rest one
+ * split each.
+ */
+export const GOOGLE_DIMENSIONS: Record<SearchConsoleList, readonly string[]> = {
+  pair: ["query", "page"],
+  page: ["page"],
+  country: ["country"],
+  device: ["device"],
+  appearance: ["searchAppearance"],
 };
 
 /**
- * The splits each kind of result has. Discover and Google News have no
- * searches — people did not type anything — and no search appearance.
+ * The lists each kind of result has. Discover and Google News have no
+ * searches — people did not type anything — so no pairs, and no search
+ * appearance.
  */
-export const DIMENSIONS_OF: Record<SearchType, readonly SearchConsoleDimension[]> = {
-  web: ["query", "page", "country", "device", "appearance"],
-  image: ["query", "page", "country", "device", "appearance"],
-  video: ["query", "page", "country", "device", "appearance"],
-  news: ["query", "page", "country", "device", "appearance"],
+export const LISTS_OF: Record<SearchType, readonly SearchConsoleList[]> = {
+  web: ["pair", "page", "country", "device", "appearance"],
+  image: ["pair", "page", "country", "device", "appearance"],
+  video: ["pair", "page", "country", "device", "appearance"],
+  news: ["pair", "page", "country", "device", "appearance"],
   discover: ["page", "country", "device"],
   googleNews: ["page", "country", "device"],
 };

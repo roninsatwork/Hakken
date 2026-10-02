@@ -12,7 +12,7 @@
  * without its words in English and Italian.
  */
 
-export type LimitTopic = { id: "google" | "ai" | "matching" | "company" | "shared"; keys: readonly string[] };
+export type LimitTopic = { id: "google" | "ai" | "matching" | "searchConsole" | "company" | "shared"; keys: readonly string[] };
 
 export const LIMIT_TOPICS: readonly LimitTopic[] = [
   {
@@ -24,6 +24,8 @@ export const LIMIT_TOPICS: readonly LimitTopic[] = [
     id: "matching",
     keys: ["anglesJudgedPerRun", "anglesJudgedPerCollection", "pagesOffered", "auditPagesRead", "rankedPagesRead", "missingAnglesSuggested"],
   },
+  // Search Console's tracked lists (search-console-plan.md §13.2): free, a company's own websites only.
+  { id: "searchConsole", keys: ["consoleTrackedKeywordsPerSite", "consoleTrackedPagesPerSite"] },
   { id: "company", keys: ["purchasesPerCollection", "companyRowsRead"] },
   // Only the platform sets these (`convex/sharedLimits.ts`): a company's Limits
   // shows them, with where they are set, and a website's does not.
@@ -74,6 +76,8 @@ export const LIMIT_UNITS: Record<string, LimitUnit> = {
   purchasesPerCollection: "purchases",
   companyRowsRead: "rows",
   competitorsPerSite: "competitors",
+  consoleTrackedKeywordsPerSite: "keywords",
+  consoleTrackedPagesPerSite: "pages",
   fanOutPerAnswer: "searches",
   sourcesPerAnswer: "sources",
   businessesPerAnswer: "businesses",

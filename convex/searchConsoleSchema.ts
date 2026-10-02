@@ -22,20 +22,6 @@ export const searchTypeValidator = v.union(
   v.literal("googleNews"),
 );
 
-/**
- * What a row of figures is of: a search, a page, a country, a device, or a
- * kind of search appearance (a rich result, a video…), as Google names them.
- */
-export const SEARCH_CONSOLE_DIMENSIONS = ["query", "page", "country", "device", "appearance"] as const;
-export type SearchConsoleDimension = (typeof SEARCH_CONSOLE_DIMENSIONS)[number];
-export const dimensionValidator = v.union(
-  v.literal("query"),
-  v.literal("page"),
-  v.literal("country"),
-  v.literal("device"),
-  v.literal("appearance"),
-);
-
 export const connectionStatusValidator = v.union(
   /** Signing in at Google, never connected before. */
   v.literal("CONNECTING"),
@@ -84,6 +70,59 @@ const figures = {
   ctr: v.number(),
   /** Google's average position: over every time the site was shown, not a ranking check. */
   position: v.number(),
+};
+
+/**
+ * What a kept list is of (plan §14.3): each search with each page it brought
+ * people to (`pair` — a search's own totals are added up from these, never
+ * kept apart), each page, each country, each device, each kind of search
+ * appearance. A page is kept apart from the pairs because Google folds the
+ * rare searches it hides into a page's totals.
+ */
+export const SEARCH_CONSOLE_LISTS = ["pair", "page", "country", "device", "appearance"] as const;
+export type SearchConsoleList = (typeof SEARCH_CONSOLE_LISTS)[number];
+export const listValidator = v.union(
+  v.literal("pair"),
+  v.literal("page"),
+  v.literal("country"),
+  v.literal("device"),
+  v.literal("appearance"),
+);
+
+/** How much time one kept list covers: a day for 90 days, then a week, then after 12 months a month. */
+export const grainValidator = v.union(v.literal("DAY"), v.literal("WEEK"), v.literal("MONTH"));
+export type SearchConsoleGrain = "DAY" | "WEEK" | "MONTH";
+
+/** What a ready-made period's list is of: the kept lists, and each search added up from the pairs. */
+export const periodListValidator = v.union(
+  v.literal("query"),
+  v.literal("pair"),
+  v.literal("page"),
+  v.literal("country"),
+  v.literal("device"),
+  v.literal("appearance"),
+);
+export type SearchConsolePeriodList = "query" | "pair" | "page" | "country" | "device" | "appearance";
+
+/** The ready-made periods (plan §14.3, item 4): days, ending on Google's newest day held. */
+export const SEARCH_CONSOLE_PERIODS = ["7", "30", "90", "365"] as const;
+export type SearchConsolePeriod = (typeof SEARCH_CONSOLE_PERIODS)[number];
+export const periodValidator = v.union(v.literal("7"), v.literal("30"), v.literal("90"), v.literal("365"));
+
+/**
+ * One list's rows, packed: one record for a whole day (or week, or month)
+ * instead of one record per row, split into parts of 2,000 rows. Parallel
+ * arrays, row `i` across them all. Position is kept as a sum weighted by
+ * impressions (`position × impressions`), so an average over any days,
+ * weeks or months is exactly Google's.
+ */
+const packedRows = {
+  keys: v.array(v.string()),
+  /** A pair's page, row for row with its search in `keys`. Only on `pair` lists. */
+  pages: v.optional(v.array(v.string())),
+  clicks: v.array(v.number()),
+  impressions: v.array(v.number()),
+  positionSums: v.array(v.number()),
 };
 
 export const searchConsoleTables = {
@@ -159,21 +198,74 @@ export const searchConsoleTables = {
   }).index("by_hold_type_day", ["companyWebsiteId", "searchType", "day"]),
 
   /**
-   * A day's figures for one search, page, country or device (SC6: every one,
-   * every day it was shown). Searches Google hides for privacy are in the
-   * day's totals and never here.
+   * What was collected, kept as the screens read it (plan §14.3): one record
+   * per website, kind of result, list and day — a week once the day is past
+   * 90 days, a month once the week is past 12 months — in parts of 2,000 rows.
+   * `start` is the first day it covers.
    */
-  searchConsoleRows: defineTable({
+  searchConsoleLists: defineTable({
     companyWebsiteId: v.id("companyWebsites"),
     searchType: searchTypeValidator,
-    dimension: dimensionValidator,
-    key: v.string(),
-    day: v.string(),
-    ...figures,
+    list: listValidator,
+    grain: grainValidator,
+    start: v.string(),
+    part: v.number(),
+    ...packedRows,
     fetchedAt: v.number(),
+  }).index("by_hold_type_list_grain_start", ["companyWebsiteId", "searchType", "list", "grain", "start", "part"]),
+
+  /**
+   * The ready-made periods the screens read (plan §14.3, item 4): for the last
+   * 7, 30 and 90 days and 12 months ending on the newest day held (`NOW`), and
+   * the same span before it (`BEFORE`) where it is held, each list added up and
+   * rebuilt after every collection. A search's list carries how many of the
+   * website's pages it brought people to and the top one; a page's, how many
+   * searches and the top one. `kinds` is a page's type or a search's intent
+   * (Sites' own judgments), `volumes` a search's searches a month from Sites,
+   * `estimates` a page's estimated visits from Sites — each where known.
+   */
+  searchConsolePeriods: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    searchType: searchTypeValidator,
+    list: periodListValidator,
+    period: periodValidator,
+    which: v.union(v.literal("NOW"), v.literal("BEFORE")),
+    part: v.number(),
+    from: v.string(),
+    to: v.string(),
+    ...packedRows,
+    counts: v.optional(v.array(v.number())),
+    tops: v.optional(v.array(v.string())),
+    kinds: v.optional(v.array(v.string())),
+    volumes: v.optional(v.array(v.number())),
+    estimates: v.optional(v.array(v.number())),
+    builtAt: v.number(),
+  }).index("by_hold_type_list_period", ["companyWebsiteId", "searchType", "list", "period", "which", "part"]),
+
+  /** When each search and each page was first and last shown, for New and lost (plan §14.3, item 6). Web results. */
+  searchConsoleSeen: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    kind: v.union(v.literal("query"), v.literal("page")),
+    key: v.string(),
+    firstDay: v.string(),
+    lastDay: v.string(),
   })
-    .index("by_hold_type_dimension_day", ["companyWebsiteId", "searchType", "dimension", "day"])
-    .index("by_hold_type_dimension_key_day", ["companyWebsiteId", "searchType", "dimension", "key", "day"]),
+    .index("by_hold_kind_key", ["companyWebsiteId", "kind", "key"])
+    .index("by_hold_kind_first", ["companyWebsiteId", "kind", "firstDay"])
+    .index("by_hold_kind_last", ["companyWebsiteId", "kind", "lastDay"]),
+
+  /**
+   * The searches and pages a company tracks on its website's Search Console
+   * (plan §13.2): its own, read and changed only through its hold, held to
+   * the website's tracking limits.
+   */
+  searchConsoleTracked: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    kind: v.union(v.literal("query"), v.literal("page")),
+    key: v.string(),
+    createdAt: v.number(),
+    createdBy: v.optional(v.id("users")),
+  }).index("by_hold_kind_key", ["companyWebsiteId", "kind", "key"]),
 
   /** Each collection: the days asked for, the requests and rows, and what went wrong. */
   searchConsoleRuns: defineTable({
