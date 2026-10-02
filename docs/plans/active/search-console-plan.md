@@ -622,8 +622,16 @@ made up: "we are only drawing a UX we don't need real data".
   headings that sort when clicked — best first, again for the other way — with
   Sites' arrows; Sites' numbered pager and 25/50/75/100 rows. Numbers and
   words only in rows: no bars, tracks or coloured verdicts.
+- **Tables fit the page** (Anthony: "Why can't we design data that fits"): no
+  sideways scrolling on a 1440px screen, where about 920px is left beside the
+  app's sidebar and the section's menu. Number columns sized to their
+  headings, text columns sharing the rest, a before and after in one column
+  ("31 → 43"), and Sites' short headings where it has one ("Volume").
 - **Every row opens its detail screen**: a page's, or a keyword's.
 - **The website's own icon** beside its name, as in Sites.
+- **Google's updates exactly as on the Sites charts**: the approved markers,
+  hover card and key (knowledge-news-and-digest plan, "The approved look"), and
+  the updates from Admin → Content → Google updates — the same list.
 - **Hero boxes** for the key totals — clicks, impressions, CTR, average
   position — each with its change on the 30 days before.
 - **The side menu, grouped**: Performance, Keywords, Pages, Countries and
