@@ -659,9 +659,14 @@ again exactly as they are there.
   this page / keyword" on the detail screens. **Limits as in Sites,
   configurable the usual Hakken way** (platform default, then company, then
   website) and shown as "x of y tracked"; a full list says "All 100 tracked.
-  Untick one to track …". Proposed, not chosen: tracked keywords per website
-  50/100/200/500/1,000, default 200; tracked pages 25/50/100/200/500, default
-  100; no cost — Search Console is free.
+  Untick one to track …". **Chosen 2026-10-02** (Anthony: "yes please set
+  these as long as I set these in a drop down in the UI in the same place as
+  the other limits"): **tracked keywords per website** — 50, 100, 200, 500 or
+  1,000, **default 200**; **tracked pages per website** — 25, 50, 100, 200 or
+  500, **default 100**. Each a dropdown on the Limits screens beside the
+  other limits, at all three levels: System Settings → Limits for the default,
+  a company's Limits page, a website's Limits page. No cost — Search Console
+  is free.
 
 ### 13.3 Thirteen more pages
 
@@ -842,3 +847,5 @@ its tests and the full gate; days are working days, each phase its own go.
 - **2026-10-02** — A newly connected website's last 90 days come in on the
   Collector's next scheduled run, as days (§14.3, item 7). D2 2 days; data 8,
   about 21.5 in all.
+- **2026-10-02** — The tracking limits chosen: 200 keywords and 100 pages a
+  website by default, each a dropdown on the Limits screens (§13.2).
