@@ -6,7 +6,9 @@ Console section — built 2026-09-27 and tested with Google faked (§10). Google
 setup done and Ronins' own site connected on dev 2026-10-02 (§10); still to
 do: the screens checked against Google's own Search Console, production's
 setup, and "External" before a client connects with its own Google account.
-Phase 4 is each part its own agreement.** Change a decision here, with a date, before building anything that
+Phase 4 is each part its own agreement. Screens beyond Google's own — three
+drawn 2026-10-02 with Ronins' real figures, to be adjusted before anything
+is agreed (§11).** Change a decision here, with a date, before building anything that
 disagrees with it. Follow `AGENTS.md`: no code until Anthony agrees, and draw
 the screens first (§1, SC9).
 
@@ -469,6 +471,85 @@ about 85 seconds, the sixteen months about an hour and a half.
 Still to come: the screens checked against Google's own Search Console for
 the same dates, once the sixteen months are in.
 
+## 11. Beyond Google's own screens — proposed 2026-10-02
+
+Anthony, 2026-10-02, in his words paraphrased: the built section reads as a
+replica of Search Console and needs taking up a notch or two. Is the data
+relational, so that screens more informative than Google's can be made —
+more like Sites', but under Search Console — understanding first what is
+possible? Then, of the drawings: "this needs adjustments". **Nothing here is
+agreed, and nothing is built.**
+
+### 11.1 What the data allows
+
+- **Google's side.** Each figure is clicks, impressions, click-through rate
+  and position for one combination of up to five things: search, page, day,
+  country and device. Hakken stores each of those by day **on its own**
+  (§10), not in combination; the pages Google showed for one search (and the
+  reverse) are asked of Google when that screen opens, the 250 with the most
+  clicks.
+- **What it joins to in Sites.** By the **search**: our ranking check and its
+  history, searches a month, advert price, difficulty, intent, and Google's
+  features on it (an AI Overview, and whether the website is named in it). By
+  the **page**: its type, section, the audit's findings, linking websites,
+  and the AI answers that cite it. By the **day**: Google's updates, and the
+  ranking history.
+- **Possible now**, from what is held: a page ledger (each page's real clicks
+  beside what Sites knows of it, and what is holding it back); almost there
+  (searches at positions 4 to 20 and what the top three would bring); shown
+  but not clicked; losing ground; sections and page types; missed demand
+  (searches tracked with real volume Google barely shows, and searches Google
+  shows that are not tracked); brand against non-brand (with a list of brand
+  words); and what each Google update did.
+- **Not possible now.** Pages competing with each other for one search needs
+  the search-and-page pairs stored — roughly the size of §10's two million
+  rows again. Leads and sales need Google Analytics or a CRM, neither built.
+
+### 11.2 Drawn — Page ledger, Almost there, Losing ground
+
+Three boards on one canvas, in the Sites screens' own look (Anthony chose "Top
+3 on one canvas"): https://claude.ai/artifact/2QFLfBk7ZhRdeRtD5d2fVK —
+private to Anthony until shared from its Share menu. Every row is
+ronins.co.uk's real figures on dev, read from the Search Console and Sites
+screens on 2026-10-02. What the drawings propose, each still to agree:
+
+- **The side menu** gains a group, "What to do", above Google's own pages
+  ("Google's figures"), with Connection under "Settings".
+- **Page ledger** (last 90 days): page and its type, clicks with a month's
+  share, showings, Google's position, Sites' estimated visits, linking
+  websites, AI answers citing it, and a verdict — Earning, Page two or three,
+  Not competing, or Estimate far too high — with one line of why. "What
+  stands out" above the table: three findings, each a sentence with its page.
+  The sharpest: Sites estimates /hub/what-is-a-web-application/ at 1,033
+  visits a month; Google counted 4 clicks in 90 days.
+- **Almost there** (last 30 days): searches on the keyword list at Google's
+  positions 4 to 20, a track from 1 to 20 for each, and what reaching the top
+  three would bring — searches a month × the website's own click rate in
+  positions 1 to 3, less the clicks it brings now — and its worth at the
+  search's advert price. A second tab for searches not on the keyword list.
+  The drawing's 2.5% is worked out from the searches readable on screen; the
+  screen would use all of them.
+- **Losing ground** (3, 6 or 12 months against the same before): each falling
+  page's clicks, showings and position then and now, and why — **Ranking
+  fell** (three places or more worse), **Shown less** (a quarter fewer
+  showings at about the same place), or **Clicked less** (shown as often at
+  the same place, clicked less: often an AI Overview or a rival's snippet).
+- Google's average position and Sites' single check are never set on one
+  axis or under one name (§9).
+
+### 11.3 Found in the built section while drawing (not fixed)
+
+- **A table's list is not worked out again when older history lands.** A list
+  is built once for its dates, and again only after Google's next day lands
+  (`convex/searchConsoleCopies.ts`, which decides "comparable" when it
+  builds). Lists built before the sixteen months arrived keep saying "No
+  change shown: the days before aren't held" until the next daily run, though
+  those days are now held.
+- **The Pages table shows one page several times.** For example,
+  /hub/accessible-design-for-neurodiversity/ appears seven times with
+  different figures. Likely addresses Google counts apart (a part after `#`,
+  a query or a host) shown with the differing part hidden. To check.
+
 ## Change log
 
 - **2026-09-27** — Plan written: how Search Console integration works, what
@@ -498,3 +579,7 @@ the same dates, once the sixteen months are in.
 - **2026-10-02** — Google setup done on dev in the existing Hakken project,
   left Internal; ronins.co.uk connected and its sixteen months coming in,
   measured at about two million rows (§10).
+- **2026-10-02** — Screens beyond Google's own (§11): what the data joins to,
+  what is possible, and three drawn with Ronins' real figures — Page ledger,
+  Almost there, Losing ground. To be adjusted; nothing agreed. Two faults in
+  the built section noted, not fixed.

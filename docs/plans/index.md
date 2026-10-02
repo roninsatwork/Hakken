@@ -97,7 +97,8 @@ completed work.
   Phase 4: connecting, collecting, and the Search Console section in the main
   navigation, tested with Google faked. Google setup done and ronins.co.uk
   connected on dev 2026-10-02; the screens still to check against Google's
-  own.**
+  own. Screens beyond Google's own: three drawn 2026-10-02, to be adjusted
+  (§11).**
 
 - [Sites — every number whole, or saying which part it is](./active/sites-data-completeness-plan.md) —
   a full audit of what we buy from DataForSEO and what every Sites screen shows
