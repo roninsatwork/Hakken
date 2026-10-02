@@ -95,8 +95,9 @@ completed work.
   sixteen months on connecting, four screens, and what Anthony sets up in
   Google. **All nine decisions agreed 2026-09-27. Built 2026-09-27 but for
   Phase 4: connecting, collecting, and the Search Console section in the main
-  navigation, tested with Google faked. Nothing collected until Anthony's
-  Google setup (§7).**
+  navigation, tested with Google faked. Google setup done and ronins.co.uk
+  connected on dev 2026-10-02; the screens still to check against Google's
+  own.**
 
 - [Sites — every number whole, or saying which part it is](./active/sites-data-completeness-plan.md) —
   a full audit of what we buy from DataForSEO and what every Sites screen shows

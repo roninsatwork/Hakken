@@ -2,10 +2,11 @@
 
 **Started 2026-09-27. Status: built but for Phase 4. All nine decisions
 agreed 2026-09-27 (§1). Phases 1–3 — connecting, collecting and the Search
-Console section — built 2026-09-27 and tested with Google faked (§10). Nothing
-is collected until Anthony's Google setup (§7) is done; the screens are then
-checked on Ronins' own connected site. Phase 4 is each part its own
-agreement.** Change a decision here, with a date, before building anything that
+Console section — built 2026-09-27 and tested with Google faked (§10). Google
+setup done and Ronins' own site connected on dev 2026-10-02 (§10); still to
+do: the screens checked against Google's own Search Console, production's
+setup, and "External" before a client connects with its own Google account.
+Phase 4 is each part its own agreement.** Change a decision here, with a date, before building anything that
 disagrees with it. Follow `AGENTS.md`: no code until Anthony agrees, and draw
 the screens first (§1, SC9).
 
@@ -431,6 +432,43 @@ Still to come: Anthony's Google setup (§7), then the check on Ronins' own
 connected site; an admin list of the runs (§4.4 — logged already, and the
 daily job shows in Admin → Health); Phase 4, each part its own agreement.
 
+### The Google setup, and Ronins connected — 2026-10-02
+
+§7 done on dev, differently from how it was written in three places:
+
+- **The existing Hakken project** (`hakken-509309`), not a new one (Anthony:
+  "its not a new project we already have a hakken project"). Its sign-in
+  screen had no scopes, so no Gmail scope to bring a review with it. The
+  Search Console API is enabled there.
+- **Internal, not published.** The project's user type is Internal: only
+  ronins.co.uk Google accounts can connect, with no review and no seven-day
+  expiry, so nothing was published. A client connecting with its own Google
+  account needs "Make external" and publishing first. Google lists all three
+  scopes (`webmasters.readonly`, `openid`, `userinfo.email`) as
+  non-sensitive, so neither step waits for a review. If the existing
+  "Hakken Web" client is the sign-in, External opens Google sign-in to
+  accounts outside Ronins too; Hakken's own accounts still decide who gets in.
+- **Dev's return address only.** The client "Hakken Search Console" (web
+  application) holds
+  `https://quaint-zebra-2.convex.site/api/search-console/oauth/callback`.
+  Production's is not added: the production deployment (`quiet-labrador-142`)
+  had no environment variables at all when checked, sign-in's included.
+
+Dev now holds `SEARCH_CONSOLE_GOOGLE_CLIENT_ID` and
+`SEARCH_CONSOLE_GOOGLE_CLIENT_SECRET` (pasted by Anthony) and
+`CONNECTOR_TOKEN_ENCRYPTION_KEY` (generated, never shown). Anthony then
+connected ronins.co.uk from localhost: property `https://www.ronins.co.uk/`,
+as anthony@ronins.co.uk, owner. The newest days came in at once and the
+sixteen months began, back to about 1 June 2025.
+
+**Size, measured.** About 28,000 rows a week, so about two million over
+sixteen months: ten times the 200,000 §4.3 estimated for Ronins, and what it
+expected of kordatackle.com. Anthony: the Convex plan is paid. A week takes
+about 85 seconds, the sixteen months about an hour and a half.
+
+Still to come: the screens checked against Google's own Search Console for
+the same dates, once the sixteen months are in.
+
 ## Change log
 
 - **2026-09-27** — Plan written: how Search Console integration works, what
@@ -457,3 +495,6 @@ daily job shows in Admin → Health); Phase 4, each part its own agreement.
   until the Google setup is done.
 - **2026-09-28** — The daily run goes through every connected website rather
   than stopping at 500; every limit in the section stated (§10).
+- **2026-10-02** — Google setup done on dev in the existing Hakken project,
+  left Internal; ronins.co.uk connected and its sixteen months coming in,
+  measured at about two million rows (§10).
