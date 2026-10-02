@@ -11,7 +11,10 @@ drawn 2026-10-02 with Ronins' real figures, to be adjusted before anything
 is agreed (§11). Collecting switched off and everything collected cleared
 2026-10-02, the connection kept: collecting is to be a Search Console
 agent's, on its own schedule, and nothing is collected in bulk until the
-screens are agreed (§12).** Change a decision here, with a date, before building anything that
+screens are agreed (§12). The Search Console Collector role built the same
+day, a run of its own for each website. Screens redesigned on a new canvas
+2026-10-02 — seventeen drawn, the §11 drawings dropped; nothing agreed or
+built yet (§13).** Change a decision here, with a date, before building anything that
 disagrees with it. Follow `AGENTS.md`: no code until Anthony agrees, and draw
 the screens first (§1, SC9).
 
@@ -586,8 +589,86 @@ This supersedes SC5 (its own daily job) and the sixteen months on connecting
 
 Anthony then made the agent and its schedule himself: **Search Console:
 Collector Agent** in Admin → Agents, and **Search Console: Data Collection
-Schedular** in Admin → Schedules, daily at 04:00 local (03:00 UTC). The role
-that connects that agent to the collecting is still to agree and build.
+Schedular** in Admin → Schedules, daily at 04:00 local (03:00 UTC).
+
+**The role, built the same day** (Anthony: "we need to build the role that
+goes in here on the agent that actually does the collection", then "a unique
+run per website so we never hit a limit"): **Search Console Collector**, under
+"Search Console" in an agent's Role dropdown (`convex/searchConsoleAgentRun.ts`).
+The run its schedule or Run starts begins a run of its own for every connected
+website, five seconds apart; each collects only the newest days and the last
+four again — never the sixteen months — in steps of a week at most, each an
+action of its own, with a line per step and a plain summary in the agent's
+Observability. A run started while any of the agent's runs is going stops.
+Anthony picks the role on his agent himself.
+
+## 13. The screens, redesigned — drawn 2026-10-02 (nothing agreed or built)
+
+Anthony, 2026-10-02: the built section "feels very search console like and
+not very hakken like"; it should behave like Sites, Ahrefs and Semrush —
+meaning how they display data, not how they show Search Console's — and the
+§11 drawings were "too flashy with table rows used to display graphical style
+data which I hate". §11's three boards are dropped. Rows in the drawings are
+made up: "we are only drawing a UX we don't need real data".
+
+**The canvas**: https://claude.ai/artifact/YSWaPwCuywp292S4rfeUQf
+("Search Console — keywords and pages", private to Anthony; version 12,
+"17 screens"). Every look below was asked for in his words on the way.
+
+### 13.1 What the screens share
+
+- **Tables exactly as Sites'**: the search bar and filter dropdowns on one row
+  above the table; the table bar with its count and Download all (CSV);
+  headings that sort when clicked — best first, again for the other way — with
+  Sites' arrows; Sites' numbered pager and 25/50/75/100 rows. Numbers and
+  words only in rows: no bars, tracks or coloured verdicts.
+- **Every row opens its detail screen**: a page's, or a keyword's.
+- **The website's own icon** beside its name, as in Sites.
+- **Hero boxes** for the key totals — clicks, impressions, CTR, average
+  position — each with its change on the 30 days before.
+- **The side menu, grouped**: Performance, Keywords, Pages, Countries and
+  devices; Changes; Opportunities; Breakdowns; Settings → Connection.
+
+### 13.2 Keywords and pages, both ways
+
+- **Pages** and **Keywords** lists; a **page's detail** (its hero boxes, a
+  340px chart of clicks and impressions beside a "Where the clicks came from"
+  panel of countries and devices, then the keywords that brought people to
+  it) and a **keyword's detail** (the same, with the pages it brought people
+  to). Countries and devices sit beside the chart — at the bottom of the page,
+  Anthony: "nobody will ever see it".
+- **Tracking, as Sites does it**: a Track tick box first in every table (tick
+  to add, untick to take off), tracked rows tinted, a Tracked filter, "Track
+  this page / keyword" on the detail screens. **Limits as in Sites,
+  configurable the usual Hakken way** (platform default, then company, then
+  website) and shown as "x of y tracked"; a full list says "All 100 tracked.
+  Untick one to track …". Proposed, not chosen: tracked keywords per website
+  50/100/200/500/1,000, default 200; tracked pages 25/50/100/200/500, default
+  100; no cost — Search Console is free.
+
+### 13.3 Thirteen more pages
+
+Changes: **Position bands**, **New and lost**, **Wins and losses**, **Google
+updates**. Opportunities: **Almost there**, **Shown but not clicked**, **Missed
+demand**, **Pages competing**. Breakdowns: **Types** (its own page, Anthony:
+"no i think this its own page" — Sites' "Pages by kind" bars with Google's
+clicks, and keywords by what they want), **Brand and non-brand**, **Click rate
+by position**, **Rich results**, **Real against estimated**. Drawn to be
+looked at; none agreed.
+
+### 13.4 Parked, to discuss with the data
+
+- **Which keyword went to which page.** Pages' "Keywords" and "Top keyword",
+  a keyword's "Your pages", and Pages competing need Google's keyword-and-page
+  pairs: stored (more data, collected once the screens are agreed) or asked of
+  Google when a screen opens. Anthony: "we will be discussing this later for
+  now we just work on UX and UI".
+- **Pages and keywords Sites has never seen** need a type and an intent, by
+  their address or the Decision Maker: a small AI cost.
+- **Google's AI answers report** (AI Overviews and AI Mode impressions) is not
+  in the Search Console API: Google's API definition of 23 September 2026 has
+  no such type, and a live test on ronins.co.uk was refused for every AI type
+  and search-appearance name. Anthony: "lets wait".
 
 ## Change log
 
@@ -627,3 +708,8 @@ that connects that agent to the collecting is still to agree and build.
   connecting, and no bulk collecting until the screens are agreed. SC5 and
   the sixteen months on connecting superseded; collecting is to be a Search
   Console agent's, timed by Admin → Schedules.
+- **2026-10-02** — The Search Console Collector role built: a run of its own
+  for each connected website, newest days only (§12).
+- **2026-10-02** — The screens redesigned on a new canvas, seventeen drawn:
+  keywords and pages both ways, Sites' tables, tracking with limits, and
+  thirteen more pages. §11's drawings dropped. Nothing agreed or built (§13).
