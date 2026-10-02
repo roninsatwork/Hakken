@@ -74,9 +74,6 @@ const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
   // The Sites lists' compact copies: any not rebuilt in a day is rebuilt
   // (docs/plans/active/sites-table-pages-plan.md §5.2).
   "sites-list-copy-refresh": (ctx) => ctx.runMutation(internal.siteListCopies.refreshListCopies, { cursor: null }),
-  // Every connected site's Search Console figures, whatever its company's
-  // schedule (docs/plans/active/search-console-plan.md, SC5).
-  "search-console-daily": (ctx) => ctx.runMutation(internal.searchConsoleSync.collectAllDaily, {}),
 };
 
 /** How often each job is meant to run, in minutes — the screen uses this to
@@ -112,7 +109,6 @@ const EXPECTED_EVERY_MINUTES: Record<string, number> = {
   "stripe-billing-reconciliation": 5,
   "wiki-exam-growth": 44640,
   "sites-list-copy-refresh": 1440,
-  "search-console-daily": 1440,
 };
 
 export const recordJobOutcomeInternal = internalMutation({

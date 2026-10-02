@@ -20,14 +20,17 @@ import { dropHoldCopies } from "./searchConsoleCopies";
  * Collecting a connected site's Search Console figures
  * (docs/plans/active/search-console-plan.md §4; SC5, SC6).
  *
- * **Its own daily job**, for every connected site whatever its company's
- * collection schedule: it is free. Each day fetches the days since the newest
- * held and the last four again — Google's figures settle over two to three
- * days — so a day is replaced until it is final.
+ * **Nothing starts it for now** (§12, 2026-10-02). The hidden daily job and
+ * the pull on connecting are gone: collecting is to be a Search Console
+ * agent's work, timed by its own row in Admin → Schedules, and nothing is
+ * collected in bulk until Anthony is happy with the screens. What is here is
+ * the collecting itself, for that agent to start.
  *
- * **Sixteen months on connecting**, worked back from the newest days a week
- * at a time, so no step outlasts an action, the screens fill in as it goes,
- * and a history that stops is taken up again by the next daily run.
+ * **A collection** (`collectRecent`) fetches the days since the newest held
+ * and the last four again — Google's figures settle over two to three days —
+ * so a day is replaced until it is final; then the sixteen months before,
+ * worked back a week at a time, so no step outlasts an action and the screens
+ * fill in as it goes. A history that stops is taken up by the next collection.
  *
  * **Every search and every page, every day** (SC6): for each day and each kind
  * of result that had any impressions, the day's figures for every search,
@@ -49,7 +52,7 @@ const DAYS_PER_STEP = 7;
 /** A step stops starting new days after this, and hands the rest to the next step. */
 const STEP_BUDGET_MS = 4 * 60 * 1000;
 
-/** A history quiet this long has stopped: the next daily run takes it up again. */
+/** A history quiet this long has stopped: the next collection takes it up again. */
 const HISTORY_STALL_MS = 60 * 60 * 1000;
 
 /** Rows written per mutation, and checked per mutation when dropping what a fetch no longer returned. */
@@ -65,13 +68,6 @@ const BUSY_WAITS_MS = [2_000, 8_000];
 /** A step Google was too busy for is tried again this much later, this many times. */
 const RETRY_LATER_MS = 15 * 60 * 1000;
 const MAX_RETRIES = 3;
-
-/**
- * Connections started per pass of the daily run — it goes through every
- * connected site, a pass at a time — and the gap between their starts.
- */
-const CONNECTIONS_PER_PASS = 100;
-const STAGGER_MS = 5_000;
 
 /** Rows removed per mutation when a site's figures are cleared. */
 const PURGE_BATCH = 500;
@@ -94,35 +90,7 @@ const laterDay = (left: string, right: string) => (left > right ? left : right);
 // Starting
 // ---------------------------------------------------------------------------
 
-/**
- * The daily job: every connected site, a little apart — all of them, a pass
- * of a hundred at a time, each pass handing the rest to the next.
- */
-export const collectAllDaily = internalMutation({
-  args: { cursor: v.optional(v.union(v.string(), v.null())), started: v.optional(v.number()) },
-  returns: v.number(),
-  handler: async (ctx, args) => {
-    const page = await ctx.db
-      .query("searchConsoleConnections")
-      .withIndex("by_status", (q) => q.eq("status", "CONNECTED"))
-      .paginate({ numItems: CONNECTIONS_PER_PASS, cursor: args.cursor ?? null });
-    const started = args.started ?? 0;
-    for (const [index, connection] of page.page.entries()) {
-      await ctx.scheduler.runAfter((started + index) * STAGGER_MS, internal.searchConsoleSync.collectRecent, {
-        connectionId: connection._id,
-      });
-    }
-    if (!page.isDone) {
-      await ctx.scheduler.runAfter(0, internal.searchConsoleSync.collectAllDaily, {
-        cursor: page.continueCursor,
-        started: started + page.page.length,
-      });
-    }
-    return page.page.length;
-  },
-});
-
-/** The days since the newest held, and the last four again; newest first. */
+/** One collection: the days since the newest held, and the last four again, newest first; then the history. */
 export const collectRecent = internalMutation({
   args: { connectionId: v.id("searchConsoleConnections") },
   returns: v.null(),
@@ -672,8 +640,9 @@ async function clearSome(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites
 }
 
 /**
- * Another property chosen: the figures from the one before go, a batch at a
- * time, and collecting from the new one starts when they are gone.
+ * A site's figures go, a batch at a time — another property chosen, or what
+ * was collected cleared (`clearCollected`). Nothing is collected afterwards
+ * until a collection is started (§12).
  */
 export const clearFigures = internalMutation({
   args: { companyWebsiteId: v.id("companyWebsites") },
@@ -689,7 +658,37 @@ export const clearFigures = internalMutation({
       .first();
     if (!connection) return null;
     await ctx.db.patch(connection._id, { clearing: undefined, updatedAt: Date.now() });
-    await ctx.scheduler.runAfter(0, internal.searchConsoleSync.collectRecent, { connectionId: connection._id });
+    return null;
+  },
+});
+
+/**
+ * Everything collected for a site cleared, its connection kept: the Google
+ * sign-in stays, so a later collection needs no new one. Run by hand
+ * (`npx convex run searchConsoleSync:clearCollected`), as on 2026-10-02 when
+ * ronins.co.uk's sixteen months were cleared (§12). The run log stays: it is
+ * what was asked of Google, not the figures.
+ */
+export const clearCollected = internalMutation({
+  args: { companyWebsiteId: v.id("companyWebsites") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const connection = await ctx.db
+      .query("searchConsoleConnections")
+      .withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.companyWebsiteId))
+      .first();
+    if (!connection) return null;
+    // Marked as clearing first: a step still running drops what it fetched.
+    await ctx.db.patch(connection._id, {
+      clearing: true,
+      newestDay: undefined,
+      oldestDay: undefined,
+      backfilledAt: undefined,
+      historyAt: undefined,
+      lastCollectedAt: undefined,
+      updatedAt: Date.now(),
+    });
+    await ctx.scheduler.runAfter(0, internal.searchConsoleSync.clearFigures, args);
     return null;
   },
 });

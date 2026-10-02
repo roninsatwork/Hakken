@@ -10521,7 +10521,7 @@
       "notOwnedDescription": "Your company watches this website rather than owning it, so it has no Search Console here.",
       "figuresTo": "Google's figures to {day}; the last three days can still change.",
       "historyComing": "The sixteen months before {day} are still coming in, newest first.",
-      "clearing": "The last property's figures are being cleared; the new property's come in next."
+      "clearing": "The last property's figures are being cleared."
     },
     "menu": {
       "label": "Search Console pages",
@@ -10648,7 +10648,7 @@
     },
     "connect": {
       "title": "Connect Google Search Console",
-      "body": "See what Google itself counted for {host}: the clicks and impressions of every search and every page, day by day, sixteen months back. Only read: nothing in Search Console is ever changed.",
+      "body": "See what Google itself counted for {host}: the clicks and impressions of every search and every page, day by day. Only read: nothing in Search Console is ever changed.",
       "button": "Connect Google Search Console",
       "hint": "You'll sign in with the Google account that can see {host} in Search Console.",
       "askAdmin": "Ask one of your company's admins to connect it. Only they can.",
@@ -10680,7 +10680,9 @@
       "notYet": "Not yet",
       "historyAll": "Sixteen months, from {day}: all in",
       "historyPart": "From {day} so far; the rest is coming in",
-      "collectedDetail": "Every morning: the new day, and the last four days again while Google's figures settle",
+      "collectedDetail": "Not collecting for now: a Search Console agent will collect, on its own schedule",
+      "nothingCollectedTitle": "Connected, with nothing collected yet",
+      "nothingCollectedBody": "{host} is connected to Google Search Console, but nothing is collected for now. A Search Console agent will collect it, on its own schedule.",
       "disconnect": "Disconnect",
       "confirm": "Disconnecting stops collecting and gives Google's access back. The figures collected so far stay, marked with the day it was disconnected.",
       "confirmDisconnect": "Disconnect",

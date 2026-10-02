@@ -11,8 +11,12 @@ import { finishScheduled } from "@/src/test/finishScheduled";
  * network (docs/plans/active/search-console-plan.md §3–§4): connecting from
  * the site's page, the property chosen, sign-ins that cannot connect,
  * sixteen months of every search and page by day, the last four days fetched
- * again, access taken back, disconnecting, and a website the company no
- * longer holds. Nothing here reaches Google.
+ * again, access taken back, disconnecting, clearing what was collected, and a
+ * website the company no longer holds. Nothing here reaches Google.
+ *
+ * Nothing starts collecting on its own (plan §12): connecting collects
+ * nothing, and each test that needs figures starts a collection itself, as
+ * the Search Console agent will.
  */
 
 const KEY = Buffer.from(new Uint8Array(32).fill(7)).toString("base64");
@@ -136,6 +140,18 @@ const rowsOf = (t: Harness, siteId: Id<"companyWebsites">, dimension: string, da
     .collect())
     .map((entry) => [entry.key, entry.clicks])
     .sort());
+
+/** One collection for a site, run to its end — what the Search Console agent will start. */
+async function collect(t: Harness, siteId: Id<"companyWebsites">) {
+  const connection = await connectionOf(t, siteId);
+  await t.mutation(internal.searchConsoleSync.collectRecent, { connectionId: connection!._id });
+  await finishScheduled(t);
+}
+
+const held = (t: Harness) => t.run(async (ctx) => ({
+  days: (await ctx.db.query("searchConsoleDays").collect()).length,
+  rows: (await ctx.db.query("searchConsoleRows").collect()).length,
+}));
 
 const revokes = (google: Google) => google.calls.filter((call) => call.url === "https://oauth2.googleapis.com/revoke");
 
@@ -329,11 +345,23 @@ describe("collecting", () => {
     };
   }
 
-  test("sixteen months of every search and page by day on connecting, newest first", async () => {
+  test("connecting collects nothing: collecting waits for the Search Console agent", async () => {
+    const { t, siteId, admin } = await setup();
+    const google = fakeGoogle({ figures: figures() });
+    await signIn(t, admin, siteId);
+    await finishScheduled(t);
+
+    expect(await connectionOf(t, siteId)).toMatchObject({ status: "CONNECTED", property });
+    expect(await held(t)).toEqual({ days: 0, rows: 0 });
+    expect(await t.run(async (ctx) => await ctx.db.query("searchConsoleRuns").collect())).toEqual([]);
+    expect(google.calls.some((call) => call.url.endsWith("/searchAnalytics/query"))).toBe(false);
+  });
+
+  test("a collection brings sixteen months of every search and page by day, newest first", async () => {
     const { t, siteId, admin } = await setup();
     fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
-    await finishScheduled(t);
+    await collect(t, siteId);
 
     const connection = await connectionOf(t, siteId);
     expect(connection).toMatchObject({ newestDay: NEWEST, oldestDay: OLDEST });
@@ -362,19 +390,18 @@ describe("collecting", () => {
     expect(runs.every((run) => run.finishedAt !== undefined && run.error === undefined)).toBe(true);
   });
 
-  test("each day brings the new day and the last four again, keeping only what Google still has", async () => {
+  test("the next collection brings the new day and the last four again, keeping only what Google still has", async () => {
     const { t, siteId, admin } = await setup();
     const google = fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
-    await finishScheduled(t);
+    await collect(t, siteId);
 
     // A day later: yesterday's figures settled, one search gone, and a new day.
     vi.setSystemTime(NOW + 24 * 60 * 60 * 1000);
     const web = google.figures[property].web;
     web[NEWEST] = { total: row("", 13, 420), query: [row("plumber leeds", 7)] };
     web["2026-09-27"] = { total: row("", 6, 200), query: [row("drain unblocking", 6)] };
-    await t.mutation(internal.searchConsoleSync.collectAllDaily, {});
-    await finishScheduled(t);
+    await collect(t, siteId);
 
     expect(await rowsOf(t, siteId, "query", NEWEST)).toEqual([["plumber leeds", 7]]);
     expect(await rowsOf(t, siteId, "page", NEWEST)).toEqual([]);
@@ -385,38 +412,16 @@ describe("collecting", () => {
     expect(runs.at(-1)).toMatchObject({ kind: "DAILY", fromDay: "2026-09-23", toDay: "2026-09-27" });
   });
 
-  test("the daily run goes through every connected site, however many", async () => {
-    const t = harness();
-    const companyId = await company(t, "Acme");
-    await t.run(async (ctx) => {
-      for (let index = 0; index < 150; index += 1) {
-        const host = `site-${index}.test`;
-        const websiteId = await ctx.db.insert("websites", { host, displayHost: host, firstSeenAt: Date.now() });
-        const companyWebsiteId = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: Date.now() });
-        await ctx.db.insert("searchConsoleConnections", {
-          companyId, companyWebsiteId, websiteId, status: "CONNECTED", createdAt: Date.now(), updatedAt: Date.now(),
-        });
-      }
-    });
-    // A pass of a hundred, and the rest handed on.
-    expect(await t.mutation(internal.searchConsoleSync.collectAllDaily, {})).toBe(100);
-    await finishScheduled(t);
-    const started = await t.run(async (ctx) =>
-      (await ctx.db.system.query("_scheduled_functions").collect()).filter((job) => job.name.includes("collectRecent")));
-    expect(started).toHaveLength(150);
-  });
-
   test("Google taking the access back asks for connecting again, and the figures stay", async () => {
     const { t, siteId, admin } = await setup();
     const google = fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
-    await finishScheduled(t);
+    await collect(t, siteId);
 
     // Two hours on the access token has expired, and Google refuses to renew it.
     vi.setSystemTime(NOW + 2 * 60 * 60 * 1000);
     google.refreshStatus = 400;
-    await t.mutation(internal.searchConsoleSync.collectAllDaily, {});
-    await finishScheduled(t);
+    await collect(t, siteId);
 
     expect(await connectionOf(t, siteId)).toMatchObject({ status: "NEEDS_RECONNECT", problem: "REVOKED" });
     expect(await tokensOf(t)).toEqual([]);
@@ -429,12 +434,12 @@ describe("collecting", () => {
     const { t, siteId, admin } = await setup();
     const google = fakeGoogle({ figures: figures(), analyticsStatus: 403 });
     await signIn(t, admin, siteId);
-    await finishScheduled(t);
+    await collect(t, siteId);
     expect(await connectionOf(t, siteId)).toMatchObject({ status: "NEEDS_RECONNECT", problem: "NO_ACCESS" });
     expect(google.calls.some((call) => call.url.endsWith("/searchAnalytics/query"))).toBe(true);
   });
 
-  test("another property after a disconnect: the old figures go before the new come in", async () => {
+  test("another property after a disconnect: the old figures go, and the next collection brings the new", async () => {
     const { t, siteId, admin } = await setup();
     const google = fakeGoogle({
       figures: {
@@ -443,7 +448,7 @@ describe("collecting", () => {
       },
     });
     await signIn(t, admin, siteId);
-    await finishScheduled(t);
+    await collect(t, siteId);
     await admin.mutation(api.searchConsoleConnect.disconnectSearchConsole, { siteId });
     await finishScheduled(t);
 
@@ -455,11 +460,46 @@ describe("collecting", () => {
     expect((await connectionOf(t, siteId))?.status).toBe("CHOOSING");
     await admin.mutation(api.searchConsoleConnect.chooseSearchConsoleProperty, { siteId, property: "https://www.acme-shop.test/" });
     await finishScheduled(t);
+    // The old property's figures are gone, and nothing new came in by itself.
+    expect(await held(t)).toEqual({ days: 0, rows: 0 });
+    expect((await connectionOf(t, siteId))?.clearing).toBeUndefined();
 
+    await collect(t, siteId);
     expect(await rowsOf(t, siteId, "query", NEWEST)).toEqual([["acme shop", 3]]);
     expect(await rowsOf(t, siteId, "query", "2025-06-01")).toEqual([]);
     expect(await connectionOf(t, siteId)).toMatchObject({ status: "CONNECTED", dataProperty: "https://www.acme-shop.test/", newestDay: NEWEST });
-    expect((await connectionOf(t, siteId))?.clearing).toBeUndefined();
+  });
+
+  test("clearing what was collected keeps the connection, and nothing comes back by itself", async () => {
+    const { t, siteId, admin } = await setup();
+    const google = fakeGoogle({ figures: figures() });
+    await signIn(t, admin, siteId);
+    await collect(t, siteId);
+    expect((await held(t)).rows).toBeGreaterThan(0);
+    const runs = (await t.run(async (ctx) => await ctx.db.query("searchConsoleRuns").collect())).length;
+    const asked = google.calls.length;
+
+    await t.mutation(internal.searchConsoleSync.clearCollected, { companyWebsiteId: siteId });
+    await finishScheduled(t);
+
+    expect(await held(t)).toEqual({ days: 0, rows: 0 });
+    const connection = await connectionOf(t, siteId);
+    expect(connection).toMatchObject({ status: "CONNECTED", property, dataProperty: property });
+    expect(connection?.newestDay).toBeUndefined();
+    expect(connection?.oldestDay).toBeUndefined();
+    expect(connection?.backfilledAt).toBeUndefined();
+    expect(connection?.lastCollectedAt).toBeUndefined();
+    expect(connection?.clearing).toBeUndefined();
+    // The sign-in stays and Google was not asked again; the run log stays.
+    expect(await tokensOf(t)).toHaveLength(1);
+    expect(google.calls.length).toBe(asked);
+    expect(await t.run(async (ctx) => await ctx.db.query("searchConsoleRuns").collect())).toHaveLength(runs);
+    const status = (await admin.query(api.searchConsoleConnect.searchConsoleStatus, { siteId }))!;
+    expect(status.connection).toMatchObject({ status: "CONNECTED", newestDay: null, lastCollectedAt: null });
+
+    // A later collection needs no new sign-in.
+    await collect(t, siteId);
+    expect(await rowsOf(t, siteId, "query", NEWEST)).toEqual([["emergency plumber", 3], ["plumber leeds", 5]]);
   });
 });
 
@@ -476,7 +516,7 @@ describe("disconnecting", () => {
     });
     await signIn(t, admin, siteId);
     await signIn(t, admin, second);
-    await finishScheduled(t);
+    await collect(t, siteId);
     expect(await tokensOf(t)).toHaveLength(2);
 
     await admin.mutation(api.searchConsoleConnect.disconnectSearchConsole, { siteId });
@@ -504,7 +544,8 @@ describe("disconnecting", () => {
       figures: { "sc-domain:acme-shop.test": { web: { [NEWEST]: { total: row("", 2, 20), query: [row("acme", 2)] } } } },
     });
     await signIn(t, admin, siteId);
-    await finishScheduled(t);
+    await collect(t, siteId);
+    expect((await held(t)).rows).toBeGreaterThan(0);
 
     const superAdmin = await person(t, companyId, "SUPER_ADMIN");
     await superAdmin.mutation(api.websites.removeCompanyWebsite, { id: siteId });

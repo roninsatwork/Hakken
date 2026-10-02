@@ -10521,7 +10521,7 @@
       "notOwnedDescription": "La tua azienda osserva questo sito ma non ne è proprietaria, quindi qui non ha Search Console.",
       "figuresTo": "Dati di Google fino al {day}; gli ultimi tre giorni possono ancora cambiare.",
       "historyComing": "I sedici mesi prima del {day} stanno ancora arrivando, dai più recenti.",
-      "clearing": "I dati della proprietà precedente vengono cancellati; poi arrivano quelli della nuova."
+      "clearing": "I dati della proprietà precedente vengono cancellati."
     },
     "menu": {
       "label": "Pagine di Search Console",
@@ -10648,7 +10648,7 @@
     },
     "connect": {
       "title": "Collega Google Search Console",
-      "body": "Vedi quello che Google stesso ha contato per {host}: i clic e le impressioni di ogni ricerca e ogni pagina, giorno per giorno, fino a sedici mesi fa. Solo in lettura: in Search Console non viene mai cambiato niente.",
+      "body": "Vedi quello che Google stesso ha contato per {host}: i clic e le impressioni di ogni ricerca e ogni pagina, giorno per giorno. Solo in lettura: in Search Console non viene mai cambiato niente.",
       "button": "Collega Google Search Console",
       "hint": "Accederai con l'account Google che vede {host} in Search Console.",
       "askAdmin": "Chiedi a un amministratore della tua azienda di collegarlo. Solo loro possono farlo.",
@@ -10680,7 +10680,9 @@
       "notYet": "Non ancora",
       "historyAll": "Sedici mesi, dal {day}: tutto arrivato",
       "historyPart": "Dal {day} per ora; il resto sta arrivando",
-      "collectedDetail": "Ogni mattina: il nuovo giorno, e di nuovo gli ultimi quattro finché i dati di Google si assestano",
+      "collectedDetail": "Per ora non si raccoglie nulla: raccoglierà un agente Search Console, con la sua programmazione",
+      "nothingCollectedTitle": "Collegato, ma non è stato ancora raccolto nulla",
+      "nothingCollectedBody": "{host} è collegato a Google Search Console, ma per ora non viene raccolto nulla. Lo raccoglierà un agente Search Console, con la sua programmazione.",
       "disconnect": "Scollega",
       "confirm": "Scollegando si ferma la raccolta e si restituisce l'accesso a Google. I dati raccolti finora restano, segnati con il giorno dello scollegamento.",
       "confirmDisconnect": "Scollega",

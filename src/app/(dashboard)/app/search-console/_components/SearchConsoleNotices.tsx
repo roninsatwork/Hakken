@@ -121,7 +121,9 @@ export function ConnectionBanner({ status, siteId }: { status: SearchConsoleStat
 /**
  * What a page shows until the site has figures: the way to connect, or, with
  * a sign-in back from Google and several properties to choose from, the way
- * to the Connection page to choose one.
+ * to the Connection page to choose one. A site connected with nothing
+ * collected says so: collecting waits for the Search Console agent
+ * (search-console-plan.md §12), so connecting again would change nothing.
  */
 export function SearchConsoleGate({ status, siteId, children }: {
   status: SearchConsoleStatus;
@@ -143,6 +145,20 @@ export function SearchConsoleGate({ status, siteId, children }: {
             </p>
           </div>
           <Link href={hrefFor("connection")} className="text-[13px] font-medium text-info hover:underline">{t("chooseTitle")} →</Link>
+        </div>
+      </div>
+    );
+  }
+  if (status.connection?.status === "CONNECTED") {
+    return (
+      <div className={PANEL}>
+        <Plug className="h-6 w-6 shrink-0 text-muted" aria-hidden="true" />
+        <div className="flex max-w-2xl flex-col items-start gap-3">
+          <div className="flex flex-col gap-1.5">
+            <h2 className="text-[15px] font-medium text-foreground">{t("nothingCollectedTitle")}</h2>
+            <p className="text-[13px] text-secondary">{t("nothingCollectedBody", { host: status.host })}</p>
+          </div>
+          <Link href={hrefFor("connection")} className="text-[13px] font-medium text-info hover:underline">{t("title")} →</Link>
         </div>
       </div>
     );

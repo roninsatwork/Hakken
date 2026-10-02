@@ -347,9 +347,10 @@ export const completeSignIn = internalMutation({
 });
 
 /**
- * Connected to a property: collecting starts now. Another property than the
- * one the figures held came from clears them first — two properties' figures
- * are never mixed — and collecting starts when they are gone.
+ * Connected to a property. Collecting does not start here: it waits for the
+ * Search Console agent and its schedule (search-console-plan.md §12). Another
+ * property than the one the figures held came from clears them — two
+ * properties' figures are never mixed.
  */
 async function connectTo(
   ctx: MutationCtx,
@@ -391,8 +392,6 @@ async function connectTo(
     await ctx.scheduler.runAfter(0, internal.searchConsoleSync.clearFigures, {
       companyWebsiteId: connection.companyWebsiteId,
     });
-  } else {
-    await ctx.scheduler.runAfter(0, internal.searchConsoleSync.collectRecent, { connectionId: connection._id });
   }
 }
 

@@ -8,7 +8,10 @@ do: the screens checked against Google's own Search Console, production's
 setup, and "External" before a client connects with its own Google account.
 Phase 4 is each part its own agreement. Screens beyond Google's own — three
 drawn 2026-10-02 with Ronins' real figures, to be adjusted before anything
-is agreed (§11).** Change a decision here, with a date, before building anything that
+is agreed (§11). Collecting switched off and everything collected cleared
+2026-10-02, the connection kept: collecting is to be a Search Console
+agent's, on its own schedule, and nothing is collected in bulk until the
+screens are agreed (§12).** Change a decision here, with a date, before building anything that
 disagrees with it. Follow `AGENTS.md`: no code until Anthony agrees, and draw
 the screens first (§1, SC9).
 
@@ -550,6 +553,42 @@ screens on 2026-10-02. What the drawings propose, each still to agree:
   different figures. Likely addresses Google counts apart (a part after `#`,
   a query or a host) shown with the differing part hidden. To check.
 
+## 12. Collecting switched off, everything collected cleared — 2026-10-02
+
+Anthony, 2026-10-02, on the proposal to store which searches went to which
+page: "we must never bulk back full data from search console", then
+"actually its free but we should never bulk collect until we are happy";
+"please delete all those we dont want or need them — we are architecturally
+going to brainstorm and we may need to pull again"; "data needs to be
+controlled through a search console agent which then has its own schedule";
+and of the daily job: "we are going to cancel that hidden job it should never
+have been there". He chose to stay connected.
+
+This supersedes SC5 (its own daily job) and the sixteen months on connecting
+(§4.2, SC6's history):
+
+- **The hidden daily job is gone**: `search-console-daily` out of
+  `convex/crons.ts` and the job ledger, and its fan-out to every connected
+  site (`collectAllDaily`) removed.
+- **Nothing starts collecting**: connecting, or choosing another property,
+  collects nothing (`searchConsoleConnect.connectTo`,
+  `searchConsoleSync.clearFigures`). The collecting itself stays
+  (`collectRecent` and its steps), for the agent to start.
+- **Everything collected for ronins.co.uk cleared** on dev — the day totals,
+  the 2.16 million rows of every search, page, country, device and search
+  appearance by day, and the tables' copies — by
+  `searchConsoleSync:clearCollected`, run by hand. The Google connection and
+  its sign-in stay, so collecting again needs no new sign-in. The run log (71
+  runs: what was asked of Google, not the figures) stays.
+- **The screens say so**: a connected site with nothing collected says
+  "Connected, with nothing collected yet" instead of offering to connect
+  again, and the Connection page says nothing is collected for now.
+
+Anthony then made the agent and its schedule himself: **Search Console:
+Collector Agent** in Admin → Agents, and **Search Console: Data Collection
+Schedular** in Admin → Schedules, daily at 04:00 local (03:00 UTC). The role
+that connects that agent to the collecting is still to agree and build.
+
 ## Change log
 
 - **2026-09-27** — Plan written: how Search Console integration works, what
@@ -583,3 +622,8 @@ screens on 2026-10-02. What the drawings propose, each still to agree:
   what is possible, and three drawn with Ronins' real figures — Page ledger,
   Almost there, Losing ground. To be adjusted; nothing agreed. Two faults in
   the built section noted, not fixed.
+- **2026-10-02** — Collecting switched off and everything collected cleared,
+  the connection kept (§12): no hidden daily job, nothing collected on
+  connecting, and no bulk collecting until the screens are agreed. SC5 and
+  the sixteen months on connecting superseded; collecting is to be a Search
+  Console agent's, timed by Admin → Schedules.
