@@ -760,6 +760,18 @@ entries. No screen reads Google's data at that grain.
    `searchConsoleDays`) and the tables' compact copies of kind `gsc`, replaced
    by the day, week and month records and the ready-made period totals.
 
+9. **Quick to load, all on the server** (Anthony, 2026-10-02: "please ensure
+   this is all server side optimised etc with indexes and page speed is kept
+   too — these pages need to be quick to load"). Every list screen reads its
+   ready-made period — one record, or a few for a long list — by index, and
+   searches, filters, sorts and pages it on the server, sending the browser
+   only the page of rows shown. No screen adds up days while it loads: that
+   is done once, after each collection. Every read uses an index that starts
+   with the website's hold; nothing scans a table. Only other dates and a
+   detail screen's chart ask Google while the screen opens. A speed test, as
+   Sites has (`convex/sitesLoad.test.ts`), times the list reads on a large
+   website's worth of rows, so a slow change fails.
+
 **Every limit**: Google returns at most 50,000 rows a day for each kind of
 result; a record holds 2,000 rows (Convex: 1MB a record); days 90, weeks 12
 months, then months; ready-made periods 7, 30 and 90 days and 12 months. The
@@ -861,3 +873,5 @@ its tests and the full gate; days are working days, each phase its own go.
   done with Anthony (§14).
 - **2026-10-02** — No history older than 90 days is fetched; D6 dropped. Data
   7.5 days, about 21 in all (§14).
+- **2026-10-02** — Quick to load, all on the server, by index, held by a speed
+  test (§14.3, item 9).
