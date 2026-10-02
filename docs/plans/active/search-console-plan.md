@@ -765,6 +765,13 @@ months, then months; ready-made periods 7, 30 and 90 days and 12 months. The
 search-and-page pairs undercount a little: Google drops some rare rows when
 asked for both together.
 
+**Brand words** (Anthony, 2026-10-02: "these are set in the company against a
+website"): the brand names already kept for each website — up to 5, with
+misspellings — set in Admin → Companies → the company → Websites → the
+website → Profile, and already used to find the website in AI answers. Brand
+and non-brand reads them; no second list. Its "Change brand words" link goes
+to that Profile for the team; a company's own users see the names only.
+
 **Size, estimated for ronins.co.uk**: a few thousand records and about 10–20MB,
 against 2.16 million records and about half a gigabyte. To be measured on
 ronins.co.uk and kordatackle.com in phase D7.
@@ -782,7 +789,7 @@ its tests and the full gate; days are working days, each phase its own go.
 | **D4** | Ready-made period totals: 7, 30 and 90 days and 12 months, and the period before each, for keywords, pages and pairs, by type, intent and brand | 1.5 |
 | **D5** | Asked of Google when needed: other dates, and the detail screens' charts | 1 |
 | **D6** | The history older than 90 days, back to Google's sixteen months, straight into weeks and months — **only on Anthony's go** | 0.5 |
-| **D7** | Measured on ronins.co.uk and kordatackle.com: records, size, time a run takes | 0.5 |
+| **D7** | Measured on ronins.co.uk: records, size, time a run takes (Anthony: "just ronins for now") | 0.5 |
 | | **Data** | **8** |
 | **S1** | Shared parts: the Search Console table on the kit's table and Sites' table bar, hero boxes, the grouped side menu, the website's icon | 1 |
 | **S2** | Pages and Keywords: search, filters, sorting, pager, the Track column | 1.5 |
@@ -790,8 +797,8 @@ its tests and the full gate; days are working days, each phase its own go.
 | **S4** | Tracking: the tracked lists, tick and untick, "Track this page / keyword", the two limits on the Limits screens at all three levels | 1.5 |
 | **S5** | Changes: Position bands, New and lost, Wins and losses, Google updates | 2 |
 | **S6** | Opportunities: Almost there, Shown but not clicked, Missed demand, Pages competing | 2 |
-| **S7** | Breakdowns: Types (sorting pages and keywords Sites has not seen), Brand and non-brand (where brand words are set), Click rate by position, Rich results, Real against estimated | 2.5 |
-| **S8** | Wording in English and Italian; the approved looks locked with drift and look tests; screen-kit entries; checked in Chrome on ronins.co.uk | 1.5 |
+| **S7** | Breakdowns: Types (sorting pages and keywords Sites has not seen), Brand and non-brand (reading the website's brand names, below), Click rate by position, Rich results, Real against estimated | 2.5 |
+| **S8** | Wording in English and Italian; the approved looks locked with drift and look tests; screen-kit entries; checked in Chrome on ronins.co.uk with Anthony | 1.5 |
 | | **Screens** | **13.5** |
 | | **Total** | **21.5** |
 
@@ -849,3 +856,6 @@ its tests and the full gate; days are working days, each phase its own go.
   about 21.5 in all.
 - **2026-10-02** — The tracking limits chosen: 200 keywords and 100 pages a
   website by default, each a dropdown on the Limits screens (§13.2).
+- **2026-10-02** — Brand words are the website's brand names in its Profile;
+  D7 measured on ronins.co.uk only; S8's Chrome checks and locking the looks
+  done with Anthony (§14).
