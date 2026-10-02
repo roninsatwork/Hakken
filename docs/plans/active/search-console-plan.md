@@ -604,7 +604,7 @@ action of its own, with a line per step and a plain summary in the agent's
 Observability. A run started while any of the agent's runs is going stops.
 Anthony picks the role on his agent himself.
 
-## 13. The screens, redesigned — drawn 2026-10-02 (nothing agreed or built)
+## 13. The screens, redesigned — drawn 2026-10-02, built 2026-10-03 (§15)
 
 Anthony, 2026-10-02: the built section "feels very search console like and
 not very hakken like"; it should behave like Sites, Ahrefs and Semrush —
@@ -814,6 +814,77 @@ its tests and the full gate; days are working days, each phase its own go.
 | | **Screens** | **13.5** |
 | | **Total** | **21** |
 
+## 15. Built overnight — 2026-10-02 to 03
+
+Anthony, 2026-10-02: "ok i pluggedin power to the laptop adn need to goto
+bed, can y ou start teh build please". Phases D1–D5 and S1–S7 of §14.4 are
+built and committed locally (nothing pushed); D7 (measuring ronins.co.uk) and
+S8 (Chrome checks with Anthony, locking the looks) are the morning's.
+
+**On dev.** The data layer was sent to the dev backend (23:24, and again at
+23:50 with the last pages' reads), once the old rows' clear-out had finished
+(none left, the connection kept) and the full local gate had passed —
+environment, guards, lint, types, every test with the speed check, the build
+and the whitespace check. The Collector's next run asks for ronins.co.uk's
+last 90 days, 2026-07-04 to Google's newest day. **Its schedule is switched
+off** ("Search Console: Data Collection Schedular", daily at 04:00, found
+inactive at 23:51), so nothing came in overnight: switching it on, or one run
+by hand, is Anthony's call.
+
+**What is where.**
+
+- `convex/utils/searchConsolePacks.ts` — packing, adding up, weeks and months.
+- `convex/searchConsoleSync.ts` — the run's steps, rollups, clearing.
+- `convex/searchConsolePeriods.ts` — the ready-made periods and the weeks the
+  charts read, built after each run, one kept list at a time.
+- `convex/searchConsoleFacts.ts` — Sites' intent, monthly searches, page type
+  and estimated visits beside each keyword and page.
+- `convex/utils/searchConsoleViews.ts` — each page's rule (Almost there, Shown
+  but not clicked, Pages competing, Wins and losses, Missed demand, Real
+  against estimated), the filters and the hero boxes' figures: pure, shared by
+  the server and the live answers.
+- `convex/searchConsoleLists.ts` — every list, read by index and searched,
+  filtered, sorted and paged on the server; other dates and one country or
+  device asked of Google.
+- `convex/searchConsoleChanges.ts` — New and lost, Google updates, Click rate
+  by position, brand words.
+- `convex/searchConsoleTracking.ts` — tracked keywords and pages, held to the
+  Limits.
+- The screens: `src/app/(dashboard)/app/search-console/` — the menu, the
+  shared list screen, the record screens and the thirteen pages.
+
+**Limits, each said** (Anthony: "say every limit"): lists hold the 25,000 rows
+with the most clicks; a kept or ready-made list is read in parts of 2,000 rows,
+at most 500 parts a slot; tracked lists are read 500 at a time; Missed demand
+reads Sites' 500 most-searched keywords for the website, "searched a lot" from
+100 searches a month, "barely shown" under 50 impressions; an estimate more
+than a quarter off Google's clicks is too high or too low; the usual click rate
+is worked out for positions 1 to 20; the Country chip offers the website's 12
+countries with the most clicks; New and lost reads up to 5,000 of each; a
+keyword counts as new only once the website has been watched 14 days; Google
+updates lists up to 100; the charts show 16 weeks.
+
+**Decisions for Anthony** (not guessed):
+
+1. The drawing's Section chip on Pages ("Top level", "/hub/") was one
+   website's folders; Pages has a Page type chip from Sites instead. Keywords
+   has an Intent chip beside the drawn ones, so Types can open it narrowed.
+2. Table bars count what is shown, as every Sites table does, rather than the
+   drawing's "12 of 268 pages".
+3. The menu is the Sites section menu — "Jump to a page", folding groups, all
+   open — with the first group named "Google's figures".
+4. Fan-out's Search Console position: the 14- and 28-day settings read the
+   ready-made 30 days now (7 reads 7).
+5. The old `gsc` compact copies: clear them and drop the kind.
+6. Scale: a rollup merges a day into its week in one mutation, and a website's
+   periods are added up in one action. Comfortable for ronins.co.uk; a website
+   with ~50,000 keyword-and-page pairs a day would pass Convex's per-function
+   limits, so this is split before a large website is connected.
+7. Lists asked live (other dates, a country or a device) carry no Sites facts.
+8. Real against estimated lists only pages Sites has an estimate for.
+9. The Collector's schedule is off: switch it on, or run it once, to bring
+   ronins.co.uk's 90 days in.
+
 ## Change log
 
 - **2026-09-27** — Plan written: how Search Console integration works, what
@@ -875,3 +946,7 @@ its tests and the full gate; days are working days, each phase its own go.
   7.5 days, about 21 in all (§14).
 - **2026-10-02** — Quick to load, all on the server, by index, held by a speed
   test (§14.3, item 9).
+- **2026-10-03** — Built overnight on Anthony's go: D1–D5 and S1–S7, all 17
+  drawn screens (§15). Committed locally, data layer on dev; the Collector's
+  schedule found switched off, so no figures yet. D7, S8 and nine decisions
+  are the morning's.
