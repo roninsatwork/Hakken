@@ -188,6 +188,7 @@ import type * as governanceRegisterService from "../governanceRegisterService.js
 import type * as governanceRollupService from "../governanceRollupService.js";
 import type * as governanceRollups from "../governanceRollups.js";
 import type * as holdLists from "../holdLists.js";
+import type * as holdPages from "../holdPages.js";
 import type * as holdProfileSchema from "../holdProfileSchema.js";
 import type * as holdProfiles from "../holdProfiles.js";
 import type * as http from "../http.js";
@@ -255,6 +256,9 @@ import type * as outbox from "../outbox.js";
 import type * as outboxAdmin from "../outboxAdmin.js";
 import type * as outboxSchema from "../outboxSchema.js";
 import type * as outboxTemplates from "../outboxTemplates.js";
+import type * as pageClassifications from "../pageClassifications.js";
+import type * as pageKinds from "../pageKinds.js";
+import type * as pagesSchema from "../pagesSchema.js";
 import type * as personalData from "../personalData.js";
 import type * as personalDataService from "../personalDataService.js";
 import type * as photoActionService from "../photoActionService.js";
@@ -371,6 +375,8 @@ import type * as siteRecords from "../siteRecords.js";
 import type * as siteSchema from "../siteSchema.js";
 import type * as siteSerp from "../siteSerp.js";
 import type * as siteSummaries from "../siteSummaries.js";
+import type * as sitemapRead from "../sitemapRead.js";
+import type * as sitemaps from "../sitemaps.js";
 import type * as sites from "../sites.js";
 import type * as streamingService from "../streamingService.js";
 import type * as swarmActions from "../swarmActions.js";
@@ -428,6 +434,7 @@ import type * as utils_fanOutAngle from "../utils/fanOutAngle.js";
 import type * as utils_fileParser from "../utils/fileParser.js";
 import type * as utils_governanceShapes from "../utils/governanceShapes.js";
 import type * as utils_healthShapes from "../utils/healthShapes.js";
+import type * as utils_holdPagesJoin from "../utils/holdPagesJoin.js";
 import type * as utils_inventoryRollupService from "../utils/inventoryRollupService.js";
 import type * as utils_knowledgeActionsService from "../utils/knowledgeActionsService.js";
 import type * as utils_knowledgePageGuard from "../utils/knowledgePageGuard.js";
@@ -441,6 +448,8 @@ import type * as utils_messageEvidence from "../utils/messageEvidence.js";
 import type * as utils_modelPricing from "../utils/modelPricing.js";
 import type * as utils_newsFeeds from "../utils/newsFeeds.js";
 import type * as utils_nightHeistRules from "../utils/nightHeistRules.js";
+import type * as utils_pageClassification from "../utils/pageClassification.js";
+import type * as utils_pageKinds from "../utils/pageKinds.js";
 import type * as utils_pii from "../utils/pii.js";
 import type * as utils_platformShapes from "../utils/platformShapes.js";
 import type * as utils_promptLimits from "../utils/promptLimits.js";
@@ -457,6 +466,8 @@ import type * as utils_security from "../utils/security.js";
 import type * as utils_seoLocations from "../utils/seoLocations.js";
 import type * as utils_seoSentPlace from "../utils/seoSentPlace.js";
 import type * as utils_siteShapes from "../utils/siteShapes.js";
+import type * as utils_sitemapFetch from "../utils/sitemapFetch.js";
+import type * as utils_sitemapReading from "../utils/sitemapReading.js";
 import type * as utils_skillBundleService from "../utils/skillBundleService.js";
 import type * as utils_skillContracts from "../utils/skillContracts.js";
 import type * as utils_skillLearningService from "../utils/skillLearningService.js";
@@ -466,6 +477,7 @@ import type * as utils_skillNormalization from "../utils/skillNormalization.js";
 import type * as utils_skillShapes from "../utils/skillShapes.js";
 import type * as utils_sortOrder from "../utils/sortOrder.js";
 import type * as utils_starterSkills from "../utils/starterSkills.js";
+import type * as utils_suggestClassifications from "../utils/suggestClassifications.js";
 import type * as utils_systemShapes from "../utils/systemShapes.js";
 import type * as utils_tailShapes from "../utils/tailShapes.js";
 import type * as utils_templateParser from "../utils/templateParser.js";
@@ -547,6 +559,7 @@ import type * as workflowScheduleService from "../workflowScheduleService.js";
 import type * as workflows from "../workflows.js";
 import type * as xConnect from "../xConnect.js";
 import type * as xRead from "../xRead.js";
+import type * as yourPages from "../yourPages.js";
 
 import type {
   ApiFromModules,
@@ -735,6 +748,7 @@ declare const fullApi: ApiFromModules<{
   governanceRollupService: typeof governanceRollupService;
   governanceRollups: typeof governanceRollups;
   holdLists: typeof holdLists;
+  holdPages: typeof holdPages;
   holdProfileSchema: typeof holdProfileSchema;
   holdProfiles: typeof holdProfiles;
   http: typeof http;
@@ -802,6 +816,9 @@ declare const fullApi: ApiFromModules<{
   outboxAdmin: typeof outboxAdmin;
   outboxSchema: typeof outboxSchema;
   outboxTemplates: typeof outboxTemplates;
+  pageClassifications: typeof pageClassifications;
+  pageKinds: typeof pageKinds;
+  pagesSchema: typeof pagesSchema;
   personalData: typeof personalData;
   personalDataService: typeof personalDataService;
   photoActionService: typeof photoActionService;
@@ -918,6 +935,8 @@ declare const fullApi: ApiFromModules<{
   siteSchema: typeof siteSchema;
   siteSerp: typeof siteSerp;
   siteSummaries: typeof siteSummaries;
+  sitemapRead: typeof sitemapRead;
+  sitemaps: typeof sitemaps;
   sites: typeof sites;
   streamingService: typeof streamingService;
   swarmActions: typeof swarmActions;
@@ -975,6 +994,7 @@ declare const fullApi: ApiFromModules<{
   "utils/fileParser": typeof utils_fileParser;
   "utils/governanceShapes": typeof utils_governanceShapes;
   "utils/healthShapes": typeof utils_healthShapes;
+  "utils/holdPagesJoin": typeof utils_holdPagesJoin;
   "utils/inventoryRollupService": typeof utils_inventoryRollupService;
   "utils/knowledgeActionsService": typeof utils_knowledgeActionsService;
   "utils/knowledgePageGuard": typeof utils_knowledgePageGuard;
@@ -988,6 +1008,8 @@ declare const fullApi: ApiFromModules<{
   "utils/modelPricing": typeof utils_modelPricing;
   "utils/newsFeeds": typeof utils_newsFeeds;
   "utils/nightHeistRules": typeof utils_nightHeistRules;
+  "utils/pageClassification": typeof utils_pageClassification;
+  "utils/pageKinds": typeof utils_pageKinds;
   "utils/pii": typeof utils_pii;
   "utils/platformShapes": typeof utils_platformShapes;
   "utils/promptLimits": typeof utils_promptLimits;
@@ -1004,6 +1026,8 @@ declare const fullApi: ApiFromModules<{
   "utils/seoLocations": typeof utils_seoLocations;
   "utils/seoSentPlace": typeof utils_seoSentPlace;
   "utils/siteShapes": typeof utils_siteShapes;
+  "utils/sitemapFetch": typeof utils_sitemapFetch;
+  "utils/sitemapReading": typeof utils_sitemapReading;
   "utils/skillBundleService": typeof utils_skillBundleService;
   "utils/skillContracts": typeof utils_skillContracts;
   "utils/skillLearningService": typeof utils_skillLearningService;
@@ -1013,6 +1037,7 @@ declare const fullApi: ApiFromModules<{
   "utils/skillShapes": typeof utils_skillShapes;
   "utils/sortOrder": typeof utils_sortOrder;
   "utils/starterSkills": typeof utils_starterSkills;
+  "utils/suggestClassifications": typeof utils_suggestClassifications;
   "utils/systemShapes": typeof utils_systemShapes;
   "utils/tailShapes": typeof utils_tailShapes;
   "utils/templateParser": typeof utils_templateParser;
@@ -1094,6 +1119,7 @@ declare const fullApi: ApiFromModules<{
   workflows: typeof workflows;
   xConnect: typeof xConnect;
   xRead: typeof xRead;
+  yourPages: typeof yourPages;
 }>;
 
 /**

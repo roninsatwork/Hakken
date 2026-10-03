@@ -16,7 +16,7 @@ vi.mock("next/navigation", async () => ({
 
 const counts: MenuCounts = {
   keywords: 2545, pages: 529, top3: 18, referringDomains: 505, brokenBacklinks: 2, aiNamed: 1, aiAsked: 4,
-  trackedSearches: 5, trackedFanOut: 8, rankedUp: 0, rankedDown: 0, suggestions: 0, citedPages: 1,
+  trackedSearches: 5, trackedFanOut: 8, rankedUp: 0, rankedDown: 0, suggestions: 0, citedPages: 1, yourPages: 175,
 };
 
 const menu = () => screen.getByRole("navigation", { name: "sites.menu.label" });
@@ -39,6 +39,19 @@ describe("the Sites side menu", () => {
     expect(page("overview")).toBeInTheDocument();
     expect(page("keywordsAll")).toHaveAttribute("aria-current", "page");
     expect(page("aiMentions")).not.toBeInTheDocument();
+  });
+
+  // docs/plans/active/page-groups-plan.md, decision 4: under Site, right after Overview, with its count.
+  it("lists Your pages right after Overview, with every page counted beside it", () => {
+    pathname.current = "/app/sites/site_1/keywords";
+    renderWithProviders(<SiteMenu siteId="site_1" counts={counts} />);
+
+    const site = screen.getAllByRole("link").map((link) => link.textContent ?? "").filter((label) => /overview|yourPages|siteAudit/.test(label));
+    expect(site[0]).toMatch(/overview/);
+    expect(site[1]).toMatch(/yourPages/);
+    expect(site[1]).toMatch(/175/);
+    expect(site[2]).toMatch(/siteAudit/);
+    expect(page("yourPages")).toHaveAttribute("href", "/app/sites/site_1/your-pages");
   });
 
   it("opens and closes a group when its heading is pressed", () => {

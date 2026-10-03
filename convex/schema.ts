@@ -6,6 +6,7 @@ import { billingTables } from "./billingSchema";
 import { uploadTables } from "./uploadSchema";
 import { siteTables } from "./siteSchema";
 import { searchConsoleTables } from "./searchConsoleSchema";
+import { pagesTables } from "./pagesSchema";
 import { contentTables } from "./contentSchema";
 import { decisionCertaintyValidator, decisionFallbackReasonValidator, decisionModeValidator, decisionOutcomeValidator, decisionSourceValidator } from "./utils/decisionShapes";
 
@@ -29,6 +30,7 @@ export default defineSchema({
   ...uploadTables,
   ...siteTables,
   ...searchConsoleTables,
+  ...pagesTables,
   ...contentTables,
   
   companies: defineTable({

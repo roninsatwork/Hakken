@@ -20,7 +20,10 @@ const CHIPS: readonly ChipId[] = ["verdict", "pageType"];
  */
 export default function SearchConsoleEstimatesPage() {
   const t = useTranslations("searchConsole");
+  const tc = useTranslations("sites.common");
   const list = useSearchConsoleList({ dimension: "page", view: "estimates", opening: "gap", chips: CHIPS });
+  // Once the website has classifications of its own, the Type column is the page's classification.
+  const typeHeader = list.pageKinds.classified ? tc("classification") : t("table.type");
   const recordHref = useRecordHref(list.siteId);
   const host = list.status?.host ?? "";
   const summary = list.summary;
@@ -47,7 +50,7 @@ export default function SearchConsoleEstimatesPage() {
         emptyIcon: <Scale className="h-8 w-8 text-muted/30" />,
         download: [
           { header: t("table.page"), field: "key" },
-          { header: t("table.type"), field: "kind" },
+          { header: typeHeader, field: "kind" },
           { header: t("table.clicks"), field: "clicks" },
           { header: t("table.estimate"), field: "estimate" },
           { header: t("table.difference"), field: "gap" },
@@ -61,7 +64,7 @@ export default function SearchConsoleEstimatesPage() {
             className: CUT_COLUMN.first,
             cell: (row) => <RecordLinkCell cut href={recordHref("pages/page", row.key)}>{pageLabel(row.key, host)}</RecordLinkCell>,
           },
-          { key: "kind", header: t("table.type"), sortable: true, cell: (row) => <KindText kind={row.kind} of="pageType" /> },
+          { key: "kind", header: typeHeader, sortable: true, cell: (row) => <KindText kind={row.kind} of="pageType" kinds={list.pageKinds} /> },
           ...figureColumns(t, ["clicks"]),
           { key: "estimate", header: t("table.estimate"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.estimate === null ? "–" : formatNumber(row.estimate)}</span> },
           { key: "gap", header: t("table.difference"), sortable: true, cell: (row) => <Difference row={row} /> },

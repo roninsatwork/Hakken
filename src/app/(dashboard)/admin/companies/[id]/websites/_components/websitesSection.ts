@@ -3,6 +3,7 @@ import {
   Gauge,
   Globe,
   IdCard,
+  Layers,
   LineChart,
   ListChecks,
   MapPin,
@@ -34,6 +35,7 @@ export type SectionPageId =
   | "competitors"
   | "names"
   | "market"
+  | "classification"
   | "todo"
   | "rankings"
   | "answers"
@@ -69,6 +71,9 @@ export const SECTION_PAGES: readonly SectionPage[] = [
   // Where a website trades and where it is watched from, inputs only (search-console-plan.md
   // §16; Anthony, 2026-10-03). A competitor has no countries, but is still watched from somewhere.
   { id: "market", group: "track", icon: MapPin, all: "market", site: "market", owners: "ANY" },
+  // What each of a website's pages is, in the company's own words (page-groups-plan.md, decision 6;
+  // Anthony, 2026-10-03). A competitor has none: only the company's own websites are classified.
+  { id: "classification", group: "track", icon: Layers, all: "classification", site: "classification", owners: "OWNED" },
   { id: "todo", group: "results", icon: ListChecks, all: "todo", site: "", owners: "OWNED" },
   { id: "rankings", group: "results", icon: LineChart, all: "rankings", site: "keywords", owners: "ANY" },
   { id: "answers", group: "results", icon: MessageSquareQuote, all: "answers", site: "citations", owners: "OWNED" },

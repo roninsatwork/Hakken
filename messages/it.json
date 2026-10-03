@@ -1748,6 +1748,165 @@
           "asPair": "{place}, come {host}"
         }
       },
+      "classification": {
+        "loading": "Caricamento…",
+        "description": "Che cos'è ciascuna delle pagine di {host}, con parole sue — le sue linee di servizio, i prodotti e l'hub dei contenuti. Appena ce n'è una, i grafici e le schermate di questo sito le usano al posto dei tipi di pagina ricavati in automatico, e una pagina che nessuna cattura risulta Non classificata. Solo per questa azienda.",
+        "descriptionCompetitor": "{host} è un concorrente. Solo i siti propri dell'azienda hanno le pagine classificate.",
+        "competitor": "Un concorrente non ha classificazioni: solo i siti propri dell'azienda hanno le pagine classificate.",
+        "add": "Aggiungi classificazione",
+        "addFullTip": "Questo sito può avere {limit, plural, one {# classificazione} other {# classificazioni}}. Alza \"Classificazioni per sito\" nella sua pagina Limiti per aggiungerne altre.",
+        "view": "Vista",
+        "views": {
+          "pages": "Pagine · {count}",
+          "classifications": "Classificazioni · {count}"
+        },
+        "notice": "{sorted} pagine su {pages} hanno una classificazione; {notSorted} non sono classificate. Imposta la classificazione di una pagina nella sua riga, oppure spuntane diverse e impostale insieme. Il cestino toglie la classificazione a una pagina.",
+        "noticeEmpty": "Ancora nessuna classificazione. Aggiungine una, poi assegnale le pagine nelle loro righe, o lascia che le catturino le sue righe di indirizzo.",
+        "suggest": {
+          "notice": "Parti dalle cartelle e dai file sitemap di {host}: una classificazione per ogni cartella di {folderPages} o più pagine e per ogni file sitemap a sé, con un nome ricavato dai suoi indirizzi e catturata dalla sua riga. Le pagine al primo livello, come le pagine dei servizi, restano da classificare a te.",
+          "button": "Suggerisci classificazioni",
+          "created": "{count, plural, one {Creata # classificazione} other {Create # classificazioni}} — rinomina o togli quelle che vuoi.",
+          "none": "Niente da suggerire: ogni cartella di {folderPages} o più pagine e ogni file sitemap a sé è già classificato.",
+          "overLimit": "{count, plural, one {# altra è stata lasciata fuori} other {altre # sono state lasciate fuori}} per i limiti di questo sito su classificazioni e righe di indirizzo.",
+          "failed": "Non è stato possibile suggerire le classificazioni."
+        },
+        "showNotSorted": "Mostra le {count} non classificate",
+        "cut": "Questo sito ha più di {count} pagine. Qui sono mostrate e contate le {count} con più clic.",
+        "searchPlaceholder": "Trova una pagina…",
+        "filter": "Classificazione",
+        "filterAll": "Tutte le classificazioni",
+        "notSorted": "Non classificata",
+        "clicksNote": "Clic: gli ultimi 90 giorni di Search Console.",
+        "columns": {
+          "tick": "Spunta",
+          "page": "Pagina",
+          "classification": "Classificazione",
+          "how": "Come è impostata",
+          "clicks": "Clic",
+          "remove": "Togli"
+        },
+        "tickPage": "Spunta {page}",
+        "rowSelect": "Classificazione di {page}",
+        "chooseNotSorted": "Non classificata — scegli…",
+        "how": {
+          "BY_HAND": "Impostata a mano",
+          "BY_LINE": "Dalla regola: {line}",
+          "TAKEN_OUT": "Tolta dalla sua regola",
+          "NONE": "—"
+        },
+        "removeBackTo": "Togli — torna alla sua regola ({name})",
+        "removeNotSorted": "Togli — risulta Non classificata",
+        "removeTakeOut": "Togli — toglie questa pagina dalla sua regola; risulta Non classificata",
+        "bulk": {
+          "ticked": "{count, plural, one {# pagina spuntata} other {# pagine spuntate}}",
+          "label": "Classificazione per le pagine spuntate",
+          "choose": "Scegli una classificazione…",
+          "chooseFirst": "Prima scegli una classificazione",
+          "set": "Imposta per {count, plural, one {# pagina} other {# pagine}}",
+          "untick": "Togli tutte le spunte"
+        },
+        "emptyPages": "Ancora nessuna pagina. Le pagine di un sito compaiono dopo che la prossima raccolta ne legge la sitemap.",
+        "noMatch": "Nessuna pagina corrisponde.",
+        "errors": {
+          "setFailed": "Impossibile impostare la classificazione. Riprova.",
+          "removeFailed": "Impossibile togliere la classificazione. Riprova."
+        },
+        "list": {
+          "columns": {
+            "name": "Classificazione",
+            "type": "Tipo",
+            "pages": "Pagine",
+            "lines": "Cattura le pagine che…",
+            "actions": "Modifica o togli"
+          },
+          "byHandOnly": "Solo impostata a mano",
+          "edit": "Modifica {name}",
+          "remove": "Togli {name} — le sue pagine risultano Non classificate",
+          "empty": "Ancora nessuna classificazione. Aggiungine una con Aggiungi classificazione."
+        },
+        "remove": {
+          "title": "Togliere {name}?",
+          "body": "{lines, plural, =0 {Non ha righe di indirizzo} one {La sua riga di indirizzo viene tolta} other {Le sue # righe di indirizzo vengono tolte}}, e {byHand, plural, =0 {nessuna pagina le è assegnata a mano} one {la pagina assegnatale a mano la perde} other {le # pagine assegnatele a mano la perdono}}. Le sue pagine risultano Non classificate, a meno che una riga di un'altra classificazione non le catturi.",
+          "confirm": "Togli",
+          "failed": "Impossibile togliere la classificazione. Riprova."
+        },
+        "types": {
+          "INFORMATIONAL": "Contenuti informativi",
+          "SERVICE": "Servizio",
+          "PRODUCT": "Prodotto",
+          "CASE_STUDY": "Caso di studio",
+          "COMPANY": "Azienda",
+          "LEGAL": "Note legali",
+          "OTHER": "Altro"
+        },
+        "kinds": {
+          "STARTS_WITH": "Inizia con",
+          "CONTAINS": "Contiene",
+          "EXACT": "È esattamente",
+          "SITEMAP_FILE": "Elencata nel file sitemap"
+        },
+        "kindsInline": {
+          "STARTS_WITH": "inizia con",
+          "CONTAINS": "contiene",
+          "EXACT": "è esattamente",
+          "SITEMAP_FILE": "elencata nel file sitemap"
+        },
+        "edit": {
+          "back": "Torna a Classificazione delle pagine",
+          "newTitle": "Nuova classificazione",
+          "notFound": "Questa classificazione non c'è più. Forse è stata tolta.",
+          "description": "Una classificazione delle pagine di {host}: il suo nome, che tipo di pagina è e quali pagine cattura. Una pagina impostata a mano tiene ciò che le è stato dato.",
+          "card": "Classificazione",
+          "name": "Nome",
+          "type": "Tipo",
+          "typeHint": "I report sommano per tipo tra le classificazioni — tutto ciò che è informativo, per esempio.",
+          "whichPages": "Quali pagine",
+          "whichLead": "Una pagina appartiene a questa classificazione quando il suo indirizzo corrisponde a una riga qui sotto. Se una pagina corrisponde a righe di due classificazioni, vince la riga più precisa: una pagina esatta batte \"inizia con\", e un \"inizia con\" più lungo batte uno più corto.",
+          "noLines": "Ancora nessuna riga. Aggiungine una qui sotto, oppure assegna le pagine a questa classificazione a mano in Classificazione delle pagine.",
+          "catches": "{count, plural, one {# pagina} other {# pagine}}",
+          "removeLine": "Togli questa riga",
+          "kindLabel": "Tipo di riga",
+          "valueLabel": "Cosa contiene l'indirizzo",
+          "placeholders": {
+            "STARTS_WITH": "es. /hub/guide/",
+            "CONTAINS": "es. brand",
+            "EXACT": "es. /chi-siamo/",
+            "SITEMAP_FILE": "es. post-sitemap.xml"
+          },
+          "addLine": "Aggiungi riga",
+          "problems": {
+            "EMPTY": "Scrivi qualcosa da cercare.",
+            "TOO_LONG": "Troppo lunga: tieni una riga entro 200 caratteri.",
+            "SPACES": "Un indirizzo non ha spazi, quindi questa riga non catturerebbe nulla.",
+            "EVERY_PAGE": "Questa riga catturerebbe tutte le pagine. Usa \"È esattamente /\" per la home page.",
+            "NO_WORD": "Serve una parola o un numero da cercare.",
+            "AFTER_MARK": "Le pagine sono confrontate senza ciò che segue \"#\" o \"?\".",
+            "TWICE": "Questa riga c'è due volte.",
+            "TAKEN": "È già in {name}."
+          },
+          "itsPages": "Le sue pagine · {count}",
+          "itsLead": "Le pagine che cattura ora, come dicono le righe qui sopra — cambiano mentre aggiungi o togli una riga.",
+          "itsEmpty": "Ancora nessuna pagina.",
+          "columns": {
+            "page": "Pagina",
+            "by": "Catturata da",
+            "clicks": "Clic"
+          },
+          "byHand": "impostata a mano",
+          "more": "E altre {count}.",
+          "cut": "Questo sito ha più pagine di quante ne contenga una lettura: qui sono contate solo quelle con più clic.",
+          "save": "Salva le modifiche",
+          "create": "Aggiungi classificazione",
+          "saved": "Salvato.",
+          "saveFailed": "Impossibile salvare la classificazione. Riprova.",
+          "remove": "Togli questa classificazione"
+        },
+        "all": {
+          "classifications": "Classificazioni",
+          "notSorted": "Non classificate",
+          "notSortedOf": "{notSorted} su {pages}"
+        }
+      },
       "notFoundTitle": "Sito web non trovato"
     },
     "companyDataCollection": {
@@ -5864,7 +6023,9 @@
         "sources": "{count, plural, one {# fonte} other {# fonti}}",
         "businesses": "{count, plural, one {# attività} other {# attività}}",
         "websites": "{count, plural, one {# sito} other {# siti}}",
-        "countries": "{count, plural, one {# paese} other {# paesi}}"
+        "countries": "{count, plural, one {# paese} other {# paesi}}",
+        "classifications": "{count, plural, one {# classificazione} other {# classificazioni}}",
+        "lines": "{count, plural, one {# riga} other {# righe}}"
       },
       "topics": {
         "google": {
@@ -5896,6 +6057,11 @@
           "title": "Uguali per ogni azienda",
           "intro": "Una risposta IA o un acquisto serve ogni azienda che chiede la stessa cosa, quindi ognuno di questi è un solo numero per tutte, impostato in Impostazioni di sistema → Limiti.",
           "footer": "Le modifiche valgono per le prossime risposte e i prossimi acquisti letti; i download cambiano subito."
+        },
+        "pages": {
+          "title": "Le pagine e la loro classificazione",
+          "intro": "L'elenco delle pagine di un sito, letto dalla sua sitemap a ogni raccolta, e le classificazioni dell'azienda — impostate in Classificazione delle pagine. Gratis: non si compra nulla.",
+          "footer": "Le modifiche valgono dalla prossima raccolta, e subito nella pagina Classificazione delle pagine."
         }
       },
       "fields": {
@@ -6043,6 +6209,26 @@
           "label": "Righe in un download",
           "description": "Il massimo di righe che contiene un file scaricato. La scelta più alta è circa quanto può contenere un file.",
           "cost": "Nessun costo."
+        },
+        "sitemapPagesRead": {
+          "label": "Pagine della sitemap lette per sito",
+          "description": "Quante pagine si leggono dalla sitemap di un sito a ogni raccolta, per Le tue pagine. Oltre il limite la lettura si ferma e lo dice.",
+          "cost": "Nessun costo: la sitemap è un file pubblico del sito stesso."
+        },
+        "classificationsPerSite": {
+          "label": "Classificazioni per sito",
+          "description": "Quante classificazioni un'azienda può dare alle pagine di un sito — le sue linee di servizio, i prodotti, l'hub dei contenuti.",
+          "cost": "Nessun costo."
+        },
+        "classificationLinesPerSite": {
+          "label": "Righe di indirizzo per sito",
+          "description": "Quante righe di indirizzo (inizia con, contiene, è esattamente, elencata in un file della sitemap) possono assegnare pagine alle classificazioni di un sito, tutte insieme.",
+          "cost": "Nessun costo."
+        },
+        "classifiedPagesPerSite": {
+          "label": "Pagine impostate a mano per sito",
+          "description": "A quante pagine di un sito si può dare una classificazione a mano, o toglierla. Oltre il limite, usa una riga di indirizzo.",
+          "cost": "Nessun costo."
         }
       }
     },
@@ -6065,6 +6251,7 @@
         "competitors": "Concorrenti",
         "names": "Nomi e profili",
         "market": "Mercato",
+        "classification": "Classificazione delle pagine",
         "todo": "Da fare",
         "rankings": "Posizionamenti",
         "answers": "Risposte IA",
@@ -6077,6 +6264,7 @@
         "competitors": "Ogni sito proprio di questa azienda ha i suoi concorrenti. Scegline uno per vederli e cambiarli — qui, o in cima al menu.",
         "names": "Ogni sito ha i suoi nomi, e ogni sito proprio di questa azienda la sua attività. Scegline uno — qui, o in cima al menu.",
         "market": "Ogni sito ha il suo mercato: dove vende, e da dove viene osservato. Scegline uno per cambiarli — qui, o in cima al menu.",
+        "classification": "Ogni sito proprio di questa azienda ha le sue classificazioni delle pagine: che cos'è ciascuna delle sue pagine, con le parole dell'azienda. Scegline uno per impostarle — qui, o in cima al menu.",
         "todo": "Ogni sito proprio di questa azienda ha la sua lista di cose da fare: come va e cosa fare dopo. Scegline uno — qui, o in cima al menu.",
         "rankings": "I posizionamenti di ogni sito sono suoi. Scegline uno per vedere tutto ciò per cui si posiziona — qui, o in cima al menu.",
         "answers": "Ogni sito proprio di questa azienda viene cercato nelle risposte ai suoi prompt. Scegline uno — qui, o in cima al menu.",
@@ -8450,7 +8638,8 @@
       "updates": "{count, plural, =1 {# aggiornamento} other {# aggiornamenti}}",
       "positions": "{count, plural, =1 {# posizione} other {# posizioni}}",
       "kinds": "{count, plural, =1 {# tipo} other {# tipi}}",
-      "fanOutQueries": "{count, plural, =1 {# query fan-out monitorata} other {# query fan-out monitorate}}"
+      "fanOutQueries": "{count, plural, =1 {# query fan-out monitorata} other {# query fan-out monitorate}}",
+      "classifications": "{count, plural, =1 {# classificazione} other {# classificazioni}}"
     },
     "chart": {
       "download": "Scarica",
@@ -8890,7 +9079,8 @@
         "siteAudit": "Controllo del sito",
         "paidSummary": "Riepilogo",
         "paidKeywords": "Parole chiave a pagamento",
-        "googleTrackedFanOut": "Query fan-out monitorate"
+        "googleTrackedFanOut": "Query fan-out monitorate",
+        "yourPages": "Le tue pagine"
       }
     },
     "range": {
@@ -9011,7 +9201,10 @@
       },
       "usd": "{value} $",
       "findWebsite": "Cerca un sito…",
-      "noWebsiteMatch": "Nessun sito corrisponde."
+      "noWebsiteMatch": "Nessun sito corrisponde.",
+      "classification": "Classificazione",
+      "anyClassification": "Qualsiasi classificazione",
+      "notSorted": "Non classificata"
     },
     "overview": {
       "title": "Panoramica",
@@ -9090,7 +9283,10 @@
         "visitsShare": "Quota di visite",
         "row": "{count, plural, one {# pagina} other {# pagine}} ({pagesShare}) · {visitsShare} delle visite",
         "capped": "Contate sulle {count} pagine posizionate per più ricerche.",
-        "hintHeld": "Le {count} pagine delle ricerche conservate, ciascuna classificata per tipo: la sua quota di quelle pagine, e di tutte le visite del sito."
+        "hintHeld": "Le {count} pagine delle ricerche conservate, ciascuna classificata per tipo: la sua quota di quelle pagine, e di tutte le visite del sito.",
+        "titleClassified": "Pagine per classificazione",
+        "hintClassified": "Tutte le {count} pagine posizionate, ognuna con la tua classificazione: la sua quota di pagine e di visite.",
+        "hintHeldClassified": "Le {count} pagine delle ricerche conservate, ciascuna con la tua classificazione: la sua quota di quelle pagine, e di tutte le visite del sito."
       },
       "pageVisits": {
         "title": "Pagine per visite",
@@ -10551,6 +10747,65 @@
       "noMatch": "Nessun sito corrisponde.",
       "keepsPage": "Cambiando sito resti su {page}"
     },
+    "yourPages": {
+      "title": "Le tue pagine",
+      "description": "Ogni pagina di questo sito, una sola volta: se la sua sitemap la elenca, se la nostra scansione l'ha raggiunta, se Google l'ha mostrata negli ultimi 90 giorni e se è posizionata. Dove non concordano vale la pena guardare: una pagina che Google non mostra mai, o una che Google mostra e la sitemap tralascia.",
+      "searchPlaceholder": "Trova una pagina…",
+      "empty": "Ancora nessuna pagina: per questo sito non è arrivato nulla dalla sitemap, dalla scansione, dai posizionamenti o da Search Console.",
+      "noMatch": "Nessuna pagina corrisponde.",
+      "notSorted": "Non classificata",
+      "notInSitemap": "Non nella sitemap",
+      "no": "No",
+      "ofAll": "su {count, plural, =1 {# pagina} other {# pagine}}",
+      "footnote": "Clic: Search Console, ultimi 90 giorni. I link di salto di Google (#…) contano insieme alla loro pagina.",
+      "figures": {
+        "sitemap": "Nella sitemap",
+        "crawled": "Scansionate",
+        "shown": "Mostrate da Google",
+        "ranking": "Posizionate",
+        "sitemapDetail": "In {count, plural, =1 {# file della sitemap} other {# file della sitemap}}",
+        "sitemapNotRead": "Letta alla prossima raccolta",
+        "sitemapNone": "Nessuna sitemap trovata",
+        "crawledDetail": "Raggiunte dal controllo del sito",
+        "crawledNone": "Non ancora scansionate",
+        "shownDetail": "In Search Console, ultimi 90 giorni",
+        "shownNotConnected": "Search Console non è collegato",
+        "rankingDetail": "Con una parola chiave su Google"
+      },
+      "filters": {
+        "differs": "Dove non concordano",
+        "group": "Gruppo",
+        "everyPage": "Tutte le pagine",
+        "everyGroup": "Tutti i gruppi",
+        "options": {
+          "neverShown": "Nella sitemap, mai mostrate da Google",
+          "notInSitemap": "Mostrate da Google, non nella sitemap",
+          "crawledNotInSitemap": "Scansionate, non nella sitemap",
+          "notCrawled": "Nella sitemap, non scansionate",
+          "sitemap": "Nella sitemap",
+          "crawled": "Scansionate",
+          "shown": "Mostrate da Google",
+          "ranking": "Posizionate"
+        }
+      },
+      "columns": {
+        "page": "Pagina",
+        "group": "Gruppo",
+        "file": "File della sitemap",
+        "crawled": "Scansionata",
+        "shown": "Mostrata da Google",
+        "ranks": "Posizionata",
+        "clicks": "Clic (90 giorni)"
+      },
+      "notices": {
+        "notReadYet": "La sitemap di questo sito non è ancora stata letta. Si legge a ogni raccolta, quindi comparirà qui dopo la prossima.",
+        "noSitemap": "Nessuna sitemap trovata: robots.txt non ne indica nessuna, e non ce n'è in /sitemap_index.xml, /sitemap.xml o /wp-sitemap.xml. Le pagine qui sotto sono quelle scansionate, mostrate da Google o posizionate.",
+        "cut": "La sitemap elenca più pagine di quante se ne leggano per questo sito: le prime {limit} sono state lette il {day}, e le altre qui non sono contate.",
+        "filesFailed": "{count, plural, =1 {Un file della sitemap non è stato letto} other {# file della sitemap non sono stati letti}}, quindi {count, plural, =1 {le sue pagine non contano} other {le loro pagine non contano}} come presenti nella sitemap.",
+        "competitor": "Le tue pagine elenca le pagine dei tuoi siti: cosa contiene la sitemap di ciascuno rispetto a ciò che è stato scansionato, mostrato da Google e posizionato. Non viene tenuta per un concorrente.",
+        "competitorLink": "Apri le pagine di {host}"
+      }
+    },
     "trackedFanOut": {
       "title": "Query fan-out monitorate",
       "description": "Le ricerche che gli assistenti IA hanno fatto dietro le quinte e che hai spuntato per controllarle su Google a ogni esecuzione, e dove si posiziona questo sito per ognuna, controllate da {place}. Spunta o togli la spunta in Query fan-out.",
@@ -11015,6 +11270,9 @@
       "ofClicks": "{share} dei clic",
       "pagesTitle": "Pagine per tipo",
       "pagesHint": "Tutte le {count} pagine mostrate da Google, ciascuna con il suo tipo: la sua quota delle pagine e dei clic.",
+      "fromInformational": "Clic dai contenuti informativi",
+      "pagesTitleClassified": "Pagine per classificazione",
+      "pagesHintClassified": "Tutte le {count} pagine mostrate da Google, ciascuna con la tua classificazione: la sua quota delle pagine e dei clic.",
       "keywordsTitle": "Parole chiave per intento",
       "keywordsHint": "Tutte le {count} parole chiave per cui Google ti ha mostrato, ciascuna giudicata per ciò che cerca chi cerca: la sua quota delle parole chiave e dei clic.",
       "pages": "Pagine",

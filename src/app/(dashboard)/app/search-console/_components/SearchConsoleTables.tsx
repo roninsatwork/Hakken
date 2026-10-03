@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import type { FunctionArgs, FunctionReturnType } from "convex/server";
@@ -16,6 +16,7 @@ import { DownloadButton, saveTextFile } from "@/src/ui/components/screens/Downlo
 import type { DataTableColumn } from "@/src/ui/components/screens/DataTable";
 import { Select } from "@/src/ui/components/screens/Select";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
+import { usePageKinds, type PageKindsView } from "../../_components/usePageKinds";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { useSiteListPage, useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
@@ -82,20 +83,42 @@ const LIVE_SORTS: SiteSortColumns<ListRow, SortKey> = {
 };
 const keyOf = (row: ListRow) => row.key;
 
+/** A live list's headings once the website has classifications: a page's sorts by its classification's name, Not sorted last. */
+function liveSortsFor(choices: PageKindsView["choices"]): SiteSortColumns<ListRow, SortKey> {
+  if (!choices || choices.length === 0) return LIVE_SORTS;
+  const names = new Map(choices.map((choice) => [choice.id, choice.name]));
+  return { ...LIVE_SORTS, kind: { value: (row) => (row.kind === null ? null : names.get(row.kind) ?? null), first: "asc" } };
+}
+
 /** The filter chips a table can show, each kept in the address under its own key. The country is the page's, not a chip (§16). */
 export type ChipId = "tracked" | "band" | "almostBand" | "intent" | "pageType" | "brand" | "move" | "verdict" | "missed" | "device";
 
 const DEVICES = ["DESKTOP", "MOBILE", "TABLET"] as const;
 /** Every intent and page type a Kind chip can hold: anything else in the address is ignored. */
 const KINDS: readonly string[] = ["", ...new Set<string>([...RANK_INTENTS, ...PAGE_TYPES])];
+
+/**
+ * The values the Kind chip may hold on a table of pages: an intent or a page
+ * type — or, once the website has classifications, a classification's id or
+ * Not sorted. While they are on their way any value is held, so a link from
+ * Types to one classification's pages is not dropped.
+ */
+function usePageKindParam(chips: readonly ChipId[]): { kinds: PageKindsView; allowed: readonly string[] | undefined } {
+  const siteId = useSearchConsoleSiteId();
+  const pages = chips.includes("pageType");
+  const kinds = usePageKinds(pages ? siteId : null);
+  if (!pages) return { kinds, allowed: KINDS };
+  return { kinds, allowed: kinds.allowed === undefined ? undefined : ["", ...new Set<string>([...RANK_INTENTS, ...PAGE_TYPES, ...kinds.allowed])] };
+}
 const ALMOST_BANDS: readonly Band[] = ["4-10", "11-20"];
 
 /** The filters chosen, read from the address: only those of the chips the table shows. */
 function useChosen(chips: readonly ChipId[]) {
   const has = (chip: ChipId) => chips.includes(chip);
+  const { kinds, allowed } = usePageKindParam(chips);
   const [tracked] = useSiteParam<"" | "yes" | "no">("tracked", "", ["", "yes", "no"]);
   const [band] = useSiteParam<"" | Band>("band", "", ["", ...BANDS]);
-  const [kind] = useSiteParam<string>("kind", "", KINDS);
+  const [kind] = useSiteParam<string>("kind", "", allowed);
   const [brand] = useSiteParam<"" | "yes" | "no">("brand", "", ["", "yes", "no"]);
   const [move] = useSiteParam<"" | "win" | "loss">("move", "", ["", "win", "loss"]);
   const [verdict] = useSiteParam<"" | "high" | "low" | "close">("verdict", "", ["", "high", "low", "close"]);
@@ -110,7 +133,7 @@ function useChosen(chips: readonly ChipId[]) {
     ...(has("verdict") && verdict ? { verdict } : {}),
     ...(has("missed") ? { missed } : {}),
   };
-  return { filters, device: has("device") ? device : "" };
+  return { filters, device: has("device") ? device : "", kinds };
 }
 
 /**
@@ -133,7 +156,7 @@ export function useSearchConsoleList(options: {
   const opening = options.opening ?? "clicks";
   const order = useSiteSort<SortKey>(FIRSTS, opening);
   const [country] = useSearchConsoleCountry();
-  const { filters, device } = useChosen(options.chips);
+  const { filters, device, kinds: pageKinds } = useChosen(options.chips);
   const held = Boolean(status?.connection?.newestDay);
   const within = options.within ?? undefined;
   const base = {
@@ -175,7 +198,10 @@ export function useSearchConsoleList(options: {
   const tracksOnly = options.view === "tracked";
   const listedLive = answered && tracksOnly ? answered.filter((row) => row.tracked) : answered;
   const liveRows = live.answer === undefined ? undefined : listedLive ? filterRows(listedLive, { ...filters, q: term }) : [];
-  const liveOrder = useSiteSortedList(liveRows, LIVE_SORTS, { opening, name: keyOf });
+  // A page's classification sorts by its name; the headings change only when the classifications do.
+  const choices = pageKinds.choices;
+  const liveSorts = useMemo(() => liveSortsFor(choices), [choices]);
+  const liveOrder = useSiteSortedList(liveRows, liveSorts, { opening, name: keyOf });
   const livePages = useSitePager(liveOrder.rows, { isLoading: liveRows === undefined, cut: live.answer?.ok ? live.answer.cut : null });
   const table = isLive
     ? {
@@ -202,6 +228,8 @@ export function useSearchConsoleList(options: {
     siteId,
     status,
     kind,
+    /** The website's own classifications, when the table holds a Page type chip: what a page's kind names. */
+    pageKinds,
     range,
     search,
     setSearch,
@@ -314,9 +342,10 @@ export function SearchConsoleChips({ chips }: { chips: readonly ChipId[] }) {
   const t = useTranslations("searchConsole.filters");
   const tc = useTranslations("sites.common");
   const tp = useTranslations("searchConsole.places");
+  const { kinds, allowed } = usePageKindParam(chips);
   const [tracked, setTracked] = useSiteParam<string>("tracked", "", ["", "yes", "no"]);
   const [band, setBand] = useSiteParam<string>("band", "", ["", ...BANDS]);
-  const [kind, setKind] = useSiteParam<string>("kind", "", KINDS);
+  const [kind, setKind] = useSiteParam<string>("kind", "", allowed);
   const [brand, setBrand] = useSiteParam<string>("brand", "", ["", "yes", "no"]);
   const [move, setMove] = useSiteParam<string>("move", "", ["", "win", "loss"]);
   const [verdict, setVerdict] = useSiteParam<string>("verdict", "", ["", "high", "low", "close"]);
@@ -353,10 +382,16 @@ export function SearchConsoleChips({ chips }: { chips: readonly ChipId[] }) {
               </Select>
             );
           case "pageType":
+            // The company's own classifications and Not sorted, once the website has any; Hakken's page types until then.
             return (
-              <Select key={chip} chip={{ label: t("pageType"), choice: kind ? tc(`pageTypes.${kind}`) : null }} value={kind} onChange={setKind}>
-                <option value="">{t("anyPageType")}</option>
-                {PAGE_TYPES.map((entry) => <option key={entry} value={entry}>{tc(`pageTypes.${entry}`)}</option>)}
+              <Select
+                key={chip}
+                chip={{ label: kinds.classified ? tc("classification") : t("pageType"), choice: kind ? kinds.label(kind) : null }}
+                value={kind}
+                onChange={setKind}
+              >
+                <option value="">{kinds.classified ? tc("anyClassification") : t("anyPageType")}</option>
+                {kinds.options.map((entry) => <option key={entry.value} value={entry.value}>{entry.label}</option>)}
               </Select>
             );
           case "brand":
@@ -447,10 +482,15 @@ export function figureColumns(say: (key: string) => string, which: readonly Figu
   return which.map((key) => all[key]);
 }
 
-/** Sites' word for a keyword's intent or a page's type: a kind, so the kit's `TagLabel`. */
-export function KindText({ kind, of }: { kind: string | null; of: "intent" | "pageType" }) {
+/**
+ * Sites' word for a keyword's intent or a page's type: a kind, so the kit's
+ * `TagLabel`. Given the website's `kinds`, a page's classification reads as
+ * its own name, and Not sorted in words (page-groups-plan.md, decision 2).
+ */
+export function KindText({ kind, of, kinds }: { kind: string | null; of: "intent" | "pageType"; kinds?: PageKindsView }) {
   const tc = useTranslations("sites.common");
   if (!kind) return <span className="text-muted">–</span>;
+  if (of === "pageType" && kinds?.isOwn(kind)) return <TagLabel>{kinds.label(kind)}</TagLabel>;
   return <TagLabel>{tc(`${of === "intent" ? "intents" : "pageTypes"}.${kind}`)}</TagLabel>;
 }
 

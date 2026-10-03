@@ -77,6 +77,10 @@ export const fanOutTables = {
     consoleTrackedKeywordsPerSite: maybeLimit,
     consoleTrackedPagesPerSite: maybeLimit,
     consoleCountriesPerSite: maybeLimit,
+    classificationsPerSite: maybeLimit,
+    classificationLinesPerSite: maybeLimit,
+    classifiedPagesPerSite: maybeLimit,
+    sitemapPagesRead: maybeLimit,
     updatedAt: v.number(),
   })
     .index("by_company_hold", ["companyId", "companyWebsiteId"])

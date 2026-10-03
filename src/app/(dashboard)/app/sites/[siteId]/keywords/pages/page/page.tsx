@@ -25,6 +25,7 @@ import { useSite, useSiteId } from "../../../../_components/useSite";
 import { useSiteListPage } from "../../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../../_components/useSiteSort";
 import { isPartHeld } from "../../../../_components/SiteCoverage";
+import { usePageKinds } from "../../../../../_components/usePageKinds";
 
 /** Dollars, whole: what visits would cost as adverts. */
 function formatUsd(value: number | null): string {
@@ -66,6 +67,9 @@ export default function SitePageRecordPage() {
   const asked = useRecordKey("page");
 
   const record = useQuery(api.siteRecords.pageRecord, asked ? { siteId, page: asked } : "skip");
+  // The page's classification, once the website has any, in place of its page type — ranking or not.
+  const pageKinds = usePageKinds(siteId);
+  const kind = record?.kind ?? null;
   const order = useSiteSort(KEYWORD_SORTS, "position");
   const table = useSiteListPage(
     api.siteKeywords.listKeywords,
@@ -152,9 +156,9 @@ export default function SitePageRecordPage() {
         icon={<FileText className="h-6 w-6 text-brand" />}
         title={asked}
         description={t("description")}
-        pills={rank || (record?.cited.times ?? 0) > 0 ? (
+        pills={kind || rank || (record?.cited.times ?? 0) > 0 ? (
           <>
-            {rank ? <PageTypeLabel type={rank.pageType} /> : null}
+            {kind ? <PageTypeLabel type={kind} kinds={pageKinds} /> : rank ? <PageTypeLabel type={rank.pageType} /> : null}
             {(record?.cited.times ?? 0) > 0 ? <StatusLabel tone="info">{t("citedPill")}</StatusLabel> : null}
           </>
         ) : undefined}

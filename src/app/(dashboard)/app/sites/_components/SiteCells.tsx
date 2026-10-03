@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
+import { kindTone, type PageKindsView } from "../../_components/usePageKinds";
 import { formatDay } from "./siteFormat";
 
 /**
@@ -128,9 +129,15 @@ const PAGE_TYPE_TONES: Record<string, StatusTone> = {
   LOCATION: "success",
 };
 
-/** What kind of page a page is, or "not sorted yet". */
-export function PageTypeLabel({ type, size }: { type: string; size?: "sm" | "md" }) {
+/**
+ * What kind of page a page is, or "not sorted yet". Extended for a company's
+ * own classifications (page-groups-plan.md, decision 2): given the website's
+ * `kinds`, a classification reads as its own name, toned by its type, and a
+ * page none catches as Not sorted.
+ */
+export function PageTypeLabel({ type, size, kinds }: { type: string; size?: "sm" | "md"; kinds?: PageKindsView }) {
   const t = useTranslations("sites.common.pageTypes");
+  if (kinds?.isOwn(type)) return <StatusLabel tone={kindTone(kinds.typeOf(type))} size={size}>{kinds.label(type)}</StatusLabel>;
   return <StatusLabel tone={PAGE_TYPE_TONES[type] ?? "neutral"} size={size}>{t.has(type) ? t(type) : t("OTHER")}</StatusLabel>;
 }
 

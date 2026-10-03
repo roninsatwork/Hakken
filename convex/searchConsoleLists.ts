@@ -15,6 +15,8 @@ import { daysIn, historyLimitDay, periodBefore } from "./searchConsoleDays";
 import { readPeriod, type PeriodRow } from "./searchConsolePeriods";
 import { factsFor } from "./searchConsoleFacts";
 import { holdBrandNames } from "./holdProfiles";
+import { pageKindSetupValidator, readPageKinds, readPageKindSetup } from "./pageKinds";
+import { classificationTypeValidator } from "./pagesSchema";
 import { loadSite } from "./websiteSiteRows";
 import {
   BANDS,
@@ -39,6 +41,7 @@ import {
 import { trackedKeys } from "./searchConsoleTracking";
 import { GOOGLE_DIMENSIONS } from "./searchConsoleApi";
 import { bySide, fromGoogle, positionOf, type Row as PackedRow } from "./utils/searchConsolePacks";
+import { NOT_SORTED_KIND, pageKindsFrom, type PageKinds, type PageKindSetup } from "./utils/pageKinds";
 
 /**
  * What the Search Console lists read (docs/plans/active/search-console-plan.md
@@ -178,6 +181,7 @@ const summaryValidator = v.object({
   bandsBefore: v.union(v.record(v.string(), v.number()), v.null()),
   brand: v.union(v.null(), v.object({ now: brandSplitValidator, before: v.union(brandSplitValidator, v.null()) })),
   kinds: v.array(v.object({ kind: v.string(), rows: v.number(), clicks: v.number() })),
+  types: v.array(v.object({ type: classificationTypeValidator, rows: v.number(), clicks: v.number() })),
 });
 
 const filterArgs = {
@@ -185,7 +189,7 @@ const filterArgs = {
   /** "yes": only the tracked; "no": only the rest. */
   tracked: v.optional(v.union(v.literal("yes"), v.literal("no"))),
   band: v.optional(v.union(...BANDS.map((band) => v.literal(band)))),
-  /** An intent or a page type, as Sites words them. */
+  /** An intent or a page type, as Sites words them — or, once the website has classifications, a classification's id or Not sorted. */
   kind: v.optional(v.string()),
   brand: v.optional(v.union(v.literal("yes"), v.literal("no"))),
   move: v.optional(v.union(v.literal("win"), v.literal("loss"))),
@@ -310,9 +314,25 @@ function sourceRows(view: View, now: readonly SourceRow[], before: readonly Sour
   return now;
 }
 
-/** Ordered over the whole list by the heading pressed. */
-export function sortRows(rows: ListRow[], sort: SortKey | undefined, direction: "asc" | "desc" | undefined): ListRow[] {
-  return rows.sort(listOrder(SORTS, sort ?? "clicks", direction, (row) => row.key));
+/**
+ * Ordered over the whole list by the heading pressed. A page's classification
+ * sorts by its name, A to Z, Not sorted last — never by its id.
+ */
+export function sortRows(rows: ListRow[], sort: SortKey | undefined, direction: "asc" | "desc" | undefined, pageKinds: PageKinds | null = null): ListRow[] {
+  const sorts: ListSorts<ListRow, SortKey> = pageKinds
+    ? { ...SORTS, kind: { value: (row) => (row.kind === null ? null : pageKinds.nameOf(row.kind)), first: "asc" } }
+    : SORTS;
+  return rows.sort(listOrder(sorts, sort ?? "clicks", direction, (row) => row.key));
+}
+
+/**
+ * A list of pages with each page's kind as the company's own classification
+ * — its id, or Not sorted — once the website has any (page-groups-plan.md,
+ * decision 2): every row, those Google showed and those a view adds alike.
+ * Without classifications the rows are left as Sites judged them.
+ */
+function withPageKinds(rows: ListRow[], pageKinds: PageKinds | null): ListRow[] {
+  return pageKinds ? rows.map((row) => ({ ...row, kind: pageKinds.kindOf(row.key) })) : rows;
 }
 
 type ListAnswer = {
@@ -333,6 +353,8 @@ type ListAnswer = {
   preparing: boolean;
   /** The hero boxes' figures; null when nothing is listed yet. */
   summary: Summary | null;
+  /** The website's classifications, when a list of its pages was read and it has any: what each row's kind names. */
+  pageKinds: PageKinds | null;
 };
 
 /**
@@ -342,7 +364,7 @@ type ListAnswer = {
  */
 export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"companyWebsites">, args: Ask): Promise<ListAnswer> {
   checkedCountry(args.country);
-  const empty = { rows: [], cut: null, from: null, to: null, named: null, listed: 0, comparable: false, summary: null };
+  const empty = { rows: [], cut: null, from: null, to: null, named: null, listed: 0, comparable: false, summary: null, pageKinds: null };
   const live = { ...empty, live: true, preparing: false };
   const connection = await connectionOf(ctx, companyWebsiteId);
   if (!connection?.newestDay) return { ...empty, live: false, preparing: false };
@@ -373,7 +395,9 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   const before = await read("BEFORE");
   const tracked = dimension === "query" || dimension === "page" ? await trackedOf(ctx, companyWebsiteId, dimension) : new Set<string>();
   const brandWords = dimension === "query" ? await brandWordsOf(ctx, companyWebsiteId) : null;
-  const shaped = shapeRows(sourceRows(view, now.rows, before?.rows ?? null, tracked), before?.rows ?? null, { tracked, brandWords });
+  // A list of pages reads the website's classifications once, and names each page by them.
+  const pageKinds = dimension === "page" ? await readPageKinds(ctx, companyWebsiteId) : null;
+  const shaped = withPageKinds(shapeRows(sourceRows(view, now.rows, before?.rows ?? null, tracked), before?.rows ?? null, { tracked, brandWords }), pageKinds);
   const context: ViewContext = { missedList: args.missed ?? "searched", tracked, days: daysIn(args.from, args.to) };
   if (view === "lowCtr") {
     const keywords = await readPeriod(ctx, companyWebsiteId, args.searchType, "query", period, "NOW", country);
@@ -386,8 +410,8 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   if (view === "missed" && context.missedList === "searched") context.sitesKeywords = await sitesKeywordsOf(ctx, companyWebsiteId);
   const listed = applyView(view, shaped, context);
   const named = listed.reduce((sum, row) => sum + row.clicks, 0);
-  const summary = summarise(listed, shaped, before?.rows ?? null, { ...context, brandWords });
-  const sorted = sortRows(filterRows(listed, args), args.sort, args.direction);
+  const summary = summarise(listed, shaped, before?.rows ?? null, { ...context, brandWords, ...(pageKinds ? { kindType: pageKinds.typeOf } : {}) });
+  const sorted = sortRows(filterRows(listed, args), args.sort, args.direction, pageKinds);
   const cut = sorted.length > MOST_ROWS ? MOST_ROWS : null;
   return {
     rows: cut ? sorted.slice(0, MOST_ROWS) : sorted,
@@ -400,6 +424,7 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
     live: false,
     preparing: false,
     summary,
+    pageKinds,
   };
 }
 
@@ -484,6 +509,8 @@ export const liveTarget = internalQuery({
     tracked: v.array(v.string()),
     brandWords: v.union(v.array(v.string()), v.null()),
     sitesKeywords: v.array(v.object({ keyword: v.string(), volume: v.number(), kind: v.string() })),
+    /** A list of pages: the website's classifications, to name each page by, once it has any. */
+    pageKinds: v.union(v.null(), pageKindSetupValidator),
   })),
   handler: async (ctx, args) => {
     const hold = await ctx.db.get(args.siteId);
@@ -501,6 +528,7 @@ export const liveTarget = internalQuery({
       tracked,
       brandWords: args.kind === "query" ? await brandWordsOf(ctx, hold._id) : null,
       sitesKeywords: args.view === "missed" ? await sitesKeywordsOf(ctx, hold._id) : [],
+      pageKinds: args.kind === "page" ? await readPageKindSetup(ctx, hold._id) : null,
     };
   },
 });
@@ -516,6 +544,7 @@ type LiveTarget = {
   tracked: string[];
   brandWords: string[] | null;
   sitesKeywords: SitesKeyword[];
+  pageKinds: PageKindSetup | null;
 };
 
 type LiveListAnswer =
@@ -671,7 +700,8 @@ export const searchConsoleLiveList = tenantAction({
     const rows = kind && target.facts ? await withFacts(ctx, target.facts, kind, now.rows) : now.rows;
     const tracked = new Set(target.tracked);
     const earlierRows = earlier.ok ? earlier.rows : null;
-    const shaped = shapeRows(sourceRows(view, rows, earlierRows, tracked), earlierRows, { tracked, brandWords: target.brandWords });
+    const pageKinds = dimension === "page" && target.pageKinds ? pageKindsFrom(target.pageKinds) : null;
+    const shaped = withPageKinds(shapeRows(sourceRows(view, rows, earlierRows, tracked), earlierRows, { tracked, brandWords: target.brandWords }), pageKinds);
     const context: ViewContext = { missedList: args.missed ?? "searched", sitesKeywords: target.sitesKeywords, tracked, days: daysIn(args.from, args.to) };
     if (view === "lowCtr") {
       const keywords = [...bySide(now.pairs, "query").values()];
@@ -681,7 +711,7 @@ export const searchConsoleLiveList = tenantAction({
     const listed = applyView(view, shaped, context);
     const sorted = sortRows(listed, undefined, undefined);
     const named = listed.reduce((sum, row) => sum + row.clicks, 0);
-    const summary = summarise(listed, shaped, earlierRows, { ...context, brandWords: target.brandWords });
+    const summary = summarise(listed, shaped, earlierRows, { ...context, brandWords: target.brandWords, ...(pageKinds ? { kindType: pageKinds.typeOf } : {}) });
     return { ok: true as const, rows: inParts(sorted.slice(0, MOST_ROWS)), cut: sorted.length > MOST_ROWS ? MOST_ROWS : null, named, comparable: earlier.ok, summary };
   },
 });
@@ -781,7 +811,12 @@ export const exportRows = internalQuery({
     if (!hold || hold.companyId !== args.companyId) return null;
     const website = await ctx.db.get(hold.websiteId);
     const list = await readList(ctx, hold._id, args);
-    return { host: website?.displayHost ?? "site", rows: inParts(list.rows), cut: list.cut };
+    // A page's classification by its name in the file, as the screen shows it; Not sorted in words (as Your pages' download).
+    const pageKinds = list.pageKinds;
+    const rows = pageKinds
+      ? list.rows.map((row) => (row.kind === null ? row : { ...row, kind: row.kind === NOT_SORTED_KIND ? "Not sorted" : (pageKinds.nameOf(row.kind) ?? row.kind) }))
+      : list.rows;
+    return { host: website?.displayHost ?? "site", rows: inParts(rows), cut: list.cut };
   },
 });
 

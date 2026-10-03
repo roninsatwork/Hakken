@@ -42,10 +42,13 @@ describe("the Websites section's menu", () => {
 
     const menu = screen.getByRole("navigation", { name: "admin.websitesSection.label" });
     // Twelve since Schedule and limits became Schedules and Limits (2026-09-28);
-    // thirteen with Market (search-console-plan.md §16, 2026-10-03).
-    expect(within(menu).getAllByRole("link")).toHaveLength(13);
+    // thirteen with Market (search-console-plan.md §16, 2026-10-03); fourteen
+    // with Page classification (page-groups-plan.md, 2026-10-03).
+    expect(within(menu).getAllByRole("link")).toHaveLength(14);
     expect(within(menu).getByRole("link", { name: "admin.websitesSection.pages.market" }))
       .toHaveAttribute("href", `${base}/market`);
+    expect(within(menu).getByRole("link", { name: "admin.websitesSection.pages.classification" }))
+      .toHaveAttribute("href", `${base}/classification`);
     expect(within(menu).getByRole("link", { name: "admin.websitesSection.pages.limits" }))
       .toHaveAttribute("href", `${base}/limits`);
     expect(within(menu).getByRole("link", { name: "admin.websitesSection.pages.questions" }))

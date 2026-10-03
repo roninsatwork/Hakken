@@ -120,3 +120,32 @@ Search Console ones) wider than the ~900px beside the two menus.
   and 23 (Your pages), from ronins.co.uk's real pages.
 - **2026-10-03** — Redrawn at page level (board 22 Page classification, 22b a
   classification's own page): no tables under tables.
+- **2026-10-03** — Pages only (his call): a PDF, an image or another file
+  Google showed in search, or a sitemap listed, is left out of every page once
+  and so of Your pages and classification (`isWebPage`,
+  `convex/utils/holdPagesJoin.ts`). ronins.co.uk had three: two images and the
+  brand audit checklist PDF.
+- **2026-10-03** — Built (local, deployed to dev; not pushed):
+  - **Stage 2, sitemap and Your pages.** The sitemap is read at the end of
+    each collection (`sitemapRead.ts`, at most once in 6 hours, from
+    robots.txt or the usual addresses), every page once is rebuilt per
+    company hold (`holdPages.ts`), and Sites → Your pages shows it with the
+    four figures and the gaps. ronins.co.uk: 139 sitemap pages in 4 files,
+    172 pages in all.
+  - **Stage 1, page classification.** Admin → Websites → Page
+    classification: the pages, each set, changed or taken out in its row,
+    and the classifications with their address lines (`pageClassifications.ts`,
+    one rule in `utils/pageClassification.ts`). Once a website has any, Search
+    Console's Types, Pages, Shown but not clicked and Real against estimated,
+    and Sites' Overview, Top pages and a page's own screen use them, read at
+    the time (`pageKinds.ts`); Not sorted otherwise. The Types hero figures
+    add up by classification type.
+  - **Stage 3, in part.** The suggested start: one action on an empty
+    Classifications view, from the site's folders (3 pages or more) and
+    sitemap files. Classifications in reports are still to do.
+  - **Limits** (Limits page, "Pages" topic): classifications per website
+    (default 25), address lines (100), pages set by hand (1,000), sitemap
+    pages read (5,000). In code: 10,000 pages read by the admin page, 8,000
+    pages of "listed in sitemap file" lines per read, 3 pages for a folder to
+    be suggested.
+  - Kit: `TableBar` gained the noun "classifications".

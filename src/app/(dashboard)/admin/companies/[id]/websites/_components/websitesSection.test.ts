@@ -21,6 +21,7 @@ describe("the Websites section's pages", () => {
     expect(sectionHref("company_1", "schedules", null)).toBe(`${base}/schedules`);
     expect(sectionHref("company_1", "limits", null)).toBe(`${base}/limits`);
     expect(sectionHref("company_1", "market", null)).toBe(`${base}/market`);
+    expect(sectionHref("company_1", "classification", null)).toBe(`${base}/classification`);
     expect(sectionHref("company_1", "runs", null)).toBe(`${base}/runs`);
 
     expect(sectionHref("company_1", "todo", own)).toBe(`${base}/site/hold_1`);
@@ -32,6 +33,9 @@ describe("the Websites section's pages", () => {
     expect(sectionHref("company_1", "limits", own)).toBe(`${base}/site/hold_1/limits`);
     expect(sectionHref("company_1", "market", own)).toBe(`${base}/site/hold_1/market`);
     expect(sectionHref("company_1", "market", rival)).toBe(`${base}/site/hold_2/market`);
+    expect(sectionHref("company_1", "classification", own)).toBe(`${base}/site/hold_1/classification`);
+    // A competitor has no classifications: its link stays the company's list of websites.
+    expect(sectionHref("company_1", "classification", rival)).toBe(`${base}/classification`);
   });
 
   it("keeps the company's pages the company's, whichever website is chosen", () => {
@@ -41,8 +45,9 @@ describe("the Websites section's pages", () => {
 
   it("offers a competitor only what a competitor has", () => {
     expect(pagesFor("TRACKED").map((page) => page.id)).toEqual(["websites", "names", "market", "rankings", "schedules", "limits", "runs"]);
-    expect(pagesFor("OWNED")).toHaveLength(13);
-    expect(pagesFor(null)).toHaveLength(13);
+    // Fourteen with Page classification (page-groups-plan.md, 2026-10-03), a company's own websites only.
+    expect(pagesFor("OWNED")).toHaveLength(14);
+    expect(pagesFor(null)).toHaveLength(14);
   });
 
   it("reads which page an address is, and for which website", () => {
@@ -56,6 +61,11 @@ describe("the Websites section's pages", () => {
     expect(readSectionPath("company_1", `${base}/limits`)).toEqual({ page: "limits", siteId: null });
     expect(readSectionPath("company_1", `${base}/market`)).toEqual({ page: "market", siteId: null });
     expect(readSectionPath("company_1", `${base}/site/hold_2/market`)).toEqual({ page: "market", siteId: "hold_2" });
+    expect(readSectionPath("company_1", `${base}/classification`)).toEqual({ page: "classification", siteId: null });
+    // A classification's own page, and a new one's, are pages of Page classification.
+    expect(readSectionPath("company_1", `${base}/site/hold_1/classification`)).toEqual({ page: "classification", siteId: "hold_1" });
+    expect(readSectionPath("company_1", `${base}/site/hold_1/classification/class_1`)).toEqual({ page: "classification", siteId: "hold_1" });
+    expect(readSectionPath("company_1", `${base}/site/hold_1/classification/new`)).toEqual({ page: "classification", siteId: "hold_1" });
     // One prompt's fan-out queries is a page of Your prompts, at either scope.
     expect(readSectionPath("company_1", `${base}/ai-searches/prompts/question_1`)).toEqual({ page: "questions", siteId: null });
     expect(readSectionPath("company_1", `${base}/site/hold_1/questions/question_1`)).toEqual({ page: "questions", siteId: "hold_1" });
@@ -67,6 +77,9 @@ describe("the Websites section's pages", () => {
     // A competitor has no questions of its own: it opens on its rankings.
     expect(switchHref("company_1", "questions", rival)).toBe(`${base}/site/hold_2/keywords`);
     expect(switchHref("company_1", "limits", rival)).toBe(`${base}/site/hold_2/limits`);
+    // From Page classification, a competitor opens on its rankings; another own site keeps the page.
+    expect(switchHref("company_1", "classification", rival)).toBe(`${base}/site/hold_2/keywords`);
+    expect(switchHref("company_1", "classification", own)).toBe(`${base}/site/hold_1/classification`);
     // The list itself belongs to no website: choosing one opens its to-do list.
     expect(switchHref("company_1", "websites", own)).toBe(`${base}/site/hold_1`);
   });

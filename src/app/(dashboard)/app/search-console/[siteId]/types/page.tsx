@@ -7,6 +7,7 @@ import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { CHART_SERIES_BLUE, CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
 import { KindBars } from "../../../_components/KindBars";
+import { usePageKinds } from "../../../_components/usePageKinds";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { formatNumber, toCsv } from "../../../sites/_components/siteFormat";
 import { SearchConsoleChartCard } from "../../_components/SearchConsoleChartCard";
@@ -21,6 +22,12 @@ import { useSearchConsoleHref, useSearchConsoleRange, useSearchConsoleSiteId, us
  * its keywords by what the searcher wants, as Sites judged them — how much
  * of each there is and how many of the clicks each brings. A kind opens its
  * pages or keywords.
+ *
+ * Once the website has classifications of the company's own, its pages are
+ * by those in place of the kinds (page-groups-plan.md, decision 2) — each
+ * classification and Not sorted — and the two page figures are added up by
+ * the classifications' type: informational content and service pages, so
+ * the company's own names still add up.
  */
 export default function SearchConsoleTypesPage() {
   const t = useTranslations("searchConsole");
@@ -31,20 +38,24 @@ export default function SearchConsoleTypesPage() {
   const hrefFor = useSearchConsoleHref(siteId);
   const pages = useSearchConsoleSummary({ dimension: "page" });
   const keywords = useSearchConsoleSummary({ dimension: "query" });
+  const pageKinds = usePageKinds(siteId);
+  const classified = pageKinds.classified;
   const host = status?.host ?? "";
   const clicksOf = (summary: ListSummary | null, kind: string) => summary?.kinds.find((entry) => entry.kind === kind)?.clicks ?? 0;
-  const hero = (label: string, summary: ListSummary | null, kind: string) => (
+  // A classification type's clicks, across every classification of that type.
+  const typeClicksOf = (summary: ListSummary | null, type: string) => summary?.types.find((entry) => entry.type === type)?.clicks ?? 0;
+  const hero = (label: string, summary: ListSummary | null, clicks: (summary: ListSummary | null) => number) => (
     <Figure
       label={label}
-      value={summary ? formatNumber(clicksOf(summary, kind)) : "…"}
-      detail={<span className="text-secondary">{t("types.ofClicks", { share: formatRate(summary && summary.clicks > 0 ? clicksOf(summary, kind) / summary.clicks : 0) })}</span>}
+      value={summary ? formatNumber(clicks(summary)) : "…"}
+      detail={<span className="text-secondary">{t("types.ofClicks", { share: formatRate(summary && summary.clicks > 0 ? clicks(summary) / summary.clicks : 0) })}</span>}
     />
   );
-  const csv = (summary: ListSummary | null, word: (kind: string) => string) => () => toCsv(
-    [t("types.kind"), t("types.count"), t("table.clicks")],
+  const csv = (summary: ListSummary | null, word: (kind: string) => string, heading: string) => () => toCsv(
+    [heading, t("types.count"), t("table.clicks")],
     (summary?.kinds ?? []).map((kind) => [word(kind.kind), kind.rows, kind.clicks]),
   );
-  const pageWord = (kind: string) => tc(`pageTypes.${kind}`);
+  const pageWord = (kind: string) => pageKinds.label(kind);
   const intentWord = (kind: string) => tc(`intents.${kind}`);
 
   return (
@@ -54,18 +65,27 @@ export default function SearchConsoleTypesPage() {
         <SearchConsoleGate status={status} siteId={siteId}>
           <ResultKindSwitch />
           <FigureRow>
-            {hero(t("types.fromArticles"), pages, "ARTICLE")}
-            {hero(t("types.fromServices"), pages, "SERVICE")}
-            {hero(t("types.fromBrand"), keywords, "BRANDED")}
-            {hero(t("types.fromCommercial"), keywords, "BUYING")}
+            {classified ? (
+              <>
+                {hero(t("types.fromInformational"), pages, (summary) => typeClicksOf(summary, "INFORMATIONAL"))}
+                {hero(t("types.fromServices"), pages, (summary) => typeClicksOf(summary, "SERVICE"))}
+              </>
+            ) : (
+              <>
+                {hero(t("types.fromArticles"), pages, (summary) => clicksOf(summary, "ARTICLE"))}
+                {hero(t("types.fromServices"), pages, (summary) => clicksOf(summary, "SERVICE"))}
+              </>
+            )}
+            {hero(t("types.fromBrand"), keywords, (summary) => clicksOf(summary, "BRANDED"))}
+            {hero(t("types.fromCommercial"), keywords, (summary) => clicksOf(summary, "BUYING"))}
           </FigureRow>
           <KindCard
-            title={t("types.pagesTitle")}
-            hint={t("types.pagesHint", { count: formatNumber(pages?.rows ?? 0) })}
-            exportName={`${host}-search-console-pages-by-kind`}
+            title={t(classified ? "types.pagesTitleClassified" : "types.pagesTitle")}
+            hint={t(classified ? "types.pagesHintClassified" : "types.pagesHint", { count: formatNumber(pages?.rows ?? 0) })}
+            exportName={`${host}-search-console-pages-by-${classified ? "classification" : "kind"}`}
             host={host}
             range={range}
-            csv={csv(pages, pageWord)}
+            csv={csv(pages, pageWord, classified ? tc("classification") : t("types.kind"))}
             summary={pages}
             of="page"
             word={pageWord}
@@ -77,7 +97,7 @@ export default function SearchConsoleTypesPage() {
             exportName={`${host}-search-console-keywords-by-intent`}
             host={host}
             range={range}
-            csv={csv(keywords, intentWord)}
+            csv={csv(keywords, intentWord, t("types.kind"))}
             summary={keywords}
             of="query"
             word={intentWord}

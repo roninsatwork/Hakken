@@ -22,6 +22,7 @@ import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../_components/useSiteSort";
 import { HeldLine, isPartHeld } from "../../../_components/SiteCoverage";
+import { usePageKinds } from "../../../../_components/usePageKinds";
 
 /**
  * The columns that sort, over every page (docs/plans/active/
@@ -29,12 +30,6 @@ import { HeldLine, isPartHeld } from "../../../_components/SiteCoverage";
  * the top, and the most visits, keywords and linking websites first.
  */
 const SORTS = { page: "asc", traffic: "desc", keywords: "desc", best: "asc", linking: "desc" } as const;
-
-const PAGE_TYPES = [
-  "HOME", "SERVICE", "PRODUCT", "CATEGORY", "ARTICLE", "CASE_STUDY",
-  "ABOUT", "CONTACT", "LOCATION", "CAREERS", "LEGAL", "OTHER", "UNJUDGED",
-] as const;
-type PageType = (typeof PAGE_TYPES)[number];
 
 /**
  * Top pages (Organic search › Top pages): the site's pages by how many
@@ -45,19 +40,26 @@ type PageType = (typeof PAGE_TYPES)[number];
  * screen; each row opens the page's own screen — its searches, what the site
  * audit found, the AI answers and the links pointing at it (docs/plans/
  * active/sites-ux-updates-plan.md §3).
+ *
+ * Once the website has classifications of the company's own, the Type
+ * column and filter are the page's classification — each classification
+ * and Not sorted — in place of Hakken's page types (page-groups-plan.md,
+ * decision 2).
  */
 export default function SitePagesPage() {
   const t = useTranslations("sites.pages");
   const siteId = useSiteId();
   const site = useSite();
   const range = useSiteRange();
-  const tt = useTranslations("sites.common.pageTypes");
+  const tc = useTranslations("sites.common");
   const tm = useTranslations("sites.measures");
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
   const [search, setSearch, term] = useSiteSearch();
   const [section, setSection] = useSiteParam<string>("section", "");
-  const [pageType, setPageType] = useSiteParam<PageType | "">("type", "", PAGE_TYPES);
+  const pageKinds = usePageKinds(siteId);
+  const [pageType, setPageType] = useSiteParam<string>("type", "", pageKinds.allowed);
+  const classified = pageKinds.classified;
   const order = useSiteSort(SORTS, "keywords");
 
   const sections = useQuery(api.siteKeywords.listSections, { siteId })?.rows;
@@ -113,9 +115,13 @@ export default function SitePagesPage() {
               <option value="">{t("allSections")}</option>
               {(sections ?? []).map((entry) => <option key={entry.section} value={entry.section}>{entry.section}</option>)}
             </Select>
-            <Select chip={{ label: t("typeFilter"), choice: pageType ? tt(pageType) : null }} value={pageType} onChange={(value) => setPageType(value as PageType | "")}>
-              <option value="">{t("anyType")}</option>
-              {PAGE_TYPES.map((entry) => <option key={entry} value={entry}>{tt(entry)}</option>)}
+            <Select
+              chip={{ label: classified ? tc("classification") : t("typeFilter"), choice: pageType ? pageKinds.label(pageType) : null }}
+              value={pageType}
+              onChange={setPageType}
+            >
+              <option value="">{classified ? tc("anyClassification") : t("anyType")}</option>
+              {pageKinds.options.map((entry) => <option key={entry.value} value={entry.value}>{entry.label}</option>)}
             </Select>
           </>
         }
@@ -131,7 +137,7 @@ export default function SitePagesPage() {
             className: CUT_COLUMN.first,
             cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "page", page: row.page })} className="text-[12px] text-info">{row.page || "/"}</RecordLinkCell>,
           },
-          { key: "type", header: t("columns.type"), cell: (row) => <PageTypeLabel type={row.pageType} /> },
+          { key: "type", header: classified ? tc("classification") : t("columns.type"), cell: (row) => <PageTypeLabel type={row.kind} kinds={pageKinds} /> },
           {
             key: "traffic",
             header: t("columns.traffic"),

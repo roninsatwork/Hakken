@@ -6,6 +6,7 @@ import { citedPagesIn, latestFigures, searchTotalOf } from "./siteFigures";
 import { holdAiSummary } from "./holdLists";
 import { pageTypeValidator } from "./utils/siteShapes";
 import { discoveredTotal } from "./siteDiscovery";
+import { readPageKinds } from "./pageKinds";
 
 /**
  * The parts of a site's Overview that no day summary holds (docs/plans/
@@ -68,6 +69,12 @@ export const overviewExtras = tenantQuery({
       visits: v.number(),
       capped: v.boolean(),
       kinds: v.array(v.object({ pageType: pageTypeValidator, pages: v.number(), visits: v.number() })),
+      /**
+       * The same pages by the company's own classifications once the website
+       * has any (page-groups-plan.md, decision 2) — each classification's id,
+       * or Not sorted — replacing the kinds on screen; null until then.
+       */
+      classified: v.union(v.null(), v.array(v.object({ kind: v.string(), pages: v.number(), visits: v.number() }))),
       visitBands: v.array(v.object({ band: visitBandValidator, pages: v.number(), visits: v.number() })),
     }),
     competitors: v.object({
@@ -107,7 +114,7 @@ export const overviewExtras = tenantQuery({
     const websiteId = site.website._id;
     const place = site.place;
 
-    const [pageRows, home, aiRows, summary, found, rivals, own, readOf] = await Promise.all([
+    const [pageRows, home, aiRows, summary, found, rivals, own, readOf, pageKinds] = await Promise.all([
       ctx.db
         .query("sitePageRanks")
         .withIndex("by_site_keywords", (q) => q.eq("websiteId", websiteId).eq("locationCode", place))
@@ -131,13 +138,16 @@ export const overviewExtras = tenantQuery({
       myRivals(ctx, site),
       latestFigures(ctx, websiteId, place),
       discoveredTotal(ctx, websiteId, place),
+      // The company's own classifications, by its own hold: another company's never count here.
+      readPageKinds(ctx, site.hold._id),
     ]);
 
     const cited = citedPagesIn(summary, websiteId);
     const answered = new Set(summary?.engines.map((entry) => entry.engine));
 
-    // Pages by kind, and by the visits a month each brings.
+    // Pages by kind — or by the company's own classification — and by the visits a month each brings.
     const kinds = new Map<string, { pageType: NonNullable<(typeof pageRows)[number]["pageType"]> | "UNJUDGED"; pages: number; visits: number }>();
+    const classified = new Map<string, { kind: string; pages: number; visits: number }>();
     const bands = VISIT_BANDS.map((entry) => ({ band: entry.band, pages: 0, visits: 0 }));
     let visits = 0;
     for (const row of pageRows) {
@@ -148,6 +158,13 @@ export const overviewExtras = tenantQuery({
       kind.pages += 1;
       kind.visits += traffic;
       kinds.set(pageType, kind);
+      if (pageKinds) {
+        const ownKind = pageKinds.kindOf(row.page);
+        const entry = classified.get(ownKind) ?? { kind: ownKind, pages: 0, visits: 0 };
+        entry.pages += 1;
+        entry.visits += traffic;
+        classified.set(ownKind, entry);
+      }
       const band = bands[VISIT_BANDS.findIndex((entry) => traffic <= entry.upTo)];
       band.pages += 1;
       band.visits += traffic;
@@ -190,6 +207,7 @@ export const overviewExtras = tenantQuery({
         visits,
         capped: pageRows.length === PAGES_READ,
         kinds: [...kinds.values()].sort((left, right) => right.pages - left.pages || right.visits - left.visits),
+        classified: pageKinds ? [...classified.values()].sort((left, right) => right.pages - left.pages || right.visits - left.visits) : null,
         visitBands: bands,
       },
       competitors: {

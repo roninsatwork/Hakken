@@ -49,6 +49,8 @@ export const settleSite = internalAction({
       if (state.newestDay && state.oldestDay && state.kept) {
         const rolled = await rollUpSite(ctx, state.companyWebsiteId, state.newestDay, args.country);
         const written = await buildSitePeriods(ctx, state.companyWebsiteId, state.newestDay, state.oldestDay, args.country);
+        // Your pages reads the 90-day page list just built: asked for, not waited on.
+        if (args.country === undefined) await ctx.runMutation(internal.holdPages.requestRebuild, { holdId: state.companyWebsiteId });
         await ctx.runMutation(internal.roleRuns.logRunLine, {
           runId: args.runId,
           companyId: args.companyId,

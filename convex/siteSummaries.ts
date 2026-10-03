@@ -296,6 +296,8 @@ async function rebuildSiteNow(
   await ctx.runMutation(internal.siteListCopies.requestCopies, {
     requests: [{ kind: "pages", key: pagesCopyKey(args.websiteId, args.locationCode) }],
   });
+  // Your pages says which pages rank: rebuilt for every company whose own website it is.
+  await ctx.runMutation(internal.holdPages.requestWebsiteRebuilds, { websiteId: args.websiteId });
 
   // What moved at the last check: the statuses of rows checked that day.
   const moved = { up: 0, down: 0, fresh: 0, lost: 0 };

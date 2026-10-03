@@ -14,7 +14,9 @@ export type TableNoun =
   // The fan-out searches grouped into angles (docs/plans/active/fan-out-angles-plan.md, FA5).
   | "angles"
   // The fan-out queries ticked to check on Google every run: Sites' Tracked fan-out queries (2026-10-03).
-  | "fanOutQueries";
+  | "fanOutQueries"
+  // A website's own classifications of its pages: admin › Page classification's Classifications view (page-groups-plan.md).
+  | "classifications";
 
 /**
  * The bar across the top of every Sites table, inside its card (`DataTable`'s

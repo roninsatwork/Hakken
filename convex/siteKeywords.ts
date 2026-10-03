@@ -7,6 +7,7 @@ import { askedQuestions, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
 import { keywordStanding, readKeywordCopy, type KeywordCopyRow } from "./siteKeywordCopy";
 import { pagesCopyKey, readListCopy } from "./siteListCopies";
 import { listOrder, listPageArgs, listPageResult, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
+import { readPageKinds } from "./pageKinds";
 import {
   kdBandValidator,
   pageTypeValidator,
@@ -99,6 +100,12 @@ const pageRowValidator = v.object({
   referringDomains: nullableNumber,
   backlinks: nullableNumber,
   pageType: pageTypeValidator,
+  /**
+   * What the screen shows as the page's kind: its page type — or, once the
+   * website has classifications of the company's own, its classification's
+   * id, or Not sorted (page-groups-plan.md, decision 2).
+   */
+  kind: v.string(),
 });
 
 function keywordRow(row: Rank) {
@@ -344,6 +351,10 @@ const PAGE_SORTS: ListSorts<PageCopyRow, "page" | "traffic" | "keywords" | "best
  * otherwise — in one folder, of one type, or matching a search (word starts,
  * T8) — with which AI engines cite each. Counted from Top pages' compact
  * copy, so the total is exact and any page opens at once.
+ *
+ * Once the website has classifications of the company's own, the type is
+ * the page's classification (`pageKinds.ts`): every page is classified in
+ * memory, by the caller's own hold, to filter by one.
  */
 export const listPages = tenantQuery({
   args: {
@@ -351,7 +362,8 @@ export const listPages = tenantQuery({
     ...listPageArgs,
     search: v.optional(v.string()),
     section: v.optional(v.string()),
-    pageType: v.optional(pageTypeValidator),
+    /** A page type; or, once the website has classifications, a classification's id or Not sorted. */
+    pageType: v.optional(v.string()),
     sort: v.optional(v.union(v.literal("page"), v.literal("traffic"), v.literal("keywords"), v.literal("best"), v.literal("linking"))),
     direction: sortDirectionArg,
   },
@@ -360,9 +372,13 @@ export const listPages = tenantQuery({
     const site = await requireMySite(ctx, args.siteId);
     const websiteId = site.website._id;
     const place = site.place;
-    const copy = await readListCopy(ctx, "pages", pagesCopyKey(websiteId, place), PAGE_COPY_FIELDS);
+    const [copy, pageKinds] = await Promise.all([
+      readListCopy(ctx, "pages", pagesCopyKey(websiteId, place), PAGE_COPY_FIELDS),
+      readPageKinds(ctx, site.hold._id),
+    ]);
     if (!copy) return preparingPage(args.rows);
     const matches = wordStartMatcher(args.search);
+    const kindOf = (row: PageCopyRow) => (pageKinds ? pageKinds.kindOf(row.path) : row.pageType);
     const pagesHeld: PageCopyRow[] = copy.rows.map(([id, path, section, pageType, keywords, traffic, topKeyword, bestPosition, referringDomains]) => ({
       id: id as Id<"sitePageRanks">,
       path: path as string,
@@ -377,7 +393,7 @@ export const listPages = tenantQuery({
     const name = (row: PageCopyRow) => row.path;
     const list = pagesHeld
       .filter((row) => (!args.section || row.section === args.section)
-        && (!args.pageType || row.pageType === args.pageType)
+        && (!args.pageType || kindOf(row) === args.pageType)
         // The address only, never its keywords (Anthony, 2026-09-30): Keywords searches those.
         && (!matches || matches(row.path)))
       .sort(listOrder(PAGE_SORTS, args.sort ?? "keywords", args.direction, name));
@@ -422,6 +438,7 @@ export const listPages = tenantQuery({
         referringDomains: row.referringDomains ?? null,
         backlinks: row.backlinks ?? null,
         pageType: row.pageType ?? "UNJUDGED",
+        kind: pageKinds ? pageKinds.kindOf(row.page) : (row.pageType ?? "UNJUDGED"),
       };
     }));
     return { ...shown, rows: page };

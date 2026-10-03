@@ -22,6 +22,8 @@ export type MenuCounts = {
   rankedDown: number | null;
   suggestions: number;
   citedPages: number;
+  /** Every page of the company's own website once; null on a competitor, or before the list is built. */
+  yourPages: number | null;
 };
 
 /**
@@ -59,8 +61,9 @@ export function SiteMenu({ siteId, counts }: { siteId: string; counts: MenuCount
       case undefined:
         return null;
       default: {
-        const value = counts[page.count];
-        return value === null || value === 0 ? null : formatNumber(value);
+        // Missing as well as null: a count the server does not send yet (a page newer than the deployment) shows nothing, never a dash.
+        const value = counts[page.count] as number | null | undefined;
+        return value === null || value === undefined || value === 0 ? null : formatNumber(value);
       }
     }
   };

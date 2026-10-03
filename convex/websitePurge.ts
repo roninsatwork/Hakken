@@ -5,6 +5,7 @@ import { internalMutation, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { purgeHoldDataLimits } from "./companyDataLimits";
 import { purgeCompanyFanOutLimits, purgeHoldFanOutLimits } from "./fanOutLimits";
+import { purgeHoldClassifications } from "./pageClassifications";
 import { purgeHoldProfile } from "./holdProfiles";
 import { citedPageOf, recountCitedPages, type CitedPage } from "./siteRankings";
 import { purgeHoldMoves } from "./websiteMoves";
@@ -53,10 +54,12 @@ export const purgeWebsiteHoldingsInternal = internalMutation({
       await purgeHoldMoves(ctx, owner._id);
       await purgeHoldDataLimits(ctx, owner._id);
       await purgeHoldFanOutLimits(ctx, owner._id);
+      await purgeHoldClassifications(ctx, owner._id);
       await purgeHoldProfile(ctx, owner._id);
       // Its Search Console connection and figures, the company's alone, and the angles of its questions' searches.
       await ctx.scheduler.runAfter(0, internal.searchConsoleConnect.forgetHold, { companyWebsiteId: owner._id });
       await ctx.scheduler.runAfter(0, internal.fanOutAngles.purgeHoldAngles, { holdId: owner._id });
+      await ctx.scheduler.runAfter(0, internal.holdPages.purgeHoldPages, { holdId: owner._id });
       // A competitor's counts stay in the rows of the list it was watched
       // against, read by nobody once it is out of the group; that list's next
       // recount drops them.
@@ -244,6 +247,14 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
     // The compact copies the Sites tables count from (`siteListCopies.ts`).
     for (const [kind, prefix] of [["keywords", `${args.websiteId}:`], ["pages", `${args.websiteId}:`], ["links", `${args.websiteId}`]] as const) {
       if (await dropCopies(ctx, kind, prefix)) more = true;
+    }
+    // Its sitemap and the pages it listed, read for Your pages.
+    const sitemapPages = await ctx.db.query("siteSitemapPages")
+      .withIndex("by_website_read", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH);
+    for (const row of sitemapPages) await ctx.db.delete(row._id);
+    if (sitemapPages.length === ENTRY_PURGE_BATCH) more = true;
+    for (const row of await ctx.db.query("siteSitemaps").withIndex("by_website", (q) => q.eq("websiteId", args.websiteId)).take(5)) {
+      await ctx.db.delete(row._id);
     }
 
     if (more) {
@@ -509,11 +520,13 @@ export const purgeCompanyWebsitesInternal = internalMutation({
       await purgeHoldMoves(ctx, row._id);
       await purgeHoldDataLimits(ctx, row._id);
       await purgeHoldFanOutLimits(ctx, row._id);
+      await purgeHoldClassifications(ctx, row._id);
       await purgeHoldProfile(ctx, row._id);
       // Its own searches, questions and AI lines go with it (V9), and its Search Console.
       await ctx.scheduler.runAfter(0, internal.websitePurge.purgeHoldListsInternal, { companyWebsiteId: row._id });
       await ctx.scheduler.runAfter(0, internal.searchConsoleConnect.forgetHold, { companyWebsiteId: row._id });
       await ctx.scheduler.runAfter(0, internal.fanOutAngles.purgeHoldAngles, { holdId: row._id });
+      await ctx.scheduler.runAfter(0, internal.holdPages.purgeHoldPages, { holdId: row._id });
       await ctx.db.delete(row._id);
     }
     // How much it collected per website goes with it, and its fan-out limits.

@@ -28,7 +28,8 @@ export type SitePage = {
     | "trackedFanOut"
     | "moves"
     | "suggestions"
-    | "citedPages";
+    | "citedPages"
+    | "yourPages";
   /**
    * What the page cannot show anything without, set up by the team for the
    * site: the questions asked of AI assistants, or the searches checked one
@@ -65,6 +66,8 @@ export const SITE_PAGE_GROUPS: SitePageGroup[] = ["site", "ai", "google", "keywo
 
 export const SITE_PAGES: SitePage[] = [
   { id: "overview", group: "site", segment: "", built: true },
+  // Every page of the website once, against its sitemap (docs/plans/active/page-groups-plan.md, decision 4).
+  { id: "yourPages", group: "site", segment: "your-pages", built: true, count: "yourPages" },
   { id: "siteAudit", group: "site", segment: "audit", built: true },
 
   { id: "aiMentions", group: "ai", segment: "ai/mentions", built: true, count: "aiNamed", needs: "questions" },

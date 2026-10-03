@@ -12,6 +12,7 @@ import { keywordStanding, readKeywordCopy } from "./siteKeywordCopy";
 import { heldTo, listOrder, listPageArgs, listPageResult, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { bare, isHost } from "./siteGoogleSerp";
 import { askedQuestions, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
+import { readPageKinds } from "./pageKinds";
 import {
   keywordFeatureValidator,
   pageTypeValidator,
@@ -351,6 +352,12 @@ export const pageRecord = tenantQuery({
   args: { siteId: v.id("companyWebsites"), page: v.string() },
   returns: v.object({
     page: v.string(),
+    /**
+     * The page's classification once the website has classifications of the
+     * company's own — its id, or Not sorted — shown in place of its page
+     * type, ranking or not (page-groups-plan.md, decision 2); null until then.
+     */
+    kind: nullableString,
     rank: v.union(v.object({
       url: v.string(),
       section: v.string(),
@@ -413,7 +420,7 @@ export const pageRecord = tenantQuery({
     const websiteId = site.website._id;
     const place = site.place;
 
-    const [rank, crawl, citedRows, asked, links] = await Promise.all([
+    const [rank, crawl, citedRows, asked, links, pageKinds] = await Promise.all([
       ctx.db
         .query("sitePageRanks")
         .withIndex("by_site_page", (q) => q.eq("websiteId", websiteId).eq("locationCode", place).eq("page", page))
@@ -434,6 +441,8 @@ export const pageRecord = tenantQuery({
         .withIndex("by_site_pass_page_rank", (q) => q.eq("websiteId", websiteId).eq("pass", "ALL").eq("pageTo", page))
         .order("desc")
         .take(LINKS_SHOWN),
+      // This one page's classification, by the caller's own hold: its sitemap file looked up alone.
+      readPageKinds(ctx, site.hold._id, { pages: [page] }),
     ]);
 
     // Only the answers to the questions this site is measured on count (D17),
@@ -455,6 +464,7 @@ export const pageRecord = tenantQuery({
 
     return {
       page,
+      kind: pageKinds ? pageKinds.kindOf(page) : null,
       rank: rank
         ? {
           url: rank.url,

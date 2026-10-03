@@ -12,7 +12,7 @@
  * without its words in English and Italian.
  */
 
-export type LimitTopic = { id: "google" | "ai" | "matching" | "searchConsole" | "company" | "shared"; keys: readonly string[] };
+export type LimitTopic = { id: "google" | "ai" | "matching" | "searchConsole" | "pages" | "company" | "shared"; keys: readonly string[] };
 
 export const LIMIT_TOPICS: readonly LimitTopic[] = [
   {
@@ -26,6 +26,8 @@ export const LIMIT_TOPICS: readonly LimitTopic[] = [
   },
   // Search Console's tracked lists (search-console-plan.md §13.2): free, a company's own websites only.
   { id: "searchConsole", keys: ["consoleTrackedKeywordsPerSite", "consoleTrackedPagesPerSite", "consoleCountriesPerSite"] },
+  // A website's pages and their classifications (page-groups-plan.md): free, set only in admin for now.
+  { id: "pages", keys: ["sitemapPagesRead", "classificationsPerSite", "classificationLinesPerSite", "classifiedPagesPerSite"] },
   { id: "company", keys: ["purchasesPerCollection", "companyRowsRead"] },
   // Only the platform sets these (`convex/sharedLimits.ts`): a company's Limits
   // shows them, with where they are set, and a website's does not.
@@ -54,7 +56,9 @@ export type LimitUnit =
   | "sources"
   | "businesses"
   | "websites"
-  | "countries";
+  | "countries"
+  | "classifications"
+  | "lines";
 
 export const LIMIT_UNITS: Record<string, LimitUnit> = {
   keywordsPerSite: "keywords",
@@ -80,6 +84,10 @@ export const LIMIT_UNITS: Record<string, LimitUnit> = {
   consoleTrackedKeywordsPerSite: "keywords",
   consoleTrackedPagesPerSite: "pages",
   consoleCountriesPerSite: "countries",
+  classificationsPerSite: "classifications",
+  classificationLinesPerSite: "lines",
+  classifiedPagesPerSite: "pages",
+  sitemapPagesRead: "pages",
   fanOutPerAnswer: "searches",
   sourcesPerAnswer: "sources",
   businessesPerAnswer: "businesses",

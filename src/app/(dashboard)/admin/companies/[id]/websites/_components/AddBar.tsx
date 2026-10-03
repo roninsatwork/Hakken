@@ -14,14 +14,23 @@ import { Button } from "@/src/ui/components/screens/Button";
  *
  * A disabled button shows no tooltip of its own, so the reason it is
  * disabled (`disabledTip`) sits on what holds it.
+ *
+ * Extended for Page classification's ticked pages (page-groups-plan.md,
+ * decision 6), drawn as this same bar: `icon` replaces the plus — `null` for
+ * "Set for 3 pages", which adds nothing to a list — and `after` holds a
+ * quieter second button on the same row ("Untick all").
  */
-export function AddBar({ label, onAdd, disabled, disabledTip, above, below, children }: {
+export function AddBar({ label, onAdd, disabled, disabledTip, above, below, icon, after, children }: {
   label: string;
   onAdd: () => void;
   disabled: boolean;
   disabledTip?: string;
   above?: ReactNode;
   below?: ReactNode;
+  /** In place of the plus before the button's words; `null` for none. */
+  icon?: ReactNode;
+  /** After the button, on its row. */
+  after?: ReactNode;
   /** The field, and any picker, before the button. */
   children: ReactNode;
 }) {
@@ -32,10 +41,11 @@ export function AddBar({ label, onAdd, disabled, disabledTip, above, below, chil
         {children}
         <span title={disabled ? disabledTip : undefined}>
           <Button variant="quiet" className="h-[46px] px-4 text-[13px]" disabled={disabled} onClick={onAdd}>
-            <Plus className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" />
+            {icon === undefined ? <Plus className="mr-1 inline h-3.5 w-3.5" aria-hidden="true" /> : icon}
             {label}
           </Button>
         </span>
+        {after}
       </div>
       {below}
     </div>

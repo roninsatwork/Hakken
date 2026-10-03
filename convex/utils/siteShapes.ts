@@ -365,13 +365,13 @@ export function pageTypeByAddress(path: string): PageType | null {
 
 /** The Sites tables that can be downloaded whole, as a CSV file built on the server (`siteExports.ts`). */
 export const SITE_EXPORT_KINDS = [
-  "keywords", "pages", "gap", "cited", "backlinks", "links", "broken", "domains", "anchors", "ips", "paid", "answers",
+  "keywords", "pages", "gap", "cited", "backlinks", "links", "broken", "domains", "anchors", "ips", "paid", "answers", "yourPages",
 ] as const;
 export type SiteExportKind = (typeof SITE_EXPORT_KINDS)[number];
 export const siteExportKindValidator = v.union(
   v.literal("keywords"), v.literal("pages"), v.literal("gap"), v.literal("cited"), v.literal("backlinks"),
   v.literal("links"), v.literal("broken"), v.literal("domains"), v.literal("anchors"), v.literal("ips"),
-  v.literal("paid"), v.literal("answers"),
+  v.literal("paid"), v.literal("answers"), v.literal("yourPages"),
 );
 
 /**

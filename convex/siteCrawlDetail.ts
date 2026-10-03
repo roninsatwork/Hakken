@@ -212,6 +212,8 @@ export const fetchCrawlDetail = internalAction({
           more = (await ctx.runMutation(internal.siteCrawlDetail.clearOlderCrawlDetail, { websiteId: crawl.websiteId, pullId: args.pullId })).more;
         }
         await ctx.runMutation(internal.siteCrawlDetail.recordDetailCut, { pullId: args.pullId, cut: pages.cut || links.cut });
+        // Your pages says which pages the crawl reached: rebuilt for every company whose own website it is.
+        await ctx.runMutation(internal.holdPages.requestWebsiteRebuilds, { websiteId: crawl.websiteId });
       }
     } catch (error) {
       failure = getErrorMessage(error);

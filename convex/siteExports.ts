@@ -14,6 +14,10 @@ import { compareSortValues, ipSortKey, type SortValue } from "./utils/sortOrder"
 import { sortDirectionArg } from "./siteListPages";
 import { loadSite } from "./websiteSiteRows";
 import { MAX_LIST } from "./websiteSiteRows";
+import { yourPagesList, yourPagesSortValue } from "./yourPages";
+import { readPageKinds } from "./pageKinds";
+import { NOT_SORTED_KIND } from "./utils/pageKinds";
+import { isTrackedHold } from "./utils/websitePairing";
 
 /**
  * Downloading a whole Sites table as CSV (docs/plans/active/user-sites-plan.md,
@@ -94,6 +98,8 @@ const HEADERS: Record<ExportKind, string[]> = {
   ips: ["address", "network", "linking_websites", "links", "rank", "first_seen", "status", "last_checked"],
   paid: ["keyword", "advert_position", "volume", "cpc_usd", "visits", "estimated_cost_usd", "landing_page", "last_checked"],
   answers: ["day", "engine", "question", "this_website", "answer", "sources"],
+  // Your pages: the company's classification (or Hakken's kind while it has none), and where each page was found.
+  yourPages: ["page", "group", "sitemap_file", "crawled", "shown_by_google", "ranks", "clicks_90_days"],
 };
 
 /**
@@ -326,15 +332,23 @@ export const exportPage = internalQuery({
           row.keyword, row.position, row.change, row.status, row.volumeKnown ? row.volume : null, row.intent,
           row.difficulty, cents(row.cpc), row.traffic === undefined ? null : Math.round(row.traffic), row.page, row.day,
         ]), (row) => row.keyword);
-      case "pages":
+      case "pages": {
+        // The page's type as the screen shows it: the company's own classification by name once it has any, Not sorted in words.
+        const pageKinds = await readPageKinds(ctx, site.hold._id);
+        const typeOf = (row: Doc<"sitePageRanks">) => {
+          if (!pageKinds) return row.pageType;
+          const kind = pageKinds.kindOf(row.page);
+          return kind === NOT_SORTED_KIND ? "Not sorted" : pageKinds.nameOf(kind);
+        };
         return done(await ctx.db.query("sitePageRanks")
           .withIndex("by_site_keywords", (q) => q.eq("websiteId", websiteId).eq("locationCode", place))
           .order("desc").paginate(page), (row: Doc<"sitePageRanks">) => line([
-          row.page, row.pageType, row.keywords, row.top3, row.bestPosition,
+          row.page, typeOf(row), row.keywords, row.top3, row.bestPosition,
           row.traffic === undefined ? null : Math.round(row.traffic),
           row.trafficValue === undefined ? null : Math.round(row.trafficValue),
           row.pageRank, row.referringDomains, row.topKeyword, row.day,
         ]), (row) => row.page);
+      }
       case "gap": {
         // A position and traffic pair per competitor tracked, as the page's
         // columns: one no longer tracked is left out, as the page leaves it.
@@ -408,6 +422,24 @@ export const exportPage = internalQuery({
           .order("desc").paginate(page), (row: Doc<"siteReferringIps">) => line([
           row.ip, row.subnet, row.referringDomains, row.backlinks, row.rank, row.firstSeen, row.status, row.day,
         ]), (row) => row.ip);
+      case "yourPages": {
+        // The company's own website's every page once, whole in one page, from its compact copy (`yourPages.ts`).
+        const list = isTrackedHold(site.hold) ? null : await yourPagesList(ctx, site.hold._id);
+        return {
+          host,
+          lines: (list?.rows ?? []).map((row) => ({
+            line: line([
+              row.page, list?.groupBy === "CLASSIFICATION" ? (row.group ?? "Not sorted") : row.kind,
+              row.file, row.crawled, row.shown, row.ranks, row.clicks,
+            ]),
+            group: "",
+            order: yourPagesSortValue(args.sort, row) ?? null,
+            name: row.page,
+          })),
+          cursor: "",
+          isDone: true,
+        };
+      }
       case "paid":
         return done(await ctx.db.query("sitePaidKeywords")
           .withIndex("by_site_traffic", (q) => q.eq("websiteId", websiteId).eq("locationCode", place))

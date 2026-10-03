@@ -107,6 +107,19 @@ export const FAN_OUT_LIMITS = {
    * storage. Past it, the countries first added are kept.
    */
   consoleCountriesPerSite: { choices: [1, 2, 3, 5, 10], fallback: 3, scope: "site" },
+  /**
+   * A website's own classifications of its pages (page-groups-plan.md): how
+   * many it may have, how many address lines catch pages for them, and how
+   * many pages may be set by hand. Free — nothing is bought — so the limits
+   * keep the admin page, and every chart that reads them, quick. Anthony:
+   * "any limit should be configurable in the usual limits way, nothing should
+   * be hidden".
+   */
+  classificationsPerSite: { choices: [10, 25, 50, 100], fallback: 25, scope: "site" },
+  classificationLinesPerSite: { choices: [50, 100, 250, 500], fallback: 100, scope: "site" },
+  classifiedPagesPerSite: { choices: [250, 500, 1_000, 2_500], fallback: 1_000, scope: "site" },
+  /** Pages read from a website's sitemap at each collection: free to fetch, kept by website. Past it the reading stops and says so. */
+  sitemapPagesRead: { choices: [1_000, 5_000, 10_000, 25_000], fallback: 5_000, scope: "site" },
 } as const satisfies Record<string, LimitSpec>;
 
 export type FanOutLimitKey = keyof typeof FAN_OUT_LIMITS;
@@ -192,6 +205,10 @@ const limitsArg = v.object({
   consoleTrackedKeywordsPerSite: limitValue,
   consoleTrackedPagesPerSite: limitValue,
   consoleCountriesPerSite: limitValue,
+  classificationsPerSite: limitValue,
+  classificationLinesPerSite: limitValue,
+  classifiedPagesPerSite: limitValue,
+  sitemapPagesRead: limitValue,
 });
 
 /** Each limit's own value where set, null where it uses the level above. */

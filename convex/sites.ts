@@ -12,6 +12,7 @@ import { CADENCES, cadenceOf } from "./utils/trackingVerdicts";
 import { MAX_DISCOVERED, pickSuggestions } from "./siteCompetitors";
 import { loadSite, MAX_LIST } from "./websiteSiteRows";
 import { websiteIconUrl } from "./websiteIcons";
+import { yourPagesCount } from "./yourPages";
 
 /**
  * The client's Sites list, and the header and side menu every page of one
@@ -222,6 +223,8 @@ export const getMySite = tenantQuery({
       citedPages: v.number(),
       /** DataForSEO's count of the searches it shows adverts on; Paid keywords holds only the everyday answer's. */
       paidKeywords: numberOrNull,
+      /** Every page of the company's own website once: the menu's count beside Your pages; null on a competitor or before it is built. */
+      yourPages: numberOrNull,
     }),
     /** What the keyword list holds of the site against the supplier's totals: every screen's "X of Y". */
     coverage: coverageValidator,
@@ -258,6 +261,8 @@ export const getMySite = tenantQuery({
       holdQuestions(ctx, holdId, 1),
       holdQuestions(ctx, holdId, 1, { activeOnly: true }),
     ]);
+    // One header read: the list's own length (`yourPages.ts`).
+    const yourPages = isTrackedHold(site.hold) ? null : await yourPagesCount(ctx, args.siteId);
 
     const me: HoldSummary = holds.find((entry) => entry.hold._id === args.siteId)?.summary ?? {
       siteId: args.siteId,
@@ -307,6 +312,7 @@ export const getMySite = tenantQuery({
         suggestions: suggested.named.length + suggested.found.length,
         citedPages: citedPagesIn(summary, websiteId).pages,
         paidKeywords: latest.metrics?.paidKeywords ?? null,
+        yourPages,
       },
       coverage: coverageOf(latest),
     };

@@ -7,6 +7,7 @@
  * answer with the same rules, and both are tested on their own.
  */
 
+import { countsByType, type ClassificationType } from "./pageKinds";
 import { wordStartMatcher } from "./wordStarts";
 
 export type Band = "1-3" | "4-10" | "11-20" | "21-50" | "51+";
@@ -371,8 +372,14 @@ export type Summary = {
   bands: BandCounts;
   bandsBefore: BandCounts | null;
   brand: { now: BrandSplit; before: BrandSplit | null } | null;
-  /** Each intent's or page type's rows and clicks, the most rows first. */
+  /**
+   * Each intent's or page type's rows and clicks, the most rows first — or,
+   * once the website has classifications of its own, each classification's
+   * (by id) and Not sorted's (`utils/pageKinds.ts`).
+   */
   kinds: { kind: string; rows: number; clicks: number }[];
+  /** The classifications' rows and clicks added up by their type; empty without classifications. */
+  types: { type: ClassificationType; rows: number; clicks: number }[];
 };
 
 const emptyBands = (): BandCounts => ({ "1-3": 0, "4-10": 0, "11-20": 0, "21-50": 0, "51+": 0 });
@@ -418,13 +425,17 @@ export function summarise(
   listed: readonly ListRow[],
   all: readonly ListRow[],
   before: readonly SourceRow[] | null,
-  context: ViewContext & { brandWords: readonly string[] | null },
+  context: ViewContext & {
+    brandWords: readonly string[] | null;
+    /** A page kind's classification type, once the website has classifications: the figures by type. */
+    kindType?: (kind: string) => ClassificationType | null;
+  },
 ): Summary {
   const bands = emptyBands();
   const kinds = new Map<string, { kind: string; rows: number; clicks: number }>();
   const summary: Summary = {
     rows: listed.length, of: all.length, ...figuresOf(listed, before !== null), tracked: 0, gaining: 0, losing: 0, gained: 0, lost: 0,
-    volume: 0, estimate: 0, expected: 0, high: 0, low: 0, pagesInvolved: null, pagesShown: null, bands, bandsBefore: null, brand: null, kinds: [],
+    volume: 0, estimate: 0, expected: 0, high: 0, low: 0, pagesInvolved: null, pagesShown: null, bands, bandsBefore: null, brand: null, kinds: [], types: [],
   };
   for (const row of listed) {
     if (row.tracked) summary.tracked += 1;
@@ -449,6 +460,7 @@ export function summarise(
     kinds.set(kind, entry);
   }
   summary.kinds = [...kinds.values()].sort((left, right) => right.rows - left.rows || right.clicks - left.clicks);
+  if (context.kindType) summary.types = countsByType(summary.kinds, context.kindType);
   if (before) {
     const counts = emptyBands();
     for (const row of before) if (row.impressions > 0) counts[bandOf(row.positionSum / row.impressions)] += 1;

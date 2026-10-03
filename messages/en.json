@@ -1748,6 +1748,165 @@
           "asPair": "{place}, as {host}"
         }
       },
+      "classification": {
+        "loading": "Loading…",
+        "description": "What each of {host}'s pages is, in its own words — its service lines, products and content hub. Once it has any, this website's charts and screens use them instead of the page kinds worked out automatically, and a page none catches shows as Not sorted. For this company only.",
+        "descriptionCompetitor": "{host} is a competitor. Only the company's own websites have their pages classified.",
+        "competitor": "A competitor has no classifications: only the company's own websites have their pages classified.",
+        "add": "Add classification",
+        "addFullTip": "This website can have {limit, plural, one {# classification} other {# classifications}}. Raise \"Classifications per website\" on its Limits page to add more.",
+        "view": "View",
+        "views": {
+          "pages": "Pages · {count}",
+          "classifications": "Classifications · {count}"
+        },
+        "notice": "{sorted} of {pages} pages have a classification; {notSorted} are not sorted. Set a page's classification in its row, or tick several and set them together. The bin removes a page's classification.",
+        "noticeEmpty": "No classifications yet. Add one, then set pages to it in their rows, or let its address lines catch them.",
+        "suggest": {
+          "notice": "Start from {host}'s own folders and sitemap files: one classification for each folder of {folderPages} or more pages and each sitemap file of its own, named from its addresses and caught by its line. Pages at the top level, such as service pages, stay for you to classify.",
+          "button": "Suggest classifications",
+          "created": "Created {count, plural, one {# classification} other {# classifications}} — rename or remove any of them.",
+          "none": "Nothing to suggest: every folder of {folderPages} or more pages and every sitemap file of its own is classified already.",
+          "overLimit": "{count, plural, one {# more was} other {# more were}} left out at this website's limits for classifications and address lines.",
+          "failed": "The classifications could not be suggested."
+        },
+        "showNotSorted": "Show the {count} not sorted",
+        "cut": "This website has more than {count} pages. The {count} with the most clicks are shown and counted here.",
+        "searchPlaceholder": "Find a page…",
+        "filter": "Classification",
+        "filterAll": "Every classification",
+        "notSorted": "Not sorted",
+        "clicksNote": "Clicks: Search Console's last 90 days.",
+        "columns": {
+          "tick": "Tick",
+          "page": "Page",
+          "classification": "Classification",
+          "how": "How it's set",
+          "clicks": "Clicks",
+          "remove": "Remove"
+        },
+        "tickPage": "Tick {page}",
+        "rowSelect": "Classification of {page}",
+        "chooseNotSorted": "Not sorted — choose…",
+        "how": {
+          "BY_HAND": "Set by hand",
+          "BY_LINE": "By the rule: {line}",
+          "TAKEN_OUT": "Taken out of its rule",
+          "NONE": "—"
+        },
+        "removeBackTo": "Remove — goes back to its rule ({name})",
+        "removeNotSorted": "Remove — shows as Not sorted",
+        "removeTakeOut": "Remove — takes this page out of its rule; shows as Not sorted",
+        "bulk": {
+          "ticked": "{count, plural, one {# page ticked} other {# pages ticked}}",
+          "label": "Classification for the ticked pages",
+          "choose": "Choose a classification…",
+          "chooseFirst": "Choose a classification first",
+          "set": "Set for {count, plural, one {# page} other {# pages}}",
+          "untick": "Untick all"
+        },
+        "emptyPages": "No pages yet. A website's pages are listed after its next collection reads its sitemap.",
+        "noMatch": "No page matches that.",
+        "errors": {
+          "setFailed": "Could not set the classification. Try again.",
+          "removeFailed": "Could not remove the classification. Try again."
+        },
+        "list": {
+          "columns": {
+            "name": "Classification",
+            "type": "Type",
+            "pages": "Pages",
+            "lines": "Catches pages that…",
+            "actions": "Edit or remove"
+          },
+          "byHandOnly": "Set by hand only",
+          "edit": "Edit {name}",
+          "remove": "Remove {name} — its pages show as Not sorted",
+          "empty": "No classifications yet. Add one with Add classification."
+        },
+        "remove": {
+          "title": "Remove {name}?",
+          "body": "{lines, plural, =0 {It has no address lines} one {Its address line goes} other {Its # address lines go}}, and {byHand, plural, =0 {no pages are set to it by hand} one {the page set to it by hand loses it} other {the # pages set to it by hand lose it}}. Its pages show as Not sorted, unless another classification's line catches them.",
+          "confirm": "Remove",
+          "failed": "Could not remove the classification. Try again."
+        },
+        "types": {
+          "INFORMATIONAL": "Informational content",
+          "SERVICE": "Service",
+          "PRODUCT": "Product",
+          "CASE_STUDY": "Case study",
+          "COMPANY": "Company",
+          "LEGAL": "Legal",
+          "OTHER": "Other"
+        },
+        "kinds": {
+          "STARTS_WITH": "Starts with",
+          "CONTAINS": "Contains",
+          "EXACT": "Is exactly",
+          "SITEMAP_FILE": "Listed in sitemap file"
+        },
+        "kindsInline": {
+          "STARTS_WITH": "starts with",
+          "CONTAINS": "contains",
+          "EXACT": "is exactly",
+          "SITEMAP_FILE": "listed in sitemap file"
+        },
+        "edit": {
+          "back": "Back to Page classification",
+          "newTitle": "New classification",
+          "notFound": "That classification is no longer here. It may have been removed.",
+          "description": "A classification of {host}'s pages: its name, what type of page it is, and which pages it catches. A page set by hand keeps what it was given.",
+          "card": "Classification",
+          "name": "Name",
+          "type": "Type",
+          "typeHint": "Reports add up by type across classifications — everything informational, say.",
+          "whichPages": "Which pages",
+          "whichLead": "A page belongs here when its address matches a line below. If a page matches lines in two classifications, the more exact line wins: an exact page beats \"starts with\", and a longer \"starts with\" beats a shorter one.",
+          "noLines": "No lines yet. Add one below, or set pages to this classification by hand on Page classification.",
+          "catches": "{count, plural, one {# page} other {# pages}}",
+          "removeLine": "Remove this line",
+          "kindLabel": "Kind of line",
+          "valueLabel": "What the address has",
+          "placeholders": {
+            "STARTS_WITH": "e.g. /hub/guides/",
+            "CONTAINS": "e.g. brand",
+            "EXACT": "e.g. /about-us/",
+            "SITEMAP_FILE": "e.g. post-sitemap.xml"
+          },
+          "addLine": "Add line",
+          "problems": {
+            "EMPTY": "Write something to look for.",
+            "TOO_LONG": "Too long: keep a line to 200 characters.",
+            "SPACES": "An address has no spaces, so this would catch nothing.",
+            "EVERY_PAGE": "This would catch every page. Use \"Is exactly /\" for the home page.",
+            "NO_WORD": "Needs a word or a number to look for.",
+            "AFTER_MARK": "Pages are compared without anything after \"#\" or \"?\".",
+            "TWICE": "This line is here twice.",
+            "TAKEN": "Already on {name}."
+          },
+          "itsPages": "Its pages · {count}",
+          "itsLead": "The pages it catches now, as the lines above read — they change as you add or remove a line.",
+          "itsEmpty": "No pages yet.",
+          "columns": {
+            "page": "Page",
+            "by": "Caught by",
+            "clicks": "Clicks"
+          },
+          "byHand": "set by hand",
+          "more": "And {count} more.",
+          "cut": "This website has more pages than one read holds: only those with the most clicks are counted here.",
+          "save": "Save changes",
+          "create": "Add classification",
+          "saved": "Saved.",
+          "saveFailed": "Could not save the classification. Try again.",
+          "remove": "Remove this classification"
+        },
+        "all": {
+          "classifications": "Classifications",
+          "notSorted": "Not sorted",
+          "notSortedOf": "{notSorted} of {pages}"
+        }
+      },
       "notFoundTitle": "Website not found"
     },
     "companyDataCollection": {
@@ -5864,7 +6023,9 @@
         "sources": "{count, plural, one {# source} other {# sources}}",
         "businesses": "{count, plural, one {# business} other {# businesses}}",
         "websites": "{count, plural, one {# website} other {# websites}}",
-        "countries": "{count, plural, one {# country} other {# countries}}"
+        "countries": "{count, plural, one {# country} other {# countries}}",
+        "classifications": "{count, plural, one {# classification} other {# classifications}}",
+        "lines": "{count, plural, one {# line} other {# lines}}"
       },
       "topics": {
         "google": {
@@ -5896,6 +6057,11 @@
           "title": "Same for every company",
           "intro": "One AI answer or one purchase serves every company that asks the same thing, so each of these is one number for all of them, set in System Settings → Limits.",
           "footer": "Changes apply to the next answers and purchases read; downloads change straight away."
+        },
+        "pages": {
+          "title": "Pages and their classification",
+          "intro": "A website's own list of its pages, read from its sitemap at each collection, and the company's own classifications of them — set in Page classification. Free: nothing is bought.",
+          "footer": "Changes apply from the next collection, and to the Page classification page straight away."
         }
       },
       "fields": {
@@ -6043,6 +6209,26 @@
           "label": "Rows in one download",
           "description": "The most rows one downloaded file holds. The largest choice is about as much as one file can carry.",
           "cost": "No cost."
+        },
+        "sitemapPagesRead": {
+          "label": "Sitemap pages read per website",
+          "description": "How many pages are read from a website's sitemap at each collection, for Your pages. Past it the reading stops and says so.",
+          "cost": "No cost: the sitemap is the website's own public file."
+        },
+        "classificationsPerSite": {
+          "label": "Classifications per website",
+          "description": "How many classifications a company may give a website's pages — its service lines, products, content hub.",
+          "cost": "No cost."
+        },
+        "classificationLinesPerSite": {
+          "label": "Address lines per website",
+          "description": "How many address lines (starts with, contains, is exactly, listed in a sitemap file) may catch pages for a website's classifications, all of them together.",
+          "cost": "No cost."
+        },
+        "classifiedPagesPerSite": {
+          "label": "Pages set by hand per website",
+          "description": "How many of a website's pages may be given a classification by hand, or taken out of one. Past it, set more with an address line.",
+          "cost": "No cost."
         }
       }
     },
@@ -6065,6 +6251,7 @@
         "competitors": "Competitors",
         "names": "Names and profiles",
         "market": "Market",
+        "classification": "Page classification",
         "todo": "To do",
         "rankings": "Rankings",
         "answers": "AI answers",
@@ -6077,6 +6264,7 @@
         "competitors": "Each of this company's own websites has its own competitors. Choose one to see and change them — here, or at the top of the menu.",
         "names": "Each website has its own names, and each of this company's own sites its business. Choose one — here, or at the top of the menu.",
         "market": "Each website has its own market: where it trades, and where it's watched from. Choose one to change them — here, or at the top of the menu.",
+        "classification": "Each of this company's own websites has its own page classifications: what each of its pages is, in the company's own words. Choose one to set them — here, or at the top of the menu.",
         "todo": "Each of this company's own websites has its own to-do list: how it is doing, and what to do next. Choose one — here, or at the top of the menu.",
         "rankings": "Each website's rankings are its own. Choose one to see everything it ranks for — here, or at the top of the menu.",
         "answers": "Each of this company's own websites is looked for in the answers to its prompts. Choose one — here, or at the top of the menu.",
@@ -8450,7 +8638,8 @@
       "updates": "{count, plural, =1 {# update} other {# updates}}",
       "positions": "{count, plural, =1 {# position} other {# positions}}",
       "kinds": "{count, plural, =1 {# kind} other {# kinds}}",
-      "fanOutQueries": "{count, plural, =1 {# tracked fan-out query} other {# tracked fan-out queries}}"
+      "fanOutQueries": "{count, plural, =1 {# tracked fan-out query} other {# tracked fan-out queries}}",
+      "classifications": "{count, plural, =1 {# classification} other {# classifications}}"
     },
     "chart": {
       "download": "Download",
@@ -8890,7 +9079,8 @@
         "siteAudit": "Site audit",
         "paidSummary": "Summary",
         "paidKeywords": "Paid keywords",
-        "googleTrackedFanOut": "Tracked fan-out queries"
+        "googleTrackedFanOut": "Tracked fan-out queries",
+        "yourPages": "Your pages"
       }
     },
     "range": {
@@ -9011,7 +9201,10 @@
       },
       "usd": "${value}",
       "findWebsite": "Find a website…",
-      "noWebsiteMatch": "No website matches that."
+      "noWebsiteMatch": "No website matches that.",
+      "classification": "Classification",
+      "anyClassification": "Any classification",
+      "notSorted": "Not sorted"
     },
     "overview": {
       "title": "Overview",
@@ -9090,7 +9283,10 @@
         "visitsShare": "Share of visits",
         "row": "{count, plural, one {# page} other {# pages}} ({pagesShare}) · {visitsShare} of visits",
         "capped": "Counted over the {count} pages ranking for the most searches.",
-        "hintHeld": "The {count} pages of the searches held, each sorted into a kind: its share of those pages, and of all the site's visits."
+        "hintHeld": "The {count} pages of the searches held, each sorted into a kind: its share of those pages, and of all the site's visits.",
+        "titleClassified": "Pages by classification",
+        "hintClassified": "All {count} ranking pages, each by your own classification: its share of the pages, and of the visits.",
+        "hintHeldClassified": "The {count} pages of the searches held, each by your own classification: its share of those pages, and of all the site's visits."
       },
       "pageVisits": {
         "title": "Pages by visits",
@@ -10551,6 +10747,65 @@
       "noMatch": "No website matches that.",
       "keepsPage": "Switching keeps you on {page}"
     },
+    "yourPages": {
+      "title": "Your pages",
+      "description": "Every page of this website, once: whether its sitemap lists it, whether our crawl reached it, whether Google showed it in the last 90 days, and whether it ranks. Where they disagree is worth a look — a page Google never shows, or one Google shows that the sitemap leaves out.",
+      "searchPlaceholder": "Find a page…",
+      "empty": "No pages yet: nothing has come in from the sitemap, the crawl, the rankings or Search Console for this website.",
+      "noMatch": "No page matches that.",
+      "notSorted": "Not sorted",
+      "notInSitemap": "Not in the sitemap",
+      "no": "No",
+      "ofAll": "of {count, plural, =1 {# page} other {# pages}}",
+      "footnote": "Clicks: Search Console, the last 90 days. Google's jump links (#…) count with their page.",
+      "figures": {
+        "sitemap": "In the sitemap",
+        "crawled": "Crawled",
+        "shown": "Shown by Google",
+        "ranking": "Ranking",
+        "sitemapDetail": "In {count, plural, =1 {# sitemap file} other {# sitemap files}}",
+        "sitemapNotRead": "Read at the next collection",
+        "sitemapNone": "No sitemap found",
+        "crawledDetail": "Reached by the site audit",
+        "crawledNone": "Not crawled yet",
+        "shownDetail": "In Search Console, the last 90 days",
+        "shownNotConnected": "Search Console isn't connected",
+        "rankingDetail": "With a keyword on Google"
+      },
+      "filters": {
+        "differs": "Where it differs",
+        "group": "Group",
+        "everyPage": "Every page",
+        "everyGroup": "Every group",
+        "options": {
+          "neverShown": "In the sitemap, never shown by Google",
+          "notInSitemap": "Shown by Google, not in the sitemap",
+          "crawledNotInSitemap": "Crawled, not in the sitemap",
+          "notCrawled": "In the sitemap, not crawled",
+          "sitemap": "In the sitemap",
+          "crawled": "Crawled",
+          "shown": "Shown by Google",
+          "ranking": "Ranking"
+        }
+      },
+      "columns": {
+        "page": "Page",
+        "group": "Group",
+        "file": "Sitemap file",
+        "crawled": "Crawled",
+        "shown": "Shown by Google",
+        "ranks": "Ranks",
+        "clicks": "Clicks (90 days)"
+      },
+      "notices": {
+        "notReadYet": "This website's sitemap hasn't been read yet. It's read at each collection, so it shows here after the next one.",
+        "noSitemap": "No sitemap was found: robots.txt names none, and there's none at /sitemap_index.xml, /sitemap.xml or /wp-sitemap.xml. The pages below are the ones crawled, shown by Google or ranking.",
+        "cut": "The sitemap lists more pages than are read for this website: the first {limit} were read on {day}, and the rest aren't counted here.",
+        "filesFailed": "{count, plural, =1 {One sitemap file} other {# sitemap files}} couldn't be read, so {count, plural, =1 {its pages aren't} other {their pages aren't}} counted as in the sitemap.",
+        "competitor": "Your pages lists your own websites' pages: what each one's sitemap holds against what was crawled, shown by Google and ranking. It isn't kept for a competitor.",
+        "competitorLink": "Open {host}'s pages"
+      }
+    },
     "trackedFanOut": {
       "title": "Tracked fan-out queries",
       "description": "The searches the AI assistants ran behind the scenes that you've ticked to check on Google every run, and where this website ranks for each, checked from {place}. Tick or untick them on Fan-out queries.",
@@ -11015,6 +11270,9 @@
       "ofClicks": "{share} of clicks",
       "pagesTitle": "Pages by kind",
       "pagesHint": "All {count} pages Google showed, each sorted into a kind: its share of the pages, and of the clicks.",
+      "fromInformational": "Clicks from informational content",
+      "pagesTitleClassified": "Pages by classification",
+      "pagesHintClassified": "All {count} pages Google showed, each by your own classification: its share of the pages, and of the clicks.",
       "keywordsTitle": "Keywords by what they want",
       "keywordsHint": "All {count} keywords Google showed you for, each judged by what the searcher wants: its share of the keywords, and of the clicks.",
       "pages": "Pages",

@@ -21,7 +21,7 @@ import { formatNumber, toCsv } from "./siteFormat";
  * to be saved.
  */
 
-type SiteExportKind = "keywords" | "pages" | "gap" | "cited" | "backlinks" | "links" | "broken" | "domains" | "anchors" | "ips" | "paid" | "answers";
+type SiteExportKind = "keywords" | "pages" | "gap" | "cited" | "backlinks" | "links" | "broken" | "domains" | "anchors" | "ips" | "paid" | "answers" | "yourPages";
 
 /** Every row the page holds, as CSV, straight away. */
 export function ListDownload<Row>({

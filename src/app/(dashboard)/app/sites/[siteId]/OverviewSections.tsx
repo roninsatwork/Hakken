@@ -16,6 +16,7 @@ import {
   CHART_SERIES_VIOLET,
 } from "@/src/ui/components/charts/chartPalette";
 import { KindBars } from "../../_components/KindBars";
+import { usePageKinds } from "../../_components/usePageKinds";
 import { RecordLinkCell } from "../_components/SiteCells";
 import { HoverArea, useHoverReadout } from "../_components/HoverReadout";
 import { SiteChartCard } from "../_components/SiteChartCard";
@@ -72,31 +73,38 @@ export function OverviewSections({ latest, extras }: { latest: Point | null; ext
  * share of the pages and of the visits. Deep bars, a row that answers the
  * pointer with its numbers, and opens the pages of that kind (Anthony,
  * 2026-09-25: the bars looked "weedy and thin", and "we need hover states").
+ *
+ * Once the website has classifications of the company's own, it is Pages by
+ * classification: one bar per classification and one for Not sorted, in the
+ * same colours, bars and hover (page-groups-plan.md, decision 2).
  */
 function PagesByKind({ extras }: { extras: Extras | undefined }) {
   const t = useTranslations("sites.overview.pageKinds");
   const to = useTranslations("sites.overview");
   const tr = useTranslations("sites.overview.readout");
-  const tp = useTranslations("sites.common.pageTypes");
+  const tc = useTranslations("sites.common");
   const siteId = useSiteId();
   const site = useSite();
   const listHref = useSiteListHref(siteId);
+  const pageKinds = usePageKinds(siteId);
   const [showPages, setShowPages] = useState(true);
   const [showVisits, setShowVisits] = useState(true);
   const pages = extras?.pages;
-  const kinds = pages?.kinds ?? [];
+  const classified = Boolean(pages?.classified);
+  // Each row's kind: a page type, or — once the website has classifications — a classification's id or Not sorted.
+  const kinds = pages?.classified ?? (pages?.kinds ?? []).map((row) => ({ kind: row.pageType as string, pages: row.pages, visits: row.visits }));
   const visitsOf = useVisitsOf(pages?.visits ?? 0);
   const partHeld = isPartHeld(site?.coverage);
 
   return (
     <SiteChartCard
       dated={false}
-      title={t("title")}
-      hint={pages ? t(partHeld ? "hintHeld" : "hint", { count: formatNumber(pages.total) }) : undefined}
-      exportName={`${site?.host ?? "site"}-pages-by-kind`}
+      title={t(classified ? "titleClassified" : "title")}
+      hint={pages ? t(classified ? (partHeld ? "hintHeldClassified" : "hintClassified") : (partHeld ? "hintHeld" : "hint"), { count: formatNumber(pages.total) }) : undefined}
+      exportName={`${site?.host ?? "site"}-pages-by-${classified ? "classification" : "kind"}`}
       csv={() => toCsv(
-        [t("kind"), t("pages"), t("pagesShare"), t("visits"), t("visitsShare")],
-        kinds.map((row) => [tp(row.pageType), row.pages, percent(row.pages, pages?.total ?? 0), Math.round(row.visits), percent(row.visits, visitsOf.of)]),
+        [classified ? tc("classification") : t("kind"), t("pages"), t("pagesShare"), t("visits"), t("visitsShare")],
+        kinds.map((row) => [pageKinds.label(row.kind), row.pages, percent(row.pages, pages?.total ?? 0), Math.round(row.visits), percent(row.visits, visitsOf.of)]),
       )}
       enoughData={kinds.length > 0}
       controls={
@@ -110,9 +118,9 @@ function PagesByKind({ extras }: { extras: Extras | undefined }) {
         colours={[CHART_SERIES_BLUE, CHART_SERIES_ORANGE]}
         shown={[showPages, showVisits]}
         rows={kinds.map((row) => ({
-          key: row.pageType,
-          label: tp(row.pageType),
-          href: listHref("keywords/pages", { type: row.pageType }),
+          key: row.kind,
+          label: pageKinds.label(row.kind),
+          href: listHref("keywords/pages", { type: row.kind }),
           shares: [row.pages / Math.max(1, pages?.total ?? 1), row.visits / Math.max(1, visitsOf.of)],
           line: t("row", {
             count: row.pages,

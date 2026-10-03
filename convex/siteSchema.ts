@@ -771,6 +771,10 @@ export const siteTables = {
     consoleTrackedKeywordsPerSite: v.optional(v.number()),
     consoleTrackedPagesPerSite: v.optional(v.number()),
     consoleCountriesPerSite: v.optional(v.number()),
+    classificationsPerSite: v.optional(v.number()),
+    classificationLinesPerSite: v.optional(v.number()),
+    classifiedPagesPerSite: v.optional(v.number()),
+    sitemapPagesRead: v.optional(v.number()),
     // Only the platform sets these: each is about something every company
     // shares (`sharedLimits.ts`).
     fanOutPerAnswer: v.optional(v.number()),

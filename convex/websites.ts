@@ -25,6 +25,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { purgeHoldDataLimits, readCompanyDataLimits, resolveSiteDataLimits } from "./companyDataLimits";
 import { purgeHoldFanOutLimits } from "./fanOutLimits";
+import { purgeHoldClassifications } from "./pageClassifications";
 import { purgeHoldProfile } from "./holdProfiles";
 import { forgetWebsiteIcon, iconAnswered, requestWebsiteIcon, websiteIconUrl } from "./websiteIcons";
 
@@ -697,6 +698,7 @@ export const removeCompanyWebsite = superAdminMutation({
     await purgeHoldMoves(ctx, args.id);
     await purgeHoldDataLimits(ctx, args.id);
     await purgeHoldFanOutLimits(ctx, args.id);
+    await purgeHoldClassifications(ctx, args.id);
     await purgeHoldProfile(ctx, args.id);
     // The company's own searches, questions and AI lines for it go too; what
     // was collected stays with the website (docs/plans/active/
@@ -705,6 +707,8 @@ export const removeCompanyWebsite = superAdminMutation({
     // Its Search Console connection and figures are the company's alone, and go too, as do its fan-out angles.
     await ctx.scheduler.runAfter(0, internal.searchConsoleConnect.forgetHold, { companyWebsiteId: args.id });
     await ctx.scheduler.runAfter(0, internal.fanOutAngles.purgeHoldAngles, { holdId: args.id });
+    // Its every page once (Your pages) goes with it.
+    await ctx.scheduler.runAfter(0, internal.holdPages.purgeHoldPages, { holdId: args.id });
     // The hold's content gap goes with it; a rival that goes changes the gap
     // of the site it was tracked against.
     await ctx.scheduler.runAfter(0, internal.siteContentGap.purgeHoldGaps, { companyWebsiteId: args.id });

@@ -16,7 +16,7 @@ import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { SECTION_ICONS, pageApplies, sectionHref, type SectionPageId } from "./websitesSection";
 
 /** The pages kept for one website at a time, which ask for one when All websites is chosen. */
-export type OneWebsitePage = Extract<SectionPageId, "competitors" | "names" | "market" | "todo" | "rankings" | "answers">;
+export type OneWebsitePage = Extract<SectionPageId, "competitors" | "names" | "market" | "classification" | "todo" | "rankings" | "answers">;
 
 /** One website on the list, as the section's chooser offers it. */
 export type WebsiteChoice = FunctionReturnType<typeof api.websites.listWebsiteChoices>[number];
