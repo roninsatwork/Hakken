@@ -32,6 +32,21 @@ the more sticky this app will be."
    under What we track, after Market. Each company sets its own, as with
    Market.
 
+6. **Classify at page level** (on the first drawing: "is this really tables
+   under tables making a poor ux … how do I set a classification too"; then
+   "we need to be able to set a classification, edit a classification and
+   remove one at the page level"). Redrawn: one admin page with two views —
+   **Pages** (every page with its classification, set or changed in its row,
+   removed with a bin, several set at once by ticking them; how each was set,
+   by rule or by hand) and **Classifications** (each with a type —
+   Informational content, Service, Product, Case study, Company, Legal, Other
+   — its page count and its address lines; each opens its own page). Removing
+   a hand-set classification returns the page to its rule; removing a
+   rule-set one takes the page out of the rule (Not sorted). No rule order to
+   manage: the more exact line wins. The screens say "classification", so the
+   page reads **Page classification** — his word; to confirm against "Page
+   groups".
+
 ## What ronins.co.uk shows (2026-10-03)
 
 - **Its sitemap** (robots.txt → `sitemap_index.xml`): 139 pages in four files
@@ -74,3 +89,5 @@ the more sticky this app will be."
 - **2026-10-03** — Brainstormed and agreed: the five decisions above.
 - **2026-10-03** — Drawn on the Search Console canvas, boards 22 (Page groups)
   and 23 (Your pages), from ronins.co.uk's real pages.
+- **2026-10-03** — Redrawn at page level (board 22 Page classification, 22b a
+  classification's own page): no tables under tables.
