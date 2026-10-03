@@ -2,14 +2,13 @@
 
 import { ArrowUpDown } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { Change } from "@/src/ui/components/screens/Change";
 import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { formatPosition } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
-import { BeforeAfter, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
+import { BeforeAfter, figureColumns, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
 
 const CHIPS: readonly ChipId[] = ["move", "band", "device"];
 
@@ -63,9 +62,9 @@ export default function SearchConsoleWinsPage() {
             cell: (row) => <RecordLinkCell cut href={recordHref("keywords/keyword", row.key)}>{row.key}</RecordLinkCell>,
           },
           { key: "clicks", header: t("table.clicks"), align: "right", sortable: true, cell: (row) => <BeforeAfter before={row.previousClicks ?? 0} now={row.clicks} format={formatNumber} /> },
-          { key: "change", header: t("table.change"), align: "right", sortable: true, cell: (row) => <Change by={row.change} isNew={row.change !== null && row.previousClicks === null && row.clicks > 0} format={formatNumber} /> },
+          ...figureColumns(t, ["change"]),
           { key: "position", header: t("table.position"), align: "right", sortable: true, cell: (row) => <BeforeAfter before={row.previousPosition} now={row.impressions > 0 ? row.position : null} format={formatPosition} /> },
-          { key: "positionChange", header: t("table.moved"), align: "right", sortable: true, cell: (row) => <Change by={row.positionChange} kind="places" same format={formatPosition} /> },
+          ...figureColumns(t, ["moved"]),
         ],
       }}
     />

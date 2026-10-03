@@ -17,6 +17,7 @@ export type MenuCounts = {
   aiNamed: number | null;
   aiAsked: number | null;
   trackedSearches: number;
+  trackedFanOut: number;
   rankedUp: number | null;
   rankedDown: number | null;
   suggestions: number;

@@ -8449,7 +8449,8 @@
       "angles": "{count, plural, =1 {# topic} other {# topics}}",
       "updates": "{count, plural, =1 {# update} other {# updates}}",
       "positions": "{count, plural, =1 {# position} other {# positions}}",
-      "kinds": "{count, plural, =1 {# kind} other {# kinds}}"
+      "kinds": "{count, plural, =1 {# kind} other {# kinds}}",
+      "fanOutQueries": "{count, plural, =1 {# tracked fan-out query} other {# tracked fan-out queries}}"
     },
     "chart": {
       "download": "Download",
@@ -8888,7 +8889,8 @@
         "backlinksNewLost": "New and lost links",
         "siteAudit": "Site audit",
         "paidSummary": "Summary",
-        "paidKeywords": "Paid keywords"
+        "paidKeywords": "Paid keywords",
+        "googleTrackedFanOut": "Tracked fan-out queries"
       }
     },
     "range": {
@@ -10548,6 +10550,19 @@
       "more": "Show {count} more",
       "noMatch": "No website matches that.",
       "keepsPage": "Switching keeps you on {page}"
+    },
+    "trackedFanOut": {
+      "title": "Tracked fan-out queries",
+      "description": "The searches the AI assistants ran behind the scenes that you've ticked to check on Google every run, and where this website ranks for each, checked from {place}. Tick or untick them on Fan-out queries.",
+      "searchPlaceholder": "Find a query…",
+      "empty": "No fan-out queries are tracked yet. Tick them on Fan-out queries to check them on Google every run.",
+      "noMatch": "No tracked query matches that.",
+      "columns": {
+        "query": "Fan-out query",
+        "askedBy": "Asked by",
+        "seen": "Seen"
+      },
+      "cannotUntrack": "No question lists this any more, so it can't be unticked here."
     }
   },
   "searchConsole": {
@@ -10599,6 +10614,7 @@
       "jumpLabel": "Jump to a page",
       "jumpPlaceholder": "Jump to a page…",
       "groups": {
+        "tracked": "Tracked",
         "figures": "Google's figures",
         "changes": "Changes",
         "opportunities": "Opportunities",
@@ -10618,7 +10634,9 @@
       "brand": "Brand and non-brand",
       "ctrCurve": "Click rate by position",
       "appearance": "Rich results",
-      "estimates": "Real against estimated"
+      "estimates": "Real against estimated",
+      "trackedKeywords": "Tracked keywords",
+      "trackedPages": "Tracked pages"
     },
     "kinds": {
       "label": "Kind of result",
@@ -11068,6 +11086,25 @@
       "others": "Every other country",
       "asked": "Asked of Google when chosen, so it takes a moment.",
       "notReady": "{country} isn't one of the countries kept ready for this website, so this page can't show it. Once it's added to them, it shows here after the next collection."
+    },
+    "tracked": {
+      "keywords": {
+        "title": "Tracked keywords",
+        "description": "The keywords you track, and how each did in these dates against the days before. Tick keywords on Keywords to add them; untick one here to stop tracking it.",
+        "searchPlaceholder": "Search tracked keywords…",
+        "empty": "You don't track any keywords yet. Tick them on Keywords to see them here."
+      },
+      "pages": {
+        "title": "Tracked pages",
+        "description": "The pages you track, and how each did in these dates against the days before. Tick pages on Pages to add them; untick one here to stop tracking it.",
+        "searchPlaceholder": "Search tracked pages…",
+        "empty": "You don't track any pages yet. Tick them on Pages to see them here."
+      },
+      "figures": {
+        "shown": "Times Google showed them",
+        "ctr": "Clicks for each time shown",
+        "position": "Google's own average"
+      }
     }
   },
   "aiEngines": {

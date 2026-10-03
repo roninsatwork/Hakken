@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -62,6 +64,28 @@ describe("record screens and the way back", () => {
 
     expect(result.current.href).toBe("/app/sites/site_1/keywords?p=3");
     expect(result.current.label).toBe("sites.record.backTo");
+  });
+
+  it("files Tracked fan-out queries as a menu page, and a query opened from it goes back there by its name", () => {
+    expect(isSiteMenuPath("/app/sites/site_1/google/fan-out", "site_1")).toBe(true);
+    expect(sitePageForPath("/app/sites/site_1/google/fan-out", "site_1").id).toBe("googleTrackedFanOut");
+
+    at("/app/sites/site_1/google/fan-out", "verdict=TOP_THREE");
+    const href = new URL(renderHook(() => useSiteRecordHref("site_1")).result.current({ kind: "keyword", keyword: "ai automation agency london uk" }), "https://app.test");
+    expect(href.pathname).toBe("/app/sites/site_1/keywords/keyword");
+    expect(href.searchParams.get("back")).toBe("/app/sites/site_1/google/fan-out?verdict=TOP_THREE");
+
+    at(href.pathname, href.search.slice(1));
+    const back = renderHook(() => useRecordBack("keyword")).result.current;
+    expect(back.href).toBe("/app/sites/site_1/google/fan-out?verdict=TOP_THREE");
+    // "Back to Tracked fan-out queries": the menu page's own name in the record's back words.
+    expect(back.label).toBe("sites.record.backTo");
+    expect(back.page).toBe("sites.menu.pages.googleTrackedFanOut");
+    // Which reads, in each language, as "Back to Tracked fan-out queries".
+    for (const [language, expected] of [["en", "Back to Tracked fan-out queries"], ["it", "Query fan-out monitorate"]] as const) {
+      const words = JSON.parse(readFileSync(join(process.cwd(), "messages", `${language}.json`), "utf8"));
+      expect(words.sites.record.backTo.replace("{page}", words.sites.menu.pages.googleTrackedFanOut)).toContain(expected);
+    }
   });
 
   it("goes back to the page a record belongs to when opened from a bookmark, and never off the app", () => {

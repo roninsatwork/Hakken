@@ -30,12 +30,18 @@ const ALL_COUNTRIES = "all";
 const COUNTRY_CHOICES = [ALL_COUNTRIES, ...GOOGLE_COUNTRIES.filter((code) => code !== "zzz")] as const;
 export type ResultKind = (typeof RESULT_KINDS)[number];
 
-/** The menu's groups (search-console-plan.md §13.1): Google's own figures first, then what changed, what to do, and how it breaks down. */
-export const SEARCH_CONSOLE_GROUPS = ["figures", "changes", "opportunities", "breakdowns", "settings"] as const;
+/**
+ * The menu's groups (search-console-plan.md §13.1): what the company tracks
+ * first (Anthony, 2026-10-03), then Google's own figures, what changed, what
+ * to do, and how it breaks down.
+ */
+export const SEARCH_CONSOLE_GROUPS = ["tracked", "figures", "changes", "opportunities", "breakdowns", "settings"] as const;
 export type SearchConsoleGroup = (typeof SEARCH_CONSOLE_GROUPS)[number];
 
 /** The section's pages, in the order its menu lists them. */
 export const SEARCH_CONSOLE_PAGES = [
+  { id: "trackedKeywords", segment: "tracked/keywords", group: "tracked" },
+  { id: "trackedPages", segment: "tracked/pages", group: "tracked" },
   { id: "performance", segment: "", group: "figures" },
   { id: "keywords", segment: "keywords", group: "figures" },
   { id: "pages", segment: "pages", group: "figures" },
@@ -57,11 +63,15 @@ export const SEARCH_CONSOLE_PAGES = [
 ] as const satisfies readonly { id: string; segment: string; group: SearchConsoleGroup }[];
 export type SearchConsolePageId = (typeof SEARCH_CONSOLE_PAGES)[number]["id"];
 
-/** The page a path under the site belongs to: a keyword's own screen belongs to Keywords, a page's to Pages. */
+/**
+ * The page a path under the site belongs to: the page whose address it is or
+ * lies under — a keyword's own screen belongs to Keywords, a page's to Pages,
+ * and `tracked/keywords` to Tracked keywords, never to Keywords.
+ */
 export function pageForPath(pathname: string, siteId: string): SearchConsolePageId {
   const rest = pathname.replace(`/app/search-console/${siteId}`, "").replace(/^\/|\/$/g, "");
-  const segment = rest.split("/")[0] ?? "";
-  return SEARCH_CONSOLE_PAGES.find((page) => page.segment === segment)?.id ?? "performance";
+  const under = SEARCH_CONSOLE_PAGES.filter((page) => page.segment && (rest === page.segment || rest.startsWith(`${page.segment}/`)));
+  return under.sort((left, right) => right.segment.length - left.segment.length)[0]?.id ?? "performance";
 }
 
 /** What travels between the section's pages: the dates, the kind of result and the country. */

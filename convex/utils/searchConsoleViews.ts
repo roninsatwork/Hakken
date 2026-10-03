@@ -18,6 +18,7 @@ export const bandOf = (position: number): Band =>
 
 /**
  * A page's own rule for what it lists (§13.3):
+ * - `tracked` — the keywords or pages the company tracks, each one whether Google showed it in the dates or not (Tracked keywords, Tracked pages);
  * - `almost` — keywords at positions 4 to 20 (Almost there);
  * - `lowCtr` — pages clicked less than the website's own click rate at their position (Shown but not clicked);
  * - `competing` — keywords two or more of the website's pages were shown for (Pages competing);
@@ -25,7 +26,7 @@ export const bandOf = (position: number): Band =>
  * - `missed` — keywords many search for that Google barely shows the website for, or not yet tracked (Missed demand);
  * - `estimates` — pages with Sites' estimated visits beside Google's clicks (Real against estimated).
  */
-export const VIEWS = ["all", "almost", "lowCtr", "competing", "moves", "missed", "estimates"] as const;
+export const VIEWS = ["all", "tracked", "almost", "lowCtr", "competing", "moves", "missed", "estimates"] as const;
 export type View = (typeof VIEWS)[number];
 
 /** The list a view reads, whatever the page asked. */
@@ -128,6 +129,17 @@ export function withGone(now: readonly SourceRow[], before: readonly SourceRow[]
   return [...now, ...before.filter((row) => !shown.has(row.key) && row.clicks > 0).map((row) => ({ key: row.key, clicks: 0, impressions: 0, positionSum: 0 }))];
 }
 
+/**
+ * The rows a tracked list shows: every row Google showed, with — for each
+ * keyword or page the company tracks that Google did not show in the dates —
+ * a row of none, so the list holds all it tracks, can be unticked from, and
+ * its clicks in the days before still count.
+ */
+export function withTracked(now: readonly SourceRow[], tracked: ReadonlySet<string>): SourceRow[] {
+  const shown = new Set(now.map((row) => row.key));
+  return [...now, ...[...tracked].filter((key) => !shown.has(key)).map((key) => ({ key, clicks: 0, impressions: 0, positionSum: 0 }))];
+}
+
 /** Rows as a list shows them: the figures, the change on the period before, the share, tracked or not. */
 export function shapeRows(
   now: readonly SourceRow[],
@@ -150,7 +162,8 @@ export function shapeRows(
       previousClicks: earlier ? (was?.clicks ?? null) : null,
       change: earlier ? row.clicks - (was?.clicks ?? 0) : null,
       previousPosition,
-      positionChange: previousPosition === null ? null : previousPosition - position,
+      // Not shown now (gone, or tracked and not shown): no position, so no places moved.
+      positionChange: previousPosition === null || row.impressions === 0 ? null : previousPosition - position,
       share: total > 0 ? row.clicks / total : 0,
       count: row.count ?? null,
       top: row.top ?? null,
@@ -226,6 +239,8 @@ export type ViewContext = {
 /** Each view's rows: the rows it lists, with the figures it adds. */
 export function applyView(view: View, rows: ListRow[], context: ViewContext = {}): ListRow[] {
   switch (view) {
+    case "tracked":
+      return rows.filter((row) => row.tracked);
     case "almost":
       return rows.filter((row) => row.position > 3 && row.position <= 20);
     case "lowCtr": {
@@ -328,6 +343,14 @@ export type Summary = {
   of: number;
   clicks: number;
   impressions: number;
+  /**
+   * The listed rows' clicks in the days before; null when those days are not
+   * held. A row not shown then counts none; a row shown only then counts only
+   * where the page's rule lists it (Wins and losses' gone, a tracked list's).
+   */
+  previousClicks: number | null;
+  /** Google's average position over the listed rows, weighted by impressions as Google's own; null when none was shown. */
+  position: number | null;
   tracked: number;
   /** Wins and losses. */
   gaining: number;
@@ -354,6 +377,29 @@ export type Summary = {
 
 const emptyBands = (): BandCounts => ({ "1-3": 0, "4-10": 0, "11-20": 0, "21-50": 0, "51+": 0 });
 
+export type ListFigures = Pick<Summary, "clicks" | "impressions" | "previousClicks" | "position">;
+
+/**
+ * Some rows' figures together — clicks, impressions, their clicks in the
+ * days before (null when those days are not held) and Google's position
+ * weighted by impressions: a list's hero boxes, worked out on the server
+ * (`summarise`) and, for a tracked list asked of Google, again on the page
+ * as rows are unticked.
+ */
+export function figuresOf(rows: readonly ListRow[], beforeHeld: boolean): ListFigures {
+  let clicks = 0;
+  let impressions = 0;
+  let previousClicks = 0;
+  let positionSum = 0;
+  for (const row of rows) {
+    clicks += row.clicks;
+    impressions += row.impressions;
+    previousClicks += row.previousClicks ?? 0;
+    positionSum += row.position * row.impressions;
+  }
+  return { clicks, impressions, previousClicks: beforeHeld ? previousClicks : null, position: impressions > 0 ? positionSum / impressions : null };
+}
+
 function brandSplit(rows: readonly { key: string; clicks: number; impressions: number }[], brandWords: readonly string[]): BrandSplit {
   const split = { brandClicks: 0, nonBrandClicks: 0, brandImpressions: 0, nonBrandImpressions: 0 };
   for (const row of rows) {
@@ -377,12 +423,10 @@ export function summarise(
   const bands = emptyBands();
   const kinds = new Map<string, { kind: string; rows: number; clicks: number }>();
   const summary: Summary = {
-    rows: listed.length, of: all.length, clicks: 0, impressions: 0, tracked: 0, gaining: 0, losing: 0, gained: 0, lost: 0,
+    rows: listed.length, of: all.length, ...figuresOf(listed, before !== null), tracked: 0, gaining: 0, losing: 0, gained: 0, lost: 0,
     volume: 0, estimate: 0, expected: 0, high: 0, low: 0, pagesInvolved: null, pagesShown: null, bands, bandsBefore: null, brand: null, kinds: [],
   };
   for (const row of listed) {
-    summary.clicks += row.clicks;
-    summary.impressions += row.impressions;
     if (row.tracked) summary.tracked += 1;
     const change = row.change ?? 0;
     if (change > 0) {

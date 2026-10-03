@@ -25,6 +25,7 @@ export type SitePage = {
     | "brokenBacklinks"
     | "aiNamed"
     | "trackedSearches"
+    | "trackedFanOut"
     | "moves"
     | "suggestions"
     | "citedPages";
@@ -75,6 +76,10 @@ export const SITE_PAGES: SitePage[] = [
   // Wins and losses and Search features read every keyword the site ranks
   // for as well, so they have something to show without tracked searches.
   { id: "googleSearches", group: "google", segment: "google/searches", built: true, count: "trackedSearches", needs: "trackedSearches" },
+  // The fan-out queries ticked to check on Google every run: a focused view of
+  // the ones among Your searches that came from Fan-out queries (Anthony,
+  // 2026-10-03). It says itself when none are ticked, so it needs no setup.
+  { id: "googleTrackedFanOut", group: "google", segment: "google/fan-out", built: true, count: "trackedFanOut" },
   { id: "googleMoves", group: "google", segment: "google/moves", built: true, count: "moves" },
   { id: "googleAbove", group: "google", segment: "google/above", built: true, needs: "trackedSearches" },
   { id: "googleFeatures", group: "google", segment: "google/features", built: true },

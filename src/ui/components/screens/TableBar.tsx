@@ -12,7 +12,9 @@ export type TableNoun =
   // Search Console's countries and devices tables (docs/plans/active/search-console-plan.md §5).
   | "countries" | "devices"
   // The fan-out searches grouped into angles (docs/plans/active/fan-out-angles-plan.md, FA5).
-  | "angles";
+  | "angles"
+  // The fan-out queries ticked to check on Google every run: Sites' Tracked fan-out queries (2026-10-03).
+  | "fanOutQueries";
 
 /**
  * The bar across the top of every Sites table, inside its card (`DataTable`'s

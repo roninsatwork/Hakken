@@ -6,10 +6,11 @@ import { useTranslations } from "next-intl";
 import type { FunctionArgs, FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { BANDS, filterRows, type Band, type Filters } from "@/convex/utils/searchConsoleViews";
+import { BANDS, figuresOf, filterRows, type Band, type Filters } from "@/convex/utils/searchConsoleViews";
 import { PAGE_TYPES, RANK_INTENTS } from "@/convex/utils/siteShapes";
 import { useToast } from "@/src/context/ToastContext";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { Change } from "@/src/ui/components/screens/Change";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { DownloadButton, saveTextFile } from "@/src/ui/components/screens/DownloadButton";
 import type { DataTableColumn } from "@/src/ui/components/screens/DataTable";
@@ -62,7 +63,8 @@ const LIVE_SORTS: SiteSortColumns<ListRow, SortKey> = {
   change: { value: (row) => row.change, first: "desc" },
   impressions: { value: (row) => row.impressions, first: "desc" },
   ctr: { value: (row) => row.ctr, first: "desc" },
-  position: { value: (row) => row.position, first: "asc" },
+  // A row Google did not show has no position: a blank, last, as the server orders it.
+  position: { value: (row) => (row.impressions > 0 ? row.position : null), first: "asc" },
   positionChange: { value: (row) => row.positionChange, first: "desc" },
   share: { value: (row) => row.share, first: "desc" },
   count: { value: (row) => row.count, first: "desc" },
@@ -167,11 +169,12 @@ export function useSearchConsoleList(options: {
   );
   // Google's answer is asked once; what the company tracks follows every tick.
   const trackedNow = useQuery(api.searchConsoleTracking.searchConsoleTrackedKeys, isLive && ready ? { siteId, kind: within ? (within.kind === "query" ? "page" : "query") : options.dimension } : "skip");
-  const liveRows = live.answer === undefined
-    ? undefined
-    : live.answer.ok
-      ? filterRows(trackedNow ? live.answer.rows.flat().map((row) => ({ ...row, tracked: trackedNow.includes(row.key) })) : live.answer.rows.flat(), { ...filters, q: term })
-      : [];
+  const ticked = trackedNow ? new Set(trackedNow) : null;
+  const answered = live.answer?.ok ? live.answer.rows.flat().map((row) => (ticked ? { ...row, tracked: ticked.has(row.key) } : row)) : null;
+  // A tracked list: a row unticked leaves it at once, and its figures with it.
+  const tracksOnly = options.view === "tracked";
+  const listedLive = answered && tracksOnly ? answered.filter((row) => row.tracked) : answered;
+  const liveRows = live.answer === undefined ? undefined : listedLive ? filterRows(listedLive, { ...filters, q: term }) : [];
   const liveOrder = useSiteSortedList(liveRows, LIVE_SORTS, { opening, name: keyOf });
   const livePages = useSitePager(liveOrder.rows, { isLoading: liveRows === undefined, cut: live.answer?.ok ? live.answer.cut : null });
   const table = isLive
@@ -190,7 +193,10 @@ export function useSearchConsoleList(options: {
       problem: null,
     };
   const filtered = Boolean(term) || Object.keys(filters).some((key) => key !== "missed") || Boolean(device);
-  const summary = isLive ? (live.answer?.ok ? live.answer.summary : null) : (server.result?.summary ?? null);
+  const liveSummary = live.answer?.ok
+    ? (tracksOnly && listedLive ? { ...live.answer.summary, ...figuresOf(listedLive, live.answer.comparable) } : live.answer.summary)
+    : null;
+  const summary = isLive ? liveSummary : (server.result?.summary ?? null);
   return {
     summary,
     siteId,
@@ -409,15 +415,34 @@ export function BeforeAfter({ before, now, format }: { before: number | null; no
   );
 }
 
-type Figure = "clicks" | "impressions" | "ctr" | "position";
+type Figure = "clicks" | "change" | "impressions" | "ctr" | "position" | "moved";
 
-/** The figure columns most tables share, right-aligned and sortable. */
+/**
+ * The figure columns most tables share, right-aligned and sortable: with
+ * `change`, the clicks gained or lost on the days before ("New" for a row not
+ * shown then), and `moved`, the places risen or fallen — Wins and losses'
+ * and the tracked lists' alike.
+ */
 export function figureColumns(say: (key: string) => string, which: readonly Figure[]): DataTableColumn<ListRow>[] {
   const all: Record<Figure, DataTableColumn<ListRow>> = {
     clicks: { key: "clicks", header: say("table.clicks"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.clicks)}</span> },
+    change: {
+      key: "change",
+      header: say("table.change"),
+      align: "right",
+      sortable: true,
+      cell: (row) => <Change by={row.change} isNew={row.change !== null && row.previousClicks === null && row.clicks > 0} format={formatNumber} />,
+    },
     impressions: { key: "impressions", header: say("table.impressions"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.impressions)}</span> },
     ctr: { key: "ctr", header: say("table.ctr"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatRate(row.ctr)}</span> },
     position: { key: "position", header: say("table.position"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.impressions > 0 ? formatPosition(row.position) : "–"}</span> },
+    moved: {
+      key: "positionChange",
+      header: say("table.moved"),
+      align: "right",
+      sortable: true,
+      cell: (row) => <Change by={row.positionChange} kind="places" same format={formatPosition} />,
+    },
   };
   return which.map((key) => all[key]);
 }

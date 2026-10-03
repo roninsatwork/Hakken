@@ -27,9 +27,11 @@ import {
   shapeRows,
   summarise,
   withGone,
+  withTracked,
   type Filters,
   type ListRow,
   type SitesKeyword,
+  type SourceRow,
   type Summary,
   type View,
   type ViewContext,
@@ -131,7 +133,8 @@ const SORTS: ListSorts<ListRow, SortKey> = {
   change: { value: (row) => row.change, first: "desc" },
   impressions: { value: (row) => row.impressions, first: "desc" },
   ctr: { value: (row) => row.ctr, first: "desc" },
-  position: { value: (row) => row.position, first: "asc" },
+  // A row Google did not show has no position: a blank, last, never "position 0" first.
+  position: { value: (row) => (row.impressions > 0 ? row.position : null), first: "asc" },
   positionChange: { value: (row) => row.positionChange, first: "desc" },
   share: { value: (row) => row.share, first: "desc" },
   count: { value: (row) => row.count, first: "desc" },
@@ -157,6 +160,8 @@ const summaryValidator = v.object({
   of: v.number(),
   clicks: v.number(),
   impressions: v.number(),
+  previousClicks: v.union(v.number(), v.null()),
+  position: v.union(v.number(), v.null()),
   tracked: v.number(),
   gaining: v.number(),
   losing: v.number(),
@@ -294,6 +299,17 @@ async function pairsWithin(
   return { from: pairs.from, to: pairs.to, rows };
 }
 
+/**
+ * The rows a view is shaped from: Wins and losses adds the keywords gone
+ * since the days before, a tracked list those it tracks that Google did not
+ * show — both read from what the list already holds, nothing more.
+ */
+function sourceRows(view: View, now: readonly SourceRow[], before: readonly SourceRow[] | null, tracked: ReadonlySet<string>): readonly SourceRow[] {
+  if (view === "moves") return withGone(now, before);
+  if (view === "tracked") return withTracked(now, tracked);
+  return now;
+}
+
 /** Ordered over the whole list by the heading pressed. */
 export function sortRows(rows: ListRow[], sort: SortKey | undefined, direction: "asc" | "desc" | undefined): ListRow[] {
   return rows.sort(listOrder(SORTS, sort ?? "clicks", direction, (row) => row.key));
@@ -357,7 +373,7 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   const before = await read("BEFORE");
   const tracked = dimension === "query" || dimension === "page" ? await trackedOf(ctx, companyWebsiteId, dimension) : new Set<string>();
   const brandWords = dimension === "query" ? await brandWordsOf(ctx, companyWebsiteId) : null;
-  const shaped = shapeRows(view === "moves" ? withGone(now.rows, before?.rows ?? null) : now.rows, before?.rows ?? null, { tracked, brandWords });
+  const shaped = shapeRows(sourceRows(view, now.rows, before?.rows ?? null, tracked), before?.rows ?? null, { tracked, brandWords });
   const context: ViewContext = { missedList: args.missed ?? "searched", tracked, days: daysIn(args.from, args.to) };
   if (view === "lowCtr") {
     const keywords = await readPeriod(ctx, companyWebsiteId, args.searchType, "query", period, "NOW", country);
@@ -655,7 +671,7 @@ export const searchConsoleLiveList = tenantAction({
     const rows = kind && target.facts ? await withFacts(ctx, target.facts, kind, now.rows) : now.rows;
     const tracked = new Set(target.tracked);
     const earlierRows = earlier.ok ? earlier.rows : null;
-    const shaped = shapeRows(view === "moves" ? withGone(rows, earlierRows) : rows, earlierRows, { tracked, brandWords: target.brandWords });
+    const shaped = shapeRows(sourceRows(view, rows, earlierRows, tracked), earlierRows, { tracked, brandWords: target.brandWords });
     const context: ViewContext = { missedList: args.missed ?? "searched", sitesKeywords: target.sitesKeywords, tracked, days: daysIn(args.from, args.to) };
     if (view === "lowCtr") {
       const keywords = [...bySide(now.pairs, "query").values()];
@@ -794,6 +810,12 @@ function cell(value: string | number | null): string {
   return /[",;\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 }
 
+/** What a download's file name says it holds: the page's rule, a tracked list's kind too, or the list. */
+function fileList(view: View | undefined, dimension: ListKind): string {
+  if (view === "tracked") return `tracked-${dimension}`;
+  return view && view !== "all" ? view : dimension;
+}
+
 /**
  * A list whole, as CSV, built here and returned for the page to save — in the
  * order and with the search on screen. `headers` are the page's own words for
@@ -816,7 +838,7 @@ export const exportSearchConsoleList = tenantAction({
     if (!found) throw appError("NOT_FOUND", "That website is not one your company holds.");
     const lines = found.rows.flat().map((row) => fields.map((field) => cell(exportValue(row, field))).join(","));
     return {
-      fileName: `${found.host}-search-console-${args.view && args.view !== "all" ? args.view : args.dimension}-${args.from}-${args.to}.csv`,
+      fileName: `${found.host}-search-console-${fileList(args.view, args.dimension)}-${args.from}-${args.to}.csv`,
       csv: [headers.map(cell).join(","), ...lines].join("\n"),
       rows: lines.length,
       cut: found.cut,

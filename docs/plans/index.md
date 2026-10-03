@@ -86,6 +86,12 @@ completed work.
   review; FA8 built switched off and never run, its search by the site's
   domain left for review (§6).**
 
+- [Tracked pages — what a company tracks, from the menu](./active/tracked-pages-plan.md) —
+  a page per tracked list inside its own section: Search Console's Tracked
+  keywords and Tracked pages in a new Tracked group, and Sites' Tracked fan-out
+  queries beside Your searches; each section's lists stay its own.
+  **Agreed and drawn 2026-10-03; build started.**
+
 - [Sites — Search Console for your own websites](./active/search-console-plan.md) —
   connecting an owned website's Google Search Console and showing its real
   clicks, impressions, click-through rate and position in a new Search Console

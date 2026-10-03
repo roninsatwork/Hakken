@@ -8449,7 +8449,8 @@
       "angles": "{count, plural, =1 {# argomento} other {# argomenti}}",
       "updates": "{count, plural, =1 {# aggiornamento} other {# aggiornamenti}}",
       "positions": "{count, plural, =1 {# posizione} other {# posizioni}}",
-      "kinds": "{count, plural, =1 {# tipo} other {# tipi}}"
+      "kinds": "{count, plural, =1 {# tipo} other {# tipi}}",
+      "fanOutQueries": "{count, plural, =1 {# query fan-out monitorata} other {# query fan-out monitorate}}"
     },
     "chart": {
       "download": "Scarica",
@@ -8888,7 +8889,8 @@
         "backlinksNewLost": "Link nuovi e persi",
         "siteAudit": "Controllo del sito",
         "paidSummary": "Riepilogo",
-        "paidKeywords": "Parole chiave a pagamento"
+        "paidKeywords": "Parole chiave a pagamento",
+        "googleTrackedFanOut": "Query fan-out monitorate"
       }
     },
     "range": {
@@ -10548,6 +10550,19 @@
       "more": "Mostra altri {count}",
       "noMatch": "Nessun sito corrisponde.",
       "keepsPage": "Cambiando sito resti su {page}"
+    },
+    "trackedFanOut": {
+      "title": "Query fan-out monitorate",
+      "description": "Le ricerche che gli assistenti IA hanno fatto dietro le quinte e che hai spuntato per controllarle su Google a ogni esecuzione, e dove si posiziona questo sito per ognuna, controllate da {place}. Spunta o togli la spunta in Query fan-out.",
+      "searchPlaceholder": "Trova una query…",
+      "empty": "Nessuna query fan-out è ancora monitorata. Spuntale in Query fan-out per controllarle su Google a ogni esecuzione.",
+      "noMatch": "Nessuna query monitorata corrisponde.",
+      "columns": {
+        "query": "Query fan-out",
+        "askedBy": "Chiesta da",
+        "seen": "Vista"
+      },
+      "cannotUntrack": "Nessuna domanda la elenca più, quindi qui non si può togliere la spunta."
     }
   },
   "searchConsole": {
@@ -10599,6 +10614,7 @@
       "jumpLabel": "Vai a una pagina",
       "jumpPlaceholder": "Vai a una pagina…",
       "groups": {
+        "tracked": "Monitorati",
         "figures": "I dati di Google",
         "changes": "Cambiamenti",
         "opportunities": "Opportunità",
@@ -10618,7 +10634,9 @@
       "brand": "Brand e non brand",
       "ctrCurve": "Tasso di clic per posizione",
       "appearance": "Risultati avanzati",
-      "estimates": "Reali contro stimati"
+      "estimates": "Reali contro stimati",
+      "trackedKeywords": "Parole chiave monitorate",
+      "trackedPages": "Pagine monitorate"
     },
     "kinds": {
       "label": "Tipo di risultato",
@@ -11068,6 +11086,25 @@
       "others": "Tutti gli altri paesi",
       "asked": "Chiesto a Google quando lo scegli, quindi richiede un momento.",
       "notReady": "{country} non è tra i paesi tenuti pronti per questo sito, quindi questa pagina non può mostrarlo. Una volta aggiunto, compare qui dopo la prossima raccolta."
+    },
+    "tracked": {
+      "keywords": {
+        "title": "Parole chiave monitorate",
+        "description": "Le parole chiave che monitori, e come è andata ognuna in queste date rispetto ai giorni prima. Spuntale in Parole chiave per aggiungerle; togli la spunta qui per smettere di monitorarne una.",
+        "searchPlaceholder": "Cerca tra le parole chiave monitorate…",
+        "empty": "Non monitori ancora nessuna parola chiave. Spuntale in Parole chiave per vederle qui."
+      },
+      "pages": {
+        "title": "Pagine monitorate",
+        "description": "Le pagine che monitori, e come è andata ognuna in queste date rispetto ai giorni prima. Spuntale in Pagine per aggiungerle; togli la spunta qui per smettere di monitorarne una.",
+        "searchPlaceholder": "Cerca tra le pagine monitorate…",
+        "empty": "Non monitori ancora nessuna pagina. Spuntale in Pagine per vederle qui."
+      },
+      "figures": {
+        "shown": "Volte in cui Google le ha mostrate",
+        "ctr": "Clic per ogni volta mostrate",
+        "position": "La media di Google"
+      }
     }
   },
   "aiEngines": {

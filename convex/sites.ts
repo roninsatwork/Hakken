@@ -5,6 +5,7 @@ import { tenantQuery } from "./tenantFunctions";
 import { companyHolds, findMySite, listHold, myRivals, placeName, type HoldSummary } from "./siteAccess";
 import { citedPagesIn, coverageOf, coverageValidator, enginesNamingIn, latestBands, latestFigures, latestListAi, linkingWebsitesOf, searchTotalOf } from "./siteFigures";
 import { holdAiSummary, holdQuestions, holdSearches } from "./holdLists";
+import { tickedCount } from "./promptFanOut";
 import type { EngineDay } from "./utils/siteShapes";
 import { isTrackedHold } from "./utils/websitePairing";
 import { CADENCES, cadenceOf } from "./utils/trackingVerdicts";
@@ -207,6 +208,8 @@ export const getMySite = tenantQuery({
       aiAsked: numberOrNull,
       /** The searches on the list switched on: the menu's count beside Your searches. */
       trackedSearches: v.number(),
+      /** Of those, the ones ticked from a fan-out query (`tickedCount`): the menu's count beside Tracked fan-out queries. */
+      trackedFanOut: v.number(),
       /** Searches on the list, and every one of them paused: still set up, so their pages keep their history and say so. */
       searchesPaused: v.boolean(),
       /** Whether the list holds any question the site is measured on in AI answers, on or paused: none means AI answers is not set up. */
@@ -294,6 +297,7 @@ export const getMySite = tenantQuery({
         aiNamed: ai?.named ?? null,
         aiAsked: ai?.asked ?? null,
         trackedSearches: searchesOn,
+        trackedFanOut: tickedCount(searches),
         searchesPaused: searches.length > 0 && searchesOn === 0,
         questionsSetUp: anyQuestion.length > 0,
         questionsPaused: anyQuestion.length > 0 && onQuestion.length === 0,

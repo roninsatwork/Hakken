@@ -365,6 +365,102 @@ describe("the tables", () => {
     }));
     expect(left).toEqual({ periods: 0, tracked: 0 });
   });
+
+  describe("the tracked lists (Tracked keywords, Tracked pages)", () => {
+    const tracked = { ...range, view: "tracked" as const };
+    const track = async (reader: Awaited<ReturnType<typeof person>>, siteId: Id<"companyWebsites">, kind: "query" | "page", key: string, on = true) =>
+      await reader.mutation(api.searchConsoleTracking.trackSearchConsoleItem, { siteId, kind, key, track: on });
+
+    test("list only what the company tracks, shown in the dates or not, with their figures together; an untick takes a row off", async () => {
+      const { siteId, reader } = await withSearches();
+      for (const key of ["plumber leeds", "boiler repair", "never shown"]) await track(reader, siteId, "query", key);
+
+      const list = await reader.query(api.searchConsoleLists.searchConsoleListPage, { siteId, ...tracked, ...page });
+      expect(list.rows.map((row) => [row.key, row.clicks, row.change, row.tracked])).toEqual([
+        ["plumber leeds", 8, 6, true],
+        ["boiler repair", 1, 1, true],
+        ["never shown", 0, 0, true],
+      ]);
+      // The four figures: the tracked rows' together, the days before held, the position weighted by impressions.
+      expect(list.summary).toMatchObject({ rows: 3, clicks: 9, impressions: 110, previousClicks: 2 });
+      expect(list.summary?.position).toBeCloseTo((3 * 100 + 9 * 10) / 110);
+      // Every other list still says the same of itself.
+      const all = await reader.query(api.searchConsoleLists.searchConsoleListPage, { siteId, ...range, ...page });
+      expect(all.summary).toMatchObject({ rows: 3, clicks: 12, impressions: 210, previousClicks: 2 });
+
+      await track(reader, siteId, "query", "boiler repair", false);
+      const after = await reader.query(api.searchConsoleLists.searchConsoleListPage, { siteId, ...tracked, ...page });
+      expect(after.rows.map((row) => row.key)).toEqual(["plumber leeds", "never shown"]);
+      expect(after.summary).toMatchObject({ clicks: 8, impressions: 100, previousClicks: 2, position: 3 });
+
+      const searched = await reader.query(api.searchConsoleLists.searchConsoleListPage, { siteId, ...tracked, ...page, q: "never" });
+      expect(searched.rows.map((row) => row.key)).toEqual(["never shown"]);
+      // Ordered by position, a keyword Google did not show is a blank, last.
+      const byPosition = await reader.query(api.searchConsoleLists.searchConsoleListPage, { siteId, ...tracked, ...page, sort: "position" });
+      expect(byPosition.rows.map((row) => row.key)).toEqual(["plumber leeds", "never shown"]);
+
+      const file = await reader.action(api.searchConsoleLists.exportSearchConsoleList, {
+        siteId, ...tracked, headers: ["Keyword", "Clicks", "Change"], fields: ["key", "clicks", "change"],
+      });
+      expect(file.fileName).toBe("acme-shop.test-search-console-tracked-query-2026-09-20-2026-09-26.csv");
+      expect(file.csv.split("\n")).toEqual(["Keyword,Clicks,Change", "plumber leeds,8,6", "never shown,0,0"]);
+    });
+
+    test("pages are tracked apart from keywords, and with the days before not held no clicks before are claimed", async () => {
+      const { t, siteId, reader } = await withSearches();
+      await period(t, siteId, "page", now, [
+        ["https://acme-shop.test/plumbers/", 8, 100, 3, 1, "plumber leeds"],
+        ["https://acme-shop.test/", 3, 100, 6, 1, "emergency plumber"],
+      ]);
+      await track(reader, siteId, "query", "plumber leeds");
+      await track(reader, siteId, "page", "https://acme-shop.test/");
+
+      const pages = await reader.query(api.searchConsoleLists.searchConsoleListPage, { siteId, ...tracked, dimension: "page", ...page });
+      expect(pages.rows.map((row) => [row.key, row.clicks, row.count, row.top])).toEqual([["https://acme-shop.test/", 3, 1, "emergency plumber"]]);
+      expect(pages.summary).toMatchObject({ rows: 1, clicks: 3, impressions: 100, previousClicks: null, position: 6 });
+    });
+
+    test("asked of Google for other dates, only the tracked are listed, against the days before", async () => {
+      const { siteId, reader } = await withSearches();
+      await track(reader, siteId, "query", "boiler repair");
+      vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        const ask = JSON.parse(String(init?.body)) as { startDate: string };
+        const pair = (query: string, clicks: number, impressions: number, position: number) =>
+          ({ keys: [query, "https://acme-shop.test/"], clicks, impressions, ctr: clicks / impressions, position });
+        return Response.json({ rows: ask.startDate === "2026-09-25"
+          ? [pair("plumber leeds", 8, 100, 3), pair("boiler repair", 2, 20, 7)]
+          : [pair("boiler repair", 5, 40, 9)] });
+      }));
+      const live = await reader.action(api.searchConsoleLists.searchConsoleLiveList, { siteId, ...tracked, from: "2026-09-25" });
+      expect(live.ok).toBe(true);
+      if (!live.ok) return;
+      expect(live.rows.flat().map((row) => [row.key, row.clicks, row.change, row.tracked])).toEqual([["boiler repair", 2, -3, true]]);
+      expect(live.summary).toMatchObject({ clicks: 2, impressions: 20, previousClicks: 5, position: 7 });
+    });
+
+    test("another company's tracked list is never read, even on the same website", async () => {
+      const { t, siteId, reader } = await withSearches();
+      await track(reader, siteId, "query", "plumber leeds");
+      const rivalId = await company(t, "Rival");
+      await t.run(async (ctx) => {
+        const mine = (await ctx.db.get(siteId))!;
+        const theirs = await ctx.db.insert("companyWebsites", { companyId: rivalId, websiteId: mine.websiteId, relationship: "OWNED", createdAt: Date.now() });
+        await ctx.db.insert("searchConsoleTracked", { companyWebsiteId: theirs, kind: "query", key: "emergency plumber", createdAt: Date.now() });
+      });
+
+      const list = await reader.query(api.searchConsoleLists.searchConsoleListPage, { siteId, ...tracked, ...page });
+      expect(list.rows.map((row) => row.key)).toEqual(["plumber leeds"]);
+      expect(list.summary).toMatchObject({ rows: 1, tracked: 1 });
+
+      const fetched = vi.fn(async () => Response.json({ rows: [] }));
+      vi.stubGlobal("fetch", fetched);
+      const rival = await person(t, rivalId);
+      await expect(rival.query(api.searchConsoleLists.searchConsoleListPage, { siteId, ...tracked, ...page })).rejects.toThrow("not one your company holds");
+      expect(await rival.action(api.searchConsoleLists.searchConsoleLiveList, { siteId, ...tracked, from: "2026-09-25" })).toEqual({ ok: false, problem: "NOT_CONNECTED" });
+      await expect(rival.action(api.searchConsoleLists.exportSearchConsoleList, { siteId, ...tracked, headers: ["Keyword"], fields: ["key"] })).rejects.toThrow("not one your company holds");
+      expect(fetched).not.toHaveBeenCalled();
+    });
+  });
 });
 
 describe("tracking", () => {

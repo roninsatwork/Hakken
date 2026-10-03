@@ -9,7 +9,6 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
-import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { Change } from "@/src/ui/components/screens/Change";
 import { CUT_COLUMN, CheckedCell, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
@@ -24,38 +23,23 @@ import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { ListDownload } from "../../../_components/SiteDownloads";
+import { SEARCH_VERDICTS, SEARCH_VERDICT_TONES, STANDING_SORTS, type SearchVerdict } from "../../../_components/searchStanding";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
-
-const VERDICTS = ["TOP_THREE", "PAGE_ONE", "SLIPPING", "RANKING", "TOO_NEW", "NOT_FOUND", "NEVER_RANKED", "NOT_CHECKED"] as const;
-type Verdict = (typeof VERDICTS)[number];
 
 type Tracked = { keyword: string; isActive: boolean; lastPosition: number | null; previousPosition: number | null; bestPosition: number | null; lastCheckedDay: string | null };
 
 /**
  * The columns that sort (docs/plans/active/sites-table-sorting-plan.md): the
- * search A to Z; the position — the order it opens on — and the best from the
- * top; the biggest rise first; the newest checked first. Paused searches stay
- * after the ones being checked in every order, as they always have.
+ * search A to Z, and the standing's own (`STANDING_SORTS`) — the position, the
+ * order it opens on, among them. Paused searches stay after the ones being
+ * checked in every order, as they always have.
  */
 const SORTS: SiteSortColumns<Tracked, "search" | "position" | "change" | "best" | "checked"> = {
   search: { value: (row) => row.keyword, first: "asc" },
-  position: { value: (row) => row.lastPosition, first: "asc" },
-  change: { value: (row) => (row.lastPosition !== null && row.previousPosition !== null ? row.previousPosition - row.lastPosition : null), first: "desc" },
-  best: { value: (row) => row.bestPosition, first: "asc" },
-  checked: { value: (row) => row.lastCheckedDay, first: "desc" },
+  ...STANDING_SORTS,
 };
 const keywordOf = (row: Tracked) => row.keyword;
 const pausedLast = (row: Tracked) => (row.isActive ? 0 : 1);
-const VERDICT_TONES: Record<Verdict, StatusTone> = {
-  TOP_THREE: "success",
-  PAGE_ONE: "success",
-  SLIPPING: "warning",
-  RANKING: "neutral",
-  TOO_NEW: "neutral",
-  NOT_FOUND: "warning",
-  NEVER_RANKED: "neutral",
-  NOT_CHECKED: "neutral",
-};
 
 /**
  * Your searches: where the site ranks on each search it is measured on, with
@@ -69,7 +53,7 @@ export default function SiteSearchesPage() {
   const site = useSite();
   const range = useSiteRange();
   const [search, setSearch, settled] = useSiteSearch();
-  const [verdict, setVerdict] = useSiteParam<Verdict | "">("verdict", "", VERDICTS);
+  const [verdict, setVerdict] = useSiteParam<SearchVerdict | "">("verdict", "", SEARCH_VERDICTS);
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
 
@@ -123,9 +107,9 @@ export default function SiteSearchesPage() {
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
-            <Select chip={{ label: t("verdictFilter"), choice: verdict ? t(`verdicts.${verdict}`) : null }} value={verdict} onChange={(value) => setVerdict(value as Verdict | "")}>
+            <Select chip={{ label: t("verdictFilter"), choice: verdict ? t(`verdicts.${verdict}`) : null }} value={verdict} onChange={(value) => setVerdict(value as SearchVerdict | "")}>
             <option value="">{t("anyVerdict")}</option>
-            {VERDICTS.map((entry) => <option key={entry} value={entry}>{t(`verdicts.${entry}`)}</option>)}
+            {SEARCH_VERDICTS.map((entry) => <option key={entry} value={entry}>{t(`verdicts.${entry}`)}</option>)}
           </Select>
           </>
         }
@@ -150,7 +134,7 @@ export default function SiteSearchesPage() {
             key: "verdict",
             header: t("columns.verdict"),
             cell: (row) => row.isActive
-              ? <StatusLabel tone={VERDICT_TONES[row.verdict]}>{t(`verdicts.${row.verdict}`)}</StatusLabel>
+              ? <StatusLabel tone={SEARCH_VERDICT_TONES[row.verdict]}>{t(`verdicts.${row.verdict}`)}</StatusLabel>
               : <StatusLabel tone="neutral">{t("paused")}</StatusLabel>,
           },
           { key: "checked", header: t("columns.lastChecked"), sortable: true, cell: (row) => <CheckedCell day={row.lastCheckedDay} /> },

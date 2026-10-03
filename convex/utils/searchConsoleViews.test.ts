@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { applyView, bandOf, ctrCurve, filterRows, isBrand, pagesByKeyword, shapeRows, summarise, withGone, type SourceRow } from "./searchConsoleViews";
+import { applyView, bandOf, ctrCurve, figuresOf, filterRows, isBrand, pagesByKeyword, shapeRows, summarise, withGone, withTracked, type SourceRow } from "./searchConsoleViews";
 
 /**
  * The rules each Search Console page lists by (docs/plans/active/
@@ -183,5 +183,45 @@ describe("found in review, 2026-10-03", () => {
       ["gone", 0, -40, 40],
     ]);
     expect(summarise(applyView("moves", rows), rows, before, { brandWords: null })).toMatchObject({ gaining: 1, gained: 4, losing: 1, lost: 40 });
+  });
+});
+
+describe("Tracked keywords and Tracked pages (drawn 2026-10-03)", () => {
+  const before = [row("ai agency", 38, 1200, 5.1), row("gone quiet", 7, 70, 9), row("not tracked", 50, 500, 2)];
+  const tracked = new Set(["ai agency", "gone quiet", "never shown"]);
+  const rows = () => shapeRows(withTracked([row("ai agency", 44, 1564, 4.3), row("not tracked", 60, 600, 2)], tracked), before, { tracked, brandWords: null });
+
+  test("only the tracked are listed, each one whether Google showed it in the dates or not", () => {
+    const listed = applyView("tracked", rows());
+    expect(listed.map((entry) => [entry.key, entry.clicks, entry.change, entry.previousClicks, entry.tracked])).toEqual([
+      ["ai agency", 44, 6, 38, true],
+      // Shown before, not now: all its clicks lost, and no position, so no places moved.
+      ["gone quiet", 0, -7, 7, true],
+      // Never shown: nothing to say, and nothing claimed.
+      ["never shown", 0, 0, null, true],
+    ]);
+    expect(listed[0].positionChange).toBeCloseTo(0.8);
+    expect(listed.slice(1).map((entry) => entry.positionChange)).toEqual([null, null]);
+  });
+
+  test("the figures are the tracked rows' together: clicks against the days before, and the position weighted by impressions", () => {
+    const all = rows();
+    const summary = summarise(applyView("tracked", all), all, before, { brandWords: null });
+    expect(summary).toMatchObject({ rows: 3, clicks: 44, impressions: 1564, previousClicks: 45, tracked: 3 });
+    expect(summary.position).toBeCloseTo(4.3);
+    // Two shown rows: Google's own average, each position counted by its impressions.
+    expect(figuresOf(shapeRows([row("a", 1, 100, 2), row("b", 1, 300, 6)], null, { tracked: new Set(), brandWords: null }), false)).toEqual({
+      clicks: 2, impressions: 400, previousClicks: null, position: 5,
+    });
+  });
+
+  test("nothing is claimed that is not known: no clicks before without the days before, no position with nothing shown", () => {
+    const listed = applyView("tracked", shapeRows(withTracked([], tracked), null, { tracked, brandWords: null }));
+    expect(summarise(listed, listed, null, { brandWords: null })).toMatchObject({ rows: 3, clicks: 0, impressions: 0, previousClicks: null, position: null });
+  });
+
+  test("Wins and losses: a keyword gone since the days before moved no places", () => {
+    const gone = shapeRows(withGone([], [row("gone", 40, 400, 6)]), [row("gone", 40, 400, 6)], { tracked: new Set(), brandWords: null });
+    expect(gone[0]).toMatchObject({ change: -40, previousPosition: 6, positionChange: null });
   });
 });

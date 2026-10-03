@@ -16,7 +16,7 @@ vi.mock("next/navigation", async () => ({
 
 const counts: MenuCounts = {
   keywords: 2545, pages: 529, top3: 18, referringDomains: 505, brokenBacklinks: 2, aiNamed: 1, aiAsked: 4,
-  trackedSearches: 5, rankedUp: 0, rankedDown: 0, suggestions: 0, citedPages: 1,
+  trackedSearches: 5, trackedFanOut: 8, rankedUp: 0, rankedDown: 0, suggestions: 0, citedPages: 1,
 };
 
 const menu = () => screen.getByRole("navigation", { name: "sites.menu.label" });
@@ -78,6 +78,19 @@ describe("the Sites side menu", () => {
 
     expect(menu()).not.toHaveTextContent("sites.menu.notSetUp");
     expect(group("ai")).toBeInTheDocument();
+  });
+
+  // Anthony, 2026-10-03: in Google results, right after Your searches — not a group of its own.
+  it("lists Tracked fan-out queries right after Your searches in Google results, with how many are ticked", () => {
+    pathname.current = "/app/sites/site_1/google/fan-out";
+    renderWithProviders(<SiteMenu siteId="site_1" counts={counts} />);
+
+    const google = screen.getAllByRole("link").map((link) => link.getAttribute("href"))
+      .filter((href) => href?.startsWith("/app/sites/site_1/google/"));
+    expect(google.slice(0, 3)).toEqual(["/app/sites/site_1/google/searches", "/app/sites/site_1/google/fan-out", "/app/sites/site_1/google/moves"]);
+    expect(page("googleTrackedFanOut")).toHaveAttribute("aria-current", "page");
+    expect(page("googleTrackedFanOut")).toHaveTextContent("8");
+    expect(page("googleSearches")).toHaveTextContent("5");
   });
 
   it("shows every match while a page is being looked for, open or not", () => {

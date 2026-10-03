@@ -37,6 +37,8 @@ export type StandingStats = Pick<
 export type SearchStanding = {
   keyword: string;
   isActive: boolean;
+  /** Ticked from a fan-out query (`addedFrom: "AI_SEARCH"`) rather than typed in. */
+  fromFanOut: boolean;
   stats: StandingStats | null;
 };
 
@@ -93,7 +95,12 @@ export async function searchStandings(
       searchStats(ctx, site.website._id, search.keyword, site.place),
       isListSite ? Promise.resolve(null) : searchStats(ctx, listSite, search.keyword, site.place),
     ]);
-    return { keyword: search.keyword, isActive: search.isActive, stats: isListSite ? own : asOfListCheck(own, list) };
+    return {
+      keyword: search.keyword,
+      isActive: search.isActive,
+      fromFanOut: search.addedFrom === "AI_SEARCH",
+      stats: isListSite ? own : asOfListCheck(own, list),
+    };
   }));
 }
 
@@ -102,6 +109,12 @@ export const listSearches = tenantQuery({
   returns: v.array(v.object({
     keyword: v.string(),
     isActive: v.boolean(),
+    /**
+     * Ticked to check on Google every run from a fan-out query
+     * (`promptFanOut.ts` `tick`), rather than typed in: the rows the Tracked
+     * fan-out queries page shows.
+     */
+    fromFanOut: v.boolean(),
     verdict: searchVerdictValidator,
     lastPosition: v.union(v.number(), v.null()),
     previousPosition: v.union(v.number(), v.null()),
@@ -113,9 +126,10 @@ export const listSearches = tenantQuery({
     const site = await requireMySite(ctx, args.siteId);
     const rows = await searchStandings(ctx, site);
     return rows
-      .map(({ keyword, isActive, stats }) => ({
+      .map(({ keyword, isActive, fromFanOut, stats }) => ({
         keyword,
         isActive,
+        fromFanOut,
         verdict: searchVerdict(stats, site.today),
         lastPosition: stats?.lastPosition ?? null,
         previousPosition: stats?.previousPosition ?? null,

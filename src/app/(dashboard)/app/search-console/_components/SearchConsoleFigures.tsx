@@ -153,3 +153,31 @@ export function SearchConsoleSiteFigures() {
   if (figures === undefined) return <div className="h-[104px] animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />;
   return <SearchConsoleFigures totals={figures.totals} previous={figures.previous} days={range.days} />;
 }
+
+/**
+ * A tracked list's four figures, for the keywords or pages it tracks
+ * together (Tracked keywords, Tracked pages): their clicks against the same
+ * days before — nothing claimed when those days aren't held — their
+ * impressions, click-through rate and Google's average position, weighted by
+ * impressions as Google's own. From the list's own summary, so a row unticked
+ * leaves the figures as it leaves the table; "…" while it loads.
+ */
+export function TrackedFigures({ summary, days }: {
+  summary: { clicks: number; impressions: number; previousClicks: number | null; position: number | null } | null;
+  days: number;
+}) {
+  const t = useTranslations("searchConsole");
+  const note = (text: string) => <span className="text-secondary">{text}</span>;
+  return (
+    <FigureRow>
+      <Figure
+        label={t("figures.clicks")}
+        value={summary ? formatNumber(summary.clicks) : "…"}
+        detail={summary ? <DaysBeforeChange by={summary.previousClicks === null ? null : summary.clicks - summary.previousClicks} days={days} write={formatNumber} /> : undefined}
+      />
+      <Figure label={t("figures.impressions")} value={summary ? formatNumber(summary.impressions) : "…"} detail={note(t("tracked.figures.shown"))} />
+      <Figure label={t("figures.ctr")} value={summary ? formatRate(summary.impressions > 0 ? summary.clicks / summary.impressions : null) : "…"} detail={note(t("tracked.figures.ctr"))} />
+      <Figure label={t("figures.position")} value={summary ? formatPosition(summary.position) : "…"} detail={note(t("tracked.figures.position"))} />
+    </FigureRow>
+  );
+}

@@ -1,7 +1,7 @@
-import { v } from "convex/values";
+import { v, type Infer } from "convex/values";
 import { tenantQuery } from "./tenantFunctions";
 import type { QueryCtx } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { askedPlace, listHold, myRivals, requireMySite } from "./siteAccess";
 import { holdQuestion, holdQuestions, holdSearches } from "./holdLists";
 import { holdBrandNames } from "./holdProfiles";
@@ -218,6 +218,26 @@ async function answersThatRanIt(
   return answers.sort((left, right) => right.day.localeCompare(left.day) || left.engine.localeCompare(right.engine));
 }
 
+/**
+ * The angles one search is a wording of, under the questions still asked: one
+ * per question it answered, as the collection built them. Shared by a
+ * search's own page (`keywordAngle`) and Tracked fan-out queries
+ * (`listTrackedFanOut`), so both read a search's assistants and times seen
+ * the same way.
+ */
+async function anglesOfSearch(
+  ctx: { db: QueryCtx["db"] },
+  holdId: Id<"companyWebsites">,
+  asked: ReadonlySet<string>,
+  keyword: string,
+): Promise<Doc<"fanOutAngles">[]> {
+  const rows = await ctx.db
+    .query("fanOutAngles")
+    .withIndex("by_hold_angle", (q) => q.eq("holdId", holdId).eq("angle", angleOf(keyword)))
+    .take(MAX_LIST);
+  return rows.filter((row) => asked.has(row.prompt) && row.wordings.some((wording) => wording.query === keyword));
+}
+
 const pageJudgmentValidator = v.object({
   verdict: pageVerdictValidator,
   page: v.union(v.string(), v.null()),
@@ -255,12 +275,8 @@ export const keywordAngle = tenantQuery({
     if (!holdId) return null;
     const keyword = args.keyword.trim().toLowerCase();
     const angle = angleOf(keyword);
-    const [questions, rows] = await Promise.all([
-      holdQuestions(ctx, holdId, MAX_LIST),
-      ctx.db.query("fanOutAngles").withIndex("by_hold_angle", (q) => q.eq("holdId", holdId).eq("angle", angle)).take(MAX_LIST),
-    ]);
-    const asked = new Set(questions.map((question) => question.prompt));
-    const found = rows.filter((row) => asked.has(row.prompt) && row.wordings.some((wording) => wording.query === keyword));
+    const questions = await holdQuestions(ctx, holdId, MAX_LIST);
+    const found = await anglesOfSearch(ctx, holdId, new Set(questions.map((question) => question.prompt)), keyword);
     if (found.length === 0) return null;
 
     const intent = await ctx.db.query("seoKeywordIntents").withIndex("by_keyword", (q) => q.eq("keyword", keyword)).unique();
@@ -283,5 +299,108 @@ export const keywordAngle = tenantQuery({
       answers,
       names: answers.length > 0 ? (await holdBrandNames(ctx, site.hold._id)).map((entry) => entry.name) : [],
     };
+  },
+});
+
+/**
+ * Choice reads at most, over all of a website's tracked fan-out queries, to
+ * find the question a query the company added itself belongs to: one read per
+ * question per such query. Past it, the rest show without one, and their tick
+ * cannot be taken off here.
+ */
+const CHOICE_READS = 500;
+
+const trackedFanOutRowValidator = v.object({
+  /** The tracked search as the lists hold it: what joins it to its row in Your searches (`siteGoogle.listSearches`). */
+  keyword: v.string(),
+  /** As written: the assistants' words, or the company's own. */
+  queryText: v.string(),
+  /** A question that lists it, which taking its tick off names; null when no question does any more. */
+  prompt: v.union(v.string(), v.null()),
+  /** The assistants that ran it, over every question it answered; none for one the company added itself. */
+  engines: v.array(fanOutSourceValidator),
+  /** How often they ran it, as its own page counts it; null for one the company added itself. */
+  timesSeen: v.union(v.number(), v.null()),
+});
+
+/**
+ * The Sites Tracked fan-out queries page (Anthony, 2026-10-03): the fan-out
+ * queries the company has ticked to check on Google every run — its tracked
+ * searches that came from a fan-out query and are running — with which
+ * assistants ran each and how often. Where the site ranks for each is Your
+ * searches' own read (`siteGoogle.listSearches`, `fromFanOut`), which the page
+ * joins on the keyword; this reads only what that one does not hold.
+ *
+ * Each query's angles are found by the query itself (`anglesOfSearch`), so a
+ * query is never missing because Fan-out queries shows only the most seen
+ * angles. One the company added on a question's screen has no angle: its
+ * question is found from the company's choices instead. Read through the
+ * company's own hold. For a competitor these are the queries of the site it is
+ * compared with, and nothing can be ticked or unticked.
+ */
+export const listTrackedFanOut = tenantQuery({
+  args: { siteId: v.id("companyWebsites") },
+  returns: v.object({
+    rows: v.array(trackedFanOutRowValidator),
+    /** The site open is the company's own: its ticks can be taken off. */
+    own: v.boolean(),
+    /** The company's own site: how many fan-out queries it tracks, and its limit. Null for a competitor. */
+    tracking: v.union(v.null(), v.object({ count: v.number(), limit: v.number() })),
+  }),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    const holdId = listHold(site);
+    const own = !isTrackedHold(site.hold);
+    if (!holdId) return { rows: [], own, tracking: null };
+
+    const [questions, searches, limits] = await Promise.all([
+      holdQuestions(ctx, holdId, MAX_LIST),
+      holdSearches(ctx, holdId, MAX_LIST),
+      own ? readFanOutLimits(ctx, site.hold.companyId, holdId) : Promise.resolve(null),
+    ]);
+    const asked = new Set(questions.map((question) => question.prompt));
+    // Ticked and running: the same searches `tickedCount` counts.
+    const ticked = searches.filter((search) => search.isActive && search.addedFrom === "AI_SEARCH");
+    const found = await Promise.all(ticked.map((search) => anglesOfSearch(ctx, holdId, asked, search.keyword)));
+
+    let choiceReads = 0;
+    const rows: Array<Infer<typeof trackedFanOutRowValidator>> = [];
+    for (const [index, search] of ticked.entries()) {
+      const angles = found[index];
+      if (angles.length > 0) {
+        const wording = angles.flatMap((row) => row.wordings).find((entry) => entry.query === search.keyword);
+        rows.push({
+          keyword: search.keyword,
+          queryText: wording?.queryText ?? search.keyword,
+          prompt: angles[0].prompt,
+          engines: [...new Set(angles.flatMap((row) => row.engines))],
+          timesSeen: angles.reduce((sum, row) => sum + row.timesSeen, 0),
+        });
+        continue;
+      }
+      // One the company added itself: the question whose list holds it.
+      let choice: Doc<"fanOutQueryChoices"> | null = null;
+      for (const question of questions) {
+        if (choiceReads >= CHOICE_READS) break;
+        choiceReads += 1;
+        const held = await ctx.db
+          .query("fanOutQueryChoices")
+          .withIndex("by_hold_prompt_query", (q) => q.eq("holdId", holdId).eq("prompt", question.prompt).eq("query", search.keyword))
+          .first();
+        if (held && held.own && !held.removed) {
+          choice = held;
+          break;
+        }
+      }
+      rows.push({
+        keyword: search.keyword,
+        queryText: choice?.queryText ?? search.keyword,
+        prompt: choice?.prompt ?? null,
+        engines: [],
+        timesSeen: null,
+      });
+    }
+
+    return { rows, own, tracking: limits ? { count: tickedCount(searches), limit: limits.fanOutTrackedPerSite } : null };
   },
 });

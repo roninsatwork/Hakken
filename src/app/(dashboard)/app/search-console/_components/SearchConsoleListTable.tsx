@@ -29,6 +29,10 @@ export type ListTableSpec = {
   download: { header: string; field: ExportField }[];
   /** The empty table's picture. */
   emptyIcon: ReactNode;
+  /** What the table says with nothing listed and nothing searched: the page's own words, or "Nothing in these dates." */
+  emptyLabel?: string;
+  /** False for a list of only tracked rows (Tracked keywords, Tracked pages), where marking each one tracked says nothing. */
+  markTracked?: boolean;
 };
 
 /** What a list says under its table when Google could not answer, and the way to ask again. */
@@ -94,8 +98,8 @@ export function SearchConsoleListScreen({
               </TableBar>
             }
             sort={list.order.tableSort}
-            rowClassName={(row) => (row.tracked ? "bg-brand/5" : "")}
-            empty={{ icon: table.emptyIcon, label: problem ?? (list.filtered ? t("table.noMatch") : t("table.empty")) }}
+            rowClassName={(row) => (row.tracked && table.markTracked !== false ? "bg-brand/5" : "")}
+            empty={{ icon: table.emptyIcon, label: problem ?? (list.filtered ? t("table.noMatch") : (table.emptyLabel ?? t("table.empty"))) }}
             footer={list.table.footer}
             columns={table.columns}
           />
