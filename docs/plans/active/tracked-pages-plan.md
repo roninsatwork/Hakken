@@ -60,3 +60,4 @@ tracked page as it was left (dates, country, search, order) and says so —
 ## Change log
 
 - **2026-10-03** — Agreed and drawn; build started.
+- **2026-10-03** — Built (b85e5680), deployed to dev, looked at in Chrome: the three pages load in their menus and say nothing is tracked yet. A ticked fan-out query no question lists any more can't be unticked here (its tick says so); paused searches are left off.

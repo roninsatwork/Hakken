@@ -90,7 +90,7 @@ completed work.
   a page per tracked list inside its own section: Search Console's Tracked
   keywords and Tracked pages in a new Tracked group, and Sites' Tracked fan-out
   queries beside Your searches; each section's lists stay its own.
-  **Agreed and drawn 2026-10-03; build started.**
+  **Agreed, drawn and built 2026-10-03.**
 
 - [Sites — Search Console for your own websites](./active/search-console-plan.md) —
   connecting an owned website's Google Search Console and showing its real
