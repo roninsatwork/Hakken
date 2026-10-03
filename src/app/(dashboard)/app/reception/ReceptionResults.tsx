@@ -31,7 +31,7 @@ export default function ReceptionResults({ screens }: { screens: ReceptionScreen
         href={`/kiosk/${screen.widgetId}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-brand px-8 py-3 text-[14px] font-bold text-white shadow-lg transition-transform hover:scale-[1.02]"
+        className="mt-6 inline-flex items-center justify-center gap-2 rounded-full bg-brand px-8 py-3 text-[14px] font-bold text-on-brand shadow-lg transition-transform hover:scale-[1.02]"
       >
         <ExternalLink className="w-4 h-4" />
         {t("open")}

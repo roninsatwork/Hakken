@@ -4264,8 +4264,9 @@
         "destructive": "Error / Delete",
         "focusRing": "Focus Outline",
         "brandOrigin": "Brand Origin",
-        "brandOriginSub": "The primary accent for the dashboard app and the chat widget's default colour.",
+        "brandOriginSub": "The primary accent for the dashboard app, with its own colour for light mode. Chat widgets keep their own colour.",
         "brandColor": "Brand Accent Color",
+        "brandColorLight": "Brand Accent Color, light mode",
         "scope": "Applies to the dashboard app. The public website, sign-in screen, and emails have their own fixed designs.",
         "headingFontSub": "Used by page and panel headings.",
         "bodyFontSub": "Used by everything else the app writes.",
@@ -4288,7 +4289,8 @@
         "info": "Info",
         "infoSub": "In motion: running jobs and activity indicators.",
         "focusRingSub": "The outline on the item keyboard focus is on. Adopted screen by screen.",
-        "brandColorSub": "Buttons, links, highlights, and glows.",
+        "brandColorSub": "Dark mode: buttons, links, highlights, and glows. Words on it turn dark when it is too pale for white.",
+        "brandColorLightSub": "The same on light mode's white pages. Pick a darker colour here if the dark mode one is pale.",
         "reset": "Reset"
       },
       "economics": {

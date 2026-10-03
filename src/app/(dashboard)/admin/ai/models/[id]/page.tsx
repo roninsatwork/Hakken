@@ -200,7 +200,7 @@ export default function ModelPricingPage({ params }: { params: Promise<{ id: str
         <WriteButton
           onClick={handleSave}
           disabled={action.isBusy("save")}
-          className="h-10 px-5 rounded-[8px] bg-brand text-white text-[13px] font-medium flex items-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
+          className="h-10 px-5 rounded-[8px] bg-brand text-on-brand text-[13px] font-medium flex items-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-50"
         >
           {action.isBusy("save") ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
           {t("save")}

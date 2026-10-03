@@ -24,7 +24,10 @@ import { adminMutation, adminQuery, publicMutation, publicQuery, superAdminQuery
 async function getSystemWidgetBranding(ctx: QueryCtx) {
   const settings = await ctx.db.query("systemSettings").first();
   const platformName = settings?.platformName || DEFAULT_SETTINGS.platformName;
-  const themePrimaryColor = settings?.brandColorHex || DEFAULT_SETTINGS.brandColorHex;
+  // A widget with no colour of its own takes the product's shipped colour,
+  // not the dashboard's brand colour: the widget sits on customers' own
+  // websites, and the dashboard's accent turned pale on 2026-10-03.
+  const themePrimaryColor = DEFAULT_SETTINGS.brandColorHex;
   let themeLogoUrl = settings?.logoUrlLight || settings?.logoUrlDark;
 
   if (isStorageLogoReference(themeLogoUrl)) {

@@ -132,7 +132,7 @@ export default function ToolsPage() {
         action={
           <Link
             href="/admin/ai/tools/new"
-            className="inline-flex h-9 items-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90"
+            className="inline-flex h-9 items-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-on-brand transition-colors hover:bg-brand/90"
           >
             <Plus className="h-4 w-4" />
             {t("buildTool")}
@@ -217,7 +217,7 @@ export default function ToolsPage() {
                       <WriteButton
                         onClick={() => void handleAddConnector(entry.key)}
                         disabled={addingKey === entry.key}
-                        className="shrink-0 rounded-[8px] bg-brand px-3 py-1.5 text-[12.5px] font-medium text-white transition-opacity disabled:opacity-40"
+                        className="shrink-0 rounded-[8px] bg-brand px-3 py-1.5 text-[12.5px] font-medium text-on-brand transition-opacity disabled:opacity-40"
                       >
                         {addingKey === entry.key ? t("adding") : t("add")}
                       </WriteButton>

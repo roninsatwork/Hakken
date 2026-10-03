@@ -104,7 +104,7 @@ export function SkillCatalogDialogs({
               <Button variant="outline" onClick={onCloseEdit} className="h-10 rounded-[8px]">
                 {t("cancel")}
               </Button>
-              <WriteButton type="submit" disabled={isEditBusy} className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
+              <WriteButton type="submit" disabled={isEditBusy} className="h-10 px-4 rounded-[8px] bg-brand text-on-brand text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
                 {isEditBusy && <Loader2 className="w-4 h-4 animate-spin" />}
                 {t("save")}
               </WriteButton>
@@ -171,7 +171,7 @@ export function SkillCatalogDialogs({
               <Button variant="outline" onClick={onCloseMarkdown} className="h-10 rounded-[8px]">
                 {t("cancel")}
               </Button>
-              <WriteButton type="submit" disabled={isAddBusy} className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
+              <WriteButton type="submit" disabled={isAddBusy} className="h-10 px-4 rounded-[8px] bg-brand text-on-brand text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2">
                 {isAddBusy && <Loader2 className="w-4 h-4 animate-spin" />}
                 {t("addSkill")}
               </WriteButton>

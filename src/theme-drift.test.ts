@@ -166,3 +166,25 @@ describe("theme drift ratchet", () => {
     expect(total).toBeLessThanOrEqual(DRIFT_BASELINE);
   });
 });
+
+/**
+ * Words on a solid brand surface use `text-on-brand`, never `text-white`.
+ *
+ * Anthony chose a pale, near-colourless brand colour on 2026-10-03, and 65
+ * buttons, counters and step numbers in 47 files wrote white words on it.
+ * `--on-brand` turns dark when the brand colour is too pale for white
+ * (`onBrandFor` in SystemSettingsContext); a literal white cannot.
+ * A tint (`bg-brand/10`) is not a solid surface and is not checked.
+ */
+const SOLID_BRAND_WITH_WHITE = /(?<![\w-])(?:[a-z]+:)*bg-brand(?![\w/-])[^\n]*(?<![\w-])(?:[a-z]+:)*text-white(?![\w/-])|(?<![\w-])(?:[a-z]+:)*text-white(?![\w/-])[^\n]*(?<![\w-])(?:[a-z]+:)*bg-brand(?![\w/-])/;
+
+describe("words on the brand colour", () => {
+  it("never writes white words on a solid brand surface", () => {
+    const offenders = collectSourceFiles(SRC_ROOT).flatMap((file) =>
+      readFileSync(file, "utf8")
+        .split("\n")
+        .flatMap((line, index) => (SOLID_BRAND_WITH_WHITE.test(line) ? [`${file.replace(SRC_ROOT, "src")}:${index + 1}`] : [])),
+    );
+    expect(offenders).toEqual([]);
+  });
+});

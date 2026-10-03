@@ -238,7 +238,7 @@ export default function ApiKeysPage() {
           type="button"
           onClick={handleCreate}
           disabled={createAction.isBusy()}
-          className="inline-flex h-9 w-max items-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
+          className="inline-flex h-9 w-max items-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-on-brand transition-colors hover:bg-brand/90 disabled:opacity-50"
         >
           {createAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
           {t("createKey")}

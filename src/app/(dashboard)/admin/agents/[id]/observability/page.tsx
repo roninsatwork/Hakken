@@ -433,7 +433,7 @@ function ActivityChart({ analytics }: { analytics: Analytics }) {
                   <>
                     <span className="absolute -left-[3px] top-0 bottom-6 w-[2px] bg-brand/60 pointer-events-none" />
                     {labelledChangeDays.has(day.dayStartMs) && (
-                      <span className="absolute -top-1 left-0 -translate-x-1/2 z-20 whitespace-nowrap rounded-[6px] bg-brand px-2 py-[3px] text-[10.5px] text-white">
+                      <span className="absolute -top-1 left-0 -translate-x-1/2 z-20 whitespace-nowrap rounded-[6px] bg-brand px-2 py-[3px] text-[10.5px] text-on-brand">
                         {t("settingsChanged")}
                       </span>
                     )}

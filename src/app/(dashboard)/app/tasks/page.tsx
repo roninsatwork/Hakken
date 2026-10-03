@@ -201,7 +201,7 @@ export default function TasksPage() {
                 <button
                   type="submit"
                   disabled={!newTitle.trim() || action.isBusy()}
-                  className="px-3 py-1.5 rounded-[8px] bg-brand text-white text-[12px] font-medium disabled:opacity-40 hover:brightness-110 transition-all"
+                  className="px-3 py-1.5 rounded-[8px] bg-brand text-on-brand text-[12px] font-medium disabled:opacity-40 hover:brightness-110 transition-all"
                 >
                   {t("create")}
                 </button>
@@ -250,7 +250,7 @@ export default function TasksPage() {
                           aria-label={isSettled ? t("reopen") : t("done")}
                           className={`mt-0.5 w-4 h-4 rounded-[5px] border flex items-center justify-center flex-shrink-0 transition-colors ${
                             task.status === "DONE"
-                              ? "bg-brand border-brand text-white"
+                              ? "bg-brand border-brand text-on-brand"
                               : "border-border-dim hover:border-brand/60"
                           }`}
                         >

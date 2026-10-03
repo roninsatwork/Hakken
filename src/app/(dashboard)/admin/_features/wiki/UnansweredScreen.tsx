@@ -119,7 +119,7 @@ export function UnansweredScreen({
                   onClick={() => setScope(option.value)}
                   className={`px-3 py-1.5 rounded-[9px] text-[12px] font-medium transition-colors ${
                     scope === option.value
-                      ? "bg-brand text-white"
+                      ? "bg-brand text-on-brand"
                       : "text-secondary hover:text-foreground"
                   }`}
                 >
@@ -207,7 +207,7 @@ export function UnansweredScreen({
                         ? `/admin/companies/${row.companyId}/ai/pages`
                         : "/admin/ai/knowledge"
                   }
-                  className="px-3 py-1 rounded-[8px] bg-brand text-white text-[12px] font-medium hover:opacity-90 transition-opacity mr-2"
+                  className="px-3 py-1 rounded-[8px] bg-brand text-on-brand text-[12px] font-medium hover:opacity-90 transition-opacity mr-2"
                 >
                   {t("feedWiki")}
                 </Link>

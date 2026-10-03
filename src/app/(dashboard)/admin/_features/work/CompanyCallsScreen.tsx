@@ -76,7 +76,7 @@ export function CompanyCallsScreen({ companyId }: { companyId: Id<"companies"> }
               onClick={() => setStatus(option.value)}
               className={`px-3 py-1.5 rounded-[9px] text-[12px] font-medium transition-colors ${
                 status === option.value
-                  ? "bg-brand text-white"
+                  ? "bg-brand text-on-brand"
                   : "text-secondary hover:text-foreground"
               }`}
             >

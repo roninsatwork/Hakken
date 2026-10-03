@@ -210,7 +210,7 @@ export function DetailTabs({ tabs, rootHref }: AdminDetailTabsProps) {
                         className={cn(
                           "flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-[14px] font-medium transition-colors",
                           isItemActive
-                            ? "bg-brand text-white"
+                            ? "bg-brand text-on-brand"
                             : "text-secondary hover:bg-foreground/5 hover:text-foreground"
                         )}
                       >

@@ -96,7 +96,7 @@ export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies">
                 onClick={() => setDecision(option.value)}
                 className={`px-3 py-1.5 rounded-[9px] text-[12px] font-medium transition-colors ${
                   decision === option.value
-                    ? "bg-brand text-white"
+                    ? "bg-brand text-on-brand"
                     : "text-secondary hover:text-foreground"
                 }`}
               >

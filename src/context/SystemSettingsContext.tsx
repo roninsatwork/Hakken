@@ -22,9 +22,32 @@ function hexToRgbTriplet(hex: string | undefined): string | undefined {
   return `${(num >> 16) & 255}, ${(num >> 8) & 255}, ${num & 255}`;
 }
 
+/**
+ * The words on a solid brand-coloured surface: white, unless white would fall
+ * under 3:1 against the brand colour, then the dark app's own background.
+ *
+ * Anthony chose a pale, near-colourless brand colour on 2026-10-03, and about
+ * fifty buttons wrote white words on it. The threshold is 3:1 rather than the
+ * best of the two because the shipped oranges (3.1 and 3.3 against white)
+ * would otherwise flip to dark words that nobody asked for. Undefined for
+ * anything that is not a plain hex, so globals.css's white applies.
+ */
+export function onBrandFor(hex: string | undefined): string | undefined {
+  const triplet = hexToRgbTriplet(hex);
+  if (!triplet) return undefined;
+  const linear = triplet.split(", ").map((part) => {
+    const channel = Number(part) / 255;
+    return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+  });
+  const luminance = 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+  const whiteContrast = 1.05 / (luminance + 0.05);
+  return whiteContrast < 3 ? "#222224" : undefined;
+}
+
 type SettingsType = {
   platformName: string;
   brandColorHex: string;
+  lightBrandColorHex?: string;
   fontFamily?: string;
   headingFontFamily?: string;
   bodyFontFamily?: string;
@@ -91,8 +114,6 @@ export function SystemSettingsProvider({ children }: { children: React.ReactNode
     // Writing --color-brand directly here used to make the @theme fallback
     // `var(--color-brand, #FF5A1F)` self-referential — a cycle, so the hex
     // never fired and brand colour only existed after JS hydration.
-    apply('--brand', settings.brandColorHex);
-    apply('--brand-rgb', hexToRgbTriplet(settings.brandColorHex));
     apply('--font-heading', resolveFontFamily(settings.headingFontFamily));
     // Never write a value into the variable it references: fonts are stored
     // as named keys and resolved to concrete stacks (src/lib/themeFonts.ts).
@@ -104,6 +125,13 @@ export function SystemSettingsProvider({ children }: { children: React.ReactNode
     const dark = active === 'dark';
     const pick = (darkValue: string | undefined, lightValue: string | undefined) =>
       dark ? darkValue : lightValue;
+
+    // The brand colour has its own light-mode value since 2026-10-03; a
+    // deployment that never saved one keeps a single colour for both.
+    const brand = pick(settings.brandColorHex, settings.lightBrandColorHex || settings.brandColorHex);
+    apply('--brand', brand);
+    apply('--brand-rgb', hexToRgbTriplet(brand));
+    apply('--on-brand', onBrandFor(brand));
 
     apply('--bg-main', pick(settings.darkBg, settings.lightBg));
     apply('--radial-outer', pick(settings.darkBg, settings.lightBg));

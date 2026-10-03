@@ -5,6 +5,8 @@ import { summariseAuditValue } from "./auditLogService";
 export const DEFAULT_SETTINGS = {
   platformName: productIdentity.name,
   brandColorHex: productIdentity.brandColorHex,
+  // Unset: light mode paints brandColorHex until it has its own.
+  lightBrandColorHex: undefined as string | undefined,
   fontFamily: undefined as string | undefined,
   headingFontFamily: undefined as string | undefined,
   bodyFontFamily: undefined as string | undefined,
@@ -101,6 +103,7 @@ export const PUBLIC_SETTINGS_FIELDS = [
   "logoUrlLight",
   "logoUrlDark",
   "brandColorHex",
+  "lightBrandColorHex",
   "fontFamily",
   "headingFontFamily",
   "bodyFontFamily",

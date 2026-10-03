@@ -240,7 +240,7 @@ export function WidgetConfigScreen({ companyId }: { companyId?: Id<"companies"> 
           <WriteButton
             onClick={handleCreateOrUpdate}
             disabled={action.isBusy("save")}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-brand text-white font-medium tracking-wide text-[13px] hover:bg-brand/90 shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] transition-all shrink-0"
+            className="flex items-center gap-2 px-6 py-2.5 rounded-full bg-brand text-on-brand font-medium tracking-wide text-[13px] hover:bg-brand/90 shadow-[0_0_15px_rgba(var(--brand-rgb),0.2)] transition-all shrink-0"
           >
             {action.isBusy("save") ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             <span>{companyId ? t("publish") : t("save")}</span>

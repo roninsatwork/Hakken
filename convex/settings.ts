@@ -113,6 +113,7 @@ export const update = superAdminMutation({
     emailSenderName: v.optional(v.string()),
     emailSenderAddress: v.optional(v.string()),
     brandColorHex: v.optional(v.string()),
+    lightBrandColorHex: v.optional(v.string()),
     // fontFamily / fontSizeBase / subTextSizeGlobal / borderRadius retired
     // 2026-08-10 — no longer writable; see the schema comment.
     headingFontFamily: v.optional(v.string()),

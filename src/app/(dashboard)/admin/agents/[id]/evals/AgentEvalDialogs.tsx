@@ -113,7 +113,7 @@ export function AgentEvalDialogs({
             <Button variant="ghost" onClick={onCloseForm} disabled={formBusy} className="px-4 py-2 font-semibold hover:bg-foreground/5">
               {t("form.cancel")}
             </Button>
-            <WriteButton type="button" onClick={onSave} disabled={formBusy} className="inline-flex items-center gap-2 rounded-[8px] bg-brand px-4 py-2 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50">
+            <WriteButton type="button" onClick={onSave} disabled={formBusy} className="inline-flex items-center gap-2 rounded-[8px] bg-brand px-4 py-2 text-[13px] font-semibold text-on-brand transition-colors hover:bg-brand/90 disabled:opacity-50">
               {formBusy && <Loader2 className="h-4 w-4 animate-spin" />}
               {isEditing ? t("form.saveCheck") : t("form.createCheck")}
             </WriteButton>

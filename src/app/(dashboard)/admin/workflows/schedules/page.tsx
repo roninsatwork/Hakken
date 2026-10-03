@@ -233,7 +233,7 @@ export default function SchedulesPage() {
           <div className="flex items-center gap-3 w-full sm:w-auto mt-2 sm:mt-0">
             <WriteButton
               onClick={handleOpenAdd}
-              className="flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] bg-brand text-white font-medium hover:opacity-90 transition-opacity whitespace-nowrap"
+              className="flex items-center gap-2 px-4 py-2 rounded-[10px] text-[13px] bg-brand text-on-brand font-medium hover:opacity-90 transition-opacity whitespace-nowrap"
             >
               <Plus className="w-4 h-4" />
               <span>{t('newSchedule')}</span>

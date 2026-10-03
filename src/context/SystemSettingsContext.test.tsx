@@ -2,7 +2,7 @@ import React from "react";
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useQuery } from "convex/react";
-import { SystemSettingsProvider } from "./SystemSettingsContext";
+import { SystemSettingsProvider, onBrandFor } from "./SystemSettingsContext";
 
 vi.mock("convex/react", () => ({ useQuery: vi.fn() }));
 
@@ -56,6 +56,35 @@ describe("SystemSettingsProvider CSS injection", () => {
 
     renderWithSettings({ brandColorHex: "not-a-colour" });
     expect(rootStyle().getPropertyValue("--brand-rgb")).toBe("");
+  });
+
+  it("gives light mode its own brand colour, and falls back to the one colour without it", () => {
+    // Anthony, 2026-10-03: a pale accent chosen for the dark app would all
+    // but vanish on light mode's white pages.
+    renderWithSettings({ brandColorHex: "#E8E4DC", lightBrandColorHex: "#2C2C2E" });
+    expect(rootStyle().getPropertyValue("--brand")).toBe("#E8E4DC");
+
+    themeState.theme = "light";
+    themeState.systemTheme = "light";
+    renderWithSettings({ brandColorHex: "#E8E4DC", lightBrandColorHex: "#2C2C2E" });
+    expect(rootStyle().getPropertyValue("--brand")).toBe("#2C2C2E");
+    expect(rootStyle().getPropertyValue("--brand-rgb")).toBe("44, 44, 46");
+
+    renderWithSettings({ brandColorHex: "#E26D28", lightBrandColorHex: undefined });
+    expect(rootStyle().getPropertyValue("--brand")).toBe("#E26D28");
+  });
+
+  it("turns the words on a solid brand surface dark only when white would not read", () => {
+    // The pale colour chosen on 2026-10-03: white on it is 1.3 to 1.
+    renderWithSettings({ brandColorHex: "#E8E4DC" });
+    expect(rootStyle().getPropertyValue("--on-brand")).toBe("#222224");
+
+    // The shipped oranges keep their white words.
+    renderWithSettings({ brandColorHex: "#E26D28" });
+    expect(rootStyle().getPropertyValue("--on-brand")).toBe("");
+    expect(onBrandFor("#FF5A1F")).toBeUndefined();
+    expect(onBrandFor("#2C2C2E")).toBeUndefined();
+    expect(onBrandFor("not-a-colour")).toBeUndefined();
   });
 
   it("never writes a font variable that references itself", () => {

@@ -81,7 +81,7 @@ export function WikiAskBox({
         <WriteButton
           onClick={() => void ask()}
           disabled={isAsking || !question.trim()}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-[10px] bg-brand text-white text-[13px] font-medium disabled:opacity-40 transition-opacity"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-[10px] bg-brand text-on-brand text-[13px] font-medium disabled:opacity-40 transition-opacity"
         >
           {isAsking ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
           {isAsking ? t("asking") : t("askButton")}

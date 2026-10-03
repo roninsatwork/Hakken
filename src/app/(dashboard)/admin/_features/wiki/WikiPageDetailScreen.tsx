@@ -294,7 +294,7 @@ export function WikiPageDetailScreen({
                 })
               }
               disabled={isSaving || draft === null || draft.trim() === detail.content}
-              className="px-4 py-2.5 rounded-[10px] bg-brand text-white text-[13px] font-medium disabled:opacity-40 transition-opacity w-fit"
+              className="px-4 py-2.5 rounded-[10px] bg-brand text-on-brand text-[13px] font-medium disabled:opacity-40 transition-opacity w-fit"
             >
               {isSaving ? t("body.saving") : t("body.save")}
             </WriteButton>
@@ -518,7 +518,7 @@ export function WikiPageDetailScreen({
                 })
               }
               disabled={isSaving || !newPin.trim()}
-              className="px-4 py-2.5 rounded-[10px] bg-brand text-white text-[13px] font-medium disabled:opacity-40 transition-opacity"
+              className="px-4 py-2.5 rounded-[10px] bg-brand text-on-brand text-[13px] font-medium disabled:opacity-40 transition-opacity"
             >
               {t("pinned.add")}
             </WriteButton>

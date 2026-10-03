@@ -405,7 +405,7 @@ export function WikiPagesListScreen({
                 <div className="flex items-center gap-2">
                   <WriteButton
                     onClick={() => void decideReview(review.reviewId, true)}
-                    className="px-3 py-1.5 rounded-[8px] bg-brand text-white text-[12px] font-medium"
+                    className="px-3 py-1.5 rounded-[8px] bg-brand text-on-brand text-[12px] font-medium"
                   >
                     {t("reviews.approve")}
                   </WriteButton>
@@ -754,7 +754,7 @@ export function WikiPagesListScreen({
             <WriteButton
               onClick={() => void handleSaveGoal()}
               disabled={isSavingGoal || !goalTitle.trim() || !goalContent.trim()}
-              className="px-4 py-2 rounded-md bg-brand text-white transition-colors text-[13px] font-medium hover:bg-brand/90 disabled:opacity-50"
+              className="px-4 py-2 rounded-md bg-brand text-on-brand transition-colors text-[13px] font-medium hover:bg-brand/90 disabled:opacity-50"
             >
               {isSavingGoal ? t("goal.saving") : t("goal.action")}
             </WriteButton>

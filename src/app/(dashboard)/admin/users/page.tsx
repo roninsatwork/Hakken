@@ -53,7 +53,7 @@ export default function ManageUsersPage() {
           action={
             <Link
               href="/admin/users/invite"
-              className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-brand text-white font-medium hover:opacity-90 transition-opacity"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-[10px] text-[13px] bg-brand text-on-brand font-medium hover:opacity-90 transition-opacity"
             >
               <Plus className="w-4 h-4" />
               <span>{t('invite')}</span>

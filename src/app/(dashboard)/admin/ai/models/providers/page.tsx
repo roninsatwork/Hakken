@@ -290,8 +290,8 @@ export default function AIModelProvidersPage() {
                     >
                       <span
                         className={cn(
-                          "absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-all",
-                          provider.isEnabled ? "left-[18px]" : "left-0.5"
+                          "absolute top-0.5 h-4 w-4 rounded-full shadow-sm transition-all",
+                          provider.isEnabled ? "left-[18px] bg-on-brand" : "left-0.5 bg-white"
                         )}
                       />
                     </span>

@@ -166,6 +166,16 @@ export function AppearanceSettingsSection({ formData, setFormData, t }: Appearan
             defaultValue="#E26D28"
             resetLabel={t("appearance.reset")}
           />
+          {/* Light mode's own brand colour (2026-10-03): a pale accent chosen
+              for the dark app would all but vanish on white. */}
+          <ColorInput
+            label={t("appearance.brandColorLight")}
+            sub={t("appearance.brandColorLightSub")}
+            value={formData.lightBrandColorHex || ""}
+            onChange={(value) => setFormData({ ...formData, lightBrandColorHex: value })}
+            defaultValue="#E26D28"
+            resetLabel={t("appearance.reset")}
+          />
         </div>
       </SettingBlock>
     </section>

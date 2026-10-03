@@ -382,7 +382,7 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
                 aria-label={tControls("send")}
                 className={`w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-[8px] transition-all mb-[1px] ${
                   content.trim() || isSubmitting
-                    ? "bg-brand text-white hover:brightness-110 active:scale-95"
+                    ? "bg-brand text-on-brand hover:brightness-110 active:scale-95"
                     : "bg-foreground/10 text-muted pointer-events-none"
                 }`}
               >

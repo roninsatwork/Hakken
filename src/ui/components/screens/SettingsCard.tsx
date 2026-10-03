@@ -185,8 +185,10 @@ export function SettingSwitch({ label, description, checked, onChange, children 
           >
             <span
               className={cn(
-                "absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all",
-                checked ? "left-[18px]" : "left-0.5",
+                // The knob on a lit switch takes the words-on-brand colour,
+                // so it still shows on a pale brand colour (2026-10-03).
+                "absolute top-0.5 h-4 w-4 rounded-full transition-all",
+                checked ? "left-[18px] bg-on-brand" : "left-0.5 bg-white",
               )}
             />
           </span>

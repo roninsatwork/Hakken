@@ -92,7 +92,7 @@ export function WidgetIntegrationSection({
               className={`relative block h-5 w-9 rounded-full transition-colors ${kioskEnabled ? "bg-brand" : "bg-foreground/15"}`}
             >
               <span
-                className={`absolute top-0.5 h-4 w-4 rounded-full bg-white transition-all ${kioskEnabled ? "left-[18px]" : "left-0.5"}`}
+                className={`absolute top-0.5 h-4 w-4 rounded-full transition-all ${kioskEnabled ? "left-[18px] bg-on-brand" : "left-0.5 bg-white"}`}
               />
             </span>
           </button>

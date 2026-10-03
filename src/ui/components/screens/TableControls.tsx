@@ -211,7 +211,9 @@ export function TableFilterSelect({
   return (
     <div className="relative" ref={containerRef}>
       {/* Raw on purpose: a filter trigger whose whole recipe swaps with the
-          active-filter state — no Button variant is a two-state chip. */}
+          active-filter state — no Button variant is a two-state chip. An
+          active filter is grey, never the brand colour, as `Select`'s chip
+          (Anthony, 2026-10-03: "the filters should be grey"). */}
       <button
         type="button"
         onClick={() => (isOpen ? close() : setIsOpen(true))}
@@ -221,7 +223,7 @@ export function TableFilterSelect({
         className={[
           "flex items-center gap-2 px-3 py-2 rounded-[10px] border text-[13px] transition-colors disabled:opacity-40",
           value
-            ? "bg-brand/10 border-brand/50 text-foreground"
+            ? "bg-hover border-secondary/40 text-foreground"
             : "bg-background border-border-dim text-secondary hover:text-foreground",
         ].join(" ")}
       >

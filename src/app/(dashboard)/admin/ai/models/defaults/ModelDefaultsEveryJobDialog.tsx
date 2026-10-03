@@ -66,7 +66,7 @@ export function ModelDefaultsEveryJobDialog({
             type="button"
             onClick={onApply}
             disabled={isApplying}
-            className="h-10 px-4 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
+            className="h-10 px-4 rounded-[8px] bg-brand text-on-brand text-[13px] font-medium hover:opacity-90 disabled:opacity-50 flex items-center gap-2"
           >
             {isApplying && <Loader2 className="w-4 h-4 animate-spin" />}
             {t("applyToEveryJob")}

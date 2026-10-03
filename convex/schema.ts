@@ -1071,6 +1071,10 @@ export default defineSchema({
     // so it must never be hardcoded into a seeded AI rule.
     salesContactEmail: v.optional(v.string()),
     brandColorHex: v.optional(v.string()),
+    // The brand colour on light mode's white pages (Anthony, 2026-10-03).
+    // Without it, light mode paints `brandColorHex`: a pale accent chosen for
+    // the dark app would all but vanish on white.
+    lightBrandColorHex: v.optional(v.string()),
     // Retired 2026-08-10 (theme compliance plan): kept only so historic rows
     // stay valid. No screen writes them and nothing reads them any more.
     // fontFamily silently overrode the body font from legacy data;

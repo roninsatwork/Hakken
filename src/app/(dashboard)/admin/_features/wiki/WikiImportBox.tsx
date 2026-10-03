@@ -184,7 +184,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
             onClick={() => setTab(key)}
             className={`flex items-center gap-2 px-4 py-2 rounded-full text-[12.5px] font-medium border transition-colors ${
               tab === key
-                ? "bg-brand text-white border-brand"
+                ? "bg-brand text-on-brand border-brand"
                 : "bg-background text-secondary border-border-dim hover:text-foreground"
             }`}
           >
@@ -211,7 +211,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
           <WriteButton
             onClick={() => void importWebsite()}
             disabled={isBusy || !url.trim()}
-            className="flex items-center gap-2 px-4 py-3 rounded-[10px] bg-brand text-white text-[13px] font-medium disabled:opacity-40 transition-opacity whitespace-nowrap"
+            className="flex items-center gap-2 px-4 py-3 rounded-[10px] bg-brand text-on-brand text-[13px] font-medium disabled:opacity-40 transition-opacity whitespace-nowrap"
           >
             {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {t("readIt")}
@@ -227,7 +227,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
             multiple
             disabled={isBusy}
             onChange={(event) => void importFiles(event.target.files)}
-            className="text-[13px] text-secondary file:mr-3 file:px-4 file:py-2.5 file:rounded-[10px] file:border-0 file:bg-brand file:text-white file:text-[12.5px] file:font-medium file:cursor-pointer"
+            className="text-[13px] text-secondary file:mr-3 file:px-4 file:py-2.5 file:rounded-[10px] file:border-0 file:bg-brand file:text-on-brand file:text-[12.5px] file:font-medium file:cursor-pointer"
           />
           {isBusy && <Loader2 className="w-4 h-4 animate-spin text-brand" />}
         </div>
@@ -256,7 +256,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
           <WriteButton
             onClick={() => void importText()}
             disabled={isBusy || !textTitle.trim() || !textBody.trim()}
-            className="flex items-center gap-2 w-fit px-4 py-2.5 rounded-[10px] bg-brand text-white text-[13px] font-medium disabled:opacity-40 transition-opacity"
+            className="flex items-center gap-2 w-fit px-4 py-2.5 rounded-[10px] bg-brand text-on-brand text-[13px] font-medium disabled:opacity-40 transition-opacity"
           >
             {isBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {t("readIt")}
@@ -274,7 +274,7 @@ export function WikiImportBox({ companyId }: { companyId?: Id<"companies"> }) {
             accept=".md,.zip"
             disabled={isBusy}
             onChange={(event) => void importVault(event.target.files)}
-            className="text-[13px] text-secondary file:mr-3 file:px-4 file:py-2.5 file:rounded-[10px] file:border-0 file:bg-brand file:text-white file:text-[13px] file:font-medium file:cursor-pointer"
+            className="text-[13px] text-secondary file:mr-3 file:px-4 file:py-2.5 file:rounded-[10px] file:border-0 file:bg-brand file:text-on-brand file:text-[13px] file:font-medium file:cursor-pointer"
           />
           {isBusy && <Loader2 className="w-4 h-4 animate-spin text-brand" />}
         </div>

@@ -115,7 +115,7 @@ export default function AnalyticsPage() {
               disabled={!hasUnsavedChanges || isSaving}
               className={`flex items-center gap-2 px-5 py-2 rounded-full font-medium tracking-wide text-[12px] transition-all duration-300 shadow-sm ${
                 hasUnsavedChanges
-                  ? "bg-brand text-white hover:opacity-90 dark:shadow-black/30"
+                  ? "bg-brand text-on-brand hover:opacity-90 dark:shadow-black/30"
                   : "bg-card border border-border-dim text-muted cursor-not-allowed"
               }`}
             >
@@ -267,7 +267,7 @@ export default function AnalyticsPage() {
       <section className="flex flex-col gap-6 relative">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-             <div className="w-5 h-5 rounded-full bg-brand text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">1</div>
+             <div className="w-5 h-5 rounded-full bg-brand text-on-brand text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">1</div>
              <span className="text-foreground text-[14px] font-bold tracking-wide">{t("containerTitle")}</span>
           </div>
            

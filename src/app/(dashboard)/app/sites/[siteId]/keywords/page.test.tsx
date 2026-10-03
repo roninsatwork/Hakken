@@ -95,8 +95,11 @@ describe("the Keywords page", () => {
   it("shows a chosen filter's choice on its chip", () => {
     openAt("band=p01_03&intent=BUYING");
 
-    expect(screen.getByText("sites.keywords.bandFilter: sites.overview.bands.p01_03")).toBeInTheDocument();
-    expect(screen.getByText("sites.common.intentFilter: sites.common.intents.BUYING")).toBeInTheDocument();
+    // The chip's words are split so the label can sit dimmer than the choice.
+    const chipWords = (text: string) => (_: string, element: Element | null) =>
+      element?.getAttribute("aria-hidden") === "true" && element.textContent === text;
+    expect(screen.getByText(chipWords("sites.keywords.bandFilter: sites.overview.bands.p01_03"))).toBeInTheDocument();
+    expect(screen.getByText(chipWords("sites.common.intentFilter: sites.common.intents.BUYING"))).toBeInTheDocument();
     expect(screen.getByText("sites.keywords.statusFilter")).toBeInTheDocument();
     expect(lastListArgs()).toMatchObject({ band: "p01_03", intent: "BUYING" });
   });

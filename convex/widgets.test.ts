@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
+import { DEFAULT_SETTINGS } from "./settingsService";
 import { seedUploadReceipt } from "../scripts/test-upload-fixture";
 import { mintWidgetEmbedPass } from "./utils/widgetEmbedPass";
 import { WIDGET_THREADS_PER_HOUR, WIDGET_UPLOAD_URL_LIMIT } from "./widgets";
@@ -208,6 +209,9 @@ describe("Widget Authorization", () => {
   });
 
   test("public widget config falls back to system branding when widget theme is unset", async () => {
+    // Name and logo follow the dashboard; the colour does not. A widget with no
+    // colour of its own takes the shipped colour, so a pale dashboard accent
+    // (2026-10-03) never reaches a customer's website.
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
 
     const widgetId = await t.run(async (ctx) => {
@@ -235,7 +239,7 @@ describe("Widget Authorization", () => {
 
     await expect(t.query(api.widgets.getWidgetById, { widgetId })).resolves.toMatchObject({
       name: "Website Bot",
-      themePrimaryColor: "#123456",
+      themePrimaryColor: DEFAULT_SETTINGS.brandColorHex,
       themeLogoUrl: "https://cdn.example/acme-light.png",
       themeGreeting: "Hi! How can Acme Assist help you today?",
       themePlaceholder: "Message Acme Assist...",

@@ -139,7 +139,7 @@ export default function ChatMessage({
     >
       <div className="flex items-center gap-2">
         <span className="w-[15px] h-[15px] rounded-[4px] bg-brand flex items-center justify-center flex-shrink-0">
-          <Sparkles className="w-2.5 h-2.5 text-white" />
+          <Sparkles className="w-2.5 h-2.5 text-on-brand" />
         </span>
         <span className="text-[9px] font-medium uppercase tracking-[0.2em] text-muted">
           {settings.platformName}

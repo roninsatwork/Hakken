@@ -130,7 +130,7 @@ export default function MaintenanceScriptDetailPage() {
             type="button"
             onClick={() => setIsConfirmOpen(true)}
             disabled={isRunning}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-[10px] text-[13px] bg-brand text-white font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-[10px] text-[13px] bg-brand text-on-brand font-medium hover:opacity-90 transition-opacity disabled:opacity-40"
           >
             {isRunning ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
             {t("runScript")}

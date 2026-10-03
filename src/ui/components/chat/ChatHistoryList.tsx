@@ -164,7 +164,7 @@ export default function ChatHistoryList() {
                       <button
                         onClick={() => handleRenameSubmit(thread._id)}
                         disabled={renameAction.isBusy()}
-                        className="w-6 h-6 rounded bg-brand flex items-center justify-center text-white active:scale-95 transition-all shadow-sm"
+                        className="w-6 h-6 rounded bg-brand flex items-center justify-center text-on-brand active:scale-95 transition-all shadow-sm"
                       >
                         {renameAction.isBusy() ? <Loader2 className="w-3 h-3 animate-spin" /> : <Check className="w-[14px] h-[14px]" />}
                       </button>

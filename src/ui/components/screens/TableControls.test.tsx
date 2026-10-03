@@ -41,6 +41,15 @@ function renderSelect(props: Partial<Parameters<typeof TableFilterSelect>[0]> = 
 }
 
 describe("TableFilterSelect", () => {
+  test("draws an active filter in grey, never the brand colour", () => {
+    // Anthony, 2026-10-03: "the filters should be grey". Orange means the
+    // page's action; a filter only narrows what is on screen.
+    const trigger = renderSelect({ value: "COLTEN CARE" });
+
+    expect(trigger).toHaveClass("bg-hover", "border-secondary/40", "text-foreground");
+    expect(trigger.className).not.toMatch(/brand/);
+  });
+
   test("opens its panel outside the bar that contains the trigger", () => {
     const trigger = renderSelect();
     fireEvent.click(trigger);

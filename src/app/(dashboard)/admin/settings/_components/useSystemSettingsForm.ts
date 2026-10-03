@@ -20,6 +20,7 @@ export const AESTHETICS_SETTINGS_FIELDS = [
   "bodyFontFamily",
   "headingSizeGlobal",
   "brandColorHex",
+  "lightBrandColorHex",
   "darkBg", "darkCardBg", "darkSidebarBg", "darkFg", "darkCardFg", "darkMuted", "darkMutedFg",
   "darkBorder", "darkSuccess", "darkDestructive", "darkWarning", "darkInfo", "darkRing",
   "lightBg", "lightCardBg", "lightSidebarBg", "lightFg", "lightCardFg", "lightMuted", "lightMutedFg",
@@ -89,6 +90,9 @@ export function useSystemSettingsForm(fields: SettingsFieldList) {
       headingFontFamily: normalizeFontKey(currentSettings.headingFontFamily),
       bodyFontFamily: normalizeFontKey(currentSettings.bodyFontFamily),
       headingSizeGlobal: currentSettings.headingSizeGlobal || "1.5rem",
+      // Light mode paints the one brand colour until it has its own, so the
+      // box shows that rather than an empty swatch.
+      lightBrandColorHex: currentSettings.lightBrandColorHex || currentSettings.brandColorHex,
 
       darkBg: currentSettings.darkBg || "#222224",
       darkCardBg: currentSettings.darkCardBg || "#2C2C2E",

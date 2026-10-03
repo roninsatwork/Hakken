@@ -101,7 +101,7 @@ export function NotificationBell() {
         <Bell className="w-[18px] h-[18px]" />
         {/* Absent at zero on purpose. */}
         {count > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-brand text-white text-[10px] font-semibold leading-4 text-center">
+          <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-brand text-on-brand text-[10px] font-semibold leading-4 text-center">
             {countLabel}
           </span>
         )}

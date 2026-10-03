@@ -258,7 +258,7 @@ export default function EditSchedulePage() {
                   <WriteButton
                     type="button"
                     onClick={() => updateFormData({ workflowId: "" })}
-                    className="px-4 py-2 rounded-[8px] bg-brand/20 text-brand text-[11px] font-bold tracking-widest uppercase hover:bg-brand hover:text-white transition-all"
+                    className="px-4 py-2 rounded-[8px] bg-brand/20 text-brand text-[11px] font-bold tracking-widest uppercase hover:bg-brand hover:text-on-brand transition-all"
                   >
                     {t('fields.workflow.change')}
                   </WriteButton>

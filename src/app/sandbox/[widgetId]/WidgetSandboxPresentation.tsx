@@ -18,7 +18,7 @@ export default function WidgetSandboxPresentation({
       <header className={`sticky top-0 w-full h-16 bg-white/80 dark:bg-black/50 backdrop-blur-md border-b border-black/5 dark:border-white/5 ${headerLayer} px-8 flex items-center justify-between`}>
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 bg-brand rounded-[8px] flex items-center justify-center shadow-md">
-            <Cpu className="w-4 h-4 text-white" />
+            <Cpu className="w-4 h-4 text-on-brand" />
           </div>
           <span className="font-bold text-[15px] tracking-tight">AcmeCorp System</span>
         </div>

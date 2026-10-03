@@ -21,12 +21,17 @@ import { cn } from "@/src/ui/lib/utils";
  * three places at once is that it was written out three times.
  *
  * `chip` draws the same dropdown as a compact filter that names itself —
- * "Position" until a choice is made, then "Position: 1–3" in the brand tint —
- * and is as wide as its words rather than its longest option, so a search box
+ * "Position" until a choice is made, then "Position: 1–3", the label dim and
+ * the choice in full white behind a lighter border — and is as wide as its words rather than its longest option, so a search box
  * and four filters share one row (Anthony, 2026-09-26, showing Ahrefs'
  * Organic keywords: four dropdowns had wrapped onto a second line). The
  * native select still does the work, laid invisibly over the chip, so the
  * keyboard, the screen reader and the phone's own picker all behave as before.
+ *
+ * A chosen chip is grey, never the brand colour (Anthony, 2026-10-03: "the
+ * filters should be grey", everywhere, user frontend and admin). Orange means
+ * the page's action; a filter only narrows what is on screen. The words say
+ * it is on, so nobody needs to tell a colour apart to see it.
  */
 export function Select({
   id,
@@ -63,7 +68,7 @@ export function Select({
   selectClassName?: string;
   /**
    * Draw it as a compact chip: `label` is what it says, and `choice` — the
-   * chosen option's words, or nothing — follows the label in the brand tint.
+   * chosen option's words, or nothing — follows the label, in grey.
    * `icon` sits before the words.
    */
   chip?: { label: string; choice?: string | null; icon?: ReactNode };
@@ -75,7 +80,7 @@ export function Select({
       <div
         className={cn(
           "relative inline-flex h-[38px] items-center gap-1.5 whitespace-nowrap rounded-[10px] border px-3 text-[13px] transition-colors focus-within:border-brand/50",
-          chosen ? "border-brand/30 bg-brand/15 text-brand" : "border-border-dim bg-background text-foreground hover:bg-hover/40",
+          chosen ? "border-secondary/40 bg-hover text-foreground" : "border-border-dim bg-background text-foreground hover:bg-hover/40",
           disabled ? "opacity-60" : "",
           className,
         )}
@@ -83,8 +88,10 @@ export function Select({
         {chip.icon}
         {/* Hidden from a screen reader, which reads the select's own name and value instead. */}
         {/* Cut short with "…" when the chip is given a width to keep to. */}
-        <span aria-hidden="true" className="min-w-0 truncate">{chosen ? `${chip.label}: ${chip.choice}` : chip.label}</span>
-        <ChevronDown className={cn("pointer-events-none h-4 w-4", chosen ? "text-brand" : "text-muted")} aria-hidden="true" />
+        <span aria-hidden="true" className="min-w-0 truncate">
+          {chosen ? <><span className="text-secondary">{chip.label}:</span> {chip.choice}</> : chip.label}
+        </span>
+        <ChevronDown className={cn("pointer-events-none h-4 w-4", chosen ? "text-foreground" : "text-muted")} aria-hidden="true" />
         <select
           id={id}
           value={value}

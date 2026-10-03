@@ -151,7 +151,7 @@ export function MoneyViewScreen({
             <WriteButton
               onClick={() => void saveAssumptions()}
               disabled={isSaving}
-              className="px-3.5 py-1.5 rounded-[9px] bg-brand text-white text-[12px] font-medium disabled:opacity-40"
+              className="px-3.5 py-1.5 rounded-[9px] bg-brand text-on-brand text-[12px] font-medium disabled:opacity-40"
             >
               {isSaving ? t("assumptions.saving") : t("assumptions.save")}
             </WriteButton>

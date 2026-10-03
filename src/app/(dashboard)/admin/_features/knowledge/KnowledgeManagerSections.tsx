@@ -327,7 +327,7 @@ export function KnowledgeTabSwitcher({
         <button
           key={tab}
           onClick={() => onTabChange(tab)}
-          className={`px-8 py-2 text-[13px] font-medium rounded-md transition-colors ${activeTab === tab ? "bg-brand text-white shadow-sm" : "text-secondary hover:text-foreground"}`}
+          className={`px-8 py-2 text-[13px] font-medium rounded-md transition-colors ${activeTab === tab ? "bg-brand text-on-brand shadow-sm" : "text-secondary hover:text-foreground"}`}
         >
           {label}
         </button>

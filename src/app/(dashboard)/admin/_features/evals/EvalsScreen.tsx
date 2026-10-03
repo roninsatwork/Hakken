@@ -225,7 +225,7 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
                 type="button"
                 onClick={openBatchDialog}
                 disabled={batchAction.isBusy() || runnableCount === 0}
-                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-9 shrink-0 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-on-brand transition-colors hover:bg-brand/90 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {batchAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                 {t("runEvals")}
@@ -278,7 +278,7 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
                 <span className="flex items-center gap-2 shrink-0">
                   <WriteButton
                     onClick={() => void handleDecideProposed(draft.caseId, true)}
-                    className="px-3 py-1 rounded-[8px] bg-brand text-white text-[12px] font-medium hover:opacity-90 transition-opacity"
+                    className="px-3 py-1 rounded-[8px] bg-brand text-on-brand text-[12px] font-medium hover:opacity-90 transition-opacity"
                   >
                     {t("proposed.approve")}
                   </WriteButton>
@@ -308,7 +308,7 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
               onClick={() => setResult(option.value)}
               className={`px-3 py-1.5 rounded-[9px] text-[12px] font-medium transition-colors ${
                 result === option.value
-                  ? "bg-brand text-white"
+                  ? "bg-brand text-on-brand"
                   : "text-secondary hover:text-foreground"
               }`}
             >
@@ -336,7 +336,7 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
                     type="button"
                     onClick={handleAddStarters}
                     disabled={starterAction.isBusy()}
-                    className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white transition-colors hover:bg-brand/90 disabled:opacity-50"
+                    className="inline-flex h-9 items-center justify-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-on-brand transition-colors hover:bg-brand/90 disabled:opacity-50"
                   >
                     {starterAction.isBusy() ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                     {t("empty.addStarters")}

@@ -294,6 +294,7 @@ const FIELD_WORDS: Record<string, string> = {
   // time.
   platformName: "Platform name",
   brandColorHex: "Brand colour",
+  lightBrandColorHex: "Brand colour (light mode)",
   logoUrlLight: "Logo (light)",
   logoUrlDark: "Logo (dark)",
   emailSenderName: "Email sender name",

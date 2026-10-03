@@ -158,7 +158,7 @@ export default function CompanyOverviewContent({
           <WriteButton
             onClick={handleSave}
             disabled={isSaving || isPristine || !nameVal.trim()}
-            className="flex items-center gap-2 px-6 py-2.5 rounded-[12px] bg-brand text-white font-bold tracking-wide hover:bg-brand/90 transition-all text-[13px] disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_4px_14px_rgba(var(--brand-rgb),0.2)]"
+            className="flex items-center gap-2 px-6 py-2.5 rounded-[12px] bg-brand text-on-brand font-bold tracking-wide hover:bg-brand/90 transition-all text-[13px] disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_4px_14px_rgba(var(--brand-rgb),0.2)]"
           >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
             {t("saveProfile")}

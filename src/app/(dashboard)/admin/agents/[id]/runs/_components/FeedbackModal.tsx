@@ -104,7 +104,7 @@ export function FeedbackModal({
                 onClick={() => onDraftChange({ ...draft, rating })}
                 className={`px-3 py-2.5 rounded-[8px] border text-[13px] font-medium flex items-center justify-center gap-2 transition-all ${
                   draft.rating === rating
-                    ? "bg-brand text-white border-brand"
+                    ? "bg-brand text-on-brand border-brand"
                     : "bg-white/[0.02] text-secondary border-border-dim hover:text-foreground hover:bg-white/[0.05]"
                 }`}
               >
@@ -163,7 +163,7 @@ export function FeedbackModal({
               type="button"
               onClick={handleSubmit}
               disabled={action.isBusy()}
-              className="px-5 py-2.5 rounded-[8px] bg-brand text-white text-[13px] font-medium hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2"
+              className="px-5 py-2.5 rounded-[8px] bg-brand text-on-brand text-[13px] font-medium hover:opacity-90 transition-all disabled:opacity-50 flex items-center gap-2"
             >
               {action.isBusy() ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageSquare className="w-4 h-4" />}
               {t("save")}

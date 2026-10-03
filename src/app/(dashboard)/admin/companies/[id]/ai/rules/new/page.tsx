@@ -140,7 +140,7 @@ export default function NewCompanyRulePage() {
         {/* Instruction Block */}
         <section className="flex flex-col gap-3 flex-1">
            <div className="flex items-center gap-3">
-             <div className="w-5 h-5 rounded-full bg-brand text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">4</div>
+             <div className="w-5 h-5 rounded-full bg-brand text-on-brand text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">4</div>
              <span className="text-foreground text-[14px] font-bold tracking-wide">{t("sectionInstruction")}</span>
            </div>
 

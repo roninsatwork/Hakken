@@ -70,7 +70,7 @@ export default function ConnectionsPage() {
           <WriteButton
             onClick={() => void check()}
             disabled={isChecking}
-            className="flex items-center gap-2 px-4 py-2 rounded-[10px] bg-brand text-white text-[13px] font-medium disabled:opacity-40 transition-opacity"
+            className="flex items-center gap-2 px-4 py-2 rounded-[10px] bg-brand text-on-brand text-[13px] font-medium disabled:opacity-40 transition-opacity"
           >
             {isChecking ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             {isChecking ? t("checking") : t("checkNow")}

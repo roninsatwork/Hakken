@@ -4264,8 +4264,9 @@
         "destructive": "Errore / Elimina",
         "focusRing": "Contorno Focus",
         "brandOrigin": "Origine Brand",
-        "brandOriginSub": "L'accento principale dell'app dashboard e il colore predefinito del widget di chat.",
+        "brandOriginSub": "L'accento principale dell'app dashboard, con un colore proprio per la modalità chiara. I widget di chat mantengono il loro colore.",
         "brandColor": "Colore Accento Brand",
+        "brandColorLight": "Colore Accento Brand, modalità chiara",
         "scope": "Si applica all'app dashboard. Il sito pubblico, la schermata di accesso e le email hanno design fissi propri.",
         "headingFontSub": "Usato dai titoli di pagine e pannelli.",
         "bodyFontSub": "Usato da tutto il resto del testo dell'app.",
@@ -4288,7 +4289,8 @@
         "info": "Info",
         "infoSub": "In corso: lavori attivi e indicatori di attività.",
         "focusRingSub": "Il contorno dell'elemento con il focus da tastiera. Adottato schermata per schermata.",
-        "brandColorSub": "Pulsanti, link, evidenziazioni e bagliori.",
+        "brandColorSub": "Modalità scura: pulsanti, link, evidenziazioni e bagliori. Il testo sopra diventa scuro quando il colore è troppo chiaro per il bianco.",
+        "brandColorLightSub": "Lo stesso sulle pagine bianche della modalità chiara. Scegli qui un colore più scuro se quello della modalità scura è chiaro.",
         "reset": "Ripristina"
       },
       "economics": {

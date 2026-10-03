@@ -333,7 +333,7 @@ export default function CompanyAiSkillsPage() {
               type="button"
               onClick={handleImportGlobalSkill}
               disabled={selectedGlobalSkillIds.length === 0 || action.isBusy()}
-              className="flex h-10 items-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-white hover:opacity-90 disabled:opacity-50"
+              className="flex h-10 items-center gap-2 rounded-[8px] bg-brand px-4 text-[13px] font-semibold text-on-brand hover:opacity-90 disabled:opacity-50"
             >
               {action.isBusy() && <Loader2 className="h-4 w-4 animate-spin" />}
               {selectedGlobalSkillIds.length > 1
@@ -392,8 +392,8 @@ function SurfaceToggle({
         }`}
       >
         <span
-          className={`absolute top-[2px] h-3.5 w-3.5 rounded-full bg-white transition-[left] ${
-            isEnabled ? "left-[16px]" : "left-[2px]"
+          className={`absolute top-[2px] h-3.5 w-3.5 rounded-full transition-[left] ${
+            isEnabled ? "left-[16px] bg-on-brand" : "left-[2px] bg-white"
           }`}
         />
       </WriteButton>

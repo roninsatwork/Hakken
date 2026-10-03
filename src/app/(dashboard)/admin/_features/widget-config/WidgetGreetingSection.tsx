@@ -47,8 +47,8 @@ export function WidgetGreetingSection({
               }`}
             >
               <div
-                className={`h-4 w-4 rounded-full bg-white transition-transform ${
-                  enableGreeting ? "translate-x-5" : "translate-x-0"
+                className={`h-4 w-4 rounded-full transition-transform ${
+                  enableGreeting ? "translate-x-5 bg-on-brand" : "translate-x-0 bg-white"
                 }`}
               />
             </div>

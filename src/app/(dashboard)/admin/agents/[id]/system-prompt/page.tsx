@@ -136,7 +136,7 @@ export default function AgentSystemPromptPage() {
           agent can be run at all. Behaviour is refinement on top of it. */}
       <section className="flex flex-col gap-3">
         <div className="flex items-center gap-3">
-          <div className="w-5 h-5 rounded-full bg-brand text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">1</div>
+          <div className="w-5 h-5 rounded-full bg-brand text-on-brand text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">1</div>
           <span className="text-foreground text-[14px] font-bold tracking-wide">{t("sections.job.title")}</span>
         </div>
 
@@ -157,7 +157,7 @@ export default function AgentSystemPromptPage() {
       <section className="flex flex-col gap-6 flex-1 min-h-[50vh] h-full relative">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-5 h-5 rounded-full bg-brand text-white text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">2</div>
+            <div className="w-5 h-5 rounded-full bg-brand text-on-brand text-[10px] flex items-center justify-center font-bold shadow-md shadow-brand/20">2</div>
             <span className="text-foreground text-[14px] font-bold tracking-wide">{t("sections.editor.title")}</span>
           </div>
 

@@ -21,6 +21,10 @@
      differ from the token on purpose: `--color-brand: var(--color-brand, …)`
      is a self-referential cycle and its fallback can never fire. */
   --color-brand: var(--brand, #ff5a1f);
+  /* Words on a solid brand surface (`bg-brand text-on-brand`). White, until
+     SystemSettingsContext finds the brand colour too pale for it and writes
+     --on-brand dark (2026-10-03). Never `text-white` on `bg-brand`. */
+  --color-on-brand: var(--on-brand, #ffffff);
   --color-success: var(--success-src, #10b981);
   --color-destructive: var(--destructive-src, #ef4444);
   /* The two status tones the app renders constantly but never had tokens
