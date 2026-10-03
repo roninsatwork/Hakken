@@ -59,6 +59,12 @@ type CompactListProps<Row> = {
    * where lines would be louder than the content.
    */
   dividers?: "rule" | "none";
+  /**
+   * `tight` for a few rows beside a chart, flush with the panel's own title —
+   * Search Console's "Where the clicks came from", drawn that way and signed
+   * off (2026-10-03). `regular` everywhere else.
+   */
+  density?: "regular" | "tight";
   /** Only for a list wide enough to need scrolling — most of these are not. */
   minWidthClassName?: string;
   className?: string;
@@ -67,6 +73,9 @@ type CompactListProps<Row> = {
 const HEADER_ROW = "text-[11px] uppercase tracking-[0.08em] text-muted";
 const HEADER_CELL = "font-medium px-4 py-1.5";
 const CELL = "px-4 py-2.5";
+// Flush with the panel at both ends, and half the row height.
+const HEADER_CELL_TIGHT = "font-medium px-2 pb-2 first:pl-0 last:pr-0";
+const CELL_TIGHT = "px-2 py-1.5 first:pl-0 last:pr-0";
 
 export function CompactList<Row>({
   rows,
@@ -75,6 +84,7 @@ export function CompactList<Row>({
   empty,
   loading,
   dividers = "rule",
+  density = "regular",
   minWidthClassName = "",
   className = "",
 }: CompactListProps<Row>) {
@@ -98,7 +108,7 @@ export function CompactList<Row>({
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={[HEADER_CELL, column.align === "right" ? "text-right" : "", column.className ?? ""]
+                  className={[density === "tight" ? HEADER_CELL_TIGHT : HEADER_CELL, column.align === "right" ? "text-right" : "", column.className ?? ""]
                     .filter(Boolean)
                     .join(" ")}
                 >
@@ -117,7 +127,7 @@ export function CompactList<Row>({
               {columns.map((column) => (
                 <td
                   key={column.key}
-                  className={[CELL, column.align === "right" ? "text-right" : "", column.className ?? ""]
+                  className={[density === "tight" ? CELL_TIGHT : CELL, column.align === "right" ? "text-right" : "", column.className ?? ""]
                     .filter(Boolean)
                     .join(" ")}
                 >

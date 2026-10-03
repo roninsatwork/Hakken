@@ -118,6 +118,20 @@ describe("CompactList", () => {
     expect(screen.queryByText("No line items")).not.toBeInTheDocument();
   });
 
+  it("lines its headings up over their own columns", () => {
+    render(<CompactList rows={LINES} columns={COLUMNS} rowKey={(l) => l.id} empty="Nothing" />);
+
+    expect(screen.getByText("Value")).toHaveClass("px-4");
+    expect(screen.getByText("£120")).toHaveClass("px-4");
+  });
+
+  it("draws a tight list flush with its panel, at half the row height", () => {
+    render(<CompactList rows={LINES} columns={COLUMNS} rowKey={(l) => l.id} empty="Nothing" density="tight" />);
+
+    expect(screen.getByText("£120")).toHaveClass("py-1.5", "first:pl-0", "last:pr-0");
+    expect(screen.getByText("Value")).toHaveClass("first:pl-0", "last:pr-0");
+  });
+
   it("right-aligns a column in heading and body alike", () => {
     render(<CompactList rows={LINES} columns={COLUMNS} rowKey={(l) => l.id} empty="Nothing" />);
 

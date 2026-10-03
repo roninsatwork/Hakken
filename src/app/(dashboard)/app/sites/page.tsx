@@ -226,9 +226,9 @@ export default function SitesPage() {
                 row.rankedUp === null && row.rankedDown === null ? dash : (
                   <span className="flex flex-col text-[12px]">
                     <span>
-                      <Change by={row.rankedUp ?? 0} />
+                      <Change by={row.rankedUp ?? 0} arrow="up" />
                       <span className="text-muted"> · </span>
-                      <Change by={-(row.rankedDown ?? 0)} />
+                      <Change by={row.rankedDown ?? 0} arrow="down" />
                     </span>
                     {row.movesAmongHeld !== null ? <span className="text-[11px] text-muted">{t("amongHeld", { count: formatNumber(row.movesAmongHeld) })}</span> : null}
                   </span>

@@ -15,15 +15,24 @@ import { cn } from "@/src/ui/lib/utils";
  * places risen (before − now, so a smaller position number is up). `isNew`
  * for a row with nothing before it; `same` writes "The same" instead of a
  * dash for no move; `format` writes the number.
+ *
+ * `arrow` is for a count of things that went one way — "▲ 3" searches rose,
+ * "▼ 0" fell — rather than one move: it always writes its arrow and number,
+ * greyed when the count is none, so "nothing moved" never reads as "not known".
  */
-export function Change({ by, kind = "count", isNew = false, same = false, format = defaultFormat }: {
+export function Change({ by, kind = "count", isNew = false, same = false, arrow, format = defaultFormat }: {
   by: number | null;
   kind?: "count" | "places";
   isNew?: boolean;
   same?: boolean;
+  arrow?: "up" | "down";
   format?: (value: number) => string;
 }) {
   const t = useTranslations("ui.change");
+  if (arrow && by !== null) {
+    const tone = by === 0 ? "text-muted" : arrow === "up" ? "text-success" : "text-destructive";
+    return <span className={cn("whitespace-nowrap font-mono text-[12px]", tone)}>{arrow === "up" ? "▲" : "▼"} {format(Math.abs(by))}</span>;
+  }
   if (isNew) return <span className="whitespace-nowrap text-[12px] text-success">{t("new")}</span>;
   if (by === null || Number.isNaN(by)) return <span className="text-muted">–</span>;
   const still = kind === "places" ? Math.abs(by) < 0.05 : by === 0;

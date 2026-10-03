@@ -17,6 +17,7 @@ export function SearchConsoleSplitList({ heading, rows, name }: { heading: strin
   return (
     <CompactList
       rows={rows}
+      density="tight"
       rowKey={(row) => row.key}
       empty={t("record.noClicks")}
       loading={<span className="block h-16 animate-pulse rounded-lg bg-sidebar/30" aria-busy="true" />}

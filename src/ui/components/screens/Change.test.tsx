@@ -43,6 +43,14 @@ describe("Change", () => {
     expect(screen.getByText("–")).toBeInTheDocument();
   });
 
+  it("counts what went one way with its arrow, greyed when none did", () => {
+    const { rerender } = render(<Change by={3} arrow="up" />);
+    expect(screen.getByText("▲ 3")).toHaveClass("text-success");
+
+    rerender(<Change by={0} arrow="down" />);
+    expect(screen.getByText("▼ 0")).toHaveClass("text-muted");
+  });
+
   it("calls a row with nothing before it new", () => {
     render(<Change by={5} isNew />);
 
