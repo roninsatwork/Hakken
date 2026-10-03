@@ -102,7 +102,9 @@ function formatDay(day: string, locale = "en-GB") {
   return date.toLocaleDateString(locale, { day: "numeric", month: "short", timeZone: "UTC" });
 }
 
-function ChartCard({ title, description, children }: {
+// The dashboards' own chart card — a larger title over a description — named
+// apart from the kit's `ChartCard`, which Sites and Search Console use (2026-10-03).
+function DashboardChartCard({ title, description, children }: {
   title: string;
   description: string;
   children: ReactNode;
@@ -245,7 +247,7 @@ export default function CompanyDashboardPage() {
       ) : null}
 
       {engagement ? (
-        <ChartCard
+        <DashboardChartCard
           title={t("charts.signInsTitle")}
           description={t("charts.signInsDescription", { days: engagement.daysBack })}
         >
@@ -293,11 +295,11 @@ export default function CompanyDashboardPage() {
             </ResponsiveContainer>
           </div>
           <ChartLegend items={SIGN_IN_BANDS.map((band) => ({ label: tBands(band.labelKey), fill: band.fill }))} />
-        </ChartCard>
+        </DashboardChartCard>
       ) : null}
 
       {engagement ? (
-        <ChartCard
+        <DashboardChartCard
           title={t("charts.askingTitle")}
           description={t("charts.askingDescription", { platformName, days: engagement.daysBack })}
         >
@@ -331,7 +333,7 @@ export default function CompanyDashboardPage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
-        </ChartCard>
+        </DashboardChartCard>
       ) : null}
 
       <section className="flex flex-col gap-3">

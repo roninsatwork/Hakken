@@ -11,6 +11,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
+import { dollars } from "@/src/app/(dashboard)/admin/companies/[id]/websites/money";
 
 /**
  * What every client costs to serve, most expensive first.
@@ -58,8 +59,8 @@ export default function SeoCostsPage() {
         <p className="max-w-3xl text-[13px] text-secondary">
           {costs
             ? t("platformTotal", {
-              paid: costs.paidUsd.toFixed(2),
-              saved: costs.reusedValueUsd.toFixed(2),
+              paid: dollars(costs.paidUsd),
+              saved: dollars(costs.reusedValueUsd),
             })
             : t("loading")}
         </p>
@@ -108,7 +109,7 @@ export default function SeoCostsPage() {
             cell: (row) => (
               // The figure a price has to clear, so it reads first and loudest.
               <span className="font-mono text-[13px] text-foreground">
-                ${row.standaloneUsd.toFixed(2)}
+                {dollars(row.standaloneUsd)}
               </span>
             ),
           },
@@ -118,7 +119,7 @@ export default function SeoCostsPage() {
             align: "right",
             cell: (row) => (
               <span className="font-mono text-[12px] text-secondary">
-                ${row.paidUsd.toFixed(2)}
+                {dollars(row.paidUsd)}
               </span>
             ),
           },
@@ -128,7 +129,7 @@ export default function SeoCostsPage() {
             align: "right",
             cell: (row) => (
               <span className="font-mono text-[12px] text-success">
-                ${row.reusedValueUsd.toFixed(2)}
+                {dollars(row.reusedValueUsd)}
               </span>
             ),
           },

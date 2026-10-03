@@ -10,6 +10,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/src/ui/components/screens/Button";
 import { Field } from "@/src/ui/components/screens/Field";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
+import { SettingsCard } from "@/src/ui/components/screens/SettingsCard";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { MAX_BRAND_NAMES } from "@/convex/utils/websiteBrands";
 
@@ -93,11 +94,8 @@ export function HoldBrandNames({
   };
 
   return (
-    <div className="flex flex-col gap-4 rounded-[12px] border border-border-dim bg-card/40 p-5">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">{t("title")}</h2>
-        <p className="max-w-3xl text-[13px] text-secondary">{t("subtitle")}</p>
-      </div>
+    <SettingsCard title={t("title")}>
+      <p className="max-w-2xl text-[12px] leading-relaxed text-secondary">{t("subtitle")}</p>
 
       <div className="flex flex-col gap-2">
         {draft.map((row, index) => (
@@ -168,6 +166,6 @@ export function HoldBrandNames({
       </div>
 
       <SaveError>{error}</SaveError>
-    </div>
+    </SettingsCard>
   );
 }

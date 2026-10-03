@@ -5,16 +5,17 @@ import { Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { BANDS } from "@/convex/utils/searchConsoleViews";
+import { Change } from "@/src/ui/components/screens/Change";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
 import { SITE_SERIES_COLOURS } from "../../../sites/_components/SiteCharts";
-import { SiteFigure } from "../../../sites/_components/SiteFigure";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { SiteGainLossChart } from "../../../sites/_components/SiteGainLossChart";
 import { datedRow } from "../../../sites/_components/datedRows";
 import { shiftDay } from "../../../sites/_components/siteRange";
-import { SiteTableBar } from "../../../sites/_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatDay, formatNumber, formatShortDay, toCsv } from "../../../sites/_components/siteFormat";
 import { useSiteListPage } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
@@ -77,12 +78,12 @@ export default function SearchConsoleNewLostPage() {
       <PageHeader icon={<Sparkles className="h-5 w-5 text-brand" />} title={t("newLost.title")} description={t("newLost.description")} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <SiteFigure label={t("newLost.newKeywords")} value={counts ? formatNumber(counts.newKeywords) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
-            <SiteFigure label={t("newLost.lostKeywords")} value={counts ? formatNumber(counts.lostKeywords) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
-            <SiteFigure label={t("newLost.newPages")} value={counts ? formatNumber(counts.newPages) : "…"} detail={<span className="text-secondary">{t("newLost.firstTime")}</span>} />
-            <SiteFigure label={t("newLost.lostPages")} value={counts ? formatNumber(counts.lostPages) : "…"} detail={<span className="text-secondary">{t("newLost.notIn14")}</span>} />
-          </div>
+          <FigureRow>
+            <Figure label={t("newLost.newKeywords")} value={counts ? formatNumber(counts.newKeywords) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
+            <Figure label={t("newLost.lostKeywords")} value={counts ? formatNumber(counts.lostKeywords) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
+            <Figure label={t("newLost.newPages")} value={counts ? formatNumber(counts.newPages) : "…"} detail={<span className="text-secondary">{t("newLost.firstTime")}</span>} />
+            <Figure label={t("newLost.lostPages")} value={counts ? formatNumber(counts.lostPages) : "…"} detail={<span className="text-secondary">{t("newLost.notIn14")}</span>} />
+          </FigureRow>
           {list.result?.watchedFrom && list.result.watchedFrom > range.from ? (
             <p className="text-[12px] text-muted">{t("newLost.watchedFrom", { day: formatDay(list.result.watchedFrom) })}</p>
           ) : null}
@@ -130,7 +131,7 @@ export default function SearchConsoleNewLostPage() {
                 </Select>
               </>
             }
-            cardHeader={<SiteTableBar footer={list.footer} noun="keywords" />}
+            cardHeader={<TableBar footer={list.footer} noun="keywords" />}
             sort={order.tableSort}
             empty={{ icon: <Sparkles className="h-8 w-8 text-muted/30" />, label: term || what || band ? t("table.noMatch") : t("table.empty") }}
             footer={list.footer}
@@ -146,9 +147,8 @@ export default function SearchConsoleNewLostPage() {
                 key: "status",
                 header: t("table.status"),
                 sortable: true,
-                cell: (row) => (row.status === "new"
-                  ? <span className="whitespace-nowrap text-[13px] text-success">▲ {t("newLost.new")}</span>
-                  : <span className="whitespace-nowrap text-[13px] text-destructive">▼ {t("newLost.lostWord")}</span>),
+                // Up for a keyword new in the dates, down for one lost, each written as its word.
+                cell: (row) => <Change by={row.status === "new" ? 1 : -1} format={() => t(row.status === "new" ? "newLost.new" : "newLost.lostWord")} />,
               },
               { key: "when", header: t("table.when"), sortable: true, cell: (row) => <span className="whitespace-nowrap text-[12px] text-secondary">{formatShortDay(row.when)}</span> },
               { key: "clicks", header: t("table.clicks"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.clicks)}</span> },

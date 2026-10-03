@@ -65,7 +65,7 @@ type CompactListProps<Row> = {
 };
 
 const HEADER_ROW = "text-[11px] uppercase tracking-[0.08em] text-muted";
-const HEADER_CELL = "font-medium py-1.5";
+const HEADER_CELL = "font-medium px-4 py-1.5";
 const CELL = "px-4 py-2.5";
 
 export function CompactList<Row>({

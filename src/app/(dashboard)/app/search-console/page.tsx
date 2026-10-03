@@ -14,7 +14,7 @@ import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { formatDateTime } from "@/src/lib/dates";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { formatNumber } from "../sites/_components/siteFormat";
-import { SiteTableBar } from "../sites/_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { ListDownload } from "../sites/_components/SiteDownloads";
 import { useSitePager } from "../sites/_components/useSitePagedTable";
 import { sharedSiteQuery, useSiteSearch } from "../sites/_components/useSiteParam";
@@ -77,7 +77,7 @@ export default function SearchConsolePage() {
           minWidthClassName="min-w-[860px]"
           search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
           cardHeader={
-            <SiteTableBar
+            <TableBar
               footer={paged.footer}
               noun="websites"
               actions={
@@ -96,7 +96,7 @@ export default function SearchConsolePage() {
               }
             >
               <span className="text-[12px] text-secondary">{t("period")}</span>
-            </SiteTableBar>
+            </TableBar>
           }
           empty={{ icon: <SearchCheck className="h-8 w-8 text-muted/30" />, label: settled ? t("noMatch") : t("empty") }}
           footer={paged.footer}

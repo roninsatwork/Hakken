@@ -8,7 +8,7 @@ import type { api } from "@/convex/_generated/api";
 import { Button } from "@/src/ui/components/screens/Button";
 import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { SiteTableBar, type SiteTableNoun } from "../../sites/_components/SiteTableBar";
+import { TableBar, type TableNoun } from "@/src/ui/components/screens/TableBar";
 import { ResultKindSwitch, SearchConsoleGate } from "./SearchConsoleNotices";
 import { SearchConsoleChips, SearchConsoleDownload, type ChipId, type ListRow, type useSearchConsoleList } from "./SearchConsoleTables";
 
@@ -19,7 +19,7 @@ export type ListTableSpec = {
   list: ReturnType<typeof useSearchConsoleList>;
   columns: DataTableColumn<ListRow>[];
   chips: readonly ChipId[];
-  noun: SiteTableNoun;
+  noun: TableNoun;
   searchPlaceholder: string;
   /** Where a row opens; none for a table whose rows open nothing. */
   rowHref?: (row: ListRow) => string;
@@ -84,14 +84,14 @@ export function SearchConsoleListScreen({
             search={{ value: list.search, onChange: list.setSearch, placeholder: table.searchPlaceholder }}
             filters={table.chips.length > 0 ? <SearchConsoleChips chips={table.chips} /> : undefined}
             cardHeader={
-              <SiteTableBar
+              <TableBar
                 footer={list.table.footer}
                 noun={table.noun}
                 actions={list.live ? undefined : <SearchConsoleDownload ask={list.download} headers={table.download.map((entry) => entry.header)} fields={table.download.map((entry) => entry.field)} />}
               >
                 {table.beside}
                 {list.live ? <span className="text-[12px] text-secondary">{t("table.asked")}</span> : null}
-              </SiteTableBar>
+              </TableBar>
             }
             sort={list.order.tableSort}
             rowClassName={(row) => (row.tracked ? "bg-brand/5" : "")}

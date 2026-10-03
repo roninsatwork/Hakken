@@ -1512,9 +1512,6 @@
         "questionsEmpty": "None yet. Add the questions your customers ask ChatGPT and the others.",
         "rivalsEmpty": "None yet. Add the sites you compete with.",
         "notCheckedYet": "Not checked yet.",
-        "seeSearches": "See the searches",
-        "seeAnswers": "See the answers",
-        "seeCompetitors": "See competitors",
         "ownLists": "These searches and questions are this company's own: no other company watching {host} can see them.",
         "editLists": "Add or change them under What we track",
         "parts": {
@@ -1543,8 +1540,6 @@
         "positionColumn": "Position",
         "notCheckedYet": "Not checked yet",
         "notOnPage": "Not in the top 100",
-        "up": "up",
-        "down": "down",
         "verdictColumn": "How it's doing",
         "verdicts": {
           "NOT_CHECKED": "Not checked yet",
@@ -1717,7 +1712,8 @@
         "subtitle": "How often {host} is collected, and from where. Anything left to follow the company keeps the company’s schedule.",
         "subtitleCompetitor": "Which of the company’s own sites {host} is watched against, and so when it is collected.",
         "record": "Who else watches {host}: its shared website record"
-      }
+      },
+      "notFoundTitle": "Website not found"
     },
     "companyDataCollection": {
       "collectNow": {
@@ -2046,7 +2042,8 @@
       "tabs": {
         "watchers": "Watched by"
       },
-      "factsMovedNotice": "Each company sets its own names, business profile and competitors for this website, on its own screen for it (Companies → the company → Websites → the website → Profile). Nothing here is shared between them."
+      "factsMovedNotice": "Each company sets its own names, business profile and competitors for this website, on its own screen for it (Companies → the company → Websites → the website → Profile). Nothing here is shared between them.",
+      "notFoundDescription": "It may have been deleted, or the link is out of date."
     },
     "workflows": {
       "title": "Workflows",
@@ -5522,7 +5519,6 @@
       "reused": "{count} answered by data already held",
       "failed": "{count} failed",
       "runStarted": "Started {when} · {trigger}",
-      "runCost": "${cost}",
       "linesTitle": "What this run asked for",
       "linesCapped": "Showing the first 200.",
       "noLines": "This run asked for nothing.",
@@ -5600,13 +5596,14 @@
       "outLong": "Out for {hours, plural, one {# hour} other {# hours}}, not answered yet",
       "lastTry": "Last try: {said}",
       "tooLarge": "Too large to keep, so nothing was filed",
-      "rowsLeftOff": "{count, plural, one {# row} other {# rows}} left off to fit"
+      "rowsLeftOff": "{count, plural, one {# row} other {# rows}} left off to fit",
+      "notFoundTitle": "Run not found"
     },
     "seoCosts": {
       "title": "Cost to serve",
       "subtitle": "What each client costs in DataForSEO spend over the last 30 days, most expensive first. Never seen by a customer.",
       "companiesTitle": "By company · last 30 days",
-      "platformTotal": "${paid} spent in the last 30 days, with ${saved} more served from data already held.",
+      "platformTotal": "{paid} spent in the last 30 days, with {saved} more served from data already held.",
       "loading": "Adding it up.",
       "searchPlaceholder": "Search by client...",
       "empty": "Nothing has been collected for any client yet.",
@@ -8379,6 +8376,47 @@
       "startDate": "Start Date",
       "endDateOptional": "End Date (Optional)",
       "applyRange": "Apply Range"
+    },
+    "tableBar": {
+      "keywords": "{count, plural, =1 {# keyword} other {# keywords}}",
+      "searches": "{count, plural, =1 {# search} other {# searches}}",
+      "pages": "{count, plural, =1 {# page} other {# pages}}",
+      "websites": "{count, plural, =1 {# website} other {# websites}}",
+      "linkingWebsites": "{count, plural, =1 {# linking website} other {# linking websites}}",
+      "links": "{count, plural, =1 {# link} other {# links}}",
+      "anchors": "{count, plural, =1 {# anchor} other {# anchors}}",
+      "addresses": "{count, plural, =1 {# address} other {# addresses}}",
+      "results": "{count, plural, =1 {# result} other {# results}}",
+      "answers": "{count, plural, =1 {# answer} other {# answers}}",
+      "queries": "{count, plural, =1 {# fan-out query} other {# fan-out queries}}",
+      "problems": "{count, plural, =1 {# problem} other {# problems}}",
+      "sections": "{count, plural, =1 {# section} other {# sections}}",
+      "checks": "{count, plural, =1 {# check} other {# checks}}",
+      "weeks": "{count, plural, =1 {# week} other {# weeks}}",
+      "groups": "{count, plural, =1 {# group} other {# groups}}",
+      "adverts": "{count, plural, =1 {# advert} other {# adverts}}",
+      "questionsAndSearches": "{count, plural, =1 {# question or search} other {# questions and searches}}",
+      "days": "{count, plural, =1 {# day} other {# days}}",
+      "months": "{count, plural, =1 {# month} other {# months}}",
+      "folders": "{count, plural, =1 {# folder} other {# folders}}",
+      "countries": "{count, plural, =1 {# country} other {# countries}}",
+      "devices": "{count, plural, =1 {# device} other {# devices}}",
+      "angles": "{count, plural, =1 {# topic} other {# topics}}",
+      "updates": "{count, plural, =1 {# update} other {# updates}}",
+      "positions": "{count, plural, =1 {# position} other {# positions}}",
+      "kinds": "{count, plural, =1 {# kind} other {# kinds}}"
+    },
+    "chart": {
+      "download": "Download",
+      "png": "Picture (PNG)",
+      "svg": "Sharp picture (SVG)",
+      "csv": "Numbers (CSV)",
+      "notEnough": "Charts fill in as more checks run. Nothing has been recorded for these dates yet."
+    },
+    "change": {
+      "new": "New",
+      "same": "The same",
+      "places": "{places} places"
     }
   },
   "agenticTesting": {
@@ -8829,42 +8867,6 @@
       "vs": "Compare with {day}",
       "chipPrevious": "vs the check before",
       "chipDay": "vs {day}"
-    },
-    "tableCounts": {
-      "keywords": "{count, plural, =1 {# keyword} other {# keywords}}",
-      "searches": "{count, plural, =1 {# search} other {# searches}}",
-      "pages": "{count, plural, =1 {# page} other {# pages}}",
-      "websites": "{count, plural, =1 {# website} other {# websites}}",
-      "linkingWebsites": "{count, plural, =1 {# linking website} other {# linking websites}}",
-      "links": "{count, plural, =1 {# link} other {# links}}",
-      "anchors": "{count, plural, =1 {# anchor} other {# anchors}}",
-      "addresses": "{count, plural, =1 {# address} other {# addresses}}",
-      "results": "{count, plural, =1 {# result} other {# results}}",
-      "answers": "{count, plural, =1 {# answer} other {# answers}}",
-      "queries": "{count, plural, =1 {# fan-out query} other {# fan-out queries}}",
-      "problems": "{count, plural, =1 {# problem} other {# problems}}",
-      "sections": "{count, plural, =1 {# section} other {# sections}}",
-      "checks": "{count, plural, =1 {# check} other {# checks}}",
-      "weeks": "{count, plural, =1 {# week} other {# weeks}}",
-      "groups": "{count, plural, =1 {# group} other {# groups}}",
-      "adverts": "{count, plural, =1 {# advert} other {# adverts}}",
-      "questionsAndSearches": "{count, plural, =1 {# question or search} other {# questions and searches}}",
-      "days": "{count, plural, =1 {# day} other {# days}}",
-      "months": "{count, plural, =1 {# month} other {# months}}",
-      "folders": "{count, plural, =1 {# folder} other {# folders}}",
-      "countries": "{count, plural, =1 {# country} other {# countries}}",
-      "devices": "{count, plural, =1 {# device} other {# devices}}",
-      "angles": "{count, plural, =1 {# topic} other {# topics}}",
-      "updates": "{count, plural, =1 {# update} other {# updates}}",
-      "positions": "{count, plural, =1 {# position} other {# positions}}",
-      "kinds": "{count, plural, =1 {# kind} other {# kinds}}"
-    },
-    "chart": {
-      "download": "Download",
-      "png": "Picture (PNG)",
-      "svg": "Sharp picture (SVG)",
-      "csv": "Numbers (CSV)",
-      "notEnough": "Charts fill in as more checks run. Nothing has been recorded for these dates yet."
     },
     "googleUpdates": {
       "legend": "Google update",
@@ -10613,10 +10615,6 @@
       "impressions": "Impressions",
       "ctr": "Click-through rate",
       "position": "Average position",
-      "download": "Download",
-      "png": "Picture (PNG)",
-      "svg": "Drawing (SVG)",
-      "csv": "Spreadsheet (CSV)",
       "day": "Day",
       "nothing": "Nothing was shown in these dates.",
       "week": "Week"
@@ -10658,7 +10656,6 @@
       "ctr": "CTR",
       "position": "Position",
       "share": "Share of clicks",
-      "new": "New",
       "versus": "Change against the {days} days before",
       "noVersus": "No change shown: the days before aren't held",
       "preparing": "Adding these dates up. The list appears as soon as it's ready.",
@@ -10677,8 +10674,6 @@
       "topKeyword": "Top keyword",
       "yourPages": "Your pages",
       "asked": "Asked of Google for these dates",
-      "same": "The same",
-      "places": "{places} places",
       "band": "Band",
       "brand": "Brand",
       "dates": "Dates",
@@ -10797,7 +10792,8 @@
       "disconnectedOn": "Disconnected on {day}",
       "keptTo": "The figures to {day} are still here. Nothing new comes in until it's connected again.",
       "keptNone": "Nothing new comes in until it's connected again.",
-      "historyKept": "From {day}. Days are kept for 90 days, then as weeks; after 12 months, as months."
+      "historyKept": "From {day}. Days are kept for 90 days, then as weeks; after 12 months, as months.",
+      "disconnectTitle": "Disconnect Search Console?"
     },
     "keywords": {
       "title": "Keywords",
@@ -10964,7 +10960,8 @@
       "kind": "Kind",
       "count": "How many",
       "pagesLine": "{count, plural, =1 {# page} other {{rows} pages}} ({share}) · {clicks} of clicks",
-      "keywordsLine": "{count, plural, =1 {# keyword} other {{rows} keywords}} ({share}) · {clicks} of clicks"
+      "keywordsLine": "{count, plural, =1 {# keyword} other {{rows} keywords}} ({share}) · {clicks} of clicks",
+      "readoutShare": "{what} ({share} of all)"
     },
     "brand": {
       "title": "Brand and non-brand",

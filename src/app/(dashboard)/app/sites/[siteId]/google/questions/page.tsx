@@ -11,7 +11,7 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { CUT_COLUMN, RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../_components/useSite";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
@@ -83,7 +83,7 @@ export default function SiteQuestionsPage() {
             </Select>
           </>
         }
-        cardHeader={<SiteTableBar footer={pager.footer} noun="questionsAndSearches" actions={<ListDownload fileName={"questions-people-ask"} rows={sorted} columns={[{ header: t("columns.text"), value: (row) => row.text }, { header: t("columns.kind"), value: (row) => t(`kinds.${row.kind}`) }, { header: t("columns.from"), value: (row) => row.searches.join("; ") }, { header: t("columns.lastChecked"), value: (row) => row.day }]} />} />}
+        cardHeader={<TableBar footer={pager.footer} noun="questionsAndSearches" actions={<ListDownload fileName={"questions-people-ask"} rows={sorted} columns={[{ header: t("columns.text"), value: (row) => row.text }, { header: t("columns.kind"), value: (row) => t(`kinds.${row.kind}`) }, { header: t("columns.from"), value: (row) => row.searches.join("; ") }, { header: t("columns.lastChecked"), value: (row) => row.day }]} />} />}
         empty={{ icon: <MessageCircleQuestion className="h-8 w-8 text-muted/30" />, label: term || kind || from ? t("noMatch") : t("empty") }}
         footer={pager.footer}
         sort={tableSort}

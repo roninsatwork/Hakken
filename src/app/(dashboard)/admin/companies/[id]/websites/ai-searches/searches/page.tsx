@@ -3,12 +3,11 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
-import { Plus, Search, Trash2 } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { Button } from "@/src/ui/components/screens/Button";
 import { Field } from "@/src/ui/components/screens/Field";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
@@ -18,6 +17,7 @@ import { useAdminAction } from "@/src/hooks/useAdminAction";
 import useDebounce from "@/src/hooks/useDebounce";
 import { RemoveSearchDialog, type SearchToRemove } from "../../site/[companyWebsiteId]/RemoveSearchDialog";
 import { WebsitePicker, chosenWebsite, useAiLists } from "../_components/AiLists";
+import { AddBar } from "../../_components/AddBar";
 
 /**
  * Google searches, for All websites: every search the company checks on
@@ -71,30 +71,27 @@ export default function CompanyTrackedSearchesPage() {
         description={ts("description")}
       />
 
-      <div className="flex flex-col gap-3 rounded-[12px] border border-border-dim bg-card/40 p-4">
-        <div className="flex flex-wrap items-end gap-2">
-          <Field
-            id="company-search"
-            label={ts("addLabel")}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder={ts("addPlaceholder")}
-            wrapperClassName="flex-1 min-w-[18rem]"
-          />
-          <WebsitePicker id="company-search-website" value={website?.companyWebsiteId ?? ""} onChange={setSite} websites={counts?.websites ?? []} />
-          <Button
-            variant="quiet"
-            className="px-3 py-2 text-[12px]"
-            disabled={!website || action.isBusy("add") || draft.trim().length === 0}
-            onClick={() => void handleAdd()}
-          >
-            <Plus className="mr-1 inline h-3.5 w-3.5" />
-            {ts("add")}
-          </Button>
-        </div>
-        {website ? <span className="text-[11px] text-muted">{ts("limit", { count: website.everydayKeywords })}</span> : null}
-        <SaveError>{error}</SaveError>
-      </div>
+      <AddBar
+        label={ts("add")}
+        disabled={!website || action.isBusy("add") || draft.trim().length === 0}
+        onAdd={() => void handleAdd()}
+        below={
+          <>
+            {website ? <span className="text-[11px] text-muted">{ts("limit", { count: website.everydayKeywords })}</span> : null}
+            <SaveError>{error}</SaveError>
+          </>
+        }
+      >
+        <Field
+          id="company-search"
+          label={ts("addLabel")}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder={ts("addPlaceholder")}
+          wrapperClassName="flex-1 min-w-[18rem]"
+        />
+        <WebsitePicker id="company-search-website" value={website?.companyWebsiteId ?? ""} onChange={setSite} websites={counts?.websites ?? []} />
+      </AddBar>
 
       {searches?.cut ? <p className="text-[12px] text-muted">{t("cut", { count: searches.totalCount })}</p> : null}
 

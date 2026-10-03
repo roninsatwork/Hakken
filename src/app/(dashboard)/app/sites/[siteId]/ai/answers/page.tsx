@@ -9,13 +9,14 @@ import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import type { Doc } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { Notice } from "@/src/ui/components/screens/Notice";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { HakkenMarkdown } from "@/src/ui/components/chat/HakkenMarkdown";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
 import { CheckedCell, RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../_components/useSite";
@@ -89,12 +90,12 @@ export default function SiteAnswersPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<MessageSquareQuote className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <p className="rounded-xl border border-border-dim bg-card/40 px-4 py-3 text-[13px] text-secondary">{t("keptFrom")}</p>
+      <Notice>{t("keptFrom")}</Notice>
 
       {missing ? (
         <HakkenEmptyState icon={MessageSquareQuote} title={t("questionMissingTitle")} description={t("questionMissingBody")} />
       ) : catalogue !== undefined && questions.length === 0 ? (
-        <p className="rounded-2xl border border-border-dim bg-card/40 px-5 py-10 text-center text-[13px] text-secondary">{t("noQuestions")}</p>
+        <HakkenEmptyState icon={MessageSquareQuote} title={t("title")} description={t("noQuestions")} />
       ) : (
         <DataTable
           rows={catalogue === undefined ? undefined : table.pageRows}
@@ -113,7 +114,7 @@ export default function SiteAnswersPage() {
               </Select>
             </>
           }
-          cardHeader={<SiteTableBar footer={table.footer} noun="answers" actions={<TableDownload siteId={siteId} kind="answers" sort={order.tableSort} />} />}
+          cardHeader={<TableBar footer={table.footer} noun="answers" actions={<TableDownload siteId={siteId} kind="answers" sort={order.tableSort} />} />}
           empty={{ icon: <MessageSquareQuote className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}
           footer={table.footer}
           sort={order.tableSort}

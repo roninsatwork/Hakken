@@ -10,7 +10,7 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
@@ -89,7 +89,7 @@ export default function SiteOrganicCompetitorsPage() {
           </Select>
           </>
         }
-        cardHeader={<SiteTableBar footer={pager.footer} noun="websites" actions={<ListDownload fileName={"organic-competitors"} rows={sorted} columns={[{ header: t("columns.website"), value: (row) => row.host }, { header: t("columns.kind"), value: (row) => t(`kinds.${row.kind ?? "OTHER"}`) }, { header: t("columns.shared"), value: (row) => row.intersections }, { header: t("columns.position"), value: (row) => row.averagePosition }, { header: t("columns.traffic"), value: (row) => row.estimatedTraffic }, { header: t("columns.domainKeywords"), value: (row) => row.domainKeywords }, { header: t("columns.domainTraffic"), value: (row) => (row.domainTraffic === null ? null : Math.round(row.domainTraffic)) }, { header: tc("lastChecked"), value: (row) => row.day }]} />} />}
+        cardHeader={<TableBar footer={pager.footer} noun="websites" actions={<ListDownload fileName={"organic-competitors"} rows={sorted} columns={[{ header: t("columns.website"), value: (row) => row.host }, { header: t("columns.kind"), value: (row) => t(`kinds.${row.kind ?? "OTHER"}`) }, { header: t("columns.shared"), value: (row) => row.intersections }, { header: t("columns.position"), value: (row) => row.averagePosition }, { header: t("columns.traffic"), value: (row) => row.estimatedTraffic }, { header: t("columns.domainKeywords"), value: (row) => row.domainKeywords }, { header: t("columns.domainTraffic"), value: (row) => (row.domainTraffic === null ? null : Math.round(row.domainTraffic)) }, { header: tc("lastChecked"), value: (row) => row.day }]} />} />}
         empty={{ icon: <Radar className="h-8 w-8 text-muted/30" />, label: term || kind ? t("noMatch") : t("empty") }}
         footer={pager.footer}
         sort={tableSort}

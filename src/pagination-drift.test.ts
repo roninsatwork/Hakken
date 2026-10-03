@@ -131,7 +131,7 @@ describe('Pagination And Shared Table Drift', () => {
       const contents = fs.readFileSync(filePath, 'utf8');
       const where = relativePath(filePath);
       const drift: string[] = [];
-      if (!/cardHeader=\{\s*<SiteTableBar\b/.test(contents)) drift.push(`${where}: a table without the Sites top bar`);
+      if (!/cardHeader=\{\s*<TableBar\b/.test(contents)) drift.push(`${where}: a table without the top bar (the kit's TableBar)`);
       const selects = contents.match(/<Select\b[^>]*/g) ?? [];
       if (selects.some((tag) => !/\bchip=/.test(tag))) drift.push(`${where}: a full-width dropdown where a compact button goes`);
       // The download sits in the bar, never on the filter row: the row's own

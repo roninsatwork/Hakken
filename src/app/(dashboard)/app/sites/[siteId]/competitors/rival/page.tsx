@@ -7,13 +7,14 @@ import { useTranslations } from "next-intl";
 import { Swords } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { Change } from "@/src/ui/components/screens/Change";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { CUT_COLUMN, RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
-import { SiteFigure } from "../../../_components/SiteFigure";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
+import { Figure } from "@/src/ui/components/screens/Figure";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
@@ -109,10 +110,10 @@ export default function SiteRivalPage() {
       />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <SiteFigure label={t("figures.traffic")} value={formatNumber(theirs?.estimatedTraffic)} detail={yoursLine(yours?.estimatedTraffic)} />
-        <SiteFigure label={t("figures.keywords")} value={formatNumber(theirs?.keywords)} detail={yoursLine(yours?.keywords)} />
-        <SiteFigure label={t("figures.linking")} value={formatNumber(theirs?.referringDomains)} detail={yoursLine(yours?.referringDomains)} />
-        <SiteFigure label={t("figures.rank")} value={formatNumber(theirs?.domainRank)} detail={yoursLine(yours?.domainRank)} />
+        <Figure label={t("figures.traffic")} value={formatNumber(theirs?.estimatedTraffic)} detail={yoursLine(yours?.estimatedTraffic)} />
+        <Figure label={t("figures.keywords")} value={formatNumber(theirs?.keywords)} detail={yoursLine(yours?.keywords)} />
+        <Figure label={t("figures.linking")} value={formatNumber(theirs?.referringDomains)} detail={yoursLine(yours?.referringDomains)} />
+        <Figure label={t("figures.rank")} value={formatNumber(theirs?.domainRank)} detail={yoursLine(yours?.domainRank)} />
       </div>
 
       <DataTable
@@ -127,7 +128,7 @@ export default function SiteRivalPage() {
             onChange={setLead}
           />
         }
-        cardHeader={<SiteTableBar
+        cardHeader={<TableBar
           footer={table.footer}
           noun="searches"
           title={t("tableTitle")}
@@ -156,11 +157,7 @@ export default function SiteRivalPage() {
             align: "right",
             sortable: true,
             // The arrow says who is ahead, without the colour: up is this site.
-            cell: (row) => {
-              const gap = row.theirPosition - row.yourPosition;
-              if (gap === 0) return <span className="text-muted">–</span>;
-              return <span className={`font-mono text-[12px] ${gap > 0 ? "text-success" : "text-destructive"}`}>{gap > 0 ? `▲ ${gap}` : `▼ ${-gap}`}</span>;
-            },
+            cell: (row) => <Change by={row.theirPosition - row.yourPosition} />,
           },
           { key: "volume", header: t("columns.volume"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.volume)}</span> },
           {

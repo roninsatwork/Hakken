@@ -5,6 +5,7 @@ import { Globe } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Header from "@/src/ui/components/layout/Header";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { Notice } from "@/src/ui/components/screens/Notice";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
@@ -94,9 +95,7 @@ export default function SearchConsoleSiteLayout({ children }: { children: React.
         />
 
         <ConnectionBanner status={status} siteId={siteId} />
-        {connection?.clearing ? (
-          <p className="rounded-xl border border-border-dim px-4 py-3 text-[13px] text-secondary">{t("clearing")}</p>
-        ) : null}
+        {connection?.clearing ? <Notice>{t("clearing")}</Notice> : null}
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
           <aside className="lg:sticky lg:top-4 lg:self-start">

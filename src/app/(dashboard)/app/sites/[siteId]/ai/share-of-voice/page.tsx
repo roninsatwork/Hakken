@@ -8,9 +8,10 @@ import { PieChart } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { Notice } from "@/src/ui/components/screens/Notice";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { toCsv } from "../../../_components/siteFormat";
 import { RecordLinkCell } from "../../../_components/SiteCells";
@@ -96,7 +97,7 @@ export default function SiteShareOfVoicePage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<PieChart className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
-      <p className="rounded-xl border border-border-dim bg-card/40 px-4 py-3 text-[13px] text-secondary">{t("note")}</p>
+      <Notice>{t("note")}</Notice>
 
       <SiteChartCard
         dated={false}
@@ -119,7 +120,7 @@ export default function SiteShareOfVoicePage() {
         rowClickable={(row) => mentionsHref(row.host) !== null}
         minWidthClassName="min-w-[640px]"
         search={{ value: search, onChange: setSearch, placeholder: tc("findWebsite") }}
-        cardHeader={<SiteTableBar footer={paged.footer} noun="websites" actions={<ListDownload fileName={`${site?.host ?? "site"}-share-of-voice`} rows={sorted} columns={[{ header: t("columns.website"), value: (row) => row.host }, ...(engines ?? []).map((engine) => ({ header: engineLabel(engine.engine), value: (row: (typeof sites)[number]) => share(engine, row.websiteId) })), { header: t("columns.all"), value: (row) => overall(row.websiteId) }]} />} />}
+        cardHeader={<TableBar footer={paged.footer} noun="websites" actions={<ListDownload fileName={`${site?.host ?? "site"}-share-of-voice`} rows={sorted} columns={[{ header: t("columns.website"), value: (row) => row.host }, ...(engines ?? []).map((engine) => ({ header: engineLabel(engine.engine), value: (row: (typeof sites)[number]) => share(engine, row.websiteId) })), { header: t("columns.all"), value: (row) => overall(row.websiteId) }]} />} />}
         empty={{ icon: <PieChart className="h-8 w-8 text-muted/30" />, label: lower ? tc("noWebsiteMatch") : t("empty") }}
         footer={paged.footer}
         sort={tableSort}

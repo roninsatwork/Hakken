@@ -5,6 +5,7 @@ import { Globe, Search, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Header from "@/src/ui/components/layout/Header";
 import { BackRow, DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { Notice } from "@/src/ui/components/screens/Notice";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { formatDateTime } from "@/src/lib/dates";
@@ -100,9 +101,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
         />
 
         {!site.checked && (
-          <p className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-[13px] text-secondary">
-            {t("notCheckedYet")}
-          </p>
+          <Notice tone="warning">{t("notCheckedYet")}</Notice>
         )}
 
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
@@ -121,7 +120,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               <>
                 {/* Everything on the list paused: what came in before stays, and nothing new is coming. */}
                 {reading.needs && setupPaused(reading, site.counts) ? (
-                  <p className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-[13px] text-secondary">{ts(`${reading.needs}.paused`)}</p>
+                  <Notice tone="warning">{ts(`${reading.needs}.paused`)}</Notice>
                 ) : null}
                 {children}
               </>

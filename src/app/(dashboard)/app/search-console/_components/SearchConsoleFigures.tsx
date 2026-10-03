@@ -3,12 +3,43 @@
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
-import { SiteFigure } from "../../sites/_components/SiteFigure";
+import { ChangeLine } from "@/src/ui/components/screens/Change";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { formatPosition, formatRate } from "./searchConsoleFormat";
 import { useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
 
 type Figures = { clicks: number; impressions: number; ctr: number; position: number };
+
+/**
+ * A figure against the same number of days before, as every Search Console
+ * hero box writes it: up 14 on the 30 days before (with its arrow), the same
+ * as the 30 days before, or that those days are not held yet. The sentence
+ * starts with its arrow; its colour is the kit's one rule (`ChangeLine`).
+ *
+ * `by` is now − before, or null when the days before are not held; `write`
+ * writes the size of the move (a count, a per cent, points); a move smaller
+ * than `still` reads as no move. `neutral` for a figure whose rise is not
+ * good news; `isNew` for one Google did not show at all in the days before —
+ * a rise from nothing.
+ */
+export function DaysBeforeChange({ by, days, write, neutral = false, still = 0, isNew = false }: {
+  by: number | null;
+  days: number;
+  write: (change: number) => string;
+  neutral?: boolean;
+  still?: number;
+  isNew?: boolean;
+}) {
+  const t = useTranslations("searchConsole.figures");
+  if (isNew) return <ChangeLine by={1}>{t("new")}</ChangeLine>;
+  if (by === null) return <ChangeLine by={null}>{t("noBefore")}</ChangeLine>;
+  if (by === 0 || Math.abs(by) < still) return <ChangeLine by={0}>{t("same", { days })}</ChangeLine>;
+  return <ChangeLine by={by} neutral={neutral}>{t(by > 0 ? "up" : "down", { change: write(Math.abs(by)), days })}</ChangeLine>;
+}
+
+/** A move too small to be one, after the sums of rates. */
+const ROUNDING = 1e-9;
 
 /**
  * The four headline figures of a website, a search or a page — clicks,
@@ -24,46 +55,47 @@ export function SearchConsoleFigures({ totals, previous, days, isNew = false }: 
   isNew?: boolean;
 }) {
   const t = useTranslations("searchConsole.figures");
-  const tone = (change: number) => (change > 0 ? "text-success" : change < 0 ? "text-destructive" : "text-muted");
-  const against = (now: number, before: number | undefined, write: (change: number) => string) => {
-    if (isNew) return <span className="text-success">{t("new")}</span>;
-    if (before === undefined) return <span className="text-muted">{t("noBefore")}</span>;
-    const change = now - before;
-    if (Math.abs(change) < 1e-9) return <span className="text-muted">{t("same", { days })}</span>;
-    return <span className={tone(change)}>{t(change > 0 ? "up" : "down", { change: write(Math.abs(change)), days })}</span>;
-  };
-  const growth = (now: number, before: number) => (change: number) => (before > 0 ? formatRate(change / before) : formatNumber(change));
+  const growth = (before: number) => (change: number) => (before > 0 ? formatRate(change / before) : formatNumber(change));
+  const against = (now: number, before: number | undefined) => (before === undefined ? null : now - before);
   const positionChange = () => {
-    if (isNew) return <span className="text-success">{t("new")}</span>;
-    if (!previous || !totals) return <span className="text-muted">{t("positionNote")}</span>;
+    if (isNew) return <ChangeLine by={1}>{t("new")}</ChangeLine>;
+    if (!previous || !totals) return <ChangeLine by={null}>{t("positionNote")}</ChangeLine>;
     // Lower is better: the change is how many places it rose.
     const change = previous.position - totals.position;
-    if (Math.abs(change) < 0.05) return <span className="text-muted">{t("same", { days })} · {t("positionNote")}</span>;
+    if (Math.abs(change) < 0.05) return <ChangeLine by={0}>{t("same", { days })} · {t("positionNote")}</ChangeLine>;
     return (
-      <span className={tone(change)}>
+      <ChangeLine by={change}>
         {t(change > 0 ? "better" : "worse", { change: formatPosition(Math.abs(change)), days })} · {t("positionNote")}
-      </span>
+      </ChangeLine>
     );
   };
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-      <SiteFigure
+    <FigureRow>
+      <Figure
         label={t("clicks")}
         value={formatNumber(totals?.clicks ?? 0)}
-        detail={against(totals?.clicks ?? 0, previous?.clicks, growth(totals?.clicks ?? 0, previous?.clicks ?? 0))}
+        detail={<DaysBeforeChange isNew={isNew} by={against(totals?.clicks ?? 0, previous?.clicks)} days={days} still={ROUNDING} write={growth(previous?.clicks ?? 0)} />}
       />
-      <SiteFigure
+      <Figure
         label={t("impressions")}
         value={formatNumber(totals?.impressions ?? 0)}
-        detail={against(totals?.impressions ?? 0, previous?.impressions, growth(totals?.impressions ?? 0, previous?.impressions ?? 0))}
+        detail={<DaysBeforeChange isNew={isNew} by={against(totals?.impressions ?? 0, previous?.impressions)} days={days} still={ROUNDING} write={growth(previous?.impressions ?? 0)} />}
       />
-      <SiteFigure
+      <Figure
         label={t("ctr")}
         value={formatRate(totals?.ctr ?? null)}
-        detail={against((totals?.ctr ?? 0) * 100, previous ? previous.ctr * 100 : undefined, (change) => t("points", { change: formatPosition(change) }))}
+        detail={
+          <DaysBeforeChange
+            isNew={isNew}
+            by={against((totals?.ctr ?? 0) * 100, previous ? previous.ctr * 100 : undefined)}
+            days={days}
+            still={ROUNDING}
+            write={(change) => t("points", { change: formatPosition(change) })}
+          />
+        }
       />
-      <SiteFigure label={t("position")} value={formatPosition(totals?.position ?? null)} detail={positionChange()} />
-    </div>
+      <Figure label={t("position")} value={formatPosition(totals?.position ?? null)} detail={positionChange()} />
+    </FigureRow>
   );
 }
 

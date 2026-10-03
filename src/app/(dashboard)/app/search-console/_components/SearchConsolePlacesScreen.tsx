@@ -7,7 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { Button } from "@/src/ui/components/screens/Button";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
-import { SiteTableBar } from "../../sites/_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../sites/_components/useSiteSort";
@@ -82,7 +82,7 @@ export function SearchConsolePlacesScreen({ dimension }: { dimension: "query" | 
             rows={countryPages.pageRows}
             rowKey={(row) => row.key}
             minWidthClassName="min-w-[560px]"
-            cardHeader={<SiteTableBar footer={countryPages.footer} noun="countries" />}
+            cardHeader={<TableBar footer={countryPages.footer} noun="countries" />}
             sort={countryOrder.tableSort}
             empty={{ icon: <Globe2 className="h-8 w-8 text-muted/30" />, label: problem ?? t("record.noClicks") }}
             footer={countryPages.footer}
@@ -92,7 +92,7 @@ export function SearchConsolePlacesScreen({ dimension }: { dimension: "query" | 
             rows={devicePages.pageRows}
             rowKey={(row) => row.key}
             minWidthClassName="min-w-[560px]"
-            cardHeader={<SiteTableBar footer={devicePages.footer} noun="devices" />}
+            cardHeader={<TableBar footer={devicePages.footer} noun="devices" />}
             sort={deviceOrder.tableSort}
             empty={{ icon: <MonitorSmartphone className="h-8 w-8 text-muted/30" />, label: problem ?? t("record.noClicks") }}
             footer={devicePages.footer}

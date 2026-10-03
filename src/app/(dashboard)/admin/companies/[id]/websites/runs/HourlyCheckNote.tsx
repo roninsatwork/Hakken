@@ -2,9 +2,9 @@
 
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, CheckCircle2 } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
+import { Notice } from "@/src/ui/components/screens/Notice";
 import { useRunFormat } from "./runFormat";
 
 /**
@@ -29,15 +29,11 @@ export function HourlyCheckNote() {
       : check.ok
         ? t("ok", { time: when(check.lastRanAt) })
         : t("failed", { time: when(check.lastRanAt), count: check.failuresInARow, error: check.error ?? "" });
-  const Icon = trouble ? AlertTriangle : CheckCircle2;
 
   return (
-    <div className="flex items-start gap-4 rounded-[12px] border border-border-dim/50 bg-foreground/[0.015] p-4 text-secondary">
-      <Icon className={`mt-0.5 h-4 w-4 flex-shrink-0 ${trouble ? "text-warning" : "text-success"}`} />
-      <div className="flex flex-col gap-0.5">
-        <h3 className="text-[13px] font-medium tracking-wide text-foreground">{t("title")}</h3>
-        <p className="text-[12.5px] leading-relaxed tracking-wide text-secondary">{text}</p>
-      </div>
-    </div>
+    <Notice tone={trouble ? "warning" : "info"}>
+      <span className="block text-[13px] font-medium text-foreground">{t("title")}</span>
+      <span className="block">{text}</span>
+    </Notice>
   );
 }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, type LucideIcon } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import { NAV_ACTIVE_PILL, NAV_ACTIVE_TEXT, NAV_IDLE_TEXT } from "@/src/ui/components/layout/navStyles";
 import { Button } from "@/src/ui/components/screens/Button";
@@ -19,6 +19,8 @@ export type SectionMenuItem = {
   count?: string | null;
   /** Said beside a page not built yet — "Coming soon". */
   note?: string;
+  /** The page's own icon, before its name: the websites admin's menu, whose page headers wear the same one. */
+  icon?: LucideIcon;
 };
 
 export type SectionMenuGroup = { id: string; label: string; items: SectionMenuItem[] };
@@ -38,19 +40,22 @@ export type SectionMenuGroup = { id: string; label: string; items: SectionMenuIt
  * being read always is — a menu that hid the page you are on would leave you
  * lost — and a group opened stays open while you move between pages. Typing
  * in "Jump to a page" shows every match, open or not.
+ *
+ * A short menu leaves the jump box out (no `jump`), and a menu whose pages
+ * have icons draws each before its name — both for the websites admin's menu,
+ * which drew its own copy of this until the 2026-10-03 clean-up.
  */
 export function SectionMenu({
   label,
-  jumpLabel,
-  jumpPlaceholder,
+  jump,
   groups,
   currentId,
   openAtFirst,
 }: {
   /** The menu's name, for a screen reader and the phone's drop-down. */
   label: string;
-  jumpLabel: string;
-  jumpPlaceholder: string;
+  /** The "Jump to a page" box's label and placeholder; left out, a short menu has none. */
+  jump?: { label: string; placeholder: string };
   groups: SectionMenuGroup[];
   /** The page being read. */
   currentId: string;
@@ -105,7 +110,7 @@ export function SectionMenu({
       </div>
 
       <nav aria-label={label} className="hidden flex-col gap-1 text-[13px] lg:flex">
-        <Field label={jumpLabel} labelHidden placeholder={jumpPlaceholder} value={filter} onChange={(event) => setFilter(event.target.value)} />
+        {jump ? <Field label={jump.label} labelHidden placeholder={jump.placeholder} value={filter} onChange={(event) => setFilter(event.target.value)} /> : null}
         {groups.map((group) => {
           const items = group.items.filter((item) => matches(group, item));
           if (items.length === 0) return null;
@@ -139,6 +144,7 @@ export function SectionMenu({
                       );
                     }
                     const isCurrent = item.id === currentId;
+                    const Icon = item.icon;
                     return (
                       <Link
                         key={item.id}
@@ -151,7 +157,11 @@ export function SectionMenu({
                           isCurrent ? cn(NAV_ACTIVE_PILL, NAV_ACTIVE_TEXT) : cn("border-transparent", NAV_IDLE_TEXT),
                         )}
                       >
-                        <span>{item.label}</span>
+                        <span className="flex items-center gap-2.5">
+                          {/* Never orange: that is a page's action, not where you are (`navStyles.ts`). */}
+                          {Icon ? <Icon className={cn("h-4 w-4 shrink-0", isCurrent ? "text-foreground" : "text-muted")} aria-hidden="true" /> : null}
+                          <span>{item.label}</span>
+                        </span>
                         {item.count ? <span className="text-[11px] tabular-nums text-muted">{item.count}</span> : null}
                       </Link>
                     );

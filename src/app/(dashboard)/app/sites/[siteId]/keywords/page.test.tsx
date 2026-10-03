@@ -105,7 +105,7 @@ describe("the Keywords page", () => {
     openAt();
 
     const card = screen.getByRole("table").parentElement?.parentElement as HTMLElement;
-    expect(within(card).getByText("sites.tableCounts.keywords 807")).toBeInTheDocument();
+    expect(within(card).getByText("ui.tableBar.keywords 807")).toBeInTheDocument();
     expect(within(card).getByRole("combobox", { name: "sites.compare.label" })).toBeInTheDocument();
     expect(within(card).getByText("sites.compare.chipPrevious")).toBeInTheDocument();
     expect(within(card).getByRole("button", { name: "sites.downloads.all" })).toBeInTheDocument();

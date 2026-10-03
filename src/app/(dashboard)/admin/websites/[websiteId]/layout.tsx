@@ -4,13 +4,13 @@ import { lazy, Suspense, useState, type ReactNode } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, Globe, Trash2, Users } from "lucide-react";
-import Link from "next/link";
+import { Globe, Trash2, Users } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { DetailLayout } from "@/src/ui/components/screens/DetailLayout";
-import { PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
+import { BackRow, PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
+import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { formatDateTime } from "@/src/lib/dates";
 
@@ -47,10 +47,10 @@ export default function WebsiteRecordLayout({ children }: { children: ReactNode 
   const [dialogActivated, setDialogActivated] = useState(false);
 
   if (website === undefined) {
-    return <p className="p-8 text-[13px] text-secondary">{t("loading")}</p>;
+    return <div role="status" aria-busy="true" aria-label={t("loading")} className="h-24 animate-pulse rounded-2xl bg-sidebar/30" />;
   }
   if (website === null) {
-    return <p className="p-8 text-[13px] text-destructive">{t("notFound")}</p>;
+    return <HakkenEmptyState icon={Globe} title={t("notFound")} description={t("notFoundDescription")} />;
   }
 
   const handleOpenDelete = () => {
@@ -100,14 +100,8 @@ export default function WebsiteRecordLayout({ children }: { children: ReactNode 
             <PagePrimaryAction icon={<Trash2 className="h-4 w-4" />} onClick={handleOpenDelete}>
               {t("deleteWebsite")}
             </PagePrimaryAction>
-            {/* The way back to the list, as the Companies section has one. */}
-            <Link
-              href="/admin/websites"
-              className="flex items-center gap-2 rounded-[10px] border border-border-dim/50 bg-foreground/5 px-5 py-2 text-[13px] font-medium text-foreground transition-all hover:bg-foreground/10"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              {t("back")}
-            </Link>
+            {/* The way back to the list, where the Companies section has one: the kit's quiet back row. */}
+            <BackRow label={t("back")} href="/admin/websites" />
           </>
         }
       >

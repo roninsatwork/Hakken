@@ -10,7 +10,7 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { CUT_COLUMN, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { toCsv } from "../../../_components/siteFormat";
@@ -124,7 +124,7 @@ export default function SiteAbovePage() {
           </Select>
           </>
         }
-        cardHeader={<SiteTableBar footer={pager.footer} noun="searches" actions={<ListDownload fileName={`${site?.host ?? "site"}-above-you`} rows={sorted} columns={[{ header: t("columns.search"), value: (row) => row.keyword }, { header: t("columns.position"), value: (row) => row.position }, { header: t("columns.above"), value: (row) => row.above.map((result) => `${result.position}. ${result.domain}`).join("; ") }, { header: t("columns.rivals"), value: (row) => row.rivalsAbove }, { header: t("columns.lastChecked"), value: (row) => row.day }]} />} />}
+        cardHeader={<TableBar footer={pager.footer} noun="searches" actions={<ListDownload fileName={`${site?.host ?? "site"}-above-you`} rows={sorted} columns={[{ header: t("columns.search"), value: (row) => row.keyword }, { header: t("columns.position"), value: (row) => row.position }, { header: t("columns.above"), value: (row) => row.above.map((result) => `${result.position}. ${result.domain}`).join("; ") }, { header: t("columns.rivals"), value: (row) => row.rivalsAbove }, { header: t("columns.lastChecked"), value: (row) => row.day }]} />} />}
         empty={{ icon: <ArrowUpWideNarrow className="h-8 w-8 text-muted/30" />, label: term || position ? t("noMatch") : t("empty") }}
         footer={pager.footer}
         sort={tableSort}

@@ -534,9 +534,9 @@ describe("links gained and lost, by step (4.3)", () => {
   const change = (day: string) => ({ day, newBacklinks: 3, lostBacklinks: 1, newReferringDomains: 2, lostReferringDomains: 0 });
 
   it.each([
-    ["day", "sites.backlinksNewLost.columns.day", "sites.tableCounts.days"],
-    ["week", "sites.backlinksNewLost.columns.week", "sites.tableCounts.weeks"],
-    ["month", "sites.backlinksNewLost.columns.month", "sites.tableCounts.months"],
+    ["day", "sites.backlinksNewLost.columns.day", "ui.tableBar.days"],
+    ["week", "sites.backlinksNewLost.columns.week", "ui.tableBar.weeks"],
+    ["month", "sites.backlinksNewLost.columns.month", "ui.tableBar.months"],
   ])("names a row a %s when the dates are stepped by it", (step, header, noun) => {
     openAt("/app/sites/site_1/backlinks/new-lost", `from=2026-06-01&to=2026-09-26&step=${step}`, {
       "siteLinkLists:linkChanges": [change("2026-08-01"), change("2026-09-01")],

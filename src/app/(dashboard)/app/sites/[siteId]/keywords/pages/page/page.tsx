@@ -9,12 +9,14 @@ import { api } from "@/convex/_generated/api";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { Notice } from "@/src/ui/components/screens/Notice";
 import { SettingsCard } from "@/src/ui/components/screens/SettingsCard";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
-import { CUT_COLUMN, ChangeCell, ExternalUrlCell, LinkStatusLabel, PageTypeLabel, PositionCell, RecordLinkCell } from "../../../../_components/SiteCells";
-import { SiteTableBar } from "../../../../_components/SiteTableBar";
-import { SiteFigure } from "../../../../_components/SiteFigure";
+import { Change } from "@/src/ui/components/screens/Change";
+import { CUT_COLUMN, ExternalUrlCell, LinkStatusLabel, PageTypeLabel, PositionCell, RecordLinkCell } from "../../../../_components/SiteCells";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
+import { Figure } from "@/src/ui/components/screens/Figure";
 import { SiteFacts, type SiteFact } from "../../../../_components/SiteRecordParts";
 import { formatDay, formatNumber } from "../../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
@@ -164,25 +166,25 @@ export default function SitePageRecordPage() {
       ) : (
         <>
           {!rank ? (
-            <p className="rounded-xl border border-border-dim bg-card/40 px-4 py-3 text-[13px] text-secondary">{t(partHeld ? "notInHeld" : "notRanking")}</p>
+            <Notice>{t(partHeld ? "notInHeld" : "notRanking")}</Notice>
           ) : null}
 
           {rank ? (
             <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-              <SiteFigure
+              <Figure
                 label={t("figures.keywords")}
                 value={formatNumber(rank?.keywords)}
                 detail={rank ? <span className="text-muted">{t("figures.top3", { count: formatNumber(rank.top3) })}</span> : undefined}
               />
-              <SiteFigure label={t("figures.best")} value={rank?.bestPosition ?? "–"} />
-              <SiteFigure
+              <Figure label={t("figures.best")} value={rank?.bestPosition ?? "–"} />
+              <Figure
                 label={t("figures.traffic")}
                 value={formatNumber(rank?.traffic)}
                 detail={rank?.trafficValue !== null && rank?.trafficValue !== undefined
                   ? <span className="text-muted">{t("figures.worth", { value: formatUsd(rank.trafficValue) })}</span>
                   : undefined}
               />
-              <SiteFigure
+              <Figure
                 label={t("figures.linking")}
                 value={formatNumber(rank?.referringDomains)}
                 detail={rank?.backlinks !== null && rank?.backlinks !== undefined
@@ -198,7 +200,7 @@ export default function SitePageRecordPage() {
               rows={table.pageRows}
               rowKey={(row) => row._id}
               onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
-              cardHeader={<SiteTableBar footer={table.footer} noun="keywords" title={t("keywordsTitle")} />}
+              cardHeader={<TableBar footer={table.footer} noun="keywords" title={t("keywordsTitle")} />}
               empty={{ icon: <FileText className="h-8 w-8 text-muted/30" />, label: t(partHeld ? "notInHeld" : "notRanking") }}
               footer={table.footer}
               columns={[
@@ -210,7 +212,7 @@ export default function SitePageRecordPage() {
                   cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.keyword}</RecordLinkCell>,
                 },
                 { key: "position", header: tk("columns.position"), align: "right", sortable: true, cell: (row) => <PositionCell position={row.position} /> },
-                { key: "change", header: tk("columns.change"), align: "right", sortable: true, cell: (row) => <ChangeCell change={row.change} /> },
+                { key: "change", header: tk("columns.change"), align: "right", sortable: true, cell: (row) => <Change by={row.change} /> },
                 { key: "volume", header: tk("columns.volume"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.volume)}</span> },
                 { key: "traffic", header: tk("columns.traffic"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.traffic)}</span> },
               ]}

@@ -77,19 +77,13 @@ export function formatMonth(month: string): string {
 /**
  * Places moved, as text that does not rely on colour: "▲ 3" up, "▼ 2" down.
  * The owner cannot tell red from green, so the arrow carries the meaning and
- * colour only repeats it.
+ * colour only repeats it. Text for a sentence; a cell is the kit's `Change`
+ * (this is frozen in the screen kit's `recipes` list).
  */
 export function movement(change: number): { text: string; tone: "up" | "down" | "none" } {
   if (change > 0) return { text: `▲ ${change}`, tone: "up" };
   if (change < 0) return { text: `▼ ${Math.abs(change)}`, tone: "down" };
   return { text: "–", tone: "none" };
-}
-
-/** A tone class for a movement: brand-safe tokens, never raw colours. */
-export function movementClass(tone: "up" | "down" | "none"): string {
-  if (tone === "up") return "text-success";
-  if (tone === "down") return "text-destructive";
-  return "text-muted";
 }
 
 /**

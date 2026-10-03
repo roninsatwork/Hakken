@@ -6,9 +6,10 @@ import { useTranslations } from "next-intl";
 import { Quote } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { Notice } from "@/src/ui/components/screens/Notice";
 import { SettingsCard } from "@/src/ui/components/screens/SettingsCard";
 import { LinkStatusLabel } from "../../../../_components/SiteCells";
-import { SiteFigure } from "../../../../_components/SiteFigure";
+import { Figure } from "@/src/ui/components/screens/Figure";
 import { SiteLinkList } from "../../../../_components/SiteLinkList";
 import { formatDay, formatNumber } from "../../../../_components/siteFormat";
 import { useRecordBack } from "../../../../_components/siteRecordLinks";
@@ -53,13 +54,13 @@ export default function SiteAnchorPage() {
       ) : (
         <>
           {!summary ? (
-            <p className="rounded-xl border border-border-dim bg-card/40 px-4 py-3 text-[13px] text-secondary">{t("notInList")}</p>
+            <Notice>{t("notInList")}</Notice>
           ) : (
             <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-              <SiteFigure label={t("figures.links")} value={formatNumber(summary.backlinks)} />
-              <SiteFigure label={t("figures.websites")} value={formatNumber(summary.referringDomains)} />
-              <SiteFigure label={t("figures.firstSeen")} value={formatDay(summary.firstSeen)} />
-              <SiteFigure label={t("figures.spam")} value={formatNumber(summary.spamScore)} detail={<span className="text-muted">{t("figures.spamDetail")}</span>} />
+              <Figure label={t("figures.links")} value={formatNumber(summary.backlinks)} />
+              <Figure label={t("figures.websites")} value={formatNumber(summary.referringDomains)} />
+              <Figure label={t("figures.firstSeen")} value={formatDay(summary.firstSeen)} />
+              <Figure label={t("figures.spam")} value={formatNumber(summary.spamScore)} detail={<span className="text-muted">{t("figures.spamDetail")}</span>} />
             </div>
           )}
 

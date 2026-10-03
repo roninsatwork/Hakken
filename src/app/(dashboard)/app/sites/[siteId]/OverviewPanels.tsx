@@ -4,6 +4,8 @@ import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import type { FunctionReturnType } from "convex/server";
 import type { api } from "@/convex/_generated/api";
+import { ChangeLine } from "@/src/ui/components/screens/Change";
+import { ChartCard } from "@/src/ui/components/screens/ChartCard";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
 import {
@@ -13,8 +15,8 @@ import {
   CHART_SERIES_VIOLET,
 } from "@/src/ui/components/charts/chartPalette";
 import { RecordLinkCell } from "../_components/SiteCells";
-import { SiteFigure } from "../_components/SiteFigure";
-import { formatDollars, formatNumber, movement, movementClass } from "../_components/siteFormat";
+import { Figure } from "@/src/ui/components/screens/Figure";
+import { formatDollars, formatNumber, movement } from "../_components/siteFormat";
 import { useSiteListHref, useSiteRecordHref } from "../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../_components/useSite";
 
@@ -28,12 +30,17 @@ type Extras = FunctionReturnType<typeof api.siteOverview.overviewExtras>;
  */
 const ASSISTANT_COLOURS = [CHART_SERIES_TEAL, CHART_SERIES_BLUE, CHART_SERIES_VIOLET, CHART_SERIES_ORANGE] as const;
 
-/** How far a figure moved since the day before the dates chosen, with an arrow that carries the meaning without the colour. */
-export function Change({ now, before }: { now: number | null | undefined; before: number | null | undefined }) {
+/**
+ * How far a figure moved since the day before the dates chosen, with an arrow
+ * that carries the meaning without the colour; the kit's `ChangeLine` keeps
+ * the one rule for its colour.
+ */
+function ChangeSince({ now, before }: { now: number | null | undefined; before: number | null | undefined }) {
   const t = useTranslations("sites.overview");
   if (now === null || now === undefined || before === null || before === undefined) return <span className="text-muted">{t("noComparison")}</span>;
-  const moved = movement(Math.round(now - before));
-  return <span className={movementClass(moved.tone)}>{moved.tone === "none" ? t("unchanged") : moved.text}</span>;
+  const by = Math.round(now - before);
+  const moved = movement(by);
+  return <ChangeLine by={by}>{moved.tone === "none" ? t("unchanged") : moved.text}</ChangeLine>;
 }
 
 /**
@@ -46,19 +53,18 @@ function Detail({ now, before, extra }: { now: number | null | undefined; before
   if (!comparable) return extra ? <span className="text-secondary">{extra}</span> : null;
   return (
     <>
-      <Change now={now} before={before} />
+      <ChangeSince now={now} before={before} />
       {extra ? <span className="text-secondary"> · {extra}</span> : null}
     </>
   );
 }
 
-/** One of the Overview's three headline panels: the same card as its charts, without a download. */
+/** One of the Overview's three headline panels: the kit's chart card, without a download. */
 function Panel({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-4 rounded-2xl border border-border-dim bg-card/40 p-5">
-      <h2 className="text-[14px] font-medium text-foreground">{title}</h2>
-      {children}
-    </section>
+    <ChartCard title={title}>
+      <div className="flex flex-col gap-4">{children}</div>
+    </ChartCard>
   );
 }
 
@@ -83,7 +89,7 @@ function StrengthRing({ label, value, colour, href }: { label: string; value: nu
           transform="rotate(-90 30 30)"
         />
       </svg>
-      <SiteFigure framed={false} label={label} value={value ?? "–"} href={href} detail={<span className="text-muted">{t("ofThousand")}</span>} />
+      <Figure framed={false} label={label} value={value ?? "–"} href={href} detail={<span className="text-muted">{t("ofThousand")}</span>} />
     </div>
   );
 }
@@ -118,28 +124,28 @@ export function OverviewPanels({ latest, before, extras }: { latest: Point | nul
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
       <Panel title={t("search.title")}>
         <div className="grid grid-cols-2 gap-x-4 gap-y-5">
-          <SiteFigure
+          <Figure
             framed={false}
             label={t("search.keywords")}
             value={formatNumber(keywords)}
             href={listHref("keywords")}
             detail={<Detail now={keywords} before={keywordsBefore} extra={top3 !== null ? t("search.top3", { count: formatNumber(top3) }) : undefined} />}
           />
-          <SiteFigure
+          <Figure
             framed={false}
             label={t("search.visits")}
             value={formatNumber(latest?.estimatedTraffic)}
             href={listHref("keywords/pages", { sort: "traffic" })}
             detail={<Detail now={latest?.estimatedTraffic} before={before?.estimatedTraffic} extra={latest?.trafficValue !== undefined ? t("search.worth", { value: formatDollars(latest.trafficValue) }) : undefined} />}
           />
-          <SiteFigure
+          <Figure
             framed={false}
             label={t("search.paidSearches")}
             value={formatNumber(latest?.paidKeywords)}
             href={listHref("paid/keywords")}
             detail={<Detail now={latest?.paidKeywords} before={before?.paidKeywords} />}
           />
-          <SiteFigure
+          <Figure
             framed={false}
             label={t("search.paidVisits")}
             value={formatNumber(latest?.paidTraffic)}
@@ -160,14 +166,14 @@ export function OverviewPanels({ latest, before, extras }: { latest: Point | nul
           />
         </div>
         <div className="grid grid-cols-2 gap-4 border-t border-border-dim pt-4">
-          <SiteFigure
+          <Figure
             framed={false}
             label={t("links.links")}
             value={formatNumber(latest?.backlinks)}
             href={listHref("backlinks/all", { links: "every" })}
             detail={<Detail now={latest?.backlinks} before={before?.backlinks} extra={latest?.brokenBacklinks !== undefined ? t("links.broken", { count: formatNumber(latest.brokenBacklinks) }) : undefined} />}
           />
-          <SiteFigure
+          <Figure
             framed={false}
             label={t("links.linkingWebsites")}
             value={formatNumber(latest?.referringDomains)}
@@ -178,7 +184,7 @@ export function OverviewPanels({ latest, before, extras }: { latest: Point | nul
       </Panel>
 
       <Panel title={t("ai.title")}>
-        <SiteFigure
+        <Figure
           framed={false}
           label={t("ai.overviews")}
           value={latest?.aiOverviewRefs === undefined ? "–" : t("ai.searches", { count: formatNumber(latest.aiOverviewRefs) })}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { ArrowRight } from "lucide-react";
 
+import { Meter } from "@/src/ui/components/screens/Meter";
 import { cn } from "@/src/ui/lib/utils";
 
 /**
@@ -34,7 +35,7 @@ export function PromptAllowance({
     : full
       ? t("full", { limit })
       : [t("left", { count: limit - used }), paused > 0 ? t("paused", { count: paused }) : ""].filter(Boolean).join(" ");
-  const share = limit > 0 ? Math.min(100, (used / limit) * 100) : 100;
+  const share = limit > 0 ? Math.min(1, used / limit) : 1;
 
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-b border-border-dim/60 pb-4">
@@ -47,15 +48,9 @@ export function PromptAllowance({
           <span className="font-mono text-[20px] font-semibold text-foreground">{used}</span>
           <span className="text-[13px] text-secondary">{t("of", { limit })}</span>
         </span>
-        <span
-          role="meter"
-          aria-label={t("meter")}
-          aria-valuemin={0}
-          aria-valuemax={limit}
-          aria-valuenow={used}
-          className="block h-2 w-[200px] overflow-hidden rounded-full bg-foreground/10"
-        >
-          <span className={cn("block h-full rounded-full", full ? "bg-warning" : "bg-foreground/70")} style={{ width: `${share}%` }} />
+        {/* The kit's share bar draws itself hidden from a screen reader; the meter's reading is said here. */}
+        <span role="meter" aria-label={t("meter")} aria-valuemin={0} aria-valuemax={limit} aria-valuenow={used}>
+          <Meter value={share} colour={full ? "var(--color-warning)" : undefined} />
         </span>
         <Link
           href={limitsHref}

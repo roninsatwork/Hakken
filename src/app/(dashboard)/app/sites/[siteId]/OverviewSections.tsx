@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import type { FunctionReturnType } from "convex/server";
 import type { api } from "@/convex/_generated/api";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
+import { Figure } from "@/src/ui/components/screens/Figure";
+import { Meter } from "@/src/ui/components/screens/Meter";
 import { ChartTooltipRow, ChartTooltipSurface, type ChartTooltipEntry } from "@/src/ui/components/charts/ChartTooltip";
 import {
   CHART_SERIES_BLUE,
@@ -14,6 +15,7 @@ import {
   CHART_SERIES_SLATE,
   CHART_SERIES_VIOLET,
 } from "@/src/ui/components/charts/chartPalette";
+import { KindBars } from "../../_components/KindBars";
 import { RecordLinkCell } from "../_components/SiteCells";
 import { HoverArea, useHoverReadout } from "../_components/HoverReadout";
 import { SiteChartCard } from "../_components/SiteChartCard";
@@ -76,21 +78,15 @@ function PagesByKind({ extras }: { extras: Extras | undefined }) {
   const to = useTranslations("sites.overview");
   const tr = useTranslations("sites.overview.readout");
   const tp = useTranslations("sites.common.pageTypes");
-  const router = useRouter();
   const siteId = useSiteId();
   const site = useSite();
   const listHref = useSiteListHref(siteId);
   const [showPages, setShowPages] = useState(true);
   const [showVisits, setShowVisits] = useState(true);
-  const { hover, bind } = useHoverReadout<string>();
   const pages = extras?.pages;
   const kinds = pages?.kinds ?? [];
   const visitsOf = useVisitsOf(pages?.visits ?? 0);
   const partHeld = isPartHeld(site?.coverage);
-  const pagesShare = (row: (typeof kinds)[number]) => (row.pages / Math.max(1, pages?.total ?? 1)) * 100;
-  const visitsShare = (row: (typeof kinds)[number]) => (row.visits / Math.max(1, visitsOf.of)) * 100;
-  // The bars share one scale: the largest share on show fills the track.
-  const top = Math.max(1, ...kinds.flatMap((row) => [showPages ? pagesShare(row) : 0, showVisits ? visitsShare(row) : 0]));
 
   return (
     <SiteChartCard
@@ -110,47 +106,28 @@ function PagesByKind({ extras }: { extras: Extras | undefined }) {
         </div>
       }
     >
-      <HoverArea
-        hover={hover}
-        className="flex flex-col gap-1"
-        readout={(key) => {
-          const row = kinds.find((entry) => entry.pageType === key);
-          if (!row) return null;
-          return (
-            <ChartTooltipSurface heading={tp(row.pageType)}>
-              <ChartTooltipRow colour={CHART_SERIES_BLUE} value={formatNumber(row.pages)} label={tr("pages", { count: row.pages, share: percent(row.pages, pages?.total ?? 0) })} />
-              <ChartTooltipRow colour={CHART_SERIES_ORANGE} value={formatNumber(Math.round(row.visits))} label={tr("visits", { share: percent(row.visits, visitsOf.of) })} />
-            </ChartTooltipSurface>
-          );
-        }}
+      <KindBars
+        colours={[CHART_SERIES_BLUE, CHART_SERIES_ORANGE]}
+        shown={[showPages, showVisits]}
+        rows={kinds.map((row) => ({
+          key: row.pageType,
+          label: tp(row.pageType),
+          href: listHref("keywords/pages", { type: row.pageType }),
+          shares: [row.pages / Math.max(1, pages?.total ?? 1), row.visits / Math.max(1, visitsOf.of)],
+          line: t("row", {
+            count: row.pages,
+            pagesShare: percent(row.pages, pages?.total ?? 0),
+            visitsShare: percent(row.visits, visitsOf.of),
+          }),
+          readout: [
+            { value: formatNumber(row.pages), label: tr("pages", { count: row.pages, share: percent(row.pages, pages?.total ?? 0) }) },
+            { value: formatNumber(Math.round(row.visits)), label: tr("visits", { share: percent(row.visits, visitsOf.of) }) },
+          ],
+        }))}
       >
-        {kinds.map((row) => {
-          const href = listHref("keywords/pages", { type: row.pageType });
-          return (
-            <div
-              key={row.pageType}
-              {...bind(row.pageType)}
-              onClick={() => router.push(href)}
-              className="grid cursor-pointer grid-cols-1 items-center gap-1.5 rounded-lg px-2 py-2 transition-colors hover:bg-hover md:grid-cols-[150px_minmax(0,1fr)_minmax(220px,auto)] md:gap-4"
-            >
-              <RecordLinkCell href={href}>{tp(row.pageType)}</RecordLinkCell>
-              <div className="flex flex-col gap-1" aria-hidden="true">
-                {showPages ? <span className="block h-3.5 rounded-[3px]" style={{ width: `${Math.max(0.5, (pagesShare(row) / top) * 100)}%`, background: CHART_SERIES_BLUE }} /> : null}
-                {showVisits ? <span className="block h-3.5 rounded-[3px]" style={{ width: `${Math.max(0.5, (visitsShare(row) / top) * 100)}%`, background: CHART_SERIES_ORANGE }} /> : null}
-              </div>
-              <span className="text-[12px] tabular-nums text-secondary">
-                {t("row", {
-                  count: row.pages,
-                  pagesShare: percent(row.pages, pages?.total ?? 0),
-                  visitsShare: percent(row.visits, visitsOf.of),
-                })}
-              </span>
-            </div>
-          );
-        })}
         {pages?.capped ? <p className="px-2 text-[12px] text-muted">{t("capped", { count: formatNumber(pages.total) })}</p> : null}
         {visitsOf.outside !== null ? <p className="px-2 text-[12px] text-muted">{to("outsideHeld", { share: percent(visitsOf.outside, visitsOf.of) })}</p> : null}
-      </HoverArea>
+      </KindBars>
     </SiteChartCard>
   );
 }
@@ -289,18 +266,24 @@ function BrandedSearches({ latest }: { latest: Point | null }) {
           </HoverArea>
           <div className="grid grid-cols-2 gap-5 xl:grid-cols-4">
             {GROUPS.map((group) => (
-              <div key={group.key} className="flex flex-col gap-1">
-                <span className="flex items-center gap-2 text-[12px] text-secondary">
-                  <span className="h-2 w-2 rounded-full" style={{ background: group.colour }} aria-hidden="true" />
-                  {group.intent
-                    ? <RecordLinkCell href={listHref("keywords", { intent: group.intent })} className="text-[12px] text-secondary">{t(`groups.${group.key}`)}</RecordLinkCell>
-                    : t(`groups.${group.key}`)}
-                </span>
-                <span className="text-[22px] font-semibold tabular-nums text-foreground">{percent(split[group.key].visits, total)}</span>
-                <span className="text-[12px] text-secondary">
-                  {t("row", { visits: formatNumber(split[group.key].visits), searches: formatNumber(split[group.key].searches) })}
-                </span>
-              </div>
+              // The kit's figure, inside the card; the dot beside the share is the bar's key above.
+              <Figure
+                key={group.key}
+                framed={false}
+                label={t(`groups.${group.key}`)}
+                href={group.intent ? listHref("keywords", { intent: group.intent }) : undefined}
+                value={(
+                  <span className="flex items-center gap-2">
+                    <span className="h-2 w-2 rounded-full" style={{ background: group.colour }} aria-hidden="true" />
+                    {percent(split[group.key].visits, total)}
+                  </span>
+                )}
+                detail={(
+                  <span className="text-secondary">
+                    {t("row", { visits: formatNumber(split[group.key].visits), searches: formatNumber(split[group.key].searches) })}
+                  </span>
+                )}
+              />
             ))}
           </div>
           {outside !== null ? <p className="text-[12px] text-muted">{to("outsideHeld", { share: percent(outside, total) })}</p> : null}
@@ -424,14 +407,7 @@ function Competitors({ extras }: { extras: Extras | undefined }) {
             {
               key: "overlap",
               header: t("columns.overlap"),
-              cell: (row) => {
-                const part = overlap(row);
-                return (
-                  <span className="flex h-1.5 w-40 overflow-hidden rounded-full bg-hover" aria-hidden="true">
-                    {part !== null ? <span className="block h-full" style={{ width: `${Math.min(100, part * 100)}%`, background: CHART_SERIES_BLUE }} /> : null}
-                  </span>
-                );
-              },
+              cell: (row) => <Meter value={overlap(row)} colour={CHART_SERIES_BLUE} />,
             },
             ...(traffic
               ? [

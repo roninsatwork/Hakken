@@ -9,6 +9,7 @@ import { Receipt } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { SettingsCard } from "@/src/ui/components/screens/SettingsCard";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
@@ -23,7 +24,7 @@ import {
   CHART_SERIES_VIOLET,
 } from "@/src/ui/components/charts/chartPalette";
 import { ListDownload } from "@/src/app/(dashboard)/app/sites/_components/SiteDownloads";
-import { CostFigure, dollars } from "../../CostFigure";
+import { dollars } from "../../money";
 import { RunStatus } from "../RunStatus";
 import { CloseRun } from "./CloseRun";
 import { RunAttention } from "./RunAttention";
@@ -217,29 +218,29 @@ export default function CollectionRunPage() {
 
       <RunAttention attention={report.attention ?? []} attentionTotal={report.attentionTotal ?? 0} waitingLong={data.waitingLong} caps={data.caps} />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <CostFigure
+      <FigureRow>
+        <Figure
           label={tDetail("figures.total")}
           value={dollars(totalUsd)}
-          hint={tDetail("figures.totalHint", { data: dollars(report.costUsd), ai: dollars(report.aiCostUsd) })}
+          detail={<span className="text-muted">{tDetail("figures.totalHint", { data: dollars(report.costUsd), ai: dollars(report.aiCostUsd) })}</span>}
           emphasis
         />
-        <CostFigure
+        <Figure
           label={tDetail("figures.requests")}
           value={count(report.requests)}
-          hint={tDetail("figures.requestsHint", { count: websites })}
+          detail={<span className="text-muted">{tDetail("figures.requestsHint", { count: websites })}</span>}
         />
-        <CostFigure
+        <Figure
           label={tDetail("figures.held")}
           value={count(data.reused)}
-          hint={tDetail("figures.heldHint")}
+          detail={<span className="text-muted">{tDetail("figures.heldHint")}</span>}
         />
-        <CostFigure
+        <Figure
           label={tDetail("figures.ai")}
           value={count(report.aiJudgements)}
-          hint={tDetail("figures.aiHint", { cost: dollars(report.aiCostUsd) })}
+          detail={<span className="text-muted">{tDetail("figures.aiHint", { cost: dollars(report.aiCostUsd) })}</span>}
         />
-      </div>
+      </FigureRow>
 
       <SettingsCard title={tDetail("money.title")}>
         <p className="text-[12px] text-secondary">{tDetail("money.subtitle", { total: dollars(report.costUsd) })}</p>

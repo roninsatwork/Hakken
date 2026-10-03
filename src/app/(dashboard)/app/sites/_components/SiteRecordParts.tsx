@@ -7,7 +7,7 @@ import { CompactList } from "@/src/ui/components/screens/CompactList";
  * The parts a record's own screen is built from, beyond the kit's: a list of
  * facts about the record. Shared by every record's screen (a keyword, a
  * page, …) so they read alike; a table inside one wears the Sites table's own
- * top bar (`SiteTableBar`), with its title.
+ * top bar (`TableBar`), with its title.
  */
 
 export type SiteFact = { key: string; label: ReactNode; value: ReactNode };

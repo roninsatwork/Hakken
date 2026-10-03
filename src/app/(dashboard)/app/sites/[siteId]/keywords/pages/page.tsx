@@ -9,7 +9,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { CUT_COLUMN, PageTypeLabel, RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
@@ -119,7 +119,7 @@ export default function SitePagesPage() {
             </Select>
           </>
         }
-        cardHeader={<SiteTableBar footer={table.footer} noun="pages" actions={<TableDownload siteId={siteId} kind="pages" sort={order.tableSort} />} />}
+        cardHeader={<TableBar footer={table.footer} noun="pages" actions={<TableDownload siteId={siteId} kind="pages" sort={order.tableSort} />} />}
         empty={{ icon: <FileText className="h-8 w-8 text-muted/30" />, label: term || section || pageType ? t("noMatch") : t("empty") }}
         footer={table.footer}
         sort={order.tableSort}

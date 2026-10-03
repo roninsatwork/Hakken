@@ -9,8 +9,9 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { CompareControl } from "../../_components/CompareControl";
-import { CUT_COLUMN, ChangeCell, PageLinkCell, PositionCell, RecordLinkCell } from "../../_components/SiteCells";
-import { SiteTableBar } from "../../_components/SiteTableBar";
+import { Change } from "@/src/ui/components/screens/Change";
+import { CUT_COLUMN, PageLinkCell, PositionCell, RecordLinkCell } from "../../_components/SiteCells";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { SiteChartCard } from "../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteStackedAreaChart } from "../../_components/SiteCharts";
 import { useSiteRange } from "../../_components/SiteDateRange";
@@ -180,13 +181,13 @@ export default function SiteKeywordsPage() {
           </>
         }
         cardHeader={
-          <SiteTableBar
+          <TableBar
             footer={table.footer}
             noun="keywords"
             actions={<TableDownload siteId={siteId} kind="keywords" sort={order.tableSort} />}
           >
             <CompareControl days={site?.checkDays ?? []} />
-          </SiteTableBar>
+          </TableBar>
         }
         sort={order.tableSort}
         empty={{ icon: <KeyRound className="h-8 w-8 text-muted/30" />, label: filtered ? t("noMatch") : t("empty") }}
@@ -211,10 +212,10 @@ export default function SiteKeywordsPage() {
                 // Not in that day's list says nothing of where it stood; a check that found it nowhere does.
                 if (!then?.checked) return <span className="text-[12px] text-muted">{t("notInListThatDay")}</span>;
                 if (then.position === null) return <span className="text-[12px] text-muted">{tc("notOnPageOne")}</span>;
-                return <span className="font-mono text-[12px] text-secondary">{then.position}{row.position !== null && then.comparable ? <ChangeCell change={then.position - row.position} /> : null}</span>;
+                return <span className="font-mono text-[12px] text-secondary">{then.position}{row.position !== null && then.comparable ? <Change by={then.position - row.position} /> : null}</span>;
               },
             }]
-            : [{ key: "change", header: t("columns.change"), align: "right" as const, sortable: true, cell: (row: (typeof shownRows)[number]) => <ChangeCell change={row.change} /> }]),
+            : [{ key: "change", header: t("columns.change"), align: "right" as const, sortable: true, cell: (row: (typeof shownRows)[number]) => <Change by={row.change} /> }]),
           { key: "volume", header: t("columns.volume"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.volume)}</span> },
           {
             key: "cpc",

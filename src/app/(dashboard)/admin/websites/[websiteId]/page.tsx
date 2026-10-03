@@ -4,13 +4,14 @@ import { useQuery } from "convex/react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Globe, Info, Users } from "lucide-react";
+import { Globe, Users } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { Notice } from "@/src/ui/components/screens/Notice";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { useScheduleSummary } from "@/src/app/(dashboard)/admin/_lib/useScheduleSummary";
 
 /**
@@ -47,10 +48,7 @@ export default function WebsiteWatchersPage() {
       />
 
       {/* Where the names and profile went, for anyone who looks for them here. */}
-      <div className="flex items-start gap-3 rounded-[12px] border border-border-dim bg-card/40 px-4 py-3">
-        <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
-        <p className="text-[13px] leading-relaxed text-secondary">{t("factsMovedNotice")}</p>
-      </div>
+      <Notice>{t("factsMovedNotice")}</Notice>
 
       <DataTable
         rows={website.watchers}
@@ -101,9 +99,7 @@ export default function WebsiteWatchersPage() {
             key: "type",
             header: t("typeColumn"),
             cell: (watcher) => (
-              <StatusLabel tone={watcher.relationship === "OWNED" ? "success" : "neutral"}>
-                {watcher.relationship === "OWNED" ? t("owned") : t("tracked")}
-              </StatusLabel>
+              <TagLabel>{watcher.relationship === "OWNED" ? t("owned") : t("tracked")}</TagLabel>
             ),
           },
           {

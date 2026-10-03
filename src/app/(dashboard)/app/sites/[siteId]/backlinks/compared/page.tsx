@@ -8,7 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
@@ -89,7 +89,7 @@ export default function SiteBacklinksComparedPage() {
         rowClickable={(row) => theirsHref(row) !== null}
         minWidthClassName="min-w-[640px]"
         search={{ value: search, onChange: setSearch, placeholder: tc("findWebsite") }}
-        cardHeader={<SiteTableBar footer={paged.footer} noun="websites" actions={<ListDownload fileName={`${site?.host ?? "site"}-links-compared`} rows={sorted} columns={[{ header: t("columns.website"), value: (row) => row.host }, { header: t("columns.rank"), value: (row) => row.domainRank }, { header: t("columns.backlinks"), value: (row) => row.backlinks }, { header: t("columns.referringDomains"), value: (row) => row.referringDomains }, { header: t("columns.lastChecked"), value: (row) => row.day }]} />} />}
+        cardHeader={<TableBar footer={paged.footer} noun="websites" actions={<ListDownload fileName={`${site?.host ?? "site"}-links-compared`} rows={sorted} columns={[{ header: t("columns.website"), value: (row) => row.host }, { header: t("columns.rank"), value: (row) => row.domainRank }, { header: t("columns.backlinks"), value: (row) => row.backlinks }, { header: t("columns.referringDomains"), value: (row) => row.referringDomains }, { header: t("columns.lastChecked"), value: (row) => row.day }]} />} />}
         empty={{ icon: <Scale className="h-8 w-8 text-muted/30" />, label: lower ? tc("noWebsiteMatch") : t("empty") }}
         footer={paged.footer}
         sort={tableSort}

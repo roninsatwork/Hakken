@@ -702,6 +702,59 @@ describe("the dividers rule", () => {
 });
 
 /**
+ * The kit parts made on 2026-10-03 — Figure, ChartCard, Notice, Meter,
+ * Change — each found copied by hand in three sections. A copy gives itself
+ * away by the part's own classes, or by an arrow typed into a screen.
+ */
+describe("the copied kit looks rule", () => {
+  const recipeHits = () => findHandWrittenParts().filter((offender) => offender.rule === "recipes" && offender.file === probeRelative);
+
+  it("catches each part's look copied by hand, naming the part", () => {
+    write(
+      "export const Probe = () => (\n" +
+        "  <div>\n" +
+        '    <div className="rounded-2xl border border-border-dim bg-card/40 px-5 py-4">807</div>\n' +
+        '    <section className="rounded-2xl border border-border-dim bg-card/40 p-5">chart</section>\n' +
+        '    <div className="rounded-[12px] border border-warning/30 bg-warning/5 p-4">careful</div>\n' +
+        '    <span className="h-1.5 w-40 rounded-full bg-hover" />\n' +
+        "    <span>▲ 12</span>\n" +
+        "  </div>\n" +
+        ");\n"
+    );
+
+    expect(recipeHits().map((hit) => hit.name)).toEqual(["Figure", "ChartCard", "Notice", "Meter", "Change"]);
+    expect(recipeHits()[0]).toMatchObject({ line: 3 });
+  });
+
+  it("leaves a comment that mentions an arrow, and a different padding, alone", () => {
+    write(
+      "/** Places a position rose (▲) or fell (▼). */\n" +
+        'export const Probe = () => <div className="rounded-2xl border border-border-dim bg-card/40 p-6" />;\n'
+    );
+
+    expect(recipeHits()).toEqual([]);
+  });
+
+  it("leaves a screen that takes the parts from the kit alone", () => {
+    write(
+      'import { Figure } from "@/src/ui/components/screens/Figure";\n' +
+        'import { Change } from "@/src/ui/components/screens/Change";\n' +
+        'export const Probe = () => <Figure label="Keywords" value="807" detail={<Change by={12} />} />;\n'
+    );
+
+    expect(recipeHits()).toEqual([]);
+  });
+
+  it("reports a freeze whose screen has moved onto the kit", () => {
+    write('export const Probe = () => <p>Nothing copied here.</p>;\n');
+
+    const stale = findStaleFreezes(loadFrozen({ tables: [], inputs: [], recipes: [probeRelative] }));
+
+    expect(stale).toContainEqual({ rule: "recipes", file: probeRelative, reason: "no longer hand-writes a kit part's own look" });
+  });
+});
+
+/**
  * Every pill went on 2026-09-29 (Anthony: "a give away it's AI designed"); a
  * status became a StatusLabel, a kind a TagLabel. These probes are the two ways
  * a pill would come back: drawn in a class string, or declared as a part.

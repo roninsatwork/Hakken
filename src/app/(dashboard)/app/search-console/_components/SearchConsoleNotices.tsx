@@ -4,11 +4,13 @@ import Link from "next/link";
 import { useMutation } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useTranslations } from "next-intl";
-import { AlertTriangle, ListChecks, Plug } from "lucide-react";
+import { ListChecks, Plug } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/components/screens/Button";
+import { Notice } from "@/src/ui/components/screens/Notice";
+import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { formatDate } from "@/src/lib/dates";
 import { formatDay } from "../../sites/_components/siteFormat";
 import { SiteViewSwitch } from "../../sites/_components/SiteViewSwitch";
@@ -101,20 +103,15 @@ export function ConnectionBanner({ status, siteId }: { status: SearchConsoleStat
       ? t(`problem.${connection.problem}`, { account, property: connection.property ?? "" })
       : t("problem.REVOKED", { account, property: connection.property ?? "" });
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3">
-      <div className="flex gap-3">
-        <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
-        <div className="flex flex-col gap-0.5">
-          <p className="text-[13px] font-medium text-foreground">{title}</p>
-          <p className="text-[12.5px] text-secondary">
-            {connection.newestDay ? t("keptTo", { day: formatDay(connection.newestDay) }) : t("keptNone")}
-          </p>
-        </div>
-      </div>
-      {status.canManage && status.configured ? (
+    <Notice
+      tone="warning"
+      action={status.canManage && status.configured ? (
         <Button variant="brand" disabled={busy} onClick={() => void start()}>{t("reconnect")}</Button>
       ) : null}
-    </div>
+    >
+      <span className="block font-medium text-foreground">{title}</span>
+      <span className="block">{connection.newestDay ? t("keptTo", { day: formatDay(connection.newestDay) }) : t("keptNone")}</span>
+    </Notice>
   );
 }
 
@@ -185,10 +182,5 @@ export function NothingOfKind({ from, to }: { from: string; to: string }) {
   const t = useTranslations("searchConsole");
   const [kind] = useResultKind();
   const name = t(`kinds.${kind}`);
-  return (
-    <div className="rounded-2xl border border-border-dim bg-card/40 px-6 py-10 text-center">
-      <p className="text-[14px] font-medium text-foreground">{t("noKind.title", { kind: name })}</p>
-      <p className="mt-1 text-[13px] text-secondary">{t("noKind.body", { kind: name, from: formatDay(from), to: formatDay(to) })}</p>
-    </div>
-  );
+  return <HakkenEmptyState title={t("noKind.title", { kind: name })} description={t("noKind.body", { kind: name, from: formatDay(from), to: formatDay(to) })} />;
 }

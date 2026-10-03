@@ -5,11 +5,12 @@ import { useLocale, useTranslations } from "next-intl";
 import { CalendarClock } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
+import { Change } from "@/src/ui/components/screens/Change";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { CUT_COLUMN } from "../../../sites/_components/SiteCells";
-import { SiteTableBar } from "../../../sites/_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber, formatShortDay } from "../../../sites/_components/siteFormat";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
@@ -17,7 +18,7 @@ import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_compone
 import { SearchConsoleChart } from "../../_components/SearchConsoleChart";
 import { ResultKindSwitch, SearchConsoleGate } from "../../_components/SearchConsoleNotices";
 import { formatPosition } from "../../_components/searchConsoleFormat";
-import { BeforeAfter, ClicksChange, PlacesMoved } from "../../_components/SearchConsoleTables";
+import { BeforeAfter } from "../../_components/SearchConsoleTables";
 import { useResultKind, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
 
 type Update = {
@@ -119,7 +120,7 @@ export default function SearchConsoleUpdatesPage() {
                 <option value="rolling">{t("updates.rolling")}</option>
               </Select>
             }
-            cardHeader={<SiteTableBar footer={pager.footer} noun="updates" />}
+            cardHeader={<TableBar footer={pager.footer} noun="updates" />}
             sort={tableSort}
             empty={{ icon: <CalendarClock className="h-8 w-8 text-muted/30" />, label: term || finished ? t("table.noMatch") : t("updates.empty") }}
             footer={pager.footer}
@@ -136,9 +137,9 @@ export default function SearchConsoleUpdatesPage() {
                 ),
               },
               { key: "clicks", header: t("table.clicks"), align: "right", sortable: true, cell: (row) => <BeforeAfter before={row.beforeClicks} now={row.afterClicks} format={formatNumber} /> },
-              { key: "change", header: t("table.change"), align: "right", sortable: true, cell: (row) => (row.state !== "done" ? notYet(row) : <ClicksChange change={row.change} previousClicks={row.beforeClicks} clicks={row.afterClicks ?? 0} />) },
+              { key: "change", header: t("table.change"), align: "right", sortable: true, cell: (row) => (row.state !== "done" ? notYet(row) : <Change by={row.change} isNew={row.change !== null && row.beforeClicks === null && (row.afterClicks ?? 0) > 0} format={formatNumber} />) },
               { key: "position", header: t("table.position"), align: "right", sortable: true, cell: (row) => <BeforeAfter before={row.beforePosition} now={row.afterPosition} format={formatPosition} /> },
-              { key: "moved", header: t("table.moved"), align: "right", sortable: true, cell: (row) => (row.state !== "done" ? notYet(row) : <PlacesMoved change={row.moved} />) },
+              { key: "moved", header: t("table.moved"), align: "right", sortable: true, cell: (row) => (row.state !== "done" ? notYet(row) : <Change by={row.moved} kind="places" same format={formatPosition} />) },
             ]}
           />
         </SearchConsoleGate>

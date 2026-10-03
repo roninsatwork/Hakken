@@ -4,17 +4,20 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import Link from "next/link";
 import { Layers } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
-import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { BackRow, DetailHeader } from "@/src/ui/components/screens/PageHeader";
+import { Notice } from "@/src/ui/components/screens/Notice";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
+import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import useDebounce from "@/src/hooks/useDebounce";
 import { formatDateTime } from "@/src/lib/dates";
+import { smallDollars } from "@/src/app/(dashboard)/admin/companies/[id]/websites/money";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 
 /**
@@ -70,20 +73,22 @@ export default function SeoCycleDetailPage() {
     setPage(1);
   };
 
+  const back = { label: t("back"), href: "/admin/websites/collection" };
+
   if (cycle === undefined) {
-    return <p className="py-12 text-center text-[13px] text-muted">{t("loading")}</p>;
+    return (
+      <div className="flex w-full flex-col gap-6 pb-12">
+        <BackRow {...back} />
+        <div role="status" aria-busy="true" aria-label={t("loading")} className="h-24 animate-pulse rounded-2xl bg-sidebar/30" />
+      </div>
+    );
   }
 
   if (cycle === null) {
     return (
-      <div className="flex w-full flex-col gap-4 py-12">
-        <p className="text-center text-[13px] text-muted">{t("notFound")}</p>
-        <Link
-          href="/admin/websites/collection"
-          className="self-center text-[13px] text-brand hover:underline"
-        >
-          {t("back")}
-        </Link>
+      <div className="flex w-full flex-col gap-6 pb-12">
+        <BackRow {...back} />
+        <HakkenEmptyState icon={Layers} title={t("notFoundTitle")} description={t("notFound")} />
       </div>
     );
   }
@@ -91,7 +96,7 @@ export default function SeoCycleDetailPage() {
   return (
     <div className="flex w-full flex-col gap-6 pb-12">
       <DetailHeader
-        back={{ label: t("back"), href: "/admin/websites/collection" }}
+        back={back}
         icon={<Layers className="h-6 w-6 text-brand" />}
         title={cycle.companyName}
         description={t("runStarted", {
@@ -103,27 +108,19 @@ export default function SeoCycleDetailPage() {
             <StatusLabel tone={CYCLE_TONES[cycle.status] ?? "neutral"}>
               {t(`status.${cycle.status}`)}
             </StatusLabel>
-            <StatusLabel tone="neutral">
-              {t("readyOfPlanned", { ready: cycle.ready, planned: cycle.planned })}
-            </StatusLabel>
+            <TagLabel>{t("readyOfPlanned", { ready: cycle.ready, planned: cycle.planned })}</TagLabel>
             {cycle.reused > 0 ? (
               <StatusLabel tone="success">{t("reused", { count: cycle.reused })}</StatusLabel>
             ) : null}
             {cycle.failed > 0 ? (
               <StatusLabel tone="warning">{t("failed", { count: cycle.failed })}</StatusLabel>
             ) : null}
-            <StatusLabel tone="neutral">
-              {t("runCost", { cost: cycle.costUsd.toFixed(4) })}
-            </StatusLabel>
+            <TagLabel>{smallDollars(cycle.costUsd)}</TagLabel>
           </>
         }
       />
 
-      {cycle.cappedReason ? (
-        <p className="max-w-3xl rounded-[12px] border border-border-dim bg-card/40 px-4 py-3 text-[12px] leading-relaxed text-muted">
-          {cycle.cappedReason}
-        </p>
-      ) : null}
+      {cycle.cappedReason ? <Notice>{cycle.cappedReason}</Notice> : null}
 
       {/*
         Section heading above the table, matching `admin/websites/[websiteId]`
@@ -200,7 +197,7 @@ export default function SeoCycleDetailPage() {
               row.reused ? (
                 <span className="text-[12px] text-success">{t("alreadyHeld")}</span>
               ) : (
-                <span className="font-mono text-[12px] text-secondary">${row.costUsd.toFixed(4)}</span>
+                <span className="font-mono text-[12px] text-secondary">{smallDollars(row.costUsd)}</span>
               )
             ),
           },

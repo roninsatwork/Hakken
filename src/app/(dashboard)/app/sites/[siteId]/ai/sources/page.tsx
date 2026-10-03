@@ -10,7 +10,7 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
 import { CUT_COLUMN, CheckedCell, RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../_components/useSite";
@@ -64,7 +64,7 @@ export default function SiteSourcesPage() {
         onRowClick={(row) => router.push(recordHref({ kind: "page", page: row.page }))}
         minWidthClassName="min-w-[640px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
-        cardHeader={<SiteTableBar footer={table.footer} noun="pages" actions={<TableDownload siteId={siteId} kind="cited" sort={tableSort} />} />}
+        cardHeader={<TableBar footer={table.footer} noun="pages" actions={<TableDownload siteId={siteId} kind="cited" sort={tableSort} />} />}
         empty={{ icon: <Link2 className="h-8 w-8 text-muted/30" />, label: settled ? t("noMatch") : t("empty") }}
         footer={table.footer}
         sort={tableSort}

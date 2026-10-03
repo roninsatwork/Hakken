@@ -10,7 +10,7 @@ import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { CUT_COLUMN, RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatDay } from "../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../_components/useSite";
@@ -90,7 +90,7 @@ export default function SiteAuditProblemPage() {
         rows={table.pageRows}
         rowKey={(row) => row.url}
         onRowClick={(row) => router.push(recordHref({ kind: "page", page: row.page }))}
-        cardHeader={<SiteTableBar footer={table.footer} noun="pages" />}
+        cardHeader={<TableBar footer={table.footer} noun="pages" />}
         empty={{ icon: <Stethoscope className="h-8 w-8 text-muted/30" />, label: ta("problemPages.none") }}
         footer={table.footer}
         sort={tableSort}

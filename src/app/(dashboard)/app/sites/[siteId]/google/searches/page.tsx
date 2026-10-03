@@ -10,8 +10,9 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
-import { CUT_COLUMN, ChangeCell, CheckedCell, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { Change } from "@/src/ui/components/screens/Change";
+import { CUT_COLUMN, CheckedCell, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
@@ -128,7 +129,7 @@ export default function SiteSearchesPage() {
           </Select>
           </>
         }
-        cardHeader={<SiteTableBar footer={pager.footer} noun="searches" actions={<ListDownload fileName={`${site?.host ?? "site"}-searches`} rows={sorted} columns={[{ header: t("columns.search"), value: (row) => row.keyword }, { header: t("columns.position"), value: (row) => row.lastPosition }, { header: t("columns.best"), value: (row) => row.bestPosition }, { header: t("columns.verdict"), value: (row) => t(`verdicts.${row.verdict}`) }, { header: t("columns.lastChecked"), value: (row) => row.lastCheckedDay }]} />} />}
+        cardHeader={<TableBar footer={pager.footer} noun="searches" actions={<ListDownload fileName={`${site?.host ?? "site"}-searches`} rows={sorted} columns={[{ header: t("columns.search"), value: (row) => row.keyword }, { header: t("columns.position"), value: (row) => row.lastPosition }, { header: t("columns.best"), value: (row) => row.bestPosition }, { header: t("columns.verdict"), value: (row) => t(`verdicts.${row.verdict}`) }, { header: t("columns.lastChecked"), value: (row) => row.lastCheckedDay }]} />} />}
         empty={{ icon: <Search className="h-8 w-8 text-muted/30" />, label: term || verdict ? t("noMatch") : t("empty") }}
         footer={pager.footer}
         sort={tableSort}
@@ -141,7 +142,7 @@ export default function SiteSearchesPage() {
             align: "right",
             sortable: true,
             cell: (row) => row.lastPosition !== null && row.previousPosition !== null
-              ? <ChangeCell change={row.previousPosition - row.lastPosition} />
+              ? <Change by={row.previousPosition - row.lastPosition} />
               : <span className="text-muted">–</span>,
           },
           { key: "best", header: t("columns.best"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.bestPosition ?? "–"}</span> },

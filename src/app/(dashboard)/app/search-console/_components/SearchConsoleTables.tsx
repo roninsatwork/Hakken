@@ -2,7 +2,6 @@
 
 import { useAction, useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
-import { Download } from "lucide-react";
 import type { FunctionArgs, FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -10,15 +9,17 @@ import { BANDS, filterRows, type Band, type Filters } from "@/convex/utils/searc
 import { PAGE_TYPES, RANK_INTENTS } from "@/convex/utils/siteShapes";
 import { useToast } from "@/src/context/ToastContext";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
-import { Button } from "@/src/ui/components/screens/Button";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
+import { DownloadButton, saveTextFile } from "@/src/ui/components/screens/DownloadButton";
 import type { DataTableColumn } from "@/src/ui/components/screens/DataTable";
 import { Select } from "@/src/ui/components/screens/Select";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { useSiteListPage, useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
 import { useSiteSort, useSiteSortedList, type SiteSortColumns } from "../../sites/_components/useSiteSort";
 import { countryName } from "./countries";
+import { DaysBeforeChange } from "./SearchConsoleFigures";
 import { formatPosition, formatRate, readerLanguage } from "./searchConsoleFormat";
 import { useLiveAsk } from "./searchConsoleRecords";
 import { isReadyMade, useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
@@ -213,14 +214,9 @@ export function useSearchConsoleSummary(ask: { dimension: "query" | "page"; view
   return server?.summary ?? null;
 }
 
-/** A count against the same days before: "▲ 14 on the 30 days before". `neutral` for a count whose rise is not good news. */
+/** A count against the same days before, as a hero box's line under it. `neutral` for a count whose rise is not good news. */
 export function CountChange({ now, before, days, neutral = false }: { now: number | null; before: number | null; days: number; neutral?: boolean }) {
-  const t = useTranslations("searchConsole.figures");
-  if (now === null || before === null) return <span className="text-muted">{t("noBefore")}</span>;
-  const change = now - before;
-  if (change === 0) return <span className="text-muted">{t("same", { days })}</span>;
-  const tone = neutral ? "text-secondary" : change > 0 ? "text-success" : "text-destructive";
-  return <span className={tone}>{t(change > 0 ? "up" : "down", { change: formatNumber(Math.abs(change)), days })}</span>;
+  return <DaysBeforeChange by={now === null || before === null ? null : now - before} days={days} neutral={neutral} write={formatNumber} />;
 }
 
 /** How many keywords and pages the company tracks on the website, against its limits. */
@@ -410,28 +406,6 @@ export function SearchConsoleChips({ chips }: { chips: readonly ChipId[] }) {
   );
 }
 
-/** Clicks gained or lost on the period before; "New" for one not shown then; nothing when those days are not held. */
-export function ClicksChange({ change, previousClicks, clicks }: { change: number | null; previousClicks: number | null; clicks: number }) {
-  const t = useTranslations("searchConsole.table");
-  if (change === null) return <span className="text-muted">–</span>;
-  if (previousClicks === null && clicks > 0) return <span className="text-[12px] text-success">{t("new")}</span>;
-  if (change > 0) return <span className="font-mono text-[12px] text-success">▲ {formatNumber(change)}</span>;
-  if (change < 0) return <span className="font-mono text-[12px] text-destructive">▼ {formatNumber(-change)}</span>;
-  return <span className="text-muted">–</span>;
-}
-
-/** Places a position rose (▲) or fell (▼): lower is better. */
-export function PlacesMoved({ change }: { change: number | null }) {
-  const t = useTranslations("searchConsole.table");
-  if (change === null) return <span className="text-muted">–</span>;
-  if (Math.abs(change) < 0.05) return <span className="font-mono text-[12px] text-muted">{t("same")}</span>;
-  return (
-    <span className={`whitespace-nowrap font-mono text-[12px] ${change > 0 ? "text-success" : "text-destructive"}`}>
-      {change > 0 ? "▲" : "▼"} {t("places", { places: formatPosition(Math.abs(change)) })}
-    </span>
-  );
-}
-
 /** A figure before and now, as "31 → 43"; "…" for a now still to come. */
 export function BeforeAfter({ before, now, format }: { before: number | null; now: number | null; format: (value: number) => string }) {
   return (
@@ -456,24 +430,11 @@ export function figureColumns(say: (key: string) => string, which: readonly Figu
   return which.map((key) => all[key]);
 }
 
-/** Sites' word for a keyword's intent or a page's type. */
+/** Sites' word for a keyword's intent or a page's type: a kind, so the kit's `TagLabel`. */
 export function KindText({ kind, of }: { kind: string | null; of: "intent" | "pageType" }) {
   const tc = useTranslations("sites.common");
   if (!kind) return <span className="text-muted">–</span>;
-  return <span className="text-[12px] text-secondary">{tc(`${of === "intent" ? "intents" : "pageTypes"}.${kind}`)}</span>;
-}
-
-/** Hand a file to the browser to save. */
-function save(csv: string, fileName: string) {
-  const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName;
-  link.rel = "noopener";
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
+  return <TagLabel>{tc(`${of === "intent" ? "intents" : "pageTypes"}.${kind}`)}</TagLabel>;
 }
 
 /**
@@ -491,20 +452,16 @@ export function SearchConsoleDownload({ ask, headers, fields }: {
   const { showToast } = useToast();
   const building = isBusy();
   return (
-    <Button
-      variant="quiet"
-      disabled={building}
+    <DownloadButton
+      label={t("download")}
+      busyLabel={t("downloading")}
+      busy={building}
       onClick={async () => {
         const outcome = await run(() => build({ ...ask, headers, fields }), { fallbackMessage: t("downloadFailed") });
         if (!outcome.ok) return;
-        save(outcome.data.csv, outcome.data.fileName);
+        saveTextFile(outcome.data.csv, outcome.data.fileName);
         if (outcome.data.cut !== null) showToast(t("downloadCut", { rows: formatNumber(outcome.data.rows) }), "info");
       }}
-      className="inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2 text-[12px]"
-      aria-live="polite"
-    >
-      <Download className="h-3.5 w-3.5" aria-hidden="true" />
-      {building ? t("downloading") : t("download")}
-    </Button>
+    />
   );
 }

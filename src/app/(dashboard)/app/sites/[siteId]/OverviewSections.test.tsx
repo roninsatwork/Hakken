@@ -47,7 +47,7 @@ describe("the Competitors card", () => {
     vi.mocked(useQuery).mockReturnValue({ host: "ronins.co.uk" } as never);
     renderWithProviders(<OverviewSections latest={null} extras={extras} />);
 
-    expect(within(card()).getByRole("tab", { name: "sites.overview.competitors.views.searches" })).toHaveAttribute("aria-selected", "true");
+    expect(within(card()).getByRole("radio", { name: "sites.overview.competitors.views.searches" })).toHaveAttribute("aria-checked", "true");
     expect(within(card()).getByText("sites.overview.competitors.hint")).toBeInTheDocument();
     expect(within(card()).getByText("sites.overview.competitors.columns.shared")).toBeInTheDocument();
     expect(hosts()).toEqual(["chilliapple.co.uk", "pixelfield.co.uk", "plugandplaydesign.co.uk", "lightflows.co.uk"]);
@@ -57,9 +57,9 @@ describe("the Competitors card", () => {
     vi.mocked(useQuery).mockReturnValue({ host: "ronins.co.uk" } as never);
     renderWithProviders(<OverviewSections latest={null} extras={extras} />);
 
-    fireEvent.click(within(card()).getByRole("tab", { name: "sites.overview.competitors.views.traffic" }));
+    fireEvent.click(within(card()).getByRole("radio", { name: "sites.overview.competitors.views.traffic" }));
 
-    expect(within(card()).getByRole("tab", { name: "sites.overview.competitors.views.traffic" })).toHaveAttribute("aria-selected", "true");
+    expect(within(card()).getByRole("radio", { name: "sites.overview.competitors.views.traffic" })).toHaveAttribute("aria-checked", "true");
     expect(within(card()).getByText("sites.overview.competitors.hintTraffic")).toBeInTheDocument();
     expect(within(card()).getByText("sites.overview.competitors.columns.sharedVisits")).toBeInTheDocument();
     expect(within(card()).queryByText("sites.overview.competitors.columns.shared")).not.toBeInTheDocument();

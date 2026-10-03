@@ -2,13 +2,14 @@
 
 import { ArrowUpDown } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { Change } from "@/src/ui/components/screens/Change";
 import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
-import { SiteFigure } from "../../../sites/_components/SiteFigure";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { formatPosition } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
-import { BeforeAfter, ClicksChange, PlacesMoved, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
+import { BeforeAfter, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
 
 const CHIPS: readonly ChipId[] = ["move", "band", "country", "device"];
 
@@ -30,12 +31,12 @@ export default function SearchConsoleWinsPage() {
       title={t("moves.title")}
       description={t("moves.description", { days })}
       heroes={
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <SiteFigure label={t("moves.gaining")} value={summary ? formatNumber(summary.gaining) : "…"} detail={<span className="text-secondary">{t("moves.against", { days })}</span>} />
-          <SiteFigure label={t("moves.losing")} value={summary ? formatNumber(summary.losing) : "…"} detail={<span className="text-secondary">{t("moves.against", { days })}</span>} />
-          <SiteFigure label={t("moves.gained")} value={summary ? `+${formatNumber(summary.gained)}` : "…"} detail={<span className="text-success">{t("moves.byGaining")}</span>} />
-          <SiteFigure label={t("moves.lost")} value={summary ? formatNumber(summary.lost) : "…"} detail={<span className="text-destructive">{t("moves.byLosing")}</span>} />
-        </div>
+        <FigureRow>
+          <Figure label={t("moves.gaining")} value={summary ? formatNumber(summary.gaining) : "…"} detail={<span className="text-secondary">{t("moves.against", { days })}</span>} />
+          <Figure label={t("moves.losing")} value={summary ? formatNumber(summary.losing) : "…"} detail={<span className="text-secondary">{t("moves.against", { days })}</span>} />
+          <Figure label={t("moves.gained")} value={summary ? `+${formatNumber(summary.gained)}` : "…"} detail={<span className="text-success">{t("moves.byGaining")}</span>} />
+          <Figure label={t("moves.lost")} value={summary ? formatNumber(summary.lost) : "…"} detail={<span className="text-destructive">{t("moves.byLosing")}</span>} />
+        </FigureRow>
       }
       table={{
         list,
@@ -62,9 +63,9 @@ export default function SearchConsoleWinsPage() {
             cell: (row) => <RecordLinkCell cut href={recordHref("keywords/keyword", row.key)}>{row.key}</RecordLinkCell>,
           },
           { key: "clicks", header: t("table.clicks"), align: "right", sortable: true, cell: (row) => <BeforeAfter before={row.previousClicks ?? 0} now={row.clicks} format={formatNumber} /> },
-          { key: "change", header: t("table.change"), align: "right", sortable: true, cell: (row) => <ClicksChange change={row.change} previousClicks={row.previousClicks} clicks={row.clicks} /> },
+          { key: "change", header: t("table.change"), align: "right", sortable: true, cell: (row) => <Change by={row.change} isNew={row.change !== null && row.previousClicks === null && row.clicks > 0} format={formatNumber} /> },
           { key: "position", header: t("table.position"), align: "right", sortable: true, cell: (row) => <BeforeAfter before={row.previousPosition} now={row.impressions > 0 ? row.position : null} format={formatPosition} /> },
-          { key: "positionChange", header: t("table.moved"), align: "right", sortable: true, cell: (row) => <PlacesMoved change={row.positionChange} /> },
+          { key: "positionChange", header: t("table.moved"), align: "right", sortable: true, cell: (row) => <Change by={row.positionChange} kind="places" same format={formatPosition} /> },
         ],
       }}
     />

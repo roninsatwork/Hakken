@@ -4,9 +4,11 @@ import type { ReactNode } from "react";
 import { useQuery } from "convex/react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { Globe } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 
 /**
  * One of a company's websites, inside the Websites section
@@ -23,10 +25,10 @@ export default function CompanySiteLayout({ children }: { children: ReactNode })
   const header = useQuery(api.websiteClientView.getSiteHeader, { companyWebsiteId });
 
   if (header === undefined) {
-    return <p className="text-[13px] text-secondary">{t("loading")}</p>;
+    return <div role="status" aria-busy="true" aria-label={t("loading")} className="h-24 animate-pulse rounded-2xl bg-sidebar/30" />;
   }
   if (header === null) {
-    return <p className="text-[13px] text-destructive">{t("notFound")}</p>;
+    return <HakkenEmptyState icon={Globe} title={t("notFoundTitle")} description={t("notFound")} />;
   }
   return <div className="flex w-full flex-col gap-6 pb-12">{children}</div>;
 }

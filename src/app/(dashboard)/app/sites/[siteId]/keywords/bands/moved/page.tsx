@@ -10,7 +10,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { CUT_COLUMN, PageLinkCell, PositionCell, RecordLinkCell } from "../../../../_components/SiteCells";
 import { ListDownload } from "../../../../_components/SiteDownloads";
-import { SiteTableBar } from "../../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber, formatShortDay } from "../../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../../_components/useSite";
@@ -78,7 +78,7 @@ export default function SiteBandMovePage() {
         rowKey={(row) => row.keyword}
         onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
         minWidthClassName="min-w-[640px]"
-        cardHeader={<SiteTableBar
+        cardHeader={<TableBar
           footer={pager.footer}
           noun="searches"
           actions={(

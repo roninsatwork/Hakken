@@ -8,7 +8,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { CheckedCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
@@ -78,7 +78,7 @@ export default function SiteLinksNewLostPage() {
         rows={pager.pageRows}
         rowKey={(row) => row.day}
         minWidthClassName="min-w-[720px]"
-        cardHeader={<SiteTableBar footer={pager.footer} noun={STEP_NOUNS[range.step]} actions={<ListDownload fileName={`${site?.host ?? "site"}-links-gained-lost`} rows={sorted} columns={[{ header: t(`columns.${range.step}`), value: (row) => row.day }, ...KEYS.map((key) => ({ header: t(`columns.${key}`), value: (row: NonNullable<typeof points>[number]) => row[key] }))]} />} />}
+        cardHeader={<TableBar footer={pager.footer} noun={STEP_NOUNS[range.step]} actions={<ListDownload fileName={`${site?.host ?? "site"}-links-gained-lost`} rows={sorted} columns={[{ header: t(`columns.${range.step}`), value: (row) => row.day }, ...KEYS.map((key) => ({ header: t(`columns.${key}`), value: (row: NonNullable<typeof points>[number]) => row[key] }))]} />} />}
         empty={{ icon: <ArrowLeftRight className="h-8 w-8 text-muted/30" />, label: t("empty") }}
         footer={pager.footer}
         sort={tableSort}

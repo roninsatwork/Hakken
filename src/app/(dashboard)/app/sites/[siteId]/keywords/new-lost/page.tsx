@@ -10,12 +10,14 @@ import { CHART_SERIES_AMBER, CHART_SERIES_BLUE, CHART_SERIES_SLATE, CHART_SERIES
 import { Button } from "@/src/ui/components/screens/Button";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { CUT_COLUMN, ChangeCell, CheckedCell, PageLinkCell, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
+import { Notice } from "@/src/ui/components/screens/Notice";
+import { Change } from "@/src/ui/components/screens/Change";
+import { CUT_COLUMN, CheckedCell, PageLinkCell, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { SiteGainLossChart, type GainLossKind, type GainLossStep } from "../../../_components/SiteGainLossChart";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber, formatShortDay, toCsv } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
@@ -37,8 +39,15 @@ const KINDS: readonly GainLossKind[] = ["new", "up", "down", "lost"];
 const KIND_OF: Record<Direction, GainLossKind> = { NEW: "new", UP: "up", DOWN: "down", LOST: "lost", LEFT: "lost" };
 const COUNT_OF = { new: "rankedNew", up: "rankedUp", down: "rankedDown", lost: "rankedLost" } as const;
 const LEFT_COUNT = "rankedLeft" as const;
-/** The arrows carry the direction; colour only repeats it, and no red sits beside green (the owner cannot tell them apart). */
+/**
+ * The arrows carry the direction; colour only repeats it, and no red sits beside green (the owner cannot tell them apart).
+ * A key to the chart's four series rather than a move, so not the kit's `Change` (frozen in the screen kit's `recipes` list).
+ */
 const ARROWS: Record<GainLossKind, string> = { new: "▲", up: "↑", down: "↓", lost: "▼" };
+/**
+ * The chart's series, from the chart palette. The tabs' arrows and underline
+ * wear the same colours: they are the chart's key, so they match it exactly.
+ */
 const COLOURS: Record<GainLossKind, string> = { new: CHART_SERIES_BLUE, up: CHART_SERIES_TEAL, down: CHART_SERIES_AMBER, lost: CHART_SERIES_SLATE };
 
 type Checks = FunctionReturnType<typeof api.siteChecks.siteChecks>;
@@ -139,7 +148,8 @@ export default function SiteNewLostPage() {
 
       {newest ? (
         <div className="flex flex-wrap items-center gap-3">
-          <span className="inline-flex h-8 items-center gap-2 rounded-lg border border-border-dim bg-card/40 px-3 text-[12px] text-foreground">
+          {/* Plain words with their icon: nothing here is pressed, so no box. */}
+          <span className="inline-flex items-center gap-2 text-[12px] text-secondary">
             <CalendarDays className="h-3.5 w-3.5 text-muted" aria-hidden />
             {newestIsStart ? t("newestStart", { day: formatShortDay(newest.day) }) : t("newest", { day: formatShortDay(newest.day) })}
           </span>
@@ -174,7 +184,7 @@ export default function SiteNewLostPage() {
       </SiteChartCard>
 
       {newest && newestIsStart ? (
-        <p className="rounded-2xl border border-border-dim bg-card/40 px-5 py-4 text-[13px] text-secondary">{startNote(newest)}</p>
+        <Notice>{startNote(newest)}</Notice>
       ) : newest ? (
         <>
           {/* The newest check's moves, one list at a time; the counts are the lists' own. */}
@@ -207,7 +217,7 @@ export default function SiteNewLostPage() {
             rowKey={(row) => row._id}
             onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
             minWidthClassName="min-w-[720px]"
-            cardHeader={<SiteTableBar footer={moves.footer} noun="searches" title={`${ARROWS[chosen]} ${t(`tabNames.${direction}`)}`} />}
+            cardHeader={<TableBar footer={moves.footer} noun="searches" title={`${ARROWS[chosen]} ${t(`tabNames.${direction}`)}`} />}
             empty={{ icon: <ArrowUpDown className="h-8 w-8 text-muted/30" />, label: t("moves.empty") }}
             footer={moves.footer}
             sort={order.tableSort}
@@ -226,7 +236,7 @@ export default function SiteNewLostPage() {
                   </span>
                 ),
               },
-              { key: "change", header: t("moves.columns.change"), align: "right", sortable: true, cell: (row) => <ChangeCell change={row.change} /> },
+              { key: "change", header: t("moves.columns.change"), align: "right", sortable: true, cell: (row) => <Change by={row.change} /> },
               { key: "volume", header: t("moves.columns.volume"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.volume)}</span> },
               {
                 key: "page",
@@ -243,7 +253,7 @@ export default function SiteNewLostPage() {
         rows={checkPager.pageRows}
         rowKey={(row) => row.day}
         minWidthClassName="min-w-[640px]"
-        cardHeader={<SiteTableBar
+        cardHeader={<TableBar
           footer={checkPager.footer}
           noun={range.step === "week" ? "weeks" : range.step === "month" ? "months" : "checks"}
           actions={(

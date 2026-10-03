@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
-import { Check, Pencil, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { Check, Pencil, Sparkles, Trash2, X } from "lucide-react";
 
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
@@ -13,6 +13,7 @@ import { DetailHeader, PagePrimaryAction } from "@/src/ui/components/screens/Pag
 import { Button } from "@/src/ui/components/screens/Button";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { Field } from "@/src/ui/components/screens/Field";
+import { Notice } from "@/src/ui/components/screens/Notice";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
@@ -21,9 +22,9 @@ import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { formatTime } from "@/src/lib/dates";
 import { useEngineLabel } from "@/src/app/(dashboard)/admin/_components/EngineChoice";
 import { sectionBase } from "../../_components/websitesSection";
-import { smallDollars } from "../../CostFigure";
+import { AddBar } from "../../_components/AddBar";
+import { smallDollars } from "../../money";
 import { useAiLists } from "./AiLists";
-import { ListNotice as Notice } from "./ListNotice";
 
 type Row = FunctionReturnType<typeof api.promptFanOut.getPromptFanOut>["rows"][number];
 
@@ -189,7 +190,11 @@ export function PromptFanOut({ questionId, companyWebsiteId }: {
       {notTicked ? <Notice>{t("notTicked", { query: notTicked, host, limit: ticked.limit })}</Notice> : null}
 
       {question ? (
-        <div className="flex flex-wrap items-end gap-2 rounded-[12px] border border-border-dim bg-card/40 p-4">
+        <AddBar
+          label={t("add")}
+          disabled={action.isBusy("add") || draft.trim().length === 0}
+          onAdd={() => void add()}
+        >
           <Field
             id="prompt-new-query"
             label={t("addLabel")}
@@ -201,16 +206,7 @@ export function PromptFanOut({ questionId, companyWebsiteId }: {
             placeholder={t("addPlaceholder")}
             wrapperClassName="flex-1 min-w-[18rem]"
           />
-          <Button
-            variant="quiet"
-            className="h-[46px] px-4 text-[13px]"
-            disabled={action.isBusy("add") || draft.trim().length === 0}
-            onClick={() => void add()}
-          >
-            <Plus className="mr-1 inline h-3.5 w-3.5" />
-            {t("add")}
-          </Button>
-        </div>
+        </AddBar>
       ) : null}
 
       <SaveError>{error}</SaveError>

@@ -10,7 +10,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { SECTION_ICONS, pageApplies, sectionHref, type SectionPageId } from "./websitesSection";
 
@@ -69,10 +69,10 @@ export function ChooseWebsite({ page }: { page: OneWebsitePage }) {
             key: "type",
             header: t("choose.columns.type"),
             cell: (row) => row.relationship === "OWNED"
-              ? <StatusLabel tone="info">{t("choose.owned")}</StatusLabel>
+              ? <TagLabel>{t("choose.owned")}</TagLabel>
               : (
                 <div className="flex items-center gap-2">
-                  <StatusLabel tone="neutral">{t("choose.competitor")}</StatusLabel>
+                  <TagLabel>{t("choose.competitor")}</TagLabel>
                   <span className="text-[12px] text-muted">
                     {row.againstHost ? t("choose.of", { host: row.againstHost }) : t("choose.onItsOwn")}
                   </span>

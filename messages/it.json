@@ -1512,9 +1512,6 @@
         "questionsEmpty": "Nessuna. Aggiungi le domande che i tuoi clienti fanno a ChatGPT e agli altri.",
         "rivalsEmpty": "Nessuno. Aggiungi i siti con cui competi.",
         "notCheckedYet": "Non ancora controllato.",
-        "seeSearches": "Vedi le ricerche",
-        "seeAnswers": "Vedi le risposte",
-        "seeCompetitors": "Vedi i concorrenti",
         "ownLists": "Queste ricerche e domande sono di questa azienda: nessun'altra azienda che osserva {host} può vederle.",
         "editLists": "Aggiungile o cambiale in Cosa seguiamo",
         "parts": {
@@ -1543,8 +1540,6 @@
         "positionColumn": "Posizione",
         "notCheckedYet": "Non ancora controllata",
         "notOnPage": "Non tra i primi 100",
-        "up": "su",
-        "down": "giù",
         "verdictColumn": "Come sta andando",
         "verdicts": {
           "NOT_CHECKED": "Non ancora controllata",
@@ -1717,7 +1712,8 @@
         "subtitle": "Quanto spesso {host} viene raccolto, e da dove. Ciò che segue l’azienda mantiene il programma dell’azienda.",
         "subtitleCompetitor": "Con quale dei siti propri dell’azienda {host} viene confrontato, e quindi quando viene raccolto.",
         "record": "Chi altro segue {host}: la sua scheda condivisa"
-      }
+      },
+      "notFoundTitle": "Sito web non trovato"
     },
     "companyDataCollection": {
       "collectNow": {
@@ -2046,7 +2042,8 @@
       "tabs": {
         "watchers": "Osservato da"
       },
-      "factsMovedNotice": "Ogni azienda imposta i propri nomi, profilo dell'attività e concorrenti per questo sito, nella propria schermata del sito (Aziende → l'azienda → Siti → il sito → Profilo). Qui non c'è nulla di condiviso tra loro."
+      "factsMovedNotice": "Ogni azienda imposta i propri nomi, profilo dell'attività e concorrenti per questo sito, nella propria schermata del sito (Aziende → l'azienda → Siti → il sito → Profilo). Qui non c'è nulla di condiviso tra loro.",
+      "notFoundDescription": "Potrebbe essere stato eliminato, oppure il link non è più valido."
     },
     "workflows": {
       "title": "Workflow Autonomi",
@@ -5522,7 +5519,6 @@
       "reused": "{count} risposte con dati già disponibili",
       "failed": "{count} non riuscite",
       "runStarted": "Avviata {when} · {trigger}",
-      "runCost": "${cost}",
       "linesTitle": "Che cosa ha richiesto questa esecuzione",
       "linesCapped": "Mostrate le prime 200.",
       "noLines": "Questa esecuzione non ha richiesto nulla.",
@@ -5600,13 +5596,14 @@
       "outLong": "Fuori da {hours, plural, one {# ora} other {# ore}}, non ancora risposta",
       "lastTry": "Ultimo tentativo: {said}",
       "tooLarge": "Troppo grande da conservare: non è stato archiviato nulla",
-      "rowsLeftOff": "{count, plural, one {# riga lasciata} other {# righe lasciate}} fuori per farla stare"
+      "rowsLeftOff": "{count, plural, one {# riga lasciata} other {# righe lasciate}} fuori per farla stare",
+      "notFoundTitle": "Esecuzione non trovata"
     },
     "seoCosts": {
       "title": "Costo del servizio",
       "subtitle": "Quanto costa ogni cliente in spesa DataForSEO negli ultimi 30 giorni, dal più caro. Mai visibile a un cliente.",
       "companiesTitle": "Per azienda · ultimi 30 giorni",
-      "platformTotal": "${paid} spesi negli ultimi 30 giorni, più ${saved} serviti con dati già disponibili.",
+      "platformTotal": "{paid} spesi negli ultimi 30 giorni, più {saved} serviti con dati già disponibili.",
       "loading": "Calcolo in corso.",
       "searchPlaceholder": "Cerca per cliente...",
       "empty": "Non è ancora stato raccolto nulla per nessun cliente.",
@@ -8379,6 +8376,47 @@
       "startDate": "Data di Inizio",
       "endDateOptional": "Data di Fine (Opzionale)",
       "applyRange": "Applica Intervallo"
+    },
+    "tableBar": {
+      "keywords": "{count, plural, =1 {# parola chiave} other {# parole chiave}}",
+      "searches": "{count, plural, =1 {# ricerca} other {# ricerche}}",
+      "pages": "{count, plural, =1 {# pagina} other {# pagine}}",
+      "websites": "{count, plural, =1 {# sito} other {# siti}}",
+      "linkingWebsites": "{count, plural, =1 {# sito che rimanda} other {# siti che rimandano}}",
+      "links": "{count, plural, =1 {# link} other {# link}}",
+      "anchors": "{count, plural, =1 {# anchor} other {# anchor}}",
+      "addresses": "{count, plural, =1 {# indirizzo} other {# indirizzi}}",
+      "results": "{count, plural, =1 {# risultato} other {# risultati}}",
+      "answers": "{count, plural, =1 {# risposta} other {# risposte}}",
+      "queries": "{count, plural, =1 {# query fan-out} other {# query fan-out}}",
+      "problems": "{count, plural, =1 {# problema} other {# problemi}}",
+      "sections": "{count, plural, =1 {# sezione} other {# sezioni}}",
+      "checks": "{count, plural, =1 {# controllo} other {# controlli}}",
+      "weeks": "{count, plural, =1 {# settimana} other {# settimane}}",
+      "groups": "{count, plural, =1 {# gruppo} other {# gruppi}}",
+      "adverts": "{count, plural, =1 {# annuncio} other {# annunci}}",
+      "questionsAndSearches": "{count, plural, =1 {# domanda o ricerca} other {# domande e ricerche}}",
+      "days": "{count, plural, =1 {# giorno} other {# giorni}}",
+      "months": "{count, plural, =1 {# mese} other {# mesi}}",
+      "folders": "{count, plural, =1 {# cartella} other {# cartelle}}",
+      "countries": "{count, plural, =1 {# paese} other {# paesi}}",
+      "devices": "{count, plural, =1 {# dispositivo} other {# dispositivi}}",
+      "angles": "{count, plural, =1 {# argomento} other {# argomenti}}",
+      "updates": "{count, plural, =1 {# aggiornamento} other {# aggiornamenti}}",
+      "positions": "{count, plural, =1 {# posizione} other {# posizioni}}",
+      "kinds": "{count, plural, =1 {# tipo} other {# tipi}}"
+    },
+    "chart": {
+      "download": "Scarica",
+      "png": "Immagine (PNG)",
+      "svg": "Immagine nitida (SVG)",
+      "csv": "Numeri (CSV)",
+      "notEnough": "I grafici si riempiono con i prossimi controlli. Per queste date non è stato ancora registrato nulla."
+    },
+    "change": {
+      "new": "Nuovo",
+      "same": "Invariato",
+      "places": "{places} posizioni"
     }
   },
   "agenticTesting": {
@@ -8829,42 +8867,6 @@
       "vs": "Confronta con il {day}",
       "chipPrevious": "vs il controllo precedente",
       "chipDay": "vs il {day}"
-    },
-    "tableCounts": {
-      "keywords": "{count, plural, =1 {# parola chiave} other {# parole chiave}}",
-      "searches": "{count, plural, =1 {# ricerca} other {# ricerche}}",
-      "pages": "{count, plural, =1 {# pagina} other {# pagine}}",
-      "websites": "{count, plural, =1 {# sito} other {# siti}}",
-      "linkingWebsites": "{count, plural, =1 {# sito che rimanda} other {# siti che rimandano}}",
-      "links": "{count, plural, =1 {# link} other {# link}}",
-      "anchors": "{count, plural, =1 {# anchor} other {# anchor}}",
-      "addresses": "{count, plural, =1 {# indirizzo} other {# indirizzi}}",
-      "results": "{count, plural, =1 {# risultato} other {# risultati}}",
-      "answers": "{count, plural, =1 {# risposta} other {# risposte}}",
-      "queries": "{count, plural, =1 {# query fan-out} other {# query fan-out}}",
-      "problems": "{count, plural, =1 {# problema} other {# problemi}}",
-      "sections": "{count, plural, =1 {# sezione} other {# sezioni}}",
-      "checks": "{count, plural, =1 {# controllo} other {# controlli}}",
-      "weeks": "{count, plural, =1 {# settimana} other {# settimane}}",
-      "groups": "{count, plural, =1 {# gruppo} other {# gruppi}}",
-      "adverts": "{count, plural, =1 {# annuncio} other {# annunci}}",
-      "questionsAndSearches": "{count, plural, =1 {# domanda o ricerca} other {# domande e ricerche}}",
-      "days": "{count, plural, =1 {# giorno} other {# giorni}}",
-      "months": "{count, plural, =1 {# mese} other {# mesi}}",
-      "folders": "{count, plural, =1 {# cartella} other {# cartelle}}",
-      "countries": "{count, plural, =1 {# paese} other {# paesi}}",
-      "devices": "{count, plural, =1 {# dispositivo} other {# dispositivi}}",
-      "angles": "{count, plural, =1 {# argomento} other {# argomenti}}",
-      "updates": "{count, plural, =1 {# aggiornamento} other {# aggiornamenti}}",
-      "positions": "{count, plural, =1 {# posizione} other {# posizioni}}",
-      "kinds": "{count, plural, =1 {# tipo} other {# tipi}}"
-    },
-    "chart": {
-      "download": "Scarica",
-      "png": "Immagine (PNG)",
-      "svg": "Immagine nitida (SVG)",
-      "csv": "Numeri (CSV)",
-      "notEnough": "I grafici si riempiono con i prossimi controlli. Per queste date non è stato ancora registrato nulla."
     },
     "googleUpdates": {
       "legend": "Aggiornamento Google",
@@ -10613,10 +10615,6 @@
       "impressions": "Impressioni",
       "ctr": "Percentuale di clic",
       "position": "Posizione media",
-      "download": "Scarica",
-      "png": "Immagine (PNG)",
-      "svg": "Disegno (SVG)",
-      "csv": "Foglio di calcolo (CSV)",
       "day": "Giorno",
       "nothing": "In queste date non è stato mostrato niente.",
       "week": "Settimana"
@@ -10658,7 +10656,6 @@
       "ctr": "CTR",
       "position": "Posizione",
       "share": "Quota dei clic",
-      "new": "Nuova",
       "versus": "Variazione rispetto ai {days} giorni precedenti",
       "noVersus": "Nessuna variazione: i giorni precedenti non sono disponibili",
       "preparing": "Sto sommando queste date. L'elenco appare appena è pronto.",
@@ -10677,8 +10674,6 @@
       "topKeyword": "Parola chiave principale",
       "yourPages": "Tue pagine",
       "asked": "Chiesto a Google per queste date",
-      "same": "Invariata",
-      "places": "{places} posizioni",
       "band": "Fascia",
       "brand": "Brand",
       "dates": "Date",
@@ -10797,7 +10792,8 @@
       "disconnectedOn": "Scollegato il {day}",
       "keptTo": "I dati fino al {day} sono ancora qui. Non arriva niente di nuovo finché non viene ricollegato.",
       "keptNone": "Non arriva niente di nuovo finché non viene ricollegato.",
-      "historyKept": "Dal {day}. I giorni si conservano per 90 giorni, poi come settimane; dopo 12 mesi, come mesi."
+      "historyKept": "Dal {day}. I giorni si conservano per 90 giorni, poi come settimane; dopo 12 mesi, come mesi.",
+      "disconnectTitle": "Scollegare Search Console?"
     },
     "keywords": {
       "title": "Parole chiave",
@@ -10964,7 +10960,8 @@
       "kind": "Tipo",
       "count": "Quante",
       "pagesLine": "{count, plural, =1 {# pagina} other {{rows} pagine}} ({share}) · {clicks} dei clic",
-      "keywordsLine": "{count, plural, =1 {# parola chiave} other {{rows} parole chiave}} ({share}) · {clicks} dei clic"
+      "keywordsLine": "{count, plural, =1 {# parola chiave} other {{rows} parole chiave}} ({share}) · {clicks} dei clic",
+      "readoutShare": "{what} ({share} del totale)"
     },
     "brand": {
       "title": "Brand e non brand",

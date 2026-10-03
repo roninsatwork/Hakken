@@ -11,7 +11,7 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { SiteChartCard } from "../../_components/SiteChartCard";
-import { SiteTableBar } from "../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../_components/SiteCharts";
 import { useSiteRange } from "../../_components/SiteDateRange";
 import { datedRow } from "../../_components/datedRows";
@@ -117,7 +117,7 @@ export default function SiteSideBySidePage() {
         rowClickable={(row) => rivalHref(row) !== null}
         minWidthClassName="min-w-[760px]"
         search={{ value: search, onChange: setSearch, placeholder: tc("findWebsite") }}
-        cardHeader={<SiteTableBar footer={paged.footer} noun="websites" actions={<ListDownload fileName={`${site?.host ?? "site"}-side-by-side`} rows={sorted} columns={[{ header: t("columns.website"), value: (row) => row.host }, { header: t("columns.traffic"), value: (row) => row.estimatedTraffic }, { header: t("columns.keywords"), value: (row) => row.keywords }, { header: t("columns.top3"), value: (row) => row.top3 }, { header: t("columns.linking"), value: (row) => row.referringDomains }, { header: t("columns.rank"), value: (row) => row.domainRank }, { header: tc("lastChecked"), value: (row) => row.day }]} />} />}
+        cardHeader={<TableBar footer={paged.footer} noun="websites" actions={<ListDownload fileName={`${site?.host ?? "site"}-side-by-side`} rows={sorted} columns={[{ header: t("columns.website"), value: (row) => row.host }, { header: t("columns.traffic"), value: (row) => row.estimatedTraffic }, { header: t("columns.keywords"), value: (row) => row.keywords }, { header: t("columns.top3"), value: (row) => row.top3 }, { header: t("columns.linking"), value: (row) => row.referringDomains }, { header: t("columns.rank"), value: (row) => row.domainRank }, { header: tc("lastChecked"), value: (row) => row.day }]} />} />}
         empty={{ icon: <Swords className="h-8 w-8 text-muted/30" />, label: lower ? tc("noWebsiteMatch") : t("empty") }}
         footer={paged.footer}
         sort={tableSort}

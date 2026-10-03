@@ -4,13 +4,15 @@ import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Building2, IdCard, Lock } from "lucide-react";
+import { IdCard } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
+import { Notice } from "@/src/ui/components/screens/Notice";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
+import { SettingsCard } from "@/src/ui/components/screens/SettingsCard";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { HoldBrandNames } from "./HoldBrandNames";
 
@@ -78,69 +80,60 @@ export default function CompanySiteProfilePage() {
         description={profile.owned ? t("subtitle") : t("subtitleCompetitor", { host: profile.host })}
       />
 
-      <div className="flex items-start gap-3 rounded-[12px] border border-border-dim bg-card/40 px-4 py-3">
-        <Lock className="mt-0.5 h-4 w-4 shrink-0 text-muted" />
-        <p className="text-[13px] leading-relaxed text-secondary">{t("ownNotice", { host: profile.host })}</p>
-      </div>
+      <Notice>{t("ownNotice", { host: profile.host })}</Notice>
 
       <HoldBrandNames companyWebsiteId={companyWebsiteId} saved={profile.brandNames} />
 
       {profile.owned ? (
-        <>
-          <PageHeader
-            icon={<Building2 className="h-5 w-5 text-brand" />}
-            title={t("business.title")}
-            description={t("business.subtitle")}
-          />
-          <div className="flex flex-col gap-4 rounded-[12px] border border-border-dim bg-card/40 p-5">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field
-                id="hold-sector"
-                label={t("business.sectorLabel")}
-                value={sector}
-                placeholder={t("business.sectorPlaceholder")}
-                onChange={(event) => {
-                  setSector(event.target.value);
-                  setIsSaved(false);
-                }}
-              />
-              <Field
-                id="hold-market"
-                label={t("business.marketLabel")}
-                value={marketLabel}
-                placeholder={t("business.marketPlaceholder")}
-                onChange={(event) => {
-                  setMarketLabel(event.target.value);
-                  setIsSaved(false);
-                }}
-              />
-            </div>
-            <TextAreaField
-              id="hold-description"
-              label={t("business.descriptionLabel")}
-              hint={t("business.descriptionHint")}
-              rows={3}
-              maxLength={MAX_DESCRIPTION}
-              value={description}
-              placeholder={t("business.descriptionPlaceholder")}
+        <SettingsCard title={t("business.title")}>
+          <p className="max-w-2xl text-[12px] leading-relaxed text-secondary">{t("business.subtitle")}</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              id="hold-sector"
+              label={t("business.sectorLabel")}
+              value={sector}
+              placeholder={t("business.sectorPlaceholder")}
               onChange={(event) => {
-                setDescription(event.target.value);
+                setSector(event.target.value);
                 setIsSaved(false);
               }}
             />
-            <SaveError>{error}</SaveError>
-            <div className="flex justify-end">
-              <SaveAction
-                onClick={handleSave}
-                isSaving={action.isBusy()}
-                label={t("business.save")}
-                savingLabel={tCommon("saving")}
-                successLabel={t("business.saved")}
-                showSuccess={isSaved}
-              />
-            </div>
+            <Field
+              id="hold-market"
+              label={t("business.marketLabel")}
+              value={marketLabel}
+              placeholder={t("business.marketPlaceholder")}
+              onChange={(event) => {
+                setMarketLabel(event.target.value);
+                setIsSaved(false);
+              }}
+            />
           </div>
-        </>
+          <TextAreaField
+            id="hold-description"
+            label={t("business.descriptionLabel")}
+            hint={t("business.descriptionHint")}
+            rows={3}
+            maxLength={MAX_DESCRIPTION}
+            value={description}
+            placeholder={t("business.descriptionPlaceholder")}
+            onChange={(event) => {
+              setDescription(event.target.value);
+              setIsSaved(false);
+            }}
+          />
+          <SaveError>{error}</SaveError>
+          <div className="flex justify-end">
+            <SaveAction
+              onClick={handleSave}
+              isSaving={action.isBusy()}
+              label={t("business.save")}
+              savingLabel={tCommon("saving")}
+              successLabel={t("business.saved")}
+              showSuccess={isSaved}
+            />
+          </div>
+        </SettingsCard>
       ) : null}
     </div>
   );

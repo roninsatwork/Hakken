@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { Layers } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { CHART_SERIES_AMBER, CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_TEAL, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
+import { ChartCard } from "@/src/ui/components/screens/ChartCard";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { CUT_COLUMN, PageLinkCell, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
@@ -15,8 +16,8 @@ import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SiteLineChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { ListDownload } from "../../../_components/SiteDownloads";
-import { SiteFigure } from "../../../_components/SiteFigure";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { Figure } from "@/src/ui/components/screens/Figure";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { isPartHeld } from "../../../_components/SiteCoverage";
 import { datedRow } from "../../../_components/datedRows";
 import { formatNumber, formatShortDay, toCsv } from "../../../_components/siteFormat";
@@ -35,8 +36,8 @@ const WHOLE_SHARE = 0.9;
 
 /** The grid's colours, from the chart palette: up, down and newly ranking, never red against green. */
 const MOVE_COLOURS = { up: CHART_SERIES_TEAL, down: CHART_SERIES_AMBER, fresh: CHART_SERIES_BLUE } as const;
-/** A colour at a fifth of its strength, as a background: the palette's hex with an alpha. */
-const tint = (colour: string) => `${colour}33`;
+/** A colour at a fifth of its strength, as a background: mixed with nothing, rather than an alpha glued onto the palette's hex. */
+const tint = (colour: string) => `color-mix(in srgb, ${colour} 20%, transparent)`;
 
 type MovedRow = FunctionReturnType<typeof api.siteBands.listBandMoves>["rows"][number];
 type ClosestRow = FunctionReturnType<typeof api.siteBands.bandMoves>["closest"]["rows"][number];
@@ -148,14 +149,14 @@ export default function SiteBandsPage() {
 
       {latest ? (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)]">
-          <SiteFigure
+          <Figure
             label={t("pageOne")}
             value={formatNumber(pageOne(latest.bands))}
             detail={(
               <div className="flex flex-col gap-1">
                 <span className="text-muted">{t("pageOneShare", { share: `${total ? Math.round((pageOne(latest.bands) / total) * 100) : 0}%`, total: formatNumber(total) })}</span>
                 {change(pageOne(latest.bands), before ? pageOne(before.bands) : undefined)}
-                {/* The top three and the rest of page one, each opening its own searches. */}
+                {/* The top three and the rest of page one, each opening its own searches: two shares in one track, which the kit's Meter (one share) does not draw — frozen in the screen kit's `recipes` list. */}
                 <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-hover" aria-hidden>
                   <span style={{ width: `${pageOne(latest.bands) ? (latest.bands.p01_03 / pageOne(latest.bands)) * 100 : 0}%`, backgroundColor: CHART_SERIES_ORANGE }} />
                   <span className="flex-1" style={{ backgroundColor: CHART_SERIES_BLUE }} />
@@ -167,7 +168,7 @@ export default function SiteBandsPage() {
               </div>
             )}
           />
-          <SiteFigure
+          <Figure
             label={t("pageTwo")}
             value={formatNumber(latest.bands.p11_20)}
             href={listHref("keywords", { band: "p11_20" })}
@@ -178,7 +179,7 @@ export default function SiteBandsPage() {
               </div>
             )}
           />
-          <SiteFigure
+          <Figure
             label={t("further")}
             value={formatNumber(further(latest.bands))}
             detail={(
@@ -223,7 +224,7 @@ export default function SiteBandsPage() {
         rowKey={(row) => row.keyword}
         onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
         minWidthClassName="min-w-[640px]"
-        cardHeader={<SiteTableBar
+        cardHeader={<TableBar
           footer={movedPager.footer}
           noun="searches"
           title={t("moved.title")}
@@ -265,7 +266,7 @@ export default function SiteBandsPage() {
         rowKey={(row) => row.keyword}
         onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
         minWidthClassName="min-w-[640px]"
-        cardHeader={<SiteTableBar
+        cardHeader={<TableBar
           footer={closestPager.footer}
           noun="searches"
           title={t("closest.title")}
@@ -337,9 +338,8 @@ function BandGrid({ moves, bandName, held }: {
   const rows: From[] = ["none", ...BANDS];
 
   return (
-    <section className="rounded-2xl border border-border-dim bg-card/40 p-5">
-      <h2 className="text-[14px] font-medium text-foreground">{t("title")}</h2>
-      <p className="mt-1 text-[13px] text-foreground">{summary}</p>
+    <ChartCard title={t("title")}>
+      <p className="text-[13px] text-foreground">{summary}</p>
       {held !== null ? <p className="mt-1 text-[12px] text-secondary">{t("amongHeld", { count: formatNumber(held) })}</p> : null}
       {start || !moves.rankingDay ? null : (
         <>
@@ -352,8 +352,9 @@ function BandGrid({ moves, bandName, held }: {
                 {BANDS.map((to) => {
                   if (from === to) {
                     const stayed = moves.bands[to] - movedInto(to);
+                    // A plain number: what stayed is read, not pressed, and needs no box.
                     return (
-                      <span key={to} title={t("stayed", { count: stayed, band: bandName(to) })} className="flex h-9 items-center justify-center rounded-md bg-hover font-mono text-muted">
+                      <span key={to} title={t("stayed", { count: stayed, band: bandName(to) })} className="flex h-9 items-center justify-center font-mono text-muted">
                         {formatNumber(stayed)}
                       </span>
                     );
@@ -385,13 +386,11 @@ function BandGrid({ moves, bandName, held }: {
                 {t(key)}
               </span>
             ))}
-            <span className="inline-flex items-center gap-1.5">
-              <span aria-hidden className="h-2.5 w-2.5 rounded-sm bg-hover" />
-              {t("legendStayed")}
-            </span>
+            {/* The counts that stayed are plain numbers on the diagonal, so their key is the word alone, no swatch. */}
+            <span className="inline-flex items-center gap-1.5">{t("legendStayed")}</span>
           </div>
         </>
       )}
-    </section>
+    </ChartCard>
   );
 }

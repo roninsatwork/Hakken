@@ -7,10 +7,11 @@ import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../sites/_components/SiteCharts";
-import { SiteFigure } from "../../../sites/_components/SiteFigure";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { datedRow } from "../../../sites/_components/datedRows";
 import { formatNumber, formatShortDay, toCsv } from "../../../sites/_components/siteFormat";
 import { SearchConsoleChartCard } from "../../_components/SearchConsoleChartCard";
+import { DaysBeforeChange } from "../../_components/SearchConsoleFigures";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { formatPosition, formatRate } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
@@ -58,20 +59,20 @@ export default function SearchConsoleBrandPage() {
       title={t("brand.title")}
       description={description}
       heroes={
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <SiteFigure label={t("brand.brandClicks")} value={split ? formatNumber(split.now.brandClicks) : "…"} detail={split ? <Growth now={split.now.brandClicks} before={split.before?.brandClicks ?? null} days={days} /> : null} />
-          <SiteFigure label={t("brand.otherClicks")} value={split ? formatNumber(split.now.nonBrandClicks) : "…"} detail={split ? <Growth now={split.now.nonBrandClicks} before={split.before?.nonBrandClicks ?? null} days={days} /> : null} />
-          <SiteFigure
+        <FigureRow>
+          <Figure label={t("brand.brandClicks")} value={split ? formatNumber(split.now.brandClicks) : "…"} detail={split ? <Growth now={split.now.brandClicks} before={split.before?.brandClicks ?? null} days={days} /> : null} />
+          <Figure label={t("brand.otherClicks")} value={split ? formatNumber(split.now.nonBrandClicks) : "…"} detail={split ? <Growth now={split.now.nonBrandClicks} before={split.before?.nonBrandClicks ?? null} days={days} /> : null} />
+          <Figure
             label={t("brand.share")}
             value={split ? formatRate(shareOf(split.now)) : "…"}
             detail={split ? <PointsChange now={shareOf(split.now)} before={split.before ? shareOf(split.before) : null} days={days} /> : null}
           />
-          <SiteFigure
+          <Figure
             label={t("brand.otherImpressions")}
             value={split ? formatNumber(split.now.nonBrandImpressions) : "…"}
             detail={split ? <Growth now={split.now.nonBrandImpressions} before={split.before?.nonBrandImpressions ?? null} days={days} /> : null}
           />
-        </div>
+        </FigureRow>
       }
       table={{
         list,
@@ -130,20 +131,26 @@ export default function SearchConsoleBrandPage() {
   );
 }
 
-/** A share against the same days before, in percentage points: "▼ 0.6 points on the 30 days before". */
+/** A share against the same days before, in percentage points: up 0.6 points on the 30 days before. */
 function PointsChange({ now, before, days }: { now: number; before: number | null; days: number }) {
   const t = useTranslations("searchConsole");
-  if (before === null) return <span className="text-muted">{t("figures.noBefore")}</span>;
-  const change = (now - before) * 100;
-  if (Math.abs(change) < 0.05) return <span className="text-muted">{t("figures.same", { days })}</span>;
-  return <span className={change > 0 ? "text-success" : "text-destructive"}>{t(change > 0 ? "figures.up" : "figures.down", { change: t("figures.points", { change: formatPosition(Math.abs(change)) }), days })}</span>;
+  return (
+    <DaysBeforeChange
+      by={before === null ? null : (now - before) * 100}
+      days={days}
+      still={0.05}
+      write={(change) => t("figures.points", { change: formatPosition(change) })}
+    />
+  );
 }
 
-/** A figure against the same days before, as a whole per cent: "▲ 6% on the 30 days before". */
+/** A figure against the same days before, as a whole per cent: up 6% on the 30 days before. */
 function Growth({ now, before, days }: { now: number; before: number | null; days: number }) {
-  const t = useTranslations("searchConsole");
-  if (before === null) return <span className="text-muted">{t("figures.noBefore")}</span>;
-  if (now === before) return <span className="text-muted">{t("figures.same", { days })}</span>;
-  const change = before > 0 ? formatRate(Math.abs(now - before) / before) : formatNumber(Math.abs(now - before));
-  return <span className={now > before ? "text-success" : "text-destructive"}>{t(now > before ? "figures.up" : "figures.down", { change, days })}</span>;
+  return (
+    <DaysBeforeChange
+      by={before === null ? null : now - before}
+      days={days}
+      write={(change) => (before !== null && before > 0 ? formatRate(change / before) : formatNumber(change))}
+    />
+  );
 }

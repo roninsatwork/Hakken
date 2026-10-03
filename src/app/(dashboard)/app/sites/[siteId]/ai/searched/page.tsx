@@ -14,7 +14,7 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
 import { CUT_COLUMN, IntentText, RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
@@ -163,7 +163,7 @@ export default function SiteSearchedPage() {
             </>
           }
           cardHeader={
-            <SiteTableBar
+            <TableBar
               footer={pager.footer}
               noun="angles"
               actions={
@@ -192,7 +192,7 @@ export default function SiteSearchedPage() {
               {tracking ? (
                 <span className="text-[12px] text-foreground">· {t("trackedCount", { count: tracking.count, limit: tracking.limit })}</span>
               ) : null}
-            </SiteTableBar>
+            </TableBar>
           }
           empty={{ icon: <Telescope className="h-8 w-8 text-muted/30" />, label: term || question || intent || tracked ? t("noMatch") : t("empty") }}
           footer={pager.footer}

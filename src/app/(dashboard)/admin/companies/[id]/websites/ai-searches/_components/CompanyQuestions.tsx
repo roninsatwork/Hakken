@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
-import { Check, MessageSquare, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, MessageSquare, Pencil, Trash2, X } from "lucide-react";
 
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
@@ -14,6 +14,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Button } from "@/src/ui/components/screens/Button";
 import { Field } from "@/src/ui/components/screens/Field";
+import { Notice } from "@/src/ui/components/screens/Notice";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { SaveError } from "@/src/ui/components/screens/SaveControls";
@@ -23,9 +24,9 @@ import useDebounce from "@/src/hooks/useDebounce";
 import { formatDate } from "@/src/lib/dates";
 import { EnginePicker, useEngineChoice, useEngineLabel } from "@/src/app/(dashboard)/admin/_components/EngineChoice";
 import { WebsitePicker, chosenWebsite, useAiLists } from "./AiLists";
-import { ListNotice } from "./ListNotice";
 import { PromptAllowance } from "./PromptAllowance";
 import { sectionBase } from "../../_components/websitesSection";
+import { AddBar } from "../../_components/AddBar";
 
 type Row = FunctionReturnType<typeof api.companyAiLists.listCompanyQuestions>["data"][number];
 
@@ -149,8 +150,12 @@ export function CompanyQuestions({ companyWebsiteId, host }: { companyWebsiteId?
         description={host ? tq("descriptionOne", { host }) : tq("description")}
       />
 
-      <div className="flex flex-col gap-3 rounded-[12px] border border-border-dim bg-card/40 p-4">
-        {website ? (
+      <AddBar
+        label={tq("add")}
+        disabled={!website || full || action.isBusy("add") || draft.trim().length === 0 || engines.length === 0}
+        disabledTip={full && website ? tq("allowance.fullTip", { host: website.host, limit: website.promptsLimit }) : undefined}
+        onAdd={() => void handleAdd()}
+        above={website ? (
           <PromptAllowance
             host={website.host}
             used={website.prompts}
@@ -159,52 +164,43 @@ export function CompanyQuestions({ companyWebsiteId, host }: { companyWebsiteId?
             limitsHref={`${sectionBase(companyId)}/site/${website.companyWebsiteId}/limits`}
           />
         ) : null}
-        <div className="flex flex-wrap items-end gap-2">
-          <Field
-            id="company-question"
-            label={tq("addLabel")}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder={full ? tq("allowance.fullPlaceholder") : tq("addPlaceholder")}
-            disabled={full}
-            wrapperClassName="flex-1 min-w-[18rem]"
-          />
-          {companyWebsiteId ? null : (
-            <WebsitePicker id="company-question-website" value={website?.companyWebsiteId ?? ""} onChange={setSite} websites={counts?.websites ?? []} />
-          )}
-          <EnginePicker
-            id="company-question-engines"
-            label={tq("askedOfLabel")}
-            all={engineChoice.all}
-            chosen={engines}
-            onToggle={engineChoice.toggle}
-          />
-          {/* A disabled button shows no tooltip of its own: the reason sits on what holds it. */}
-          <span title={full && website ? tq("allowance.fullTip", { host: website.host, limit: website.promptsLimit }) : undefined}>
-            <Button
-              variant="quiet"
-              className="px-3 py-2 text-[12px]"
-              disabled={!website || full || action.isBusy("add") || draft.trim().length === 0 || engines.length === 0}
-              onClick={() => void handleAdd()}
-            >
-              <Plus className="mr-1 inline h-3.5 w-3.5" />
-              {tq("add")}
-            </Button>
-          </span>
-        </div>
-        {/* What a collection buys across the company's websites. */}
-        <span className="text-[11px] text-muted">
-          {isLoading ? "" : `${tq("asked", { count: questions.engineCalls })} · ${tq("live")}`}
-        </span>
-        <SaveError>{error}</SaveError>
-      </div>
+        below={
+          <>
+            {/* What a collection buys across the company's websites. */}
+            <span className="text-[11px] text-muted">
+              {isLoading ? "" : `${tq("asked", { count: questions.engineCalls })} · ${tq("live")}`}
+            </span>
+            <SaveError>{error}</SaveError>
+          </>
+        }
+      >
+        <Field
+          id="company-question"
+          label={tq("addLabel")}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder={full ? tq("allowance.fullPlaceholder") : tq("addPlaceholder")}
+          disabled={full}
+          wrapperClassName="flex-1 min-w-[18rem]"
+        />
+        {companyWebsiteId ? null : (
+          <WebsitePicker id="company-question-website" value={website?.companyWebsiteId ?? ""} onChange={setSite} websites={counts?.websites ?? []} />
+        )}
+        <EnginePicker
+          id="company-question-engines"
+          label={tq("askedOfLabel")}
+          all={engineChoice.all}
+          chosen={engines}
+          onToggle={engineChoice.toggle}
+        />
+      </AddBar>
 
       {edited ? (
-        <ListNotice>
+        <Notice>
           {edited.words
             ? tq("edited", { prompt: edited.prompt })
             : tq("editedEngines", { prompt: edited.prompt, engines: edited.engines.map(engineLabel).join(", ") })}
-        </ListNotice>
+        </Notice>
       ) : null}
       {questions?.cut ? <p className="text-[12px] text-muted">{t("cut", { count: questions.totalCount })}</p> : null}
 

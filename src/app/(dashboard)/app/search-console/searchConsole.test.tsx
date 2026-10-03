@@ -268,13 +268,16 @@ describe("the connection", () => {
     await waitFor(() => expect(mutations.choose).toHaveBeenCalledWith({ siteId: "site_1", property: "https://acme-shop.test/blog/" }));
   });
 
-  it("asks on the screen before disconnecting, never in a pop-up", async () => {
+  it("asks a yes or a no in the kit's confirmation before disconnecting", async () => {
     at("/app/search-console/site_1/connection");
     answer({ "searchConsoleConnect:searchConsoleStatus": status() });
     render(<SearchConsoleConnectionPage />);
     expect(screen.getByText("sc-domain:acme-shop.test")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "searchConsole.connection.disconnect" }));
-    expect(screen.getByText("searchConsole.connection.confirm")).toBeInTheDocument();
+    const dialog = await screen.findByRole("dialog");
+    expect(dialog).toHaveTextContent("searchConsole.connection.confirm");
+    expect(screen.getByRole("button", { name: "searchConsole.connection.keep" })).toBeInTheDocument();
     expect(mutations.disconnect).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "searchConsole.connection.confirmDisconnect" }));
     await waitFor(() => expect(mutations.disconnect).toHaveBeenCalledWith({ siteId: "site_1" }));

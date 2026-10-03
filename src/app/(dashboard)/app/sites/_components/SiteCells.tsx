@@ -4,8 +4,9 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
-import { STATUS_TONE_TEXT_CLASSES, type StatusTone } from "@/src/ui/components/screens/statusTone";
-import { formatDay, movement, movementClass } from "./siteFormat";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
+import type { StatusTone } from "@/src/ui/components/screens/statusTone";
+import { formatDay } from "./siteFormat";
 
 /**
  * The cells the Sites tables share, so a keyword's intent, a position and a
@@ -27,11 +28,15 @@ export function IntentLabel({ intent, size }: { intent: string | null; size?: "s
   return <StatusLabel tone={INTENT_TONES[key] ?? "neutral"} size={size}>{t(key in INTENT_TONES ? key : "OTHER")}</StatusLabel>;
 }
 
-/** What the searcher wants as coloured words, for a row's second line where a label's icon would crowd it. */
+/**
+ * What the searcher wants as plain words, for a row's second line where a
+ * label's icon would crowd it: a kind, so the kit's `TagLabel` (2026-10-03
+ * clean-up), not words coloured by hand.
+ */
 export function IntentText({ intent }: { intent: string | null }) {
   const t = useTranslations("sites.common.intents");
   const key = intent ?? "UNJUDGED";
-  return <span className={STATUS_TONE_TEXT_CLASSES[INTENT_TONES[key] ?? "neutral"]}>{t(key in INTENT_TONES ? key : "OTHER")}</span>;
+  return <TagLabel>{t(key in INTENT_TONES ? key : "OTHER")}</TagLabel>;
 }
 
 /** A position, or "not on page one" when there is none. */
@@ -39,12 +44,6 @@ export function PositionCell({ position }: { position: number | null }) {
   const t = useTranslations("sites.common");
   if (position === null) return <span className="whitespace-nowrap text-[12px] text-muted">{t("notOnPageOne")}</span>;
   return <span className="font-mono text-[13px] text-foreground">{position}</span>;
-}
-
-/** Places moved, with an arrow that carries the meaning without the colour. */
-export function ChangeCell({ change }: { change: number }) {
-  const moved = movement(change);
-  return <span className={`font-mono text-[12px] ${movementClass(moved.tone)}`}>{moved.text}</span>;
 }
 
 /** The day a row was last checked, in its own column on every table (D12). */

@@ -2,10 +2,10 @@
 
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import type { PagedFooterSpec } from "@/src/ui/components/screens/DataTable";
+import type { PagedFooterSpec } from "./DataTable";
 
 /** What a table's rows are, for its count: "807 keywords", "531 linking websites". */
-export type SiteTableNoun =
+export type TableNoun =
   | "keywords" | "searches" | "pages" | "websites" | "linkingWebsites" | "links" | "anchors" | "addresses"
   | "results" | "answers" | "queries" | "problems" | "sections" | "folders" | "checks" | "days" | "weeks" | "months" | "groups" | "adverts"
   | "questionsAndSearches" | "updates" | "positions" | "kinds"
@@ -25,7 +25,7 @@ export type SiteTableNoun =
  * A table inside a record's screen keeps its title here, with the count
  * beside it. The page's own header is above the card either way.
  */
-export function SiteTableBar({
+export function TableBar({
   footer,
   noun,
   title,
@@ -35,7 +35,7 @@ export function SiteTableBar({
 }: {
   /** The table's footer: its total, and whether the list is still on its way. */
   footer: Pick<PagedFooterSpec, "isLoading" | "totalCount">;
-  noun: SiteTableNoun;
+  noun: TableNoun;
   /** A table on a record's screen: what it lists. */
   title?: ReactNode;
   description?: ReactNode;
@@ -44,7 +44,7 @@ export function SiteTableBar({
   /** On the right: the download. */
   actions?: ReactNode;
 }) {
-  const t = useTranslations("sites.tableCounts");
+  const t = useTranslations("ui.tableBar");
   const count = footer.isLoading ? "…" : t(noun, { count: footer.totalCount });
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-dim/50 bg-background/50 px-4 py-3">

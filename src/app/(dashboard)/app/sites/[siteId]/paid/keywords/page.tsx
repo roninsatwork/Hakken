@@ -7,7 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { CUT_COLUMN, RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatCpc, formatNumber } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
@@ -60,7 +60,7 @@ export default function SitePaidKeywordsPage() {
         onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
         minWidthClassName="min-w-[720px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
-        cardHeader={<SiteTableBar footer={table.footer} noun="adverts" actions={<TableDownload siteId={siteId} kind="paid" sort={order.tableSort} />} />}
+        cardHeader={<TableBar footer={table.footer} noun="adverts" actions={<TableDownload siteId={siteId} kind="paid" sort={order.tableSort} />} />}
         empty={{ icon: <Megaphone className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : reported ? t("emptyReported", { reported: formatNumber(reported) }) : t("empty") }}
         footer={table.footer}
         sort={order.tableSort}

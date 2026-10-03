@@ -3,7 +3,7 @@
 import { Scale } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
-import { SiteFigure } from "../../../sites/_components/SiteFigure";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { pageLabel, useRecordHref } from "../../_components/searchConsoleRecords";
@@ -31,12 +31,12 @@ export default function SearchConsoleEstimatesPage() {
       title={t("estimates.title")}
       description={t("estimates.description", { days })}
       heroes={
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <SiteFigure label={t("estimates.sites")} value={summary ? formatNumber(summary.estimate) : "…"} detail={<span className="text-secondary">{t("estimates.visitsIn", { days })}</span>} />
-          <SiteFigure label={t("estimates.google")} value={summary ? formatNumber(summary.clicks) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
-          <SiteFigure label={t("estimates.high")} value={summary ? formatNumber(summary.high) : "…"} detail={<span className="text-secondary">{t("estimates.byAQuarter")}</span>} />
-          <SiteFigure label={t("estimates.low")} value={summary ? formatNumber(summary.low) : "…"} detail={<span className="text-secondary">{t("estimates.byAQuarter")}</span>} />
-        </div>
+        <FigureRow>
+          <Figure label={t("estimates.sites")} value={summary ? formatNumber(summary.estimate) : "…"} detail={<span className="text-secondary">{t("estimates.visitsIn", { days })}</span>} />
+          <Figure label={t("estimates.google")} value={summary ? formatNumber(summary.clicks) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
+          <Figure label={t("estimates.high")} value={summary ? formatNumber(summary.high) : "…"} detail={<span className="text-secondary">{t("estimates.byAQuarter")}</span>} />
+          <Figure label={t("estimates.low")} value={summary ? formatNumber(summary.low) : "…"} detail={<span className="text-secondary">{t("estimates.byAQuarter")}</span>} />
+        </FigureRow>
       }
       table={{
         list,

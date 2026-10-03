@@ -16,7 +16,7 @@ export default function CompanyWebsitesLayout({ children }: { children: ReactNod
   const params = useParams();
   const companyId = params.id as Id<"companies">;
   return (
-    <div className="grid w-full grid-cols-1 gap-8 lg:grid-cols-[230px_minmax(0,1fr)]">
+    <div className="grid w-full grid-cols-1 gap-8 lg:grid-cols-[240px_minmax(0,1fr)]">
       <aside className="lg:sticky lg:top-4 lg:self-start">
         <WebsitesMenu companyId={companyId} />
       </aside>

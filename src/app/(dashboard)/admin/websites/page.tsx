@@ -11,7 +11,8 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader, PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
-import { RowIconButton } from "@/src/ui/components/screens/Table";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
+import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
@@ -195,7 +196,7 @@ export default function AllWebsitesPage() {
             cell: (website) => (
               website.nextPullAt ? (
                 <div className="flex flex-col gap-0.5">
-                  <StatusLabel tone="info">{formatDateTime(website.nextPullAt)}</StatusLabel>
+                  <TagLabel>{formatDateTime(website.nextPullAt)}</TagLabel>
                   {website.fetchedFor ? (
                     <span className="text-[11px] text-muted">
                       {t("fetchedFor", {
@@ -221,11 +222,10 @@ export default function AllWebsitesPage() {
             key: "actions",
             header: t("actionsColumn"),
             align: "right",
-            // Always shown rather than on hover, which is how the kit's
-            // RowActions hides its buttons: Anthony looked for it and could
-            // not see it.
+            // Always shown rather than on hover: Anthony looked for it and
+            // could not see it.
             cell: (website) => (
-              <div className="flex justify-end">
+              <RowActions alwaysVisible>
                 <RowIconButton
                   label={tDetail("deleteWebsite")}
                   tone="danger"
@@ -233,7 +233,7 @@ export default function AllWebsitesPage() {
                 >
                   <Trash2 className="h-4 w-4" />
                 </RowIconButton>
-              </div>
+              </RowActions>
             ),
           },
         ]}

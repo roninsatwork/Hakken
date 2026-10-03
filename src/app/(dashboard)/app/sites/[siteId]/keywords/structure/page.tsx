@@ -7,11 +7,12 @@ import { FolderTree } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { CHART_SERIES_BLUE, CHART_SERIES_TEAL } from "@/src/ui/components/charts/chartPalette";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { Meter } from "@/src/ui/components/screens/Meter";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { RecordLinkCell } from "../../../_components/SiteCells";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { ListDownload } from "../../../_components/SiteDownloads";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { SiteTreemap } from "../../../_components/SiteTreemap";
 import { SiteViewSwitch } from "../../../_components/SiteViewSwitch";
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
@@ -170,7 +171,7 @@ export default function SiteStructurePage() {
         onRowClick={(row) => router.push(folderHref(row.section))}
         minWidthClassName="min-w-[760px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
-        cardHeader={<SiteTableBar footer={pager.footer} noun="folders" actions={<ListDownload fileName={`${host}-structure`} rows={sorted} columns={[{ header: t("columns.section"), value: (row) => row.section }, { header: t("columns.pages"), value: (row) => row.pages }, { header: t("columns.keywords"), value: (row) => row.keywords }, { header: t("columns.top3"), value: (row) => row.top3 }, { header: t("columns.traffic"), value: (row) => (row.traffic === null ? null : Math.round(row.traffic)) }, { header: tc("lastChecked"), value: (row) => row.day }]} />} />}
+        cardHeader={<TableBar footer={pager.footer} noun="folders" actions={<ListDownload fileName={`${host}-structure`} rows={sorted} columns={[{ header: t("columns.section"), value: (row) => row.section }, { header: t("columns.pages"), value: (row) => row.pages }, { header: t("columns.keywords"), value: (row) => row.keywords }, { header: t("columns.top3"), value: (row) => row.top3 }, { header: t("columns.traffic"), value: (row) => (row.traffic === null ? null : Math.round(row.traffic)) }, { header: tc("lastChecked"), value: (row) => row.day }]} />} />}
         empty={{ icon: <FolderTree className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}
         footer={pager.footer}
         sort={tableSort}
@@ -185,6 +186,7 @@ export default function SiteStructurePage() {
             className: "w-[26%]",
             header: (
               <span>
+                {/* The key to the two bars below, in the bars' own colours. */}
                 {t("columns.share")}: <span style={{ color: CHART_SERIES_BLUE }}>{t("shareOf.keywords")}</span> · <span style={{ color: CHART_SERIES_TEAL }}>{t("shareOf.traffic")}</span>
               </span>
             ),
@@ -197,13 +199,9 @@ export default function SiteStructurePage() {
                   className="grid grid-cols-[minmax(0,1fr)_36px] items-center gap-x-2 gap-y-1 text-[11px]"
                   title={`${shareLine(searches, t("shareOf.keywords"))} · ${shareLine(visits, t("shareOf.traffic"))}`}
                 >
-                  <span className="h-1.5 overflow-hidden rounded-full bg-hover">
-                    <span className="block h-full rounded-full" style={{ width: `${searches}%`, backgroundColor: CHART_SERIES_BLUE }} />
-                  </span>
+                  <Meter value={searches / 100} colour={CHART_SERIES_BLUE} className="w-full" />
                   <span className="text-right font-mono text-secondary">{Math.round(searches)}%</span>
-                  <span className="h-1.5 overflow-hidden rounded-full bg-hover">
-                    <span className="block h-full rounded-full" style={{ width: `${visits}%`, backgroundColor: CHART_SERIES_TEAL }} />
-                  </span>
+                  <Meter value={visits / 100} colour={CHART_SERIES_TEAL} className="w-full" />
                   <span className="text-right font-mono text-secondary">{Math.round(visits)}%</span>
                 </span>
               );

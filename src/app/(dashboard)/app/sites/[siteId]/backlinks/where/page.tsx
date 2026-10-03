@@ -5,11 +5,12 @@ import { useQuery } from "convex/react";
 import { useLocale, useTranslations } from "next-intl";
 import { Globe2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
+import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { CheckedCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { formatDay, formatNumber, toCsv } from "../../../_components/siteFormat";
@@ -104,7 +105,7 @@ export default function SiteLinkSourcesPage() {
       />
 
       {profile === null ? (
-        <p className="rounded-2xl border border-border-dim bg-card/40 px-5 py-10 text-center text-[13px] text-secondary">{t("empty")}</p>
+        <HakkenEmptyState icon={Globe2} title={t("title")} description={t("empty")} />
       ) : (
         <>
           <SiteChartCard
@@ -134,7 +135,7 @@ export default function SiteLinkSourcesPage() {
             rowKey={(row) => row.key}
             minWidthClassName="min-w-[480px]"
             search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
-            cardHeader={<SiteTableBar footer={pager.footer} noun="groups" actions={<ListDownload fileName={`${site?.host ?? "site"}-links-${breakdown}`} rows={sorted} columns={[{ header: t("columns.group"), value: (row) => nameOf(row.key) }, { header: t("columns.links"), value: (row) => row.count }, { header: t("columns.share"), value: (row) => (total ? ((row.count / total) * 100).toFixed(1) : null) }]} />} />}
+            cardHeader={<TableBar footer={pager.footer} noun="groups" actions={<ListDownload fileName={`${site?.host ?? "site"}-links-${breakdown}`} rows={sorted} columns={[{ header: t("columns.group"), value: (row) => nameOf(row.key) }, { header: t("columns.links"), value: (row) => row.count }, { header: t("columns.share"), value: (row) => (total ? ((row.count / total) * 100).toFixed(1) : null) }]} />} />}
             empty={{ icon: <Globe2 className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}
             footer={pager.footer}
             sort={tableSort}

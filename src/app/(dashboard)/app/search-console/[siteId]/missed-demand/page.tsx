@@ -3,7 +3,7 @@
 import { SearchX } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
-import { SiteFigure } from "../../../sites/_components/SiteFigure";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { pageLabel, useRecordHref } from "../../_components/searchConsoleRecords";
@@ -42,20 +42,20 @@ export default function SearchConsoleDemandPage() {
       title={t("demand.title")}
       description={t("demand.description")}
       heroes={
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <SiteFigure label={t("filters.missedSearched")} value={searched ? formatNumber(searched.rows) : "…"} detail={<span className="text-secondary">{t("demand.fewer")}</span>} />
-          <SiteFigure label={t("almost.searches")} value={searched ? formatNumber(searched.volume) : "…"} detail={<span className="text-secondary">{t("almost.sitesFigures")}</span>} />
-          <SiteFigure
+        <FigureRow>
+          <Figure label={t("filters.missedSearched")} value={searched ? formatNumber(searched.rows) : "…"} detail={<span className="text-secondary">{t("demand.fewer")}</span>} />
+          <Figure label={t("almost.searches")} value={searched ? formatNumber(searched.volume) : "…"} detail={<span className="text-secondary">{t("almost.sitesFigures")}</span>} />
+          <Figure
             label={t("filters.missedUntracked")}
             value={untracked ? formatNumber(untracked.rows) : "…"}
             detail={<span className="text-secondary">{t("demand.ofShown", { count: formatNumber(untracked?.of ?? 0) })}</span>}
           />
-          <SiteFigure
+          <Figure
             label={t("almost.tracked")}
             value={keywords ? t("track.of", { count: formatNumber(keywords.count), limit: formatNumber(keywords.limit) }) : "…"}
             detail={<span className="text-secondary">{t("almost.youTrack")}</span>}
           />
-        </div>
+        </FigureRow>
       }
       table={{
         list,

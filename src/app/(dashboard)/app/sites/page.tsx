@@ -9,6 +9,7 @@ import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import Header from "@/src/ui/components/layout/Header";
 import { Button } from "@/src/ui/components/screens/Button";
+import { Change } from "@/src/ui/components/screens/Change";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { formatDate, formatDateTime } from "@/src/lib/dates";
@@ -16,7 +17,7 @@ import { cn } from "@/src/ui/lib/utils";
 import { formatDay, formatNumber } from "./_components/siteFormat";
 import { SiteMark } from "./_components/SiteMark";
 import { groupHolds } from "./_components/siteGroups";
-import { SiteTableBar } from "./_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { sharedSiteQuery, useSiteSearch } from "./_components/useSiteParam";
 import { useSitePager } from "./_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "./_components/useSiteSort";
@@ -140,7 +141,7 @@ export default function SitesPage() {
           minWidthClassName="min-w-[1040px]"
           search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
           cardHeader={
-            <SiteTableBar
+            <TableBar
               footer={paged.footer}
               noun="websites"
               actions={
@@ -159,6 +160,7 @@ export default function SitesPage() {
                     { header: t("columns.top3"), value: (row) => row.top3 },
                     { header: t("columns.traffic"), value: (row) => row.estimatedTraffic },
                     {
+                      // The download's text, not a cell: the kit's `Change` draws the cell on screen.
                       header: t("columns.moved"),
                       value: (row) => (row.rankedUp === null && row.rankedDown === null ? null : `▲ ${row.rankedUp ?? 0} · ▼ ${row.rankedDown ?? 0}`),
                     },
@@ -224,9 +226,9 @@ export default function SitesPage() {
                 row.rankedUp === null && row.rankedDown === null ? dash : (
                   <span className="flex flex-col text-[12px]">
                     <span>
-                      <span className="text-success">▲ {row.rankedUp ?? 0}</span>
+                      <Change by={row.rankedUp ?? 0} />
                       <span className="text-muted"> · </span>
-                      <span className="text-destructive">▼ {row.rankedDown ?? 0}</span>
+                      <Change by={-(row.rankedDown ?? 0)} />
                     </span>
                     {row.movesAmongHeld !== null ? <span className="text-[11px] text-muted">{t("amongHeld", { count: formatNumber(row.movesAmongHeld) })}</span> : null}
                   </span>

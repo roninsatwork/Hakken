@@ -8,7 +8,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { LinkStatusLabel, RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
@@ -93,7 +93,7 @@ export default function SiteReferringIpsPage() {
             </Select>
           </>
         }
-        cardHeader={<SiteTableBar footer={table.footer} noun="addresses" actions={<TableDownload siteId={siteId} kind="ips" sort={order.tableSort} />} />}
+        cardHeader={<TableBar footer={table.footer} noun="addresses" actions={<TableDownload siteId={siteId} kind="ips" sort={order.tableSort} />} />}
         empty={{ icon: <Server className="h-8 w-8 text-muted/30" />, label: term || subnet ? t("noMatch") : t("empty") }}
         footer={table.footer}
         sort={order.tableSort}

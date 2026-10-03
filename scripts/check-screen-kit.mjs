@@ -335,6 +335,24 @@ const RULES = {
       "RunStatusLabel); a part that says a kind draws TagLabel. See \"Status labels\" in\n" +
       "docs/developer/screen-kit.md.",
   },
+  recipes: {
+    part: "a kit part's own look",
+    headline: "These copy a kit part's own classes instead of using the part:",
+    fix:
+      "Each of these is a part's own recipe, copied by hand — the copy that drifts a\n" +
+      "token at a time until two screens look almost, not quite, the same:\n" +
+      "\n" +
+      "  a number box  → Figure (src/ui/components/screens/Figure.tsx)\n" +
+      "  a chart card  → ChartCard (screens/ChartCard.tsx); without exportName, a card\n" +
+      "                  with a heading and no download\n" +
+      "  a notice      → Notice (screens/Notice.tsx), tone \"info\" or \"warning\"\n" +
+      "  a share bar   → Meter (screens/Meter.tsx)\n" +
+      "  ▲ or ▼        → Change, or ChangeLine for a figure's sentence (screens/Change.tsx)\n" +
+      "\n" +
+      "Anthony, 2026-10-03, after Sites, Search Console and the websites admin were found\n" +
+      "drawing their own copies of each: \"we need to keep a ui standard app wide\". If the\n" +
+      "part nearly fits, extend it and say so; a new part is fine, but he is told.",
+  },
   headerRule: {
     part: "the header's rule",
     headline: "These draw the header's underline by hand:",
@@ -402,6 +420,9 @@ export function loadFrozen(source = ALLOWLIST_FILE) {
     // had?".
     headings: new Map(Object.entries(allowlist.headings ?? {})),
     headerRule: new Set(allowlist.headerRule ?? []),
+    // Files, like dividers: what still copied a part's look the day the
+    // parts were made (2026-10-03), each for a reason.
+    recipes: new Set(allowlist.recipes ?? []),
     // Counted per file like buttons: what still matched the pill recipe the
     // day every pill went is not a status (a code snippet, a step circle).
     pills: new Map(Object.entries(allowlist.pills ?? {})),
@@ -555,6 +576,21 @@ const TOGGLE_GLYPHS = /<Toggle(Left|Right)\b/;
  * so a screen on the kit never needs to write it.
  */
 const HAND_DRAWN_DIVIDER = /\blast:border-(?:b-)?0\b/;
+
+/**
+ * The kit parts' own recipes, as the classes that give a copy away
+ * (2026-10-03). Each is the part's frame or its one tell, exact enough that
+ * nothing else in the app writes it by chance: a screen writing one is
+ * drawing the part by hand. The arrows are read where a screen types them —
+ * after a tag, a quote or a brace — so a comment mentioning one is not a copy.
+ */
+const KIT_RECIPES = [
+  { part: "Figure", pattern: /rounded-2xl border border-border-dim bg-card\/40 px-5 py-4/ },
+  { part: "ChartCard", pattern: /rounded-2xl border border-border-dim bg-card\/40 p-5(?![\w./-])/ },
+  { part: "Notice", pattern: /border-border-dim\/50 bg-foreground\/\[0\.015\]|border-warning\/30 bg-warning\/5/ },
+  { part: "Meter", pattern: /rounded-full bg-hover/ },
+  { part: "Change", pattern: /[>"'`{]\s*[▲▼]/ },
+];
 
 /**
  * Where the pill rules read: every dashboard screen and every shared component,
@@ -718,6 +754,11 @@ function findInFile(relative, text) {
   const dividerAt = text.search(HAND_DRAWN_DIVIDER);
   if (dividerAt >= 0) {
     found.push({ rule: "dividers", file: relative, line: lineOf(dividerAt) });
+  }
+
+  for (const recipe of KIT_RECIPES) {
+    const at = text.search(recipe.pattern);
+    if (at >= 0) found.push({ rule: "recipes", file: relative, line: lineOf(at), name: recipe.part });
   }
 
   const kitNames = kitComponentNames();
@@ -911,6 +952,7 @@ export function findStaleFreezes(frozen = loadFrozen(), root = rootDir) {
     "anatomy",
     "controls",
     "headerRule",
+    "recipes",
   ]) {
     for (const relative of frozen[rule]) {
       const full = path.join(root, relative);
@@ -947,8 +989,8 @@ function main() {
         `(across ${frozen.buttons.size} files), ${headingCount} hand-written headings ` +
         `(across ${frozen.headings.size} files), ${frozen.headerRule.size} hand-drawn ` +
         `header rules, ${[...frozen.pills.values()].reduce((sum, count) => sum + count, 0)} ` +
-        `pill-shaped non-statuses (across ${frozen.pills.size} files) and ` +
-        `${frozen.pillNames.size} pill-named parts frozen, no new ones.`
+        `pill-shaped non-statuses (across ${frozen.pills.size} files), ` +
+        `${frozen.pillNames.size} pill-named parts and ${frozen.recipes.size} copied kit looks frozen, no new ones.`
     );
     return;
   }
@@ -964,7 +1006,7 @@ function main() {
           `  ${offender.file} — ${offender.count} × ${RULES[rule].part}, frozen at ${offender.frozen}`
         );
       } else {
-        console.error(`  ${offender.file}:${offender.line}`);
+        console.error(`  ${offender.file}:${offender.line}${offender.name ? ` — ${offender.name}` : ""}`);
       }
     }
     console.error(`\n${RULES[rule].fix}`);

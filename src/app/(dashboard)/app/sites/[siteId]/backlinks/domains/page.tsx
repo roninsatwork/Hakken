@@ -9,7 +9,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { LinkStatusLabel, RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { formatDay, formatNumber } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
@@ -77,7 +77,7 @@ export default function SiteReferringDomainsPage() {
             </Select>
           </>
         }
-        cardHeader={<SiteTableBar footer={table.footer} noun="linkingWebsites" actions={<TableDownload siteId={siteId} kind="domains" sort={order.tableSort} />} />}
+        cardHeader={<TableBar footer={table.footer} noun="linkingWebsites" actions={<TableDownload siteId={siteId} kind="domains" sort={order.tableSort} />} />}
         empty={{ icon: <Network className="h-8 w-8 text-muted/30" />, label: term || status || follow ? t("noMatch") : t("empty") }}
         footer={table.footer}
         sort={order.tableSort}

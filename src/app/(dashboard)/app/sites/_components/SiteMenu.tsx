@@ -50,6 +50,7 @@ export function SiteMenu({ siteId, counts }: { siteId: string; counts: MenuCount
     switch (page.count) {
       case "aiNamed":
         return counts.aiNamed === null || counts.aiAsked === null ? null : `${counts.aiNamed}/${counts.aiAsked}`;
+      // Text in the menu's count, not a cell: the kit's `Change` draws a cell (frozen in the screen kit's `recipes` list).
       case "moves":
         return counts.rankedUp === null && counts.rankedDown === null
           ? null
@@ -66,8 +67,7 @@ export function SiteMenu({ siteId, counts }: { siteId: string; counts: MenuCount
   return (
     <SectionMenu
       label={t("label")}
-      jumpLabel={t("jumpLabel")}
-      jumpPlaceholder={t("jumpPlaceholder")}
+      jump={{ label: t("jumpLabel"), placeholder: t("jumpPlaceholder") }}
       currentId={current.id}
       openAtFirst={["site"]}
       groups={SITE_PAGE_GROUPS.map((group) => ({

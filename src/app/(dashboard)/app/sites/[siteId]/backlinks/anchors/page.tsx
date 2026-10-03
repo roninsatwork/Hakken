@@ -8,7 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { LinkStatusLabel, RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
@@ -77,7 +77,7 @@ export default function SiteAnchorsPage() {
         onRowClick={(row) => router.push(recordHref({ kind: "anchor", anchor: row.anchor }))}
         minWidthClassName="min-w-[680px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
-        cardHeader={<SiteTableBar footer={table.footer} noun="anchors" actions={<TableDownload siteId={siteId} kind="anchors" sort={order.tableSort} />} />}
+        cardHeader={<TableBar footer={table.footer} noun="anchors" actions={<TableDownload siteId={siteId} kind="anchors" sort={order.tableSort} />} />}
         empty={{ icon: <Anchor className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}
         footer={table.footer}
         sort={order.tableSort}

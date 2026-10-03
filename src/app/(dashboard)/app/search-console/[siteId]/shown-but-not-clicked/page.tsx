@@ -3,7 +3,7 @@
 import { MousePointerClick } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
-import { SiteFigure } from "../../../sites/_components/SiteFigure";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { formatRate } from "../../_components/searchConsoleFormat";
@@ -31,12 +31,12 @@ export default function SearchConsoleLowCtrPage() {
       title={t("lowCtr.title")}
       description={t("lowCtr.description")}
       heroes={
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <SiteFigure label={t("lowCtr.below")} value={summary ? formatNumber(summary.rows) : "…"} detail={<span className="text-secondary">{t("lowCtr.ofShown", { count: formatNumber(summary?.of ?? 0) })}</span>} />
-          <SiteFigure label={t("lowCtr.impressions")} value={summary ? formatNumber(summary.impressions) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
-          <SiteFigure label={t("lowCtr.clicks")} value={summary ? formatNumber(summary.clicks) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
-          <SiteFigure label={t("lowCtr.atUsual")} value={summary ? formatNumber(summary.expected) : "…"} detail={<span className="text-secondary">{t("lowCtr.wouldHave")}</span>} />
-        </div>
+        <FigureRow>
+          <Figure label={t("lowCtr.below")} value={summary ? formatNumber(summary.rows) : "…"} detail={<span className="text-secondary">{t("lowCtr.ofShown", { count: formatNumber(summary?.of ?? 0) })}</span>} />
+          <Figure label={t("lowCtr.impressions")} value={summary ? formatNumber(summary.impressions) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
+          <Figure label={t("lowCtr.clicks")} value={summary ? formatNumber(summary.clicks) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
+          <Figure label={t("lowCtr.atUsual")} value={summary ? formatNumber(summary.expected) : "…"} detail={<span className="text-secondary">{t("lowCtr.wouldHave")}</span>} />
+        </FigureRow>
       }
       table={{
         list,

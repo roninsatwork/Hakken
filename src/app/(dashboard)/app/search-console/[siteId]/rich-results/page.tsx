@@ -8,8 +8,8 @@ import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { CUT_COLUMN } from "../../../sites/_components/SiteCells";
-import { SiteFigure } from "../../../sites/_components/SiteFigure";
-import { SiteTableBar } from "../../../sites/_components/SiteTableBar";
+import { Figure } from "@/src/ui/components/screens/Figure";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
@@ -95,9 +95,9 @@ export default function SearchConsoleAppearancePage() {
         <SearchConsoleGate status={status} siteId={siteId}>
           <ResultKindSwitch />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <SiteFigure label={t("appearance.kinds")} value={rows ? formatNumber(rows.length) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days: range.days })}</span>} />
-            <SiteFigure label={t("appearance.clicks")} value={rows ? formatNumber(clicks) : "…"} detail={<span className="text-secondary">{t("appearance.ofAll", { share: all > 0 ? formatRate(clicks / all) : "–" })}</span>} />
-            <SiteFigure label={t("appearance.impressions")} value={rows ? formatNumber(impressions) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days: range.days })}</span>} />
+            <Figure label={t("appearance.kinds")} value={rows ? formatNumber(rows.length) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days: range.days })}</span>} />
+            <Figure label={t("appearance.clicks")} value={rows ? formatNumber(clicks) : "…"} detail={<span className="text-secondary">{t("appearance.ofAll", { share: all > 0 ? formatRate(clicks / all) : "–" })}</span>} />
+            <Figure label={t("appearance.impressions")} value={rows ? formatNumber(impressions) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days: range.days })}</span>} />
           </div>
           <DataTable
             rows={pager.pageRows}
@@ -105,7 +105,7 @@ export default function SearchConsoleAppearancePage() {
             minWidthClassName="min-w-[640px]"
             search={{ value: search, onChange: setSearch, placeholder: t("appearance.searchPlaceholder") }}
             filters={<SearchConsoleChips chips={CHIPS} />}
-            cardHeader={<SiteTableBar footer={pager.footer} noun="kinds" />}
+            cardHeader={<TableBar footer={pager.footer} noun="kinds" />}
             sort={tableSort}
             empty={{ icon: <Star className="h-8 w-8 text-muted/30" />, label: term ? t("table.noMatch") : t("appearance.empty") }}
             footer={pager.footer}

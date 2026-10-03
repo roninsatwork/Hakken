@@ -132,7 +132,9 @@ function formatSpend(value: number) {
   return `$${value.toFixed(2)}`;
 }
 
-function ChartCard({ title, description, action, children }: {
+// The dashboards' own chart card — a larger title over a description — named
+// apart from the kit's `ChartCard`, which Sites and Search Console use (2026-10-03).
+function DashboardChartCard({ title, description, action, children }: {
   title: string;
   description: string;
   action?: ReactNode;
@@ -335,7 +337,7 @@ export default function AdminDashboardPage() {
 
       {overview ? (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <ChartCard
+          <DashboardChartCard
             title={t("charts.activityTitle")}
             description={t("charts.activityDescription", { days: overview.windowDays })}
           >
@@ -362,9 +364,9 @@ export default function AdminDashboardPage() {
             </div>
             {/* The gap between the lines is automation running unasked. */}
             <ChartLegend items={ACTIVITY_SERIES.map((series) => ({ label: t(series.labelKey), fill: series.stroke }))} />
-          </ChartCard>
+          </DashboardChartCard>
 
-          <ChartCard
+          <DashboardChartCard
             title={t("charts.spendTitle")}
             description={t("charts.spendDescription", { days: overview.windowDays })}
           >
@@ -393,12 +395,12 @@ export default function AdminDashboardPage() {
                 </AreaChart>
               </ResponsiveContainer>
             </div>
-          </ChartCard>
+          </DashboardChartCard>
         </div>
       ) : null}
 
       {overview ? (
-        <ChartCard
+        <DashboardChartCard
           title={t("charts.signInsTitle")}
           description={t("charts.signInsDescription", { days: overview.windowDays })}
         >
@@ -425,11 +427,11 @@ export default function AdminDashboardPage() {
             </ResponsiveContainer>
           </div>
           <ChartLegend items={SIGN_IN_BANDS.map((band) => ({ label: t(band.labelKey), fill: band.fill }))} />
-        </ChartCard>
+        </DashboardChartCard>
       ) : null}
 
       {overview && overview.planDistribution.length > 0 ? (
-        <ChartCard
+        <DashboardChartCard
           title={t("charts.plansTitle")}
           description={t("charts.plansDescription")}
           action={
@@ -446,7 +448,7 @@ export default function AdminDashboardPage() {
             planFill={CHART_PRIMARY_BLUE}
             unitLabel={(count) => t("charts.plansTooltipUnit", { count })}
           />
-        </ChartCard>
+        </DashboardChartCard>
       ) : null}
 
       <section className="flex flex-col gap-3">

@@ -10,7 +10,7 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { CUT_COLUMN, ExternalUrlCell, LinkStatusLabel, RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { formatDay, formatNumber } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
@@ -91,7 +91,7 @@ export default function SiteAllBacklinksPage() {
             </Select>
           </>
         }
-        cardHeader={<SiteTableBar footer={table.footer} noun="links" actions={<TableDownload siteId={siteId} kind={every ? "links" : "backlinks"} sort={order.tableSort} />} />}
+        cardHeader={<TableBar footer={table.footer} noun="links" actions={<TableDownload siteId={siteId} kind={every ? "links" : "backlinks"} sort={order.tableSort} />} />}
         empty={{ icon: <Link2 className="h-8 w-8 text-muted/30" />, label: term || status || follow ? t("noMatch") : t("empty") }}
         footer={table.footer}
         sort={order.tableSort}

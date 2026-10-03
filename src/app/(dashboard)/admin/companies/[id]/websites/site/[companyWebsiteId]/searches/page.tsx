@@ -4,11 +4,12 @@ import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowDown, ArrowUp, Plus, Search, Trash2 } from "lucide-react";
+import { Search, Trash2 } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Button } from "@/src/ui/components/screens/Button";
+import { Change } from "@/src/ui/components/screens/Change";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { Field } from "@/src/ui/components/screens/Field";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
@@ -20,6 +21,7 @@ import { useAdminAction } from "@/src/hooks/useAdminAction";
 import useDebounce from "@/src/hooks/useDebounce";
 import { SEARCH_TONE } from "../siteView";
 import { RemoveSearchDialog, type SearchToRemove } from "../RemoveSearchDialog";
+import { AddBar } from "../../../_components/AddBar";
 
 /**
  * The Google searches this company tracks for its site, and how the site does
@@ -90,32 +92,29 @@ export default function CompanySiteSearchesPage() {
         description={header ? t("subtitle", { place: header.placeLabel }) : undefined}
       />
 
-      <div className="flex flex-col gap-3 rounded-[12px] border border-border-dim bg-card/40 p-4">
-        <div className="flex flex-wrap items-end gap-2">
-          <Field
-            id="site-search"
-            label={t("addLabel")}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder={t("addPlaceholder")}
-            wrapperClassName="flex-1 min-w-[16rem]"
-          />
-          <Button
-            variant="quiet"
-            className="px-3 py-2 text-[12px]"
-            disabled={action.isBusy("add") || draft.trim().length === 0}
-            onClick={() => void handleAdd()}
-          >
-            <Plus className="mr-1 inline h-3.5 w-3.5" />
-            {t("add")}
-          </Button>
-        </div>
-        {/* What a cycle buys, on screen rather than discovered on an invoice. */}
-        <span className="text-[11px] text-muted">
-          {header ? t("tracking", { count: header.counts.searches }) : ""}
-        </span>
-        <SaveError>{error}</SaveError>
-      </div>
+      <AddBar
+        label={t("add")}
+        disabled={action.isBusy("add") || draft.trim().length === 0}
+        onAdd={() => void handleAdd()}
+        below={
+          <>
+            {/* What a cycle buys, on screen rather than discovered on an invoice. */}
+            <span className="text-[11px] text-muted">
+              {header ? t("tracking", { count: header.counts.searches }) : ""}
+            </span>
+            <SaveError>{error}</SaveError>
+          </>
+        }
+      >
+        <Field
+          id="site-search"
+          label={t("addLabel")}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder={t("addPlaceholder")}
+          wrapperClassName="flex-1 min-w-[16rem]"
+        />
+      </AddBar>
 
       <DataTable
         rows={isLoading ? undefined : rows.data}
@@ -152,19 +151,12 @@ export default function CompanySiteSearchesPage() {
             cell: (row) => {
               if (row.lastCheckedDay === null) return <span className="text-[12px] text-muted">{t("notCheckedYet")}</span>;
               if (row.lastPosition === null) return <span className="text-[12px] text-muted">{t("notOnPage")}</span>;
-              const change = row.previousPosition === null ? 0 : row.previousPosition - row.lastPosition;
+              // Places risen since the check before: a smaller position number is better.
+              const risen = row.previousPosition === null ? 0 : row.previousPosition - row.lastPosition;
               return (
                 <span className="flex items-center gap-1.5 font-mono text-[13px] text-foreground">
                   {row.lastPosition}
-                  {change > 0 ? (
-                    <span className="flex items-center text-[11px] text-success">
-                      <ArrowUp className="h-3 w-3" aria-label={t("up")} />{change}
-                    </span>
-                  ) : change < 0 ? (
-                    <span className="flex items-center text-[11px] text-destructive">
-                      <ArrowDown className="h-3 w-3" aria-label={t("down")} />{-change}
-                    </span>
-                  ) : null}
+                  {risen !== 0 ? <Change by={risen} /> : null}
                 </span>
               );
             },

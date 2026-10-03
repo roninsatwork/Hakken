@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
+import { ChangeLine } from "@/src/ui/components/screens/Change";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { Button } from "@/src/ui/components/screens/Button";
@@ -13,10 +14,10 @@ import { ExternalUrlCell, IntentLabel, PositionCell, RecordLinkCell, TrendCell, 
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
-import { SiteFigure } from "../../../_components/SiteFigure";
+import { Figure } from "@/src/ui/components/screens/Figure";
 import { SiteFacts, type SiteFact } from "../../../_components/SiteRecordParts";
 import { datedRow } from "../../../_components/datedRows";
-import { formatCpc, formatDay, formatNumber, movement, movementClass, toCsv } from "../../../_components/siteFormat";
+import { formatCpc, formatDay, formatNumber, movement, toCsv } from "../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { isPartHeld } from "../../../_components/SiteCoverage";
@@ -98,7 +99,7 @@ export default function SiteKeywordPage() {
     const moved = movement(rank.change);
     return moved.tone === "none"
       ? <span className="text-muted">{t("figures.unchangedSince", { day: formatDay(rank.previousDay) })}</span>
-      : <span className={movementClass(moved.tone)}>{t("figures.movedSince", { moved: moved.text, day: formatDay(rank.previousDay) })}</span>;
+      : <ChangeLine by={rank.change}>{t("figures.movedSince", { moved: moved.text, day: formatDay(rank.previousDay) })}</ChangeLine>;
   })();
 
   // Google Ads' figures for a search the keyword list does not measure: a fan-out query's (`searchVolumes.ts`).
@@ -295,16 +296,16 @@ export default function SiteKeywordPage() {
       ) : (
         <>
           <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-            <SiteFigure
+            <Figure
               label={t("figures.position")}
               value={shownAt ?? t(partHeld ? "figures.notInHeld" : "figures.notRanking")}
               detail={check && checkedAt !== null
                 ? <span className="text-muted">{t("figures.checkedOn", { day: formatDay(check.day) })}</span>
                 : positionDetail ?? undefined}
             />
-            <SiteFigure label={t("figures.volume")} value={formatNumber(search?.volume ?? bought?.volume)} detail={<span className="text-muted">{t("figures.volumeDetail")}</span>} />
-            <SiteFigure label={t("figures.traffic")} value={formatNumber(rank?.traffic)} detail={<span className="text-muted">{t("figures.trafficDetail")}</span>} />
-            <SiteFigure label={t("figures.cpc")} value={formatCpc(search?.cpc ?? bought?.cpc ?? null)} detail={<span className="text-muted">{t("figures.cpcDetail")}</span>} />
+            <Figure label={t("figures.volume")} value={formatNumber(search?.volume ?? bought?.volume)} detail={<span className="text-muted">{t("figures.volumeDetail")}</span>} />
+            <Figure label={t("figures.traffic")} value={formatNumber(rank?.traffic)} detail={<span className="text-muted">{t("figures.trafficDetail")}</span>} />
+            <Figure label={t("figures.cpc")} value={formatCpc(search?.cpc ?? bought?.cpc ?? null)} detail={<span className="text-muted">{t("figures.cpcDetail")}</span>} />
           </div>
 
           {fromAi ? (
@@ -406,20 +407,27 @@ export default function SiteKeywordPage() {
 
             {record.serp && (record.serp.questions.length > 0 || record.serp.related.length > 0) ? (
               <SettingsCard title={t("serp.questions")}>
-                <ul className="flex flex-col gap-1.5 text-[13px] text-foreground">
-                  {record.serp.questions.map((question) => <li key={question}>{question}</li>)}
-                </ul>
+                {record.serp.questions.length > 0 ? (
+                  <CompactList
+                    rows={record.serp.questions}
+                    rowKey={(question) => question}
+                    empty="–"
+                    columns={[{ key: "question", className: "text-[13px] text-foreground", cell: (question) => question }]}
+                  />
+                ) : null}
                 {record.serp.related.length > 0 ? (
-                  <>
-                    <h3 className="mt-2 text-[12px] font-medium text-secondary">{t("serp.related")}</h3>
-                    <ul className="flex flex-wrap gap-x-4 gap-y-1.5 text-[13px]">
-                      {record.serp.related.map((related) => (
-                        <li key={related}>
-                          <RecordLinkCell href={recordHref({ kind: "keyword", keyword: related })} className="text-[13px] text-info">{related}</RecordLinkCell>
-                        </li>
-                      ))}
-                    </ul>
-                  </>
+                  // The kit's heading row names the related searches, in place of a heading drawn by hand.
+                  <CompactList
+                    rows={record.serp.related}
+                    rowKey={(related) => related}
+                    empty="–"
+                    columns={[{
+                      key: "related",
+                      header: t("serp.related"),
+                      className: "text-[13px]",
+                      cell: (related) => <RecordLinkCell href={recordHref({ kind: "keyword", keyword: related })} className="text-[13px] text-info">{related}</RecordLinkCell>,
+                    }]}
+                  />
                 ) : null}
               </SettingsCard>
             ) : null}

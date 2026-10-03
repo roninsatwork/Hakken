@@ -4,15 +4,17 @@ import { useQuery } from "convex/react";
 import { BarChart3 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
+import { Change } from "@/src/ui/components/screens/Change";
 import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../sites/_components/SiteCharts";
-import { SiteFigure } from "../../../sites/_components/SiteFigure";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { datedRow } from "../../../sites/_components/datedRows";
 import { formatNumber, formatShortDay, toCsv } from "../../../sites/_components/siteFormat";
 import { SearchConsoleChartCard } from "../../_components/SearchConsoleChartCard";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
+import { formatPosition } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
-import { CountChange, PlacesMoved, figureColumns, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
+import { CountChange, figureColumns, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
 
 const CHIPS: readonly ChipId[] = ["band", "intent", "country", "device"];
 
@@ -50,16 +52,16 @@ export default function SearchConsoleBandsPage() {
       title={t("bands.title")}
       description={t("bands.description")}
       heroes={
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <FigureRow>
           {boxes.map((box) => (
-            <SiteFigure
+            <Figure
               key={box.label}
               label={box.label}
               value={box.now === null ? "…" : formatNumber(box.now)}
               detail={<CountChange now={box.now} before={box.before} days={days} neutral={!box.better} />}
             />
           ))}
-        </div>
+        </FigureRow>
       }
       table={{
         list,
@@ -85,7 +87,7 @@ export default function SearchConsoleBandsPage() {
           },
           { key: "band", header: t("table.band"), cell: (row) => <span className="text-[12px] text-secondary">{row.impressions > 0 ? t(`filters.bands.${row.band}`) : "–"}</span> },
           ...figureColumns(t, ["position"]),
-          { key: "positionChange", header: t("table.change"), align: "right", sortable: true, cell: (row) => <PlacesMoved change={row.positionChange} /> },
+          { key: "positionChange", header: t("table.change"), align: "right", sortable: true, cell: (row) => <Change by={row.positionChange} kind="places" same format={formatPosition} /> },
           ...figureColumns(t, ["clicks", "impressions"]),
         ],
       }}

@@ -13,7 +13,8 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
-import { CostFigure, dollars } from "../CostFigure";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
+import { dollars } from "../money";
 import { HourlyCheckNote } from "./HourlyCheckNote";
 import { RunStatus } from "./RunStatus";
 import { useRunFormat } from "./runFormat";
@@ -57,34 +58,38 @@ export default function CompanyCollectionRunsPage() {
         description={t("subtitle")}
       />
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <CostFigure
+      <FigureRow>
+        <Figure
           label={t("figures.month")}
           value={summary ? dollars(summary.monthUsd) : "…"}
-          hint={t("figures.monthHint", { count: summary?.monthRuns ?? 0 })}
+          detail={<span className="text-muted">{t("figures.monthHint", { count: summary?.monthRuns ?? 0 })}</span>}
           emphasis
         />
-        <CostFigure
+        <Figure
           label={t("figures.lastRun")}
           value={summary?.lastRun ? dollars(summary.lastRun.totalUsd) : t("figures.noRunYet")}
-          hint={summary?.lastRun ? when(summary.lastRun.startedAt) : ""}
+          detail={<span className="text-muted">{summary?.lastRun ? when(summary.lastRun.startedAt) : ""}</span>}
         />
-        <CostFigure
+        <Figure
           label={t("figures.estimate")}
           value={summary?.estimate ? dollars(summary.estimate.perMonthUsd) : "–"}
-          hint={summary?.estimate ? t("figures.estimateHint") : t("figures.estimateOff")}
+          detail={<span className="text-muted">{summary?.estimate ? t("figures.estimateHint") : t("figures.estimateOff")}</span>}
         />
-        <CostFigure
+        <Figure
           label={t("figures.nextRun")}
           value={summary?.nextRun ? day(summary.nextRun.at) : t("figures.notScheduled")}
-          hint={summary?.nextRun
-            ? t("figures.nextRunHint", {
-              time: clock(summary.nextRun.at),
-              cadence: t(`cadence.${summary.nextRun.cadence}`),
-            })
-            : ""}
+          detail={
+            <span className="text-muted">
+              {summary?.nextRun
+                ? t("figures.nextRunHint", {
+                  time: clock(summary.nextRun.at),
+                  cadence: t(`cadence.${summary.nextRun.cadence}`),
+                })
+                : ""}
+            </span>
+          }
         />
-      </div>
+      </FigureRow>
 
       <HourlyCheckNote />
 

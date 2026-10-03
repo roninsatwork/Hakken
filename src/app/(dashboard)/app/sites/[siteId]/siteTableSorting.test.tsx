@@ -96,7 +96,7 @@ describe("a Sites table sent whole", () => {
     render(<SiteSourcesPage />);
 
     const card = screen.getByRole("table").parentElement?.parentElement as HTMLElement;
-    expect(within(card).getByText("sites.tableCounts.pages 3")).toBeInTheDocument();
+    expect(within(card).getByText("ui.tableBar.pages 3")).toBeInTheDocument();
     expect(within(card).getByRole("button", { name: "sites.downloads.all" })).toBeInTheDocument();
   });
 

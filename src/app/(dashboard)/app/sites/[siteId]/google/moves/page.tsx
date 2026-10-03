@@ -8,8 +8,9 @@ import { api } from "@/convex/_generated/api";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { CUT_COLUMN, ChangeCell, CheckedCell, PageLinkCell, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { Change } from "@/src/ui/components/screens/Change";
+import { CUT_COLUMN, CheckedCell, PageLinkCell, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
@@ -119,7 +120,7 @@ export default function SiteMovesPage() {
             />
           </>
         }
-        cardHeader={<SiteTableBar footer={table.footer} noun="searches" actions={<TableDownload siteId={siteId} kind="keywords" />} />}
+        cardHeader={<TableBar footer={table.footer} noun="searches" actions={<TableDownload siteId={siteId} kind="keywords" />} />}
         empty={{ icon: <ArrowUpDown className="h-8 w-8 text-muted/30" />, label: settled ? t("noMatch") : t("empty") }}
         footer={table.footer}
         sort={order.tableSort}
@@ -138,7 +139,7 @@ export default function SiteMovesPage() {
               </span>
             ),
           },
-          { key: "change", header: t("columns.change"), align: "right", sortable: true, cell: (row) => <ChangeCell change={row.change} /> },
+          { key: "change", header: t("columns.change"), align: "right", sortable: true, cell: (row) => <Change by={row.change} /> },
           {
             key: "page",
             header: t("columns.page"),

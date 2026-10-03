@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import { useMutation } from "convex/react";
-import { AlertTriangle, Plug } from "lucide-react";
+import { Plug } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/components/screens/Button";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
+import { Notice } from "@/src/ui/components/screens/Notice";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { formatDate, formatDateTime } from "@/src/lib/dates";
 import { SiteFacts } from "../../../sites/_components/SiteRecordParts";
 import { formatDay } from "../../../sites/_components/siteFormat";
@@ -60,13 +62,10 @@ function AttemptNote({ status }: { status: SearchConsoleStatus }) {
   if (!attempt) return null;
   const account = attempt.account ?? t("someone");
   return (
-    <div className="flex gap-3 rounded-xl border border-warning/30 bg-warning/5 px-4 py-3">
-      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" aria-hidden="true" />
-      <div className="flex flex-col gap-0.5">
-        <p className="text-[13px] font-medium text-foreground">{t(`attemptTitle.${attempt.outcome}`, { host: status.host, account })}</p>
-        <p className="text-[12.5px] text-secondary">{t(`attempt.${attempt.outcome}`, { host: status.host, account })}</p>
-      </div>
-    </div>
+    <Notice tone="warning">
+      <span className="block font-medium text-foreground">{t(`attemptTitle.${attempt.outcome}`, { host: status.host, account })}</span>
+      <span className="block">{t(`attempt.${attempt.outcome}`, { host: status.host, account })}</span>
+    </Notice>
   );
 }
 
@@ -104,7 +103,7 @@ function ChooseProperty({ status }: { status: SearchConsoleStatus }) {
               <span className="truncate font-mono text-[13px] text-foreground">{choice.property}</span>
               <span className="text-[12px] text-secondary">{choice.property.startsWith("sc-domain:") ? t("domain") : t("prefix")}</span>
             </span>
-            <StatusLabel tone="neutral">{t(`permissions.${choice.permission as "siteOwner"}`)}</StatusLabel>
+            <TagLabel>{t(`permissions.${choice.permission as "siteOwner"}`)}</TagLabel>
           </label>
         ))}
       </fieldset>
@@ -131,6 +130,10 @@ function ConnectionDetails({ status }: { status: SearchConsoleStatus }) {
   const disconnect = useMutation(api.searchConsoleConnect.disconnectSearchConsole);
   const { run, isBusy } = useAdminAction({ scope: "search-console-disconnect" });
   const [confirming, setConfirming] = useState(false);
+  const confirmDisconnect = async () => {
+    const outcome = await run(() => disconnect({ siteId }), { fallbackMessage: t("failed") });
+    if (outcome.ok) setConfirming(false);
+  };
   const connection = status.connection!;
   const account = connection.googleAccount ?? t("someone");
   const facts = [
@@ -140,7 +143,7 @@ function ConnectionDetails({ status }: { status: SearchConsoleStatus }) {
       value: (
         <span className="inline-flex items-center gap-2">
           <span className="font-mono">{connection.property ?? "–"}</span>
-          {connection.permission ? <StatusLabel tone="neutral">{t(`permissions.${connection.permission as "siteOwner"}`)}</StatusLabel> : null}
+          {connection.permission ? <TagLabel>{t(`permissions.${connection.permission as "siteOwner"}`)}</TagLabel> : null}
         </span>
       ),
     },
@@ -166,37 +169,29 @@ function ConnectionDetails({ status }: { status: SearchConsoleStatus }) {
   return (
     <div className="flex flex-col gap-4">
       {connection.status === "CONNECTED" && connection.problem ? (
-        <p className="rounded-xl border border-warning/30 bg-warning/5 px-4 py-3 text-[13px] text-secondary">
-          {t(`problem.${connection.problem}`, { account, property: connection.property ?? "" })}
-        </p>
+        <Notice tone="warning">{t(`problem.${connection.problem}`, { account, property: connection.property ?? "" })}</Notice>
       ) : null}
       <div className={PANEL}>
         <SiteFacts facts={facts} empty="–" />
       </div>
       {status.canManage && connection.status === "CONNECTED" ? (
-        confirming ? (
-          <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-destructive/30 px-4 py-3">
-            <p className="max-w-2xl text-[13px] text-secondary">{t("confirm")}</p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                disabled={isBusy()}
-                className="border-destructive/40 text-destructive hover:text-destructive"
-                onClick={async () => {
-                  const outcome = await run(() => disconnect({ siteId }), { fallbackMessage: t("failed") });
-                  if (outcome.ok) setConfirming(false);
-                }}
-              >
-                {t("confirmDisconnect")}
-              </Button>
-              <Button variant="quiet" onClick={() => setConfirming(false)}>{t("keep")}</Button>
-            </div>
-          </div>
-        ) : (
+        <>
           <div>
             <Button variant="outline" onClick={() => setConfirming(true)}>{t("disconnect")}</Button>
           </div>
-        )
+          {/* A yes or a no, so the kit's confirmation (AGENTS.md: a pop-up is only for a yes or a no). */}
+          <ConfirmationModal
+            isOpen={confirming}
+            onClose={() => setConfirming(false)}
+            title={t("disconnectTitle")}
+            cancelLabel={t("keep")}
+            confirmLabel={t("confirmDisconnect")}
+            isSubmitting={isBusy()}
+            onConfirm={() => void confirmDisconnect()}
+          >
+            {t("confirm")}
+          </ConfirmationModal>
+        </>
       ) : null}
     </div>
   );

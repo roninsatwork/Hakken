@@ -5,9 +5,10 @@ import { MapPin, Monitor } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { Meter } from "@/src/ui/components/screens/Meter";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
-import { SiteTableBar } from "../../../sites/_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
@@ -30,13 +31,11 @@ const SORTS: SiteSortColumns<Split, "name" | "clicks" | "share" | "impressions" 
 };
 const nameOf = (row: Split) => row.name;
 
-/** A share of the site's clicks, as a bar and a number: the bar only repeats the number. */
+/** A share of the site's clicks, as the kit's bar beside its number: the bar only repeats the number. */
 function ShareCell({ share }: { share: number }) {
   return (
     <span className="flex items-center gap-2">
-      <span className="flex h-1.5 w-24 overflow-hidden rounded-full bg-hover" aria-hidden="true">
-        <span className="block h-full" style={{ width: `${Math.min(100, share * 100)}%`, background: CHART_SERIES_ORANGE }} />
-      </span>
+      <Meter value={share} colour={CHART_SERIES_ORANGE} />
       <span className="font-mono text-[12px] text-secondary">{formatRate(share)}</span>
     </span>
   );
@@ -110,7 +109,7 @@ export default function SearchConsolePlacesPage() {
                 rows={countryPages.pageRows}
                 rowKey={(row) => row.key}
                 minWidthClassName="min-w-[700px]"
-                cardHeader={<SiteTableBar footer={countryPages.footer} noun="countries" title={t("places.countries")} />}
+                cardHeader={<TableBar footer={countryPages.footer} noun="countries" title={t("places.countries")} />}
                 sort={countryOrder.tableSort}
                 empty={{ icon: <MapPin className="h-8 w-8 text-muted/30" />, label: t("table.empty") }}
                 footer={countryPages.footer}
@@ -120,7 +119,7 @@ export default function SearchConsolePlacesPage() {
                 rows={devicePages.pageRows}
                 rowKey={(row) => row.key}
                 minWidthClassName="min-w-[700px]"
-                cardHeader={<SiteTableBar footer={devicePages.footer} noun="devices" title={t("places.devices")} />}
+                cardHeader={<TableBar footer={devicePages.footer} noun="devices" title={t("places.devices")} />}
                 sort={deviceOrder.tableSort}
                 empty={{ icon: <Monitor className="h-8 w-8 text-muted/30" />, label: t("table.empty") }}
                 footer={devicePages.footer}

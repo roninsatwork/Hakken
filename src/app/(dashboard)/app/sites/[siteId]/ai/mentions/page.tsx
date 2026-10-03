@@ -12,7 +12,7 @@ import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
 import { CUT_COLUMN, RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
@@ -125,7 +125,7 @@ export default function SiteMentionsPage() {
             </Select>
           </>
         }
-        cardHeader={<SiteTableBar footer={pager.footer} noun="results" actions={<ListDownload fileName={`${site?.host ?? "site"}-ai-mentions`} rows={sorted} columns={[{ header: t("columns.question"), value: (row) => row.prompt }, { header: t("columns.engine"), value: (row) => engineLabel(row.engine) }, { header: t("columns.latest"), value: (row) => t(`stances.${row.lastStance ?? "NOT_ASKED"}`) }, { header: t("columns.named"), value: (row) => (row.asked > 0 ? row.named : null) }, { header: t("columns.recommended"), value: (row) => (row.asked > 0 ? row.recommended : null) }, { header: t("columns.lastChecked"), value: (row) => row.lastAskedDay }]} />} />}
+        cardHeader={<TableBar footer={pager.footer} noun="results" actions={<ListDownload fileName={`${site?.host ?? "site"}-ai-mentions`} rows={sorted} columns={[{ header: t("columns.question"), value: (row) => row.prompt }, { header: t("columns.engine"), value: (row) => engineLabel(row.engine) }, { header: t("columns.latest"), value: (row) => t(`stances.${row.lastStance ?? "NOT_ASKED"}`) }, { header: t("columns.named"), value: (row) => (row.asked > 0 ? row.named : null) }, { header: t("columns.recommended"), value: (row) => (row.asked > 0 ? row.recommended : null) }, { header: t("columns.lastChecked"), value: (row) => row.lastAskedDay }]} />} />}
         empty={{ icon: <Sparkles className="h-8 w-8 text-muted/30" />, label: term || engine || stance ? t("noMatch") : t("empty") }}
         footer={pager.footer}
         sort={tableSort}

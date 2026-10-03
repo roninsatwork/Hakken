@@ -12,7 +12,7 @@ import { SITE_SERIES_COLOURS, SiteLineChart } from "../../_components/SiteCharts
 import { useSiteRange } from "../../_components/SiteDateRange";
 import { datedRow } from "../../_components/datedRows";
 import { formatNumber, toCsv } from "../../_components/siteFormat";
-import { SiteFigure } from "../../_components/SiteFigure";
+import { Figure } from "@/src/ui/components/screens/Figure";
 import { useSiteListHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
 import { newestOfEach } from "../newestOfEach";
@@ -47,10 +47,10 @@ export default function SiteBacklinksPage() {
       <PageHeader icon={<LinkIcon className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
 
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <SiteFigure label={t("domainRank")} value={formatNumber(latest?.domainRank)} detail={<span className="text-muted">{t("rankScale")}</span>} />
-        <SiteFigure label={t("backlinks")} value={formatNumber(latest?.backlinks)} href={listHref("backlinks/all", { links: "every" })} />
-        <SiteFigure label={t("referringDomains")} value={formatNumber(latest?.referringDomains)} href={listHref("backlinks/domains")} />
-        <SiteFigure label={t("broken")} value={formatNumber(latest?.brokenBacklinks)} href={listHref("backlinks/broken")} />
+        <Figure label={t("domainRank")} value={formatNumber(latest?.domainRank)} detail={<span className="text-muted">{t("rankScale")}</span>} />
+        <Figure label={t("backlinks")} value={formatNumber(latest?.backlinks)} href={listHref("backlinks/all", { links: "every" })} />
+        <Figure label={t("referringDomains")} value={formatNumber(latest?.referringDomains)} href={listHref("backlinks/domains")} />
+        <Figure label={t("broken")} value={formatNumber(latest?.brokenBacklinks)} href={listHref("backlinks/broken")} />
       </div>
 
       <SiteChartCard

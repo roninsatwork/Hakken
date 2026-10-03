@@ -10,12 +10,12 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { CUT_COLUMN, RecordLinkCell, useFeatureLabel } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSiteRange } from "../../../_components/SiteDateRange";
-import { SiteFigure } from "../../../_components/SiteFigure";
+import { Figure } from "@/src/ui/components/screens/Figure";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
@@ -96,7 +96,7 @@ export default function SiteFeaturesPage() {
               ["inLocalPacks", across.localPacks, "local_pack"],
               ["inSnippets", across.featuredSnippets, "featured_snippet"],
             ] as const).map(([key, value, feature]) => (
-              <SiteFigure key={key} label={t(key)} value={formatNumber(value)} href={listComplete ? recordHref({ kind: "feature", feature }) : undefined} />
+              <Figure key={key} label={t(key)} value={formatNumber(value)} href={listComplete ? recordHref({ kind: "feature", feature }) : undefined} />
             ))}
           </div>
           {total !== null && stored !== null && !listComplete
@@ -140,7 +140,7 @@ export default function SiteFeaturesPage() {
           </Select>
           </>
         }
-        cardHeader={<SiteTableBar footer={pager.footer} noun="searches" actions={<ListDownload fileName={`${site?.host ?? "site"}-search-features`} rows={sorted} columns={[{ header: t("columns.search"), value: (row) => row.keyword }, { header: t("columns.features"), value: (row) => row.features.map(label).join("; ") }, { header: t("columns.aiOverview"), value: (row) => (row.inAiOverview ? tc("yes") : "") }, { header: t("columns.localPack"), value: (row) => (row.inLocalPack ? tc("yes") : "") }, { header: t("columns.snippet"), value: (row) => (row.hasFeaturedSnippet ? tc("yes") : "") }, { header: t("columns.lastChecked"), value: (row) => row.day }]} />} />}
+        cardHeader={<TableBar footer={pager.footer} noun="searches" actions={<ListDownload fileName={`${site?.host ?? "site"}-search-features`} rows={sorted} columns={[{ header: t("columns.search"), value: (row) => row.keyword }, { header: t("columns.features"), value: (row) => row.features.map(label).join("; ") }, { header: t("columns.aiOverview"), value: (row) => (row.inAiOverview ? tc("yes") : "") }, { header: t("columns.localPack"), value: (row) => (row.inLocalPack ? tc("yes") : "") }, { header: t("columns.snippet"), value: (row) => (row.hasFeaturedSnippet ? tc("yes") : "") }, { header: t("columns.lastChecked"), value: (row) => row.day }]} />} />}
         empty={{ icon: <Sparkles className="h-8 w-8 text-muted/30" />, label: term || feature ? t("noMatch") : t("empty") }}
         footer={pager.footer}
         sort={tableSort}

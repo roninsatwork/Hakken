@@ -3,7 +3,7 @@
 import { Target } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
-import { SiteFigure } from "../../../sites/_components/SiteFigure";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { pageLabel, useRecordHref } from "../../_components/searchConsoleRecords";
@@ -40,24 +40,24 @@ export default function SearchConsoleAlmostPage() {
       title={t("almost.title")}
       description={t("almost.description")}
       heroes={
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <SiteFigure
+        <FigureRow>
+          <Figure
             label={t("almost.at4to10")}
             value={summary ? formatNumber(summary.bands["4-10"]) : "…"}
             detail={<CountChange now={summary?.bands["4-10"] ?? null} before={summary?.bandsBefore?.["4-10"] ?? null} days={days} />}
           />
-          <SiteFigure
+          <Figure
             label={t("almost.at11to20")}
             value={summary ? formatNumber(summary.bands["11-20"]) : "…"}
             detail={<CountChange now={summary?.bands["11-20"] ?? null} before={summary?.bandsBefore?.["11-20"] ?? null} days={days} />}
           />
-          <SiteFigure label={t("almost.searches")} value={summary ? formatNumber(summary.volume) : "…"} detail={<span className="text-secondary">{t("almost.sitesFigures")}</span>} />
-          <SiteFigure
+          <Figure label={t("almost.searches")} value={summary ? formatNumber(summary.volume) : "…"} detail={<span className="text-secondary">{t("almost.sitesFigures")}</span>} />
+          <Figure
             label={t("almost.tracked")}
             value={keywords ? t("track.of", { count: formatNumber(keywords.count), limit: formatNumber(keywords.limit) }) : "…"}
             detail={<span className="text-secondary">{t("almost.youTrack")}</span>}
           />
-        </div>
+        </FigureRow>
       }
       table={{
         list,

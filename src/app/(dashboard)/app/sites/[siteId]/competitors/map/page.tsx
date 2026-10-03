@@ -12,7 +12,7 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteScatterChart, type SiteScatterGroup } from "../../../_components/SiteCharts";
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
@@ -129,7 +129,7 @@ export default function SiteMarketMapPage() {
           </Select>
           </>
         }
-        cardHeader={<SiteTableBar footer={pager.footer} noun="websites" actions={<ListDownload fileName={`${site?.host ?? "site"}-market`} rows={sorted} columns={[{ header: t("columns.website"), value: (row) => row.host }, { header: t("columns.role"), value: (row) => t(`roles.${row.role}`) }, { header: t("columns.keywords"), value: (row) => row.keywords }, { header: t("columns.traffic"), value: (row) => row.traffic }, { header: t("columns.shared"), value: (row) => row.sharedKeywords }, { header: t("columns.lastChecked"), value: (row) => row.day }]} />} />}
+        cardHeader={<TableBar footer={pager.footer} noun="websites" actions={<ListDownload fileName={`${site?.host ?? "site"}-market`} rows={sorted} columns={[{ header: t("columns.website"), value: (row) => row.host }, { header: t("columns.role"), value: (row) => t(`roles.${row.role}`) }, { header: t("columns.keywords"), value: (row) => row.keywords }, { header: t("columns.traffic"), value: (row) => row.traffic }, { header: t("columns.shared"), value: (row) => row.sharedKeywords }, { header: t("columns.lastChecked"), value: (row) => row.day }]} />} />}
         empty={{ icon: <MapIcon className="h-8 w-8 text-muted/30" />, label: term || role ? t("noMatch") : t("empty") }}
         footer={pager.footer}
         sort={tableSort}

@@ -994,3 +994,10 @@ layer, and the screens — and what they found put right before morning:
 - **2026-10-03** — Two reviews of the night's code; what they found put right
   (memory and size limits for a busy website, gaps, wrong answers on four
   pages) and three things left for Anthony (§15, items 10–12).
+- **2026-10-03** — The UI clean-up (Anthony: "we need to keep a ui standard
+  app wide"; "yes lets do it all"): the screens take the shared kit parts —
+  `Figure`, `Notice`, `ChartCard`, `TableBar`, `Change`, `Meter`, `KindBars` —
+  instead of Search Console's own copies. Disconnecting now asks its yes-or-no
+  in the kit's pop-up (`ConfirmationModal`), which AGENTS.md allows since
+  2026-10-01 ("a pop-up is only for a yes or a no"); every screen above is
+  still a screen, never a pop-up.

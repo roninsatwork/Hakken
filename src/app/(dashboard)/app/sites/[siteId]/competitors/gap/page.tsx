@@ -11,7 +11,7 @@ import { DataTable, type DataTableColumn, type DataTableHeaderGroup } from "@/sr
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { IntentLabel, RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber, formatVisits } from "../../../_components/siteFormat";
 import { useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
@@ -177,7 +177,7 @@ export default function SiteContentGapPage() {
             </Select>
           </>
         }
-        cardHeader={<SiteTableBar footer={table.footer} noun="keywords" actions={<TableDownload siteId={siteId} kind="gap" sort={order.tableSort} />} />}
+        cardHeader={<TableBar footer={table.footer} noun="keywords" actions={<TableDownload siteId={siteId} kind="gap" sort={order.tableSort} />} />}
         empty={{ icon: <Puzzle className="h-8 w-8 text-muted/30" />, label: settled || intent || minRivals > 1 ? t("noMatch") : t("empty") }}
         footer={table.footer}
         sort={order.tableSort}

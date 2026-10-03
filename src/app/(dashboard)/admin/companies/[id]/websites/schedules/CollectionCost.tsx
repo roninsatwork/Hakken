@@ -5,7 +5,8 @@ import { useTranslations } from "next-intl";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { CostFigure } from "../CostFigure";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
+import { dollars } from "../money";
 
 /**
  * What this company costs to serve.
@@ -34,24 +35,24 @@ export function CollectionCost({ companyId }: { companyId: Id<"companies"> }) {
         <p className="max-w-3xl text-[13px] text-secondary">{t("subtitle")}</p>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        <CostFigure
+      <FigureRow columns={3}>
+        <Figure
           label={t("paid")}
-          value={`$${spend.paidUsd.toFixed(2)}`}
-          hint={t("paidHint", { pulls: spend.totalPulls })}
+          value={dollars(spend.paidUsd)}
+          detail={<span className="text-muted">{t("paidHint", { pulls: spend.totalPulls })}</span>}
         />
-        <CostFigure
+        <Figure
           label={t("standalone")}
-          value={`$${spend.standaloneUsd.toFixed(2)}`}
-          hint={t("standaloneHint")}
+          value={dollars(spend.standaloneUsd)}
+          detail={<span className="text-muted">{t("standaloneHint")}</span>}
           emphasis
         />
-        <CostFigure
+        <Figure
           label={t("saving")}
-          value={`$${spend.reusedValueUsd.toFixed(2)}`}
-          hint={t("savingHint")}
+          value={dollars(spend.reusedValueUsd)}
+          detail={<span className="text-muted">{t("savingHint")}</span>}
         />
-      </div>
+      </FigureRow>
     </div>
   );
 }

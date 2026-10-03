@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
-import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
+import { ChartCard } from "@/src/ui/components/screens/ChartCard";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../sites/_components/SiteCharts";
 import { datedRow } from "../../sites/_components/datedRows";
@@ -96,26 +96,10 @@ export function SearchConsoleChart({ title, days, range, held, host, exportName,
   const caption = [host, `${formatDay(range.from)} – ${formatDay(range.to)}`, steps[range.step], platformName].filter(Boolean).join(" · ");
   const anything = data.some((point) => point.impressions > 0);
   return (
-    <ChartExportWrapper
-      exportName={exportName}
-      formats={["png", "svg", "csv"]}
-      csv={() => toCsv(
-        [t("day"), t("clicks"), t("impressions"), `${t("ctr")} (%)`, t("position")],
-        data.map((point) => [point.key, point.clicks, point.impressions, point.ctr, point.position]),
-      )}
-      svgTitle={title}
-      caption={caption}
-      themedBackground
-      alwaysVisible
-      downloadLabel={t("download")}
-      formatLabels={{ png: t("png"), svg: t("svg"), csv: t("csv") }}
-      className="rounded-2xl border border-border-dim bg-card/40 p-5"
-    >
-      <div className="flex flex-col gap-3 pr-28">
-        <div>
-          <h2 className="text-[14px] font-medium text-foreground">{title}</h2>
-          <p className="text-[12px] text-secondary">{t("hint")}</p>
-        </div>
+    <ChartCard
+      title={title}
+      hint={t("hint")}
+      controls={(
         <div className="flex flex-wrap gap-x-5 gap-y-2">
           {MEASURES.map((measure) => (
             <Checkbox
@@ -127,14 +111,17 @@ export function SearchConsoleChart({ title, days, range, held, host, exportName,
             />
           ))}
         </div>
-      </div>
-      <div className="mt-4">
-        {anything ? (
-          <SiteLineChart data={data} series={series} {...(height ? { height } : {})} />
-        ) : (
-          <p className="py-10 text-center text-[13px] text-secondary">{t("nothing")}</p>
-        )}
-      </div>
-    </ChartExportWrapper>
+      )}
+      exportName={exportName}
+      csv={() => toCsv(
+        [t("day"), t("clicks"), t("impressions"), `${t("ctr")} (%)`, t("position")],
+        data.map((point) => [point.key, point.clicks, point.impressions, point.ctr, point.position]),
+      )}
+      caption={caption}
+      enoughData={anything}
+      emptyText={t("nothing")}
+    >
+      <SiteLineChart data={data} series={series} {...(height ? { height } : {})} />
+    </ChartCard>
   );
 }

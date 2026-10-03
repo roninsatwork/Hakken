@@ -3,7 +3,7 @@
 import { Split } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { RecordLinkCell } from "../../../sites/_components/SiteCells";
-import { SiteFigure } from "../../../sites/_components/SiteFigure";
+import { Figure } from "@/src/ui/components/screens/Figure";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { formatRate } from "../../_components/searchConsoleFormat";
@@ -33,9 +33,9 @@ export default function SearchConsoleCompetingPage() {
       description={t("competing.description")}
       heroes={
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <SiteFigure label={t("competing.split")} value={summary ? formatNumber(summary.rows) : "…"} detail={<span className="text-secondary">{t("competing.ofShown", { count: formatNumber(summary?.of ?? 0) })}</span>} />
-          <SiteFigure label={t("competing.clicks")} value={summary ? formatNumber(summary.clicks) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
-          <SiteFigure
+          <Figure label={t("competing.split")} value={summary ? formatNumber(summary.rows) : "…"} detail={<span className="text-secondary">{t("competing.ofShown", { count: formatNumber(summary?.of ?? 0) })}</span>} />
+          <Figure label={t("competing.clicks")} value={summary ? formatNumber(summary.clicks) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
+          <Figure
             label={t("competing.pages")}
             value={summary?.pagesInvolved === null || summary === null ? "…" : formatNumber(summary.pagesInvolved)}
             detail={<span className="text-secondary">{t("competing.ofShown", { count: formatNumber(summary?.pagesShown ?? 0) })}</span>}

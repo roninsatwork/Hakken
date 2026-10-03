@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
-import { Link2 } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Select } from "@/src/ui/components/screens/Select";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
+import { SettingsCard } from "@/src/ui/components/screens/SettingsCard";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { formatDateTime } from "@/src/lib/dates";
 
@@ -81,18 +81,12 @@ export function TrackedPairing({
   };
 
   return (
-    <div className="flex flex-col gap-3 rounded-[12px] border border-border-dim bg-card/40 p-5">
-      <div className="flex flex-col gap-1">
-        <h2 className="flex items-center gap-2 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">
-          <Link2 className="h-3.5 w-3.5" />
-          {t("title")}
-        </h2>
-        <p className="max-w-3xl text-[13px] text-secondary">
-          {pairedWith
-            ? t("pairedSubtitle", { host: pairedWith.displayHost })
-            : t("unpairedSubtitle")}
-        </p>
-      </div>
+    <SettingsCard title={t("title")}>
+      <p className="max-w-2xl text-[12px] leading-relaxed text-secondary">
+        {pairedWith
+          ? t("pairedSubtitle", { host: pairedWith.displayHost })
+          : t("unpairedSubtitle")}
+      </p>
 
       {pairedWith ? (
         <p className="flex flex-wrap gap-x-3 gap-y-1 text-[12px] text-secondary">
@@ -133,6 +127,6 @@ export function TrackedPairing({
       </div>
 
       <SaveError>{error}</SaveError>
-    </div>
+    </SettingsCard>
   );
 }

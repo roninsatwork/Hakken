@@ -7,12 +7,13 @@ import { Megaphone } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
+import { Notice } from "@/src/ui/components/screens/Notice";
 import { SiteChartCard } from "../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../_components/SiteCharts";
 import { useSiteRange } from "../../_components/SiteDateRange";
 import { datedRow } from "../../_components/datedRows";
 import { formatDay, formatDollars, formatNumber, toCsv } from "../../_components/siteFormat";
-import { SiteFigure } from "../../_components/SiteFigure";
+import { Figure } from "@/src/ui/components/screens/Figure";
 import { useSiteListHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
 
@@ -52,13 +53,13 @@ export default function SitePaidPage() {
       />
 
       {notAdvertising ? (
-        <p className="rounded-xl border border-border-dim bg-card/40 px-4 py-3 text-[13px] text-secondary">{t("notAdvertising")}</p>
+        <Notice>{t("notAdvertising")}</Notice>
       ) : null}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <SiteFigure label={t("keywords")} value={formatNumber(latest?.paidKeywords)} href={listHref("paid/keywords")} />
-        <SiteFigure label={t("traffic")} value={formatNumber(latest?.paidTraffic)} href={listHref("paid/keywords", { sort: "traffic" })} />
-        <SiteFigure label={t("spend")} value={formatDollars(latest?.paidTrafficCost)} href={listHref("paid/keywords", { sort: "cost" })} />
+        <Figure label={t("keywords")} value={formatNumber(latest?.paidKeywords)} href={listHref("paid/keywords")} />
+        <Figure label={t("traffic")} value={formatNumber(latest?.paidTraffic)} href={listHref("paid/keywords", { sort: "traffic" })} />
+        <Figure label={t("spend")} value={formatDollars(latest?.paidTrafficCost)} href={listHref("paid/keywords", { sort: "cost" })} />
       </div>
 
       <SiteChartCard

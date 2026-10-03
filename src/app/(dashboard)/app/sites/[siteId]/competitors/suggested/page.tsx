@@ -8,7 +8,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { CheckedCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
 import { useSiteSearch } from "../../../_components/useSiteParam";
@@ -58,7 +58,7 @@ export default function SiteSuggestedPage() {
         rowKey={(row) => row.host}
         minWidthClassName="min-w-[700px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
-        cardHeader={<SiteTableBar footer={pager.footer} noun="websites" actions={<ListDownload fileName={"suggested-competitors"} rows={sorted} columns={[{ header: t("columns.website"), value: (row) => row.host }, { header: t("columns.why"), value: (row) => (row.reason === "NAMED_BY_AI" ? t("namedByAi", { times: row.times ?? 0 }) : t("ranksFor", { count: String(row.intersections ?? 0) })) }, { header: tc("lastChecked"), value: (row) => row.day }]} />} />}
+        cardHeader={<TableBar footer={pager.footer} noun="websites" actions={<ListDownload fileName={"suggested-competitors"} rows={sorted} columns={[{ header: t("columns.website"), value: (row) => row.host }, { header: t("columns.why"), value: (row) => (row.reason === "NAMED_BY_AI" ? t("namedByAi", { times: row.times ?? 0 }) : t("ranksFor", { count: String(row.intersections ?? 0) })) }, { header: tc("lastChecked"), value: (row) => row.day }]} />} />}
         empty={{ icon: <Lightbulb className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}
         footer={pager.footer}
         sort={tableSort}

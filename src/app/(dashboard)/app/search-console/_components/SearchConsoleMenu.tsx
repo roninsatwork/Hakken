@@ -21,8 +21,7 @@ export function SearchConsoleMenu({ siteId }: { siteId: string }) {
   return (
     <SectionMenu
       label={t("label")}
-      jumpLabel={t("jumpLabel")}
-      jumpPlaceholder={t("jumpPlaceholder")}
+      jump={{ label: t("jumpLabel"), placeholder: t("jumpPlaceholder") }}
       currentId={pageForPath(pathname, siteId)}
       openAtFirst={SEARCH_CONSOLE_GROUPS}
       groups={SEARCH_CONSOLE_GROUPS.map((group) => ({

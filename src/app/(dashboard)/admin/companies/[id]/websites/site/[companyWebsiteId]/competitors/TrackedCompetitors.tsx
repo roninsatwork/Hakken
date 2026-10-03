@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Plus, Swords, X } from "lucide-react";
+import { Swords, X } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -18,6 +18,7 @@ import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { RIVAL_TONE, siteBase } from "../siteView";
+import { AddBar } from "../../../_components/AddBar";
 
 /** Discovery kinds a person can read; anything else shows as not judged. */
 const KINDS = ["COMPETITOR", "DIRECTORY", "PUBLISHER", "SUPPLIER", "OTHER"] as const;
@@ -120,28 +121,21 @@ export function TrackedCompetitors({
         description={t("subtitle", { host })}
       />
 
-      <div className="flex flex-col gap-2 rounded-[12px] border border-border-dim bg-card/40 p-4">
-        <div className="flex flex-wrap items-end gap-2">
-          <Field
-            id="site-rival"
-            label={t("addLabel")}
-            value={draft}
-            onChange={(event) => setDraft(event.target.value)}
-            placeholder={t("addPlaceholder")}
-            wrapperClassName="flex-1 min-w-[16rem]"
-          />
-          <Button
-            variant="quiet"
-            className="px-3 py-2 text-[12px]"
-            disabled={action.isBusy("add") || draft.trim().length === 0}
-            onClick={() => void handleAdd()}
-          >
-            <Plus className="mr-1 inline h-3.5 w-3.5" />
-            {t("add")}
-          </Button>
-        </div>
-        <SaveError>{error}</SaveError>
-      </div>
+      <AddBar
+        label={t("add")}
+        disabled={action.isBusy("add") || draft.trim().length === 0}
+        onAdd={() => void handleAdd()}
+        below={<SaveError>{error}</SaveError>}
+      >
+        <Field
+          id="site-rival"
+          label={t("addLabel")}
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder={t("addPlaceholder")}
+          wrapperClassName="flex-1 min-w-[16rem]"
+        />
+      </AddBar>
 
       <DataTable
         rows={rivals}

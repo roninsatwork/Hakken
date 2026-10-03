@@ -4,12 +4,13 @@ import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
-import { Info, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { Notice } from "@/src/ui/components/screens/Notice";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
@@ -92,10 +93,7 @@ export function CompanyFanOut({ companyWebsiteId, host }: { companyWebsiteId?: I
         description={host ? tf("descriptionOne", { host }) : tf("description")}
       />
 
-      <div className="flex items-start gap-4 rounded-[12px] border border-border-dim/50 bg-foreground/[0.015] p-4 text-secondary">
-        <Info className="mt-0.5 h-4 w-4 flex-shrink-0 text-muted" />
-        <p className="text-[12.5px] leading-relaxed">{tf("note")}</p>
-      </div>
+      <Notice>{tf("note")}</Notice>
 
       {list?.cut ? <p className="text-[12px] text-muted">{t("cut", { count: list.totalCount })}</p> : null}
 

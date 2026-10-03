@@ -58,11 +58,18 @@ const SEGMENT_COLUMNS: Record<number, string> = {
   4: "grid-cols-4",
 };
 
-export function SegmentedChoice<T extends string>({ label, value, options, onChange }: {
+export function SegmentedChoice<T extends string>({ label, value, options, onChange, size = "field" }: {
   label: string;
   value: T;
-  options: Array<{ value: T; label: string }>;
+  options: ReadonlyArray<{ value: T; label: string }>;
   onChange: (next: T) => void;
+  /**
+   * `field` stands with the form's fields, their height and full width;
+   * `compact` is as wide as its choices, for switching between views of one
+   * card or table — Sites' and Search Console's view switches, which drew
+   * their own until the 2026-10-03 clean-up.
+   */
+  size?: "field" | "compact";
 }) {
   // Three was hardcoded because reasoning effort has three levels. A two-way
   // choice left an empty column and a four-way one wrapped, so anything but a
@@ -75,8 +82,9 @@ export function SegmentedChoice<T extends string>({ label, value, options, onCha
       role="radiogroup"
       aria-label={label}
       className={cn(
-        "grid h-[46px] gap-1 rounded-[12px] border border-border-dim bg-black/20 p-1",
-        columns,
+        size === "compact"
+          ? "inline-flex w-fit gap-1 rounded-[10px] border border-border-dim bg-black/20 p-1"
+          : cn("grid h-[46px] gap-1 rounded-[12px] border border-border-dim bg-black/20 p-1", columns),
       )}
     >
       {options.map((option) => (
@@ -89,7 +97,8 @@ export function SegmentedChoice<T extends string>({ label, value, options, onCha
           aria-checked={value === option.value}
           onClick={() => onChange(option.value)}
           className={cn(
-            "rounded-[9px] text-[12px] font-medium transition-colors",
+            "text-[12px] font-medium transition-colors",
+            size === "compact" ? "rounded-[7px] px-3 py-1" : "rounded-[9px]",
             value === option.value
               ? "bg-brand/20 text-brand"
               : "text-secondary hover:text-foreground",

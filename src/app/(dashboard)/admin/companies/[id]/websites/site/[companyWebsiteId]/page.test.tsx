@@ -44,11 +44,12 @@ describe("To do", () => {
   it("opens the results behind each card", async () => {
     renderWithProviders(<CompanySiteOverviewPage />);
 
-    expect((await screen.findByText("admin.siteView.overview.searches")).closest("a"))
+    // Each card is the kit's Figure, which says it opens with an arrow after its label.
+    expect((await screen.findByText("admin.siteView.overview.searches →")).closest("a"))
       .toHaveAttribute("href", `${base}/searches`);
-    expect(screen.getByText("admin.siteView.overview.questions").closest("a"))
+    expect(screen.getByText("admin.siteView.overview.questions →").closest("a"))
       .toHaveAttribute("href", `${base}/citations`);
-    expect(screen.getByText("admin.siteView.overview.rivals").closest("a"))
+    expect(screen.getByText("admin.siteView.overview.rivals →").closest("a"))
       .toHaveAttribute("href", `${base}/competitors`);
   });
 
@@ -78,7 +79,7 @@ describe("To do", () => {
     renderWithProviders(<CompanySiteOverviewPage />);
 
     await waitFor(() => expect(replace).toHaveBeenCalledWith(`${base}/keywords`));
-    expect(screen.queryByText("admin.siteView.overview.searches")).not.toBeInTheDocument();
+    expect(screen.queryByText("admin.siteView.overview.searches →")).not.toBeInTheDocument();
   });
 
   it("lists what to do next, each with the action that answers it", async () => {

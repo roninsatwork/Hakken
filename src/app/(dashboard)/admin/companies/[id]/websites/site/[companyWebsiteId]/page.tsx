@@ -9,6 +9,7 @@ import { ArrowRight, ListChecks } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { formatDate } from "@/src/lib/dates";
 import { SiteMoves } from "./SiteMoves";
@@ -77,7 +78,6 @@ export default function CompanySiteTodoPage() {
           ["notFound", ["NEVER_RANKED", "NOT_FOUND"]],
           ["tooEarly", ["TOO_NEW", "NOT_CHECKED"]],
         ]),
-      go: t("overview.seeSearches"),
     },
     {
       key: "questions",
@@ -93,7 +93,6 @@ export default function CompanySiteTodoPage() {
           ["never", ["NEVER_LANDED"]],
           ["tooEarly", ["TOO_NEW", "NOT_ASKED"]],
         ]),
-      go: t("overview.seeAnswers"),
     },
     {
       key: "rivals",
@@ -109,7 +108,6 @@ export default function CompanySiteTodoPage() {
           ["quiet", ["GONE_QUIET"]],
           ["tooEarly", ["TOO_NEW", "NOT_CHECKED"]],
         ]),
-      go: t("overview.seeCompetitors"),
     },
   ];
 
@@ -123,23 +121,17 @@ export default function CompanySiteTodoPage() {
           : t("overview.neverChecked", { host: header.displayHost })}
       />
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <FigureRow columns={3}>
         {cards.map((card) => (
-          <Link
+          <Figure
             key={card.key}
             href={card.href}
-            className="group flex flex-col gap-2 rounded-[13px] border border-border-dim bg-card/40 p-4 transition-colors hover:border-brand/40"
-          >
-            <h2 className="text-[13px] font-medium text-secondary">{card.label}</h2>
-            <span className="font-mono text-[26px] leading-none text-foreground">{card.value}</span>
-            <span className="text-[13px] leading-relaxed text-secondary">{card.line || t("overview.notCheckedYet")}</span>
-            <span className="mt-auto flex items-center gap-1 pt-2 text-[12px] text-muted group-hover:text-brand">
-              {card.go}
-              <ArrowRight className="h-3.5 w-3.5" />
-            </span>
-          </Link>
+            label={card.label}
+            value={card.value}
+            detail={<span className="text-secondary">{card.line || t("overview.notCheckedYet")}</span>}
+          />
         ))}
-      </div>
+      </FigureRow>
 
       {/* The lists are this company's own (docs/plans/active/private-tracking-lists-plan.md). */}
       <p className="-mt-4 flex flex-wrap items-center gap-x-2 text-[13px] text-secondary">

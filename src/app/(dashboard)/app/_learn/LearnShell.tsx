@@ -94,8 +94,7 @@ function LearnMenu({ current }: { current?: string }) {
   return (
     <SectionMenu
       label={t("label")}
-      jumpLabel={t("jumpLabel")}
-      jumpPlaceholder={t("jumpPlaceholder")}
+      jump={{ label: t("jumpLabel"), placeholder: t("jumpPlaceholder") }}
       currentId={current ?? learnItemFor(pathname, params)}
       openAtFirst={["news", "people", "knowledge"]}
       groups={[

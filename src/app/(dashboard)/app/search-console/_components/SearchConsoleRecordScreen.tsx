@@ -7,15 +7,17 @@ import { ExternalLink, FileText, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/src/ui/components/screens/Button";
+import { ChartCard } from "@/src/ui/components/screens/ChartCard";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { CUT_COLUMN, RecordLinkCell } from "../../sites/_components/SiteCells";
-import { SiteTableBar } from "../../sites/_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { countryName } from "./countries";
 import { SearchConsoleChart } from "./SearchConsoleChart";
 import { SearchConsoleFigures } from "./SearchConsoleFigures";
+import { SearchConsoleSplitList } from "./SearchConsoleSplitList";
 import { useListProblem, type ExportField } from "./SearchConsoleListTable";
 import { NothingOfKind, ResultKindSwitch, SearchConsoleGate, hasFigures } from "./SearchConsoleNotices";
 import { readerLanguage } from "./searchConsoleFormat";
@@ -37,37 +39,8 @@ const CHIPS: readonly ChipId[] = ["tracked", "band", "country", "device"];
 /** The chart's plot on a record's screen, as drawn. */
 const CHART_HEIGHT = 340;
 
-type Split = { key: string; clicks: number; share: number };
-
 /** Countries "Where the clicks came from" shows beside the chart (Anthony, 2026-10-03: "only show top countries"); the rest are a click away. */
 const TOP_COUNTRIES = 5;
-
-/** One of "Where the clicks came from"'s two short tables: its clicks and its share of them. */
-function SplitTable({ heading, rows, name }: { heading: string; rows: Split[] | undefined; name: (key: string) => string }) {
-  const t = useTranslations("searchConsole");
-  return (
-    <div className="flex flex-col">
-      <div className="grid grid-cols-[minmax(0,1fr)_64px_64px] border-b border-border-dim pb-2 text-[11px] font-medium uppercase tracking-[0.1em] text-muted">
-        <span>{heading}</span>
-        <span className="text-right">{t("table.clicks")}</span>
-        <span className="text-right">{t("record.share")}</span>
-      </div>
-      {rows === undefined ? (
-        <div className="mt-2 h-16 animate-pulse rounded-lg bg-sidebar/30" aria-busy="true" />
-      ) : rows.length === 0 ? (
-        <p className="py-2 text-[12px] text-muted">{t("record.noClicks")}</p>
-      ) : (
-        rows.map((row) => (
-          <div key={row.key} className="grid grid-cols-[minmax(0,1fr)_64px_64px] border-b border-border-dim/50 py-1.5 text-[13px]">
-            <span className="truncate text-foreground">{name(row.key)}</span>
-            <span className="text-right font-mono text-[12px] text-foreground">{formatNumber(row.clicks)}</span>
-            <span className="text-right font-mono text-[12px] text-secondary">{Math.round(row.share * 100)}%</span>
-          </div>
-        ))
-      )}
-    </div>
-  );
-}
 
 /**
  * A keyword's or a page's own screen (search-console-plan.md §13.2, drawn as
@@ -176,30 +149,33 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
               )}
             </div>
             <div className="relative min-w-0">
-            <section className="flex flex-col gap-4 overflow-y-auto rounded-2xl border border-border-dim bg-card/40 p-5 lg:absolute lg:inset-0">
-              <div>
-                <h2 className="text-[14px] font-medium text-foreground">{t("record.cameFrom")}</h2>
-                <p className="mt-0.5 text-[12px] text-secondary">{t(dimension === "query" ? "record.thisKeywordOnly" : "record.thisPageOnly")}</p>
-              </div>
-              {splits.answer && !splits.answer.ok ? (
-                <div className="flex flex-col items-start gap-2">
-                  <p className="text-[12px] text-muted">{t(splits.answer.problem === "GOOGLE_BUSY" ? "record.busy" : splits.answer.problem === "NOT_CONNECTED" ? "record.notConnected" : "record.refused")}</p>
-                  {splits.answer.problem === "GOOGLE_BUSY" ? <Button variant="quiet" onClick={splits.retry}>{t("record.tryAgain")}</Button> : null}
-                </div>
-              ) : (
-                <>
-                  <div className="flex flex-col gap-2">
-                    <SplitTable heading={t("table.country")} rows={splits.answer?.countries.slice(0, TOP_COUNTRIES)} name={(code) => countryName(code, language) ?? tp("unknownCountry")} />
-                    {splits.answer && splits.answer.countries.length > TOP_COUNTRIES ? (
-                      <Link href={allPlacesHref} className="self-start text-[12px] text-secondary hover:text-info">
-                        {t("record.showAllCountries", { count: formatNumber(splits.answer.countries.length) })} →
-                      </Link>
-                    ) : null}
+              <ChartCard
+                title={t("record.cameFrom")}
+                hint={t(dimension === "query" ? "record.thisKeywordOnly" : "record.thisPageOnly")}
+                className="overflow-y-auto lg:absolute lg:inset-0"
+              >
+                {splits.answer && !splits.answer.ok ? (
+                  <div className="flex flex-col items-start gap-2">
+                    <p className="text-[12px] text-muted">{t(splits.answer.problem === "GOOGLE_BUSY" ? "record.busy" : splits.answer.problem === "NOT_CONNECTED" ? "record.notConnected" : "record.refused")}</p>
+                    {splits.answer.problem === "GOOGLE_BUSY" ? <Button variant="quiet" onClick={splits.retry}>{t("record.tryAgain")}</Button> : null}
                   </div>
-                  <SplitTable heading={t("table.device")} rows={splits.answer?.devices} name={(device) => tp(`deviceNames.${device}`)} />
-                </>
-              )}
-            </section>
+                ) : (
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                      <SearchConsoleSplitList heading={t("table.country")} rows={splits.answer?.countries.slice(0, TOP_COUNTRIES)} name={(code) => countryName(code, language) ?? tp("unknownCountry")} />
+                      {splits.answer && splits.answer.countries.length > TOP_COUNTRIES ? (
+                        <Link href={allPlacesHref} className="self-start text-[12px] text-secondary hover:text-info">
+                          {t("record.showAllCountries", { count: formatNumber(splits.answer.countries.length) })} →
+                        </Link>
+                      ) : null}
+                    </div>
+                    {/* No clicks at all is said once: the lists carry no heading when empty, so a second line would only repeat it. */}
+                    {splits.answer && splits.answer.countries.length === 0 && splits.answer.devices.length === 0 ? null : (
+                      <SearchConsoleSplitList heading={t("table.device")} rows={splits.answer?.devices} name={(device) => tp(`deviceNames.${device}`)} />
+                    )}
+                  </div>
+                )}
+              </ChartCard>
             </div>
           </div>
           <section className="flex flex-col gap-3">
@@ -220,14 +196,14 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
               search={{ value: list.search, onChange: list.setSearch, placeholder: t(other === "query" ? "keywords.searchPlaceholder" : "pages.searchPlaceholder") }}
               filters={<SearchConsoleChips chips={CHIPS} />}
               cardHeader={
-                <SiteTableBar
+                <TableBar
                   footer={list.table.footer}
                   noun={other === "query" ? "keywords" : "pages"}
                   actions={list.live ? undefined : <SearchConsoleDownload ask={list.download} headers={download.map((entry) => entry.header)} fields={download.map((entry) => entry.field)} />}
                 >
                   <TrackedCount tracking={tracking} kind={other} wording={other === "query" ? "keywordsOnSite" : "pagesOnSite"} />
                   {list.live ? <span className="text-[12px] text-secondary">{t("table.asked")}</span> : null}
-                </SiteTableBar>
+                </TableBar>
               }
               sort={list.order.tableSort}
               rowClassName={(row) => (row.tracked ? "bg-brand/5" : "")}

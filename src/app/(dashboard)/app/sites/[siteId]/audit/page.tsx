@@ -6,20 +6,21 @@ import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Stethoscope } from "lucide-react";
 import { api } from "@/convex/_generated/api";
+import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { CheckedCell, RecordLinkCell } from "../../_components/SiteCells";
-import { SiteTableBar } from "../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { SiteChartCard } from "../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../_components/SiteCharts";
 import { useSiteRange } from "../../_components/SiteDateRange";
 import { datedRow } from "../../_components/datedRows";
 import { formatDay, formatNumber, toCsv } from "../../_components/siteFormat";
 import { useSite, useSiteId } from "../../_components/useSite";
-import { SiteFigure } from "../../_components/SiteFigure";
+import { Figure } from "@/src/ui/components/screens/Figure";
 import { useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { sharedSiteQuery, useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
 import { useSitePager } from "../../_components/useSitePagedTable";
@@ -98,18 +99,18 @@ export default function SiteAuditPage() {
       />
 
       {audit === null ? (
-        <p className="rounded-2xl border border-border-dim bg-card/40 px-5 py-10 text-center text-[13px] text-secondary">{t("empty")}</p>
+        <HakkenEmptyState icon={Stethoscope} title={t("title")} description={t("empty")} />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-          <SiteFigure label={t("score")} value={formatNumber(audit?.onPageScore)} detail={<span className="text-muted">{t("scoreScale")}</span>} />
-          <SiteFigure
+          <Figure label={t("score")} value={formatNumber(audit?.onPageScore)} detail={<span className="text-muted">{t("scoreScale")}</span>} />
+          <Figure
             label={t("pages")}
             value={formatNumber(audit?.pagesCrawled)}
             detail={pagesDetail === null ? undefined : <span className="text-muted">{pagesDetail}</span>}
           />
-          <SiteFigure label={t("errors")} value={audit ? String(count("ERROR")) : "–"} href={severityHref("ERROR")} />
-          <SiteFigure label={t("warnings")} value={audit ? String(count("WARNING")) : "–"} href={severityHref("WARNING")} />
-          <SiteFigure label={t("notices")} value={audit ? String(count("NOTICE")) : "–"} href={severityHref("NOTICE")} />
+          <Figure label={t("errors")} value={audit ? String(count("ERROR")) : "–"} href={severityHref("ERROR")} />
+          <Figure label={t("warnings")} value={audit ? String(count("WARNING")) : "–"} href={severityHref("WARNING")} />
+          <Figure label={t("notices")} value={audit ? String(count("NOTICE")) : "–"} href={severityHref("NOTICE")} />
         </div>
       )}
 
@@ -143,7 +144,7 @@ export default function SiteAuditPage() {
           </Select>
           </>
         }
-        cardHeader={<SiteTableBar footer={pager.footer} noun="problems" actions={<ListDownload fileName={`${site?.host ?? "site"}-site-audit`} rows={sorted} columns={[{ header: t("columns.issue"), value: (row) => label(row.check) }, { header: t("columns.severity"), value: (row) => t(`severities.${row.severity}`) }, { header: t("columns.pages"), value: (row) => row.pages }, { header: t("columns.lastChecked"), value: () => audit?.day ?? null }]} />} />}
+        cardHeader={<TableBar footer={pager.footer} noun="problems" actions={<ListDownload fileName={`${site?.host ?? "site"}-site-audit`} rows={sorted} columns={[{ header: t("columns.issue"), value: (row) => label(row.check) }, { header: t("columns.severity"), value: (row) => t(`severities.${row.severity}`) }, { header: t("columns.pages"), value: (row) => row.pages }, { header: t("columns.lastChecked"), value: () => audit?.day ?? null }]} />} />}
         empty={{ icon: <Stethoscope className="h-8 w-8 text-muted/30" />, label: audit === null ? t("empty") : term || severity ? t("noMatch") : t("noIssues") }}
         footer={pager.footer}
         sort={tableSort}

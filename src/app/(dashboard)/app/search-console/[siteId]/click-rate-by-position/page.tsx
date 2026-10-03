@@ -9,7 +9,7 @@ import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../sites/_components/SiteCharts";
-import { SiteTableBar } from "../../../sites/_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber, toCsv } from "../../../sites/_components/siteFormat";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
@@ -102,7 +102,7 @@ export default function SearchConsoleCtrCurvePage() {
             minWidthClassName="min-w-[640px]"
             search={{ value: search, onChange: setSearch, placeholder: t("ctrCurve.searchPlaceholder") }}
             filters={<SearchConsoleChips chips={CHIPS} />}
-            cardHeader={<SiteTableBar footer={pager.footer} noun="positions" />}
+            cardHeader={<TableBar footer={pager.footer} noun="positions" />}
             sort={tableSort}
             empty={{ icon: <Percent className="h-8 w-8 text-muted/30" />, label: term ? t("table.noMatch") : t("table.empty") }}
             footer={pager.footer}

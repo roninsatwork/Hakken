@@ -8,7 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { CUT_COLUMN, ExternalUrlCell, RecordLinkCell } from "../../../_components/SiteCells";
-import { SiteTableBar } from "../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
@@ -51,7 +51,7 @@ export default function SiteBrokenBacklinksPage() {
         onRowClick={(row) => router.push(recordHref({ kind: "page", page: row.pageTo }))}
         minWidthClassName="min-w-[760px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
-        cardHeader={<SiteTableBar footer={table.footer} noun="links" actions={<TableDownload siteId={siteId} kind="broken" sort={order.tableSort} />} />}
+        cardHeader={<TableBar footer={table.footer} noun="links" actions={<TableDownload siteId={siteId} kind="broken" sort={order.tableSort} />} />}
         empty={{ icon: <Unlink className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}
         footer={table.footer}
         sort={order.tableSort}

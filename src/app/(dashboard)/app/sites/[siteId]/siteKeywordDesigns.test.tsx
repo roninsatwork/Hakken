@@ -100,7 +100,7 @@ describe("Site structure", () => {
     // Each folder's share of the searches beside its share of the visits: the blog holds most searches and few visits.
     expect(screen.getAllByRole("row")[3].getAttribute("title") ?? screen.getAllByRole("row")[3].innerHTML).toContain("60%");
 
-    fireEvent.click(screen.getByRole("tab", { name: "sites.structure.switch.keywords" }));
+    fireEvent.click(screen.getByRole("radio", { name: "sites.structure.switch.keywords" }));
     expect(String(nav.replace.mock.calls.at(-1)?.[0])).toContain("size=keywords");
   });
 

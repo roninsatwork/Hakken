@@ -7,7 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { CUT_COLUMN, PositionCell, RecordLinkCell } from "../../../../_components/SiteCells";
-import { SiteTableBar } from "../../../../_components/SiteTableBar";
+import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../../_components/useSite";
@@ -75,7 +75,7 @@ export default function SiteFeatureKeywordsPage() {
         rows={table.pageRows}
         rowKey={(row) => row._id}
         onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
-        cardHeader={<SiteTableBar footer={table.footer} noun="searches" />}
+        cardHeader={<TableBar footer={table.footer} noun="searches" />}
         empty={{ icon: <Sparkles className="h-8 w-8 text-muted/30" />, label: t("empty") }}
         footer={table.footer}
         sort={order.tableSort}
