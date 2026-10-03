@@ -78,6 +78,35 @@ the more sticky this app will be."
 - **Where groups show**: Search Console's Types, the Sites Overview's pages by
   kind, the Pages lists' filters, Your pages, and reports.
 
+## Size and stages (2026-10-03)
+
+About 20–24 days for one developer, 4–5 weeks: reading sitemaps (2), one list
+of every page across the sitemap, crawl, Search Console and rankings (2), the
+classifications' data and rules with set, change and remove per page (3), the
+admin Page classification page and a classification's own page (4), the
+charts and screens using them — Types, the Overview, the Pages filters,
+reports, Not sorted (3–4), Your pages in Sites (2–3), the suggested start from
+the site's folders and sitemap files (1–2), and tests in both languages, docs
+and checking on ronins.co.uk and Korda (3). Anthony: "wow this is a big task".
+
+It splits into three stages, each useful alone:
+
+1. **Page classification** (about 10 days) — the admin page and the charts
+   that use it.
+2. **Sitemap and Your pages** (about 6 days) — independent of stage 1.
+3. **The extras** (about 4 days) — the suggested start, classifications in
+   reports and downloads.
+
+Which comes first is his choice.
+
+## The drawings
+
+On the Search Console canvas (https://claude.ai/artifact/YSWaPwCuywp292S4rfeUQf):
+board 22 Page classification, 22b a classification's own page, 23 Your pages.
+On 2026-10-03 every table on the canvas was made to fit its board: tables had
+been given fixed minimum widths (980px on these boards, 860px on the earlier
+Search Console ones) wider than the ~900px beside the two menus.
+
 ## Open — with the drawings
 
 - Limits to say: groups and rules per website, sitemap pages read per website
