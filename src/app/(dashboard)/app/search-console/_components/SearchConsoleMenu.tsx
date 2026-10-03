@@ -9,10 +9,11 @@ import { SEARCH_CONSOLE_GROUPS, SEARCH_CONSOLE_PAGES, pageForPath, useSearchCons
  * A website's pages in the Search Console section, grouped as drawn
  * (search-console-plan.md §13.1): Google's own figures, then Changes,
  * Opportunities, Breakdowns and Settings. The menu is the Sites one
- * (`SectionMenu`) — "Jump to a page", each group folding away — every group
- * open at first. Page names only, never a mark or a label (Anthony,
- * 2026-09-25). A keyword's or a page's own screen keeps the list it belongs
- * to lit; on a phone the menu is one drop-down.
+ * (`SectionMenu`) — "Jump to a page", each group folding away — and opens
+ * as Sites does: Google's figures and the page's own group, the rest closed.
+ * Page names only, never a mark or a label (Anthony, 2026-09-25). A
+ * keyword's or a page's own screen keeps the list it belongs to lit; on a
+ * phone the menu is one drop-down.
  */
 export function SearchConsoleMenu({ siteId }: { siteId: string }) {
   const t = useTranslations("searchConsole.menu");
@@ -23,7 +24,8 @@ export function SearchConsoleMenu({ siteId }: { siteId: string }) {
       label={t("label")}
       jump={{ label: t("jumpLabel"), placeholder: t("jumpPlaceholder") }}
       currentId={pageForPath(pathname, siteId)}
-      openAtFirst={SEARCH_CONSOLE_GROUPS}
+      // As Sites: the first group open, and the group of the page being read; the rest fold away (Anthony, 2026-10-03: "most are closed when you go to the page so it's no overwhelm").
+      openAtFirst={["figures"]}
       groups={SEARCH_CONSOLE_GROUPS.map((group) => ({
         id: group,
         label: t(`groups.${group}`),
