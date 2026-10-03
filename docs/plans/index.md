@@ -86,6 +86,12 @@ completed work.
   review; FA8 built switched off and never run, its search by the site's
   domain left for review (§6).**
 
+- [Page groups and Your pages](./active/page-groups-plan.md) — a website's
+  own sections in its own words (admin, by address rules and sitemap files),
+  replacing Hakken's page kinds on its screens once set, and a Your pages page
+  in Sites setting its sitemap against what was crawled, shown by Google and
+  ranking. **Agreed and drawn 2026-10-03; not built.**
+
 - [Tracked pages — what a company tracks, from the menu](./active/tracked-pages-plan.md) —
   a page per tracked list inside its own section: Search Console's Tracked
   keywords and Tracked pages in a new Tracked group, and Sites' Tracked fan-out
