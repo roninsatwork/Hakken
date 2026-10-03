@@ -10725,7 +10725,9 @@
       "keywordsFor": "Parole chiave che hanno portato visitatori a questa pagina",
       "namedFor": "Google nomina le parole chiave dietro {named} dei {clicks} clic di questa pagina; le altre le nasconde per privacy. Spunta una parola chiave per seguirla; cliccane una per vedere ogni tua pagina a cui ha portato visitatori.",
       "keywordsHint": "Spunta una parola chiave per seguirla; cliccane una per vedere ogni tua pagina a cui ha portato visitatori.",
-      "pagesHint": "Ogni tua pagina che Google ha mostrato per questa parola chiave. Spunta una pagina per seguirla; cliccane una per vedere tutto su di lei."
+      "pagesHint": "Ogni tua pagina che Google ha mostrato per questa parola chiave. Spunta una pagina per seguirla; cliccane una per vedere tutto su di lei.",
+      "showAllCountries": "Mostra tutti i {count} paesi",
+      "placesDescription": "Ogni paese e ogni dispositivo dietro i clic di “{name}”, per le date scelte."
     },
     "connect": {
       "title": "Collega Google Search Console",

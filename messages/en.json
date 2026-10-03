@@ -10725,7 +10725,9 @@
       "keywordsFor": "Keywords that brought people to this page",
       "namedFor": "Google names the keywords behind {named} of this page's {clicks} clicks; it hides the rest for privacy. Tick a keyword to track it; click one to see every page of yours it brought people to.",
       "keywordsHint": "Tick a keyword to track it; click one to see every page of yours it brought people to.",
-      "pagesHint": "Every page of yours Google showed for this keyword. Tick a page to track it; click one to see everything about it."
+      "pagesHint": "Every page of yours Google showed for this keyword. Tick a page to track it; click one to see everything about it.",
+      "showAllCountries": "Show all {count} countries",
+      "placesDescription": "Every country and every device behind “{name}”'s clicks, for the dates chosen."
     },
     "connect": {
       "title": "Connect Google Search Console",

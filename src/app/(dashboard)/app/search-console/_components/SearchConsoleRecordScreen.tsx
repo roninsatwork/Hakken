@@ -1,7 +1,8 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ExternalLink, FileText, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
@@ -18,7 +19,7 @@ import { SearchConsoleFigures } from "./SearchConsoleFigures";
 import { useListProblem, type ExportField } from "./SearchConsoleListTable";
 import { NothingOfKind, ResultKindSwitch, SearchConsoleGate, hasFigures } from "./SearchConsoleNotices";
 import { readerLanguage } from "./searchConsoleFormat";
-import { pageLabel, useLiveAsk, useRecordBack, useRecordHref } from "./searchConsoleRecords";
+import { BACK_KEY, pageLabel, useLiveAsk, useRecordBack, useRecordHref } from "./searchConsoleRecords";
 import {
   SearchConsoleChips,
   SearchConsoleDownload,
@@ -29,11 +30,17 @@ import {
   useSearchConsoleTracking,
   type ChipId,
 } from "./SearchConsoleTables";
-import { useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
+import { useResultKind, useSearchConsoleHref, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
 
 const CHIPS: readonly ChipId[] = ["tracked", "band", "country", "device"];
 
+/** The chart's plot on a record's screen, as drawn. */
+const CHART_HEIGHT = 340;
+
 type Split = { key: string; clicks: number; share: number };
+
+/** Countries "Where the clicks came from" shows beside the chart (Anthony, 2026-10-03: "only show top countries"); the rest are a click away. */
+const TOP_COUNTRIES = 5;
 
 /** One of "Where the clicks came from"'s two short tables: its clicks and its share of them. */
 function SplitTable({ heading, rows, name }: { heading: string; rows: Split[] | undefined; name: (key: string) => string }) {
@@ -51,7 +58,7 @@ function SplitTable({ heading, rows, name }: { heading: string; rows: Split[] | 
         <p className="py-2 text-[12px] text-muted">{t("record.noClicks")}</p>
       ) : (
         rows.map((row) => (
-          <div key={row.key} className="grid grid-cols-[minmax(0,1fr)_64px_64px] border-b border-border-dim/50 py-2 text-[13px]">
+          <div key={row.key} className="grid grid-cols-[minmax(0,1fr)_64px_64px] border-b border-border-dim/50 py-1.5 text-[13px]">
             <span className="truncate text-foreground">{name(row.key)}</span>
             <span className="text-right font-mono text-[12px] text-foreground">{formatNumber(row.clicks)}</span>
             <span className="text-right font-mono text-[12px] text-secondary">{Math.round(row.share * 100)}%</span>
@@ -99,6 +106,9 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
   const counts = tracking.counts ? (dimension === "query" ? tracking.counts.keywords : tracking.counts.pages) : null;
   const full = counts !== null && counts.count >= counts.limit && isTracked === false;
   const title = dimension === "query" ? key : pageLabel(key, host);
+  const hrefFor = useSearchConsoleHref(siteId);
+  const pathname = usePathname();
+  const allPlacesHref = hrefFor(`${dimension === "query" ? "keywords/keyword" : "pages/page"}/countries`, { key, [BACK_KEY]: `${pathname}?${params.toString()}` });
   const router = useRouter();
   const problem = useListProblem(list);
   const download: { header: string; field: ExportField }[] = [
@@ -148,10 +158,12 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
           ) : (
             <SearchConsoleFigures totals={days.totals} previous={days.previous} days={range.days} isNew={days.previousHeld && days.previous === null} />
           )}
+          {/* The chart sets the row's depth; "Where the clicks came from" fills it beside, never deeper (as drawn). */}
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,2.3fr)_minmax(280px,1fr)]">
             <div className="min-w-0">
               {days && days.totals !== null ? (
                 <SearchConsoleChart
+                  height={CHART_HEIGHT}
                   title={t("record.chartTitle")}
                   days={days.days}
                   range={range}
@@ -163,7 +175,8 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
                 <div className="h-[340px] animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />
               )}
             </div>
-            <section className="flex flex-col gap-4 rounded-2xl border border-border-dim bg-card/40 p-5">
+            <div className="relative min-w-0">
+            <section className="flex flex-col gap-4 overflow-y-auto rounded-2xl border border-border-dim bg-card/40 p-5 lg:absolute lg:inset-0">
               <div>
                 <h2 className="text-[14px] font-medium text-foreground">{t("record.cameFrom")}</h2>
                 <p className="mt-0.5 text-[12px] text-secondary">{t(dimension === "query" ? "record.thisKeywordOnly" : "record.thisPageOnly")}</p>
@@ -175,11 +188,19 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
                 </div>
               ) : (
                 <>
-                  <SplitTable heading={t("table.country")} rows={splits.answer?.countries} name={(code) => countryName(code, language) ?? tp("unknownCountry")} />
+                  <div className="flex flex-col gap-2">
+                    <SplitTable heading={t("table.country")} rows={splits.answer?.countries.slice(0, TOP_COUNTRIES)} name={(code) => countryName(code, language) ?? tp("unknownCountry")} />
+                    {splits.answer && splits.answer.countries.length > TOP_COUNTRIES ? (
+                      <Link href={allPlacesHref} className="self-start text-[12px] text-secondary hover:text-info">
+                        {t("record.showAllCountries", { count: formatNumber(splits.answer.countries.length) })} →
+                      </Link>
+                    ) : null}
+                  </div>
                   <SplitTable heading={t("table.device")} rows={splits.answer?.devices} name={(device) => tp(`deviceNames.${device}`)} />
                 </>
               )}
             </section>
+            </div>
           </div>
           <section className="flex flex-col gap-3">
             <div>

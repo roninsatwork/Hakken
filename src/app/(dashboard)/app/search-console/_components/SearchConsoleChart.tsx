@@ -70,8 +70,10 @@ function points(days: Day[], range: { from: string; to: string; step: "day" | "w
  * running from the top as 1 is best — and the chart's own download, as every
  * Sites chart has (D16).
  */
-export function SearchConsoleChart({ title, days, range, held, host, exportName }: {
+export function SearchConsoleChart({ title, days, range, held, host, exportName, height }: {
   title: string;
+  /** The plot's height, when a screen draws it taller than the Sites charts' own (a record's screen: 340, as drawn). */
+  height?: number;
   days: Day[];
   range: { from: string; to: string; step: "day" | "week" | "month" };
   held: { from: string | null; to: string | null };
@@ -128,7 +130,7 @@ export function SearchConsoleChart({ title, days, range, held, host, exportName 
       </div>
       <div className="mt-4">
         {anything ? (
-          <SiteLineChart data={data} series={series} />
+          <SiteLineChart data={data} series={series} {...(height ? { height } : {})} />
         ) : (
           <p className="py-10 text-center text-[13px] text-secondary">{t("nothing")}</p>
         )}
