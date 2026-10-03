@@ -152,8 +152,8 @@ const rowsOf = (t: Harness, siteId: Id<"companyWebsites">, list: "query" | "page
   t.run(async (ctx) => {
     const records = await ctx.db
       .query("searchConsoleLists")
-      .withIndex("by_hold_type_list_grain_start", (q) => q
-        .eq("companyWebsiteId", siteId).eq("searchType", "web").eq("list", list === "query" ? "pair" : list).eq("grain", grain).eq("start", day))
+      .withIndex("by_hold_country_type_list_grain_start", (q) => q
+        .eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", list === "query" ? "pair" : list).eq("grain", grain).eq("start", day))
       .collect();
     const sums = new Map<string, number>();
     for (const record of records) record.keys.forEach((key, index) => sums.set(key, (sums.get(key) ?? 0) + record.clicks[index]));
@@ -434,7 +434,7 @@ describe("collecting", () => {
     fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
     await collect(t);
-    const seen = await t.run(async (ctx) => await ctx.db.query("searchConsoleSeen").withIndex("by_hold_kind_key", (q) => q.eq("companyWebsiteId", siteId)).collect());
+    const seen = await t.run(async (ctx) => await ctx.db.query("searchConsoleSeen").withIndex("by_hold_country_kind_key", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined)).collect());
     expect(seen.map((entry) => `${entry.kind} ${entry.key} ${entry.firstDay} ${entry.lastDay}`).sort()).toEqual([
       "page https://acme-shop.test/ 2026-09-26 2026-09-26",
       "query emergency plumber 2026-09-26 2026-09-26",
@@ -449,32 +449,32 @@ describe("collecting", () => {
     await collect(t);
     const thirty = await t.run(async (ctx) => await ctx.db
       .query("searchConsolePeriods")
-      .withIndex("by_hold_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("searchType", "web").eq("list", "query").eq("period", "30").eq("which", "NOW"))
+      .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", "30").eq("which", "NOW"))
       .collect());
     expect(thirty).toHaveLength(1);
     expect(thirty[0]).toMatchObject({ from: "2026-08-28", to: NEWEST, keys: ["plumber leeds", "emergency plumber"], clicks: [9, 3], counts: [1, 1], tops: ["https://acme-shop.test/", "https://acme-shop.test/"] });
     // The thirty days before are held, and had nothing: kept as held and empty, so the change reads as nothing gained.
     const before = await t.run(async (ctx) => await ctx.db
       .query("searchConsolePeriods")
-      .withIndex("by_hold_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("searchType", "web").eq("list", "query").eq("period", "30").eq("which", "BEFORE"))
+      .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", "30").eq("which", "BEFORE"))
       .collect());
     expect(before.map((part) => part.keys)).toEqual([[]]);
     // Twelve months of a website held for 90 days counts the 90 days, and says so.
     const year = await t.run(async (ctx) => await ctx.db
       .query("searchConsolePeriods")
-      .withIndex("by_hold_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("searchType", "web").eq("list", "page").eq("period", "365").eq("which", "NOW"))
+      .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "page").eq("period", "365").eq("which", "NOW"))
       .first());
     expect(year).toMatchObject({ from: "2026-06-29", to: NEWEST, keys: ["https://acme-shop.test/"], counts: [2], tops: ["plumber leeds"] });
     // The weeks the Position bands and Brand charts read: the website has no brand words yet, so every click is the rest's.
     const weeks = await t.run(async (ctx) => await ctx.db
       .query("searchConsoleWeeks")
-      .withIndex("by_hold_type_week", (q) => q.eq("companyWebsiteId", siteId).eq("searchType", "web"))
+      .withIndex("by_hold_country_type_week", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web"))
       .collect());
     expect(weeks.map((week) => [week.week, week.top3, week.top10, week.brandClicks, week.otherClicks])).toEqual([["2026-09-21", 0, 2, 0, 12]]);
     // Discover has no searches: no pairs or searches kept for it.
     const discover = await t.run(async (ctx) => await ctx.db
       .query("searchConsolePeriods")
-      .withIndex("by_hold_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("searchType", "discover").eq("list", "query"))
+      .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "discover").eq("list", "query"))
       .collect());
     expect(discover).toEqual([]);
   });
@@ -514,11 +514,11 @@ describe("collecting", () => {
     await put("WEEK", "2025-09-15", ["/a"], [4], [40], [160]);
     await put("WEEK", "2025-09-22", ["/a"], [5], [50], [100]);
 
-    const due = await t.query(internal.searchConsoleSync.rollUpsDue, { companyWebsiteId: siteId, newest: NEWEST });
+    const due = await t.query(internal.searchConsoleRollups.rollUpsDue, { companyWebsiteId: siteId, newest: NEWEST });
     expect(due.days.map((slot) => slot.start)).toEqual(["2026-06-01", "2026-06-02"]);
     expect(due.weeks.map((slot) => slot.start)).toEqual(["2025-09-15", "2025-09-22"]);
-    for (const slot of due.days) await t.mutation(internal.searchConsoleSync.rollUp, { companyWebsiteId: siteId, ...slot, from: "DAY" });
-    for (const slot of due.weeks) await t.mutation(internal.searchConsoleSync.rollUp, { companyWebsiteId: siteId, ...slot, from: "WEEK" });
+    for (const slot of due.days) await t.mutation(internal.searchConsoleRollups.rollUp, { companyWebsiteId: siteId, ...slot, from: "DAY" });
+    for (const slot of due.weeks) await t.mutation(internal.searchConsoleRollups.rollUp, { companyWebsiteId: siteId, ...slot, from: "WEEK" });
 
     const kept = await t.run(async (ctx) => await ctx.db.query("searchConsoleLists").collect());
     expect(kept.map((record) => `${record.grain} ${record.start}`).sort()).toEqual(["DAY 2026-06-29", "MONTH 2025-09-01", "WEEK 2026-06-01"]);

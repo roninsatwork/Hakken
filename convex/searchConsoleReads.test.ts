@@ -271,6 +271,25 @@ describe("the tables", () => {
     expect(list.rows.every((row) => row.change === null && row.previousClicks === null)).toBe(true);
   });
 
+  test("a list longer than Convex carries in one array comes in parts, all of it", async () => {
+    // 2026-10-03: the United Kingdom's 8,833 searches on ronins.co.uk broke the
+    // 8,192 a Convex array holds, and the screen called it Google being busy.
+    const { siteId, reader } = await withSearches();
+    const twoDays = { ...range, from: "2026-09-25", to: "2026-09-26" };
+    vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const ask = JSON.parse(String(init?.body)) as { startDate: string; startRow?: number };
+      const rows = ask.startDate === "2026-09-25" && !ask.startRow
+        ? Array.from({ length: 9_000 }, (_, at) => ({ keys: [`search ${at}`, "https://acme-shop.test/"], clicks: 1, impressions: 10, ctr: 0.1, position: 5 }))
+        : [];
+      return Response.json({ rows });
+    }));
+    const live = await reader.action(api.searchConsoleLists.searchConsoleLiveList, { siteId, ...twoDays });
+    expect(live.ok).toBe(true);
+    if (!live.ok) return;
+    expect(live.rows.map((part) => part.length)).toEqual([8_000, 1_000]);
+    expect(new Set(live.rows.flat().map((row) => row.key)).size).toBe(9_000);
+  });
+
   test("the countries come whole, for a page of several short tables", async () => {
     const { t, siteId, reader } = await withSearches();
     await period(t, siteId, "country", now, [["gbr", 11, 300, 4], ["irl", 1, 100, 8]]);
@@ -298,7 +317,7 @@ describe("the tables", () => {
     expect(live.ok).toBe(true);
     if (!live.ok) return;
     expect(live).toMatchObject({ named: 9, comparable: true, cut: null });
-    expect(live.rows.map((row) => [row.key, row.clicks, row.position, row.change, row.count, row.top])).toEqual([
+    expect(live.rows.flat().map((row) => [row.key, row.clicks, row.position, row.change, row.count, row.top])).toEqual([
       ["plumber leeds", 8, 3, 6, 2, "https://acme-shop.test/plumbers/"],
       ["boiler repair", 1, 9, 1, 1, "https://acme-shop.test/boilers/"],
     ]);

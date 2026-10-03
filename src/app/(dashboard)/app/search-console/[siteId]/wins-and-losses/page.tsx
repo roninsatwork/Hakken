@@ -11,7 +11,7 @@ import { formatPosition } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
 import { BeforeAfter, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
 
-const CHIPS: readonly ChipId[] = ["move", "band", "country", "device"];
+const CHIPS: readonly ChipId[] = ["move", "band", "device"];
 
 /**
  * Wins and losses (search-console-plan.md §13.3, drawn as "7 · Wins and

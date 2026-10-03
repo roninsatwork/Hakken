@@ -17,7 +17,7 @@ import {
   type ChipId,
 } from "../../_components/SearchConsoleTables";
 
-const CHIPS: readonly ChipId[] = ["missed", "tracked", "intent", "country"];
+const CHIPS: readonly ChipId[] = ["missed", "tracked", "intent"];
 
 /**
  * Missed demand (search-console-plan.md §13.3, drawn as "11 · Missed

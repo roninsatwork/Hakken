@@ -19,7 +19,7 @@ import { SearchConsoleChart } from "./SearchConsoleChart";
 import { SearchConsoleFigures } from "./SearchConsoleFigures";
 import { SearchConsoleSplitList } from "./SearchConsoleSplitList";
 import { useListProblem, type ExportField } from "./SearchConsoleListTable";
-import { NothingOfKind, ResultKindSwitch, SearchConsoleGate, hasFigures } from "./SearchConsoleNotices";
+import { NothingOfKind, ResultKindSwitch, SearchConsoleGate, hasFigures, canRetry, liveProblemKey } from "./SearchConsoleNotices";
 import { readerLanguage } from "./searchConsoleFormat";
 import { BACK_KEY, pageLabel, useLiveAsk, useRecordBack, useRecordHref } from "./searchConsoleRecords";
 import {
@@ -32,9 +32,17 @@ import {
   useSearchConsoleTracking,
   type ChipId,
 } from "./SearchConsoleTables";
-import { useResultKind, useSearchConsoleHref, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
+import {
+  countryArg,
+  useResultKind,
+  useSearchConsoleCountry,
+  useSearchConsoleHref,
+  useSearchConsoleRange,
+  useSearchConsoleSiteId,
+  useSearchConsoleStatus,
+} from "./useSearchConsole";
 
-const CHIPS: readonly ChipId[] = ["tracked", "band", "country", "device"];
+const CHIPS: readonly ChipId[] = ["tracked", "band", "device"];
 
 /** The chart's plot on a record's screen, as drawn. */
 const CHART_HEIGHT = 340;
@@ -50,7 +58,9 @@ const TOP_COUNTRIES = 5;
  * brought people to, or every keyword that brought people to the page, with
  * the same search, chips, Track ticks and pager as the lists. The days and
  * the places are asked of Google as the screen opens; the table is read from
- * the ready-made periods. A new screen with a way back, never a panel.
+ * the ready-made periods. All in the country chosen for the page, except
+ * where the clicks came from by country — every country, always (§16). A new
+ * screen with a way back, never a panel.
  */
 export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | "page" }) {
   const t = useTranslations("searchConsole");
@@ -60,6 +70,7 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
   const [kind] = useResultKind();
+  const [country] = useSearchConsoleCountry();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
   const host = status?.host ?? "";
   const back = useRecordBack(siteId, dimension === "query" ? "keywords" : "pages", host);
@@ -67,7 +78,8 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
   const tracking = useSearchConsoleTracking(siteId);
   const isTracked = useQuery(api.searchConsoleTracking.searchConsoleIsTracked, key ? { siteId, kind: dimension, key } : "skip");
   const ready = Boolean(status && hasFigures(status) && key);
-  const ask = { siteId, searchType: kind, dimension, key, from: range.from, to: range.to };
+  // The country chosen narrows the days and the devices; the splits' countries are every country still.
+  const ask = { siteId, searchType: kind, dimension, key, from: range.from, to: range.to, ...countryArg(country) };
   const series = useLiveAsk(api.searchConsoleLists.searchConsoleKeySeries, ready ? ask : null);
   const splits = useLiveAsk(api.searchConsoleLists.searchConsoleKeySplits, ready ? ask : null);
   const days = series.answer === undefined ? undefined : series.answer.ok ? series.answer : { days: [], totals: null, previous: null, previousHeld: false };
@@ -156,8 +168,8 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
               >
                 {splits.answer && !splits.answer.ok ? (
                   <div className="flex flex-col items-start gap-2">
-                    <p className="text-[12px] text-muted">{t(splits.answer.problem === "GOOGLE_BUSY" ? "record.busy" : splits.answer.problem === "NOT_CONNECTED" ? "record.notConnected" : "record.refused")}</p>
-                    {splits.answer.problem === "GOOGLE_BUSY" ? <Button variant="quiet" onClick={splits.retry}>{t("record.tryAgain")}</Button> : null}
+                    <p className="text-[12px] text-muted">{t(liveProblemKey(splits.answer.problem))}</p>
+                    {canRetry(splits.answer.problem) ? <Button variant="quiet" onClick={splits.retry}>{t("record.tryAgain")}</Button> : null}
                   </div>
                 ) : (
                   <div className="flex flex-col gap-4">
@@ -231,7 +243,7 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
                 },
               ]}
             />
-            {list.table.problem === "GOOGLE_BUSY" ? (
+            {canRetry(list.table.problem) ? (
               <div>
                 <Button variant="quiet" onClick={list.retry}>{t("record.tryAgain")}</Button>
               </div>

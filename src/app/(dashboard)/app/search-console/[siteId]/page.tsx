@@ -1,14 +1,12 @@
 "use client";
 
-import { useQuery } from "convex/react";
 import { LineChart } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { SearchConsoleChart } from "../_components/SearchConsoleChart";
-import { SearchConsoleFigures } from "../_components/SearchConsoleFigures";
-import { NothingOfKind, ResultKindSwitch, SearchConsoleGate, hasFigures } from "../_components/SearchConsoleNotices";
+import { SearchConsoleFigures, useSiteFiguresFor } from "../_components/SearchConsoleFigures";
+import { LiveProblem, NothingOfKind, ResultKindSwitch, SearchConsoleGate, hasFigures } from "../_components/SearchConsoleNotices";
 import { useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../_components/useSearchConsole";
 
 /**
@@ -16,7 +14,8 @@ import { useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearch
  * clicks, impressions, click-through rate and Google's average position for
  * the dates chosen, each against the days before; how much of the clicks
  * came from searches Google names; and one chart of them over time — for the
- * kind of result chosen.
+ * kind of result and the country chosen. A country the website does not keep
+ * ready is asked of Google, which names no clicks.
  */
 export default function SearchConsolePerformancePage() {
   const t = useTranslations("searchConsole");
@@ -24,9 +23,8 @@ export default function SearchConsolePerformancePage() {
   const status = useSearchConsoleStatus();
   const [kind] = useResultKind();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
-  const performance = useQuery(
-    api.searchConsoleReads.searchConsolePerformance,
-    status && hasFigures(status) ? { siteId, searchType: kind, from: range.from, to: range.to } : "skip",
+  const { figures: performance, problem, retry } = useSiteFiguresFor(
+    status && hasFigures(status) ? { siteId, searchType: kind, from: range.from, to: range.to } : null,
   );
   const totals = performance?.totals ?? null;
 
@@ -36,7 +34,9 @@ export default function SearchConsolePerformancePage() {
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
           <ResultKindSwitch />
-          {performance === undefined ? (
+          {problem ? (
+            <LiveProblem problem={problem} retry={retry} />
+          ) : performance === undefined ? (
             <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />
           ) : totals === null ? (
             <NothingOfKind from={range.from} to={range.to} />

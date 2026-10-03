@@ -322,6 +322,8 @@ export default defineSchema({
     locationCode: v.optional(v.number()),
     /** The same place as a person reads it — "Leeds, England, United Kingdom". */
     locationLabel: v.optional(v.string()),
+    /** Where it trades, as Google's codes (`gbr`) in the order added: set on the Market page, kept ready in Search Console (search-console-plan.md §16). */
+    searchConsoleCountries: v.optional(v.array(v.string())),
     /**
      * Whether this company owns the site or is watching somebody else's.
      *

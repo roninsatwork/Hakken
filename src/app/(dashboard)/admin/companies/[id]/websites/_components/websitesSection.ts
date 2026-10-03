@@ -5,6 +5,7 @@ import {
   IdCard,
   LineChart,
   ListChecks,
+  MapPin,
   MessageSquare,
   MessageSquareQuote,
   Receipt,
@@ -32,6 +33,7 @@ export type SectionPageId =
   | "questions"
   | "competitors"
   | "names"
+  | "market"
   | "todo"
   | "rankings"
   | "answers"
@@ -64,6 +66,9 @@ export const SECTION_PAGES: readonly SectionPage[] = [
   { id: "questions", group: "track", icon: MessageSquare, all: "ai-searches", site: "questions", owners: "OWNED" },
   { id: "competitors", group: "track", icon: Swords, all: "competitors", site: "competitors", owners: "OWNED" },
   { id: "names", group: "track", icon: IdCard, all: "names", site: "profile", owners: "ANY" },
+  // Where a website trades and where it is watched from, inputs only (search-console-plan.md
+  // §16; Anthony, 2026-10-03). A competitor has no countries, but is still watched from somewhere.
+  { id: "market", group: "track", icon: MapPin, all: "market", site: "market", owners: "ANY" },
   { id: "todo", group: "results", icon: ListChecks, all: "todo", site: "", owners: "OWNED" },
   { id: "rankings", group: "results", icon: LineChart, all: "rankings", site: "keywords", owners: "ANY" },
   { id: "answers", group: "results", icon: MessageSquareQuote, all: "answers", site: "citations", owners: "OWNED" },

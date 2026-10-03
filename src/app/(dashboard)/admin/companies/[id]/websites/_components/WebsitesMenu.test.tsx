@@ -41,8 +41,11 @@ describe("the Websites section's menu", () => {
     renderWithProviders(<WebsitesMenu companyId={"company_1" as never} />);
 
     const menu = screen.getByRole("navigation", { name: "admin.websitesSection.label" });
-    // Twelve since Schedule and limits became Schedules and Limits (2026-09-28).
-    expect(within(menu).getAllByRole("link")).toHaveLength(12);
+    // Twelve since Schedule and limits became Schedules and Limits (2026-09-28);
+    // thirteen with Market (search-console-plan.md §16, 2026-10-03).
+    expect(within(menu).getAllByRole("link")).toHaveLength(13);
+    expect(within(menu).getByRole("link", { name: "admin.websitesSection.pages.market" }))
+      .toHaveAttribute("href", `${base}/market`);
     expect(within(menu).getByRole("link", { name: "admin.websitesSection.pages.limits" }))
       .toHaveAttribute("href", `${base}/limits`);
     expect(within(menu).getByRole("link", { name: "admin.websitesSection.pages.questions" }))
@@ -71,6 +74,7 @@ describe("the Websites section's menu", () => {
     expect(within(menu).getAllByRole("link").map((link) => link.textContent)).toEqual([
       "admin.websitesSection.pages.websites",
       "admin.websitesSection.pages.names",
+      "admin.websitesSection.pages.market",
       "admin.websitesSection.pages.rankings",
       "admin.websitesSection.pages.schedules",
       "admin.websitesSection.pages.limits",
@@ -80,6 +84,9 @@ describe("the Websites section's menu", () => {
       .toHaveAttribute("href", `${base}/site/hold_2/schedules`);
     expect(within(menu).getByRole("link", { name: "admin.websitesSection.pages.limits" }))
       .toHaveAttribute("href", `${base}/site/hold_2/limits`);
+    // A competitor is still watched from somewhere, so it has a Market page.
+    expect(within(menu).getByRole("link", { name: "admin.websitesSection.pages.market" }))
+      .toHaveAttribute("href", `${base}/site/hold_2/market`);
     expect(screen.getByLabelText("admin.websitesSection.chooser.label")).toHaveTextContent("nashtackle.co.uk");
     // From a competitor's page, its own site opens on the same page.
     fireEvent.click(screen.getByLabelText("admin.websitesSection.chooser.label"));

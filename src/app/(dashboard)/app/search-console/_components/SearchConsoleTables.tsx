@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import type { FunctionArgs, FunctionReturnType } from "convex/server";
@@ -18,22 +19,30 @@ import { formatNumber } from "../../sites/_components/siteFormat";
 import { useSiteListPage, useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
 import { useSiteSort, useSiteSortedList, type SiteSortColumns } from "../../sites/_components/useSiteSort";
-import { countryName } from "./countries";
 import { DaysBeforeChange } from "./SearchConsoleFigures";
-import { formatPosition, formatRate, readerLanguage } from "./searchConsoleFormat";
+import { formatPosition, formatRate } from "./searchConsoleFormat";
 import { useLiveAsk } from "./searchConsoleRecords";
-import { isReadyMade, useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
-import { shiftDay } from "../../sites/_components/siteRange";
+import {
+  countryArg,
+  isReadyMade,
+  useResultKind,
+  useSearchConsoleCountry,
+  useSearchConsoleRange,
+  useSearchConsoleSiteId,
+  useSearchConsoleStatus,
+} from "./useSearchConsole";
 
 /**
  * What every Search Console table shares (search-console-plan.md §13.1,
  * "Tables exactly as Sites'"): a list read a page at a time on the server —
  * searched, filtered and ordered over the whole of it by the heading pressed,
- * the best first — from the ready-made periods; asked of Google instead for
- * other dates, or for one country or device, and paged here by the same
- * rules (`convex/utils/searchConsoleViews.ts`). Filters are chips on the
- * search row, as on Sites; a Track tick first in every keyword and page
- * table, held to the website's limits; its download.
+ * the best first — from the ready-made periods, all countries' or the
+ * country chosen's when the website keeps it ready; asked of Google instead
+ * for other dates, any other country, or one device, and paged here by the
+ * same rules (`convex/utils/searchConsoleViews.ts`). Filters are chips on the
+ * search row, as on Sites — the country is the page's own choice, beside the
+ * dates (search-console-plan.md §16), never a chip; a Track tick first in
+ * every keyword and page table, held to the website's limits; its download.
  */
 
 export type ListRow = FunctionReturnType<typeof api.searchConsoleLists.searchConsoleListPage>["rows"][number];
@@ -71,8 +80,8 @@ const LIVE_SORTS: SiteSortColumns<ListRow, SortKey> = {
 };
 const keyOf = (row: ListRow) => row.key;
 
-/** The filter chips a table can show, each kept in the address under its own key. */
-export type ChipId = "tracked" | "band" | "almostBand" | "intent" | "pageType" | "brand" | "move" | "verdict" | "missed" | "country" | "device";
+/** The filter chips a table can show, each kept in the address under its own key. The country is the page's, not a chip (§16). */
+export type ChipId = "tracked" | "band" | "almostBand" | "intent" | "pageType" | "brand" | "move" | "verdict" | "missed" | "device";
 
 const DEVICES = ["DESKTOP", "MOBILE", "TABLET"] as const;
 /** Every intent and page type a Kind chip can hold: anything else in the address is ignored. */
@@ -89,7 +98,6 @@ function useChosen(chips: readonly ChipId[]) {
   const [move] = useSiteParam<"" | "win" | "loss">("move", "", ["", "win", "loss"]);
   const [verdict] = useSiteParam<"" | "high" | "low" | "close">("verdict", "", ["", "high", "low", "close"]);
   const [missed] = useSiteParam<"searched" | "untracked">("list", "searched", ["searched", "untracked"]);
-  const [country] = useSiteParam<string>("country", "");
   const [device] = useSiteParam<string>("device", "", ["", ...DEVICES]);
   const filters: Filters & { missed?: "searched" | "untracked" } = {
     ...(has("tracked") && tracked ? { tracked } : {}),
@@ -100,13 +108,13 @@ function useChosen(chips: readonly ChipId[]) {
     ...(has("verdict") && verdict ? { verdict } : {}),
     ...(has("missed") ? { missed } : {}),
   };
-  return { filters, country: has("country") ? country : "", device: has("device") ? device : "" };
+  return { filters, device: has("device") ? device : "" };
 }
 
 /**
  * A Search Console list for the page on screen: `dimension` keywords or
  * pages, a page's own rule (`view`), or one keyword's pages and one page's
- * keywords (`within`).
+ * keywords (`within`) — in the country chosen for the page.
  */
 export function useSearchConsoleList(options: {
   dimension: "query" | "page";
@@ -122,7 +130,8 @@ export function useSearchConsoleList(options: {
   const [search, setSearch, term] = useSiteSearch();
   const opening = options.opening ?? "clicks";
   const order = useSiteSort<SortKey>(FIRSTS, opening);
-  const { filters, country, device } = useChosen(options.chips);
+  const [country] = useSearchConsoleCountry();
+  const { filters, device } = useChosen(options.chips);
   const held = Boolean(status?.connection?.newestDay);
   const within = options.within ?? undefined;
   const base = {
@@ -133,27 +142,35 @@ export function useSearchConsoleList(options: {
     ...(within ? { within } : {}),
     from: range.from,
     to: range.to,
+    ...countryArg(country),
   };
-  // Other dates, or one country or device, are asked of Google: the periods are kept for the whole website.
-  const byPlace = Boolean(country || device);
+  // Other dates, or one device, are asked of Google: the periods are kept for the whole website and each country kept ready.
   // One keyword's pages, one page's keywords and Pages competing read a period's pairs: past 30 days, Google is asked.
   const readsPairs = Boolean(within) || options.view === "competing";
-  const isLive = byPlace || !isReadyMade(range, status?.connection?.newestDay) || (readsPairs && range.days > 30);
+  const asksGoogle = Boolean(device) || !isReadyMade(range, status?.connection?.newestDay) || (readsPairs && range.days > 30);
   const ready = held && (within === undefined || Boolean(within.key));
+  // A country the website does not keep ready — or keeps, before its first collection — the server answers `live`.
+  // That answer is held for these dates and this country, so a search, a filter or an order, worked out here from
+  // Google's answer, never asks the server, or Google, again.
+  const baseKey = JSON.stringify(base);
+  const [liveFor, setLiveFor] = useState<string | null>(null);
+  const toldLive = liveFor === baseKey;
   const server = useSiteListPage(
     api.searchConsoleLists.searchConsoleListPage,
-    ready && !isLive ? { ...base, ...filters, ...(term ? { q: term } : {}), sort: order.key, direction: order.direction } : "skip",
+    ready && !asksGoogle && !toldLive ? { ...base, ...filters, ...(term ? { q: term } : {}), sort: order.key, direction: order.direction } : "skip",
   );
+  if (server.result?.live && !toldLive) setLiveFor(baseKey);
+  const isLive = asksGoogle || toldLive || server.result?.live === true;
   const live = useLiveAsk(
     api.searchConsoleLists.searchConsoleLiveList,
-    isLive && ready ? { ...base, ...(filters.missed ? { missed: filters.missed } : {}), ...(country ? { country } : {}), ...(device ? { device } : {}) } : null,
+    isLive && ready ? { ...base, ...(filters.missed ? { missed: filters.missed } : {}), ...(device ? { device } : {}) } : null,
   );
   // Google's answer is asked once; what the company tracks follows every tick.
   const trackedNow = useQuery(api.searchConsoleTracking.searchConsoleTrackedKeys, isLive && ready ? { siteId, kind: within ? (within.kind === "query" ? "page" : "query") : options.dimension } : "skip");
   const liveRows = live.answer === undefined
     ? undefined
     : live.answer.ok
-      ? filterRows(trackedNow ? live.answer.rows.map((row) => ({ ...row, tracked: trackedNow.includes(row.key) })) : live.answer.rows, { ...filters, q: term })
+      ? filterRows(trackedNow ? live.answer.rows.flat().map((row) => ({ ...row, tracked: trackedNow.includes(row.key) })) : live.answer.rows.flat(), { ...filters, q: term })
       : [];
   const liveOrder = useSiteSortedList(liveRows, LIVE_SORTS, { opening, name: keyOf });
   const livePages = useSitePager(liveOrder.rows, { isLoading: liveRows === undefined, cut: live.answer?.ok ? live.answer.cut : null });
@@ -172,7 +189,7 @@ export function useSearchConsoleList(options: {
       comparable: server.result?.comparable ?? false,
       problem: null,
     };
-  const filtered = Boolean(term) || Object.keys(filters).some((key) => key !== "missed") || byPlace;
+  const filtered = Boolean(term) || Object.keys(filters).some((key) => key !== "missed") || Boolean(device);
   const summary = isLive ? (live.answer?.ok ? live.answer.summary : null) : (server.result?.summary ?? null);
   return {
     summary,
@@ -197,20 +214,23 @@ export type ListSummary = NonNullable<FunctionReturnType<typeof api.searchConsol
 
 /**
  * The hero boxes' figures for a list other than the one on screen (Missed
- * demand's two lists): read from the ready-made period, or asked of Google
- * for other dates.
+ * demand's two lists, Types): read from the ready-made period — all
+ * countries', or the country chosen's when the website keeps it ready — or
+ * asked of Google for other dates and any other country.
  */
 export function useSearchConsoleSummary(ask: { dimension: "query" | "page"; view?: View; missed?: "searched" | "untracked" }): ListSummary | null {
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
   const [kind] = useResultKind();
+  const [country] = useSearchConsoleCountry();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
-  const base = { siteId, searchType: kind, from: range.from, to: range.to, ...ask };
+  const base = { siteId, searchType: kind, from: range.from, to: range.to, ...ask, ...countryArg(country) };
   const held = Boolean(status?.connection?.newestDay);
   const readyMade = isReadyMade(range, status?.connection?.newestDay);
   const server = useQuery(api.searchConsoleLists.searchConsoleListPage, held && readyMade ? { ...base, page: 1, rows: 25 } : "skip");
-  const live = useLiveAsk(api.searchConsoleLists.searchConsoleLiveList, held && !readyMade ? base : null);
-  if (!readyMade) return live.answer?.ok ? live.answer.summary : null;
+  const asksGoogle = !readyMade || server?.live === true;
+  const live = useLiveAsk(api.searchConsoleLists.searchConsoleLiveList, held && asksGoogle ? base : null);
+  if (asksGoogle) return live.answer?.ok ? live.answer.summary : null;
   return server?.summary ?? null;
 }
 
@@ -283,23 +303,6 @@ export function TrackedCount({ tracking, kind, wording = "count" }: {
   return <span className="text-[12px] text-foreground">· {t(wording, { count: formatNumber(counts.count), limit: formatNumber(counts.limit) })}</span>;
 }
 
-/** Countries a chip offers: the website's with the most clicks. */
-const COUNTRY_CHOICES = 12;
-
-/** The countries a chip offers: the website's own, the most clicks first. */
-function useCountryChoices(enabled: boolean): string[] {
-  const siteId = useSearchConsoleSiteId();
-  const status = useSearchConsoleStatus();
-  const [kind] = useResultKind();
-  const newest = status?.connection?.newestDay;
-  // The website's countries over the ready-made 90 days, whatever the dates chosen: a list read, never an ask of Google.
-  const answer = useQuery(
-    api.searchConsoleLists.searchConsoleSplitList,
-    enabled && newest ? { siteId, searchType: kind, dimension: "country", from: shiftDay(newest, -89), to: newest } : "skip",
-  );
-  return (answer?.rows ?? []).slice(0, COUNTRY_CHOICES).map((row) => row.key);
-}
-
 /** The filter chips on a table's search row, each a Sites chip kept in the address. */
 export function SearchConsoleChips({ chips }: { chips: readonly ChipId[] }) {
   const t = useTranslations("searchConsole.filters");
@@ -312,12 +315,8 @@ export function SearchConsoleChips({ chips }: { chips: readonly ChipId[] }) {
   const [move, setMove] = useSiteParam<string>("move", "", ["", "win", "loss"]);
   const [verdict, setVerdict] = useSiteParam<string>("verdict", "", ["", "high", "low", "close"]);
   const [missed, setMissed] = useSiteParam<string>("list", "searched", ["searched", "untracked"]);
-  const [country, setCountry] = useSiteParam<string>("country", "");
   const [device, setDevice] = useSiteParam<string>("device", "", ["", ...DEVICES]);
-  const countries = useCountryChoices(chips.includes("country"));
-  const language = readerLanguage();
   const bandWord = (value: string) => t(`bands.${value}`);
-  const countryWord = (code: string) => countryName(code, language) ?? code.toUpperCase();
   return (
     <>
       {chips.map((chip) => {
@@ -384,13 +383,6 @@ export function SearchConsoleChips({ chips }: { chips: readonly ChipId[] }) {
                 <option value="untracked">{t("missedUntracked")}</option>
               </Select>
             );
-          case "country":
-            return (
-              <Select key={chip} chip={{ label: t("country"), choice: country ? countryWord(country) : null }} value={country} onChange={setCountry}>
-                <option value="">{t("anyCountry")}</option>
-                {[...new Set([...countries, ...(country ? [country] : [])])].map((code) => <option key={code} value={code}>{countryWord(code)}</option>)}
-              </Select>
-            );
           case "device":
             return (
               <Select key={chip} chip={{ label: t("device"), choice: device ? tp(`deviceNames.${device}`) : null }} value={device} onChange={setDevice}>
@@ -439,7 +431,8 @@ export function KindText({ kind, of }: { kind: string | null; of: "intent" | "pa
 
 /**
  * A whole list as CSV, built on the server from the ready-made period — in
- * the order and with the search and filters on screen — and saved here.
+ * the order and with the search, filters and country on screen — and saved
+ * here.
  */
 export function SearchConsoleDownload({ ask, headers, fields }: {
   ask: Omit<FunctionArgs<typeof api.searchConsoleLists.exportSearchConsoleList>, "headers" | "fields">;

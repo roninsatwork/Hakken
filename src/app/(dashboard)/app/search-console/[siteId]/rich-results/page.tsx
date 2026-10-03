@@ -14,13 +14,22 @@ import { formatNumber } from "../../../sites/_components/siteFormat";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
+import { useSiteFiguresFor } from "../../_components/SearchConsoleFigures";
 import { ResultKindSwitch, SearchConsoleGate } from "../../_components/SearchConsoleNotices";
 import { formatPosition, formatRate } from "../../_components/searchConsoleFormat";
 import { useLiveAsk } from "../../_components/searchConsoleRecords";
 import { SearchConsoleChips, type ChipId, type ListRow } from "../../_components/SearchConsoleTables";
-import { isReadyMade, useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
+import {
+  countryArg,
+  isReadyMade,
+  useResultKind,
+  useSearchConsoleCountry,
+  useSearchConsoleRange,
+  useSearchConsoleSiteId,
+  useSearchConsoleStatus,
+} from "../../_components/useSearchConsole";
 
-const CHIPS: readonly ChipId[] = ["country", "device"];
+const CHIPS: readonly ChipId[] = ["device"];
 
 type Kind = { key: string; clicks: number; impressions: number; ctr: number; position: number; pages: number | null };
 const SORTS: SiteSortColumns<Kind, "key" | "clicks" | "impressions" | "ctr" | "position" | "pages"> = {
@@ -42,7 +51,9 @@ function kindName(key: string, known: (key: string) => string | null): string {
  * Rich results (search-console-plan.md §13.3, drawn as "16 · Rich results"):
  * the special kinds of result Google showed the website's pages in — review
  * stars, videos, translated results and the rest — and the clicks each
- * brought, with how many pages it showed in each.
+ * brought, with how many pages it showed in each — in the country chosen,
+ * asked of Google when the website does not keep it ready
+ * (search-console-plan.md §16).
  */
 export default function SearchConsoleAppearancePage() {
   const t = useTranslations("searchConsole");
@@ -52,24 +63,24 @@ export default function SearchConsoleAppearancePage() {
   const range = useSearchConsoleRange(status?.connection?.newestDay);
   const [search, setSearch, term] = useSiteSearch();
   const held = Boolean(status?.connection?.newestDay);
-  const [country] = useSiteParam<string>("country", "");
+  const [country] = useSearchConsoleCountry();
   const [device] = useSiteParam<string>("device", "", ["", "DESKTOP", "MOBILE", "TABLET"]);
-  // Other dates, or one country or device: asked of Google.
-  const fromLive = Boolean(country || device) || !isReadyMade(range, status?.connection?.newestDay);
+  const dates = { siteId, searchType: kind, from: range.from, to: range.to };
+  // Other dates or one device are asked of Google; so is a country the website does not keep ready, the server says.
+  const asksGoogle = Boolean(device) || !isReadyMade(range, status?.connection?.newestDay);
   const split = useQuery(
     api.searchConsoleLists.searchConsoleSplitList,
-    held && !fromLive ? { siteId, searchType: kind, dimension: "appearance", from: range.from, to: range.to } : "skip",
+    held && !asksGoogle ? { ...dates, dimension: "appearance", ...countryArg(country) } : "skip",
   );
+  const fromLive = asksGoogle || split?.live === true;
   const liveSplit = useLiveAsk(
     api.searchConsoleLists.searchConsoleLiveList,
-    held && fromLive
-      ? { siteId, searchType: kind, dimension: "appearance" as const, from: range.from, to: range.to, ...(country ? { country } : {}), ...(device ? { device } : {}) }
-      : null,
+    held && fromLive ? { ...dates, dimension: "appearance" as const, ...countryArg(country), ...(device ? { device } : {}) } : null,
   );
-  const appearances: ListRow[] | undefined = fromLive ? (liveSplit.answer === undefined ? undefined : liveSplit.answer.ok ? liveSplit.answer.rows : []) : split?.rows;
-  const performance = useQuery(api.searchConsoleReads.searchConsolePerformance, held ? { siteId, searchType: kind, from: range.from, to: range.to } : "skip");
+  const appearances: ListRow[] | undefined = fromLive ? (liveSplit.answer === undefined ? undefined : liveSplit.answer.ok ? liveSplit.answer.rows.flat() : []) : split?.rows;
+  const performance = useSiteFiguresFor(held ? dates : null).figures;
   const kinds = appearances?.map((row) => row.key) ?? [];
-  const pages = useLiveAsk(api.searchConsoleLists.searchConsoleAppearancePages, held && kinds.length > 0 ? { siteId, searchType: kind, from: range.from, to: range.to, kinds } : null);
+  const pages = useLiveAsk(api.searchConsoleLists.searchConsoleAppearancePages, held && kinds.length > 0 ? { ...dates, kinds, ...countryArg(country) } : null);
   const pagesOf = new Map(pages.answer?.ok ? pages.answer.pages.map((entry) => [entry.kind, entry.pages]) : []);
   const known = (key: string) => (t.has(`appearance.names.${key}`) ? t(`appearance.names.${key}`) : null);
   const rows: Kind[] | undefined = appearances?.map((row) => ({

@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { GOOGLE_COUNTRIES } from "@/convex/utils/countryCodes";
 import { useSiteRange } from "../../sites/_components/SiteDateRange";
 import { shiftDay } from "../../sites/_components/siteRange";
 import { SITE_SHARED_KEYS, useSiteParam } from "../../sites/_components/useSiteParam";
@@ -18,6 +19,15 @@ import { SITE_SHARED_KEYS, useSiteParam } from "../../sites/_components/useSiteP
 /** The kind of result every page of a site shows, kept in the address and carried by its menu. */
 export const RESULTS_KEY = "results";
 export const RESULT_KINDS = ["web", "image", "video", "news", "discover", "googleNews"] as const;
+
+/**
+ * The country every page of a site shows, kept in the address beside the
+ * dates (search-console-plan.md §16): Google's code (`gbr`), or nothing for
+ * All countries — what every page opens on.
+ */
+export const COUNTRY_KEY = "country";
+const ALL_COUNTRIES = "all";
+const COUNTRY_CHOICES = [ALL_COUNTRIES, ...GOOGLE_COUNTRIES.filter((code) => code !== "zzz")] as const;
 export type ResultKind = (typeof RESULT_KINDS)[number];
 
 /** The menu's groups (search-console-plan.md §13.1): Google's own figures first, then what changed, what to do, and how it breaks down. */
@@ -54,10 +64,10 @@ export function pageForPath(pathname: string, siteId: string): SearchConsolePage
   return SEARCH_CONSOLE_PAGES.find((page) => page.segment === segment)?.id ?? "performance";
 }
 
-/** What travels between the section's pages: the dates, and the kind of result. */
+/** What travels between the section's pages: the dates, the kind of result and the country. */
 export function searchConsoleQuery(params: URLSearchParams): string {
   const shared = new URLSearchParams();
-  for (const key of [...SITE_SHARED_KEYS, RESULTS_KEY]) {
+  for (const key of [...SITE_SHARED_KEYS, RESULTS_KEY, COUNTRY_KEY]) {
     const value = params.get(key);
     if (value) shared.set(key, value);
   }
@@ -85,6 +95,17 @@ export function useSearchConsoleSiteId(): Id<"companyWebsites"> {
 export function useSearchConsoleStatus() {
   const siteId = useSearchConsoleSiteId();
   return useQuery(api.searchConsoleConnect.searchConsoleStatus, { siteId });
+}
+
+/** The country chosen — Google's code — or null for All countries; and its setter (null back to All countries). */
+export function useSearchConsoleCountry(): [string | null, (next: string | null) => void] {
+  const [value, set] = useSiteParam<string>(COUNTRY_KEY, ALL_COUNTRIES, COUNTRY_CHOICES);
+  return [value === ALL_COUNTRIES ? null : value, (next) => set(next ?? ALL_COUNTRIES)];
+}
+
+/** The country a read is asked for: Google's code, or left out for All countries, as every read takes it. */
+export function countryArg(country: string | null): { country?: string } {
+  return country ? { country } : {};
 }
 
 export function useResultKind(): [ResultKind, (next: ResultKind) => void] {

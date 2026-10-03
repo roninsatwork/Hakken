@@ -1435,8 +1435,9 @@
     "companyWebsiteDetail": {
       "loading": "Caricamento sito web...",
       "notFound": "Sito web non trovato",
-      "settingsTitle": "Con quale frequenza, e da dove",
-      "settingsSubtitle": "Le due impostazioni che cambiano tra i clienti che osservano lo stesso sito. Di norma segue la pianificazione dell'azienda; dagli una pianificazione propria solo quando va osservato più o meno da vicino degli altri.",
+      "settingsTitle": "Con quale frequenza",
+      "settingsSubtitle": "L'impostazione che cambia tra i clienti che osservano lo stesso sito. Di norma segue la pianificazione dell'azienda; dagli una pianificazione propria solo quando va osservato più o meno da vicino degli altri.",
+      "placeOnMarket": "Da dove viene osservato si imposta nella sua pagina Mercato",
       "collectionLabel": "Raccogli dati per questo sito web",
       "errors": {
         "settingsFailed": "Impossibile salvare queste impostazioni. Riprova."
@@ -1445,14 +1446,10 @@
       "overrideLabel": "Usa una pianificazione propria",
       "overrideDescription": "Disattivato segue {company} e si muove quando quella cambia.",
       "collectionDescription": "Disattivato ferma solo questo sito web, lasciando il resto dell'azienda in raccolta.",
-      "location": {
-        "title": "Da dove osservi",
-        "subtitle": "I risultati di ricerca cambiano in base al luogo. Questa è la località usata per raccogliere posizionamenti e citazioni AI per questo sito, solo per questo cliente."
-      },
       "pairing": {
         "title": "Confrontato con",
         "pairedSubtitle": "Raccolto insieme a {host} — lo stesso giorno e dallo stesso luogo — così i due si possono confrontare. Pianificazione e luogo sono quelli di {host}.",
-        "unpairedSubtitle": "Non abbinato a un sito di questa azienda, quindi viene raccolto con una pianificazione propria, dal luogo indicato sotto.",
+        "unpairedSubtitle": "Non abbinato a un sito di questa azienda, quindi viene raccolto con una pianificazione propria, dal luogo impostato nella sua pagina Mercato.",
         "none": "Nessuno — raccoglilo da solo",
         "save": "Salva",
         "saved": "Salvato",
@@ -1709,9 +1706,47 @@
       },
       "schedulesPage": {
         "title": "Programmi",
-        "subtitle": "Quanto spesso {host} viene raccolto, e da dove. Ciò che segue l’azienda mantiene il programma dell’azienda.",
+        "subtitle": "Quanto spesso {host} viene raccolto. Ciò che segue l’azienda mantiene il programma dell’azienda.",
         "subtitleCompetitor": "Con quale dei siti propri dell’azienda {host} viene confrontato, e quindi quando viene raccolto.",
         "record": "Chi altro segue {host}: la sua scheda condivisa"
+      },
+      "market": {
+        "description": "Dove sono i clienti di {host}, e da dove vengono controllati i suoi posizionamenti. Solo per questa azienda: un'altra azienda che osserva lo stesso sito imposta i propri.",
+        "descriptionCompetitor": "Da dove vengono controllati i posizionamenti di {host}. Solo per questa azienda: un'altra azienda che osserva lo stesso sito imposta i propri.",
+        "trades": {
+          "title": "Dove vende",
+          "lead": "I paesi in cui si trovano i suoi clienti. Search Console tiene pronto ciascuno accanto a tutti i paesi, così puoi vedere le ricerche di un paese da sole, senza quelle dei luoghi in cui non vende.",
+          "speed": "Ogni paese tenuto pronto viene raccolto a ogni raccolta, quindi sceglierlo in una pagina di Search Console è veloce quanto Tutti i paesi, mentre qualsiasi altro paese viene chiesto a Google quando lo scegli. Search Console si apre sempre su Tutti i paesi.",
+          "limit": "Tiene pronti fino a {limit, plural, one {# paese} other {# paesi}}.",
+          "over": "Tiene pronti fino a {limit, plural, one {# paese} other {# paesi}}: restano pronti quelli aggiunti per primi, e gli altri vengono chiesti a Google quando li scegli.",
+          "changeLimit": "Cambia il limite",
+          "changeLimitTip": "Paesi tenuti pronti per sito, nella pagina Limiti di {host}",
+          "empty": "Ancora nessun paese. Search Console mostra tutti i paesi, e chiede a Google qualsiasi paese scelto.",
+          "pastLimit": "Non tenuto pronto: oltre il limite",
+          "remove": "Rimuovi {country}",
+          "addLabel": "Aggiungi un paese",
+          "choose": "Scegli un paese…",
+          "add": "Aggiungi",
+          "fullTip": "Questo sito tiene pronti {limit, plural, one {# paese} other {# paesi}}. Alza il limite nella sua pagina Limiti per aggiungerne altri."
+        },
+        "watch": {
+          "title": "Da dove osservi",
+          "lead": "I risultati di ricerca cambiano in base al luogo. Questa è la località usata per raccogliere posizionamenti e citazioni AI per questo sito, solo per questo cliente.",
+          "paired": "Raccolto con {host}, quindi viene osservato da dove si trova {host}: {place}. Cambialo nella pagina Mercato di {host}, oppure separa questo sito nella sua pagina Programmi per dargli un luogo proprio.",
+          "pairMarket": "Pagina Mercato di {host}"
+        },
+        "save": "Salva le modifiche",
+        "saved": "Salvato. La prossima raccolta lo usa.",
+        "errors": {
+          "saveFailed": "Impossibile salvare il mercato. Riprova."
+        },
+        "all": {
+          "trades": "Dove vende",
+          "watch": "Da dove osservi",
+          "none": "Ancora nessuno",
+          "notForCompetitor": "Non per un concorrente",
+          "asPair": "{place}, come {host}"
+        }
       },
       "notFoundTitle": "Sito web non trovato"
     },
@@ -5828,7 +5863,8 @@
         "competitors": "{count, plural, one {# concorrente} other {# concorrenti}}",
         "sources": "{count, plural, one {# fonte} other {# fonti}}",
         "businesses": "{count, plural, one {# attività} other {# attività}}",
-        "websites": "{count, plural, one {# sito} other {# siti}}"
+        "websites": "{count, plural, one {# sito} other {# siti}}",
+        "countries": "{count, plural, one {# paese} other {# paesi}}"
       },
       "topics": {
         "google": {
@@ -5897,6 +5933,11 @@
           "label": "Pagine di Search Console seguite per sito",
           "description": "Quante pagine della Search Console di un sito la sua azienda può spuntare per seguirle. Quando è pieno, non se ne possono spuntare altre finché non se ne toglie una.",
           "cost": "Nessun costo."
+        },
+        "consoleCountriesPerSite": {
+          "label": "Paesi tenuti pronti per sito",
+          "description": "Quanti paesi la Search Console di un sito tiene pronti accanto a tutti i paesi, impostati nella pagina Mercato. Ognuno viene raccolto a ogni raccolta, così sceglierlo in una pagina di Search Console è veloce come tutti i paesi. Oltre il limite, restano i paesi aggiunti per primi.",
+          "cost": "Nessun costo da Google. Ogni paese aggiunge circa l'80% di richieste in più a ogni raccolta, e spazio in proporzione alla sua quota di ricerche."
         },
         "competitorsPerSite": {
           "label": "Concorrenti raccolti per sito",
@@ -6023,6 +6064,7 @@
         "questions": "I tuoi prompt",
         "competitors": "Concorrenti",
         "names": "Nomi e profili",
+        "market": "Mercato",
         "todo": "Da fare",
         "rankings": "Posizionamenti",
         "answers": "Risposte IA",
@@ -6034,6 +6076,7 @@
       "choose": {
         "competitors": "Ogni sito proprio di questa azienda ha i suoi concorrenti. Scegline uno per vederli e cambiarli — qui, o in cima al menu.",
         "names": "Ogni sito ha i suoi nomi, e ogni sito proprio di questa azienda la sua attività. Scegline uno — qui, o in cima al menu.",
+        "market": "Ogni sito ha il suo mercato: dove vende, e da dove viene osservato. Scegline uno per cambiarli — qui, o in cima al menu.",
         "todo": "Ogni sito proprio di questa azienda ha la sua lista di cose da fare: come va e cosa fare dopo. Scegline uno — qui, o in cima al menu.",
         "rankings": "I posizionamenti di ogni sito sono suoi. Scegline uno per vedere tutto ciò per cui si posiziona — qui, o in cima al menu.",
         "answers": "Ogni sito proprio di questa azienda viene cercato nelle risposte ai suoi prompt. Scegline uno — qui, o in cima al menu.",
@@ -10619,7 +10662,8 @@
       "position": "Posizione media",
       "day": "Giorno",
       "nothing": "In queste date non è stato mostrato niente.",
-      "week": "Settimana"
+      "week": "Settimana",
+      "preparing": "Le settimane di questo paese sono in preparazione. Il grafico appare dopo la sua prima raccolta."
     },
     "performance": {
       "title": "Rendimento",
@@ -10724,7 +10768,8 @@
       "keywordsHint": "Spunta una parola chiave per seguirla; cliccane una per vedere ogni tua pagina a cui ha portato visitatori.",
       "pagesHint": "Ogni tua pagina che Google ha mostrato per questa parola chiave. Spunta una pagina per seguirla; cliccane una per vedere tutto su di lei.",
       "showAllCountries": "Mostra tutti i {count} paesi",
-      "placesDescription": "Ogni paese e ogni dispositivo dietro i clic di “{name}”, per le date scelte."
+      "placesDescription": "Ogni paese e ogni dispositivo dietro i clic di “{name}”, per le date scelte.",
+      "failed": "Non è stato possibile leggerlo adesso. Riprova e avvisaci se continua a succedere."
     },
     "connect": {
       "title": "Collega Google Search Console",
@@ -10848,8 +10893,6 @@
       "missed": "Elenco",
       "missedSearched": "Molto cercate, poco mostrate",
       "missedUntracked": "Mostrate, non ancora seguite",
-      "country": "Paese",
-      "anyCountry": "Qualsiasi paese",
       "device": "Dispositivo",
       "anyDevice": "Qualsiasi dispositivo"
     },
@@ -11017,6 +11060,14 @@
       "aboutRight": "Corretta",
       "tooHigh": "{count} troppo alta",
       "tooLow": "{count} troppo bassa"
+    },
+    "country": {
+      "label": "Paese",
+      "all": "Tutti i paesi",
+      "ready": "Tenuti pronti",
+      "others": "Tutti gli altri paesi",
+      "asked": "Chiesto a Google quando lo scegli, quindi richiede un momento.",
+      "notReady": "{country} non è tra i paesi tenuti pronti per questo sito, quindi questa pagina non può mostrarlo. Una volta aggiunto, compare qui dopo la prossima raccolta."
     }
   },
   "aiEngines": {

@@ -3,13 +3,51 @@
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { ChangeLine } from "@/src/ui/components/screens/Change";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { formatNumber } from "../../sites/_components/siteFormat";
+import { LiveProblem, type LiveProblemKind } from "./SearchConsoleNotices";
 import { formatPosition, formatRate } from "./searchConsoleFormat";
-import { useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
+import { useLiveAsk } from "./searchConsoleRecords";
+import {
+  countryArg,
+  useResultKind,
+  useSearchConsoleCountry,
+  useSearchConsoleRange,
+  useSearchConsoleSiteId,
+  useSearchConsoleStatus,
+  type ResultKind,
+} from "./useSearchConsole";
 
 type Figures = { clicks: number; impressions: number; ctr: number; position: number };
+type Day = Figures & { day: string };
+
+/** A website's figures for some dates: each day, the totals, the same days before (null when not held), and the clicks Google names (null when not known). */
+export type SiteFigures = { days: Day[]; totals: Figures | null; previous: Figures | null; named: number | null };
+
+const NO_FIGURES: SiteFigures = { days: [], totals: null, previous: null, named: null };
+
+/**
+ * A website's figures for some dates in the country chosen
+ * (search-console-plan.md §16): read from what is kept — all countries', or
+ * a country the website keeps ready — or, for any other country, asked of
+ * Google (`searchConsoleLiveDays`), which names no clicks. Undefined while
+ * loading; `problem` when Google could not answer, and `retry` to ask again.
+ */
+export function useSiteFiguresFor(ask: { siteId: Id<"companyWebsites">; searchType: ResultKind; from: string; to: string } | null): {
+  figures: SiteFigures | undefined;
+  problem: LiveProblemKind | null;
+  retry: () => void;
+} {
+  const [country] = useSearchConsoleCountry();
+  const kept = useQuery(api.searchConsoleReads.searchConsolePerformance, ask ? { ...ask, ...countryArg(country) } : "skip");
+  const live = useLiveAsk(api.searchConsoleReads.searchConsoleLiveDays, ask && country && kept?.live ? { ...ask, country } : null);
+  if (!kept?.live) return { figures: kept, problem: null, retry: live.retry };
+  if (live.answer === undefined) return { figures: undefined, problem: null, retry: live.retry };
+  if (!live.answer.ok) return { figures: NO_FIGURES, problem: live.answer.problem, retry: live.retry };
+  return { figures: live.answer, problem: null, retry: live.retry };
+}
 
 /**
  * A figure against the same number of days before, as every Search Console
@@ -102,17 +140,16 @@ export function SearchConsoleFigures({ totals, previous, days, isNew = false }: 
 /**
  * The website's four headline figures for the dates chosen, against the days
  * before: the hero boxes above the Keywords and Pages lists (§13.1). Read
- * from the website's day totals — the rare searches Google hides included.
+ * from the website's day totals — the rare searches Google hides included —
+ * in the country chosen.
  */
 export function SearchConsoleSiteFigures() {
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
   const [kind] = useResultKind();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
-  const performance = useQuery(
-    api.searchConsoleReads.searchConsolePerformance,
-    status?.connection?.newestDay ? { siteId, searchType: kind, from: range.from, to: range.to } : "skip",
-  );
-  if (performance === undefined) return <div className="h-[104px] animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />;
-  return <SearchConsoleFigures totals={performance.totals} previous={performance.previous} days={range.days} />;
+  const { figures, problem, retry } = useSiteFiguresFor(status?.connection?.newestDay ? { siteId, searchType: kind, from: range.from, to: range.to } : null);
+  if (problem) return <LiveProblem problem={problem} retry={retry} />;
+  if (figures === undefined) return <div className="h-[104px] animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />;
+  return <SearchConsoleFigures totals={figures.totals} previous={figures.previous} days={range.days} />;
 }

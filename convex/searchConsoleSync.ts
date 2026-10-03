@@ -3,31 +3,20 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import type { ActionCtx, MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { appError } from "./utils/appError";
 import { accessTokenFor, type ConnectionProblem } from "./searchConsoleConnect";
 import { GOOGLE_DIMENSIONS, LISTS_OF, queryAnalytics, type AnalyticsRow, type GoogleFailure } from "./searchConsoleApi";
 import {
   SEARCH_TYPES,
   listValidator,
   searchTypeValidator,
-  type SearchConsoleGrain,
   type SearchConsoleList,
   type SearchType,
 } from "./searchConsoleSchema";
 import { daysNewestFirst, newestWholeDay, shiftDay } from "./searchConsoleDays";
 import { isTrackedHold } from "./utils/websitePairing";
-import {
-  addUp,
-  firstDayKept,
-  firstWeekKept,
-  fromGoogle,
-  monthStart,
-  pack,
-  rowsOf,
-  weekStart,
-  DAYS_KEPT,
-  type Packed,
-} from "./utils/searchConsolePacks";
+import { fromGoogle, pack, rowsOf, DAYS_KEPT, type Packed } from "./utils/searchConsolePacks";
+import { slotParts } from "./searchConsoleRollups";
+import { countriesKeptReady, heldFor, stillKeptReady, withHeld, type HeldRange } from "./searchConsoleCountries";
 
 /**
  * Collecting a connected site's Search Console figures, and keeping them as
@@ -51,8 +40,14 @@ import {
  *
  * **Kept packed** (§14.3, item 2): one record per website, kind of result,
  * list and day, in parts of 2,000 rows (`utils/searchConsolePacks.ts`). Days
- * past 90 roll into their week, weeks past 12 months into their month; the
- * website's totals by day stay as days.
+ * past 90 roll into their week, weeks past 12 months into their month
+ * (`searchConsoleRollups.ts`); the website's totals by day stay as days.
+ *
+ * **Each country kept ready** (§16) is collected the same way after all
+ * countries, in the same run: the same asks with Google's country filter,
+ * no country list inside a country, filed with `country` set. Its held days
+ * are kept on the connection (`countriesHeld`), so a country new to the list
+ * gets the same 90 days a newly connected website does.
  *
  * Every write names the connection and the property it was fetched for, and
  * is dropped if either changed while the step ran: two properties' figures
@@ -74,19 +69,12 @@ const PARALLEL_ASKS = 4;
 /** Waits before asking a busy Google again, within a step. */
 const BUSY_WAITS_MS = [2_000, 8_000];
 
-/** Records removed per mutation when a site's figures are cleared: a kept list's record can be large. */
 /** Kept or ready-made parts cleared per mutation: each can be most of a megabyte. */
 const PURGE_BATCH = 5;
 const PURGE_ROWS = 500;
 
 /** Keys noted as seen per mutation. */
 const SEEN_CHUNK = 500;
-
-/** Days rolled into weeks, or weeks into months, per site run at most; the rest roll next run. */
-export const ROLLUPS_PER_RUN = 200;
-
-/** Kept records one ask for due rollups reads, per kind of result, list and grain: whole records, so few. */
-const ROLLUP_SLOTS_PER_READ = 4;
 
 const kindValidator = v.union(v.literal("DAILY"), v.literal("HISTORY"));
 const figuresValidator = { clicks: v.number(), impressions: v.number(), ctr: v.number(), position: v.number() };
@@ -128,14 +116,16 @@ export function recentWindow(newestDay: string | undefined, now: number, oldestD
   return { from: laterDay(oldest, shiftDay(newest, -(REFETCH_DAYS - 1))), top };
 }
 
-/**
- * What the Search Console Collector's run collects (§12): every connected
- * website, with its recent days — the one longest since it was collected
- * first, so one a run did not reach goes first in the next.
- */
 /** Connections read per page when listing every connected website. */
 const CONNECTIONS_PER_READ = 500;
 
+/**
+ * What the Search Console Collector's run collects (§12): every connected
+ * website, with its recent days — the one longest since it was collected
+ * first, so one a run did not reach goes first in the next — and each
+ * country it keeps ready (§16), from that country's own held days: a country
+ * new to the list holds none, so it goes back the whole 90 days.
+ */
 export const agentCollections = internalQuery({
   args: {},
   returns: v.array(v.object({
@@ -145,6 +135,7 @@ export const agentCollections = internalQuery({
     property: v.string(),
     from: v.string(),
     top: v.string(),
+    countries: v.array(v.object({ code: v.string(), from: v.string() })),
   })),
   handler: async (ctx) => {
     // One row per owned website at most: every connected one, a page at a time.
@@ -163,12 +154,18 @@ export const agentCollections = internalQuery({
     for (const connection of connected.sort((left, right) => (left.lastCollectedAt ?? 0) - (right.lastCollectedAt ?? 0))) {
       if (!connection.property || connection.clearing) continue;
       const website = await ctx.db.get(connection.websiteId);
+      const hold = await ctx.db.get(connection.companyWebsiteId);
+      const kept = hold ? await countriesKeptReady(ctx, hold) : [];
       out.push({
         connectionId: connection._id,
         companyId: connection.companyId,
         host: website?.displayHost ?? website?.host ?? connection.property,
         property: connection.property,
         ...recentWindow(connection.newestDay, now, connection.oldestDay),
+        countries: kept.map((code) => {
+          const held = heldFor(connection, code);
+          return { code, from: recentWindow(held?.newestDay, now, held?.oldestDay).from };
+        }),
       });
     }
     return out;
@@ -179,20 +176,32 @@ export const agentCollections = internalQuery({
 // One step
 // ---------------------------------------------------------------------------
 
+/**
+ * Where a collection stands: the connection, and the days held — all
+ * countries', or one country's when one is named. `kept` is false once that
+ * country is no longer kept ready; `countries` are the countries kept ready
+ * with days held, the ones a settle adds up after all countries.
+ */
 export const stepState = internalQuery({
-  args: { connectionId: v.id("searchConsoleConnections") },
+  args: { connectionId: v.id("searchConsoleConnections"), country: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const connection = await ctx.db.get(args.connectionId);
     if (!connection) return null;
     const hold = await ctx.db.get(connection.companyWebsiteId);
+    const kept = hold ? await countriesKeptReady(ctx, hold) : [];
+    const held = args.country === undefined
+      ? { newestDay: connection.newestDay, oldestDay: connection.oldestDay }
+      : heldFor(connection, args.country);
     return {
       status: connection.status,
       property: connection.property ?? null,
       clearing: connection.clearing === true,
       companyWebsiteId: connection.companyWebsiteId,
       owned: hold !== null && !isTrackedHold(hold),
-      oldestDay: connection.oldestDay ?? null,
-      newestDay: connection.newestDay ?? null,
+      oldestDay: held?.oldestDay ?? null,
+      newestDay: held?.newestDay ?? null,
+      kept: args.country === undefined || kept.includes(args.country),
+      countries: kept.filter((code) => heldFor(connection, code) !== null),
     };
   },
 });
@@ -257,6 +266,8 @@ type StepArgs = {
   top: string;
   /** The newest day of this step. */
   to: string;
+  /** One country kept ready (§16), asked with Google's country filter; missing for all countries. */
+  country?: string;
 };
 
 /**
@@ -266,10 +277,12 @@ type StepArgs = {
  * too busy. `NO_ACCESS`: the account can no longer read the property.
  * `STOPPED`: the sign-in failed, or Google answered with an error. `SKIPPED`:
  * the connection changed before the step began. `NOT_OWNED`: the website is
- * no longer the company's own. The connection carries any problem already.
+ * no longer the company's own. `NOT_KEPT`: the country the step was for is
+ * no longer kept ready, so the run goes on without it. The connection
+ * carries any problem already.
  */
 export type StepOutcome = {
-  ended: "DONE" | "MORE" | "BUSY" | "NO_ACCESS" | "STOPPED" | "SKIPPED" | "NOT_OWNED";
+  ended: "DONE" | "MORE" | "BUSY" | "NO_ACCESS" | "STOPPED" | "SKIPPED" | "NOT_OWNED" | "NOT_KEPT";
   fromDay: string;
   toDay: string;
   processedFrom: string | null;
@@ -283,19 +296,23 @@ export type StepOutcome = {
 /**
  * One step: up to a week of days, newest first — each kind of result's
  * totals for the step's days, then, day by day, each list of each kind that
- * had impressions, kept as one record a day. Says how it ended; the
- * Collector's run goes on from there (`searchConsoleAgentRun.ts`).
+ * had impressions, kept as one record a day. For one country kept ready,
+ * every ask carries Google's country filter and there is no country list.
+ * Says how it ended; the Collector's run goes on from there
+ * (`searchConsoleAgentRun.ts`).
  */
 export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number): Promise<StepOutcome> {
   const stepFrom = laterDay(args.from, shiftDay(args.to, -(DAYS_PER_STEP - 1)));
   const ended = (end: StepOutcome["ended"]): StepOutcome =>
     ({ ended: end, fromDay: stepFrom, toDay: args.to, processedFrom: null, nextTo: args.to, requests: 0, rows: 0, refused: [], error: null });
-  const state = await ctx.runQuery(internal.searchConsoleSync.stepState, { connectionId: args.connectionId });
+  const country = args.country === undefined ? {} : { country: args.country };
+  const state = await ctx.runQuery(internal.searchConsoleSync.stepState, { connectionId: args.connectionId, ...country });
   if (!state || state.status !== "CONNECTED" || state.property !== args.property || state.clearing) return ended("SKIPPED");
   if (!state.owned) {
     await ctx.runMutation(internal.searchConsoleConnect.noteProblem, { connectionId: args.connectionId, problem: "NOT_OWNED" });
     return ended("NOT_OWNED");
   }
+  if (!state.kept) return ended("NOT_KEPT");
 
   const startedAt = Date.now();
   const runId = await ctx.runMutation(internal.searchConsoleSync.startRun, {
@@ -310,6 +327,7 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
     await ctx.runMutation(internal.searchConsoleSync.finishStep, {
       connectionId: args.connectionId,
       property: args.property,
+      ...country,
       runId,
       top: args.top,
       processedFrom,
@@ -328,8 +346,14 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
     connectionId: args.connectionId,
     property: args.property,
     companyWebsiteId: state.companyWebsiteId,
+    ...country,
   };
   const held = (day: string) => state.oldestDay !== null && state.newestDay !== null && day >= state.oldestDay && day <= state.newestDay;
+  // One country's figures: every ask filtered to it, and no country list inside it.
+  const filter = args.country === undefined
+    ? {}
+    : { dimensionFilterGroups: [{ filters: [{ dimension: "country", operator: "equals", expression: args.country }] }] };
+  const listsOf = (type: SearchType) => LISTS_OF[type].filter((list) => args.country === undefined || list !== "country");
   let failure: GoogleFailure | null = null;
 
   // Each kind of result's totals, a row a day: one ask covers the step.
@@ -340,6 +364,7 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
       endDate: args.to,
       type,
       dimensions: ["date"],
+      ...filter,
     }));
     if (!answer.ok) {
       if (answer.reason === "REFUSED") {
@@ -375,7 +400,7 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
       const shown = (byDay.get(day)?.impressions ?? 0) > 0;
       // A day fetched again drops what it no longer has, even when the kind now has nothing.
       if (!shown && !again) continue;
-      for (const list of LISTS_OF[type]) asks.push({ type, list, shown });
+      for (const list of listsOf(type)) asks.push({ type, list, shown });
     }
     await inTurns(asks, PARALLEL_ASKS, async ({ type, list, shown }) => {
       if (failure || session.stopped) return;
@@ -386,6 +411,7 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
           endDate: day,
           type,
           dimensions: [...GOOGLE_DIMENSIONS[list]],
+          ...filter,
         }));
         if (!answer.ok) {
           if (answer.reason === "REFUSED") counts.refused.push(`${type}/${list}`);
@@ -465,17 +491,29 @@ const whereArgs = {
   connectionId: v.id("searchConsoleConnections"),
   property: v.string(),
   companyWebsiteId: v.id("companyWebsites"),
+  /** One country kept ready (§16); missing for all countries. */
+  country: v.optional(v.string()),
 };
 
-/** Whether a write still belongs: the connection is there, on the property it was fetched for. */
+/**
+ * Whether a write still belongs: the connection is there, on the property it
+ * was fetched for — and, for one country, that country is still kept ready,
+ * so a country taken off while a step ran is not filed again behind its
+ * clearing.
+ */
 async function stillCollecting(
   ctx: { db: MutationCtx["db"] },
   connectionId: Id<"searchConsoleConnections">,
   property: string,
+  country?: string,
 ) {
   const connection = await ctx.db.get(connectionId);
-  return connection !== null && connection.property === property && connection.clearing !== true && connection.status === "CONNECTED";
+  if (connection === null || connection.property !== property || connection.clearing === true || connection.status !== "CONNECTED") return false;
+  return await stillKeptReady(ctx, connection.companyWebsiteId, country);
 }
+
+/** A field set only for one country: all countries' records carry none. */
+const countryField = (country: string | undefined) => (country === undefined ? {} : { country });
 
 export const startRun = internalMutation({
   args: {
@@ -492,13 +530,15 @@ export const startRun = internalMutation({
 
 /**
  * A step's end: its run finished, and the days it brought joined to the days
- * held when they meet them. A collection works newest first without gaps, so
- * the days it has done so far are always one run of days down from its top.
+ * held when they meet them — all countries', or the one country's. A
+ * collection works newest first without gaps, so the days it has done so far
+ * are always one run of days down from its top.
  */
 export const finishStep = internalMutation({
   args: {
     connectionId: v.id("searchConsoleConnections"),
     property: v.string(),
+    country: v.optional(v.string()),
     runId: v.id("searchConsoleRuns"),
     top: v.string(),
     processedFrom: v.union(v.string(), v.null()),
@@ -525,19 +565,26 @@ export const finishStep = internalMutation({
       patch.problemAt = undefined;
     }
     if (args.processedFrom !== null) {
-      const from = args.processedFrom;
-      if (!connection.newestDay || !connection.oldestDay) {
-        patch.newestDay = args.top;
-        patch.oldestDay = from;
-      } else if (from <= shiftDay(connection.newestDay, 1)) {
-        if (args.top > connection.newestDay) patch.newestDay = args.top;
-        if (from < connection.oldestDay) patch.oldestDay = from;
+      const was = args.country === undefined ? { newestDay: connection.newestDay, oldestDay: connection.oldestDay } : heldFor(connection, args.country);
+      const joined = joinHeld(was, args.processedFrom, args.top);
+      if (joined && args.country === undefined) {
+        patch.newestDay = joined.newestDay;
+        patch.oldestDay = joined.oldestDay;
+      } else if (joined && args.country !== undefined && await stillKeptReady(ctx, connection.companyWebsiteId, args.country)) {
+        patch.countriesHeld = withHeld(connection.countriesHeld, args.country, joined);
       }
     }
     await ctx.db.patch(connection._id, patch);
     return null;
   },
 });
+
+/** The days held once a step's days from `from` to `top` are in: joined when they meet, else as they were (null). */
+function joinHeld(was: { newestDay?: string; oldestDay?: string } | null, from: string, top: string): HeldRange | null {
+  if (!was?.newestDay || !was.oldestDay) return { newestDay: top, oldestDay: from };
+  if (from > shiftDay(was.newestDay, 1)) return null;
+  return { newestDay: top > was.newestDay ? top : was.newestDay, oldestDay: from < was.oldestDay ? from : was.oldestDay };
+}
 
 /** A day's totals for the kinds that answered: kept, replaced, or gone when the kind had nothing. */
 export const writeDayTotals = internalMutation({
@@ -550,11 +597,12 @@ export const writeDayTotals = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    if (!(await stillCollecting(ctx, args.connectionId, args.property))) return null;
+    if (!(await stillCollecting(ctx, args.connectionId, args.property, args.country))) return null;
     for (const type of args.types) {
       const existing = await ctx.db
         .query("searchConsoleDays")
-        .withIndex("by_hold_type_day", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("searchType", type).eq("day", args.day))
+        .withIndex("by_hold_country_type_day", (q) => q
+          .eq("companyWebsiteId", args.companyWebsiteId).eq("country", args.country).eq("searchType", type).eq("day", args.day))
         .unique();
       const fresh = args.totals.find((entry) => entry.searchType === type);
       if (!fresh) {
@@ -570,37 +618,11 @@ export const writeDayTotals = internalMutation({
         fetchedAt: args.fetchedAt,
       };
       if (existing) await ctx.db.patch(existing._id, row);
-      else await ctx.db.insert("searchConsoleDays", { companyWebsiteId: args.companyWebsiteId, searchType: type, day: args.day, ...row });
+      else await ctx.db.insert("searchConsoleDays", { companyWebsiteId: args.companyWebsiteId, ...countryField(args.country), searchType: type, day: args.day, ...row });
     }
     return null;
   },
 });
-
-/** A kept list's records for one slot: one day, week or month of one list. */
-/**
- * The most parts one slot is read in: 2,000 rows each, so a million rows — a
- * week of pairs for a very large website is a few hundred thousand.
- */
-export const PARTS_MOST = 500;
-
-async function slotParts(
-  ctx: { db: MutationCtx["db"] },
-  companyWebsiteId: Id<"companyWebsites">,
-  searchType: SearchType,
-  list: SearchConsoleList,
-  grain: SearchConsoleGrain,
-  start: string,
-) {
-  return await ctx.db
-    .query("searchConsoleLists")
-    .withIndex("by_hold_type_list_grain_start", (q) => q
-      .eq("companyWebsiteId", companyWebsiteId)
-      .eq("searchType", searchType)
-      .eq("list", list)
-      .eq("grain", grain)
-      .eq("start", start))
-    .take(PARTS_MOST);
-}
 
 /**
  * One part of a day's list. The first part replaces whatever the day held
@@ -619,13 +641,14 @@ export const writeList = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    if (!(await stillCollecting(ctx, args.connectionId, args.property))) return null;
+    if (!(await stillCollecting(ctx, args.connectionId, args.property, args.country))) return null;
     if (args.part === 0) {
-      for (const old of await slotParts(ctx, args.companyWebsiteId, args.searchType, args.list, "DAY", args.day)) await ctx.db.delete(old._id);
+      for (const old of await slotParts(ctx, args.companyWebsiteId, args.country, args.searchType, args.list, "DAY", args.day)) await ctx.db.delete(old._id);
     }
     if (args.keys.length === 0) return null;
     await ctx.db.insert("searchConsoleLists", {
       companyWebsiteId: args.companyWebsiteId,
+      ...countryField(args.country),
       searchType: args.searchType,
       list: args.list,
       grain: "DAY",
@@ -642,7 +665,7 @@ export const writeList = internalMutation({
   },
 });
 
-/** When each search and page was first and last shown (§14.3, item 6): widened, never narrowed. */
+/** When each search and page was first and last shown (§14.3, item 6), in all countries or one: widened, never narrowed. */
 export const noteSeen = internalMutation({
   args: {
     ...whereArgs,
@@ -651,14 +674,17 @@ export const noteSeen = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    if (!(await stillCollecting(ctx, args.connectionId, args.property))) return null;
+    if (!(await stillCollecting(ctx, args.connectionId, args.property, args.country))) return null;
     for (const entry of args.entries) {
       const held = await ctx.db
         .query("searchConsoleSeen")
-        .withIndex("by_hold_kind_key", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("kind", args.kind).eq("key", entry.key))
+        .withIndex("by_hold_country_kind_key", (q) => q
+          .eq("companyWebsiteId", args.companyWebsiteId).eq("country", args.country).eq("kind", args.kind).eq("key", entry.key))
         .unique();
       if (!held) {
-        await ctx.db.insert("searchConsoleSeen", { companyWebsiteId: args.companyWebsiteId, kind: args.kind, key: entry.key, firstDay: entry.first, lastDay: entry.last });
+        await ctx.db.insert("searchConsoleSeen", {
+          companyWebsiteId: args.companyWebsiteId, ...countryField(args.country), kind: args.kind, key: entry.key, firstDay: entry.first, lastDay: entry.last,
+        });
         continue;
       }
       if (entry.first < held.firstDay || entry.last > held.lastDay) {
@@ -673,198 +699,38 @@ export const noteSeen = internalMutation({
 });
 
 // ---------------------------------------------------------------------------
-// Rolling up: days past 90 into weeks, weeks past 12 months into months
-// ---------------------------------------------------------------------------
-
-type Slot = { searchType: SearchType; list: SearchConsoleList; start: string };
-
-/**
- * The records old enough to roll up, oldest first: days before the first day
- * kept as a day, and weeks before the first week kept as a week.
- */
-export const rollUpsDue = internalQuery({
-  args: { companyWebsiteId: v.id("companyWebsites"), newest: v.string() },
-  returns: v.object({
-    days: v.array(v.object({ searchType: searchTypeValidator, list: listValidator, start: v.string() })),
-    weeks: v.array(v.object({ searchType: searchTypeValidator, list: listValidator, start: v.string() })),
-  }),
-  handler: async (ctx, args) => {
-    const dayLine = firstDayKept(args.newest);
-    const weekLine = firstWeekKept(args.newest);
-    const days = new Map<string, Slot>();
-    const weeks = new Map<string, Slot>();
-    for (const searchType of SEARCH_TYPES) {
-      for (const list of LISTS_OF[searchType]) {
-        for (const [grain, line, into] of [["DAY", dayLine, days], ["WEEK", weekLine, weeks]] as const) {
-          const old = await ctx.db
-            .query("searchConsoleLists")
-            .withIndex("by_hold_type_list_grain_start", (q) => q
-              .eq("companyWebsiteId", args.companyWebsiteId)
-              .eq("searchType", searchType)
-              .eq("list", list)
-              .eq("grain", grain)
-              .lt("start", line))
-            .take(ROLLUP_SLOTS_PER_READ);
-          for (const record of old) into.set(`${searchType}|${list}|${record.start}`, { searchType, list, start: record.start });
-        }
-      }
-    }
-    return { days: [...days.values()].slice(0, ROLLUPS_PER_RUN), weeks: [...weeks.values()].slice(0, ROLLUPS_PER_RUN) };
-  },
-});
-
-/**
- * One day into its week, or one week into its month: the two added up and
- * kept as the larger, the smaller gone — in one mutation, so a figure is
- * never in both or in neither.
- */
-export const rollUp = internalMutation({
-  args: {
-    companyWebsiteId: v.id("companyWebsites"),
-    searchType: searchTypeValidator,
-    list: listValidator,
-    from: v.union(v.literal("DAY"), v.literal("WEEK")),
-    start: v.string(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const into: SearchConsoleGrain = args.from === "DAY" ? "WEEK" : "MONTH";
-    const intoStart = args.from === "DAY" ? weekStart(args.start) : monthStart(args.start);
-    const small = await slotParts(ctx, args.companyWebsiteId, args.searchType, args.list, args.from, args.start);
-    if (small.length === 0) return null;
-    const large = await slotParts(ctx, args.companyWebsiteId, args.searchType, args.list, into, intoStart);
-    const pairs = args.list === "pair";
-    const merged = pack(addUp([...small, ...large]), pairs);
-    for (const record of [...small, ...large]) await ctx.db.delete(record._id);
-    const fetchedAt = Math.max(...small.map((record) => record.fetchedAt), ...large.map((record) => record.fetchedAt));
-    for (const [part, packed] of merged.entries()) {
-      if (packed.keys.length === 0) continue;
-      await ctx.db.insert("searchConsoleLists", {
-        companyWebsiteId: args.companyWebsiteId,
-        searchType: args.searchType,
-        list: args.list,
-        grain: into,
-        start: intoStart,
-        part,
-        ...packed,
-        fetchedAt,
-      });
-    }
-    return null;
-  },
-});
-
-/** The rollups a site's run makes after collecting: how many it made. */
-export async function rollUpSite(ctx: ActionCtx, companyWebsiteId: Id<"companyWebsites">, newest: string): Promise<number> {
-  let rolled = 0;
-  // A few at a time, asking again until none is due: after a long pause many days are, each a large record.
-  for (let round = 0; round < ROLLUP_ROUNDS; round += 1) {
-    const due = await ctx.runQuery(internal.searchConsoleSync.rollUpsDue, { companyWebsiteId, newest });
-    if (due.days.length + due.weeks.length === 0) break;
-    for (const slot of due.days) await ctx.runMutation(internal.searchConsoleSync.rollUp, { companyWebsiteId, ...slot, from: "DAY" });
-    for (const slot of due.weeks) await ctx.runMutation(internal.searchConsoleSync.rollUp, { companyWebsiteId, ...slot, from: "WEEK" });
-    rolled += due.days.length + due.weeks.length;
-  }
-  return rolled;
-}
-
-/** Rounds of rollups one settle makes at most: the rest wait for the next run. */
-const ROLLUP_ROUNDS = 100;
-
-// ---------------------------------------------------------------------------
-// Reading what is kept, for the ready-made periods
-// ---------------------------------------------------------------------------
-
-/**
- * A list's kept records with any day from `from` to `to`: its days in the
- * span, and the weeks and months that hold the rest — counted whole, so a
- * span reaching past the 90 days held as days is counted in whole weeks
- * (§14.3, item 4). Days, weeks and months never hold the same day twice.
- */
-/** Kept records one read returns at most. */
-const KEPT_READ = 900;
-
-export const keptBetween = internalQuery({
-  args: {
-    companyWebsiteId: v.id("companyWebsites"),
-    searchType: searchTypeValidator,
-    list: listValidator,
-    grain: v.union(v.literal("DAY"), v.literal("WEEK"), v.literal("MONTH")),
-    from: v.string(),
-    to: v.string(),
-  },
-  returns: v.array(v.object({ start: v.string(), ...packedValidator })),
-  handler: async (ctx, args) => {
-    const from = args.grain === "DAY" ? args.from : args.grain === "WEEK" ? weekStart(args.from) : monthStart(args.from);
-    const records = await ctx.db
-      .query("searchConsoleLists")
-      .withIndex("by_hold_type_list_grain_start", (q) => q
-        .eq("companyWebsiteId", args.companyWebsiteId)
-        .eq("searchType", args.searchType)
-        .eq("list", args.list)
-        .eq("grain", args.grain)
-        .gte("start", from)
-        .lte("start", args.to))
-      .take(KEPT_READ + 1);
-    // Asked a span short enough to hold far fewer: one this long is a website past what a run adds up (§14.3, item 9).
-    if (records.length > KEPT_READ) throw appError("INVALID_INPUT", `More than ${KEPT_READ} kept records of one list from ${from} to ${args.to}: ask a shorter span.`);
-    return records.map((record) => ({
-      start: record.start,
-      keys: record.keys,
-      ...(record.pages ? { pages: record.pages } : {}),
-      clicks: record.clicks,
-      impressions: record.impressions,
-      positionSums: record.positionSums,
-    }));
-  },
-});
-
-/** Which kinds of result a website has any days of: the ones worth building periods for. */
-export const typesHeld = internalQuery({
-  args: { companyWebsiteId: v.id("companyWebsites") },
-  returns: v.array(searchTypeValidator),
-  handler: async (ctx, args) => {
-    const out: SearchType[] = [];
-    for (const searchType of SEARCH_TYPES) {
-      const any = await ctx.db
-        .query("searchConsoleDays")
-        .withIndex("by_hold_type_day", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("searchType", searchType))
-        .first();
-      if (any) out.push(searchType);
-    }
-    return out;
-  },
-});
-
-// ---------------------------------------------------------------------------
 // Clearing
 // ---------------------------------------------------------------------------
 
-/** Remove a batch of a site's figures and the periods worked out from them; true once none are left. */
+/**
+ * Remove a batch of a site's figures and the periods worked out from them —
+ * all countries' and every country's, the hold alone leading each index —
+ * true once none are left.
+ */
 async function clearSome(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites">): Promise<boolean> {
   const lists = await ctx.db
     .query("searchConsoleLists")
-    .withIndex("by_hold_type_list_grain_start", (q) => q.eq("companyWebsiteId", companyWebsiteId))
+    .withIndex("by_hold_country_type_list_grain_start", (q) => q.eq("companyWebsiteId", companyWebsiteId))
     .take(PURGE_BATCH);
   for (const record of lists) await ctx.db.delete(record._id);
   const periods = await ctx.db
     .query("searchConsolePeriods")
-    .withIndex("by_hold_type_list_period", (q) => q.eq("companyWebsiteId", companyWebsiteId))
+    .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", companyWebsiteId))
     .take(PURGE_BATCH);
   for (const record of periods) await ctx.db.delete(record._id);
   const days = await ctx.db
     .query("searchConsoleDays")
-    .withIndex("by_hold_type_day", (q) => q.eq("companyWebsiteId", companyWebsiteId))
+    .withIndex("by_hold_country_type_day", (q) => q.eq("companyWebsiteId", companyWebsiteId))
     .take(PURGE_ROWS);
   for (const row of days) await ctx.db.delete(row._id);
   const seen = await ctx.db
     .query("searchConsoleSeen")
-    .withIndex("by_hold_kind_key", (q) => q.eq("companyWebsiteId", companyWebsiteId))
+    .withIndex("by_hold_country_kind_key", (q) => q.eq("companyWebsiteId", companyWebsiteId))
     .take(PURGE_ROWS);
   for (const row of seen) await ctx.db.delete(row._id);
   const weeks = await ctx.db
     .query("searchConsoleWeeks")
-    .withIndex("by_hold_type_week", (q) => q.eq("companyWebsiteId", companyWebsiteId))
+    .withIndex("by_hold_country_type_week", (q) => q.eq("companyWebsiteId", companyWebsiteId))
     .take(PURGE_ROWS);
   for (const row of weeks) await ctx.db.delete(row._id);
   return lists.length < PURGE_BATCH && periods.length < PURGE_BATCH && days.length < PURGE_ROWS && seen.length < PURGE_ROWS && weeks.length < PURGE_ROWS;
@@ -914,6 +780,7 @@ export const clearCollected = internalMutation({
       clearing: true,
       newestDay: undefined,
       oldestDay: undefined,
+      countriesHeld: undefined,
       backfilledAt: undefined,
       historyAt: undefined,
       lastCollectedAt: undefined,

@@ -1435,8 +1435,9 @@
     "companyWebsiteDetail": {
       "loading": "Loading website...",
       "notFound": "Website not found",
-      "settingsTitle": "How often, and from where",
-      "settingsSubtitle": "The two settings that differ between clients watching one site. By default it follows its company's schedule; give it its own only when it needs watching more or less closely than the rest.",
+      "settingsTitle": "How often",
+      "settingsSubtitle": "The setting that differs between clients watching one site. By default it follows its company's schedule; give it its own only when it needs watching more or less closely than the rest.",
+      "placeOnMarket": "Where it's watched from is set on its Market page",
       "collectionLabel": "Collect data for this website",
       "errors": {
         "settingsFailed": "Could not save these settings. Try again."
@@ -1445,14 +1446,10 @@
       "overrideLabel": "Use its own schedule",
       "overrideDescription": "Off follows {company}, and moves whenever that changes.",
       "collectionDescription": "Off stops this website alone, leaving the rest of the company collecting.",
-      "location": {
-        "title": "Where you watch from",
-        "subtitle": "Search results differ by place. This is the location used when collecting rankings and AI citations for this website, for this client only."
-      },
       "pairing": {
         "title": "Watched against",
         "pairedSubtitle": "Collected with {host} — on its day and from its place — so the two can be compared. Its schedule and place are {host}'s.",
-        "unpairedSubtitle": "Not paired with one of this company's own sites, so it is collected on its own schedule, from the place below.",
+        "unpairedSubtitle": "Not paired with one of this company's own sites, so it is collected on its own schedule, from the place set on its Market page.",
         "none": "None — collect it on its own",
         "save": "Save",
         "saved": "Saved",
@@ -1709,9 +1706,47 @@
       },
       "schedulesPage": {
         "title": "Schedules",
-        "subtitle": "How often {host} is collected, and from where. Anything left to follow the company keeps the company’s schedule.",
+        "subtitle": "How often {host} is collected. Anything left to follow the company keeps the company’s schedule.",
         "subtitleCompetitor": "Which of the company’s own sites {host} is watched against, and so when it is collected.",
         "record": "Who else watches {host}: its shared website record"
+      },
+      "market": {
+        "description": "Where {host}'s customers are, and where its rankings are checked from. For this company only: another company watching the same website sets its own.",
+        "descriptionCompetitor": "Where {host}'s rankings are checked from. For this company only: another company watching the same website sets its own.",
+        "trades": {
+          "title": "Where it trades",
+          "lead": "The countries its customers are in. Search Console keeps each one ready beside all countries, so you can see one country's searches on their own, without the ones from places it doesn't trade.",
+          "speed": "Each country kept ready is collected at every collection, so choosing it on a Search Console page is as quick as All countries, while any other country is asked of Google when it's chosen. Search Console always opens on All countries.",
+          "limit": "Keeps up to {limit, plural, one {# country} other {# countries}} ready.",
+          "over": "Keeps up to {limit, plural, one {# country} other {# countries}} ready: the ones added first are kept ready, and the rest are asked of Google when chosen.",
+          "changeLimit": "Change the limit",
+          "changeLimitTip": "Countries kept ready per website, on {host}'s Limits page",
+          "empty": "No countries yet. Search Console shows all countries, and asks Google for any one chosen.",
+          "pastLimit": "Not kept ready: past the limit",
+          "remove": "Remove {country}",
+          "addLabel": "Add a country",
+          "choose": "Choose a country…",
+          "add": "Add",
+          "fullTip": "This website keeps {limit, plural, one {# country} other {# countries}} ready. Raise the limit on its Limits page to add more."
+        },
+        "watch": {
+          "title": "Where you watch from",
+          "lead": "Search results differ by place. This is the location used when collecting rankings and AI citations for this website, for this client only.",
+          "paired": "Collected with {host}, so it's watched from wherever {host} is: {place}. Change it on {host}'s Market page, or unpair this one on its Schedules page to give it its own.",
+          "pairMarket": "{host}'s Market page"
+        },
+        "save": "Save changes",
+        "saved": "Saved. The next collection uses it.",
+        "errors": {
+          "saveFailed": "Could not save the market. Try again."
+        },
+        "all": {
+          "trades": "Where it trades",
+          "watch": "Where you watch from",
+          "none": "None yet",
+          "notForCompetitor": "Not for a competitor",
+          "asPair": "{place}, as {host}"
+        }
       },
       "notFoundTitle": "Website not found"
     },
@@ -5828,7 +5863,8 @@
         "competitors": "{count, plural, one {# competitor} other {# competitors}}",
         "sources": "{count, plural, one {# source} other {# sources}}",
         "businesses": "{count, plural, one {# business} other {# businesses}}",
-        "websites": "{count, plural, one {# website} other {# websites}}"
+        "websites": "{count, plural, one {# website} other {# websites}}",
+        "countries": "{count, plural, one {# country} other {# countries}}"
       },
       "topics": {
         "google": {
@@ -5897,6 +5933,11 @@
           "label": "Search Console pages tracked per website",
           "description": "How many of a website's Search Console pages its company can tick to track. When it's full, no more can be ticked until one is unticked.",
           "cost": "No cost."
+        },
+        "consoleCountriesPerSite": {
+          "label": "Countries kept ready per website",
+          "description": "How many countries a website's Search Console keeps ready beside all countries, set on the Market page. Each one is collected at every collection, so choosing it on a Search Console page is as quick as all countries. Past it, the countries added first are kept.",
+          "cost": "No cost from Google. Each country adds about 80% more requests to each collection, and storage in line with its share of the searches."
         },
         "competitorsPerSite": {
           "label": "Competitors collected per website",
@@ -6023,6 +6064,7 @@
         "questions": "Your prompts",
         "competitors": "Competitors",
         "names": "Names and profiles",
+        "market": "Market",
         "todo": "To do",
         "rankings": "Rankings",
         "answers": "AI answers",
@@ -6034,6 +6076,7 @@
       "choose": {
         "competitors": "Each of this company's own websites has its own competitors. Choose one to see and change them — here, or at the top of the menu.",
         "names": "Each website has its own names, and each of this company's own sites its business. Choose one — here, or at the top of the menu.",
+        "market": "Each website has its own market: where it trades, and where it's watched from. Choose one to change them — here, or at the top of the menu.",
         "todo": "Each of this company's own websites has its own to-do list: how it is doing, and what to do next. Choose one — here, or at the top of the menu.",
         "rankings": "Each website's rankings are its own. Choose one to see everything it ranks for — here, or at the top of the menu.",
         "answers": "Each of this company's own websites is looked for in the answers to its prompts. Choose one — here, or at the top of the menu.",
@@ -10619,7 +10662,8 @@
       "position": "Average position",
       "day": "Day",
       "nothing": "Nothing was shown in these dates.",
-      "week": "Week"
+      "week": "Week",
+      "preparing": "This country's weeks are being added up. The chart appears after its first collection."
     },
     "performance": {
       "title": "Performance",
@@ -10724,7 +10768,8 @@
       "keywordsHint": "Tick a keyword to track it; click one to see every page of yours it brought people to.",
       "pagesHint": "Every page of yours Google showed for this keyword. Tick a page to track it; click one to see everything about it.",
       "showAllCountries": "Show all {count} countries",
-      "placesDescription": "Every country and every device behind “{name}”'s clicks, for the dates chosen."
+      "placesDescription": "Every country and every device behind “{name}”'s clicks, for the dates chosen.",
+      "failed": "This couldn't be read just now. Try again, and tell us if it keeps happening."
     },
     "connect": {
       "title": "Connect Google Search Console",
@@ -10848,8 +10893,6 @@
       "missed": "List",
       "missedSearched": "Searched a lot, barely shown",
       "missedUntracked": "Shown, not tracked yet",
-      "country": "Country",
-      "anyCountry": "Any country",
       "device": "Device",
       "anyDevice": "Any device"
     },
@@ -11017,6 +11060,14 @@
       "aboutRight": "About right",
       "tooHigh": "{count} too high",
       "tooLow": "{count} too low"
+    },
+    "country": {
+      "label": "Country",
+      "all": "All countries",
+      "ready": "Kept ready",
+      "others": "Every other country",
+      "asked": "Asked of Google when chosen, so it takes a moment.",
+      "notReady": "{country} isn't one of the countries kept ready for this website, so this page can't show it. Once it's added to them, it shows here after the next collection."
     }
   },
   "aiEngines": {

@@ -9,7 +9,7 @@ import { Button } from "@/src/ui/components/screens/Button";
 import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { TableBar, type TableNoun } from "@/src/ui/components/screens/TableBar";
-import { ResultKindSwitch, SearchConsoleGate } from "./SearchConsoleNotices";
+import { ResultKindSwitch, SearchConsoleGate, canRetry, liveProblemKey } from "./SearchConsoleNotices";
 import { SearchConsoleChips, SearchConsoleDownload, type ChipId, type ListRow, type useSearchConsoleList } from "./SearchConsoleTables";
 
 export type ExportField = FunctionArgs<typeof api.searchConsoleLists.exportSearchConsoleList>["fields"][number];
@@ -35,7 +35,7 @@ export type ListTableSpec = {
 export function useListProblem(list: ReturnType<typeof useSearchConsoleList>): string | null {
   const t = useTranslations("searchConsole");
   const problem = list.table.problem;
-  return problem ? t(problem === "NOT_CONNECTED" ? "record.notConnected" : problem === "GOOGLE_BUSY" ? "record.busy" : "record.refused") : null;
+  return problem ? t(liveProblemKey(problem)) : null;
 }
 
 /**
@@ -99,7 +99,7 @@ export function SearchConsoleListScreen({
             footer={list.table.footer}
             columns={table.columns}
           />
-          {list.table.problem === "GOOGLE_BUSY" ? (
+          {canRetry(list.table.problem) ? (
             <div>
               <Button variant="quiet" onClick={list.retry}>{t("record.tryAgain")}</Button>
             </div>

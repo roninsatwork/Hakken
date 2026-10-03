@@ -14,6 +14,8 @@ import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { formatDate } from "@/src/lib/dates";
 import { formatDay } from "../../sites/_components/siteFormat";
 import { SiteViewSwitch } from "../../sites/_components/SiteViewSwitch";
+import { countryName } from "./countries";
+import { readerLanguage } from "./searchConsoleFormat";
 import { RESULT_KINDS, useResultKind, useSearchConsoleHref } from "./useSearchConsole";
 
 export type SearchConsoleStatus = NonNullable<FunctionReturnType<typeof api.searchConsoleConnect.searchConsoleStatus>>;
@@ -183,4 +185,44 @@ export function NothingOfKind({ from, to }: { from: string; to: string }) {
   const [kind] = useResultKind();
   const name = t(`kinds.${kind}`);
   return <HakkenEmptyState title={t("noKind.title", { kind: name })} description={t("noKind.body", { kind: name, from: formatDay(from), to: formatDay(to) })} />;
+}
+
+/** Why Google could not answer a question asked while a screen is open. */
+/** Why a live ask has no answer: Google's three, and `FAILED` — our own server failing, never worded as Google's. */
+export type LiveProblemKind = "NOT_CONNECTED" | "GOOGLE_REFUSED" | "GOOGLE_BUSY" | "FAILED";
+
+/** Whether asking again may help: Google busy, or our own server failing. */
+export function canRetry(problem: LiveProblemKind | null | undefined): boolean {
+  return problem === "GOOGLE_BUSY" || problem === "FAILED";
+}
+
+/** The words for why Google could not answer, as the record screens and the lists say it. */
+export function liveProblemKey(problem: LiveProblemKind): "record.notConnected" | "record.busy" | "record.refused" | "record.failed" {
+  if (problem === "FAILED") return "record.failed";
+  return problem === "NOT_CONNECTED" ? "record.notConnected" : problem === "GOOGLE_BUSY" ? "record.busy" : "record.refused";
+}
+
+/**
+ * In place of figures or a chart asked of Google — a country the website
+ * does not keep ready (search-console-plan.md §16) — when Google could not
+ * answer: why, and, when it was only busy, the way to ask again.
+ */
+export function LiveProblem({ problem, retry }: { problem: LiveProblemKind; retry: () => void }) {
+  const t = useTranslations("searchConsole");
+  return (
+    <Notice tone="warning" action={canRetry(problem) ? <Button variant="quiet" onClick={retry}>{t("record.tryAgain")}</Button> : null}>
+      {t(liveProblemKey(problem))}
+    </Notice>
+  );
+}
+
+/**
+ * In place of what a page cannot show for a country the website does not
+ * keep ready (§16): New and lost's register and the weekly charts are built
+ * collection by collection, so Google cannot be asked for them. The country
+ * is added on the Market page in admin.
+ */
+export function CountryNotReady({ country }: { country: string }) {
+  const t = useTranslations("searchConsole.country");
+  return <Notice>{t("notReady", { country: countryName(country, readerLanguage()) ?? country.toUpperCase() })}</Notice>;
 }

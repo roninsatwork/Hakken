@@ -19,9 +19,17 @@ import { ResultKindSwitch, SearchConsoleGate } from "../../_components/SearchCon
 import { formatRate } from "../../_components/searchConsoleFormat";
 import { useLiveAsk } from "../../_components/searchConsoleRecords";
 import { SearchConsoleChips, type ChipId } from "../../_components/SearchConsoleTables";
-import { isReadyMade, useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
+import {
+  countryArg,
+  isReadyMade,
+  useResultKind,
+  useSearchConsoleCountry,
+  useSearchConsoleRange,
+  useSearchConsoleSiteId,
+  useSearchConsoleStatus,
+} from "../../_components/useSearchConsole";
 
-const CHIPS: readonly ChipId[] = ["country", "device"];
+const CHIPS: readonly ChipId[] = ["device"];
 
 type Point = CurvePoint & { key: string };
 const SORTS: SiteSortColumns<Point, "position" | "keywords" | "impressions" | "clicks" | "ctr"> = {
@@ -38,6 +46,9 @@ const nameOf = (row: Point) => row.key;
  * rate by position"): how often people click the website at each of
  * Google's positions, 1 to 20 — clicks for each time it was shown, from its
  * keywords. Shown but not clicked uses it as the website's own yardstick.
+ * In the country chosen: from its ready-made periods when the website keeps
+ * it ready, otherwise worked out from Google's answer (search-console-plan.md
+ * §16).
  */
 export default function SearchConsoleCtrCurvePage() {
   const t = useTranslations("searchConsole");
@@ -46,18 +57,20 @@ export default function SearchConsoleCtrCurvePage() {
   const [kind] = useResultKind();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
   const [search, setSearch, term] = useSiteSearch();
-  const [country] = useSiteParam<string>("country", "");
+  const [country] = useSearchConsoleCountry();
   const [device] = useSiteParam<string>("device", "", ["", "DESKTOP", "MOBILE", "TABLET"]);
   const held = Boolean(status?.connection?.newestDay);
-  const ask = { siteId, searchType: kind, from: range.from, to: range.to };
-  const fromLive = Boolean(country || device) || !isReadyMade(range, status?.connection?.newestDay);
-  const server = useQuery(api.searchConsoleChanges.searchConsoleCurve, held && !fromLive ? ask : "skip");
+  const ask = { siteId, searchType: kind, from: range.from, to: range.to, ...countryArg(country) };
+  // Other dates or one device are asked of Google; so is a country the website does not keep ready, the server says.
+  const asksGoogle = Boolean(device) || !isReadyMade(range, status?.connection?.newestDay);
+  const server = useQuery(api.searchConsoleChanges.searchConsoleCurve, held && !asksGoogle ? ask : "skip");
+  const fromLive = asksGoogle || server?.live === true;
   const live = useLiveAsk(
     api.searchConsoleLists.searchConsoleLiveList,
-    held && fromLive ? { ...ask, dimension: "query" as const, ...(country ? { country } : {}), ...(device ? { device } : {}) } : null,
+    held && fromLive ? { ...ask, dimension: "query" as const, ...(device ? { device } : {}) } : null,
   );
   const points: CurvePoint[] | undefined = fromLive
-    ? (live.answer === undefined ? undefined : live.answer.ok ? ctrCurve(live.answer.rows) : [])
+    ? (live.answer === undefined ? undefined : live.answer.ok ? ctrCurve(live.answer.rows.flat()) : [])
     : server?.points;
   const rows = points?.map((point) => ({ ...point, key: String(point.position) }));
   const matches = wordStartMatcher(term.toLowerCase());

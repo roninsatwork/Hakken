@@ -98,6 +98,15 @@ export const FAN_OUT_LIMITS = {
    */
   consoleTrackedKeywordsPerSite: { choices: [50, 100, 200, 500, 1_000], fallback: 200, scope: "site" },
   consoleTrackedPagesPerSite: { choices: [25, 50, 100, 200, 500], fallback: 100, scope: "site" },
+  /**
+   * Countries a website's Search Console keeps ready beside all countries
+   * (search-console-plan.md §16): each is collected and made ready at every
+   * collection, about 80% more Google requests each. Anthony, 2026-10-03:
+   * "any limit should be configurable in the usual limits way, nothing should
+   * be hidden". Free: Search Console charges nothing; the cost is time and
+   * storage. Past it, the countries first added are kept.
+   */
+  consoleCountriesPerSite: { choices: [1, 2, 3, 5, 10], fallback: 3, scope: "site" },
 } as const satisfies Record<string, LimitSpec>;
 
 export type FanOutLimitKey = keyof typeof FAN_OUT_LIMITS;
@@ -182,6 +191,7 @@ const limitsArg = v.object({
   competitorsPerSite: limitValue,
   consoleTrackedKeywordsPerSite: limitValue,
   consoleTrackedPagesPerSite: limitValue,
+  consoleCountriesPerSite: limitValue,
 });
 
 /** Each limit's own value where set, null where it uses the level above. */

@@ -10,7 +10,7 @@ import { formatRate } from "../../_components/searchConsoleFormat";
 import { pageLabel, useRecordHref } from "../../_components/searchConsoleRecords";
 import { figureColumns, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
 
-const CHIPS: readonly ChipId[] = ["intent", "band", "country"];
+const CHIPS: readonly ChipId[] = ["intent", "band"];
 
 /**
  * Pages competing (search-console-plan.md §13.3, drawn as "12 · Pages

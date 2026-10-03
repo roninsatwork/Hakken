@@ -21,10 +21,10 @@ import { useSiteListPage } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSort } from "../../../sites/_components/useSiteSort";
 import { SearchConsoleChartCard } from "../../_components/SearchConsoleChartCard";
-import { SearchConsoleGate } from "../../_components/SearchConsoleNotices";
+import { CountryNotReady, SearchConsoleGate } from "../../_components/SearchConsoleNotices";
 import { formatPosition } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
-import { useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
+import { countryArg, useSearchConsoleCountry, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
 
 const FIRSTS = { key: "asc", status: "asc", when: "desc", clicks: "desc", impressions: "desc", position: "asc" } as const;
 
@@ -35,6 +35,10 @@ const FIRSTS = { key: "asc", status: "asc", when: "desc", clicks: "desc", impres
  * week by week, newest first. Web results only — the register of when each
  * keyword and page was first and last shown is kept for them — so the page
  * has no kind-of-result switch.
+ *
+ * In the country chosen when the website keeps it ready (search-console-plan.md
+ * §16). The register is built collection by collection, so Google cannot be
+ * asked for any other country: the page says to add it on the Market page.
  */
 export default function SearchConsoleNewLostPage() {
   const t = useTranslations("searchConsole");
@@ -42,6 +46,7 @@ export default function SearchConsoleNewLostPage() {
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
+  const [country] = useSearchConsoleCountry();
   const [search, setSearch, term] = useSiteSearch();
   const [what, setWhat] = useSiteParam<"" | "new" | "lost">("what", "", ["", "new", "lost"]);
   const [band, setBand] = useSiteParam<string>("band", "", ["", ...BANDS]);
@@ -55,6 +60,7 @@ export default function SearchConsoleNewLostPage() {
         siteId,
         from: range.from,
         to: range.to,
+        ...countryArg(country),
         ...(term ? { q: term } : {}),
         ...(what ? { what } : {}),
         ...(band ? { band: band as (typeof BANDS)[number] } : {}),
@@ -78,58 +84,61 @@ export default function SearchConsoleNewLostPage() {
       <PageHeader icon={<Sparkles className="h-5 w-5 text-brand" />} title={t("newLost.title")} description={t("newLost.description")} />
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
-          <FigureRow>
-            <Figure label={t("newLost.newKeywords")} value={counts ? formatNumber(counts.newKeywords) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
-            <Figure label={t("newLost.lostKeywords")} value={counts ? formatNumber(counts.lostKeywords) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
-            <Figure label={t("newLost.newPages")} value={counts ? formatNumber(counts.newPages) : "…"} detail={<span className="text-secondary">{t("newLost.firstTime")}</span>} />
-            <Figure label={t("newLost.lostPages")} value={counts ? formatNumber(counts.lostPages) : "…"} detail={<span className="text-secondary">{t("newLost.notIn14")}</span>} />
-          </FigureRow>
-          {list.result?.watchedFrom && list.result.watchedFrom > range.from ? (
-            <p className="text-[12px] text-muted">{t("newLost.watchedFrom", { day: formatDay(list.result.watchedFrom) })}</p>
-          ) : null}
-          <SearchConsoleChartCard
-            title={t("newLost.chartTitle")}
-            hint={t("newLost.chartHint")}
-            exportName={`${host}-search-console-new-and-lost`}
-            host={host}
-            from={weeks[0]?.week ?? null}
-            to={status.connection?.newestDay ?? null}
-            csv={() => toCsv([t("chart.week"), t("newLost.gained"), t("newLost.lost")], weeks.map((week) => [week.week, week.gained, week.lost]))}
-          >
-            {list.result === undefined ? (
-              <div className="h-[280px] animate-pulse rounded-xl bg-sidebar/30" aria-busy="true" />
-            ) : steps.length === 0 ? (
-              <p className="py-10 text-center text-[13px] text-secondary">{t("chart.nothing")}</p>
-            ) : (
-              <SiteGainLossChart
-                steps={steps}
-                series={[
-                  { key: "new", name: t("newLost.gained"), colour: SITE_SERIES_COLOURS[3] },
-                  { key: "lost", name: t("newLost.lost"), colour: SITE_SERIES_COLOURS[0] },
-                ]}
-                netLabel={t("newLost.net")}
-                startLegend={t("newLost.gained")}
-              />
-            )}
-          </SearchConsoleChartCard>
-          <DataTable
-            rows={list.pageRows}
-            rowKey={(row) => `${row.status}:${row.key}`}
-            onRowClick={(row) => router.push(recordHref("keywords/keyword", row.key))}
-            minWidthClassName="min-w-[760px]"
-            search={{ value: search, onChange: setSearch, placeholder: t("keywords.searchPlaceholder") }}
-            filters={
-              <>
-                <Select chip={{ label: t("newLost.what"), choice: what ? t(what === "new" ? "newLost.new" : "newLost.lostWord") : null }} value={what} onChange={(next) => setWhat(next as "" | "new" | "lost")}>
-                  <option value="">{t("newLost.newOrLost")}</option>
-                  <option value="new">{t("newLost.new")}</option>
-                  <option value="lost">{t("newLost.lostWord")}</option>
-                </Select>
-                <Select chip={{ label: t("filters.position"), choice: band ? t(`filters.bands.${band}`) : null }} value={band} onChange={setBand}>
-                  <option value="">{t("filters.anyPosition")}</option>
-                  {BANDS.map((entry) => <option key={entry} value={entry}>{t(`filters.bands.${entry}`)}</option>)}
-                </Select>
-              </>
+          {country && list.result?.notReady ? <CountryNotReady country={country} /> : (
+            <>
+              {list.preparing ? <p className="text-[12px] text-muted">{t("table.preparing")}</p> : null}
+              <FigureRow>
+                <Figure label={t("newLost.newKeywords")} value={counts ? formatNumber(counts.newKeywords) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
+                <Figure label={t("newLost.lostKeywords")} value={counts ? formatNumber(counts.lostKeywords) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
+                <Figure label={t("newLost.newPages")} value={counts ? formatNumber(counts.newPages) : "…"} detail={<span className="text-secondary">{t("newLost.firstTime")}</span>} />
+                <Figure label={t("newLost.lostPages")} value={counts ? formatNumber(counts.lostPages) : "…"} detail={<span className="text-secondary">{t("newLost.notIn14")}</span>} />
+              </FigureRow>
+              {list.result?.watchedFrom && list.result.watchedFrom > range.from ? (
+                <p className="text-[12px] text-muted">{t("newLost.watchedFrom", { day: formatDay(list.result.watchedFrom) })}</p>
+              ) : null}
+              <SearchConsoleChartCard
+                title={t("newLost.chartTitle")}
+                hint={t("newLost.chartHint")}
+                exportName={`${host}-search-console-new-and-lost`}
+                host={host}
+                from={weeks[0]?.week ?? null}
+                to={status.connection?.newestDay ?? null}
+                csv={() => toCsv([t("chart.week"), t("newLost.gained"), t("newLost.lost")], weeks.map((week) => [week.week, week.gained, week.lost]))}
+              >
+                {list.result === undefined ? (
+                  <div className="h-[280px] animate-pulse rounded-xl bg-sidebar/30" aria-busy="true" />
+                ) : steps.length === 0 ? (
+                  <p className="py-10 text-center text-[13px] text-secondary">{t("chart.nothing")}</p>
+                ) : (
+                  <SiteGainLossChart
+                    steps={steps}
+                    series={[
+                      { key: "new", name: t("newLost.gained"), colour: SITE_SERIES_COLOURS[3] },
+                      { key: "lost", name: t("newLost.lost"), colour: SITE_SERIES_COLOURS[0] },
+                    ]}
+                    netLabel={t("newLost.net")}
+                    startLegend={t("newLost.gained")}
+                  />
+                )}
+              </SearchConsoleChartCard>
+              <DataTable
+                rows={list.pageRows}
+                rowKey={(row) => `${row.status}:${row.key}`}
+                onRowClick={(row) => router.push(recordHref("keywords/keyword", row.key))}
+                minWidthClassName="min-w-[760px]"
+                search={{ value: search, onChange: setSearch, placeholder: t("keywords.searchPlaceholder") }}
+                filters={
+                  <>
+                    <Select chip={{ label: t("newLost.what"), choice: what ? t(what === "new" ? "newLost.new" : "newLost.lostWord") : null }} value={what} onChange={(next) => setWhat(next as "" | "new" | "lost")}>
+                      <option value="">{t("newLost.newOrLost")}</option>
+                      <option value="new">{t("newLost.new")}</option>
+                      <option value="lost">{t("newLost.lostWord")}</option>
+                    </Select>
+                    <Select chip={{ label: t("filters.position"), choice: band ? t(`filters.bands.${band}`) : null }} value={band} onChange={setBand}>
+                      <option value="">{t("filters.anyPosition")}</option>
+                      {BANDS.map((entry) => <option key={entry} value={entry}>{t(`filters.bands.${entry}`)}</option>)}
+                    </Select>
+            </>
             }
             cardHeader={<TableBar footer={list.footer} noun="keywords" />}
             sort={order.tableSort}
@@ -156,6 +165,8 @@ export default function SearchConsoleNewLostPage() {
               { key: "position", header: t("table.position"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatPosition(row.position)}</span> },
             ]}
           />
+            </>
+          )}
         </SearchConsoleGate>
       ) : null}
     </div>

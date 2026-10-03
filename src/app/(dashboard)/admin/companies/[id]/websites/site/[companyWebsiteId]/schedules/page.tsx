@@ -15,9 +15,10 @@ import { siteBase } from "../siteView";
 
 /**
  * One website's Schedules (docs/plans/active/websites-section-menu-plan.md):
- * how often and from where it is collected — its own sites, and a competitor
- * watched on its own — and which of the company's sites a competitor is
- * watched against. How much of it is kept is its Limits page since
+ * how often it is collected — its own sites, and a competitor watched on its
+ * own — and which of the company's sites a competitor is watched against.
+ * Where it is watched from is its Market page since 2026-10-03
+ * (docs/plans/active/search-console-plan.md §16). How much of it is kept is its Limits page since
  * 2026-09-28 (docs/plans/active/platform-limits-plan.md; Anthony: "This should
  * be two screens / Schedules / Limits").
  */
@@ -60,7 +61,13 @@ export default function CompanySiteSchedulesPage() {
         </>
       )}
       {/* A paired competitor's day and place are its pair's: it has none to set. */}
-      {header.pairedWith ? null : <SiteSchedule companyWebsiteId={companyWebsiteId} host={header.displayHost} />}
+      {header.pairedWith ? null : (
+        <SiteSchedule
+          companyWebsiteId={companyWebsiteId}
+          host={header.displayHost}
+          marketHref={`${siteBase(companyId, companyWebsiteId)}/market`}
+        />
+      )}
       <Link
         href={`/admin/websites/${header.websiteId}`}
         className="flex w-fit items-center gap-1.5 text-[13px] text-secondary transition-colors hover:text-foreground"

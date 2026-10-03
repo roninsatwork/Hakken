@@ -15,8 +15,9 @@ import {
   type SearchType,
 } from "./searchConsoleSchema";
 import { shiftDay } from "./searchConsoleDays";
-import { PARTS_MOST } from "./searchConsoleSync";
+import { PARTS_MOST } from "./searchConsoleRollups";
 import { UNKNOWN, factsFor, type Facts } from "./searchConsoleFacts";
+import { countryScope, stillKeptReady } from "./searchConsoleCountries";
 import {
   addUp,
   bySide,
@@ -43,6 +44,10 @@ import { requireMySite } from "./siteAccess";
  * website's pages it brought people to and the top one; a page's list is
  * Google's own page totals (the rare searches it hides included), with how
  * many searches and the top one from the pairs.
+ *
+ * Built for all countries and for each country kept ready (§16), the same
+ * way: `country` missing is all countries, and every read and write is by
+ * the hold's index, country second.
  */
 
 /** The periods with a period before them held for the change: twelve months has none (§14.3, item 7). */
@@ -121,18 +126,20 @@ const DAYS_PER_READ = 15;
 /** Weeks of kept week records read per ask. */
 const WEEKS_PER_READ = 4;
 
-/** Every kept record of one list a website's periods could need, oldest first. */
+/** Every kept record of one list a website's periods could need — all countries', or one country's — oldest first. */
 async function readKept(
   ctx: ActionCtx,
   companyWebsiteId: Id<"companyWebsites">,
+  country: string | undefined,
   searchType: SearchType,
   list: SearchConsoleList,
   newest: string,
 ): Promise<Kept[]> {
   const from = widestFrom(newest);
   const out: Kept[] = [];
+  const scope = country === undefined ? {} : { country };
   const read = async (grain: Kept["grain"], start: string, end: string) => {
-    const records = await ctx.runQuery(internal.searchConsoleSync.keptBetween, { companyWebsiteId, searchType, list, grain, from: start, to: end < newest ? end : newest });
+    const records = await ctx.runQuery(internal.searchConsoleRollups.keptBetween, { companyWebsiteId, ...scope, searchType, list, grain, from: start, to: end < newest ? end : newest });
     for (const record of records) out.push({ grain, start: record.start, packed: record });
   };
   // A month at a time, and four weeks at a time: a week of a busy website's pairs is about a megabyte.
@@ -146,8 +153,9 @@ async function readKept(
   for (let offset = 0; offset < span; offset += DAYS_PER_READ) {
     const start = shiftDay(from, offset);
     const end = shiftDay(start, DAYS_PER_READ - 1);
-    const records = await ctx.runQuery(internal.searchConsoleSync.keptBetween, {
+    const records = await ctx.runQuery(internal.searchConsoleRollups.keptBetween, {
       companyWebsiteId,
+      ...scope,
       searchType,
       list,
       grain: "DAY",
@@ -207,17 +215,28 @@ const weekValidator = v.object({
   otherClicks: v.number(),
 });
 
-/** A kind of result's weeks, all at once: the ones held before go. */
+/** A kind of result's weeks, all at once, for all countries or one: the ones held before go. */
 export const writeWeeks = internalMutation({
-  args: { companyWebsiteId: v.id("companyWebsites"), searchType: searchTypeValidator, weeks: v.array(weekValidator), builtAt: v.number() },
+  args: {
+    companyWebsiteId: v.id("companyWebsites"),
+    country: v.optional(v.string()),
+    searchType: searchTypeValidator,
+    weeks: v.array(weekValidator),
+    builtAt: v.number(),
+  },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const old = await ctx.db
-      .query("searchConsoleWeeks")
-      .withIndex("by_hold_type_week", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("searchType", args.searchType))
-      .take(WEEKS_READ);
-    for (const week of old) await ctx.db.delete(week._id);
-    for (const week of args.weeks) await ctx.db.insert("searchConsoleWeeks", { companyWebsiteId: args.companyWebsiteId, searchType: args.searchType, ...week, builtAt: args.builtAt });
+    if (!(await stillKeptReady(ctx, args.companyWebsiteId, args.country))) return null;
+    for (const week of await weeksOf(ctx, args.companyWebsiteId, args.country, args.searchType)) await ctx.db.delete(week._id);
+    for (const week of args.weeks) {
+      await ctx.db.insert("searchConsoleWeeks", {
+        companyWebsiteId: args.companyWebsiteId,
+        ...(args.country === undefined ? {} : { country: args.country }),
+        searchType: args.searchType,
+        ...week,
+        builtAt: args.builtAt,
+      });
+    }
     return null;
   },
 });
@@ -225,17 +244,36 @@ export const writeWeeks = internalMutation({
 /** Weeks one read returns: far more than the 16 kept. */
 const WEEKS_READ = 200;
 
-/** A website's weeks for its Position bands and Brand charts, oldest first. */
-export const searchConsoleWeeks = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), searchType: searchTypeValidator },
-  returns: v.array(weekValidator),
+/** One kind of result's weeks, for all countries or one, oldest first. */
+async function weeksOf(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"companyWebsites">, country: string | undefined, searchType: SearchType) {
+  return await ctx.db
+    .query("searchConsoleWeeks")
+    .withIndex("by_hold_country_type_week", (q) => q.eq("companyWebsiteId", companyWebsiteId).eq("country", country).eq("searchType", searchType))
+    .take(WEEKS_READ);
+}
+
+const weekRow = ({ week, top3, top10, top20, rest, brandClicks, otherClicks }: Week) => ({ week, top3, top10, top20, rest, brandClicks, otherClicks });
+
+/**
+ * A website's weeks for its Position bands and Brand charts, oldest first —
+ * for all countries, or one country kept ready (§16). Sixteen weeks of
+ * keywords by position are not asked of Google live, so a country not kept
+ * ready is `notReady` ("Add this country on the Market page to see this"),
+ * and one just added, before its first collection, is `preparing`.
+ */
+export const searchConsoleWeekFigures = tenantQuery({
+  args: { siteId: v.id("companyWebsites"), searchType: searchTypeValidator, country: v.optional(v.string()) },
+  returns: v.object({ weeks: v.array(weekValidator), notReady: v.boolean(), preparing: v.boolean() }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const weeks = await ctx.db
-      .query("searchConsoleWeeks")
-      .withIndex("by_hold_type_week", (q) => q.eq("companyWebsiteId", site.hold._id).eq("searchType", args.searchType))
-      .take(WEEKS_READ);
-    return weeks.map(({ week, top3, top10, top20, rest, brandClicks, otherClicks }) => ({ week, top3, top10, top20, rest, brandClicks, otherClicks }));
+    const connection = await ctx.db
+      .query("searchConsoleConnections")
+      .withIndex("by_hold", (q) => q.eq("companyWebsiteId", site.hold._id))
+      .first();
+    const scope = await countryScope(ctx, site.hold, connection, args.country);
+    if (scope.read === "LIVE") return { weeks: [], notReady: !scope.kept, preparing: scope.kept };
+    const weeks = await weeksOf(ctx, site.hold._id, scope.read === "KEPT" ? scope.country : undefined, args.searchType);
+    return { weeks: weeks.map(weekRow), notReady: false, preparing: false };
   },
 });
 type Slot = { period: SearchConsolePeriod; which: "NOW" | "BEFORE"; span: PeriodSpan | null; now: PeriodSpan };
@@ -255,19 +293,22 @@ const slotKey = (slot: Slot) => `${slot.period}|${slot.which}`;
 
 /**
  * A website's ready-made periods, rebuilt from what is kept: every list of
- * every kind of result it has, for each period and the period before. A
- * slot with nothing now is emptied, so no period outlives its days. One kept
- * list is read at a time, so a run holds one list's days at once, never all.
+ * every kind of result it has, for each period and the period before — for
+ * all countries, or one country kept ready from its own held days. A slot
+ * with nothing now is emptied, so no period outlives its days. One kept list
+ * is read at a time, so a run holds one list's days at once, never all.
  */
 export async function buildSitePeriods(
   ctx: ActionCtx,
   companyWebsiteId: Id<"companyWebsites">,
   newest: string,
   oldest: string,
+  country?: string,
 ): Promise<number> {
   let written = 0;
   const builtAt = Date.now();
   const slots = slotsOf(newest, oldest);
+  const scope = country === undefined ? {} : { country };
   const write = async (searchType: SearchType, list: SearchConsolePeriodList, slot: Slot, rows: Row[] | null, counts?: Counts, facts?: Facts) => {
     // Not held, or a list this kind of result does not have: the slot is only emptied.
     const clearOnly = rows === null;
@@ -287,6 +328,7 @@ export async function buildSitePeriods(
       };
       await ctx.runMutation(internal.searchConsolePeriods.writePeriodPart, {
         companyWebsiteId,
+        ...scope,
         searchType,
         list,
         period: slot.period,
@@ -303,7 +345,7 @@ export async function buildSitePeriods(
     }
   };
 
-  const types = await ctx.runQuery(internal.searchConsoleSync.typesHeld, { companyWebsiteId });
+  const types = await ctx.runQuery(internal.searchConsoleRollups.typesHeld, { companyWebsiteId, ...scope });
   const target = await ctx.runQuery(internal.searchConsoleFacts.factsTarget, { companyWebsiteId });
   // Sites' facts for each keyword and page, looked up once for every kind of result.
   const known: Record<"query" | "page", Facts> = { query: new Map(), page: new Map() };
@@ -318,10 +360,11 @@ export async function buildSitePeriods(
     const lists = LISTS_OF[searchType];
     // Each search added up from the pairs, and each page's searches counted from them.
     const pageCounts = new Map<string, Counts>();
-    const pairsKept = lists.includes("pair") ? await readKept(ctx, companyWebsiteId, searchType, "pair", newest) : null;
+    const pairsKept = lists.includes("pair") ? await readKept(ctx, companyWebsiteId, country, searchType, "pair", newest) : null;
     const queryFacts = pairsKept ? await factsOf("query", pairsKept) : undefined;
     await ctx.runMutation(internal.searchConsolePeriods.writeWeeks, {
       companyWebsiteId,
+      ...scope,
       searchType,
       weeks: pairsKept ? weekFigures(pairsKept, newest, target?.brandWords ?? []) : [],
       builtAt,
@@ -346,8 +389,11 @@ export async function buildSitePeriods(
       pageCounts.set(slotKey(slot), new Map([...bySide(pairs, "page").values()].map((summed) => [summed.key, { count: summed.count, top: summed.top }])));
     }
     // Pages, countries, devices and kinds of search appearance: Google's own totals, one list at a time.
+    // A country has no country list of its own: its slots are only emptied.
     for (const list of ["page", "country", "device", "appearance"] as const) {
-      const kept = lists.includes(list) ? await readKept(ctx, companyWebsiteId, searchType, list, newest) : null;
+      const kept = lists.includes(list) && !(country !== undefined && list === "country")
+        ? await readKept(ctx, companyWebsiteId, country, searchType, list, newest)
+        : null;
       const pageFacts = list === "page" && kept ? await factsOf("page", kept) : undefined;
       for (const slot of slots) {
         const rows = kept && slot.span ? addUp(keptIn(kept, slot.span, newest)) : null;
@@ -358,10 +404,11 @@ export async function buildSitePeriods(
   return written;
 }
 
-/** One part of a ready-made period's list; the first replaces the slot, and an empty first part empties it. */
+/** One part of a ready-made period's list, for all countries or one; the first replaces the slot, and an empty first part empties it. */
 export const writePeriodPart = internalMutation({
   args: {
     companyWebsiteId: v.id("companyWebsites"),
+    country: v.optional(v.string()),
     searchType: searchTypeValidator,
     list: periodListValidator,
     period: periodValidator,
@@ -386,8 +433,9 @@ export const writePeriodPart = internalMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const { clearOnly, ...record } = args;
+    if (!(await stillKeptReady(ctx, args.companyWebsiteId, args.country))) return null;
     if (args.part === 0) {
-      for (const old of await periodParts(ctx, args.companyWebsiteId, args.searchType, args.list, args.period, args.which)) await ctx.db.delete(old._id);
+      for (const old of await periodParts(ctx, args.companyWebsiteId, args.country, args.searchType, args.list, args.period, args.which)) await ctx.db.delete(old._id);
     }
     // A held period with nothing in it keeps its first part, empty: held, and no clicks.
     if (clearOnly || (args.keys.length === 0 && args.part > 0)) return null;
@@ -399,6 +447,7 @@ export const writePeriodPart = internalMutation({
 async function periodParts(
   ctx: { db: QueryCtx["db"] | MutationCtx["db"] },
   companyWebsiteId: Id<"companyWebsites">,
+  country: string | undefined,
   searchType: SearchType,
   list: SearchConsolePeriodList,
   period: SearchConsolePeriod,
@@ -406,8 +455,9 @@ async function periodParts(
 ) {
   return await ctx.db
     .query("searchConsolePeriods")
-    .withIndex("by_hold_type_list_period", (q) => q
+    .withIndex("by_hold_country_type_list_period", (q) => q
       .eq("companyWebsiteId", companyWebsiteId)
+      .eq("country", country)
       .eq("searchType", searchType)
       .eq("list", list)
       .eq("period", period)
@@ -418,7 +468,7 @@ async function periodParts(
 /** A row of a ready-made period: its figures, and — where kept — its count and top, and Sites' facts (UNKNOWN for none). */
 export type PeriodRow = Row & { count?: number; top?: string; kind?: string; volume?: number; estimate?: number };
 
-/** A ready-made period's list, its parts put back together; null when nothing is built for it. */
+/** A ready-made period's list — all countries', or one country's kept ready — its parts put back together; null when nothing is built for it. */
 export async function readPeriod(
   ctx: { db: QueryCtx["db"] },
   companyWebsiteId: Id<"companyWebsites">,
@@ -426,8 +476,9 @@ export async function readPeriod(
   list: SearchConsolePeriodList,
   period: SearchConsolePeriod,
   which: "NOW" | "BEFORE",
+  country?: string,
 ): Promise<{ from: string; to: string; builtAt: number; rows: PeriodRow[] } | null> {
-  const parts = (await periodParts(ctx, companyWebsiteId, searchType, list, period, which)).sort((left, right) => left.part - right.part);
+  const parts = (await periodParts(ctx, companyWebsiteId, country, searchType, list, period, which)).sort((left, right) => left.part - right.part);
   if (parts.length === 0) return null;
   const rows: PeriodRow[] = [];
   for (const part of parts) {

@@ -10,7 +10,7 @@ import { pageLabel, useRecordHref } from "../../_components/searchConsoleRecords
 import { TrackedCount, figureColumns, trackColumn, useSearchConsoleList, useSearchConsoleTracking, type ChipId } from "../../_components/SearchConsoleTables";
 
 /** Intent beside the drawn chips: Types opens Keywords narrowed to one. */
-const CHIPS: readonly ChipId[] = ["tracked", "band", "intent", "country", "device"];
+const CHIPS: readonly ChipId[] = ["tracked", "band", "intent", "device"];
 
 /**
  * Keywords (search-console-plan.md §13.2, drawn as "4 · Keywords"): every

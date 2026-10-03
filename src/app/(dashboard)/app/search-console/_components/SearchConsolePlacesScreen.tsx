@@ -12,10 +12,10 @@ import { formatNumber } from "../../sites/_components/siteFormat";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../sites/_components/useSiteSort";
 import { countryName } from "./countries";
-import { ResultKindSwitch, SearchConsoleGate, hasFigures } from "./SearchConsoleNotices";
+import { ResultKindSwitch, SearchConsoleGate, hasFigures, canRetry, liveProblemKey } from "./SearchConsoleNotices";
 import { formatRate, readerLanguage } from "./searchConsoleFormat";
 import { pageLabel, useLiveAsk, useRecordBack } from "./searchConsoleRecords";
-import { useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
+import { countryArg, useResultKind, useSearchConsoleCountry, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus } from "./useSearchConsole";
 
 type Place = { key: string; name: string; clicks: number; impressions: number; share: number };
 
@@ -32,7 +32,9 @@ const nameOf = (row: Place) => row.name;
  * opened from "Show all countries" beside its chart (Anthony, 2026-10-03:
  * "maybe with a show all on another page"): the same ask of Google as the
  * panel, whole, each table sorted by its headings and paged as Sites' are.
- * A screen of its own with the way back, never a panel.
+ * Every country, whatever the country chosen; the devices follow the choice,
+ * as on Countries and devices (search-console-plan.md §16). A screen of its
+ * own with the way back, never a panel.
  */
 export function SearchConsolePlacesScreen({ dimension }: { dimension: "query" | "page" }) {
   const t = useTranslations("searchConsole");
@@ -42,11 +44,16 @@ export function SearchConsolePlacesScreen({ dimension }: { dimension: "query" | 
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
   const [kind] = useResultKind();
+  const [country] = useSearchConsoleCountry();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
   const host = status?.host ?? "";
   const back = useRecordBack(siteId, dimension === "query" ? "keywords" : "pages", host);
   const ready = Boolean(status && hasFigures(status) && key);
-  const splits = useLiveAsk(api.searchConsoleLists.searchConsoleKeySplits, ready ? { siteId, searchType: kind, dimension, key, from: range.from, to: range.to } : null);
+  // The country chosen narrows the devices only: Google is asked for every country whatever it is.
+  const splits = useLiveAsk(
+    api.searchConsoleLists.searchConsoleKeySplits,
+    ready ? { siteId, searchType: kind, dimension, key, from: range.from, to: range.to, ...countryArg(country) } : null,
+  );
   const language = readerLanguage();
   const answer = splits.answer?.ok ? splits.answer : null;
   const countries = answer?.countries.map((row) => ({ ...row, name: countryName(row.key, language) ?? tp("unknownCountry") }));
@@ -56,9 +63,7 @@ export function SearchConsolePlacesScreen({ dimension }: { dimension: "query" | 
   const countryPages = useSitePager(countryOrder.rows, { isLoading: loading, table: "countries" });
   const deviceOrder = useSiteSortedList(loading ? undefined : (devices ?? []), SORTS, { opening: "clicks", name: nameOf, table: "devices" });
   const devicePages = useSitePager(deviceOrder.rows, { isLoading: loading, table: "devices" });
-  const problem = splits.answer && !splits.answer.ok
-    ? t(splits.answer.problem === "GOOGLE_BUSY" ? "record.busy" : splits.answer.problem === "NOT_CONNECTED" ? "record.notConnected" : "record.refused")
-    : null;
+  const problem = splits.answer && !splits.answer.ok ? t(liveProblemKey(splits.answer.problem)) : null;
   const name = dimension === "query" ? key : pageLabel(key, host);
   const columns = (heading: string) => [
     { key: "name", header: heading, sortable: true, cell: (row: Place) => <span className="text-[13px] text-foreground">{row.name}</span> },
@@ -98,7 +103,7 @@ export function SearchConsolePlacesScreen({ dimension }: { dimension: "query" | 
             footer={devicePages.footer}
             columns={columns(t("table.device"))}
           />
-          {splits.answer && !splits.answer.ok && splits.answer.problem === "GOOGLE_BUSY" ? (
+          {splits.answer && !splits.answer.ok && canRetry(splits.answer.problem) ? (
             <div>
               <Button variant="quiet" onClick={splits.retry}>{t("record.tryAgain")}</Button>
             </div>

@@ -12,24 +12,33 @@ import { datedRow } from "../../../sites/_components/datedRows";
 import { formatNumber, formatShortDay, toCsv } from "../../../sites/_components/siteFormat";
 import { SearchConsoleChartCard } from "../../_components/SearchConsoleChartCard";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
+import { CountryNotReady } from "../../_components/SearchConsoleNotices";
 import { formatPosition } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
 import { CountChange, figureColumns, useSearchConsoleList, type ChipId } from "../../_components/SearchConsoleTables";
+import { countryArg, useSearchConsoleCountry } from "../../_components/useSearchConsole";
 
-const CHIPS: readonly ChipId[] = ["band", "intent", "country", "device"];
+const CHIPS: readonly ChipId[] = ["band", "intent", "device"];
 
 /**
  * Position bands (search-console-plan.md §13.3, drawn as "5 · Position
  * bands"): how many of the website's keywords Google shows in each band of
  * its own average positions — the top three, 4 to 10, 11 to 20, and 21 and
  * below — against the days before, week by week, and each keyword's band and
- * the places it moved.
+ * the places it moved. In the country chosen (search-console-plan.md §16):
+ * the weeks are added up collection by collection, so a country the website
+ * does not keep ready has no chart, and its list is asked of Google.
  */
 export default function SearchConsoleBandsPage() {
   const t = useTranslations("searchConsole");
   const list = useSearchConsoleList({ dimension: "query", chips: CHIPS });
   const recordHref = useRecordHref(list.siteId);
-  const weeks = useQuery(api.searchConsolePeriods.searchConsoleWeeks, list.status?.connection?.newestDay ? { siteId: list.siteId, searchType: list.kind } : "skip");
+  const [country] = useSearchConsoleCountry();
+  const figures = useQuery(
+    api.searchConsolePeriods.searchConsoleWeekFigures,
+    list.status?.connection?.newestDay ? { siteId: list.siteId, searchType: list.kind, ...countryArg(country) } : "skip",
+  );
+  const weeks = figures?.weeks;
   const summary = list.summary;
   const days = list.range.days;
   const host = list.status?.host ?? "";
@@ -92,31 +101,35 @@ export default function SearchConsoleBandsPage() {
         ],
       }}
     >
-      <SearchConsoleChartCard
-        title={t("bands.chartTitle")}
-        hint={t("bands.chartHint")}
-        exportName={`${host}-search-console-position-bands`}
-        host={host}
-        from={weeks?.[0]?.week ?? null}
-        to={list.status?.connection?.newestDay ?? null}
-        csv={() => toCsv(
-          [t("chart.week"), t("bands.top3"), t("filters.bands.4-10"), t("filters.bands.11-20"), t("bands.below")],
-          (weeks ?? []).map((week) => [week.week, week.top3, week.top10, week.top20, week.rest]),
-        )}
-      >
-        {weeks === undefined ? (
-          <div className="h-[280px] animate-pulse rounded-xl bg-sidebar/30" aria-busy="true" />
-        ) : weeks.length === 0 ? (
-          <p className="py-10 text-center text-[13px] text-secondary">{t("chart.nothing")}</p>
-        ) : (
-          <SiteBarChart
-            stacked
-            height={280}
-            series={series}
-            data={weeks.map((week) => ({ ...datedRow({ day: week.week }, {}, formatShortDay(week.week)), top3: week.top3, top10: week.top10, top20: week.top20, rest: week.rest }))}
-          />
-        )}
-      </SearchConsoleChartCard>
+      {country && figures?.notReady ? <CountryNotReady country={country} /> : (
+        <SearchConsoleChartCard
+          title={t("bands.chartTitle")}
+          hint={t("bands.chartHint")}
+          exportName={`${host}-search-console-position-bands`}
+          host={host}
+          from={weeks?.[0]?.week ?? null}
+          to={list.status?.connection?.newestDay ?? null}
+          csv={() => toCsv(
+            [t("chart.week"), t("bands.top3"), t("filters.bands.4-10"), t("filters.bands.11-20"), t("bands.below")],
+            (weeks ?? []).map((week) => [week.week, week.top3, week.top10, week.top20, week.rest]),
+          )}
+        >
+          {weeks === undefined ? (
+            <div className="h-[280px] animate-pulse rounded-xl bg-sidebar/30" aria-busy="true" />
+          ) : figures?.preparing ? (
+            <p className="py-10 text-center text-[13px] text-secondary">{t("chart.preparing")}</p>
+          ) : weeks.length === 0 ? (
+            <p className="py-10 text-center text-[13px] text-secondary">{t("chart.nothing")}</p>
+          ) : (
+            <SiteBarChart
+              stacked
+              height={280}
+              series={series}
+              data={weeks.map((week) => ({ ...datedRow({ day: week.week }, {}, formatShortDay(week.week)), top3: week.top3, top10: week.top10, top20: week.top20, rest: week.rest }))}
+            />
+          )}
+        </SearchConsoleChartCard>
+      )}
     </SearchConsoleListScreen>
   );
 }

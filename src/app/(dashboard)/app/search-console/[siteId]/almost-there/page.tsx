@@ -17,7 +17,7 @@ import {
   type ChipId,
 } from "../../_components/SearchConsoleTables";
 
-const CHIPS: readonly ChipId[] = ["tracked", "almostBand", "intent", "country"];
+const CHIPS: readonly ChipId[] = ["tracked", "almostBand", "intent"];
 
 /**
  * Almost there (search-console-plan.md §13.3, drawn as "9 · Almost there"):

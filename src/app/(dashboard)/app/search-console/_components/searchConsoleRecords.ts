@@ -90,7 +90,8 @@ export function useLiveAsk<Action extends LiveAction>(
     let live = true;
     // The ask is the action's own arguments, carried as text so a new object each render asks nothing new.
     void (run as unknown as (args: FunctionArgs<Action>) => Promise<FunctionReturnType<Action>>)(JSON.parse(askKey) as FunctionArgs<Action>)
-      .catch(() => ({ ok: false, problem: "GOOGLE_BUSY" }) as FunctionReturnType<Action>)
+      // Our own server failing is not Google being busy: say so, and offer to ask again.
+      .catch(() => ({ ok: false, problem: "FAILED" }) as unknown as FunctionReturnType<Action>)
       .then((answer) => {
         if (live) setAnswered({ key: `${askKey}#${attempt}`, answer: answer as FunctionReturnType<Action> });
       });
@@ -107,7 +108,8 @@ export function useLiveAsk<Action extends LiveAction>(
 /**
  * Which pages Google showed for a search, or which searches it showed a page
  * for — asked of Google when the screen opens, and again when the dates or
- * kind of result change. `retry` asks again after Google was busy.
+ * kind of result change — in the country chosen, when one is. `retry` asks
+ * again after Google was busy.
  */
 export function usePairing(ask: {
   siteId: Id<"companyWebsites">;
@@ -116,6 +118,7 @@ export function usePairing(ask: {
   key: string;
   from: string;
   to: string;
+  country?: string;
 } | null): { answer: Pairing | undefined; retry: () => void } {
   const pair = useAction(api.searchConsoleReads.searchConsolePairing);
   const askKey = ask ? JSON.stringify(ask) : null;

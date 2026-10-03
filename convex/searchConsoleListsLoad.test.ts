@@ -16,13 +16,17 @@ import { PART_ROWS } from "./utils/searchConsolePacks";
  *
  * Counted, not timed: the reads are counted through the database the list
  * is given, so this holds on any machine, GitHub's included (AGENTS.md,
- * "Test time limits").
+ * "Test time limits"). A country kept ready (§16) costs the same: its own
+ * period, by the same index with the country second.
  */
 
 const NEWEST = "2026-09-26";
 const ROWS_NOW = 25_000;
 const ROWS_BEFORE = 20_000;
 const TRACKED = 200;
+/** A country kept ready's share of the same website: its own, smaller, period. */
+const COUNTRY_NOW = 9_000;
+const COUNTRY_BEFORE = 7_000;
 
 type Read = { table: string; index: string | null; documents: number };
 
@@ -127,5 +131,32 @@ describe("a large website's Search Console", () => {
     expect(first.rows[0]).toMatchObject({ key: "search 0", clicks: ROWS_NOW, tracked: true, change: ROWS_NOW, previousClicks: null });
     const last = await reader.query(api.searchConsoleLists.searchConsoleListPage, { siteId, ...ask, page: ROWS_NOW / 25, rows: 25 });
     expect(last.rows.at(-1)).toMatchObject({ key: `search ${ROWS_NOW - 1}`, clicks: 1 });
+
+    // A country kept ready (§16) reads its own ready-made period by the same index, country second: never all countries' parts.
+    await t.run(async (ctx) => {
+      await ctx.db.patch(siteId, { searchConsoleCountries: ["gbr"] });
+      const connection = (await ctx.db.query("searchConsoleConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", siteId)).first())!;
+      await ctx.db.patch(connection._id, { countriesHeld: [{ country: "gbr", newestDay: NEWEST, oldestDay: "2026-03-31" }] });
+      for (const [which, rows, from, to] of [["NOW", periodRows(COUNTRY_NOW, 0), "2026-08-28", NEWEST], ["BEFORE", periodRows(COUNTRY_BEFORE, 3_000), "2026-07-29", "2026-08-27"]] as const) {
+        for (let part = 0; part * PART_ROWS < rows.length; part += 1) {
+          const slice = rows.slice(part * PART_ROWS, (part + 1) * PART_ROWS);
+          await ctx.db.insert("searchConsolePeriods", {
+            companyWebsiteId: siteId, country: "gbr", searchType: "web", list: "query", period: "30", which, part, from, to,
+            keys: slice.map((row) => row.key), clicks: slice.map((row) => row.clicks), impressions: slice.map((row) => row.impressions),
+            positionSums: slice.map((row) => row.positionSum), builtAt: 1,
+          });
+        }
+      }
+    });
+    const { list, reads } = await t.run(async (ctx) => {
+      const { db, reads } = counted(ctx.db);
+      return { list: await readList({ db }, siteId as Id<"companyWebsites">, { ...ask, country: "gbr" }), reads };
+    });
+    expect(list).toMatchObject({ preparing: false, live: false, comparable: true, listed: COUNTRY_NOW });
+    const consoleReads = reads.filter((read) => read.table.startsWith("searchConsole"));
+    expect(consoleReads.every((read) => read.index?.startsWith("by_hold")), JSON.stringify(consoleReads)).toBe(true);
+    const periods = reads.filter((read) => read.table === "searchConsolePeriods");
+    expect(periods.map((read) => read.index)).toEqual(["by_hold_country_type_list_period", "by_hold_country_type_list_period"]);
+    expect(periods.reduce((sum, read) => sum + read.documents, 0)).toBe(Math.ceil(COUNTRY_NOW / PART_ROWS) + Math.ceil(COUNTRY_BEFORE / PART_ROWS));
   });
 });

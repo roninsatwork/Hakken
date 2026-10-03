@@ -4,6 +4,8 @@ import { internalAction, internalMutation, type ActionCtx } from "./_generated/s
 import type { Id } from "./_generated/dataModel";
 import { failureSummary } from "./roleRuns";
 import { STEP_BUDGET_MS, runStep, type StepOutcome } from "./searchConsoleSync";
+import { countriesPastLimit } from "./searchConsoleCountries";
+import { ALPHA3_TO_ALPHA2 } from "./utils/countryCodes";
 
 /**
  * The Search Console Collector's job (docs/plans/active/search-console-plan.md
@@ -23,6 +25,11 @@ import { STEP_BUDGET_MS, runStep, type StepOutcome } from "./searchConsoleSync";
  * its last 90 days (plan §14.3, item 7). Nothing older, ever. Google charges
  * nothing, and no model is called, so a run costs nothing.
  *
+ * **Then each country kept ready** (§16), one after another in the same run,
+ * from its own held days — a country new to the list gets the 90 days too.
+ * A country on the list past "Countries kept ready per website" has what was
+ * kept for it cleared as the run starts.
+ *
  * **Then it settles** (`searchConsoleSettle.ts`): days past 90 roll into their weeks,
  * weeks past 12 months into their months, and the ready-made periods every
  * list reads are rebuilt — a step of its own, as a line on the run.
@@ -41,7 +48,24 @@ const siteArgs = {
   property: v.string(),
   from: v.string(),
   top: v.string(),
+  /** The countries kept ready, each from its own held days: collected after all countries, in this order. */
+  countries: v.array(v.object({ code: v.string(), from: v.string() })),
 };
+
+/** A country as a run's lines name it: "United Kingdom (GBR)", or the code alone where no name is known. */
+export function countryLabel(code: string): string {
+  const alpha2 = ALPHA3_TO_ALPHA2[code.toUpperCase()];
+  try {
+    const name = alpha2 ? new Intl.DisplayNames(["en-GB"], { type: "region" }).of(alpha2) : undefined;
+    return name ? `${name} (${code.toUpperCase()})` : code.toUpperCase();
+  } catch {
+    return code.toUpperCase();
+  }
+}
+
+/** The countries kept ready, as a sentence of a run's objective ("Then …") or summary ("With …"); nothing without any. */
+const countriesLine = (countries: readonly { code: string }[], lead: "Then" | "With" = "Then") =>
+  countries.length === 0 ? "" : ` ${lead} the ${countries.length === 1 ? "country" : `${countries.length} countries`} kept ready: ${countries.map((country) => countryLabel(country.code)).join(", ")}.`;
 
 const dayLabel = (day: string) =>
   new Date(`${day}T00:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
@@ -50,7 +74,7 @@ export const days = (from: string, to: string) => (from === to ? dayLabel(from) 
 
 export const count = (value: number) => value.toLocaleString("en-GB");
 
-const NOT_HISTORY = "The newest days and the last four again; a website with nothing held gets its last 90 days, and nothing older is fetched.";
+const NOT_HISTORY = "The newest days and the last four again; a website, or a country newly kept ready, with nothing held gets its last 90 days, and nothing older is fetched.";
 
 export async function finishRun(
   ctx: ActionCtx,
@@ -95,7 +119,7 @@ export const runSearchConsoleCollectorNow = internalAction({
           runId: args.runId,
           companyId: site.companyId,
           heading: site.host,
-          detail: `Its own run started: ${days(site.from, site.top)}.`,
+          detail: `Its own run started: ${days(site.from, site.top)}.${countriesLine(site.countries)}`,
           failed: false,
         });
       }
@@ -113,18 +137,29 @@ export const runSearchConsoleCollectorNow = internalAction({
   },
 });
 
-/** One website's run, under the same agent as the run that started it, and its first step. */
+/**
+ * One website's run, under the same agent as the run that started it, and its
+ * first step. Countries on the website's list past its limit have what was
+ * kept for them cleared now, so a lowered limit leaves nothing stale.
+ */
 export const startSiteRun = internalMutation({
   args: { parentRunId: v.id("agentRuns"), ...siteArgs, delayMs: v.number() },
   returns: v.union(v.id("agentRuns"), v.null()),
   handler: async (ctx, args) => {
     const parent = await ctx.db.get(args.parentRunId);
     if (!parent) return null;
+    const connection = await ctx.db.get(args.connectionId);
+    const hold = connection ? await ctx.db.get(connection.companyWebsiteId) : null;
+    if (hold) {
+      for (const country of await countriesPastLimit(ctx, hold)) {
+        await ctx.scheduler.runAfter(0, internal.searchConsoleCountries.clearCountry, { companyWebsiteId: hold._id, country });
+      }
+    }
     const now = Date.now();
     const runId = await ctx.db.insert("agentRuns", {
       agentId: parent.agentId,
       triggerType: "EVENT",
-      objective: `Collect ${args.host}'s newest Search Console days (${args.property}): ${days(args.from, args.top)}. ${NOT_HISTORY}`,
+      objective: `Collect ${args.host}'s newest Search Console days (${args.property}): ${days(args.from, args.top)}.${countriesLine(args.countries)} ${NOT_HISTORY}`,
       title: `Search Console: ${args.host}`,
       status: "QUEUED",
       companyId: args.companyId,
@@ -147,6 +182,7 @@ export const startSiteRun = internalMutation({
       property: args.property,
       from: args.from,
       top: args.top,
+      countries: args.countries,
       to: args.top,
       rows: 0,
       requests: 0,
@@ -171,14 +207,18 @@ function stoppedBecause(outcome: StepOutcome, host: string): string {
 
 /**
  * One step of a website's run: up to a week of its days, newest first, as a
- * line on the run. Days left go to the next step, an action of its own; the
- * last step finishes the run.
+ * line on the run — all countries first, then each country kept ready
+ * (`at`, its place in `countries`). Days left go to the next step, an action
+ * of its own; the next country starts once one is done, and the last
+ * settles the run.
  */
 export const collectSiteStep = internalAction({
   args: {
     runId: v.id("agentRuns"),
     workflowExecutionId: v.id("workflowExecutions"),
     ...siteArgs,
+    /** The country kept ready this step is for, as its place in `countries`; missing for all countries. */
+    at: v.optional(v.number()),
     to: v.string(),
     rows: v.number(),
     requests: v.number(),
@@ -187,14 +227,16 @@ export const collectSiteStep = internalAction({
   handler: async (ctx, args) => {
     const finish = (status: "SUCCESS" | "FAILED", summary: string) =>
       finishRun(ctx, args.runId, args.workflowExecutionId, status, summary);
-    if (args.to === args.top) await ctx.runMutation(internal.roleRuns.markRunStarted, { runId: args.runId });
+    const country = args.at === undefined ? undefined : args.countries[args.at];
+    if (args.to === args.top && country === undefined) await ctx.runMutation(internal.roleRuns.markRunStarted, { runId: args.runId });
     try {
       const outcome = await runStep(ctx, {
         connectionId: args.connectionId,
         property: args.property,
-        from: args.from,
+        from: country?.from ?? args.from,
         top: args.top,
         to: args.to,
+        ...(country ? { country: country.code } : {}),
       }, STEP_BUDGET_MS);
       const rows = args.rows + outcome.rows;
       const requests = args.requests + outcome.requests;
@@ -203,8 +245,8 @@ export const collectSiteStep = internalAction({
         await ctx.runMutation(internal.roleRuns.logRunLine, {
           runId: args.runId,
           companyId: args.companyId,
-          heading: days(outcome.processedFrom, outcome.toDay),
-          detail: `${count(outcome.rows)} rows from ${count(outcome.requests)} asks to Google.${refused}`,
+          heading: `${days(outcome.processedFrom, outcome.toDay)}${country ? `, ${countryLabel(country.code)}` : ""}`,
+          detail: `${count(outcome.rows)} rows from ${count(outcome.requests)} asks to Google${country ? `, for ${countryLabel(country.code)} alone` : ""}.${refused}`,
           failed: false,
         });
       }
@@ -213,15 +255,23 @@ export const collectSiteStep = internalAction({
           await ctx.scheduler.runAfter(0, internal.searchConsoleAgentRun.collectSiteStep, { ...args, to: outcome.nextTo, rows, requests });
           return null;
         case "DONE":
+        case "NOT_KEPT": {
+          // All countries, or this country, done: the next country kept ready, else settle.
+          const next = args.at === undefined ? 0 : args.at + 1;
+          if (next < args.countries.length) {
+            await ctx.scheduler.runAfter(0, internal.searchConsoleAgentRun.collectSiteStep, { ...args, at: next, to: args.top, rows, requests });
+            return null;
+          }
           await ctx.scheduler.runAfter(0, internal.searchConsoleSettle.settleSite, {
             runId: args.runId,
             workflowExecutionId: args.workflowExecutionId,
             connectionId: args.connectionId,
             companyId: args.companyId,
             host: args.host,
-            summary: `Collected ${args.host}, ${days(args.from, args.top)}: ${count(rows)} rows from ${count(requests)} asks to Google. ${NOT_HISTORY}`,
+            summary: `Collected ${args.host}, ${days(args.from, args.top)}: ${count(rows)} rows from ${count(requests)} asks to Google.${countriesLine(args.countries, "With")} ${NOT_HISTORY}`,
           });
           return null;
+        }
         case "BUSY":
           await finish("FAILED", `Google was too busy to answer for ${args.host}, so not every day from ${days(args.from, args.top)} came in. The next run fetches them again.`);
           return null;

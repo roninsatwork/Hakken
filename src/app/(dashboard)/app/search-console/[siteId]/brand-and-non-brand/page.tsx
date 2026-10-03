@@ -13,11 +13,13 @@ import { formatNumber, formatShortDay, toCsv } from "../../../sites/_components/
 import { SearchConsoleChartCard } from "../../_components/SearchConsoleChartCard";
 import { DaysBeforeChange } from "../../_components/SearchConsoleFigures";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
+import { CountryNotReady } from "../../_components/SearchConsoleNotices";
 import { formatPosition, formatRate } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
 import { figureColumns, useSearchConsoleList, type ChipId, type ListSummary } from "../../_components/SearchConsoleTables";
+import { countryArg, useSearchConsoleCountry } from "../../_components/useSearchConsole";
 
-const CHIPS: readonly ChipId[] = ["brand", "band", "country", "device"];
+const CHIPS: readonly ChipId[] = ["brand", "band", "device"];
 
 type Split = NonNullable<ListSummary["brand"]>["now"];
 
@@ -27,7 +29,10 @@ const shareOf = (split: Split) => (split.brandClicks + split.nonBrandClicks > 0 
  * Brand and non-brand (search-console-plan.md §13.3, drawn as "14 · Brand
  * and non-brand"): clicks from searches using the website's brand words —
  * the brand names and misspellings in its Profile — against every other
- * search, week by week, and each keyword marked one or the other.
+ * search, week by week, and each keyword marked one or the other. In the
+ * country chosen (search-console-plan.md §16): the weeks are added up
+ * collection by collection, so a country the website does not keep ready has
+ * no chart, and its list is asked of Google.
  */
 export default function SearchConsoleBrandPage() {
   const t = useTranslations("searchConsole");
@@ -35,7 +40,9 @@ export default function SearchConsoleBrandPage() {
   const recordHref = useRecordHref(list.siteId);
   const held = Boolean(list.status?.connection?.newestDay);
   const words = useQuery(api.searchConsoleChanges.searchConsoleBrandWords, { siteId: list.siteId });
-  const weeks = useQuery(api.searchConsolePeriods.searchConsoleWeeks, held ? { siteId: list.siteId, searchType: list.kind } : "skip");
+  const [country] = useSearchConsoleCountry();
+  const figures = useQuery(api.searchConsolePeriods.searchConsoleWeekFigures, held ? { siteId: list.siteId, searchType: list.kind, ...countryArg(country) } : "skip");
+  const weeks = figures?.weeks;
   const split = list.summary?.brand ?? null;
   const days = list.range.days;
   const host = list.status?.host ?? "";
@@ -102,31 +109,35 @@ export default function SearchConsoleBrandPage() {
         ],
       }}
     >
-      <SearchConsoleChartCard
-        title={t("brand.chartTitle")}
-        hint={t("brand.chartHint")}
-        exportName={`${host}-search-console-brand-weeks`}
-        host={host}
-        from={weeks?.[0]?.week ?? null}
-        to={list.status?.connection?.newestDay ?? null}
-        csv={() => toCsv([t("chart.week"), t("filters.brandYes"), t("filters.brandNo")], (weeks ?? []).map((week) => [week.week, week.brandClicks, week.otherClicks]))}
-      >
-        {weeks === undefined ? (
-          <div className="h-[280px] animate-pulse rounded-xl bg-sidebar/30" aria-busy="true" />
-        ) : points.length === 0 ? (
-          <p className="py-10 text-center text-[13px] text-secondary">{t("chart.nothing")}</p>
-        ) : (
-          <SiteLineChart
-            height={280}
-            data={points}
-            series={[
-              { key: "brand", name: t("filters.brandYes"), colour: SITE_SERIES_COLOURS[3] },
-              { key: "other", name: t("filters.brandNo"), colour: SITE_SERIES_COLOURS[0] },
-            ]}
-            sharedScale
-          />
-        )}
-      </SearchConsoleChartCard>
+      {country && figures?.notReady ? <CountryNotReady country={country} /> : (
+        <SearchConsoleChartCard
+          title={t("brand.chartTitle")}
+          hint={t("brand.chartHint")}
+          exportName={`${host}-search-console-brand-weeks`}
+          host={host}
+          from={weeks?.[0]?.week ?? null}
+          to={list.status?.connection?.newestDay ?? null}
+          csv={() => toCsv([t("chart.week"), t("filters.brandYes"), t("filters.brandNo")], (weeks ?? []).map((week) => [week.week, week.brandClicks, week.otherClicks]))}
+        >
+          {weeks === undefined ? (
+            <div className="h-[280px] animate-pulse rounded-xl bg-sidebar/30" aria-busy="true" />
+          ) : figures?.preparing ? (
+            <p className="py-10 text-center text-[13px] text-secondary">{t("chart.preparing")}</p>
+          ) : points.length === 0 ? (
+            <p className="py-10 text-center text-[13px] text-secondary">{t("chart.nothing")}</p>
+          ) : (
+            <SiteLineChart
+              height={280}
+              data={points}
+              series={[
+                { key: "brand", name: t("filters.brandYes"), colour: SITE_SERIES_COLOURS[3] },
+                { key: "other", name: t("filters.brandNo"), colour: SITE_SERIES_COLOURS[0] },
+              ]}
+              sharedScale
+            />
+          )}
+        </SearchConsoleChartCard>
+      )}
     </SearchConsoleListScreen>
   );
 }

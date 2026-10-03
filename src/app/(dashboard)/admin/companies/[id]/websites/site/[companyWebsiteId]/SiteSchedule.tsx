@@ -1,15 +1,15 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
+import { MapPin } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { DEFAULT_LOCATION_CODE, SEO_LOCATIONS } from "@/convex/utils/seoLocations";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
-import { Select } from "@/src/ui/components/screens/Select";
-import { FieldHint, FieldLabel, SettingsCard, SettingSwitch } from "@/src/ui/components/screens/SettingsCard";
+import { SettingsCard, SettingSwitch } from "@/src/ui/components/screens/SettingsCard";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { SeoScheduleFields } from "@/src/app/(dashboard)/admin/_components/SeoScheduleFields";
 import {
@@ -42,12 +42,15 @@ function hydrateSeoDraft(intervalStr?: string | null): ScheduleDraft {
 }
 
 /**
- * How often this site is collected, and where from — the two settings that
- * genuinely differ between two companies watching one host.
+ * How often this site is collected — the setting that genuinely differs
+ * between two companies watching one host. Where it is watched from moved to
+ * its Market page on 2026-10-03, beside where it trades, so the two place
+ * settings sit together and nothing is set twice (docs/plans/active/
+ * search-console-plan.md §16); a line here says where it went.
  *
- * A card on the website's Schedule and limits page, beside how much of it is
- * kept (docs/plans/active/websites-section-menu-plan.md) — it was a dialog in
- * the website's header until 2026-09-28, one of four places its settings sat.
+ * A card on the website's Schedules page (docs/plans/active/
+ * websites-section-menu-plan.md) — it was a dialog in the website's header
+ * until 2026-09-28, one of four places its settings sat.
  * The schedule is built on `SeoScheduleFields`, the same control the company
  * screen uses — four cadences, no hourly pull, no list of exact times, because
  * every pull is money on a service billed per call. What is stored is only the
@@ -57,30 +60,30 @@ function hydrateSeoDraft(intervalStr?: string | null): ScheduleDraft {
 export function SiteSchedule({
   companyWebsiteId,
   host,
+  marketHref,
 }: {
   companyWebsiteId: Id<"companyWebsites">;
   host: string;
+  /** The website's Market page, where it is watched from is set. */
+  marketHref: string;
 }) {
   const t = useTranslations("admin.companyWebsiteDetail");
-  const tPlace = useTranslations("admin.companyWebsiteDetail.location");
   const tCommon = useTranslations("common");
 
   const website = useQuery(api.websites.getCompanyWebsiteById, { id: companyWebsiteId });
   const scheduleSummary = useScheduleSummary();
   const setSchedule = useMutation(api.websites.setCompanyWebsiteSchedule);
-  const setLocation = useMutation(api.websites.setCompanyWebsiteLocation);
   const action = useAdminAction({ scope: "admin-site-settings" });
 
   // Adopted once per saved state, keyed on the row's id and its stored values,
   // so an edit in progress survives the query refreshing underneath it.
   const adoptKey = website
-    ? `${website._id}:${website.refreshIntervalStr ?? ""}:${String(website.collectionEnabled)}:${website.locationCode ?? ""}`
+    ? `${website._id}:${website.refreshIntervalStr ?? ""}:${String(website.collectionEnabled)}`
     : null;
   const [adopted, setAdopted] = useState<string | null>(null);
   const [overriding, setOverriding] = useState(false);
   const [draft, setDraft] = useState<ScheduleDraft>(createDefaultScheduleDraft());
   const [collecting, setCollecting] = useState(true);
-  const [place, setPlace] = useState<number>(DEFAULT_LOCATION_CODE);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
 
@@ -89,7 +92,6 @@ export function SiteSchedule({
     setOverriding(Boolean(website.refreshIntervalStr));
     setDraft(hydrateSeoDraft(website.refreshIntervalStr ?? website.companyIntervalStr));
     setCollecting(website.collectionEnabled ?? website.effective.active);
-    setPlace(website.locationCode ?? DEFAULT_LOCATION_CODE);
     setError("");
   }
 
@@ -106,8 +108,6 @@ export function SiteSchedule({
       }
     }
 
-    const savedPlace = website.locationCode ?? DEFAULT_LOCATION_CODE;
-    const chosen = SEO_LOCATIONS.find((location) => location.code === place);
     const outcome = await action.run(
       async () => {
         await setSchedule({
@@ -117,14 +117,6 @@ export function SiteSchedule({
           refreshIntervalStr: overriding ? serializeScheduleDraft(draft) : undefined,
           collectionEnabled: overriding ? collecting : undefined,
         });
-        if (place !== savedPlace) {
-          const isDefault = place === DEFAULT_LOCATION_CODE;
-          await setLocation({
-            companyWebsiteId,
-            locationCode: isDefault ? null : place,
-            locationLabel: isDefault ? null : chosen?.label ?? null,
-          });
-        }
       },
       { suppressErrorToast: true, fallbackMessage: t("errors.settingsFailed") },
     );
@@ -182,27 +174,17 @@ export function SiteSchedule({
             </div>
           ) : null}
 
-          <div className="flex flex-col gap-2 border-t border-border-dim pt-5">
-            <FieldLabel htmlFor="site-place">{tPlace("title")}</FieldLabel>
-            <Select
-              id="site-place"
-              value={place}
-              onChange={(value) => touched(setPlace)(Number(value))}
-              className="w-full sm:w-[320px]"
-            >
-              {SEO_LOCATIONS.map((location) => (
-                <option key={location.code} value={location.code}>
-                  {location.label}
-                </option>
-              ))}
-            </Select>
-            <FieldHint>{tPlace("subtitle")}</FieldHint>
-          </div>
-
           <div className="flex flex-col gap-2 border-t border-border-dim pt-4">
             <p className="text-[13px] text-foreground">{summary()}</p>
             <p className="text-[12px] text-muted">{t("competitorsFollow")}</p>
             <p className="text-[12px] text-muted">{t("askedLive")}</p>
+            <Link
+              href={marketHref}
+              className="flex w-fit items-center gap-1.5 text-[12px] text-secondary transition-colors hover:text-foreground"
+            >
+              <MapPin className="h-3.5 w-3.5" aria-hidden="true" />
+              {t("placeOnMarket")}
+            </Link>
           </div>
 
           <SaveError>{error}</SaveError>

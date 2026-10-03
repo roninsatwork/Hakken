@@ -17,7 +17,15 @@ import { formatPosition, formatRate, readerLanguage } from "../../_components/se
 import { NothingOfKind, ResultKindSwitch, SearchConsoleGate, hasFigures } from "../../_components/SearchConsoleNotices";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useLiveAsk } from "../../_components/searchConsoleRecords";
-import { useResultKind, useSearchConsoleRange, useSearchConsoleSiteId, useSearchConsoleStatus, type ResultKind } from "../../_components/useSearchConsole";
+import {
+  countryArg,
+  useResultKind,
+  useSearchConsoleCountry,
+  useSearchConsoleRange,
+  useSearchConsoleSiteId,
+  useSearchConsoleStatus,
+  type ResultKind,
+} from "../../_components/useSearchConsole";
 
 type Split = { key: string; name: string; clicks: number; impressions: number; ctr: number; position: number; share: number };
 
@@ -43,33 +51,38 @@ function ShareCell({ share }: { share: number }) {
 
 /**
  * A short list for the dates chosen: the ready-made period's, or — for other
- * dates — asked of Google (search-console-plan.md §14.3, item 4).
+ * dates, or a country the website does not keep ready — asked of Google
+ * (search-console-plan.md §14.3, item 4; §16).
  */
-function useSplitList(ask: { siteId: Id<"companyWebsites">; searchType: ResultKind; from: string; to: string; dimension: "country" | "device" } | null) {
+function useSplitList(ask: { siteId: Id<"companyWebsites">; searchType: ResultKind; from: string; to: string; dimension: "country" | "device"; country?: string } | null) {
   const server = useQuery(api.searchConsoleLists.searchConsoleSplitList, ask ?? "skip");
   const live = useLiveAsk(api.searchConsoleLists.searchConsoleLiveList, server?.live && ask ? ask : null);
   if (!server?.live) return server;
   if (live.answer === undefined) return undefined;
-  return { rows: live.answer.ok ? live.answer.rows : [], preparing: false };
+  return { rows: live.answer.ok ? live.answer.rows.flat() : [], preparing: false };
 }
 
 /**
  * Where a website's clicks came from, and on what (docs/plans/active/
  * search-console-plan.md §5.4): a table of countries and one of devices, each
- * with its share of the clicks, for the dates and kind of result chosen. Each
- * table sorts and pages apart from the other.
+ * with its share of the clicks, for the dates and kind of result chosen. The
+ * countries are every country whatever the country chosen; the devices
+ * follow the choice (search-console-plan.md §16). Each table sorts and pages
+ * apart from the other.
  */
 export default function SearchConsolePlacesPage() {
   const t = useTranslations("searchConsole");
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
   const [kind] = useResultKind();
+  const [country] = useSearchConsoleCountry();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
   const held = Boolean(status && hasFigures(status));
   const base = { siteId, searchType: kind, from: range.from, to: range.to };
+  // Every country, always; the devices in the country chosen.
   const countryList = useSplitList(held ? { ...base, dimension: "country" } : null);
-  const deviceList = useSplitList(held ? { ...base, dimension: "device" } : null);
-  const countryCopy = { building: Boolean(countryList?.preparing), behind: false };
+  const deviceList = useSplitList(held ? { ...base, dimension: "device", ...countryArg(country) } : null);
+  const countryCopy = { building: Boolean(countryList?.preparing || deviceList?.preparing), behind: false };
   const language = readerLanguage();
   const countries = countryList?.preparing ? undefined : countryList?.rows.map((row) => ({
     ...row,

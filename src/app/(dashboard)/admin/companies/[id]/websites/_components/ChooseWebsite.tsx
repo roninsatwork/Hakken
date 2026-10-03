@@ -2,20 +2,24 @@
 
 import { useState } from "react";
 import { useQuery } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import { useParams, useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Globe } from "lucide-react";
 
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { DataTable } from "@/src/ui/components/screens/DataTable";
+import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { SECTION_ICONS, pageApplies, sectionHref, type SectionPageId } from "./websitesSection";
 
 /** The pages kept for one website at a time, which ask for one when All websites is chosen. */
-export type OneWebsitePage = Extract<SectionPageId, "competitors" | "names" | "todo" | "rankings" | "answers">;
+export type OneWebsitePage = Extract<SectionPageId, "competitors" | "names" | "market" | "todo" | "rankings" | "answers">;
+
+/** One website on the list, as the section's chooser offers it. */
+export type WebsiteChoice = FunctionReturnType<typeof api.websites.listWebsiteChoices>[number];
 
 /**
  * A page kept for each website, opened with All websites chosen
@@ -23,8 +27,17 @@ export type OneWebsitePage = Extract<SectionPageId, "competitors" | "names" | "t
  * websites that have it — a company's own sites for competitors, its to-do
  * list and AI answers; every website for names and rankings — each opening
  * the page for it, as choosing it at the top of the menu does.
+ *
+ * `columns` adds columns after Website and Type, for a page whose All-websites
+ * view says what each website has set on it — Market, each one's countries and
+ * place (search-console-plan.md §16) — with `loading` while what they read is
+ * on its way.
  */
-export function ChooseWebsite({ page }: { page: OneWebsitePage }) {
+export function ChooseWebsite({ page, columns = [], loading = false }: {
+  page: OneWebsitePage;
+  columns?: DataTableColumn<WebsiteChoice>[];
+  loading?: boolean;
+}) {
   const t = useTranslations("admin.websitesSection");
   const params = useParams();
   const router = useRouter();
@@ -45,7 +58,7 @@ export function ChooseWebsite({ page }: { page: OneWebsitePage }) {
         description={t(`choose.${page}`)}
       />
       <DataTable
-        rows={shown}
+        rows={loading ? undefined : shown}
         rowKey={(row) => row.companyWebsiteId}
         onRowClick={(row) => router.push(sectionHref(companyId, page, { siteId: row.companyWebsiteId, relationship: row.relationship }))}
         empty={{ icon: <Globe className="h-8 w-8 text-muted/30" />, label: t("choose.empty") }}
@@ -55,7 +68,7 @@ export function ChooseWebsite({ page }: { page: OneWebsitePage }) {
           totalPages,
           totalCount: websites?.length ?? 0,
           pageSize: TABLE_PAGE_SIZE,
-          isLoading: choices === undefined,
+          isLoading: choices === undefined || loading,
           onPageChange: setPageNumber,
           labels: { empty: t("choose.empty") },
         }}
@@ -79,6 +92,7 @@ export function ChooseWebsite({ page }: { page: OneWebsitePage }) {
                 </div>
               ),
           },
+          ...columns,
         ]}
       />
     </div>

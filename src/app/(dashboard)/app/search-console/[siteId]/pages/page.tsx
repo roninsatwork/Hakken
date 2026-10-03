@@ -14,7 +14,7 @@ import { TrackedCount, figureColumns, trackColumn, useSearchConsoleList, useSear
  * folders; a Page type chip from Sites stands in its place for every
  * website (noted for Anthony, 2026-10-03).
  */
-const CHIPS: readonly ChipId[] = ["tracked", "band", "pageType", "country", "device"];
+const CHIPS: readonly ChipId[] = ["tracked", "band", "pageType", "device"];
 
 /**
  * Pages (search-console-plan.md §13.2, drawn as "1 · Pages"): every page

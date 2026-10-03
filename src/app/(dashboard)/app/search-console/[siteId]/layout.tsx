@@ -13,13 +13,15 @@ import { formatDateTime } from "@/src/lib/dates";
 import { SiteDateRange } from "../../sites/_components/SiteDateRange";
 import { formatDay } from "../../sites/_components/siteFormat";
 import { sharedSiteQuery } from "../../sites/_components/useSiteParam";
+import { CountryAskedNote, SearchConsoleCountryPicker } from "../_components/SearchConsoleCountryPicker";
 import { SearchConsoleMenu } from "../_components/SearchConsoleMenu";
 import { ConnectionBanner } from "../_components/SearchConsoleNotices";
 import { searchConsoleQuery, useSearchConsoleSiteId, useSearchConsoleStatus } from "../_components/useSearchConsole";
 
 /**
  * One website in the Search Console section: its header, the switch between
- * the company's own websites, the shared date range, the menu, and the page.
+ * the company's own websites, the country choice beside the shared date range
+ * (search-console-plan.md §16), the menu, and the page.
  * A website opens on top of the section's list, so it wears the record-level
  * header with the way back (docs/developer/screen-kit.md, "Headers"). Read
  * through the caller's own hold: another company's website answers exactly
@@ -89,6 +91,7 @@ export default function SearchConsoleSiteLayout({ children }: { children: React.
                   {status.ownSites.map((site) => <option key={site.siteId} value={site.siteId}>{site.host}</option>)}
                 </Select>
               ) : null}
+              <SearchConsoleCountryPicker />
               <SiteDateRange />
             </div>
           }
@@ -105,6 +108,7 @@ export default function SearchConsoleSiteLayout({ children }: { children: React.
             {connection?.newestDay && state !== "CHOOSING" ? (
               <p className="text-[12px] text-muted">
                 {t("figuresTo", { day: formatDay(connection.newestDay) })}
+                <CountryAskedNote />
               </p>
             ) : null}
             {children}

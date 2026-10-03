@@ -374,7 +374,7 @@ async function connectTo(
     problem: undefined,
     problemAt: undefined,
     ...(another
-      ? { clearing: true, newestDay: undefined, oldestDay: undefined, backfilledAt: undefined, historyAt: undefined }
+      ? { clearing: true, newestDay: undefined, oldestDay: undefined, countriesHeld: undefined, backfilledAt: undefined, historyAt: undefined }
       : {}),
     updatedAt: now,
   });

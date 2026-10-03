@@ -16,10 +16,12 @@ import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { SearchConsoleChart } from "../../_components/SearchConsoleChart";
-import { ResultKindSwitch, SearchConsoleGate } from "../../_components/SearchConsoleNotices";
+import { useSiteFiguresFor } from "../../_components/SearchConsoleFigures";
+import { LiveProblem, ResultKindSwitch, SearchConsoleGate, liveProblemKey } from "../../_components/SearchConsoleNotices";
 import { formatPosition } from "../../_components/searchConsoleFormat";
+import { useLiveAsk } from "../../_components/searchConsoleRecords";
 import { BeforeAfter } from "../../_components/SearchConsoleTables";
-import { useResultKind, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
+import { countryArg, useResultKind, useSearchConsoleCountry, useSearchConsoleSiteId, useSearchConsoleStatus } from "../../_components/useSearchConsole";
 
 type Update = {
   key: string;
@@ -51,6 +53,8 @@ const titleOf = (row: Update) => row.title;
  * average position the 14 days before it began against the 14 days after it
  * finished — beside its clicks day by day with every update marked, as the
  * Sites charts mark them. The updates are Admin → Content → Google updates.
+ * In the country chosen: from its own days when the website keeps it ready,
+ * otherwise asked of Google (search-console-plan.md §16).
  */
 export default function SearchConsoleUpdatesPage() {
   const t = useTranslations("searchConsole");
@@ -58,14 +62,18 @@ export default function SearchConsoleUpdatesPage() {
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
   const [kind] = useResultKind();
+  const [country] = useSearchConsoleCountry();
   const [search, setSearch, term] = useSiteSearch();
   const [finished, setFinished] = useSiteParam<"" | "done" | "rolling">("finished", "", ["", "done", "rolling"]);
   const held = Boolean(status?.connection?.newestDay);
-  const answer = useQuery(api.searchConsoleChanges.searchConsoleUpdates, held ? { siteId, searchType: kind, language } : "skip");
-  const days = useQuery(
-    api.searchConsoleReads.searchConsolePerformance,
-    answer?.from && answer.to ? { siteId, searchType: kind, from: answer.from, to: answer.to } : "skip",
-  );
+  const kept = useQuery(api.searchConsoleChanges.searchConsoleUpdates, held ? { siteId, searchType: kind, language, ...countryArg(country) } : "skip");
+  // A country the website does not keep ready: the same answer, asked of Google.
+  const live = useLiveAsk(api.searchConsoleChanges.searchConsoleLiveUpdates, held && country && kept?.live ? { siteId, searchType: kind, language, country } : null);
+  const answer = kept?.live ? (live.answer === undefined ? undefined : live.answer.ok ? live.answer : { from: null, to: null, updates: [] }) : kept;
+  const problem = kept?.live && live.answer && !live.answer.ok ? live.answer.problem : null;
+  const days = useSiteFiguresFor(answer?.from && answer.to ? { siteId, searchType: kind, from: answer.from, to: answer.to } : null);
+  // Google out of reach for the updates, or for the days the chart draws.
+  const chartProblem = problem ?? days.problem;
   const rows: Update[] | undefined = answer?.updates.map((update) => ({
     key: update.id,
     title: update.title,
@@ -92,10 +100,12 @@ export default function SearchConsoleUpdatesPage() {
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
           <ResultKindSwitch />
-          {days && answer?.from && answer.to ? (
+          {chartProblem ? (
+            <LiveProblem problem={chartProblem} retry={problem ? live.retry : days.retry} />
+          ) : days.figures && answer?.from && answer.to ? (
             <SearchConsoleChart
               title={t("updates.chartTitle")}
-              days={days.days}
+              days={days.figures.days}
               range={{ from: answer.from, to: answer.to, step: "day" }}
               held={{ from: answer.from, to: answer.to }}
               host={host}
@@ -122,7 +132,7 @@ export default function SearchConsoleUpdatesPage() {
             }
             cardHeader={<TableBar footer={pager.footer} noun="updates" />}
             sort={tableSort}
-            empty={{ icon: <CalendarClock className="h-8 w-8 text-muted/30" />, label: term || finished ? t("table.noMatch") : t("updates.empty") }}
+            empty={{ icon: <CalendarClock className="h-8 w-8 text-muted/30" />, label: problem ? t(liveProblemKey(problem)) : term || finished ? t("table.noMatch") : t("updates.empty") }}
             footer={pager.footer}
             columns={[
               { key: "title", header: t("table.update"), sortable: true, className: CUT_COLUMN.first, cell: (row) => <span className="block truncate text-[13px] text-foreground">{row.title}</span> },

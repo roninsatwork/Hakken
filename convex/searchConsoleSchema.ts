@@ -150,6 +150,12 @@ export const searchConsoleTables = {
     /** The newest and oldest days held, and when sixteen months were first all in. */
     newestDay: v.optional(v.string()),
     oldestDay: v.optional(v.string()),
+    /**
+     * The same, for each country kept ready (§16): a country new to the list
+     * holds nothing, so its first run fetches the same 90 days. Dropped when
+     * the country's figures are cleared, so a country put back starts again.
+     */
+    countriesHeld: v.optional(v.array(v.object({ country: v.string(), newestDay: v.string(), oldestDay: v.string() }))),
     backfilledAt: v.optional(v.number()),
     /** When the history last took a step: one quiet for an hour has stopped, and the daily job resumes it. */
     historyAt: v.optional(v.number()),
@@ -185,6 +191,8 @@ export const searchConsoleTables = {
   /** A day's totals, rare searches Google hides included. */
   searchConsoleDays: defineTable({
     companyWebsiteId: v.id("companyWebsites"),
+    /** One country's figures (Google's `gbr`), kept ready because the website trades there; missing means all countries (§16). */
+    country: v.optional(v.string()),
     searchType: searchTypeValidator,
     day: v.string(),
     ...figures,
@@ -195,7 +203,7 @@ export const searchConsoleTables = {
     namedClicks: v.optional(v.number()),
     /** The collection that last wrote it: a day fetched again drops what that fetch did not return. */
     fetchedAt: v.number(),
-  }).index("by_hold_type_day", ["companyWebsiteId", "searchType", "day"]),
+  }).index("by_hold_country_type_day", ["companyWebsiteId", "country", "searchType", "day"]),
 
   /**
    * What was collected, kept as the screens read it (plan §14.3): one record
@@ -205,6 +213,8 @@ export const searchConsoleTables = {
    */
   searchConsoleLists: defineTable({
     companyWebsiteId: v.id("companyWebsites"),
+    /** One country's figures (Google's `gbr`), kept ready because the website trades there; missing means all countries (§16). */
+    country: v.optional(v.string()),
     searchType: searchTypeValidator,
     list: listValidator,
     grain: grainValidator,
@@ -212,7 +222,7 @@ export const searchConsoleTables = {
     part: v.number(),
     ...packedRows,
     fetchedAt: v.number(),
-  }).index("by_hold_type_list_grain_start", ["companyWebsiteId", "searchType", "list", "grain", "start", "part"]),
+  }).index("by_hold_country_type_list_grain_start", ["companyWebsiteId", "country", "searchType", "list", "grain", "start", "part"]),
 
   /**
    * The ready-made periods the screens read (plan §14.3, item 4): for the last
@@ -226,6 +236,8 @@ export const searchConsoleTables = {
    */
   searchConsolePeriods: defineTable({
     companyWebsiteId: v.id("companyWebsites"),
+    /** One country's figures (Google's `gbr`), kept ready because the website trades there; missing means all countries (§16). */
+    country: v.optional(v.string()),
     searchType: searchTypeValidator,
     list: periodListValidator,
     period: periodValidator,
@@ -240,7 +252,7 @@ export const searchConsoleTables = {
     volumes: v.optional(v.array(v.number())),
     estimates: v.optional(v.array(v.number())),
     builtAt: v.number(),
-  }).index("by_hold_type_list_period", ["companyWebsiteId", "searchType", "list", "period", "which", "part"]),
+  }).index("by_hold_country_type_list_period", ["companyWebsiteId", "country", "searchType", "list", "period", "which", "part"]),
 
   /**
    * Each week's keywords by band of Google's average position, and its clicks
@@ -250,6 +262,8 @@ export const searchConsoleTables = {
    */
   searchConsoleWeeks: defineTable({
     companyWebsiteId: v.id("companyWebsites"),
+    /** One country's figures (Google's `gbr`), kept ready because the website trades there; missing means all countries (§16). */
+    country: v.optional(v.string()),
     searchType: searchTypeValidator,
     /** The Monday the week starts on. */
     week: v.string(),
@@ -260,19 +274,21 @@ export const searchConsoleTables = {
     brandClicks: v.number(),
     otherClicks: v.number(),
     builtAt: v.number(),
-  }).index("by_hold_type_week", ["companyWebsiteId", "searchType", "week"]),
+  }).index("by_hold_country_type_week", ["companyWebsiteId", "country", "searchType", "week"]),
 
   /** When each search and each page was first and last shown, for New and lost (plan §14.3, item 6). Web results. */
   searchConsoleSeen: defineTable({
     companyWebsiteId: v.id("companyWebsites"),
+    /** One country's figures (Google's `gbr`), kept ready because the website trades there; missing means all countries (§16). */
+    country: v.optional(v.string()),
     kind: v.union(v.literal("query"), v.literal("page")),
     key: v.string(),
     firstDay: v.string(),
     lastDay: v.string(),
   })
-    .index("by_hold_kind_key", ["companyWebsiteId", "kind", "key"])
-    .index("by_hold_kind_first", ["companyWebsiteId", "kind", "firstDay"])
-    .index("by_hold_kind_last", ["companyWebsiteId", "kind", "lastDay"]),
+    .index("by_hold_country_kind_key", ["companyWebsiteId", "country", "kind", "key"])
+    .index("by_hold_country_kind_first", ["companyWebsiteId", "country", "kind", "firstDay"])
+    .index("by_hold_country_kind_last", ["companyWebsiteId", "country", "kind", "lastDay"]),
 
   /**
    * The searches and pages a company tracks on its website's Search Console

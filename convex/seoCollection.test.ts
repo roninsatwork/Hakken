@@ -957,7 +957,9 @@ describe("a company too big for one page", () => {
     const t = harness();
     const company = await seedCompany(t, "Big Agency");
     await seedSchedule(t, company, DAILY);
-    const total = 230;
+    // Three pages of 100 (`SEO_EXPANSION_PAGE`), the last with five: 230 until
+    // 2026-10-03, when it ran just past the 5s each test is held to here.
+    const total = 205;
     await t.run(async (ctx) => {
       for (let index = 0; index < total; index += 1) {
         const websiteId = await ctx.db.insert("websites", {

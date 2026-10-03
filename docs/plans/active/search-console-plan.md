@@ -834,7 +834,9 @@ by hand, is Anthony's call.
 **What is where.**
 
 - `convex/utils/searchConsolePacks.ts` — packing, adding up, weeks and months.
-- `convex/searchConsoleSync.ts` — the run's steps, rollups, clearing.
+- `convex/searchConsoleSync.ts` — the run's steps and clearing.
+- `convex/searchConsoleRollups.ts` — days into weeks into months, per country (moved out of the sync file on 2026-10-03, §16).
+- `convex/searchConsoleCountries.ts` — the countries kept ready: the setting, which rows a read uses, clearing a country (§16).
 - `convex/searchConsolePeriods.ts` — the ready-made periods and the weeks the
   charts read, built after each run, one kept list at a time.
 - `convex/searchConsoleFacts.ts` — Sites' intent, monthly searches, page type
@@ -926,6 +928,101 @@ layer, and the screens — and what they found put right before morning:
 12. While the periods are rebuilt after a run, a list read at that moment can
     show part of a period for a few seconds.
 
+## 16. Countries kept ready — agreed 2026-10-03
+
+Seen on ronins.co.uk: "ai agency" showed as lost, and only its own screen
+said it was lost in Mozambique, where Ronins doesn't trade. Only 51.5% of
+the website's last 30 days' clicks came from the United Kingdom, spread
+across 213 countries. Anthony: a country choice beside the date boxes, and
+"the country dropdown will expose this".
+
+### 16.1 His decisions
+
+1. **Countries are set only in admin** — the websites section's Market page
+   (drawn on the canvas as board 18, inputs only: "this is an admin screen we
+   don't want results on it"), under What we track. "Where you watch from"
+   moves there from Schedules, as drawn, so the two place settings sit
+   together and nothing is set twice.
+2. **The choice opens on All countries.** The drawing's "Search Console
+   opens on this" goes.
+3. **Several countries per website**, in the order added, per company (like
+   the place: another company watching the same website sets its own).
+4. **Speed is important.** Each country on the website's list is collected
+   and made ready at every collection, so choosing it is as quick as all
+   countries. Any other country is asked of Google live, as other dates are.
+5. **The number is a limit, set the usual way**: "Countries kept ready per
+   website" on the Limits page (Search Console), per company and per website,
+   choices 1, 2, 3, 5 or 10, 3 until set (`consoleCountriesPerSite`). "Any
+   limit should be configurable in the usual limits way, nothing should be
+   hidden." Past it, the countries added first are kept.
+
+### 16.2 The design
+
+- **The setting**: `searchConsoleCountries` on the company's hold
+  (`companyWebsites`), Google's three-letter codes in lower case
+  (`gbr`), checked against `convex/utils/countryCodes.ts`. Set by a
+  super admin only, as the place is.
+- **What is kept**: `country` on `searchConsoleDays`, `searchConsoleLists`,
+  `searchConsolePeriods`, `searchConsoleWeeks` and `searchConsoleSeen`.
+  Missing means all countries, so every row already held stays as it is.
+  Each index leads with the hold, then the country, then what it led with
+  before, so a read of one country never passes over another's rows.
+- **Collecting**: for each country on the list, each step asks the same as
+  for all countries with Google's country filter — each kind's day totals,
+  then each day's searches-with-pages, pages, devices and search
+  appearances. No country list inside a country. A country new to the list
+  holds nothing and is fetched over the same 90 days. About 80% more Google
+  requests per country; rows in line with its share of the searches.
+- **Adding up**: the weeks-and-months roll-up, the ready-made periods, the
+  weekly figures with Sites' facts, and the seen register (new and lost) are
+  built for each country exactly as for all countries.
+- **Taking a country off**: what was kept for it is deleted in the
+  background, a chunk at a time.
+- **Reading**: every Search Console read takes an optional `country`.
+  On the list, it reads that country's ready-made figures. Not on it, it asks
+  Google live with the country filter (the path the tables' Country filter
+  used). Missing, all countries, as before.
+- **The screens**: the choice sits beside the date boxes on every Search
+  Console page (the kit's `Select`), the website's countries first, then
+  every other country; it is kept in the address (`?country=gbr`) so links
+  and the back button keep it. The Keywords and Pages tables lose their own
+  Country filter — one country choice per page. Countries and devices keeps
+  every country in its countries table; its devices follow the choice.
+
+### 16.3 As built — 2026-10-03
+
+- **Held days per country**: `countriesHeld` on the connection (country,
+  oldest and newest day), joined step by step as all countries' are. A
+  country with no entry gets the whole 90 days; taking a country off forgets
+  its held days, so putting it back fetches them all again.
+- **A run**: all countries first, then each kept country in turn, each step
+  within the same 4 minutes and 4 asks at a time. Countries past the limit
+  are cleared as the run starts.
+- **Each page with a country chosen**:
+  - kept ready — read from that country's own ready-made figures;
+  - not kept ready (or kept but not yet collected) — the figures, charts,
+    every list, the devices table, Click rate by position and Google updates
+    are asked of Google live, and the "Figures to …" line adds "Asked of
+    Google when chosen, so it takes a moment";
+  - New and lost, and the weekly charts on Position bands and Brand and
+    non-brand, can't be asked live: they say the country isn't kept ready
+    and to add it on the Market page;
+  - Countries and devices, and a keyword's or page's "Where the clicks came
+    from": every country always; devices follow the choice.
+- **Market page** (admin, What we track): "Where it trades" (countries in
+  order, Add a country, the limit with a link to Limits, any past the limit
+  marked "Not kept ready") and "Where you watch from" (moved from Schedules),
+  one Save. The last country can be removed: Search Console no longer opens
+  on it. All websites shows each website's countries and place.
+- **Files**: `searchConsoleCountries.ts` (setting, which rows a read uses,
+  clearing), `searchConsoleRollups.ts` (moved out of the sync file),
+  `searchConsoleWeekFigures` replaces `searchConsoleWeeks`.
+
+### 16.4 Limits, said
+
+- Countries kept ready per website: 1, 2, 3, 5 or 10; 3 until set.
+- Days fetched for a country new to the list: the same 90 as all countries.
+
 ## Change log
 
 - **2026-09-27** — Plan written: how Search Console integration works, what
@@ -1001,3 +1098,6 @@ layer, and the screens — and what they found put right before morning:
   in the kit's pop-up (`ConfirmationModal`), which AGENTS.md allows since
   2026-10-01 ("a pop-up is only for a yes or a no"); every screen above is
   still a screen, never a pop-up.
+- **2026-10-03** — Countries kept ready (§16): Anthony's four answers — set
+  only in admin, opens on All countries, several per website, speed matters —
+  and a limit on the Limits page, "nothing should be hidden".

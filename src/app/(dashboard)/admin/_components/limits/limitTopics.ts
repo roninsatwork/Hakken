@@ -25,7 +25,7 @@ export const LIMIT_TOPICS: readonly LimitTopic[] = [
     keys: ["anglesJudgedPerRun", "anglesJudgedPerCollection", "pagesOffered", "auditPagesRead", "rankedPagesRead", "missingAnglesSuggested"],
   },
   // Search Console's tracked lists (search-console-plan.md §13.2): free, a company's own websites only.
-  { id: "searchConsole", keys: ["consoleTrackedKeywordsPerSite", "consoleTrackedPagesPerSite"] },
+  { id: "searchConsole", keys: ["consoleTrackedKeywordsPerSite", "consoleTrackedPagesPerSite", "consoleCountriesPerSite"] },
   { id: "company", keys: ["purchasesPerCollection", "companyRowsRead"] },
   // Only the platform sets these (`convex/sharedLimits.ts`): a company's Limits
   // shows them, with where they are set, and a website's does not.
@@ -53,7 +53,8 @@ export type LimitUnit =
   | "competitors"
   | "sources"
   | "businesses"
-  | "websites";
+  | "websites"
+  | "countries";
 
 export const LIMIT_UNITS: Record<string, LimitUnit> = {
   keywordsPerSite: "keywords",
@@ -78,6 +79,7 @@ export const LIMIT_UNITS: Record<string, LimitUnit> = {
   competitorsPerSite: "competitors",
   consoleTrackedKeywordsPerSite: "keywords",
   consoleTrackedPagesPerSite: "pages",
+  consoleCountriesPerSite: "countries",
   fanOutPerAnswer: "searches",
   sourcesPerAnswer: "sources",
   businessesPerAnswer: "businesses",
