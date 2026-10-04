@@ -56,6 +56,33 @@ agent does it again. The why and the record of what was built:
   Anthony its name and why before drawing it; when it is built, add it to
   `scripts/drawing-kit/parts.tsx`.
 
+## Redrawing a built screen
+
+A canvas of a screen that is already built is drawn **as the screen now is**,
+copied from the running app rather than drawn again by hand, so the drawing
+and the app cannot disagree. This is how the nine canvases of built screens
+were redrawn on 2026-10-04.
+
+1. `npm run drawing-kit`, and upload `build/kit.css` to the canvas.
+2. Copy each screen from the running app: in a tab on localhost:3000, signed
+   in, run `scripts/drawing-kit/copy-page.js`, then
+   `await window.hakkenCopyPage("<route>", "<name>")` per screen (a third
+   argument, `390`, for a phone). Each saves `hk-snap-<name>.html` to the
+   browser's downloads — ask Anthony first — and answers with the board's
+   height. Move the copies out of Downloads when done.
+3. `node scripts/drawing-kit/from-app.mjs images <copies>…` writes the
+   pictures the copies carry; upload them to the canvas, and map each key to
+   its url in an `images.json`.
+4. Per board: `node scripts/drawing-kit/from-app.mjs board <copy> --name
+   <Board> --title "…" --height <height + 40> --kit /_blob/<kit.css> --links
+   links.json --images images.json --out <Board>.dc.html` — `links.json` maps
+   an app path to the board that draws it, so the board's links go between
+   boards. A canvas board is at most 8,000px tall; a taller screen scrolls
+   inside it.
+5. `npm run check:drawing` on every board, as for any drawing. A table that
+   scrolls sideways by approval carries the approval marker
+   (`<!-- tables-fit: approved sideways scroll (…) -->`), as Content gap's does.
+
 ## Building
 
 - Build the screen from the parts the approved drawing used, from the

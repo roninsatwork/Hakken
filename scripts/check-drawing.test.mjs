@@ -22,8 +22,10 @@ describe("check:drawing", () => {
       "colour #ff5a1f is not in hakken.theme.json or the chart palette — use a theme class",
     ]);
     expect(check(`<a href="#add" style="background: rgba(255,90,31,0.05)"></a>`)).toEqual([
-      "colour rgba(255,90,31,0.05) is written by hand — use a theme class",
+      "colour rgba(255,90,31,0.05) is not in hakken.theme.json or the chart palette — use a theme class",
     ]);
+    // The chart palette's orange, as a browser writes it back.
+    expect(check(`<span style="color: rgb(249, 115, 22)"></span>`)).toEqual([]);
   });
 
   test("the app's fonts pass; any other fails", () => {
@@ -32,9 +34,28 @@ describe("check:drawing", () => {
     expect(check(`<div style="font-family: Georgia, serif"></div>`)).toEqual(["font Georgia is not the app's — words are Inter, numbers JetBrains Mono"]);
   });
 
-  test("a table that would scroll sideways fails", () => {
+  test("a table that would scroll sideways on a laptop fails; the kit's phone-only minimum does not", () => {
     expect(check(`<div style="min-width: 900px"></div>`)).toEqual(["min-width 900px — tables fit the page; size number columns to their headings"]);
-    expect(check(`<div class="overflow-x-auto"></div>`)).toContain("sideways scrolling — tables fit the page");
+    const laptop = checkDrawing(`<table class="min-w-[900px]"></table>`, { kitCss: `${selectorFor("min-w-[900px]")}{}`, colours });
+    expect(laptop).toEqual(["min-w-[900px] — tables fit the page; size number columns to their headings"]);
+    const phoneOnly = checkDrawing(`<table class="min-w-[720px] lg:min-w-0"></table>`, { kitCss: `${selectorFor("min-w-[720px]")}{} ${selectorFor("lg:min-w-0")}{}`, colours });
+    expect(phoneOnly).toEqual([]);
     expect(check(`<div style="min-width: 240px"></div>`)).toEqual([]);
+  });
+
+  test("a class written escaped in HTML is read as the class it is", () => {
+    const css = `${selectorFor("[&>p]:mb-0")}{}`;
+    expect(checkDrawing(`<div class="[&amp;&gt;p]:mb-0"></div>`, { kitCss: css, colours })).toEqual([]);
+  });
+
+  test("the one table approved to scroll sideways says so and is let through", () => {
+    const css = `${selectorFor("min-w-[1100px]")}{}`;
+    expect(checkDrawing(`<table class="min-w-[1100px]"></table>`, { kitCss: css, colours })).toHaveLength(1);
+    expect(checkDrawing(`<!-- tables-fit: approved sideways scroll (Content gap, 2026-09-30) --><table class="min-w-[1100px]"></table>`, { kitCss: css, colours })).toEqual([]);
+  });
+
+  test("the chart library's class names, and the app's own markers, are not invented parts", () => {
+    expect(checkDrawing(`<g class="recharts-layer xAxis"></g><div class="custom-scrollbar"></div>`, { kitCss, colours, appSource: "className=\"custom-scrollbar\"" })).toEqual([]);
+    expect(checkDrawing(`<div class="made-up-part"></div>`, { kitCss, colours, appSource: "" })).toHaveLength(1);
   });
 });

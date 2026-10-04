@@ -4,217 +4,217 @@
   "boards": {
     "Keyword.dc.html": {
       "expand": "fill",
-      "h": 1420,
+      "h": 1593,
       "is_interactive": true,
-      "title": "3 · A keyword's detail: everything about it, and the pages it brought people to",
+      "title": "3 \u00b7 A keyword's detail: everything about it, and the pages it brought people to",
       "w": 1440,
       "x": 3040,
       "y": 0
     },
     "Keywords.dc.html": {
       "expand": "fill",
-      "h": 1820,
+      "h": 2147,
       "is_interactive": true,
-      "title": "4 · Keywords",
+      "title": "4 \u00b7 Keywords",
       "w": 1440,
       "x": 4560,
       "y": 0
     },
     "Main.dc.html": {
       "expand": "fill",
-      "h": 1820,
+      "h": 2163,
       "is_interactive": true,
-      "title": "1 · Pages",
+      "title": "1 \u00b7 Pages",
       "w": 1440,
       "x": 0,
       "y": 0
     },
     "Page.dc.html": {
       "expand": "fill",
-      "h": 2320,
+      "h": 2840,
       "is_interactive": true,
-      "title": "2 · A page's detail: everything about it, and the keywords that brought people to it",
+      "title": "2 \u00b7 A page's detail: everything about it, and the keywords that brought people to it",
       "w": 1440,
       "x": 1520,
       "y": 0
     },
     "Bands.dc.html": {
       "x": 0,
-      "y": 2720,
+      "y": 3220,
       "w": 1440,
-      "h": 2410,
-      "title": "5 · Position bands",
+      "h": 2561,
+      "title": "5 \u00b7 Position bands",
       "expand": "fill",
       "is_interactive": true
     },
     "NewLost.dc.html": {
       "x": 1520,
-      "y": 2720,
+      "y": 3220,
       "w": 1440,
-      "h": 1904,
-      "title": "6 · New and lost",
+      "h": 2586,
+      "title": "6 \u00b7 New and lost",
       "expand": "fill",
       "is_interactive": true
     },
     "Moves.dc.html": {
       "x": 3040,
-      "y": 2720,
+      "y": 3220,
       "w": 1440,
-      "h": 1510,
-      "title": "7 · Wins and losses",
+      "h": 2109,
+      "title": "7 \u00b7 Wins and losses",
       "expand": "fill",
       "is_interactive": true
     },
     "Updates.dc.html": {
       "x": 4560,
-      "y": 2720,
+      "y": 3220,
       "w": 1440,
-      "h": 1500,
-      "title": "8 · Google updates",
+      "h": 1213,
+      "title": "8 \u00b7 Google updates",
       "expand": "fill",
       "is_interactive": true
     },
     "Almost.dc.html": {
       "x": 0,
-      "y": 5530,
+      "y": 6186,
       "w": 1440,
-      "h": 1556,
-      "title": "9 · Almost there",
+      "h": 2147,
+      "title": "9 \u00b7 Almost there",
       "expand": "fill",
       "is_interactive": true
     },
     "LowCtr.dc.html": {
       "x": 1520,
-      "y": 5530,
+      "y": 6186,
       "w": 1440,
-      "h": 1372,
-      "title": "10 · Shown but not clicked",
+      "h": 1434,
+      "title": "10 \u00b7 Shown but not clicked",
       "expand": "fill",
       "is_interactive": true
     },
     "Demand.dc.html": {
       "x": 3040,
-      "y": 5530,
+      "y": 6186,
       "w": 1440,
-      "h": 1372,
-      "title": "11 · Missed demand",
+      "h": 2147,
+      "title": "11 \u00b7 Missed demand",
       "expand": "fill",
       "is_interactive": true
     },
     "Competing.dc.html": {
       "x": 4560,
-      "y": 5530,
+      "y": 6186,
       "w": 1440,
-      "h": 1280,
-      "title": "12 · Pages competing",
+      "h": 2109,
+      "title": "12 \u00b7 Pages competing",
       "expand": "fill",
       "is_interactive": true
     },
     "Types.dc.html": {
       "x": 0,
-      "y": 7486,
+      "y": 8713,
       "w": 1440,
-      "h": 1620,
-      "title": "13 · Types",
+      "h": 1903,
+      "title": "13 \u00b7 Types",
       "expand": "fill",
       "is_interactive": true
     },
     "Brand.dc.html": {
       "x": 1520,
-      "y": 7486,
+      "y": 8713,
       "w": 1440,
-      "h": 2440,
-      "title": "14 · Brand and non-brand",
+      "h": 2579,
+      "title": "14 \u00b7 Brand and non-brand",
       "expand": "fill",
       "is_interactive": true
     },
     "CtrCurve.dc.html": {
       "x": 3040,
-      "y": 7486,
+      "y": 8713,
       "w": 1440,
-      "h": 2050,
-      "title": "15 · Click rate by position",
+      "h": 2164,
+      "title": "15 \u00b7 Click rate by position",
       "expand": "fill",
       "is_interactive": true
     },
     "Appearance.dc.html": {
       "x": 4560,
-      "y": 7486,
+      "y": 8713,
       "w": 1440,
-      "h": 1004,
-      "title": "16 · Rich results",
+      "h": 1040,
+      "title": "16 \u00b7 Rich results",
       "expand": "fill",
       "is_interactive": true
     },
     "Estimates.dc.html": {
       "x": 6080,
-      "y": 7486,
+      "y": 8713,
       "w": 1440,
-      "h": 1372,
-      "title": "17 · Real against estimated",
+      "h": 2129,
+      "title": "17 \u00b7 Real against estimated",
       "expand": "fill",
       "is_interactive": true
     },
     "Market.dc.html": {
       "x": 0,
-      "y": 10380,
+      "y": 11672,
       "w": 1440,
-      "h": 960,
-      "title": "18 · Market: where a website trades, and where it's watched from (Admin → Companies → website)",
+      "h": 1186,
+      "title": "18 \u00b7 Market: where a website trades, and where it's watched from (Admin \u2192 Companies \u2192 website)",
       "expand": "fill",
       "is_interactive": true
     },
     "TrackedKeywords.dc.html": {
       "x": 0,
-      "y": 11900,
+      "y": 13238,
       "w": 1440,
-      "h": 1300,
-      "title": "19 · Search Console: Tracked keywords (new Tracked group, first in the menu)",
+      "h": 1103,
+      "title": "19 \u00b7 Search Console: Tracked keywords (new Tracked group, first in the menu)",
       "expand": "fill",
       "is_interactive": true
     },
     "TrackedPages.dc.html": {
       "x": 1520,
-      "y": 11900,
+      "y": 13238,
       "w": 1440,
-      "h": 1220,
-      "title": "20 · Search Console: Tracked pages",
+      "h": 1119,
+      "title": "20 \u00b7 Search Console: Tracked pages",
       "expand": "fill",
       "is_interactive": true
     },
     "TrackedFanOut.dc.html": {
       "x": 3040,
-      "y": 11900,
+      "y": 13238,
       "w": 1440,
-      "h": 1120,
-      "title": "21 · Sites: Tracked fan-out queries (beside Your searches)",
+      "h": 1040,
+      "title": "21 \u00b7 Sites: Tracked fan-out queries (beside Your searches)",
       "expand": "fill",
       "is_interactive": true
     },
     "PageGroups.dc.html": {
       "x": 0,
-      "y": 13760,
+      "y": 14737,
       "w": 1440,
-      "h": 1720,
-      "title": "22 · Admin: Page classification — every page set, changed or removed in its row; your classifications in the second view",
+      "h": 1816,
+      "title": "22 \u00b7 Admin: Page classification \u2014 every page set, changed or removed in its row; your classifications in the second view",
       "expand": "fill",
       "is_interactive": true
     },
     "YourPages.dc.html": {
       "x": 3040,
-      "y": 13760,
+      "y": 14737,
       "w": 1440,
-      "h": 1640,
-      "title": "23 · Sites: Your pages (Site → after Overview)",
+      "h": 3045,
+      "title": "23 \u00b7 Sites: Your pages (Site \u2192 after Overview)",
       "expand": "fill",
       "is_interactive": true
     },
     "ClassificationEdit.dc.html": {
       "x": 1520,
-      "y": 13760,
+      "y": 14737,
       "w": 1440,
-      "h": 1500,
-      "title": "22b · Admin: one classification's own page (opened from its row)",
+      "h": 1275,
+      "title": "22b \u00b7 Admin: one classification's own page (opened from its row)",
       "expand": "fill",
       "is_interactive": true
     }
@@ -238,45 +238,54 @@
     },
     "changes": {
       "x": 0,
-      "y": 2460,
+      "y": 2960,
       "text": "Changes: position bands, new and lost, wins and losses, Google updates",
       "kind": "title1",
       "maxW": 6000
     },
     "opportunities": {
       "x": 0,
-      "y": 5270,
+      "y": 5926,
       "text": "Opportunities: almost there, shown but not clicked, missed demand, pages competing",
       "kind": "title1",
       "maxW": 6000
     },
     "breakdowns": {
       "x": 0,
-      "y": 7226,
+      "y": 8453,
       "text": "Breakdowns: types, brand and non-brand, click rate by position, rich results, real against estimated",
       "kind": "title1",
       "maxW": 7520
     },
     "market": {
       "x": 0,
-      "y": 10120,
+      "y": 11412,
       "text": "Settings: where a website trades",
       "kind": "title1",
       "maxW": 1440
     },
     "tracked": {
       "x": 0,
-      "y": 11640,
-      "text": "Tracked: only what you track — drawn 2026-10-03 with ronins.co.uk's real figures (3 Sep – 2 Oct). Nothing is ticked yet, so these rows are shown as if ticked.",
+      "y": 12978,
+      "text": "Tracked: as built \u2014 copied from the running app 2026-10-04. Nothing is tracked yet, so the lists are empty.",
       "kind": "title1",
       "maxW": 4480
     },
     "pagegroups": {
       "x": 0,
-      "y": 13500,
-      "text": "Page classification and Your pages — redrawn 2026-10-03: no tables under tables; classify at page level (set, change, remove). From ronins.co.uk's real sitemap, crawl, Search Console and rankings; the classifications are a suggested start from its own folders.",
+      "y": 14477,
+      "text": "Page classification and Your pages \u2014 as built, copied from the running app 2026-10-04 with ronins.co.uk's real sitemap, crawl, Search Console and rankings.",
       "kind": "title1",
       "maxW": 4480
+    },
+    "kit": {
+      "x": 0,
+      "y": -560,
+      "w": 1440,
+      "maxH": 180,
+      "size": "m",
+      "fill": "gray",
+      "text": "Redrawn 2026-10-04 from the running app on the drawing kit (stylesheet fe4b5af825bd, look 149d9f4fb243): every board is the built screen's own markup, at 1440px, and passes npm run check:drawing. Links between boards follow the app's."
     }
   },
   "order": [
@@ -306,5 +315,5 @@
     "YourPages.dc.html"
   ],
   "pages": [],
-  "title": "Search Console — keywords and pages"
+  "title": "Search Console \u2014 keywords and pages"
 }
