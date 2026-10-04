@@ -35,7 +35,7 @@ export const SETUP = {
   ],
   limits: { keywordsPerLookup: 10, ideasPerKind: 100, reuseDays: 30 },
   costs: COSTS,
-  agent: { active: true, test: false },
+  agent: { active: true },
 };
 
 const lookupRow = (lookupId: string, keyword: string, volume: number | null, difficulty: number | null, intent: string | null, position: number | null, day: number) => ({

@@ -6,7 +6,7 @@ import { requireTenant, tenantMutation, tenantQuery } from "./tenantFunctions";
 import { isOversightRole } from "./authz";
 import { readFanOutLimits } from "./fanOutLimits";
 import { companyHolds } from "./siteAccess";
-import { buysFromSandbox, freshnessOf, researchAgent } from "./keywordResearchData";
+import { freshnessOf } from "./keywordResearchData";
 import { ownWebsites, partIsBuying, requireLookup, startResearchRun, watchedIn } from "./keywordResearch";
 import { findResearchCountry } from "./utils/researchCountries";
 
@@ -38,7 +38,7 @@ export const openAnswers = tenantMutation({
     const companyId = requireTenant(ctx);
     if (!args.again) {
       const limits = await readFanOutLimits(ctx, companyId);
-      const fresh = freshnessOf(limits.researchReuseDays, buysFromSandbox(await researchAgent(ctx)));
+      const fresh = freshnessOf(limits.researchReuseDays);
       const held = await newestAnswers(ctx, lookup.keyword, lookup.locationCode);
       if (held && held.boughtAt >= fresh.since && (fresh.sandbox || !held.sandbox)) {
         if (lookup.answers !== "READY") await ctx.db.patch(lookup._id, { answers: "READY" });

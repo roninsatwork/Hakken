@@ -31,7 +31,7 @@ import {
   type KeywordOverview,
   type ResearchCall,
 } from "./keywordResearchCalls";
-import { buysFromSandbox, freshnessOf, newestSerp, overviewIsFresh, researchAgent, serpIsFresh, type Freshness } from "./keywordResearchData";
+import { freshnessOf, newestSerp, overviewIsFresh, platformSandbox, serpIsFresh, type Freshness } from "./keywordResearchData";
 import { findResearchCountry } from "./utils/researchCountries";
 import { AI_ENGINES, AI_ENGINE_CALLS, type AiEngine } from "./seoAiEngines";
 import { seoAiCitationParams } from "./dataForSeoRegistry";
@@ -58,17 +58,17 @@ import { getErrorMessage } from "./utils/lang";
  *   for" ideas, as many of them as the company's limit;
  * - **Ideas** opened: terms match and questions;
  * - **What the AI says** opened: the question behind the keyword — written
- *   by the agent's own model in Live, a plain sentence in Test — asked of
+ *   by the agent's own model (a plain sentence when the platform is on
+ *   DataForSEO's sandbox) — asked of
  *   four assistants at once, and Google's AI Overview searches.
  *
  * Every call is a live one, so the person waiting sees the answer in seconds;
  * each is written as a line on this run with its cost, and to the company's
  * DataForSEO spend (`seoDataPulls`), so Cost to serve counts it, and shared
- * among the lookups it was bought for. Its Mode, on its Settings, is Test —
- * DataForSEO's free sandbox, at no cost — until it is switched to Live. It
- * buys a few keywords at once; a run with more than about six minutes of
- * buying carries on in a fresh part rather than meet Convex's ten-minute
- * limit. It stops at its own spend limit for a run, if it has one, and says
+ * among the lookups it was bought for. It always buys real figures: it has
+ * no Test mode (Anthony, 2026-10-04). It buys a few keywords at once; a run
+ * with more than about six minutes of buying carries on in a fresh part
+ * rather than meet Convex's ten-minute limit. It stops at its own spend limit for a run, if it has one, and says
  * which lookups it left.
  */
 
@@ -172,9 +172,9 @@ export const readWork = internalQuery({
     const agent = run ? await ctx.db.get(run.agentId) : null;
     const jobs = run ? await runJobs(ctx, args.runId) : [];
     const companyId = run?.companyId ?? jobs[0]?.companyId ?? null;
-    const sandbox = buysFromSandbox(agent ?? (await researchAgent(ctx)));
+    const sandbox = platformSandbox();
     const limits = companyId ? await readFanOutLimits(ctx, companyId) : null;
-    const base = freshnessOf(limits?.researchReuseDays ?? 30, sandbox);
+    const base = freshnessOf(limits?.researchReuseDays ?? 30);
     const ideasPerKind = limits?.researchIdeasPerKind ?? 100;
 
     const overviews = new Map<string, Place>();
@@ -460,10 +460,9 @@ export const settleLookups = internalMutation({
     const run = await ctx.db.get(args.runId);
     if (!run) return { ready: 0, failed: 0 };
     const jobs = await runJobs(ctx, args.runId);
-    const agent = await ctx.db.get(run.agentId);
     const companyId = run.companyId ?? jobs[0]?.companyId;
     const limits = companyId ? await readFanOutLimits(ctx, companyId) : null;
-    const base = freshnessOf(limits?.researchReuseDays ?? 30, buysFromSandbox(agent));
+    const base = freshnessOf(limits?.researchReuseDays ?? 30);
     const ideasPerKind = limits?.researchIdeasPerKind ?? 100;
     const problem = args.problem ?? "DataForSEO did not answer for this keyword. Look it up again.";
     let ready = 0;
@@ -526,8 +525,8 @@ const MOST_PARTS = 6;
 
 /**
  * One live call: refused before it is sent when the run's spend limit is
- * reached, and written down whatever DataForSEO says — at no cost in Test
- * mode, where nothing is charged. Calls sent at once each check the limit
+ * reached, and written down whatever DataForSEO says — at no cost when the
+ * platform is on DataForSEO's sandbox, where nothing is charged. Calls sent at once each check the limit
  * before they go, so a run can pass its limit by the calls already on their
  * way: at most four more of the same kind (docs/plans/active/keyword-
  * research-plan.md, "Spend").
@@ -591,16 +590,6 @@ async function eachPlace(buyer: Buyer, places: Place[], buyOne: (place: Place) =
   }
 }
 
-/**
- * The sandbox answers every question with the same sample, about a keyword of
- * its own: in Test mode that sample stands in for each keyword asked, so the
- * screens can be tried end to end. Never in Live, where a keyword with no
- * answer has none.
- */
-function sampleFor<T>(credentials: DataForSeoCredentials, answers: Map<string, T>): T | undefined {
-  return credentials.sandbox ? answers.values().next().value : undefined;
-}
-
 const countryName = (code: number) => findResearchCountry(code)?.label ?? `place ${code}`;
 
 /** Overviews, many keywords a call; with each keyword's 24 months for a lookup's own country, the overview alone for another country picked. */
@@ -621,9 +610,9 @@ async function buyOverviews(buyer: Buyer, places: Place[], withHistory: boolean)
       const overviews = readKeywordOverviews(overviewResult);
       const histories = withHistory ? readSearchHistories(historyResult) : new Map<string, Array<{ month: string; volume: number }>>();
       const items = chunk.flatMap((keyword) => {
-        const overview: KeywordOverview | undefined = overviews.get(keyword) ?? sampleFor(credentials, overviews);
+        const overview: KeywordOverview | undefined = overviews.get(keyword);
         if (!overview) return [];
-        const history = histories.get(keyword) ?? sampleFor(credentials, histories);
+        const history = histories.get(keyword);
         return [{ keyword, overview: { ...overview, monthly: history && history.length > overview.monthly.length ? history : overview.monthly } }];
       });
       if (items.length > 0) await ctx.runMutation(internal.keywordResearchRun.fileOverviews, { locationCode, sandbox: credentials.sandbox, items });
@@ -771,7 +760,7 @@ async function research(ctx: ActionCtx, runId: Id<"agentRuns">, workflowExecutio
 
   let credentials: DataForSeoCredentials;
   try {
-    credentials = { ...readDataForSeoCredentials(), ...(work.sandbox ? { sandbox: true } : {}) };
+    credentials = readDataForSeoCredentials();
   } catch (error) {
     const problem = `DataForSEO is not connected: ${getErrorMessage(error)}`;
     await ctx.runMutation(internal.keywordResearchRun.settleLookups, { runId, problem });
@@ -788,7 +777,7 @@ async function research(ctx: ActionCtx, runId: Id<"agentRuns">, workflowExecutio
   ].filter(Boolean).join(", ");
   await ctx.runMutation(internal.roleRuns.recordObservation, {
     runId,
-    text: `${carrying.part > 0 ? "Carrying on. " : ""}${credentials.sandbox ? "Test mode: asking DataForSEO's free sandbox, sample figures." : "Live: buying from DataForSEO."} To buy: ${said}.`,
+    text: `${carrying.part > 0 ? "Carrying on. " : ""}${credentials.sandbox ? "The platform is on DataForSEO's free sandbox: sample figures." : "Buying from DataForSEO."} To buy: ${said}.`,
   });
 
   const lookupsByPlace = new Map<string, Id<"keywordLookups">[]>();
@@ -840,7 +829,7 @@ async function research(ctx: ActionCtx, runId: Id<"agentRuns">, workflowExecutio
 
 async function summaryOf(ctx: ActionCtx, runId: Id<"agentRuns">, settled: { ready: number; failed: number }, calls: number, sandbox: boolean, stopped: string | null): Promise<string> {
   const spent = await ctx.runQuery(internal.roleRuns.readRunCost, { runId });
-  return `${sandbox ? "Test mode, from DataForSEO's sandbox: " : ""}${settled.ready} ready`
+  return `${sandbox ? "From DataForSEO's sandbox: " : ""}${settled.ready} ready`
     + `${settled.failed > 0 ? `, ${settled.failed} failed` : ""}, from ${calls} ${calls === 1 ? "call" : "calls"} costing $${spent.toFixed(2)}.`
     + `${stopped ? ` ${stopped}` : ""}`;
 }

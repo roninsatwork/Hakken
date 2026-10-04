@@ -261,17 +261,15 @@ export function AgentFormSections({
         {/* Anthony, 2026-09-23: while testing, the Planner adds everything;
             live, it respects each company's cadence. The Weekly Digest has a
             mode too (knowledge-news-and-digest plan): in Test its issue goes
-            only to super admins. So does Keyword research (keyword-research-
-            plan.md): in Test it asks DataForSEO's free sandbox. */}
-        {(values.role === "DATAFORSEO_PLANNER" || values.role === "WEEKLY_DIGEST" || values.role === "KEYWORD_RESEARCH") && !builtInRoleName ? (
+            only to super admins. Keyword research has none: it always buys
+            real figures (Anthony, 2026-10-04). */}
+        {(values.role === "DATAFORSEO_PLANNER" || values.role === "WEEKLY_DIGEST") && !builtInRoleName ? (
           <div className="border-t border-border-dim/40">
             <SettingRow
               label={t("sections.role.mode.label")}
               description={values.role === "WEEKLY_DIGEST"
                 ? (values.plannerMode === "LIVE" ? t("sections.role.mode.digestLiveHint") : t("sections.role.mode.digestTestHint"))
-                : values.role === "KEYWORD_RESEARCH"
-                  ? (values.plannerMode === "LIVE" ? t("sections.role.mode.researchLiveHint") : t("sections.role.mode.researchTestHint"))
-                  : (values.plannerMode === "LIVE" ? t("sections.role.mode.liveHint") : t("sections.role.mode.testHint"))}
+                : (values.plannerMode === "LIVE" ? t("sections.role.mode.liveHint") : t("sections.role.mode.testHint"))}
             >
               <SegmentedChoice
                 label={t("sections.role.mode.label")}

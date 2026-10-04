@@ -13,7 +13,6 @@ import Header from "@/src/ui/components/layout/Header";
 import { Button } from "@/src/ui/components/screens/Button";
 import { ConfirmationModal } from "@/src/ui/components/screens/ConfirmationModal";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
-import { Notice } from "@/src/ui/components/screens/Notice";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
@@ -104,7 +103,6 @@ export default function KeywordResearchPage() {
       <div className="flex flex-col gap-6 pb-8">
         <PageHeader divider icon={<TextSearch className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} />
 
-        {setup?.agent?.test ? <Notice>{t("testMode")}</Notice> : null}
         {setup && canLookUp ? <LookUpCard setup={setup} siteId={siteId} onSiteId={setSiteId} /> : null}
         {measured ? <CompetitorStartCards siteId={measured.siteId} host={measured.host} /> : null}
 

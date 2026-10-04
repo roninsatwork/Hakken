@@ -7,9 +7,11 @@ import type { QueryCtx } from "./_generated/server";
  * enough to reuse rather than buy again.
  *
  * **Fresh** is within the reading company's "Days a lookup is kept" (a
- * limit, 30 days to start: Anthony, 2026-10-04), and bought the way the
- * agent buys now: sample figures from DataForSEO's sandbox never stand in for
- * real ones once the agent is Live, and real ones serve a Test lookup too.
+ * limit, 30 days to start: Anthony, 2026-10-04), and real: sample figures
+ * from DataForSEO's sandbox never stand in for real ones. The Keyword
+ * research agent always buys real figures — it has no Test mode (Anthony,
+ * 2026-10-04: "who asked for test mode"); only the platform's own switch,
+ * `DATAFORSEO_SANDBOX=1`, points every DataForSEO call at the sandbox.
  */
 
 type Reader = { db: QueryCtx["db"] };
@@ -21,16 +23,16 @@ export async function researchAgent(ctx: Reader): Promise<Doc<"agents"> | null> 
   return await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", "KEYWORD_RESEARCH")).first();
 }
 
-/** Whether the agent buys from the free sandbox: its Mode is Test until it is switched to Live. */
-export function buysFromSandbox(agent: Pick<Doc<"agents">, "plannerMode"> | null): boolean {
-  return agent?.plannerMode !== "LIVE";
+/** Whether the whole platform asks DataForSEO's free sandbox (`DATAFORSEO_SANDBOX=1`, as `readDataForSeoCredentials` reads it). */
+export function platformSandbox(): boolean {
+  return process.env.DATAFORSEO_SANDBOX === "1";
 }
 
-/** What counts as fresh for a company: bought within its days, and not sample figures once the agent is Live. */
+/** What counts as fresh for a company: bought within its days, and not sample figures unless the platform itself is on the sandbox. */
 export type Freshness = { since: number; sandbox: boolean };
 
-export function freshnessOf(reuseDays: number, sandbox: boolean, now = Date.now()): Freshness {
-  return { since: now - reuseDays * DAY_MS, sandbox };
+export function freshnessOf(reuseDays: number, now = Date.now()): Freshness {
+  return { since: now - reuseDays * DAY_MS, sandbox: platformSandbox() };
 }
 
 const usable = (row: { sandbox: boolean } | null, fresh: Freshness) => Boolean(row) && (fresh.sandbox || !row!.sandbox);

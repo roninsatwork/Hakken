@@ -3371,9 +3371,7 @@
                 "testHint": "Prova: ogni esecuzione aggiunge alla coda tutto, per ogni azienda, qualunque sia la sua cadenza.",
                 "liveHint": "Operativa: ogni esecuzione aggiunge solo ciò che è dovuto secondo la cadenza di ogni azienda.",
                 "digestTestHint": "Test: ogni esecuzione scrive un numero e lo invia solo ai super admin, così lo vedi prima di qualsiasi cliente.",
-                "digestLiveHint": "Live: una volta a settimana, il numero va a ogni utente che ha attivo il Digest settimanale delle notizie.",
-                "researchTestHint": "Test: le ricerche interrogano la sandbox gratuita di DataForSEO — forme reali, dati di esempio, nessun costo.",
-                "researchLiveHint": "Live: le ricerche acquistano dati reali da DataForSEO, entro il limite di spesa per esecuzione di questo agente."
+                "digestLiveHint": "Live: una volta a settimana, il numero va a ogni utente che ha attivo il Digest settimanale delle notizie."
               }
             },
             "status": {
@@ -11506,8 +11504,7 @@
   "keywordResearch": {
     "title": "Ricerca parole chiave",
     "description": "Cerca qualsiasi ricerca fatta su Google: quante persone la fanno ogni mese, quanto è difficile entrare tra i primi dieci, le idee intorno e chi mostra Google. Ognuna è misurata su uno dei tuoi siti.",
-    "testMode": "L'agente Ricerca parole chiave è in modalità Test: una ricerca dà dati di esempio, non reali, e non costa nulla.",
-    "sample": "Dati di esempio: l'agente Ricerca parole chiave è in modalità Test, quindi non è stato acquistato nulla e questi numeri non sono reali.",
+    "sample": "Dati di esempio: provengono da un servizio di prova gratuito che risponde a ogni parola chiave con lo stesso esempio, quindi non sono reali.",
     "placeIn": {
       "gb": "nel Regno Unito",
       "ie": "in Irlanda",

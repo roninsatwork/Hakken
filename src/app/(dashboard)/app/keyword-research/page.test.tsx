@@ -107,12 +107,6 @@ describe("the Keyword research page", () => {
     expect(screen.queryByText("keywordResearch.start.title")).not.toBeInTheDocument();
   });
 
-  it("says plainly when the agent is in Test mode, so no figure reads as real", () => {
-    open({ setup: { ...SETUP, agent: { active: true, test: true } } });
-
-    expect(screen.getByText("keywordResearch.testMode")).toBeInTheDocument();
-  });
-
   it("looks up what was typed, in the country and against the website chosen, and opens the first lookup", async () => {
     const mutation = open();
 

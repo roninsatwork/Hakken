@@ -20,7 +20,7 @@ export const researchSetupShape = v.union(v.null(), v.object({
   websites: v.array(v.object({ siteId: v.id("companyWebsites"), host: v.string(), homeCountry: v.number() })),
   limits: v.object({ keywordsPerLookup: v.number(), ideasPerKind: v.number(), reuseDays: v.number() }),
   costs,
-  agent: v.union(v.null(), v.object({ active: v.boolean(), test: v.boolean() })),
+  agent: v.union(v.null(), v.object({ active: v.boolean() })),
 }));
 
 export const pastLookupsShape = v.array(v.object({

@@ -13,7 +13,7 @@ import { holdSearch, holdSearches } from "./holdLists";
 import { RESEARCH_COUNTRIES, RESEARCH_COUNTRY_CODES, findResearchCountry, homeCountryOf } from "./utils/researchCountries";
 import { hostOf, pageKey } from "./keywordResearchCalls";
 import { pageTypeByAddress } from "./utils/siteShapes";
-import { buysFromSandbox, newestKeyword, newestSerp, overviewIsFresh, freshnessOf, researchAgent, serpIsFresh } from "./keywordResearchData";
+import { newestKeyword, newestSerp, overviewIsFresh, freshnessOf, researchAgent, serpIsFresh } from "./keywordResearchData";
 import { researchCosts } from "./keywordResearchPrices";
 
 /**
@@ -154,7 +154,7 @@ export const researchSetup = tenantQuery({
       websites: websites.map(({ siteId, host, homeCountry }) => ({ siteId, host, homeCountry })),
       limits: { keywordsPerLookup: limits.researchKeywordsPerLookup, ideasPerKind: limits.researchIdeasPerKind, reuseDays: limits.researchReuseDays },
       costs: researchCosts(limits),
-      agent: agent ? { active: agent.isActive !== false, test: buysFromSandbox(agent) } : null,
+      agent: agent ? { active: agent.isActive !== false } : null,
     };
   },
 });
@@ -185,7 +185,7 @@ export const lookUp = tenantMutation({
       throw appError("INVALID_INPUT", `One Look up can hold at most ${keywordsWord(limits.researchKeywordsPerLookup)}: the limit in Limits.`);
     }
 
-    const fresh = freshnessOf(limits.researchReuseDays, buysFromSandbox(await researchAgent(ctx)));
+    const fresh = freshnessOf(limits.researchReuseDays);
     const now = Date.now();
     const lookupIds: Id<"keywordLookups">[] = [];
     const waiting: ResearchJob[] = [];
@@ -246,7 +246,7 @@ export const lookUpInCountry = tenantMutation({
     const asked = lookup.countries?.find((country) => country.locationCode === args.locationCode);
     if (asked?.state === "WAITING" && (await partIsBuying(ctx, lookup._id, "COUNTRY", args.locationCode))) return null;
     const limits = await readFanOutLimits(ctx, companyId);
-    const fresh = freshnessOf(limits.researchReuseDays, buysFromSandbox(await researchAgent(ctx)));
+    const fresh = freshnessOf(limits.researchReuseDays);
     const others = (lookup.countries ?? []).filter((country) => country.locationCode !== args.locationCode);
     if (await overviewIsFresh(ctx, lookup.keyword, args.locationCode, fresh)) {
       await ctx.db.patch(lookup._id, { countries: [...others, { locationCode: args.locationCode, state: "READY" }] });
@@ -464,7 +464,7 @@ export const openResults = tenantMutation({
     if (lookup.results === "WAITING" && (await partIsBuying(ctx, lookup._id, "RESULTS"))) return null;
     const companyId = requireTenant(ctx);
     const limits = await readFanOutLimits(ctx, companyId);
-    const fresh = freshnessOf(limits.researchReuseDays, buysFromSandbox(await researchAgent(ctx)));
+    const fresh = freshnessOf(limits.researchReuseDays);
     const serp = await newestSerp(ctx, lookup.keyword, lookup.locationCode);
     if (serp?.detailsBoughtAt && serp.detailsBoughtAt >= fresh.since && (fresh.sandbox || !serp.sandbox)) {
       if (lookup.results !== "READY") await ctx.db.patch(lookup._id, { results: "READY" });

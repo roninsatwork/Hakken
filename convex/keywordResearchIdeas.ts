@@ -3,7 +3,7 @@ import { lookupIdeasShape } from "./keywordResearchShapes";
 import { tenantMutation, tenantQuery, requireTenant } from "./tenantFunctions";
 import { isOversightRole } from "./authz";
 import { readFanOutLimits } from "./fanOutLimits";
-import { buysFromSandbox, freshnessOf, newestSerp, researchAgent } from "./keywordResearchData";
+import { freshnessOf, newestSerp } from "./keywordResearchData";
 import { ownWebsites, partIsBuying, requireLookup, startResearchRun, watchedIn, type ResearchJob } from "./keywordResearch";
 import { hostOf } from "./keywordResearchCalls";
 import { findResearchCountry } from "./utils/researchCountries";
@@ -31,7 +31,7 @@ export const openIdeas = tenantMutation({
     const resultsBuying = lookup.results === "WAITING" && (await partIsBuying(ctx, lookup._id, "RESULTS"));
     const companyId = requireTenant(ctx);
     const limits = await readFanOutLimits(ctx, companyId);
-    const fresh = freshnessOf(limits.researchReuseDays, buysFromSandbox(await researchAgent(ctx)));
+    const fresh = freshnessOf(limits.researchReuseDays);
     const usable = (row: { boughtAt: number; sandbox: boolean; limit?: number } | null) =>
       Boolean(row && row.boughtAt >= fresh.since && (fresh.sandbox || !row.sandbox) && (row.limit ?? Infinity) >= limits.researchIdeasPerKind);
     const newest = async (kind: (typeof KINDS)[number]) => await ctx.db

@@ -87,8 +87,9 @@ been put at 2 cents and Google's results at 15.
   fan-out query (`addWebsiteKeywordCore`), within the website's tracked limit.
 - **Limits.** Each number below that is a limit goes on the Limits pages,
   platform, company and website, like every other.
-- **Testing costs nothing.** Built and tested against DataForSEO's free
-  sandbox (`DATAFORSEO_SANDBOX=1`); the first real lookup waits for his go.
+- **Always real figures.** The agent has no Test mode (removed 2026-10-04,
+  below). Only the platform's own switch, `DATAFORSEO_SANDBOX=1`, points
+  every DataForSEO call at the free sandbox.
 
 ## How it is built — the parts
 
@@ -128,10 +129,9 @@ tracked lists):
 like the other DataForSEO agents). Look up writes the lookups and starts a run
 at once; the run buys what is missing, files it, and writes each call's cost
 and a line on its own run, in Observability, and on the company's DataForSEO
-spend (`seoDataPulls`, the day roll-ups), so Cost to serve counts it. Its Mode,
-on its Settings, is **Test** (DataForSEO's free sandbox: real shapes, sample
-figures, no cost — written as $0) until he switches it to **Live**. Its
-per-run spend limit is the agent's own (agent-cost-control-is-enough).
+spend (`seoDataPulls`, the day roll-ups), so Cost to serve counts it. It
+always buys real figures. Its per-run spend limit is the agent's own
+(agent-cost-control-is-enough).
 
 **Spend.** Each call checks the run's spend before it is sent. Calls go a
 few at a time (five keywords at once, the ten pages of Google's results at
@@ -242,9 +242,8 @@ All five steps, on his "build the keyword research section".
   website doesn't rank for at all) and its "Where it is above you" is
   Websites' own comparison on the tracked searches; Google's results keep
   the newest check only and the ordinary results only.
-- **Not yet done:** the first lookup on dev waits for his go — the agent has
-  to be created from its template, in Test mode (DataForSEO's free sandbox),
-  then Live when he says.
+- **The agent** was created on dev by him, 2026-10-04 ("Keyword Research
+  Agent", role Keyword research).
 - **Also changed on the way:** the DataForSEO call ledger moved out of
   `schema.ts` into `seoPullSchema.ts` (unchanged), bringing that file back
   inside its size band; the personal-data manifest reads both new schema
@@ -269,3 +268,9 @@ All five steps, on his "build the keyword research section".
   cost is the lookup's own; another country buys its overview alone (no 24
   months); a raised ideas limit buys "also rank for" again; and the
   website's positions show only for the country it is watched from.
+- 2026-10-04 — **Test mode removed.** I had given the agent a Test mode,
+  DataForSEO's free sandbox, as its default; he never asked for it ("who
+  asked for test mode"). The sandbox answers every keyword with the same
+  example, so his first lookup, "web designers surrey", showed pizza
+  restaurants. The agent now always buys real figures. Sample figures never
+  count as held, so Look up again replaces them with real ones.

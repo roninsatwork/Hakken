@@ -9,7 +9,7 @@ import { AI_ENGINES, AI_ENGINE_CALLS } from "./seoAiEngines";
  * Keyword research (docs/plans/active/keyword-research-plan.md): Look up
  * writes the company's lookups and starts the Keyword research agent; the
  * agent buys each keyword's overview, its 24 months and Google's top 100 —
- * live, from DataForSEO's sandbox while its Mode is Test — files them and
+ * live, always real figures (it has no Test mode) — files them and
  * writes each call's cost; what is held and fresh is opened, not bought
  * again. Lists, Track, and every read and write the company's own.
  */
@@ -45,10 +45,10 @@ async function company(t: Harness, role: "USER" | "READ_ONLY" = "USER") {
   return { ...ids, as: t.withIdentity({ subject: ids.userId }) };
 }
 
-async function researchAgent(t: Harness, mode: "TEST" | "LIVE" = "LIVE", maxCostUsd?: number) {
+async function researchAgent(t: Harness, maxCostUsd?: number) {
   return await t.run(async (ctx) => await ctx.db.insert("agents", {
     name: "Keyword research", modelId: "model-test", thinkingMode: false, isActive: true,
-    systemKey: "KEYWORD_RESEARCH", plannerMode: mode, ...(maxCostUsd !== undefined ? { maxCostUsd } : {}),
+    systemKey: "KEYWORD_RESEARCH", ...(maxCostUsd !== undefined ? { maxCostUsd } : {}),
     createdAt: Date.now(), updatedAt: Date.now(),
   }));
 }
@@ -133,7 +133,7 @@ describe("Look up", () => {
   test("the agent buys each keyword's overview, 24 months and Google's top 100, files them, and writes each call's cost", async () => {
     const t = harness();
     const { as, siteId, companyId } = await company(t);
-    await researchAgent(t, "LIVE");
+    await researchAgent(t);
     await as.mutation(api.keywordResearch.lookUp, { keywords: ["web design agency"], locationCode: UK, siteId });
     const runId = (await t.run(async (ctx) => await ctx.db.query("agentRuns").first()))!._id;
     const fetch = dataForSeo(() => [{ domain: "madebyshape.co.uk", position: 1 }, { domain: "ronins.co.uk", position: 18 }]);
@@ -172,14 +172,35 @@ describe("Look up", () => {
     expect(held.lookup?.spentUsd).toBeCloseTo(0.04);
   });
 
-  test("in Test mode it asks DataForSEO's free sandbox, its sample standing in for each keyword", async () => {
+  test("always buys real figures: an agent saved with the old Test mode still asks DataForSEO itself, never its sandbox", async () => {
     const t = harness();
     const { as } = await company(t);
-    await researchAgent(t, "TEST");
+    await t.run(async (ctx) => await ctx.db.insert("agents", {
+      name: "Keyword research", modelId: "model-test", thinkingMode: false, isActive: true,
+      systemKey: "KEYWORD_RESEARCH", plannerMode: "TEST", createdAt: Date.now(), updatedAt: Date.now(),
+    }));
+    await as.mutation(api.keywordResearch.lookUp, { keywords: ["web designers surrey"], locationCode: UK });
+    const runId = (await t.run(async (ctx) => await ctx.db.query("agentRuns").first()))!._id;
+    const fetch = dataForSeo(() => [{ domain: "acme-agency.test", position: 3 }]);
+    vi.stubGlobal("fetch", fetch);
+
+    await t.action(internal.keywordResearchRun.runKeywordResearchNow, { runId });
+
+    expect(fetch.mock.calls.every(([url]) => String(url).startsWith("https://api.dataforseo.com"))).toBe(true);
+    const held = await t.run(async (ctx) => ({ keyword: await ctx.db.query("researchKeywords").first(), pulls: await ctx.db.query("seoDataPulls").collect() }));
+    expect(held.keyword).toMatchObject({ keyword: "web designers surrey", sandbox: false });
+    expect(held.pulls.every((pull) => pull.costUsd === 0.01 && !pull.sandbox)).toBe(true);
+  });
+
+  test("on the platform's own sandbox switch, calls cost $0 and a keyword the sandbox doesn't answer gets no stand-in", async () => {
+    const t = harness();
+    const { as } = await company(t);
+    await researchAgent(t);
+    vi.stubEnv("DATAFORSEO_SANDBOX", "1");
     await as.mutation(api.keywordResearch.lookUp, { keywords: ["anything at all"], locationCode: US });
     const runId = (await t.run(async (ctx) => await ctx.db.query("agentRuns").first()))!._id;
     const sample = dataForSeo();
-    // The sandbox answers about a keyword of its own.
+    // The sandbox answers about a keyword of its own, whatever is asked.
     const fetch = vi.fn(async (url: string, init: { body: string }) => {
       const body = JSON.parse(init.body) as Array<{ keywords?: string[] }>;
       if (body[0].keywords) body[0].keywords = ["iphone"];
@@ -193,21 +214,17 @@ describe("Look up", () => {
     const held = await t.run(async (ctx) => ({
       keyword: await ctx.db.query("researchKeywords").first(),
       pulls: await ctx.db.query("seoDataPulls").collect(),
-      run: await ctx.db.get(runId),
       lookup: await ctx.db.query("keywordLookups").first(),
     }));
-    expect(held.keyword).toMatchObject({ keyword: "anything at all", locationCode: US, sandbox: true, searchVolume: 3600 });
-    // The sandbox says what a call would cost, and charges nothing: nothing is written as spent.
-    expect(held.pulls.length).toBeGreaterThan(0);
+    expect(held.keyword).toBeNull();
     expect(held.pulls.every((pull) => pull.costUsd === 0)).toBe(true);
-    expect(held.run?.costUsd ?? 0).toBe(0);
-    expect(held.lookup?.spentUsd).toBeUndefined();
+    expect(held.lookup?.overview).toBe("FAILED");
   });
 
   test("a long Look up carries on in a fresh part of the run, buying only what is still missing", async () => {
     const t = harness();
     const { as } = await company(t);
-    await researchAgent(t, "LIVE");
+    await researchAgent(t);
     const keywords = Array.from({ length: 6 }, (_, index) => `keyword ${index}`);
     await as.mutation(api.keywordResearch.lookUp, { keywords, locationCode: UK });
     const runId = (await t.run(async (ctx) => await ctx.db.query("agentRuns").first()))!._id;
@@ -244,7 +261,7 @@ describe("Look up", () => {
   test("a lookup is ready only on what was bought for it: an old overview never stands in for a purchase that failed", async () => {
     const t = harness();
     const { as } = await company(t);
-    await researchAgent(t, "LIVE");
+    await researchAgent(t);
     await t.run(async (ctx) => {
       const boughtAt = Date.now() - 40 * 24 * 60 * 60 * 1000;
       await ctx.db.insert("researchKeywords", {
@@ -263,10 +280,10 @@ describe("Look up", () => {
     expect(lookup?.overview).toBe("FAILED");
   });
 
-  test("a keyword held and fresh is opened again, not bought; sample figures don't count once the agent is Live", async () => {
+  test("a keyword held and fresh is opened again, not bought; sample figures never count", async () => {
     const t = harness();
     const { as } = await company(t);
-    await researchAgent(t, "LIVE");
+    await researchAgent(t);
     const hold = async (sandbox: boolean, boughtAt: number) => await t.run(async (ctx) => {
       await ctx.db.insert("researchKeywords", {
         keyword: "seo", locationCode: UK, boughtAt, sandbox, searchVolume: 10, cpc: null, competitionLevel: null, difficulty: 5,
@@ -311,7 +328,7 @@ describe("Google's results", () => {
   test("opened, the agent buys the top ten's strength, linking websites and what each ranks for: its top keyword, and the also-rank-for ideas", async () => {
     const t = harness();
     const { as, siteId } = await company(t);
-    await researchAgent(t, "LIVE");
+    await researchAgent(t);
     const { lookupIds: [lookupId] } = await as.mutation(api.keywordResearch.lookUp, { keywords: ["web design agency"], locationCode: UK, siteId });
     vi.stubGlobal("fetch", dataForSeo(() => [{ domain: "madebyshape.co.uk", position: 1 }, { domain: "lightflows.co.uk", position: 2 }]));
     const firstRun = (await t.run(async (ctx) => await ctx.db.query("agentRuns").first()))!._id;
@@ -342,11 +359,12 @@ describe("Google's results", () => {
   });
 });
 
-describe("Google's results in Test mode", () => {
+describe("Google's results on the platform's sandbox", () => {
   test("sample details never land on real results: the sandbox's own results are bought first, the real ones left as they were", async () => {
     const t = harness();
     const { as, siteId } = await company(t);
-    await researchAgent(t, "TEST");
+    await researchAgent(t);
+    vi.stubEnv("DATAFORSEO_SANDBOX", "1");
     await t.run(async (ctx) => {
       await ctx.db.insert("researchKeywords", {
         keyword: "web design agency", locationCode: UK, boughtAt: Date.now(), sandbox: false, searchVolume: 3600, cpc: null, competitionLevel: null,
@@ -358,7 +376,7 @@ describe("Google's results in Test mode", () => {
       });
     });
     const { lookupIds: [lookupId] } = await as.mutation(api.keywordResearch.lookUp, { keywords: ["web design agency"], locationCode: UK, siteId });
-    // Real figures, held and fresh, open a Test lookup: nothing was bought.
+    // Real figures, held and fresh, open a lookup on the sandbox too: nothing was bought.
     expect(await t.run(async (ctx) => (await ctx.db.query("agentRuns").collect()).length)).toBe(0);
     const fetch = dataForSeo(() => [{ domain: "madebyshape.co.uk", position: 1 }]);
     vi.stubGlobal("fetch", fetch);
@@ -377,7 +395,7 @@ describe("keyword ideas", () => {
   test("opened, the agent buys terms match and questions, the company's number of each, and the top ten in full for also-rank-for", async () => {
     const t = harness();
     const { as, siteId, websiteId } = await company(t);
-    await researchAgent(t, "LIVE");
+    await researchAgent(t);
     const { lookupIds: [lookupId] } = await as.mutation(api.keywordResearch.lookUp, { keywords: ["web design agency"], locationCode: UK, siteId });
     const fetch = dataForSeo(() => [{ domain: "madebyshape.co.uk", position: 1 }]);
     vi.stubGlobal("fetch", fetch);
@@ -410,7 +428,7 @@ describe("keyword ideas", () => {
   test("opened while Google's results are being bought, the ideas are bought by a run of their own, and each run settles only its own part", async () => {
     const t = harness();
     const { as, siteId } = await company(t);
-    await researchAgent(t, "LIVE");
+    await researchAgent(t);
     const { lookupIds: [lookupId] } = await as.mutation(api.keywordResearch.lookUp, { keywords: ["web design agency"], locationCode: UK, siteId });
     const fetch = dataForSeo(() => [{ domain: "madebyshape.co.uk", position: 1 }]);
     vi.stubGlobal("fetch", fetch);
@@ -575,7 +593,9 @@ describe("what the AI says", () => {
   test("opened, the four assistants are asked the question at once, each answer read for who it names, and Google's AI Overview searches bought", async () => {
     const t = harness();
     const { as, siteId, websiteId, companyId } = await company(t);
-    await researchAgent(t, "TEST");
+    await researchAgent(t);
+    // On the platform's sandbox the question is a plain sentence, not written by a model.
+    vi.stubEnv("DATAFORSEO_SANDBOX", "1");
     await t.run(async (ctx) => {
       const rival = (await ctx.db.query("companyWebsites").collect()).find((row) => row.relationship === "TRACKED")!;
       for (const [hold, website, name] of [[siteId, websiteId, "Ronins"], [rival._id, rival.websiteId, "Lightflows"]] as const) {

@@ -3371,9 +3371,7 @@
                 "testHint": "Test: every run adds everything for every company to the queue, whatever its cadence says.",
                 "liveHint": "Live: every run adds only what is due by each company's cadence.",
                 "digestTestHint": "Test: each run writes an issue and sends it to super admins only, so you see it before any customer does.",
-                "digestLiveHint": "Live: once a week, the issue goes to every user who has the Weekly News Digest on.",
-                "researchTestHint": "Test: lookups ask DataForSEO's free sandbox — real shapes, sample figures, no cost.",
-                "researchLiveHint": "Live: lookups buy real figures from DataForSEO, within this agent's spend limit per run."
+                "digestLiveHint": "Live: once a week, the issue goes to every user who has the Weekly News Digest on."
               }
             },
             "status": {
@@ -11506,8 +11504,7 @@
   "keywordResearch": {
     "title": "Keyword research",
     "description": "Look up any search people make on Google: how many make it each month, how hard it is to reach the top ten, the ideas around it, and who Google shows. Each is measured against one of your websites.",
-    "testMode": "The Keyword research agent is in Test mode: a lookup gives sample figures, not real ones, and costs nothing.",
-    "sample": "Sample figures: the Keyword research agent is in Test mode, so nothing was bought and these numbers are not real.",
+    "sample": "Sample figures: these come from a free test service that answers every keyword with the same example, so they are not real.",
     "placeIn": {
       "gb": "in the United Kingdom",
       "ie": "in Ireland",
