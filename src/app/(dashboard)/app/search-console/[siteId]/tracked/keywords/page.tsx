@@ -63,7 +63,7 @@ export default function SearchConsoleTrackedKeywordsPage() {
             className: CUT_COLUMN.first,
             cell: (row) => <RecordLinkCell cut href={recordHref("keywords/keyword", row.key)}>{row.key}</RecordLinkCell>,
           },
-          ...figureColumns(t, ["clicks", "change", "impressions", "ctr", "position", "moved"]),
+          ...figureColumns(t, ["clicksAndChange", "impressions", "ctr", "positionAndMove"]),
           { key: "count", header: t("table.pages"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.count === null ? "–" : formatNumber(row.count)}</span> },
           {
             key: "top",

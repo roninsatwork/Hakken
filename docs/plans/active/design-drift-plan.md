@@ -256,12 +256,15 @@ pass `check:drawing`.
   wrap`), and the Websites overview's AI answers panel (`CompactList
   density="tight"`) and Competitors panel (the overlap bar shrinks below the
   kit's 160px).
-- **Left for Anthony — too many columns to fit:** Search Console's Tracked
-  keywords and Tracked pages (eight figure columns; the keyword or page
-  squeezed to 32–43px) and Websites → Fan-out queries (nine columns; the
-  query 32px). They fit only by dropping or folding columns — e.g. Change
-  into Clicks and Moved into Position ("a before and after in one column",
-  §13.1 of the Search Console plan) — which changes approved screens.
+- **Too many columns, folded on his "go" (2026-10-04):** Search Console's
+  Tracked keywords and Tracked pages (eight figure columns had squeezed the
+  keyword or page to 32–43px) now carry Change under Clicks and Moved under
+  Position; Websites → Fan-out queries (nine columns, the query 32px) carries
+  its change under Position and leaves Best to the download. One new shared
+  part does it, `app/_components/FigureWithMove.tsx` — the figure, its move
+  on a short line under it, nothing when there was no move ("a before and
+  after in one column", search-console-plan §13.1). Measured after: all
+  three fit at 1440px, the word columns 125–202px.
 
 ## Order and size
 

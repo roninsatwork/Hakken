@@ -188,11 +188,13 @@ describe("Tracked keywords", () => {
     expect(screen.getByPlaceholderText("searchConsole.tracked.keywords.searchPlaceholder")).toBeInTheDocument();
     expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
     expect(screen.getByText(/searchConsole\.track\.count 8 200/)).toBeInTheDocument();
-    // The columns as drawn: the tick, the keyword, its figures, what changed, its pages and top page.
+    // The columns: the tick, the keyword, its figures, its pages and top page. What changed sits
+    // under Clicks and Position since 2026-10-04 — eight figure columns left no room for the
+    // keyword (design-drift-plan D4; Anthony: "go").
     const headings = screen.getAllByRole("columnheader").map((heading) => heading.textContent ?? "");
     expect(headings.map((heading) => heading.replace(/\s+/g, ""))).toEqual([
-      "searchConsole.track.column", "searchConsole.table.keyword", "searchConsole.table.clicks", "searchConsole.table.change",
-      "searchConsole.table.impressions", "searchConsole.table.ctr", "searchConsole.table.position", "searchConsole.table.moved",
+      "searchConsole.track.column", "searchConsole.table.keyword", "searchConsole.table.clicks",
+      "searchConsole.table.impressions", "searchConsole.table.ctr", "searchConsole.table.position",
       "searchConsole.table.pages", "searchConsole.table.topPage",
     ]);
     const first = screen.getByText("ai agency").closest("tr")!;

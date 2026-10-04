@@ -9,6 +9,7 @@ import { Pin } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Change } from "@/src/ui/components/screens/Change";
+import { FigureWithMove } from "../../../../_components/FigureWithMove";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
@@ -183,18 +184,20 @@ export default function SiteTrackedFanOutPage() {
           // Short headings stay on one line: an empty table has no rows to give its columns their widths (2026-10-04).
           { key: "askedBy", header: t("columns.askedBy"), sortable: true, className: NO_WRAP, cell: (row) => (row.engines.length > 0 ? <TagLabel>{askedBy(row)}</TagLabel> : <NoFigure />) },
           { key: "seen", header: t("columns.seen"), align: "right", sortable: true, className: NO_WRAP, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.timesSeen)}</span> },
-          { key: "position", header: ts("columns.position"), align: "right", sortable: true, className: NO_WRAP, cell: (row) => (row.lastCheckedDay === null ? <span className="whitespace-nowrap text-[12px] text-muted">{ts("verdicts.NOT_CHECKED")}</span> : <PositionCell position={row.lastPosition} />) },
+          // Its move folded underneath, and Best left to the download, so the
+          // table fits the page (design-drift-plan D4, 2026-10-04).
           {
-            key: "change",
-            header: ts("columns.change"),
-            className: NO_WRAP,
+            key: "position",
+            header: ts("columns.position"),
             align: "right",
             sortable: true,
-            cell: (row) => row.lastPosition !== null && row.previousPosition !== null
-              ? <Change by={row.previousPosition - row.lastPosition} />
-              : <NoFigure />,
+            className: NO_WRAP,
+            cell: (row) => {
+              if (row.lastCheckedDay === null) return <span className="whitespace-nowrap text-[12px] text-muted">{ts("verdicts.NOT_CHECKED")}</span>;
+              const move = row.lastPosition !== null && row.previousPosition !== null ? row.previousPosition - row.lastPosition : null;
+              return <FigureWithMove figure={<PositionCell position={row.lastPosition} />} move={move ? <Change by={move} /> : null} />;
+            },
           },
-          { key: "best", header: ts("columns.best"), align: "right", sortable: true, className: NO_WRAP, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.bestPosition ?? "–"}</span> },
           { key: "verdict", header: ts("columns.verdict"), className: NO_WRAP, cell: (row) => <StatusLabel tone={SEARCH_VERDICT_TONES[row.verdict]}>{ts(`verdicts.${row.verdict}`)}</StatusLabel> },
           { key: "checked", header: ts("columns.lastChecked"), sortable: true, className: NO_WRAP, cell: (row) => <CheckedCell day={row.lastCheckedDay} /> },
         ]}

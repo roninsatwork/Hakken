@@ -12,6 +12,7 @@ import { PAGE_TYPES, RANK_INTENTS } from "@/convex/utils/siteShapes";
 import { useToast } from "@/src/context/ToastContext";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Change } from "@/src/ui/components/screens/Change";
+import { FigureWithMove } from "../../_components/FigureWithMove";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { DownloadButton, saveTextFile } from "@/src/ui/components/screens/DownloadButton";
 import type { DataTableColumn } from "@/src/ui/components/screens/DataTable";
@@ -456,13 +457,17 @@ export function BeforeAfter({ before, now, format }: { before: number | null; no
   );
 }
 
-type Figure = "clicks" | "change" | "impressions" | "ctr" | "position" | "moved";
+type Figure = "clicks" | "change" | "impressions" | "ctr" | "position" | "moved" | "clicksAndChange" | "positionAndMove";
 
 /**
  * The figure columns most tables share, right-aligned and sortable: with
  * `change`, the clicks gained or lost on the days before ("New" for a row not
  * shown then), and `moved`, the places risen or fallen — Wins and losses'
  * and the tracked lists' alike.
+ *
+ * `clicksAndChange` and `positionAndMove` fold the move under its figure, one
+ * column each: the tracked lists, whose eight figures would not fit the page
+ * otherwise (design-drift-plan D4, 2026-10-04). They sort by the figure.
  */
 export function figureColumns(say: (key: string) => string, which: readonly Figure[]): DataTableColumn<ListRow>[] {
   const all: Record<Figure, DataTableColumn<ListRow>> = {
@@ -483,6 +488,27 @@ export function figureColumns(say: (key: string) => string, which: readonly Figu
       align: "right",
       sortable: true,
       cell: (row) => <Change by={row.positionChange} kind="places" same format={formatPosition} />,
+    },
+    clicksAndChange: {
+      key: "clicks",
+      header: say("table.clicks"),
+      align: "right",
+      sortable: true,
+      cell: (row) => {
+        const isNew = row.change !== null && row.previousClicks === null && row.clicks > 0;
+        const moved = isNew || (row.change !== null && row.change !== 0);
+        return <FigureWithMove figure={<span className="font-mono text-[12px] text-foreground">{formatNumber(row.clicks)}</span>} move={moved ? <Change by={row.change} isNew={isNew} format={formatNumber} /> : null} />;
+      },
+    },
+    positionAndMove: {
+      key: "position",
+      header: say("table.position"),
+      align: "right",
+      sortable: true,
+      cell: (row) => {
+        const moved = row.positionChange !== null && Math.abs(row.positionChange) >= 0.05;
+        return <FigureWithMove figure={<span className="font-mono text-[12px] text-secondary">{row.impressions > 0 ? formatPosition(row.position) : "–"}</span>} move={moved ? <Change by={row.positionChange} kind="places" format={formatPosition} /> : null} />;
+      },
     },
   };
   return which.map((key) => all[key]);
