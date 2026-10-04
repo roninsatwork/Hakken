@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { listOwnerOf } from "@/src/test/listOwner";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 /**
  * Deleting a website takes everything about it (Anthony, 2026-09-24: "delete
@@ -99,7 +100,7 @@ describe("deleting a website", () => {
     await t.run(async (ctx) => await ctx.db.delete(gone));
     await t.mutation(internal.websitePurge.purgeWebsiteListsInternal, { websiteId: gone });
     await t.mutation(internal.websitePurge.purgeWebsiteCollectedDataInternal, { websiteId: gone });
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
 
     const left = await t.run(async (ctx) => ({
       answers: (await ctx.db.query("aiAnswers").collect()).map((row) => [row.prompt, row.named]),

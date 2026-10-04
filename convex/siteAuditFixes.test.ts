@@ -730,8 +730,8 @@ describe("content gap, ranking now (4.10)", () => {
     await ranks(t, rival.websiteId, "tackle box", 4, "2026-09-20");
 
     await t.action(internal.siteContentGap.rebuildGap, { companyWebsiteId: own.holdId });
-    await t.finishInProgressScheduledFunctions();
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    // The page's compact copy is built by a function of another module: loaded cold under a busy suite (`finishScheduled`).
+    await finishScheduled(t);
     const asKorda = await member(t, korda);
     const gap = await asKorda.query(api.siteCompetitors.listContentGap, { siteId: own.holdId, page: 1, rows: 25 });
     // "carp rigs": the competitor ranks for it now and the site no longer does.

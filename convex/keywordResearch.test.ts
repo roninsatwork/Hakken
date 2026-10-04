@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { finishScheduled } from "@/src/test/finishScheduled";
 import { AI_ENGINES, AI_ENGINE_CALLS } from "./seoAiEngines";
 
 /**
@@ -232,7 +233,7 @@ describe("Look up", () => {
     expect(serps()).toBe(5);
     expect((await t.run(async (ctx) => await ctx.db.get(runId)))?.status).toBe("RUNNING");
 
-    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    await finishScheduled(t);
     expect(serps()).toBe(6);
     expect(fetch.mock.calls.filter(([url]) => String(url).includes("keyword_overview"))).toHaveLength(1);
     const after = await t.run(async (ctx) => ({ run: await ctx.db.get(runId), lookups: await ctx.db.query("keywordLookups").collect() }));
