@@ -58,4 +58,11 @@ describe("check:drawing", () => {
     expect(checkDrawing(`<g class="recharts-layer xAxis"></g><div class="custom-scrollbar"></div>`, { kitCss, colours, appSource: "className=\"custom-scrollbar\"" })).toEqual([]);
     expect(checkDrawing(`<div class="made-up-part"></div>`, { kitCss, colours, appSource: "" })).toHaveLength(1);
   });
+
+  test("a canvas repeat inside a table fails; outside one it is fine", () => {
+    expect(check(`<table><tbody><sc-for list="{{rows}}" as="row"><tr><td>{{row.name}}</td></tr></sc-for></tbody></table>`)).toEqual([
+      "<sc-for> inside a table — a browser moves it out; write the rows out, with holes for what changes",
+    ]);
+    expect(check(`<sc-for list="{{rows}}" as="row"><div>{{row.name}}</div></sc-for><table><tbody><tr><td>{{rows.r0.name}}</td></tr></tbody></table>`)).toEqual([]);
+  });
 });

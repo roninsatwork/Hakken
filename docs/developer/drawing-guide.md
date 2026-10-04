@@ -48,9 +48,13 @@ agent does it again. The why and the record of what was built:
 - **The whole screen**, in the app's frame — the menu, the top bar, the
   page — with real-looking rows and working clicks (sorting, filters,
   ticks, links between screens).
+- **A table's rows are written out**, with holes (`{{rows.r3.tracked}}`)
+  for what changes — never an `<sc-for>` or `<sc-if>` inside a table: a
+  browser lifts it out, and the rows draw above the table or not at all.
 - **`npm run check:drawing -- <board>` on every board before publishing.**
   It fails a class the app does not have, a colour outside the record, a
-  font other than the app's, or a table that would scroll. Fix what it
+  font other than the app's, a table that would scroll, or a repeat inside
+  a table. Fix what it
   names; never publish a board it fails.
 - **A part the kit does not have** is a new part for the screen kit. Tell
   Anthony its name and why before drawing it; when it is built, add it to

@@ -8,7 +8,11 @@ change it here, with a date, before building anything that disagrees with it.
 Drawing: the canvas "Content gap, Ahrefs layout" (claude.ai artifact
 `SoK2VZMG2GZYkPk3TfhiMS`), one board. Its source is kept beside this plan
 (`../assets/content-gap-ahrefs-layout/approved-drawing-2026-09-30.dc.html`),
-with the built page as it stands (`built-2026-09-30.jpg`).
+with the built page as it stands (`built-2026-09-30.jpg`). On 2026-10-04 the
+canvas was redrawn on the drawing kit as the page is built
+(design-drift-plan D3), and that board is kept beside it too
+(`as-built-2026-10-04.dc.html`); the approved drawing stays the record of
+what was agreed.
 
 ## What was asked
 

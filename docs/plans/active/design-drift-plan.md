@@ -1,6 +1,6 @@
 # Design drift — one record for the look, and nothing built or drawn off it — 2026-10-04
 
-D1, D2 and D5 built on dev 2026-10-04 ("build the kit first", then "lets do it and build it and also make it inter"); D3 and D4 to come.
+D1, D2 and D5 built on dev 2026-10-04 ("build the kit first", then "lets do it and build it and also make it inter"); D3 done the same day; D4's tables done, its parts lists and look tests to come.
 
 ## Why
 
@@ -116,34 +116,37 @@ approved.
 
 The canvases on 2026-10-04, newest work first:
 
-| Canvas | State of its screens |
-|---|---|
-| Keyword research | Redrawn on the app's stylesheet 2026-10-04 — moves onto the kit file |
-| Search Console — keywords and pages | Built; 24 boards |
-| Learn: News, Knowledge, Who to follow | Built in part |
-| Platform limits | Built |
-| Hakken Websites — Screens to build | Built |
-| Hakken multi-website switcher | Built |
-| Hakken Sites Overview Drawing | Built |
-| Content gap, Ahrefs layout | Built |
-| Hakken Collection Runs Drawing | Built |
-| Fan-out queries — Track | Built |
-| Features screen | Built |
-| A search's page header | Built |
-| Your prompts — the limit on screen | Built |
-| Search Console — beyond Google | An earlier proposal; redrawn whole |
-| Replacing the pills | A comparison of four options, C chosen; redrawn whole |
+| Canvas | State of its screens | Redrawn |
+|---|---|---|
+| Keyword research | Not built | On the kit 2026-10-04, drawn from `parts.html` |
+| Search Console — keywords and pages | Built; 24 boards | 2026-10-04, copied from the app |
+| Learn: News, Knowledge, Who to follow | Four News ideas; the News page was built to a later design | Ideas redrawn whole, in the built Learn frame |
+| Platform limits | Built | 2026-10-04, copied from the app |
+| Hakken Websites — Screens to build | Built | 2026-10-04, copied from the app (14 boards; "day one" dropped — no website on dev is in its first day) |
+| Hakken multi-website switcher | Built | 2026-10-04, copied from the app, phone included |
+| Hakken Sites Overview Drawing | Built | 2026-10-04, copied from the app |
+| Content gap, Ahrefs layout | Built | 2026-10-04, copied from the app |
+| Hakken Collection Runs Drawing | Built | 2026-10-04, copied from the app |
+| Fan-out queries — Track | Options A, B, C (C built) and the page a row opens | Options redrawn whole on the built page's parts |
+| A search's page header | Today and three alternatives | Redrawn whole on the built header's parts |
+| Your prompts — the limit on screen | Built | 2026-10-04, copied from the app |
+| Search Console — beyond Google | An earlier proposal, since built | 2026-10-04, copied from the app as built |
+| Replacing the pills | A comparison of four options, C chosen | Redrawn whole; C in the real StatusLabel |
 
 The canvas list is the whole claude.ai account's, not this repo's: it also
 shows "Route Planner Screens" (2026-09-19), a Conterra Ops drawing of
-routes from Baghdad to Erbil. It is not Hakken's and is left alone; nothing
-from it is in this repository. (The only mentions of Conterra in the repo
+routes from Baghdad to Erbil, and "Features screen" (switching Route Planner
+on and off). Neither is Hakken's; both are left alone, and nothing
+from them is in this repository. (The only mentions of Conterra in the repo
 are deliberate: the August 2026 email work, where Anthony asked for
 Hakken's emails to read like Conterra's.)
 
 Each is redrawn from `parts.html` on the kit, its boards kept, its
 `docs/plans/assets/<plan>/` copy refreshed. A canvas whose screen is built
-is drawn as the screen now is, so the drawing and the app agree again.
+is drawn as the screen now is, so the drawing and the app agree again:
+copied from the running app (`scripts/drawing-kit/copy-page.js`) and turned
+into boards on the kit (`scripts/drawing-kit/from-app.mjs`) — the drawing
+guide's "Redrawing a built screen".
 
 ### D4. Built screens hold to what was approved
 
@@ -236,6 +239,35 @@ from `screen-kit.md`.
 **The Keyword research canvas moved onto the kit** (its stylesheet uploaded,
 Inter linked, the kit's fingerprint noted on the canvas); all seven boards
 pass `check:drawing`.
+
+**D3, the canvases redrawn — 2026-10-04 ("go").**
+
+- The nine canvases of built screens — Search Console (24 boards), Platform
+  limits, Websites (14), the website switcher (with the phone), the Websites
+  overview, Content gap, Collection runs, Your prompts and Search Console
+  beyond Google — are now the built screens themselves: each page copied
+  from the running app at 1440px (390px for the phone), its scripts taken
+  out, on the kit's stylesheet, linked board to board as the app links. All
+  pass `check:drawing`; Content gap carries the approval marker for its
+  sideways scroll. The Search Console copy in
+  `docs/plans/assets/search-console-redesign/` is refreshed to match.
+- The converter is in the repo (`scripts/drawing-kit/from-app.mjs`, with a
+  test; `copy-page.js` copies a page), so the next canvas of a built screen
+  is redrawn the same way.
+- The option canvases are redrawn whole on the kit, each option keeping its
+  idea, words and rows, drawn from the built screen's own parts and inside
+  the app's real frame: Fan-out queries (the wide table before, A, B, C as
+  built, and the three search pages), A search's page header (today and A,
+  B, C, with B the one built), Replacing the pills (C drawn in the real
+  StatusLabel) and the four News ideas (in the built Learn frame; the News
+  page itself was later built to a different design). All 15 boards pass
+  `check:drawing`.
+- Drawing them found one canvas trap, now in `check:drawing` with a test: a
+  repeat (`<sc-for>`) inside a table is lifted out by the browser, so the
+  rows draw above the table or not at all. A table's rows are written out,
+  with holes for what changes (the drawing guide).
+- Seen in passing, not changed: on the Learn pages the app's top bar reads
+  "Dashboard" rather than "Learn".
 
 **D4, tables fit — begun 2026-10-04 ("continue with the drift work").**
 

@@ -98,6 +98,15 @@ export function checkDrawing(html, { kitCss, colours, appSource = "" }) {
     }
   }
 
+  // A canvas repeat or branch inside a table: a browser lifts any element a
+  // table may not hold out of it, so the rows draw above the table or not at
+  // all. Write a table's rows out, with holes for what changes.
+  let tableDepth = 0;
+  for (const tag of html.matchAll(/<(\/?)(table|sc-for|sc-if)\b/g)) {
+    if (tag[2] === "table") tableDepth += tag[1] ? -1 : 1;
+    else if (!tag[1] && tableDepth > 0) problems.push(`<${tag[2]}> inside a table — a browser moves it out; write the rows out, with holes for what changes`);
+  }
+
   const counted = new Map();
   for (const problem of problems) counted.set(problem, (counted.get(problem) ?? 0) + 1);
   return [...counted].map(([problem, times]) => (times > 1 ? `${problem} (${times} times)` : problem));
