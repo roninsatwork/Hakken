@@ -52,3 +52,6 @@ movement_seed.json
 poseData.json
 
 .npm-cache/
+
+# The drawing kit is built from the code (npm run drawing-kit), never committed.
+/docs/design/drawing-kit/build/

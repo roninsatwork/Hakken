@@ -26,6 +26,7 @@
   "ignoreDependencies": [
     "tailwindcss",
     "esbuild",
+    "postcss",
     "playwright",
     "google-auth-library",
     "ws"

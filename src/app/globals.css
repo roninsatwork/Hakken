@@ -16,24 +16,27 @@
   
   /* Hakken Brand.
      The source variables (--brand, --success-src, --destructive-src, --ring)
-     are written by SystemSettingsContext; the hex here is the real fallback
-     for first paint and for deployments that never saved a theme. The names
-     differ from the token on purpose: `--color-brand: var(--color-brand, …)`
-     is a self-referential cycle and its fallback can never fire. */
-  --color-brand: var(--brand, #ff5a1f);
+     are written by SystemSettingsContext, and :root and .dark below paint
+     them from hakken.theme.json, the one record of the look, for first paint
+     and for deployments that never saved one. The hex here is the record's
+     dark look too (src/theme-record-drift.test.ts holds every one of them).
+     The names differ from the token on purpose: `--color-brand:
+     var(--color-brand, …)` is a self-referential cycle and its fallback can
+     never fire. */
+  --color-brand: var(--brand, #E8E4DC);
   /* Words on a solid brand surface (`bg-brand text-on-brand`). White, until
      SystemSettingsContext finds the brand colour too pale for it and writes
      --on-brand dark (2026-10-03). Never `text-white` on `bg-brand`. */
-  --color-on-brand: var(--on-brand, #ffffff);
-  --color-success: var(--success-src, #10b981);
-  --color-destructive: var(--destructive-src, #ef4444);
+  --color-on-brand: var(--on-brand, #222224);
+  --color-success: var(--success-src, #10B981);
+  --color-destructive: var(--destructive-src, #EF4444);
   /* The two status tones the app renders constantly but never had tokens
      for: warning (review/pending/risk, previously hardcoded amber) and info
      (running/neutral activity, previously hardcoded sky). Defaults are the
      values the app was already painting by hand. */
-  --color-warning: var(--warning-src, #f59e0b);
-  --color-info: var(--info-src, #38bdf8);
-  --color-ring: var(--ring, rgba(255, 90, 31, 0.4));
+  --color-warning: var(--warning-src, #F59E0B);
+  --color-info: var(--info-src, #38BDF8);
+  --color-ring: var(--ring, #E8E4DC);
 
   /* Shapes */
   --radius-lg: 1rem;
@@ -42,35 +45,56 @@
 }
 
 :root {
+  /* The light look, from hakken.theme.json (the one record of the look;
+     `npm run theme:pull` copies it from System Settings). SystemSettingsContext
+     writes the same variables from the saved settings once they load; these
+     are first paint and a deployment that never saved a look. Change the
+     record, never these by hand: src/theme-record-drift.test.ts holds them. */
+  --brand: #2C2C2E;
   /* "R, G, B" of the brand colour, for rgba(var(--brand-rgb), a) glow
-     shadows. Overridden by SystemSettingsContext when a brand colour is
-     saved; both spellings exist because call sites grew up using both. */
-  --brand-rgb: 255, 90, 31;
+     shadows; both spellings exist because call sites grew up using both. */
+  --brand-rgb: 44, 44, 46;
   --color-brand-rgb: var(--brand-rgb);
+  --on-brand: #ffffff;
 
-  --bg-main: #fcfcfc;
-  --bg-sidebar: #ffffff;
-  --bg-card: #ffffff;
-  --bg-hover: rgba(0, 0, 0, 0.05);
+  --bg-main: #FCFCFC;
+  --bg-sidebar: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-hover: #F2F2F2;
   --text-primary: #111111;
   --text-secondary: #666666;
   --text-muted: #999999;
-  --border-subtle: rgba(0, 0, 0, 0.05);
-  --radial-inner: #f2f2f7;
-  --radial-outer: #fdfdfd;
+  --border-subtle: #E5E5E5;
+  --radial-inner: #FFFFFF;
+  --radial-outer: #FCFCFC;
+  --success-src: #10B981;
+  --destructive-src: #EF4444;
+  --warning-src: #F59E0B;
+  --info-src: #38BDF8;
+  --ring: #2C2C2E;
 }
 
 .dark {
+  /* The dark look, from hakken.theme.json, as :root above. */
+  --brand: #E8E4DC;
+  --brand-rgb: 232, 228, 220;
+  --on-brand: #222224;
+
   --bg-main: #222224;
   --bg-sidebar: #18181A;
   --bg-card: #2C2C2E;
-  --bg-hover: rgba(255, 255, 255, 0.08);
-  --text-primary: #ffffff;
+  --bg-hover: #3A3A3C;
+  --text-primary: #FFFFFF;
   --text-secondary: #A1A1A6;
   --text-muted: #737373;
-  --border-subtle: rgba(255, 255, 255, 0.1);
+  --border-subtle: #3A3A3C;
   --radial-inner: #2C2C2E;
   --radial-outer: #222224;
+  --success-src: #10B981;
+  --destructive-src: #EF4444;
+  --warning-src: #F59E0B;
+  --info-src: #38BDF8;
+  --ring: #E8E4DC;
 }
 
 body {

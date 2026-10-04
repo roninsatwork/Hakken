@@ -41,11 +41,17 @@ export default async function RootLayout({
 
   return (
     <ConvexAuthNextjsServerProvider>
-      <html lang={locale} suppressHydrationWarning>
+      {/*
+        Inter's variable sits on <html>, not <body>: globals.css works out
+        `--font-sans: var(--font-inter), …` on the root, and with the variable
+        only on <body> it never resolved there, so the app quietly drew the
+        system font (found 2026-10-04, design-drift-plan; Anthony: "make it
+        inter"). JetBrains Mono stays on <body>, where `font-mono` reads it.
+      */}
+      <html lang={locale} suppressHydrationWarning className={inter.variable}>
         <body
           suppressHydrationWarning
           className={cn(
-            inter.variable,
             jetbrainsMono.variable,
             "antialiased min-h-screen pt-0 m-0 w-full font-sans tracking-tight"
           )}

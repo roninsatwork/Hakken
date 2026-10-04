@@ -1,17 +1,29 @@
 import { productIdentity } from "../product.identity";
+// The one record of the look (docs/plans/active/design-drift-plan.md, D1):
+// a deployment that never saved one starts in it.
+import themeRecord from "../hakken.theme.json";
 import type { Doc } from "./_generated/dataModel";
 import { summariseAuditValue } from "./auditLogService";
 
+/**
+ * The product's shipped colour, from `hakken.product.json`: what a chat widget
+ * on a client's own website wears when it has no colour of its own
+ * (widgets.ts). It is not the dashboard's look — that pale accent would vanish
+ * on a client's page (2026-10-03) — and so not in hakken.theme.json.
+ */
+export const SHIPPED = {
+  brandColorHex: productIdentity.brandColorHex,
+};
+
 export const DEFAULT_SETTINGS = {
   platformName: productIdentity.name,
-  brandColorHex: productIdentity.brandColorHex,
-  // Unset: light mode paints brandColorHex until it has its own.
-  lightBrandColorHex: undefined as string | undefined,
+  brandColorHex: themeRecord.brandColorHex as string,
+  lightBrandColorHex: themeRecord.lightBrandColorHex as string | undefined,
   fontFamily: undefined as string | undefined,
-  headingFontFamily: undefined as string | undefined,
-  bodyFontFamily: undefined as string | undefined,
+  headingFontFamily: themeRecord.headingFontFamily as string | undefined,
+  bodyFontFamily: themeRecord.bodyFontFamily as string | undefined,
   fontSizeBase: undefined as string | undefined,
-  headingSizeGlobal: undefined as string | undefined,
+  headingSizeGlobal: themeRecord.headingSizeGlobal as string | undefined,
   subTextSizeGlobal: undefined as string | undefined,
   borderRadius: undefined as string | undefined,
   logoUrlLight: (productIdentity.logoUrlLight || undefined) as string | undefined,
@@ -20,33 +32,33 @@ export const DEFAULT_SETTINGS = {
   emailSenderAddress: undefined as string | undefined,
   salesContactEmail: undefined as string | undefined,
 
-  lightBg: undefined as string | undefined,
-  lightFg: undefined as string | undefined,
-  lightCardBg: undefined as string | undefined,
-  lightCardFg: undefined as string | undefined,
-  lightBorder: undefined as string | undefined,
-  lightMuted: undefined as string | undefined,
-  lightMutedFg: undefined as string | undefined,
-  lightSuccess: undefined as string | undefined,
-  lightDestructive: undefined as string | undefined,
-  lightWarning: undefined as string | undefined,
-  lightInfo: undefined as string | undefined,
-  lightRing: undefined as string | undefined,
-  lightSidebarBg: undefined as string | undefined,
+  lightBg: themeRecord.lightBg as string | undefined,
+  lightFg: themeRecord.lightFg as string | undefined,
+  lightCardBg: themeRecord.lightCardBg as string | undefined,
+  lightCardFg: themeRecord.lightCardFg as string | undefined,
+  lightBorder: themeRecord.lightBorder as string | undefined,
+  lightMuted: themeRecord.lightMuted as string | undefined,
+  lightMutedFg: themeRecord.lightMutedFg as string | undefined,
+  lightSuccess: themeRecord.lightSuccess as string | undefined,
+  lightDestructive: themeRecord.lightDestructive as string | undefined,
+  lightWarning: themeRecord.lightWarning as string | undefined,
+  lightInfo: themeRecord.lightInfo as string | undefined,
+  lightRing: themeRecord.lightRing as string | undefined,
+  lightSidebarBg: themeRecord.lightSidebarBg as string | undefined,
 
-  darkBg: undefined as string | undefined,
-  darkFg: undefined as string | undefined,
-  darkCardBg: undefined as string | undefined,
-  darkCardFg: undefined as string | undefined,
-  darkBorder: undefined as string | undefined,
-  darkMuted: undefined as string | undefined,
-  darkMutedFg: undefined as string | undefined,
-  darkSuccess: undefined as string | undefined,
-  darkDestructive: undefined as string | undefined,
-  darkWarning: undefined as string | undefined,
-  darkInfo: undefined as string | undefined,
-  darkRing: undefined as string | undefined,
-  darkSidebarBg: undefined as string | undefined,
+  darkBg: themeRecord.darkBg as string | undefined,
+  darkFg: themeRecord.darkFg as string | undefined,
+  darkCardBg: themeRecord.darkCardBg as string | undefined,
+  darkCardFg: themeRecord.darkCardFg as string | undefined,
+  darkBorder: themeRecord.darkBorder as string | undefined,
+  darkMuted: themeRecord.darkMuted as string | undefined,
+  darkMutedFg: themeRecord.darkMutedFg as string | undefined,
+  darkSuccess: themeRecord.darkSuccess as string | undefined,
+  darkDestructive: themeRecord.darkDestructive as string | undefined,
+  darkWarning: themeRecord.darkWarning as string | undefined,
+  darkInfo: themeRecord.darkInfo as string | undefined,
+  darkRing: themeRecord.darkRing as string | undefined,
+  darkSidebarBg: themeRecord.darkSidebarBg as string | undefined,
   diagnosticRoutingEnabled: false as boolean,
 };
 

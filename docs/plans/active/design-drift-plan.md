@@ -1,6 +1,6 @@
 # Design drift — one record for the look, and nothing built or drawn off it — 2026-10-04
 
-Planning. Nothing built yet.
+D1, D2 and D5 built on dev 2026-10-04 ("build the kit first", then "lets do it and build it and also make it inter"); D3 and D4 to come.
 
 ## Why
 
@@ -171,6 +171,71 @@ is drawn as the screen now is, so the drawing and the app agree again.
   it, beside the existing screen-kit rules.
 - The rule as it stands today is already saved in the agents' memory
   ("Draw from the live app").
+
+## Built — 2026-10-04
+
+**D1, one record for the look.**
+
+- `hakken.theme.json`: the 31 look settings saved on dev, under the settings'
+  own names (dark and light colours, the brand for each, fonts, heading
+  size). Ivory brand `#E8E4DC` dark, `#2C2C2E` light; borders and hover
+  `#3A3A3C`.
+- `npm run theme:pull` copies them from the dev deployment
+  (`settings:get`); `npm run check:theme` fails when they differ, and is now
+  part of `npm run check` (skipped on GitHub, which cannot read the database).
+- The code follows the record: `globals.css`'s `:root` (light) and `.dark`
+  blocks and its fallbacks, and `DEFAULT_SETTINGS`, so a deployment that
+  never saved a look starts in it. `src/theme-record-drift.test.ts` holds
+  all of them, and that `SystemSettingsContext` applies every variable the
+  record maps. Shared helpers: `scripts/theme-record.mjs`.
+- **The widget is not the dashboard.** `hakken.product.json`'s orange
+  `#E26D28` stays: it is the product's shipped colour, which a chat widget on
+  a client's own website wears (decided 2026-10-03 — the pale dashboard
+  accent would vanish there). It is now named `SHIPPED` in
+  `convex/settingsService.ts` and read by `widgets.ts` by that name, and a
+  test holds the two apart. (Caught while building: the first cut of D1
+  turned the product file ivory, which would have turned the widgets pale.)
+
+**D2, the drawing kit.**
+
+- `npm run drawing-kit` builds `docs/design/drawing-kit/build/` in half a
+  second: `kit.css` (the app's stylesheet compiled as the app compiles it,
+  with the dark look on the page root), `parts.html` (17 parts rendered from
+  the real components — the client's menu, top bar, headers, section menu,
+  figures, chart card, notices, fields, buttons, filters, labels, and a
+  Websites table with its cells and numbered pages) and `kit.json`. Not
+  committed; `.gitignore` keeps it out.
+- The parts render outside the app on small stand-ins
+  (`scripts/drawing-kit/stubs/`): English words from `messages/en.json`, a
+  link as `<a>`, no database, the record as the settings.
+- `npm run check:drawing -- <board>` fails a class the app's stylesheet does
+  not have, a colour outside the record and the chart palette, a font other
+  than the app's, or a table that would scroll sideways. On the day it
+  passed all seven Keyword research boards and failed the old Search
+  Console board for exactly its drift (orange, Inter, hand-written colours,
+  an 860px table).
+- Tests: `scripts/drawing-kit.test.mjs` rebuilds the kit (a component the
+  stand-ins cannot render fails there) and `scripts/check-drawing.test.mjs`.
+- How to draw with it: `docs/design/drawing-kit/README.md`.
+
+**Inter, as meant (his call, "make it inter").** The app's words had been
+rendering in the system font: `globals.css` names Inter (`--font-sans:
+var(--font-inter), …`) and `themeFonts.ts` says the default "is already
+Inter", but next/font set `--font-inter` on `<body>` while `--font-sans` is
+worked out on `<html>`, so it never resolved. Inter's variable now sits on
+`<html>` (`src/app/layout.tsx`); JetBrains Mono stays on `<body>`, where it
+already worked. Checked in the running app: titles, tables and words are
+Inter. `src/theme-record-drift.test.ts` holds the wiring; the kit and
+`check:drawing` take Inter and JetBrains Mono and no other font.
+
+**D5, one guide every agent reads.** `docs/developer/drawing-guide.md` —
+the rule, before you start, drawing, building, when the look changes —
+linked from a new AGENTS.md section, "Drawing And Building Screens", and
+from `screen-kit.md`.
+
+**The Keyword research canvas moved onto the kit** (its stylesheet uploaded,
+Inter linked, the kit's fingerprint noted on the canvas); all seven boards
+pass `check:drawing`.
 
 ## Order and size
 

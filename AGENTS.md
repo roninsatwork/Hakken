@@ -214,6 +214,26 @@ npm run convex:dev
 ```
 
 
+## Drawing And Building Screens
+
+**Read [docs/developer/drawing-guide.md](docs/developer/drawing-guide.md)
+before drawing or building any screen** (Anthony, 2026-10-04, after drawings
+drifted from the app: "We cannot go through this with every agent").
+
+- **The look has one record: `hakken.theme.json`**, copied from Admin →
+  System Settings → Global Aesthetics by `npm run theme:pull`. Never take a
+  colour or font from a drawing, an old canvas, a memory or the code's
+  fallbacks. `npm run check` fails while the saved look and the record differ.
+- **Draw only from the drawing kit** (`npm run drawing-kit`;
+  `docs/design/drawing-kit/README.md`): the app's own stylesheet, and parts
+  rendered from the real components. Never copy another canvas's styles.
+- **Run `npm run check:drawing -- <board>` on every board before
+  publishing** a canvas, and fix what it names.
+- **Tables fit the page**: no minimum width, no sideways scrolling.
+- **Words are Inter, numbers JetBrains Mono.**
+- **A part not in the kit** is new to the screen kit: name it to Anthony
+  before drawing it.
+
 ## Project Guardrails
 
 - **Reuse before you build. Look first, every time.** Before writing a

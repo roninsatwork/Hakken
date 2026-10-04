@@ -17,7 +17,7 @@ import {
   validateStoredUpload,
   validateWidgetAttachmentMetadata,
 } from "./utils/uploadPolicy";
-import { DEFAULT_SETTINGS, isStorageLogoReference } from "./settingsService";
+import { DEFAULT_SETTINGS, SHIPPED, isStorageLogoReference } from "./settingsService";
 import type { QueryCtx } from "./_generated/server";
 import { adminMutation, adminQuery, publicMutation, publicQuery, superAdminQuery } from "./tenantFunctions";
 
@@ -27,7 +27,7 @@ async function getSystemWidgetBranding(ctx: QueryCtx) {
   // A widget with no colour of its own takes the product's shipped colour,
   // not the dashboard's brand colour: the widget sits on customers' own
   // websites, and the dashboard's accent turned pale on 2026-10-03.
-  const themePrimaryColor = DEFAULT_SETTINGS.brandColorHex;
+  const themePrimaryColor = SHIPPED.brandColorHex;
   let themeLogoUrl = settings?.logoUrlLight || settings?.logoUrlDark;
 
   if (isStorageLogoReference(themeLogoUrl)) {

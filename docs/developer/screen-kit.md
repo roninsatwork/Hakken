@@ -4,6 +4,8 @@ The screen kit provides the table, pagination, modal, detail-layout, settings-se
 
 **It serves both halves of the app.** The kit began inside the admin folder and moved to `src/ui/components/screens/` on 2026-08-16 so the screens under `/app` — the ones a client actually uses — can reach it too, and so a product cloned from this repo inherits a kit rather than rebuilding one. Nothing here is admin-only; a name carrying `Admin` means the part is genuinely specific to an administration surface. See [Every Screen Is Built From The Same Parts](../plans/completed/shared-screen-kit-plan.md).
 
+**Drawing a screen, or building one from a drawing?** Read the [drawing guide](./drawing-guide.md) first: the look's one record (`hakken.theme.json`) and the drawing kit built from these parts.
+
 Read this before changing `src/ui/components/screens/**`, `src/hooks/useServerPagedTable.ts`, `src/ui/components/feedback/HakkenModal.tsx`, `src/ui/components/feedback/HakkenEmptyState.tsx`, `src/ui/components/settings/JsonSchemaBuilder.tsx`, or any page that repeats table/search/pagination/form patterns. For the route and role model around admin pages, see [Administration](./administration.md). For global styling guidance, see [Frontend](./frontend.md).
 
 ## Where A Kit Component Lives

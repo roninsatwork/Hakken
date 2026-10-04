@@ -2,7 +2,7 @@ import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
-import { DEFAULT_SETTINGS } from "./settingsService";
+import { SHIPPED } from "./settingsService";
 import { seedUploadReceipt } from "../scripts/test-upload-fixture";
 import { mintWidgetEmbedPass } from "./utils/widgetEmbedPass";
 import { WIDGET_THREADS_PER_HOUR, WIDGET_UPLOAD_URL_LIMIT } from "./widgets";
@@ -239,7 +239,7 @@ describe("Widget Authorization", () => {
 
     await expect(t.query(api.widgets.getWidgetById, { widgetId })).resolves.toMatchObject({
       name: "Website Bot",
-      themePrimaryColor: DEFAULT_SETTINGS.brandColorHex,
+      themePrimaryColor: SHIPPED.brandColorHex,
       themeLogoUrl: "https://cdn.example/acme-light.png",
       themeGreeting: "Hi! How can Acme Assist help you today?",
       themePlaceholder: "Message Acme Assist...",
