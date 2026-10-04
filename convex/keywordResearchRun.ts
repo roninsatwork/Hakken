@@ -33,6 +33,9 @@ import {
 } from "./keywordResearchCalls";
 import { freshnessOf, newestSerp, overviewIsFresh, platformSandbox, serpIsFresh, type Freshness } from "./keywordResearchData";
 import { findResearchCountry } from "./utils/researchCountries";
+import { RESEARCH_PROBLEMS, type ResearchProblem } from "./utils/researchProblems";
+
+const problemValidator = v.union(...RESEARCH_PROBLEMS.map((code) => v.literal(code)));
 import { AI_ENGINES, AI_ENGINE_CALLS, type AiEngine } from "./seoAiEngines";
 import { seoAiCitationParams } from "./dataForSeoRegistry";
 import { parseLlmResponse } from "./dataForSeoParsers";
@@ -454,7 +457,7 @@ export const fileAnswers = internalMutation({
  * it is not. A part asked for again since, by a newer run, is that run's.
  */
 export const settleLookups = internalMutation({
-  args: { runId: v.id("agentRuns"), problem: v.optional(v.string()) },
+  args: { runId: v.id("agentRuns"), problem: v.optional(problemValidator) },
   returns: v.object({ ready: v.number(), failed: v.number() }),
   handler: async (ctx, args) => {
     const run = await ctx.db.get(args.runId);
@@ -464,7 +467,7 @@ export const settleLookups = internalMutation({
     const limits = companyId ? await readFanOutLimits(ctx, companyId) : null;
     const base = freshnessOf(limits?.researchReuseDays ?? 30);
     const ideasPerKind = limits?.researchIdeasPerKind ?? 100;
-    const problem = args.problem ?? "DataForSEO did not answer for this keyword. Look it up again.";
+    const problem: ResearchProblem = args.problem ?? "NO_ANSWER";
     let ready = 0;
     let failed = 0;
     for (const job of jobs) {
@@ -762,9 +765,8 @@ async function research(ctx: ActionCtx, runId: Id<"agentRuns">, workflowExecutio
   try {
     credentials = readDataForSeoCredentials();
   } catch (error) {
-    const problem = `DataForSEO is not connected: ${getErrorMessage(error)}`;
-    await ctx.runMutation(internal.keywordResearchRun.settleLookups, { runId, problem });
-    return `Nothing was bought. ${problem}`;
+    await ctx.runMutation(internal.keywordResearchRun.settleLookups, { runId, problem: "NOT_CONNECTED" });
+    return `Nothing was bought. DataForSEO is not connected: ${getErrorMessage(error)}`;
   }
   const keywords = (count: number) => `${count} ${count === 1 ? "keyword" : "keywords"}`;
   const said = [
@@ -790,7 +792,7 @@ async function research(ctx: ActionCtx, runId: Id<"agentRuns">, workflowExecutio
     calls: carrying.calls,
     deadline: Date.now() + RUN_PART_MS,
   };
-  let stopped: string | null = null;
+  let stopped: { problem: ResearchProblem; said: string } | null = null;
   try {
     await buyOverviews(buyer, work.overviews, true);
     await buyOverviews(buyer, work.countries, false);
@@ -818,13 +820,13 @@ async function research(ctx: ActionCtx, runId: Id<"agentRuns">, workflowExecutio
       });
       return null;
     }
-    if (error instanceof TimeToCarryOn) stopped = "This lookup took too long to buy in one go. Look it up again to buy the rest.";
-    else if (error instanceof SpendLimitReached) stopped = "This run reached the Keyword research agent's spend limit. Look it up again to buy the rest.";
+    if (error instanceof TimeToCarryOn) stopped = { problem: "TOO_LONG", said: "This lookup took too long to buy in one go." };
+    else if (error instanceof SpendLimitReached) stopped = { problem: "SPEND_LIMIT", said: "This run reached the Keyword research agent's spend limit." };
     else throw error;
   }
 
-  const settled = await ctx.runMutation(internal.keywordResearchRun.settleLookups, { runId, ...(stopped ? { problem: stopped } : {}) });
-  return await summaryOf(ctx, runId, settled, buyer.calls, credentials.sandbox, stopped);
+  const settled = await ctx.runMutation(internal.keywordResearchRun.settleLookups, { runId, ...(stopped ? { problem: stopped.problem } : {}) });
+  return await summaryOf(ctx, runId, settled, buyer.calls, credentials.sandbox, stopped?.said ?? null);
 }
 
 async function summaryOf(ctx: ActionCtx, runId: Id<"agentRuns">, settled: { ready: number; failed: number }, calls: number, sandbox: boolean, stopped: string | null): Promise<string> {
@@ -858,7 +860,7 @@ export const runKeywordResearchNow = internalAction({
       }
     } catch (error: unknown) {
       const summary = failureSummary(error);
-      await ctx.runMutation(internal.keywordResearchRun.settleLookups, { runId: args.runId, problem: `The lookup stopped: ${summary}` });
+      await ctx.runMutation(internal.keywordResearchRun.settleLookups, { runId: args.runId, problem: "STOPPED" });
       await ctx.runMutation(internal.roleRuns.finishRoleRun, { runId: args.runId, workflowExecutionId: args.workflowExecutionId, status: "FAILED", summary });
     }
     return null;

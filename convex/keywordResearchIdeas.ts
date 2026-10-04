@@ -7,6 +7,7 @@ import { freshnessOf, newestSerp } from "./keywordResearchData";
 import { ownWebsites, partIsBuying, requireLookup, startResearchRun, watchedIn, type ResearchJob } from "./keywordResearch";
 import { hostOf } from "./keywordResearchCalls";
 import { findResearchCountry } from "./utils/researchCountries";
+import { researchProblemOf } from "./utils/researchProblems";
 
 /**
  * Keyword ideas (board 5; docs/plans/active/keyword-research-plan.md):
@@ -94,7 +95,7 @@ export const lookupIdeas = tenantQuery({
       siteId: website?.siteId ?? null,
       kind: args.kind,
       state: args.kind === "ALSO_RANK" ? lookup.results ?? null : lookup.ideas ?? null,
-      problem: lookup.problem ?? null,
+      problem: researchProblemOf(lookup.problem),
       boughtAt: chosen?.boughtAt ?? null,
       sample: Boolean(chosen?.sandbox),
       counts: Object.fromEntries(KINDS.map((kind) => [kind, held[kind] ? held[kind]!.total ?? held[kind]!.rows.length : null])) as Record<(typeof KINDS)[number], number | null>,

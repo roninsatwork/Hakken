@@ -205,6 +205,7 @@ import type * as keywordResearchIdeas from "../keywordResearchIdeas.js";
 import type * as keywordResearchPrices from "../keywordResearchPrices.js";
 import type * as keywordResearchQuestion from "../keywordResearchQuestion.js";
 import type * as keywordResearchRun from "../keywordResearchRun.js";
+import type * as keywordResearchSampleMigration from "../keywordResearchSampleMigration.js";
 import type * as keywordResearchSchema from "../keywordResearchSchema.js";
 import type * as keywordResearchShapes from "../keywordResearchShapes.js";
 import type * as kiosk from "../kiosk.js";
@@ -471,6 +472,7 @@ import type * as utils_providerContentTypes from "../utils/providerContentTypes.
 import type * as utils_purgeShapes from "../utils/purgeShapes.js";
 import type * as utils_readCoverage from "../utils/readCoverage.js";
 import type * as utils_researchCountries from "../utils/researchCountries.js";
+import type * as utils_researchProblems from "../utils/researchProblems.js";
 import type * as utils_reviewInboxShapes from "../utils/reviewInboxShapes.js";
 import type * as utils_rowShape from "../utils/rowShape.js";
 import type * as utils_safeWorkflowHttp from "../utils/safeWorkflowHttp.js";
@@ -782,6 +784,7 @@ declare const fullApi: ApiFromModules<{
   keywordResearchPrices: typeof keywordResearchPrices;
   keywordResearchQuestion: typeof keywordResearchQuestion;
   keywordResearchRun: typeof keywordResearchRun;
+  keywordResearchSampleMigration: typeof keywordResearchSampleMigration;
   keywordResearchSchema: typeof keywordResearchSchema;
   keywordResearchShapes: typeof keywordResearchShapes;
   kiosk: typeof kiosk;
@@ -1048,6 +1051,7 @@ declare const fullApi: ApiFromModules<{
   "utils/purgeShapes": typeof utils_purgeShapes;
   "utils/readCoverage": typeof utils_readCoverage;
   "utils/researchCountries": typeof utils_researchCountries;
+  "utils/researchProblems": typeof utils_researchProblems;
   "utils/reviewInboxShapes": typeof utils_reviewInboxShapes;
   "utils/rowShape": typeof utils_rowShape;
   "utils/safeWorkflowHttp": typeof utils_safeWorkflowHttp;

@@ -111,8 +111,8 @@ describe("a lookup's Google's results", () => {
   });
 
   it("says why reading the pages failed", async () => {
-    await open({ state: "FAILED", problem: "The pages could not be read." });
-    expect(screen.getByText("The pages could not be read.")).toBeInTheDocument();
+    await open({ state: "FAILED", problem: "STOPPED" });
+    expect(screen.getByText("keywordResearch.problems.STOPPED")).toBeInTheDocument();
   });
 
   it("waits for the lookup itself before asking for anything", async () => {

@@ -11943,6 +11943,13 @@
       "aboveYouDetail": "You both rank, it is higher",
       "visits": "Visits these bring it",
       "visitsDetail": "a month, estimated"
+    },
+    "problems": {
+      "NO_ANSWER": "Nothing came back for this keyword. Try again.",
+      "NOT_CONNECTED": "Keyword research isn't connected to its data source. An admin needs to check the connection.",
+      "SPEND_LIMIT": "The Keyword research agent reached its spend limit for one run. Try again to buy the rest.",
+      "TOO_LONG": "This took too long to buy in one go. Try again to buy the rest.",
+      "STOPPED": "The lookup stopped before it finished. Try again."
     }
   },
   "aiEngines": {

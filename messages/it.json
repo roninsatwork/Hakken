@@ -11943,6 +11943,13 @@
       "aboveYouDetail": "Vi posizionate entrambi, è più in alto",
       "visits": "Visite che gli portano",
       "visitsDetail": "al mese, stimate"
+    },
+    "problems": {
+      "NO_ANSWER": "Non è arrivato nulla per questa parola chiave. Riprova.",
+      "NOT_CONNECTED": "Keyword research non è collegato alla sua fonte di dati. Un amministratore deve controllare il collegamento.",
+      "SPEND_LIMIT": "L'agente Keyword research ha raggiunto il suo limite di spesa per un'esecuzione. Riprova per acquistare il resto.",
+      "TOO_LONG": "L'acquisto ha richiesto troppo tempo in una volta. Riprova per acquistare il resto.",
+      "STOPPED": "La ricerca si è fermata prima di finire. Riprova."
     }
   },
   "aiEngines": {

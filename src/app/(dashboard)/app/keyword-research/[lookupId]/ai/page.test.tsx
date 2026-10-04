@@ -102,9 +102,9 @@ describe("a lookup's What the AI says", () => {
   });
 
   it("says why asking failed, with Ask again", async () => {
-    const mutation = await open({ state: "FAILED", problem: "The assistants did not answer." });
+    const mutation = await open({ state: "FAILED", problem: "NO_ANSWER" });
 
-    const notice = screen.getByText("The assistants did not answer.").closest("[data-part='notice']") as HTMLElement;
+    const notice = screen.getByText("keywordResearch.problems.NO_ANSWER").closest("[data-part='notice']") as HTMLElement;
     await act(async () => {
       fireEvent.click(within(notice).getByRole("button", { name: "keywordResearch.ai.askAgain" }));
     });

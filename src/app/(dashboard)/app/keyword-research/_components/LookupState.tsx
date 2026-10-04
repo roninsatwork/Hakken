@@ -8,10 +8,12 @@ import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/components/screens/Button";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import type { LookupOverview } from "./useLookup";
+import { useProblemWords } from "./ResearchCells";
 
 /** Waiting while the agent buys, or why it failed, with Look up again for anyone who may buy. */
 export function LookupState({ lookup }: { lookup: LookupOverview }) {
   const t = useTranslations("keywordResearch.lookup");
+  const problemWords = useProblemWords();
   const lookUpAgain = useMutation(api.keywordResearch.lookUpAgain);
   const { run, isBusy } = useAdminAction({ scope: "keyword-research-again" });
   if (lookup.state === "WAITING") return <Notice>{t("waitingNotice")}</Notice>;
@@ -33,7 +35,7 @@ export function LookupState({ lookup }: { lookup: LookupOverview }) {
         ) : undefined
       }
     >
-      {lookup.problem ?? t("failedNotice")}
+      {problemWords(lookup.problem, t("failedNotice"))}
     </Notice>
   );
 }

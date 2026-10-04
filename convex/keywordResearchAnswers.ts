@@ -9,6 +9,7 @@ import { companyHolds } from "./siteAccess";
 import { freshnessOf } from "./keywordResearchData";
 import { ownWebsites, partIsBuying, requireLookup, startResearchRun, watchedIn } from "./keywordResearch";
 import { findResearchCountry } from "./utils/researchCountries";
+import { researchProblemOf } from "./utils/researchProblems";
 
 /**
  * What the AI says (board 4; docs/plans/active/keyword-research-plan.md): the
@@ -118,7 +119,7 @@ export const lookupAnswers = tenantQuery({
       country: findResearchCountry(lookup.locationCode)?.label ?? "",
       host: website?.host ?? null,
       state: lookup.answers ?? null,
-      problem: lookup.problem ?? null,
+      problem: researchProblemOf(lookup.problem),
       askedAt: held?.boughtAt ?? null,
       sample: Boolean(held?.sandbox),
       question: held?.question ?? null,

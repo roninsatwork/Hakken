@@ -26,7 +26,7 @@ import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteP
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { AddTickedToList, KeywordOpener, useOpenKeyword } from "../../_components/KeywordActions";
 import { LookupState } from "../../_components/LookupState";
-import { DifficultyCell, FigureCell, IntentWord } from "../../_components/ResearchCells";
+import { DifficultyCell, FigureCell, IntentWord, useProblemWords } from "../../_components/ResearchCells";
 import {
   DIFFICULTY_BANDS,
   IDEA_KEYS,
@@ -68,6 +68,7 @@ const YOU_CHOICES = ["", "ranks", "not"] as const;
 export default function LookupIdeasPage() {
   const t = useTranslations("keywordResearch.ideas");
   const tk = useTranslations("keywordResearch");
+  const problemWords = useProblemWords();
   const tc = useTranslations("keywordResearch.columns");
   const pathname = usePathname();
   const lookupId = useLookupId();
@@ -181,7 +182,7 @@ export default function LookupIdeasPage() {
       {ideas?.sample ? <Notice>{tk("sample")}</Notice> : null}
       {lookup.state !== "READY" ? <LookupState lookup={lookup} /> : null}
       {ideas?.state === "WAITING" ? <Notice>{t("waiting")}</Notice> : null}
-      {ideas?.state === "FAILED" ? <Notice tone="warning">{ideas.problem ?? t("failed")}</Notice> : null}
+      {ideas?.state === "FAILED" ? <Notice tone="warning">{problemWords(ideas.problem, t("failed"))}</Notice> : null}
       <SiteViewSwitch
         label={t("kindLabel")}
         value={key}

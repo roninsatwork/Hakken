@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalAction } from "./_generated/server";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import { getErrorMessage } from "./utils/lang";
 
 /**
  * What the AI says (board 4; docs/plans/active/keyword-research-plan.md):
@@ -31,6 +32,7 @@ export const writeQuestion = internalAction({
     const prompt = `Google search: ${args.keyword}\nCountry: ${args.country}`;
     let text = "";
     let failed = false;
+    let reason = "";
     let inputTokens = 0;
     let outputTokens = 0;
     try {
@@ -42,8 +44,10 @@ export const writeQuestion = internalAction({
       text = (response.text ?? "").trim().replace(/^["“]|["”]$/g, "").replace(/\s+/g, " ").trim().slice(0, MAX_QUESTION);
       inputTokens = response.inputTokens ?? 0;
       outputTokens = response.outputTokens ?? 0;
-    } catch {
+    } catch (error) {
       failed = true;
+      // Kept on the run's step, so Observability says why no question was written.
+      reason = getErrorMessage(error);
     }
     await ctx.runMutation(internal.roleRuns.recordRunModelCall, {
       runId: args.runId,
@@ -55,7 +59,7 @@ export const writeQuestion = internalAction({
       inputTokens,
       outputTokens,
       promptContent: prompt,
-      responseContent: text,
+      responseContent: text || (reason ? `Failed: ${reason}` : "The model wrote nothing."),
       failed: failed || !text,
     });
     return text || null;

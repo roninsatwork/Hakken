@@ -136,8 +136,8 @@ describe("a lookup's Keyword ideas", () => {
   });
 
   it("says why the ideas failed", async () => {
-    await open({ state: "FAILED", problem: "The ideas could not be read." });
-    expect(screen.getByText("The ideas could not be read.")).toBeInTheDocument();
+    await open({ state: "FAILED", problem: "SPEND_LIMIT" });
+    expect(screen.getByText("keywordResearch.problems.SPEND_LIMIT")).toBeInTheDocument();
   });
 
   it("never passes sample ideas off as real", async () => {

@@ -8,6 +8,7 @@ import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { PositionCell } from "../../sites/_components/SiteCells";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { COUNTRY_KEYS, VERDICT_TONES, difficultyWord, isIntent, type Verdict } from "./researchWords";
+import type { ResearchProblem } from "@/convex/utils/researchProblems";
 
 /**
  * The cells Keyword research's tables share, so a difficulty, an intent, a
@@ -85,6 +86,12 @@ export function useCountryName(): (code: number, fallback: string) => string {
 }
 
 /** "in the United Kingdom", "nel Regno Unito": a country as a sentence says where. */
+/** Why a part of a lookup failed, in the screen's own words: the server sends a code, never a sentence of its own. */
+export function useProblemWords(): (problem: ResearchProblem | null, fallback: string) => string {
+  const t = useTranslations("keywordResearch.problems");
+  return (problem, fallback) => (problem ? t(problem) : fallback);
+}
+
 export function usePlaceIn(): (code: number, fallback: string) => string {
   const t = useTranslations("keywordResearch");
   const countryName = useCountryName();

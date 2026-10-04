@@ -185,10 +185,10 @@ describe("a lookup's Overview", () => {
     expect(screen.queryByText("keywordResearch.overview.volume")).not.toBeInTheDocument();
   });
 
-  it("says why a lookup failed, with Look up again", async () => {
-    const mutation = await open({ state: "FAILED" as never, problem: "DataForSEO did not answer.", overview: null as never });
+  it("says why a lookup failed in its own words, never the server's, with Look up again", async () => {
+    const mutation = await open({ state: "FAILED" as never, problem: "NO_ANSWER", overview: null as never });
 
-    const notice = screen.getByText("DataForSEO did not answer.").closest("[data-part='notice']") as HTMLElement;
+    const notice = screen.getByText("keywordResearch.problems.NO_ANSWER").closest("[data-part='notice']") as HTMLElement;
     await act(async () => {
       fireEvent.click(within(notice).getByRole("button", { name: "keywordResearch.lookup.again" }));
     });

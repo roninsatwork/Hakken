@@ -23,7 +23,7 @@ import { useSiteParam } from "../../../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { LookupState } from "../../_components/LookupState";
 import { WhereYouAre, WhoLabel } from "../../_components/WhereYouAre";
-import { FigureCell, usePlaceIn } from "../../_components/ResearchCells";
+import { FigureCell, usePlaceIn, useProblemWords } from "../../_components/ResearchCells";
 import { readableAddress } from "../../_components/researchWords";
 import { useLookupId, useLookupOverview } from "../../_components/useLookup";
 
@@ -53,6 +53,7 @@ const VIEWS = ["all", "ours"] as const;
 export default function LookupResultsPage() {
   const t = useTranslations("keywordResearch.results");
   const tk = useTranslations("keywordResearch");
+  const problemWords = useProblemWords();
   const tc = useTranslations("keywordResearch.columns");
   const placeIn = usePlaceIn();
   const lookupId = useLookupId();
@@ -89,7 +90,7 @@ export default function LookupResultsPage() {
       {results?.sample ? <Notice>{tk("sample")}</Notice> : null}
       {lookup.state !== "READY" ? <LookupState lookup={lookup} /> : null}
       {results?.state === "WAITING" ? <Notice>{t("waiting")}</Notice> : null}
-      {lookup.state === "READY" && results?.state === "FAILED" ? <Notice tone="warning">{results.problem ?? t("failed")}</Notice> : null}
+      {lookup.state === "READY" && results?.state === "FAILED" ? <Notice tone="warning">{problemWords(results.problem, t("failed"))}</Notice> : null}
       {measured ? (
         <SiteViewSwitch
           label={t("which")}

@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { RESEARCH_PROBLEMS } from "./utils/researchProblems";
 
 /**
  * What Keyword research's reads return (docs/plans/active/keyword-research-
@@ -10,6 +11,8 @@ const num = v.union(v.number(), v.null());
 const str = v.union(v.string(), v.null());
 const partState = v.union(v.literal("WAITING"), v.literal("READY"), v.literal("FAILED"));
 const who = v.union(v.literal("YOU"), v.literal("RIVAL"), v.null());
+/** Why a part failed, as a code the screens word (`researchProblems`): never the server's own sentence. */
+const problem = v.union(...RESEARCH_PROBLEMS.map((code) => v.literal(code)), v.null());
 const verdict = v.union(v.literal("WINNING"), v.literal("IMPROVE"), v.literal("NEW_PAGE"), v.literal("TOO_HARD"), v.null());
 /** What each part of a lookup costs in cents, from the company's limits (`researchCosts`). */
 const costs = v.object({ lookUp: v.number(), results: v.number(), ideas: v.number(), answers: v.number(), country: v.number() });
@@ -58,7 +61,7 @@ export const lookupOverviewShape = v.union(v.null(), v.object({
   locationCode: v.number(),
   country: v.string(),
   state: partState,
-  problem: str,
+  problem,
   openedAt: v.number(),
   boughtAt: num,
   costUsd: num,
@@ -111,7 +114,7 @@ export const lookupResultsShape = v.union(v.null(), v.object({
   keyword: v.string(),
   country: v.string(),
   state: v.union(partState, v.null()),
-  problem: str,
+  problem,
   checkedAt: num,
   detailsAt: num,
   sample: v.boolean(),
@@ -173,7 +176,7 @@ export const lookupIdeasShape = v.union(v.null(), v.object({
   siteId: v.union(v.id("companyWebsites"), v.null()),
   kind: ideaKind,
   state: v.union(partState, v.null()),
-  problem: str,
+  problem,
   boughtAt: num,
   sample: v.boolean(),
   counts: v.object({ TERMS: num, QUESTIONS: num, ALSO_RANK: num }),
@@ -186,7 +189,7 @@ export const lookupAnswersShape = v.union(v.null(), v.object({
   country: v.string(),
   host: str,
   state: v.union(partState, v.null()),
-  problem: str,
+  problem,
   askedAt: num,
   sample: v.boolean(),
   question: str,

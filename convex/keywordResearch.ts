@@ -15,6 +15,7 @@ import { hostOf, pageKey } from "./keywordResearchCalls";
 import { pageTypeByAddress } from "./utils/siteShapes";
 import { newestKeyword, newestSerp, overviewIsFresh, freshnessOf, researchAgent, serpIsFresh } from "./keywordResearchData";
 import { researchCosts } from "./keywordResearchPrices";
+import { researchProblemOf } from "./utils/researchProblems";
 
 /**
  * Keyword research, the company's side (docs/plans/active/keyword-research-
@@ -384,7 +385,7 @@ export const lookupOverview = tenantQuery({
       locationCode: lookup.locationCode,
       country: findResearchCountry(lookup.locationCode)?.label ?? "",
       state: lookup.overview,
-      problem: lookup.problem ?? null,
+      problem: researchProblemOf(lookup.problem),
       openedAt: lookup.openedAt,
       boughtAt: overview?.boughtAt ?? null,
       costUsd: lookup.spentUsd ?? null,
@@ -502,7 +503,7 @@ export const lookupResults = tenantQuery({
       keyword: lookup.text,
       country: findResearchCountry(lookup.locationCode)?.label ?? "",
       state: lookup.results ?? null,
-      problem: lookup.problem ?? null,
+      problem: researchProblemOf(lookup.problem),
       checkedAt: serp?.boughtAt ?? null,
       detailsAt: serp?.detailsBoughtAt ?? null,
       sample: Boolean(serp?.sandbox),

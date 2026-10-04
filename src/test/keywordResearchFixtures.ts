@@ -2,6 +2,7 @@ import messages from "../../messages/en.json";
 import { vi } from "vitest";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { answerQueries, convexPath } from "./siteViewFixtures";
+import type { ResearchProblem } from "@/convex/utils/researchProblems";
 
 /** The four assistants, as the screens name them (`aiEngines` in the word file), without naming them here. */
 export const AI_ENGINE_KEYS = Object.keys(messages.aiEngines).filter((key) => key !== "googleAiOverview");
@@ -97,7 +98,7 @@ export const OVERVIEW = {
   locationCode: 2826,
   country: "United Kingdom",
   state: "READY" as const,
-  problem: null as string | null,
+  problem: null as ResearchProblem | null,
   openedAt: Date.UTC(2026, 9, 1, 8, 14),
   boughtAt: Date.UTC(2026, 9, 1, 8, 14),
   costUsd: 0.34 as number | null,
@@ -171,7 +172,7 @@ export const RESULTS = {
   keyword: "web design agency",
   country: "United Kingdom",
   state: "READY" as string | null,
-  problem: null as string | null,
+  problem: null as ResearchProblem | null,
   checkedAt: Date.UTC(2026, 9, 1, 8, 14),
   detailsAt: Date.UTC(2026, 9, 1, 8, 20),
   sample: false,
@@ -229,7 +230,7 @@ export const IDEAS = {
   siteId: SITE_ID as string | null,
   kind: "TERMS",
   state: "READY" as string | null,
-  problem: null as string | null,
+  problem: null as ResearchProblem | null,
   boughtAt: Date.UTC(2026, 9, 1, 8, 14) as number | null,
   sample: false,
   counts: { TERMS: 1000, QUESTIONS: 86, ALSO_RANK: 410 } as Record<"TERMS" | "QUESTIONS" | "ALSO_RANK", number | null>,
@@ -262,7 +263,7 @@ export const ANSWERS = {
   country: "United Kingdom",
   host: "acme-agency.test" as string | null,
   state: "READY" as string | null,
-  problem: null as string | null,
+  problem: null as ResearchProblem | null,
   askedAt: Date.UTC(2026, 9, 1, 8, 20) as number | null,
   sample: false,
   question: "Which web design agency should I use in the UK?" as string | null,

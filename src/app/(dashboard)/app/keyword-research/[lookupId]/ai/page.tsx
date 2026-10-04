@@ -22,6 +22,7 @@ import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_compone
 import { AnswerCards, QuestionCard } from "../../_components/AnswerParts";
 import { LookupState } from "../../_components/LookupState";
 import { useLookupAnswers, useLookupId, useLookupOverview, type LookupAnswers } from "../../_components/useLookup";
+import { useProblemWords } from "../../_components/ResearchCells";
 
 type Engine = LookupAnswers["engines"][number];
 
@@ -43,6 +44,7 @@ const engineOf = (row: Engine) => row.engine;
 export default function LookupAnswersPage() {
   const t = useTranslations("keywordResearch.ai");
   const tk = useTranslations("keywordResearch");
+  const problemWords = useProblemWords();
   const engineLabel = useEngineLabel();
   const lookupId = useLookupId();
   const lookup = useLookupOverview();
@@ -92,7 +94,7 @@ export default function LookupAnswersPage() {
       {answers?.state === "WAITING" ? (
         <Notice>{t("waiting")}</Notice>
       ) : answers?.state === "FAILED" ? (
-        <Notice tone="warning" action={askAgain}>{answers.problem ?? t("failed")}</Notice>
+        <Notice tone="warning" action={askAgain}>{problemWords(answers.problem, t("failed"))}</Notice>
       ) : answers?.askedAt && setup ? (
         <Notice action={askAgain}>
           {t("asked", { day: formatDate(answers.askedAt), cents: lookup.costs.answers, days: setup.limits.reuseDays })}
