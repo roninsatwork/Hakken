@@ -415,7 +415,8 @@ function Competitors({ extras }: { extras: Extras | undefined }) {
             {
               key: "overlap",
               header: t("columns.overlap"),
-              cell: (row) => <Meter value={overlap(row)} colour={CHART_SERIES_BLUE} />,
+              // Up to the kit's 160px, narrower when the table needs the room (design-drift-plan D4).
+              cell: (row) => <Meter value={overlap(row)} colour={CHART_SERIES_BLUE} className="w-full max-w-40" />,
             },
             ...(traffic
               ? [

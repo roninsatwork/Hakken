@@ -84,7 +84,6 @@ export function SearchConsoleListScreen({
             rows={list.table.pageRows}
             rowKey={(row) => row.key}
             onRowClick={rowHref ? (row) => router.push(rowHref(row)) : undefined}
-            minWidthClassName="min-w-[760px]"
             search={{ value: list.search, onChange: list.setSearch, placeholder: table.searchPlaceholder }}
             filters={table.chips.length > 0 ? <SearchConsoleChips chips={table.chips} /> : undefined}
             cardHeader={

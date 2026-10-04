@@ -189,7 +189,6 @@ export function RunsTable({
     <DataTable
       rows={isLoading ? undefined : runs}
       rowKey={(run) => run._id}
-      minWidthClassName="min-w-[860px]"
       empty={{
         icon: <Timer className="w-9 h-9 text-brand opacity-60" />,
         label:

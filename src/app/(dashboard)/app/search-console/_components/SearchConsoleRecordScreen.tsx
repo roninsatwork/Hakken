@@ -205,7 +205,6 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
               rows={list.table.pageRows}
               rowKey={(row) => row.key}
               onRowClick={(row) => router.push(recordHref(otherSegment, row.key))}
-              minWidthClassName="min-w-[760px]"
               search={{ value: list.search, onChange: list.setSearch, placeholder: t(other === "query" ? "keywords.searchPlaceholder" : "pages.searchPlaceholder") }}
               filters={<SearchConsoleChips chips={CHIPS} />}
               cardHeader={

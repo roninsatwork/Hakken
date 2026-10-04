@@ -312,7 +312,6 @@ export default function AuditTrailPage() {
       <DataTable<AuditRow>
         rows={loading ? undefined : visible}
         rowKey={(log) => log._id}
-        minWidthClassName="min-w-[1180px]"
         onRowClick={(log) => router.push(`/admin/governance/audit-trail/${log._id}`)}
         /* An empty trail shows nothing. This table used to invent four entries
            when it had none — including a user deletion for a "TOS Violation"

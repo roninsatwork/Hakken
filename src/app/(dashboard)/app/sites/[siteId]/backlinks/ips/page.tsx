@@ -83,7 +83,6 @@ export default function SiteReferringIpsPage() {
       <DataTable
         rows={table.pageRows}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[640px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>

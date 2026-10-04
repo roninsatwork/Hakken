@@ -321,7 +321,6 @@ export function EvalsScreen({ companyId }: { companyId?: Id<"companies"> }) {
       <DataTable
         rows={cases.isLoading ? undefined : cases.rows}
         rowKey={(evalCase) => evalCase._id}
-        minWidthClassName="min-w-[760px]"
         empty={{
           icon: <ClipboardCheck className="h-8 w-8 text-muted/30" />,
           label: t("empty.label"),

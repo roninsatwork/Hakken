@@ -138,7 +138,6 @@ export default function SearchConsolePlacesPage() {
               <DataTable
                 rows={countryPages.pageRows}
                 rowKey={(row) => row.key}
-                minWidthClassName="min-w-[700px]"
                 search={{ value: countrySearch, onChange: setCountrySearch, placeholder: t("places.searchCountries") }}
                 cardHeader={<TableBar footer={countryPages.footer} noun="countries" title={t("places.countries")} actions={download(t("table.country"), countryOrder.rows, "countries")} />}
                 sort={countryOrder.tableSort}
@@ -149,7 +148,6 @@ export default function SearchConsolePlacesPage() {
               <DataTable
                 rows={devicePages.pageRows}
                 rowKey={(row) => row.key}
-                minWidthClassName="min-w-[700px]"
                 search={{ value: deviceSearch, onChange: setDeviceSearch, placeholder: t("places.searchDevices") }}
                 cardHeader={<TableBar footer={devicePages.footer} noun="devices" title={t("places.devices")} actions={download(t("table.device"), deviceOrder.rows, "devices")} />}
                 sort={deviceOrder.tableSort}

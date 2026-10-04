@@ -210,7 +210,6 @@ export function CompanyQuestions({ companyWebsiteId, host }: { companyWebsiteId?
         onRowClick={(row) => router.push(promptHref(row))}
         // The question being edited is a text box, not a way to its fan-out queries.
         rowClickable={(row) => editing?.id !== row._id}
-        minWidthClassName="min-w-[1080px]"
         search={{
           value: searchTerm,
           onChange: (value) => {

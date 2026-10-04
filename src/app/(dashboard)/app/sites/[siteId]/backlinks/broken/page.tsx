@@ -49,7 +49,6 @@ export default function SiteBrokenBacklinksPage() {
         rows={table.pageRows}
         rowKey={(row) => row._id}
         onRowClick={(row) => router.push(recordHref({ kind: "page", page: row.pageTo }))}
-        minWidthClassName="min-w-[760px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         cardHeader={<TableBar footer={table.footer} noun="links" actions={<TableDownload siteId={siteId} kind="broken" sort={order.tableSort} />} />}
         empty={{ icon: <Unlink className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}

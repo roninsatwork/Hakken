@@ -138,7 +138,6 @@ export default function AllWebsitesPage() {
       <DataTable
         rows={websitesTable.isLoading ? undefined : websitesTable.rows}
         rowKey={(website) => website._id}
-        minWidthClassName="min-w-[900px]"
         onRowClick={(website) => router.push(`/admin/websites/${website._id}`)}
         search={{ value: searchTerm, onChange: setSearchTerm, placeholder: t("searchPlaceholder") }}
         empty={{

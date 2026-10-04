@@ -19,7 +19,6 @@ export default function CompanyAiOverviewLoading() {
       <DataTable<Area>
         rows={undefined}
         rowKey={(area) => area.key}
-        minWidthClassName="min-w-[720px]"
         empty={{ icon: <Sparkles className="h-8 w-8 text-muted/30" />, label: t("empty") }}
         footer={{
           mode: "paged",

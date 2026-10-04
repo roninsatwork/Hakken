@@ -131,7 +131,6 @@ export function SelfImprovementSection() {
         // loading row rather than a table of switches that all read as off.
         rows={switches === null ? undefined : paged.items}
         rowKey={(row) => row.key}
-        minWidthClassName="min-w-[640px]"
         search={{
           value: searchTerm,
           onChange: (next) => {

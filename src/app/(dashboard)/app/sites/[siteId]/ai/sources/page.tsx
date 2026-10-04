@@ -62,7 +62,6 @@ export default function SiteSourcesPage() {
         rows={table.pageRows}
         rowKey={(row) => row.page}
         onRowClick={(row) => router.push(recordHref({ kind: "page", page: row.page }))}
-        minWidthClassName="min-w-[640px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         cardHeader={<TableBar footer={table.footer} noun="pages" actions={<TableDownload siteId={siteId} kind="cited" sort={tableSort} />} />}
         empty={{ icon: <Link2 className="h-8 w-8 text-muted/30" />, label: settled ? t("noMatch") : t("empty") }}

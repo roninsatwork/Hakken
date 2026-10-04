@@ -126,7 +126,6 @@ export default function SearchConsoleUpdatesPage() {
           <DataTable
             rows={pager.pageRows}
             rowKey={(row) => row.key}
-            minWidthClassName="min-w-[760px]"
             search={{ value: search, onChange: setSearch, placeholder: t("updates.searchPlaceholder") }}
             filters={
               <Select

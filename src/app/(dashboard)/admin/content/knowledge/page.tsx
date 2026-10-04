@@ -62,7 +62,6 @@ export default function KnowledgeArticlesAdminPage() {
       <DataTable
         rows={articles === undefined ? undefined : paged.items}
         rowKey={(article) => article._id}
-        minWidthClassName="min-w-[760px]"
         onRowClick={open}
         search={{
           value: search,

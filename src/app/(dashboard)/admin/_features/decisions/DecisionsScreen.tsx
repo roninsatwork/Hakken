@@ -166,7 +166,6 @@ export function DecisionsScreen({
       <DataTable
         rows={rows === undefined ? undefined : paged.items}
         rowKey={(row) => row.key}
-        minWidthClassName="min-w-[760px]"
         search={{
           value: searchTerm,
           onChange: (next) => {

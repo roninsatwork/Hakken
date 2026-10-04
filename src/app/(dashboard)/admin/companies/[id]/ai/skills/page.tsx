@@ -176,7 +176,6 @@ export default function CompanyAiSkillsPage() {
       <DataTable
         rows={skills.status === "LoadingFirstPage" ? undefined : pageSkills}
         rowKey={(skill) => skill._id}
-        minWidthClassName="min-w-[640px]"
         empty={{
           icon: <BrainCircuit className="h-8 w-8 text-muted/30" />,
           label: companySearchTerm.trim()

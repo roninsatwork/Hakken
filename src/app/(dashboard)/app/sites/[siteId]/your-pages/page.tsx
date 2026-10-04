@@ -185,7 +185,6 @@ export default function SiteYourPagesPage() {
         rows={table.pageRows}
         rowKey={(row) => row.page}
         onRowClick={(row) => router.push(recordHref({ kind: "page", page: row.page }))}
-        minWidthClassName="min-w-[820px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>

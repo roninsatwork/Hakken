@@ -99,7 +99,6 @@ export function WikiDiaryScreen({
       <DataTable
         rows={entries.isLoading ? undefined : visibleEntries}
         rowKey={(entry, ) => `${entry.at}-${entry.action}-${entry.pageId ?? ""}`}
-        minWidthClassName="min-w-[760px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <div className="max-w-xs w-full">

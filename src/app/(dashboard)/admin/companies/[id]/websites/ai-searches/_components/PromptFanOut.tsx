@@ -216,7 +216,6 @@ export function PromptFanOut({ questionId, companyWebsiteId }: {
         rows={data === undefined ? undefined : shown.slice((safePage - 1) * TABLE_PAGE_SIZE, safePage * TABLE_PAGE_SIZE)}
         rowKey={(row) => row.query}
         // Four narrow columns: the table's usual minimum width would push the icons off a laptop screen.
-        minWidthClassName="min-w-[52rem]"
         search={{
           value: searchTerm,
           onChange: (next) => {

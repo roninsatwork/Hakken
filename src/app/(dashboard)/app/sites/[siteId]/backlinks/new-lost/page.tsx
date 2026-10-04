@@ -77,7 +77,6 @@ export default function SiteLinksNewLostPage() {
       <DataTable
         rows={pager.pageRows}
         rowKey={(row) => row.day}
-        minWidthClassName="min-w-[720px]"
         cardHeader={<TableBar footer={pager.footer} noun={STEP_NOUNS[range.step]} actions={<ListDownload fileName={`${site?.host ?? "site"}-links-gained-lost`} rows={sorted} columns={[{ header: t(`columns.${range.step}`), value: (row) => row.day }, ...KEYS.map((key) => ({ header: t(`columns.${key}`), value: (row: NonNullable<typeof points>[number]) => row[key] }))]} />} />}
         empty={{ icon: <ArrowLeftRight className="h-8 w-8 text-muted/30" />, label: t("empty") }}
         footer={pager.footer}

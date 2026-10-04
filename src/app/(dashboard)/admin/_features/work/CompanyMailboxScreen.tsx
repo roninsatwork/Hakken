@@ -84,7 +84,6 @@ export function CompanyMailboxScreen({ companyId }: { companyId: Id<"companies">
       <DataTable
         rows={mail.isLoading ? undefined : mail.rows}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[760px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <div className="flex items-center gap-1 rounded-[12px] border border-border-dim bg-card/40 p-1">

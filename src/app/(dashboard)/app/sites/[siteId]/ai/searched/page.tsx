@@ -139,7 +139,6 @@ export default function SiteSearchedPage() {
           rows={pager.pageRows}
           rowKey={(row) => row.key}
           onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.query }))}
-          minWidthClassName="min-w-[720px]"
           search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
           filters={
             <>

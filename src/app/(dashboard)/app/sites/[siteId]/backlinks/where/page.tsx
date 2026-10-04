@@ -133,7 +133,6 @@ export default function SiteLinkSourcesPage() {
           <DataTable
             rows={pager.pageRows}
             rowKey={(row) => row.key}
-            minWidthClassName="min-w-[480px]"
             search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
             cardHeader={<TableBar footer={pager.footer} noun="groups" actions={<ListDownload fileName={`${site?.host ?? "site"}-links-${breakdown}`} rows={sorted} columns={[{ header: t("columns.group"), value: (row) => nameOf(row.key) }, { header: t("columns.links"), value: (row) => row.count }, { header: t("columns.share"), value: (row) => (total ? ((row.count / total) * 100).toFixed(1) : null) }]} />} />}
             empty={{ icon: <Globe2 className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}

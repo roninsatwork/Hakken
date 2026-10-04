@@ -50,7 +50,6 @@ function WorkflowExecutionsList({ runs }: { runs: WorkflowExecutionRuns }) {
     <DataTable
       rows={rows}
       rowKey={(execution) => execution._id}
-      minWidthClassName="min-w-[900px]"
       empty={{ icon: <History className="w-8 h-8 text-muted/30" />, label: t("empty") }}
       footer={{
         mode: "paged",

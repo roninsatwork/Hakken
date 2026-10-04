@@ -117,7 +117,6 @@ export default function SearchConsoleCtrCurvePage() {
           <DataTable
             rows={pager.pageRows}
             rowKey={(row) => row.key}
-            minWidthClassName="min-w-[640px]"
             search={{ value: search, onChange: setSearch, placeholder: t("ctrCurve.searchPlaceholder") }}
             filters={<SearchConsoleChips chips={CHIPS} />}
             cardHeader={

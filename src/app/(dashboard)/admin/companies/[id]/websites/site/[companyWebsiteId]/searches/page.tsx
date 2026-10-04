@@ -119,7 +119,6 @@ export default function CompanySiteSearchesPage() {
       <DataTable
         rows={isLoading ? undefined : rows.data}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[760px]"
         search={{
           value: searchTerm,
           onChange: (value) => {

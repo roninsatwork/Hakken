@@ -146,7 +146,13 @@ export function TableShell({
   children,
   header,
   footer,
-  minWidthClassName = "min-w-[1000px]",
+  // Tables fit the page (design-drift-plan D4): from a laptop up there is no
+  // minimum width, so number columns sit at their headings' width and text
+  // columns share the rest. On a phone the table keeps 720px and scrolls
+  // sideways rather than crushing its columns (smallScreens.test.tsx). The
+  // one table that scrolls on every screen is Content gap's, approved
+  // 2026-09-30.
+  minWidthClassName = "min-w-[720px] lg:min-w-0",
   variant = "default",
   className = "",
 }: AdminTableShellProps) {

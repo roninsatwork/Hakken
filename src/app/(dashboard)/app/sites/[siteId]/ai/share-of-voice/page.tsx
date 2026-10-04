@@ -118,7 +118,6 @@ export default function SiteShareOfVoicePage() {
         rowKey={(row) => row.websiteId}
         onRowClick={(row) => { const href = mentionsHref(row.host); if (href) router.push(href); }}
         rowClickable={(row) => mentionsHref(row.host) !== null}
-        minWidthClassName="min-w-[640px]"
         search={{ value: search, onChange: setSearch, placeholder: tc("findWebsite") }}
         cardHeader={<TableBar footer={paged.footer} noun="websites" actions={<ListDownload fileName={`${site?.host ?? "site"}-share-of-voice`} rows={sorted} columns={[{ header: t("columns.website"), value: (row) => row.host }, ...(engines ?? []).map((engine) => ({ header: engineLabel(engine.engine), value: (row: (typeof sites)[number]) => share(engine, row.websiteId) })), { header: t("columns.all"), value: (row) => overall(row.websiteId) }]} />} />}
         empty={{ icon: <PieChart className="h-8 w-8 text-muted/30" />, label: lower ? tc("noWebsiteMatch") : t("empty") }}

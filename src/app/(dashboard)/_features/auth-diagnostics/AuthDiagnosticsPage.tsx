@@ -186,7 +186,6 @@ export function AuthDiagnosticsPage() {
       <DataTable
         rows={isLoading ? undefined : paginated.items}
         rowKey={(event) => event._id}
-        minWidthClassName="min-w-[1120px]"
         empty={{
           icon: <Inbox className="h-8 w-8 text-muted" />,
           label:

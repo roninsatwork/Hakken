@@ -141,7 +141,6 @@ export default function SeoCycleDetailPage() {
       <DataTable
         rows={lines === undefined ? undefined : lines.data}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[780px]"
         search={{
           value: searchTerm,
           onChange: handleSearch,

@@ -496,7 +496,6 @@ export default function AgentMemoryPage() {
       <DataTable
         rows={isLoading ? undefined : pageMemories}
         rowKey={(memory) => memory._id}
-        minWidthClassName="min-w-[720px]"
         search={{
           value: searchTerm,
           onChange: (value) => {

@@ -103,7 +103,6 @@ export default function SiteLinkQualityPage() {
       <DataTable
         rows={pager.pageRows}
         rowKey={(row) => row.day}
-        minWidthClassName="min-w-[560px]"
         cardHeader={<TableBar footer={pager.footer} noun="checks" actions={<ListDownload fileName={`${site?.host ?? "site"}-link-quality`} rows={sorted} columns={[{ header: tc("lastChecked"), value: (row) => row.day }, ...MEASURES.map((measure) => ({ header: tm(measure), value: (row: (typeof points)[number]) => row[measure] }))]} />} />}
         empty={{ icon: <ShieldCheck className="h-8 w-8 text-muted/30" />, label: t("empty") }}
         footer={pager.footer}

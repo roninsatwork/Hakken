@@ -82,7 +82,6 @@ export function PurgeHistorySection() {
       <DataTable
         rows={isLoading ? undefined : pageRows}
         rowKey={(log) => log._id}
-        minWidthClassName="min-w-[760px]"
         search={{
           value: searchTerm,
           onChange: (value) => {

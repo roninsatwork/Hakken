@@ -78,7 +78,6 @@ export default function SiteBandMovePage() {
         rows={pager.pageRows}
         rowKey={(row) => row.keyword}
         onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
-        minWidthClassName="min-w-[640px]"
         cardHeader={<TableBar
           footer={pager.footer}
           noun="searches"

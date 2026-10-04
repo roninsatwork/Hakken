@@ -62,7 +62,6 @@ export default function SiteReferringDomainsPage() {
         rows={table.pageRows}
         rowKey={(row) => row._id}
         onRowClick={(row) => router.push(recordHref({ kind: "domain", domain: row.domain }))}
-        minWidthClassName="min-w-[720px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>

@@ -105,7 +105,6 @@ export function UnansweredScreen({
       <DataTable
         rows={isLoading ? undefined : visibleRows}
         rowKey={(row) => row.unansweredId}
-        minWidthClassName="min-w-[760px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>

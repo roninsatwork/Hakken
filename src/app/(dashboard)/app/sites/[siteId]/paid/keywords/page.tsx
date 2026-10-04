@@ -58,7 +58,6 @@ export default function SitePaidKeywordsPage() {
         rows={table.pageRows}
         rowKey={(row) => row._id}
         onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
-        minWidthClassName="min-w-[720px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         cardHeader={<TableBar footer={table.footer} noun="adverts" actions={<TableDownload siteId={siteId} kind="paid" sort={order.tableSort} />} />}
         empty={{ icon: <Megaphone className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : reported ? t("emptyReported", { reported: formatNumber(reported) }) : t("empty") }}

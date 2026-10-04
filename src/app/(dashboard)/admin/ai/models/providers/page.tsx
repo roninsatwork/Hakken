@@ -165,7 +165,6 @@ export default function AIModelProvidersPage() {
       <DataTable
         rows={providersResult === undefined ? undefined : providers}
         rowKey={(provider) => provider.providerKey}
-        minWidthClassName="min-w-[820px]"
         empty={{ icon: <Bot className="w-8 h-8 text-muted/30" />, label: t("empty") }}
         footer={{
           mode: "paged",

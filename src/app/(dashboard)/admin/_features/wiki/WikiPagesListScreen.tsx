@@ -493,7 +493,6 @@ export function WikiPagesListScreen({
       <DataTable
         rows={isLoading ? undefined : visibleRows}
         rowKey={(row) => row.pageId}
-        minWidthClassName="min-w-[760px]"
         search={{
           value: search,
           onChange: (value) => {

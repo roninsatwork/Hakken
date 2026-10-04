@@ -102,7 +102,6 @@ export default function SeoCollectionPage() {
       <DataTable
         rows={pulls.isLoading ? undefined : pulls.rows}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[860px]"
         onRowClick={(row) => {
           if (row.cycleId) router.push(`/admin/websites/collection/${row.cycleId}`);
         }}

@@ -225,7 +225,6 @@ export default function CompanyWebsitesPage() {
       <DataTable
         rows={shown}
         rowKey={lineKey}
-        minWidthClassName="min-w-[860px]"
         onRowClick={(line) => {
           if (line.kind !== "alone") router.push(openRow(line.row));
         }}

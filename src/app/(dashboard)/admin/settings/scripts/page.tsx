@@ -112,7 +112,6 @@ export default function MaintenanceScriptsPage() {
       <DataTable
         rows={isLoading ? undefined : visibleScripts}
         rowKey={(script) => script.id}
-        minWidthClassName="min-w-[980px]"
         onRowClick={(script) => router.push(`/admin/settings/scripts/${script.id}`)}
         search={{
           value: searchTerm,

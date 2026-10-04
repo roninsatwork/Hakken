@@ -181,7 +181,6 @@ export default function AIModelCataloguePage() {
       <DataTable
         rows={isLoading || (paginationStatus === "LoadingMore" && models.length === 0) ? undefined : models}
         rowKey={(model) => model._id}
-        minWidthClassName="min-w-[760px]"
         onRowClick={(model) => router.push(`/admin/ai/models/${model._id}`)}
         empty={{
           icon: <Bot className="w-8 h-8 text-muted/30" />,

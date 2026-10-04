@@ -101,7 +101,6 @@ export default function SiteAnswersPage() {
           rows={catalogue === undefined ? undefined : table.pageRows}
           rowKey={(row) => row._id}
           onRowClick={(row) => router.push(recordHref({ kind: "answer", answerId: row._id }))}
-          minWidthClassName="min-w-[760px]"
           search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
           filters={
             <>

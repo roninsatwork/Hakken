@@ -169,7 +169,6 @@ export default function SiteStructurePage() {
         rows={pager.pageRows}
         rowKey={(row) => row.section}
         onRowClick={(row) => router.push(folderHref(row.section))}
-        minWidthClassName="min-w-[760px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         cardHeader={<TableBar footer={pager.footer} noun="folders" actions={<ListDownload fileName={`${host}-structure`} rows={sorted} columns={[{ header: t("columns.section"), value: (row) => row.section }, { header: t("columns.pages"), value: (row) => row.pages }, { header: t("columns.keywords"), value: (row) => row.keywords }, { header: t("columns.top3"), value: (row) => row.top3 }, { header: t("columns.traffic"), value: (row) => (row.traffic === null ? null : Math.round(row.traffic)) }, { header: tc("lastChecked"), value: (row) => row.day }]} />} />}
         empty={{ icon: <FolderTree className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}

@@ -224,7 +224,6 @@ export default function SiteBandsPage() {
         rows={movedPager.pageRows}
         rowKey={(row) => row.keyword}
         onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
-        minWidthClassName="min-w-[640px]"
         cardHeader={<TableBar
           footer={movedPager.footer}
           noun="searches"
@@ -266,7 +265,6 @@ export default function SiteBandsPage() {
         rows={closestPager.pageRows}
         rowKey={(row) => row.keyword}
         onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
-        minWidthClassName="min-w-[640px]"
         cardHeader={<TableBar
           footer={closestPager.footer}
           noun="searches"

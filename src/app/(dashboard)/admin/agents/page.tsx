@@ -123,7 +123,6 @@ export default function AgentsPage() {
       <DataTable
         rows={isLoading ? undefined : paginatedAgents}
         rowKey={(agent) => agent._id}
-        minWidthClassName="min-w-[800px]"
         search={{ value: searchTerm, onChange: handleSearch, placeholder: t('searchPlaceholder') }}
         onRowClick={(agent) => router.push(`/admin/agents/${agent._id}`)}
         empty={{ icon: <Bot className="w-8 h-8 text-muted/30" />, label: t('table.empty') }}

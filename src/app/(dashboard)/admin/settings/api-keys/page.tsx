@@ -278,7 +278,6 @@ export default function ApiKeysPage() {
         <DataTable
           rows={status === "LoadingFirstPage" ? undefined : apiKeys}
           rowKey={(apiKey) => apiKey._id}
-          minWidthClassName="min-w-[900px]"
           empty={{
             icon: <KeyRound className="h-8 w-8 text-muted/30" />,
             label: t("emptyKeys"),

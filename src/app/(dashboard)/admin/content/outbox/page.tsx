@@ -36,7 +36,6 @@ export default function OutboxAdminPage() {
       <DataTable
         rows={rows.status === "LoadingFirstPage" ? undefined : rows.results}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[860px]"
         onRowClick={(row) => router.push(`/admin/content/outbox/${row._id}`)}
         filters={
           <Select chip={{ label: t("statusFilter"), choice: status ? t(`statuses.${status}`) : null }} value={status} onChange={(value) => setStatus(value as OutboxStatus | "")}>

@@ -342,7 +342,6 @@ export default function AgentEvalsPage() {
       <DataTable
         rows={fixtures === undefined ? undefined : paged.pageRows}
         rowKey={(fixture) => fixture._id}
-        minWidthClassName="min-w-[760px]"
         empty={{
           icon: <ClipboardCheck className="h-8 w-8 text-muted/30" />,
           label: t("emptyLabel"),

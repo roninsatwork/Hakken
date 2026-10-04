@@ -68,7 +68,6 @@ export default function SiteQuestionsPage() {
         rowKey={(row) => `${row.kind}:${row.text}`}
         // A related search is a search of its own; a question opens the search it came up on.
         onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.kind === "RELATED" ? row.text : row.searches[0] }))}
-        minWidthClassName="min-w-[720px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>

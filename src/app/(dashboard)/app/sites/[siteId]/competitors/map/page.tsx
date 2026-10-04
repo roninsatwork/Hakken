@@ -120,7 +120,6 @@ export default function SiteMarketMapPage() {
         rowKey={(row) => `${row.role}:${row.host}`}
         onRowClick={(row) => { const href = rivalHref(row); if (href) router.push(href); }}
         rowClickable={(row) => rivalHref(row) !== null}
-        minWidthClassName="min-w-[720px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
@@ -145,7 +144,7 @@ export default function SiteMarketMapPage() {
               return href ? <RecordLinkCell href={href} className={className}>{row.host}</RecordLinkCell> : <span className={className}>{row.host}</span>;
             },
           },
-          { key: "role", header: t("columns.role"), cell: (row) => <StatusLabel tone={ROLE_TONES[row.role]}>{t(`roles.${row.role}`)}</StatusLabel> },
+          { key: "role", header: t("columns.role"), cell: (row) => <StatusLabel tone={ROLE_TONES[row.role]} wrap>{t(`roles.${row.role}`)}</StatusLabel> },
           {
             key: "kind",
             header: t("columns.kind"),

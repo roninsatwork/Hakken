@@ -184,7 +184,6 @@ export default function AgentSkillsPage() {
       <DataTable
         rows={pagedBindings.pageRows}
         rowKey={(row) => row.binding._id}
-        minWidthClassName="min-w-[640px]"
         empty={{
           icon: <BrainCircuit className="h-8 w-8 text-muted/30" />,
           label: t("emptyLabel"),

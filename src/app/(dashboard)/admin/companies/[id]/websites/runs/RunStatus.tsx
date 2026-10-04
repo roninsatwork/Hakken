@@ -38,12 +38,13 @@ export function RunStatus({
   const t = useTranslations("admin.collectionRuns.status");
   const rise = costRise(totalUsd, previousTotalUsd);
   return (
+    // Wrapping, so the runs table fits beside the menus (design-drift-plan D4).
     <span className="flex flex-wrap gap-1.5">
-      {rise !== null ? <StatusLabel tone="warning">{t("costUp", { percent: rise })}</StatusLabel> : null}
-      {waiting > 0 ? <StatusLabel tone="neutral">{t("waiting", { count: waiting })}</StatusLabel> : null}
-      {answering > 0 ? <StatusLabel tone="info">{t("answering", { count: answering })}</StatusLabel> : null}
-      {failed > 0 ? <StatusLabel tone="danger">{t("failed", { count: failed })}</StatusLabel> : null}
-      {final && failed === 0 ? <StatusLabel tone="success">{t("complete")}</StatusLabel> : null}
+      {rise !== null ? <StatusLabel tone="warning" wrap>{t("costUp", { percent: rise })}</StatusLabel> : null}
+      {waiting > 0 ? <StatusLabel tone="neutral" wrap>{t("waiting", { count: waiting })}</StatusLabel> : null}
+      {answering > 0 ? <StatusLabel tone="info" wrap>{t("answering", { count: answering })}</StatusLabel> : null}
+      {failed > 0 ? <StatusLabel tone="danger" wrap>{t("failed", { count: failed })}</StatusLabel> : null}
+      {final && failed === 0 ? <StatusLabel tone="success" wrap>{t("complete")}</StatusLabel> : null}
     </span>
   );
 }

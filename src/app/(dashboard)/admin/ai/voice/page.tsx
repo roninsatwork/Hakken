@@ -195,7 +195,6 @@ export default function SpokenVoicePage() {
       <DataTable
         rows={isLoading ? undefined : setting.options}
         rowKey={(option) => option.key}
-        minWidthClassName="min-w-[640px]"
         /* The voices are a fixed list the platform offers, so there is no state
            in which none exist. The empty label is here because the shared table
            asks for one, not because it can be reached. */

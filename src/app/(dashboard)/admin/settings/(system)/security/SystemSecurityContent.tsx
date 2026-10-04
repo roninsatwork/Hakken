@@ -146,7 +146,6 @@ export function SystemSecurityContent({ currentPiiConfig }: SystemSecurityConten
       <DataTable
         rows={paged.items}
         rowKey={(row) => row.key}
-        minWidthClassName="min-w-[640px]"
         search={{
           value: searchTerm,
           onChange: (next) => {

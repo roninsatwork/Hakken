@@ -61,7 +61,6 @@ export default function WebsiteCitationsPage() {
       <DataTable
         rows={citations === undefined ? undefined : citations.data}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[760px]"
         search={{
           value: searchTerm,
           onChange: (value) => {

@@ -78,7 +78,6 @@ export default function GovernancePoliciesPage() {
       <DataTable
         rows={active === undefined ? undefined : paged.items}
         rowKey={(rule) => rule._id}
-        minWidthClassName="min-w-[820px]"
         search={{
           value: search,
           onChange: (value) => narrow(() => setSearch(value)),

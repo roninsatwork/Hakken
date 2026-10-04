@@ -80,7 +80,6 @@ export default function SiteOrganicCompetitorsPage() {
         rowKey={(row) => row.host}
         onRowClick={(row) => { const href = rivalHref(row.host); if (href) router.push(href); }}
         rowClickable={(row) => rivalHref(row.host) !== null}
-        minWidthClassName="min-w-[760px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>

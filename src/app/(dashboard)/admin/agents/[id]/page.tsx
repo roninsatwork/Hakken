@@ -119,7 +119,6 @@ export default function AgentDashboard() {
         rows={status === "LoadingFirstPage" ? undefined : pagedRuns.pageRows}
         rowKey={(tx) => tx._id}
         className="mt-2"
-        minWidthClassName="min-w-[800px]"
         headerVariant="strip"
         search={{
           value: runSearch,

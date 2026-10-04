@@ -268,7 +268,6 @@ export default function CollectionRunPage() {
           rows={operationRows}
           rowKey={(row) => row.total ? "total" : row.operationId}
           empty={tDetail("sent.none")}
-          minWidthClassName="min-w-[720px]"
           columns={[
             {
               key: "what",
@@ -304,7 +303,6 @@ export default function CollectionRunPage() {
             rows={siteRows}
             rowKey={(row) => (row.total ? "total" : row.websiteId ?? "shared")}
             empty={tDetail("sent.none")}
-            minWidthClassName="min-w-[760px]"
             columns={[
               {
                 key: "website",

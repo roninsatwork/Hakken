@@ -217,7 +217,6 @@ export default function SiteNewLostPage() {
             rows={moves.pageRows}
             rowKey={(row) => row._id}
             onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
-            minWidthClassName="min-w-[720px]"
             cardHeader={<TableBar footer={moves.footer} noun="searches" title={`${ARROWS[chosen]} ${t(`tabNames.${direction}`)}`} />}
             empty={{ icon: <ArrowUpDown className="h-8 w-8 text-muted/30" />, label: t("moves.empty") }}
             footer={moves.footer}
@@ -253,7 +252,6 @@ export default function SiteNewLostPage() {
       <DataTable
         rows={checkPager.pageRows}
         rowKey={(row) => row.day}
-        minWidthClassName="min-w-[640px]"
         cardHeader={<TableBar
           footer={checkPager.footer}
           noun={range.step === "week" ? "weeks" : range.step === "month" ? "months" : "checks"}

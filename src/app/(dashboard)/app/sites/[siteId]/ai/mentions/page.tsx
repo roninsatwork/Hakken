@@ -111,7 +111,6 @@ export default function SiteMentionsPage() {
         rows={pager.pageRows}
         rowKey={(row) => `${row.prompt}::${row.engine}`}
         onRowClick={(row) => router.push(answersHref(row))}
-        minWidthClassName="min-w-[760px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>

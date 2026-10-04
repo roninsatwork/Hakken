@@ -287,7 +287,6 @@ export function RetentionRulesSection() {
                 isLoading: purgeConfigs === undefined,
                 onPageChange: setPage,
               }}
-              minWidthClassName="min-w-[900px]"
             />
 
           </section>

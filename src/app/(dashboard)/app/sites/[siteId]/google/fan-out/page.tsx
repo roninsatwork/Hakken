@@ -140,7 +140,6 @@ export default function SiteTrackedFanOutPage() {
         rows={pager.pageRows}
         rowKey={(row) => row.keyword}
         onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
-        minWidthClassName="min-w-[980px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>

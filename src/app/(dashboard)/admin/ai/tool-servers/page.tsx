@@ -190,7 +190,6 @@ export default function ToolServersPage() {
       <DataTable
         rows={servers === undefined ? undefined : paged.items}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[900px]"
         search={{
           value: search,
           onChange: (value) => { setSearch(value); setPage(1); },

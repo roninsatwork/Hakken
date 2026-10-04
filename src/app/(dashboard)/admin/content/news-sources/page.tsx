@@ -68,7 +68,6 @@ export default function NewsSourcesAdminPage() {
       <DataTable
         rows={sources === undefined ? undefined : paged.items}
         rowKey={(source) => source._id}
-        minWidthClassName="min-w-[860px]"
         onRowClick={open}
         search={{
           value: search,

@@ -76,7 +76,6 @@ export default function SearchConsolePage() {
           rows={paged.pageRows}
           rowKey={(row) => row.siteId}
           onRowClick={(row) => router.push(`/app/search-console/${row.siteId}${range}`)}
-          minWidthClassName="min-w-[860px]"
           search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
           cardHeader={
             <TableBar

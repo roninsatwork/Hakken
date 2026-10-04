@@ -64,7 +64,6 @@ export function CompanyCallsScreen({ companyId }: { companyId: Id<"companies"> }
       <DataTable
         rows={calls.isLoading ? undefined : calls.rows}
         rowKey={(call) => call._id}
-        minWidthClassName="min-w-[760px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
         <div className="flex items-center gap-1 rounded-[12px] border border-border-dim bg-card/40 p-1">

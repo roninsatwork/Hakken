@@ -64,7 +64,6 @@ export default function WebsiteKeywordsPage() {
       <DataTable
         rows={keywords === undefined ? undefined : keywords.data}
         rowKey={(row) => row._id}
-        minWidthClassName="min-w-[860px]"
         search={{
           value: searchTerm,
           onChange: (value) => {

@@ -123,7 +123,6 @@ export default function SearchConsoleAppearancePage() {
           <DataTable
             rows={pager.pageRows}
             rowKey={(row) => row.key}
-            minWidthClassName="min-w-[640px]"
             search={{ value: search, onChange: setSearch, placeholder: t("appearance.searchPlaceholder") }}
             filters={<SearchConsoleChips chips={CHIPS} />}
             cardHeader={

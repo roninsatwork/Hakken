@@ -192,6 +192,9 @@ export function OverviewPanels({ latest, before, extras }: { latest: Point | nul
           detail={<Detail now={latest?.aiOverviewRefs} before={before?.aiOverviewRefs} extra={aiPages !== null ? t("ai.pagesLinked", { count: aiPages }) : undefined} />}
         />
         <CompactList
+          // Tight, flush with the panel: three columns in a third of the page
+          // fit without a sideways scroll (design-drift-plan D4).
+          density="tight"
           rows={assistantRows}
           rowKey={(row) => row.engine}
           empty="–"

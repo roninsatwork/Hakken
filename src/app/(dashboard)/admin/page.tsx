@@ -464,7 +464,6 @@ export default function AdminDashboardPage() {
         <DataTable
           rows={overview === undefined ? undefined : portfolio}
           rowKey={(client) => client.companyId}
-          minWidthClassName="min-w-[900px]"
           empty={{ icon: <LayoutDashboard className="h-8 w-8 text-muted/30" />, label: t("clients.empty") }}
           footer={{
             mode: "paged",

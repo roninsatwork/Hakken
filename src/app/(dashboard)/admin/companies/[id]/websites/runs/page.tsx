@@ -96,7 +96,6 @@ export default function CompanyCollectionRunsPage() {
       <DataTable
         rows={runs.isLoading ? undefined : runs.rows}
         rowKey={(row) => row.cycleId}
-        minWidthClassName="min-w-[900px]"
         onRowClick={(row) => router.push(`/admin/companies/${companyId}/websites/runs/${row.cycleId}`)}
         filters={
           <Select aria-label={t("period.label")} value={period} onChange={(value) => setPeriod(value as Period)}>

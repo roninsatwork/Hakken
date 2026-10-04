@@ -168,7 +168,6 @@ export default function CompanyTeamPage() {
         rows={status === "LoadingFirstPage" ? undefined : paged.pageRows}
         search={{ value: searchTerm, onChange: setSearchTerm, placeholder: t('searchPlaceholder') }}
         rowKey={(row) => (row.kind === "invite" ? `inv_${row.invite._id}` : row.user._id)}
-        minWidthClassName="min-w-[720px]"
         /* A pending invitation is not a person yet, and the tint is what says
            so before the row's words do. */
         rowClassName={(row) => (row.kind === "invite" ? "bg-brand/[0.03] hover:bg-brand/[0.05] opacity-80" : "")}

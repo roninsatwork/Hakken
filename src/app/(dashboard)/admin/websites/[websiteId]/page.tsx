@@ -53,7 +53,6 @@ export default function WebsiteWatchersPage() {
       <DataTable
         rows={website.watchers}
         rowKey={(watcher) => watcher.key}
-        minWidthClassName="min-w-[760px]"
         empty={{ icon: <Globe className="h-8 w-8 text-muted/30" />, label: t("noWatchers") }}
         footer={{
           // `loadMore` rather than `paged`: the watchers arrive with the

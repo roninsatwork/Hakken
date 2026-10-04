@@ -110,7 +110,6 @@ export default function AiRegisterPage() {
       <DataTable
         rows={entries === undefined ? undefined : paged.items}
         rowKey={(entry) => entry.id}
-        minWidthClassName="min-w-[900px]"
         search={{
           value: search,
           onChange: (value) => narrow(() => setSearch(value)),

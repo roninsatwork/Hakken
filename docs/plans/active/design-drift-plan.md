@@ -237,6 +237,32 @@ from `screen-kit.md`.
 Inter linked, the kit's fingerprint noted on the canvas); all seven boards
 pass `check:drawing`.
 
+**D4, tables fit — begun 2026-10-04 ("continue with the drift work").**
+
+- All 146 kit tables carried a minimum width (128 their own, 480 to
+  1,180px; the rest the kit's 1,000px default), so each scrolled sideways in
+  any narrower window. 126 were taken off in 118 files. The kit's default
+  is now `min-w-[720px] lg:min-w-0`: from a laptop up there is no minimum,
+  while on a phone a table keeps 720px and scrolls rather than crushing its
+  columns (the kit's existing phone rule, `smallScreens.test.tsx`).
+- The one table that scrolls on every screen is Content gap's, the keyword
+  held in place while a column pair per competitor scrolls — approved
+  2026-09-30. `src/table-fit-drift.test.ts` fails any other.
+- **Measured, 2026-10-04:** every dashboard screen that opens with a real
+  company and website (212 of 285; News timed out) was loaded in the running
+  app at 1440px and each table measured — wider than its column, or a word
+  column squeezed under 64px. Fixed on the spot, no design change: Collection
+  runs and Competitors → Map (a status that would not wrap; `StatusLabel
+  wrap`), and the Websites overview's AI answers panel (`CompactList
+  density="tight"`) and Competitors panel (the overlap bar shrinks below the
+  kit's 160px).
+- **Left for Anthony — too many columns to fit:** Search Console's Tracked
+  keywords and Tracked pages (eight figure columns; the keyword or page
+  squeezed to 32–43px) and Websites → Fan-out queries (nine columns; the
+  query 32px). They fit only by dropping or folding columns — e.g. Change
+  into Clicks and Moved into Position ("a before and after in one column",
+  §13.1 of the Search Console plan) — which changes approved screens.
+
 ## Order and size
 
 | Step | What | Size |

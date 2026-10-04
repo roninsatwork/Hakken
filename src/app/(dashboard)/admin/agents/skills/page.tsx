@@ -330,7 +330,6 @@ export function AgentSkillsCatalog({ nav }: { nav?: ReactNode } = {}) {
       <DataTable
         rows={status === "LoadingFirstPage" ? undefined : pageSkills}
         rowKey={(skill) => skill._id}
-        minWidthClassName="min-w-[640px]"
         onRowClick={(skill) => openEdit(skill)}
         empty={{
           icon: <BrainCircuit className="w-8 h-8 text-muted/30" />,

@@ -122,7 +122,6 @@ export default function AgentApprovalsPage() {
       <DataTable
         rows={isLoading ? undefined : approvals}
         rowKey={(entry) => entry.approval._id}
-        minWidthClassName="min-w-[900px]"
         empty={{
           icon: <ShieldCheck className="w-8 h-8 text-muted/30" />,
           label: searchTerm.trim() ? t("empty.noMatches") : t("empty.none"),

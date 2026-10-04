@@ -178,7 +178,6 @@ export default function SubscriptionPlansPage() {
       <DataTable
         rows={isLoading ? undefined : paginatedPlans}
         rowKey={(plan) => plan._id}
-        minWidthClassName="min-w-[900px]"
         empty={{ icon: <CreditCard className="w-8 h-8 text-muted/30" />, label: t('emptyState') }}
         footer={{
           mode: "paged",

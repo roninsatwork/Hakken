@@ -121,7 +121,6 @@ export default function AgentInterfacesPage() {
         <DataTable
           rows={globalTools === undefined ? undefined : toolPaged.items}
           rowKey={(tool) => tool._id}
-          minWidthClassName="min-w-[720px]"
           search={{
             value: toolSearch,
             onChange: setToolSearch,

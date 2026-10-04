@@ -75,7 +75,6 @@ export default function SiteAnchorsPage() {
         rows={table.pageRows}
         rowKey={(row) => row._id}
         onRowClick={(row) => router.push(recordHref({ kind: "anchor", anchor: row.anchor }))}
-        minWidthClassName="min-w-[680px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         cardHeader={<TableBar footer={table.footer} noun="anchors" actions={<TableDownload siteId={siteId} kind="anchors" sort={order.tableSort} />} />}
         empty={{ icon: <Anchor className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}

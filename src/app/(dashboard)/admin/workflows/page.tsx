@@ -129,7 +129,6 @@ export default function WorkflowsPage() {
         rows={workflows.isLoading ? undefined : workflows.rows}
         rowKey={(workflow) => workflow._id}
         onRowClick={(workflow) => router.push(`/admin/workflows/${workflow._id}`)}
-        minWidthClassName="min-w-[800px]"
         search={{ value: searchTerm, onChange: handleSearch, placeholder: t('searchPlaceholder') }}
         empty={{ icon: <Network className="w-8 h-8 text-muted/30" />, label: t('table.empty') }}
         footer={{

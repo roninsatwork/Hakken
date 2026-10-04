@@ -56,7 +56,6 @@ export default function SiteSuggestedPage() {
       <DataTable
         rows={pager.pageRows}
         rowKey={(row) => row.host}
-        minWidthClassName="min-w-[700px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         cardHeader={<TableBar footer={pager.footer} noun="websites" actions={<ListDownload fileName={"suggested-competitors"} rows={sorted} columns={[{ header: t("columns.website"), value: (row) => row.host }, { header: t("columns.why"), value: (row) => (row.reason === "NAMED_BY_AI" ? t("namedByAi", { times: row.times ?? 0 }) : t("ranksFor", { count: String(row.intersections ?? 0) })) }, { header: tc("lastChecked"), value: (row) => row.day }]} />} />}
         empty={{ icon: <Lightbulb className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}

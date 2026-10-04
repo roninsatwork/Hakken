@@ -143,7 +143,6 @@ export default function SearchConsoleNewLostPage() {
                 rows={list.pageRows}
                 rowKey={(row) => `${row.status}:${row.key}`}
                 onRowClick={(row) => router.push(recordHref("keywords/keyword", row.key))}
-                minWidthClassName="min-w-[760px]"
                 search={{ value: search, onChange: setSearch, placeholder: t("keywords.searchPlaceholder") }}
                 filters={
                   <>

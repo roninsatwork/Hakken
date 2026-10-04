@@ -130,7 +130,6 @@ export function CompanyFeaturesContent({
       <DataTable
         rows={paged.items}
         rowKey={(module) => module.key}
-        minWidthClassName="min-w-[640px]"
         search={{
           value: searchTerm,
           onChange: (next) => {

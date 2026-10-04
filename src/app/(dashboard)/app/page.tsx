@@ -558,7 +558,6 @@ export default function AppDashboardPage() {
               <CompactList<LedgerRow>
                 rows={ledgerRows}
                 rowKey={(row) => row.time + row.what}
-                minWidthClassName="min-w-[34rem]"
                 empty={t("governance.ledger.empty")}
                 columns={[
                   {

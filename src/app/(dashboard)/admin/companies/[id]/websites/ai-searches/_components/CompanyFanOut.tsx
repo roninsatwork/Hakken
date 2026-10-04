@@ -100,7 +100,6 @@ export function CompanyFanOut({ companyWebsiteId, host }: { companyWebsiteId?: I
       <DataTable
         rows={isLoading ? undefined : list.data}
         rowKey={(row) => row.key}
-        minWidthClassName="min-w-[1000px]"
         search={{
           value: searchTerm,
           onChange: (value) => {

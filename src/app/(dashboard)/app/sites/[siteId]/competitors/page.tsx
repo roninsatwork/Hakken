@@ -116,7 +116,6 @@ export default function SiteSideBySidePage() {
         rowKey={(row) => row.websiteId}
         onRowClick={(row) => { const href = rivalHref(row); if (href) router.push(href); }}
         rowClickable={(row) => rivalHref(row) !== null}
-        minWidthClassName="min-w-[760px]"
         search={{ value: search, onChange: setSearch, placeholder: tc("findWebsite") }}
         cardHeader={<TableBar footer={paged.footer} noun="websites" actions={<ListDownload fileName={`${site?.host ?? "site"}-side-by-side`} rows={sorted} columns={[{ header: t("columns.website"), value: (row) => row.host }, { header: t("columns.traffic"), value: (row) => row.estimatedTraffic }, { header: t("columns.keywords"), value: (row) => row.keywords }, { header: t("columns.top3"), value: (row) => row.top3 }, { header: t("columns.linking"), value: (row) => row.referringDomains }, { header: t("columns.rank"), value: (row) => row.domainRank }, { header: tc("lastChecked"), value: (row) => row.day }]} />} />}
         empty={{ icon: <Swords className="h-8 w-8 text-muted/30" />, label: lower ? tc("noWebsiteMatch") : t("empty") }}

@@ -263,7 +263,6 @@ function ClassificationPages({ companyWebsiteId, data, search, onSearch, filter,
         rows={data?.rows}
         rowKey={(row) => row.page}
         // Six columns beside two menus: the table's usual minimum width would push the bin off a laptop screen.
-        minWidthClassName="min-w-[52rem]"
         search={{ value: search, onChange: onSearch, placeholder: t("searchPlaceholder") }}
         filters={(
           <Select
@@ -429,7 +428,6 @@ function ClassificationList({ companyWebsiteId, base, host, data }: {
         rows={rows?.slice((safePage - 1) * TABLE_PAGE_SIZE, safePage * TABLE_PAGE_SIZE)}
         rowKey={(row) => row._id}
         onRowClick={open}
-        minWidthClassName="min-w-[52rem]"
         cardHeader={<TableBar footer={{ isLoading: data === undefined, totalCount: rows?.length ?? 0 }} noun="classifications" />}
         empty={{ icon: <Layers className="h-8 w-8 text-muted/30" />, label: t("list.empty") }}
         footer={{

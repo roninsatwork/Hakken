@@ -69,7 +69,6 @@ export default function SeoCostsPage() {
       <DataTable
         rows={costs === undefined ? undefined : visible}
         rowKey={(row) => row.companyId}
-        minWidthClassName="min-w-[760px]"
         onRowClick={(row) =>
           router.push(`/admin/companies/${row.companyId}/websites/schedules`)}
         search={{

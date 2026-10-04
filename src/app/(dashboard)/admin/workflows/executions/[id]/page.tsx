@@ -102,7 +102,6 @@ export default function WorkflowExecutionDetailPage() {
       <DataTable
         rows={execution === undefined ? undefined : steps}
         rowKey={(step) => step._id}
-        minWidthClassName="min-w-[820px]"
         empty={{ icon: <History className="w-8 h-8 text-muted/30" />, label: t("detail.noSteps") }}
         footer={{
           mode: "paged",

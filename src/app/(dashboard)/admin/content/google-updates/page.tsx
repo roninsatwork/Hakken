@@ -64,7 +64,6 @@ export default function GoogleUpdatesAdminPage() {
       <DataTable
         rows={updates === undefined ? undefined : paged.items}
         rowKey={(update) => update._id}
-        minWidthClassName="min-w-[860px]"
         onRowClick={open}
         search={{
           value: search,

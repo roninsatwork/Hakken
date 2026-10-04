@@ -134,7 +134,6 @@ export default function SiteAuditPage() {
         rows={pager.pageRows}
         rowKey={(row) => row.check}
         onRowClick={(row) => router.push(recordHref({ kind: "problem", check: row.check }))}
-        minWidthClassName="min-w-[640px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>

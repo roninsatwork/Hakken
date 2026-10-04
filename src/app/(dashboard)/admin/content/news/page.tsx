@@ -53,7 +53,6 @@ export default function NewsItemsAdminPage() {
       <DataTable
         rows={items.status === "LoadingFirstPage" ? undefined : items.results}
         rowKey={(item) => item._id}
-        minWidthClassName="min-w-[760px]"
         filters={
           <Select chip={{ label: t("kindFilter"), choice: kind ? tNews(`kinds.${kind}`) : null }} value={kind} onChange={(value) => setKind(value as NewsItemKind | "")}>
             <option value="">{t("allKinds")}</option>

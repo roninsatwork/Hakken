@@ -137,7 +137,6 @@ export function DecisionDetailScreen({
         <DataTable
           rows={data === undefined ? undefined : paged.items}
           rowKey={(row) => row.id}
-          minWidthClassName="min-w-[820px]"
           empty={{ icon: <Scale className="w-8 h-8 text-muted/30" />, label: t("detail.emptyRuns") }}
           footer={{
             mode: "paged",

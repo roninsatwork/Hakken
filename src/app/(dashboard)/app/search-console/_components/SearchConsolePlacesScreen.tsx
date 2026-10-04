@@ -112,7 +112,6 @@ export function SearchConsolePlacesScreen({ dimension }: { dimension: "query" | 
           <DataTable
             rows={countryPages.pageRows}
             rowKey={(row) => row.key}
-            minWidthClassName="min-w-[560px]"
             search={{ value: countrySearch, onChange: setCountrySearch, placeholder: tp("searchCountries") }}
             cardHeader={<TableBar footer={countryPages.footer} noun="countries" actions={download(t("table.country"), countryOrder.rows, "countries")} />}
             sort={countryOrder.tableSort}
@@ -123,7 +122,6 @@ export function SearchConsolePlacesScreen({ dimension }: { dimension: "query" | 
           <DataTable
             rows={devicePages.pageRows}
             rowKey={(row) => row.key}
-            minWidthClassName="min-w-[560px]"
             search={{ value: deviceSearch, onChange: setDeviceSearch, placeholder: tp("searchDevices") }}
             cardHeader={<TableBar footer={devicePages.footer} noun="devices" actions={download(t("table.device"), deviceOrder.rows, "devices")} />}
             sort={deviceOrder.tableSort}

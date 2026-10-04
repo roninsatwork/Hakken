@@ -347,7 +347,6 @@ export default function CompanyDashboardPage() {
         <DataTable
           rows={engagement === undefined ? undefined : everyone}
           rowKey={(person) => person.userId}
-          minWidthClassName="min-w-[820px]"
           empty={{
             icon: <Users className="h-8 w-8 text-muted/30" />,
             label: t("people.empty"),

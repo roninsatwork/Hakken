@@ -59,7 +59,7 @@ export default function BillingOverviewPage() {
       {["active", "past_due", "unpaid", "incomplete", "pending", "canceled", "unsupported"].map(status => <option key={status} value={status}>{state(status)}</option>)}
     </Select>
     {!statusFilter && <SearchBar value={searchTerm} onChange={setSearchTerm} placeholder={t("search")} />}
-    <DataTable rows={companies.isLoading ? undefined : companies.rows} rowKey={row => row.companyId} minWidthClassName="min-w-[900px]"
+    <DataTable rows={companies.isLoading ? undefined : companies.rows} rowKey={row => row.companyId}
       empty={{ icon: <ChartNoAxesCombined className="h-8 w-8 text-muted" />, label: t("empty") }} footer={{ mode: "paged", page: companies.page, totalPages: companies.totalPages, totalCount: companies.loadedCount, pageSize: TABLE_PAGE_SIZE, isLoading: companies.isBusy, onPageChange: companies.goToPage }}
       columns={[
         { key: "company", header: t("company"), cell: row => <Link className="text-foreground underline underline-offset-4" href={`/admin/companies/${row.companyId}/overview`}>{row.companyName}</Link> },

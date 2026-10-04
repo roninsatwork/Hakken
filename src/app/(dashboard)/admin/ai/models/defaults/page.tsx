@@ -147,7 +147,6 @@ export default function AIModelDefaultsPage() {
       <DataTable
         rows={isLoading ? undefined : globalDefaults}
         rowKey={(row) => row.useCase}
-        minWidthClassName="min-w-[860px]"
         empty={{ icon: <Cpu className="w-8 h-8 text-muted/30" />, label: t("empty") }}
         footer={{
           mode: "paged",

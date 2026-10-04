@@ -101,7 +101,6 @@ export default function ConnectionsPage() {
       <DataTable
         rows={connections === undefined ? undefined : connectionPaged.items}
         rowKey={(row) => row.id}
-        minWidthClassName="min-w-[780px]"
         search={{
           value: connectionSearch,
           onChange: (value) => { setConnectionSearch(value); setConnectionPage(1); },
@@ -177,7 +176,6 @@ export default function ConnectionsPage() {
       <DataTable
         rows={jobs === undefined ? undefined : jobPaged.items}
         rowKey={(job) => job.job}
-        minWidthClassName="min-w-[780px]"
         search={{
           value: jobSearch,
           onChange: (value) => { setJobSearch(value); setJobPage(1); },

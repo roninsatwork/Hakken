@@ -115,7 +115,6 @@ export default function SiteAbovePage() {
         rows={pager.pageRows}
         rowKey={(row) => row.keyword}
         onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
-        minWidthClassName="min-w-[760px]"
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>

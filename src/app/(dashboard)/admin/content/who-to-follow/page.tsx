@@ -60,7 +60,6 @@ export default function WhoToFollowAdminPage() {
       <DataTable
         rows={follows === undefined ? undefined : paged.items}
         rowKey={(follow) => follow._id}
-        minWidthClassName="min-w-[760px]"
         onRowClick={open}
         search={{
           value: search,

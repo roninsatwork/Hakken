@@ -140,7 +140,6 @@ export function TrackedCompetitors({
       <DataTable
         rows={rivals}
         rowKey={(row) => row.companyWebsiteId}
-        minWidthClassName="min-w-[720px]"
         empty={{ icon: <Swords className="h-8 w-8 text-muted/30" />, label: t("empty") }}
         footer={staticFooter(rivals?.length, t("empty"))}
         columns={[
@@ -204,7 +203,6 @@ export function TrackedCompetitors({
         <DataTable
           rows={suggestions}
           rowKey={(row) => row.key}
-          minWidthClassName="min-w-[640px]"
           empty={{ icon: <Swords className="h-8 w-8 text-muted/30" />, label: t("suggestedEmpty") }}
           footer={staticFooter(suggestions?.length, t("suggestedEmpty"))}
           columns={[

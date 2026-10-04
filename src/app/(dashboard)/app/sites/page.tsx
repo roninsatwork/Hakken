@@ -141,7 +141,6 @@ export default function SitesPage() {
           }}
           rowClickable={(line) => line.kind === "site" || line.kind === "competitor"}
           rowClassName={(line) => (line.kind === "competitor" ? "bg-foreground/[0.015]" : "")}
-          minWidthClassName="min-w-[1040px]"
           search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
           cardHeader={
             <TableBar

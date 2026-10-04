@@ -142,7 +142,6 @@ function HealthRunTable({
     <DataTable
       rows={rows}
       rowKey={(run) => run.runId}
-      minWidthClassName="min-w-[820px]"
       search={{ value: search, onChange: onSearchChange, placeholder: t("searchPlaceholder") }}
       footer={{
         mode: "paged",

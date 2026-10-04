@@ -103,7 +103,6 @@ export function RunAttention({
         rows={rows}
         rowKey={(row) => row.key}
         empty={null}
-        minWidthClassName="min-w-[720px]"
         columns={[
           {
             key: "what",
