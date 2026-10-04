@@ -95,7 +95,7 @@ export const IDEA_KEYS: readonly IdeaKey[] = IDEA_KINDS.map((entry) => entry.key
 export const ideaKindOf = (key: IdeaKey): IdeaKind => IDEA_KINDS.find((entry) => entry.key === key)!.kind;
 
 /** What buying the ideas or asking the AI costs, as the Overview says before either is held. */
-export const CENTS_FOR_IDEAS = 2;
+export const CENTS_FOR_IDEAS = 4;
 export const CENTS_FOR_ANSWERS = 20;
 
 /** Difficulty bands the Ideas filter offers, as drawn: easy under 30, medium 30 to 49, hard 50 and over. */

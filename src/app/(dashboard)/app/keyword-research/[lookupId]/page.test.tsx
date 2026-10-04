@@ -169,7 +169,7 @@ describe("a lookup's Overview", () => {
     const empty = { ...IDEAS, counts: { TERMS: null, QUESTIONS: null, ALSO_RANK: null }, rows: [], state: null, boughtAt: null };
     const mutation = await open({}, CONSOLE_STATUS, { ideas: empty, answers: { ...ANSWERS, figures: null, engines: [], question: null, state: null, askedAt: null } });
 
-    expect(screen.getByText("keywordResearch.overview.ideasNotYet 2")).toBeInTheDocument();
+    expect(screen.getByText("keywordResearch.overview.ideasNotYet 4")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "keywordResearch.overview.ideasOpen" })).toHaveAttribute("href", "/app/keyword-research/lookup_1/ideas?kind=terms");
     expect(screen.getByText("keywordResearch.overview.aiNotYet 20")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "keywordResearch.overview.aiOpen" })).toHaveAttribute("href", "/app/keyword-research/lookup_1/ai");

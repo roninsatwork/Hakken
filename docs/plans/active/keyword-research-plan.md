@@ -46,14 +46,15 @@ Labs calls, about 1 cent a call plus 0.01 cent a row returned.
 | When | Bought (each a live call) | About |
 |---|---|---|
 | Look up | Labs keyword overview (searches, CPC, difficulty, intent, the top ten's average linking websites); Labs historical searches (24 months); Google's top 100 (live SERP, depth 100); the top ten's visits and keywords (Labs bulk traffic estimation, one call for all ten) | 5 cents |
-| Google's results opened | Each top-ten page's strength (`bulk_ranks`) and linking websites (`bulk_referring_domains`), 2.4 cents each for all ten; what each page ranks for (Labs ranked keywords, one call a page) — its top keyword, and the "also rank for" ideas | 15 cents |
-| Ideas opened | Terms match and questions (Labs keyword suggestions, the second with a question filter), the limit's number of each; "also rank for" comes with Google's results | 2 cents at 100 of each |
+| Google's results opened | Each top-ten page's strength (`bulk_ranks`) and linking websites (`bulk_referring_domains`), 2.4 cents each for all ten; what each page ranks for (Labs ranked keywords, one call a page) — its top keyword, and the "also rank for" ideas | 16 cents |
+| Ideas opened | Terms match and questions (Labs keyword suggestions, the second with a question filter), the limit's number of each; "also rank for" comes with Google's results | 4 cents at 100 of each (1 cent a kind and 1 cent for each 100 ideas) |
 | What the AI says opened | Our AI writes the question (a fraction of a cent); four assistants answer (between 0.6 and 3.8 cents each); Google's AI Overview searches (10 cents a call and a tenth of a cent a search: 12.5 cents at 25) | 20 cents |
 | Another country picked | Labs keyword overview for that country | 1 cent |
 | Start from a competitor | Nothing: Content gap's copy, from what Websites holds | free |
 
-So a keyword looked up and opened on every screen costs about 32 cents at
-100 ideas of each kind, his choice (decision 3); one only looked up, about 5. The drawings' "1,000" and
+So a keyword looked up and opened on every screen costs about 45 cents at
+100 ideas of each kind and 25 AI Overview searches; one only looked up, about
+5. Corrected 2026-10-04: Ideas had been put at 2 cents, half their cost. The drawings' "1,000" and
 "about $0.34" were mine; the screens follow his decisions.
 
 ## What is reused
