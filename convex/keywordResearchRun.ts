@@ -44,6 +44,7 @@ import { aiOverviewFanOutParams } from "./dataForSeoAiOverviewOperations";
 import { parseAiOverviewFanOuts } from "./aiOverviewFanOuts";
 import { hostOf } from "./keywordResearchCalls";
 import { getErrorMessage } from "./utils/lang";
+import { getAgentTemplateById } from "./agentTemplates";
 
 /**
  * The Keyword research agent's job (docs/plans/active/keyword-research-plan.md):
@@ -238,7 +239,12 @@ export const readTopUrls = internalQuery({
   handler: async (ctx, args) => ((await newestSerp(ctx, args.keyword, args.locationCode))?.results ?? []).slice(0, TOP_PAGES).map((result) => result.url),
 });
 
-/** The agent's own instructions and model, for writing the question behind a keyword. */
+/**
+ * The agent's own instructions and model, for writing the question behind a
+ * keyword — its template's instructions when it has none of its own, as an
+ * agent made by hand from Admin → Agents may (without them the model asked
+ * the person a question back, 2026-10-04).
+ */
 export const readQuestionSetup = internalQuery({
   args: { runId: v.id("agentRuns") },
   returns: v.union(v.null(), v.object({ instructions: v.string(), requestedModelId: v.optional(v.string()) })),
@@ -247,7 +253,7 @@ export const readQuestionSetup = internalQuery({
     const agent = run ? await ctx.db.get(run.agentId) : null;
     if (!agent) return null;
     return {
-      instructions: agent.systemPrompt ?? "",
+      instructions: agent.systemPrompt?.trim() || (getAgentTemplateById("keyword-research-agent")?.systemPrompt ?? ""),
       ...(agent.modelSelectionMode === "inherit" ? {} : { requestedModelId: agent.modelId }),
     };
   },

@@ -325,6 +325,21 @@ describe("Look up", () => {
   });
 });
 
+describe("the question behind a keyword", () => {
+  test("is written from the agent's own instructions, or its template's when it has none", async () => {
+    const t = harness();
+    const { as } = await company(t);
+    const agentId = await researchAgent(t);
+    await as.mutation(api.keywordResearch.lookUp, { keywords: ["app developer london"], locationCode: UK });
+    const runId = (await t.run(async (ctx) => await ctx.db.query("agentRuns").first()))!._id;
+
+    const bare = await t.query(internal.keywordResearchRun.readQuestionSetup, { runId });
+    expect(bare?.instructions).toMatch(/^You turn one Google search into the question a person would ask/);
+    await t.run(async (ctx) => await ctx.db.patch(agentId, { systemPrompt: "Ask it as a buyer would." }));
+    expect((await t.query(internal.keywordResearchRun.readQuestionSetup, { runId }))?.instructions).toBe("Ask it as a buyer would.");
+  });
+});
+
 describe("the sample figures of the Test mode he never asked for", () => {
   test("are removed, with a lookup left with no real figures and its jobs; real figures and lookups stay", async () => {
     const t = harness();
