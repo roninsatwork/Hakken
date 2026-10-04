@@ -69,9 +69,9 @@ export default function SearchConsoleCompetingPage() {
           { key: "count", header: t("table.pages"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.count === null ? "–" : formatNumber(row.count)}</span> },
           ...figureColumns(t, ["clicks"]),
           { key: "top", header: t("table.topPage"), sortable: true, className: "w-[20%] max-w-0", cell: (row) => page(row.top) },
-          { key: "topShare", header: t("table.share"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatRate(row.topShare)}</span> },
+          { key: "topShare", header: t("record.share"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatRate(row.topShare)}</span> },
           { key: "next", header: t("table.nextPage"), sortable: true, className: "w-[20%] max-w-0", cell: (row) => page(row.next) },
-          { key: "nextShare", header: t("table.share"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatRate(row.nextShare)}</span> },
+          { key: "nextShare", header: t("record.share"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatRate(row.nextShare)}</span> },
         ],
       }}
     />

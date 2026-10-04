@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { positionLookups } from "./fanOutPositions";
 
 /**
  * What the Search Console section reads (docs/plans/active/
@@ -226,12 +227,125 @@ describe("the tables", () => {
     expect(paged.rows.map((row) => row.key)).toEqual(["boiler repair"]);
   });
 
-  test("one keyword's pages over 90 days are asked of Google, not read from the whole period's pairs", async () => {
-    const { siteId, reader } = await withSearches();
-    const ninety = await reader.query(api.searchConsoleLists.searchConsoleListPage, {
+  /** A pair kept in key order: keyword, page, clicks, impressions, position, then the other side's count. */
+  type KeyedRow = [string, string, number, number, number, number?];
+
+  /** A ready-made period's pairs kept in key order, part by part, each part with its first key — as the build files them. */
+  async function keyed(
+    t: Harness,
+    siteId: Id<"companyWebsites">,
+    list: "pair" | "pairByPage",
+    span: { period: "7" | "30" | "90" | "365"; which: "NOW" | "BEFORE"; from: string; to: string },
+    parts: Array<{ firstKey: string; rows: KeyedRow[] }>,
+  ) {
+    for (const [part, { firstKey, rows }] of parts.entries()) {
+      await t.mutation(internal.searchConsolePeriods.writePeriodPart, {
+        companyWebsiteId: siteId,
+        searchType: "web",
+        list,
+        ...span,
+        part,
+        keys: rows.map((row) => row[0]),
+        pages: rows.map((row) => row[1]),
+        clicks: rows.map((row) => row[2]),
+        impressions: rows.map((row) => row[3]),
+        positionSums: rows.map((row) => row[4] * row[3]),
+        ...(rows.some((row) => row[5] !== undefined) ? { counts: rows.map((row) => row[5] ?? 0) } : {}),
+        firstKey,
+        builtAt: Date.now(),
+      });
+    }
+  }
+
+  test("one keyword's pages and one page's keywords over 90 days are read by index, never asked of Google (drift fixes, 2026-10-03)", async () => {
+    const { t, siteId, reader } = await withSearches();
+    const ninety = { period: "90" as const, which: "NOW" as const, from: "2026-06-29", to: "2026-09-26" };
+    // "plumber leeds" starts at the end of the first part and runs on into the second: both are read, nothing else.
+    await keyed(t, siteId, "pair", ninety, [
+      { firstKey: "boiler repair", rows: [
+        ["boiler repair", "https://acme-shop.test/boilers/", 4, 40, 8, 1],
+        ["emergency plumber", "https://acme-shop.test/", 9, 300, 6, 3],
+        ["plumber leeds", "https://acme-shop.test/plumbers/", 20, 250, 3, 2],
+      ] },
+      { firstKey: "plumber leeds", rows: [
+        ["plumber leeds", "https://acme-shop.test/", 5, 90, 7, 3],
+        ["plumber leeds", "https://acme-shop.test/leeds/", 1, 30, 12, 1],
+      ] },
+      { firstKey: "water heater", rows: [["water heater", "https://acme-shop.test/heaters/", 2, 20, 9, 1]] },
+    ]);
+    await keyed(t, siteId, "pairByPage", ninety, [
+      { firstKey: "https://acme-shop.test/", rows: [
+        ["emergency plumber", "https://acme-shop.test/", 9, 300, 6, 1],
+        ["plumber leeds", "https://acme-shop.test/", 5, 90, 7, 3],
+      ] },
+      { firstKey: "https://acme-shop.test/boilers/", rows: [["boiler repair", "https://acme-shop.test/boilers/", 4, 40, 8, 1]] },
+    ]);
+    const pages = await reader.query(api.searchConsoleLists.searchConsoleListPage, {
       siteId, ...range, from: "2026-06-29", within: { kind: "query", key: "plumber leeds" }, ...page,
     });
-    expect(ninety).toMatchObject({ live: true, total: 0 });
+    expect(pages).toMatchObject({ live: false, preparing: false, total: 3, from: "2026-06-29", to: "2026-09-26" });
+    expect(pages.rows.map((row) => [row.key, row.clicks, row.count])).toEqual([
+      ["https://acme-shop.test/plumbers/", 20, 2],
+      ["https://acme-shop.test/", 5, 3],
+      ["https://acme-shop.test/leeds/", 1, 1],
+    ]);
+    const keywords = await reader.query(api.searchConsoleLists.searchConsoleListPage, {
+      siteId, ...range, dimension: "page", from: "2026-06-29", within: { kind: "page", key: "https://acme-shop.test/" }, ...page,
+    });
+    expect(keywords).toMatchObject({ live: false, total: 2 });
+    expect(keywords.rows.map((row) => [row.key, row.clicks, row.count])).toEqual([["emergency plumber", 9, 1], ["plumber leeds", 5, 3]]);
+    // A keyword the period never showed: an empty list, still read, not asked of Google.
+    const none = await reader.query(api.searchConsoleLists.searchConsoleListPage, {
+      siteId, ...range, from: "2026-06-29", within: { kind: "query", key: "gas safety" }, ...page,
+    });
+    expect(none).toMatchObject({ live: false, preparing: false, total: 0 });
+  });
+
+  test("Pages competing over 12 months reads its own ready-made list, with how many pages Google showed (drift fixes, 2026-10-03)", async () => {
+    const { t, siteId, reader } = await withSearches();
+    const year = { period: "365" as const, which: "NOW" as const, from: "2026-09-01", to: "2026-09-26" };
+    await period(t, siteId, "query", year, [
+      ["plumber leeds", 10, 200, 3, 2, "https://acme-shop.test/plumbers/"],
+      ["boiler repair", 1, 10, 9, 1, "https://acme-shop.test/boilers/"],
+    ]);
+    await t.mutation(internal.searchConsolePeriods.writePeriodPart, {
+      companyWebsiteId: siteId,
+      searchType: "web",
+      list: "competing",
+      ...year,
+      part: 0,
+      keys: ["plumber leeds", "plumber leeds"],
+      pages: ["https://acme-shop.test/plumbers/", "https://acme-shop.test/"],
+      clicks: [7, 3],
+      impressions: [150, 50],
+      positionSums: [450, 350],
+      shown: 4,
+      builtAt: Date.now(),
+    });
+    const competing = await reader.query(api.searchConsoleLists.searchConsoleListPage, {
+      siteId, ...range, view: "competing", from: "2025-09-27", ...page,
+    });
+    expect(competing).toMatchObject({ live: false, preparing: false, total: 1 });
+    expect(competing.rows[0]).toMatchObject({ key: "plumber leeds", count: 2, top: "https://acme-shop.test/plumbers/", next: "https://acme-shop.test/" });
+    expect(competing.rows[0].topShare).toBeCloseTo(0.7);
+    expect(competing.summary).toMatchObject({ rows: 1, of: 2, pagesInvolved: 2, pagesShown: 4 });
+  });
+
+  test("Fan-out's 14 and 28 days read their own ready-made lists, the 30 days until they are built (§15, decision 4)", async () => {
+    const { t, siteId } = await withSearches();
+    await t.mutation(internal.searchConsolePeriods.writePeriodPart, {
+      companyWebsiteId: siteId, searchType: "web", list: "query", period: "28", which: "NOW", from: "2026-08-30", to: "2026-09-26", part: 0,
+      keys: ["plumber leeds"], clicks: [8], impressions: [100], positionSums: [400], builtAt: Date.now(),
+    });
+    await period(t, siteId, "query", { period: "30", which: "NOW", from: "2026-08-28", to: "2026-09-26" }, [["plumber leeds", 9, 110, 6]]);
+    const positions = await t.run(async (ctx) => {
+      const site = (await ctx.db.get(siteId))!;
+      return {
+        twentyEight: (await positionLookups(ctx, site, 28)).consolePositions.get("plumber leeds"),
+        fourteen: (await positionLookups(ctx, site, 14)).consolePositions.get("plumber leeds"),
+      };
+    });
+    expect(positions).toEqual({ twentyEight: 4, fourteen: 6 });
   });
 
   test("a list asked of Google ticks its rows from the tracked list as it changes", async () => {
@@ -510,7 +624,7 @@ describe("tracking", () => {
 });
 
 describe("one search", () => {
-  test("its own days against the days before, and the pages Google showed for it, asked of Google", async () => {
+  test("its own days against the days before, asked of Google", async () => {
     const t = harness();
     const companyId = await company(t, "Acme");
     const siteId = await hold(t, companyId, "acme-shop.test");
@@ -545,24 +659,12 @@ describe("one search", () => {
     const dated = JSON.parse(asks[0].body) as { startDate: string; endDate: string; dimensions: string[]; dimensionFilterGroups: unknown };
     expect(dated).toMatchObject({ startDate: "2026-09-23", endDate: "2026-09-26", dimensions: ["date"] });
     expect(dated.dimensionFilterGroups).toEqual([{ filters: [{ dimension: "query", operator: "equals", expression: "plumber leeds" }] }]);
-
-    const pairing = await reader.action(api.searchConsoleReads.searchConsolePairing, {
-      siteId, searchType: "web", dimension: "query", key: "plumber leeds", from: "2026-09-25", to: "2026-09-26",
-    });
-    expect(pairing.ok && pairing.rows.map((row) => [row.key, row.clicks])).toEqual([
-      ["https://acme-shop.test/plumbers/", 7],
-      ["https://acme-shop.test/other/", 1],
-    ]);
-    const ask = JSON.parse(asks[1].body) as { dimensions: string[]; dimensionFilterGroups: unknown };
-    expect(ask.dimensions).toEqual(["page"]);
-    expect(ask.dimensionFilterGroups).toEqual([{ filters: [{ dimension: "query", operator: "equals", expression: "plumber leeds" }] }]);
-    expect(asks[1].url).toContain(encodeURIComponent(PROPERTY));
+    expect(asks[0].url).toContain(encodeURIComponent(PROPERTY));
 
     // Another company's reader is refused before Google is asked anything.
     const otherReader = await person(t, await company(t, "Rival"));
     const args = { siteId, searchType: "web" as const, dimension: "query" as const, key: "plumber leeds", from: "2026-09-25", to: "2026-09-26" };
-    expect(await otherReader.action(api.searchConsoleReads.searchConsolePairing, args)).toEqual({ ok: false, problem: "NOT_CONNECTED" });
     expect(await otherReader.action(api.searchConsoleLists.searchConsoleKeySeries, args)).toEqual({ ok: false, problem: "NOT_CONNECTED" });
-    expect(asks).toHaveLength(2);
+    expect(asks).toHaveLength(1);
   });
 });

@@ -12,6 +12,7 @@ import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { formatDateTime } from "@/src/lib/dates";
 import { SiteDateRange } from "../../sites/_components/SiteDateRange";
 import { formatDay } from "../../sites/_components/siteFormat";
+import { SiteMark } from "../../sites/_components/SiteMark";
 import { sharedSiteQuery } from "../../sites/_components/useSiteParam";
 import { CountryAskedNote, SearchConsoleCountryPicker } from "../_components/SearchConsoleCountryPicker";
 import { SearchConsoleMenu } from "../_components/SearchConsoleMenu";
@@ -70,7 +71,8 @@ export default function SearchConsoleSiteLayout({ children }: { children: React.
       <div className="flex flex-col gap-6 pb-8">
         <DetailHeader
           back={{ label: t("back"), href: `/app/search-console${sharedSiteQuery(params)}` }}
-          icon={<Globe className="h-6 w-6 text-brand" />}
+          // The website's mark, as Sites' lists draw it: its letter until `searchConsoleStatus` sends its icon.
+          icon={<SiteMark host={status.host} iconUrl={status.iconUrl} owned />}
           title={status.host}
           description={shown ? t("withProperty", { property: shown }) : t("yourWebsite")}
           pills={

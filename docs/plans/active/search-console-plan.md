@@ -1023,6 +1023,277 @@ across 213 countries. Anthony: a country choice beside the date boxes, and
 - Countries kept ready per website: 1, 2, 3, 5 or 10; 3 until set.
 - Days fetched for a country new to the list: the same 90 as all countries.
 
+## 17. Drift audit and fixes — 2026-10-03
+
+Anthony, 2026-10-03, on Pages competing taking half a minute on Last year:
+"why is this page so slow", then "for a selected home countries and all
+countries it should be really quick" and "Can you audit the search console
+section and see if the agent kept it true as i think they drifted". Three
+audits read the section against this plan and the drawings — speed and data,
+the screens, and the decisions and limits. Of the findings his answers were:
+"lets fix 1" (speed), "2 is ok we are only going back 90 days in the plan"
+(a "Last year" read from storage covers the 90 days held), "fix 3 and 4"
+(decisions taken without him; the screens against the drawings) and "5 — we
+need limits in the limits sections". Asked three questions, he chose: keep
+the kind-of-result tabs; every limit that changes what a screen shows goes on
+the Limits page, internal work sizes written here; keywords Sites has never
+seen stay "Not judged yet".
+
+Where they differ, this section supersedes §15's Decisions 1, 4 and 7, §15's
+"Reviewed the same night" (the asks of Google for 90 days and 12 months, no
+download on lists asked of Google, New and lost web results only), §15's
+"Limits, each said", §10's 250 rows of a pairing, and the "all open" menu
+(Decision 3, settled in his words in 3551a567: most groups closed).
+
+### 17.1 What had drifted
+
+- **Speed (§14.3 item 9, §16.1 item 4).** Pages competing, one keyword's
+  pages and one page's keywords asked Google for 90 days and 12 months, for
+  all countries and countries kept ready alike: decided by the night review on
+  memory grounds, never asked. A year of Pages competing took 33 seconds: about
+  7 asking Google for this year and the year before, one after the other, and
+  about 26 looking up Sites' intent and searches for 5,000 keywords, 200 at a
+  time, one after another — the reversal of Decision 7, also never asked. The
+  90-day and 12-month pair lists were built after every collection and read by
+  nothing. Rich results asked Google once per kind, one after another, every
+  time it opened. A kept country a day behind fell back to Google. In
+  development each ask went to Google twice. The speed test counted only
+  Keywords on 30 days.
+- **Built or changed without his go.** The thirteen pages of §13.3 ("drawn to
+  be looked at; none agreed"); the night review's changes; Decisions 1, 4 and 8
+  settled in code; S7's "type for unseen pages" called built when it was not;
+  two "show all countries" screens from "maybe with a show all on another page".
+- **Screens against the drawings.** Kind-of-result tabs on every page (in no
+  drawing); Download all missing on four pages and on every list asked of
+  Google; chart tick boxes missing; bars in Countries and devices' rows; a globe
+  for the website's icon; "Share of clicks" for "Share"; New and lost's Device
+  filter gone; Position bands' Band column not sortable; the Tracked group's
+  boards (19–21) never saved to the repo.
+- **Limits never said.** About a dozen caps and thresholds fixed in code.
+- **Not done.** D7 (measuring ronins.co.uk) and most of S8 (no look tests or
+  binding spec; Italian is done).
+
+### 17.2 Speed, as built
+
+- **Every list reads what is kept ready, for every period.** After each
+  collection the pairs are written twice in key order — by keyword (`pair`) and
+  by page (`pairByPage`), each part with its first key — so one keyword's pages
+  and one page's keywords are read by index: the parts starting with it and the
+  one before (`readKeyed`). Pages competing has its own list, `competing`: only
+  the pairs of keywords two or more pages were shown for, and how many pages
+  Google showed at all. Nothing on those pages asks Google for 7, 30 or 90 days
+  or 12 months, in all countries or a country kept ready; only other dates, one
+  device or a country not kept ready do, as §14.3 agreed.
+- **Rich results' pages per kind** are counted once after each collection for
+  the ready-made periods (one ask per kind, four at a time) and read
+  ready-made; the page asks Google only for other dates, one device, a country
+  not kept ready, or when Google was busy during the build.
+- **Lists asked of Google** ask for the dates and the days before at the same
+  time (and a list of pages its pairs and pages at once); Sites' facts are
+  looked up after the page's rule, so Pages competing looks up only its
+  competing keywords, eight lookups at once; Real against estimated, which
+  chooses its rows by Sites' estimates, looks them up first.
+- **A kept country** reads to its own newest day (the status carries each
+  kept country's newest day), so its quick picks read its ready-made figures.
+- **The same ask is sent once**: two parts of a page, or React's development
+  double-run, share one ask of Google.
+- **"Where the clicks came from"** stays asked of Google (no list per keyword
+  per country is kept), its countries and devices asked at the same time.
+- **The speed test** (`searchConsoleListsLoad.test.ts`) now also holds one
+  keyword's pages, one page's keywords and Pages competing over 12 months to a
+  few parts by index on a website of 60,000 pairs, and a website's own list
+  limit. Counted, not timed (AGENTS.md, "Test time limits").
+- **Measured on ronins.co.uk (dev), all countries:** Pages competing for 12
+  months, 2,178 keywords; the United Kingdom, 1,940; one keyword's pages and
+  the home page's 576 keywords — each about a second from the command line,
+  its own start-up of about a second included. It was 33 seconds.
+- **Rebuilt on dev, 2026-10-03**, from what was kept, no collection:
+  `searchConsoleSettle.rebuildSitePeriods` for ronins.co.uk, all countries and
+  the United Kingdom.
+- **Fan-out (Decision 4):** its 14- and 28-day settings read their own
+  ready-made keyword lists, web, all countries (`FAN_OUT_PERIODS`), not the 30
+  days; the 30 days until a website's next build.
+- The Google pairing action no screen used any more (`searchConsolePairing`,
+  `usePairing`) is removed.
+
+### 17.3 The decisions taken without him, now
+
+- **The thirteen pages** stay: "fix" kept them, recorded here.
+- **Download all on a list asked of Google** is back, built on the page from
+  the rows it holds, in the order and with the search on screen.
+- **New and lost reads every kind of result**, with the tabs: the first- and
+  last-seen register carries the kind (missing is web, every row held before),
+  collecting files each kind, and the kinds other than web were filled from the
+  90 days held (`searchConsoleSettle.fillSeenRegister`, run on dev 2026-10-03).
+- **Decision 1:** Pages' Page type filter names the website's own
+  classifications once it has any (page-groups-plan.md) — what the drawn
+  Section filter was for.
+- **Decision 7:** Sites' facts stay on lists asked of Google, for the rows the
+  page lists, up to a limit — so the Intent and Page type filters still work on
+  other dates. Decision 7 had said none; **his call** if he wants none.
+- **Kept as the night review built them, for him to overrule:** Real against
+  estimated reads Sites' monthly estimate against the days chosen; Wins and
+  losses counts a keyword gone altogether as all its clicks lost; a brand word
+  matches whole words; days before Google's sixteen months are not compared.
+  Each corrects a wrong answer.
+- **Decision 8** (Real against estimated lists only pages with an estimate)
+  stays: the drawing shows the same.
+- **Keywords Sites has never seen** stay "Not judged yet" (his answer); pages
+  are named by his classifications.
+- **The "show all countries" screens** stay; how many countries the panel shows
+  is a limit.
+- **The kind-of-result tabs** stay (his answer).
+
+### 17.4 The screens against the drawings
+
+Fixed: Download all on Google updates, New and lost, Rich results and Click
+rate by position, and on Countries and devices' tables and both "all
+countries" screens, each with its own search box; the chart tick boxes on
+Position bands, New and lost, Brand and non-brand and Click rate by position;
+Google updates' chart clicks only, with the drawing's hint; no bars in
+Countries and devices' rows; the website's own icon (Sites' `SiteMark`, with
+its icon) in the header and the list; "Share" on Pages competing; Position
+bands' Band column sorts, the top band first. Boards 18–21 are saved in
+`docs/plans/assets/search-console-redesign/` with the canvas as it is now
+(`canvas.json` also lists boards 22–23, page-groups-plan.md's).
+
+Not done: **New and lost's Device filter** — the register keeps no device,
+so it needs devices collected per keyword: his call. Left as they are: the
+section menu's width (Sites' shared menu, 240px against the drawing's 200),
+and the header's "Updated …" and "Google's figures to …" lines.
+
+### 17.5 Limits, each on the Limits page
+
+A new group, **Search Console screens**, on the Limits page at all three
+levels (System Settings → Limits for the default, a company's, a website's),
+beside Search Console's tracking and countries:
+
+| Limit | Choices | Until set |
+|---|---|---|
+| Rows a Search Console list holds | 5,000 · 10,000 · 25,000 | 25,000 |
+| Rows on a keyword's or a page's own screen | 1,000 · 2,500 · 5,000 · 8,000 | 8,000 |
+| Rows given intent and searches on a list asked of Google | 1,000 · 2,500 · 5,000 · 10,000 | 5,000 |
+| Kinds of rich result whose pages are counted | 5 · 10 · 20 · 40 | 20 |
+| Countries beside a keyword's or a page's chart | 3 · 5 · 10 | 5 |
+| New and lost keywords read | 1,000 · 2,500 · 5,000 | 5,000 |
+| Days watched before a keyword counts as new | 7 · 14 · 28 | 14 |
+| Days unseen before a keyword counts as lost | 7 · 14 · 28 | 14 |
+| Sites keywords Missed demand reads | 250 · 500 · 1,000 | 500 |
+| Searches a month that count as searched a lot | 50 · 100 · 250 · 500 | 100 |
+| Impressions under which a keyword is barely shown | 10 · 25 · 50 · 100 | 50 |
+| How far an estimate can be from Google's clicks | 10% · 25% · 50% | 25% |
+| Positions the usual click rate is worked out for | 10 · 20 · 30 | 20 |
+| Google updates listed | 25 · 50 · 100 · 200 | 100 |
+| Days read either side of a Google update | 7 · 14 · 28 | 14 |
+| Weeks the weekly charts show | 8 · 16 · 26 · 52 | 16 |
+| Longest date range | 365 · 500 · 800 days | 800 |
+
+"Days read either side of a Google update" was not on the list he saw; it is
+a rule of the same kind, so it joined. The screens' words name each number
+from the limit ("lost when Google has not shown you for it in 14 days").
+
+**Internal work sizes, written here, not set:** facts looked up 200 keys an
+ask, eight asks at once; a list sent to the page in parts of 8,000 (Convex
+carries 8,192 items in an array); kept and ready-made records of 2,000 rows;
+Google asked four at a time, four minutes a step, its result pages 25,000
+rows; rich results counted four kinds at once; roll-ups 200 a run, 100 rounds;
+a ready-made slot read as at most 500 parts and kept lists 900 records (past
+that a build stops and says so); kept days read 15 at a time, weeks 4;
+register pages of 500; a disconnect hands Google's access back while no more
+than 200 websites share the account.
+
+### 17.6 Left for Anthony
+
+- Decision 7 (above): facts on lists asked of Google, or none.
+- The night review's four rules (above).
+- New and lost's Device filter: collect devices per keyword, or leave it out.
+- D7 (measure ronins.co.uk) and S8 (the approved looks locked with look and
+  drift tests and a binding spec, and checked in Chrome with him).
+- Still open from §15: item 5 (the old `gsc` compact copies), items 10–12.
+
+## 18. Charts in the dates chosen — 2026-10-04
+
+Anthony, on Position bands: "everytime i move the date range nothing
+changes". An audit of all 43 charts in Search Console and Sites found four
+that ignored the dates and two whose captions said otherwise; he answered "do
+it all and agree", and of Daily reaching past the days kept as days, "switch to
+weekly when it goes back".
+
+- **Position bands and Brand and non-brand**: `searchConsoleWeeks` now holds
+  each day (the 90 days kept as days), week and month the charts reach
+  (`grain`; `week` is the period's first day), and how many of its days are
+  held (`days`), built after each collection by the rule every period uses
+  (`keptIn`). `searchConsoleChartFigures` returns those touching the dates, in
+  the step chosen. Daily dates reaching past the 90 days are drawn by week and
+  say so; dates past the charts' weeks (`consoleChartWeeks`, 16) start at the
+  first of them and say so. A part-week or part-month at an edge of the
+  history is drawn lighter — fainter bars, an open ring on a line — and its
+  hover names its days ("28 Sep – 2 Oct, 5 days"). Rows built before this
+  carry no grain and read as weeks; days and months appear after the next
+  collection, and until then the chart says so.
+- **New and lost**: the chart is the same keywords the counts and list hold,
+  in each day, week or month of the dates (`step`), no longer the last 16
+  weeks.
+- **Google updates**: the list holds the updates that began in the dates, each
+  still compared on the days either side of it however far outside the dates
+  they fall; the chart draws the dates in their step.
+- **Sites**: the Overview's twelve months against the twelve before keeps its
+  own dates, and its caption now says them; Google searches and a keyword's
+  own page draw a point per day, week or month, each at its last day's
+  position, as every Sites level does.
+
+Then, seen on ronins.co.uk's own pages in his Chrome, three more ("yes pls"):
+
+- **New and lost counted every one**: its list reads at most
+  `consoleNewLostRows` (5,000) of each, so on a busy website the counts read
+  5,000 and July read as nothing. `searchConsoleSeenDays` holds how many the
+  register has as first shown, and as last shown, on each day, counted from
+  the whole register after each collection (`searchConsoleSeenDays.ts`); the
+  four counts and the chart read it, the table keeps its limit, and until the
+  first count the lists are read as before.
+- **The line charts' part-weeks**: Performance, Google updates and a search's
+  or page's own chart dipped at the edges of the dates, a week holding two
+  days drawn as a fall. A week or month cut by the dates or the history now
+  wears the open ring, and its hover names its days.
+- **Brand and non-brand's colours**: amber against blue, where amber against
+  orange read as one line.
+
+**Limits, said**: the charts' weeks (16, on the Limits page) still bound how
+far back Position bands and Brand reach; days are kept as days for 90 days;
+New and lost's table reads 5,000 of each, its counts and chart every one.
+
+## 19. Audit of Sites and Search Console — 2026-10-04
+
+Every page of both sections opened in Anthony's own Chrome on ronins.co.uk:
+no errors, every chart drawn, the dates, step, sorts, searches, pages, filters,
+kind of result and country all working. Eight things found, all fixed on his
+"yes fix all eight":
+
+1. **Section links**: Google reports a click on a link to a heading of a page
+   ("…/#types-and-uses") as a page of its own. Rows now show the section
+   (`pageLabel`), and wherever pages are compared or counted a section link is
+   part of its page (`withSectionsInPages`, `pageWithoutSection`): Shown but
+   not clicked, Real against estimated (one page had read "1,018 too high"
+   seven times; "too high" fell from 97 pages to 27), Pages competing, and
+   the counts by classification (Content hub 196 rows, 53 pages). Lists of
+   Google's own rows — Pages — still list section links, marked as such.
+2. **A followed link opened the next page partway down**: the dashboard's
+   column (`FluidWorkspace`) scrolls itself, so it now starts each new page
+   at its top and returns Back and Forward to their place.
+3. **Sorting threw the reader to the page's top**: the table empties while a
+   new sort, filter or search loads; it now keeps its height meanwhile
+   (`DataTable`).
+4. **16px in 12px tables**: missing figures' dashes on eighteen screens, now
+   the kit's `NoFigure`; Countries and devices' country names, now 13px.
+5. **Click rate by position's scale** ran to 4 for rates under 1, with no %:
+   `SiteBarChart`'s `formatScale`.
+6. **A search's or page's chart** said "by day" whatever the step.
+7. **Tracked fan-out queries**' headings wrapped when the table was empty.
+8. **New and lost's Lost** in blue, where amber and orange read as one.
+
+And on his word, Breakdowns' "Types" is "By page classification" (menu and
+title).
+
 ## Change log
 
 - **2026-09-27** — Plan written: how Search Console integration works, what
@@ -1101,3 +1372,20 @@ across 213 countries. Anthony: a country choice beside the date boxes, and
 - **2026-10-03** — Countries kept ready (§16): Anthony's four answers — set
   only in admin, opens on All countries, several per website, speed matters —
   and a limit on the Limits page, "nothing should be hidden".
+- **2026-10-03** — Drift audit and fixes (§17), on Anthony's answers ("lets
+  fix 1", "fix 3 and 4", "we need limits in the limits sections"): every
+  period read ready-made — Pages competing for a year from 33 seconds to about
+  one; Rich results counted after each collection; New and lost for every kind
+  of result; the screens put back to the drawings; seventeen Search Console
+  limits on the Limits page; three things left for him.
+- **2026-10-04** — Charts in the dates chosen (§18): Position bands, Brand and
+  non-brand, New and lost and Google updates follow the dates and step; Daily
+  past the 90 days kept as days is drawn by week; part-weeks are drawn as
+  such; two Sites captions and steps put right.
+- **2026-10-04** — Then three seen on the real pages: New and lost counts
+  every keyword from counts kept by day, not the 5,000 its list reads; the
+  line charts mark part-weeks; Brand and non-brand in amber and blue.
+- **2026-10-04** — The audit (§19): section links shown on their rows and
+  part of their page wherever pages are compared or counted; pages open at
+  their top and Back returns to its place; sorting keeps the reader's place;
+  `NoFigure`; the click-rate scale; "By page classification".

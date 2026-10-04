@@ -4,16 +4,17 @@ import { useQuery } from "convex/react";
 import { MapPin, Monitor } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
+import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
-import { Meter } from "@/src/ui/components/screens/Meter";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
-import { CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../../sites/_components/siteFormat";
+import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
+import { tableKey, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { countryName } from "../../_components/countries";
-import { formatPosition, formatRate, readerLanguage } from "../../_components/searchConsoleFormat";
+import { filePercent, filePosition, formatPosition, formatRate, readerLanguage } from "../../_components/searchConsoleFormat";
 import { NothingOfKind, ResultKindSwitch, SearchConsoleGate, hasFigures } from "../../_components/SearchConsoleNotices";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useLiveAsk } from "../../_components/searchConsoleRecords";
@@ -39,14 +40,10 @@ const SORTS: SiteSortColumns<Split, "name" | "clicks" | "share" | "impressions" 
 };
 const nameOf = (row: Split) => row.name;
 
-/** A share of the site's clicks, as the kit's bar beside its number: the bar only repeats the number. */
-function ShareCell({ share }: { share: number }) {
-  return (
-    <span className="flex items-center gap-2">
-      <Meter value={share} colour={CHART_SERIES_ORANGE} />
-      <span className="font-mono text-[12px] text-secondary">{formatRate(share)}</span>
-    </span>
-  );
+/** The rows whose name — a country's or a device's — has a word starting with what was searched. */
+function matching(rows: Split[] | undefined, term: string): Split[] | undefined {
+  const matches = wordStartMatcher(term.toLowerCase());
+  return matches ? rows?.filter((row) => matches(row.name)) : rows;
 }
 
 /**
@@ -67,8 +64,9 @@ function useSplitList(ask: { siteId: Id<"companyWebsites">; searchType: ResultKi
  * search-console-plan.md §5.4): a table of countries and one of devices, each
  * with its share of the clicks, for the dates and kind of result chosen. The
  * countries are every country whatever the country chosen; the devices
- * follow the choice (search-console-plan.md §16). Each table sorts and pages
- * apart from the other.
+ * follow the choice (search-console-plan.md §16). Each table searches, sorts
+ * and pages apart from the other, and downloads what it lists; numbers and
+ * words only in its rows (§13.1).
  */
 export default function SearchConsolePlacesPage() {
   const t = useTranslations("searchConsole");
@@ -77,6 +75,8 @@ export default function SearchConsolePlacesPage() {
   const [kind] = useResultKind();
   const [country] = useSearchConsoleCountry();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
+  const [countrySearch, setCountrySearch, countryTerm] = useSiteSearch();
+  const [deviceSearch, setDeviceSearch, deviceTerm] = useSiteSearch(tableKey("q", "devices"), "devices");
   const held = Boolean(status && hasFigures(status));
   const base = { siteId, searchType: kind, from: range.from, to: range.to };
   // Every country, always; the devices in the country chosen.
@@ -92,20 +92,37 @@ export default function SearchConsolePlacesPage() {
     ...row,
     name: ["DESKTOP", "MOBILE", "TABLET"].includes(row.key) ? t(`places.deviceNames.${row.key}`) : row.key,
   }));
-  const countryOrder = useSiteSortedList(countries, SORTS, { opening: "clicks", name: nameOf });
-  const deviceOrder = useSiteSortedList(devices, SORTS, { opening: "clicks", name: nameOf, table: "devices" });
+  const countryOrder = useSiteSortedList(matching(countries, countryTerm), SORTS, { opening: "clicks", name: nameOf });
+  const deviceOrder = useSiteSortedList(matching(devices, deviceTerm), SORTS, { opening: "clicks", name: nameOf, table: "devices" });
   const countryPages = useSitePager(countryOrder.rows, { isLoading: countries === undefined });
   const devicePages = useSitePager(deviceOrder.rows, { isLoading: devices === undefined, table: "devices" });
   const nothing = countryList && !countryList.preparing && countryList.rows.length === 0 && deviceList && !deviceList.preparing && deviceList.rows.length === 0;
 
   const columns = (first: string) => [
-    { key: "name", header: first, sortable: true, cell: (row: Split) => <span className="text-foreground">{row.name}</span> },
+    { key: "name", header: first, sortable: true, cell: (row: Split) => <span className="text-[13px] text-foreground">{row.name}</span> },
     { key: "clicks", header: t("table.clicks"), align: "right" as const, sortable: true, cell: (row: Split) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.clicks)}</span> },
-    { key: "share", header: t("table.share"), sortable: true, cell: (row: Split) => <ShareCell share={row.share} /> },
+    { key: "share", header: t("table.share"), align: "right" as const, sortable: true, cell: (row: Split) => <span className="font-mono text-[12px] text-secondary">{formatRate(row.share)}</span> },
     { key: "impressions", header: t("table.impressions"), align: "right" as const, sortable: true, cell: (row: Split) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.impressions)}</span> },
     { key: "ctr", header: t("table.ctr"), align: "right" as const, sortable: true, cell: (row: Split) => <span className="font-mono text-[12px] text-secondary">{formatRate(row.ctr)}</span> },
     { key: "position", header: t("table.position"), align: "right" as const, sortable: true, cell: (row: Split) => <span className="font-mono text-[12px] text-secondary">{formatPosition(row.position)}</span> },
   ];
+  const host = status?.host ?? "";
+  // A table's download: the rows it lists, in its order, under its headings.
+  const download = (first: string, rows: Split[] | undefined, name: string) => (
+    <ListDownload
+      label={t("table.download")}
+      fileName={`${host}-search-console-${name}`}
+      rows={rows}
+      columns={[
+        { header: first, value: (row) => row.name },
+        { header: t("table.clicks"), value: (row) => row.clicks },
+        { header: `${t("table.share")} (%)`, value: (row) => filePercent(row.share) },
+        { header: t("table.impressions"), value: (row) => row.impressions },
+        { header: `${t("table.ctr")} (%)`, value: (row) => filePercent(row.ctr) },
+        { header: t("table.position"), value: (row) => filePosition(row.position) },
+      ]}
+    />
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -122,9 +139,10 @@ export default function SearchConsolePlacesPage() {
                 rows={countryPages.pageRows}
                 rowKey={(row) => row.key}
                 minWidthClassName="min-w-[700px]"
-                cardHeader={<TableBar footer={countryPages.footer} noun="countries" title={t("places.countries")} />}
+                search={{ value: countrySearch, onChange: setCountrySearch, placeholder: t("places.searchCountries") }}
+                cardHeader={<TableBar footer={countryPages.footer} noun="countries" title={t("places.countries")} actions={download(t("table.country"), countryOrder.rows, "countries")} />}
                 sort={countryOrder.tableSort}
-                empty={{ icon: <MapPin className="h-8 w-8 text-muted/30" />, label: t("table.empty") }}
+                empty={{ icon: <MapPin className="h-8 w-8 text-muted/30" />, label: countryTerm ? t("table.noMatch") : t("table.empty") }}
                 footer={countryPages.footer}
                 columns={columns(t("table.country"))}
               />
@@ -132,9 +150,10 @@ export default function SearchConsolePlacesPage() {
                 rows={devicePages.pageRows}
                 rowKey={(row) => row.key}
                 minWidthClassName="min-w-[700px]"
-                cardHeader={<TableBar footer={devicePages.footer} noun="devices" title={t("places.devices")} />}
+                search={{ value: deviceSearch, onChange: setDeviceSearch, placeholder: t("places.searchDevices") }}
+                cardHeader={<TableBar footer={devicePages.footer} noun="devices" title={t("places.devices")} actions={download(t("table.device"), deviceOrder.rows, "devices")} />}
                 sort={deviceOrder.tableSort}
-                empty={{ icon: <Monitor className="h-8 w-8 text-muted/30" />, label: t("table.empty") }}
+                empty={{ icon: <Monitor className="h-8 w-8 text-muted/30" />, label: deviceTerm ? t("table.noMatch") : t("table.empty") }}
                 footer={devicePages.footer}
                 columns={columns(t("table.device"))}
               />

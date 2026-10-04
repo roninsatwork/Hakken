@@ -23,6 +23,7 @@ import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { CHART_CROSSHAIR, ChartTooltip } from "@/src/ui/components/charts/ChartTooltip";
+import { ChartReveal, revealKey } from "@/src/ui/components/screens/ChartReveal";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
 import TimeframeDropdown from "@/src/ui/components/TimeframeDropdown";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
@@ -230,65 +231,67 @@ export default function CompanyAiUsagePage() {
 
               <div className="w-full h-[300px] min-h-[300px]">
                 {data.timeline && data.timeline.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300} debounce={50}>
-                    <AreaChart data={data.timeline}>
-                      <defs>
-                        <linearGradient id="colorInternal" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={CHART_SERIES_VIOLET} stopOpacity={0.1} />
-                          <stop offset="95%" stopColor={CHART_SERIES_VIOLET} stopOpacity={0} />
-                        </linearGradient>
-                        <linearGradient id="colorExternal" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor={CHART_SERIES_EMERALD} stopOpacity={0.1} />
-                          <stop offset="95%" stopColor={CHART_SERIES_EMERALD} stopOpacity={0} />
-                        </linearGradient>
-                      </defs>
-                      <XAxis
-                        dataKey="date"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 11, fill: '#888888' }}
-                        dy={10}
-                      />
-                      <YAxis
-                        yAxisId="left"
-                        axisLine={false}
-                        tickLine={false}
-                        tick={{ fontSize: 11, fill: '#888888' }}
-                        width={40}
-                      />
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
-                      <Tooltip
-                        cursor={CHART_CROSSHAIR}
-                        content={
-                          <ChartTooltip
-                            seriesLabel={(entry) =>
-                              entry.dataKey === "internalMessages" ? t("internalExecutions") : t("externalWidgetTraffic")
-                            }
-                          />
-                        }
-                      />
+                  <ChartReveal replay={revealKey(data.timeline, "date")}>
+                    <ResponsiveContainer width="100%" height={300} debounce={50}>
+                      <AreaChart data={data.timeline}>
+                        <defs>
+                          <linearGradient id="colorInternal" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={CHART_SERIES_VIOLET} stopOpacity={0.1} />
+                            <stop offset="95%" stopColor={CHART_SERIES_VIOLET} stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="colorExternal" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor={CHART_SERIES_EMERALD} stopOpacity={0.1} />
+                            <stop offset="95%" stopColor={CHART_SERIES_EMERALD} stopOpacity={0} />
+                          </linearGradient>
+                        </defs>
+                        <XAxis
+                          dataKey="date"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 11, fill: '#888888' }}
+                          dy={10}
+                        />
+                        <YAxis
+                          yAxisId="left"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 11, fill: '#888888' }}
+                          width={40}
+                        />
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
+                        <Tooltip
+                          cursor={CHART_CROSSHAIR}
+                          content={
+                            <ChartTooltip
+                              seriesLabel={(entry) =>
+                                entry.dataKey === "internalMessages" ? t("internalExecutions") : t("externalWidgetTraffic")
+                              }
+                            />
+                          }
+                        />
 
-                      {/* No entrance animation: it can wedge and render the series as nothing — see GovernanceRunsChart.tsx. */}
-                      <Area isAnimationActive={false}
-                        yAxisId="left"
-                        type="monotone"
-                        dataKey="internalMessages"
-                        stroke={CHART_SERIES_VIOLET}
-                        strokeWidth={3}
-                        fillOpacity={1}
-                        fill="url(#colorInternal)"
-                      />
-                      <Area isAnimationActive={false}
-                        yAxisId="left"
-                        type="monotone"
-                        dataKey="externalMessages"
-                        stroke={CHART_SERIES_EMERALD}
-                        strokeWidth={3}
-                        fillOpacity={1}
-                        fill="url(#colorExternal)"
-                      />
-                    </AreaChart>
-                  </ResponsiveContainer>
+                        {/* No entrance animation: it can wedge and render the series as nothing — see GovernanceRunsChart.tsx. */}
+                        <Area isAnimationActive={false}
+                          yAxisId="left"
+                          type="monotone"
+                          dataKey="internalMessages"
+                          stroke={CHART_SERIES_VIOLET}
+                          strokeWidth={3}
+                          fillOpacity={1}
+                          fill="url(#colorInternal)"
+                        />
+                        <Area isAnimationActive={false}
+                          yAxisId="left"
+                          type="monotone"
+                          dataKey="externalMessages"
+                          stroke={CHART_SERIES_EMERALD}
+                          strokeWidth={3}
+                          fillOpacity={1}
+                          fill="url(#colorExternal)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </ChartReveal>
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center text-muted opacity-50 relative z-10 bottom-8">
                     <AreaChart className="w-12 h-12 mb-3" />

@@ -24,6 +24,7 @@ import { useSiteSort } from "../../_components/useSiteSort";
 import { TableDownload } from "../../_components/SiteDownloads";
 import { useSiteListPage } from "../../_components/useSitePagedTable";
 import { HeldLine, isPartHeld } from "../../_components/SiteCoverage";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 
 const BANDS = ["p01_03", "p04_10", "p11_20", "p21_50", "p51_up"] as const;
 const INTENTS = ["BUYING", "RESEARCHING", "BRANDED", "IRRELEVANT", "OTHER", "UNJUDGED"] as const;
@@ -245,7 +246,7 @@ export default function SiteKeywordsPage() {
             className: CUT_COLUMN.second,
             cell: (row) => row.page
               ? <PageLinkCell href={recordHref({ kind: "page", page: row.page })} page={row.page} was={row.previousPage} />
-              : <span className="text-muted">–</span>,
+              : <NoFigure />,
           },
         ]}
       />

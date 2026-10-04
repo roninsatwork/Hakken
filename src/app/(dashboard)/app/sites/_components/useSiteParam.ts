@@ -124,12 +124,15 @@ export function useSiteParam<Value extends string>(
 /**
  * A search box kept in the address: typed into freely, written to the
  * address once typing pauses. Returns the box's text, its setter, and the
- * settled term a query should use.
+ * settled term a query should use. A page's second table with a search of
+ * its own names itself (`table`, its key `tableKey("q", table)`), so a search
+ * in it starts that table again at page one and leaves the first where it
+ * was — Search Console's Countries and devices, since 2026-10-03.
  */
-export function useSiteSearch(key = "q"): [string, (next: string) => void, string] {
+export function useSiteSearch(key = "q", table?: string): [string, (next: string) => void, string] {
   const params = useSearchParams();
   const pathname = usePathname();
-  const set = useSetSiteParams();
+  const set = useSetSiteParams(table);
   const inAddress = params.get(key) ?? "";
   const [text, setText] = useState(inAddress);
   const settled = useDebounce(text, 400).trim();

@@ -9,6 +9,7 @@ import SearchConsoleSearchesPage from "./[siteId]/keywords/page";
 import SearchConsoleConnectionPage from "./[siteId]/connection/page";
 import SearchConsoleWinsPage from "./[siteId]/wins-and-losses/page";
 import SearchConsoleTypesPage from "./[siteId]/types/page";
+import { STARTING_CONSOLE_LIMITS } from "@/src/test/searchConsoleLimits";
 
 const nav = vi.hoisted(() => ({ pathname: "/app/search-console/site_1", search: "", replace: vi.fn(), push: vi.fn() }));
 
@@ -45,6 +46,7 @@ const CONNECTION = {
   disconnectedAt: null,
   newestDay: "2026-09-26",
   oldestDay: "2025-05-26",
+  countriesNewest: [],
   historyDone: true,
   clearing: false,
   lastCollectedAt: Date.parse("2026-09-27T10:02:00Z"),
@@ -59,7 +61,7 @@ function status(overrides: Record<string, unknown> = {}, connection: Record<stri
     canManage: true,
     host: "acme-shop.test",
     ownSites: [{ siteId: "site_1", host: "acme-shop.test" }],
-    historyFrom: "2025-05-26",
+    historyFrom: "2025-05-26", limits: STARTING_CONSOLE_LIMITS,
     connection: connection === null ? null : { ...CONNECTION, ...connection },
     ...overrides,
   };

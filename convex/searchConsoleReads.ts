@@ -7,6 +7,8 @@ import { tenantAction, tenantQuery } from "./tenantFunctions";
 import { getActiveCompanyId } from "./authz";
 import { companyHolds, requireMySite } from "./siteAccess";
 import { isTrackedHold } from "./utils/websitePairing";
+import { websiteIconUrl } from "./websiteIcons";
+import { checkedLongest, consoleLimitsOf } from "./searchConsoleLimits";
 import { appError } from "./utils/appError";
 import { accessTokenFor } from "./searchConsoleConnect";
 import { queryAnalytics, type AnalyticsRow } from "./searchConsoleApi";
@@ -28,17 +30,11 @@ import { checkedCountry, countryScope } from "./searchConsoleCountries";
  * filter (`searchConsoleLiveDays`).
  */
 
-/** Days a range may span: Google keeps sixteen months, and the screens offer two years. */
-const MOST_DAYS = 800;
-
 /**
- * Rows a live pairing shows: the pages Google showed for a search, or the
- * searches a page was shown for — every one Google names, up to its 25,000
- * an answer (plan §13: "I want to click on a page … and see the keywords that
- * went to that page", all of them).
+ * Days a range may ever span: the largest choice of a website's longest date
+ * range (`consoleLongestRange`), which each read then holds it to.
  */
-/** Under the 8,192 items Convex carries in one array (a page can be shown for more searches than that). */
-const MOST_PAIRED = 8_000;
+const MOST_DAYS = 800;
 
 const figuresValidator = v.object({ clicks: v.number(), impressions: v.number(), ctr: v.number(), position: v.number() });
 const dayValidator = v.object({ day: v.string(), clicks: v.number(), impressions: v.number(), ctr: v.number(), position: v.number() });
@@ -92,6 +88,8 @@ export const listSearchConsoleSites = tenantQuery({
   returns: v.array(v.object({
     siteId: v.id("companyWebsites"),
     host: v.string(),
+    /** The website's own icon, as Sites draws it; null to draw its letter. */
+    iconUrl: v.union(v.string(), v.null()),
     status: v.union(connectionStatusValidator, v.literal("NOT_CONNECTED")),
     figures: v.union(figuresValidator, v.null()),
     from: v.union(v.string(), v.null()),
@@ -109,6 +107,7 @@ export const listSearchConsoleSites = tenantQuery({
       return {
         siteId: entry.summary.siteId,
         host: entry.summary.host,
+        iconUrl: await websiteIconUrl(ctx, entry.hold.websiteId),
         status: connection?.status === "CONNECTING" || !connection ? ("NOT_CONNECTED" as const) : connection.status,
         figures,
         from,
@@ -146,6 +145,7 @@ export const searchConsolePerformance = tenantQuery({
   handler: async (ctx, args) => {
     checkedRange(args.from, args.to);
     const site = await requireMySite(ctx, args.siteId);
+    checkedLongest(args.from, args.to, await consoleLimitsOf(ctx, site.hold));
     const connection = await connectionOf(ctx, site.hold._id);
     const scope = await countryScope(ctx, site.hold, connection, args.country);
     if (scope.read === "LIVE") return { days: [], totals: null, previous: null, named: null, live: true };
@@ -194,8 +194,9 @@ export const searchConsoleLiveDays = tenantAction({
     checkedCountry(args.country);
     const companyId = getActiveCompanyId(ctx.user);
     if (!companyId) throw appError("NOT_FOUND", "That website is not one your company holds.");
-    const target = await ctx.runQuery(internal.searchConsoleReads.pairingTarget, { companyId, siteId: args.siteId });
+    const target = await ctx.runQuery(internal.searchConsoleReads.liveDaysTarget, { companyId, siteId: args.siteId });
     if (!target) return { ok: false as const, problem: "NOT_CONNECTED" as const };
+    checkedLongest(args.from, args.to, target.limits);
     const before = periodBefore(args.from, args.to);
     const beforeHeld = before.from >= historyLimitDay(Date.now());
     const answer = await askLive(ctx, target, {
@@ -233,67 +234,17 @@ export async function askLive(
 }
 
 // ---------------------------------------------------------------------------
-// One search, or one page
+// Asked of Google
 // ---------------------------------------------------------------------------
 
-const splitValidator = v.union(v.literal("query"), v.literal("page"));
-
-/** The connection a live ask goes through, when the site is the caller's company's own and connected. */
-export const pairingTarget = internalQuery({
+/** The connection a live ask of the days goes through, when the site is the caller's company's own and connected, with its limits. */
+export const liveDaysTarget = internalQuery({
   args: { companyId: v.id("companies"), siteId: v.id("companyWebsites") },
   handler: async (ctx, args) => {
     const hold = await ctx.db.get(args.siteId);
     if (!hold || hold.companyId !== args.companyId || isTrackedHold(hold)) return null;
     const connection = await connectionOf(ctx, hold._id);
     if (!connection || connection.status !== "CONNECTED" || !connection.property) return null;
-    return { connectionId: connection._id, property: connection.property };
-  },
-});
-
-/**
- * Which pages Google showed for one search, or which searches it showed one
- * page for, in the dates chosen — and in one country, when one is named —
- * asked of Google when the screen opens: the pairing is not among what is
- * collected each day, and asking is free and answers for any dates (agreed
- * with the drawings, 2026-09-27).
- */
-export const searchConsolePairing = tenantAction({
-  args: {
-    siteId: v.id("companyWebsites"),
-    searchType: searchTypeValidator,
-    dimension: splitValidator,
-    key: v.string(),
-    from: v.string(),
-    to: v.string(),
-    country: v.optional(v.string()),
-  },
-  returns: v.union(
-    v.object({
-      ok: v.literal(true),
-      rows: v.array(v.object({ key: v.string(), clicks: v.number(), impressions: v.number(), ctr: v.number(), position: v.number() })),
-      cut: v.union(v.number(), v.null()),
-    }),
-    v.object({ ok: v.literal(false), problem: v.union(v.literal("NOT_CONNECTED"), v.literal("GOOGLE_REFUSED"), v.literal("GOOGLE_BUSY")) }),
-  ),
-  handler: async (ctx, args) => {
-    checkedRange(args.from, args.to);
-    checkedCountry(args.country);
-    const companyId = getActiveCompanyId(ctx.user);
-    if (!companyId) throw appError("NOT_FOUND", "That website is not one your company holds.");
-    const target = await ctx.runQuery(internal.searchConsoleReads.pairingTarget, { companyId, siteId: args.siteId });
-    if (!target) return { ok: false as const, problem: "NOT_CONNECTED" as const };
-    const other = args.dimension === "query" ? "page" : "query";
-    const answer = await askLive(ctx, target, {
-      startDate: args.from,
-      endDate: args.to,
-      type: args.searchType,
-      dimensions: [other],
-      dimensionFilterGroups: [{ filters: [{ dimension: args.dimension, operator: "equals", expression: args.key }, ...countryFilters(args.country)] }],
-    });
-    if (!answer.ok) return answer;
-    const rows = answer.rows
-      .map((row) => ({ key: row.keys[0] ?? "", clicks: row.clicks, impressions: row.impressions, ctr: row.ctr, position: row.position }))
-      .sort((left, right) => right.clicks - left.clicks || right.impressions - left.impressions);
-    return { ok: true as const, rows: rows.slice(0, MOST_PAIRED), cut: rows.length > MOST_PAIRED ? MOST_PAIRED : null };
+    return { connectionId: connection._id, property: connection.property, limits: await consoleLimitsOf(ctx, hold) };
   },
 });

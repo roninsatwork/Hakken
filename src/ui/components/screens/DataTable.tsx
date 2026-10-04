@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useLayoutEffect, useRef, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
 
@@ -257,9 +257,25 @@ export function DataTable<Row>({
   const t = useTranslations("ui.table");
   const isLoading = rows === undefined;
   const hasControls = Boolean(search || filters);
+  const box = useRef<HTMLDivElement>(null);
+  const height = useRef(0);
+  // While a new sort, filter or search loads, the table keeps the height it
+  // had, so the page does not shrink under the reader and throw them back to
+  // its top (Anthony's audit, 2026-10-04). Set on the element before the
+  // browser lays it out; the new rows take their own height.
+  useLayoutEffect(() => {
+    const table = box.current;
+    if (!table) return;
+    if (isLoading) {
+      if (height.current > 0) table.style.minHeight = `${height.current}px`;
+      return;
+    }
+    table.style.minHeight = "";
+    height.current = table.offsetHeight;
+  });
 
   return (
-    <div className={`flex flex-col ${CONTROLS_GAP} w-full ${className}`.trim()}>
+    <div ref={box} className={`flex flex-col ${CONTROLS_GAP} w-full ${className}`.trim()}>
       {hasControls && (
         <div className="flex items-center gap-3 flex-wrap">
           {search && (

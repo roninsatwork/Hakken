@@ -19,6 +19,7 @@ import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 
 const KINDS = ["COMPETITOR", "DIRECTORY", "PUBLISHER", "SUPPLIER", "OTHER"] as const;
 type Kind = (typeof KINDS)[number];
@@ -111,7 +112,7 @@ export default function SiteOrganicCompetitorsPage() {
           { key: "shared", header: t("columns.shared"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.intersections)}</span> },
           { key: "position", header: t("columns.position"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.averagePosition === null ? "–" : row.averagePosition.toFixed(1)}</span> },
           { key: "domainTraffic", header: t("columns.domainTraffic"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.domainTraffic)}</span> },
-          { key: "tracked", header: t("columns.tracked"), cell: (row) => (row.tracked ? <StatusLabel tone="success">{tc("yes")}</StatusLabel> : <span className="text-muted">–</span>) },
+          { key: "tracked", header: t("columns.tracked"), cell: (row) => (row.tracked ? <StatusLabel tone="success">{tc("yes")}</StatusLabel> : <NoFigure />) },
         ]}
       />
     </div>

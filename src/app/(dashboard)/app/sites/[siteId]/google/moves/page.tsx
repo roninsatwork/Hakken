@@ -24,6 +24,7 @@ import { useSiteListPage } from "../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../_components/useSiteSort";
 import { SiteViewSwitch } from "../../../_components/SiteViewSwitch";
 import { HeldLine, isPartHeld } from "../../../_components/SiteCoverage";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 
 /**
  * The fourth move is lost from a list that held everything the site ranks
@@ -144,7 +145,7 @@ export default function SiteMovesPage() {
             key: "page",
             header: t("columns.page"),
             className: CUT_COLUMN.second,
-            cell: (row) => (row.page ? <PageLinkCell href={recordHref({ kind: "page", page: row.page })} page={row.page} was={row.previousPage} /> : <span className="text-muted">–</span>),
+            cell: (row) => (row.page ? <PageLinkCell href={recordHref({ kind: "page", page: row.page })} page={row.page} was={row.previousPage} /> : <NoFigure />),
           },
           { key: "checked", header: t("columns.lastChecked"), cell: (row) => <CheckedCell day={row.day} /> },
         ]}

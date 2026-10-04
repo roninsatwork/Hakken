@@ -52,6 +52,21 @@ describe("DataTable", () => {
     expect(document.querySelectorAll("tbody tr")[0].querySelectorAll("td")).toHaveLength(2);
   });
 
+  it("keeps its height while a new sort, filter or search loads, so the page does not jump to its top", () => {
+    const height = vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(640);
+    try {
+      const view = renderTable();
+      const table = view.container.firstElementChild as HTMLElement;
+      expect(table.style.minHeight).toBe("");
+      view.rerender(<DataTable<Person> rows={undefined} columns={COLUMNS} rowKey={(p) => p.id} empty={EMPTY} />);
+      expect(table.style.minHeight).toBe("640px");
+      view.rerender(<DataTable<Person> rows={PEOPLE.slice(0, 1)} columns={COLUMNS} rowKey={(p) => p.id} empty={EMPTY} />);
+      expect(table.style.minHeight).toBe("");
+    } finally {
+      height.mockRestore();
+    }
+  });
+
   it("shows the loading row while the query has not answered", () => {
     const { container } = renderTable({ rows: undefined });
 

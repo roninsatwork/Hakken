@@ -23,6 +23,7 @@ import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 
 const ROLES = ["YOU", "RIVAL", "FOUND"] as const;
 type Role = (typeof ROLES)[number];
@@ -148,7 +149,7 @@ export default function SiteMarketMapPage() {
           {
             key: "kind",
             header: t("columns.kind"),
-            cell: (row) => (row.role === "FOUND" && row.kind ? <span className="text-[12px] text-secondary">{tk(row.kind)}</span> : <span className="text-muted">–</span>),
+            cell: (row) => (row.role === "FOUND" && row.kind ? <span className="text-[12px] text-secondary">{tk(row.kind)}</span> : <NoFigure />),
           },
           { key: "keywords", header: t("columns.keywords"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.keywords)}</span> },
           { key: "traffic", header: t("columns.traffic"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.traffic)}</span> },

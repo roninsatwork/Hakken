@@ -16,6 +16,7 @@ import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../../_com
 import { useSite, useSiteId } from "../../../../_components/useSite";
 import { useSitePager } from "../../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../../_components/useSiteSort";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 
 const BANDS = ["p01_03", "p04_10", "p11_20", "p21_50", "p51_up"] as const;
 type Band = (typeof BANDS)[number];
@@ -107,7 +108,7 @@ export default function SiteBandMovePage() {
             key: "page",
             header: t("closest.columns.page"),
             className: CUT_COLUMN.second,
-            cell: (row) => (row.page ? <PageLinkCell href={recordHref({ kind: "page", page: row.page })} page={row.page} /> : <span className="text-muted">–</span>),
+            cell: (row) => (row.page ? <PageLinkCell href={recordHref({ kind: "page", page: row.page })} page={row.page} /> : <NoFigure />),
           },
         ]}
       />

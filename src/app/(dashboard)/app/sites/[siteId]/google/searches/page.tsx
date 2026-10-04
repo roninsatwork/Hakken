@@ -25,6 +25,7 @@ import { useSiteSortedList, type SiteSortColumns } from "../../../_components/us
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { SEARCH_VERDICTS, SEARCH_VERDICT_TONES, STANDING_SORTS, type SearchVerdict } from "../../../_components/searchStanding";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 
 type Tracked = { keyword: string; isActive: boolean; lastPosition: number | null; previousPosition: number | null; bestPosition: number | null; lastCheckedDay: string | null };
 
@@ -61,7 +62,7 @@ export default function SiteSearchesPage() {
   const charted = (rows ?? []).filter((row) => row.lastPosition !== null).slice(0, 5).map((row) => row.keyword);
   const positions = useQuery(
     api.siteGoogle.searchPositions,
-    charted.length > 0 ? { siteId, keywords: charted, from: range.from, to: range.to } : "skip",
+    charted.length > 0 ? { siteId, keywords: charted, from: range.from, to: range.to, step: range.step } : "skip",
   );
 
   const term = settled.toLowerCase();
@@ -71,8 +72,10 @@ export default function SiteSearchesPage() {
   const pager = useSitePager(sorted, { isLoading: rows === undefined });
 
   const days = [...new Set((positions ?? []).flatMap((line) => line.points.map((point) => point.day)))].sort();
+  // Each day, week or month of the step, dated to the newest check inside it.
+  const lastDayOf = (day: string) => (positions ?? []).flatMap((line) => line.points.filter((point) => point.day === day).map((point) => point.lastDay)).sort().at(-1);
   const chartRows = days.map((day) => datedRow(
-    { day },
+    { day, lastDay: lastDayOf(day) },
     Object.fromEntries((positions ?? []).map((line) => [line.keyword, line.points.find((point) => point.day === day)?.position ?? null])),
   ));
 
@@ -127,7 +130,7 @@ export default function SiteSearchesPage() {
             sortable: true,
             cell: (row) => row.lastPosition !== null && row.previousPosition !== null
               ? <Change by={row.previousPosition - row.lastPosition} />
-              : <span className="text-muted">–</span>,
+              : <NoFigure />,
           },
           { key: "best", header: t("columns.best"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.bestPosition ?? "–"}</span> },
           {

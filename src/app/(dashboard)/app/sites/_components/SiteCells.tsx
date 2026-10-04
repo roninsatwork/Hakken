@@ -8,6 +8,7 @@ import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { kindTone, type PageKindsView } from "../../_components/usePageKinds";
 import { formatDay } from "./siteFormat";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 
 /**
  * The cells the Sites tables share, so a keyword's intent, a position and a
@@ -82,7 +83,7 @@ export function PageLinkCell({ href, page, was }: { href: string; page: string; 
  * charts would load the chart library fifteen times over for a squiggle.
  */
 export function TrendCell({ trend, label }: { trend: number[]; label: string }) {
-  if (trend.length < 2) return <span className="text-muted">–</span>;
+  if (trend.length < 2) return <NoFigure />;
   const width = 64;
   const height = 18;
   const top = Math.max(...trend);
@@ -109,7 +110,7 @@ export function useFeatureLabel(): (feature: string) => string {
 export function FeaturesCell({ features }: { features: string[] }) {
   const t = useTranslations("sites.keywords");
   const label = useFeatureLabel();
-  if (features.length === 0) return <span className="text-muted">–</span>;
+  if (features.length === 0) return <NoFigure />;
   const names = features.map(label).join(", ");
   return (
     <span className="text-[12px] text-secondary" title={names}>

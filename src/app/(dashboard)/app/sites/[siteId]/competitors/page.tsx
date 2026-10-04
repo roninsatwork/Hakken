@@ -24,6 +24,7 @@ import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSi
 import { useSiteSearch } from "../../_components/useSiteParam";
 import { ListDownload } from "../../_components/SiteDownloads";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 
 type Figures = { websiteId: string; host: string; estimatedTraffic: number | null; keywords: number | null; referringDomains: number | null };
 const hostOf = (row: Figures) => row.host;
@@ -146,7 +147,7 @@ export default function SiteSideBySidePage() {
               // A competitor with no place on any search compared has nothing to count (4.9).
               return entry && entry.rankedOn > 0
                 ? <span className="font-mono text-[12px]">{t("searchesOf", { count: entry.beatsYouOn, total: entry.comparedOn })}</span>
-                : <span className="text-muted">–</span>;
+                : <NoFigure />;
             },
           },
           {
@@ -154,7 +155,7 @@ export default function SiteSideBySidePage() {
             header: t("columns.verdict"),
             cell: (row) => {
               const entry = compare.get(row.websiteId);
-              return entry ? <StatusLabel tone={VERDICT_TONES[entry.verdict] ?? "neutral"}>{t(`verdicts.${entry.verdict}`)}</StatusLabel> : <span className="text-muted">–</span>;
+              return entry ? <StatusLabel tone={VERDICT_TONES[entry.verdict] ?? "neutral"}>{t(`verdicts.${entry.verdict}`)}</StatusLabel> : <NoFigure />;
             },
           },
         ]}

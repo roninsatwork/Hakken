@@ -7,6 +7,7 @@ import { listHold, listWebsiteId, requireMySite } from "./siteAccess";
 import { holdFirstCheck, holdSearch, holdSearches } from "./holdLists";
 import { searchVerdict, searchVerdictValidator } from "./utils/trackingVerdicts";
 import { MAX_LIST, type Site } from "./websiteSiteRows";
+import { bucketOf, stepValidator } from "./siteFigures";
 
 /**
  * The searches chosen for a site and how it does on each, for the client's
@@ -144,12 +145,17 @@ export const listSearches = tenantQuery({
   },
 });
 
-/** Where the site stood on each of these searches, day by day between two days. */
+/**
+ * Where the site stood on each of these searches between two days, a point
+ * for each day, week or month of the step chosen (2026-10-04: it was always
+ * daily, whatever the step). A position is a level, so a week or month takes
+ * its last day's, as every Sites chart's levels do (`seriesFor`).
+ */
 export const searchPositions = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), keywords: v.array(v.string()), from: v.string(), to: v.string() },
+  args: { siteId: v.id("companyWebsites"), keywords: v.array(v.string()), from: v.string(), to: v.string(), step: stepValidator },
   returns: v.array(v.object({
     keyword: v.string(),
-    points: v.array(v.object({ day: v.string(), position: v.union(v.number(), v.null()) })),
+    points: v.array(v.object({ day: v.string(), lastDay: v.string(), position: v.union(v.number(), v.null()) })),
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
@@ -196,12 +202,12 @@ export const searchPositions = tenantQuery({
         const position = row.position ?? null;
         if (held === undefined || (position !== null && (held === null || position < held))) byDay.set(row.day, position);
       }
-      return {
-        keyword,
-        points: [...byDay.entries()]
-          .map(([day, position]) => ({ day, position }))
-          .sort((left, right) => left.day.localeCompare(right.day)),
-      };
+      // Then each day, week or month at its last day's position.
+      const bySteps = new Map<string, { day: string; lastDay: string; position: number | null }>();
+      for (const [day, position] of [...byDay.entries()].sort(([left], [right]) => left.localeCompare(right))) {
+        bySteps.set(bucketOf(day, args.step), { day: bucketOf(day, args.step), lastDay: day, position });
+      }
+      return { keyword, points: [...bySteps.values()] };
     }));
   },
 });

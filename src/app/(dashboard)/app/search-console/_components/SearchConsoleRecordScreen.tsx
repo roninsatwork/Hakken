@@ -24,7 +24,7 @@ import { readerLanguage } from "./searchConsoleFormat";
 import { BACK_KEY, pageLabel, useLiveAsk, useRecordBack, useRecordHref } from "./searchConsoleRecords";
 import {
   SearchConsoleChips,
-  SearchConsoleDownload,
+  SearchConsoleListDownload,
   TrackedCount,
   figureColumns,
   trackColumn,
@@ -47,8 +47,6 @@ const CHIPS: readonly ChipId[] = ["tracked", "band", "device"];
 /** The chart's plot on a record's screen, as drawn. */
 const CHART_HEIGHT = 340;
 
-/** Countries "Where the clicks came from" shows beside the chart (Anthony, 2026-10-03: "only show top countries"); the rest are a click away. */
-const TOP_COUNTRIES = 5;
 
 /**
  * A keyword's or a page's own screen (search-console-plan.md §13.2, drawn as
@@ -69,6 +67,9 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
   const key = params.get("key") ?? "";
   const siteId = useSearchConsoleSiteId();
   const status = useSearchConsoleStatus();
+  // Countries "Where the clicks came from" shows beside the chart (Anthony, 2026-10-03: "only show top countries"),
+  // the website's limit (`consoleTopCountries`); the rest are a click away.
+  const topCountries = status?.limits.topCountries ?? 0;
   const [kind] = useResultKind();
   const [country] = useSearchConsoleCountry();
   const range = useSearchConsoleRange(status?.connection?.newestDay);
@@ -174,8 +175,8 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
                 ) : (
                   <div className="flex flex-col gap-4">
                     <div className="flex flex-col gap-2">
-                      <SearchConsoleSplitList heading={t("table.country")} rows={splits.answer?.countries.slice(0, TOP_COUNTRIES)} name={(code) => countryName(code, language) ?? tp("unknownCountry")} />
-                      {splits.answer && splits.answer.countries.length > TOP_COUNTRIES ? (
+                      <SearchConsoleSplitList heading={t("table.country")} rows={splits.answer?.countries.slice(0, topCountries)} name={(code) => countryName(code, language) ?? tp("unknownCountry")} />
+                      {splits.answer && splits.answer.countries.length > topCountries ? (
                         <Link href={allPlacesHref} className="self-start text-[12px] text-secondary hover:text-info">
                           {t("record.showAllCountries", { count: formatNumber(splits.answer.countries.length) })} →
                         </Link>
@@ -211,7 +212,7 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
                 <TableBar
                   footer={list.table.footer}
                   noun={other === "query" ? "keywords" : "pages"}
-                  actions={list.live ? undefined : <SearchConsoleDownload ask={list.download} headers={download.map((entry) => entry.header)} fields={download.map((entry) => entry.field)} />}
+                  actions={<SearchConsoleListDownload list={list} download={download} />}
                 >
                   <TrackedCount tracking={tracking} kind={other} wording={other === "query" ? "keywordsOnSite" : "pagesOnSite"} />
                   {list.live ? <span className="text-[12px] text-secondary">{t("table.asked")}</span> : null}

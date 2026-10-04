@@ -8,6 +8,8 @@ import { ADMIN_WRITE_ROLES } from "./authz";
 import { companyHolds, findMySite, requireMySite } from "./siteAccess";
 import { isTrackedHold } from "./utils/websitePairing";
 import { appError } from "./utils/appError";
+import { websiteIconUrl } from "./websiteIcons";
+import { consoleLimitsOf, consoleLimitsValidator } from "./searchConsoleLimits";
 import {
   SEARCH_CONSOLE_PROVIDER,
   getConnectorOAuthClientCredentials,
@@ -704,9 +706,13 @@ export const searchConsoleStatus = tenantQuery({
     canManage: v.boolean(),
     /** The website, as a person reads it, and the company's other own websites, for the switcher. */
     host: v.string(),
+    /** The website's own icon, as Sites draws it; null to draw its letter. */
+    iconUrl: v.union(v.string(), v.null()),
     ownSites: v.array(v.object({ siteId: v.id("companyWebsites"), host: v.string() })),
     /** The oldest day Google still keeps: how far back the history goes. */
     historyFrom: v.string(),
+    /** The website's Search Console limits: what its pages read and the rules they say (§17). */
+    limits: consoleLimitsValidator,
     connection: v.union(
       v.null(),
       v.object({
@@ -720,6 +726,8 @@ export const searchConsoleStatus = tenantQuery({
         disconnectedAt: v.union(v.number(), v.null()),
         newestDay: orNull(v.string()),
         oldestDay: orNull(v.string()),
+        /** Each country kept ready and collected, with its own newest day: its quick picks end there (§16). */
+        countriesNewest: v.array(v.object({ country: v.string(), newestDay: v.string() })),
         historyDone: v.boolean(),
         clearing: v.boolean(),
         lastCollectedAt: v.union(v.number(), v.null()),
@@ -742,10 +750,12 @@ export const searchConsoleStatus = tenantQuery({
       owned: !isTrackedHold(site.hold),
       canManage: (ADMIN_WRITE_ROLES as readonly string[]).includes(ctx.user.role ?? ""),
       host: site.website.displayHost,
+      iconUrl: await websiteIconUrl(ctx, site.website._id),
       ownSites: holds
         .filter((entry) => entry.summary.relationship === "OWNED")
         .map((entry) => ({ siteId: entry.summary.siteId, host: entry.summary.host })),
       historyFrom: historyLimitDay(now),
+      limits: await consoleLimitsOf(ctx, site.hold),
       connection: connection
         ? {
           status: connection.status,
@@ -758,6 +768,7 @@ export const searchConsoleStatus = tenantQuery({
           disconnectedAt: connection.disconnectedAt ?? null,
           newestDay: connection.newestDay ?? null,
           oldestDay: connection.oldestDay ?? null,
+          countriesNewest: (connection.countriesHeld ?? []).map((held) => ({ country: held.country, newestDay: held.newestDay })),
           historyDone: connection.backfilledAt !== undefined,
           clearing: connection.clearing === true,
           lastCollectedAt: connection.lastCollectedAt ?? null,

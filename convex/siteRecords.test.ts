@@ -127,15 +127,15 @@ describe("a keyword's own screen", () => {
     // The competitor is in no keyword list for it, and not on the page the check read.
     expect(record.rivals).toEqual([{ siteId: rival.holdId, host: "nashtackle.co.uk", relationship: "TRACKED", position: null, page: null, day: DAY, checked: true }]);
     const range = { from: "2026-09-01", to: "2026-09-30" };
-    expect(await asKorda.query(api.siteGoogle.searchPositions, { siteId: own.holdId, keywords: [keyword], ...range }))
-      .toEqual([{ keyword, points: [{ day: DAY, position: 2 }] }]);
+    expect(await asKorda.query(api.siteGoogle.searchPositions, { siteId: own.holdId, keywords: [keyword], ...range, step: "day" }))
+      .toEqual([{ keyword, points: [{ day: DAY, lastDay: DAY, position: 2 }] }]);
 
     // Another company owning the same website did not ask: none of it is theirs.
     const asOther = await member(t, other);
     const theirRecord = await asOther.query(api.siteRecords.keywordRecord, { siteId: theirs.holdId, keyword });
     expect(theirRecord.checkedOnce).toBeNull();
     expect(theirRecord.serp).toBeNull();
-    expect(await asOther.query(api.siteGoogle.searchPositions, { siteId: theirs.holdId, keywords: [keyword], ...range })).toEqual([]);
+    expect(await asOther.query(api.siteGoogle.searchPositions, { siteId: theirs.holdId, keywords: [keyword], ...range, step: "day" })).toEqual([]);
   });
 
   test("is only ever read through the caller's own hold", async () => {

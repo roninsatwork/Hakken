@@ -18,6 +18,7 @@ import { formatDay, formatNumber } from "./_components/siteFormat";
 import { SiteMark } from "./_components/SiteMark";
 import { groupHolds } from "./_components/siteGroups";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { sharedSiteQuery, useSiteSearch } from "./_components/useSiteParam";
 import { useSitePager } from "./_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "./_components/useSiteSort";
@@ -109,7 +110,9 @@ export default function SitesPage() {
   // Paged like every Sites table: a company may hold many sites.
   const paged = useSitePager(lines, { isLoading: lines === undefined });
 
-  const dash = <span className="text-muted">–</span>;
+  const dash = <NoFigure />;
+  // A figure in the row's size, as Search Console's list draws it.
+  const number = (text: string) => <span className="font-mono text-[12px] text-foreground">{text}</span>;
   const figure = (render: (row: SiteRow) => ReactNode) => (line: Line) =>
     line.kind === "site" || line.kind === "competitor" ? render(line.row) : null;
 
@@ -188,7 +191,7 @@ export default function SitesPage() {
                   return (
                     <span className="flex min-w-0 items-center gap-2.5 pl-11">
                       <SiteMark host={line.row.host} iconUrl={line.row.iconUrl} owned={false} small />
-                      <span className="truncate text-foreground/90">{line.row.host}</span>
+                      <span className="truncate text-[13px] text-foreground/90">{line.row.host}</span>
                     </span>
                   );
                 }
@@ -196,7 +199,7 @@ export default function SitesPage() {
                   <span className="flex min-w-0 items-center gap-3">
                     <SiteMark host={line.row.host} iconUrl={line.row.iconUrl} owned />
                     <span className="flex min-w-0 flex-col gap-0.5">
-                      <span className="truncate font-medium text-foreground">{line.row.host}</span>
+                      <span className="truncate text-[13px] font-medium text-foreground">{line.row.host}</span>
                       <span className="text-[12px] text-secondary">{aboutSite(line.row)}</span>
                     </span>
                   </span>
@@ -208,16 +211,16 @@ export default function SitesPage() {
               header: t("columns.aiMentions"),
               align: "right",
               sortable: true,
-              cell: figure((row) => (row.aiNamed === null || row.aiAsked === null ? dash : t("ofEngines", { named: row.aiNamed, asked: row.aiAsked }))),
+              cell: figure((row) => (row.aiNamed === null || row.aiAsked === null ? dash : number(t("ofEngines", { named: row.aiNamed, asked: row.aiAsked })))),
             },
-            { key: "keywords", header: t("columns.keywords"), align: "right", sortable: true, cell: figure((row) => (row.keywords === null ? dash : formatNumber(row.keywords))) },
-            { key: "top3", header: t("columns.top3"), align: "right", sortable: true, cell: figure((row) => (row.top3 === null ? dash : formatNumber(row.top3))) },
+            { key: "keywords", header: t("columns.keywords"), align: "right", sortable: true, cell: figure((row) => (row.keywords === null ? dash : number(formatNumber(row.keywords)))) },
+            { key: "top3", header: t("columns.top3"), align: "right", sortable: true, cell: figure((row) => (row.top3 === null ? dash : number(formatNumber(row.top3)))) },
             {
               key: "traffic",
               header: t("columns.traffic"),
               align: "right",
               sortable: true,
-              cell: figure((row) => (row.estimatedTraffic === null ? dash : formatNumber(row.estimatedTraffic))),
+              cell: figure((row) => (row.estimatedTraffic === null ? dash : number(formatNumber(row.estimatedTraffic)))),
             },
             {
               key: "moved",
@@ -239,7 +242,7 @@ export default function SitesPage() {
               header: t("columns.competitors"),
               cell: (line) =>
                 line.kind !== "site" ? null : line.competitors === 0 ? dash : (
-                  <span className="text-secondary">{t("competitorCount", { count: line.competitors })}</span>
+                  <span className="text-[12px] text-secondary">{t("competitorCount", { count: line.competitors })}</span>
                 ),
             },
             {

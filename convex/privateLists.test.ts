@@ -126,7 +126,7 @@ describe("a company's searches and questions are its own", () => {
 
     // Asked for the other company's search or question by name: nothing.
     const siteId = kordaHold.holdId;
-    expect(await asKorda.query(api.siteGoogle.searchPositions, { siteId, keywords: ["bivvies"], from: "2026-09-01", to: DAY })).toEqual([]);
+    expect(await asKorda.query(api.siteGoogle.searchPositions, { siteId, keywords: ["bivvies"], from: "2026-09-01", to: DAY, step: "day" })).toEqual([]);
     const record = await asKorda.query(api.siteRecords.keywordRecord, { siteId, keyword: "bivvies" });
     expect(record.tracked).toBeNull();
     expect(record.serp).toBeNull();

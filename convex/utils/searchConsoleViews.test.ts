@@ -1,5 +1,25 @@
 import { describe, expect, test } from "vitest";
-import { applyView, bandOf, ctrCurve, figuresOf, filterRows, isBrand, pagesByKeyword, shapeRows, summarise, withGone, withTracked, type SourceRow } from "./searchConsoleViews";
+import {
+  VIEWS_BY_WHOLE_PAGE,
+  applyView,
+  bandOf,
+  ctrCurve,
+  figuresOf,
+  filterRows,
+  isBrand,
+  pageWithoutSection,
+  pagesByKeyword,
+  shapeRows,
+  summarise,
+  withGone,
+  withSectionsInPages,
+  withTracked,
+  type SourceRow,
+  type ViewRules,
+} from "./searchConsoleViews";
+
+/** The rules as the limits start them (fanOutLimits.ts): 20 positions, 50 impressions, 100 searches, a quarter off. */
+const rules: ViewRules = { curvePositions: 20, barelyShown: 50, searchedALot: 100, estimateOff: 0.25 };
 
 /**
  * The rules each Search Console page lists by (docs/plans/active/
@@ -39,7 +59,7 @@ describe("shaping", () => {
 describe("each page's rule", () => {
   test("Almost there: positions above 3, up to 20", () => {
     const rows = shaped([row("a", 1, 10, 3), row("b", 1, 10, 4.2), row("c", 1, 10, 20), row("d", 1, 10, 20.1)]);
-    expect(applyView("almost", rows).map((entry) => entry.key)).toEqual(["b", "c"]);
+    expect(applyView("almost", rows, { rules }).map((entry) => entry.key)).toEqual(["b", "c"]);
   });
 
   test("Click rate by position: the website's own rate at each whole position, 1 to 20", () => {
@@ -48,7 +68,7 @@ describe("each page's rule", () => {
       { clicks: 5, impressions: 100, position: 0.8 },
       { clicks: 2, impressions: 100, position: 7.4 },
       { clicks: 9, impressions: 9, position: 21 },
-    ]);
+    ], rules.curvePositions);
     expect(curve).toEqual([
       { position: 1, keywords: 2, impressions: 200, clicks: 15, ctr: 0.075 },
       { position: 7, keywords: 1, impressions: 100, clicks: 2, ctr: 0.02 },
@@ -56,9 +76,9 @@ describe("each page's rule", () => {
   });
 
   test("Shown but not clicked: pages clicked less than the website's own rate at their position would bring", () => {
-    const curve = ctrCurve([{ clicks: 2, impressions: 100, position: 7 }]);
+    const curve = ctrCurve([{ clicks: 2, impressions: 100, position: 7 }], rules.curvePositions);
     const rows = shaped([row("/low/", 19, 3918, 7.4), row("/fine/", 90, 3918, 7.4), row("/far/", 0, 500, 40)]);
-    expect(applyView("lowCtr", rows, { curve })).toEqual([expect.objectContaining({ key: "/low/", usualCtr: 0.02, expected: 78 })]);
+    expect(applyView("lowCtr", rows, { rules, curve })).toEqual([expect.objectContaining({ key: "/low/", usualCtr: 0.02, expected: 78 })]);
   });
 
   test("Pages competing: keywords with two or more pages, the top two and their shares", () => {
@@ -68,15 +88,15 @@ describe("each page's rule", () => {
       { key: "solo", page: "/", clicks: 5, impressions: 50 },
     ]);
     const rows = shaped([row("ai agency", 43, 950, 4), row("solo", 5, 50, 3)]);
-    expect(applyView("competing", rows, { pages })).toEqual([
+    expect(applyView("competing", rows, { rules, pages })).toEqual([
       expect.objectContaining({ key: "ai agency", count: 2, top: "/ai-agency/", next: "/", topShare: 41 / 43, nextShare: 2 / 43 }),
     ]);
   });
 
   test("Wins and losses: only keywords whose clicks changed", () => {
     const rows = shaped([row("up", 43, 10, 4), row("same", 5, 10, 4), row("down", 1, 10, 4)], [row("up", 31, 10, 5), row("same", 5, 10, 4), row("down", 6, 10, 3)]);
-    expect(applyView("moves", rows).map((entry) => [entry.key, entry.change])).toEqual([["up", 12], ["down", -5]]);
-    expect(filterRows(applyView("moves", rows), { move: "loss" }).map((entry) => entry.key)).toEqual(["down"]);
+    expect(applyView("moves", rows, { rules }).map((entry) => [entry.key, entry.change])).toEqual([["up", 12], ["down", -5]]);
+    expect(filterRows(applyView("moves", rows, { rules }), { move: "loss" }).map((entry) => entry.key)).toEqual(["down"]);
   });
 
   test("Missed demand: Sites' most-searched keywords Google barely shows, or every shown keyword not tracked", () => {
@@ -87,11 +107,21 @@ describe("each page's rule", () => {
       { keyword: "shown a lot", volume: 5000, kind: "BUYING" },
       { keyword: "hardly searched", volume: 20, kind: "BUYING" },
     ];
-    expect(applyView("missed", rows, { sitesKeywords, missedList: "searched" }).map((entry) => [entry.key, entry.volume, entry.impressions])).toEqual([
+    expect(applyView("missed", rows, { rules, sitesKeywords, missedList: "searched" }).map((entry) => [entry.key, entry.volume, entry.impressions])).toEqual([
       ["barely", 6600, 14],
       ["never shown", 1000, 0],
     ]);
-    expect(applyView("missed", rows, { missedList: "untracked" }).map((entry) => entry.key)).toEqual(["barely"]);
+    expect(applyView("missed", rows, { rules, missedList: "untracked" }).map((entry) => entry.key)).toEqual(["barely"]);
+  });
+
+  test("each rule follows the website's limits: searched a lot, barely shown, how far off, and the positions counted", () => {
+    const rows = shaped([row("barely", 0, 14, 61.2), row("/b/", 9, 10, 4, { estimate: 11 })]);
+    const sitesKeywords = [{ keyword: "barely", volume: 200, kind: "BUYING" }, { keyword: "never shown", volume: 120, kind: "BUYING" }];
+    const stricter: ViewRules = { curvePositions: 5, barelyShown: 10, searchedALot: 150, estimateOff: 0.1 };
+    expect(applyView("missed", rows, { rules: stricter, sitesKeywords, missedList: "searched" }).map((entry) => entry.key)).toEqual([]);
+    expect(applyView("missed", rows, { rules, sitesKeywords, missedList: "searched" }).map((entry) => entry.key)).toEqual(["barely", "never shown"]);
+    expect(applyView("estimates", rows, { rules: stricter }).map((entry) => entry.verdict)).toEqual(["high"]);
+    expect(ctrCurve([{ clicks: 1, impressions: 10, position: 7 }], stricter.curvePositions)).toEqual([]);
   });
 
   test("Real against estimated: an estimate more than a quarter off Google's clicks is too high or too low", () => {
@@ -101,7 +131,7 @@ describe("each page's rule", () => {
       row("/c/", 40, 10, 4, { estimate: 12 }),
       row("/d/", 4, 10, 4, { estimate: -1 }),
     ]);
-    expect(applyView("estimates", rows).map((entry) => [entry.key, entry.verdict, entry.gap])).toEqual([
+    expect(applyView("estimates", rows, { rules }).map((entry) => [entry.key, entry.verdict, entry.gap])).toEqual([
       ["/a/", "high", 1032],
       ["/b/", "close", 0],
       ["/c/", "low", -28],
@@ -133,8 +163,8 @@ describe("a page's hero boxes", () => {
       ["ai agency"],
       ["ronins"],
     );
-    const listed = applyView("almost", all);
-    const summary = summarise(listed, all, [row("ai agency", 31, 1000, 5.1), row("web design", 6, 800, 12), row("gone", 1, 10, 30)], { brandWords: ["ronins"] });
+    const listed = applyView("almost", all, { rules });
+    const summary = summarise(listed, all, [row("ai agency", 31, 1000, 5.1), row("web design", 6, 800, 12), row("gone", 1, 10, 30)], { rules, brandWords: ["ronins"] });
     expect(summary).toMatchObject({
       rows: 2, of: 3, clicks: 45, impressions: 2441, tracked: 1, gaining: 1, gained: 12, losing: 1, lost: 4, volume: 3400,
       bands: { "1-3": 0, "4-10": 1, "11-20": 1, "21-50": 0, "51+": 0 },
@@ -156,7 +186,7 @@ describe("a page's hero boxes", () => {
       { key: "solo", page: "/solo/", clicks: 5, impressions: 50 },
     ]);
     const all = shaped([row("ai agency", 43, 950, 4), row("solo", 5, 50, 3)]);
-    const summary = summarise(applyView("competing", all, { pages }), all, null, { pages, brandWords: null });
+    const summary = summarise(applyView("competing", all, { rules, pages }), all, null, { rules, pages, brandWords: null });
     expect(summary).toMatchObject({ rows: 1, of: 2, pagesInvolved: 2, pagesShown: 3, bandsBefore: null, brand: null });
   });
 });
@@ -171,18 +201,18 @@ describe("found in review, 2026-10-03", () => {
   test("Sites' monthly estimate is read against the days chosen", () => {
     // 100 visits a month is about 296 over 90 days: 300 clicks is about right, not too low.
     const rows = shaped([row("/a/", 300, 1000, 4, { estimate: 100 })]);
-    expect(applyView("estimates", rows, { days: 90 })).toEqual([expect.objectContaining({ estimate: 296, verdict: "close", gap: 0 })]);
-    expect(applyView("estimates", rows, { days: 30 })).toEqual([expect.objectContaining({ estimate: 99, verdict: "low", gap: -201 })]);
+    expect(applyView("estimates", rows, { rules, days: 90 })).toEqual([expect.objectContaining({ estimate: 296, verdict: "close", gap: 0 })]);
+    expect(applyView("estimates", rows, { rules, days: 30 })).toEqual([expect.objectContaining({ estimate: 99, verdict: "low", gap: -201 })]);
   });
 
   test("Wins and losses counts a keyword shown before and not at all now as all its clicks lost", () => {
     const before = [row("gone", 40, 400, 6), row("kept", 5, 50, 4), row("never clicked", 0, 9, 50)];
     const rows = shapeRows(withGone([row("kept", 9, 60, 3)], before), before, { tracked: new Set(), brandWords: null });
-    expect(applyView("moves", rows).map((entry) => [entry.key, entry.clicks, entry.change, entry.previousClicks])).toEqual([
+    expect(applyView("moves", rows, { rules }).map((entry) => [entry.key, entry.clicks, entry.change, entry.previousClicks])).toEqual([
       ["kept", 9, 4, 5],
       ["gone", 0, -40, 40],
     ]);
-    expect(summarise(applyView("moves", rows), rows, before, { brandWords: null })).toMatchObject({ gaining: 1, gained: 4, losing: 1, lost: 40 });
+    expect(summarise(applyView("moves", rows, { rules }), rows, before, { rules, brandWords: null })).toMatchObject({ gaining: 1, gained: 4, losing: 1, lost: 40 });
   });
 });
 
@@ -192,7 +222,7 @@ describe("Tracked keywords and Tracked pages (drawn 2026-10-03)", () => {
   const rows = () => shapeRows(withTracked([row("ai agency", 44, 1564, 4.3), row("not tracked", 60, 600, 2)], tracked), before, { tracked, brandWords: null });
 
   test("only the tracked are listed, each one whether Google showed it in the dates or not", () => {
-    const listed = applyView("tracked", rows());
+    const listed = applyView("tracked", rows(), { rules });
     expect(listed.map((entry) => [entry.key, entry.clicks, entry.change, entry.previousClicks, entry.tracked])).toEqual([
       ["ai agency", 44, 6, 38, true],
       // Shown before, not now: all its clicks lost, and no position, so no places moved.
@@ -206,7 +236,7 @@ describe("Tracked keywords and Tracked pages (drawn 2026-10-03)", () => {
 
   test("the figures are the tracked rows' together: clicks against the days before, and the position weighted by impressions", () => {
     const all = rows();
-    const summary = summarise(applyView("tracked", all), all, before, { brandWords: null });
+    const summary = summarise(applyView("tracked", all, { rules }), all, before, { rules, brandWords: null });
     expect(summary).toMatchObject({ rows: 3, clicks: 44, impressions: 1564, previousClicks: 45, tracked: 3 });
     expect(summary.position).toBeCloseTo(4.3);
     // Two shown rows: Google's own average, each position counted by its impressions.
@@ -216,12 +246,73 @@ describe("Tracked keywords and Tracked pages (drawn 2026-10-03)", () => {
   });
 
   test("nothing is claimed that is not known: no clicks before without the days before, no position with nothing shown", () => {
-    const listed = applyView("tracked", shapeRows(withTracked([], tracked), null, { tracked, brandWords: null }));
-    expect(summarise(listed, listed, null, { brandWords: null })).toMatchObject({ rows: 3, clicks: 0, impressions: 0, previousClicks: null, position: null });
+    const listed = applyView("tracked", shapeRows(withTracked([], tracked), null, { tracked, brandWords: null }), { rules });
+    expect(summarise(listed, listed, null, { rules, brandWords: null })).toMatchObject({ rows: 3, clicks: 0, impressions: 0, previousClicks: null, position: null });
   });
 
   test("Wins and losses: a keyword gone since the days before moved no places", () => {
     const gone = shapeRows(withGone([], [row("gone", 40, 400, 6)]), [row("gone", 40, 400, 6)], { tracked: new Set(), brandWords: null });
     expect(gone[0]).toMatchObject({ change: -40, previousPosition: 6, positionChange: null });
+  });
+});
+
+/**
+ * A link to a section of a page — "…/#types-and-uses" — is a page of its own
+ * to Google. Where pages are compared or counted it is part of its page
+ * (Anthony's audit, 2026-10-04: one page read "1,018 too high" seven times).
+ */
+describe("a page's section links", () => {
+  const PAGE = "https://acme-shop.test/hub/web-apps/";
+
+  test("a section link is its page without the part after #", () => {
+    expect(pageWithoutSection(`${PAGE}#types-and-uses`)).toBe(PAGE);
+    expect(pageWithoutSection(PAGE)).toBe(PAGE);
+  });
+
+  test("are folded into their page: clicks and impressions added, position weighted, Sites' estimate the page's own", () => {
+    const rows = shaped([
+      row(PAGE, 6, 300, 4, { estimate: 1000, kind: "CONTENT_HUB" }),
+      row(`${PAGE}#types-and-uses`, 2, 100, 8, { estimate: 1000 }),
+      row(`${PAGE}#costs`, 0, 100, 12, { estimate: 1000 }),
+      row("https://acme-shop.test/other/", 3, 50, 2),
+    ], [row(PAGE, 4, 200, 5), row(`${PAGE}#costs`, 1, 50, 9)]);
+    const folded = withSectionsInPages(rows);
+    expect(folded).toHaveLength(2);
+    const page = folded.find((entry) => entry.key === PAGE)!;
+    expect(page).toMatchObject({ clicks: 8, impressions: 500, estimate: 1000, kind: "CONTENT_HUB", previousClicks: 5, change: 3 });
+    expect(page.position).toBeCloseTo((4 * 300 + 8 * 100 + 12 * 100) / 500);
+    expect(page.ctr).toBeCloseTo(8 / 500);
+    // A page without section links stands as it was.
+    expect(folded.find((entry) => entry.key.endsWith("/other/"))).toBe(rows[3]);
+  });
+
+  test("Real against estimated weighs the page once, against its whole clicks", () => {
+    const rows = shaped([
+      row(PAGE, 600, 3000, 4, { estimate: 800 }),
+      row(`${PAGE}#types-and-uses`, 200, 1000, 6, { estimate: 800 }),
+    ]);
+    expect(VIEWS_BY_WHOLE_PAGE.has("estimates")).toBe(true);
+    const listed = applyView("estimates", withSectionsInPages(rows), { rules, days: 30.44 });
+    expect(listed.map((entry) => [entry.key, entry.clicks, entry.estimate, entry.verdict])).toEqual([[PAGE, 800, 800, "close"]]);
+    // Unfolded, the section link alone read the whole page's estimate as too high.
+    expect(applyView("estimates", rows, { rules, days: 30.44 }).map((entry) => entry.verdict)).toEqual(["high", "high"]);
+  });
+
+  test("a page and its section link are one page for a keyword, not two competing", () => {
+    const pages = pagesByKeyword([
+      { key: "web apps", page: PAGE, clicks: 5, impressions: 50 },
+      { key: "web apps", page: `${PAGE}#types-and-uses`, clicks: 2, impressions: 30 },
+    ]);
+    expect(pages.get("web apps")).toEqual([{ page: PAGE, clicks: 7, impressions: 80 }]);
+  });
+
+  test("a list of pages counts each page once by its type", () => {
+    const rows = shaped([
+      row(PAGE, 6, 300, 4, { kind: "CONTENT_HUB" }),
+      row(`${PAGE}#types-and-uses`, 2, 100, 8, { kind: "CONTENT_HUB" }),
+      row("https://acme-shop.test/blog/", 1, 10, 9, { kind: "CONTENT_HUB" }),
+    ]);
+    const summary = summarise(rows, rows, null, { rules, brandWords: null, pageList: true });
+    expect(summary.kinds).toEqual([{ kind: "CONTENT_HUB", rows: 2, clicks: 9 }]);
   });
 });

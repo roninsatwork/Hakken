@@ -89,7 +89,10 @@ export const keyFacts = internalQuery({
 
 export type Facts = Map<string, { kind: string; number: number }>;
 
-/** The facts for every key, asked a few hundred at a time. */
+/** Asks of `keyFacts` run at once: one after another, 5,000 keys took about 25 seconds (2026-10-03). */
+const ASKS_AT_ONCE = 8;
+
+/** The facts for every key, asked a few hundred at a time, several asks at once. */
 export async function factsFor(
   ctx: ActionCtx,
   target: { websiteId: Id<"websites">; place: number },
@@ -97,10 +100,12 @@ export async function factsFor(
   keys: readonly string[],
 ): Promise<Facts> {
   const facts: Facts = new Map();
-  for (let start = 0; start < keys.length; start += KEYS_PER_ASK) {
-    const slice = keys.slice(start, start + KEYS_PER_ASK);
-    const found = await ctx.runQuery(internal.searchConsoleFacts.keyFacts, { websiteId: target.websiteId, place: target.place, kind, keys: slice });
-    slice.forEach((key, index) => facts.set(key, { kind: found.kinds[index] ?? "UNJUDGED", number: found.numbers[index] ?? UNKNOWN }));
+  const slices: string[][] = [];
+  for (let start = 0; start < keys.length; start += KEYS_PER_ASK) slices.push(keys.slice(start, start + KEYS_PER_ASK));
+  for (let at = 0; at < slices.length; at += ASKS_AT_ONCE) {
+    const batch = slices.slice(at, at + ASKS_AT_ONCE);
+    const answers = await Promise.all(batch.map(async (slice) => await ctx.runQuery(internal.searchConsoleFacts.keyFacts, { websiteId: target.websiteId, place: target.place, kind, keys: slice })));
+    batch.forEach((slice, which) => slice.forEach((key, index) => facts.set(key, { kind: answers[which].kinds[index] ?? "UNJUDGED", number: answers[which].numbers[index] ?? UNKNOWN })));
   }
   return facts;
 }

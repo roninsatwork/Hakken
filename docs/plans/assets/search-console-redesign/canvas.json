@@ -154,6 +154,69 @@
       "title": "17 · Real against estimated",
       "expand": "fill",
       "is_interactive": true
+    },
+    "Market.dc.html": {
+      "x": 0,
+      "y": 10380,
+      "w": 1440,
+      "h": 960,
+      "title": "18 · Market: where a website trades, and where it's watched from (Admin → Companies → website)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "TrackedKeywords.dc.html": {
+      "x": 0,
+      "y": 11900,
+      "w": 1440,
+      "h": 1300,
+      "title": "19 · Search Console: Tracked keywords (new Tracked group, first in the menu)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "TrackedPages.dc.html": {
+      "x": 1520,
+      "y": 11900,
+      "w": 1440,
+      "h": 1220,
+      "title": "20 · Search Console: Tracked pages",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "TrackedFanOut.dc.html": {
+      "x": 3040,
+      "y": 11900,
+      "w": 1440,
+      "h": 1120,
+      "title": "21 · Sites: Tracked fan-out queries (beside Your searches)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "PageGroups.dc.html": {
+      "x": 0,
+      "y": 13760,
+      "w": 1440,
+      "h": 1720,
+      "title": "22 · Admin: Page classification — every page set, changed or removed in its row; your classifications in the second view",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "YourPages.dc.html": {
+      "x": 3040,
+      "y": 13760,
+      "w": 1440,
+      "h": 1640,
+      "title": "23 · Sites: Your pages (Site → after Overview)",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "ClassificationEdit.dc.html": {
+      "x": 1520,
+      "y": 13760,
+      "w": 1440,
+      "h": 1500,
+      "title": "22b · Admin: one classification's own page (opened from its row)",
+      "expand": "fill",
+      "is_interactive": true
     }
   },
   "createdOnFiles": {
@@ -193,6 +256,27 @@
       "text": "Breakdowns: types, brand and non-brand, click rate by position, rich results, real against estimated",
       "kind": "title1",
       "maxW": 7520
+    },
+    "market": {
+      "x": 0,
+      "y": 10120,
+      "text": "Settings: where a website trades",
+      "kind": "title1",
+      "maxW": 1440
+    },
+    "tracked": {
+      "x": 0,
+      "y": 11640,
+      "text": "Tracked: only what you track — drawn 2026-10-03 with ronins.co.uk's real figures (3 Sep – 2 Oct). Nothing is ticked yet, so these rows are shown as if ticked.",
+      "kind": "title1",
+      "maxW": 4480
+    },
+    "pagegroups": {
+      "x": 0,
+      "y": 13500,
+      "text": "Page classification and Your pages — redrawn 2026-10-03: no tables under tables; classify at page level (set, change, remove). From ronins.co.uk's real sitemap, crawl, Search Console and rankings; the classifications are a suggested start from its own folders.",
+      "kind": "title1",
+      "maxW": 4480
     }
   },
   "order": [
@@ -212,7 +296,14 @@
     "Brand.dc.html",
     "CtrCurve.dc.html",
     "Appearance.dc.html",
-    "Estimates.dc.html"
+    "Estimates.dc.html",
+    "Market.dc.html",
+    "TrackedKeywords.dc.html",
+    "TrackedPages.dc.html",
+    "TrackedFanOut.dc.html",
+    "PageGroups.dc.html",
+    "ClassificationEdit.dc.html",
+    "YourPages.dc.html"
   ],
   "pages": [],
   "title": "Search Console — keywords and pages"

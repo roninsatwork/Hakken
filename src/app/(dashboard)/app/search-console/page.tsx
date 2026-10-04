@@ -15,10 +15,12 @@ import { formatDateTime } from "@/src/lib/dates";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { formatNumber } from "../sites/_components/siteFormat";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { ListDownload } from "../sites/_components/SiteDownloads";
 import { useSitePager } from "../sites/_components/useSitePagedTable";
 import { sharedSiteQuery, useSiteSearch } from "../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../sites/_components/useSiteSort";
+import { SiteMark } from "../sites/_components/SiteMark";
 import { formatPosition, formatRate } from "./_components/searchConsoleFormat";
 
 type SiteRow = FunctionReturnType<typeof api.searchConsoleReads.listSearchConsoleSites>[number];
@@ -62,7 +64,7 @@ export default function SearchConsolePage() {
   const paged = useSitePager(sorted, { isLoading: sorted === undefined });
   // Into a website go the dates only.
   const range = sharedSiteQuery(params);
-  const dash = <span className="text-muted">–</span>;
+  const dash = <NoFigure />;
 
   return (
     <>
@@ -102,13 +104,24 @@ export default function SearchConsolePage() {
           footer={paged.footer}
           sort={tableSort}
           columns={[
-            { key: "host", header: t("columns.website"), sortable: true, cell: (row) => <span className="font-medium text-foreground">{row.host}</span> },
+            {
+              key: "host",
+              header: t("columns.website"),
+              sortable: true,
+              cell: (row) => (
+                <span className="flex min-w-0 items-center gap-3">
+                  {/* As Sites' list draws it: the website's letter until `listSearchConsoleSites` sends its icon. */}
+                  <SiteMark host={row.host} iconUrl={row.iconUrl} owned />
+                  <span className="truncate text-[13px] font-medium text-foreground">{row.host}</span>
+                </span>
+              ),
+            },
             { key: "status", header: t("columns.status"), cell: (row) => <StatusLabel tone={TONES[row.status]}>{ts(row.status)}</StatusLabel> },
             { key: "clicks", header: t("columns.clicks"), align: "right", sortable: true, cell: (row) => (row.figures ? <span className="font-mono text-[12px] text-foreground">{formatNumber(row.figures.clicks)}</span> : dash) },
             { key: "impressions", header: t("columns.impressions"), align: "right", sortable: true, cell: (row) => (row.figures ? <span className="font-mono text-[12px] text-secondary">{formatNumber(row.figures.impressions)}</span> : dash) },
             { key: "ctr", header: t("columns.ctr"), align: "right", sortable: true, cell: (row) => (row.figures ? <span className="font-mono text-[12px] text-secondary">{formatRate(row.figures.ctr)}</span> : dash) },
             { key: "position", header: t("columns.position"), align: "right", sortable: true, cell: (row) => (row.figures ? <span className="font-mono text-[12px] text-secondary">{formatPosition(row.figures.position)}</span> : dash) },
-            { key: "updated", header: t("columns.updated"), sortable: true, cell: (row) => (row.lastCollectedAt ? <span className="text-secondary">{formatDateTime(row.lastCollectedAt)}</span> : dash) },
+            { key: "updated", header: t("columns.updated"), sortable: true, cell: (row) => (row.lastCollectedAt ? <span className="whitespace-nowrap text-[12px] text-secondary">{formatDateTime(row.lastCollectedAt)}</span> : dash) },
           ]}
         />
       </div>

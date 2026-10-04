@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { cn } from "@/src/ui/lib/utils";
+import { NoFigure } from "./NoFigure";
 
 /**
  * A move up or down, as every table writes it: "▲ 12", "▼ 3", "▲ 0.8 places",
@@ -34,9 +35,9 @@ export function Change({ by, kind = "count", isNew = false, same = false, arrow,
     return <span className={cn("whitespace-nowrap font-mono text-[12px]", tone)}>{arrow === "up" ? "▲" : "▼"} {format(Math.abs(by))}</span>;
   }
   if (isNew) return <span className="whitespace-nowrap text-[12px] text-success">{t("new")}</span>;
-  if (by === null || Number.isNaN(by)) return <span className="text-muted">–</span>;
+  if (by === null || Number.isNaN(by)) return <NoFigure />;
   const still = kind === "places" ? Math.abs(by) < 0.05 : by === 0;
-  if (still) return same ? <span className="whitespace-nowrap font-mono text-[12px] text-muted">{t("same")}</span> : <span className="text-muted">–</span>;
+  if (still) return same ? <span className="whitespace-nowrap font-mono text-[12px] text-muted">{t("same")}</span> : <NoFigure />;
   const up = by > 0;
   const amount = format(Math.abs(by));
   return (

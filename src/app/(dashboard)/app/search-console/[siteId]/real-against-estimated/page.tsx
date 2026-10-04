@@ -8,6 +8,7 @@ import { formatNumber } from "../../../sites/_components/siteFormat";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { pageLabel, useRecordHref } from "../../_components/searchConsoleRecords";
 import { KindText, figureColumns, useSearchConsoleList, type ChipId, type ListRow } from "../../_components/SearchConsoleTables";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 
 const CHIPS: readonly ChipId[] = ["verdict", "pageType"];
 
@@ -37,8 +38,8 @@ export default function SearchConsoleEstimatesPage() {
         <FigureRow>
           <Figure label={t("estimates.sites")} value={summary ? formatNumber(summary.estimate) : "…"} detail={<span className="text-secondary">{t("estimates.visitsIn", { days })}</span>} />
           <Figure label={t("estimates.google")} value={summary ? formatNumber(summary.clicks) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days })}</span>} />
-          <Figure label={t("estimates.high")} value={summary ? formatNumber(summary.high) : "…"} detail={<span className="text-secondary">{t("estimates.byAQuarter")}</span>} />
-          <Figure label={t("estimates.low")} value={summary ? formatNumber(summary.low) : "…"} detail={<span className="text-secondary">{t("estimates.byAQuarter")}</span>} />
+          <Figure label={t("estimates.high")} value={summary ? formatNumber(summary.high) : "…"} detail={<span className="text-secondary">{t("estimates.byAQuarter", { percent: list.status?.limits.estimateOff ?? "…" })}</span>} />
+          <Figure label={t("estimates.low")} value={summary ? formatNumber(summary.low) : "…"} detail={<span className="text-secondary">{t("estimates.byAQuarter", { percent: list.status?.limits.estimateOff ?? "…" })}</span>} />
         </FigureRow>
       }
       table={{
@@ -77,7 +78,7 @@ export default function SearchConsoleEstimatesPage() {
 /** An estimate against Google's clicks, in words: too high by so many, too low, or about right. */
 function Difference({ row }: { row: ListRow }) {
   const t = useTranslations("searchConsole");
-  if (row.verdict === null || row.gap === null) return <span className="text-muted">–</span>;
+  if (row.verdict === null || row.gap === null) return <NoFigure />;
   if (row.verdict === "close") return <span className="whitespace-nowrap text-[13px] text-secondary">{t("estimates.aboutRight")}</span>;
   return row.verdict === "high"
     ? <span className="whitespace-nowrap text-[13px] text-warning">{t("estimates.tooHigh", { count: formatNumber(row.gap) })}</span>

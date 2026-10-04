@@ -6,6 +6,7 @@ import { convexPath } from "@/src/test/siteViewFixtures";
 import SearchConsolePagesPage from "./[siteId]/pages/page";
 import SearchConsoleEstimatesPage from "./[siteId]/real-against-estimated/page";
 import SearchConsoleTypesPage from "./[siteId]/types/page";
+import { STARTING_CONSOLE_LIMITS } from "@/src/test/searchConsoleLimits";
 
 const nav = vi.hoisted(() => ({ pathname: "/app/search-console/site_1", search: "", replace: vi.fn(), push: vi.fn() }));
 
@@ -40,10 +41,10 @@ vi.mock("@/src/ui/components/layout/Header", () => ({ default: () => null }));
  */
 
 const STATUS = {
-  configured: true, owned: true, canManage: true, host: "acme-shop.test", ownSites: [{ siteId: "site_1", host: "acme-shop.test" }], historyFrom: "2025-05-26",
+  configured: true, owned: true, canManage: true, host: "acme-shop.test", ownSites: [{ siteId: "site_1", host: "acme-shop.test" }], historyFrom: "2025-05-26", limits: STARTING_CONSOLE_LIMITS,
   connection: {
     status: "CONNECTED", signingIn: false, googleAccount: "owner@acme-shop.test", property: "sc-domain:acme-shop.test", permission: "siteOwner", choices: [],
-    connectedAt: 0, disconnectedAt: null, newestDay: "2026-09-26", oldestDay: "2025-05-26", historyDone: true, clearing: false, lastCollectedAt: 0, problem: null, attempt: null,
+    connectedAt: 0, disconnectedAt: null, newestDay: "2026-09-26", oldestDay: "2025-05-26", countriesNewest: [], historyDone: true, clearing: false, lastCollectedAt: 0, problem: null, attempt: null,
   },
 };
 

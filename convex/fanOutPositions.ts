@@ -37,11 +37,16 @@ export type Lookups = {
   consolePositions: Map<string, number>;
 };
 
+/** The ready-made keyword list each "Days of Search Console averaged" setting reads. */
+const CONSOLE_PERIOD: Record<number, "7" | "14" | "28"> = { 7: "7", 14: "14", 28: "28" };
+
 /**
  * Search Console's position for a search reads its ready-made list
- * (search-console-plan.md §14.3, item 4), once for the website: the 7-day
- * list for a 7-day setting, the 30-day list for 14 or 28 days — the
- * ready-made periods are 7, 30 and 90 days and 12 months.
+ * (search-console-plan.md §14.3, item 4), once for the website: the list of
+ * the days the setting names — 7, 14 or 28, each kept ready since the drift
+ * fixes of 2026-10-03 (§15, decision 4), where 14 and 28 had read the 30
+ * days. A website whose 14 or 28 days are not built yet reads its 30 days
+ * until its next run.
  */
 export async function positionLookups(ctx: Reader, hold: Doc<"companyWebsites">, consoleDays: number): Promise<Lookups> {
   const connection = await ctx.db
@@ -51,7 +56,8 @@ export async function positionLookups(ctx: Reader, hold: Doc<"companyWebsites">,
   const consoleTo = connection?.status === "CONNECTED" && !connection.clearing && connection.newestDay ? connection.newestDay : null;
   const consolePositions = new Map<string, number>();
   if (consoleTo) {
-    const list = await readPeriod(ctx, hold._id, "web", "query", consoleDays <= 7 ? "7" : "30", "NOW");
+    const own = CONSOLE_PERIOD[consoleDays];
+    const list = (own ? await readPeriod(ctx, hold._id, "web", "query", own, "NOW") : null) ?? await readPeriod(ctx, hold._id, "web", "query", "30", "NOW");
     for (const row of list?.rows ?? []) {
       const position = positionOf(row);
       if (position !== null) consolePositions.set(row.key, position);

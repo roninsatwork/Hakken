@@ -81,7 +81,7 @@ export default function SearchConsoleTypesPage() {
           </FigureRow>
           <KindCard
             title={t(classified ? "types.pagesTitleClassified" : "types.pagesTitle")}
-            hint={t(classified ? "types.pagesHintClassified" : "types.pagesHint", { count: formatNumber(pages?.rows ?? 0) })}
+            hint={t(classified ? "types.pagesHintClassified" : "types.pagesHint", { count: formatNumber(pagesCounted(pages)) })}
             exportName={`${host}-search-console-pages-by-${classified ? "classification" : "kind"}`}
             host={host}
             range={range}
@@ -110,6 +110,16 @@ export default function SearchConsoleTypesPage() {
 }
 
 /**
+ * How many pages a summary of pages holds, each once: Google lists a link to
+ * a section of a page as a page of its own, and each type counts its pages
+ * once (2026-10-04), so the pages are the types' counts added up — a page and
+ * its sections share their classification.
+ */
+function pagesCounted(summary: ListSummary | null | undefined): number {
+  return (summary?.kinds ?? []).reduce((sum, kind) => sum + kind.rows, 0);
+}
+
+/**
  * One card of kinds: each kind's share of the pages (or keywords) and of the
  * clicks, as two bars, the most first — each row opening the list it counts.
  * The bars are the shared `KindBars`, in the Sites Overview's blue and orange.
@@ -130,6 +140,8 @@ function KindCard({ title, hint, exportName, host, range, csv, summary, of, href
   const [shown, setShown] = useState({ count: true, clicks: true });
   const share = (part: number, whole: number) => (whole > 0 ? part / whole : 0);
   const what = t(of === "page" ? "types.pages" : "types.keywords");
+  // Pages are counted once each, their section links folded in; keywords as listed.
+  const whole = of === "page" ? pagesCounted(summary) : summary?.rows ?? 0;
   return (
     <SearchConsoleChartCard
       title={title}
@@ -151,7 +163,7 @@ function KindCard({ title, hint, exportName, host, range, csv, summary, of, href
         colours={[CHART_SERIES_BLUE, CHART_SERIES_ORANGE]}
         shown={[shown.count, shown.clicks]}
         rows={(summary?.kinds ?? []).map((kind) => {
-          const count = share(kind.rows, summary?.rows ?? 0);
+          const count = share(kind.rows, whole);
           const clicks = share(kind.clicks, summary?.clicks ?? 0);
           return {
             key: kind.kind,

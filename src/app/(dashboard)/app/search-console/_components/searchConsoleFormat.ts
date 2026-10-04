@@ -24,3 +24,6 @@ export function formatPosition(value: number | null | undefined): string {
 export function readerLanguage(): string {
   return readerLocale();
 }
+
+/** Figures in a downloaded file, written as the files built on the server write them. */
+export { filePercent, filePosition } from "@/convex/utils/searchConsoleExport";

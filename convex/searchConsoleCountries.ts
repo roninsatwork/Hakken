@@ -214,10 +214,16 @@ async function clearSomeOf(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsit
   for (const row of weeks) await ctx.db.delete(row._id);
   const seen = await ctx.db
     .query("searchConsoleSeen")
-    .withIndex("by_hold_country_kind_key", (q) => q.eq("companyWebsiteId", companyWebsiteId).eq("country", country))
+    .withIndex("by_hold_country_type_kind_key", (q) => q.eq("companyWebsiteId", companyWebsiteId).eq("country", country))
     .take(CLEAR_ROWS);
   for (const row of seen) await ctx.db.delete(row._id);
-  return lists.length < CLEAR_RECORDS && periods.length < CLEAR_RECORDS && days.length < CLEAR_ROWS && weeks.length < CLEAR_ROWS && seen.length < CLEAR_ROWS;
+  const seenDays = await ctx.db
+    .query("searchConsoleSeenDays")
+    .withIndex("by_hold_country_type_kind_day", (q) => q.eq("companyWebsiteId", companyWebsiteId).eq("country", country))
+    .take(CLEAR_ROWS);
+  for (const row of seenDays) await ctx.db.delete(row._id);
+  return lists.length < CLEAR_RECORDS && periods.length < CLEAR_RECORDS && days.length < CLEAR_ROWS && weeks.length < CLEAR_ROWS && seen.length < CLEAR_ROWS
+    && seenDays.length < CLEAR_ROWS;
 }
 
 /** A country's held days forgotten on its connection: the next collection fetches its whole 90 days again. */

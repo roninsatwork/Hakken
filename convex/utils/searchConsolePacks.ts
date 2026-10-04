@@ -10,6 +10,8 @@
  * Google's, which a plain average of averages is not.
  */
 
+import { compareValues } from "convex/values";
+
 /** Rows in one part of a kept list: a Convex record holds 1MB at most, and an array 8,192 items. */
 export const PART_ROWS = 2_000;
 
@@ -65,6 +67,33 @@ export function pack(rows: readonly Row[], pairs: boolean): Packed[] {
       positionSums: slice.map((row) => row.positionSum),
     });
     if (sorted.length === 0) break;
+  }
+  return parts;
+}
+
+/**
+ * Pairs packed in key order — by keyword, or by page — each part with the
+ * first key it holds, so one keyword's or one page's rows are found by index
+ * (`readKeyed`): the parts starting with that key, and the one just before.
+ * Ordered as Convex orders an index (`compareValues`), most clicks first
+ * within a key.
+ */
+export function packByKey(rows: readonly Row[], side: "query" | "page"): Array<Packed & { pages: string[]; firstKey: string }> {
+  const keyOf = (row: Row) => (side === "query" ? row.key : (row.page ?? ""));
+  const otherOf = (row: Row) => (side === "query" ? (row.page ?? "") : row.key);
+  const sorted = [...rows].sort((left, right) => compareValues(keyOf(left), keyOf(right))
+    || right.clicks - left.clicks || right.impressions - left.impressions || compareValues(otherOf(left), otherOf(right)));
+  const parts: Array<Packed & { pages: string[]; firstKey: string }> = [];
+  for (let start = 0; start < sorted.length; start += PART_ROWS) {
+    const slice = sorted.slice(start, start + PART_ROWS);
+    parts.push({
+      keys: slice.map((row) => row.key),
+      pages: slice.map((row) => row.page ?? ""),
+      clicks: slice.map((row) => row.clicks),
+      impressions: slice.map((row) => row.impressions),
+      positionSums: slice.map((row) => row.positionSum),
+      firstKey: keyOf(slice[0]),
+    });
   }
   return parts;
 }
@@ -140,6 +169,22 @@ export function weekStart(day: string): string {
 
 export function monthStart(day: string): string {
   return `${day.slice(0, 7)}-01`;
+}
+
+/** What each point or bar of a chart is: the page's step (2026-10-04, charts in the dates and step chosen). */
+export type ChartStep = "day" | "week" | "month";
+
+/** The first day of the day, week or month a day falls in. */
+export function stepStart(day: string, step: ChartStep): string {
+  if (step === "day") return day;
+  return step === "week" ? weekStart(day) : monthStart(day);
+}
+
+/** The last day of the day, week or month starting on `start`. */
+export function stepEnd(start: string, step: ChartStep): string {
+  if (step === "day") return start;
+  if (step === "week") return dayOf(time(start) + 6 * 86_400_000);
+  return dayOf(time(monthStart(dayOf(time(start) + 31 * 86_400_000))) - 86_400_000);
 }
 
 /** Days kept as days (plan §14.3: 90), weeks kept as weeks for a year past that. */

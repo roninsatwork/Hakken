@@ -93,21 +93,64 @@ export const listValidator = v.union(
 export const grainValidator = v.union(v.literal("DAY"), v.literal("WEEK"), v.literal("MONTH"));
 export type SearchConsoleGrain = "DAY" | "WEEK" | "MONTH";
 
-/** What a ready-made period's list is of: the kept lists, and each search added up from the pairs. */
+/**
+ * What a ready-made period's list is of: the kept lists, and each search
+ * added up from the pairs. The pairs are kept twice, in key order, so one
+ * keyword's pages (`pair`, by keyword) and one page's keywords (`pairByPage`,
+ * by page) are found by index rather than by reading a whole period of pairs;
+ * `competing` holds only the pairs of keywords two or more pages were shown
+ * for, for Pages competing (drift fixes, 2026-10-03).
+ */
 export const periodListValidator = v.union(
   v.literal("query"),
   v.literal("pair"),
+  v.literal("pairByPage"),
+  v.literal("competing"),
   v.literal("page"),
   v.literal("country"),
   v.literal("device"),
   v.literal("appearance"),
 );
-export type SearchConsolePeriodList = "query" | "pair" | "page" | "country" | "device" | "appearance";
+export type SearchConsolePeriodList = "query" | "pair" | "pairByPage" | "competing" | "page" | "country" | "device" | "appearance";
 
 /** The ready-made periods (plan §14.3, item 4): days, ending on Google's newest day held. */
 export const SEARCH_CONSOLE_PERIODS = ["7", "30", "90", "365"] as const;
-export type SearchConsolePeriod = (typeof SEARCH_CONSOLE_PERIODS)[number];
-export const periodValidator = v.union(v.literal("7"), v.literal("30"), v.literal("90"), v.literal("365"));
+/**
+ * Fan-out's own periods (§15, decision 4): its "Days of Search Console
+ * averaged" setting offers 14 and 28 days, so each is kept ready too — the
+ * web keyword list for all countries only, with no period before.
+ */
+export const FAN_OUT_PERIODS = ["14", "28"] as const;
+export type SearchConsolePeriod = (typeof SEARCH_CONSOLE_PERIODS)[number] | (typeof FAN_OUT_PERIODS)[number];
+/**
+ * The Search Console screens' limits as stored (search-console-plan.md §17.5),
+ * one field each, on the platform's row and on a company's or a website's —
+ * spread into `platformLimits` and `fanOutLimits` so the two never drift.
+ */
+export const consoleScreenLimitFields = {
+  consoleListRows: v.optional(v.number()),
+  consolePairedRows: v.optional(v.number()),
+  consoleLiveFactsRows: v.optional(v.number()),
+  consoleRichResultKinds: v.optional(v.number()),
+  consoleTopCountries: v.optional(v.number()),
+  consoleNewLostRows: v.optional(v.number()),
+  consoleNewAfterDays: v.optional(v.number()),
+  consoleLostAfterDays: v.optional(v.number()),
+  consoleMissedKeywords: v.optional(v.number()),
+  consoleSearchedALot: v.optional(v.number()),
+  consoleBarelyShown: v.optional(v.number()),
+  consoleEstimateOff: v.optional(v.number()),
+  consoleCurvePositions: v.optional(v.number()),
+  consoleUpdatesListed: v.optional(v.number()),
+  consoleUpdateWindowDays: v.optional(v.number()),
+  consoleChartWeeks: v.optional(v.number()),
+  consoleLongestRange: v.optional(v.number()),
+};
+
+/** The kind of result as the first- and last-seen register files it: web results carry none, as every row held before they all did. */
+export const seenType = (type: SearchType): SearchType | undefined => (type === "web" ? undefined : type);
+
+export const periodValidator = v.union(v.literal("7"), v.literal("14"), v.literal("28"), v.literal("30"), v.literal("90"), v.literal("365"));
 
 /**
  * One list's rows, packed: one record for a whole day (or week, or month)
@@ -251,22 +294,45 @@ export const searchConsoleTables = {
     kinds: v.optional(v.array(v.string())),
     volumes: v.optional(v.array(v.number())),
     estimates: v.optional(v.array(v.number())),
+    /**
+     * A list kept in key order (`pair` by keyword, `pairByPage` by page): the
+     * first key in this part, so one keyword's or one page's rows are read by
+     * index — this part and those after it starting with the same key.
+     */
+    firstKey: v.optional(v.string()),
+    /** Pages competing (`competing`): how many pages Google showed for any keyword in the period. */
+    shown: v.optional(v.number()),
     builtAt: v.number(),
-  }).index("by_hold_country_type_list_period", ["companyWebsiteId", "country", "searchType", "list", "period", "which", "part"]),
+  })
+    .index("by_hold_country_type_list_period", ["companyWebsiteId", "country", "searchType", "list", "period", "which", "part"])
+    .index("by_hold_country_type_list_period_first", ["companyWebsiteId", "country", "searchType", "list", "period", "which", "firstKey"]),
 
   /**
-   * Each week's keywords by band of Google's average position, and its clicks
-   * from searches using the website's brand words and from the rest — the
-   * Position bands and Brand and non-brand charts (plan §13.3). Worked out
-   * after each run from the kept lists, for the last 16 weeks held.
+   * Each day's, week's and month's keywords by band of Google's average
+   * position, and its clicks from searches using the website's brand words
+   * and from the rest — the Position bands and Brand and non-brand charts
+   * (plan §13.3), in the step and dates chosen. Worked out after each run from
+   * the kept lists, as far back as the charts' weeks reach (16 unless Data
+   * limits says otherwise); days only for the 90 days kept as days.
    */
   searchConsoleWeeks: defineTable({
     companyWebsiteId: v.id("companyWebsites"),
     /** One country's figures (Google's `gbr`), kept ready because the website trades there; missing means all countries (§16). */
     country: v.optional(v.string()),
     searchType: searchTypeValidator,
-    /** The Monday the week starts on. */
+    /**
+     * What the row adds up: a day, a week (Monday to Sunday) or a calendar
+     * month, so Position bands and Brand and non-brand draw the step chosen
+     * (2026-10-04). Missing on rows built before then, which are weeks.
+     */
+    grain: v.optional(v.union(v.literal("DAY"), v.literal("WEEK"), v.literal("MONTH"))),
+    /**
+     * The row's first day: the day itself, a week's Monday or a month's 1st.
+     * Named when the table held only weeks.
+     */
     week: v.string(),
+    /** How many of its days are held — fewer at the edges of the history — so a part-week is drawn as one. */
+    days: v.optional(v.number()),
     top3: v.number(),
     top10: v.number(),
     top20: v.number(),
@@ -276,19 +342,43 @@ export const searchConsoleTables = {
     builtAt: v.number(),
   }).index("by_hold_country_type_week", ["companyWebsiteId", "country", "searchType", "week"]),
 
-  /** When each search and each page was first and last shown, for New and lost (plan §14.3, item 6). Web results. */
+  /** When each search and each page was first and last shown, for New and lost (plan §14.3, item 6), for each kind of result. */
   searchConsoleSeen: defineTable({
     companyWebsiteId: v.id("companyWebsites"),
     /** One country's figures (Google's `gbr`), kept ready because the website trades there; missing means all countries (§16). */
     country: v.optional(v.string()),
+    /** The kind of result (`seenType`): missing means web results, as every row held before 2026-10-03 (drift fixes: web had been the only one). */
+    searchType: v.optional(searchTypeValidator),
     kind: v.union(v.literal("query"), v.literal("page")),
     key: v.string(),
     firstDay: v.string(),
     lastDay: v.string(),
   })
-    .index("by_hold_country_kind_key", ["companyWebsiteId", "country", "kind", "key"])
-    .index("by_hold_country_kind_first", ["companyWebsiteId", "country", "kind", "firstDay"])
-    .index("by_hold_country_kind_last", ["companyWebsiteId", "country", "kind", "lastDay"]),
+    .index("by_hold_country_type_kind_key", ["companyWebsiteId", "country", "searchType", "kind", "key"])
+    .index("by_hold_country_type_kind_first", ["companyWebsiteId", "country", "searchType", "kind", "firstDay"])
+    .index("by_hold_country_type_kind_last", ["companyWebsiteId", "country", "searchType", "kind", "lastDay"]),
+
+  /**
+   * How many searches and pages the register above holds as first shown, and
+   * as last shown, on each day — counted from it after each collection
+   * (`searchConsoleSeenDays.ts`) — so New and lost counts and charts every one
+   * in the dates, where its list reads at most `consoleNewLostRows`
+   * (2026-10-04: 5,000 of each hid a busy website's July).
+   */
+  searchConsoleSeenDays: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    /** One country's, as the register's; missing means all countries (§16). */
+    country: v.optional(v.string()),
+    /** As the register's (`seenType`): missing means web results. */
+    searchType: v.optional(searchTypeValidator),
+    kind: v.union(v.literal("query"), v.literal("page")),
+    day: v.string(),
+    /** First shown that day. */
+    first: v.number(),
+    /** Last shown that day, and not since. */
+    last: v.number(),
+    builtAt: v.number(),
+  }).index("by_hold_country_type_kind_day", ["companyWebsiteId", "country", "searchType", "kind", "day"]),
 
   /**
    * The searches and pages a company tracks on its website's Search Console

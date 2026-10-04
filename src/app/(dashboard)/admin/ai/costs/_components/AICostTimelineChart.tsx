@@ -6,6 +6,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { TrendingUp } from "lucide-react";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
 import { CHART_CROSSHAIR, ChartTooltip } from "@/src/ui/components/charts/ChartTooltip";
+import { ChartReveal, revealKey } from "@/src/ui/components/screens/ChartReveal";
 import type { TimelinePoint, Translate } from "./types";
 import { formatCostAxisTick } from "./costFormatters";
 
@@ -40,49 +41,51 @@ export function AICostTimelineChart({
 
           <div className="w-full h-[300px] min-h-[300px]">
             {timeline && timeline.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300} debounce={50}>
-                <AreaChart data={timeline}>
-                  <defs>
-                    <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={CHART_SERIES_ROSE} stopOpacity={0.2} />
-                      <stop offset="95%" stopColor={CHART_SERIES_ROSE} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis
-                    dataKey="date"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 11, fill: "#888888" }}
-                    dy={10}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 11, fill: "#888888" }}
-                    tickFormatter={formatCostAxisTick}
-                    width={80}
-                  />
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
-                  <Tooltip
-                    cursor={CHART_CROSSHAIR}
-                    content={
-                      <ChartTooltip
-                        formatValue={(value) => formatCostAxisTick(value)}
-                        seriesLabel={() => t("chart.tooltipLabel")}
-                      />
-                    }
-                  />
-                  {/* No entrance animation: it can wedge and render the series as nothing — see GovernanceRunsChart.tsx. */}
-                  <Area isAnimationActive={false}
-                    type="monotone"
-                    dataKey="cost"
-                    stroke={CHART_SERIES_ROSE}
-                    strokeWidth={3}
-                    fillOpacity={1}
-                    fill="url(#colorCost)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <ChartReveal replay={revealKey(timeline, "date")}>
+                <ResponsiveContainer width="100%" height={300} debounce={50}>
+                  <AreaChart data={timeline}>
+                    <defs>
+                      <linearGradient id="colorCost" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor={CHART_SERIES_ROSE} stopOpacity={0.2} />
+                        <stop offset="95%" stopColor={CHART_SERIES_ROSE} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis
+                      dataKey="date"
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: "#888888" }}
+                      dy={10}
+                    />
+                    <YAxis
+                      axisLine={false}
+                      tickLine={false}
+                      tick={{ fontSize: 11, fill: "#888888" }}
+                      tickFormatter={formatCostAxisTick}
+                      width={80}
+                    />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
+                    <Tooltip
+                      cursor={CHART_CROSSHAIR}
+                      content={
+                        <ChartTooltip
+                          formatValue={(value) => formatCostAxisTick(value)}
+                          seriesLabel={() => t("chart.tooltipLabel")}
+                        />
+                      }
+                    />
+                    {/* No entrance animation: it can wedge and render the series as nothing — see GovernanceRunsChart.tsx. */}
+                    <Area isAnimationActive={false}
+                      type="monotone"
+                      dataKey="cost"
+                      stroke={CHART_SERIES_ROSE}
+                      strokeWidth={3}
+                      fillOpacity={1}
+                      fill="url(#colorCost)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </ChartReveal>
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center text-muted opacity-50 relative z-10 bottom-8">
                 <TrendingUp className="w-12 h-12 mb-3" />

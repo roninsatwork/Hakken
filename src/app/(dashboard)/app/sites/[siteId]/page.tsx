@@ -12,7 +12,7 @@ import { SiteChartCard } from "../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteLineChart, SiteStackedAreaChart } from "../_components/SiteCharts";
 import { useSiteRange } from "../_components/SiteDateRange";
 import { datedRow } from "../_components/datedRows";
-import { formatMonthName, toCsv } from "../_components/siteFormat";
+import { formatDay, formatMonthName, toCsv } from "../_components/siteFormat";
 import { shiftDay, shiftMonth } from "../_components/siteRange";
 import { useSite, useSiteId } from "../_components/useSite";
 import { SiteViewSwitch } from "../_components/SiteViewSwitch";
@@ -147,6 +147,8 @@ export default function SiteOverviewPage() {
   let chart: ReactNode;
   let csv: () => string;
   let enough: boolean;
+  // What the caption says the chart draws, when not the dates chosen.
+  let dates: string | undefined;
   if (tab === "metrics") {
     chart = (
       <SiteLineChart
@@ -210,6 +212,8 @@ export default function SiteOverviewPage() {
     );
     csv = () => toCsv(["month", t("thisYear"), t("lastYear")], rows.map((row) => [row.label, row.thisYear, row.lastYear]));
     enough = twoYears !== undefined && lastYear.length > 0;
+    // It draws its own twelve months, whatever the dates' start and step (2026-10-04: the caption had said otherwise).
+    dates = t("yearsCaption", { from: formatDay(`${shiftMonth(lastMonth, -11)}-01`), to: formatDay(range.to) });
   }
 
   return (
@@ -225,6 +229,7 @@ export default function SiteOverviewPage() {
           exportName={`${exportBase}-performance-${tab}`}
           csv={csv}
           enoughData={enough}
+          dates={dates}
           controls={
             <>
               {tabs}

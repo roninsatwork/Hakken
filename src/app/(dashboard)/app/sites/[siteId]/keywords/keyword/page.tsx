@@ -24,6 +24,7 @@ import { isPartHeld } from "../../../_components/SiteCoverage";
 import { pagePath } from "@/convex/utils/siteShapes";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
 import { SearchAnswers } from "./SearchAnswers";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 
 /** Results shown before "Show all": Google's first page. */
 const PAGE_ONE = 10;
@@ -65,7 +66,7 @@ export default function SiteKeywordPage() {
   const fromAi = useQuery(api.siteAngles.keywordAngle, asked ? { siteId, keyword: asked } : "skip");
   const positions = useQuery(
     api.siteGoogle.searchPositions,
-    record ? { siteId, keywords: [record.keyword], from: range.from, to: range.to } : "skip",
+    record ? { siteId, keywords: [record.keyword], from: range.from, to: range.to, step: range.step } : "skip",
   );
 
   if (!asked) {
@@ -380,7 +381,7 @@ export default function SiteKeywordPage() {
                     className: "text-[12px]",
                     cell: (row) => row.page
                       ? <RecordLinkCell href={recordHref({ kind: "page", page: row.page })} className="break-all text-[12px] text-info">{row.page}</RecordLinkCell>
-                      : <span className="text-muted">–</span>,
+                      : <NoFigure />,
                   },
                   {
                     key: "position",

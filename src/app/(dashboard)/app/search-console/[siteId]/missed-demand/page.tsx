@@ -43,7 +43,7 @@ export default function SearchConsoleDemandPage() {
       description={t("demand.description")}
       heroes={
         <FigureRow>
-          <Figure label={t("filters.missedSearched")} value={searched ? formatNumber(searched.rows) : "…"} detail={<span className="text-secondary">{t("demand.fewer")}</span>} />
+          <Figure label={t("filters.missedSearched")} value={searched ? formatNumber(searched.rows) : "…"} detail={<span className="text-secondary">{t("demand.fewer", { count: list.status?.limits.barelyShown ?? "…" })}</span>} />
           <Figure label={t("almost.searches")} value={searched ? formatNumber(searched.volume) : "…"} detail={<span className="text-secondary">{t("almost.sitesFigures")}</span>} />
           <Figure
             label={t("filters.missedUntracked")}

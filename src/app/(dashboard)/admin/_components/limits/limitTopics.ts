@@ -12,7 +12,7 @@
  * without its words in English and Italian.
  */
 
-export type LimitTopic = { id: "google" | "ai" | "matching" | "searchConsole" | "pages" | "company" | "shared"; keys: readonly string[] };
+export type LimitTopic = { id: "google" | "ai" | "matching" | "searchConsole" | "consoleScreens" | "pages" | "company" | "shared"; keys: readonly string[] };
 
 export const LIMIT_TOPICS: readonly LimitTopic[] = [
   {
@@ -26,6 +26,16 @@ export const LIMIT_TOPICS: readonly LimitTopic[] = [
   },
   // Search Console's tracked lists (search-console-plan.md §13.2): free, a company's own websites only.
   { id: "searchConsole", keys: ["consoleTrackedKeywordsPerSite", "consoleTrackedPagesPerSite", "consoleCountriesPerSite"] },
+  // What the Search Console screens read and the rules they decide by (search-console-plan.md §17): free, nothing hidden.
+  {
+    id: "consoleScreens",
+    keys: [
+      "consoleListRows", "consolePairedRows", "consoleLiveFactsRows", "consoleRichResultKinds", "consoleTopCountries",
+      "consoleNewLostRows", "consoleNewAfterDays", "consoleLostAfterDays", "consoleMissedKeywords", "consoleSearchedALot",
+      "consoleBarelyShown", "consoleEstimateOff", "consoleCurvePositions", "consoleUpdatesListed", "consoleUpdateWindowDays",
+      "consoleChartWeeks", "consoleLongestRange",
+    ],
+  },
   // A website's pages and their classifications (page-groups-plan.md): free, set only in admin for now.
   { id: "pages", keys: ["sitemapPagesRead", "classificationsPerSite", "classificationLinesPerSite", "classifiedPagesPerSite"] },
   { id: "company", keys: ["purchasesPerCollection", "companyRowsRead"] },
@@ -58,7 +68,13 @@ export type LimitUnit =
   | "websites"
   | "countries"
   | "classifications"
-  | "lines";
+  | "lines"
+  | "kinds"
+  | "impressions"
+  | "percent"
+  | "positions"
+  | "updates"
+  | "weeks";
 
 export const LIMIT_UNITS: Record<string, LimitUnit> = {
   keywordsPerSite: "keywords",
@@ -84,6 +100,23 @@ export const LIMIT_UNITS: Record<string, LimitUnit> = {
   consoleTrackedKeywordsPerSite: "keywords",
   consoleTrackedPagesPerSite: "pages",
   consoleCountriesPerSite: "countries",
+  consoleListRows: "rows",
+  consolePairedRows: "rows",
+  consoleLiveFactsRows: "rows",
+  consoleRichResultKinds: "kinds",
+  consoleTopCountries: "countries",
+  consoleNewLostRows: "keywords",
+  consoleNewAfterDays: "days",
+  consoleLostAfterDays: "days",
+  consoleMissedKeywords: "keywords",
+  consoleSearchedALot: "searches",
+  consoleBarelyShown: "impressions",
+  consoleEstimateOff: "percent",
+  consoleCurvePositions: "positions",
+  consoleUpdatesListed: "updates",
+  consoleUpdateWindowDays: "days",
+  consoleChartWeeks: "weeks",
+  consoleLongestRange: "days",
   classificationsPerSite: "classifications",
   classificationLinesPerSite: "lines",
   classifiedPagesPerSite: "pages",

@@ -10,13 +10,14 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { CUT_COLUMN } from "../../../sites/_components/SiteCells";
 import { Figure } from "@/src/ui/components/screens/Figure";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
+import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { useSiteFiguresFor } from "../../_components/SearchConsoleFigures";
 import { ResultKindSwitch, SearchConsoleGate } from "../../_components/SearchConsoleNotices";
-import { formatPosition, formatRate } from "../../_components/searchConsoleFormat";
+import { filePercent, filePosition, formatPosition, formatRate } from "../../_components/searchConsoleFormat";
 import { useLiveAsk } from "../../_components/searchConsoleRecords";
 import { SearchConsoleChips, type ChipId, type ListRow } from "../../_components/SearchConsoleTables";
 import {
@@ -31,7 +32,8 @@ import {
 
 const CHIPS: readonly ChipId[] = ["device"];
 
-type Kind = { key: string; clicks: number; impressions: number; ctr: number; position: number; pages: number | null };
+/** A kind of rich result; `counted` false when its pages are not counted (past the kinds counted), as against still coming (`pages` null). */
+type Kind = { key: string; clicks: number; impressions: number; ctr: number; position: number; pages: number | null; counted: boolean };
 const SORTS: SiteSortColumns<Kind, "key" | "clicks" | "impressions" | "ctr" | "position" | "pages"> = {
   key: { value: (row) => row.key, first: "asc" },
   clicks: { value: (row) => row.clicks, first: "desc" },
@@ -53,7 +55,9 @@ function kindName(key: string, known: (key: string) => string | null): string {
  * stars, videos, translated results and the rest — and the clicks each
  * brought, with how many pages it showed in each — in the country chosen,
  * asked of Google when the website does not keep it ready
- * (search-console-plan.md §16).
+ * (search-console-plan.md §16). The pages for each kind are counted after
+ * each collection for the ready-made periods (drift fixes, 2026-10-03), so
+ * only other dates, one device or a country not kept ready ask Google.
  */
 export default function SearchConsoleAppearancePage() {
   const t = useTranslations("searchConsole");
@@ -79,18 +83,24 @@ export default function SearchConsoleAppearancePage() {
   );
   const appearances: ListRow[] | undefined = fromLive ? (liveSplit.answer === undefined ? undefined : liveSplit.answer.ok ? liveSplit.answer.rows.flat() : []) : split?.rows;
   const performance = useSiteFiguresFor(held ? dates : null).figures;
+  // Counted after each collection: a ready-made list carries each kind's pages, a negative count for a kind past those counted.
+  const countedReady = !fromLive && appearances !== undefined && appearances.every((row) => row.count !== null);
   const kinds = appearances?.map((row) => row.key) ?? [];
-  const pages = useLiveAsk(api.searchConsoleLists.searchConsoleAppearancePages, held && kinds.length > 0 ? { ...dates, kinds, ...countryArg(country) } : null);
+  const pages = useLiveAsk(api.searchConsoleLists.searchConsoleAppearancePages, held && !countedReady && kinds.length > 0 ? { ...dates, kinds, ...countryArg(country) } : null);
   const pagesOf = new Map(pages.answer?.ok ? pages.answer.pages.map((entry) => [entry.kind, entry.pages]) : []);
   const known = (key: string) => (t.has(`appearance.names.${key}`) ? t(`appearance.names.${key}`) : null);
-  const rows: Kind[] | undefined = appearances?.map((row) => ({
-    key: kindName(row.key, known),
-    clicks: row.clicks,
-    impressions: row.impressions,
-    ctr: row.ctr,
-    position: row.position,
-    pages: pagesOf.get(row.key) ?? null,
-  }));
+  const rows: Kind[] | undefined = appearances?.map((row) => {
+    const counted = countedReady ? (row.count ?? 0) >= 0 : pages.answer === undefined || pagesOf.has(row.key);
+    return {
+      key: kindName(row.key, known),
+      clicks: row.clicks,
+      impressions: row.impressions,
+      ctr: row.ctr,
+      position: row.position,
+      pages: !counted ? null : countedReady ? row.count : (pagesOf.get(row.key) ?? null),
+      counted,
+    };
+  });
   const matches = wordStartMatcher(term.toLowerCase());
   const matching = rows?.filter((row) => !matches || matches(row.key));
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "clicks", name: nameOf });
@@ -116,7 +126,27 @@ export default function SearchConsoleAppearancePage() {
             minWidthClassName="min-w-[640px]"
             search={{ value: search, onChange: setSearch, placeholder: t("appearance.searchPlaceholder") }}
             filters={<SearchConsoleChips chips={CHIPS} />}
-            cardHeader={<TableBar footer={pager.footer} noun="kinds" />}
+            cardHeader={
+              <TableBar
+                footer={pager.footer}
+                noun="kinds"
+                actions={
+                  <ListDownload
+                    label={t("table.download")}
+                    fileName={`${status.host}-search-console-rich-results-${range.from}-${range.to}`}
+                    rows={sorted}
+                    columns={[
+                      { header: t("table.richResult"), value: (row) => row.key },
+                      { header: t("table.clicks"), value: (row) => row.clicks },
+                      { header: t("table.impressions"), value: (row) => row.impressions },
+                      { header: `${t("table.ctr")} (%)`, value: (row) => filePercent(row.ctr) },
+                      { header: t("table.position"), value: (row) => filePosition(row.position) },
+                      { header: t("table.pages"), value: (row) => (row.counted ? row.pages : null) },
+                    ]}
+                  />
+                }
+              />
+            }
             sort={tableSort}
             empty={{ icon: <Star className="h-8 w-8 text-muted/30" />, label: term ? t("table.noMatch") : t("appearance.empty") }}
             footer={pager.footer}
@@ -126,7 +156,7 @@ export default function SearchConsoleAppearancePage() {
               { key: "impressions", header: t("table.impressions"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.impressions)}</span> },
               { key: "ctr", header: t("table.ctr"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatRate(row.ctr)}</span> },
               { key: "position", header: t("table.position"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatPosition(row.position)}</span> },
-              { key: "pages", header: t("table.pages"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.pages === null ? "…" : formatNumber(row.pages)}</span> },
+              { key: "pages", header: t("table.pages"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{!row.counted ? "–" : row.pages === null ? "…" : formatNumber(row.pages)}</span> },
             ]}
           />
         </SearchConsoleGate>

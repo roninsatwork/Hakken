@@ -1,6 +1,7 @@
 import { defineTable } from "convex/server";
 import { v } from "convex/values";
 import { fanOutSourceValidator } from "./seoAiEngines";
+import { consoleScreenLimitFields } from "./searchConsoleSchema";
 
 /**
  * The fan-out searches of a company's own website, as angles
@@ -77,6 +78,7 @@ export const fanOutTables = {
     consoleTrackedKeywordsPerSite: maybeLimit,
     consoleTrackedPagesPerSite: maybeLimit,
     consoleCountriesPerSite: maybeLimit,
+    ...consoleScreenLimitFields,
     classificationsPerSite: maybeLimit,
     classificationLinesPerSite: maybeLimit,
     classifiedPagesPerSite: maybeLimit,

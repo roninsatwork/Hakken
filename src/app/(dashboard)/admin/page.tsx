@@ -19,6 +19,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { cn } from "@/src/ui/lib/utils";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { CHART_CURSOR, ChartTooltipSurface } from "@/src/ui/components/charts/ChartTooltip";
+import { ChartReveal, revealKey } from "@/src/ui/components/screens/ChartReveal";
 
 const Area = dynamic(() => import("recharts").then((module) => module.Area));
 const AreaChart = dynamic(() => import("recharts").then((module) => module.AreaChart));
@@ -342,25 +343,27 @@ export default function AdminDashboardPage() {
             description={t("charts.activityDescription", { days: overview.windowDays })}
           >
             <div className="w-full">
-              <ResponsiveContainer width="100%" height={220}>
-                <LineChart data={overview.daily} margin={{ top: 4, right: 8, bottom: 0, left: -18 }}>
-                  <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="day" tickFormatter={formatDayTick} tick={AXIS_TICK} tickLine={false} axisLine={false} minTickGap={24} />
-                  <YAxis allowDecimals={false} tick={AXIS_TICK} tickLine={false} axisLine={false} />
-                  <Tooltip content={<ActivityTooltip />} />
-                  {ACTIVITY_SERIES.map((series) => (
-                    <Line
-                      key={series.key}
-                      type="monotone"
-                      dataKey={series.key}
-                      stroke={series.stroke}
-                      strokeWidth={2}
-                      dot={false}
-                      isAnimationActive={false}
-                    />
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
+              <ChartReveal replay={revealKey(overview.daily, "day")}>
+                <ResponsiveContainer width="100%" height={220}>
+                  <LineChart data={overview.daily} margin={{ top: 4, right: 8, bottom: 0, left: -18 }}>
+                    <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="day" tickFormatter={formatDayTick} tick={AXIS_TICK} tickLine={false} axisLine={false} minTickGap={24} />
+                    <YAxis allowDecimals={false} tick={AXIS_TICK} tickLine={false} axisLine={false} />
+                    <Tooltip content={<ActivityTooltip />} />
+                    {ACTIVITY_SERIES.map((series) => (
+                      <Line
+                        key={series.key}
+                        type="monotone"
+                        dataKey={series.key}
+                        stroke={series.stroke}
+                        strokeWidth={2}
+                        dot={false}
+                        isAnimationActive={false}
+                      />
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartReveal>
             </div>
             {/* The gap between the lines is automation running unasked. */}
             <ChartLegend items={ACTIVITY_SERIES.map((series) => ({ label: t(series.labelKey), fill: series.stroke }))} />
@@ -371,29 +374,31 @@ export default function AdminDashboardPage() {
             description={t("charts.spendDescription", { days: overview.windowDays })}
           >
             <div className="w-full">
-              <ResponsiveContainer width="100%" height={220}>
-                <AreaChart data={overview.daily} margin={{ top: 4, right: 8, bottom: 0, left: -8 }}>
-                  <defs>
-                    <linearGradient id="platform-spend" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor={CHART_PRIMARY_BLUE} stopOpacity={0.35} />
-                      <stop offset="100%" stopColor={CHART_PRIMARY_BLUE} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="day" tickFormatter={formatDayTick} tick={AXIS_TICK} tickLine={false} axisLine={false} minTickGap={24} />
-                  <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={(value: number) => `$${value.toFixed(2)}`} />
-                  <Tooltip content={<SpendTooltip />} />
-                  {/* One series, so the title names it and no legend is needed. */}
-                  <Area
-                    type="monotone"
-                    dataKey="spendUsd"
-                    stroke={CHART_PRIMARY_BLUE}
-                    strokeWidth={2}
-                    fill="url(#platform-spend)"
-                    isAnimationActive={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              <ChartReveal replay={revealKey(overview.daily, "day")}>
+                <ResponsiveContainer width="100%" height={220}>
+                  <AreaChart data={overview.daily} margin={{ top: 4, right: 8, bottom: 0, left: -8 }}>
+                    <defs>
+                      <linearGradient id="platform-spend" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor={CHART_PRIMARY_BLUE} stopOpacity={0.35} />
+                        <stop offset="100%" stopColor={CHART_PRIMARY_BLUE} stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="day" tickFormatter={formatDayTick} tick={AXIS_TICK} tickLine={false} axisLine={false} minTickGap={24} />
+                    <YAxis tick={AXIS_TICK} tickLine={false} axisLine={false} tickFormatter={(value: number) => `$${value.toFixed(2)}`} />
+                    <Tooltip content={<SpendTooltip />} />
+                    {/* One series, so the title names it and no legend is needed. */}
+                    <Area
+                      type="monotone"
+                      dataKey="spendUsd"
+                      stroke={CHART_PRIMARY_BLUE}
+                      strokeWidth={2}
+                      fill="url(#platform-spend)"
+                      isAnimationActive={false}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </ChartReveal>
             </div>
           </DashboardChartCard>
         </div>
@@ -405,26 +410,28 @@ export default function AdminDashboardPage() {
           description={t("charts.signInsDescription", { days: overview.windowDays })}
         >
           <div className="w-full">
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={overview.signInBands} margin={{ top: 4, right: 8, bottom: 0, left: -18 }}>
-                <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="day" tickFormatter={formatDayTick} tick={AXIS_TICK} tickLine={false} axisLine={false} minTickGap={24} />
-                <YAxis allowDecimals={false} tick={AXIS_TICK} tickLine={false} axisLine={false} />
-                <Tooltip cursor={CHART_CURSOR} content={<SignInTooltip />} />
-                {SIGN_IN_BANDS.map((band, index) => (
-                  <Bar
-                    key={band.key}
-                    dataKey={band.key}
-                    stackId="signIns"
-                    fill={band.fill}
-                    stroke="var(--color-card)"
-                    strokeWidth={2}
-                    radius={index === SIGN_IN_BANDS.length - 1 ? [4, 4, 0, 0] : undefined}
-                    isAnimationActive={false}
-                  />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
+            <ChartReveal replay={revealKey(overview.signInBands, "day")} motion="rise">
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={overview.signInBands} margin={{ top: 4, right: 8, bottom: 0, left: -18 }}>
+                  <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="day" tickFormatter={formatDayTick} tick={AXIS_TICK} tickLine={false} axisLine={false} minTickGap={24} />
+                  <YAxis allowDecimals={false} tick={AXIS_TICK} tickLine={false} axisLine={false} />
+                  <Tooltip cursor={CHART_CURSOR} content={<SignInTooltip />} />
+                  {SIGN_IN_BANDS.map((band, index) => (
+                    <Bar
+                      key={band.key}
+                      dataKey={band.key}
+                      stackId="signIns"
+                      fill={band.fill}
+                      stroke="var(--color-card)"
+                      strokeWidth={2}
+                      radius={index === SIGN_IN_BANDS.length - 1 ? [4, 4, 0, 0] : undefined}
+                      isAnimationActive={false}
+                    />
+                  ))}
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartReveal>
           </div>
           <ChartLegend items={SIGN_IN_BANDS.map((band) => ({ label: t(band.labelKey), fill: band.fill }))} />
         </DashboardChartCard>

@@ -27,6 +27,7 @@ import { useSiteSortedList, type SiteSortColumns } from "../../../_components/us
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { SEARCH_VERDICTS, SEARCH_VERDICT_TONES, STANDING_SORTS, type SearchVerdict } from "../../../_components/searchStanding";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 
 type Standing = FunctionReturnType<typeof api.siteGoogle.listSearches>[number];
 type FanOut = FunctionReturnType<typeof api.siteAngles.listTrackedFanOut>["rows"][number];
@@ -47,6 +48,7 @@ const SORTS: SiteSortColumns<Row, "query" | "askedBy" | "seen" | "position" | "c
   ...STANDING_SORTS,
 };
 const queryOf = (row: Row) => row.queryText;
+const NO_WRAP = "whitespace-nowrap";
 
 /**
  * Tracked fan-out queries (Anthony, 2026-10-03): the searches the AI
@@ -179,21 +181,23 @@ export default function SiteTrackedFanOutPage() {
         columns={[
           ...(own ? [{ key: "track", header: ta("columns.track"), className: "w-[72px]", cell: trackCell }] : []),
           { key: "query", header: t("columns.query"), sortable: true, className: CUT_COLUMN.first, cell: (row) => <RecordLinkCell cut href={recordHref({ kind: "keyword", keyword: row.keyword })}>{row.queryText}</RecordLinkCell> },
-          { key: "askedBy", header: t("columns.askedBy"), sortable: true, cell: (row) => (row.engines.length > 0 ? <TagLabel>{askedBy(row)}</TagLabel> : <span className="text-muted">–</span>) },
-          { key: "seen", header: t("columns.seen"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.timesSeen)}</span> },
-          { key: "position", header: ts("columns.position"), align: "right", sortable: true, cell: (row) => (row.lastCheckedDay === null ? <span className="whitespace-nowrap text-[12px] text-muted">{ts("verdicts.NOT_CHECKED")}</span> : <PositionCell position={row.lastPosition} />) },
+          // Short headings stay on one line: an empty table has no rows to give its columns their widths (2026-10-04).
+          { key: "askedBy", header: t("columns.askedBy"), sortable: true, className: NO_WRAP, cell: (row) => (row.engines.length > 0 ? <TagLabel>{askedBy(row)}</TagLabel> : <NoFigure />) },
+          { key: "seen", header: t("columns.seen"), align: "right", sortable: true, className: NO_WRAP, cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatNumber(row.timesSeen)}</span> },
+          { key: "position", header: ts("columns.position"), align: "right", sortable: true, className: NO_WRAP, cell: (row) => (row.lastCheckedDay === null ? <span className="whitespace-nowrap text-[12px] text-muted">{ts("verdicts.NOT_CHECKED")}</span> : <PositionCell position={row.lastPosition} />) },
           {
             key: "change",
             header: ts("columns.change"),
+            className: NO_WRAP,
             align: "right",
             sortable: true,
             cell: (row) => row.lastPosition !== null && row.previousPosition !== null
               ? <Change by={row.previousPosition - row.lastPosition} />
-              : <span className="text-muted">–</span>,
+              : <NoFigure />,
           },
-          { key: "best", header: ts("columns.best"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.bestPosition ?? "–"}</span> },
-          { key: "verdict", header: ts("columns.verdict"), cell: (row) => <StatusLabel tone={SEARCH_VERDICT_TONES[row.verdict]}>{ts(`verdicts.${row.verdict}`)}</StatusLabel> },
-          { key: "checked", header: ts("columns.lastChecked"), sortable: true, cell: (row) => <CheckedCell day={row.lastCheckedDay} /> },
+          { key: "best", header: ts("columns.best"), align: "right", sortable: true, className: NO_WRAP, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.bestPosition ?? "–"}</span> },
+          { key: "verdict", header: ts("columns.verdict"), className: NO_WRAP, cell: (row) => <StatusLabel tone={SEARCH_VERDICT_TONES[row.verdict]}>{ts(`verdicts.${row.verdict}`)}</StatusLabel> },
+          { key: "checked", header: ts("columns.lastChecked"), sortable: true, className: NO_WRAP, cell: (row) => <CheckedCell day={row.lastCheckedDay} /> },
         ]}
       />
     </div>

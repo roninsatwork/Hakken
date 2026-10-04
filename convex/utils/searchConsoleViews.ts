@@ -40,14 +40,20 @@ export const VIEW_LIST: Partial<Record<View, "query" | "page">> = {
   estimates: "page",
 };
 
-/** Positions the website's own click rate is worked out for (Click rate by position). */
-export const CURVE_POSITIONS = 20;
-/** Missed demand: "barely shown" is fewer impressions than this in the dates chosen (the drawing's "Fewer than 50"). */
-export const BARELY_SHOWN = 50;
-/** Missed demand: "searched a lot" is at least this many searches a month, from Sites. */
-export const SEARCHED_A_LOT = 100;
-/** Real against estimated: an estimate this far from Google's clicks, either way, is too high or too low ("By more than a quarter"). */
-export const ESTIMATE_OFF = 0.25;
+/**
+ * The rules the pages decide by, each a limit on the Limits screens since the
+ * drift fixes of 2026-10-03 (`searchConsoleLimits.ts`, `viewRulesOf`).
+ */
+export type ViewRules = {
+  /** Positions, from 1, the website's own click rate is worked out for (Click rate by position, Shown but not clicked). */
+  curvePositions: number;
+  /** Missed demand: "barely shown" is fewer impressions than this in the dates chosen. */
+  barelyShown: number;
+  /** Missed demand: "searched a lot" is at least this many searches a month, from Sites. */
+  searchedALot: number;
+  /** Real against estimated: an estimate this far from Google's clicks, either way, as a share of them, is too high or too low. */
+  estimateOff: number;
+};
 
 export type Verdict = "high" | "low" | "close";
 
@@ -186,12 +192,12 @@ export function shapeRows(
 
 export type CurvePoint = { position: number; keywords: number; impressions: number; clicks: number; ctr: number };
 
-/** The website's own click rate at each whole position, 1 to 20, from its keywords (Click rate by position). */
-export function ctrCurve(keywords: readonly { clicks: number; impressions: number; position: number }[]): CurvePoint[] {
+/** The website's own click rate at each whole position, 1 to `positions`, from its keywords (Click rate by position). */
+export function ctrCurve(keywords: readonly { clicks: number; impressions: number; position: number }[], positions: number): CurvePoint[] {
   const points = new Map<number, CurvePoint>();
   for (const row of keywords) {
     const at = Math.round(row.position);
-    if (at < 1 || at > CURVE_POSITIONS || row.impressions <= 0) continue;
+    if (at < 1 || at > positions || row.impressions <= 0) continue;
     const point = points.get(at) ?? { position: at, keywords: 0, impressions: 0, clicks: 0, ctr: 0 };
     point.keywords += 1;
     point.impressions += row.impressions;
@@ -210,13 +216,72 @@ export function pagesByKeyword(pairs: readonly { key: string; page?: string; cli
   const out: PairPages = new Map();
   for (const pair of pairs) {
     const pages = out.get(pair.key) ?? [];
-    pages.push({ page: pair.page ?? "", clicks: pair.clicks, impressions: pair.impressions });
+    // A page and a link to one of its sections are one page, not two competing (2026-10-04).
+    const page = pageWithoutSection(pair.page ?? "");
+    const held = pages.find((entry) => entry.page === page);
+    if (held) {
+      held.clicks += pair.clicks;
+      held.impressions += pair.impressions;
+    } else {
+      pages.push({ page, clicks: pair.clicks, impressions: pair.impressions });
+    }
     out.set(pair.key, pages);
   }
   for (const pages of out.values()) {
     pages.sort((left, right) => right.clicks - left.clicks || right.impressions - left.impressions || left.page.localeCompare(right.page));
   }
   return out;
+}
+
+/**
+ * A page's address without the section it links to: Google reports a click
+ * on a link to a heading ("…/what-is-a-web-application/#types-and-uses") as a
+ * page of its own (Anthony's audit, 2026-10-04).
+ */
+export function pageWithoutSection(url: string): string {
+  const hash = url.indexOf("#");
+  return hash === -1 ? url : url.slice(0, hash);
+}
+
+/** The views that compare or count pages, where a section link is part of its page rather than a page of its own. */
+export const VIEWS_BY_WHOLE_PAGE: ReadonlySet<View> = new Set(["lowCtr", "estimates"]);
+
+/**
+ * A list of pages with each link to a section folded into its page — clicks
+ * and impressions added up, position weighted by impressions — so Shown but
+ * not clicked and Real against estimated weigh a page once: Sites' estimate is
+ * the whole page's, and was set against each section link on its own
+ * (2026-10-04: one page read "1,018 too high" seven times). What Sites knows
+ * of the page — its estimate, type and tracking — is the page's own row's.
+ */
+export function withSectionsInPages(rows: readonly ListRow[]): ListRow[] {
+  const byPage = new Map<string, ListRow[]>();
+  for (const row of rows) {
+    const page = pageWithoutSection(row.key);
+    byPage.set(page, [...(byPage.get(page) ?? []), row]);
+  }
+  return [...byPage].map(([page, group]) => {
+    if (group.length === 1 && group[0].key === page) return group[0];
+    const own = group.find((row) => row.key === page) ?? group[0];
+    const add = (pick: (row: ListRow) => number) => group.reduce((sum, row) => sum + pick(row), 0);
+    const clicks = add((row) => row.clicks);
+    const impressions = add((row) => row.impressions);
+    const position = impressions > 0 ? add((row) => row.position * row.impressions) / impressions : own.position;
+    const previousClicks = group.some((row) => row.previousClicks !== null) ? add((row) => row.previousClicks ?? 0) : null;
+    return {
+      ...own,
+      key: page,
+      clicks,
+      impressions,
+      ctr: impressions > 0 ? clicks / impressions : 0,
+      position,
+      band: bandOf(position),
+      previousClicks,
+      change: group.every((row) => row.change === null) ? null : clicks - (previousClicks ?? 0),
+      share: add((row) => row.share),
+      tracked: group.some((row) => row.tracked),
+    };
+  });
 }
 
 /** A keyword Sites holds for the website that Google barely shows it for: Missed demand. */
@@ -226,19 +291,23 @@ export type SitesKeyword = { keyword: string; volume: number; kind: string };
 const DAYS_A_MONTH = 30.44;
 
 export type ViewContext = {
+  /** The rules the website's limits set. */
+  rules: ViewRules;
   /** The days the list covers: Real against estimated scales Sites' monthly estimate to them. */
   days?: number;
   /** The company's tracked keywords: Missed demand's keywords Google never showed are ticked from these. */
   tracked?: ReadonlySet<string>;
   curve?: readonly CurvePoint[];
   pages?: PairPages;
+  /** Pages competing: how many pages Google showed for any keyword, when `pages` holds only the competing keywords' pairs. */
+  pagesShown?: number;
   /** Missed demand's first list: the website's most-searched keywords in Sites. */
   sitesKeywords?: readonly SitesKeyword[];
   missedList?: "searched" | "untracked";
 };
 
 /** Each view's rows: the rows it lists, with the figures it adds. */
-export function applyView(view: View, rows: ListRow[], context: ViewContext = {}): ListRow[] {
+export function applyView(view: View, rows: ListRow[], context: ViewContext): ListRow[] {
   switch (view) {
     case "tracked":
       return rows.filter((row) => row.tracked);
@@ -273,9 +342,9 @@ export function applyView(view: View, rows: ListRow[], context: ViewContext = {}
       if (context.missedList === "untracked") return rows.filter((row) => !row.tracked);
       const shown = new Map(rows.map((row) => [row.key, row]));
       return (context.sitesKeywords ?? []).flatMap((keyword) => {
-        if (keyword.volume < SEARCHED_A_LOT) return [];
+        if (keyword.volume < context.rules.searchedALot) return [];
         const row = shown.get(keyword.keyword);
-        if (row && row.impressions >= BARELY_SHOWN) return [];
+        if (row && row.impressions >= context.rules.barelyShown) return [];
         return [row
           ? { ...row, volume: keyword.volume, kind: row.kind ?? keyword.kind }
           : { ...emptyRow(keyword.keyword), volume: keyword.volume, kind: keyword.kind, tracked: context.tracked?.has(keyword.keyword) ?? false }];
@@ -287,7 +356,7 @@ export function applyView(view: View, rows: ListRow[], context: ViewContext = {}
         // Sites estimates a month's visits: the same span as the clicks it is read against.
         const estimate = Math.round((row.estimate * (context.days ?? DAYS_A_MONTH)) / DAYS_A_MONTH);
         const gap = estimate - row.clicks;
-        const verdict: Verdict = Math.abs(gap) > ESTIMATE_OFF * row.clicks ? (gap > 0 ? "high" : "low") : "close";
+        const verdict: Verdict = Math.abs(gap) > context.rules.estimateOff * row.clicks ? (gap > 0 ? "high" : "low") : "close";
         return [{ ...row, estimate, gap: verdict === "close" ? 0 : gap, verdict }];
       });
     default:
@@ -429,10 +498,13 @@ export function summarise(
     brandWords: readonly string[] | null;
     /** A page kind's classification type, once the website has classifications: the figures by type. */
     kindType?: (kind: string) => ClassificationType | null;
+    /** A list of pages: each type counts a page once, however many of its sections Google listed (2026-10-04). */
+    pageList?: boolean;
   },
 ): Summary {
   const bands = emptyBands();
   const kinds = new Map<string, { kind: string; rows: number; clicks: number }>();
+  const pagesOfKind = new Map<string, Set<string>>();
   const summary: Summary = {
     rows: listed.length, of: all.length, ...figuresOf(listed, before !== null), tracked: 0, gaining: 0, losing: 0, gained: 0, lost: 0,
     volume: 0, estimate: 0, expected: 0, high: 0, low: 0, pagesInvolved: null, pagesShown: null, bands, bandsBefore: null, brand: null, kinds: [], types: [],
@@ -455,7 +527,14 @@ export function summarise(
     if (row.impressions > 0) bands[row.band] += 1;
     const kind = row.kind ?? "UNJUDGED";
     const entry = kinds.get(kind) ?? { kind, rows: 0, clicks: 0 };
-    entry.rows += 1;
+    if (context.pageList) {
+      const pages = pagesOfKind.get(kind) ?? new Set<string>();
+      pages.add(pageWithoutSection(row.key));
+      pagesOfKind.set(kind, pages);
+      entry.rows = pages.size;
+    } else {
+      entry.rows += 1;
+    }
     entry.clicks += row.clicks;
     kinds.set(kind, entry);
   }
@@ -472,7 +551,7 @@ export function summarise(
     summary.pagesInvolved = pages.size;
     const shown = new Set<string>();
     for (const list of context.pages.values()) for (const page of list) shown.add(page.page);
-    summary.pagesShown = shown.size;
+    summary.pagesShown = context.pagesShown ?? shown.size;
   }
   if (context.brandWords) {
     summary.brand = { now: brandSplit(all, context.brandWords), before: before ? brandSplit(before, context.brandWords) : null };

@@ -429,17 +429,20 @@ describe("collecting", () => {
     expect(runs.every((run) => run.kind === "DAILY" && run.finishedAt !== undefined && run.error === undefined)).toBe(true);
   });
 
-  test("when each search and page was first and last shown is kept", async () => {
+  test("when each search and page was first and last shown is kept, for each kind of result", async () => {
     const { t, siteId, admin } = await setup();
     fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
     await collect(t);
-    const seen = await t.run(async (ctx) => await ctx.db.query("searchConsoleSeen").withIndex("by_hold_country_kind_key", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined)).collect());
-    expect(seen.map((entry) => `${entry.kind} ${entry.key} ${entry.firstDay} ${entry.lastDay}`).sort()).toEqual([
-      "page https://acme-shop.test/ 2026-09-26 2026-09-26",
-      "query emergency plumber 2026-09-26 2026-09-26",
-      "query plumber leeds 2026-09-25 2026-09-26",
+    const seen = await t.run(async (ctx) => await ctx.db.query("searchConsoleSeen").withIndex("by_hold_country_type_kind_key", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined)).collect());
+    // Web results carry no kind of result, as every row held before the others were kept (drift fixes, 2026-10-03).
+    expect(seen.map((entry) => `${entry.searchType ?? "web"} ${entry.kind} ${entry.key} ${entry.firstDay} ${entry.lastDay}`).sort()).toEqual([
+      "discover page https://acme-shop.test/news 2026-09-26 2026-09-26",
+      "web page https://acme-shop.test/ 2026-09-26 2026-09-26",
+      "web query emergency plumber 2026-09-26 2026-09-26",
+      "web query plumber leeds 2026-09-25 2026-09-26",
     ]);
+    expect(seen.filter((entry) => entry.searchType === "web")).toEqual([]);
   });
 
   test("the ready-made periods are built after each run: searches from the pairs, with their pages", async () => {
@@ -465,18 +468,48 @@ describe("collecting", () => {
       .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "page").eq("period", "365").eq("which", "NOW"))
       .first());
     expect(year).toMatchObject({ from: "2026-06-29", to: NEWEST, keys: ["https://acme-shop.test/"], counts: [2], tops: ["plumber leeds"] });
-    // The weeks the Position bands and Brand charts read: the website has no brand words yet, so every click is the rest's.
-    const weeks = await t.run(async (ctx) => await ctx.db
+    // The days, weeks and months the Position bands and Brand charts read: the website has no brand words yet, so every click is the rest's.
+    const charted = await t.run(async (ctx) => await ctx.db
       .query("searchConsoleWeeks")
       .withIndex("by_hold_country_type_week", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web"))
       .collect());
-    expect(weeks.map((week) => [week.week, week.top3, week.top10, week.brandClicks, week.otherClicks])).toEqual([["2026-09-21", 0, 2, 0, 12]]);
+    const shown = (grain: string) => charted.filter((row) => row.grain === grain && row.top3 + row.top10 + row.top20 + row.rest > 0);
+    expect(shown("WEEK").map((week) => [week.week, week.top3, week.top10, week.brandClicks, week.otherClicks])).toEqual([["2026-09-21", 0, 2, 0, 12]]);
+    expect(charted.filter((row) => row.grain === "DAY")).toHaveLength(90);
+    expect(charted.filter((row) => row.grain === "MONTH").map((month) => [month.week, month.days])).toEqual([
+      ["2026-06-01", 2], ["2026-07-01", 31], ["2026-08-01", 31], ["2026-09-01", 26],
+    ]);
+    expect(shown("MONTH").map((month) => [month.week, month.top10, month.otherClicks])).toEqual([["2026-09-01", 2, 12]]);
     // Discover has no searches: no pairs or searches kept for it.
     const discover = await t.run(async (ctx) => await ctx.db
       .query("searchConsolePeriods")
       .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "discover").eq("list", "query"))
       .collect());
     expect(discover).toEqual([]);
+  });
+
+  test("the pairs are kept in key order both ways, with Pages competing's, Rich results' and Fan-out's own lists (drift fixes, 2026-10-03)", async () => {
+    const { t, siteId, admin } = await setup();
+    fakeGoogle({ figures: figures() });
+    await signIn(t, admin, siteId);
+    await collect(t);
+    const slot = async (list: "pair" | "pairByPage" | "competing" | "query" | "appearance", period: "14" | "28" | "30", which: "NOW" | "BEFORE" = "NOW") => await t.run(async (ctx) => await ctx.db
+      .query("searchConsolePeriods")
+      .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", list).eq("period", period).eq("which", which))
+      .collect());
+    // By keyword, each page carrying how many keywords it brought; by page, each keyword how many pages it was shown with.
+    expect(await slot("pair", "30")).toMatchObject([{ firstKey: "emergency plumber", keys: ["emergency plumber", "plumber leeds"], counts: [2, 2] }]);
+    expect(await slot("pairByPage", "30")).toMatchObject([{ firstKey: "https://acme-shop.test/", keys: ["plumber leeds", "emergency plumber"], counts: [1, 1] }]);
+    // Every keyword here was shown with one page: none competing, and the one page Google showed counted.
+    expect(await slot("competing", "30")).toMatchObject([{ keys: [], shown: 1 }]);
+    expect(await slot("competing", "30", "BEFORE")).toEqual([]);
+    // Rich results' pages for each kind, counted on the period the screens list only.
+    expect((await slot("appearance", "30"))[0].counts).toEqual([0]);
+    expect((await slot("appearance", "30", "BEFORE"))[0]?.counts).toBeUndefined();
+    // Fan-out's 14 and 28 days: web keywords, no period before.
+    expect(await slot("query", "14")).toMatchObject([{ from: "2026-09-13", to: NEWEST, keys: ["plumber leeds", "emergency plumber"], clicks: [9, 3] }]);
+    expect(await slot("query", "28")).toMatchObject([{ from: "2026-08-30", to: NEWEST }]);
+    expect(await slot("query", "28", "BEFORE")).toEqual([]);
   });
 
   test("the next run brings the new day and the last four again, keeping only what Google still has", async () => {

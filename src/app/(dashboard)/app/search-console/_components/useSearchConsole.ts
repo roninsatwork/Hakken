@@ -128,14 +128,26 @@ export function useResultKind(): [ResultKind, (next: ResultKind) => void] {
  * figures run two or three days behind, and a range ending today would read
  * as a fall; dates chosen by hand are read as chosen.
  */
-export function useSearchConsoleRange(newestDay: string | null | undefined): { from: string; to: string; days: number; step: "day" | "week" | "month"; chosen: boolean } {
+export function useSearchConsoleRange(newestDay: string | null | undefined): {
+  from: string;
+  to: string;
+  days: number;
+  step: "day" | "week" | "month";
+  chosen: boolean;
+  /** The newest day the quick picks end on: a country kept ready has its own (§16). */
+  newest: string | null;
+} {
   const range = useSiteRange();
-  if (range.preset === "custom" || !newestDay) {
+  const status = useSearchConsoleStatus();
+  const [country] = useSearchConsoleCountry();
+  // A country kept ready may be a day behind all countries: its quick picks end on its own newest day, so they read its ready-made figures.
+  const newest = (country ? status?.connection?.countriesNewest.find((held) => held.country === country)?.newestDay : undefined) ?? newestDay ?? null;
+  if (range.preset === "custom" || !newest) {
     const days = Math.round((Date.parse(`${range.to}T00:00:00Z`) - Date.parse(`${range.from}T00:00:00Z`)) / 86_400_000) + 1;
-    return { from: range.from, to: range.to, days, step: range.step, chosen: range.preset === "custom" };
+    return { from: range.from, to: range.to, days, step: range.step, chosen: range.preset === "custom", newest };
   }
   const days = Number(range.preset);
-  return { from: shiftDay(newestDay, -(days - 1)), to: newestDay, days, step: range.step, chosen: false };
+  return { from: shiftDay(newest, -(days - 1)), to: newest, days, step: range.step, chosen: false, newest };
 }
 
 /** The ready-made periods' lengths in days (search-console-plan.md §14.3, item 4), as the server's `periodOf` reads them. */
@@ -147,6 +159,8 @@ const READY_MADE_DAYS: readonly number[] = [7, 30, 90, 365];
  * a page at a time; any other dates are asked of Google. Worked out here from
  * the dates alone, so a search, an order or a filter never asks Google again.
  */
-export function isReadyMade(range: { to: string; days: number }, newestDay: string | null | undefined): boolean {
-  return Boolean(newestDay) && range.to === newestDay && READY_MADE_DAYS.includes(range.days);
+export function isReadyMade(range: { to: string; days: number; newest?: string | null }, newestDay: string | null | undefined): boolean {
+  // The range's own newest day first: a country kept ready reads its ready-made figures to its own newest day.
+  const newest = range.newest ?? newestDay;
+  return Boolean(newest) && range.to === newest && READY_MADE_DAYS.includes(range.days);
 }

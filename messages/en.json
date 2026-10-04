@@ -605,9 +605,9 @@
     "roninsRun3D": "Ronin's Run 3D",
     "badgeWaiting": "{count} waiting",
     "billing": "Billing",
-    "sites": "Sites",
+    "sites": "Discovery",
     "searchConsole": "Search Console",
-    "yourSites": "Your sites",
+    "yourSites": "Websites",
     "knowledge": "Knowledge",
     "content": "Content",
     "news": "News",
@@ -6025,12 +6025,18 @@
         "websites": "{count, plural, one {# website} other {# websites}}",
         "countries": "{count, plural, one {# country} other {# countries}}",
         "classifications": "{count, plural, one {# classification} other {# classifications}}",
-        "lines": "{count, plural, one {# line} other {# lines}}"
+        "lines": "{count, plural, one {# line} other {# lines}}",
+        "kinds": "{count, plural, one {# kind} other {# kinds}}",
+        "impressions": "{count, plural, one {# impression} other {# impressions}}",
+        "percent": "{count}%",
+        "positions": "{count, plural, one {# position} other {# positions}}",
+        "updates": "{count, plural, one {# update} other {# updates}}",
+        "weeks": "{count, plural, one {# week} other {# weeks}}"
       },
       "topics": {
         "google": {
           "title": "Google data for each website",
-          "intro": "What the platform buys from Google, through DataForSEO, for each website: a company’s own sites and every competitor it watches. Higher numbers give fuller lists on the Sites screens, and cost more.",
+          "intro": "What the platform buys from Google, through DataForSEO, for each website: a company’s own sites and every competitor it watches. Higher numbers give fuller lists on the Discovery screens, and cost more.",
           "footer": "Changes apply from each website’s next run, or its next weekly refresh."
         },
         "ai": {
@@ -6047,6 +6053,11 @@
           "title": "Search Console",
           "intro": "What a company can track on its own websites' Search Console: the keywords and the pages it ticks to keep an eye on. Google charges nothing for Search Console, so these only keep the lists a size people can work with.",
           "footer": "Changes apply straight away. At the limit, nothing more can be ticked."
+        },
+        "consoleScreens": {
+          "title": "Search Console screens",
+          "intro": "What the Search Console pages read, and the rules they decide by: how long a list is, when a keyword counts as new or lost, what counts as searched a lot. Google charges nothing for Search Console, so these only keep the pages quick and say every rule they use.",
+          "footer": "Changes apply straight away, except the weekly charts and Rich results’ page counts, which change from the next collection."
         },
         "company": {
           "title": "Whole company",
@@ -6104,6 +6115,91 @@
           "label": "Countries kept ready per website",
           "description": "How many countries a website's Search Console keeps ready beside all countries, set on the Market page. Each one is collected at every collection, so choosing it on a Search Console page is as quick as all countries. Past it, the countries added first are kept.",
           "cost": "No cost from Google. Each country adds about 80% more requests to each collection, and storage in line with its share of the searches."
+        },
+        "consoleListRows": {
+          "label": "Rows a Search Console list holds",
+          "description": "The most rows any Search Console list holds, the most clicks first: Keywords, Pages and every page built on them. Past it, the list’s footer says the list is longer.",
+          "cost": "No cost. Longer lists take longer to open."
+        },
+        "consolePairedRows": {
+          "label": "Rows on a keyword’s or a page’s own screen",
+          "description": "The most pages a keyword’s own screen lists, and the most keywords a page’s own screen lists, the most clicks first.",
+          "cost": "No cost."
+        },
+        "consoleLiveFactsRows": {
+          "label": "Rows given intent and searches on a list asked of Google",
+          "description": "A list for other dates, or for a country not kept ready, is asked of Google when it is chosen. Discovery’s intent and monthly searches, or a page’s type and estimated visits, are looked up for this many of the rows the page lists, the most clicks first. The rest show none.",
+          "cost": "No cost. More rows take longer to look up."
+        },
+        "consoleRichResultKinds": {
+          "label": "Kinds of rich result whose pages are counted",
+          "description": "Rich results counts how many pages Google showed in each kind of rich result, the kinds with the most clicks first. Google answers one kind at a time, so each kind is one more request after each collection. Kinds past it show no page count.",
+          "cost": "No cost from Google. Each kind adds one request to each collection."
+        },
+        "consoleTopCountries": {
+          "label": "Countries beside a keyword’s or a page’s chart",
+          "description": "How many countries “Where the clicks came from” shows beside a keyword’s or a page’s chart, the most clicks first. “Show all countries” opens the rest.",
+          "cost": "No cost."
+        },
+        "consoleNewLostRows": {
+          "label": "New and lost keywords read",
+          "description": "The most new keywords, and the most lost ones, New and lost reads for the dates chosen, the most recent first.",
+          "cost": "No cost."
+        },
+        "consoleNewAfterDays": {
+          "label": "Days watched before a keyword counts as new",
+          "description": "A keyword Google starts showing the website for counts as new only once the website has been watched this long, so one Google simply hadn’t shown yet isn’t called new.",
+          "cost": "No cost."
+        },
+        "consoleLostAfterDays": {
+          "label": "Days unseen before a keyword counts as lost",
+          "description": "A keyword counts as lost once Google hasn’t shown the website for it in this many days.",
+          "cost": "No cost."
+        },
+        "consoleMissedKeywords": {
+          "label": "Discovery keywords Missed demand reads",
+          "description": "Missed demand reads this many of the website’s most-searched keywords in Discovery, to find those Google barely shows the website for.",
+          "cost": "No cost."
+        },
+        "consoleSearchedALot": {
+          "label": "Searches a month that count as searched a lot",
+          "description": "Missed demand lists a keyword from this many searches a month.",
+          "cost": "No cost."
+        },
+        "consoleBarelyShown": {
+          "label": "Impressions under which a keyword is barely shown",
+          "description": "Missed demand lists a keyword Google showed the website for fewer times than this in the dates chosen.",
+          "cost": "No cost."
+        },
+        "consoleEstimateOff": {
+          "label": "How far an estimate can be from Google’s clicks",
+          "description": "Real against estimated calls Discovery’s estimate too high, or too low, when it is further than this from Google’s clicks, as a share of the clicks.",
+          "cost": "No cost."
+        },
+        "consoleCurvePositions": {
+          "label": "Positions the usual click rate is worked out for",
+          "description": "Click rate by position, and Shown but not clicked, work out the website’s own usual click rate at each position from 1 to this.",
+          "cost": "No cost."
+        },
+        "consoleUpdatesListed": {
+          "label": "Google updates listed",
+          "description": "The most of Google’s updates the Google updates page lists, newest first.",
+          "cost": "No cost."
+        },
+        "consoleUpdateWindowDays": {
+          "label": "Days read either side of a Google update",
+          "description": "Google updates compares clicks and position this many days before an update began with the same number of days after it finished.",
+          "cost": "No cost."
+        },
+        "consoleChartWeeks": {
+          "label": "Weeks the weekly charts show",
+          "description": "Position bands, Brand and non-brand, and New and lost show this many weeks.",
+          "cost": "No cost. Position bands and Brand and non-brand change from the next collection."
+        },
+        "consoleLongestRange": {
+          "label": "Longest date range",
+          "description": "The most days that can be chosen at once on a Search Console page. Google keeps 16 months.",
+          "cost": "No cost. Longer ranges take longer to open."
         },
         "competitorsPerSite": {
           "label": "Competitors collected per website",
@@ -6370,7 +6466,7 @@
     },
     "googleUpdates": {
       "title": "Google updates",
-      "subtitle": "Google's announced updates, entered by hand. Each one shows in News straight away, and on every Sites chart that covers its dates.",
+      "subtitle": "Google's announced updates, entered by hand. Each one shows in News straight away, and on every Discovery chart that covers its dates.",
       "create": "New update",
       "createTitle": "New Google update",
       "editTitle": "Edit Google update",
@@ -6389,7 +6485,7 @@
       "edit": "Edit update",
       "delete": "Delete update",
       "deleteTitle": "Delete Google update",
-      "deleteWarning": "It leaves News and the Sites charts straight away.",
+      "deleteWarning": "It leaves News and the Discovery charts straight away.",
       "deleteConfirm": "Delete <highlight>{title}</highlight>?",
       "columns": {
         "update": "Update",
@@ -8415,7 +8511,7 @@
       },
       "seoPageType": {
         "name": "What kind of page is this?",
-        "description": "Labels each page a site ranks with — service, article, case study, location and so on — so the Sites Top pages report shows which kinds of page bring the visitors.",
+        "description": "Labels each page a site ranks with — service, article, case study, location and so on — so the Discovery Top pages report shows which kinds of page bring the visitors.",
         "rule": "Without it, only pages whose address says what they are (the home page, /contact, anything under /blog) are labelled; the rest show as not sorted yet.",
         "answers": {
           "home": "Home page",
@@ -8978,7 +9074,7 @@
   },
   "sites": {
     "list": {
-      "title": "Your sites",
+      "title": "Websites",
       "description": "Each website you own, with the competitors it is measured against. Open one to see all of its pages.",
       "empty": "No websites yet. Ask us to add the ones you own and the ones you want to watch.",
       "noMatch": "No website matches that.",
@@ -9018,7 +9114,7 @@
       "hideCompetitors": "Hide the competitors of {host}"
     },
     "site": {
-      "back": "Your sites",
+      "back": "Websites",
       "ownedFrom": "Your website · Watched from {place}",
       "competitorOfFrom": "Competitor of {host} · Watched from {place}",
       "competitorFrom": "Competitor · Watched from {place}",
@@ -9215,6 +9311,7 @@
       "performanceHint": "Tick the measures to draw. Each line has its own scale, so small and large numbers can be read together.",
       "competitorsHint": "This website beside the others in its group, on one measure and one scale. The dashed lines are the others.",
       "yearsHint": "The last twelve months against the twelve before, month by month.",
+      "yearsCaption": "{from} – {to} against the year before · Monthly",
       "chartView": "Chart view",
       "measure": "Measure",
       "tabs": {
@@ -10736,7 +10833,7 @@
       "close": "Close",
       "findLabel": "Find a website",
       "findPlaceholder": "Find a website…",
-      "yourSites": "Your sites",
+      "yourSites": "Websites",
       "totals": "{sites, plural, =1 {1 website} other {# websites}} · {competitors, plural, =0 {no competitors} =1 {1 competitor} other {# competitors}}",
       "websites": "Websites",
       "alone": "On their own",
@@ -10885,7 +10982,7 @@
       "lowCtr": "Shown but not clicked",
       "demand": "Missed demand",
       "competing": "Pages competing",
-      "types": "Types",
+      "types": "By page classification",
       "brand": "Brand and non-brand",
       "ctrCurve": "Click rate by position",
       "appearance": "Rich results",
@@ -10936,11 +11033,16 @@
       "day": "Day",
       "nothing": "Nothing was shown in these dates.",
       "week": "Week",
-      "preparing": "This country's weeks are being added up. The chart appears after its first collection."
+      "preparing": "This country's weeks are being added up. The chart appears after its first collection.",
+      "month": "Month",
+      "byWeek": "Shown by week: days are kept for 90 days, and these dates reach further back.",
+      "reach": "Showing the last {weeks} weeks, from {from}: the most the charts keep, set in Limits.",
+      "partDays": "{dates}, {days, plural, one {# day} other {# days}}",
+      "notBuilt": "This step is added up after the next collection."
     },
     "performance": {
       "title": "Performance",
-      "description": "What Google itself counted for this website: real clicks and impressions, where Sites shows estimates."
+      "description": "What Google itself counted for this website: real clicks and impressions, where Discovery shows estimates."
     },
     "searches": {
       "title": "Searches",
@@ -10957,6 +11059,8 @@
       "description": "Where the clicks came from, and on what: each country's and device's share of this website's clicks.",
       "countries": "Countries",
       "devices": "Devices",
+      "searchCountries": "Search countries…",
+      "searchDevices": "Search devices…",
       "unknownCountry": "Unknown",
       "deviceNames": {
         "DESKTOP": "Desktop",
@@ -11011,10 +11115,10 @@
     },
     "record": {
       "searchDescription": "What Google counted for this search, day by day, and which of your pages it showed.",
-      "pageDescription": "What Google counted for this page, day by day, and the keywords that brought people to it.",
+      "pageDescription": "What Google counted for this page in the dates chosen, and the keywords that brought people to it.",
       "backToSearches": "Back to Searches",
       "backToPages": "Back to Pages",
-      "openInSites": "Open it in Sites",
+      "openInSites": "Open it in Discovery",
       "openPage": "Open the page",
       "pagesFor": "Pages it brought people to",
       "searchesFor": "Searches Google showed it for",
@@ -11027,10 +11131,10 @@
       "cut": "The {count} with the most clicks.",
       "tryAgain": "Try again",
       "backTo": "Back to {name}",
-      "keywordDescription": "What Google counted for this keyword, day by day, and every page of yours it brought people to.",
+      "keywordDescription": "What Google counted for this keyword in the dates chosen, and every page of yours it brought people to.",
       "trackKeyword": "Track this keyword",
       "trackPage": "Track this page",
-      "chartTitle": "Clicks and impressions by day",
+      "chartTitle": "Clicks and impressions over time",
       "cameFrom": "Where the clicks came from",
       "thisKeywordOnly": "This keyword only, for the dates chosen.",
       "thisPageOnly": "This page only, for the dates chosen.",
@@ -11174,11 +11278,11 @@
     },
     "almost": {
       "title": "Almost there",
-      "description": "Keywords Google already shows you for at positions 4 to 20, with how many people search for each a month, from Sites. These are the ones closest to the top three.",
+      "description": "Keywords Google already shows you for at positions 4 to 20, with how many people search for each a month, from Discovery. These are the ones closest to the top three.",
       "at4to10": "Keywords at 4–10",
       "at11to20": "Keywords at 11–20",
       "searches": "Searches a month behind them",
-      "sitesFigures": "Sites' figures",
+      "sitesFigures": "Discovery's figures",
       "tracked": "Tracked",
       "youTrack": "Keywords you track"
     },
@@ -11194,8 +11298,8 @@
     },
     "demand": {
       "title": "Missed demand",
-      "description": "Keywords many people search for that Google barely shows you for, from Sites' monthly searches. And keywords Google shows you for that you don't track yet: tick one to track it.",
-      "fewer": "Fewer than 50 impressions in these dates",
+      "description": "Keywords many people search for that Google barely shows you for, from Discovery's monthly searches. And keywords Google shows you for that you don't track yet: tick one to track it.",
+      "fewer": "Fewer than {count} impressions in these dates",
       "ofShown": "Of the {count} keywords Google showed"
     },
     "competing": {
@@ -11221,23 +11325,23 @@
     },
     "bands": {
       "title": "Position bands",
-      "description": "How many of your keywords Google shows in each band of positions, week by week. The positions are Google's own averages.",
+      "description": "How many of your keywords Google shows in each band of positions, in the dates you choose. The positions are Google's own averages.",
       "top3": "Top 3",
       "below": "21 and below",
-      "chartTitle": "Keywords in each band, week by week",
-      "chartHint": "Every keyword Google showed your website for, by its average position that week."
+      "chartTitle": "Keywords in each band",
+      "chartHint": "Every keyword Google showed your website for, by its average position in each day, week or month."
     },
     "newLost": {
       "title": "New and lost",
-      "description": "Keywords Google started showing your website for, and keywords it stopped showing you for. A keyword is lost when Google has not shown you for it in 14 days.",
+      "description": "Keywords Google started showing your website for, and keywords it stopped showing you for. A keyword is lost when Google has not shown you for it in {days} days.",
       "newKeywords": "New keywords",
       "lostKeywords": "Lost keywords",
       "newPages": "New pages",
       "lostPages": "Lost pages",
       "firstTime": "Shown for the first time",
-      "notIn14": "Not shown in 14 days",
-      "watchedFrom": "A keyword counts as new from {day}: by then the website had been watched 14 days.",
-      "chartTitle": "Gained and lost each week",
+      "notIn14": "Not shown in {days} days",
+      "watchedFrom": "A keyword counts as new from {day}: by then the website had been watched {days} days.",
+      "chartTitle": "Keywords gained and lost",
       "chartHint": "Keywords Google started showing you for (up) and stopped showing you for (down).",
       "gained": "Gained",
       "lost": "Lost",
@@ -11249,19 +11353,21 @@
     },
     "updates": {
       "title": "Google updates",
-      "description": "What each of Google's updates did to your website: clicks and average position read the 14 days before it began → the 14 days after it finished. The updates are the ones kept in Admin → Content → Google updates, the same list the Sites charts mark.",
-      "chartTitle": "Clicks a day, with Google's updates",
+      "description": "What each of Google's updates did to your website: clicks and average position read the {days} days before it began → the {days} days after it finished. The updates are the ones kept in Admin → Content → Google updates, the same list the Discovery charts mark.",
+      "chartTitle": "Clicks, with Google's updates",
+      "chartHint": "Hover a G for the update: when it started and finished, and what Google said about it.",
       "searchPlaceholder": "Search updates…",
       "finishedOrNot": "Finished or not",
       "finished": "Finished",
       "rolling": "Still rolling out",
       "rollingOut": "rolling out",
+      "started": "Started",
       "notFinished": "Not finished",
-      "waiting": "14 days not yet passed",
+      "waiting": "{days} days not yet passed",
       "empty": "No Google update began in the days held."
     },
     "types": {
-      "title": "Types",
+      "title": "By page classification",
       "description": "Your pages by kind, and your keywords by what the searcher wants: how much of each there is, and how many of the clicks each brings. Click a kind to see its pages or keywords.",
       "fromArticles": "Clicks from articles",
       "fromServices": "Clicks from service pages",
@@ -11294,14 +11400,14 @@
       "otherClicks": "Non-brand clicks",
       "share": "Brand share of clicks",
       "otherImpressions": "Non-brand impressions",
-      "chartTitle": "Brand and non-brand clicks, week by week",
+      "chartTitle": "Brand and non-brand clicks",
       "chartHint": "Clicks from searches with your brand words, and from every other search."
     },
     "ctrCurve": {
       "title": "Click rate by position",
       "description": "How often people click your website at each of Google's positions, over the last {days} days. Shown but not clicked uses this as your yardstick.",
       "chartTitle": "Your click rate at each position",
-      "chartHint": "Clicks for each time Google showed you, at positions 1 to 20.",
+      "chartHint": "Clicks for each time Google showed you, at positions 1 to {positions}.",
       "rate": "Click rate",
       "searchPlaceholder": "Search positions…"
     },
@@ -11326,13 +11432,13 @@
     },
     "estimates": {
       "title": "Real against estimated",
-      "description": "Clicks are what Google counted; Estimate is the visits Sites estimated for the same {days} days. Where they differ a lot, trust Google's.",
-      "sites": "Sites' estimate",
+      "description": "Clicks are what Google counted; Estimate is the visits Discovery estimated for the same {days} days. Where they differ a lot, trust Google's.",
+      "sites": "Discovery's estimate",
       "visitsIn": "Visits in the last {days} days",
       "google": "Google's clicks",
       "high": "Pages estimated too high",
       "low": "Pages estimated too low",
-      "byAQuarter": "By more than a quarter",
+      "byAQuarter": "By more than {percent}%",
       "aboutRight": "About right",
       "tooHigh": "{count} too high",
       "tooLow": "{count} too low"
@@ -11375,7 +11481,7 @@
   "knowledgeArticles": {
     "list": {
       "title": "Knowledge",
-      "description": "Short answers to the questions we get asked most, like how the figures in Sites are worked out.",
+      "description": "Short answers to the questions we get asked most, like how the figures in Discovery are worked out.",
       "searchPlaceholder": "Find an article…",
       "empty": "No articles yet.",
       "noMatch": "No article matches that.",

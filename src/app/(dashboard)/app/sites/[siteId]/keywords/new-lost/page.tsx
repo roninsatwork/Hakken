@@ -25,6 +25,7 @@ import { useSiteParam } from "../../../_components/useSiteParam";
 import { useSiteListPage, useSitePager } from "../../../_components/useSitePagedTable";
 import { dayOf, dayTableSorts, useSiteSort, useSiteSortedList } from "../../../_components/useSiteSort";
 import { isPartHeld } from "../../../_components/SiteCoverage";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 
 /**
  * The fourth move: lost, from a list that held everything the site ranks
@@ -242,7 +243,7 @@ export default function SiteNewLostPage() {
                 key: "page",
                 header: t("moves.columns.page"),
                 className: CUT_COLUMN.second,
-                cell: (row) => (row.page ? <PageLinkCell href={recordHref({ kind: "page", page: row.page })} page={row.page} was={row.previousPage} /> : <span className="text-muted">–</span>),
+                cell: (row) => (row.page ? <PageLinkCell href={recordHref({ kind: "page", page: row.page })} page={row.page} was={row.previousPage} /> : <NoFigure />),
               },
             ]}
           />

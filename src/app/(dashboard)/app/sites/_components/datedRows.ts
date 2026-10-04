@@ -8,14 +8,29 @@ import { formatShortDay } from "./siteFormat";
  * active/knowledge-news-and-digest-plan.md, "Google updates on the Sites
  * charts"); a chart of named things — engines, sites, countries — carries none.
  */
-export type DatedRow = Record<string, unknown> & { day: string; lastDay: string; label: string };
+export type DatedRow = Record<string, unknown> & {
+  day: string;
+  lastDay: string;
+  label: string;
+  /** The hover readout's heading, when it says more than the axis: "28 Sep – 2 Oct, 5 days". */
+  readout?: string;
+  /** A week or month holding only some of its days, at an edge of the history: drawn lighter, so it does not read as a drop. */
+  part?: boolean;
+};
 
 export function datedRow(
-  point: { day: string; lastDay?: string },
+  point: { day: string; lastDay?: string; readout?: string; part?: boolean },
   values: Record<string, unknown>,
   label: string = formatShortDay(point.day),
 ): DatedRow {
-  return { ...values, day: point.day, lastDay: point.lastDay ?? point.day, label };
+  return {
+    ...values,
+    day: point.day,
+    lastDay: point.lastDay ?? point.day,
+    label,
+    ...(point.readout ? { readout: point.readout } : {}),
+    ...(point.part ? { part: true } : {}),
+  };
 }
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;

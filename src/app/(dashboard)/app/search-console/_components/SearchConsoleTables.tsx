@@ -7,6 +7,7 @@ import type { FunctionArgs, FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { BANDS, figuresOf, filterRows, type Band, type Filters } from "@/convex/utils/searchConsoleViews";
+import { exportFileName, exportValue, type ExportField } from "@/convex/utils/searchConsoleExport";
 import { PAGE_TYPES, RANK_INTENTS } from "@/convex/utils/siteShapes";
 import { useToast } from "@/src/context/ToastContext";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
@@ -18,6 +19,7 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { usePageKinds, type PageKindsView } from "../../_components/usePageKinds";
 import { formatNumber } from "../../sites/_components/siteFormat";
+import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSiteListPage, useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
 import { useSiteSort, useSiteSortedList, type SiteSortColumns } from "../../sites/_components/useSiteSort";
@@ -33,6 +35,7 @@ import {
   useSearchConsoleSiteId,
   useSearchConsoleStatus,
 } from "./useSearchConsole";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 
 /**
  * What every Search Console table shares (search-console-plan.md §13.1,
@@ -54,7 +57,7 @@ type View = NonNullable<FunctionArgs<typeof api.searchConsoleLists.searchConsole
 const FIRSTS = {
   key: "asc", clicks: "desc", change: "desc", impressions: "desc", ctr: "desc", position: "asc", positionChange: "desc", share: "desc",
   count: "desc", top: "asc", volume: "desc", estimate: "desc", kind: "asc", brand: "asc", usualCtr: "desc", expected: "desc",
-  topShare: "desc", next: "asc", nextShare: "desc", gap: "desc",
+  topShare: "desc", next: "asc", nextShare: "desc", gap: "desc", band: "asc",
 } as const;
 export type SortKey = keyof typeof FIRSTS;
 
@@ -80,6 +83,8 @@ const LIVE_SORTS: SiteSortColumns<ListRow, SortKey> = {
   next: { value: (row) => row.next, first: "asc" },
   nextShare: { value: (row) => row.nextShare, first: "desc" },
   gap: { value: (row) => row.gap, first: "desc" },
+  // Position bands: the top band first; a row Google did not show has none, last, as the server orders it.
+  band: { value: (row) => (row.impressions > 0 ? BANDS.indexOf(row.band) : null), first: "asc" },
 };
 const keyOf = (row: ListRow) => row.key;
 
@@ -169,10 +174,9 @@ export function useSearchConsoleList(options: {
     to: range.to,
     ...countryArg(country),
   };
-  // Other dates, or one device, are asked of Google: the periods are kept for the whole website and each country kept ready.
-  // One keyword's pages, one page's keywords and Pages competing read a period's pairs: past 30 days, Google is asked.
-  const readsPairs = Boolean(within) || options.view === "competing";
-  const asksGoogle = Boolean(device) || !isReadyMade(range, status?.connection?.newestDay) || (readsPairs && range.days > 30);
+  // Other dates, or one device, are asked of Google: the periods are kept for the whole website and each country kept ready —
+  // one keyword's pages, one page's keywords and Pages competing included, for every period (drift fixes, 2026-10-03).
+  const asksGoogle = Boolean(device) || !isReadyMade(range, status?.connection?.newestDay);
   const ready = held && (within === undefined || Boolean(within.key));
   // A country the website does not keep ready — or keeps, before its first collection — the server answers `live`.
   // That answer is held for these dates and this country, so a search, a filter or an order, worked out here from
@@ -241,6 +245,8 @@ export function useSearchConsoleList(options: {
     live: isLive,
     retry: live.retry,
     download: { ...base, ...filters, ...(term ? { q: term } : {}), sort: order.key, direction: order.direction },
+    /** A list asked of Google: every row, searched, filtered and ordered as on screen, for its download. */
+    liveRows: isLive ? (liveOrder.rows ?? null) : null,
   };
 }
 
@@ -489,7 +495,7 @@ export function figureColumns(say: (key: string) => string, which: readonly Figu
  */
 export function KindText({ kind, of, kinds }: { kind: string | null; of: "intent" | "pageType"; kinds?: PageKindsView }) {
   const tc = useTranslations("sites.common");
-  if (!kind) return <span className="text-muted">–</span>;
+  if (!kind) return <NoFigure />;
   if (of === "pageType" && kinds?.isOwn(kind)) return <TagLabel>{kinds.label(kind)}</TagLabel>;
   return <TagLabel>{tc(`${of === "intent" ? "intents" : "pageTypes"}.${kind}`)}</TagLabel>;
 }
@@ -499,6 +505,28 @@ export function KindText({ kind, of, kinds }: { kind: string | null; of: "intent
  * the order and with the search, filters and country on screen — and saved
  * here.
  */
+/**
+ * A list's Download all (CSV): a ready-made list's file is built on the
+ * server; a list asked of Google's from the rows the page already holds, in
+ * the order and with the search on screen (drift fixes, 2026-10-03: those
+ * lists had none).
+ */
+export function SearchConsoleListDownload({ list, download }: {
+  list: ReturnType<typeof useSearchConsoleList>;
+  download: { header: string; field: ExportField }[];
+}) {
+  const t = useTranslations("searchConsole.table");
+  if (!list.live) return <SearchConsoleDownload ask={list.download} headers={download.map((entry) => entry.header)} fields={download.map((entry) => entry.field)} />;
+  return (
+    <ListDownload
+      label={t("download")}
+      fileName={exportFileName(list.status?.host ?? "site", list.download.view, list.download.dimension, list.range.from, list.range.to)}
+      rows={list.liveRows ?? undefined}
+      columns={download.map((entry) => ({ header: entry.header, value: (row: ListRow) => exportValue(row, entry.field) }))}
+    />
+  );
+}
+
 export function SearchConsoleDownload({ ask, headers, fields }: {
   ask: Omit<FunctionArgs<typeof api.searchConsoleLists.exportSearchConsoleList>, "headers" | "fields">;
   headers: string[];

@@ -185,6 +185,7 @@ describe("Search Console is read only through the company's own hold", () => {
     "searchConsoleLists",
     "searchConsolePeriods",
     "searchConsoleSeen",
+    "searchConsoleSeenDays",
     "searchConsoleTracked",
     "searchConsoleWeeks",
     "searchConsoleRuns",

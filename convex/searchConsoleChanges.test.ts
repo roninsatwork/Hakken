@@ -66,7 +66,7 @@ async function period(t: Harness, siteId: Id<"companyWebsites">, period: "30" | 
 }
 
 describe("New and lost", () => {
-  test("keywords first shown in the dates, and those not shown for 14 days, with the page's counts and weeks", async () => {
+  test("keywords first shown in the dates, and those not shown for 14 days, with the page's counts and chart", async () => {
     const { t, siteId, reader } = await setup();
     // Watched from 29 June, so a keyword counts as new from 13 July.
     await seen(t, siteId, "query", "drain unblocking", "2026-09-20", NEWEST);
@@ -76,7 +76,7 @@ describe("New and lost", () => {
     await seen(t, siteId, "page", "https://acme-shop.test/drains/", "2026-09-20", NEWEST);
     await period(t, siteId, "90", [["drain unblocking", 6, 200, 4.5], ["boiler repair", 3, 90, 12]]);
 
-    const answer = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, from: "2026-08-28", to: NEWEST, page: 1, rows: 25 });
+    const answer = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, step: "week", page: 1, rows: 25 });
     expect(answer.counts).toEqual({ newKeywords: 1, lostKeywords: 1, newPages: 1, lostPages: 0 });
     expect(answer.rows.map((row) => [row.key, row.status, row.when, row.clicks, row.band])).toEqual([
       ["drain unblocking", "new", "2026-09-20", 6, "4-10"],
@@ -84,15 +84,76 @@ describe("New and lost", () => {
       ["boiler repair", "lost", "2026-09-19", 0, "11-20"],
     ]);
     expect(answer.watchedFrom).toBe("2026-07-13");
-    const lostOnly = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, from: "2026-08-28", to: NEWEST, what: "lost", page: 1, rows: 25 });
+    const lostOnly = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, step: "week", what: "lost", page: 1, rows: 25 });
     expect(lostOnly.rows.map((row) => row.key)).toEqual(["boiler repair"]);
-    const week = answer.weeks.find((entry) => entry.week === "2026-09-14");
-    expect(week).toEqual({ week: "2026-09-14", gained: 1, lost: 1 });
+    // The chart draws the dates chosen, in their step (2026-10-04): the same keywords the counts hold.
+    expect(answer.periods[0]).toEqual({ start: "2026-08-24", lastDay: "2026-08-30", gained: 0, lost: 0 });
+    expect(answer.periods.at(-1)?.lastDay).toBe(NEWEST);
+    expect(answer.periods.find((entry) => entry.start === "2026-09-14")).toEqual({ start: "2026-09-14", lastDay: "2026-09-20", gained: 1, lost: 1 });
+    const byDay = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, searchType: "web", from: "2026-09-15", to: "2026-09-21", step: "day", page: 1, rows: 25 });
+    expect(byDay.periods.map((entry) => [entry.start, entry.gained, entry.lost])).toEqual([
+      ["2026-09-15", 0, 0], ["2026-09-16", 0, 0], ["2026-09-17", 0, 0], ["2026-09-18", 0, 0], ["2026-09-19", 0, 1], ["2026-09-20", 1, 0], ["2026-09-21", 0, 0],
+    ]);
+    const byMonth = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, step: "month", page: 1, rows: 25 });
+    expect(byMonth.periods.map((entry) => [entry.start, entry.lastDay, entry.gained, entry.lost])).toEqual([
+      ["2026-08-01", "2026-08-31", 0, 0], ["2026-09-01", NEWEST, 1, 1],
+    ]);
 
     const otherReader = t.withIdentity({ subject: await t.run(async (ctx) => await ctx.db.insert("users", {
       name: "Rival", email: "rival@rival.test", role: "USER", companyId: await ctx.db.insert("companies", { name: "Rival", createdAt: 1 }), createdAt: 1,
     })) });
-    await expect(otherReader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, from: "2026-08-28", to: NEWEST, page: 1, rows: 25 })).rejects.toThrow("not one your company holds");
+    await expect(otherReader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, step: "week", page: 1, rows: 25 })).rejects.toThrow("not one your company holds");
+  });
+});
+
+describe("New and lost, past the list's limit (2026-10-04)", () => {
+  test("its counts and chart take every one from the counts by day; the table keeps its limit", async () => {
+    const { t, siteId, reader } = await setup();
+    await seen(t, siteId, "query", "drain unblocking", "2026-09-20", NEWEST);
+    await seen(t, siteId, "query", "boiler repair", "2026-07-20", "2026-09-05");
+    await t.run(async (ctx) => {
+      const day = (kind: "query" | "page", date: string, first: number, last: number) =>
+        ctx.db.insert("searchConsoleSeenDays", { companyWebsiteId: siteId, kind, day: date, first, last, builtAt: 1 });
+      // Far more than the 5,000 its list reads, as a busy website has.
+      await day("query", "2026-07-20", 1_500, 0);
+      await day("query", "2026-09-05", 0, 6_200);
+      await day("query", "2026-09-20", 4_800, 0);
+      await day("page", "2026-09-20", 7, 0);
+    });
+    const answer = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, searchType: "web", from: "2026-07-01", to: NEWEST, step: "month", page: 1, rows: 25 });
+    // Watched from 13 July, so July's 1,500 count; lost 14 days after 5 September.
+    expect(answer.counts).toEqual({ newKeywords: 6_300, lostKeywords: 6_200, newPages: 7, lostPages: 0 });
+    expect(answer.periods.map((period) => [period.start, period.gained, period.lost])).toEqual([
+      ["2026-07-01", 1_500, 0], ["2026-08-01", 0, 0], ["2026-09-01", 4_800, 6_200],
+    ]);
+    // The table lists the register's own rows, as before.
+    expect(answer.rows.map((row) => `${row.status} ${row.key}`).sort()).toEqual(["lost boiler repair", "new boiler repair", "new drain unblocking"]);
+  });
+});
+
+describe("New and lost, by kind of result (drift fixes, 2026-10-03)", () => {
+  test("image results read their own register; web results, as before, the rows that carry no kind", async () => {
+    const { t, siteId, reader } = await setup();
+    await seen(t, siteId, "query", "drain unblocking", "2026-09-20", NEWEST);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("searchConsoleSeen", { companyWebsiteId: siteId, searchType: "image", kind: "query", key: "drain photos", firstDay: "2026-09-21", lastDay: NEWEST });
+    });
+    const ask = { siteId, from: "2026-08-28", to: NEWEST, step: "week" as const, page: 1, rows: 25 };
+    const web = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { ...ask, searchType: "web" });
+    const image = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { ...ask, searchType: "image" });
+    expect(web.rows.map((row) => row.key)).toEqual(["drain unblocking"]);
+    expect(image.rows.map((row) => row.key)).toEqual(["drain photos"]);
+  });
+
+  test("a changed lost-after limit moves when a keyword counts as lost", async () => {
+    const { t, siteId, companyId, reader } = await setup();
+    await seen(t, siteId, "query", "boiler repair", "2026-07-20", "2026-09-05");
+    await t.run(async (ctx) => {
+      await ctx.db.insert("fanOutLimits", { companyId, companyWebsiteId: siteId, consoleLostAfterDays: 7, updatedAt: 1 });
+    });
+    const answer = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, step: "week", page: 1, rows: 25 });
+    // Last shown on 5 September: lost 7 days later.
+    expect(answer.rows.map((row) => [row.key, row.status, row.when])).toEqual([["boiler repair", "lost", "2026-09-12"]]);
   });
 });
 
@@ -105,7 +166,7 @@ describe("New and lost, on a busy day", () => {
       }
       await ctx.db.insert("searchConsoleSeen", { companyWebsiteId: siteId, kind: "query", key: "the day before", firstDay: "2026-09-19", lastDay: NEWEST });
     });
-    const answer = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, from: "2026-08-28", to: NEWEST, page: 1, rows: 25 });
+    const answer = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, step: "week", page: 1, rows: 25 });
     expect(answer.counts.newKeywords).toBe(521);
     expect(answer.total).toBe(521);
   });
@@ -129,8 +190,9 @@ describe("Google updates", () => {
       await update("Rolling update", "2026-09-24");
       await update("Before the days held", "2026-05-01", "2026-05-10");
     });
-    const answer = await reader.query(api.searchConsoleChanges.searchConsoleUpdates, { siteId, searchType: "web", language: "en" });
-    expect(answer.from).toBe(OLDEST);
+    const answer = await reader.query(api.searchConsoleChanges.searchConsoleUpdates, { siteId, searchType: "web", language: "en", from: "2025-10-01", to: NEWEST });
+    // The dates chosen, cut to the days held.
+    expect([answer.from, answer.to]).toEqual([OLDEST, NEWEST]);
     expect(answer.updates.map((update) => [update.title, update.state, update.before?.clicks ?? null, update.after?.clicks ?? null])).toEqual([
       ["July 2026 core update", "done", 140, 280],
       ["September 2026 spam update", "waiting", 280, null],
@@ -138,6 +200,75 @@ describe("Google updates", () => {
     ]);
     expect(answer.updates[0].before?.position).toBe(12);
     expect(answer.updates[0].after?.position).toBe(9);
+
+    // Only the updates that began in the dates (2026-10-04), each still compared on days outside them.
+    const july = await reader.query(api.searchConsoleChanges.searchConsoleUpdates, { siteId, searchType: "web", language: "en", from: "2026-07-15", to: "2026-07-25" });
+    expect([july.from, july.to]).toEqual(["2026-07-15", "2026-07-25"]);
+    expect(july.updates.map((update) => [update.title, update.before?.clicks ?? null, update.after?.clicks ?? null])).toEqual([["July 2026 core update", 140, 280]]);
+    const none = await reader.query(api.searchConsoleChanges.searchConsoleUpdates, { siteId, searchType: "web", language: "en", from: "2025-01-01", to: "2025-02-01" });
+    expect(none).toEqual({ from: null, to: null, updates: [], live: false });
+  });
+});
+
+describe("Position bands and Brand charts, in the dates and step chosen (2026-10-04)", () => {
+  const row = (siteId: Id<"companyWebsites">, grain: "DAY" | "WEEK" | "MONTH" | undefined, week: string, top3: number, days?: number) => ({
+    companyWebsiteId: siteId, searchType: "web" as const, ...(grain ? { grain } : {}), week, ...(days === undefined ? {} : { days }),
+    top3, top10: 0, top20: 0, rest: 0, brandClicks: top3, otherClicks: 0, builtAt: 1,
+  });
+  const ask = (siteId: Id<"companyWebsites">, from: string, step: "day" | "week" | "month") => ({ siteId, searchType: "web" as const, from, to: NEWEST, step });
+
+  test("the days, weeks or months touching the dates, a part-week marked by its days", async () => {
+    const { t, siteId, reader } = await setup();
+    await t.run(async (ctx) => {
+      for (const day of ["2026-09-19", "2026-09-20", "2026-09-21", NEWEST]) await ctx.db.insert("searchConsoleWeeks", row(siteId, "DAY", day, 1, 1));
+      await ctx.db.insert("searchConsoleWeeks", row(siteId, "WEEK", "2026-09-14", 2, 7));
+      await ctx.db.insert("searchConsoleWeeks", row(siteId, "WEEK", "2026-09-21", 3, 6));
+      await ctx.db.insert("searchConsoleWeeks", row(siteId, "MONTH", "2026-09-01", 4, 26));
+      // Built before 2026-10-04: no grain, so a week, and its days worked out.
+      await ctx.db.insert("searchConsoleWeeks", row(siteId, undefined, "2026-08-31", 5));
+    });
+    const weeks = await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-09-15", "week"));
+    expect(weeks).toMatchObject({ step: "week", byWeek: false, reach: null, notBuilt: false });
+    expect(weeks.periods.map((period) => [period.start, period.lastDay, period.days, period.length, period.top3])).toEqual([
+      ["2026-09-14", "2026-09-20", 7, 7, 2],
+      ["2026-09-21", NEWEST, 6, 7, 3],
+    ]);
+    const older = await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-09-01", "week"));
+    expect(older.periods.map((period) => [period.start, period.days])).toEqual([["2026-08-31", 7], ["2026-09-14", 7], ["2026-09-21", 6]]);
+    const days = await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-09-20", "day"));
+    expect(days.periods.map((period) => period.start)).toEqual(["2026-09-20", "2026-09-21", NEWEST]);
+    const months = await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-09-20", "month"));
+    expect(months.periods.map((period) => [period.start, period.lastDay, period.days, period.length])).toEqual([["2026-09-01", NEWEST, 26, 30]]);
+  });
+
+  test("daily dates reaching past the 90 days kept as days are drawn by week; past the charts' weeks, from the first of them", async () => {
+    const { t, siteId, companyId, reader } = await setup();
+    await t.run(async (ctx) => {
+      await ctx.db.insert("searchConsoleWeeks", row(siteId, "DAY", NEWEST, 1, 1));
+      await ctx.db.insert("searchConsoleWeeks", row(siteId, "WEEK", "2026-09-21", 1, 6));
+    });
+    // Held from the 90-day line itself: nothing older is held by week, so days stay days.
+    expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-06-01", "day"))).toMatchObject({ step: "day", byWeek: false });
+    await t.run(async (ctx) => {
+      const connection = await ctx.db.query("searchConsoleConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", siteId)).first();
+      await ctx.db.patch(connection!._id, { oldestDay: "2026-03-02" });
+    });
+    expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-09-20", "day"))).toMatchObject({ step: "day", byWeek: false });
+    const reaching = await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-06-01", "day"));
+    expect(reaching).toMatchObject({ step: "week", byWeek: true, reach: "2026-06-08", chartWeeks: 16 });
+    expect(reaching.periods.map((period) => period.start)).toEqual(["2026-09-21"]);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("fanOutLimits", { companyId, companyWebsiteId: siteId, consoleChartWeeks: 8, updatedAt: 1 });
+    });
+    expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-08-10", "week"))).toMatchObject({ reach: null, chartWeeks: 8 });
+    expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-07-01", "week"))).toMatchObject({ reach: "2026-08-03", chartWeeks: 8 });
+  });
+
+  test("a step not built yet says so, rather than drawing nothing", async () => {
+    const { t, siteId, reader } = await setup();
+    await t.run(async (ctx) => await ctx.db.insert("searchConsoleWeeks", row(siteId, undefined, "2026-09-21", 1)));
+    expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-09-20", "month"))).toMatchObject({ periods: [], notBuilt: true });
+    expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-09-20", "week"))).toMatchObject({ notBuilt: false });
   });
 });
 

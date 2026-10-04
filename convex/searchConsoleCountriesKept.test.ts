@@ -155,7 +155,8 @@ const keptOf = (t: Harness, siteId: Id<"companyWebsites">, country: string | und
   lists: await ctx.db.query("searchConsoleLists").withIndex("by_hold_country_type_list_grain_start", (q) => q.eq("companyWebsiteId", siteId).eq("country", country)).take(500),
   periods: await ctx.db.query("searchConsolePeriods").withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", country)).take(500),
   weeks: await ctx.db.query("searchConsoleWeeks").withIndex("by_hold_country_type_week", (q) => q.eq("companyWebsiteId", siteId).eq("country", country)).take(500),
-  seen: await ctx.db.query("searchConsoleSeen").withIndex("by_hold_country_kind_key", (q) => q.eq("companyWebsiteId", siteId).eq("country", country)).take(500),
+  seen: await ctx.db.query("searchConsoleSeen").withIndex("by_hold_country_type_kind_key", (q) => q.eq("companyWebsiteId", siteId).eq("country", country)).take(500),
+  seenDays: await ctx.db.query("searchConsoleSeenDays").withIndex("by_hold_country_type_kind_day", (q) => q.eq("companyWebsiteId", siteId).eq("country", country)).take(500),
 }));
 
 beforeEach(() => {
@@ -230,7 +231,7 @@ describe("collecting a country kept ready", () => {
     expect(period("device", "NOW", "30")).toMatchObject({ keys: ["MOBILE", "DESKTOP"], clicks: [6, 2] });
     // No country list inside a country.
     expect(gbr.periods.some((part) => part.list === "country")).toBe(false);
-    expect(gbr.weeks.map((week) => [week.week, week.otherClicks])).toEqual([["2026-07-27", 2], ["2026-09-21", 8]]);
+    expect(gbr.weeks.filter((week) => week.grain === "WEEK" && week.otherClicks > 0).map((week) => [week.week, week.otherClicks])).toEqual([["2026-07-27", 2], ["2026-09-21", 8]]);
     expect(gbr.seen.map((entry) => `${entry.kind} ${entry.key} ${entry.firstDay}`).sort()).toEqual([
       "page https://acme-shop.test/ 2026-09-26",
       "page https://acme-shop.test/boilers/ 2026-08-01",
@@ -238,6 +239,11 @@ describe("collecting a country kept ready", () => {
       "query emergency plumber 2026-09-26",
       "query plumber leeds 2026-09-26",
     ]);
+    // New and lost's counts by day, counted from that register (2026-10-04).
+    const firstOn = (kind: string) => gbr.seenDays.filter((row) => row.kind === kind && row.first > 0).map((row) => [row.day, row.first]);
+    expect(firstOn("query")).toEqual([["2026-08-01", 1], ["2026-09-26", 2]]);
+    expect(firstOn("page")).toEqual([["2026-08-01", 1], ["2026-09-26", 1]]);
+    expect(gbr.seenDays.filter((row) => row.kind === "query").reduce((sum, row) => sum + row.last, 0)).toBe(3);
     // All countries' periods stand apart, with the searches from Mozambique.
     const everywhere = await keptOf(t, siteId, undefined);
     expect(everywhere.periods.find((part) => part.list === "query" && part.which === "NOW" && part.period === "30")?.keys)
@@ -273,14 +279,14 @@ describe("reading one country", () => {
     expect(days.days.map((day) => day.day)).toEqual(["2026-08-01", NEWEST]);
     const curve = await reader.query(api.searchConsoleChanges.searchConsoleCurve, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, country: "gbr" });
     expect(curve).toMatchObject({ live: false, points: [{ position: 4, keywords: 2, clicks: 8 }] });
-    const weeks = await reader.query(api.searchConsolePeriods.searchConsoleWeekFigures, { siteId, searchType: "web", country: "gbr" });
-    expect(weeks).toMatchObject({ notReady: false, preparing: false });
-    expect(weeks.weeks.map((week) => week.week)).toEqual(["2026-07-27", "2026-09-21"]);
+    const weeks = await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, { siteId, searchType: "web", country: "gbr", from: "2026-07-01", to: NEWEST, step: "week" });
+    expect(weeks).toMatchObject({ notReady: false, preparing: false, notBuilt: false, step: "week" });
+    expect(weeks.periods.filter((week) => week.top3 + week.top10 + week.top20 + week.rest > 0).map((week) => week.start)).toEqual(["2026-07-27", "2026-09-21"]);
 
-    const newLost = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, from: "2026-08-28", to: NEWEST, country: "gbr", page: 1, rows: 25 });
+    const newLost = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, step: "week", country: "gbr", page: 1, rows: 25 });
     expect(newLost).toMatchObject({ notReady: false, watchedFrom: "2026-07-13", counts: { newKeywords: 2 } });
     expect(newLost.rows.map((one) => one.key).sort()).toEqual(["emergency plumber", "plumber leeds"]);
-    const allNewLost = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, from: "2026-08-28", to: NEWEST, page: 1, rows: 25 });
+    const allNewLost = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, step: "week", page: 1, rows: 25 });
     expect(allNewLost.rows.map((one) => one.key)).toContain("ai agency");
 
     expect(asks).toEqual([]);
@@ -298,7 +304,7 @@ describe("reading one country", () => {
       .toMatchObject({ live: true, days: [], totals: null });
     expect(await reader.query(api.searchConsoleChanges.searchConsoleCurve, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, country: "moz" }))
       .toMatchObject({ live: true, points: [] });
-    expect(await reader.query(api.searchConsoleChanges.searchConsoleUpdates, { siteId, searchType: "web", language: "en", country: "moz" })).toMatchObject({ live: true, updates: [] });
+    expect(await reader.query(api.searchConsoleChanges.searchConsoleUpdates, { siteId, searchType: "web", language: "en", country: "moz", from: "2026-06-01", to: NEWEST })).toMatchObject({ live: true, updates: [] });
     expect(asks).toEqual([]);
 
     const list = await reader.action(api.searchConsoleLists.searchConsoleLiveList, { ...thirty, country: "moz" });
@@ -329,7 +335,7 @@ describe("reading one country", () => {
       titleEn: "September 2026 spam update", descriptionEn: "Spam.", startedOn: "2026-09-01", finishedOn: "2026-09-05", url: "https://status.search.google.com/", createdAt: 1, updatedAt: 1,
     }));
     asks.length = 0;
-    const answer = await reader.action(api.searchConsoleChanges.searchConsoleLiveUpdates, { siteId, searchType: "web", language: "en", country: "moz" });
+    const answer = await reader.action(api.searchConsoleChanges.searchConsoleLiveUpdates, { siteId, searchType: "web", language: "en", country: "moz", from: "2026-06-01", to: NEWEST });
     expect(answer).toMatchObject({ ok: true, from: "2026-06-28", to: NEWEST, updates: [{ title: "September 2026 spam update", state: "done", before: null, after: null }] });
     expect(asks.map((ask) => [ask.dimensions.join("+"), countryOf(ask), ask.startDate, ask.endDate])).toEqual([["date", "moz", "2026-06-28", NEWEST]]);
   });
@@ -337,15 +343,16 @@ describe("reading one country", () => {
   test("what Google cannot answer live says the country is not kept ready, or on its way once added", async () => {
     const { t, siteId, reader } = await setup(["gbr"]);
     fakeGoogle(figures());
-    const newLost = { siteId, from: "2026-08-28", to: NEWEST, page: 1, rows: 25 };
+    const newLost = { siteId, searchType: "web" as const, from: "2026-08-28", to: NEWEST, step: "week" as const, page: 1, rows: 25 };
+    const chart = { siteId, searchType: "web" as const, from: "2026-08-28", to: NEWEST, step: "week" as const };
     // Added, but not yet collected: on its way.
     expect(await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { ...newLost, country: "gbr" })).toMatchObject({ preparing: true, notReady: false, rows: [] });
-    expect(await reader.query(api.searchConsolePeriods.searchConsoleWeekFigures, { siteId, searchType: "web", country: "gbr" })).toEqual({ weeks: [], notReady: false, preparing: true });
+    expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, { ...chart, country: "gbr" })).toMatchObject({ periods: [], notReady: false, preparing: true });
     await collect(t);
     expect(await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { ...newLost, country: "moz" })).toMatchObject({ notReady: true, preparing: false, rows: [], total: 0 });
-    expect(await reader.query(api.searchConsolePeriods.searchConsoleWeekFigures, { siteId, searchType: "web", country: "moz" })).toEqual({ weeks: [], notReady: true, preparing: false });
+    expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, { ...chart, country: "moz" })).toMatchObject({ periods: [], notReady: true, preparing: false });
     // All countries, as before.
-    expect((await reader.query(api.searchConsolePeriods.searchConsoleWeekFigures, { siteId, searchType: "web" })).notReady).toBe(false);
+    expect((await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, chart)).notReady).toBe(false);
   });
 
   test("another company's website is refused, and a code Google does not name is refused", async () => {
@@ -359,9 +366,9 @@ describe("reading one country", () => {
     await expect(rival.query(api.searchConsoleCountries.searchConsoleCountryChoices, { siteId })).rejects.toThrow("not one your company holds");
     await expect(rival.query(api.searchConsoleLists.searchConsoleListPage, { ...thirty, country: "gbr", page: 1, rows: 25 })).rejects.toThrow("not one your company holds");
     await expect(rival.query(api.searchConsoleReads.searchConsolePerformance, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, country: "gbr" })).rejects.toThrow("not one your company holds");
-    await expect(rival.query(api.searchConsolePeriods.searchConsoleWeekFigures, { siteId, searchType: "web", country: "gbr" })).rejects.toThrow("not one your company holds");
+    await expect(rival.query(api.searchConsolePeriods.searchConsoleChartFigures, { siteId, searchType: "web", country: "gbr", from: "2026-08-28", to: NEWEST, step: "week" })).rejects.toThrow("not one your company holds");
     expect(await rival.action(api.searchConsoleReads.searchConsoleLiveDays, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, country: "moz" })).toEqual({ ok: false, problem: "NOT_CONNECTED" });
-    expect(await rival.action(api.searchConsoleChanges.searchConsoleLiveUpdates, { siteId, searchType: "web", language: "en", country: "moz" })).toEqual({ ok: false, problem: "NOT_CONNECTED" });
+    expect(await rival.action(api.searchConsoleChanges.searchConsoleLiveUpdates, { siteId, searchType: "web", language: "en", country: "moz", from: "2026-08-28", to: NEWEST })).toEqual({ ok: false, problem: "NOT_CONNECTED" });
     expect(await rival.action(api.searchConsoleLists.searchConsoleLiveList, { ...thirty, country: "moz" })).toEqual({ ok: false, problem: "NOT_CONNECTED" });
 
     await expect(reader.query(api.searchConsoleLists.searchConsoleListPage, { ...thirty, country: "xyz", page: 1, rows: 25 })).rejects.toThrow("not a country Google names");
@@ -383,11 +390,12 @@ describe("a country past the limit", () => {
       await ctx.db.insert("searchConsolePeriods", { companyWebsiteId: siteId, country: "irl", searchType: "web", list: "query", period: "30", which: "NOW", part: 0, from: "2026-08-27", to: "2026-09-25", ...packed, builtAt: 1 });
       await ctx.db.insert("searchConsoleWeeks", { companyWebsiteId: siteId, country: "irl", searchType: "web", week: "2026-09-14", top3: 1, top10: 0, top20: 0, rest: 0, brandClicks: 0, otherClicks: 1, builtAt: 1 });
       await ctx.db.insert("searchConsoleSeen", { companyWebsiteId: siteId, country: "irl", kind: "query", key: "plumber dublin", firstDay: "2026-09-20", lastDay: "2026-09-20" });
+      await ctx.db.insert("searchConsoleSeenDays", { companyWebsiteId: siteId, country: "irl", kind: "query", day: "2026-09-20", first: 1, last: 1, builtAt: 1 });
     });
     const asks = fakeGoogle(figures());
     await collect(t);
 
-    expect(await keptOf(t, siteId, "irl")).toEqual({ days: [], lists: [], periods: [], weeks: [], seen: [] });
+    expect(await keptOf(t, siteId, "irl")).toEqual({ days: [], lists: [], periods: [], weeks: [], seen: [], seenDays: [] });
     expect(asks.some((ask) => countryOf(ask) === "irl")).toBe(false);
     expect(asks.some((ask) => countryOf(ask) === "gbr")).toBe(true);
     expect((await connectionOf(t, siteId))?.countriesHeld).toEqual([{ country: "gbr", newestDay: NEWEST, oldestDay: WINDOW_FROM }]);

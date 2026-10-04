@@ -12,8 +12,9 @@ import { SEARCH_CONSOLE_PERIODS, searchTypeValidator, type SearchConsolePeriod, 
 import { askLive, checkedRange, countryFilters } from "./searchConsoleReads";
 import { checkedCountry, countryScope, type CountryScope } from "./searchConsoleCountries";
 import { daysIn, historyLimitDay, periodBefore } from "./searchConsoleDays";
-import { readPeriod, type PeriodRow } from "./searchConsolePeriods";
-import { factsFor } from "./searchConsoleFacts";
+import { readKeyed, readPeriod, type PeriodRow } from "./searchConsolePeriods";
+import { checkedLongest, consoleLimitsOf, consoleLimitsValidator, viewRulesOf, type ConsoleLimits } from "./searchConsoleLimits";
+import { UNKNOWN, factsFor } from "./searchConsoleFacts";
 import { holdBrandNames } from "./holdProfiles";
 import { pageKindSetupValidator, readPageKinds, readPageKindSetup } from "./pageKinds";
 import { classificationTypeValidator } from "./pagesSchema";
@@ -21,6 +22,7 @@ import { loadSite } from "./websiteSiteRows";
 import {
   BANDS,
   VIEWS,
+  VIEWS_BY_WHOLE_PAGE,
   VIEW_LIST,
   applyView,
   ctrCurve,
@@ -29,6 +31,7 @@ import {
   shapeRows,
   summarise,
   withGone,
+  withSectionsInPages,
   withTracked,
   type Filters,
   type ListRow,
@@ -40,6 +43,7 @@ import {
 } from "./utils/searchConsoleViews";
 import { trackedKeys } from "./searchConsoleTracking";
 import { GOOGLE_DIMENSIONS } from "./searchConsoleApi";
+import { EXPORT_FIELDS, exportFileName, exportValue } from "./utils/searchConsoleExport";
 import { bySide, fromGoogle, positionOf, type Row as PackedRow } from "./utils/searchConsolePacks";
 import { NOT_SORTED_KIND, pageKindsFrom, type PageKinds, type PageKindSetup } from "./utils/pageKinds";
 
@@ -65,8 +69,6 @@ import { NOT_SORTED_KIND, pageKindsFrom, type PageKinds, type PageKindSetup } fr
  * Google with the country filter, as other dates are.
  */
 
-/** Rows a list holds: the 25,000 with the most clicks; past this the footer says the list is longer. */
-const MOST_ROWS = 25_000;
 /**
  * Convex carries at most 8,192 items in one array, between functions and to
  * the screen — so a long list travels in parts of 8,000 and is joined where
@@ -82,12 +84,6 @@ function inParts<T>(rows: readonly T[]): T[][] {
 
 /** Rows a short list (countries, devices, kinds of search appearance) holds whole. */
 const SPLIT_ROWS = 500;
-
-/** Periods whose keyword-and-page pairs are asked of Google rather than read whole. */
-export const LONG_PERIODS: readonly SearchConsolePeriod[] = ["90", "365"];
-
-/** Missed demand reads the website's most-searched keywords in Sites, this many at most. */
-const SITES_KEYWORDS_READ = 500;
 
 const listKindValidator = v.union(v.literal("query"), v.literal("page"), v.literal("country"), v.literal("device"), v.literal("appearance"));
 type ListKind = "query" | "page" | "country" | "device" | "appearance";
@@ -127,7 +123,7 @@ const rowValidator = v.object({
 /** The headings a list orders by, each the best first on its first press. */
 export const SORT_KEYS = [
   "key", "clicks", "change", "impressions", "ctr", "position", "positionChange", "share", "count", "top",
-  "volume", "estimate", "kind", "brand", "usualCtr", "expected", "topShare", "next", "nextShare", "gap",
+  "volume", "estimate", "kind", "brand", "usualCtr", "expected", "topShare", "next", "nextShare", "gap", "band",
 ] as const;
 type SortKey = (typeof SORT_KEYS)[number];
 const SORTS: ListSorts<ListRow, SortKey> = {
@@ -152,6 +148,8 @@ const SORTS: ListSorts<ListRow, SortKey> = {
   next: { value: (row) => row.next, first: "asc" },
   nextShare: { value: (row) => row.nextShare, first: "desc" },
   gap: { value: (row) => row.gap, first: "desc" },
+  // Position bands: the top band first; a row Google did not show has none, last.
+  band: { value: (row) => (row.impressions > 0 ? BANDS.indexOf(row.band) : null), first: "asc" },
 };
 const sortValidator = v.optional(v.union(...SORT_KEYS.map((key) => v.literal(key))));
 
@@ -253,22 +251,24 @@ async function brandWordsOf(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"c
   return (await holdBrandNames(ctx, companyWebsiteId)).map((brand) => brand.name);
 }
 
-/** The website's most-searched keywords in Sites, for Missed demand. */
-async function sitesKeywordsOf(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"companyWebsites">): Promise<SitesKeyword[]> {
+/** The website's most-searched keywords in Sites, for Missed demand: as many as its limit (`consoleMissedKeywords`). */
+async function sitesKeywordsOf(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"companyWebsites">, most: number): Promise<SitesKeyword[]> {
   const site = await loadSite(ctx, companyWebsiteId);
   if (!site) return [];
   const rows = await ctx.db
     .query("siteKeywordRanks")
     .withIndex("by_site_volume", (q) => q.eq("websiteId", site.website._id).eq("locationCode", site.place))
     .order("desc")
-    .take(SITES_KEYWORDS_READ);
+    .take(most);
   return rows.filter((row) => row.volumeKnown).map((row) => ({ keyword: row.keyword, volume: row.volume, kind: row.intent }));
 }
 
 /**
  * The pairs holding one keyword or one page, as rows keyed by the other
  * side: a page's keywords, or a keyword's pages — each with how many pages
- * (or keywords) it has across the whole website.
+ * (or keywords) it has across the whole website, kept beside it. Read by
+ * index from the pairs kept in key order, for every period (drift fixes,
+ * 2026-10-03): never a whole period of pairs, never Google.
  */
 async function pairsWithin(
   ctx: { db: QueryCtx["db"] },
@@ -279,28 +279,7 @@ async function pairsWithin(
   within: { kind: "query" | "page"; key: string },
   country: string | undefined,
 ): Promise<{ from: string; to: string; rows: PeriodRow[] } | null> {
-  const pairs = await readPeriod(ctx, companyWebsiteId, searchType, "pair", period, which, country);
-  if (!pairs) return null;
-  const other = within.kind === "query" ? "page" : "query";
-  const counted = which === "NOW" ? await readPeriod(ctx, companyWebsiteId, searchType, other, period, "NOW", country) : null;
-  const counts = new Map((counted?.rows ?? []).map((row) => [row.key, row]));
-  const rows = pairs.rows.flatMap((pair): PeriodRow[] => {
-    const mine = within.kind === "query" ? pair.key : pair.page;
-    if (mine !== within.key) return [];
-    const key = within.kind === "query" ? (pair.page ?? "") : pair.key;
-    const whole = counts.get(key);
-    return [{
-      key,
-      clicks: pair.clicks,
-      impressions: pair.impressions,
-      positionSum: pair.positionSum,
-      ...(whole?.count !== undefined ? { count: whole.count } : {}),
-      ...(whole?.kind !== undefined ? { kind: whole.kind } : {}),
-      ...(whole?.volume !== undefined ? { volume: whole.volume } : {}),
-      ...(whole?.estimate !== undefined ? { estimate: whole.estimate } : {}),
-    }];
-  });
-  return { from: pairs.from, to: pairs.to, rows };
+  return await readKeyed(ctx, companyWebsiteId, searchType, within.kind === "query" ? "pair" : "pairByPage", period, which, within.key, country);
 }
 
 /**
@@ -366,14 +345,13 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   checkedCountry(args.country);
   const empty = { rows: [], cut: null, from: null, to: null, named: null, listed: 0, comparable: false, summary: null, pageKinds: null };
   const live = { ...empty, live: true, preparing: false };
+  const hold = await ctx.db.get(companyWebsiteId);
+  if (!hold) return { ...empty, live: false, preparing: false };
+  const limits = await consoleLimitsOf(ctx, hold);
+  checkedLongest(args.from, args.to, limits);
   const connection = await connectionOf(ctx, companyWebsiteId);
   if (!connection?.newestDay) return { ...empty, live: false, preparing: false };
-  let scope: CountryScope = { read: "ALL" };
-  if (args.country !== undefined) {
-    const hold = await ctx.db.get(companyWebsiteId);
-    if (!hold) return { ...empty, live: false, preparing: false };
-    scope = await countryScope(ctx, hold, connection, args.country);
-  }
+  const scope: CountryScope = args.country === undefined ? { read: "ALL" } : await countryScope(ctx, hold, connection, args.country);
   // A country not kept ready, or not yet collected: asked of Google with its filter.
   if (scope.read === "LIVE") return live;
   const country = scope.read === "KEPT" ? scope.country : undefined;
@@ -381,8 +359,6 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   if (!period) return live;
   const view = args.view ?? "all";
   const within = args.within;
-  // A whole period of keyword-and-page pairs is too much to read for 90 days or 12 months: those are asked of Google.
-  if ((within || view === "competing") && LONG_PERIODS.includes(period)) return live;
   // One keyword's pages are rows keyed by page, one page's keywords by keyword.
   const dimension = within ? (within.kind === "query" ? "page" : "query") : (VIEW_LIST[view] ?? args.dimension);
   // A country keeps no country list of its own: Google answers it, filtered to that one country.
@@ -398,23 +374,35 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   // A list of pages reads the website's classifications once, and names each page by them.
   const pageKinds = dimension === "page" ? await readPageKinds(ctx, companyWebsiteId) : null;
   const shaped = withPageKinds(shapeRows(sourceRows(view, now.rows, before?.rows ?? null, tracked), before?.rows ?? null, { tracked, brandWords }), pageKinds);
-  const context: ViewContext = { missedList: args.missed ?? "searched", tracked, days: daysIn(args.from, args.to) };
+  const context: ViewContext = { rules: viewRulesOf(limits), missedList: args.missed ?? "searched", tracked, days: daysIn(args.from, args.to) };
   if (view === "lowCtr") {
     const keywords = await readPeriod(ctx, companyWebsiteId, args.searchType, "query", period, "NOW", country);
-    context.curve = ctrCurve((keywords?.rows ?? []).map((row) => ({ clicks: row.clicks, impressions: row.impressions, position: positionOf(row) ?? 0 })));
+    context.curve = ctrCurve((keywords?.rows ?? []).map((row) => ({ clicks: row.clicks, impressions: row.impressions, position: positionOf(row) ?? 0 })), limits.curvePositions);
   }
   if (view === "competing") {
-    const pairs = await readPeriod(ctx, companyWebsiteId, args.searchType, "pair", period, "NOW", country);
-    context.pages = pagesByKeyword(pairs?.rows ?? []);
+    // Only the pairs of keywords two or more pages were shown for, kept ready, and how many pages Google showed at all.
+    const competing = await readPeriod(ctx, companyWebsiteId, args.searchType, "competing", period, "NOW", country);
+    if (!competing) return { ...empty, live: false, preparing: true };
+    context.pages = pagesByKeyword(competing.rows);
+    context.pagesShown = competing.shown ?? undefined;
   }
-  if (view === "missed" && context.missedList === "searched") context.sitesKeywords = await sitesKeywordsOf(ctx, companyWebsiteId);
-  const listed = applyView(view, shaped, context);
+  if (view === "missed" && context.missedList === "searched") context.sitesKeywords = await sitesKeywordsOf(ctx, companyWebsiteId, limits.missedKeywords);
+  // A view that compares or counts pages weighs each page once, its section links folded in.
+  const weighed = dimension === "page" && VIEWS_BY_WHOLE_PAGE.has(view) ? withSectionsInPages(shaped) : shaped;
+  const listed = applyView(view, weighed, context);
   const named = listed.reduce((sum, row) => sum + row.clicks, 0);
-  const summary = summarise(listed, shaped, before?.rows ?? null, { ...context, brandWords, ...(pageKinds ? { kindType: pageKinds.typeOf } : {}) });
+  const summary = summarise(listed, weighed, before?.rows ?? null, {
+    ...context,
+    brandWords,
+    pageList: dimension === "page",
+    ...(pageKinds ? { kindType: pageKinds.typeOf } : {}),
+  });
   const sorted = sortRows(filterRows(listed, args), args.sort, args.direction, pageKinds);
-  const cut = sorted.length > MOST_ROWS ? MOST_ROWS : null;
+  // A keyword's pages, or a page's keywords, hold their own limit; every other list the list limit.
+  const most = within ? limits.pairedRows : limits.listRows;
+  const cut = sorted.length > most ? most : null;
   return {
-    rows: cut ? sorted.slice(0, MOST_ROWS) : sorted,
+    rows: cut ? sorted.slice(0, most) : sorted,
     cut,
     from: now.from,
     to: now.to,
@@ -511,10 +499,12 @@ export const liveTarget = internalQuery({
     sitesKeywords: v.array(v.object({ keyword: v.string(), volume: v.number(), kind: v.string() })),
     /** A list of pages: the website's classifications, to name each page by, once it has any. */
     pageKinds: v.union(v.null(), pageKindSetupValidator),
+    limits: consoleLimitsValidator,
   })),
   handler: async (ctx, args) => {
     const hold = await ctx.db.get(args.siteId);
     if (!hold || hold.companyId !== args.companyId) return null;
+    const limits = await consoleLimitsOf(ctx, hold);
     const connection = await connectionOf(ctx, hold._id);
     if (!connection || connection.status !== "CONNECTED" || !connection.property) return null;
     const website = await ctx.db.get(hold.websiteId);
@@ -527,8 +517,9 @@ export const liveTarget = internalQuery({
       facts: site ? { websiteId: site.website._id, place: site.place } : null,
       tracked,
       brandWords: args.kind === "query" ? await brandWordsOf(ctx, hold._id) : null,
-      sitesKeywords: args.view === "missed" ? await sitesKeywordsOf(ctx, hold._id) : [],
+      sitesKeywords: args.view === "missed" ? await sitesKeywordsOf(ctx, hold._id, limits.missedKeywords) : [],
       pageKinds: args.kind === "page" ? await readPageKindSetup(ctx, hold._id) : null,
+      limits,
     };
   },
 });
@@ -545,6 +536,7 @@ type LiveTarget = {
   brandWords: string[] | null;
   sitesKeywords: SitesKeyword[];
   pageKinds: PageKindSetup | null;
+  limits: ConsoleLimits;
 };
 
 type LiveListAnswer =
@@ -612,11 +604,14 @@ async function liveRows(
       pairs: pairs.rows,
     };
   }
-  const pairs = await askGoogle(ctx, target, searchType, "pair", from, to, filters);
+  // A list of pages asks for its pages beside the pairs, at the same time.
+  const [pairs, pages] = await Promise.all([
+    askGoogle(ctx, target, searchType, "pair", from, to, filters),
+    dimension === "page" ? askGoogle(ctx, target, searchType, "page", from, to, filters) : null,
+  ]);
   if (!pairs.ok) return pairs;
   const side = bySide(pairs.rows, dimension);
-  if (dimension === "query") return { ok: true, rows: [...side.values()].map((summed) => ({ ...summed })), pairs: pairs.rows };
-  const pages = await askGoogle(ctx, target, searchType, "page", from, to, filters);
+  if (!pages) return { ok: true, rows: [...side.values()].map((summed) => ({ ...summed })), pairs: pairs.rows };
   if (!pages.ok) return pages;
   return {
     ok: true,
@@ -625,8 +620,10 @@ async function liveRows(
   };
 }
 
-/** Rows of a live list Sites' facts are looked up for: the most clicks first. */
-const LIVE_FACTS_ROWS = 5_000;
+/** The keys Sites' facts are looked up for: the rows with the most clicks, up to the website's limit (`consoleLiveFactsRows`). */
+function factKeys(rows: readonly { key: string; clicks: number }[], most: number): string[] {
+  return [...rows].sort((left, right) => right.clicks - left.clicks).slice(0, most).map((row) => row.key);
+}
 
 /** A live list's rows with Sites' intent and searches a month, or page type and estimated visits, beside the first few thousand. */
 async function withFacts(
@@ -634,9 +631,9 @@ async function withFacts(
   target: { websiteId: Id<"websites">; place: number },
   kind: "query" | "page",
   rows: PeriodRow[],
+  most: number,
 ): Promise<PeriodRow[]> {
-  const keys = [...rows].sort((left, right) => right.clicks - left.clicks).slice(0, LIVE_FACTS_ROWS).map((row) => row.key);
-  const facts = await factsFor(ctx, target, kind, keys);
+  const facts = await factsFor(ctx, target, kind, factKeys(rows, most));
   return rows.map((row) => {
     const known = facts.get(row.key);
     if (!known) return row;
@@ -644,11 +641,31 @@ async function withFacts(
   });
 }
 
+/** The same, on rows a page's rule has listed: so a rule that keeps few rows looks up few. */
+async function withListFacts(
+  ctx: ActionCtx,
+  target: { websiteId: Id<"websites">; place: number },
+  kind: "query" | "page",
+  rows: ListRow[],
+  most: number,
+): Promise<ListRow[]> {
+  const facts = await factsFor(ctx, target, kind, factKeys(rows, most));
+  return rows.map((row) => {
+    const known = facts.get(row.key);
+    if (!known) return row;
+    const number = known.number === UNKNOWN ? null : known.number;
+    return { ...row, kind: known.kind, ...(kind === "query" ? { volume: number } : { estimate: number }) };
+  });
+}
+
 /**
  * A list for dates that are not a ready-made period — or for one country or
  * device — asked of Google when chosen and sent whole, put through the
  * page's rule, for the page to search, filter, order and page itself: with
- * the period before for the change. Sites' facts are not looked up for it.
+ * the period before for the change, asked at the same time. Sites' facts
+ * are looked up for the rows the rule lists, the most clicks first (drift
+ * fixes, 2026-10-03: looking them up for every row Google returned made a
+ * year of Pages competing wait half a minute).
  */
 export const searchConsoleLiveList = tenantAction({
   args: {
@@ -689,37 +706,48 @@ export const searchConsoleLiveList = tenantAction({
     ];
     const target: LiveTarget | null = await ctx.runQuery(internal.searchConsoleLists.liveTarget, { companyId, siteId: args.siteId, kind, view });
     if (!target) return { ok: false as const, problem: "NOT_CONNECTED" as const };
-    const now = await liveRows(ctx, target, args.searchType, dimension, args.from, args.to, filters, within);
-    if (!now.ok) return now;
+    const { limits } = target;
+    checkedLongest(args.from, args.to, limits);
     const before = periodBefore(args.from, args.to);
     // Google keeps sixteen months: days before it would read as nothing, not as a fall.
-    const earlier = before.from >= historyLimitDay(Date.now())
-      ? await liveRows(ctx, target, args.searchType, dimension, before.from, before.to, filters, within)
-      : { ok: false as const, problem: "GOOGLE_REFUSED" as const };
-    // Sites' facts beside the rows with the most clicks, as the ready-made periods carry them.
-    const rows = kind && target.facts ? await withFacts(ctx, target.facts, kind, now.rows) : now.rows;
+    const [now, earlier] = await Promise.all([
+      liveRows(ctx, target, args.searchType, dimension, args.from, args.to, filters, within),
+      before.from >= historyLimitDay(Date.now())
+        ? liveRows(ctx, target, args.searchType, dimension, before.from, before.to, filters, within)
+        : { ok: false as const, problem: "GOOGLE_REFUSED" as const },
+    ]);
+    if (!now.ok) return now;
+    // Real against estimated chooses its rows by Sites' estimates: those are looked up before its rule; every other page's after.
+    const factsFirst = view === "estimates" && kind !== null && target.facts !== null;
+    const rows = factsFirst && kind && target.facts ? await withFacts(ctx, target.facts, kind, now.rows, limits.liveFactsRows) : now.rows;
     const tracked = new Set(target.tracked);
     const earlierRows = earlier.ok ? earlier.rows : null;
     const pageKinds = dimension === "page" && target.pageKinds ? pageKindsFrom(target.pageKinds) : null;
     const shaped = withPageKinds(shapeRows(sourceRows(view, rows, earlierRows, tracked), earlierRows, { tracked, brandWords: target.brandWords }), pageKinds);
-    const context: ViewContext = { missedList: args.missed ?? "searched", sitesKeywords: target.sitesKeywords, tracked, days: daysIn(args.from, args.to) };
+    const context: ViewContext = { rules: viewRulesOf(limits), missedList: args.missed ?? "searched", sitesKeywords: target.sitesKeywords, tracked, days: daysIn(args.from, args.to) };
     if (view === "lowCtr") {
       const keywords = [...bySide(now.pairs, "query").values()];
-      context.curve = ctrCurve(keywords.map((row) => ({ clicks: row.clicks, impressions: row.impressions, position: positionOf(row) ?? 0 })));
+      context.curve = ctrCurve(keywords.map((row) => ({ clicks: row.clicks, impressions: row.impressions, position: positionOf(row) ?? 0 })), limits.curvePositions);
     }
     if (view === "competing") context.pages = pagesByKeyword(now.pairs);
-    const listed = applyView(view, shaped, context);
+    const weighed = dimension === "page" && VIEWS_BY_WHOLE_PAGE.has(view) ? withSectionsInPages(shaped) : shaped;
+    const ruled = applyView(view, weighed, context);
+    // A page's classification stays its kind once the website has any; Sites' type only names the rest.
+    const listed = !factsFirst && kind && target.facts ? withPageKinds(await withListFacts(ctx, target.facts, kind, ruled, limits.liveFactsRows), pageKinds) : ruled;
     const sorted = sortRows(listed, undefined, undefined);
     const named = listed.reduce((sum, row) => sum + row.clicks, 0);
-    const summary = summarise(listed, shaped, earlierRows, { ...context, brandWords: target.brandWords, ...(pageKinds ? { kindType: pageKinds.typeOf } : {}) });
-    return { ok: true as const, rows: inParts(sorted.slice(0, MOST_ROWS)), cut: sorted.length > MOST_ROWS ? MOST_ROWS : null, named, comparable: earlier.ok, summary };
+    const summary = summarise(listed, weighed, earlierRows, {
+      ...context,
+      brandWords: target.brandWords,
+      pageList: dimension === "page",
+      ...(pageKinds ? { kindType: pageKinds.typeOf } : {}),
+    });
+    const most = within ? limits.pairedRows : limits.listRows;
+    return { ok: true as const, rows: inParts(sorted.slice(0, most)), cut: sorted.length > most ? most : null, named, comparable: earlier.ok, summary };
   },
 });
 
 const splitRowValidator = v.object({ key: v.string(), clicks: v.number(), impressions: v.number(), share: v.number() });
-
-/** Kinds of rich result one ask counts the pages of, at most. */
-const APPEARANCES_ASKED = 20;
 
 /**
  * How many of the website's pages Google showed in each kind of rich result
@@ -745,10 +773,11 @@ export const searchConsoleAppearancePages = tenantAction({
     const inCountry = countryFilter(args.country);
     const companyId = getActiveCompanyId(ctx.user);
     if (!companyId) throw appError("NOT_FOUND", "That website is not one your company holds.");
-    const target = await ctx.runQuery(internal.searchConsoleLists.liveTarget, { companyId, siteId: args.siteId, kind: null });
+    const target: LiveTarget | null = await ctx.runQuery(internal.searchConsoleLists.liveTarget, { companyId, siteId: args.siteId, kind: null });
     if (!target) return { ok: false as const, problem: "NOT_CONNECTED" as const };
+    checkedLongest(args.from, args.to, target.limits);
     const pages: { kind: string; pages: number }[] = [];
-    for (const kind of args.kinds.slice(0, APPEARANCES_ASKED)) {
+    for (const kind of args.kinds.slice(0, target.limits.richResultKinds)) {
       const answer = await askGoogle(ctx, target, args.searchType, "page", args.from, args.to, [{ dimension: "searchAppearance", key: kind }, ...inCountry]);
       if (!answer.ok) return answer;
       pages.push({ kind, pages: answer.rows.length });
@@ -756,6 +785,9 @@ export const searchConsoleAppearancePages = tenantAction({
     return { ok: true as const, pages };
   },
 });
+
+type SplitRow = { key: string; clicks: number; impressions: number; share: number };
+type KeySplitsAnswer = { ok: true; countries: SplitRow[]; devices: SplitRow[] } | { ok: false; problem: LiveProblem };
 
 /**
  * Where one keyword's or one page's clicks came from: its countries and
@@ -777,17 +809,20 @@ export const searchConsoleKeySplits = tenantAction({
     v.object({ ok: v.literal(true), countries: v.array(splitRowValidator), devices: v.array(splitRowValidator) }),
     v.object({ ok: v.literal(false), problem: v.union(v.literal("NOT_CONNECTED"), v.literal("GOOGLE_REFUSED"), v.literal("GOOGLE_BUSY")) }),
   ),
-  handler: async (ctx, args) => {
+  handler: async (ctx, args): Promise<KeySplitsAnswer> => {
     checkedRange(args.from, args.to);
     const inCountry = countryFilter(args.country);
     const companyId = getActiveCompanyId(ctx.user);
     if (!companyId) throw appError("NOT_FOUND", "That website is not one your company holds.");
-    const target = await ctx.runQuery(internal.searchConsoleLists.liveTarget, { companyId, siteId: args.siteId, kind: null });
+    const target: LiveTarget | null = await ctx.runQuery(internal.searchConsoleLists.liveTarget, { companyId, siteId: args.siteId, kind: null });
     if (!target) return { ok: false as const, problem: "NOT_CONNECTED" as const };
+    checkedLongest(args.from, args.to, target.limits);
     const filters: Filter[] = [{ dimension: args.dimension, key: args.key }];
-    const countries = await askGoogle(ctx, target, args.searchType, "country", args.from, args.to, filters);
+    const [countries, devices] = await Promise.all([
+      askGoogle(ctx, target, args.searchType, "country", args.from, args.to, filters),
+      askGoogle(ctx, target, args.searchType, "device", args.from, args.to, [...filters, ...inCountry]),
+    ]);
     if (!countries.ok) return countries;
-    const devices = await askGoogle(ctx, target, args.searchType, "device", args.from, args.to, [...filters, ...inCountry]);
     if (!devices.ok) return devices;
     const shaped = (rows: PackedRow[]) => {
       const total = rows.reduce((sum, row) => sum + row.clicks, 0);
@@ -820,35 +855,11 @@ export const exportRows = internalQuery({
   },
 });
 
-/** The figures a download can hold, by the row's own names. */
-const EXPORT_FIELDS = [
-  "key", "clicks", "change", "impressions", "ctr", "position", "positionChange", "count", "top", "tracked", "kind",
-  "volume", "estimate", "brand", "usualCtr", "expected", "topShare", "next", "nextShare", "verdict", "gap", "previousClicks", "previousPosition",
-] as const;
-type ExportField = (typeof EXPORT_FIELDS)[number];
-
-/** A figure as a spreadsheet reads it: rates in per cent, positions to one place. */
-function exportValue(row: ListRow, field: ExportField): string | number | null {
-  const value = row[field];
-  if (value === null || value === undefined) return null;
-  if (typeof value === "boolean") return value ? "yes" : "";
-  if (typeof value === "string") return value;
-  if (field === "ctr" || field === "usualCtr" || field === "topShare" || field === "nextShare") return Math.round(value * 10_000) / 100;
-  if (field === "position" || field === "positionChange" || field === "previousPosition") return Math.round(value * 10) / 10;
-  return value;
-}
-
 /** A cell of a download: quoted where needed, and never read as a formula by a spreadsheet. */
 function cell(value: string | number | null): string {
   if (value === null) return "";
   const text = typeof value === "string" && /^[=+\-@\t\r]/.test(value) ? `'${value}` : String(value);
   return /[",;\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
-}
-
-/** What a download's file name says it holds: the page's rule, a tracked list's kind too, or the list. */
-function fileList(view: View | undefined, dimension: ListKind): string {
-  if (view === "tracked") return `tracked-${dimension}`;
-  return view && view !== "all" ? view : dimension;
 }
 
 /**
@@ -873,7 +884,7 @@ export const exportSearchConsoleList = tenantAction({
     if (!found) throw appError("NOT_FOUND", "That website is not one your company holds.");
     const lines = found.rows.flat().map((row) => fields.map((field) => cell(exportValue(row, field))).join(","));
     return {
-      fileName: `${found.host}-search-console-${fileList(args.view, args.dimension)}-${args.from}-${args.to}.csv`,
+      fileName: exportFileName(found.host, args.view, args.dimension, args.from, args.to),
       csv: [headers.map(cell).join(","), ...lines].join("\n"),
       rows: lines.length,
       cut: found.cut,
@@ -921,8 +932,9 @@ export const searchConsoleKeySeries = tenantAction({
     checkedCountry(args.country);
     const companyId = getActiveCompanyId(ctx.user);
     if (!companyId) throw appError("NOT_FOUND", "That website is not one your company holds.");
-    const target = await ctx.runQuery(internal.searchConsoleLists.liveTarget, { companyId, siteId: args.siteId, kind: null });
+    const target: LiveTarget | null = await ctx.runQuery(internal.searchConsoleLists.liveTarget, { companyId, siteId: args.siteId, kind: null });
     if (!target) return { ok: false as const, problem: "NOT_CONNECTED" as const };
+    checkedLongest(args.from, args.to, target.limits);
     const before = periodBefore(args.from, args.to);
     const answer = await askLive(ctx, target, {
       startDate: before.from,

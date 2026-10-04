@@ -28,15 +28,22 @@ export function ListDownload<Row>({
   fileName,
   rows,
   columns,
+  label,
 }: {
   fileName: string;
   rows: readonly Row[] | undefined;
   columns: Array<{ header: string; value: (row: Row) => string | number | null | undefined }>;
+  /**
+   * The button's words, where a section's tables say it their own way:
+   * Search Console's say "Download all (CSV)" whether the file is built here
+   * or on the server, as drawn (search-console-plan.md §13.1).
+   */
+  label?: string;
 }) {
   const t = useTranslations("sites.downloads");
   return (
     <DownloadButton
-      label={t("csv")}
+      label={label ?? t("csv")}
       disabled={!rows || rows.length === 0}
       onClick={() => {
         if (!rows) return;

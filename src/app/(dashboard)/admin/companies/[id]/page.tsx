@@ -19,6 +19,7 @@ import { cn } from "@/src/ui/lib/utils";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useLocale, useTranslations } from "next-intl";
 import { CHART_CURSOR, ChartTooltipSurface } from "@/src/ui/components/charts/ChartTooltip";
+import { ChartReveal, revealKey } from "@/src/ui/components/screens/ChartReveal";
 
 const Bar = dynamic(() => import("recharts").then((module) => module.Bar));
 const BarChart = dynamic(() => import("recharts").then((module) => module.BarChart));
@@ -255,44 +256,46 @@ export default function CompanyDashboardPage() {
               and a percentage of an unresolved height renders nothing on first
               paint. `quality-drift` guards this across every dashboard. */}
           <div className="w-full">
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={engagement.daily} margin={{ top: 4, right: 8, bottom: 0, left: -18 }}>
-                {/* Recessive: the data is the subject, the grid is scaffolding. */}
-                <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
-                <XAxis
-                  dataKey="day"
-                  tickFormatter={formatDayTick}
-                  tick={{ fontSize: 11, fill: "var(--color-muted)" }}
-                  tickLine={false}
-                  axisLine={false}
-                  minTickGap={16}
-                />
-                <YAxis
-                  allowDecimals={false}
-                  tick={{ fontSize: 11, fill: "var(--color-muted)" }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <Tooltip cursor={CHART_CURSOR} content={<SignInTooltip />} />
-                {SIGN_IN_BANDS.map((band, index) => (
-                  <Bar
-                    key={band.key}
-                    dataKey={band.key}
-                    stackId="signIns"
-                    fill={band.fill}
-                    // A 2px surface gap between segments, and the top of the
-                    // stack rounded rather than every segment.
-                    stroke="var(--color-card)"
-                    strokeWidth={2}
-                    radius={index === SIGN_IN_BANDS.length - 1 ? [4, 4, 0, 0] : undefined}
-                    // A dashboard should be readable the instant it is open, not
-                    // after a bar race. It also means the chart draws the same
-                    // whether or not the tab was in front when it loaded.
-                    isAnimationActive={false}
+            <ChartReveal replay={revealKey(engagement.daily, "day")} motion="rise">
+              <ResponsiveContainer width="100%" height={260}>
+                <BarChart data={engagement.daily} margin={{ top: 4, right: 8, bottom: 0, left: -18 }}>
+                  {/* Recessive: the data is the subject, the grid is scaffolding. */}
+                  <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="day"
+                    tickFormatter={formatDayTick}
+                    tick={{ fontSize: 11, fill: "var(--color-muted)" }}
+                    tickLine={false}
+                    axisLine={false}
+                    minTickGap={16}
                   />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 11, fill: "var(--color-muted)" }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip cursor={CHART_CURSOR} content={<SignInTooltip />} />
+                  {SIGN_IN_BANDS.map((band, index) => (
+                    <Bar
+                      key={band.key}
+                      dataKey={band.key}
+                      stackId="signIns"
+                      fill={band.fill}
+                      // A 2px surface gap between segments, and the top of the
+                      // stack rounded rather than every segment.
+                      stroke="var(--color-card)"
+                      strokeWidth={2}
+                      radius={index === SIGN_IN_BANDS.length - 1 ? [4, 4, 0, 0] : undefined}
+                      // A dashboard should be readable the instant it is open, not
+                      // after a bar race. It also means the chart draws the same
+                      // whether or not the tab was in front when it loaded.
+                      isAnimationActive={false}
+                    />
+                  ))}
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartReveal>
           </div>
           <ChartLegend items={SIGN_IN_BANDS.map((band) => ({ label: tBands(band.labelKey), fill: band.fill }))} />
         </DashboardChartCard>
@@ -304,34 +307,36 @@ export default function CompanyDashboardPage() {
           description={t("charts.askingDescription", { platformName, days: engagement.daysBack })}
         >
           <div className="w-full">
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={engagement.daily} margin={{ top: 4, right: 8, bottom: 0, left: -18 }}>
-                <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
-                <XAxis
-                  dataKey="day"
-                  tickFormatter={formatDayTick}
-                  tick={{ fontSize: 11, fill: "var(--color-muted)" }}
-                  tickLine={false}
-                  axisLine={false}
-                  minTickGap={16}
-                />
-                <YAxis
-                  allowDecimals={false}
-                  tick={{ fontSize: 11, fill: "var(--color-muted)" }}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <Tooltip cursor={CHART_CURSOR} content={<QuestionsTooltip />} />
-                {/* One series, so no legend: the title names it. A day with
-                    nothing asked is drawn in the recessive grey rather than
-                    left blank, so the gap is visible as a gap. */}
-                <Bar dataKey="questions" radius={[4, 4, 0, 0]} isAnimationActive={false}>
-                  {engagement.daily.map((entry) => (
-                    <Cell key={entry.day} fill={entry.questions > 0 ? CHART_PRIMARY_BLUE : CHART_ENGAGEMENT_NONE} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            <ChartReveal replay={revealKey(engagement.daily, "day")} motion="rise">
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={engagement.daily} margin={{ top: 4, right: 8, bottom: 0, left: -18 }}>
+                  <CartesianGrid stroke="var(--color-border-dim)" strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="day"
+                    tickFormatter={formatDayTick}
+                    tick={{ fontSize: 11, fill: "var(--color-muted)" }}
+                    tickLine={false}
+                    axisLine={false}
+                    minTickGap={16}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tick={{ fontSize: 11, fill: "var(--color-muted)" }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <Tooltip cursor={CHART_CURSOR} content={<QuestionsTooltip />} />
+                  {/* One series, so no legend: the title names it. A day with
+                      nothing asked is drawn in the recessive grey rather than
+                      left blank, so the gap is visible as a gap. */}
+                  <Bar dataKey="questions" radius={[4, 4, 0, 0]} isAnimationActive={false}>
+                    {engagement.daily.map((entry) => (
+                      <Cell key={entry.day} fill={entry.questions > 0 ? CHART_PRIMARY_BLUE : CHART_ENGAGEMENT_NONE} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartReveal>
           </div>
         </DashboardChartCard>
       ) : null}

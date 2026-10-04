@@ -2,6 +2,7 @@
 
 import { ResponsiveContainer, Tooltip, Treemap } from "recharts";
 import { ChartTooltipRow, ChartTooltipSurface } from "@/src/ui/components/charts/ChartTooltip";
+import { ChartReveal, revealKey } from "@/src/ui/components/screens/ChartReveal";
 import { CHART_SERIES_BLUE } from "@/src/ui/components/charts/chartPalette";
 
 /**
@@ -91,20 +92,23 @@ export function SiteTreemap({ items, onOpen, height = 320 }: {
   const floor = total > 0 ? total / 5_000 : 1;
   const data = items.map((item) => ({ ...item, size: Math.max(item.value, floor) }));
   return (
-    <ResponsiveContainer width="100%" height={height} debounce={50}>
-      <Treemap
-        data={data}
-        dataKey="size"
-        nameKey="name"
-        aspectRatio={4 / 3}
-        isAnimationActive={false}
-        content={<Box />}
-        onClick={(node) => {
-          if (typeof node.id === "string") onOpen(node.id);
-        }}
-      >
-        <Tooltip content={<BoxReadout />} />
-      </Treemap>
-    </ResponsiveContainer>
+    // The boxes run along nothing, so they fade in.
+    <ChartReveal replay={revealKey(data, "name")} motion="fade">
+      <ResponsiveContainer width="100%" height={height} debounce={50}>
+        <Treemap
+          data={data}
+          dataKey="size"
+          nameKey="name"
+          aspectRatio={4 / 3}
+          isAnimationActive={false}
+          content={<Box />}
+          onClick={(node) => {
+            if (typeof node.id === "string") onOpen(node.id);
+          }}
+        >
+          <Tooltip content={<BoxReadout />} />
+        </Treemap>
+      </ResponsiveContainer>
+    </ChartReveal>
   );
 }

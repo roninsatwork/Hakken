@@ -12,6 +12,7 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { IntentLabel, RecordLinkCell } from "../../../_components/SiteCells";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { formatNumber, formatVisits } from "../../../_components/siteFormat";
 import { useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
@@ -41,7 +42,7 @@ const rivalKey = (column: RivalColumn, siteId: string) => `${column}:${siteId}`;
 const numberCell = (value: string, strong = false) => (
   <span className={`font-mono text-[12px] ${strong ? "text-foreground" : "text-secondary"}`}>{value}</span>
 );
-const blank = <span className="text-[12px] text-muted">–</span>;
+const blank = <NoFigure />;
 
 /**
  * Content gap: searches the other websites in the group rank for and this one

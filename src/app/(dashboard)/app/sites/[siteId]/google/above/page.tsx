@@ -21,6 +21,7 @@ import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 
 const POSITIONS = ["top3", "pageOne", "notOnPage"] as const;
 
@@ -143,7 +144,7 @@ export default function SiteAbovePage() {
             // By how many websites are above.
             sortable: true,
             cell: (row) => {
-              if (row.day === null) return <span className="text-muted">–</span>;
+              if (row.day === null) return <NoFigure />;
               if (row.above.length === 0) return <span className="text-[12px] text-success">{t("nobodyAbove")}</span>;
               return (
                 <ol className="flex flex-col gap-0.5">

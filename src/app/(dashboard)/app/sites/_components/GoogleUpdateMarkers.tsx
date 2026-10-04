@@ -131,6 +131,7 @@ export function useGoogleUpdates(rows: ReadonlyArray<Record<string, unknown>>, {
   const [open, setOpen] = useState<OpenMarker | null>(null);
   const labels = new Map(rows.map((row) => [String(row.day), String(row.label ?? row.day)]));
   const labelOf = (day: unknown) => labels.get(String(day)) ?? String(day ?? "");
+  const readouts = new Map(rows.filter((row) => typeof row.readout === "string").map((row) => [String(row.day), String(row.readout)]));
   const shown = updates.length > 0;
   return {
     dates,
@@ -152,8 +153,8 @@ export function useGoogleUpdates(rows: ReadonlyArray<Record<string, unknown>>, {
         ...(shown ? { tickMargin: GOOGLE_UPDATE_LOOK.tickMargin, height: GOOGLE_UPDATE_LOOK.axisHeight } : {}),
       }
       : { dataKey: xKey }),
-    /** The hover readout's heading: the row's label rather than its day. */
-    readoutTitle: dates ? (label: string) => labelOf(label) : undefined,
+    /** The hover readout's heading: the row's own `readout` when it has one, else its label rather than its day. */
+    readoutTitle: dates ? (label: string) => readouts.get(String(label)) ?? labelOf(label) : undefined,
   };
 }
 

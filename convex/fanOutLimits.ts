@@ -107,6 +107,49 @@ export const FAN_OUT_LIMITS = {
    * storage. Past it, the countries first added are kept.
    */
   consoleCountriesPerSite: { choices: [1, 2, 3, 5, 10], fallback: 3, scope: "site" },
+  /*
+   * What the Search Console screens read and the rules they decide by
+   * (search-console-plan.md §17): each was a number fixed in code, found by
+   * the drift audit of 2026-10-03. Anthony: "we need limits in the limits
+   * sections" — everything that changes what a screen shows. Free: Search
+   * Console charges nothing; the largest choice of each is the most the code
+   * held before, or the most one read can safely take. The fallback is the
+   * number the code used.
+   */
+  /** Rows a Search Console list holds, the most clicks first; past it the footer says the list is longer. */
+  consoleListRows: { choices: [5_000, 10_000, 25_000], fallback: 25_000, scope: "site" },
+  /** Pages on a keyword's own screen, and keywords on a page's, the most clicks first. */
+  consolePairedRows: { choices: [1_000, 2_500, 5_000, 8_000], fallback: 8_000, scope: "site" },
+  /** Rows of a list asked of Google given Sites' intent and searches a month (or page type and estimated visits), the most clicks first. */
+  consoleLiveFactsRows: { choices: [1_000, 2_500, 5_000, 10_000], fallback: 5_000, scope: "site" },
+  /** Kinds of rich result whose pages are counted, the most clicks first: one request to Google each, after each collection. */
+  consoleRichResultKinds: { choices: [5, 10, 20, 40], fallback: 20, scope: "site" },
+  /** Countries "Where the clicks came from" shows beside a keyword's or a page's chart, the most clicks first. */
+  consoleTopCountries: { choices: [3, 5, 10], fallback: 5, scope: "site" },
+  /** New keywords, and lost ones, New and lost reads for the dates chosen, the most recent first. */
+  consoleNewLostRows: { choices: [1_000, 2_500, 5_000], fallback: 5_000, scope: "site" },
+  /** Days a website is watched before a keyword first shown counts as new. */
+  consoleNewAfterDays: { choices: [7, 14, 28], fallback: 14, scope: "site" },
+  /** Days without Google showing the website for a keyword before it counts as lost. */
+  consoleLostAfterDays: { choices: [7, 14, 28], fallback: 14, scope: "site" },
+  /** The website's most-searched keywords in Sites that Missed demand reads. */
+  consoleMissedKeywords: { choices: [250, 500, 1_000], fallback: 500, scope: "site" },
+  /** Searches a month from which Missed demand counts a keyword as searched a lot. */
+  consoleSearchedALot: { choices: [50, 100, 250, 500], fallback: 100, scope: "site" },
+  /** Impressions under which Missed demand counts a keyword as barely shown. */
+  consoleBarelyShown: { choices: [10, 25, 50, 100], fallback: 50, scope: "site" },
+  /** How far, in per cent of Google's clicks, Sites' estimate can be before Real against estimated calls it too high or too low. */
+  consoleEstimateOff: { choices: [10, 25, 50], fallback: 25, scope: "site" },
+  /** Positions, from 1, the website's usual click rate is worked out for (Click rate by position, Shown but not clicked). */
+  consoleCurvePositions: { choices: [10, 20, 30], fallback: 20, scope: "site" },
+  /** Google's updates the Google updates page lists, newest first. */
+  consoleUpdatesListed: { choices: [25, 50, 100, 200], fallback: 100, scope: "site" },
+  /** Days before a Google update began, and after it finished, that its change is read over. */
+  consoleUpdateWindowDays: { choices: [7, 14, 28], fallback: 14, scope: "site" },
+  /** Weeks the weekly charts show: Position bands, Brand and non-brand, New and lost. */
+  consoleChartWeeks: { choices: [8, 16, 26, 52], fallback: 16, scope: "site" },
+  /** The most days a Search Console page can be asked for at once. */
+  consoleLongestRange: { choices: [365, 500, 800], fallback: 800, scope: "site" },
   /**
    * A website's own classifications of its pages (page-groups-plan.md): how
    * many it may have, how many address lines catch pages for them, and how
@@ -205,6 +248,23 @@ const limitsArg = v.object({
   consoleTrackedKeywordsPerSite: limitValue,
   consoleTrackedPagesPerSite: limitValue,
   consoleCountriesPerSite: limitValue,
+  consoleListRows: limitValue,
+  consolePairedRows: limitValue,
+  consoleLiveFactsRows: limitValue,
+  consoleRichResultKinds: limitValue,
+  consoleTopCountries: limitValue,
+  consoleNewLostRows: limitValue,
+  consoleNewAfterDays: limitValue,
+  consoleLostAfterDays: limitValue,
+  consoleMissedKeywords: limitValue,
+  consoleSearchedALot: limitValue,
+  consoleBarelyShown: limitValue,
+  consoleEstimateOff: limitValue,
+  consoleCurvePositions: limitValue,
+  consoleUpdatesListed: limitValue,
+  consoleUpdateWindowDays: limitValue,
+  consoleChartWeeks: limitValue,
+  consoleLongestRange: limitValue,
   classificationsPerSite: limitValue,
   classificationLinesPerSite: limitValue,
   classifiedPagesPerSite: limitValue,

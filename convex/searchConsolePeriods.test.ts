@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { keptIn, periodSpan, spanBefore, weekFigures, type Kept } from "./searchConsolePeriods";
+import { chartFigures, keptIn, periodSpan, spanBefore, type Kept } from "./searchConsolePeriods";
 import { pack, type Packed } from "./utils/searchConsolePacks";
 
 /**
@@ -63,20 +63,54 @@ describe("what counts towards a period", () => {
   });
 });
 
-describe("the weeks the charts read", () => {
-  test("each week's keywords by band and its brand clicks, a week's days and its rolled-up part together", () => {
-    const pairs = (rows: [string, string, number, number, number][]) =>
-      pack(rows.map(([key, page, clicks, impressions, position]) => ({ key, page, clicks, impressions, positionSum: position * impressions })), true)[0];
-    const kept: Kept[] = [
-      // The week of 21 September: Monday rolled up already, the rest kept as days.
-      { grain: "WEEK", start: "2026-09-21", packed: pairs([["ronins", "/", 4, 10, 1]]) },
-      { grain: "DAY", start: "2026-09-22", packed: pairs([["ronins", "/", 2, 10, 2], ["ai agency", "/ai/", 3, 100, 8]]) },
-      { grain: "DAY", start: "2026-09-26", packed: pairs([["web design", "/", 0, 50, 40]]) },
-      // Too old for the chart's sixteen weeks.
-      { grain: "WEEK", start: "2026-05-04", packed: pairs([["old", "/", 9, 9, 1]]) },
-    ];
-    expect(weekFigures(kept, NEWEST, ["Ronins"])).toEqual([
-      { week: "2026-09-21", top3: 1, top10: 1, top20: 0, rest: 1, brandClicks: 6, otherClicks: 3 },
+describe("the days, weeks and months the charts read", () => {
+  const pairs = (rows: [string, string, number, number, number][]) =>
+    pack(rows.map(([key, page, clicks, impressions, position]) => ({ key, page, clicks, impressions, positionSum: position * impressions })), true)[0];
+  // Held from Wednesday 10 June; days kept as days from Monday 29 June, the 90-day line.
+  const OLDEST = "2026-06-10";
+  const kept: Kept[] = [
+    { grain: "WEEK", start: "2026-06-08", packed: pairs([["early", "/", 1, 10, 15]]) },
+    { grain: "WEEK", start: "2026-06-22", packed: pairs([["ronins", "/", 4, 10, 1]]) },
+    { grain: "DAY", start: "2026-06-29", packed: pairs([["ronins", "/", 2, 10, 2]]) },
+    { grain: "DAY", start: "2026-07-01", packed: pairs([["ai agency", "/ai/", 3, 100, 8]]) },
+    { grain: "DAY", start: NEWEST, packed: pairs([["web design", "/", 0, 50, 40]]) },
+  ];
+  const built = chartFigures(kept, NEWEST, OLDEST, ["Ronins"], 16);
+  const of = (grain: Kept["grain"], start: string) => built.find((row) => row.grain === grain && row.week === start);
+
+  test("days only from the 90-day line, weeks and months as far as the charts reach", () => {
+    const days = built.filter((row) => row.grain === "DAY");
+    expect([days[0].week, days.at(-1)?.week, days.length]).toEqual(["2026-06-29", NEWEST, 90]);
+    expect(built.filter((row) => row.grain === "WEEK").map((row) => row.week)).toEqual([
+      "2026-06-08", "2026-06-15", "2026-06-22", "2026-06-29", "2026-07-06", "2026-07-13", "2026-07-20", "2026-07-27",
+      "2026-08-03", "2026-08-10", "2026-08-17", "2026-08-24", "2026-08-31", "2026-09-07", "2026-09-14", "2026-09-21",
     ]);
+    expect(built.filter((row) => row.grain === "MONTH").map((row) => row.week)).toEqual(["2026-06-01", "2026-07-01", "2026-08-01", "2026-09-01"]);
+  });
+
+  test("each one's keywords by band and brand clicks, from the records counting towards it", () => {
+    expect(of("DAY", "2026-06-29")).toMatchObject({ top3: 1, top10: 0, brandClicks: 2, otherClicks: 0, days: 1 });
+    expect(of("DAY", "2026-06-30")).toMatchObject({ top3: 0, top10: 0, top20: 0, rest: 0 });
+    expect(of("WEEK", "2026-06-29")).toMatchObject({ top3: 1, top10: 1, brandClicks: 2, otherClicks: 3 });
+    expect(of("WEEK", "2026-06-22")).toMatchObject({ top3: 1, brandClicks: 4 });
+    // June: two rolled-up weeks and its last day kept as a day; "ronins" in both counts once, at its average.
+    expect(of("MONTH", "2026-06-01")).toMatchObject({ top3: 1, top20: 1, brandClicks: 6, otherClicks: 1 });
+    expect(of("MONTH", "2026-09-01")).toMatchObject({ rest: 1, otherClicks: 0 });
+  });
+
+  test("a week or month at an edge of the history holds only some of its days", () => {
+    expect(of("WEEK", "2026-06-08")?.days).toBe(5);
+    expect(of("WEEK", "2026-06-15")?.days).toBe(7);
+    expect(of("WEEK", "2026-09-21")?.days).toBe(6);
+    expect(of("MONTH", "2026-06-01")?.days).toBe(21);
+    expect(of("MONTH", "2026-07-01")?.days).toBe(31);
+    expect(of("MONTH", "2026-09-01")?.days).toBe(26);
+  });
+
+  test("the charts' weeks limit how far back they reach", () => {
+    const eight = chartFigures(kept, NEWEST, OLDEST, ["Ronins"], 8);
+    expect(eight.filter((row) => row.grain === "WEEK")[0].week).toBe("2026-08-03");
+    expect(eight.filter((row) => row.grain === "DAY")[0].week).toBe("2026-08-03");
+    expect(eight.filter((row) => row.grain === "MONTH")[0].week).toBe("2026-08-01");
   });
 });

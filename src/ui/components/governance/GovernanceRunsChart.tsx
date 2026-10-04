@@ -1,6 +1,7 @@
 "use client";
 
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { ChartReveal, revealKey } from "@/src/ui/components/screens/ChartReveal";
 
 import { CHART_CURSOR, ChartTooltip } from "@/src/ui/components/charts/ChartTooltip";
 
@@ -49,48 +50,50 @@ export function GovernanceRunsChart({ data, labels }: GovernanceRunsChartProps) 
   };
 
   return (
-    <ResponsiveContainer width="100%" height={200} debounce={50}>
-      <BarChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -20 }} barCategoryGap="18%">
-        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border-dim" />
-        <XAxis
-          dataKey="date"
-          axisLine={false}
-          tickLine={false}
-          interval={tickGap - 1}
-          tickFormatter={formatDay}
-          tick={{ fontSize: 11, fill: "currentColor" }}
-          className="text-muted"
-          dy={6}
-        />
-        <YAxis
-          axisLine={false}
-          tickLine={false}
-          allowDecimals={false}
-          width={44}
-          tick={{ fontSize: 11, fill: "currentColor" }}
-          className="text-muted"
-        />
-        {/* A day with no waited runs should not list a nought for them. */}
-        <Tooltip
-          cursor={CHART_CURSOR}
-          content={
-            <ChartTooltip
-              hideEmptyRows
-              title={(date) => formatDay(date)}
-              seriesLabel={(entry) => bandLabel[String(entry.dataKey)] ?? String(entry.dataKey)}
-            />
-          }
-        />
-        {/* Ordered so the band a reader cares about most sits at the top of the
-            column, where its height is easiest to judge against the gridline. */}
-        {/* No entrance animation: recharts' Animate can wedge under React 19's
-            double-invoked effects, leaving every rectangle rendered as nothing —
-            grid and axes drawn, bars absent. A compliance chart has no business
-            animating anyway. */}
-        <Bar dataKey="finished" stackId="runs" isAnimationActive={false} fill={RUN_OUTCOME_COLOURS.finished} />
-        <Bar dataKey="waited" stackId="runs" isAnimationActive={false} fill={RUN_OUTCOME_COLOURS.waited} />
-        <Bar dataKey="unfinished" stackId="runs" isAnimationActive={false} fill={RUN_OUTCOME_COLOURS.unfinished} radius={[3, 3, 0, 0]} />
-      </BarChart>
-    </ResponsiveContainer>
+    <ChartReveal replay={revealKey(data, "date")} motion="rise">
+      <ResponsiveContainer width="100%" height={200} debounce={50}>
+        <BarChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -20 }} barCategoryGap="18%">
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border-dim" />
+          <XAxis
+            dataKey="date"
+            axisLine={false}
+            tickLine={false}
+            interval={tickGap - 1}
+            tickFormatter={formatDay}
+            tick={{ fontSize: 11, fill: "currentColor" }}
+            className="text-muted"
+            dy={6}
+          />
+          <YAxis
+            axisLine={false}
+            tickLine={false}
+            allowDecimals={false}
+            width={44}
+            tick={{ fontSize: 11, fill: "currentColor" }}
+            className="text-muted"
+          />
+          {/* A day with no waited runs should not list a nought for them. */}
+          <Tooltip
+            cursor={CHART_CURSOR}
+            content={
+              <ChartTooltip
+                hideEmptyRows
+                title={(date) => formatDay(date)}
+                seriesLabel={(entry) => bandLabel[String(entry.dataKey)] ?? String(entry.dataKey)}
+              />
+            }
+          />
+          {/* Ordered so the band a reader cares about most sits at the top of the
+              column, where its height is easiest to judge against the gridline. */}
+          {/* No entrance animation: recharts' Animate can wedge under React 19's
+              double-invoked effects, leaving every rectangle rendered as nothing —
+              grid and axes drawn, bars absent. The bars rise in by ChartReveal
+              instead, over the finished chart. */}
+          <Bar dataKey="finished" stackId="runs" isAnimationActive={false} fill={RUN_OUTCOME_COLOURS.finished} />
+          <Bar dataKey="waited" stackId="runs" isAnimationActive={false} fill={RUN_OUTCOME_COLOURS.waited} />
+          <Bar dataKey="unfinished" stackId="runs" isAnimationActive={false} fill={RUN_OUTCOME_COLOURS.unfinished} radius={[3, 3, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </ChartReveal>
   );
 }

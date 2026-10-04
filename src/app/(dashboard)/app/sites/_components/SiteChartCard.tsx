@@ -21,6 +21,7 @@ export function SiteChartCard({
   csv,
   enoughData,
   dated = true,
+  dates,
   children,
 }: {
   title: string;
@@ -34,6 +35,11 @@ export function SiteChartCard({
   enoughData: boolean;
   /** Whether the chart follows the dates chosen; a snapshot (a split of the newest check) says no. */
   dated?: boolean;
+  /**
+   * The caption's dates and step, when the chart draws its own rather than the
+   * page's: the Overview's twelve months against the twelve before.
+   */
+  dates?: string;
   children: ReactNode;
 }) {
   const tr = useTranslations("sites.range");
@@ -43,8 +49,8 @@ export function SiteChartCard({
   const steps = { day: tr("daily"), week: tr("weekly"), month: tr("monthly") } as const;
   const caption = [
     site?.host,
-    dated ? `${formatDay(range.from)} – ${formatDay(range.to)}` : null,
-    dated ? steps[range.step] : null,
+    dates ?? (dated ? `${formatDay(range.from)} – ${formatDay(range.to)}` : null),
+    dates ? null : dated ? steps[range.step] : null,
     platformName,
   ].filter(Boolean).join(" · ");
   return (

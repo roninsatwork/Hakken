@@ -7,6 +7,7 @@ import { SearchConsoleMenu } from "./_components/SearchConsoleMenu";
 import SearchConsoleTrackedKeywordsPage from "./[siteId]/tracked/keywords/page";
 import SearchConsoleTrackedPagesPage from "./[siteId]/tracked/pages/page";
 import SearchConsoleKeywordPage from "./[siteId]/keywords/keyword/page";
+import { STARTING_CONSOLE_LIMITS } from "@/src/test/searchConsoleLimits";
 
 /**
  * Tracked keywords and Tracked pages (drawn and approved 2026-10-03): a
@@ -44,10 +45,10 @@ const STATUS = {
   canManage: true,
   host: "acme-shop.test",
   ownSites: [{ siteId: "site_1", host: "acme-shop.test" }],
-  historyFrom: "2025-05-26",
+  historyFrom: "2025-05-26", limits: STARTING_CONSOLE_LIMITS,
   connection: {
     status: "CONNECTED", signingIn: false, googleAccount: "owner@acme-shop.test", property: "sc-domain:acme-shop.test", permission: "siteOwner",
-    choices: [], connectedAt: Date.parse("2026-09-27T10:00:00Z"), disconnectedAt: null, newestDay: "2026-09-26", oldestDay: "2025-05-26",
+    choices: [], connectedAt: Date.parse("2026-09-27T10:00:00Z"), disconnectedAt: null, newestDay: "2026-09-26", oldestDay: "2025-05-26", countriesNewest: [],
     historyDone: true, clearing: false, lastCollectedAt: Date.parse("2026-09-27T10:02:00Z"), problem: null, attempt: null,
   },
 };

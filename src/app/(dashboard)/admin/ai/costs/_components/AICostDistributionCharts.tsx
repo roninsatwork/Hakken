@@ -4,6 +4,7 @@ import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveCo
 import { BarChart3, Network, PieChart as PieChartIcon } from "lucide-react";
 import ChartExportWrapper from "@/src/ui/components/charts/ChartExportWrapper";
 import { CHART_CURSOR, ChartTooltip } from "@/src/ui/components/charts/ChartTooltip";
+import { ChartReveal, revealKey } from "@/src/ui/components/screens/ChartReveal";
 import {
   CHART_SERIES_BLUE,
   CHART_SERIES_EMERALD,
@@ -90,42 +91,44 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
                   {t("noData")}
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={260} debounce={50}>
-                  <PieChart>
-                    {/* No entrance animation: it can wedge and render the series as nothing — see GovernanceRunsChart.tsx. */}
-                    <Pie isAnimationActive={false}
-                      data={modelDistribution}
-                      cx="50%"
-                      cy="45%"
-                      innerRadius={65}
-                      outerRadius={85}
-                      paddingAngle={5}
-                      dataKey="calls"
-                      stroke="none"
-                    >
-                      {modelDistribution.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={MODEL_COLORS[index % MODEL_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      content={
-                        <ChartTooltip
-                          title={(_, entries) => String(entries[0]?.name ?? "")}
-                          seriesLabel={() => t("callsUnit")}
-                        />
-                      }
-                    />
-                    <Legend
-                      iconType="circle"
-                      wrapperStyle={{
-                        fontSize: "11px",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                        color: "#888",
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                <ChartReveal replay={revealKey(modelDistribution, "name")} motion="fade">
+                  <ResponsiveContainer width="100%" height={260} debounce={50}>
+                    <PieChart>
+                      {/* No entrance animation: it can wedge and render the series as nothing — see GovernanceRunsChart.tsx. */}
+                      <Pie isAnimationActive={false}
+                        data={modelDistribution}
+                        cx="50%"
+                        cy="45%"
+                        innerRadius={65}
+                        outerRadius={85}
+                        paddingAngle={5}
+                        dataKey="calls"
+                        stroke="none"
+                      >
+                        {modelDistribution.map((_, index) => (
+                          <Cell key={`cell-${index}`} fill={MODEL_COLORS[index % MODEL_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        content={
+                          <ChartTooltip
+                            title={(_, entries) => String(entries[0]?.name ?? "")}
+                            seriesLabel={() => t("callsUnit")}
+                          />
+                        }
+                      />
+                      <Legend
+                        iconType="circle"
+                        wrapperStyle={{
+                          fontSize: "11px",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          color: "#888",
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </ChartReveal>
               )}
             </div>
           </motion.section>
@@ -153,37 +156,39 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
                   {t("noData")}
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={260} debounce={50}>
-                  <PieChart>
-                    <Pie isAnimationActive={false}
-                      data={providerChartData}
-                      cx="50%"
-                      cy="45%"
-                      innerRadius={65}
-                      outerRadius={85}
-                      paddingAngle={5}
-                      dataKey="cost"
-                      nameKey="name"
-                      stroke="none"
-                    >
-                      {providerChartData.map((_, index) => (
-                        <Cell key={`provider-cell-${index}`} fill={PROVIDER_COLORS[index % PROVIDER_COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      content={<ChartTooltip formatValue={(value) => `$${value.toFixed(4)}`} />}
-                    />
-                    <Legend
-                      iconType="circle"
-                      wrapperStyle={{
-                        fontSize: "11px",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                        color: "#888",
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
+                <ChartReveal replay={revealKey(providerChartData, "name")} motion="fade">
+                  <ResponsiveContainer width="100%" height={260} debounce={50}>
+                    <PieChart>
+                      <Pie isAnimationActive={false}
+                        data={providerChartData}
+                        cx="50%"
+                        cy="45%"
+                        innerRadius={65}
+                        outerRadius={85}
+                        paddingAngle={5}
+                        dataKey="cost"
+                        nameKey="name"
+                        stroke="none"
+                      >
+                        {providerChartData.map((_, index) => (
+                          <Cell key={`provider-cell-${index}`} fill={PROVIDER_COLORS[index % PROVIDER_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        content={<ChartTooltip formatValue={(value) => `$${value.toFixed(4)}`} />}
+                      />
+                      <Legend
+                        iconType="circle"
+                        wrapperStyle={{
+                          fontSize: "11px",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          color: "#888",
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </ChartReveal>
               )}
             </div>
           </motion.section>
@@ -211,34 +216,36 @@ export function AICostDistributionCharts({ modelDistribution, providerDistributi
                   {t("noData")}
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={260} debounce={50}>
-                  <BarChart data={timeline}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
-                    <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#888" }} dy={10} hide />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fontSize: 11, fill: "#888" }}
-                      tickFormatter={formatTokenAxisTick}
-                      width={40}
-                    />
-                    <Tooltip
-                      cursor={CHART_CURSOR}
-                      content={<ChartTooltip formatValue={(value) => formatTokenAxisTick(value)} />}
-                    />
-                    <Legend
-                      iconType="circle"
-                      wrapperStyle={{
-                        fontSize: "11px",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                        color: "#888",
-                      }}
-                    />
-                    <Bar isAnimationActive={false} dataKey="inputTokens" name={t("inputSeries")} stackId="a" fill={CHART_SERIES_EMERALD} radius={[0, 0, 4, 4]} />
-                    <Bar isAnimationActive={false} dataKey="outputTokens" name={t("outputSeries")} stackId="a" fill={CHART_SERIES_BLUE} radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <ChartReveal replay={revealKey(timeline, "date")} motion="rise">
+                  <ResponsiveContainer width="100%" height={260} debounce={50}>
+                    <BarChart data={timeline}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#ffffff10" />
+                      <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: "#888" }} dy={10} hide />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 11, fill: "#888" }}
+                        tickFormatter={formatTokenAxisTick}
+                        width={40}
+                      />
+                      <Tooltip
+                        cursor={CHART_CURSOR}
+                        content={<ChartTooltip formatValue={(value) => formatTokenAxisTick(value)} />}
+                      />
+                      <Legend
+                        iconType="circle"
+                        wrapperStyle={{
+                          fontSize: "11px",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          color: "#888",
+                        }}
+                      />
+                      <Bar isAnimationActive={false} dataKey="inputTokens" name={t("inputSeries")} stackId="a" fill={CHART_SERIES_EMERALD} radius={[0, 0, 4, 4]} />
+                      <Bar isAnimationActive={false} dataKey="outputTokens" name={t("outputSeries")} stackId="a" fill={CHART_SERIES_BLUE} radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartReveal>
               )}
             </div>
           </motion.section>

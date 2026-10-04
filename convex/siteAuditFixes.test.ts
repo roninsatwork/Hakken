@@ -96,15 +96,23 @@ describe("a keyword's position over time (1.2)", () => {
 
     const range = { from: "2026-09-01", to: "2026-09-30" };
     const asKorda = await member(t, korda);
-    expect(await asKorda.query(api.siteGoogle.searchPositions, { siteId: own.holdId, keywords: ["carp rigs", "bivvies"], ...range })).toEqual([
-      { keyword: "carp rigs", points: [{ day: "2026-09-19", position: 5 }, { day: "2026-09-23", position: 3 }] },
+    expect(await asKorda.query(api.siteGoogle.searchPositions, { siteId: own.holdId, keywords: ["carp rigs", "bivvies"], ...range, step: "day" })).toEqual([
+      { keyword: "carp rigs", points: [{ day: "2026-09-19", lastDay: "2026-09-19", position: 5 }, { day: "2026-09-23", lastDay: "2026-09-23", position: 3 }] },
     ]);
     // The company tracking it sees every check of it.
     const asAgency = await member(t, agency);
-    const tracked = await asAgency.query(api.siteGoogle.searchPositions, { siteId: theirs.holdId, keywords: ["carp rigs"], ...range });
+    const tracked = await asAgency.query(api.siteGoogle.searchPositions, { siteId: theirs.holdId, keywords: ["carp rigs"], ...range, step: "day" });
     expect(tracked[0].points.map((point) => [point.day, point.position])).toEqual([
       ["2026-09-19", 5], ["2026-09-20", 4], ["2026-09-21", null], ["2026-09-22", 3], ["2026-09-23", 3],
     ]);
+    // In the step chosen (2026-10-04): each week or month where it stood on its last day checked.
+    const weekly = await asAgency.query(api.siteGoogle.searchPositions, { siteId: theirs.holdId, keywords: ["carp rigs"], ...range, step: "week" });
+    expect(weekly[0].points).toEqual([
+      { day: "2026-09-14", lastDay: "2026-09-20", position: 4 },
+      { day: "2026-09-21", lastDay: "2026-09-23", position: 3 },
+    ]);
+    const monthly = await asAgency.query(api.siteGoogle.searchPositions, { siteId: theirs.holdId, keywords: ["carp rigs"], ...range, step: "month" });
+    expect(monthly[0].points).toEqual([{ day: "2026-09-01", lastDay: "2026-09-23", position: 3 }]);
   });
 });
 

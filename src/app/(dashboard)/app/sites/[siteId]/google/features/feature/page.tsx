@@ -14,6 +14,7 @@ import { useSite, useSiteId } from "../../../../_components/useSite";
 import { isPartHeld } from "../../../../_components/SiteCoverage";
 import { useSiteListPage } from "../../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../../_components/useSiteSort";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 
 /** The features a site can be found in, beside its ordinary ranking. */
 const FEATURES = ["ai_overview_reference", "featured_snippet", "local_pack"] as const;
@@ -96,7 +97,7 @@ export default function SiteFeatureKeywordsPage() {
             className: CUT_COLUMN.second,
             cell: (row) => row.page
               ? <RecordLinkCell cut href={recordHref({ kind: "page", page: row.page })} className="text-[12px] text-info">{row.page}</RecordLinkCell>
-              : <span className="text-muted">–</span>,
+              : <NoFigure />,
           },
         ]}
       />

@@ -10,7 +10,7 @@ import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/Dat
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { TableBar, type TableNoun } from "@/src/ui/components/screens/TableBar";
 import { ResultKindSwitch, SearchConsoleGate, canRetry, liveProblemKey } from "./SearchConsoleNotices";
-import { SearchConsoleChips, SearchConsoleDownload, type ChipId, type ListRow, type useSearchConsoleList } from "./SearchConsoleTables";
+import { SearchConsoleChips, SearchConsoleListDownload, type ChipId, type ListRow, type useSearchConsoleList } from "./SearchConsoleTables";
 
 export type ExportField = FunctionArgs<typeof api.searchConsoleLists.exportSearchConsoleList>["fields"][number];
 
@@ -91,7 +91,7 @@ export function SearchConsoleListScreen({
               <TableBar
                 footer={list.table.footer}
                 noun={table.noun}
-                actions={list.live ? undefined : <SearchConsoleDownload ask={list.download} headers={table.download.map((entry) => entry.header)} fields={table.download.map((entry) => entry.field)} />}
+                actions={<SearchConsoleListDownload list={list} download={table.download} />}
               >
                 {table.beside}
                 {list.live ? <span className="text-[12px] text-secondary">{t("table.asked")}</span> : null}

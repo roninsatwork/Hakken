@@ -4,7 +4,7 @@ import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { readList } from "./searchConsoleLists";
-import { PART_ROWS } from "./utils/searchConsolePacks";
+import { PART_ROWS, pack, packByKey, type Row } from "./utils/searchConsolePacks";
 
 /**
  * The Search Console lists stay quick on a large website
@@ -114,12 +114,17 @@ describe("a large website's Search Console", () => {
         return { list: await readList({ db }, siteId as Id<"companyWebsites">, { ...ask, ...filters }), reads };
       });
       expect(list.preparing).toBe(false);
+      // The website's limits (§17): its own, its company's and the platform's row — three small reads, the first two by index.
+      const limitReads = reads.filter((read) => read.table === "fanOutLimits" || read.table === "platformLimits");
+      expect(limitReads.map((read) => read.table).sort()).toEqual(["fanOutLimits", "fanOutLimits", "platformLimits"]);
+      expect(limitReads.filter((read) => read.table === "fanOutLimits").every((read) => read.index !== null)).toBe(true);
+      const listReads = reads.filter((read) => !limitReads.includes(read));
       // The connection, the period and the one before, the tracked list, and the website's brand words.
-      expect(reads.map((read) => read.table).sort()).toEqual([
+      expect(listReads.map((read) => read.table).sort()).toEqual([
         "holdProfiles", "searchConsoleConnections", "searchConsolePeriods", "searchConsolePeriods", "searchConsoleTracked",
       ]);
-      expect(reads.every((read) => read.index?.startsWith("by_hold")), JSON.stringify(reads)).toBe(true);
-      const documents = reads.reduce((sum, read) => sum + read.documents, 0);
+      expect(listReads.every((read) => read.index?.startsWith("by_hold")), JSON.stringify(listReads)).toBe(true);
+      const documents = listReads.reduce((sum, read) => sum + read.documents, 0);
       expect(documents).toBe(1 + Math.ceil(ROWS_NOW / PART_ROWS) + Math.ceil(ROWS_BEFORE / PART_ROWS) + TRACKED);
     }
 
@@ -131,6 +136,17 @@ describe("a large website's Search Console", () => {
     expect(first.rows[0]).toMatchObject({ key: "search 0", clicks: ROWS_NOW, tracked: true, change: ROWS_NOW, previousClicks: null });
     const last = await reader.query(api.searchConsoleLists.searchConsoleListPage, { siteId, ...ask, page: ROWS_NOW / 25, rows: 25 });
     expect(last.rows.at(-1)).toMatchObject({ key: `search ${ROWS_NOW - 1}`, clicks: 1 });
+
+    // The website's own list limit (`consoleListRows`, §17) holds the list to its rows with the most clicks, and says it is cut.
+    await t.run(async (ctx) => {
+      const hold = (await ctx.db.get(siteId))!;
+      await ctx.db.insert("fanOutLimits", { companyId: hold.companyId, companyWebsiteId: siteId, consoleListRows: 5_000, updatedAt: 1 });
+    });
+    const held = await reader.query(api.searchConsoleLists.searchConsoleListPage, { siteId, ...ask, page: 1, rows: 25 });
+    expect(held).toMatchObject({ total: 5_000, cut: 5_000 });
+    await t.run(async (ctx) => {
+      for (const row of await ctx.db.query("fanOutLimits").withIndex("by_hold", (q) => q.eq("companyWebsiteId", siteId)).collect()) await ctx.db.delete(row._id);
+    });
 
     // A country kept ready (§16) reads its own ready-made period by the same index, country second: never all countries' parts.
     await t.run(async (ctx) => {
@@ -158,5 +174,73 @@ describe("a large website's Search Console", () => {
     const periods = reads.filter((read) => read.table === "searchConsolePeriods");
     expect(periods.map((read) => read.index)).toEqual(["by_hold_country_type_list_period", "by_hold_country_type_list_period"]);
     expect(periods.reduce((sum, read) => sum + read.documents, 0)).toBe(Math.ceil(COUNTRY_NOW / PART_ROWS) + Math.ceil(COUNTRY_BEFORE / PART_ROWS));
+  });
+
+  /**
+   * Drift fixes, 2026-10-03: one keyword's pages, one page's keywords and
+   * Pages competing had asked Google for 90 days and 12 months — a year of
+   * Pages competing took 33 seconds. They read the ready-made pairs kept in
+   * key order, and Pages competing its own list: a few parts by index for
+   * every period, never a whole period of pairs.
+   */
+  test("one keyword's pages, one page's keywords and Pages competing over 12 months read a few parts by index, never the whole year", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const KEYWORDS = 20_000;
+    const PAGES = 500;
+    // Three pages for every keyword: 60,000 pairs, thirty parts each way.
+    const pairs: Row[] = Array.from({ length: KEYWORDS * 3 }, (_, index) => {
+      const keyword = Math.floor(index / 3);
+      return {
+        key: `search ${String(keyword).padStart(5, "0")}`,
+        page: `https://big.co.uk/page-${String((keyword * 3 + (index % 3)) % PAGES).padStart(3, "0")}`,
+        clicks: 3 - (index % 3),
+        impressions: 30,
+        positionSum: 150,
+      };
+    });
+    const competing = pairs.filter((pair) => pair.key < "search 02000");
+    const year = { period: "365" as const, which: "NOW" as const, from: "2025-09-27", to: NEWEST };
+    const siteId = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Big Co", createdAt: Date.now() });
+      const websiteId = await ctx.db.insert("websites", { host: "big.co.uk", displayHost: "big.co.uk", firstSeenAt: Date.now() });
+      const siteId = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: Date.now() });
+      await ctx.db.insert("searchConsoleConnections", {
+        companyId, companyWebsiteId: siteId, websiteId, status: "CONNECTED", property: "sc-domain:big.co.uk",
+        newestDay: NEWEST, oldestDay: "2025-09-27", createdAt: Date.now(), updatedAt: Date.now(),
+      });
+      const parts = (list: "pair" | "pairByPage" | "competing" | "query", packed: ReturnType<typeof pack>) => packed.map((part, index) => ctx.db.insert("searchConsolePeriods", {
+        companyWebsiteId: siteId, searchType: "web", list, ...year, part: index, ...part, builtAt: 1,
+      }));
+      await Promise.all([
+        ...parts("pair", packByKey(pairs, "query")),
+        ...parts("pairByPage", packByKey(pairs, "page")),
+        ...parts("competing", pack(competing, true).map((part) => ({ ...part, shown: PAGES }))),
+        ...parts("query", pack(Array.from({ length: KEYWORDS }, (_, keyword) => ({ key: `search ${String(keyword).padStart(5, "0")}`, clicks: 6, impressions: 90, positionSum: 450 })), false)),
+      ]);
+      return siteId;
+    });
+    const ask = { searchType: "web" as const, dimension: "query" as const, from: year.from, to: NEWEST };
+    const read = async (extra: Partial<Parameters<typeof readList>[2]>) => await t.run(async (ctx) => {
+      const { db, reads } = counted(ctx.db);
+      return { list: await readList({ db }, siteId as Id<"companyWebsites">, { ...ask, ...extra }), reads };
+    });
+    const periodDocuments = (reads: Read[]) => reads.filter((one) => one.table === "searchConsolePeriods").reduce((sum, one) => sum + one.documents, 0);
+
+    // One keyword's three pages: the period's first part, the part before the keyword and any starting with it.
+    const pagesOf = await read({ within: { kind: "query", key: "search 12345" } });
+    expect(pagesOf.list).toMatchObject({ live: false, preparing: false, listed: 3 });
+    expect(periodDocuments(pagesOf.reads)).toBeLessThanOrEqual(3);
+    // One page's keywords: 120 of them, from the pairs kept by page.
+    const keywordsOf = await read({ dimension: "page", within: { kind: "page", key: "https://big.co.uk/page-250" } });
+    expect(keywordsOf.list).toMatchObject({ live: false, preparing: false, listed: 120 });
+    expect(periodDocuments(keywordsOf.reads)).toBeLessThanOrEqual(3);
+    // Pages competing: the keyword list and its own small list, never the year's pairs.
+    const competingList = await read({ view: "competing" });
+    expect(competingList.list).toMatchObject({ live: false, preparing: false, listed: 2_000 });
+    expect(competingList.list.summary).toMatchObject({ pagesShown: PAGES });
+    expect(periodDocuments(competingList.reads)).toBe(Math.ceil(KEYWORDS / PART_ROWS) + Math.ceil(competing.length / PART_ROWS));
+    for (const one of [...pagesOf.reads, ...keywordsOf.reads, ...competingList.reads]) {
+      if (one.table.startsWith("searchConsole")) expect(one.index, JSON.stringify(one)).toMatch(/^by_hold/);
+    }
   });
 });

@@ -23,6 +23,7 @@ import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
+import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 
 const INTENTS = ["BUYING", "RESEARCHING", "BRANDED", "IRRELEVANT", "OTHER", "UNJUDGED"] as const;
 
@@ -206,7 +207,7 @@ export default function SiteSearchedPage() {
           ] : [
             { key: "search", header: t("columns.search"), sortable: true, className: CUT_COLUMN.first, cell: searchCell },
             { key: "times", header: t("columns.times"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.timesSeen)}</span> },
-            { key: "tracked", header: t("columns.tracked"), cell: (row) => (row.tracked ? <StatusLabel tone="success">{tc("yes")}</StatusLabel> : <span className="text-muted">–</span>) },
+            { key: "tracked", header: t("columns.tracked"), cell: (row) => (row.tracked ? <StatusLabel tone="success">{tc("yes")}</StatusLabel> : <NoFigure />) },
           ]}
         />
       </div>

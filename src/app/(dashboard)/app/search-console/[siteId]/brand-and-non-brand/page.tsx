@@ -8,16 +8,15 @@ import { api } from "@/convex/_generated/api";
 import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
 import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../sites/_components/SiteCharts";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
-import { datedRow } from "../../../sites/_components/datedRows";
-import { formatNumber, formatShortDay, toCsv } from "../../../sites/_components/siteFormat";
-import { SearchConsoleChartCard } from "../../_components/SearchConsoleChartCard";
+import { formatNumber, toCsv } from "../../../sites/_components/siteFormat";
+import { SearchConsoleChartCard, useSeriesTicks } from "../../_components/SearchConsoleChartCard";
 import { DaysBeforeChange } from "../../_components/SearchConsoleFigures";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { CountryNotReady } from "../../_components/SearchConsoleNotices";
 import { formatPosition, formatRate } from "../../_components/searchConsoleFormat";
 import { useRecordHref } from "../../_components/searchConsoleRecords";
 import { figureColumns, useSearchConsoleList, type ChipId, type ListSummary } from "../../_components/SearchConsoleTables";
-import { countryArg, useSearchConsoleCountry } from "../../_components/useSearchConsole";
+import { useChartPeriods } from "../../_components/useChartPeriods";
 
 const CHIPS: readonly ChipId[] = ["brand", "band", "device"];
 
@@ -29,24 +28,27 @@ const shareOf = (split: Split) => (split.brandClicks + split.nonBrandClicks > 0 
  * Brand and non-brand (search-console-plan.md §13.3, drawn as "14 · Brand
  * and non-brand"): clicks from searches using the website's brand words —
  * the brand names and misspellings in its Profile — against every other
- * search, week by week, and each keyword marked one or the other. In the
- * country chosen (search-console-plan.md §16): the weeks are added up
- * collection by collection, so a country the website does not keep ready has
- * no chart, and its list is asked of Google.
+ * search, in the dates and step chosen, and each keyword marked one or the
+ * other. In the country chosen (search-console-plan.md §16): the days, weeks
+ * and months are added up collection by collection, so a country the website
+ * does not keep ready has no chart, and its list is asked of Google.
  */
 export default function SearchConsoleBrandPage() {
   const t = useTranslations("searchConsole");
   const list = useSearchConsoleList({ dimension: "query", chips: CHIPS });
   const recordHref = useRecordHref(list.siteId);
-  const held = Boolean(list.status?.connection?.newestDay);
   const words = useQuery(api.searchConsoleChanges.searchConsoleBrandWords, { siteId: list.siteId });
-  const [country] = useSearchConsoleCountry();
-  const figures = useQuery(api.searchConsolePeriods.searchConsoleWeekFigures, held ? { siteId: list.siteId, searchType: list.kind, ...countryArg(country) } : "skip");
-  const weeks = figures?.weeks;
+  const chart = useChartPeriods(list);
+  const { figures, periods, country } = chart;
   const split = list.summary?.brand ?? null;
   const days = list.range.days;
   const host = list.status?.host ?? "";
-  const points = (weeks ?? []).map((week) => ({ ...datedRow({ day: week.week }, {}, formatShortDay(week.week)), brand: week.brandClicks, other: week.otherClicks }));
+  const points = chart.rows((period) => ({ brand: period.brandClicks, other: period.otherClicks }));
+  // Brand and Non-brand, each with its tick box, as drawn. Amber against blue (2026-10-04): amber against orange read as one line.
+  const ticks = useSeriesTicks([
+    { key: "brand", name: t("filters.brandYes"), colour: SITE_SERIES_COLOURS[3] },
+    { key: "other", name: t("filters.brandNo"), colour: SITE_SERIES_COLOURS[1] },
+  ]);
   const description = (
     <>
       {t("brand.description")}{" "}
@@ -113,28 +115,30 @@ export default function SearchConsoleBrandPage() {
         <SearchConsoleChartCard
           title={t("brand.chartTitle")}
           hint={t("brand.chartHint")}
-          exportName={`${host}-search-console-brand-weeks`}
+          controls={ticks.controls}
+          exportName={`${host}-search-console-brand-${list.range.from}-to-${list.range.to}`}
           host={host}
-          from={weeks?.[0]?.week ?? null}
-          to={list.status?.connection?.newestDay ?? null}
-          csv={() => toCsv([t("chart.week"), t("filters.brandYes"), t("filters.brandNo")], (weeks ?? []).map((week) => [week.week, week.brandClicks, week.otherClicks]))}
+          from={chart.from}
+          to={chart.to}
+          step={chart.step}
+          csv={() => toCsv([chart.periodHeader, t("filters.brandYes"), t("filters.brandNo")], (periods ?? []).map((period) => [period.start, period.brandClicks, period.otherClicks]))}
         >
-          {weeks === undefined ? (
+          {periods === undefined ? (
             <div className="h-[280px] animate-pulse rounded-xl bg-sidebar/30" aria-busy="true" />
-          ) : figures?.preparing ? (
-            <p className="py-10 text-center text-[13px] text-secondary">{t("chart.preparing")}</p>
+          ) : figures?.preparing || figures?.notBuilt ? (
+            <p className="py-10 text-center text-[13px] text-secondary">{t(figures.preparing ? "chart.preparing" : "chart.notBuilt")}</p>
           ) : points.length === 0 ? (
             <p className="py-10 text-center text-[13px] text-secondary">{t("chart.nothing")}</p>
           ) : (
-            <SiteLineChart
-              height={280}
-              data={points}
-              series={[
-                { key: "brand", name: t("filters.brandYes"), colour: SITE_SERIES_COLOURS[3] },
-                { key: "other", name: t("filters.brandNo"), colour: SITE_SERIES_COLOURS[0] },
-              ]}
-              sharedScale
-            />
+            <>
+              {chart.note ? <p className="mb-3 text-[12px] text-secondary">{chart.note}</p> : null}
+              <SiteLineChart
+                height={280}
+                data={points}
+                series={ticks.shown}
+                sharedScale
+              />
+            </>
           )}
         </SearchConsoleChartCard>
       )}

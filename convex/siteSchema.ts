@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { aiEngineValidator } from "./seoAiEngines";
 import { fanOutTables } from "./fanOutSchema";
 import { holdProfileTables } from "./holdProfileSchema";
+import { consoleScreenLimitFields } from "./searchConsoleSchema";
 import {
   bandCountsValidator,
   engineDayValidator,
@@ -771,6 +772,7 @@ export const siteTables = {
     consoleTrackedKeywordsPerSite: v.optional(v.number()),
     consoleTrackedPagesPerSite: v.optional(v.number()),
     consoleCountriesPerSite: v.optional(v.number()),
+    ...consoleScreenLimitFields,
     classificationsPerSite: v.optional(v.number()),
     classificationLinesPerSite: v.optional(v.number()),
     classifiedPagesPerSite: v.optional(v.number()),

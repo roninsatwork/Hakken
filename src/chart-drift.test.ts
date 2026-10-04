@@ -54,4 +54,33 @@ describe('Chart Drift', () => {
       `Dashboard ResponsiveContainer usage needs numeric heights so Recharts can render immediately:\n${percentageHeightContainers.join('\n')}`
     ).toEqual([]);
   });
+
+  /**
+   * Every chart comes in the same way (Anthony, 2026-10-03: "the charts in
+   * the app are static and load flat"): drawn whole, with `ChartReveal`
+   * playing its entrance over it. Recharts' own entrance stays off, since it
+   * wedged charts blank on React 19 (GovernanceRunsChart.tsx, 2026-08-18).
+   */
+  test('every chart plays its entrance through ChartReveal, never Recharts', () => {
+    const chartFiles = walkFiles(path.join(repoRoot, 'src'), new Set(['.tsx']))
+      .filter((filePath) => !filePath.endsWith('.test.tsx'));
+
+    const count = (contents: string, pattern: RegExp) => (contents.match(pattern) ?? []).length;
+    const unrevealed = chartFiles.flatMap((filePath) => {
+      const contents = fs.readFileSync(filePath, 'utf8');
+      const charts = count(contents, /<ResponsiveContainer\b/g);
+      const reveals = count(contents, /<ChartReveal\b/g);
+      return charts > reveals ? [`${relativePath(filePath)}: ${charts} charts, ${reveals} inside ChartReveal`] : [];
+    });
+    const recharts = chartFiles.flatMap((filePath) =>
+      fs.readFileSync(filePath, 'utf8').split('\n').flatMap((line, index) =>
+        /isAnimationActive(?!=\{false\})/.test(line) && !/^\s*(\/\/|\*|\{\/\*)/.test(line)
+          ? [`${relativePath(filePath)}:${index + 1}: ${line.trim()}`]
+          : []
+      )
+    );
+
+    expect(unrevealed, `Wrap each ResponsiveContainer in ChartReveal (src/ui/components/screens/ChartReveal.tsx):\n${unrevealed.join('\n')}`).toEqual([]);
+    expect(recharts, `Keep isAnimationActive={false} on every series; ChartReveal plays the entrance:\n${recharts.join('\n')}`).toEqual([]);
+  });
 });

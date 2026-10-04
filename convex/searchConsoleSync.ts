@@ -9,6 +9,7 @@ import {
   SEARCH_TYPES,
   listValidator,
   searchTypeValidator,
+  seenType,
   type SearchConsoleList,
   type SearchType,
 } from "./searchConsoleSchema";
@@ -74,7 +75,7 @@ const PURGE_BATCH = 5;
 const PURGE_ROWS = 500;
 
 /** Keys noted as seen per mutation. */
-const SEEN_CHUNK = 500;
+export const SEEN_CHUNK = 500;
 
 const kindValidator = v.union(v.literal("DAILY"), v.literal("HISTORY"));
 const figuresValidator = { clicks: v.number(), impressions: v.number(), ctr: v.number(), position: v.number() };
@@ -378,11 +379,14 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
     totals.set(type, new Map(answer.rows.map((row) => [row.keys[0], figuresOf(row)])));
   }
 
-  // Searches and pages seen in the step's web results: noted once for the step, not once a day.
-  const seen = { query: new Map<string, { first: string; last: string }>(), page: new Map<string, { first: string; last: string }>() };
-  const see = (kind: "query" | "page", key: string, day: string) => {
-    const was = seen[kind].get(key);
-    if (!was) seen[kind].set(key, { first: day, last: day });
+  // Searches and pages seen in the step, for each kind of result: noted once for the step, not once a day.
+  type Seen = Record<"query" | "page", Map<string, { first: string; last: string }>>;
+  const seen = new Map<SearchType, Seen>();
+  const see = (type: SearchType, kind: "query" | "page", key: string, day: string) => {
+    const lists = seen.get(type) ?? { query: new Map(), page: new Map() };
+    seen.set(type, lists);
+    const was = lists[kind].get(key);
+    if (!was) lists[kind].set(key, { first: day, last: day });
     else {
       if (day < was.first) was.first = day;
       if (day > was.last) was.last = day;
@@ -422,8 +426,8 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
         counts.rows += answer.rows.length;
         const rows = fromGoogle(answer.rows, list === "pair");
         if (list === "pair") named.set(type, rows.reduce((sum, row) => sum + row.clicks, 0));
-        if (type === "web" && list === "pair") for (const row of rows) see("query", row.key, day);
-        if (type === "web" && list === "page") for (const row of rows) see("page", row.key, day);
+        if (list === "pair") for (const row of rows) see(type, "query", row.key, day);
+        if (list === "page") for (const row of rows) see(type, "page", row.key, day);
         parts = pack(rows, list === "pair");
       }
       for (const [index, part] of parts.entries()) {
@@ -453,14 +457,17 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
     processedFrom = day;
   }
 
-  for (const kind of ["query", "page"] as const) {
-    const entries = [...seen[kind]].map(([key, days]) => ({ key, ...days }));
-    for (let start = 0; start < entries.length; start += SEEN_CHUNK) {
-      await ctx.runMutation(internal.searchConsoleSync.noteSeen, {
-        ...where,
-        kind,
-        entries: entries.slice(start, start + SEEN_CHUNK),
-      });
+  for (const [searchType, lists] of seen) {
+    for (const kind of ["query", "page"] as const) {
+      const entries = [...lists[kind]].map(([key, days]) => ({ key, ...days }));
+      for (let start = 0; start < entries.length; start += SEEN_CHUNK) {
+        await ctx.runMutation(internal.searchConsoleSync.noteSeen, {
+          ...where,
+          searchType,
+          kind,
+          entries: entries.slice(start, start + SEEN_CHUNK),
+        });
+      }
     }
   }
 
@@ -665,25 +672,33 @@ export const writeList = internalMutation({
   },
 });
 
-/** When each search and page was first and last shown (§14.3, item 6), in all countries or one: widened, never narrowed. */
+/** When each search and page was first and last shown (§14.3, item 6), for one kind of result in all countries or one: widened, never narrowed. */
 export const noteSeen = internalMutation({
   args: {
     ...whereArgs,
+    searchType: searchTypeValidator,
     kind: v.union(v.literal("query"), v.literal("page")),
     entries: v.array(v.object({ key: v.string(), first: v.string(), last: v.string() })),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     if (!(await stillCollecting(ctx, args.connectionId, args.property, args.country))) return null;
+    const searchType = seenType(args.searchType);
     for (const entry of args.entries) {
       const held = await ctx.db
         .query("searchConsoleSeen")
-        .withIndex("by_hold_country_kind_key", (q) => q
-          .eq("companyWebsiteId", args.companyWebsiteId).eq("country", args.country).eq("kind", args.kind).eq("key", entry.key))
+        .withIndex("by_hold_country_type_kind_key", (q) => q
+          .eq("companyWebsiteId", args.companyWebsiteId).eq("country", args.country).eq("searchType", searchType).eq("kind", args.kind).eq("key", entry.key))
         .unique();
       if (!held) {
         await ctx.db.insert("searchConsoleSeen", {
-          companyWebsiteId: args.companyWebsiteId, ...countryField(args.country), kind: args.kind, key: entry.key, firstDay: entry.first, lastDay: entry.last,
+          companyWebsiteId: args.companyWebsiteId,
+          ...countryField(args.country),
+          ...(searchType === undefined ? {} : { searchType }),
+          kind: args.kind,
+          key: entry.key,
+          firstDay: entry.first,
+          lastDay: entry.last,
         });
         continue;
       }
@@ -725,7 +740,7 @@ async function clearSome(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites
   for (const row of days) await ctx.db.delete(row._id);
   const seen = await ctx.db
     .query("searchConsoleSeen")
-    .withIndex("by_hold_country_kind_key", (q) => q.eq("companyWebsiteId", companyWebsiteId))
+    .withIndex("by_hold_country_type_kind_key", (q) => q.eq("companyWebsiteId", companyWebsiteId))
     .take(PURGE_ROWS);
   for (const row of seen) await ctx.db.delete(row._id);
   const weeks = await ctx.db
@@ -733,7 +748,13 @@ async function clearSome(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites
     .withIndex("by_hold_country_type_week", (q) => q.eq("companyWebsiteId", companyWebsiteId))
     .take(PURGE_ROWS);
   for (const row of weeks) await ctx.db.delete(row._id);
-  return lists.length < PURGE_BATCH && periods.length < PURGE_BATCH && days.length < PURGE_ROWS && seen.length < PURGE_ROWS && weeks.length < PURGE_ROWS;
+  const seenDays = await ctx.db
+    .query("searchConsoleSeenDays")
+    .withIndex("by_hold_country_type_kind_day", (q) => q.eq("companyWebsiteId", companyWebsiteId))
+    .take(PURGE_ROWS);
+  for (const row of seenDays) await ctx.db.delete(row._id);
+  return lists.length < PURGE_BATCH && periods.length < PURGE_BATCH && days.length < PURGE_ROWS && seen.length < PURGE_ROWS && weeks.length < PURGE_ROWS
+    && seenDays.length < PURGE_ROWS;
 }
 
 /**

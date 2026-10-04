@@ -2,6 +2,7 @@
 
 import { Bar, BarChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis, useXAxisScale, useYAxisScale } from "recharts";
 import { CHART_ACTIVE_BAR, CHART_CURSOR, ChartTooltipRow, ChartTooltipSurface } from "@/src/ui/components/charts/ChartTooltip";
+import { ChartReveal, revealKey } from "@/src/ui/components/screens/ChartReveal";
 import { GoogleUpdateFrame, GoogleUpdateKey, GoogleUpdateMarkers, useGoogleUpdates } from "./GoogleUpdateMarkers";
 import { formatCompact, formatNumber } from "./siteFormat";
 
@@ -179,33 +180,36 @@ export function SiteGainLossChart({ steps, series, netLabel, startLegend, height
   return (
     <div>
       <GoogleUpdateFrame google={google}>
-        <ResponsiveContainer width="100%" height={height} debounce={50}>
-          <BarChart data={data} stackOffset="sign" barCategoryGap="25%" maxBarSize={MAX_BAR} margin={{ top: 22, right: 28, bottom: detailed ? 16 : 0, left: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border-dim" />
-            <XAxis {...AXIS_PROPS} interval="preserveStartEnd" minTickGap={16} {...google.axis("day")} tick={<StepTick steps={steps} />} />
-            {/*
-              The marks are set here rather than left to the chart: bars stacked
-              either side of the line draw no axis at all when every value is
-              nought (recharts 3.8), and its own marks skipped the line itself.
-            */}
-            <YAxis
-              width={48}
-              ticks={ticks}
-              domain={[ticks[0], ticks[ticks.length - 1]]}
-              allowDataOverflow
-              tickFormatter={(value: number) => formatCompact(Math.abs(value))}
-              {...AXIS_PROPS}
-              tick={{ fontSize: 11 }}
-            />
-            <ReferenceLine y={0} stroke="currentColor" className="text-secondary" strokeOpacity={0.5} />
-            <Tooltip active={google.open ? false : undefined} cursor={CHART_CURSOR} content={<StepReadout steps={steps} series={series} netLabel={netLabel} />} />
-            {ordered.map((entry) => (
-              <Bar key={entry.key} dataKey={entry.key} name={entry.name} stackId="moves" fill={entry.colour} activeBar={CHART_ACTIVE_BAR} isAnimationActive={false} />
-            ))}
-            <StepMarks steps={steps} />
-            <GoogleUpdateMarkers google={google} />
-          </BarChart>
-        </ResponsiveContainer>
+        {/* Bars either side of the line: along the dates from the left, as the lines do, rather than rising through the losses first. */}
+        <ChartReveal replay={revealKey(data, "day")}>
+          <ResponsiveContainer width="100%" height={height} debounce={50}>
+            <BarChart data={data} stackOffset="sign" barCategoryGap="25%" maxBarSize={MAX_BAR} margin={{ top: 22, right: 28, bottom: detailed ? 16 : 0, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border-dim" />
+              <XAxis {...AXIS_PROPS} interval="preserveStartEnd" minTickGap={16} {...google.axis("day")} tick={<StepTick steps={steps} />} />
+              {/*
+                The marks are set here rather than left to the chart: bars stacked
+                either side of the line draw no axis at all when every value is
+                nought (recharts 3.8), and its own marks skipped the line itself.
+              */}
+              <YAxis
+                width={48}
+                ticks={ticks}
+                domain={[ticks[0], ticks[ticks.length - 1]]}
+                allowDataOverflow
+                tickFormatter={(value: number) => formatCompact(Math.abs(value))}
+                {...AXIS_PROPS}
+                tick={{ fontSize: 11 }}
+              />
+              <ReferenceLine y={0} stroke="currentColor" className="text-secondary" strokeOpacity={0.5} />
+              <Tooltip active={google.open ? false : undefined} cursor={CHART_CURSOR} content={<StepReadout steps={steps} series={series} netLabel={netLabel} />} />
+              {ordered.map((entry) => (
+                <Bar key={entry.key} dataKey={entry.key} name={entry.name} stackId="moves" fill={entry.colour} activeBar={CHART_ACTIVE_BAR} isAnimationActive={false} />
+              ))}
+              <StepMarks steps={steps} />
+              <GoogleUpdateMarkers google={google} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartReveal>
       </GoogleUpdateFrame>
       {/* The key in the order the bars stack, the outline when one is drawn, and Google's updates when one is marked. */}
       <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px] text-secondary">
