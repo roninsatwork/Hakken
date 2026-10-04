@@ -1,0 +1,24 @@
+# Discovery → Keyword research — the approved look (board "Main" of docs/plans/assets/keyword-research/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Keyword research
+settings-card: Look up
+  field: Keywords
+  select: Country
+  select: Measured against
+  primary-action: Look up
+section: Start from a competitor
+figures
+  figure: plugandplaydesign.co.uk →
+  figure: pixelfield.co.uk →
+section: Past lookups
+search: Find a keyword…
+filter: Intent
+table: Keyword | Country | Volume | Difficulty | Intent | Position | Looked up
+  table-bar
+    download: Download CSV
+  table-footer
+section: Research lists
+table: List | Keywords | Volume | Measured against | Changed | Change this list
+  table-bar
+  table-footer

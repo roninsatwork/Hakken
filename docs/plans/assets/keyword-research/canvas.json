@@ -1,0 +1,112 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-04T09:29:35.326Z"
+  },
+  "title": "Keyword research",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 2000,
+      "title": "1 · Keyword research: look up a keyword, or start from a competitor",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Overview.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 2700,
+      "title": "2 · A keyword’s overview: how many search, how hard, and what it means for ronins.co.uk",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Results.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 1700,
+      "title": "3 · Google’s results: the top ten, each page’s strength and visits",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Ai.dc.html": {
+      "x": 4560,
+      "y": 0,
+      "w": 1440,
+      "h": 2100,
+      "title": "4 · What the AI says: who the assistants name, and what Google’s AI Overview searched",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Ideas.dc.html": {
+      "x": 0,
+      "y": 3080,
+      "w": 1440,
+      "h": 2000,
+      "title": "5 · Keyword ideas: terms match, questions, and what the top pages also rank for",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "StartFrom.dc.html": {
+      "x": 1520,
+      "y": 3080,
+      "w": 1440,
+      "h": 1700,
+      "title": "6 · Start from a competitor: what they rank for that you don’t",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "List.dc.html": {
+      "x": 3040,
+      "y": 3080,
+      "w": 1440,
+      "h": 1600,
+      "title": "7 · A research list: decide, then track the ones worth it",
+      "expand": "fill",
+      "is_interactive": true
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Overview.dc.html",
+    "Results.dc.html",
+    "Ai.dc.html",
+    "Ideas.dc.html",
+    "StartFrom.dc.html",
+    "List.dc.html"
+  ],
+  "notes": {
+    "lookup": {
+      "x": 0,
+      "y": -260,
+      "text": "Look up a keyword: its overview, Google’s results, and what the AI says",
+      "kind": "title1",
+      "maxW": 6000
+    },
+    "lists": {
+      "x": 0,
+      "y": 2820,
+      "text": "Its ideas, starting from a competitor, and research lists",
+      "kind": "title1",
+      "maxW": 4480
+    },
+    "kit": {
+      "x": 0,
+      "y": -560,
+      "w": 1440,
+      "maxH": 160,
+      "size": "m",
+      "fill": "gray",
+      "text": "Drawn from the drawing kit (npm run drawing-kit): stylesheet 7c46f4aaefed, look 149d9f4fb243 — hakken.theme.json. Every board passes npm run check:drawing."
+    }
+  },
+  "designSystems": []
+}

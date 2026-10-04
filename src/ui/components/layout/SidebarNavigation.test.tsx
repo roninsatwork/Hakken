@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import { usePathname } from "next/navigation";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import SidebarNavigation from "./SidebarNavigation";
+import { NAV_ACTIVE_TEXT } from "./navStyles";
 
 const setIsSidebarOpen = vi.hoisted(() => vi.fn());
 const useQueryMock = vi.hoisted(() => vi.fn());
@@ -372,5 +373,38 @@ describe("Billing navigation belongs to the correct frontend", () => {
     useQueryMock.mockImplementation(ref => ref === "users:getMe" ? { role } : undefined);
     render(<SidebarNavigation />);
     expect(screen.queryByRole("link", { name: "Billing" })).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Discovery holds Websites and, since 2026-10-04, Keyword research
+ * (docs/plans/active/keyword-research-plan.md): each sub-item is lit on its
+ * own pages only, and Discovery opens on either.
+ */
+describe("Discovery's menu", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useMutationMock.mockReturnValue(vi.fn());
+    useQueryMock.mockImplementation((ref: unknown) => (ref === "users:getMe" ? { role: "USER", companyId: "company" } : undefined));
+  });
+
+  it("lists Keyword research after Websites, lit on its own pages and Websites not", () => {
+    vi.mocked(usePathname).mockReturnValue("/app/keyword-research/lookup_1/results");
+    render(<SidebarNavigation />);
+
+    const websites = screen.getByRole("link", { name: "yourSites" });
+    const research = screen.getByRole("link", { name: "keywordResearch" });
+    expect(research).toHaveAttribute("href", "/app/keyword-research");
+    expect(websites.compareDocumentPosition(research) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(research.className).toContain(NAV_ACTIVE_TEXT);
+    expect(websites.className).not.toContain(NAV_ACTIVE_TEXT);
+  });
+
+  it("keeps Websites lit on a website's pages, and Keyword research not", () => {
+    vi.mocked(usePathname).mockReturnValue("/app/sites/site_1");
+    render(<SidebarNavigation />);
+
+    expect(screen.getByRole("link", { name: "yourSites" }).className).toContain(NAV_ACTIVE_TEXT);
+    expect(screen.getByRole("link", { name: "keywordResearch" }).className).not.toContain(NAV_ACTIVE_TEXT);
   });
 });

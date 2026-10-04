@@ -246,7 +246,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/app/assistant')) return 'Assistant';
   if (pathname.startsWith('/app/tasks')) return 'Tasks';
   if (pathname.startsWith('/app/calls')) return 'Calls';
-  if (pathname.startsWith('/app/sites')) return 'Sites';
+  if (pathname.startsWith('/app/sites') || pathname.startsWith('/app/keyword-research')) return 'Sites';
   if (pathname.startsWith('/app/search-console')) return 'Search Console';
   if (isLearnPath(pathname)) return 'Learn';
   if (pathname.startsWith('/app/reception')) return 'Reception';
@@ -271,7 +271,7 @@ function getDefaultOpenSections(pathname: string): Record<string, boolean> {
     workspace: true,
     governance: pathname.startsWith('/admin/governance'),
     workspaceGovernance: pathname.startsWith('/app/governance'),
-    sites: pathname.startsWith('/app/sites'),
+    sites: pathname.startsWith('/app/sites') || pathname.startsWith('/app/keyword-research'),
     content: pathname.startsWith('/admin/content'),
     businessHub: false,
     clients: false,

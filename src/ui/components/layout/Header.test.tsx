@@ -161,6 +161,15 @@ describe("Header route labels", () => {
     expect(screen.getByLabelText("Organization / Team Members")).toBeInTheDocument();
   });
 
+  it("names Keyword research's pages Discovery, as Websites' are", () => {
+    for (const path of ["/app/keyword-research", "/app/keyword-research/lookup_1/results", "/app/keyword-research/lists/list_1"]) {
+      vi.mocked(usePathname).mockReturnValue(path);
+      const { unmount } = render(<Header />);
+      expect(screen.getByLabelText("sites")).toBeInTheDocument();
+      unmount();
+    }
+  });
+
   it("names Learn's pages Learn, not Dashboard", () => {
     for (const path of ["/app/news", "/app/news/item_1", "/app/knowledge", "/app/who-to-follow"]) {
       vi.mocked(usePathname).mockReturnValue(path);

@@ -31,16 +31,25 @@ export const NEWS_ROLES = ["NEWS_COLLECTOR", "WEEKLY_DIGEST", "EMAIL_SENDER"] as
  */
 export const SEARCH_CONSOLE_ROLES = ["SEARCH_CONSOLE_COLLECTOR"] as const;
 
-export const ASSIGNABLE_AGENT_ROLES = [...DATAFORSEO_ROLES, ...NEWS_ROLES, ...SEARCH_CONSOLE_ROLES] as const;
+/**
+ * The Keyword research agent (docs/plans/active/keyword-research-plan.md):
+ * buys a company's lookups from DataForSEO when someone presses Look up, and
+ * only those (Anthony, 2026-10-04: "A new Keyword research agent"). Its own
+ * job, not the Collector's, so a lookup never waits behind a collection.
+ */
+export const RESEARCH_ROLES = ["KEYWORD_RESEARCH"] as const;
+
+export const ASSIGNABLE_AGENT_ROLES = [...DATAFORSEO_ROLES, ...RESEARCH_ROLES, ...NEWS_ROLES, ...SEARCH_CONSOLE_ROLES] as const;
 
 export type DataForSeoRole = (typeof DATAFORSEO_ROLES)[number];
 export type NewsRole = (typeof NEWS_ROLES)[number];
 export type SearchConsoleRole = (typeof SEARCH_CONSOLE_ROLES)[number];
+export type ResearchRole = (typeof RESEARCH_ROLES)[number];
 export type AssignableAgentRole = (typeof ASSIGNABLE_AGENT_ROLES)[number];
 
 /** The roles in the groups the Role dropdown shows them under. */
 export const AGENT_ROLE_GROUPS: ReadonlyArray<{ group: "dataforseo" | "news" | "searchConsole"; roles: readonly AssignableAgentRole[] }> = [
-  { group: "dataforseo", roles: DATAFORSEO_ROLES },
+  { group: "dataforseo", roles: [...DATAFORSEO_ROLES, ...RESEARCH_ROLES] },
   { group: "news", roles: NEWS_ROLES },
   { group: "searchConsole", roles: SEARCH_CONSOLE_ROLES },
 ];
@@ -60,6 +69,7 @@ export const agentRoleChoiceValidator = v.union(
   v.literal("WEEKLY_DIGEST"),
   v.literal("EMAIL_SENDER"),
   v.literal("SEARCH_CONSOLE_COLLECTOR"),
+  v.literal("KEYWORD_RESEARCH"),
 );
 
 export type AgentRoleChoice = "NONE" | AssignableAgentRole;
@@ -74,6 +84,10 @@ export function isDataForSeoRole(key: string | undefined): key is DataForSeoRole
 
 export function isNewsRole(key: string | undefined): key is NewsRole {
   return key !== undefined && (NEWS_ROLES as readonly string[]).includes(key);
+}
+
+export function isResearchRole(key: string | undefined): key is ResearchRole {
+  return key !== undefined && (RESEARCH_ROLES as readonly string[]).includes(key);
 }
 
 export function isSearchConsoleRole(key: string | undefined): key is SearchConsoleRole {

@@ -14,9 +14,14 @@ import {
 /**
  * The reporting sections whose tables keep the Sites standard: Sites, and
  * Search Console, built on the same parts (docs/plans/active/
- * search-console-plan.md §5).
+ * search-console-plan.md §5) — and Keyword research, Discovery's second
+ * section beside Websites (docs/plans/active/keyword-research-plan.md).
  */
-const REPORTING_ROOTS = ['src/app/(dashboard)/app/sites', 'src/app/(dashboard)/app/search-console'];
+const REPORTING_ROOTS = [
+  'src/app/(dashboard)/app/sites',
+  'src/app/(dashboard)/app/search-console',
+  'src/app/(dashboard)/app/keyword-research',
+];
 const reportingFiles = () => REPORTING_ROOTS.flatMap((root) => walkFiles(path.join(repoRoot, root), new Set(['.tsx'])));
 
 describe('Pagination And Shared Table Drift', () => {

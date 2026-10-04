@@ -1,0 +1,25 @@
+# Discovery → Keyword research → a keyword's What the AI says — the approved look (board "Ai" of docs/plans/assets/keyword-research/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Keyword research
+  page-header: ‹the record's name›
+    select: Measured against
+    filter: Add to a list
+field: Look up another keyword
+select: This keyword
+page-header: What the AI says
+notice (info)
+chart-card: The question asked
+figures
+  figure: Name you
+  figure: Name a competitor
+  figure: Businesses named
+  figure: Pages cited
+table: Assistant | You | Businesses named, in order | Your competitors | Cited
+  table-bar
+  table-footer
+chart-card: Named most
+compact-list: Business | Who | Named by
+chart-card: What Google's AI Overview searched
+compact-list: Search | Times seen | Your page that answers it

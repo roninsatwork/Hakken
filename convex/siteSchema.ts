@@ -777,6 +777,10 @@ export const siteTables = {
     classificationLinesPerSite: v.optional(v.number()),
     classifiedPagesPerSite: v.optional(v.number()),
     sitemapPagesRead: v.optional(v.number()),
+    researchKeywordsPerLookup: v.optional(v.number()),
+    researchIdeasPerKind: v.optional(v.number()),
+    researchReuseDays: v.optional(v.number()),
+    researchOverviewSearches: v.optional(v.number()),
     // Only the platform sets these: each is about something every company
     // shares (`sharedLimits.ts`).
     fanOutPerAnswer: v.optional(v.number()),

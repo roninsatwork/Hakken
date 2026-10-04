@@ -157,6 +157,8 @@ export type PagedFooterSpec = {
   numbered?: boolean;
   /** How many rows a page shows, chosen in the footer. Only with `numbered`. */
   rowsChoice?: RowsChoice;
+  /** A line on the left saying what a column means. Only with `numbered`; see `PaginationFooter`. */
+  note?: ReactNode;
 };
 
 type DataTableProps<Row> = {
@@ -475,6 +477,7 @@ function renderFooter(footer: LoadMoreFooterSpec | PagedFooterSpec | CursorFoote
       labels={footer.labels}
       numbered={footer.numbered}
       rowsChoice={footer.rowsChoice}
+      note={footer.note}
     />
   );
 }

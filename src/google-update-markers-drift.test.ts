@@ -41,7 +41,8 @@ const DRAWS_WITH_RECHARTS = new Set([
   MARKERS,
 ]);
 
-const SITES_ROOTS = ['src/app/(dashboard)/app/sites', 'src/app/(dashboard)/app/search-console'];
+// Keyword research's 24 months of searches are drawn on the same parts (keyword-research-plan.md, board 2).
+const SITES_ROOTS = ['src/app/(dashboard)/app/sites', 'src/app/(dashboard)/app/search-console', 'src/app/(dashboard)/app/keyword-research'];
 
 const GOOGLE_COLOURS = /#(?:4285f4|34a853|fbbc05|ea4335)\b/i;
 

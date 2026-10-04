@@ -1,0 +1,38 @@
+# Discovery → Keyword research → a keyword's Overview — the approved look (board "Overview" of docs/plans/assets/keyword-research/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Keyword research
+  page-header: ‹the record's name›
+    select: Measured against
+    filter: Add to a list
+field: Look up another keyword
+select: This keyword
+page-header: Overview
+figures
+  figure: Searches a month
+  figure: Difficulty
+  figure: Visits the top result gets →
+  figure: Intent
+chart-card: For acme-agency.test
+chart-card: Your page
+figure: Position
+figure: Visits a month
+chart-card: What Google counted
+figure: Shown
+figure: Clicks
+figure: Position
+chart-card: Your competitors on it
+compact-list
+chart-card: Searches a month in the United Kingdom
+chart-card: Searches by country
+select: Another country
+section: Keyword ideas
+choice: Kind of idea: Terms match · # | Questions · # | Also rank for · #
+table: Keyword | Intent | Volume | Difficulty | Position
+  table-bar: Terms match
+  table-footer
+chart-card: Google's results
+compact-list: # | Page | Kind | Visits
+chart-card: What the AI says
+compact-list

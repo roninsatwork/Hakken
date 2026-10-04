@@ -467,6 +467,13 @@ type AdminPaginationFooterProps = {
   numbered?: boolean;
   /** How many rows a page shows, chosen beside the count. Only with `numbered`. */
   rowsChoice?: RowsChoice;
+  /**
+   * A line on the left saying what a column means — "Strength: 0 to 100…".
+   * Only with `numbered`. Added 2026-10-04 for Keyword research, whose
+   * approved drawings put such a line in every table's footer; a footer with
+   * none is drawn as before.
+   */
+  note?: ReactNode;
 };
 
 export function PaginationFooter(props: AdminPaginationFooterProps) {
@@ -540,6 +547,7 @@ function NumberedPaginationFooter({
   onPageChange,
   labels,
   rowsChoice,
+  note,
 }: AdminPaginationFooterProps) {
   const t = useTranslations("ui.table");
   const safeTotalPages = Math.max(totalPages, 1);
@@ -550,6 +558,7 @@ function NumberedPaginationFooter({
 
   return (
     <FooterBar>
+      {note ? <div className="text-[12px] text-muted">{note}</div> : null}
       {safeTotalPages > 1 && (
         <nav aria-label={t("pages")} className="flex items-center gap-1">
           <FooterStepButton

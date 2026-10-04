@@ -163,6 +163,21 @@ export const FAN_OUT_LIMITS = {
   classifiedPagesPerSite: { choices: [250, 500, 1_000, 2_500], fallback: 1_000, scope: "site" },
   /** Pages read from a website's sitemap at each collection: free to fetch, kept by website. Past it the reading stops and says so. */
   sitemapPagesRead: { choices: [1_000, 5_000, 10_000, 25_000], fallback: 5_000, scope: "site" },
+  /**
+   * Keyword research (keyword-research-plan.md), the company's own: how many
+   * keywords one Look up may hold, how many ideas of each kind a lookup buys
+   * (Anthony, 2026-10-04: "100 each"), and how many days a bought lookup is
+   * kept and reused before Look up again buys it afresh ("30 days"). He:
+   * "Remember the limits in the system ui".
+   */
+  researchKeywordsPerLookup: { choices: [1, 10, 25, 50, 100], fallback: 10, scope: "company" },
+  researchIdeasPerKind: { choices: [100, 300, 1_000], fallback: 100, scope: "company" },
+  researchReuseDays: { choices: [7, 30, 90], fallback: 30, scope: "company" },
+  /**
+   * Google's AI Overview searches bought with What the AI says: 10 cents a
+   * call and a tenth of a cent a search. 0 buys none.
+   */
+  researchOverviewSearches: { choices: [0, 25, 50, 100], fallback: 25, scope: "company" },
 } as const satisfies Record<string, LimitSpec>;
 
 export type FanOutLimitKey = keyof typeof FAN_OUT_LIMITS;
@@ -269,6 +284,10 @@ const limitsArg = v.object({
   classificationLinesPerSite: limitValue,
   classifiedPagesPerSite: limitValue,
   sitemapPagesRead: limitValue,
+  researchKeywordsPerLookup: limitValue,
+  researchIdeasPerKind: limitValue,
+  researchReuseDays: limitValue,
+  researchOverviewSearches: limitValue,
 });
 
 /** Each limit's own value where set, null where it uses the level above. */

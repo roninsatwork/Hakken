@@ -1,0 +1,18 @@
+# Discovery → Keyword research → a keyword's Google's results — the approved look (board "Results" of docs/plans/assets/keyword-research/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Keyword research
+  page-header: ‹the record's name›
+    select: Measured against
+    filter: Add to a list
+field: Look up another keyword
+select: This keyword
+page-header: Google's results
+choice: Which results: Every result | You and your competitors
+table: # | Page | Kind | Strength | Linking websites | Traffic | Keywords | Top keyword
+  table-bar
+    download: Download CSV
+  table-footer
+chart-card: Where you and your competitors are
+compact-list: Website | Position | Page

@@ -556,6 +556,17 @@ const CALL_NAMES: Record<string, string> = {
   bulk_backlinks: "link counts",
   bulk_referring_domains: "linking sites",
   bulk_ranks: "strength scores",
+  // Keyword research's own calls (`keywordResearchCalls.ts`), bought by its agent.
+  research_keyword_overview: "keyword overviews",
+  research_search_history: "searches a month, 24 months",
+  research_google_results: "Google's top 100",
+  research_page_traffic: "the top ten's visits",
+  research_page_strength: "the top ten's strength",
+  research_page_linking: "the top ten's linking websites",
+  research_page_keywords: "what a top page ranks for",
+  research_ideas_terms: "keyword ideas, terms match",
+  research_ideas_questions: "keyword ideas, questions",
+  research_ai_overview_searches: "Google's AI Overview searches",
 };
 
 /**
@@ -572,7 +583,8 @@ function describeCall(row: Doc<"seoDataPulls">): string {
   }
   const what = row.operationId.startsWith("ai_citation_")
     ? row.operationId.slice("ai_citation_".length)
-    : CALL_NAMES[row.operationId] ?? row.operationId;
+    // Keyword research's own answers are named by their engine, as the collection's are.
+    : CALL_NAMES[row.operationId] ?? (row.operationId.startsWith("research_ai_") ? row.operationId.slice("research_ai_".length) : row.operationId);
   const about = args.keyword ?? args.user_prompt ?? args.target
     ?? (Array.isArray(args.targets) ? `${args.targets.length} websites` : undefined);
   return about ? `${what} · ${String(about)}` : what;

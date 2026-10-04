@@ -1,0 +1,20 @@
+# Discovery → Keyword research → a research list — the approved look (board "List" of docs/plans/assets/keyword-research/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Keyword research
+  page-header: ‹the record's name›
+notice (info)
+figures
+  figure: Keywords
+  figure: Searches a month
+  figure: Worth a new page
+  figure: Improve your page
+search: Find a keyword…
+filter: Worth it
+table: Tick every keyword | Keyword | Volume | Difficulty | Intent | Position | Your page | Worth it | Tracked | Take it off this list
+  table-bar
+    primary-action: Tick keywords to track them
+    download: Download CSV
+  checkbox: Tick every keyword
+  table-footer

@@ -348,20 +348,23 @@ export function UserNavTree({
   )}
 
   {/*
-    One item under Sites, the company's websites with their competitors; a
+    Discovery: Websites, the company's websites with their competitors — a
     website is switched from its own header (docs/plans/active/
-    sites-website-switcher-plan.md, W5 — Anthony, 2026-10-01).
+    sites-website-switcher-plan.md, W5 — Anthony, 2026-10-01) — then Keyword
+    research (docs/plans/active/keyword-research-plan.md, 2026-10-04). Each
+    sub-item is lit on its own pages only.
   */}
   <NavItem
     icon={Globe}
     label={t('sites')}
-    isActive={activeItem === 'Sites' || pathname.startsWith('/app/sites')}
+    isActive={activeItem === 'Sites' || pathname.startsWith('/app/sites') || pathname.startsWith('/app/keyword-research')}
     onClick={() => setActiveItem('Sites')}
     hasChildren
     isOpen={openSections.sites}
     onToggle={() => toggleSection('sites')}
   >
     <SubNavItem label={t('yourSites')} href="/app/sites" isActive={pathname.startsWith('/app/sites')} onClick={() => setActiveItem('Sites')} />
+    <SubNavItem label={t('keywordResearch')} href="/app/keyword-research" isActive={pathname.startsWith('/app/keyword-research')} onClick={() => setActiveItem('Sites')} />
   </NavItem>
 
   {/* Each own website's real clicks from Google (docs/plans/active/search-console-plan.md, SC1). */}

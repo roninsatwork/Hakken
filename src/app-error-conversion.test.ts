@@ -105,6 +105,10 @@ describe("appError conversion holds and spreads", () => {
       "convex/mcpToolCall.ts:162 is its only consumer and converts it into an `{ ok: false, error }` return value; nothing rethrows it.",
     ],
     [
+      "SpendLimitReached",
+      "convex/keywordResearchRun.ts throws it inside the Keyword research agent's own run when the run's spend limit is reached, and catches it in the same function to stop buying and write the reason on the lookups. It never leaves the run, and no screen waits on the action.",
+    ],
+    [
       "DataForSeoBackoff",
       "convex/seoCollectionActions.ts catches it at the one call site and turns it into a queue release — the batch goes back to PENDING with a later due time. It never leaves the worker chain, and no screen is waiting on the action that throws it.",
     ],

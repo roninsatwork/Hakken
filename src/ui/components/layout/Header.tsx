@@ -64,7 +64,8 @@ function getAppHeaderSegments(pathname: string, t: HeaderTranslator, askLabel: s
   if (pathname.startsWith("/app/assistant")) return [askLabel];
   if (pathname.startsWith("/app/tasks")) return [t("tasks")];
   if (pathname.startsWith("/app/calls")) return [t("calls")];
-  if (pathname.startsWith("/app/sites")) return [t("sites")];
+  // Keyword research sits under Discovery beside Websites (keyword-research-plan.md).
+  if (pathname.startsWith("/app/sites") || pathname.startsWith("/app/keyword-research")) return [t("sites")];
   if (pathname.startsWith("/app/search-console")) return [t("searchConsole")];
   if (isLearnPath(pathname)) return [t("learn")];
   if (pathname.startsWith("/app/settings/team")) return [t("organization"), t("teamMembers")];
@@ -112,7 +113,7 @@ export default function Header({ onOpenModal }: HeaderProps) {
       ? ListChecks
       : pathname.startsWith("/app/calls")
       ? Phone
-      : pathname.startsWith("/app/sites")
+      : pathname.startsWith("/app/sites") || pathname.startsWith("/app/keyword-research")
       ? Globe
       : pathname.startsWith("/app/search-console")
       ? SearchCheck

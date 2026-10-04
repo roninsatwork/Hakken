@@ -60,6 +60,9 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
   { table: "uploadReservations", fields: ["userId"], treatment: "DISSOCIATE", reason: "Retain attached business files without the erased uploader identity." },
   { table: "billingAccounts", fields: ["auditActorId"], treatment: "DISSOCIATE", reason: "The most recent billing worker; permanent attribution remains in the audit trail." },
   { table: "billingSettings", fields: ["updatedBy"], treatment: "DISSOCIATE", reason: "The current settings remain; permanent operator attribution is kept in the audit trail." },
+  { table: "keywordLookups", fields: ["createdBy"], treatment: "DISSOCIATE", reason: "A keyword the company looked up stays the company's; who looked it up goes." },
+  { table: "researchLists", fields: ["createdBy"], treatment: "DISSOCIATE", reason: "A research list stays the company's; who made it goes." },
+  { table: "researchListKeywords", fields: ["addedBy"], treatment: "DISSOCIATE", reason: "A keyword on a company's list stays; who added it goes." },
   { table: "analyticsDailySnapshots", fields: ["userId"], treatment: "ERASE", reason: "Their usage, counted per person." },
   { table: "agentMemories", fields: ["userId"], treatment: "ERASE", reason: "What an assistant remembered about them." },
   {

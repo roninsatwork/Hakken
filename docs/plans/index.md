@@ -7,13 +7,20 @@ completed work.
 
 ## Active Plans
 
+- [Keyword research](./active/keyword-research-plan.md) — Discovery →
+  Keyword research, like Ahrefs' Keywords Explorer: look up any search, its
+  overview, Google's results, ideas, what the AI says, and starting from a
+  competitor, with research lists and Track. **Decided 2026-10-04 (a new
+  Keyword research agent buys; anyone who can edit looks up; 100 ideas of
+  each kind; kept 30 days); built on dev the same day; the first lookup waits
+  for his go.**
 - [Design drift: one record for the look](./active/design-drift-plan.md) —
   the look (colours, font) kept in one repo file copied from System Settings;
   a drawing kit built from the app's own stylesheet and components; every
   canvas redrawn on it; approved screens held to their drawings by look
   tests; tables that fit as a kit rule; one guide every agent reads. After
   the Keyword research drawings drifted, 2026-10-04 ("We cannot go through
-  this with every agent"). **D1 (one record), D2 (the kit) and D5 (the guide) built on dev 2026-10-04; the app now in Inter.**
+  this with every agent"). **All five parts built on dev 2026-10-04: the record, the kit, every canvas redrawn, tables that fit and 26 approved screens held by look tests, the guide; the app now in Inter.**
 - [Sites: moving between a company's own websites](./active/sites-website-switcher-plan.md) —
   Sites opens on "Your websites", each owned site with its competitors folded
   beneath it; the site's name in the header is the switcher, grouped the same

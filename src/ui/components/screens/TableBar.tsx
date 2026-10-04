@@ -16,7 +16,9 @@ export type TableNoun =
   // The fan-out queries ticked to check on Google every run: Sites' Tracked fan-out queries (2026-10-03).
   | "fanOutQueries"
   // A website's own classifications of its pages: admin › Page classification's Classifications view (page-groups-plan.md).
-  | "classifications";
+  | "classifications"
+  // Keyword research (keyword-research-plan.md): research lists (board 1), keyword ideas (board 5), and the AI assistants asked (board 4).
+  | "lists" | "ideas" | "assistants";
 
 /**
  * The bar across the top of every Sites table, inside its card (`DataTable`'s

@@ -1,0 +1,22 @@
+# Discovery → Keyword research → a keyword's Keyword ideas — the approved look (board "Ideas" of docs/plans/assets/keyword-research/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Keyword research
+  page-header: ‹the record's name›
+    select: Measured against
+    filter: Add to a list
+field: Look up another keyword
+select: This keyword
+page-header: Terms match
+choice: Kind of idea: Terms match · # | Questions · # | Also rank for · #
+search: Find an idea…
+filter: Intent
+filter: Difficulty
+filter: You
+table: Tick every idea on this page | Keyword | Intent | Volume | Difficulty | CPC | Position | Your page
+  table-bar
+    filter: Tick ideas to add them
+    download: Download CSV
+  checkbox: Tick every idea on this page
+  table-footer

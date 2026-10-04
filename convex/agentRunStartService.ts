@@ -1,7 +1,7 @@
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
-import { isDataForSeoRole, isNewsRole, isSearchConsoleRole } from "./utils/agentRoles";
+import { isDataForSeoRole, isNewsRole, isResearchRole, isSearchConsoleRole } from "./utils/agentRoles";
 import { WIKI_STAFF } from "./wikiStaff";
 import { TRANSLATOR } from "./utils/contentTranslator";
 
@@ -21,13 +21,14 @@ import { TRANSLATOR } from "./utils/contentTranslator";
  *
  * - A wiki agent does its round over every wiki, with no model call about it.
  * - A DataForSEO agent does its role's fixed job, with no model call.
+ * - The Keyword research agent buys what its lookups wait for (`keywordResearchRun.ts`).
  * - A News agent — the News Collector, the Weekly Digest, the Email Sender —
  *   does its role's fixed job (`newsAgentRunActions.ts`). Until 2026-10-01
  *   every role that could be given went to the DataForSEO job.
  * - The Translator translates whatever is still missing (`contentTranslation.ts`).
  * - Every other agent is given its objective on the model loop.
  */
-export type AgentRunStart = "WIKI_ROUND" | "SEO_JOB" | "NEWS_JOB" | "SEARCH_CONSOLE_JOB" | "TRANSLATION_ROUND" | "MODEL";
+export type AgentRunStart = "WIKI_ROUND" | "SEO_JOB" | "RESEARCH_JOB" | "NEWS_JOB" | "SEARCH_CONSOLE_JOB" | "TRANSLATION_ROUND" | "MODEL";
 
 export async function startAgentRun(
   ctx: Pick<MutationCtx, "scheduler">,
@@ -68,6 +69,11 @@ export async function startAgentRun(
       workflowExecutionId,
     });
     return "SEO_JOB";
+  }
+
+  if (isResearchRole(agent.systemKey)) {
+    await ctx.scheduler.runAfter(0, internal.keywordResearchRun.runKeywordResearchNow, { runId, workflowExecutionId });
+    return "RESEARCH_JOB";
   }
 
   if (isNewsRole(agent.systemKey)) {

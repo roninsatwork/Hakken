@@ -142,6 +142,18 @@ export function PageTypeLabel({ type, size, kinds }: { type: string; size?: "sm"
   return <StatusLabel tone={PAGE_TYPE_TONES[type] ?? "neutral"} size={size}>{t.has(type) ? t(type) : t("OTHER")}</StatusLabel>;
 }
 
+/**
+ * What kind of page a page is, as plain words — a kind, so the kit's
+ * `TagLabel`, as `IntentText` is for intent. For a page on someone else's
+ * website, where the kind is read from its address alone: Keyword research's
+ * Google results, drawn as grey words (keyword-research-plan.md, boards 2 and
+ * 3). A page the address says nothing about is Other.
+ */
+export function PageTypeText({ type }: { type: string | null }) {
+  const t = useTranslations("sites.common.pageTypes");
+  return <TagLabel>{type && t.has(type) ? t(type) : t("OTHER")}</TagLabel>;
+}
+
 const LINK_STATUS_TONES: Record<string, StatusTone> = { LIVE: "neutral", NEW: "info", LOST: "warning" };
 
 /** Whether a link, linking website, anchor or server is live, new or lost — in words, not colour alone. */

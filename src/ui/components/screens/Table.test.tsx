@@ -112,6 +112,18 @@ describe("PaginationFooter, numbered", () => {
     expect(screen.getByRole("combobox", { name: "Rows per page" })).toHaveValue("50");
   });
 
+  it("says what a column means on the left, when given a note, with the count still on the right", () => {
+    render(
+      <PaginationFooter page={1} totalPages={2} totalCount={40} pageSize={25} isLoading={false} onPageChange={vi.fn()} numbered note="Strength: 0 to 100." />
+    );
+
+    const note = screen.getByText("Strength: 0 to 100.");
+    const footer = note.closest("[data-part='table-footer']");
+    expect(footer?.firstElementChild).toBe(note);
+    expect(screen.getByRole("navigation", { name: "Pages" })).toBeInTheDocument();
+    expect(screen.getByText("Showing 1-25 of 40")).toBeInTheDocument();
+  });
+
   it("says nothing while the list is still loading", () => {
     render(<PaginationFooter page={1} totalPages={1} totalCount={0} pageSize={25} isLoading onPageChange={vi.fn()} numbered rowsChoice={rowsChoice()} />);
 

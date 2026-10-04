@@ -1,0 +1,20 @@
+# Discovery → Keyword research → Start from a competitor — the approved look (board "StartFrom" of docs/plans/assets/keyword-research/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Keyword research
+  page-header: ‹the record's name›
+    select: Competitor
+figures
+  figure: Searches it ranks for
+  figure: That you don't
+  figure: Where it is above you
+  figure: Visits these bring it
+search: Find a keyword…
+filter: Intent
+table: Tick every keyword on this page | Keyword | Its position | Yours | Volume | Difficulty | Intent
+  table-bar
+    filter: Tick keywords to add them
+    download: Download CSV
+  checkbox: Tick every keyword on this page
+  table-footer
