@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { removeSampleResearch } from "./keywordResearchSampleMigration";
 import { AI_ENGINES, AI_ENGINE_CALLS } from "./seoAiEngines";
 
 /**
@@ -321,6 +322,48 @@ describe("Look up", () => {
     await expect(as.mutation(api.keywordResearch.lookUp, { keywords: ["seo"], locationCode: 2250 })).rejects.toThrow(/can't look up that country/);
     const eleven = Array.from({ length: 11 }, (_, index) => `keyword ${index}`);
     await expect(as.mutation(api.keywordResearch.lookUp, { keywords: eleven, locationCode: UK })).rejects.toThrow(/at most 10 keywords/);
+  });
+});
+
+describe("the sample figures of the Test mode he never asked for", () => {
+  test("are removed, with a lookup left with no real figures and its jobs; real figures and lookups stay", async () => {
+    const t = harness();
+    const { as } = await company(t);
+    await researchAgent(t);
+    const overview = (keyword: string, sandbox: boolean) => ({
+      keyword, locationCode: UK, boughtAt: Date.now(), sandbox, searchVolume: 10, cpc: null, competitionLevel: null, difficulty: 5,
+      intent: null, monthly: [], serpKinds: [], resultsCount: null, topTenLinkingSites: null,
+    });
+    await t.run(async (ctx) => {
+      await ctx.db.insert("researchKeywords", overview("web designers surrey", true));
+      await ctx.db.insert("researchSerps", { keyword: "web designers surrey", locationCode: UK, boughtAt: Date.now(), sandbox: true, results: [{ position: 1, domain: "dominos.co.uk", url: "https://dominos.co.uk/", title: "Pizza" }] });
+      await ctx.db.insert("researchKeywords", overview("seo", false));
+      await ctx.db.insert("researchSerps", { keyword: "seo", locationCode: UK, boughtAt: Date.now(), sandbox: false, results: [] });
+    });
+    await as.mutation(api.keywordResearch.lookUp, { keywords: ["seo"], locationCode: UK });
+    await t.run(async (ctx) => {
+      const companyId = (await ctx.db.query("companies").first())!._id;
+      const lookupId = await ctx.db.insert("keywordLookups", { companyId, keyword: "web designers surrey", text: "web designers surrey", locationCode: UK, createdAt: Date.now(), openedAt: Date.now(), overview: "READY" });
+      const runId = (await ctx.db.query("agentRuns").first())?._id;
+      if (runId) await ctx.db.insert("researchJobs", { runId, lookupId, companyId, part: "OVERVIEW", keyword: "web designers surrey", locationCode: UK, again: false, createdAt: Date.now() });
+    });
+
+    await t.run(async (ctx) => {
+      let cursor: string | null = null;
+      for (;;) {
+        const step = await removeSampleResearch(ctx, cursor, 1);
+        if (step.isDone) break;
+        cursor = step.cursor;
+      }
+    });
+
+    const left = await t.run(async (ctx) => ({
+      keywords: (await ctx.db.query("researchKeywords").collect()).map((row) => row.keyword),
+      serps: (await ctx.db.query("researchSerps").collect()).map((row) => row.keyword),
+      lookups: (await ctx.db.query("keywordLookups").collect()).map((row) => row.keyword),
+      jobs: (await ctx.db.query("researchJobs").collect()).length,
+    }));
+    expect(left).toEqual({ keywords: ["seo"], serps: ["seo"], lookups: ["seo"], jobs: 0 });
   });
 });
 

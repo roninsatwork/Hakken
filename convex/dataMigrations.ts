@@ -32,6 +32,7 @@ import { requestMissingIcons } from "./websites";
 import { untickAutomaticQueries } from "./promptFanOut";
 import { followPlatformWhereStartingNumber } from "./companyDataLimits";
 import { detachCompanySchedules } from "./scheduler";
+import { removeSampleResearch } from "./keywordResearchSampleMigration";
 import {
   rebuildAnswerSummaries,
   rebuildOperationCosts,
@@ -185,6 +186,8 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
   "2026-09-28-untick-fan-out-queries": untickAutomaticQueries,
   /** A company's saved 1,000s use the platform's number (platform-limits-plan.md). */
   "2026-09-28-company-limits-follow-platform": followPlatformWhereStartingNumber,
+  /** Keyword research's sample figures from its removed Test mode go, with any lookup left with none real (keyword-research-plan.md). */
+  "2026-10-04-remove-sample-keyword-research": removeSampleResearch,
 
   /**
    * Takes the Collector off each company's Collection schedule, and the next
