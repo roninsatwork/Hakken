@@ -13,7 +13,7 @@ completed work.
   canvas redrawn on it; approved screens held to their drawings by look
   tests; tables that fit as a kit rule; one guide every agent reads. After
   the Keyword research drawings drifted, 2026-10-04 ("We cannot go through
-  this with every agent"). **Planning; nothing built.**
+  this with every agent"). All questions answered. **Planning; nothing built.**
 - [Sites: moving between a company's own websites](./active/sites-website-switcher-plan.md) —
   Sites opens on "Your websites", each owned site with its competitors folded
   beneath it; the site's name in the header is the switcher, grouped the same

@@ -65,6 +65,12 @@ approved.
    drawings he approved, and the instructions every agent works from.
 3. **Every existing canvas is redrawn on the kit**, not kept in the old
    look.
+4. **The repo's look file sets production too** (2026-10-04, "yes"): when
+   there is a production site it starts in, and stays in, the look recorded
+   in the repo.
+5. **The two explorations are redrawn whole** ("redraw before we start").
+6. **All 128 wide tables are fixed in this plan** ("yes"), not left to fall
+   as screens are next touched.
 
 ## The plan
 
@@ -125,9 +131,15 @@ The canvases on 2026-10-04, newest work first:
 | Features screen | Built |
 | A search's page header | Built |
 | Your prompts — the limit on screen | Built |
-| Search Console — beyond Google | An earlier proposal |
-| Replacing the pills | A comparison of four options; C chosen |
-| Route Planner Screens | Not Hakken's (see the questions below) |
+| Search Console — beyond Google | An earlier proposal; redrawn whole |
+| Replacing the pills | A comparison of four options, C chosen; redrawn whole |
+
+The canvas list is the whole claude.ai account's, not this repo's: it also
+shows "Route Planner Screens" (2026-09-19), a Conterra Ops drawing of
+routes from Baghdad to Erbil. It is not Hakken's and is left alone; nothing
+from it is in this repository. (The only mentions of Conterra in the repo
+are deliberate: the August 2026 email work, where Anthony asked for
+Hakken's emails to read like Conterra's.)
 
 Each is redrawn from `parts.html` on the kit, its boards kept, its
 `docs/plans/assets/<plan>/` copy refreshed. A canvas whose screen is built
@@ -169,24 +181,19 @@ is drawn as the screen now is, so the drawing and the app agree again.
 | 3 | D5 — the guide and AGENTS.md | 0.5 day |
 | 4 | D4 — tables-fit guard and ratchet; parts lists and look tests for screens being built | 1 day, then with each screen |
 | 5 | D3 — redraw the canvases, newest first | 0.5 day each for the large ones, less for the small; about 4 days in all |
-| 6 | D4 — the 128 wide tables, falling screen by screen | with each screen touched |
+| 6 | D4 — the 128 wide tables, every one made to fit | about 2 days |
 
 Steps 1 to 3 stop new drift; 4 to 6 remove what has already drifted.
 
 ## Questions for Anthony
 
-1. **Production.** There is no production yet. When there is, should
-   `hakken.theme.json` set production's look (recommended: the repo is the
-   record, so production matches dev), or may production keep its own?
-2. **Route Planner Screens.** It looks like Conterra Ops' work, not
-   Hakken's. Leave it out?
-3. **The two explorations.** "Replacing the pills" (four options, C chosen)
-   and "Search Console — beyond Google" (an earlier proposal): redraw only
-   the chosen option and mark the rest as history, or redraw them whole?
-4. **The 128 wide tables.** Fix them all as part of this plan, or let the
-   ratchet bring them down as each screen is next touched?
+All four answered 2026-10-04 (decisions 4 to 6, and Route Planner left out
+as Conterra's).
 
 ## Change log
 
 - 2026-10-04 — planned after the Keyword research drawings drifted; his
   decisions 1–3 taken the same day.
+- 2026-10-04 — decisions 4–6: the look file sets production, the
+  explorations redrawn whole, all 128 wide tables fixed in this plan; Route
+  Planner Screens left out as Conterra Ops'. About 10 days in all.
