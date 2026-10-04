@@ -15,6 +15,7 @@ import { hostOf, pageKey } from "./keywordResearchCalls";
 import { pageTypeByAddress } from "./utils/siteShapes";
 import { newestKeyword, newestSerp, overviewIsFresh, freshnessOf, researchAgent, serpIsFresh } from "./keywordResearchData";
 import { researchCosts } from "./keywordResearchPrices";
+import { findSeoLocation } from "./utils/seoLocations";
 import { researchProblemOf } from "./utils/researchProblems";
 
 /**
@@ -415,6 +416,7 @@ export const lookupOverview = tenantQuery({
       resultsCount: serp ? Math.min(serp.results.length, 10) : null,
       results: lookup.results ?? null,
       serpBoughtAt: serp?.boughtAt ?? null,
+      serpFrom: serp?.from ? findSeoLocation(serp.from)?.city ?? null : null,
       forWebsite,
       countries: countryRows,
       lists: lists.map((list) => ({ listId: list._id, name: list.name })),
@@ -505,6 +507,8 @@ export const lookupResults = tenantQuery({
       state: lookup.results ?? null,
       problem: researchProblemOf(lookup.problem),
       checkedAt: serp?.boughtAt ?? null,
+      /** The city Google was asked from, when the keyword names one. */
+      from: serp?.from ? findSeoLocation(serp.from)?.city ?? null : null,
       detailsAt: serp?.detailsBoughtAt ?? null,
       sample: Boolean(serp?.sandbox),
       rows: serp ? topPages(serp).map((page) => ({ ...page, who: whoOf(page.domain) })) : [],

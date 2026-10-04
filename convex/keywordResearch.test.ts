@@ -325,6 +325,32 @@ describe("Look up", () => {
   });
 });
 
+describe("where Google is asked from", () => {
+  test("a keyword naming a city is asked from that city, and results asked from the whole country never stand in for it", async () => {
+    const t = harness();
+    const { as, siteId } = await company(t);
+    await researchAgent(t);
+    // Held, fresh, but asked from the whole United Kingdom — as before 2026-10-04.
+    await t.run(async (ctx) => {
+      await ctx.db.insert("researchKeywords", {
+        keyword: "app developer london", locationCode: UK, boughtAt: Date.now(), sandbox: false, searchVolume: 90, cpc: null, competitionLevel: null,
+        difficulty: 20, intent: null, monthly: [], serpKinds: [], resultsCount: null, topTenLinkingSites: null,
+      });
+      await ctx.db.insert("researchSerps", { keyword: "app developer london", locationCode: UK, boughtAt: Date.now(), sandbox: false, results: [{ position: 1, domain: "reed.co.uk", url: "https://reed.co.uk/jobs", title: "Jobs" }] });
+    });
+    const { lookupIds: [lookupId] } = await as.mutation(api.keywordResearch.lookUp, { keywords: ["app developer london"], locationCode: UK, siteId });
+    const fetch = dataForSeo(() => [{ domain: "pixelfield.co.uk", position: 1 }]);
+    vi.stubGlobal("fetch", fetch);
+    await t.action(internal.keywordResearchRun.runKeywordResearchNow, { runId: (await t.run(async (ctx) => await ctx.db.query("agentRuns").first()))!._id });
+
+    const asked = fetch.mock.calls.filter(([url]) => String(url).includes("/serp/")).map(([, init]) => JSON.parse((init as { body: string }).body)[0].location_code);
+    expect(asked).toEqual([1006886]);
+    const overview = await as.query(api.keywordResearch.lookupOverview, { lookupId });
+    expect(overview?.top?.map((row) => row.domain)).toEqual(["pixelfield.co.uk"]);
+    expect(overview?.serpFrom).toBe("London");
+  });
+});
+
 describe("the question behind a keyword", () => {
   test("is written from the agent's own instructions, or its template's when it has none", async () => {
     const t = harness();

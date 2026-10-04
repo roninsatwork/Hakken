@@ -11712,6 +11712,7 @@
       "countryLookUpFailed": "That country could not be looked up — try again",
       "results": "Google's results",
       "resultsHint": "The top five on {day}, and the visits each gets a month.",
+      "resultsHintFrom": "The top five on {day}, as a searcher in {city} sees them, and the visits each gets a month.",
       "seeAll": "See all ten, and where you are",
       "seeAllTitle": "Opening it buys the top ten in full: about {cents} cents.",
       "noResults": "Google's results are not in yet.",
@@ -11735,6 +11736,7 @@
     "results": {
       "title": "Google's results",
       "description": "What Google showed for this search {place}, in order, with each page's strength, the websites linking to it and the visits it gets a month. Further down: where you and your competitors are.",
+      "descriptionFrom": "What Google showed a searcher in {city} for this search, in order, with each page's strength, the websites linking to it and the visits it gets a month. Further down: where you and your competitors are.",
       "which": "Which results",
       "every": "Every result",
       "ours": "You and your competitors",

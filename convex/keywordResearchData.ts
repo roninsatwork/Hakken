@@ -1,5 +1,6 @@
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
+import { searchPlaceOf } from "./utils/researchCountries";
 
 /**
  * Reading what Keyword research has bought (docs/plans/active/keyword-
@@ -62,5 +63,10 @@ export async function overviewIsFresh(ctx: Reader, keyword: string, locationCode
 
 export async function serpIsFresh(ctx: Reader, keyword: string, locationCode: number, fresh: Freshness): Promise<boolean> {
   const row = await newestSerp(ctx, keyword, locationCode);
-  return usable(row, fresh) && row!.boughtAt >= fresh.since;
+  return usable(row, fresh) && row!.boughtAt >= fresh.since && serpIsFrom(row!, keyword, locationCode);
+}
+
+/** Whether Google's results were asked from where they are now asked from: results asked from the whole country never stand in for a city's. */
+export function serpIsFrom(row: Pick<Doc<"researchSerps">, "from" | "locationCode">, keyword: string, locationCode: number): boolean {
+  return (row.from ?? row.locationCode) === searchPlaceOf(keyword, locationCode);
 }

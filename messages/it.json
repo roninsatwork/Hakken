@@ -11712,6 +11712,7 @@
       "countryLookUpFailed": "Non è stato possibile cercare quel paese — riprova",
       "results": "I risultati di Google",
       "resultsHint": "I primi cinque il {day}, e le visite al mese di ciascuno.",
+      "resultsHintFrom": "I primi cinque il {day}, come li vede chi cerca da {city}, e le visite che ciascuno riceve al mese.",
       "seeAll": "Vedi tutti e dieci, e dove sei",
       "seeAllTitle": "Aprirlo acquista i primi dieci per intero: circa {cents} centesimi.",
       "noResults": "I risultati di Google non sono ancora arrivati.",
@@ -11735,6 +11736,7 @@
     "results": {
       "title": "I risultati di Google",
       "description": "Cosa ha mostrato Google per questa ricerca {place}, in ordine, con la forza di ogni pagina, i siti che vi rimandano e le visite al mese. Più in basso: dove sei tu e dove sono i tuoi concorrenti.",
+      "descriptionFrom": "Cosa ha mostrato Google a chi cerca da {city} per questa ricerca, in ordine, con la forza di ogni pagina, i siti che rimandano a essa e le visite che riceve al mese. Più in basso: dove siete tu e i tuoi concorrenti.",
       "which": "Quali risultati",
       "every": "Tutti i risultati",
       "ours": "Tu e i tuoi concorrenti",

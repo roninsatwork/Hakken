@@ -96,6 +96,8 @@ export const keywordResearchTables = {
     pages: v.optional(v.array(serpPageValidator)),
     /** When the strength, linking websites and top keyword were bought: absent until Google's results are opened. */
     detailsBoughtAt: v.optional(v.number()),
+    /** The city Google was asked from, when the keyword names one (`searchPlaceOf`); absent when asked from the whole country. */
+    from: v.optional(v.number()),
   }).index("by_keyword_place", ["keyword", "locationCode", "boughtAt"]),
 
   /** One kind of idea for a keyword in a country, the most searched first (board 5). */

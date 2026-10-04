@@ -101,7 +101,9 @@ company for 30 days, like Websites' own buying):
   Google shows, how many results, and the linking websites the top ten have
   on average. From Labs keyword overview and historical searches.
 - `researchSerps` — Google's top 100 for it (live, so the screen waits
-  seconds, not minutes; about 2 cents), and once Google's results are opened,
+  seconds, not minutes; about 2 cents) — asked from the city the keyword
+  names, when it names one the platform searches from ("app developer
+  london" from London), else the whole country — and once Google's results are opened,
   each top-ten page's strength, linking websites, visits, keywords and top
   keyword.
 - `researchIdeas` — one row per keyword, country and kind (terms match,
@@ -274,3 +276,12 @@ All five steps, on his "build the keyword research section".
   example, so his first lookup, "web designers surrey", showed pizza
   restaurants. The agent now always buys real figures. Sample figures never
   count as held, so Look up again replaces them with real ones.
+- 2026-10-04 — **Google's results asked from the named city.** "app developer
+  london", asked from the whole United Kingdom, came back as job boards; a
+  searcher in London sees agencies (his words: "these are not the results in
+  Google … this won't be good enough for clients"). A keyword naming a city
+  in `SEO_LOCATIONS` is now asked from that city, and the screens say so
+  ("as a searcher in London sees them"). Results asked from the whole
+  country never stand in for a city's. Searches a month stay the country's
+  (Google Ads counts by country). Websites' own tracking still asks from the
+  whole country — not changed here.

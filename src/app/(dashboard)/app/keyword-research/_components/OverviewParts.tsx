@@ -268,7 +268,11 @@ export function TopFive({ lookup }: { lookup: LookupOverview }) {
   const t = useTranslations("keywordResearch.overview");
   const tc = useTranslations("keywordResearch.columns");
   return (
-    <ChartCard title={t("results")} hint={lookup.serpBoughtAt ? t("resultsHint", { day: formatDate(lookup.serpBoughtAt) }) : undefined}>
+    <ChartCard title={t("results")} hint={lookup.serpBoughtAt
+        ? lookup.serpFrom
+          ? t("resultsHintFrom", { day: formatDate(lookup.serpBoughtAt), city: lookup.serpFrom })
+          : t("resultsHint", { day: formatDate(lookup.serpBoughtAt) })
+        : undefined}>
       <CompactList
         rows={lookup.top ?? undefined}
         rowKey={(row) => `${row.position}-${row.url}`}

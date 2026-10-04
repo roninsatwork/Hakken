@@ -123,6 +123,7 @@ export const OVERVIEW = {
   resultsCount: 10,
   results: null as string | null,
   serpBoughtAt: Date.UTC(2026, 9, 1, 8, 14),
+  serpFrom: null as string | null,
   forWebsite: {
     siteId: SITE_ID,
     host: "acme-agency.test",
@@ -174,6 +175,7 @@ export const RESULTS = {
   state: "READY" as string | null,
   problem: null as ResearchProblem | null,
   checkedAt: Date.UTC(2026, 9, 1, 8, 14),
+  from: null as string | null,
   detailsAt: Date.UTC(2026, 9, 1, 8, 20),
   sample: false,
   rows: [

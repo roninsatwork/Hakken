@@ -185,6 +185,12 @@ describe("a lookup's Overview", () => {
     expect(screen.queryByText("keywordResearch.overview.volume")).not.toBeInTheDocument();
   });
 
+  it("says when Google's results were asked from the city the keyword names", async () => {
+    await open({ serpFrom: "London" });
+
+    expect(screen.getByText(/^keywordResearch\.overview\.resultsHintFrom .* London$/)).toBeInTheDocument();
+  });
+
   it("says why a lookup failed in its own words, never the server's, with Look up again", async () => {
     const mutation = await open({ state: "FAILED" as never, problem: "NO_ANSWER", overview: null as never });
 

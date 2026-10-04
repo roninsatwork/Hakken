@@ -31,8 +31,8 @@ import {
   type KeywordOverview,
   type ResearchCall,
 } from "./keywordResearchCalls";
-import { freshnessOf, newestSerp, overviewIsFresh, platformSandbox, serpIsFresh, type Freshness } from "./keywordResearchData";
-import { findResearchCountry } from "./utils/researchCountries";
+import { freshnessOf, newestSerp, overviewIsFresh, platformSandbox, serpIsFresh, serpIsFrom, type Freshness } from "./keywordResearchData";
+import { findResearchCountry, searchPlaceOf } from "./utils/researchCountries";
 import { RESEARCH_PROBLEMS, type ResearchProblem } from "./utils/researchProblems";
 
 const problemValidator = v.union(...RESEARCH_PROBLEMS.map((code) => v.literal(code)));
@@ -113,7 +113,7 @@ async function answersAreFresh(ctx: Reader, place: Place, fresh: Freshness): Pro
 /** The top ten in full — strength, linking websites, what each ranks for — held, fresh, and with as many "also rank for" ideas as the company asks for. */
 async function detailsAreFresh(ctx: Reader, place: Place, fresh: Freshness, ideasLimit: number): Promise<boolean> {
   const serp = await newestSerp(ctx, place.keyword, place.locationCode);
-  if (!serp?.detailsBoughtAt || serp.detailsBoughtAt < fresh.since || (!fresh.sandbox && serp.sandbox)) return false;
+  if (!serp?.detailsBoughtAt || serp.detailsBoughtAt < fresh.since || (!fresh.sandbox && serp.sandbox) || !serpIsFrom(serp, place.keyword, place.locationCode)) return false;
   const also = await newestIdeas(ctx, place, "ALSO_RANK");
   return Boolean(also && also.boughtAt >= fresh.since && (fresh.sandbox || !also.sandbox) && also.limit >= ideasLimit);
 }
@@ -125,7 +125,7 @@ async function detailsAreFresh(ctx: Reader, place: Place, fresh: Freshness, idea
  */
 async function serpTakesDetails(ctx: Reader, place: Place, fresh: Freshness): Promise<boolean> {
   const serp = await newestSerp(ctx, place.keyword, place.locationCode);
-  return Boolean(serp && serp.boughtAt >= fresh.since && serp.sandbox === fresh.sandbox);
+  return Boolean(serp && serp.boughtAt >= fresh.since && serp.sandbox === fresh.sandbox && serpIsFrom(serp, place.keyword, place.locationCode));
 }
 
 /** Whether a job is still the newest asked for its part of its lookup: an older run never buys for, or settles, a part asked for again since. */
@@ -362,6 +362,7 @@ export const fileSerp = internalMutation({
     keyword: v.string(),
     locationCode: v.number(),
     sandbox: v.boolean(),
+    from: v.optional(v.number()),
     results: v.array(v.object({ position: v.number(), url: v.string(), domain: v.string(), title: v.string() })),
     pages: v.array(pageValidator),
   },
@@ -636,9 +637,10 @@ async function buyOverviews(buyer: Buyer, places: Place[], withHistory: boolean)
   }
 }
 
-/** Google's top 100, then the top ten's visits and keywords in one call. */
+/** Google's top 100 — asked from the city the keyword names, if any (`searchPlaceOf`) — then the top ten's visits and keywords in one call. */
 async function buyResults(buyer: Buyer, place: Place) {
-  const results = readGoogleResults(await buy(buyer, RESEARCH_CALLS.serp, serpTask(place.keyword, place.locationCode), [place]));
+  const from = searchPlaceOf(place.keyword, place.locationCode);
+  const results = readGoogleResults(await buy(buyer, RESEARCH_CALLS.serp, serpTask(place.keyword, from), [place]));
   const top = results.slice(0, TOP_PAGES);
   const traffic = top.length > 0
     ? readPageTraffic(await buy(buyer, RESEARCH_CALLS.traffic, trafficTask(top.map((result) => result.url), place.locationCode), [place]))
@@ -648,7 +650,13 @@ async function buyResults(buyer: Buyer, place: Place) {
     return { url: result.url, strength: null, linkingSites: null, visits: figures?.visits ?? null, keywords: figures?.keywords ?? null, topKeyword: null };
   });
   if (results.length > 0) {
-    await buyer.ctx.runMutation(internal.keywordResearchRun.fileSerp, { ...place, sandbox: buyer.credentials.sandbox, results, pages });
+    await buyer.ctx.runMutation(internal.keywordResearchRun.fileSerp, {
+      ...place,
+      sandbox: buyer.credentials.sandbox,
+      ...(from !== place.locationCode ? { from } : {}),
+      results,
+      pages,
+    });
   }
 }
 

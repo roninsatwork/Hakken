@@ -86,6 +86,8 @@ export const lookupOverviewShape = v.union(v.null(), v.object({
   resultsCount: num,
   results: v.union(partState, v.null()),
   serpBoughtAt: num,
+  /** The city Google was asked from, when the keyword names one. */
+  serpFrom: str,
   forWebsite: v.union(v.null(), v.object({
     siteId: v.id("companyWebsites"),
     host: v.string(),
@@ -116,6 +118,7 @@ export const lookupResultsShape = v.union(v.null(), v.object({
   state: v.union(partState, v.null()),
   problem,
   checkedAt: num,
+  from: str,
   detailsAt: num,
   sample: v.boolean(),
   rows: v.array(v.object({

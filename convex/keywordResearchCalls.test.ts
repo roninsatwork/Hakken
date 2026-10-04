@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { hostOf, overviewTask, readGoogleResults, readKeywordOverviews, readSearchHistories, serpTask } from "./keywordResearchCalls";
+import { searchPlaceOf } from "./utils/researchCountries";
 
 /** DataForSEO's answers as they arrive, cut to the fields read (shapes from their docs and the sandbox). */
 const OVERVIEW = [{
@@ -20,6 +21,16 @@ describe("Keyword research's calls", () => {
   test("ask for English, in the country chosen, deep enough to say 'not in the top 100'", () => {
     expect(overviewTask(["web design agency"], 2826)).toEqual({ keywords: ["web design agency"], location_code: 2826, language_code: "en", include_serp_info: true });
     expect(serpTask("web design agency", 2840)).toEqual({ keyword: "web design agency", location_code: 2840, language_code: "en", depth: 100 });
+  });
+
+  test("ask Google from the city a keyword names, else the whole country", () => {
+    expect(searchPlaceOf("app developer london", 2826)).toBe(1006886);
+    expect(searchPlaceOf("Web Design, Newcastle", 2826)).toBe(1007220);
+    expect(searchPlaceOf("london or manchester agencies", 2826)).toBe(1006886);
+    expect(searchPlaceOf("web designers surrey", 2826)).toBe(2826);
+    expect(searchPlaceOf("londoner app", 2826)).toBe(2826);
+    // A city is asked from only in its own country.
+    expect(searchPlaceOf("app developer london", 2840)).toBe(2840);
   });
 
   test("read a keyword's overview, missing figures as null", () => {

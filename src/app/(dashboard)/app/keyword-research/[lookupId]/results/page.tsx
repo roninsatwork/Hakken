@@ -85,7 +85,7 @@ export default function LookupResultsPage() {
       <PageHeader
         icon={<Search className="h-6 w-6 text-brand" />}
         title={t("title")}
-        description={t("description", { place: placeIn(lookup.locationCode, lookup.country) })}
+        description={results?.from ? t("descriptionFrom", { city: results.from }) : t("description", { place: placeIn(lookup.locationCode, lookup.country) })}
       />
       {results?.sample ? <Notice>{tk("sample")}</Notice> : null}
       {lookup.state !== "READY" ? <LookupState lookup={lookup} /> : null}
