@@ -147,6 +147,7 @@ export function DetailTabs({ tabs, rootHref }: AdminDetailTabsProps) {
 
   return (
     <div
+      data-part="tabs"
       ref={navRef}
       className="flex items-center gap-1 border-b border-border-dim/50 pb-px mt-2 overflow-x-auto custom-scrollbar"
     >

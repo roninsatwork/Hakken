@@ -19,6 +19,8 @@ export function DownloadButton({ label, busyLabel, busy = false, disabled = fals
 }) {
   return (
     <Button
+      data-part="download"
+      data-part-label={label}
       variant="quiet"
       disabled={disabled || busy}
       onClick={onClick}

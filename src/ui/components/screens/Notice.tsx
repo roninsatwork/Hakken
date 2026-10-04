@@ -25,6 +25,8 @@ export function Notice({ tone = "info", children, action, className }: {
   const Icon = tone === "warning" ? AlertTriangle : Info;
   return (
     <div
+      data-part="notice"
+      data-part-variant={tone}
       role="status"
       className={cn(
         "flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[12px] border p-4 text-secondary",

@@ -1,0 +1,29 @@
+# Search Console → Pages → a page — the approved look (board "Page" of docs/plans/assets/search-console-redesign/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Back to Pages
+  page-header: ‹the record's name›
+    checkbox: Track this page
+choice: Kind of result: Web | Image | Video | News | Discover | Google News
+figures
+  figure: Clicks
+  figure: Impressions
+  figure: Click-through rate
+  figure: Average position
+chart-card: Clicks and impressions over time
+  checkbox: Clicks
+  checkbox: Impressions
+  checkbox: Click-through rate (%)
+  checkbox: Average position
+chart-card: Where the clicks came from
+compact-list: Country | Clicks | Share
+compact-list: Device | Clicks | Share
+search: Search keywords…
+filter: Tracked
+filter: Position
+filter: Device
+table: Track | Keyword | Clicks | Impressions | CTR | Position | Your pages
+  table-bar
+    download: Download all (CSV)
+  table-footer

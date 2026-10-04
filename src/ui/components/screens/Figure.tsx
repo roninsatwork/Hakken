@@ -27,7 +27,7 @@ export function Figure({ label, value, detail, href, framed = true, emphasis = f
 }) {
   const body = (
     <>
-      <div className="text-[12px] text-secondary">{href ? `${label} →` : label}</div>
+      <div data-part-title className="text-[12px] text-secondary">{href ? `${label} →` : label}</div>
       <div className="mt-1 text-[24px] font-semibold tabular-nums text-foreground">{value}</div>
       {detail !== undefined ? <div className="mt-1 text-[12px]">{detail}</div> : null}
     </>
@@ -35,9 +35,10 @@ export function Figure({ label, value, detail, href, framed = true, emphasis = f
   const frame = framed
     ? cn("rounded-2xl border px-5 py-4", emphasis ? "border-brand/40 bg-brand/5" : "border-border-dim bg-card/40")
     : "rounded-lg";
-  if (!href) return <div className={frame}>{body}</div>;
+  if (!href) return <div data-part="figure" className={frame}>{body}</div>;
   return (
     <Link
+      data-part="figure"
       href={href}
       className={cn(
         frame,
@@ -53,7 +54,7 @@ export function Figure({ label, value, detail, href, framed = true, emphasis = f
 /** A row of figures: four across on a wide screen, two on a tablet, one on a phone. */
 export function FigureRow({ children, columns = 4 }: { children: ReactNode; columns?: 2 | 3 | 4 }) {
   return (
-    <div className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2", columns === 4 ? "xl:grid-cols-4" : columns === 3 ? "xl:grid-cols-3" : "")}>
+    <div data-part="figures" className={cn("grid grid-cols-1 gap-3 sm:grid-cols-2", columns === 4 ? "xl:grid-cols-4" : columns === 3 ? "xl:grid-cols-3" : "")}>
       {children}
     </div>
   );

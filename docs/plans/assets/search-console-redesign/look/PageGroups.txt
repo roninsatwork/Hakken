@@ -1,0 +1,12 @@
+# Admin → Websites → Page classification — the approved look (board "PageGroups" of docs/plans/assets/search-console-redesign/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Page classification
+  primary-action: Add classification
+choice: View: Pages · # | Classifications · #
+notice (info)
+search: Find a page…
+filter: Classification
+table: Tick | Page | Classification | How it's set | Clicks | Remove
+  table-bar
+  table-footer

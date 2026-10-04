@@ -1,0 +1,15 @@
+# Search Console → Tracked keywords — the approved look (board "TrackedKeywords" of docs/plans/assets/search-console-redesign/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Tracked keywords
+choice: Kind of result: Web | Image | Video | News | Discover | Google News
+figures
+  figure: Clicks
+  figure: Impressions
+  figure: Click-through rate
+  figure: Average position
+search: Search tracked keywords…
+table: Track | Keyword | Clicks | Impressions | CTR | Position | Pages | Top page
+  table-bar
+    download: Download all (CSV)
+  table-footer

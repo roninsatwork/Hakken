@@ -1,0 +1,17 @@
+# Search Console → Real against estimated — the approved look (board "Estimates" of docs/plans/assets/search-console-redesign/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Real against estimated
+choice: Kind of result: Web | Image | Video | News | Discover | Google News
+figures
+  figure: Discovery's estimate
+  figure: Google's clicks
+  figure: Pages estimated too high
+  figure: Pages estimated too low
+search: Search pages…
+filter: Estimate
+filter: Page type
+table: Page | Type | Clicks | Estimate | Difference
+  table-bar
+    download: Download all (CSV)
+  table-footer

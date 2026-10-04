@@ -1,0 +1,13 @@
+# Search Console → Click rate by position — the approved look (board "CtrCurve" of docs/plans/assets/search-console-redesign/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Click rate by position
+choice: Kind of result: Web | Image | Video | News | Discover | Google News
+chart-card: Your click rate at each position
+  checkbox: Click rate
+search: Search positions…
+filter: Device
+table: Position | Keywords | Impressions | Clicks | CTR
+  table-bar
+    download: Download all (CSV)
+  table-footer

@@ -1,6 +1,6 @@
 # Design drift — one record for the look, and nothing built or drawn off it — 2026-10-04
 
-D1, D2 and D5 built on dev 2026-10-04 ("build the kit first", then "lets do it and build it and also make it inter"); D3 done the same day; D4's tables done, its parts lists and look tests to come.
+D1, D2 and D5 built on dev 2026-10-04 ("build the kit first", then "lets do it and build it and also make it inter"); D3 and D4 done the same day (D4's look tests on his "do the tests and fix anything").
 
 ## Why
 
@@ -298,6 +298,48 @@ pass `check:drawing`.
   after in one column", search-console-plan §13.1). Measured after: all
   three fit at 1440px, the word columns 125–202px.
 
+**D4, look tests — 2026-10-04 ("ok can you do the tests and fix anything").**
+
+- Every kit part now carries a quiet marker (`data-part`, its title
+  `data-part-title` or `data-part-label`); nothing on screen changes. A look
+  test renders an approved screen with sample rows in English and reads it
+  as an outline — its parts top to bottom, their titles, its tables' column
+  headings, with numbers and a record's name left out as data — which must
+  equal the file saved beside the approved drawing,
+  `docs/plans/assets/<plan>/look/<board>.txt` (`src/test/lookOutline.ts`).
+- 26 screens held: Search Console's 24 boards (the 20 of its own, Market,
+  Page classification and a classification's own page in the websites admin,
+  and Tracked fan-out queries and Your pages in Discovery), Content gap and the
+  News front page, whose own parts (dateline, lead story, the last three
+  Google updates, the columns, Earlier, Show more) got markers too.
+  `src/look-tests-drift.test.ts` fails a kit part that loses its marker, a
+  saved look with no test, and a Search Console board with no saved look.
+- How to change an approved look: screen-kit.md, "Approved Looks And Their
+  Look Tests".
+- **What the comparison with the drawings found.**
+  - Fixed: Pages competing and Rich results laid their figures out in a grid
+    of their own; both now use the kit's figure row.
+  - Fixed in passing: on Learn's pages the top bar read "Dashboard"; it reads
+    Learn, with Learn's icon (`learnPaths.ts`, shared with the menu).
+  - Explained by later decisions, left as built: the Country filter drawn on
+    every Search Console list moved beside the dates, one choice per page
+    (search-console-plan §16.2); chart titles lost "week by week" and "by day"
+    when charts began following the dates and step chosen (§18, §19); New and
+    lost's Device filter (§17.6, his call); the kind-of-result switch (§17.3);
+    Types became "By page classification" (§19); "Sites' estimate" is
+    "Discovery's estimate" since the rename; Market's "open on this" choice
+    went with §16.1; Content gap's On its page and CPC went on 2026-09-30.
+  - Kept, with a reason: the figure reads "Click-through rate" where three
+    drawings wrote "CTR" — the plan's own words for the figure (search-console-plan §2.3), the
+    table column staying "CTR" as drawn; Your pages' clicks read "Clicks
+    (90 days)" where the drawing said "these dates" — its list is rebuilt from
+    Search Console's last 90 days at each collection and cannot follow the
+    dates chosen.
+  - His call, not changed: Keywords has an Intent filter the drawing did not
+    (raised in search-console-plan §15, decisions item 1, and only Pages'
+    half settled); the Intent filters offer "Irrelevant" and "Unknown" beyond
+    the drawings' four, because the intent judge files them.
+
 ## Order and size
 
 | Step | What | Size |
@@ -323,3 +365,5 @@ as Conterra's).
 - 2026-10-04 — decisions 4–6: the look file sets production, the
   explorations redrawn whole, all 128 wide tables fixed in this plan; Route
   Planner Screens left out as Conterra Ops'. About 10 days in all.
+- 2026-10-04 — D3 and D4 built: every canvas redrawn on the kit; tables fit;
+  26 approved screens held by look tests.

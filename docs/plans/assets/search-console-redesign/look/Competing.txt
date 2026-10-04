@@ -1,0 +1,16 @@
+# Search Console → Pages competing — the approved look (board "Competing" of docs/plans/assets/search-console-redesign/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Pages competing
+choice: Kind of result: Web | Image | Video | News | Discover | Google News
+figures
+  figure: Keywords split between pages
+  figure: Clicks they share
+  figure: Pages involved
+search: Search keywords…
+filter: Intent
+filter: Position
+table: Keyword | Pages | Clicks | Top page | Share | Next page | Share
+  table-bar
+    download: Download all (CSV)
+  table-footer

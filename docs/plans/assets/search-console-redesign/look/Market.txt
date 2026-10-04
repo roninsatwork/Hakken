@@ -1,0 +1,11 @@
+# Admin → Websites → Market — the approved look (board "Market" of docs/plans/assets/search-console-redesign/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Market
+settings-card: Where it trades
+  notice (info)
+  compact-list
+  select: Add a country
+settings-card: Where you watch from
+  select: Where you watch from
+save

@@ -1,0 +1,17 @@
+# Discovery → Websites → Your pages — the approved look (board "YourPages" of docs/plans/assets/search-console-redesign/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Your pages
+figures
+  figure: In the sitemap →
+  figure: Crawled →
+  figure: Shown by Google →
+  figure: Ranking →
+search: Find a page…
+filter: Where it differs
+filter: Group
+table: Page | Group | Sitemap file | Crawled | Shown by Google | Ranks | Clicks (# days)
+  table-bar
+    download: Download all (CSV)
+  table-footer
+    select: Rows per page

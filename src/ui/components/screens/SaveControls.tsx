@@ -30,7 +30,7 @@ export function SaveAction({
   if (!canWriteHere) return null;
 
   return (
-    <div className="flex items-center gap-3">
+    <div data-part="save" className="flex items-center gap-3">
       {showSuccess && successLabel ? (
         <span className="text-[#10b981] text-[12px] font-medium flex items-center gap-1.5 animate-in fade-in">
           <CheckCircle2 className="w-3.5 h-3.5" />

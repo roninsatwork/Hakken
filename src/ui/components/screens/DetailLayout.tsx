@@ -40,11 +40,11 @@ export function DetailLayout({
       <div className={cn("flex flex-col gap-6 relative", LAYER.PAGE_CHROME, headerClassName)}>
         {/* Tabbed sections share the ruled-header anatomy (2026-08-22
             decision): title, rule, then the tab strip. */}
-        <header className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border-dim pb-6">
+        <header data-part="record-header" className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-border-dim pb-6">
           <div className="flex items-center gap-4 min-w-0">
             {leading}
             <div className="flex flex-col gap-0.5 min-w-0">
-              <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
+              <h1 data-part-title className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
                 {title}
               </h1>
               {description ? (

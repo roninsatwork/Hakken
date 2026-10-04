@@ -1,0 +1,16 @@
+# Admin → Websites → Page classification → a classification's own page — the approved look (board "ClassificationEdit" of docs/plans/assets/search-console-redesign/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Back to Page classification
+  page-header: ‹the record's name›
+settings-card: Classification
+  field: Name
+  select: Type
+settings-card: Which pages
+  compact-list
+  select: Kind of line
+  field: What the address has
+settings-card: Its pages · #
+  compact-list: Page | Caught by | Clicks
+save

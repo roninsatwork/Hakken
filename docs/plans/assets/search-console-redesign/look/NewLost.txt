@@ -1,0 +1,20 @@
+# Search Console → New and lost — the approved look (board "NewLost" of docs/plans/assets/search-console-redesign/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: New and lost
+choice: Kind of result: Web | Image | Video | News | Discover | Google News
+figures
+  figure: New keywords
+  figure: Lost keywords
+  figure: New pages
+  figure: Lost pages
+chart-card: Keywords gained and lost
+  checkbox: Gained
+  checkbox: Lost
+search: Search keywords…
+filter: What happened
+filter: Position
+table: Keyword | Status | When | Clicks | Impressions | Position
+  table-bar
+    download: Download all (CSV)
+  table-footer

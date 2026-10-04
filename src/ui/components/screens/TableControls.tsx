@@ -64,6 +64,7 @@ export function TableSearchInput({
 
   return (
     <div
+      data-part="search"
       className={
         variant === "underline"
           ? "flex-1 min-w-[220px] flex items-center gap-2.5 pl-0 pr-1 pb-2 border-b border-border-dim text-secondary focus-within:text-foreground focus-within:border-brand/50 transition-colors"
@@ -209,7 +210,7 @@ export function TableFilterSelect({
   };
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div data-part="filter" data-part-label={label} className="relative" ref={containerRef}>
       {/* Raw on purpose: a filter trigger whose whole recipe swaps with the
           active-filter state — no Button variant is a two-state chip. An
           active filter is grey, never the brand colour, as `Select`'s chip

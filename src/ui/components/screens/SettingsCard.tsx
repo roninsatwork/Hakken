@@ -21,8 +21,8 @@ export function SettingsCard({ title, className, children }: {
   children: ReactNode;
 }) {
   return (
-    <section className={cn("flex flex-col gap-3 rounded-[16px] border border-border-dim bg-card/40 p-6", className)}>
-      <h2 className="mb-1 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">
+    <section data-part="settings-card" className={cn("flex flex-col gap-3 rounded-[16px] border border-border-dim bg-card/40 p-6", className)}>
+      <h2 data-part-title className="mb-1 text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">
         {title}
       </h2>
       {children}
@@ -79,6 +79,8 @@ export function SegmentedChoice<T extends string>({ label, value, options, onCha
 
   return (
     <div
+      data-part="choice"
+      data-part-label={label}
       role="radiogroup"
       aria-label={label}
       className={cn(

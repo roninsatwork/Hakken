@@ -1,0 +1,18 @@
+# Search Console → Wins and losses — the approved look (board "Moves" of docs/plans/assets/search-console-redesign/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Wins and losses
+choice: Kind of result: Web | Image | Video | News | Discover | Google News
+figures
+  figure: Keywords gaining clicks
+  figure: Keywords losing clicks
+  figure: Clicks gained
+  figure: Clicks lost
+search: Search keywords…
+filter: Wins or losses
+filter: Position
+filter: Device
+table: Keyword | Clicks | Change | Position | Moved
+  table-bar
+    download: Download all (CSV)
+  table-footer

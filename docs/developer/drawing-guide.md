@@ -98,6 +98,10 @@ were redrawn on 2026-10-04.
 - When Anthony approves a drawing, save it with its plan under
   `docs/plans/assets/<plan>/` and treat it as binding: a change to that look
   is drawn and approved again first.
+- **When the approved screen is built, give it a look test** (screen-kit.md,
+  "Approved Looks And Their Look Tests"): it saves the screen's outline beside
+  the drawing, and fails when a part is added, removed or moved, a title
+  reworded or a column changed.
 
 ## When the look changes
 

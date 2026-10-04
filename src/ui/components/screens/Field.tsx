@@ -63,7 +63,7 @@ export function Field({ label, hint, error, labelHidden, className, wrapperClass
   const describedById = hint || error ? `${fieldId}-description` : undefined;
 
   return (
-    <div className={cn("flex flex-col gap-1.5", wrapperClassName)}>
+    <div data-part="field" data-part-label={label} className={cn("flex flex-col gap-1.5", wrapperClassName)}>
       {labelHidden ? (
         <label htmlFor={fieldId} className="sr-only">{label}</label>
       ) : (
@@ -105,7 +105,7 @@ export function TextAreaField({ label, hint, error, labelHidden, className, wrap
   const describedById = hint || error ? `${fieldId}-description` : undefined;
 
   return (
-    <div className={cn("flex flex-col gap-1.5", wrapperClassName)}>
+    <div data-part="field" data-part-label={label} className={cn("flex flex-col gap-1.5", wrapperClassName)}>
       {labelHidden ? (
         <label htmlFor={fieldId} className="sr-only">{label}</label>
       ) : (

@@ -19,7 +19,7 @@ type AdminSearchBarProps = {
 
 export function SearchBar({ value, onChange, placeholder }: AdminSearchBarProps) {
   return (
-    <div className="w-full flex items-center justify-between p-2 bg-card/40 backdrop-blur-xl border border-border-dim rounded-[16px] shadow-sm">
+    <div data-part="search" className="w-full flex items-center justify-between p-2 bg-card/40 backdrop-blur-xl border border-border-dim rounded-[16px] shadow-sm">
       <div className="flex items-center gap-2 px-3 flex-1">
         <Search className="w-4 h-4 text-muted" />
         <input
@@ -84,7 +84,7 @@ export function InlineSearchInput({
   inputRef,
 }: InlineSearchInputProps) {
   return (
-    <div className="flex w-full items-center gap-2">
+    <div data-part="search" className="flex w-full items-center gap-2">
       <Search className="w-4 h-4 shrink-0 text-muted" />
       <input
         ref={inputRef}
@@ -157,7 +157,7 @@ export function TableShell({
   className = "",
 }: AdminTableShellProps) {
   return (
-    <div className={`${SHELL_CLASSES[variant]} ${className}`.trim()}>
+    <div data-part="table" className={`${SHELL_CLASSES[variant]} ${className}`.trim()}>
       {header}
       <div className="w-full overflow-x-auto">
         <table className={`w-full text-left border-collapse ${minWidthClassName}`}>{children}</table>
@@ -357,14 +357,14 @@ function FooterBar({
 }) {
   if (variant === "quiet") {
     return (
-      <div className="w-full pt-3 pl-3 pr-1 flex items-center justify-between gap-3">
+      <div data-part="table-footer" className="w-full pt-3 pl-3 pr-1 flex items-center justify-between gap-3">
         {children}
       </div>
     );
   }
 
   return (
-    <div className="w-full p-4 border-t border-border-dim/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-sidebar/40">
+    <div data-part="table-footer" className="w-full p-4 border-t border-border-dim/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-sidebar/40">
       {children}
     </div>
   );

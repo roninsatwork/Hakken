@@ -93,14 +93,14 @@ export function CompactList<Row>({
 
   if (isLoading || rows.length === 0) {
     return (
-      <div className={`w-full ${className}`.trim()}>
+      <div data-part="compact-list" className={`w-full ${className}`.trim()}>
         <p className="py-1 text-[12px] text-secondary">{isLoading ? (loading ?? empty) : empty}</p>
       </div>
     );
   }
 
   return (
-    <div className={`w-full ${minWidthClassName ? "overflow-x-auto" : ""} ${className}`.trim()}>
+    <div data-part="compact-list" className={`w-full ${minWidthClassName ? "overflow-x-auto" : ""} ${className}`.trim()}>
       <table className={`w-full text-left border-collapse ${minWidthClassName}`.trim()}>
         {hasHeadings && (
           <thead>

@@ -82,7 +82,7 @@ export function NewsFrontPage() {
       {/* The week's count is every story it shows: News's, and Knowledge's new articles. */}
       <Dateline today={today} weekCount={front.weekCount + newArticles.length} />
 
-      <section aria-label={t("leadLabel")} className="grid grid-cols-1 gap-8 border-b border-border-dim py-7 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-0">
+      <section data-part="lead-story" aria-label={t("leadLabel")} className="grid grid-cols-1 gap-8 border-b border-border-dim py-7 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-0">
         <article className="flex min-w-0 flex-col gap-4 lg:pr-9">
           <StoryKicker kind={lead.kind} sourceName={lead.sourceName} publishedAt={lead.publishedAt} />
           <h2 className="text-[28px] font-extrabold leading-[1.08] tracking-[-0.035em] text-foreground sm:text-[38px]">
@@ -94,7 +94,7 @@ export function NewsFrontPage() {
       </section>
 
       {columns.length > 0 ? (
-        <section aria-label={t("moreLabel")} className="grid grid-cols-1 gap-6 border-b border-border-dim py-7 md:grid-cols-3 md:gap-0">
+        <section data-part="story-columns" aria-label={t("moreLabel")} className="grid grid-cols-1 gap-6 border-b border-border-dim py-7 md:grid-cols-3 md:gap-0">
           {columns.map((story) => (
             <article key={story.key} className="flex min-w-0 flex-col gap-3 md:border-l md:border-border-dim md:px-6 md:first:border-l-0 md:first:pl-0 md:last:pr-0">
               <StoryKicker kind={story.kind} sourceName={story.sourceName} publishedAt={story.publishedAt} />
@@ -108,8 +108,8 @@ export function NewsFrontPage() {
       ) : null}
 
       {wire.length > 0 ? (
-        <section aria-labelledby="news-earlier" className="flex flex-col gap-2 pt-7">
-          <h3 id="news-earlier" className="text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">{t("earlier")}</h3>
+        <section data-part="earlier-stories" aria-labelledby="news-earlier" className="flex flex-col gap-2 pt-7">
+          <h3 data-part-title id="news-earlier" className="text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">{t("earlier")}</h3>
           <StoryList stories={wire} />
           <ShowMore feed={feed} />
         </section>
@@ -141,7 +141,7 @@ function Dateline({ today, weekCount }: { today: string; weekCount: number }) {
   const t = useTranslations("news.front");
   const locale = useLocale();
   return (
-    <div className="flex flex-col gap-2.5">
+    <div data-part="dateline" className="flex flex-col gap-2.5">
       <p className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 font-mono text-[11px] uppercase tracking-[0.2em] text-secondary">
         <span>
           <span className="font-medium text-foreground">{formatLongDay(today, locale)}</span>
@@ -166,12 +166,12 @@ function LatestGoogleUpdates({ updates, today }: { updates: LatestUpdate[] | und
   const scale = Math.max(UPDATE_SCALE_DAYS, ...(updates ?? []).map((update) => rolloutPlace(update, today).length));
 
   return (
-    <aside aria-labelledby="news-google-updates" className="flex flex-col gap-1 border-t border-border-dim pt-7 lg:border-l lg:border-t-0 lg:pl-7 lg:pt-1">
+    <aside data-part="latest-google-updates" aria-labelledby="news-google-updates" className="flex flex-col gap-1 border-t border-border-dim pt-7 lg:border-l lg:border-t-0 lg:pl-7 lg:pt-1">
       <p className="flex items-center gap-2 text-[10.5px] font-medium uppercase tracking-[0.12em] text-muted">
         <GoogleMark size={12} />
         {t("label")}
       </p>
-      <h3 id="news-google-updates" className="mt-1.5 text-[15px] font-semibold text-foreground">{t("title")}</h3>
+      <h3 data-part-title id="news-google-updates" className="mt-1.5 text-[15px] font-semibold text-foreground">{t("title")}</h3>
       <p className="pb-2 text-[12.5px] leading-relaxed text-secondary">{t("description")}</p>
       <CompactList
         rows={updates}
@@ -263,7 +263,7 @@ function ShowMore({ feed }: { feed: { status: string; loadMore: (count: number) 
   const t = useTranslations("news.front");
   if (feed.status !== "CanLoadMore") return null;
   return (
-    <Button variant="ghost" onClick={() => feed.loadMore(PAGE)} className="self-start px-0 text-[13px] text-secondary hover:bg-transparent hover:text-foreground">
+    <Button data-part="show-more" variant="ghost" onClick={() => feed.loadMore(PAGE)} className="self-start px-0 text-[13px] text-secondary hover:bg-transparent hover:text-foreground">
       {t("showMore")}
     </Button>
   );

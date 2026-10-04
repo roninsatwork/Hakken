@@ -407,6 +407,37 @@ Every Sites chart that runs over dates marks the Google updates inside its dates
 - **One part draws them.** `GoogleUpdateMarkers.tsx` holds the line, the logo on its circle, the hover card and the key; `GoogleMark.tsx` is the only place Google's four colours are written, a sanctioned exception to the theme tokens beside `chartPalette.ts`. No chart draws its own marker, line, logo or card.
 - **Held by two tests.** `GoogleUpdateMarkers.test.tsx` holds every number of the look; `src/google-update-markers-drift.test.ts` fails when a dated chart part stops drawing the markers, a Sites page draws a chart with Recharts directly, a chart row is dated by its label alone, or Google's colours, the line or the card are written anywhere else.
 
+## Approved Looks And Their Look Tests
+
+Every screen Anthony approved from a drawing is held by a **look test**
+(design-drift-plan D4, 2026-10-04): the screen, rendered with sample rows in
+English, reads as an outline — its kit parts top to bottom, nested as they
+nest, each with its title, and each table's column headings — that must equal
+the one saved beside the plan's approved drawing,
+`docs/plans/assets/<plan>/look/<board>.txt`. Rows, numbers and a record's
+name are data and are left out, so the outline changes only when the look
+does.
+
+- **Every kit part carries a marker.** Its outer element has
+  `data-part="figure"` (or `page-header`, `detail-header`, `back`, `chart-card`,
+  `notice`, `search`, `filter`, `select`, `choice`, `checkbox`, `field`,
+  `table`, `table-bar`, `table-footer`, `compact-list`, `settings-card`,
+  `download`, `save`, `primary-action`, `tabs`, `record-header`), and its title
+  `data-part-title` or `data-part-label`. A new kit part gets one the day it
+  is written; `src/look-tests-drift.test.ts` fails a kit part that loses its
+  marker. A screen's own part that Anthony approved, like the News front page's
+  dateline and lead story, may carry one too.
+- **The reader** is `src/test/lookOutline.ts` (`lookOutline`,
+  `expectApprovedLook`); the tests sit beside the screens, named `…Look….test.tsx`.
+- **A change to an approved look is drawn first** and approved again. Then
+  the drawing, the screen and the look file change in the same commit:
+  `npx vitest run <its look test> -u` writes the new outline. Never run `-u`
+  to make a failing look test pass without that approval.
+- **Covered on 2026-10-04:** Search Console's 24 boards, Content gap and the
+  News front page. A screen approved from now on gets its look test when it is
+  built.
+
+## What The Build Enforces
 ## What The Build Enforces
 
 `scripts/check-screen-kit.mjs` fails the build when a file under `src/app/(dashboard)` hand-writes a part the kit already owns, or assembles a list screen in the wrong order. It runs in `npm run check:guards`, which is CI's first step, and has its own test in `scripts/check-screen-kit.test.mjs`.

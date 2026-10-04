@@ -1,0 +1,16 @@
+# Search Console → By page classification — the approved look (board "Types" of docs/plans/assets/search-console-redesign/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: By page classification
+choice: Kind of result: Web | Image | Video | News | Discover | Google News
+figures
+  figure: Clicks from articles
+  figure: Clicks from service pages
+  figure: Clicks from brand searches
+  figure: Clicks from commercial searches
+chart-card: Pages by kind
+  checkbox: Pages
+  checkbox: Clicks
+chart-card: Keywords by what they want
+  checkbox: Keywords
+  checkbox: Clicks

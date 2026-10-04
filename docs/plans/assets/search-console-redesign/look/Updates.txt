@@ -1,0 +1,13 @@
+# Search Console → Google updates — the approved look (board "Updates" of docs/plans/assets/search-console-redesign/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Google updates
+choice: Kind of result: Web | Image | Video | News | Discover | Google News
+chart-card: Clicks, with Google's updates
+  checkbox: Clicks
+search: Search updates…
+filter: Finished or not
+table: Update | Dates | Clicks | Change | Position | Moved
+  table-bar
+    download: Download all (CSV)
+  table-footer

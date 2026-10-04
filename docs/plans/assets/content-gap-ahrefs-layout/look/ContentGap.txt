@@ -1,0 +1,12 @@
+# Discovery → Websites → Content gap — the approved look (board "ContentGap" of docs/plans/assets/content-gap-ahrefs-layout/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Content gap
+search: Search keywords…
+filter: Intent
+filter: Competitors ranking
+table: Keyword | What they want | Volume | KD | (Position | Traffic) for each
+  table-bar
+    download: Download all (CSV)
+  table-footer
+    select: Rows per page

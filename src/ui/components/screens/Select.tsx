@@ -78,6 +78,8 @@ export function Select({
     const chosen = Boolean(chip.choice);
     return (
       <div
+        data-part="filter"
+        data-part-label={chip.label}
         className={cn(
           "relative inline-flex h-[38px] items-center gap-1.5 whitespace-nowrap rounded-[10px] border px-3 text-[13px] transition-colors focus-within:border-brand/50",
           chosen ? "border-secondary/40 bg-hover text-foreground" : "border-border-dim bg-background text-foreground hover:bg-hover/40",
@@ -110,7 +112,7 @@ export function Select({
   }
 
   return (
-    <div className={cn("relative inline-flex items-center", className)}>
+    <div data-part="select" data-part-label={ariaLabel} className={cn("relative inline-flex items-center", className)}>
       <select
         id={id}
         value={value}

@@ -73,7 +73,7 @@ export function Checkbox({
 
   if (labelHidden) {
     return (
-      <span title={title} className={cn("inline-flex items-center", className)}>
+      <span data-part="checkbox" data-part-label={label} title={title} className={cn("inline-flex items-center", className)}>
         <label htmlFor={boxId} className="sr-only">{label}</label>
         {box}
       </span>
@@ -82,6 +82,8 @@ export function Checkbox({
 
   return (
     <label
+      data-part="checkbox"
+      data-part-label={label}
       htmlFor={boxId}
       title={title}
       className={cn(

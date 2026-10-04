@@ -51,9 +51,9 @@ export function ChartCard({
 }) {
   const t = useTranslations("ui.chart");
   const head = (
-    <div className={exportName ? "flex flex-col gap-3 pr-28" : "flex flex-col gap-3"}>
+    <div data-part="chart-card" className={exportName ? "flex flex-col gap-3 pr-28" : "flex flex-col gap-3"}>
       <div>
-        <h2 className="text-[14px] font-medium text-foreground">{title}</h2>
+        <h2 data-part-title className="text-[14px] font-medium text-foreground">{title}</h2>
         {hint ? <p className="text-[12px] text-secondary">{hint}</p> : null}
       </div>
       {controls}

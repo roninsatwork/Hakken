@@ -1,0 +1,14 @@
+# Learn → News — the approved look (board "NewsFrontPage" of docs/plans/assets/knowledge-news-and-digest/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: News
+select: Learn
+field: Jump to a page
+dateline
+lead-story
+  latest-google-updates: The last three
+    compact-list
+story-columns
+earlier-stories: Earlier
+  compact-list
+  show-more: Show more

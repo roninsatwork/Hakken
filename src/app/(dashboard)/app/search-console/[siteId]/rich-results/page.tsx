@@ -8,7 +8,7 @@ import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { CUT_COLUMN } from "../../../sites/_components/SiteCells";
-import { Figure } from "@/src/ui/components/screens/Figure";
+import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { ListDownload } from "../../../sites/_components/SiteDownloads";
 import { formatNumber } from "../../../sites/_components/siteFormat";
@@ -115,11 +115,11 @@ export default function SearchConsoleAppearancePage() {
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
           <ResultKindSwitch />
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <FigureRow columns={3}>
             <Figure label={t("appearance.kinds")} value={rows ? formatNumber(rows.length) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days: range.days })}</span>} />
             <Figure label={t("appearance.clicks")} value={rows ? formatNumber(clicks) : "…"} detail={<span className="text-secondary">{t("appearance.ofAll", { share: all > 0 ? formatRate(clicks / all) : "–" })}</span>} />
             <Figure label={t("appearance.impressions")} value={rows ? formatNumber(impressions) : "…"} detail={<span className="text-secondary">{t("common.inLast", { days: range.days })}</span>} />
-          </div>
+          </FigureRow>
           <DataTable
             rows={pager.pageRows}
             rowKey={(row) => row.key}

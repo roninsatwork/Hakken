@@ -31,9 +31,9 @@ type AdminPageHeaderProps = {
 
 export function PageHeader({ icon, title, description, action, pills, divider = false }: AdminPageHeaderProps) {
   return (
-    <div className={`flex flex-col sm:flex-row sm:items-end justify-between gap-4${divider ? " border-b border-border-dim pb-6" : ""}`}>
+    <div data-part="page-header" className={`flex flex-col sm:flex-row sm:items-end justify-between gap-4${divider ? " border-b border-border-dim pb-6" : ""}`}>
       <div>
-        <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
+        <h1 data-part-title className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
           {icon}
           {title}
         </h1>
@@ -81,7 +81,7 @@ const BACK_ROW_CLASSES =
 export function DetailHeader({ back, layout = "stacked", icon, ...headerProps }: AdminDetailHeaderProps) {
   if (layout === "path") return <PathHeader back={back} {...headerProps} />;
   return (
-    <div className="flex flex-col gap-3">
+    <div data-part="detail-header" className="flex flex-col gap-3">
       <BackRow {...back} />
       <PageHeader icon={icon} {...headerProps} divider />
     </div>
@@ -96,9 +96,9 @@ export function DetailHeader({ back, layout = "stacked", icon, ...headerProps }:
  */
 function PathHeader({ back, title, description, pills, action }: Omit<AdminDetailHeaderProps, "layout" | "icon">) {
   return (
-    <div className="flex flex-col gap-2 border-b border-border-dim pb-6">
+    <div data-part="detail-header" data-part-variant="path" className="flex flex-col gap-2 border-b border-border-dim pb-6">
       {back.page && back.href ? (
-        <Link href={back.href} aria-label={back.label} className={cn(BACK_ROW_CLASSES, "gap-1.5")}>
+        <Link data-part="back" data-part-label={back.page} href={back.href} aria-label={back.label} className={cn(BACK_ROW_CLASSES, "gap-1.5")}>
           {back.page}
           <span aria-hidden="true" className="text-muted">/</span>
         </Link>
@@ -106,7 +106,7 @@ function PathHeader({ back, title, description, pills, action }: Omit<AdminDetai
         <BackRow {...back} />
       )}
       <div className="flex flex-col gap-x-6 gap-y-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
-        <h1 className="min-w-0 break-words text-2xl font-bold tracking-tight text-foreground">{title}</h1>
+        <h1 data-part-title className="min-w-0 break-words text-2xl font-bold tracking-tight text-foreground">{title}</h1>
         {pills || action ? (
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
             {pills}
@@ -127,12 +127,14 @@ function PathHeader({ back, title, description, pills, action }: Omit<AdminDetai
  */
 export function BackRow({ label, href, onClick }: AdminDetailHeaderProps["back"]) {
   return href ? (
-    <Link href={href} className={BACK_ROW_CLASSES}>
+    <Link data-part="back" data-part-label={label} href={href} className={BACK_ROW_CLASSES}>
       <ArrowLeft className="w-3.5 h-3.5" />
       {label}
     </Link>
   ) : (
     <Button
+      data-part="back"
+      data-part-label={label}
       variant="ghost"
       onClick={onClick}
       className={cn(BACK_ROW_CLASSES, "px-0 py-0 rounded-none hover:bg-transparent")}
@@ -171,6 +173,7 @@ export function PagePrimaryAction({
 
   return (
     <Button
+      data-part="primary-action"
       variant={variant}
       type={type}
       className={cn(
