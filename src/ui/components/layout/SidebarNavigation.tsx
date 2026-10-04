@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/src/ui/lib/utils";
 import { NAV_ACTIVE_PILL, NAV_ACTIVE_TEXT, NAV_IDLE_TEXT } from "./navStyles";
+import { isLearnPath } from "./learnPaths";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -215,12 +216,6 @@ export function isSystemSettingsRoute(pathname: string) {
   ));
 }
 
-/** Learn's three parts, behind one menu item (knowledge-news-and-digest-plan.md, revised again 2026-10-01, R4). */
-const LEARN_PATHS = ['/app/news', '/app/knowledge', '/app/who-to-follow'];
-
-export function isLearnPath(pathname: string) {
-  return LEARN_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
-}
 
 function getActiveItemFromPathname(pathname: string) {
   if (pathname === '/admin') return 'Admin Dashboard';

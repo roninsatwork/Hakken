@@ -103,6 +103,7 @@ const labels: Record<string, string> = {
   calls: "Calls",
   dashboard: "Dashboard",
   information: "Information",
+  learn: "Learn",
   loading: "Loading",
   logs: "Logs",
   organization: "Organization",
@@ -158,5 +159,14 @@ describe("Header route labels", () => {
     render(<Header />);
 
     expect(screen.getByLabelText("Organization / Team Members")).toBeInTheDocument();
+  });
+
+  it("names Learn's pages Learn, not Dashboard", () => {
+    for (const path of ["/app/news", "/app/news/item_1", "/app/knowledge", "/app/who-to-follow"]) {
+      vi.mocked(usePathname).mockReturnValue(path);
+      const { unmount } = render(<Header />);
+      expect(screen.getByLabelText("Learn")).toBeInTheDocument();
+      unmount();
+    }
   });
 });

@@ -33,9 +33,9 @@ import {
   NavItem,
 
   SubNavItem,
-  isLearnPath,
   isSystemSettingsRoute,
 } from "./SidebarNavigation";
+import { isLearnPath } from "./learnPaths";
 
 export function AdminNavTree({
   activeItem,

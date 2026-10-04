@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, Building2, Gamepad2, LayoutDashboard, ListChecks, User, Settings, LogOut, Sidebar, ShieldCheck, ChevronsUpDown, Phone, Globe, SearchCheck } from "lucide-react";
+import { Bot, Building2, Gamepad2, GraduationCap, LayoutDashboard, ListChecks, User, Settings, LogOut, Sidebar, ShieldCheck, ChevronsUpDown, Phone, Globe, SearchCheck } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useQuery, useMutation } from "convex/react";
@@ -15,6 +15,7 @@ import Image from "next/image";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { LAYER } from "@/src/ui/lib/layers";
 import { NotificationBell } from "./NotificationBell";
+import { isLearnPath } from "./learnPaths";
 
 interface HeaderProps {
   onOpenModal?: () => void;
@@ -65,6 +66,7 @@ function getAppHeaderSegments(pathname: string, t: HeaderTranslator, askLabel: s
   if (pathname.startsWith("/app/calls")) return [t("calls")];
   if (pathname.startsWith("/app/sites")) return [t("sites")];
   if (pathname.startsWith("/app/search-console")) return [t("searchConsole")];
+  if (isLearnPath(pathname)) return [t("learn")];
   if (pathname.startsWith("/app/settings/team")) return [t("organization"), t("teamMembers")];
   if (pathname.startsWith("/app/settings")) return [t("organization")];
   if (pathname.startsWith("/app/arcade/ronins-run-3d")) return [t("arcade"), t("roninsRun3D")];
@@ -114,6 +116,8 @@ export default function Header({ onOpenModal }: HeaderProps) {
       ? Globe
       : pathname.startsWith("/app/search-console")
       ? SearchCheck
+      : isLearnPath(pathname)
+      ? GraduationCap
       : pathname.startsWith("/app/arcade")
         ? Gamepad2
         : isAdmin
