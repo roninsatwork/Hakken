@@ -21,7 +21,6 @@ import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { AnswerCards, QuestionCard } from "../../_components/AnswerParts";
 import { LookupState } from "../../_components/LookupState";
-import { CENTS_FOR_ANSWERS } from "../../_components/researchWords";
 import { useLookupAnswers, useLookupId, useLookupOverview, type LookupAnswers } from "../../_components/useLookup";
 
 type Engine = LookupAnswers["engines"][number];
@@ -96,10 +95,10 @@ export default function LookupAnswersPage() {
         <Notice tone="warning" action={askAgain}>{answers.problem ?? t("failed")}</Notice>
       ) : answers?.askedAt && setup ? (
         <Notice action={askAgain}>
-          {t("asked", { day: formatDate(answers.askedAt), cents: CENTS_FOR_ANSWERS, days: setup.limits.reuseDays })}
+          {t("asked", { day: formatDate(answers.askedAt), cents: lookup.costs.answers, days: setup.limits.reuseDays })}
         </Notice>
       ) : answers && lookup.state === "READY" ? (
-        <Notice>{lookup.canLookUp ? t("notAskedYet", { cents: CENTS_FOR_ANSWERS }) : t("notAskedReadOnly")}</Notice>
+        <Notice>{lookup.canLookUp ? t("notAskedYet", { cents: lookup.costs.answers }) : t("notAskedReadOnly")}</Notice>
       ) : null}
 
       {answers?.question ? <QuestionCard question={answers.question} /> : null}

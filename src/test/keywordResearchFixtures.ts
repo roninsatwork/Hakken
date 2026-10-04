@@ -17,6 +17,9 @@ export const SITE_ID = "site_1";
 export const LOOKUP_ID = "lookup_1";
 export const LIST_ID = "list_1";
 
+/** What each part costs in cents at the starting limits (100 ideas of each kind, 25 AI Overview searches): `researchCosts`. */
+export const COSTS = { lookUp: 5, results: 18, ideas: 5, answers: 20, country: 1 };
+
 export const SETUP = {
   canLookUp: true,
   countries: [
@@ -31,6 +34,7 @@ export const SETUP = {
     { siteId: "site_2", host: "acme-agency.ie", homeCountry: 2372 },
   ],
   limits: { keywordsPerLookup: 10, ideasPerKind: 100, reuseDays: 30 },
+  costs: COSTS,
   agent: { active: true, test: false },
 };
 
@@ -97,6 +101,9 @@ export const OVERVIEW = {
   openedAt: Date.UTC(2026, 9, 1, 8, 14),
   boughtAt: Date.UTC(2026, 9, 1, 8, 14),
   costUsd: 0.34 as number | null,
+  buying: false,
+  // The Overview's ideas cost counts the top ten in full too, while Google's results are not held.
+  costs: { ...COSTS, ideas: COSTS.ideas + COSTS.results },
   sample: false,
   overview: {
     volume: 3600,
@@ -108,6 +115,7 @@ export const OVERVIEW = {
     serpKinds: ["local_pack", "people_also_ask"],
     resultsCount: 1_250_000,
     topTenLinkingSites: 180,
+    topTenStrength: 38,
   },
   top: TOP,
   topResult: TOP[0],
@@ -122,7 +130,7 @@ export const OVERVIEW = {
     notInTop100: false,
     visits: 40,
     checkedDay: "2026-09-29",
-    linkingSites: 312,
+    strength: 41,
     tracked: false,
     verdict: "IMPROVE" as const,
     competitors: [

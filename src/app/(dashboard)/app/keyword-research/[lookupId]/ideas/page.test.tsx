@@ -100,6 +100,9 @@ describe("a lookup's Keyword ideas", () => {
     expect(add).toBeDisabled();
     fireEvent.click(within(rowOf("near me")).getByRole("checkbox"));
     fireEvent.click(within(rowOf("surrey")).getByRole("checkbox"));
+    // Ticking, or clicking a row's figures, buys nothing: only the keyword itself opens a lookup.
+    fireEvent.click(within(rowOf("surrey")).getAllByRole("cell").at(-1)!);
+    expect(mutation("lookUp")).not.toHaveBeenCalled();
     await act(async () => {
       fireEvent.change(add, { target: { value: "list_1" } });
     });

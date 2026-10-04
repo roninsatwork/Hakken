@@ -77,9 +77,6 @@ export function lastDayOfMonth(month: string): string {
  */
 export const COUNTRY_KEYS: Readonly<Record<number, string>> = { 2826: "gb", 2372: "ie", 2840: "us", 2036: "au", 2124: "ca" };
 
-/** What a lookup costs to buy again, as the Look up card says it: about 5 cents a keyword not already held. */
-export const CENTS_A_KEYWORD = 5;
-
 /**
  * The three kinds of keyword idea (board 5), as the server names them and as
  * the address names them: `?kind=terms`.
@@ -93,10 +90,6 @@ export type IdeaKind = (typeof IDEA_KINDS)[number]["kind"];
 export type IdeaKey = (typeof IDEA_KINDS)[number]["key"];
 export const IDEA_KEYS: readonly IdeaKey[] = IDEA_KINDS.map((entry) => entry.key);
 export const ideaKindOf = (key: IdeaKey): IdeaKind => IDEA_KINDS.find((entry) => entry.key === key)!.kind;
-
-/** What buying the ideas or asking the AI costs, as the Overview says before either is held. */
-export const CENTS_FOR_IDEAS = 4;
-export const CENTS_FOR_ANSWERS = 20;
 
 /** Difficulty bands the Ideas filter offers, as drawn: easy under 30, medium 30 to 49, hard 50 and over. */
 export const DIFFICULTY_BANDS = { easy: [0, 29], medium: [30, 49], hard: [50, 100] } as const;

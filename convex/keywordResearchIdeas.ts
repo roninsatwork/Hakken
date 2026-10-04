@@ -4,7 +4,7 @@ import { tenantMutation, tenantQuery, requireTenant } from "./tenantFunctions";
 import { isOversightRole } from "./authz";
 import { readFanOutLimits } from "./fanOutLimits";
 import { buysFromSandbox, freshnessOf, newestSerp, researchAgent } from "./keywordResearchData";
-import { ownWebsites, requireLookup, runIsGoing, startResearchRun } from "./keywordResearch";
+import { ownWebsites, partIsBuying, requireLookup, startResearchRun, watchedIn, type ResearchJob } from "./keywordResearch";
 import { hostOf } from "./keywordResearchCalls";
 import { findResearchCountry } from "./utils/researchCountries";
 
@@ -26,7 +26,9 @@ export const openIdeas = tenantMutation({
   handler: async (ctx, args) => {
     const lookup = await requireLookup(ctx, args.lookupId);
     if (isOversightRole(ctx.user.role) || lookup.overview !== "READY") return null;
-    if ((lookup.ideas === "WAITING" || lookup.results === "WAITING") && (await runIsGoing(ctx, lookup.runId))) return null;
+    if (lookup.ideas === "WAITING" && (await partIsBuying(ctx, lookup._id, "IDEAS"))) return null;
+    // Google's results in full, being bought already, bring "also rank for" with them.
+    const resultsBuying = lookup.results === "WAITING" && (await partIsBuying(ctx, lookup._id, "RESULTS"));
     const companyId = requireTenant(ctx);
     const limits = await readFanOutLimits(ctx, companyId);
     const fresh = freshnessOf(limits.researchReuseDays, buysFromSandbox(await researchAgent(ctx)));
@@ -39,16 +41,20 @@ export const openIdeas = tenantMutation({
       .first();
     const needIdeas = !(usable(await newest("TERMS")) && usable(await newest("QUESTIONS")));
     const serp = await newestSerp(ctx, lookup.keyword, lookup.locationCode);
-    const needDetails = !(serp?.detailsBoughtAt && usable({ boughtAt: serp.detailsBoughtAt, sandbox: serp.sandbox }) && usable(await newest("ALSO_RANK")));
+    const needDetails = !resultsBuying
+      && !(serp?.detailsBoughtAt && usable({ boughtAt: serp.detailsBoughtAt, sandbox: serp.sandbox }) && usable(await newest("ALSO_RANK")));
     if (!needIdeas && !needDetails) {
-      await ctx.db.patch(lookup._id, { ideas: "READY", ...(serp?.detailsBoughtAt ? { results: "READY" as const } : {}) });
+      await ctx.db.patch(lookup._id, { ideas: "READY", ...(serp?.detailsBoughtAt && !resultsBuying ? { results: "READY" as const } : {}) });
       return null;
     }
-    const runId = await startResearchRun(ctx, companyId, `keyword ideas for "${lookup.text}"`);
+    const jobs: ResearchJob[] = [
+      ...(needIdeas ? [{ lookup, part: "IDEAS" as const }] : []),
+      ...(needDetails ? [{ lookup, part: "RESULTS" as const }] : []),
+    ];
+    await startResearchRun(ctx, companyId, `keyword ideas for "${lookup.text}"`, jobs);
     await ctx.db.patch(lookup._id, {
       ideas: needIdeas ? "WAITING" : "READY",
       ...(needDetails ? { results: "WAITING" as const } : {}),
-      runId,
       problem: undefined,
     });
     return null;
@@ -70,7 +76,9 @@ export const lookupIdeas = tenantQuery({
       .first();
     const held = Object.fromEntries(await Promise.all(KINDS.map(async (kind) => [kind, await newest(kind)] as const)));
     const chosen = held[args.kind];
-    const website = lookup.companyWebsiteId ? (await ownWebsites(ctx, companyId)).find((row) => row.siteId === lookup.companyWebsiteId) ?? null : null;
+    const measured = lookup.companyWebsiteId ? (await ownWebsites(ctx, companyId)).find((row) => row.siteId === lookup.companyWebsiteId) ?? null : null;
+    // Positions are the website's own, from where it is watched: none to show for a lookup in another country.
+    const website = watchedIn(measured, lookup.locationCode) ? measured : null;
     const place = website?.place ?? lookup.locationCode;
     const rows = await Promise.all((chosen?.rows ?? []).map(async (row) => {
       const ranked = website

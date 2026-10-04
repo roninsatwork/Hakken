@@ -6343,7 +6343,7 @@
         "researchIdeasPerKind": {
           "label": "Keyword ideas of each kind",
           "description": "How many ideas a lookup buys of each kind — terms match, questions, and what the top pages also rank for — the most searched first.",
-          "cost": "About 1 cent a kind, and 1 cent for each 100 ideas."
+          "cost": "About 1.2 cents a kind, and 1.2 cents for each 100 ideas: about 5 cents for both kinds at 100."
         },
         "researchReuseDays": {
           "label": "Days a lookup is kept",
@@ -11672,9 +11672,9 @@
         "noPage": "No page of yours is in Google's top 100 for it.",
         "searched": "{volume} people search it a month, and they are {intent}.",
         "searchedOnly": "{volume} people search it a month.",
-        "linkingTop": "The top ten have about {top} linking websites each.",
-        "linkingWithin": "The top ten have about {top} linking websites each. {host} has {mine}, so the top ten is within reach.",
-        "linkingOut": "The top ten have about {top} linking websites each. {host} has {mine}, so the top ten is out of reach for now.",
+        "strengthTop": "The top ten's websites have a strength of about {top} out of 100.",
+        "strengthWithin": "The top ten's websites have a strength of about {top} out of 100. {host}'s is {mine}, so the top ten is within reach.",
+        "strengthOut": "The top ten's websites have a strength of about {top} out of 100. {host}'s is {mine}, so the top ten is out of reach for now.",
         "notJudged": "Not every figure it needs is in yet, so it is not judged."
       },
       "seeking": {
@@ -11703,7 +11703,7 @@
       "chartSeries": "Searches a month",
       "month": "Month",
       "byCountry": "Searches by country",
-      "byCountryHint": "Only the home country is looked up. Pick another to look it up too: about 1 cent a country.",
+      "byCountryHint": "Only the home country is looked up. Pick another to look it up too: about {cents, plural, one {# cent} other {# cents}} a country.",
       "home": "Home",
       "lookedUp": "Looked up",
       "lookingUp": "Looking it up…",
@@ -11711,11 +11711,12 @@
       "anotherCountry": "Another country",
       "chooseCountry": "Choose a country",
       "lookUpCountry": "Look up",
-      "lookUpCountryTitle": "About 1 cent",
+      "lookUpCountryTitle": "About {cents, plural, one {# cent} other {# cents}}",
       "countryLookUpFailed": "That country could not be looked up — try again",
       "results": "Google's results",
       "resultsHint": "The top five on {day}, and the visits each gets a month.",
       "seeAll": "See all ten, and where you are",
+      "seeAllTitle": "Opening it buys the top ten in full: about {cents} cents.",
       "noResults": "Google's results are not in yet.",
       "ideasTitle": "Keyword ideas",
       "ideasHint": "The first eight of each kind, the most searched first. Open one to look it up.",
@@ -11779,7 +11780,7 @@
       "trackedYes": "Tracked",
       "empty": "This list is empty. Add keywords to it from a lookup.",
       "noMatch": "Nothing matches that.",
-      "note": "Worth it: worked out from where {host} ranks and how many websites link to it, against the top ten. Your position: {host} on Google today.",
+      "note": "Worth it: worked out from where {host} ranks and how strong it is, against the top ten's websites. Your position: {host} on Google today.",
       "noteNoWebsite": "Worth it and positions need a website to measure against.",
       "notFoundTitle": "That list isn't here",
       "notFoundBody": "The link may be wrong, or the list was deleted. Your company's lists are on Keyword research.",
@@ -11861,7 +11862,7 @@
       "openFailed": "The ideas could not be asked for — try again",
       "empty": "No ideas of this kind yet.",
       "noMatch": "Nothing matches that.",
-      "note": "Bought {day}: about 1 cent a kind, and 1 cent for each 100 ideas.",
+      "note": "Bought {day}: about 1.2 cents a kind, and 1.2 cents for each 100 ideas.",
       "noteAlso": "Bought with Google's results in full, {day}.",
       "noteNotYet": "Bought the first time Keyword ideas is opened."
     },

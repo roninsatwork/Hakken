@@ -124,7 +124,9 @@ describe("Look up", () => {
     ]);
     expect(runs).toHaveLength(1);
     expect(runs[0]).toMatchObject({ agentId, companyId, triggerType: "MANUAL", title: "Look up — 2 keywords" });
-    expect(lookups.every((lookup) => lookup.runId === runs[0]._id)).toBe(true);
+    // Each keyword is a job of the one run: what it buys for, and settles.
+    const jobs = await t.run(async (ctx) => await ctx.db.query("researchJobs").collect());
+    expect(jobs.map((job) => [job.lookupId, job.part, job.runId, job.again])).toEqual(lookups.map((lookup) => [lookup._id, "OVERVIEW", runs[0]._id, false]));
   });
 
   test("the agent buys each keyword's overview, 24 months and Google's top 100, files them, and writes each call's cost", async () => {
@@ -165,6 +167,8 @@ describe("Look up", () => {
     expect(held.lookup?.overview).toBe("READY");
     expect(held.run?.status).toBe("SUCCESS");
     expect(held.run?.costUsd).toBeCloseTo(0.04);
+    // What the lookup's header says it cost: its share of each call bought for it.
+    expect(held.lookup?.spentUsd).toBeCloseTo(0.04);
   });
 
   test("in Test mode it asks DataForSEO's free sandbox, its sample standing in for each keyword", async () => {
@@ -185,8 +189,77 @@ describe("Look up", () => {
     await t.action(internal.keywordResearchRun.runKeywordResearchNow, { runId });
 
     expect(fetch.mock.calls.every(([url]) => String(url).startsWith("https://sandbox.dataforseo.com"))).toBe(true);
-    const keyword = await t.run(async (ctx) => await ctx.db.query("researchKeywords").first());
-    expect(keyword).toMatchObject({ keyword: "anything at all", locationCode: US, sandbox: true, searchVolume: 3600 });
+    const held = await t.run(async (ctx) => ({
+      keyword: await ctx.db.query("researchKeywords").first(),
+      pulls: await ctx.db.query("seoDataPulls").collect(),
+      run: await ctx.db.get(runId),
+      lookup: await ctx.db.query("keywordLookups").first(),
+    }));
+    expect(held.keyword).toMatchObject({ keyword: "anything at all", locationCode: US, sandbox: true, searchVolume: 3600 });
+    // The sandbox says what a call would cost, and charges nothing: nothing is written as spent.
+    expect(held.pulls.length).toBeGreaterThan(0);
+    expect(held.pulls.every((pull) => pull.costUsd === 0)).toBe(true);
+    expect(held.run?.costUsd ?? 0).toBe(0);
+    expect(held.lookup?.spentUsd).toBeUndefined();
+  });
+
+  test("a long Look up carries on in a fresh part of the run, buying only what is still missing", async () => {
+    const t = harness();
+    const { as } = await company(t);
+    await researchAgent(t, "LIVE");
+    const keywords = Array.from({ length: 6 }, (_, index) => `keyword ${index}`);
+    await as.mutation(api.keywordResearch.lookUp, { keywords, locationCode: UK });
+    const runId = (await t.run(async (ctx) => await ctx.db.query("agentRuns").first()))!._id;
+    const answer = dataForSeo(() => [{ domain: "madebyshape.co.uk", position: 1 }]);
+    let slowed = false;
+    const fetch = vi.fn(async (url: string, init: { body: string }) => {
+      // The first of Google's results takes the part's time.
+      if (url.includes("/serp/") && !slowed) {
+        slowed = true;
+        vi.setSystemTime(Date.now() + 7 * 60 * 1000);
+      }
+      return await answer(url, init);
+    });
+    vi.stubGlobal("fetch", fetch);
+    // The run Look up scheduled is run here, by hand: only the part it schedules is left to run by itself.
+    await t.run(async (ctx) => {
+      for (const job of await ctx.db.system.query("_scheduled_functions").collect()) await ctx.scheduler.cancel(job._id);
+    });
+
+    await t.action(internal.keywordResearchRun.runKeywordResearchNow, { runId });
+    const serps = () => fetch.mock.calls.filter(([url]) => String(url).includes("/serp/")).length;
+    // Five at once, then the part's time was up: the run carries on rather than finishing.
+    expect(serps()).toBe(5);
+    expect((await t.run(async (ctx) => await ctx.db.get(runId)))?.status).toBe("RUNNING");
+
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    expect(serps()).toBe(6);
+    expect(fetch.mock.calls.filter(([url]) => String(url).includes("keyword_overview"))).toHaveLength(1);
+    const after = await t.run(async (ctx) => ({ run: await ctx.db.get(runId), lookups: await ctx.db.query("keywordLookups").collect() }));
+    expect(after.run?.status).toBe("SUCCESS");
+    expect(after.lookups.map((lookup) => lookup.overview)).toEqual(Array(6).fill("READY"));
+  });
+
+  test("a lookup is ready only on what was bought for it: an old overview never stands in for a purchase that failed", async () => {
+    const t = harness();
+    const { as } = await company(t);
+    await researchAgent(t, "LIVE");
+    await t.run(async (ctx) => {
+      const boughtAt = Date.now() - 40 * 24 * 60 * 60 * 1000;
+      await ctx.db.insert("researchKeywords", {
+        keyword: "seo", locationCode: UK, boughtAt, sandbox: false, searchVolume: 10, cpc: null, competitionLevel: null, difficulty: 5,
+        intent: null, monthly: [], serpKinds: [], resultsCount: null, topTenLinkingSites: null,
+      });
+      await ctx.db.insert("researchSerps", { keyword: "seo", locationCode: UK, boughtAt, sandbox: false, results: [] });
+    });
+    await as.mutation(api.keywordResearch.lookUp, { keywords: ["seo"], locationCode: UK });
+    const runId = (await t.run(async (ctx) => await ctx.db.query("agentRuns").first()))!._id;
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ status_code: 50000, status_message: "Internal error." })));
+
+    await t.action(internal.keywordResearchRun.runKeywordResearchNow, { runId });
+
+    const lookup = await t.run(async (ctx) => await ctx.db.query("keywordLookups").first());
+    expect(lookup?.overview).toBe("FAILED");
   });
 
   test("a keyword held and fresh is opened again, not bought; sample figures don't count once the agent is Live", async () => {
@@ -268,6 +341,37 @@ describe("Google's results", () => {
   });
 });
 
+describe("Google's results in Test mode", () => {
+  test("sample details never land on real results: the sandbox's own results are bought first, the real ones left as they were", async () => {
+    const t = harness();
+    const { as, siteId } = await company(t);
+    await researchAgent(t, "TEST");
+    await t.run(async (ctx) => {
+      await ctx.db.insert("researchKeywords", {
+        keyword: "web design agency", locationCode: UK, boughtAt: Date.now(), sandbox: false, searchVolume: 3600, cpc: null, competitionLevel: null,
+        difficulty: 64, intent: null, monthly: [], serpKinds: [], resultsCount: null, topTenLinkingSites: null,
+      });
+      await ctx.db.insert("researchSerps", {
+        keyword: "web design agency", locationCode: UK, boughtAt: Date.now() - 1_000, sandbox: false,
+        results: [{ position: 1, domain: "kota.co.uk", url: "https://kota.co.uk/", title: "Kota" }],
+      });
+    });
+    const { lookupIds: [lookupId] } = await as.mutation(api.keywordResearch.lookUp, { keywords: ["web design agency"], locationCode: UK, siteId });
+    // Real figures, held and fresh, open a Test lookup: nothing was bought.
+    expect(await t.run(async (ctx) => (await ctx.db.query("agentRuns").collect()).length)).toBe(0);
+    const fetch = dataForSeo(() => [{ domain: "madebyshape.co.uk", position: 1 }]);
+    vi.stubGlobal("fetch", fetch);
+
+    await as.mutation(api.keywordResearch.openResults, { lookupId });
+    await t.action(internal.keywordResearchRun.runKeywordResearchNow, { runId: (await t.run(async (ctx) => await ctx.db.query("agentRuns").first()))!._id });
+
+    expect(fetch.mock.calls.some(([url]) => String(url).includes("/serp/"))).toBe(true);
+    const serps = await t.run(async (ctx) => await ctx.db.query("researchSerps").collect());
+    expect(serps.map((serp) => [serp.sandbox, Boolean(serp.detailsBoughtAt)])).toEqual([[false, false], [true, true]]);
+    expect((await as.query(api.keywordResearch.lookupResults, { lookupId }))?.state).toBe("READY");
+  });
+});
+
 describe("keyword ideas", () => {
   test("opened, the agent buys terms match and questions, the company's number of each, and the top ten in full for also-rank-for", async () => {
     const t = harness();
@@ -301,23 +405,50 @@ describe("keyword ideas", () => {
     const alsoRank = await as.query(api.keywordResearchIdeas.lookupIdeas, { lookupId, kind: "ALSO_RANK" });
     expect(alsoRank?.rows.map((row) => row.keyword)).toEqual(["madebyshape.co.uk top"]);
   });
+
+  test("opened while Google's results are being bought, the ideas are bought by a run of their own, and each run settles only its own part", async () => {
+    const t = harness();
+    const { as, siteId } = await company(t);
+    await researchAgent(t, "LIVE");
+    const { lookupIds: [lookupId] } = await as.mutation(api.keywordResearch.lookUp, { keywords: ["web design agency"], locationCode: UK, siteId });
+    const fetch = dataForSeo(() => [{ domain: "madebyshape.co.uk", position: 1 }]);
+    vi.stubGlobal("fetch", fetch);
+    await t.action(internal.keywordResearchRun.runKeywordResearchNow, { runId: (await t.run(async (ctx) => await ctx.db.query("agentRuns").first()))!._id });
+
+    await as.mutation(api.keywordResearch.openResults, { lookupId });
+    await as.mutation(api.keywordResearchIdeas.openIdeas, { lookupId });
+    const [, resultsRun, ideasRun] = await t.run(async (ctx) => await ctx.db.query("agentRuns").collect());
+    const jobs = await t.run(async (ctx) => await ctx.db.query("researchJobs").collect());
+    expect(jobs.slice(1).map((job) => [job.part, job.runId])).toEqual([["RESULTS", resultsRun._id], ["IDEAS", ideasRun._id]]);
+
+    // The ideas' run finishes first, and leaves Google's results to their own run.
+    await t.action(internal.keywordResearchRun.runKeywordResearchNow, { runId: ideasRun._id });
+    let lookup = await t.run(async (ctx) => await ctx.db.get(lookupId));
+    expect([lookup?.ideas, lookup?.results]).toEqual(["READY", "WAITING"]);
+    await t.action(internal.keywordResearchRun.runKeywordResearchNow, { runId: resultsRun._id });
+    lookup = await t.run(async (ctx) => await ctx.db.get(lookupId));
+    expect([lookup?.ideas, lookup?.results]).toEqual(["READY", "READY"]);
+    // The top ten in full was bought once.
+    expect(fetch.mock.calls.filter(([url]) => String(url).includes("bulk_ranks"))).toHaveLength(1);
+  });
 });
 
 describe("a lookup's overview", () => {
-  async function lookedUp(t: Harness, results: Array<{ domain: string; position: number }>, linkingSites?: number) {
+  async function lookedUp(t: Harness, results: Array<{ domain: string; position: number }>, domainRank?: number) {
     const ids = await company(t);
     await researchAgent(t);
     await t.run(async (ctx) => {
       await ctx.db.insert("researchKeywords", {
         keyword: "web design agency", locationCode: UK, boughtAt: Date.now(), sandbox: false, searchVolume: 3600, cpc: 6.2,
         competitionLevel: "HIGH", difficulty: 64, intent: "commercial", monthly: [], serpKinds: [], resultsCount: null, topTenLinkingSites: 180,
+        topTenDomainStrength: 40,
       });
       await ctx.db.insert("researchSerps", {
         keyword: "web design agency", locationCode: UK, boughtAt: Date.now(), sandbox: false,
         results: results.map(({ domain, position }) => ({ position, domain, url: `https://${domain}/web/`, title: domain })),
       });
-      if (linkingSites !== undefined) {
-        await ctx.db.insert("siteDaySummaries", { websiteId: ids.websiteId, locationCode: UK, day: "2026-10-01", referringDomains: linkingSites, updatedAt: Date.now() } as never);
+      if (domainRank !== undefined) {
+        await ctx.db.insert("siteDaySummaries", { websiteId: ids.websiteId, locationCode: UK, day: "2026-10-01", domainRank, referringDomains: 5_000, updatedAt: Date.now() } as never);
       }
     });
     const { lookupIds } = await ids.as.mutation(api.keywordResearch.lookUp, { keywords: ["web design agency"], locationCode: UK, siteId: ids.siteId });
@@ -335,14 +466,39 @@ describe("a lookup's overview", () => {
     expect(overview?.top?.map((result) => result.domain)).toEqual(["madebyshape.co.uk", "lightflows.co.uk", "ronins.co.uk"]);
   });
 
-  test("with no page of its own, a new page is worth it when its linking websites are half the top ten's, too hard when not", async () => {
-    const reach = async (linkingSites: number) => {
+  test("with no page of its own, a new page is worth it when the website is as strong as the top ten's websites, too hard when not — like for like", async () => {
+    const reach = async (domainRank: number) => {
       const t = harness();
-      const { as, lookupId } = await lookedUp(t, [{ domain: "madebyshape.co.uk", position: 1 }], linkingSites);
-      return (await as.query(api.keywordResearch.lookupOverview, { lookupId }))?.forWebsite?.verdict;
+      const { as, lookupId } = await lookedUp(t, [{ domain: "madebyshape.co.uk", position: 1 }], domainRank);
+      return (await as.query(api.keywordResearch.lookupOverview, { lookupId }))?.forWebsite;
     };
-    expect(await reach(90)).toBe("NEW_PAGE");
-    expect(await reach(89)).toBe("TOO_HARD");
+    // Strength 0 to 100 against the top ten's 40: never the website's linking websites against the top ten's pages'.
+    expect(await reach(400)).toMatchObject({ strength: 40, verdict: "NEW_PAGE" });
+    expect(await reach(390)).toMatchObject({ strength: 39, verdict: "TOO_HARD" });
+  });
+
+  test("another country picked buys its overview alone, and the website's own positions show only for the country it is watched from", async () => {
+    const t = harness();
+    const { as, lookupId, websiteId } = await lookedUp(t, [{ domain: "madebyshape.co.uk", position: 1 }]);
+    const fetch = dataForSeo();
+    vi.stubGlobal("fetch", fetch);
+    await as.mutation(api.keywordResearch.lookUpInCountry, { lookupId, locationCode: US });
+    await t.action(internal.keywordResearchRun.runKeywordResearchNow, { runId: (await t.run(async (ctx) => await ctx.db.query("agentRuns").first()))!._id });
+    expect(fetch.mock.calls.map(([url]) => String(url).replace("https://api.dataforseo.com", ""))).toEqual(["/v3/dataforseo_labs/google/keyword_overview/live"]);
+    expect((await as.query(api.keywordResearch.lookupOverview, { lookupId }))?.countries.find((country) => country.code === US)).toMatchObject({ state: "READY", volume: 3600 });
+
+    // Looked up in the United States, the website — watched from the United Kingdom — has no positions to show.
+    await t.run(async (ctx) => {
+      await ctx.db.insert("researchIdeas", { keyword: "web design agency", locationCode: US, kind: "TERMS", boughtAt: Date.now(), sandbox: false, limit: 100, total: 1, rows: [{ keyword: "best web design agency", volume: 400, difficulty: 30, intent: null, cpc: null }] });
+      await ctx.db.insert("siteKeywordRanks", {
+        websiteId, locationCode: UK, keyword: "best web design agency", position: 7, url: "https://ronins.co.uk/web/", band: "p04_10", page: "/web/",
+        volume: 400, volumeKnown: true, intent: "BUYING", status: "SAME", change: 0, day: "2026-10-01", firstSeenDay: "2026-09-01",
+        searchText: "best web design agency", updatedAt: Date.now(),
+      });
+    });
+    const { lookupIds: [usLookup] } = await as.mutation(api.keywordResearch.lookUp, { keywords: ["web design agency"], locationCode: US });
+    const ideas = await as.query(api.keywordResearchIdeas.lookupIdeas, { lookupId: usLookup, kind: "TERMS" });
+    expect(ideas?.rows.map((row) => [row.keyword, row.position])).toEqual([["best web design agency", null]]);
   });
 
   test("is the company's own: another company reads nothing of it", async () => {

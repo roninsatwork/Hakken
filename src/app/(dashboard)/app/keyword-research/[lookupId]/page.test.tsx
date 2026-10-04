@@ -107,7 +107,7 @@ describe("a lookup's Overview", () => {
     const verdict = card("keywordResearch.overview.forHost acme-agency.test");
     expect(within(verdict).getByText("keywordResearch.verdicts.IMPROVE")).toBeInTheDocument();
     expect(within(verdict).getByText("keywordResearch.overview.reasons.ranks /custom-web-design-agency/ 18 2")).toBeInTheDocument();
-    expect(within(verdict).getByText("keywordResearch.overview.reasons.linkingWithin 180 acme-agency.test 312")).toBeInTheDocument();
+    expect(within(verdict).getByText("keywordResearch.overview.reasons.strengthWithin 38 acme-agency.test 41")).toBeInTheDocument();
 
     const yours = card("keywordResearch.overview.yourPage");
     expect(within(yours).getByRole("link", { name: "keywordResearch.overview.openInWebsites" })).toHaveAttribute(
@@ -169,7 +169,7 @@ describe("a lookup's Overview", () => {
     const empty = { ...IDEAS, counts: { TERMS: null, QUESTIONS: null, ALSO_RANK: null }, rows: [], state: null, boughtAt: null };
     const mutation = await open({}, CONSOLE_STATUS, { ideas: empty, answers: { ...ANSWERS, figures: null, engines: [], question: null, state: null, askedAt: null } });
 
-    expect(screen.getByText("keywordResearch.overview.ideasNotYet 4")).toBeInTheDocument();
+    expect(screen.getByText("keywordResearch.overview.ideasNotYet 23")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "keywordResearch.overview.ideasOpen" })).toHaveAttribute("href", "/app/keyword-research/lookup_1/ideas?kind=terms");
     expect(screen.getByText("keywordResearch.overview.aiNotYet 20")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "keywordResearch.overview.aiOpen" })).toHaveAttribute("href", "/app/keyword-research/lookup_1/ai");

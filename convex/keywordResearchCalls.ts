@@ -123,6 +123,8 @@ export type KeywordOverview = {
   serpKinds: string[];
   resultsCount: number | null;
   topTenLinkingSites: number | null;
+  /** The top ten's domains' strength on average, 0 to 100: DataForSEO's main domain rank of 0 to 1,000 divided by ten. */
+  topTenDomainStrength: number | null;
 };
 
 /** The result's items, wherever the envelope's task put them. */
@@ -172,9 +174,15 @@ export function readKeywordOverviews(result: unknown): Map<string, KeywordOvervi
       }),
       resultsCount: orNull(asNumber(serp?.se_results_count)),
       topTenLinkingSites: orNull(asNumber(links?.referring_domains)),
+      topTenDomainStrength: strengthOf(asNumber(links?.main_domain_rank)),
     });
   }
   return read;
+}
+
+/** DataForSEO's rank of 0 to 1,000 as a strength of 0 to 100: the scale every strength in Keyword research is read on. */
+function strengthOf(rank: number | undefined): number | null {
+  return rank === undefined ? null : Math.round(rank / 10);
 }
 
 /** Historical search volume: each keyword's last 24 months. */
@@ -257,8 +265,8 @@ export function readPageStrength(result: unknown): Map<string, number> {
   const read = new Map<string, number>();
   for (const item of itemsOf(result)) {
     const target = asString(item.target);
-    const rank = asNumber(item.rank);
-    if (target && rank !== undefined) read.set(pageKey(target), Math.round(rank / 10));
+    const strength = strengthOf(asNumber(item.rank));
+    if (target && strength !== null) read.set(pageKey(target), strength);
   }
   return read;
 }

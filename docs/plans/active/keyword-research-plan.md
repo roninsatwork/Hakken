@@ -39,23 +39,27 @@ His decisions so far:
 
 ## What each lookup buys, and what it costs
 
-DataForSEO's real average charges on dev, from `seoOperationCosts` on
-2026-10-04, against what each screen needs. The new endpoints are DataForSEO
-Labs calls, about 1 cent a call plus 0.01 cent a row returned.
+DataForSEO's published prices, checked on 2026-10-04 and matching dev's real
+charges: DataForSEO Labs 1.2 cents a call and 0.012 cents a row; a live
+Google results page 0.2 cents, each further page of ten 0.15 cents (so the
+top 100 is 1.55 cents); Backlinks 2.4 cents a call and 0.0036 cents a row;
+LLM Mentions 10 cents a call and a tenth of a cent a row; the four
+assistants' answers as dev's collections have been charged on average,
+between 0.6 and 3.8 cents each, 7.4 cents together.
 
 | When | Bought (each a live call) | About |
 |---|---|---|
-| Look up | Labs keyword overview (searches, CPC, difficulty, intent, the top ten's average linking websites); Labs historical searches (24 months); Google's top 100 (live SERP, depth 100); the top ten's visits and keywords (Labs bulk traffic estimation, one call for all ten) | 5 cents |
-| Google's results opened | Each top-ten page's strength (`bulk_ranks`) and linking websites (`bulk_referring_domains`), 2.4 cents each for all ten; what each page ranks for (Labs ranked keywords, one call a page) — its top keyword, and the "also rank for" ideas | 16 cents |
-| Ideas opened | Terms match and questions (Labs keyword suggestions, the second with a question filter), the limit's number of each; "also rank for" comes with Google's results | 4 cents at 100 of each (1 cent a kind and 1 cent for each 100 ideas) |
-| What the AI says opened | Our AI writes the question (a fraction of a cent); four assistants answer (between 0.6 and 3.8 cents each); Google's AI Overview searches (10 cents a call and a tenth of a cent a search: 12.5 cents at 25) | 20 cents |
+| Look up | Labs keyword overview (searches, CPC, difficulty, intent, the top ten's average linking websites); Labs historical searches (24 months); Google's top 100 (live SERP, depth 100); the top ten's visits and keywords (Labs bulk traffic estimation, one call for all ten) | 5 cents (1.2 + 1.2 + 1.55 + 1.3) |
+| Google's results opened | Each top-ten page's strength (`bulk_ranks`) and linking websites (`bulk_referring_domains`), 2.4 cents each for all ten; what each page ranks for (Labs ranked keywords, one call a page, 10 rows each) — its top keyword, and the "also rank for" ideas | 18 cents (2.4 + 2.4 + 10 × 1.3) |
+| Ideas opened | Terms match and questions (Labs keyword suggestions, the second with a question filter), the limit's number of each; "also rank for" comes with Google's results | 5 cents at 100 of each (2 × (1.2 + 100 × 0.012)) |
+| What the AI says opened | Our AI writes the question (a fraction of a cent); four assistants answer (7.4 cents together, as charged on dev); Google's AI Overview searches (10 cents a call and a tenth of a cent a search: 12.5 cents at 25) | 20 cents |
 | Another country picked | Labs keyword overview for that country | 1 cent |
 | Start from a competitor | Nothing: Content gap's copy, from what Websites holds | free |
 
-So a keyword looked up and opened on every screen costs about 45 cents at
+So a keyword looked up and opened on every screen costs about 48 cents at
 100 ideas of each kind and 25 AI Overview searches; one only looked up, about
-5. Corrected 2026-10-04: Ideas had been put at 2 cents, half their cost. The drawings' "1,000" and
-"about $0.34" were mine; the screens follow his decisions.
+5. Corrected 2026-10-04 against DataForSEO's published prices: Ideas had
+been put at 2 cents and Google's results at 15.
 
 ## What is reused
 
@@ -109,8 +113,14 @@ company for 30 days, like Websites' own buying):
 tracked lists):
 
 - `keywordLookups` — a keyword the company looked up: the country, the
-  website it is measured against (or none), who and when, and each part's
-  state (waiting, ready, failed) with the agent run that bought it.
+  website it is measured against (or none), who and when, each part's state
+  (waiting, ready, failed), and what the company has spent on it (its share
+  of each call bought for it — the header's cost).
+- `researchJobs` — each part of a lookup a run was started to buy (the
+  overview, another country, Google's results, ideas, what the AI says). A
+  run buys for its own jobs and settles only them, so two parts opened close
+  together are each bought by their own run, and a part asked for again
+  belongs to the newer run.
 - `researchLists` and `researchListKeywords` — a list's name, the website it
   is measured against, and its keywords.
 
@@ -120,8 +130,24 @@ at once; the run buys what is missing, files it, and writes each call's cost
 and a line on its own run, in Observability, and on the company's DataForSEO
 spend (`seoDataPulls`, the day roll-ups), so Cost to serve counts it. Its Mode,
 on its Settings, is **Test** (DataForSEO's free sandbox: real shapes, sample
-figures, no cost) until he switches it to **Live**. Its per-run spend limit is
-the agent's own (agent-cost-control-is-enough).
+figures, no cost — written as $0) until he switches it to **Live**. Its
+per-run spend limit is the agent's own (agent-cost-control-is-enough).
+
+**Spend.** Each call checks the run's spend before it is sent. Calls go a
+few at a time (five keywords at once, the ten pages of Google's results at
+once, the four assistants at once), so a run can pass its limit by the calls
+already on their way: at most four keywords' worth of one kind of call, or
+about 7 to 15 cents on What the AI says.
+
+**Time.** Convex stops any one step after ten minutes. A run buys for about
+six, then carries on in a fresh part of the same run, which reads again what
+is still missing — nothing is bought twice. A run that has done nothing for
+ten minutes counts as stopped, and Look up again can start another.
+
+**Ready means bought.** A part is ready only when what it waited for is held
+and fresh (bought within the company's days, or — for Look up again and Ask
+again — since that run started). An older copy never stands in for a
+purchase that failed.
 
 **Who** — any company member but the platform's oversight roles (read-only,
 auditor) may look up, make lists and track (decision 2); everyone in the
@@ -142,9 +168,17 @@ The agent's spend in one run is the agent's own limit, on its Settings.
 the page, each saying why:
 - **Already winning**: the website is in the top three.
 - **Improve your page**: a page of the website ranks, below the top three.
-- **Worth a new page**: no page ranks, and the website's linking websites are
-  at least half the top ten's average (`avg_backlinks_info`).
-- **Too hard for now**: no page ranks, and they are not.
+- **Worth a new page**: no page ranks, and the website is at least as strong
+  as the top ten's websites on average — its domain's strength against
+  theirs, both 0 to 100 (DataForSEO's domain rank ÷ 10: the website's from
+  Websites, the top ten's from the overview's `avg_backlinks_info.main_domain_rank`).
+- **Too hard for now**: no page ranks, and it is not.
+
+Until 2026-10-04's review it compared the website's linking websites with
+half the top ten's — but the overview's figure is the top ten *pages'*
+linking websites, and the website's is the whole *domain's*, so a website
+with many links read as "worth a new page" for almost anything. Strength
+against strength is like for like.
 
 ## Order
 
@@ -178,8 +212,9 @@ All five steps, on his "build the keyword research section".
   Start from a competitor; research lists and Track. The Keyword research
   agent (role `KEYWORD_RESEARCH`, template "Keyword research") buys, with its
   Test / Live mode; every call is on its run, the company's DataForSEO spend
-  and Cost to serve. 15 tests (`convex/keywordResearch.test.ts`, the readers'
-  `keywordResearchCalls.test.ts`).
+  and Cost to serve. 19 tests (`convex/keywordResearch.test.ts`), the
+  readers' (`keywordResearchCalls.test.ts`) and the costs'
+  (`keywordResearchPrices.test.ts`).
 - **Screens** (`src/app/(dashboard)/app/keyword-research/`): Look up (board
   1), a lookup's Overview (2), Google's results (3), What the AI says (4),
   Keyword ideas (5), Start from a competitor (6), a research list (7), with
@@ -192,7 +227,13 @@ All five steps, on his "build the keyword research section".
   Google's AI Overview searches per lookup (25; 0 buys none).
 - **Said, not settings:** Past lookups shows the newest 500; a research list
   holds at most 500 keywords; the overview's ideas card shows the first eight
-  of each kind.
+  of each kind; a run buys five keywords at once and carries on after about
+  six minutes, at most six times.
+- **Costs on screen** come from one price list (`convex/keywordResearchPrices.ts`,
+  DataForSEO's published prices and the company's limits), never a figure in
+  the words: Look up, Look up again, opening a keyword, Google's results
+  ("See all ten", on hover), Keyword ideas (with the top ten in full when not
+  yet held), What the AI says and another country.
 - **Where the screens differ from the drawings, and why:** headings sort and
   footers are numbered (Discovery's table rules); figures and labels use the
   kit's parts (no white dropdown, no coloured "You"); costs read as the real
@@ -216,3 +257,15 @@ All five steps, on his "build the keyword research section".
   1–4 the same day ("A new Keyword research agent", "Anyone who can edit",
   "100 each", "30 days").
 - 2026-10-04 — all five steps built, on dev; the first lookup waits for his go.
+- 2026-10-04 — checked again, on his "Can you double check your work": the
+  costs against DataForSEO's published prices (ideas 5 cents, not 2 or 4;
+  Google's results 18, not 15), and twelve faults found by a second reading
+  of the code, all fixed — ticking a row no longer looks it up; sample
+  details never land on real results; the sandbox's calls cost $0; each part
+  is a job of its own run (`researchJobs`), so parts opened together are all
+  bought; long runs carry on rather than stop at ten minutes; a part is
+  ready only on what was bought for it; Track reads the tracked list once;
+  "Worth a new page" compares strength with strength (above); the header's
+  cost is the lookup's own; another country buys its overview alone (no 24
+  months); a raised ideas limit buys "also rank for" again; and the
+  website's positions show only for the country it is watched from.

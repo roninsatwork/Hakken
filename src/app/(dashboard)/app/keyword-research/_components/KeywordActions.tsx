@@ -10,7 +10,6 @@ import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/components/screens/Button";
 import { Select } from "@/src/ui/components/screens/Select";
 import { cn } from "@/src/ui/lib/utils";
-import { CENTS_A_KEYWORD } from "./researchWords";
 import { lookupHref } from "./useLookup";
 
 /**
@@ -22,13 +21,16 @@ import { lookupHref } from "./useLookup";
 /** Where the keywords are looked up: the country, and the website measured against, or none. */
 export type LookUpPlace = { locationCode: number; siteId: Id<"companyWebsites"> | null };
 
-/** Looks a keyword up and opens its overview: one runner for a whole table. */
+/** Looks a keyword up and opens its overview: one runner for a whole table, with what a lookup costs. */
 export function useOpenKeyword(place: LookUpPlace) {
   const t = useTranslations("keywordResearch.lookup");
   const router = useRouter();
   const lookUp = useMutation(api.keywordResearch.lookUp);
+  const setup = useQuery(api.keywordResearch.researchSetup, {});
   const { run, isBusy } = useAdminAction({ scope: "keyword-research-open" });
   return {
+    /** About what a keyword not already held costs, in cents, once the company's limits are read. */
+    cents: setup?.costs.lookUp ?? null,
     busy: (keyword: string) => isBusy(keyword),
     open: async (keyword: string) => {
       const outcome = await run(
@@ -57,13 +59,9 @@ export function KeywordOpener({ keyword, canLookUp, opener, wrap = false }: {
   return (
     <Button
       variant="ghost"
-      title={t("openTitle", { keyword, cents: CENTS_A_KEYWORD })}
+      title={opener.cents === null ? keyword : t("openTitle", { keyword, cents: opener.cents })}
       disabled={opener.busy(keyword)}
-      onClick={(event) => {
-        // The row's own click is the same action; once is enough.
-        event.stopPropagation();
-        void opener.open(keyword);
-      }}
+      onClick={() => void opener.open(keyword)}
       className={cn("block max-w-full rounded-none p-0 text-left text-[13px] font-normal text-foreground hover:bg-transparent hover:text-foreground hover:underline", fit)}
     >
       {keyword}

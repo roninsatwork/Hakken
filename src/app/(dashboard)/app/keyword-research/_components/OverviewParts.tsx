@@ -29,7 +29,7 @@ import { formatDate } from "@/src/lib/dates";
 import { shiftDay } from "../../sites/_components/siteRange";
 import { ResearchPositionCell, ResearchSection, useCountryName } from "./ResearchCells";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
-import { CENTS_FOR_ANSWERS, CENTS_FOR_IDEAS, VERDICT_TONES, dayDate, isIntent, lastDayOfMonth, pathOf, readableAddress } from "./researchWords";
+import { VERDICT_TONES, dayDate, isIntent, lastDayOfMonth, pathOf, readableAddress } from "./researchWords";
 import { ideasHref, lookupHref, useLookupAnswers, type LookupOverview } from "./useLookup";
 
 /** "What Google counted" reads Search Console's last this many days, as drawn. */
@@ -62,12 +62,13 @@ export function ForWebsiteSection({ lookup, forWebsite, figures }: { lookup: Loo
       ? t("reasons.searched", { volume: formatNumber(figures.volume), intent: t(`seeking.${figures.intent}`) })
       : t("reasons.searchedOnly", { volume: formatNumber(figures.volume) }));
   }
-  const top = figures?.topTenLinkingSites ?? null;
+  // Like for like (`verdictOf`): the website's strength against the top ten's websites', both 0 to 100.
+  const top = figures?.topTenStrength ?? null;
   if (top !== null) {
-    const mine = forWebsite.linkingSites;
+    const mine = forWebsite.strength;
     reasons.push(mine === null
-      ? t("reasons.linkingTop", { top: formatNumber(top) })
-      : t(mine >= top / 2 ? "reasons.linkingWithin" : "reasons.linkingOut", { top: formatNumber(top), host, mine: formatNumber(mine) }));
+      ? t("reasons.strengthTop", { top: formatNumber(top) })
+      : t(mine >= top ? "reasons.strengthWithin" : "reasons.strengthOut", { top: formatNumber(top), host, mine: formatNumber(mine) }));
   }
   if (!verdict) reasons.push(t("reasons.notJudged"));
 
@@ -225,7 +226,7 @@ export function SearchesByCountry({ lookup }: { lookup: LookupOverview }) {
   };
 
   return (
-    <ChartCard title={t("byCountry")} hint={t("byCountryHint")}>
+    <ChartCard title={t("byCountry")} hint={t("byCountryHint", { cents: lookup.costs.country })}>
       <div className="flex flex-col gap-4">
         {shown.map((country) => (
           <div key={country.code} className="flex flex-col gap-2">
@@ -244,7 +245,7 @@ export function SearchesByCountry({ lookup }: { lookup: LookupOverview }) {
             </Select>
             <Button
               variant="quiet"
-              title={t("lookUpCountryTitle")}
+              title={t("lookUpCountryTitle", { cents: lookup.costs.country })}
               disabled={!picked || isBusy()}
               onClick={async () => {
                 const outcome = await run(() => lookUpInCountry({ lookupId: lookup.lookupId, locationCode: Number(picked) }), { fallbackMessage: t("countryLookUpFailed") });
@@ -281,15 +282,20 @@ export function TopFive({ lookup }: { lookup: LookupOverview }) {
           { key: "visits", header: tc("visits"), align: "right", cell: (row) => <span className="font-mono text-[12px] tabular-nums text-foreground">{formatVisits(row.visits)}</span> },
         ]}
       />
-      <OnwardLink href={lookupHref(lookup.lookupId, "results")}>{t("seeAll")}</OnwardLink>
+      <OnwardLink
+        href={lookupHref(lookup.lookupId, "results")}
+        title={lookup.canLookUp && lookup.results !== "READY" ? t("seeAllTitle", { cents: lookup.costs.results }) : undefined}
+      >
+        {t("seeAll")}
+      </OnwardLink>
     </ChartCard>
   );
 }
 
 /** "See all ten →": the quiet link onward under a card, as the drawing kit's "A quiet link onward". */
-function OnwardLink({ href, children }: { href: string; children: string }) {
+function OnwardLink({ href, title, children }: { href: string; title?: string; children: string }) {
   return (
-    <Link href={href} className="mt-3 inline-flex items-center gap-1.5 text-[12px] text-secondary hover:text-foreground">
+    <Link href={href} title={title} className="mt-3 inline-flex items-center gap-1.5 text-[12px] text-secondary hover:text-foreground">
       {children}
       <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
     </Link>
@@ -306,7 +312,7 @@ export function IdeasCardWaiting({ lookup, waiting }: { lookup: LookupOverview; 
   return (
     <ResearchSection
       title={t("ideasTitle")}
-      description={waiting ? t("ideasWaiting") : lookup.canLookUp ? t("ideasNotYet", { cents: CENTS_FOR_IDEAS }) : t("ideasNotYetReadOnly")}
+      description={waiting ? t("ideasWaiting") : lookup.canLookUp ? t("ideasNotYet", { cents: lookup.costs.ideas }) : t("ideasNotYetReadOnly")}
     >
       <OnwardLink href={ideasHref(lookup.lookupId, "terms")}>{t("ideasOpen")}</OnwardLink>
     </ResearchSection>
@@ -352,7 +358,7 @@ export function AnswersCard({ lookup }: { lookup: LookupOverview }) {
       ) : (
         <>
           <p className="text-[13px] text-secondary">
-            {answers?.state === "WAITING" ? t("aiWaiting") : lookup.canLookUp ? t("aiNotYet", { cents: CENTS_FOR_ANSWERS }) : t("aiNotYetReadOnly")}
+            {answers?.state === "WAITING" ? t("aiWaiting") : lookup.canLookUp ? t("aiNotYet", { cents: lookup.costs.answers }) : t("aiNotYetReadOnly")}
           </p>
           <OnwardLink href={href}>{t("aiOpen")}</OnwardLink>
         </>

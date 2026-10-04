@@ -79,8 +79,10 @@ export const keywordResearchTables = {
     /** The kinds of result Google's page shows besides the ordinary ones: ai_overview, local_pack, people_also_ask… */
     serpKinds: v.array(v.string()),
     resultsCount: v.union(v.number(), v.null()),
-    /** The linking websites the top ten have, on average: what "within reach" is measured against. */
+    /** The linking websites the top ten's pages have, on average. */
     topTenLinkingSites: v.union(v.number(), v.null()),
+    /** The top ten's domains' strength, 0 to 100, on average: what "within reach" is measured against, like for like with the website's own. */
+    topTenDomainStrength: v.optional(v.union(v.number(), v.null())),
   }).index("by_keyword_place", ["keyword", "locationCode", "boughtAt"]),
 
   /** Google's top 100 for a keyword in a country, and once Google's results are opened, its top ten pages in full (board 3). */
@@ -154,20 +156,36 @@ export const keywordResearchTables = {
     ideas: v.optional(researchPartStateValidator),
     /** What the AI says opened: the question, four answers and the AI Overview's searches. */
     answers: v.optional(researchPartStateValidator),
-    /** Ask again: the answers bought afresh by the next run, however recently they were bought. */
-    answersAgain: v.optional(v.boolean()),
     /** Searches by country: each other country picked, looked up for its overview alone (about 1 cent each). */
     countries: v.optional(v.array(v.object({ locationCode: v.number(), state: researchPartStateValidator }))),
-    /** Look up again: bought afresh by the next run, however recently it was bought. */
-    again: v.optional(v.boolean()),
-    /** The run that last bought for it. */
-    runId: v.optional(v.id("agentRuns")),
+    /** What the company has spent on this keyword, in USD: its share of each call bought for it. */
+    spentUsd: v.optional(v.number()),
     /** Why the last part asked for failed, in words for the screen. */
     problem: v.optional(v.string()),
   })
     .index("by_company_opened", ["companyId", "openedAt"])
-    .index("by_company_keyword_place", ["companyId", "keyword", "locationCode"])
-    .index("by_run", ["runId"]),
+    .index("by_company_keyword_place", ["companyId", "keyword", "locationCode"]),
+
+  /**
+   * One part of one lookup a run was started to buy: the run reads its jobs
+   * to know what to buy, and settles only them — so two parts opened close
+   * together are two jobs, each settled by its own run, and a later run
+   * never settles an earlier one's part.
+   */
+  researchJobs: defineTable({
+    runId: v.id("agentRuns"),
+    lookupId: v.id("keywordLookups"),
+    companyId: v.id("companies"),
+    part: v.union(v.literal("OVERVIEW"), v.literal("RESULTS"), v.literal("IDEAS"), v.literal("ANSWERS"), v.literal("COUNTRY")),
+    keyword: v.string(),
+    /** The lookup's country, or for a COUNTRY job the one picked. */
+    locationCode: v.number(),
+    /** Look up again or Ask again: bought afresh, whatever is held. */
+    again: v.boolean(),
+    createdAt: v.number(),
+  })
+    .index("by_run", ["runId"])
+    .index("by_lookup_part", ["lookupId", "part", "createdAt"]),
 
   /** A company's research list (board 7). */
   researchLists: defineTable({

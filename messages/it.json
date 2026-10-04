@@ -6343,7 +6343,7 @@
         "researchIdeasPerKind": {
           "label": "Idee di parole chiave per tipo",
           "description": "Quante idee acquista una ricerca per ogni tipo — termini corrispondenti, domande, e per cosa si posizionano anche le prime pagine — le più cercate prima.",
-          "cost": "Circa 1 centesimo per tipo, e 1 centesimo ogni 100 idee."
+          "cost": "Circa 1,2 centesimi per tipo, e 1,2 centesimi ogni 100 idee: circa 5 centesimi per i due tipi a 100."
         },
         "researchReuseDays": {
           "label": "Giorni di conservazione di una ricerca",
@@ -11672,9 +11672,9 @@
         "noPage": "Nessuna tua pagina è tra i primi 100 di Google per questa ricerca.",
         "searched": "{volume} persone la cercano ogni mese, e stanno {intent}.",
         "searchedOnly": "{volume} persone la cercano ogni mese.",
-        "linkingTop": "I primi dieci hanno circa {top} siti che rimandano ciascuno.",
-        "linkingWithin": "I primi dieci hanno circa {top} siti che rimandano ciascuno. {host} ne ha {mine}, quindi i primi dieci sono a portata.",
-        "linkingOut": "I primi dieci hanno circa {top} siti che rimandano ciascuno. {host} ne ha {mine}, quindi per ora i primi dieci non sono a portata.",
+        "strengthTop": "I siti dei primi dieci hanno una forza di circa {top} su 100.",
+        "strengthWithin": "I siti dei primi dieci hanno una forza di circa {top} su 100. Quella di {host} è {mine}, quindi i primi dieci sono a portata.",
+        "strengthOut": "I siti dei primi dieci hanno una forza di circa {top} su 100. Quella di {host} è {mine}, quindi per ora i primi dieci non sono a portata.",
         "notJudged": "Non ci sono ancora tutti i dati necessari, quindi non è valutata."
       },
       "seeking": {
@@ -11703,7 +11703,7 @@
       "chartSeries": "Ricerche al mese",
       "month": "Mese",
       "byCountry": "Ricerche per paese",
-      "byCountryHint": "Si cerca solo il paese della sede. Scegline un altro per cercarlo: circa 1 centesimo a paese.",
+      "byCountryHint": "Si cerca solo il paese della sede. Scegline un altro per cercarlo: circa {cents, plural, one {# centesimo} other {# centesimi}} a paese.",
       "home": "Sede",
       "lookedUp": "Cercato",
       "lookingUp": "Ricerca in corso…",
@@ -11711,11 +11711,12 @@
       "anotherCountry": "Un altro paese",
       "chooseCountry": "Scegli un paese",
       "lookUpCountry": "Cerca",
-      "lookUpCountryTitle": "Circa 1 centesimo",
+      "lookUpCountryTitle": "Circa {cents, plural, one {# centesimo} other {# centesimi}}",
       "countryLookUpFailed": "Non è stato possibile cercare quel paese — riprova",
       "results": "I risultati di Google",
       "resultsHint": "I primi cinque il {day}, e le visite al mese di ciascuno.",
       "seeAll": "Vedi tutti e dieci, e dove sei",
+      "seeAllTitle": "Aprirlo acquista i primi dieci per intero: circa {cents} centesimi.",
       "noResults": "I risultati di Google non sono ancora arrivati.",
       "ideasTitle": "Idee di parole chiave",
       "ideasHint": "Le prime otto di ogni tipo, dalle più cercate. Aprine una per cercarla.",
@@ -11779,7 +11780,7 @@
       "trackedYes": "Monitorata",
       "empty": "Questa lista è vuota. Aggiungi parole chiave da una ricerca.",
       "noMatch": "Nessun risultato.",
-      "note": "Ne vale la pena: calcolato da dove si posiziona {host} e da quanti siti vi rimandano, rispetto ai primi dieci. La tua posizione: {host} su Google oggi.",
+      "note": "Ne vale la pena: calcolato da dove si posiziona {host} e da quanto è forte, rispetto ai siti dei primi dieci. La tua posizione: {host} su Google oggi.",
       "noteNoWebsite": "Ne vale la pena e le posizioni richiedono un sito su cui misurare.",
       "notFoundTitle": "Questa lista non è qui",
       "notFoundBody": "Il link potrebbe essere sbagliato, o la lista è stata eliminata. Le liste della tua azienda sono in Ricerca parole chiave.",
@@ -11861,7 +11862,7 @@
       "openFailed": "Non è stato possibile chiedere le idee — riprova",
       "empty": "Ancora nessuna idea di questo tipo.",
       "noMatch": "Nessun risultato.",
-      "note": "Acquistate il {day}: circa 1 centesimo a tipo, e 1 centesimo ogni 100 idee.",
+      "note": "Acquistate il {day}: circa 1,2 centesimi a tipo, e 1,2 centesimi ogni 100 idee.",
       "noteAlso": "Acquistate con i risultati di Google completi, il {day}.",
       "noteNotYet": "Acquistate la prima volta che si apre Idee."
     },

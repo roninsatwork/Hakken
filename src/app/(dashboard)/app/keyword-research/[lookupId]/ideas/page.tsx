@@ -201,7 +201,6 @@ export default function LookupIdeasPage() {
       <DataTable
         rows={paged.pageRows}
         rowKey={keywordOf}
-        onRowClick={canLookUp ? (row) => void opener.open(row.keyword) : undefined}
         rowClassName={(row) => (ticked.has(row.keyword) ? "bg-brand/5" : "")}
         search={{ value: search, onChange: setSearch, placeholder: t("search") }}
         filters={

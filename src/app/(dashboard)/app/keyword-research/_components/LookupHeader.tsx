@@ -15,7 +15,6 @@ import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { usePlaceIn } from "./ResearchCells";
-import { CENTS_A_KEYWORD } from "./researchWords";
 import { KEYWORD_RESEARCH_HREF, lookupHref, type LookupOverview } from "./useLookup";
 
 /** "A new list…" in Add to a list: its own page, with the keyword carried over. */
@@ -113,8 +112,8 @@ export function LookupHeader({ lookup }: { lookup: LookupOverview }) {
             </Select>
             <Button
               variant="quiet"
-              title={t("againTitle", { cents: CENTS_A_KEYWORD })}
-              disabled={lookup.state === "WAITING" || isBusy("again")}
+              title={t("againTitle", { cents: lookup.costs.lookUp })}
+              disabled={lookup.buying || isBusy("again")}
               onClick={() => void run(() => lookUpAgain({ lookupId: lookup.lookupId }), { key: "again", fallbackMessage: t("againFailed") })}
               className="inline-flex h-[38px] items-center gap-1.5"
             >

@@ -9,11 +9,12 @@ import { companyHolds } from "./siteAccess";
 import { readFanOutLimits } from "./fanOutLimits";
 import { startAgentRun } from "./agentRunStartService";
 import { readSearchPhrase, addWebsiteKeywordCore } from "./websiteCanonical";
-import { holdSearch } from "./holdLists";
+import { holdSearch, holdSearches } from "./holdLists";
 import { RESEARCH_COUNTRIES, RESEARCH_COUNTRY_CODES, findResearchCountry, homeCountryOf } from "./utils/researchCountries";
 import { hostOf, pageKey } from "./keywordResearchCalls";
 import { pageTypeByAddress } from "./utils/siteShapes";
 import { buysFromSandbox, newestKeyword, newestSerp, overviewIsFresh, freshnessOf, researchAgent, serpIsFresh } from "./keywordResearchData";
+import { researchCosts } from "./keywordResearchPrices";
 
 /**
  * Keyword research, the company's side (docs/plans/active/keyword-research-
@@ -33,8 +34,10 @@ type Reader = { db: QueryCtx["db"] };
 const LOOKUPS_READ = 500;
 const LISTS_READ = 200;
 const LIST_KEYWORDS_READ = 500;
-/** A run younger than this is still buying; a lookup waiting on an older one is asked again. */
+/** A run that has done nothing for this long has stopped; a part waiting on it may be asked for again. */
 const RUN_GOING_MS = 10 * 60 * 1000;
+/** Enough of a website's tracked searches to know whether one more fits: its limit is at most 1,000. */
+const TRACKED_READ = 1_001;
 const NAME_MAX = 80;
 
 export function requireLooker(ctx: TenantIdentity): Id<"companies"> {
@@ -72,11 +75,15 @@ async function requireList(ctx: Reader & TenantIdentity, listId: Id<"researchLis
   return list;
 }
 
+export type ResearchPart = Doc<"researchJobs">["part"];
+export type ResearchJob = { lookup: Pick<Doc<"keywordLookups">, "_id" | "keyword" | "locationCode">; part: ResearchPart; locationCode?: number; again?: boolean };
+
 /**
- * Start the Keyword research agent for a company's waiting lookups — refused
- * plainly when there is no agent holding the role, or it is switched off.
+ * Start the Keyword research agent for parts of a company's lookups, each a
+ * job of the run — refused plainly when there is no agent holding the role,
+ * or it is switched off.
  */
-export async function startResearchRun(ctx: MutationCtx & TenantIdentity, companyId: Id<"companies">, what: string): Promise<Id<"agentRuns">> {
+export async function startResearchRun(ctx: MutationCtx & TenantIdentity, companyId: Id<"companies">, what: string, jobs: ResearchJob[]): Promise<Id<"agentRuns">> {
   const agent = await researchAgent(ctx);
   if (!agent) throw appError("NOT_FOUND", "There is no Keyword research agent yet. An admin creates it in Admin → Agents, from the Keyword research template.");
   if (agent.isActive === false) throw appError("CONFLICT", `${agent.name} is switched off. An admin switches it on in Admin → Agents.`);
@@ -94,6 +101,18 @@ export async function startResearchRun(ctx: MutationCtx & TenantIdentity, compan
     startedAt: now,
     updatedAt: now,
   });
+  for (const job of jobs) {
+    await ctx.db.insert("researchJobs", {
+      runId,
+      lookupId: job.lookup._id,
+      companyId,
+      part: job.part,
+      keyword: job.lookup.keyword,
+      locationCode: job.locationCode ?? job.lookup.locationCode,
+      again: job.again === true,
+      createdAt: now,
+    });
+  }
   const workflowExecutionId = await ctx.db.insert("workflowExecutions", {
     agentId: agent._id,
     agentRunId: runId,
@@ -106,10 +125,17 @@ export async function startResearchRun(ctx: MutationCtx & TenantIdentity, compan
   return runId;
 }
 
-export async function runIsGoing(ctx: Reader, runId: Id<"agentRuns"> | undefined): Promise<boolean> {
-  if (!runId) return false;
-  const run = await ctx.db.get(runId);
-  return Boolean(run && (run.status === "QUEUED" || run.status === "RUNNING") && Date.now() - run.startedAt < RUN_GOING_MS);
+/**
+ * Whether a part of a lookup is being bought now: the newest job asked for it
+ * belongs to a run still going — one that has done something in the last ten
+ * minutes. A part left waiting by a run that stopped may be asked for again.
+ */
+export async function partIsBuying(ctx: Reader, lookupId: Id<"keywordLookups">, part: ResearchPart, locationCode?: number): Promise<boolean> {
+  const jobs = await ctx.db.query("researchJobs").withIndex("by_lookup_part", (q) => q.eq("lookupId", lookupId).eq("part", part)).order("desc").take(20);
+  const job = locationCode === undefined ? jobs[0] : jobs.find((row) => row.locationCode === locationCode);
+  if (!job) return false;
+  const run = await ctx.db.get(job.runId);
+  return Boolean(run && (run.status === "QUEUED" || run.status === "RUNNING") && Date.now() - (run.updatedAt ?? run.startedAt) < RUN_GOING_MS);
 }
 
 const keywordsWord = (count: number) => (count === 1 ? "1 keyword" : `${count} keywords`);
@@ -127,6 +153,7 @@ export const researchSetup = tenantQuery({
       countries: RESEARCH_COUNTRIES.map((country) => ({ code: country.code, label: country.label })),
       websites: websites.map(({ siteId, host, homeCountry }) => ({ siteId, host, homeCountry })),
       limits: { keywordsPerLookup: limits.researchKeywordsPerLookup, ideasPerKind: limits.researchIdeasPerKind, reuseDays: limits.researchReuseDays },
+      costs: researchCosts(limits),
       agent: agent ? { active: agent.isActive !== false, test: buysFromSandbox(agent) } : null,
     };
   },
@@ -161,14 +188,14 @@ export const lookUp = tenantMutation({
     const fresh = freshnessOf(limits.researchReuseDays, buysFromSandbox(await researchAgent(ctx)));
     const now = Date.now();
     const lookupIds: Id<"keywordLookups">[] = [];
-    const waiting: Id<"keywordLookups">[] = [];
+    const waiting: ResearchJob[] = [];
     for (const [keyword, text] of typed) {
       const held = (await overviewIsFresh(ctx, keyword, args.locationCode, fresh)) && (await serpIsFresh(ctx, keyword, args.locationCode, fresh));
       const existing = await ctx.db
         .query("keywordLookups")
         .withIndex("by_company_keyword_place", (q) => q.eq("companyId", companyId).eq("keyword", keyword).eq("locationCode", args.locationCode))
         .first();
-      const stillBuying = existing?.overview === "WAITING" && (await runIsGoing(ctx, existing.runId));
+      const stillBuying = existing?.overview === "WAITING" && (await partIsBuying(ctx, existing._id, "OVERVIEW"));
       const overview = held ? ("READY" as const) : ("WAITING" as const);
       if (existing) {
         await ctx.db.patch(existing._id, {
@@ -178,20 +205,17 @@ export const lookUp = tenantMutation({
           ...(stillBuying ? {} : { overview, problem: undefined }),
         });
         lookupIds.push(existing._id);
-        if (!stillBuying && !held) waiting.push(existing._id);
+        if (!stillBuying && !held) waiting.push({ lookup: existing, part: "OVERVIEW" });
       } else {
         const id = await ctx.db.insert("keywordLookups", {
           companyId, keyword, text, locationCode: args.locationCode, ...(args.siteId ? { companyWebsiteId: args.siteId } : {}),
           createdBy: ctx.userId, createdAt: now, openedAt: now, overview,
         });
         lookupIds.push(id);
-        if (!held) waiting.push(id);
+        if (!held) waiting.push({ lookup: { _id: id, keyword, locationCode: args.locationCode }, part: "OVERVIEW" });
       }
     }
-    if (waiting.length > 0) {
-      const runId = await startResearchRun(ctx, companyId, keywordsWord(waiting.length));
-      for (const id of waiting) await ctx.db.patch(id, { runId });
-    }
+    if (waiting.length > 0) await startResearchRun(ctx, companyId, keywordsWord(waiting.length), waiting);
     return { lookupIds, waiting: waiting.length };
   },
 });
@@ -203,15 +227,14 @@ export const lookUpAgain = tenantMutation({
   handler: async (ctx, args) => {
     const companyId = requireLooker(ctx);
     const lookup = await requireLookup(ctx, args.lookupId);
-    if (lookup.overview === "WAITING" && (await runIsGoing(ctx, lookup.runId))) return null;
-    // Bought again only once what is held is older than now: the run reads this lookup as waiting.
-    const runId = await startResearchRun(ctx, companyId, keywordsWord(1));
-    await ctx.db.patch(lookup._id, { overview: "WAITING", runId, openedAt: Date.now(), problem: undefined, again: true });
+    if (lookup.overview === "WAITING" && (await partIsBuying(ctx, lookup._id, "OVERVIEW"))) return null;
+    await startResearchRun(ctx, companyId, keywordsWord(1), [{ lookup, part: "OVERVIEW", again: true }]);
+    await ctx.db.patch(lookup._id, { overview: "WAITING", openedAt: Date.now(), problem: undefined });
     return null;
   },
 });
 
-/** Searches by country: look the keyword up in one more country, its overview alone (about 1 cent). */
+/** Searches by country: look the keyword up in one more country, its overview alone (about 1 cent: `researchCosts`). */
 export const lookUpInCountry = tenantMutation({
   args: { lookupId: v.id("keywordLookups"), locationCode: v.number() },
   returns: v.null(),
@@ -220,6 +243,8 @@ export const lookUpInCountry = tenantMutation({
     requireCountry(args.locationCode);
     const lookup = await requireLookup(ctx, args.lookupId);
     if (args.locationCode === lookup.locationCode) return null;
+    const asked = lookup.countries?.find((country) => country.locationCode === args.locationCode);
+    if (asked?.state === "WAITING" && (await partIsBuying(ctx, lookup._id, "COUNTRY", args.locationCode))) return null;
     const limits = await readFanOutLimits(ctx, companyId);
     const fresh = freshnessOf(limits.researchReuseDays, buysFromSandbox(await researchAgent(ctx)));
     const others = (lookup.countries ?? []).filter((country) => country.locationCode !== args.locationCode);
@@ -227,8 +252,10 @@ export const lookUpInCountry = tenantMutation({
       await ctx.db.patch(lookup._id, { countries: [...others, { locationCode: args.locationCode, state: "READY" }] });
       return null;
     }
-    const runId = await startResearchRun(ctx, companyId, `"${lookup.text}" in ${findResearchCountry(args.locationCode)?.label ?? "another country"}`);
-    await ctx.db.patch(lookup._id, { countries: [...others, { locationCode: args.locationCode, state: "WAITING" }], runId });
+    await startResearchRun(ctx, companyId, `"${lookup.text}" in ${findResearchCountry(args.locationCode)?.label ?? "another country"}`, [
+      { lookup, part: "COUNTRY", locationCode: args.locationCode },
+    ]);
+    await ctx.db.patch(lookup._id, { countries: [...others, { locationCode: args.locationCode, state: "WAITING" }], problem: undefined });
     return null;
   },
 });
@@ -276,18 +303,26 @@ export const pastLookups = tenantQuery({
 /**
  * "For acme-agency.test" (plan, "How it is built"): one of four answers, worked
  * out from the figures on the page. Null where they are not all there.
+ *
+ * With no page in the top 100, a new page is within reach when the website is
+ * at least as strong as the top ten's websites are on average — its domain's
+ * strength against theirs, like for like, both 0 to 100.
  */
-function verdictOf(position: number | null, notInTop100: boolean, siteLinkingSites: number | null, topTenLinkingSites: number | null) {
+function verdictOf(position: number | null, notInTop100: boolean, siteStrength: number | null, topTenStrength: number | null) {
   if (position !== null) return position <= 3 ? ("WINNING" as const) : ("IMPROVE" as const);
-  if (!notInTop100 || siteLinkingSites === null || topTenLinkingSites === null) return null;
-  return siteLinkingSites >= topTenLinkingSites / 2 ? ("NEW_PAGE" as const) : ("TOO_HARD" as const);
+  if (!notInTop100 || siteStrength === null || topTenStrength === null) return null;
+  return siteStrength >= topTenStrength ? ("NEW_PAGE" as const) : ("TOO_HARD" as const);
 }
 
-/** A website's own linking websites, from its newest day that has them. */
-async function linkingSitesOf(ctx: Reader, websiteId: Id<"websites">, place: number): Promise<number | null> {
+/** A website's own strength, 0 to 100 — its domain's rank of 0 to 1,000 divided by ten — from its newest day that has it. */
+async function strengthOfWebsite(ctx: Reader, websiteId: Id<"websites">, place: number): Promise<number | null> {
   const days = await ctx.db.query("siteDaySummaries").withIndex("by_site_day", (q) => q.eq("websiteId", websiteId).eq("locationCode", place)).order("desc").take(30);
-  return days.find((day) => day.referringDomains !== undefined)?.referringDomains ?? null;
+  const rank = days.find((day) => day.domainRank !== undefined)?.domainRank;
+  return rank === undefined ? null : Math.round(rank / 10);
 }
+
+/** Whether what Websites holds for a website — its positions, its visits — is for the lookup's country: it is watched from one place only. */
+export const watchedIn = (website: { homeCountry: number } | null, locationCode: number) => Boolean(website && website.homeCountry === locationCode);
 
 /** A lookup's overview (board 2): its figures, its 24 months, Google's top results, and what it means for the website measured. */
 export const lookupOverview = tenantQuery({
@@ -309,9 +344,11 @@ export const lookupOverview = tenantQuery({
 
     let forWebsite = null;
     if (website && host) {
-      const [ranked, linkingSites] = await Promise.all([
-        ctx.db.query("siteKeywordRanks").withIndex("by_site_keyword", (q) => q.eq("websiteId", website.websiteId).eq("locationCode", website.place ?? lookup.locationCode).eq("keyword", lookup.keyword)).first(),
-        linkingSitesOf(ctx, website.websiteId, website.place ?? lookup.locationCode),
+      const [ranked, strength] = await Promise.all([
+        watchedIn(website, lookup.locationCode)
+          ? ctx.db.query("siteKeywordRanks").withIndex("by_site_keyword", (q) => q.eq("websiteId", website.websiteId).eq("locationCode", website.place ?? lookup.locationCode).eq("keyword", lookup.keyword)).first()
+          : null,
+        strengthOfWebsite(ctx, website.websiteId, website.place ?? lookup.locationCode),
       ]);
       const rivals = holds.filter((row) => row.summary.relationship === "TRACKED" && row.summary.ofSiteId === website.siteId);
       forWebsite = {
@@ -322,9 +359,9 @@ export const lookupOverview = tenantQuery({
         notInTop100: Boolean(serp && !position),
         visits: ranked?.traffic ?? null,
         checkedDay: ranked?.day ?? null,
-        linkingSites,
+        strength,
         tracked: Boolean(await holdSearch(ctx, website.siteId, lookup.keyword)),
-        verdict: verdictOf(position?.position ?? null, Boolean(serp && !position), linkingSites, overview?.topTenLinkingSites ?? null),
+        verdict: verdictOf(position?.position ?? null, Boolean(serp && !position), strength, overview?.topTenDomainStrength ?? null),
         competitors: rivals.map((row) => {
           const rival = hostOf(row.website.displayHost);
           return { host: row.website.displayHost, position: serp?.results.find((result) => result.domain === rival)?.position ?? null };
@@ -340,7 +377,7 @@ export const lookupOverview = tenantQuery({
     }));
 
     const lists = await ctx.db.query("researchLists").withIndex("by_company_updated", (q) => q.eq("companyId", companyId)).order("desc").take(LISTS_READ);
-    const run = lookup.runId ? await ctx.db.get(lookup.runId) : null;
+    const costs = researchCosts(await readFanOutLimits(ctx, companyId));
     return {
       lookupId: lookup._id,
       keyword: lookup.text,
@@ -350,7 +387,13 @@ export const lookupOverview = tenantQuery({
       problem: lookup.problem ?? null,
       openedAt: lookup.openedAt,
       boughtAt: overview?.boughtAt ?? null,
-      costUsd: run?.costUsd ?? null,
+      costUsd: lookup.spentUsd ?? null,
+      buying: lookup.overview === "WAITING" && (await partIsBuying(ctx, lookup._id, "OVERVIEW")),
+      costs: {
+        ...costs,
+        // Opening Keyword ideas buys the top ten in full too, for "also rank for", unless Google's results already have it.
+        ideas: costs.ideas + (lookup.results === "READY" ? 0 : costs.results),
+      },
       sample: Boolean(overview?.sandbox || serp?.sandbox),
       overview: overview
         ? {
@@ -363,6 +406,7 @@ export const lookupOverview = tenantQuery({
             serpKinds: overview.serpKinds,
             resultsCount: overview.resultsCount,
             topTenLinkingSites: overview.topTenLinkingSites,
+            topTenStrength: overview.topTenDomainStrength ?? null,
           }
         : null,
       top: serp ? topPages(serp).slice(0, 5) : null,
@@ -417,7 +461,7 @@ export const openResults = tenantMutation({
   handler: async (ctx, args) => {
     const lookup = await requireLookup(ctx, args.lookupId);
     if (isOversightRole(ctx.user.role) || lookup.overview !== "READY") return null;
-    if (lookup.results === "WAITING" && (await runIsGoing(ctx, lookup.runId))) return null;
+    if (lookup.results === "WAITING" && (await partIsBuying(ctx, lookup._id, "RESULTS"))) return null;
     const companyId = requireTenant(ctx);
     const limits = await readFanOutLimits(ctx, companyId);
     const fresh = freshnessOf(limits.researchReuseDays, buysFromSandbox(await researchAgent(ctx)));
@@ -426,8 +470,8 @@ export const openResults = tenantMutation({
       if (lookup.results !== "READY") await ctx.db.patch(lookup._id, { results: "READY" });
       return null;
     }
-    const runId = await startResearchRun(ctx, companyId, `Google's results for "${lookup.text}"`);
-    await ctx.db.patch(lookup._id, { results: "WAITING", runId, problem: undefined });
+    await startResearchRun(ctx, companyId, `Google's results for "${lookup.text}"`, [{ lookup, part: "RESULTS" }]);
+    await ctx.db.patch(lookup._id, { results: "WAITING", problem: undefined });
     return null;
   },
 });
@@ -509,7 +553,7 @@ export const researchList = tenantQuery({
     ]);
     const website = list.companyWebsiteId ? websites.find((row) => row.siteId === list.companyWebsiteId) ?? null : null;
     const host = website ? hostOf(website.host) : null;
-    const linkingSites = website ? await linkingSitesOf(ctx, website.websiteId, website.place ?? keywords[0]?.locationCode ?? 2826) : null;
+    const strength = website ? await strengthOfWebsite(ctx, website.websiteId, website.place ?? keywords[0]?.locationCode ?? 2826) : null;
     const rows = await Promise.all(keywords.map(async (row) => {
       const [overview, serp] = await Promise.all([newestKeyword(ctx, row.keyword, row.locationCode), newestSerp(ctx, row.keyword, row.locationCode)]);
       const result = host && serp ? serp.results.find((entry) => entry.domain === host) ?? null : null;
@@ -522,7 +566,7 @@ export const researchList = tenantQuery({
         intent: overview?.intent ?? null,
         position: result?.position ?? null,
         url: result?.url ?? null,
-        verdict: website ? verdictOf(result?.position ?? null, Boolean(serp && !result), linkingSites, overview?.topTenLinkingSites ?? null) : null,
+        verdict: website ? verdictOf(result?.position ?? null, Boolean(serp && !result), strength, overview?.topTenDomainStrength ?? null) : null,
         tracked: website ? Boolean(await holdSearch(ctx, website.siteId, row.keyword)) : false,
         addedAt: row.addedAt,
       };
@@ -653,11 +697,14 @@ export const trackFromResearchList = tenantMutation({
     const list = await requireList(ctx, args.listId);
     if (!list.companyWebsiteId) throw appError("INVALID_INPUT", "Choose the website this list is measured against before tracking its keywords.");
     await requireOwnWebsite(ctx, companyId, list.companyWebsiteId);
+    // The tracked list read once, and counted up as each is added, rather than read again for every keyword.
+    let listSize = (await holdSearches(ctx, list.companyWebsiteId, TRACKED_READ)).length;
     let tracked = 0;
     for (const raw of args.keywords) {
       const { keyword } = readSearchPhrase(raw);
       if (await holdSearch(ctx, list.companyWebsiteId, keyword)) continue;
-      await addWebsiteKeywordCore(ctx, { companyWebsiteId: list.companyWebsiteId, keyword, userId: ctx.userId, addedFrom: "HAND" });
+      await addWebsiteKeywordCore(ctx, { companyWebsiteId: list.companyWebsiteId, keyword, userId: ctx.userId, addedFrom: "HAND", listSize });
+      listSize += 1;
       tracked += 1;
     }
     return { tracked };

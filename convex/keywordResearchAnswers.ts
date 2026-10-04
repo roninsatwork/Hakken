@@ -7,7 +7,7 @@ import { isOversightRole } from "./authz";
 import { readFanOutLimits } from "./fanOutLimits";
 import { companyHolds } from "./siteAccess";
 import { buysFromSandbox, freshnessOf, researchAgent } from "./keywordResearchData";
-import { ownWebsites, requireLookup, runIsGoing, startResearchRun } from "./keywordResearch";
+import { ownWebsites, partIsBuying, requireLookup, startResearchRun, watchedIn } from "./keywordResearch";
 import { findResearchCountry } from "./utils/researchCountries";
 
 /**
@@ -34,7 +34,7 @@ export const openAnswers = tenantMutation({
   handler: async (ctx, args) => {
     const lookup = await requireLookup(ctx, args.lookupId);
     if (isOversightRole(ctx.user.role) || lookup.overview !== "READY") return null;
-    if (lookup.answers === "WAITING" && (await runIsGoing(ctx, lookup.runId))) return null;
+    if (lookup.answers === "WAITING" && (await partIsBuying(ctx, lookup._id, "ANSWERS"))) return null;
     const companyId = requireTenant(ctx);
     if (!args.again) {
       const limits = await readFanOutLimits(ctx, companyId);
@@ -45,8 +45,8 @@ export const openAnswers = tenantMutation({
         return null;
       }
     }
-    const runId = await startResearchRun(ctx, companyId, `what the AI says about "${lookup.text}"`);
-    await ctx.db.patch(lookup._id, { answers: "WAITING", runId, problem: undefined, ...(args.again ? { answersAgain: true } : {}) });
+    await startResearchRun(ctx, companyId, `what the AI says about "${lookup.text}"`, [{ lookup, part: "ANSWERS", again: args.again === true }]);
+    await ctx.db.patch(lookup._id, { answers: "WAITING", problem: undefined });
     return null;
   },
 });
@@ -105,7 +105,8 @@ export const lookupAnswers = tenantQuery({
 
     // The website's page for each AI Overview search, where it ranks for that search, from what Websites holds.
     const searches = await Promise.all((held?.overviewSearches ?? []).map(async (search) => {
-      const ranked = website
+      // The website's positions are from where it is watched: none for a lookup in another country.
+      const ranked = website && watchedIn(website, lookup.locationCode)
         ? await ctx.db.query("siteKeywordRanks").withIndex("by_site_keyword", (q) => q.eq("websiteId", website.websiteId).eq("locationCode", website.place ?? lookup.locationCode).eq("keyword", search.query.toLowerCase())).first()
         : null;
       return { query: search.query, times: search.times, page: ranked?.url ?? null };

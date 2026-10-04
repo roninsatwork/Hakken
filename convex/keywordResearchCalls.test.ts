@@ -11,7 +11,7 @@ const OVERVIEW = [{
     },
     keyword_properties: { keyword_difficulty: 64 },
     serp_info: { serp_item_types: ["organic", "local_pack", "people_also_ask"], se_results_count: 1_200_000 },
-    avg_backlinks_info: { referring_domains: 180.4 },
+    avg_backlinks_info: { referring_domains: 180.4, main_domain_rank: 386.4 },
     search_intent_info: { main_intent: "commercial" },
   }, { keyword: "Odd Keyword" }],
 }];
@@ -28,6 +28,7 @@ describe("Keyword research's calls", () => {
       searchVolume: 3600, cpc: 6.2, competitionLevel: "HIGH", difficulty: 64, intent: "commercial",
       monthly: [{ month: "2026-08", volume: 2900 }, { month: "2026-09", volume: 4400 }],
       serpKinds: ["local_pack", "people_also_ask"], resultsCount: 1_200_000, topTenLinkingSites: 180.4,
+      topTenDomainStrength: 39,
     });
     expect(read.get("odd keyword")).toMatchObject({ searchVolume: null, difficulty: null, monthly: [], serpKinds: [] });
   });

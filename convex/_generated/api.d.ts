@@ -202,6 +202,7 @@ import type * as keywordResearchCalls from "../keywordResearchCalls.js";
 import type * as keywordResearchCompetitors from "../keywordResearchCompetitors.js";
 import type * as keywordResearchData from "../keywordResearchData.js";
 import type * as keywordResearchIdeas from "../keywordResearchIdeas.js";
+import type * as keywordResearchPrices from "../keywordResearchPrices.js";
 import type * as keywordResearchQuestion from "../keywordResearchQuestion.js";
 import type * as keywordResearchRun from "../keywordResearchRun.js";
 import type * as keywordResearchSchema from "../keywordResearchSchema.js";
@@ -778,6 +779,7 @@ declare const fullApi: ApiFromModules<{
   keywordResearchCompetitors: typeof keywordResearchCompetitors;
   keywordResearchData: typeof keywordResearchData;
   keywordResearchIdeas: typeof keywordResearchIdeas;
+  keywordResearchPrices: typeof keywordResearchPrices;
   keywordResearchQuestion: typeof keywordResearchQuestion;
   keywordResearchRun: typeof keywordResearchRun;
   keywordResearchSchema: typeof keywordResearchSchema;

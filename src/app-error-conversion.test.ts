@@ -109,6 +109,10 @@ describe("appError conversion holds and spreads", () => {
       "convex/keywordResearchRun.ts throws it inside the Keyword research agent's own run when the run's spend limit is reached, and catches it in the same function to stop buying and write the reason on the lookups. It never leaves the run, and no screen waits on the action.",
     ],
     [
+      "TimeToCarryOn",
+      "convex/keywordResearchRun.ts throws it inside the Keyword research agent's own run when one part of the run has used its time, and catches it in the same function to schedule the next part. It never leaves the run, and no screen waits on the action.",
+    ],
+    [
       "DataForSeoBackoff",
       "convex/seoCollectionActions.ts catches it at the one call site and turns it into a queue release — the batch goes back to PENDING with a later due time. It never leaves the worker chain, and no screen is waiting on the action that throws it.",
     ],

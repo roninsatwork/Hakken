@@ -96,7 +96,10 @@ describe("Start from a competitor", () => {
     expect(mutation("lookUp")).toHaveBeenCalledWith({ keywords: ["web design guildford"], locationCode: 2826, siteId: "site_1" });
     expect(nav.push).toHaveBeenCalledWith("/app/keyword-research/lookup_new");
 
+    // Ticking, or clicking a row's figures, buys nothing more: only the keyword itself opens a lookup.
     fireEvent.click(within(bodyRows()[0]).getByRole("checkbox"));
+    fireEvent.click(within(bodyRows()[0]).getAllByRole("cell").at(-1)!);
+    expect(mutation("lookUp")).toHaveBeenCalledTimes(1);
     await act(async () => {
       fireEvent.change(screen.getByLabelText("keywordResearch.add.label"), { target: { value: "list_2" } });
     });

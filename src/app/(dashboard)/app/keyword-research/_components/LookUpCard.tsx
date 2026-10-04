@@ -14,7 +14,6 @@ import { PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { FieldHint, FieldLabel, SettingsCard } from "@/src/ui/components/screens/SettingsCard";
 import { useCountryName } from "./ResearchCells";
-import { CENTS_A_KEYWORD } from "./researchWords";
 import { lookupHref } from "./useLookup";
 
 export type ResearchSetup = NonNullable<FunctionReturnType<typeof api.keywordResearch.researchSetup>>;
@@ -112,7 +111,7 @@ export function LookUpCard({ setup, siteId, onSiteId }: {
             {isBusy() ? t("looking") : t("button")}
           </PagePrimaryAction>
         </div>
-        <FieldHint>{t("cost", { cents: CENTS_A_KEYWORD })}</FieldHint>
+        <FieldHint>{t("cost", { cents: setup.costs.lookUp })}</FieldHint>
       </form>
     </SettingsCard>
   );

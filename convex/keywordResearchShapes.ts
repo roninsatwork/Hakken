@@ -11,12 +11,15 @@ const str = v.union(v.string(), v.null());
 const partState = v.union(v.literal("WAITING"), v.literal("READY"), v.literal("FAILED"));
 const who = v.union(v.literal("YOU"), v.literal("RIVAL"), v.null());
 const verdict = v.union(v.literal("WINNING"), v.literal("IMPROVE"), v.literal("NEW_PAGE"), v.literal("TOO_HARD"), v.null());
+/** What each part of a lookup costs in cents, from the company's limits (`researchCosts`). */
+const costs = v.object({ lookUp: v.number(), results: v.number(), ideas: v.number(), answers: v.number(), country: v.number() });
 
 export const researchSetupShape = v.union(v.null(), v.object({
   canLookUp: v.boolean(),
   countries: v.array(v.object({ code: v.number(), label: v.string() })),
   websites: v.array(v.object({ siteId: v.id("companyWebsites"), host: v.string(), homeCountry: v.number() })),
   limits: v.object({ keywordsPerLookup: v.number(), ideasPerKind: v.number(), reuseDays: v.number() }),
+  costs,
   agent: v.union(v.null(), v.object({ active: v.boolean(), test: v.boolean() })),
 }));
 
@@ -59,6 +62,9 @@ export const lookupOverviewShape = v.union(v.null(), v.object({
   openedAt: v.number(),
   boughtAt: num,
   costUsd: num,
+  /** Its overview is being bought now: Look up again waits for it. */
+  buying: v.boolean(),
+  costs,
   sample: v.boolean(),
   overview: v.union(v.null(), v.object({
     volume: num,
@@ -70,6 +76,7 @@ export const lookupOverviewShape = v.union(v.null(), v.object({
     serpKinds: v.array(v.string()),
     resultsCount: num,
     topTenLinkingSites: num,
+    topTenStrength: num,
   })),
   top: v.union(v.null(), v.array(topPage)),
   topResult: v.union(v.null(), topPage),
@@ -84,7 +91,7 @@ export const lookupOverviewShape = v.union(v.null(), v.object({
     notInTop100: v.boolean(),
     visits: num,
     checkedDay: str,
-    linkingSites: num,
+    strength: num,
     tracked: v.boolean(),
     verdict,
     competitors: v.array(v.object({ host: v.string(), position: num })),
