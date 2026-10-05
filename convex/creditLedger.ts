@@ -7,6 +7,7 @@ import {
   DEFAULT_CREDIT_COVERS_USD,
   DEFAULT_CREDIT_PRICES,
   DEFAULT_PLAN_CREDITS,
+  creditDayOf,
   creditMonthOf,
   creditsForUnits,
   type CreditKind,
@@ -204,7 +205,7 @@ async function bumpPlatformMonth(
 /** What a charge cost us, arriving after it closed — a lookup's calls, an answer that came late — into its month's rollups. */
 async function bumpRollupCosts(ctx: MutationCtx, charge: Charge, realCostUsd: number, reusedValueUsd: number, now: number): Promise<void> {
   if (!charge.kind || charge.state !== "charged") return;
-  const month = new Date(charge.at).toISOString().slice(0, 7);
+  const month = creditDayOf(charge.at).slice(0, 7);
   const websiteKey = charge.websiteId ?? "none";
   const kind = charge.kind;
   const row = await ctx.db
@@ -218,7 +219,7 @@ async function bumpRollupCosts(ctx: MutationCtx, charge: Charge, realCostUsd: nu
 /** A charge's credits into its month's rollup (per kind and website), its day's total, and every company's month. */
 async function bumpCreditRollup(ctx: MutationCtx, charge: Charge, credits: number, now: number): Promise<void> {
   if (!charge.kind) return;
-  const day = new Date(now).toISOString().slice(0, 10);
+  const day = creditDayOf(now);
   const month = day.slice(0, 7);
   const websiteKey = charge.websiteId ?? "none";
   const kind = charge.kind;
@@ -390,7 +391,7 @@ export async function refundCreditCharge(ctx: MutationCtx, chargeId: Id<"creditC
     if (account) await ctx.db.patch(account._id, { owed: Math.max(0, account.owed - charge.owed), updatedAt: now });
   }
   if (charge.kind) {
-    const month = new Date(charge.at).toISOString().slice(0, 7);
+    const month = creditDayOf(charge.at).slice(0, 7);
     const kind = charge.kind;
     const websiteKey = charge.websiteId ?? "none";
     const row = await ctx.db

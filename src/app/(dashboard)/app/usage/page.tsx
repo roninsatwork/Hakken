@@ -67,7 +67,7 @@ function Overview({ summary, words, picked, onPick, statementHref }: {
   onPick: (key: string | null) => void;
   statementHref: string;
 }) {
-  const lastDay = summary ? summary.endsAt - 86_400_000 : 0;
+  const lastDay = summary ? summary.endsAt - 1 : 0;
   const pickedWebsite = picked && summary ? summary.websites.find((row) => keyOf(row.website) === picked) : undefined;
   return (
     <>

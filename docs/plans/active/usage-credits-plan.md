@@ -130,18 +130,21 @@ none holds up step 1.
    credits"). Top-up packs and the credits each kind of work costs come from
    the cost audit, later — not a question to put again before then.
 4. **How expired credits count in the accounts**, and VAT on top-ups — for his
-   accountant.
-5. **PRODUCT.md §15's £149–£499 tiers** are superseded by decision 1 once he
-   says so; PRODUCT.md is not changed by this plan ("not yet", 2026-10-05).
-6. **The plan's message limit.** Plans count Ask Hakken messages against
-   `messageLimit` today. Recommended: retire it when questions cost credits
-   (step 5), so a company is never stopped by two different meters.
-7. **Who sees Usage and who buys.** Recommended: everyone in the company sees
-   Usage; only the people who can manage the company's Billing today buy
-   top-ups and set automatic top-up.
-8. **When a month ends.** The existing monthly reset runs at 00:00 UTC (01:00 in
-   a British summer). Recommended: plan credits follow it, so there is one
-   month boundary in the app.
+   accountant. *Too early, 2026-10-05 ("dunno yet its too early"): left until
+   he raises it.*
+5. **PRODUCT.md §15's £149–£499 tiers.** *Not until after the cost audit,
+   2026-10-05; PRODUCT.md is not changed by this plan.*
+6. **The plan's message limit.** *Answered 2026-10-05: retired — "this is now
+   part of credits".* Removed with step 5, when charging is switched on:
+   removing it before then would leave Ask Hakken with no limit at all.
+7. **Who sees Usage and who buys.** *Answered 2026-10-05: any user of the
+   company* ("this is a user frontend thing - so any user") — as Usage is built;
+   top-ups the same, with step 4.
+8. **When a month ends.** *Answered 2026-10-05: UK time.* Built the same day:
+   a month's plan credits start at midnight in the UK on the 1st and end at the
+   next; a charge's day and month are its UK date's (`creditMonthOf`,
+   `creditDayOf` in `convex/creditKinds.ts`), tested across both changes of the
+   clocks.
 
 ## What is there today
 
@@ -208,8 +211,8 @@ works: sorting, search, filters, pages, the side menus and the chart.
 
 ## The rules
 
-- **Batches.** A plan batch of the plan's credits is granted at 00:00 on the
-  1st and ends at midnight on the month's last day. A top-up batch ends 12
+- **Batches.** A plan batch of the plan's credits is granted at midnight in the
+  UK on the 1st and ends at the next midnight after the month's last day. A top-up batch ends 12
   months after it is bought, to the minute. Whatever a batch holds when it ends
   is written off as its own statement line ("September's plan credits ended").
 - **Drawing credits.** Each charge takes from the batch ending soonest, moving to
@@ -386,8 +389,9 @@ real cost; nothing is refused and no screen shows it.
   its keywords or websites; anything else one. Credits are rounded up once per
   run, never per request. Placeholder prices as drawn.
 - **The ledger** (`convex/creditLedger.ts`): a month's plan batch is granted the
-  first time anything is charged in it, dated the 1st (UTC, the month the quota
-  reset already uses), after ending what has run out; charges draw from the
+  first time anything is charged in it, dated the 1st (UTC as first built;
+  UK midnight since question 8 was answered the same day), after ending what
+  has run out; charges draw from the
   batch ending soonest; what none can cover is owed (`creditAccounts`) and the
   balance goes below zero — outstanding question 2 decides what pays it;
   refunds go back to their batch, or the current plan's if it has ended. An
@@ -510,6 +514,9 @@ have you stopped"), every setting changeable on the screen.
   and website replaced by a monthly one and daily totals.
 - 2026-10-05 — No charging at this stage, only monitoring costs to set prices:
   steps 4 and 5 parked.
+- 2026-10-05 — Questions 4 to 8: accounting too early; PRODUCT.md after the
+  audit; the message limit retired into credits (with step 5); any user sees
+  Usage; months end at UK midnight (built).
 - 2026-10-05 — Outstanding question 2 answered "c": at zero scheduled checks
   stop too. Question 3 settled for now: £200 gives 1,000 credits; the rest
   after the audit.

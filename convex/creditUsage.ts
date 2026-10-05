@@ -6,7 +6,7 @@ import { appError } from "./utils/appError";
 import { isTrackedHold } from "./utils/websitePairing";
 import { websiteIconUrl } from "./websiteIcons";
 import { cadenceOf, DAY_MS, EVERY_DAYS } from "./seoRunEstimate";
-import { DEFAULT_CREDIT_PRICES, DEFAULT_PLAN_CREDITS, creditMonthOf, type CreditKind } from "./creditKinds";
+import { DEFAULT_CREDIT_PRICES, DEFAULT_PLAN_CREDITS, creditDayOf, creditMonthNamed, creditMonthOf, type CreditKind } from "./creditKinds";
 import { creditKindValidator, creditSourceValidator } from "./creditSchema";
 
 /**
@@ -25,15 +25,12 @@ const MONTH_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 /** The month asked for, or this one; a month not yet begun is refused. */
 function monthBounds(month: string | undefined, now: number) {
   if (month !== undefined && !MONTH_PATTERN.test(month)) throw appError("INVALID_INPUT", "A month is written YYYY-MM.");
-  const at = month ? Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1) : now;
-  if (at > now) throw appError("INVALID_INPUT", "That month has not begun.");
-  const bounds = creditMonthOf(at);
+  const bounds = month ? creditMonthNamed(month) : creditMonthOf(now);
+  if (bounds.startsAt > now) throw appError("INVALID_INPUT", "That month has not begun.");
   const days = Math.round((bounds.endsAt - bounds.startsAt) / DAY_MS);
   const current = now >= bounds.startsAt && now < bounds.endsAt;
-  return { ...bounds, days, current, startDay: dayOf(bounds.startsAt), endDay: dayOf(bounds.endsAt) };
+  return { ...bounds, days, current, startDay: creditDayOf(bounds.startsAt), endDay: creditDayOf(bounds.endsAt) };
 }
-
-const dayOf = (at: number) => new Date(at).toISOString().slice(0, 10);
 
 /** A month's rollups: a row per kind and website, so a few hundred at most. */
 async function monthRollups(ctx: Reader, companyId: Id<"companies">, month: string) {
@@ -52,12 +49,12 @@ async function dayTotals(ctx: Reader, companyId: Id<"companies">, startDay: stri
     .take(31);
 }
 
-/** Days into a month as an array of credits, one per day. */
-function creditsByDay(rows: Doc<"creditDayTotals">[], startsAt: number, days: number): number[] {
+/** A month's days as an array of credits, one per UK day. */
+function creditsByDay(rows: Doc<"creditDayTotals">[], month: string, days: number): number[] {
   const out = Array.from({ length: days }, () => 0);
   for (const row of rows) {
-    const index = Math.floor((Date.parse(`${row.day}T00:00:00Z`) - startsAt) / DAY_MS);
-    if (index >= 0 && index < days) out[index] += row.credits;
+    const index = Number(row.day.slice(8, 10)) - 1;
+    if (row.day.startsWith(month) && index >= 0 && index < days) out[index] += row.credits;
   }
   return out;
 }
@@ -299,8 +296,8 @@ export const usageSummary = tenantQuery({
       },
       owed: account?.owed ?? 0,
       used,
-      byDay: creditsByDay(days, month.startsAt, month.days),
-      previous: { month: previous.month, granted: previousPlan?.granted ?? planCredits, byDay: creditsByDay(previousDays, previous.startsAt, previous.days) },
+      byDay: creditsByDay(days, month.month, month.days),
+      previous: { month: previous.month, granted: previousPlan?.granted ?? planCredits, byDay: creditsByDay(previousDays, previous.month, previous.days) },
       kinds: [...kinds.entries()].map(([kind, total]) => ({ kind, ...total })).sort((a, b) => b.credits - a.credits),
       websites: [...sites.entries()]
         .map(([key, total]) => ({ website: key === "none" ? null : websites.get(key) ?? null, credits: total.credits, runs: total.runs, kinds: [...total.kinds] }))
@@ -375,6 +372,8 @@ const statementLineShape = v.object({
   detail: v.union(v.string(), v.null()),
   /** The batches that paid, or were paid back: a month's plan (`YYYY-MM`), or a top-up bought on a day. */
   from: v.array(v.object({ source: creditSourceValidator, month: v.union(v.string(), v.null()), startsAt: v.number() })),
+  /** A grant's or an ending's own batch: its month, and when it began and ends. */
+  batch: v.union(v.object({ source: creditSourceValidator, month: v.union(v.string(), v.null()), startsAt: v.number(), endsAt: v.number() }), v.null()),
 });
 
 /**
@@ -425,7 +424,7 @@ export const usageStatement = tenantQuery({
     const websites = await websitesOf(ctx, companyId, charged.flatMap((row) => (row.websiteId ? [row.websiteId] : [])));
     const names = await namesOf(ctx, charged.flatMap((row) => (row.userId ? [row.userId] : [])));
     const batches = new Map<string, Doc<"creditBatches"> | null>();
-    for (const batchId of new Set(charged.flatMap((row) => row.paidFrom.map((part) => part.batchId)))) {
+    for (const batchId of new Set(charged.flatMap((row) => [...row.paidFrom.map((part) => part.batchId), ...(row.batchId ? [row.batchId] : [])]))) {
       batches.set(batchId, await ctx.db.get(batchId));
     }
 
@@ -447,6 +446,10 @@ export const usageStatement = tenantQuery({
         const batch = batches.get(part.batchId);
         return batch ? [{ source: batch.source, month: batch.month ?? null, startsAt: batch.startsAt }] : [];
       }),
+      batch: (() => {
+        const batch = row.batchId ? batches.get(row.batchId) : null;
+        return batch ? { source: batch.source, month: batch.month ?? null, startsAt: batch.startsAt, endsAt: batch.endsAt } : null;
+      })(),
     }));
     return {
       month: month.month,

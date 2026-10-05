@@ -65,10 +65,10 @@ export function useUsageMonth() {
   return { month, setMonth, withMonth };
 }
 
-/** The last twelve months, newest first, as `YYYY-MM`. */
+/** The last twelve months, newest first, as `YYYY-MM` — UK months, as credits are counted in. */
 export function recentMonths(now: number, count = 12): string[] {
-  const date = new Date(now);
-  return Array.from({ length: count }, (_, index) => new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() - index, 1)).toISOString().slice(0, 7));
+  const [year, month] = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit" }).format(now).split("-").map(Number);
+  return Array.from({ length: count }, (_, index) => new Date(Date.UTC(year, month - 1 - index, 1)).toISOString().slice(0, 7));
 }
 
 /** Who a website is to the company, in the words of the Usage screens. */

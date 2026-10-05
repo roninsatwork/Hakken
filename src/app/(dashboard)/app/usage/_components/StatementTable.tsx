@@ -35,11 +35,6 @@ export type StatementFilter = "task" | "website" | "user";
 
 const NOT_TIED = "none";
 
-function lastDayOfMonth(at: number): number {
-  const date = new Date(at);
-  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0);
-}
-
 /** A line in words: what it was, and the facts a reader would ask about it. */
 function describe(line: StatementLine, words: UsageWords, platformName: string) {
   const fromWords = line.from.map((batch) => (batch.source === "plan" && batch.month
@@ -48,10 +43,11 @@ function describe(line: StatementLine, words: UsageWords, platformName: string) 
   const parts: string[] = [];
   let title: string;
   if (line.entry === "grant") {
-    title = line.source === "topup" ? words.t("statement.topUp") : words.t("statement.planGranted", { month: words.monthName(new Date(line.at).toISOString().slice(0, 7)) });
-    if (line.source !== "topup") parts.push(words.t("statement.planEnds", { date: words.date(lastDayOfMonth(line.at)) }));
+    title = line.source === "topup" ? words.t("statement.topUp") : words.t("statement.planGranted", { month: line.batch?.month ? words.monthName(line.batch.month) : "" });
+    // A batch ends at midnight starting its next day: the last moment before it is the day it ends on.
+    if (line.source !== "topup" && line.batch) parts.push(words.t("statement.planEnds", { date: words.date(line.batch.endsAt - 1) }));
   } else if (line.entry === "ended") {
-    const batch = line.from[0];
+    const batch = line.batch ?? line.from[0];
     title = batch?.source === "topup"
       ? words.t("statement.topUpEnded", { date: words.date(batch.startsAt) })
       : words.t("statement.planEnded", { month: batch?.month ? words.monthName(batch.month) : "" });

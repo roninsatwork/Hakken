@@ -6,7 +6,7 @@ import type { MutationCtx } from "./_generated/server";
 import schema from "./schema";
 import { creditAssistantReply, creditCycleFinished, creditCycleLine, creditCycleLineDropped, creditPullSettled, creditResearchRun } from "./creditHooks";
 import { chargeCreditsNow, creditBalance, ensurePlanBatch } from "./creditLedger";
-import { creditUnitsOfRequest, creditsForUnits, creditKindOfFamily } from "./creditKinds";
+import { creditDayOf, creditMonthNamed, creditMonthOf, creditUnitsOfRequest, creditsForUnits, creditKindOfFamily } from "./creditKinds";
 
 /**
  * The credit ledger, step 1 of docs/plans/active/usage-credits-plan.md:
@@ -88,6 +88,18 @@ describe("credit kinds", () => {
     expect(creditUnitsOfRequest("siteAudit", JSON.stringify({ max_crawl_pages: 1240 }))).toBe(1240);
     expect(creditUnitsOfRequest("aiAnswers", JSON.stringify({ limit: 50 }))).toBe(1);
     expect(creditUnitsOfRequest("backlinks", "not json")).toBe(1);
+  });
+
+  test("months and days are the UK's, across both changes of the clocks", () => {
+    // October 2026: begins in summer time, ends in winter time (the clocks go back on the 25th).
+    expect(creditMonthOf(Date.UTC(2026, 9, 15))).toEqual({ month: "2026-10", startsAt: Date.UTC(2026, 8, 30, 23), endsAt: Date.UTC(2026, 10, 1) });
+    // 30 September at 23:30 UTC is already 1 October in the UK.
+    expect(creditMonthOf(Date.UTC(2026, 8, 30, 23, 30)).month).toBe("2026-10");
+    expect(creditDayOf(Date.UTC(2026, 8, 30, 23, 30))).toBe("2026-10-01");
+    // March 2026: begins in winter time, ends in summer time (the clocks go forward on the 29th).
+    expect(creditMonthOf(Date.UTC(2026, 2, 10))).toEqual({ month: "2026-03", startsAt: Date.UTC(2026, 2, 1), endsAt: Date.UTC(2026, 2, 31, 23) });
+    expect(creditMonthNamed("2026-07")).toEqual({ month: "2026-07", startsAt: Date.UTC(2026, 5, 30, 23), endsAt: Date.UTC(2026, 6, 31, 23) });
+    expect(creditMonthNamed("2026-12")).toEqual({ month: "2026-12", startsAt: Date.UTC(2026, 11, 1), endsAt: Date.UTC(2027, 0, 1) });
   });
 
   test("credits round up once per run, and nothing is never charged", () => {
@@ -201,8 +213,9 @@ describe("batches", () => {
       const november = Date.UTC(2026, 10, 1, 0, 5);
       await ensurePlanBatch(ctx, acme, november);
       const lines = await statement(ctx, acme);
+      // UK midnights: 1 October 2026 is in summer time (an hour ahead of UTC), 1 November in winter.
       expect(lines.map((line) => [line.entry, line.creditsIn, line.creditsOut, line.at])).toEqual([
-        ["grant", 1000, 0, Date.UTC(2026, 9, 1)],
+        ["grant", 1000, 0, Date.UTC(2026, 8, 30, 23)],
         ["charge", 0, 1, october],
         ["ended", 0, 999, Date.UTC(2026, 10, 1)],
         ["grant", 1000, 0, Date.UTC(2026, 10, 1)],

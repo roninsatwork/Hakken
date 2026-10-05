@@ -99,6 +99,7 @@ const line = (id: string, at: number, extra: Partial<NonNullable<FunctionReturnT
   balance: null,
   detail: null,
   from: [{ source: "plan" as const, month: "2026-10", startsAt: OCT }],
+  batch: null,
   ...extra,
 });
 
@@ -108,12 +109,12 @@ const STATEMENT: NonNullable<FunctionReturnType<typeof api.creditUsage.usageStat
   closing: 957,
   cut: false,
   lines: [
-    line("c1", OCT, { entry: "ended", source: "plan", how: "automatic", out: 37, balance: 0, from: [{ source: "plan", month: "2026-09", startsAt: Date.UTC(2026, 8, 1) }] }),
-    line("c2", OCT, { entry: "grant", source: "plan", how: "automatic", in: 1000, balance: 1000, from: [] }),
+    line("c1", OCT, { entry: "ended", source: "plan", how: "automatic", out: 37, balance: 0, from: [{ source: "plan", month: "2026-09", startsAt: Date.UTC(2026, 8, 1) }], batch: { source: "plan", month: "2026-09", startsAt: Date.UTC(2026, 8, 1), endsAt: OCT } }),
+    line("c2", OCT, { entry: "grant", source: "plan", how: "automatic", in: 1000, balance: 1000, from: [], batch: { source: "plan", month: "2026-10", startsAt: OCT, endsAt: Date.UTC(2026, 10, 1) } }),
     line("c3", OCT + 2 * 3_600_000, { kind: "siteAudit", website: own, user: "Anthony Basker", units: 1240, out: 25, balance: 975 }),
     line("c4", OCT + 6 * 3_600_000, { kind: "rankings", website: own, user: "Anthony Basker", units: 1000, out: 4, balance: 971 }),
     line("c5", OCT + 10 * 3_600_000, { kind: "keywordResearch", user: "Priya Shah", how: "byHand", units: 2, out: 10, balance: 961, detail: "“web design agency bradford”, “shopify web design”" }),
-    line("c6", OCT + 15 * DAY, { entry: "grant", source: "topup", how: "bought", user: "Anthony Basker", in: 500, balance: 1461, from: [] }),
+    line("c6", OCT + 15 * DAY, { entry: "grant", source: "topup", how: "bought", user: "Anthony Basker", in: 500, balance: 1461, from: [], batch: { source: "topup", month: null, startsAt: OCT + 15 * DAY, endsAt: OCT + 380 * DAY } }),
     line("c7", OCT + 19 * DAY, { kind: "assistant", user: "Anthony Basker", how: "byHand", units: 1, out: 1, balance: 957 }),
   ],
 };

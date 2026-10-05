@@ -77,12 +77,48 @@ export function creditsForUnits(price: CreditPrice, units: number): number {
   return Math.max(1, Math.ceil((units * price.credits) / price.per - 1e-9));
 }
 
-/** The UTC month a moment falls in, and when it starts and ends — the month the app's quota reset already uses. */
+/**
+ * Credits count in UK time (Anthony, 2026-10-05: "UK time"): a month's plan
+ * credits start at midnight in the UK on the 1st and end at the next, and a
+ * charge's day and month are its UK date's.
+ */
+const UK = "Europe/London";
+const ukDate = new Intl.DateTimeFormat("en-CA", { timeZone: UK, year: "numeric", month: "2-digit", day: "2-digit" });
+const ukClock = new Intl.DateTimeFormat("en-GB", { timeZone: UK, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+
+/** A moment's date in the UK, `YYYY-MM-DD`. */
+export function creditDayOf(at: number): string {
+  return ukDate.format(at);
+}
+
+/** How far ahead of UTC the UK is at a moment: nothing in winter, an hour in summer. */
+function ukOffsetMs(at: number): number {
+  const parts = Object.fromEntries(ukClock.formatToParts(at).map((part) => [part.type, part.value]));
+  const wall = Date.UTC(Number(parts.year), Number(parts.month) - 1, Number(parts.day), Number(parts.hour), Number(parts.minute), Number(parts.second));
+  return wall - Math.floor(at / 1000) * 1000;
+}
+
+/**
+ * Midnight in the UK at the start of a date, as a moment. The clocks change at
+ * 01:00 UTC, so a UK midnight is never skipped or doubled, and the offset an
+ * hour before UTC's midnight is the one in force at it.
+ */
+function ukMidnight(year: number, monthIndex: number, day: number): number {
+  const utc = Date.UTC(year, monthIndex, day);
+  return utc - ukOffsetMs(utc - 3_600_000);
+}
+
+/** The UK month a moment falls in, and when it starts and ends. */
 export function creditMonthOf(at: number): { month: string; startsAt: number; endsAt: number } {
-  const date = new Date(at);
-  const startsAt = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), 1);
-  const endsAt = Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 1);
-  return { month: new Date(startsAt).toISOString().slice(0, 7), startsAt, endsAt };
+  const day = creditDayOf(at);
+  const year = Number(day.slice(0, 4));
+  const monthIndex = Number(day.slice(5, 7)) - 1;
+  return { month: day.slice(0, 7), startsAt: ukMidnight(year, monthIndex, 1), endsAt: ukMidnight(year, monthIndex + 1, 1) };
+}
+
+/** A month named `YYYY-MM`, and when it starts and ends in the UK. */
+export function creditMonthNamed(month: string): { month: string; startsAt: number; endsAt: number } {
+  return creditMonthOf(ukMidnight(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 15));
 }
 
 /** A collection run's charge: one per collection, website and kind of work. */

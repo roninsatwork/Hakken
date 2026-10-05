@@ -3,7 +3,7 @@ import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { superAdminMutation, superAdminQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
-import { DEFAULT_CREDIT_PRICES, DEFAULT_CREDIT_COVERS_USD, DEFAULT_PLAN_CREDITS, creditMonthOf, type CreditKind } from "./creditKinds";
+import { DEFAULT_CREDIT_PRICES, DEFAULT_CREDIT_COVERS_USD, DEFAULT_PLAN_CREDITS, creditMonthNamed, creditMonthOf, type CreditKind } from "./creditKinds";
 import { creditKindValidator } from "./creditSchema";
 
 /**
@@ -57,7 +57,7 @@ export const creditPriceReport = superAdminQuery({
     ]);
     return {
       month,
-      endsAt: creditMonthOf(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 1)).endsAt,
+      endsAt: creditMonthNamed(month).endsAt,
       settings: {
         creditCoversUsd: settings?.creditCoversUsd ?? DEFAULT_CREDIT_COVERS_USD,
         planCredits: settings?.planCredits ?? DEFAULT_PLAN_CREDITS,

@@ -49,7 +49,7 @@ export default function UsageComingUpPage() {
   const booked = checks?.reduce((sum, check) => sum + check.toMonthEnd, 0) ?? 0;
   const bookedNext = checks?.reduce((sum, check) => sum + check.nextMonth, 0) ?? 0;
   const websitesCount = new Set(checks?.flatMap((check) => (check.website ? [check.website.websiteId] : [])) ?? []).size;
-  const lastDay = data ? data.endsAt - 86_400_000 : 0;
+  const lastDay = data ? data.endsAt - 1 : 0;
   const shownThisMonth = rows?.reduce((sum, check) => sum + check.toMonthEnd, 0) ?? 0;
   const shownNextMonth = rows?.reduce((sum, check) => sum + check.nextMonth, 0) ?? 0;
 

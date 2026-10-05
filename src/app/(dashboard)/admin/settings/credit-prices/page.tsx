@@ -88,7 +88,7 @@ export default function CreditPricesPage() {
     && matchesSearchTerm(search, [kindName(line.kind)]));
   const paged = paginateItems(shown ?? [], page);
   const changed = Object.keys(pending).length > 0 || cover !== null;
-  const lastDay = report ? report.endsAt - 86_400_000 : 0;
+  const lastDay = report ? report.endsAt - 1 : 0;
 
   const onSave = async () => {
     if (!report) return;
