@@ -22,8 +22,8 @@ import type { SeoOperation } from "./dataForSeoRegistry";
  * **Each has its own cadence** (`refresh`), because link lists do not change
  * daily: every one is bought once a month whatever the cycle's own cadence
  * (finish-off plan, item 6c, agreed with Anthony on 2026-10-05 — measured on
- * ronins.co.uk and four competitors since 1 September, linking websites moved
- * about 1–2% a week and links 1–3%). Until then the linking websites, every
+ * one of our own websites and four competitors since 1 September, linking
+ * websites moved about 1–2% a week and links 1–3%). Until then the linking websites, every
  * link, one link per website, broken links and links gained and lost were
  * weekly. Links gained and lost still come week by week: each answer holds
  * every week since 2019 (`group_range: "week"`), filed under its Monday.

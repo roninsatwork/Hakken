@@ -10819,7 +10819,7 @@
       "noAnchor": "Nessuna parola (un'immagine o un indirizzo nudo)",
       "empty": "Nessun backlink raccolto ancora.",
       "noMatch": "Nessun link corrisponde.",
-      "competitor": "Tutti i link, e il link più forte di ogni sito che rimanda qui, vengono raccolti solo per i tuoi siti web. Per un concorrente Hakken conserva ciò che serve al confronto: i totali dei link a ogni raccolta e, una volta al mese, i siti che rimandano a lui, in Domini di riferimento."
+      "competitor": "Tutti i link, e il link più forte di ogni sito che rimanda qui, vengono raccolti solo per i tuoi siti web. Per un concorrente si conserva ciò che serve al confronto: i totali dei link a ogni raccolta e, una volta al mese, i siti che rimandano a lui, in Domini di riferimento."
     },
     "backlinksDomains": {
       "title": "Domini di riferimento",
@@ -10858,7 +10858,7 @@
       "noAnchor": "Nessuna parola (un'immagine o un indirizzo nudo)",
       "empty": "Nessun anchor raccolto ancora.",
       "noMatch": "Nessun anchor corrisponde.",
-      "competitor": "Le parole usate nei link vengono raccolte solo per i tuoi siti web. Per un concorrente Hakken conserva i totali dei link e i siti che rimandano a lui, in Domini di riferimento."
+      "competitor": "Le parole usate nei link vengono raccolte solo per i tuoi siti web. Per un concorrente si conservano i totali dei link e i siti che rimandano a lui, in Domini di riferimento."
     },
     "backlinksIps": {
       "title": "IP di riferimento",
@@ -10884,7 +10884,7 @@
       "noMatch": "Nessun indirizzo corrisponde.",
       "chartHintHeld": "Ogni barra è una rete (le prime tre parti dell’indirizzo), contata sui {held} server conservati su {total}.",
       "networksInAll": "I link verso questo sito arrivano da {count} reti in tutto.",
-      "competitor": "I server da cui provengono i link vengono raccolti solo per i tuoi siti web. Per un concorrente Hakken conserva i totali dei link e i siti che rimandano a lui, in Domini di riferimento."
+      "competitor": "I server da cui provengono i link vengono raccolti solo per i tuoi siti web. Per un concorrente si conservano i totali dei link e i siti che rimandano a lui, in Domini di riferimento."
     },
     "backlinksBroken": {
       "title": "Backlink non funzionanti",
@@ -10901,7 +10901,7 @@
       },
       "empty": "Nessun backlink non funzionante trovato. Bene.",
       "noMatch": "Nessun link corrisponde.",
-      "competitor": "I link interrotti vengono raccolti solo per i tuoi siti web: sono link da riparare, e solo i tuoi si possono riparare. Per un concorrente Hakken conserva i totali dei link e i siti che rimandano a lui."
+      "competitor": "I link interrotti vengono raccolti solo per i tuoi siti web: sono link da riparare, e solo i tuoi si possono riparare. Per un concorrente si conservano i totali dei link e i siti che rimandano a lui."
     },
     "backlinksNewLost": {
       "title": "Link nuovi e persi",

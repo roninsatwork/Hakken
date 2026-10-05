@@ -90,7 +90,7 @@ comes at the run nearest thirty days, never faster.
 | A crawl of its pages (Site audit, page list, AI search checks) — one crawl shared by every company whose own site it is | `site_crawl` | every 30 days | every 4th run | every 2nd run | monthly | not crawled |
 | **For the company's own lists — its own website only** | | | | | | |
 | Google's results for each tracked keyword | `serp_google_organic` | daily | weekly | fortnightly | monthly | — (a competitor's position comes from the same page) |
-| Each AI question, asked of ChatGPT, Claude, Gemini and Perplexity | `ai_citation_*` | daily | weekly | fortnightly | monthly | — (a competitor is found named in the answers) |
+| Each AI question, asked of each AI engine the company chose | `ai_citation_*` | daily | weekly | fortnightly | monthly | — (a competitor is found named in the answers) |
 | What Google's AI Overviews searched for each question | `ai_overview_fan_out` | monthly | monthly | monthly | monthly | — |
 | How often those searches are made | `keyword_search_volume` | when new ones appear | | | | — |
 | **By hand only, never on a schedule** | | | | | | |
