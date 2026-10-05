@@ -11680,6 +11680,7 @@
       "ready": "Tenuti pronti",
       "others": "Tutti gli altri paesi",
       "asked": "Chiesto a Google quando lo scegli, quindi richiede un momento.",
+      "asAll": "ricerche e pagine di tutti i paesi, perché {country} è quasi tutte le ricerche di questo sito",
       "notReady": "{country} non è tra i paesi tenuti pronti per questo sito, quindi questa pagina non può mostrarlo. Una volta aggiunto, compare qui dopo la prossima raccolta."
     },
     "tracked": {

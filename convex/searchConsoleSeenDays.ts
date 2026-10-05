@@ -4,6 +4,7 @@ import type { ActionCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { searchTypeValidator, seenType, type SearchType } from "./searchConsoleSchema";
+import { searchLinesCountry } from "./searchConsoleShrink";
 import { stillKeptReady } from "./searchConsoleCountries";
 
 /**
@@ -135,16 +136,18 @@ export async function seenDaysBetween(
   to: string,
 ): Promise<Map<string, { first: number; last: number }> | null> {
   const searchType = seenType(scope.searchType);
+  // A country nearly all of the searches keeps no register of its own (`searchConsoleShrink.ts`).
+  const country = await searchLinesCountry(ctx, scope.companyWebsiteId, scope.country);
   const counted = await ctx.db
     .query("searchConsoleSeenDays")
     .withIndex("by_hold_country_type_kind_day", (q) => q
-      .eq("companyWebsiteId", scope.companyWebsiteId).eq("country", scope.country).eq("searchType", searchType).eq("kind", kind))
+      .eq("companyWebsiteId", scope.companyWebsiteId).eq("country", country).eq("searchType", searchType).eq("kind", kind))
     .first();
   if (!counted) return null;
   const rows = await ctx.db
     .query("searchConsoleSeenDays")
     .withIndex("by_hold_country_type_kind_day", (q) => q
-      .eq("companyWebsiteId", scope.companyWebsiteId).eq("country", scope.country).eq("searchType", searchType).eq("kind", kind)
+      .eq("companyWebsiteId", scope.companyWebsiteId).eq("country", country).eq("searchType", searchType).eq("kind", kind)
       .gte("day", from).lte("day", to))
     .take(DAYS_READ);
   return new Map(rows.map((row) => [row.day, { first: row.first, last: row.last }]));

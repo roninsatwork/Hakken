@@ -204,6 +204,8 @@ export const stepState = internalQuery({
       newestDay: held?.newestDay ?? null,
       kept: args.country === undefined || kept.includes(args.country),
       countries: kept.filter((code) => heldFor(connection, code) !== null),
+      /** Nearly all of the website's searches: no search-and-page lines of its own (`searchConsoleShrink.ts`). */
+      asAll: args.country !== undefined && (connection.countriesAsAll ?? []).includes(args.country),
     };
   },
 });
@@ -355,7 +357,9 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
   const filter = args.country === undefined
     ? {}
     : { dimensionFilterGroups: [{ filters: [{ dimension: "country", operator: "equals", expression: args.country }] }] };
-  const listsOf = (type: SearchType) => LISTS_OF[type].filter((list) => args.country === undefined || list !== "country");
+  // A country nearly all of the searches asks for no search-and-page lines: they would be all countries' again.
+  const listsOf = (type: SearchType) => LISTS_OF[type].filter((list) => args.country === undefined
+    || (list !== "country" && !(state.asAll && (list === "pair" || list === "page"))));
   let failure: GoogleFailure | null = null;
 
   // Each kind of result's totals, a row a day: one ask covers the step.

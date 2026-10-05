@@ -6,6 +6,7 @@ import { failureSummary } from "./roleRuns";
 import { STEP_BUDGET_MS, runStep, type StepOutcome } from "./searchConsoleSync";
 import { countriesPastLimit } from "./searchConsoleCountries";
 import { ALPHA3_TO_ALPHA2 } from "./utils/countryCodes";
+import { refreshCountriesAsAll } from "./searchConsoleShrink";
 
 /**
  * The Search Console Collector's job (docs/plans/active/search-console-plan.md
@@ -175,6 +176,8 @@ export const startSiteRun = internalMutation({
     });
     // The days this run fetches, so Collection pipeline can say how far it has got.
     if (connection) await ctx.db.patch(connection._id, { collecting: { runId, from: args.from, top: args.top } });
+    // Which countries kept ready are nearly all of its searches, read as all countries (finish-off plan 2B).
+    if (connection) await refreshCountriesAsAll(ctx, connection);
     await ctx.scheduler.runAfter(args.delayMs, internal.searchConsoleAgentRun.collectSiteStep, {
       runId,
       workflowExecutionId,

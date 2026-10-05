@@ -112,10 +112,15 @@ export async function countryScope(
  */
 export const searchConsoleCountryChoices = tenantQuery({
   args: { siteId: v.id("companyWebsites") },
-  returns: v.object({ ready: v.array(v.string()) }),
+  returns: v.object({ ready: v.array(v.string()), asAll: v.array(v.string()) }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    return { ready: await countriesKeptReady(ctx, site.hold) };
+    const connection = await ctx.db
+      .query("searchConsoleConnections")
+      .withIndex("by_hold", (q) => q.eq("companyWebsiteId", site.hold._id))
+      .first();
+    // Countries nearly all of its searches, whose searches and pages read as all countries (`searchConsoleShrink.ts`).
+    return { ready: await countriesKeptReady(ctx, site.hold), asAll: connection?.countriesAsAll ?? [] };
   },
 });
 

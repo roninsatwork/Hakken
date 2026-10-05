@@ -209,6 +209,12 @@ export const searchConsoleTables = {
      * (docs/plans/active/collection-progress-plan.md).
      */
     collecting: v.optional(v.object({ runId: v.id("agentRuns"), from: v.string(), top: v.string() })),
+    /**
+     * Countries kept ready that are nearly all of the website's searches: they
+     * keep no search-and-page lines of their own, and are read as all countries
+     * (finish-off plan item 2B, `searchConsoleShrink.ts`).
+     */
+    countriesAsAll: v.optional(v.array(v.string())),
     /** What stopped the connection or its last collection; cleared when a collection goes right. */
     problem: v.optional(connectionProblemValidator),
     problemAt: v.optional(v.number()),

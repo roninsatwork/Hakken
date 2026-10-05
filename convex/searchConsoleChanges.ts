@@ -21,6 +21,7 @@ import { holdBrandNames } from "./holdProfiles";
 import { updateInLanguage } from "./googleUpdates";
 import { BANDS, bandOf, ctrCurve, type Band } from "./utils/searchConsoleViews";
 import { stepEnd, stepStart } from "./utils/searchConsolePacks";
+import { searchLinesCountry } from "./searchConsoleShrink";
 import { wordStartMatcher } from "./utils/wordStarts";
 
 /**
@@ -66,8 +67,10 @@ async function seenPage(
   by: "first" | "last",
   span: { from: string; to: string } | { day: string; before: number },
 ): Promise<Seen[]> {
-  const query = ctx.db.query("searchConsoleSeen");
+  // A country nearly all of the searches keeps no register of its own (`searchConsoleShrink.ts`).
+  country = await searchLinesCountry(ctx, companyWebsiteId, country);
   const filed = seenType(searchType);
+  const query = ctx.db.query("searchConsoleSeen");
   const ordered = by === "first"
     ? query.withIndex("by_hold_country_type_kind_first", (q) => {
       const hold = q.eq("companyWebsiteId", companyWebsiteId).eq("country", country).eq("searchType", filed).eq("kind", kind);

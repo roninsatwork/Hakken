@@ -39,6 +39,7 @@ import {
 } from "./utils/searchConsolePacks";
 import { bandOf, isBrand, pageWithoutSection } from "./utils/searchConsoleViews";
 import { tenantQuery } from "./tenantFunctions";
+import { FROM_SEARCH_LINES, searchLinesCountry } from "./searchConsoleShrink";
 import { requireMySite } from "./siteAccess";
 
 /**
@@ -145,6 +146,8 @@ export async function readKept(
 ): Promise<Kept[]> {
   const from = widestFrom(newest);
   const out: Kept[] = [];
+  // A country nearly all of the searches keeps no search-and-page lines: read as all countries (`searchConsoleShrink.ts`).
+  if ((list === "pair" || list === "page") && await ctx.runQuery(internal.searchConsoleShrink.countryReadAsAll, { holdId: companyWebsiteId, ...(country === undefined ? {} : { country }) })) return out;
   const scope = country === undefined ? {} : { country };
   // Page by page (`keptBetween`): a busy website's span is more than one read may hold.
   const read = async (grain: Kept["grain"], start: string, end: string) => {
@@ -289,9 +292,10 @@ const WEEKS_READ = 200;
 
 /** One kind of result's days, weeks and months, for all countries or one, oldest first. */
 async function weeksOf(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"companyWebsites">, country: string | undefined, searchType: SearchType) {
+  const scope = await searchLinesCountry(ctx, companyWebsiteId, country);
   return await ctx.db
     .query("searchConsoleWeeks")
-    .withIndex("by_hold_country_type_week", (q) => q.eq("companyWebsiteId", companyWebsiteId).eq("country", country).eq("searchType", searchType))
+    .withIndex("by_hold_country_type_week", (q) => q.eq("companyWebsiteId", companyWebsiteId).eq("country", scope).eq("searchType", searchType))
     .take(WEEKS_READ);
 }
 
@@ -752,7 +756,9 @@ export async function readPeriod(
   which: "NOW" | "BEFORE",
   country?: string,
 ): Promise<{ from: string; to: string; builtAt: number; shown: number | null; rows: PeriodRow[] } | null> {
-  const parts = (await periodParts(ctx, companyWebsiteId, country, searchType, list, period, which)).sort((left, right) => left.part - right.part);
+  // Read only: a country nearly all of the searches reads its searches and pages as all countries (`searchConsoleShrink.ts`).
+  const scope = FROM_SEARCH_LINES.has(list) ? await searchLinesCountry(ctx, companyWebsiteId, country) : country;
+  const parts = (await periodParts(ctx, companyWebsiteId, scope, searchType, list, period, which)).sort((left, right) => left.part - right.part);
   if (parts.length === 0) return null;
   const rows: PeriodRow[] = [];
   for (const part of parts) {

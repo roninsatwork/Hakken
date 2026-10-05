@@ -20,6 +20,12 @@ function useCountriesKeptReady(): string[] | undefined {
   return useQuery(api.searchConsoleCountries.searchConsoleCountryChoices, { siteId })?.ready;
 }
 
+/** Countries nearly all of the website's searches: their searches and pages are all countries' (finish-off plan 2B). */
+function useCountriesAsAll(): string[] {
+  const siteId = useSearchConsoleSiteId();
+  return useQuery(api.searchConsoleCountries.searchConsoleCountryChoices, { siteId })?.asAll ?? [];
+}
+
 /**
  * The country every page of a website shows (search-console-plan.md §16),
  * beside the date boxes and the same size as them — a choice for the whole
@@ -77,6 +83,10 @@ export function CountryAskedNote() {
   const pathname = usePathname();
   const [country] = useSearchConsoleCountry();
   const ready = useCountriesKeptReady();
-  if (!country || !ready || ready.includes(country) || NEVER_ASKED.includes(pageForPath(pathname, siteId))) return null;
+  const asAll = useCountriesAsAll();
+  if (!country || !ready) return null;
+  // Nearly all of the searches: its searches and pages are all countries', said where the page names its figures.
+  if (asAll.includes(country)) return <span> · {t("asAll", { country: countryName(country, readerLanguage()) ?? country.toUpperCase() })}</span>;
+  if (ready.includes(country) || NEVER_ASKED.includes(pageForPath(pathname, siteId))) return null;
   return <span> · {t("asked")}</span>;
 }

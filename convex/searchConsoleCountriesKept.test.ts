@@ -261,7 +261,7 @@ describe("reading one country", () => {
     asks.length = 0;
     const thirty = { siteId, searchType: "web" as const, dimension: "query" as const, from: "2026-08-28", to: NEWEST, page: 1, rows: 25 };
 
-    expect(await reader.query(api.searchConsoleCountries.searchConsoleCountryChoices, { siteId })).toEqual({ ready: ["gbr"] });
+    expect(await reader.query(api.searchConsoleCountries.searchConsoleCountryChoices, { siteId })).toEqual({ ready: ["gbr"], asAll: [] });
     const uk = await reader.query(api.searchConsoleLists.searchConsoleListPage, { ...thirty, country: "gbr" });
     expect(uk).toMatchObject({ live: false, preparing: false, total: 2 });
     expect(uk.rows.map((one) => [one.key, one.clicks])).toEqual([["plumber leeds", 5], ["emergency plumber", 3]]);
@@ -375,6 +375,57 @@ describe("reading one country", () => {
     await expect(reader.action(api.searchConsoleLists.searchConsoleLiveList, { ...thirty, country: "GBR" })).rejects.toThrow("not a country Google names");
     await expect(reader.action(api.searchConsoleReads.searchConsoleLiveDays, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, country: "zzz" })).rejects.toThrow("not a country Google names");
     expect(asks).toEqual([]);
+  });
+});
+
+describe("a country nearly all of the searches (2026-10-05)", () => {
+  /** Ten days on which the United Kingdom is 95% of the website's showings. */
+  function nearlyAll(): Figures {
+    const all: Record<string, Day> = {};
+    const uk: Record<string, Day> = {};
+    for (let back = 0; back < 10; back += 1) {
+      const day = new Date(Date.parse(`${NEWEST}T00:00:00Z`) - back * 86_400_000).toISOString().slice(0, 10);
+      all[day] = {
+        total: row("", 20, 400),
+        pair: [pair("plumber leeds", "https://acme-shop.test/", 19), pair("ai agency", "https://acme-shop.test/ai/", 1)],
+        page: [row("https://acme-shop.test/", 19), row("https://acme-shop.test/ai/", 1)],
+        country: [row("gbr", 19), row("moz", 1)],
+        device: [row("MOBILE", 20)],
+      };
+      uk[day] = {
+        total: row("", 19, 380),
+        pair: [pair("plumber leeds", "https://acme-shop.test/", 19)],
+        page: [row("https://acme-shop.test/", 19)],
+        device: [row("MOBILE", 19)],
+      };
+    }
+    return { all: { web: all }, gbr: { web: uk } };
+  }
+
+  test("keeps no search-and-page lines of its own once judged so, and its searches read as all countries'", async () => {
+    const { t, siteId, reader } = await setup(["gbr"]);
+    const asks = fakeGoogle(nearlyAll());
+    await collect(t);
+    // Nothing held to judge by before the first run: the country is collected whole.
+    expect((await connectionOf(t, siteId))?.countriesAsAll).toBeUndefined();
+
+    asks.length = 0;
+    vi.setSystemTime(NOW + 24 * 60 * 60 * 1000);
+    await collect(t);
+
+    expect((await connectionOf(t, siteId))?.countriesAsAll).toEqual(["gbr"]);
+    const uk = asks.filter((ask) => countryOf(ask) === "gbr");
+    expect(uk.length).toBeGreaterThan(0);
+    expect(uk.some((ask) => ask.dimensions.includes("page"))).toBe(false);
+    expect(uk.some((ask) => ask.dimensions.includes("device"))).toBe(true);
+
+    // The United Kingdom's searches are all countries' — "ai agency" was searched from Mozambique.
+    // The last 30 days, ending on the newest day the second run holds.
+    const thirty = { siteId, searchType: "web" as const, dimension: "query" as const, from: "2026-08-29", to: "2026-09-27", page: 1, rows: 25, country: "gbr" };
+    const read = await reader.query(api.searchConsoleLists.searchConsoleListPage, thirty);
+    expect(read).toMatchObject({ live: false });
+    expect(read.rows.map((one: { key: string }) => one.key)).toContain("ai agency");
+    expect(await reader.query(api.searchConsoleCountries.searchConsoleCountryChoices, { siteId })).toEqual({ ready: ["gbr"], asAll: ["gbr"] });
   });
 });
 
