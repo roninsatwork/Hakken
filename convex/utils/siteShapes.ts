@@ -417,6 +417,14 @@ export const runReportFields = {
     answering: v.number(),
     /** Of its cost, what was bought on every run as the everyday check, rather than on its own cadence. */
     everyRunCostUsd: v.optional(v.number()),
+    /**
+     * Of its cost, what was bought for the company's competitors, and of that
+     * its lists' first pages: what the estimate prices under today's rules
+     * (finish-off plan, item 15). Absent from a report worked out before
+     * 2026-10-05.
+     */
+    trackedCostUsd: v.optional(v.number()),
+    trackedFirstPageCostUsd: v.optional(v.number()),
   })),
   /** A website's requests; the ones asked about several websites at once have no website. */
   bySite: v.array(v.object({
