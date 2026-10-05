@@ -66,6 +66,16 @@ describe("the Site audit", () => {
     answer({ "sites:getMySite": OWN, "siteCrawl:siteAudit": AUDIT });
     render(<SiteAuditPage />);
     expect(screen.queryByText("sites.audit.competitor")).not.toBeInTheDocument();
+    expect(screen.queryByText(/sites\.audit\.turnedAway/)).not.toBeInTheDocument();
     expect(screen.getByText("sites.audit.score")).toBeInTheDocument();
+  });
+
+  it("says a crawl the website turned away is not complete, rather than reading as a perfect audit", () => {
+    // morehandles.co.uk, 2026-10-05: one page, and no problems found on it.
+    answer({ "sites:getMySite": OWN, "siteCrawl:siteAudit": { ...AUDIT, pagesCrawled: 1, pagesFound: 1, turnedAway: "BLOCKED", issues: [] } });
+    render(<SiteAuditPage />);
+    expect(screen.getByText("sites.audit.turnedAway.BLOCKED 1")).toBeInTheDocument();
+    expect(screen.getByText("sites.audit.notComplete")).toBeInTheDocument();
+    expect(screen.queryByText("sites.audit.noIssues")).not.toBeInTheDocument();
   });
 });

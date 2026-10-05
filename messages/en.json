@@ -11015,7 +11015,16 @@
       "empty": "Not crawled yet. The first crawl runs with the next collection.",
       "noIssues": "No problems found. Good.",
       "noMatch": "No problem matches that.",
-      "competitor": "Competitors aren't crawled. The site audit is for your own websites: each is crawled once a month, and what the crawl finds feeds its audit, its page list and its AI search checks. A competitor is compared on its traffic, keywords, links and AI answers instead."
+      "competitor": "Competitors aren't crawled. The site audit is for your own websites: each is crawled once a month, and what the crawl finds feeds its audit, its page list and its AI search checks. A competitor is compared on its traffic, keywords, links and AI answers instead.",
+      "turnedAway": {
+        "BLOCKED": "Crawled {count, plural, =0 {no pages} =1 {1 page} other {# pages}}: the website probably blocked our crawler, so this audit is not complete.",
+        "ROBOTS": "Crawled {count, plural, =0 {no pages} =1 {1 page} other {# pages}}: the website's robots.txt tells crawlers to stay out, so this audit is not complete.",
+        "UNREACHABLE": "Crawled {count, plural, =0 {no pages} =1 {1 page} other {# pages}}: the website couldn't be reached when it was crawled, so this audit is not complete.",
+        "ERROR_PAGE": "Crawled {count, plural, =0 {no pages} =1 {1 page} other {# pages}}: the website's home page answered with an error, so this audit is not complete.",
+        "NO_INDEX": "Crawled {count, plural, =0 {no pages} =1 {1 page} other {# pages}}: the website's pages ask crawlers not to read them, so this audit is not complete.",
+        "REDIRECTS": "Crawled {count, plural, =0 {no pages} =1 {1 page} other {# pages}}: the website's home page redirects too many times to follow, so this audit is not complete."
+      },
+      "notComplete": "Too little of the website was crawled to judge it."
     },
     "paid": {
       "title": "Paid search",

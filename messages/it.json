@@ -11015,7 +11015,16 @@
       "empty": "Non ancora scansionato. La prima scansione parte con la prossima raccolta.",
       "noIssues": "Nessun problema trovato. Bene.",
       "noMatch": "Nessun problema corrisponde.",
-      "competitor": "I concorrenti non vengono scansionati. L'audit del sito è per i tuoi siti web: ognuno viene scansionato una volta al mese, e ciò che la scansione trova alimenta il suo audit, l'elenco delle sue pagine e i suoi controlli di ricerca AI. Un concorrente viene confrontato invece su traffico, parole chiave, link e risposte AI."
+      "competitor": "I concorrenti non vengono scansionati. L'audit del sito è per i tuoi siti web: ognuno viene scansionato una volta al mese, e ciò che la scansione trova alimenta il suo audit, l'elenco delle sue pagine e i suoi controlli di ricerca AI. Un concorrente viene confrontato invece su traffico, parole chiave, link e risposte AI.",
+      "turnedAway": {
+        "BLOCKED": "{count, plural, =0 {Nessuna pagina scansionata} =1 {1 pagina scansionata} other {# pagine scansionate}}: probabilmente il sito ha bloccato il nostro crawler, quindi questo audit non è completo.",
+        "ROBOTS": "{count, plural, =0 {Nessuna pagina scansionata} =1 {1 pagina scansionata} other {# pagine scansionate}}: il robots.txt del sito chiede ai crawler di non entrare, quindi questo audit non è completo.",
+        "UNREACHABLE": "{count, plural, =0 {Nessuna pagina scansionata} =1 {1 pagina scansionata} other {# pagine scansionate}}: il sito non era raggiungibile durante la scansione, quindi questo audit non è completo.",
+        "ERROR_PAGE": "{count, plural, =0 {Nessuna pagina scansionata} =1 {1 pagina scansionata} other {# pagine scansionate}}: la home page del sito ha risposto con un errore, quindi questo audit non è completo.",
+        "NO_INDEX": "{count, plural, =0 {Nessuna pagina scansionata} =1 {1 pagina scansionata} other {# pagine scansionate}}: le pagine del sito chiedono ai crawler di non leggerle, quindi questo audit non è completo.",
+        "REDIRECTS": "{count, plural, =0 {Nessuna pagina scansionata} =1 {1 pagina scansionata} other {# pagine scansionate}}: la home page del sito reindirizza troppe volte per essere seguita, quindi questo audit non è completo."
+      },
+      "notComplete": "È stata scansionata troppo poca parte del sito per giudicarlo."
     },
     "paid": {
       "title": "Ricerca a pagamento",
