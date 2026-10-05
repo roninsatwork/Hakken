@@ -366,6 +366,7 @@ import type * as seoRunEstimate from "../seoRunEstimate.js";
 import type * as seoRunReportRebuild from "../seoRunReportRebuild.js";
 import type * as seoRunReports from "../seoRunReports.js";
 import type * as seoScheduleService from "../seoScheduleService.js";
+import type * as seoStorageMeasure from "../seoStorageMeasure.js";
 import type * as seoSupplierRetry from "../seoSupplierRetry.js";
 import type * as seoTestDataReset from "../seoTestDataReset.js";
 import type * as seoTools from "../seoTools.js";
@@ -969,6 +970,7 @@ declare const fullApi: ApiFromModules<{
   seoRunReportRebuild: typeof seoRunReportRebuild;
   seoRunReports: typeof seoRunReports;
   seoScheduleService: typeof seoScheduleService;
+  seoStorageMeasure: typeof seoStorageMeasure;
   seoSupplierRetry: typeof seoSupplierRetry;
   seoTestDataReset: typeof seoTestDataReset;
   seoTools: typeof seoTools;
