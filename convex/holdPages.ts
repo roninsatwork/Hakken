@@ -233,13 +233,22 @@ export const judgedTypesPage = internalQuery({
 });
 
 /**
+ * Pages returned per read: a function's answer holds at most 8,192 to a list.
+ * morehandles.co.uk's 90 days showed 13,813, and its Your pages never rebuilt
+ * (found 2026-10-06).
+ */
+const CONSOLE_PAGES_PER_READ = 4_000;
+
+/**
  * The pages the company's own Search Console shows over the last 90 days,
  * folded to their page with their clicks added up: the ready-made period
  * (`readPeriod`), read by the hold. Only the website's own host and its twin.
+ * A part at a time, in page order, from `start`; `next` is where the next
+ * part starts, null after the last.
  */
 export const consolePages = internalQuery({
-  args: { holdId: v.id("companyWebsites"), host: v.string() },
-  returns: v.array(v.object({ key: v.string(), clicks: v.number() })),
+  args: { holdId: v.id("companyWebsites"), host: v.string(), start: v.optional(v.number()) },
+  returns: v.object({ pages: v.array(v.object({ key: v.string(), clicks: v.number() })), next: v.union(v.number(), v.null()) }),
   handler: async (ctx, args) => {
     const period = await readPeriod(ctx, args.holdId, "web", "page", "90", "NOW");
     const clicks = new Map<string, number>();
@@ -248,9 +257,27 @@ export const consolePages = internalQuery({
       const page = normalisePage(row.key);
       clicks.set(page, (clicks.get(page) ?? 0) + row.clicks);
     }
-    return [...clicks].map(([key, total]) => ({ key, clicks: total }));
+    const all = [...clicks].sort(([one], [two]) => (one < two ? -1 : one > two ? 1 : 0));
+    const start = args.start ?? 0;
+    const end = start + CONSOLE_PAGES_PER_READ;
+    return {
+      pages: all.slice(start, end).map(([key, total]) => ({ key, clicks: total })),
+      next: end < all.length ? end : null,
+    };
   },
 });
+
+/** Every page the company's own Search Console shows, read a part at a time (`consolePages`). */
+async function allConsolePages(ctx: ActionCtx, holdId: Id<"companyWebsites">, host: string): Promise<Array<{ key: string; clicks: number }>> {
+  const pages: Array<{ key: string; clicks: number }> = [];
+  for (let start: number | null = 0; start !== null;) {
+    const part: { pages: Array<{ key: string; clicks: number }>; next: number | null } =
+      await ctx.runQuery(internal.holdPages.consolePages, { holdId, host, start });
+    pages.push(...part.pages);
+    start = part.next;
+  }
+  return pages;
+}
 
 const holdRowValidator = v.object({
   _id: v.id("holdPages"),
@@ -407,7 +434,7 @@ async function rebuildNow(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promis
   const crawled = crawl ? await readAll((cursor) => ctx.runQuery(internal.holdPages.crawlPagesPage, { pullId: crawl.pullId, cursor })) : [];
   const ranked = await readAll((cursor) => ctx.runQuery(internal.holdPages.rankedPagesPage, { websiteId, place, cursor }));
   const judged = await readAll((cursor) => ctx.runQuery(internal.holdPages.judgedTypesPage, { websiteId, cursor }));
-  const shown = head.console.connected ? await ctx.runQuery(internal.holdPages.consolePages, { holdId, host: head.host }) : null;
+  const shown = head.console.connected ? await allConsolePages(ctx, holdId, head.host) : null;
   const joined = joinHoldPages({ host: head.host, sitemap, sitemapLimit: head.limit, crawled, ranked, shown, judged });
 
   // Only what changed is written: the rest of the rows stay as they are.

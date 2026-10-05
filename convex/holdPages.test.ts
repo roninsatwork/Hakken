@@ -354,3 +354,31 @@ describe("the download", () => {
     expect(file.complete).toBe(true);
   });
 });
+
+describe("a website Google shows many pages of", () => {
+  test("every page its Search Console shows is read, more than one read may return (2026-10-06)", async () => {
+    // morehandles.co.uk's 90 days showed 13,813 pages: one read holds at most 8,192, and its Your pages never rebuilt.
+    const t = harness();
+    const holdId = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: 1 });
+      const websiteId = await ctx.db.insert("websites", { host: "acme-shop.test", displayHost: "acme-shop.test", firstSeenAt: 1 });
+      const holdId = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: 1 });
+      const pages = Array.from({ length: 4_500 }, (_, index) => `https://acme-shop.test/p/${String(index).padStart(5, "0")}`);
+      for (let part = 0; part * 2_000 < pages.length; part += 1) {
+        const keys = pages.slice(part * 2_000, (part + 1) * 2_000);
+        await ctx.db.insert("searchConsolePeriods", {
+          companyWebsiteId: holdId, searchType: "web", list: "page", period: "90", which: "NOW", part, from: "2026-07-01", to: "2026-09-28",
+          keys, clicks: keys.map(() => 1), impressions: keys.map(() => 10), positionSums: keys.map(() => 30), builtAt: 1,
+        });
+      }
+      return holdId;
+    });
+    const first = await t.query(internal.holdPages.consolePages, { holdId, host: "acme-shop.test", start: 0 });
+    expect(first.pages).toHaveLength(4_000);
+    expect(first.next).toBe(4_000);
+    const second = await t.query(internal.holdPages.consolePages, { holdId, host: "acme-shop.test", start: first.next! });
+    expect(second.pages).toHaveLength(500);
+    expect(second.next).toBeNull();
+    expect(new Set([...first.pages, ...second.pages].map((page) => page.key)).size).toBe(4_500);
+  });
+});
