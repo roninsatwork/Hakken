@@ -120,6 +120,28 @@ passed — `verify:env`, `lint:all`, `check` (6,430 tests), `test:coverage`,
 country read as all countries from 75% (B: "the UK searches are 50% of all
 countries for ronins").
 
+## Cost review, first items — built 2026-10-05 (night), and the next
+
+Agreed by Anthony on 2026-10-05 from the list of better ways ("lets do 1 and
+4", "and 3 please"):
+
+| # | What | Built | Measured |
+|---|---|---|---|
+| 1 | The 90-day and 12-month lists added up weekly, the 7 and 30 days nightly | `searchConsoleSettling.ts` (`longPeriodsDue`), `buildSitePeriods({ long })` | Saves the long lists' writing on six nights in seven — nearer 30% of the nightly work than the 55% first estimated: most of it is reading the kept days, still done every night |
+| 3 | A day already held fetched again only when Google's totals for it changed | `searchConsoleSync.ts` (`sameTotals`, `heldDayTotals`) | — |
+| 4 | The periods added up as one job per kind of result and country, side by side; the last ends the run | `searchConsoleSettle.ts` (`settlePart`), `searchConsoleConnections.settling` | morehandles.co.uk's whole rebuild, all countries and the UK: about 3 minutes, from about 9 (its web job about 2½ minutes, of an action's 10) |
+
+**Next (agreed 2026-10-05: "yes"): rebuild weekly, and when the website is
+opened.** Search Console is still collected every day, but a website's
+ready-made lists are added up once a week — never more than six days old —
+and again when someone opens its Search Console and they are behind. The
+screen shows the last figures at once, with a line and a bar while the
+newest days are added, and updates itself when done (the picture sent on
+2026-10-05, `catching-up.png`). Estimated saving on the rebuild: about 85%
+for a website nobody opens that week, about 60% for one opened two days a
+week. About 1.5 days. The question it leaves for pricing: the bill then
+follows how often customers look.
+
 ## Next, once this plan is done: what Convex costs (agreed 2026-10-05)
 
 Anthony, 2026-10-05: "It's still a lot of money — we need to look at saving
