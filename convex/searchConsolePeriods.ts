@@ -433,6 +433,9 @@ function slotsOf(newest: string, oldest: string): Slot[] {
 
 const slotKey = (slot: Slot) => `${slot.period}|${slot.which}`;
 
+/** The periods added up once a week, not every night (cost review 1). */
+export const LONG_PERIODS: readonly SearchConsolePeriod[] = ["90", "365"];
+
 /**
  * Twelve months holding exactly the 90 days' days — every website, until it
  * has held more than 90 days — is the 90 days again: kept once (finish-off
@@ -557,12 +560,20 @@ export async function buildSitePeriods(
   newest: string,
   oldest: string,
   country?: string,
+  /**
+   * One kind of result only — a settle's jobs each take one, side by side —
+   * and whether its 90 days and twelve months are added up too: weekly, the
+   * 7 and 30 days nightly (cost review 1 and 4, `searchConsoleSettling.ts`).
+   */
+  options: { searchType?: SearchType; long?: boolean } = {},
 ): Promise<number> {
   let written = 0;
   const builtAt = Date.now();
-  const slots = slotsOf(newest, oldest);
+  const long = options.long ?? true;
+  const allSlots = slotsOf(newest, oldest);
+  const slots = long ? allSlots : allSlots.filter((slot) => !LONG_PERIODS.includes(slot.period));
   const scope = country === undefined ? {} : { country };
-  const ninety = slots.find((slot) => slot.period === "90" && slot.which === "NOW")?.span ?? null;
+  const ninety = allSlots.find((slot) => slot.period === "90" && slot.which === "NOW")?.span ?? null;
   const asNinety = (slot: Slot) => sameAsNinety(slot, ninety);
   // The website's page list, both ways, read once a run (`addressesOf`, already read to turn the kept pages back).
   let numbers: { book: Map<string, string>; refOf: Map<string, string> } | null = null;
@@ -650,7 +661,8 @@ export async function buildSitePeriods(
     }));
   };
 
-  const types = await ctx.runQuery(internal.searchConsoleRollups.typesHeld, { companyWebsiteId, ...scope });
+  const held = await ctx.runQuery(internal.searchConsoleRollups.typesHeld, { companyWebsiteId, ...scope });
+  const types = options.searchType === undefined ? held : held.filter((type) => type === options.searchType);
   const target = await ctx.runQuery(internal.searchConsoleFacts.factsTarget, { companyWebsiteId });
   const { google, chartWeeks, richResultKinds } = await ctx.runQuery(internal.searchConsolePeriods.buildTarget, { companyWebsiteId });
   // Sites' facts for each keyword and page, looked up once for every kind of result.

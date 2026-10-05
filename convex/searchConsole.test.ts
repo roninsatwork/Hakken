@@ -568,6 +568,29 @@ describe("collecting", () => {
     expect(await slot("query", "28", "BEFORE")).toEqual([]);
   });
 
+  test("the 7 and 30 days are added up every run, the 90 days and twelve months once a week (cost review 1)", async () => {
+    const { t, siteId, admin } = await setup();
+    fakeGoogle({ figures: figures() });
+    await signIn(t, admin, siteId);
+    await collect(t);
+    const builtAt = async (period: "30" | "90") => (await t.run(async (ctx) => await ctx.db
+      .query("searchConsolePeriods")
+      .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "page").eq("period", period).eq("which", "NOW"))
+      .first()))?.builtAt;
+    const first = { thirty: await builtAt("30"), ninety: await builtAt("90") };
+
+    vi.setSystemTime(NOW + 24 * 60 * 60 * 1000);
+    await collect(t);
+    expect(await builtAt("30")).toBeGreaterThan(first.thirty!);
+    expect(await builtAt("90")).toBe(first.ninety);
+
+    vi.setSystemTime(NOW + 7 * 24 * 60 * 60 * 1000);
+    await collect(t);
+    expect(await builtAt("90")).toBeGreaterThan(first.ninety!);
+    // Every job counted and the settle closed.
+    expect((await connectionOf(t, siteId))?.settling).toBeUndefined();
+  });
+
   test("the next run brings the new day and the last four again, keeping only what Google still has", async () => {
     const { t, siteId, admin } = await setup();
     const google = fakeGoogle({ figures: figures() });
@@ -816,8 +839,9 @@ describe("the Search Console Collector agent", () => {
     expect(own.every((run) => run.status === "SUCCESS" && run.finalOutput?.includes("nothing older is fetched"))).toBe(true);
     const lines = await t.run(async (ctx) => await ctx.db.query("agentLogs").collect());
     expect(own.every((run) => lines.some((line) => line.runId === run._id && line.responseContent.includes("rows from")))).toBe(true);
-    // Each website's run ends by adding up its periods, as a line of its own.
-    expect(own.every((run) => lines.some((line) => line.runId === run._id && line.interactionType === "Kept and added up"))).toBe(true);
+    // Each website's run ends by adding up its periods, as one job per kind of result side by side (cost review 4).
+    expect(own.every((run) => lines.some((line) => line.runId === run._id && line.interactionType === "Kept"))).toBe(true);
+    expect(own.every((run) => lines.some((line) => line.runId === run._id && line.interactionType === "Added up" && line.responseContent.includes("90-day and 12-month")))).toBe(true);
 
     expect(await rowsOf(t, siteId, "query", NEWEST)).toEqual([["emergency plumber", 3], ["plumber leeds", 5]]);
     expect(await rowsOf(t, blogId, "query", NEWEST)).toEqual([["how to fix a tap", 2]]);

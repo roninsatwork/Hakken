@@ -240,7 +240,8 @@ describe("collecting a country kept ready", () => {
     expect(everywhere.periods.find((part) => part.list === "query" && part.which === "NOW" && part.period === "30")?.keys)
       .toEqual(["plumber leeds", "ai agency", "emergency plumber"]);
     const lines = await t.run(async (ctx) => await ctx.db.query("agentLogs").collect());
-    expect(lines.map((line) => line.interactionType)).toEqual(expect.arrayContaining(["Kept and added up", "Kept and added up, United Kingdom (GBR)"]));
+    // Every country's days rolled up first, then all their lists added up side by side (cost review 4).
+    expect(lines.map((line) => line.interactionType)).toEqual(expect.arrayContaining(["Kept", "Added up"]));
   });
 });
 

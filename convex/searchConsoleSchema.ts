@@ -210,6 +210,24 @@ export const searchConsoleTables = {
      */
     collecting: v.optional(v.object({ runId: v.id("agentRuns"), from: v.string(), top: v.string() })),
     /**
+     * The ready-made periods being added up, one job per kind of result and
+     * country, side by side (cost review 4, 2026-10-05): how many, how many
+     * done, and the run the last one finishes. `token` tells this settle's
+     * jobs from an older one's.
+     */
+    settling: v.optional(v.object({
+      token: v.number(),
+      parts: v.number(),
+      done: v.number(),
+      written: v.number(),
+      weekly: v.number(),
+      failed: v.optional(v.string()),
+      runId: v.optional(v.id("agentRuns")),
+      workflowExecutionId: v.optional(v.id("workflowExecutions")),
+      companyId: v.optional(v.id("companies")),
+      summary: v.optional(v.string()),
+    })),
+    /**
      * Countries kept ready that are nearly all of the website's searches: they
      * keep no search-and-page lines of their own, and are read as all countries
      * (finish-off plan item 2B, `searchConsoleShrink.ts`).
