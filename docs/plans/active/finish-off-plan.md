@@ -78,6 +78,28 @@ Console part.
   Stripe; about 3 days) and 5 (switching charging on; about 1.5 days), and
   counting other agents' model costs (about 1 day).
 
+## Next, once this plan is done: what Convex costs (agreed 2026-10-05)
+
+Anthony, 2026-10-05: "It's still a lot of money — we need to look at saving
+when the plan finishes." Convex's Professional plan includes 50 GB stored and
+50 GB read and written a month, then $0.20 a GB of each
+([convex.dev/pricing](https://www.convex.dev/pricing), read 2026-10-05).
+Storing is cheap — morehandles.co.uk's Search Console, about 470 MB after
+item 2E, is about $0.10 a month. Reading and writing is the cost: each day's
+Search Console run reads the website's kept days and writes every ready-made
+period again, estimated at half a GB a day for a website that size — about
+$3 a month, ~$290 a month for 100 such companies, ~$3,000 for 1,000.
+**Estimates: read the real figures first**, on the Convex dashboard's Usage
+page (reads and writes by function), then choose among:
+
+- Build again only the periods whose days changed, not every one every day —
+  likely the largest saving.
+- Page references inside the ready-made periods too (~130 MB of
+  morehandles.co.uk's; every screen reading them changes; about 1.5 days).
+- Keep only a website's top or clicked searches (see Your decisions).
+- A country read as all countries from 75% of showings rather than 90%.
+- The same look at DataForSEO's stored data, not yet measured.
+
 ## Order
 
 Items 1 and 2 first, together — the screens are blank until they are done,
