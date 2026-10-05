@@ -4,6 +4,13 @@ import { useQuery } from "convex/react";
 
 import { answerQueries } from "@/src/test/siteViewFixtures";
 import SiteAuditPage from "./audit/page";
+import SiteAllBacklinksPage from "./backlinks/all/page";
+import SiteBrokenBacklinksPage from "./backlinks/broken/page";
+import SiteLinksNewLostPage from "./backlinks/new-lost/page";
+import SiteAnchorsPage from "./backlinks/anchors/page";
+import SiteReferringIpsPage from "./backlinks/ips/page";
+import SiteOrganicCompetitorsPage from "./competitors/organic/page";
+import SiteKeywordsPage from "./keywords/page";
 
 /**
  * What a competitor's screens say about what is not collected for it
@@ -77,5 +84,44 @@ describe("the Site audit", () => {
     expect(screen.getByText("sites.audit.turnedAway.BLOCKED 1")).toBeInTheDocument();
     expect(screen.getByText("sites.audit.notComplete")).toBeInTheDocument();
     expect(screen.queryByText("sites.audit.noIssues")).not.toBeInTheDocument();
+  });
+});
+
+describe("the lists bought for a company's own websites only", () => {
+  // Every link, broken links, gained and lost, the words links use and the
+  // servers they come from are no longer bought for a competitor (items 6b
+  // and 6c), nor who competes with it: each says so instead of sitting empty.
+  const TABS = [
+    ["All backlinks", SiteAllBacklinksPage, "backlinksAll", "backlinks/all"],
+    ["Broken backlinks", SiteBrokenBacklinksPage, "backlinksBroken", "backlinks/broken"],
+    ["New and lost links", SiteLinksNewLostPage, "backlinksNewLost", "backlinks/new-lost"],
+    ["Anchors", SiteAnchorsPage, "backlinksAnchors", "backlinks/anchors"],
+    ["Referring IPs", SiteReferringIpsPage, "backlinksIps", "backlinks/ips"],
+    ["Organic competitors", SiteOrganicCompetitorsPage, "organic", "competitors/organic"],
+  ] as const;
+
+  it.each(TABS)("%s says so on a competitor, and leads to the website it is measured against", (_name, Page, namespace, tab) => {
+    answer({ "sites:getMySite": RIVAL });
+    render(<Page />);
+    expect(screen.getByText(`sites.${namespace}.competitor`)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "sites.common.openOwnSite a.com" })).toHaveAttribute("href", `/app/sites/site_1/${tab}`);
+  });
+
+  it.each(TABS)("%s is the list as before on a company's own website", (_name, Page, namespace) => {
+    answer({ "sites:getMySite": OWN });
+    render(<Page />);
+    expect(screen.queryByText(`sites.${namespace}.competitor`)).not.toBeInTheDocument();
+    expect(screen.getByText(`sites.${namespace}.title`)).toBeInTheDocument();
+  });
+
+  it("a competitor's keyword list says it holds the top 1,000", () => {
+    answer({ "sites:getMySite": RIVAL });
+    const { unmount } = render(<SiteKeywordsPage />);
+    expect(screen.getByText("sites.keywords.competitorTop")).toBeInTheDocument();
+    unmount();
+
+    answer({ "sites:getMySite": OWN });
+    render(<SiteKeywordsPage />);
+    expect(screen.queryByText("sites.keywords.competitorTop")).not.toBeInTheDocument();
   });
 });

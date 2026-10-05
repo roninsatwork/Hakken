@@ -9897,7 +9897,8 @@
       "bandOfEvery": "Conserviamo {held} delle {total} ricerche in {band} tra tutte quelle per cui questo sito si posiziona.",
       "moveOfEvery": "Conserviamo {held} delle {total} ricerche segnate «{move}» tra tutte quelle per cui questo sito si posiziona.",
       "newToHeld": "Una ricerca può risultare nuova qui anche perché è entrata tra quelle conservate.",
-      "notInListThatDay": "Non nell’elenco di quel giorno"
+      "notInListThatDay": "Non nell’elenco di quel giorno",
+      "competitorTop": "Per un concorrente questo elenco contiene le sue prime 1.000 ricerche, quelle che gli portano più visite, aggiornate una volta al mese. I suoi totali vengono controllati a ogni raccolta."
     },
     "pages": {
       "title": "Pagine principali",
@@ -10385,7 +10386,8 @@
       },
       "empty": "Nessun concorrente organico trovato per ora.",
       "noMatch": "Nessun sito corrisponde.",
-      "readOf": "{count} dei {total} siti che si posizionano per le stesse ricerche: quelli che ne condividono di più con questo. Gli altri non vengono letti."
+      "readOf": "{count} dei {total} siti che si posizionano per le stesse ricerche: quelli che ne condividono di più con questo. Gli altri non vengono letti.",
+      "competitor": "Chi compete con un sito per le stesse ricerche viene raccolto solo per i tuoi siti web. Per confrontare questo concorrente con il tuo, apri Confronto diretto."
     },
     "gap": {
       "title": "Divario di contenuti",
@@ -10816,7 +10818,8 @@
       },
       "noAnchor": "Nessuna parola (un'immagine o un indirizzo nudo)",
       "empty": "Nessun backlink raccolto ancora.",
-      "noMatch": "Nessun link corrisponde."
+      "noMatch": "Nessun link corrisponde.",
+      "competitor": "Tutti i link, e il link più forte di ogni sito che rimanda qui, vengono raccolti solo per i tuoi siti web. Per un concorrente Hakken conserva ciò che serve al confronto: i totali dei link a ogni raccolta e, una volta al mese, i siti che rimandano a lui, in Domini di riferimento."
     },
     "backlinksDomains": {
       "title": "Domini di riferimento",
@@ -10854,7 +10857,8 @@
       },
       "noAnchor": "Nessuna parola (un'immagine o un indirizzo nudo)",
       "empty": "Nessun anchor raccolto ancora.",
-      "noMatch": "Nessun anchor corrisponde."
+      "noMatch": "Nessun anchor corrisponde.",
+      "competitor": "Le parole usate nei link vengono raccolte solo per i tuoi siti web. Per un concorrente Hakken conserva i totali dei link e i siti che rimandano a lui, in Domini di riferimento."
     },
     "backlinksIps": {
       "title": "IP di riferimento",
@@ -10879,7 +10883,8 @@
       "empty": "Nessun server raccolto ancora.",
       "noMatch": "Nessun indirizzo corrisponde.",
       "chartHintHeld": "Ogni barra è una rete (le prime tre parti dell’indirizzo), contata sui {held} server conservati su {total}.",
-      "networksInAll": "I link verso questo sito arrivano da {count} reti in tutto."
+      "networksInAll": "I link verso questo sito arrivano da {count} reti in tutto.",
+      "competitor": "I server da cui provengono i link vengono raccolti solo per i tuoi siti web. Per un concorrente Hakken conserva i totali dei link e i siti che rimandano a lui, in Domini di riferimento."
     },
     "backlinksBroken": {
       "title": "Backlink non funzionanti",
@@ -10895,7 +10900,8 @@
         "lastChecked": "Ultimo controllo"
       },
       "empty": "Nessun backlink non funzionante trovato. Bene.",
-      "noMatch": "Nessun link corrisponde."
+      "noMatch": "Nessun link corrisponde.",
+      "competitor": "I link interrotti vengono raccolti solo per i tuoi siti web: sono link da riparare, e solo i tuoi si possono riparare. Per un concorrente Hakken conserva i totali dei link e i siti che rimandano a lui."
     },
     "backlinksNewLost": {
       "title": "Link nuovi e persi",
@@ -10922,7 +10928,8 @@
         "week": "Settimana del",
         "month": "Mese di"
       },
-      "empty": "Nessun cambiamento dei link registrato in queste date."
+      "empty": "Nessun cambiamento dei link registrato in queste date.",
+      "competitor": "I link acquisiti e persi vengono raccolti solo per i tuoi siti web. Per un concorrente i totali dei link vengono controllati a ogni raccolta, e Backlink → Riepilogo mostra come cambiano."
     },
     "audit": {
       "problemPages": {

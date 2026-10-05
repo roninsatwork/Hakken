@@ -17,6 +17,7 @@ import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../_components/useSiteSort";
 import { ListHeldLine } from "../../../_components/SiteCoverage";
+import { CompetitorNotCollected, useIsCompetitor } from "../../../_components/CompetitorNotCollected";
 
 /**
  * The columns that sort, over every broken link (docs/plans/active/
@@ -32,6 +33,7 @@ const SORTS = { from: "asc", code: "desc", domainRank: "desc" } as const;
  */
 export default function SiteBrokenBacklinksPage() {
   const t = useTranslations("sites.backlinksBroken");
+  const competitor = useIsCompetitor();
   const siteId = useSiteId();
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
@@ -40,6 +42,19 @@ export default function SiteBrokenBacklinksPage() {
   const table = useSiteListPage(api.siteLinkLists.listBrokenBacklinks, { siteId, ...(term ? { search: term } : {}), sort: order.key, direction: order.direction });
   // The whole list's length, for what the rows kept are of (sites-data-completeness-plan.md, §4.E).
   const totals = useQuery(api.siteLinks.linkListTotals, { siteId });
+
+  // Bought for a company's own websites only (finish-off plan, items 6b, 6c and 14).
+  if (competitor) {
+    return (
+      <CompetitorNotCollected
+        icon={<Unlink className="h-5 w-5 text-brand" />}
+        title={t("title")}
+        description={t("description")}
+        notice={t("competitor")}
+        tab="backlinks/broken"
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

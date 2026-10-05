@@ -25,6 +25,7 @@ import { TableDownload } from "../../_components/SiteDownloads";
 import { useSiteListPage } from "../../_components/useSitePagedTable";
 import { HeldLine, isPartHeld } from "../../_components/SiteCoverage";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
+import { Notice } from "@/src/ui/components/screens/Notice";
 
 const BANDS = ["p01_03", "p04_10", "p11_20", "p21_50", "p51_up"] as const;
 const INTENTS = ["BUYING", "RESEARCHING", "BRANDED", "IRRELEVANT", "OTHER", "UNJUDGED"] as const;
@@ -132,6 +133,9 @@ export default function SiteKeywordsPage() {
         description={t("description")}
         pills={isPartHeld(coverage) ? <HeldLine coverage={coverage} className="text-[12px] text-secondary" /> : null}
       />
+
+      {/* A competitor's list is its top 1,000, refreshed monthly (finish-off plan, items 6b, 6c and 14). */}
+      {site?.relationship === "TRACKED" ? <Notice>{t("competitorTop")}</Notice> : null}
 
       <SiteChartCard
         title={to("positions")}
