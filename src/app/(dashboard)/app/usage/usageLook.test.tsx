@@ -217,6 +217,16 @@ describe("Usage's screens", () => {
     expect(screen.getByText("ronins.co.uk · 1,240 pages · from October’s plan")).toBeTruthy();
   });
 
+  it("a charge counted again from what came back says what it is now and was, and where its credits went back", async () => {
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "creditUsage:usageStatement": { ...STATEMENT, lines: [...STATEMENT.lines, line("c8", OCT + 19 * DAY + 3_600_000, { entry: "recount", kind: "siteAudit", website: own, user: "Anthony Basker", how: "automatic", units: 1, before: 1000, in: 24, balance: 981, reason: "recounted" })] },
+    }));
+    at("/app/usage/statement");
+    render(<UsageStatementPage />);
+    expect(await screen.findByText("Counted again: Site audit")).toBeTruthy();
+    expect(screen.getByText("ronins.co.uk · 1 page came back, not 1,000 · back to October’s plan")).toBeTruthy();
+  });
+
   it("a month's plan credits raised after they were given say so, from what to what", async () => {
     const october = { source: "plan" as const, month: "2026-10", startsAt: OCT, endsAt: Date.UTC(2026, 10, 1) };
     vi.mocked(useQuery).mockImplementation(answerQueries({

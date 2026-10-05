@@ -124,3 +124,47 @@ the table above is how it stands before it.
   line on the statement** — "October's plan credits raised · From 1,000 to
   10,000 a month", 9,000 in — so the balances before it stay true and the
   ones after it add up. Never lowers a batch; a second run finds nothing to do.
+
+### Item 3 — credits count what came back
+
+- **What came back is counted where the answer arrives**: the Collector
+  counts each answer's rows as it keeps it (`rowsReturnedIn`,
+  `convex/dataForSeoSlim.ts` — a list's rows, every one sent, including any
+  left off the stored copy; a crawl's `pages_crawled`) and records it on the
+  request (`seoDataPulls.rowsReturned`).
+- **The rule** (`creditUnitsOfAnswer`, `convex/creditKinds.ts`): a list or
+  batch counts the rows that came back, never more than it asked for; a crawl
+  the pages it crawled; a single answer 1; an AI answer 1 whatever it says.
+  Up front, before the answer, a single answer counts 1 and a list or crawl
+  **0** — so a run in progress shows only what has come back.
+- **Each plan line keeps what it put in its run** (`seoCycleLines.creditUnits`)
+  and whether its run waits for it (`creditPending`); when its request is
+  answered or fails, the run moves by the difference. A run whose collection
+  finishes while a request another collection sent is still out **stays open
+  until that answer comes** (`creditCharges.pendingLines`, `closeRunIfDone`),
+  so it is charged once, on what came back; the hourly sweep gives up waiting
+  after two days. A list's later pages, which have no plan line, now count for
+  the run that bought them, rows and cost (`creditListPage`) — before, they
+  counted nothing.
+- **Decision — a correction is a line of its own, never a rewrite.** A charge
+  counted again after it was charged (`recountCreditRun`) keeps its line as
+  it was; the difference is a **"Counted again"** line — "Counted again: Site
+  audit · corston.com · 1 page came back, not 1,000 · back to October's plan",
+  19 in — with credits given back to the batches that paid (or this month's
+  plan, where one has ended), or taken, if it came out higher, from the
+  batches that end soonest. The month's rollup, every company's month, and
+  the day the work was charged on move with it, so the Usage chart, Overview
+  and Credit prices still add up. A refund after a recount gives back what the
+  charge stands at.
+- **The 5 October charges, counted again once, by hand**:
+  `creditCorrections:recountCollectionCredits` (no arguments: from the start
+  of this UK month; or `{"since": <ms>}`). Three passes, each paged and
+  booking the next: what each kept answer brought back (four answers a
+  transaction); every request's lines moved to what it counts now, later pages
+  counted, requests outside a collection counted again; then each charged run
+  that owes a difference counted again once, as above. Running it again
+  changes nothing.
+- Not counted again: a request still out when it runs (its answer counts it,
+  as above), and keyword lookups (item 9 deals with those). A request shared
+  with another company counts for that company only on its first page: a
+  list's later pages count for the collection that bought them.

@@ -287,6 +287,35 @@ async function bumpCreditRollup(ctx: MutationCtx, charge: Charge, credits: numbe
   else await ctx.db.insert("creditDayTotals", { companyId: charge.companyId, day, credits, byHand, updatedAt: now });
 }
 
+/**
+ * A charge's credits moved after it was charged — given back, or counted
+ * again — in the rollups it was first counted in: its month's (per kind and
+ * website), every company's month, and the day it was charged, so the Usage
+ * chart's days still add up to the month's figures. Its runs stand.
+ */
+async function moveChargeRollups(ctx: MutationCtx, charge: Charge, credits: number, units: number, now: number): Promise<void> {
+  if (!charge.kind || (credits === 0 && units === 0)) return;
+  const day = creditDayOf(charge.at);
+  const month = day.slice(0, 7);
+  const kind = charge.kind;
+  const websiteKey = charge.websiteId ?? "none";
+  const row = await ctx.db
+    .query("creditMonthRollups")
+    .withIndex("by_company_month_kind_site", (q) => q.eq("companyId", charge.companyId).eq("month", month).eq("kind", kind).eq("websiteKey", websiteKey))
+    .first();
+  if (row && credits !== 0) await ctx.db.patch(row._id, { credits: row.credits + credits, updatedAt: now });
+  await bumpPlatformMonth(ctx, month, kind, { credits, units }, now);
+  if (credits === 0) return;
+  const total = await ctx.db.query("creditDayTotals").withIndex("by_company_day", (q) => q.eq("companyId", charge.companyId).eq("day", day)).first();
+  if (total) {
+    await ctx.db.patch(total._id, {
+      credits: total.credits + credits,
+      byHand: total.byHand + (charge.how === "byHand" ? credits : 0),
+      updatedAt: now,
+    });
+  }
+}
+
 /** What a run is, when it opens: everything but its counts. */
 export type CreditRunStart = {
   companyId: Id<"companies">;
@@ -333,12 +362,21 @@ export async function openCreditRun(ctx: MutationCtx, start: CreditRunStart, now
   return charge;
 }
 
-export type CreditRunChange = { units?: number; lines?: number; failedUnits?: number; realCostUsd?: number; reusedValueUsd?: number };
+export type CreditRunChange = {
+  units?: number;
+  lines?: number;
+  failedUnits?: number;
+  realCostUsd?: number;
+  reusedValueUsd?: number;
+  /** Lines whose requests are out, joining (+1) or come back (-1): an open run waits for them before it is charged. */
+  pendingLines?: number;
+};
 
 /**
- * Add to a run. While it is open its units move; once charged, only what it
- * cost us can still arrive (an answer that comes after the run closed), and
- * its credits stand.
+ * Add to a run. While it is open its units move. Once charged, what it cost
+ * us can still arrive (an answer that comes after the run closed), and units
+ * that move — an answer counted after the run was charged — count it again,
+ * as a line of its own (`recountCreditRun`).
  */
 export async function addToCreditRun(ctx: MutationCtx, charge: Charge, change: CreditRunChange): Promise<void> {
   const costs = {
@@ -350,6 +388,9 @@ export async function addToCreditRun(ctx: MutationCtx, charge: Charge, change: C
       await ctx.db.patch(charge._id, costs);
       await bumpRollupCosts(ctx, charge, change.realCostUsd ?? 0, change.reusedValueUsd ?? 0, Date.now());
     }
+    if (change.units && charge.entry === "charge") {
+      await recountCreditRun(ctx, charge._id, (charge.unitsNow ?? charge.units) + change.units, "recounted", Date.now());
+    }
     return;
   }
   await ctx.db.patch(charge._id, {
@@ -357,7 +398,114 @@ export async function addToCreditRun(ctx: MutationCtx, charge: Charge, change: C
     units: Math.max(0, charge.units + (change.units ?? 0)),
     lines: Math.max(0, charge.lines + (change.lines ?? 0)),
     failedUnits: charge.failedUnits + (change.failedUnits ?? 0),
+    ...(change.pendingLines ? { pendingLines: Math.max(0, (charge.pendingLines ?? 0) + change.pendingLines) } : {}),
   });
+}
+
+/**
+ * Give credits back to the batches a charge drew them from, the last drawn
+ * first — or, where one has ended, to this month's plan batch. Nobody loses
+ * credits to a count that came out lower. Returns where each went.
+ */
+async function giveCreditsBack(ctx: MutationCtx, charge: Charge, credits: number, now: number) {
+  await ensurePlanBatch(ctx, charge.companyId, now);
+  const current = (await openBatches(ctx, charge.companyId)).find((batch) => batch.source === "plan" && batch.endsAt > now);
+  const paidBack: Array<{ batchId: Id<"creditBatches">; credits: number }> = [];
+  let left = credits;
+  const parts = [...charge.paidFrom].reverse();
+  for (const part of parts) {
+    if (left <= 0) break;
+    const back = Math.min(part.credits, left);
+    const batch = await ctx.db.get(part.batchId);
+    const into = batch && batch.state === "open" ? batch : current ? await ctx.db.get(current._id) : null;
+    if (!into) continue;
+    await ctx.db.patch(into._id, { left: into.left + back });
+    paidBack.push({ batchId: into._id, credits: back });
+    left -= back;
+  }
+  // More than the charge first drew — counted up since, then down — goes to this month's plan.
+  if (left > 0 && current) {
+    const into = await ctx.db.get(current._id);
+    if (into) {
+      await ctx.db.patch(into._id, { left: into.left + left });
+      paidBack.push({ batchId: into._id, credits: left });
+    }
+  }
+  return paidBack;
+}
+
+/** Whether a charge was given back whole: nothing more is counted on it. */
+async function refunded(ctx: MutationCtx, chargeId: Id<"creditCharges">): Promise<boolean> {
+  return (await ctx.db.query("creditCharges").withIndex("by_run_key", (q) => q.eq("runKey", `refund:${chargeId}`)).first()) !== null;
+}
+
+/**
+ * Count a run again, once what came back is known after it was charged
+ * (finish-off-plan.md, items 3 and 9). An open run simply takes the new
+ * units. One closed with nothing to charge is charged now, as any run
+ * closing. One already charged keeps its line exactly as it was, and the
+ * difference is a line of its own — "Counted again" — credits given back to
+ * the batches that paid (`giveCreditsBack`), or taken from the batches that
+ * end soonest; its month's and day's rollups move with it. So the statement
+ * says what changed, and every balance on it still adds up. Returns the
+ * credits it moved: more taken, or (below zero) given back.
+ */
+export async function recountCreditRun(
+  ctx: MutationCtx,
+  chargeId: Id<"creditCharges">,
+  units: number,
+  reason: "recounted" | "nothingBack",
+  now: number,
+): Promise<number> {
+  const charge = await ctx.db.get(chargeId);
+  if (!charge || charge.entry !== "charge" || !charge.kind) return 0;
+  const target = Math.max(0, Math.floor(units));
+  if (charge.state === "open") {
+    if (target !== charge.units) await ctx.db.patch(chargeId, { units: target });
+    return 0;
+  }
+  if (charge.state === "void") {
+    if (target <= 0) return 0;
+    await ctx.db.patch(chargeId, { state: "open", units: target });
+    await closeCreditRun(ctx, chargeId, now);
+    return (await ctx.db.get(chargeId))?.creditsOut ?? 0;
+  }
+  const unitsBefore = charge.unitsNow ?? charge.units;
+  if (target === unitsBefore || (await refunded(ctx, chargeId))) return 0;
+  const creditsBefore = charge.creditsNow ?? charge.creditsOut;
+  const credits = creditsForUnits(charge.price ?? DEFAULT_CREDIT_PRICES[charge.kind], target);
+  const moved = credits - creditsBefore;
+  await ctx.db.patch(chargeId, { unitsNow: target, creditsNow: credits });
+  await moveChargeRollups(ctx, charge, moved, target - unitsBefore, now);
+  if (moved === 0) return 0;
+  const taken = moved > 0 ? await drawCredits(ctx, charge.companyId, moved, now) : null;
+  const paidFrom = taken ? taken.paidFrom : await giveCreditsBack(ctx, charge, -moved, now);
+  await ctx.db.insert("creditCharges", {
+    companyId: charge.companyId,
+    entry: "recount",
+    state: "charged",
+    at: now,
+    kind: charge.kind,
+    websiteId: charge.websiteId,
+    userId: charge.userId,
+    how: "automatic",
+    units: target,
+    lines: 0,
+    failedUnits: 0,
+    creditsOut: Math.max(0, moved),
+    creditsIn: Math.max(0, -moved),
+    paidFrom,
+    owed: taken?.owed ?? 0,
+    balanceAfter: await creditBalance(ctx, charge.companyId),
+    realCostUsd: 0,
+    reusedValueUsd: 0,
+    refundOf: chargeId,
+    ...(charge.detail ? { detail: charge.detail } : {}),
+    reason,
+    before: unitsBefore,
+    createdAt: now,
+  });
+  return moved;
 }
 
 /** Close a run: take its credits, or void it when nothing was left to charge. */
@@ -395,13 +543,31 @@ export async function chargeCreditsNow(
   await closeCreditRun(ctx, charge._id, now);
 }
 
-/** Close every run a collection opened, once it has finished. */
+/**
+ * Close every run a collection opened, once it has finished — except a run
+ * still waiting for a request another collection sent, which closes when
+ * that answer comes (`closeRunIfDone`) so what it brings is counted first.
+ */
 export async function closeCycleCreditRuns(ctx: MutationCtx, cycleId: Id<"seoCollectionCycles">, now: number): Promise<void> {
   const open = await ctx.db
     .query("creditCharges")
     .withIndex("by_cycle_state", (q) => q.eq("cycleId", cycleId).eq("state", "open"))
     .take(CLOSE_PAGE);
-  for (const charge of open) await closeCreditRun(ctx, charge._id, now);
+  for (const charge of open) {
+    if ((charge.pendingLines ?? 0) > 0) continue;
+    await closeCreditRun(ctx, charge._id, now);
+  }
+}
+
+/** A collection that has stopped, one way or another: done, capped or failed. */
+const FINISHED: ReadonlySet<Doc<"seoCollectionCycles">["status"]> = new Set(["DONE", "CAPPED_PLAN", "CAPPED_SPEND", "FAILED"]);
+
+/** An open collection run whose last awaited answer has come: charged now, if its collection has finished. */
+export async function closeRunIfDone(ctx: MutationCtx, chargeId: Id<"creditCharges">, now: number): Promise<void> {
+  const charge = await ctx.db.get(chargeId);
+  if (!charge || charge.state !== "open" || !charge.cycleId || (charge.pendingLines ?? 0) > 0) return;
+  const cycle = await ctx.db.get(charge.cycleId);
+  if (cycle && FINISHED.has(cycle.status)) await closeCreditRun(ctx, chargeId, now);
 }
 
 /**
@@ -411,8 +577,45 @@ export async function closeCycleCreditRuns(ctx: MutationCtx, cycleId: Id<"seoCol
  */
 export async function refundCreditCharge(ctx: MutationCtx, chargeId: Id<"creditCharges">, now: number): Promise<void> {
   const charge = await ctx.db.get(chargeId);
-  if (!charge || charge.entry !== "charge" || charge.state !== "charged" || charge.creditsOut <= 0) return;
-  if (await ctx.db.query("creditCharges").withIndex("by_run_key", (q) => q.eq("runKey", `refund:${chargeId}`)).first()) return;
+  // What it stands at now: a charge counted again since gives back what it was counted at.
+  const standing = charge ? charge.creditsNow ?? charge.creditsOut : 0;
+  if (!charge || charge.entry !== "charge" || charge.state !== "charged" || standing <= 0) return;
+  if (await refunded(ctx, chargeId)) return;
+  const paidBack = charge.creditsNow === undefined
+    ? await givePartsBack(ctx, charge, now)
+    : await giveCreditsBack(ctx, charge, standing, now);
+  if (charge.owed > 0 && charge.creditsNow === undefined) {
+    const account = await readAccount(ctx, charge.companyId);
+    if (account) await ctx.db.patch(account._id, { owed: Math.max(0, account.owed - charge.owed), updatedAt: now });
+  }
+  await moveChargeRollups(ctx, charge, -standing, 0, now);
+  await ctx.db.insert("creditCharges", {
+    companyId: charge.companyId,
+    entry: "refund",
+    state: "charged",
+    at: now,
+    kind: charge.kind,
+    websiteId: charge.websiteId,
+    userId: charge.userId,
+    how: "automatic",
+    units: charge.unitsNow ?? charge.units,
+    lines: 0,
+    failedUnits: 0,
+    creditsOut: 0,
+    creditsIn: standing,
+    paidFrom: paidBack,
+    owed: 0,
+    balanceAfter: await creditBalance(ctx, charge.companyId),
+    realCostUsd: 0,
+    reusedValueUsd: 0,
+    runKey: `refund:${chargeId}`,
+    refundOf: chargeId,
+    createdAt: now,
+  });
+}
+
+/** Every part a charge drew, back to its batch — or this month's plan, where it has ended. */
+async function givePartsBack(ctx: MutationCtx, charge: Charge, now: number) {
   await ensurePlanBatch(ctx, charge.companyId, now);
   const current = (await openBatches(ctx, charge.companyId)).find((batch) => batch.source === "plan");
   const paidBack: Array<{ batchId: Id<"creditBatches">; credits: number }> = [];
@@ -425,44 +628,7 @@ export async function refundCreditCharge(ctx: MutationCtx, chargeId: Id<"creditC
     await ctx.db.patch(fresh._id, { left: fresh.left + part.credits });
     paidBack.push({ batchId: fresh._id, credits: part.credits });
   }
-  if (charge.owed > 0) {
-    const account = await readAccount(ctx, charge.companyId);
-    if (account) await ctx.db.patch(account._id, { owed: Math.max(0, account.owed - charge.owed), updatedAt: now });
-  }
-  if (charge.kind) {
-    const month = creditDayOf(charge.at).slice(0, 7);
-    const kind = charge.kind;
-    const websiteKey = charge.websiteId ?? "none";
-    const row = await ctx.db
-      .query("creditMonthRollups")
-      .withIndex("by_company_month_kind_site", (q) => q.eq("companyId", charge.companyId).eq("month", month).eq("kind", kind).eq("websiteKey", websiteKey))
-      .first();
-    if (row) await ctx.db.patch(row._id, { credits: row.credits - charge.creditsOut, updatedAt: now });
-    await bumpPlatformMonth(ctx, month, kind, { credits: -charge.creditsOut }, now);
-  }
-  await ctx.db.insert("creditCharges", {
-    companyId: charge.companyId,
-    entry: "refund",
-    state: "charged",
-    at: now,
-    kind: charge.kind,
-    websiteId: charge.websiteId,
-    userId: charge.userId,
-    how: "automatic",
-    units: charge.units,
-    lines: 0,
-    failedUnits: 0,
-    creditsOut: 0,
-    creditsIn: charge.creditsOut,
-    paidFrom: paidBack,
-    owed: 0,
-    balanceAfter: await creditBalance(ctx, charge.companyId),
-    realCostUsd: 0,
-    reusedValueUsd: 0,
-    runKey: `refund:${chargeId}`,
-    refundOf: chargeId,
-    createdAt: now,
-  });
+  return paidBack;
 }
 
 /** A collection still at work: planning, or with a request not yet answered. */
@@ -484,6 +650,12 @@ async function collectionStillAtWork(ctx: MutationCtx, cycleId: Id<"seoCollectio
 const CLOSE_PAGE = 200;
 /** A run opened less than this long ago is left to its collection to close. */
 const OPEN_GRACE_MS = 60 * 60 * 1000;
+/**
+ * A run still waiting for an answer another collection sent is closed by the
+ * sweep anyway once it has waited this long: an answer that comes later still
+ * counts, as a line of its own (`recountCreditRun`).
+ */
+const WAITING_GIVE_UP_MS = 2 * 24 * 60 * 60 * 1000;
 
 /**
  * Hourly (`credit-ledger-sweep`): end batches whose time is up, and close the
@@ -508,6 +680,7 @@ export const sweepCreditLedger = internalMutation({
     let runsClosed = 0;
     for (const charge of stale) {
       if (charge.cycleId && (await collectionStillAtWork(ctx, charge.cycleId))) continue;
+      if ((charge.pendingLines ?? 0) > 0 && charge.at > now - WAITING_GIVE_UP_MS) continue;
       await closeCreditRun(ctx, charge._id, now);
       runsClosed += 1;
     }

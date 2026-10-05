@@ -12515,8 +12515,13 @@
       "unused": "Non usati alla scadenza",
       "refund": "Restituiti: {kind}",
       "givenBack": "Il lavoro non è stato completato",
+      "recount": "Ricontato: {kind}",
+      "recounted": "In risposta: {now}, non {before}",
+      "nothingBack": "Non è arrivato nulla, quindi non si addebita nulla",
       "fromPlan": "dal piano di {month}",
       "fromTopUp": "da una ricarica del {date}",
+      "toPlan": "restituiti al piano di {month}",
+      "toTopUp": "restituiti a una ricarica del {date}",
       "and": " e ",
       "figures": {
         "opening": "Saldo iniziale",

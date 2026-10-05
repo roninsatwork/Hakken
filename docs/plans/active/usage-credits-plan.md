@@ -527,6 +527,12 @@ have you stopped"), every setting changeable on the screen.
   and 6 (the old Organization usage chart out) built. Then: 5 cents a credit
   confirmed, no exchange rate, a company sees only credits — the burn figure
   out too.
+- 2026-10-05 — Units are what came back, not what was asked for
+  (finish-off-plan.md, item 3): a list counts the rows it brought, a crawl the
+  pages it crawled, a single answer one. Step 1's "Kinds and units" counted
+  `max_crawl_pages` and `limit`; that rule is kept only for lines planned
+  before the change, and the 5 October charges are counted again as
+  "Counted again" lines of their own.
 - 2026-10-05 — Decision 1 changed to 10,000 credits a month, for now
   (finish-off-plan.md, item 3a): the platform default, a "Credits a month" box
   on Credit prices, and October's batches raised by a grant line of their own

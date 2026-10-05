@@ -7,7 +7,7 @@ import { isTrackedHold } from "./utils/websitePairing";
 import { websiteIconUrl } from "./websiteIcons";
 import { cadenceOf, DAY_MS, EVERY_DAYS } from "./seoRunEstimate";
 import { DEFAULT_CREDIT_PRICES, DEFAULT_PLAN_CREDITS, creditDayOf, creditMonthNamed, creditMonthOf, type CreditKind } from "./creditKinds";
-import { creditKindValidator, creditReasonValidator, creditSourceValidator } from "./creditSchema";
+import { creditEntryValidator, creditKindValidator, creditReasonValidator, creditSourceValidator } from "./creditSchema";
 
 /**
  * What the Usage screens read (docs/plans/active/usage-credits-plan.md,
@@ -359,7 +359,7 @@ const STATEMENT_LIMIT = 900;
 const statementLineShape = v.object({
   id: v.id("creditCharges"),
   at: v.number(),
-  entry: v.union(v.literal("charge"), v.literal("grant"), v.literal("ended"), v.literal("refund")),
+  entry: creditEntryValidator,
   kind: v.union(creditKindValidator, v.null()),
   source: v.union(creditSourceValidator, v.null()),
   website: v.union(websiteShape, v.null()),

@@ -12515,8 +12515,13 @@
       "unused": "Unused when they ended",
       "refund": "Given back: {kind}",
       "givenBack": "The work did not finish",
+      "recount": "Counted again: {kind}",
+      "recounted": "{now} came back, not {before}",
+      "nothingBack": "Nothing came back, so nothing is charged",
       "fromPlan": "from {month}’s plan",
       "fromTopUp": "from a top-up of {date}",
+      "toPlan": "back to {month}’s plan",
+      "toTopUp": "back to a top-up of {date}",
       "and": " and ",
       "figures": {
         "opening": "Opening balance",

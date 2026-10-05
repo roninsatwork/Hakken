@@ -25,7 +25,7 @@ export default function UsageStatementPage() {
   const lines = statement?.lines;
   const into = lines?.reduce((sum, line) => sum + line.in, 0) ?? 0;
   const out = lines?.reduce((sum, line) => sum + line.out, 0) ?? 0;
-  const used = lines?.filter((line) => line.entry === "charge").reduce((sum, line) => sum + line.out, 0) ?? 0;
+  const used = lines?.filter((line) => line.entry === "charge" || line.entry === "recount").reduce((sum, line) => sum + line.out, 0) ?? 0;
   const ended = out - used;
   const planIn = lines?.filter((line) => line.entry === "grant" && line.source === "plan").reduce((sum, line) => sum + line.in, 0) ?? 0;
   const loading = statement === undefined;

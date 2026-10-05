@@ -16,7 +16,7 @@ import {
   type DataForSeoEnvelope,
 } from "./dataForSeoRest";
 import { argsToSend, findSeoOperation, seoResultPath } from "./dataForSeoRegistry";
-import { rowsLeftOffIn, slimSeoResult } from "./dataForSeoSlim";
+import { rowsLeftOffIn, rowsReturnedIn, slimSeoResult } from "./dataForSeoSlim";
 import { isCrawlUnfinished } from "./dataForSeoCrawlOperations";
 import { splitAnswer } from "./seoPullAnswers";
 import { getErrorMessage } from "./utils/lang";
@@ -193,6 +193,7 @@ export async function sendNextBatch(
     resultParts?: string[];
     rawTruncated?: boolean;
     rowsLeftOff?: number;
+    rowsReturned?: number;
     ready: boolean;
   }> = [];
   const unmentioned: Id<"seoDataPulls">[] = [];
@@ -368,17 +369,23 @@ export const fetchSeoResult = internalAction({
  * counted on the request (`rowsLeftOff`), and an answer too large to keep at
  * all is marked (`rawTruncated`) — before 2026-09-25 it was dropped, and a
  * paid answer filed nothing, without a word.
+ *
+ * What came back is counted here too, from the answer as sent — the rows of
+ * a list, the pages of a crawl — since credits count that, not what was
+ * asked for (finish-off-plan.md, item 3).
  */
 function keepAnswer(
   operationId: string,
   result: unknown,
-): { resultParts?: string[]; rawTruncated?: boolean; rowsLeftOff?: number } {
+): { resultParts?: string[]; rawTruncated?: boolean; rowsLeftOff?: number; rowsReturned?: number } {
   const stored = slimSeoResult(operationId, result);
   const rowsLeftOff = rowsLeftOffIn(stored);
+  const rowsReturned = rowsReturnedIn(operationId, result);
   const parts = splitAnswer(JSON.stringify(stored ?? null));
   return {
     ...(parts ? { resultParts: parts } : { rawTruncated: true }),
     ...(rowsLeftOff > 0 ? { rowsLeftOff } : {}),
+    ...(rowsReturned !== undefined ? { rowsReturned } : {}),
   };
 }
 

@@ -37,9 +37,11 @@ const NOT_TIED = "none";
 
 /** A line in words: what it was, and the facts a reader would ask about it. */
 function describe(line: StatementLine, words: UsageWords, platformName: string) {
+  // Credits given back went to a batch; credits used came from one.
+  const back = line.in > 0 && (line.entry === "refund" || line.entry === "recount");
   const fromWords = line.from.map((batch) => (batch.source === "plan" && batch.month
-    ? words.t("statement.fromPlan", { month: words.monthName(batch.month) })
-    : words.t("statement.fromTopUp", { date: words.date(batch.startsAt) })));
+    ? words.t(back ? "statement.toPlan" : "statement.fromPlan", { month: words.monthName(batch.month) })
+    : words.t(back ? "statement.toTopUp" : "statement.fromTopUp", { date: words.date(batch.startsAt) })));
   const parts: string[] = [];
   let title: string;
   if (line.entry === "grant") {
@@ -55,6 +57,14 @@ function describe(line: StatementLine, words: UsageWords, platformName: string) 
       ? words.t("statement.topUpEnded", { date: words.date(batch.startsAt) })
       : words.t("statement.planEnded", { month: batch?.month ? words.monthName(batch.month) : "" });
     parts.push(words.t("statement.unused"));
+  } else if (line.entry === "recount") {
+    // A charge counted again from what came back (finish-off-plan.md, items 3 and 9): what it is now, and was.
+    const kindName = line.kind ? words.kind(line.kind) : "";
+    title = words.t("statement.recount", { kind: kindName });
+    if (line.website) parts.push(line.website.host);
+    if (line.detail) parts.push(line.detail);
+    if (line.reason === "nothingBack" || (line.units === 0 && line.kind)) parts.push(words.t("statement.nothingBack"));
+    else if (line.kind) parts.push(words.t("statement.recounted", { now: words.t(`units.${line.kind}`, { count: line.units }), before: words.number(line.before ?? 0) }));
   } else {
     const kindName = line.kind ? words.kind(line.kind) : "";
     title = line.entry === "refund" ? words.t("statement.refund", { kind: kindName }) : kindName;

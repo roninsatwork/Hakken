@@ -324,13 +324,16 @@ const keptAnswer = {
   resultParts: v.optional(v.array(v.string())),
   rawTruncated: v.optional(v.boolean()),
   rowsLeftOff: v.optional(v.number()),
+  /** Rows or pages the answer brought back, which credits count (finish-off-plan.md, item 3). */
+  rowsReturned: v.optional(v.number()),
 };
 
-/** What the request says of its answer's keeping: nothing, unless something was lost. */
-function keptMarks(args: { rawTruncated?: boolean; rowsLeftOff?: number }) {
+/** What the request says of its answer's keeping — nothing, unless something was lost — and how much came back. */
+function keptMarks(args: { rawTruncated?: boolean; rowsLeftOff?: number; rowsReturned?: number }) {
   return {
     ...(args.rawTruncated ? { rawTruncated: true } : {}),
     ...(args.rowsLeftOff ? { rowsLeftOff: args.rowsLeftOff } : {}),
+    ...(args.rowsReturned !== undefined ? { rowsReturned: args.rowsReturned } : {}),
   };
 }
 
@@ -641,6 +644,10 @@ export async function countSettled(
   const day = new Date().toISOString().slice(0, 10);
   const sent = phase === "SEND" && (status === "SUBMITTED" || status === "READY") ? 1 : 0;
 
+  // Credits first: what came back is counted before the collection can
+  // finish and close its charges below (finish-off-plan.md, item 3).
+  await creditPullSettled(ctx, row, status, costUsd);
+
   if (row.cycleId) {
     const cycle = await ctx.db.get(row.cycleId);
     if (cycle) {
@@ -662,7 +669,6 @@ export async function countSettled(
 
   // Only once the answer exists is it worth anything to anyone else.
   if (status === "READY") await creditReusers(ctx, row, day, costUsd);
-  await creditPullSettled(ctx, row, status, costUsd);
 }
 
 /**

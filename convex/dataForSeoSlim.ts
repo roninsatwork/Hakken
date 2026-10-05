@@ -385,6 +385,45 @@ export function rowsLeftOffIn(stored: unknown): number {
   return left;
 }
 
+/**
+ * How much an answer brought back, which is what credits count for a list
+ * or a crawl (finish-off-plan.md, item 3): a crawl's pages crawled; a list's
+ * rows, over every result in it — every row DataForSEO sent, the ones left
+ * off the stored copy too, since each was paid for; and an answer whose
+ * results are themselves the rows (search volumes, a keyword a result) its
+ * results. Read from the answer as sent or as stored. Nothing is a count of
+ * none; anything else unreadable is undefined, and counts what was asked.
+ */
+export function rowsReturnedIn(operationId: string, result: unknown): number | undefined {
+  if (result === null) return 0;
+  if (!Array.isArray(result)) return undefined;
+  if (operationId === "site_crawl") {
+    const pages = asRecord(asRecord(result[0])?.crawl_status)?.pages_crawled;
+    return typeof pages === "number" && Number.isFinite(pages) ? pages : undefined;
+  }
+  let rows = 0;
+  let listed = false;
+  let records = 0;
+  for (const entry of result) {
+    const record = asRecord(entry);
+    if (!record) continue;
+    records += 1;
+    const packed = asRecord(record.packedItems) ?? asRecord(record.packedRanked);
+    if (packed && Array.isArray(packed.rows)) {
+      rows += packed.rows.length + (typeof packed.dropped === "number" ? packed.dropped : 0);
+      listed = true;
+    } else if (Array.isArray(record.items)) {
+      rows += record.items.length;
+      listed = true;
+    } else if ("items" in record || typeof record.items_count === "number") {
+      // A list with nothing in it: `items` null, `items_count` 0.
+      rows += typeof record.items_count === "number" ? record.items_count : 0;
+      listed = true;
+    }
+  }
+  return listed ? rows : records;
+}
+
 /** The answer as it should be stored for this operation. */
 export function slimSeoResult(operationId: string, result: unknown): unknown {
   if (operationId === "serp_google_organic") return fitSerpResult(result);

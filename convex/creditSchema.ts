@@ -23,7 +23,10 @@ export const creditKindValidator = v.union(
 export const creditSourceValidator = v.union(v.literal("plan"), v.literal("topup"));
 
 /** Why a statement line that is not plain work was written (`creditCharges.reason`). */
-export const creditReasonValidator = v.union(v.literal("raised"));
+export const creditReasonValidator = v.union(v.literal("raised"), v.literal("recounted"), v.literal("nothingBack"));
+
+/** What a statement line is: work charged, a batch granted or ended, work that failed given back, or work counted again. */
+export const creditEntryValidator = v.union(v.literal("charge"), v.literal("grant"), v.literal("ended"), v.literal("refund"), v.literal("recount"));
 
 export const creditTables = {
   /**
@@ -69,7 +72,13 @@ export const creditTables = {
    */
   creditCharges: defineTable({
     companyId: v.id("companies"),
-    entry: v.union(v.literal("charge"), v.literal("grant"), v.literal("ended"), v.literal("refund")),
+    /**
+     * A `recount` is a charge's credits counted again once what came back
+     * was known after it was charged (finish-off-plan.md, items 3 and 9):
+     * credits given back in, or taken out, as a line of its own — the line it
+     * corrects is never rewritten.
+     */
+    entry: creditEntryValidator,
     /** `open` while a run is still gathering; `void` when it closed with nothing to charge. */
     state: v.union(v.literal("open"), v.literal("charged"), v.literal("void")),
     /** When it was charged; for an open run, when it opened. */
@@ -106,17 +115,31 @@ export const creditTables = {
     messageId: v.optional(v.id("messages")),
     pullId: v.optional(v.id("seoDataPulls")),
     batchId: v.optional(v.id("creditBatches")),
+    /** The charge a refund gives back, or a recount counts again. */
     refundOf: v.optional(v.id("creditCharges")),
     /** What a person would call it: the keywords looked up. */
     detail: v.optional(v.string()),
     /**
      * Why a line that is not plain work was written: `raised`, a month's
      * plan credits raised after they were granted (finish-off-plan.md, item
-     * 3a). A refund with none is work that failed.
+     * 3a); `recounted`, a charge counted again from what came back (item 3);
+     * `nothingBack`, a lookup that brought nothing back, given back (item 9).
+     * A refund with none is work that failed.
      */
     reason: v.optional(creditReasonValidator),
-    /** What it stood at before: a raised batch's credits. */
+    /** What it stood at before: a raised batch's credits, or a recounted charge's units. */
     before: v.optional(v.number()),
+    /**
+     * An open collection run: its lines whose requests are still out. It
+     * stays open, when its collection finishes, until each has come back —
+     * so what they bring is counted before it is charged (item 3).
+     */
+    pendingLines: v.optional(v.number()),
+    /** A charge counted again since it was charged: the units and credits it stands at now. */
+    unitsNow: v.optional(v.number()),
+    creditsNow: v.optional(v.number()),
+    /** Units the one-off recount (`creditCorrections.ts`) found it owes, not yet written as a recount line. */
+    recountUnits: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_company_at", ["companyId", "at"])
