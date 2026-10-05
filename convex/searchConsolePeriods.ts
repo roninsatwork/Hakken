@@ -146,9 +146,17 @@ export async function readKept(
   const from = widestFrom(newest);
   const out: Kept[] = [];
   const scope = country === undefined ? {} : { country };
+  // Page by page (`keptBetween`): a busy website's span is more than one read may hold.
   const read = async (grain: Kept["grain"], start: string, end: string) => {
-    const records = await ctx.runQuery(internal.searchConsoleRollups.keptBetween, { companyWebsiteId, ...scope, searchType, list, grain, from: start, to: end < newest ? end : newest });
-    for (const record of records) out.push({ grain, start: record.start, packed: record });
+    for (let cursor: string | null = null; ;) {
+      const page: { records: Array<Packed & { start: string }>; continueCursor: string; isDone: boolean } = await ctx.runQuery(
+        internal.searchConsoleRollups.keptBetween,
+        { companyWebsiteId, ...scope, searchType, list, grain, from: start, to: end < newest ? end : newest, cursor },
+      );
+      for (const record of page.records) out.push({ grain, start: record.start, packed: record });
+      if (page.isDone) return;
+      cursor = page.continueCursor;
+    }
   };
   // A month at a time, and four weeks at a time: a week of a busy website's pairs is about a megabyte.
   for (let month = from; month <= newest; month = monthStart(shiftDay(month, 31))) {
@@ -160,17 +168,7 @@ export async function readKept(
   const span = daysBetween(from, newest);
   for (let offset = 0; offset < span; offset += DAYS_PER_READ) {
     const start = shiftDay(from, offset);
-    const end = shiftDay(start, DAYS_PER_READ - 1);
-    const records = await ctx.runQuery(internal.searchConsoleRollups.keptBetween, {
-      companyWebsiteId,
-      ...scope,
-      searchType,
-      list,
-      grain: "DAY",
-      from: start,
-      to: end < newest ? end : newest,
-    });
-    for (const record of records) out.push({ grain: "DAY", start: record.start, packed: record });
+    await read("DAY", start, shiftDay(start, DAYS_PER_READ - 1));
   }
   return out;
 }

@@ -7,6 +7,15 @@ completed work.
 
 ## Active Plans
 
+- [Finishing off](./active/finish-off-plan.md) — everything left from the
+  usage credits and collection work, in order with days: big websites' Search
+  Console figures, storing less, credits counting what came back, Usage while
+  a collection runs, crawl refunds, crawls once in 30 days, crawls turned away,
+  competitors only what benchmarking needs, nothing bought again while fresh,
+  less often where the data barely changes, a clear-out of what is no longer
+  collected, 10,000 credits a month for now, a notice when it needs a person,
+  competitors' screens and cost forecasts brought into line, the release, and
+  the loose ends. **Written 2026-10-05; about 13 to 14.5 days.**
 - [Collection progress](./active/collection-progress-plan.md) — a
   collection sends itself to the end (one continuous send, AI questions five
   at a time, a $3 limit per website instead of $15 a run, $100 a day for all

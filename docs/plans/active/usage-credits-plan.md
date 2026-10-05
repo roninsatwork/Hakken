@@ -53,7 +53,10 @@ Anthony, 2026-10-05, in a pricing brainstorm:
 1. **£200 a month per company, flat, including a monthly batch of credits** —
    1,000 for now, a placeholder until the cost audit (DataForSEO, AI tokens,
    development). No tiers built from permutations of keywords, fan-outs,
-   engines and schedules.
+   engines and schedules. *Changed 2026-10-05, later the same day: 10,000 a
+   month for the moment (Anthony: "make the credits default 10,000 credits per
+   month for the moment"), set on Admin → Settings → Credit prices —
+   finish-off-plan.md, item 3a.*
 2. **Every piece of paid work uses credits**: weekly runs, monthly runs,
    one-off lookups, questions. Customers pay for what they use.
 3. **Credits belong to the company.** An agency tops up each client's company

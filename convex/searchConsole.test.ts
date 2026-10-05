@@ -533,6 +533,33 @@ describe("collecting", () => {
     expect(runs.at(-1)).toMatchObject({ kind: "DAILY", fromDay: "2026-09-23", toDay: "2026-09-27" });
   });
 
+  test("a website's kept records are read a page at a time, so a busy one never reads too much at once (2026-10-05)", async () => {
+    // morehandles.co.uk's pairs, about six records a day of 220 KB, came to 19 MB in one fifteen-day read: its periods were never built.
+    const { t, siteId } = await setup();
+    await t.run(async (ctx) => {
+      for (let day = 1; day <= 30; day += 1) {
+        await ctx.db.insert("searchConsoleLists", {
+          companyWebsiteId: siteId, searchType: "web", list: "page", grain: "DAY", start: `2026-09-${String(day).padStart(2, "0")}`, part: 0,
+          keys: ["/a"], clicks: [day], impressions: [10], positionSums: [20], fetchedAt: 1,
+        });
+      }
+    });
+    const read = (cursor: string | null) => t.query(internal.searchConsoleRollups.keptBetween, {
+      companyWebsiteId: siteId, searchType: "web", list: "page", grain: "DAY", from: "2026-09-01", to: "2026-09-30", cursor,
+    });
+
+    const pages = [];
+    for (let cursor: string | null = null; ;) {
+      const page = await read(cursor);
+      pages.push(page.records.length);
+      if (page.isDone) break;
+      cursor = page.continueCursor;
+    }
+
+    expect(Math.max(...pages)).toBeLessThanOrEqual(12);
+    expect(pages.reduce((sum, count) => sum + count, 0)).toBe(30);
+  });
+
   test("days past 90 roll into their week, and weeks past 12 months into their month, figures and positions intact", async () => {
     const { t, siteId } = await setup();
     const put = (grain: "DAY" | "WEEK", start: string, keys: string[], clicks: number[], impressions: number[], positionSums: number[]) =>

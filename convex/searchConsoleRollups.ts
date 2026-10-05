@@ -3,7 +3,6 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { appError } from "./utils/appError";
 import { LISTS_OF } from "./searchConsoleApi";
 import {
   SEARCH_TYPES,
@@ -35,8 +34,14 @@ const ROLLUP_SLOTS_PER_READ = 4;
 /** Rounds of rollups one settle makes at most: the rest wait for the next run. */
 const ROLLUP_ROUNDS = 100;
 
-/** Kept records one read returns at most. */
-const KEPT_READ = 900;
+/**
+ * Kept records one read returns, a page at a time: a record is at most 8,000
+ * rows (`PART_ROWS`), under a megabyte, so a page stays well inside the 16 MB
+ * one function may read. Until 2026-10-05 a read took a fixed span at once —
+ * fifteen days — and morehandles.co.uk's pairs, about six records a day of
+ * 220 KB each, came to 19 MB: its periods were never built.
+ */
+const KEPT_PAGE = 12;
 
 /**
  * The most parts one slot is read in: 2,000 rows each, so a million rows — a
@@ -196,11 +201,17 @@ export const keptBetween = internalQuery({
     grain: v.union(v.literal("DAY"), v.literal("WEEK"), v.literal("MONTH")),
     from: v.string(),
     to: v.string(),
+    /** Where the last page ended; null for the first. */
+    cursor: v.union(v.string(), v.null()),
   },
-  returns: v.array(v.object({ start: v.string(), ...packedValidator })),
+  returns: v.object({
+    records: v.array(v.object({ start: v.string(), ...packedValidator })),
+    continueCursor: v.string(),
+    isDone: v.boolean(),
+  }),
   handler: async (ctx, args) => {
     const from = args.grain === "DAY" ? args.from : args.grain === "WEEK" ? weekStart(args.from) : monthStart(args.from);
-    const records = await ctx.db
+    const page = await ctx.db
       .query("searchConsoleLists")
       .withIndex("by_hold_country_type_list_grain_start", (q) => q
         .eq("companyWebsiteId", args.companyWebsiteId)
@@ -210,17 +221,19 @@ export const keptBetween = internalQuery({
         .eq("grain", args.grain)
         .gte("start", from)
         .lte("start", args.to))
-      .take(KEPT_READ + 1);
-    // Asked a span short enough to hold far fewer: one this long is a website past what a run adds up (§14.3, item 9).
-    if (records.length > KEPT_READ) throw appError("INVALID_INPUT", `More than ${KEPT_READ} kept records of one list from ${from} to ${args.to}: ask a shorter span.`);
-    return records.map((record) => ({
-      start: record.start,
-      keys: record.keys,
-      ...(record.pages ? { pages: record.pages } : {}),
-      clicks: record.clicks,
-      impressions: record.impressions,
-      positionSums: record.positionSums,
-    }));
+      .paginate({ cursor: args.cursor, numItems: KEPT_PAGE });
+    return {
+      records: page.page.map((record) => ({
+        start: record.start,
+        keys: record.keys,
+        ...(record.pages ? { pages: record.pages } : {}),
+        clicks: record.clicks,
+        impressions: record.impressions,
+        positionSums: record.positionSums,
+      })),
+      continueCursor: page.continueCursor,
+      isDone: page.isDone,
+    };
   },
 });
 
