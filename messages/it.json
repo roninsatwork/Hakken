@@ -11603,7 +11603,8 @@
       "what": "Cosa è successo",
       "newOrLost": "Nuove o perse",
       "new": "Nuova",
-      "lostWord": "Persa"
+      "lostWord": "Persa",
+      "notKept": "Nuove e perse si tengono per Web, tutti i paesi. Scegli Web e Tutti i paesi per vederle."
     },
     "updates": {
       "title": "Aggiornamenti di Google",

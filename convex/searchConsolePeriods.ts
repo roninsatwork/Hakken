@@ -662,7 +662,8 @@ export async function buildSitePeriods(
       builtAt,
     });
     // New and lost's counts by day, from the whole first- and last-seen register (2026-10-04).
-    await buildSeenDays(ctx, { companyWebsiteId, country, searchType }, builtAt);
+    // New and lost is kept for web search, all countries (store less round two, F).
+    if (searchType === "web" && country === undefined) await buildSeenDays(ctx, { companyWebsiteId, country, searchType }, builtAt);
     for (const slot of slots) {
       if (!pairsKept || !slot.span) {
         for (const list of ["pair", "pairByPage", "competing", "query"] as const) await writeParts(searchType, list, slot, null);

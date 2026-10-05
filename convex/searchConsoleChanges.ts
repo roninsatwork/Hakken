@@ -190,6 +190,8 @@ export const searchConsoleNewLost = tenantQuery({
     watchedFrom: v.union(v.string(), v.null()),
     /** A country not kept ready: the page says to add it on the Market page. */
     notReady: v.boolean(),
+    /** Another kind of result than web, or one country: New and lost is kept for web search, all countries (store less round two, F). */
+    notKept: v.optional(v.boolean()),
   }),
   handler: async (ctx, args) => {
     checkedRange(args.from, args.to);
@@ -200,8 +202,9 @@ export const searchConsoleNewLost = tenantQuery({
     const lostAfter = limits.lostAfterDays;
     const most = limits.newLostRows;
     const connection = await connectionOf(ctx, holdId);
-    const empty = { counts: { newKeywords: 0, lostKeywords: 0, newPages: 0, lostPages: 0 }, periods: [], watchedFrom: null };
+    const empty = { counts: { newKeywords: 0, lostKeywords: 0, newPages: 0, lostPages: 0 }, periods: [], watchedFrom: null, notKept: false };
     const nothing = (preparing: boolean, notReady: boolean) => ({ ...pageOfList([] as Change[], args.page, args.rows, null), preparing, notReady, ...empty });
+    if (args.searchType !== "web" || args.country !== undefined) return { ...nothing(false, false), notKept: true };
     const scope = await countryScope(ctx, site.hold, connection, args.country);
     if (scope.read === "LIVE") return nothing(scope.kept, !scope.kept);
     const country = scope.read === "KEPT" ? scope.country : undefined;
@@ -291,6 +294,7 @@ export const searchConsoleNewLost = tenantQuery({
       ...pageOfList(kept, args.page, args.rows, cut),
       preparing: false,
       notReady: false,
+      notKept: false,
       counts: {
         newKeywords: keywordsBy.newCount,
         lostKeywords: keywordsBy.lostCount,

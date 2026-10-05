@@ -436,7 +436,7 @@ describe("collecting", () => {
     expect(runs.every((run) => run.kind === "DAILY" && run.finishedAt !== undefined && run.error === undefined)).toBe(true);
   });
 
-  test("when each search and page was first and last shown is kept, for each kind of result", async () => {
+  test("when each search and page was first and last shown is kept, for web search, all countries (store less round two, F)", async () => {
     const { t, siteId, admin } = await setup();
     fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
@@ -444,7 +444,6 @@ describe("collecting", () => {
     const seen = await t.run(async (ctx) => await ctx.db.query("searchConsoleSeen").withIndex("by_hold_country_type_kind_key", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined)).collect());
     // Web results carry no kind of result, as every row held before the others were kept (drift fixes, 2026-10-03).
     expect(seen.map((entry) => `${entry.searchType ?? "web"} ${entry.kind} ${entry.key} ${entry.firstDay} ${entry.lastDay}`).sort()).toEqual([
-      "discover page https://acme-shop.test/news 2026-09-26 2026-09-26",
       "web page https://acme-shop.test/ 2026-09-26 2026-09-26",
       "web query emergency plumber 2026-09-26 2026-09-26",
       "web query plumber leeds 2026-09-25 2026-09-26",

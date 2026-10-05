@@ -11603,7 +11603,8 @@
       "what": "What happened",
       "newOrLost": "New or lost",
       "new": "New",
-      "lostWord": "Lost"
+      "lostWord": "Lost",
+      "notKept": "New and lost is kept for Web, all countries. Pick Web and All countries to see it."
     },
     "updates": {
       "title": "Google updates",

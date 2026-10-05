@@ -103,7 +103,7 @@ export default function SearchConsoleNewLostPage() {
       {status ? (
         <SearchConsoleGate status={status} siteId={siteId}>
           <ResultKindSwitch />
-          {country && list.result?.notReady ? <CountryNotReady country={country} /> : (
+          {list.result?.notKept ? <p className="text-[13px] text-secondary">{t("newLost.notKept")}</p> : country && list.result?.notReady ? <CountryNotReady country={country} /> : (
             <>
               {list.preparing ? <p className="text-[12px] text-muted">{t("table.preparing")}</p> : null}
               <FigureRow>

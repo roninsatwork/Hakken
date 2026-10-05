@@ -56,8 +56,9 @@ describe("tidying the figures kept before 2026-10-05", () => {
     const before = await t.run(async (ctx) => (await ctx.db.query("searchConsoleLists").collect()).length);
 
     const counted = await t.action(internal.searchConsoleTidy.tidyKeptFigures, { go: false });
-    expect(counted?.tally).toEqual({ websites: 1, countries: 1, copies: 2, seen: 1, addresses: 5, imageDays: 2, imageSearches: 2 });
-    expect(counted?.lines[0]).toBe("acme-shop.test: gbr read as all countries; 2 country records and 1 register rows to remove; 5 records to turn to page references; 2 image days to roll into weeks; 2 Google Images search records to remove.");
+    // Counting changes nothing, so a record two steps would each remove is counted by both.
+    expect(counted?.tally).toEqual({ websites: 1, countries: 1, copies: 2, seen: 1, addresses: 5, imageDays: 2, imageSearches: 2, register: 2 });
+    expect(counted?.lines[0]).toBe("acme-shop.test: gbr read as all countries; 2 country records and 1 register rows to remove; 5 records to turn to page references; 2 image days to roll into weeks; 2 Google Images search records and 2 New and lost records not kept to remove.");
     expect(await t.run(async (ctx) => (await ctx.db.query("searchConsoleLists").collect()).length)).toBe(before);
 
     const done = await t.action(internal.searchConsoleTidy.tidyKeptFigures, { go: true });
@@ -86,6 +87,6 @@ describe("tidying the figures kept before 2026-10-05", () => {
 
     // A second run finds nothing left to do.
     const again = await t.action(internal.searchConsoleTidy.tidyKeptFigures, { go: false });
-    expect(again?.tally).toEqual({ websites: 1, countries: 1, copies: 0, seen: 0, addresses: 0, imageDays: 0, imageSearches: 0 });
+    expect(again?.tally).toEqual({ websites: 1, countries: 1, copies: 0, seen: 0, addresses: 0, imageDays: 0, imageSearches: 0, register: 0 });
   });
 });

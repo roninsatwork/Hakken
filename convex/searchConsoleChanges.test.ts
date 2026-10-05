@@ -132,7 +132,7 @@ describe("New and lost, past the list's limit (2026-10-04)", () => {
 });
 
 describe("New and lost, by kind of result (drift fixes, 2026-10-03)", () => {
-  test("image results read their own register; web results, as before, the rows that carry no kind", async () => {
+  test("web results read the rows that carry no kind; other kinds say New and lost is kept for web only (store less round two, F)", async () => {
     const { t, siteId, reader } = await setup();
     await seen(t, siteId, "query", "drain unblocking", "2026-09-20", NEWEST);
     await t.run(async (ctx) => {
@@ -142,7 +142,7 @@ describe("New and lost, by kind of result (drift fixes, 2026-10-03)", () => {
     const web = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { ...ask, searchType: "web" });
     const image = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { ...ask, searchType: "image" });
     expect(web.rows.map((row) => row.key)).toEqual(["drain unblocking"]);
-    expect(image.rows.map((row) => row.key)).toEqual(["drain photos"]);
+    expect(image).toMatchObject({ notKept: true, rows: [] });
   });
 
   test("a changed lost-after limit moves when a keyword counts as lost", async () => {

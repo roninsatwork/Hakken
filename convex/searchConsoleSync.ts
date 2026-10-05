@@ -388,6 +388,8 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
   type Seen = Record<"query" | "page", Map<string, { first: string; last: string }>>;
   const seen = new Map<SearchType, Seen>();
   const see = (type: SearchType, kind: "query" | "page", key: string, day: string) => {
+    // New and lost is kept for web search, all countries (store less round two, F).
+    if (type !== "web" || args.country !== undefined) return;
     const lists = seen.get(type) ?? { query: new Map(), page: new Map() };
     seen.set(type, lists);
     const was = lists[kind].get(key);
