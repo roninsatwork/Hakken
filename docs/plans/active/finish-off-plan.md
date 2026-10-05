@@ -103,6 +103,13 @@ the table above is how it stands before it.
 
 ## Built — 2026-10-05 (local, on a branch for the lead to merge; not pushed)
 
+Items 3, 3a, 4, 5, 8, 9 and 10. **Run once on each deployment after it is
+deployed, in this order** (each pages itself; nothing to pass):
+`npx convex run creditCorrections:raisePlanCredits`, then
+`npx convex run creditCorrections:recountCollectionCredits` (its three
+passes book each other; it is done when no `creditCorrections` function is
+left scheduled). Both are safe to run again.
+
 ### Item 3a — 10,000 credits a month, for now
 
 - The platform's default is 10,000 credits a month (`DEFAULT_PLAN_CREDITS`,
