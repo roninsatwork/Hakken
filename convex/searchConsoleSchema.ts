@@ -348,7 +348,9 @@ export const searchConsoleTables = {
     builtAt: v.number(),
   })
     .index("by_hold_country_type_list_period", ["companyWebsiteId", "country", "searchType", "list", "period", "which", "part"])
-    .index("by_hold_country_type_list_period_first", ["companyWebsiteId", "country", "searchType", "list", "period", "which", "firstKey"]),
+    .index("by_hold_country_type_list_period_first", ["companyWebsiteId", "country", "searchType", "list", "period", "which", "firstKey"])
+    // Each build's parts apart: a report is read from its newest complete build, swapped in whole (2026-10-05).
+    .index("by_hold_slot_built", ["companyWebsiteId", "country", "searchType", "list", "period", "which", "builtAt", "part"]),
 
   /**
    * Each day's, week's and month's keywords by band of Google's average

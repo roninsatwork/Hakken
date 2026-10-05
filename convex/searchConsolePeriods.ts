@@ -589,10 +589,15 @@ export async function buildSitePeriods(
     const parts = given !== null && asNinety(slot) ? [] : given;
     // Not held, or a list this kind of result does not have: the slot is only emptied.
     const clearOnly = parts === null;
-    // The slot's old parts cleared a few at a time first: a busy website's 90 days of pairs are more than one step may read.
     const where = { companyWebsiteId, ...scope, searchType, list, period: slot.period, which: slot.which };
-    while (await ctx.runMutation(internal.searchConsolePeriods.clearPeriodSlot, where)) { /* until none is left */ }
-    for (const [part, packed] of (parts && parts.length > 0 ? parts : [EMPTY_PART]).entries()) {
+    if (clearOnly) {
+      while (await ctx.runMutation(internal.searchConsolePeriods.clearPeriodSlot, where)) { /* until none is left */ }
+      return;
+    }
+    // Swapped in whole (2026-10-05): the new build's parts first, its first part — which makes it the one read —
+    // last, then the builds before it cleared a few parts at a time. A screen never reads half a list.
+    const toWrite = (parts.length > 0 ? parts : [EMPTY_PART]).map((packed, part) => ({ packed, part }));
+    for (const { packed, part } of [...toWrite.slice(1), toWrite[0]]) {
       await ctx.runMutation(internal.searchConsolePeriods.writePeriodPart, {
         companyWebsiteId,
         ...scope,
@@ -605,10 +610,10 @@ export async function buildSitePeriods(
         to: slot.span?.to ?? slot.now.to,
         ...packed,
         builtAt,
-        clearOnly,
       });
       written += 1;
     }
+    while (await ctx.runMutation(internal.searchConsolePeriods.clearPeriodSlot, { ...where, before: builtAt })) { /* until none is left */ }
   };
   const write = async (searchType: SearchType, list: SearchConsolePeriodList, slot: Slot, rows: Row[] | null, counts?: Counts, facts?: Facts) => {
     if (rows === null) return await writeParts(searchType, list, slot, null);
@@ -758,7 +763,7 @@ export async function buildSitePeriods(
 /** Old parts of a ready-made period cleared per step: each up to a few hundred kilobytes, and a step reads at most 16 MB. */
 const CLEAR_SLOT_PARTS = 8;
 
-/** A few of a ready-made period's old parts removed, before it is written again; true while more are left. */
+/** A few of a ready-made period's parts removed — every one, or the builds before `before` — true while more are left. */
 export const clearPeriodSlot = internalMutation({
   args: {
     companyWebsiteId: v.id("companyWebsites"),
@@ -767,14 +772,18 @@ export const clearPeriodSlot = internalMutation({
     list: periodListValidator,
     period: periodValidator,
     which: v.union(v.literal("NOW"), v.literal("BEFORE")),
+    /** Keep the build of this time and any later: the one just written. */
+    before: v.optional(v.number()),
   },
   returns: v.boolean(),
   handler: async (ctx, args) => {
     const old = await ctx.db
       .query("searchConsolePeriods")
-      .withIndex("by_hold_country_type_list_period", (q) => q
-        .eq("companyWebsiteId", args.companyWebsiteId).eq("country", args.country).eq("searchType", args.searchType)
-        .eq("list", args.list).eq("period", args.period).eq("which", args.which))
+      .withIndex("by_hold_slot_built", (q) => {
+        const slot = q.eq("companyWebsiteId", args.companyWebsiteId).eq("country", args.country).eq("searchType", args.searchType)
+          .eq("list", args.list).eq("period", args.period).eq("which", args.which);
+        return args.before === undefined ? slot : slot.lt("builtAt", args.before);
+      })
       .take(CLEAR_SLOT_PARTS);
     for (const part of old) await ctx.db.delete(part._id);
     return old.length === CLEAR_SLOT_PARTS;
@@ -806,23 +815,28 @@ export const writePeriodPart = internalMutation({
     firstKey: v.optional(v.string()),
     shown: v.optional(v.number()),
     builtAt: v.number(),
-    /** Empty the slot and keep nothing: the period is not held, or the kind of result has no such list. */
-    clearOnly: v.optional(v.boolean()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const { clearOnly, ...record } = args;
     if (!(await stillKeptReady(ctx, args.companyWebsiteId, args.country))) return null;
-    if (args.part === 0) {
-      for (const old of await periodParts(ctx, args.companyWebsiteId, args.country, args.searchType, args.list, args.period, args.which)) await ctx.db.delete(old._id);
-    }
     // A held period with nothing in it keeps its first part, empty: held, and no clicks.
-    if (clearOnly || (args.keys.length === 0 && args.part > 0)) return null;
-    await ctx.db.insert("searchConsolePeriods", record);
+    if (args.keys.length === 0 && args.part > 0) return null;
+    if (args.part === 0) {
+      // The first part, written last, makes this build the one read: the first parts before it go now, their other parts after.
+      const firsts = await ctx.db
+        .query("searchConsolePeriods")
+        .withIndex("by_hold_country_type_list_period", (q) => q
+          .eq("companyWebsiteId", args.companyWebsiteId).eq("country", args.country).eq("searchType", args.searchType)
+          .eq("list", args.list).eq("period", args.period).eq("which", args.which).eq("part", 0))
+        .take(FIRST_PARTS_READ);
+      for (const old of firsts) if (old.builtAt <= args.builtAt) await ctx.db.delete(old._id);
+    }
+    await ctx.db.insert("searchConsolePeriods", args);
     return null;
   },
 });
 
+/** A ready-made period's parts, from its newest complete build only (`firstPartOf`). */
 async function periodParts(
   ctx: { db: QueryCtx["db"] | MutationCtx["db"] },
   companyWebsiteId: Id<"companyWebsites">,
@@ -832,7 +846,7 @@ async function periodParts(
   period: SearchConsolePeriod,
   which: "NOW" | "BEFORE",
 ) {
-  return await ctx.db
+  const parts = await ctx.db
     .query("searchConsolePeriods")
     .withIndex("by_hold_country_type_list_period", (q) => q
       .eq("companyWebsiteId", companyWebsiteId)
@@ -842,11 +856,21 @@ async function periodParts(
       .eq("period", period)
       .eq("which", which))
     .take(PARTS_MOST);
+  // One read: an older build is beside the newest only while it is being cleared.
+  const built = parts.filter((part) => part.part === 0).reduce((newest, part) => Math.max(newest, part.builtAt), -Infinity);
+  return parts.filter((part) => part.builtAt === built);
 }
 
-/** A ready-made period's first part, which says its days. */
+/** First parts read for a period: the one being swapped in, and the one before it. */
+const FIRST_PARTS_READ = 3;
+
+/**
+ * A ready-made period's first part, which says its days: the newest complete
+ * build's — a build writes its first part last, so a build being written is
+ * not read until it is whole.
+ */
 async function firstPartOf(
-  ctx: { db: QueryCtx["db"] },
+  ctx: { db: QueryCtx["db"] | MutationCtx["db"] },
   companyWebsiteId: Id<"companyWebsites">,
   country: string | undefined,
   searchType: SearchType,
@@ -854,11 +878,12 @@ async function firstPartOf(
   period: SearchConsolePeriod,
   which: "NOW" | "BEFORE",
 ) {
-  return await ctx.db
+  const firsts = await ctx.db
     .query("searchConsolePeriods")
     .withIndex("by_hold_country_type_list_period", (q) => q
       .eq("companyWebsiteId", companyWebsiteId).eq("country", country).eq("searchType", searchType).eq("list", list).eq("period", period).eq("which", which).eq("part", 0))
-    .first();
+    .take(FIRST_PARTS_READ);
+  return firsts.reduce<(typeof firsts)[number] | null>((newest, part) => (newest === null || part.builtAt > newest.builtAt ? part : newest), null);
 }
 
 /**
@@ -963,7 +988,15 @@ export async function readKeyed(
       .eq("companyWebsiteId", companyWebsiteId).eq("country", country).eq("searchType", searchType).eq("list", list).eq("period", period).eq("which", which)
       .gte("firstKey", "").lt("firstKey", key))
     .order("desc")
-    .first();
+    // The part just before, of the build read — an older build being cleared may sit beside it.
+    .take(1)
+    .then(async (parts) => (parts[0] === undefined || parts[0].builtAt === first.builtAt ? parts[0] ?? null : (await ctx.db
+      .query("searchConsolePeriods")
+      .withIndex("by_hold_country_type_list_period_first", (q) => q
+        .eq("companyWebsiteId", companyWebsiteId).eq("country", country).eq("searchType", searchType).eq("list", list).eq("period", period).eq("which", which)
+        .gte("firstKey", "").lt("firstKey", key))
+      .order("desc")
+      .take(FIRST_PARTS_READ)).find((part) => part.builtAt === first.builtAt) ?? null));
   const starting = await ctx.db
     .query("searchConsolePeriods")
     .withIndex("by_hold_country_type_list_period_first", (q) => q
@@ -972,7 +1005,8 @@ export async function readKeyed(
     .take(PARTS_MOST);
   const byKeyword = list === "pair";
   const rows: PeriodRow[] = [];
-  for (const part of [...(before ? [before] : []), ...starting.sort((left, right) => left.part - right.part)]) {
+  const built = starting.filter((part) => part.builtAt === first.builtAt);
+  for (const part of [...(before ? [before] : []), ...built.sort((left, right) => left.part - right.part)]) {
     let index = 0;
     for (const row of rowsOf(part)) {
       if ((byKeyword ? row.key : row.page) === key) {
