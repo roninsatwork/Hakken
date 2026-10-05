@@ -622,7 +622,8 @@
     "usageByWork": "Per lavoro",
     "usageByWebsite": "Per sito web",
     "usageComingUp": "In arrivo",
-    "usageStatement": "Estratto conto"
+    "usageStatement": "Estratto conto",
+    "creditPrices": "Prezzi dei crediti"
   },
   "header": {
     "adminOverview": "Protocollo Infrastruttura",
@@ -6733,6 +6734,69 @@
         "waiting": "Traduzione in corso: {done} di {total} lingue pronte",
         "notYet": "Tradotto una volta pubblicato"
       }
+    },
+    "creditPrices": {
+      "title": "Prezzi dei crediti",
+      "description": "Quanto ci è costato davvero questo mese ogni tipo di lavoro, tutte le aziende insieme, rispetto ai crediti conteggiati — e il prezzo che lo coprirebbe.",
+      "notice": "Per ora nessuno paga: questi prezzi sono ciò che il registro conteggia mentre si osservano i costi. Un suggerimento è quanto è costata questo mese un'unità di quel lavoro, da sola, divisa per quanto copre un credito, arrotondata per eccesso. I suggerimenti non cambiano mai un prezzo da soli: usane uno e salva, e varrà dalla prossima esecuzione di ogni azienda; gli addebiti già fatti mantengono il prezzo con cui sono stati fatti.",
+      "month": "Mese",
+      "thisMonth": "Questo mese",
+      "saved": "Prezzi salvati.",
+      "saveFailed": "Non è stato possibile salvare i prezzi.",
+      "settings": {
+        "title": "Come vengono suggeriti i prezzi",
+        "cover": "Un credito copre, in dollari USA di costo reale",
+        "coverHint": "I nostri fornitori fatturano in dollari. 0,05 significa che un credito paga 5 centesimi di quanto ci costa il lavoro.",
+        "plans": "Quanti crediti dà ogni piano al mese si imposta in Piani."
+      },
+      "figures": {
+        "charged": "Crediti conteggiati questo mese",
+        "chargedDetail": "Tutte le aziende, fino al {date}",
+        "real": "Costo reale questo mese",
+        "realDetail": "Quanto ci hanno addebitato i fornitori, tutte le aziende, in dollari USA",
+        "perCredit": "Un credito ci è costato",
+        "under": "Sotto i {cover} che copre un credito",
+        "over": "Sopra i {cover} che copre un credito",
+        "nothingYet": "Ancora nulla conteggiato questo mese",
+        "notCovered": "Prezzi che non coprono il costo",
+        "allCovered": "Ogni prezzo copre il suo costo"
+      },
+      "search": "Trova un tipo di lavoro…",
+      "status": {
+        "label": "Stato",
+        "every": "Ogni stato",
+        "covered": "Coperto",
+        "notCovered": "Non coperto",
+        "none": "Ancora nulla"
+      },
+      "noMatch": "Nessun tipo di lavoro corrisponde.",
+      "totals": "{notCovered, plural, =0 {Ogni prezzo copre il suo costo} =1 {# prezzo non copre il suo costo} other {# prezzi non coprono il loro costo}}",
+      "columns": {
+        "work": "Lavoro",
+        "cost": "Costo reale per unità",
+        "suggested": "Suggerito",
+        "inUse": "In uso",
+        "charged": "Conteggiati questo mese",
+        "real": "Costo reale questo mese",
+        "perCredit": "Un credito ci è costato",
+        "use": "Usa il suggerimento"
+      },
+      "units": {
+        "rankings": "Ogni {per, plural, =1 {parola chiave controllata} other {# parole chiave controllate}}",
+        "aiAnswers": "Ogni {per, plural, =1 {risposta} other {# risposte}}: una domanda a un assistente",
+        "keywordResearch": "Ogni {per, plural, =1 {parola chiave cercata} other {# parole chiave cercate}}",
+        "siteAudit": "Ogni {per, plural, =1 {pagina} other {# pagine}}",
+        "backlinks": "Ogni {per, plural, =1 {link} other {# link}}",
+        "assistant": "Ogni {per, plural, =1 {domanda} other {# domande}}"
+      },
+      "was": "era {credits} · non salvato",
+      "coveredAt": "{cost} · coperto",
+      "notCoveredAt": "{cost} · non coperto",
+      "use": "Usa {credits}",
+      "notSaved": "Modifiche non salvate",
+      "discard": "Annulla",
+      "save": "Salva i prezzi",
+      "saving": "Salvataggio…"
     }
   },
   "ai": {

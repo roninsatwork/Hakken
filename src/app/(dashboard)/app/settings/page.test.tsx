@@ -152,9 +152,10 @@ describe("CompanySettingsDashboard", () => {
     expect(useQuery).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ companyId: "company_1", timeframe: "today" }));
     expect(screen.getByText("Organization Dashboard")).toBeInTheDocument();
     expect(screen.getByText("£99.00")).toBeInTheDocument();
-    expect(screen.getByText("Provider Usage")).toBeInTheDocument();
-    expect(screen.getByText("OpenAI")).toBeInTheDocument();
-    expect(screen.getByText("7 calls")).toBeInTheDocument();
+    // A company's usage is Usage now, in credits; the model providers it ran on are not its to see (usage-credits-plan.md, step 6).
+    expect(screen.queryByText("Provider Usage")).not.toBeInTheDocument();
+    expect(screen.queryByText("AI Cost")).not.toBeInTheDocument();
+    expect(screen.queryByText("OpenAI")).not.toBeInTheDocument();
     expect(screen.getByText("Ada")).toBeInTheDocument();
     expect(screen.getByText("Sales Agent")).toBeInTheDocument();
 

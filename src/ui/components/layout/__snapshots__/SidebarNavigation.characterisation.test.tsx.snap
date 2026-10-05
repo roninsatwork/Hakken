@@ -98,6 +98,7 @@ exports[`sidebar navigation characterisation > super admin navigation is unchang
     "authDiagnostics -> /admin/auth-diagnostics",
     "billing -> /admin/settings/billing",
     "connections -> /admin/connections",
+    "creditPrices -> /admin/settings/credit-prices",
     "dashboard -> /admin",
     "googleUpdates -> /admin/content/google-updates",
     "governanceApprovals -> /admin/governance/approvals",

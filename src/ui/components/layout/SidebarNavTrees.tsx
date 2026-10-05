@@ -235,6 +235,8 @@ export function AdminNavTree({
       >
         <SubNavItem label={t('systemSettings')} href="/admin/settings" isActive={isSystemSettingsRoute(pathname)} onClick={() => setActiveItem('System Settings')} />
         <SubNavItem label={t('plans')} href="/admin/settings/plans" isActive={activeItem === 'Plans' || pathname.startsWith('/admin/settings/plans')} onClick={() => setActiveItem('Plans')} />
+        {/* What each kind of work really costs against its credits (docs/plans/active/usage-credits-plan.md, step 2). */}
+        <SubNavItem label={t('creditPrices')} href="/admin/settings/credit-prices" isActive={pathname.startsWith('/admin/settings/credit-prices')} onClick={() => setActiveItem('Credit prices')} />
         {canManageBilling && <SubNavItem label={t('billing')} href="/admin/settings/billing" isActive={pathname.startsWith('/admin/settings/billing')} onClick={() => setActiveItem('PlatformBilling')} />}
         <SubNavItem label={t('apiKeys')} href="/admin/settings/api-keys" isActive={activeItem === 'API Keys' || pathname.startsWith('/admin/settings/api-keys')} onClick={() => setActiveItem('API Keys')} />
         <SubNavItem label={t('analytics')} href="/admin/settings/analytics" isActive={activeItem === 'Analytics' || pathname === '/admin/settings/analytics'} onClick={() => setActiveItem('Analytics')} />

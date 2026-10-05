@@ -6,7 +6,6 @@ import { appError } from "./utils/appError";
 import {
   DEFAULT_CREDIT_COVERS_USD,
   DEFAULT_CREDIT_PRICES,
-  DEFAULT_GBP_PER_USD,
   DEFAULT_PLAN_CREDITS,
   creditMonthOf,
   creditsForUnits,
@@ -42,7 +41,6 @@ export async function readCreditSettings(ctx: MutationCtx) {
   return {
     planCredits: row?.planCredits ?? DEFAULT_PLAN_CREDITS,
     creditCoversUsd: row?.creditCoversUsd ?? DEFAULT_CREDIT_COVERS_USD,
-    gbpPerUsd: row?.gbpPerUsd ?? DEFAULT_GBP_PER_USD,
   };
 }
 
@@ -173,7 +171,51 @@ async function drawCredits(ctx: MutationCtx, companyId: Id<"companies">, credits
   return { paidFrom, owed: needed };
 }
 
-/** A charge's credits into its month's rollup (per kind and website) and its day's total. */
+/**
+ * Every company's month for a kind of work (`creditPlatformMonths`): what
+ * Admin → Settings → Credit prices reads. Moved by a charge, a refund, and a
+ * cost that arrives after its charge closed.
+ */
+async function bumpPlatformMonth(
+  ctx: MutationCtx,
+  month: string,
+  kind: CreditKind,
+  change: { credits?: number; runs?: number; units?: number; realCostUsd?: number; reusedValueUsd?: number },
+  now: number,
+): Promise<void> {
+  const row = await ctx.db.query("creditPlatformMonths").withIndex("by_month_kind", (q) => q.eq("month", month).eq("kind", kind)).first();
+  if (row) {
+    await ctx.db.patch(row._id, {
+      credits: row.credits + (change.credits ?? 0),
+      runs: row.runs + (change.runs ?? 0),
+      units: row.units + (change.units ?? 0),
+      realCostUsd: row.realCostUsd + (change.realCostUsd ?? 0),
+      reusedValueUsd: row.reusedValueUsd + (change.reusedValueUsd ?? 0),
+      updatedAt: now,
+    });
+    return;
+  }
+  await ctx.db.insert("creditPlatformMonths", {
+    month, kind, credits: change.credits ?? 0, runs: change.runs ?? 0, units: change.units ?? 0,
+    realCostUsd: change.realCostUsd ?? 0, reusedValueUsd: change.reusedValueUsd ?? 0, updatedAt: now,
+  });
+}
+
+/** What a charge cost us, arriving after it closed — a lookup's calls, an answer that came late — into its month's rollups. */
+async function bumpRollupCosts(ctx: MutationCtx, charge: Charge, realCostUsd: number, reusedValueUsd: number, now: number): Promise<void> {
+  if (!charge.kind || charge.state !== "charged") return;
+  const month = new Date(charge.at).toISOString().slice(0, 7);
+  const websiteKey = charge.websiteId ?? "none";
+  const kind = charge.kind;
+  const row = await ctx.db
+    .query("creditMonthRollups")
+    .withIndex("by_company_month_kind_site", (q) => q.eq("companyId", charge.companyId).eq("month", month).eq("kind", kind).eq("websiteKey", websiteKey))
+    .first();
+  if (row) await ctx.db.patch(row._id, { realCostUsd: row.realCostUsd + realCostUsd, updatedAt: now });
+  await bumpPlatformMonth(ctx, month, kind, { realCostUsd, reusedValueUsd }, now);
+}
+
+/** A charge's credits into its month's rollup (per kind and website), its day's total, and every company's month. */
 async function bumpCreditRollup(ctx: MutationCtx, charge: Charge, credits: number, now: number): Promise<void> {
   if (!charge.kind) return;
   const day = new Date(now).toISOString().slice(0, 10);
@@ -196,6 +238,9 @@ async function bumpCreditRollup(ctx: MutationCtx, charge: Charge, credits: numbe
       companyId: charge.companyId, month, kind, websiteKey, credits, runs: 1, realCostUsd: charge.realCostUsd, updatedAt: now,
     });
   }
+  await bumpPlatformMonth(ctx, month, kind, {
+    credits, runs: 1, units: charge.units, realCostUsd: charge.realCostUsd, reusedValueUsd: charge.reusedValueUsd,
+  }, now);
   const byHand = charge.how === "byHand" ? credits : 0;
   const total = await ctx.db.query("creditDayTotals").withIndex("by_company_day", (q) => q.eq("companyId", charge.companyId).eq("day", day)).first();
   if (total) await ctx.db.patch(total._id, { credits: total.credits + credits, byHand: total.byHand + byHand, updatedAt: now });
@@ -261,7 +306,10 @@ export async function addToCreditRun(ctx: MutationCtx, charge: Charge, change: C
     reusedValueUsd: charge.reusedValueUsd + (change.reusedValueUsd ?? 0),
   };
   if (charge.state !== "open") {
-    if (change.realCostUsd || change.reusedValueUsd) await ctx.db.patch(charge._id, costs);
+    if (change.realCostUsd || change.reusedValueUsd) {
+      await ctx.db.patch(charge._id, costs);
+      await bumpRollupCosts(ctx, charge, change.realCostUsd ?? 0, change.reusedValueUsd ?? 0, Date.now());
+    }
     return;
   }
   await ctx.db.patch(charge._id, {
@@ -340,6 +388,17 @@ export async function refundCreditCharge(ctx: MutationCtx, chargeId: Id<"creditC
   if (charge.owed > 0) {
     const account = await readAccount(ctx, charge.companyId);
     if (account) await ctx.db.patch(account._id, { owed: Math.max(0, account.owed - charge.owed), updatedAt: now });
+  }
+  if (charge.kind) {
+    const month = new Date(charge.at).toISOString().slice(0, 7);
+    const kind = charge.kind;
+    const websiteKey = charge.websiteId ?? "none";
+    const row = await ctx.db
+      .query("creditMonthRollups")
+      .withIndex("by_company_month_kind_site", (q) => q.eq("companyId", charge.companyId).eq("month", month).eq("kind", kind).eq("websiteKey", websiteKey))
+      .first();
+    if (row) await ctx.db.patch(row._id, { credits: row.credits - charge.creditsOut, updatedAt: now });
+    await bumpPlatformMonth(ctx, month, kind, { credits: -charge.creditsOut }, now);
   }
   await ctx.db.insert("creditCharges", {
     companyId: charge.companyId,

@@ -8,7 +8,7 @@ Analytics, then pages that carry the detail, down to a bank-style statement.
 Super admins set what each kind of work costs in credits, and see whether each
 price covers what the work really costs us.
 
-**Status: planned 2026-10-05; steps 1 (the record) and 3 (the Usage screens) built the same day, local on dev. Every price and number in it is a
+**Status: planned 2026-10-05; steps 1, 2, 3 and 6 built the same day, local on dev; steps 4 and 5 parked (no charging yet). Every price and number in it is a
 placeholder until the cost audit.** Change a decision here, with a date, before
 building anything that disagrees with it.
 
@@ -93,6 +93,12 @@ teh designes for this"):
 
 ## Not charging yet — 2026-10-05
 
+"as long as you store both credits and costs but onyl show credits we can work
+back from there" (Anthony): **every charge stores its credits and its real
+cost; a company only ever sees credits.** Real costs are on Admin → Settings →
+Credit prices alone. The Organization page's "burn" figure, which showed a
+company admin what its AI cost us, is gone with its usage chart (step 6).
+
 Anthony, while step 3 was built: "we dont switch on charging we are just
 montiorign costs at this stage to set pricign etc". **Nothing charges anyone
 at this stage**: the record (step 1) and the screens (step 3) show what each
@@ -106,11 +112,13 @@ Left open on purpose, 2026-10-05 ("leave the questiosn as outstadigni n the
 plan"). Each is answered before the step that needs it (Order of work, below);
 none holds up step 1.
 
-1. **How a credit's worth is set.** Recommended, and drawn on Credit prices: one
-   setting, "a credit covers $0.05 of real cost"; a fixed pounds-to-dollars rate
-   set by hand; each line's suggested price is its 30-day average real cost per
-   unit divided by what a credit covers, rounded up, never below 1; suggestions
-   never change a price by themselves. Confirm before building step 2.
+1. **How a credit's worth is set.** *Answered 2026-10-05:* one setting, "a
+   credit covers $0.05 of real cost" ("yes that will work for now 5 cents - its
+   an audit phase after all"), changeable on Credit prices; each line's
+   suggested price is its real cost per unit this month divided by what a
+   credit covers, rounded up, never below 1; suggestions never change a price
+   by themselves. **No exchange rate**: "we dont need pound to dollaor or vise
+   vera" — costs stay in US dollars, as the suppliers charge.
 2. **What a scheduled check uses when the balance is zero.** Decision 6 says it
    keeps running. Recommended: the balance goes below zero and the next batch to
    arrive pays that first (the next month's plan credits, or a top-up), shown on
@@ -232,7 +240,7 @@ New tables, every one keyed by company except the platform's own settings:
 | `creditCharges` | The statement: one row per charge, refund, grant, ending or top-up — when, who (a person, or "scheduled" with whoever set the schedule up), kind of work, website, units, the price line it was charged at, credits out or in, the batches that paid, the balance after, the real cost (`realCostUsd`, `reusedValueUsd`) and what it was for (the cycle, lookup, message or purchase); booked, charged or refunded |
 | `creditPurchases` | Every top-up: who bought it, the pack, credits, amount and currency, the Stripe session and payment, the receipt, its batch |
 | `creditPrices` | The price list: one line per kind of work — unit, unit size, credits — and each change with who made it and when |
-| `creditSettings` | The platform's: what a credit covers in dollars, pounds to a dollar, the warning point (80%), the top-up packs |
+| `creditSettings` | The platform's: what a credit covers in US dollars, and the plan credits a month where a plan sets none |
 | `creditAutoTopUps` | Per company: on or off, the pack, the monthly limit, how many bought this month |
 | `creditDayRollups` | Credits and runs per company, day, kind and website — what the Usage screens read, so no screen sums raw rows (the rule `seoDayRollups` already follows) |
 
@@ -457,6 +465,33 @@ Not yet, knowingly:
   Statement and Coming up draw as approved, empty until dev's first charges,
   with no console errors; the top bar now names Usage.
 
+## Built — step 2, Credit prices, and step 6, 2026-10-05 (local, on dev; not pushed)
+
+Outstanding question 1 built as recommended (Anthony, asked to go on: "why
+have you stopped"), every setting changeable on the screen.
+
+- **Admin → Settings → Credit prices**, after Plans
+  (`src/app/(dashboard)/admin/settings/credit-prices/page.tsx`), super admin
+  only: what a credit covers, in US dollars (no exchange rate: he asked for it
+  out, and the board was redrawn without it); this month (or an earlier
+  one), every company together, credits counted, real cost, what a credit cost
+  us and the prices not covering their cost; a line per kind of work — real
+  cost a unit standing alone (paid and saved by sharing, over its units),
+  suggested, in use, counted, real cost, what a credit cost us (covered or
+  not) — with "Use" to take a suggestion; Save prices or Discard. Its look is
+  held by `page.test.tsx` beside the boards.
+- **The record behind it** (`convex/creditPricesAdmin.ts`): `creditPlatformMonths`,
+  six rows a month whatever the number of companies, moved by every charge, by
+  a refund (its credits come off, what it cost stays), and by a cost that
+  arrives after its charge closed — a lookup's calls do — which reaches the
+  company's month too. `saveCreditPrices` refuses a price or setting no one
+  could mean and writes one audit record (`CREDIT_PRICES_CHANGED`) of every
+  change; a price counts from each company's next run.
+- **Step 6**: Settings → Organization no longer draws the old usage chart
+  (`OrganizationUsagePlot`, deleted) or the list of model providers.
+  Its "burn" figure, a company admin's AI cost to us in dollars, went too:
+  "only show credits".
+
 ## Not in this plan
 
 - A money value for a credit on customer screens: customers see credits.
@@ -474,3 +509,7 @@ Not yet, knowingly:
   and website replaced by a monthly one and daily totals.
 - 2026-10-05 — No charging at this stage, only monitoring costs to set prices:
   steps 4 and 5 parked.
+- 2026-10-05 — Steps 2 (Credit prices, outstanding question 1 as recommended)
+  and 6 (the old Organization usage chart out) built. Then: 5 cents a credit
+  confirmed, no exchange rate, a company sees only credits — the burn figure
+  out too.

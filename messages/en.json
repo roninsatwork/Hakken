@@ -622,7 +622,8 @@
     "usageByWork": "By work",
     "usageByWebsite": "By website",
     "usageComingUp": "Coming up",
-    "usageStatement": "Statement"
+    "usageStatement": "Statement",
+    "creditPrices": "Credit prices"
   },
   "header": {
     "adminOverview": "Platform Management",
@@ -6733,6 +6734,69 @@
         "waiting": "Translating: {done} of {total} languages ready",
         "notYet": "Translated once published"
       }
+    },
+    "creditPrices": {
+      "title": "Credit prices",
+      "description": "What each kind of work really cost us this month, every company together, against the credits it charged — and the price that would cover it.",
+      "notice": "Nothing charges anyone yet: these prices are what the record counts while costs are watched. A suggestion is what one unit of that work cost this month, standing alone, divided by what a credit covers, rounded up. Suggestions never change a price by themselves: use one and save, and it counts from each company's next run; charges already made keep the price they were made at.",
+      "month": "Month",
+      "thisMonth": "This month",
+      "saved": "Prices saved.",
+      "saveFailed": "The prices could not be saved.",
+      "settings": {
+        "title": "How prices are suggested",
+        "cover": "A credit covers, in US dollars of real cost",
+        "coverHint": "Our suppliers charge in dollars. 0.05 means one credit pays for 5 cents of what the work costs us.",
+        "plans": "How many credits each plan gives a month is set on Plans."
+      },
+      "figures": {
+        "charged": "Credits counted this month",
+        "chargedDetail": "Every company, to {date}",
+        "real": "Real cost this month",
+        "realDetail": "What the suppliers charged us, every company, in US dollars",
+        "perCredit": "A credit cost us",
+        "under": "Under the {cover} a credit covers",
+        "over": "Over the {cover} a credit covers",
+        "nothingYet": "Nothing counted yet this month",
+        "notCovered": "Prices not covering their cost",
+        "allCovered": "Every price covers its cost"
+      },
+      "search": "Find a kind of work…",
+      "status": {
+        "label": "Status",
+        "every": "Every status",
+        "covered": "Covered",
+        "notCovered": "Not covered",
+        "none": "Nothing yet"
+      },
+      "noMatch": "No kind of work matches.",
+      "totals": "{notCovered, plural, =0 {Every price covers its cost} =1 {# price not covering its cost} other {# prices not covering their cost}}",
+      "columns": {
+        "work": "Work",
+        "cost": "Real cost a unit",
+        "suggested": "Suggested",
+        "inUse": "In use",
+        "charged": "Counted this month",
+        "real": "Real cost this month",
+        "perCredit": "A credit cost us",
+        "use": "Use the suggestion"
+      },
+      "units": {
+        "rankings": "Per {per, plural, =1 {keyword} other {# keywords}} checked",
+        "aiAnswers": "Per {per, plural, =1 {answer} other {# answers}}: one question to one assistant",
+        "keywordResearch": "Per {per, plural, =1 {keyword} other {# keywords}} looked up",
+        "siteAudit": "Per {per, plural, =1 {page} other {# pages}}",
+        "backlinks": "Per {per, plural, =1 {link} other {# links}}",
+        "assistant": "Per {per, plural, =1 {question} other {# questions}}"
+      },
+      "was": "was {credits} · not saved",
+      "coveredAt": "{cost} · covered",
+      "notCoveredAt": "{cost} · not covered",
+      "use": "Use {credits}",
+      "notSaved": "Changes not saved",
+      "discard": "Discard",
+      "save": "Save prices",
+      "saving": "Saving…"
     }
   },
   "ai": {

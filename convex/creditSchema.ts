@@ -141,8 +141,6 @@ export const creditTables = {
     planCredits: v.number(),
     /** What one credit covers, in US dollars of real cost (outstanding question 1). */
     creditCoversUsd: v.number(),
-    /** Pounds to one US dollar, fixed by hand. */
-    gbpPerUsd: v.number(),
     updatedAt: v.number(),
     updatedBy: v.optional(v.id("users")),
   }).index("by_key", ["key"]),
@@ -167,6 +165,25 @@ export const creditTables = {
   })
     .index("by_company_month_kind_site", ["companyId", "month", "kind", "websiteKey"])
     .index("by_company_month", ["companyId", "month"]),
+
+  /**
+   * Every company's month, per kind of work: what Admin → Settings → Credit
+   * prices reads to set prices from — credits charged, the units they were
+   * charged for, what the suppliers charged us (`realCostUsd`) and what
+   * sharing saved (`reusedValueUsd`). Six rows a month, whatever the number
+   * of companies.
+   */
+  creditPlatformMonths: defineTable({
+    /** `YYYY-MM`, UTC. */
+    month: v.string(),
+    kind: creditKindValidator,
+    credits: v.number(),
+    runs: v.number(),
+    units: v.number(),
+    realCostUsd: v.number(),
+    reusedValueUsd: v.number(),
+    updatedAt: v.number(),
+  }).index("by_month_kind", ["month", "kind"]),
 
   /** Credits charged per company and day, and how many of them by hand: the Usage chart's days and its pace. */
   creditDayTotals: defineTable({

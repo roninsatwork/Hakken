@@ -142,6 +142,7 @@ import type * as costCurrencyMigration from "../costCurrencyMigration.js";
 import type * as creditHooks from "../creditHooks.js";
 import type * as creditKinds from "../creditKinds.js";
 import type * as creditLedger from "../creditLedger.js";
+import type * as creditPricesAdmin from "../creditPricesAdmin.js";
 import type * as creditSchema from "../creditSchema.js";
 import type * as creditUsage from "../creditUsage.js";
 import type * as crons from "../crons.js";
@@ -726,6 +727,7 @@ declare const fullApi: ApiFromModules<{
   creditHooks: typeof creditHooks;
   creditKinds: typeof creditKinds;
   creditLedger: typeof creditLedger;
+  creditPricesAdmin: typeof creditPricesAdmin;
   creditSchema: typeof creditSchema;
   creditUsage: typeof creditUsage;
   crons: typeof crons;

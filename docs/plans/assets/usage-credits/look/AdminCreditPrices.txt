@@ -1,0 +1,19 @@
+# Admin → Settings → Credit prices — the approved look (board "AdminCreditPrices" of docs/plans/assets/usage-credits/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Credit prices
+notice (info)
+filter: This month
+settings-card: How prices are suggested
+  field: A credit covers, in US dollars of real cost
+figures
+  figure: Credits counted this month
+  figure: Real cost this month
+  figure: A credit cost us
+  figure: Prices not covering their cost
+search: Find a kind of work…
+filter: Status
+table: Work | Real cost a unit | Suggested | In use | Counted this month | Real cost this month | A credit cost us | Use the suggestion
+  table-bar
+  table-footer
+save

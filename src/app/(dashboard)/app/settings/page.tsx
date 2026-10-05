@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { BillingLink } from "./_components/BillingLink";
-import { formatPreciseUsd } from "@/src/lib/currency";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import {
@@ -11,23 +10,16 @@ import {
   MessageSquare,
   TrendingUp,
   Loader2,
-  PoundSterling,
   CreditCard,
   Target,
-  Network
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { motion } from "framer-motion";
-import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import TimeframeDropdown from "@/src/ui/components/TimeframeDropdown";
 import { Leaderboard } from "@/src/ui/components/screens/Leaderboard";
 import { IncompleteFiguresNotice } from "@/src/ui/components/screens/IncompleteFiguresNotice";
 import type { ReadCoverage } from "@/convex/utils/readCoverage";
-
-const OrganizationUsagePlot = dynamic(() =>
-  import("./_components/OrganizationUsagePlot").then((module) => module.OrganizationUsagePlot),
-);
 
 type TimeframeOption = "today" | "yesterday" | "7d" | "14d" | "30d" | "60d" | "90d" | "180d" | "365d" | "ytd" | "custom";
 
@@ -74,15 +66,6 @@ type CompanyMetricsData = {
   }>;
 };
 
-function formatProviderName(providerKey: string, t: ReturnType<typeof useTranslations>) {
-  if (providerKey === "google") return t("providers.names.google");
-  if (providerKey === "openai") return "OpenAI";
-  if (providerKey === "anthropic") return "Anthropic";
-  if (providerKey === "openrouter") return "OpenRouter";
-  if (providerKey === "unknown") return t("providers.names.unknown");
-  return providerKey;
-}
-
 const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0, className = "", largeText = false }: MetricBlockProps) => (
   <motion.div
     initial={{ opacity: 0, y: 15 }}
@@ -102,46 +85,6 @@ const MetricBlock = ({ title, value, sub, icon: Icon, delay = 0, className = "",
   </motion.div>
 );
 
-const ProviderUsageList = ({ providers }: { providers?: CompanyMetricsData["providerDistribution"] }) => {
-  const t = useTranslations("admin.overview");
-  return (
-    <motion.section
-      initial={{ opacity: 0, y: 15 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.55 }}
-      className="bg-card/20 border border-border-dim rounded-[24px] overflow-hidden flex flex-col shadow-inner backdrop-blur-xl"
-    >
-      <div className="px-6 py-5 border-b border-border-dim bg-background/30 flex flex-col gap-1.5">
-        <div className="flex items-center gap-3">
-          <Network className="w-4 h-4 text-brand opacity-80" />
-          <h2 className="text-[14px] font-bold text-foreground">{t("providers.title")}</h2>
-        </div>
-        <span className="text-[11px] font-mono tracking-widest text-muted opacity-60 uppercase">{t("providers.subtitle")}</span>
-      </div>
-      <div className="flex flex-col p-4">
-        {/* Unranked: every provider there is, not the leaders of a longer list. */}
-        <Leaderboard
-          rows={providers ?? []}
-          rowKey={(provider) => provider.providerKey}
-          ranked={false}
-          nameHeader={t("providers.nameHeader")}
-          name={(provider) => formatProviderName(provider.providerKey, t)}
-          sub={(provider) => t("providers.calls", { count: provider.calls.toLocaleString() })}
-          empty={t("providers.empty")}
-          stats={[
-            {
-              key: "cost",
-              header: t("providers.costHeader"),
-              cell: (provider) =>
-                `$${provider.cost.toLocaleString("en-GB", { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`,
-            },
-          ]}
-        />
-      </div>
-    </motion.section>
-  );
-};
-
 export default function CompanySettingsDashboard() {
   const t = useTranslations('admin.overview');
   const [timeframe, setTimeframe] = useState<TimeframeOption>("today");
@@ -157,12 +100,6 @@ export default function CompanySettingsDashboard() {
     customStart: (timeframe === "custom" && customStart) ? new Date(customStart).getTime() : undefined,
     customEnd: (timeframe === "custom" && customEnd) ? new Date(customEnd).getTime() + 86399999 : undefined
   } : "skip") as CompanyMetricsData | undefined;
-
-  const getAggregationLabel = (agg: string) => {
-    if (agg === "month") return t('charts.monthly');
-    if (agg === "week") return t('charts.weekly');
-    return t('charts.daily');
-  };
 
   if (user === undefined) {
     return (
@@ -237,13 +174,7 @@ export default function CompanySettingsDashboard() {
               sub={t('metrics.activeSub')}
               delay={0.15}
             />
-            <MetricBlock
-              icon={PoundSterling}
-              title={t('metrics.logisticBurn')}
-              value={formatPreciseUsd(data.aggregates.totalCostUsd ?? 0)}
-              sub={t('metrics.burnSub')}
-              delay={0.2}
-            />
+            {/* What the company's AI cost us is not its to see: it sees credits, in Usage (usage-credits-plan.md, 2026-10-05). */}
             
             <MetricBlock
               className="md:col-span-2 lg:col-span-2"
@@ -255,32 +186,7 @@ export default function CompanySettingsDashboard() {
             />
           </div>
 
-          <div className="flex flex-col gap-6">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.98 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.5 }}
-              className="w-full flex flex-col p-6 rounded-[24px] bg-card/20 border border-border-dim shadow-inner min-h-[400px]"
-            >
-              <div className="flex items-center justify-between mb-8">
-                <div className="flex items-center gap-3">
-                  <TrendingUp className="w-5 h-5 text-brand" />
-                  <h3 className="text-[15px] font-bold tracking-wide">{getAggregationLabel(data.aggregates.aggregationType)}</h3>
-                </div>
-              </div>
-
-              <div className="w-full h-[300px] min-h-[300px]">
-                <OrganizationUsagePlot
-                  estimatedCostLabel={t('charts.estimatedCost')}
-                  globalMessagesLabel={t('charts.globalMessages')}
-                  noDataLabel={t('charts.noData')}
-                  timeline={data.timeline}
-                />
-              </div>
-            </motion.div>
-          </div>
-
-          <ProviderUsageList providers={data.providerDistribution} />
+          {/* The usage chart and the list of model providers moved out: a company's usage is Usage now, in credits (docs/plans/active/usage-credits-plan.md, step 6). */}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-2">
             <motion.section

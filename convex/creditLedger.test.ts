@@ -170,7 +170,7 @@ describe("batches", () => {
       const ctx = asCtx(raw);
       const now = Date.now();
       const acme = await seedCompany(ctx, "Acme");
-      await ctx.db.insert("creditSettings", { key: "platform", planCredits: 10, creditCoversUsd: 0.05, gbpPerUsd: 0.79, updatedAt: now });
+      await ctx.db.insert("creditSettings", { key: "platform", planCredits: 10, creditCoversUsd: 0.05, updatedAt: now });
       await ensurePlanBatch(ctx, acme, now);
       const topUp = await ctx.db.insert("creditBatches", {
         companyId: acme, source: "topup", granted: 20, left: 20, startsAt: now, endsAt: now + 365 * 86_400_000, state: "open", createdAt: now,

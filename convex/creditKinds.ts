@@ -25,7 +25,6 @@ export const DEFAULT_CREDIT_PRICES: Record<CreditKind, CreditPrice> = {
 export const DEFAULT_PLAN_CREDITS = 1_000;
 /** What one credit covers in US dollars of real cost, as recommended (outstanding question 1). */
 export const DEFAULT_CREDIT_COVERS_USD = 0.05;
-export const DEFAULT_GBP_PER_USD = 0.79;
 
 /**
  * Which kind a DataForSEO request is, by its registry family. Keyword
