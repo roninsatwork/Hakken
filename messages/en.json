@@ -11287,6 +11287,8 @@
       "preparing": "This country's weeks are being added up. The chart appears after its first collection.",
       "month": "Month",
       "byWeek": "Shown by week: days are kept for 90 days, and these dates reach further back.",
+      "byMonth": "Shown by month: weeks are kept for 6 months, and these dates reach further back.",
+      "noSearches": "Searches aren't kept for {kind, select, image {Google Images} discover {Discover} googleNews {Google News} other {this kind of result}}, only its totals and pages. Pick Web to see searches.",
       "reach": "Showing the last {weeks} weeks, from {from}: the most the charts keep, set in Limits.",
       "partDays": "{dates}, {days, plural, one {# day} other {# days}}",
       "notBuilt": "This step is added up after the next collection."
@@ -11333,6 +11335,7 @@
       "versus": "Change against the {days} days before",
       "noVersus": "No change shown: the days before aren't held",
       "preparing": "Adding these dates up. The list appears as soon as it's ready.",
+      "noSearches": "Searches aren't kept for {kind, select, image {Google Images} discover {Discover} googleNews {Google News} other {this kind of result}}, only its totals and pages. Pick Web to see searches.",
       "behind": "Showing the list from before Google's newest day; the newest is being added now.",
       "cut": "The {count} with the most clicks",
       "empty": "Nothing in these dates.",

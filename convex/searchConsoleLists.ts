@@ -42,7 +42,7 @@ import {
   type ViewContext,
 } from "./utils/searchConsoleViews";
 import { trackedKeys } from "./searchConsoleTracking";
-import { GOOGLE_DIMENSIONS } from "./searchConsoleApi";
+import { GOOGLE_DIMENSIONS, LISTS_OF } from "./searchConsoleApi";
 import { EXPORT_FIELDS, exportFileName, exportValue } from "./utils/searchConsoleExport";
 import { bySide, fromGoogle, positionOf, type Row as PackedRow } from "./utils/searchConsolePacks";
 import { NOT_SORTED_KIND, pageKindsFrom, type PageKinds, type PageKindSetup } from "./utils/pageKinds";
@@ -330,6 +330,8 @@ type ListAnswer = {
   live: boolean;
   /** Connected but nothing built yet. */
   preparing: boolean;
+  /** A list of searches for a kind of result that keeps none — Google Images, Discover: said so, not "being added up". */
+  noSearches?: boolean;
   /** The hero boxes' figures; null when nothing is listed yet. */
   summary: Summary | null;
   /** The website's classifications, when a list of its pages was read and it has any: what each row's kind names. */
@@ -361,6 +363,10 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   const within = args.within;
   // One keyword's pages are rows keyed by page, one page's keywords by keyword.
   const dimension = within ? (within.kind === "query" ? "page" : "query") : (VIEW_LIST[view] ?? args.dimension);
+  // A kind of result keeping no searches (store less round two, A) lists none: the screen says so.
+  if (!LISTS_OF[args.searchType].includes("pair") && (dimension === "query" || within !== undefined || view === "competing")) {
+    return { ...empty, live: false, preparing: false, noSearches: true };
+  }
   // A country keeps no country list of its own: Google answers it, filtered to that one country.
   if (country !== undefined && dimension === "country") return live;
   const read = async (which: "NOW" | "BEFORE") => (within
@@ -443,6 +449,7 @@ export const searchConsoleListPage = tenantQuery({
     size: v.number(),
     cut: v.union(v.number(), v.null()),
     preparing: v.boolean(),
+    noSearches: v.optional(v.boolean()),
     summary: v.union(summaryValidator, v.null()),
     ...answerFacts,
   }),
@@ -454,6 +461,7 @@ export const searchConsoleListPage = tenantQuery({
     return {
       ...page,
       preparing: list.preparing,
+      ...(list.noSearches ? { noSearches: true } : {}),
       summary: list.summary,
       current: true,
       named: list.named,

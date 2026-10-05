@@ -11,6 +11,7 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { TableBar, type TableNoun } from "@/src/ui/components/screens/TableBar";
 import { ResultKindSwitch, SearchConsoleGate, canRetry, liveProblemKey } from "./SearchConsoleNotices";
 import { SearchConsoleChips, SearchConsoleListDownload, type ChipId, type ListRow, type useSearchConsoleList } from "./SearchConsoleTables";
+import { useResultKind } from "./useSearchConsole";
 
 export type ExportField = FunctionArgs<typeof api.searchConsoleLists.exportSearchConsoleList>["fields"][number];
 
@@ -71,6 +72,7 @@ export function SearchConsoleListScreen({
   const router = useRouter();
   const { list, rowHref } = table;
   const problem = useListProblem(list);
+  const [resultKind] = useResultKind();
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={icon} title={title} description={description} />
@@ -80,6 +82,7 @@ export function SearchConsoleListScreen({
           {heroes}
           {children}
           {list.preparing ? <p className="text-[12px] text-muted">{t("table.preparing")}</p> : null}
+          {list.noSearches ? <p className="text-[12px] text-muted">{t("table.noSearches", { kind: resultKind })}</p> : null}
           <DataTable
             rows={list.table.pageRows}
             rowKey={(row) => row.key}

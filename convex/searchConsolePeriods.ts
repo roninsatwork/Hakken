@@ -360,6 +360,8 @@ export const searchConsoleChartFigures = tenantQuery({
     byWeek: v.boolean(),
     /** Weeks asked for reaching past the six months kept as weeks: shown by month. */
     byMonth: v.optional(v.boolean()),
+    /** A kind of result keeping no searches (Google Images, Discover): its bands and brand split are not kept. */
+    noSearches: v.optional(v.boolean()),
     reach: v.union(v.null(), v.string()),
     chartWeeks: v.number(),
     notReady: v.boolean(),
@@ -373,7 +375,7 @@ export const searchConsoleChartFigures = tenantQuery({
       .withIndex("by_hold", (q) => q.eq("companyWebsiteId", site.hold._id))
       .first();
     const { chartWeeks } = await consoleLimitsOf(ctx, site.hold);
-    const nothing = { periods: [], step: args.step, byWeek: false, reach: null, chartWeeks, notBuilt: false };
+    const nothing = { periods: [], step: args.step, byWeek: false, reach: null, chartWeeks, notBuilt: false, noSearches: false };
     const scope = await countryScope(ctx, site.hold, connection, args.country);
     if (scope.read === "LIVE") return { ...nothing, notReady: !scope.kept, preparing: scope.kept };
     const newest = scope.read === "KEPT" ? scope.newestDay : connection?.newestDay;
@@ -412,7 +414,8 @@ export const searchConsoleChartFigures = tenantQuery({
           otherClicks: row.otherClicks,
         };
       });
-    return { periods, step, byWeek, byMonth, reach, chartWeeks, notReady: false, preparing: false, notBuilt: rows.length > 0 && ofGrain.length === 0 };
+    if (!LISTS_OF[args.searchType].includes("pair")) return { ...nothing, notReady: false, preparing: false, noSearches: true };
+    return { periods, step, byWeek, byMonth, reach, chartWeeks, notReady: false, preparing: false, notBuilt: rows.length > 0 && ofGrain.length === 0, noSearches: false };
   },
 });
 type Slot = { period: SearchConsolePeriod; which: "NOW" | "BEFORE"; span: PeriodSpan | null; now: PeriodSpan };

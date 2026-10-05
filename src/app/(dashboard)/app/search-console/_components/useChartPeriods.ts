@@ -56,7 +56,11 @@ export function useChartPeriods(list: {
       step === "month" ? formatMonth(period.start.slice(0, 7)) : formatShortDay(period.start),
     ));
 
-  const note = figures?.byWeek
+  const note = figures?.noSearches
+    ? t("noSearches", { kind: list.kind })
+    : figures?.byMonth
+      ? t("byMonth")
+      : figures?.byWeek
     ? t("byWeek")
     : figures?.reach
       ? t("reach", { weeks: figures.chartWeeks, from: formatDay(figures.reach) })

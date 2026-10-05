@@ -480,6 +480,10 @@ describe("collecting", () => {
     const twelveMonths = await listed(shiftDay(NEWEST, -364));
     expect(twelveMonths.rows.map((one: { key: string }) => one.key)).toEqual(["https://acme-shop.test/"]);
     expect(twelveMonths.rows).toEqual((await listed("2026-06-29")).rows);
+    // Google Images keeps no searches (store less round two, A): its keyword list says so; its pages still list.
+    const images = (dimension: "query" | "page") => admin.query(api.searchConsoleLists.searchConsoleListPage, { siteId, searchType: "image", dimension, from: "2026-06-29", to: NEWEST, page: 1, rows: 25 });
+    expect(await images("query")).toMatchObject({ noSearches: true, preparing: false, rows: [] });
+    expect((await images("page")).noSearches).toBeUndefined();
     // The days, weeks and months the Position bands and Brand charts read: the website has no brand words yet, so every click is the rest's.
     const charted = await t.run(async (ctx) => await ctx.db
       .query("searchConsoleWeeks")

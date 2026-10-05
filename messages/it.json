@@ -11287,6 +11287,8 @@
       "preparing": "Le settimane di questo paese sono in preparazione. Il grafico appare dopo la sua prima raccolta.",
       "month": "Mese",
       "byWeek": "Mostrato per settimana: i giorni si tengono per 90 giorni e queste date vanno più indietro.",
+      "byMonth": "Mostrato per mese: le settimane si tengono per 6 mesi e queste date vanno più indietro.",
+      "noSearches": "Le ricerche non si tengono per {kind, select, image {Google Immagini} discover {Discover} googleNews {Google News} other {questo tipo di risultato}}, solo i totali e le pagine. Scegli Web per vedere le ricerche.",
       "reach": "Mostra le ultime {weeks} settimane, dal {from}: il massimo che i grafici tengono, impostato in Limiti.",
       "partDays": "{dates}, {days, plural, one {# giorno} other {# giorni}}",
       "notBuilt": "Questo passo viene sommato dopo la prossima raccolta."
@@ -11333,6 +11335,7 @@
       "versus": "Variazione rispetto ai {days} giorni precedenti",
       "noVersus": "Nessuna variazione: i giorni precedenti non sono disponibili",
       "preparing": "Sto sommando queste date. L'elenco appare appena è pronto.",
+      "noSearches": "Le ricerche non si tengono per {kind, select, image {Google Immagini} discover {Discover} googleNews {Google News} other {questo tipo di risultato}}, solo i totali e le pagine. Scegli Web per vedere le ricerche.",
       "behind": "Mostro l'elenco di prima del giorno più recente di Google; il più recente si sta aggiungendo ora.",
       "cut": "I {count} con più clic",
       "empty": "Niente in queste date.",

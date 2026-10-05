@@ -201,6 +201,7 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
               </p>
             </div>
             {list.preparing ? <p className="text-[12px] text-muted">{t("table.preparing")}</p> : null}
+            {list.noSearches ? <p className="text-[12px] text-muted">{t("table.noSearches", { kind })}</p> : null}
             <DataTable
               rows={list.table.pageRows}
               rowKey={(row) => row.key}

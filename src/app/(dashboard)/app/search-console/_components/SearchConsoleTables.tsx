@@ -243,6 +243,8 @@ export function useSearchConsoleList(options: {
     table,
     filtered,
     preparing: server.preparing,
+    /** A kind of result keeping no searches (Google Images, Discover): the screen says so, not "being added up". */
+    noSearches: server.result?.noSearches === true,
     live: isLive,
     retry: live.retry,
     download: { ...base, ...filters, ...(term ? { q: term } : {}), sort: order.key, direction: order.direction },
