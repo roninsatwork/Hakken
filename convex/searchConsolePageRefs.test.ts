@@ -46,12 +46,14 @@ describe("page addresses kept once", () => {
     expect(device.keys).toEqual(["MOBILE"]);
     expect(await t.run(async (ctx) => await decodePages(ctx, holdId, pair.pages!))).toEqual(pages);
 
-    // Read back for the periods exactly as before.
+    // Read as kept, references and all; the action reading them turns them back with the page list read once.
     const kept = await t.query(internal.searchConsoleRollups.keptBetween, {
       companyWebsiteId: holdId, searchType: "web", list: "pair", grain: "DAY", from: "2026-10-01", to: "2026-10-01", cursor: null,
     });
-    expect(kept.records[0].pages).toEqual(pages);
+    expect(kept.records[0].pages).toEqual(pair.pages);
     expect(kept.records[0].keys).toEqual(["door handles", "brass knobs", "lever"]);
+    const book = await t.query(internal.searchConsolePageRefs.pageListPart, { holdId, cursor: null });
+    expect(book.pages.sort()).toEqual(["https://acme-shop.test/a", "https://acme-shop.test/b"]);
   });
 
   test("a day of more addresses than one step may look up is turned a few hundred at a time", async () => {

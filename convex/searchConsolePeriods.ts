@@ -40,6 +40,7 @@ import {
 import { bandOf, isBrand, pageWithoutSection } from "./utils/searchConsoleViews";
 import { tenantQuery } from "./tenantFunctions";
 import { FROM_SEARCH_LINES, searchLinesCountry } from "./searchConsoleShrink";
+import { addressesOf, decodeWith } from "./searchConsolePageRefs";
 import { requireMySite } from "./siteAccess";
 
 /**
@@ -161,6 +162,19 @@ export async function readKept(
       cursor = page.continueCursor;
     }
   };
+  // Page references back to addresses, from the website's page list read once a run (`searchConsolePageRefs.ts`).
+  const addresses = async () => {
+    if (list !== "pair" && list !== "page") return out;
+    const book = await addressesOf(ctx, companyWebsiteId);
+    return out.map((kept) => ({
+      ...kept,
+      packed: {
+        ...kept.packed,
+        ...(list === "page" ? { keys: decodeWith(book, kept.packed.keys) } : {}),
+        ...(kept.packed.pages ? { pages: decodeWith(book, kept.packed.pages) } : {}),
+      },
+    }));
+  };
   // A month at a time, and four weeks at a time: a week of a busy website's pairs is about a megabyte.
   for (let month = from; month <= newest; month = monthStart(shiftDay(month, 31))) {
     await read("MONTH", month, shiftDay(monthStart(shiftDay(month, 31)), -1));
@@ -173,7 +187,7 @@ export async function readKept(
     const start = shiftDay(from, offset);
     await read("DAY", start, shiftDay(start, DAYS_PER_READ - 1));
   }
-  return out;
+  return await addresses();
 }
 
 type Counts = Map<string, { count: number; top: string }>;

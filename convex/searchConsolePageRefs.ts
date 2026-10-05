@@ -14,7 +14,8 @@ import type { Id } from "./_generated/dataModel";
  * every day: two thirds of a busy website's search-and-page lines. Now a
  * `pair` list's `pages` and a `page` list's `keys` hold a reference, `~` and
  * the page's number in base 36, written when a list is saved (`writeList`) and
- * read back to the address when the kept records are read (`keptBetween`).
+ * read back to the address by the action reading the kept records
+ * (`readKept`, from the page list read once: `addressesOf`).
  * Everything between — the roll-ups, which add lines up by their page — works
  * on the references as they are, and everything after sees addresses.
  *
@@ -77,6 +78,56 @@ export async function decodePages(ctx: QueryCtx, holdId: Id<"companyWebsites">, 
     if (held) found.set(value, held.page);
   }
   return values.map((value) => found.get(value) ?? value);
+}
+
+/** Page references read per step when an action reads a website's whole page list: small rows. */
+const REFS_PER_READ = 4_000;
+
+/** One page of a website's page list, reference by reference. */
+export const pageListPart = internalQuery({
+  args: { holdId: v.id("companyWebsites"), cursor: v.union(v.string(), v.null()) },
+  returns: v.object({ refs: v.array(v.number()), pages: v.array(v.string()), continueCursor: v.string(), isDone: v.boolean() }),
+  handler: async (ctx, args) => {
+    const page = await ctx.db
+      .query("searchConsolePageRefs")
+      .withIndex("by_hold_ref", (q) => q.eq("companyWebsiteId", args.holdId))
+      .paginate({ cursor: args.cursor, numItems: REFS_PER_READ });
+    return { refs: page.page.map((row) => row.ref), pages: page.page.map((row) => row.page), continueCursor: page.continueCursor, isDone: page.isDone };
+  },
+});
+
+/** Each action's page lists, read once however many lists it decodes. */
+const addressBooks = new WeakMap<object, Map<string, Promise<Map<string, string>>>>();
+
+/**
+ * A website's page list — reference to address — read once per action run,
+ * a few thousand a step: what turns kept references back into addresses for
+ * the periods. morehandles.co.uk's 26,000 pages are a few reads; looked up
+ * one by one inside each read of kept records, they outran a query's second
+ * (2026-10-05).
+ */
+export async function addressesOf(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promise<Map<string, string>> {
+  const books = addressBooks.get(ctx) ?? new Map<string, Promise<Map<string, string>>>();
+  addressBooks.set(ctx, books);
+  const held = books.get(holdId);
+  if (held) return await held;
+  const reading = (async () => {
+    const book = new Map<string, string>();
+    for (let cursor: string | null = null; ;) {
+      const part: { refs: number[]; pages: string[]; continueCursor: string; isDone: boolean } =
+        await ctx.runQuery(internal.searchConsolePageRefs.pageListPart, { holdId, cursor });
+      part.refs.forEach((ref, index) => book.set(refOf(ref), part.pages[index]));
+      if (part.isDone) return book;
+      cursor = part.continueCursor;
+    }
+  })();
+  books.set(holdId, reading);
+  return await reading;
+}
+
+/** References back to addresses from a page list read whole; an address kept before references is returned as it is. */
+export function decodeWith(book: ReadonlyMap<string, string>, values: readonly string[]): string[] {
+  return values.map((value) => (isPageRef(value) ? book.get(value) ?? value : value));
 }
 
 /** Every page reference a website holds, removed with its Search Console data. A page at a time; true when none is left. */
