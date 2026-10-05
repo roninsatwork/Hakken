@@ -190,3 +190,19 @@ the table above is how it stands before it.
   except the Collector run's cost, because a crawl sent before this change
   never recorded which run sent it. Today's day ceiling therefore still counts
   the full $1.50 for crawls sent before the deploy; that resets at midnight.
+
+### Item 9 — a keyword lookup that buys nothing is not charged
+
+- A lookup is still charged by the keyword when it starts (so, once charging
+  is switched on, one is refused at zero before anything is bought). When its
+  jobs settle (`settleLookups`, `convex/keywordResearchRun.ts`), it is
+  counted again (`creditResearchSettled`): a keyword for which nothing came
+  back — every part failed or brought nothing — is not charged, and a lookup
+  for which nothing came back at all is given back whole. The statement shows
+  it as a line of its own: "Counted again: Keyword research · “web design
+  leeds” · Nothing came back, so nothing is charged · back to October's plan".
+  A lookup whose parts were already held and fresh is still charged in full:
+  its figures came back, from what another lookup bought (decision 8).
+- Decided: per keyword, not only all-or-nothing, since a three-keyword lookup
+  where one keyword fails has bought nothing for that keyword. Lookups made
+  before this change are not counted again.

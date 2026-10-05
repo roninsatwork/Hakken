@@ -5,6 +5,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { LIVE_REQUEST_TIMEOUT_MS, postDataForSeoTasks, readDataForSeoCredentials, readDataForSeoOutcome, type DataForSeoCredentials } from "./dataForSeoRest";
 import { countSettled, recordCollectorCall } from "./seoCollectionQueue";
 import { recordOperationCost } from "./websiteTrackingStats";
+import { creditResearchSettled } from "./creditHooks";
 import { failureSummary } from "./roleRuns";
 import { readFanOutLimits } from "./fanOutLimits";
 import {
@@ -477,6 +478,8 @@ export const settleLookups = internalMutation({
     const problem: ResearchProblem = args.problem ?? "NO_ANSWER";
     let ready = 0;
     let failed = 0;
+    // Each keyword settled here, and whether anything came back for it: what the lookup is charged for.
+    const settled: Array<{ keyword: string; ready: boolean }> = [];
     for (const job of jobs) {
       const lookup = await ctx.db.get(job.lookupId);
       if (!lookup) continue;
@@ -503,8 +506,11 @@ export const settleLookups = internalMutation({
         failed += 1;
         patch.problem = problem;
       }
+      settled.push({ keyword: job.keyword, ready: held });
       await ctx.db.patch(lookup._id, patch);
     }
+    // A lookup that brought nothing back is not charged (finish-off-plan.md, item 9).
+    await creditResearchSettled(ctx, args.runId, settled);
     return { ready, failed };
   },
 });

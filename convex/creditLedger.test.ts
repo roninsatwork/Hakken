@@ -4,7 +4,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import schema from "./schema";
-import { creditAssistantReply, creditCycleFinished, creditCycleLine, creditCycleLineDropped, creditPullSettled, creditResearchRun } from "./creditHooks";
+import { creditAssistantReply, creditCycleFinished, creditCycleLine, creditCycleLineDropped, creditPullSettled, creditResearchRun, creditResearchSettled } from "./creditHooks";
 import { chargeCreditsNow, creditBalance, ensurePlanBatch, findCreditRun, recountCreditRun, refundCreditCharge } from "./creditLedger";
 import { rowsReturnedIn, slimSeoResult } from "./dataForSeoSlim";
 import { creditDayOf, creditMonthNamed, creditMonthOf, creditUnitsOfAnswer, creditUnitsOfRequest, creditUnitsUpFront, creditsForUnits, creditKindOfFamily } from "./creditKinds";
@@ -405,6 +405,35 @@ describe("lookups and questions", () => {
         kind: "keywordResearch", how: "byHand", userId, units: 2, creditsOut: 10, realCostUsd: 0.03,
         detail: "“web design leeds”, “web design york”",
       });
+    });
+  });
+
+  test("a lookup is charged only for the keywords something came back for (finish-off-plan.md, item 9)", async () => {
+    const t = convexTest(schema, modules);
+    await t.run(async (raw) => {
+      const ctx = asCtx(raw);
+      const acme = await seedCompany(ctx, "Acme");
+      const userId = await ctx.db.insert("users", { email: "priya@example.com", role: "ADMIN", companyId: acme });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Keyword research", modelId: "test-model", thinkingMode: false, isActive: true, temperature: 1, humanApprovalRequired: false, createdAt: Date.now(), updatedAt: Date.now(),
+      });
+      const runId = await ctx.db.insert("agentRuns", { agentId, triggerType: "MANUAL", objective: "Look up", status: "QUEUED", startedAt: Date.now(), updatedAt: Date.now() });
+      await creditResearchRun(ctx, { companyId: acme, userId, runId, keywords: ["a", "b", "c"] });
+      // Three keywords, two parts each: something came back for two of them.
+      await creditResearchSettled(ctx, runId, [
+        { keyword: "a", ready: true }, { keyword: "a", ready: false },
+        { keyword: "b", ready: false }, { keyword: "b", ready: false },
+        { keyword: "c", ready: true }, { keyword: "c", ready: true },
+      ]);
+      // A second settle that settled nothing changes nothing.
+      await creditResearchSettled(ctx, runId, []);
+      const lines = await statement(ctx, acme);
+      expect(lines.map((line) => [line.entry, line.units, line.creditsOut, line.creditsIn, line.reason ?? null])).toEqual([
+        ["grant", 0, 0, 10_000, null],
+        ["charge", 3, 15, 0, null],
+        ["recount", 2, 0, 5, "recounted"],
+      ]);
+      expect(lines[1]).toMatchObject({ unitsNow: 2, creditsNow: 10 });
     });
   });
 

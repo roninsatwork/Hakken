@@ -429,7 +429,9 @@ real cost; nothing is refused and no screen shows it.
 Left for later steps, knowingly:
 - Other agents' model costs are not a kind on the price list, so not charged.
 - A lookup whose run buys nothing is still charged; refunds for it come with
-  step 5, when refusing at zero makes them matter.
+  step 5, when refusing at zero makes them matter. *Done earlier, 2026-10-05
+  (finish-off-plan.md, item 9): a keyword nothing came back for is given back
+  as a "Counted again" line.*
 - A request revived after it was counted failed is not charged again.
 - A month with nothing charged has no grant or ending line.
 

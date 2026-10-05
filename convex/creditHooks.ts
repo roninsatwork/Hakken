@@ -320,6 +320,30 @@ export async function creditResearchRun(
 }
 
 /**
+ * A lookup's jobs settled (finish-off-plan.md, item 9). It was charged by the
+ * keyword when it started; now a keyword for which nothing came back — every
+ * part failed, or brought nothing — is not charged, and a lookup that brought
+ * nothing back at all is given back whole. Either way the charge's line
+ * stands and the difference is a line of its own: "Counted again: Keyword
+ * research · Nothing came back, so nothing is charged". A settle that
+ * settled nothing — the run's jobs taken by a newer run — changes nothing.
+ */
+export async function creditResearchSettled(
+  ctx: MutationCtx,
+  runId: Id<"agentRuns">,
+  settled: ReadonlyArray<{ keyword: string; ready: boolean }>,
+): Promise<void> {
+  await quietly("a settled lookup", async () => {
+    if (settled.length === 0) return;
+    const charge = await findCreditRun(ctx, `research:${runId}`);
+    if (!charge || charge.entry !== "charge") return;
+    // Never more than it was charged for when it started.
+    const cameBack = Math.min(charge.unitsNow ?? charge.units, new Set(settled.filter((job) => job.ready).map((job) => job.keyword)).size);
+    await recountCreditRun(ctx, charge._id, cameBack, cameBack === 0 ? "nothingBack" : "recounted", Date.now());
+  });
+}
+
+/**
  * Ask Hakken answered: one question, charged with what the reply cost us,
  * priced from the model's rates — `messages` keeps only its tokens. A public
  * widget's conversation and an evaluation's are not a company's questions.
