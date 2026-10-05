@@ -142,7 +142,21 @@ to six days behind between weekly rebuilds, or any after a failed rebuild —
 they are added up then. The screen shows the figures held at once, with a
 line and a bar while the newest days are added, and updates itself when
 done (the picture sent on 2026-10-05, `catching-up.png`). About 1.5 days;
-waiting on his word to build.
+built that night (below).
+
+**Built, 2026-10-05 night, as Anthony confirmed:** Search Console is still
+fetched every night, but adds up nothing but a website's first collection;
+lists are added up weekly (`search-console-weekly-rebuild`), after the
+website's company's own collection (`afterCompanyCollection`), and when a
+screen opens any period behind (`searchConsoleCatchUp.ts`, the line and bar
+from the picture). Reports are swapped in whole. Costs as left:
+[docs/product/search-console-running-costs-oct-2026.md](../../product/search-console-running-costs-oct-2026.md).
+Not taken: a hard cap of a seventh.
+
+**Next: the DataForSEO side** (Anthony, 2026-10-05: "tomorrow we pick up 2",
+then "let's brainstorm and audit it now") — what its stored data and its
+rebuilds after each collection cost in Convex, measured the same way, then
+the same kind of rules.
 
 ## Next, once this plan is done: what Convex costs (agreed 2026-10-05)
 
