@@ -158,6 +158,58 @@ then "let's brainstorm and audit it now") — what its stored data and its
 rebuilds after each collection cost in Convex, measured the same way, then
 the same kind of rules.
 
+## The DataForSEO side — audit, 2026-10-05 night (plan only: nothing built)
+
+Anthony: "this is for the plan only". Read from the code (file:line in the
+audit notes below); sizes not yet measured — measure first, as for Search
+Console, before building any of it.
+
+**Found**
+
+- The 03:30 list-copy refresh (`siteListCopies.ts:245-265`) rebuilds every
+  copy older than 26 hours — every second night for every website, changed or
+  not — and a keyword copy's rebuild sets off a full Discovery rebuild of the
+  website (`siteSummaries.rebuildSite`) and its cascade: pages copy, Your
+  pages, every content gap in its groups, day figures, AI lines.
+- During a collection the full website rebuild runs again and again: after
+  every keyword-list page (`siteKeywordList.ts:222`), after every AI answer for
+  every website asking it (`websiteTrackingStats.ts:170`), and after each
+  site-wide figure (`seoCollectionParse.ts:483`) — most needing only a small
+  part of it.
+- Kept forever and growing: daily keyword positions (`seoKeywordPositions`),
+  full AI answer texts with a search index (`aiAnswerTexts`), Google's full
+  results pages (`siteSerpPages`), competitor discovery days.
+- Work that grows with the whole platform: each AI answer reads up to 2,000
+  companies' brand names (`holdProfiles.ts:49`); the admin run report is
+  rebuilt about once a minute during a collection, reading platform-wide
+  decision runs (`seoRunReports.ts:355`).
+- Rewritten whole though little changed: content gaps (every row,
+  `siteContentGap.ts:271`), every list copy (`siteListCopies.ts:119`), sitemap
+  pages each collection (`sitemapRead.ts:42`), fan-out angles patched only to
+  bump `rebuiltAt` (`fanOutAngles.ts:262`), day figures (`siteSummaries.ts:829`).
+- Raw answers kept 30 days, up to 3.6 MB each (`seoPullAnswers.ts`), read once
+  more by the purge.
+
+**Group A — nothing a customer sees changes**
+
+| # | Change | Decision |
+|---|---|---|
+| A1 | The nightly refresh rebuilds only copies out of date with their data, not every copy every second night; a copy still rebuilds the moment its data changes. Before building, check no table shows anything that changes with the calendar alone ("new this week", "lost after 14 days") — such a copy keeps a nightly rebuild | **Agreed** (2026-10-05). On screen: nothing changes; an "updated" date, where shown, says when the data last changed |
+| A2 | An AI answer updates only the AI lines, a site-wide figure only the day figures — not a full rebuild | To decide |
+| A3 | Write only what changed: content gaps, list copies, sitemap pages, fan-out angles, day figures | To decide |
+| A4 | The brand-name check per answer reads only the companies asking that question | To decide |
+| A5 | The admin run report rebuilt at most every 5 minutes during a collection | To decide |
+| A6 | Raw DataForSEO answers kept 7 days, not 30 | To decide |
+
+**Group B — customers would notice**
+
+| # | Change | They would lose | Decision |
+|---|---|---|---|
+| B1 | Daily keyword positions kept 90 days, then weekly | Day-by-day history older than 90 days | To decide, once measured |
+| B2 | Full AI answer wording kept 90 days; who was named and cited kept forever | Reading old answers word for word | To decide, once measured |
+| B3 | Google's full results pages kept 90 days; positions kept forever | Opening an old results page in full | To decide, once measured |
+| B4 | One rebuild at the end of each collection, not during it | Discovery screens fill in at the end of a collection, not bit by bit | To decide |
+
 ## Next, once this plan is done: what Convex costs (agreed 2026-10-05)
 
 Anthony, 2026-10-05: "It's still a lot of money — we need to look at saving
