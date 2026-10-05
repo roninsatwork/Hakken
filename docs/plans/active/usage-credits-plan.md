@@ -63,7 +63,10 @@ Anthony, 2026-10-05, in a pricing brainstorm:
    are bought.
 5. **Use is shown up front**: Coming up shows the credits scheduled checks have
    already booked, this month and next.
-6. **At zero, new one-off work stops; scheduled checks keep running.** A warning
+6. **At zero, everything stops — one-off work and scheduled checks alike**
+   (changed 2026-10-05, outstanding question 2 answered "c"; it had been
+   "scheduled checks keep running"), and the gap in a scheduled check's
+   history is accepted. A warning
    at 80% of the month's plan credits. **Automatic top-up is optional**, with a
    monthly limit the company sets.
 7. **Credits attach to work through a price list in Admin**: one line per kind
@@ -119,14 +122,13 @@ none holds up step 1.
    credit covers, rounded up, never below 1; suggestions never change a price
    by themselves. **No exchange rate**: "we dont need pound to dollaor or vise
    vera" — costs stay in US dollars, as the suppliers charge.
-2. **What a scheduled check uses when the balance is zero.** Decision 6 says it
-   keeps running. Recommended: the balance goes below zero and the next batch to
-   arrive pays that first (the next month's plan credits, or a top-up), shown on
-   the statement as its own line. The other choices are running it free, or
-   stopping it.
-3. **The prices**: the plan fee, credits a month, top-up packs (drawn as 250 /
-   500 / 1,000 / 2,500 credits at £25 / £50 / £90 / £200) and every line of the
-   price list — after the cost audit.
+2. **What a scheduled check uses when the balance is zero.** *Answered
+   2026-10-05: "c" — it stops, like everything else, and the gap is accepted
+   (decision 6). Built with step 5.*
+3. **The prices.** *Settled for now, 2026-10-05: the £200 plan gives 1,000
+   credits* ("we said we will do this later - lets assume 200 plan give 1,000
+   credits"). Top-up packs and the credits each kind of work costs come from
+   the cost audit, later — not a question to put again before then.
 4. **How expired credits count in the accounts**, and VAT on top-ups — for his
    accountant.
 5. **PRODUCT.md §15's £149–£499 tiers** are superseded by decision 1 once he
@@ -218,9 +220,8 @@ works: sorting, search, filters, pages, the side menus and the chart.
 - **Shared data.** Charged at the standalone price whatever was reused; the
   record keeps both what we paid (`costUsd`) and what the sharing saved
   (`reusedValueUsd`), as `seoDayRollups` already does.
-- **Zero.** One-off work (a lookup, a question, an audit started by hand) is
-  refused with a plain message and a link to Top up. Scheduled checks run
-  (Outstanding question, 2).
+- **Zero.** All work is refused — one-off work with a plain message and a link
+  to Top up, and scheduled checks too, accepting the gap (decision 6).
 - **Who.** Every charge names a person: whoever started it, or, for a scheduled
   check, whoever set the schedule up ("Scheduled"). Plan grants and endings are
   "Hakken, automatic".
@@ -316,8 +317,8 @@ query returns a real cost, a supplier, or a reused flag.
 - Tenancy: one company can never read another's charges, batches or purchases,
   in the manner of `convex/websiteTenancyGuard.test.ts`; only a super admin
   changes a price or a setting, and each change is audited.
-- Zero: one-off work refused with the plain message; scheduled checks per
-  Outstanding question 2.
+- Zero: one-off work refused with the plain message, and scheduled checks
+  stopped (decision 6).
 - Stripe: a paid session makes one purchase and one batch however often the
   webhook comes.
 - Screens: every table a `DataTable` with its search row (`npm run
@@ -341,8 +342,8 @@ kit, checked locally (`npm run verify:env`, `npm run lint:all`, `npm run check`,
    record.
 4. **Purchases, Top up and Stripe's one-off payment**: 12-month batches and
    automatic top-up.
-5. **Switching it on**: one-off work refused at zero, the 80% warning, scheduled
-   checks at zero (Outstanding question 2), the £200 plan with its credits in Stripe,
+5. **Switching it on**: all work refused at zero, scheduled checks included
+   (decision 6), the 80% warning, the £200 plan with its 1,000 credits in Stripe,
    and the message limit retired (Outstanding question 6). His go first.
 6. **Settings → Organization's old usage chart taken out.**
 
@@ -509,6 +510,9 @@ have you stopped"), every setting changeable on the screen.
   and website replaced by a monthly one and daily totals.
 - 2026-10-05 — No charging at this stage, only monitoring costs to set prices:
   steps 4 and 5 parked.
+- 2026-10-05 — Outstanding question 2 answered "c": at zero scheduled checks
+  stop too. Question 3 settled for now: £200 gives 1,000 credits; the rest
+  after the audit.
 - 2026-10-05 — Steps 2 (Credit prices, outstanding question 1 as recommended)
   and 6 (the old Organization usage chart out) built. Then: 5 cents a credit
   confirmed, no exchange rate, a company sees only credits — the burn figure
