@@ -150,6 +150,23 @@ export const SEO_RAW_RETENTION_DAYS = 7;
 export const SEO_CYCLE_RETENTION_DAYS = 90;
 
 /**
+ * How long an AI answer's full wording is kept (`aiAnswerTexts`, with the
+ * light row that lists it, `aiAnswerIndex`), then cleared by the hourly
+ * sweep (docs/plans/active/dataforseo-cost-plan.md, B2): an answer runs to
+ * tens of kilobytes. Who it named and cited (`aiAnswers`, `aiCitations`) is
+ * kept for ever, and an older answer's screen shows that instead of its words.
+ */
+export const AI_ANSWER_WORDING_RETENTION_DAYS = 90;
+
+/**
+ * The first day whose answers are still kept word for word, `YYYY-MM-DD`:
+ * an answer asked before it shows who it named and cited, not its wording.
+ */
+export function wordingKeptFrom(today: string): string {
+  return new Date(Date.parse(`${today}T00:00:00Z`) - AI_ANSWER_WORDING_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+/**
  * The backoff a worker waits after DataForSEO pushes back, by attempt.
  *
  * A 429 is not a failure, it is "later" — the rows go back to `PENDING` with a

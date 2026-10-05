@@ -10482,6 +10482,7 @@
         "sources": "Sources"
       },
       "readFull": "Read the full answer",
+      "wordingNotKept": "The full wording is kept for 90 days.",
       "questionMissingTitle": "That question is not on this website's list",
       "questionMissingBody": "It may have been removed. Choose one of its questions from Mentions, or open Full answers from the menu."
     },

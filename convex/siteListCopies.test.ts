@@ -303,7 +303,7 @@ describe("Full answers", () => {
     expect((await list({ page: 2 })).rows).toHaveLength(5);
     // Word starts, every word typed.
     expect((await list({ search: "korda kai" })).total).toBe(15);
-    expect((await list({ search: "kai" })).rows.every((row) => row.text.includes("Kaizen"))).toBe(true);
+    expect((await list({ search: "kai" })).rows.every((row) => row.text?.includes("Kaizen"))).toBe(true);
   });
 });
 

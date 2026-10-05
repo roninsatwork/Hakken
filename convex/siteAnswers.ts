@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
-import type { MutationCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { aiEngineValidator, answerPlace, fanOutPlace, type AiEngine } from "./seoAiEngines";
 import { askedPlace, listHold, requireMySite } from "./siteAccess";
 import { holdBrandNames } from "./holdProfiles";
@@ -11,6 +11,8 @@ import { appError } from "./utils/appError";
 import { answerStance } from "./utils/siteShapes";
 import { wordStartMatcher, wordsOf } from "./utils/wordStarts";
 import { MAX_LIST } from "./websiteSiteRows";
+import { wordingKeptFrom } from "./seoCollectionPolicy";
+import { sharedLimitCeiling } from "./sharedLimits";
 
 /**
  * Keeping what each AI engine said, word for word (D9).
@@ -22,6 +24,11 @@ import { MAX_LIST } from "./websiteSiteRows";
  * Full answers page, and handed to any agent that later reads it as quoted
  * material to analyse, never as instructions. See
  * docs/plans/active/user-sites-plan.md, "Stored answers".
+ *
+ * The wording is kept 90 days (`AI_ANSWER_WORDING_RETENTION_DAYS`, the
+ * DataForSEO cost plan's B2): an older answer shows who it named and cited,
+ * which are kept for ever (`aiAnswers`, `aiCitations`), and says its wording
+ * is kept 90 days. Such an answer is opened by its own id (`aiAnswers`).
  */
 
 /** Characters kept of one answer: a guard against a payload that is not what the docs describe. */
@@ -98,6 +105,55 @@ export async function deleteAnswerText(ctx: MutationCtx, textId: Id<"aiAnswerTex
   await ctx.db.delete(textId);
 }
 
+type Reader = { db: QueryCtx["db"] };
+
+/** An answer's citations read for its sources: every source it can have, written after the businesses it named. */
+const SOURCES_READ = sharedLimitCeiling("sourcesPerAnswer");
+
+/**
+ * The addresses an answer cited, in order, from its citations: what is kept
+ * of its sources once its wording has gone. They are written after the
+ * businesses it named (`writeAiCitations`), so its newest rows hold them all.
+ */
+export async function citedSourcesOf(ctx: Reader, pullId: Id<"seoDataPulls">): Promise<string[]> {
+  const rows = await ctx.db
+    .query("aiCitations")
+    .withIndex("by_pull", (q) => q.eq("pullId", pullId))
+    .order("desc")
+    .take(SOURCES_READ);
+  return rows
+    .flatMap((row) => (row.kind === "SOURCE" && row.url !== undefined ? [{ url: row.url, position: row.position }] : []))
+    .sort((left, right) => left.position - right.position)
+    .map((row) => row.url)
+    .slice(0, MAX_TEXT_SOURCES);
+}
+
+/**
+ * One answer by the id a screen opens it by: its wording's while that is kept,
+ * the answer's own after. An answer opened by its own id still shows its
+ * wording when it is kept.
+ */
+async function answerById(
+  ctx: Reader,
+  id: Id<"aiAnswerTexts"> | Id<"aiAnswers">,
+): Promise<{ text: Doc<"aiAnswerTexts"> | null; answer: Doc<"aiAnswers"> | null } | null> {
+  const textId = ctx.db.normalizeId("aiAnswerTexts", id);
+  if (textId) {
+    const text = await ctx.db.get(textId);
+    if (!text) return null;
+    const answer = await ctx.db.query("aiAnswers").withIndex("by_pull", (q) => q.eq("pullId", text.pullId)).first();
+    return { text, answer };
+  }
+  const answerId = ctx.db.normalizeId("aiAnswers", id);
+  const answer = answerId ? await ctx.db.get(answerId) : null;
+  if (!answer) return null;
+  const text = await ctx.db.query("aiAnswerTexts").withIndex("by_pull", (q) => q.eq("pullId", answer.pullId)).first();
+  return { text, answer };
+}
+
+/** An answer as a screen opens it: by its wording while kept, by the answer itself after. */
+export const answerIdValidator = v.union(v.id("aiAnswerTexts"), v.id("aiAnswers"));
+
 
 const stanceValidator = v.union(
   v.literal("RECOMMENDED"),
@@ -139,7 +195,14 @@ const ANSWERS_LISTED = 5_000;
  */
 const SEARCH_CANDIDATES = 50;
 
-type AnswerEntry = { textId: Id<"aiAnswerTexts">; pullId: Id<"seoDataPulls">; engine: AiEngine; day: string };
+/** One answer listed: by its wording while that is kept, or by the answer itself once it is not. */
+type AnswerEntry = {
+  textId: Id<"aiAnswerTexts"> | null;
+  answer: Doc<"aiAnswers"> | null;
+  pullId: Id<"seoDataPulls">;
+  engine: AiEngine;
+  day: string;
+};
 
 /**
  * Full answers sort by the day asked, newest first or oldest (docs/plans/
@@ -161,6 +224,11 @@ const ANSWER_SORTS: ListSorts<AnswerEntry, "day"> = {
  * sites-table-pages-plan.md §5). Each answer carries how it treated the open
  * site: recommended, named, warned against or not named, from the answer row
  * its parse wrote.
+ *
+ * An answer asked before the wording kept (`wordingKeptFrom`) is listed from
+ * the answer itself, with the sources it cited and no words: its wording is
+ * kept 90 days. A search reads the wording, so it finds answers of those 90
+ * days.
  */
 export const listAnswers = tenantQuery({
   args: {
@@ -175,10 +243,11 @@ export const listAnswers = tenantQuery({
     direction: sortDirectionArg,
   },
   returns: listPageResult(v.object({
-    _id: v.id("aiAnswerTexts"),
+    _id: answerIdValidator,
     engine: aiEngineValidator,
     day: v.string(),
-    text: v.string(),
+    /** Word for word, or null for an answer older than the 90 days its wording is kept. */
+    text: v.union(v.string(), v.null()),
     sources: v.array(v.string()),
     stance: stanceValidator,
   })),
@@ -200,6 +269,7 @@ export const listAnswers = tenantQuery({
     let cut: number | null = null;
     const texts = new Map<Id<"aiAnswerTexts">, Doc<"aiAnswerTexts">>();
     if (!matches) {
+      const keptFrom = wordingKeptFrom(site.today);
       // Every answer from each engine, from its own place, in the dates: exact.
       for (const { engine, place } of places) {
         const read = await ctx.db
@@ -210,7 +280,24 @@ export const listAnswers = tenantQuery({
           .take(ANSWERS_LISTED + 1);
         const held = heldTo(read, ANSWERS_LISTED);
         if (held.cut !== null) cut = held.cut;
-        entries.push(...held.rows.map((row) => ({ textId: row.textId, pullId: row.pullId, engine: row.engine, day: row.day })));
+        entries.push(...held.rows.map((row) => ({ textId: row.textId, answer: null, pullId: row.pullId, engine: row.engine, day: row.day })));
+        if (args.from >= keptFrom) continue;
+        // Before the wording kept: the answers themselves, those whose wording
+        // has gone. One whose wording the hourly sweep has yet to clear is listed above.
+        const worded = new Set(held.rows.map((row) => row.pullId));
+        const older = await ctx.db
+          .query("aiAnswers")
+          .withIndex("by_question", (q) => {
+            const asked = q.eq("prompt", args.prompt).eq("engine", engine).eq("locationCode", place).gte("day", args.from);
+            return args.to < keptFrom ? asked.lte("day", args.to) : asked.lt("day", keptFrom);
+          })
+          .order("desc")
+          .take(ANSWERS_LISTED + 1);
+        const heldOlder = heldTo(older, ANSWERS_LISTED);
+        if (heldOlder.cut !== null) cut = heldOlder.cut;
+        for (const answer of heldOlder.rows) {
+          if (!worded.has(answer.pullId)) entries.push({ textId: null, answer, pullId: answer.pullId, engine, day: answer.day });
+        }
       }
     } else {
       // The search index finds the answers with a word starting as the
@@ -226,7 +313,7 @@ export const listAnswers = tenantQuery({
         for (const row of found) {
           if (!inDates(row.day) || !matches(row.text)) continue;
           texts.set(row._id, row);
-          entries.push({ textId: row._id, pullId: row.pullId, engine: row.engine, day: row.day });
+          entries.push({ textId: row._id, answer: null, pullId: row.pullId, engine: row.engine, day: row.day });
         }
       }
     }
@@ -235,6 +322,12 @@ export const listAnswers = tenantQuery({
     const shown = pageOfList(entries, args.page, args.rows, cut);
     const id = site.website._id;
     const rows = await Promise.all(shown.rows.map(async (entry) => {
+      if (entry.answer) {
+        // Past the 90 days its wording is kept: who it named, and what it cited.
+        const sources = await citedSourcesOf(ctx, entry.pullId);
+        return { _id: entry.answer._id, engine: entry.engine, day: entry.day, text: null, sources, stance: answerStance(entry.answer, id) };
+      }
+      if (!entry.textId) return null;
       const text = texts.get(entry.textId) ?? await ctx.db.get(entry.textId);
       if (!text) return null;
       const answer = await ctx.db
@@ -261,14 +354,18 @@ const SEARCHES_SHOWN = 25;
  * (`promptFanOutQueries`), so they are shown as that. Read only through a
  * question on the site's own list, answered from the site's place: an answer
  * id in an address cannot open another company's question.
+ *
+ * An answer whose wording is no longer kept (90 days) is opened by its own
+ * id: no text, how it treated the site, and the sources its citations kept.
  */
 export const answerRecord = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), answerId: v.id("aiAnswerTexts") },
+  args: { siteId: v.id("companyWebsites"), answerId: answerIdValidator },
   returns: v.union(v.object({
     prompt: v.string(),
     engine: aiEngineValidator,
     day: v.string(),
-    text: v.string(),
+    /** Word for word, or null once its wording is no longer kept. */
+    text: v.union(v.string(), v.null()),
     sources: v.array(v.object({ url: v.string(), page: v.union(v.string(), v.null()) })),
     stance: stanceValidator,
     names: v.array(v.string()),
@@ -276,13 +373,15 @@ export const answerRecord = tenantQuery({
   }), v.null()),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const row = await ctx.db.get(args.answerId);
-    if (!row) return null;
+    const found = await answerById(ctx, args.answerId);
+    const row = found?.text ?? found?.answer;
+    if (!found || !row) return null;
     const question = await holdQuestion(ctx, listHold(site), row.prompt);
     if (!question || !question.engines.includes(row.engine) || row.locationCode !== answerPlace(row.engine, site.place)) return null;
 
-    const [answer, searches] = await Promise.all([
-      ctx.db.query("aiAnswers").withIndex("by_pull", (q) => q.eq("pullId", row.pullId)).first(),
+    const answer = found.answer;
+    const [sources, searches] = await Promise.all([
+      found.text ? Promise.resolve(found.text.sources) : citedSourcesOf(ctx, row.pullId),
       ctx.db
         .query("promptFanOutQueries")
         .withIndex("by_prompt_engine_place_seen", (q) =>
@@ -307,8 +406,8 @@ export const answerRecord = tenantQuery({
       prompt: row.prompt,
       engine: row.engine,
       day: row.day,
-      text: row.text,
-      sources: row.sources.map((url) => ({ url, page: pageOf(url) })),
+      text: found.text?.text ?? null,
+      sources: sources.map((url) => ({ url, page: pageOf(url) })),
       stance,
       names: (await holdBrandNames(ctx, site.hold._id)).map((entry) => entry.name),
       searches: searches.map((entry) => ({

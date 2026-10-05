@@ -10482,6 +10482,7 @@
         "sources": "Fonti"
       },
       "readFull": "Leggi la risposta completa",
+      "wordingNotKept": "Il testo completo si conserva per 90 giorni.",
       "questionMissingTitle": "Quella domanda non è nell'elenco di questo sito",
       "questionMissingBody": "Potrebbe essere stata rimossa. Scegli una delle sue domande da Menzioni, o apri Risposte complete dal menu."
     },

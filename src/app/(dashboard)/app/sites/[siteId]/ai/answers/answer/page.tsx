@@ -47,7 +47,8 @@ export default function SiteAnswerPage() {
   const recordHref = useSiteRecordHref(siteId);
   const asked = useRecordKey("answer");
   // An id is 32 lowercase letters and digits; anything else is not one.
-  const answerId = /^[a-z0-9]{32}$/.test(asked) ? (asked as Id<"aiAnswerTexts">) : null;
+  // Its wording's id while that is kept, the answer's own after (90 days).
+  const answerId = /^[a-z0-9]{32}$/.test(asked) ? (asked as Id<"aiAnswerTexts"> | Id<"aiAnswers">) : null;
   const record = useQuery(api.siteAnswers.answerRecord, answerId ? { siteId, answerId } : "skip");
 
   if (!answerId) {
@@ -72,9 +73,14 @@ export default function SiteAnswerPage() {
       ) : (
         <>
           <SettingsCard title={t("answerTitle")}>
-            <div className="max-w-[75ch] text-[13px] text-secondary">
-              <HakkenMarkdown content={record.text} highlight={record.names} />
-            </div>
+            {record.text === null ? (
+              // Past the 90 days its wording is kept: how it treated the site and its sources still show.
+              <p className="text-[13px] text-muted">{ta("wordingNotKept")}</p>
+            ) : (
+              <div className="max-w-[75ch] text-[13px] text-secondary">
+                <HakkenMarkdown content={record.text} highlight={record.names} />
+              </div>
+            )}
           </SettingsCard>
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">

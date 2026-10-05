@@ -39,6 +39,7 @@ function firstWords(text: string): string {
  */
 export function SearchAnswers({ answers, names, host }: { answers: SearchAnswer[]; names: string[]; host: string }) {
   const t = useTranslations("sites.keywordRecord.fromAi");
+  const ta = useTranslations("sites.aiAnswers");
   const engineLabel = useEngineLabel();
   const [open, setOpen] = useState<Record<string, boolean>>({});
 
@@ -61,7 +62,7 @@ export function SearchAnswers({ answers, names, host }: { answers: SearchAnswer[
                 : <ChevronRight className="h-4 w-4 flex-shrink-0 text-muted" aria-hidden="true" />}
               <span className="text-[13px] font-semibold text-foreground">{t("answerTitle", { engine: engineLabel(answer.engine) })}</span>
               <span className="text-[12px] text-muted">{t("answerDay", { day: formatDay(answer.day) })}</span>
-              {!isOpen ? <span className="min-w-0 flex-1 truncate text-[12px] font-normal text-muted">{firstWords(answer.text)}</span> : null}
+              {!isOpen ? <span className="min-w-0 flex-1 truncate text-[12px] font-normal text-muted">{answer.text === null ? ta("wordingNotKept") : firstWords(answer.text)}</span> : null}
             </Button>
             {isOpen ? (
               <div id={panelId} className="flex flex-col gap-3 px-4 pb-4 pl-11">
@@ -71,9 +72,14 @@ export function SearchAnswers({ answers, names, host }: { answers: SearchAnswer[
                     <StatusLabel key={rival.host} tone="warning" size="md">{t(`rival.${rival.stance === "NOT_NAMED" ? "NAMED" : rival.stance}`, { host: rival.host })}</StatusLabel>
                   ))}
                 </div>
-                <div className="max-w-[75ch] text-[13px] text-secondary">
-                  <HakkenMarkdown content={answer.text} highlight={names} highlightOthers={answer.rivalNames} />
-                </div>
+                {answer.text === null ? (
+                  // Past the 90 days its wording is kept: whom it named still shows above.
+                  <p className="text-[13px] text-muted">{ta("wordingNotKept")}</p>
+                ) : (
+                  <div className="max-w-[75ch] text-[13px] text-secondary">
+                    <HakkenMarkdown content={answer.text} highlight={names} highlightOthers={answer.rivalNames} />
+                  </div>
+                )}
               </div>
             ) : null}
           </div>

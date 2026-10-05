@@ -14,6 +14,8 @@ import { MAX_LIST } from "./websiteSiteRows";
 import { readFanOutLimits } from "./fanOutLimits";
 import { tickedCount } from "./promptFanOut";
 import { angleOf } from "./utils/fanOutAngle";
+import { answerIdValidator } from "./siteAnswers";
+import { wordingKeptFrom } from "./seoCollectionPolicy";
 
 /**
  * The Sites Fan-out queries page (docs/plans/active/fan-out-angles-plan.md,
@@ -155,11 +157,14 @@ export const listAngles = tenantQuery({
 const stanceValidator = v.union(v.literal("RECOMMENDED"), v.literal("NAMED"), v.literal("WARNED_AGAINST"), v.literal("NOT_NAMED"));
 
 const searchAnswerValidator = v.object({
-  answerId: v.id("aiAnswerTexts"),
+  answerId: answerIdValidator,
   engine: aiEngineValidator,
   day: v.string(),
-  /** Word for word: another model's writing, shown to people, never read as instructions. */
-  text: v.string(),
+  /**
+   * Word for word: another model's writing, shown to people, never read as
+   * instructions. Null for an answer older than the 90 days its wording is kept.
+   */
+  text: v.union(v.string(), v.null()),
   /** How it treated this site. */
   stance: stanceValidator,
   /** The site's competitors it named, and how. */
@@ -173,7 +178,8 @@ const searchAnswerValidator = v.object({
  * 2026-09-29: the full answer on the search's own page, one per assistant) —
  * the latest, as the search's own record keeps it (`promptFanOutQueries`),
  * asked from the site's place — with how it treated the site and which of its
- * competitors it named.
+ * competitors it named. One older than the 90 days its wording is kept says
+ * whom it named, without its words.
  */
 async function answersThatRanIt(
   ctx: { db: QueryCtx["db"] },
@@ -184,6 +190,7 @@ async function answersThatRanIt(
 ) {
   const place = askedPlace(site);
   const rivals = await myRivals(ctx, site);
+  const keptFrom = wordingKeptFrom(site.today);
   const answers = [];
   for (const prompt of prompts) {
     const question = await holdQuestion(ctx, holdId, prompt);
@@ -199,16 +206,19 @@ async function answersThatRanIt(
         ctx.db.query("aiAnswerTexts").withIndex("by_pull", (q) => q.eq("pullId", ran.lastPullId)).first(),
         ctx.db.query("aiAnswers").withIndex("by_pull", (q) => q.eq("pullId", ran.lastPullId)).first(),
       ]);
-      if (!text) continue;
+      // No wording: past the 90 days it is kept, the answer still says whom it
+      // named; inside them, it was never kept (before 2026-09-23) and is left out.
+      const shown = text ?? (judged && judged.day < keptFrom ? judged : null);
+      if (!shown) continue;
       const named = rivals
         .map((rival) => ({ rival, stance: answerStance(judged, rival.website._id) }))
         .filter((entry) => entry.stance !== "NOT_NAMED");
       const namedIds = new Set<string>(named.map((entry) => entry.rival.website._id));
       answers.push({
-        answerId: text._id,
+        answerId: shown._id,
         engine,
-        day: text.day,
-        text: text.text,
+        day: shown.day,
+        text: text?.text ?? null,
         stance: answerStance(judged, site.website._id),
         rivals: named.map((entry) => ({ host: entry.rival.summary.host, stance: entry.stance })),
         rivalNames: (judged?.mentions ?? []).filter((mention) => namedIds.has(mention.websiteId)).flatMap((mention) => mention.texts),

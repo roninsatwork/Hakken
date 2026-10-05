@@ -12,6 +12,7 @@ import SitePaidPage from "./paid/page";
 import SitePaidKeywordsPage from "./paid/keywords/page";
 import SiteLinkSourcesPage from "./backlinks/where/page";
 import SiteAnswersPage from "./ai/answers/page";
+import SiteAnswerPage from "./ai/answers/answer/page";
 import SiteLayout from "./layout";
 import SiteMentionsPage from "./ai/mentions/page";
 import SiteSideBySidePage from "./competitors/page";
@@ -350,6 +351,29 @@ describe("full answers (3.2, 4.7)", () => {
     // The engine picker reads "all engines", not the one it is not applying.
     const pickers = screen.getAllByRole("combobox") as HTMLSelectElement[];
     expect(pickers.map((picker) => picker.value)).toEqual(["best bivvies", ""]);
+  });
+
+  it("an answer past the 90 days its wording is kept says so, in the list and on its own screen, with its sources (B2)", () => {
+    const old = { _id: "a".repeat(32), engine: "chatgpt", day: "2026-06-01", text: null, sources: ["https://elsewhere.com/best"], stance: "NAMED" };
+    openAt("/app/sites/site_1/ai/answers", "question=best+carp+rods", {
+      "siteAnswers:answerQuestions": catalogue,
+      "siteAnswers:listAnswers": { rows: [old], total: 1, page: 1, pages: 1, size: 25, cut: null, preparing: false },
+    });
+    const { unmount } = render(<SiteAnswersPage />);
+    expect(screen.getByText("sites.aiAnswers.wordingNotKept")).toBeInTheDocument();
+    expect(screen.queryByText(/sites.aiAnswers.readFull/)).toBeNull();
+    unmount();
+
+    openAt("/app/sites/site_1/ai/answers/answer", `answer=${old._id}`, {
+      "siteAnswers:answerRecord": {
+        prompt: "best carp rods", engine: "chatgpt", day: "2026-06-01", text: null,
+        sources: [{ url: "https://elsewhere.com/best", page: null }], stance: "NAMED", names: [], searches: [],
+      },
+    });
+    render(<SiteAnswerPage />);
+    expect(screen.getByText("sites.aiAnswers.wordingNotKept")).toBeInTheDocument();
+    expect(screen.getByText("sites.aiAnswers.stances.NAMED")).toBeInTheDocument();
+    expect(screen.getByText("https://elsewhere.com/best")).toBeInTheDocument();
   });
 });
 

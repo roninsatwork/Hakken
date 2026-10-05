@@ -542,6 +542,41 @@ describe("tracking a fan-out query from Sites", () => {
     })]);
   });
 
+  test("an answer older than the 90 days its wording is kept still shows who it named, without its words (B2)", async () => {
+    const t = harness();
+    vi.setSystemTime(Date.parse("2026-10-05T12:00:00Z"));
+    const ronins = await asking(t, "Ronins", "ronins.co.uk", [["best web designers surrey england", 8]]);
+    const staff = await member(t, ronins.companyId);
+    await t.run(async (ctx) => {
+      const websiteId = await ctx.db.insert("websites", { host: "lightflows.co.uk", displayHost: "lightflows.co.uk", firstSeenAt: Date.now() });
+      await ctx.db.insert("companyWebsites", {
+        companyId: ronins.companyId, websiteId, relationship: "TRACKED", againstWebsiteId: ronins.websiteId, createdAt: Date.now(),
+      });
+      const ran = (await ctx.db.query("promptFanOutQueries").collect()).find((row) => row.query === "best web designers surrey england")!;
+      // Asked in June: its wording cleared, who it named kept.
+      await ctx.db.insert("aiAnswers", {
+        pullId: ran.lastPullId, prompt: PROMPT, engine: "claude", locationCode: 2826, day: "2026-06-01",
+        named: [websiteId], recommended: [websiteId], warnedAgainst: [], mentions: [{ websiteId, texts: ["Lightflows"] }], createdAt: Date.now(),
+      } as never);
+    });
+
+    const read = await staff.query(api.siteAngles.keywordAngle, { siteId: ronins.holdId, keyword: "best web designers surrey england" });
+    expect(read?.answers).toEqual([expect.objectContaining({
+      engine: "claude",
+      day: "2026-06-01",
+      text: null,
+      stance: "NOT_NAMED",
+      rivals: [{ host: "lightflows.co.uk", stance: "RECOMMENDED" }],
+    })]);
+
+    // Inside the 90 days, an answer whose wording was never kept is left out, as before.
+    await t.run(async (ctx) => {
+      const answer = (await ctx.db.query("aiAnswers").collect())[0];
+      await ctx.db.patch(answer._id, { day: "2026-09-20" });
+    });
+    expect((await staff.query(api.siteAngles.keywordAngle, { siteId: ronins.holdId, keyword: "best web designers surrey england" }))?.answers).toEqual([]);
+  });
+
   test("never past the website's limit, never a search off its list, never another company's website", async () => {
     const t = harness();
     const ronins = await asking(t, "Ronins", "ronins.co.uk", [["best web designers surrey england", 8]]);

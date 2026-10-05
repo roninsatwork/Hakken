@@ -27,3 +27,18 @@ can do with it only within those 7 days:
   the answers it is meant to count.
 - **Read stored answers again for new fields** —
   `npx convex run siteBackfillRaw:readStoredResults` reaches 7 days back.
+
+## AI answers' full wording — 90 days
+
+What an AI assistant said, word for word (`aiAnswerTexts`, and the light row
+that lists it, `aiAnswerIndex`), is kept for **90 days**
+(`AI_ANSWER_WORDING_RETENTION_DAYS`; kept for ever until 2026-10-05). The
+hourly collection sweep clears older wording, a few thousand answers an hour.
+**Who an answer named and cited is kept for ever** (`aiAnswers`,
+`aiCitations`), so every count and chart built from them is unchanged.
+
+On the screens, an answer older than 90 days is still listed under Full
+answers and still opens: how it treated the website and the sources it cited,
+with "The full wording is kept for 90 days." in place of its words. A search
+of the answers' words finds those of the last 90 days. The Full answers
+download lists the answers whose wording is kept.

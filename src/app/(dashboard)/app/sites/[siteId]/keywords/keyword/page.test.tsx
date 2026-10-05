@@ -54,7 +54,7 @@ const FROM_AI = {
   }],
 };
 
-function open(fromAi: typeof FROM_AI | null, record: Record<string, unknown> = RECORD) {
+function open(fromAi: Record<string, unknown> | null, record: Record<string, unknown> = RECORD) {
   vi.mocked(useQuery).mockImplementation(answerQueries({
     "sites:getMySite": { host: "ronins.co.uk", relationship: "OWNED", counts: {} },
     "siteRecords:keywordRecord": record,
@@ -109,6 +109,17 @@ describe("a search's own page, as a fan-out query", () => {
     const competitor = screen.getByText("Lightflows");
     // A competitor is picked out in its own colour, apart from the site's own names.
     expect(competitor.closest("mark")?.className).toContain("bg-warning");
+  });
+
+  it("an answer older than the 90 days its wording is kept opens to who it named, and says the wording is kept 90 days (B2)", () => {
+    open({ ...FROM_AI, answers: [{ ...FROM_AI.answers[0], day: "2026-06-01", text: null }] });
+    const row = screen.getByRole("button", { name: /fromAi\.answerTitle/ });
+    expect(row).toHaveTextContent("sites.aiAnswers.wordingNotKept");
+
+    fireEvent.click(row);
+    expect(screen.getByText("sites.keywordRecord.fromAi.rival.RECOMMENDED lightflows.co.uk")).toBeInTheDocument();
+    expect(screen.getAllByText("sites.aiAnswers.wordingNotKept")).toHaveLength(1);
+    expect(screen.queryByText("Lightflows")).not.toBeInTheDocument();
   });
 
   it("shows Google Ads' figures for a search the keyword list does not measure", () => {

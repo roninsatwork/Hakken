@@ -2,6 +2,7 @@ import { internalAction, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v, type Infer } from "convex/values";
 import {
+  AI_ANSWER_WORDING_RETENTION_DAYS,
   SEO_CLAIM_TIMEOUT_MS,
   SEO_CYCLE_RETENTION_DAYS,
   SEO_RAW_RETENTION_DAYS,
@@ -18,6 +19,7 @@ import {
 import { dropUnsentRequest } from "./seoCollectionClose";
 import { closeStalledRoleRuns } from "./roleRuns";
 import { sendLongWaiting } from "./seoAgentRuns";
+import { deleteAnswerText } from "./siteAnswers";
 
 /**
  * The hourly walk round the kitchen.
@@ -37,7 +39,8 @@ import { sendLongWaiting } from "./seoAgentRuns";
  *  4. Close cycles whose work is all settled.
  *  5. Close Planner and Collector runs that died without saying so.
  *  6. Start the Collector for requests left waiting with nothing sending.
- *  7. Clear raw payloads and cycles that have outlived their retention.
+ *  7. Clear raw payloads, AI answers' wording and cycles that have outlived
+ *     their retention.
  *
  * It never re-posts a task. A submitted task was paid for; if its result is
  * missing the answer is always to fetch it, never to buy it again.
@@ -56,7 +59,7 @@ import { sendLongWaiting } from "./seoAgentRuns";
  * transaction inside Convex's limits, and a duty takes pages until it is done,
  * its page budget is spent, or the check has run for `SWEEP_TIME_MS`.
  */
-const DUTIES = ["reclaim", "chase", "close", "resume", "refile", "stalledRuns", "sendWaiting", "purgeRaw", "purgeCycles"] as const;
+const DUTIES = ["reclaim", "chase", "close", "resume", "refile", "stalledRuns", "sendWaiting", "purgeRaw", "purgeWording", "purgeCycles"] as const;
 type Duty = (typeof DUTIES)[number];
 const dutyValidator = v.union(...DUTIES.map((duty) => v.literal(duty)));
 
@@ -70,6 +73,7 @@ const PAGES_PER_DUTY: Record<Duty, number> = {
   stalledRuns: 1,
   sendWaiting: 1,
   purgeRaw: 250,
+  purgeWording: 100,
   purgeCycles: 25,
 };
 
@@ -152,6 +156,8 @@ export const sweepDuty = internalMutation({
         return FINISHED;
       case "purgeRaw":
         return await purgeExpiredRaw(ctx, now);
+      case "purgeWording":
+        return await purgeExpiredWording(ctx, now);
       case "purgeCycles":
         return await purgeExpiredCycles(ctx, now);
     }
@@ -390,6 +396,30 @@ async function purgeExpiredRaw(ctx: MutationCtx, now: number): Promise<DutyPage>
  * may read; the check takes as many pages as there are rows to clear.
  */
 const ANSWER_PURGE_PAGE = 8;
+
+/**
+ * Clear AI answers' full wording past its 90 days
+ * (`AI_ANSWER_WORDING_RETENTION_DAYS`, the DataForSEO cost plan's B2), with
+ * the light row that lists each (`deleteAnswerText`), oldest first. Only the
+ * words: who an answer named and cited (`aiAnswers`, `aiCitations`) is kept
+ * for ever, and its screen shows that instead.
+ */
+async function purgeExpiredWording(ctx: MutationCtx, now: number): Promise<DutyPage> {
+  const cutoff = now - AI_ANSWER_WORDING_RETENTION_DAYS * DAY_MS;
+  const old = await ctx.db
+    .query("aiAnswerTexts")
+    .withIndex("by_creation_time", (q) => q.lt("_creationTime", cutoff))
+    .take(WORDING_PURGE_PAGE);
+  for (const text of old) await deleteAnswerText(ctx, text._id);
+  return { ...FINISHED, more: old.length === WORDING_PURGE_PAGE };
+}
+
+/**
+ * Answers' wording cleared per page. Each is read to be deleted and keeps up
+ * to sixty thousand characters, so fifty keep a page a few megabytes; the
+ * check takes as many pages as there are to clear.
+ */
+const WORDING_PURGE_PAGE = 50;
 
 /**
  * Retire cycles and their lines together.

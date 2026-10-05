@@ -130,8 +130,11 @@ export default function SiteAnswersPage() {
               key: "answer",
               header: t("columns.answer"),
               // The start of the answer; the whole of it, its sources and the
-              // engine's searches are on the answer's own screen.
-              cell: (row) => (
+              // engine's searches are on the answer's own screen. Past the 90
+              // days its wording is kept, it says so; its row still opens it.
+              cell: (row) => row.text === null ? (
+                <span className="text-[13px] text-muted">{t("wordingNotKept")}</span>
+              ) : (
                 <div className="flex max-w-[64ch] flex-col gap-2 text-[13px] text-secondary">
                   <div className="max-h-36 overflow-hidden [mask-image:linear-gradient(to_bottom,black_55%,transparent)]">
                     <HakkenMarkdown content={row.text} highlight={catalogue?.names ?? []} />
