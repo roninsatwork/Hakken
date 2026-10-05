@@ -160,6 +160,9 @@ the same kind of rules.
 
 ## The DataForSEO side — audit, 2026-10-05 night (plan only: nothing built)
 
+The plan for it, with steps, days and what each changes on screen:
+[dataforseo-cost-plan.md](./dataforseo-cost-plan.md).
+
 Anthony: "this is for the plan only". Read from the code (file:line in the
 audit notes below); sizes not yet measured — measure first, as for Search
 Console, before building any of it.
