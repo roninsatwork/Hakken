@@ -388,3 +388,115 @@ export const keptSize = internalAction({
     return report;
   },
 });
+
+// ---------------------------------------------------------------------------
+// What keeping only a website's top searches would keep (a question, 2026-10-05)
+// ---------------------------------------------------------------------------
+
+/** One part of a website's 90-day searches, most clicks first: web, all countries. */
+export const searchesPart = internalQuery({
+  args: { holdId: v.id("companyWebsites"), cursor: v.union(v.string(), v.null()) },
+  returns: v.object({ keys: v.array(v.string()), clicks: v.array(v.number()), impressions: v.array(v.number()), continueCursor: v.string(), isDone: v.boolean() }),
+  handler: async (ctx, args) => {
+    const page = await ctx.db
+      .query("searchConsolePeriods")
+      .withIndex("by_hold_country_type_list_period", (q) => q
+        .eq("companyWebsiteId", args.holdId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", "90").eq("which", "NOW"))
+      .paginate({ cursor: args.cursor, numItems: 1 });
+    const part = page.page[0];
+    return { keys: part?.keys ?? [], clicks: part?.clicks ?? [], impressions: part?.impressions ?? [], continueCursor: page.continueCursor, isDone: page.isDone };
+  },
+});
+
+/** A page of a website's kept web search-and-page lines: how many, and how many are for each cap's top searches. */
+export const linesWithin = internalQuery({
+  args: { holdId: v.id("companyWebsites"), top: v.array(v.string()), caps: v.array(v.number()), cursor: v.union(v.string(), v.null()) },
+  returns: v.object({ lines: v.number(), within: v.array(v.number()), continueCursor: v.string(), isDone: v.boolean() }),
+  handler: async (ctx, args) => {
+    const rank = new Map(args.top.map((key, index) => [key, index]));
+    const page = await ctx.db
+      .query("searchConsoleLists")
+      .withIndex("by_hold_country_type_list_grain_start", (q) => q.eq("companyWebsiteId", args.holdId).eq("country", undefined).eq("searchType", "web").eq("list", "pair"))
+      .paginate({ cursor: args.cursor, numItems: RECORDS_PER_STEP });
+    let lines = 0;
+    const within = args.caps.map(() => 0);
+    for (const record of page.page) {
+      lines += record.keys.length;
+      for (const key of record.keys) {
+        const at = rank.get(key);
+        if (at === undefined) continue;
+        args.caps.forEach((cap, index) => {
+          if (at < cap) within[index] += 1;
+        });
+      }
+    }
+    return { lines, within, continueCursor: page.continueCursor, isDone: page.isDone };
+  },
+});
+
+/**
+ * Anthony, 2026-10-05: "what would happen to the database size if we only
+ * track 2,000 keywords … or even 1,000". For one website: how many searches
+ * its last 90 days hold, what share of its clicks and showings the top ones
+ * carry, and what share of its kept search-and-page lines they are.
+ */
+export const searchCapEstimate = internalAction({
+  args: { host: v.string(), caps: v.array(v.number()) },
+  returns: v.union(v.null(), v.object({
+    searches: v.number(),
+    clicked: v.number(),
+    clicks: v.number(),
+    impressions: v.number(),
+    lines: v.number(),
+    caps: v.array(v.object({ cap: v.number(), clicksShare: v.number(), impressionsShare: v.number(), linesShare: v.number() })),
+  })),
+  handler: async (ctx, args) => {
+    const connections: Array<{ connectionId: Id<"searchConsoleConnections">; holdId: Id<"companyWebsites"> }> = await ctx.runQuery(internal.searchConsoleSync.connectionsWithFigures, {});
+    let holdId: Id<"companyWebsites"> | null = null;
+    for (const connection of connections) {
+      const host: string | null = await ctx.runQuery(internal.searchConsoleTidy.hostOfConnection, { connectionId: connection.connectionId });
+      if (host === args.host) holdId = connection.holdId;
+    }
+    if (!holdId) return null;
+    const keys: string[] = [];
+    const clicks: number[] = [];
+    const impressions: number[] = [];
+    for (let cursor: string | null = null; ;) {
+      const part: { keys: string[]; clicks: number[]; impressions: number[]; continueCursor: string; isDone: boolean } =
+        await ctx.runQuery(internal.searchConsoleTidy.searchesPart, { holdId, cursor });
+      keys.push(...part.keys);
+      clicks.push(...part.clicks);
+      impressions.push(...part.impressions);
+      if (part.isDone) break;
+      cursor = part.continueCursor;
+    }
+    const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
+    const top = keys.slice(0, Math.max(...args.caps));
+    let lines = 0;
+    const within = args.caps.map(() => 0);
+    for (let cursor: string | null = null; ;) {
+      const step: { lines: number; within: number[]; continueCursor: string; isDone: boolean } =
+        await ctx.runQuery(internal.searchConsoleTidy.linesWithin, { holdId, top, caps: args.caps, cursor });
+      lines += step.lines;
+      step.within.forEach((count, index) => {
+        within[index] += count;
+      });
+      if (step.isDone) break;
+      cursor = step.continueCursor;
+    }
+    const share = (part: number, whole: number) => (whole === 0 ? 0 : Math.round((part / whole) * 1000) / 10);
+    return {
+      searches: keys.length,
+      clicked: clicks.filter((count) => count > 0).length,
+      clicks: sum(clicks),
+      impressions: sum(impressions),
+      lines,
+      caps: args.caps.map((cap, index) => ({
+        cap,
+        clicksShare: share(sum(clicks.slice(0, cap)), sum(clicks)),
+        impressionsShare: share(sum(impressions.slice(0, cap)), sum(impressions)),
+        linesShare: share(within[index], lines),
+      })),
+    };
+  },
+});
