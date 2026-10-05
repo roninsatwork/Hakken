@@ -109,6 +109,8 @@ describe("Collection pipeline's approved look", () => {
     expect(screen.getByText("Search Console — morehandles.co.uk")).toBeInTheDocument();
     expect(screen.getByText("35 of 90 days · 640,000 rows")).toBeInTheDocument();
     expect(screen.getAllByText("Counted at the end")).toHaveLength(2);
+    // A running collection's websites are rebuilt at its end (dataforseo-cost-plan.md, B4); a Search Console download says nothing of it.
+    expect(screen.getAllByText("Figures update when it finishes")).toHaveLength(2);
 
     fireEvent.click(screen.getByText("Period House Group", { selector: "span" }));
     expect(await screen.findByText("Sending: 79 of 136")).toBeInTheDocument();

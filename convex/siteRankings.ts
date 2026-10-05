@@ -436,15 +436,144 @@ export function outOfDate(row: Pick<Doc<"siteSummaryRequests">, "requestedAt" | 
   return (row.changedAt ?? row.requestedAt) > row.builtFrom;
 }
 
-/** Ask for a site's summaries to be rebuilt from one place, once, shortly. */
+/** Ask for a site's summaries to be rebuilt from one place, once, shortly — or at the end of its running collection. */
 export async function requestSiteRebuild(
   ctx: MutationCtx,
   websiteId: Id<"websites">,
   locationCode: number,
 ): Promise<void> {
-  if (!(await claimSchedule(ctx, siteRebuildKey(websiteId, locationCode)))) return;
-  await ctx.scheduler.runAfter(REBUILD_DELAY_MS, internal.siteSummaries.rebuildSite, { websiteId, locationCode });
+  await requestWebsiteWork(ctx, "site", websiteId, locationCode);
 }
+
+/**
+ * A website's rebuilds: the whole site rebuild (`site`), or the part an AI
+ * answer changes (`aiLines`) or a site-wide figure changes (`days`) — each
+ * keyed `<work>:<websiteId>:<locationCode>`.
+ */
+type WebsiteWork = "site" | "aiLines" | "days";
+
+function websiteWorkKey(work: WebsiteWork, websiteId: Id<"websites">, locationCode: number): string {
+  return work === "site" ? siteRebuildKey(websiteId, locationCode)
+    : work === "aiLines" ? aiLinesKey(websiteId, locationCode)
+      : dayFiguresKey(websiteId, locationCode);
+}
+
+async function scheduleWebsiteWork(ctx: MutationCtx, work: WebsiteWork, websiteId: Id<"websites">, locationCode: number): Promise<void> {
+  const args = { websiteId, locationCode };
+  if (work === "site") await ctx.scheduler.runAfter(REBUILD_DELAY_MS, internal.siteSummaries.rebuildSite, args);
+  else if (work === "aiLines") await ctx.scheduler.runAfter(REBUILD_DELAY_MS, internal.siteDayFigures.syncSiteAiLines, args);
+  else await ctx.scheduler.runAfter(REBUILD_DELAY_MS, internal.siteDayFigures.syncSiteDays, args);
+}
+
+/**
+ * Ask for a website's rebuild, or a part of it, once, shortly — unless the
+ * website's collection is running, when it waits for the collection's end
+ * (`holdForCollection`).
+ */
+async function requestWebsiteWork(ctx: MutationCtx, work: WebsiteWork, websiteId: Id<"websites">, locationCode: number): Promise<void> {
+  const key = websiteWorkKey(work, websiteId, locationCode);
+  if (!(await claimSchedule(ctx, key))) return;
+  if (await holdForCollection(ctx, key, websiteId)) return;
+  await scheduleWebsiteWork(ctx, work, websiteId, locationCode);
+}
+
+/**
+ * How often a website held by a collection that runs long is rebuilt all the
+ * same: a few hours (Anthony's plan, B4), counted from the collection's start
+ * or the website's last rebuild, whichever is later.
+ */
+export const COLLECTION_REBUILD_EVERY_MS = 3 * 60 * 60 * 1000;
+
+/** A website's newest requests read to find the collection collecting it: one collection's lines for it, and a few more. */
+const CYCLE_PULLS_READ = 20;
+
+/** The collection statuses that mean it is still running. */
+const RUNNING_CYCLE = new Set<Doc<"seoCollectionCycles">["status"]>(["EXPANDING", "SENDING", "COLLECTING"]);
+
+/** The collection collecting a website now, found from its newest requests, or null when none is. */
+async function runningCycleOf(ctx: MutationCtx, websiteId: Id<"websites">): Promise<Doc<"seoCollectionCycles"> | null> {
+  const pulls = await ctx.db
+    .query("seoDataPulls")
+    .withIndex("by_website_submitted", (q) => q.eq("websiteId", websiteId))
+    .order("desc")
+    .take(CYCLE_PULLS_READ);
+  const seen = new Set<Id<"seoCollectionCycles">>();
+  for (const pull of pulls) {
+    if (!pull.cycleId || seen.has(pull.cycleId)) continue;
+    seen.add(pull.cycleId);
+    const cycle = await ctx.db.get(pull.cycleId);
+    if (cycle && RUNNING_CYCLE.has(cycle.status)) return cycle;
+  }
+  return null;
+}
+
+/**
+ * One rebuild at the end of each collection, not during it
+ * (docs/plans/active/dataforseo-cost-plan.md, B4). A website rebuild asked
+ * for while the website's collection runs waits — its request held for the
+ * collection, still pending, so later asks add nothing — until the
+ * collection finishes (`releaseHeldRebuilds`), or until a few hours after
+ * the collection began or the website was last rebuilt, so one that runs
+ * long still rebuilds every few hours (`releaseHeldRequest`). Answers
+ * whether it was held; outside a collection, nothing changes.
+ */
+async function holdForCollection(ctx: MutationCtx, key: string, websiteId: Id<"websites">): Promise<boolean> {
+  const cycle = await runningCycleOf(ctx, websiteId);
+  if (!cycle) return false;
+  const row = await ctx.db
+    .query("siteSummaryRequests")
+    .withIndex("by_key", (q) => q.eq("key", key))
+    .unique();
+  if (!row) return false;
+  const now = Date.now();
+  const due = Math.max(cycle.startedAt, row.builtFrom ?? 0) + COLLECTION_REBUILD_EVERY_MS;
+  if (now >= due) return false;
+  await ctx.db.patch(row._id, { heldFor: cycle._id });
+  await ctx.scheduler.runAfter(due - now, internal.siteRankings.releaseHeldRequest, { key, cycleId: cycle._id });
+  return true;
+}
+
+/** Run a held request's rebuild now, if it is still held for that collection. */
+async function releaseHeld(ctx: MutationCtx, row: Doc<"siteSummaryRequests">, cycleId: Id<"seoCollectionCycles">): Promise<void> {
+  if (row.heldFor !== cycleId) return;
+  await ctx.db.patch(row._id, { heldFor: undefined });
+  const [work, id, place] = row.key.split(":");
+  const websiteId = ctx.db.normalizeId("websites", id);
+  if (!websiteId || (work !== "site" && work !== "aiLines" && work !== "days")) return;
+  await scheduleWebsiteWork(ctx, work, websiteId, Number(place));
+}
+
+/** A held request's few hours are up, its collection still running: rebuilt now. */
+export const releaseHeldRequest = internalMutation({
+  args: { key: v.string(), cycleId: v.id("seoCollectionCycles") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("siteSummaryRequests")
+      .withIndex("by_key", (q) => q.eq("key", args.key))
+      .unique();
+    if (row) await releaseHeld(ctx, row, args.cycleId);
+    return null;
+  },
+});
+
+/** Held requests released per step when a collection finishes: each schedules one job. */
+const RELEASED_PER_STEP = 100;
+
+/** A collection finished (`finishSeoCycle`): every rebuild held for it runs, a step at a time. */
+export const releaseHeldRebuilds = internalMutation({
+  args: { cycleId: v.id("seoCollectionCycles") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db
+      .query("siteSummaryRequests")
+      .withIndex("by_held", (q) => q.eq("heldFor", args.cycleId))
+      .take(RELEASED_PER_STEP);
+    for (const row of rows) await releaseHeld(ctx, row, args.cycleId);
+    if (rows.length === RELEASED_PER_STEP) await ctx.scheduler.runAfter(0, internal.siteRankings.releaseHeldRebuilds, args);
+    return null;
+  },
+});
 
 /** Ask for a hold's content gap to be rebuilt, once, shortly. */
 export async function requestGapRebuild(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites">): Promise<void> {
@@ -519,10 +648,7 @@ export function dayFiguresKey(websiteId: Id<"websites">, locationCode: number): 
  * keyword read again (docs/plans/active/dataforseo-cost-plan.md, A2).
  */
 export async function requestAiLinesEverywhere(ctx: MutationCtx, websiteId: Id<"websites">): Promise<void> {
-  for (const place of await placesWatching(ctx, websiteId)) {
-    if (!(await claimSchedule(ctx, aiLinesKey(websiteId, place)))) continue;
-    await ctx.scheduler.runAfter(REBUILD_DELAY_MS, internal.siteDayFigures.syncSiteAiLines, { websiteId, locationCode: place });
-  }
+  for (const place of await placesWatching(ctx, websiteId)) await requestWebsiteWork(ctx, "aiLines", websiteId, place);
 }
 
 /**
@@ -531,8 +657,5 @@ export async function requestAiLinesEverywhere(ctx: MutationCtx, websiteId: Id<"
  * watched from, each once, shortly (dataforseo-cost-plan.md, A2).
  */
 export async function requestDayFiguresEverywhere(ctx: MutationCtx, websiteId: Id<"websites">): Promise<void> {
-  for (const place of await placesWatching(ctx, websiteId)) {
-    if (!(await claimSchedule(ctx, dayFiguresKey(websiteId, place)))) continue;
-    await ctx.scheduler.runAfter(REBUILD_DELAY_MS, internal.siteDayFigures.syncSiteDays, { websiteId, locationCode: place });
-  }
+  for (const place of await placesWatching(ctx, websiteId)) await requestWebsiteWork(ctx, "days", websiteId, place);
 }

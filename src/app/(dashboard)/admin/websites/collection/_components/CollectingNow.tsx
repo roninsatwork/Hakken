@@ -10,6 +10,7 @@ import type { FunctionReturnType } from "convex/server";
 import type { DataTableColumn } from "@/src/ui/components/screens/DataTable";
 import { Meter } from "@/src/ui/components/screens/Meter";
 import { StatusLabel, type StatusIconName } from "@/src/ui/components/screens/StatusLabel";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { TableFilterSelect } from "@/src/ui/components/screens/TableControls";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
@@ -234,6 +235,8 @@ export function useCollectingNow() {
           <div className="flex flex-col gap-1">
             <StatusLabel tone={look.tone} icon={look.icon} wrap>{stateWords(row)}</StatusLabel>
             <span className="text-[12px] text-secondary">{doingLine(row)}</span>
+            {/* Its websites are rebuilt once, at its end (dataforseo-cost-plan.md, B4). */}
+            {row.kind === "COLLECTION" && row.finishedAt === null ? <TagLabel>{t("figuresAtEnd")}</TagLabel> : null}
           </div>
         );
       },

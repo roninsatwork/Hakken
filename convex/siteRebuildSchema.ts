@@ -43,7 +43,16 @@ export const siteRebuildTables = {
      * finished, or after one that failed.
      */
     builtFrom: v.optional(v.number()),
-  }).index("by_key", ["key"]),
+    /**
+     * The collection a website rebuild asked for during it waits for: run
+     * when it finishes (`finishSeoCycle`), or after `COLLECTION_REBUILD_EVERY_MS`
+     * for one that runs long (dataforseo-cost-plan.md, B4). Absent when
+     * nothing waits.
+     */
+    heldFor: v.optional(v.id("seoCollectionCycles")),
+  })
+    .index("by_key", ["key"])
+    .index("by_held", ["heldFor"]),
 
   /**
    * A compact copy of one big Sites list (docs/plans/active/

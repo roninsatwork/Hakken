@@ -5883,6 +5883,7 @@
           "googleEmpty": "No clicks or impressions in these days. Worth a look in Search Console itself.",
           "stoppedPlan": "Stopped at the company's plan limit"
         },
+        "figuresAtEnd": "Figures update when it finishes",
         "left": {
           "send": "About {minutes} min to send",
           "sendSoon": "Under a minute to send",

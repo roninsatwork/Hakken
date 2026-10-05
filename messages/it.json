@@ -5883,6 +5883,7 @@
           "googleEmpty": "Nessun clic né impressione in questi giorni. Vale la pena controllare in Search Console.",
           "stoppedPlan": "Interrotta al limite del piano dell'azienda"
         },
+        "figuresAtEnd": "I dati si aggiornano quando finisce",
         "left": {
           "send": "Circa {minutes} min per l'invio",
           "sendSoon": "Meno di un minuto per l'invio",
