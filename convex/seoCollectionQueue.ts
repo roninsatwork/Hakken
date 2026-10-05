@@ -16,6 +16,7 @@ import { appendRunStep } from "./agentRunStepWriter";
 import { storePullAnswer } from "./seoPullAnswers";
 import { creditCycleFinished, creditPullSettled } from "./creditHooks";
 import { holdToLimits, tallyWebsiteSpend } from "./seoCollectionLimits";
+import { recordCrawlRefund } from "./seoCrawlRefund";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 /**
@@ -415,6 +416,7 @@ async function settleSend(
     sandbox,
     ...(args.error ? { error: args.error } : {}),
     ...keptMarks(args),
+    ...(runId ? { sentByRunId: runId } : {}),
     sentAt: now,
     claimedBy: undefined,
     claimedAt: undefined,
@@ -869,6 +871,8 @@ export const settleSeoResult = internalMutation({
     if (args.resultParts) await storePullAnswer(ctx, args.pullId, args.resultParts);
 
     await countSettled(ctx, row, status, args.costUsd ?? 0, "RESULT");
+    // A finished crawl's pages not crawled, given back by DataForSEO (finish-off-plan.md, item 5).
+    if (status === "READY") await recordCrawlRefund(ctx, row._id);
     if (status === "READY" && args.resultParts) await scheduleFiling(ctx, row);
     return null;
   },

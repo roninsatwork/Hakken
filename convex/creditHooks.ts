@@ -261,6 +261,39 @@ async function creditListPage(
   if (settled && row.creditUnits === undefined) await ctx.db.patch(row._id, { creditUnits: counted });
 }
 
+/**
+ * What a request cost came down after it was recorded — a crawl's pages not
+ * crawled, given back (finish-off-plan.md, item 5): the run of the collection
+ * that paid has its real cost lowered, every other run it served what its
+ * sharing saved, and a request outside any collection its own charge's cost.
+ */
+export async function creditCostRefunded(ctx: MutationCtx, pull: Doc<"seoDataPulls">, refundUsd: number): Promise<void> {
+  await quietly("a refund of a request's cost", async () => {
+    const kind = creditKindOfFamily(pull.family);
+    if (!kind || refundUsd <= 0) return;
+    if (!pull.cycleId) {
+      const charge = await findCreditRun(ctx, `pull:${pull._id}`);
+      if (charge) await addToCreditRun(ctx, charge, { realCostUsd: -refundUsd });
+      return;
+    }
+    const lines = await ctx.db.query("seoCycleLines").withIndex("by_pull", (q) => q.eq("pullId", pull._id)).take(LINES_PER_REQUEST);
+    if (lines.length === 0 && pull.websiteId) {
+      // A list's later page: its collection's run paid for it.
+      const charge = await findCreditRun(ctx, cycleRunKey(pull.cycleId, pull.websiteId, kind));
+      if (charge) await addToCreditRun(ctx, charge, { realCostUsd: -refundUsd });
+      return;
+    }
+    let paid = false;
+    for (const line of lines) {
+      const charge = await findCreditRun(ctx, cycleRunKey(line.cycleId, line.websiteId, kind));
+      if (!charge) continue;
+      const payer = !paid && line.cycleId === pull.cycleId;
+      if (payer) paid = true;
+      await addToCreditRun(ctx, charge, payer ? { realCostUsd: -refundUsd } : { reusedValueUsd: -refundUsd });
+    }
+  });
+}
+
 /** A collection finished: its runs close and take their credits. */
 export async function creditCycleFinished(ctx: MutationCtx, cycleId: Id<"seoCollectionCycles">): Promise<void> {
   await quietly("a finished collection", () => closeCycleCreditRuns(ctx, cycleId, Date.now()));

@@ -121,6 +121,14 @@ export const seoPullTables = {
     /** A list's next page, which has no plan line of its own: the units it put in its collection's credit charge. */
     creditUnits: v.optional(v.number()),
     /**
+     * What DataForSEO gave back once the task finished — a crawl's pages not
+     * crawled — taken off `costUsd` and everything that holds it, once
+     * (`seoCrawlRefund.ts`, finish-off-plan.md item 5).
+     */
+    refundedUsd: v.optional(v.number()),
+    /** The Collector run that sent it, whose cost holds what it was charged. */
+    sentByRunId: v.optional(v.id("agentRuns")),
+    /**
      * How far a list page's run meant to buy the list, in rows — the everyday
      * check, or the whole list kept when the week's was due: the pages its
      * first answer queues stop there (`queueListPages` in `sitePagedLists.ts`).

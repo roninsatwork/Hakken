@@ -168,3 +168,25 @@ the table above is how it stands before it.
   as above), and keyword lookups (item 9 deals with those). A request shared
   with another company counts for that company only on its first page: a
   list's later pages count for the collection that bought them.
+
+### Item 5 — a crawl's refund recorded
+
+- When a finished crawl's summary is recorded (`settleSeoResult`), its cost
+  comes down to the pages crawled at the price a page was charged — what was
+  charged over `max_crawl_pages`, so $0.0015 a page for today's $1.50 crawls,
+  and right whatever the price becomes (`crawlRefundUsd`,
+  `convex/seoCrawlRefund.ts`). The reduction is carried through everything
+  that holds the cost: the request's `costUsd` (and `refundedUsd`, so it is
+  done once), the collection's `totalCostUsd`, the day's `seoDayRollups`
+  (platform and company, on the day it was refunded), the website's spend in
+  that collection (`seoCycleSpend`, which the $3 limit reads), the running
+  price of a crawl (`seoOperationCosts`), the Collector run that sent it (its
+  `costUsd`, which the $100 a day reads, and a cost record of the refund
+  beside the call's), and the credit charge's `realCostUsd` with its month's
+  and every company's month's real cost. A request now records the Collector
+  run that sent it (`sentByRunId`).
+- **Crawls already filed** are corrected by the item 3 recount
+  (`creditCorrections:recountCollectionCredits`, pass 2) — everywhere above
+  except the Collector run's cost, because a crawl sent before this change
+  never recorded which run sent it. Today's day ceiling therefore still counts
+  the full $1.50 for crawls sent before the deploy; that resets at midnight.

@@ -58,14 +58,14 @@ async function seedOldCollection(t: ReturnType<typeof convexTest>): Promise<Seed
     const failed = await pull("backlinks_broken", "Backlinks", { target: "example.com", limit: 1000 }, "FAILED");
 
     // Each run charged as the old count had it, before the failure came back.
-    const charge = async (kind: CreditKind, units: number) => {
+    const charge = async (kind: CreditKind, units: number, realCostUsd: number) => {
       const run = await openCreditRun(ctx, { companyId: acme, kind, runKey: cycleRunKey(cycleId, websiteId, kind), how: "scheduled", websiteId, cycleId }, now - 30_000);
-      await addToCreditRun(ctx, run, { units, lines: 1 });
+      await addToCreditRun(ctx, run, { units, lines: 1, realCostUsd });
       await closeCreditRun(ctx, run._id, now - 30_000);
     };
-    await charge("backlinks", 2000);
-    await charge("siteAudit", 1000);
-    await charge("rankings", 1);
+    await charge("backlinks", 2000, 0.3);
+    await charge("siteAudit", 1000, 0.1);
+    await charge("rankings", 1, 0.1);
     await ctx.db.patch(failed, { completedAt: now - 10_000 });
     return { acme, crawl, page, list };
   });
@@ -101,6 +101,10 @@ describe("the recount of charges made before credits counted what came back", ()
       const ctx = asCtx(raw);
       expect((await ctx.db.get(list))?.rowsReturned).toBe(340);
       expect((await ctx.db.get(crawl))?.rowsReturned).toBe(1);
+      // The crawl's refund, recorded too (item 5): one page of a thousand kept of its $0.10.
+      expect((await ctx.db.get(crawl))?.refundedUsd).toBeCloseTo(0.0999, 6);
+      const audit = (await ctx.db.query("creditCharges").collect()).find((row) => row.entry === "charge" && row.kind === "siteAudit");
+      expect(audit?.realCostUsd).toBeCloseTo(0.0001, 6);
       expect((await ctx.db.get(page))?.creditUnits).toBe(200);
       const lines = await ctx.db.query("seoCycleLines").collect();
       expect(lines.map((line) => line.creditUnits).sort((a, b) => (a ?? 0) - (b ?? 0))).toEqual([0, 1, 1, 340]);

@@ -15,6 +15,7 @@ import {
 } from "./creditKinds";
 import { addToCreditRun, findCreditRun, raisePlanBatch, recountCreditRun } from "./creditLedger";
 import { rowsReturnedIn } from "./dataForSeoSlim";
+import { recordCrawlRefund } from "./seoCrawlRefund";
 import { readPullAnswerParts } from "./seoPullAnswers";
 
 /**
@@ -103,7 +104,10 @@ export const raisePlanCredits = internalMutation({
  *    later pages, which no line counted, are counted for the run that bought
  *    them; a request outside any collection is counted again on its own
  *    charge. A run still open just takes the difference; one already charged
- *    is told what it owes (`recountUnits`), so it is counted again once.
+ *    is told what it owes (`recountUnits`), so it is counted again once. A
+ *    finished crawl has its refund recorded too (item 5, `recordCrawlRefund`)
+ *    — everywhere but the Collector run that sent it, which a crawl sent
+ *    before 2026-10-05 did not record.
  * 3. **The charges** (`recountCharges`): each charged run told it owes a
  *    difference is counted again (`recountCreditRun`) — its line left as it
  *    was, and a "Counted again" line of its own, credits given back to the
@@ -239,6 +243,8 @@ export const recountRequests = internalMutation({
       if (!kind || pull.status === "PENDING" || pull.status === "CLAIMED" || pull.status === "SUBMITTED") continue;
       if (pull.operationId.startsWith("research_")) continue;
       lines += await recountRequest(ctx, pull, kind, now);
+      // A finished crawl recorded before its refund was (item 5): its pages not crawled given back now.
+      if (pull.operationId === "site_crawl") await recordCrawlRefund(ctx, pull._id);
     }
     if (!page.isDone) {
       await ctx.scheduler.runAfter(0, internal.creditCorrections.recountRequests, { since: args.since, cursor: page.continueCursor });

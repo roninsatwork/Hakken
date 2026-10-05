@@ -337,6 +337,7 @@ import type * as seoCollectionQueue from "../seoCollectionQueue.js";
 import type * as seoCollectionReports from "../seoCollectionReports.js";
 import type * as seoCollectionSweep from "../seoCollectionSweep.js";
 import type * as seoCollectorRun from "../seoCollectorRun.js";
+import type * as seoCrawlRefund from "../seoCrawlRefund.js";
 import type * as seoDiscoveredCompetitors from "../seoDiscoveredCompetitors.js";
 import type * as seoFiling from "../seoFiling.js";
 import type * as seoIdempotency from "../seoIdempotency.js";
@@ -926,6 +927,7 @@ declare const fullApi: ApiFromModules<{
   seoCollectionReports: typeof seoCollectionReports;
   seoCollectionSweep: typeof seoCollectionSweep;
   seoCollectorRun: typeof seoCollectorRun;
+  seoCrawlRefund: typeof seoCrawlRefund;
   seoDiscoveredCompetitors: typeof seoDiscoveredCompetitors;
   seoFiling: typeof seoFiling;
   seoIdempotency: typeof seoIdempotency;
