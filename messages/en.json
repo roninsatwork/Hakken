@@ -6798,7 +6798,8 @@
       "previewTitle": "The email as its reader gets it",
       "wouldSkip": "It would not be sent: {reason}",
       "types": {
-        "WEEKLY_NEWS_DIGEST": "Weekly News Digest"
+        "WEEKLY_NEWS_DIGEST": "Weekly News Digest",
+        "COLLECTION_NEEDS_YOU": "Collection needs you"
       },
       "statuses": {
         "WAITING": "Waiting",

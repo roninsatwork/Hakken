@@ -34,6 +34,7 @@ type Template = (ctx: QueryCtx, row: Doc<"outboxMessages">, brand: Brand) => Pro
  */
 export const SENDER_ADDRESS_VARIABLES: Record<OutboxMessageType, string> = {
   WEEKLY_NEWS_DIGEST: "NEWS_DIGEST_FROM_EMAIL",
+  COLLECTION_NEEDS_YOU: "ALERTS_FROM_EMAIL",
 };
 
 /**
@@ -111,8 +112,31 @@ const weeklyNewsDigest: Template = async (ctx, row, brand) => {
   };
 };
 
+/**
+ * To a super admin: collecting stopped for something only a person can fix
+ * (docs/plans/active/finish-off-plan.md, item 13) — the reason in the
+ * Collector's own words, and the way to the pipeline.
+ */
+const collectionNeedsYou: Template = async (_ctx, row, brand) => {
+  const reason = typeof payloadOf(row).reason === "string" ? (payloadOf(row).reason as string) : "";
+  if (!reason) return { skip: "It says nothing of why collecting stopped." };
+  const words = emailWording(row.language).collectionNeedsYou;
+  const pipelineUrl = `${brand.appUrl}/admin/websites/collection`;
+  return {
+    subject: words.subject({ platformName: brand.platformName }),
+    content: {
+      kind: words.kind,
+      verdict: words.verdict,
+      paragraphs: [reason],
+      actions: [{ label: words.open, url: pipelineUrl, emphasis: "primary" }],
+      footer: { lines: [words.whyYouGetIt({ platformName: brand.platformName })] },
+    },
+  };
+};
+
 const TEMPLATES: Record<OutboxMessageType, Template> = {
   WEEKLY_NEWS_DIGEST: weeklyNewsDigest,
+  COLLECTION_NEEDS_YOU: collectionNeedsYou,
 };
 
 /**

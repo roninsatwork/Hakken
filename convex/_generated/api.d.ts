@@ -113,6 +113,7 @@ import type * as chat from "../chat.js";
 import type * as chatAdmin from "../chatAdmin.js";
 import type * as chatAdminService from "../chatAdminService.js";
 import type * as chatService from "../chatService.js";
+import type * as collectionAlerts from "../collectionAlerts.js";
 import type * as companies from "../companies.js";
 import type * as companyAiLists from "../companyAiLists.js";
 import type * as companyDataLimits from "../companyDataLimits.js";
@@ -701,6 +702,7 @@ declare const fullApi: ApiFromModules<{
   chatAdmin: typeof chatAdmin;
   chatAdminService: typeof chatAdminService;
   chatService: typeof chatService;
+  collectionAlerts: typeof collectionAlerts;
   companies: typeof companies;
   companyAiLists: typeof companyAiLists;
   companyDataLimits: typeof companyDataLimits;

@@ -148,6 +148,13 @@ export async function collectStep(ctx: ActionCtx, args: StepArgs): Promise<void>
     });
     return;
   }
+  // Stopped for something only a person can fix: tell the super admins (finish-off plan, item 13).
+  if (end.kind === "CAPPED" || end.kind === "ACCOUNT") {
+    await ctx.runMutation(internal.collectionAlerts.noteCollectorNeedsYou, {
+      kind: end.kind === "CAPPED" ? "DAY_CEILING" : "ACCOUNT",
+      reason: `Stopped because ${stoppedBecause(end)}.`,
+    });
+  }
   await finishCollecting(ctx, args, sent, stoppedBecause(end));
 }
 

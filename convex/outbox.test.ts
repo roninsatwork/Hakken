@@ -165,7 +165,7 @@ describe("the outbox", () => {
     const finished = await send(t, agentId);
 
     expect(finished).toMatchObject({ status: "FAILED" });
-    expect(finished?.finalOutput).toMatch(/^NEWS_DIGEST_FROM_EMAIL is not set, so nothing was sent/);
+    expect(finished?.finalOutput).toMatch(/^NEWS_DIGEST_FROM_EMAIL and ALERTS_FROM_EMAIL are not set, so nothing was sent/);
     expect((await rows(t))[0]).toMatchObject({ status: "WAITING", attempts: 0 });
     expect(sent).toHaveLength(0);
   });

@@ -62,11 +62,12 @@ export async function sendOutbox(ctx: ActionCtx, runId: Id<"agentRuns">): Promis
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) throw appError("NOT_CONFIGURED", `RESEND_API_KEY is not set on this deployment, so nothing was sent. ${waitingText}.`);
   const from = senderAddresses();
-  const unset = OUTBOX_MESSAGE_TYPES.filter((type) => !from[type]);
+  const unset: OutboxMessageType[] = OUTBOX_MESSAGE_TYPES.filter((type) => !from[type]);
+  const unsetVerb = unset.length === 1 ? "is" : "are";
   if (unset.length === OUTBOX_MESSAGE_TYPES.length) {
     throw appError(
       "NOT_CONFIGURED",
-      `${unset.map((type) => SENDER_ADDRESS_VARIABLES[type]).join(" and ")} ${unset.length === 1 ? "is" : "are"} not set, so nothing was sent: `
+      `${unset.map((type) => SENDER_ADDRESS_VARIABLES[type]).join(" and ")} ${unsetVerb} not set, so nothing was sent: `
         + `each email type is sent only from its own address. ${waitingText}.`,
     );
   }

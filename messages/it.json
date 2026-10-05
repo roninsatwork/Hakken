@@ -6798,7 +6798,8 @@
       "previewTitle": "L'email come la riceve il lettore",
       "wouldSkip": "Non verrebbe inviata: {reason}",
       "types": {
-        "WEEKLY_NEWS_DIGEST": "Digest settimanale delle notizie"
+        "WEEKLY_NEWS_DIGEST": "Digest settimanale delle notizie",
+        "COLLECTION_NEEDS_YOU": "La raccolta richiede il tuo intervento"
       },
       "statuses": {
         "WAITING": "In attesa",

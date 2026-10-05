@@ -24,6 +24,14 @@ export type EmailWording = {
     whyYouGetIt: (args: { platformName: string }) => string;
     unsubscribe: string;
   };
+  /** To super admins, when collecting stops for something only a person can fix. */
+  collectionNeedsYou: {
+    kind: string;
+    subject: (args: { platformName: string }) => string;
+    verdict: string;
+    open: string;
+    whyYouGetIt: (args: { platformName: string }) => string;
+  };
 };
 
 export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
@@ -39,6 +47,13 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
       whyYouGetIt: ({ platformName }) => `You get this weekly email because you use ${platformName}.`,
       unsubscribe: "Stop these emails",
     },
+    collectionNeedsYou: {
+      kind: "Collection",
+      subject: ({ platformName }) => `${platformName} stopped collecting: it needs you`,
+      verdict: "Collecting data has stopped, and only a person can start it again.",
+      open: "Open the collection pipeline",
+      whyYouGetIt: ({ platformName }) => `You get this because you are a super admin of ${platformName}. It is sent at most once a day for each reason.`,
+    },
   },
   it: {
     dateLocale: "it-IT",
@@ -51,6 +66,13 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
       seeAll: ({ count, platformName }) => `Vedi tutte le ${count} su ${platformName}`,
       whyYouGetIt: ({ platformName }) => `Ricevi questa email settimanale perché usi ${platformName}.`,
       unsubscribe: "Non ricevere più queste email",
+    },
+    collectionNeedsYou: {
+      kind: "Raccolta",
+      subject: ({ platformName }) => `${platformName} ha smesso di raccogliere: serve il tuo intervento`,
+      verdict: "La raccolta dei dati si è fermata e solo una persona può farla ripartire.",
+      open: "Apri la pipeline di raccolta",
+      whyYouGetIt: ({ platformName }) => `La ricevi perché sei super admin di ${platformName}. Viene inviata al massimo una volta al giorno per ogni motivo.`,
     },
   },
 };
