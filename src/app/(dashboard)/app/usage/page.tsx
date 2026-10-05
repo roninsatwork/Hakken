@@ -51,7 +51,7 @@ export default function UsageOverviewPage() {
       <Header />
       <div className="flex flex-col gap-6 pb-8">
         <PageHeader divider icon={<Gauge className="h-6 w-6 text-brand" />} title={words.t("title")} description={words.t("description")} />
-        <Notice>{words.t("notice", { plan: words.number(summary?.plan.granted ?? 1000) })}</Notice>
+        <Notice>{words.t("notice", { plan: summary ? words.number(summary.plan.granted) : "…" })}</Notice>
         {summary && summary.owed > 0 ? <Notice tone="warning">{words.t("owed", { owed: words.number(summary.owed) })}</Notice> : null}
         <div className="flex flex-wrap items-center gap-3"><MonthPicker /></div>
         {summary === null ? <Notice>{words.t("noCompany")}</Notice> : <Overview summary={summary} words={words} picked={picked} onPick={setPicked} statementHref={withMonth("/app/usage/statement")} />}

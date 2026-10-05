@@ -22,6 +22,9 @@ export const creditKindValidator = v.union(
 
 export const creditSourceValidator = v.union(v.literal("plan"), v.literal("topup"));
 
+/** Why a statement line that is not plain work was written (`creditCharges.reason`). */
+export const creditReasonValidator = v.union(v.literal("raised"));
+
 export const creditTables = {
   /**
    * A batch of a company's credits: the plan's for one month, or one top-up's.
@@ -106,6 +109,14 @@ export const creditTables = {
     refundOf: v.optional(v.id("creditCharges")),
     /** What a person would call it: the keywords looked up. */
     detail: v.optional(v.string()),
+    /**
+     * Why a line that is not plain work was written: `raised`, a month's
+     * plan credits raised after they were granted (finish-off-plan.md, item
+     * 3a). A refund with none is work that failed.
+     */
+    reason: v.optional(creditReasonValidator),
+    /** What it stood at before: a raised batch's credits. */
+    before: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_company_at", ["companyId", "at"])

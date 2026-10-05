@@ -85,6 +85,7 @@ export const creditPriceReport = superAdminQuery({
 /** Bounds a person could not mean to go past. */
 const MAX_CREDITS = 100_000;
 const MAX_DOLLARS_A_CREDIT = 10;
+const MAX_PLAN_CREDITS = 1_000_000;
 
 async function audit(ctx: MutationCtx & { userId: Id<"users"> }, changes: Array<{ field: string; from: number; to: number }>) {
   await ctx.db.insert("auditLogs", {
@@ -97,14 +98,19 @@ async function audit(ctx: MutationCtx & { userId: Id<"users"> }, changes: Array<
 }
 
 /**
- * Save the price list and what a credit covers, which suggestions are made with. A price
- * applies from each company's next run; a charge already made keeps the price
- * it was made at. Audited, a change at a time.
+ * Save the price list, what a credit covers (which suggestions are made
+ * with), and the credits a month every company's plan gives where its plan
+ * sets none (finish-off-plan.md, item 3a). A price applies from each
+ * company's next run; a charge already made keeps the price it was made at.
+ * Credits a month count from the next month's grant: a month already granted
+ * keeps what it was given. Audited, a change at a time.
  */
 export const saveCreditPrices = superAdminMutation({
   args: {
     prices: v.array(v.object({ kind: creditKindValidator, credits: v.number() })),
     creditCoversUsd: v.number(),
+    /** Credits a month; left out, unchanged. */
+    planCredits: v.optional(v.number()),
   },
   returns: v.object({ changed: v.number() }),
   handler: async (ctx, args) => {
@@ -112,6 +118,10 @@ export const saveCreditPrices = superAdminMutation({
       if (!Number.isInteger(price.credits) || price.credits < 0 || price.credits > MAX_CREDITS) throw appError("INVALID_INPUT", `A price is a whole number of credits from 0 to ${MAX_CREDITS.toLocaleString("en-GB")}.`);
     }
     if (!(args.creditCoversUsd > 0 && args.creditCoversUsd <= MAX_DOLLARS_A_CREDIT)) throw appError("INVALID_INPUT", `What a credit covers is more than $0 and at most $${MAX_DOLLARS_A_CREDIT}.`);
+    const planCredits = args.planCredits;
+    if (planCredits !== undefined && (!Number.isInteger(planCredits) || planCredits < 0 || planCredits > MAX_PLAN_CREDITS)) {
+      throw appError("INVALID_INPUT", `Credits a month is a whole number from 0 to ${MAX_PLAN_CREDITS.toLocaleString("en-GB")}.`);
+    }
 
     const now = Date.now();
     const changes: Array<{ field: string; from: number; to: number }> = [];
@@ -125,12 +135,16 @@ export const saveCreditPrices = superAdminMutation({
     }
 
     const settings = await ctx.db.query("creditSettings").withIndex("by_key", (q) => q.eq("key", "platform")).first();
-    const before = settings?.creditCoversUsd ?? DEFAULT_CREDIT_COVERS_USD;
-    if (before !== args.creditCoversUsd) {
-      changes.push({ field: "creditCoversUsd", from: before, to: args.creditCoversUsd });
-      const values = { creditCoversUsd: args.creditCoversUsd, updatedAt: now, updatedBy: ctx.userId };
+    const coverBefore = settings?.creditCoversUsd ?? DEFAULT_CREDIT_COVERS_USD;
+    const planBefore = settings?.planCredits ?? DEFAULT_PLAN_CREDITS;
+    const settingChanges: Array<{ field: string; from: number; to: number }> = [];
+    if (coverBefore !== args.creditCoversUsd) settingChanges.push({ field: "creditCoversUsd", from: coverBefore, to: args.creditCoversUsd });
+    if (planCredits !== undefined && planBefore !== planCredits) settingChanges.push({ field: "planCredits", from: planBefore, to: planCredits });
+    if (settingChanges.length > 0) {
+      changes.push(...settingChanges);
+      const values = { creditCoversUsd: args.creditCoversUsd, planCredits: planCredits ?? planBefore, updatedAt: now, updatedBy: ctx.userId };
       if (settings) await ctx.db.patch(settings._id, values);
-      else await ctx.db.insert("creditSettings", { key: "platform", planCredits: DEFAULT_PLAN_CREDITS, ...values });
+      else await ctx.db.insert("creditSettings", { key: "platform", ...values });
     }
 
     if (changes.length > 0) await audit(ctx, changes);

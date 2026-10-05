@@ -142,13 +142,13 @@ describe("a collection's charges", () => {
       const acmeCharge = acmeLines[1];
       expect(acmeCharge).toMatchObject({
         kind: "rankings", state: "charged", how: "scheduled", websiteId,
-        units: 1001, lines: 3, failedUnits: 1, creditsOut: 5, owed: 0, balanceAfter: 995,
+        units: 1001, lines: 3, failedUnits: 1, creditsOut: 5, owed: 0, balanceAfter: 9995,
         realCostUsd: 0.002, reusedValueUsd: 0.12,
       });
-      expect(acmeLines[0]).toMatchObject({ entry: "grant", creditsIn: 1000, source: "plan" });
+      expect(acmeLines[0]).toMatchObject({ entry: "grant", creditsIn: 10_000, source: "plan" });
 
       const [, rivalCharge] = await statement(ctx, rival);
-      expect(rivalCharge).toMatchObject({ units: 1, creditsOut: 1, realCostUsd: 0, reusedValueUsd: 0.002, balanceAfter: 999 });
+      expect(rivalCharge).toMatchObject({ units: 1, creditsOut: 1, realCostUsd: 0, reusedValueUsd: 0.002, balanceAfter: 9999 });
 
       const rollups = await ctx.db.query("creditMonthRollups").withIndex("by_company_month", (q) => q.eq("companyId", acme)).collect();
       expect(rollups).toEqual([expect.objectContaining({ kind: "rankings", websiteKey: websiteId, credits: 5, runs: 1, realCostUsd: 0.002 })]);
@@ -215,12 +215,12 @@ describe("batches", () => {
       const lines = await statement(ctx, acme);
       // UK midnights: 1 October 2026 is in summer time (an hour ahead of UTC), 1 November in winter.
       expect(lines.map((line) => [line.entry, line.creditsIn, line.creditsOut, line.at])).toEqual([
-        ["grant", 1000, 0, Date.UTC(2026, 8, 30, 23)],
+        ["grant", 10_000, 0, Date.UTC(2026, 8, 30, 23)],
         ["charge", 0, 1, october],
-        ["ended", 0, 999, Date.UTC(2026, 10, 1)],
-        ["grant", 1000, 0, Date.UTC(2026, 10, 1)],
+        ["ended", 0, 9999, Date.UTC(2026, 10, 1)],
+        ["grant", 10_000, 0, Date.UTC(2026, 10, 1)],
       ]);
-      expect(await creditBalance(ctx, acme)).toBe(1000);
+      expect(await creditBalance(ctx, acme)).toBe(10_000);
     });
   });
 
@@ -231,11 +231,11 @@ describe("batches", () => {
       const acme = await seedCompany(ctx, "Acme");
       const pull = await seedPull(ctx, { operationId: "serp_google_organic", family: "SERP", taskArgs: { keyword: "a" }, companyId: acme });
       await creditPullSettled(ctx, pull, "SUBMITTED", 0.01);
-      expect(await creditBalance(ctx, acme)).toBe(999);
+      expect(await creditBalance(ctx, acme)).toBe(9999);
       await creditPullSettled(ctx, pull, "FAILED", 0);
       const lines = await statement(ctx, acme);
       expect(lines.map((line) => line.entry)).toEqual(["grant", "charge", "refund"]);
-      expect(lines[2]).toMatchObject({ creditsIn: 1, refundOf: lines[1]._id, balanceAfter: 1000 });
+      expect(lines[2]).toMatchObject({ creditsIn: 1, refundOf: lines[1]._id, balanceAfter: 10_000 });
       expect(lines[1].realCostUsd).toBe(0.01);
     });
   });

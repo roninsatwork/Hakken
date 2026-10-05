@@ -7,7 +7,7 @@ import { isTrackedHold } from "./utils/websitePairing";
 import { websiteIconUrl } from "./websiteIcons";
 import { cadenceOf, DAY_MS, EVERY_DAYS } from "./seoRunEstimate";
 import { DEFAULT_CREDIT_PRICES, DEFAULT_PLAN_CREDITS, creditDayOf, creditMonthNamed, creditMonthOf, type CreditKind } from "./creditKinds";
-import { creditKindValidator, creditSourceValidator } from "./creditSchema";
+import { creditKindValidator, creditReasonValidator, creditSourceValidator } from "./creditSchema";
 
 /**
  * What the Usage screens read (docs/plans/active/usage-credits-plan.md,
@@ -370,6 +370,9 @@ const statementLineShape = v.object({
   in: v.number(),
   balance: v.union(v.number(), v.null()),
   detail: v.union(v.string(), v.null()),
+  /** Why a line that is not plain work was written, and what it stood at before (`creditCharges.reason`). */
+  reason: v.union(creditReasonValidator, v.null()),
+  before: v.union(v.number(), v.null()),
   /** The batches that paid, or were paid back: a month's plan (`YYYY-MM`), or a top-up bought on a day. */
   from: v.array(v.object({ source: creditSourceValidator, month: v.union(v.string(), v.null()), startsAt: v.number() })),
   /** A grant's or an ending's own batch: its month, and when it began and ends. */
@@ -442,6 +445,8 @@ export const usageStatement = tenantQuery({
       in: row.creditsIn,
       balance: row.balanceAfter ?? null,
       detail: row.detail ?? null,
+      reason: row.reason ?? null,
+      before: row.before ?? null,
       from: row.paidFrom.flatMap((part) => {
         const batch = batches.get(part.batchId);
         return batch ? [{ source: batch.source, month: batch.month ?? null, startsAt: batch.startsAt }] : [];

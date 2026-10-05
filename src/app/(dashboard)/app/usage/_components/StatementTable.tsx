@@ -43,7 +43,10 @@ function describe(line: StatementLine, words: UsageWords, platformName: string) 
   const parts: string[] = [];
   let title: string;
   if (line.entry === "grant") {
-    title = line.source === "topup" ? words.t("statement.topUp") : words.t("statement.planGranted", { month: line.batch?.month ? words.monthName(line.batch.month) : "" });
+    const month = line.batch?.month ? words.monthName(line.batch.month) : "";
+    title = line.source === "topup" ? words.t("statement.topUp") : words.t(line.reason === "raised" ? "statement.planRaised" : "statement.planGranted", { month });
+    // A month's plan credits raised after they were given (finish-off-plan.md, item 3a): from what, to what.
+    if (line.reason === "raised" && line.before !== null) parts.push(words.t("statement.raisedFrom", { before: words.number(line.before), after: words.number(line.before + line.in) }));
     // A batch ends at midnight starting its next day: the last moment before it is the day it ends on.
     if (line.source !== "topup" && line.batch) parts.push(words.t("statement.planEnds", { date: words.date(line.batch.endsAt - 1) }));
   } else if (line.entry === "ended") {

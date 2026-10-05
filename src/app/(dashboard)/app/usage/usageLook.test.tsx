@@ -98,6 +98,8 @@ const line = (id: string, at: number, extra: Partial<NonNullable<FunctionReturnT
   in: 0,
   balance: null,
   detail: null,
+  reason: null,
+  before: null,
   from: [{ source: "plan" as const, month: "2026-10", startsAt: OCT }],
   batch: null,
   ...extra,
@@ -213,5 +215,16 @@ describe("Usage's screens", () => {
     expect(within(rows[0]).getByText("Opening balance")).toBeTruthy();
     expect(within(rows[1]).getByText("September’s plan credits ended")).toBeTruthy();
     expect(screen.getByText("ronins.co.uk · 1,240 pages · from October’s plan")).toBeTruthy();
+  });
+
+  it("a month's plan credits raised after they were given say so, from what to what", async () => {
+    const october = { source: "plan" as const, month: "2026-10", startsAt: OCT, endsAt: Date.UTC(2026, 10, 1) };
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "creditUsage:usageStatement": { ...STATEMENT, lines: [...STATEMENT.lines, line("c8", OCT + 19 * DAY + 3_600_000, { entry: "grant", source: "plan", how: "automatic", in: 9000, balance: 9957, reason: "raised", before: 1000, from: [], batch: october })] },
+    }));
+    at("/app/usage/statement");
+    render(<UsageStatementPage />);
+    expect(await screen.findByText("October’s plan credits raised")).toBeTruthy();
+    expect(screen.getByText(/^From 1,000 to 10,000 a month · End at midnight on/)).toBeTruthy();
   });
 });

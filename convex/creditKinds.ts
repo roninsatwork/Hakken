@@ -21,8 +21,15 @@ export const DEFAULT_CREDIT_PRICES: Record<CreditKind, CreditPrice> = {
   assistant: { credits: 1, per: 1 },
 };
 
-/** Credits in a month's plan batch, where the plan sets none: 1,000, his placeholder of 2026-10-05. */
-export const DEFAULT_PLAN_CREDITS = 1_000;
+/**
+ * Credits in a month's plan batch, where neither the company's plan nor
+ * Admin → Settings → Credit prices sets a number: 10,000 (Anthony,
+ * 2026-10-05: "make the credits default 10,000 credits per month for the
+ * moment"), raised the same day from his first placeholder of 1,000.
+ */
+export const DEFAULT_PLAN_CREDITS = 10_000;
+/** The first placeholder, which a platform setting saved before the raise may still hold. */
+export const FIRST_PLAN_CREDITS = 1_000;
 /** What one credit covers in US dollars of real cost, as recommended (outstanding question 1). */
 export const DEFAULT_CREDIT_COVERS_USD = 0.05;
 

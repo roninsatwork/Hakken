@@ -100,3 +100,27 @@ Collect now buys everything a run would, whatever its cadence says is due —
 until item 6a, which keeps what is fresh. Item 6c makes the link lists, the
 competitors' keyword lists and "its competitors" monthly whatever the schedule;
 the table above is how it stands before it.
+
+## Built — 2026-10-05 (local, on a branch for the lead to merge; not pushed)
+
+### Item 3a — 10,000 credits a month, for now
+
+- The platform's default is 10,000 credits a month (`DEFAULT_PLAN_CREDITS`,
+  `convex/creditKinds.ts`). A company's month is its plan's own number, else
+  the platform's.
+- **Admin → Settings → Credit prices** has a **Credits a month** box beside
+  "A credit covers", saved with the prices (`saveCreditPrices`, a whole number
+  from 0 to 1,000,000, audited as `planCredits` like every other change). A
+  change counts from the next month's grant; a month already given keeps what
+  it was given. The approved outline
+  (`docs/plans/assets/usage-credits/look/AdminCreditPrices.txt`) gained exactly
+  one line for it, `field: Credits a month`, under the same settings card —
+  the plan approved the box; nothing else on the screen moved.
+- **October's 1,000 raised, once, by hand**:
+  `creditCorrections:raisePlanCredits` (no arguments; pages itself). It first
+  raises a platform setting still holding the old 1,000 to 10,000 (dev saved
+  one beside "what a credit covers"), then raises every open plan batch of
+  this month to what its company's plan gives now. Each raise is **its own
+  line on the statement** — "October's plan credits raised · From 1,000 to
+  10,000 a month", 9,000 in — so the balances before it stay true and the
+  ones after it add up. Never lowers a batch; a second run finds nothing to do.

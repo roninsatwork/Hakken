@@ -46,7 +46,7 @@ export async function readCreditSettings(ctx: MutationCtx) {
 }
 
 /** Credits in a company's monthly plan batch: its plan's, else the platform's. */
-async function planCreditsFor(ctx: MutationCtx, companyId: Id<"companies">): Promise<number> {
+export async function planCreditsFor(ctx: MutationCtx, companyId: Id<"companies">): Promise<number> {
   const company = await ctx.db.get(companyId);
   const plan = company?.planId ? await ctx.db.get(company.planId) : null;
   return plan?.monthlyCredits ?? (await readCreditSettings(ctx)).planCredits;
@@ -149,6 +149,45 @@ export async function ensurePlanBatch(ctx: MutationCtx, companyId: Id<"companies
     batchId,
     createdAt: now,
   });
+}
+
+/**
+ * Raise a month's plan batch to what the company's plan gives now
+ * (finish-off-plan.md, item 3a: 1,000 a month became 10,000 after October's
+ * were granted). The extra credits are a grant line of their own, "October's
+ * plan credits raised", with what the batch held before, so the statement
+ * still adds up line by line. Never lowered; a batch that has ended is left
+ * as it ended. Returns the credits added.
+ */
+export async function raisePlanBatch(ctx: MutationCtx, batch: Doc<"creditBatches">, now: number): Promise<number> {
+  if (batch.source !== "plan" || batch.state !== "open" || batch.endsAt <= now) return 0;
+  const target = await planCreditsFor(ctx, batch.companyId);
+  const extra = target - batch.granted;
+  if (extra <= 0) return 0;
+  await ctx.db.patch(batch._id, { granted: target, left: batch.left + extra });
+  await ctx.db.insert("creditCharges", {
+    companyId: batch.companyId,
+    entry: "grant",
+    state: "charged",
+    at: now,
+    source: "plan",
+    how: "automatic",
+    units: 0,
+    lines: 0,
+    failedUnits: 0,
+    creditsOut: 0,
+    creditsIn: extra,
+    paidFrom: [],
+    owed: 0,
+    balanceAfter: await creditBalance(ctx, batch.companyId),
+    realCostUsd: 0,
+    reusedValueUsd: 0,
+    batchId: batch._id,
+    reason: "raised",
+    before: batch.granted,
+    createdAt: now,
+  });
+  return extra;
 }
 
 /** Take credits from the batches that end soonest; what none can cover is owed. */

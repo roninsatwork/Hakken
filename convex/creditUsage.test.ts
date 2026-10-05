@@ -61,7 +61,7 @@ describe("usage screens' reads", () => {
     if (!summary) throw new Error("expected a summary");
     // Six rankings runs at 4 credits, and one question.
     expect(summary.used).toBe(25);
-    expect(summary.plan).toMatchObject({ granted: 1000, left: 975 });
+    expect(summary.plan).toMatchObject({ granted: 10_000, left: 9975 });
     expect(summary.kinds).toEqual([{ kind: "rankings", credits: 24, runs: 6 }, { kind: "assistant", credits: 1, runs: 1 }]);
     const byWebsite = new Map(summary.websites.map((row) => [row.website?.websiteId ?? "none", row]));
     expect(byWebsite.get(own)).toMatchObject({ credits: 12, runs: 3, website: { host: "acme.com", relationship: "owned" } });
@@ -81,10 +81,10 @@ describe("usage screens' reads", () => {
     const statement = await t.withIdentity({ subject: anthony }).query(api.creditUsage.usageStatement, {});
     if (!statement) throw new Error("expected a statement");
     expect(statement.opening).toBe(0);
-    expect(statement.lines[0]).toMatchObject({ entry: "grant", in: 1000, source: "plan" });
+    expect(statement.lines[0]).toMatchObject({ entry: "grant", in: 10_000, source: "plan" });
     expect(statement.lines.slice(1).every((line) => line.entry === "charge")).toBe(true);
     expect(statement.lines.at(-1)).toMatchObject({ kind: "assistant", out: 1, user: "Anthony Basker", how: "byHand" });
-    expect(statement.closing).toBe(975);
+    expect(statement.closing).toBe(9975);
     const firstCharge = statement.lines[1];
     expect(firstCharge.from).toEqual([expect.objectContaining({ source: "plan" })]);
     expect(JSON.stringify(statement)).not.toContain("realCost");

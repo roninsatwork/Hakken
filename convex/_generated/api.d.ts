@@ -139,6 +139,7 @@ import type * as contentTranslation from "../contentTranslation.js";
 import type * as contentTranslationActions from "../contentTranslationActions.js";
 import type * as contentTranslationSchema from "../contentTranslationSchema.js";
 import type * as costCurrencyMigration from "../costCurrencyMigration.js";
+import type * as creditCorrections from "../creditCorrections.js";
 import type * as creditHooks from "../creditHooks.js";
 import type * as creditKinds from "../creditKinds.js";
 import type * as creditLedger from "../creditLedger.js";
@@ -727,6 +728,7 @@ declare const fullApi: ApiFromModules<{
   contentTranslationActions: typeof contentTranslationActions;
   contentTranslationSchema: typeof contentTranslationSchema;
   costCurrencyMigration: typeof costCurrencyMigration;
+  creditCorrections: typeof creditCorrections;
   creditHooks: typeof creditHooks;
   creditKinds: typeof creditKinds;
   creditLedger: typeof creditLedger;

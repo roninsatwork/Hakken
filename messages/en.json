@@ -6876,7 +6876,9 @@
         "title": "How prices are suggested",
         "cover": "A credit covers, in US dollars of real cost",
         "coverHint": "Our suppliers charge in dollars. 0.05 means one credit pays for 5 cents of what the work costs us.",
-        "plans": "How many credits each plan gives a month is set on Plans."
+        "planCredits": "Credits a month",
+        "planCreditsHint": "What every company is given on the 1st of each month. A change counts from the next month; credits already given this month stay as they are.",
+        "plans": "A plan that sets its own number of credits a month gives that instead."
       },
       "figures": {
         "charged": "Credits counted this month",
@@ -12504,6 +12506,8 @@
       "totals": "{out} out · {in} in",
       "used": "{out} credits",
       "planGranted": "{month}’s plan credits",
+      "planRaised": "{month}’s plan credits raised",
+      "raisedFrom": "From {before} to {after} a month",
       "planEnds": "End at midnight on {date}",
       "planEnded": "{month}’s plan credits ended",
       "topUp": "Top-up",

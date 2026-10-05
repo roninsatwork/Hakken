@@ -6876,7 +6876,9 @@
         "title": "Come vengono suggeriti i prezzi",
         "cover": "Un credito copre, in dollari USA di costo reale",
         "coverHint": "I nostri fornitori fatturano in dollari. 0,05 significa che un credito paga 5 centesimi di quanto ci costa il lavoro.",
-        "plans": "Quanti crediti dà ogni piano al mese si imposta in Piani."
+        "planCredits": "Crediti al mese",
+        "planCreditsHint": "Quanti ne riceve ogni azienda il 1° di ogni mese. Una modifica vale dal mese successivo; i crediti già dati questo mese restano come sono.",
+        "plans": "Un piano che imposta un proprio numero di crediti al mese dà quello."
       },
       "figures": {
         "charged": "Crediti conteggiati questo mese",
@@ -12504,6 +12506,8 @@
       "totals": "{out} in uscita · {in} in entrata",
       "used": "{out} crediti",
       "planGranted": "Crediti del piano di {month}",
+      "planRaised": "Crediti del piano di {month} aumentati",
+      "raisedFrom": "Da {before} a {after} al mese",
       "planEnds": "Scadono a mezzanotte del {date}",
       "planEnded": "Crediti del piano di {month} scaduti",
       "topUp": "Ricarica",

@@ -527,3 +527,7 @@ have you stopped"), every setting changeable on the screen.
   and 6 (the old Organization usage chart out) built. Then: 5 cents a credit
   confirmed, no exchange rate, a company sees only credits — the burn figure
   out too.
+- 2026-10-05 — Decision 1 changed to 10,000 credits a month, for now
+  (finish-off-plan.md, item 3a): the platform default, a "Credits a month" box
+  on Credit prices, and October's batches raised by a grant line of their own
+  ("October's plan credits raised"), never by rewriting the first grant.
