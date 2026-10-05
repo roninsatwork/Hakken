@@ -22,7 +22,7 @@ import { everyDaysOf } from "./seoRunEstimate";
 import { readSiteDataLimits } from "./companyDataLimits";
 import { everyRunReach, LIST_COUNT_DAYS, listLimitOf, listPagesFor, pagedListOf, pagedListParams, readListShape } from "./sitePagedLists";
 import { findFreshPull, heldByOwnCadence, wholeListDue } from "./seoHeldAnswers";
-import { boughtForCompetitor } from "./seoBuyingRules";
+import { asBoughtFor, boughtForCompetitor, COMPETITOR_KEYWORD_ROWS, competitorFirstPageOnly } from "./seoBuyingRules";
 import { collectedOnItsOwn, dueByCadence } from "./seoCollectionDue";
 import { countingReads } from "./utils/countingReads";
 import { isTrackedHold } from "./utils/websitePairing";
@@ -381,7 +381,7 @@ async function websiteSteps(
       // website's limit allows, not one (`sitePagedLists.ts`).
       if (pagedListOf(operation.id)) {
         steps.push(async (sendIndex) => await planPagedList(ctx, {
-          cycle, schedule, companyWebsite, hold: holdOf.get(websiteId) ?? companyWebsite, websiteId, operation, sendIndex, now, runDays,
+          cycle, schedule, companyWebsite, hold: holdOf.get(websiteId) ?? companyWebsite, websiteId, operation, sendIndex, now, runDays, competitor,
         }));
         continue;
       }
@@ -714,9 +714,11 @@ async function planPagedList(
     now: Date;
     /** How far apart this website's runs come, in days. */
     runDays: number;
+    /** The target is a competitor: its own cadence, and only its keyword list's top 1,000. */
+    competitor: boolean;
   },
 ): Promise<{ planned: number; reused: number }> {
-  const { operation } = args;
+  const operation = asBoughtFor(args.operation, args.competitor);
   const list = pagedListOf(operation.id);
   const website = await ctx.db.get(args.websiteId);
   if (!list || !website) return { planned: 0, reused: 0 };
@@ -744,11 +746,18 @@ async function planPagedList(
   // The whole list when it is due — a site never counted, or no whole list
   // at this company's limit inside the list's cadence — else the everyday
   // check's first pages alone.
-  const everyday = everyRunReach(list, limits);
-  const due = !list.everyRun || counted === null || await wholeListDue(ctx, operation, args.websiteId, place, limit, args.now, args.runDays);
-  const reach = due ? limit : everyday;
+  // A competitor's keyword list is its top 1,000 — one page, once a month, no
+  // everyday pages (finish-off plan, items 6b and 6c). Its reach is none, so
+  // it never queues a second page (`queueListPages`) and never stands for an
+  // own website's whole list (`wholeListDue`).
+  const firstPageOnly = args.competitor && competitorFirstPageOnly(operation.id);
+  const everyday = firstPageOnly ? 0 : everyRunReach(list, limits);
+  const due = firstPageOnly || !list.everyRun || counted === null || await wholeListDue(ctx, operation, args.websiteId, place, limit, args.now, args.runDays);
+  const reach = firstPageOnly ? 0 : due ? limit : everyday;
   const everydayEnds = listPagesFor(list, everyday, shape).reduce((end, page) => Math.max(end, page.offset + page.limit), 0);
-  const pages = listPagesFor(list, reach, shape).map((page) => ({ page, eachRun: everyday > 0 && page.offset < everydayEnds }));
+  const pages = firstPageOnly
+    ? [{ page: { offset: 0, limit: COMPETITOR_KEYWORD_ROWS }, eachRun: false }]
+    : listPagesFor(list, reach, shape).map((page) => ({ page, eachRun: everyday > 0 && page.offset < everydayEnds }));
 
   let planned = 0;
   let reused = 0;

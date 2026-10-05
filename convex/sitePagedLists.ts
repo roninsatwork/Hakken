@@ -43,6 +43,11 @@ import { readSentLocationCode } from "./utils/seoSentPlace";
  * its own weekly cadence. A page carries how far its run meant to buy
  * (`listReach`, in the list's own unit), so a first page bought for the
  * everyday check never queues the rest of the list.
+ *
+ * **A competitor's: its top 1,000, once a month** (finish-off plan, items 6b
+ * and 6c, 2026-10-05): the keyword list's first page alone, with a reach of
+ * none, so it queues nothing more; and of the link lists only the linking
+ * websites (`seoBuyingRules.ts`). The link lists are all bought monthly.
  */
 
 /** The most rows DataForSEO returns in one request of either list. */

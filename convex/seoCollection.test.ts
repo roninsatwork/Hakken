@@ -1,5 +1,5 @@
 import { convexTest } from "convex-test";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
@@ -70,11 +70,11 @@ const MONTHLY = JSON.stringify({ version: 2, kind: "recurring", cadence: "monthl
 const SITE_OPERATIONS = 12;
 
 /**
- * The same for a competitor (a tracked hold): every one but the site crawl,
- * which feeds only a company's own websites' Site audit, page list and AI
- * checks (finish-off plan, item 6, 2026-10-05).
+ * The same for a competitor (a tracked hold): only what benchmarking needs —
+ * its keyword totals and its keyword list's top 1,000, its link totals and its
+ * linking websites (finish-off plan, items 6 and 6b, 2026-10-05).
  */
-const COMPETITOR_OPERATIONS = SITE_OPERATIONS - 1;
+const COMPETITOR_OPERATIONS = 4;
 
 /**
  * The operations that ask about every website on a page in one paid call.
@@ -630,11 +630,11 @@ describe("the reuse ladder", () => {
     expect(list.map((row) => row.websiteId)).toEqual([own]);
   });
 
-  test("each schedule buys a call on the run nearest its own cadence: weekly lists every week, the crawl every fourth", async () => {
-    // Held for its whole cadence, a weekly list bought a few minutes short of
-    // seven days before was held on a weekly schedule, and bought every other
-    // week; a monthly company skipped the crawl after a month of 30 days or
-    // fewer (2026-09-25).
+  test("each schedule buys a call on the run nearest its own cadence: the link lists and the crawl once a month", async () => {
+    // Held for its whole cadence, a list bought a few minutes short of it was
+    // held, and bought a run late; a monthly company skipped the crawl after a
+    // month of 30 days or fewer (2026-09-25). Every link list, and who
+    // competes with a site, are monthly since 2026-10-05 (finish-off plan, 6c).
     const day = 24 * 60 * 60 * 1000;
     const plannedFor = async (cadence: string, bought: Array<[string, number]>) => {
       const t = harness();
@@ -660,15 +660,19 @@ describe("the reuse ladder", () => {
     const threeWeeks = 21 * day - 5 * 60_000;
     const fourWeeks = 28 * day - 5 * 60_000;
 
-    // Weekly: the lists every run, even a few minutes short of a week; the crawl every fourth week.
-    const weekly = await plannedFor(WEEKLY, [["backlinks_list", lastWeek], ["site_crawl", threeWeeks], ["anchors_list", fourWeeks]]);
-    expect(weekly).toContain("backlinks_list");
+    // Weekly: the lists, who competes and the crawl every fourth week, even a few minutes short of it.
+    const weekly = await plannedFor(WEEKLY, [
+      ["backlinks_list", lastWeek], ["domain_competitors", lastWeek], ["site_crawl", threeWeeks], ["anchors_list", fourWeeks], ["referring_domains_list", fourWeeks],
+    ]);
+    expect(weekly).not.toContain("backlinks_list");
+    expect(weekly).not.toContain("domain_competitors");
     expect(weekly).not.toContain("site_crawl");
-    expect(weekly).toContain("anchors_list");
+    expect(weekly).toEqual(expect.arrayContaining(["anchors_list", "referring_domains_list"]));
 
-    // Fortnightly: the crawl every other run.
-    const fortnightly = await plannedFor(FORTNIGHTLY, [["site_crawl", 14 * day - 5 * 60_000], ["anchors_list", fourWeeks]]);
+    // Fortnightly: every other run.
+    const fortnightly = await plannedFor(FORTNIGHTLY, [["site_crawl", 14 * day - 5 * 60_000], ["backlinks_broken", 14 * day - 5 * 60_000], ["anchors_list", fourWeeks]]);
     expect(fortnightly).not.toContain("site_crawl");
+    expect(fortnightly).not.toContain("backlinks_broken");
     expect(fortnightly).toContain("anchors_list");
 
     // Monthly: the full scan, whatever the month's length — but nothing bought
@@ -681,9 +685,10 @@ describe("the reuse ladder", () => {
     expect(monthly).not.toContain("site_crawl");
     expect(await plannedFor(MONTHLY, [["site_crawl", 28 * day - 5 * 60_000]])).toContain("site_crawl");
 
-    // Daily: the lists weekly, the crawl monthly.
-    const daily = await plannedFor(DAILY, [["backlinks_list", 6 * day], ["site_crawl", 29 * day], ["anchors_list", 30 * day - 5 * 60_000]]);
+    // Daily: the lists and the crawl monthly.
+    const daily = await plannedFor(DAILY, [["backlinks_list", 6 * day], ["backlinks_new_lost", 20 * day], ["site_crawl", 29 * day], ["anchors_list", 30 * day - 5 * 60_000]]);
     expect(daily).not.toContain("backlinks_list");
+    expect(daily).not.toContain("backlinks_new_lost");
     expect(daily).not.toContain("site_crawl");
     expect(daily).toContain("anchors_list");
   });
@@ -841,6 +846,74 @@ describe("the reuse ladder", () => {
   });
 });
 
+describe("a competitor", () => {
+  /** A company's own big site and a big competitor watched against it, on a Daily schedule. */
+  async function watched(t: Harness) {
+    const company = await seedCompany(t, "Korda");
+    await seedSchedule(t, company, DAILY);
+    const own = await seedWebsite(t, "kordatackle.com");
+    const rival = await seedWebsite(t, "gocatch.fish");
+    await seedCompanyWebsite(t, company, own);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("companyWebsites", { companyId: company, websiteId: rival, relationship: "TRACKED", againstWebsiteId: own, createdAt: Date.now() });
+      await ctx.db.insert("companyDataLimits", { companyId: company, keywordsPerSite: 10_000, backlinksPerSite: 10_000, updatedAt: Date.now() });
+      for (const websiteId of [own, rival]) {
+        await ctx.db.insert("siteDaySummaries", {
+          websiteId, locationCode: 2826, day: "2026-09-20", rankedKeywordsTotal: 25_000, backlinks: 30_000, referringMainDomains: 1_500, updatedAt: Date.now(),
+        } as never);
+      }
+    });
+    return { company, own, rival };
+  }
+
+  test("gets only what benchmarking needs: keyword and link totals, its top 1,000 keywords and its linking websites", async () => {
+    const t = harness();
+    const { company, own, rival } = await watched(t);
+    const cycleId = await openCycle(t, company);
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
+
+    const all = await pulls(t);
+    const kinds = (websiteId: Id<"websites">) => [...new Set(all.filter((row) => row.websiteId === websiteId).map((row) => row.operationId))].sort();
+    expect(kinds(rival)).toEqual(["backlinks_summary", "domain_ranked_keywords", "domain_ranked_keywords_list", "referring_domains_list"]);
+    // The company's own website keeps everything.
+    expect(kinds(own)).toHaveLength(SITE_OPERATIONS);
+    expect(kinds(own)).toContain("domain_competitors");
+
+    // One page of a thousand rows, however long its list and the company's limit.
+    const list = all.filter((row) => row.websiteId === rival && row.operationId === "domain_ranked_keywords_list");
+    expect(list.map((row) => JSON.parse(row.taskArgsJson) as { offset: number; limit: number }).map((sent) => [sent.offset, sent.limit])).toEqual([[0, 1_000]]);
+    expect(list[0]).toMatchObject({ listReach: 0 });
+    expect(list[0].eachRun).toBeUndefined();
+    // Its linking websites, paged up to the company's limit as an own website's are.
+    expect(all.filter((row) => row.websiteId === rival && row.operationId === "referring_domains_list")).toHaveLength(2);
+
+    // Its answer queues no second page.
+    expect(await t.mutation(internal.sitePagedLists.queueListPages, { pullId: list[0]._id, total: 30_000 })).toBe(0);
+  });
+
+  test("its keyword list is bought once a month, the company's own weekly", async () => {
+    const t = harness();
+    const { company, own, rival } = await watched(t);
+    const tenDays = Date.now() - 10 * 24 * 60 * 60 * 1000;
+    await t.run(async (ctx) => {
+      for (const [websiteId, host] of [[own, "kordatackle.com"], [rival, "gocatch.fish"]] as const) {
+        await ctx.db.insert("seoDataPulls", {
+          operationId: "domain_ranked_keywords_list", family: "DataForSEO Labs", mode: "LIVE", target: host, websiteId,
+          taskArgsJson: JSON.stringify({ target: host, limit: 1_000, offset: 0, location_code: 2826, language_code: "en", item_types: ["organic", "featured_snippet", "local_pack", "ai_overview_reference"], order_by: ["ranked_serp_element.serp_item.etv,desc"] }),
+          status: "READY", tag: `list-${host}`, costUsd: 0.13, sandbox: false, submittedAt: tenDays, completedAt: tenDays,
+        });
+      }
+    });
+    const cycleId = await openCycle(t, company);
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
+
+    const planned = (websiteId: Id<"websites">) => (pulls(t)).then((rows) => rows.filter((row) =>
+      row.cycleId === cycleId && row.websiteId === websiteId && row.operationId === "domain_ranked_keywords_list"));
+    expect(await planned(rival)).toEqual([]);
+    expect((await planned(own)).length).toBeGreaterThan(0);
+  });
+});
+
 describe("the site crawl", () => {
   /** A crawl of the host, bought `ago` before now, answered or still out. */
   async function crawled(t: Harness, websiteId: Id<"websites">, host: string, ago: number, status: "READY" | "SUBMITTED" = "READY") {
@@ -984,37 +1057,49 @@ describe("collecting now, by hand", () => {
   });
 
   test("a Monthly company's run ten days after Collect now reuses it; a Weekly run reuses only what is under half a week old", async () => {
-    // 5 October's Collect now would otherwise be bought again on 15 October.
+    // 5 October's Collect now would otherwise be bought again on 15 October:
+    // a scheduled run comes at its schedule's turn, which every answer from
+    // before the turn falls behind. Pinned to real dates, the run at its turn.
     const day = 24 * 60 * 60 * 1000;
-    const plannedAfter = async (cadence: string, ago: number) => {
-      const t = harness();
-      const bought = await seedCompany(t, "Period House Group");
-      const company = await seedCompany(t, "Acme Ltd");
-      await seedSchedule(t, bought, cadence);
-      await seedSchedule(t, company, cadence);
-      const website = await seedWebsite(t, "corston.com");
-      await seedCompanyWebsite(t, bought, website);
-      await seedCompanyWebsite(t, company, website);
-      const first = await openCycle(t, bought, Date.now() - ago, "MANUAL");
-      await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: first });
-      await t.run(async (ctx) => {
-        for (const row of await ctx.db.query("seoDataPulls").collect()) {
-          await ctx.db.patch(row._id, { status: "READY", submittedAt: Date.now() - ago, completedAt: Date.now() - ago });
-        }
-      });
-      // A scheduled run, for a company that has not collected it itself: due.
-      const cycleId = await openCycle(t, company);
-      await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
-      return (await pulls(t)).filter((row) => row.cycleId === cycleId).map((row) => row.operationId);
+    const plannedAfter = async (cadence: string, runAt: number, ago: number) => {
+      vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true });
+      vi.setSystemTime(runAt);
+      try {
+        const t = harness();
+        const bought = await seedCompany(t, "Period House Group");
+        const company = await seedCompany(t, "Acme Ltd");
+        await seedSchedule(t, bought, cadence);
+        await seedSchedule(t, company, cadence);
+        const website = await seedWebsite(t, "corston.com");
+        await seedCompanyWebsite(t, bought, website);
+        await seedCompanyWebsite(t, company, website);
+        const first = await openCycle(t, bought, runAt - ago, "MANUAL");
+        await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: first });
+        await t.run(async (ctx) => {
+          for (const row of await ctx.db.query("seoDataPulls").collect()) {
+            await ctx.db.patch(row._id, { status: "READY", submittedAt: runAt - ago, completedAt: runAt - ago });
+          }
+        });
+        // A scheduled run, for a company that has not collected it itself: due.
+        const cycleId = await openCycle(t, company, runAt);
+        await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
+        return (await pulls(t)).filter((row) => row.cycleId === cycleId).map((row) => row.operationId);
+      } finally {
+        vi.useRealTimers();
+      }
     };
+    const onThe15th = JSON.stringify({ version: 2, kind: "recurring", cadence: "monthly", dayOfMonth: 15, timeLocal: "09:00", timezone: "UTC" });
+    expect(await plannedAfter(onThe15th, Date.UTC(2026, 9, 15, 10), 10 * day)).toEqual([]);
 
-    expect(await plannedAfter(MONTHLY, 10 * day)).toEqual([]);
-    // The weekly lists are bought every run of a Weekly company once past
-    // half a week; the monthly ones and the crawl are held for their own cadence.
-    expect(await plannedAfter(WEEKLY, 3 * day)).toEqual([]);
-    const weekly = await plannedAfter(WEEKLY, 4 * day);
-    expect(weekly).toContain("backlinks_list");
-    expect(weekly).not.toContain("anchors_list");
+    // Mondays at 09:00: on Monday 12 October, Thursday's answers are four days
+    // old and bought again; Friday's, three days old, are served. The keyword
+    // list is weekly, bought every run of a Weekly company once no longer
+    // fresh; the monthly lists and the crawl are held for their own cadence.
+    const monday = Date.UTC(2026, 9, 12, 10);
+    expect(await plannedAfter(WEEKLY, monday, 3 * day)).toEqual([]);
+    const weekly = await plannedAfter(WEEKLY, monday, 4 * day);
+    expect(weekly).toEqual(expect.arrayContaining(["domain_ranked_keywords_list", "domain_ranked_keywords", "backlinks_summary"]));
+    expect(weekly).not.toContain("referring_domains_list");
     expect(weekly).not.toContain("site_crawl");
   });
 

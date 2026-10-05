@@ -20,8 +20,16 @@ import type { SeoOperation } from "./dataForSeoRegistry";
  * returns nothing.
  *
  * **Each has its own cadence** (`refresh`), because link lists do not change
- * daily: a weekly list is held for seven days whatever the cycle's own
- * cadence, and a monthly one for thirty.
+ * daily: every one is bought once a month whatever the cycle's own cadence
+ * (finish-off plan, item 6c, agreed with Anthony on 2026-10-05 — measured on
+ * ronins.co.uk and four competitors since 1 September, linking websites moved
+ * about 1–2% a week and links 1–3%). Until then the linking websites, every
+ * link, one link per website, broken links and links gained and lost were
+ * weekly. Links gained and lost still come week by week: each answer holds
+ * every week since 2019 (`group_range: "week"`), filed under its Monday.
+ * The link totals (`backlinks_summary`) stay every run: they are the trend
+ * charts' points. A competitor gets only the totals and the linking websites
+ * (`seoBuyingRules.ts`).
  *
  * **Row caps.** A list returns at most a thousand rows, one link per linking
  * website unless a page needs every link, and the answer is trimmed to the
@@ -53,7 +61,7 @@ export const SITE_LINK_OPERATIONS: readonly SeoOperation[] = [
     mode: "LIVE",
     path: "/v3/backlinks/backlinks/live",
     costBand: "medium",
-    refresh: { everyDays: 7 },
+    refresh: { everyDays: 30 },
     // One link per linking website: the strongest thousand websites, each
     // once, rather than a thousand links from the three sites with most.
     // Lost links too, so the page can say which went.
@@ -67,7 +75,7 @@ export const SITE_LINK_OPERATIONS: readonly SeoOperation[] = [
     mode: "LIVE",
     path: "/v3/backlinks/backlinks/live",
     costBand: "medium",
-    refresh: { everyDays: 7 },
+    refresh: { everyDays: 30 },
     // Every link as it is (Anthony, 2026-09-24: "store whatever we can"), a
     // thousand a request, as many requests as the site's limit allows
     // (`companyDataLimits.ts`), planned and paged like the full keyword list
@@ -86,7 +94,7 @@ export const SITE_LINK_OPERATIONS: readonly SeoOperation[] = [
     mode: "LIVE",
     path: "/v3/backlinks/backlinks/live",
     costBand: "medium",
-    refresh: { everyDays: 7 },
+    refresh: { everyDays: 30 },
     // Every broken link, not one per website: each is a page worth mending.
     fixed: { mode: "as_is", filters: ["is_broken", "=", true], order_by: ["domain_from_rank,desc"] },
     params: { target: TARGET, limit: LIMIT },
@@ -98,7 +106,7 @@ export const SITE_LINK_OPERATIONS: readonly SeoOperation[] = [
     mode: "LIVE",
     path: "/v3/backlinks/referring_domains/live",
     costBand: "medium",
-    refresh: { everyDays: 7 },
+    refresh: { everyDays: 30 },
     fixed: { backlinks_status_type: "all", order_by: ["rank,desc"], internal_list_limit: 1 },
     params: { target: TARGET, limit: LIMIT },
   },
@@ -131,7 +139,7 @@ export const SITE_LINK_OPERATIONS: readonly SeoOperation[] = [
     mode: "LIVE",
     path: "/v3/backlinks/timeseries_new_lost_summary/live",
     costBand: "low",
-    refresh: { everyDays: 7 },
+    refresh: { everyDays: 30 },
     // By week, and with no start date. The docs offer `date_from`, but on
     // 2026-09-23 DataForSEO refused every request that sent one ("Invalid
     // Field: 'date_from'", uncharged) and answered without it with every

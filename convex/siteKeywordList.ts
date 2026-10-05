@@ -12,6 +12,7 @@ import { fileKeywordRank, requestSiteRebuild, type RankExtras } from "./siteRank
 import { getErrorMessage } from "./utils/lang";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { readSentLocationCode } from "./utils/seoSentPlace";
+import { anyCompanyOwns } from "./utils/websitePairing";
 import { featurePositionValidator, pagePath, rankedPositionValidator } from "./utils/siteShapes";
 import { recomputeSearchStats } from "./websiteTrackingStats";
 
@@ -282,11 +283,14 @@ async function clearOlderFeatures(
 /**
  * Whether a page is part of a refresh of the whole list kept: planned before
  * pages carried their reach, or bought to reach the site's whole limit —
- * not an everyday check's page alone.
+ * not an everyday check's page alone. A competitor's top 1,000 (a reach of
+ * none, finish-off plan item 6b) is the whole list kept for it — unless a
+ * company holds the website as its own, whose longer list it must not clear.
  */
 async function refreshesWholeList(ctx: MutationCtx, pullId: Id<"seoDataPulls">, websiteId: Id<"websites">): Promise<boolean> {
   const pull = await ctx.db.get(pullId);
   if (!pull || pull.listReach === undefined) return true;
+  if (pull.listReach === 0) return !(await anyCompanyOwns(ctx, websiteId));
   const hold = pull.companyId
     ? await ctx.db.query("companyWebsites").withIndex("by_company_website", (q) => q.eq("companyId", pull.companyId!).eq("websiteId", websiteId)).first()
     : null;

@@ -1,3 +1,5 @@
+import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
+
 /**
  * What a collection buys for which website, and how long an answer it bought
  * is served before the same thing is bought again
@@ -41,15 +43,63 @@ export function isCrawl(operationId: string): boolean {
 }
 
 /**
- * Whether a kind of request is bought for a competitor (a tracked hold,
- * `isTrackedHold`). Not the crawl: it feeds only a company's own websites'
- * Site audit, page list and AI search checks, each already off for
- * competitors (`holdPages.ts`, `siteAngles.ts`, `fanOutPageJudge.ts`) — and on
+ * What a competitor (a tracked hold, `isTrackedHold`) is bought: only what
+ * benchmarking needs (finish-off plan, item 6b, agreed with Anthony on
+ * 2026-10-05). Its keyword totals and its link totals, every run — the trend
+ * charts' points; its linking websites ("we don't need every backlink for a
+ * competitor, just the linking domains"); and its keyword list's top 1,000
+ * ("happy with 1,000"). Where it ranks for the company's tracked searches and
+ * whether the AI engines name it come free, from the company's own searches
+ * and questions.
+ *
+ * Not bought for a competitor: the crawl, which feeds only a company's own
+ * websites' Site audit, page list and AI search checks (item 6 — on
  * 2026-10-05 about $5.19 of the $5.21 that day's crawls really cost was
- * competitors'.
+ * competitors'); every link, one link per website, broken links, links gained
+ * and lost, the words links use and the servers they come from; and who
+ * competes with it.
  */
+const BOUGHT_FOR_COMPETITORS = new Set([
+  "domain_ranked_keywords",
+  KEYWORD_LIST_OPERATION_ID,
+  "backlinks_summary",
+  "referring_domains_list",
+]);
+
+/** Whether a kind of request is bought for a competitor. */
 export function boughtForCompetitor(operationId: string): boolean {
-  return !isCrawl(operationId);
+  return BOUGHT_FOR_COMPETITORS.has(operationId);
+}
+
+/** A competitor's keyword list: its first thousand rows, the ones bringing it most visits. */
+export const COMPETITOR_KEYWORD_ROWS = 1_000;
+
+/**
+ * A competitor's keyword list is bought once a month (item 6c), not at the
+ * list's own weekly cadence — the company's own website keeps that, and its
+ * everyday first pages.
+ */
+export const COMPETITOR_KEYWORD_LIST_DAYS = 30;
+
+/** Whether a competitor's list stops at its first page: the keyword list's top 1,000. */
+export function competitorFirstPageOnly(operationId: string): boolean {
+  return operationId === KEYWORD_LIST_OPERATION_ID;
+}
+
+/**
+ * A request's own cadence for this website, in days: the registry's, except a
+ * competitor's keyword list, bought monthly. Undefined for a request bought
+ * at the company's cadence.
+ */
+export function ownDaysFor(operation: { id: string; refresh?: { everyDays: number } }, competitor: boolean): number | undefined {
+  if (competitor && operation.id === KEYWORD_LIST_OPERATION_ID) return COMPETITOR_KEYWORD_LIST_DAYS;
+  return operation.refresh?.everyDays;
+}
+
+/** The operation as bought for this website: with a competitor's own cadence where it differs. */
+export function asBoughtFor<Operation extends { id: string; refresh?: { everyDays: number } }>(operation: Operation, competitor: boolean): Operation {
+  const everyDays = ownDaysFor(operation, competitor);
+  return everyDays === operation.refresh?.everyDays ? operation : { ...operation, refresh: everyDays === undefined ? undefined : { everyDays } };
 }
 
 /**
