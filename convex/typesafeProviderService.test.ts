@@ -1,4 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
+import { whileMovingClock } from "@/src/test/realTime";
 import {
   askTypesafe,
   boundedFetch,
@@ -96,8 +97,7 @@ describe("typesafe provider service", () => {
         questions: { urgent: { type: "noul", instructions: "Is this urgent?" } },
       });
 
-      await vi.runAllTimersAsync();
-      await expect(resultPromise).resolves.toMatchObject({ answers: { urgent: { noul: 0.92 } } });
+      await expect(whileMovingClock(resultPromise)).resolves.toMatchObject({ answers: { urgent: { noul: 0.92 } } });
       expect(fetchImpl).toHaveBeenCalledTimes(2);
     } finally {
       vi.useRealTimers();

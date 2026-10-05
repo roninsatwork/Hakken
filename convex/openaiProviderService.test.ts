@@ -1,4 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
+import { whileMovingClock } from "@/src/test/realTime";
 import {
   buildOpenAIProviderConfig,
   createOpenAIProviderAdapter,
@@ -84,8 +85,7 @@ describe("openai provider service", () => {
         contents: [{ type: "text", text: "Prompt" }],
       });
 
-      await vi.runAllTimersAsync();
-      await expect(resultPromise).resolves.toEqual({
+      await expect(whileMovingClock(resultPromise)).resolves.toEqual({
         text: "Reply after retry",
         inputTokens: 8,
         outputTokens: 3,
@@ -141,8 +141,7 @@ describe("openai provider service", () => {
         fetchImpl,
       });
 
-      await vi.runAllTimersAsync();
-      await expect(resultPromise).resolves.toEqual(["gpt-test"]);
+      await expect(whileMovingClock(resultPromise)).resolves.toEqual(["gpt-test"]);
       expect(fetchImpl).toHaveBeenCalledTimes(2);
     } finally {
       vi.useRealTimers();

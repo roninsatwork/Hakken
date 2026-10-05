@@ -1,5 +1,6 @@
 import type { GoogleGenAI } from "@google/genai";
 import { describe, expect, test, vi } from "vitest";
+import { whileMovingClock } from "@/src/test/realTime";
 import {
   buildVertexProviderConfig,
   listVertexModels,
@@ -123,8 +124,7 @@ describe("vertex provider service", () => {
         retryPolicy: { maxAttempts: 2, baseDelayMs: 1000, jitterRatio: 0 },
       });
 
-      await vi.runAllTimersAsync();
-      await expect(resultPromise).resolves.toMatchObject({ text: "ok" });
+      await expect(whileMovingClock(resultPromise)).resolves.toMatchObject({ text: "ok" });
       expect(generateContent).toHaveBeenCalledTimes(2);
     } finally {
       vi.useRealTimers();
@@ -149,8 +149,7 @@ describe("vertex provider service", () => {
         retryPolicy: { maxAttempts: 2, baseDelayMs: 1000, jitterRatio: 0 },
       });
 
-      await vi.runAllTimersAsync();
-      await expect(resultPromise).resolves.toMatchObject({
+      await expect(whileMovingClock(resultPromise)).resolves.toMatchObject({
         embeddings: [{ values: [0.1, 0.2] }],
       });
       expect(embedContent).toHaveBeenCalledTimes(2);

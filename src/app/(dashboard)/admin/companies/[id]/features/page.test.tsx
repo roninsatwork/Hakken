@@ -86,7 +86,7 @@ describe("CompanyFeaturesPage", () => {
     render(<CompanyFeaturesPage />);
 
     expect(
-      await screen.findByRole("heading", { name: "featuresTitle" }, { timeout: 5000 })
+      await screen.findByRole("heading", { name: "featuresTitle" })
     ).toBeInTheDocument();
 
     // Twice on purpose: once visibly in the name column, and once as the

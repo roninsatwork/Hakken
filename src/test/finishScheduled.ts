@@ -1,4 +1,5 @@
 import { vi } from "vitest";
+import { nextTurn, realDeadline, REAL_WAIT_LIMIT_MS } from "./realTime";
 
 /**
  * Run every scheduled function to completion, and whatever those schedule.
@@ -20,34 +21,18 @@ import { vi } from "vitest";
  * and does it well inside the thirty-second test timeout. A cold module no
  * longer does.
  *
- * Needs fake timers, like the call it replaces.
+ * Needs fake timers, like the call it replaces. Its deadline is real time
+ * (`realTime.ts`): until 2026-10-05 it was read from `process.hrtime`, which
+ * Vitest 4's fake timers replace too, so a clock jump spent it and a cold
+ * load never did — the helper meant to fail a hang in its own words ran on
+ * to the thirty-second limit instead.
  */
 
 /** The one piece of the test harness this needs. */
 type ScheduledFunctionHarness = { finishInProgressScheduledFunctions: () => Promise<void> };
 
-/** Real time allowed for one round's functions, however long their modules take to load. */
-const ROUND_LIMIT_MS = 20_000;
-
 /** Rounds of "these scheduled more". A chain deeper than this is looping. */
 const MAX_ROUNDS = 100;
-
-function elapsedMs(since: bigint): number {
-  return Number(process.hrtime.bigint() - since) / 1_000_000;
-}
-
-/** One full turn of the event loop, on a queue fake timers do not touch. */
-function nextTurn(): Promise<void> {
-  return new Promise((resolve) => {
-    const { port1, port2 } = new MessageChannel();
-    port2.onmessage = () => {
-      port1.close();
-      port2.close();
-      resolve();
-    };
-    port1.postMessage(null);
-  });
-}
 
 export async function finishScheduled(t: ScheduledFunctionHarness): Promise<void> {
   for (let round = 0; round < MAX_ROUNDS; round += 1) {
@@ -60,16 +45,20 @@ export async function finishScheduled(t: ScheduledFunctionHarness): Promise<void
 
     // Keep the clock moving while waiting: an action may be sleeping on a
     // timer, and a follow-up it schedules should start rather than wait.
-    const started = process.hrtime.bigint();
-    while (!done) {
-      vi.runAllTimers();
-      await nextTurn();
-      if (!done && elapsedMs(started) > ROUND_LIMIT_MS) {
-        throw new Error(
-          `finishScheduled: a scheduled function was still running after ${ROUND_LIMIT_MS / 1000}s. `
-          + "Something is waiting on a timer that never fires, or on itself.",
-        );
+    const deadline = realDeadline();
+    try {
+      while (!done) {
+        vi.runAllTimers();
+        await nextTurn();
+        if (!done && deadline.passed()) {
+          throw new Error(
+            `finishScheduled: a scheduled function was still running after ${REAL_WAIT_LIMIT_MS / 1000}s of real time. `
+            + "Something is waiting on a timer that never fires, or on itself.",
+          );
+        }
       }
+    } finally {
+      deadline.stop();
     }
     await settled;
 
@@ -78,4 +67,37 @@ export async function finishScheduled(t: ScheduledFunctionHarness): Promise<void
   throw new Error(
     `finishScheduled: scheduled functions were still scheduling more after ${MAX_ROUNDS} rounds.`,
   );
+}
+
+/** A harness that can also read the scheduler's own table. */
+type DueHarness = ScheduledFunctionHarness & {
+  run: <T>(handler: (ctx: { db: { system: { query: (table: "_scheduled_functions") => { collect: () => Promise<Array<{ scheduledTime: number; state: { kind: string } }>> } } } }) => Promise<T>) => Promise<T>;
+};
+
+/**
+ * Run the scheduled functions due now, and those they schedule for now, until
+ * none is left due — a writer that pages itself through a long list — but
+ * none set for later, which `finishScheduled` would run too. Bounded by real
+ * time, never by a guess at how many pages the chain takes: the five rounds
+ * `seoKeywordIntent.test.ts` once counted were right only for 1,200 rows.
+ */
+export async function finishDueNow(t: DueHarness): Promise<void> {
+  const deadline = realDeadline();
+  try {
+    for (;;) {
+      const due = await t.run(async (ctx) => (await ctx.db.system.query("_scheduled_functions").collect())
+        .filter((job) => job.state.kind === "pending" && job.scheduledTime <= Date.now()).length);
+      if (due === 0) return;
+      if (deadline.passed()) {
+        throw new Error(
+          `finishDueNow: functions were still due after ${REAL_WAIT_LIMIT_MS / 1000}s of real time. `
+          + "Something keeps scheduling itself for now.",
+        );
+      }
+      vi.advanceTimersByTime(1);
+      await t.finishInProgressScheduledFunctions();
+    }
+  } finally {
+    deadline.stop();
+  }
 }

@@ -4,7 +4,7 @@ import { describe, expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
-import { SEO_COMPETITORS_PER_WEBSITE, SEO_MAX_SENDS_PER_CYCLE } from "./seoCollectionPolicy";
+import { SEO_COMPETITORS_PER_WEBSITE, SEO_EXPANSION_PAGE, SEO_MAX_SENDS_PER_CYCLE } from "./seoCollectionPolicy";
 import { findSeoOperation, seoSiteOperationParams } from "./dataForSeoRegistry";
 import { companyHasWorkDue } from "./seoCollectionDue";
 
@@ -957,9 +957,12 @@ describe("a company too big for one page", () => {
     const t = harness();
     const company = await seedCompany(t, "Big Agency");
     await seedSchedule(t, company, DAILY);
-    // Three pages of 100 (`SEO_EXPANSION_PAGE`), the last with five: 230 until
-    // 2026-10-03, when it ran just past the 5s each test is held to here.
-    const total = 205;
+    // Past the rows one page reads (`SEO_EXPANSION_PAGE`, and one more), which
+    // is where the old pages lost every website after: 230 until 2026-10-03,
+    // then 205, each past the 5s a test is held to here. A page now stops on
+    // its reads after thirty or so websites, and the test's database slows as
+    // it fills, so thirty past the page is the bug's whole reach, and quick.
+    const total = SEO_EXPANSION_PAGE + 30;
     await t.run(async (ctx) => {
       for (let index = 0; index < total; index += 1) {
         const websiteId = await ctx.db.insert("websites", {
@@ -971,7 +974,7 @@ describe("a company too big for one page", () => {
     const cycleId = await openCycle(t, company);
 
     let cursor: Id<"companyWebsites"> | undefined;
-    for (let pageNumber = 0; pageNumber < 10; pageNumber += 1) {
+    for (let pageNumber = 0; pageNumber < 20; pageNumber += 1) {
       await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId, ...(cursor ? { cursor } : {}) });
       const row = await cycle(t, cycleId);
       if (row?.status !== "EXPANDING") break;

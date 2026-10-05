@@ -126,6 +126,8 @@ describe("useSitePager", () => {
     const other = freshPage("rows=50");
     rememberRows(other, 100);
     const shared = renderHook(() => useSitePager(list(200)));
+    // The memory is restored on a 0ms timer set during render; this later 5ms
+    // one cannot end before it, however busy the run — an order, not a guess.
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 5)); });
     expect(shared.result.current.footer.pageSize).toBe(50);
   });

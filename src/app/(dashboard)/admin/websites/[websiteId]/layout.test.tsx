@@ -139,7 +139,7 @@ describe("WebsiteRecordLayout", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: /deleteWebsite/ }));
 
-    const dialog = await screen.findByRole("dialog", {}, { timeout: 5000 });
+    const dialog = await screen.findByRole("dialog");
     expect(await screen.findByText("deleteConfirm:rival.com")).toBeInTheDocument();
     expect(screen.getByText("affectedTitle:2")).toBeInTheDocument();
     expect(screen.getByText("deleteWarningBody")).toBeInTheDocument();
@@ -156,7 +156,7 @@ describe("WebsiteRecordLayout", () => {
     renderLayout();
 
     fireEvent.click(await screen.findByRole("button", { name: /deleteWebsite/ }));
-    const confirm = await screen.findAllByRole("button", { name: /deleteWebsite/ }, { timeout: 5000 });
+    const confirm = await screen.findAllByRole("button", { name: /deleteWebsite/ });
     fireEvent.click(confirm[confirm.length - 1]);
 
     await waitFor(() => {
@@ -172,7 +172,7 @@ describe("WebsiteRecordLayout", () => {
     renderLayout();
 
     fireEvent.click(await screen.findByRole("button", { name: /deleteWebsite/ }));
-    const confirm = await screen.findAllByRole("button", { name: /deleteWebsite/ }, { timeout: 5000 });
+    const confirm = await screen.findAllByRole("button", { name: /deleteWebsite/ });
     fireEvent.click(confirm[confirm.length - 1]);
 
     await waitFor(() => {

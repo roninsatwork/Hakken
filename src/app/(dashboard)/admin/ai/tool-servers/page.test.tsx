@@ -102,8 +102,6 @@ describe("ToolServersPage", () => {
     fireEvent.click(screen.getByRole("button", { name: `${T}.buttons.connect` }));
     const nameInput = await screen.findByPlaceholderText(
       `${T}.placeholders.name`,
-      {},
-      { timeout: 5_000 },
     );
     fireEvent.change(nameInput, {
       target: { value: "  Warehouse  " },
@@ -128,8 +126,6 @@ describe("ToolServersPage", () => {
     fireEvent.click(screen.getByRole("button", { name: `${T}.buttons.connect` }));
     const nameInput = await screen.findByPlaceholderText(
       `${T}.placeholders.name`,
-      {},
-      { timeout: 5_000 },
     );
     fireEvent.change(nameInput, {
       target: { value: "Warehouse" },
@@ -189,8 +185,6 @@ describe("ToolServersPage", () => {
 
     expect(await screen.findByText(
       `${T}.modal.disconnectDetail`,
-      {},
-      { timeout: 5_000 },
     )).toBeInTheDocument();
     expect(deleteServer).not.toHaveBeenCalled();
   });

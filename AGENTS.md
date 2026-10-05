@@ -163,7 +163,53 @@ a result):
   `npm run test:run` — inside `npm run check` — times every test, times again
   on its own any test over five seconds, and fails if it is still over
   (`scripts/check-test-speed.mjs`). Make a slow test lighter. The list of
-  tests slow on purpose in that script may shrink, never grow.
+  tests slow on purpose in that script may shrink, never grow. Keep a test
+  well under five seconds: one near the line passes or fails with the
+  machine's load.
+
+**Tests that never flake** (Anthony, 2026-10-05: "i don't want timeouts and
+flakes ever again … add whatever rules you need for other agents"). A test
+that fails in a full run and passes alone is a fault in the test. Every one
+found in September and October 2026 was one of the shapes below; each now has
+one way to do it, and `src/test-time-limits-drift.test.ts` fails the others.
+
+- **Wait for the work, never for a count or a guess.** In a full run the first
+  call into app code really loads it — seconds, on a busy machine — so "move
+  the clock two thousand times", "move it once", or "sleep half a second" all
+  run out before the work has started. With fake timers, use the helpers:
+  `await whileMovingClock(work)` (`src/test/realTime.ts`; `"next"` to stop at
+  each timer), `await finishScheduled(t)` for scheduled functions, and
+  `await finishDueNow(t)` for a chain due now but not the work set for later
+  (`src/test/finishScheduled.ts`). All three are bounded by real time and fail
+  a genuine hang in their own words. Never write a loop that moves the clock,
+  never `vi.runAllTimersAsync()` / `vi.advanceTimersToNextTimer…()` and hope,
+  never a `setTimeout` sleep of 50ms or more to wait for something.
+- **Fake timers fake every clock.** In Vitest 4 a plain `vi.useFakeTimers()`
+  replaces `Date`, `performance.now` and `process.hrtime` too, so a deadline
+  read from any of them is fake time. Use `realDeadline()`; to time a test,
+  keep `performance.now` before the fakes go in.
+- **One wait on screen.** `findBy…` and `waitFor` take the default set once in
+  `vitest.setup.ts` (ten seconds here, a minute on GitHub) — it lasts only as
+  long as it must. Never give one a `{ timeout }` of its own; never use
+  `vi.waitFor`, which the default does not reach.
+- **Keep days away from midnight.** A test that works out "today" or
+  "yesterday" from the clock calls `useMiddayUtc()` before each test and
+  `vi.useRealTimers()` after, or fixes the date with `vi.setSystemTime`.
+- **Stubs go back by themselves.** The config undoes every `vi.stubEnv` and
+  `vi.stubGlobal` after each test (`unstubEnvs`, `unstubGlobals`); stub what a
+  test needs in that test or its `beforeEach`, never rely on one carrying over.
+- **The run is set as measured; leave it.** Here, `vitest.config.ts` runs half
+  the machine's cores and keeps transformed files between runs
+  (`fsModuleCache`): the longest wait in a full run fell from 22 seconds to
+  under 6. GitHub's runs are untouched.
+- **A slow test is made lighter, never excused.** Time it with a real clock,
+  find which step costs, and cut what its assertions do not read — the test
+  database checks every stored row on each lookup, so rows nobody asserts on
+  are the usual cost.
+- **When one still fails in a full run and passes alone**: find its shape, fix
+  every test with that shape through the helpers, extend the guard so it
+  cannot be written again, and add the rule here — in the same piece of work.
+  Never re-run and move on; never fix only the test that happened to fail.
 
 Two different things run on GitHub, and it matters which one you are about to
 trigger.

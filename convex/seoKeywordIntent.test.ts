@@ -7,6 +7,7 @@ import type { Id } from "./_generated/dataModel";
 import type { ActionCtx } from "./_generated/server";
 import type { TypesafeAskResult } from "./typesafeProviderService";
 import { judgeNewKeywords, normaliseKeyword } from "./seoJudgments";
+import { finishDueNow } from "@/src/test/finishScheduled";
 
 /**
  * What somebody means by a search, and what it costs to find out.
@@ -233,10 +234,8 @@ describe("a meaning carried onto what holds the search", () => {
       });
 
       await t.mutation(internal.seoCollectionParse.writeKeywordIntents, { judged: [{ keyword: "carp bait", intent: "BUYING" }] });
-      for (let round = 0; round < 5; round += 1) {
-        vi.advanceTimersByTime(1);
-        await t.finishInProgressScheduledFunctions();
-      }
+      // To the end of the chain, however many pages it takes, by real time.
+      await finishDueNow(t);
 
       const intents = await t.run(async (ctx) => (await ctx.db.query("siteKeywordRanks").collect()).map((row) => row.intent));
       expect(intents).toHaveLength(1_200);

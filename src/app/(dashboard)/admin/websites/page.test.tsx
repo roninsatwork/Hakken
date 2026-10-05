@@ -151,7 +151,7 @@ describe("AllWebsitesPage", () => {
     const bins = await screen.findAllByRole("button", { name: "deleteWebsite" });
     fireEvent.click(bins[1]);
     // The confirmation names the site, and nothing is deleted until it is confirmed.
-    expect(await screen.findByText("deleteTitle", {}, { timeout: 5000 })).toBeInTheDocument();
+    expect(await screen.findByText("deleteTitle")).toBeInTheDocument();
     expect(deleteWebsite).not.toHaveBeenCalled();
     // Pressing the bin does not also open the record behind it.
     expect(push).not.toHaveBeenCalled();
@@ -165,7 +165,7 @@ describe("AllWebsitesPage", () => {
     render(<AllWebsitesPage />);
 
     fireEvent.click(await screen.findByRole("button", { name: /addWebsite/ }));
-    fireEvent.change(await screen.findByLabelText("urlLabel", {}, { timeout: 5000 }), {
+    fireEvent.change(await screen.findByLabelText("urlLabel"), {
       target: { value: "https://new.com" },
     });
     fireEvent.click(screen.getByRole("button", { name: "add" }));
@@ -184,7 +184,7 @@ describe("AllWebsitesPage", () => {
     render(<AllWebsitesPage />);
 
     fireEvent.click(await screen.findByRole("button", { name: /addWebsite/ }));
-    fireEvent.change(await screen.findByLabelText("urlLabel", {}, { timeout: 5000 }), {
+    fireEvent.change(await screen.findByLabelText("urlLabel"), {
       target: { value: "8.8.8.8" },
     });
     fireEvent.click(screen.getByRole("button", { name: "add" }));

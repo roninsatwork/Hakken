@@ -7,6 +7,7 @@ import schema from "./schema";
 import { RESULT_GAVE_UP, RETRY_RUN_ENDED, SEND_UNCERTAIN } from "./seoCollectionQueue";
 import { dataForSeoCodeKind } from "./dataForSeoRest";
 import { reusableByKey } from "./seoCollection";
+import { whileMovingClock } from "@/src/test/realTime";
 
 /**
  * The collection's money rules, against a stand-in for DataForSEO.
@@ -20,9 +21,6 @@ import { reusableByKey } from "./seoCollection";
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
 
-/** A real pause, taken before the fake timers below replace `setTimeout`. */
-const realSetTimeout = globalThis.setTimeout;
-const pauseForReal = () => new Promise((resolve) => realSetTimeout(resolve, 0));
 
 beforeEach(() => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
@@ -208,15 +206,14 @@ describe("a supplier's refusal", () => {
     }));
 
     // The clock moves only to the Collector's next wait, never past it: moved
-    // by fixed steps, it outran a run still loading and ended it early.
-    let finished = false;
-    const running = t.action(internal.seoAgentRuns.runSeoRoleNow, { role: "DATAFORSEO_COLLECTOR", runId })
-      .finally(() => { finished = true; });
-    for (let step = 0; step < 2_000 && !finished; step++) {
-      await vi.advanceTimersToNextTimerAsync();
-      await pauseForReal();
-    }
-    await running;
+    // by fixed steps, it outran a run still loading and ended it early. For as
+    // long as real time allows, not for two thousand turns, which a busy full
+    // run's first load of the Collector outlasted (`src/test/realTime.ts`).
+    await whileMovingClock(
+      t.action(internal.seoAgentRuns.runSeoRoleNow, { role: "DATAFORSEO_COLLECTOR", runId }),
+      "next",
+      "The Collector's run",
+    );
 
     expect(sentAt).toHaveLength(4);
     expect(sentAt.slice(1).map((at, index) => Math.round((at - sentAt[index]) / 60_000))).toEqual([1, 2, 3]);

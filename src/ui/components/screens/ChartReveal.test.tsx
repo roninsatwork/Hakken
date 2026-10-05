@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { render, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ChartReveal, revealKey } from "./ChartReveal";
@@ -72,7 +72,7 @@ describe("ChartReveal", () => {
     const line = document.createElementNS("http://www.w3.org/2000/svg", "g");
     line.setAttribute("class", "recharts-line");
     container.querySelector("svg")!.appendChild(line);
-    await vi.waitFor(() => expect(animate).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(animate).toHaveBeenCalledTimes(1));
   });
 
   it("plays again on new dates, but not when a line is ticked on or off", () => {

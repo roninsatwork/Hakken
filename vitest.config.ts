@@ -65,6 +65,34 @@ const coverageConfig = {
  */
 const TEST_TIMEOUT_MS = process.env.GITHUB_ACTIONS ? 180_000 : 30_000
 
+/*
+ * How hard a run here drives the machine (AGENTS.md, "Tests that never
+ * flake"). A test's time in the full run is mostly waiting for the app's
+ * code to load, not running: a test of 0.2s alone took 22s there, one of 1s
+ * took 30s and timed out, because nineteen workers queued on one process to
+ * turn the same files into code. Measured on 2026-10-05, the whole run alike
+ * at about four and a half minutes (the Sites speed test sets its length):
+ *
+ *   nineteen workers, nothing kept      14 tests past 5s, the longest 22s
+ *   half the cores (ten)                 4 past 5s, the longest 15.5s
+ *   transformed files kept between runs  3 past 5s, the longest 7.5s
+ *   both                                 1 past 5s, the longest 5.6s
+ *
+ * So here: half the cores, and the transformed files kept on disk between
+ * runs (`node_modules/.vite/vitest`), redone for any file that changed.
+ * GitHub's runs are left as they were: its three-minute limit has the room,
+ * and its own cache of `node_modules` must never carry this one.
+ */
+const LOCAL_RUN = !process.env.GITHUB_ACTIONS
+
+/*
+ * What one test stubs — an environment value, `fetch` — is put back before
+ * the next, whether or not it remembered to: a stub left behind changed the
+ * tests after it, in whatever order a run happened to take. Each project sets
+ * it, as each sets its time limit: a project takes nothing from the root.
+ */
+const STUBS_PUT_BACK = { unstubEnvs: true, unstubGlobals: true } as const
+
 export default defineConfig({
   plugins: [reactPlugin],
   resolve: {
@@ -73,6 +101,7 @@ export default defineConfig({
   test: {
     globals: true,
     coverage: coverageConfig,
+    ...(LOCAL_RUN ? { maxWorkers: '50%', experimental: { fsModuleCache: true } } : {}),
     projects: [
       {
         plugins: [reactPlugin],
@@ -95,6 +124,7 @@ export default defineConfig({
            */
           testTimeout: TEST_TIMEOUT_MS,
           hookTimeout: TEST_TIMEOUT_MS,
+          ...STUBS_PUT_BACK,
         },
       },
       {
@@ -135,6 +165,7 @@ export default defineConfig({
            */
           testTimeout: TEST_TIMEOUT_MS,
           hookTimeout: TEST_TIMEOUT_MS,
+          ...STUBS_PUT_BACK,
         },
       },
     ],

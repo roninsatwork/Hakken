@@ -260,7 +260,7 @@ describe("a country the website does not keep ready", () => {
     at("/app/search-console/site_1/keywords", "country=moz");
     actions = {
       searchConsoleLiveDays: vi.fn().mockResolvedValue({ ok: true, days: [], totals: FIGURES, previous: null, named: null }),
-      searchConsoleLiveList: vi.fn().mockResolvedValue({ ok: true, rows: [{ ...ROW, key: "plumber maputo" }], cut: null, named: 8, comparable: true, summary: SUMMARY }),
+      searchConsoleLiveList: vi.fn().mockResolvedValue({ ok: true, rows: [{ ...ROW, key: "plumber maputo" }, { ...ROW, key: "plumber beira" }], cut: null, named: 8, comparable: true, summary: SUMMARY }),
     };
     answer({
       "searchConsoleConnect:searchConsoleStatus": STATUS,
@@ -275,8 +275,10 @@ describe("a country the website does not keep ready", () => {
     await waitFor(() => expect(actions.searchConsoleLiveDays).toHaveBeenCalledWith(expect.objectContaining({ country: "moz" })));
 
     // A search is worked out from Google's answer: neither the server nor Google is asked again.
+    // Waited for by what it does — the other row goes — never for a fixed time,
+    // which a busy run outlasts and then checks nothing (AGENTS.md, "Tests that never flake").
     fireEvent.change(screen.getByPlaceholderText("searchConsole.keywords.searchPlaceholder"), { target: { value: "maputo" } });
-    await new Promise((settle) => setTimeout(settle, 500));
+    await waitFor(() => expect(screen.queryByText("plumber beira")).not.toBeInTheDocument());
     expect(screen.getByText("plumber maputo")).toBeInTheDocument();
     expect(actions.searchConsoleLiveList).toHaveBeenCalledTimes(1);
     expect(askedOf("searchConsoleListPage").every((args) => !("q" in args))).toBe(true);

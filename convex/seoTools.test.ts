@@ -1,10 +1,16 @@
 import { convexTest } from "convex-test";
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { useMiddayUtc } from "@/src/test/realTime";
 
 import { internal } from "./_generated/api";
 import schema from "./schema";
 import { findSeoOperation, seoSiteOperationParams } from "./dataForSeoRegistry";
 import type { Id } from "./_generated/dataModel";
+
+// Works out "today" itself, beside code that does the same: kept at midday UTC
+// so a run crossing midnight cannot give the two different days.
+beforeEach(() => useMiddayUtc());
+afterEach(() => vi.useRealTimers());
 
 /**
  * The wall between one customer and another.

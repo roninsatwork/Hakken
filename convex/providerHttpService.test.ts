@@ -1,4 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
+import { whileMovingClock } from "@/src/test/realTime";
 import { ProviderRuntimeError } from "./aiProviderRetryService";
 import { parseProviderJsonResponse, requestProviderJson } from "./providerHttpService";
 
@@ -60,8 +61,7 @@ describe("provider HTTP service", () => {
         },
       });
 
-      await vi.runAllTimersAsync();
-      await expect(requestPromise).resolves.toEqual({ ok: true });
+      await expect(whileMovingClock(requestPromise)).resolves.toEqual({ ok: true });
       expect(fetchImpl).toHaveBeenCalledTimes(2);
     } finally {
       vi.useRealTimers();

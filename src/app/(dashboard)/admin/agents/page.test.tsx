@@ -138,7 +138,7 @@ describe("AgentsPage model column", () => {
 
     fireEvent.click(screen.getAllByRole("button", { name: "buttons.delete" })[0]);
 
-    expect(await screen.findByText("modal.deleteConfirm", {}, { timeout: 5_000 })).toBeInTheDocument();
+    expect(await screen.findByText("modal.deleteConfirm")).toBeInTheDocument();
     expect(screen.getByText("modal.undone")).toBeInTheDocument();
   });
 

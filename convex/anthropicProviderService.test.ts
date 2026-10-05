@@ -1,4 +1,5 @@
 import { describe, expect, test, vi } from "vitest";
+import { whileMovingClock } from "@/src/test/realTime";
 import {
   buildAnthropicProviderConfig,
   createAnthropicProviderAdapter,
@@ -77,8 +78,7 @@ describe("anthropic provider service", () => {
         contents: [{ type: "text", text: "Prompt" }],
       });
 
-      await vi.runAllTimersAsync();
-      await expect(resultPromise).resolves.toEqual({
+      await expect(whileMovingClock(resultPromise)).resolves.toEqual({
         text: "Reply after retry",
         inputTokens: 10,
         outputTokens: 5,
@@ -137,8 +137,7 @@ describe("anthropic provider service", () => {
         fetchImpl,
       });
 
-      await vi.runAllTimersAsync();
-      await expect(resultPromise).resolves.toEqual([{ id: "claude-test", displayName: "Claude Test" }]);
+      await expect(whileMovingClock(resultPromise)).resolves.toEqual([{ id: "claude-test", displayName: "Claude Test" }]);
       expect(fetchImpl).toHaveBeenCalledTimes(2);
     } finally {
       vi.useRealTimers();

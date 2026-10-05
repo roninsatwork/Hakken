@@ -2,10 +2,16 @@
 // analyticsSnapshots / systemHealth / platformAlerts (foundation-quality
 // plan, phase 3). It still covers all three; split it when next touched.
 import { convexTest } from "convex-test";
-import { describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
+import { useMiddayUtc } from "@/src/test/realTime";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { MODEL_CATALOG_LIMIT } from "./aiModelService";
+
+// Works out "today" itself, beside code that does the same: kept at midday UTC
+// so a run crossing midnight cannot give the two different days.
+beforeEach(() => useMiddayUtc());
+afterEach(() => vi.useRealTimers());
 
 describe("analytics cron snapshots", () => {
   test("empty days create one global zero snapshot and duplicate generation is skipped", async () => {

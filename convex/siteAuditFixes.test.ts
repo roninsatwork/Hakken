@@ -461,11 +461,16 @@ describe("side by side at its limits (3.5)", () => {
     const own = await hold(t, korda, "kordatackle.com");
     const rivals: Array<Id<"websites">> = [];
     for (let index = 0; index < 31; index += 1) rivals.push((await hold(t, korda, `rival-${index}.co.uk`, own.websiteId)).websiteId);
+    // Standings for the site and one competitor only: every competitor is
+    // still looked up on its share, but each lookup in the test's database
+    // reads every row stored, and thirty-one competitors' rows made this the
+    // one test over five seconds on its own (2026-10-05).
+    const [ranked] = rivals;
     await t.run(async (ctx) => {
       for (let index = 0; index < 100; index += 1) {
         const keyword = `tracked search ${index}`;
         await ctx.db.insert("websiteKeywords", { websiteId: own.websiteId, companyWebsiteId: own.holdId, keyword, isActive: true, createdAt: Date.now() });
-        for (const websiteId of [own.websiteId, ...rivals]) {
+        for (const websiteId of [own.websiteId, ranked]) {
           await ctx.db.insert("websiteSearchStats", {
             websiteId, keyword, locationCode: UK, firstCheckedDay: "2026-09-01", lastCheckedDay: "2026-09-23",
             lastPosition: websiteId === own.websiteId ? 5 : 3, bestPosition: 1, everRanked: true, updatedAt: Date.now(),
@@ -478,7 +483,8 @@ describe("side by side at its limits (3.5)", () => {
     expect(sideBySide).toHaveLength(31);
     // Two and a half thousand lookups among thirty-one: eighty searches each, and each says so.
     expect(new Set(sideBySide.map((rival) => rival.comparedOn))).toEqual(new Set([80]));
-    expect(sideBySide[0]).toMatchObject({ beatsYouOn: 80, rankedOn: 80 });
+    expect(sideBySide.find((rival) => rival.websiteId === ranked)).toMatchObject({ beatsYouOn: 80, rankedOn: 80 });
+    expect(sideBySide.filter((rival) => rival.websiteId !== ranked).every((rival) => rival.rankedOn === 0)).toBe(true);
   });
 });
 
