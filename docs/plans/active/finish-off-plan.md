@@ -78,6 +78,26 @@ Console part.
   Stripe; about 3 days) and 5 (switching charging on; about 1.5 days), and
   counting other agents' model costs (about 1 day).
 
+## Store less, round two (agreed 2026-10-05, evening)
+
+Measured on dev: morehandles.co.uk's Search Console was 830 MB at the start
+of the evening, 608 MB after item 2 and 471 MB after item 2E. Anthony agreed
+these five, by the letters he was shown (an image of what each changes on
+screen, `C-E-F-explained.png`):
+
+| | What | Saves on morehandles.co.uk (est.) | Days |
+|---|---|---|---|
+| A | Google Images keeps its totals and pages, not each image search | ~110 MB | 0.5 |
+| E | The click-through lists (one search's pages, one page's searches) keep no "period before", so show no % change; the main lists keep theirs | ~40 MB | 0.5 |
+| F | "New and lost" kept for web search, all countries, only | ~30 MB | 0.5 |
+| C | Page numbers, not addresses, inside the ready-made periods; screens unchanged | ~60 MB | 1.5 |
+| D | Keep a search only if it got a click, is tracked, ranks in the top 20, or two or more of the website's pages were shown for it — Almost there and Pages competing stay whole (Anthony: "we need almost there and competing pages; missed demand we don't need") | ~20 MB | 1.5 |
+
+Estimated end: about 210 MB. Each is measured on dev as it is built
+(`searchConsoleTidy:keptSize`, `searchKeepEstimate`). Not agreed: a
+country read as all countries from 75% (B: "the UK searches are 50% of all
+countries for ronins").
+
 ## Next, once this plan is done: what Convex costs (agreed 2026-10-05)
 
 Anthony, 2026-10-05: "It's still a lot of money — we need to look at saving

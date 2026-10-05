@@ -396,7 +396,7 @@ export const keptSize = internalAction({
 /** One part of a website's 90-day searches, most clicks first: web, all countries. */
 export const searchesPart = internalQuery({
   args: { holdId: v.id("companyWebsites"), cursor: v.union(v.string(), v.null()) },
-  returns: v.object({ keys: v.array(v.string()), clicks: v.array(v.number()), impressions: v.array(v.number()), continueCursor: v.string(), isDone: v.boolean() }),
+  returns: v.object({ keys: v.array(v.string()), clicks: v.array(v.number()), impressions: v.array(v.number()), positionSums: v.array(v.number()), counts: v.array(v.number()), continueCursor: v.string(), isDone: v.boolean() }),
   handler: async (ctx, args) => {
     const page = await ctx.db
       .query("searchConsolePeriods")
@@ -404,7 +404,7 @@ export const searchesPart = internalQuery({
         .eq("companyWebsiteId", args.holdId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", "90").eq("which", "NOW"))
       .paginate({ cursor: args.cursor, numItems: 1 });
     const part = page.page[0];
-    return { keys: part?.keys ?? [], clicks: part?.clicks ?? [], impressions: part?.impressions ?? [], continueCursor: page.continueCursor, isDone: page.isDone };
+    return { keys: part?.keys ?? [], clicks: part?.clicks ?? [], impressions: part?.impressions ?? [], positionSums: part?.positionSums ?? [], counts: part?.counts ?? [], continueCursor: page.continueCursor, isDone: page.isDone };
   },
 });
 
@@ -462,7 +462,7 @@ export const searchCapEstimate = internalAction({
     const clicks: number[] = [];
     const impressions: number[] = [];
     for (let cursor: string | null = null; ;) {
-      const part: { keys: string[]; clicks: number[]; impressions: number[]; continueCursor: string; isDone: boolean } =
+      const part: { keys: string[]; clicks: number[]; impressions: number[]; positionSums: number[]; continueCursor: string; isDone: boolean } =
         await ctx.runQuery(internal.searchConsoleTidy.searchesPart, { holdId, cursor });
       keys.push(...part.keys);
       clicks.push(...part.clicks);
@@ -496,6 +496,103 @@ export const searchCapEstimate = internalAction({
         clicksShare: share(sum(clicks.slice(0, cap)), sum(clicks)),
         impressionsShare: share(sum(impressions.slice(0, cap)), sum(impressions)),
         linesShare: share(within[index], lines),
+      })),
+    };
+  },
+});
+
+/** Searches passed to one read of the lines: a function's list argument holds at most 8,192. */
+const KEYS_PER_PASS = 8_000;
+
+/** The searches a website tracks, for what a keep rule would keep. */
+export const trackedSearches = internalQuery({
+  args: { holdId: v.id("companyWebsites") },
+  returns: v.array(v.string()),
+  handler: async (ctx, args) => (await ctx.db
+    .query("searchConsoleTracked")
+    .withIndex("by_hold_kind_key", (q) => q.eq("companyWebsiteId", args.holdId).eq("kind", "query"))
+    .take(500)).map((row) => row.key),
+});
+
+/**
+ * What "keep a search if it got a click, ranks in the top N, or is tracked"
+ * would keep of one website's last 90 days (2026-10-05: keeping only clicked
+ * searches would empty Almost there, which lists positions 4 to 20, mostly
+ * not yet clicked). Each rule's searches, and their share of showings and of
+ * the kept search-and-page lines.
+ */
+export const searchKeepEstimate = internalAction({
+  /** `showings`: the rules kept by showings in the 90 days instead — at least each figure — rather than by position. */
+  args: { host: v.string(), positions: v.array(v.number()), showings: v.optional(v.array(v.number())), competing: v.optional(v.boolean()) },
+  returns: v.union(v.null(), v.object({
+    searches: v.number(),
+    lines: v.number(),
+    rules: v.array(v.object({ rule: v.string(), searches: v.number(), impressionsShare: v.number(), linesShare: v.number() })),
+  })),
+  handler: async (ctx, args) => {
+    const connections: Array<{ connectionId: Id<"searchConsoleConnections">; holdId: Id<"companyWebsites"> }> = await ctx.runQuery(internal.searchConsoleSync.connectionsWithFigures, {});
+    let holdId: Id<"companyWebsites"> | null = null;
+    for (const connection of connections) {
+      const host: string | null = await ctx.runQuery(internal.searchConsoleTidy.hostOfConnection, { connectionId: connection.connectionId });
+      if (host === args.host) holdId = connection.holdId;
+    }
+    if (!holdId) return null;
+    const rows: Array<{ key: string; clicks: number; impressions: number; position: number; pages: number }> = [];
+    for (let cursor: string | null = null; ;) {
+      const part: { keys: string[]; clicks: number[]; impressions: number[]; positionSums: number[]; counts: number[]; continueCursor: string; isDone: boolean } =
+        await ctx.runQuery(internal.searchConsoleTidy.searchesPart, { holdId, cursor });
+      part.keys.forEach((key, index) => rows.push({
+        pages: part.counts[index] ?? 1,
+        key,
+        clicks: part.clicks[index],
+        impressions: part.impressions[index],
+        position: part.impressions[index] > 0 ? part.positionSums[index] / part.impressions[index] : 999,
+      }));
+      if (part.isDone) break;
+      cursor = part.continueCursor;
+    }
+    const tracked = new Set<string>(await ctx.runQuery(internal.searchConsoleTidy.trackedSearches, { holdId }));
+    // Nested rules, the smallest first: each the one before and the searches ranking within its position.
+    const byShowings = args.showings !== undefined;
+    const positions = byShowings ? [...args.showings!].sort((one, two) => two - one) : [...args.positions].sort((one, two) => one - two);
+    const levelOf = (row: (typeof rows)[number]) => {
+      if (row.clicks > 0 || tracked.has(row.key) || (args.competing === true && row.pages >= 2)) return 0;
+      const at = positions.findIndex((limit) => (byShowings ? row.impressions >= limit : row.position <= limit));
+      return at === -1 ? Infinity : at + 1;
+    };
+    const ordered = [...rows].sort((one, two) => levelOf(one) - levelOf(two));
+    const caps = [0, ...positions].map((_, level) => ordered.filter((row) => levelOf(row) <= level).length);
+    let lines = 0;
+    const within = caps.map(() => 0);
+    const top = ordered.slice(0, Math.max(...caps));
+    // A function's list argument holds at most 8,192: the searches go a few thousand at a time, each a whole pass.
+    for (let from = 0; from < top.length; from += KEYS_PER_PASS) {
+      const chunk = top.slice(from, from + KEYS_PER_PASS);
+      // Within this chunk, each cap is how many of its searches that rule keeps.
+      const chunkCaps = caps.map((cap) => Math.max(0, Math.min(cap - from, chunk.length)));
+      let passLines = 0;
+      for (let cursor: string | null = null; ;) {
+        const step: { lines: number; within: number[]; continueCursor: string; isDone: boolean } =
+          await ctx.runQuery(internal.searchConsoleTidy.linesWithin, { holdId, top: chunk.map((row) => row.key), caps: chunkCaps, cursor });
+        passLines += step.lines;
+        step.within.forEach((count, index) => {
+          within[index] += count;
+        });
+        if (step.isDone) break;
+        cursor = step.continueCursor;
+      }
+      lines = passLines;
+    }
+    const all = rows.reduce((sum, row) => sum + row.impressions, 0);
+    const share = (part: number, whole: number) => (whole === 0 ? 0 : Math.round((part / whole) * 1000) / 10);
+    return {
+      searches: rows.length,
+      lines,
+      rules: caps.map((cap, level) => ({
+        rule: level === 0 ? (args.competing ? "clicked, tracked or two pages or more" : "clicked or tracked") : byShowings ? `clicked, tracked or shown ${positions[level - 1]}+ times` : `clicked, tracked or in the top ${positions[level - 1]}`,
+        searches: cap,
+        impressionsShare: share(ordered.slice(0, cap).reduce((sum, row) => sum + row.impressions, 0), all),
+        linesShare: share(within[level], lines),
       })),
     };
   },
