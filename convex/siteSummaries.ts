@@ -7,6 +7,7 @@ import { syncListAiLines } from "./siteListAiDays";
 import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
 import { KEYWORD_COPY_FIELDS, keywordCopyTuple } from "./siteKeywordCopy";
 import { LIST_PAGE_STUCK_MS, dropCopyOf, keywordsCopyKey, pagesCopyKey, writeListCopy } from "./siteListCopies";
+import { stableStringify } from "./utils/lang";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
 import { bandCountsValidator, emptyBandCounts, pageTypeByAddress, sectionOf, type BandCounts, intentSplitValidator, type IntentSplit } from "./utils/siteShapes";
@@ -902,10 +903,20 @@ async function syncDayFigures(
     }
   }
 
+  // Only a figure that changed is written: a day whose figures stand as they
+  // are is left alone (dataforseo-cost-plan.md, A3).
   const now = Date.now();
   for (const [day, fields] of perDay) {
-    const row = await daySummary(ctx, args.websiteId, args.locationCode, day);
-    await ctx.db.patch(row._id, { ...fields, updatedAt: now });
+    const row = await ctx.db
+      .query("siteDaySummaries")
+      .withIndex("by_site_day", (q) => q.eq("websiteId", args.websiteId).eq("locationCode", args.locationCode).eq("day", day))
+      .unique();
+    if (!row) {
+      await ctx.db.insert("siteDaySummaries", { websiteId: args.websiteId, locationCode: args.locationCode, day, ...fields, updatedAt: now });
+      continue;
+    }
+    const changed = Object.entries(fields).filter(([key, value]) => stableStringify((row as Record<string, unknown>)[key]) !== stableStringify(value));
+    if (changed.length > 0) await ctx.db.patch(row._id, { ...Object.fromEntries(changed), updatedAt: now });
   }
 }
 

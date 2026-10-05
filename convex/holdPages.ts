@@ -7,7 +7,7 @@ import { readPeriod } from "./searchConsolePeriodReads";
 import { dropCopies, writeListCopy } from "./siteListCopies";
 import { claimSchedule, holdPagesKey, noteDataChanged } from "./siteRankings";
 import { REBUILD_WAIT_MS } from "./siteSummaries";
-import { ownedHoldsOf, sitemapReadingOf } from "./sitemaps";
+import { ownedHoldsOf, pagesStampOf, sitemapReadingOf } from "./sitemaps";
 import { loadSite } from "./websiteSiteRows";
 import { joinHoldPages, type JoinedPage } from "./utils/holdPagesJoin";
 import { normalisePage } from "./utils/pageClassification";
@@ -148,7 +148,8 @@ export const rebuildHead = internalQuery({
       place: site.place,
       limit: limits.sitemapPagesRead,
       sitemap: reading ? {
-        readAt: reading.readAt,
+        // The stamp its pages carry: a reading that found the same pages kept the last one's.
+        readAt: pagesStampOf(reading),
         source: reading.source,
         files: reading.files.filter((file) => !file.problem).length,
         failed: reading.files.filter((file) => file.problem).length,

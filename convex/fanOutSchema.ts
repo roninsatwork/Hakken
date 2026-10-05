@@ -95,9 +95,10 @@ export const fanOutTables = {
   /**
    * One angle of one question: the wordings the engines searched that say the
    * same thing, most seen first, and where the site stands for it. Rebuilt
-   * after each collection from `promptFanOutQueries` (`fanOutAngles.ts`); a
-   * rebuild stamps every row it writes, and the rows it did not write are the
-   * ones to clear.
+   * after each collection from `promptFanOutQueries` (`fanOutAngles.ts`): a
+   * row changed carries the stamp of the rebuild that changed it
+   * (`rebuiltAt`), one the same is left alone, and one the rebuild no longer
+   * found is cleared (dataforseo-cost-plan.md, A3).
    */
   fanOutAngles: defineTable({
     holdId: v.id("companyWebsites"),

@@ -2,7 +2,8 @@
 
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { internalAction } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { internalAction, type ActionCtx } from "./_generated/server";
 import { REBUILD_WAIT_MS } from "./siteSummaries";
 import { SITEMAP_PAGES_PER_WRITE, sitemapReadKey } from "./sitemaps";
 import { sitemapFetcher } from "./utils/sitemapFetch";
@@ -22,6 +23,24 @@ import { readSitemap } from "./utils/sitemapReading";
  * found no sitemap where the website did answer is kept, and Your pages says
  * so.
  */
+type SitemapPage = { page: string; file: string; lastmod?: string };
+
+/** Whether a new reading lists exactly the pages a held reading does, in the same order. */
+async function listsHeldPages(ctx: ActionCtx, websiteId: Id<"websites">, heldReadAt: number, pages: readonly SitemapPage[]): Promise<boolean> {
+  let at = 0;
+  for (let cursor: string | null = null; ;) {
+    const held: { rows: SitemapPage[]; cursor: string; isDone: boolean } =
+      await ctx.runQuery(internal.sitemaps.heldSitemapPages, { websiteId, readAt: heldReadAt, cursor });
+    for (const row of held.rows) {
+      const page = pages[at];
+      if (!page || page.page !== row.page || page.file !== row.file || (page.lastmod ?? null) !== (row.lastmod ?? null)) return false;
+      at += 1;
+    }
+    if (held.isDone) return at === pages.length;
+    cursor = held.cursor;
+  }
+}
+
 export const readWebsiteSitemap = internalAction({
   args: { websiteId: v.id("websites") },
   returns: v.null(),
@@ -39,13 +58,20 @@ export const readWebsiteSitemap = internalAction({
 
       const readAt = Date.now();
       const day = new Date(readAt).toISOString().slice(0, 10);
-      for (let start = 0; start < reading.pages.length; start += SITEMAP_PAGES_PER_WRITE) {
-        await ctx.runMutation(internal.sitemaps.writeSitemapPages, {
-          websiteId: args.websiteId,
-          readAt,
-          day,
-          rows: reading.pages.slice(start, start + SITEMAP_PAGES_PER_WRITE),
-        });
+      // The same pages as the reading held — most days — are kept, not
+      // written again and the old ones removed (dataforseo-cost-plan.md, A3).
+      const kept = target.pagesReadAt !== null && await listsHeldPages(ctx, args.websiteId, target.pagesReadAt, reading.pages)
+        ? target.pagesReadAt
+        : null;
+      if (kept === null) {
+        for (let start = 0; start < reading.pages.length; start += SITEMAP_PAGES_PER_WRITE) {
+          await ctx.runMutation(internal.sitemaps.writeSitemapPages, {
+            websiteId: args.websiteId,
+            readAt,
+            day,
+            rows: reading.pages.slice(start, start + SITEMAP_PAGES_PER_WRITE),
+          });
+        }
       }
       await ctx.runMutation(internal.sitemaps.switchSitemap, {
         websiteId: args.websiteId,
@@ -56,8 +82,10 @@ export const readWebsiteSitemap = internalAction({
         pages: reading.pages.length,
         cut: reading.cut,
         ...(reading.problem ? { problem: reading.problem } : {}),
+        ...(kept !== null ? { pagesReadAt: kept } : {}),
       });
-      while ((await ctx.runMutation(internal.sitemaps.dropOldSitemapPages, { websiteId: args.websiteId, keepReadAt: readAt })) > 0) {
+      // Any other reading's pages go: the last one's, or one that died before it switched.
+      while ((await ctx.runMutation(internal.sitemaps.dropOldSitemapPages, { websiteId: args.websiteId, keepReadAt: kept ?? readAt })) > 0) {
         // Each pass removes a batch of the last reading's pages; the next takes the rest.
       }
       // Every owner's Your pages, from the new reading.

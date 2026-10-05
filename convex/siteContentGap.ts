@@ -1,10 +1,11 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalAction, internalMutation, internalQuery, type ActionCtx } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, type ActionCtx, type QueryCtx } from "./_generated/server";
 import { keywordStanding } from "./siteKeywordCopy";
 import { gapRebuildKey } from "./siteRankings";
 import { REBUILD_WAIT_MS } from "./siteSummaries";
+import { stableStringify } from "./utils/lang";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
 import { GAP_KEYWORDS_PER_RIVAL, rankIntentValidator, type RankIntent } from "./utils/siteShapes";
@@ -143,6 +144,9 @@ async function rebuildGapNow(ctx: ActionCtx, args: { companyWebsiteId: Id<"compa
     }
   }
 
+  // Only rows whose figures changed are written (`writeGaps`); a row this
+  // rebuild did not find is a search the site has now, or no rival has, and
+  // goes (dataforseo-cost-plan.md, A3).
   const rebuildId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const rows = [...gaps.values()];
   for (let start = 0; start < rows.length; start += WRITE_BATCH) {
@@ -154,13 +158,12 @@ async function rebuildGapNow(ctx: ActionCtx, args: { companyWebsiteId: Id<"compa
   }
   let cursor: string | null = null;
   for (;;) {
-    const result: { cursor: string; isDone: boolean } = await ctx.runMutation(internal.siteContentGap.removeStaleGaps, {
-      companyWebsiteId: args.companyWebsiteId,
-      rebuildId,
-      cursor,
-    });
-    if (result.isDone) break;
-    cursor = result.cursor;
+    const held: { rows: Array<{ _id: Id<"siteContentGaps">; keyword: string }>; cursor: string; isDone: boolean } =
+      await ctx.runQuery(internal.siteContentGap.heldGapsPage, { companyWebsiteId: args.companyWebsiteId, cursor });
+    const stale = held.rows.filter((row) => !gaps.has(row.keyword)).map((row) => row._id);
+    if (stale.length > 0) await ctx.runMutation(internal.siteContentGap.removeGaps, { companyWebsiteId: args.companyWebsiteId, ids: stale });
+    if (held.isDone) break;
+    cursor = held.cursor;
   }
   // The Content gap page counts from the gap's compact copy: rebuilt from what was just written.
   await ctx.runMutation(internal.siteListCopies.requestCopies, { requests: [{ kind: "gap", key: `${args.companyWebsiteId}` }] });
@@ -263,14 +266,15 @@ export const writeGaps = internalMutation({
         .query("siteContentGaps")
         .withIndex("by_hold_keyword", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("keyword", row.keyword))
         .unique();
-      const fields = {
-        companyWebsiteId: args.companyWebsiteId,
+      const figures = {
         ...row,
         rivalsRanking: row.rivals.length,
         bestRivalPosition: Math.min(...row.rivals.map((rival) => rival.position)),
-        rebuildId: args.rebuildId,
-        updatedAt: now,
       };
+      // Its figures as they stand: the row is left as it is, its stamp and
+      // time too, so nothing reading it is woken (dataforseo-cost-plan.md, A3).
+      if (existing && sameGap(existing, figures)) continue;
+      const fields = { companyWebsiteId: args.companyWebsiteId, ...figures, rebuildId: args.rebuildId, updatedAt: now };
       if (existing) await ctx.db.replace(existing._id, fields);
       else await ctx.db.insert("siteContentGaps", fields);
     }
@@ -278,17 +282,75 @@ export const writeGaps = internalMutation({
   },
 });
 
-export const removeStaleGaps = internalMutation({
-  args: { companyWebsiteId: v.id("companyWebsites"), rebuildId: v.string(), cursor: v.union(v.string(), v.null()) },
-  returns: v.object({ cursor: v.string(), isDone: v.boolean() }),
+/** The figures a gap row holds, as `writeGaps` writes them. */
+type GapFigures = Pick<Doc<"siteContentGaps">,
+  "keyword" | "volume" | "volumeKnown" | "intent" | "difficulty" | "rivals" | "rivalsRanking" | "bestRivalPosition">;
+
+/** Whether a stored gap row holds these figures already. */
+function sameGap(row: Doc<"siteContentGaps">, figures: GapFigures): boolean {
+  const held: GapFigures = {
+    keyword: row.keyword,
+    volume: row.volume,
+    volumeKnown: row.volumeKnown,
+    intent: row.intent,
+    difficulty: row.difficulty,
+    rivals: row.rivals,
+    rivalsRanking: row.rivalsRanking,
+    bestRivalPosition: row.bestRivalPosition,
+  };
+  return stableStringify(held) === stableStringify(figures);
+}
+
+/** A page of a hold's gap rows as they stand: which searches they are, for a rebuild to find those it no longer has. */
+export const heldGapsPage = internalQuery({
+  args: { companyWebsiteId: v.id("companyWebsites"), cursor: v.union(v.string(), v.null()) },
+  returns: v.object({
+    rows: v.array(v.object({ _id: v.id("siteContentGaps"), keyword: v.string() })),
+    cursor: v.string(),
+    isDone: v.boolean(),
+  }),
   handler: async (ctx, args) => {
     const result = await ctx.db
       .query("siteContentGaps")
       .withIndex("by_hold_keyword", (q) => q.eq("companyWebsiteId", args.companyWebsiteId))
       .paginate({ cursor: args.cursor, numItems: WRITE_BATCH });
-    for (const row of result.page) if (row.rebuildId !== args.rebuildId) await ctx.db.delete(row._id);
-    return { cursor: result.continueCursor, isDone: result.isDone };
+    return { rows: result.page.map((row) => ({ _id: row._id, keyword: row.keyword })), cursor: result.continueCursor, isDone: result.isDone };
   },
+});
+
+/** Remove gap rows a rebuild no longer found: only this hold's. */
+export const removeGaps = internalMutation({
+  args: { companyWebsiteId: v.id("companyWebsites"), ids: v.array(v.id("siteContentGaps")) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    for (const id of args.ids) {
+      const row = await ctx.db.get(id);
+      if (row && row.companyWebsiteId === args.companyWebsiteId) await ctx.db.delete(id);
+    }
+    return null;
+  },
+});
+
+/**
+ * When a hold's gap was last worked out from its rivals' rankings: the start
+ * of its last gap rebuild to finish. A row whose figures that rebuild found
+ * unchanged keeps its own time (`writeGaps`), so the day a row was last
+ * checked is the later of the two (dataforseo-cost-plan.md, A3). Null before
+ * the first rebuild kept it.
+ */
+export async function gapWorkedOutAt(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">): Promise<number | null> {
+  const row = await ctx.db
+    .query("siteSummaryRequests")
+    .withIndex("by_key", (q) => q.eq("key", gapRebuildKey(holdId)))
+    .unique();
+  return row?.builtFrom ?? null;
+}
+
+/** The same, for the copy's build, which runs as an action. */
+export const gapWorkedOut = internalQuery({
+  args: { holdId: v.id("companyWebsites") },
+  returns: v.union(v.number(), v.null()),
+  handler: async (ctx, args) => await gapWorkedOutAt(ctx, args.holdId),
 });
 
 /** Remove a hold's gap rows, when the hold goes. The caller loops until none are left. */

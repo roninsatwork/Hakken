@@ -53,6 +53,12 @@ export const pagesTables = {
     day: v.string(),
     /** When this reading was taken: its pages carry the same stamp (`siteSitemapPages.readAt`). */
     readAt: v.number(),
+    /**
+     * The stamp its pages carry when it found exactly the pages of the
+     * reading before, and kept them rather than writing them again
+     * (dataforseo-cost-plan.md, A3); absent when its pages carry `readAt`.
+     */
+    pagesReadAt: v.optional(v.number()),
   }).index("by_website", ["websiteId"]),
 
   /** One page the sitemap lists: its path, the file that lists it, and its last change where given. */

@@ -317,6 +317,12 @@ export const siteTables = {
     bestRivalPosition: v.number(),
     /** Each rival ranking for it: where, and the visits a month DataForSEO estimates it brings that rival. */
     rivals: v.array(v.object({ websiteId: v.id("websites"), position: v.number(), traffic: v.optional(v.number()) })),
+    /**
+     * The rebuild that last changed its figures, and when: a rebuild finding
+     * them the same leaves the row alone (dataforseo-cost-plan.md, A3), so the
+     * day it was last checked is the later of this and its hold's last gap
+     * rebuild (`gapWorkedOutAt`).
+     */
     rebuildId: v.string(),
     updatedAt: v.number(),
   })
@@ -958,6 +964,12 @@ export const siteTables = {
     /** Facts about the whole list at the time, by kind: the keywords' ranking day and latest check. */
     meta: v.record(v.string(), v.union(v.string(), v.number(), v.null())),
     builtAt: v.number(),
+    /**
+     * A fingerprint of everything the copy holds (`writeListCopy`): a rebuild
+     * that would write the same is not written (dataforseo-cost-plan.md, A3).
+     * Absent on a copy written before 2026-10-05.
+     */
+    hash: v.optional(v.string()),
   }).index("by_kind_key", ["kind", "key"]),
 
   /** A copy's rows, a part at a time: JSON, each part kept under a document's 1 MiB. */

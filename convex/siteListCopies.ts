@@ -5,6 +5,7 @@ import { internalMutation, internalQuery, type ActionCtx, type MutationCtx, type
 import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
 import { claimSchedule, gapRebuildKey, holdPagesKey, outOfDate, requestGapRebuild, requestSiteRebuild, siteRebuildKey } from "./siteRankings";
 import { utf8Length } from "./seoPullAnswers";
+import { stableStringify } from "./utils/lang";
 
 /**
  * Compact copies of the big Sites lists (docs/plans/active/
@@ -115,13 +116,40 @@ function partsOf(rows: readonly unknown[][]): string[] {
   return parts;
 }
 
-/** Write a list's copy beside its last one, then switch to it and drop the last one. */
+/** A copy's fingerprint: its layout, cut, facts and every part, hashed (SHA-256). */
+async function copyHash(fields: readonly string[], cut: number | null, meta: Record<string, string | number | null>, parts: readonly string[]): Promise<string> {
+  const text = [JSON.stringify(fields), JSON.stringify(cut), stableStringify(meta), ...parts].join("\u0000");
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+/** The fingerprint of the copy a list holds now, or null for none or one written before copies kept one. */
+export const heldCopyHash = internalQuery({
+  args: { kind: v.string(), key: v.string() },
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx, args) => {
+    const header = await ctx.db
+      .query("siteListCopies")
+      .withIndex("by_kind_key", (q) => q.eq("kind", args.kind).eq("key", args.key))
+      .unique();
+    return header?.hash ?? null;
+  },
+});
+
+/**
+ * Write a list's copy beside its last one, then switch to it and drop the
+ * last one — unless the list is as its copy holds it already, when nothing is
+ * written: an open table reading the copy is not woken to read it again
+ * (docs/plans/active/dataforseo-cost-plan.md, A3).
+ */
 export async function writeListCopy(
   ctx: ActionCtx,
   copy: { kind: AnyCopyKind; key: string; fields: readonly string[]; rows: readonly unknown[][]; cut?: number | null; meta?: Record<string, string | number | null> },
 ): Promise<void> {
-  const buildId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const parts = partsOf(copy.rows);
+  const hash = await copyHash(copy.fields, copy.cut ?? null, copy.meta ?? {}, parts);
+  if ((await ctx.runQuery(internal.siteListCopies.heldCopyHash, { kind: copy.kind, key: copy.key })) === hash) return;
+  const buildId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   for (const [part, data] of parts.entries()) {
     await ctx.runMutation(internal.siteListCopies.writeCopyPart, { kind: copy.kind, key: copy.key, buildId, part, data });
   }
@@ -134,6 +162,7 @@ export async function writeListCopy(
     parts: parts.length,
     cut: copy.cut ?? null,
     meta: copy.meta ?? {},
+    hash,
   });
   for (;;) {
     const left: number = await ctx.runMutation(internal.siteListCopies.dropOldParts, { kind: copy.kind, key: copy.key, keepBuildId: buildId });
@@ -167,6 +196,7 @@ export const switchCopy = internalMutation({
     parts: v.number(),
     cut: v.union(v.number(), v.null()),
     meta: v.record(v.string(), v.union(v.string(), v.number(), v.null())),
+    hash: v.optional(v.string()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {

@@ -7,6 +7,7 @@ import { answerPlace } from "./seoAiEngines";
 import { listHold, myRivals } from "./siteAccess";
 import { holdQuestions } from "./holdLists";
 import { citedPagesOf, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
+import { gapWorkedOutAt } from "./siteContentGap";
 import { tenantAction } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import { answerStance, siteExportKindValidator, type SiteExportKind } from "./utils/siteShapes";
@@ -357,6 +358,8 @@ export const exportPage = internalQuery({
         // The page names a competitor's column by its Sites page; its rows, by its website.
         const [column, rivalSiteId] = args.sort?.split(":") ?? [];
         const rivalWebsite = rivals.find((rival) => rival.hold._id === rivalSiteId)?.website._id;
+        // A row its last rebuild found unchanged keeps its own time: it was checked when that rebuild ran.
+        const workedOut = (await gapWorkedOutAt(ctx, job.siteId)) ?? 0;
         const lines = done(await ctx.db.query("siteContentGaps")
           .withIndex("by_hold_volume", (q) => q.eq("companyWebsiteId", job.siteId))
           .order("desc").paginate(page), (row: Doc<"siteContentGaps">) => {
@@ -367,7 +370,7 @@ export const exportPage = internalQuery({
               const rival = ranking.get(website._id);
               return [rival?.position, rival?.traffic === undefined ? null : Math.round(rival.traffic)];
             }),
-            new Date(row.updatedAt).toISOString().slice(0, 10),
+            new Date(Math.max(row.updatedAt, workedOut)).toISOString().slice(0, 10),
           ]);
         }, (row) => row.keyword, rivalWebsite ? `${column}:${rivalWebsite}` : args.sort);
         return args.cursor === null

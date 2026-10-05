@@ -121,6 +121,8 @@ async function buildGapCopy(ctx: ActionCtx, key: string): Promise<void> {
   }), GAP_COPY_MAX + 1);
   const cut = read.length > GAP_COPY_MAX ? GAP_COPY_MAX : null;
   const rows = read.slice(0, GAP_COPY_MAX);
+  // A row its last rebuild found unchanged keeps its own time: it was checked when that rebuild ran.
+  const workedOut: number | null = await ctx.runQuery(internal.siteContentGap.gapWorkedOut, { holdId: key as Id<"companyWebsites"> });
   const rivalIds: string[] = [];
   const rivalIndex = new Map<string, number>();
   const indexOf = (websiteId: string) => {
@@ -143,7 +145,7 @@ async function buildGapCopy(ctx: ActionCtx, key: string): Promise<void> {
       row.intent,
       row.difficulty ?? null,
       row.rivals.flatMap((rival) => [indexOf(rival.websiteId), rival.position, rival.traffic ?? null]),
-      new Date(row.updatedAt).toISOString().slice(0, 10),
+      new Date(Math.max(row.updatedAt, workedOut ?? 0)).toISOString().slice(0, 10),
     ]),
     cut,
     meta: { rivalIds: JSON.stringify(rivalIds) },

@@ -1,6 +1,6 @@
 import { gzipSync } from "node:zlib";
 import { convexTest } from "convex-test";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
@@ -95,6 +95,8 @@ beforeEach(() => {
   served.pages = {};
   connected.length = 0;
 });
+// A test that moves the clock between readings puts it back.
+afterEach(() => vi.useRealTimers());
 
 describe("reading a website's sitemap", () => {
   test("robots.txt, redirected to www, then its index and four files — one gzipped — every page kept with the file that lists it", async () => {
@@ -182,6 +184,34 @@ describe("reading a website's sitemap", () => {
     const second = await stored(t, websiteId);
     expect(second.reading).toMatchObject({ pages: 2, cut: false });
     expect(second.pages.map((row) => row.page)).toEqual(["/", "/about-us/"]);
+  });
+
+  test("a reading that lists the same pages keeps the ones held: none written or removed, and Your pages reads them", async () => {
+    const t = harness();
+    roninsWeb();
+    const { websiteId, holdId } = await owned(t);
+    await t.action(internal.sitemapRead.readWebsiteSitemap, { websiteId });
+    const first = await stored(t, websiteId);
+
+    // Each reading a minute apart, as readings are hours apart.
+    vi.setSystemTime(Date.now() + 60_000);
+    await t.action(internal.sitemapRead.readWebsiteSitemap, { websiteId });
+    const second = await stored(t, websiteId);
+    // The same rows, not written again (dataforseo-cost-plan.md, A3); the reading itself is the newer one.
+    expect(second.pages).toEqual(first.pages);
+    expect(second.reading?.readAt).toBeGreaterThan(first.reading!.readAt);
+    expect(second.reading?.pagesReadAt).toBe(first.reading!.readAt);
+    const head = await t.query(internal.holdPages.rebuildHead, { holdId });
+    expect(head?.sitemap?.readAt).toBe(first.reading!.readAt);
+
+    // A page added: the new reading's pages written, the kept ones gone.
+    served.pages[www("/case_study-sitemap.xml")] = { body: urlset([www("/case-study/cysiam/"), www("/case-study/korda/")]) };
+    vi.setSystemTime(Date.now() + 60_000);
+    await t.action(internal.sitemapRead.readWebsiteSitemap, { websiteId });
+    const third = await stored(t, websiteId);
+    expect(third.pages).toHaveLength(9);
+    expect(third.reading?.pagesReadAt).toBeUndefined();
+    expect(third.pages.every((row) => row.readAt === third.reading?.readAt)).toBe(true);
   });
 
   test("a file past its size cap is noted, not read: one too big to fetch, and a gzip that unzips past 50 MB", async () => {

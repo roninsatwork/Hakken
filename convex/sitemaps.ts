@@ -59,6 +59,11 @@ export async function sitemapReadingOf(ctx: Reader, websiteId: Id<"websites">): 
   return await ctx.db.query("siteSitemaps").withIndex("by_website", (q) => q.eq("websiteId", websiteId)).first();
 }
 
+/** The stamp a reading's pages carry: its own, or the reading before's when it found the same pages and kept them. */
+export function pagesStampOf(reading: Pick<Doc<"siteSitemaps">, "readAt" | "pagesReadAt">): number {
+  return reading.pagesReadAt ?? reading.readAt;
+}
+
 /**
  * What a reading needs: the website's host, and how many pages to read — the
  * largest `sitemapPagesRead` of the companies whose own website it is, since
@@ -68,7 +73,13 @@ export async function sitemapReadingOf(ctx: Reader, websiteId: Id<"websites">): 
  */
 export const sitemapTarget = internalQuery({
   args: { websiteId: v.id("websites") },
-  returns: v.union(v.null(), v.object({ host: v.string(), limit: v.number(), readAt: v.union(v.number(), v.null()) })),
+  returns: v.union(v.null(), v.object({
+    host: v.string(),
+    limit: v.number(),
+    readAt: v.union(v.number(), v.null()),
+    /** The stamp the held reading's pages carry (`pagesStampOf`), or null before the first. */
+    pagesReadAt: v.union(v.number(), v.null()),
+  })),
   handler: async (ctx, args) => {
     const website = await ctx.db.get(args.websiteId);
     if (!website) return null;
@@ -76,7 +87,8 @@ export const sitemapTarget = internalQuery({
     if (owners.length === 0) return null;
     let limit = 0;
     for (const hold of owners) limit = Math.max(limit, (await readFanOutLimits(ctx, hold.companyId, hold._id)).sitemapPagesRead);
-    return { host: website.host, limit, readAt: (await sitemapReadingOf(ctx, args.websiteId))?.readAt ?? null };
+    const reading = await sitemapReadingOf(ctx, args.websiteId);
+    return { host: website.host, limit, readAt: reading?.readAt ?? null, pagesReadAt: reading ? pagesStampOf(reading) : null };
   },
 });
 
@@ -116,6 +128,26 @@ export const readCycleSitemaps = internalMutation({
 
 const pageRow = v.object({ page: v.string(), file: v.string(), lastmod: v.optional(v.string()) });
 
+/** A held reading's pages read per batch when a new reading is compared with it: small rows. */
+const SITEMAP_PAGES_READ = 2_000;
+
+/** One batch of the pages a held reading lists, in the order read: to find whether a new reading lists the same. */
+export const heldSitemapPages = internalQuery({
+  args: { websiteId: v.id("websites"), readAt: v.number(), cursor: v.union(v.string(), v.null()) },
+  returns: v.object({ rows: v.array(pageRow), cursor: v.string(), isDone: v.boolean() }),
+  handler: async (ctx, args) => {
+    const result = await ctx.db
+      .query("siteSitemapPages")
+      .withIndex("by_website_read", (q) => q.eq("websiteId", args.websiteId).eq("readAt", args.readAt))
+      .paginate({ cursor: args.cursor, numItems: SITEMAP_PAGES_READ });
+    return {
+      rows: result.page.map((row) => ({ page: row.page, file: row.file, ...(row.lastmod !== undefined ? { lastmod: row.lastmod } : {}) })),
+      cursor: result.continueCursor,
+      isDone: result.isDone,
+    };
+  },
+});
+
 /** One batch of a new reading's pages, under its stamp, beside the reading before. */
 export const writeSitemapPages = internalMutation({
   args: { websiteId: v.id("websites"), readAt: v.number(), day: v.string(), rows: v.array(pageRow) },
@@ -139,6 +171,8 @@ export const switchSitemap = internalMutation({
     pages: v.number(),
     cut: v.boolean(),
     problem: v.optional(v.string()),
+    /** The stamp of the pages it kept, when it found the reading before's again (`pagesStampOf`). */
+    pagesReadAt: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -152,6 +186,7 @@ export const switchSitemap = internalMutation({
       ...(args.problem ? { problem: args.problem } : {}),
       day: args.day,
       readAt: args.readAt,
+      ...(args.pagesReadAt !== undefined ? { pagesReadAt: args.pagesReadAt } : {}),
     };
     if (existing[0]) await ctx.db.replace(existing[0]._id, fields);
     else await ctx.db.insert("siteSitemaps", fields);
