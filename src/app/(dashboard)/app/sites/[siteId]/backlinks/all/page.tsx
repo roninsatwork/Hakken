@@ -19,6 +19,7 @@ import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../_components/useSiteSort";
 import { ListHeldLine } from "../../../_components/SiteCoverage";
+import { CompetitorNotCollected, useIsCompetitor } from "../../../_components/CompetitorNotCollected";
 
 type Status = "LIVE" | "NEW" | "LOST";
 type Follow = "FOLLOW" | "NOFOLLOW";
@@ -38,6 +39,7 @@ const SORTS = { from: "asc", domainRank: "desc", firstSeen: "desc" } as const;
  */
 export default function SiteAllBacklinksPage() {
   const t = useTranslations("sites.backlinksAll");
+  const competitor = useIsCompetitor();
   const tl = useTranslations("sites.linkLists");
   const siteId = useSiteId();
   const router = useRouter();
@@ -59,6 +61,19 @@ export default function SiteAllBacklinksPage() {
   }, every ? [{ siteId, list: "links" }] : []);
   // The whole list's length, for what the rows kept are of (sites-data-completeness-plan.md, §4.E).
   const totals = useQuery(api.siteLinks.linkListTotals, { siteId });
+
+  // Bought for a company's own websites only (finish-off plan, items 6b, 6c and 14).
+  if (competitor) {
+    return (
+      <CompetitorNotCollected
+        icon={<Link2 className="h-5 w-5 text-brand" />}
+        title={t("title")}
+        description={t("description")}
+        notice={t("competitor")}
+        tab="backlinks/all"
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

@@ -101,6 +101,60 @@ describe("usage screens' reads", () => {
     expect(check!.nextAt).toBeGreaterThan(Date.now());
   });
 
+  test("coming up books each check at its newest run, however long its history", async () => {
+    // Read newest first and taken from the end, a check with more than two
+    // turns of history was booked from its oldest run, and dropped as stopped.
+    const t = convexTest(schema, modules);
+    const { anthony, own } = await seed(t);
+    await t.run(async (raw) => {
+      for (const daysAgo of [5, 4, 3]) {
+        await chargeCreditsNow(asCtx(raw), {
+          companyId: (await raw.db.query("companies").first())!._id, kind: "rankings", runKey: `old:${daysAgo}`, how: "scheduled", websiteId: own, userId: anthony,
+        }, 500, { realCostUsd: 0.07 }, Date.now() - daysAgo * DAY - 60_000);
+      }
+    });
+    const data = await t.withIdentity({ subject: anthony }).query(api.creditUsage.usageComingUp, {});
+    expect(data?.checks.find((row) => row.website?.websiteId === own)).toMatchObject({ kind: "rankings", everyDays: 1, each: 4 });
+  });
+
+  test("coming up books a competitor at what is still bought for it: never its audit, and of its links the totals and linking websites", async () => {
+    // Finish-off plan, items 6, 6b and 15: a competitor's last run, bought
+    // before 2026-10-05, had its crawl and every link list.
+    const t = convexTest(schema, modules);
+    const { anthony, competitor } = await seed(t);
+    await t.run(async (raw) => {
+      const ctx = asCtx(raw);
+      const acme = (await ctx.db.query("companies").first())!._id;
+      const startedAt = Date.now() - 2 * DAY;
+      const cycleId = await ctx.db.insert("seoCollectionCycles", {
+        companyId: acme, trigger: "SCHEDULE", status: "DONE", plannedCount: 4, reusedCount: 0, sentCount: 4, readyCount: 4, failedCount: 0,
+        totalCostUsd: 0, startedAt,
+      });
+      for (const [operationId, family, args] of [
+        ["backlinks_summary", "Backlinks", { target: "rival.com" }],
+        ["referring_domains_list", "Backlinks", { target: "rival.com", limit: 1000 }],
+        ["backlinks_all", "Backlinks", { target: "rival.com", limit: 1000, offset: 0 }],
+        ["site_crawl", "On-Page", { target: "rival.com", max_crawl_pages: 1000 }],
+      ] as const) {
+        const pullId = await ctx.db.insert("seoDataPulls", {
+          operationId, family, mode: "LIVE", websiteId: competitor, companyId: acme, cycleId, taskArgsJson: JSON.stringify(args),
+          status: "READY", tag: `t-${operationId}`, attempts: 1, costUsd: 0.04, sandbox: false, submittedAt: startedAt, completedAt: startedAt,
+        });
+        await ctx.db.insert("seoCycleLines", { cycleId, companyId: acme, websiteId: competitor, operationId, pullId, reused: false, createdAt: startedAt + 1000 });
+      }
+      for (const [kind, units] of [["backlinks", 2001], ["siteAudit", 1000]] as const) {
+        await chargeCreditsNow(ctx, {
+          companyId: acme, kind, runKey: `cycle:${cycleId}:${competitor}:${kind}`, how: "scheduled", websiteId: competitor, userId: anthony, cycleId,
+        }, units, { realCostUsd: 1 }, startedAt + 2 * 60 * 60_000);
+      }
+    });
+    const data = await t.withIdentity({ subject: anthony }).query(api.creditUsage.usageComingUp, {});
+    const ofCompetitor = data?.checks.filter((row) => row.website?.websiteId === competitor) ?? [];
+    expect(ofCompetitor.map((row) => row.kind).sort()).toEqual(["backlinks", "rankings"]);
+    // 2,001 links' worth was 21 credits; the totals and linking websites, 1,001 of them, are 11.
+    expect(ofCompetitor.find((row) => row.kind === "backlinks")).toMatchObject({ each: 11 });
+  });
+
   test("another company sees none of it", async () => {
     const t = convexTest(schema, modules);
     const { outsider } = await seed(t);

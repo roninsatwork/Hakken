@@ -22,6 +22,7 @@ import { useSiteSortedList, type SiteSortColumns } from "../../../_components/us
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
+import { CompetitorNotCollected, useIsCompetitor } from "../../../_components/CompetitorNotCollected";
 
 const KINDS = ["COMPETITOR", "DIRECTORY", "PUBLISHER", "SUPPLIER", "OTHER"] as const;
 type Kind = (typeof KINDS)[number];
@@ -48,6 +49,7 @@ const hostOf = (row: Organic) => row.host;
  */
 export default function SiteOrganicCompetitorsPage() {
   const t = useTranslations("sites.organic");
+  const competitor = useIsCompetitor();
   const tc = useTranslations("sites.common");
   const siteId = useSiteId();
   const rows = useQuery(api.siteCompetitors.listOrganicCompetitors, { siteId });
@@ -70,6 +72,19 @@ export default function SiteOrganicCompetitorsPage() {
   const matching = rows?.filter((row) => (!matches || matches(row.host)) && (!kind || (row.kind ?? "OTHER") === kind));
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "shared", name: hostOf });
   const pager = useSitePager(sorted, { isLoading: rows === undefined });
+
+  // Bought for a company's own websites only (finish-off plan, items 6b, 6c and 14).
+  if (competitor) {
+    return (
+      <CompetitorNotCollected
+        icon={<Radar className="h-5 w-5 text-brand" />}
+        title={t("title")}
+        description={t("description")}
+        notice={t("competitor")}
+        tab="competitors/organic"
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

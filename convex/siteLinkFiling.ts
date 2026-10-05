@@ -326,8 +326,15 @@ export const hasNewerList = internalQuery({
 /** A link list's pages read to judge it: at most ten a list, over a few weeks. */
 const LINK_PAGES_READ = 200;
 
-/** A standing list older than this is replaced by any whole list, however long. */
-const STANDING_LIST_DAYS = 28;
+/**
+ * A standing list older than this is replaced by any whole list, however long.
+ * Under the shortest gap between two of a website's scheduled lists — bought
+ * once a month since 2026-10-05 (finish-off plan item 6c), 28 days apart on a
+ * Weekly or Fortnightly schedule, 28 to 31 on a Monthly one — so this month's
+ * list always replaces last month's, even when the site has lost links; at 28
+ * a Weekly company's list 28 days on was kept out for a second month.
+ */
+const STANDING_LIST_DAYS = 25;
 
 /**
  * One link list page's figures, replacing an earlier parse's, as its metrics

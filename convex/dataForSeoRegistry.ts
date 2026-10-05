@@ -322,6 +322,10 @@ export const SEO_OPERATIONS: readonly SeoOperation[] = [
     mode: "LIVE",
     path: "/v3/dataforseo_labs/google/competitors_domain/live",
     costBand: "medium",
+    // Once a month: who competes with a site barely changes week to week, and
+    // it is asked for a company's own websites only (finish-off plan, items
+    // 6b and 6c, 2026-10-05).
+    refresh: { everyDays: 30 },
     params: {
       target: {
         kind: "host",

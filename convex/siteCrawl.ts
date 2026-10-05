@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { v, type Infer } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, type ActionCtx } from "./_generated/server";
@@ -93,6 +93,10 @@ export type CrawlSummary = {
   cms?: string;
   server?: string;
   crawlEnd?: string;
+  /** Why the crawl stopped, as DataForSEO says it: `limit_exceeded`, `empty_queue`, `force_stopped`, `unexpected_exception`. */
+  stopReason?: string;
+  /** How the crawl went, as DataForSEO says it (`extended_crawl_status`): `no_errors`, `forbidden_robots`, `site_unreachable`… */
+  crawlStatus?: string;
   issues: Array<{ check: string; pages: number }>;
 };
 
@@ -120,6 +124,8 @@ export function parseCrawlSummary(result: unknown): CrawlSummary | null {
     ...optional("cms", text(domain?.cms)?.slice(0, 80)),
     ...optional("server", text(domain?.server)?.slice(0, 80)),
     ...optional("crawlEnd", text(domain?.crawl_end)?.slice(0, 10)),
+    ...optional("stopReason", text(first.crawl_stop_reason)?.slice(0, 40)),
+    ...optional("crawlStatus", text(domain?.extended_crawl_status)?.slice(0, 40)),
     issues: issues.sort((left, right) => right.pages - left.pages),
   } as CrawlSummary;
 }
@@ -157,8 +163,46 @@ const summaryValidator = v.object({
   cms: v.optional(v.string()),
   server: v.optional(v.string()),
   crawlEnd: v.optional(v.string()),
+  stopReason: v.optional(v.string()),
+  crawlStatus: v.optional(v.string()),
   issues: v.array(v.object({ check: v.string(), pages: v.number() })),
 });
+
+/**
+ * A crawl that read this few pages was turned away (finish-off plan, item 7):
+ * a working website's home page links to more. On 2026-10-05 seven of the
+ * fourteen crawls stopped at one page — morehandles.co.uk, a large shop, among
+ * them — and their audits read as empty, or as perfect.
+ */
+export const TURNED_AWAY_PAGES = 3;
+
+const turnedAwayReason = v.union(
+  v.literal("BLOCKED"),
+  v.literal("ROBOTS"),
+  v.literal("UNREACHABLE"),
+  v.literal("ERROR_PAGE"),
+  v.literal("NO_INDEX"),
+  v.literal("REDIRECTS"),
+);
+
+/**
+ * Why a crawl that read too few pages stopped, in the audit's words: from
+ * DataForSEO's own account of the crawl (`extended_crawl_status`) where it
+ * names a cause, else — a crawler served a challenge page, or refused — that
+ * the website probably blocked it. Null for a crawl that read enough.
+ */
+export function turnedAwayOf(crawl: { pagesCrawled: number; crawlStatus?: string }): Infer<typeof turnedAwayReason> | null {
+  if (crawl.pagesCrawled > TURNED_AWAY_PAGES) return null;
+  switch (crawl.crawlStatus) {
+    case "forbidden_robots": return "ROBOTS";
+    case "site_unreachable": return "UNREACHABLE";
+    case "invalid_page_status_code": return "ERROR_PAGE";
+    case "forbidden_meta_tag":
+    case "forbidden_http_header": return "NO_INDEX";
+    case "too_many_redirects": return "REDIRECTS";
+    default: return "BLOCKED";
+  }
+}
 
 /** Keep the crawl, replacing a re-parse of the same pull, and put its figures in the day summaries. */
 export const writeCrawl = internalMutation({
@@ -202,6 +246,8 @@ export const siteAudit = tenantQuery({
     linksExternal: v.union(v.number(), v.null()),
     cms: v.union(v.string(), v.null()),
     server: v.union(v.string(), v.null()),
+    /** Why so few pages were crawled that the audit is not complete; null when enough were. */
+    turnedAway: v.union(v.null(), turnedAwayReason),
     issues: v.array(v.object({
       check: v.string(),
       pages: v.number(),
@@ -226,6 +272,7 @@ export const siteAudit = tenantQuery({
       linksExternal: newest.linksExternal ?? null,
       cms: newest.cms ?? null,
       server: newest.server ?? null,
+      turnedAway: turnedAwayOf(newest),
       issues: newest.issues.flatMap((issue) => {
         const severity = CRAWL_ISSUES[issue.check];
         return severity ? [{ ...issue, severity }] : [];

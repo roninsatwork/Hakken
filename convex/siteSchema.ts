@@ -580,6 +580,9 @@ export const siteTables = {
     cms: v.optional(v.string()),
     server: v.optional(v.string()),
     crawlEnd: v.optional(v.string()),
+    /** Why the crawl stopped, and how it went, as DataForSEO said (finish-off plan, item 7). */
+    stopReason: v.optional(v.string()),
+    crawlStatus: v.optional(v.string()),
     issues: v.array(v.object({ check: v.string(), pages: v.number() })),
     createdAt: v.number(),
   })

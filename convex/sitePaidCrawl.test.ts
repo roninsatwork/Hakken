@@ -6,7 +6,7 @@ import type { Id } from "./_generated/dataModel";
 import { parseDomainRankedKeywords } from "./dataForSeoParsers";
 import { isCrawlUnfinished } from "./dataForSeoCrawlOperations";
 import { findSeoOperation, seoSiteOperationParams } from "./dataForSeoRegistry";
-import { parseCrawlSummary } from "./siteCrawl";
+import { parseCrawlSummary, TURNED_AWAY_PAGES, turnedAwayOf } from "./siteCrawl";
 
 /**
  * Phase 5 of the Sites plan: paid search, read from the ranked-keywords
@@ -175,6 +175,36 @@ describe("the site crawl", () => {
 
     const audit = await (await member(t, acme)).query(api.siteCrawl.siteAudit, { siteId: own.holdId });
     expect(audit).toMatchObject({ pagesCrawled: 1_000, maxPages: 1_000, pagesFound: 3_412 });
+  });
+
+  // Seven of 2026-10-05's fourteen crawls stopped at one page, morehandles.co.uk
+  // among them, and their audits read as empty (finish-off plan, item 7).
+  test("a crawl the website turned away says so, and why where DataForSEO knows", async () => {
+    const t = harness();
+    const acme = await company(t, "Acme");
+    const shop = await hold(t, acme, "morehandles.co.uk");
+    const robots = await hold(t, acme, "private.co.uk");
+    const whole = await hold(t, acme, "advertiser.co.uk");
+    const turnedAway = (status?: string) => {
+      const answer = summary("finished");
+      answer[0].crawl_status = { max_crawl_pages: 1_000, pages_in_queue: 0, pages_crawled: 1 };
+      Object.assign(answer[0], { crawl_stop_reason: "empty_queue" });
+      if (status) Object.assign(answer[0].domain_info, { extended_crawl_status: status });
+      return answer;
+    };
+    expect(parseCrawlSummary(turnedAway("forbidden_robots"))).toMatchObject({ pagesCrawled: 1, stopReason: "empty_queue", crawlStatus: "forbidden_robots" });
+    await file(t, shop.websiteId, "site_crawl", turnedAway("no_errors"), "2026-10-05");
+    await file(t, robots.websiteId, "site_crawl", turnedAway("forbidden_robots"), "2026-10-05");
+    await file(t, whole.websiteId, "site_crawl", summary("finished"), "2026-10-05");
+
+    const asAcme = await member(t, acme);
+    const read = async (siteId: Id<"companyWebsites">) => (await asAcme.query(api.siteCrawl.siteAudit, { siteId }))?.turnedAway;
+    expect(await read(shop.holdId)).toBe("BLOCKED");
+    expect(await read(robots.holdId)).toBe("ROBOTS");
+    expect(await read(whole.holdId)).toBeNull();
+    // A crawl kept before the reasons were: judged by its pages alone.
+    expect(turnedAwayOf({ pagesCrawled: 1 })).toBe("BLOCKED");
+    expect(turnedAwayOf({ pagesCrawled: TURNED_AWAY_PAGES + 1 })).toBeNull();
   });
 
   test("another company's site answers not found, for paid search and the audit alike", async () => {

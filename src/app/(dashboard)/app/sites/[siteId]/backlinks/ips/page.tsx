@@ -19,6 +19,7 @@ import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../_components/useSiteSort";
 import { ListHeldLine } from "../../../_components/SiteCoverage";
+import { CompetitorNotCollected, useIsCompetitor } from "../../../_components/CompetitorNotCollected";
 
 /**
  * The columns that sort, over every address (docs/plans/active/
@@ -34,6 +35,7 @@ const SORTS = { ip: "asc", domains: "desc", backlinks: "desc" } as const;
  */
 export default function SiteReferringIpsPage() {
   const t = useTranslations("sites.backlinksIps");
+  const competitor = useIsCompetitor();
   const siteId = useSiteId();
   const listHref = useSiteListHref(siteId);
   const networkHref = (network: string) => listHref("backlinks/ips", { network });
@@ -53,6 +55,19 @@ export default function SiteReferringIpsPage() {
   const totals = useQuery(api.siteLinks.linkListTotals, { siteId });
   const profile = useQuery(api.siteLinks.linkProfile, { siteId });
   const heldIps = !term && !subnet ? table.result?.total : undefined;
+
+  // Bought for a company's own websites only (finish-off plan, items 6b, 6c and 14).
+  if (competitor) {
+    return (
+      <CompetitorNotCollected
+        icon={<Server className="h-5 w-5 text-brand" />}
+        title={t("title")}
+        description={t("description")}
+        notice={t("competitor")}
+        tab="backlinks/ips"
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

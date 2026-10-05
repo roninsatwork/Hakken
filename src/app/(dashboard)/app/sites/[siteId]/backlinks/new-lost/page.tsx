@@ -19,6 +19,7 @@ import { useSiteParam } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { dayOf, dayTableSorts, useSiteSortedList } from "../../../_components/useSiteSort";
 import { ListDownload } from "../../../_components/SiteDownloads";
+import { CompetitorNotCollected, useIsCompetitor } from "../../../_components/CompetitorNotCollected";
 
 const KEYS = ["newBacklinks", "lostBacklinks", "newReferringDomains", "lostReferringDomains"] as const;
 type Key = (typeof KEYS)[number];
@@ -37,6 +38,7 @@ const STEP_NOUNS = { day: "days", week: "weeks", month: "months" } as const;
  */
 export default function SiteLinksNewLostPage() {
   const t = useTranslations("sites.backlinksNewLost");
+  const competitor = useIsCompetitor();
   const siteId = useSiteId();
   const site = useSite();
   const range = useSiteRange();
@@ -47,6 +49,19 @@ export default function SiteLinksNewLostPage() {
   const newestFirst = [...(points ?? [])].reverse();
   const { rows: sorted, tableSort } = useSiteSortedList(newestFirst, SORTS, { opening: "day", name: dayOf });
   const pager = useSitePager(sorted, { isLoading: points === undefined });
+
+  // Bought for a company's own websites only (finish-off plan, items 6b, 6c and 14).
+  if (competitor) {
+    return (
+      <CompetitorNotCollected
+        icon={<ArrowLeftRight className="h-5 w-5 text-brand" />}
+        title={t("title")}
+        description={t("description")}
+        notice={t("competitor")}
+        tab="backlinks/new-lost"
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

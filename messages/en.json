@@ -9531,7 +9531,8 @@
       "noWebsiteMatch": "No website matches that.",
       "classification": "Classification",
       "anyClassification": "Any classification",
-      "notSorted": "Not sorted"
+      "notSorted": "Not sorted",
+      "openOwnSite": "Open {host}"
     },
     "overview": {
       "title": "Overview",
@@ -9897,7 +9898,8 @@
       "bandOfEvery": "{held} of the {total} searches in {band} across everything this website ranks for are held.",
       "moveOfEvery": "{held} of the {total} searches marked “{move}” across everything this website ranks for are held.",
       "newToHeld": "A search can also be new here because it moved into the searches held.",
-      "notInListThatDay": "Not in that day’s list"
+      "notInListThatDay": "Not in that day’s list",
+      "competitorTop": "For a competitor, this list holds its top 1,000 searches, the ones bringing it most visits, refreshed once a month. Its totals are checked at every collection."
     },
     "pages": {
       "title": "Top pages",
@@ -10385,7 +10387,8 @@
       },
       "empty": "No organic competitors found yet.",
       "noMatch": "No website matches that.",
-      "readOf": "{count} of the {total} websites ranking for the same searches: those sharing the most with this one. The rest are not read."
+      "readOf": "{count} of the {total} websites ranking for the same searches: those sharing the most with this one. The rest are not read.",
+      "competitor": "Who competes with a website for the same searches is collected for your own websites only. To compare this competitor with yours, open Side by side."
     },
     "gap": {
       "title": "Content gap",
@@ -10816,7 +10819,8 @@
       },
       "noAnchor": "No words (an image or a bare address)",
       "empty": "No backlinks collected yet.",
-      "noMatch": "No link matches that."
+      "noMatch": "No link matches that.",
+      "competitor": "Every link, and each linking website's strongest link, are collected for your own websites only. For a competitor, what comparing needs is kept: its link totals at every collection, and the websites linking to it once a month, under Referring domains."
     },
     "backlinksDomains": {
       "title": "Referring domains",
@@ -10854,7 +10858,8 @@
       },
       "noAnchor": "No words (an image or a bare address)",
       "empty": "No anchors collected yet.",
-      "noMatch": "No anchor matches that."
+      "noMatch": "No anchor matches that.",
+      "competitor": "The words links use are collected for your own websites only. For a competitor, its link totals and the websites linking to it are kept, under Referring domains."
     },
     "backlinksIps": {
       "title": "Referring IPs",
@@ -10879,7 +10884,8 @@
       "empty": "No servers collected yet.",
       "noMatch": "No address matches that.",
       "chartHintHeld": "Each bar is one network (the first three parts of the address), counted over the {held} servers kept of {total}.",
-      "networksInAll": "Links to this website come from {count} networks in all."
+      "networksInAll": "Links to this website come from {count} networks in all.",
+      "competitor": "The servers links come from are collected for your own websites only. For a competitor, its link totals and the websites linking to it are kept, under Referring domains."
     },
     "backlinksBroken": {
       "title": "Broken backlinks",
@@ -10895,7 +10901,8 @@
         "lastChecked": "Last checked"
       },
       "empty": "No broken backlinks found. Good.",
-      "noMatch": "No link matches that."
+      "noMatch": "No link matches that.",
+      "competitor": "Broken links are collected for your own websites only: they are links worth mending, and only your own can be mended. For a competitor, its link totals and the websites linking to it are kept."
     },
     "backlinksNewLost": {
       "title": "New and lost links",
@@ -10922,7 +10929,8 @@
         "week": "Week of",
         "month": "Month of"
       },
-      "empty": "No link changes recorded in these dates."
+      "empty": "No link changes recorded in these dates.",
+      "competitor": "Links gained and lost are collected for your own websites only. For a competitor, its link totals are checked at every collection, and Backlinks → Summary charts how they move."
     },
     "audit": {
       "problemPages": {
@@ -11014,7 +11022,17 @@
       },
       "empty": "Not crawled yet. The first crawl runs with the next collection.",
       "noIssues": "No problems found. Good.",
-      "noMatch": "No problem matches that."
+      "noMatch": "No problem matches that.",
+      "competitor": "Competitors aren't crawled. The site audit is for your own websites: each is crawled once a month, and what the crawl finds feeds its audit, its page list and its AI search checks. A competitor is compared on its traffic, keywords, links and AI answers instead.",
+      "turnedAway": {
+        "BLOCKED": "Crawled {count, plural, =0 {no pages} =1 {1 page} other {# pages}}: the website probably blocked our crawler, so this audit is not complete.",
+        "ROBOTS": "Crawled {count, plural, =0 {no pages} =1 {1 page} other {# pages}}: the website's robots.txt tells crawlers to stay out, so this audit is not complete.",
+        "UNREACHABLE": "Crawled {count, plural, =0 {no pages} =1 {1 page} other {# pages}}: the website couldn't be reached when it was crawled, so this audit is not complete.",
+        "ERROR_PAGE": "Crawled {count, plural, =0 {no pages} =1 {1 page} other {# pages}}: the website's home page answered with an error, so this audit is not complete.",
+        "NO_INDEX": "Crawled {count, plural, =0 {no pages} =1 {1 page} other {# pages}}: the website's pages ask crawlers not to read them, so this audit is not complete.",
+        "REDIRECTS": "Crawled {count, plural, =0 {no pages} =1 {1 page} other {# pages}}: the website's home page redirects too many times to follow, so this audit is not complete."
+      },
+      "notComplete": "Too little of the website was crawled to judge it."
     },
     "paid": {
       "title": "Paid search",

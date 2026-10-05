@@ -2,7 +2,9 @@ import type { SeoOperation } from "./dataForSeoRegistry";
 
 /**
  * Every keyword a website ranks for, up to its limit — its own, else its
- * company's (`companyDataLimits.ts`) — refreshed weekly.
+ * company's (`companyDataLimits.ts`) — refreshed weekly. A competitor's is
+ * its top 1,000 alone, refreshed monthly (finish-off plan, items 6b and 6c;
+ * `seoBuyingRules.ts`).
  *
  * Anthony, 2026-09-24: "I think we need to store whatever we can please, then
  * we can fully evaluate the screens to see what is useful and what we keep."

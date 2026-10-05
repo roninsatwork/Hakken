@@ -110,37 +110,102 @@ before each, nothing pushed without your word.
 
 ## What we buy from DataForSEO, and how often — 2026-10-05
 
-Read from `convex/dataForSeoRegistry.ts` and the collection's planning
-(`seoCollection.ts`, `heldByOwnCadence`). A company's cadence is set on its
-Schedules page. Each request has its own pace too: one with none comes every
-run; a weekly or monthly one comes at the run nearest its own pace, never
-faster. "Competitors after" is what was agreed today (items 6 and 6b).
+As built on 2026-10-05 (items 6, 6a, 6b and 6c); the rules are in one place,
+`convex/seoBuyingRules.ts`, and the planning in `seoCollection.ts` with
+`seoHeldAnswers.ts`. A company's cadence is set on its Schedules page. Each
+request has its own pace too: one with none comes every run; a monthly one
+comes at the run nearest thirty days, never faster.
 
-| What | Request | Daily company | Weekly | Fortnightly | Monthly | Competitors after |
+| What | Request | Daily company | Weekly | Fortnightly | Monthly | Competitors |
 |---|---|---|---|---|---|---|
 | **For each website — its own, and each competitor** | | | | | | |
 | What it ranks for (totals) | `domain_ranked_keywords` | daily | weekly | fortnightly | monthly | same |
-| Every keyword it ranks for — the list, up to the company's limit | `domain_ranked_keywords_list` | weekly (its first page daily, for the everyday keywords) | weekly | fortnightly | monthly | top 1,000 only |
-| Who competes with it | `domain_competitors` | daily | weekly | fortnightly | monthly | not asked |
+| Every keyword it ranks for — the list, up to the company's limit | `domain_ranked_keywords_list` | weekly (its first page daily, for the everyday keywords) | weekly | fortnightly | monthly | its top 1,000 only (one page), once a month |
 | Who links to it — the link totals | `backlinks_summary` | daily | weekly | fortnightly | monthly | same |
-| Every linking website — the referring domains | `referring_domains_list` | weekly | weekly | fortnightly | monthly | same |
-| Every link to it | `backlinks_all` | weekly | weekly | fortnightly | monthly | not bought |
-| Every site linking to it (one link each) | `backlinks_list` | weekly | weekly | fortnightly | monthly | not bought |
-| Links to its broken pages | `backlinks_broken` | weekly | weekly | fortnightly | monthly | not bought |
-| Links gained and lost | `backlinks_new_lost` | weekly | weekly | fortnightly | monthly | not bought |
-| The words links use | `anchors_list` | monthly | monthly | monthly | monthly | not bought |
-| The servers links come from | `referring_ips_list` | monthly | monthly | monthly | monthly | not bought |
-| A crawl of its pages (Site audit) | `site_crawl` | monthly | monthly | monthly | monthly | not crawled |
+| Every linking website — the referring domains | `referring_domains_list` | every 30 days | every 4th run (28 days) | every 2nd run (28 days) | monthly | same |
+| **For a company's own websites only** | | | | | | |
+| Who competes with it | `domain_competitors` | every 30 days | every 4th run | every 2nd run | monthly | not asked |
+| Every link to it | `backlinks_all` | every 30 days | every 4th run | every 2nd run | monthly | not bought |
+| Every site linking to it (one link each) | `backlinks_list` | every 30 days | every 4th run | every 2nd run | monthly | not bought |
+| Links to its broken pages | `backlinks_broken` | every 30 days | every 4th run | every 2nd run | monthly | not bought |
+| Links gained and lost (week by week: each answer holds every week since 2019) | `backlinks_new_lost` | every 30 days | every 4th run | every 2nd run | monthly | not bought |
+| The words links use | `anchors_list` | every 30 days | every 4th run | every 2nd run | monthly | not bought |
+| The servers links come from | `referring_ips_list` | every 30 days | every 4th run | every 2nd run | monthly | not bought |
+| A crawl of its pages (Site audit, page list, AI search checks) — one crawl shared by every company whose own site it is | `site_crawl` | every 30 days | every 4th run | every 2nd run | monthly | not crawled |
 | **For the company's own lists — its own website only** | | | | | | |
 | Google's results for each tracked keyword | `serp_google_organic` | daily | weekly | fortnightly | monthly | — (a competitor's position comes from the same page) |
-| Each AI question, asked of ChatGPT, Claude, Gemini and Perplexity | `ai_citation_*` | daily | weekly | fortnightly | monthly | — (a competitor is found named in the answers) |
+| Each AI question, asked of each AI engine the company chose | `ai_citation_*` | daily | weekly | fortnightly | monthly | — (a competitor is found named in the answers) |
 | What Google's AI Overviews searched for each question | `ai_overview_fan_out` | monthly | monthly | monthly | monthly | — |
 | How often those searches are made | `keyword_search_volume` | when new ones appear | | | | — |
 | **By hand only, never on a schedule** | | | | | | |
 | A keyword looked up in Keyword research | Keyword research agent | each lookup | | | | — |
 | Link counts for many websites at once | `bulk_*` | when an agent asks | | | | — |
 
-Collect now buys everything a run would, whatever its cadence says is due —
-until item 6a, which keeps what is fresh. Item 6c makes the link lists, the
-competitors' keyword lists and "its competitors" monthly whatever the schedule;
-the table above is how it stands before it.
+**Nothing is bought again while it is fresh** (item 6a): an answer a website
+already has is served while it is younger than half the cadence it is bought
+at — its own cadence, or the company's when that is slower. A Monthly
+company's run reuses anything under about 15 days old, a Weekly one under 3½
+days, a Daily one under 12 hours; Collect now holds anything a day at least,
+so pressed twice in a day it buys once. Google's results for tracked searches
+and the AI questions are still bought on every scheduled run — keyed by the
+day, so only a second run the same day (Collect now pressed again) is served
+them. **The crawl** is never bought again inside 26 days, whatever starts the
+run, Collect now included: a month less the room a run on the same date in
+February needs (held a full 30 days from its answer, a Monthly company would
+skip its crawl in every month of 30 days or fewer).
+
+## Built — 2026-10-05: items 6, 6a, 6b, 6c, 7, 14 and 15
+
+Local on a branch for the lead to merge; not deployed. The rules of what is
+bought for whom, and how long an answer is served, are in
+`convex/seoBuyingRules.ts`, read by the planner, the ad hoc door and both
+forecasts.
+
+- **6 — Competitors are not crawled; own sites once a month.** A competitor is
+  never crawled, by a collection or by an agent's request by hand
+  (`seoTools.requestSeoPull` refuses it). A company's own website's crawl,
+  answered or still out, is held at least 26 days whatever starts the run,
+  and one crawl serves every company whose own site it is. A competitor's
+  Site audit says "Competitors aren't crawled" and links to the website it is
+  measured against (`CompetitorNotCollected`).
+- **6a — Nothing bought again while it is fresh.** As in the table's note
+  above (`heldForDays`). The one-hour reuse for a manual collection is gone.
+- **6b — Competitors: only what benchmarking needs.** Keyword and link totals
+  every run, its linking websites, and its keyword list's first page of 1,000
+  rows — which queues no second page and never stands for an own website's
+  whole list. A competitor's top 1,000 refreshes the list kept for it unless a
+  company holds that website as its own.
+- **6c — Less often where the data barely changes.** Every link list monthly
+  for every website; who competes with an own website monthly; a
+  competitor's keyword list monthly. Links gained and lost still come week by
+  week. A standing link list is replaced by a whole one after 25 days, not
+  28, so this month's list always replaces last month's.
+- **7 — A crawl turned away says so.** A crawl that read three pages or fewer
+  shows a warning above the Site audit's figures — "Crawled 1 page: the
+  website probably blocked our crawler, so this audit is not complete" — or
+  the cause DataForSEO names (robots.txt, unreachable, an error page, pages
+  asking not to be read, too many redirects); its empty problem list says too
+  little was crawled to judge it. A filed crawl keeps DataForSEO's stop
+  reason and crawl status (`siteCrawls.stopReason`, `crawlStatus`).
+- **14 — Competitors' screens say what is not collected.** All backlinks,
+  Broken backlinks, New and lost links, Anchors, Referring IPs and Organic
+  competitors show their header and a plain notice on a competitor, with a
+  link to the same page for the website it is measured against; a
+  competitor's keyword list says it holds its top 1,000, refreshed monthly.
+  No approved look's outline changed.
+- **15 — Cost forecasts follow the new rules.** A run's report keeps what it
+  bought for competitors, and Runs and cost's "a month from now" prices every
+  run under today's rules (`boughtUnderTodaysRules`). Reports from before
+  have no split: `seoRunReportRebuild:rebuildRecentRunReports` works the last
+  45 days' out again, once, after deploying. Usage → Coming up books a
+  competitor's checks at the share of their last charge still bought — its
+  Site audit at nothing (`creditForecastRules.ts`); and it now reads each
+  check from its newest charge, not its oldest (any check with more than two
+  turns of history was dropped as stopped).
+
+Left as they are, for a decision: a held answer — the month's crawl, a
+monthly list, Collect now's second press — still writes a line on each run,
+and today's credit rules charge every line in full (usage-credits-plan.md,
+decision 8), so a company is charged credits each run for an answer bought
+once a month. That is the credits' rule to change (items 3 and the cost
+audit), not the buying.

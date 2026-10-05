@@ -19,6 +19,7 @@ import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../_components/useSiteSort";
 import { ListHeldLine } from "../../../_components/SiteCoverage";
+import { CompetitorNotCollected, useIsCompetitor } from "../../../_components/CompetitorNotCollected";
 
 /** Bars drawn: the first of the page on screen, as many as a page held before rows per page could grow to 100. */
 const CHARTED = 15;
@@ -36,6 +37,7 @@ const SORTS = { anchor: "asc", backlinks: "desc", domains: "desc", firstSeen: "d
  */
 export default function SiteAnchorsPage() {
   const t = useTranslations("sites.backlinksAnchors");
+  const competitor = useIsCompetitor();
   const siteId = useSiteId();
   const router = useRouter();
   const recordHref = useSiteRecordHref(siteId);
@@ -47,6 +49,19 @@ export default function SiteAnchorsPage() {
   const totals = useQuery(api.siteLinks.linkListTotals, { siteId });
   const words = (anchor: string) => anchor || t("noAnchor");
   const charted = (table.pageRows ?? []).slice(0, CHARTED);
+
+  // Bought for a company's own websites only (finish-off plan, items 6b, 6c and 14).
+  if (competitor) {
+    return (
+      <CompetitorNotCollected
+        icon={<Anchor className="h-5 w-5 text-brand" />}
+        title={t("title")}
+        description={t("description")}
+        notice={t("competitor")}
+        tab="backlinks/anchors"
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

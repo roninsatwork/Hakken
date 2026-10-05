@@ -8,7 +8,9 @@ import {
   SEO_OPERATIONS,
   seoSiteOperationParams,
 } from "./dataForSeoRegistry";
-import { heldByOwnCadence } from "./seoCollection";
+import { heldByOwnCadence } from "./seoHeldAnswers";
+import { boughtForCompetitor } from "./seoBuyingRules";
+import { isTrackedHold } from "./utils/websitePairing";
 import { cyclePullIn } from "./seoCollectionQueue";
 import { buildSeoIdempotencyKey } from "./seoIdempotency";
 import { WEBSITE_IDENTITY_MESSAGES, readWebsiteHost } from "./websiteIdentity";
@@ -61,7 +63,7 @@ export async function requireCompanyWebsite(
   ctx: QueryCtx,
   companyId: Id<"companies">,
   host: string,
-): Promise<{ websiteId: Id<"websites">; host: string }> {
+): Promise<{ websiteId: Id<"websites">; host: string; tracked: boolean }> {
   const identity = readWebsiteHost(host);
   if (!identity.ok) {
     throw appError("INVALID_INPUT", WEBSITE_IDENTITY_MESSAGES[identity.problem]);
@@ -83,7 +85,7 @@ export async function requireCompanyWebsite(
     .withIndex("by_company_website", (q) =>
       q.eq("companyId", companyId).eq("websiteId", website._id))
     .first();
-  if (held) return { websiteId: website._id, host: website.host };
+  if (held) return { websiteId: website._id, host: website.host, tracked: isTrackedHold(held) };
 
   // Same words as "no such website", on purpose. A different message would
   // turn this into a way of asking which hosts the platform knows about.
@@ -252,7 +254,11 @@ export const requestSeoPull = internalMutation({
       );
     }
 
-    const { websiteId, host } = await requireCompanyWebsite(ctx, args.companyId, args.host);
+    const { websiteId, host, tracked } = await requireCompanyWebsite(ctx, args.companyId, args.host);
+    // What a collection never buys for a competitor is not bought for one here either (`seoBuyingRules.ts`).
+    if (tracked && !boughtForCompetitor(operation.id)) {
+      return { ok: false, reused: false, message: `${host} is one of this company's competitors, and ${operation.id} is bought for a company's own websites only.` };
+    }
     const params = seoSiteOperationParams(operation, host);
     const startedAt = Date.now();
 

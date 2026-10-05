@@ -6,6 +6,7 @@ import { appError } from "./utils/appError";
 import { isTrackedHold } from "./utils/websitePairing";
 import { websiteIconUrl } from "./websiteIcons";
 import { cadenceOf, DAY_MS, EVERY_DAYS } from "./seoRunEstimate";
+import { competitorChargeUnderTodaysRules } from "./creditForecastRules";
 import { DEFAULT_CREDIT_PRICES, DEFAULT_PLAN_CREDITS, creditDayOf, creditMonthNamed, creditMonthOf, type CreditKind } from "./creditKinds";
 import { creditKindValidator, creditSourceValidator } from "./creditSchema";
 
@@ -150,19 +151,25 @@ async function scheduledChecks(ctx: Reader, companyId: Id<"companies">, now: num
   const scheduledDays = EVERY_DAYS[cadenceOf(schedule?.intervalStr)];
 
   const websites = await websitesOf(ctx, companyId, [...groups.values()].flatMap((runs) => (runs[0].websiteId ? [runs[0].websiteId] : [])));
-  const names = await namesOf(ctx, [...groups.values()].flatMap((runs) => {
-    const last = runs[runs.length - 1];
-    return last.userId ? [last.userId] : [];
-  }));
+  // The charges were read newest first, so a check's last run is its first
+  // here. Taken from the end, a check with more than its two turns of history
+  // was read from its oldest run, and dropped as stopped (found 2026-10-05).
+  const names = await namesOf(ctx, [...groups.values()].flatMap((runs) => (runs[0].userId ? [runs[0].userId] : [])));
 
   const out: Scheduled[] = [];
   for (const runs of groups.values()) {
     const ats = runs.map((run) => run.at).sort((a, b) => a - b);
     const gaps = ats.slice(1).map((at, index) => (at - ats[index]) / DAY_MS);
     const everyDays = gaps.length > 0 ? Math.max(1, Math.round(median(gaps))) : Math.max(1, Math.round(scheduledDays));
-    const last = runs[runs.length - 1];
+    const last = runs[0];
     const everyMs = everyDays * DAY_MS;
     if (now - last.at > 2 * everyMs + DAY_MS) continue;
+    // A competitor is bought only what benchmarking needs from 2026-10-05:
+    // its next runs are booked at what today's rules still buy of its last
+    // (`creditForecastRules.ts`, finish-off plan item 15) — its audit at none.
+    const website = last.websiteId ? websites.get(last.websiteId) ?? null : null;
+    const each = website?.relationship === "tracked" ? await competitorChargeUnderTodaysRules(ctx, last) ?? last.creditsOut : last.creditsOut;
+    if (each <= 0) continue;
     let nextAt = last.at + everyMs;
     while (nextAt <= now) nextAt += everyMs;
     const runsBefore = (until: number, from: number) => (from >= until ? 0 : Math.floor((until - 1 - from) / everyMs) + 1);
@@ -170,12 +177,12 @@ async function scheduledChecks(ctx: Reader, companyId: Id<"companies">, now: num
     const firstNext = nextAt + toMonthEnd * everyMs;
     out.push({
       kind: last.kind as CreditKind,
-      website: last.websiteId ? websites.get(last.websiteId) ?? null : null,
+      website,
       everyDays,
       nextAt,
-      each: last.creditsOut,
-      toMonthEnd: toMonthEnd * last.creditsOut,
-      nextMonth: runsBefore(nextEndsAt, Math.max(firstNext, endsAt)) * last.creditsOut,
+      each,
+      toMonthEnd: toMonthEnd * each,
+      nextMonth: runsBefore(nextEndsAt, Math.max(firstNext, endsAt)) * each,
       setUpBy: last.userId ? names.get(last.userId) ?? null : null,
     });
   }

@@ -5,7 +5,7 @@ import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { attentionOf, spendCategoryOf, stoppedOf } from "./seoRunReports";
-import { cadenceOf, collectsEveryRun, estimateMonthly, repeatDays } from "./seoRunEstimate";
+import { boughtUnderTodaysRules, cadenceOf, collectsEveryRun, estimateMonthly, repeatDays } from "./seoRunEstimate";
 
 /**
  * The Collection runs screens (Anthony, 2026-09-24): what each run for a
@@ -83,6 +83,7 @@ async function pull(t: Harness, s: Seeded, fields: {
   costUsd: number;
   sentAt?: number;
   eachRun?: boolean;
+  taskArgsJson?: string;
 }) {
   return await t.run(async (ctx) => await ctx.db.insert("seoDataPulls", {
     family: "DataForSEO", mode: "LIVE", companyId: s.korda, cycleId: s.run, taskArgsJson: "{}",
@@ -458,5 +459,90 @@ describe("a month from now, with the everyday check (2026-09-27)", () => {
       { operationId: "domain_ranked_keywords_list", costUsd: 0.61 + 0.5, everyRunCostUsd: 0.61 },
       { operationId: "domain_ranked_keywords", costUsd: 0.12 },
     ], "daily").perMonthUsd, 6);
+  });
+});
+
+describe("a month from now, under the buying rules of 2026-10-05", () => {
+  // Finish-off plan, item 15: no crawl for a competitor, only its link totals
+  // and linking websites, its keyword list's top 1,000 once a month, and every
+  // link list monthly — a forecast from a run bought before would overstate.
+  test("a run's report keeps what it bought for competitors, and of that its lists' first pages", async () => {
+    const t = harness();
+    const s = await seed(t);
+    const page = (offset: number) => JSON.stringify({ target: "x", limit: 1_000, offset });
+    await pull(t, s, { operationId: "site_crawl", websiteId: s.own, target: "kordatackle.com", status: "READY", costUsd: 1.5 });
+    await pull(t, s, { operationId: "site_crawl", websiteId: s.rival, target: "nashtackle.co.uk", status: "READY", costUsd: 1.5 });
+    await pull(t, s, { operationId: "domain_ranked_keywords_list", websiteId: s.own, target: "kordatackle.com", status: "READY", costUsd: 0.13, taskArgsJson: page(0) });
+    await pull(t, s, { operationId: "domain_ranked_keywords_list", websiteId: s.rival, target: "nashtackle.co.uk", status: "READY", costUsd: 0.13, taskArgsJson: page(0) });
+    await pull(t, s, { operationId: "domain_ranked_keywords_list", websiteId: s.rival, target: "nashtackle.co.uk", status: "READY", costUsd: 0.12, taskArgsJson: page(1_000) });
+    await t.action(internal.seoRunReports.buildRunReport, { cycleId: s.run });
+    const report = await t.run(async (ctx) => await ctx.db.query("seoRunReports").withIndex("by_cycle", (q) => q.eq("cycleId", s.run)).unique());
+    const line = (operationId: string) => report!.byOperation.find((entry) => entry.operationId === operationId);
+    expect(line("site_crawl")).toMatchObject({ costUsd: 3, trackedCostUsd: 1.5 });
+    expect(line("domain_ranked_keywords_list")?.trackedCostUsd).toBeCloseTo(0.25, 8);
+    expect(line("domain_ranked_keywords_list")?.trackedFirstPageCostUsd).toBeCloseTo(0.13, 8);
+  });
+
+  test("prices the company's own websites in full, and its competitors only at what is still bought for them", () => {
+    const priced = [
+      { operationId: "site_crawl", costUsd: 3, trackedCostUsd: 1.5 },
+      { operationId: "backlinks_all", costUsd: 0.08, trackedCostUsd: 0.04, trackedFirstPageCostUsd: 0.04 },
+      { operationId: "referring_domains_list", costUsd: 0.1, trackedCostUsd: 0.05, trackedFirstPageCostUsd: 0.05 },
+      { operationId: "backlinks_summary", costUsd: 0.05, trackedCostUsd: 0.025 },
+      { operationId: "domain_competitors", costUsd: 0.04, trackedCostUsd: 0.02 },
+      { operationId: "domain_ranked_keywords_list", costUsd: 0.52, everyRunCostUsd: 0.13, trackedCostUsd: 0.26, trackedFirstPageCostUsd: 0.13 },
+    ].flatMap(boughtUnderTodaysRules);
+    expect(priced).toEqual([
+      { operationId: "site_crawl", costUsd: 1.5 },
+      { operationId: "backlinks_all", costUsd: 0.04 },
+      { operationId: "referring_domains_list", costUsd: 0.1 },
+      { operationId: "backlinks_summary", costUsd: 0.05 },
+      { operationId: "domain_competitors", costUsd: 0.02 },
+      { operationId: "domain_ranked_keywords_list", costUsd: 0.26, everyRunCostUsd: 0.13 },
+      { operationId: "domain_ranked_keywords_list", costUsd: 0.13, ownDays: 30 },
+    ]);
+    // Weekly: the totals every run; the keyword list's own pages weekly; the
+    // crawl, every link list, who competes and a competitor's top 1,000 every fourth week.
+    const weekly = estimateMonthly(priced, "weekly");
+    expect(weekly.perMonthUsd).toBeCloseTo(((0.05 + 0.26) * 30.44) / 7 + ((1.5 + 0.04 + 0.1 + 0.02 + 0.13) * 30.44) / 28, 6);
+    // A report from before 2026-10-05 kept no split, and is priced whole.
+    expect(boughtUnderTodaysRules({ operationId: "site_crawl", costUsd: 3 })).toEqual([{ operationId: "site_crawl", costUsd: 3 }]);
+  });
+
+  test("the company's figure reads its runs under today's rules", async () => {
+    const t = harness();
+    const s = await seed(t);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("seoRunReports", {
+        cycleId: s.run, companyId: s.korda, builtAt: NOW, final: true, requests: 3, costUsd: 3.39, waiting: 0, answering: 0,
+        filed: 3, failed: 0, aiJudgements: 0, aiCostUsd: 0,
+        byOperation: [
+          { operationId: "site_crawl", requests: 2, answering: 0, costUsd: 3, trackedCostUsd: 1.5 },
+          { operationId: "domain_ranked_keywords_list", requests: 3, answering: 0, costUsd: 0.39, trackedCostUsd: 0.26, trackedFirstPageCostUsd: 0.13 },
+        ],
+        bySite: [], byCollectorRun: [], ai: [],
+      });
+    });
+    const summary = await t.withIdentity({ subject: s.adminId }).query(api.seoRunReports.getCompanyRunSummary, { companyId: s.korda });
+    expect(summary.estimate?.perMonthUsd).toBeCloseTo(estimateMonthly([
+      { operationId: "site_crawl", costUsd: 1.5 },
+      { operationId: "domain_ranked_keywords_list", costUsd: 0.13 },
+      { operationId: "domain_ranked_keywords_list", costUsd: 0.13, ownDays: 30 },
+    ], "weekly").perMonthUsd, 6);
+  });
+
+  test("the recent runs' reports are worked out again, once each, for the reports that exist", async () => {
+    const t = harness();
+    const s = await seed(t);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("seoRunReports", {
+        cycleId: s.run, companyId: s.korda, builtAt: NOW, final: true, requests: 0, costUsd: 0, waiting: 0, answering: 0,
+        filed: 0, failed: 0, aiJudgements: 0, aiCostUsd: 0, byOperation: [], bySite: [], byCollectorRun: [], ai: [],
+      });
+    });
+    expect(await t.mutation(internal.seoRunReportRebuild.rebuildRecentRunReports, {})).toEqual({ booked: 1, done: true });
+    const booked = await t.run(async (ctx) => (await ctx.db.system.query("_scheduled_functions").collect())
+      .filter((job) => job.name.includes("buildRunReport")).map((job) => (job.args[0] as { cycleId: string }).cycleId));
+    expect(booked).toEqual([s.run]);
   });
 });

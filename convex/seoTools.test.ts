@@ -231,6 +231,20 @@ describe("asking for one website now", () => {
     expect(await t.run(async (ctx) => await ctx.db.query("seoDataPulls").collect())).toHaveLength(1);
   });
 
+  test("what a collection never buys for a competitor is not bought for one by hand either", async () => {
+    // Competitors are not crawled (finish-off plan, item 6): the crawl feeds
+    // only a company's own websites' Site audit, page list and AI checks.
+    const t = harness();
+    const company = await seedCompany(t, "Ronins Agency");
+    const rival = await seedWebsite(t, "rival.com");
+    await t.run(async (ctx) => await ctx.db.insert("companyWebsites", { companyId: company, websiteId: rival, relationship: "TRACKED", createdAt: Date.now() }));
+
+    const asked = await t.mutation(internal.seoTools.requestSeoPull, { companyId: company, host: "rival.com", operationId: "site_crawl" });
+    expect(asked).toMatchObject({ ok: false, reused: false });
+    expect(asked.message).toMatch(/own websites only/);
+    expect(await t.run(async (ctx) => await ctx.db.query("seoDataPulls").collect())).toHaveLength(0);
+  });
+
   test("an invented data type is refused rather than sent", async () => {
     const t = harness();
     const company = await seedCompany(t, "Ronins Agency");

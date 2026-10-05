@@ -11,7 +11,9 @@ import { claimSchedule } from "./siteRankings";
 import { superAdminQuery } from "./tenantFunctions";
 import { attentionRow, runReportFields } from "./utils/siteShapes";
 import { PARSE_FAILED } from "./seoFiling";
-import { cadenceOf, DAY_MS, estimateMonthly, estimateShape, everyDaysOf, newestPrices, repeatDays, reportOf } from "./seoRunEstimate";
+import { boughtUnderTodaysRules, cadenceOf, DAY_MS, estimateMonthly, estimateShape, everyDaysOf, newestPrices, repeatDays, reportOf } from "./seoRunEstimate";
+import { isPagedListOperation, sentOffset } from "./sitePagedLists";
+import { isTrackedHold } from "./utils/websitePairing";
 import { SEO_COMPETITORS_PER_WEBSITE, SEO_MAX_SENDS_PER_CYCLE } from "./seoCollectionPolicy";
 import { readFanOutLimits } from "./fanOutLimits";
 import { websiteIconUrl } from "./websiteIcons";
@@ -116,6 +118,10 @@ const pullForReport = v.object({
   rowsLeftOff: v.optional(v.number()),
   /** A keyword list page bought on every run as the site's everyday check. */
   eachRun: v.optional(v.boolean()),
+  /** Bought for one of the run's company's competitors, not its own website. */
+  tracked: v.optional(v.boolean()),
+  /** A page of a list past its first. */
+  laterPage: v.optional(v.boolean()),
 });
 type PullForReport = Infer<typeof pullForReport>;
 
@@ -163,6 +169,15 @@ export const pullsForReport = internalQuery({
       .query("seoDataPulls")
       .withIndex("by_cycle", (q) => q.eq("cycleId", args.cycleId))
       .paginate({ cursor: args.cursor, numItems: PULLS_PER_READ });
+    // Which of the page's websites the run's company watches as a competitor:
+    // what the estimate prices under today's rules (`boughtUnderTodaysRules`).
+    const cycle = await ctx.db.get(args.cycleId);
+    const tracked = new Set<string>();
+    for (const websiteId of new Set(result.page.flatMap((pull) => (pull.websiteId ? [pull.websiteId] : [])))) {
+      const hold = cycle ? await ctx.db.query("companyWebsites")
+        .withIndex("by_company_website", (q) => q.eq("companyId", cycle.companyId).eq("websiteId", websiteId)).first() : null;
+      if (hold && isTrackedHold(hold)) tracked.add(websiteId);
+    }
     return {
       rows: result.page.map((pull) => ({
         pullId: pull._id,
@@ -178,6 +193,8 @@ export const pullsForReport = internalQuery({
         ...(pull.rawTruncated ? { rawTruncated: true } : {}),
         ...(pull.rowsLeftOff ? { rowsLeftOff: pull.rowsLeftOff } : {}),
         ...(pull.eachRun ? { eachRun: true } : {}),
+        ...(pull.websiteId && tracked.has(pull.websiteId) ? { tracked: true } : {}),
+        ...(isPagedListOperation(pull.operationId) && sentOffset(pull.taskArgsJson) > 0 ? { laterPage: true } : {}),
       })),
       cursor: result.continueCursor,
       isDone: result.isDone,
@@ -393,7 +410,9 @@ type SiteTally = {
 
 /** A run's requests added up as they are read. */
 export function tallyRequests(rows: readonly PullForReport[]) {
-  const byOperation = new Map<string, { operationId: string; requests: number; costUsd: number; answering: number; everyRunCostUsd?: number }>();
+  const byOperation = new Map<string, {
+    operationId: string; requests: number; costUsd: number; answering: number; everyRunCostUsd?: number; trackedCostUsd?: number; trackedFirstPageCostUsd?: number;
+  }>();
   const bySite = new Map<string, SiteTally>();
   const siteOfPull = new Map<string, string>();
   const pullIds = new Set<string>();
@@ -417,6 +436,11 @@ export function tallyRequests(rows: readonly PullForReport[]) {
     operation.costUsd += row.costUsd;
     // The everyday check's pages are bought on every run, whatever the list's own cadence.
     if (row.eachRun) operation.everyRunCostUsd = (operation.everyRunCostUsd ?? 0) + row.costUsd;
+    // Bought for a competitor, and of that its lists' first pages: what today's rules still buy for one.
+    if (row.tracked) {
+      operation.trackedCostUsd = (operation.trackedCostUsd ?? 0) + row.costUsd;
+      if (!row.laterPage) operation.trackedFirstPageCostUsd = (operation.trackedFirstPageCostUsd ?? 0) + row.costUsd;
+    }
     if (row.status === "SUBMITTED") operation.answering += 1;
     byOperation.set(row.operationId, operation);
 
@@ -891,7 +915,7 @@ export const getRunReport = superAdminQuery({
       sites,
       decisions: (report?.ai ?? []).map(({ decisionKey }) => ({ decisionKey, copyKey: getDecision(decisionKey)?.copyKey ?? null })),
       cadence: schedule?.isActive ? cadence : null,
-      estimate: schedule?.isActive && report ? estimateMonthly(report.byOperation, cadence) : null,
+      estimate: schedule?.isActive && report ? estimateMonthly(report.byOperation.flatMap(boughtUnderTodaysRules), cadence) : null,
       open: cycle.status === "EXPANDING" || cycle.status === "SENDING" || cycle.status === "COLLECTING",
       // Known by what the close took off the queue; the name goes if the closer's data is erased.
       closedByHand: cycle.closedUnsent !== undefined
