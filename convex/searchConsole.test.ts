@@ -469,6 +469,14 @@ describe("collecting", () => {
       .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", "30").eq("which", "BEFORE"))
       .collect());
     expect(before.map((part) => part.keys)).toEqual([[]]);
+    // One search's pages and one page's searches keep no period before (store less round two, E).
+    for (const list of ["pair", "pairByPage"] as const) {
+      const pairsBefore = await t.run(async (ctx) => await ctx.db
+        .query("searchConsolePeriods")
+        .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", list).eq("period", "30").eq("which", "BEFORE"))
+        .collect());
+      expect(pairsBefore).toEqual([]);
+    }
     // Twelve months of a website held for 90 days is the 90 days: kept once, its own slot only saying its days (finish-off plan 2E).
     const year = await t.run(async (ctx) => await ctx.db
       .query("searchConsolePeriods")

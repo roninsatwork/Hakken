@@ -615,7 +615,9 @@ export async function buildSitePeriods(
    * searches a month.
    */
   const writeKeyed = async (searchType: SearchType, list: "pair" | "pairByPage", slot: Slot, pairs: Row[] | null, other: { counts: Counts; facts: Facts | undefined }) => {
-    if (pairs === null) return await writeParts(searchType, list, slot, null);
+    // One search's pages and one page's searches keep no period before (store less round two, E):
+    // those lists show no change, as twelve months' never did; the searches' and pages' own lists keep theirs.
+    if (pairs === null || slot.which === "BEFORE") return await writeParts(searchType, list, slot, null);
     const byKeyword = list === "pair";
     await writeParts(searchType, list, slot, packByKey(pairs, byKeyword ? "query" : "page").map((packed): PartToWrite => {
       if (slot.which !== "NOW") return packed;
