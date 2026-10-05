@@ -30,6 +30,7 @@ import { holdQuestions, holdSearches } from "./holdLists";
 import { counted, firstCheckSteps, withinFanOutLimit, type PlannedCheck } from "./fanOutFirstCheckSteps";
 import { reusableByKey } from "./seoPullReuse";
 import { SEARCH_VOLUME_OPERATION, volumeSteps } from "./searchVolumes";
+import { creditCycleLine } from "./creditHooks";
 import {
   SEO_DUE_SPACING_MS,
   SEO_EXPANSION_PAGE,
@@ -569,6 +570,8 @@ async function planSharedPull(
     reused: Boolean(existing),
     createdAt: Date.now(),
   });
+  // Charged at the full price, bought or reused (usage-credits-plan.md).
+  await creditCycleLine(ctx, cycle, args.websiteId, existing ?? { family: args.operation.family, taskArgsJson: JSON.stringify(args.params), costUsd: 0, status: "PENDING" }, Boolean(existing));
 
   return { reused: Boolean(existing), pullId, pull: existing };
 }
@@ -963,4 +966,5 @@ async function writeLine(
     reused,
     createdAt: Date.now(),
   });
+  await creditCycleLine(ctx, args.cycle, args.websiteId, pullId, reused);
 }

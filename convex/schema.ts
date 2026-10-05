@@ -10,6 +10,7 @@ import { pagesTables } from "./pagesSchema";
 import { contentTables } from "./contentSchema";
 import { keywordResearchTables } from "./keywordResearchSchema";
 import { seoPullTables } from "./seoPullSchema";
+import { creditTables } from "./creditSchema";
 import { decisionCertaintyValidator, decisionFallbackReasonValidator, decisionModeValidator, decisionOutcomeValidator, decisionSourceValidator } from "./utils/decisionShapes";
 
 
@@ -36,6 +37,7 @@ export default defineSchema({
   ...contentTables,
   ...keywordResearchTables,
   ...seoPullTables,
+  ...creditTables,
   
   companies: defineTable({
     name: v.string(),
@@ -1200,6 +1202,8 @@ export default defineSchema({
      * without it.
      */
     grantedModules: v.optional(v.array(v.string())),
+    /** Credits in each month's plan batch; absent, the platform's (`creditSettings`). */
+    monthlyCredits: v.optional(v.number()),
     isActive: v.boolean(),
     createdAt: v.number(),
   }).index("by_active", ["isActive"])

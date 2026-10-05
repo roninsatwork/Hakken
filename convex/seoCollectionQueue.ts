@@ -13,6 +13,7 @@ import { requestRunReport, scheduleLateRunReports } from "./seoRunReports";
 import { recordOperationCost } from "./websiteTrackingStats";
 import { appendRunStep } from "./agentRunStepWriter";
 import { storePullAnswer } from "./seoPullAnswers";
+import { creditCycleFinished, creditPullSettled } from "./creditHooks";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 /**
@@ -702,6 +703,7 @@ export async function countSettled(
 
   // Only once the answer exists is it worth anything to anyone else.
   if (status === "READY") await creditReusers(ctx, row, day, costUsd);
+  await creditPullSettled(ctx, row, status, costUsd);
 }
 
 /**
@@ -762,6 +764,7 @@ export async function finishSeoCycle(
   await ctx.scheduler.runAfter(SEO_MOVES_DELAY_MS, internal.websiteMoves.deriveCycleMoves, { cycleId });
   // Each of the company's own websites' sitemaps, read at each collection, free (page-groups-plan.md).
   await ctx.scheduler.runAfter(0, internal.sitemaps.readCycleSitemaps, { cycleId });
+  await creditCycleFinished(ctx, cycleId);
 }
 
 

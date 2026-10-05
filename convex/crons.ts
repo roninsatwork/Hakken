@@ -194,6 +194,16 @@ crons.interval(
   { job: "seo-collection-sweep" }
 );
 
+// Credits: end the batches whose time is up — a month's plan credits, a
+// top-up after 12 months — and close the runs of collections that finished
+// without their last answer settling (docs/plans/active/usage-credits-plan.md).
+crons.interval(
+  "credit-ledger-sweep",
+  { hours: 1 },
+  internal.jobLedger.runJob,
+  { job: "credit-ledger-sweep" }
+);
+
 // Fold new answer ratings into per-chunk knowledge evidence. Hourly and
 // watermarked: rating a message stays O(1), the aggregation happens here,
 // and a quiet hour costs one indexed read. No model call is involved.

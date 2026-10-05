@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Usage</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="/_blob/b2cd348c4f9e09c3043440452936d49d">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#222224}
+a{text-decoration:none}
+.hk-wrap-anywhere{overflow-wrap:anywhere}
+@media (max-width:1180px){.hk-sidebar{display:none !important}}
+</style>
+</helmet>
+<div class="dark">
+<div class="flex min-h-screen bg-background text-foreground font-sans tracking-tight antialiased">
+<aside class="hk-sidebar w-[240px] shrink-0 bg-sidebar border-r border-border-dim/50 flex flex-col shadow-2xl">
+<div class="flex items-center justify-between px-5 pt-8 pb-5"><a href="#" class="flex items-center gap-3 group"><div class="w-[30px] h-[30px] rounded-[8px] bg-card border border-border-dim flex items-center justify-center relative shadow-sm"><div class="w-[18px] h-[18px] text-brand flex items-center justify-center"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="w-full h-full"><path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364-6.364l-.707.707M6.343 17.657l-.707.707m0-12.728l.707.707m11.314 11.314l.707.707"></path><circle cx="12" cy="12" r="3"></circle></svg></div></div><span class="font-bold text-[18px] text-foreground tracking-tight">Hakken</span></a><button title="Collapse the menu" aria-label="Collapse the menu" class="text-muted hover:text-foreground transition-colors border border-transparent hover:border-border-dim p-1.5 rounded-md"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="w-[18px] h-[18px]"><rect width="18" height="18" x="3" y="3" rx="2"></rect><path d="M9 3v18"></path></svg></button></div>
+<div class="flex-1 overflow-y-auto flex flex-col pt-6 pb-8 px-4 gap-6">
+<div>
+<div class="mb-3 px-3"><span class="text-[11px] font-mono tracking-[0.15em] text-muted uppercase">Main navigation</span></div>
+<nav aria-label="Main navigation" class="flex flex-col">
+<div class="flex flex-col mb-0.5 relative"><a href="#" class="flex items-center justify-between w-full px-3 rounded-[10px] text-[13px] font-medium transition-all group relative text-secondary py-[11px] hover:text-foreground hover:bg-hover/50"><div class="flex items-center gap-3 relative z-10"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="w-[18px] h-[18px] text-secondary group-hover:text-foreground"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg><span>Dashboard</span></div></a></div>
+<div class="flex flex-col mb-0.5 relative"><a href="#" class="flex items-center justify-between w-full px-3 rounded-[10px] text-[13px] font-medium transition-all group relative text-secondary py-[11px] hover:text-foreground hover:bg-hover/50"><div class="flex items-center gap-3 relative z-10"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="w-[18px] h-[18px] text-secondary group-hover:text-foreground"><path d="M12 8V4H8"></path><rect width="16" height="12" x="4" y="8" rx="2"></rect><path d="M2 14h2M20 14h2M15 13v2M9 13v2"></path></svg><span>Ask Hakken</span></div></a></div>
+<div class="flex flex-col mb-0.5 relative"><button class="flex items-center justify-between w-full px-3 py-[7px] rounded-[10px] text-[13px] font-medium transition-all group relative text-secondary py-[11px] hover:text-foreground hover:bg-hover/50"><div class="flex items-center gap-3 relative z-10"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="w-[18px] h-[18px] text-secondary group-hover:text-foreground"><circle cx="12" cy="12" r="10"></circle><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"></path><path d="M2 12h20"></path></svg><span>Discovery</span></div><div class="relative z-10"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="w-3.5 h-3.5 text-muted"><path d="m6 9 6 6 6-6"></path></svg></div></button></div>
+<div class="flex flex-col mb-0.5 relative"><a href="#" class="flex items-center justify-between w-full px-3 rounded-[10px] text-[13px] font-medium transition-all group relative text-secondary py-[11px] hover:text-foreground hover:bg-hover/50"><div class="flex items-center gap-3 relative z-10"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="w-[18px] h-[18px] text-secondary group-hover:text-foreground"><path d="m8 11 2 2 4-4"></path><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg><span>Search Console</span></div></a></div>
+<div class="flex flex-col mb-0.5 relative"><a href="#" class="flex items-center justify-between w-full px-3 rounded-[10px] text-[13px] font-medium transition-all group relative text-secondary py-[11px] hover:text-foreground hover:bg-hover/50"><div class="flex items-center gap-3 relative z-10"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="w-[18px] h-[18px] text-secondary group-hover:text-foreground"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0zM22 10v6M6 12.5V16a6 3 0 0 0 12 0v-3.5"></path></svg><span>Learn</span></div></a></div>
+<div class="flex flex-col mb-0.5 relative">
+<button class="flex items-center justify-between w-full px-3 py-[7px] rounded-[10px] text-[13px] font-medium transition-all group relative text-foreground"><div class="flex items-center gap-3 relative z-10"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="w-[18px] h-[18px] text-foreground"><path d="m12 14 4-4"></path><path d="M3.34 19a10 10 0 1 1 17.32 0"></path></svg><span>Usage</span></div><div class="relative z-10"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="w-3.5 h-3.5 text-foreground rotate-180"><path d="m6 9 6 6 6-6"></path></svg></div></button>
+<div class="pl-6 pr-1 py-1 flex flex-col gap-0.5 mt-1 ml-4 border-l border-border-dim/30">
+<a href="Main.dc.html" aria-current="page" class="py-1.5 px-3 rounded-[8px] text-[13px] tracking-wide transition-all relative group text-left block w-full text-foreground font-medium"><div class="absolute inset-0 rounded-[8px] z-0 bg-foreground/10 border border-border-dim shadow-sm"></div><span class="relative z-10 flex items-center justify-between gap-2"><span class="truncate">Overview</span></span></a>
+<a href="ByWork.dc.html" class="py-1.5 px-3 rounded-[8px] text-[13px] tracking-wide transition-all relative group text-left block w-full text-secondary hover:text-foreground"><span class="relative z-10 flex items-center justify-between gap-2"><span class="truncate">By work</span></span></a>
+<a href="ByWebsite.dc.html" class="py-1.5 px-3 rounded-[8px] text-[13px] tracking-wide transition-all relative group text-left block w-full text-secondary hover:text-foreground"><span class="relative z-10 flex items-center justify-between gap-2"><span class="truncate">By website</span></span></a>
+<a href="ComingUp.dc.html" class="py-1.5 px-3 rounded-[8px] text-[13px] tracking-wide transition-all relative group text-left block w-full text-secondary hover:text-foreground"><span class="relative z-10 flex items-center justify-between gap-2"><span class="truncate">Coming up</span></span></a>
+<a href="Statement.dc.html" class="py-1.5 px-3 rounded-[8px] text-[13px] tracking-wide transition-all relative group text-left block w-full text-secondary hover:text-foreground"><span class="relative z-10 flex items-center justify-between gap-2"><span class="truncate">Statement</span></span></a>
+<a href="Purchases.dc.html" class="py-1.5 px-3 rounded-[8px] text-[13px] tracking-wide transition-all relative group text-left block w-full text-secondary hover:text-foreground"><span class="relative z-10 flex items-center justify-between gap-2"><span class="truncate">Purchases</span></span></a>
+</div>
+</div>
+</nav>
+</div>
+</div>
+</aside>
+<div class="flex flex-col flex-1 w-full p-8 relative min-h-0 min-w-0">
+<header class="sticky top-0 -mx-8 -mt-8 px-8 py-4 mb-8 bg-sidebar/40 backdrop-blur-xl border-b border-border-dim flex items-center justify-between">
+<nav class="flex items-center gap-4 text-[13px]"><div class="flex items-center gap-2 text-foreground font-medium"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="w-[18px] h-[18px] opacity-80"><path d="m12 14 4-4"></path><path d="M3.34 19a10 10 0 1 1 17.32 0"></path></svg><div class="flex min-w-0 items-center gap-2"><span class="flex min-w-0 items-center gap-2"><span class="truncate">Usage</span></span></div></div></nav>
+<div class="flex items-center gap-3">
+<button title="Notifications" aria-label="Notifications" class="p-1.5 rounded-md text-muted hover:text-foreground hover:bg-foreground/5 border border-transparent hover:border-border-dim transition-all"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="w-[18px] h-[18px]"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"></path></svg></button>
+<div class="relative"><button class="flex items-center gap-4 p-1 rounded-full hover:bg-foreground/5 transition-colors group"><div class="relative"><div class="w-10 h-10 rounded-full bg-sidebar border border-border-dim flex items-center justify-center text-[13px] font-medium text-secondary">AB</div><div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-[#10b981] border-2 border-[#161616] rounded-full"></div></div><div class="flex flex-col items-start min-w-[120px]"><span class="text-[15px] font-light text-foreground tracking-[0.12em] leading-tight">Anthony Basker</span><span class="text-[12px] text-secondary/70 font-normal">anthony@ronins.co.uk</span></div><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="w-4 h-4 text-secondary/50"><path d="m7 15 5 5 5-5M7 9l5-5 5 5"></path></svg></button></div>
+</div>
+</header>
+
+<div class="flex flex-col gap-6 pb-8">
+
+<div data-part="page-header" class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-border-dim pb-6"><div><h1 data-part-title="true" class="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-6 w-6 text-brand"><path d="m12 14 4-4"></path><path d="M3.34 19a10 10 0 1 1 17.32 0"></path></svg>Usage</h1><p class="text-[13px] text-secondary mt-1 tracking-wide">Where your credits go, and how many are left.</p></div><a href="#" class="rounded-[10px] bg-foreground text-background font-medium hover:bg-foreground/90 transition-all shadow-xl shadow-foreground/10 flex items-center gap-2 px-3 py-1.5 text-[13px] whitespace-nowrap" data-part="primary-action"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-4 w-4"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg><span>Top up</span></a></div>
+
+<div data-part="notice" data-part-variant="info" role="status" class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-[12px] border p-4 text-secondary border-border-dim/50 bg-foreground/[0.015]"><span class="flex min-w-0 items-start gap-3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="mt-0.5 h-4 w-4 flex-shrink-0 text-muted"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg><span class="text-[12.5px] leading-relaxed">Your plan gives you 1,000 credits on the 1st of each month; whatever is left at midnight on the last day ends. Credits you buy last 12 months, and are used only once your plan’s have run out.</span></span></div>
+
+<div class="flex flex-wrap items-center gap-3">
+<div data-part="filter" data-part-label="Period" class="relative inline-flex h-[38px] items-center gap-1.5 whitespace-nowrap rounded-[10px] border px-3 text-[13px] transition-colors focus-within:border-brand/50 border-border-dim bg-background text-foreground hover:bg-hover/40"><span aria-hidden="true" class="min-w-0 truncate">This month</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="pointer-events-none h-4 w-4 text-muted"><path d="m6 9 6 6 6-6"></path></svg><select aria-label="Period" class="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-background text-[13px] text-foreground opacity-0"><option value="">This month</option><option value="last">September</option><option value="3">The last 3 months</option><option value="12">The last 12 months</option></select></div>
+</div>
+
+<div data-part="figures" class="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+<div data-part="figure" class="rounded-2xl border px-5 py-4 border-border-dim bg-card/40"><div data-part-title="true" class="text-[12px] text-secondary">Plan credits left</div><div class="mt-1 text-[24px] font-semibold tabular-nums text-foreground">457</div><div class="mt-1 text-[12px]"><span class="text-secondary">They end at midnight on 31 October</span></div></div>
+<a href="Purchases.dc.html" data-part="figure" class="rounded-2xl border px-5 py-4 border-border-dim bg-card/40 transition-colors focus-visible:outline-2 focus-visible:outline-brand hover:border-brand/40"><div data-part-title="true" class="text-[12px] text-secondary">Bought credits left →</div><div class="mt-1 text-[24px] font-semibold tabular-nums text-foreground">500</div><div class="mt-1 text-[12px]"><span class="text-secondary">They end on 16/10/2027</span></div></a>
+<div data-part="figure" class="rounded-2xl border px-5 py-4 border-border-dim bg-card/40"><div data-part-title="true" class="text-[12px] text-secondary">Used this month, of 1,000</div><div class="mt-1 text-[24px] font-semibold tabular-nums text-foreground">543</div><div class="mt-1 text-[12px]"><span aria-hidden="true" class="flex overflow-hidden rounded-full bg-hover h-2.5 w-full"><span class="block h-full bg-brand" style="width: 54%"></span></span></div></div>
+<div data-part="figure" class="rounded-2xl border px-5 py-4 border-brand/40 bg-brand/5"><div data-part-title="true" class="text-[12px] text-secondary">Left on 31 October</div><div class="mt-1 text-[24px] font-semibold tabular-nums text-foreground">250</div><div class="mt-1 text-[12px]"><span class="text-secondary">At this pace; unused, they end that night</span></div></div>
+</div>
+
+<div class="grid grid-cols-1 gap-3" style="grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr)">
+<section class="rounded-2xl border border-border-dim bg-card/40 p-5 relative">
+<div class="flex flex-col gap-3 pr-28"><h2 class="text-[14px] font-medium text-foreground">This month’s credits, day by day</h2><p class="text-[12px] text-secondary">What was left of your plan’s 1,000 at the end of each day. Mondays drop most: the weekly checks run then.</p></div>
+<button class="inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2 rounded-[8px] border border-border-dim bg-white/[0.03] text-[12px] font-medium text-secondary hover:text-foreground hover:bg-white/[0.06] transition-all absolute top-4 right-4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-3.5 w-3.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"></path></svg>Download</button>
+<div class="mt-4">
+<div class="grid" style="grid-template-columns: 44px minmax(0, 1fr); column-gap: 4px">
+<div class="relative text-[11px] text-muted" style="height: 240px"><span class="absolute right-2" style="top: 15px">1k</span><span class="absolute right-2" style="top: 124px">500</span><span class="absolute right-2" style="top: 233px">0</span></div>
+<svg viewBox="0 0 1000 220" preserveAspectRatio="none" role="img" aria-label="Credits left at the end of each day this month" class="text-border-dim" style="width: 100%; height: 240px; display: block">
+<line x1="0" y1="20" x2="1000" y2="20" stroke="currentColor" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"></line><line x1="0" y1="120" x2="1000" y2="120" stroke="currentColor" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"></line><line x1="0" y1="220" x2="1000" y2="220" stroke="currentColor" stroke-dasharray="3 3" vector-effect="non-scaling-stroke"></line>
+<line x1="{{todayX}}" y1="0" x2="{{todayX}}" y2="220" stroke="currentColor" vector-effect="non-scaling-stroke"></line>
+<polyline points="{{sepLine}}" fill="none" stroke="#8a8a90" stroke-width="1.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline>
+<polygon points="{{area}}" fill="#f97316" fill-opacity="0.35"></polygon>
+<polyline points="{{line}}" fill="none" stroke="#f97316" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline>
+<polyline points="{{ahead}}" fill="none" stroke="#f97316" stroke-width="2" stroke-dasharray="5 4" vector-effect="non-scaling-stroke" stroke-linejoin="round"></polyline>
+<sc-for list="{{days}}" as="d" hint-placeholder-count="31"><rect x="{{d.x}}" y="0" width="{{d.w}}" height="220" fill="transparent" onMouseEnter="{{d.hover}}"></rect></sc-for>
+<sc-if value="{{tip.show}}" hint-placeholder-val="{{false}}"><line x1="{{tip.x}}" y1="0" x2="{{tip.x}}" y2="220" stroke="#A1A1A6" vector-effect="non-scaling-stroke"></line></sc-if>
+</svg>
+<div></div>
+<div class="mt-2 flex justify-between text-[11px] text-muted"><span>1 Oct</span><span>8 Oct</span><span>15 Oct</span><span>Today</span><span>31 Oct</span></div>
+</div>
+<div class="mt-3 flex flex-wrap items-center gap-5 text-[12px] text-secondary">
+<span class="flex items-center gap-2"><svg width="18" height="6" viewBox="0 0 18 6" aria-hidden="true"><line x1="0" y1="3" x2="18" y2="3" stroke="#f97316" stroke-width="2"></line></svg>October</span>
+<span class="flex items-center gap-2"><svg width="18" height="6" viewBox="0 0 18 6" aria-hidden="true"><line x1="0" y1="3" x2="18" y2="3" stroke="#f97316" stroke-width="2" stroke-dasharray="4 3"></line></svg>Booked, and your usual pace</span>
+<span class="flex items-center gap-2"><svg width="18" height="6" viewBox="0 0 18 6" aria-hidden="true"><line x1="0" y1="3" x2="18" y2="3" stroke="#8a8a90" stroke-width="1.5"></line></svg>September</span>
+</div>
+<div class="mt-3 text-[12px] text-secondary" style="min-height: 18px">{{tip.text}}</div>
+</div>
+</section>
+<section class="rounded-2xl border border-border-dim bg-card/40 p-5">
+<div class="flex flex-col gap-3"><h2 class="text-[14px] font-medium text-foreground">Where they went</h2><p class="text-[12px] text-secondary">This month’s 543 credits, by kind of work.</p></div>
+<div class="mt-4 flex flex-col gap-4">
+<sc-for list="{{kinds}}" as="k" hint-placeholder-count="6">
+<div class="flex flex-col gap-2"><div class="flex items-center justify-between gap-3 text-[13px]"><a href="ByWork.dc.html" class="text-foreground hover:underline">{{k.name}}</a><span class="flex items-center gap-3"><span class="font-mono text-[12px] tabular-nums text-secondary">{{k.pct}}</span><span class="font-mono text-[12px] tabular-nums text-foreground">{{k.creditsText}}</span></span></div><span aria-hidden="true" class="flex overflow-hidden rounded-full bg-hover h-2.5 w-full"><span class="block h-full bg-brand" style="width: {{k.bar}}"></span></span></div>
+</sc-for>
+<div class="flex items-center border-t border-border-dim pt-4"><a href="Statement.dc.html" class="inline-flex items-center gap-1.5 text-[12px] text-secondary hover:text-foreground">Your statement: every credit in and out<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-3.5 w-3.5"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a></div>
+</div>
+</section>
+</div>
+
+<div class="flex flex-col gap-3"><div class="flex flex-col gap-3"><h2 class="text-[14px] font-medium text-foreground">Credits by website</h2><p class="text-[12px] text-secondary">This month, for each website: the ones you own and the competitors you track. Pick one to see its breakdown below.</p></div><div class="flex flex-col gap-5 w-full">
+<div class="flex items-center gap-3 flex-wrap"><div class="flex-1 min-w-[240px]"><div data-part="search" class="w-full flex items-center justify-between p-2 bg-card/40 backdrop-blur-xl border border-border-dim rounded-[16px] shadow-sm"><div class="flex items-center gap-2 px-3 flex-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="w-4 h-4 text-muted"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg><input type="text" placeholder="Find a website…" aria-label="Find a website…" onChange="{{sfind}}" value="{{squery}}" class="w-full bg-transparent border-none outline-none text-[13px] tracking-wide placeholder:text-muted/60 text-foreground"></div></div></div><div data-part="filter" data-part-label="Owned or tracked" class="relative inline-flex h-[38px] items-center gap-1.5 whitespace-nowrap rounded-[10px] border px-3 text-[13px] transition-colors focus-within:border-brand/50 {{f.kind.cls}}"><span aria-hidden="true" class="min-w-0 truncate"><span class="{{f.kind.labelCls}}">{{f.kind.label}}</span>{{f.kind.choice}}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="pointer-events-none h-4 w-4 text-muted"><path d="m6 9 6 6 6-6"></path></svg><select aria-label="Owned or tracked" onChange="{{f.kind.pick}}" class="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-background text-[13px] text-foreground opacity-0"><sc-for list="{{f.kind.options}}" as="o" hint-placeholder-count="4"><option value="{{o.value}}" selected="{{o.on}}">{{o.text}}</option></sc-for></select></div></div>
+<div data-part="table" class="flex flex-col gap-0 border border-border-dim/80 bg-sidebar/20 rounded-[16px] overflow-hidden shadow-sm relative w-full">
+<div data-part="table-bar" class="flex flex-wrap items-center justify-between gap-3 border-b border-border-dim/50 bg-background/50 px-4 py-3"><div class="flex flex-wrap items-center gap-3"><span aria-live="polite" class="text-[13px] font-medium text-foreground">{{sitesBar}}</span></div><div class="flex items-center gap-2"><button type="button" class="rounded-[8px] border border-border-dim bg-white/[0.03] font-medium text-secondary hover:text-foreground hover:bg-white/[0.06] transition-all disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2 text-[12px]" data-part="download" data-part-label="Download CSV"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-3.5 w-3.5"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg>Download CSV</button></div></div>
+<div class="w-full overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead><tr class="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
+<th aria-sort="{{hs.site.aria}}" class="px-4 py-3 font-medium"><button type="button" onClick="{{hs.site.sort}}" class="font-medium hover:text-foreground transition-all inline-flex items-center gap-1 rounded-sm p-0 text-[length:inherit] [text-transform:inherit] hover:bg-transparent {{hs.site.cls}}">Website<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-3 w-3 shrink-0 {{hs.site.arrowCls}}"><path d="{{hs.site.d}}"></path></svg></button></th>
+<th aria-sort="{{hs.kind.aria}}" class="px-4 py-3 font-medium"><button type="button" onClick="{{hs.kind.sort}}" class="font-medium hover:text-foreground transition-all inline-flex items-center gap-1 rounded-sm p-0 text-[length:inherit] [text-transform:inherit] hover:bg-transparent {{hs.kind.cls}}">Owned or tracked<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-3 w-3 shrink-0 {{hs.kind.arrowCls}}"><path d="{{hs.kind.d}}"></path></svg></button></th>
+<th class="px-4 py-3 font-medium">Checks</th>
+<th aria-sort="{{hs.runs.aria}}" class="px-4 py-3 font-medium text-right"><button type="button" onClick="{{hs.runs.sort}}" class="font-medium hover:text-foreground transition-all inline-flex items-center gap-1 rounded-sm p-0 text-[length:inherit] [text-transform:inherit] hover:bg-transparent {{hs.runs.cls}}">Runs<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-3 w-3 shrink-0 {{hs.runs.arrowCls}}"><path d="{{hs.runs.d}}"></path></svg></button></th>
+<th aria-sort="{{hs.credits.aria}}" class="px-4 py-3 font-medium text-right"><button type="button" onClick="{{hs.credits.sort}}" class="font-medium hover:text-foreground transition-all inline-flex items-center gap-1 rounded-sm p-0 text-[length:inherit] [text-transform:inherit] hover:bg-transparent {{hs.credits.cls}}">Credits<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-3 w-3 shrink-0 {{hs.credits.arrowCls}}"><path d="{{hs.credits.d}}"></path></svg></button></th>
+<th class="px-4 py-3 font-medium" style="width: 200px">Share</th>
+</tr></thead>
+<tbody>
+<tr class="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group {{srows.r1.hide}} {{srows.r1.picked}}"><td class="px-4 py-3"><button type="button" onClick="{{srows.r1.pick}}" class="flex min-w-0 items-center gap-2 text-left text-[13px] text-foreground hover:underline"><span aria-hidden="true" class="flex shrink-0 items-center justify-center overflow-hidden bg-foreground/10 font-semibold text-foreground h-5 w-5 text-[10px] {{srows.r1.mark}}">{{srows.r1.letter}}</span><span class="truncate">{{srows.r1.name}}</span></button></td><td class="px-4 py-3"><span class="inline-flex w-fit items-center whitespace-nowrap text-[12px] font-normal leading-snug text-secondary">{{srows.r1.kind}}</span></td><td class="px-4 py-3"><span class="text-[12px] text-secondary">{{srows.r1.checks}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[12px] tabular-nums">{{srows.r1.runsText}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[13px] text-foreground">{{srows.r1.creditsText}}</span></td><td class="px-4 py-3"><div class="flex items-center gap-3"><span class="font-mono text-[12px] tabular-nums text-secondary" style="width: 32px">{{srows.r1.pct}}</span><span aria-hidden="true" class="flex overflow-hidden rounded-full bg-hover h-1.5 w-full"><span class="block h-full bg-brand" style="width: {{srows.r1.bar}}"></span></span></div></td></tr>
+<tr class="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group {{srows.r2.hide}} {{srows.r2.picked}}"><td class="px-4 py-3"><button type="button" onClick="{{srows.r2.pick}}" class="flex min-w-0 items-center gap-2 text-left text-[13px] text-foreground hover:underline"><span aria-hidden="true" class="flex shrink-0 items-center justify-center overflow-hidden bg-foreground/10 font-semibold text-foreground h-5 w-5 text-[10px] {{srows.r2.mark}}">{{srows.r2.letter}}</span><span class="truncate">{{srows.r2.name}}</span></button></td><td class="px-4 py-3"><span class="inline-flex w-fit items-center whitespace-nowrap text-[12px] font-normal leading-snug text-secondary">{{srows.r2.kind}}</span></td><td class="px-4 py-3"><span class="text-[12px] text-secondary">{{srows.r2.checks}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[12px] tabular-nums">{{srows.r2.runsText}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[13px] text-foreground">{{srows.r2.creditsText}}</span></td><td class="px-4 py-3"><div class="flex items-center gap-3"><span class="font-mono text-[12px] tabular-nums text-secondary" style="width: 32px">{{srows.r2.pct}}</span><span aria-hidden="true" class="flex overflow-hidden rounded-full bg-hover h-1.5 w-full"><span class="block h-full bg-brand" style="width: {{srows.r2.bar}}"></span></span></div></td></tr>
+<tr class="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group {{srows.r3.hide}} {{srows.r3.picked}}"><td class="px-4 py-3"><button type="button" onClick="{{srows.r3.pick}}" class="flex min-w-0 items-center gap-2 text-left text-[13px] text-foreground hover:underline"><span aria-hidden="true" class="flex shrink-0 items-center justify-center overflow-hidden bg-foreground/10 font-semibold text-foreground h-5 w-5 text-[10px] {{srows.r3.mark}}">{{srows.r3.letter}}</span><span class="truncate">{{srows.r3.name}}</span></button></td><td class="px-4 py-3"><span class="inline-flex w-fit items-center whitespace-nowrap text-[12px] font-normal leading-snug text-secondary">{{srows.r3.kind}}</span></td><td class="px-4 py-3"><span class="text-[12px] text-secondary">{{srows.r3.checks}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[12px] tabular-nums">{{srows.r3.runsText}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[13px] text-foreground">{{srows.r3.creditsText}}</span></td><td class="px-4 py-3"><div class="flex items-center gap-3"><span class="font-mono text-[12px] tabular-nums text-secondary" style="width: 32px">{{srows.r3.pct}}</span><span aria-hidden="true" class="flex overflow-hidden rounded-full bg-hover h-1.5 w-full"><span class="block h-full bg-brand" style="width: {{srows.r3.bar}}"></span></span></div></td></tr>
+<tr class="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group {{srows.r4.hide}} {{srows.r4.picked}}"><td class="px-4 py-3"><button type="button" onClick="{{srows.r4.pick}}" class="flex min-w-0 items-center gap-2 text-left text-[13px] text-foreground hover:underline"><span aria-hidden="true" class="flex shrink-0 items-center justify-center overflow-hidden bg-foreground/10 font-semibold text-foreground h-5 w-5 text-[10px] {{srows.r4.mark}}">{{srows.r4.letter}}</span><span class="truncate">{{srows.r4.name}}</span></button></td><td class="px-4 py-3"><span class="inline-flex w-fit items-center whitespace-nowrap text-[12px] font-normal leading-snug text-secondary">{{srows.r4.kind}}</span></td><td class="px-4 py-3"><span class="text-[12px] text-secondary">{{srows.r4.checks}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[12px] tabular-nums">{{srows.r4.runsText}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[13px] text-foreground">{{srows.r4.creditsText}}</span></td><td class="px-4 py-3"><div class="flex items-center gap-3"><span class="font-mono text-[12px] tabular-nums text-secondary" style="width: 32px">{{srows.r4.pct}}</span><span aria-hidden="true" class="flex overflow-hidden rounded-full bg-hover h-1.5 w-full"><span class="block h-full bg-brand" style="width: {{srows.r4.bar}}"></span></span></div></td></tr>
+</tbody>
+</table>
+</div>
+<div data-part="table-footer" class="w-full p-4 border-t border-border-dim/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-sidebar/40"><div class="flex items-center gap-3 sm:ml-auto"><div class="text-[12px] font-medium text-secondary"><span>{{sitesShowing}}</span></div></div></div>
+</div>
+</div></div>
+
+<div class="flex flex-col gap-3">
+<div class="flex flex-col gap-3"><h2 class="text-[14px] font-medium text-foreground">{{breakdown.title}}</h2><p class="text-[12px] text-secondary">Each kind of check, on each website: what one run costs, and what it used. Open one to see every charge it made.</p></div>
+<div class="flex flex-col gap-5 w-full">
+<div class="flex items-center gap-3 flex-wrap"><div class="flex-1 min-w-[240px]"><div data-part="search" class="w-full flex items-center justify-between p-2 bg-card/40 backdrop-blur-xl border border-border-dim rounded-[16px] shadow-sm"><div class="flex items-center gap-2 px-3 flex-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="w-4 h-4 text-muted"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg><input type="text" placeholder="Find a check or website…" aria-label="Find a check or website…" onChange="{{find}}" value="{{query}}" class="w-full bg-transparent border-none outline-none text-[13px] tracking-wide placeholder:text-muted/60 text-foreground"></div></div></div><div data-part="filter" data-part-label="Website" class="relative inline-flex h-[38px] items-center gap-1.5 whitespace-nowrap rounded-[10px] border px-3 text-[13px] transition-colors focus-within:border-brand/50 {{f.site.cls}}"><span aria-hidden="true" class="min-w-0 truncate"><span class="{{f.site.labelCls}}">{{f.site.label}}</span>{{f.site.choice}}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="pointer-events-none h-4 w-4 text-muted"><path d="m6 9 6 6 6-6"></path></svg><select aria-label="Website" onChange="{{f.site.pick}}" class="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-background text-[13px] text-foreground opacity-0"><sc-for list="{{f.site.options}}" as="o" hint-placeholder-count="4"><option value="{{o.value}}" selected="{{o.on}}">{{o.text}}</option></sc-for></select></div><div data-part="filter" data-part-label="How often" class="relative inline-flex h-[38px] items-center gap-1.5 whitespace-nowrap rounded-[10px] border px-3 text-[13px] transition-colors focus-within:border-brand/50 {{f.often.cls}}"><span aria-hidden="true" class="min-w-0 truncate"><span class="{{f.often.labelCls}}">{{f.often.label}}</span>{{f.often.choice}}</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="pointer-events-none h-4 w-4 text-muted"><path d="m6 9 6 6 6-6"></path></svg><select aria-label="How often" onChange="{{f.often.pick}}" class="absolute inset-0 h-full w-full cursor-pointer appearance-none bg-background text-[13px] text-foreground opacity-0"><sc-for list="{{f.often.options}}" as="o" hint-placeholder-count="4"><option value="{{o.value}}" selected="{{o.on}}">{{o.text}}</option></sc-for></select></div></div>
+<div data-part="table" class="flex flex-col gap-0 border border-border-dim/80 bg-sidebar/20 rounded-[16px] overflow-hidden shadow-sm relative w-full">
+<div data-part="table-bar" class="flex flex-wrap items-center justify-between gap-3 border-b border-border-dim/50 bg-background/50 px-4 py-3"><div class="flex flex-wrap items-center gap-3"><span aria-live="polite" class="text-[13px] font-medium text-foreground">{{bar}}</span></div><div class="flex items-center gap-2"><button type="button" class="rounded-[8px] border border-border-dim bg-white/[0.03] font-medium text-secondary hover:text-foreground hover:bg-white/[0.06] transition-all disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2 text-[12px]" data-part="download" data-part-label="Download CSV"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-3.5 w-3.5"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg>Download CSV</button></div></div>
+<div class="w-full overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead><tr class="border-b border-border-dim text-[11px] uppercase tracking-[0.1em] text-muted">
+<th aria-sort="{{h.run.aria}}" class="px-4 py-3 font-medium"><button type="button" onClick="{{h.run.sort}}" class="font-medium hover:text-foreground transition-all inline-flex items-center gap-1 rounded-sm p-0 text-[length:inherit] [text-transform:inherit] hover:bg-transparent {{h.run.cls}}">Check<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-3 w-3 shrink-0 {{h.run.arrowCls}}"><path d="{{h.run.d}}"></path></svg></button></th>
+<th aria-sort="{{h.site.aria}}" class="px-4 py-3 font-medium"><button type="button" onClick="{{h.site.sort}}" class="font-medium hover:text-foreground transition-all inline-flex items-center gap-1 rounded-sm p-0 text-[length:inherit] [text-transform:inherit] hover:bg-transparent {{h.site.cls}}">Website<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-3 w-3 shrink-0 {{h.site.arrowCls}}"><path d="{{h.site.d}}"></path></svg></button></th>
+<th aria-sort="{{h.often.aria}}" class="px-4 py-3 font-medium"><button type="button" onClick="{{h.often.sort}}" class="font-medium hover:text-foreground transition-all inline-flex items-center gap-1 rounded-sm p-0 text-[length:inherit] [text-transform:inherit] hover:bg-transparent {{h.often.cls}}">How often<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-3 w-3 shrink-0 {{h.often.arrowCls}}"><path d="{{h.often.d}}"></path></svg></button></th>
+<th aria-sort="{{h.runs.aria}}" class="px-4 py-3 font-medium text-right"><button type="button" onClick="{{h.runs.sort}}" class="font-medium hover:text-foreground transition-all inline-flex items-center gap-1 rounded-sm p-0 text-[length:inherit] [text-transform:inherit] hover:bg-transparent {{h.runs.cls}}">Runs<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-3 w-3 shrink-0 {{h.runs.arrowCls}}"><path d="{{h.runs.d}}"></path></svg></button></th>
+<th aria-sort="{{h.each.aria}}" class="px-4 py-3 font-medium text-right"><button type="button" onClick="{{h.each.sort}}" class="font-medium hover:text-foreground transition-all inline-flex items-center gap-1 rounded-sm p-0 text-[length:inherit] [text-transform:inherit] hover:bg-transparent {{h.each.cls}}">Each<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-3 w-3 shrink-0 {{h.each.arrowCls}}"><path d="{{h.each.d}}"></path></svg></button></th>
+<th aria-sort="{{h.credits.aria}}" class="px-4 py-3 font-medium text-right"><button type="button" onClick="{{h.credits.sort}}" class="font-medium hover:text-foreground transition-all inline-flex items-center gap-1 rounded-sm p-0 text-[length:inherit] [text-transform:inherit] hover:bg-transparent {{h.credits.cls}}">Credits<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="h-3 w-3 shrink-0 {{h.credits.arrowCls}}"><path d="{{h.credits.d}}"></path></svg></button></th>
+<th class="px-4 py-3 font-medium" style="width: 200px">Share</th>
+</tr></thead>
+<tbody>
+<tr class="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group {{rows.r1.hide}}"><td class="px-4 py-3"><a href="ByWork.dc.html" class="text-[13px] text-foreground hover:underline">{{rows.r1.run}}</a><span class="block text-[12px] text-secondary">{{rows.r1.detail}}</span></td><td class="px-4 py-3"><span class="text-[13px] {{rows.r1.siteCls}}">{{rows.r1.siteText}}</span></td><td class="px-4 py-3"><span class="inline-flex w-fit items-center whitespace-nowrap text-[12px] font-normal leading-snug text-secondary">{{rows.r1.often}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[12px] tabular-nums">{{rows.r1.runsText}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[12px] tabular-nums text-secondary">{{rows.r1.eachText}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[13px] text-foreground">{{rows.r1.creditsText}}</span></td><td class="px-4 py-3"><div class="flex items-center gap-3"><span class="font-mono text-[12px] tabular-nums text-secondary" style="width: 32px">{{rows.r1.pct}}</span><span aria-hidden="true" class="flex overflow-hidden rounded-full bg-hover h-1.5 w-full"><span class="block h-full bg-brand" style="width: {{rows.r1.bar}}"></span></span></div></td></tr>
+<tr class="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group {{rows.r2.hide}}"><td class="px-4 py-3"><a href="ByWork.dc.html" class="text-[13px] text-foreground hover:underline">{{rows.r2.run}}</a><span class="block text-[12px] text-secondary">{{rows.r2.detail}}</span></td><td class="px-4 py-3"><span class="text-[13px] {{rows.r2.siteCls}}">{{rows.r2.siteText}}</span></td><td class="px-4 py-3"><span class="inline-flex w-fit items-center whitespace-nowrap text-[12px] font-normal leading-snug text-secondary">{{rows.r2.often}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[12px] tabular-nums">{{rows.r2.runsText}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[12px] tabular-nums text-secondary">{{rows.r2.eachText}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[13px] text-foreground">{{rows.r2.creditsText}}</span></td><td class="px-4 py-3"><div class="flex items-center gap-3"><span class="font-mono text-[12px] tabular-nums text-secondary" style="width: 32px">{{rows.r2.pct}}</span><span aria-hidden="true" class="flex overflow-hidden rounded-full bg-hover h-1.5 w-full"><span class="block h-full bg-brand" style="width: {{rows.r2.bar}}"></span></span></div></td></tr>
+<tr class="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group {{rows.r3.hide}}"><td class="px-4 py-3"><a href="ByWork.dc.html" class="text-[13px] text-foreground hover:underline">{{rows.r3.run}}</a><span class="block text-[12px] text-secondary">{{rows.r3.detail}}</span></td><td class="px-4 py-3"><span class="text-[13px] {{rows.r3.siteCls}}">{{rows.r3.siteText}}</span></td><td class="px-4 py-3"><span class="inline-flex w-fit items-center whitespace-nowrap text-[12px] font-normal leading-snug text-secondary">{{rows.r3.often}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[12px] tabular-nums">{{rows.r3.runsText}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[12px] tabular-nums text-secondary">{{rows.r3.eachText}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[13px] text-foreground">{{rows.r3.creditsText}}</span></td><td class="px-4 py-3"><div class="flex items-center gap-3"><span class="font-mono text-[12px] tabular-nums text-secondary" style="width: 32px">{{rows.r3.pct}}</span><span aria-hidden="true" class="flex overflow-hidden rounded-full bg-hover h-1.5 w-full"><span class="block h-full bg-brand" style="width: {{rows.r3.bar}}"></span></span></div></td></tr>
+<tr class="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group {{rows.r4.hide}}"><td class="px-4 py-3"><a href="ByWork.dc.html" class="text-[13px] text-foreground hover:underline">{{rows.r4.run}}</a><span class="block text-[12px] text-secondary">{{rows.r4.detail}}</span></td><td class="px-4 py-3"><span class="text-[13px] {{rows.r4.siteCls}}">{{rows.r4.siteText}}</span></td><td class="px-4 py-3"><span class="inline-flex w-fit items-center whitespace-nowrap text-[12px] font-normal leading-snug text-secondary">{{rows.r4.often}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[12px] tabular-nums">{{rows.r4.runsText}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[12px] tabular-nums text-secondary">{{rows.r4.eachText}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[13px] text-foreground">{{rows.r4.creditsText}}</span></td><td class="px-4 py-3"><div class="flex items-center gap-3"><span class="font-mono text-[12px] tabular-nums text-secondary" style="width: 32px">{{rows.r4.pct}}</span><span aria-hidden="true" class="flex overflow-hidden rounded-full bg-hover h-1.5 w-full"><span class="block h-full bg-brand" style="width: {{rows.r4.bar}}"></span></span></div></td></tr>
+<tr class="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group {{rows.r5.hide}}"><td class="px-4 py-3"><a href="ByWork.dc.html" class="text-[13px] text-foreground hover:underline">{{rows.r5.run}}</a><span class="block text-[12px] text-secondary">{{rows.r5.detail}}</span></td><td class="px-4 py-3"><span class="text-[13px] {{rows.r5.siteCls}}">{{rows.r5.siteText}}</span></td><td class="px-4 py-3"><span class="inline-flex w-fit items-center whitespace-nowrap text-[12px] font-normal leading-snug text-secondary">{{rows.r5.often}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[12px] tabular-nums">{{rows.r5.runsText}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[12px] tabular-nums text-secondary">{{rows.r5.eachText}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[13px] text-foreground">{{rows.r5.creditsText}}</span></td><td class="px-4 py-3"><div class="flex items-center gap-3"><span class="font-mono text-[12px] tabular-nums text-secondary" style="width: 32px">{{rows.r5.pct}}</span><span aria-hidden="true" class="flex overflow-hidden rounded-full bg-hover h-1.5 w-full"><span class="block h-full bg-brand" style="width: {{rows.r5.bar}}"></span></span></div></td></tr>
+<tr class="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group {{rows.r6.hide}}"><td class="px-4 py-3"><a href="ByWork.dc.html" class="text-[13px] text-foreground hover:underline">{{rows.r6.run}}</a><span class="block text-[12px] text-secondary">{{rows.r6.detail}}</span></td><td class="px-4 py-3"><span class="text-[13px] {{rows.r6.siteCls}}">{{rows.r6.siteText}}</span></td><td class="px-4 py-3"><span class="inline-flex w-fit items-center whitespace-nowrap text-[12px] font-normal leading-snug text-secondary">{{rows.r6.often}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[12px] tabular-nums">{{rows.r6.runsText}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[12px] tabular-nums text-secondary">{{rows.r6.eachText}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[13px] text-foreground">{{rows.r6.creditsText}}</span></td><td class="px-4 py-3"><div class="flex items-center gap-3"><span class="font-mono text-[12px] tabular-nums text-secondary" style="width: 32px">{{rows.r6.pct}}</span><span aria-hidden="true" class="flex overflow-hidden rounded-full bg-hover h-1.5 w-full"><span class="block h-full bg-brand" style="width: {{rows.r6.bar}}"></span></span></div></td></tr>
+<tr class="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group {{rows.r7.hide}}"><td class="px-4 py-3"><a href="ByWork.dc.html" class="text-[13px] text-foreground hover:underline">{{rows.r7.run}}</a><span class="block text-[12px] text-secondary">{{rows.r7.detail}}</span></td><td class="px-4 py-3"><span class="text-[13px] {{rows.r7.siteCls}}">{{rows.r7.siteText}}</span></td><td class="px-4 py-3"><span class="inline-flex w-fit items-center whitespace-nowrap text-[12px] font-normal leading-snug text-secondary">{{rows.r7.often}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[12px] tabular-nums">{{rows.r7.runsText}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[12px] tabular-nums text-secondary">{{rows.r7.eachText}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[13px] text-foreground">{{rows.r7.creditsText}}</span></td><td class="px-4 py-3"><div class="flex items-center gap-3"><span class="font-mono text-[12px] tabular-nums text-secondary" style="width: 32px">{{rows.r7.pct}}</span><span aria-hidden="true" class="flex overflow-hidden rounded-full bg-hover h-1.5 w-full"><span class="block h-full bg-brand" style="width: {{rows.r7.bar}}"></span></span></div></td></tr>
+<tr class="border-b border-border-dim/50 hover:bg-foreground/[0.02] transition-colors group {{rows.r8.hide}}"><td class="px-4 py-3"><a href="ByWork.dc.html" class="text-[13px] text-foreground hover:underline">{{rows.r8.run}}</a><span class="block text-[12px] text-secondary">{{rows.r8.detail}}</span></td><td class="px-4 py-3"><span class="text-[13px] {{rows.r8.siteCls}}">{{rows.r8.siteText}}</span></td><td class="px-4 py-3"><span class="inline-flex w-fit items-center whitespace-nowrap text-[12px] font-normal leading-snug text-secondary">{{rows.r8.often}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[12px] tabular-nums">{{rows.r8.runsText}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[12px] tabular-nums text-secondary">{{rows.r8.eachText}}</span></td><td class="px-4 py-3 text-right"><span class="font-mono text-[13px] text-foreground">{{rows.r8.creditsText}}</span></td><td class="px-4 py-3"><div class="flex items-center gap-3"><span class="font-mono text-[12px] tabular-nums text-secondary" style="width: 32px">{{rows.r8.pct}}</span><span aria-hidden="true" class="flex overflow-hidden rounded-full bg-hover h-1.5 w-full"><span class="block h-full bg-brand" style="width: {{rows.r8.bar}}"></span></span></div></td></tr>
+</tbody>
+</table>
+</div>
+<div data-part="table-footer" class="w-full p-4 border-t border-border-dim/50 flex flex-col sm:flex-row items-center justify-between gap-4 bg-sidebar/40"><nav aria-label="Pages" class="flex items-center gap-1"><button type="button" disabled="" aria-label="Previous" class="flex items-center gap-1.5 py-1.5 rounded-[6px] text-[12px] font-medium transition-colors hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none text-foreground border border-transparent hover:border-border-dim px-1.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="w-4 h-4"><path d="m15 18-6-6 6-6"></path></svg></button><button type="button" aria-label="Page 1" aria-current="page" class="flex items-center gap-1.5 py-1.5 rounded-[6px] text-[12px] transition-colors hover:bg-white/5 hover:border-border-dim bg-foreground/10 border border-border-dim shadow-sm text-foreground font-medium min-w-[28px] justify-center px-1.5 tabular-nums">1</button><button type="button" disabled="" aria-label="Next" class="flex items-center gap-1.5 py-1.5 rounded-[6px] text-[12px] font-medium transition-colors hover:bg-white/5 disabled:opacity-30 disabled:pointer-events-none text-foreground border border-transparent hover:border-border-dim px-1.5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="w-4 h-4"><path d="m9 18 6-6-6-6"></path></svg></button></nav><div class="flex items-center gap-3 sm:ml-auto"><div class="text-[12px] font-medium text-secondary"><span>{{showing}}</span></div></div></div>
+</div>
+</div>
+</div>
+
+</div>
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":2380}}'>
+class Component extends DCLogic {
+
+  heads(s, FIRST) {
+    var self = this, h = {};
+    var UPDOWN = 'm21 16-4 4-4-4M17 20V4M3 8l4-4 4 4M7 4v16', UP = 'm5 12 7-7 7 7M12 19V5', DOWN = 'M12 5v14M19 12l-7 7-7-7';
+    Object.keys(FIRST).forEach(function (key) {
+      var active = s.key === key;
+      h[key] = {
+        sort: function () { self.setState(active ? { key: key, dir: s.dir === 'asc' ? 'desc' : 'asc' } : { key: key, dir: FIRST[key] }); },
+        d: active ? (s.dir === 'asc' ? UP : DOWN) : UPDOWN,
+        arrowCls: active ? '' : 'opacity-40',
+        cls: active ? 'text-foreground' : 'text-inherit',
+        aria: active ? (s.dir === 'asc' ? 'ascending' : 'descending') : 'none'
+      };
+    });
+    return h;
+  }
+
+  order(rows, key, dir) {
+    return rows.slice().sort(function (a, b) {
+      var x = a[key], y = b[key];
+      var blank = function (v) { return v === null || v === undefined || v === ''; };
+      if (blank(x)) return blank(y) ? 0 : 1;
+      if (blank(y)) return -1;
+      var o = typeof x === 'string' ? x.localeCompare(y) : x - y;
+      return dir === 'asc' ? o : -o;
+    });
+  }
+
+  n(v) { return v.toLocaleString('en-GB'); }
+  chip(s, field, label, values, every) {
+    var self = this, on = Boolean(s[field]);
+    return {
+      label: label, choice: on ? ': ' + s[field] : '', labelCls: on ? 'text-secondary' : '',
+      cls: on ? 'border-secondary/40 bg-hover text-foreground' : 'border-border-dim bg-background text-foreground hover:bg-hover/40',
+      options: [{ value: '', text: every, on: !on }].concat(values.map(function (v) { return { value: v, text: v, on: s[field] === v }; })),
+      pick: function (event) { var next = {}; next[field] = event.target.value; self.setState(next); }
+    };
+  }
+
+  renderVals() {
+    var self = this, s = this.state || {};
+    var key = s.key || 'credits', dir = s.dir || 'desc', hover = s.hover === undefined ? -1 : s.hover;
+
+    // Credits used on each day of October so far (1st to 20th), then what is
+    // booked on each day to the 31st plus the usual one-off pace.
+    var USED = [49, 16, 4, 4, 117, 21, 9, 6, 9, 4, 4, 124, 9, 16, 4, 6, 4, 4, 124, 9];
+    var AHEAD = [9, 9, 9, 9, 9, 117, 9, 9, 9, 9, 9];
+    var TODAY = USED.length, PLAN = 1000, SEPT = 480 / 543;
+    var all = USED.concat(AHEAD);
+    var left = [PLAN];
+    all.forEach(function (u) { left.push(left[left.length - 1] - u); });
+    var X = function (d) { return (d / 31 * 1000).toFixed(1); };
+    var Y = function (v) { return (220 - v / PLAN * 200).toFixed(1); };
+    var pts = left.slice(0, TODAY + 1).map(function (v, d) { return X(d) + ',' + Y(v); });
+    var aheadPts = left.slice(TODAY).map(function (v, i) { return X(TODAY + i) + ',' + Y(v); });
+    var sepPts = left.slice(0, 31).map(function (v, d) { return X(d) + ',' + Y(PLAN - Math.round((PLAN - v) * SEPT)); });
+    var DAYS = ['Thursday', 'Friday', 'Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday'];
+    var step = 1000 / 31;
+
+    var tip = { show: false, x: 0, text: 'Hover a day to read it. Today, the 20th, 457 of the plan’s credits are left; September had 520 left by this day.' };
+    if (hover >= 0) {
+      var d = hover + 1, past = d <= TODAY;
+      var sep = PLAN - Math.round((PLAN - left[Math.min(d, 30)]) * SEPT);
+      tip = {
+        show: true,
+        x: X(d),
+        text: DAYS[(d - 1) % 7] + ' ' + d + ' October: ' + (past ? self.n(all[hover]) + ' used, ' : 'about ' + self.n(all[hover]) + ' expected, ') + self.n(left[d]) + ' left' + (d <= 30 ? ' · September by this day: ' + self.n(sep) + ' left' : '')
+      };
+    }
+
+    var KINDS = [['AI answers', 300], ['Rankings', 104], ['Keyword research', 90], ['Site audits', 25], ['Ask Hakken', 14], ['Backlinks', 10]];
+    var TOTAL = 543, TOP = 300;
+
+    var OFTEN = { 'Every day': 1, 'Every week': 2, 'Every month': 3, 'When you ask': 4 };
+    var RUNS = [
+      { run: 'AI answers', detail: '25 questions · 4 assistants', site: 'ronins.co.uk', often: 'Every week', runs: 3, each: 100, eachText: '100', credits: 300 },
+      { run: 'Keyword research', detail: 'Keywords looked up', site: '', often: 'When you ask', runs: 18, each: 5, eachText: '5', credits: 90 },
+      { run: 'Rankings', detail: 'Your site · 1,000 keywords', site: 'ronins.co.uk', often: 'Every day', runs: 20, each: 4, eachText: '4', credits: 80 },
+      { run: 'Site audit', detail: '1,240 pages', site: 'ronins.co.uk', often: 'Every month', runs: 1, each: 25, eachText: '25', credits: 25 },
+      { run: 'Ask Hakken', detail: 'Questions asked', site: '', often: 'When you ask', runs: 14, each: 1, eachText: '1', credits: 14 },
+      { run: 'Rankings', detail: 'A competitor · 1,000 keywords', site: 'kota.co.uk', often: 'Every week', runs: 3, each: 4, eachText: '4', credits: 12 },
+      { run: 'Rankings', detail: 'A competitor · 1,000 keywords', site: 'madebyshape.co.uk', often: 'Every week', runs: 3, each: 4, eachText: '4', credits: 12 },
+      { run: 'Backlinks', detail: 'The strongest 1,000 links', site: 'ronins.co.uk', often: 'Every month', runs: 1, each: 10, eachText: '10', credits: 10 }
+    ].map(function (r) { return Object.assign({}, r, { oi: OFTEN[r.often] }); });
+    var topRun = 300;
+    var q = (s.query || '').toLowerCase();
+    var shown = RUNS.filter(function (r) { return (!s.site || (s.site === '(none)' ? !r.site : r.site === s.site)) && (!s.often || r.often === s.often) && (!q || (r.run + ' ' + r.detail + ' ' + r.site).toLowerCase().indexOf(q) >= 0); });
+    var sorted = this.order(shown, key === 'often' ? 'oi' : key, dir);
+    var rows = {};
+    for (var i = 8; i > sorted.length; i--) rows['r' + i] = { hide: 'hidden', run: '', detail: '', siteText: '', siteCls: '', often: '', runsText: '', eachText: '', creditsText: '', pct: '', bar: '0%' };
+    sorted.forEach(function (r, i) {
+      rows['r' + (i + 1)] = {
+        hide: '',
+        run: r.run,
+        detail: r.detail,
+        siteText: r.site || '–',
+        siteCls: r.site ? 'text-foreground' : 'text-muted',
+        often: r.often,
+        runsText: self.n(r.runs),
+        eachText: r.eachText,
+        creditsText: self.n(r.credits),
+        pct: Math.round(r.credits / TOTAL * 100) + '%',
+        bar: Math.round(r.credits / topRun * 100) + '%'
+      };
+    });
+
+    // Credits by website: owned and tracked, and the work tied to none. Picking one narrows the breakdown.
+    var SITES = [
+      { site: 'ronins.co.uk', name: 'ronins.co.uk', kind: 'Owned', mark: 'rounded-[8px]', letter: 'R', checks: 'Rankings, AI answers, Site audit, Backlinks', runs: 25, credits: 415 },
+      { site: 'kota.co.uk', name: 'kota.co.uk', kind: 'Tracked', mark: 'rounded-full', letter: 'K', checks: 'Rankings', runs: 3, credits: 12 },
+      { site: 'madebyshape.co.uk', name: 'madebyshape.co.uk', kind: 'Tracked', mark: 'rounded-full', letter: 'M', checks: 'Rankings', runs: 3, credits: 12 },
+      { site: '(none)', name: 'Not tied to a website', kind: '–', mark: 'hidden', letter: '', checks: 'Keyword research, Ask Hakken', runs: 32, credits: 104 }
+    ];
+    var sq = (s.squery || '').toLowerCase(), skey = s.skey || 'credits', sdir = s.sdir || 'desc';
+    var sshown = this.order(SITES.filter(function (x) { return (!s.kind || x.kind === s.kind) && (!sq || x.name.toLowerCase().indexOf(sq) >= 0); }), skey === 'site' ? 'name' : skey, sdir);
+    sshown = sshown.filter(function (x) { return x.site !== '(none)'; }).concat(sshown.filter(function (x) { return x.site === '(none)'; }));
+    var srows = {};
+    for (var j = 0; j < 4; j++) (function (x, j) {
+      srows['r' + (j + 1)] = x ? {
+        hide: '', picked: s.site === x.site ? 'bg-foreground/[0.02]' : '', name: x.name, kind: x.kind, mark: x.mark, letter: x.letter, checks: x.checks,
+        runsText: self.n(x.runs), creditsText: self.n(x.credits), pct: Math.round(x.credits / TOTAL * 100) + '%', bar: Math.round(x.credits / 415 * 100) + '%',
+        pick: function () { self.setState({ site: s.site === x.site ? '' : x.site }); }
+      } : { hide: 'hidden', picked: '', name: '', kind: '', mark: 'hidden', letter: '', checks: '', runsText: '', creditsText: '', pct: '', bar: '0%', pick: function () {} };
+    })(sshown[j], j);
+    var owned = SITES.filter(function (x) { return x.kind === 'Owned'; }).reduce(function (a, x) { return a + x.credits; }, 0);
+    var tracked = SITES.filter(function (x) { return x.kind === 'Tracked'; }).reduce(function (a, x) { return a + x.credits; }, 0);
+    var fsite = this.chip(s, 'site', 'Website', ['ronins.co.uk', 'kota.co.uk', 'madebyshape.co.uk', '(none)'], 'Every website');
+    fsite.options[4].text = 'Not tied to a website';
+    if (s.site === '(none)') fsite.choice = ': Not tied to a website';
+    var picked = SITES.filter(function (x) { return x.site === s.site; })[0];
+    var UPDOWN = 'm21 16-4 4-4-4M17 20V4M3 8l4-4 4 4M7 4v16', UP = 'm5 12 7-7 7 7M12 19V5', DOWN = 'M12 5v14M19 12l-7 7-7-7';
+    var hs = {};
+    [['site', 'asc'], ['kind', 'asc'], ['runs', 'desc'], ['credits', 'desc']].forEach(function (p) {
+      var k = p[0], on = skey === k;
+      hs[k] = { sort: function () { self.setState(on ? { skey: k, sdir: sdir === 'asc' ? 'desc' : 'asc' } : { skey: k, sdir: p[1] }); }, d: on ? (sdir === 'asc' ? UP : DOWN) : UPDOWN, arrowCls: on ? '' : 'opacity-40', cls: on ? 'text-foreground' : 'text-inherit', aria: on ? (sdir === 'asc' ? 'ascending' : 'descending') : 'none' };
+    });
+
+    return {
+      squery: s.squery || '',
+      sfind: function (event) { self.setState({ squery: event.target.value }); },
+      hs: hs,
+      srows: srows,
+      sitesBar: sshown.length + ' websites · ' + self.n(owned) + ' credits on the website you own · ' + self.n(tracked) + ' on the 2 you track',
+      sitesShowing: 'Showing ' + (sshown.length ? 1 : 0) + '-' + sshown.length + ' of ' + sshown.length,
+      breakdown: { title: picked ? 'What ran this month: ' + picked.name : 'What ran this month' },
+      line: pts.join(' '),
+      area: '0,220 ' + pts.join(' ') + ' ' + X(TODAY) + ',220',
+      ahead: aheadPts.join(' '),
+      sepLine: sepPts.join(' '),
+      todayX: X(TODAY),
+      days: all.map(function (u, i) { return { x: Math.max(0, (i + 1) * step - step / 2).toFixed(1), w: step.toFixed(1), hover: function () { self.setState({ hover: i }); } }; }),
+      tip: tip,
+      kinds: KINDS.map(function (k) { return { name: k[0], creditsText: self.n(k[1]), pct: Math.round(k[1] / TOTAL * 100) + '%', bar: Math.round(k[1] / TOP * 100) + '%' }; }),
+      h: this.heads({ key: key, dir: dir }, { run: 'asc', site: 'asc', often: 'asc', runs: 'desc', each: 'desc', credits: 'desc' }),
+      rows: rows,
+      query: s.query || '',
+      find: function (event) { self.setState({ query: event.target.value }); },
+      f: { kind: this.chip(s, 'kind', 'Owned or tracked', ['Owned', 'Tracked'], 'Owned and tracked'), site: fsite, often: this.chip(s, 'often', 'How often', ['Every day', 'Every week', 'Every month', 'When you ask'], 'Every schedule') },
+      bar: (shown.length === 1 ? '1 check' : shown.length + ' checks') + ' · ' + self.n(shown.reduce(function (a, r) { return a + r.credits; }, 0)) + ' credits',
+      showing: 'Showing ' + (shown.length ? 1 : 0) + '-' + shown.length + ' of ' + shown.length
+    };
+  }
+}
+</script>
+</body>
+</html>

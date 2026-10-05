@@ -18,6 +18,7 @@ import { researchCosts } from "./keywordResearchPrices";
 import { findSeoLocation } from "./utils/seoLocations";
 import { researchProblemOf } from "./utils/researchProblems";
 import { websiteIconUrl } from "./websiteIcons";
+import { creditResearchRun } from "./creditHooks";
 
 /**
  * Keyword research, the company's side (docs/plans/active/keyword-research-
@@ -116,6 +117,8 @@ export async function startResearchRun(ctx: MutationCtx & TenantIdentity, compan
       createdAt: now,
     });
   }
+  // Charged by the keyword; its calls add what they cost as they settle (usage-credits-plan.md).
+  await creditResearchRun(ctx, { companyId, userId: ctx.userId, runId, keywords: jobs.map((job) => job.lookup.keyword) });
   const workflowExecutionId = await ctx.db.insert("workflowExecutions", {
     agentId: agent._id,
     agentRunId: runId,

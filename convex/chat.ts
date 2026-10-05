@@ -26,6 +26,7 @@ import {
   validateChatAttachments,
 } from "./chatService";
 import { extractPhotoActionProposal } from "./photoActionService";
+import { creditAssistantReply } from "./creditHooks";
 
 const USER_THREAD_MESSAGE_LIMIT = 500;
 const AI_CONTEXT_MESSAGE_LIMIT = 40;
@@ -500,7 +501,7 @@ export const saveAssistantMessage = internalMutation({
       ? extractPhotoActionProposal(args.content)
       : { content: args.content, proposal: undefined };
 
-    return await ctx.db.insert("messages", {
+    const messageId = await ctx.db.insert("messages", {
       threadId: args.threadId,
       role: "assistant",
       content: extracted.content,
@@ -515,6 +516,9 @@ export const saveAssistantMessage = internalMutation({
       ...(extracted.proposal ? { photoActionProposal: extracted.proposal } : {}),
       ...getThreadMessageDimensions(thread),
     });
+    // One question answered, with what the reply cost us (usage-credits-plan.md).
+    await creditAssistantReply(ctx, thread, messageId, args);
+    return messageId;
   },
 });
 
@@ -618,6 +622,7 @@ export const finishStreamingAssistantMessage = internalMutation({
       companyRuntimeEvidenceJson: args.companyRuntimeEvidenceJson,
       ...(extracted.proposal ? { photoActionProposal: extracted.proposal } : {}),
     });
+    await creditAssistantReply(ctx, await ctx.db.get(message.threadId), args.messageId, args);
   },
 });
 

@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import { superAdminMutation } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import { finishSeoCycle } from "./seoCollectionQueue";
+import { creditCycleLineDropped } from "./creditHooks";
 
 /**
  * Closing a collection run by hand, for a collection that will not finish on
@@ -78,8 +79,11 @@ export async function dropUnsentRequest(
     .take(LINES_PER_REQUEST);
   let stillNeededBy: Id<"seoCollectionCycles"> | null = null;
   for (const line of lines) {
-    if (line.cycleId === cycleId) await ctx.db.delete(line._id);
-    else stillNeededBy ??= line.cycleId;
+    if (line.cycleId === cycleId) {
+      // Never bought for this run, so never charged to it (usage-credits-plan.md).
+      await creditCycleLineDropped(ctx, line, pullId);
+      await ctx.db.delete(line._id);
+    } else stillNeededBy ??= line.cycleId;
   }
   // More lines than were read may mean more runs than were read: keep it.
   if (!stillNeededBy && lines.length === LINES_PER_REQUEST) return "KEPT";

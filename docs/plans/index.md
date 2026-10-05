@@ -7,6 +7,15 @@ completed work.
 
 ## Active Plans
 
+- [Usage and credits](./active/usage-credits-plan.md) — £200 a month per
+  company including 1,000 credits (placeholders until the cost audit); every
+  piece of paid work uses credits at a price set in Admin → Settings → Credit
+  prices, beside what it really cost us; plan credits end each month, bought
+  ones last 12 months; a new Usage menu — Overview with credits by website,
+  owned and tracked, then By work, By website, Coming up, a bank-style
+  Statement, Purchases and Top up. **Planned and drawn 2026-10-05 (eight
+  boards approved); about 12 building days; questions left outstanding;
+  step 1 (every charge recorded, nothing refused) built on dev the same day.**
 - [Keyword research](./active/keyword-research-plan.md) — Discovery →
   Keyword research, like Ahrefs' Keywords Explorer: look up any search, its
   overview, Google's results, ideas, what the AI says, and starting from a
