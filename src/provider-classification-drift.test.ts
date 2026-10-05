@@ -71,6 +71,9 @@ describe('Provider Classification Drift', () => {
       // A prompt's fan-out queries plan prices each assistant's answer, which
       // is why a company would untick one: naming them is the subject.
       'docs/plans/active/prompt-fan-out-queries-plan.md',
+      // The finishing-off plan's table of what is bought, how often, names the
+      // assistants each AI question is asked of: naming them is the subject.
+      'docs/plans/active/finish-off-plan.md',
       'src/provider-classification-drift.test.ts',
     ]);
 
