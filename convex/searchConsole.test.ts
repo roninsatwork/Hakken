@@ -469,12 +469,17 @@ describe("collecting", () => {
       .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", "30").eq("which", "BEFORE"))
       .collect());
     expect(before.map((part) => part.keys)).toEqual([[]]);
-    // Twelve months of a website held for 90 days counts the 90 days, and says so.
+    // Twelve months of a website held for 90 days is the 90 days: kept once, its own slot only saying its days (finish-off plan 2E).
     const year = await t.run(async (ctx) => await ctx.db
       .query("searchConsolePeriods")
       .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "page").eq("period", "365").eq("which", "NOW"))
-      .first());
-    expect(year).toMatchObject({ from: "2026-06-29", to: NEWEST, keys: ["https://acme-shop.test/"], counts: [2], tops: ["plumber leeds"] });
+      .collect());
+    expect(year).toEqual([expect.objectContaining({ from: "2026-06-29", to: NEWEST, keys: [] })]);
+    // And read as the 90 days, which it is.
+    const listed = (from: string) => admin.query(api.searchConsoleLists.searchConsoleListPage, { siteId, searchType: "web", dimension: "page", from, to: NEWEST, page: 1, rows: 25 });
+    const twelveMonths = await listed(shiftDay(NEWEST, -364));
+    expect(twelveMonths.rows.map((one: { key: string }) => one.key)).toEqual(["https://acme-shop.test/"]);
+    expect(twelveMonths.rows).toEqual((await listed("2026-06-29")).rows);
     // The days, weeks and months the Position bands and Brand charts read: the website has no brand words yet, so every click is the rest's.
     const charted = await t.run(async (ctx) => await ctx.db
       .query("searchConsoleWeeks")

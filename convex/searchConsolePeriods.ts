@@ -410,6 +410,18 @@ function slotsOf(newest: string, oldest: string): Slot[] {
 
 const slotKey = (slot: Slot) => `${slot.period}|${slot.which}`;
 
+/**
+ * Twelve months holding exactly the 90 days' days — every website, until it
+ * has held more than 90 days — is the 90 days again: kept once (finish-off
+ * plan item 2E, 2026-10-05: a third of morehandles.co.uk's ready-made
+ * periods, 138 MB, were the 90 days twice). Its slot keeps one empty part
+ * saying its days, and the readers read the 90 days (`periodToRead`).
+ */
+function sameAsNinety(slot: Slot, ninety: PeriodSpan | null): boolean {
+  return slot.period === "365" && slot.which === "NOW" && ninety !== null && slot.span !== null
+    && slot.span.from === ninety.from && slot.span.to === ninety.to;
+}
+
 /** A part as written: its rows, and what each row carries beside them. */
 type PartToWrite = Packed & {
   counts?: number[];
@@ -527,7 +539,11 @@ export async function buildSitePeriods(
   const builtAt = Date.now();
   const slots = slotsOf(newest, oldest);
   const scope = country === undefined ? {} : { country };
-  const writeParts = async (searchType: SearchType, list: SearchConsolePeriodList, slot: Slot, parts: PartToWrite[] | null) => {
+  const ninety = slots.find((slot) => slot.period === "90" && slot.which === "NOW")?.span ?? null;
+  const asNinety = (slot: Slot) => sameAsNinety(slot, ninety);
+  const writeParts = async (searchType: SearchType, list: SearchConsolePeriodList, slot: Slot, given: PartToWrite[] | null) => {
+    // Twelve months on the 90 days' own days: one empty part saying its days, the 90 days read instead (`sameAsNinety`).
+    const parts = given !== null && asNinety(slot) ? [] : given;
     // Not held, or a list this kind of result does not have: the slot is only emptied.
     const clearOnly = parts === null;
     for (const [part, packed] of (parts && parts.length > 0 ? parts : [EMPTY_PART]).entries()) {
@@ -622,6 +638,10 @@ export async function buildSitePeriods(
     for (const slot of slots) {
       if (!pairsKept || !slot.span) {
         for (const list of ["pair", "pairByPage", "competing", "query"] as const) await writeParts(searchType, list, slot, null);
+        continue;
+      }
+      if (asNinety(slot)) {
+        for (const list of ["pair", "pairByPage", "competing", "query"] as const) await writeParts(searchType, list, slot, []);
         continue;
       }
       const pairs = addUp(keptIn(pairsKept, slot.span, newest, searchType));
@@ -743,6 +763,43 @@ async function periodParts(
     .take(PARTS_MOST);
 }
 
+/** A ready-made period's first part, which says its days. */
+async function firstPartOf(
+  ctx: { db: QueryCtx["db"] },
+  companyWebsiteId: Id<"companyWebsites">,
+  country: string | undefined,
+  searchType: SearchType,
+  list: SearchConsolePeriodList,
+  period: SearchConsolePeriod,
+  which: "NOW" | "BEFORE",
+) {
+  return await ctx.db
+    .query("searchConsolePeriods")
+    .withIndex("by_hold_country_type_list_period", (q) => q
+      .eq("companyWebsiteId", companyWebsiteId).eq("country", country).eq("searchType", searchType).eq("list", list).eq("period", period).eq("which", which).eq("part", 0))
+    .first();
+}
+
+/**
+ * Twelve months kept as the 90 days (`sameAsNinety`): given the first part
+ * read for a period, the 90 days' first part when the period is twelve
+ * months, its slot holds only the empty part saying its days, and the 90
+ * days are those days. Null otherwise — the period is read as it is, with no
+ * read more than before.
+ */
+async function ninetyInstead(
+  ctx: { db: QueryCtx["db"] },
+  scope: { companyWebsiteId: Id<"companyWebsites">; country: string | undefined; searchType: SearchType; list: SearchConsolePeriodList },
+  period: SearchConsolePeriod,
+  which: "NOW" | "BEFORE",
+  first: { keys: string[]; from: string; to: string; part: number } | null,
+  parts: number,
+) {
+  if (period !== "365" || which !== "NOW" || !first || first.keys.length > 0 || parts > 1) return null;
+  const ninety = await firstPartOf(ctx, scope.companyWebsiteId, scope.country, scope.searchType, scope.list, "90", "NOW");
+  return ninety && ninety.from === first.from && ninety.to === first.to ? ninety : null;
+}
+
 /** A row of a ready-made period: its figures, and — where kept — its count and top, and Sites' facts (UNKNOWN for none). */
 export type PeriodRow = Row & { count?: number; top?: string; kind?: string; volume?: number; estimate?: number };
 
@@ -758,8 +815,11 @@ export async function readPeriod(
 ): Promise<{ from: string; to: string; builtAt: number; shown: number | null; rows: PeriodRow[] } | null> {
   // Read only: a country nearly all of the searches reads its searches and pages as all countries (`searchConsoleShrink.ts`).
   const scope = FROM_SEARCH_LINES.has(list) ? await searchLinesCountry(ctx, companyWebsiteId, country) : country;
-  const parts = (await periodParts(ctx, companyWebsiteId, scope, searchType, list, period, which)).sort((left, right) => left.part - right.part);
+  let parts = (await periodParts(ctx, companyWebsiteId, scope, searchType, list, period, which)).sort((left, right) => left.part - right.part);
   if (parts.length === 0) return null;
+  if (await ninetyInstead(ctx, { companyWebsiteId, country: scope, searchType, list }, period, which, parts[0], parts.length)) {
+    parts = (await periodParts(ctx, companyWebsiteId, scope, searchType, list, "90", "NOW")).sort((left, right) => left.part - right.part);
+  }
   const rows: PeriodRow[] = [];
   for (const part of parts) {
     let index = 0;
@@ -800,16 +860,17 @@ export async function readKeyed(
   companyWebsiteId: Id<"companyWebsites">,
   searchType: SearchType,
   list: "pair" | "pairByPage",
-  period: SearchConsolePeriod,
+  askedPeriod: SearchConsolePeriod,
   which: "NOW" | "BEFORE",
   key: string,
-  country?: string,
+  asked?: string,
 ): Promise<{ from: string; to: string; rows: PeriodRow[] } | null> {
-  const first = await ctx.db
-    .query("searchConsolePeriods")
-    .withIndex("by_hold_country_type_list_period", (q) => q
-      .eq("companyWebsiteId", companyWebsiteId).eq("country", country).eq("searchType", searchType).eq("list", list).eq("period", period).eq("which", which).eq("part", 0))
-    .first();
+  // As `readPeriod`: a country nearly all of the searches reads all countries', and twelve months kept as the 90 days reads them.
+  const country = await searchLinesCountry(ctx, companyWebsiteId, asked);
+  const own = await firstPartOf(ctx, companyWebsiteId, country, searchType, list, askedPeriod, which);
+  const ninety = await ninetyInstead(ctx, { companyWebsiteId, country, searchType, list }, askedPeriod, which, own, own && own.keys.length === 0 ? 1 : 2);
+  const period: SearchConsolePeriod = ninety ? "90" : askedPeriod;
+  const first = ninety ?? own;
   if (!first || (first.firstKey === undefined && first.keys.length > 0)) return null;
   const before = await ctx.db
     .query("searchConsolePeriods")
