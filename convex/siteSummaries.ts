@@ -2,7 +2,7 @@ import { v, type Infer } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx } from "./_generated/server";
-import { requestGapRebuild, siteRebuildKey } from "./siteRankings";
+import { aiLinesKey, dayFiguresKey, requestGapRebuild, siteRebuildKey } from "./siteRankings";
 import { syncListAiLines } from "./siteListAiDays";
 import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
 import { KEYWORD_COPY_FIELDS, keywordCopyTuple } from "./siteKeywordCopy";
@@ -334,10 +334,9 @@ async function rebuildSiteNow(
   // day rows: the last fortnight normally, everything on a backfill.
   const today = new Date().toISOString().slice(0, 10);
   const firstDay: string | null = args.fullSync
-    ? await ctx.runQuery(internal.siteSummaries.firstRecordedDay, { websiteId: args.websiteId })
-    : shiftDay(today, -SYNC_DAYS);
-  for (let from = firstDay ?? today; from <= today; from = shiftDay(from, 31)) {
-    const window = { websiteId: args.websiteId, locationCode: args.locationCode, fromDay: from, toDay: shiftDay(from, 30) };
+    ? await ctx.runQuery(internal.siteSummaries.firstRecordedDay, { websiteId: args.websiteId }) ?? today
+    : null;
+  for (const window of syncWindows(args, firstDay)) {
     await ctx.runMutation(internal.siteSummaries.syncDays, window);
     await syncListAiLines(ctx, window);
   }
@@ -360,6 +359,68 @@ async function rebuildSiteNow(
   });
   return null;
 }
+
+/**
+ * The windows of days a rebuild copies the website's figures and answers
+ * into, a month each: from `firstDay` on a backfill, else the last fortnight.
+ */
+function syncWindows(
+  site: { websiteId: Id<"websites">; locationCode: number },
+  firstDay: string | null,
+): Array<{ websiteId: Id<"websites">; locationCode: number; fromDay: string; toDay: string }> {
+  const today = new Date().toISOString().slice(0, 10);
+  const windows: Array<{ websiteId: Id<"websites">; locationCode: number; fromDay: string; toDay: string }> = [];
+  for (let from = firstDay ?? shiftDay(today, -SYNC_DAYS); from <= today; from = shiftDay(from, 31)) {
+    windows.push({ websiteId: site.websiteId, locationCode: site.locationCode, fromDay: from, toDay: shiftDay(from, 30) });
+  }
+  return windows;
+}
+
+/**
+ * Only the AI lines of the company lists about a website, from one place, for
+ * the last fortnight: the part of a site rebuild an AI answer changes
+ * (`requestAiLinesEverywhere`; docs/plans/active/dataforseo-cost-plan.md,
+ * A2). One at a time per site and place, as the rebuilds take their turn.
+ */
+export const syncSiteAiLines = internalAction({
+  args: { websiteId: v.id("websites"), locationCode: v.number() },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    const key = aiLinesKey(args.websiteId, args.locationCode);
+    if (!(await ctx.runMutation(internal.siteSummaries.beginRebuild, { key }))) {
+      await ctx.scheduler.runAfter(REBUILD_WAIT_MS, internal.siteSummaries.syncSiteAiLines, args);
+      return null;
+    }
+    let done = false;
+    try {
+      for (const window of syncWindows(args, null)) await syncListAiLines(ctx, window);
+      done = true;
+    } finally {
+      await ctx.runMutation(internal.siteSummaries.endRebuild, { key, done });
+    }
+    return null;
+  },
+});
+
+/**
+ * Only a website's day figures, from one place, for the last fortnight: the
+ * part of a site rebuild a site-wide figure changes, a backlinks summary
+ * (`requestDayFiguresEverywhere`; dataforseo-cost-plan.md, A2). The request
+ * is released as it runs, so a figure filed after it asks again.
+ */
+export const syncSiteDays = internalMutation({
+  args: { websiteId: v.id("websites"), locationCode: v.number() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const row = await ctx.db
+      .query("siteSummaryRequests")
+      .withIndex("by_key", (q) => q.eq("key", dayFiguresKey(args.websiteId, args.locationCode)))
+      .unique();
+    if (row) await ctx.db.patch(row._id, { pending: false, builtFrom: Date.now() });
+    for (const window of syncWindows(args, null)) await syncDayFigures(ctx, window);
+    return null;
+  },
+});
 
 /** How long a rebuild may hold its turn before another may take it: past an action's own ten minutes. */
 const REBUILD_TURN_MS = 11 * 60 * 1000;
@@ -772,74 +833,81 @@ export const syncDays = internalMutation({
   args: { websiteId: v.id("websites"), locationCode: v.number(), fromDay: v.string(), toDay: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const perDay = new Map<string, Partial<Doc<"siteDaySummaries">>>();
-    const touch = (day: string) => {
-      const held = perDay.get(day) ?? {};
-      perDay.set(day, held);
-      return held;
-    };
-
-    const metrics = await ctx.db
-      .query("seoWebsiteMetrics")
-      .withIndex("by_website_day", (q) =>
-        q.eq("websiteId", args.websiteId).gte("day", args.fromDay).lte("day", args.toDay))
-      .take(METRICS_PER_WINDOW);
-    for (const row of metrics) {
-      if (!isThisPlace(row, args.locationCode)) continue;
-      const figures = JSON.parse(row.metricsJson) as Record<string, number | null | undefined>;
-      const into = touch(row.day);
-      const copy = (from: string, to: keyof Doc<"siteDaySummaries">) => {
-        const value = figures[from];
-        if (typeof value === "number") (into as Record<string, unknown>)[to] = value;
-      };
-      if (row.operationId === "domain_ranked_keywords") {
-        if (typeof figures.rankedKeywords === "number") into.rankedKeywordsTotal = figures.rankedKeywords;
-        if (typeof figures.estimatedTraffic === "number") into.estimatedTraffic = Math.round(figures.estimatedTraffic);
-        if (typeof figures.trafficValue === "number") into.trafficValue = Math.round(figures.trafficValue);
-        copy("keywordsNew", "keywordsNew");
-        copy("keywordsUp", "keywordsUp");
-        copy("keywordsDown", "keywordsDown");
-        copy("keywordsLost", "keywordsLost");
-        copy("featuredSnippets", "featuredSnippets");
-        copy("localPacks", "localPacks");
-        copy("aiOverviewRefs", "aiOverviewRefs");
-        if (typeof figures.paidKeywords === "number") into.paidKeywords = figures.paidKeywords;
-        if (typeof figures.paidTraffic === "number") into.paidTraffic = Math.round(figures.paidTraffic);
-        if (typeof figures.paidTrafficCost === "number") into.paidTrafficCost = Math.round(figures.paidTrafficCost);
-        const allBands = bandsFrom(figures);
-        if (allBands) into.allBands = allBands;
-      } else if (row.operationId === KEYWORD_LIST_OPERATION_ID) {
-        // The full list asks for the site's results-page features, so its
-        // counts of them are the ones to show.
-        copy("featuredSnippets", "featuredSnippets");
-        copy("localPacks", "localPacks");
-        copy("aiOverviewRefs", "aiOverviewRefs");
-      } else if (row.operationId === "backlinks_summary") {
-        copy("backlinks", "backlinks");
-        copy("referringDomains", "referringDomains");
-        copy("referringMainDomains", "referringMainDomains");
-        copy("rank", "domainRank");
-        copy("brokenBacklinks", "brokenBacklinks");
-        copy("spamScore", "spamScore");
-        copy("brokenPages", "brokenPages");
-      } else if (row.operationId === "bulk_backlinks" && into.backlinks === undefined) {
-        copy("backlinks", "backlinks");
-      } else if (row.operationId === "bulk_referring_domains" && into.referringDomains === undefined) {
-        copy("referringDomains", "referringDomains");
-      } else if (row.operationId === "bulk_ranks" && into.domainRank === undefined) {
-        copy("rank", "domainRank");
-      }
-    }
-
-    const now = Date.now();
-    for (const [day, fields] of perDay) {
-      const row = await daySummary(ctx, args.websiteId, args.locationCode, day);
-      await ctx.db.patch(row._id, { ...fields, updatedAt: now });
-    }
-
+    await syncDayFigures(ctx, args);
     return null;
   },
 });
+
+/** The work of `syncDays` for one window, shared with the day-figures-only sync (`syncSiteDays`). */
+async function syncDayFigures(
+  ctx: MutationCtx,
+  args: { websiteId: Id<"websites">; locationCode: number; fromDay: string; toDay: string },
+): Promise<void> {
+  const perDay = new Map<string, Partial<Doc<"siteDaySummaries">>>();
+  const touch = (day: string) => {
+    const held = perDay.get(day) ?? {};
+    perDay.set(day, held);
+    return held;
+  };
+
+  const metrics = await ctx.db
+    .query("seoWebsiteMetrics")
+    .withIndex("by_website_day", (q) =>
+      q.eq("websiteId", args.websiteId).gte("day", args.fromDay).lte("day", args.toDay))
+    .take(METRICS_PER_WINDOW);
+  for (const row of metrics) {
+    if (!isThisPlace(row, args.locationCode)) continue;
+    const figures = JSON.parse(row.metricsJson) as Record<string, number | null | undefined>;
+    const into = touch(row.day);
+    const copy = (from: string, to: keyof Doc<"siteDaySummaries">) => {
+      const value = figures[from];
+      if (typeof value === "number") (into as Record<string, unknown>)[to] = value;
+    };
+    if (row.operationId === "domain_ranked_keywords") {
+      if (typeof figures.rankedKeywords === "number") into.rankedKeywordsTotal = figures.rankedKeywords;
+      if (typeof figures.estimatedTraffic === "number") into.estimatedTraffic = Math.round(figures.estimatedTraffic);
+      if (typeof figures.trafficValue === "number") into.trafficValue = Math.round(figures.trafficValue);
+      copy("keywordsNew", "keywordsNew");
+      copy("keywordsUp", "keywordsUp");
+      copy("keywordsDown", "keywordsDown");
+      copy("keywordsLost", "keywordsLost");
+      copy("featuredSnippets", "featuredSnippets");
+      copy("localPacks", "localPacks");
+      copy("aiOverviewRefs", "aiOverviewRefs");
+      if (typeof figures.paidKeywords === "number") into.paidKeywords = figures.paidKeywords;
+      if (typeof figures.paidTraffic === "number") into.paidTraffic = Math.round(figures.paidTraffic);
+      if (typeof figures.paidTrafficCost === "number") into.paidTrafficCost = Math.round(figures.paidTrafficCost);
+      const allBands = bandsFrom(figures);
+      if (allBands) into.allBands = allBands;
+    } else if (row.operationId === KEYWORD_LIST_OPERATION_ID) {
+      // The full list asks for the site's results-page features, so its
+      // counts of them are the ones to show.
+      copy("featuredSnippets", "featuredSnippets");
+      copy("localPacks", "localPacks");
+      copy("aiOverviewRefs", "aiOverviewRefs");
+    } else if (row.operationId === "backlinks_summary") {
+      copy("backlinks", "backlinks");
+      copy("referringDomains", "referringDomains");
+      copy("referringMainDomains", "referringMainDomains");
+      copy("rank", "domainRank");
+      copy("brokenBacklinks", "brokenBacklinks");
+      copy("spamScore", "spamScore");
+      copy("brokenPages", "brokenPages");
+    } else if (row.operationId === "bulk_backlinks" && into.backlinks === undefined) {
+      copy("backlinks", "backlinks");
+    } else if (row.operationId === "bulk_referring_domains" && into.referringDomains === undefined) {
+      copy("referringDomains", "referringDomains");
+    } else if (row.operationId === "bulk_ranks" && into.domainRank === undefined) {
+      copy("rank", "domainRank");
+    }
+  }
+
+  const now = Date.now();
+  for (const [day, fields] of perDay) {
+    const row = await daySummary(ctx, args.websiteId, args.locationCode, day);
+    await ctx.db.patch(row._id, { ...fields, updatedAt: now });
+  }
+}
 
 /** Whether a metrics row speaks for this place: a site-wide figure, or an older row, speaks for every place. */
 function isThisPlace(row: Doc<"seoWebsiteMetrics">, locationCode: number): boolean {

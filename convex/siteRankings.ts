@@ -500,3 +500,39 @@ export async function placesWatching(ctx: MutationCtx, websiteId: Id<"websites">
 export async function requestRebuildEverywhere(ctx: MutationCtx, websiteId: Id<"websites">): Promise<void> {
   for (const place of await placesWatching(ctx, websiteId)) await requestSiteRebuild(ctx, websiteId, place);
 }
+
+/** The key the AI lines of a website's company lists are synced under, from one place. */
+export function aiLinesKey(websiteId: Id<"websites">, locationCode: number): string {
+  return `aiLines:${websiteId}:${locationCode}`;
+}
+
+/** The key a website's day figures are synced under, from one place. */
+export function dayFiguresKey(websiteId: Id<"websites">, locationCode: number): string {
+  return `days:${websiteId}:${locationCode}`;
+}
+
+/**
+ * Ask for the part of a site rebuild an AI answer changes — the AI lines of
+ * the company lists about the website (`syncListAiLines`) — for every place
+ * it is watched from, each once, shortly. An answer moves nothing else a
+ * rebuild writes: until 2026-10-05 it asked for the whole rebuild, every
+ * keyword read again (docs/plans/active/dataforseo-cost-plan.md, A2).
+ */
+export async function requestAiLinesEverywhere(ctx: MutationCtx, websiteId: Id<"websites">): Promise<void> {
+  for (const place of await placesWatching(ctx, websiteId)) {
+    if (!(await claimSchedule(ctx, aiLinesKey(websiteId, place)))) continue;
+    await ctx.scheduler.runAfter(REBUILD_DELAY_MS, internal.siteSummaries.syncSiteAiLines, { websiteId, locationCode: place });
+  }
+}
+
+/**
+ * Ask for the part of a site rebuild a site-wide figure changes — its day
+ * figures (`syncDays`), a backlinks summary's say — for every place it is
+ * watched from, each once, shortly (dataforseo-cost-plan.md, A2).
+ */
+export async function requestDayFiguresEverywhere(ctx: MutationCtx, websiteId: Id<"websites">): Promise<void> {
+  for (const place of await placesWatching(ctx, websiteId)) {
+    if (!(await claimSchedule(ctx, dayFiguresKey(websiteId, place)))) continue;
+    await ctx.scheduler.runAfter(REBUILD_DELAY_MS, internal.siteSummaries.syncSiteDays, { websiteId, locationCode: place });
+  }
+}

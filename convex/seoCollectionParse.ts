@@ -2,11 +2,11 @@ import { v } from "convex/values";
 import { PARSE_FAILED } from "./seoFiling";
 import { readPullAnswerParts } from "./seoPullAnswers";
 
-import { internalAction, internalMutation, internalQuery, type ActionCtx } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { judgeCompetitors, judgeStances, linkCitedAddresses, normaliseKeyword } from "./seoJudgments";
 import {
-  citedPageOf, patchKeywordIntent, recountCitedPages, requestRebuildEverywhere, requestSiteRebuild, type CitedPage,
+  citedPageOf, patchKeywordIntent, recountCitedPages, requestDayFiguresEverywhere, requestRebuildEverywhere, requestSiteRebuild, type CitedPage,
 } from "./siteRankings";
 import { fileAnswerText } from "./siteAnswers";
 import { fileSiteLinkPull, isSiteLinkOperation } from "./siteLinkFiling";
@@ -480,10 +480,23 @@ export const writeSeoMetrics = internalMutation({
     // Rankings are this place's; a site-wide figure (backlinks) is every
     // watcher's, so it refreshes the summary of every place the site is read from.
     if (args.positions.length > 0) await requestSiteRebuild(ctx, args.websiteId, place);
-    else await requestRebuildEverywhere(ctx, args.websiteId);
+    else await requestAfterFigures(ctx, args.websiteId, args.operationId);
     return null;
   },
 });
+
+/**
+ * Ask for what a metrics row with no positions changes, in every place the
+ * site is read from. A keyword total still says which check is the latest and
+ * whether a list was whole (`completeRankedDay`, `latestKeywordCheck`), which
+ * the whole site rebuild reads; any other is a site-wide figure — a backlinks
+ * summary, a bulk count — that only the day figures carry, so only they are
+ * synced (docs/plans/active/dataforseo-cost-plan.md, A2).
+ */
+async function requestAfterFigures(ctx: MutationCtx, websiteId: Id<"websites">, operationId: string): Promise<void> {
+  if (operationId === "domain_ranked_keywords" || isKeywordListOperation(operationId)) await requestRebuildEverywhere(ctx, websiteId);
+  else await requestDayFiguresEverywhere(ctx, websiteId);
+}
 
 /**
  * Record who an AI answer named.
@@ -783,7 +796,7 @@ export const writeBulkMetrics = internalMutation({
         createdAt: now,
       });
       // A site-wide figure, so every place the site is read from.
-      await requestRebuildEverywhere(ctx, websiteId);
+      await requestAfterFigures(ctx, websiteId, args.operationId);
     }
     return null;
   },

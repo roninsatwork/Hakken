@@ -2,7 +2,7 @@ import type { Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import type { AiEngine } from "./seoAiEngines";
 import { recordListAnswer } from "./siteListAi";
-import { requestRebuildEverywhere } from "./siteRankings";
+import { requestAiLinesEverywhere } from "./siteRankings";
 
 /**
  * Keeping each host's search and question summaries current as results land.
@@ -166,8 +166,9 @@ export async function recordAnswer(
 
   for (const websiteId of askers) {
     await rebuildQuestionStats(ctx, websiteId, answer, answers);
-    // Each list's AI lines count its answers per day and engine.
-    await requestRebuildEverywhere(ctx, websiteId);
+    // Each list's AI lines count its answers per day and engine: only those,
+    // not the whole site rebuild (dataforseo-cost-plan.md, A2).
+    await requestAiLinesEverywhere(ctx, websiteId);
   }
   // And each company's own list asking it, from the same answers
   // (docs/plans/active/sites-ai-list-summaries-plan.md).

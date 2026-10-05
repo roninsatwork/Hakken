@@ -904,7 +904,9 @@ export const siteTables = {
   siteSummaryRequests: defineTable({
     /**
      * `site:<websiteId>:<locationCode>`, `gap:<companyWebsiteId>`, `copy:<kind>:<key>` for a list's compact copy, or
-     * `listAi:<companyWebsiteId>` / `listAiAll:<companyWebsiteId>` for a company list's AI summary (`siteListAi.ts`).
+     * `listAi:<companyWebsiteId>` / `listAiAll:<companyWebsiteId>` for a company list's AI summary (`siteListAi.ts`);
+     * `aiLines:<websiteId>:<locationCode>` and `days:<websiteId>:<locationCode>` for the parts of a site rebuild an
+     * AI answer and a site-wide figure change (dataforseo-cost-plan.md, A2).
      */
     key: v.string(),
     pending: v.boolean(),
