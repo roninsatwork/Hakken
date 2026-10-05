@@ -130,13 +130,21 @@ export const SEO_RESULT_TIMEOUT_MS = 12 * 60 * 60 * 1000;
 export const SEO_MAX_ATTEMPTS = 3;
 
 /**
- * How long a raw response is kept in file storage.
+ * How long DataForSEO's raw answer is kept (`seoPullAnswers`, apart from the
+ * request; never in file storage, which is swept of anything without an
+ * upload reservation), then cleared by the hourly sweep.
  *
- * Long enough to re-parse everything after finding a parser bug, and no
- * longer. The pull row and its cost survive the file, because the cost record
- * has to be checkable against an invoice long after the payload is useless.
+ * A week, not a month since 2026-10-05 (docs/plans/active/dataforseo-cost-plan.md,
+ * A6): what reads it later works well inside it — the hourly re-file of an
+ * answer never filed takes it within hours — and a parser bug is caught in
+ * days. Filing an answer again, the credit recount
+ * (`creditCorrections.recountCollectionCredits`) and reading stored answers
+ * again (`siteBackfillRaw`) reach a week back and no further
+ * (docs/operator/dataforseo-data-kept.md). The pull row and its cost outlive
+ * the answer, because the cost record has to be checkable against an invoice
+ * long after the payload is useless.
  */
-export const SEO_RAW_RETENTION_DAYS = 30;
+export const SEO_RAW_RETENTION_DAYS = 7;
 
 /** How long cycles and their lines are kept. One quarter of history. */
 export const SEO_CYCLE_RETENTION_DAYS = 90;

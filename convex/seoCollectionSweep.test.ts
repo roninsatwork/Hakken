@@ -82,9 +82,9 @@ describe("the sweep at scale", () => {
     expect(delays[delays.length - 1]).toBeGreaterThan(40_000);
   });
 
-  test("every stored answer past its thirty days is cleared in one check — not eight", async () => {
+  test("every stored answer past its seven days is cleared in one check — not eight — and one inside them kept (A6)", async () => {
     const t = harness();
-    await t.run(async (ctx) => {
+    const kept = await t.run(async (ctx) => {
       const pullId = await ctx.db.insert("seoDataPulls", {
         operationId: "site_crawl", family: "OnPage", mode: "QUEUED", taskArgsJson: "{}", status: "READY",
         tag: "t-old", costUsd: 0.1, sandbox: false, submittedAt: Date.now() - 40 * DAY_MS,
@@ -92,12 +92,14 @@ describe("the sweep at scale", () => {
       for (let n = 0; n < 60; n += 1) {
         await ctx.db.insert("seoPullAnswers", { pullId, resultJson: "{}", storedAt: Date.now() - 31 * DAY_MS - n });
       }
-      await ctx.db.insert("seoPullAnswers", { pullId, resultJson: "{}", storedAt: Date.now() - DAY_MS });
+      // A week and an hour old: past it. Six days: kept.
+      await ctx.db.insert("seoPullAnswers", { pullId, resultJson: "{}", storedAt: Date.now() - 7 * DAY_MS - HOUR_MS });
+      return await ctx.db.insert("seoPullAnswers", { pullId, resultJson: "{}", storedAt: Date.now() - 6 * DAY_MS });
     });
 
     await t.action(internal.seoCollectionSweep.sweepSeoCollection, {});
 
-    expect(await t.run(async (ctx) => (await ctx.db.query("seoPullAnswers").collect()).length)).toBe(1);
+    expect(await t.run(async (ctx) => (await ctx.db.query("seoPullAnswers").collect()).map((row) => row._id))).toEqual([kept]);
   });
 
   test("old collections are retired however they ended, a large one over several pages, never one still collecting", async () => {

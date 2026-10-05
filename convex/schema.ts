@@ -489,8 +489,9 @@ export default defineSchema({
    *
    * Small, queryable and permanent, which is exactly what the raw payload is
    * not. Splitting them is what keeps years of history affordable: the raw
-   * SERP response is megabytes and lives in file storage until its TTL, while
-   * this is a handful of numbers and lives forever.
+   * SERP response is megabytes and is kept apart (`seoPullAnswers`) for
+   * `SEO_RAW_RETENTION_DAYS`, while this is a handful of numbers and lives
+   * forever.
    *
    * Keyed on `websiteId` with no company anywhere. **A company's right to read
    * a row here comes from its own join row, never from this table** — see the

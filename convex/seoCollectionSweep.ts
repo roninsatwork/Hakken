@@ -366,8 +366,8 @@ async function closeSettledCycles(ctx: MutationCtx) {
  * Drop raw payloads past their window, keeping the pull row itself.
  *
  * The raw response exists so a parser bug can be fixed and re-run rather than
- * re-bought; after a month that is no longer a real possibility and the bytes
- * are pure cost. The row stays because it is the cost record, and a cost
+ * re-bought; after a week (`SEO_RAW_RETENTION_DAYS`) that is no longer a real
+ * possibility and the bytes are pure cost. The row stays because it is the cost record, and a cost
  * record has to be checkable against an invoice long after the payload is
  * useless. An answer kept in parts may lose them over two pages; one missing a
  * part reads as no answer (`readPullAnswerParts`), as it is on its way out.

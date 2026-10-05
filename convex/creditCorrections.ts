@@ -98,7 +98,9 @@ export const raisePlanCredits = internalMutation({
  * 1. **What came back** (`recountAnswers`): every answered list or crawl
  *    since `since` whose rows were never counted has them counted from its
  *    kept answer (`rowsReturnedIn`) — four answers a transaction at most,
- *    as each can be megabytes.
+ *    as each can be megabytes. Answers are kept a week
+ *    (`SEO_RAW_RETENTION_DAYS`), so one older than that is not counted again
+ *    and keeps what it was counted at.
  * 2. **Each request's lines** (`recountRequests`): every plan line moves from
  *    what it had put in its run to what its request counts now; a list's
  *    later pages, which no line counted, are counted for the run that bought

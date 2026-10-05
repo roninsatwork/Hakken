@@ -13,6 +13,10 @@ Operator docs are for internal launch, release, demo, and packaging workflows. T
 - [Product Recipes](../developer/product-recipes.md)
 - [Vertical App Packaging Checklist](./vertical-app-packaging-checklist.md)
 
+## Data Kept
+
+- [DataForSEO Data: What Is Kept, and For How Long](./dataforseo-data-kept.md)
+
 ## Demo Operations
 
 - Movement Demo Pitch Runbook (not included in this copy)
