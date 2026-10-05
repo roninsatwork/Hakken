@@ -146,6 +146,8 @@ export const creditTables = {
     /** By work and By website: one kind's or one website's lines in a month, a page at a time (finish-off-plan.md, item 10). */
     .index("by_company_kind_at", ["companyId", "kind", "at"])
     .index("by_company_website_at", ["companyId", "websiteId", "at"])
+    /** A company's runs still being counted, for Usage while a collection runs (finish-off-plan.md, item 4). */
+    .index("by_company_state_at", ["companyId", "state", "at"])
     .index("by_run_key", ["runKey"])
     .index("by_cycle_state", ["cycleId", "state"])
     /** Runs left open: closed by the hourly sweep once their collection has nothing in flight. */

@@ -12319,6 +12319,8 @@
     "owed": "Your credits ran out this month: {owed} more were used. Nothing has been stopped.",
     "noCompany": "Choose a company to see its usage.",
     "nothingYet": "Nothing has used credits this month yet.",
+    "counting": "includes {counting} being counted",
+    "beingCounted": "{counting} being counted",
     "download": "Download CSV",
     "month": {
       "label": "Month",
@@ -12397,7 +12399,8 @@
       "price": "Price",
       "checks": "Checks",
       "eachRun": "Each run",
-      "eachRunDetail": "Credits a run, on average"
+      "eachRunDetail": "Credits a run, on average",
+      "includesCounting": "Includes {counting} being counted"
     },
     "chart": {
       "title": "This month’s credits, day by day",
@@ -12409,6 +12412,7 @@
     "where": {
       "title": "Where they went",
       "hint": "This month’s {credits} credits, by kind of work.",
+      "hintCounting": "This month’s {credits} credits, by kind of work, {counting} of them still being counted.",
       "empty": "Nothing has used credits this month yet.",
       "statement": "Your statement: every credit in and out"
     },
@@ -12515,6 +12519,7 @@
       "unused": "Unused when they ended",
       "refund": "Given back: {kind}",
       "givenBack": "The work did not finish",
+      "beingCounted": "being counted, {units} so far",
       "recount": "Counted again: {kind}",
       "recounted": "{now} came back, not {before}",
       "nothingBack": "Nothing came back, so nothing is charged",
@@ -12531,7 +12536,8 @@
         "out": "Out",
         "outDetail": "{used} used, after any given back · {ended} ended unused",
         "closing": "Balance now",
-        "closingDetail": "Every open batch, less anything owed"
+        "closingDetail": "Every open batch, less anything owed",
+        "closingCounting": "Every open batch, less anything owed; {counting} more being counted"
       },
       "columns": {
         "date": "Date",

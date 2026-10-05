@@ -55,7 +55,13 @@ export default function UsageStatementPage() {
               <Figure label={words.t("statement.figures.opening")} value={loading ? "…" : words.number(totals.opening)} detail={words.t("statement.figures.openingDetail")} />
               <Figure label={words.t("statement.figures.in")} value={loading ? "…" : words.number(into)} detail={loading ? null : words.t("statement.figures.inDetail", { plan: words.number(totals.planIn), other: words.number(totals.otherIn) })} />
               <Figure label={words.t("statement.figures.out")} value={loading ? "…" : words.number(out)} detail={loading ? null : words.t("statement.figures.outDetail", { used: words.number(totals.used), ended: words.number(totals.ended) })} />
-              <Figure emphasis label={words.t("statement.figures.closing")} value={loading ? "…" : words.number(totals.closing)} detail={words.t("statement.figures.closingDetail")} />
+              <Figure
+                emphasis
+                label={words.t("statement.figures.closing")}
+                value={loading ? "…" : words.number(totals.closing)}
+                // A collection under way: what it has counted so far is not out of the balance yet (finish-off-plan.md, item 4).
+                detail={!loading && totals.counting > 0 ? words.t("statement.figures.closingCounting", { counting: words.number(totals.counting) }) : words.t("statement.figures.closingDetail")}
+              />
             </FigureRow>
             <DataTable {...table} footer={table.footer} />
           </>

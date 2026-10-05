@@ -49,29 +49,30 @@ const SUMMARY: NonNullable<FunctionReturnType<typeof api.creditUsage.usageSummar
   bought: { left: 500, nextEndsAt: Date.UTC(2027, 9, 16), nextEndsLeft: 500 },
   owed: 0,
   used: 543,
+  counting: 0,
   byDay: [49, 16, 4, 4, 117, 21, 9, 6, 9, 4, 4, 124, 9, 16, 4, 6, 4, 4, 124, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   previous: { month: "2026-09", granted: 1000, byDay: Array.from({ length: 30 }, () => 16) },
   kinds: [
-    { kind: "aiAnswers", credits: 300, runs: 3, people: 0 },
-    { kind: "rankings", credits: 104, runs: 26, people: 0 },
-    { kind: "keywordResearch", credits: 90, runs: 18, people: 2 },
-    { kind: "siteAudit", credits: 25, runs: 1, people: 0 },
-    { kind: "assistant", credits: 14, runs: 14, people: 1 },
-    { kind: "backlinks", credits: 10, runs: 1, people: 0 },
+    { kind: "aiAnswers", credits: 300, runs: 3, people: 0, counting: 0 },
+    { kind: "rankings", credits: 104, runs: 26, people: 0, counting: 0 },
+    { kind: "keywordResearch", credits: 90, runs: 18, people: 2, counting: 0 },
+    { kind: "siteAudit", credits: 25, runs: 1, people: 0, counting: 0 },
+    { kind: "assistant", credits: 14, runs: 14, people: 1, counting: 0 },
+    { kind: "backlinks", credits: 10, runs: 1, people: 0, counting: 0 },
   ],
   websites: [
-    { website: own, credits: 427, runs: 25, people: 0, kinds: ["rankings", "aiAnswers", "siteAudit", "backlinks"] },
-    { website: null, credits: 104, runs: 32, people: 2, kinds: ["keywordResearch", "assistant"] },
-    { website: rival, credits: 12, runs: 3, people: 0, kinds: ["rankings"] },
+    { website: own, credits: 427, runs: 25, people: 0, counting: 0, kinds: ["rankings", "aiAnswers", "siteAudit", "backlinks"] },
+    { website: null, credits: 104, runs: 32, people: 2, counting: 0, kinds: ["keywordResearch", "assistant"] },
+    { website: rival, credits: 12, runs: 3, people: 0, counting: 0, kinds: ["rankings"] },
   ],
   lines: [
-    { kind: "aiAnswers", website: own, credits: 300, runs: 3, everyDays: 7 },
-    { kind: "keywordResearch", website: null, credits: 90, runs: 18, everyDays: null },
-    { kind: "rankings", website: own, credits: 80, runs: 20, everyDays: 1 },
-    { kind: "siteAudit", website: own, credits: 25, runs: 1, everyDays: 30 },
-    { kind: "assistant", website: null, credits: 14, runs: 14, everyDays: null },
-    { kind: "rankings", website: rival, credits: 12, runs: 3, everyDays: 7 },
-    { kind: "backlinks", website: own, credits: 10, runs: 1, everyDays: 30 },
+    { kind: "aiAnswers", website: own, credits: 300, runs: 3, counting: 0, everyDays: 7 },
+    { kind: "keywordResearch", website: null, credits: 90, runs: 18, counting: 0, everyDays: null },
+    { kind: "rankings", website: own, credits: 80, runs: 20, counting: 0, everyDays: 1 },
+    { kind: "siteAudit", website: own, credits: 25, runs: 1, counting: 0, everyDays: 30 },
+    { kind: "assistant", website: null, credits: 14, runs: 14, counting: 0, everyDays: null },
+    { kind: "rankings", website: rival, credits: 12, runs: 3, counting: 0, everyDays: 7 },
+    { kind: "backlinks", website: own, credits: 10, runs: 1, counting: 0, everyDays: 30 },
   ],
   prices: [
     { kind: "rankings", credits: 4, per: 1000 },
@@ -100,6 +101,7 @@ const line = (id: string, at: number, extra: Partial<FunctionReturnType<typeof a
   detail: null,
   reason: null,
   before: null,
+  counting: false,
   from: [{ source: "plan" as const, month: "2026-10", startsAt: OCT }],
   batch: null,
   ...extra,
@@ -114,6 +116,7 @@ const TOTALS: NonNullable<FunctionReturnType<typeof api.creditUsage.usageStateme
   otherIn: 500,
   used: 40,
   ended: 37,
+  counting: 0,
   people: [{ userId: "user_anthony" as Id<"users">, name: "Anthony Basker" }, { userId: "user_priya" as Id<"users">, name: "Priya Shah" }],
 };
 
@@ -232,6 +235,42 @@ describe("Usage's screens", () => {
     expect(within(rows[0]).getByText("Opening balance")).toBeTruthy();
     expect(within(rows[1]).getByText("September’s plan credits ended")).toBeTruthy();
     expect(screen.getByText("ronins.co.uk · 1,240 pages · from October’s plan")).toBeTruthy();
+  });
+
+  it("a collection under way shows what it has counted so far, as being counted, in the figures and the lines (finish-off-plan.md, item 4)", async () => {
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "creditUsage:usageSummary": {
+        ...SUMMARY,
+        counting: 20,
+        kinds: [...SUMMARY.kinds.filter((row) => row.kind !== "siteAudit"), { kind: "siteAudit", credits: 25, runs: 1, people: 0, counting: 20 }],
+        websites: SUMMARY.websites.map((row) => (row.website?.websiteId === own.websiteId ? { ...row, counting: 20 } : row)),
+        lines: SUMMARY.lines.map((row) => (row.kind === "siteAudit" ? { ...row, counting: 20 } : row)),
+      },
+      "creditUsage:usageStatementTotals": TOTALS,
+    }));
+    at("/app/usage");
+    render(<UsageOverviewPage />);
+    await screen.findByText("Credits by website");
+    // Used counts it in, and says so; the plan's credits left take it off.
+    expect(screen.getByText("563")).toBeTruthy();
+    expect(screen.getByText("Includes 20 being counted")).toBeTruthy();
+    expect(screen.getByText("437")).toBeTruthy();
+    expect(screen.getByText("This month’s 563 credits, by kind of work, 20 of them still being counted.")).toBeTruthy();
+    expect(screen.getAllByText("includes 20 being counted")).toHaveLength(2);
+    // The site audit on ronins.co.uk: 25 charged and 20 still being counted.
+    expect(within(tableRows("What ran this month").find((row) => within(row).queryByText("Site audit"))!).getByText("20 being counted")).toBeTruthy();
+  });
+
+  it("a run still being counted is a line of the statement, with what it has counted so far and no balance yet", async () => {
+    pagesOf([...STATEMENT.lines, line("c8", OCT + 19 * DAY + 3_600_000, { kind: "siteAudit", website: own, user: "Anthony Basker", units: 340, out: 7, balance: null, from: [], counting: true })]);
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "creditUsage:usageSummary": SUMMARY,
+      "creditUsage:usageStatementTotals": { ...TOTALS, counting: 7 },
+    }));
+    at("/app/usage/statement");
+    render(<UsageStatementPage />);
+    expect(await screen.findByText("ronins.co.uk · being counted, 340 pages so far")).toBeTruthy();
+    expect(screen.getByText("Every open batch, less anything owed; 7 more being counted")).toBeTruthy();
   });
 
   it("the statement reads a page at a time: more to come says so, and its filters and order are asked of the server", async () => {

@@ -234,3 +234,26 @@ the table above is how it stands before it.
   opening balance opens the first page and the balance now closes the last;
   the CSV reads every page in turn (up to 50,000 lines). The "more lines than
   one page can hold" warning is gone.
+
+### Item 4 — Usage shows credits while a collection runs
+
+- A run still open — a collection under way — is **being counted**: what has
+  come back so far at its price (item 3 counts lists and crawls only as their
+  answers arrive, so this is never what was merely asked for). Read by
+  company (`creditCharges.by_company_state_at`, `runsBeingCounted`,
+  `convex/creditUsage.ts`); not taken from any batch until the run closes.
+- **Overview**: "Used this month" counts it in and says "Includes 728 being
+  counted" under its meter; "Plan credits left" and "Left on …" take it off;
+  today on the chart includes it; "Where they went" says "…, 728 of them still
+  being counted"; each website and each check counts it in its Credits, with
+  "728 being counted" beneath the figure, and both tables' bars add "includes
+  728 being counted". A kind or website with nothing charged yet but a run
+  under way now appears (Period House Group's empty Usage). "Each" stays what
+  a finished run took.
+- **Statement, By work, By website**: a run being counted is a line in date
+  order — "Site audit · corston.com · being counted, 1 page so far", its
+  credits so far in Out and no balance, since nothing has been taken; "Balance
+  now" says "…; 7 more being counted". By work's and By website's "Credits
+  this month" count it in and say so.
+- No kit part, heading or title changed: the approved outlines stand
+  (`usageLook.test.tsx`).

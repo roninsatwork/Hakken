@@ -37,10 +37,10 @@ export function UsageBreakdown({ by }: { by: "work" | "website" }) {
   const kinds = CREDIT_KIND_ORDER.filter((kind) => summary?.kinds.some((row) => row.kind === kind));
   const websites = summary?.websites ?? [];
   const menuItems = by === "work"
-    ? kinds.map((kind) => ({ id: kind, label: words.kind(kind), href: withMonth(`${base}?kind=${kind}`), count: words.number(summary?.kinds.find((row) => row.kind === kind)?.credits ?? 0) }))
+    ? kinds.map((kind) => ({ id: kind, label: words.kind(kind), href: withMonth(`${base}?kind=${kind}`), count: words.number((summary?.kinds.find((row) => row.kind === kind)?.credits ?? 0) + (summary?.kinds.find((row) => row.kind === kind)?.counting ?? 0)) }))
     : websites.map((row) => {
       const id = row.website?.websiteId ?? NOT_TIED;
-      return { id, label: row.website?.host ?? words.t("websites.none"), href: withMonth(`${base}?website=${id}`), count: words.number(row.credits) };
+      return { id, label: row.website?.host ?? words.t("websites.none"), href: withMonth(`${base}?website=${id}`), count: words.number(row.credits + row.counting) };
     });
   const asked = params.get(by === "work" ? "kind" : "website");
   const current = menuItems.find((item) => item.id === asked)?.id ?? menuItems[0]?.id ?? null;
@@ -51,7 +51,10 @@ export function UsageBreakdown({ by }: { by: "work" | "website" }) {
   const price = kind ? summary?.prices.find((row) => row.kind === kind) : undefined;
   // The month's figures from its rollups; its charges a page at a time (finish-off-plan.md, item 10).
   const picked = by === "work" ? kindRow : websiteRow;
-  const credits = picked?.credits ?? 0;
+  // What is still being counted — a collection under way — is counted in, and said (finish-off-plan.md, item 4).
+  const counting = picked?.counting ?? 0;
+  const credits = (picked?.credits ?? 0) + counting;
+  const everything = summary ? summary.used + summary.counting : 0;
   const runs = picked?.runs ?? 0;
   const people = picked?.people ?? 0;
 
@@ -94,14 +97,20 @@ export function UsageBreakdown({ by }: { by: "work" | "website" }) {
             <section className="flex min-w-0 flex-col gap-6">
               <ResearchSection title={sectionTitle} description={sectionAbout}>
                 <FigureRow>
-                  <Figure label={words.t("figures.creditsThisMonth")} value={words.number(credits)} detail={summary ? words.t("figures.shareOfAll", { share: summary.used ? `${Math.round((credits / summary.used) * 100)}%` : "–" }) : null} />
+                  <Figure
+                    label={words.t("figures.creditsThisMonth")}
+                    value={words.number(credits)}
+                    detail={summary ? (counting > 0
+                      ? words.t("figures.includesCounting", { counting: words.number(counting) })
+                      : words.t("figures.shareOfAll", { share: everything ? `${Math.round((credits / everything) * 100)}%` : "–" })) : null}
+                  />
                   <Figure label={words.t("figures.runs")} value={words.number(runs)} detail={people ? words.t("figures.startedBy", { count: people }) : words.t("figures.allScheduled")} />
                   {by === "work" ? (
                     <Figure label={words.t("figures.price")} value={price ? words.number(price.credits) : "…"} detail={kind && price ? words.price(kind, price) : null} />
                   ) : (
                     <Figure label={words.t("figures.checks")} value={words.number(websiteRow?.kinds.length ?? 0)} detail={websiteRow?.kinds.map((item) => words.kind(item)).join(", ") ?? null} />
                   )}
-                  <Figure label={words.t("figures.eachRun")} value={runs ? words.number(Math.round(credits / runs)) : "–"} detail={words.t("figures.eachRunDetail")} />
+                  <Figure label={words.t("figures.eachRun")} value={runs ? words.number(Math.round((credits - counting) / runs)) : "–"} detail={words.t("figures.eachRunDetail")} />
                 </FigureRow>
               </ResearchSection>
               <DataTable {...table} footer={table.footer} />

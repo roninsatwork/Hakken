@@ -12319,6 +12319,8 @@
     "owed": "Questo mese hai esaurito i crediti: ne sono stati usati altri {owed}. Non è stato fermato nulla.",
     "noCompany": "Scegli un’azienda per vederne l’utilizzo.",
     "nothingYet": "Questo mese non è ancora stato usato nessun credito.",
+    "counting": "di cui {counting} in conteggio",
+    "beingCounted": "{counting} in conteggio",
     "download": "Scarica CSV",
     "month": {
       "label": "Mese",
@@ -12397,7 +12399,8 @@
       "price": "Prezzo",
       "checks": "Controlli",
       "eachRun": "Ogni esecuzione",
-      "eachRunDetail": "Crediti per esecuzione, in media"
+      "eachRunDetail": "Crediti per esecuzione, in media",
+      "includesCounting": "Di cui {counting} in conteggio"
     },
     "chart": {
       "title": "I crediti di questo mese, giorno per giorno",
@@ -12409,6 +12412,7 @@
     "where": {
       "title": "Dove sono andati",
       "hint": "I {credits} crediti di questo mese, per tipo di lavoro.",
+      "hintCounting": "I {credits} crediti di questo mese, per tipo di lavoro, di cui {counting} ancora in conteggio.",
       "empty": "Questo mese non è ancora stato usato nessun credito.",
       "statement": "Il tuo estratto conto: ogni credito in entrata e in uscita"
     },
@@ -12515,6 +12519,7 @@
       "unused": "Non usati alla scadenza",
       "refund": "Restituiti: {kind}",
       "givenBack": "Il lavoro non è stato completato",
+      "beingCounted": "in conteggio, {units} finora",
       "recount": "Ricontato: {kind}",
       "recounted": "In risposta: {now}, non {before}",
       "nothingBack": "Non è arrivato nulla, quindi non si addebita nulla",
@@ -12531,7 +12536,8 @@
         "out": "In uscita",
         "outDetail": "{used} usati, al netto dei restituiti · {ended} scaduti senza uso",
         "closing": "Saldo attuale",
-        "closingDetail": "Ogni lotto aperto, meno quanto dovuto"
+        "closingDetail": "Ogni lotto aperto, meno quanto dovuto",
+        "closingCounting": "Ogni lotto aperto, meno quanto dovuto; altri {counting} in conteggio"
       },
       "columns": {
         "date": "Data",

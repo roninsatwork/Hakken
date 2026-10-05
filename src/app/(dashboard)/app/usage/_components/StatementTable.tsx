@@ -76,6 +76,12 @@ function describe(line: StatementLine, words: UsageWords, platformName: string) 
     if (line.detail) parts.push(line.detail);
     if (line.reason === "nothingBack" || (line.units === 0 && line.kind)) parts.push(words.t("statement.nothingBack"));
     else if (line.kind) parts.push(words.t("statement.recounted", { now: words.t(`units.${line.kind}`, { count: line.units }), before: words.number(line.before ?? 0) }));
+  } else if (line.counting) {
+    // A run still being counted (finish-off-plan.md, item 4): what has come back so far, its credits not taken yet.
+    title = line.kind ? words.kind(line.kind) : "";
+    if (line.website) parts.push(line.website.host);
+    if (line.detail) parts.push(line.detail);
+    if (line.kind) parts.push(words.t("statement.beingCounted", { units: words.t(`units.${line.kind}`, { count: line.units }) }));
   } else {
     const kindName = line.kind ? words.kind(line.kind) : "";
     title = line.entry === "refund" ? words.t("statement.refund", { kind: kindName }) : kindName;

@@ -40,10 +40,43 @@ type LineRow = Summary["lines"][number];
 const NOT_TIED = "none";
 const keyOf = (website: { websiteId: string } | null) => website?.websiteId ?? NOT_TIED;
 
+/**
+ * The month as the Overview shows it, with what is still being counted — a
+ * collection under way, its credits not yet taken — counted in everywhere
+ * (finish-off-plan.md, item 4): used, each kind, website and check, today on
+ * the chart, and taken off what the plan has left. Each row keeps its
+ * `counting`, so the screen can say "includes 728 being counted".
+ */
+function withCounting(summary: Summary): Summary {
+  if (summary.counting <= 0) return summary;
+  const plus = <Row extends { credits: number; counting: number }>(row: Row): Row => ({ ...row, credits: row.credits + row.counting });
+  const today = summary.today === null ? -1 : summary.today - 1;
+  return {
+    ...summary,
+    used: summary.used + summary.counting,
+    plan: { ...summary.plan, left: summary.plan.left - summary.counting },
+    byDay: summary.byDay.map((credits, index) => (index === today ? credits + summary.counting : credits)),
+    kinds: summary.kinds.map(plus),
+    websites: summary.websites.map(plus),
+    lines: summary.lines.map(plus),
+  };
+}
+
+/** A row's credits with "being counted" beneath, when some of them are. */
+function CreditsCell({ credits, counting, words }: { credits: number; counting: number; words: UsageWords }) {
+  return (
+    <span className="flex flex-col items-end">
+      <span className="font-mono text-[13px] text-foreground">{words.number(credits)}</span>
+      {counting > 0 ? <span className="whitespace-nowrap text-[11px] text-secondary">{words.t("beingCounted", { counting: words.number(counting) })}</span> : null}
+    </span>
+  );
+}
+
 export default function UsageOverviewPage() {
   const words = useUsageWords();
   const { month, withMonth } = useUsageMonth();
-  const summary = useQuery(api.creditUsage.usageSummary, { month });
+  const answered = useQuery(api.creditUsage.usageSummary, { month });
+  const summary = answered ? withCounting(answered) : answered;
   const [picked, setPicked] = useState<string | null>(null);
 
   return (
@@ -85,7 +118,12 @@ function Overview({ summary, words, picked, onPick, statementHref }: {
         <Figure
           label={words.t("figures.used", { plan: words.number(summary?.plan.granted ?? 0) })}
           value={summary ? words.number(summary.used) : "…"}
-          detail={summary ? <Meter value={summary.plan.granted ? summary.used / summary.plan.granted : null} size="md" /> : null}
+          detail={summary ? (
+            <span className="flex flex-col gap-1.5">
+              <Meter value={summary.plan.granted ? summary.used / summary.plan.granted : null} size="md" />
+              {summary.counting > 0 ? <span>{words.t("figures.includesCounting", { counting: words.number(summary.counting) })}</span> : null}
+            </span>
+          ) : null}
         />
         {summary?.forecast ? (
           <Figure
@@ -175,7 +213,14 @@ function runningTotals(values: number[]): number[] {
 function WhereTheyWent({ summary, words, statementHref }: { summary: Summary | undefined; words: UsageWords; statementHref: string }) {
   const top = summary?.kinds[0]?.credits ?? 0;
   return (
-    <ChartCard title={words.t("where.title")} hint={summary ? words.t("where.hint", { credits: words.number(summary.used) }) : null} enoughData={(summary?.kinds.length ?? 0) > 0} emptyText={words.t("where.empty")}>
+    <ChartCard
+      title={words.t("where.title")}
+      hint={summary ? (summary.counting > 0
+        ? words.t("where.hintCounting", { credits: words.number(summary.used), counting: words.number(summary.counting) })
+        : words.t("where.hint", { credits: words.number(summary.used) })) : null}
+      enoughData={(summary?.kinds.length ?? 0) > 0}
+      emptyText={words.t("where.empty")}
+    >
       <div className="flex flex-col gap-4">
         {summary?.kinds.map((row) => (
           <div key={row.kind} className="flex flex-col gap-2">
@@ -216,6 +261,7 @@ function WebsitesTable({ summary, words, picked, onPick }: { summary: Summary | 
   const top = Math.max(1, ...(summary?.websites.map((row) => row.credits) ?? [1]));
   const owned = summary?.websites.filter((row) => row.website?.relationship === "owned").reduce((sum, row) => sum + row.credits, 0) ?? 0;
   const tracked = summary?.websites.filter((row) => row.website?.relationship === "tracked").reduce((sum, row) => sum + row.credits, 0) ?? 0;
+  const counting = summary?.counting ?? 0;
   const checks = (row: WebsiteRow) => row.kinds.map((kind: CreditKind) => words.kind(kind)).join(", ");
   return (
     <DataTable
@@ -246,6 +292,7 @@ function WebsitesTable({ summary, words, picked, onPick }: { summary: Summary | 
           ]} />}
         >
           <span className="text-[13px] text-secondary">{words.t("websites.totals", { owned: words.number(owned), tracked: words.number(tracked) })}</span>
+          {counting > 0 ? <span className="text-[13px] text-secondary">{words.t("counting", { counting: words.number(counting) })}</span> : null}
         </TableBar>
       )}
       footer={{ mode: "paged", page: paged.page, totalPages: paged.totalPages, totalCount: paged.totalItems, pageSize: paged.pageSize, isLoading: summary === undefined, onPageChange: setPage }}
@@ -254,7 +301,7 @@ function WebsitesTable({ summary, words, picked, onPick }: { summary: Summary | 
         { key: "relationship", header: words.t("websites.columns.relationship"), cell: (row) => <TagLabel>{relationshipWord(words, row.website)}</TagLabel> },
         { key: "checks", header: words.t("websites.columns.checks"), cell: (row) => <span className="text-[12px] text-secondary">{checks(row)}</span> },
         { key: "runs", header: words.t("websites.columns.runs"), align: "right", cell: (row) => <span className="font-mono text-[12px] tabular-nums">{words.number(row.runs)}</span> },
-        { key: "credits", header: words.t("websites.columns.credits"), align: "right", cell: (row) => <span className="font-mono text-[13px] text-foreground">{words.number(row.credits)}</span> },
+        { key: "credits", header: words.t("websites.columns.credits"), align: "right", cell: (row) => <CreditsCell credits={row.credits} counting={row.counting} words={words} /> },
         { key: "share", header: words.t("websites.columns.share"), className: "w-[200px]", cell: (row) => <ShareCell part={row.credits} whole={summary?.used ?? 0} top={top} /> },
       ]}
     />
@@ -285,7 +332,9 @@ function LinesTable({ summary, words, picked, onPick }: { summary: Summary | und
   const paged = paginateItems(rows ?? [], page);
   const top = Math.max(1, ...(summary?.lines.map((row) => row.credits) ?? [1]));
   const total = rows?.reduce((sum, row) => sum + row.credits, 0) ?? 0;
-  const each = (row: LineRow) => (row.runs > 0 ? Math.round(row.credits / row.runs) : 0);
+  const counting = rows?.reduce((sum, row) => sum + row.counting, 0) ?? 0;
+  // What a run took on average: runs being counted are not runs yet.
+  const each = (row: LineRow) => (row.runs > 0 ? Math.round((row.credits - row.counting) / row.runs) : 0);
   const pickedName = picked ? hosts.find(([key]) => key === picked)?.[1]?.host ?? words.t("websites.none") : null;
   return (
     <DataTable
@@ -319,6 +368,7 @@ function LinesTable({ summary, words, picked, onPick }: { summary: Summary | und
           ]} />}
         >
           <span className="text-[13px] text-secondary">{words.t("lines.totals", { credits: words.number(total) })}</span>
+          {counting > 0 ? <span className="text-[13px] text-secondary">{words.t("counting", { counting: words.number(counting) })}</span> : null}
         </TableBar>
       )}
       footer={{ mode: "paged", page: paged.page, totalPages: paged.totalPages, totalCount: paged.totalItems, pageSize: paged.pageSize, isLoading: summary === undefined, onPageChange: setPage }}
@@ -337,7 +387,7 @@ function LinesTable({ summary, words, picked, onPick }: { summary: Summary | und
         { key: "often", header: words.t("lines.columns.often"), cell: (row) => <TagLabel>{oftenOf(row)}</TagLabel> },
         { key: "runs", header: words.t("lines.columns.runs"), align: "right", cell: (row) => <span className="font-mono text-[12px] tabular-nums">{words.number(row.runs)}</span> },
         { key: "each", header: words.t("lines.columns.each"), align: "right", cell: (row) => <span className="font-mono text-[12px] tabular-nums text-secondary">{words.number(each(row))}</span> },
-        { key: "credits", header: words.t("lines.columns.credits"), align: "right", cell: (row) => <span className="font-mono text-[13px] text-foreground">{words.number(row.credits)}</span> },
+        { key: "credits", header: words.t("lines.columns.credits"), align: "right", cell: (row) => <CreditsCell credits={row.credits} counting={row.counting} words={words} /> },
         { key: "share", header: words.t("lines.columns.share"), className: "w-[200px]", cell: (row) => <ShareCell part={row.credits} whole={summary?.used ?? 0} top={top} /> },
       ]}
     />

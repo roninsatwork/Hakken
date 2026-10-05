@@ -7,7 +7,7 @@ import { appError } from "./utils/appError";
 import { isTrackedHold } from "./utils/websitePairing";
 import { websiteIconUrl } from "./websiteIcons";
 import { cadenceOf, DAY_MS, EVERY_DAYS } from "./seoRunEstimate";
-import { DEFAULT_CREDIT_PRICES, DEFAULT_PLAN_CREDITS, creditDayOf, creditMonthNamed, creditMonthOf, type CreditKind } from "./creditKinds";
+import { DEFAULT_CREDIT_PRICES, DEFAULT_PLAN_CREDITS, creditDayOf, creditMonthNamed, creditMonthOf, creditsForUnits, type CreditKind } from "./creditKinds";
 import { creditEntryValidator, creditKindValidator, creditReasonValidator, creditSourceValidator } from "./creditSchema";
 
 /**
@@ -48,6 +48,30 @@ async function dayTotals(ctx: Reader, companyId: Id<"companies">, startDay: stri
     .query("creditDayTotals")
     .withIndex("by_company_day", (q) => q.eq("companyId", companyId).gte("day", startDay).lt("day", endDay))
     .take(31);
+}
+
+/** Runs read as being counted at once: every website and kind of a few collections under way. */
+const COUNTING_READ = 300;
+
+/**
+ * A company's runs still being counted — a collection under way, its charge
+ * open (finish-off-plan.md, item 4) — each with the credits what has come
+ * back so far comes to at its price. Not taken from any batch until the run
+ * closes; shown as "being counted" until then.
+ */
+async function runsBeingCounted(ctx: Reader, companyId: Id<"companies">) {
+  const open = await ctx.db
+    .query("creditCharges")
+    .withIndex("by_company_state_at", (q) => q.eq("companyId", companyId).eq("state", "open"))
+    .take(COUNTING_READ);
+  return open.flatMap((charge) => (charge.kind && charge.entry === "charge"
+    ? [{ kind: charge.kind, websiteKey: charge.websiteId ?? "none", credits: countingCredits(charge) }]
+    : []));
+}
+
+/** What an open run's units come to so far, at the price it opened at. */
+function countingCredits(charge: Doc<"creditCharges">): number {
+  return charge.kind ? creditsForUnits(charge.price ?? DEFAULT_CREDIT_PRICES[charge.kind], charge.units) : 0;
 }
 
 /** A month's days as an array of credits, one per UK day. */
@@ -191,8 +215,12 @@ function median(values: number[]): number {
 
 // ---------------------------------------------------------------- the summary
 
-/** A kind's month: its credits, runs, and how many people started work of it by hand (from the rollups' `byHandUsers`). */
-const kindTotalShape = v.object({ kind: creditKindValidator, credits: v.number(), runs: v.number(), people: v.number() });
+/**
+ * A kind's month: its credits charged, runs, how many people started work of
+ * it by hand (from the rollups' `byHandUsers`), and the credits of its runs
+ * still being counted — a collection under way (finish-off-plan.md, item 4).
+ */
+const kindTotalShape = v.object({ kind: creditKindValidator, credits: v.number(), runs: v.number(), people: v.number(), counting: v.number() });
 
 const summaryShape = v.object({
   month: v.string(),
@@ -204,7 +232,10 @@ const summaryShape = v.object({
   plan: v.object({ granted: v.number(), left: v.number(), endsAt: v.number() }),
   bought: v.object({ left: v.number(), nextEndsAt: v.union(v.number(), v.null()), nextEndsLeft: v.number() }),
   owed: v.number(),
+  /** Credits charged this month. */
   used: v.number(),
+  /** This month only: credits of runs still being counted, not yet taken — a collection under way (item 4). */
+  counting: v.number(),
   byDay: v.array(v.number()),
   previous: v.object({ month: v.string(), granted: v.number(), byDay: v.array(v.number()) }),
   kinds: v.array(kindTotalShape),
@@ -213,6 +244,7 @@ const summaryShape = v.object({
     credits: v.number(),
     runs: v.number(),
     people: v.number(),
+    counting: v.number(),
     kinds: v.array(creditKindValidator),
   })),
   lines: v.array(v.object({
@@ -220,6 +252,7 @@ const summaryShape = v.object({
     website: v.union(websiteShape, v.null()),
     credits: v.number(),
     runs: v.number(),
+    counting: v.number(),
     /** Days apart for a scheduled check; null for work started by hand. */
     everyDays: v.union(v.number(), v.null()),
   })),
@@ -251,22 +284,31 @@ export const usageSummary = tenantQuery({
     const previousPlan = await ctx.db.query("creditBatches").withIndex("by_company_month", (q) => q.eq("companyId", companyId).eq("month", previous.month)).first();
     const topUps = batches.filter((batch) => batch.source === "topup" && batch.left > 0 && batch.endsAt > now);
 
-    const kinds = new Map<CreditKind, { credits: number; runs: number; people: Set<string> }>();
-    const sites = new Map<string, { credits: number; runs: number; kinds: Set<CreditKind>; people: Set<string> }>();
-    const lines = new Map<string, { kind: CreditKind; websiteKey: string; credits: number; runs: number }>();
-    for (const row of rows) {
-      const kind = row.kind as CreditKind;
-      const k = kinds.get(kind) ?? { credits: 0, runs: 0, people: new Set<string>() };
-      for (const userId of row.byHandUsers ?? []) k.people.add(userId);
-      kinds.set(kind, { credits: k.credits + row.credits, runs: k.runs + row.runs, people: k.people });
-      const s = sites.get(row.websiteKey) ?? { credits: 0, runs: 0, kinds: new Set<CreditKind>(), people: new Set<string>() };
-      s.kinds.add(kind);
-      for (const userId of row.byHandUsers ?? []) s.people.add(userId);
-      sites.set(row.websiteKey, { credits: s.credits + row.credits, runs: s.runs + row.runs, kinds: s.kinds, people: s.people });
-      const lineKey = `${kind}:${row.websiteKey}`;
-      const l = lines.get(lineKey) ?? { kind, websiteKey: row.websiteKey, credits: 0, runs: 0 };
-      lines.set(lineKey, { ...l, credits: l.credits + row.credits, runs: l.runs + row.runs });
-    }
+    type Total = { credits: number; runs: number; counting: number; people: Set<string>; kinds: Set<CreditKind> };
+    const total = (): Total => ({ credits: 0, runs: 0, counting: 0, people: new Set<string>(), kinds: new Set<CreditKind>() });
+    const kinds = new Map<CreditKind, Total>();
+    const sites = new Map<string, Total>();
+    const lines = new Map<string, Total & { kind: CreditKind; websiteKey: string }>();
+    /** One month's row, or one run still being counted, into the kind, the website and the check it belongs to. */
+    const add = (kind: CreditKind, websiteKey: string, change: { credits?: number; runs?: number; counting?: number; people?: readonly string[] }) => {
+      const lineKey = `${kind}:${websiteKey}`;
+      const targets = [
+        kinds.get(kind) ?? kinds.set(kind, total()).get(kind)!,
+        sites.get(websiteKey) ?? sites.set(websiteKey, total()).get(websiteKey)!,
+        lines.get(lineKey) ?? lines.set(lineKey, { ...total(), kind, websiteKey }).get(lineKey)!,
+      ];
+      for (const target of targets) {
+        target.credits += change.credits ?? 0;
+        target.runs += change.runs ?? 0;
+        target.counting += change.counting ?? 0;
+        target.kinds.add(kind);
+        for (const userId of change.people ?? []) target.people.add(userId);
+      }
+    };
+    for (const row of rows) add(row.kind as CreditKind, row.websiteKey, { credits: row.credits, runs: row.runs, people: row.byHandUsers });
+    // This month, runs still being counted: what has come back so far, at their price (finish-off-plan.md, item 4).
+    const counting = month.current ? await runsBeingCounted(ctx, companyId) : [];
+    for (const run of counting) add(run.kind, run.websiteKey, { counting: run.credits });
 
     const websiteIds = [...sites.keys()].filter((key) => key !== "none") as Id<"websites">[];
     const websites = await websitesOf(ctx, companyId, websiteIds);
@@ -274,6 +316,7 @@ export const usageSummary = tenantQuery({
     const everyOf = new Map(scheduled.map((check) => [`${check.kind}:${check.website?.websiteId ?? "none"}`, check.everyDays]));
 
     const used = rows.reduce((sum, row) => sum + row.credits, 0);
+    const beingCounted = counting.reduce((sum, run) => sum + run.credits, 0);
     const today = month.current ? Math.floor((now - month.startsAt) / DAY_MS) + 1 : null;
     const granted = planBatch?.granted ?? planCredits;
     const planLeft = planBatch ? (planBatch.state === "open" ? planBatch.left : 0) : granted;
@@ -282,7 +325,7 @@ export const usageSummary = tenantQuery({
       const booked = scheduled.reduce((sum, check) => sum + check.toMonthEnd, 0);
       const byHand = days.reduce((sum, day) => sum + day.byHand, 0);
       const pace = Math.round((byHand / today) * (month.days - today));
-      forecast = { booked, pace, leftAtEnd: planLeft - booked - pace };
+      forecast = { booked, pace, leftAtEnd: planLeft - beingCounted - booked - pace };
     }
 
     const nextTopUp = topUps[0] ?? null;
@@ -301,21 +344,26 @@ export const usageSummary = tenantQuery({
       },
       owed: account?.owed ?? 0,
       used,
+      counting: beingCounted,
       byDay: creditsByDay(days, month.month, month.days),
       previous: { month: previous.month, granted: previousPlan?.granted ?? planCredits, byDay: creditsByDay(previousDays, previous.month, previous.days) },
-      kinds: [...kinds.entries()].map(([kind, total]) => ({ kind, credits: total.credits, runs: total.runs, people: total.people.size })).sort((a, b) => b.credits - a.credits),
+      // Biggest first, what is being counted included.
+      kinds: [...kinds.entries()]
+        .map(([kind, sum]) => ({ kind, credits: sum.credits, runs: sum.runs, people: sum.people.size, counting: sum.counting }))
+        .sort((a, b) => b.credits + b.counting - (a.credits + a.counting)),
       websites: [...sites.entries()]
-        .map(([key, total]) => ({ website: key === "none" ? null : websites.get(key) ?? null, credits: total.credits, runs: total.runs, people: total.people.size, kinds: [...total.kinds] }))
-        .sort((a, b) => b.credits - a.credits),
+        .map(([key, sum]) => ({ website: key === "none" ? null : websites.get(key) ?? null, credits: sum.credits, runs: sum.runs, people: sum.people.size, counting: sum.counting, kinds: [...sum.kinds] }))
+        .sort((a, b) => b.credits + b.counting - (a.credits + a.counting)),
       lines: [...lines.values()]
         .map((line) => ({
           kind: line.kind,
           website: line.websiteKey === "none" ? null : websites.get(line.websiteKey) ?? null,
           credits: line.credits,
           runs: line.runs,
+          counting: line.counting,
           everyDays: everyOf.get(`${line.kind}:${line.websiteKey}`) ?? null,
         }))
-        .sort((a, b) => b.credits - a.credits),
+        .sort((a, b) => b.credits + b.counting - (a.credits + a.counting)),
       prices: (Object.keys(DEFAULT_CREDIT_PRICES) as CreditKind[]).map((kind) => {
         const saved = prices.find((price) => price.kind === kind);
         return { kind, credits: saved?.credits ?? DEFAULT_CREDIT_PRICES[kind].credits, per: saved?.per ?? DEFAULT_CREDIT_PRICES[kind].per };
@@ -386,6 +434,8 @@ const statementLineShape = v.object({
   from: v.array(v.object({ source: creditSourceValidator, month: v.union(v.string(), v.null()), startsAt: v.number() })),
   /** A grant's or an ending's own batch: its month, and when it began and ends. */
   batch: v.union(v.object({ source: creditSourceValidator, month: v.union(v.string(), v.null()), startsAt: v.number(), endsAt: v.number() }), v.null()),
+  /** A run still being counted — a collection under way (finish-off-plan.md, item 4): its credits so far, not yet taken, and no balance after it. */
+  counting: v.boolean(),
 });
 
 /** The statement's balance before a moment: the newest charged line's before it, among the last few. */
@@ -454,7 +504,8 @@ export const usageStatement = tenantQuery({
         ? ctx.db.query("creditCharges").withIndex("by_company_website_at", (q) => q.eq("companyId", companyId).eq("websiteId", websiteId).gte("at", startsAt).lt("at", endsAt))
         : ctx.db.query("creditCharges").withIndex("by_company_at", (q) => q.eq("companyId", companyId).gte("at", startsAt).lt("at", endsAt));
     const page = await query.order(args.order ?? "asc").paginate(opts);
-    const rows = page.page.filter((row) => row.state === "charged"
+    // Charged lines, and runs still being counted (item 4).
+    const rows = page.page.filter((row) => (row.state === "charged" || (row.state === "open" && row.entry === "charge"))
       && (args.userId === undefined || row.userId === args.userId)
       && (website === undefined || row.websiteId === websiteId)
       && (args.chargesOnly !== true || row.entry === "charge"));
@@ -481,6 +532,8 @@ export const usageStatementTotals = tenantQuery({
     otherIn: v.number(),
     used: v.number(),
     ended: v.number(),
+    /** This month: credits of runs still being counted, not in the balance yet (item 4). */
+    counting: v.number(),
     /** The company's people, for the User filter. */
     people: v.array(v.object({ userId: v.id("users"), name: v.string() })),
   }), v.null()),
@@ -510,7 +563,9 @@ export const usageStatementTotals = tenantQuery({
     const open = opening ?? 0;
     const now = closing ?? open;
     const out = open + planIn + otherIn - now;
-    return { month: month.month, opening: open, closing: now, planIn, otherIn, used: out - ended, ended, people };
+    // This month: the credits of runs still being counted, not yet taken (item 4).
+    const counting = month.current ? (await runsBeingCounted(ctx, companyId)).reduce((sum, run) => sum + run.credits, 0) : 0;
+    return { month: month.month, opening: open, closing: now, planIn, otherIn, used: out - ended, ended, counting, people };
   },
 });
 
@@ -536,7 +591,8 @@ async function statementLines(ctx: Reader, companyId: Id<"companies">, charged: 
     user: row.userId ? names.get(row.userId) ?? null : null,
     how: row.how,
     units: row.units,
-    out: row.creditsOut,
+    out: row.state === "open" ? countingCredits(row) : row.creditsOut,
+    counting: row.state === "open",
     in: row.creditsIn,
     balance: row.balanceAfter ?? null,
     detail: row.detail ?? null,

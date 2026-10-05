@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api } from "./_generated/api";
 import type { MutationCtx } from "./_generated/server";
 import schema from "./schema";
-import { chargeCreditsNow } from "./creditLedger";
+import { addToCreditRun, chargeCreditsNow, openCreditRun } from "./creditLedger";
 
 /**
  * What the Usage screens read (docs/plans/active/usage-credits-plan.md,
@@ -62,7 +62,7 @@ describe("usage screens' reads", () => {
     // Six rankings runs at 4 credits, and one question.
     expect(summary.used).toBe(25);
     expect(summary.plan).toMatchObject({ granted: 10_000, left: 9975 });
-    expect(summary.kinds).toEqual([{ kind: "rankings", credits: 24, runs: 6, people: 0 }, { kind: "assistant", credits: 1, runs: 1, people: 1 }]);
+    expect(summary.kinds).toEqual([{ kind: "rankings", credits: 24, runs: 6, people: 0, counting: 0 }, { kind: "assistant", credits: 1, runs: 1, people: 1, counting: 0 }]);
     const byWebsite = new Map(summary.websites.map((row) => [row.website?.websiteId ?? "none", row]));
     expect(byWebsite.get(own)).toMatchObject({ credits: 12, runs: 3, website: { host: "acme.com", relationship: "owned" } });
     expect(byWebsite.get(competitor)).toMatchObject({ credits: 12, website: { relationship: "tracked" } });
@@ -125,6 +125,31 @@ describe("usage screens' reads", () => {
     expect(searched.page).toHaveLength(3);
     const byKindName = await asAnthony.query(api.creditUsage.usageStatement, { paginationOpts: { cursor: null, numItems: 20 }, search: "hakken", searchKinds: ["assistant"] });
     expect(byKindName.page.map((line) => line.kind)).toEqual(["assistant"]);
+  });
+
+  test("a collection under way shows as being counted: in the month, its kind and website, and as a line (finish-off-plan.md, item 4)", async () => {
+    const t = convexTest(schema, modules);
+    const { anthony, own } = await seed(t);
+    await t.run(async (raw) => {
+      const ctx = asCtx(raw);
+      const companyId = (await ctx.db.get(anthony))!.companyId!;
+      // A site audit under way: 340 pages counted so far, at 1 credit a 50 — 7 credits, not taken yet.
+      const run = await openCreditRun(ctx, { companyId, kind: "siteAudit", runKey: "cycle:running", how: "scheduled", websiteId: own, userId: anthony }, Date.now() - 5_000);
+      await addToCreditRun(ctx, run, { units: 340, lines: 1 });
+    });
+    const asAnthony = t.withIdentity({ subject: anthony });
+    const summary = await asAnthony.query(api.creditUsage.usageSummary, {});
+    expect(summary?.used).toBe(25);
+    expect(summary?.counting).toBe(7);
+    expect(summary?.kinds.find((row) => row.kind === "siteAudit")).toMatchObject({ credits: 0, runs: 0, counting: 7 });
+    expect(summary?.websites.find((row) => row.website?.websiteId === own)).toMatchObject({ credits: 12, counting: 7 });
+    // Not taken: the plan still holds them, and the forecast takes them off what will be left.
+    expect(summary?.plan.left).toBe(9975);
+
+    const statement = await asAnthony.query(api.creditUsage.usageStatement, { paginationOpts: { cursor: null, numItems: 50 }, order: "desc" });
+    expect(statement.page.find((line) => line.counting)).toMatchObject({ kind: "siteAudit", out: 7, units: 340, balance: null });
+    const totals = await asAnthony.query(api.creditUsage.usageStatementTotals, {});
+    expect(totals).toMatchObject({ counting: 7, closing: 9975, used: 25 });
   });
 
   test("coming up: each scheduled check's next run and what it will use", async () => {
