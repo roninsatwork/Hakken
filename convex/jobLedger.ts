@@ -71,8 +71,9 @@ const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
     ctx.runAction(internal.platformAlerts.dispatchPlatformAlerts, { daysBack: 7 }),
   "wiki-weekly-report": (ctx) => ctx.runAction(internal.wikiReport.sendWeeklyReports, {}),
   "wiki-exam-growth": (ctx) => ctx.runAction(internal.wikiExamGrowthActions.examGrowthSweep, {}),
-  // The Sites lists' compact copies: any not rebuilt in a day is rebuilt
-  // (docs/plans/active/sites-table-pages-plan.md §5.2).
+  // The Sites lists' compact copies: any out of date with its data — changed
+  // since its last rebuild began, or that rebuild failed — is rebuilt
+  // (docs/plans/active/sites-table-pages-plan.md §5.2; dataforseo-cost-plan.md, A1).
   "sites-list-copy-refresh": (ctx) => ctx.runMutation(internal.siteListCopies.refreshListCopies, { cursor: null }),
   // Credits: batches whose time is up end, and runs of collections that
   // finished without their last answer close (docs/plans/active/usage-credits-plan.md).

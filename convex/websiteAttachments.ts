@@ -6,7 +6,7 @@ import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
 import { findOrCreateWebsite, requireHost } from "./websites";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { requestGroupGapRebuilds } from "./siteRankings";
+import { noteGroupGapsChanged, requestGroupGapRebuilds } from "./siteRankings";
 import { requestListRecount } from "./siteListAi";
 
 /**
@@ -240,8 +240,13 @@ export const setTrackedPairing = superAdminMutation({
         : {}),
       updatedAt: Date.now(),
     });
-    // It leaves one owned site's group and joins another's: both lists count again.
-    for (const owner of [before, against]) if (owner) await requestListRecount(ctx, owner._id);
+    // It leaves one owned site's group and joins another's: both lists count
+    // again, and both groups' gaps are rebuilt that night (dataforseo-cost-plan.md, A1).
+    for (const owner of [before, against]) {
+      if (!owner) continue;
+      await requestListRecount(ctx, owner._id);
+      await noteGroupGapsChanged(ctx, owner);
+    }
 
     await ctx.db.insert("auditLogs", {
       actorId: ctx.userId,

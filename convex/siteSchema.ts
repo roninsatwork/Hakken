@@ -915,6 +915,21 @@ export const siteTables = {
      * 2.3). Cleared when it ends; one that died frees it after `REBUILD_TURN_MS`.
      */
     runningSince: v.optional(v.number()),
+    /**
+     * When the data behind this key last changed: set when a rebuild is asked
+     * for (`claimSchedule`), and where a source changes without asking for one
+     * (`noteDataChanged`). Absent on a row written before 2026-10-05, when
+     * `requestedAt` says it.
+     */
+    changedAt: v.optional(v.number()),
+    /**
+     * When the last rebuild under this key to finish began reading: what it
+     * built is current to here. The nightly refresh rebuilds a list's copy
+     * only when its data changed after this (`refreshListCopies`;
+     * docs/plans/active/dataforseo-cost-plan.md, A1). Absent until one has
+     * finished, or after one that failed.
+     */
+    builtFrom: v.optional(v.number()),
   }).index("by_key", ["key"]),
 
   /**

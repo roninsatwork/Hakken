@@ -305,8 +305,9 @@ crons.monthly(
 );
 
 // The Sites lists' compact copies (docs/plans/active/sites-table-pages-plan.md
-// §5.2): each is rebuilt when its rows change; this catches any that missed
-// its rebuild, so no table counts from a copy more than a day old.
+// §5.2): each is rebuilt when its rows change; this catches any whose data
+// changed after its last rebuild began, or whose rebuild failed, and leaves
+// the rest alone (dataforseo-cost-plan.md, A1).
 crons.daily(
   "sites-list-copy-refresh",
   { hourUTC: 3, minuteUTC: 30 },

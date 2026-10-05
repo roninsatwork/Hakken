@@ -19,7 +19,8 @@ import {
 import * as websiteShapes from "./utils/websiteShapes";
 import { anyCompanyOwns, isTrackedHold, pairedOwnedHold, refuseIfPaired } from "./utils/websitePairing";
 import { countOpenMoves, purgeHoldMoves } from "./websiteMoves";
-import { requestGroupGapRebuilds } from "./siteRankings";
+import { noteGroupGapsChanged, requestGroupGapRebuilds } from "./siteRankings";
+import { noteHoldPagesChanged } from "./holdPages";
 import { requestListRecount } from "./siteListAi";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -894,7 +895,12 @@ export const setCompanyWebsiteLocation = superAdminMutation({
       updatedAt: Date.now(),
     });
     // Its questions are answered from the new place: its AI figures are those answers'.
-    if (!isTrackedHold(companyWebsite)) await requestListRecount(ctx, args.companyWebsiteId);
+    if (!isTrackedHold(companyWebsite)) {
+      await requestListRecount(ctx, args.companyWebsiteId);
+      // Its group's gaps and its Your pages read rankings from the place: rebuilt that night (dataforseo-cost-plan.md, A1).
+      await noteGroupGapsChanged(ctx, companyWebsite);
+      await noteHoldPagesChanged(ctx, args.companyWebsiteId);
+    }
 
     await ctx.db.insert("auditLogs", {
       actorId: ctx.userId,

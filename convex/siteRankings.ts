@@ -378,6 +378,11 @@ export function gapRebuildKey(companyWebsiteId: Id<"companyWebsites">): string {
   return `gap:${companyWebsiteId}`;
 }
 
+/** The key a hold's Your pages rebuild is asked for and takes its turn under (`holdPages.ts`). */
+export function holdPagesKey(holdId: Id<"companyWebsites">): string {
+  return `holdPages:${holdId}`;
+}
+
 /**
  * Mark a request pending and schedule it, unless one is already waiting.
  * Returns whether this call scheduled the work.
@@ -387,10 +392,48 @@ export async function claimSchedule(ctx: MutationCtx, key: string): Promise<bool
     .query("siteSummaryRequests")
     .withIndex("by_key", (q) => q.eq("key", key))
     .unique();
+  // Already waiting: the rebuild has not begun, so it reads this change too.
   if (existing?.pending) return false;
-  if (existing) await ctx.db.patch(existing._id, { pending: true, requestedAt: Date.now() });
-  else await ctx.db.insert("siteSummaryRequests", { key, pending: true, requestedAt: Date.now() });
+  const now = Date.now();
+  // A rebuild asked for is data changed: noted for the nightly refresh (`refreshListCopies`).
+  if (existing) await ctx.db.patch(existing._id, { pending: true, requestedAt: now, changedAt: now });
+  else await ctx.db.insert("siteSummaryRequests", { key, pending: true, requestedAt: now, changedAt: now });
   return true;
+}
+
+/**
+ * Note that the data behind a rebuild key changed, without asking for the
+ * rebuild now: a source that changes rarely and asked for none before — a
+ * Search Console disconnected, a limit changed, a page's kind judged — is
+ * rebuilt by the nightly refresh (`refreshListCopies`), as it was when that
+ * refresh rebuilt every copy (docs/plans/active/dataforseo-cost-plan.md, A1).
+ * Written only when the key is not already marked changed since its last
+ * rebuild began.
+ */
+export async function noteDataChanged(ctx: MutationCtx, key: string): Promise<void> {
+  const existing = await ctx.db
+    .query("siteSummaryRequests")
+    .withIndex("by_key", (q) => q.eq("key", key))
+    .unique();
+  const now = Date.now();
+  if (!existing) {
+    await ctx.db.insert("siteSummaryRequests", { key, pending: false, requestedAt: now, changedAt: now });
+    return;
+  }
+  // Marked after the last rebuild began, or the one running now: that mark stands.
+  const lastBuild = Math.max(existing.builtFrom ?? 0, existing.runningSince ?? 0);
+  if ((existing.changedAt ?? existing.requestedAt) > lastBuild) return;
+  await ctx.db.patch(existing._id, { changedAt: now });
+}
+
+/**
+ * Whether what a key's last rebuild built is out of date with its data: its
+ * data changed after that rebuild began, or none has finished — never built,
+ * or the last one failed. What the nightly refresh rebuilds.
+ */
+export function outOfDate(row: Pick<Doc<"siteSummaryRequests">, "requestedAt" | "changedAt" | "builtFrom"> | null): boolean {
+  if (!row || row.builtFrom === undefined) return true;
+  return (row.changedAt ?? row.requestedAt) > row.builtFrom;
 }
 
 /** Ask for a site's summaries to be rebuilt from one place, once, shortly. */
@@ -417,6 +460,20 @@ export async function requestGroupGapRebuilds(ctx: MutationCtx, owner: Doc<"comp
     .take(HOLDS_READ))
     .filter(isTrackedHold);
   for (const member of [owner, ...competitors]) await requestGapRebuild(ctx, member._id);
+}
+
+/**
+ * Note that the gap of every hold in an owned site's group changed — a
+ * competitor moved between groups, the group's place changed — for the
+ * nightly refresh to rebuild (`refreshListCopies`; dataforseo-cost-plan.md, A1).
+ */
+export async function noteGroupGapsChanged(ctx: MutationCtx, owner: Doc<"companyWebsites">): Promise<void> {
+  const competitors = (await ctx.db
+    .query("companyWebsites")
+    .withIndex("by_company_against", (q) => q.eq("companyId", owner.companyId).eq("againstWebsiteId", owner.websiteId))
+    .take(HOLDS_READ))
+    .filter(isTrackedHold);
+  for (const member of [owner, ...competitors]) await noteDataChanged(ctx, gapRebuildKey(member._id));
 }
 
 /**

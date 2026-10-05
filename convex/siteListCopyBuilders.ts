@@ -168,17 +168,17 @@ export const buildListCopy = internalAction({
       await ctx.scheduler.runAfter(REBUILD_WAIT_MS, internal.siteListCopyBuilders.buildListCopy, args);
       return null;
     }
+    let done = false;
     try {
       // Asked for before its website or hold was deleted: remove the copy, write none.
       if (!(await ctx.runQuery(internal.siteListCopies.copyOwnerExists, args))) {
         await dropCopyOf(ctx, args.kind, args.key);
-        return null;
-      }
-      if (args.kind === "pages") await buildPagesCopy(ctx, args.key);
+      } else if (args.kind === "pages") await buildPagesCopy(ctx, args.key);
       else if (args.kind === "links") await buildLinksCopy(ctx, args.key);
       else await buildGapCopy(ctx, args.key);
+      done = true;
     } finally {
-      await ctx.runMutation(internal.siteSummaries.endRebuild, { key: turn });
+      await ctx.runMutation(internal.siteSummaries.endRebuild, { key: turn, done });
     }
     return null;
   },

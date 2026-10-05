@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type ActionCtx, type MutationCtx, type QueryCtx } from "./_generated/server";
-import { claimSchedule, requestSiteRebuild } from "./siteRankings";
+import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
+import { claimSchedule, gapRebuildKey, holdPagesKey, outOfDate, requestGapRebuild, requestSiteRebuild, siteRebuildKey } from "./siteRankings";
 import { utf8Length } from "./seoPullAnswers";
 
 /**
@@ -25,9 +26,11 @@ import { utf8Length } from "./seoPullAnswers";
  * to be rebuilt where its rows are written (the site rebuild after a filing,
  * a judged intent, a filed page of links, a rebuilt gap), through the same
  * ask-once-run-shortly requests the site rebuild uses, one build of a list at
- * a time. A daily sweep rebuilds any copy that has not been rebuilt in a day,
- * so a missed request cannot leave a list stale for long, and a copy missing
- * or in an older layout is built the first time a table asks for it.
+ * a time. A nightly refresh rebuilds any copy out of date with its data —
+ * changed after its last rebuild began, or that rebuild failed
+ * (`refreshListCopies`) — so a missed request cannot leave a list stale for
+ * long, and a copy missing or in an older layout is built the first time a
+ * table asks for it.
  */
 
 export type CopyKind = "keywords" | "pages" | "links" | "gap";
@@ -41,15 +44,12 @@ export type CopyKind = "keywords" | "pages" | "links" | "gap";
  *
  * `yourPages` is a company's every page once, per hold (`holdPages.ts`, Your
  * pages in Sites): built by that rebuild, not by `buildListCopy`, so the
- * daily sweep asks that rebuild for it.
+ * nightly refresh asks that rebuild for it.
  */
 export type AnyCopyKind = CopyKind | "gsc" | "yourPages";
 
 /** A part's budget, in bytes of JSON: under a document's 1 MiB with room to spare. */
 const PART_BYTES = 700_000;
-
-/** How long a copy may go unrebuilt before the daily sweep rebuilds it. */
-export const COPY_MAX_AGE_MS = 26 * 60 * 60 * 1000;
 
 /** How long after a request its build runs: long enough for a burst of writes to ask once. */
 const COPY_DELAY_MS = 20_000;
@@ -239,25 +239,106 @@ export const requestCopies = internalMutation({
 });
 
 /**
- * The daily sweep: every copy not rebuilt in a day is asked for again, so a
- * request that was missed, or a build that failed, is put right within a day.
+ * A list page still out after this long is stuck, and no longer holds its
+ * list back (`siteSummaries.latestKeywordCheck`) — the one thing in a list's
+ * copy the calendar alone changes, so the nightly refresh looks for it
+ * (`listPagesSettledSince`).
+ */
+export const LIST_PAGE_STUCK_MS = 14 * 24 * 60 * 60 * 1000;
+
+/** A site's list pages read to find one that settled since its rebuild: a list is up to ten pages a day, from each place. */
+const LIST_PULLS_SETTLED_READ = 100;
+
+/**
+ * Whether a keyword-list page of the site that was out when a rebuild began
+ * (`since`) has stopped being out with no filing to ask for a rebuild: it
+ * ended after `since` — failed, most often — or has been out past
+ * `LIST_PAGE_STUCK_MS` since then. Either moves the site's latest keyword
+ * check (`latestKeywordCheck`), and so its keyword copy, while nothing about
+ * its keywords is written; a page gone stuck does it with the calendar
+ * alone. The nightly refresh rebuilds such a site (dataforseo-cost-plan.md, A1).
+ */
+export async function listPagesSettledSince(
+  ctx: { db: QueryCtx["db"] },
+  websiteId: Id<"websites">,
+  since: number,
+  now: number,
+): Promise<boolean> {
+  // Only a page sent before the rebuild began, and not stuck by then, was out for it.
+  const pulls = await ctx.db
+    .query("seoDataPulls")
+    .withIndex("by_website_operation_submitted", (q) => q.eq("websiteId", websiteId).eq("operationId", KEYWORD_LIST_OPERATION_ID)
+      .gt("submittedAt", since - LIST_PAGE_STUCK_MS).lte("submittedAt", since))
+    .order("desc")
+    .take(LIST_PULLS_SETTLED_READ);
+  return pulls.some((pull) => (pull.status === "READY" || pull.status === "FAILED"
+    ? pull.completedAt !== undefined && pull.completedAt > since
+    : now - pull.submittedAt > LIST_PAGE_STUCK_MS));
+}
+
+/** The request row a rebuild key keeps: when its data last changed, and when its last finished rebuild began. */
+async function requestRow(ctx: MutationCtx, key: string) {
+  return await ctx.db
+    .query("siteSummaryRequests")
+    .withIndex("by_key", (q) => q.eq("key", key))
+    .unique();
+}
+
+/**
+ * The nightly refresh (03:30): every copy out of date with its data is asked
+ * for again — its data changed after its last rebuild began, or that rebuild
+ * failed, or none ever finished — so a request that was missed, or a build
+ * that failed, is put right by the next night. A copy whose data has not
+ * changed is left alone: until 2026-10-05 every copy was rebuilt every
+ * second night whatever (docs/plans/active/dataforseo-cost-plan.md, A1).
+ *
+ * Each copy is judged by the rebuild that writes it: a site's keywords by its
+ * site rebuild, which also writes its pages, sections, day figures and gaps;
+ * a content gap by its gap rebuild, then its copy's own build; Your pages by
+ * its hold's rebuild. The one value the calendar alone changes is a site's
+ * latest keyword check, when a list page stays out past a fortnight — or ends
+ * with no filing to ask — so a site with such a page is rebuilt too
+ * (`listPagesSettledSince`). Nothing else a copy holds — no "new this week",
+ * no age from today — moves without its rows being written.
  */
 export const refreshListCopies = internalMutation({
   args: { cursor: v.union(v.string(), v.null()) },
   returns: v.null(),
   handler: async (ctx, args) => {
     const page = await ctx.db.query("siteListCopies").paginate({ cursor: args.cursor, numItems: 50 });
-    const stale = Date.now() - COPY_MAX_AGE_MS;
+    const now = Date.now();
     for (const copy of page.page) {
       // Search Console's old copies are no longer built: never rebuilt here.
       if (copy.kind === "gsc") continue;
       if (copy.kind === "yourPages") {
         // A hold's every page once: asked of its own rebuild.
         const holdId = ctx.db.normalizeId("companyWebsites", copy.key);
-        if (holdId && copy.builtAt < stale) await ctx.scheduler.runAfter(0, internal.holdPages.requestRebuild, { holdId });
+        if (holdId && outOfDate(await requestRow(ctx, holdPagesKey(holdId)))) {
+          await ctx.scheduler.runAfter(0, internal.holdPages.requestRebuild, { holdId });
+        }
         continue;
       }
-      if (copy.builtAt < stale) await requestListCopy(ctx, copy.kind as CopyKind, copy.key);
+      if (copy.kind === "keywords") {
+        const [id, place] = copy.key.split(":");
+        const websiteId = ctx.db.normalizeId("websites", id);
+        if (!websiteId) continue;
+        const site = await requestRow(ctx, siteRebuildKey(websiteId, Number(place)));
+        if (outOfDate(site) || await listPagesSettledSince(ctx, websiteId, site!.builtFrom!, now)) {
+          await requestSiteRebuild(ctx, websiteId, Number(place));
+        }
+        continue;
+      }
+      if (copy.kind === "gap") {
+        // The gap's rows first: their rebuild asks for the copy when it ends.
+        const holdId = ctx.db.normalizeId("companyWebsites", copy.key);
+        if (holdId && outOfDate(await requestRow(ctx, gapRebuildKey(holdId)))) {
+          await requestGapRebuild(ctx, holdId);
+          continue;
+        }
+      }
+      if (outOfDate(await requestRow(ctx, copyRequestKey(copy.kind as CopyKind, copy.key)))) {
+        await requestListCopy(ctx, copy.kind as CopyKind, copy.key);
+      }
     }
     if (!page.isDone) await ctx.scheduler.runAfter(0, internal.siteListCopies.refreshListCopies, { cursor: page.continueCursor });
     return null;

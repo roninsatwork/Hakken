@@ -2,6 +2,7 @@ import { v, type Infer } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, type ActionCtx } from "./_generated/server";
+import { noteWebsitePagesChanged } from "./holdPages";
 import { requireMySite } from "./siteAccess";
 import { placesWatching } from "./siteRankings";
 import { tenantQuery } from "./tenantFunctions";
@@ -213,6 +214,8 @@ export const writeCrawl = internalMutation({
     for (const row of earlier) await ctx.db.delete(row._id);
     await ctx.db.insert("siteCrawls", { websiteId: args.websiteId, pullId: args.pullId, day: args.day, ...args.summary, createdAt: Date.now() });
     await ctx.db.patch(args.pullId, { error: undefined });
+    // Your pages reads the newest crawl: its pages ask for it when filed; noted here in case they never are.
+    await noteWebsitePagesChanged(ctx, args.websiteId);
 
     // A crawl is the website's alone, so every place it is watched from shows it.
     for (const place of await placesWatching(ctx, args.websiteId)) {

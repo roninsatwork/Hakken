@@ -4,6 +4,7 @@ import type { ActionCtx, MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { accessTokenFor, type ConnectionProblem } from "./searchConsoleConnect";
+import { noteHoldPagesChanged } from "./holdPages";
 import { GOOGLE_DIMENSIONS, LISTS_OF, queryAnalytics, type AnalyticsRow, type GoogleFailure } from "./searchConsoleApi";
 import {
   SEARCH_TYPES,
@@ -910,6 +911,8 @@ export const clearCollected = internalMutation({
       updatedAt: Date.now(),
     });
     await ctx.scheduler.runAfter(0, internal.searchConsoleSync.clearFigures, args);
+    // Your pages' clicks go with them that night (dataforseo-cost-plan.md, A1).
+    await noteHoldPagesChanged(ctx, args.companyWebsiteId);
     return null;
   },
 });

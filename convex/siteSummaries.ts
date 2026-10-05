@@ -6,7 +6,7 @@ import { requestGapRebuild, siteRebuildKey } from "./siteRankings";
 import { syncListAiLines } from "./siteListAiDays";
 import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
 import { KEYWORD_COPY_FIELDS, keywordCopyTuple } from "./siteKeywordCopy";
-import { dropCopyOf, keywordsCopyKey, pagesCopyKey, writeListCopy } from "./siteListCopies";
+import { LIST_PAGE_STUCK_MS, dropCopyOf, keywordsCopyKey, pagesCopyKey, writeListCopy } from "./siteListCopies";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
 import { bandCountsValidator, emptyBandCounts, pageTypeByAddress, sectionOf, type BandCounts, intentSplitValidator, type IntentSplit } from "./utils/siteShapes";
@@ -111,10 +111,13 @@ export const rebuildSite = internalAction({
       await ctx.scheduler.runAfter(REBUILD_WAIT_MS, internal.siteSummaries.rebuildSite, args);
       return null;
     }
+    let done = false;
     try {
-      return await rebuildSiteNow(ctx, args);
+      const result = await rebuildSiteNow(ctx, args);
+      done = true;
+      return result;
     } finally {
-      await ctx.runMutation(internal.siteSummaries.endRebuild, { key });
+      await ctx.runMutation(internal.siteSummaries.endRebuild, { key, done });
     }
   },
 });
@@ -385,16 +388,22 @@ export const beginRebuild = internalMutation({
   },
 });
 
-/** Give the turn back, however the rebuild ended. */
+/**
+ * Give the turn back, however the rebuild ended. One that finished (`done`)
+ * says what it built is current to when it began (`builtFrom`); one that
+ * failed leaves its key out of date, for the nightly refresh to catch.
+ */
 export const endRebuild = internalMutation({
-  args: { key: v.string() },
+  args: { key: v.string(), done: v.optional(v.boolean()) },
   returns: v.null(),
   handler: async (ctx, args) => {
     const row = await ctx.db
       .query("siteSummaryRequests")
       .withIndex("by_key", (q) => q.eq("key", args.key))
       .unique();
-    if (row) await ctx.db.patch(row._id, { runningSince: undefined });
+    if (!row) return null;
+    const finished = args.done === true && row.runningSince !== undefined ? { builtFrom: row.runningSince } : {};
+    await ctx.db.patch(row._id, { runningSince: undefined, ...finished });
     return null;
   },
 });
@@ -451,9 +460,6 @@ export const completeRankedDay = internalQuery({
   },
 });
 
-/** A site's newest list requests read to find those still out: a list is up to ten pages, from each place. */
-const LIST_PULLS_READ = 100;
-
 /** How far back a list day's reach is compared: a limit lowered is followed after this long. */
 const LIST_REACH_DAYS = 14;
 
@@ -490,8 +496,8 @@ function latestWholeListDay(rows: Doc<"seoWebsiteMetrics">[]): string | null {
   return known.find((entry) => entry.reach >= furthest)?.day ?? newest;
 }
 
-/** A list page still out after this long is stuck, and no longer holds its list back. */
-const LIST_PAGE_STUCK_MS = 14 * 24 * 60 * 60 * 1000;
+/** A site's newest list requests read to find those still out: a list is up to ten pages, from each place. */
+const LIST_PULLS_READ = 100;
 
 /**
  * The day of the latest keyword check that has fully arrived, from this

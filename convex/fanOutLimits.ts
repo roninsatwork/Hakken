@@ -3,6 +3,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { readPlatformLimitRow } from "./platformLimitRow";
 import { SEO_COMPETITORS_PER_WEBSITE } from "./seoCollectionPolicy";
+import { holdPagesKey, noteDataChanged } from "./siteRankings";
 import { superAdminMutation } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import { isTrackedHold } from "./utils/websitePairing";
@@ -308,6 +309,9 @@ export async function readOwnSiteFanOutLimits(
   return ownOf(await holdRow(ctx, companyWebsiteId), FAN_OUT_LIMIT_KEYS) as Record<FanOutLimitKey, number | null>;
 }
 
+/** A company's websites read to note their Your pages changed with its limit: past any company's count. */
+const HOLDS_NOTED = 500;
+
 async function writeLimits(
   ctx: MutationCtx,
   row: Doc<"fanOutLimits"> | null,
@@ -350,6 +354,11 @@ export async function writeCompanyFanOutLimits(
   const company = await ctx.db.get(companyId);
   if (!company) throw appError("NOT_FOUND", "There is no such company.");
   const changes = await writeLimits(ctx, await companyRow(ctx, companyId), { companyId }, limits, FAN_OUT_LIMIT_KEYS, "platform");
+  if (changes.some((change) => change.field === "sitemapPagesRead")) {
+    // Your pages holds to this limit: each own website's list is rebuilt that night (dataforseo-cost-plan.md, A1).
+    const holds = await ctx.db.query("companyWebsites").withIndex("by_company", (q) => q.eq("companyId", companyId)).take(HOLDS_NOTED);
+    for (const hold of holds) if (!isTrackedHold(hold)) await noteDataChanged(ctx, holdPagesKey(hold._id));
+  }
   if (changes.length > 0) {
     await ctx.db.insert("auditLogs", {
       actorId,
@@ -385,6 +394,8 @@ export async function writeSiteFanOutLimits(
     SITE_KEYS,
     "company",
   );
+  // Your pages holds to this limit: the website's list is rebuilt that night (dataforseo-cost-plan.md, A1).
+  if (changes.some((change) => change.field === "sitemapPagesRead")) await noteDataChanged(ctx, holdPagesKey(hold._id));
   if (changes.length > 0) {
     await ctx.db.insert("auditLogs", {
       actorId,

@@ -6,6 +6,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { adminMutation, tenantQuery } from "./tenantFunctions";
 import { ADMIN_WRITE_ROLES } from "./authz";
 import { companyHolds, findMySite, requireMySite } from "./siteAccess";
+import { noteHoldPagesChanged } from "./holdPages";
 import { isTrackedHold } from "./utils/websitePairing";
 import { appError } from "./utils/appError";
 import { websiteIconUrl } from "./websiteIcons";
@@ -394,6 +395,8 @@ async function connectTo(
     await ctx.scheduler.runAfter(0, internal.searchConsoleSync.clearFigures, {
       companyWebsiteId: connection.companyWebsiteId,
     });
+    // The last property's clicks go from Your pages that night (dataforseo-cost-plan.md, A1).
+    await noteHoldPagesChanged(ctx, connection.companyWebsiteId);
   }
 }
 
@@ -451,6 +454,8 @@ export const disconnectSearchConsole = adminMutation({
       metadata: JSON.stringify({ account: connection.googleAccount, property: connection.property }),
     });
     await ctx.scheduler.runAfter(0, internal.searchConsoleConnect.forgetTokens, { connectionId: connection._id });
+    // Your pages shows Search Console's clicks only while connected: rebuilt that night (dataforseo-cost-plan.md, A1).
+    await noteHoldPagesChanged(ctx, connection.companyWebsiteId);
     return null;
   },
 });
@@ -623,6 +628,8 @@ export const noteProblem = internalMutation({
       ...(reconnect && connection.status === "CONNECTED" ? { status: "NEEDS_RECONNECT" as const } : {}),
       updatedAt: now,
     });
+    // No longer connected: Your pages drops its clicks that night (dataforseo-cost-plan.md, A1).
+    if (reconnect && connection.status === "CONNECTED") await noteHoldPagesChanged(ctx, connection.companyWebsiteId);
     // Keys Google has refused, or that cannot be read, are no use to keep.
     if (args.problem === "REVOKED" || args.problem === "UNREADABLE") {
       for (const row of await ctx.db

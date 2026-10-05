@@ -76,10 +76,13 @@ export const rebuildGap = internalAction({
       await ctx.scheduler.runAfter(REBUILD_WAIT_MS, internal.siteContentGap.rebuildGap, args);
       return null;
     }
+    let done = false;
     try {
-      return await rebuildGapNow(ctx, args);
+      const result = await rebuildGapNow(ctx, args);
+      done = true;
+      return result;
     } finally {
-      await ctx.runMutation(internal.siteSummaries.endRebuild, { key });
+      await ctx.runMutation(internal.siteSummaries.endRebuild, { key, done });
     }
   },
 });

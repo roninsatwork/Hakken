@@ -5,7 +5,7 @@ import { internalAction, internalMutation, internalQuery, type ActionCtx, type M
 import { readFanOutLimits } from "./fanOutLimits";
 import { readPeriod } from "./searchConsolePeriodReads";
 import { dropCopies, writeListCopy } from "./siteListCopies";
-import { claimSchedule } from "./siteRankings";
+import { claimSchedule, holdPagesKey, noteDataChanged } from "./siteRankings";
 import { REBUILD_WAIT_MS } from "./siteSummaries";
 import { ownedHoldsOf, sitemapReadingOf } from "./sitemaps";
 import { loadSite } from "./websiteSiteRows";
@@ -26,8 +26,11 @@ import { isTrackedHold } from "./utils/websitePairing";
  * (`requestRebuild`, `requestWebsiteRebuilds`) and the rebuild runs shortly,
  * once for a burst of asks, one rebuild of a hold at a time (the site
  * rebuilds' own turn-taking, `beginRebuild`). The first visit to Your pages
- * asks too, and the daily sweep of the compact copies (`refreshListCopies`)
- * asks for any not rebuilt in a day.
+ * asks too. A source that changes without asking — a Search Console
+ * stopped, a limit or a place changed, a page's kind judged — notes it
+ * (`noteHoldPagesChanged`), and the nightly refresh of the compact copies
+ * (`refreshListCopies`) asks for any hold whose sources changed after its
+ * last rebuild began, or whose last rebuild failed.
  *
  * **What it writes.** The rows, changed only where a page changed, so the
  * admin Page classification page reading them by index is not woken for
@@ -61,16 +64,27 @@ const HOLD_ROWS_WRITTEN = 200;
 /** Rows removed per pass when a hold's pages are cleared. */
 const HOLD_ROWS_CLEARED = 500;
 
-/** The key a hold's rebuild is asked for and takes its turn under. */
-export const holdPagesKey = (holdId: Id<"companyWebsites">) => `holdPages:${holdId}`;
-
 /** Ask for a hold's pages to be rebuilt, once, shortly. */
 export async function requestHoldPages(ctx: MutationCtx, holdId: Id<"companyWebsites">, delayMs = REBUILD_DELAY_MS): Promise<void> {
   if (!(await claimSchedule(ctx, holdPagesKey(holdId)))) return;
   await ctx.scheduler.runAfter(delayMs, internal.holdPages.rebuildHoldPages, { holdId });
 }
 
-/** Ask for one hold's pages: Search Console settled for it, or its copy is a day old. */
+/**
+ * Note that what a hold's pages are built from changed — its Search Console
+ * stopped, a limit or a place changed — without asking for a rebuild now: the
+ * nightly refresh rebuilds it (`refreshListCopies`; dataforseo-cost-plan.md, A1).
+ */
+export async function noteHoldPagesChanged(ctx: MutationCtx, holdId: Id<"companyWebsites">): Promise<void> {
+  await noteDataChanged(ctx, holdPagesKey(holdId));
+}
+
+/** The same for every company whose own website this is: a page's kind judged, a crawl kept. */
+export async function noteWebsitePagesChanged(ctx: MutationCtx, websiteId: Id<"websites">): Promise<void> {
+  for (const hold of await ownedHoldsOf(ctx, websiteId)) await noteHoldPagesChanged(ctx, hold._id);
+}
+
+/** Ask for one hold's pages: Search Console settled for it, or its sources changed since its last rebuild. */
 export const requestRebuild = internalMutation({
   args: { holdId: v.id("companyWebsites") },
   returns: v.null(),
@@ -449,10 +463,12 @@ export const rebuildHoldPages = internalAction({
       await ctx.scheduler.runAfter(REBUILD_WAIT_MS, internal.holdPages.rebuildHoldPages, args);
       return null;
     }
+    let done = false;
     try {
       await rebuildNow(ctx, args.holdId);
+      done = true;
     } finally {
-      await ctx.runMutation(internal.siteSummaries.endRebuild, { key });
+      await ctx.runMutation(internal.siteSummaries.endRebuild, { key, done });
     }
     return null;
   },

@@ -4,6 +4,7 @@ import { internalAction, internalMutation, internalQuery } from "./_generated/se
 import { runDecisions, type DecisionResult } from "./decisionActions";
 import { pageTypeValidator, type PageType } from "./utils/siteShapes";
 import { pagesCopyKey, requestListCopy } from "./siteListCopies";
+import { noteWebsitePagesChanged } from "./holdPages";
 
 /**
  * What kind of page each ranking page is, for the Sites Top pages report
@@ -186,7 +187,11 @@ export const writePageTypes = internalMutation({
       if (ranked && ranked.pageType === "UNJUDGED") await ctx.db.patch(ranked._id, { pageType: row.pageType });
     }
     // Top pages is filtered by type from its compact copy: rebuilt once the types land.
-    if (args.judged.length > 0) await requestListCopy(ctx, "pages", pagesCopyKey(args.websiteId, args.locationCode));
+    if (args.judged.length > 0) {
+      await requestListCopy(ctx, "pages", pagesCopyKey(args.websiteId, args.locationCode));
+      // Your pages shows each page's kind too: its owners' lists are rebuilt that night.
+      await noteWebsitePagesChanged(ctx, args.websiteId);
+    }
     return null;
   },
 });
