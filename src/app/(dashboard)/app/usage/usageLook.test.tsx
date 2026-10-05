@@ -20,13 +20,13 @@ import UsageStatementPage from "./statement/page";
  * saved beside its board in docs/plans/assets/usage-credits/look/.
  */
 
-const nav = vi.hoisted(() => ({ pathname: "/app/usage", search: "" }));
+const nav = vi.hoisted(() => ({ pathname: "/app/usage", search: "", replace: vi.fn() }));
 
 vi.mock("convex/react", async () => (await import("@/src/test/screenMocks")).convexReact());
 vi.mock("next/navigation", () => ({
   usePathname: () => nav.pathname,
   useSearchParams: () => new URLSearchParams(nav.search),
-  useRouter: () => ({ replace: vi.fn(), push: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
+  useRouter: () => ({ replace: nav.replace, push: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
   useParams: () => ({}),
 }));
 vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
@@ -225,6 +225,33 @@ describe("Usage's screens", () => {
     fireEvent.click(within(tableRows("Credits by website")[1]).getByText("kota.co.uk"));
     expect(screen.getByText("What ran this month: kota.co.uk")).toBeTruthy();
     expect(tableRows("What ran this month: kota.co.uk")).toHaveLength(1);
+  });
+
+  it("the Overview's tables sort by their headings over the whole list, blanks and work tied to no website last (finish-off-plan.md, item 8)", async () => {
+    // A website is drawn after its mark (its first letter): read its name from the end.
+    const hosts = (title: string) => tableRows(title).map((row) => /(Not tied to a website|[a-z0-9-]+\.[a-z.]+)$/.exec(within(row).getAllByRole("cell")[0].textContent ?? "")?.[1]);
+    // Most credits first, as it opens.
+    at("/app/usage");
+    const first = render(<UsageOverviewPage />);
+    await screen.findByText("Credits by website");
+    expect(hosts("Credits by website")).toEqual(["ronins.co.uk", "kota.co.uk", "Not tied to a website"]);
+    // Pressing a heading asks for its column, best first.
+    fireEvent.click(within(screen.getByText("Credits by website").closest("section") as HTMLElement).getByRole("button", { name: /Runs/ }));
+    expect(String(nav.replace.mock.lastCall?.[0])).toContain("websites.sort=runs");
+    first.unmount();
+
+    // Website A to Z, then Z to A: work tied to no website last both ways.
+    at("/app/usage", "websites.sort=website");
+    const second = render(<UsageOverviewPage />);
+    await screen.findByText("Credits by website");
+    expect(hosts("Credits by website")).toEqual(["kota.co.uk", "ronins.co.uk", "Not tied to a website"]);
+    second.unmount();
+    at("/app/usage", "websites.sort=website&websites.dir=asc&checks.sort=often");
+    render(<UsageOverviewPage />);
+    await screen.findByText("Credits by website");
+    // How often, most often first; work started by hand, with no schedule, last.
+    const often = tableRows("What ran this month").map((row) => within(row).getAllByRole("cell")[2].textContent);
+    expect(often).toEqual(["Every day", "Every week", "Every week", "Every month", "Every month", "When you ask", "When you ask"]);
   });
 
   it("the statement opens and closes on the month's balances, and says which batch paid", async () => {

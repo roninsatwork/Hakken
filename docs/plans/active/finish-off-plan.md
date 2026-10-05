@@ -257,3 +257,14 @@ the table above is how it stands before it.
   this month" count it in and say so.
 - No kit part, heading or title changed: the approved outlines stand
   (`usageLook.test.tsx`).
+
+### Item 8 — Usage Overview's two tables sort by their headings
+
+- "Credits by website" and "What ran this month" sort by every heading
+  through the Sites tables' own hook (`useSiteSortedList`, the rule in
+  `convex/utils/sortOrder.ts`): the first press best first — a figure the
+  most first, a name A to Z, How often the most often first — again for the
+  other way, over the whole list before it is paged, blanks last either way.
+  Work tied to no website stays after every website whichever way. Each opens
+  on Credits, the most first, as before; the order is kept in the address
+  (`websites.sort`, `checks.sort`), so the two tables keep theirs apart.

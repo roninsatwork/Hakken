@@ -472,6 +472,8 @@ screen's outline is held by a look test
 Not yet, knowingly:
 - Purchases, Top up and "Bought credits left →" (step 4).
 - Sorting the Overview's two tables by their headings; the statement sorts.
+  *Done 2026-10-05 (finish-off-plan.md, item 8); the statement now sorts by
+  date only, either way, as it is read a page at a time (item 10).*
 - Seen in the browser pane: the session's own dev server cannot start while
   another session's runs in this folder, and the pane is not signed in there.
   Then seen in his own Chrome, signed in, on localhost:3000: Overview,
