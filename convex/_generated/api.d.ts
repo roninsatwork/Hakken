@@ -328,6 +328,7 @@ import type * as selfImprovementConfig from "../selfImprovementConfig.js";
 import type * as seoAgentRuns from "../seoAgentRuns.js";
 import type * as seoAiEngines from "../seoAiEngines.js";
 import type * as seoCitationReports from "../seoCitationReports.js";
+import type * as seoCleanOut from "../seoCleanOut.js";
 import type * as seoCollection from "../seoCollection.js";
 import type * as seoCollectionActions from "../seoCollectionActions.js";
 import type * as seoCollectionClose from "../seoCollectionClose.js";
@@ -920,6 +921,7 @@ declare const fullApi: ApiFromModules<{
   seoAgentRuns: typeof seoAgentRuns;
   seoAiEngines: typeof seoAiEngines;
   seoCitationReports: typeof seoCitationReports;
+  seoCleanOut: typeof seoCleanOut;
   seoCollection: typeof seoCollection;
   seoCollectionActions: typeof seoCollectionActions;
   seoCollectionClose: typeof seoCollectionClose;

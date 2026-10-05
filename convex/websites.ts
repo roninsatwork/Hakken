@@ -17,7 +17,7 @@ import {
   type ResolvedWebsiteSchedule,
 } from "./seoScheduleService";
 import * as websiteShapes from "./utils/websiteShapes";
-import { isTrackedHold, pairedOwnedHold, refuseIfPaired } from "./utils/websitePairing";
+import { anyCompanyOwns, isTrackedHold, pairedOwnedHold, refuseIfPaired } from "./utils/websitePairing";
 import { countOpenMoves, purgeHoldMoves } from "./websiteMoves";
 import { requestGroupGapRebuilds } from "./siteRankings";
 import { requestListRecount } from "./siteListAi";
@@ -839,6 +839,25 @@ export async function requestMissingIcons(
     await requestWebsiteIcon(ctx, website._id, index * ICON_BACKFILL_SPACING_MS);
   }
   return { cursor: page.isDone ? null : page.continueCursor, isDone: page.isDone, processed: page.page.length, updated: unasked.length };
+}
+
+/**
+ * A page of the websites no company holds as its own, for the clean-out of
+ * what competitors no longer have collected (`seoCleanOut.ts`, finish-off
+ * plan item 12). Here because only this file reads the whole table
+ * (`websiteTenancyGuard.test.ts`).
+ */
+export async function competitorOnlyWebsites(
+  ctx: QueryCtx,
+  cursor: string | null,
+  batchSize: number,
+): Promise<{ websites: Array<{ websiteId: Id<"websites">; host: string }>; continueCursor: string; isDone: boolean }> {
+  const page = await ctx.db.query("websites").paginate({ cursor, numItems: batchSize });
+  const websites: Array<{ websiteId: Id<"websites">; host: string }> = [];
+  for (const website of page.page) {
+    if (!(await anyCompanyOwns(ctx, website._id))) websites.push({ websiteId: website._id, host: website.displayHost ?? website.host });
+  }
+  return { websites, continueCursor: page.continueCursor, isDone: page.isDone };
 }
 
 /**
