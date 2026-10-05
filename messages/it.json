@@ -9530,7 +9530,8 @@
       "noWebsiteMatch": "Nessun sito corrisponde.",
       "classification": "Classificazione",
       "anyClassification": "Qualsiasi classificazione",
-      "notSorted": "Non classificata"
+      "notSorted": "Non classificata",
+      "openOwnSite": "Apri {host}"
     },
     "overview": {
       "title": "Panoramica",
@@ -11013,7 +11014,8 @@
       },
       "empty": "Non ancora scansionato. La prima scansione parte con la prossima raccolta.",
       "noIssues": "Nessun problema trovato. Bene.",
-      "noMatch": "Nessun problema corrisponde."
+      "noMatch": "Nessun problema corrisponde.",
+      "competitor": "I concorrenti non vengono scansionati. L'audit del sito è per i tuoi siti web: ognuno viene scansionato una volta al mese, e ciò che la scansione trova alimenta il suo audit, l'elenco delle sue pagine e i suoi controlli di ricerca AI. Un concorrente viene confrontato invece su traffico, parole chiave, link e risposte AI."
     },
     "paid": {
       "title": "Ricerca a pagamento",

@@ -2,6 +2,10 @@ import { v, type Infer } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { findSeoOperation } from "./dataForSeoRegistry";
+import { collectsEveryRun } from "./seoBuyingRules";
+
+// The rule lives with the other buying rules; its old home still answers for it.
+export { collectsEveryRun };
 
 /**
  * How often a company's collection buys each kind of request, and what a
@@ -64,15 +68,6 @@ export function repeatDays(ownDays: number, runDays: number): number | null {
   return runs <= 1 ? null : runs * runDays;
 }
 
-/**
- * Whether a company whose runs come every `runDays` buys a call with its own
- * cadence of `ownDays` on every run: it collects about as seldom as the call,
- * or more seldom — a monthly company and a monthly crawl, a weekly one and a
- * weekly list — so every run is due one, however the months fall.
- */
-export function collectsEveryRun(ownDays: number, runDays: number): boolean {
-  return runDays >= ownDays * 0.9;
-}
 
 export const estimateShape = v.object({
   perMonthUsd: v.number(),

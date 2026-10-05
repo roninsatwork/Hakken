@@ -9530,7 +9530,8 @@
       "noWebsiteMatch": "No website matches that.",
       "classification": "Classification",
       "anyClassification": "Any classification",
-      "notSorted": "Not sorted"
+      "notSorted": "Not sorted",
+      "openOwnSite": "Open {host}"
     },
     "overview": {
       "title": "Overview",
@@ -11013,7 +11014,8 @@
       },
       "empty": "Not crawled yet. The first crawl runs with the next collection.",
       "noIssues": "No problems found. Good.",
-      "noMatch": "No problem matches that."
+      "noMatch": "No problem matches that.",
+      "competitor": "Competitors aren't crawled. The site audit is for your own websites: each is crawled once a month, and what the crawl finds feeds its audit, its page list and its AI search checks. A competitor is compared on its traffic, keywords, links and AI answers instead."
     },
     "paid": {
       "title": "Paid search",

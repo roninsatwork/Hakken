@@ -26,6 +26,7 @@ import { sharedSiteQuery, useSiteParam, useSiteSearch } from "../../_components/
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
 import { ListDownload } from "../../_components/SiteDownloads";
+import { CompetitorNotCollected, useIsCompetitor } from "../../_components/CompetitorNotCollected";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 
 type Severity = "ERROR" | "WARNING" | "NOTICE";
@@ -40,13 +41,15 @@ const pagesOf = (row: Issue) => row.pages;
 /**
  * Site audit: what the newest crawl found — the technical score, pages
  * crawled, and each problem as a count of pages, worst first — with the
- * crawls over the dates chosen drawn above the table.
+ * crawls over the dates chosen drawn above the table. A competitor is not
+ * crawled (finish-off plan, item 6), and its page says so.
  */
 export default function SiteAuditPage() {
   const t = useTranslations("sites.audit");
   const tm = useTranslations("sites.measures");
   const siteId = useSiteId();
   const site = useSite();
+  const competitor = useIsCompetitor();
   const range = useSiteRange();
   const audit = useQuery(api.siteCrawl.siteAudit, { siteId });
   const router = useRouter();
@@ -84,6 +87,18 @@ export default function SiteAuditPage() {
     : audit.pagesFound !== null
       ? (audit.pagesFound > audit.pagesCrawled ? t("pagesFound", { found: formatNumber(audit.pagesFound) }) : t("pagesEvery"))
       : audit.maxPages ? t("pagesOf", { max: formatNumber(audit.maxPages) }) : null;
+
+  if (competitor) {
+    return (
+      <CompetitorNotCollected
+        icon={<Stethoscope className="h-5 w-5 text-brand" />}
+        title={t("title")}
+        description={t("description")}
+        notice={t("competitor")}
+        tab="audit"
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

@@ -15,14 +15,14 @@ import { aiCitationOperationId } from "./seoAiEngines";
 import { AI_OVERVIEW_FAN_OUT_OPERATION, aiOverviewFanOutParams, aiOverviewPeriodStart, googleTopicOf } from "./dataForSeoAiOverviewOperations";
 import { readFanOutLimits } from "./fanOutLimits";
 import { DEFAULT_LOCATION_CODE, findSeoLocation } from "./utils/seoLocations";
-import { readSentLocationCode } from "./utils/seoSentPlace";
 import { MAX_PROMPTS_PER_WEBSITE } from "./utils/promptLimits";
 import { buildSeoIdempotencyKey } from "./seoIdempotency";
 import { finishSeoCycle } from "./seoCollectionQueue";
-import { collectsEveryRun, everyDaysOf } from "./seoRunEstimate";
+import { everyDaysOf } from "./seoRunEstimate";
 import { readSiteDataLimits } from "./companyDataLimits";
-import { everyRunReach, LIST_COUNT_DAYS, listLimitOf, listPagesFor, pagedListOf, pagedListParams, readListShape, sentOffset } from "./sitePagedLists";
-import { isWebsiteDue } from "./seoScheduleService";
+import { everyRunReach, LIST_COUNT_DAYS, listLimitOf, listPagesFor, pagedListOf, pagedListParams, readListShape } from "./sitePagedLists";
+import { findFreshPull, heldByOwnCadence, wholeListDue } from "./seoHeldAnswers";
+import { boughtForCompetitor } from "./seoBuyingRules";
 import { collectedOnItsOwn, dueByCadence } from "./seoCollectionDue";
 import { countingReads } from "./utils/countingReads";
 import { isTrackedHold } from "./utils/websitePairing";
@@ -36,7 +36,6 @@ import {
   SEO_EXPANSION_PAGE,
   SEO_COMPETITORS_PER_WEBSITE,
   SEO_KEYWORD_CHECKS_PER_WEBSITE,
-  SEO_MANUAL_FRESH_MS,
   SEO_MAX_SENDS_PER_CYCLE,
 } from "./seoCollectionPolicy";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -373,7 +372,10 @@ async function websiteSteps(
     })),
   ];
   for (const websiteId of targets) {
+    // A competitor gets only what benchmarking needs (`seoBuyingRules.ts`).
+    const competitor = isTrackedHold(holdOf.get(websiteId) ?? companyWebsite);
     for (const operation of seoSiteOperations()) {
+      if (competitor && !boughtForCompetitor(operation.id)) continue;
       // Every keyword and every link are as many requests as the
       // website's limit allows, not one (`sitePagedLists.ts`).
       if (pagedListOf(operation.id)) {
@@ -626,7 +628,7 @@ async function planPull(
   // A call with its own cadence — a weekly or monthly link list — is held for
   // that long whatever this cycle's own cadence, a manual one included: a
   // week-old list is this week's list. The same call, asked the same way.
-  const held = await heldByOwnCadence(ctx, operation, args.websiteId, args.now, JSON.stringify(params), args.runDays);
+  const held = await heldByOwnCadence(ctx, operation, args.websiteId, args.now, JSON.stringify(params), { runDays: args.runDays, manual: args.cycle.trigger === "MANUAL" });
   if (held) {
     await writeLine(ctx, args, held, true);
     return "REUSED";
@@ -757,7 +759,7 @@ async function planPagedList(
     // never served. A page bought every run holds no answer, as a call bought
     // every run holds none, but one still on its way is shared rather than
     // bought twice.
-    const held = await heldByOwnCadence(ctx, operation, args.websiteId, args.now, JSON.stringify(params), eachRun && !due ? operation.refresh?.everyDays : args.runDays)
+    const held = await heldByOwnCadence(ctx, operation, args.websiteId, args.now, JSON.stringify(params), { runDays: eachRun && !due ? operation.refresh?.everyDays ?? args.runDays : args.runDays, manual: args.cycle.trigger === "MANUAL" })
       // Bought every run by this company, a page still fresh by its cadence —
       // today's, for another company; the last hour's, for a second press — is
       // shared as a single call's answer is (`findFreshPull`).
@@ -800,151 +802,6 @@ async function planPagedList(
     planned += 1;
   }
   return { planned, reused };
-}
-
-/**
- * Whether a site's whole list is due this run: unless a whole list at this
- * company's limit or more — a first page bought to reach it — was answered,
- * or is on its way, for this website from this place inside the list's
- * cadence. A first page bought for an everyday check, or for a company that
- * keeps fewer, is not this company's whole list (docs/plans/active/
- * sites-data-completeness-plan.md, B4). A company collecting as seldom as the
- * list is bought buys it every run.
- */
-async function wholeListDue(
-  ctx: MutationCtx,
-  operation: SeoOperation,
-  websiteId: Id<"websites">,
-  place: number,
-  limit: number,
-  now: Date,
-  runDays: number,
-): Promise<boolean> {
-  if (!operation.refresh || collectsEveryRun(operation.refresh.everyDays, runDays)) return true;
-  const window = (operation.refresh.everyDays - runDays / 2) * DAY_MS;
-  const recent = await ctx.db
-    .query("seoDataPulls")
-    .withIndex("by_website_operation_submitted", (q) => q.eq("websiteId", websiteId).eq("operationId", operation.id))
-    .order("desc")
-    .take(PULLS_READ_FOR_HOLD);
-  for (const pull of recent) {
-    if (pull.sandbox === true || pull.status === "FAILED") continue;
-    if (sentOffset(pull.taskArgsJson) !== 0) continue;
-    if ((readSentLocationCode(pull.taskArgsJson) ?? DEFAULT_LOCATION_CODE) !== place) continue;
-    // Pages planned before a page carried its reach were each the whole list.
-    if (pull.listReach !== undefined && pull.listReach < limit) continue;
-    if (pull.status === "READY") {
-      if (pull.completedAt !== undefined && now.getTime() - pull.completedAt < window) return false;
-      continue;
-    }
-    if (now.getTime() - pull.submittedAt < window) return false;
-  }
-  return true;
-}
-
-/**
- * The answer an operation with its own cadence is still held on: the newest
- * one bought for this website within `everyDays` — or one already on its way,
- * planned within that time and not yet sent or answered. Without the second,
- * a weekly list left unsent while the Collector was at its spending cap would
- * be planned again by the next day's cycle, and both would be bought. Null
- * for everything else, which the cycle's cadence decides.
- *
- * Also the ad hoc door's check (`requestSeoPull` in `seoTools.ts`), so an
- * agent cannot buy a weekly list daily.
- *
- * `taskArgsJson`, when given, is what would be sent: only the same call asked
- * the same way holds — from the same place, for the same page of a list.
- *
- * `runDays`, when given, is how far apart the asker's runs come. A company
- * that collects about as seldom as the call, or more seldom, buys it every run
- * (`collectsEveryRun`) — a monthly company's run is the full scan, however
- * soon after another it comes. Otherwise the answer holds only until it is
- * within half a run of due, so the call is bought on the run nearest its own
- * cadence (`repeatDays` in `seoRunReports.ts`). Held for its whole cadence, a weekly list was bought
- * every other week on a weekly schedule — the last one a few minutes short of
- * seven days old — and a monthly company's run skipped the crawl after every
- * month of thirty days or fewer (2026-09-25).
- */
-export async function heldByOwnCadence(
-  ctx: MutationCtx,
-  operation: SeoOperation,
-  websiteId: Id<"websites">,
-  now: Date,
-  taskArgsJson?: string,
-  runDays?: number,
-): Promise<Id<"seoDataPulls"> | null> {
-  if (!operation.refresh) return null;
-  // Bought every run: no answer holds, but one still on its way is shared.
-  const everyRun = runDays !== undefined && collectsEveryRun(operation.refresh.everyDays, runDays);
-  const window = (operation.refresh.everyDays - (runDays ?? 0) / 2) * DAY_MS;
-  const recent = await ctx.db
-    .query("seoDataPulls")
-    .withIndex("by_website_operation_submitted", (q) => q.eq("websiteId", websiteId).eq("operationId", operation.id))
-    .order("desc")
-    .take(PULLS_READ_FOR_HOLD);
-  for (const pull of recent) {
-    if (pull.sandbox === true || pull.status === "FAILED") continue;
-    if (taskArgsJson !== undefined && pull.taskArgsJson !== taskArgsJson) continue;
-    if (pull.status === "READY") {
-      if (!everyRun && pull.completedAt !== undefined && now.getTime() - pull.completedAt < window) return pull._id;
-      continue;
-    }
-    // Planned, claimed or sent, and not answered yet: on its way.
-    if (everyRun || now.getTime() - pull.submittedAt < window) return pull._id;
-  }
-  return null;
-}
-
-const DAY_MS = 86_400_000;
-
-/** A site's newest pulls of one operation read for the hold; failures in a row past this many are not a week. */
-const PULLS_READ_FOR_HOLD = 50;
-
-async function findFreshPull(
-  ctx: MutationCtx,
-  args: {
-    cycle: Doc<"seoCollectionCycles">;
-    schedule: Doc<"schedules"> | null;
-    companyWebsite: Doc<"companyWebsites">;
-    websiteId: Id<"websites">;
-    operationId: string;
-    /** What would be sent. A fresh answer to a different question is no answer. */
-    taskArgsJson: string;
-    now: Date;
-  },
-) {
-  // Matched on the arguments as well as the operation, because the place is
-  // in them: Leeds's rankings on Monday are not London's on Wednesday, however
-  // fresh they are. Read by site *and* operation through the index, so the
-  // scan never wades through a busy site's other operations to find this one.
-  const recent = await ctx.db
-    .query("seoDataPulls")
-    .withIndex("by_website_operation_submitted", (q) =>
-      q.eq("websiteId", args.websiteId).eq("operationId", args.operationId))
-    .order("desc")
-    .filter((q) =>
-      q.and(
-        q.eq(q.field("status"), "READY"),
-        q.eq(q.field("taskArgsJson"), args.taskArgsJson),
-        // Made-up sandbox numbers are never somebody's fresh answer.
-        q.neq(q.field("sandbox"), true),
-      ))
-    .first();
-
-  if (!recent?.completedAt) return null;
-
-  // A manual collection asks for today's numbers, so only an answer from the last
-  // hour serves it — enough to stop a double press paying twice, and no more.
-  if (args.cycle.trigger === "MANUAL") {
-    return args.now.getTime() - recent.completedAt <= SEO_MANUAL_FRESH_MS ? recent : null;
-  }
-
-  // "Fresh enough" is the asker's own cadence, asked of the same helper that
-  // decides whether a website is due at all. A weekly watcher handed six-day-old
-  // numbers is being served correctly, not short-changed.
-  const stale = isWebsiteDue(args.schedule, args.companyWebsite, recent.completedAt, args.now);
-  return stale ? null : recent;
 }
 
 async function writeLine(

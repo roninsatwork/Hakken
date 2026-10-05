@@ -70,6 +70,13 @@ const MONTHLY = JSON.stringify({ version: 2, kind: "recurring", cadence: "monthl
 const SITE_OPERATIONS = 12;
 
 /**
+ * The same for a competitor (a tracked hold): every one but the site crawl,
+ * which feeds only a company's own websites' Site audit, page list and AI
+ * checks (finish-off plan, item 6, 2026-10-05).
+ */
+const COMPETITOR_OPERATIONS = SITE_OPERATIONS - 1;
+
+/**
  * The operations that ask about every website on a page in one paid call.
  *
  * One pull each, however many websites the page held. That is the whole point
@@ -196,8 +203,9 @@ describe("expanding a cycle", () => {
     // Numbers from different weeks are not a comparison.
     const perSite = (await pulls(t)).filter((row) => row.websiteId !== undefined);
     expect(new Set(perSite.map((row) => row.websiteId)).size).toBe(2);
-    // Two websites: the per-site operations run twice each.
-    expect(await pulls(t)).toHaveLength(SITE_OPERATIONS * 2 + BULK_OPERATIONS);
+    // Two websites: the per-site operations for each — a competitor's fewer.
+    expect(await pulls(t)).toHaveLength(SITE_OPERATIONS + COMPETITOR_OPERATIONS + BULK_OPERATIONS);
+    expect((await pulls(t)).filter((row) => row.websiteId === rival).map((row) => row.operationId)).not.toContain("site_crawl");
   });
 
   test("collects a tracked site with no pair on its own", async () => {
@@ -220,7 +228,7 @@ describe("expanding a cycle", () => {
     await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
 
     const perSite = (await pulls(t)).filter((row) => row.websiteId === watched);
-    expect(perSite).toHaveLength(SITE_OPERATIONS);
+    expect(perSite).toHaveLength(COMPETITOR_OPERATIONS);
   });
 
   test("plans a paired tracked site once, as its pair's target, not twice", async () => {
@@ -245,7 +253,7 @@ describe("expanding a cycle", () => {
     // One line per site operation, as for any site on the page. Walked twice,
     // it would carry each of those twice.
     const rivalLines = (await lines(t)).filter((row) => row.websiteId === rival);
-    expect(rivalLines).toHaveLength(SITE_OPERATIONS + BULK_OPERATIONS);
+    expect(rivalLines).toHaveLength(COMPETITOR_OPERATIONS + BULK_OPERATIONS);
   });
 
   test("a pairing to a site the company has let go collects the tracked site on its own", async () => {
@@ -269,7 +277,7 @@ describe("expanding a cycle", () => {
 
     await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
 
-    expect((await pulls(t)).filter((row) => row.websiteId === rival)).toHaveLength(SITE_OPERATIONS);
+    expect((await pulls(t)).filter((row) => row.websiteId === rival)).toHaveLength(COMPETITOR_OPERATIONS);
   });
 
   test("buys no bulk call: nothing filed them, and the screens have the figures", async () => {
@@ -663,9 +671,13 @@ describe("the reuse ladder", () => {
     expect(fortnightly).not.toContain("site_crawl");
     expect(fortnightly).toContain("anchors_list");
 
-    // Monthly: the full scan, whatever the month's length — even a crawl bought a week ago.
+    // Monthly: the full scan, whatever the month's length — but never a
+    // second crawl inside the month (finish-off plan, item 6): one bought a
+    // week ago holds; one bought in February, 28 days before, does not.
     const monthly = await plannedFor(MONTHLY, [["backlinks_list", day], ["site_crawl", 7 * day], ["anchors_list", fourWeeks]]);
-    expect(monthly).toEqual(expect.arrayContaining(["backlinks_list", "site_crawl", "anchors_list"]));
+    expect(monthly).toEqual(expect.arrayContaining(["backlinks_list", "anchors_list"]));
+    expect(monthly).not.toContain("site_crawl");
+    expect(await plannedFor(MONTHLY, [["site_crawl", 28 * day - 5 * 60_000]])).toContain("site_crawl");
 
     // Daily: the lists weekly, the crawl monthly.
     const daily = await plannedFor(DAILY, [["backlinks_list", 6 * day], ["site_crawl", 29 * day], ["anchors_list", 30 * day - 5 * 60_000]]);
@@ -824,6 +836,61 @@ describe("the reuse ladder", () => {
     // Absence of an override is what makes a site follow its company;
     // presence is what makes it stop.
     expect((await cycle(t, cycleId))?.plannedCount).toBe(0);
+  });
+});
+
+describe("the site crawl", () => {
+  /** A crawl of the host, bought `ago` before now, answered or still out. */
+  async function crawled(t: Harness, websiteId: Id<"websites">, host: string, ago: number, status: "READY" | "SUBMITTED" = "READY") {
+    return await t.run(async (ctx) => {
+      const at = Date.now() - ago;
+      return await ctx.db.insert("seoDataPulls", {
+        operationId: "site_crawl", family: "On-Page", mode: "QUEUED", target: host, websiteId,
+        taskArgsJson: sentFor("site_crawl", host), status, tag: `crawl-${ago}`, costUsd: 1.5, sandbox: false,
+        submittedAt: at, ...(status === "READY" ? { completedAt: at } : {}),
+      });
+    });
+  }
+
+  test("is bought once a month whatever starts the run, one crawl for every company whose own site it is", async () => {
+    // Collect now included (Anthony, 2026-10-05): "never again within 30 days".
+    const t = harness();
+    const ronins = await seedCompany(t, "Ronins Agency");
+    const acme = await seedCompany(t, "Acme Ltd");
+    await seedSchedule(t, ronins, MONTHLY);
+    await seedSchedule(t, acme, DAILY);
+    const shared = await seedWebsite(t, "shared.com");
+    await seedCompanyWebsite(t, ronins, shared);
+    await seedCompanyWebsite(t, acme, shared);
+    const bought = await crawled(t, shared, "shared.com", 10 * 24 * 60 * 60 * 1000);
+
+    for (const [company, trigger] of [[acme, "SCHEDULE"], [ronins, "MANUAL"], [acme, "MANUAL"]] as const) {
+      const cycleId = await openCycle(t, company, Date.now(), trigger);
+      await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
+      const crawlLines = (await lines(t)).filter((line) => line.cycleId === cycleId && line.operationId === "site_crawl");
+      expect(crawlLines.map((line) => [line.pullId, line.reused])).toEqual([[bought, true]]);
+    }
+    expect((await pulls(t)).filter((row) => row.operationId === "site_crawl")).toHaveLength(1);
+  });
+
+  test("a crawl still out is not bought again, and a competitor is never crawled", async () => {
+    const t = harness();
+    const company = await seedCompany(t, "Ronins Agency");
+    await seedSchedule(t, company, MONTHLY);
+    const own = await seedWebsite(t, "ourshop.com");
+    const rival = await seedWebsite(t, "rival.com");
+    await seedCompanyWebsite(t, company, own);
+    await t.run(async (ctx) => await ctx.db.insert("companyWebsites", {
+      companyId: company, websiteId: rival, relationship: "TRACKED", againstWebsiteId: own, createdAt: Date.now(),
+    }));
+    // corston.com's crawl was out for hours on 2026-10-05.
+    await crawled(t, own, "ourshop.com", 3 * 60 * 60 * 1000, "SUBMITTED");
+
+    const cycleId = await openCycle(t, company, Date.now(), "MANUAL");
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
+
+    expect((await pulls(t)).filter((row) => row.operationId === "site_crawl")).toHaveLength(1);
+    expect((await lines(t)).filter((line) => line.websiteId === rival).map((line) => line.operationId)).not.toContain("site_crawl");
   });
 });
 
