@@ -17,7 +17,7 @@ import { daysNewestFirst, newestWholeDay, shiftDay } from "./searchConsoleDays";
 import { isTrackedHold } from "./utils/websitePairing";
 import { fromGoogle, pack, rowsOf, DAYS_KEPT, type Packed } from "./utils/searchConsolePacks";
 import { slotParts } from "./searchConsoleRollups";
-import { deletePageRefs, encodePages } from "./searchConsolePageRefs";
+import { deletePageRefs, encodePages, encodePagesFromAction } from "./searchConsolePageRefs";
 import { countriesKeptReady, heldFor, stillKeptReady, withHeld, type HeldRange } from "./searchConsoleCountries";
 
 /**
@@ -398,6 +398,8 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
     }
   };
 
+  // The website's page references known so far in the step: its pages repeat from day to day.
+  const pageRefs = new Map<string, string>();
   let processedFrom: string | null = null;
   for (const day of failure || session.stopped ? [] : daysNewestFirst(stepFrom, args.to)) {
     if (Date.now() - startedAt > budgetMs) break;
@@ -436,6 +438,9 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
         parts = pack(rows, list === "pair");
       }
       for (const [index, part] of parts.entries()) {
+        // Page addresses as references, asked for a few hundred at a time and remembered for the step (`searchConsolePageRefs.ts`).
+        const keys = list === "page" ? await encodePagesFromAction(ctx, state.companyWebsiteId, part.keys, pageRefs) : part.keys;
+        const pages = part.pages ? await encodePagesFromAction(ctx, state.companyWebsiteId, part.pages, pageRefs) : undefined;
         await ctx.runMutation(internal.searchConsoleSync.writeList, {
           ...where,
           searchType: type,
@@ -444,6 +449,8 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
           part: index,
           fetchedAt,
           ...part,
+          keys,
+          ...(pages ? { pages } : {}),
         });
       }
     });

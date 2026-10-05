@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { internalAction, internalMutation, internalQuery, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { isPageRef } from "./searchConsolePageRefs";
+import { isPageRef, turnKeptStep } from "./searchConsolePageRefs";
 import { rollUpSite } from "./searchConsoleRollups";
 import { countriesAsAllNow } from "./searchConsoleShrink";
 import { firstDayKeptFor } from "./utils/searchConsolePacks";
@@ -147,12 +147,12 @@ async function tasksFor(ctx: ActionCtx, connectionId: Id<"searchConsoleConnectio
 }
 
 /** One step of a task: what it found, and where to go on. */
-async function stepOf(ctx: ActionCtx, holdId: Id<"companyWebsites">, task: Task, go: boolean, cursor: string | null): Promise<Step> {
+async function stepOf(ctx: ActionCtx, holdId: Id<"companyWebsites">, task: Task, go: boolean, cursor: string | null, known: Map<string, string>): Promise<Step> {
   if (task.kind === "copies") return await ctx.runMutation(internal.searchConsoleTidy.countryCopiesStep, { holdId, country: task.country!, go, cursor });
   if (task.kind === "seen") return await ctx.runMutation(internal.searchConsoleTidy.countrySeenStep, { holdId, country: task.country!, go, cursor });
   if (task.kind === "addresses") {
     if (!go) return await ctx.runQuery(internal.searchConsoleTidy.addressesStep, { holdId, cursor });
-    const step = await ctx.runMutation(internal.searchConsolePageRefs.encodeKeptPagesStep, { holdId, cursor });
+    const step = await turnKeptStep(ctx, holdId, cursor, known);
     return { found: step.changed, continueCursor: step.continueCursor, isDone: step.isDone };
   }
   const scope = task.country === undefined ? {} : { country: task.country };
@@ -204,6 +204,8 @@ export const tidyKeptFigures = internalAction({
     let site = args.site ?? null;
     let tally = args.tally ?? NO_TALLY;
     const lines = [...(args.lines ?? [])];
+    // The website's page references known so far: its pages repeat from record to record.
+    let known = new Map<string, string>();
     while (at < connections.length) {
       if (Date.now() - started > TIDY_RUN_MS) {
         await ctx.scheduler.runAfter(0, internal.searchConsoleTidy.tidyKeptFigures, { go: args.go, connections, at, ...(site ? { site } : {}), tally, lines });
@@ -221,7 +223,7 @@ export const tidyKeptFigures = internalAction({
       }
       if (site.task < site.tasks.length) {
         const task = site.tasks[site.task];
-        const step = await stepOf(ctx, holdId, task, args.go, site.cursor);
+        const step = await stepOf(ctx, holdId, task, args.go, site.cursor, known);
         const field = FIELD_OF[task.kind];
         site = { ...site, tally: { ...site.tally, [field]: site.tally[field] + step.found } };
         site = step.isDone ? { ...site, task: site.task + 1, cursor: null } : { ...site, cursor: step.continueCursor };
@@ -232,6 +234,7 @@ export const tidyKeptFigures = internalAction({
       lines.push(lineOf(site.host, site.countries, site.tally, args.go));
       tally = add(tally, site.tally);
       site = null;
+      known = new Map();
       at += 1;
     }
     lines.push(`All ${tally.websites} websites with Search Console figures: ${tally.countries} countries read as all countries; `
@@ -278,9 +281,14 @@ function listBucket(record: { country?: string; searchType: string; list: string
   return "searchConsoleLists: the rest";
 }
 
+/** Which of the ready-made periods a record is, for a closer look at the largest table. */
+function periodBucket(record: { country?: string; searchType: string; list: string; period: string; which: string }): string {
+  return `searchConsolePeriods: ${record.list}, ${record.period} days${record.which === "BEFORE" ? " (the period before)" : ""}${record.country ? `, ${record.country}` : ""}${record.searchType === "web" ? "" : `, ${record.searchType}`}`;
+}
+
 /** One page of a website's rows in one table: how many, and their size as stored, near enough. */
 export const sizeStep = internalQuery({
-  args: { holdId: v.id("companyWebsites"), table: v.union(...TABLES.map((table) => v.literal(table))), cursor: v.union(v.string(), v.null()) },
+  args: { holdId: v.id("companyWebsites"), table: v.union(...TABLES.map((table) => v.literal(table))), cursor: v.union(v.string(), v.null()), detail: v.optional(v.boolean()) },
   returns: v.object({ buckets: v.array(bucketValidator), continueCursor: v.string(), isDone: v.boolean() }),
   handler: async (ctx, args) => {
     const paging = { cursor: args.cursor, numItems: SIZE_PAGE[args.table] };
@@ -300,7 +308,11 @@ export const sizeStep = internalQuery({
                 : await ctx.db.query("searchConsolePageRefs").withIndex("by_hold_ref", (q) => q.eq("companyWebsiteId", hold)).paginate(paging);
     const buckets = new Map<string, Bucket>();
     for (const row of page.page as Array<Record<string, unknown>>) {
-      const name = args.table === "searchConsoleLists" ? listBucket(row as { country?: string; searchType: string; list: string }) : args.table;
+      const name = args.table === "searchConsoleLists"
+        ? listBucket(row as { country?: string; searchType: string; list: string })
+        : args.table === "searchConsolePeriods" && args.detail
+          ? periodBucket(row as { country?: string; searchType: string; list: string; period: string; which: string })
+          : args.table;
       const bucket = buckets.get(name) ?? { name, records: 0, bytes: 0 };
       bucket.records += 1;
       bucket.bytes += JSON.stringify(row).length;
@@ -342,7 +354,8 @@ const sizeReportValidator = v.object({
 type SizeReport = typeof sizeReportValidator.type;
 
 export const keptSize = internalAction({
-  args: { host: v.optional(v.string()) },
+  /** `detail`: the ready-made periods shown list by list and period by period. */
+  args: { host: v.optional(v.string()), detail: v.optional(v.boolean()) },
   returns: v.array(sizeReportValidator),
   handler: async (ctx, args): Promise<SizeReport[]> => {
     const started = Date.now();
@@ -359,7 +372,7 @@ export const keptSize = internalAction({
             complete = false;
             break;
           }
-          const step: { buckets: Bucket[]; continueCursor: string; isDone: boolean } = await ctx.runQuery(internal.searchConsoleTidy.sizeStep, { holdId, table, cursor });
+          const step: { buckets: Bucket[]; continueCursor: string; isDone: boolean } = await ctx.runQuery(internal.searchConsoleTidy.sizeStep, { holdId, table, cursor, detail: args.detail });
           for (const one of step.buckets) {
             const held = buckets.get(one.name) ?? { name: one.name, records: 0, bytes: 0 };
             buckets.set(one.name, { name: one.name, records: held.records + one.records, bytes: held.bytes + one.bytes });

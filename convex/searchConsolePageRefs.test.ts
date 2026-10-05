@@ -28,20 +28,15 @@ describe("page addresses kept once", () => {
       await ctx.db.insert("searchConsoleLists", { ...base, list: "page", keys: ["https://acme-shop.test/a"], clicks: [6], impressions: [15], positionSums: [24] });
       await ctx.db.insert("searchConsoleLists", { ...base, list: "device", keys: ["MOBILE"], clicks: [6], impressions: [15], positionSums: [24] });
     });
-    const turn = async () => {
-      let changed = 0;
-      for (let cursor: string | null = null; ;) {
-        const step: { changed: number; continueCursor: string; isDone: boolean } = await t.mutation(internal.searchConsolePageRefs.encodeKeptPagesStep, { holdId, cursor });
-        changed += step.changed;
-        if (step.isDone) return changed;
-        cursor = step.continueCursor;
-      }
-    };
+    const turn = () => t.action(internal.searchConsolePageRefs.encodeKeptPages, { holds: [holdId] });
+    const stored = () => t.run(async (ctx) => await ctx.db.query("searchConsoleLists").collect());
 
-    expect(await turn()).toBe(2);
-    expect(await turn()).toBe(0);
+    await turn();
+    const records = await stored();
+    // Turned again, nothing changes.
+    await turn();
+    expect(await stored()).toEqual(records);
 
-    const records = await t.run(async (ctx) => await ctx.db.query("searchConsoleLists").collect());
     const pair = records.find((record) => record.list === "pair")!;
     const page = records.find((record) => record.list === "page")!;
     const device = records.find((record) => record.list === "device")!;
@@ -57,5 +52,27 @@ describe("page addresses kept once", () => {
     });
     expect(kept.records[0].pages).toEqual(pages);
     expect(kept.records[0].keys).toEqual(["door handles", "brass knobs", "lever"]);
+  });
+
+  test("a day of more addresses than one step may look up is turned a few hundred at a time", async () => {
+    const t = harness();
+    const holdId = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now() });
+      const websiteId = await ctx.db.insert("websites", { host: "acme-shop.test", displayHost: "acme-shop.test", firstSeenAt: Date.now() });
+      return await ctx.db.insert("companyWebsites", { companyId, websiteId, createdAt: Date.now() } as never) as Id<"companyWebsites">;
+    });
+    const pages = Array.from({ length: 1_200 }, (_, index) => `https://acme-shop.test/p/${index}`);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("searchConsoleLists", {
+        companyWebsiteId: holdId, searchType: "web", list: "page", grain: "DAY", start: "2026-10-01", part: 0, fetchedAt: 1,
+        keys: pages, clicks: pages.map(() => 1), impressions: pages.map(() => 2), positionSums: pages.map(() => 3),
+      });
+    });
+
+    await t.action(internal.searchConsolePageRefs.encodeKeptPages, { holds: [holdId] });
+    const [record] = await t.run(async (ctx) => await ctx.db.query("searchConsoleLists").collect());
+    expect(new Set(record.keys).size).toBe(1_200);
+    expect(record.keys.every(isPageRef)).toBe(true);
+    expect(await t.run(async (ctx) => await decodePages(ctx, holdId, record.keys))).toEqual(pages);
   });
 });

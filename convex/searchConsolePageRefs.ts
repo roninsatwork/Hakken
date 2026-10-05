@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 
-import { internalAction, internalMutation } from "./_generated/server";
-import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery } from "./_generated/server";
+import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 
@@ -87,38 +87,108 @@ export async function deletePageRefs(ctx: MutationCtx, holdId: Id<"companyWebsit
 }
 
 // ---------------------------------------------------------------------------
+// From an action: a few hundred look-ups a step, remembered for the run
+// ---------------------------------------------------------------------------
+
+/**
+ * Addresses given references in one step, at most: each is a look-up, and a
+ * step stops at a few thousand. A busy website's day holds thousands of
+ * addresses — morehandles.co.uk's conversion stopped on 2026-10-05 at three
+ * kept records a step — so an action asks for them this many at a time.
+ */
+const REFS_PER_STEP = 500;
+
+/** References for up to `REFS_PER_STEP` addresses, new numbers for those the website has not had. */
+export const refsForPages = internalMutation({
+  args: { holdId: v.id("companyWebsites"), pages: v.array(v.string()) },
+  returns: v.array(v.string()),
+  handler: async (ctx, args) => {
+    if (args.pages.length > REFS_PER_STEP) throw new Error(`At most ${REFS_PER_STEP} page addresses a step, not ${args.pages.length}.`);
+    return await encodePages(ctx, args.holdId, args.pages);
+  },
+});
+
+/**
+ * Addresses as references from an action: the ones not yet known asked for a
+ * few hundred at a time, and remembered in `known` for the rest of the run —
+ * a website's pages repeat from day to day.
+ */
+export async function encodePagesFromAction(
+  ctx: ActionCtx,
+  holdId: Id<"companyWebsites">,
+  pages: readonly string[],
+  known: Map<string, string>,
+): Promise<string[]> {
+  const missing = [...new Set(pages)].filter((page) => !isPageRef(page) && !known.has(page));
+  for (let start = 0; start < missing.length; start += REFS_PER_STEP) {
+    const chunk = missing.slice(start, start + REFS_PER_STEP);
+    const refs: string[] = await ctx.runMutation(internal.searchConsolePageRefs.refsForPages, { holdId, pages: chunk });
+    chunk.forEach((page, index) => known.set(page, refs[index]));
+  }
+  return pages.map((page) => known.get(page) ?? page);
+}
+
+// ---------------------------------------------------------------------------
 // Turning the addresses kept before 2026-10-05 into references, once
 // ---------------------------------------------------------------------------
 
-/** Kept records turned per mutation: each up to 8,000 lines, so few. */
+/** Kept records read per step: each up to a few thousand lines, so few. */
 const RECORDS_PER_STEP = 3;
 
-/**
- * One step of turning a website's kept addresses into references: the next
- * few of its kept records, wherever a `pair` or `page` list still holds an
- * address. Says where to go on, or that the website is done.
- */
-export const encodeKeptPagesStep = internalMutation({
+const addressedValidator = v.object({ recordId: v.id("searchConsoleLists"), keys: v.optional(v.array(v.string())), pages: v.optional(v.array(v.string())) });
+
+/** The next few of a website's kept records, and those still holding an address with what they hold. */
+export const keptWithAddresses = internalQuery({
   args: { holdId: v.id("companyWebsites"), cursor: v.union(v.string(), v.null()) },
-  returns: v.object({ changed: v.number(), continueCursor: v.string(), isDone: v.boolean() }),
+  returns: v.object({ records: v.array(addressedValidator), continueCursor: v.string(), isDone: v.boolean() }),
   handler: async (ctx, args) => {
     const page = await ctx.db
       .query("searchConsoleLists")
       .withIndex("by_hold_country_type_list_grain_start", (q) => q.eq("companyWebsiteId", args.holdId))
       .paginate({ cursor: args.cursor, numItems: RECORDS_PER_STEP });
-    let changed = 0;
-    for (const record of page.page) {
-      if (record.list === "pair" && record.pages?.some((value) => !isPageRef(value))) {
-        await ctx.db.patch(record._id, { pages: await encodePages(ctx, args.holdId, record.pages) });
-        changed += 1;
-      } else if (record.list === "page" && record.keys.some((value) => !isPageRef(value))) {
-        await ctx.db.patch(record._id, { keys: await encodePages(ctx, args.holdId, record.keys) });
-        changed += 1;
-      }
-    }
-    return { changed, continueCursor: page.continueCursor, isDone: page.isDone };
+    const records = page.page.flatMap((record): Array<typeof addressedValidator.type> => {
+      if (record.list === "pair" && record.pages?.some((value) => !isPageRef(value))) return [{ recordId: record._id, pages: record.pages }];
+      if (record.list === "page" && record.keys.some((value) => !isPageRef(value))) return [{ recordId: record._id, keys: record.keys }];
+      return [];
+    });
+    return { records, continueCursor: page.continueCursor, isDone: page.isDone };
   },
 });
+
+/** A kept record's addresses replaced by their references; one rolled up or fetched again since is left alone. */
+export const setRecordRefs = internalMutation({
+  args: addressedValidator.fields,
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const record = await ctx.db.get(args.recordId);
+    if (!record) return false;
+    await ctx.db.patch(record._id, { ...(args.keys ? { keys: args.keys } : {}), ...(args.pages ? { pages: args.pages } : {}) });
+    return true;
+  },
+});
+
+/** One step of turning a website's kept addresses into references, from an action. Says where to go on. */
+export async function turnKeptStep(
+  ctx: ActionCtx,
+  holdId: Id<"companyWebsites">,
+  cursor: string | null,
+  known: Map<string, string>,
+): Promise<{ changed: number; continueCursor: string; isDone: boolean }> {
+  const page: { records: Array<typeof addressedValidator.type>; continueCursor: string; isDone: boolean } =
+    await ctx.runQuery(internal.searchConsolePageRefs.keptWithAddresses, { holdId, cursor });
+  let changed = 0;
+  for (const record of page.records) {
+    const keys = record.keys ? await encodePagesFromAction(ctx, holdId, record.keys, known) : undefined;
+    const pages = record.pages ? await encodePagesFromAction(ctx, holdId, record.pages, known) : undefined;
+    const set: boolean = await ctx.runMutation(internal.searchConsolePageRefs.setRecordRefs, {
+      recordId: record.recordId,
+      ...(keys ? { keys } : {}),
+      ...(pages ? { pages } : {}),
+    });
+    if (set) changed += 1;
+  }
+  return { changed, continueCursor: page.continueCursor, isDone: page.isDone };
+}
 
 /** How long one run of the turning works before it hands on to the next: an action stops at ten minutes. */
 const TURN_RUN_MS = 6 * 60 * 1000;
@@ -127,7 +197,8 @@ const TURN_RUN_MS = 6 * 60 * 1000;
  * Run once on each deployment after 2026-10-05's change: every connected
  * website's kept addresses turned into references, a few records a step, in
  * runs that hand on to the next until all are done. Safe to run again — a
- * record already turned is left alone.
+ * record already turned is left alone. (`searchConsoleTidy.ts` does this
+ * among the rest of the day's changes.)
  */
 export const encodeKeptPages = internalAction({
   args: { holds: v.optional(v.array(v.id("companyWebsites"))), cursor: v.optional(v.union(v.string(), v.null())), records: v.optional(v.number()) },
@@ -138,16 +209,18 @@ export const encodeKeptPages = internalAction({
       ?? (await ctx.runQuery(internal.searchConsoleSync.connectionsWithFigures, {})).map((connection) => connection.holdId);
     let records = args.records ?? 0;
     let cursor = args.cursor ?? null;
+    let known = new Map<string, string>();
     for (let at = 0; at < holds.length;) {
       if (Date.now() - started > TURN_RUN_MS) {
         await ctx.scheduler.runAfter(0, internal.searchConsolePageRefs.encodeKeptPages, { holds: holds.slice(at), cursor, records });
         return null;
       }
-      const step: { changed: number; continueCursor: string; isDone: boolean } = await ctx.runMutation(internal.searchConsolePageRefs.encodeKeptPagesStep, { holdId: holds[at], cursor });
+      const step = await turnKeptStep(ctx, holds[at], cursor, known);
       records += step.changed;
       if (step.isDone) {
         at += 1;
         cursor = null;
+        known = new Map();
       } else {
         cursor = step.continueCursor;
       }
