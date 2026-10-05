@@ -1,0 +1,28 @@
+# Usage → Overview — the approved look (board "Main" of docs/plans/assets/usage-credits/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Usage
+notice (info)
+filter: This month
+figures
+  figure: Plan credits left
+  figure: Bought credits left
+  figure: Used this month, of #
+  figure: Left on #/#/#
+chart-card: This month’s credits, day by day
+chart-card: Where they went
+section: Credits by website
+search: Find a website…
+filter: Owned or tracked
+table: Website | Owned or tracked | Checks | Runs | Credits | Share
+  table-bar
+    download: Download CSV
+  table-footer
+section: What ran this month
+search: Find a check or website…
+filter: Website
+filter: How often
+table: Check | Website | How often | Runs | Each | Credits | Share
+  table-bar
+    download: Download CSV
+  table-footer

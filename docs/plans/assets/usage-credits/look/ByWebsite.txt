@@ -1,0 +1,19 @@
+# Usage → By website — the approved look (board "ByWebsite" of docs/plans/assets/usage-credits/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Credits by website
+filter: This month
+select: Websites
+section: ronins.co.uk
+figures
+  figure: Credits this month
+  figure: Runs
+  figure: Checks
+  figure: Each run
+search: Find a task, keyword or person…
+filter: Task
+filter: User
+table: Date | Time | Description | User | Out
+  table-bar
+    download: Download CSV
+  table-footer

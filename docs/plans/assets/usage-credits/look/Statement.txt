@@ -1,0 +1,18 @@
+# Usage → Statement — the approved look (board "Statement" of docs/plans/assets/usage-credits/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Statement
+filter: This month
+figures
+  figure: Opening balance
+  figure: In
+  figure: Out
+  figure: Balance now
+search: Find a task, keyword or question…
+filter: Task
+filter: Website
+filter: User
+table: Date | Time | Description | User | Out | In | Balance
+  table-bar
+    download: Download CSV
+  table-footer

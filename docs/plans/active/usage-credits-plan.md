@@ -8,7 +8,7 @@ Analytics, then pages that carry the detail, down to a bank-style statement.
 Super admins set what each kind of work costs in credits, and see whether each
 price covers what the work really costs us.
 
-**Status: planned 2026-10-05; step 1 (the record) built the same day, local on dev. Every price and number in it is a
+**Status: planned 2026-10-05; steps 1 (the record) and 3 (the Usage screens) built the same day, local on dev. Every price and number in it is a
 placeholder until the cost audit.** Change a decision here, with a date, before
 building anything that disagrees with it.
 
@@ -90,6 +90,15 @@ teh designes for this"):
   credits to our failure.
 - **What a top-up's credits end on is stated at the point of sale**: on the Top
   up page and on the receipt.
+
+## Not charging yet — 2026-10-05
+
+Anthony, while step 3 was built: "we dont switch on charging we are just
+montiorign costs at this stage to set pricign etc". **Nothing charges anyone
+at this stage**: the record (step 1) and the screens (step 3) show what each
+piece of work would use in credits beside what it really cost us, and that is
+what the prices are set from. **Steps 4 (Purchases, Top up, Stripe) and 5
+(switching it on) are parked** until he says the prices are set.
 
 ## Outstanding questions
 
@@ -338,8 +347,8 @@ Nothing in any step buys more than collections already buy.
 | 1. The record, quietly | 3 | Nothing |
 | 2. Admin → Credit prices | 1 | Outstanding question 1 |
 | 3. Usage, five screens | 3 | Step 1 |
-| 4. Purchases, Top up, Stripe | 3 | Step 1; Outstanding question 7 |
-| 5. Switching it on | 1.5 | Outstanding questions 2, 3, 4, 6 and 8; his go |
+| 4. Purchases, Top up, Stripe | 3 | **Parked**: no charging yet (2026-10-05) |
+| 5. Switching it on | 1.5 | **Parked**: no charging yet (2026-10-05) |
 | 6. The old chart out | 0.5 | Step 3 |
 | **In all** | **about 12** | |
 
@@ -356,7 +365,10 @@ real cost; nothing is refused and no screen shows it.
 
 - **Tables** (`convex/creditSchema.ts`): `creditBatches`, `creditCharges` (the
   statement), `creditAccounts` (owed), `creditPrices`, `creditSettings`,
-  `creditDayRollups`; `plans.monthlyCredits`.
+  `creditMonthRollups` (per month, kind and website) and `creditDayTotals`
+  (per day, and how much of it by hand); `plans.monthlyCredits`. (A daily
+  rollup per kind and website was built first and replaced the same day, in
+  step 3, before it held a row: a month of it grew with every website.)
 - **Kinds and units** (`convex/creditKinds.ts`): a request's kind is its
   registry family — SERP, DataForSEO Labs and Keywords Data are Rankings; AI
   Optimization is AI answers; On-Page is Site audit; Backlinks is Backlinks. Its
@@ -405,6 +417,46 @@ Left for later steps, knowingly:
 - A request revived after it was counted failed is not charged again.
 - A month with nothing charged has no grant or ending line.
 
+## Built — step 3, the Usage screens, 2026-10-05 (local, on dev; not pushed)
+
+Usage is on the main menu after Learn, with Overview, By work, By website,
+Coming up and Statement, built on the screen kit to the approved boards; each
+screen's outline is held by a look test
+(`src/app/(dashboard)/app/usage/usageLook.test.tsx`,
+`docs/plans/assets/usage-credits/look/`).
+
+- **Reads** (`convex/creditUsage.ts`), each the signed-in company's own and
+  none carrying a real cost: `usageSummary` (a month from its rollups and
+  daily totals: plan and bought credits left, used, the month by day beside
+  the month before, by kind, by website owned and tracked, every kind of check
+  on every website, and this month what is booked and left at the end),
+  `usageStatement` (the month line by line with the balance after each and
+  the month's opening; one kind or one website on By work and By website), and
+  `usageComingUp`.
+- **What is booked** is worked out from how each scheduled check has run: as
+  often as its recent runs were apart (or the company's collection cadence
+  after one run), charging what its last run charged; a check that has missed
+  two of its turns is taken as stopped. The screen says so.
+- **The screens**: the month is a view picker kept in the address, so it
+  follows between screens; every table is the standard search-and-filter
+  table with its bar, download and pages; a website is drawn with its mark,
+  square owned and round tracked; picking a website on the Overview narrows
+  "What ran this month" to it; the Statement opens and closes on the month's
+  balances and says which batch paid each line.
+- **Bounded reads**: a month's rollups, the newest 900 charges for what is
+  booked, and 900 statement lines — a month with more says so.
+- **Words**: English and Italian; the assistant's kind reads "Ask" and the
+  platform's own name.
+
+Not yet, knowingly:
+- Purchases, Top up and "Bought credits left →" (step 4).
+- Sorting the Overview's two tables by their headings; the statement sorts.
+- Seen in the browser pane: the session's own dev server cannot start while
+  another session's runs in this folder, and the pane is not signed in there.
+  Then seen in his own Chrome, signed in, on localhost:3000: Overview,
+  Statement and Coming up draw as approved, empty until dev's first charges,
+  with no console errors; the top bar now names Usage.
+
 ## Not in this plan
 
 - A money value for a credit on customer screens: customers see credits.
@@ -418,3 +470,7 @@ Left for later steps, knowingly:
   approved; written up at his request.
 - 2026-10-05 — Step 1 built: every charge recorded with its real cost, nothing
   refused, no screen.
+- 2026-10-05 — Step 3 built: the five Usage screens; the daily rollup per kind
+  and website replaced by a monthly one and daily totals.
+- 2026-10-05 — No charging at this stage, only monitoring costs to set prices:
+  steps 4 and 5 parked.

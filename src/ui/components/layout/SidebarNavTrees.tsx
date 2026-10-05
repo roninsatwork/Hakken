@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   Building2,
   FileText,
+  Gauge,
   Globe,
   GraduationCap,
   SearchCheck,
@@ -388,6 +389,23 @@ export function UserNavTree({
     isActive={activeItem === 'Learn' || isLearnPath(pathname)}
     onClick={() => setActiveItem('Learn')}
   />
+
+  {/* Usage, after Learn: where the company's credits go (docs/plans/active/usage-credits-plan.md, step 3). */}
+  <NavItem
+    icon={Gauge}
+    label={t('usage')}
+    isActive={activeItem === 'Usage' || pathname.startsWith('/app/usage')}
+    onClick={() => setActiveItem('Usage')}
+    hasChildren
+    isOpen={openSections.usage}
+    onToggle={() => toggleSection('usage')}
+  >
+    <SubNavItem label={t('usageOverview')} href="/app/usage" isActive={pathname === '/app/usage'} onClick={() => setActiveItem('Usage')} />
+    <SubNavItem label={t('usageByWork')} href="/app/usage/work" isActive={pathname.startsWith('/app/usage/work')} onClick={() => setActiveItem('Usage')} />
+    <SubNavItem label={t('usageByWebsite')} href="/app/usage/websites" isActive={pathname.startsWith('/app/usage/websites')} onClick={() => setActiveItem('Usage')} />
+    <SubNavItem label={t('usageComingUp')} href="/app/usage/coming-up" isActive={pathname.startsWith('/app/usage/coming-up')} onClick={() => setActiveItem('Usage')} />
+    <SubNavItem label={t('usageStatement')} href="/app/usage/statement" isActive={pathname.startsWith('/app/usage/statement')} onClick={() => setActiveItem('Usage')} />
+  </NavItem>
 
   {hasCapability(CORE_MODULES.reception) && (
   <NavItem

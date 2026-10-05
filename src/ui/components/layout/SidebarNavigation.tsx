@@ -272,6 +272,7 @@ function getDefaultOpenSections(pathname: string): Record<string, boolean> {
     governance: pathname.startsWith('/admin/governance'),
     workspaceGovernance: pathname.startsWith('/app/governance'),
     sites: pathname.startsWith('/app/sites') || pathname.startsWith('/app/keyword-research'),
+    usage: pathname.startsWith('/app/usage'),
     content: pathname.startsWith('/admin/content'),
     businessHub: false,
     clients: false,

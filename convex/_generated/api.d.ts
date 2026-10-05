@@ -143,6 +143,7 @@ import type * as creditHooks from "../creditHooks.js";
 import type * as creditKinds from "../creditKinds.js";
 import type * as creditLedger from "../creditLedger.js";
 import type * as creditSchema from "../creditSchema.js";
+import type * as creditUsage from "../creditUsage.js";
 import type * as crons from "../crons.js";
 import type * as customerIdentity from "../customerIdentity.js";
 import type * as dataForSeoAiOverviewOperations from "../dataForSeoAiOverviewOperations.js";
@@ -726,6 +727,7 @@ declare const fullApi: ApiFromModules<{
   creditKinds: typeof creditKinds;
   creditLedger: typeof creditLedger;
   creditSchema: typeof creditSchema;
+  creditUsage: typeof creditUsage;
   crons: typeof crons;
   customerIdentity: typeof customerIdentity;
   dataForSeoAiOverviewOperations: typeof dataForSeoAiOverviewOperations;

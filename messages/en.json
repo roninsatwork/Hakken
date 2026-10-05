@@ -616,7 +616,13 @@
     "googleUpdates": "Google updates",
     "whoToFollow": "Who to follow",
     "outbox": "Outbox",
-    "learn": "Learn"
+    "learn": "Learn",
+    "usage": "Usage",
+    "usageOverview": "Overview",
+    "usageByWork": "By work",
+    "usageByWebsite": "By website",
+    "usageComingUp": "Coming up",
+    "usageStatement": "Statement"
   },
   "header": {
     "adminOverview": "Platform Management",
@@ -8765,7 +8771,8 @@
       "classifications": "{count, plural, =1 {# classification} other {# classifications}}",
       "lists": "{count, plural, =1 {# list} other {# lists}}",
       "ideas": "{count, plural, =1 {# idea} other {# ideas}}",
-      "assistants": "{count, plural, =1 {# assistant} other {# assistants}}"
+      "assistants": "{count, plural, =1 {# assistant} other {# assistants}}",
+      "lines": "{count, plural, =1 {# line} other {# lines}}"
     },
     "chart": {
       "download": "Download",
@@ -12107,6 +12114,232 @@
         "name": "Name",
         "where": "Where",
         "why": "Why follow them"
+      }
+    }
+  },
+  "usage": {
+    "title": "Usage",
+    "description": "Where your credits go, and how many are left.",
+    "notice": "Your plan gives you {plan} credits on the 1st of each month; whatever is left at midnight on the last day ends. Credits you buy last 12 months, and are used only once your plan’s have run out.",
+    "owed": "Your credits ran out this month: {owed} more were used. Nothing has been stopped.",
+    "noCompany": "Choose a company to see its usage.",
+    "nothingYet": "Nothing has used credits this month yet.",
+    "download": "Download CSV",
+    "month": {
+      "label": "Month",
+      "thisMonth": "This month"
+    },
+    "kinds": {
+      "rankings": "Rankings",
+      "aiAnswers": "AI answers",
+      "keywordResearch": "Keyword research",
+      "siteAudit": "Site audit",
+      "backlinks": "Backlinks",
+      "assistant": "Ask {platformName}"
+    },
+    "prices": {
+      "rankings": "{credits} per {per, plural, =1 {keyword} other {# keywords}} checked",
+      "aiAnswers": "{credits} per {per, plural, =1 {answer} other {# answers}}",
+      "keywordResearch": "{credits} per {per, plural, =1 {keyword} other {# keywords}} looked up",
+      "siteAudit": "{credits} per {per, plural, =1 {page} other {# pages}}",
+      "backlinks": "{credits} per {per, plural, =1 {link} other {# links}}",
+      "assistant": "{credits} per {per, plural, =1 {question} other {# questions}}"
+    },
+    "units": {
+      "rankings": "{count, plural, =1 {# keyword} other {# keywords}}",
+      "aiAnswers": "{count, plural, =1 {# answer} other {# answers}}",
+      "keywordResearch": "{count, plural, =1 {# keyword looked up} other {# keywords looked up}}",
+      "siteAudit": "{count, plural, =1 {# page} other {# pages}}",
+      "backlinks": "{count, plural, =1 {# link} other {# links}}",
+      "assistant": "{count, plural, =1 {# question} other {# questions}}"
+    },
+    "about": {
+      "rankings": "Where your websites and the competitors you track rank on Google, checked on a schedule.",
+      "aiAnswers": "Your questions put to the AI assistants, on a schedule.",
+      "keywordResearch": "Every keyword someone on your team looked up.",
+      "siteAudit": "Every page of your website read for problems.",
+      "backlinks": "The links to your websites, strongest first.",
+      "assistant": "Every question someone on your team asked."
+    },
+    "often": {
+      "byHand": "When you ask",
+      "day": "Every day",
+      "week": "Every week",
+      "month": "Every month",
+      "days": "Every {count} days"
+    },
+    "how": {
+      "scheduled": "Scheduled",
+      "byHand": "By hand",
+      "automatic": "Automatic",
+      "bought": "Bought"
+    },
+    "filters": {
+      "task": "Task",
+      "everyTask": "Every task",
+      "website": "Website",
+      "everyWebsite": "Every website",
+      "user": "User",
+      "everyUser": "Everyone"
+    },
+    "figures": {
+      "planLeft": "Plan credits left",
+      "planEnds": "They end at midnight on {date}",
+      "planEnded": "They ended at midnight on {date}",
+      "boughtLeft": "Bought credits left",
+      "boughtEnds": "The next {left} end on {date}",
+      "noneBought": "None bought",
+      "used": "Used this month, of {plan}",
+      "leftAtEnd": "Left on {date}",
+      "atThisPace": "At this pace; unused, they end that night",
+      "endedUnused": "Ended unused",
+      "endedOn": "At midnight on {date}",
+      "creditsThisMonth": "Credits this month",
+      "shareOfAll": "{share} of everything used",
+      "runs": "Runs",
+      "startedBy": "Started by {count, plural, =1 {# person} other {# people}}",
+      "allScheduled": "All on a schedule",
+      "price": "Price",
+      "checks": "Checks",
+      "eachRun": "Each run",
+      "eachRunDetail": "Credits a run, on average"
+    },
+    "chart": {
+      "title": "This month’s credits, day by day",
+      "hint": "What was left of your plan’s {plan} at the end of each day.",
+      "left": "Credits left",
+      "expected": "Booked, and your usual pace",
+      "empty": "The chart fills in as work uses credits."
+    },
+    "where": {
+      "title": "Where they went",
+      "hint": "This month’s {credits} credits, by kind of work.",
+      "empty": "Nothing has used credits this month yet.",
+      "statement": "Your statement: every credit in and out"
+    },
+    "websites": {
+      "title": "Credits by website",
+      "description": "This month, for each website: the ones you own and the competitors you track. Pick one to see its breakdown below.",
+      "search": "Find a website…",
+      "relationship": "Owned or tracked",
+      "everyRelationship": "Owned and tracked",
+      "owned": "Owned",
+      "tracked": "Tracked",
+      "none": "Not tied to a website",
+      "noMatch": "No website matches.",
+      "empty": "No credits were used this month.",
+      "totals": "{owned} credits on websites you own · {tracked} on those you track",
+      "columns": {
+        "website": "Website",
+        "relationship": "Owned or tracked",
+        "checks": "Checks",
+        "runs": "Runs",
+        "credits": "Credits",
+        "share": "Share"
+      }
+    },
+    "lines": {
+      "title": "What ran this month",
+      "titleFor": "What ran this month: {website}",
+      "description": "Each kind of check on each website: how often it runs, what one run uses, and what it used. Open one to see every charge.",
+      "search": "Find a check or website…",
+      "often": "How often",
+      "everyOften": "Every schedule",
+      "noMatch": "No check matches.",
+      "empty": "Nothing ran this month.",
+      "totals": "{credits} credits",
+      "columns": {
+        "check": "Check",
+        "website": "Website",
+        "often": "How often",
+        "runs": "Runs",
+        "each": "Each",
+        "credits": "Credits",
+        "share": "Share"
+      }
+    },
+    "byWork": {
+      "title": "Credits by work",
+      "description": "Pick a kind of work to see every charge it made: who, when, and what it used.",
+      "menu": "Kinds of work",
+      "search": "Find a keyword, question or person…"
+    },
+    "byWebsite": {
+      "title": "Credits by website",
+      "description": "Pick a website to see every charge made for it: the ones you own, and the competitors you track.",
+      "menu": "Websites",
+      "search": "Find a task, keyword or person…",
+      "notTied": "Keyword research and questions, which belong to no one website."
+    },
+    "comingUp": {
+      "title": "Coming up",
+      "description": "Every check on a schedule: when it runs next, who set it up, and the credits it will use.",
+      "notice": "Worked out from how each scheduled check has run. To change how often a check runs, open its website’s settings. Work you start yourself, like keyword research, is not booked.",
+      "search": "Find a task, website or person…",
+      "noMatch": "No scheduled check matches.",
+      "empty": "No scheduled check has run yet.",
+      "totals": "{thisMonth} credits to the month’s end · {nextMonth} next month",
+      "figures": {
+        "booked": "Booked to {date}",
+        "bookedDetail": "Of the {left} left from your plan",
+        "next": "Booked for {month}, of {plan}",
+        "free": "Free in {month}",
+        "freeDetail": "For work you start yourself",
+        "checks": "Scheduled checks",
+        "checksDetail": "On {count, plural, =1 {# website} other {# websites}}"
+      },
+      "columns": {
+        "next": "Next run",
+        "task": "Task",
+        "website": "Website",
+        "often": "How often",
+        "setUpBy": "Set up by",
+        "each": "Each",
+        "thisMonth": "To month end",
+        "nextMonth": "Next month"
+      }
+    },
+    "statement": {
+      "title": "Statement",
+      "description": "Every credit in and out this month, like a bank statement: who, when, what, and the balance after.",
+      "search": "Find a task, keyword or question…",
+      "noMatch": "No line matches.",
+      "empty": "No credits came in or went out this month.",
+      "cut": "This month has more lines than one page can hold; download the CSV for every one.",
+      "opening": "Opening balance",
+      "closing": "Balance now",
+      "totals": "{out} out · {in} in",
+      "used": "{out} credits",
+      "planGranted": "{month}’s plan credits",
+      "planEnds": "End at midnight on {date}",
+      "planEnded": "{month}’s plan credits ended",
+      "topUp": "Top-up",
+      "topUpEnded": "A top-up from {date} ended",
+      "unused": "Unused when they ended",
+      "refund": "Given back: {kind}",
+      "givenBack": "The work did not finish",
+      "fromPlan": "from {month}’s plan",
+      "fromTopUp": "from a top-up of {date}",
+      "and": " and ",
+      "figures": {
+        "opening": "Opening balance",
+        "openingDetail": "Left when the month began",
+        "in": "In",
+        "inDetail": "{plan} from your plan · {other} else",
+        "out": "Out",
+        "outDetail": "{used} used · {ended} ended unused",
+        "closing": "Balance now",
+        "closingDetail": "Every open batch, less anything owed"
+      },
+      "columns": {
+        "date": "Date",
+        "time": "Time",
+        "description": "Description",
+        "detail": "Detail",
+        "user": "User",
+        "out": "Out",
+        "in": "In",
+        "balance": "Balance"
       }
     }
   }

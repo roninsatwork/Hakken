@@ -616,7 +616,13 @@
     "googleUpdates": "Aggiornamenti di Google",
     "whoToFollow": "Chi seguire",
     "outbox": "Posta in uscita",
-    "learn": "Impara"
+    "learn": "Impara",
+    "usage": "Utilizzo",
+    "usageOverview": "Panoramica",
+    "usageByWork": "Per lavoro",
+    "usageByWebsite": "Per sito web",
+    "usageComingUp": "In arrivo",
+    "usageStatement": "Estratto conto"
   },
   "header": {
     "adminOverview": "Protocollo Infrastruttura",
@@ -8765,7 +8771,8 @@
       "classifications": "{count, plural, =1 {# classificazione} other {# classificazioni}}",
       "lists": "{count, plural, =1 {# lista} other {# liste}}",
       "ideas": "{count, plural, =1 {# idea} other {# idee}}",
-      "assistants": "{count, plural, =1 {# assistente} other {# assistenti}}"
+      "assistants": "{count, plural, =1 {# assistente} other {# assistenti}}",
+      "lines": "{count, plural, =1 {# riga} other {# righe}}"
     },
     "chart": {
       "download": "Scarica",
@@ -12107,6 +12114,232 @@
         "name": "Nome",
         "where": "Dove",
         "why": "Perché seguirli"
+      }
+    }
+  },
+  "usage": {
+    "title": "Utilizzo",
+    "description": "Dove vanno i tuoi crediti e quanti ne restano.",
+    "notice": "Il tuo piano ti dà {plan} crediti il 1° di ogni mese; quelli rimasti a mezzanotte dell’ultimo giorno scadono. I crediti che acquisti durano 12 mesi e si usano solo dopo aver esaurito quelli del piano.",
+    "owed": "Questo mese hai esaurito i crediti: ne sono stati usati altri {owed}. Non è stato fermato nulla.",
+    "noCompany": "Scegli un’azienda per vederne l’utilizzo.",
+    "nothingYet": "Questo mese non è ancora stato usato nessun credito.",
+    "download": "Scarica CSV",
+    "month": {
+      "label": "Mese",
+      "thisMonth": "Questo mese"
+    },
+    "kinds": {
+      "rankings": "Posizionamenti",
+      "aiAnswers": "Risposte AI",
+      "keywordResearch": "Ricerca parole chiave",
+      "siteAudit": "Analisi del sito",
+      "backlinks": "Backlink",
+      "assistant": "Chiedi a {platformName}"
+    },
+    "prices": {
+      "rankings": "{credits} ogni {per, plural, =1 {parola chiave controllata} other {# parole chiave controllate}}",
+      "aiAnswers": "{credits} ogni {per, plural, =1 {risposta} other {# risposte}}",
+      "keywordResearch": "{credits} ogni {per, plural, =1 {parola chiave cercata} other {# parole chiave cercate}}",
+      "siteAudit": "{credits} ogni {per, plural, =1 {pagina} other {# pagine}}",
+      "backlinks": "{credits} ogni {per, plural, =1 {link} other {# link}}",
+      "assistant": "{credits} ogni {per, plural, =1 {domanda} other {# domande}}"
+    },
+    "units": {
+      "rankings": "{count, plural, =1 {# parola chiave} other {# parole chiave}}",
+      "aiAnswers": "{count, plural, =1 {# risposta} other {# risposte}}",
+      "keywordResearch": "{count, plural, =1 {# parola chiave cercata} other {# parole chiave cercate}}",
+      "siteAudit": "{count, plural, =1 {# pagina} other {# pagine}}",
+      "backlinks": "{count, plural, =1 {# link} other {# link}}",
+      "assistant": "{count, plural, =1 {# domanda} other {# domande}}"
+    },
+    "about": {
+      "rankings": "Dove si posizionano su Google i tuoi siti e i concorrenti che segui, controllato secondo una pianificazione.",
+      "aiAnswers": "Le tue domande poste agli assistenti AI, secondo una pianificazione.",
+      "keywordResearch": "Ogni parola chiave cercata da qualcuno del tuo team.",
+      "siteAudit": "Ogni pagina del tuo sito letta per trovare problemi.",
+      "backlinks": "I link verso i tuoi siti, dai più forti.",
+      "assistant": "Ogni domanda posta da qualcuno del tuo team."
+    },
+    "often": {
+      "byHand": "Quando lo chiedi",
+      "day": "Ogni giorno",
+      "week": "Ogni settimana",
+      "month": "Ogni mese",
+      "days": "Ogni {count} giorni"
+    },
+    "how": {
+      "scheduled": "Pianificato",
+      "byHand": "A mano",
+      "automatic": "Automatico",
+      "bought": "Acquistato"
+    },
+    "filters": {
+      "task": "Attività",
+      "everyTask": "Ogni attività",
+      "website": "Sito web",
+      "everyWebsite": "Ogni sito web",
+      "user": "Utente",
+      "everyUser": "Tutti"
+    },
+    "figures": {
+      "planLeft": "Crediti del piano rimasti",
+      "planEnds": "Scadono a mezzanotte del {date}",
+      "planEnded": "Sono scaduti a mezzanotte del {date}",
+      "boughtLeft": "Crediti acquistati rimasti",
+      "boughtEnds": "I prossimi {left} scadono il {date}",
+      "noneBought": "Nessuno acquistato",
+      "used": "Usati questo mese, su {plan}",
+      "leftAtEnd": "Rimasti il {date}",
+      "atThisPace": "A questo ritmo; se non usati, scadono quella notte",
+      "endedUnused": "Scaduti senza uso",
+      "endedOn": "A mezzanotte del {date}",
+      "creditsThisMonth": "Crediti questo mese",
+      "shareOfAll": "{share} di tutto ciò che è stato usato",
+      "runs": "Esecuzioni",
+      "startedBy": "Avviate da {count, plural, =1 {# persona} other {# persone}}",
+      "allScheduled": "Tutte pianificate",
+      "price": "Prezzo",
+      "checks": "Controlli",
+      "eachRun": "Ogni esecuzione",
+      "eachRunDetail": "Crediti per esecuzione, in media"
+    },
+    "chart": {
+      "title": "I crediti di questo mese, giorno per giorno",
+      "hint": "Quanto restava dei {plan} del tuo piano alla fine di ogni giorno.",
+      "left": "Crediti rimasti",
+      "expected": "Prenotati, e il tuo ritmo abituale",
+      "empty": "Il grafico si riempie man mano che il lavoro usa crediti."
+    },
+    "where": {
+      "title": "Dove sono andati",
+      "hint": "I {credits} crediti di questo mese, per tipo di lavoro.",
+      "empty": "Questo mese non è ancora stato usato nessun credito.",
+      "statement": "Il tuo estratto conto: ogni credito in entrata e in uscita"
+    },
+    "websites": {
+      "title": "Crediti per sito web",
+      "description": "Questo mese, per ogni sito: quelli di tua proprietà e i concorrenti che segui. Scegline uno per vederne il dettaglio qui sotto.",
+      "search": "Trova un sito web…",
+      "relationship": "Di proprietà o seguito",
+      "everyRelationship": "Di proprietà e seguiti",
+      "owned": "Di proprietà",
+      "tracked": "Seguito",
+      "none": "Non legato a un sito web",
+      "noMatch": "Nessun sito web corrisponde.",
+      "empty": "Questo mese non sono stati usati crediti.",
+      "totals": "{owned} crediti sui siti di tua proprietà · {tracked} su quelli che segui",
+      "columns": {
+        "website": "Sito web",
+        "relationship": "Di proprietà o seguito",
+        "checks": "Controlli",
+        "runs": "Esecuzioni",
+        "credits": "Crediti",
+        "share": "Quota"
+      }
+    },
+    "lines": {
+      "title": "Cosa è stato eseguito questo mese",
+      "titleFor": "Cosa è stato eseguito questo mese: {website}",
+      "description": "Ogni tipo di controllo su ogni sito: con che frequenza viene eseguito, quanto usa un’esecuzione e quanto ha usato. Aprine uno per vedere ogni addebito.",
+      "search": "Trova un controllo o un sito web…",
+      "often": "Frequenza",
+      "everyOften": "Ogni pianificazione",
+      "noMatch": "Nessun controllo corrisponde.",
+      "empty": "Questo mese non è stato eseguito nulla.",
+      "totals": "{credits} crediti",
+      "columns": {
+        "check": "Controllo",
+        "website": "Sito web",
+        "often": "Frequenza",
+        "runs": "Esecuzioni",
+        "each": "Ciascuna",
+        "credits": "Crediti",
+        "share": "Quota"
+      }
+    },
+    "byWork": {
+      "title": "Crediti per lavoro",
+      "description": "Scegli un tipo di lavoro per vedere ogni addebito che ha fatto: chi, quando e quanto ha usato.",
+      "menu": "Tipi di lavoro",
+      "search": "Trova una parola chiave, una domanda o una persona…"
+    },
+    "byWebsite": {
+      "title": "Crediti per sito web",
+      "description": "Scegli un sito web per vedere ogni addebito fatto per esso: quelli di tua proprietà e i concorrenti che segui.",
+      "menu": "Siti web",
+      "search": "Trova un’attività, una parola chiave o una persona…",
+      "notTied": "Ricerca parole chiave e domande, che non appartengono a nessun sito."
+    },
+    "comingUp": {
+      "title": "In arrivo",
+      "description": "Ogni controllo pianificato: quando sarà eseguito, chi l’ha impostato e i crediti che userà.",
+      "notice": "Calcolato da come è stato eseguito ogni controllo pianificato. Per cambiare la frequenza di un controllo, apri le impostazioni del suo sito. Il lavoro che avvii tu, come la ricerca di parole chiave, non è prenotato.",
+      "search": "Trova un’attività, un sito web o una persona…",
+      "noMatch": "Nessun controllo pianificato corrisponde.",
+      "empty": "Nessun controllo pianificato è ancora stato eseguito.",
+      "totals": "{thisMonth} crediti fino a fine mese · {nextMonth} il mese prossimo",
+      "figures": {
+        "booked": "Prenotati fino al {date}",
+        "bookedDetail": "Dei {left} rimasti del tuo piano",
+        "next": "Prenotati per {month}, su {plan}",
+        "free": "Liberi a {month}",
+        "freeDetail": "Per il lavoro che avvii tu",
+        "checks": "Controlli pianificati",
+        "checksDetail": "Su {count, plural, =1 {# sito web} other {# siti web}}"
+      },
+      "columns": {
+        "next": "Prossima esecuzione",
+        "task": "Attività",
+        "website": "Sito web",
+        "often": "Frequenza",
+        "setUpBy": "Impostato da",
+        "each": "Ciascuna",
+        "thisMonth": "Fino a fine mese",
+        "nextMonth": "Mese prossimo"
+      }
+    },
+    "statement": {
+      "title": "Estratto conto",
+      "description": "Ogni credito in entrata e in uscita questo mese, come un estratto conto bancario: chi, quando, cosa e il saldo dopo.",
+      "search": "Trova un’attività, una parola chiave o una domanda…",
+      "noMatch": "Nessuna riga corrisponde.",
+      "empty": "Questo mese non sono entrati né usciti crediti.",
+      "cut": "Questo mese ha più righe di quante ne stiano in una pagina; scarica il CSV per vederle tutte.",
+      "opening": "Saldo iniziale",
+      "closing": "Saldo attuale",
+      "totals": "{out} in uscita · {in} in entrata",
+      "used": "{out} crediti",
+      "planGranted": "Crediti del piano di {month}",
+      "planEnds": "Scadono a mezzanotte del {date}",
+      "planEnded": "Crediti del piano di {month} scaduti",
+      "topUp": "Ricarica",
+      "topUpEnded": "Una ricarica del {date} è scaduta",
+      "unused": "Non usati alla scadenza",
+      "refund": "Restituiti: {kind}",
+      "givenBack": "Il lavoro non è stato completato",
+      "fromPlan": "dal piano di {month}",
+      "fromTopUp": "da una ricarica del {date}",
+      "and": " e ",
+      "figures": {
+        "opening": "Saldo iniziale",
+        "openingDetail": "Rimasto all’inizio del mese",
+        "in": "In entrata",
+        "inDetail": "{plan} dal tuo piano · {other} da altro",
+        "out": "In uscita",
+        "outDetail": "{used} usati · {ended} scaduti senza uso",
+        "closing": "Saldo attuale",
+        "closingDetail": "Ogni lotto aperto, meno quanto dovuto"
+      },
+      "columns": {
+        "date": "Data",
+        "time": "Ora",
+        "description": "Descrizione",
+        "detail": "Dettaglio",
+        "user": "Utente",
+        "out": "Uscita",
+        "in": "Entrata",
+        "balance": "Saldo"
       }
     }
   }

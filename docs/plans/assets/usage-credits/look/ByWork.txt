@@ -1,0 +1,19 @@
+# Usage → By work — the approved look (board "ByWork" of docs/plans/assets/usage-credits/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Credits by work
+filter: This month
+select: Kinds of work
+section: Keyword research
+figures
+  figure: Credits this month
+  figure: Runs
+  figure: Price
+  figure: Each run
+search: Find a keyword, question or person…
+filter: Website
+filter: User
+table: Date | Time | Description | User | Out
+  table-bar
+    download: Download CSV
+  table-footer

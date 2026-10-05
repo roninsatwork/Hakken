@@ -173,14 +173,16 @@ async function drawCredits(ctx: MutationCtx, companyId: Id<"companies">, credits
   return { paidFrom, owed: needed };
 }
 
+/** A charge's credits into its month's rollup (per kind and website) and its day's total. */
 async function bumpCreditRollup(ctx: MutationCtx, charge: Charge, credits: number, now: number): Promise<void> {
   if (!charge.kind) return;
   const day = new Date(now).toISOString().slice(0, 10);
+  const month = day.slice(0, 7);
   const websiteKey = charge.websiteId ?? "none";
   const kind = charge.kind;
   const existing = await ctx.db
-    .query("creditDayRollups")
-    .withIndex("by_company_day_kind_site", (q) => q.eq("companyId", charge.companyId).eq("day", day).eq("kind", kind).eq("websiteKey", websiteKey))
+    .query("creditMonthRollups")
+    .withIndex("by_company_month_kind_site", (q) => q.eq("companyId", charge.companyId).eq("month", month).eq("kind", kind).eq("websiteKey", websiteKey))
     .first();
   if (existing) {
     await ctx.db.patch(existing._id, {
@@ -189,11 +191,15 @@ async function bumpCreditRollup(ctx: MutationCtx, charge: Charge, credits: numbe
       realCostUsd: existing.realCostUsd + charge.realCostUsd,
       updatedAt: now,
     });
-    return;
+  } else {
+    await ctx.db.insert("creditMonthRollups", {
+      companyId: charge.companyId, month, kind, websiteKey, credits, runs: 1, realCostUsd: charge.realCostUsd, updatedAt: now,
+    });
   }
-  await ctx.db.insert("creditDayRollups", {
-    companyId: charge.companyId, day, kind, websiteKey, credits, runs: 1, realCostUsd: charge.realCostUsd, updatedAt: now,
-  });
+  const byHand = charge.how === "byHand" ? credits : 0;
+  const total = await ctx.db.query("creditDayTotals").withIndex("by_company_day", (q) => q.eq("companyId", charge.companyId).eq("day", day)).first();
+  if (total) await ctx.db.patch(total._id, { credits: total.credits + credits, byHand: total.byHand + byHand, updatedAt: now });
+  else await ctx.db.insert("creditDayTotals", { companyId: charge.companyId, day, credits, byHand, updatedAt: now });
 }
 
 /** What a run is, when it opens: everything but its counts. */

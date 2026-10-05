@@ -9,6 +9,8 @@ export type TableNoun =
   | "keywords" | "searches" | "pages" | "websites" | "linkingWebsites" | "links" | "anchors" | "addresses"
   | "results" | "answers" | "queries" | "problems" | "sections" | "folders" | "checks" | "days" | "weeks" | "months" | "groups" | "adverts"
   | "questionsAndSearches" | "updates" | "positions" | "kinds"
+  /** A credit statement's lines (docs/plans/active/usage-credits-plan.md). */
+  | "lines"
   // Search Console's countries and devices tables (docs/plans/active/search-console-plan.md §5).
   | "countries" | "devices"
   // The fan-out searches grouped into angles (docs/plans/active/fan-out-angles-plan.md, FA5).

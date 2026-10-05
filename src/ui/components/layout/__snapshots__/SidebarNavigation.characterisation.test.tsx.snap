@@ -20,12 +20,18 @@ exports[`sidebar navigation characterisation > company admin navigation is uncha
     "searchConsole -> /app/search-console",
     "tasks -> /app/tasks",
     "teamMembers -> /app/settings/team",
+    "usageByWebsite -> /app/usage/websites",
+    "usageByWork -> /app/usage/work",
+    "usageComingUp -> /app/usage/coming-up",
+    "usageOverview -> /app/usage",
+    "usageStatement -> /app/usage/statement",
     "yourSites -> /app/sites",
   ],
   "sections": [
     "governance",
     "organization",
     "sites",
+    "usage",
   ],
 }
 `;
@@ -39,10 +45,16 @@ exports[`sidebar navigation characterisation > signed-out navigation is unchange
     "keywordResearch -> /app/keyword-research",
     "learn -> /app/news",
     "searchConsole -> /app/search-console",
+    "usageByWebsite -> /app/usage/websites",
+    "usageByWork -> /app/usage/work",
+    "usageComingUp -> /app/usage/coming-up",
+    "usageOverview -> /app/usage",
+    "usageStatement -> /app/usage/statement",
     "yourSites -> /app/sites",
   ],
   "sections": [
     "sites",
+    "usage",
   ],
 }
 `;
@@ -59,10 +71,16 @@ exports[`sidebar navigation characterisation > standard user navigation is uncha
     "reception -> /app/reception",
     "searchConsole -> /app/search-console",
     "tasks -> /app/tasks",
+    "usageByWebsite -> /app/usage/websites",
+    "usageByWork -> /app/usage/work",
+    "usageComingUp -> /app/usage/coming-up",
+    "usageOverview -> /app/usage",
+    "usageStatement -> /app/usage/statement",
     "yourSites -> /app/sites",
   ],
   "sections": [
     "sites",
+    "usage",
   ],
 }
 `;

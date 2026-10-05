@@ -138,8 +138,10 @@ describe("a collection's charges", () => {
       const [, rivalCharge] = await statement(ctx, rival);
       expect(rivalCharge).toMatchObject({ units: 1, creditsOut: 1, realCostUsd: 0, reusedValueUsd: 0.002, balanceAfter: 999 });
 
-      const rollups = await ctx.db.query("creditDayRollups").withIndex("by_company_day", (q) => q.eq("companyId", acme)).collect();
+      const rollups = await ctx.db.query("creditMonthRollups").withIndex("by_company_month", (q) => q.eq("companyId", acme)).collect();
       expect(rollups).toEqual([expect.objectContaining({ kind: "rankings", websiteKey: websiteId, credits: 5, runs: 1, realCostUsd: 0.002 })]);
+      const days = await ctx.db.query("creditDayTotals").withIndex("by_company_day", (q) => q.eq("companyId", acme)).collect();
+      expect(days).toEqual([expect.objectContaining({ credits: 5, byHand: 0 })]);
     });
   });
 

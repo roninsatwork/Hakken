@@ -148,13 +148,16 @@ export const creditTables = {
   }).index("by_key", ["key"]),
 
   /**
-   * Credits charged per company, day, kind and website: what the Usage
-   * screens read, so no screen sums the statement (the rule `seoDayRollups`
-   * already keeps). `websiteKey` is the website's id, or `none`.
+   * Credits charged per company, month, kind and website: what the Usage
+   * screens' totals read, so no screen sums the statement (the rule
+   * `seoDayRollups` already keeps). A month is a row per kind and website,
+   * not per day as well, so a company's month stays one small read however
+   * many websites it watches. `websiteKey` is the website's id, or `none`.
    */
-  creditDayRollups: defineTable({
+  creditMonthRollups: defineTable({
     companyId: v.id("companies"),
-    day: v.string(),
+    /** `YYYY-MM`, UTC. */
+    month: v.string(),
     kind: creditKindValidator,
     websiteKey: v.string(),
     credits: v.number(),
@@ -162,6 +165,17 @@ export const creditTables = {
     realCostUsd: v.number(),
     updatedAt: v.number(),
   })
-    .index("by_company_day_kind_site", ["companyId", "day", "kind", "websiteKey"])
-    .index("by_company_day", ["companyId", "day"]),
+    .index("by_company_month_kind_site", ["companyId", "month", "kind", "websiteKey"])
+    .index("by_company_month", ["companyId", "month"]),
+
+  /** Credits charged per company and day, and how many of them by hand: the Usage chart's days and its pace. */
+  creditDayTotals: defineTable({
+    companyId: v.id("companies"),
+    /** `YYYY-MM-DD`, UTC. */
+    day: v.string(),
+    credits: v.number(),
+    /** Credits for work someone started — a lookup, a question — rather than a schedule. */
+    byHand: v.number(),
+    updatedAt: v.number(),
+  }).index("by_company_day", ["companyId", "day"]),
 };

@@ -15,7 +15,8 @@ completed work.
   owned and tracked, then By work, By website, Coming up, a bank-style
   Statement, Purchases and Top up. **Planned and drawn 2026-10-05 (eight
   boards approved); about 12 building days; questions left outstanding;
-  step 1 (every charge recorded, nothing refused) built on dev the same day.**
+  steps 1 (every charge recorded, nothing refused) and 3 (the five Usage
+  screens) built on dev the same day.**
 - [Keyword research](./active/keyword-research-plan.md) — Discovery →
   Keyword research, like Ahrefs' Keywords Explorer: look up any search, its
   overview, Google's results, ideas, what the AI says, and starting from a

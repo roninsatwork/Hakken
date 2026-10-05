@@ -1,0 +1,17 @@
+# Usage → Coming up — the approved look (board "ComingUp" of docs/plans/assets/usage-credits/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Coming up
+notice (info)
+figures
+  figure: Booked to #/#/#
+  figure: Booked for November # of #
+  figure: Free in November
+  figure: Scheduled checks
+search: Find a task, website or person…
+filter: Website
+filter: How often
+table: Next run | Task | Website | How often | Set up by | Each | To month end | Next month
+  table-bar
+    download: Download CSV
+  table-footer
