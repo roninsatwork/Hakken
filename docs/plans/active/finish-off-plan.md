@@ -10,7 +10,10 @@ Built and saved locally on `dev` today, not pushed: usage credits steps 1, 2,
 continuous sender, five AI questions at once, $3 a website and $100 a day, and
 Collecting now (`collection-progress-plan.md`, commit `87373c41`).
 
-**Status, 2026-10-05 evening — built and saved locally on `dev`, not pushed:**
+**Status, 2026-10-05, 21:00 — items 1 to 15, 2E and store less round two
+built, saved locally on `dev` and run on the dev deployment; nothing pushed
+(GitHub was down). Left: item 16, the release, on Anthony's word.** Earlier:
+**built and saved locally on `dev`, not pushed:**
 items 1, 2 and 13. Item 2's change to the figures already kept is one script,
 run on each deployment — counted first (`go: false`), then done (`go: true`):
 `npx convex run searchConsoleTidy:tidyKeptFigures '{"go": false}'`. It removes
@@ -95,7 +98,24 @@ screen, `C-E-F-explained.png`):
 
 | G | Weeks kept as weeks to six months, then months — was a year of weeks (Anthony: "months 4, 5 and 6 weekly … that will also save space"). Saves nothing today, every website holding 90 days; about 30 MB a year on morehandles.co.uk once it holds more. A chart by week reaching past six months is shown by month, as one by day past 90 days is shown by week | — | 0.25 |
 
-Estimated end: about 210 MB. Each is measured on dev as it is built
+Estimated end: about 210 MB.
+
+**Built — 2026-10-05, evening (local on `dev`, loaded and run on the dev
+deployment, not pushed):** A (`LISTS_OF.image` keeps no pairs; the screens
+say "Searches aren't kept for Google Images…"), C (one keyword's pages and one
+page's keywords keep page numbers; the lists read whole keep addresses —
+turning them back on every screen view would read more than it saves), D
+(`searchConsoleKeep.ts`), E, F ("New and lost is kept for Web, all
+countries…") and G (weeks to six months; a weekly chart past them shown by
+month). The tidy (`searchConsoleTidy:tidyKeptFigures`) carries each one's
+change to what is kept; on dev it removed 70,092 Google Images search
+records, 96,271 New and lost records and 404,824 lines and register rows of
+searches not kept. Two faults found on dev and fixed on the way: a kept
+record's page numbers were looked up one by one inside a query (the rebuild
+outran a query's second), and a period's old parts were read whole before
+being replaced (past 16 MB for morehandles.co.uk). The full local gate
+passed — `verify:env`, `lint:all`, `check` (6,430 tests), `test:coverage`,
+`coverage:check`, the browser smoke tests (19) and `build`. Each is measured on dev as it is built
 (`searchConsoleTidy:keptSize`, `searchKeepEstimate`). Not agreed: a
 country read as all countries from 75% (B: "the UK searches are 50% of all
 countries for ronins").
