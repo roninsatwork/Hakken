@@ -86,6 +86,19 @@ export async function searchLinesCountry(ctx: { db: QueryCtx["db"] }, holdId: Id
   return await readAsAllCountries(ctx, holdId, country) ? undefined : country;
 }
 
+/** Each country a website keeps ready, with its share of the website's web showings over the last 28 days: to check the judgement by hand. */
+export const countryShares = internalQuery({
+  args: { holdId: v.id("companyWebsites") },
+  returns: v.array(v.object({ country: v.string(), share: v.union(v.number(), v.null()) })),
+  handler: async (ctx, args) => {
+    const hold = await ctx.db.get(args.holdId);
+    if (!hold) return [];
+    const shares = [];
+    for (const country of await countriesKeptReady(ctx, hold)) shares.push({ country, share: await countryShare(ctx, hold._id, country) });
+    return shares;
+  },
+});
+
 export const countryReadAsAll = internalQuery({
   args: { holdId: v.id("companyWebsites"), country: v.optional(v.string()) },
   returns: v.boolean(),
