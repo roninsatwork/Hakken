@@ -83,10 +83,13 @@ async function startParts(
   plan: Plan,
   run?: { runId: Id<"agentRuns">; workflowExecutionId: Id<"workflowExecutions">; companyId: Id<"companies">; summary: string },
   long?: boolean,
+  onlyLong?: boolean,
 ) {
   const token = await ctx.runMutation(internal.searchConsoleSettling.startSettle, { connectionId, parts: plan.parts.length, ...(run ? { run } : {}) });
   for (const part of plan.parts) {
-    await ctx.scheduler.runAfter(0, internal.searchConsoleSettle.settlePart, { connectionId, holdId: plan.holdId, token, ...part, ...(long === undefined ? {} : { long }) });
+    await ctx.scheduler.runAfter(0, internal.searchConsoleSettle.settlePart, {
+      connectionId, holdId: plan.holdId, token, ...part, ...(long === undefined ? {} : { long }), ...(onlyLong ? { onlyLong } : {}),
+    });
   }
 }
 
@@ -107,6 +110,8 @@ export const settlePart = internalAction({
     oldest: v.string(),
     /** Add up the 90 days and twelve months whatever their age: a rebuild by hand. */
     long: v.optional(v.boolean()),
+    /** Only the 90 days and twelve months: caught up because a screen asked (`searchConsoleCatchUp.ts`). */
+    onlyLong: v.optional(v.boolean()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
@@ -116,7 +121,7 @@ export const settlePart = internalAction({
     let failed: string | undefined;
     try {
       weekly = args.long ?? await ctx.runQuery(internal.searchConsoleSettling.longPeriodsDue, { holdId: args.holdId, ...scope, searchType: args.searchType });
-      written = await buildSitePeriods(ctx, args.holdId, args.newest, args.oldest, args.country, { searchType: args.searchType, long: weekly });
+      written = await buildSitePeriods(ctx, args.holdId, args.newest, args.oldest, args.country, { searchType: args.searchType, long: weekly, onlyLong: args.onlyLong });
     } catch (error: unknown) {
       failed = `${args.searchType}${args.country ? ` (${countryLabel(args.country)})` : ""}: ${failureSummary(error)}`;
     }
@@ -142,6 +147,22 @@ export const settlePart = internalAction({
       settle.failed ? "FAILED" : "SUCCESS",
       settle.failed ? `The days came in, but adding them up stopped: ${settle.failed} The next run adds them up again.` : (settle.summary ?? ""),
     );
+    return null;
+  },
+});
+
+/**
+ * A website's 90 days and twelve months caught up because someone opened a
+ * screen reading them while they were behind the newest day collected
+ * (`searchConsoleCatchUp.ts`): only those, every kind and country side by
+ * side, the screen showing what is held until they are swapped in.
+ */
+export const catchUpSite = internalAction({
+  args: { connectionId: v.id("searchConsoleConnections") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const plan = await rollUpAndPlan(ctx, args.connectionId);
+    if (plan) await startParts(ctx, args.connectionId, plan, undefined, true, true);
     return null;
   },
 });

@@ -591,6 +591,35 @@ describe("collecting", () => {
     expect((await connectionOf(t, siteId))?.settling).toBeUndefined();
   });
 
+  test("a screen reading the 90 days while they are behind catches them up; the 30 days never need it (cost review)", async () => {
+    const { t, siteId, admin } = await setup();
+    const google = fakeGoogle({ figures: figures() });
+    await signIn(t, admin, siteId);
+    await collect(t);
+    // A day later a new day comes in: the 30 days are added up with it, the 90 days wait for their week.
+    vi.setSystemTime(NOW + 24 * 60 * 60 * 1000);
+    google.figures[property].web["2026-09-27"] = { total: row("", 6, 200), query: [row("drain unblocking", 6)] };
+    await collect(t);
+    const newest = "2026-09-27";
+    const dates = (days: number) => ({ siteId, from: shiftDay(newest, 1 - days), to: newest });
+
+    expect(await admin.query(api.searchConsoleCatchUp.searchConsoleCatchUp, dates(30))).toMatchObject({ behind: false });
+    expect(await admin.mutation(api.searchConsoleCatchUp.requestSearchConsoleCatchUp, dates(30))).toBe(false);
+    expect(await admin.query(api.searchConsoleCatchUp.searchConsoleCatchUp, dates(90))).toMatchObject({ behind: true, heldTo: NEWEST, newest });
+
+    expect(await admin.mutation(api.searchConsoleCatchUp.requestSearchConsoleCatchUp, dates(90))).toBe(true);
+    // Asked once: a second screen opening does not ask again.
+    expect(await admin.mutation(api.searchConsoleCatchUp.requestSearchConsoleCatchUp, dates(90))).toBe(false);
+    await finishScheduled(t);
+    expect(await admin.query(api.searchConsoleCatchUp.searchConsoleCatchUp, dates(90))).toMatchObject({ behind: false });
+    const ninety = await t.run(async (ctx) => await ctx.db
+      .query("searchConsolePeriods")
+      .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", "90").eq("which", "NOW"))
+      .collect());
+    expect(ninety.map((part) => part.to)).toEqual([newest]);
+    expect(ninety[0].keys).toContain("drain unblocking");
+  });
+
   test("the next run brings the new day and the last four again, keeping only what Google still has", async () => {
     const { t, siteId, admin } = await setup();
     const google = fakeGoogle({ figures: figures() });

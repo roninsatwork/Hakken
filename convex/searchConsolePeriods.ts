@@ -564,13 +564,17 @@ export async function buildSitePeriods(
    * and whether its 90 days and twelve months are added up too: weekly, the
    * 7 and 30 days nightly (cost review 1 and 4, `searchConsoleSettling.ts`).
    */
-  options: { searchType?: SearchType; long?: boolean } = {},
+  options: { searchType?: SearchType; long?: boolean; onlyLong?: boolean } = {},
 ): Promise<number> {
   let written = 0;
   const builtAt = Date.now();
   const long = options.long ?? true;
+  // Caught up when a screen asks (`searchConsoleCatchUp.ts`): the 90 days and twelve months alone, nothing nightly.
+  const onlyLong = options.onlyLong === true;
   const allSlots = slotsOf(newest, oldest);
-  const slots = long ? allSlots : allSlots.filter((slot) => !LONG_PERIODS.includes(slot.period));
+  const slots = onlyLong
+    ? allSlots.filter((slot) => LONG_PERIODS.includes(slot.period))
+    : long ? allSlots : allSlots.filter((slot) => !LONG_PERIODS.includes(slot.period));
   const scope = country === undefined ? {} : { country };
   const ninety = allSlots.find((slot) => slot.period === "90" && slot.which === "NOW")?.span ?? null;
   const asNinety = (slot: Slot) => sameAsNinety(slot, ninety);
@@ -684,7 +688,7 @@ export async function buildSitePeriods(
     const pairsKept = lists.includes("pair") ? await readKept(ctx, companyWebsiteId, country, searchType, "pair", newest) : null;
     const queryFacts = pairsKept ? await factsOf("query", keysIn(pairsKept, "keys")) : undefined;
     const pairPageFacts = pairsKept ? await factsOf("page", keysIn(pairsKept, "pages")) : undefined;
-    await ctx.runMutation(internal.searchConsolePeriods.writeWeeks, {
+    if (!onlyLong) await ctx.runMutation(internal.searchConsolePeriods.writeWeeks, {
       companyWebsiteId,
       ...scope,
       searchType,
@@ -693,7 +697,7 @@ export async function buildSitePeriods(
     });
     // New and lost's counts by day, from the whole first- and last-seen register (2026-10-04).
     // New and lost is kept for web search, all countries (store less round two, F).
-    if (searchType === "web" && country === undefined) await buildSeenDays(ctx, { companyWebsiteId, country, searchType }, builtAt);
+    if (searchType === "web" && country === undefined && !onlyLong) await buildSeenDays(ctx, { companyWebsiteId, country, searchType }, builtAt);
     for (const slot of slots) {
       if (!pairsKept || !slot.span) {
         for (const list of ["pair", "pairByPage", "competing", "query"] as const) await writeParts(searchType, list, slot, null);
@@ -730,7 +734,7 @@ export async function buildSitePeriods(
       pageCounts.set(slotKey(slot), pagesCounted);
     }
     // Fan-out's 14 and 28 days (§15, decision 4): web keywords for all countries, no period before.
-    if (searchType === "web" && country === undefined) {
+    if (searchType === "web" && country === undefined && !onlyLong) {
       for (const period of FAN_OUT_PERIODS) {
         const span = periodSpan(period, newest, oldest);
         const rows = pairsKept

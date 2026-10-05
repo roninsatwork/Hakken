@@ -215,6 +215,8 @@ export const searchConsoleTables = {
      * done, and the run the last one finishes. `token` tells this settle's
      * jobs from an older one's.
      */
+    /** When a screen last asked for the 90 days and twelve months to be caught up (`searchConsoleCatchUp.ts`). */
+    catchUpAt: v.optional(v.number()),
     settling: v.optional(v.object({
       token: v.number(),
       parts: v.number(),

@@ -11585,6 +11585,10 @@
       "chartTitle": "Parole chiave per fascia",
       "chartHint": "Ogni parola chiave per cui Google ha mostrato il tuo sito, secondo la sua posizione media in ciascun giorno, settimana o mese."
     },
+    "catchUp": {
+      "held": "Dati mostrati fino al {day}.",
+      "bringing": "Aggiornamento dei 90 giorni e dei dodici mesi al {day}: la pagina si aggiorna da sola quando ha finito."
+    },
     "newLost": {
       "title": "Nuove e perse",
       "description": "Parole chiave per cui Google ha iniziato a mostrare il tuo sito, e quelle per cui ha smesso. Una parola chiave è persa quando Google non ti mostra per lei da {days} giorni.",

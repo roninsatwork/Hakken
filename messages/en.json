@@ -11585,6 +11585,10 @@
       "chartTitle": "Keywords in each band",
       "chartHint": "Every keyword Google showed your website for, by its average position in each day, week or month."
     },
+    "catchUp": {
+      "held": "Showing figures to {day}.",
+      "bringing": "Bringing the 90 days and twelve months up to {day}: this page updates itself when it is done."
+    },
     "newLost": {
       "title": "New and lost",
       "description": "Keywords Google started showing your website for, and keywords it stopped showing you for. A keyword is lost when Google has not shown you for it in {days} days.",

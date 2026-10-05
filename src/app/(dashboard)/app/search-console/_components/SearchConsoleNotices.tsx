@@ -17,6 +17,7 @@ import { SiteViewSwitch } from "../../sites/_components/SiteViewSwitch";
 import { countryName } from "./countries";
 import { readerLanguage } from "./searchConsoleFormat";
 import { RESULT_KINDS, useResultKind, useSearchConsoleHref } from "./useSearchConsole";
+import { SearchConsoleCatchUp } from "./SearchConsoleCatchUp";
 
 export type SearchConsoleStatus = NonNullable<FunctionReturnType<typeof api.searchConsoleConnect.searchConsoleStatus>>;
 
@@ -131,7 +132,14 @@ export function SearchConsoleGate({ status, siteId, children }: {
 }) {
   const t = useTranslations("searchConsole.connection");
   const hrefFor = useSearchConsoleHref(siteId);
-  if (hasFigures(status)) return <>{children}</>;
+  if (hasFigures(status)) {
+    return (
+      <>
+        <SearchConsoleCatchUp siteId={siteId} newestDay={status.connection?.newestDay} />
+        {children}
+      </>
+    );
+  }
   if (status.connection?.status === "CHOOSING") {
     return (
       <div className={PANEL}>
