@@ -1,7 +1,7 @@
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { holdFirstCheck, holdSearch } from "./holdLists";
-import { readPeriod } from "./searchConsolePeriods";
+import { readPeriod } from "./searchConsolePeriodReads";
 import { positionOf } from "./utils/searchConsolePacks";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 

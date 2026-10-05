@@ -3,7 +3,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx } from "./_generated/server";
 import { readFanOutLimits } from "./fanOutLimits";
-import { readPeriod } from "./searchConsolePeriods";
+import { readPeriod } from "./searchConsolePeriodReads";
 import { dropCopies, writeListCopy } from "./siteListCopies";
 import { claimSchedule } from "./siteRankings";
 import { REBUILD_WAIT_MS } from "./siteSummaries";

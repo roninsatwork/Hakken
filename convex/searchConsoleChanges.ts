@@ -13,7 +13,8 @@ import { searchTypeValidator, seenType, type SearchType } from "./searchConsoleS
 import { askLive, checkedRange, countryFilters, daysOf } from "./searchConsoleReads";
 import { addUp, historyLimitDay, shiftDay, type Figures } from "./searchConsoleDays";
 import { checkedCountry, countryScope } from "./searchConsoleCountries";
-import { chartStepValidator, readPeriod } from "./searchConsolePeriods";
+import { chartStepValidator } from "./searchConsolePeriods";
+import { readPeriod } from "./searchConsolePeriodReads";
 import { seenDaysBetween } from "./searchConsoleSeenDays";
 import { checkedLongest, consoleLimitsOf, type ConsoleLimits } from "./searchConsoleLimits";
 import { periodOf } from "./searchConsoleLists";

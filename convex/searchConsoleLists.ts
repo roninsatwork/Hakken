@@ -12,7 +12,7 @@ import { SEARCH_CONSOLE_PERIODS, searchTypeValidator, type SearchConsolePeriod, 
 import { askLive, checkedRange, countryFilters } from "./searchConsoleReads";
 import { checkedCountry, countryScope, type CountryScope } from "./searchConsoleCountries";
 import { daysIn, historyLimitDay, periodBefore } from "./searchConsoleDays";
-import { readKeyed, readPeriod, type PeriodRow } from "./searchConsolePeriods";
+import { readKeyed, readPeriod, type PeriodRow } from "./searchConsolePeriodReads";
 import { checkedLongest, consoleLimitsOf, consoleLimitsValidator, viewRulesOf, type ConsoleLimits } from "./searchConsoleLimits";
 import { UNKNOWN, factsFor } from "./searchConsoleFacts";
 import { holdBrandNames } from "./holdProfiles";
