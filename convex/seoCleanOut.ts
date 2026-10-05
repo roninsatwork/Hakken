@@ -47,8 +47,8 @@ const DROPPED_LINK_OPERATIONS = [
   "referring_ips_list",
 ] as const;
 
-/** Rows read or removed per step: small rows, so many. */
-const ROWS_PER_STEP = 1_000;
+/** Rows read or removed per step: small rows, but kept under a thousand (`src/analytics-read-drift.test.ts`). */
+const ROWS_PER_STEP = 500;
 /** Websites read per page when looking for competitors. */
 const WEBSITES_PER_PAGE = 100;
 /** How long one run works before it hands on to the next: an action stops at ten minutes. */

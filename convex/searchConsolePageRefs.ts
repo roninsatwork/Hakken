@@ -4,6 +4,7 @@ import { internalAction, internalMutation, internalQuery } from "./_generated/se
 import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+import { appError } from "./utils/appError";
 
 /**
  * Each page address kept once per website, and Search Console's kept lists
@@ -154,7 +155,7 @@ export const refsForPages = internalMutation({
   args: { holdId: v.id("companyWebsites"), pages: v.array(v.string()) },
   returns: v.array(v.string()),
   handler: async (ctx, args) => {
-    if (args.pages.length > REFS_PER_STEP) throw new Error(`At most ${REFS_PER_STEP} page addresses a step, not ${args.pages.length}.`);
+    if (args.pages.length > REFS_PER_STEP) throw appError("INVALID_INPUT", `At most ${REFS_PER_STEP} page addresses a step, not ${args.pages.length}.`);
     return await encodePages(ctx, args.holdId, args.pages);
   },
 });
