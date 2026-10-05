@@ -136,15 +136,29 @@ Run these before asking the user to merge or push:
 npm run verify:env
 npm run lint:all
 npm run check
+npm run test:coverage
+npm run coverage:check
+npm run test:e2e:smoke
 npm run build
 git diff --check
 ```
+
+**Run GitHub's own steps too, not only `npm run check`** (Anthony,
+2026-10-05: "it's obvious GitHub runs slower, you knew that"). GitHub measures
+coverage and runs ten times slower, so a fault that needs a slow machine shows
+only there: a screen's timer outliving its test passed three full local checks
+and failed CI #26. `test:coverage`, `coverage:check` and `test:e2e:smoke` are
+what `.github/workflows/ci.yml` runs on every push; a push is ready when they
+pass here as well. Stop the local frontend on port 3000 first — the smoke
+tests start their own.
 
 **Two tests run only here, never on GitHub** (Anthony, 2026-09-25): the Sites
 speed test (`convex/sitesLoad.test.ts`) and the whole-company planning test in
 `convex/seoCollection.test.ts`. Both failed pushes on timing alone — GitHub's
 runner is small, busy and slowed by coverage — so they skip when
-`GITHUB_ACTIONS` is set. The local `npm run check` above is therefore the only
+`GITHUB_ACTIONS` is set. The Sites speed test also skips any run measuring
+coverage (`npm run test:coverage`, `npm run gate`), which slows the code it
+times past its own limit. The local `npm run check` above is therefore the only
 place they run: never push without it. Every other test still runs on GitHub.
 
 **Test time limits** (Anthony, 2026-09-28, after every CI run that failed in
@@ -195,6 +209,12 @@ one way to do it, and `src/test-time-limits-drift.test.ts` fails the others.
 - **Keep days away from midnight.** A test that works out "today" or
   "yesterday" from the clock calls `useMiddayUtc()` before each test and
   `vi.useRealTimers()` after, or fixes the date with `vi.setSystemTime`.
+- **No timer outlives its test.** A screen's timer left running — a "Saved"
+  note cleared two seconds later — fired after its test's window was gone on
+  GitHub's slower runner and failed a run whose every test had passed (CI #26).
+  `vitest.setup.ts` clears every timer a test started once its screens are
+  unmounted (`src/test/testTimers.ts`); leave it on, and never count on a timer
+  from one test firing in the next.
 - **Stubs go back by themselves.** The config undoes every `vi.stubEnv` and
   `vi.stubGlobal` after each test (`unstubEnvs`, `unstubGlobals`); stub what a
   test needs in that test or its `beforeEach`, never rely on one carrying over.

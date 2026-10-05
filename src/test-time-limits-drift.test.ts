@@ -218,6 +218,8 @@ describe('test time limits', () => {
     expect(config.match(/\.\.\.STUBS_PUT_BACK/g)).toHaveLength(2)
     const setup = readFileSync(join(repoRoot, 'vitest.setup.ts'), 'utf8')
     expect(setup).toMatch(/configure\(\{ asyncUtilTimeout: SCREEN_WAIT_MS \}\)/)
+    // And no timer a screen sets outlives its test (src/test/testTimers.ts; CI #26).
+    expect(setup).toMatch(/^clearTimersAfterEachTest\(cleanup\);$/m)
   })
 
   test('the one limit is where it is said to be', () => {

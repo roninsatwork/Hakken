@@ -29,11 +29,15 @@ import { AI_ENGINES } from "./seoAiEngines";
  * coverage on a small, busy machine, and failed a query that takes 17% of a
  * scan here at 50.2% (2026-09-25). Anthony, the same day: "We need tests on
  * dev still just remove these new ones that are causing failures in GitHub".
- * It runs in every local run before a push (`npm run check`).
+ * It runs in every local run before a push (`npm run check`) — but not in a
+ * run that measures coverage (`npm run test:coverage`, `npm run gate`), which
+ * slowed it to six minutes here, past its own limit (2026-10-05).
  */
 const UK = 2826;
 /** On GitHub's runner, where this test's timings mean nothing. */
 const ON_GITHUB = process.env.GITHUB_ACTIONS === "true";
+/** Coverage slows the code it times past any target: six minutes here under `npm run test:coverage` (2026-10-05). */
+const MEASURING_COVERAGE = process.env.HAKKEN_MEASURING_COVERAGE === "1";
 /** A query may take at most this share of one full scan of the keywords. */
 const SHARE_OF_A_SCAN = 0.5;
 /** Runs per query; the fastest counts. */
@@ -52,7 +56,7 @@ async function fastest<T>(run: () => Promise<T>, times: number): Promise<{ took:
 }
 
 describe("a very large site", () => {
-  test.skipIf(ON_GITHUB)("every Sites query answers within the target on 50,000 keywords, 5,000 pages, 20,000 links and two years", async () => {
+  test.skipIf(ON_GITHUB || MEASURING_COVERAGE)("every Sites query answers within the target on 50,000 keywords, 5,000 pages, 20,000 links and two years", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const { holdId, userId } = await t.run(async (ctx) => {
       const companyId = await ctx.db.insert("companies", { name: "Big Co", createdAt: Date.now() });

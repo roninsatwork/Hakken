@@ -93,6 +93,15 @@ const LOCAL_RUN = !process.env.GITHUB_ACTIONS
  */
 const STUBS_PUT_BACK = { unstubEnvs: true, unstubGlobals: true } as const
 
+/*
+ * Whether this run measures coverage, told to the tests: the Sites speed test
+ * times the app's code, and coverage slows it past any target — it took six
+ * minutes under `npm run test:coverage` here, against three without
+ * (2026-10-05). Coverage runs on GitHub, where it is skipped already, and in
+ * `npm run gate`.
+ */
+const MEASURING_COVERAGE = process.argv.includes('--coverage')
+
 export default defineConfig({
   plugins: [reactPlugin],
   resolve: {
@@ -135,6 +144,7 @@ export default defineConfig({
           name: 'backend',
           globals: true,
           environment: 'node',
+          env: { HAKKEN_MEASURING_COVERAGE: MEASURING_COVERAGE ? '1' : '' },
           include: [
             'convex/**/*.test.{ts,tsx}',
             'scripts/**/*.test.{js,mjs,ts,tsx}',
