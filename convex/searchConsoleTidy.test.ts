@@ -73,6 +73,13 @@ describe("tidying the figures kept before 2026-10-05", () => {
     const asked = await t.run(async (ctx) => (await ctx.db.system.query("_scheduled_functions").collect()).map((job) => job.name));
     expect(asked.some((name) => name.includes("rebuildSitePeriods"))).toBe(true);
 
+    // What is kept, measured: the country's searches and pages gone, the page references counted.
+    const [size] = await t.action(internal.searchConsoleTidy.keptSize, { host: "acme-shop.test" });
+    expect(size.complete).toBe(true);
+    expect(size.buckets.map((bucket) => bucket.name)).not.toContain("searchConsoleLists: a country's searches and pages");
+    expect(size.buckets.find((bucket) => bucket.name === "searchConsolePageRefs")?.records).toBe(1);
+    expect(await t.action(internal.searchConsoleTidy.keptSize, { host: "elsewhere.test" })).toEqual([]);
+
     // A second run finds nothing left to do.
     const again = await t.action(internal.searchConsoleTidy.tidyKeptFigures, { go: false });
     expect(again?.tally).toEqual({ websites: 1, countries: 1, copies: 0, seen: 0, addresses: 0, imageDays: 0 });

@@ -241,3 +241,137 @@ export const tidyKeptFigures = internalAction({
     return { tally, lines };
   },
 });
+
+// ---------------------------------------------------------------------------
+// How much a website's Search Console figures take up, before and after
+// ---------------------------------------------------------------------------
+
+const TABLES = [
+  "searchConsoleLists",
+  "searchConsolePeriods",
+  "searchConsoleDays",
+  "searchConsoleWeeks",
+  "searchConsoleSeen",
+  "searchConsoleSeenDays",
+  "searchConsolePageRefs",
+] as const;
+type Table = (typeof TABLES)[number];
+/** Large packed records are read a few at a time; small rows many. */
+const SIZE_PAGE: Record<Table, number> = {
+  searchConsoleLists: 8,
+  searchConsolePeriods: 8,
+  searchConsoleDays: 2_000,
+  searchConsoleWeeks: 2_000,
+  searchConsoleSeen: 2_000,
+  searchConsoleSeenDays: 2_000,
+  searchConsolePageRefs: 2_000,
+};
+
+const bucketValidator = v.object({ name: v.string(), records: v.number(), bytes: v.number() });
+type Bucket = typeof bucketValidator.type;
+
+/** Which part of the kept lists a record is: the parts this tidy changes are shown apart. */
+function listBucket(record: { country?: string; searchType: string; list: string }): string {
+  if (record.country !== undefined && (record.list === "pair" || record.list === "page")) return "searchConsoleLists: a country's searches and pages";
+  if (record.searchType === "image") return "searchConsoleLists: image search";
+  if (record.list === "pair" || record.list === "page") return "searchConsoleLists: searches and pages, all countries";
+  return "searchConsoleLists: the rest";
+}
+
+/** One page of a website's rows in one table: how many, and their size as stored, near enough. */
+export const sizeStep = internalQuery({
+  args: { holdId: v.id("companyWebsites"), table: v.union(...TABLES.map((table) => v.literal(table))), cursor: v.union(v.string(), v.null()) },
+  returns: v.object({ buckets: v.array(bucketValidator), continueCursor: v.string(), isDone: v.boolean() }),
+  handler: async (ctx, args) => {
+    const paging = { cursor: args.cursor, numItems: SIZE_PAGE[args.table] };
+    const hold = args.holdId;
+    const page = args.table === "searchConsoleLists"
+      ? await ctx.db.query("searchConsoleLists").withIndex("by_hold_country_type_list_grain_start", (q) => q.eq("companyWebsiteId", hold)).paginate(paging)
+      : args.table === "searchConsolePeriods"
+        ? await ctx.db.query("searchConsolePeriods").withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", hold)).paginate(paging)
+        : args.table === "searchConsoleDays"
+          ? await ctx.db.query("searchConsoleDays").withIndex("by_hold_country_type_day", (q) => q.eq("companyWebsiteId", hold)).paginate(paging)
+          : args.table === "searchConsoleWeeks"
+            ? await ctx.db.query("searchConsoleWeeks").withIndex("by_hold_country_type_week", (q) => q.eq("companyWebsiteId", hold)).paginate(paging)
+            : args.table === "searchConsoleSeen"
+              ? await ctx.db.query("searchConsoleSeen").withIndex("by_hold_country_type_kind_key", (q) => q.eq("companyWebsiteId", hold)).paginate(paging)
+              : args.table === "searchConsoleSeenDays"
+                ? await ctx.db.query("searchConsoleSeenDays").withIndex("by_hold_country_type_kind_day", (q) => q.eq("companyWebsiteId", hold)).paginate(paging)
+                : await ctx.db.query("searchConsolePageRefs").withIndex("by_hold_ref", (q) => q.eq("companyWebsiteId", hold)).paginate(paging);
+    const buckets = new Map<string, Bucket>();
+    for (const row of page.page as Array<Record<string, unknown>>) {
+      const name = args.table === "searchConsoleLists" ? listBucket(row as { country?: string; searchType: string; list: string }) : args.table;
+      const bucket = buckets.get(name) ?? { name, records: 0, bytes: 0 };
+      bucket.records += 1;
+      bucket.bytes += JSON.stringify(row).length;
+      buckets.set(name, bucket);
+    }
+    return { buckets: [...buckets.values()], continueCursor: page.continueCursor, isDone: page.isDone };
+  },
+});
+
+/** A website's name, for the report. */
+export const hostOfConnection = internalQuery({
+  args: { connectionId: v.id("searchConsoleConnections") },
+  returns: v.union(v.null(), v.string()),
+  handler: async (ctx, args) => {
+    const connection = await ctx.db.get(args.connectionId);
+    const hold = connection ? await ctx.db.get(connection.companyWebsiteId) : null;
+    const website = hold ? await ctx.db.get(hold.websiteId) : null;
+    return website?.displayHost ?? website?.host ?? null;
+  },
+});
+
+/** How long the measure reads before it says how far it got: an action stops at ten minutes. */
+const SIZE_RUN_MS = 9 * 60 * 1000;
+
+const mb = (bytes: number) => `${(bytes / 1_000_000).toFixed(1)} MB`;
+
+/**
+ * How much each website's Search Console figures take up, table by table —
+ * or one website's, named by its host: run before the tidy and after it.
+ * Sizes are each row as JSON, near enough what is stored.
+ */
+const sizeReportValidator = v.object({
+  host: v.string(),
+  complete: v.boolean(),
+  totalBytes: v.number(),
+  total: v.string(),
+  buckets: v.array(v.object({ name: v.string(), records: v.number(), size: v.string() })),
+});
+type SizeReport = typeof sizeReportValidator.type;
+
+export const keptSize = internalAction({
+  args: { host: v.optional(v.string()) },
+  returns: v.array(sizeReportValidator),
+  handler: async (ctx, args): Promise<SizeReport[]> => {
+    const started = Date.now();
+    const report: SizeReport[] = [];
+    const connections: Array<{ connectionId: Id<"searchConsoleConnections">; holdId: Id<"companyWebsites"> }> = await ctx.runQuery(internal.searchConsoleSync.connectionsWithFigures, {});
+    for (const { connectionId, holdId } of connections) {
+      const host: string | null = await ctx.runQuery(internal.searchConsoleTidy.hostOfConnection, { connectionId });
+      if (!host || (args.host !== undefined && host !== args.host)) continue;
+      const buckets = new Map<string, Bucket>();
+      let complete = true;
+      for (const table of TABLES) {
+        for (let cursor: string | null = null; ;) {
+          if (Date.now() - started > SIZE_RUN_MS) {
+            complete = false;
+            break;
+          }
+          const step: { buckets: Bucket[]; continueCursor: string; isDone: boolean } = await ctx.runQuery(internal.searchConsoleTidy.sizeStep, { holdId, table, cursor });
+          for (const one of step.buckets) {
+            const held = buckets.get(one.name) ?? { name: one.name, records: 0, bytes: 0 };
+            buckets.set(one.name, { name: one.name, records: held.records + one.records, bytes: held.bytes + one.bytes });
+          }
+          if (step.isDone) break;
+          cursor = step.continueCursor;
+        }
+      }
+      const sorted = [...buckets.values()].sort((one, two) => two.bytes - one.bytes);
+      const totalBytes = sorted.reduce((sum, one) => sum + one.bytes, 0);
+      report.push({ host, complete, totalBytes, total: mb(totalBytes), buckets: sorted.map((one) => ({ name: one.name, records: one.records, size: mb(one.bytes) })) });
+    }
+    return report;
+  },
+});
