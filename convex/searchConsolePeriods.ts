@@ -560,6 +560,9 @@ export async function buildSitePeriods(
     const parts = given !== null && asNinety(slot) ? [] : given;
     // Not held, or a list this kind of result does not have: the slot is only emptied.
     const clearOnly = parts === null;
+    // The slot's old parts cleared a few at a time first: a busy website's 90 days of pairs are more than one step may read.
+    const where = { companyWebsiteId, ...scope, searchType, list, period: slot.period, which: slot.which };
+    while (await ctx.runMutation(internal.searchConsolePeriods.clearPeriodSlot, where)) { /* until none is left */ }
     for (const [part, packed] of (parts && parts.length > 0 ? parts : [EMPTY_PART]).entries()) {
       await ctx.runMutation(internal.searchConsolePeriods.writePeriodPart, {
         companyWebsiteId,
@@ -713,6 +716,32 @@ export async function buildSitePeriods(
   }
   return written;
 }
+
+/** Old parts of a ready-made period cleared per step: each up to a few hundred kilobytes, and a step reads at most 16 MB. */
+const CLEAR_SLOT_PARTS = 8;
+
+/** A few of a ready-made period's old parts removed, before it is written again; true while more are left. */
+export const clearPeriodSlot = internalMutation({
+  args: {
+    companyWebsiteId: v.id("companyWebsites"),
+    country: v.optional(v.string()),
+    searchType: searchTypeValidator,
+    list: periodListValidator,
+    period: periodValidator,
+    which: v.union(v.literal("NOW"), v.literal("BEFORE")),
+  },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    const old = await ctx.db
+      .query("searchConsolePeriods")
+      .withIndex("by_hold_country_type_list_period", (q) => q
+        .eq("companyWebsiteId", args.companyWebsiteId).eq("country", args.country).eq("searchType", args.searchType)
+        .eq("list", args.list).eq("period", args.period).eq("which", args.which))
+      .take(CLEAR_SLOT_PARTS);
+    for (const part of old) await ctx.db.delete(part._id);
+    return old.length === CLEAR_SLOT_PARTS;
+  },
+});
 
 /** One part of a ready-made period's list, for all countries or one; the first replaces the slot, and an empty first part empties it. */
 export const writePeriodPart = internalMutation({
