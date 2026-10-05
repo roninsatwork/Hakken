@@ -14,6 +14,7 @@ import {
 } from "./searchConsoleSchema";
 import { addUp, firstDayKept, firstWeekKept, monthStart, pack, weekStart } from "./utils/searchConsolePacks";
 import { stillKeptReady } from "./searchConsoleCountries";
+import { decodePages } from "./searchConsolePageRefs";
 
 /**
  * What is kept, as it ages and as it is read back
@@ -222,15 +223,20 @@ export const keptBetween = internalQuery({
         .gte("start", from)
         .lte("start", args.to))
       .paginate({ cursor: args.cursor, numItems: KEPT_PAGE });
-    return {
-      records: page.page.map((record) => ({
+    // Page references back to addresses (`searchConsolePageRefs.ts`): everything after sees addresses.
+    const records = [];
+    for (const record of page.page) {
+      records.push({
         start: record.start,
-        keys: record.keys,
-        ...(record.pages ? { pages: record.pages } : {}),
+        keys: args.list === "page" ? await decodePages(ctx, args.companyWebsiteId, record.keys) : record.keys,
+        ...(record.pages ? { pages: await decodePages(ctx, args.companyWebsiteId, record.pages) } : {}),
         clicks: record.clicks,
         impressions: record.impressions,
         positionSums: record.positionSums,
-      })),
+      });
+    }
+    return {
+      records,
       continueCursor: page.continueCursor,
       isDone: page.isDone,
     };

@@ -17,6 +17,7 @@ import { daysNewestFirst, newestWholeDay, shiftDay } from "./searchConsoleDays";
 import { isTrackedHold } from "./utils/websitePairing";
 import { fromGoogle, pack, rowsOf, DAYS_KEPT, type Packed } from "./utils/searchConsolePacks";
 import { slotParts } from "./searchConsoleRollups";
+import { deletePageRefs, encodePages } from "./searchConsolePageRefs";
 import { countriesKeptReady, heldFor, stillKeptReady, withHeld, type HeldRange } from "./searchConsoleCountries";
 
 /**
@@ -653,6 +654,9 @@ export const writeList = internalMutation({
       for (const old of await slotParts(ctx, args.companyWebsiteId, args.country, args.searchType, args.list, "DAY", args.day)) await ctx.db.delete(old._id);
     }
     if (args.keys.length === 0) return null;
+    // Each page address kept once, the lines pointing to it (`searchConsolePageRefs.ts`).
+    const keys = args.list === "page" ? await encodePages(ctx, args.companyWebsiteId, args.keys) : args.keys;
+    const pages = args.pages ? await encodePages(ctx, args.companyWebsiteId, args.pages) : undefined;
     await ctx.db.insert("searchConsoleLists", {
       companyWebsiteId: args.companyWebsiteId,
       ...countryField(args.country),
@@ -661,14 +665,32 @@ export const writeList = internalMutation({
       grain: "DAY",
       start: args.day,
       part: args.part,
-      keys: args.keys,
-      ...(args.pages ? { pages: args.pages } : {}),
+      keys,
+      ...(pages ? { pages } : {}),
       clicks: args.clicks,
       impressions: args.impressions,
       positionSums: args.positionSums,
       fetchedAt: args.fetchedAt,
     });
     return null;
+  },
+});
+
+/** Every website connected to Search Console: what turning its kept page addresses into references walks (`searchConsolePageRefs.ts`). */
+export const connectedHolds = internalQuery({
+  args: {},
+  returns: v.array(v.id("companyWebsites")),
+  handler: async (ctx) => {
+    const holds: Id<"companyWebsites">[] = [];
+    for (let after = 0; ;) {
+      const page = await ctx.db
+        .query("searchConsoleConnections")
+        .withIndex("by_status", (q) => q.eq("status", "CONNECTED").gt("_creationTime", after))
+        .take(CONNECTIONS_PER_READ);
+      holds.push(...page.map((connection) => connection.companyWebsiteId));
+      if (page.length < CONNECTIONS_PER_READ) return holds;
+      after = page[page.length - 1]._creationTime;
+    }
   },
 });
 
@@ -753,8 +775,10 @@ async function clearSome(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites
     .withIndex("by_hold_country_type_kind_day", (q) => q.eq("companyWebsiteId", companyWebsiteId))
     .take(PURGE_ROWS);
   for (const row of seenDays) await ctx.db.delete(row._id);
+  // Its page addresses go last, once no kept list points to them.
+  const refsGone = lists.length < PURGE_BATCH ? await deletePageRefs(ctx, companyWebsiteId, PURGE_ROWS) : false;
   return lists.length < PURGE_BATCH && periods.length < PURGE_BATCH && days.length < PURGE_ROWS && seen.length < PURGE_ROWS && weeks.length < PURGE_ROWS
-    && seenDays.length < PURGE_ROWS;
+    && seenDays.length < PURGE_ROWS && refsGone;
 }
 
 /**

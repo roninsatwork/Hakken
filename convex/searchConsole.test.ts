@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
+import { decodePages } from "./searchConsolePageRefs";
 import { decryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { recentWindow } from "./searchConsoleSync";
@@ -156,7 +157,11 @@ const rowsOf = (t: Harness, siteId: Id<"companyWebsites">, list: "query" | "page
         .eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", list === "query" ? "pair" : list).eq("grain", grain).eq("start", day))
       .collect();
     const sums = new Map<string, number>();
-    for (const record of records) record.keys.forEach((key, index) => sums.set(key, (sums.get(key) ?? 0) + record.clicks[index]));
+    // A page list holds each address once, as a reference (`searchConsolePageRefs.ts`): read back as the app does.
+    for (const record of records) {
+      const keys = list === "page" ? await decodePages(ctx, siteId, record.keys) : record.keys;
+      keys.forEach((key, index) => sums.set(key, (sums.get(key) ?? 0) + record.clicks[index]));
+    }
     return [...sums].sort();
   });
 
@@ -419,7 +424,9 @@ describe("collecting", () => {
       .toEqual(["appearance", "country", "device", "page", "pair"]);
     expect(lists.every((record) => record.grain === "DAY" && record.part === 0)).toBe(true);
     const pair = lists.find((record) => record.list === "pair" && record.start === NEWEST)!;
-    expect(pair.pages).toEqual(["https://acme-shop.test/", "https://acme-shop.test/"]);
+    // Each page address kept once: the pair's lines point to it (`searchConsolePageRefs.ts`).
+    expect(pair.pages).toEqual(["~0", "~0"]);
+    expect(await t.run(async (ctx) => await decodePages(ctx, siteId, pair.pages!))).toEqual(["https://acme-shop.test/", "https://acme-shop.test/"]);
     // Position kept as a sum weighted by impressions: 3.5 for each of 50 impressions.
     expect(pair.positionSums).toEqual([175, 105]);
 

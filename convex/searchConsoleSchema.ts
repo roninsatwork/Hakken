@@ -274,6 +274,19 @@ export const searchConsoleTables = {
   }).index("by_hold_country_type_list_grain_start", ["companyWebsiteId", "country", "searchType", "list", "grain", "start", "part"]),
 
   /**
+   * Each page address a website's kept lists point to, once (finish-off plan
+   * item 2A, `searchConsolePageRefs.ts`): a `pair` list's `pages` and a `page`
+   * list's `keys` hold `~` and `ref` in base 36 rather than the address.
+   */
+  searchConsolePageRefs: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    page: v.string(),
+    ref: v.number(),
+  })
+    .index("by_hold_page", ["companyWebsiteId", "page"])
+    .index("by_hold_ref", ["companyWebsiteId", "ref"]),
+
+  /**
    * The ready-made periods the screens read (plan §14.3, item 4): for the last
    * 7, 30 and 90 days and 12 months ending on the newest day held (`NOW`), and
    * the same span before it (`BEFORE`) where it is held, each list added up and
