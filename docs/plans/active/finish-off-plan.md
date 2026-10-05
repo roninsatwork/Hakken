@@ -59,6 +59,20 @@ Console part.
 - **Credit prices, after item 3** — once credits count what came back, look
   over Admin → Settings → Credit prices: each line's suggested price is worked
   out from its real cost, and some will want to change.
+- **Keep only a website's top searches from Search Console?** (asked
+  2026-10-05; Anthony: "not sure on this" — nothing built.) Measured on dev
+  (`searchConsoleTidy:keptSize`, `searchCapEstimate`): morehandles.co.uk's
+  Search Console takes **830 MB** — the ready-made period lists 453 MB, the
+  kept search-and-page lines 143 MB for all countries and 126 MB for the UK,
+  image search 47 MB, the first- and last-seen register 60 MB. Its last 90
+  days hold 64,360 searches and 926,800 lines; only 3,224 searches (5%) were
+  ever clicked. Top 1,000: 71% of clicks, 31% of showings, 10% of lines
+  (~130 MB). Top 2,000: 84%, 40%, 18% (~190 MB). Every clicked search: 100%
+  of clicks, ~20% of lines (~200 MB). Top 5,000: 100%, 64%, 40% (~360 MB).
+  The website's and each page's totals stay exact whatever is chosen. About
+  1.5 days, plus converting what is kept. The UK is 78% of morehandles.co.uk's
+  showings and 73% of ronins.co.uk's — under item 2B's 90% — so no country
+  copy is removed on dev today.
 - **Parked until the cost audit** — usage credits steps 4 (Purchases, Top up,
   Stripe; about 3 days) and 5 (switching charging on; about 1.5 days), and
   counting other agents' model costs (about 1 day).
