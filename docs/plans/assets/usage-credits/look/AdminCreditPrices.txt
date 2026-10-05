@@ -6,6 +6,7 @@ notice (info)
 filter: This month
 settings-card: How prices are suggested
   field: A credit covers, in US dollars of real cost
+  field: Credits a month
 figures
   figure: Credits counted this month
   figure: Real cost this month

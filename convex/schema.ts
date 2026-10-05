@@ -474,6 +474,9 @@ export default defineSchema({
     pullId: v.id("seoDataPulls"),
     /** True when this line was served by a pull it did not pay for. */
     reused: v.boolean(),
+    /** Units it put in its credit charge, and whether that charge waits on its answer (finish-off-plan.md, item 3). */
+    creditUnits: v.optional(v.number()),
+    creditPending: v.optional(v.boolean()),
     createdAt: v.number(),
   })
     .index("by_cycle", ["cycleId"])

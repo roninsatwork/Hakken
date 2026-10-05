@@ -6877,7 +6877,9 @@
         "title": "How prices are suggested",
         "cover": "A credit covers, in US dollars of real cost",
         "coverHint": "Our suppliers charge in dollars. 0.05 means one credit pays for 5 cents of what the work costs us.",
-        "plans": "How many credits each plan gives a month is set on Plans."
+        "planCredits": "Credits a month",
+        "planCreditsHint": "What every company is given on the 1st of each month. A change counts from the next month; credits already given this month stay as they are.",
+        "plans": "A plan that sets its own number of credits a month gives that instead."
       },
       "figures": {
         "charged": "Credits counted this month",
@@ -12337,6 +12339,8 @@
     "owed": "Your credits ran out this month: {owed} more were used. Nothing has been stopped.",
     "noCompany": "Choose a company to see its usage.",
     "nothingYet": "Nothing has used credits this month yet.",
+    "counting": "includes {counting} being counted",
+    "beingCounted": "{counting} being counted",
     "download": "Download CSV",
     "month": {
       "label": "Month",
@@ -12415,7 +12419,8 @@
       "price": "Price",
       "checks": "Checks",
       "eachRun": "Each run",
-      "eachRunDetail": "Credits a run, on average"
+      "eachRunDetail": "Credits a run, on average",
+      "includesCounting": "Includes {counting} being counted"
     },
     "chart": {
       "title": "This month’s credits, day by day",
@@ -12427,6 +12432,7 @@
     "where": {
       "title": "Where they went",
       "hint": "This month’s {credits} credits, by kind of work.",
+      "hintCounting": "This month’s {credits} credits, by kind of work, {counting} of them still being counted.",
       "empty": "Nothing has used credits this month yet.",
       "statement": "Your statement: every credit in and out"
     },
@@ -12518,12 +12524,14 @@
       "search": "Find a task, keyword or question…",
       "noMatch": "No line matches.",
       "empty": "No credits came in or went out this month.",
-      "cut": "This month has more lines than one page can hold; download the CSV for every one.",
+      "soFar": "so far: more on the pages after",
       "opening": "Opening balance",
       "closing": "Balance now",
       "totals": "{out} out · {in} in",
       "used": "{out} credits",
       "planGranted": "{month}’s plan credits",
+      "planRaised": "{month}’s plan credits raised",
+      "raisedFrom": "From {before} to {after} a month",
       "planEnds": "End at midnight on {date}",
       "planEnded": "{month}’s plan credits ended",
       "topUp": "Top-up",
@@ -12531,18 +12539,25 @@
       "unused": "Unused when they ended",
       "refund": "Given back: {kind}",
       "givenBack": "The work did not finish",
+      "beingCounted": "being counted, {units} so far",
+      "recount": "Counted again: {kind}",
+      "recounted": "{now} came back, not {before}",
+      "nothingBack": "Nothing came back, so nothing is charged",
       "fromPlan": "from {month}’s plan",
       "fromTopUp": "from a top-up of {date}",
+      "toPlan": "back to {month}’s plan",
+      "toTopUp": "back to a top-up of {date}",
       "and": " and ",
       "figures": {
         "opening": "Opening balance",
         "openingDetail": "Left when the month began",
         "in": "In",
-        "inDetail": "{plan} from your plan · {other} else",
+        "inDetail": "{plan} from your plan · {other} bought",
         "out": "Out",
-        "outDetail": "{used} used · {ended} ended unused",
+        "outDetail": "{used} used, after any given back · {ended} ended unused",
         "closing": "Balance now",
-        "closingDetail": "Every open batch, less anything owed"
+        "closingDetail": "Every open batch, less anything owed",
+        "closingCounting": "Every open batch, less anything owed; {counting} more being counted"
       },
       "columns": {
         "date": "Date",

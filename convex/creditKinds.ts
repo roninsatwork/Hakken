@@ -21,8 +21,15 @@ export const DEFAULT_CREDIT_PRICES: Record<CreditKind, CreditPrice> = {
   assistant: { credits: 1, per: 1 },
 };
 
-/** Credits in a month's plan batch, where the plan sets none: 1,000, his placeholder of 2026-10-05. */
-export const DEFAULT_PLAN_CREDITS = 1_000;
+/**
+ * Credits in a month's plan batch, where neither the company's plan nor
+ * Admin → Settings → Credit prices sets a number: 10,000 (Anthony,
+ * 2026-10-05: "make the credits default 10,000 credits per month for the
+ * moment"), raised the same day from his first placeholder of 1,000.
+ */
+export const DEFAULT_PLAN_CREDITS = 10_000;
+/** The first placeholder, which a platform setting saved before the raise may still hold. */
+export const FIRST_PLAN_CREDITS = 1_000;
 /** What one credit covers in US dollars of real cost, as recommended (outstanding question 1). */
 export const DEFAULT_CREDIT_COVERS_USD = 0.05;
 
@@ -47,28 +54,72 @@ export function creditKindOfFamily(family: string): CreditKind | null {
   }
 }
 
-/**
- * The units one request counts as: an AI answer is one answer whatever it
- * returns; a crawl counts the pages it may read; a list counts the rows it
- * asks for, a batch its keywords or websites; anything else counts one.
- * Rounded to credits only once a run's units are added up, so a single
- * keyword checked is not charged as a thousand.
- */
-export function creditUnitsOfRequest(kind: CreditKind, taskArgsJson: string): number {
-  if (kind === "aiAnswers") return 1;
-  let args: Record<string, unknown> = {};
+function readArgs(taskArgsJson: string): Record<string, unknown> {
   try {
     const parsed: unknown = JSON.parse(taskArgsJson);
-    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) args = parsed as Record<string, unknown>;
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return parsed as Record<string, unknown>;
   } catch {
     // An unreadable request still counts as one.
   }
-  const count = (value: unknown) => (typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : null);
-  if (kind === "siteAudit") return count(args.max_crawl_pages) ?? 1;
-  return count(args.limit)
+  return {};
+}
+
+const countOf = (value: unknown) => (typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.floor(value) : null);
+
+/** What a list or batch asks for, in rows: its `limit`, else its keywords or websites; null for a single answer. */
+function rowsAskedFor(args: Record<string, unknown>): number | null {
+  return countOf(args.limit)
     ?? (Array.isArray(args.keywords) && args.keywords.length > 0 ? args.keywords.length : null)
-    ?? (Array.isArray(args.targets) && args.targets.length > 0 ? args.targets.length : null)
-    ?? 1;
+    ?? (Array.isArray(args.targets) && args.targets.length > 0 ? args.targets.length : null);
+}
+
+/**
+ * The units one request asks for: an AI answer is one answer whatever it
+ * returns; a crawl the pages it may read; a list the rows it asks for, a
+ * batch its keywords or websites; anything else one. **Not what is charged
+ * since 2026-10-05** (finish-off-plan.md, item 3): a request is counted by
+ * what came back (`creditUnitsOfAnswer`). Kept for what a collection line
+ * planned before then had counted, and as the most an answer can count.
+ */
+export function creditUnitsOfRequest(kind: CreditKind, taskArgsJson: string): number {
+  if (kind === "aiAnswers") return 1;
+  const args = readArgs(taskArgsJson);
+  if (kind === "siteAudit") return countOf(args.max_crawl_pages) ?? 1;
+  return rowsAskedFor(args) ?? 1;
+}
+
+/** Whether a request is counted by what comes back — a crawl, a list, a batch — rather than as one answer. */
+export function countsWhatCameBack(kind: CreditKind, taskArgsJson: string): boolean {
+  if (kind === "aiAnswers") return false;
+  if (kind === "siteAudit") return true;
+  return rowsAskedFor(readArgs(taskArgsJson)) !== null;
+}
+
+/**
+ * The units a request counts before its answer is in (finish-off-plan.md,
+ * item 3): one for a single answer, which is all it can be, and nothing yet
+ * for a crawl or a list, which count what comes back when it comes.
+ */
+export function creditUnitsUpFront(kind: CreditKind, taskArgsJson: string): number {
+  return countsWhatCameBack(kind, taskArgsJson) ? 0 : 1;
+}
+
+/**
+ * The units a request counts once it is answered (finish-off-plan.md, item
+ * 3): the pages a crawl crawled, the rows a list or batch brought back —
+ * never more than it asked for — one for a single answer, and an AI answer
+ * one whatever it says. An answer whose rows were never counted (one
+ * recorded before 2026-10-05 with nothing kept to count) counts what was
+ * asked for, as it did then.
+ */
+export function creditUnitsOfAnswer(kind: CreditKind, taskArgsJson: string, rowsReturned: number | undefined): number {
+  if (!countsWhatCameBack(kind, taskArgsJson)) return 1;
+  const asked = creditUnitsOfRequest(kind, taskArgsJson);
+  if (rowsReturned === undefined || !Number.isFinite(rowsReturned)) return asked;
+  const came = Math.max(0, Math.floor(rowsReturned));
+  // A crawl sent without its page limit has none to hold it to.
+  const askedFor = kind === "siteAudit" ? countOf(readArgs(taskArgsJson).max_crawl_pages) : asked;
+  return askedFor === null ? came : Math.min(askedFor, came);
 }
 
 /** Credits for a run's units: rounded up to a whole credit, and never a charge for nothing. */

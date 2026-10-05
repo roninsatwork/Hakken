@@ -209,3 +209,178 @@ and today's credit rules charge every line in full (usage-credits-plan.md,
 decision 8), so a company is charged credits each run for an answer bought
 once a month. That is the credits' rule to change (items 3 and the cost
 audit), not the buying.
+
+## Built — 2026-10-05: items 3, 3a, 4, 5, 8, 9 and 10
+
+Items 3, 3a, 4, 5, 8, 9 and 10. **Run once on each deployment after it is
+deployed, in this order** (each pages itself; nothing to pass):
+`npx convex run creditCorrections:raisePlanCredits`, then
+`npx convex run creditCorrections:recountCollectionCredits` (its three
+passes book each other; it is done when no `creditCorrections` function is
+left scheduled). Both are safe to run again.
+
+### Item 3a — 10,000 credits a month, for now
+
+- The platform's default is 10,000 credits a month (`DEFAULT_PLAN_CREDITS`,
+  `convex/creditKinds.ts`). A company's month is its plan's own number, else
+  the platform's.
+- **Admin → Settings → Credit prices** has a **Credits a month** box beside
+  "A credit covers", saved with the prices (`saveCreditPrices`, a whole number
+  from 0 to 1,000,000, audited as `planCredits` like every other change). A
+  change counts from the next month's grant; a month already given keeps what
+  it was given. The approved outline
+  (`docs/plans/assets/usage-credits/look/AdminCreditPrices.txt`) gained exactly
+  one line for it, `field: Credits a month`, under the same settings card —
+  the plan approved the box; nothing else on the screen moved.
+- **October's 1,000 raised, once, by hand**:
+  `creditCorrections:raisePlanCredits` (no arguments; pages itself). It first
+  raises a platform setting still holding the old 1,000 to 10,000 (dev saved
+  one beside "what a credit covers"), then raises every open plan batch of
+  this month to what its company's plan gives now. Each raise is **its own
+  line on the statement** — "October's plan credits raised · From 1,000 to
+  10,000 a month", 9,000 in — so the balances before it stay true and the
+  ones after it add up. Never lowers a batch; a second run finds nothing to do.
+
+### Item 3 — credits count what came back
+
+- **What came back is counted where the answer arrives**: the Collector
+  counts each answer's rows as it keeps it (`rowsReturnedIn`,
+  `convex/dataForSeoSlim.ts` — a list's rows, every one sent, including any
+  left off the stored copy; a crawl's `pages_crawled`) and records it on the
+  request (`seoDataPulls.rowsReturned`).
+- **The rule** (`creditUnitsOfAnswer`, `convex/creditKinds.ts`): a list or
+  batch counts the rows that came back, never more than it asked for; a crawl
+  the pages it crawled; a single answer 1; an AI answer 1 whatever it says.
+  Up front, before the answer, a single answer counts 1 and a list or crawl
+  **0** — so a run in progress shows only what has come back.
+- **Each plan line keeps what it put in its run** (`seoCycleLines.creditUnits`)
+  and whether its run waits for it (`creditPending`); when its request is
+  answered or fails, the run moves by the difference. A run whose collection
+  finishes while a request another collection sent is still out **stays open
+  until that answer comes** (`creditCharges.pendingLines`, `closeRunIfDone`),
+  so it is charged once, on what came back; the hourly sweep gives up waiting
+  after two days. A list's later pages, which have no plan line, now count for
+  the run that bought them, rows and cost (`creditListPage`) — before, they
+  counted nothing.
+- **Decision — a correction is a line of its own, never a rewrite.** A charge
+  counted again after it was charged (`recountCreditRun`) keeps its line as
+  it was; the difference is a **"Counted again"** line — "Counted again: Site
+  audit · corston.com · 1 page came back, not 1,000 · back to October's plan",
+  19 in — with credits given back to the batches that paid (or this month's
+  plan, where one has ended), or taken, if it came out higher, from the
+  batches that end soonest. The month's rollup, every company's month, and
+  the day the work was charged on move with it, so the Usage chart, Overview
+  and Credit prices still add up. A refund after a recount gives back what the
+  charge stands at.
+- **The 5 October charges, counted again once, by hand**:
+  `creditCorrections:recountCollectionCredits` (no arguments: from the start
+  of this UK month; or `{"since": <ms>}`). Three passes, each paged and
+  booking the next: what each kept answer brought back (four answers a
+  transaction); every request's lines moved to what it counts now, later pages
+  counted, requests outside a collection counted again; then each charged run
+  that owes a difference counted again once, as above. Running it again
+  changes nothing.
+- Not counted again: a request still out when it runs (its answer counts it,
+  as above), and keyword lookups (item 9 deals with those). A request shared
+  with another company counts for that company only on its first page: a
+  list's later pages count for the collection that bought them.
+
+### Item 5 — a crawl's refund recorded
+
+- When a finished crawl's summary is recorded (`settleSeoResult`), its cost
+  comes down to the pages crawled at the price a page was charged — what was
+  charged over `max_crawl_pages`, so $0.0015 a page for today's $1.50 crawls,
+  and right whatever the price becomes (`crawlRefundUsd`,
+  `convex/seoCrawlRefund.ts`). The reduction is carried through everything
+  that holds the cost: the request's `costUsd` (and `refundedUsd`, so it is
+  done once), the collection's `totalCostUsd`, the day's `seoDayRollups`
+  (platform and company, on the day it was refunded), the website's spend in
+  that collection (`seoCycleSpend`, which the $3 limit reads), the running
+  price of a crawl (`seoOperationCosts`), the Collector run that sent it (its
+  `costUsd`, which the $100 a day reads, and a cost record of the refund
+  beside the call's), and the credit charge's `realCostUsd` with its month's
+  and every company's month's real cost. A request now records the Collector
+  run that sent it (`sentByRunId`).
+- **Crawls already filed** are corrected by the item 3 recount
+  (`creditCorrections:recountCollectionCredits`, pass 2) — everywhere above
+  except the Collector run's cost, because a crawl sent before this change
+  never recorded which run sent it. Today's day ceiling therefore still counts
+  the full $1.50 for crawls sent before the deploy; that resets at midnight.
+
+### Item 9 — a keyword lookup that buys nothing is not charged
+
+- A lookup is still charged by the keyword when it starts (so, once charging
+  is switched on, one is refused at zero before anything is bought). When its
+  jobs settle (`settleLookups`, `convex/keywordResearchRun.ts`), it is
+  counted again (`creditResearchSettled`): a keyword for which nothing came
+  back — every part failed or brought nothing — is not charged, and a lookup
+  for which nothing came back at all is given back whole. The statement shows
+  it as a line of its own: "Counted again: Keyword research · “web design
+  leeds” · Nothing came back, so nothing is charged · back to October's plan".
+  A lookup whose parts were already held and fresh is still charged in full:
+  its figures came back, from what another lookup bought (decision 8).
+- Decided: per keyword, not only all-or-nothing, since a three-keyword lookup
+  where one keyword fails has bought nothing for that keyword. Lookups made
+  before this change are not counted again.
+
+### Item 10 — the Statement reads past 900 lines in a month
+
+- **A page at a time, never the whole month.** `usageStatement` is a paged
+  query (`convex/creditUsage.ts`): the Statement, By work and By website ask
+  for 15 lines at a time through the house pager (`useServerPagedTable`,
+  extended with `fill` so a page narrowed as it is read keeps reading until it
+  is full) and the kit's paged footer. One kind's or one website's lines are
+  read by their own index (`by_company_kind_at`, `by_company_website_at`); a
+  person or a search narrows each page as it is read, 200 lines a read at most.
+- **Figures without reading lines** (`usageStatementTotals`): the opening
+  balance and the balance now are the balances on the lines either side of the
+  month; In is the month's plan credits and anything bought; Out is what
+  opened and came in less what is left, split into ended unused (the batches
+  that ended in the month) and used — so "used" is after anything given back,
+  and the figure says so. By work's and By website's figures come from the
+  month's rollups, which now keep who started work by hand (`byHandUsers`,
+  for "Started by 2 people"); the recount's last pass fills it in for charges
+  made before (`creditCorrections:recountCollectionCredits`).
+- **Changed on the screens** (no kit part or heading added or removed; the
+  approved outlines are unchanged): the table sorts by Date only, either way
+  — User and Out sorted only the lines on screen, which the table rules do not
+  allow, and a month cannot be ordered by them on the server without more
+  indexes; the User filter lists the company's people; the count in the bar
+  says "so far: more on the pages after" while more pages are to come; the
+  opening balance opens the first page and the balance now closes the last;
+  the CSV reads every page in turn (up to 50,000 lines). The "more lines than
+  one page can hold" warning is gone.
+
+### Item 4 — Usage shows credits while a collection runs
+
+- A run still open — a collection under way — is **being counted**: what has
+  come back so far at its price (item 3 counts lists and crawls only as their
+  answers arrive, so this is never what was merely asked for). Read by
+  company (`creditCharges.by_company_state_at`, `runsBeingCounted`,
+  `convex/creditUsage.ts`); not taken from any batch until the run closes.
+- **Overview**: "Used this month" counts it in and says "Includes 728 being
+  counted" under its meter; "Plan credits left" and "Left on …" take it off;
+  today on the chart includes it; "Where they went" says "…, 728 of them still
+  being counted"; each website and each check counts it in its Credits, with
+  "728 being counted" beneath the figure, and both tables' bars add "includes
+  728 being counted". A kind or website with nothing charged yet but a run
+  under way now appears (Period House Group's empty Usage). "Each" stays what
+  a finished run took.
+- **Statement, By work, By website**: a run being counted is a line in date
+  order — "Site audit · corston.com · being counted, 1 page so far", its
+  credits so far in Out and no balance, since nothing has been taken; "Balance
+  now" says "…; 7 more being counted". By work's and By website's "Credits
+  this month" count it in and say so.
+- No kit part, heading or title changed: the approved outlines stand
+  (`usageLook.test.tsx`).
+
+### Item 8 — Usage Overview's two tables sort by their headings
+
+- "Credits by website" and "What ran this month" sort by every heading
+  through the Sites tables' own hook (`useSiteSortedList`, the rule in
+  `convex/utils/sortOrder.ts`): the first press best first — a figure the
+  most first, a name A to Z, How often the most often first — again for the
+  other way, over the whole list before it is paged, blanks last either way.
+  Work tied to no website stays after every website whichever way. Each opens
+  on Credits, the most first, as before; the order is kept in the address
+  (`websites.sort`, `checks.sort`), so the two tables keep theirs apart.

@@ -6877,7 +6877,9 @@
         "title": "Come vengono suggeriti i prezzi",
         "cover": "Un credito copre, in dollari USA di costo reale",
         "coverHint": "I nostri fornitori fatturano in dollari. 0,05 significa che un credito paga 5 centesimi di quanto ci costa il lavoro.",
-        "plans": "Quanti crediti dà ogni piano al mese si imposta in Piani."
+        "planCredits": "Crediti al mese",
+        "planCreditsHint": "Quanti ne riceve ogni azienda il 1° di ogni mese. Una modifica vale dal mese successivo; i crediti già dati questo mese restano come sono.",
+        "plans": "Un piano che imposta un proprio numero di crediti al mese dà quello."
       },
       "figures": {
         "charged": "Crediti conteggiati questo mese",
@@ -12337,6 +12339,8 @@
     "owed": "Questo mese hai esaurito i crediti: ne sono stati usati altri {owed}. Non è stato fermato nulla.",
     "noCompany": "Scegli un’azienda per vederne l’utilizzo.",
     "nothingYet": "Questo mese non è ancora stato usato nessun credito.",
+    "counting": "di cui {counting} in conteggio",
+    "beingCounted": "{counting} in conteggio",
     "download": "Scarica CSV",
     "month": {
       "label": "Mese",
@@ -12415,7 +12419,8 @@
       "price": "Prezzo",
       "checks": "Controlli",
       "eachRun": "Ogni esecuzione",
-      "eachRunDetail": "Crediti per esecuzione, in media"
+      "eachRunDetail": "Crediti per esecuzione, in media",
+      "includesCounting": "Di cui {counting} in conteggio"
     },
     "chart": {
       "title": "I crediti di questo mese, giorno per giorno",
@@ -12427,6 +12432,7 @@
     "where": {
       "title": "Dove sono andati",
       "hint": "I {credits} crediti di questo mese, per tipo di lavoro.",
+      "hintCounting": "I {credits} crediti di questo mese, per tipo di lavoro, di cui {counting} ancora in conteggio.",
       "empty": "Questo mese non è ancora stato usato nessun credito.",
       "statement": "Il tuo estratto conto: ogni credito in entrata e in uscita"
     },
@@ -12518,12 +12524,14 @@
       "search": "Trova un’attività, una parola chiave o una domanda…",
       "noMatch": "Nessuna riga corrisponde.",
       "empty": "Questo mese non sono entrati né usciti crediti.",
-      "cut": "Questo mese ha più righe di quante ne stiano in una pagina; scarica il CSV per vederle tutte.",
+      "soFar": "finora: altre nelle pagine successive",
       "opening": "Saldo iniziale",
       "closing": "Saldo attuale",
       "totals": "{out} in uscita · {in} in entrata",
       "used": "{out} crediti",
       "planGranted": "Crediti del piano di {month}",
+      "planRaised": "Crediti del piano di {month} aumentati",
+      "raisedFrom": "Da {before} a {after} al mese",
       "planEnds": "Scadono a mezzanotte del {date}",
       "planEnded": "Crediti del piano di {month} scaduti",
       "topUp": "Ricarica",
@@ -12531,18 +12539,25 @@
       "unused": "Non usati alla scadenza",
       "refund": "Restituiti: {kind}",
       "givenBack": "Il lavoro non è stato completato",
+      "beingCounted": "in conteggio, {units} finora",
+      "recount": "Ricontato: {kind}",
+      "recounted": "In risposta: {now}, non {before}",
+      "nothingBack": "Non è arrivato nulla, quindi non si addebita nulla",
       "fromPlan": "dal piano di {month}",
       "fromTopUp": "da una ricarica del {date}",
+      "toPlan": "restituiti al piano di {month}",
+      "toTopUp": "restituiti a una ricarica del {date}",
       "and": " e ",
       "figures": {
         "opening": "Saldo iniziale",
         "openingDetail": "Rimasto all’inizio del mese",
         "in": "In entrata",
-        "inDetail": "{plan} dal tuo piano · {other} da altro",
+        "inDetail": "{plan} dal tuo piano · {other} acquistati",
         "out": "In uscita",
-        "outDetail": "{used} usati · {ended} scaduti senza uso",
+        "outDetail": "{used} usati, al netto dei restituiti · {ended} scaduti senza uso",
         "closing": "Saldo attuale",
-        "closingDetail": "Ogni lotto aperto, meno quanto dovuto"
+        "closingDetail": "Ogni lotto aperto, meno quanto dovuto",
+        "closingCounting": "Ogni lotto aperto, meno quanto dovuto; altri {counting} in conteggio"
       },
       "columns": {
         "date": "Data",

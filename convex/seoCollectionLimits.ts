@@ -86,15 +86,16 @@ export function clampDailyCeiling(value: number | undefined): number | undefined
 
 /** Add what a request cost to its website's spend in its collection, as it is booked. */
 export async function tallyWebsiteSpend(ctx: MutationCtx, row: Doc<"seoDataPulls">, costUsd: number): Promise<void> {
-  if (costUsd <= 0 || !row.cycleId || !row.websiteId) return;
+  // Below nothing is a refund given back after the charge — a crawl's pages not crawled (finish-off-plan.md, item 5).
+  if (costUsd === 0 || !row.cycleId || !row.websiteId) return;
   const cycleId = row.cycleId;
   const websiteId = row.websiteId;
   const existing = await ctx.db
     .query("seoCycleSpend")
     .withIndex("by_cycle_website", (q) => q.eq("cycleId", cycleId).eq("websiteId", websiteId))
     .unique();
-  if (existing) await ctx.db.patch(existing._id, { spentUsd: existing.spentUsd + costUsd });
-  else await ctx.db.insert("seoCycleSpend", { cycleId, websiteId, spentUsd: costUsd });
+  if (existing) await ctx.db.patch(existing._id, { spentUsd: Math.max(0, existing.spentUsd + costUsd) });
+  else if (costUsd > 0) await ctx.db.insert("seoCycleSpend", { cycleId, websiteId, spentUsd: costUsd });
 }
 
 /** Whether the day's ceiling is reached, and why — for the hourly check, before it starts a send that could not go. */

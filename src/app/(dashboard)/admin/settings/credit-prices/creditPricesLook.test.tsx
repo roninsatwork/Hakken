@@ -32,7 +32,7 @@ const line = (kind: string, extra: Partial<FunctionReturnType<typeof api.creditP
 const REPORT: FunctionReturnType<typeof api.creditPricesAdmin.creditPriceReport> = {
   month: "2026-10",
   endsAt: Date.UTC(2026, 10, 1),
-  settings: { creditCoversUsd: 0.05, planCredits: 1000 },
+  settings: { creditCoversUsd: 0.05, planCredits: 10_000 },
   lines: [
     // 2,000 keywords at $0.26: 1.3 credits' cost a thousand, so 3 at 5 cents a credit, against 4 in use.
     line("rankings", { credits: 4, per: 1000, defaultCredits: 4, charged: 8, runs: 2, units: 2000, realCostUsd: 0.26 }),
@@ -84,6 +84,19 @@ describe("Credit prices", () => {
       prices: expect.arrayContaining([{ kind: "rankings", credits: 3 }, { kind: "siteAudit", credits: 1 }]),
       creditCoversUsd: 0.05,
     }));
+  });
+
+  it("credits a month are changed in their own box and saved with the prices", async () => {
+    render(<CreditPricesPage />);
+    await screen.findByText("Rankings");
+    const box = screen.getByLabelText("Credits a month") as HTMLInputElement;
+    expect(box.value).toBe("10000");
+    fireEvent.change(box, { target: { value: "12,000" } });
+    expect(screen.getByText("Changes not saved")).toBeTruthy();
+    await act(async () => {
+      fireEvent.click(screen.getByText("Save prices"));
+    });
+    expect(saveSpy).toHaveBeenCalledWith(expect.objectContaining({ planCredits: 12_000, creditCoversUsd: 0.05 }));
   });
 
   it("what a credit covers moves every suggestion at once", async () => {

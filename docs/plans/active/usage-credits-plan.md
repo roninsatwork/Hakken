@@ -429,7 +429,9 @@ real cost; nothing is refused and no screen shows it.
 Left for later steps, knowingly:
 - Other agents' model costs are not a kind on the price list, so not charged.
 - A lookup whose run buys nothing is still charged; refunds for it come with
-  step 5, when refusing at zero makes them matter.
+  step 5, when refusing at zero makes them matter. *Done earlier, 2026-10-05
+  (finish-off-plan.md, item 9): a keyword nothing came back for is given back
+  as a "Counted again" line.*
 - A request revived after it was counted failed is not charged again.
 - A month with nothing charged has no grant or ending line.
 
@@ -460,13 +462,18 @@ screen's outline is held by a look test
   "What ran this month" to it; the Statement opens and closes on the month's
   balances and says which batch paid each line.
 - **Bounded reads**: a month's rollups, the newest 900 charges for what is
-  booked, and 900 statement lines — a month with more says so.
+  booked, and 900 statement lines — a month with more says so. *Changed
+  2026-10-05 (finish-off-plan.md, item 10): the statement is read a page at a
+  time, however long the month, and its figures come from its balances and
+  batches.*
 - **Words**: English and Italian; the assistant's kind reads "Ask" and the
   platform's own name.
 
 Not yet, knowingly:
 - Purchases, Top up and "Bought credits left →" (step 4).
 - Sorting the Overview's two tables by their headings; the statement sorts.
+  *Done 2026-10-05 (finish-off-plan.md, item 8); the statement now sorts by
+  date only, either way, as it is read a page at a time (item 10).*
 - Seen in the browser pane: the session's own dev server cannot start while
   another session's runs in this folder, and the pane is not signed in there.
   Then seen in his own Chrome, signed in, on localhost:3000: Overview,
@@ -527,3 +534,13 @@ have you stopped"), every setting changeable on the screen.
   and 6 (the old Organization usage chart out) built. Then: 5 cents a credit
   confirmed, no exchange rate, a company sees only credits — the burn figure
   out too.
+- 2026-10-05 — Units are what came back, not what was asked for
+  (finish-off-plan.md, item 3): a list counts the rows it brought, a crawl the
+  pages it crawled, a single answer one. Step 1's "Kinds and units" counted
+  `max_crawl_pages` and `limit`; that rule is kept only for lines planned
+  before the change, and the 5 October charges are counted again as
+  "Counted again" lines of their own.
+- 2026-10-05 — Decision 1 changed to 10,000 credits a month, for now
+  (finish-off-plan.md, item 3a): the platform default, a "Credits a month" box
+  on Credit prices, and October's batches raised by a grant line of their own
+  ("October's plan credits raised"), never by rewriting the first grant.

@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, renderWithProviders as render, screen, within } from "@/src/test/renderWithProviders";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useQuery } from "convex/react";
+import { usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import type { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -20,13 +20,13 @@ import UsageStatementPage from "./statement/page";
  * saved beside its board in docs/plans/assets/usage-credits/look/.
  */
 
-const nav = vi.hoisted(() => ({ pathname: "/app/usage", search: "" }));
+const nav = vi.hoisted(() => ({ pathname: "/app/usage", search: "", replace: vi.fn() }));
 
 vi.mock("convex/react", async () => (await import("@/src/test/screenMocks")).convexReact());
 vi.mock("next/navigation", () => ({
   usePathname: () => nav.pathname,
   useSearchParams: () => new URLSearchParams(nav.search),
-  useRouter: () => ({ replace: vi.fn(), push: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
+  useRouter: () => ({ replace: nav.replace, push: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
   useParams: () => ({}),
 }));
 vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
@@ -49,29 +49,30 @@ const SUMMARY: NonNullable<FunctionReturnType<typeof api.creditUsage.usageSummar
   bought: { left: 500, nextEndsAt: Date.UTC(2027, 9, 16), nextEndsLeft: 500 },
   owed: 0,
   used: 543,
+  counting: 0,
   byDay: [49, 16, 4, 4, 117, 21, 9, 6, 9, 4, 4, 124, 9, 16, 4, 6, 4, 4, 124, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   previous: { month: "2026-09", granted: 1000, byDay: Array.from({ length: 30 }, () => 16) },
   kinds: [
-    { kind: "aiAnswers", credits: 300, runs: 3 },
-    { kind: "rankings", credits: 104, runs: 26 },
-    { kind: "keywordResearch", credits: 90, runs: 18 },
-    { kind: "siteAudit", credits: 25, runs: 1 },
-    { kind: "assistant", credits: 14, runs: 14 },
-    { kind: "backlinks", credits: 10, runs: 1 },
+    { kind: "aiAnswers", credits: 300, runs: 3, people: 0, counting: 0 },
+    { kind: "rankings", credits: 104, runs: 26, people: 0, counting: 0 },
+    { kind: "keywordResearch", credits: 90, runs: 18, people: 2, counting: 0 },
+    { kind: "siteAudit", credits: 25, runs: 1, people: 0, counting: 0 },
+    { kind: "assistant", credits: 14, runs: 14, people: 1, counting: 0 },
+    { kind: "backlinks", credits: 10, runs: 1, people: 0, counting: 0 },
   ],
   websites: [
-    { website: own, credits: 427, runs: 25, kinds: ["rankings", "aiAnswers", "siteAudit", "backlinks"] },
-    { website: null, credits: 104, runs: 32, kinds: ["keywordResearch", "assistant"] },
-    { website: rival, credits: 12, runs: 3, kinds: ["rankings"] },
+    { website: own, credits: 427, runs: 25, people: 0, counting: 0, kinds: ["rankings", "aiAnswers", "siteAudit", "backlinks"] },
+    { website: null, credits: 104, runs: 32, people: 2, counting: 0, kinds: ["keywordResearch", "assistant"] },
+    { website: rival, credits: 12, runs: 3, people: 0, counting: 0, kinds: ["rankings"] },
   ],
   lines: [
-    { kind: "aiAnswers", website: own, credits: 300, runs: 3, everyDays: 7 },
-    { kind: "keywordResearch", website: null, credits: 90, runs: 18, everyDays: null },
-    { kind: "rankings", website: own, credits: 80, runs: 20, everyDays: 1 },
-    { kind: "siteAudit", website: own, credits: 25, runs: 1, everyDays: 30 },
-    { kind: "assistant", website: null, credits: 14, runs: 14, everyDays: null },
-    { kind: "rankings", website: rival, credits: 12, runs: 3, everyDays: 7 },
-    { kind: "backlinks", website: own, credits: 10, runs: 1, everyDays: 30 },
+    { kind: "aiAnswers", website: own, credits: 300, runs: 3, counting: 0, everyDays: 7 },
+    { kind: "keywordResearch", website: null, credits: 90, runs: 18, counting: 0, everyDays: null },
+    { kind: "rankings", website: own, credits: 80, runs: 20, counting: 0, everyDays: 1 },
+    { kind: "siteAudit", website: own, credits: 25, runs: 1, counting: 0, everyDays: 30 },
+    { kind: "assistant", website: null, credits: 14, runs: 14, counting: 0, everyDays: null },
+    { kind: "rankings", website: rival, credits: 12, runs: 3, counting: 0, everyDays: 7 },
+    { kind: "backlinks", website: own, credits: 10, runs: 1, counting: 0, everyDays: 30 },
   ],
   prices: [
     { kind: "rankings", credits: 4, per: 1000 },
@@ -84,7 +85,7 @@ const SUMMARY: NonNullable<FunctionReturnType<typeof api.creditUsage.usageSummar
   forecast: { booked: 152, pace: 55, leftAtEnd: 250 },
 };
 
-const line = (id: string, at: number, extra: Partial<NonNullable<FunctionReturnType<typeof api.creditUsage.usageStatement>>["lines"][number]>) => ({
+const line = (id: string, at: number, extra: Partial<FunctionReturnType<typeof api.creditUsage.usageStatement>["page"][number]>) => ({
   id: id as never,
   at,
   entry: "charge" as const,
@@ -98,16 +99,29 @@ const line = (id: string, at: number, extra: Partial<NonNullable<FunctionReturnT
   in: 0,
   balance: null,
   detail: null,
+  reason: null,
+  before: null,
+  counting: false,
   from: [{ source: "plan" as const, month: "2026-10", startsAt: OCT }],
   batch: null,
   ...extra,
 });
 
-const STATEMENT: NonNullable<FunctionReturnType<typeof api.creditUsage.usageStatement>> = {
+/** The month's figures, as `usageStatementTotals` gives them. */
+const TOTALS: NonNullable<FunctionReturnType<typeof api.creditUsage.usageStatementTotals>> = {
   month: "2026-10",
   opening: 37,
   closing: 957,
-  cut: false,
+  planIn: 1000,
+  otherIn: 500,
+  used: 40,
+  ended: 37,
+  counting: 0,
+  people: [{ userId: "user_anthony" as Id<"users">, name: "Anthony Basker" }, { userId: "user_priya" as Id<"users">, name: "Priya Shah" }],
+};
+
+/** The month's lines, as the statement's pages give them. */
+const STATEMENT = {
   lines: [
     line("c1", OCT, { entry: "ended", source: "plan", how: "automatic", out: 37, balance: 0, from: [{ source: "plan", month: "2026-09", startsAt: Date.UTC(2026, 8, 1) }], batch: { source: "plan", month: "2026-09", startsAt: Date.UTC(2026, 8, 1), endsAt: OCT } }),
     line("c2", OCT, { entry: "grant", source: "plan", how: "automatic", in: 1000, balance: 1000, from: [], batch: { source: "plan", month: "2026-10", startsAt: OCT, endsAt: Date.UTC(2026, 10, 1) } }),
@@ -137,13 +151,21 @@ function at(pathname: string, search = "") {
   nav.search = search;
 }
 
+/** The statement's pages: every line at once, and nothing more to read. */
+function pagesOf(lines: typeof STATEMENT.lines) {
+  vi.mocked(usePaginatedQuery).mockImplementation(((_query: unknown, args: unknown) => (args === "skip"
+    ? { results: [], status: "LoadingFirstPage", isLoading: true, loadMore: vi.fn() }
+    : { results: lines, status: "Exhausted", isLoading: false, loadMore: vi.fn() })) as never);
+}
+
 beforeEach(() => {
   vi.mocked(useQuery).mockReset();
   vi.mocked(useQuery).mockImplementation(answerQueries({
     "creditUsage:usageSummary": SUMMARY,
-    "creditUsage:usageStatement": STATEMENT,
+    "creditUsage:usageStatementTotals": TOTALS,
     "creditUsage:usageComingUp": COMING_UP,
   }));
+  pagesOf(STATEMENT.lines);
 });
 afterEach(cleanup);
 
@@ -205,6 +227,33 @@ describe("Usage's screens", () => {
     expect(tableRows("What ran this month: kota.co.uk")).toHaveLength(1);
   });
 
+  it("the Overview's tables sort by their headings over the whole list, blanks and work tied to no website last (finish-off-plan.md, item 8)", async () => {
+    // A website is drawn after its mark (its first letter): read its name from the end.
+    const hosts = (title: string) => tableRows(title).map((row) => /(Not tied to a website|[a-z0-9-]+\.[a-z.]+)$/.exec(within(row).getAllByRole("cell")[0].textContent ?? "")?.[1]);
+    // Most credits first, as it opens.
+    at("/app/usage");
+    const first = render(<UsageOverviewPage />);
+    await screen.findByText("Credits by website");
+    expect(hosts("Credits by website")).toEqual(["ronins.co.uk", "kota.co.uk", "Not tied to a website"]);
+    // Pressing a heading asks for its column, best first.
+    fireEvent.click(within(screen.getByText("Credits by website").closest("section") as HTMLElement).getByRole("button", { name: /Runs/ }));
+    expect(String(nav.replace.mock.lastCall?.[0])).toContain("websites.sort=runs");
+    first.unmount();
+
+    // Website A to Z, then Z to A: work tied to no website last both ways.
+    at("/app/usage", "websites.sort=website");
+    const second = render(<UsageOverviewPage />);
+    await screen.findByText("Credits by website");
+    expect(hosts("Credits by website")).toEqual(["kota.co.uk", "ronins.co.uk", "Not tied to a website"]);
+    second.unmount();
+    at("/app/usage", "websites.sort=website&websites.dir=asc&checks.sort=often");
+    render(<UsageOverviewPage />);
+    await screen.findByText("Credits by website");
+    // How often, most often first; work started by hand, with no schedule, last.
+    const often = tableRows("What ran this month").map((row) => within(row).getAllByRole("cell")[2].textContent);
+    expect(often).toEqual(["Every day", "Every week", "Every week", "Every month", "Every month", "When you ask", "When you ask"]);
+  });
+
   it("the statement opens and closes on the month's balances, and says which batch paid", async () => {
     at("/app/usage/statement");
     render(<UsageStatementPage />);
@@ -213,5 +262,73 @@ describe("Usage's screens", () => {
     expect(within(rows[0]).getByText("Opening balance")).toBeTruthy();
     expect(within(rows[1]).getByText("September’s plan credits ended")).toBeTruthy();
     expect(screen.getByText("ronins.co.uk · 1,240 pages · from October’s plan")).toBeTruthy();
+  });
+
+  it("a collection under way shows what it has counted so far, as being counted, in the figures and the lines (finish-off-plan.md, item 4)", async () => {
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "creditUsage:usageSummary": {
+        ...SUMMARY,
+        counting: 20,
+        kinds: [...SUMMARY.kinds.filter((row) => row.kind !== "siteAudit"), { kind: "siteAudit", credits: 25, runs: 1, people: 0, counting: 20 }],
+        websites: SUMMARY.websites.map((row) => (row.website?.websiteId === own.websiteId ? { ...row, counting: 20 } : row)),
+        lines: SUMMARY.lines.map((row) => (row.kind === "siteAudit" ? { ...row, counting: 20 } : row)),
+      },
+      "creditUsage:usageStatementTotals": TOTALS,
+    }));
+    at("/app/usage");
+    render(<UsageOverviewPage />);
+    await screen.findByText("Credits by website");
+    // Used counts it in, and says so; the plan's credits left take it off.
+    expect(screen.getByText("563")).toBeTruthy();
+    expect(screen.getByText("Includes 20 being counted")).toBeTruthy();
+    expect(screen.getByText("437")).toBeTruthy();
+    expect(screen.getByText("This month’s 563 credits, by kind of work, 20 of them still being counted.")).toBeTruthy();
+    expect(screen.getAllByText("includes 20 being counted")).toHaveLength(2);
+    // The site audit on ronins.co.uk: 25 charged and 20 still being counted.
+    expect(within(tableRows("What ran this month").find((row) => within(row).queryByText("Site audit"))!).getByText("20 being counted")).toBeTruthy();
+  });
+
+  it("a run still being counted is a line of the statement, with what it has counted so far and no balance yet", async () => {
+    pagesOf([...STATEMENT.lines, line("c8", OCT + 19 * DAY + 3_600_000, { kind: "siteAudit", website: own, user: "Anthony Basker", units: 340, out: 7, balance: null, from: [], counting: true })]);
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "creditUsage:usageSummary": SUMMARY,
+      "creditUsage:usageStatementTotals": { ...TOTALS, counting: 7 },
+    }));
+    at("/app/usage/statement");
+    render(<UsageStatementPage />);
+    expect(await screen.findByText("ronins.co.uk · being counted, 340 pages so far")).toBeTruthy();
+    expect(screen.getByText("Every open batch, less anything owed; 7 more being counted")).toBeTruthy();
+  });
+
+  it("the statement reads a page at a time: more to come says so, and its filters and order are asked of the server", async () => {
+    const loadMore = vi.fn();
+    vi.mocked(usePaginatedQuery).mockImplementation((() => ({ results: STATEMENT.lines, status: "CanLoadMore", isLoading: false, loadMore })) as never);
+    at("/app/usage/statement");
+    render(<UsageStatementPage />);
+    await screen.findByText("Opening balance", { selector: "span" });
+    expect(screen.getByText("so far: more on the pages after")).toBeTruthy();
+    // The month closes only on its last page.
+    expect(screen.queryByText("Balance now", { selector: "span.font-medium" })).toBeNull();
+    fireEvent.change(screen.getByLabelText("User"), { target: { value: "user_priya" } });
+    expect(vi.mocked(usePaginatedQuery).mock.lastCall?.[1]).toMatchObject({ userId: "user_priya", order: "asc" });
+    fireEvent.click(screen.getByRole("button", { name: /Date/ }));
+    expect(vi.mocked(usePaginatedQuery).mock.lastCall?.[1]).toMatchObject({ order: "desc" });
+  });
+
+  it("a charge counted again from what came back says what it is now and was, and where its credits went back", async () => {
+    pagesOf([...STATEMENT.lines, line("c8", OCT + 19 * DAY + 3_600_000, { entry: "recount", kind: "siteAudit", website: own, user: "Anthony Basker", how: "automatic", units: 1, before: 1000, in: 24, balance: 981, reason: "recounted" })]);
+    at("/app/usage/statement");
+    render(<UsageStatementPage />);
+    expect(await screen.findByText("Counted again: Site audit")).toBeTruthy();
+    expect(screen.getByText("ronins.co.uk · 1 page came back, not 1,000 · back to October’s plan")).toBeTruthy();
+  });
+
+  it("a month's plan credits raised after they were given say so, from what to what", async () => {
+    const october = { source: "plan" as const, month: "2026-10", startsAt: OCT, endsAt: Date.UTC(2026, 10, 1) };
+    pagesOf([...STATEMENT.lines, line("c8", OCT + 19 * DAY + 3_600_000, { entry: "grant", source: "plan", how: "automatic", in: 9000, balance: 9957, reason: "raised", before: 1000, from: [], batch: october })]);
+    at("/app/usage/statement");
+    render(<UsageStatementPage />);
+    expect(await screen.findByText("October’s plan credits raised")).toBeTruthy();
+    expect(screen.getByText(/^From 1,000 to 10,000 a month · End at midnight on/)).toBeTruthy();
   });
 });

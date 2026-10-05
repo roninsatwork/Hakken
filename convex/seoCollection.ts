@@ -564,7 +564,7 @@ async function planSharedPull(
     submittedAt: Date.now(),
   });
 
-  await ctx.db.insert("seoCycleLines", {
+  const lineId = await ctx.db.insert("seoCycleLines", {
     cycleId: cycle._id,
     companyId: cycle.companyId,
     websiteId: args.websiteId,
@@ -574,7 +574,7 @@ async function planSharedPull(
     createdAt: Date.now(),
   });
   // Charged at the full price, bought or reused (usage-credits-plan.md).
-  await creditCycleLine(ctx, cycle, args.websiteId, existing ?? { family: args.operation.family, taskArgsJson: JSON.stringify(args.params), costUsd: 0, status: "PENDING" }, Boolean(existing));
+  await creditCycleLine(ctx, cycle, args.websiteId, existing ?? { family: args.operation.family, taskArgsJson: JSON.stringify(args.params), costUsd: 0, status: "PENDING" }, Boolean(existing), lineId);
 
   return { reused: Boolean(existing), pullId, pull: existing };
 }
@@ -823,7 +823,7 @@ async function writeLine(
   pullId: Id<"seoDataPulls">,
   reused: boolean,
 ) {
-  await ctx.db.insert("seoCycleLines", {
+  const lineId = await ctx.db.insert("seoCycleLines", {
     cycleId: args.cycle._id,
     companyId: args.cycle.companyId,
     websiteId: args.websiteId,
@@ -832,5 +832,5 @@ async function writeLine(
     reused,
     createdAt: Date.now(),
   });
-  await creditCycleLine(ctx, args.cycle, args.websiteId, pullId, reused);
+  await creditCycleLine(ctx, args.cycle, args.websiteId, pullId, reused, lineId);
 }

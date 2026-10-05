@@ -4,9 +4,10 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import schema from "./schema";
-import { creditAssistantReply, creditCycleFinished, creditCycleLine, creditCycleLineDropped, creditPullSettled, creditResearchRun } from "./creditHooks";
-import { chargeCreditsNow, creditBalance, ensurePlanBatch } from "./creditLedger";
-import { creditDayOf, creditMonthNamed, creditMonthOf, creditUnitsOfRequest, creditsForUnits, creditKindOfFamily } from "./creditKinds";
+import { creditAssistantReply, creditCycleFinished, creditCycleLine, creditCycleLineDropped, creditPullSettled, creditResearchRun, creditResearchSettled } from "./creditHooks";
+import { chargeCreditsNow, creditBalance, ensurePlanBatch, findCreditRun, recountCreditRun, refundCreditCharge } from "./creditLedger";
+import { rowsReturnedIn, slimSeoResult } from "./dataForSeoSlim";
+import { creditDayOf, creditMonthNamed, creditMonthOf, creditUnitsOfAnswer, creditUnitsOfRequest, creditUnitsUpFront, creditsForUnits, creditKindOfFamily } from "./creditKinds";
 
 /**
  * The credit ledger, step 1 of docs/plans/active/usage-credits-plan.md:
@@ -69,7 +70,7 @@ async function planLine(ctx: Ctx, cycle: Doc<"seoCollectionCycles">, websiteId: 
   const lineId = await ctx.db.insert("seoCycleLines", {
     cycleId: cycle._id, companyId: cycle.companyId, websiteId, operationId: pull.operationId, pullId: pull._id, reused, createdAt: Date.now(),
   });
-  await creditCycleLine(ctx, cycle, websiteId, pull, reused);
+  await creditCycleLine(ctx, cycle, websiteId, pull, reused, lineId);
   return (await ctx.db.get(lineId))!;
 }
 
@@ -142,13 +143,13 @@ describe("a collection's charges", () => {
       const acmeCharge = acmeLines[1];
       expect(acmeCharge).toMatchObject({
         kind: "rankings", state: "charged", how: "scheduled", websiteId,
-        units: 1001, lines: 3, failedUnits: 1, creditsOut: 5, owed: 0, balanceAfter: 995,
+        units: 1001, lines: 3, failedUnits: 1, creditsOut: 5, owed: 0, balanceAfter: 9995,
         realCostUsd: 0.002, reusedValueUsd: 0.12,
       });
-      expect(acmeLines[0]).toMatchObject({ entry: "grant", creditsIn: 1000, source: "plan" });
+      expect(acmeLines[0]).toMatchObject({ entry: "grant", creditsIn: 10_000, source: "plan" });
 
       const [, rivalCharge] = await statement(ctx, rival);
-      expect(rivalCharge).toMatchObject({ units: 1, creditsOut: 1, realCostUsd: 0, reusedValueUsd: 0.002, balanceAfter: 999 });
+      expect(rivalCharge).toMatchObject({ units: 1, creditsOut: 1, realCostUsd: 0, reusedValueUsd: 0.002, balanceAfter: 9999 });
 
       const rollups = await ctx.db.query("creditMonthRollups").withIndex("by_company_month", (q) => q.eq("companyId", acme)).collect();
       expect(rollups).toEqual([expect.objectContaining({ kind: "rankings", websiteKey: websiteId, credits: 5, runs: 1, realCostUsd: 0.002 })]);
@@ -171,6 +172,149 @@ describe("a collection's charges", () => {
 
       const lines = await statement(ctx, acme);
       expect(lines).toEqual([expect.objectContaining({ entry: "charge", state: "void", units: 0, creditsOut: 0 })]);
+    });
+  });
+});
+
+describe("credits count what came back (finish-off-plan.md, item 3)", () => {
+  test("a request counts nothing up front for a list or crawl, then what came back, never more than it asked", () => {
+    const list = JSON.stringify({ target: "a.com", limit: 1000 });
+    const crawl = JSON.stringify({ target: "a.com", max_crawl_pages: 1000 });
+    expect(creditUnitsUpFront("backlinks", list)).toBe(0);
+    expect(creditUnitsUpFront("siteAudit", crawl)).toBe(0);
+    expect(creditUnitsUpFront("rankings", JSON.stringify({ keyword: "a" }))).toBe(1);
+    expect(creditUnitsUpFront("aiAnswers", JSON.stringify({ limit: 50 }))).toBe(1);
+    expect(creditUnitsOfAnswer("backlinks", list, 340)).toBe(340);
+    expect(creditUnitsOfAnswer("backlinks", list, 5000)).toBe(1000);
+    expect(creditUnitsOfAnswer("siteAudit", crawl, 1)).toBe(1);
+    expect(creditUnitsOfAnswer("siteAudit", crawl, 0)).toBe(0);
+    // A single answer is one whatever it brings; an answer never counted is what was asked.
+    expect(creditUnitsOfAnswer("backlinks", JSON.stringify({ target: "a.com" }), 900)).toBe(1);
+    expect(creditUnitsOfAnswer("backlinks", list, undefined)).toBe(1000);
+  });
+
+  test("what an answer brought back, as sent or as kept", () => {
+    expect(rowsReturnedIn("site_crawl", [{ crawl_progress: "finished", crawl_status: { max_crawl_pages: 1000, pages_crawled: 7 } }])).toBe(7);
+    expect(rowsReturnedIn("backlinks_list", [{ items_count: 3, items: [{}, {}, {}] }])).toBe(3);
+    expect(rowsReturnedIn("backlinks_list", slimSeoResult("backlinks_list", [{ items_count: 2, items: [{ domain_from: "a" }, { domain_from: "b" }] }]))).toBe(2);
+    expect(rowsReturnedIn("backlinks_list", [{ items_count: 0, items: null }])).toBe(0);
+    expect(rowsReturnedIn("keyword_search_volume", [{ keyword: "a" }, { keyword: "b" }])).toBe(2);
+    expect(rowsReturnedIn("backlinks_list", null)).toBe(0);
+    expect(rowsReturnedIn("backlinks_list", "garbled")).toBeUndefined();
+  });
+
+  test("a list and a crawl are charged for the rows and pages that came back", async () => {
+    const t = convexTest(schema, modules);
+    await t.run(async (raw) => {
+      const ctx = asCtx(raw);
+      const acme = await seedCompany(ctx, "Acme");
+      const websiteId = await ctx.db.insert("websites", { host: "example.com", displayHost: "example.com", firstSeenAt: Date.now() });
+      const run = await seedCycle(ctx, acme);
+      const links = await seedPull(ctx, { operationId: "backlinks_list", family: "Backlinks", taskArgs: { target: "example.com", limit: 1000 }, companyId: acme, cycleId: run._id });
+      const crawl = await seedPull(ctx, { operationId: "site_crawl", family: "On-Page", taskArgs: { target: "example.com", max_crawl_pages: 1000 }, companyId: acme, cycleId: run._id });
+      await planLine(ctx, run, websiteId, links, false);
+      await planLine(ctx, run, websiteId, crawl, false);
+      // While they are out, nothing is counted yet.
+      const open = await statement(ctx, acme);
+      expect(open.map((line) => [line.kind, line.state, line.units, line.pendingLines])).toEqual([["backlinks", "open", 0, 1], ["siteAudit", "open", 0, 1]]);
+
+      await ctx.db.patch(links._id, { status: "READY", rowsReturned: 340 });
+      await creditPullSettled(ctx, links, "READY", 0.34);
+      await ctx.db.patch(crawl._id, { status: "READY", rowsReturned: 1 });
+      await creditPullSettled(ctx, crawl, "READY", 1.5);
+      await creditCycleFinished(ctx, run._id);
+
+      const charges = (await statement(ctx, acme)).filter((line) => line.entry === "charge");
+      // 340 links at 10 a thousand is 4 credits, not 10; one page at 1 a 50 is 1, not 20.
+      expect(charges.map((line) => [line.kind, line.units, line.creditsOut, line.pendingLines])).toEqual([["backlinks", 340, 4, 0], ["siteAudit", 1, 1, 0]]);
+      const lines = await ctx.db.query("seoCycleLines").withIndex("by_pull", (q) => q.eq("pullId", links._id)).collect();
+      expect(lines[0]).toMatchObject({ creditUnits: 340, creditPending: false });
+    });
+  });
+
+  test("a run waits for a request another collection sent, and is charged when it comes back", async () => {
+    const t = convexTest(schema, modules);
+    await t.run(async (raw) => {
+      const ctx = asCtx(raw);
+      const acme = await seedCompany(ctx, "Acme");
+      const rival = await seedCompany(ctx, "Rival");
+      const websiteId = await ctx.db.insert("websites", { host: "example.com", displayHost: "example.com", firstSeenAt: Date.now() });
+      const acmeRun = await seedCycle(ctx, acme);
+      const rivalRun = await seedCycle(ctx, rival);
+      const list = await seedPull(ctx, { operationId: "referring_domains_list", family: "Backlinks", taskArgs: { target: "example.com", limit: 1000 }, companyId: acme, cycleId: acmeRun._id });
+      await planLine(ctx, acmeRun, websiteId, list, false);
+      await planLine(ctx, rivalRun, websiteId, list, true);
+      // Rival's collection is done before Acme's request comes back: its run stays open, waiting.
+      await ctx.db.patch(rivalRun._id, { status: "DONE" });
+      await creditCycleFinished(ctx, rivalRun._id);
+      expect((await statement(ctx, rival))[0]).toMatchObject({ state: "open", pendingLines: 1 });
+
+      await ctx.db.patch(list._id, { status: "READY", rowsReturned: 1000 });
+      await creditPullSettled(ctx, list, "READY", 0.2);
+      const [, rivalCharge] = await statement(ctx, rival);
+      expect(rivalCharge).toMatchObject({ entry: "charge", state: "charged", units: 1000, creditsOut: 10, pendingLines: 0 });
+      // Acme's own collection still has to finish to be charged.
+      expect((await statement(ctx, acme))[0]).toMatchObject({ state: "open", units: 1000, pendingLines: 0 });
+    });
+  });
+
+  test("a list's later page counts for the run that bought it", async () => {
+    const t = convexTest(schema, modules);
+    await t.run(async (raw) => {
+      const ctx = asCtx(raw);
+      const acme = await seedCompany(ctx, "Acme");
+      const websiteId = await ctx.db.insert("websites", { host: "example.com", displayHost: "example.com", firstSeenAt: Date.now() });
+      const run = await seedCycle(ctx, acme);
+      const first = await seedPull(ctx, { operationId: "backlinks_all", family: "Backlinks", taskArgs: { target: "example.com", limit: 1000 }, companyId: acme, cycleId: run._id });
+      await planLine(ctx, run, websiteId, first, false);
+      await ctx.db.patch(first._id, { status: "READY", rowsReturned: 1000 });
+      await creditPullSettled(ctx, first, "READY", 1);
+      // Queued by the first page's answer, with no plan line of its own.
+      const next = await seedPull(ctx, { operationId: "backlinks_all", family: "Backlinks", taskArgs: { target: "example.com", limit: 1000, offset: 1000 }, companyId: acme, cycleId: run._id });
+      await ctx.db.patch(next._id, { websiteId, status: "READY", rowsReturned: 650 });
+      const sent = (await ctx.db.get(next._id))!;
+      await creditPullSettled(ctx, { ...sent, status: "SUBMITTED" }, "READY", 0.65);
+      await creditPullSettled(ctx, { ...sent, status: "SUBMITTED", creditUnits: (await ctx.db.get(next._id))!.creditUnits }, "READY", 0);
+      await creditCycleFinished(ctx, run._id);
+      const [charge] = (await statement(ctx, acme)).filter((line) => line.entry === "charge");
+      expect(charge).toMatchObject({ units: 1650, creditsOut: 17, realCostUsd: 1.65 });
+    });
+  });
+
+  test("a charge counted again after it was charged keeps its line, and the difference is a line of its own", async () => {
+    const t = convexTest(schema, modules);
+    await t.run(async (raw) => {
+      const ctx = asCtx(raw);
+      const now = Date.now();
+      const acme = await seedCompany(ctx, "Acme");
+      const websiteId = await ctx.db.insert("websites", { host: "example.com", displayHost: "example.com", firstSeenAt: now });
+      // A crawl charged, before 2026-10-05, as the thousand pages it might read: 20 credits.
+      await chargeCreditsNow(ctx, { companyId: acme, kind: "siteAudit", runKey: "cycle:x", how: "scheduled", websiteId }, 1000, { realCostUsd: 1.5 }, now);
+      const charge = (await findCreditRun(ctx, "cycle:x"))!;
+      expect(await recountCreditRun(ctx, charge._id, 1, "recounted", now)).toBe(-19);
+
+      const lines = await statement(ctx, acme);
+      expect(lines.map((line) => [line.entry, line.creditsIn, line.creditsOut, line.balanceAfter])).toEqual([
+        ["grant", 10_000, 0, 10_000],
+        ["charge", 0, 20, 9_980],
+        ["recount", 19, 0, 9_999],
+      ]);
+      expect(lines[1]).toMatchObject({ units: 1000, unitsNow: 1, creditsNow: 1 });
+      expect(lines[2]).toMatchObject({ reason: "recounted", units: 1, before: 1000, refundOf: charge._id, kind: "siteAudit", websiteId });
+      expect(lines[2].paidFrom).toEqual([{ batchId: lines[1].paidFrom[0].batchId, credits: 19 }]);
+      // The month, every company's month and the day the work was charged on all move with it.
+      const rollup = await ctx.db.query("creditMonthRollups").withIndex("by_company_month", (q) => q.eq("companyId", acme)).first();
+      expect(rollup).toMatchObject({ credits: 1, runs: 1 });
+      const day = await ctx.db.query("creditDayTotals").withIndex("by_company_day", (q) => q.eq("companyId", acme)).first();
+      expect(day?.credits).toBe(1);
+      const platform = await ctx.db.query("creditPlatformMonths").first();
+      expect(platform).toMatchObject({ credits: 1, units: 1 });
+      // Counted again at what it already stands at: nothing more is written.
+      expect(await recountCreditRun(ctx, charge._id, 1, "recounted", now)).toBe(0);
+      expect(await statement(ctx, acme)).toHaveLength(3);
+      // And a refund after it gives back only what it stands at.
+      await refundCreditCharge(ctx, charge._id, now);
+      expect((await statement(ctx, acme)).at(-1)).toMatchObject({ entry: "refund", creditsIn: 1, balanceAfter: 10_000 });
     });
   });
 });
@@ -215,12 +359,12 @@ describe("batches", () => {
       const lines = await statement(ctx, acme);
       // UK midnights: 1 October 2026 is in summer time (an hour ahead of UTC), 1 November in winter.
       expect(lines.map((line) => [line.entry, line.creditsIn, line.creditsOut, line.at])).toEqual([
-        ["grant", 1000, 0, Date.UTC(2026, 8, 30, 23)],
+        ["grant", 10_000, 0, Date.UTC(2026, 8, 30, 23)],
         ["charge", 0, 1, october],
-        ["ended", 0, 999, Date.UTC(2026, 10, 1)],
-        ["grant", 1000, 0, Date.UTC(2026, 10, 1)],
+        ["ended", 0, 9999, Date.UTC(2026, 10, 1)],
+        ["grant", 10_000, 0, Date.UTC(2026, 10, 1)],
       ]);
-      expect(await creditBalance(ctx, acme)).toBe(1000);
+      expect(await creditBalance(ctx, acme)).toBe(10_000);
     });
   });
 
@@ -231,11 +375,11 @@ describe("batches", () => {
       const acme = await seedCompany(ctx, "Acme");
       const pull = await seedPull(ctx, { operationId: "serp_google_organic", family: "SERP", taskArgs: { keyword: "a" }, companyId: acme });
       await creditPullSettled(ctx, pull, "SUBMITTED", 0.01);
-      expect(await creditBalance(ctx, acme)).toBe(999);
+      expect(await creditBalance(ctx, acme)).toBe(9999);
       await creditPullSettled(ctx, pull, "FAILED", 0);
       const lines = await statement(ctx, acme);
       expect(lines.map((line) => line.entry)).toEqual(["grant", "charge", "refund"]);
-      expect(lines[2]).toMatchObject({ creditsIn: 1, refundOf: lines[1]._id, balanceAfter: 1000 });
+      expect(lines[2]).toMatchObject({ creditsIn: 1, refundOf: lines[1]._id, balanceAfter: 10_000 });
       expect(lines[1].realCostUsd).toBe(0.01);
     });
   });
@@ -261,6 +405,35 @@ describe("lookups and questions", () => {
         kind: "keywordResearch", how: "byHand", userId, units: 2, creditsOut: 10, realCostUsd: 0.03,
         detail: "“web design leeds”, “web design york”",
       });
+    });
+  });
+
+  test("a lookup is charged only for the keywords something came back for (finish-off-plan.md, item 9)", async () => {
+    const t = convexTest(schema, modules);
+    await t.run(async (raw) => {
+      const ctx = asCtx(raw);
+      const acme = await seedCompany(ctx, "Acme");
+      const userId = await ctx.db.insert("users", { email: "priya@example.com", role: "ADMIN", companyId: acme });
+      const agentId = await ctx.db.insert("agents", {
+        name: "Keyword research", modelId: "test-model", thinkingMode: false, isActive: true, temperature: 1, humanApprovalRequired: false, createdAt: Date.now(), updatedAt: Date.now(),
+      });
+      const runId = await ctx.db.insert("agentRuns", { agentId, triggerType: "MANUAL", objective: "Look up", status: "QUEUED", startedAt: Date.now(), updatedAt: Date.now() });
+      await creditResearchRun(ctx, { companyId: acme, userId, runId, keywords: ["a", "b", "c"] });
+      // Three keywords, two parts each: something came back for two of them.
+      await creditResearchSettled(ctx, runId, [
+        { keyword: "a", ready: true }, { keyword: "a", ready: false },
+        { keyword: "b", ready: false }, { keyword: "b", ready: false },
+        { keyword: "c", ready: true }, { keyword: "c", ready: true },
+      ]);
+      // A second settle that settled nothing changes nothing.
+      await creditResearchSettled(ctx, runId, []);
+      const lines = await statement(ctx, acme);
+      expect(lines.map((line) => [line.entry, line.units, line.creditsOut, line.creditsIn, line.reason ?? null])).toEqual([
+        ["grant", 0, 0, 10_000, null],
+        ["charge", 3, 15, 0, null],
+        ["recount", 2, 0, 5, "recounted"],
+      ]);
+      expect(lines[1]).toMatchObject({ unitsNow: 2, creditsNow: 10 });
     });
   });
 

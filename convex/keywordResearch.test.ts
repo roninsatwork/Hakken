@@ -281,6 +281,23 @@ describe("Look up", () => {
     expect(lookup?.overview).toBe("FAILED");
   });
 
+  test("a lookup that brings nothing back is not charged, and the statement says so (finish-off-plan.md, item 9)", async () => {
+    const t = harness();
+    const { as, companyId } = await company(t);
+    await researchAgent(t);
+    await as.mutation(api.keywordResearch.lookUp, { keywords: ["web design leeds"], locationCode: UK });
+    const runId = (await t.run(async (ctx) => await ctx.db.query("agentRuns").first()))!._id;
+    vi.stubGlobal("fetch", vi.fn(async () => {
+      throw new Error("DataForSEO could not be reached.");
+    }));
+
+    await t.action(internal.keywordResearchRun.runKeywordResearchNow, { runId });
+
+    const lines = await t.run(async (ctx) => await ctx.db.query("creditCharges").withIndex("by_company_at", (q) => q.eq("companyId", companyId)).collect());
+    expect(lines.map((line) => [line.entry, line.creditsOut, line.creditsIn])).toEqual([["grant", 0, 10_000], ["charge", 5, 0], ["recount", 0, 5]]);
+    expect(lines[2]).toMatchObject({ kind: "keywordResearch", reason: "nothingBack", units: 0, before: 1, detail: "“web design leeds”", balanceAfter: 10_000 });
+  });
+
   test("a keyword held and fresh is opened again, not bought; sample figures never count", async () => {
     const t = harness();
     const { as } = await company(t);

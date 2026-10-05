@@ -62,6 +62,8 @@ export default function CreditPricesPage() {
   const action = useAdminAction({ scope: "admin-credit-prices" });
 
   const [cover, setCover] = useState<string | null>(null);
+  // Credits a month every company's plan gives where its plan sets none (finish-off-plan.md, item 3a).
+  const [plan, setPlan] = useState<string | null>(null);
   const [pending, setPending] = useState<Partial<Record<CreditKind, number>>>({});
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
@@ -69,6 +71,7 @@ export default function CreditPricesPage() {
 
   const coverText = cover ?? (report ? String(report.settings.creditCoversUsd) : "");
   const coverValue = Number(coverText) > 0 ? Number(coverText) : report?.settings.creditCoversUsd ?? 0.05;
+  const planText = plan ?? (report ? String(report.settings.planCredits) : "");
 
   const number = (value: number) => value.toLocaleString(locale);
   const dollars = (value: number, digits = 2) => `$${value.toLocaleString(locale, { minimumFractionDigits: digits, maximumFractionDigits: digits })}`;
@@ -87,7 +90,7 @@ export default function CreditPricesPage() {
     (!status || (status === "covered" ? covered(line) === true : status === "notCovered" ? covered(line) === false : covered(line) === null))
     && matchesSearchTerm(search, [kindName(line.kind)]));
   const paged = paginateItems(shown ?? [], page);
-  const changed = Object.keys(pending).length > 0 || cover !== null;
+  const changed = Object.keys(pending).length > 0 || cover !== null || plan !== null;
   const lastDay = report ? report.endsAt - 1 : 0;
 
   const onSave = async () => {
@@ -96,12 +99,15 @@ export default function CreditPricesPage() {
       () => save({
         prices: report.lines.map((line) => ({ kind: line.kind, credits: pending[line.kind] ?? line.credits })),
         creditCoversUsd: coverValue,
+        // Sent as typed: the server refuses anything but a whole number, and says so.
+        ...(plan !== null ? { planCredits: Number(plan.replace(/[,\s]/g, "")) } : {}),
       }),
       { successMessage: t("saved"), fallbackMessage: t("saveFailed"), suppressErrorToast: true },
     );
     if (outcome.ok) {
       setPending({});
       setCover(null);
+      setPlan(null);
     }
   };
 
@@ -119,6 +125,7 @@ export default function CreditPricesPage() {
       <SettingsCard title={t("settings.title")}>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <Field label={t("settings.cover")} hint={t("settings.coverHint")} inputMode="decimal" value={coverText} onChange={(event) => setCover(event.target.value)} />
+          <Field label={t("settings.planCredits")} hint={t("settings.planCreditsHint")} inputMode="numeric" value={planText} onChange={(event) => setPlan(event.target.value)} />
         </div>
         <FieldHint>{t("settings.plans")}</FieldHint>
       </SettingsCard>
@@ -206,7 +213,7 @@ export default function CreditPricesPage() {
       <SaveError>{action.error}</SaveError>
       <div className="flex flex-wrap items-center justify-end gap-3">
         {changed ? <span className="text-[12px] text-secondary">{t("notSaved")}</span> : null}
-        <Button variant="ghost" disabled={!changed} onClick={() => { setPending({}); setCover(null); }}>{t("discard")}</Button>
+        <Button variant="ghost" disabled={!changed} onClick={() => { setPending({}); setCover(null); setPlan(null); }}>{t("discard")}</Button>
         <SaveAction isSaving={action.isBusy()} disabled={!changed || !report} label={t("save")} savingLabel={t("saving")} onClick={() => void onSave()} />
       </div>
     </div>
