@@ -597,6 +597,32 @@ describe("collecting", () => {
     expect(month).toMatchObject({ keys: ["/a"], clicks: [9], impressions: [90], positionSums: [260] });
   });
 
+  test("image search's days roll into their week once the week is over; web search keeps its 90 days", async () => {
+    const { t, siteId } = await setup();
+    const put = (searchType: "web" | "image", start: string) =>
+      t.run(async (ctx) => await ctx.db.insert("searchConsoleLists", {
+        companyWebsiteId: siteId, searchType, list: "device", grain: "DAY", start, part: 0, keys: ["MOBILE"], clicks: [1], impressions: [10], positionSums: [20], fetchedAt: 1,
+      }));
+    // Newest Saturday 2026-09-26: its week began Monday 2026-09-21.
+    for (const day of ["2026-09-15", "2026-09-16", "2026-09-21"]) {
+      await put("image", day);
+      await put("web", day);
+    }
+
+    const due = await t.query(internal.searchConsoleRollups.rollUpsDue, { companyWebsiteId: siteId, newest: NEWEST });
+    expect(due.days).toEqual([
+      { searchType: "image", list: "device", start: "2026-09-15" },
+      { searchType: "image", list: "device", start: "2026-09-16" },
+    ]);
+    for (const slot of due.days) await t.mutation(internal.searchConsoleRollups.rollUp, { companyWebsiteId: siteId, ...slot, from: "DAY" });
+
+    const kept = await t.run(async (ctx) => await ctx.db.query("searchConsoleLists").collect());
+    expect(kept.filter((record) => record.searchType === "image").map((record) => `${record.grain} ${record.start}`).sort())
+      .toEqual(["DAY 2026-09-21", "WEEK 2026-09-14"]);
+    expect(kept.find((record) => record.grain === "WEEK")).toMatchObject({ keys: ["MOBILE"], clicks: [2], impressions: [20] });
+    expect(kept.filter((record) => record.searchType === "web")).toHaveLength(3);
+  });
+
   test("Google taking the access back asks for connecting again, and the figures stay", async () => {
     const { t, siteId, admin } = await setup();
     const google = fakeGoogle({ figures: figures() });

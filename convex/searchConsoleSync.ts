@@ -680,21 +680,28 @@ export const writeList = internalMutation({
   },
 });
 
-/** Every website connected to Search Console: what turning its kept page addresses into references walks (`searchConsolePageRefs.ts`). */
-export const connectedHolds = internalQuery({
+/**
+ * Every connection whose figures are kept — connected, or waiting to be
+ * connected again, which keeps its figures — for the one-off changes to what
+ * is kept (`searchConsolePageRefs.ts`, `searchConsoleTidy.ts`).
+ */
+export const connectionsWithFigures = internalQuery({
   args: {},
-  returns: v.array(v.id("companyWebsites")),
+  returns: v.array(v.object({ connectionId: v.id("searchConsoleConnections"), holdId: v.id("companyWebsites") })),
   handler: async (ctx) => {
-    const holds: Id<"companyWebsites">[] = [];
-    for (let after = 0; ;) {
-      const page = await ctx.db
-        .query("searchConsoleConnections")
-        .withIndex("by_status", (q) => q.eq("status", "CONNECTED").gt("_creationTime", after))
-        .take(CONNECTIONS_PER_READ);
-      holds.push(...page.map((connection) => connection.companyWebsiteId));
-      if (page.length < CONNECTIONS_PER_READ) return holds;
-      after = page[page.length - 1]._creationTime;
+    const found: Array<{ connectionId: Id<"searchConsoleConnections">; holdId: Id<"companyWebsites"> }> = [];
+    for (const status of ["CONNECTED", "NEEDS_RECONNECT"] as const) {
+      for (let after = 0; ;) {
+        const page = await ctx.db
+          .query("searchConsoleConnections")
+          .withIndex("by_status", (q) => q.eq("status", status).gt("_creationTime", after))
+          .take(CONNECTIONS_PER_READ);
+        found.push(...page.map((connection) => ({ connectionId: connection._id, holdId: connection.companyWebsiteId })));
+        if (page.length < CONNECTIONS_PER_READ) break;
+        after = page[page.length - 1]._creationTime;
+      }
     }
+    return found;
   },
 });
 

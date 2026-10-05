@@ -10,7 +10,14 @@ Built and saved locally on `dev` today, not pushed: usage credits steps 1, 2,
 continuous sender, five AI questions at once, $3 a website and $100 a day, and
 Collecting now (`collection-progress-plan.md`, commit `87373c41`).
 
-**Status: written 2026-10-05; nothing in it started except item 1, part one.**
+**Status, 2026-10-05 evening — built and saved locally on `dev`, not pushed:**
+items 1, 2 and 13. Item 2's change to the figures already kept is one script,
+run on each deployment — counted first (`go: false`), then done (`go: true`):
+`npx convex run searchConsoleTidy:tidyKeptFigures '{"go": false}'`. It removes
+the copies of a country nearly all of a website's searches, turns every page
+address kept into a reference, rolls image search's past days into their
+weeks, and builds each website's periods again; it is also item 12's Search
+Console part.
 
 ## The list
 

@@ -319,6 +319,7 @@ import type * as searchConsoleSeenDays from "../searchConsoleSeenDays.js";
 import type * as searchConsoleSettle from "../searchConsoleSettle.js";
 import type * as searchConsoleShrink from "../searchConsoleShrink.js";
 import type * as searchConsoleSync from "../searchConsoleSync.js";
+import type * as searchConsoleTidy from "../searchConsoleTidy.js";
 import type * as searchConsoleTracking from "../searchConsoleTracking.js";
 import type * as searchVolumes from "../searchVolumes.js";
 import type * as seedUsers from "../seedUsers.js";
@@ -910,6 +911,7 @@ declare const fullApi: ApiFromModules<{
   searchConsoleSettle: typeof searchConsoleSettle;
   searchConsoleShrink: typeof searchConsoleShrink;
   searchConsoleSync: typeof searchConsoleSync;
+  searchConsoleTidy: typeof searchConsoleTidy;
   searchConsoleTracking: typeof searchConsoleTracking;
   searchVolumes: typeof searchVolumes;
   seedUsers: typeof seedUsers;

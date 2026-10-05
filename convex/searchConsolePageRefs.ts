@@ -134,7 +134,8 @@ export const encodeKeptPages = internalAction({
   returns: v.null(),
   handler: async (ctx, args) => {
     const started = Date.now();
-    const holds: Id<"companyWebsites">[] = args.holds ?? await ctx.runQuery(internal.searchConsoleSync.connectedHolds, {});
+    const holds: Id<"companyWebsites">[] = args.holds
+      ?? (await ctx.runQuery(internal.searchConsoleSync.connectionsWithFigures, {})).map((connection) => connection.holdId);
     let records = args.records ?? 0;
     let cursor = args.cursor ?? null;
     for (let at = 0; at < holds.length;) {

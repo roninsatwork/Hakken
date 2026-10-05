@@ -49,8 +49,8 @@ async function countryShare(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebs
   return one.impressions / all.impressions;
 }
 
-/** Work out again which countries kept ready are nearly all of the website's searches: at the start of each website's run. */
-export async function refreshCountriesAsAll(ctx: MutationCtx, connection: Doc<"searchConsoleConnections">): Promise<string[]> {
+/** The countries kept ready that are nearly all of the website's searches, judged now. */
+export async function countriesAsAllNow(ctx: { db: QueryCtx["db"] }, connection: Doc<"searchConsoleConnections">): Promise<string[]> {
   const hold = await ctx.db.get(connection.companyWebsiteId);
   if (!hold) return [];
   const was = new Set(connection.countriesAsAll ?? []);
@@ -59,6 +59,13 @@ export async function refreshCountriesAsAll(ctx: MutationCtx, connection: Doc<"s
     const share = await countryShare(ctx, hold._id, country);
     if (share === null ? was.has(country) : share >= NEARLY_ALL_SHARE || (was.has(country) && share >= NO_LONGER_SHARE)) now.push(country);
   }
+  return now;
+}
+
+/** Work out again which countries kept ready are nearly all of the website's searches: at the start of each website's run. */
+export async function refreshCountriesAsAll(ctx: MutationCtx, connection: Doc<"searchConsoleConnections">): Promise<string[]> {
+  const was = new Set(connection.countriesAsAll ?? []);
+  const now = await countriesAsAllNow(ctx, connection);
   const same = now.length === was.size && now.every((country) => was.has(country));
   if (!same) await ctx.db.patch(connection._id, { countriesAsAll: now.length > 0 ? now : undefined });
   return now;

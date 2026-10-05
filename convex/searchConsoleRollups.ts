@@ -12,7 +12,7 @@ import {
   type SearchConsoleList,
   type SearchType,
 } from "./searchConsoleSchema";
-import { addUp, firstDayKept, firstWeekKept, monthStart, pack, weekStart } from "./utils/searchConsolePacks";
+import { addUp, firstDayKeptFor, firstWeekKept, monthStart, pack, weekStart } from "./utils/searchConsolePacks";
 import { stillKeptReady } from "./searchConsoleCountries";
 import { decodePages } from "./searchConsolePageRefs";
 
@@ -99,11 +99,12 @@ export const rollUpsDue = internalQuery({
     weeks: v.array(v.object({ searchType: searchTypeValidator, list: listValidator, start: v.string() })),
   }),
   handler: async (ctx, args) => {
-    const dayLine = firstDayKept(args.newest);
     const weekLine = firstWeekKept(args.newest);
     const days = new Map<string, Slot>();
     const weeks = new Map<string, Slot>();
     for (const searchType of SEARCH_TYPES) {
+      // Image search's days go into their weeks once the week is over (finish-off plan 2C).
+      const dayLine = firstDayKeptFor(searchType, args.newest);
       for (const list of LISTS_OF[searchType]) {
         for (const [grain, line, into] of [["DAY", dayLine, days], ["WEEK", weekLine, weeks]] as const) {
           const old = await ctx.db

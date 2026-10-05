@@ -196,6 +196,16 @@ export function firstDayKept(newest: string): string {
   return dayOf(time(newest) - (DAYS_KEPT - 1) * 86_400_000);
 }
 
+/**
+ * The first day still kept as a day for a kind of result: image search's days
+ * are kept as their weeks once the week is over (finish-off plan item 2C —
+ * about a fifth of a busy website's storage, for figures nobody reads by the
+ * day); every other kind's for 90 days.
+ */
+export function firstDayKeptFor(searchType: string, newest: string): string {
+  return searchType === "image" ? weekStart(newest) : firstDayKept(newest);
+}
+
 /** A week starting before this goes into its month. */
 export function firstWeekKept(newest: string): string {
   return dayOf(time(newest) - WEEKS_KEPT_DAYS * 86_400_000);

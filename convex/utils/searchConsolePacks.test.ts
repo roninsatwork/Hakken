@@ -4,6 +4,7 @@ import {
   addUp,
   bySide,
   firstDayKept,
+  firstDayKeptFor,
   firstWeekKept,
   fromGoogle,
   monthStart,
@@ -87,5 +88,12 @@ describe("days, weeks and months", () => {
   test("90 days are kept as days, and weeks for 12 months", () => {
     expect(firstDayKept("2026-09-26")).toBe("2026-06-29");
     expect(firstWeekKept("2026-09-26")).toBe("2025-09-26");
+  });
+
+  test("image search keeps only the newest week's days; every other kind its 90", () => {
+    expect(firstDayKeptFor("image", "2026-09-26")).toBe("2026-09-21");
+    expect(firstDayKeptFor("image", "2026-09-21")).toBe("2026-09-21");
+    expect(firstDayKeptFor("web", "2026-09-26")).toBe("2026-06-29");
+    expect(firstDayKeptFor("video", "2026-09-26")).toBe("2026-06-29");
   });
 });

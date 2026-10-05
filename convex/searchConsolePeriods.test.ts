@@ -52,6 +52,17 @@ describe("what counts towards a period", () => {
     expect(keptIn(records, before, newest).map((part) => part.keys[0])).toEqual(["WEEK 2026-06-22", "WEEK 2026-06-29"]);
   });
 
+  test("image search's finished weeks count as weeks: its days are kept only for the newest week", () => {
+    // Newest Saturday 2026-09-26: image search's days from Monday 2026-09-21; the week before is a week.
+    const records = [kept("WEEK", "2026-09-14"), kept("DAY", "2026-09-21"), kept("DAY", NEWEST)];
+    const week = periodSpan("7", NEWEST, "2026-06-29");
+    expect(keptIn(records, week, NEWEST, "image").map((part) => part.keys[0])).toEqual(["DAY 2026-09-21", `DAY ${NEWEST}`]);
+    const month = periodSpan("30", NEWEST, "2026-06-29");
+    expect(keptIn(records, month, NEWEST, "image").map((part) => part.keys[0])).toEqual(["WEEK 2026-09-14", "DAY 2026-09-21", `DAY ${NEWEST}`]);
+    // The same records read as web search: its days run back 90, so a week there is not counted.
+    expect(keptIn(records, month, NEWEST, "web").map((part) => part.keys[0])).toEqual(["DAY 2026-09-21", `DAY ${NEWEST}`]);
+  });
+
   test("a week or month at the far edge counts when most of its days are inside", () => {
     // From Thursday 2026-04-02: the week of 30 March has four of its seven days inside, that of 23 March none.
     const records = [kept("WEEK", "2026-03-23"), kept("WEEK", "2026-03-30"), kept("WEEK", "2026-04-06")];

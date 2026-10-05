@@ -26,7 +26,7 @@ import { buildSeenDays } from "./searchConsoleSeenDays";
 import {
   addUp,
   bySide,
-  firstDayKept,
+  firstDayKeptFor,
   monthStart,
   pack,
   packByKey,
@@ -112,8 +112,8 @@ function daysHeld(record: Kept, dayLine: string): PeriodSpan {
  * days cannot be told apart — and never counts the days just before the
  * 90-day line twice over (§14.3, items 2 and 4).
  */
-export function keptIn(kept: readonly Kept[], span: PeriodSpan, newest: string): Packed[] {
-  const dayLine = firstDayKept(newest);
+export function keptIn(kept: readonly Kept[], span: PeriodSpan, newest: string, searchType = "web"): Packed[] {
+  const dayLine = firstDayKeptFor(searchType, newest);
   return kept
     .filter((record) => {
       const held = daysHeld(record, dayLine);
@@ -207,10 +207,10 @@ const chartReach = (newest: string, chartWeeks: number) => weekStart(shiftDay(ne
  * only from the 90-day line, since older days are rolled into weeks; the
  * weeks and months at either edge may hold only some of their days.
  */
-function chartPeriods(newest: string, oldest: string, chartWeeks: number): Array<{ grain: Grain; start: string }> {
+function chartPeriods(newest: string, oldest: string, chartWeeks: number, searchType: string): Array<{ grain: Grain; start: string }> {
   const reach = chartReach(newest, chartWeeks);
   const from = reach > oldest ? reach : oldest;
-  const dayLine = firstDayKept(newest);
+  const dayLine = firstDayKeptFor(searchType, newest);
   const periods: Array<{ grain: Grain; start: string }> = [];
   for (let day = from > dayLine ? from : dayLine; day <= newest; day = shiftDay(day, 1)) periods.push({ grain: "DAY", start: day });
   for (let week = weekStart(from); week <= newest; week = shiftDay(week, 7)) periods.push({ grain: "WEEK", start: week });
@@ -225,12 +225,12 @@ function chartPeriods(newest: string, oldest: string, chartWeeks: number): Array
  * (`keptIn`): its days, and a rolled-up week in the month most of its days
  * fall in (§14.3, item 4).
  */
-export function chartFigures(kept: readonly Kept[], newest: string, oldest: string, brandWords: readonly string[], chartWeeks: number): ChartPeriod[] {
-  return chartPeriods(newest, oldest, chartWeeks).map(({ grain, start }) => {
+export function chartFigures(kept: readonly Kept[], newest: string, oldest: string, brandWords: readonly string[], chartWeeks: number, searchType = "web"): ChartPeriod[] {
+  return chartPeriods(newest, oldest, chartWeeks, searchType).map(({ grain, start }) => {
     const end = lastDayOf(grain, start);
     const held = { from: start > oldest ? start : oldest, to: end < newest ? end : newest };
     const figures: ChartPeriod = { grain, week: start, days: daysBetween(held.from, held.to), top3: 0, top10: 0, top20: 0, rest: 0, brandClicks: 0, otherClicks: 0 };
-    for (const keyword of bySide(addUp(keptIn(kept, { from: start, to: end }, newest)), "query").values()) {
+    for (const keyword of bySide(addUp(keptIn(kept, { from: start, to: end }, newest, searchType)), "query").values()) {
       if (keyword.impressions > 0) {
         const band = bandOf(keyword.positionSum / keyword.impressions);
         if (band === "1-3") figures.top3 += 1;
@@ -363,7 +363,7 @@ export const searchConsoleChartFigures = tenantQuery({
     const oldest = scope.read === "KEPT" ? scope.oldestDay : connection?.oldestDay;
     if (!newest || !oldest) return { ...nothing, notReady: false, preparing: false };
 
-    const dayLine = firstDayKept(newest);
+    const dayLine = firstDayKeptFor(args.searchType, newest);
     const byWeek = args.step === "day" && args.from < dayLine && oldest < dayLine;
     const step: ChartStep = byWeek ? "week" : args.step;
     const grain = GRAIN_OF[step];
@@ -614,7 +614,7 @@ export async function buildSitePeriods(
       companyWebsiteId,
       ...scope,
       searchType,
-      weeks: pairsKept ? chartFigures(pairsKept, newest, oldest, target?.brandWords ?? [], chartWeeks) : [],
+      weeks: pairsKept ? chartFigures(pairsKept, newest, oldest, target?.brandWords ?? [], chartWeeks, searchType) : [],
       builtAt,
     });
     // New and lost's counts by day, from the whole first- and last-seen register (2026-10-04).
@@ -624,7 +624,7 @@ export async function buildSitePeriods(
         for (const list of ["pair", "pairByPage", "competing", "query"] as const) await writeParts(searchType, list, slot, null);
         continue;
       }
-      const pairs = addUp(keptIn(pairsKept, slot.span, newest));
+      const pairs = addUp(keptIn(pairsKept, slot.span, newest, searchType));
       const queries = bySide(pairs, "query");
       const pages = bySide(pairs, "page");
       const queryCounts: Counts = new Map([...queries.values()].map((summed) => [summed.key, { count: summed.count, top: summed.top }]));
@@ -655,7 +655,7 @@ export async function buildSitePeriods(
       for (const period of FAN_OUT_PERIODS) {
         const span = periodSpan(period, newest, oldest);
         const rows = pairsKept
-          ? [...bySide(addUp(keptIn(pairsKept, span, newest)), "query").values()].map((summed) => ({ key: summed.key, clicks: summed.clicks, impressions: summed.impressions, positionSum: summed.positionSum }))
+          ? [...bySide(addUp(keptIn(pairsKept, span, newest, searchType)), "query").values()].map((summed) => ({ key: summed.key, clicks: summed.clicks, impressions: summed.impressions, positionSum: summed.positionSum }))
           : null;
         await write(searchType, "query", { period, which: "NOW", span, now: span }, rows);
       }
@@ -668,7 +668,7 @@ export async function buildSitePeriods(
         : null;
       const pageFacts = list === "page" && kept ? await factsOf("page", keysIn(kept, "keys")) : undefined;
       for (const slot of slots) {
-        const rows = kept && slot.span ? addUp(keptIn(kept, slot.span, newest)) : null;
+        const rows = kept && slot.span ? addUp(keptIn(kept, slot.span, newest, searchType)) : null;
         // Rich results' pages for each kind, counted once here on the periods the screens list.
         const appearancePages = list === "appearance" && rows && slot.span && slot.which === "NOW"
           ? await pagesPerAppearance(ctx, google, searchType, slot.span, country, rows, richResultKinds)
