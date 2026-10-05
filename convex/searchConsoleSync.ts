@@ -18,6 +18,7 @@ import { isTrackedHold } from "./utils/websitePairing";
 import { fromGoogle, pack, rowsOf, DAYS_KEPT, type Packed } from "./utils/searchConsolePacks";
 import { slotParts } from "./searchConsoleRollups";
 import { deletePageRefs, encodePages, encodePagesFromAction } from "./searchConsolePageRefs";
+import { keptLines, keptSearchesOf } from "./searchConsoleKeep";
 import { countriesKeptReady, heldFor, stillKeptReady, withHeld, type HeldRange } from "./searchConsoleCountries";
 
 /**
@@ -402,6 +403,13 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
 
   // The website's page references known so far in the step: its pages repeat from day to day.
   const pageRefs = new Map<string, string>();
+  // Each kind of result's searches kept, read once a step and grown day by day, newest first (`searchConsoleKeep.ts`).
+  const keeps = new Map<SearchType, Promise<Set<string>>>();
+  const keptFor = (type: SearchType) => {
+    const held = keeps.get(type) ?? keptSearchesOf(ctx, state.companyWebsiteId, args.country, type);
+    keeps.set(type, held);
+    return held;
+  };
   let processedFrom: string | null = null;
   for (const day of failure || session.stopped ? [] : daysNewestFirst(stepFrom, args.to)) {
     if (Date.now() - startedAt > budgetMs) break;
@@ -433,7 +441,9 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
         }
         counts.requests += answer.requests;
         counts.rows += answer.rows.length;
-        const rows = fromGoogle(answer.rows, list === "pair");
+        const all = fromGoogle(answer.rows, list === "pair");
+        // Only the searches kept (store less round two, D): clicked, tracked, in the top 20, or on two pages or more.
+        const rows = list === "pair" ? keptLines(all, await keptFor(type)) : all;
         if (list === "pair") named.set(type, rows.reduce((sum, row) => sum + row.clicks, 0));
         if (list === "pair") for (const row of rows) see(type, "query", row.key, day);
         if (list === "page") for (const row of rows) see(type, "page", row.key, day);

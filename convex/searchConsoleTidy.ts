@@ -8,6 +8,8 @@ import { rollUpSite } from "./searchConsoleRollups";
 import { countriesAsAllNow } from "./searchConsoleShrink";
 import { firstDayKeptFor } from "./utils/searchConsolePacks";
 import { SEARCH_TYPES, searchTypeValidator } from "./searchConsoleSchema";
+import { LISTS_OF } from "./searchConsoleApi";
+import { keptSearchesOf } from "./searchConsoleKeep";
 
 /**
  * Search Console's figures kept before 2026-10-05 brought to what is kept
@@ -44,14 +46,15 @@ const tallyValidator = v.object({
   imageDays: v.number(),
   imageSearches: v.number(),
   register: v.number(),
+  unkept: v.number(),
 });
 type Tally = typeof tallyValidator.type;
-const NO_TALLY: Tally = { websites: 0, countries: 0, copies: 0, seen: 0, addresses: 0, imageDays: 0, imageSearches: 0, register: 0 };
+const NO_TALLY: Tally = { websites: 0, countries: 0, copies: 0, seen: 0, addresses: 0, imageDays: 0, imageSearches: 0, register: 0, unkept: 0 };
 
 const taskValidator = v.object({
   kind: v.union(
     v.literal("copies"), v.literal("seen"), v.literal("addresses"), v.literal("images"), v.literal("imageSearches"), v.literal("imageSeen"),
-    v.literal("register"), v.literal("registerDays"),
+    v.literal("register"), v.literal("registerDays"), v.literal("unkept"), v.literal("unkeptSeen"),
   ),
   country: v.optional(v.string()),
   /** The kind of result a register task clears, for all countries. */
@@ -179,6 +182,87 @@ export const registerStep = internalMutation({
   },
 });
 
+/** A few of a kind of result's search-and-page records, for all countries or one, as kept. */
+export const pairRecordsPart = internalQuery({
+  args: { holdId: v.id("companyWebsites"), country: v.optional(v.string()), searchType: searchTypeValidator, cursor: v.union(v.string(), v.null()) },
+  returns: v.object({
+    records: v.array(v.object({
+      recordId: v.id("searchConsoleLists"),
+      keys: v.array(v.string()),
+      pages: v.optional(v.array(v.string())),
+      clicks: v.array(v.number()),
+      impressions: v.array(v.number()),
+      positionSums: v.array(v.number()),
+    })),
+    continueCursor: v.string(),
+    isDone: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const page = await ctx.db
+      .query("searchConsoleLists")
+      .withIndex("by_hold_country_type_list_grain_start", (q) => q.eq("companyWebsiteId", args.holdId).eq("country", args.country).eq("searchType", args.searchType).eq("list", "pair"))
+      .paginate({ cursor: args.cursor, numItems: 3 });
+    return {
+      records: page.page.map((record) => ({
+        recordId: record._id,
+        keys: record.keys,
+        ...(record.pages ? { pages: record.pages } : {}),
+        clicks: record.clicks,
+        impressions: record.impressions,
+        positionSums: record.positionSums,
+      })),
+      continueCursor: page.continueCursor,
+      isDone: page.isDone,
+    };
+  },
+});
+
+/** A kept search-and-page record with only its kept lines; removed when none is left. */
+export const keepRecordLines = internalMutation({
+  args: { recordId: v.id("searchConsoleLists"), lines: v.array(v.number()) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const record = await ctx.db.get(args.recordId);
+    if (!record) return null;
+    if (args.lines.length === 0) {
+      await ctx.db.delete(record._id);
+      return null;
+    }
+    const pick = <T,>(values: readonly T[]) => args.lines.map((line) => values[line]);
+    await ctx.db.patch(record._id, {
+      keys: pick(record.keys),
+      ...(record.pages ? { pages: pick(record.pages) } : {}),
+      clicks: pick(record.clicks),
+      impressions: pick(record.impressions),
+      positionSums: pick(record.positionSums),
+    });
+    return null;
+  },
+});
+
+/** A page of web search's first- and last-seen searches, all countries: their keys, to keep only the searches kept. */
+export const registerSearchesPart = internalQuery({
+  args: { holdId: v.id("companyWebsites"), cursor: v.union(v.string(), v.null()) },
+  returns: v.object({ rows: v.array(v.object({ id: v.id("searchConsoleSeen"), key: v.string() })), continueCursor: v.string(), isDone: v.boolean() }),
+  handler: async (ctx, args) => {
+    const page = await ctx.db
+      .query("searchConsoleSeen")
+      .withIndex("by_hold_country_type_kind_key", (q) => q.eq("companyWebsiteId", args.holdId).eq("country", undefined).eq("searchType", undefined).eq("kind", "query"))
+      .paginate({ cursor: args.cursor, numItems: SEEN_PER_STEP });
+    return { rows: page.page.map((row) => ({ id: row._id, key: row.key })), continueCursor: page.continueCursor, isDone: page.isDone };
+  },
+});
+
+/** First- and last-seen searches removed, by id: those no longer kept. */
+export const removeRegisterRows = internalMutation({
+  args: { ids: v.array(v.id("searchConsoleSeen")) },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    for (const id of args.ids) if (await ctx.db.get(id)) await ctx.db.delete(id);
+    return null;
+  },
+});
+
 /** One step through a website's kept lists: the records still holding a page address. */
 export const addressesStep = internalQuery({
   args: { holdId: v.id("companyWebsites"), cursor: v.union(v.string(), v.null()) },
@@ -221,6 +305,13 @@ async function tasksFor(ctx: ActionCtx, connectionId: Id<"searchConsoleConnectio
   // New and lost kept for web, all countries: every country's register, and each other kind's.
   for (const country of all?.countries ?? []) tasks.push({ kind: "register", country }, { kind: "registerDays", country });
   for (const searchType of SEARCH_TYPES.filter((type) => type !== "web")) tasks.push({ kind: "register", searchType }, { kind: "registerDays", searchType });
+  // Only the searches kept (round two, D): each kind of result with searches, for all countries and each country; then the register.
+  for (const country of [undefined, ...(all?.countries ?? [])]) {
+    for (const searchType of SEARCH_TYPES.filter((type) => LISTS_OF[type].includes("pair"))) {
+      tasks.push({ kind: "unkept", searchType, ...(country === undefined ? {} : { country }) });
+    }
+  }
+  tasks.push({ kind: "unkeptSeen", searchType: "web" });
   tasks.push({ kind: "addresses" });
   if (!all?.newestDay) return tasks;
   tasks.push({ kind: "images", newest: all.newestDay });
@@ -232,7 +323,32 @@ async function tasksFor(ctx: ActionCtx, connectionId: Id<"searchConsoleConnectio
 }
 
 /** One step of a task: what it found, and where to go on. */
-async function stepOf(ctx: ActionCtx, holdId: Id<"companyWebsites">, task: Task, go: boolean, cursor: string | null, known: Map<string, string>): Promise<Step> {
+async function stepOf(ctx: ActionCtx, holdId: Id<"companyWebsites">, task: Task, go: boolean, cursor: string | null, known: Map<string, string>, keeps: Map<string, Set<string> & { judged?: boolean }>): Promise<Step> {
+  if (task.kind === "unkept" || task.kind === "unkeptSeen") {
+    const searchType = task.searchType ?? "web";
+    const which = `${task.country ?? ""}|${searchType}`;
+    const keep: Set<string> & { judged?: boolean } = keeps.get(which) ?? await keptSearchesOf(ctx, holdId, task.country, searchType);
+    keeps.set(which, keep);
+    // Its 90 days not built yet: nothing to judge by, so nothing is removed.
+    if (!keep.judged) return { found: 0, continueCursor: "", isDone: true };
+    if (task.kind === "unkeptSeen") {
+      const page: { rows: Array<{ id: Id<"searchConsoleSeen">; key: string }>; continueCursor: string; isDone: boolean } =
+        await ctx.runQuery(internal.searchConsoleTidy.registerSearchesPart, { holdId, cursor });
+      const gone = page.rows.filter((row) => !keep.has(row.key)).map((row) => row.id);
+      if (go && gone.length > 0) await ctx.runMutation(internal.searchConsoleTidy.removeRegisterRows, { ids: gone });
+      return { found: gone.length, continueCursor: page.continueCursor, isDone: page.isDone };
+    }
+    const page: { records: Array<{ recordId: Id<"searchConsoleLists">; keys: string[] }>; continueCursor: string; isDone: boolean } =
+      await ctx.runQuery(internal.searchConsoleTidy.pairRecordsPart, { holdId, ...(task.country === undefined ? {} : { country: task.country }), searchType, cursor });
+    let found = 0;
+    for (const record of page.records) {
+      const lines = record.keys.flatMap((key, line) => (keep.has(key) ? [line] : []));
+      if (lines.length === record.keys.length) continue;
+      found += record.keys.length - lines.length;
+      if (go) await ctx.runMutation(internal.searchConsoleTidy.keepRecordLines, { recordId: record.recordId, lines });
+    }
+    return { found, continueCursor: page.continueCursor, isDone: page.isDone };
+  }
   if (task.kind === "copies") return await ctx.runMutation(internal.searchConsoleTidy.countryCopiesStep, { holdId, country: task.country!, go, cursor });
   if (task.kind === "seen") return await ctx.runMutation(internal.searchConsoleTidy.countrySeenStep, { holdId, country: task.country!, go, cursor });
   if (task.kind === "addresses") {
@@ -263,6 +379,8 @@ const FIELD_OF: Record<Task["kind"], keyof Tally> = {
   imageSeen: "imageSearches",
   register: "register",
   registerDays: "register",
+  unkept: "unkept",
+  unkeptSeen: "unkept",
 };
 
 /** What one website comes to, as a line of the report. */
@@ -271,7 +389,8 @@ function lineOf(host: string, countries: readonly string[], tally: Tally, go: bo
   const verb = go ? "removed" : "to remove";
   return `${host}: ${as}; ${tally.copies} country records and ${tally.seen} register rows ${verb}; `
     + `${tally.addresses} records ${go ? "turned" : "to turn"} to page references; ${tally.imageDays} image days ${go ? "rolled up (with any other roll-up due)" : "to roll into weeks"}; `
-    + `${tally.imageSearches} Google Images search records and ${tally.register} New and lost records not kept ${verb}.`;
+    + `${tally.imageSearches} Google Images search records and ${tally.register} New and lost records not kept ${verb}; `
+    + `${tally.unkept} lines and register rows of searches not kept ${verb}.`;
 }
 
 const add = (one: Tally, two: Tally): Tally => ({
@@ -283,6 +402,7 @@ const add = (one: Tally, two: Tally): Tally => ({
   imageDays: one.imageDays + two.imageDays,
   imageSearches: one.imageSearches + two.imageSearches,
   register: one.register + two.register,
+  unkept: one.unkept + two.unkept,
 });
 
 /**
@@ -310,6 +430,8 @@ export const tidyKeptFigures = internalAction({
     const lines = [...(args.lines ?? [])];
     // The website's page references known so far: its pages repeat from record to record.
     let known = new Map<string, string>();
+    // Each kind of result's searches kept, for all countries or one, read once a run (round two, D).
+    let keeps = new Map<string, Set<string> & { judged?: boolean }>();
     while (at < connections.length) {
       if (Date.now() - started > TIDY_RUN_MS) {
         await ctx.scheduler.runAfter(0, internal.searchConsoleTidy.tidyKeptFigures, { go: args.go, connections, at, ...(site ? { site } : {}), tally, lines });
@@ -327,7 +449,7 @@ export const tidyKeptFigures = internalAction({
       }
       if (site.task < site.tasks.length) {
         const task = site.tasks[site.task];
-        const step = await stepOf(ctx, holdId, task, args.go, site.cursor, known);
+        const step = await stepOf(ctx, holdId, task, args.go, site.cursor, known, keeps);
         const field = FIELD_OF[task.kind];
         site = { ...site, tally: { ...site.tally, [field]: site.tally[field] + step.found } };
         site = step.isDone ? { ...site, task: site.task + 1, cursor: null } : { ...site, cursor: step.continueCursor };
@@ -339,12 +461,14 @@ export const tidyKeptFigures = internalAction({
       tally = add(tally, site.tally);
       site = null;
       known = new Map();
+      keeps = new Map();
       at += 1;
     }
     lines.push(`All ${tally.websites} websites with Search Console figures: ${tally.countries} countries read as all countries; `
       + `${tally.copies} country records and ${tally.seen} register rows ${args.go ? "removed" : "to remove"}; `
       + `${tally.addresses} records ${args.go ? "turned" : "to turn"} to page references; ${tally.imageDays} image days ${args.go ? "rolled up" : "to roll into weeks"}; `
-      + `${tally.imageSearches} Google Images search records and ${tally.register} New and lost records not kept ${args.go ? "removed" : "to remove"}.`);
+      + `${tally.imageSearches} Google Images search records and ${tally.register} New and lost records not kept ${args.go ? "removed" : "to remove"}; `
+      + `${tally.unkept} lines and register rows of searches not kept ${args.go ? "removed" : "to remove"}.`);
     for (const line of lines) console.log(`Search Console tidy${args.go ? "" : " (count only)"}: ${line}`);
     return { tally, lines };
   },
@@ -609,16 +733,6 @@ export const searchCapEstimate = internalAction({
 /** Searches passed to one read of the lines: a function's list argument holds at most 8,192. */
 const KEYS_PER_PASS = 8_000;
 
-/** The searches a website tracks, for what a keep rule would keep. */
-export const trackedSearches = internalQuery({
-  args: { holdId: v.id("companyWebsites") },
-  returns: v.array(v.string()),
-  handler: async (ctx, args) => (await ctx.db
-    .query("searchConsoleTracked")
-    .withIndex("by_hold_kind_key", (q) => q.eq("companyWebsiteId", args.holdId).eq("kind", "query"))
-    .take(500)).map((row) => row.key),
-});
-
 /**
  * What "keep a search if it got a click, ranks in the top N, or is tracked"
  * would keep of one website's last 90 days (2026-10-05: keeping only clicked
@@ -656,7 +770,7 @@ export const searchKeepEstimate = internalAction({
       if (part.isDone) break;
       cursor = part.continueCursor;
     }
-    const tracked = new Set<string>(await ctx.runQuery(internal.searchConsoleTidy.trackedSearches, { holdId }));
+    const tracked = new Set<string>(await ctx.runQuery(internal.searchConsoleKeep.trackedSearches, { holdId }));
     // Nested rules, the smallest first: each the one before and the searches ranking within its position.
     const byShowings = args.showings !== undefined;
     const positions = byShowings ? [...args.showings!].sort((one, two) => two - one) : [...args.positions].sort((one, two) => one - two);

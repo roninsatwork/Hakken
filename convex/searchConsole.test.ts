@@ -34,7 +34,7 @@ const ALL_SCOPES = `${READ_SCOPE} openid https://www.googleapis.com/auth/userinf
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
 
-type Row = { key: string; clicks: number; impressions: number };
+type Row = { key: string; clicks: number; impressions: number; position?: number };
 /** What the fake Google holds: per property, kind of result and day, the totals and each split's rows. */
 type Pair = Row & { page: string };
 /**
@@ -85,7 +85,7 @@ function fakeGoogle(overrides: Partial<Google> = {}): Google {
       const ask = JSON.parse(body) as { startDate: string; endDate: string; type: string; dimensions: string[]; startRow: number };
       const days = google.figures[property]?.[ask.type] ?? {};
       if (ask.startRow > 0) return Response.json({});
-      const figures = (row: Row) => ({ clicks: row.clicks, impressions: row.impressions, ctr: row.clicks / row.impressions, position: 3.5 });
+      const figures = (row: Row) => ({ clicks: row.clicks, impressions: row.impressions, ctr: row.clicks / row.impressions, position: row.position ?? 3.5 });
       if (ask.dimensions[0] === "date") {
         return Response.json({
           rows: Object.entries(days)
@@ -449,6 +449,29 @@ describe("collecting", () => {
       "web query plumber leeds 2026-09-25 2026-09-26",
     ]);
     expect(seen.filter((entry) => entry.searchType === "web")).toEqual([]);
+  });
+
+  test("only the searches kept are kept: clicked, in the top 20, or on two pages or more (store less round two, D)", async () => {
+    const { t, siteId, admin } = await setup();
+    const page = (path: string) => `https://acme-shop.test${path}`;
+    fakeGoogle({ figures: { "sc-domain:acme-shop.test": { web: { [NEWEST]: {
+      total: row("", 5, 400),
+      pair: [
+        { key: "plumber leeds", page: page("/"), clicks: 5, impressions: 100, position: 30 },
+        { key: "almost there", page: page("/"), clicks: 0, impressions: 100, position: 12 },
+        { key: "two pages", page: page("/"), clicks: 0, impressions: 50, position: 40 },
+        { key: "two pages", page: page("/boilers/"), clicks: 0, impressions: 50, position: 45 },
+        { key: "deep and lonely", page: page("/"), clicks: 0, impressions: 100, position: 35 },
+      ],
+      page: [row(page("/"), 5, 350), row(page("/boilers/"), 0, 50)],
+    } } } } });
+    await signIn(t, admin, siteId);
+    await collect(t);
+    const kept = await t.run(async (ctx) => (await ctx.db.query("searchConsoleLists").collect())
+      .filter((record) => record.list === "pair" && record.searchType === "web" && record.start === NEWEST && record.country === undefined));
+    expect(kept.flatMap((record) => record.keys).sort()).toEqual(["almost there", "plumber leeds", "two pages", "two pages"]);
+    const seen = await t.run(async (ctx) => (await ctx.db.query("searchConsoleSeen").collect()).filter((entry) => entry.kind === "query").map((entry) => entry.key));
+    expect(seen).not.toContain("deep and lonely");
   });
 
   test("the ready-made periods are built after each run: searches from the pairs, with their pages", async () => {
