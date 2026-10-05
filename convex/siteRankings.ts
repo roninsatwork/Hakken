@@ -521,7 +521,7 @@ export function dayFiguresKey(websiteId: Id<"websites">, locationCode: number): 
 export async function requestAiLinesEverywhere(ctx: MutationCtx, websiteId: Id<"websites">): Promise<void> {
   for (const place of await placesWatching(ctx, websiteId)) {
     if (!(await claimSchedule(ctx, aiLinesKey(websiteId, place)))) continue;
-    await ctx.scheduler.runAfter(REBUILD_DELAY_MS, internal.siteSummaries.syncSiteAiLines, { websiteId, locationCode: place });
+    await ctx.scheduler.runAfter(REBUILD_DELAY_MS, internal.siteDayFigures.syncSiteAiLines, { websiteId, locationCode: place });
   }
 }
 
@@ -533,6 +533,6 @@ export async function requestAiLinesEverywhere(ctx: MutationCtx, websiteId: Id<"
 export async function requestDayFiguresEverywhere(ctx: MutationCtx, websiteId: Id<"websites">): Promise<void> {
   for (const place of await placesWatching(ctx, websiteId)) {
     if (!(await claimSchedule(ctx, dayFiguresKey(websiteId, place)))) continue;
-    await ctx.scheduler.runAfter(REBUILD_DELAY_MS, internal.siteSummaries.syncSiteDays, { websiteId, locationCode: place });
+    await ctx.scheduler.runAfter(REBUILD_DELAY_MS, internal.siteDayFigures.syncSiteDays, { websiteId, locationCode: place });
   }
 }

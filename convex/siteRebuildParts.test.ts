@@ -88,7 +88,7 @@ describe("the parts of a site rebuild", () => {
     expect(named(await waiting(t), "syncSiteAiLines")).toHaveLength(2);
 
     // The part does what the rebuild did for it: the list's AI line, counted from its answers.
-    await t.action(internal.siteSummaries.syncSiteAiLines, { websiteId: site.websiteId, locationCode: UK });
+    await t.action(internal.siteDayFigures.syncSiteAiLines, { websiteId: site.websiteId, locationCode: UK });
     const lines = await t.run(async (ctx) => await ctx.db.query("siteListAiDays").collect());
     expect(lines.find((line) => line.companyWebsiteId === site.holdId && line.websiteId === site.websiteId)?.ai)
       .toEqual([{ engine: "chatgpt", asked: 2, named: 1, recommended: 0 }]);
@@ -111,7 +111,7 @@ describe("the parts of a site rebuild", () => {
     expect(named(jobs, "syncSiteDays").map((job) => job.args.locationCode).sort()).toEqual([UK, LEEDS].sort());
 
     // The part does what the rebuild did for it: the day's figures, in that place.
-    for (const place of [UK, LEEDS]) await t.mutation(internal.siteSummaries.syncSiteDays, { websiteId: site.websiteId, locationCode: place });
+    for (const place of [UK, LEEDS]) await t.mutation(internal.siteDayFigures.syncSiteDays, { websiteId: site.websiteId, locationCode: place });
     const days = await t.run(async (ctx) => await ctx.db.query("siteDaySummaries").collect());
     expect(days.filter((row) => row.day === today()).map((row) => [row.locationCode, row.backlinks, row.referringDomains]).sort())
       .toEqual([[UK, 1200, 80], [LEEDS, 1200, 80]].sort());

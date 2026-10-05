@@ -42,8 +42,8 @@ const ANGLE_WORDINGS_PER_PASS = 400;
 /** Rows of questions no longer listed cleared per step. */
 const ANGLE_ROWS_CLEARED = 500;
 
-/** A question's angles read as they stand, to write only what changed: a few dozen at most. */
-const ANGLES_PER_QUESTION_READ = 1_000;
+/** A question's angles read at a time as they stand, to write only what changed: most questions have a few dozen. */
+const ANGLES_PER_READ = 200;
 
 type Wording = Doc<"fanOutAngles">["wordings"][number];
 
@@ -124,14 +124,22 @@ export const rebuildPass = internalMutation({
       // The question's angles as they stand: one the same is left alone, one
       // no longer found goes (dataforseo-cost-plan.md, A3).
       const standing = new Map<string, Doc<"fanOutAngles">>();
-      for (const row of await ctx.db
-        .query("fanOutAngles")
-        .withIndex("by_hold_prompt_angle", (q) => q.eq("holdId", hold._id).eq("prompt", question.prompt))
-        .take(ANGLES_PER_QUESTION_READ)) {
-        // Two rows for one angle — a rebuild that died half-way — keep one.
-        const twin = standing.get(row.angle);
-        if (twin) await ctx.db.delete(twin._id);
-        standing.set(row.angle, row);
+      for (let after: string | null = null; ;) {
+        const from: string | null = after;
+        const batch: Doc<"fanOutAngles">[] = await ctx.db
+          .query("fanOutAngles")
+          .withIndex("by_hold_prompt_angle", (q) => (from === null
+            ? q.eq("holdId", hold._id).eq("prompt", question.prompt)
+            : q.eq("holdId", hold._id).eq("prompt", question.prompt).gt("angle", from)))
+          .take(ANGLES_PER_READ);
+        for (const row of batch) {
+          // Two rows for one angle — a rebuild that died half-way — keep one.
+          const twin = standing.get(row.angle);
+          if (twin) await ctx.db.delete(twin._id);
+          standing.set(row.angle, row);
+        }
+        if (batch.length < ANGLES_PER_READ) break;
+        after = batch[batch.length - 1].angle;
       }
       for (const [angle, members] of groups) {
         const sorted = members
