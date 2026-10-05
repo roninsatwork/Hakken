@@ -16,6 +16,8 @@ import { CUT_COLUMN, RecordLinkCell } from "../../../_components/SiteCells";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { Figure } from "@/src/ui/components/screens/Figure";
 import { formatNumber } from "../../../_components/siteFormat";
+import { heldIcon } from "../../../_components/siteGroups";
+import { SiteMark } from "../../../_components/SiteMark";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { sharedSiteQuery, useSiteParam } from "../../../_components/useSiteParam";
@@ -98,7 +100,7 @@ export default function SiteRivalPage() {
     <div className="flex flex-col gap-6">
       <DetailHeader
         back={back}
-        icon={<Swords className="h-6 w-6 text-brand" />}
+        icon={hold ? <SiteMark host={hold.host} iconUrl={heldIcon(site?.holds, { siteId: hold.siteId })} owned={false} /> : undefined}
         title={hold?.host ?? ""}
         description={hold && site ? t("description", { rival: hold.host, site: site.host }) : undefined}
         pills={verdict ? <StatusLabel tone={VERDICT_TONES[verdict] ?? "neutral"}>{ts(`verdicts.${verdict}`)}</StatusLabel> : undefined}

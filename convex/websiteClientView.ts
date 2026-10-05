@@ -31,6 +31,8 @@ import {
   untrackedNamed,
 } from "./websiteSiteRows";
 import { holdQuestions, holdSearches } from "./holdLists";
+import type { Id } from "./_generated/dataModel";
+import { websiteIconUrl } from "./websiteIcons";
 
 /**
  * A company's view of one of its websites: what it tracks, what that is
@@ -301,12 +303,15 @@ export const listTrackedCompetitors = superAdminQuery({
       lastSeenDay: v.union(v.string(), v.null()),
       verdict: rivalVerdictValidator,
       monthlyUsd: moneyOrNull,
+      /** Its icon (`websiteIcons.ts`), or null to draw its letter. */
+      iconUrl: v.union(v.string(), v.null()),
     })),
     untrackedNamed: v.array(v.object({
       websiteId: v.id("websites"),
       displayHost: v.string(),
       times: v.number(),
       lastDay: v.string(),
+      iconUrl: v.union(v.string(), v.null()),
     })),
   }),
   handler: async (ctx, args) => {
@@ -323,6 +328,10 @@ export const listTrackedCompetitors = superAdminQuery({
         || right.beatsYouOn - left.beatsYouOn
         || left.displayHost.localeCompare(right.displayHost));
 
-    return { rivals, untrackedNamed: await untrackedNamed(ctx, site, questions) };
+    const withIcon = async <Row extends { websiteId: Id<"websites"> }>(row: Row) => ({ ...row, iconUrl: await websiteIconUrl(ctx, row.websiteId) });
+    return {
+      rivals: await Promise.all(rivals.map(withIcon)),
+      untrackedNamed: await Promise.all((await untrackedNamed(ctx, site, questions)).map(withIcon)),
+    };
   },
 });

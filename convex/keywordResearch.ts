@@ -17,6 +17,7 @@ import { newestKeyword, newestSerp, overviewIsFresh, freshnessOf, researchAgent,
 import { researchCosts } from "./keywordResearchPrices";
 import { findSeoLocation } from "./utils/seoLocations";
 import { researchProblemOf } from "./utils/researchProblems";
+import { websiteIconUrl } from "./websiteIcons";
 
 /**
  * Keyword research, the company's side (docs/plans/active/keyword-research-
@@ -364,10 +365,14 @@ export const lookupOverview = tenantQuery({
         strength,
         tracked: Boolean(await holdSearch(ctx, website.siteId, lookup.keyword)),
         verdict: verdictOf(position?.position ?? null, Boolean(serp && !position), strength, overview?.topTenDomainStrength ?? null),
-        competitors: rivals.map((row) => {
+        competitors: await Promise.all(rivals.map(async (row) => {
           const rival = hostOf(row.website.displayHost);
-          return { host: row.website.displayHost, position: serp?.results.find((result) => result.domain === rival)?.position ?? null };
-        }),
+          return {
+            host: row.website.displayHost,
+            iconUrl: await websiteIconUrl(ctx, row.website._id),
+            position: serp?.results.find((result) => result.domain === rival)?.position ?? null,
+          };
+        })),
       };
     }
 
@@ -490,15 +495,19 @@ export const lookupResults = tenantQuery({
     const [serp, websites, holds] = await Promise.all([newestSerp(ctx, lookup.keyword, lookup.locationCode), ownWebsites(ctx, companyId), companyHolds(ctx, companyId)]);
     const website = lookup.companyWebsiteId ? websites.find((row) => row.siteId === lookup.companyWebsiteId) ?? null : null;
     const host = website ? hostOf(website.host) : null;
-    const rivals = website
-      ? holds.filter((row) => row.summary.relationship === "TRACKED" && row.summary.ofSiteId === website.siteId).map((row) => hostOf(row.website.displayHost))
+    const rivalWebsites = website
+      ? holds.filter((row) => row.summary.relationship === "TRACKED" && row.summary.ofSiteId === website.siteId).map((row) => row.website)
       : [];
+    const rivals = rivalWebsites.map((row) => hostOf(row.displayHost));
     const whoOf = (domain: string) => (domain === host ? ("YOU" as const) : rivals.includes(domain) ? ("RIVAL" as const) : null);
-    const beyond = serp && host
-      ? [host, ...rivals].map((domain) => {
+    const beyond = serp && host && website
+      ? await Promise.all([
+          { domain: host, websiteId: website.websiteId },
+          ...rivalWebsites.map((row) => ({ domain: hostOf(row.displayHost), websiteId: row._id })),
+        ].map(async ({ domain, websiteId }) => {
           const found = serp.results.find((result) => result.domain === domain);
-          return { domain, who: whoOf(domain), position: found?.position ?? null, url: found?.url ?? null };
-        })
+          return { domain, who: whoOf(domain), iconUrl: await websiteIconUrl(ctx, websiteId), position: found?.position ?? null, url: found?.url ?? null };
+        }))
       : [];
     return {
       lookupId: lookup._id,

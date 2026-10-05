@@ -19,6 +19,7 @@ import useDebounce from "@/src/hooks/useDebounce";
 import { formatDateTime } from "@/src/lib/dates";
 import { smallDollars } from "@/src/app/(dashboard)/admin/companies/[id]/websites/money";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
+import { SiteMark } from "@/src/app/(dashboard)/app/sites/_components/SiteMark";
 
 /**
  * One collection run, line by line.
@@ -165,7 +166,10 @@ export default function SeoCycleDetailPage() {
             key: "host",
             header: t("hostColumn"),
             cell: (row) => (
-              <span className="text-[13px] font-medium text-foreground">{row.host}</span>
+              <span className="flex min-w-0 items-center gap-2">
+                <SiteMark host={row.host} iconUrl={row.mark.iconUrl} owned={row.mark.owned} small />
+                <span className="truncate text-[13px] font-medium text-foreground">{row.host}</span>
+              </span>
             ),
           },
           {

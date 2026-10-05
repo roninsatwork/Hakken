@@ -212,7 +212,7 @@ describe("the competitors list", () => {
       companyWebsiteId: holdId,
     });
     expect(untrackedNamed).toEqual([
-      { websiteId: unheld, displayHost: "northgate.co.uk", times: 4, lastDay: today() },
+      { websiteId: unheld, displayHost: "northgate.co.uk", times: 4, lastDay: today(), iconUrl: null },
     ]);
     expect(rivals[0]).toMatchObject({ displayHost: "held.co.uk", namedInAnswers: 3, answersCounted: 6 });
   });

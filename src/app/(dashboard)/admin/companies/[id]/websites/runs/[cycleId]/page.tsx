@@ -24,6 +24,7 @@ import {
   CHART_SERIES_VIOLET,
 } from "@/src/ui/components/charts/chartPalette";
 import { ListDownload } from "@/src/app/(dashboard)/app/sites/_components/SiteDownloads";
+import { SiteMark } from "@/src/app/(dashboard)/app/sites/_components/SiteMark";
 import { dollars } from "../../money";
 import { RunStatus } from "../RunStatus";
 import { CloseRun } from "./CloseRun";
@@ -312,13 +313,16 @@ export default function CollectionRunPage() {
                   if (!row.websiteId) return <span className="text-[12px] text-secondary">{tDetail("sites.shared")}</span>;
                   const info = siteInfo.get(row.websiteId);
                   return (
-                    <span className="flex flex-col gap-0.5">
-                      <span className="text-[13px] text-foreground">{row.host}</span>
-                      {info ? (
-                        <span className={`text-[11px] ${info.relationship === "OWNED" ? "text-info" : "text-muted"}`}>
-                          {info.relationship === "OWNED" ? tDetail("sites.owned") : tDetail("sites.competitor")}
-                        </span>
-                      ) : null}
+                    <span className="flex min-w-0 items-center gap-3">
+                      <SiteMark host={row.host} iconUrl={info?.iconUrl ?? null} owned={info?.relationship !== "TRACKED"} />
+                      <span className="flex min-w-0 flex-col gap-0.5">
+                        <span className="truncate text-[13px] text-foreground">{row.host}</span>
+                        {info ? (
+                          <span className={`text-[11px] ${info.relationship === "OWNED" ? "text-info" : "text-muted"}`}>
+                            {info.relationship === "OWNED" ? tDetail("sites.owned") : tDetail("sites.competitor")}
+                          </span>
+                        ) : null}
+                      </span>
                     </span>
                   );
                 },

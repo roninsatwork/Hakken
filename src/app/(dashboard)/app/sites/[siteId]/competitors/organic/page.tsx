@@ -10,6 +10,8 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { RecordLinkCell } from "../../../_components/SiteCells";
+import { heldIcon } from "../../../_components/siteGroups";
+import { MarkedHost } from "../../../_components/SiteMark";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
@@ -100,7 +102,11 @@ export default function SiteOrganicCompetitorsPage() {
             sortable: true,
             cell: (row) => {
               const href = rivalHref(row.host);
-              return href ? <RecordLinkCell href={href}>{row.host}</RecordLinkCell> : <span className="text-[13px] text-foreground">{row.host}</span>;
+              return (
+                <MarkedHost host={row.host} iconUrl={heldIcon(site?.holds, { host: row.host })} owned={false}>
+                  {href ? <RecordLinkCell href={href}>{row.host}</RecordLinkCell> : <span className="text-[13px] text-foreground">{row.host}</span>}
+                </MarkedHost>
+              );
             },
           },
           {

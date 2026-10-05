@@ -13,6 +13,7 @@ import { BackRow, PagePrimaryAction } from "@/src/ui/components/screens/PageHead
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { formatDateTime } from "@/src/lib/dates";
+import { SiteMark } from "@/src/app/(dashboard)/app/sites/_components/SiteMark";
 
 const loadDeleteDialog = () => import("./DeleteWebsiteDialog");
 const DeleteWebsiteDialog = lazy(() =>
@@ -88,7 +89,8 @@ export default function WebsiteRecordLayout({ children }: { children: ReactNode 
       <DetailLayout
         rootHref={rootHref}
         tabs={tabs}
-        leading={<Globe className="h-6 w-6 text-brand" />}
+        // Square when any company owns it, round when it is only ever a competitor, as the list draws it.
+        leading={<SiteMark host={website.displayHost} iconUrl={website.iconUrl} owned={website.watchers.some((watcher) => watcher.relationship === "OWNED")} />}
         title={website.displayHost}
         description={
           website.nextPullAt

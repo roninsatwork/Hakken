@@ -21,6 +21,8 @@ import { formatCpc, formatDay, formatNumber, movement, toCsv } from "../../../_c
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { isPartHeld } from "../../../_components/SiteCoverage";
+import { heldIcon } from "../../../_components/siteGroups";
+import { MarkedHost } from "../../../_components/SiteMark";
 import { pagePath } from "@/convex/utils/siteShapes";
 import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
 import { SearchAnswers } from "./SearchAnswers";
@@ -218,8 +220,8 @@ export default function SiteKeywordPage() {
   // This website among its competitors on the same search, best placed first.
   const standings = record
     ? [
-      { siteId: null, host: site?.host ?? "", position: shownAt, page: rankedPage ?? checkedPage, checked: false },
-      ...record.rivals.map((rival) => ({ siteId: rival.siteId, host: rival.host, position: rival.position, page: rival.page, checked: rival.checked })),
+      { siteId: null, host: site?.host ?? "", owned: site?.relationship === "OWNED", position: shownAt, page: rankedPage ?? checkedPage, checked: false },
+      ...record.rivals.map((rival) => ({ siteId: rival.siteId, host: rival.host, owned: rival.relationship === "OWNED", position: rival.position, page: rival.page, checked: rival.checked })),
     ].sort((left, right) => (left.position ?? 999) - (right.position ?? 999))
     : undefined;
 
@@ -348,9 +350,13 @@ export default function SiteKeywordPage() {
                   {
                     key: "host",
                     className: "text-[13px]",
-                    cell: (row) => row.siteId === null
-                      ? <span className="text-foreground">{row.host} <span className="text-muted">· {t("rivals.thisWebsite")}</span></span>
-                      : <RecordLinkCell href={recordHref({ kind: "keyword", keyword: record.keyword }, row.siteId)}>{row.host}</RecordLinkCell>,
+                    cell: (row) => (
+                      <MarkedHost host={row.host} iconUrl={heldIcon(site?.holds, { siteId: row.siteId ?? site?.siteId })} owned={row.owned}>
+                        {row.siteId === null
+                          ? <span className="text-foreground">{row.host} <span className="text-muted">· {t("rivals.thisWebsite")}</span></span>
+                          : <RecordLinkCell href={recordHref({ kind: "keyword", keyword: record.keyword }, row.siteId)}>{row.host}</RecordLinkCell>}
+                      </MarkedHost>
+                    ),
                   },
                   {
                     key: "position",

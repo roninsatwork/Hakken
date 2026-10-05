@@ -47,9 +47,13 @@ function lastWrite(): URLSearchParams {
   return new URLSearchParams(String(nav.replace.mock.calls.at(-1)?.[0] ?? "").split("?")[1] ?? "");
 }
 
-/** The table's rows, by their first cell's words. */
+/** The table's rows, by their first cell's words — a website's mark is decoration, hidden from them. */
 function firstCells(): string[] {
-  return screen.getAllByRole("row").slice(1).map((row) => within(row).getAllByRole("cell")[0].textContent ?? "");
+  return screen.getAllByRole("row").slice(1).map((row) => {
+    const cell = within(row).getAllByRole("cell")[0].cloneNode(true) as HTMLElement;
+    cell.querySelectorAll("[aria-hidden='true']").forEach((mark) => mark.remove());
+    return cell.textContent ?? "";
+  });
 }
 
 /**

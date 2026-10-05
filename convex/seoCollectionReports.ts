@@ -8,7 +8,10 @@ import {
   paginateItems,
 } from "./adminQueryService";
 import type { Doc, Id } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
 import { PARSE_FAILED } from "./seoFiling";
+import { anyCompanyOwns } from "./utils/websitePairing";
+import { websiteIconUrl } from "./websiteIcons";
 
 /**
  * What the collection screens read.
@@ -69,6 +72,12 @@ export const listSeoPulls = superAdminQuery({
   returns: paginationResultValidator(v.object({
     _id: v.id("seoDataPulls"),
     host: v.string(),
+    /**
+     * The website's mark — its icon (`websiteIcons.ts`), square when any
+     * company owns it — or null when the pull is not about one website: a
+     * question, or many websites in one call.
+     */
+    mark: v.union(v.null(), v.object({ iconUrl: v.union(v.string(), v.null()), owned: v.boolean() })),
     companyName: v.string(),
     operationId: v.string(),
     /** Above one when a single call covered many websites. */
@@ -115,12 +124,15 @@ export const listSeoPulls = superAdminQuery({
 
     const hosts = new Map<string, string>();
     const names = new Map<string, string>();
+    const marks = new Map<string, Promise<{ iconUrl: string | null; owned: boolean }>>();
 
     const rows = await Promise.all(page.page.map(async (pull) => {
       if (pull.websiteId && !hosts.has(pull.websiteId)) {
         const website = await ctx.db.get(pull.websiteId);
         hosts.set(pull.websiteId, website?.displayHost ?? website?.host ?? "");
       }
+      const websiteId = pull.websiteId;
+      if (websiteId && !marks.has(websiteId)) marks.set(websiteId, websiteMark(ctx, websiteId));
       if (pull.companyId && !names.has(pull.companyId)) {
         const company = await ctx.db.get(pull.companyId);
         names.set(pull.companyId, company?.name ?? "");
@@ -132,6 +144,7 @@ export const listSeoPulls = superAdminQuery({
         host: pull.websiteId
           ? hosts.get(pull.websiteId) ?? ""
           : readPromptText(pull.taskArgsJson) ?? pull.target ?? "",
+        mark: websiteId ? await marks.get(websiteId)! : null,
         // Whose cadence caused this, not somebody to charge. A shared host is
         // pulled once for everyone watching it.
         companyName: pull.companyId ? names.get(pull.companyId) ?? "" : "",
@@ -260,6 +273,8 @@ export const listSeoCycleLines = superAdminQuery({
     data: v.array(v.object({
       _id: v.id("seoCycleLines"),
       host: v.string(),
+      /** The website's icon (`websiteIcons.ts`), square when any company owns it. */
+      mark: v.object({ iconUrl: v.union(v.string(), v.null()), owned: v.boolean() }),
       operationId: v.string(),
       reused: v.boolean(),
       status: v.string(),
@@ -286,6 +301,7 @@ export const listSeoCycleLines = superAdminQuery({
       const pull = await ctx.db.get(line.pullId);
       return {
         _id: line._id,
+        websiteId: line.websiteId,
         host: hosts.get(line.websiteId) ?? "",
         operationId: line.operationId,
         reused: line.reused,
@@ -303,8 +319,11 @@ export const listSeoCycleLines = superAdminQuery({
         includesSearchTerm(row.host, term) || includesSearchTerm(row.operationId, term))
       : rows;
 
+    // Marks for the lines shown, not the two hundred read.
+    const shown = paginateItems(matching, args.page, args.pageSize);
     return {
-      ...paginateItems(matching, args.page, args.pageSize),
+      ...shown,
+      data: await Promise.all(shown.data.map(async ({ websiteId, ...row }) => ({ ...row, mark: await websiteMark(ctx, websiteId) }))),
       isCapped: lines.length > MAX_LINES,
     };
   },
@@ -312,6 +331,12 @@ export const listSeoCycleLines = superAdminQuery({
 
 /** One screenful of detail. A cycle can hold far more; the list is a sample. */
 const MAX_LINES = 200;
+
+/** What a website's mark is drawn from on the pipeline's screens, which look across companies. */
+async function websiteMark(ctx: QueryCtx, websiteId: Id<"websites">) {
+  const [iconUrl, owned] = await Promise.all([websiteIconUrl(ctx, websiteId), anyCompanyOwns(ctx, websiteId)]);
+  return { iconUrl, owned };
+}
 
 /**
  * How many websites one pull was about, read from what was actually sent.

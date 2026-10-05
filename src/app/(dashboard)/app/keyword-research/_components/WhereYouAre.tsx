@@ -8,6 +8,7 @@ import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { ExternalUrlCell, PositionCell } from "../../sites/_components/SiteCells";
+import { MarkedHost } from "../../sites/_components/SiteMark";
 import { readableAddress } from "./researchWords";
 
 type Beyond = NonNullable<FunctionReturnType<typeof api.keywordResearch.lookupResults>>["beyond"];
@@ -40,10 +41,12 @@ export function WhereYouAre({ beyond }: { beyond: Beyond }) {
             key: "website",
             header: tc("website"),
             cell: (row) => (
-              <span className="flex items-center gap-2 text-[13px] text-foreground">
-                {row.domain}
-                <WhoLabel who={row.who} />
-              </span>
+              <MarkedHost host={row.domain} iconUrl={row.iconUrl} owned={row.who === "YOU"}>
+                <span className="flex items-center gap-2 text-[13px] text-foreground">
+                  {row.domain}
+                  <WhoLabel who={row.who} />
+                </span>
+              </MarkedHost>
             ),
           },
           { key: "position", header: tc("position"), align: "right", cell: (row) => <PositionCell position={row.position} /> },

@@ -17,6 +17,7 @@ import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import useDebounce from "@/src/hooks/useDebounce";
 import { useNow } from "@/src/hooks/useNow";
 import { formatDateTime } from "@/src/lib/dates";
+import { SiteMark } from "@/src/app/(dashboard)/app/sites/_components/SiteMark";
 
 /**
  * Every DataForSEO pull, at whatever stage it has reached.
@@ -141,19 +142,23 @@ export default function SeoCollectionPage() {
             key: "website",
             header: t("hostColumn"),
             cell: (row) => (
-              <div className="flex flex-col gap-0.5">
-                {/*
-                  A bulk pull has no single host. Saying how many it covered
-                  reads as the saving it is; a blank cell reads as missing data.
-                */}
-                <span className="text-[13px] font-medium text-foreground">
-                  {row.host || t("manySites", { count: row.targetCount })}
-                </span>
-                {/*
-                  Whose cadence caused this, not somebody to charge. A shared
-                  host is pulled once for everyone watching it.
-                */}
-                <span className="text-[11px] text-muted">{row.companyName}</span>
+              <div className="flex min-w-0 items-center gap-3">
+                {/* A pull about one website wears its mark; a question or a bulk pull keeps its place, so the names line up. */}
+                {row.mark ? <SiteMark host={row.host} iconUrl={row.mark.iconUrl} owned={row.mark.owned} /> : <span aria-hidden="true" className="h-8 w-8 shrink-0" />}
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  {/*
+                    A bulk pull has no single host. Saying how many it covered
+                    reads as the saving it is; a blank cell reads as missing data.
+                  */}
+                  <span className="text-[13px] font-medium text-foreground">
+                    {row.host || t("manySites", { count: row.targetCount })}
+                  </span>
+                  {/*
+                    Whose cadence caused this, not somebody to charge. A shared
+                    host is pulled once for everyone watching it.
+                  */}
+                  <span className="text-[11px] text-muted">{row.companyName}</span>
+                </div>
               </div>
             ),
           },

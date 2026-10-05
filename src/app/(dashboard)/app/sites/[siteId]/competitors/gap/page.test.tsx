@@ -86,8 +86,15 @@ describe("Content gap", () => {
     openAt("");
     render(<SiteContentGapPage />);
 
-    const headings = screen.getAllByRole("columnheader").map((cell) => cell.textContent);
-    expect(headings).toEqual([
+    // A competitor's heading wears its mark; the words are read without it.
+    const words = (cell: HTMLElement) => {
+      const copy = cell.cloneNode(true) as HTMLElement;
+      copy.querySelectorAll("[aria-hidden='true']").forEach((mark) => mark.remove());
+      return copy.textContent;
+    };
+    const headings = screen.getAllByRole("columnheader");
+    expect(headings[0].querySelector("[aria-hidden='true']")).toHaveTextContent("C");
+    expect(headings.map(words)).toEqual([
       "chilliapple.co.uk", "pixelfield.co.uk",
       "sites.gap.columns.keyword", "sites.gap.columns.intent", "sites.gap.columns.volume", "sites.gap.columns.kd",
       "sites.gap.columns.position", "sites.gap.columns.traffic", "sites.gap.columns.position", "sites.gap.columns.traffic",

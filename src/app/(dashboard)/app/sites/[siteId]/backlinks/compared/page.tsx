@@ -8,6 +8,8 @@ import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { RecordLinkCell } from "../../../_components/SiteCells";
+import { heldIcon } from "../../../_components/siteGroups";
+import { MarkedHost } from "../../../_components/SiteMark";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
@@ -100,7 +102,11 @@ export default function SiteBacklinksComparedPage() {
             cell: (row) => {
               const href = theirsHref(row);
               const className = `text-[13px] ${row.isYou ? "font-medium text-foreground" : "text-secondary"}`;
-              return href ? <RecordLinkCell href={href} className={className}>{name(row)}</RecordLinkCell> : <span className={className}>{name(row)}</span>;
+              return (
+                <MarkedHost host={row.host} iconUrl={heldIcon(site?.holds, { host: row.host })} owned={row.isYou && site?.relationship === "OWNED"}>
+                  {href ? <RecordLinkCell href={href} className={className}>{name(row)}</RecordLinkCell> : <span className={className}>{name(row)}</span>}
+                </MarkedHost>
+              );
             },
           },
           { key: "rank", header: t("columns.rank"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.domainRank)}</span> },

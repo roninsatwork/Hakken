@@ -17,6 +17,8 @@ import { useSiteRange } from "../../_components/SiteDateRange";
 import { datedRow } from "../../_components/datedRows";
 import { formatNumber, toCsv } from "../../_components/siteFormat";
 import { RecordLinkCell } from "../../_components/SiteCells";
+import { heldIcon } from "../../_components/siteGroups";
+import { MarkedHost } from "../../_components/SiteMark";
 import { useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
 import { useSitePager } from "../../_components/useSitePagedTable";
@@ -130,7 +132,12 @@ export default function SiteSideBySidePage() {
               const href = rivalHref(row);
               const className = `text-[13px] ${row.isYou ? "font-medium text-foreground" : "text-secondary"}`;
               const name = row.isYou ? tc("you", { host: row.host }) : row.host;
-              return href ? <RecordLinkCell href={href} className={className}>{name}</RecordLinkCell> : <span className={className}>{name}</span>;
+              const owned = row.isYou && site?.relationship === "OWNED";
+              return (
+                <MarkedHost host={row.host} iconUrl={heldIcon(site?.holds, { host: row.host })} owned={owned}>
+                  {href ? <RecordLinkCell href={href} className={className}>{name}</RecordLinkCell> : <span className={className}>{name}</span>}
+                </MarkedHost>
+              );
             },
           },
           { key: "traffic", header: t("columns.traffic"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px]">{formatNumber(row.estimatedTraffic)}</span> },

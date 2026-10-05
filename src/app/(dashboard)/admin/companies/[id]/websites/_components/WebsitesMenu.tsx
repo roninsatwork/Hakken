@@ -11,6 +11,7 @@ import { cn } from "@/src/ui/lib/utils";
 import { FieldLabel } from "@/src/ui/components/screens/SettingsCard";
 import { SectionMenu } from "@/src/app/(dashboard)/app/_components/SectionMenu";
 import { WebsitePicker, type PickerHold } from "@/src/app/(dashboard)/app/sites/_components/WebsitePicker";
+import { SiteMark } from "@/src/app/(dashboard)/app/sites/_components/SiteMark";
 import {
   SECTION_GROUPS,
   pagesFor,
@@ -68,7 +69,14 @@ export function WebsitesMenu({ companyId }: { companyId: Id<"companies"> }) {
           triggerClassName="flex h-10 w-full items-center justify-between gap-2 rounded-[10px] border border-border-dim bg-background px-3 py-0 text-[13px] text-foreground hover:bg-foreground/5 hover:text-foreground"
           renderTrigger={(isOpen) => (
             <>
-              <span className="truncate">{chosen?.host ?? t("chooser.all")}</span>
+              {chosen ? (
+                <span className="flex min-w-0 items-center gap-2">
+                  <SiteMark host={chosen.host} iconUrl={chosen.iconUrl} owned={chosen.relationship === "OWNED"} small />
+                  <span className="truncate">{chosen.host}</span>
+                </span>
+              ) : (
+                <span className="truncate">{t("chooser.all")}</span>
+              )}
               <ChevronDown className={cn("h-4 w-4 shrink-0 text-secondary transition-transform", isOpen && "rotate-180")} aria-hidden="true" />
             </>
           )}

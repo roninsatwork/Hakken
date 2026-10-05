@@ -5,6 +5,7 @@ import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { iconSourceUrl, readIconReply } from "./websiteIcons";
 import { requestMissingIcons } from "./websites";
+import { anyCompanyOwns } from "./utils/websitePairing";
 
 /**
  * Website icons (`websiteIcons.ts`): looked for once when a website is first
@@ -175,6 +176,40 @@ describe("Drawing the icon", () => {
     const byHost = new Map(rows.map((row) => [row.host, row.iconUrl]));
     expect(byHost.get("kordatackle.com")).toBe(PNG_DATA_URL);
     expect(byHost.get("noicon.com")).toBeNull();
+  });
+
+  test("admin's All Websites and a website's own page give its icon, and null where there is none", async () => {
+    const t = harness();
+    const admin = await superAdmin(t);
+    const withIcon = await website(t, "kordatackle.com");
+    const withoutIcon = await website(t, "noicon.com");
+    await answered(t, withIcon, PNG_DATA_URL);
+    await answered(t, withoutIcon);
+
+    const page = await admin.query(api.websites.getPaginatedWebsites, { paginationOpts: { numItems: 15, cursor: null } });
+
+    const byHost = new Map(page.page.map((row) => [row.host, row.iconUrl]));
+    expect(byHost.get("kordatackle.com")).toBe(PNG_DATA_URL);
+    expect(byHost.get("noicon.com")).toBeNull();
+    expect((await admin.query(api.websites.getWebsiteById, { id: withIcon }))?.iconUrl).toBe(PNG_DATA_URL);
+  });
+
+  test("across companies a website is owned when any company owns it, and watched when every one only tracks it", async () => {
+    const t = harness();
+    const [first, second] = await t.run(async (ctx) => [
+      await ctx.db.insert("companies", { name: "Korda", createdAt: Date.now() }),
+      await ctx.db.insert("companies", { name: "Nash", createdAt: Date.now() }),
+    ]);
+    const shared = await website(t, "kordatackle.com");
+    const watched = await website(t, "rival.com");
+    await t.run(async (ctx) => {
+      await ctx.db.insert("companyWebsites", { companyId: first, websiteId: shared, relationship: "OWNED", createdAt: Date.now() });
+      await ctx.db.insert("companyWebsites", { companyId: second, websiteId: shared, relationship: "TRACKED", createdAt: Date.now() });
+      await ctx.db.insert("companyWebsites", { companyId: first, websiteId: watched, relationship: "TRACKED", createdAt: Date.now() });
+    });
+
+    expect(await t.run(async (ctx) => await anyCompanyOwns(ctx, shared))).toBe(true);
+    expect(await t.run(async (ctx) => await anyCompanyOwns(ctx, watched))).toBe(false);
   });
 
   test("deleting a website deletes its icon", async () => {

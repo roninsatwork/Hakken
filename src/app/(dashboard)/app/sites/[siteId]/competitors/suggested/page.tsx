@@ -8,9 +8,11 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { CheckedCell } from "../../../_components/SiteCells";
+import { heldIcon } from "../../../_components/siteGroups";
+import { MarkedHost } from "../../../_components/SiteMark";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../../_components/siteFormat";
-import { useSiteId } from "../../../_components/useSite";
+import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -42,6 +44,7 @@ export default function SiteSuggestedPage() {
   const to = useTranslations("sites.organic.kinds");
   const tc = useTranslations("sites.common");
   const siteId = useSiteId();
+  const site = useSite();
   const rows = useQuery(api.siteCompetitors.listSuggested, { siteId });
   const [search, setSearch, settled] = useSiteSearch();
   const term = settled.toLowerCase();
@@ -62,7 +65,16 @@ export default function SiteSuggestedPage() {
         footer={pager.footer}
         sort={tableSort}
         columns={[
-          { key: "website", header: t("columns.website"), sortable: true, cell: (row) => <span className="text-[13px] text-foreground">{row.host}</span> },
+          {
+            key: "website",
+            header: t("columns.website"),
+            sortable: true,
+            cell: (row) => (
+              <MarkedHost host={row.host} iconUrl={heldIcon(site?.holds, { host: row.host })} owned={false}>
+                <span className="truncate text-[13px] text-foreground">{row.host}</span>
+              </MarkedHost>
+            ),
+          },
           {
             key: "why",
             header: t("columns.why"),

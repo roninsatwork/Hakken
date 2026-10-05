@@ -18,6 +18,7 @@ import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import useDebounce from "@/src/hooks/useDebounce";
 import { formatDate, formatDateTime } from "@/src/lib/dates";
+import { SiteMark } from "@/src/app/(dashboard)/app/sites/_components/SiteMark";
 
 const loadDeleteDialog = () => import("./[websiteId]/DeleteWebsiteDialog");
 const DeleteWebsiteDialog = lazy(() =>
@@ -159,8 +160,10 @@ export default function AllWebsitesPage() {
             key: "website",
             header: t("websiteColumn"),
             cell: (website) => (
-              <span className="block text-[13px] font-medium leading-tight text-foreground">
-                {website.displayHost}
+              <span className="flex min-w-0 items-center gap-3">
+                {/* Square when any company owns it, round when it is only ever a competitor. */}
+                <SiteMark host={website.displayHost} iconUrl={website.iconUrl} owned={website.ownedCount > 0} />
+                <span className="truncate text-[13px] font-medium leading-tight text-foreground">{website.displayHost}</span>
               </span>
             ),
           },

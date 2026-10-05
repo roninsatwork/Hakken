@@ -60,6 +60,23 @@ describe("Page classification for All websites", () => {
     expect(within(screen.getByText("newshop.com").closest("tr") as HTMLElement).getByText("0")).toBeInTheDocument();
   });
 
+  it("draws each website's icon beside its name, and its letter where it has none", () => {
+    const icon = "data:image/png;base64,AAAA";
+    vi.mocked(useQuery).mockImplementation(((reference: unknown) => {
+      const name = convexPath(reference);
+      if (name.endsWith("listWebsiteChoices")) return choices.map((choice) => (choice.companyWebsiteId === "hold_1" ? { ...choice, iconUrl: icon } : choice));
+      if (name.endsWith("pageClassificationList")) return summaryOf(0, 0, 0);
+      return undefined;
+    }) as never);
+    renderWithProviders(<AllWebsitesClassificationPage />);
+
+    const withIcon = screen.getByText("ronins.co.uk").closest("tr") as HTMLElement;
+    expect(withIcon.querySelector("img")).toHaveAttribute("src", icon);
+    const withoutIcon = screen.getByText("newshop.com").closest("tr") as HTMLElement;
+    expect(withoutIcon.querySelector("img")).toBeNull();
+    expect(within(withoutIcon).getByText("N")).toBeInTheDocument();
+  });
+
   it("opens a website's own Page classification from its row", () => {
     renderWithProviders(<AllWebsitesClassificationPage />);
 

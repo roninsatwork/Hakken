@@ -1,5 +1,5 @@
 import { appError } from "./appError";
-import type { Doc } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import type { QueryCtx } from "../_generated/server";
 
 /**
@@ -37,6 +37,22 @@ export async function pairedOwnedHold(
 /** Absent reads as owned: every hold written before the flag existed was one. */
 export function isTrackedHold(hold: Pick<Doc<"companyWebsites">, "relationship">): boolean {
   return hold.relationship === "TRACKED";
+}
+
+/** Holds read to say whether any company owns a website; past this many, all watching it, it is taken as watched only. */
+const OWNER_SEARCH_LIMIT = 100;
+
+/**
+ * Whether any company holds the website as its own, for the screens that look
+ * across companies (All Websites, the collection pipeline): its mark is drawn
+ * square when one does and round when it is only ever a competitor.
+ */
+export async function anyCompanyOwns(ctx: { db: QueryCtx["db"] }, websiteId: Id<"websites">): Promise<boolean> {
+  const holds = await ctx.db
+    .query("companyWebsites")
+    .withIndex("by_website", (q) => q.eq("websiteId", websiteId))
+    .take(OWNER_SEARCH_LIMIT);
+  return holds.some((hold) => !isTrackedHold(hold));
 }
 
 /**

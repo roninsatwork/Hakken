@@ -18,6 +18,8 @@ import {
 import { KindBars } from "../../_components/KindBars";
 import { usePageKinds } from "../../_components/usePageKinds";
 import { RecordLinkCell } from "../_components/SiteCells";
+import { heldIcon } from "../_components/siteGroups";
+import { MarkedHost } from "../_components/SiteMark";
 import { HoverArea, useHoverReadout } from "../_components/HoverReadout";
 import { SiteChartCard } from "../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart, SiteScatterChart, type SiteScatterGroup } from "../_components/SiteCharts";
@@ -410,7 +412,11 @@ function Competitors({ extras }: { extras: Extras | undefined }) {
               key: "website",
               header: t("columns.website"),
               className: "whitespace-nowrap",
-              cell: (row) => <RecordLinkCell href={recordHref({ kind: "rival", rivalId: row.siteId })}>{row.host}</RecordLinkCell>,
+              cell: (row) => (
+                <MarkedHost host={row.host} iconUrl={heldIcon(site?.holds, { siteId: row.siteId })} owned={false}>
+                  <RecordLinkCell href={recordHref({ kind: "rival", rivalId: row.siteId })}>{row.host}</RecordLinkCell>
+                </MarkedHost>
+              ),
             },
             {
               key: "overlap",

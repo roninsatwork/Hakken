@@ -15,19 +15,30 @@ import { cn } from "@/src/ui/lib/utils";
  * arrow (docs/plans/active/sites-ux-updates-plan.md §3, "every number opens
  * the records behind it"); without one it is only read. `framed={false}` for
  * figures inside a panel that is already the card; `emphasis` for the one
- * figure the eye should land on first.
+ * figure the eye should land on first. `mark` goes before the label when the
+ * figure is about one website — its `SiteMark` — as the competitor cards are.
  */
-export function Figure({ label, value, detail, href, framed = true, emphasis = false }: {
+export function Figure({ label, value, detail, href, framed = true, emphasis = false, mark }: {
   label: string;
   value: ReactNode;
   detail?: ReactNode;
   href?: string;
   framed?: boolean;
   emphasis?: boolean;
+  mark?: ReactNode;
 }) {
+  const title = href ? `${label} →` : label;
   const body = (
     <>
-      <div data-part-title className="text-[12px] text-secondary">{href ? `${label} →` : label}</div>
+      {mark !== undefined ? (
+        // The mark sits beside the title, not in it: the title stays the figure's words alone.
+        <div className="flex min-w-0 items-center gap-2">
+          {mark}
+          <div data-part-title className="truncate text-[12px] text-secondary">{title}</div>
+        </div>
+      ) : (
+        <div data-part-title className="text-[12px] text-secondary">{title}</div>
+      )}
       <div className="mt-1 text-[24px] font-semibold tabular-nums text-foreground">{value}</div>
       {detail !== undefined ? <div className="mt-1 text-[12px]">{detail}</div> : null}
     </>

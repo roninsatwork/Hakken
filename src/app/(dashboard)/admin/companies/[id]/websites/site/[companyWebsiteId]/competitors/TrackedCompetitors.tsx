@@ -19,6 +19,7 @@ import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { RIVAL_TONE, siteBase } from "../siteView";
 import { AddBar } from "../../../_components/AddBar";
+import { MarkedHost } from "@/src/app/(dashboard)/app/sites/_components/SiteMark";
 
 /** Discovery kinds a person can read; anything else shows as not judged. */
 const KINDS = ["COMPETITOR", "DIRECTORY", "PUBLISHER", "SUPPLIER", "OTHER"] as const;
@@ -27,6 +28,7 @@ type Suggestion = {
   key: string;
   host: string;
   reason: string;
+  iconUrl: string | null;
   /** Only a ranking suggestion can be dismissed; an AI mention refills itself. */
   suggestionId: Id<"discoveredCompetitors"> | null;
 };
@@ -90,13 +92,14 @@ export function TrackedCompetitors({
       const rows: Suggestion[] = [];
       for (const named of view.untrackedNamed) {
         seen.add(named.displayHost);
-        rows.push({ key: named.websiteId, host: named.displayHost, reason: t("reasonNamed", { times: named.times }), suggestionId: null });
+        rows.push({ key: named.websiteId, host: named.displayHost, reason: t("reasonNamed", { times: named.times }), iconUrl: named.iconUrl, suggestionId: null });
       }
       for (const found of discovered.data) {
         if (seen.has(found.host)) continue;
         const kind = found.kind && (KINDS as readonly string[]).includes(found.kind) ? tKinds(`kinds.${found.kind}`) : null;
         const overlap = t("reasonRanks", { count: found.intersections });
-        rows.push({ key: found._id, host: found.host, reason: kind ? `${overlap} · ${kind}` : overlap, suggestionId: found._id });
+        // Discovery names a host, not a website record, and is not read against one (`websiteTenancyGuard.test.ts`): its letter.
+        rows.push({ key: found._id, host: found.host, reason: kind ? `${overlap} · ${kind}` : overlap, iconUrl: null, suggestionId: found._id });
       }
       return rows.slice(0, TABLE_PAGE_SIZE);
     })()
@@ -147,9 +150,11 @@ export function TrackedCompetitors({
             key: "rival",
             header: t("rivalColumn"),
             cell: (row) => (
-              <Link href={siteBase(companyId, row.companyWebsiteId)} className="text-[13px] text-foreground hover:text-brand">
-                {row.displayHost}
-              </Link>
+              <MarkedHost host={row.displayHost} iconUrl={row.iconUrl} owned={false}>
+                <Link href={siteBase(companyId, row.companyWebsiteId)} className="truncate text-[13px] text-foreground hover:text-brand">
+                  {row.displayHost}
+                </Link>
+              </MarkedHost>
             ),
           },
           {
@@ -209,7 +214,11 @@ export function TrackedCompetitors({
             {
               key: "site",
               header: t("siteColumn"),
-              cell: (row) => <span className="text-[13px] text-foreground">{row.host}</span>,
+              cell: (row) => (
+                <MarkedHost host={row.host} iconUrl={row.iconUrl} owned={false}>
+                  <span className="truncate text-[13px] text-foreground">{row.host}</span>
+                </MarkedHost>
+              ),
             },
             {
               key: "reason",

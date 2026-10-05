@@ -430,8 +430,8 @@ describe("Google's results", () => {
       [2, "lightflows.co.uk", null, 72, 2100, 8400, "lightflows.co.uk top", "RIVAL"],
     ]);
     expect(results?.beyond).toEqual([
-      { domain: "ronins.co.uk", who: "YOU", position: null, url: null },
-      { domain: "lightflows.co.uk", who: "RIVAL", position: 2, url: "https://lightflows.co.uk/page/" },
+      { domain: "ronins.co.uk", who: "YOU", iconUrl: null, position: null, url: null },
+      { domain: "lightflows.co.uk", who: "RIVAL", iconUrl: null, position: 2, url: "https://lightflows.co.uk/page/" },
     ]);
     const ideas = await t.run(async (ctx) => await ctx.db.query("researchIdeas").collect());
     // The keyword itself is never its own idea; each page's keywords once.
@@ -665,7 +665,7 @@ describe("start from a competitor", () => {
 
     expect(await as.query(api.keywordResearchCompetitors.competitorStarts, { siteId })).toEqual({
       preparing: false,
-      rivals: [{ rivalSiteId: rival, host: "lightflows.co.uk", gap: 2 }],
+      rivals: [{ rivalSiteId: rival, host: "lightflows.co.uk", iconUrl: null, gap: 2 }],
     });
     const gap = await as.query(api.keywordResearchCompetitors.competitorGap, { siteId, rivalSiteId: rival });
     expect(gap?.rows.map((row) => [row.keyword, row.position, row.volume])).toEqual([["brand agency", 9, 900], ["web agency surrey", 4, 300]]);

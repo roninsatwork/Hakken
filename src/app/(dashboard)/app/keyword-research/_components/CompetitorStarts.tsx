@@ -11,6 +11,7 @@ import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { Select } from "@/src/ui/components/screens/Select";
 import { FieldLabel } from "@/src/ui/components/screens/SettingsCard";
 import { formatNumber } from "../../sites/_components/siteFormat";
+import { SiteMark } from "../../sites/_components/SiteMark";
 import { ResearchSection } from "./ResearchCells";
 
 /**
@@ -59,6 +60,7 @@ export function CompetitorStartCards({ siteId, host }: { siteId: Id<"companyWebs
             <Figure
               key={rival.rivalSiteId}
               label={rival.host}
+              mark={<SiteMark host={rival.host} iconUrl={rival.iconUrl} owned={false} small />}
               href={competitorHref(rival.rivalSiteId, siteId)}
               value={rival.gap === null ? <NoFigure /> : formatNumber(rival.gap)}
               detail={<span className="text-secondary">{t("cardDetail")}</span>}

@@ -14,6 +14,7 @@ import { PARSE_FAILED } from "./seoFiling";
 import { cadenceOf, DAY_MS, estimateMonthly, estimateShape, everyDaysOf, newestPrices, repeatDays, reportOf } from "./seoRunEstimate";
 import { SEO_COMPETITORS_PER_WEBSITE, SEO_MAX_SENDS_PER_CYCLE } from "./seoCollectionPolicy";
 import { readFanOutLimits } from "./fanOutLimits";
+import { websiteIconUrl } from "./websiteIcons";
 
 /**
  * What each collection run for a company cost, and where the money went: the
@@ -784,6 +785,8 @@ export const getRunReport = superAdminQuery({
     sites: v.array(v.object({
       websiteId: v.id("websites"),
       relationship: v.union(v.literal("OWNED"), v.literal("TRACKED")),
+      /** The website's icon (`websiteIcons.ts`), or null to draw its letter. */
+      iconUrl: v.union(v.string(), v.null()),
       keywordsPerSite: v.number(),
       backlinksPerSite: v.number(),
     })),
@@ -856,6 +859,7 @@ export const getRunReport = superAdminQuery({
         websiteId: hold.websiteId,
         // An older hold has no relationship written: it is the company's own.
         relationship: hold.relationship ?? ("OWNED" as const),
+        iconUrl: await websiteIconUrl(ctx, hold.websiteId),
         keywordsPerSite: limits.keywordsPerSite,
         backlinksPerSite: limits.backlinksPerSite,
       });

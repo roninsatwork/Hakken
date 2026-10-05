@@ -24,6 +24,7 @@ import { useLiveAsk } from "../../search-console/_components/searchConsoleRecord
 import { ExternalUrlCell, PageTypeText } from "../../sites/_components/SiteCells";
 import { SiteStackedAreaChart } from "../../sites/_components/SiteCharts";
 import { datedRow } from "../../sites/_components/datedRows";
+import { MarkedHost } from "../../sites/_components/SiteMark";
 import { formatMonthName, formatNumber, formatVisits, toCsv } from "../../sites/_components/siteFormat";
 import { formatDate } from "@/src/lib/dates";
 import { shiftDay } from "../../sites/_components/siteRange";
@@ -98,7 +99,15 @@ export function ForWebsiteSection({ lookup, forWebsite, figures }: { lookup: Loo
             density="tight"
             empty={t("noCompetitors", { host })}
             columns={[
-              { key: "host", className: "max-w-0 w-full", cell: (row) => <span title={row.host} className="block truncate text-[13px] text-foreground">{row.host}</span> },
+              {
+                key: "host",
+                className: "max-w-0 w-full",
+                cell: (row) => (
+                  <MarkedHost host={row.host} iconUrl={row.iconUrl} owned={false}>
+                    <span title={row.host} className="block truncate text-[13px] text-foreground">{row.host}</span>
+                  </MarkedHost>
+                ),
+              },
               {
                 key: "position",
                 align: "right",

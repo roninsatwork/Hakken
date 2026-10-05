@@ -247,7 +247,7 @@ describe("a collection run's report", () => {
     expect(full).toMatchObject({ companyName: "Korda", reused: 3, cadence: "weekly" });
     expect(full?.previous).toMatchObject({ totalUsd: 2 });
     expect(full?.previous?.byOperation).toEqual([{ operationId: "site_crawl", costUsd: 1.8 }, { operationId: "backlinks_list", costUsd: 0.1 }]);
-    expect(full?.sites).toEqual([{ websiteId: s.own, relationship: "OWNED", keywordsPerSite: 10_000, backlinksPerSite: 100 }]);
+    expect(full?.sites).toEqual([{ websiteId: s.own, relationship: "OWNED", iconUrl: null, keywordsPerSite: 10_000, backlinksPerSite: 100 }]);
     // Korda collects weekly: the monthly crawl comes every fourth run.
     expect(full?.operations.find((row) => row.operationId === "site_crawl")).toEqual({ operationId: "site_crawl", category: "SITE_AUDIT", everyDays: 28 });
     expect(full?.decisions).toEqual([{ decisionKey: "seo.keyword-intent", copyKey: "seoKeywordIntent" }]);

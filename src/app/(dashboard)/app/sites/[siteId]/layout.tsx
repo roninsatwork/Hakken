@@ -11,6 +11,8 @@ import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { formatDateTime } from "@/src/lib/dates";
 import { SiteDateRange } from "../_components/SiteDateRange";
 import { formatDay } from "../_components/siteFormat";
+import { heldIcon } from "../_components/siteGroups";
+import { SiteMark } from "../_components/SiteMark";
 import { SiteMenu } from "../_components/SiteMenu";
 import { isSiteMenuPath, setupMet, setupPaused, sitePageForPath, switchHref } from "../_components/sitePages";
 import { SiteSwitcher } from "../_components/SiteSwitcher";
@@ -75,7 +77,8 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               ? { label: site.ofHost, href: switchHref(pathname, siteId, site.ofSiteId, query) }
               : { label: t("back"), href: `/app/sites${query}` }
           }
-          icon={<Globe className="h-6 w-6 text-brand" />}
+          // The website's mark, as the Sites list and Search Console's header draw it.
+          icon={<SiteMark host={site.host} iconUrl={heldIcon(site.holds, { siteId: site.siteId })} owned={site.relationship === "OWNED"} />}
           title={<SiteSwitcher siteId={site.siteId} host={site.host} holds={site.holds} />}
           description={
             site.relationship === "OWNED"

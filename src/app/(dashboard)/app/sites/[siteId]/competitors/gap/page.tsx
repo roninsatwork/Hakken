@@ -11,6 +11,8 @@ import { DataTable, type DataTableColumn, type DataTableHeaderGroup } from "@/sr
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { IntentLabel, RecordLinkCell } from "../../../_components/SiteCells";
+import { heldIcon } from "../../../_components/siteGroups";
+import { MarkedHost } from "../../../_components/SiteMark";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { formatNumber, formatVisits } from "../../../_components/siteFormat";
@@ -141,7 +143,9 @@ export default function SiteContentGapPage() {
         className: "border-l border-border-dim",
         label: (
           <span title={t("hints.competitor", { host: rival.host })}>
-            <RecordLinkCell href={listHref("", {}, rival.siteId)} className="text-[13px] font-medium text-foreground">{rival.host}</RecordLinkCell>
+            <MarkedHost host={rival.host} iconUrl={heldIcon(site?.holds, { siteId: rival.siteId })} owned={false}>
+              <RecordLinkCell href={listHref("", {}, rival.siteId)} className="text-[13px] font-medium text-foreground">{rival.host}</RecordLinkCell>
+            </MarkedHost>
           </span>
         ),
       })),

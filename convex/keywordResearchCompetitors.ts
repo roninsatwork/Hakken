@@ -6,6 +6,7 @@ import { tenantQuery } from "./tenantFunctions";
 import { myRivals, requireMySite, type MyRival } from "./siteAccess";
 import { gapCopyKey, readListCopy } from "./siteListCopies";
 import { GAP_COPY_FIELDS } from "./siteCompetitors";
+import { websiteIconUrl } from "./websiteIcons";
 
 /**
  * Start from a competitor (boards 1 and 6; docs/plans/active/keyword-
@@ -52,7 +53,12 @@ export const competitorStarts = tenantQuery({
     const gaps = await gapsByRival(ctx, args.siteId, rivals);
     return {
       preparing: gaps === null,
-      rivals: rivals.map((rival) => ({ rivalSiteId: rival.hold._id, host: rival.website.displayHost, gap: gaps?.get(rival.website._id)?.length ?? null })),
+      rivals: await Promise.all(rivals.map(async (rival) => ({
+        rivalSiteId: rival.hold._id,
+        host: rival.website.displayHost,
+        iconUrl: await websiteIconUrl(ctx, rival.website._id),
+        gap: gaps?.get(rival.website._id)?.length ?? null,
+      }))),
     };
   },
 });

@@ -13,6 +13,7 @@ import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/Dat
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
+import { SiteMark } from "@/src/app/(dashboard)/app/sites/_components/SiteMark";
 import { SECTION_ICONS, pageApplies, sectionHref, type SectionPageId } from "./websitesSection";
 
 /** The pages kept for one website at a time, which ask for one when All websites is chosen. */
@@ -76,7 +77,12 @@ export function ChooseWebsite({ page, columns = [], loading = false }: {
           {
             key: "website",
             header: t("choose.columns.website"),
-            cell: (row) => <span className="text-[13px] font-medium text-foreground">{row.host}</span>,
+            cell: (row) => (
+              <span className="flex min-w-0 items-center gap-3">
+                <SiteMark host={row.host} iconUrl={row.iconUrl} owned={row.relationship === "OWNED"} />
+                <span className="truncate text-[13px] font-medium text-foreground">{row.host}</span>
+              </span>
+            ),
           },
           {
             key: "type",

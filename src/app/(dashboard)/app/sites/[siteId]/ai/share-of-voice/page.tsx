@@ -15,6 +15,8 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { toCsv } from "../../../_components/siteFormat";
 import { RecordLinkCell } from "../../../_components/SiteCells";
+import { heldIcon } from "../../../_components/siteGroups";
+import { MarkedHost } from "../../../_components/SiteMark";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSitePager } from "../../../_components/useSitePagedTable";
@@ -131,7 +133,11 @@ export default function SiteShareOfVoicePage() {
             cell: (row) => {
               const href = mentionsHref(row.host);
               const className = `text-[13px] ${row.isYou ? "font-medium text-foreground" : "text-secondary"}`;
-              return href ? <RecordLinkCell href={href} className={className}>{nameOf(row)}</RecordLinkCell> : <span className={className}>{nameOf(row)}</span>;
+              return (
+                <MarkedHost host={row.host} iconUrl={heldIcon(site?.holds, { host: row.host })} owned={row.isYou && site?.relationship === "OWNED"}>
+                  {href ? <RecordLinkCell href={href} className={className}>{nameOf(row)}</RecordLinkCell> : <span className={className}>{nameOf(row)}</span>}
+                </MarkedHost>
+              );
             },
           },
           ...(engines ?? []).map((engine) => ({

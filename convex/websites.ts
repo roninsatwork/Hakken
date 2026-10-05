@@ -556,6 +556,7 @@ export const getPaginatedWebsites = superAdminQuery({
           companyCount: companies.size,
           ownedCount: watchers.filter((w) => w.relationship === "OWNED").length,
           trackedCount: watchers.filter((w) => w.relationship === "TRACKED").length,
+          iconUrl: await websiteIconUrl(ctx, website._id),
           ...deriveFetchRate(watchers),
         };
       }),
@@ -577,6 +578,7 @@ export const getWebsiteById = superAdminQuery({
     return {
       ...website,
       nextPullAt: deriveFetchRate(watchers).nextPullAt,
+      iconUrl: await websiteIconUrl(ctx, website._id),
       watchers: watchers.map((watcher) => ({
         key: watcher.key,
         companyId: watcher.companyWebsite.companyId,

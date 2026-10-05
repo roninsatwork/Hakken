@@ -12,6 +12,8 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import type { StatusTone } from "@/src/ui/components/screens/statusTone";
 import { RecordLinkCell } from "../../../_components/SiteCells";
+import { heldIcon } from "../../../_components/siteGroups";
+import { MarkedHost } from "../../../_components/SiteMark";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteScatterChart, type SiteScatterGroup } from "../../../_components/SiteCharts";
@@ -141,7 +143,11 @@ export default function SiteMarketMapPage() {
             cell: (row) => {
               const href = rivalHref(row);
               const className = `text-[13px] ${row.role === "YOU" ? "font-medium text-foreground" : "text-foreground"}`;
-              return href ? <RecordLinkCell href={href} className={className}>{row.host}</RecordLinkCell> : <span className={className}>{row.host}</span>;
+              return (
+                <MarkedHost host={row.host} iconUrl={heldIcon(site?.holds, { host: row.host })} owned={row.role === "YOU" && site?.relationship === "OWNED"}>
+                  {href ? <RecordLinkCell href={href} className={className}>{row.host}</RecordLinkCell> : <span className={className}>{row.host}</span>}
+                </MarkedHost>
+              );
             },
           },
           { key: "role", header: t("columns.role"), cell: (row) => <StatusLabel tone={ROLE_TONES[row.role]} wrap>{t(`roles.${row.role}`)}</StatusLabel> },

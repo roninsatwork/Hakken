@@ -114,6 +114,8 @@ export const globalWebsiteRow = v.object({
   companyCount: v.number(),
   ownedCount: v.number(),
   trackedCount: v.number(),
+  /** The website's icon (`websiteIcons.ts`), or null to draw its letter. */
+  iconUrl: v.union(v.string(), v.null()),
   /** When this host is next pulled, across everyone watching it. */
   nextPullAt: v.union(v.number(), v.null()),
   fetchedFor: v.union(v.null(), v.object({
@@ -146,6 +148,8 @@ export const websiteDetailShape = v.union(v.null(), v.object({
   ...rowShape.websites.fields,
   _id: v.id("websites"),
   nextPullAt: v.union(v.number(), v.null()),
+  /** The website's icon (`websiteIcons.ts`), or null to draw its letter. */
+  iconUrl: v.union(v.string(), v.null()),
   watchers: websiteWatcherShape,
 }));
 

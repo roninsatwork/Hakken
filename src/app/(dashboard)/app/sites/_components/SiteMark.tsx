@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { cn } from "@/src/ui/lib/utils";
 import { siteInitial } from "./siteGroups";
 
@@ -48,6 +48,30 @@ export function SiteMark({
       ) : (
         siteInitial(host)
       )}
+    </span>
+  );
+}
+
+/**
+ * A website named in a table or list cell, its small mark before its name —
+ * as the lists of competitors write one. `children` is the name when it is
+ * more than the host: a link to its record, or "You (host)".
+ */
+export function MarkedHost({
+  host,
+  owned,
+  iconUrl = null,
+  children,
+}: {
+  host: string;
+  owned: boolean;
+  iconUrl?: string | null;
+  children?: ReactNode;
+}) {
+  return (
+    <span className="flex min-w-0 items-center gap-2">
+      <SiteMark host={host} iconUrl={iconUrl} owned={owned} small />
+      {children ?? <span className="truncate">{host}</span>}
     </span>
   );
 }

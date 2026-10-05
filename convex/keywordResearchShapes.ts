@@ -99,7 +99,8 @@ export const lookupOverviewShape = v.union(v.null(), v.object({
     strength: num,
     tracked: v.boolean(),
     verdict,
-    competitors: v.array(v.object({ host: v.string(), position: num })),
+    /** Each with its icon (`websiteIcons.ts`), or null to draw its letter. */
+    competitors: v.array(v.object({ host: v.string(), iconUrl: v.union(v.string(), v.null()), position: num })),
   })),
   countries: v.array(v.object({
     code: v.number(),
@@ -134,7 +135,7 @@ export const lookupResultsShape = v.union(v.null(), v.object({
     topKeyword: str,
     who,
   })),
-  beyond: v.array(v.object({ domain: v.string(), who, position: num, url: str })),
+  beyond: v.array(v.object({ domain: v.string(), who, iconUrl: v.union(v.string(), v.null()), position: num, url: str })),
 }));
 
 export const researchListsShape = v.array(v.object({
@@ -222,7 +223,8 @@ export const lookupAnswersShape = v.union(v.null(), v.object({
 
 export const competitorStartsShape = v.object({
   preparing: v.boolean(),
-  rivals: v.array(v.object({ rivalSiteId: v.id("companyWebsites"), host: v.string(), gap: num })),
+  /** Each with its icon (`websiteIcons.ts`), or null to draw its letter. */
+  rivals: v.array(v.object({ rivalSiteId: v.id("companyWebsites"), host: v.string(), iconUrl: v.union(v.string(), v.null()), gap: num })),
 });
 
 export const competitorGapShape = v.union(v.null(), v.object({
