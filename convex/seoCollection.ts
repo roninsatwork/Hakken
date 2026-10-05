@@ -65,9 +65,10 @@ import type { MutationCtx } from "./_generated/server";
  * planning a send we ask whether somebody already holds a fresh enough answer.
  * If Acme pulled `rival.com` on Monday and Acme's rival comes round on
  * Wednesday, Wednesday gets a line pointing at Monday's pull and pays nothing.
- * "Fresh enough" is the asker's own schedule, judged by the same helper that
- * decides whether a website is due at all — a weekly watcher is perfectly
- * served by six-day-old data.
+ * "Fresh enough" is younger than half the cadence the asker buys it at — a
+ * Monthly company's run reuses anything under about 15 days old, Collect now
+ * anything under a day at least — or not yet due by the asker's own schedule
+ * (`heldForDays` in `seoBuyingRules.ts`, finish-off plan item 6a).
  */
 
 /** What one page of expansion did, so the caller can decide what happens next. */
@@ -756,13 +757,12 @@ async function planPagedList(
     if (!params) break;
     // Each page is held on its own: this page, from this place, answered or on
     // its way inside the list's cadence. A sandbox answer or a failure is
-    // never served. A page bought every run holds no answer, as a call bought
-    // every run holds none, but one still on its way is shared rather than
-    // bought twice.
-    const held = await heldByOwnCadence(ctx, operation, args.websiteId, args.now, JSON.stringify(params), { runDays: eachRun && !due ? operation.refresh?.everyDays ?? args.runDays : args.runDays, manual: args.cycle.trigger === "MANUAL" })
-      // Bought every run by this company, a page still fresh by its cadence —
-      // today's, for another company; the last hour's, for a second press — is
-      // shared as a single call's answer is (`findFreshPull`).
+    // never served. A page bought every run holds an answer only while it is
+    // fresh (`heldForDays`), as a call bought every run does, and one still on
+    // its way is shared rather than bought twice.
+    const held = await heldByOwnCadence(ctx, operation, args.websiteId, args.now, JSON.stringify(params), { runDays: args.runDays, manual: args.cycle.trigger === "MANUAL", everyRunPage: eachRun && !due })
+      // Or a page not yet due by this company's schedule, as a single call's
+      // answer is served (`findFreshPull`).
       ?? (await findFreshPull(ctx, { ...args, operationId: operation.id, taskArgsJson: JSON.stringify(params) }))?._id;
     if (held) {
       await writeLine(ctx, lineArgs, held, true);

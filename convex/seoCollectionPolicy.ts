@@ -214,10 +214,3 @@ export const SEO_KEYWORD_CHECKS_PER_WEBSITE = 1_000;
  * that the Brief is current by the time anyone opens it.
  */
 export const SEO_MOVES_DELAY_MS = 5 * 60 * 1000;
-
-/**
- * How old an answer a manual (Planner) collection will reuse: one hour. A scheduled
- * run reuses anything its own cadence still calls fresh; a person pressing the
- * button wants today's numbers, and this only stops a double press paying twice.
- */
-export const SEO_MANUAL_FRESH_MS = 60 * 60 * 1000;

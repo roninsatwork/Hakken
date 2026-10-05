@@ -1,12 +1,11 @@
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import type { SeoOperation } from "./dataForSeoRegistry";
-import { DAY_MS, collectsEveryRun, heldForDays, isCrawl, type Asker } from "./seoBuyingRules";
+import { DAY_MS, boughtEveryRun, collectsEveryRun, heldForDays, type Asker } from "./seoBuyingRules";
 import { isWebsiteDue } from "./seoScheduleService";
 import { sentOffset } from "./sitePagedLists";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { readSentLocationCode } from "./utils/seoSentPlace";
-import { SEO_MANUAL_FRESH_MS } from "./seoCollectionPolicy";
 
 /**
  * Whether a website already has an answer to a request, so the request is
@@ -36,10 +35,13 @@ const PULLS_READ_FOR_HOLD = 50;
  * `taskArgsJson`, when given, is what would be sent: only the same call asked
  * the same way holds — from the same place, for the same page of a list.
  *
- * `asker`, when given, is how the asking run collects. A company that collects
- * about as seldom as the call, or more seldom, buys it every run
- * (`collectsEveryRun`) — but one still on its way is shared rather than bought
- * twice. Otherwise the answer holds only until it is within half a run of due,
+ * `asker`, when given, is how the asking run collects. Nothing is bought again
+ * while it is fresh — younger than half the cadence it is bought at, a day at
+ * least for Collect now (`heldForDays`, finish-off plan item 6a). A company
+ * that collects about as seldom as the call, or more seldom, buys it every
+ * run once it is no longer fresh (`collectsEveryRun`) — and one still on its
+ * way is shared rather than bought twice. Otherwise the answer holds until it
+ * is within half a run of due,
  * so the call is bought on the run nearest its own cadence (`repeatDays` in
  * `seoRunEstimate.ts`). Held for its whole cadence, a weekly list was bought
  * every other week on a weekly schedule — the last one a few minutes short of
@@ -57,8 +59,8 @@ export async function heldByOwnCadence(
 ): Promise<Id<"seoDataPulls"> | null> {
   if (!operation.refresh) return null;
   const ownDays = operation.refresh.everyDays;
-  // Bought every run: no answer holds, but one still on its way is shared.
-  const everyRun = asker !== undefined && !isCrawl(operation.id) && collectsEveryRun(ownDays, asker.runDays);
+  // Bought every run: an answer holds only while it is fresh, but one still on its way is shared.
+  const everyRun = asker !== undefined && boughtEveryRun(operation.id, ownDays, asker);
   const window = heldForDays(operation.id, ownDays, asker) * DAY_MS;
   const recent = await ctx.db
     .query("seoDataPulls")
@@ -134,6 +136,8 @@ export async function findFreshPull(
     /** What would be sent. A fresh answer to a different question is no answer. */
     taskArgsJson: string;
     now: Date;
+    /** How far apart the website's runs come, in days. */
+    runDays: number;
   },
 ) {
   // Matched on the arguments as well as the operation, because the place is
@@ -156,15 +160,18 @@ export async function findFreshPull(
 
   if (!recent?.completedAt) return null;
 
-  // A manual collection asks for today's numbers, so only an answer from the last
-  // hour serves it — enough to stop a double press paying twice, and no more.
-  if (args.cycle.trigger === "MANUAL") {
-    return args.now.getTime() - recent.completedAt <= SEO_MANUAL_FRESH_MS ? recent : null;
-  }
+  // Fresh: younger than half the company's cadence, and for Collect now at
+  // least a day (`heldForDays`, finish-off plan item 6a). Until 2026-10-05 a
+  // manual collection took only an answer from the last hour, so a Monthly
+  // company's Collect now and its run ten days on bought everything twice.
+  const manual = args.cycle.trigger === "MANUAL";
+  const held = heldForDays(args.operationId, undefined, { runDays: args.runDays, manual }) * DAY_MS;
+  if (args.now.getTime() - recent.completedAt < held) return recent;
+  if (manual) return null;
 
-  // "Fresh enough" is the asker's own cadence, asked of the same helper that
-  // decides whether a website is due at all. A weekly watcher handed six-day-old
-  // numbers is being served correctly, not short-changed.
+  // Or not yet due by the asker's own schedule, asked of the same helper that
+  // decides whether a website is due at all: a weekly watcher handed numbers
+  // from since its last turn is being served correctly, not short-changed.
   const stale = isWebsiteDue(args.schedule, args.companyWebsite, recent.completedAt, args.now);
   return stale ? null : recent;
 }

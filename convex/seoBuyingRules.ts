@@ -68,24 +68,62 @@ export type Asker = {
   runDays: number;
   /** Collect now: a run started by hand, outside the schedule. */
   manual?: boolean;
+  /**
+   * A page of the keyword list bought on every run as the website's everyday
+   * check (`sitePagedLists.ts`, `everyRun`): bought at the run's cadence,
+   * whatever the list's own.
+   */
+  everyRunPage?: boolean;
 };
+
+/** The least a Collect now holds anything for: pressed twice in a day, it buys once. */
+export const MANUAL_HELD_DAYS = 1;
 
 /**
  * How many days an answer this website already has is served instead of the
- * same request being bought again, for a request with a cadence of its own
- * (`refresh.everyDays`).
+ * same request being bought again. `ownDays` is the request's own cadence
+ * (`refresh.everyDays`) when it has one.
  *
+ * **Nothing is bought again while it is fresh** (finish-off plan, item 6a,
+ * agreed with Anthony on 2026-10-05): an answer is served while it is younger
+ * than half the cadence it is bought at — its own cadence, or the company's
+ * when that is slower, or the company's alone for a request with none. So a
+ * Monthly company's run reuses anything under about 15 days old, a Weekly
+ * one anything under 3½ days, a Daily one under 12 hours; and Collect now
+ * holds anything for at least a day, so pressed twice in a day it buys once.
+ * Before it, a Monthly company's run bought everything again — 5 October's
+ * Collect now would have been bought again on 15 October — and a second
+ * Collect now the same day bought everything twice (about $31 on 2026-10-05).
+ *
+ * On top of that, as before:
  * - **The crawl**: at least `CRAWL_HELD_DAYS`, whatever starts the run, and on
  *   a faster schedule until the run nearest thirty days.
- * - **Anything else with its own cadence**: until it is within half a run of
- *   due, so it is bought on the run nearest its cadence (`repeatDays` in
- *   `seoRunEstimate.ts`) — none held when the company collects as seldom as
- *   the request (`collectsEveryRun`).
+ * - **A request with its own cadence**: until it is within half a run of due,
+ *   so it is bought on the run nearest its cadence (`repeatDays` in
+ *   `seoRunEstimate.ts`).
+ *
+ * Google's results for the tracked searches and the AI engines' answers are
+ * not held here: they are bought on every scheduled run, keyed by the day
+ * (`seoIdempotency.ts`), so only a run the same day — Collect now pressed
+ * again — is served the day's answer.
  *
  * With no asker — the ad hoc door, which has no runs — its whole cadence.
  */
-export function heldForDays(operationId: string, ownDays: number, asker?: Asker): number {
-  if (!asker) return ownDays;
-  if (isCrawl(operationId)) return Math.max(CRAWL_HELD_DAYS, ownDays - asker.runDays / 2);
-  return collectsEveryRun(ownDays, asker.runDays) ? 0 : ownDays - asker.runDays / 2;
+export function heldForDays(operationId: string, ownDays: number | undefined, asker?: Asker): number {
+  if (!asker) return ownDays ?? 0;
+  if (isCrawl(operationId)) return Math.max(CRAWL_HELD_DAYS, (ownDays ?? CRAWL_EVERY_DAYS) - asker.runDays / 2);
+  const own = asker.everyRunPage ? undefined : ownDays;
+  const byOwnCadence = own !== undefined && !collectsEveryRun(own, asker.runDays) ? own - asker.runDays / 2 : 0;
+  const fresh = Math.max(own ?? 0, asker.runDays) / 2;
+  return Math.max(byOwnCadence, fresh, asker.manual ? MANUAL_HELD_DAYS : 0);
+}
+
+/**
+ * Whether a request with its own cadence is bought on every run of this
+ * asker, so one still on its way is shared whatever its age: the company
+ * collects as seldom as the request, or it is an everyday page. Never the
+ * crawl, which is held a month.
+ */
+export function boughtEveryRun(operationId: string, ownDays: number, asker: Asker): boolean {
+  return !isCrawl(operationId) && (asker.everyRunPage === true || collectsEveryRun(ownDays, asker.runDays));
 }

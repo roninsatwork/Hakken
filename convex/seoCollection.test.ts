@@ -671,11 +671,13 @@ describe("the reuse ladder", () => {
     expect(fortnightly).not.toContain("site_crawl");
     expect(fortnightly).toContain("anchors_list");
 
-    // Monthly: the full scan, whatever the month's length — but never a
-    // second crawl inside the month (finish-off plan, item 6): one bought a
+    // Monthly: the full scan, whatever the month's length — but nothing bought
+    // again while it is fresh (finish-off plan, item 6a: under half a month
+    // old), and never a second crawl inside the month (item 6): one bought a
     // week ago holds; one bought in February, 28 days before, does not.
     const monthly = await plannedFor(MONTHLY, [["backlinks_list", day], ["site_crawl", 7 * day], ["anchors_list", fourWeeks]]);
-    expect(monthly).toEqual(expect.arrayContaining(["backlinks_list", "anchors_list"]));
+    expect(monthly).toContain("anchors_list");
+    expect(monthly).not.toContain("backlinks_list");
     expect(monthly).not.toContain("site_crawl");
     expect(await plannedFor(MONTHLY, [["site_crawl", 28 * day - 5 * 60_000]])).toContain("site_crawl");
 
@@ -944,9 +946,10 @@ describe("collecting now, by hand", () => {
     expect((await lines(t)).filter((line) => line.cycleId === cycleId).length).toBeGreaterThan(0);
   });
 
-  test("collects a site the timetable says is not due yet", async () => {
+  test("collects a site the timetable says is not due yet, buying what is no longer fresh", async () => {
+    // Four days old: past half a week, so a Weekly company's Collect now buys it again.
     const t = harness();
-    const company = await collectedYesterday(t, { sandbox: false, completedAt: Date.now() - 86_400_000 });
+    const company = await collectedYesterday(t, { sandbox: false, completedAt: Date.now() - 4 * 86_400_000 });
 
     const scheduled = await openCycle(t, company);
     await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: scheduled });
@@ -956,6 +959,63 @@ describe("collecting now, by hand", () => {
     const manual = await openCycle(t, company, Date.now(), "MANUAL");
     await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: manual });
     expect((await cycle(t, manual))?.plannedCount).toBeGreaterThan(0);
+  });
+
+  test("Collect now pressed twice in a day buys once", async () => {
+    // Thirteen hours on, a Daily company's second Collect now is served the
+    // first's answers: nothing is bought again while it is fresh, and a
+    // Collect now holds anything a day at least (finish-off plan, item 6a).
+    // Until 2026-10-05 only the last hour's were reused — about $31 that day.
+    const t = harness();
+    const company = await seedCompany(t, "Conterra Ops");
+    await seedSchedule(t, company, DAILY);
+    await seedCompanyWebsite(t, company, await seedWebsite(t, "conterraops.com"));
+    const first = await openCycle(t, company, Date.now() - 13 * 60 * 60 * 1000, "MANUAL");
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: first });
+    await t.run(async (ctx) => {
+      for (const row of await ctx.db.query("seoDataPulls").collect()) {
+        await ctx.db.patch(row._id, { status: "READY", completedAt: Date.now() - 13 * 60 * 60 * 1000 });
+      }
+    });
+
+    const second = await openCycle(t, company, Date.now(), "MANUAL");
+    await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: second });
+    expect(await cycle(t, second)).toMatchObject({ plannedCount: 0, reusedCount: SITE_OPERATIONS });
+  });
+
+  test("a Monthly company's run ten days after Collect now reuses it; a Weekly run reuses only what is under half a week old", async () => {
+    // 5 October's Collect now would otherwise be bought again on 15 October.
+    const day = 24 * 60 * 60 * 1000;
+    const plannedAfter = async (cadence: string, ago: number) => {
+      const t = harness();
+      const bought = await seedCompany(t, "Period House Group");
+      const company = await seedCompany(t, "Acme Ltd");
+      await seedSchedule(t, bought, cadence);
+      await seedSchedule(t, company, cadence);
+      const website = await seedWebsite(t, "corston.com");
+      await seedCompanyWebsite(t, bought, website);
+      await seedCompanyWebsite(t, company, website);
+      const first = await openCycle(t, bought, Date.now() - ago, "MANUAL");
+      await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId: first });
+      await t.run(async (ctx) => {
+        for (const row of await ctx.db.query("seoDataPulls").collect()) {
+          await ctx.db.patch(row._id, { status: "READY", submittedAt: Date.now() - ago, completedAt: Date.now() - ago });
+        }
+      });
+      // A scheduled run, for a company that has not collected it itself: due.
+      const cycleId = await openCycle(t, company);
+      await t.mutation(internal.seoCollection.expandSeoCycle, { cycleId });
+      return (await pulls(t)).filter((row) => row.cycleId === cycleId).map((row) => row.operationId);
+    };
+
+    expect(await plannedAfter(MONTHLY, 10 * day)).toEqual([]);
+    // The weekly lists are bought every run of a Weekly company once past
+    // half a week; the monthly ones and the crawl are held for their own cadence.
+    expect(await plannedAfter(WEEKLY, 3 * day)).toEqual([]);
+    const weekly = await plannedAfter(WEEKLY, 4 * day);
+    expect(weekly).toContain("backlinks_list");
+    expect(weekly).not.toContain("anchors_list");
+    expect(weekly).not.toContain("site_crawl");
   });
 
   test("reuses an answer from the last hour, so a double press does not pay twice", async () => {
