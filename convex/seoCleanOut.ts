@@ -20,8 +20,8 @@ import { competitorOnlyWebsites } from "./websites";
  *
  * A competitor — a website no company holds as its own — keeps its link
  * totals, its linking websites, its keyword totals and its top 1,000
- * keywords (items 6 and 6b). Removed: its crawls and their pages and broken
- * links; every other link list (every link, one per site, broken links,
+ * keywords (items 6 and 6b). Removed: its crawls, their pages and broken
+ * links, and the crawl's figures on each day's summary; every other link list (every link, one per site, broken links,
  * gained and lost, link words, linking servers); its keywords past the top
  * 1,000; and "who competes with it". A website any company owns is never
  * touched, even where another company watches it as a competitor.
@@ -58,6 +58,7 @@ const TASKS = [
   "crawls",
   "crawlPages",
   "crawlLinks",
+  "crawlFigures",
   "backlinks",
   "anchors",
   "ips",
@@ -122,6 +123,13 @@ export const cleanStep = internalMutation({
         return await clearPage(ctx, as(await ctx.db.query("siteCrawlPages").withIndex("by_site", (q) => q.eq("websiteId", site)).paginate(paging)), args.go);
       case "crawlLinks":
         return await clearPage(ctx, as(await ctx.db.query("siteCrawlLinks").withIndex("by_site", (q) => q.eq("websiteId", site)).paginate(paging)), args.go);
+      case "crawlFigures": {
+        // A crawl's pages and score, written onto each day's summary: the fields cleared, the days kept.
+        const page = await ctx.db.query("siteDaySummaries").withIndex("by_site_day", (q) => q.eq("websiteId", site)).paginate(paging);
+        const crawled = page.page.filter((row) => row.crawledPages !== undefined || row.onPageScore !== undefined);
+        if (args.go) for (const row of crawled) await ctx.db.patch(row._id, { crawledPages: undefined, onPageScore: undefined });
+        return { found: crawled.length, continueCursor: page.continueCursor, isDone: page.isDone, mark: args.mark };
+      }
       case "backlinks":
         return await clearPage(ctx, as(await ctx.db.query("siteBacklinks").withIndex("by_site_pass_day", (q) => q.eq("websiteId", site)).paginate(paging)), args.go);
       case "anchors":
@@ -259,6 +267,7 @@ const LABELS: Record<Task, string> = {
   crawls: "crawls",
   crawlPages: "crawled pages",
   crawlLinks: "crawled broken links",
+  crawlFigures: "days' crawl figures",
   backlinks: "links (every link, one per site, broken)",
   anchors: "link words",
   ips: "linking servers",

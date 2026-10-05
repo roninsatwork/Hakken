@@ -28,6 +28,7 @@ async function collected(t: Harness, websiteId: Id<"websites">, keywordRanks: nu
     await ctx.db.insert("siteCrawls", { websiteId, pullId: crawl, day: DAY, pagesCrawled: 1, issues: [], createdAt: 1 } as never);
     await ctx.db.insert("siteCrawlPages", { websiteId, pullId: crawl, day: DAY, url: "https://x.test/", page: "/", problems: [] } as never);
     await ctx.db.insert("siteCrawlLinks", { websiteId, pullId: crawl, day: DAY, from: "https://x.test/", fromPage: "/", to: "https://x.test/gone" } as never);
+    await ctx.db.insert("siteDaySummaries", { websiteId, locationCode: UK, day: DAY, crawledPages: 1, onPageScore: 90, updatedAt: 1 } as never);
     const links = await pull("backlinks_all");
     await ctx.db.insert("siteBacklinks", {
       websiteId, pass: "ALL", pullId: links, day: DAY, domainFrom: "a.test", urlFrom: "https://a.test/", urlTo: "https://x.test/", pageTo: "/",
@@ -86,6 +87,7 @@ async function heldBy(t: Harness, websiteId: Id<"websites">) {
       (await ctx.db.query(table).collect()).filter((row) => (row as { websiteId?: Id<"websites"> }).websiteId === websiteId).length;
     return {
       crawls: await count("siteCrawls") + await count("siteCrawlPages") + await count("siteCrawlLinks"),
+      crawlFigures: (await ctx.db.query("siteDaySummaries").collect()).filter((row) => row.websiteId === websiteId && row.crawledPages !== undefined).length,
       links: await count("siteBacklinks") + await count("siteAnchors") + await count("siteReferringIps") + await count("siteReferringSubnets") + await count("siteLinkDays"),
       linkingWebsites: await count("siteReferringDomains"),
       metrics: (await ctx.db.query("seoWebsiteMetrics").collect()).filter((row) => row.websiteId === websiteId).map((row) => row.operationId).sort(),
@@ -103,7 +105,7 @@ describe("clearing out what competitors no longer have collected", () => {
     const counted = await t.action(internal.seoCleanOut.cleanOutCompetitors, { go: false });
     expect(counted?.websites).toBe(1);
     expect(counted?.tally).toMatchObject({
-      crawls: 1, crawlPages: 1, crawlLinks: 1, backlinks: 1, anchors: 1, ips: 1, subnets: 1, linkDays: 1,
+      crawls: 1, crawlPages: 1, crawlLinks: 1, crawlFigures: 1, backlinks: 1, anchors: 1, ips: 1, subnets: 1, linkDays: 1,
       metrics: 2, keywordPages: 2, keywordRanks: 2, discovery: 1,
     });
     expect(await heldBy(t, rival)).toMatchObject({ crawls: 3, links: 5, ranks: COMPETITOR_KEYWORDS_KEPT + 2 });
@@ -112,6 +114,7 @@ describe("clearing out what competitors no longer have collected", () => {
 
     expect(await heldBy(t, rival)).toEqual({
       crawls: 0,
+      crawlFigures: 0,
       links: 0,
       linkingWebsites: 1,
       metrics: ["backlinks_summary"],
