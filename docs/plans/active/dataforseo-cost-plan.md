@@ -8,8 +8,57 @@ Search Console as left:
 Anthony, 2026-10-05: "tomorrow we pick up 2", "let's brainstorm and audit it
 now", "make a plan for A and B".
 
-**Status: A1 built (2026-10-05).** A1 agreed; the rest waits on Anthony's
-word, and B on the measurements of step 0.
+**Status, morning of 2026-10-06:** built overnight on `dev`, committed and
+**not pushed** (Anthony: "build this overnight and double check
+everything"): **A1, A2, A3, A5, A6**, and a fault A1's check found (below).
+Built and **held on their own branches** for Anthony's word, because a
+customer would notice them: **B2 and B3**
+(`worktree-agent-a270321a61606fe0d`), **B4**
+(`worktree-agent-ada3a01b855414cb0`). **Not built: A4 and B1** — see "What
+the night found".
+
+## What the night found, 2026-10-06
+
+**Measured before, on dev** (4 companies: 8 own websites, 28 competitors;
+`seoStorageMeasure:measureSeoStorage`): DataForSEO's data took **349 MB**.
+
+| Table | MB | What it is |
+|---|---|---|
+| `seoPullAnswers` | 147.4 | Raw DataForSEO answers; 101 MB of them older than 7 days, which A6 removes |
+| `siteContentGaps` | 81.0 | Content gap rows; about 77 MB of it for competitors' holds |
+| `siteKeywordRanks` | 32.7 | Every keyword a website ranks for; morehandles.co.uk 6.4 MB |
+| `siteListCopyParts` | 31.4 | The tables' ready-made copies |
+| `seoKeywordPositions` | 26.4 | Daily keyword positions, kept for ever; morehandles.co.uk 2.5 MB, growing about that much each collection |
+| `aiAnswerTexts` | 0.8 | AI answers' full wording (B2) |
+| `siteSerpPages` | 0.5 | Google's full results pages (B3) |
+
+- **A1 checked live on dev.** The first nightly refresh asked for 104
+  rebuilds (every copy); the second, nothing having changed, asked for 1.
+  That one was morehandles.co.uk's Your pages, whose rebuild had **always
+  failed**: Search Console's 90 days showed 13,813 pages and a function's
+  answer holds at most 8,192 to a list. Fixed (`holdPages.consolePages` reads
+  4,000 at a time); its rebuild now finishes and records its build.
+- **A4 not built**: reading only the companies asking a question also stops
+  finding a brand named in an answer to someone else's question, which is
+  where competitor suggestions come from — that changes what customers see,
+  so it is a group B question, not A.
+- **B1 not built**: it saves nothing until a website has held positions for
+  90 days, and every chart reading positions would have to read days and
+  weeks; positions are 26 MB on dev. Worth it later, when they are larger.
+- **B2 and B3 built, held**: measured, what they remove is small (0.8 MB and
+  0.5 MB on dev) and a customer would see it. Two wordings to settle first —
+  the "kept from 23 September" note and "word for word" on the answer screen.
+- **B4 built, held**: during a collection the Discovery screens would keep
+  the last collection's figures until its end. A2 already takes the repeat
+  rebuilds AI answers and site-wide figures set off; whether the rest is
+  worth B4 is for the reads-and-writes measurement.
+- **Content gaps for competitors** (about 77 MB of 81 MB) is a new question:
+  the competitor gap tab is a deliberate feature, so nothing was changed.
+
+**Not yet measured**: the size after (A6's purge removes the raw answers
+over 7 days old in its hourly steps) and the reads and writes before and
+after — the Convex dashboard's Usage page, or the deployment's function
+logs, which record each function's bytes read and written.
 
 ## How this plan is run
 

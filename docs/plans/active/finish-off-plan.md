@@ -158,14 +158,16 @@ then "let's brainstorm and audit it now") — what its stored data and its
 rebuilds after each collection cost in Convex, measured the same way, then
 the same kind of rules.
 
-## The DataForSEO side — audit, 2026-10-05 night (plan only: nothing built)
+## The DataForSEO side — audit, 2026-10-05 night; built overnight 2026-10-06
 
 The plan for it, with steps, days and what each changes on screen:
 [dataforseo-cost-plan.md](./dataforseo-cost-plan.md).
 
-Anthony: "this is for the plan only". Read from the code (file:line in the
-audit notes below); sizes not yet measured — measure first, as for Search
-Console, before building any of it.
+Anthony: "this is for the plan only", then "build this overnight and double
+check everything". Read from the code (file:line in the audit notes below),
+then measured on dev before building: 349 MB of DataForSEO data — what was
+built, held and left, and why, is in the plan's "What the night found". All
+of it is committed on `dev` and not pushed.
 
 **Found**
 
@@ -197,21 +199,21 @@ Console, before building any of it.
 
 | # | Change | Decision |
 |---|---|---|
-| A1 | The nightly refresh rebuilds only copies out of date with their data, not every copy every second night; a copy still rebuilds the moment its data changes. Before building, check no table shows anything that changes with the calendar alone ("new this week", "lost after 14 days") — such a copy keeps a nightly rebuild | **Agreed** (2026-10-05). On screen: nothing changes; an "updated" date, where shown, says when the data last changed |
-| A2 | An AI answer updates only the AI lines, a site-wide figure only the day figures — not a full rebuild | To decide |
-| A3 | Write only what changed: content gaps, list copies, sitemap pages, fan-out angles, day figures | To decide |
-| A4 | The brand-name check per answer reads only the companies asking that question | To decide |
-| A5 | The admin run report rebuilt at most every 5 minutes during a collection | To decide |
-| A6 | Raw DataForSEO answers kept 7 days, not 30 | To decide |
+| A1 | The nightly refresh rebuilds only copies out of date with their data, not every copy every second night; a copy still rebuilds the moment its data changes. Before building, check no table shows anything that changes with the calendar alone ("new this week", "lost after 14 days") — such a copy keeps a nightly rebuild | **Agreed** (2026-10-05); **built** on dev overnight, not pushed. On screen: nothing changes; an "updated" date, where shown, says when the data last changed |
+| A2 | An AI answer updates only the AI lines, a site-wide figure only the day figures — not a full rebuild | **Built** overnight (agreed as group A), not pushed |
+| A3 | Write only what changed: content gaps, list copies, sitemap pages, fan-out angles, day figures | **Built** overnight, not pushed |
+| A4 | The brand-name check per answer reads only the companies asking that question | **Not built**: it would change which mentions are found, so it is a customer-visible question |
+| A5 | The admin run report rebuilt at most every 5 minutes during a collection | **Built** overnight, not pushed |
+| A6 | Raw DataForSEO answers kept 7 days, not 30 | **Built** overnight, not pushed; a re-file or credit recount older than 7 days is no longer possible |
 
 **Group B — customers would notice**
 
 | # | Change | They would lose | Decision |
 |---|---|---|---|
-| B1 | Daily keyword positions kept 90 days, then weekly | Day-by-day history older than 90 days | To decide, once measured |
-| B2 | Full AI answer wording kept 90 days; who was named and cited kept forever | Reading old answers word for word | To decide, once measured |
-| B3 | Google's full results pages kept 90 days; positions kept forever | Opening an old results page in full | To decide, once measured |
-| B4 | One rebuild at the end of each collection, not during it | Discovery screens fill in at the end of a collection, not bit by bit | To decide |
+| B1 | Daily keyword positions kept 90 days, then weekly | Day-by-day history older than 90 days | **Not built**: 26 MB on dev, and it saves nothing until day 90 |
+| B2 | Full AI answer wording kept 90 days; who was named and cited kept forever | Reading old answers word for word | **Built, held** on a branch: 0.8 MB on dev — to decide |
+| B3 | Google's full results pages kept 90 days; positions kept forever | Opening an old results page in full | **Built, held** on a branch: 0.5 MB on dev — to decide |
+| B4 | One rebuild at the end of each collection, not during it | Discovery screens fill in at the end of a collection, not bit by bit | **Built, held** on a branch — to decide once reads and writes are measured |
 
 ## Next, once this plan is done: what Convex costs (agreed 2026-10-05)
 
