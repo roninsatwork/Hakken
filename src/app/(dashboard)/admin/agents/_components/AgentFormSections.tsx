@@ -64,6 +64,8 @@ export type AgentFormValues = {
   role: AgentRoleChoice;
   /** The Planner's mode — shown and saved only while the role is DataForSEO Planner. */
   plannerMode: "TEST" | "LIVE";
+  /** The DataForSEO Collector's ceiling a day, in US dollars; empty for none. */
+  maxDailyCostUsd: string;
   storageId?: Id<"_storage">;
 };
 
@@ -283,6 +285,25 @@ export function AgentFormSections({
             </SettingRow>
           </div>
         ) : null}
+        {/* Anthony, 2026-10-05: $100 a day for everything the Collector sends,
+            beside its limit per website (collection-progress-plan.md). */}
+        {values.role === "DATAFORSEO_COLLECTOR" ? (
+          <div className="border-t border-border-dim/40">
+            <SettingRow label={t("sections.role.daily.label")} description={t("sections.role.daily.hint")}>
+              <Field
+                label={t("sections.role.daily.label")}
+                labelHidden
+                id="agent-collector-daily"
+                type="number"
+                min={0}
+                step="0.01"
+                value={values.maxDailyCostUsd}
+                onChange={(event) => onChange({ maxDailyCostUsd: event.target.value })}
+                className="px-3 text-[13px] focus:border-brand/40"
+              />
+            </SettingRow>
+          </div>
+        ) : null}
       </SettingsCard>
 
       <SettingsCard title={t("sections.engine.groups.behaviour")}>
@@ -375,7 +396,12 @@ export function AgentFormSections({
       {/* The budget is what remains when approval is off. */}
       <SettingsCard title={t("sections.engine.groups.limits")}>
         <p className="-mt-1 text-[12px] leading-relaxed text-secondary">{t("sections.engine.budget.hint")}</p>
-        <AgentBudgetFields layout="rows" values={values} onChange={(key, value) => onChange({ [key]: value })} />
+        <AgentBudgetFields
+          layout="rows"
+          values={values}
+          costPerWebsite={values.role === "DATAFORSEO_COLLECTOR"}
+          onChange={(key, value) => onChange({ [key]: value })}
+        />
       </SettingsCard>
 
       <SettingsCard title={t("sections.status.title")}>

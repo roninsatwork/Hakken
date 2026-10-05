@@ -57,9 +57,16 @@ export function AgentBudgetFields({
   values,
   onChange,
   layout = "grid",
+  costPerWebsite = false,
 }: {
   values: AgentBudgetValues;
   onChange: (key: BudgetKey, value: string) => void;
+  /**
+   * The DataForSEO Collector reads its spend as a limit per website in one
+   * collection, its runs being as long as the queue
+   * (docs/plans/active/collection-progress-plan.md, decision 3).
+   */
+  costPerWebsite?: boolean;
   /**
    * `rows` for the Settings page, which is one setting per row; `grid` for the
    * create screen. The same five boxes either way — only where the words sit.
@@ -76,11 +83,19 @@ export function AgentBudgetFields({
         // limit here in the millions — is a text box that formats what is typed
         // and strips the commas on the way out.
         const grouped = key === "maxInputTokens";
-        const label = t(`sections.engine.budget.fields.${key}`);
-        const hint = t("sections.engine.budget.inherits", {
+        const perWebsite = costPerWebsite && key === "maxCostUsd";
+        const label = perWebsite
+          ? t("sections.engine.budget.fields.maxCostUsdPerWebsite")
+          : t(`sections.engine.budget.fields.${key}`);
+        const figures = {
           value: AGENT_LIMIT_DEFAULTS[key].toLocaleString("en-GB"),
           ceiling: AGENT_LIMIT_CEILINGS[key].toLocaleString("en-GB"),
-        });
+        };
+        const hint = perWebsite ? t("sections.engine.budget.perWebsite", figures) : t("sections.engine.budget.inherits", figures);
+        // Over the ceiling, said in the app's words rather than the browser's
+        // own bubble (Anthony met "Value must be less than or equal to 50",
+        // 2026-10-05): the server holds a higher figure to the ceiling.
+        const over = Number(values[key]) > AGENT_LIMIT_CEILINGS[key];
 
         const field = (
           <Field
@@ -90,7 +105,7 @@ export function AgentBudgetFields({
             id={`agent-limit-${key}`}
             type={grouped ? "text" : "number"}
             inputMode={grouped ? "numeric" : undefined}
-            {...(grouped ? {} : { min: 0, max: AGENT_LIMIT_CEILINGS[key] })}
+            {...(grouped ? {} : { min: 0 })}
             step={key === "maxCostUsd" ? "0.01" : "1"}
             value={grouped ? formatLimitNumber(values[key]) : values[key]}
             onChange={(event) =>
@@ -98,6 +113,7 @@ export function AgentBudgetFields({
             }
             placeholder={AGENT_LIMIT_DEFAULTS[key].toLocaleString("en-GB")}
             hint={rows ? undefined : hint}
+            error={over ? t("sections.engine.budget.overCeiling", { ceiling: figures.ceiling }) : undefined}
             className="px-3 text-[13px] focus:border-brand/40"
           />
         );

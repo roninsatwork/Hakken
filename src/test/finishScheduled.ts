@@ -101,3 +101,41 @@ export async function finishDueNow(t: DueHarness): Promise<void> {
     deadline.stop();
   }
 }
+
+/** A harness that can read each scheduled function's name and time. */
+type InOrderHarness = ScheduledFunctionHarness & {
+  run: <T>(handler: (ctx: { db: { system: { query: (table: "_scheduled_functions") => { collect: () => Promise<Array<{ name: string; scheduledTime: number; state: { kind: string } }>> } } } }) => Promise<T>) => Promise<T>;
+};
+
+/**
+ * Run the scheduled functions one at a time, in the order they are due, each
+ * to completion before the clock moves on to the next — as real time does.
+ *
+ * For a chain whose steps each book a watch far ahead (the DataForSEO
+ * Collector's, `convex/seoCollectorRun.ts`): `finishScheduled` moves the clock
+ * past every timer at once, so a watch set ten minutes on fired while the step
+ * it watched was still running, which no real clock allows. Bounded by real
+ * time, never by a count of rounds.
+ */
+export async function finishScheduledInOrder(t: InOrderHarness): Promise<void> {
+  const deadline = realDeadline();
+  try {
+    for (;;) {
+      const pending = await t.run(async (ctx) => (await ctx.db.system.query("_scheduled_functions").collect())
+        .filter((job) => job.state.kind === "pending")
+        .map((job) => job.scheduledTime));
+      if (pending.length === 0) return;
+      if (deadline.passed()) {
+        throw new Error(
+          `finishScheduledInOrder: functions were still scheduled after ${REAL_WAIT_LIMIT_MS / 1000}s of real time. `
+          + "Something keeps scheduling itself.",
+        );
+      }
+      vi.advanceTimersByTime(Math.max(1, Math.min(...pending) - Date.now()));
+      await t.finishInProgressScheduledFunctions();
+      await nextTurn();
+    }
+  } finally {
+    deadline.stop();
+  }
+}

@@ -43,6 +43,7 @@ const emptyFormData: AgentSettingsFormData = {
   maxCostUsd: "",
   role: "NONE",
   plannerMode: "TEST",
+  maxDailyCostUsd: "",
 };
 
 export default function AgentOverviewPage() {
@@ -133,6 +134,7 @@ export default function AgentOverviewPage() {
       maxCostUsd: agent.maxCostUsd ? String(agent.maxCostUsd) : "",
       role: isAssignableAgentRole(agent.systemKey) ? agent.systemKey : "NONE",
       plannerMode: agent.plannerMode ?? "TEST",
+      maxDailyCostUsd: agent.maxDailyCostUsd ? String(agent.maxDailyCostUsd) : "",
       storageId: undefined,
     });
   }
@@ -172,6 +174,8 @@ export default function AgentOverviewPage() {
         // A built-in role is never sent: the server refuses to move it.
         ...(hasFixedRole ? {} : { role: formData.role }),
         ...(formData.role === "DATAFORSEO_PLANNER" || formData.role === "WEEKLY_DIGEST" ? { plannerMode: formData.plannerMode } : {}),
+        // A cleared box (0) removes the Collector's ceiling a day.
+        ...(formData.role === "DATAFORSEO_COLLECTOR" ? { maxDailyCostUsd: parseLimitInput(formData.maxDailyCostUsd) ?? 0 } : {}),
         storageId: formData.storageId
       }),
       { suppressErrorToast: true, fallbackMessage: t("errors.saveFailed") },

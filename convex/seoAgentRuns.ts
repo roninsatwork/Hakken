@@ -1,11 +1,10 @@
 import { v } from "convex/values";
 
-import { internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx } from "./_generated/server";
+import { internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { sendNextBatch } from "./seoCollectionActions";
+import { collectStep } from "./seoCollectorRun";
 import { readDataForSeoCredentials } from "./dataForSeoRest";
 import { getErrorMessage } from "./utils/lang";
-import { SEO_COLLECTOR_RUN_MS } from "./seoCollectionPolicy";
 import { companyCollectionSchedule } from "./seoScheduleService";
 import { openSeoCycle, openSeoCycleOf } from "./seoTools";
 import { companyHasWorkDue } from "./seoCollectionDue";
@@ -13,6 +12,8 @@ import { startAgentRun } from "./agentRunStartService";
 import { runAhead } from "./roleRuns";
 import { superAdminMutation } from "./tenantFunctions";
 import { appError } from "./utils/appError";
+import { dayCeilingReached } from "./seoCollectionLimits";
+import { SEO_WAITING_TOO_LONG_MS } from "./seoCollectionPolicy";
 import type { Doc, Id } from "./_generated/dataModel";
 
 /**
@@ -28,8 +29,9 @@ import type { Doc, Id } from "./_generated/dataModel";
  *   testing yes add everything to the queue" — and **Live** adds only what is
  *   due by each company's cadence. Unset reads as Test.
  * - **Collector** (`DATAFORSEO_COLLECTOR`) empties the queue: sends each call
- *   and records its cost and a log line on its own run, until the queue is
- *   empty, its agent's spend limit is reached, or the run's time is up.
+ *   and records its cost and a log line on its own run, in one continuous send
+ *   as long as the queue (`seoCollectorRun.ts`), within its limit per website
+ *   and its ceiling a day (`seoCollectionLimits.ts`).
  *
  * The role is read off the agent (`systemKey`), never its name. Every run
  * writes its steps — what it observed, each company planned or each call made,
@@ -66,10 +68,14 @@ export const runSeoRoleNow = internalAction({
   handler: async (ctx, args) => {
     await ctx.runMutation(internal.roleRuns.markRunStarted, { runId: args.runId });
     try {
+      // A Collector run that starts sending is finished by its last step; one
+      // that does not start says why here.
       const summary = args.role === "DATAFORSEO_PLANNER"
         ? await plan(ctx, args.runId)
-        : await collect(ctx, args.runId);
-      await ctx.runMutation(internal.roleRuns.finishRoleRun, { runId: args.runId, workflowExecutionId: args.workflowExecutionId, status: "SUCCESS", summary });
+        : await startCollecting(ctx, args.runId, args.workflowExecutionId);
+      if (summary !== null) {
+        await ctx.runMutation(internal.roleRuns.finishRoleRun, { runId: args.runId, workflowExecutionId: args.workflowExecutionId, status: "SUCCESS", summary });
+      }
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       await ctx.runMutation(internal.roleRuns.finishRoleRun, {
@@ -218,15 +224,19 @@ function plannedLine(counts: CycleCounts): string {
     : `${counts?.plannedCount ?? 0} added to the queue, ${counts?.reusedCount ?? 0} served from data already held.`;
 }
 
-/** "Not now" replies in a row before a Collector run stops, and how long it waits after each. */
-const REFUSAL_PAUSES_MS = [10_000, 30_000, 60_000];
-
-async function collect(ctx: ActionCtx, runId: Id<"agentRuns">): Promise<string> {
-  const started = Date.now();
-  const workerId = `collector-${runId}`;
-
-  // One Collector at a time: its schedule starts one, as do Run and Collect
-  // now, and two at once would each spend to their own limit.
+/**
+ * Start a Collector run's send: its first step, at once, with the watch that
+ * carries it on if the platform stops it. Says why instead when it may not
+ * send — another run is sending, or there is no DataForSEO login — and
+ * returns nothing when it started, the run's last step finishing it.
+ */
+async function startCollecting(
+  ctx: ActionCtx,
+  runId: Id<"agentRuns">,
+  workflowExecutionId: Id<"workflowExecutions"> | undefined,
+): Promise<string | null> {
+  // One Collector at a time: its schedule starts one, as do Run, Collect now
+  // and the hourly check, and two at once would send side by side.
   const turn = await ctx.runMutation(internal.seoAgentRuns.takeCollectorTurn, { runId });
   if (!turn.ok) return turn.message;
 
@@ -243,48 +253,10 @@ async function collect(ctx: ActionCtx, runId: Id<"agentRuns">): Promise<string> 
     runId,
     text: `Queue: ${waiting.count}${waiting.more ? "+" : ""} waiting to be sent.`,
   });
-  let sent = 0;
-  let refusals = 0;
-  let stoppedBecause = "the queue is empty";
-
-  for (;;) {
-    if (Date.now() - started > SEO_COLLECTOR_RUN_MS) {
-      stoppedBecause = "this run's time was up; the rest waits for the next run";
-      break;
-    }
-    const outcome = await sendNextBatch(ctx, { workerId, runId, runEndsAt: started + SEO_COLLECTOR_RUN_MS });
-    if (outcome.kind === "CAPPED") {
-      stoppedBecause = "the spend limit was reached; the rest waits for the next run";
-      break;
-    }
-    if (outcome.kind === "ACCOUNT") {
-      stoppedBecause = `${outcome.reason} Nothing more is sent until that is fixed; the queue waits`;
-      break;
-    }
-    if (outcome.kind === "REFUSED") {
-      refusals += 1;
-      if (refusals > REFUSAL_PAUSES_MS.length) {
-        stoppedBecause = `DataForSEO kept saying "not now" (${outcome.reason}); the rest waits for the next run`;
-        break;
-      }
-      await sleep(REFUSAL_PAUSES_MS[refusals - 1]);
-      continue;
-    }
-    if (outcome.kind === "SENT") {
-      refusals = 0;
-      sent += outcome.count;
-      continue;
-    }
-    // Nothing due this moment. Work is spaced out as it is queued, so wait
-    // for the next row if it comes due while this run still has time.
-    const wait = outcome.nextDueAt === null ? null : outcome.nextDueAt - Date.now();
-    if (wait === null || Date.now() - started + wait > SEO_COLLECTOR_RUN_MS) break;
-    await sleep(Math.max(wait, 250));
-  }
-
-  const spent = await ctx.runQuery(internal.roleRuns.readRunCost, { runId });
-  return `Sent ${sent} ${sent === 1 ? "request" : "requests"} to DataForSEO and spent $${spent.toFixed(2)}. `
-    + `Stopped because ${stoppedBecause}.`;
+  const first = { runId, ...(workflowExecutionId ? { workflowExecutionId } : {}), step: 1, sent: 0, refusedSteps: 0 };
+  const watchId: Id<"_scheduled_functions"> = await ctx.runMutation(internal.seoCollectorRun.bookCollectorStep, first);
+  await collectStep(ctx, { ...first, watchId });
+  return null;
 }
 
 /**
@@ -299,13 +271,13 @@ export const takeCollectorTurn = internalMutation({
   handler: async (ctx, args) => {
     const run = await ctx.db.get(args.runId);
     if (!run) return { ok: false, message: "This run no longer exists." };
-    const ahead = await runAhead(ctx, run, LIVE_RUN_MS);
+    const ahead = await runAhead(ctx, run, COLLECTOR_SILENT_MS);
     if (!ahead) return { ok: true, message: "" };
     const at = new Date(ahead.startedAt).toISOString().slice(11, 16);
     return {
       ok: false,
-      message: `Another Collector run, started at ${at} UTC, is already sending. This one stopped without sending anything, `
-        + "so nothing is sent twice and the spend limit stays one limit.",
+      message: `Another Collector run, started at ${at} UTC, is already sending, and sends this too. This one stopped `
+        + "without sending anything, so nothing is sent twice.",
     };
   },
 });
@@ -416,8 +388,13 @@ export const countWaiting = internalQuery({
 
 // ── Collect now ────────────────────────────────────────────────────────────
 
-/** A run older than this that still says RUNNING died without saying so: a Collector run is capped well inside it. */
-const LIVE_RUN_MS = SEO_COLLECTOR_RUN_MS + 5 * 60 * 1000;
+/**
+ * A Collector run silent this long that still says RUNNING died without saying
+ * so. Judged by its last step, not its start: a run is as long as the queue,
+ * and each step marks it moving (`seoCollectorRun.ts`) — a step booked ahead
+ * at most `SEO_COLLECTOR_WAIT_AHEAD_MS`, a lost one taken over by its watch.
+ */
+export const COLLECTOR_SILENT_MS = 15 * 60 * 1000;
 
 /** The Collector's newest runs, read to see whether one is still sending. */
 const RECENT_COLLECTOR_RUNS = 5;
@@ -438,7 +415,20 @@ async function requireRoleAgent(ctx: { db: MutationCtx["db"] }, role: Role): Pro
 }
 
 function isGoing(run: Doc<"agentRuns">, now: number): boolean {
-  return (run.status === "QUEUED" || run.status === "RUNNING") && now - run.startedAt < LIVE_RUN_MS;
+  return (run.status === "QUEUED" || run.status === "RUNNING") && now - Math.max(run.startedAt, run.updatedAt) < COLLECTOR_SILENT_MS;
+}
+
+/** Whether a Collector run is sending now — for Collection pipeline's line on what is happening. */
+export async function collectorSending(ctx: { db: QueryCtx["db"] }): Promise<boolean> {
+  const collector = await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", "DATAFORSEO_COLLECTOR")).first();
+  if (!collector) return false;
+  const now = Date.now();
+  const recent = await ctx.db
+    .query("agentRuns")
+    .withIndex("by_agent_started", (q) => q.eq("agentId", collector._id))
+    .order("desc")
+    .take(RECENT_COLLECTOR_RUNS);
+  return recent.some((run) => isGoing(run, now));
 }
 
 /**
@@ -450,8 +440,9 @@ function isGoing(run: Doc<"agentRuns">, now: number): boolean {
 export async function startCollector(
   ctx: MutationCtx,
   args: {
-    companyId: Id<"companies">;
-    companyName: string;
+    /** The company it is for; none when the hourly check starts it for whatever waits. */
+    companyId?: Id<"companies">;
+    companyName?: string;
     userId?: Id<"users">;
     /** What the run is for, when it is not Collect now: "Generate fan-out queries". */
     purpose?: string;
@@ -467,14 +458,16 @@ export async function startCollector(
   if (recent.some((run) => isGoing(run, now))) return false;
 
   const purpose = args.purpose ?? "Collect now";
-  const objective = `Send the queue: ${purpose.toLowerCase()} for ${args.companyName}.`;
+  const objective = args.companyName
+    ? `Send the queue: ${purpose.toLowerCase()} for ${args.companyName}.`
+    : `Send the queue: ${purpose.toLowerCase()}.`;
   const runId = await ctx.db.insert("agentRuns", {
     agentId: collector._id,
     triggerType: "MANUAL",
     objective,
-    title: `${purpose} — ${args.companyName}`,
+    title: args.companyName ? `${purpose} — ${args.companyName}` : purpose,
     status: "QUEUED",
-    companyId: args.companyId,
+    ...(args.companyId ? { companyId: args.companyId } : {}),
     userId: args.userId,
     startedAt: now,
     updatedAt: now,
@@ -498,6 +491,40 @@ export async function startCollector(
   });
   return true;
 }
+
+/**
+ * Start the Collector for requests left waiting — due since `dueBefore` with
+ * no Collector sending — unless today's ceiling holds them. The hourly check
+ * calls it for requests due a quarter of an hour (the net under each step's
+ * watch), and saving the Collector's limits for anything due at all, so a
+ * raised limit carries on at once rather than waiting for a button.
+ */
+export async function sendWhatWaits(ctx: MutationCtx, dueBefore: number): Promise<boolean> {
+  const waiting = await ctx.db
+    .query("seoDataPulls")
+    .withIndex("by_status_due", (q) => q.eq("status", "PENDING").lt("dueAt", dueBefore))
+    .first();
+  if (!waiting) return false;
+  const collector = await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", "DATAFORSEO_COLLECTOR")).first();
+  if (!collector || collector.isActive === false) return false;
+  if (await dayCeilingReached(ctx)) return false;
+  return await startCollector(ctx, { purpose: "Send what was waiting" });
+}
+
+/** The hourly check's net: requests due a quarter of an hour with nothing sending. */
+export async function sendLongWaiting(ctx: MutationCtx, now: number): Promise<void> {
+  await sendWhatWaits(ctx, now - SEO_WAITING_TOO_LONG_MS);
+}
+
+/** After the Collector's limits are saved: whatever is due goes now, if nothing is sending it. */
+export const sendIfWaiting = internalMutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    await sendWhatWaits(ctx, Date.now() + 1);
+    return null;
+  },
+});
 
 const collectNowOutcome = v.union(
   /** Queued now: the Planner writes the work list, then starts the Collector. */

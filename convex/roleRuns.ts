@@ -133,11 +133,21 @@ export const finishRoleRun = internalMutation({
 /** An agent's newest runs, read to see whether one is still going. */
 const RECENT_RUNS = 5;
 
-/** A run that started this long ago and still says it is going has died: an action is stopped at ten minutes. */
+/**
+ * A run silent this long that still says it is going has died: an action is
+ * stopped at ten minutes. Judged by its last step (`updatedAt`, which each step
+ * it records moves), not its start, so a run in many steps — Search Console's
+ * first ninety days for a large website take forty minutes — reads as going
+ * for as long as it moves.
+ */
 export const ROLE_RUN_LIVE_MS = 15 * 60 * 1000;
 
+export function lastMoved(run: Doc<"agentRuns">): number {
+  return Math.max(run.startedAt, run.updatedAt);
+}
+
 function isGoing(run: Doc<"agentRuns">, now: number, liveMs: number): boolean {
-  return (run.status === "QUEUED" || run.status === "RUNNING") && now - run.startedAt < liveMs;
+  return (run.status === "QUEUED" || run.status === "RUNNING") && now - lastMoved(run) < liveMs;
 }
 
 /**
@@ -383,7 +393,7 @@ export const runSpendLeft = internalQuery({
 
 // ── A run that died ────────────────────────────────────────────────────────
 
-/** Past this, a run still "running" has died: an action is stopped at ten minutes. */
+/** Silent past this, a run still "running" has died: an action is stopped at ten minutes. */
 const RUN_LIFE_MS = 20 * 60 * 1000;
 
 /** A role's newest runs past that life, looked at each hour. */
@@ -411,6 +421,8 @@ export async function closeStalledRoleRuns(ctx: MutationCtx, now: number): Promi
       .take(STALLED_RUNS_READ);
     for (const run of old) {
       if (run.status !== "QUEUED" && run.status !== "RUNNING") continue;
+      // Started long ago but still moving: a run in many steps is not dead (2026-10-05).
+      if (now - lastMoved(run) < RUN_LIFE_MS) continue;
       await appendRunStep(ctx, {
         runId: run._id,
         agentId: agent._id,

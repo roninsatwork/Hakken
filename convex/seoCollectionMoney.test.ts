@@ -7,7 +7,7 @@ import schema from "./schema";
 import { RESULT_GAVE_UP, RETRY_RUN_ENDED, SEND_UNCERTAIN } from "./seoCollectionQueue";
 import { dataForSeoCodeKind } from "./dataForSeoRest";
 import { reusableByKey } from "./seoCollection";
-import { whileMovingClock } from "@/src/test/realTime";
+import { finishScheduledInOrder } from "@/src/test/finishScheduled";
 
 /**
  * The collection's money rules, against a stand-in for DataForSEO.
@@ -147,6 +147,29 @@ describe("sending", () => {
     expect((await scheduled(t)).filter((name) => name.includes("parseSeoResult"))).toHaveLength(1);
   });
 
+  test("live requests go five at once, each its own request", async () => {
+    const t = harness();
+    const { runId } = await collector(t);
+    const pulls = [await request(t), await request(t), await request(t)];
+    const tags = await Promise.all(pulls.map(async (id) => (await get(t, id))!.tag));
+    const bodies: unknown[][] = [];
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: { body: string }) => {
+      const tasks = JSON.parse(init.body) as Array<{ tag: string }>;
+      bodies.push(tasks);
+      return Response.json({
+        status_code: 20000,
+        tasks: tasks.map((task) => ({ id: `task-${task.tag}`, status_code: 20000, cost: 0.01, data: { tag: task.tag }, result: [{ n: 1 }] })),
+      });
+    }));
+
+    await t.action(internal.seoAgentRuns.runSeoRoleNow, { role: "DATAFORSEO_COLLECTOR", runId });
+
+    // One task a request — a live endpoint refuses more — and all three sent.
+    expect(bodies.map((tasks) => tasks.length)).toEqual([1, 1, 1]);
+    expect(new Set(bodies.map((tasks) => (tasks[0] as { tag: string }).tag))).toEqual(new Set(tags));
+    for (const id of pulls) expect(await get(t, id)).toMatchObject({ status: "READY", costUsd: 0.01 });
+  });
+
   test("a rate limit puts the batch back without counting a try", async () => {
     const t = harness();
     const pullId = await request(t, { status: "CLAIMED" });
@@ -158,10 +181,11 @@ describe("sending", () => {
     expect(await get(t, pullId)).toMatchObject({ status: "PENDING", attempts: 0 });
   });
 
-  test("a batch never spends past what is left of the run's limit", async () => {
+  test("a batch never spends past what is left of today's ceiling", async () => {
     const t = harness();
-    const { runId } = await collector(t, 1);
+    const { agentId, runId } = await collector(t);
     await t.run(async (ctx) => {
+      await ctx.db.patch(agentId, { maxDailyCostUsd: 1 });
       await ctx.db.patch(runId, { costUsd: 0.9 });
       await ctx.db.insert("seoOperationCosts", {
         operationId: "serp_google_organic", charged: 10, totalUsd: 0.5, lastUsd: 0.05, updatedAt: Date.now(),
@@ -205,15 +229,11 @@ describe("a supplier's refusal", () => {
       return refusal(tag);
     }));
 
-    // The clock moves only to the Collector's next wait, never past it: moved
-    // by fixed steps, it outran a run still loading and ended it early. For as
-    // long as real time allows, not for two thousand turns, which a busy full
-    // run's first load of the Collector outlasted (`src/test/realTime.ts`).
-    await whileMovingClock(
-      t.action(internal.seoAgentRuns.runSeoRoleNow, { role: "DATAFORSEO_COLLECTOR", runId }),
-      "next",
-      "The Collector's run",
-    );
+    // Each ask again is a step of the run booked for when it comes due, so
+    // the steps run one at a time in the order they are due, the clock moving
+    // only between them — never past a step's watch while it runs.
+    await t.action(internal.seoAgentRuns.runSeoRoleNow, { role: "DATAFORSEO_COLLECTOR", runId });
+    await finishScheduledInOrder(t);
 
     expect(sentAt).toHaveLength(4);
     expect(sentAt.slice(1).map((at, index) => Math.round((at - sentAt[index]) / 60_000))).toEqual([1, 2, 3]);
@@ -289,6 +309,89 @@ describe("a supplier's refusal", () => {
   });
 });
 
+describe("one continuous send", () => {
+  test("a send outlasting its step hands on to the next, and the run ends once, every request counted", async () => {
+    const t = harness();
+    const { runId } = await collector(t);
+    const now = await request(t);
+    const later = await request(t);
+    // Due past the step's five minutes, within the ten it waits ahead.
+    await t.run(async (ctx) => { await ctx.db.patch(later, { dueAt: Date.now() + 7 * 60_000 }); });
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: { body: string }) => {
+      const [task] = JSON.parse(init.body) as Array<{ tag: string }>;
+      return Response.json({ status_code: 20000, tasks: [{ id: `task-${task.tag}`, status_code: 20000, cost: 0.01, data: { tag: task.tag }, result: [{ n: 1 }] }] });
+    }));
+
+    await t.action(internal.seoAgentRuns.runSeoRoleNow, { role: "DATAFORSEO_COLLECTOR", runId });
+    expect(await t.run(async (ctx) => (await ctx.db.get(runId))?.status)).toBe("RUNNING");
+    expect(await get(t, later)).toMatchObject({ status: "PENDING" });
+
+    await finishScheduledInOrder(t);
+
+    expect(await get(t, now)).toMatchObject({ status: "READY" });
+    expect(await get(t, later)).toMatchObject({ status: "READY" });
+    const run = await t.run(async (ctx) => await ctx.db.get(runId));
+    expect(run).toMatchObject({ status: "SUCCESS" });
+    expect(run?.finalOutput).toBe("Sent 2 requests to DataForSEO and spent $0.02. Stopped because the queue is empty.");
+    // Nothing of the send is left waiting to run: each watch went with its step.
+    const pending = await t.run(async (ctx) => (await ctx.db.system.query("_scheduled_functions").collect())
+      .filter((job) => job.state.kind === "pending").map((job) => job.name));
+    expect(pending.filter((name) => name.includes("seoCollectorRun"))).toEqual([]);
+  });
+
+  test("a step the platform stopped is carried on by its watch, saying so; a finished run's watch does nothing", async () => {
+    const t = harness();
+    const { runId } = await collector(t);
+    // Still moving: a step the platform started late, still working, is left be.
+    await t.run(async (ctx) => { await ctx.db.patch(runId, { status: "RUNNING", updatedAt: Date.now() - 60_000 }); });
+    await t.mutation(internal.seoCollectorRun.watchCollector, { runId, step: 3, sent: 40, refusedSteps: 0 });
+    expect(await t.run(async (ctx) => (await ctx.db.system.query("_scheduled_functions").collect()).length)).toBe(0);
+
+    // Quiet past any step: the platform stopped it, and the watch carries on.
+    await t.run(async (ctx) => { await ctx.db.patch(runId, { startedAt: Date.now() - 30 * 60_000, updatedAt: Date.now() - 11 * 60_000 }); });
+    await t.mutation(internal.seoCollectorRun.watchCollector, { runId, step: 3, sent: 40, refusedSteps: 0 });
+
+    const steps = await t.run(async (ctx) => await ctx.db.query("agentRunSteps").withIndex("by_run_step", (q) => q.eq("runId", runId)).collect());
+    expect(steps.at(-1)).toMatchObject({ kind: "OBSERVE", output: "Step 3 was stopped by the platform before it finished, so sending carried on from where it was." });
+    const jobs = await t.run(async (ctx) => await ctx.db.system.query("_scheduled_functions").collect());
+    const next = jobs.find((job) => job.name.includes("continueCollecting"));
+    expect(next?.args[0]).toMatchObject({ runId, step: 4, sent: 40 });
+    expect(jobs.some((job) => job.name.includes("watchCollector"))).toBe(true);
+
+    await t.run(async (ctx) => { await ctx.db.patch(runId, { status: "SUCCESS", updatedAt: Date.now() - 11 * 60_000 }); });
+    const before = jobs.length;
+    await t.mutation(internal.seoCollectorRun.watchCollector, { runId, step: 4, sent: 40, refusedSteps: 0 });
+    expect(await t.run(async (ctx) => (await ctx.db.system.query("_scheduled_functions").collect()).length)).toBe(before);
+  });
+
+  test("the hourly check starts the Collector for requests left waiting, unless one is sending or today's ceiling holds them", async () => {
+    const t = harness();
+    const { agentId, runId } = await collector(t);
+    const waiting = await request(t);
+    await t.run(async (ctx) => { await ctx.db.patch(waiting, { dueAt: Date.now() - 20 * 60_000 }); });
+    const runs = () => t.run(async (ctx) => await ctx.db.query("agentRuns").collect());
+
+    // One is sending: it sends these too.
+    await t.run(async (ctx) => { await ctx.db.patch(runId, { status: "RUNNING" }); });
+    await t.mutation(internal.seoCollectionSweep.sweepDuty, { duty: "sendWaiting" });
+    expect(await runs()).toHaveLength(1);
+
+    // Today's ceiling reached: they wait for midnight, and the screen says so.
+    await t.run(async (ctx) => {
+      await ctx.db.patch(runId, { status: "SUCCESS", costUsd: 5 });
+      await ctx.db.patch(agentId, { maxDailyCostUsd: 5 });
+    });
+    await t.mutation(internal.seoCollectionSweep.sweepDuty, { duty: "sendWaiting" });
+    expect(await runs()).toHaveLength(1);
+
+    // Neither: a run of its own sends them.
+    await t.run(async (ctx) => { await ctx.db.patch(agentId, { maxDailyCostUsd: 50 }); });
+    await t.mutation(internal.seoCollectionSweep.sweepDuty, { duty: "sendWaiting" });
+    const started = (await runs()).find((run) => run._id !== runId);
+    expect(started).toMatchObject({ title: "Send what was waiting", status: "QUEUED" });
+  });
+});
+
 describe("one Collector at a time", () => {
   test("the earliest live run sends; a later one stands down, saying so", async () => {
     const t = harness();
@@ -304,6 +407,21 @@ describe("one Collector at a time", () => {
     const later = await t.mutation(internal.seoAgentRuns.takeCollectorTurn, { runId: second });
     expect(later.ok).toBe(false);
     expect(later.message).toMatch(/already sending/);
+  });
+
+  test("a run started long ago that is still moving holds up a new one; one silent a quarter of an hour does not", async () => {
+    const t = harness();
+    const { agentId, runId: long } = await collector(t);
+    const hourAgo = Date.now() - 60 * 60_000;
+    await t.run(async (ctx) => { await ctx.db.patch(long, { status: "RUNNING", startedAt: hourAgo, updatedAt: Date.now() - 60_000 }); });
+    const next = await t.run(async (ctx) => await ctx.db.insert("agentRuns", {
+      agentId, triggerType: "SCHEDULE", objective: "collect", status: "RUNNING", startedAt: Date.now(), updatedAt: Date.now(),
+    }));
+
+    expect((await t.mutation(internal.seoAgentRuns.takeCollectorTurn, { runId: next })).ok).toBe(false);
+
+    await t.run(async (ctx) => { await ctx.db.patch(long, { updatedAt: Date.now() - 16 * 60_000 }); });
+    expect((await t.mutation(internal.seoAgentRuns.takeCollectorTurn, { runId: next })).ok).toBe(true);
   });
 });
 

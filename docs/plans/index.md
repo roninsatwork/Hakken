@@ -7,6 +7,13 @@ completed work.
 
 ## Active Plans
 
+- [Collection progress](./active/collection-progress-plan.md) — a
+  collection sends itself to the end (one continuous send, AI questions five
+  at a time, a $3 limit per website instead of $15 a run, $100 a day for all
+  of it) and Admin → Websites → Collection pipeline says what it is doing:
+  progress, what it is on, time left, cost and credits. **Planned, drawn,
+  approved and built 2026-10-05, local on dev and on the dev deployment; the
+  Collector's two limits to be set on production when it is deployed.**
 - [Usage and credits](./active/usage-credits-plan.md) — £200 a month per
   company including 1,000 credits (placeholders until the cost audit); every
   piece of paid work uses credits at a price set in Admin → Settings → Credit

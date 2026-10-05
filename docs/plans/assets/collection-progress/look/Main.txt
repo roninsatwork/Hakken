@@ -1,0 +1,12 @@
+# Admin → Websites → Collection pipeline — the approved look (board "Main" of docs/plans/assets/collection-progress/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Collection pipeline
+search: Find a company or website…
+filter: Show
+table: Collection | Progress | Doing now | Time left | Cost so far | Credits
+  table-footer
+search: Search by website or client...
+filter: State
+table: Website | Asked for | State | When | Cost
+  table-footer

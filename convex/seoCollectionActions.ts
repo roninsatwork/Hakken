@@ -52,7 +52,8 @@ import type { Id } from "./_generated/dataModel";
 export type SendOutcome =
   | { kind: "SENT"; count: number }
   | { kind: "EMPTY"; nextDueAt: number | null }
-  | { kind: "CAPPED" }
+  /** Today's ceiling for all collecting is reached (`seoCollectionLimits.ts`); nothing was claimed. */
+  | { kind: "CAPPED"; reason: string }
   /** DataForSEO said "not now" — a rate limit or "unavailable". Nothing was taken or counted. */
   | { kind: "REFUSED"; reason: string }
   /** DataForSEO refused the account, or it is not set up. Nothing was taken; nothing will be until a person fixes it. */
@@ -77,8 +78,8 @@ export async function sendNextBatch(
   args: {
     workerId: string;
     runId: Id<"agentRuns">;
-    /** When the Collector's run ends: a supplier's refusal is asked again only before it. */
-    runEndsAt: number;
+    /** Until when a supplier's refusal may be asked again (`SEO_SUPPLIER_RETRY_WINDOW_MS` from now). */
+    retryUntil: number;
   },
 ): Promise<SendOutcome> {
   const claim = await ctx.runMutation(internal.seoCollectionQueue.claimSeoBatch, {
@@ -86,7 +87,7 @@ export async function sendNextBatch(
     runId: args.runId,
   });
 
-  if (claim.capped) return { kind: "CAPPED" };
+  if (claim.capped) return { kind: "CAPPED", reason: claim.cappedReason ?? "today's limit for all collecting is reached" };
   if (claim.pulls.length === 0) return { kind: "EMPTY", nextDueAt: claim.nextDueAt };
   const claimedIds = claim.pulls.map((pull) => pull.pullId);
   const release = async (pullIds: Id<"seoDataPulls">[], reason: string, countAttempt: boolean) => {
@@ -122,7 +123,6 @@ export async function sendNextBatch(
   });
   const sending = claim.pulls.filter((pull) => marked.includes(pull.pullId));
   if (sending.length === 0) return { kind: "SENT", count: 0 };
-  const sendingIds = sending.map((pull) => pull.pullId);
 
   const pingbackUrl = seoPingbackUrl();
   const tasks = sending.map((pull) => ({
@@ -136,37 +136,55 @@ export async function sendNextBatch(
       : {}),
   }));
 
-  let envelope: DataForSeoEnvelope;
-  try {
-    envelope = await postDataForSeoTasks(
-      operation.path,
-      tasks,
-      credentials,
-      operation.mode === "LIVE" ? { timeoutMs: LIVE_REQUEST_TIMEOUT_MS } : {},
-    );
-  } catch (error) {
+  // A queued batch is one request; live requests go one task each, all at once
+  // (`SEO_LIVE_AT_ONCE`), and each request's fate is its own.
+  const requests = operation.mode === "LIVE"
+    ? sending.map((pull, index) => ({ pulls: [pull], tasks: [tasks[index]] }))
+    : [{ pulls: sending, tasks }];
+  const posted = await Promise.all(requests.map(async (request) => {
+    try {
+      const envelope: DataForSeoEnvelope = await postDataForSeoTasks(
+        operation.path,
+        request.tasks,
+        credentials,
+        operation.mode === "LIVE" ? { timeoutMs: LIVE_REQUEST_TIMEOUT_MS } : {},
+      );
+      return { ok: true as const, pulls: request.pulls, envelope };
+    } catch (error) {
+      return { ok: false as const, pulls: request.pulls, error };
+    }
+  }));
+
+  let accountReason: string | null = null;
+  let refusedReason: string | null = null;
+  const answered: typeof sending = [];
+  const outcomes: ReturnType<typeof readDataForSeoBatch> = new Map();
+  for (const post of posted) {
+    const ids = post.pulls.map((pull) => pull.pullId);
+    if (post.ok) {
+      for (const [tag, outcome] of readDataForSeoBatch(post.envelope)) outcomes.set(tag, outcome);
+      answered.push(...post.pulls);
+      continue;
+    }
+    const error = post.error;
     if (error instanceof DataForSeoBackoff) {
-      await release(sendingIds, error.message, false);
-      return { kind: "REFUSED", reason: error.message };
-    }
-    if (error instanceof DataForSeoAccountError) {
-      await release(sendingIds, error.message, false);
-      return { kind: "ACCOUNT", reason: error.message };
-    }
-    if (error instanceof DataForSeoUncertain) {
+      await release(ids, error.message, false);
+      refusedReason ??= error.message;
+    } else if (error instanceof DataForSeoAccountError) {
+      await release(ids, error.message, false);
+      accountReason ??= error.message;
+    } else if (error instanceof DataForSeoUncertain) {
       await ctx.runMutation(internal.seoCollectionQueue.failUncertainSends, {
-        pullIds: sendingIds,
+        pullIds: ids,
         reason: error.message,
         runId: args.runId,
       });
-      return { kind: "SENT", count: 0 };
+    } else {
+      // A plain refusal of the whole request: nothing was taken, and it may be tried again.
+      await release(ids, getErrorMessage(error), true);
     }
-    // A plain refusal of the whole request: nothing was taken, and it may be tried again.
-    await release(sendingIds, getErrorMessage(error), true);
-    return { kind: "SENT", count: 0 };
   }
 
-  const outcomes = readDataForSeoBatch(envelope);
   const results: Array<{
     pullId: Id<"seoDataPulls">;
     taskId?: string;
@@ -180,11 +198,9 @@ export async function sendNextBatch(
   const unmentioned: Id<"seoDataPulls">[] = [];
   const notTaken: Id<"seoDataPulls">[] = [];
   const askAgain: Id<"seoDataPulls">[] = [];
-  let accountReason: string | null = null;
-  let refusedReason: string | null = null;
   let supplierReason: string | null = null;
 
-  for (const pull of sending) {
+  for (const pull of answered) {
     const outcome = outcomes.get(pull.tag);
     if (!outcome) {
       unmentioned.push(pull.pullId);
@@ -235,7 +251,7 @@ export async function sendNextBatch(
     await ctx.runMutation(internal.seoSupplierRetry.retrySupplierRefusals, {
       pullIds: askAgain,
       reason: supplierReason ?? "DataForSEO's supplier was unavailable.",
-      retryUntil: args.runEndsAt,
+      retryUntil: args.retryUntil,
       runId: args.runId,
     });
   }

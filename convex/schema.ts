@@ -3249,8 +3249,14 @@ export default defineSchema({
      */
     maxInputTokens: v.optional(v.number()),
     maxRuntimeMs: v.optional(v.number()),
-    /** The cap on a run's spend, in US dollars. Was `maxCostGBP`. */
+    /**
+     * The cap on a run's spend, in US dollars. Was `maxCostGBP`. The DataForSEO
+     * Collector reads it as the limit per website in one collection
+     * (`seoCollectionLimits.ts`), its runs being as long as the queue.
+     */
     maxCostUsd: v.optional(v.number()),
+    /** The DataForSEO Collector's ceiling on everything it sends in a UK day, in US dollars. */
+    maxDailyCostUsd: v.optional(v.number()),
     avatar: v.optional(v.string()), // Optional icon/avatar
     modelId: v.string(), // Provider model identifier
     modelSelectionMode: v.optional(v.union(v.literal("inherit"), v.literal("override"))),

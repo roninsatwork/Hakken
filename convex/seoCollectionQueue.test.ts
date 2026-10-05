@@ -67,17 +67,18 @@ describe("claiming", () => {
     expect(second.pulls).toHaveLength(0);
   });
 
-  test("a live endpoint is sent one task per request, because it refuses the rest", async () => {
+  test("live requests are claimed five at a time, each to go as its own request", async () => {
     const t = harness();
-    await seedPull(t);
-    await seedPull(t);
+    for (let i = 0; i < 7; i++) await seedPull(t);
 
     // DataForSEO answered a batch of two live tasks with "You can set only one
-    // task at a time" on 2026-09-23, and the second was lost.
+    // task at a time" on 2026-09-23, so each still goes alone — five at once
+    // since 2026-10-05, because one after another forty AI questions took four
+    // minutes (`seoCollectionActions.ts` sends one request each).
     const first = await t.mutation(internal.seoCollectionQueue.claimSeoBatch, { workerId: "one" });
     const second = await t.mutation(internal.seoCollectionQueue.claimSeoBatch, { workerId: "two" });
-    expect(first.pulls).toHaveLength(1);
-    expect(second.pulls).toHaveLength(1);
+    expect(first.pulls).toHaveLength(5);
+    expect(second.pulls).toHaveLength(2);
   });
 
   test("a batch is all one operation, because one request is one endpoint", async () => {
@@ -114,43 +115,92 @@ describe("claiming", () => {
     expect(claim.nextDueAt).toBeNull();
   });
 
-  test("the Collector stops at its spend limit, and the rest waits for its next run", async () => {
+  test("a website past its limit in its collection is not bought, says why, and the rest goes", async () => {
     const t = harness();
-    const agent = await t.run(async (ctx) =>
+    const { cycleId, cheap, dear } = await t.run(async (ctx) => {
       await ctx.db.insert("agents", {
-        name: "Anything",
-        // Not a real model id: nothing here calls a model, and a literal one
-        // would be a runtime model choice hidden in a fixture.
-        modelId: "test-model",
-        thinkingMode: false,
-        isActive: true,
-        systemKey: "DATAFORSEO_COLLECTOR",
-        maxCostUsd: 1,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      } as never));
-    const run = (costUsd: number) => t.run(async (ctx) =>
+        name: "Collector", modelId: "test-model", thinkingMode: false, isActive: true,
+        systemKey: "DATAFORSEO_COLLECTOR", maxCostUsd: 3, createdAt: Date.now(), updatedAt: Date.now(),
+      } as never);
+      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now() });
+      const cycleId = await ctx.db.insert("seoCollectionCycles", {
+        companyId, trigger: "MANUAL", status: "SENDING", plannedCount: 2, reusedCount: 0, sentCount: 0,
+        readyCount: 0, failedCount: 0, totalCostUsd: 0, startedAt: Date.now(),
+      });
+      const site = (host: string) => ctx.db.insert("websites", { host, displayHost: host, firstSeenAt: Date.now() });
+      const cheap = await site("cheap.com");
+      const dear = await site("dear.com");
+      // A site crawl costs $1.50: dear.com has already cost $2 in this collection.
+      await ctx.db.insert("seoOperationCosts", { operationId: "site_crawl", charged: 2, totalUsd: 3, lastUsd: 1.5, updatedAt: Date.now() });
+      await ctx.db.insert("seoCycleSpend", { cycleId, websiteId: dear, spentUsd: 2 });
+      return { cycleId, cheap, dear };
+    });
+    const crawl = async (websiteId: Id<"websites">, target: string) => await t.run(async (ctx) => await ctx.db.insert("seoDataPulls", {
+      operationId: "site_crawl", family: "On-Page", mode: "QUEUED", taskArgsJson: "{}", status: "PENDING",
+      tag: `tag-${target}`, dueAt: Date.now() - 1000, attempts: 0, costUsd: 0, sandbox: false,
+      submittedAt: Date.now(), cycleId, websiteId, target,
+    }));
+    const dearCrawl = await crawl(dear, "dear.com");
+    const cheapCrawl = await crawl(cheap, "cheap.com");
+
+    const claim = await t.mutation(internal.seoCollectionQueue.claimSeoBatch, { workerId: "one" });
+
+    expect(claim.pulls.map((row) => row.pullId)).toEqual([cheapCrawl]);
+    const held = await pull(t, dearCrawl);
+    expect(held?.status).toBe("FAILED");
+    expect(held?.error).toMatch(/^Not bought: dear\.com has cost \$2\.00 in this collection, and this request \(about \$1\.50\) would take it past the \$3\.00 limit for one website\./);
+    const cycle = await t.run(async (ctx) => await ctx.db.get(cycleId));
+    expect(cycle?.failedCount).toBe(1);
+  });
+
+  test("what a request costs is added to its website's spend in its collection, once", async () => {
+    const t = harness();
+    const { cycleId, websiteId, rowId } = await t.run(async (ctx) => {
+      const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: Date.now() });
+      const cycleId = await ctx.db.insert("seoCollectionCycles", {
+        companyId, trigger: "MANUAL", status: "SENDING", plannedCount: 1, reusedCount: 0, sentCount: 0,
+        readyCount: 0, failedCount: 0, totalCostUsd: 0, startedAt: Date.now(),
+      });
+      const websiteId = await ctx.db.insert("websites", { host: "a.com", displayHost: "a.com", firstSeenAt: Date.now() });
+      const rowId = await ctx.db.insert("seoDataPulls", {
+        operationId: "backlinks_summary", family: "Backlinks", mode: "QUEUED", taskArgsJson: "{}", status: "CLAIMED",
+        tag: "tag-a", dueAt: Date.now(), attempts: 0, costUsd: 0, sandbox: false, submittedAt: Date.now(),
+        cycleId, websiteId, claimedBy: "one", postedAt: Date.now(),
+      });
+      return { cycleId, websiteId, rowId };
+    });
+
+    await t.mutation(internal.seoCollectionQueue.settleSeoSend, { pullId: rowId, taskId: "task-a", costUsd: 0.25, sandbox: false, ready: false });
+    // Settled twice — a retried record — it is still counted once.
+    await t.mutation(internal.seoCollectionQueue.settleSeoSend, { pullId: rowId, taskId: "task-a", costUsd: 0.25, sandbox: false, ready: false });
+
+    const spend = await t.run(async (ctx) => await ctx.db.query("seoCycleSpend").collect());
+    expect(spend).toMatchObject([{ cycleId, websiteId, spentUsd: 0.25 }]);
+  });
+
+  test("at today's ceiling nothing is claimed, the rows wait, and it says why", async () => {
+    const t = harness();
+    await t.run(async (ctx) => {
+      const agentId = await ctx.db.insert("agents", {
+        name: "Collector", modelId: "test-model", thinkingMode: false, isActive: true,
+        systemKey: "DATAFORSEO_COLLECTOR", maxDailyCostUsd: 100, createdAt: Date.now(), updatedAt: Date.now(),
+      } as never);
       await ctx.db.insert("agentRuns", {
-        agentId: agent,
-        triggerType: "MANUAL",
-        objective: "collect",
-        status: "RUNNING",
-        costUsd,
-        startedAt: Date.now(),
-        updatedAt: Date.now(),
-      } as never));
-    await seedPull(t);
+        agentId, triggerType: "MANUAL", objective: "collect", status: "SUCCESS", costUsd: 100.42,
+        startedAt: Date.now(), updatedAt: Date.now(),
+      } as never);
+    });
+    const waiting = await seedPull(t);
 
-    // Checked before every batch against what this run has already spent.
-    const spent = await t.mutation(internal.seoCollectionQueue.claimSeoBatch, { workerId: "one", runId: await run(1) });
-    expect(spent).toMatchObject({ pulls: [], capped: true });
+    const claim = await t.mutation(internal.seoCollectionQueue.claimSeoBatch, { workerId: "one" });
+
+    expect(claim).toMatchObject({ pulls: [], capped: true });
+    expect(claim.cappedReason).toBe(
+      "today's $100.00 limit for all collecting is reached ($100.42 spent). The rest waits and goes after midnight, "
+      + "or as soon as the limit is raised on the Collector's Settings",
+    );
     // Nothing is marked on the queue: the row simply waits.
-    expect((await t.run(async (ctx) => await ctx.db.query("seoDataPulls").collect()))[0].status)
-      .toBe("PENDING");
-
-    // A fresh run starts with its limit untouched and takes it.
-    const fresh = await t.mutation(internal.seoCollectionQueue.claimSeoBatch, { workerId: "two", runId: await run(0) });
-    expect(fresh.pulls).toHaveLength(1);
+    expect((await pull(t, waiting))?.status).toBe("PENDING");
   });
 
   test("a call settled on the Collector's run lands in its cost and its log", async () => {

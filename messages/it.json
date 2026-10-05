@@ -3314,12 +3314,15 @@
                 "label": "Budget di Esecuzione",
                 "hint": "Il limite per una singola esecuzione. È ciò che ferma un agente autonomo, quindi conta soprattutto quando l'approvazione è disattivata. Lascia un campo vuoto per usare il valore predefinito della piattaforma.",
                 "inherits": "Predefinito {value} · massimo {ceiling}",
+                "perWebsite": "Quanto possono costare le richieste di un sito web in una raccolta. Una richiesta che lo supererebbe non viene acquistata, e lo dice. Predefinito {value} · massimo {ceiling}",
+                "overCeiling": "Massimo {ceiling}. Una cifra più alta viene salvata come {ceiling}.",
                 "fields": {
                   "maxSteps": "Passaggi",
                   "maxToolCalls": "Chiamate strumenti",
                   "maxInputTokens": "Budget token",
                   "maxRuntimeMinutes": "Minuti",
-                  "maxCostUsd": "Spesa ($)"
+                  "maxCostUsd": "Spesa ($)",
+                  "maxCostUsdPerWebsite": "Spesa per sito web ($)"
                 }
               },
               "status": {
@@ -3379,6 +3382,10 @@
                 "liveHint": "Operativa: ogni esecuzione aggiunge solo ciò che è dovuto secondo la cadenza di ogni azienda.",
                 "digestTestHint": "Test: ogni esecuzione scrive un numero e lo invia solo ai super admin, così lo vedi prima di qualsiasi cliente.",
                 "digestLiveHint": "Live: una volta a settimana, il numero va a ogni utente che ha attivo il Digest settimanale delle notizie."
+              },
+              "daily": {
+                "label": "Spesa al giorno ($)",
+                "hint": "Tutto ciò che il Collector invia in un giorno (ora del Regno Unito). Raggiunto il limite, l'invio attende la mezzanotte, o riprende appena lo alzi qui. Vuoto significa nessun limite."
               }
             },
             "status": {
@@ -5747,10 +5754,10 @@
         "FAILED": "Non riuscita"
       },
       "pull": {
-        "PENDING": "In attesa",
-        "CLAIMED": "In invio",
-        "SUBMITTED": "Inviata",
-        "READY": "Raccolta",
+        "PENDING": "In attesa di invio",
+        "CLAIMED": "Invio in corso",
+        "SUBMITTED": "Inviata, in attesa della risposta",
+        "READY": "Tornata",
         "FAILED": "Non riuscita"
       },
       "operation": {
@@ -5779,7 +5786,7 @@
         "backlinks_history": "Storico dei link (non più raccolto)",
         "ranking_history": "Storico dei posizionamenti (non più raccolto)"
       },
-      "queueCounts": "{pending} in attesa · {claimed} in invio · {submitted} in attesa di risposta",
+      "queueCounts": "{pending} in attesa di invio · {claimed} in invio · {submitted} inviate, in attesa di risposta",
       "attempts": "{count} tentativo/i finora",
       "sandbox": "Sandbox",
       "queueSubtitle": "Non c'è nulla in attesa di invio.",
@@ -5802,6 +5809,128 @@
       "lastTry": "Ultimo tentativo: {said}",
       "tooLarge": "Troppo grande da conservare: non è stato archiviato nulla",
       "rowsLeftOff": "{count, plural, one {# riga lasciata} other {# righe lasciate}} fuori per farla stare",
+      "now": {
+        "title": "Raccolta in corso",
+        "headline": {
+          "SENDING": "Invio automatico in corso",
+          "WORKING": "Lavoro automatico in corso",
+          "IDLE": "Nessuna raccolta",
+          "NEEDS_YOU": "Serve il tuo intervento"
+        },
+        "line": {
+          "SENDING": "Invio della raccolta di {company}. {collections, plural, =0 {Nessuna raccolta} one {# raccolta} other {# raccolte}} e {downloads, plural, =0 {nessun download da Search Console} one {# download da Search Console} other {# download da Search Console}} in corso, e nulla aspetta nessuno.",
+          "WORKING": "{collections, plural, =0 {Nessuna raccolta} one {# raccolta} other {# raccolte}} e {downloads, plural, =0 {nessun download da Search Console} one {# download da Search Console} other {# download da Search Console}} in corso. Tutto è inviato e le risposte stanno arrivando; nulla aspetta nessuno.",
+          "IDLE": "Nessuna raccolta in corso. Una raccolta parte secondo la pianificazione dell'azienda, o con Raccogli ora nella sua pagina Pianificazioni."
+        },
+        "searchPlaceholder": "Cerca un'azienda o un sito web…",
+        "show": {
+          "label": "Mostra",
+          "IN_PROGRESS": "In corso",
+          "FINISHED_TODAY": "Finite oggi",
+          "EVERYTHING": "Tutto",
+          "search": "Filtra…",
+          "noMatches": "Nessuna corrispondenza."
+        },
+        "bar": "{count, plural, one {# in corso} other {# in corso}}",
+        "barAll": "{count, plural, one {# esecuzione} other {# esecuzioni}}",
+        "columns": {
+          "collection": "Raccolta",
+          "progress": "Avanzamento",
+          "doing": "In corso ora",
+          "left": "Tempo rimanente",
+          "cost": "Costo finora",
+          "credits": "Crediti"
+        },
+        "how": {
+          "COLLECT_NOW": "Raccogli ora",
+          "SCHEDULE": "Secondo la pianificazione",
+          "PLANNER_TEST": "Il Planner, in Prova",
+          "FIRST_DAYS": "Primi 90 giorni",
+          "NEWEST_DAYS": "Giorni più recenti"
+        },
+        "started": "{how} · iniziata alle {time}",
+        "startedBy": "{how} · iniziata alle {time} da {name}",
+        "ran": "{how} · dalle {start} alle {end}",
+        "searchConsole": "Search Console — {host}",
+        "count": {
+          "back": "{back} di {planned} tornate",
+          "out": "{count} in attesa",
+          "toSend": "{count} da inviare",
+          "failed": "{count} non acquistate o fallite",
+          "days": "{done} di {total} giorni",
+          "rows": "{count} righe"
+        },
+        "state": {
+          "WRITING": "Scrittura dell'elenco di lavoro",
+          "SENDING": "Invio in corso",
+          "WAITING_TO_SEND": "Avvio dell'invio",
+          "ANSWERS": "In attesa delle risposte",
+          "CLOSING": "Chiusura",
+          "DONE": "Completata alle {time}",
+          "DONE_EMPTY": "Completata: Google non aveva nulla",
+          "NEEDS_YOU": "Serve il tuo intervento",
+          "STOPPED": "Interrotta",
+          "DOWNLOADING": "Download in corso"
+        },
+        "doing": {
+          "sending": "{host} — {operation}",
+          "writing": "Cosa chiedere per ogni sito web e concorrente",
+          "waitingToSend": "Il Collector parte entro pochi minuti",
+          "out": "{count} in attesa da {duration}: {operation} — {hosts}",
+          "outNoHosts": "{count} in attesa da {duration}: {operation}",
+          "closing": "Tutte le risposte sono tornate: conteggio dei crediti e calcolo dei dati di Discovery",
+          "reused": "{count} servite da dati già disponibili",
+          "googleEmpty": "Nessun clic né impressione in questi giorni. Vale la pena controllare in Search Console.",
+          "stoppedPlan": "Interrotta al limite del piano dell'azienda"
+        },
+        "left": {
+          "send": "Circa {minutes} min per l'invio",
+          "sendSoon": "Meno di un minuto per l'invio",
+          "thenOut": "Poi le risposte: {typical}",
+          "usually": "Di solito circa {duration}",
+          "usuallyUnknown": "La maggior parte delle risposte arriva in pochi minuti",
+          "givesUp": "Abbandonata alle {time} se non risponde",
+          "writing": "Un minuto o due",
+          "closing": "Entro un minuto",
+          "finished": "Completata",
+          "downloading": "Circa {minutes} min",
+          "downloadingSoon": "Meno di un minuto",
+          "waitsForYou": "In attesa di te",
+          "nothingLost": "Nulla va perso: ciò che resta rimane in coda"
+        },
+        "cost": {
+          "real": "Costo reale",
+          "free": "Gratuito",
+          "freeLine": "Google non addebita nulla"
+        },
+        "credits": {
+          "counting": "Contati alla fine",
+          "counted": "In Utilizzo",
+          "none": "Nessun credito"
+        },
+        "steps": {
+          "label": "I suoi passaggi",
+          "written": "Elenco di lavoro scritto",
+          "writtenLine": "{count, plural, one {# richiesta} other {# richieste}}, {reused} servite da dati già disponibili",
+          "sending": "Invio: {sent} di {planned}",
+          "sendingLine": "Domande all'AI cinque alla volta; il resto cento alla volta",
+          "sent": "Tutto inviato",
+          "answers": "Risposte",
+          "answersLine": "{back} tornate, {out} in attesa",
+          "closes": "Chiusura",
+          "closesLine": "Crediti contati in Utilizzo; dati di Discovery e resoconto dell'esecuzione calcolati",
+          "closed": "Chiusa",
+          "downloaded": "{done} di {total} giorni salvati",
+          "downloadedLine": "{rows} righe di ricerche e pagine",
+          "now": "ora",
+          "next": "dopo",
+          "then": "poi",
+          "open": "Apri questa raccolta, riga per riga"
+        },
+        "empty": "Nessuna raccolta in corso.",
+        "emptyFinished": "Nulla è finito oggi.",
+        "noMatch": "Nessuna corrispondenza per questa ricerca."
+      },
       "notFoundTitle": "Esecuzione non trovata"
     },
     "seoCosts": {

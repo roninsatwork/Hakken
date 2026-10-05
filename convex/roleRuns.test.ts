@@ -5,6 +5,7 @@ import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { RUN_STALLED } from "./roleRuns";
 import schema from "./schema";
+import { appendRunStep } from "./agentRunStepWriter";
 
 /**
  * The News agents' groundwork (docs/plans/active/knowledge-news-and-digest-
@@ -190,6 +191,24 @@ describe("a run that died", () => {
     expect(await read(deadSeo)).toMatchObject({ status: "FAILED", finalOutput: RUN_STALLED });
     expect(await read(done)).toMatchObject({ status: "SUCCESS" });
     expect(await read(recent)).toMatchObject({ status: "RUNNING" });
+  });
+
+  test("is judged by its last step, so a long run still moving is left going (2026-10-05)", async () => {
+    const t = harness();
+    // Search Console's first ninety days for a large website take some forty
+    // minutes; judged by its start, the hourly check closed it while it worked.
+    const { agentId } = await setup(t, "SEARCH_CONSOLE_COLLECTOR");
+    const moving = await startRun(t, agentId, Date.now() - 45 * 60 * 1000, "RUNNING");
+    await t.run(async (ctx) => {
+      const run = (await ctx.db.get(moving))!;
+      await appendRunStep(ctx, { runId: moving, agentId: run.agentId, kind: "OBSERVE", status: "SUCCESS", output: "a week of days" });
+    });
+
+    await t.mutation(internal.seoCollectionSweep.sweepDuty, { duty: "stalledRuns" });
+
+    expect(await t.run(async (ctx) => await ctx.db.get(moving))).toMatchObject({ status: "RUNNING" });
+    const next = await startRun(t, agentId);
+    expect((await t.mutation(internal.roleRuns.takeRoleTurn, { runId: next })).ok).toBe(false);
   });
 });
 

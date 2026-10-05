@@ -116,6 +116,12 @@ export function creditMonthOf(at: number): { month: string; startsAt: number; en
   return { month: day.slice(0, 7), startsAt: ukMidnight(year, monthIndex, 1), endsAt: ukMidnight(year, monthIndex + 1, 1) };
 }
 
+/** When the UK day a moment falls in started: its midnight. */
+export function ukDayStart(at: number): number {
+  const day = creditDayOf(at);
+  return ukMidnight(Number(day.slice(0, 4)), Number(day.slice(5, 7)) - 1, Number(day.slice(8, 10)));
+}
+
 /** A month named `YYYY-MM`, and when it starts and ends in the UK. */
 export function creditMonthNamed(month: string): { month: string; startsAt: number; endsAt: number } {
   return creditMonthOf(ukMidnight(Number(month.slice(0, 4)), Number(month.slice(5, 7)) - 1, 15));

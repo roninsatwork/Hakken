@@ -413,6 +413,15 @@ drifted from the app: "We cannot go through this with every agent").
   `border-b border-border-dim pb-6` — the header components own the title recipe
   and that line, and the build refuses both. Full detail in
   `docs/developer/screen-kit.md` under "Headers".
+- **No queue waits on a person to press a button** (Anthony, 2026-10-05:
+  "this is not a SaaS if we have to babysit this each time"). Work that stops
+  at a time limit hands itself on — the DataForSEO Collector's run is one
+  continuous send in steps, each booking the next and a watch past the
+  longest an action lives (`convex/seoCollectorRun.ts`) — and only what a
+  person must fix stops it, saying what to do. A limit is per thing (per
+  website, per day), never per run, and a run is judged alive by its last
+  step, never its start (`convex/roleRuns.ts`). Never "fix" a stall with a
+  retry the person sees. See `docs/plans/active/collection-progress-plan.md`.
 - Preserve tenant isolation in Convex queries and mutations. Scope non-super-admin access by company.
 - A company's tracked Google searches and AI questions are its own
   (Anthony, 2026-09-25; `docs/plans/active/private-tracking-lists-plan.md`).

@@ -17,6 +17,7 @@ import {
 } from "./seoCollectionQueue";
 import { dropUnsentRequest } from "./seoCollectionClose";
 import { closeStalledRoleRuns } from "./roleRuns";
+import { sendLongWaiting } from "./seoAgentRuns";
 
 /**
  * The hourly walk round the kitchen.
@@ -24,7 +25,9 @@ import { closeStalledRoleRuns } from "./roleRuns";
  * Housekeeping only. It neither plans nor sends: since 2026-09-23 the
  * DataForSEO Planner agent fills the queue and the Collector agent sends it,
  * and nothing else buys data. It used to restart the sending and open
- * collections for websites on their own schedule, both outside any agent.
+ * collections for websites on their own schedule, both outside any agent; it
+ * now starts a Collector run — the agent, never a send of its own — for
+ * requests left waiting a quarter of an hour (2026-10-05).
  *
  * Its duties, in the order they matter:
  *
@@ -33,7 +36,8 @@ import { closeStalledRoleRuns } from "./roleRuns";
  *  3. Give up on tasks that will never answer.
  *  4. Close cycles whose work is all settled.
  *  5. Close Planner and Collector runs that died without saying so.
- *  6. Clear raw payloads and cycles that have outlived their retention.
+ *  6. Start the Collector for requests left waiting with nothing sending.
+ *  7. Clear raw payloads and cycles that have outlived their retention.
  *
  * It never re-posts a task. A submitted task was paid for; if its result is
  * missing the answer is always to fetch it, never to buy it again.
@@ -52,7 +56,7 @@ import { closeStalledRoleRuns } from "./roleRuns";
  * transaction inside Convex's limits, and a duty takes pages until it is done,
  * its page budget is spent, or the check has run for `SWEEP_TIME_MS`.
  */
-const DUTIES = ["reclaim", "chase", "close", "resume", "refile", "stalledRuns", "purgeRaw", "purgeCycles"] as const;
+const DUTIES = ["reclaim", "chase", "close", "resume", "refile", "stalledRuns", "sendWaiting", "purgeRaw", "purgeCycles"] as const;
 type Duty = (typeof DUTIES)[number];
 const dutyValidator = v.union(...DUTIES.map((duty) => v.literal(duty)));
 
@@ -64,6 +68,7 @@ const PAGES_PER_DUTY: Record<Duty, number> = {
   resume: 1,
   refile: 10,
   stalledRuns: 1,
+  sendWaiting: 1,
   purgeRaw: 250,
   purgeCycles: 25,
 };
@@ -140,6 +145,10 @@ export const sweepDuty = internalMutation({
       case "stalledRuns":
         // Every role's runs, the News agents' too (`roleRuns.ts`).
         await closeStalledRoleRuns(ctx, now);
+        return FINISHED;
+      case "sendWaiting":
+        // The net under each Collector step's watch (`seoCollectorRun.ts`).
+        await sendLongWaiting(ctx, now);
         return FINISHED;
       case "purgeRaw":
         return await purgeExpiredRaw(ctx, now);
@@ -422,6 +431,15 @@ async function purgeExpiredCycles(ctx: MutationCtx, now: number): Promise<DutyPa
       writes += lines.length;
       // Only retire the cycle once its lines are gone, so an interrupted page
       // leaves orphaned lines rather than a cycle nobody will ever revisit.
+      if (writes >= RETIRE_WRITES) return { ...FINISHED, more: true };
+
+      // What each of its websites cost, kept for its limit (`seoCollectionLimits.ts`).
+      const spends = await ctx.db
+        .query("seoCycleSpend")
+        .withIndex("by_cycle_website", (q) => q.eq("cycleId", cycle._id))
+        .take(RETIRE_WRITES - writes);
+      for (const spend of spends) await ctx.db.delete(spend._id);
+      writes += spends.length;
       if (writes >= RETIRE_WRITES) return { ...FINISHED, more: true };
 
       const report = await ctx.db

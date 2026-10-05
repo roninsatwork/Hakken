@@ -22,14 +22,66 @@
 export const SEO_EXPANSION_PAGE = 100;
 
 /**
- * How long one Collector run keeps sending before it hands back.
+ * How long one step of the Collector's send keeps sending before it starts the
+ * next (docs/plans/active/collection-progress-plan.md, decision 1).
  *
- * Under Convex's ten-minute ceiling for an action, with room to finish the
- * batch in hand — a live call is waited for up to 130 seconds
- * (`LIVE_REQUEST_TIMEOUT_MS`) — and record the run. Whatever is left waits in
- * the queue for the Collector's next run.
+ * A run is one continuous send, as long as the queue: it goes in steps because
+ * an action stops at ten minutes. Five minutes leaves room to finish the batch
+ * in hand — a live call is waited for up to 130 seconds
+ * (`LIVE_REQUEST_TIMEOUT_MS`) — and start the next step. Until 2026-10-05 a run
+ * stopped here and the rest waited for the next night's run.
  */
-export const SEO_COLLECTOR_RUN_MS = 7 * 60 * 1000;
+export const SEO_COLLECTOR_STEP_MS = 5 * 60 * 1000;
+
+/**
+ * When a step's watch looks to see whether the step was lost.
+ *
+ * Booked with each step. No action outlives ten minutes, so a step neither
+ * finished nor followed by this is gone — a deploy or a restart stopped it —
+ * and the watch starts the next one. Never sooner, so a step still working is
+ * never doubled.
+ */
+export const SEO_COLLECTOR_WATCH_MS = 10.5 * 60 * 1000;
+
+/**
+ * The longest a step sleeps for the next request to come due: the gaps a
+ * collection is spaced by (`SEO_DUE_SPACING_MS`). A longer wait — a supplier's
+ * refusal asked again in a minute, two or three — is a step booked for then.
+ */
+export const SEO_COLLECTOR_SLEEP_MAX_MS = 30 * 1000;
+
+/**
+ * How far ahead a step is booked for the next request to come due, rather
+ * than the run ending.
+ */
+export const SEO_COLLECTOR_WAIT_AHEAD_MS = 10 * 60 * 1000;
+
+/**
+ * A run moved within this is alive, and a watch that fires — a booked step the
+ * platform started late — leaves it be. A step marks its run with every batch;
+ * none is quiet this long: a live call is waited for 130 seconds at most.
+ */
+export const SEO_COLLECTOR_QUIET_MS = 3 * 60 * 1000;
+
+/**
+ * How long a request asked again after a supplier's refusal may wait for its
+ * next try: the three waits (`SEO_SUPPLIER_RETRY_WAITS_MS`) and room to send.
+ */
+export const SEO_SUPPLIER_RETRY_WINDOW_MS = 10 * 60 * 1000;
+
+/**
+ * Live requests sent at once. A live endpoint takes one task per request, so
+ * forty AI questions one after another took four minutes; five at a time take
+ * under one (collection-progress-plan.md, decision 2).
+ */
+export const SEO_LIVE_AT_ONCE = 5;
+
+/**
+ * Requests due this long with no Collector sending are started by the hourly
+ * check — the last net under the step's watch, never the way anything is
+ * normally sent.
+ */
+export const SEO_WAITING_TOO_LONG_MS = 15 * 60 * 1000;
 
 /**
  * Tasks in one `task_post` request.
@@ -102,8 +154,8 @@ export const SEO_BACKOFF_MS = [10_000, 60_000, 300_000] as const;
  * charged nothing — Google over its limit for DataForSEO, all ten of Ronins'
  * questions to its engine on 2026-09-29 (Anthony: "don't we retry but slower"). A
  * minute, two, then three, inside the Collector's run while the rest of the
- * queue carries on; refused after the last, or with no run left for the next
- * wait, the request is failed and the next night's run asks again.
+ * queue carries on; refused after the last, the request is failed and the next
+ * night's run asks again.
  */
 export const SEO_SUPPLIER_RETRY_WAITS_MS = [60_000, 120_000, 180_000] as const;
 

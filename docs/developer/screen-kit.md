@@ -61,7 +61,7 @@ the set but i need to be told"):
 - `src/ui/components/screens/DownloadButton.tsx`: the quiet download button every table bar wears, saying what it is doing while the file is made; `saveTextFile` hands the file to the browser.
 - `src/ui/components/screens/NoFigure.tsx`: `NoFigure` — a figure a row has none of, as a muted dash in the tables' figure size (12px). Use it rather than writing a dash: eighteen screens wrote their own and left it at the page's 16px, taller than the numbers beside it (audit, 2026-10-04). `Change` draws it for no change.
 - `src/ui/components/screens/Change.tsx`: `Change` — a move in a table cell, "▲ 12", "▼ 0.8 places", "New", or a dash; `ChangeLine` — the colour rule for a figure's change sentence. The arrow carries the meaning; the colour only repeats it.
-- `src/ui/components/screens/Meter.tsx`: a share as a thin bar, always beside its number, coloured from `chartPalette.ts`.
+- `src/ui/components/screens/Meter.tsx`: a share as a thin bar, always beside its number, coloured from `chartPalette.ts`. `then` adds a lighter second band for work under way but not done — a collection's requests out, beside those back (Collection pipeline, 2026-10-05).
 - `SegmentedChoice` (in `SettingsCard.tsx`) gained `size="compact"`: as wide as its choices, for switching between views of one card or table. Sites' `SiteViewSwitch` is it.
 
 Two parts shared by one area rather than the whole app, in the narrowest folder their callers reach:

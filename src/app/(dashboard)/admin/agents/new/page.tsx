@@ -77,6 +77,7 @@ const emptyForm: AgentFormValues = {
   isActive: false,
   role: "NONE",
   plannerMode: "TEST",
+  maxDailyCostUsd: "",
 };
 
 export default function NewAgentPage() {

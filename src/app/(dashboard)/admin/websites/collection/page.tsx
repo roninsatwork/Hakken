@@ -18,6 +18,7 @@ import useDebounce from "@/src/hooks/useDebounce";
 import { useNow } from "@/src/hooks/useNow";
 import { formatDateTime } from "@/src/lib/dates";
 import { SiteMark } from "@/src/app/(dashboard)/app/sites/_components/SiteMark";
+import { useCollectingNow } from "./_components/CollectingNow";
 
 /**
  * Every DataForSEO pull, at whatever stage it has reached.
@@ -58,6 +59,8 @@ export default function SeoCollectionPage() {
   const debouncedSearch = useDebounce(searchTerm, 400);
 
   const counts = useQuery(api.seoCollectionReports.readSeoQueueCounts, {});
+  // What is going now, above every pull (collection-progress-plan.md, the approved drawing).
+  const collecting = useCollectingNow();
   const now = useNow();
   const pulls = useServerPagedTable(
     api.seoCollectionReports.listSeoPulls,
@@ -86,6 +89,22 @@ export default function SeoCollectionPage() {
       />
 
       <div className="flex flex-col gap-2">
+        <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">
+          {collecting.title}
+        </h2>
+        {collecting.headline ? (
+          <div className="flex flex-col gap-1">
+            <StatusLabel tone={collecting.headline.tone} icon={collecting.headline.icon} size="md" wrap>
+              {collecting.headline.words}
+            </StatusLabel>
+            <p className="max-w-3xl text-[13px] text-secondary">{collecting.headline.line}</p>
+          </div>
+        ) : null}
+      </div>
+
+      <DataTable {...collecting.table} footer={collecting.table.footer} />
+
+      <div className="flex flex-col gap-2 pt-4">
         <h2 className="text-[13px] font-semibold uppercase tracking-[0.12em] text-muted">
           {t("pullsTitle")}
         </h2>

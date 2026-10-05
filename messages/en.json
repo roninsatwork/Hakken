@@ -3314,12 +3314,15 @@
                 "label": "Run Budget",
                 "hint": "The limit on a single run. This is what stops an autonomous agent, so it matters most when approval is off. Leave a box empty to use the platform default.",
                 "inherits": "Default {value} · most {ceiling}",
+                "perWebsite": "What one website's requests in one collection may cost. A request that would take it past this is not bought, and says so. Default {value} · most {ceiling}",
+                "overCeiling": "Most {ceiling}. A higher figure is saved as {ceiling}.",
                 "fields": {
                   "maxSteps": "Steps",
                   "maxToolCalls": "Tool calls",
                   "maxInputTokens": "Token budget",
                   "maxRuntimeMinutes": "Minutes",
-                  "maxCostUsd": "Spend ($)"
+                  "maxCostUsd": "Spend ($)",
+                  "maxCostUsdPerWebsite": "Spend per website ($)"
                 }
               },
               "status": {
@@ -3379,6 +3382,10 @@
                 "liveHint": "Live: every run adds only what is due by each company's cadence.",
                 "digestTestHint": "Test: each run writes an issue and sends it to super admins only, so you see it before any customer does.",
                 "digestLiveHint": "Live: once a week, the issue goes to every user who has the Weekly News Digest on."
+              },
+              "daily": {
+                "label": "Spend a day ($)",
+                "hint": "Everything the Collector sends in a UK day. Once it is reached, sending waits until midnight, or carries on as soon as you raise it here. Empty means no ceiling."
               }
             },
             "status": {
@@ -5747,10 +5754,10 @@
         "FAILED": "Failed"
       },
       "pull": {
-        "PENDING": "Waiting",
-        "CLAIMED": "Being sent",
-        "SUBMITTED": "Sent",
-        "READY": "Collected",
+        "PENDING": "Waiting to send",
+        "CLAIMED": "Sending",
+        "SUBMITTED": "Out, waiting for the answer",
+        "READY": "Back",
         "FAILED": "Failed"
       },
       "operation": {
@@ -5779,7 +5786,7 @@
         "backlinks_history": "Link history (no longer collected)",
         "ranking_history": "Ranking history (no longer collected)"
       },
-      "queueCounts": "{pending} waiting · {claimed} being sent · {submitted} awaiting an answer",
+      "queueCounts": "{pending} waiting to send · {claimed} sending · {submitted} out, waiting for an answer",
       "attempts": "{count} attempt(s) so far",
       "sandbox": "Sandbox",
       "queueSubtitle": "Nothing is waiting to go out.",
@@ -5802,6 +5809,128 @@
       "lastTry": "Last try: {said}",
       "tooLarge": "Too large to keep, so nothing was filed",
       "rowsLeftOff": "{count, plural, one {# row} other {# rows}} left off to fit",
+      "now": {
+        "title": "Collecting now",
+        "headline": {
+          "SENDING": "Sending on its own",
+          "WORKING": "Working on its own",
+          "IDLE": "Nothing collecting",
+          "NEEDS_YOU": "Needs you"
+        },
+        "line": {
+          "SENDING": "Sending {company}'s collection. {collections, plural, =0 {No collections} one {# collection} other {# collections}} and {downloads, plural, =0 {no Search Console downloads} one {# Search Console download} other {# Search Console downloads}} going, and nothing is waiting on anyone.",
+          "WORKING": "{collections, plural, =0 {No collections} one {# collection} other {# collections}} and {downloads, plural, =0 {no Search Console downloads} one {# Search Console download} other {# Search Console downloads}} going. Everything is sent and the answers are coming in; nothing is waiting on anyone.",
+          "IDLE": "Nothing is collecting right now. A collection starts on its company's schedule, or with Collect now on the company's Schedules page."
+        },
+        "searchPlaceholder": "Find a company or website…",
+        "show": {
+          "label": "Show",
+          "IN_PROGRESS": "In progress",
+          "FINISHED_TODAY": "Finished today",
+          "EVERYTHING": "Everything",
+          "search": "Filter…",
+          "noMatches": "Nothing matches that."
+        },
+        "bar": "{count, plural, one {# going now} other {# going now}}",
+        "barAll": "{count, plural, one {# run} other {# runs}}",
+        "columns": {
+          "collection": "Collection",
+          "progress": "Progress",
+          "doing": "Doing now",
+          "left": "Time left",
+          "cost": "Cost so far",
+          "credits": "Credits"
+        },
+        "how": {
+          "COLLECT_NOW": "Collect now",
+          "SCHEDULE": "On its schedule",
+          "PLANNER_TEST": "The Planner, in Test",
+          "FIRST_DAYS": "First 90 days",
+          "NEWEST_DAYS": "Newest days"
+        },
+        "started": "{how} · started {time}",
+        "startedBy": "{how} · started {time} by {name}",
+        "ran": "{how} · {start} to {end}",
+        "searchConsole": "Search Console — {host}",
+        "count": {
+          "back": "{back} of {planned} back",
+          "out": "{count} out",
+          "toSend": "{count} to send",
+          "failed": "{count} not bought or failed",
+          "days": "{done} of {total} days",
+          "rows": "{count} rows"
+        },
+        "state": {
+          "WRITING": "Writing the work list",
+          "SENDING": "Sending",
+          "WAITING_TO_SEND": "Starting to send",
+          "ANSWERS": "Waiting for answers",
+          "CLOSING": "Closing",
+          "DONE": "Done at {time}",
+          "DONE_EMPTY": "Done: Google had nothing",
+          "NEEDS_YOU": "Needs you",
+          "STOPPED": "Stopped",
+          "DOWNLOADING": "Downloading"
+        },
+        "doing": {
+          "sending": "{host} — {operation}",
+          "writing": "What to ask for each website and competitor",
+          "waitingToSend": "The Collector starts within minutes",
+          "out": "{count} out for {duration}: {operation} — {hosts}",
+          "outNoHosts": "{count} out for {duration}: {operation}",
+          "closing": "Every answer is back: counting credits and building Discovery's figures",
+          "reused": "{count} served from data already held",
+          "googleEmpty": "No clicks or impressions in these days. Worth a look in Search Console itself.",
+          "stoppedPlan": "Stopped at the company's plan limit"
+        },
+        "left": {
+          "send": "About {minutes} min to send",
+          "sendSoon": "Under a minute to send",
+          "thenOut": "Then the answers: {typical}",
+          "usually": "Usually about {duration}",
+          "usuallyUnknown": "Most answers come within minutes",
+          "givesUp": "Given up at {time} if no answer",
+          "writing": "A minute or two",
+          "closing": "Within a minute",
+          "finished": "Finished",
+          "downloading": "About {minutes} min",
+          "downloadingSoon": "Under a minute",
+          "waitsForYou": "Waiting for you",
+          "nothingLost": "Nothing is lost: what is left stays queued"
+        },
+        "cost": {
+          "real": "Real cost",
+          "free": "Free",
+          "freeLine": "Google charges nothing"
+        },
+        "credits": {
+          "counting": "Counted at the end",
+          "counted": "On Usage",
+          "none": "No credits"
+        },
+        "steps": {
+          "label": "Its steps",
+          "written": "Work list written",
+          "writtenLine": "{count, plural, one {# request} other {# requests}}, {reused} served from data already held",
+          "sending": "Sending: {sent} of {planned}",
+          "sendingLine": "AI questions five at a time; the rest a hundred at a time",
+          "sent": "All sent",
+          "answers": "Answers",
+          "answersLine": "{back} back, {out} out",
+          "closes": "Closes",
+          "closesLine": "Credits counted on Usage; Discovery's figures and the run report built",
+          "closed": "Closed",
+          "downloaded": "{done} of {total} days stored",
+          "downloadedLine": "{rows} rows of searches and pages",
+          "now": "now",
+          "next": "next",
+          "then": "then",
+          "open": "Open this collection, line by line"
+        },
+        "empty": "Nothing is collecting right now.",
+        "emptyFinished": "Nothing has finished today.",
+        "noMatch": "Nothing matches that search."
+      },
       "notFoundTitle": "Run not found"
     },
     "seoCosts": {

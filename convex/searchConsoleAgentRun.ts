@@ -173,6 +173,8 @@ export const startSiteRun = internalMutation({
       status: "RUNNING",
       startedAt: now,
     });
+    // The days this run fetches, so Collection pipeline can say how far it has got.
+    if (connection) await ctx.db.patch(connection._id, { collecting: { runId, from: args.from, top: args.top } });
     await ctx.scheduler.runAfter(args.delayMs, internal.searchConsoleAgentRun.collectSiteStep, {
       runId,
       workflowExecutionId,

@@ -303,11 +303,12 @@ export const requestSeoPull = internalMutation({
       submittedAt: startedAt,
     });
 
-    // Only queued: the DataForSEO Collector agent sends it on its next run.
+    // Queued, and sent now: a Collector sending takes it in; with none going, one starts (2026-10-05).
+    await ctx.scheduler.runAfter(0, internal.seoAgentRuns.sendIfWaiting, {});
     return {
       ok: true,
       reused: false,
-      message: `Queued ${operation.id} for ${host}. The DataForSEO Collector sends it on its next run.`,
+      message: `Queued ${operation.id} for ${host}. The DataForSEO Collector sends it now.`,
     };
   },
 });

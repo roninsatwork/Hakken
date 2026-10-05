@@ -203,6 +203,12 @@ export const searchConsoleTables = {
     /** When the history last took a step: one quiet for an hour has stopped, and the daily job resumes it. */
     historyAt: v.optional(v.number()),
     lastCollectedAt: v.optional(v.number()),
+    /**
+     * The run collecting it now, and the days it fetches, newest first from
+     * `top` back to `from` — for Collection pipeline's progress
+     * (docs/plans/active/collection-progress-plan.md).
+     */
+    collecting: v.optional(v.object({ runId: v.id("agentRuns"), from: v.string(), top: v.string() })),
     /** What stopped the connection or its last collection; cleared when a collection goes right. */
     problem: v.optional(connectionProblemValidator),
     problemAt: v.optional(v.number()),

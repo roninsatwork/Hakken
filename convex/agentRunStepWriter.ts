@@ -32,6 +32,10 @@ export async function appendRunStep(
     .order("desc")
     .first();
   const now = Date.now();
+  // Each step marks its run as moving, so a run in many steps is judged by its
+  // last one rather than its start (`roleRuns.ts`, `ROLE_RUN_LIVE_MS`).
+  const run = await ctx.db.get(step.runId);
+  if (run && run.updatedAt < now) await ctx.db.patch(step.runId, { updatedAt: now });
   return await ctx.db.insert("agentRunSteps", {
     runId: step.runId,
     agentId: step.agentId,

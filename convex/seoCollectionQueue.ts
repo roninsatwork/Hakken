@@ -4,6 +4,7 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import {
   SEO_BATCH_SIZE,
+  SEO_LIVE_AT_ONCE,
   SEO_MAX_ATTEMPTS,
   SEO_MOVES_DELAY_MS,
   seoBackoffMs,
@@ -14,6 +15,7 @@ import { recordOperationCost } from "./websiteTrackingStats";
 import { appendRunStep } from "./agentRunStepWriter";
 import { storePullAnswer } from "./seoPullAnswers";
 import { creditCycleFinished, creditPullSettled } from "./creditHooks";
+import { holdToLimits, tallyWebsiteSpend } from "./seoCollectionLimits";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 /**
@@ -54,25 +56,19 @@ const claimedPull = v.object({
 export const claimSeoBatch = internalMutation({
   args: {
     workerId: v.string(),
-    /** The Collector's run, whose spend limit this batch must fit inside. */
+    /** The Collector's run the batch is sent on. */
     runId: v.optional(v.id("agentRuns")),
   },
   returns: v.object({
     pulls: v.array(claimedPull),
     /** When the next row comes due, if the queue is not empty but not ready. */
     nextDueAt: v.union(v.number(), v.null()),
-    /** The run has spent its limit; what is left waits for the next run. */
+    /** Today's ceiling for all collecting is reached; what is left waits (`seoCollectionLimits.ts`). */
     capped: v.boolean(),
+    cappedReason: v.optional(v.string()),
   }),
   handler: async (ctx, args) => {
     const now = Date.now();
-
-    // The Collector's spend limit, checked before every batch against what its
-    // run has already spent. Nothing is marked on the queue when it is reached:
-    // the rows stay waiting, and the next run of the Collector takes them.
-    if (args.runId && await runHasSpentItsLimit(ctx, args.runId)) {
-      return { pulls: [], nextDueAt: null, capped: true };
-    }
 
     const waitingNow = await ctx.db
       .query("seoDataPulls")
@@ -120,12 +116,17 @@ export const claimSeoBatch = internalMutation({
     const operationId = due[0].operationId;
     // A live endpoint takes one task per request and refuses the rest with
     // "You can set only one task at a time" — the first live run on 2026-09-23
-    // lost three pulls that way. Only a queued endpoint takes a batch.
-    const batchSize = due[0].mode === "LIVE" ? 1 : SEO_BATCH_SIZE;
-    // Never a batch that spends past what is left of the run's limit — a
-    // hundred site crawls is about $15 — judged on what this call has cost.
-    const affordable = args.runId ? await affordableRows(ctx, args.runId, operationId, batchSize) : batchSize;
-    const batch = due.filter((row) => row.operationId === operationId).slice(0, affordable);
+    // lost three pulls that way — so live requests go several at once, each
+    // its own request (`SEO_LIVE_AT_ONCE`). Only a queued endpoint takes a batch.
+    const batchSize = due[0].mode === "LIVE" ? SEO_LIVE_AT_ONCE : SEO_BATCH_SIZE;
+    // Never past a website's limit in its collection, nor the day's ceiling.
+    const held = await holdToLimits(ctx, due.filter((row) => row.operationId === operationId).slice(0, batchSize), async (row, error) => {
+      await ctx.db.patch(row._id, { status: "FAILED", error, completedAt: now });
+      await countSettled(ctx, row, "FAILED", 0, "SEND");
+    });
+    if (held.capped) return { pulls: [], nextDueAt: null, capped: true, cappedReason: held.capped };
+    if (held.send.length === 0) return { pulls: [], nextDueAt: now, capped: false };
+    const batch = held.send;
 
     const claimed: Array<typeof claimedPull.type> = [];
     for (const row of batch) {
@@ -190,49 +191,6 @@ async function stillWanted(ctx: MutationCtx, pull: Doc<"seoDataPulls">): Promise
 
 /** Companies sharing one call read to decide whether it is still wanted. */
 const LINES_READ_FOR_SWITCH = 50;
-
-/**
- * Whether the Collector's run has spent its agent's limit.
- *
- * The limit belongs to the agent that spends — the Collector — and is counted
- * per run, from the run's own cost. An agent with no limit set is not capped;
- * that is the platform's existing convention for `maxCostUsd`. One batch can
- * carry a run a little past the line, because the check comes before a batch
- * and a live batch is one call.
- */
-/**
- * How many requests of this call the run can still afford, from what the call
- * has cost on average. At least one while any limit is left, so a run always
- * moves; a call never priced yet goes as the batch it is.
- */
-async function affordableRows(
-  ctx: MutationCtx,
-  runId: Id<"agentRuns">,
-  operationId: string,
-  wanted: number,
-): Promise<number> {
-  const run = await ctx.db.get(runId);
-  const agent = run ? await ctx.db.get(run.agentId) : null;
-  const cap = agent?.maxCostUsd;
-  if (typeof cap !== "number" || cap <= 0) return wanted;
-  const price = await ctx.db
-    .query("seoOperationCosts")
-    .withIndex("by_operation", (q) => q.eq("operationId", operationId))
-    .unique();
-  if (!price || price.charged <= 0 || price.totalUsd <= 0) return wanted;
-  const left = cap - (run?.costUsd ?? 0);
-  // A hair of tolerance: $1.00 less $0.90 is $0.0999… in floating point.
-  return Math.max(1, Math.min(wanted, Math.floor(left / (price.totalUsd / price.charged) + 1e-9)));
-}
-
-async function runHasSpentItsLimit(ctx: MutationCtx, runId: Id<"agentRuns">): Promise<boolean> {
-  const run = await ctx.db.get(runId);
-  if (!run) return false;
-  const agent = await ctx.db.get(run.agentId);
-  const cap = agent?.maxCostUsd;
-  if (typeof cap !== "number" || cap <= 0) return false;
-  return (run.costUsd ?? 0) >= cap;
-}
 
 /**
  * Put a batch back because DataForSEO said "not now".
@@ -700,6 +658,7 @@ export async function countSettled(
 
   await bumpRollup(ctx, "platform", day, status, costUsd, phase);
   if (row.companyId) await bumpRollup(ctx, `company:${row.companyId}`, day, status, costUsd, phase);
+  await tallyWebsiteSpend(ctx, row, costUsd);
 
   // Only once the answer exists is it worth anything to anyone else.
   if (status === "READY") await creditReusers(ctx, row, day, costUsd);

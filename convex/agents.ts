@@ -37,6 +37,8 @@ import { evalFixtureTypes as EVAL_FIXTURE_TYPE_ORDER, type EvalFixtureType as Ag
 import { validateAdminImageMetadata, validateStoredUpload } from "./utils/uploadPolicy";
 import { agentRoleChoiceValidator } from "./utils/agentRoles";
 import { applyAgentRole } from "./agentRoles";
+import { internal } from "./_generated/api";
+import { clampDailyCeiling } from "./seoCollectionLimits";
 
 const AGENT_CATALOG_LIMIT = 500;
 const DEFAULT_MODEL_LIMIT = 10;
@@ -1111,6 +1113,8 @@ export const updateAgent = superAdminMutation({
     /** The agent's job, from the Role dropdown — see convex/agentRoles.ts. */
     role: v.optional(agentRoleChoiceValidator),
     plannerMode: v.optional(v.union(v.literal("TEST"), v.literal("LIVE"))),
+    /** The DataForSEO Collector's ceiling a day (`seoCollectionLimits.ts`); a cleared box (0) removes it. */
+    maxDailyCostUsd: v.optional(v.number()),
   },
   returns: v.id("agents"),
   handler: async (ctx, args) => {
@@ -1140,6 +1144,7 @@ export const updateAgent = superAdminMutation({
     if ("approvalExpiryHours" in updates) {
       updates.approvalExpiryHours = clampAgentApprovalExpiryHours(updates.approvalExpiryHours);
     }
+    if ("maxDailyCostUsd" in updates) updates.maxDailyCostUsd = clampDailyCeiling(updates.maxDailyCostUsd);
     if (updates.releaseGateTags !== undefined) {
       updates.releaseGateTags = normalizeReleaseGateTags(updates.releaseGateTags);
     }
@@ -1226,6 +1231,8 @@ export const updateAgent = superAdminMutation({
       resolvedAvatarUrl,
       now,
     }));
+    // The Collector's limits saved: whatever they held back goes now, without a button.
+    if (existingAgent.systemKey === "DATAFORSEO_COLLECTOR") await ctx.scheduler.runAfter(0, internal.seoAgentRuns.sendIfWaiting, {});
     
     await ctx.db.insert("auditLogs", {
       actionType: "UPDATE_AGENT",

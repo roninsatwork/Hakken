@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { readSiteDataLimits, type CompanyDataLimits } from "./companyDataLimits";
 import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
 import { BACKLINK_LIST_OPERATION_ID } from "./dataForSeoLinkOperations";
@@ -458,6 +459,8 @@ export const queueListPages = internalMutation({
       });
       queued += 1;
     }
+    // Sent now, not at the next run: a Collector sending takes them in; with none going, one starts (2026-10-05).
+    if (queued > 0) await ctx.scheduler.runAfter(0, internal.seoAgentRuns.sendIfWaiting, {});
     return queued;
   },
 });

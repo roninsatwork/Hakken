@@ -47,6 +47,8 @@ describe('the Italian catalogue is translated, not copied', () => {
     ['searchConsole.kinds.googleNews', "Google's product name"],
     ['admin.agents.details.settings.sections.role.groups.searchConsole', "Google's product name"],
     ['admin.limits.topics.searchConsole.title', "Google's product name"],
+    ['admin.seoCollection.now.searchConsole', "Google's product name and a website's address"],
+    ['admin.seoCollection.now.doing.sending', 'a website and what is asked of it, no words of its own'],
     ['arcade.title', 'product name'],
     ['arcade.firstPerson.title', 'the separate 3D game product name'],
     ['admin.companies.modules.postureStudio.name', 'product name'],

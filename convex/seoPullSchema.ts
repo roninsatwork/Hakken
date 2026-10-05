@@ -182,4 +182,15 @@ export const seoPullTables = {
     /** A site's newest pulls of one operation: what the reuse ladder asks. */
     .index("by_website_operation_submitted", ["websiteId", "operationId", "submittedAt"])
     .index("by_run", ["agentRunId"]),
+
+  /**
+   * What one website's requests have cost in one collection, kept as they are
+   * booked so the limit per website (`seoCollectionLimits.ts`) is one read
+   * rather than a sum over the collection's requests.
+   */
+  seoCycleSpend: defineTable({
+    cycleId: v.id("seoCollectionCycles"),
+    websiteId: v.id("websites"),
+    spentUsd: v.number(),
+  }).index("by_cycle_website", ["cycleId", "websiteId"]),
 };

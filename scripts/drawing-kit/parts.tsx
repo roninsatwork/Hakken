@@ -254,6 +254,8 @@ const PARTS: Part[] = [
         <Change by={0} same />
         <NoFigure />
         <Meter value={0.64} />
+        {/* A collection's progress: back, then out and waiting for answers (collection-progress-plan.md). */}
+        <Meter value={0.57} then={0.15} />
       </div>
     ),
   },
