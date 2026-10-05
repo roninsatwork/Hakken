@@ -277,6 +277,33 @@ describe("a collection run's report", () => {
     // One a minute after the burst; then, the run closed, a quarter of an hour and two hours on.
     expect(waits).toEqual([1, 15, 120]);
   });
+
+  test("while a run goes on, its requests settling within five minutes ask for one rebuild; its end still rebuilds it (A5)", async () => {
+    const t = harness();
+    const s = await seed(t);
+    // The run's first report is worked out already.
+    await t.action(internal.seoRunReports.buildRunReport, { cycleId: s.run });
+    const pulls = [];
+    for (let n = 0; n < 4; n += 1) {
+      pulls.push(await pull(t, s, { operationId: "backlinks_list", websiteId: s.own, target: "kordatackle.com", status: "PENDING", costUsd: 0 }));
+    }
+    const builds = () => t.run(async (ctx) => (await ctx.db.system.query("_scheduled_functions").collect())
+      .filter((job) => job.name.includes("buildRunReport") && job.state.kind === "pending")
+      .map((job) => Math.round((job.scheduledTime - NOW) / MINUTE))
+      .sort((left, right) => left - right));
+
+    // Three answered in the same few minutes, one still out: one rebuild, five minutes on.
+    for (const pullId of pulls.slice(0, 3)) {
+      await t.mutation(internal.seoCollectionQueue.settleSeoSend, { pullId, costUsd: 0.04, sandbox: false, ready: true });
+    }
+    expect(await builds()).toEqual([5]);
+
+    // That rebuild starts; the last answer closes the run: worked out whole a minute on, and later for its AI.
+    await t.action(internal.seoRunReports.buildRunReport, { cycleId: s.run });
+    await t.mutation(internal.seoCollectionQueue.settleSeoSend, { pullId: pulls[3], costUsd: 0.04, sandbox: false, ready: true });
+    expect(await builds()).toEqual([1, 5, 15, 120]);
+    expect((await t.run(async (ctx) => await ctx.db.get(s.run)))?.status).toBe("DONE");
+  });
 });
 
 describe("the arithmetic", () => {

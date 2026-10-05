@@ -30,9 +30,12 @@ import { websiteIconUrl } from "./websiteIcons";
  * many Collector runs it takes to send.
  *
  * **Worked out once, then read.** A run's requests and its AI judgements
- * both run to thousands, so neither is added up while a screen waits. A minute after any of its requests is sent or answered the
- * report is worked out again in the background (`buildRunReport`) and kept
- * (`seoRunReports`), and the screens read that.
+ * both run to thousands, so neither is added up while a screen waits. While
+ * the run goes on, its report is worked out again in the background
+ * (`buildRunReport`) at most every five minutes — a minute after its first
+ * request, then five minutes after the next request sent or answered — and
+ * once more a minute after it closes; kept (`seoRunReports`), and the screens
+ * read that.
  *
  * **AI belongs to a run through what it judged.** A keyword's meaning, a
  * competitor, an answer's stance and an address point at the request they
@@ -40,8 +43,17 @@ import { websiteIconUrl } from "./websiteIcons";
  * judged for one of the run's websites while the run was being filed.
  */
 
-/** How long after a request is sent or answered its run's report is worked out: a burst asks once. */
-const REPORT_DELAY_MS = 60_000;
+/**
+ * How long after a request is sent or answered its run's report is worked out
+ * while the run goes on: every request settling in those five minutes asks
+ * for the one rebuild, so a report is worked out at most every five minutes.
+ * It was a minute, about once a minute through a collection
+ * (docs/plans/active/dataforseo-cost-plan.md, A5).
+ */
+const REPORT_EVERY_MS = 5 * 60_000;
+
+/** A run's first report, and its whole one when it closes: a minute on, as the run page says. */
+const REPORT_SOON_MS = 60_000;
 
 /** Late passes after a run closes, for the AI judgements its last answers lead to. */
 const LATE_PASSES_MS = [15 * 60_000, 2 * 60 * 60_000];
@@ -83,11 +95,22 @@ export function runReportKey(cycleId: Id<"seoCollectionCycles">): string {
   return `run:${cycleId}`;
 }
 
-/** Ask for a run's report to be worked out again, once, shortly. */
+/**
+ * Ask for a run's report to be worked out again, once: in five minutes while
+ * the run goes on, or in a minute when it has no report yet or has closed. A
+ * rebuild already asked for answers every request until it starts — at the
+ * close too, since it then finds the run closed and works it out whole.
+ */
 export async function requestRunReport(ctx: MutationCtx, cycleId: Id<"seoCollectionCycles">): Promise<void> {
   if (!(await claimSchedule(ctx, runReportKey(cycleId)))) return;
-  await ctx.scheduler.runAfter(REPORT_DELAY_MS, internal.seoRunReports.buildRunReport, { cycleId });
+  const cycle = await ctx.db.get(cycleId);
+  const running = cycle !== null && RUNNING_STATES.has(cycle.status);
+  const soon = !running || (await reportOf(ctx, cycleId)) === null;
+  await ctx.scheduler.runAfter(soon ? REPORT_SOON_MS : REPORT_EVERY_MS, internal.seoRunReports.buildRunReport, { cycleId });
 }
+
+/** A collection still writing its list, sending or waiting on answers. */
+const RUNNING_STATES = new Set<Doc<"seoCollectionCycles">["status"]>(["EXPANDING", "SENDING", "COLLECTING"]);
 
 /** A run has closed: work its report out again later, for the AI its last answers lead to. */
 export async function scheduleLateRunReports(ctx: MutationCtx, cycleId: Id<"seoCollectionCycles">): Promise<void> {
@@ -351,6 +374,11 @@ export const companyJudgementsForReport = internalQuery({
  * Counted for every run holding the website at the time, it was counted twice
  * when one company's runs overlapped, or two companies watched one rival
  * (reliability plan 2.5).
+ *
+ * Read website by website of the run (`by_subject`), not every page judged
+ * on the platform in the run's hours: only one about the run's own websites
+ * can count (docs/plans/active/dataforseo-cost-plan.md, A5). The cursor says
+ * which website it is on and where in its judgements, `website|cursor`.
  */
 export const pageTypeJudgementsForReport = internalQuery({
   args: {
@@ -362,17 +390,24 @@ export const pageTypeJudgementsForReport = internalQuery({
   },
   returns: judgementPage,
   handler: async (ctx, args) => {
-    const websites = new Set(args.websiteIds);
+    const split = args.cursor ? args.cursor.indexOf("|") : -1;
+    const at = args.cursor && split >= 0 ? Number(args.cursor.slice(0, split)) : 0;
+    const inner = args.cursor && split >= 0 ? args.cursor.slice(split + 1) || null : null;
+    const subjectId = args.websiteIds[at];
+    if (subjectId === undefined) return { rows: [], cursor: "", isDone: true };
+    const last = at + 1 >= args.websiteIds.length;
+    const websiteId = ctx.db.normalizeId("websites", subjectId);
+    if (!websiteId) return { rows: [], cursor: `${at + 1}|`, isDone: last };
+    // A judgement's own time, `createdAt`, is when the database wrote it to
+    // within a transaction: read a margin either side, then keep it exactly.
     const result = await ctx.db
       .query("decisionRuns")
-      .withIndex("by_key_created", (q) => q.eq("decisionKey", PAGE_TYPE_KEY).gte("createdAt", args.from).lte("createdAt", args.to))
-      .paginate({ cursor: args.cursor, numItems: JUDGEMENTS_PER_READ });
+      .withIndex("by_subject", (q) => q.eq("subjectKind", PAGE_SUBJECT).eq("subjectId", subjectId)
+        .gte("_creationTime", args.from - WRITTEN_MARGIN_MS).lte("_creationTime", args.to + WRITTEN_MARGIN_MS))
+      .paginate({ cursor: inner, numItems: JUDGEMENTS_PER_READ });
     const rows: JudgementForReport[] = [];
     for (const row of result.page) {
-      const websiteId = row.subjectKind === PAGE_SUBJECT && websites.has(row.subjectId)
-        ? ctx.db.normalizeId("websites", row.subjectId)
-        : null;
-      if (!websiteId) continue;
+      if (row.decisionKey !== PAGE_TYPE_KEY || row.createdAt < args.from || row.createdAt > args.to) continue;
       const cause = await ctx.db
         .query("seoDataPulls")
         .withIndex("by_website_submitted", (q) => q.eq("websiteId", websiteId).lte("submittedAt", row.createdAt))
@@ -380,9 +415,13 @@ export const pageTypeJudgementsForReport = internalQuery({
         .first();
       if (cause?.cycleId === args.cycleId) rows.push(judgementOf(row));
     }
-    return { rows, cursor: result.continueCursor, isDone: result.isDone };
+    if (!result.isDone) return { rows, cursor: `${at}|${result.continueCursor}`, isDone: false };
+    return { rows, cursor: `${at + 1}|`, isDone: last };
   },
 });
+
+/** Between a judgement's `createdAt` and the database's own time for it, at most: far more than a transaction takes. */
+const WRITTEN_MARGIN_MS = 10 * 60_000;
 
 function judgementOf(row: Doc<"decisionRuns">): JudgementForReport {
   return { decisionKey: row.decisionKey, subjectKind: row.subjectKind, subjectId: row.subjectId, costUsd: row.costUsd };
