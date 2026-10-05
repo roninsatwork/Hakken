@@ -218,6 +218,9 @@ export const lookupAnswersShape = v.union(v.null(), v.object({
   })),
   mostNamed: v.array(v.object({ host: v.string(), who, count: v.number() })),
   searches: v.array(v.object({ query: v.string(), times: v.number(), page: str })),
+  /** The website's own names and its competitors', to pick out in the answers word for word. */
+  yourNames: v.array(v.string()),
+  rivalNames: v.array(v.string()),
   canAsk: v.boolean(),
 }));
 

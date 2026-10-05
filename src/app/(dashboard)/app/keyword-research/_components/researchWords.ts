@@ -48,6 +48,19 @@ export function readableAddress(url: string): string {
   return url.replace(/^https?:\/\/(www\.)?/, "");
 }
 
+/** An address without the tracking an assistant adds to the pages it links (`?utm_source=openai`). */
+export function withoutTracking(url: string): string {
+  try {
+    const parsed = new URL(url);
+    for (const key of [...parsed.searchParams.keys()]) {
+      if (key.toLowerCase().startsWith("utm_")) parsed.searchParams.delete(key);
+    }
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
 /** A page's path on its own website, "/" for the home page. */
 export function pathOf(url: string): string {
   try {

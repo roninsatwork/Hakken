@@ -84,6 +84,54 @@ describe("a lookup's What the AI says", () => {
     expect(within(searched).getByText("keywordResearch.ai.overviewHintMissing 1")).toBeInTheDocument();
   });
 
+  it("opens each assistant's row to its answer word for word, in the one table", async () => {
+    await open();
+
+    const table = screen.getAllByRole("table")[0];
+    const perplexity = within(table).getByRole("button", { name: "keywordResearch.ai.answerTitle aiEngines.perplexity" });
+    expect(perplexity).toHaveAttribute("aria-expanded", "false");
+    expect(within(table).getAllByRole("button", { name: /keywordResearch\.ai\.answerTitle/ })).toHaveLength(4);
+    expect(screen.queryByText(/Some agencies to consider/)).not.toBeInTheDocument();
+
+    fireEvent.click(perplexity);
+
+    expect(perplexity).toHaveAttribute("aria-expanded", "true");
+    const answer = document.getElementById(perplexity.getAttribute("aria-controls") ?? "") as HTMLElement;
+    expect(table).toContainElement(answer);
+    expect(answer).toHaveTextContent("Some agencies to consider: kota.co.uk, madebyshape.co.uk, plugandplaydesign.co.uk, acme-agency.test");
+  });
+
+  it("draws an answer's links without their tracking, its [n] as links to what it cites, and those pages beside it, numbered", async () => {
+    const perplexity = {
+      ...ANSWERS.engines[1],
+      answer: "A shortlist: **[Apadmi](https://www.apadmi.com/?utm_source=openai)** for enterprise.[2]",
+      cited: [{ url: "https://clutch.co/uk/app-developers/london", host: "clutch.co" }, { url: "https://www.designrush.com/agency/mobile-app?utm_source=openai", host: "designrush.com" }],
+    };
+    const claude = { ...ANSWERS.engines[0], answer: "I can't browse; try Clutch.", cited: [] };
+    await open({ engines: [claude, perplexity, ...ANSWERS.engines.slice(2)] });
+
+    fireEvent.click(screen.getByRole("button", { name: "keywordResearch.ai.answerTitle aiEngines.perplexity" }));
+    const opened = screen.getByRole("button", { name: "keywordResearch.ai.answerTitle aiEngines.perplexity" });
+    const answer = document.getElementById(opened.getAttribute("aria-controls") ?? "") as HTMLElement;
+
+    expect(within(answer).getByRole("link", { name: "Apadmi" })).toHaveAttribute("href", "https://www.apadmi.com/");
+    expect(within(answer).getByRole("link", { name: "2" })).toHaveAttribute("href", "https://www.designrush.com/agency/mobile-app");
+    const sources = within(answer).getByText("keywordResearch.ai.sources").parentElement as HTMLElement;
+    expect(within(sources).getAllByRole("link").map((link) => link.textContent)).toEqual(["clutch.co/uk/app-developers/london", "designrush.com/agency/mobile-app"]);
+    expect(within(sources).getByText("2")).toBeInTheDocument();
+
+    const claudeRow = screen.getByRole("button", { name: `keywordResearch.ai.answerTitle aiEngines.${claude.engine}` });
+    fireEvent.click(claudeRow);
+    const claudeAnswer = document.getElementById(claudeRow.getAttribute("aria-controls") ?? "") as HTMLElement;
+    expect(within(claudeAnswer).getByText("keywordResearch.ai.sourcesNone")).toBeInTheDocument();
+  });
+
+  it("gives an assistant that wrote nothing no answer to open", async () => {
+    await open({ engines: [...ANSWERS.engines.slice(0, 3), { ...ANSWERS.engines[3], answered: false, answer: "" }] });
+
+    expect(within(screen.getAllByRole("table")[0]).getAllByRole("button", { name: /keywordResearch\.ai\.answerTitle/ })).toHaveLength(3);
+  });
+
   it("asks the first time it opens, and again on Ask again", async () => {
     const mutation = await open();
 

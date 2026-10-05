@@ -249,7 +249,7 @@ const engine = (name: string, named: Array<[string, "YOU" | "RIVAL" | null]>, ci
   return {
     engine: name,
     answered: true,
-    answer: "Some agencies to consider…",
+    answer: `Some agencies to consider: ${named.map(([host]) => host).join(", ")}.`,
     named: named.map(([host, who]) => ({ host, who })),
     yourPlace: place >= 0 ? place + 1 : null,
     rivalsNamed: named.filter(([, who]) => who === "RIVAL").map(([host]) => host),
@@ -287,6 +287,8 @@ export const ANSWERS = {
     { query: "best web design agencies uk 2026", times: 3, page: null },
     { query: "web design agency vs freelancer", times: 2, page: "https://acme-agency.test/hub/how-to-choose-a-web-design-agency/" },
   ],
+  yourNames: ["Acme Agency"],
+  rivalNames: ["Plug and Play Design", "Pixelfield"],
   canAsk: true,
 };
 

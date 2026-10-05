@@ -285,3 +285,20 @@ All five steps, on his "build the keyword research section".
   country never stand in for a city's. Searches a month stay the country's
   (Google Ads counts by country). Websites' own tracking still asks from the
   whole country — not changed here.
+- 2026-10-05 — **Each answer word for word on What the AI says.** He asked
+  whether the four assistants' answers are kept, to show them ("lets show what
+  we can please as accordion on the page as we do in the discover section").
+  They are, to 20,000 characters each. First drawn as a second box of rows
+  under the table, as Discovery's keyword page opens its answers; he asked
+  "why are these two separate boxes when the drop down could be in the first
+  one", so each assistant's row in the table opens instead, the answer beneath
+  it across the table (`DataTable`'s `rowDetail`), the website's and its
+  competitors' names picked out. Board 4's look is unchanged. Google's AI
+  Overview's own text is never bought, so it has none. Then, on his "do the
+  answers include links and can we format them better": links in the blue
+  of every outside link, without the `?utm_source=openai` ChatGPT adds;
+  Perplexity's `[n]` as small links to the nth page cited (its order checked
+  on a real answer: [8] was Purrweb, the eighth page purrweb.com); the pages
+  each assistant cites beside its answer, numbered the same; and an answer's
+  tables drawn in columns (`HakkenMarkdown`'s `answer` variant and
+  `citations`; chat unchanged). Claude, which does not search, says so.

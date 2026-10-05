@@ -34,3 +34,48 @@ describe("OWASP: Cross Site Scripting (XSS) Prevention", () => {
     expect(link).toHaveAttribute('rel', 'noopener noreferrer'); // Target _blank security
   });
 });
+
+/**
+ * An AI assistant's answer read on a page (Keyword research's What the AI
+ * says, 2026-10-05): its links in the outside-link blue, and its `[n]`
+ * markers small links to the pages it cites.
+ */
+describe("An assistant's answer", () => {
+  test("its links are drawn in the outside-link blue, a chat's in the brand colour", () => {
+    const { container: answer } = render(<HakkenMarkdown content="See [Pocket App](https://pocketapp.co.uk/)" variant="answer" />);
+    const { container: chat } = render(<HakkenMarkdown content="See [Pocket App](https://pocketapp.co.uk/)" />);
+
+    expect(answer.querySelector("a")).toHaveClass("text-info");
+    expect(chat.querySelector("a")).toHaveClass("text-brand");
+  });
+
+  test("each [n] becomes a small link to the nth page it cites, and nothing else does", () => {
+    const { container } = render(
+      <HakkenMarkdown
+        content={"Apadmi is best for enterprise.[2] Purrweb for startups.[3][9] `[1]` stays code."}
+        variant="answer"
+        citations={["https://one.test/", "https://two.test/", "javascript:alert(1)"]}
+      />,
+    );
+
+    const links = [...container.querySelectorAll("a")];
+    expect(links.map((link) => [link.textContent, link.getAttribute("href")])).toEqual([["2", "https://two.test/"]]);
+    // A page that is not a web page, a number past the list and a marker in code all stay words.
+    expect(container).toHaveTextContent("[3][9]");
+    expect(container.querySelector("code")).toHaveTextContent("[1]");
+  });
+
+  test("markers side by side read apart, and its tables are drawn in columns", () => {
+    const { container } = render(
+      <HakkenMarkdown
+        content={"Ask for references.[1][2]\n\n| Need | Start with |\n| --- | --- |\n| MVP | Purrweb |"}
+        variant="answer"
+        citations={["https://one.test/", "https://two.test/"]}
+      />,
+    );
+
+    expect(container.querySelector("p")).toHaveTextContent("Ask for references.1,2");
+    expect(container.querySelector("th")).toHaveClass("border-b");
+    expect([...container.querySelectorAll("td")].map((cell) => cell.textContent)).toEqual(["MVP", "Purrweb"]);
+  });
+});

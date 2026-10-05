@@ -703,6 +703,9 @@ describe("what the AI says", () => {
     expect(answers?.engines.find((engine) => engine.engine === "perplexity")).toMatchObject({ yourPlace: 2, rivalsNamed: ["lightflows.co.uk"] });
     expect(answers?.mostNamed.map((row) => [row.host, row.who, row.count])).toEqual([["lightflows.co.uk", "RIVAL", 4], ["ronins.co.uk", "YOU", 1]]);
     expect(answers?.searches.map((row) => [row.query, row.times])).toEqual([["web design agency uk", 2], ["best web designers", 1]]);
+    // Each answer word for word, with the names to pick out in it: the website's own and its competitors'.
+    expect(answers?.engines.every((engine) => engine.answer.length > 0)).toBe(true);
+    expect([answers?.yourNames, answers?.rivalNames]).toEqual([["Ronins"], ["Lightflows"]]);
 
     // Opened again while fresh: nothing bought. Ask again buys afresh.
     await as.mutation(api.keywordResearchAnswers.openAnswers, { lookupId });

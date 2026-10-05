@@ -1,8 +1,8 @@
 "use client";
 
-import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { Fragment, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronDown, ChevronRight } from "lucide-react";
 
 import { LAYER } from "@/src/ui/lib/layers";
 import { cn } from "@/src/ui/lib/utils";
@@ -190,6 +190,16 @@ type DataTableProps<Row> = {
   rowClickable?: (row: Row) => boolean;
   /** Tinting for a row that is not an ordinary one — a pending invitation, say. */
   rowClassName?: (row: Row) => string;
+  /**
+   * More about a row, opened beneath it across the whole table — an AI
+   * assistant's answer word for word under the assistant's row (Anthony,
+   * 2026-10-05: "why are these two separate boxes when the drop down could be
+   * in the first one"). An arrow before the first cell opens and closes it, as
+   * does a click on the row, so it takes the row's click from `onRowClick`.
+   * `label` names what opens, for the arrow; a row whose `content` is null has
+   * nothing to open and no arrow.
+   */
+  rowDetail?: { label: (row: Row) => string; content: (row: Row) => ReactNode | null };
 
   variant?: "default" | "panel" | "bare";
   headerVariant?: "default" | "strip";
@@ -247,6 +257,7 @@ export function DataTable<Row>({
   onRowClick,
   rowClickable,
   rowClassName,
+  rowDetail,
   variant = "default",
   headerVariant = "default",
   minWidthClassName,
@@ -261,6 +272,13 @@ export function DataTable<Row>({
   const hasControls = Boolean(search || filters);
   const box = useRef<HTMLDivElement>(null);
   const height = useRef(0);
+  const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set());
+  const toggle = (key: string) => setOpened((was) => {
+    const next = new Set(was);
+    if (next.has(key)) next.delete(key);
+    else next.add(key);
+    return next;
+  });
   // While a new sort, filter or search loads, the table keeps the height it
   // had, so the page does not shrink under the reader and throw them back to
   // its top (Anthony's audit, 2026-10-04). Set on the element before the
@@ -355,20 +373,37 @@ export function DataTable<Row>({
             />
           ) : (
             rows.map((row) => {
-              const clickable = Boolean(onRowClick) && rowClickable?.(row) !== false;
+              const key = rowKey(row);
+              const detail = rowDetail ? rowDetail.content(row) : null;
+              const isOpen = detail !== null && opened.has(key);
+              const detailId = `row-detail-${key}`;
+              const clickable = detail !== null || (Boolean(onRowClick) && rowClickable?.(row) !== false);
+              const onClick = detail !== null ? () => toggle(key) : clickable && onRowClick ? () => onRowClick(row) : undefined;
+              // The arrow, or its room on a row with nothing to open, so the first column's words line up.
+              const arrow = rowDetail ? (
+                detail !== null ? (
+                  <Button
+                    variant="ghost"
+                    aria-expanded={isOpen}
+                    aria-controls={isOpen ? detailId : undefined}
+                    aria-label={rowDetail.label(row)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggle(key);
+                    }}
+                    className="flex h-5 w-5 shrink-0 items-center justify-center rounded-sm p-0 text-muted hover:bg-transparent hover:text-foreground"
+                  >
+                    {isOpen ? <ChevronDown className="h-4 w-4" aria-hidden="true" /> : <ChevronRight className="h-4 w-4" aria-hidden="true" />}
+                  </Button>
+                ) : <span aria-hidden="true" className="h-5 w-5 shrink-0" />
+              ) : null;
 
               return (
+              <Fragment key={key}>
               <tr
-                key={rowKey(row)}
-                onClick={clickable && onRowClick ? () => onRowClick(row) : undefined}
-                className={[
-                  ROW_CLASSES,
-                  "group",
-                  clickable ? "cursor-pointer" : "",
-                  rowClassName?.(row) ?? "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
+                onClick={onClick}
+                // An open row's line moves below what opens under it.
+                className={cn(ROW_CLASSES, "group", clickable && "cursor-pointer", isOpen && "border-b-0", rowClassName?.(row))}
               >
                 {columns.map((column, index) => (
                   <td
@@ -383,10 +418,24 @@ export function DataTable<Row>({
                       .filter(Boolean)
                       .join(" ")}
                   >
-                    {column.cell(row)}
+                    {arrow && index === 0 ? (
+                      <span className="flex items-center gap-2">
+                        {arrow}
+                        {column.cell(row)}
+                      </span>
+                    ) : column.cell(row)}
                   </td>
                 ))}
               </tr>
+              {isOpen ? (
+                <tr id={detailId} className="border-b border-border-dim/50">
+                  {/* Under the first column's words, past the arrow. */}
+                  <td colSpan={columns.length} className="px-4 pb-4 pl-11 pt-0">
+                    {detail}
+                  </td>
+                </tr>
+              ) : null}
+              </Fragment>
               );
             })
           )}

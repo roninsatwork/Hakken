@@ -145,6 +145,32 @@ describe("DataTable", () => {
     expect(onRowClick).toHaveBeenCalledWith(PEOPLE[1]);
   });
 
+  it("opens more about a row beneath it, across the table, from its arrow or the row", () => {
+    // An assistant's answer under its row (Anthony, 2026-10-05): one table, not a second box.
+    renderTable({
+      rowDetail: {
+        label: (person) => `About ${person.name}`,
+        content: (person) => (person.id === "1" ? <p>Wrote the first program.</p> : null),
+      },
+    });
+
+    const arrow = screen.getByRole("button", { name: "About Ada Lovelace" });
+    expect(arrow).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByText("Wrote the first program.")).not.toBeInTheDocument();
+    // A row with nothing to open has no arrow, and is not offered as clickable.
+    expect(screen.queryByRole("button", { name: "About Grace Hopper" })).not.toBeInTheDocument();
+    expect(document.querySelectorAll("tbody tr")[1]).not.toHaveClass("cursor-pointer");
+
+    fireEvent.click(arrow);
+    expect(arrow).toHaveAttribute("aria-expanded", "true");
+    const detail = screen.getByText("Wrote the first program.").closest("td") as HTMLElement;
+    expect(detail).toHaveAttribute("colspan", String(COLUMNS.length));
+    expect(document.getElementById(arrow.getAttribute("aria-controls") ?? "")).toContainElement(detail);
+
+    fireEvent.click(screen.getByText("Ada Lovelace"));
+    expect(screen.queryByText("Wrote the first program.")).not.toBeInTheDocument();
+  });
+
   it("draws the load-more footer, and its button only when there is more", () => {
     const onLoadMore = vi.fn();
     const { rerender } = renderTable({

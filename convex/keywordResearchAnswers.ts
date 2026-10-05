@@ -10,6 +10,7 @@ import { freshnessOf } from "./keywordResearchData";
 import { ownWebsites, partIsBuying, requireLookup, startResearchRun, watchedIn } from "./keywordResearch";
 import { findResearchCountry } from "./utils/researchCountries";
 import { researchProblemOf } from "./utils/researchProblems";
+import { holdBrandNames } from "./holdProfiles";
 
 /**
  * What the AI says (board 4; docs/plans/active/keyword-research-plan.md): the
@@ -113,6 +114,16 @@ export const lookupAnswers = tenantQuery({
       return { query: search.query, times: search.times, page: ranked?.url ?? null };
     }));
 
+    // The names the company keeps for its website and competitors (`holdProfiles.ts`), read only when there are answers to pick them out in.
+    const anyAnswer = answered.some((engine) => engine.answer.length > 0);
+    const namesOf = async (siteId: Id<"companyWebsites">) => (await holdBrandNames(ctx, siteId)).map((entry) => entry.name);
+    const [yourNames, rivalNames] = anyAnswer
+      ? await Promise.all([
+          website ? namesOf(website.siteId) : [],
+          Promise.all(rivals.map((row) => namesOf(row.hold._id))).then((lists) => lists.flat()),
+        ])
+      : [[], []];
+
     return {
       lookupId: lookup._id,
       keyword: lookup.text,
@@ -137,6 +148,8 @@ export const lookupAnswers = tenantQuery({
       engines,
       mostNamed,
       searches,
+      yourNames,
+      rivalNames,
       canAsk: !isOversightRole(ctx.user.role),
     };
   },

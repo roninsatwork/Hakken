@@ -20,6 +20,7 @@ import { formatNumber } from "../../../sites/_components/siteFormat";
 import { useSitePager } from "../../../sites/_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_components/useSiteSort";
 import { AnswerCards, QuestionCard } from "../../_components/AnswerParts";
+import { ResearchAnswer } from "../../_components/ResearchAnswer";
 import { LookupState } from "../../_components/LookupState";
 import { useLookupAnswers, useLookupId, useLookupOverview, type LookupAnswers } from "../../_components/useLookup";
 import { useProblemWords } from "../../_components/ResearchCells";
@@ -37,7 +38,8 @@ const engineOf = (row: Engine) => row.engine;
  * What the AI says (board 4 of the approved drawings, docs/plans/active/
  * keyword-research-plan.md): the question behind the search asked of four AI
  * assistants who each names and
- * whether the website is one, the businesses named most, and the searches
+ * whether the website is one — each row opening to its answer word for word
+ * (Anthony, 2026-10-05) — the businesses named most, and the searches
  * Google's AI Overview ran to answer it. Opening the screen asks the first
  * time (`openAnswers`, about 20 cents); Ask again asks afresh.
  */
@@ -141,6 +143,13 @@ export default function LookupAnswersPage() {
             empty={{ icon: <Sparkles className="h-8 w-8 text-muted/30" />, label: t("noAnswers") }}
             footer={{ ...paged.footer, note: t("citedNote") }}
             sort={tableSort}
+            // Each answer word for word, opened under its assistant: the website's names and its competitors' picked out.
+            rowDetail={{
+              label: (row) => t("answerTitle", { engine: engineLabel(row.engine) }),
+              content: (row) => (row.answered && row.answer.trim().length > 0
+                ? <ResearchAnswer answer={row.answer} cited={row.cited} names={answers.yourNames} others={answers.rivalNames} />
+                : null),
+            }}
             columns={[
               { key: "engine", header: t("assistant"), sortable: true, cell: (row) => <span className="text-[13px] font-medium text-foreground">{engineLabel(row.engine)}</span> },
               {
