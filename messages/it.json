@@ -11587,7 +11587,7 @@
     },
     "catchUp": {
       "held": "Dati mostrati fino al {day}.",
-      "bringing": "Aggiornamento dei 90 giorni e dei dodici mesi al {day}: la pagina si aggiorna da sola quando ha finito."
+      "bringing": "Aggiornamento al {day}: la pagina si aggiorna da sola quando ha finito."
     },
     "newLost": {
       "title": "Nuove e perse",

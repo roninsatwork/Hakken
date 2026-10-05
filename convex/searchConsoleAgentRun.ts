@@ -76,6 +76,8 @@ export const days = (from: string, to: string) => (from === to ? dayLabel(from) 
 export const count = (value: number) => value.toLocaleString("en-GB");
 
 const NOT_HISTORY = "The newest days and the last four again; a website, or a country newly kept ready, with nothing held gets its last 90 days, and nothing older is fetched.";
+/** A nightly fetch's last word: its lists are added up at other times (`searchConsoleSettling.ts`). */
+const ADDED_UP_LATER = "Its lists are added up weekly, after the company's own collection, and when a screen opens them behind.";
 
 export async function finishRun(
   ctx: ActionCtx,
@@ -267,13 +269,20 @@ export const collectSiteStep = internalAction({
             await ctx.scheduler.runAfter(0, internal.searchConsoleAgentRun.collectSiteStep, { ...args, at: next, to: args.top, rows, requests });
             return null;
           }
+          const summary = `Collected ${args.host}, ${days(args.from, args.top)}: ${count(rows)} rows from ${count(requests)} asks to Google.${countriesLine(args.countries, "With")} ${NOT_HISTORY}`;
+          // The nightly fetch adds up nothing but a website's first collection: its figures are added up weekly,
+          // after its company's own collection, and when a screen opens them behind (`searchConsoleSettling.ts`).
+          if (await ctx.runQuery(internal.searchConsoleSettling.reportsBuilt, { connectionId: args.connectionId })) {
+            await finish("SUCCESS", `${summary} ${ADDED_UP_LATER}`);
+            return null;
+          }
           await ctx.scheduler.runAfter(0, internal.searchConsoleSettle.settleSite, {
             runId: args.runId,
             workflowExecutionId: args.workflowExecutionId,
             connectionId: args.connectionId,
             companyId: args.companyId,
             host: args.host,
-            summary: `Collected ${args.host}, ${days(args.from, args.top)}: ${count(rows)} rows from ${count(requests)} asks to Google.${countriesLine(args.countries, "With")} ${NOT_HISTORY}`,
+            summary,
           });
           return null;
         }

@@ -11,12 +11,12 @@ import { formatDay } from "../../sites/_components/siteFormat";
 import { useSearchConsoleRange } from "./useSearchConsole";
 
 /**
- * The 90 days and twelve months being caught up (`convex/searchConsoleCatchUp.ts`):
- * added up weekly, they may end a few days before the newest day collected.
- * A screen reading them then shows what is held at once, asks for them to be
- * added up, and says so here with how far along it is; the lists swap in
- * whole when done and the screen updates itself (Anthony, 2026-10-05 — the
- * picture `catching-up.png`).
+ * A screen's lists being caught up (`convex/searchConsoleCatchUp.ts`): added
+ * up weekly and after the company's own collection, they may end a few days
+ * before the newest day collected. A screen reading them then shows what is
+ * held at once, asks for them to be added up, and says so here with how far
+ * along it is; the lists swap in whole when done and the screen updates itself
+ * (Anthony, 2026-10-05 — the picture `catching-up.png`).
  */
 export function SearchConsoleCatchUp({ siteId, newestDay }: { siteId: Id<"companyWebsites">; newestDay: string | null | undefined }) {
   const t = useTranslations("searchConsole.catchUp");

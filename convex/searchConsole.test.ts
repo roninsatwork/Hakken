@@ -568,54 +568,78 @@ describe("collecting", () => {
     expect(await slot("query", "28", "BEFORE")).toEqual([]);
   });
 
-  test("the 7 and 30 days are added up every run, the 90 days and twelve months once a week (cost review 1)", async () => {
-    const { t, siteId, admin } = await setup();
-    fakeGoogle({ figures: figures() });
+  test("lists are added up on a first collection, weekly, after the company's own collection, and when opened behind — not by each nightly fetch", async () => {
+    const { t, companyId, siteId, admin } = await setup();
+    const google = fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
     await collect(t);
-    const builtAt = async (period: "30" | "90") => (await t.run(async (ctx) => await ctx.db
+    const builtAt = async (period: "7" | "90") => (await t.run(async (ctx) => await ctx.db
       .query("searchConsolePeriods")
-      .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "page").eq("period", period).eq("which", "NOW"))
+      .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "page").eq("period", period).eq("which", "NOW").eq("part", 0))
       .first()))?.builtAt;
-    const first = { thirty: await builtAt("30"), ninety: await builtAt("90") };
+    // A first collection adds its lists up.
+    const first = await builtAt("7");
+    expect(first).toBeDefined();
 
+    // The next night's fetch brings a new day and adds nothing up.
     vi.setSystemTime(NOW + 24 * 60 * 60 * 1000);
+    google.figures[property].web["2026-09-27"] = { total: row("", 6, 200), query: [row("drain unblocking", 6)] };
     await collect(t);
-    expect(await builtAt("30")).toBeGreaterThan(first.thirty!);
-    expect(await builtAt("90")).toBe(first.ninety);
+    expect(await builtAt("7")).toBe(first);
+    const runs = await t.run(async (ctx) => await ctx.db.query("agentRuns").collect());
+    expect(runs.at(-1)?.finalOutput).toContain("added up weekly, after the company's own collection, and when a screen opens them behind");
+    // The weekly sweep finds nothing a week old yet.
+    expect(await t.action(internal.searchConsoleSettling.weeklyRebuilds, {})).toBe(0);
 
-    vi.setSystemTime(NOW + 7 * 24 * 60 * 60 * 1000);
-    await collect(t);
-    expect(await builtAt("90")).toBeGreaterThan(first.ninety!);
+    // The company's own collection finishes: its own website's lists are added up — the 7 days, the 90 days not yet a week old.
+    const cycleId = await t.run(async (ctx) => await ctx.db.insert("seoCollectionCycles", {
+      companyId, trigger: "SCHEDULE", status: "DONE", plannedCount: 0, reusedCount: 0, sentCount: 0, readyCount: 0, failedCount: 0, totalCostUsd: 0, startedAt: Date.now(),
+    } as never));
+    expect(await t.mutation(internal.searchConsoleSettling.afterCompanyCollection, { cycleId })).toBe(1);
+    await finishScheduled(t);
+    const second = await builtAt("7");
+    expect(second).toBeGreaterThan(first!);
+    expect(await builtAt("90")).toBe(first);
+
+    // A week on, the sweep adds up the website whole.
+    vi.setSystemTime(NOW + 8 * 24 * 60 * 60 * 1000);
+    expect(await t.action(internal.searchConsoleSettling.weeklyRebuilds, {})).toBe(1);
+    await finishScheduled(t);
+    expect(await builtAt("90")).toBeGreaterThan(first!);
     // Every job counted and the settle closed.
     expect((await connectionOf(t, siteId))?.settling).toBeUndefined();
   });
 
-  test("a screen reading the 90 days while they are behind catches them up; the 30 days never need it (cost review)", async () => {
+  test("a screen whose lists are behind catches them up: the 30 days with the charts, or the 90 days and twelve months (cost review)", async () => {
     const { t, siteId, admin } = await setup();
     const google = fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
     await collect(t);
-    // A day later a new day comes in: the 30 days are added up with it, the 90 days wait for their week.
+    // A day later a new day comes in, and nothing is added up with it.
     vi.setSystemTime(NOW + 24 * 60 * 60 * 1000);
     google.figures[property].web["2026-09-27"] = { total: row("", 6, 200), query: [row("drain unblocking", 6)] };
     await collect(t);
     const newest = "2026-09-27";
     const dates = (days: number) => ({ siteId, from: shiftDay(newest, 1 - days), to: newest });
+    const slot = (period: "30" | "90") => t.run(async (ctx) => await ctx.db
+      .query("searchConsolePeriods")
+      .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", period).eq("which", "NOW"))
+      .collect());
 
-    expect(await admin.query(api.searchConsoleCatchUp.searchConsoleCatchUp, dates(30))).toMatchObject({ behind: false });
+    // The 30 days: behind, caught up once however many screens open.
+    expect(await admin.query(api.searchConsoleCatchUp.searchConsoleCatchUp, dates(30))).toMatchObject({ behind: true, heldTo: NEWEST, newest });
+    expect(await admin.mutation(api.searchConsoleCatchUp.requestSearchConsoleCatchUp, dates(30))).toBe(true);
     expect(await admin.mutation(api.searchConsoleCatchUp.requestSearchConsoleCatchUp, dates(30))).toBe(false);
-    expect(await admin.query(api.searchConsoleCatchUp.searchConsoleCatchUp, dates(90))).toMatchObject({ behind: true, heldTo: NEWEST, newest });
-
+    await finishScheduled(t);
+    expect(await admin.query(api.searchConsoleCatchUp.searchConsoleCatchUp, dates(30))).toMatchObject({ behind: false });
+    expect((await slot("30")).map((part) => part.to)).toEqual([newest]);
+    // Only the short lists: the 90 days are still behind, and caught up when a screen reads them.
+    expect(await admin.query(api.searchConsoleCatchUp.searchConsoleCatchUp, dates(90))).toMatchObject({ behind: true, heldTo: NEWEST });
+    vi.setSystemTime(NOW + 24 * 60 * 60 * 1000 + 3 * 60 * 1000);
     expect(await admin.mutation(api.searchConsoleCatchUp.requestSearchConsoleCatchUp, dates(90))).toBe(true);
-    // Asked once: a second screen opening does not ask again.
-    expect(await admin.mutation(api.searchConsoleCatchUp.requestSearchConsoleCatchUp, dates(90))).toBe(false);
     await finishScheduled(t);
     expect(await admin.query(api.searchConsoleCatchUp.searchConsoleCatchUp, dates(90))).toMatchObject({ behind: false });
-    const ninety = await t.run(async (ctx) => await ctx.db
-      .query("searchConsolePeriods")
-      .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", "90").eq("which", "NOW"))
-      .collect());
+    const ninety = await slot("90");
     expect(ninety.map((part) => part.to)).toEqual([newest]);
     expect(ninety[0].keys).toContain("drain unblocking");
   });

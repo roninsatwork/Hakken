@@ -11587,7 +11587,7 @@
     },
     "catchUp": {
       "held": "Showing figures to {day}.",
-      "bringing": "Bringing the 90 days and twelve months up to {day}: this page updates itself when it is done."
+      "bringing": "Bringing them up to {day}: this page updates itself when it is done."
     },
     "newLost": {
       "title": "New and lost",

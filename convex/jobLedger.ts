@@ -77,6 +77,8 @@ const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
   // Credits: batches whose time is up end, and runs of collections that
   // finished without their last answer close (docs/plans/active/usage-credits-plan.md).
   "credit-ledger-sweep": (ctx) => ctx.runMutation(internal.creditLedger.sweepCreditLedger, {}),
+  // Every website's Search Console figures added up once a week, those a week old each day (cost review, 2026-10-05).
+  "search-console-weekly-rebuild": (ctx) => ctx.runAction(internal.searchConsoleSettling.weeklyRebuilds, {}),
 };
 
 /** How often each job is meant to run, in minutes — the screen uses this to
@@ -113,6 +115,7 @@ const EXPECTED_EVERY_MINUTES: Record<string, number> = {
   "wiki-exam-growth": 44640,
   "sites-list-copy-refresh": 1440,
   "credit-ledger-sweep": 60,
+  "search-console-weekly-rebuild": 1440,
 };
 
 export const recordJobOutcomeInternal = internalMutation({

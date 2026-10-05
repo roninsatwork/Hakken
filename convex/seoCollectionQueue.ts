@@ -731,6 +731,8 @@ export async function finishSeoCycle(
   await ctx.scheduler.runAfter(SEO_MOVES_DELAY_MS, internal.websiteMoves.deriveCycleMoves, { cycleId });
   // Each of the company's own websites' sitemaps, read at each collection, free (page-groups-plan.md).
   await ctx.scheduler.runAfter(0, internal.sitemaps.readCycleSitemaps, { cycleId });
+  // And their Search Console figures added up after it (Anthony, 2026-10-05: "after each website collection").
+  await ctx.scheduler.runAfter(0, internal.searchConsoleSettling.afterCompanyCollection, { cycleId });
   await creditCycleFinished(ctx, cycleId);
 }
 

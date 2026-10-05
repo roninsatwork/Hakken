@@ -314,4 +314,14 @@ crons.daily(
   { job: "sites-list-copy-refresh" }
 );
 
+// Every website's Search Console figures added up once a week, whatever else
+// adds them up (cost review, 2026-10-05): each day, those a week old. After
+// the nightly fetch, which adds up nothing but a website's first collection.
+crons.daily(
+  "search-console-weekly-rebuild",
+  { hourUTC: 5, minuteUTC: 0 },
+  internal.jobLedger.runJob,
+  { job: "search-console-weekly-rebuild" }
+);
+
 export default crons;

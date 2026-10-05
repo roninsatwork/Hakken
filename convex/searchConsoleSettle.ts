@@ -152,17 +152,33 @@ export const settlePart = internalAction({
 });
 
 /**
- * A website's 90 days and twelve months caught up because someone opened a
- * screen reading them while they were behind the newest day collected
- * (`searchConsoleCatchUp.ts`): only those, every kind and country side by
- * side, the screen showing what is held until they are swapped in.
+ * A website's lists caught up because someone opened a screen reading them
+ * while they were behind the newest day collected (`searchConsoleCatchUp.ts`):
+ * the 90 days and twelve months alone (`long`), or the 7 and 30 days with the
+ * charts — every kind and country side by side, the screen showing what is
+ * held until the new lists are swapped in.
  */
 export const catchUpSite = internalAction({
+  args: { connectionId: v.id("searchConsoleConnections"), long: v.boolean() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const plan = await rollUpAndPlan(ctx, args.connectionId);
+    if (plan) await startParts(ctx, args.connectionId, plan, undefined, args.long, args.long);
+    return null;
+  },
+});
+
+/**
+ * A website's figures added up after its company's own collection
+ * (`searchConsoleSettling.afterCompanyCollection`): the 7 and 30 days, and the
+ * 90 days and twelve months when a week old.
+ */
+export const refreshSitePeriods = internalAction({
   args: { connectionId: v.id("searchConsoleConnections") },
   returns: v.null(),
   handler: async (ctx, args) => {
     const plan = await rollUpAndPlan(ctx, args.connectionId);
-    if (plan) await startParts(ctx, args.connectionId, plan, undefined, true, true);
+    if (plan) await startParts(ctx, args.connectionId, plan);
     return null;
   },
 });
