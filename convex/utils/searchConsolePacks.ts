@@ -187,9 +187,13 @@ export function stepEnd(start: string, step: ChartStep): string {
   return dayOf(time(monthStart(dayOf(time(start) + 31 * 86_400_000))) - 86_400_000);
 }
 
-/** Days kept as days (plan §14.3: 90), weeks kept as weeks for a year past that. */
+/**
+ * Days kept as days (plan §14.3: 90); weeks kept as weeks to six months, then
+ * months (store less round two, agreed 2026-10-05: "months 4, 5 and 6 weekly,
+ * months after 6 months" — was a year of weeks).
+ */
 export const DAYS_KEPT = 90;
-export const WEEKS_KEPT_DAYS = 365;
+export const WEEKS_KEPT_DAYS = 183;
 
 /** The first day still kept as a day, with `newest` the newest day held. */
 export function firstDayKept(newest: string): string {

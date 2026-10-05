@@ -38,6 +38,9 @@ async function setup() {
     await list({ country: "gbr", list: "pair", keys: ["plumber leeds"], pages: ["https://acme-shop.test/"] });
     await list({ country: "gbr", list: "page", keys: ["https://acme-shop.test/"] });
     await list({ country: "gbr" });
+    // Google Images' searches, no longer kept (store less round two, A).
+    await list({ searchType: "image", list: "pair", keys: ["brass knob"], pages: ["https://acme-shop.test/"] });
+    await ctx.db.insert("searchConsoleSeen", { companyWebsiteId: holdId, searchType: "image", kind: "query", key: "brass knob", firstDay: NEWEST, lastDay: NEWEST });
     // Image search: two days of the week before the newest, and one of the newest's week.
     for (const start of ["2026-09-15", "2026-09-16", "2026-09-21"]) await list({ searchType: "image", start });
     await ctx.db.insert("searchConsoleSeen", { companyWebsiteId: holdId, country: "gbr", kind: "query", key: "plumber leeds", firstDay: NEWEST, lastDay: NEWEST });
@@ -53,18 +56,19 @@ describe("tidying the figures kept before 2026-10-05", () => {
     const before = await t.run(async (ctx) => (await ctx.db.query("searchConsoleLists").collect()).length);
 
     const counted = await t.action(internal.searchConsoleTidy.tidyKeptFigures, { go: false });
-    expect(counted?.tally).toEqual({ websites: 1, countries: 1, copies: 2, seen: 1, addresses: 4, imageDays: 2 });
-    expect(counted?.lines[0]).toBe("acme-shop.test: gbr read as all countries; 2 country records and 1 register rows to remove; 4 records to turn to page references; 2 image days to roll into weeks.");
+    expect(counted?.tally).toEqual({ websites: 1, countries: 1, copies: 2, seen: 1, addresses: 5, imageDays: 2, imageSearches: 2 });
+    expect(counted?.lines[0]).toBe("acme-shop.test: gbr read as all countries; 2 country records and 1 register rows to remove; 5 records to turn to page references; 2 image days to roll into weeks; 2 Google Images search records to remove.");
     expect(await t.run(async (ctx) => (await ctx.db.query("searchConsoleLists").collect()).length)).toBe(before);
 
     const done = await t.action(internal.searchConsoleTidy.tidyKeptFigures, { go: true });
-    expect(done?.tally).toMatchObject({ websites: 1, countries: 1, copies: 2, seen: 1, addresses: 2 });
+    expect(done?.tally).toMatchObject({ websites: 1, countries: 1, copies: 2, seen: 1, addresses: 2, imageSearches: 2 });
 
     const kept = await t.run(async (ctx) => await ctx.db.query("searchConsoleLists").collect());
     expect(kept.filter((record) => record.country === "gbr").map((record) => record.list)).toEqual(["device"]);
     const pair = kept.find((record) => record.list === "pair")!;
     expect(pair.pages!.every(isPageRef)).toBe(true);
     expect(kept.find((record) => record.list === "page")!.keys.every(isPageRef)).toBe(true);
+    expect(kept.filter((record) => record.searchType === "image" && record.list === "pair")).toEqual([]);
     expect(kept.filter((record) => record.searchType === "image").map((record) => `${record.grain} ${record.start}`).sort())
       .toEqual(["DAY 2026-09-21", "WEEK 2026-09-14"]);
     const seen = await t.run(async (ctx) => await ctx.db.query("searchConsoleSeen").collect());
@@ -82,6 +86,6 @@ describe("tidying the figures kept before 2026-10-05", () => {
 
     // A second run finds nothing left to do.
     const again = await t.action(internal.searchConsoleTidy.tidyKeptFigures, { go: false });
-    expect(again?.tally).toEqual({ websites: 1, countries: 1, copies: 0, seen: 0, addresses: 0, imageDays: 0 });
+    expect(again?.tally).toEqual({ websites: 1, countries: 1, copies: 0, seen: 0, addresses: 0, imageDays: 0, imageSearches: 0 });
   });
 });

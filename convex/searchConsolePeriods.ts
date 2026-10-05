@@ -27,6 +27,7 @@ import {
   addUp,
   bySide,
   firstDayKeptFor,
+  firstWeekKept,
   monthStart,
   pack,
   packByKey,
@@ -357,6 +358,8 @@ export const searchConsoleChartFigures = tenantQuery({
     periods: v.array(shownPeriodValidator),
     step: chartStepValidator,
     byWeek: v.boolean(),
+    /** Weeks asked for reaching past the six months kept as weeks: shown by month. */
+    byMonth: v.optional(v.boolean()),
     reach: v.union(v.null(), v.string()),
     chartWeeks: v.number(),
     notReady: v.boolean(),
@@ -379,7 +382,10 @@ export const searchConsoleChartFigures = tenantQuery({
 
     const dayLine = firstDayKeptFor(args.searchType, newest);
     const byWeek = args.step === "day" && args.from < dayLine && oldest < dayLine;
-    const step: ChartStep = byWeek ? "week" : args.step;
+    // Weeks past six months are kept as months (`firstWeekKept`): weeks reaching there are shown by month.
+    const weekLine = firstWeekKept(newest);
+    const byMonth = (byWeek || args.step === "week") && args.from < weekLine && oldest < weekLine;
+    const step: ChartStep = byMonth ? "month" : byWeek ? "week" : args.step;
     const grain = GRAIN_OF[step];
     const reachFrom = chartReach(newest, chartWeeks);
     const reach = args.from < reachFrom && oldest < reachFrom ? reachFrom : null;
@@ -406,7 +412,7 @@ export const searchConsoleChartFigures = tenantQuery({
           otherClicks: row.otherClicks,
         };
       });
-    return { periods, step, byWeek, reach, chartWeeks, notReady: false, preparing: false, notBuilt: rows.length > 0 && ofGrain.length === 0 };
+    return { periods, step, byWeek, byMonth, reach, chartWeeks, notReady: false, preparing: false, notBuilt: rows.length > 0 && ofGrain.length === 0 };
   },
 });
 type Slot = { period: SearchConsolePeriod; which: "NOW" | "BEFORE"; span: PeriodSpan | null; now: PeriodSpan };

@@ -93,6 +93,8 @@ screen, `C-E-F-explained.png`):
 | C | Page numbers, not addresses, inside the ready-made periods; screens unchanged | ~60 MB | 1.5 |
 | D | Keep a search only if it got a click, is tracked, ranks in the top 20, or two or more of the website's pages were shown for it — Almost there and Pages competing stay whole (Anthony: "we need almost there and competing pages; missed demand we don't need") | ~20 MB | 1.5 |
 
+| G | Weeks kept as weeks to six months, then months — was a year of weeks (Anthony: "months 4, 5 and 6 weekly … that will also save space"). Saves nothing today, every website holding 90 days; about 30 MB a year on morehandles.co.uk once it holds more. A chart by week reaching past six months is shown by month, as one by day past 90 days is shown by week | — | 0.25 |
+
 Estimated end: about 210 MB. Each is measured on dev as it is built
 (`searchConsoleTidy:keptSize`, `searchKeepEstimate`). Not agreed: a
 country read as all countries from 75% (B: "the UK searches are 50% of all

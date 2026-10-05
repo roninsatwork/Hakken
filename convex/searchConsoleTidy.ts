@@ -39,12 +39,13 @@ const tallyValidator = v.object({
   seen: v.number(),
   addresses: v.number(),
   imageDays: v.number(),
+  imageSearches: v.number(),
 });
 type Tally = typeof tallyValidator.type;
-const NO_TALLY: Tally = { websites: 0, countries: 0, copies: 0, seen: 0, addresses: 0, imageDays: 0 };
+const NO_TALLY: Tally = { websites: 0, countries: 0, copies: 0, seen: 0, addresses: 0, imageDays: 0, imageSearches: 0 };
 
 const taskValidator = v.object({
-  kind: v.union(v.literal("copies"), v.literal("seen"), v.literal("addresses"), v.literal("images")),
+  kind: v.union(v.literal("copies"), v.literal("seen"), v.literal("addresses"), v.literal("images"), v.literal("imageSearches"), v.literal("imageSeen")),
   country: v.optional(v.string()),
   newest: v.optional(v.string()),
 });
@@ -101,6 +102,38 @@ export const countrySeenStep = internalMutation({
   },
 });
 
+/**
+ * One step through a website's Google Images searches for all countries or
+ * one, no longer kept (store less round two, A): its search-and-page lines
+ * counted, and removed when going ahead.
+ */
+export const imageSearchesStep = internalMutation({
+  args: { holdId: v.id("companyWebsites"), country: v.optional(v.string()), go: v.boolean(), cursor: v.union(v.string(), v.null()) },
+  returns: stepValidator,
+  handler: async (ctx, args) => {
+    const page = await ctx.db
+      .query("searchConsoleLists")
+      .withIndex("by_hold_country_type_list_grain_start", (q) => q.eq("companyWebsiteId", args.holdId).eq("country", args.country).eq("searchType", "image").eq("list", "pair"))
+      .paginate({ cursor: args.cursor, numItems: RECORDS_PER_STEP });
+    if (args.go) for (const record of page.page) await ctx.db.delete(record._id);
+    return { found: page.page.length, continueCursor: page.continueCursor, isDone: page.isDone };
+  },
+});
+
+/** One step through a website's first- and last-seen Google Images searches for all countries or one: counted, and removed when going ahead. */
+export const imageSeenStep = internalMutation({
+  args: { holdId: v.id("companyWebsites"), country: v.optional(v.string()), go: v.boolean(), cursor: v.union(v.string(), v.null()) },
+  returns: stepValidator,
+  handler: async (ctx, args) => {
+    const page = await ctx.db
+      .query("searchConsoleSeen")
+      .withIndex("by_hold_country_type_kind_key", (q) => q.eq("companyWebsiteId", args.holdId).eq("country", args.country).eq("searchType", "image").eq("kind", "query"))
+      .paginate({ cursor: args.cursor, numItems: SEEN_PER_STEP });
+    if (args.go) for (const row of page.page) await ctx.db.delete(row._id);
+    return { found: page.page.length, continueCursor: page.continueCursor, isDone: page.isDone };
+  },
+});
+
 /** One step through a website's kept lists: the records still holding a page address. */
 export const addressesStep = internalQuery({
   args: { holdId: v.id("companyWebsites"), cursor: v.union(v.string(), v.null()) },
@@ -135,8 +168,12 @@ export const imageDaysStep = internalQuery({
 async function tasksFor(ctx: ActionCtx, connectionId: Id<"searchConsoleConnections">, countries: readonly string[]): Promise<Task[]> {
   const tasks: Task[] = [];
   for (const country of countries) tasks.push({ kind: "copies", country }, { kind: "seen", country });
-  tasks.push({ kind: "addresses" });
+  // What is no longer kept goes before the addresses are turned, so none is turned only to go.
   const all = await ctx.runQuery(internal.searchConsoleSync.stepState, { connectionId });
+  for (const country of [undefined, ...(all?.countries ?? [])]) {
+    tasks.push({ kind: "imageSearches", ...(country === undefined ? {} : { country }) }, { kind: "imageSeen", ...(country === undefined ? {} : { country }) });
+  }
+  tasks.push({ kind: "addresses" });
   if (!all?.newestDay) return tasks;
   tasks.push({ kind: "images", newest: all.newestDay });
   for (const country of all.countries) {
@@ -156,20 +193,30 @@ async function stepOf(ctx: ActionCtx, holdId: Id<"companyWebsites">, task: Task,
     return { found: step.changed, continueCursor: step.continueCursor, isDone: step.isDone };
   }
   const scope = task.country === undefined ? {} : { country: task.country };
+  if (task.kind === "imageSearches") return await ctx.runMutation(internal.searchConsoleTidy.imageSearchesStep, { holdId, ...scope, go, cursor });
+  if (task.kind === "imageSeen") return await ctx.runMutation(internal.searchConsoleTidy.imageSeenStep, { holdId, ...scope, go, cursor });
   if (!go) return await ctx.runQuery(internal.searchConsoleTidy.imageDaysStep, { holdId, ...scope, newest: task.newest!, cursor });
   // Every roll-up due for the scope, image search's finished weeks among them, in one go.
   const rolled = await rollUpSite(ctx, holdId, task.newest!, task.country);
   return { found: rolled, continueCursor: "", isDone: true };
 }
 
-const FIELD_OF: Record<Task["kind"], keyof Tally> = { copies: "copies", seen: "seen", addresses: "addresses", images: "imageDays" };
+const FIELD_OF: Record<Task["kind"], keyof Tally> = {
+  copies: "copies",
+  seen: "seen",
+  addresses: "addresses",
+  images: "imageDays",
+  imageSearches: "imageSearches",
+  imageSeen: "imageSearches",
+};
 
 /** What one website comes to, as a line of the report. */
 function lineOf(host: string, countries: readonly string[], tally: Tally, go: boolean): string {
   const as = countries.length > 0 ? `${countries.join(", ")} read as all countries` : "no country read as all countries";
   const verb = go ? "removed" : "to remove";
   return `${host}: ${as}; ${tally.copies} country records and ${tally.seen} register rows ${verb}; `
-    + `${tally.addresses} records ${go ? "turned" : "to turn"} to page references; ${tally.imageDays} image days ${go ? "rolled up (with any other roll-up due)" : "to roll into weeks"}.`;
+    + `${tally.addresses} records ${go ? "turned" : "to turn"} to page references; ${tally.imageDays} image days ${go ? "rolled up (with any other roll-up due)" : "to roll into weeks"}; `
+    + `${tally.imageSearches} Google Images search records ${verb}.`;
 }
 
 const add = (one: Tally, two: Tally): Tally => ({
@@ -179,6 +226,7 @@ const add = (one: Tally, two: Tally): Tally => ({
   seen: one.seen + two.seen,
   addresses: one.addresses + two.addresses,
   imageDays: one.imageDays + two.imageDays,
+  imageSearches: one.imageSearches + two.imageSearches,
 });
 
 /**
@@ -239,7 +287,8 @@ export const tidyKeptFigures = internalAction({
     }
     lines.push(`All ${tally.websites} websites with Search Console figures: ${tally.countries} countries read as all countries; `
       + `${tally.copies} country records and ${tally.seen} register rows ${args.go ? "removed" : "to remove"}; `
-      + `${tally.addresses} records ${args.go ? "turned" : "to turn"} to page references; ${tally.imageDays} image days ${args.go ? "rolled up" : "to roll into weeks"}.`);
+      + `${tally.addresses} records ${args.go ? "turned" : "to turn"} to page references; ${tally.imageDays} image days ${args.go ? "rolled up" : "to roll into weeks"}; `
+      + `${tally.imageSearches} Google Images search records ${args.go ? "removed" : "to remove"}.`);
     for (const line of lines) console.log(`Search Console tidy${args.go ? "" : " (count only)"}: ${line}`);
     return { tally, lines };
   },

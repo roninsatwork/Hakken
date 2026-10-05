@@ -85,9 +85,9 @@ describe("days, weeks and months", () => {
     expect(monthStart("2026-09-26")).toBe("2026-09-01");
   });
 
-  test("90 days are kept as days, and weeks for 12 months", () => {
+  test("90 days are kept as days, and weeks to six months", () => {
     expect(firstDayKept("2026-09-26")).toBe("2026-06-29");
-    expect(firstWeekKept("2026-09-26")).toBe("2025-09-26");
+    expect(firstWeekKept("2026-09-26")).toBe("2026-03-27");
   });
 
   test("image search keeps only the newest week's days; every other kind its 90", () => {

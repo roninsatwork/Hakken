@@ -170,11 +170,13 @@ export const GOOGLE_DIMENSIONS: Record<SearchConsoleList, readonly string[]> = {
 /**
  * The lists each kind of result has. Discover and Google News have no
  * searches — people did not type anything — so no pairs, and no search
- * appearance.
+ * appearance. Google Images keeps its totals and pages but not its searches
+ * (finish-off plan, store less round two, A — agreed 2026-10-05): its
+ * search-and-page lines were a fifth of a busy website's storage.
  */
 export const LISTS_OF: Record<SearchType, readonly SearchConsoleList[]> = {
   web: ["pair", "page", "country", "device", "appearance"],
-  image: ["pair", "page", "country", "device", "appearance"],
+  image: ["page", "country", "device", "appearance"],
   video: ["pair", "page", "country", "device", "appearance"],
   news: ["pair", "page", "country", "device", "appearance"],
   discover: ["page", "country", "device"],

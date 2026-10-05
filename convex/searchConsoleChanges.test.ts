@@ -264,6 +264,21 @@ describe("Position bands and Brand charts, in the dates and step chosen (2026-10
     expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-07-01", "week"))).toMatchObject({ reach: "2026-08-03", chartWeeks: 8 });
   });
 
+  test("weekly dates reaching past the six months kept as weeks are drawn by month (store less round two)", async () => {
+    const { t, siteId, reader } = await setup();
+    await t.run(async (ctx) => {
+      await ctx.db.insert("searchConsoleWeeks", row(siteId, "WEEK", "2026-09-21", 1, 6));
+      await ctx.db.insert("searchConsoleWeeks", row(siteId, "MONTH", "2026-09-01", 1, 26));
+      const connection = await ctx.db.query("searchConsoleConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", siteId)).first();
+      await ctx.db.patch(connection!._id, { oldestDay: "2025-10-01" });
+    });
+    // Inside the six months: weeks.
+    expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-06-01", "week"))).toMatchObject({ step: "week", byMonth: false });
+    // Reaching before 2026-03-27, six months before the newest day: months, and so for days reaching that far.
+    expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-01-01", "week"))).toMatchObject({ step: "month", byMonth: true });
+    expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-01-01", "day"))).toMatchObject({ step: "month", byWeek: true, byMonth: true });
+  });
+
   test("a step not built yet says so, rather than drawing nothing", async () => {
     const { t, siteId, reader } = await setup();
     await t.run(async (ctx) => await ctx.db.insert("searchConsoleWeeks", row(siteId, undefined, "2026-09-21", 1)));
