@@ -41,7 +41,7 @@ import {
 import { bandOf, isBrand, pageWithoutSection } from "./utils/searchConsoleViews";
 import { tenantQuery } from "./tenantFunctions";
 import { FROM_SEARCH_LINES, searchLinesCountry } from "./searchConsoleShrink";
-import { addressesOf, decodeWith } from "./searchConsolePageRefs";
+import { addressesOf, decodePages, decodeWith, isPageRef, refFor } from "./searchConsolePageRefs";
 import { requireMySite } from "./siteAccess";
 
 /**
@@ -564,6 +564,15 @@ export async function buildSitePeriods(
   const scope = country === undefined ? {} : { country };
   const ninety = slots.find((slot) => slot.period === "90" && slot.which === "NOW")?.span ?? null;
   const asNinety = (slot: Slot) => sameAsNinety(slot, ninety);
+  // The website's page list, both ways, read once a run (`addressesOf`, already read to turn the kept pages back).
+  let numbers: { book: Map<string, string>; refOf: Map<string, string> } | null = null;
+  const pageNumbers = async () => {
+    if (!numbers) {
+      const book = await addressesOf(ctx, companyWebsiteId);
+      numbers = { book, refOf: new Map([...book].map(([ref, address]) => [address, ref])) };
+    }
+    return numbers;
+  };
   const writeParts = async (searchType: SearchType, list: SearchConsolePeriodList, slot: Slot, given: PartToWrite[] | null) => {
     // Twelve months on the 90 days' own days: one empty part saying its days, the 90 days read instead (`sameAsNinety`).
     const parts = given !== null && asNinety(slot) ? [] : given;
@@ -619,9 +628,14 @@ export async function buildSitePeriods(
     // those lists show no change, as twelve months' never did; the searches' and pages' own lists keep theirs.
     if (pairs === null || slot.which === "BEFORE") return await writeParts(searchType, list, slot, null);
     const byKeyword = list === "pair";
-    await writeParts(searchType, list, slot, packByKey(pairs, byKeyword ? "query" : "page").map((packed): PartToWrite => {
+    // Each page kept as its number (store less round two, C), packed in that order, so a page's searches are found by it.
+    const pages = await pageNumbers();
+    const numbered = pairs.map((row) => (row.page !== undefined && pages.refOf.has(row.page) ? { ...row, page: pages.refOf.get(row.page)! } : row));
+    // A page's figures are looked up by its address; a keyword's by itself.
+    const lookup = byKeyword ? (value: string) => pages.book.get(value) ?? value : (value: string) => value;
+    await writeParts(searchType, list, slot, packByKey(numbered, byKeyword ? "query" : "page").map((packed): PartToWrite => {
       if (slot.which !== "NOW") return packed;
-      const others = byKeyword ? packed.pages : packed.keys;
+      const others = (byKeyword ? packed.pages : packed.keys).map(lookup);
       const { counts, facts } = other;
       return {
         ...packed,
@@ -917,7 +931,7 @@ export async function readKeyed(
   list: "pair" | "pairByPage",
   askedPeriod: SearchConsolePeriod,
   which: "NOW" | "BEFORE",
-  key: string,
+  askedKey: string,
   asked?: string,
 ): Promise<{ from: string; to: string; rows: PeriodRow[] } | null> {
   // As `readPeriod`: a country nearly all of the searches reads all countries', and twelve months kept as the 90 days reads them.
@@ -927,6 +941,10 @@ export async function readKeyed(
   const period: SearchConsolePeriod = ninety ? "90" : askedPeriod;
   const first = ninety ?? own;
   if (!first || (first.firstKey === undefined && first.keys.length > 0)) return null;
+  // A period built since round two C keeps each page as its number: a page asked for is found by it.
+  const pagesNumbered = first.firstKey !== undefined && isPageRef(first.firstKey);
+  const key = list === "pairByPage" && pagesNumbered ? await refFor(ctx, companyWebsiteId, askedKey) : askedKey;
+  if (key === null) return { from: first.from, to: first.to, rows: [] };
   const before = await ctx.db
     .query("searchConsolePeriods")
     .withIndex("by_hold_country_type_list_period_first", (q) => q
@@ -950,6 +968,11 @@ export async function readKeyed(
       }
       index += 1;
     }
+  }
+  // A keyword's pages are its few rows' numbers: back to addresses here.
+  if (byKeyword) {
+    const addresses = await decodePages(ctx, companyWebsiteId, rows.map((row) => row.key));
+    return { from: first.from, to: first.to, rows: rows.map((row, index) => ({ ...row, key: addresses[index] })) };
   }
   return { from: first.from, to: first.to, rows };
 }

@@ -68,7 +68,7 @@ export async function encodePages(ctx: MutationCtx, holdId: Id<"companyWebsites"
 }
 
 /** References back to addresses; an address kept before references is returned as it is. */
-export async function decodePages(ctx: QueryCtx, holdId: Id<"companyWebsites">, values: readonly string[]): Promise<string[]> {
+export async function decodePages(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, values: readonly string[]): Promise<string[]> {
   const found = new Map<string, string>();
   for (const value of new Set(values)) {
     if (!isPageRef(value)) continue;
@@ -129,6 +129,15 @@ export async function addressesOf(ctx: ActionCtx, holdId: Id<"companyWebsites">)
 /** References back to addresses from a page list read whole; an address kept before references is returned as it is. */
 export function decodeWith(book: ReadonlyMap<string, string>, values: readonly string[]): string[] {
   return values.map((value) => (isPageRef(value) ? book.get(value) ?? value : value));
+}
+
+/** One address's reference, as a ready-made period keyed by page keeps it; null for an address the website has not had. */
+export async function refFor(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, page: string): Promise<string | null> {
+  const held = await ctx.db
+    .query("searchConsolePageRefs")
+    .withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", holdId).eq("page", page))
+    .first();
+  return held ? refOf(held.ref) : null;
 }
 
 /** Every page reference a website holds, removed with its Search Console data. A page at a time; true when none is left. */

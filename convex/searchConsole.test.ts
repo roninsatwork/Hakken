@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { decodePages } from "./searchConsolePageRefs";
+import { decodePages, isPageRef } from "./searchConsolePageRefs";
 import { decryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { recentWindow } from "./searchConsoleSync";
@@ -522,7 +522,17 @@ describe("collecting", () => {
       .collect());
     // By keyword, each page carrying how many keywords it brought; by page, each keyword how many pages it was shown with.
     expect(await slot("pair", "30")).toMatchObject([{ firstKey: "emergency plumber", keys: ["emergency plumber", "plumber leeds"], counts: [2, 2] }]);
-    expect(await slot("pairByPage", "30")).toMatchObject([{ firstKey: "https://acme-shop.test/", keys: ["plumber leeds", "emergency plumber"], counts: [1, 1] }]);
+    // Each page kept as its number in both (store less round two, C)…
+    const byPage = await slot("pairByPage", "30");
+    expect(byPage).toMatchObject([{ keys: ["plumber leeds", "emergency plumber"], counts: [1, 1] }]);
+    expect(isPageRef(byPage[0].firstKey!)).toBe(true);
+    expect((await slot("pair", "30"))[0].pages!.every(isPageRef)).toBe(true);
+    // …and read back as addresses: one page's keywords found by its address, one keyword's pages named by theirs.
+    const within = (kind: "query" | "page", key: string) => admin.query(api.searchConsoleLists.searchConsoleListPage, {
+      siteId, searchType: "web", dimension: kind === "query" ? "page" : "query", within: { kind, key }, from: "2026-08-28", to: NEWEST, page: 1, rows: 25,
+    });
+    expect((await within("page", "https://acme-shop.test/")).rows.map((one: { key: string }) => one.key)).toEqual(["plumber leeds", "emergency plumber"]);
+    expect((await within("query", "plumber leeds")).rows.map((one: { key: string }) => one.key)).toEqual(["https://acme-shop.test/"]);
     // Every keyword here was shown with one page: none competing, and the one page Google showed counted.
     expect(await slot("competing", "30")).toMatchObject([{ keys: [], shown: 1 }]);
     expect(await slot("competing", "30", "BEFORE")).toEqual([]);
