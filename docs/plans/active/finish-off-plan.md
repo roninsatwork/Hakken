@@ -131,13 +131,18 @@ Agreed by Anthony on 2026-10-05 from the list of better ways ("lets do 1 and
 | 3 | A day already held fetched again only when Google's totals for it changed | `searchConsoleSync.ts` (`sameTotals`, `heldDayTotals`) | — |
 | 4 | The periods added up as one job per kind of result and country, side by side; the last ends the run | `searchConsoleSettle.ts` (`settlePart`), `searchConsoleConnections.settling` | morehandles.co.uk's whole rebuild, all countries and the UK: about 3 minutes, from about 9 (its web job about 2½ minutes, of an action's 10) |
 
-**Decided against (2026-10-05): rebuilding when the website is opened.**
-Anthony: "We collect as per the website schedule, that's not changing. We
-rebuild weekly and after each website collection for that website." That is
-what 1 built: each collection of a website rebuilds its 7- and 30-day lists,
-and its 90-day and 12-month ones when they are a week old; a website not
-collected has nothing new to add up. The catching-up screen
-(`catching-up.png`) is not needed.
+**Next, as Anthony set it out (2026-10-05):** "We collect as per the website
+schedule, that's not changing. We rebuild weekly and after each website
+collection for that website … and we rebuild when someone opens if it's
+stale." Collecting and the rebuild after each collection are as built (1:
+the 7- and 30-day lists every time, the 90-day and 12-month ones weekly).
+To add: when someone opens a website's Search Console and the lists they
+read end before the newest day collected — the 90-day and 12-month ones, up
+to six days behind between weekly rebuilds, or any after a failed rebuild —
+they are added up then. The screen shows the figures held at once, with a
+line and a bar while the newest days are added, and updates itself when
+done (the picture sent on 2026-10-05, `catching-up.png`). About 1.5 days;
+waiting on his word to build.
 
 ## Next, once this plan is done: what Convex costs (agreed 2026-10-05)
 
