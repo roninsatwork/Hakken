@@ -143,6 +143,9 @@ export const creditTables = {
     createdAt: v.number(),
   })
     .index("by_company_at", ["companyId", "at"])
+    /** By work and By website: one kind's or one website's lines in a month, a page at a time (finish-off-plan.md, item 10). */
+    .index("by_company_kind_at", ["companyId", "kind", "at"])
+    .index("by_company_website_at", ["companyId", "websiteId", "at"])
     .index("by_run_key", ["runKey"])
     .index("by_cycle_state", ["cycleId", "state"])
     /** Runs left open: closed by the hourly sweep once their collection has nothing in flight. */
@@ -195,6 +198,12 @@ export const creditTables = {
     credits: v.number(),
     runs: v.number(),
     realCostUsd: v.number(),
+    /**
+     * Who started work of it by hand this month, a few at most: By work's and
+     * By website's "Started by 2 people", read without reading the statement
+     * (finish-off-plan.md, item 10).
+     */
+    byHandUsers: v.optional(v.array(v.id("users"))),
     updatedAt: v.number(),
   })
     .index("by_company_month_kind_site", ["companyId", "month", "kind", "websiteKey"])

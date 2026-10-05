@@ -1,17 +1,20 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, type ComponentProps, type ReactNode } from "react";
+import { useConvex } from "convex/react";
 import { ReceiptText } from "lucide-react";
-import type { FunctionReturnType } from "convex/server";
-import type { api } from "@/convex/_generated/api";
+import type { FunctionArgs, FunctionReturnType } from "convex/server";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import type { CreditKind } from "@/convex/creditKinds";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import useDebounce from "@/src/hooks/useDebounce";
+import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
-import type { ComponentProps } from "react";
 import { DownloadButton, saveTextFile } from "@/src/ui/components/screens/DownloadButton";
 import { Select } from "@/src/ui/components/screens/Select";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
-import { matchesSearchTerm, paginateItems } from "@/src/ui/components/screens/pagination";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { toCsv } from "../../sites/_components/siteFormat";
 import { CREDIT_KIND_ORDER, useUsageWords, type UsageWords } from "./usageWords";
 
@@ -21,10 +24,14 @@ import { CREDIT_KIND_ORDER, useUsageWords, type UsageWords } from "./usageWords"
  * ByWebsite): date, time, what it was, who, credits out — and on the
  * statement itself, credits in and the balance after, between the balance
  * the month opened with and the balance now.
+ *
+ * Read a page at a time from the server (finish-off-plan.md, item 10): a
+ * month of any length, its filters and search applied there, its order by
+ * date either way. The download reads every page in turn.
  */
 
-type Statement = NonNullable<FunctionReturnType<typeof api.creditUsage.usageStatement>>;
-export type StatementLine = Statement["lines"][number];
+export type StatementLine = FunctionReturnType<typeof api.creditUsage.usageStatement>["page"][number];
+type StatementArgs = Omit<FunctionArgs<typeof api.creditUsage.usageStatement>, "paginationOpts">;
 
 type Row =
   | { kind: "line"; line: StatementLine; title: string; detail: string; user: string; how: string }
@@ -34,6 +41,10 @@ type Row =
 export type StatementFilter = "task" | "website" | "user";
 
 const NOT_TIED = "none";
+
+/** Lines a download reads a page, and the most it reads: a month far past any company's. */
+const DOWNLOAD_PAGE = 500;
+const DOWNLOAD_MOST = 50_000;
 
 /** A line in words: what it was, and the facts a reader would ask about it. */
 function describe(line: StatementLine, words: UsageWords, platformName: string) {
@@ -83,67 +94,86 @@ function describe(line: StatementLine, words: UsageWords, platformName: string) 
  * header, as every list screen does.
  */
 export function useStatementTable({
-  lines,
+  base,
   statement = false,
   opening,
   closing,
+  totals,
   filters,
+  kinds,
+  websites,
+  people,
   searchPlaceholder,
   fileName,
 }: {
-  lines: StatementLine[] | undefined;
+  /** The month, and the kind or website a By work or By website page is showing; "skip" until it knows. */
+  base: Pick<StatementArgs, "month" | "kind" | "website" | "chargesOnly"> | "skip";
   /** The statement itself: credits in, the balance after each line, and the month's opening and closing balances. */
   statement?: boolean;
   opening?: number;
   closing?: number;
+  /** The words beside the count: the month's totals, from its figures. */
+  totals: ReactNode;
   filters: StatementFilter[];
+  /** What the filters offer: the month's kinds of work, its websites, and the company's people. */
+  kinds: CreditKind[];
+  websites: Array<{ key: string; host: string }>;
+  people: Array<{ userId: Id<"users">; name: string }>;
   searchPlaceholder: string;
   fileName: string;
 }) {
   const words = useUsageWords();
   const { platformName } = useSystemSettings();
+  const convex = useConvex();
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
   const [task, setTask] = useState("");
   const [website, setWebsite] = useState("");
   const [user, setUser] = useState("");
-  const [sort, setSort] = useState<{ key: string; direction: "asc" | "desc" }>({ key: "when", direction: statement ? "asc" : "desc" });
+  const [direction, setDirection] = useState<"asc" | "desc">(statement ? "asc" : "desc");
+  const term = useDebounce(search.trim(), 300);
 
-  const described = lines?.map((line) => ({ kind: "line" as const, line, ...describe(line, words, platformName) }));
+  const lower = term.toLowerCase();
+  const args: StatementArgs | "skip" = base === "skip" ? "skip" : {
+    ...base,
+    ...(task ? { kind: task as CreditKind } : {}),
+    ...(website ? { website } : {}),
+    ...(user ? { userId: user as Id<"users"> } : {}),
+    // The kinds of work whose names, in the reader's own words, the search matches.
+    ...(lower ? { search: lower, searchKinds: CREDIT_KIND_ORDER.filter((kind) => words.kind(kind).toLowerCase().includes(lower)) } : {}),
+    order: direction,
+  };
+  const pages = useServerPagedTable(api.creditUsage.usageStatement, args, TABLE_PAGE_SIZE, { fill: true });
 
-  const kinds = CREDIT_KIND_ORDER.filter((kind) => described?.some((row) => row.line.kind === kind));
-  const hosts = [...new Set(described?.flatMap((row) => (row.line.website ? [row.line.website.host] : [])) ?? [])];
-  const anyNotTied = described?.some((row) => row.line.entry === "charge" && !row.line.website) ?? false;
-  const users = [...new Set(described?.map((row) => row.user) ?? [])].filter((name) => name !== "–");
-
-  const filtered = described?.filter((row) =>
-    (!task || row.line.kind === task)
-    && (!website || (website === NOT_TIED ? !row.line.website && row.line.entry === "charge" : row.line.website?.host === website))
-    && (!user || row.user === user)
-    && matchesSearchTerm(search, [row.title, row.detail, row.user]));
-
-  const sorted = filtered ? [...filtered].sort((a, b) => {
-    const by = sort.key === "out" ? a.line.out - b.line.out : sort.key === "user" ? a.user.localeCompare(b.user) : a.line.at - b.line.at;
-    return sort.direction === "asc" ? by || a.line.at - b.line.at : -by || b.line.at - a.line.at;
-  }) : undefined;
-
+  const described = (line: StatementLine) => ({ kind: "line" as const, line, ...describe(line, words, platformName) });
+  const narrowed = Boolean(task || website || user || term);
   // The month's opening and closing balances, as a bank statement prints them:
-  // only around the whole month, in date order.
-  const whole = statement && !task && !website && !user && !search && sort.key === "when" && sort.direction === "asc";
-  const rows: Row[] | undefined = sorted && sorted.length > 0 && whole && opening !== undefined && closing !== undefined
-    ? [{ kind: "opening", balance: opening, at: sorted[0]?.line.at ?? 0 }, ...sorted, { kind: "closing", balance: closing, at: sorted[sorted.length - 1]?.line.at ?? 0 }]
-    : sorted;
-  const paged = paginateItems(rows ?? [], page);
-  const lineRows = sorted ?? [];
+  // only around the whole month, in date order — the first page opens, the last closes.
+  const whole = statement && !narrowed && direction === "asc" && opening !== undefined && closing !== undefined;
+  const lineRows: Row[] = pages.rows.map(described);
+  const loading = base === "skip" || pages.isLoading;
+  const rows: Row[] | undefined = loading ? undefined : [
+    ...(whole && pages.page === 1 && lineRows.length > 0 ? [{ kind: "opening" as const, balance: opening, at: pages.rows[0]?.at ?? 0 }] : []),
+    ...lineRows,
+    ...(whole && !pages.hasMore && pages.page === pages.totalPages && lineRows.length > 0 ? [{ kind: "closing" as const, balance: closing, at: pages.rows.at(-1)?.at ?? 0 }] : []),
+  ];
 
   const reset = (apply: () => void) => {
     apply();
-    setPage(1);
+    pages.goToPage(1);
   };
 
-  const download = () => {
+  const download = async () => {
+    if (args === "skip") return;
+    const all: StatementLine[] = [];
+    let cursor: string | null = null;
+    while (all.length < DOWNLOAD_MOST) {
+      const page: FunctionReturnType<typeof api.creditUsage.usageStatement> = await convex.query(api.creditUsage.usageStatement, { ...args, paginationOpts: { cursor, numItems: DOWNLOAD_PAGE } });
+      all.push(...page.page);
+      if (page.isDone) break;
+      cursor = page.continueCursor;
+    }
     const headers = [words.t("statement.columns.date"), words.t("statement.columns.time"), words.t("statement.columns.description"), words.t("statement.columns.detail"), words.t("statement.columns.user"), words.t("statement.columns.out"), ...(statement ? [words.t("statement.columns.in"), words.t("statement.columns.balance")] : [])];
-    saveTextFile(toCsv(headers, lineRows.map((row) => [
+    saveTextFile(toCsv(headers, all.map(described).map((row) => [
       words.date(row.line.at), words.time(row.line.at), row.title, row.detail, row.user, row.line.out || null,
       ...(statement ? [row.line.in || null, row.line.balance] : []),
     ])), `${fileName}.csv`);
@@ -177,7 +207,6 @@ export function useStatementTable({
     {
       key: "user",
       header: words.t("statement.columns.user"),
-      sortable: true,
       cell: lineOnly((row) => (
         <span className="flex flex-col">
           <span className="whitespace-nowrap text-[13px] text-foreground">{row.user}</span>
@@ -185,7 +214,7 @@ export function useStatementTable({
         </span>
       )),
     },
-    { key: "out", header: words.t("statement.columns.out"), align: "right", sortable: true, cell: lineOnly((row) => <span className="font-mono text-[13px] text-foreground">{row.line.out ? words.number(row.line.out) : ""}</span>) },
+    { key: "out", header: words.t("statement.columns.out"), align: "right", cell: lineOnly((row) => <span className="font-mono text-[13px] text-foreground">{row.line.out ? words.number(row.line.out) : ""}</span>) },
     ...(statement ? [
       { key: "in", header: words.t("statement.columns.in"), align: "right" as const, cell: lineOnly((row) => <span className="font-mono text-[13px] text-foreground">{row.line.in ? words.number(row.line.in) : ""}</span>) },
       {
@@ -205,56 +234,55 @@ export function useStatementTable({
       {filters.includes("task") ? (
         <Select value={task} onChange={(next) => reset(() => setTask(next))} chip={{ label: words.t("filters.task"), choice: task ? words.kind(task as CreditKind) : null }}>
           <option value="">{words.t("filters.everyTask")}</option>
-          {kinds.map((kind) => <option key={kind} value={kind}>{words.kind(kind)}</option>)}
+          {CREDIT_KIND_ORDER.filter((kind) => kinds.includes(kind)).map((kind) => <option key={kind} value={kind}>{words.kind(kind)}</option>)}
         </Select>
       ) : null}
       {filters.includes("website") ? (
-        <Select value={website} onChange={(next) => reset(() => setWebsite(next))} chip={{ label: words.t("filters.website"), choice: website ? (website === NOT_TIED ? words.t("websites.none") : website) : null }}>
+        <Select value={website} onChange={(next) => reset(() => setWebsite(next))} chip={{ label: words.t("filters.website"), choice: website ? websites.find((row) => row.key === website)?.host ?? words.t("websites.none") : null }}>
           <option value="">{words.t("filters.everyWebsite")}</option>
-          {hosts.map((host) => <option key={host} value={host}>{host}</option>)}
-          {anyNotTied ? <option value={NOT_TIED}>{words.t("websites.none")}</option> : null}
+          {websites.map((row) => <option key={row.key} value={row.key}>{row.key === NOT_TIED ? words.t("websites.none") : row.host}</option>)}
         </Select>
       ) : null}
       {filters.includes("user") ? (
-        <Select value={user} onChange={(next) => reset(() => setUser(next))} chip={{ label: words.t("filters.user"), choice: user || null }}>
+        <Select value={user} onChange={(next) => reset(() => setUser(next))} chip={{ label: words.t("filters.user"), choice: user ? people.find((person) => person.userId === user)?.name ?? null : null }}>
           <option value="">{words.t("filters.everyUser")}</option>
-          {users.map((name) => <option key={name} value={name}>{name}</option>)}
+          {people.map((person) => <option key={person.userId} value={person.userId}>{person.name}</option>)}
         </Select>
       ) : null}
     </>
   );
 
-  const out = lineRows.reduce((sum, row) => sum + row.line.out, 0);
-  const into = lineRows.reduce((sum, row) => sum + row.line.in, 0);
   const footer = {
     mode: "paged" as const,
-    page: paged.page,
-    totalPages: paged.totalPages,
-    totalCount: paged.totalItems,
-    pageSize: paged.pageSize,
-    isLoading: lines === undefined,
-    onPageChange: setPage,
+    page: pages.page,
+    totalPages: pages.totalPages,
+    totalCount: pages.loadedCount,
+    pageSize: TABLE_PAGE_SIZE,
+    isLoading: loading || pages.isBusy,
+    onPageChange: pages.goToPage,
   };
 
   const props: ComponentProps<typeof DataTable<Row>> = {
-      rows: rows === undefined ? undefined : paged.items,
-      rowKey: (row) => (row.kind === "line" ? row.line.id : row.kind),
-      columns,
-      rowClassName: (row) => (row.kind === "line" ? "" : "bg-foreground/[0.02]"),
-      search: { value: search, onChange: (next) => reset(() => setSearch(next)), placeholder: searchPlaceholder },
-      filters: chips,
-      sort: { key: sort.key, direction: sort.direction, onSort: (key) => reset(() => setSort((before) => ({ key, direction: before.key === key ? (before.direction === "asc" ? "desc" : "asc") : key === "when" ? (statement ? "asc" : "desc") : "desc" }))) },
-      empty: { icon: <ReceiptText className="h-8 w-8 text-muted/30" />, label: search || task || website || user ? words.t("statement.noMatch") : words.t("statement.empty") },
-      cardHeader: (
-        <TableBar
-          footer={{ isLoading: lines === undefined, totalCount: lineRows.length }}
-          noun="lines"
-          actions={<DownloadButton label={words.t("download")} onClick={download} disabled={lineRows.length === 0} />}
-        >
-          <span className="text-[13px] text-secondary">{statement ? words.t("statement.totals", { out: words.number(out), in: words.number(into) }) : words.t("statement.used", { out: words.number(out) })}</span>
-        </TableBar>
-      ),
-      footer,
+    rows,
+    rowKey: (row) => (row.kind === "line" ? row.line.id : row.kind),
+    columns,
+    rowClassName: (row) => (row.kind === "line" ? "" : "bg-foreground/[0.02]"),
+    search: { value: search, onChange: (next) => reset(() => setSearch(next)), placeholder: searchPlaceholder },
+    filters: chips,
+    // By date, either way; the statement itself oldest first.
+    sort: { key: "when", direction, onSort: () => reset(() => setDirection((before) => (before === "asc" ? "desc" : "asc"))) },
+    empty: { icon: <ReceiptText className="h-8 w-8 text-muted/30" />, label: narrowed ? words.t("statement.noMatch") : words.t("statement.empty") },
+    cardHeader: (
+      <TableBar
+        footer={{ isLoading: loading, totalCount: pages.loadedCount }}
+        noun="lines"
+        actions={<DownloadButton label={words.t("download")} onClick={() => void download()} disabled={loading || pages.loadedCount === 0} />}
+      >
+        {pages.hasMore ? <span className="text-[13px] text-secondary">{words.t("statement.soFar")}</span> : null}
+        <span className="text-[13px] text-secondary">{totals}</span>
+      </TableBar>
+    ),
+    footer,
   };
   return props;
 }

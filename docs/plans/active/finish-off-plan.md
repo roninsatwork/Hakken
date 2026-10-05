@@ -206,3 +206,31 @@ the table above is how it stands before it.
 - Decided: per keyword, not only all-or-nothing, since a three-keyword lookup
   where one keyword fails has bought nothing for that keyword. Lookups made
   before this change are not counted again.
+
+### Item 10 — the Statement reads past 900 lines in a month
+
+- **A page at a time, never the whole month.** `usageStatement` is a paged
+  query (`convex/creditUsage.ts`): the Statement, By work and By website ask
+  for 15 lines at a time through the house pager (`useServerPagedTable`,
+  extended with `fill` so a page narrowed as it is read keeps reading until it
+  is full) and the kit's paged footer. One kind's or one website's lines are
+  read by their own index (`by_company_kind_at`, `by_company_website_at`); a
+  person or a search narrows each page as it is read, 200 lines a read at most.
+- **Figures without reading lines** (`usageStatementTotals`): the opening
+  balance and the balance now are the balances on the lines either side of the
+  month; In is the month's plan credits and anything bought; Out is what
+  opened and came in less what is left, split into ended unused (the batches
+  that ended in the month) and used — so "used" is after anything given back,
+  and the figure says so. By work's and By website's figures come from the
+  month's rollups, which now keep who started work by hand (`byHandUsers`,
+  for "Started by 2 people"); the recount's last pass fills it in for charges
+  made before (`creditCorrections:recountCollectionCredits`).
+- **Changed on the screens** (no kit part or heading added or removed; the
+  approved outlines are unchanged): the table sorts by Date only, either way
+  — User and Out sorted only the lines on screen, which the table rules do not
+  allow, and a month cannot be ordered by them on the server without more
+  indexes; the User filter lists the company's people; the count in the bar
+  says "so far: more on the pages after" while more pages are to come; the
+  opening balance opens the first page and the balance now closes the last;
+  the CSV reads every page in turn (up to 50,000 lines). The "more lines than
+  one page can hold" warning is gone.

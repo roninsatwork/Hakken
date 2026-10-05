@@ -462,7 +462,10 @@ screen's outline is held by a look test
   "What ran this month" to it; the Statement opens and closes on the month's
   balances and says which batch paid each line.
 - **Bounded reads**: a month's rollups, the newest 900 charges for what is
-  booked, and 900 statement lines — a month with more says so.
+  booked, and 900 statement lines — a month with more says so. *Changed
+  2026-10-05 (finish-off-plan.md, item 10): the statement is read a page at a
+  time, however long the month, and its figures come from its balances and
+  batches.*
 - **Words**: English and Italian; the assistant's kind reads "Ask" and the
   platform's own name.
 

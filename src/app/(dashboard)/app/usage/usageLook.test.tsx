@@ -1,6 +1,6 @@
 import { act, cleanup, fireEvent, renderWithProviders as render, screen, within } from "@/src/test/renderWithProviders";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useQuery } from "convex/react";
+import { usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import type { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -52,17 +52,17 @@ const SUMMARY: NonNullable<FunctionReturnType<typeof api.creditUsage.usageSummar
   byDay: [49, 16, 4, 4, 117, 21, 9, 6, 9, 4, 4, 124, 9, 16, 4, 6, 4, 4, 124, 9, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   previous: { month: "2026-09", granted: 1000, byDay: Array.from({ length: 30 }, () => 16) },
   kinds: [
-    { kind: "aiAnswers", credits: 300, runs: 3 },
-    { kind: "rankings", credits: 104, runs: 26 },
-    { kind: "keywordResearch", credits: 90, runs: 18 },
-    { kind: "siteAudit", credits: 25, runs: 1 },
-    { kind: "assistant", credits: 14, runs: 14 },
-    { kind: "backlinks", credits: 10, runs: 1 },
+    { kind: "aiAnswers", credits: 300, runs: 3, people: 0 },
+    { kind: "rankings", credits: 104, runs: 26, people: 0 },
+    { kind: "keywordResearch", credits: 90, runs: 18, people: 2 },
+    { kind: "siteAudit", credits: 25, runs: 1, people: 0 },
+    { kind: "assistant", credits: 14, runs: 14, people: 1 },
+    { kind: "backlinks", credits: 10, runs: 1, people: 0 },
   ],
   websites: [
-    { website: own, credits: 427, runs: 25, kinds: ["rankings", "aiAnswers", "siteAudit", "backlinks"] },
-    { website: null, credits: 104, runs: 32, kinds: ["keywordResearch", "assistant"] },
-    { website: rival, credits: 12, runs: 3, kinds: ["rankings"] },
+    { website: own, credits: 427, runs: 25, people: 0, kinds: ["rankings", "aiAnswers", "siteAudit", "backlinks"] },
+    { website: null, credits: 104, runs: 32, people: 2, kinds: ["keywordResearch", "assistant"] },
+    { website: rival, credits: 12, runs: 3, people: 0, kinds: ["rankings"] },
   ],
   lines: [
     { kind: "aiAnswers", website: own, credits: 300, runs: 3, everyDays: 7 },
@@ -84,7 +84,7 @@ const SUMMARY: NonNullable<FunctionReturnType<typeof api.creditUsage.usageSummar
   forecast: { booked: 152, pace: 55, leftAtEnd: 250 },
 };
 
-const line = (id: string, at: number, extra: Partial<NonNullable<FunctionReturnType<typeof api.creditUsage.usageStatement>>["lines"][number]>) => ({
+const line = (id: string, at: number, extra: Partial<FunctionReturnType<typeof api.creditUsage.usageStatement>["page"][number]>) => ({
   id: id as never,
   at,
   entry: "charge" as const,
@@ -105,11 +105,20 @@ const line = (id: string, at: number, extra: Partial<NonNullable<FunctionReturnT
   ...extra,
 });
 
-const STATEMENT: NonNullable<FunctionReturnType<typeof api.creditUsage.usageStatement>> = {
+/** The month's figures, as `usageStatementTotals` gives them. */
+const TOTALS: NonNullable<FunctionReturnType<typeof api.creditUsage.usageStatementTotals>> = {
   month: "2026-10",
   opening: 37,
   closing: 957,
-  cut: false,
+  planIn: 1000,
+  otherIn: 500,
+  used: 40,
+  ended: 37,
+  people: [{ userId: "user_anthony" as Id<"users">, name: "Anthony Basker" }, { userId: "user_priya" as Id<"users">, name: "Priya Shah" }],
+};
+
+/** The month's lines, as the statement's pages give them. */
+const STATEMENT = {
   lines: [
     line("c1", OCT, { entry: "ended", source: "plan", how: "automatic", out: 37, balance: 0, from: [{ source: "plan", month: "2026-09", startsAt: Date.UTC(2026, 8, 1) }], batch: { source: "plan", month: "2026-09", startsAt: Date.UTC(2026, 8, 1), endsAt: OCT } }),
     line("c2", OCT, { entry: "grant", source: "plan", how: "automatic", in: 1000, balance: 1000, from: [], batch: { source: "plan", month: "2026-10", startsAt: OCT, endsAt: Date.UTC(2026, 10, 1) } }),
@@ -139,13 +148,21 @@ function at(pathname: string, search = "") {
   nav.search = search;
 }
 
+/** The statement's pages: every line at once, and nothing more to read. */
+function pagesOf(lines: typeof STATEMENT.lines) {
+  vi.mocked(usePaginatedQuery).mockImplementation(((_query: unknown, args: unknown) => (args === "skip"
+    ? { results: [], status: "LoadingFirstPage", isLoading: true, loadMore: vi.fn() }
+    : { results: lines, status: "Exhausted", isLoading: false, loadMore: vi.fn() })) as never);
+}
+
 beforeEach(() => {
   vi.mocked(useQuery).mockReset();
   vi.mocked(useQuery).mockImplementation(answerQueries({
     "creditUsage:usageSummary": SUMMARY,
-    "creditUsage:usageStatement": STATEMENT,
+    "creditUsage:usageStatementTotals": TOTALS,
     "creditUsage:usageComingUp": COMING_UP,
   }));
+  pagesOf(STATEMENT.lines);
 });
 afterEach(cleanup);
 
@@ -217,10 +234,23 @@ describe("Usage's screens", () => {
     expect(screen.getByText("ronins.co.uk · 1,240 pages · from October’s plan")).toBeTruthy();
   });
 
+  it("the statement reads a page at a time: more to come says so, and its filters and order are asked of the server", async () => {
+    const loadMore = vi.fn();
+    vi.mocked(usePaginatedQuery).mockImplementation((() => ({ results: STATEMENT.lines, status: "CanLoadMore", isLoading: false, loadMore })) as never);
+    at("/app/usage/statement");
+    render(<UsageStatementPage />);
+    await screen.findByText("Opening balance", { selector: "span" });
+    expect(screen.getByText("so far: more on the pages after")).toBeTruthy();
+    // The month closes only on its last page.
+    expect(screen.queryByText("Balance now", { selector: "span.font-medium" })).toBeNull();
+    fireEvent.change(screen.getByLabelText("User"), { target: { value: "user_priya" } });
+    expect(vi.mocked(usePaginatedQuery).mock.lastCall?.[1]).toMatchObject({ userId: "user_priya", order: "asc" });
+    fireEvent.click(screen.getByRole("button", { name: /Date/ }));
+    expect(vi.mocked(usePaginatedQuery).mock.lastCall?.[1]).toMatchObject({ order: "desc" });
+  });
+
   it("a charge counted again from what came back says what it is now and was, and where its credits went back", async () => {
-    vi.mocked(useQuery).mockImplementation(answerQueries({
-      "creditUsage:usageStatement": { ...STATEMENT, lines: [...STATEMENT.lines, line("c8", OCT + 19 * DAY + 3_600_000, { entry: "recount", kind: "siteAudit", website: own, user: "Anthony Basker", how: "automatic", units: 1, before: 1000, in: 24, balance: 981, reason: "recounted" })] },
-    }));
+    pagesOf([...STATEMENT.lines, line("c8", OCT + 19 * DAY + 3_600_000, { entry: "recount", kind: "siteAudit", website: own, user: "Anthony Basker", how: "automatic", units: 1, before: 1000, in: 24, balance: 981, reason: "recounted" })]);
     at("/app/usage/statement");
     render(<UsageStatementPage />);
     expect(await screen.findByText("Counted again: Site audit")).toBeTruthy();
@@ -229,9 +259,7 @@ describe("Usage's screens", () => {
 
   it("a month's plan credits raised after they were given say so, from what to what", async () => {
     const october = { source: "plan" as const, month: "2026-10", startsAt: OCT, endsAt: Date.UTC(2026, 10, 1) };
-    vi.mocked(useQuery).mockImplementation(answerQueries({
-      "creditUsage:usageStatement": { ...STATEMENT, lines: [...STATEMENT.lines, line("c8", OCT + 19 * DAY + 3_600_000, { entry: "grant", source: "plan", how: "automatic", in: 9000, balance: 9957, reason: "raised", before: 1000, from: [], batch: october })] },
-    }));
+    pagesOf([...STATEMENT.lines, line("c8", OCT + 19 * DAY + 3_600_000, { entry: "grant", source: "plan", how: "automatic", in: 9000, balance: 9957, reason: "raised", before: 1000, from: [], batch: october })]);
     at("/app/usage/statement");
     render(<UsageStatementPage />);
     expect(await screen.findByText("October’s plan credits raised")).toBeTruthy();

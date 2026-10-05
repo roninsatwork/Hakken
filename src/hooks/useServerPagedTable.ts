@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePaginatedQuery } from "convex/react";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 
@@ -23,10 +23,22 @@ export function useServerPagedTable<Query extends Parameters<typeof usePaginated
   query: Query,
   args: Parameters<typeof usePaginatedQuery<Query>>[1],
   pageSize: number = TABLE_PAGE_SIZE,
+  /**
+   * `fill`: for a query whose pages can come back short — one that narrows
+   * each page as it reads it, as the Usage statement does by person and
+   * search (finish-off-plan.md, item 10) — keep reading on until the page on
+   * screen is full or the list has ended, so a page is never half empty
+   * while the next one holds its rows.
+   */
+  options: { fill?: boolean } = {},
 ) {
   const [page, setPage] = useState(1);
   const paginated = usePaginatedQuery(query, args, { initialNumItems: pageSize });
   const { results, status, loadMore } = paginated;
+  const short = options.fill === true && status === "CanLoadMore" && results.length < page * pageSize;
+  useEffect(() => {
+    if (short) loadMore(pageSize);
+  }, [short, results.length, loadMore, pageSize]);
 
   // A new search or filter starts at the beginning; staying on page 4 of a
   // list that just became one page long shows an empty table. Adjusted

@@ -255,6 +255,34 @@ async function bumpRollupCosts(ctx: MutationCtx, charge: Charge, realCostUsd: nu
   await bumpPlatformMonth(ctx, month, kind, { realCostUsd, reusedValueUsd }, now);
 }
 
+/** People a month's rollup names as having started work by hand: enough to count a team, never a list that grows without end. */
+const BY_HAND_USERS = 50;
+
+/** A rollup's people with a charge's person added, when it was started by hand and is not there yet; else nothing to write. */
+function withByHandUser(users: Id<"users">[] | undefined, charge: Charge): Id<"users">[] | null {
+  if (charge.how !== "byHand" || !charge.userId) return null;
+  const known = users ?? [];
+  if (known.includes(charge.userId) || known.length >= BY_HAND_USERS) return null;
+  return [...known, charge.userId];
+}
+
+/**
+ * Add a charge's person to its month's rollup — for charges closed before
+ * the rollups named them (finish-off-plan.md, item 10). Safe to repeat.
+ */
+export async function noteByHandUser(ctx: MutationCtx, charge: Charge): Promise<void> {
+  if (!charge.kind || charge.entry !== "charge" || charge.state !== "charged") return;
+  const month = creditDayOf(charge.at).slice(0, 7);
+  const kind = charge.kind;
+  const websiteKey = charge.websiteId ?? "none";
+  const row = await ctx.db
+    .query("creditMonthRollups")
+    .withIndex("by_company_month_kind_site", (q) => q.eq("companyId", charge.companyId).eq("month", month).eq("kind", kind).eq("websiteKey", websiteKey))
+    .first();
+  const byHandUsers = row ? withByHandUser(row.byHandUsers, charge) : null;
+  if (row && byHandUsers) await ctx.db.patch(row._id, { byHandUsers });
+}
+
 /** A charge's credits into its month's rollup (per kind and website), its day's total, and every company's month. */
 async function bumpCreditRollup(ctx: MutationCtx, charge: Charge, credits: number, now: number): Promise<void> {
   if (!charge.kind) return;
@@ -266,16 +294,18 @@ async function bumpCreditRollup(ctx: MutationCtx, charge: Charge, credits: numbe
     .query("creditMonthRollups")
     .withIndex("by_company_month_kind_site", (q) => q.eq("companyId", charge.companyId).eq("month", month).eq("kind", kind).eq("websiteKey", websiteKey))
     .first();
+  const byHandUsers = withByHandUser(existing?.byHandUsers, charge);
   if (existing) {
     await ctx.db.patch(existing._id, {
       credits: existing.credits + credits,
       runs: existing.runs + 1,
       realCostUsd: existing.realCostUsd + charge.realCostUsd,
+      ...(byHandUsers ? { byHandUsers } : {}),
       updatedAt: now,
     });
   } else {
     await ctx.db.insert("creditMonthRollups", {
-      companyId: charge.companyId, month, kind, websiteKey, credits, runs: 1, realCostUsd: charge.realCostUsd, updatedAt: now,
+      companyId: charge.companyId, month, kind, websiteKey, credits, runs: 1, realCostUsd: charge.realCostUsd, ...(byHandUsers ? { byHandUsers } : {}), updatedAt: now,
     });
   }
   await bumpPlatformMonth(ctx, month, kind, {

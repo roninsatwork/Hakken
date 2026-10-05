@@ -1,4 +1,5 @@
 import { v, type Infer } from "convex/values";
+import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
@@ -190,7 +191,8 @@ function median(values: number[]): number {
 
 // ---------------------------------------------------------------- the summary
 
-const kindTotalShape = v.object({ kind: creditKindValidator, credits: v.number(), runs: v.number() });
+/** A kind's month: its credits, runs, and how many people started work of it by hand (from the rollups' `byHandUsers`). */
+const kindTotalShape = v.object({ kind: creditKindValidator, credits: v.number(), runs: v.number(), people: v.number() });
 
 const summaryShape = v.object({
   month: v.string(),
@@ -210,6 +212,7 @@ const summaryShape = v.object({
     website: v.union(websiteShape, v.null()),
     credits: v.number(),
     runs: v.number(),
+    people: v.number(),
     kinds: v.array(creditKindValidator),
   })),
   lines: v.array(v.object({
@@ -248,16 +251,18 @@ export const usageSummary = tenantQuery({
     const previousPlan = await ctx.db.query("creditBatches").withIndex("by_company_month", (q) => q.eq("companyId", companyId).eq("month", previous.month)).first();
     const topUps = batches.filter((batch) => batch.source === "topup" && batch.left > 0 && batch.endsAt > now);
 
-    const kinds = new Map<CreditKind, { credits: number; runs: number }>();
-    const sites = new Map<string, { credits: number; runs: number; kinds: Set<CreditKind> }>();
+    const kinds = new Map<CreditKind, { credits: number; runs: number; people: Set<string> }>();
+    const sites = new Map<string, { credits: number; runs: number; kinds: Set<CreditKind>; people: Set<string> }>();
     const lines = new Map<string, { kind: CreditKind; websiteKey: string; credits: number; runs: number }>();
     for (const row of rows) {
       const kind = row.kind as CreditKind;
-      const k = kinds.get(kind) ?? { credits: 0, runs: 0 };
-      kinds.set(kind, { credits: k.credits + row.credits, runs: k.runs + row.runs });
-      const s = sites.get(row.websiteKey) ?? { credits: 0, runs: 0, kinds: new Set<CreditKind>() };
+      const k = kinds.get(kind) ?? { credits: 0, runs: 0, people: new Set<string>() };
+      for (const userId of row.byHandUsers ?? []) k.people.add(userId);
+      kinds.set(kind, { credits: k.credits + row.credits, runs: k.runs + row.runs, people: k.people });
+      const s = sites.get(row.websiteKey) ?? { credits: 0, runs: 0, kinds: new Set<CreditKind>(), people: new Set<string>() };
       s.kinds.add(kind);
-      sites.set(row.websiteKey, { credits: s.credits + row.credits, runs: s.runs + row.runs, kinds: s.kinds });
+      for (const userId of row.byHandUsers ?? []) s.people.add(userId);
+      sites.set(row.websiteKey, { credits: s.credits + row.credits, runs: s.runs + row.runs, kinds: s.kinds, people: s.people });
       const lineKey = `${kind}:${row.websiteKey}`;
       const l = lines.get(lineKey) ?? { kind, websiteKey: row.websiteKey, credits: 0, runs: 0 };
       lines.set(lineKey, { ...l, credits: l.credits + row.credits, runs: l.runs + row.runs });
@@ -298,9 +303,9 @@ export const usageSummary = tenantQuery({
       used,
       byDay: creditsByDay(days, month.month, month.days),
       previous: { month: previous.month, granted: previousPlan?.granted ?? planCredits, byDay: creditsByDay(previousDays, previous.month, previous.days) },
-      kinds: [...kinds.entries()].map(([kind, total]) => ({ kind, ...total })).sort((a, b) => b.credits - a.credits),
+      kinds: [...kinds.entries()].map(([kind, total]) => ({ kind, credits: total.credits, runs: total.runs, people: total.people.size })).sort((a, b) => b.credits - a.credits),
       websites: [...sites.entries()]
-        .map(([key, total]) => ({ website: key === "none" ? null : websites.get(key) ?? null, credits: total.credits, runs: total.runs, kinds: [...total.kinds] }))
+        .map(([key, total]) => ({ website: key === "none" ? null : websites.get(key) ?? null, credits: total.credits, runs: total.runs, people: total.people.size, kinds: [...total.kinds] }))
         .sort((a, b) => b.credits - a.credits),
       lines: [...lines.values()]
         .map((line) => ({
@@ -353,8 +358,12 @@ export const usageComingUp = tenantQuery({
 
 // ---------------------------------------------------------------- the statement
 
-/** A month's lines sent at most; past them the screen says so and the CSV is the whole. */
-const STATEMENT_LIMIT = 900;
+/**
+ * Lines read for one page of a statement narrowed by a person or a search,
+ * which the page's own index cannot narrow: the screen asks for the next
+ * page until its own is full, each read this many lines at most.
+ */
+const STATEMENT_SCAN = 200;
 
 const statementLineShape = v.object({
   id: v.id("creditCharges"),
@@ -379,89 +388,167 @@ const statementLineShape = v.object({
   batch: v.union(v.object({ source: creditSourceValidator, month: v.union(v.string(), v.null()), startsAt: v.number(), endsAt: v.number() }), v.null()),
 });
 
+/** The statement's balance before a moment: the newest charged line's before it, among the last few. */
+async function balanceBefore(ctx: Reader, companyId: Id<"companies">, at: number): Promise<number | null> {
+  const before = await ctx.db
+    .query("creditCharges")
+    .withIndex("by_company_at", (q) => q.eq("companyId", companyId).lt("at", at))
+    .order("desc")
+    .take(50);
+  return before.find((line) => line.state === "charged" && line.balanceAfter !== undefined)?.balanceAfter ?? null;
+}
+
+/** What a search finds on a line: its website, what it was for, who, and the kinds of work whose names the screen matched. */
+function lineMatches(line: StatementLine, term: string, kinds: readonly CreditKind[]): boolean {
+  return (line.kind !== null && kinds.includes(line.kind))
+    || [line.website?.host, line.detail, line.user].some((text) => (text ?? "").toLowerCase().includes(term));
+}
+
+type StatementLine = Infer<typeof statementLineShape>;
+
 /**
- * Usage → Statement, and the lists on By work and By website: every credit
- * in and out in a month, in order, with the balance after each and the
- * balance the month opened with.
+ * Usage → Statement, and the lists on By work and By website: a month's
+ * credits in and out, a page at a time (finish-off-plan.md, item 10) — never
+ * the whole month at once, however many lines it has. One kind of work's or
+ * one website's lines are read by their own index; a person or a search
+ * narrows each page as it is read, a page of at most `STATEMENT_SCAN` lines,
+ * and the screen reads on until its own page is full. In date order, oldest
+ * first for the statement; the month's balances and totals are
+ * `usageStatementTotals`.
  */
 export const usageStatement = tenantQuery({
   args: {
+    paginationOpts: paginationOptsValidator,
     month: v.optional(v.string()),
-    /** By work: one kind of work's charges only. */
+    /** By work, or the Task filter: one kind of work's lines only. */
     kind: v.optional(creditKindValidator),
-    /** By website: one website's charges only, or `none` for work tied to no website. */
+    /** By website, or the Website filter: one website's lines only, or `none` for work tied to no website. */
     website: v.optional(v.string()),
+    /** The User filter: one person's lines. */
+    userId: v.optional(v.id("users")),
+    /** The search box, and the kinds of work whose names (in the reader's language) it matches. */
+    search: v.optional(v.string()),
+    searchKinds: v.optional(v.array(creditKindValidator)),
+    /** Oldest first, as a statement prints, or newest first. */
+    order: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
+    /** By work and By website: the work charged only, not the lines that granted, ended or gave back credits. */
+    chargesOnly: v.optional(v.boolean()),
   },
+  returns: paginationResultValidator(statementLineShape),
+  handler: async (ctx, args) => {
+    const companyId = ctx.companyId;
+    const month = monthBounds(args.month, Date.now());
+    if (!companyId) return { page: [], isDone: true, continueCursor: "" };
+    const kind = args.kind;
+    const website = args.website;
+    const term = args.search?.trim().toLowerCase() ?? "";
+    // One kind on one website — By website's Task filter — reads the kind's index and narrows by website as it goes.
+    const bothKindAndWebsite = kind !== undefined && website !== undefined;
+    const narrowed = args.userId !== undefined || term.length > 0 || bothKindAndWebsite || args.chargesOnly === true;
+    const opts = narrowed ? { ...args.paginationOpts, numItems: Math.max(args.paginationOpts.numItems, STATEMENT_SCAN) } : args.paginationOpts;
+    const { startsAt, endsAt } = month;
+    const websiteId = website === undefined || website === "none" ? undefined : website as Id<"websites">;
+    const query = kind
+      ? ctx.db.query("creditCharges").withIndex("by_company_kind_at", (q) => q.eq("companyId", companyId).eq("kind", kind).gte("at", startsAt).lt("at", endsAt))
+      : website !== undefined
+        ? ctx.db.query("creditCharges").withIndex("by_company_website_at", (q) => q.eq("companyId", companyId).eq("websiteId", websiteId).gte("at", startsAt).lt("at", endsAt))
+        : ctx.db.query("creditCharges").withIndex("by_company_at", (q) => q.eq("companyId", companyId).gte("at", startsAt).lt("at", endsAt));
+    const page = await query.order(args.order ?? "asc").paginate(opts);
+    const rows = page.page.filter((row) => row.state === "charged"
+      && (args.userId === undefined || row.userId === args.userId)
+      && (website === undefined || row.websiteId === websiteId)
+      && (args.chargesOnly !== true || row.entry === "charge"));
+    const lines = await statementLines(ctx, companyId, rows);
+    return { ...page, page: term ? lines.filter((line) => lineMatches(line, term, args.searchKinds ?? [])) : lines };
+  },
+});
+
+/**
+ * The Statement's month in figures, without reading its lines (finish-off-
+ * plan.md, item 10): the balance it opened with and stands at; what came in
+ * from the plan and from anything else; and what went out — used, after
+ * anything given back, and ended unused. Every line moves the balance by
+ * what it takes or gives, so what went out is what opened and came in, less
+ * what is left.
+ */
+export const usageStatementTotals = tenantQuery({
+  args: { month: v.optional(v.string()) },
   returns: v.union(v.object({
     month: v.string(),
     opening: v.number(),
     closing: v.number(),
-    lines: v.array(statementLineShape),
-    /** True when the month had more lines than are sent. */
-    cut: v.boolean(),
+    planIn: v.number(),
+    otherIn: v.number(),
+    used: v.number(),
+    ended: v.number(),
+    /** The company's people, for the User filter. */
+    people: v.array(v.object({ userId: v.id("users"), name: v.string() })),
   }), v.null()),
   handler: async (ctx, args) => {
     const companyId = ctx.companyId;
     if (!companyId) return null;
     const month = monthBounds(args.month, Date.now());
-    const before = await ctx.db
-      .query("creditCharges")
-      .withIndex("by_company_at", (q) => q.eq("companyId", companyId).lt("at", month.startsAt))
-      .order("desc")
-      .take(50);
-    const opening = before.find((line) => line.state === "charged" && line.balanceAfter !== undefined)?.balanceAfter ?? 0;
-    const kind = args.kind;
-    const website = args.website;
-    const rows = await ctx.db
-      .query("creditCharges")
-      .withIndex("by_company_at", (q) => q.eq("companyId", companyId).gte("at", month.startsAt).lt("at", month.endsAt))
-      .filter((q) => {
-        const charged = q.eq(q.field("state"), "charged");
-        const ofKind = kind ? q.eq(q.field("kind"), kind) : charged;
-        const ofSite = website === undefined ? charged : website === "none" ? q.eq(q.field("websiteId"), undefined) : q.eq(q.field("websiteId"), website as Id<"websites">);
-        return q.and(charged, ofKind, ofSite);
-      })
-      .take(STATEMENT_LIMIT);
-    const charged = rows;
-
-    const websites = await websitesOf(ctx, companyId, charged.flatMap((row) => (row.websiteId ? [row.websiteId] : [])));
-    const names = await namesOf(ctx, charged.flatMap((row) => (row.userId ? [row.userId] : [])));
-    const batches = new Map<string, Doc<"creditBatches"> | null>();
-    for (const batchId of new Set(charged.flatMap((row) => [...row.paidFrom.map((part) => part.batchId), ...(row.batchId ? [row.batchId] : [])]))) {
-      batches.set(batchId, await ctx.db.get(batchId));
-    }
-
-    const lines = charged.map((row) => ({
-      id: row._id,
-      at: row.at,
-      entry: row.entry,
-      kind: row.kind ?? null,
-      source: row.source ?? null,
-      website: row.websiteId ? websites.get(row.websiteId) ?? null : null,
-      user: row.userId ? names.get(row.userId) ?? null : null,
-      how: row.how,
-      units: row.units,
-      out: row.creditsOut,
-      in: row.creditsIn,
-      balance: row.balanceAfter ?? null,
-      detail: row.detail ?? null,
-      reason: row.reason ?? null,
-      before: row.before ?? null,
-      from: row.paidFrom.flatMap((part) => {
-        const batch = batches.get(part.batchId);
-        return batch ? [{ source: batch.source, month: batch.month ?? null, startsAt: batch.startsAt }] : [];
-      }),
-      batch: (() => {
-        const batch = row.batchId ? batches.get(row.batchId) : null;
-        return batch ? { source: batch.source, month: batch.month ?? null, startsAt: batch.startsAt, endsAt: batch.endsAt } : null;
-      })(),
-    }));
-    return {
-      month: month.month,
-      opening,
-      closing: lines.length > 0 ? lines[lines.length - 1].balance ?? opening : opening,
-      lines,
-      cut: rows.length === STATEMENT_LIMIT,
-    };
+    const previous = creditMonthOf(month.startsAt - 1).month;
+    const [opening, closing, plan, endedPlan, batches, members] = await Promise.all([
+      balanceBefore(ctx, companyId, month.startsAt),
+      balanceBefore(ctx, companyId, month.endsAt),
+      ctx.db.query("creditBatches").withIndex("by_company_month", (q) => q.eq("companyId", companyId).eq("month", month.month)).first(),
+      ctx.db.query("creditBatches").withIndex("by_company_month", (q) => q.eq("companyId", companyId).eq("month", previous)).first(),
+      // A company's top-ups: a handful a year.
+      ctx.db.query("creditBatches").withIndex("by_company_state_ends", (q) => q.eq("companyId", companyId)).take(100),
+      ctx.db.query("users").withIndex("by_company", (q) => q.eq("companyId", companyId)).take(PEOPLE_LISTED),
+    ]);
+    const people = members
+      .map((user) => ({ userId: user._id, name: user.name?.trim() || user.email || "" }))
+      .filter((person) => person.name)
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const within = (at: number) => at >= month.startsAt && at < month.endsAt;
+    const topUps = batches.filter((batch) => batch.source === "topup");
+    const planIn = plan ? plan.granted : 0;
+    const otherIn = topUps.filter((batch) => within(batch.startsAt)).reduce((sum, batch) => sum + batch.granted, 0);
+    const ended = [endedPlan, ...topUps].reduce((sum, batch) => sum + (batch && batch.state === "ended" && within(batch.endsAt) ? batch.writtenOff ?? 0 : 0), 0);
+    const open = opening ?? 0;
+    const now = closing ?? open;
+    const out = open + planIn + otherIn - now;
+    return { month: month.month, opening: open, closing: now, planIn, otherIn, used: out - ended, ended, people };
   },
 });
+
+/** People offered by the User filter: a company's team. */
+const PEOPLE_LISTED = 200;
+
+/** Lines as the screens show them: each website, person and batch named, and nothing a company may not see. */
+async function statementLines(ctx: Reader, companyId: Id<"companies">, charged: Doc<"creditCharges">[]): Promise<StatementLine[]> {
+  const websites = await websitesOf(ctx, companyId, charged.flatMap((row) => (row.websiteId ? [row.websiteId] : [])));
+  const names = await namesOf(ctx, charged.flatMap((row) => (row.userId ? [row.userId] : [])));
+  const batches = new Map<string, Doc<"creditBatches"> | null>();
+  for (const batchId of new Set(charged.flatMap((row) => [...row.paidFrom.map((part) => part.batchId), ...(row.batchId ? [row.batchId] : [])]))) {
+    batches.set(batchId, await ctx.db.get(batchId));
+  }
+
+  return charged.map((row) => ({
+    id: row._id,
+    at: row.at,
+    entry: row.entry,
+    kind: row.kind ?? null,
+    source: row.source ?? null,
+    website: row.websiteId ? websites.get(row.websiteId) ?? null : null,
+    user: row.userId ? names.get(row.userId) ?? null : null,
+    how: row.how,
+    units: row.units,
+    out: row.creditsOut,
+    in: row.creditsIn,
+    balance: row.balanceAfter ?? null,
+    detail: row.detail ?? null,
+    reason: row.reason ?? null,
+    before: row.before ?? null,
+    from: row.paidFrom.flatMap((part) => {
+      const batch = batches.get(part.batchId);
+      return batch ? [{ source: batch.source, month: batch.month ?? null, startsAt: batch.startsAt }] : [];
+    }),
+    batch: (() => {
+      const batch = row.batchId ? batches.get(row.batchId) : null;
+      return batch ? { source: batch.source, month: batch.month ?? null, startsAt: batch.startsAt, endsAt: batch.endsAt } : null;
+    })(),
+  }));
+}

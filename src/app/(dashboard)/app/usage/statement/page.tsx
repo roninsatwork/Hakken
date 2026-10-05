@@ -16,27 +16,31 @@ import { useUsageMonth, useUsageWords } from "../_components/usageWords";
  * Usage → Statement (docs/plans/active/usage-credits-plan.md, board
  * Statement): every credit in and out in a month, like a bank statement —
  * the balance it opened with, every line in date order with the balance
- * after it, and the balance now.
+ * after it, and the balance now. Its lines come a page at a time and its
+ * figures from the month's batches and balances, so a month of any length
+ * reads whole (finish-off-plan.md, item 10).
  */
 export default function UsageStatementPage() {
   const words = useUsageWords();
   const { month } = useUsageMonth();
-  const statement = useQuery(api.creditUsage.usageStatement, { month });
-  const lines = statement?.lines;
-  const into = lines?.reduce((sum, line) => sum + line.in, 0) ?? 0;
-  const out = lines?.reduce((sum, line) => sum + line.out, 0) ?? 0;
-  const used = lines?.filter((line) => line.entry === "charge" || line.entry === "recount").reduce((sum, line) => sum + line.out, 0) ?? 0;
-  const ended = out - used;
-  const planIn = lines?.filter((line) => line.entry === "grant" && line.source === "plan").reduce((sum, line) => sum + line.in, 0) ?? 0;
-  const loading = statement === undefined;
+  const totals = useQuery(api.creditUsage.usageStatementTotals, month ? { month } : {});
+  // The month's kinds of work and websites, for the filters.
+  const summary = useQuery(api.creditUsage.usageSummary, month ? { month } : {});
+  const loading = totals === undefined;
+  const into = totals ? totals.planIn + totals.otherIn : 0;
+  const out = totals ? totals.used + totals.ended : 0;
   const table = useStatementTable({
+    base: month ? { month } : {},
     statement: true,
-    lines,
-    opening: statement?.opening,
-    closing: statement?.closing,
+    opening: totals?.opening,
+    closing: totals?.closing,
+    totals: totals ? words.t("statement.totals", { out: words.number(out), in: words.number(into) }) : null,
     filters: ["task", "website", "user"],
+    kinds: summary?.kinds.map((row) => row.kind) ?? [],
+    websites: summary?.websites.map((row) => ({ key: row.website?.websiteId ?? "none", host: row.website?.host ?? words.t("websites.none") })) ?? [],
+    people: totals?.people ?? [],
     searchPlaceholder: words.t("statement.search"),
-    fileName: `statement-${statement?.month ?? "month"}`,
+    fileName: `statement-${totals?.month ?? "month"}`,
   });
 
   return (
@@ -45,15 +49,14 @@ export default function UsageStatementPage() {
       <div className="flex flex-col gap-6 pb-8">
         <PageHeader divider icon={<Gauge className="h-6 w-6 text-brand" />} title={words.t("statement.title")} description={words.t("statement.description")} />
         <div className="flex flex-wrap items-center gap-3"><MonthPicker /></div>
-        {statement === null ? <Notice>{words.t("noCompany")}</Notice> : (
+        {totals === null ? <Notice>{words.t("noCompany")}</Notice> : (
           <>
             <FigureRow>
-              <Figure label={words.t("statement.figures.opening")} value={loading ? "…" : words.number(statement.opening)} detail={words.t("statement.figures.openingDetail")} />
-              <Figure label={words.t("statement.figures.in")} value={loading ? "…" : words.number(into)} detail={loading ? null : words.t("statement.figures.inDetail", { plan: words.number(planIn), other: words.number(into - planIn) })} />
-              <Figure label={words.t("statement.figures.out")} value={loading ? "…" : words.number(out)} detail={loading ? null : words.t("statement.figures.outDetail", { used: words.number(used), ended: words.number(ended) })} />
-              <Figure emphasis label={words.t("statement.figures.closing")} value={loading ? "…" : words.number(statement.closing)} detail={words.t("statement.figures.closingDetail")} />
+              <Figure label={words.t("statement.figures.opening")} value={loading ? "…" : words.number(totals.opening)} detail={words.t("statement.figures.openingDetail")} />
+              <Figure label={words.t("statement.figures.in")} value={loading ? "…" : words.number(into)} detail={loading ? null : words.t("statement.figures.inDetail", { plan: words.number(totals.planIn), other: words.number(totals.otherIn) })} />
+              <Figure label={words.t("statement.figures.out")} value={loading ? "…" : words.number(out)} detail={loading ? null : words.t("statement.figures.outDetail", { used: words.number(totals.used), ended: words.number(totals.ended) })} />
+              <Figure emphasis label={words.t("statement.figures.closing")} value={loading ? "…" : words.number(totals.closing)} detail={words.t("statement.figures.closingDetail")} />
             </FigureRow>
-            {statement?.cut ? <Notice tone="warning">{words.t("statement.cut")}</Notice> : null}
             <DataTable {...table} footer={table.footer} />
           </>
         )}

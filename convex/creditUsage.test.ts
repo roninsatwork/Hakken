@@ -62,7 +62,7 @@ describe("usage screens' reads", () => {
     // Six rankings runs at 4 credits, and one question.
     expect(summary.used).toBe(25);
     expect(summary.plan).toMatchObject({ granted: 10_000, left: 9975 });
-    expect(summary.kinds).toEqual([{ kind: "rankings", credits: 24, runs: 6 }, { kind: "assistant", credits: 1, runs: 1 }]);
+    expect(summary.kinds).toEqual([{ kind: "rankings", credits: 24, runs: 6, people: 0 }, { kind: "assistant", credits: 1, runs: 1, people: 1 }]);
     const byWebsite = new Map(summary.websites.map((row) => [row.website?.websiteId ?? "none", row]));
     expect(byWebsite.get(own)).toMatchObject({ credits: 12, runs: 3, website: { host: "acme.com", relationship: "owned" } });
     expect(byWebsite.get(competitor)).toMatchObject({ credits: 12, website: { relationship: "tracked" } });
@@ -78,16 +78,53 @@ describe("usage screens' reads", () => {
   test("the statement: every line in order with the balance after it, and who and what", async () => {
     const t = convexTest(schema, modules);
     const { anthony } = await seed(t);
-    const statement = await t.withIdentity({ subject: anthony }).query(api.creditUsage.usageStatement, {});
-    if (!statement) throw new Error("expected a statement");
-    expect(statement.opening).toBe(0);
-    expect(statement.lines[0]).toMatchObject({ entry: "grant", in: 10_000, source: "plan" });
-    expect(statement.lines.slice(1).every((line) => line.entry === "charge")).toBe(true);
-    expect(statement.lines.at(-1)).toMatchObject({ kind: "assistant", out: 1, user: "Anthony Basker", how: "byHand" });
-    expect(statement.closing).toBe(9975);
-    const firstCharge = statement.lines[1];
-    expect(firstCharge.from).toEqual([expect.objectContaining({ source: "plan" })]);
+    const asAnthony = t.withIdentity({ subject: anthony });
+    const statement = await asAnthony.query(api.creditUsage.usageStatement, { paginationOpts: { cursor: null, numItems: 50 } });
+    const lines = statement.page;
+    expect(statement.isDone).toBe(true);
+    expect(lines[0]).toMatchObject({ entry: "grant", in: 10_000, source: "plan" });
+    expect(lines.slice(1).every((line) => line.entry === "charge")).toBe(true);
+    expect(lines.at(-1)).toMatchObject({ kind: "assistant", out: 1, user: "Anthony Basker", how: "byHand" });
+    expect(lines[1].from).toEqual([expect.objectContaining({ source: "plan" })]);
     expect(JSON.stringify(statement)).not.toContain("realCost");
+
+    // The month's figures, without reading its lines: what it opened with, came in, went out and stands at.
+    const totals = await asAnthony.query(api.creditUsage.usageStatementTotals, {});
+    expect(totals).toMatchObject({ opening: 0, planIn: 10_000, otherIn: 0, used: 25, ended: 0, closing: 9975 });
+    expect(totals?.people).toEqual([expect.objectContaining({ userId: anthony, name: "Anthony Basker" })]);
+  });
+
+  test("the statement reads a month a page at a time, past any number of lines, narrowed where asked", async () => {
+    const t = convexTest(schema, modules);
+    const { anthony, own } = await seed(t);
+    const asAnthony = t.withIdentity({ subject: anthony });
+    // Eight lines this month: the grant, six rankings runs and a question. Three pages of three.
+    const seen: string[] = [];
+    let cursor: string | null = null;
+    for (let page = 0; page < 5; page += 1) {
+      const result: { page: Array<{ id: string }>; isDone: boolean; continueCursor: string } = await asAnthony.query(api.creditUsage.usageStatement, { paginationOpts: { cursor, numItems: 3 } });
+      seen.push(...result.page.map((line) => line.id));
+      if (result.isDone) break;
+      cursor = result.continueCursor;
+    }
+    expect(seen).toHaveLength(8);
+    expect(new Set(seen).size).toBe(8);
+
+    // Newest first, one kind, one website, one person, a search.
+    const newest = await asAnthony.query(api.creditUsage.usageStatement, { paginationOpts: { cursor: null, numItems: 1 }, order: "desc" });
+    expect(newest.page[0]).toMatchObject({ kind: "assistant" });
+    const rankings = await asAnthony.query(api.creditUsage.usageStatement, { paginationOpts: { cursor: null, numItems: 20 }, kind: "rankings", chargesOnly: true });
+    expect(rankings.page).toHaveLength(6);
+    const onOwn = await asAnthony.query(api.creditUsage.usageStatement, { paginationOpts: { cursor: null, numItems: 20 }, website: own });
+    expect(onOwn.page).toHaveLength(3);
+    const notTied = await asAnthony.query(api.creditUsage.usageStatement, { paginationOpts: { cursor: null, numItems: 20 }, website: "none", chargesOnly: true });
+    expect(notTied.page.map((line) => line.kind)).toEqual(["assistant"]);
+    const byHim = await asAnthony.query(api.creditUsage.usageStatement, { paginationOpts: { cursor: null, numItems: 20 }, userId: anthony });
+    expect(byHim.page).toHaveLength(7);
+    const searched = await asAnthony.query(api.creditUsage.usageStatement, { paginationOpts: { cursor: null, numItems: 20 }, search: "rival.com" });
+    expect(searched.page).toHaveLength(3);
+    const byKindName = await asAnthony.query(api.creditUsage.usageStatement, { paginationOpts: { cursor: null, numItems: 20 }, search: "hakken", searchKinds: ["assistant"] });
+    expect(byKindName.page.map((line) => line.kind)).toEqual(["assistant"]);
   });
 
   test("coming up: each scheduled check's next run and what it will use", async () => {
@@ -108,8 +145,9 @@ describe("usage screens' reads", () => {
     const summary = await asRival.query(api.creditUsage.usageSummary, {});
     expect(summary?.used).toBe(0);
     expect(summary?.websites).toEqual([]);
-    const statement = await asRival.query(api.creditUsage.usageStatement, {});
-    expect(statement?.lines).toEqual([]);
+    const statement = await asRival.query(api.creditUsage.usageStatement, { paginationOpts: { cursor: null, numItems: 50 } });
+    expect(statement.page).toEqual([]);
+    expect(await asRival.query(api.creditUsage.usageStatementTotals, {})).toMatchObject({ opening: 0, closing: 0, used: 0 });
     expect((await asRival.query(api.creditUsage.usageComingUp, {}))?.checks).toEqual([]);
   });
 
@@ -118,7 +156,8 @@ describe("usage screens' reads", () => {
     const { anthony } = await seed(t);
     const asAnthony = t.withIdentity({ subject: anthony });
     await expect(asAnthony.query(api.creditUsage.usageSummary, { month: "October" })).rejects.toThrow();
-    await expect(asAnthony.query(api.creditUsage.usageStatement, { month: "2999-01" })).rejects.toThrow();
+    await expect(asAnthony.query(api.creditUsage.usageStatement, { month: "2999-01", paginationOpts: { cursor: null, numItems: 10 } })).rejects.toThrow();
+    await expect(asAnthony.query(api.creditUsage.usageStatementTotals, { month: "2999-01" })).rejects.toThrow();
   });
 });
 

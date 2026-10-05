@@ -13,7 +13,7 @@ import {
   cycleRunKey,
   type CreditKind,
 } from "./creditKinds";
-import { addToCreditRun, findCreditRun, raisePlanBatch, recountCreditRun } from "./creditLedger";
+import { addToCreditRun, findCreditRun, noteByHandUser, raisePlanBatch, recountCreditRun } from "./creditLedger";
 import { rowsReturnedIn } from "./dataForSeoSlim";
 import { recordCrawlRefund } from "./seoCrawlRefund";
 import { readPullAnswerParts } from "./seoPullAnswers";
@@ -270,6 +270,8 @@ export const recountCharges = internalMutation({
       .paginate({ cursor: args.cursor, numItems: CHARGE_PAGE });
     let recounted = 0;
     for (const charge of page.page) {
+      // Who started it, for By work's and By website's people (item 10): rollups closed before named no one.
+      await noteByHandUser(ctx, charge);
       if (charge.recountUnits === undefined) continue;
       await ctx.db.patch(charge._id, { recountUnits: undefined });
       const standing = charge.state === "void" ? charge.units : charge.unitsNow ?? charge.units;
