@@ -42,3 +42,18 @@ answers and still opens: how it treated the website and the sources it cited,
 with "The full wording is kept for 90 days." in place of its words. A search
 of the answers' words finds those of the last 90 days. The Full answers
 download lists the answers whose wording is kept.
+
+## Google's full results pages — 90 days
+
+Google's first pages for each tracked search, as each check found them
+(`siteSerpPages`), are kept for **90 days** (`SERP_PAGE_RETENTION_DAYS`; kept
+for ever until 2026-10-05). The hourly collection sweep clears older pages.
+**Where each website stood is kept for ever** (`seoKeywordPositions`,
+`siteKeywordRanks`, and the summary `websiteSearchStats`), so positions,
+their history and every chart of them are unchanged.
+
+A search checked in the last 90 days shows its results page as before. One
+last checked before them — a paused search, or one whose company has not
+collected since — shows, on its own page and under Who ranks above you, the website's position at that check and "Google's full results page is
+kept for 90 days." in place of the page. Search features and What people also
+ask read the pages kept, so such a search drops out of them.

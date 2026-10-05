@@ -10050,7 +10050,8 @@
         "showAll": "Show all {count}",
         "showTop": "Show the top ten",
         "questions": "What people also ask",
-        "related": "Related searches"
+        "related": "Related searches",
+        "pageNotKept": "Google's full results page is kept for 90 days."
       },
       "notInHeld": "This search is not in the keyword list held for this website at its newest check. It may still rank below the searches held.",
       "checkedOncePill": "Checked once on Google",

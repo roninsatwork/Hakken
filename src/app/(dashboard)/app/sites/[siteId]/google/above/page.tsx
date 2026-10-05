@@ -25,20 +25,21 @@ import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 
 const POSITIONS = ["top3", "pageOne", "notOnPage"] as const;
 
-type Above = { keyword: string; isActive: boolean; position: number | null; above: readonly unknown[]; rivalsAbove: number; day: string | null };
+type Above = { keyword: string; isActive: boolean; position: number | null; above: readonly unknown[]; rivalsAbove: number; day: string | null; pageKept: boolean };
 
 /**
  * The columns that sort (docs/plans/active/sites-table-sorting-plan.md): the
  * search A to Z, your position from the top — the order it opens on — and the
  * most websites and most competitors above you first. A search not checked
  * yet has none of these, so goes last; paused searches stay after the ones
- * being checked in every order, as they always have.
+ * being checked in every order, as they always have. One last checked before
+ * the 90 days Google's full page is kept has its position, and no one above.
  */
 const SORTS: SiteSortColumns<Above, "search" | "position" | "above" | "rivals"> = {
   search: { value: (row) => row.keyword, first: "asc" },
   position: { value: (row) => row.position, first: "asc" },
-  above: { value: (row) => (row.day === null ? null : row.above.length), first: "desc" },
-  rivals: { value: (row) => (row.day === null ? null : row.rivalsAbove), first: "desc" },
+  above: { value: (row) => (row.day === null || !row.pageKept ? null : row.above.length), first: "desc" },
+  rivals: { value: (row) => (row.day === null || !row.pageKept ? null : row.rivalsAbove), first: "desc" },
 };
 const keywordOf = (row: Above) => row.keyword;
 const pausedLast = (row: Above) => (row.isActive ? 0 : 1);
@@ -66,6 +67,7 @@ function matchesPosition(position: number | null, filter: PositionFilter | ""): 
  */
 export default function SiteAbovePage() {
   const t = useTranslations("sites.googleAbove");
+  const ts = useTranslations("sites.keywordRecord.serp");
   const siteId = useSiteId();
   const site = useSite();
   const rows = useQuery(api.siteGoogleSerp.listAbove, { siteId });
@@ -81,7 +83,7 @@ export default function SiteAbovePage() {
   const { rows: sorted, tableSort } = useSiteSortedList(matching, SORTS, { opening: "position", name: keywordOf, group: pausedLast });
   const pager = useSitePager(sorted, { isLoading: rows === undefined });
 
-  const charted = [...(rows ?? [])].filter((row) => row.day !== null)
+  const charted = [...(rows ?? [])].filter((row) => row.day !== null && row.pageKept)
     .sort((left, right) => right.above.length - left.above.length)
     .slice(0, CHARTED);
 
@@ -124,7 +126,7 @@ export default function SiteAbovePage() {
           </Select>
           </>
         }
-        cardHeader={<TableBar footer={pager.footer} noun="searches" actions={<ListDownload fileName={`${site?.host ?? "site"}-above-you`} rows={sorted} columns={[{ header: t("columns.search"), value: (row) => row.keyword }, { header: t("columns.position"), value: (row) => row.position }, { header: t("columns.above"), value: (row) => row.above.map((result) => `${result.position}. ${result.domain}`).join("; ") }, { header: t("columns.rivals"), value: (row) => row.rivalsAbove }, { header: t("columns.lastChecked"), value: (row) => row.day }]} />} />}
+        cardHeader={<TableBar footer={pager.footer} noun="searches" actions={<ListDownload fileName={`${site?.host ?? "site"}-above-you`} rows={sorted} columns={[{ header: t("columns.search"), value: (row) => row.keyword }, { header: t("columns.position"), value: (row) => row.position }, { header: t("columns.above"), value: (row) => row.above.map((result) => `${result.position}. ${result.domain}`).join("; ") }, { header: t("columns.rivals"), value: (row) => (row.pageKept ? row.rivalsAbove : null) }, { header: t("columns.lastChecked"), value: (row) => row.day }]} />} />}
         empty={{ icon: <ArrowUpWideNarrow className="h-8 w-8 text-muted/30" />, label: term || position ? t("noMatch") : t("empty") }}
         footer={pager.footer}
         sort={tableSort}
@@ -144,6 +146,8 @@ export default function SiteAbovePage() {
             sortable: true,
             cell: (row) => {
               if (row.day === null) return <NoFigure />;
+              // Past the 90 days Google's full page is kept: who was above is not.
+              if (!row.pageKept) return <span className="text-[12px] text-muted">{ts("pageNotKept")}</span>;
               if (row.above.length === 0) return <span className="text-[12px] text-success">{t("nobodyAbove")}</span>;
               return (
                 <ol className="flex flex-col gap-0.5">
@@ -163,7 +167,7 @@ export default function SiteAbovePage() {
               );
             },
           },
-          { key: "rivals", header: t("columns.rivals"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.day === null ? "–" : row.rivalsAbove}</span> },
+          { key: "rivals", header: t("columns.rivals"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.day === null || !row.pageKept ? "–" : row.rivalsAbove}</span> },
         ]}
       />
     </div>

@@ -159,11 +159,33 @@ export const SEO_CYCLE_RETENTION_DAYS = 90;
 export const AI_ANSWER_WORDING_RETENTION_DAYS = 90;
 
 /**
+ * How long Google's full results page for a search is kept (`siteSerpPages`),
+ * then cleared by the hourly sweep (docs/plans/active/dataforseo-cost-plan.md,
+ * B3): a page names up to a hundred websites and addresses. Where the website
+ * stood on it (`seoKeywordPositions`, `siteKeywordRanks`, and the summary
+ * `websiteSearchStats`) is kept for ever, and an older check shows that.
+ */
+export const SERP_PAGE_RETENTION_DAYS = 90;
+
+/** The first day still kept, `YYYY-MM-DD`, of what is kept `days` days. */
+function keptFrom(today: string, days: number): string {
+  return new Date(Date.parse(`${today}T00:00:00Z`) - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+/**
  * The first day whose answers are still kept word for word, `YYYY-MM-DD`:
  * an answer asked before it shows who it named and cited, not its wording.
  */
 export function wordingKeptFrom(today: string): string {
-  return new Date(Date.parse(`${today}T00:00:00Z`) - AI_ANSWER_WORDING_RETENTION_DAYS * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  return keptFrom(today, AI_ANSWER_WORDING_RETENTION_DAYS);
+}
+
+/**
+ * The first day whose results pages are still kept, `YYYY-MM-DD`: a search
+ * last checked before it shows where the website stood, not the page.
+ */
+export function serpPagesKeptFrom(today: string): string {
+  return keptFrom(today, SERP_PAGE_RETENTION_DAYS);
 }
 
 /**

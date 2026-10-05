@@ -468,6 +468,16 @@ export default function SiteKeywordPage() {
                   </Button>
                 ) : null}
               </SettingsCard>
+            ) : record.serpNotKept ? (
+              // Checked before the 90 days Google's full page is kept: where the site stood, from the positions kept.
+              <SettingsCard title={t("serp.title")} className="xl:col-span-2">
+                <p className="text-[12px] text-muted">{t("serp.checked", { day: formatDay(record.serpNotKept.day) })}</p>
+                <SiteFacts
+                  facts={[{ key: "position", label: t("checkedOnce.position"), value: <PositionCell position={record.serpNotKept.position} /> }]}
+                  empty="–"
+                />
+                <p className="text-[13px] text-muted">{t("serp.pageNotKept")}</p>
+              </SettingsCard>
             ) : null}
           </div>
         </>

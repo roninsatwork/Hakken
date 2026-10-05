@@ -10050,7 +10050,8 @@
         "showAll": "Mostra tutti i {count}",
         "showTop": "Mostra i primi dieci",
         "questions": "Le domande che le persone fanno",
-        "related": "Ricerche correlate"
+        "related": "Ricerche correlate",
+        "pageNotKept": "La pagina completa dei risultati di Google si conserva per 90 giorni."
       },
       "notInHeld": "Questa ricerca non è nell’elenco conservato per questo sito all’ultimo controllo. Potrebbe comunque posizionarsi sotto le ricerche conservate.",
       "checkedOncePill": "Controllata una volta su Google",

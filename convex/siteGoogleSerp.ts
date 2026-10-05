@@ -2,7 +2,9 @@ import { v } from "convex/values";
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
-import { listHold, myRivals, requireMySite } from "./siteAccess";
+import { listHold, listWebsiteId, myRivals, requireMySite } from "./siteAccess";
+import { asOfListCheck, searchStats, type StandingStats } from "./siteGoogle";
+import { serpPagesKeptFrom } from "./seoCollectionPolicy";
 import { holdSearches } from "./holdLists";
 import { MAX_LIST, type Site } from "./websiteSiteRows";
 import { listWithCut } from "./siteListPages";
@@ -56,6 +58,19 @@ async function latestPages(ctx: Reader, site: Site): Promise<Checked[]> {
   })));
 }
 
+/**
+ * Where the site stood on a search at its newest check, from the positions
+ * kept for ever (`websiteSearchStats`) — a competitor's as of its list's
+ * check, as the search's own page reads it — for a search whose results page
+ * is past the 90 days it is kept (`SERP_PAGE_RETENTION_DAYS`).
+ */
+async function keptStanding(ctx: Reader, site: Site, keyword: string): Promise<StandingStats | null> {
+  const listSite = listWebsiteId(site);
+  const own = await searchStats(ctx, site.website._id, keyword, site.place);
+  if (listSite === site.website._id) return own;
+  return asOfListCheck(own, await searchStats(ctx, listSite, keyword, site.place));
+}
+
 /** The company's other holds on the page, by host, to mark them as rivals. */
 async function rivalHosts(ctx: Reader, site: Site): Promise<Set<string>> {
   return new Set((await myRivals(ctx, site)).map((rival) => rival.website.host));
@@ -74,7 +89,9 @@ const PAGE_ONE = 10;
 /**
  * Who ranks above the site on each of its searches: every result higher on
  * the page than the site's own, or the whole of page one when the site is not
- * in the hundred a check reads.
+ * in the hundred a check reads. A search last checked before the 90 days
+ * Google's full page is kept has its position from the positions kept, and
+ * nobody above (`pageKept` false).
  */
 export const listAbove = tenantQuery({
   args: { siteId: v.id("companyWebsites") },
@@ -87,12 +104,24 @@ export const listAbove = tenantQuery({
     above: v.array(resultValidator),
     rivalsAbove: v.number(),
     results: v.number(),
+    /** False when the newest check's full page is past the 90 days it is kept. */
+    pageKept: v.boolean(),
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const host = site.website.host;
     const rivals = await rivalHosts(ctx, site);
-    const rows = (await latestPages(ctx, site)).map(({ keyword, isActive, page }) => {
+    const keptFrom = serpPagesKeptFrom(site.today);
+    const rows = await Promise.all((await latestPages(ctx, site)).map(async ({ keyword, isActive, page }) => {
+      if (!page) {
+        const stats = await keptStanding(ctx, site, keyword);
+        if (stats && stats.lastCheckedDay < keptFrom) {
+          return {
+            keyword, isActive, day: stats.lastCheckedDay, position: stats.lastPosition ?? null, url: null,
+            above: [], rivalsAbove: 0, results: 0, pageKept: false,
+          };
+        }
+      }
       const mine = page?.results.find((result) => isHost(result.domain, host)) ?? null;
       const above = (page?.results ?? [])
         .filter((result) => !isHost(result.domain, host) && (mine === null ? result.position <= PAGE_ONE : result.position < mine.position))
@@ -111,8 +140,9 @@ export const listAbove = tenantQuery({
         above,
         rivalsAbove: above.filter((result) => result.isRival).length,
         results: page?.results.length ?? 0,
+        pageKept: true,
       };
-    });
+    }));
     // Searches with most to win first: on the page but beaten, then not on it.
     return rows.sort((left, right) =>
       Number(right.isActive) - Number(left.isActive)

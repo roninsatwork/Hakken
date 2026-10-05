@@ -13,6 +13,7 @@ import SitePaidKeywordsPage from "./paid/keywords/page";
 import SiteLinkSourcesPage from "./backlinks/where/page";
 import SiteAnswersPage from "./ai/answers/page";
 import SiteAnswerPage from "./ai/answers/answer/page";
+import SiteAbovePage from "./google/above/page";
 import SiteLayout from "./layout";
 import SiteMentionsPage from "./ai/mentions/page";
 import SiteSideBySidePage from "./competitors/page";
@@ -374,6 +375,28 @@ describe("full answers (3.2, 4.7)", () => {
     expect(screen.getByText("sites.aiAnswers.wordingNotKept")).toBeInTheDocument();
     expect(screen.getByText("sites.aiAnswers.stances.NAMED")).toBeInTheDocument();
     expect(screen.getByText("https://elsewhere.com/best")).toBeInTheDocument();
+  });
+});
+
+describe("who ranks above you, past the 90 days Google's full page is kept (B3)", () => {
+  beforeEach(() => {
+    vi.mocked(useQuery).mockReset();
+    window.localStorage.clear();
+  });
+
+  it("a search last checked before them shows the website's position then, and says the full page is kept 90 days", () => {
+    openAt("/app/sites/site_1/google/above", "", {
+      "siteGoogleSerp:listAbove": [
+        { keyword: "carp rods", isActive: false, day: "2026-06-01", position: 3, url: null, above: [], rivalsAbove: 0, results: 0, pageKept: false },
+      ],
+    });
+    render(<SiteAbovePage />);
+
+    const row = screen.getByText("carp rods").closest("tr")!;
+    expect(within(row).getByText("sites.keywordRecord.serp.pageNotKept")).toBeInTheDocument();
+    expect(within(row).queryByText("sites.googleAbove.nobodyAbove")).not.toBeInTheDocument();
+    expect(within(row).queryByText("sites.googleAbove.notChecked")).not.toBeInTheDocument();
+    expect(within(row).getByText("3")).toBeInTheDocument();
   });
 });
 

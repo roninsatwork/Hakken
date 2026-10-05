@@ -122,6 +122,19 @@ describe("a search's own page, as a fan-out query", () => {
     expect(screen.queryByText("Lightflows")).not.toBeInTheDocument();
   });
 
+  it("a search last checked before the 90 days Google's full page is kept shows the website's position then, and says so (B3)", () => {
+    open(null, {
+      ...RECORD,
+      checkedOnce: null,
+      tracked: { isActive: false, lastPosition: 3, bestPosition: 3, firstCheckedDay: "2026-06-01", lastCheckedDay: "2026-06-01" },
+      serpNotKept: { day: "2026-06-01", position: 3 },
+    });
+    expect(screen.getByText("sites.keywordRecord.serp.title")).toBeInTheDocument();
+    expect(screen.getByText(/^sites\.keywordRecord\.serp\.checked /)).toBeInTheDocument();
+    expect(screen.getByText("sites.keywordRecord.serp.pageNotKept")).toBeInTheDocument();
+    expect(screen.queryByText("sites.keywordRecord.serp.thisWebsite")).not.toBeInTheDocument();
+  });
+
   it("shows Google Ads' figures for a search the keyword list does not measure", () => {
     open(null, { ...RECORD, bought: { volume: 30, cpc: 12.5, competition: "HIGH", trend: [10, 40, 20], day: "2026-09-29" } });
     expect(screen.getByText("sites.keywordRecord.about.competitionLevels.HIGH")).toBeInTheDocument();

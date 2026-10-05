@@ -11,6 +11,7 @@ import { asOfListCheck, searchStats } from "./siteGoogle";
 import { keywordStanding, readKeywordCopy } from "./siteKeywordCopy";
 import { heldTo, listOrder, listPageArgs, listPageResult, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { bare, isHost } from "./siteGoogleSerp";
+import { serpPagesKeptFrom } from "./seoCollectionPolicy";
 import { askedQuestions, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
 import { readPageKinds } from "./pageKinds";
 import {
@@ -204,6 +205,10 @@ export const keywordRecord = tenantQuery({
       questions: v.array(v.string()),
       related: v.array(v.string()),
     }), v.null()),
+    // Google's full page is kept 90 days (the DataForSEO cost plan, B3): for
+    // a search last checked before them, where the site stood at that check,
+    // from the positions kept for ever, in place of the page.
+    serpNotKept: v.union(v.object({ day: v.string(), position: nullableNumber }), v.null()),
   }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
@@ -241,6 +246,9 @@ export const keywordRecord = tenantQuery({
     // company's to read, as the fan-out queries screen reads it (`ownCheck`).
     const checkedOnce = !listed && firstCheck && stats ? { position: stats.lastPosition ?? null, day: stats.lastCheckedDay } : null;
     const shownSerp = serp && (listed || checkedOnce) ? serp : null;
+    const serpNotKept = !shownSerp && (listed || checkedOnce) && stats && stats.lastCheckedDay < serpPagesKeptFrom(site.today)
+      ? { day: stats.lastCheckedDay, position: stats.lastPosition ?? null }
+      : null;
 
     // Each competitor's own latest ranking for the same search, from the same place.
     const rivalRanks = await Promise.all(rivals.slice(0, MAX_RIVALS).map(async (rival) => ({
@@ -338,6 +346,7 @@ export const keywordRecord = tenantQuery({
           related: shownSerp.related,
         }
         : null,
+      serpNotKept,
     };
   },
 });

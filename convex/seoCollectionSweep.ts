@@ -7,6 +7,7 @@ import {
   SEO_CYCLE_RETENTION_DAYS,
   SEO_RAW_RETENTION_DAYS,
   SEO_RESULT_TIMEOUT_MS,
+  SERP_PAGE_RETENTION_DAYS,
 } from "./seoCollectionPolicy";
 import type { MutationCtx } from "./_generated/server";
 import {
@@ -39,8 +40,8 @@ import { deleteAnswerText } from "./siteAnswers";
  *  4. Close cycles whose work is all settled.
  *  5. Close Planner and Collector runs that died without saying so.
  *  6. Start the Collector for requests left waiting with nothing sending.
- *  7. Clear raw payloads, AI answers' wording and cycles that have outlived
- *     their retention.
+ *  7. Clear raw payloads, AI answers' wording, Google's results pages and
+ *     cycles that have outlived their retention.
  *
  * It never re-posts a task. A submitted task was paid for; if its result is
  * missing the answer is always to fetch it, never to buy it again.
@@ -59,7 +60,7 @@ import { deleteAnswerText } from "./siteAnswers";
  * transaction inside Convex's limits, and a duty takes pages until it is done,
  * its page budget is spent, or the check has run for `SWEEP_TIME_MS`.
  */
-const DUTIES = ["reclaim", "chase", "close", "resume", "refile", "stalledRuns", "sendWaiting", "purgeRaw", "purgeWording", "purgeCycles"] as const;
+const DUTIES = ["reclaim", "chase", "close", "resume", "refile", "stalledRuns", "sendWaiting", "purgeRaw", "purgeWording", "purgeSerpPages", "purgeCycles"] as const;
 type Duty = (typeof DUTIES)[number];
 const dutyValidator = v.union(...DUTIES.map((duty) => v.literal(duty)));
 
@@ -74,6 +75,7 @@ const PAGES_PER_DUTY: Record<Duty, number> = {
   sendWaiting: 1,
   purgeRaw: 250,
   purgeWording: 100,
+  purgeSerpPages: 100,
   purgeCycles: 25,
 };
 
@@ -158,6 +160,8 @@ export const sweepDuty = internalMutation({
         return await purgeExpiredRaw(ctx, now);
       case "purgeWording":
         return await purgeExpiredWording(ctx, now);
+      case "purgeSerpPages":
+        return await purgeExpiredSerpPages(ctx, now);
       case "purgeCycles":
         return await purgeExpiredCycles(ctx, now);
     }
@@ -420,6 +424,26 @@ async function purgeExpiredWording(ctx: MutationCtx, now: number): Promise<DutyP
  * check takes as many pages as there are to clear.
  */
 const WORDING_PURGE_PAGE = 50;
+
+/**
+ * Clear Google's full results pages past their 90 days
+ * (`SERP_PAGE_RETENTION_DAYS`, the DataForSEO cost plan's B3), oldest first.
+ * Only the pages: where each website stood on them (`seoKeywordPositions`,
+ * `siteKeywordRanks`, `websiteSearchStats`) is kept for ever, and a search's
+ * screen shows that instead.
+ */
+async function purgeExpiredSerpPages(ctx: MutationCtx, now: number): Promise<DutyPage> {
+  const cutoff = now - SERP_PAGE_RETENTION_DAYS * DAY_MS;
+  const old = await ctx.db
+    .query("siteSerpPages")
+    .withIndex("by_creation_time", (q) => q.lt("_creationTime", cutoff))
+    .take(SERP_PURGE_PAGE);
+  for (const page of old) await ctx.db.delete(page._id);
+  return { ...FINISHED, more: old.length === SERP_PURGE_PAGE };
+}
+
+/** Results pages cleared per page: each names up to a hundred results, tens of kilobytes at most. */
+const SERP_PURGE_PAGE = 100;
 
 /**
  * Retire cycles and their lines together.
