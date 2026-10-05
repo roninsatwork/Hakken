@@ -395,13 +395,16 @@ describe("a country nearly all of the searches (2026-10-05)", () => {
 
   test("keeps no search-and-page lines of its own once judged so, and its searches read as all countries'", async () => {
     const { t, siteId, reader } = await setup(["gbr"]);
-    const asks = fakeGoogle(nearlyAll());
+    const held = nearlyAll();
+    const asks = fakeGoogle(held);
     await collect(t);
     // Nothing held to judge by before the first run: the country is collected whole.
     expect((await connectionOf(t, siteId))?.countriesAsAll).toBeUndefined();
 
     asks.length = 0;
     vi.setSystemTime(NOW + 24 * 60 * 60 * 1000);
+    // The newest day's figures settle, so its lists are fetched again (a day Google has not changed is not).
+    held.gbr.web[NEWEST].total = row("", 19, 381);
     await collect(t);
 
     expect((await connectionOf(t, siteId))?.countriesAsAll).toEqual(["gbr"]);

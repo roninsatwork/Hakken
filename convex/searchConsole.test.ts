@@ -579,8 +579,16 @@ describe("collecting", () => {
     const web = google.figures[property].web;
     web[NEWEST] = { total: row("", 13, 420), query: [row("plumber leeds", 7)] };
     web["2026-09-27"] = { total: row("", 6, 200), query: [row("drain unblocking", 6)] };
+    const before = google.calls.length;
     await collect(t);
 
+    // Only the days whose totals Google changed are fetched again, list by list (store less round two, 3).
+    const listsAsked = google.calls.slice(before).flatMap((call) => {
+      if (!call.url.includes("searchAnalytics")) return [];
+      const ask = JSON.parse(call.body) as { startDate: string; dimensions: string[] };
+      return ask.dimensions[0] === "date" ? [] : [ask.startDate];
+    });
+    expect([...new Set(listsAsked)].sort()).toEqual([NEWEST, "2026-09-27"]);
     expect(await rowsOf(t, siteId, "query", NEWEST)).toEqual([["plumber leeds", 7]]);
     expect(await rowsOf(t, siteId, "page", NEWEST)).toEqual([]);
     expect(await rowsOf(t, siteId, "query", "2026-09-27")).toEqual([["drain unblocking", 6]]);

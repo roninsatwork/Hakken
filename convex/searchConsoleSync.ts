@@ -84,6 +84,12 @@ const figuresValidator = { clicks: v.number(), impressions: v.number(), ctr: v.n
 
 type Figures = { clicks: number; impressions: number; ctr: number; position: number };
 
+/** Whether Google's totals for a day are the ones already held: its lists then need no fetching again. */
+export function sameTotals(held: Figures | undefined, now: Figures | undefined): boolean {
+  if (!held || !now) return false;
+  return held.clicks === now.clicks && held.impressions === now.impressions && Math.abs(held.position - now.position) < 0.005;
+}
+
 const figuresOf = (row: AnalyticsRow): Figures => ({
   clicks: row.clicks,
   impressions: row.impressions,
@@ -410,6 +416,11 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
     keeps.set(type, held);
     return held;
   };
+  // The totals already held for the step's days, to fetch again only the days Google has changed.
+  const heldTotals = new Map<string, Figures & { namedClicks?: number }>();
+  for (const held of await ctx.runQuery(internal.searchConsoleSync.heldDayTotals, { companyWebsiteId: state.companyWebsiteId, ...country, from: stepFrom, to: args.to })) {
+    heldTotals.set(`${held.searchType}|${held.day}`, held);
+  }
   let processedFrom: string | null = null;
   for (const day of failure || session.stopped ? [] : daysNewestFirst(stepFrom, args.to)) {
     if (Date.now() - startedAt > budgetMs) break;
@@ -421,6 +432,12 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
       const shown = (byDay.get(day)?.impressions ?? 0) > 0;
       // A day fetched again drops what it no longer has, even when the kind now has nothing.
       if (!shown && !again) continue;
+      // A day held whose totals Google has not changed keeps its lists: nothing to fetch again (store less round two, 3).
+      if (again && sameTotals(heldTotals.get(`${type}|${day}`), byDay.get(day))) {
+        const kept = heldTotals.get(`${type}|${day}`);
+        if (kept?.namedClicks !== undefined) named.set(type, kept.namedClicks);
+        continue;
+      }
       for (const list of listsOf(type)) asks.push({ type, list, shown });
     }
     await inTurns(asks, PARALLEL_ASKS, async ({ type, list, shown }) => {
@@ -696,6 +713,37 @@ export const writeList = internalMutation({
       fetchedAt: args.fetchedAt,
     });
     return null;
+  },
+});
+
+/** The day totals already held for a step's days, every kind of result, for all countries or one. */
+export const heldDayTotals = internalQuery({
+  args: { companyWebsiteId: v.id("companyWebsites"), country: v.optional(v.string()), from: v.string(), to: v.string() },
+  returns: v.array(v.object({
+    searchType: searchTypeValidator,
+    day: v.string(),
+    clicks: v.number(),
+    impressions: v.number(),
+    ctr: v.number(),
+    position: v.number(),
+    namedClicks: v.optional(v.number()),
+  })),
+  handler: async (ctx, args) => {
+    const out = [];
+    for (const searchType of SEARCH_TYPES) {
+      const days = await ctx.db
+        .query("searchConsoleDays")
+        .withIndex("by_hold_country_type_day", (q) => q
+          .eq("companyWebsiteId", args.companyWebsiteId).eq("country", args.country).eq("searchType", searchType).gte("day", args.from).lte("day", args.to))
+        .take(DAYS_PER_STEP);
+      for (const day of days) {
+        out.push({
+          searchType, day: day.day, clicks: day.clicks, impressions: day.impressions, ctr: day.ctr, position: day.position,
+          ...(day.namedClicks === undefined ? {} : { namedClicks: day.namedClicks }),
+        });
+      }
+    }
+    return out;
   },
 });
 
