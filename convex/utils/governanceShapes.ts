@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 
 import { rowShape } from "./rowShape";
+import { lookupValidator } from "./assistantLookups";
 
 /** What the governance, connection and job screens hand back. */
 
@@ -182,6 +183,8 @@ export const messageEvidenceShape = v.union(v.null(), v.object({
   memories: v.array(v.object({ id: v.string(), title: v.string(), alwaysOn: v.boolean() })),
   skills: v.array(v.object({ id: v.string(), name: v.string() })),
   wikiPages: v.array(v.object({ title: v.string(), isPlatform: v.boolean() })),
+  /** What the Assistant looked up for the answer, each with its screen. */
+  lookedUp: v.array(lookupValidator),
   /** The Decisions that ran on the turn this answer replied to. */
   checks: v.array(v.object({
     key: v.string(),

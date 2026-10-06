@@ -27,6 +27,7 @@ import {
 } from "./chatService";
 import { extractPhotoActionProposal } from "./photoActionService";
 import { creditAssistantReply } from "./creditHooks";
+import { lookupValidator } from "./utils/assistantLookups";
 
 const USER_THREAD_MESSAGE_LIMIT = 500;
 const AI_CONTEXT_MESSAGE_LIMIT = 40;
@@ -137,6 +138,8 @@ const clientMessageValidator = v.object({
   streamStartedAt: v.optional(v.number()),
   streamUpdatedAt: v.optional(v.number()),
   imageAttachments: v.optional(v.array(v.object({ url: v.string() }))),
+  /** What the Assistant looked up for the answer, each with its screen: the reader's own company's figures. */
+  lookedUp: v.optional(v.array(lookupValidator)),
 });
 
 function toClientMessage(
@@ -165,6 +168,7 @@ function toClientMessage(
       ? { streamUpdatedAt: message.streamUpdatedAt }
       : {}),
     ...(imageAttachments && imageAttachments.length > 0 ? { imageAttachments } : {}),
+    ...(message.lookedUp && message.lookedUp.length > 0 ? { lookedUp: message.lookedUp } : {}),
   };
 }
 
@@ -489,6 +493,7 @@ export const saveAssistantMessage = internalMutation({
     providerModelId: v.optional(v.string()),
     companyMemoryEvidenceJson: v.optional(v.string()),
     companyRuntimeEvidenceJson: v.optional(v.string()),
+    lookedUp: v.optional(v.array(lookupValidator)),
     photoTurn: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
@@ -512,6 +517,7 @@ export const saveAssistantMessage = internalMutation({
       providerModelId: args.providerModelId,
       companyMemoryEvidenceJson: args.companyMemoryEvidenceJson,
       companyRuntimeEvidenceJson: args.companyRuntimeEvidenceJson,
+      ...(args.lookedUp && args.lookedUp.length > 0 ? { lookedUp: args.lookedUp } : {}),
       ...(extracted.proposal ? { photoActionProposal: extracted.proposal } : {}),
       ...getThreadMessageDimensions(thread),
     });
@@ -596,6 +602,7 @@ export const finishStreamingAssistantMessage = internalMutation({
     providerModelId: v.optional(v.string()),
     companyMemoryEvidenceJson: v.optional(v.string()),
     companyRuntimeEvidenceJson: v.optional(v.string()),
+    lookedUp: v.optional(v.array(lookupValidator)),
     photoTurn: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
@@ -619,6 +626,7 @@ export const finishStreamingAssistantMessage = internalMutation({
       providerModelId: args.providerModelId,
       companyMemoryEvidenceJson: args.companyMemoryEvidenceJson,
       companyRuntimeEvidenceJson: args.companyRuntimeEvidenceJson,
+      ...(args.lookedUp && args.lookedUp.length > 0 ? { lookedUp: args.lookedUp } : {}),
       ...(extracted.proposal ? { photoActionProposal: extracted.proposal } : {}),
     });
     await creditAssistantReply(ctx, await ctx.db.get(message.threadId), args.messageId, args);

@@ -26,6 +26,7 @@ import {
 } from "./aiToolNotificationService";
 import { getErrorMessage, isRecord } from "./utils/lang";
 import { appError } from "./utils/appError";
+import { ASSISTANT_FIGURE_HANDLERS } from "./assistantToolHandlers";
 
 type JsonSchema = Record<string, unknown>;
 
@@ -452,18 +453,6 @@ export function isNotImplementedToolResult(value: unknown): boolean {
   );
 }
 
-/** What the company-figure tools say in a conversation that belongs to no company. */
-const NO_COMPANY_FIGURES = {
-  ok: false,
-  problem: "This conversation belongs to no company, so there are no company figures to read.",
-};
-
-/** Search Console is read over its ready-made periods only: 7, 30 or 90 days, the nearest asked for. */
-function nearestPeriod(days: number | undefined): 7 | 30 | 90 {
-  if (days === undefined || days <= 7) return 7;
-  return days <= 30 ? 30 : 90;
-}
-
 const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
   /**
    * Read a web page.
@@ -647,48 +636,8 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
         + "they are not available in this reply.",
     };
   },
-  /**
-   * The company's own figures (docs/plans/active/assistant-foundation-plan.md,
-   * item 7): its websites, a website's overview, its Search Console figures,
-   * its AI answers, its open tasks. Each reads through the function its screen
-   * reads through (`assistantReads.ts`), for the conversation's company — the
-   * run's, never one the model names — and a conversation with no company has
-   * no company figures, which the answer says rather than failing.
-   */
-  "assistant.websites": async (input) => {
-    if (!input.companyId) return NO_COMPANY_FIGURES;
-    return await input.ctx.runQuery(internal.assistantReads.websitesInternal, { companyId: input.companyId });
-  },
-  "assistant.site.overview": async (input) => {
-    if (!input.companyId) return NO_COMPANY_FIGURES;
-    return await input.ctx.runQuery(internal.assistantReads.siteOverviewInternal, {
-      companyId: input.companyId,
-      website: getStringToolArg(input.args, "website"),
-    });
-  },
-  "assistant.searchConsole": async (input) => {
-    if (!input.companyId) return NO_COMPANY_FIGURES;
-    const page = getOptionalStringToolArg(input.args, "page");
-    return await input.ctx.runQuery(internal.assistantReads.searchConsoleInternal, {
-      companyId: input.companyId,
-      website: getStringToolArg(input.args, "website"),
-      days: nearestPeriod(getNumberToolArg(input.args, "days")),
-      ...(page ? { page } : {}),
-    });
-  },
-  "assistant.ai.mentions": async (input) => {
-    if (!input.companyId) return NO_COMPANY_FIGURES;
-    const question = getOptionalStringToolArg(input.args, "question");
-    return await input.ctx.runQuery(internal.assistantReads.aiMentionsInternal, {
-      companyId: input.companyId,
-      website: getStringToolArg(input.args, "website"),
-      ...(question ? { question } : {}),
-    });
-  },
-  "assistant.tasks.open": async (input) => {
-    if (!input.companyId) return NO_COMPANY_FIGURES;
-    return await input.ctx.runQuery(internal.assistantReads.openTasksInternal, { companyId: input.companyId });
-  },
+  // The Assistant's company-figure reads (assistant-foundation-plan.md, item 7).
+  ...ASSISTANT_FIGURE_HANDLERS,
   "knowledge.search": async (input) => {
     const query = getStringToolArg(input.args, "query") || input.fallbackQuery || "";
     const limit = getNumberToolArg(input.args, "limit");

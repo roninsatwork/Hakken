@@ -245,6 +245,8 @@ describe("the Assistant's company figures", () => {
     expect(calls).toHaveLength(1);
     expect(calls[0]).toMatchObject({ status: "SUCCESS" });
     expect(JSON.stringify(calls[0])).toContain("Fix the title tags");
-    expect(messages.some((message) => message.content === "One task is open: fix the title tags.")).toBe(true);
+    const reply = messages.find((message) => message.content === "One task is open: fix the title tags.");
+    // The reply keeps what it looked up, for the quiet line under it.
+    expect(reply?.lookedUp).toEqual([{ kind: "tasks", link: "/app/tasks" }]);
   });
 });

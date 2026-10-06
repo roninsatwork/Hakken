@@ -7267,7 +7267,8 @@
         "none": "Nothing was retrieved for this answer — it came from the model and your instructions alone.",
         "wikiPages": "Wiki pages this answer stood on",
         "wikiPlatform": "(platform)",
-        "checks": "Checks that ran on the question"
+        "checks": "Checks that ran on the question",
+        "lookedUp": "Looked up"
       },
       "photoAction": {
         "heading": "Suggested follow-up",
@@ -7286,7 +7287,17 @@
         "readingMany": "Reading {count} files before answering"
       },
       "unsupportedFiles": "Unsupported file(s): {files}",
-      "analyzedDocuments": "Analyzed attached documents."
+      "analyzedDocuments": "Analyzed attached documents.",
+      "lookedUp": {
+        "label": "Looked up",
+        "websites": "Your websites",
+        "overview": "{website} overview",
+        "searchConsole": "Search Console, {website}, last {days} days",
+        "searchConsolePages": "Search Console, {website}, pages matching {page}, last {days} days",
+        "searchConsoleDays": "last {days} days",
+        "aiMentions": "AI answers, {website}",
+        "tasks": "Open tasks"
+      }
     },
     "costs": {
       "title": "AI Running Costs",

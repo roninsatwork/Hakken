@@ -2,6 +2,7 @@ import { defineSchema, defineTable } from "convex/server";
 import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { aiEngineValidator } from "./seoAiEngines";
+import { lookupValidator } from "./utils/assistantLookups";
 import { billingTables } from "./billingSchema";
 import { uploadTables } from "./uploadSchema";
 import { siteTables } from "./siteSchema";
@@ -3093,7 +3094,7 @@ export default defineSchema({
     /** Stamped when a person saved this answer into the wiki, so the same
      * answer is filed once however many times the button is pressed. */
     savedToWikiAt: v.optional(v.number()),
-    // Hakken AI Logistics
+    lookedUp: v.optional(v.array(lookupValidator)), // What the Assistant looked up for it, each with its screen (utils/assistantLookups.ts).
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
     modelUsed: v.optional(v.string()),

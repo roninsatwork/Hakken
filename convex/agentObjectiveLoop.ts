@@ -943,6 +943,11 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
         // duplicate reply. The final content is authoritative: a budget stop
         // replaces whatever partial text the reader saw with the explanation
         // of why the run ended.
+        // What it looked up, from the run's own record of its calls — which
+        // survives a hand-over to a later segment, as memory would not.
+        const lookedUp = threadId
+            ? await ctx.runQuery(internal.assistantReads.runLookupsInternal, { runId })
+            : [];
         const messageId = await finishAssistantReply(ctx, {
             threadId,
             stream,
@@ -951,6 +956,7 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
             model: modelConfig,
             evidence: messageEvidence,
             photoTurn: params.photoTurn,
+            lookedUp,
         });
         if (params.learning && finalStepStatus === "SUCCESS") {
             await learnFromAnswer(ctx, {

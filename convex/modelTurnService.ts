@@ -6,6 +6,7 @@ import { runDecisions } from "./decisionActions";
 import { certaintyWords } from "./decisionService";
 import { shouldFlushStreamedText } from "./streamingService";
 import type { MessageEvidence } from "./utils/messageEvidence";
+import type { Lookup } from "./utils/assistantLookups";
 
 /**
  * The turn both assistants share.
@@ -291,6 +292,8 @@ export async function finishAssistantReply(
     model?: ModelAttribution;
     evidence?: MessageEvidence;
     photoTurn?: boolean;
+    /** What the Assistant looked up for the answer (`utils/assistantLookups.ts`). */
+    lookedUp?: Lookup[];
   }
 ): Promise<Id<"messages"> | undefined> {
   const shared = {
@@ -303,6 +306,7 @@ export async function finishAssistantReply(
     companyMemoryEvidenceJson: args.evidence?.companyMemoryEvidenceJson,
     companyRuntimeEvidenceJson: args.evidence?.companyRuntimeEvidenceJson,
     photoTurn: args.photoTurn,
+    ...(args.lookedUp && args.lookedUp.length > 0 ? { lookedUp: args.lookedUp } : {}),
   };
 
   if (args.stream.messageId !== undefined) {

@@ -7267,7 +7267,8 @@
         "none": "Nulla è stato recuperato per questa risposta — deriva solo dal modello e dalle tue istruzioni.",
         "wikiPages": "Pagine wiki alla base di questa risposta",
         "wikiPlatform": "(piattaforma)",
-        "checks": "Controlli eseguiti sulla domanda"
+        "checks": "Controlli eseguiti sulla domanda",
+        "lookedUp": "Consultato"
       },
       "photoAction": {
         "heading": "Follow-up suggerito",
@@ -7286,7 +7287,17 @@
         "readingMany": "Sto leggendo {count} file prima di rispondere"
       },
       "unsupportedFiles": "File non supportati: {files}",
-      "analyzedDocuments": "Documenti allegati analizzati."
+      "analyzedDocuments": "Documenti allegati analizzati.",
+      "lookedUp": {
+        "label": "Consultato",
+        "websites": "I tuoi siti web",
+        "overview": "Panoramica di {website}",
+        "searchConsole": "Search Console, {website}, ultimi {days} giorni",
+        "searchConsolePages": "Search Console, {website}, pagine che contengono {page}, ultimi {days} giorni",
+        "searchConsoleDays": "ultimi {days} giorni",
+        "aiMentions": "Risposte AI, {website}",
+        "tasks": "Attività aperte"
+      }
     },
     "costs": {
       "title": "Telemetria Economica AI Globale",

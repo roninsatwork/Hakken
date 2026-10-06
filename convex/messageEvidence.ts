@@ -137,19 +137,24 @@ export const getForMessage = tenantQuery({
       ...(run.probabilities ? { probabilities: run.probabilities } : {}),
     }));
 
+    // What the Assistant looked up, each with its screen (assistant-foundation-plan.md, item 7).
+    const lookedUp = message.lookedUp ?? [];
+
     return {
       checks,
       documents,
       memories,
       skills,
       wikiPages,
+      lookedUp,
       // The panel needs to distinguish "used nothing" from "we did not
       // record it", and only the first is worth stating plainly.
       hasAny:
         documents.length > 0 ||
         memories.length > 0 ||
         skills.length > 0 ||
-        wikiPages.length > 0,
+        wikiPages.length > 0 ||
+        lookedUp.length > 0,
     };
   },
 });

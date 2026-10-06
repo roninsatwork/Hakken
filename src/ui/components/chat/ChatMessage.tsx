@@ -14,6 +14,8 @@ import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { MessageFeedbackControls } from "./MessageFeedbackControls";
 import { AnswerEvidence } from "./AnswerEvidence";
 import { PhotoActionChip } from "./PhotoActionChip";
+import { LookedUpLine } from "./LookedUpLine";
+import type { Lookup } from "@/convex/utils/assistantLookups";
 
 /**
  * What this component reads off a message, and nothing more.
@@ -29,7 +31,7 @@ export type ChatMessageView = Pick<
 > &
   Partial<
     Pick<Doc<"messages">, "systemKey" | "photoActionProposal" | "photoActionTaskId" | "isStreaming" | "streamStartedAt" | "streamUpdatedAt">
-  > & { imageAttachments?: Array<{ url: string }> };
+  > & { imageAttachments?: Array<{ url: string }>; lookedUp?: Lookup[] };
 
 interface ChatMessageProps {
   // The list query attaches viewable URLs for image attachments; older
@@ -161,6 +163,10 @@ export default function ChatMessage({
           <p className="mt-2 text-[12px] text-amber-500/90">{STREAM_STALLED_MESSAGE}</p>
         )}
       </div>
+
+      {/* What it looked up, each a link to the screen the figures came from
+          (assistant-foundation-plan.md, item 7). Once the reply has finished. */}
+      {!isStreaming && <LookedUpLine lookups={message.lookedUp} />}
 
       {/* The follow-up the model read out of an attached photo, waiting for
           the confirming tap. Only once the reply has finished writing. */}

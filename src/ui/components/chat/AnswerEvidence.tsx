@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import { DecisionLabel } from "@/src/ui/components/screens/DecisionLabel";
-import { ChevronDown, FileText, Lightbulb, Wrench, BookOpen, Scale } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, FileText, Lightbulb, Wrench, BookOpen, Scale, Search } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { lookupLabel } from "./LookedUpLine";
 
 /**
  * The workings behind an answer.
@@ -23,6 +25,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 export function AnswerEvidence({ messageId }: { messageId: Id<"messages"> }) {
   const t = useTranslations("ai.assistant.evidence");
   const tDecisions = useTranslations("decisions");
+  const tLookedUp = useTranslations("ai.assistant.lookedUp");
   const [isOpen, setIsOpen] = useState(false);
   const evidence = useQuery(api.messageEvidence.getForMessage, isOpen ? { messageId } : "skip");
 
@@ -50,6 +53,18 @@ export function AnswerEvidence({ messageId }: { messageId: Id<"messages"> }) {
       {isOpen && evidence && (
         <div className="flex flex-col gap-3 border-l border-border-dim pl-3 text-[12px]">
           {!evidence.hasAny && <p className="text-muted leading-relaxed max-w-[34rem]">{t("none")}</p>}
+
+          {evidence.lookedUp.length > 0 && (
+            <EvidenceGroup icon={<Search className="h-3 w-3" />} label={t("lookedUp")}>
+              {evidence.lookedUp.map((lookup, index) => (
+                <li key={`${lookup.kind}-${lookup.link}-${index}`}>
+                  <Link href={lookup.link} className="text-secondary hover:text-foreground transition-colors">
+                    {lookupLabel(tLookedUp, lookup)}
+                  </Link>
+                </li>
+              ))}
+            </EvidenceGroup>
+          )}
 
           {evidence.wikiPages.length > 0 && (
             <EvidenceGroup icon={<BookOpen className="h-3 w-3" />} label={t("wikiPages")}>
