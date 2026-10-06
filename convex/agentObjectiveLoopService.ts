@@ -14,7 +14,8 @@ import {
   type ToolAccessRole,
   type ToolSideEffectLevel,
 } from "./aiToolExecutionService";
-import { buildAgentSystemInstruction } from "./aiPromptAssembly";
+import { buildAgentSystemInstruction, shouldInjectPersonalNote } from "./aiPromptAssembly";
+import { gatherInstructions } from "./assistantKnowledge";
 import {
   finishAssistantReply,
   type ModelTurnStream,
@@ -195,6 +196,31 @@ export type ObjectiveLoopState = {
  */
 export type RunOwner = { companyId?: Id<"companies">; userId?: Id<"users"> };
 
+async function buildTriggeredAgentInstruction(ctx: ActionCtx, args: {
+  agent: { systemPrompt?: string | null };
+  runtimeSkills: Parameters<typeof buildAgentSystemInstruction>[1];
+  agentAlwaysMemories: Array<{ title: string; content: string }>;
+  companyId?: Id<"companies">;
+}) {
+  const [companyAlwaysMemories, emailBranding] = await Promise.all([
+    args.companyId
+      ? ctx.runQuery(internal.companyMemories.getAlwaysMemoriesInternal, { companyId: args.companyId })
+      : Promise.resolve([]),
+    // The deployment's configured name: an agent with no prompt of its own
+    // introduces itself as this platform's agent, not the shipped default's.
+    ctx.runQuery(internal.settings.getEmailBranding, {}),
+  ]);
+  return buildAgentSystemInstruction(
+    args.agent.systemPrompt,
+    args.runtimeSkills,
+    [
+      ...companyAlwaysMemories.map((memory) => ({ title: memory.title, content: memory.content })),
+      ...args.agentAlwaysMemories,
+    ],
+    emailBranding.platformName
+  );
+}
+
 export async function buildLoopExecutionContext(ctx: ActionCtx, args: {
   agentId: Id<"agents">;
   /** Present when the run came from a conversation. Absent for scheduled work. */
@@ -273,32 +299,38 @@ export async function buildLoopExecutionContext(ctx: ActionCtx, args: {
     }
   }
 
-  // The agent's own always-on memories, plus the company's. The company's were
-  // read nowhere on this path, so giving a company a memory did nothing on any
-  // widget with an agent attached.
-  const [agentAlwaysMemories, companyAlwaysMemories, emailBranding] = await Promise.all([
-    ctx.runQuery(internal.agentMemories.getAlwaysMemoriesInternal, {
-      agentId: args.agentId,
-      companyId: owner.companyId,
-    }),
-    owner.companyId
-      ? ctx.runQuery(internal.companyMemories.getAlwaysMemoriesInternal, { companyId: owner.companyId })
-      : Promise.resolve([]),
-    // The deployment's configured name: an agent with no prompt of its own
-    // introduces itself as this platform's agent, not the shipped default's.
-    ctx.runQuery(internal.settings.getEmailBranding, {}),
-  ]);
-  const alwaysMemories = [
-    ...companyAlwaysMemories.map((memory) => ({ title: memory.title, content: memory.content })),
-    ...agentAlwaysMemories.map((memory) => ({ title: memory.title, content: memory.content })),
-  ];
+  // The agent's own always-on memories. The company's come with the rest of
+  // what the company's AI is told.
+  const agentAlwaysMemories = (await ctx.runQuery(internal.agentMemories.getAlwaysMemoriesInternal, {
+    agentId: args.agentId,
+    companyId: owner.companyId,
+  })).map((memory) => ({ title: memory.title, content: memory.content }));
 
-  const systemInstruction = buildAgentSystemInstruction(
-    agent.systemPrompt,
-    runtimeSkills,
-    alwaysMemories,
-    emailBranding.platformName
-  );
+  // Answering a conversation, the agent is one more door onto the same
+  // assistant (assistant-foundation-plan.md, item 1): the platform's and the
+  // company's prompts, the rules, the company's skills and memories and the
+  // asker's own note, with the agent's own part inside them. Rebuilt the same
+  // way on every segment, so a resumed run is told what it was told.
+  const conversationInstructions = thread
+    ? await gatherInstructions(ctx, {
+        companyId: owner.companyId,
+        surface: thread.widgetId ? "WIDGET" : "COMPANY_CHAT",
+        ...(shouldInjectPersonalNote(thread) ? { noteFor: thread.userId } : {}),
+        presentation: "WRITTEN",
+        agent: { systemPrompt: agent.systemPrompt, skills: runtimeSkills, alwaysMemories: agentAlwaysMemories },
+      })
+    : null;
+  const systemInstruction = conversationInstructions
+    ? conversationInstructions.systemInstruction
+    // Work nobody is waiting on in a conversation — a schedule, a workflow,
+    // a webhook — is the agent's own instructions and memories, and the
+    // company's always memories, which giving a company a memory has to reach.
+    : await buildTriggeredAgentInstruction(ctx, {
+        agent,
+        runtimeSkills,
+        agentAlwaysMemories,
+        ...(owner.companyId ? { companyId: owner.companyId } : {}),
+      });
   // Deterministic logic routing.
   const temperature = 0.1;
 
@@ -337,6 +369,8 @@ export async function buildLoopExecutionContext(ctx: ActionCtx, args: {
     agent, thread, owner, runtimeSkills, modelConfig, provider,
     systemInstruction, temperature, toolDeclarations, providerTools,
     toolMetadataByName, modelDoc, limits,
+    /** The asker's note entries the instructions carry, for their usage stamps. */
+    noteMemoryIds: (conversationInstructions?.userMemories ?? []).map((memory) => memory.memoryId),
   };
 }
 

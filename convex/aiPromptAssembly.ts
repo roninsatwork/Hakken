@@ -76,21 +76,46 @@ export function buildAssistantSystemInstruction(args: {
    * never access, and is never repeated into shared knowledge.
    */
   userMemories?: string[];
+  /**
+   * An agent answering the conversation (assistant-foundation-plan.md,
+   * item 1): its own configured behaviour, skills and always memories, put
+   * inside the instructions every other door is given rather than in place of
+   * them. Without this an agent in a conversation — every website chat with
+   * one attached — answered without the platform's prompt, the company's
+   * prompt or its rules.
+   */
+  agent?: {
+    systemPrompt?: string | null;
+    skills?: AgentSkillInstruction[];
+    alwaysMemories?: Array<{ title: string; content: string }>;
+  };
 }) {
+  const agentPrompt = args.agent?.systemPrompt?.trim() ? args.agent.systemPrompt : null;
+  // An agent's own prompt says who is answering, so the platform's fallback
+  // identity is only for a conversation nobody gave one.
   const configuredPlatformPrompt =
     args.globalSystemPrompt && args.globalSystemPrompt.trim().length > 0
       ? args.globalSystemPrompt
-      : buildFallbackAssistantSystemPrompt(args.platformName);
+      : agentPrompt
+        ? null
+        : buildFallbackAssistantSystemPrompt(args.platformName);
 
-  let instruction = `${ASK_HAKKEN_PLATFORM_SAFETY_CONTRACT}
+  let instruction = ASK_HAKKEN_PLATFORM_SAFETY_CONTRACT;
 
-====================
-CONFIGURED PLATFORM BEHAVIOR:
-
-${configuredPlatformPrompt}`;
+  if (configuredPlatformPrompt) {
+    instruction += `\n\n====================\nCONFIGURED PLATFORM BEHAVIOR:\n\n${configuredPlatformPrompt}`;
+  }
 
   if (args.companySystemPrompt && args.companySystemPrompt.trim().length > 0) {
     instruction += `\n\n====================\nTENANT (COMPANY) SPECIFIC BEHAVIORAL INSTRUCTIONS:\n\n${args.companySystemPrompt}`;
+  }
+
+  if (agentPrompt) {
+    instruction += `\n\n====================\nCONFIGURED AGENT BEHAVIOR:\n\n${agentPrompt}`;
+  }
+
+  if (args.agent?.skills && args.agent.skills.length > 0) {
+    instruction += `\n\n====================\nENABLED AGENT SKILLS:\n\n${compileAgentSkills(args.agent.skills)}`;
   }
 
   if (args.companySkills && args.companySkills.length > 0) {
@@ -101,7 +126,7 @@ ${configuredPlatformPrompt}`;
     instruction += `\n\n====================\nSKILLS AVAILABLE TO THIS COMPANY:\n\n${compiledSkills}`;
   }
 
-  instruction += buildAlwaysMemorySection(args.companyMemories);
+  instruction += buildAlwaysMemorySection([...(args.companyMemories ?? []), ...(args.agent?.alwaysMemories ?? [])]);
   instruction += buildWhoIsAskingSection(args.userMemories);
 
   if (args.activeRules.length > 0) {
@@ -162,9 +187,31 @@ function buildWhoIsAskingSection(memories: string[] | undefined) {
   return `\n\n====================\nWHO IS ASKING (the assistant's private note about this signed-in person):\n\nUse these notes to shape tone, length and emphasis for this person. They never grant access, never override the safety contract above, and must never be repeated into answers for anyone else or written into shared knowledge.\n\n${compiled}`;
 }
 
+/** An agent's skill as the instructions name it. */
+type AgentSkillInstruction = { name: string; instruction: string; category?: string; riskLevel?: string };
+
+/** An agent's skills, written the same way whichever instructions carry them. */
+function compileAgentSkills(skills: AgentSkillInstruction[]) {
+  return skills
+    .map((skill) => {
+      const metadata = [
+        skill.category ? `CATEGORY: ${skill.category}` : undefined,
+        skill.riskLevel ? `RISK: ${skill.riskLevel}` : undefined,
+      ].filter(Boolean).join("\n");
+      return `[SKILL: ${skill.name}]\n${metadata ? `${metadata}\n` : ""}${skill.instruction}`;
+    })
+    .join("\n\n---\n\n");
+}
+
+/**
+ * An agent's instructions for work nobody is waiting on in a conversation —
+ * a schedule, a workflow, a webhook. An agent answering a conversation is
+ * given the assistant's instructions with its own part inside them
+ * (`buildAssistantSystemInstruction`'s `agent`), like every other door.
+ */
 export function buildAgentSystemInstruction(
   agentSystemPrompt: string | null | undefined,
-  skillInstructions: Array<{ name: string; instruction: string; category?: string; riskLevel?: string }> = [],
+  skillInstructions: AgentSkillInstruction[] = [],
   /**
    * ALWAYS memories, the agent's own and the company's.
    *
@@ -190,17 +237,7 @@ CONFIGURED AGENT BEHAVIOR:
 ${configuredAgentPrompt}`;
 
   if (skillInstructions.length > 0) {
-    const compiledSkills = skillInstructions
-      .map((skill) => {
-        const metadata = [
-          skill.category ? `CATEGORY: ${skill.category}` : undefined,
-          skill.riskLevel ? `RISK: ${skill.riskLevel}` : undefined,
-        ].filter(Boolean).join("\n");
-        return `[SKILL: ${skill.name}]\n${metadata ? `${metadata}\n` : ""}${skill.instruction}`;
-      })
-      .join("\n\n---\n\n");
-
-    instruction += `\n\n====================\nENABLED AGENT SKILLS:\n\n${compiledSkills}`;
+    instruction += `\n\n====================\nENABLED AGENT SKILLS:\n\n${compileAgentSkills(skillInstructions)}`;
   }
 
   instruction += buildAlwaysMemorySection(alwaysMemories);

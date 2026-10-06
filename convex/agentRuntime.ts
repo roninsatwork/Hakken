@@ -16,8 +16,8 @@ import {
 import {
   buildAgentSystemInstruction,
   buildUntrustedKnowledgeContext,
-  selectKnowledgeChunksWithinBudget,
 } from "./aiPromptAssembly";
+import { gatherReading } from "./assistantKnowledge";
 import {
   createModelTurnStream,
   guardModelTurn,
@@ -28,8 +28,6 @@ import {
 } from "./vertexProviderService";
 import { getGoogleVertexProviderModelId, GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
 import { PHOTO_ACTION_PROPOSAL_INSTRUCTION } from "./photoActionService";
-import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
-import { knowledgeCutOff, readChunk } from "./knowledgeReading";
 import { buildCompanyMemoryEvidence, buildCompanyRuntimeEvidence } from "./utils/messageEvidence";
 import {
 } from "./promptCacheService";
@@ -209,19 +207,29 @@ export const runAgentObjective = internalAction({
             currentUserContent = currentUserContent.substring(0, 10000) + "\n\n... [TRUNCATED DUE TO SIZE LIMITS]";
         }
 
-        const memoryMatches = await ctx.runQuery(internal.agentMemories.searchMemoryInternal, {
-            agentId: args.agentId,
+        // What Hakken knows for this question, read where every door reads it
+        // (assistantKnowledge.ts, assistant-foundation-plan.md item 1): the
+        // company's wiki and documents, the global brain, files in the
+        // conversation, the company's looked-up memories and Helpful content
+        // as typed Ask Hakken reads them — plus the agent's own knowledge and
+        // memory, which only its own runs read.
+        const reading = await gatherReading(ctx, {
+            question: args.content,
             companyId: owner.companyId,
-            queryText: args.content,
-            limit: 5,
+            thread: execution.thread,
+            allowance: "full",
+            operation: "agentRagEmbedding",
+            agent: { agentId: args.agentId, agentRunId: runId },
         });
+
+        const memoryMatches = reading.agentMemories;
         if (memoryMatches.length > 0) {
             await ctx.runMutation(internal.agentMemories.recordUsageInternal, {
                 runId,
                 agentId: args.agentId,
                 companyId: owner.companyId,
                 queryText: args.content,
-                memories: memoryMatches.map((memory) => ({ memoryId: memory.id, score: memory.score })),
+                memories: memoryMatches.map((memory) => ({ memoryId: memory.id as Id<"agentMemories">, score: memory.score })),
             });
             preLoopStepIndex += 1;
             await ctx.runMutation(internal.agentRuns.appendStepInternal, {
@@ -234,32 +242,13 @@ export const runAgentObjective = internalAction({
                 input: args.content,
                 output: JSON.stringify({ memories: memoryMatches.map((memory) => ({ id: memory.id, applyMode: memory.applyMode, score: memory.score })) }),
             });
-            currentUserContent += buildUntrustedKnowledgeContext({
-                sourceLabel: "agent memory",
-                chunks: memoryMatches.map((memory) => memory.content),
-                maxChars: 6000,
-            });
         }
 
-        // The company's when-relevant memories, which this path never read.
         // Held for the message's evidence trail as well as the prompt, so a
-        // rating on the answer can find the memories behind it.
-        let ratedCompanyMemories: Parameters<typeof buildCompanyMemoryEvidence>[0] = [];
-        if (owner.companyId) {
-            const companyMemories = await ctx.runQuery(internal.companyMemories.getRuntimeMemoriesInternal, {
-                companyId: owner.companyId,
-                queryText: args.content,
-                limit: 5,
-            });
-            if (companyMemories.relevant.length > 0) {
-                ratedCompanyMemories = companyMemories.relevant;
-                currentUserContent += buildUntrustedKnowledgeContext({
-                    sourceLabel: "company memory",
-                    chunks: companyMemories.relevant.map((memory) => `${memory.title}: ${memory.content}`),
-                    maxChars: 6000,
-                });
-            }
-        }
+        // rating on the answer can find the memories and pieces behind it.
+        const ratedCompanyMemories = reading.relevantMemories;
+        const includedChunkIds = reading.chunkIds;
+        currentUserContent += [...reading.leading, ...reading.trailing].join("");
 
         // A photo turn may end in a structured follow-up proposal, generated
         // in this same reply rather than by a second model call.
@@ -273,69 +262,12 @@ export const runAgentObjective = internalAction({
             parts: [{ text: currentUserContent }, ...(imageParts ?? [])]
         });
 
-        // --- RAG VECTOR SEARCH PIPELINE (Agent Isolated) ---
-        let ragContext = "";
-        // The chunks that actually reached the prompt, for the evidence trail —
-        // this is what lets the knowledge-evidence sweep credit a rated answer
-        // back to its sources.
-        const includedChunkIds: string[] = [];
-        try {
-            const embedded = await embedRetrievalQuery(ctx, {
-                query: args.content,
-                companyId: owner.companyId,
-                operation: "agentRagEmbedding",
+        // The asker's private note counts as used once per run, not once per
+        // segment: the instructions carrying it are rebuilt on every one.
+        if (execution.noteMemoryIds.length > 0) {
+            await ctx.scheduler.runAfter(0, internal.userMemories.markUsedInternal, {
+                memoryIds: execution.noteMemoryIds,
             });
-
-            if (embedded) {
-                // Hybrid (vector + keyword) search of the agent's own knowledge.
-                const vectorMatches = await searchKnowledgeScope(ctx, {
-                    queryVector: embedded.vector,
-                    queryText: args.content,
-                    scope: { kind: "agent", agentId: args.agentId },
-                    limit: 100, // Matching the maximum RAG boundary limit
-                    priorCompanyId: owner.companyId,
-                });
-                
-                if (vectorMatches.length > 0) {
-                    const MAX_RAG_CHARS = 32000;
-                    const cutOff = await knowledgeCutOff(ctx, {
-                        ...(owner.companyId ? { companyId: owner.companyId } : {}),
-                        question: args.content,
-                        links: { threadId: args.threadId, ...(agentRunId ? { agentRunId } : {}) },
-                    });
-                    // The shared selection, as chat reads: one tier, so the
-                    // search's own order stands.
-                    const { chunkTexts, chunkIds } = await selectKnowledgeChunksWithinBudget({
-                        ranked: vectorMatches.map((match) => ({ match, tier: "agent" as const, score: match._score })),
-                        maxChars: MAX_RAG_CHARS,
-                        threadReserveRatio: 0,
-                        loadChunk: readChunk(ctx),
-                        embeddingModelId: embedded.modelId,
-                        agent: { agentId: args.agentId, ...(owner.companyId ? { companyId: owner.companyId } : {}) },
-                        ...(cutOff ? { judge: cutOff } : {}),
-                    });
-                    includedChunkIds.push(...chunkIds);
-
-                    if (chunkTexts.length > 0) {
-                        ragContext = buildUntrustedKnowledgeContext({
-                            sourceLabel: "agent-scoped knowledge",
-                            chunks: chunkTexts,
-                            maxChars: MAX_RAG_CHARS,
-                        });
-                    }
-                }
-            }
-        } catch (e) {
-            console.error("Agent RAG pipeline failed to execute", e);
-        }
-
-        if (ragContext) {
-             // Append to the final user message to prioritize context grounding over system instruction fading
-             const finalMessage = conversationHistory[conversationHistory.length - 1];
-             const finalTextPart = finalMessage?.parts?.[0];
-             if (finalTextPart?.text) {
-                 finalTextPart.text += ragContext;
-             }
         }
 
         await executeObjectiveLoop(ctx, {

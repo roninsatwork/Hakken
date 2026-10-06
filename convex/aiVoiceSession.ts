@@ -23,46 +23,19 @@ import {
   REALTIME_MODEL_USE_CASE,
 } from "./aiModelService";
 import type { Id } from "./_generated/dataModel";
-import {
-  buildAssistantSystemInstruction,
-  buildUntrustedKnowledgeContext,
-  rankAssistantKnowledgeMatches,
-  selectKnowledgeChunksWithinBudget,
-} from "./aiPromptAssembly";
-import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
-import { searchHelpfulContent } from "./libraryArticleSearch";
-import { knowledgeCutOff, readChunk } from "./knowledgeReading";
+import type { ActionCtx } from "./_generated/server";
+import { shouldInjectPersonalNote } from "./aiPromptAssembly";
+import { gatherInstructions, gatherReading } from "./assistantKnowledge";
 import { getOpenAIApiKey } from "./openaiProviderService";
-import { companyAnswersFromWiki } from "./wikiRewriteService";
 import { getActiveCompanyId } from "./authz";
 
 const REALTIME_SESSION_RATE_LIMIT_PER_MINUTE = 10;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
 
-/**
- * How a spoken assistant differs from a written one.
- *
- * The company's own instructions still rule; this only adds what is true of
- * speech and false of text — nobody wants a bulleted list read aloud, and a
- * spoken answer that runs for a paragraph cannot be skimmed.
- */
-export const REALTIME_VOICE_STYLE = `You are speaking out loud, not writing.
-
-- Keep answers short: one or two sentences unless asked for more.
-- No markdown, no bullet points, no headings — say it as a person would.
-- Numbers, dates and money are spoken naturally, not written as symbols.
-- If you are asked something you do not know, say so plainly and briefly.
-- You may be interrupted mid-sentence. If that happens, stop and listen.
-- Answer in the language you are spoken to in, and switch the moment the
-  speaker switches. Never announce that you are doing this and never ask
-  which language they would like — following them is the whole point.
-- The company's knowledge may be written in a different language from the
-  one you are speaking. Read it in whatever language you find it and answer
-  in theirs; never read a stored passage out in its original language.`;
-
-
-/** Helpful content read aloud at most: a spoken answer is two sentences, not three articles (IH9). */
-const VOICE_HELPFUL_MAX_CHARS = 3000;
+// The speaking style lives with the rest of what Hakken knows
+// (assistantKnowledge.ts); exported here too, where the tests and the kiosk
+// have always found it.
+export { REALTIME_VOICE_STYLE } from "./assistantKnowledge";
 
 /** The one thing a spoken session can ask this platform for, mid-conversation. */
 export const VOICE_KNOWLEDGE_TOOL_NAME = "search_company_knowledge";
@@ -137,213 +110,21 @@ export const searchKnowledgeForVoiceInternal = internalAction({
     const thread = args.threadId
       ? await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId })
       : null;
+    // The thread decides whose knowledge is searched; the fallback only
+    // covers a call or an email, which have no thread.
     const companyId = thread?.companyId ?? args.fallbackCompanyId;
-    const company = companyId
-      ? await ctx.runQuery(internal.companies.getCompanyByIdInternal, { id: companyId })
-      : null;
-    const knowledgeMode =
-      args.forceKnowledgeMode ?? (companyAnswersFromWiki(company) ? "wiki" : "chunks");
 
-    try {
-      const embedded = await embedRetrievalQuery(ctx, {
-        query,
-        companyId,
-        operation: "voiceRagEmbedding",
-      });
-      if (!embedded) return { context: "" };
-      const queryVector = embedded.vector;
-      const cutOff = await knowledgeCutOff(ctx, {
-        ...(companyId ? { companyId } : {}),
-        question: query,
-        ...(args.threadId ? { links: { threadId: args.threadId } } : {}),
-      });
-
-      // Spoken answers retire the global chunk arm on the same content-
-      // carried cutover as typed ones (global-wiki-plan, phase 2).
-      const voiceGlobalWikiServes =
-        Boolean(companyId) &&
-        knowledgeMode === "wiki" &&
-        (await ctx.runQuery(internal.wikiPages.hasGlobalWikiPagesInternal, {}));
-      const [companyChunks, globalChunks, threadChunks] = await Promise.all([
-        companyId && knowledgeMode === "chunks"
-          ? searchKnowledgeScope(ctx, {
-              queryVector,
-              queryText: query,
-              scope: { kind: "company", companyId },
-              limit: 30,
-              priorCompanyId: companyId,
-            })
-          : Promise.resolve([]),
-        voiceGlobalWikiServes
-          ? Promise.resolve([])
-          : searchKnowledgeScope(ctx, {
-          queryVector,
-          queryText: query,
-          scope: { kind: "global" },
-          limit: 30,
-          priorCompanyId: companyId,
-        }),
-        args.threadId
-          ? searchKnowledgeScope(ctx, {
-              queryVector,
-              queryText: query,
-              scope: { kind: "thread", threadId: args.threadId },
-              limit: 30,
-              priorCompanyId: companyId,
-            })
-          : Promise.resolve([]),
-      ]);
-
-      const ranked = rankAssistantKnowledgeMatches({
-        globalMatches: globalChunks,
-        companyMatches: companyChunks,
-        threadMatches: threadChunks,
-      });
-      // Far smaller than the typed budget on purpose: this is read aloud, and
-      // a spoken answer is two sentences, not two pages.
-      const { chunkTexts } =
-        ranked.length > 0
-          ? await selectKnowledgeChunksWithinBudget({
-              ranked,
-              maxChars: 6000,
-              threadReserveRatio: 0.3,
-              loadChunk: readChunk(ctx),
-              embeddingModelId: embedded.modelId,
-              ...(cutOff ? { judge: cutOff } : {}),
-            })
-          : { chunkTexts: [] as string[] };
-
-      // Everything the typed assistant would assemble for this question, not
-      // just documents: a company memory written for exactly this situation
-      // is as much an answer as a paragraph in a file, and saved answers live
-      // in company knowledge so they arrive through the search above.
-      // Looked up even when no document matched — documents finding nothing
-      // does not mean the company has nothing to say.
-      const memories = companyId
-        ? await ctx.runQuery(internal.companyMemories.getRuntimeMemoriesInternal, {
-            companyId,
-            queryText: query,
-            limit: 5,
-          })
-        : null;
-      const relevantMemories = (memories?.relevant ?? [])
-        .map((memory: { title: string; content: string }) => `- ${memory.title}: ${memory.content}`)
-        .join("\n");
-
-      // The wiki answers company questions in wiki mode (stage two): index
-      // scanned, best pages opened whole, one hop along links. Customer
-      // pages are excluded — a caller must never be read another customer's
-      // page; identity-matched pages arrive by their own doors instead.
-      const wikiAnswer =
-        companyId && knowledgeMode === "wiki"
-          ? await ctx.runAction(internal.wikiActions.selectWikiContextForQuery, {
-              companyId,
-              query,
-              includeCustomerPages: false,
-              // Spoken answers are two sentences; the reading pile is smaller
-              // than typed chat's, but big enough for a page and its hop.
-              maxChars: 9000,
-            })
-          : { context: "", pageKeys: [] };
-
-      // The loop's bookkeeping for spoken answers (closing-the-loop
-      // plan, phases 1-2) — same one call, same mechanics as typed.
-      if (companyId && knowledgeMode === "wiki") {
-        await ctx.scheduler.runAfter(0, internal.wikiFeedback.recordAnswerOutcomeInternal, {
-          companyId,
-          question: query.slice(0, 500),
-          pageKeys: wikiAnswer.pageKeys,
-        });
-      }
-
-      // The same net the typed assistant has: a wiki that names no pages for
-      // this question does not mean the company's own documents have nothing
-      // to say. Without this, a caller asking about a document whose wiki
-      // pages were never written is told "I cannot check" about a file
-      // sitting on the company's own shelf.
-      let voiceFallbackTexts: string[] = [];
-      if (companyId && knowledgeMode === "wiki" && !wikiAnswer.context && chunkTexts.length === 0) {
-        try {
-          const fallbackChunks = await searchKnowledgeScope(ctx, {
-            queryVector,
-            queryText: query,
-            scope: { kind: "company", companyId },
-            limit: 30,
-            priorCompanyId: companyId,
-          });
-          if (fallbackChunks.length > 0) {
-            const picked = await selectKnowledgeChunksWithinBudget({
-              ranked: rankAssistantKnowledgeMatches({
-                globalMatches: [],
-                companyMatches: fallbackChunks,
-                threadMatches: [],
-              }),
-              maxChars: 6000,
-              threadReserveRatio: 0,
-              loadChunk: readChunk(ctx),
-              embeddingModelId: embedded.modelId,
-              ...(cutOff ? { judge: cutOff } : {}),
-            });
-            voiceFallbackTexts = picked.chunkTexts;
-          }
-        } catch (error) {
-          console.error("Voice document fallback failed; answering without it", error);
-        }
-      }
-
-      // Helpful content (insights-helpful-content-plan.md, IH9): read to a
-      // signed-in user speaking in their own conversation, as typed; never on
-      // a phone call or to a widget visitor, who are the public (L13).
-      // Fail-open — it must never cost an answer.
-      let helpfulSections: string[] = [];
-      if (thread && !thread.widgetId) {
-        try {
-          helpfulSections = await searchHelpfulContent(ctx, { question: query, embedded });
-        } catch (error) {
-          console.error("Voice Helpful content search failed; answering without it", error);
-        }
-      }
-
-      // Nothing found is reported as nothing found. Returning the wrapper
-      // around an empty list reads to the model as "here is your evidence",
-      // and a model handed an empty evidence block invents rather than
-      // admits — which is the one thing this must never do out loud.
-      if (chunkTexts.length === 0 && voiceFallbackTexts.length === 0 && !relevantMemories && !wikiAnswer.context && helpfulSections.length === 0) {
-        return { context: "" };
-      }
-
-      return {
-        context: `${
-          wikiAnswer.context ? `${wikiAnswer.context}\n\n` : ""
-        }${
-          chunkTexts.length > 0 || voiceFallbackTexts.length > 0
-            ? buildUntrustedKnowledgeContext({
-                sourceLabel:
-                  chunkTexts.length > 0
-                    ? "global, company, and thread-scoped knowledge"
-                    : "the company's own filed documents",
-                chunks: chunkTexts.length > 0 ? chunkTexts : voiceFallbackTexts,
-                maxChars: 6000,
-              })
-            : ""
-        }${
-          relevantMemories
-            ? `\n\nApproved company notes that apply here:\n${relevantMemories}`
-            : ""
-        }${
-          helpfulSections.length > 0
-            ? `\n\n${buildUntrustedKnowledgeContext({
-                sourceLabel: "Helpful content — articles from other websites, each headed with its title, publication and original address; when you use one, name it",
-                chunks: helpfulSections,
-                maxChars: VOICE_HELPFUL_MAX_CHARS,
-              })}`
-            : ""
-        }`,
-      };
-    } catch (error) {
-      console.error("Voice knowledge search failed", error);
-      return { context: "" };
-    }
+    // Everything the typed assistant would read for this question, from the
+    // same place (assistantKnowledge.ts), within a spoken answer's room.
+    const reading = await gatherReading(ctx, {
+      question: query,
+      companyId,
+      thread,
+      allowance: "brief",
+      operation: "voiceRagEmbedding",
+      ...(args.forceKnowledgeMode ? { forceKnowledgeMode: args.forceKnowledgeMode } : {}),
+    });
+    return { context: reading.context };
   },
 });
 
@@ -356,52 +137,16 @@ export const searchKnowledgeForVoiceInternal = internalAction({
  * differently depending on how you reached it.
  */
 export async function buildSpokenSessionInstructions(
-  ctx: { runQuery: (reference: never, args: never) => Promise<unknown> },
+  ctx: Pick<ActionCtx, "runQuery">,
   companyId: Id<"companies"> | undefined
 ): Promise<string> {
-  const run = ctx.runQuery as unknown as (reference: unknown, args: unknown) => Promise<never>;
-  const [globalSystemPrompt, activeRules, company, companySkills, companyMemories, emailBranding] =
-    await Promise.all([
-      run(internal.system.getInternalSystemPrompt, {}),
-      run(internal.aiRules.getActiveRulesInternal, { companyId }),
-      companyId
-        ? run(internal.companies.getCompanyByIdInternal, { id: companyId })
-        : Promise.resolve(null),
-      companyId
-        ? run(internal.companySkills.getRuntimeCompanySkillsInternal, {
-            companyId,
-            surfaceType: "COMPANY_CHAT" as const,
-          })
-        : Promise.resolve(null),
-      companyId
-        ? run(internal.companyMemories.getRuntimeMemoriesInternal, {
-            // The session opens before anything is said, so there is no
-            // question to match on: this returns the company's ALWAYS
-            // memories, which is exactly what belongs in a system
-            // instruction.
-            companyId,
-            queryText: "",
-            limit: 5,
-          })
-        : Promise.resolve(null),
-      run(internal.settings.getEmailBranding, {}),
-    ]);
-
-  type InstructionInput = Parameters<typeof buildAssistantSystemInstruction>[0];
-  return `${buildAssistantSystemInstruction({
-    globalSystemPrompt,
-    companySystemPrompt: (company as { systemPrompt?: string } | null)?.systemPrompt,
-    activeRules: ((activeRules ?? []) as InstructionInput["activeRules"]),
-    companySkills: (companySkills as { skills?: InstructionInput["companySkills"] } | null)?.skills,
-    companyMemories: (companyMemories as { always?: InstructionInput["companyMemories"] } | null)
-      ?.always,
-    platformName: (emailBranding as { platformName?: string } | null)?.platformName,
-  })}
-
-====================
-SPEAKING OUT LOUD:
-
-${REALTIME_VOICE_STYLE}`;
+  // A caller and a reception visitor are the public: no private note.
+  const { systemInstruction } = await gatherInstructions(ctx, {
+    companyId,
+    surface: "COMPANY_CHAT",
+    presentation: "SPOKEN",
+  });
+  return systemInstruction;
 }
 
 /** The knowledge door, declared the way Google's live models expect it. */
@@ -590,53 +335,18 @@ export const createRealtimeVoiceSession = tenantAction({
 
     const companyId = thread.companyId ?? activeCompanyId;
 
-    // The same company voice the typed assistant uses, plus the speech style.
-    const [globalSystemPrompt, activeRules, company, companySkills, companyMemories, emailBranding, userMemories] =
-      await Promise.all([
-        ctx.runQuery(internal.system.getInternalSystemPrompt),
-        ctx.runQuery(internal.aiRules.getActiveRulesInternal, { companyId }),
-        companyId
-          ? ctx.runQuery(internal.companies.getCompanyByIdInternal, { id: companyId })
-          : Promise.resolve(null),
-        companyId
-          ? ctx.runQuery(internal.companySkills.getRuntimeCompanySkillsInternal, {
-              companyId,
-              surfaceType: "COMPANY_CHAT" as const,
-            })
-          : Promise.resolve(null),
-        companyId
-          ? ctx.runQuery(internal.companyMemories.getRuntimeMemoriesInternal, {
-              // The session is opened before anything is said, so there is no
-              // question to match on: this returns the company's ALWAYS
-              // memories, which is exactly what belongs in a system
-              // instruction.
-              companyId,
-              queryText: "",
-              limit: 5,
-            })
-          : Promise.resolve(null),
-        ctx.runQuery(internal.settings.getEmailBranding, {}),
-        // The speaker's own private note (personal-layer-and-goals-plan.md,
-        // part 2): this session was opened by a signed-in person, and the
-        // note injected is theirs alone. Phone callers and kiosks go through
-        // buildSpokenSessionInstructions instead, which carries none.
-        ctx.runQuery(internal.userMemories.getActiveForUserInternal, { userId }),
-      ]);
-
-    const instructions = `${buildAssistantSystemInstruction({
-      globalSystemPrompt,
-      companySystemPrompt: company?.systemPrompt,
-      activeRules: activeRules ?? [],
-      companySkills: companySkills?.skills,
-      companyMemories: companyMemories?.always,
-      platformName: emailBranding.platformName,
-      userMemories: userMemories.map((memory) => memory.content),
-    })}
-
-====================
-SPEAKING OUT LOUD:
-
-${REALTIME_VOICE_STYLE}`;
+    // The same instructions the typed assistant is given, plus the speech
+    // style (assistantKnowledge.ts). The speaker's own private note
+    // (personal-layer-and-goals-plan.md, part 2): this session was opened by
+    // a signed-in person in their own conversation, and the note is theirs
+    // alone. Phone callers and kiosks go through buildSpokenSessionInstructions
+    // instead, which carries none.
+    const { systemInstruction: instructions, userMemories } = await gatherInstructions(ctx, {
+      companyId,
+      surface: "COMPANY_CHAT",
+      ...(shouldInjectPersonalNote(thread) ? { noteFor: userId } : {}),
+      presentation: "SPOKEN",
+    });
 
     // The note's usage stamps, same as the typed path: a session that
     // carries the note counts as a use.

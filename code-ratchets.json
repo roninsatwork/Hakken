@@ -8,7 +8,7 @@
     "convex/agents.ts": 1400,
     "convex/agentRuns.ts": 1350,
     "convex/users.ts": 1250,
-    "convex/agentRuntime.ts": 1250,
+    "convex/agentRuntime.ts": 1200,
     "convex/agentSkills.ts": 1200,
     "convex/agentMemoryCandidates.ts": 1200,
     "convex/agentObjectiveLoop.ts": 1150,

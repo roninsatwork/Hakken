@@ -13,20 +13,40 @@ describe('Ask Hakken Safety Drift', () => {
     // `convex/modelTurnService.ts` (maintenance plan, Phase 8), so the spine
     // is now pinned by that one name; `convex/modelTurnService.test.ts` holds
     // the fuller guard that neither runtime re-grows a private copy.
+    //
+    // What the model is told and what it reads moved into the one shared
+    // place every door uses (`convex/assistantKnowledge.ts`,
+    // assistant-foundation-plan.md item 1), so the prompt hierarchy and the
+    // untrusted wrappers are pinned there, and the door is pinned to using it.
     const assistantRequirements = [
       'guardModelTurn',
       'runModelTurn',
       'finishAssistantReply',
-      'buildAssistantSystemInstruction',
-      'buildUntrustedConversationHistory',
-      'buildUntrustedKnowledgeContext',
+      'gatherInstructions',
+      'gatherReading',
+      'composeWrittenPrompt',
     ];
     const assistantMissing = assistantRequirements.filter((needle) => !assistantBody.includes(needle));
 
     expect(
       assistantMissing,
-      `generateHakkenResponse must keep preflight refusal, prompt hierarchy, untrusted history, and untrusted RAG helpers:\n${assistantMissing.join('\n')}`
+      `generateHakkenResponse must keep preflight refusal and read its instructions, knowledge and history through the shared assistant knowledge:\n${assistantMissing.join('\n')}`
     ).toEqual([]);
+
+    const sharedSpine: Array<{ declaration: string; requirements: string[] }> = [
+      { declaration: 'gatherInstructions', requirements: ['buildAssistantSystemInstruction'] },
+      { declaration: 'gatherReading', requirements: ['buildUntrustedKnowledgeContext', 'selectKnowledgeChunksWithinBudget'] },
+      { declaration: 'composeWrittenPrompt', requirements: ['buildUntrustedConversationHistory'] },
+    ];
+    for (const { declaration, requirements } of sharedSpine) {
+      const body = extractDeclarationBody('convex/assistantKnowledge.ts', declaration);
+      expect(body, `${declaration} not found in convex/assistantKnowledge.ts`).not.toBe('');
+      const missing = requirements.filter((needle) => !body.includes(needle));
+      expect(
+        missing,
+        `${declaration} must keep the prompt hierarchy and untrusted wrappers:\n${missing.join('\n')}`
+      ).toEqual([]);
+    }
 
     // The agent run is no longer one function. It starts in `runAgentObjective`
     // or resumes in `continueAgentObjective`, both of which build their
@@ -46,7 +66,7 @@ describe('Ask Hakken Safety Drift', () => {
         declaration: 'runAgentObjective',
         requirements: [
           'guardModelTurn',
-          'buildUntrustedKnowledgeContext',
+          'gatherReading',
           'buildLoopExecutionContext',
           'executeObjectiveLoop',
         ],
@@ -57,8 +77,15 @@ describe('Ask Hakken Safety Drift', () => {
         requirements: ['buildLoopExecutionContext', 'executeObjectiveLoop'],
       },
       {
+        // A run answering a conversation is told what every door is told; a
+        // run nobody waits on in one keeps the agent's own instructions.
         file: 'convex/agentObjectiveLoopService.ts',
         declaration: 'buildLoopExecutionContext',
+        requirements: ['gatherInstructions', 'buildTriggeredAgentInstruction'],
+      },
+      {
+        file: 'convex/agentObjectiveLoopService.ts',
+        declaration: 'buildTriggeredAgentInstruction',
         requirements: ['buildAgentSystemInstruction'],
       },
       {
@@ -88,6 +115,7 @@ describe('Ask Hakken Safety Drift', () => {
       'convex/agentRuntime.ts',
       'convex/agentObjectiveLoop.ts',
       'convex/agentObjectiveLoopService.ts',
+      'convex/assistantKnowledge.ts',
     ]) {
       const source = readRepoFile(file);
       expect(source, `${file} is missing, so the framing checks below read nothing`).not.toBe('');

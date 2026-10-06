@@ -7,6 +7,18 @@ completed work.
 
 ## Active Plans
 
+- [The assistant's foundation — one brain, many doors](./active/assistant-foundation-plan.md) —
+  before Hakken becomes a personal assistant that takes on jobs, one brain:
+  what Hakken knows put together in one place for every door (typed and
+  spoken Ask Hakken, the phone line, email replies, the website chat), Ask
+  Hakken on the agent runtime as a built-in Hakken assistant, the first four
+  read tools giving the company's real figures through the screens' own code,
+  a client picker for super admins, and a guard so a second brain cannot come
+  back. Anthony: "we cannot have two AI giving two different answers". The
+  wider assistant's decisions (jobs, watches, Telegram first) recorded at its
+  end. **Planned 2026-10-06, decisions taken the same day (everyone at
+  once; Swarm removed); item 1 (one record of what Hakken knows) built the
+  same day, saved locally on dev, not pushed; about 9.5 to 12.5 days left.**
 - [Finishing off](./active/finish-off-plan.md) — everything left from the
   usage credits and collection work, in order with days: big websites' Search
   Console figures, storing less, credits counting what came back, Usage while
