@@ -13,11 +13,11 @@ two different answers." And: "Make this a repo plan first and let me know how
 many man days."
 
 **Status, 2026-10-06: planned, the four decisions taken (below), and items 1
-to 9 done the same day — saved locally on `dev`, not pushed; Ask Hakken
-answers through the Assistant on the dev deployment with the company's own
-figures, for the client a super admin picks, and its old answer path is
-gone. About 95% done; about half a building day left: item 10, the checks
-and the push.** The wider
+to 10 done the same day — committed locally on `dev`, not pushed; the push
+waits for Anthony's word. Ask Hakken answers through the Assistant on the
+dev deployment with the company's own figures, for the client a super admin
+picks, and its old answer path is gone. Speed S1 measured the same day;
+the fixes it points to are proposed, not approved (below).** The wider
 assistant (jobs, Telegram) is planned after this one is proven — the
 decisions already taken for it are recorded at the end so they are not
 asked again.
@@ -79,7 +79,7 @@ Hakken's knowledge, the agent runtime's hands.
 | 8 | **Built 2026-10-06, as drawn and approved.** "Answering for {client} ▾" above Ask Hakken's message box, for super admins only: the clients and "The platform — no client"; picking one makes the new conversation that client's (`createThread`'s `forCompanyId` / `forPlatform`, refused to anyone else) without changing who they view as, and a started conversation shows its client fixed (`getConversationClient`). Files and voice follow the conversation's client for a super admin's own conversation (`isThreadInCallersWorkspace`); everyone else's must still be their own company's. Checked in Anthony's Chrome: picking Ronins Agency while viewing as Conterra Ops, "How did ronins.co.uk do in Search Console over the last 7 days?" answered 81 clicks against 91, 54,613 impressions against 48,314, position 19.3 against 15.7 — the figures the data holds. **Which client** — a super admin's conversation belongs to the company they are viewing as (`getActiveCompanyId`, `chat.ts:306`); a picker at the top of the conversation changes it without changing their whole view. Everyone else is always in their own company. Drawn first and approved | a super admin sees every client, so "how did we do last week?" needs to know whose week | 1 |
 | **Finishing** | | | |
 | 9 | **Built 2026-10-06.** `generateHakkenResponse` deleted — `aiChat.ts` keeps only the conversation's title — with `composeWrittenPrompt`, which only it used; its tests moved to `askHakken.test.ts`, asking through the Assistant; `src/ai-safety-drift.test.ts` now holds that every answer goes through the agent runtime, and the doors guard names no second path. PRODUCT.md §22 (rules reach every door that answers a person; one brain) and §32, and the developer guides (`assistant-chat.md` and four more), describe it as built. **The old answer path removed** after item 6 — the model call of its own in `aiChat.ts` goes; PRODUCT.md §22 and §24 and the developer guides updated | one brain in the code, not only in use | 0.5–1 |
-| 10 | **Checks and push** — the local gate, GitHub's own steps (coverage, smoke), English and Italian wording in step, a look in Anthony's Chrome on port 3000; push on his word | as every release | 0.5 |
+| 10 | **Checks done 2026-10-06; the push waits for Anthony's word.** All passed on the commits for items 9 and S1: `verify:env`, the guards, the theme, `lint:all`, the cold type check, the full suite with its speed check (783 files, 6,575 tests), coverage and its check, the browser smoke tests (19, in a copy so the dev server on port 3000 kept running), the build, `git diff --check`; English and Italian in step (`check:messages`); the client picker looked at in Anthony's Chrome on port 3000. **Checks and push** — the local gate, GitHub's own steps (coverage, smoke), English and Italian wording in step, a look in Anthony's Chrome on port 3000; push on his word | as every release | 0.5 |
 | | **Total** | | **10.25–13.25** |
 
 ### Item 1, as built — 2026-10-06

@@ -23,8 +23,10 @@ completed work.
   Swarm removed — item 6, old and new compared (the same brain, the same
   cost, about 4 seconds slower), item 7, the company's own figures and its
   competitors' with a "Looked up" line, item 8, the client picker, and
-  item 9, the old answer path removed — saved locally on dev, not pushed;
-  about half a day left: checks and the push.**
+  item 9, the old answer path removed, and item 10, every check passed —
+  committed locally on dev, not pushed; the push waits for Anthony's word.
+  Speed S1 measured (each answer logs where its time went); the fixes it
+  points to proposed, not approved.**
 - [Finishing off](./active/finish-off-plan.md) — everything left from the
   usage credits and collection work, in order with days: big websites' Search
   Console figures, storing less, credits counting what came back, Usage while
