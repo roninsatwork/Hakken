@@ -97,7 +97,7 @@ describe("a keyword's position over time (1.2)", () => {
     const range = { from: "2026-09-01", to: "2026-09-30" };
     const asKorda = await member(t, korda);
     expect(await asKorda.query(api.siteGoogle.searchPositions, { siteId: own.holdId, keywords: ["carp rigs", "bivvies"], ...range, step: "day" })).toEqual([
-      { keyword: "carp rigs", points: [{ day: "2026-09-19", lastDay: "2026-09-19", position: 5 }, { day: "2026-09-23", lastDay: "2026-09-23", position: 3 }] },
+      { keyword: "carp rigs", points: [{ day: "2026-09-19", lastDay: "2026-09-19", position: 5 }, { day: "2026-09-23", lastDay: "2026-09-23", position: 3 }], weeklyBefore: null },
     ]);
     // The company tracking it sees every check of it.
     const asAgency = await member(t, agency);

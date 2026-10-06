@@ -128,7 +128,7 @@ describe("a keyword's own screen", () => {
     expect(record.rivals).toEqual([{ siteId: rival.holdId, host: "nashtackle.co.uk", relationship: "TRACKED", position: null, page: null, day: DAY, checked: true }]);
     const range = { from: "2026-09-01", to: "2026-09-30" };
     expect(await asKorda.query(api.siteGoogle.searchPositions, { siteId: own.holdId, keywords: [keyword], ...range, step: "day" }))
-      .toEqual([{ keyword, points: [{ day: DAY, lastDay: DAY, position: 2 }] }]);
+      .toEqual([{ keyword, points: [{ day: DAY, lastDay: DAY, position: 2 }], weeklyBefore: null }]);
 
     // Another company owning the same website did not ask: none of it is theirs.
     const asOther = await member(t, other);
