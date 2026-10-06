@@ -157,6 +157,36 @@ describe("ai tool execution service", () => {
     });
   });
 
+  /**
+   * The one exception to "administrators only" (Anthony, 2026-10-06): reads of
+   * the company's own figures, which any member of the company may have the
+   * Assistant make — and nothing else, not even another read.
+   */
+  test("a company member may read the company's own figures, and nothing else", () => {
+    const member = (userRole: "USER" | "READ_ONLY" | "AUDITOR", handlerMapping: string, extra: Partial<Parameters<typeof canExecuteTool>[0]> = {}) =>
+      canExecuteTool({ requiredRole: "ADMIN", handlerMapping, sideEffectLevel: "READ", userRole, userCompanyId: "a", targetCompanyId: "a", ...extra });
+    const refused = { allowed: false, reason: "Tool execution requires administrator privileges." };
+
+    for (const handler of ["assistant.websites", "assistant.site.overview", "assistant.searchConsole", "assistant.ai.mentions", "assistant.tasks.open"]) {
+      expect(member("USER", handler)).toEqual({ allowed: true });
+      expect(member("READ_ONLY", handler)).toEqual({ allowed: true });
+      // The oversight role is not a company member.
+      expect(member("AUDITOR", handler)).toEqual(refused);
+    }
+    // Still only their own company's.
+    expect(member("USER", "assistant.tasks.open", { targetCompanyId: "b" })).toEqual({
+      allowed: false,
+      reason: "Tool execution is not allowed across tenant boundaries.",
+    });
+    // Other reads stay administrators': a company's mailbox is its admins'.
+    expect(member("USER", "gmail.read")).toEqual(refused);
+    expect(member("USER", "knowledge.search")).toEqual(refused);
+    // A change is never a member's, even one misfiled under a figures handler.
+    expect(member("USER", "task.create", { sideEffectLevel: "WRITE" })).toEqual(refused);
+    expect(member("USER", "assistant.tasks.open", { sideEffectLevel: "WRITE" })).toEqual(refused);
+    expect(member("USER", "assistant.tasks.open", { requiredRole: "SUPER_ADMIN" })).toEqual(refused);
+  });
+
   test("enforces tool execution role and tenant boundaries", () => {
     expect(canExecuteTool({ requiredRole: "ADMIN" })).toEqual({
       allowed: false,

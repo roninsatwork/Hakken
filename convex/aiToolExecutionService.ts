@@ -48,6 +48,30 @@ export type ToolExecutorRole = "USER" | "ADMIN" | "SUPER_ADMIN" | "READ_ONLY" | 
  * it.
  */
 const TOOL_EXECUTOR_ROLES: readonly ToolExecutorRole[] = ["ADMIN", "SUPER_ADMIN"];
+
+/**
+ * The one exception: reads of the company's own figures, which any member of
+ * the company may have the Assistant make (Anthony, 2026-10-06, agreeing:
+ * "ordinary and read-only users may use tools that only read their own
+ * company's figures. Anything that changes something … stays admins-only and
+ * still asks for a yes first").
+ *
+ * Named tool by tool rather than "every read", because not every read is a
+ * member's to make: the mailbox read is a read, and a company's mailbox is
+ * its administrators'. Each of these reads only what that member can already
+ * open on the Sites, Search Console and Tasks screens, for their own company —
+ * the tenant check below still applies — and none of them changes anything.
+ */
+const MEMBER_READABLE_HANDLERS: ReadonlySet<string> = new Set([
+  "assistant.websites",
+  "assistant.site.overview",
+  "assistant.searchConsole",
+  "assistant.ai.mentions",
+  "assistant.tasks.open",
+]);
+
+/** The roles that are a company's members without being its administrators. */
+const MEMBER_ROLES: readonly ToolExecutorRole[] = ["USER", "READ_ONLY"];
 export type ToolSideEffectLevel = "READ" | "WRITE" | "DESTRUCTIVE" | "EXTERNAL";
 export type ToolHandlerExecutionInput = {
   ctx: Pick<ActionCtx, "runMutation" | "runQuery" | "runAction">;
@@ -331,6 +355,8 @@ export function normalizeToolExecutionPolicy(tool: ToolExecutionPolicyInput): No
  */
 export function canExecuteTool(args: {
   requiredRole: ToolAccessRole;
+  /** Which handler the tool runs: the company-figure reads are a member's to make (`MEMBER_READABLE_HANDLERS`). */
+  handlerMapping?: string;
   userRole?: ToolExecutorRole;
   userCompanyId?: string;
   targetCompanyId?: string;
@@ -349,7 +375,12 @@ export function canExecuteTool(args: {
     return { allowed: false, reason: "Tool execution requires an authenticated user." };
   }
 
-  if (!TOOL_EXECUTOR_ROLES.includes(args.userRole)) {
+  const membersRead = args.handlerMapping !== undefined
+    && MEMBER_READABLE_HANDLERS.has(args.handlerMapping)
+    && policy.sideEffectLevel === "READ"
+    && policy.requiredRole !== "SUPER_ADMIN"
+    && MEMBER_ROLES.includes(args.userRole);
+  if (!TOOL_EXECUTOR_ROLES.includes(args.userRole) && !membersRead) {
     return { allowed: false, reason: "Tool execution requires administrator privileges." };
   }
 

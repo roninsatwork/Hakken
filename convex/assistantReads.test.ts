@@ -37,16 +37,23 @@ async function company(t: Harness, name: string) {
   return await t.run(async (ctx) => await ctx.db.insert("companies", { name, createdAt: Date.now() }));
 }
 
-async function admin(t: Harness, companyId: Id<"companies">) {
+async function admin(t: Harness, companyId: Id<"companies">, role: "ADMIN" | "USER" = "ADMIN") {
   return await t.run(async (ctx) => await ctx.db.insert("users", {
-    name: "Owner", email: `owner-${Math.random()}@figures.test`, role: "ADMIN", companyId, createdAt: Date.now(),
+    name: "Owner", email: `owner-${Math.random()}@figures.test`, role, companyId, createdAt: Date.now(),
   }));
 }
 
-async function hold(t: Harness, companyId: Id<"companies">, host: string) {
+async function hold(t: Harness, companyId: Id<"companies">, host: string, against?: Id<"companyWebsites">) {
   return await t.run(async (ctx) => {
     const websiteId = await ctx.db.insert("websites", { host, displayHost: host, firstSeenAt: Date.now() });
-    return await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: Date.now() });
+    const againstWebsiteId = against ? (await ctx.db.get(against))!.websiteId : undefined;
+    return await ctx.db.insert("companyWebsites", {
+      companyId,
+      websiteId,
+      relationship: against ? "TRACKED" : "OWNED",
+      ...(againstWebsiteId ? { againstWebsiteId } : {}),
+      createdAt: Date.now(),
+    });
   });
 }
 
@@ -184,10 +191,31 @@ describe("the Assistant's company figures", () => {
     ]);
   });
 
-  test("asked about the company's work, the Assistant looks it up and answers from it", async () => {
+  test("a competitor's overview and AI answers can be read; its Search Console is the owner's, and says so", async () => {
+    const t = harness();
+    const companyId = await company(t, "Rival Watch Ltd");
+    const own = await hold(t, companyId, "ours.test");
+    const rival = await hold(t, companyId, "rival.test", own);
+
+    const listed = await t.query(internal.assistantReads.websitesInternal, { companyId });
+    expect(listed.websites).toContainEqual({ website: "rival.test", kind: "a competitor of ours.test", link: `/app/sites/${rival}` });
+    expect(await t.query(internal.assistantReads.siteOverviewInternal, { companyId, website: "rival.test" })).toMatchObject({
+      ok: true, website: "rival.test", link: `/app/sites/${rival}`,
+    });
+    expect(await t.query(internal.assistantReads.aiMentionsInternal, { companyId, website: "rival.test" })).toMatchObject({
+      ok: true, website: "rival.test",
+    });
+    const console = await t.query(internal.assistantReads.searchConsoleInternal, { companyId, website: "rival.test", days: 7 });
+    expect(console).toMatchObject({ ok: false });
+    if (console.ok) throw new Error("expected a problem");
+    expect(console.problem).toContain("Search Console covers the company's own websites only");
+  });
+
+  test("asked about the company's work by an ordinary member, the Assistant looks it up and answers from it", async () => {
     const t = harness();
     const companyId = await company(t, "Busy Ltd");
-    const userId = await admin(t, companyId);
+    // Not an administrator: the company-figure reads are any member's (Anthony, 2026-10-06).
+    const userId = await admin(t, companyId, "USER");
     await t.run(async (ctx) => {
       await ctx.db.insert("tasks", { companyId, title: "Fix the title tags", status: "OPEN", createdBySource: "PERSON", createdAt: Date.now() });
       await ctx.db.insert("aiModels", {

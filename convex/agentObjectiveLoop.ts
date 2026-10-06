@@ -570,6 +570,7 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 });
                 const accessDecision = canExecuteTool({
                     requiredRole,
+                    ...(toolMetadata?.handlerMapping ? { handlerMapping: toolMetadata.handlerMapping } : {}),
                     userRole: currentUser?.role,
                     userCompanyId: currentUser?.companyId,
                     targetCompanyId: companyId,

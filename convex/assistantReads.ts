@@ -8,6 +8,7 @@ import { readPerformance } from "./searchConsoleReads";
 import { readList } from "./searchConsoleLists";
 import { shiftDay } from "./searchConsoleDays";
 import { readWebsiteHost } from "./websiteIdentity";
+import { isTrackedHold } from "./utils/websitePairing";
 
 /**
  * The company's own figures, as the Assistant reads them
@@ -110,6 +111,15 @@ export const searchConsoleInternal = internalQuery({
     const found = await holdFor(ctx, args.companyId, args.website);
     if ("problem" in found) return { ok: false, problem: found.problem };
     const hold = found.held.hold;
+    // Google gives a website's Search Console figures to its owner only, so a
+    // competitor has none — said as that, not as "not connected", which
+    // would read as something broken.
+    if (isTrackedHold(hold)) {
+      return {
+        ok: false,
+        problem: `Search Console covers the company's own websites only: Google gives those figures to a website's owner, and ${found.held.summary.host} is a competitor. Its rankings, linking websites and AI answers can still be read: from its Sites overview and its AI answers.`,
+      };
+    }
     const connection = await ctx.db
       .query("searchConsoleConnections")
       .withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id))
