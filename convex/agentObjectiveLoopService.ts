@@ -16,6 +16,7 @@ import {
 } from "./aiToolExecutionService";
 import { buildAgentSystemInstruction, shouldInjectPersonalNote } from "./aiPromptAssembly";
 import { gatherInstructions } from "./assistantKnowledge";
+import { HAKKEN_ASSISTANT, type AgentReasoningEffortLevel } from "./utils/hakkenAssistant";
 import {
   finishAssistantReply,
   type ModelTurnStream,
@@ -227,6 +228,10 @@ export async function buildLoopExecutionContext(ctx: ActionCtx, args: {
   threadId?: Id<"threads">;
   /** Required when there is no conversation to read the owner from. */
   owner?: RunOwner;
+  /** The model the conversation chose (Ask Hakken's picker), or the one a resumed run started on. */
+  requestedModelId?: string;
+  /** The thinking the conversation chose; absent, the agent's own. */
+  reasoningEffort?: AgentReasoningEffortLevel;
 }) {
   const agent = await ctx.runQuery(internal.agents.getAgentInternal, { id: args.agentId });
   if (!agent) throw appError("NOT_FOUND", "Agent not found.");
@@ -245,10 +250,13 @@ export async function buildLoopExecutionContext(ctx: ActionCtx, args: {
     companyId: owner.companyId,
   });
 
+  // The assistant answers on the chat job's model, as typed Ask Hakken did;
+  // every other agent on the agent job's, or its own.
+  const isAssistant = agent.systemKey === HAKKEN_ASSISTANT.systemKey;
   const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
-    requestedModelId: agent.modelSelectionMode === "inherit" ? undefined : agent.modelId,
+    requestedModelId: args.requestedModelId ?? (agent.modelSelectionMode === "inherit" ? undefined : agent.modelId),
     companyId: owner.companyId,
-    useCase: "agent",
+    useCase: isAssistant ? HAKKEN_ASSISTANT.modelUseCase : "agent",
   });
   const agentTools = await ctx.runQuery(internal.agents.getAgentToolsInternal, { agentId: args.agentId });
   const dynamicTools: FunctionDeclaration[] = [];
@@ -371,6 +379,7 @@ export async function buildLoopExecutionContext(ctx: ActionCtx, args: {
     toolMetadataByName, modelDoc, limits,
     /** The asker's note entries the instructions carry, for their usage stamps. */
     noteMemoryIds: (conversationInstructions?.userMemories ?? []).map((memory) => memory.memoryId),
+    reasoningEffort: args.reasoningEffort ?? agent.reasoningEffort,
   };
 }
 

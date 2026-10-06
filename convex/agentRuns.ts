@@ -865,6 +865,10 @@ export const getRunExecutionStateInternal = internalQuery({
       userId: run.userId,
       refusedToolCallsJson: run.refusedToolCallsJson,
       isRehearsal: run.isRehearsal === true,
+      // A resumed segment finishes on the model, and with the thinking, the
+      // run started with — a conversation may have chosen both.
+      modelId: run.modelId,
+      reasoningEffort: run.reasoningEffort,
     };
   },
 });
@@ -1082,6 +1086,7 @@ export const createRunInternal = internalMutation({
     companyId: v.optional(v.id("companies")),
     userId: v.optional(v.id("users")),
     modelId: v.optional(v.string()),
+    reasoningEffort: v.optional(v.union(v.literal("LOW"), v.literal("MEDIUM"), v.literal("HIGH"))),
     providerKey: v.optional(v.string()),
     providerModelId: v.optional(v.string()),
     maxSteps: v.optional(v.number()),

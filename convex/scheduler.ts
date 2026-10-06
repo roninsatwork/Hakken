@@ -11,6 +11,7 @@ import { resolveRunObjective } from "./agentObjectiveService";
 import { startAgentRun } from "./agentRunStartService";
 import { appError } from "./utils/appError";
 import { rowShape } from "./utils/rowShape";
+import { HAKKEN_ASSISTANT } from "./utils/hakkenAssistant";
 
 const SCHEDULE_LIST_LIMIT = 100;
 /** Counting cannot be indexed away, so the badge stops here and says it did. */
@@ -283,6 +284,10 @@ export const manualRunSchedule = superAdminMutation({
     if (args.agentId) {
       agent = await ctx.db.get(args.agentId);
       if (!agent || agent.isActive === false) throw appError("NOT_FOUND", "Agent not found or inactive.");
+      // A run with nobody asking would only spend (assistant-foundation-plan.md, item 4).
+      if (agent.systemKey === HAKKEN_ASSISTANT.systemKey) {
+        throw appError("INVALID_INPUT", "The Assistant answers people in Ask Hakken, so it has no run of its own.");
+      }
 
       // What the caller asked for wins, then the agent's own standing job,
       // then what it says it is for. Never a refusal: pressing Run runs the

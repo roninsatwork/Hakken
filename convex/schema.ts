@@ -1822,6 +1822,8 @@ export default defineSchema({
     companyId: v.optional(v.id("companies")),
     userId: v.optional(v.id("users")),
     modelId: v.optional(v.string()),
+    // The conversation's thinking level, so a resumed run thinks as it started (assistant-foundation-plan.md, item 4).
+    reasoningEffort: v.optional(v.union(v.literal("LOW"), v.literal("MEDIUM"), v.literal("HIGH"))),
     providerKey: v.optional(v.string()),
     providerModelId: v.optional(v.string()),
     maxSteps: v.optional(v.number()),

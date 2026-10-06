@@ -364,7 +364,9 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
                 // workflow-node path. So an agent set to High that searched the
                 // web inside a workflow did neither when launched from its own
                 // page.
-                reasoningEffort: execution.agent.reasoningEffort,
+                // The conversation's choice where it made one (Ask Hakken's
+                // thinking level), else the agent's.
+                reasoningEffort: execution.reasoningEffort,
                 webSearch: execution.agent.allowInternetAccess === true,
                 responseJsonSchema: agentResponseJsonSchema,
             };

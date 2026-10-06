@@ -18,6 +18,7 @@ import {
   buildUntrustedKnowledgeContext,
 } from "./aiPromptAssembly";
 import { gatherReading } from "./assistantKnowledge";
+import { reasoningEffortFor } from "./utils/hakkenAssistant";
 import {
   createModelTurnStream,
   guardModelTurn,
@@ -69,6 +70,10 @@ export const runAgentObjective = internalAction({
     agentId: v.id("agents"),
     content: v.string(),
     fileIds: v.optional(v.array(v.id("_storage"))),
+    /** The model the conversation chose (Ask Hakken's picker); absent, the agent's. */
+    modelId: v.optional(v.string()),
+    /** The conversation's thinking level: NONE, LOW, MEDIUM or HIGH. */
+    thinkingLevel: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     let agentRunId: Id<"agentRuns"> | undefined;
@@ -97,6 +102,8 @@ export const runAgentObjective = internalAction({
         execution = await buildLoopExecutionContext(ctx, {
             agentId: args.agentId,
             threadId: args.threadId,
+            ...(args.modelId ? { requestedModelId: args.modelId } : {}),
+            ...(reasoningEffortFor(args.thinkingLevel) ? { reasoningEffort: reasoningEffortFor(args.thinkingLevel) } : {}),
         });
         const { owner, runtimeSkills, modelConfig } = execution;
         companyId = owner.companyId;
@@ -110,6 +117,7 @@ export const runAgentObjective = internalAction({
             companyId: owner.companyId,
             userId: owner.userId,
             modelId: modelConfig.modelId,
+            ...(execution.reasoningEffort ? { reasoningEffort: execution.reasoningEffort } : {}),
             providerKey: modelConfig.providerKey,
             providerModelId: modelConfig.providerModelId,
             maxSteps: DEFAULT_AGENT_OBJECTIVE_LIMITS.maxSteps,
@@ -378,6 +386,9 @@ export const continueAgentObjective = internalAction({
         // whose work this is. Without it a resumed segment would rebuild its
         // tools with no company, and every workspace-scoped tool would fail.
         owner: { companyId: runState.companyId, userId: runState.userId },
+        // And it finishes on the model, and with the thinking, it started with.
+        ...(runState.modelId ? { requestedModelId: runState.modelId } : {}),
+        ...(runState.reasoningEffort ? { reasoningEffort: runState.reasoningEffort } : {}),
       });
 
       const conversationHistory = JSON.parse(checkpoint.transcriptJson) as Content[];
