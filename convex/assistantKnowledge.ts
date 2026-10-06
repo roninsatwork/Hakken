@@ -305,6 +305,30 @@ export async function gatherReading(
       })
     : Promise.resolve([]);
 
+  // The wiki answers company questions where it is the answering brain:
+  // index scanned, best pages opened whole, one hop along links. Started
+  // first, beside the search key and the document search rather than after
+  // them (speed S3, approved 2026-10-06; measured 0.9 s): the page-picker
+  // reads only the question, the company and the conversation, never the
+  // search key, so it picks the same pages. Read below, where it always was.
+  const wikiRead = wikiAnswers
+    ? ctx.runAction(internal.wikiActions.selectWikiContextForQuery, {
+        ...(thread ? { threadId: thread._id } : {}),
+        // No company means the global AI's own conversation: the chooser
+        // reads the platform shelf alone.
+        ...(companyId ? { companyId } : {}),
+        query: args.question.slice(0, 500),
+        // Staff may ask about their own customers; the public may not be
+        // read anybody's page this way, and the platform shelf holds no
+        // customer pages at all.
+        includeCustomerPages: Boolean(companyId && staff),
+        ...(allowance.wikiChars !== undefined ? { maxChars: allowance.wikiChars } : {}),
+      }).catch((error: unknown) => {
+        console.error("Wiki reading failed; answering without it", error);
+        return { context: "", pageKeys: [] as string[] };
+      })
+    : null;
+
   let documents = "";
   let chunkIds: string[] = [];
   // Embedded once per question: the documents, the fallback and Helpful
@@ -381,29 +405,12 @@ export async function gatherReading(
   }
   args.onStep?.("documents");
 
-  // The wiki answers company questions where it is the answering brain:
-  // index scanned, best pages opened whole, one hop along links.
   let wiki = "";
   let wikiPageKeys: string[] = [];
-  if (wikiAnswers) {
-    try {
-      const wikiAnswer = await ctx.runAction(internal.wikiActions.selectWikiContextForQuery, {
-        ...(thread ? { threadId: thread._id } : {}),
-        // No company means the global AI's own conversation: the chooser
-        // reads the platform shelf alone.
-        ...(companyId ? { companyId } : {}),
-        query: args.question.slice(0, 500),
-        // Staff may ask about their own customers; the public may not be
-        // read anybody's page this way, and the platform shelf holds no
-        // customer pages at all.
-        includeCustomerPages: Boolean(companyId && staff),
-        ...(allowance.wikiChars !== undefined ? { maxChars: allowance.wikiChars } : {}),
-      });
-      wiki = wikiAnswer.context;
-      wikiPageKeys = wikiAnswer.pageKeys;
-    } catch (error) {
-      console.error("Wiki reading failed; answering without it", error);
-    }
+  if (wikiRead) {
+    const wikiAnswer = await wikiRead;
+    wiki = wikiAnswer.context;
+    wikiPageKeys = wikiAnswer.pageKeys;
 
     // The loop's bookkeeping (closing-the-loop plan, phases 1-2): pages
     // under the answer get their marks and close matching gaps; no pages

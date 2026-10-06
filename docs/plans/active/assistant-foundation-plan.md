@@ -16,8 +16,10 @@ many man days."
 to 10 done the same day — committed locally on `dev`, not pushed; the push
 waits for Anthony's word. Ask Hakken answers through the Assistant on the
 dev deployment with the company's own figures, for the client a super admin
-picks, and its old answer path is gone. Speed S1 measured the same day;
-the fixes it points to are proposed, not approved (below).** The wider
+picks, and its old answer path is gone. Speed the same day: S1 measured
+where an answer's time goes, S2 was dropped by it, and S3 — the wiki's
+page-picker started first, about 0.9 s off every answer that reads the wiki
+— was approved, built and measured (S4). Below.** The wider
 assistant (jobs, Telegram) is planned after this one is proven — the
 decisions already taken for it are recorded at the end so they are not
 asked again.
@@ -196,19 +198,19 @@ is complete and ready to test. Items 9 and 10 close it.
   (`aiToolExecutionService.ts`) — and passes the same access check as the
   screens.
 
-## Speed — S1 measured; the rest proposed, not approved
+## Speed — S1 measured, S3 built, S2 dropped
 
 Added 2026-10-06 at Anthony's word ("add it to plan but not approved yet"),
 after item 6 found both paths slow. **S1 approved and done the same day
-("Yes"); S2 and S3 are not approved, and the measurement changed them —
-below.** None of it is in the day totals above.
+("Yes"); the measurement dropped S2 and changed S3, which was then approved
+("Ok do it") and built, and S4 measured it — below.** None of it is in the day totals above.
 
 | # | What | Why | Days |
 |---|---|---|---|
 | S1 | **Done 2026-10-06.** **Measure each step of an answer** — each answer writes one `Answer timing {…}` line to the server log when its run ends (`convex/utils/answerTiming.ts`): milliseconds from the message being saved to each step. No new screen, no new stored field. The eight questions of item 6 sent the way a typed message is (`chat.sendMessage`, as Anthony, on fresh check conversations), after one warm-up question not counted, so an idle dev deployment's wake-up does not land on question one | until now where the time goes is from the run records and a reading of the code, not measured step by step | 0.25 |
 | S2 | **Dropped by S1's numbers (not built):** one hand-off fewer — a message going straight to the Assistant's run. The hand-off itself costs about 0.2 seconds; what costs 3 seconds on some questions is the run's worker starting, which happens whichever way the message arrives | measured: about 0.2 s saved | — |
-| S3 | **Changed by S1's numbers, not approved:** start the wiki's page-picker first, at the same time as the search key and the document search, instead of after them. The picker needs only the question, the company and the conversation, so it picks the same pages; what the model is sent stays the same and in the same order. (As first written — the documents, wiki and Helpful content together — it would save about 0.15 s: the documents take 0.1 s and Helpful content less, beside the wiki's 3) | measured: about 0.9 s on every answer that reads the wiki | 0.25 |
-| S4 | **Measured again and written up here** — the same eight questions before and after, side by side; the full suite green | proof, not a claim | 0.25 |
+| S3 | **Built 2026-10-06 at Anthony's word ("Ok do it"), after he asked whether it breaks Karpathy's wiki — it does not: how the wiki reads (the index, the chooser, pages opened whole with one hop, the second pass with filed documents, the word-match fallback) is untouched; only when it starts moves.** `gatherReading` starts it before the search key and collects it where it always did; `convex/assistantReadingOrder.test.ts` fails if the search key is made first (it failed on the old order). The one visible difference: "Why this answer?" may list two checks in another order. **Changed by S1's numbers:** start the wiki's page-picker first, at the same time as the search key and the document search, instead of after them. The picker needs only the question, the company and the conversation, so it picks the same pages; what the model is sent stays the same and in the same order. (As first written — the documents, wiki and Helpful content together — it would save about 0.15 s: the documents take 0.1 s and Helpful content less, beside the wiki's 3) | measured: about 0.9 s on every answer that reads the wiki | 0.25 |
+| S4 | **Done 2026-10-06 — results below.** **Measured again and written up here** — the same eight questions before and after, side by side; the full suite green | proof, not a claim | 0.25 |
 
 ### S1, measured — 2026-10-06
 
@@ -258,6 +260,44 @@ the deployment's own log of every function's start and length:
   page-picker directly from the run, rather than as its own worker, would
   save that occasional start-up: worth about 0.3 s on average, found here,
   not proposed.
+
+### S4, after S3 — 2026-10-06
+
+The same eight questions, sent the same way, the same evening. "Reading" is
+from the instructions being ready to everything being read; "alongside" is
+the search key and the document search, which now run while the page-picker
+works instead of before it (the documents step's end less the instructions
+being ready, less the run's own tenth of a second of bookkeeping between).
+
+| Question | Total, before → after | Reading, before → after | Alongside the picker | Same wiki pages |
+|---|---|---|---|---|
+| How does Hakken work out a website's traffic? | 12.7 → 28.8 | 6.1 → 5.4 | 0.9 | yes |
+| What does a traffic reading of <1 mean? | 12.9 → 25.2 | 4.0 → 17.7 | 0.9 | yes |
+| How long does recovery from a core update take? | 10.6 → 11.2 | 3.4 → 2.3 | 1.1 | yes (none read) |
+| How does Google measure a website's quality? | 14.8 → 12.3 | 3.6 → 2.8 | 0.8 | yes (none read) |
+| What does your company do? (Conterra Ops) | 12.6 → 16.1 | 4.5 → 4.1 | 0.9 | yes |
+| What products does Hakken offer? (no company) | 30.1 → 20.2 | 19.4 → 2.4 | 0.8 | yes |
+| What is the capital of France? | 6.7 → 4.4 | 4.3 → 1.9 | 0.8 | yes (none read) |
+| **Median** | **12.7 → 16.1** | **4.4 → 2.8** | **0.9** | |
+
+- **S3 did what it was built to do**: on every question the search key and
+  the documents (0.8 to 1.1 s) now run while the picker works, and every
+  answer drew on exactly the same wiki pages as before. The reading's median
+  fell from 4.4 to 2.8 s.
+- **The totals went up, for reasons S3 does not touch**, and they show how
+  much an answer's length on dev is the models' and the hosting's: the
+  answering model took 16.7 and 14.4 s to its first words on two questions
+  (1.6 and 7.2 s before); the page-picker took 17.5 s on a different question
+  from last time; and four of the seven met a cold worker (3 to 4 s), against
+  two before. Seven questions on one evening cannot average that out.
+- **Same reading, same brain**: input tokens equal on six of the seven. The
+  company question differs (5,082 → 3,128) because the model chose, the
+  first time, to open the company's Sites overview as well as its list of
+  websites — its own choice of look-up, not a change in what was read.
+- The biggest single delay left is still the page-picker's occasional 17
+  seconds. A time limit that falls back to the word-match it already uses
+  would cap it, but would change which pages those answers read — Anthony's
+  call, not proposed.
 
 Not changed, and why: the first question after a pause stays slower on dev,
 where the hosting's workers sleep when nobody uses them; and neither the
