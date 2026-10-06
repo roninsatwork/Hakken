@@ -192,6 +192,23 @@ is complete and ready to test. Items 9 and 10 close it.
   (`aiToolExecutionService.ts`) — and passes the same access check as the
   screens.
 
+## Proposed, not approved — speed
+
+Added 2026-10-06 at Anthony's word ("add it to plan but not approved yet"),
+after item 6 found both paths slow. **Not approved, not built, and not in
+the day totals above.** About 1 day if approved.
+
+| # | What | Why | Days |
+|---|---|---|---|
+| S1 | **Measure each step of an answer** — the time each answer reaches each step written to the server log: message arrives, the worker starts, the safety check, the instructions read, the wiki's page-picker, the document search, Helpful content, the model starting, its first words, the answer done. No new screen, no new stored field; the same eight questions as item 6, shown as a table | until now where the time goes is from the run records and a reading of the code, not measured step by step | 0.25 |
+| S2 | **One hand-off fewer**, only if S1 shows it worth it — a message goes straight to the Assistant's run (`runAgentObjective`) instead of through `answerInternal` first, and the three checks `answerInternal` makes (switched on, waiting for a new file, a photo to a model that can see) move to the start of that run; their tests must still pass | each hand-off is one more worker to start: probably 1–5 seconds | 0.25 |
+| S3 | **The lookups at the same time**, only if S1 shows it worth it — the document search, the wiki (with its page-picker) and Helpful content started together and waited for together, instead of one after another. The same sources, the same order in what the model is sent | a few seconds when the wiki and Helpful content both run | 0.25 |
+| S4 | **Measured again and written up here** — the same eight questions before and after, side by side; the full suite green | proof, not a claim | 0.25 |
+
+Not changed, and why: the first question after a pause stays slower on dev,
+where the hosting's workers sleep when nobody uses them; and neither the
+model nor what it reads is cut for speed, since that would change answers.
+
 ## Decided, 2026-10-06
 
 - **The Swarm mode is removed** — yes. It is a hard-coded demo of five agents
