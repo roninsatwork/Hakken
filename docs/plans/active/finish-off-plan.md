@@ -164,7 +164,9 @@ The plan for it, with steps, days and what each changes on screen:
 [dataforseo-cost-plan.md](./dataforseo-cost-plan.md).
 
 Anthony: "this is for the plan only", then "build this overnight and double
-check everything". Read from the code (file:line in the audit notes below),
+check everything". On 2026-10-06 Content gap was taken off storage
+altogether — worked out when read, for owned websites only — see the plan's
+"Content gap worked out when read". Read from the code (file:line in the audit notes below),
 then measured on dev before building: 349 MB of DataForSEO data — what was
 built, held and left, and why, is in the plan's "What the night found". All
 of it is committed on `dev` and not pushed.

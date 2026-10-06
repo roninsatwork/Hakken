@@ -56,13 +56,45 @@ built: A4** — see "What the night found".
   header "Who {engine} named and cited when asked this on {day}."
 - **B4 held overnight, added 2026-10-06**: during a collection the Discovery
   screens keep the last collection's figures until its end, or three hours.
-- **Content gaps for competitors** (about 77 MB of 81 MB) is a new question:
-  the competitor gap tab is a deliberate feature, so nothing was changed.
+- **Content gaps for competitors** (about 77 MB of 81 MB): decided
+  2026-10-06, below — Content gap is no longer stored at all.
 
-**Not yet measured**: the size after (A6's purge removes the raw answers
-over 7 days old in its hourly steps) and the reads and writes before and
-after — the Convex dashboard's Usage page, or the deployment's function
-logs, which record each function's bytes read and written.
+## Content gap worked out when read — 2026-10-06
+
+The Convex dashboard's Usage page (read with Anthony, 2026-10-06) put
+content gaps at about 16 GB of Hakken's 52.8 GB read and written since 24
+September: `siteContentGap.writeGaps` alone 10.3 GB, the biggest single
+function. Every hold — each owned website and each competitor — kept its
+own gap rows and a copy of them, rebuilt whenever any website in its group
+was: 177,033 rows from 31,830 keywords.
+
+Anthony: "we already track the keywords for 5 competitors and then ours, why
+do we need to store it again"; "yes do it please and we don't need content
+gap for sites we track — that's a report for owned only".
+
+- **Built:** a gap is worked out when read, from each website's keyword copy
+  — kept already — the competitors' less the site's own
+  (`siteContentGap.contentGapOf`), by the same rule as before. Content gap,
+  its download and keyword research's competitor boards read it. The keyword
+  copy carries the difficulty number so KD shows and sorts as before.
+- **Owned websites only:** a competitor's Content gap says it is for the
+  company's own websites and links to the one it is measured against.
+- **Checked on dev before anything was removed:** for the four owned
+  websites with competitors (13,444 gap rows), the live gap held the same
+  searches with the same volume, difficulty, intent and positions: no
+  difference.
+- **Removed on dev** by the data migration `2026-10-06-drop-stored-gaps`:
+  177,145 rows and requests, every gap copy; the copies' parts fell from
+  31.4 MB to 9.5 MB. `siteContentGaps` leaves the schema once the migration
+  has run on every deployment.
+
+**Measured 2026-10-06 morning:** A6's purge left 332 raw answers on dev,
+none older than 7 days (1,294 before). The Usage page, read with Anthony:
+since 24 September the team read and wrote 151 GB — Conterra 67.1 GB,
+Hakken 52.8 GB, Kando 27.9 GB, Sonae 3.3 GB — 101 GB past the 50 GB
+included. Hakken's ordinary day was 1 to 5 GB; 5 October 29 GB, that day's
+one-off moves and measuring. **Still to measure:** a week with collections
+on the new code, against those days.
 
 ## How this plan is run
 

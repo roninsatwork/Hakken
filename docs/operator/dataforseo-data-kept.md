@@ -80,3 +80,16 @@ The sweep keeps its place in `positionThinning` and reads each day once, the
 day it passes the 90 days, never the weeks already thinned. It thins about
 thirty thousand positions an hour, so a first pass over a long history takes
 some hours, handing itself on each hour.
+
+## Content gap — not stored
+
+Since 2026-10-06 a content gap is worked out when it is read, from the
+keyword copies each website keeps already (`convex/siteContentGap.ts`), for
+a company's own websites only. Nothing is stored for it: the rows it kept
+before (`siteContentGaps`) and their copies are cleared by the data
+migration `2026-10-06-drop-stored-gaps`:
+
+    npx convex run dataMigrations:run '{"name":"2026-10-06-drop-stored-gaps"}'
+
+Run it once on each deployment after this release; `siteContentGaps` leaves
+the schema once it has run everywhere.
