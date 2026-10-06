@@ -10174,6 +10174,7 @@
     },
     "answerRecord": {
       "description": "What {engine} said, word for word, when asked this on {day}.",
+      "descriptionNotKept": "Who {engine} named and cited when asked this on {day}.",
       "missingTitle": "No answer chosen",
       "missingBody": "Open an answer from Full answers to read it here.",
       "notFoundTitle": "Answer not found",
@@ -10459,7 +10460,7 @@
     },
     "aiAnswers": {
       "title": "Full answers",
-      "description": "What exactly did each AI assistant say? The answers, word for word, to the questions this website is measured on. Open one to read it in full.",
+      "description": "What exactly did each AI assistant say? The answers to the questions this website is measured on, word for word for 90 days. Open one to read it in full.",
       "questionLabel": "Question",
       "engineFilter": "Engine",
       "allEngines": "All engines",
@@ -10471,7 +10472,7 @@
         "NOT_NAMED": "Did not name it"
       },
       "sources": "{count, plural, =0 {No sources} =1 {1 source} other {# sources}}",
-      "keptFrom": "Answers are kept word for word from 23 September 2026. Earlier checks kept only who was named.",
+      "keptFrom": "Each answer's words are kept for 90 days, from 23 September 2026. Older answers show only who they named and cited.",
       "noQuestions": "No questions yet. Ask us to add the questions your customers put to AI.",
       "empty": "No answers in these dates.",
       "noMatch": "No answer says that.",

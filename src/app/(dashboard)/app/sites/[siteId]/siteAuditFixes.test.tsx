@@ -373,6 +373,8 @@ describe("full answers (3.2, 4.7)", () => {
     });
     render(<SiteAnswerPage />);
     expect(screen.getByText("sites.aiAnswers.wordingNotKept")).toBeInTheDocument();
+    // Its header no longer says "word for word": who it named and cited is what is left.
+    expect(screen.getByText(/^sites.answerRecord.descriptionNotKept/)).toBeInTheDocument();
     expect(screen.getByText("sites.aiAnswers.stances.NAMED")).toBeInTheDocument();
     expect(screen.getByText("https://elsewhere.com/best")).toBeInTheDocument();
   });

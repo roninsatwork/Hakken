@@ -64,7 +64,8 @@ export default function SiteAnswerPage() {
         back={back}
         icon={<MessageSquareQuote className="h-6 w-6 text-brand" />}
         title={record?.prompt ?? tr("loading")}
-        description={record ? t("description", { engine: engineLabel(record.engine), day: formatDay(record.day) }) : undefined}
+        // Past the 90 days its wording is kept, it says what is left: who it named and cited.
+        description={record ? t(record.text === null ? "descriptionNotKept" : "description", { engine: engineLabel(record.engine), day: formatDay(record.day) }) : undefined}
         pills={record ? <StatusLabel tone={STANCE_TONES[record.stance]}>{ta(`stances.${record.stance}`)}</StatusLabel> : undefined}
       />
 

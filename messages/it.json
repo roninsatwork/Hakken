@@ -10174,6 +10174,7 @@
     },
     "answerRecord": {
       "description": "Cosa ha detto {engine}, parola per parola, a questa domanda il {day}.",
+      "descriptionNotKept": "Chi ha nominato e citato {engine} a questa domanda il {day}.",
       "missingTitle": "Nessuna risposta scelta",
       "missingBody": "Apri una risposta da Risposte complete per leggerla qui.",
       "notFoundTitle": "Risposta non trovata",
@@ -10459,7 +10460,7 @@
     },
     "aiAnswers": {
       "title": "Risposte complete",
-      "description": "Cosa ha detto esattamente ogni assistente AI? Le risposte, parola per parola, alle domande su cui questo sito è misurato. Aprine una per leggerla per intero.",
+      "description": "Cosa ha detto esattamente ogni assistente AI? Le risposte alle domande su cui questo sito è misurato, parola per parola per 90 giorni. Aprine una per leggerla per intero.",
       "questionLabel": "Domanda",
       "engineFilter": "Motore",
       "allEngines": "Tutti i motori",
@@ -10471,7 +10472,7 @@
         "NOT_NAMED": "Non lo ha nominato"
       },
       "sources": "{count, plural, =0 {Nessuna fonte} =1 {1 fonte} other {# fonti}}",
-      "keptFrom": "Le risposte sono conservate parola per parola dal 23 settembre 2026. I controlli precedenti hanno conservato solo chi veniva nominato.",
+      "keptFrom": "Il testo di ogni risposta si conserva per 90 giorni, dal 23 settembre 2026. Le risposte più vecchie mostrano solo chi hanno nominato e citato.",
       "noQuestions": "Nessuna domanda ancora. Chiedici di aggiungere le domande che i tuoi clienti fanno all'IA.",
       "empty": "Nessuna risposta in queste date.",
       "noMatch": "Nessuna risposta dice questo.",
