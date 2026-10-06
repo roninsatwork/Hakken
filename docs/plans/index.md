@@ -20,8 +20,9 @@ completed work.
   once; Swarm removed); items 1 to 5 built the same day — one record of
   what Hakken knows, email replies under the same instructions, the guard,
   the built-in Assistant agent, and Ask Hakken answering through it with the
-  Swarm removed — saved locally on dev, not pushed; about 4.5 to 6.5 days
-  left.**
+  Swarm removed — and item 6, old and new compared (the same brain, the
+  same cost, about 4 seconds slower), saved locally on dev, not pushed;
+  about 3.75 to 5.5 days left.**
 - [Finishing off](./active/finish-off-plan.md) — everything left from the
   usage credits and collection work, in order with days: big websites' Search
   Console figures, storing less, credits counting what came back, Usage while
