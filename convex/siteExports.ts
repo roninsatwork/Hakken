@@ -7,7 +7,7 @@ import { answerPlace } from "./seoAiEngines";
 import { listHold, myRivals } from "./siteAccess";
 import { holdQuestions } from "./holdLists";
 import { citedPagesOf, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
-import { gapWorkedOutAt } from "./siteContentGap";
+import { contentGapOf, type GapRow } from "./siteContentGap";
 import { tenantAction } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import { answerStance, siteExportKindValidator, type SiteExportKind } from "./utils/siteShapes";
@@ -81,7 +81,7 @@ const HEADERS: Record<ExportKind, string[]> = {
   keywords: ["keyword", "position", "change", "status", "volume", "intent", "difficulty", "cpc_usd", "traffic", "page", "last_checked"],
   pages: ["page", "type", "keywords", "top_3", "best_position", "traffic", "traffic_value_usd", "page_rank", "linking_websites", "top_keyword", "last_checked"],
   // Then a position and traffic pair per competitor, named when the file is
-  // read (`exportPage`), and the day it was last worked out.
+  // read (`exportPage`), and the newest day a competitor was seen ranking.
   gap: ["keyword", "intent", "volume", "difficulty"],
   cited: ["page", "times_cited", "engines", "first_cited", "last_cited"],
   backlinks: ["linking_website", "linking_page", "anchor", "linked_page", "followed", "domain_rank", "first_seen", "last_seen", "status", "last_checked"],
@@ -109,7 +109,7 @@ const HEADERS: Record<ExportKind, string[]> = {
  * so the file comes in the order on screen. A column a file does not know
  * leaves it in its own order.
  */
-type ExportRow = Doc<"siteKeywordRanks"> | Doc<"sitePageRanks"> | Doc<"siteContentGaps"> | Doc<"siteBacklinks">
+type ExportRow = Doc<"siteKeywordRanks"> | Doc<"sitePageRanks"> | GapRow | Doc<"siteBacklinks">
   | Doc<"siteReferringDomains"> | Doc<"siteAnchors"> | Doc<"siteReferringIps"> | Doc<"sitePaidKeywords">;
 const EXPORT_SORTS: Partial<Record<ExportKind, Record<string, (row: never) => SortValue>>> = {
   keywords: {
@@ -129,9 +129,9 @@ const EXPORT_SORTS: Partial<Record<ExportKind, Record<string, (row: never) => So
     linking: (row: Doc<"sitePageRanks">) => row.referringDomains,
   },
   gap: {
-    keyword: (row: Doc<"siteContentGaps">) => row.keyword,
-    volume: (row: Doc<"siteContentGaps">) => (row.volumeKnown ? row.volume : null),
-    kd: (row: Doc<"siteContentGaps">) => row.difficulty,
+    keyword: (row: GapRow) => row.keyword,
+    volume: (row: GapRow) => row.volume,
+    kd: (row: GapRow) => row.difficulty,
   },
   backlinks: {
     from: (row: Doc<"siteBacklinks">) => row.domainFrom,
@@ -181,7 +181,7 @@ function exportValue(kind: ExportKind, sort: string | undefined, row: ExportRow)
   // A competitor's own column of the content gap, `position:<its website>` or `traffic:<its website>`.
   const [column, rivalId] = sort?.split(":") ?? [];
   if (kind === "gap" && rivalId && (column === "position" || column === "traffic")) {
-    const rival = (row as Doc<"siteContentGaps">).rivals.find((entry) => entry.websiteId === rivalId);
+    const rival = (row as GapRow).rivals.find((entry) => entry.websiteId === rivalId);
     return (column === "position" ? rival?.position : rival?.traffic) ?? null;
   }
   const read = sort ? EXPORT_SORTS[kind]?.[sort] : undefined;
@@ -352,30 +352,38 @@ export const exportPage = internalQuery({
       }
       case "gap": {
         // A position and traffic pair per competitor tracked, as the page's
-        // columns: one no longer tracked is left out, as the page leaves it.
-        const rivals = await myRivals(ctx, site);
+        // columns, worked out when read as the page works it out
+        // (`siteContentGap.ts`); none for a competitor, whose page has none.
+        const rivals = isTrackedHold(site.hold) ? [] : await myRivals(ctx, site);
         const competitors = rivals.map((rival) => rival.website);
+        const gap = rivals.length === 0 ? null : await contentGapOf(ctx, { websiteId, place }, competitors.map((website) => website._id));
         // The page names a competitor's column by its Sites page; its rows, by its website.
         const [column, rivalSiteId] = args.sort?.split(":") ?? [];
         const rivalWebsite = rivals.find((rival) => rival.hold._id === rivalSiteId)?.website._id;
-        // A row its last rebuild found unchanged keeps its own time: it was checked when that rebuild ran.
-        const workedOut = (await gapWorkedOutAt(ctx, job.siteId)) ?? 0;
-        const lines = done(await ctx.db.query("siteContentGaps")
-          .withIndex("by_hold_volume", (q) => q.eq("companyWebsiteId", job.siteId))
-          .order("desc").paginate(page), (row: Doc<"siteContentGaps">) => {
-          const ranking = new Map(row.rivals.map((rival) => [rival.websiteId, rival]));
-          return line([
-            row.keyword, row.intent, row.volumeKnown ? row.volume : null, row.difficulty,
-            ...competitors.flatMap((website) => {
-              const rival = ranking.get(website._id);
-              return [rival?.position, rival?.traffic === undefined ? null : Math.round(rival.traffic)];
-            }),
-            new Date(Math.max(row.updatedAt, workedOut)).toISOString().slice(0, 10),
-          ]);
-        }, (row) => row.keyword, rivalWebsite ? `${column}:${rivalWebsite}` : args.sort);
-        return args.cursor === null
-          ? { ...lines, header: [...HEADERS.gap, ...competitors.flatMap((website) => [`${website.displayHost}_position`, `${website.displayHost}_traffic`]), "last_checked"] }
-          : lines;
+        const sort = rivalWebsite ? `${column}:${rivalWebsite}` : args.sort;
+        return {
+          host,
+          header: [...HEADERS.gap, ...competitors.flatMap((website) => [`${website.displayHost}_position`, `${website.displayHost}_traffic`]), "last_checked"],
+          lines: (gap?.rows ?? []).map((row) => {
+            const ranking = new Map(row.rivals.map((rival) => [rival.websiteId, rival]));
+            return {
+              line: line([
+                row.keyword, row.intent, row.volume, row.difficulty,
+                ...competitors.flatMap((website) => {
+                  const rival = ranking.get(website._id);
+                  return [rival?.position, rival?.traffic === null || rival?.traffic === undefined ? null : Math.round(rival.traffic)];
+                }),
+                row.day,
+              ]),
+              group: "",
+              order: exportValue("gap", sort, row),
+              name: row.keyword,
+            };
+          }),
+          cursor: "",
+          isDone: true,
+          ...(gap?.cut ? { cut: true } : {}),
+        };
       }
       case "cited": {
         // A bounded list added up from the site's own questions (D17), whole in one page.

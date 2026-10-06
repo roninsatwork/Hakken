@@ -1,372 +1,124 @@
-import { v } from "convex/values";
-import { internal } from "./_generated/api";
-import type { Doc, Id } from "./_generated/dataModel";
-import { internalAction, internalMutation, internalQuery, type ActionCtx, type QueryCtx } from "./_generated/server";
-import { keywordStanding } from "./siteKeywordCopy";
-import { gapRebuildKey } from "./siteRankings";
-import { REBUILD_WAIT_MS } from "./siteSummaries";
-import { stableStringify } from "./utils/lang";
-import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
-import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
-import { GAP_KEYWORDS_PER_RIVAL, rankIntentValidator, type RankIntent } from "./utils/siteShapes";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { dropCopies, PARTS_DROPPED_PER_STEP } from "./siteListCopies";
+import { keywordStanding, readKeywordCopy, type KeywordCopyRow } from "./siteKeywordCopy";
+import { GAP_KEYWORDS_PER_RIVAL, type RankIntent } from "./utils/siteShapes";
 
 /**
- * The content gap: searches the rest of a site's group ranks for and the site
- * does not.
+ * The content gap: searches a company's own website's competitors rank for
+ * and it does not.
  *
- * Every hold is a Site (D17), so every hold has a gap: an owned site's is what
- * its competitors rank for and it does not; a competitor's is what the owned
- * site and the other competitors rank for and it does not. It depends on which
- * rivals the company chose, so it is kept per hold rather than per website,
- * and rebuilt whenever any site in the group is (`siteSummaries.requestGapsFor`).
- * Each rival's searches are read from its latest rankings, best-searched first,
- * and checked against the site's own a page at a time, so no read grows with
- * the size of either site.
+ * **Worked out when it is read, from what is already kept** (Anthony,
+ * 2026-10-06: "we already track the keywords for 5 competitors and then ours,
+ * why do we need to store it again"). Each website's keywords are kept once,
+ * in its compact copy (`siteKeywordCopy.ts`); a gap is the competitors'
+ * copies less the website's own, so it is never stored. Until then every hold
+ * kept its own gap rows and a copy of them, rebuilt whenever any website in
+ * its group was: on dev, 177,033 rows from 31,830 keywords, and about a third
+ * of all Hakken's database reading and writing.
+ *
+ * **For a company's own websites only** (Anthony, 2026-10-06: "we don't need
+ * content gap for sites we track — that's a report for owned only"). A
+ * competitor's Content gap says so and leads to its own website's.
  *
  * "Ranks for" means at the latest check, on both sides, as a competitor's
- * shared searches read it (`sharedSearches`, `keywordStanding`): a search a
- * rival was last seen on before its latest check is not one it ranks for,
- * and one the site held only before its own latest check is not one the site
- * has (docs/plans/active/sites-audit-fixes-plan.md, 4.10).
+ * shared searches read it (`keywordStanding`): a search a rival was last seen
+ * on before its latest check is not one it ranks for, and one the site held
+ * only before its own latest check is not one the site has
+ * (docs/plans/active/sites-audit-fixes-plan.md, 4.10).
  *
- * **Bounded, and says so.** A rival is read to its `KEYWORDS_PER_RIVAL`
- * most-searched keywords. A site that ranks for fifty thousand searches has a
- * long tail nobody writes content for; the gap is about the searches worth
- * having, and the screen names the ceiling rather than implying it read all.
+ * **Bounded, and says so.** A rival is read to its `GAP_KEYWORDS_PER_RIVAL`
+ * most-searched keywords, and the gap to `GAP_MAX` searches, the most
+ * searched first; the screen names the ceiling.
  */
-
-/** A rival's keywords read, most-searched first. The page names this ceiling. */
-const KEYWORDS_PER_RIVAL = GAP_KEYWORDS_PER_RIVAL;
 
 /** Rivals compared for one site. More than this is a plan conversation. */
-const MAX_RIVALS = 25;
+export const MAX_RIVALS = 25;
 
-/** Keywords read or checked per call. */
-const PAGE = 500;
+/** Searches a gap keeps, most-searched first; past this the screen says the list is longer. */
+export const GAP_MAX = 50_000;
 
-/** Gap rows written or removed per mutation. */
-const WRITE_BATCH = 400;
-
-/** Whether a ranking row stands at the website's latest keyword check (`keywordStanding`). */
-function rankingNow(row: Pick<Doc<"siteKeywordRanks">, "status" | "position" | "day">, latestCheckDay: string | null): boolean {
-  return keywordStanding({ status: row.status, position: row.position ?? null, day: row.day }, latestCheckDay) === "current";
-}
-
-type GapRow = {
+/** One search the site's competitors rank for and it does not. */
+export type GapRow = {
   keyword: string;
-  volume: number;
-  volumeKnown: boolean;
+  /** The most any rival's row says it is searched; null when none knows. */
+  volume: number | null;
   intent: RankIntent;
-  difficulty?: number;
-  rivals: Array<{ websiteId: Id<"websites">; position: number; traffic?: number }>;
+  /** How hard the search is, 0–100: the first ranking that knows says. */
+  difficulty: number | null;
+  rivals: Array<{ websiteId: Id<"websites">; position: number; traffic: number | null }>;
+  /** The newest day a rival was seen ranking for it. */
+  day: string;
 };
 
-/** The rival row's fields a gap keeps, in the shape `rivalKeywords` reads them. */
-type RivalRow = Pick<Doc<"siteKeywordRanks">,
-  "keyword" | "position" | "volume" | "volumeKnown" | "intent" | "status" | "day" | "difficulty" | "traffic">;
+/** The ranking rows of a copy that stand at its latest check. */
+function rankingNow(rows: KeywordCopyRow[], latestCheckDay: string | null): KeywordCopyRow[] {
+  return rows.filter((row) => keywordStanding(row, latestCheckDay) === "current");
+}
 
-export const rebuildGap = internalAction({
-  args: { companyWebsiteId: v.id("companyWebsites") },
-  returns: v.null(),
-  handler: async (ctx, args): Promise<null> => {
-    const key = gapRebuildKey(args.companyWebsiteId);
-    // One gap rebuild per hold at a time: it runs for minutes, every site
-    // rebuild in the group asks for it again, and two at once each deleted
-    // what the other wrote (collection reliability plan, 2.3).
-    if (!(await ctx.runMutation(internal.siteSummaries.beginRebuild, { key }))) {
-      await ctx.scheduler.runAfter(REBUILD_WAIT_MS, internal.siteContentGap.rebuildGap, args);
-      return null;
-    }
-    let done = false;
-    try {
-      const result = await rebuildGapNow(ctx, args);
-      done = true;
-      return result;
-    } finally {
-      await ctx.runMutation(internal.siteSummaries.endRebuild, { key, done });
-    }
-  },
-});
+/**
+ * A site's content gap against these rivals, from the place it is watched
+ * from, the most searched first: null while the site's own keyword copy is
+ * not built yet. A rival with no copy yet adds nothing until it has one.
+ */
+export async function contentGapOf(
+  ctx: QueryCtx,
+  site: { websiteId: Id<"websites">; place: number },
+  rivalIds: readonly Id<"websites">[],
+): Promise<{ rows: GapRow[]; cut: number | null } | null> {
+  const own = await readKeywordCopy(ctx, site.websiteId, site.place);
+  if (!own) return null;
+  const ours = new Set(rankingNow(own.rows, own.latestCheckDay).map((row) => row.keyword));
 
-async function rebuildGapNow(ctx: ActionCtx, args: { companyWebsiteId: Id<"companyWebsites"> }): Promise<null> {
-  const context: { websiteId: Id<"websites">; locationCode: number; rivals: Id<"websites">[] } | null =
-    await ctx.runQuery(internal.siteContentGap.gapContext, { companyWebsiteId: args.companyWebsiteId });
-  if (!context) return null;
-
-  const latestCheckOf = async (websiteId: Id<"websites">): Promise<string | null> =>
-    await ctx.runQuery(internal.siteSummaries.latestKeywordCheck, { websiteId, locationCode: context.locationCode });
-  const siteCheck = await latestCheckOf(context.websiteId);
   const gaps = new Map<string, GapRow>();
-  for (const rivalId of context.rivals) {
-    const rivalCheck = await latestCheckOf(rivalId);
-    let cursor: string | null = null;
-    let read = 0;
-    while (read < KEYWORDS_PER_RIVAL) {
-      const page: { rows: RivalRow[]; cursor: string; isDone: boolean } =
-        await ctx.runQuery(internal.siteContentGap.rivalKeywords, {
-          websiteId: rivalId,
-          locationCode: context.locationCode,
-          cursor,
-        });
-      read += page.rows.length;
-      const ranking = page.rows.filter((row) => rankingNow(row, rivalCheck));
-      const ours: string[] = await ctx.runQuery(internal.siteContentGap.keywordsSiteRanksFor, {
-        websiteId: context.websiteId,
-        locationCode: context.locationCode,
-        keywords: ranking.map((row) => row.keyword),
-        latestCheckDay: siteCheck,
-      });
-      const held = new Set(ours);
-      for (const row of ranking) {
-        if (held.has(row.keyword)) continue;
-        const gap = gaps.get(row.keyword) ?? {
-          keyword: row.keyword,
-          volume: row.volume,
-          volumeKnown: row.volumeKnown,
-          intent: row.intent,
-          rivals: [],
-        };
-        gap.rivals.push({
-          websiteId: rivalId,
-          position: row.position as number,
-          ...(row.traffic !== undefined ? { traffic: row.traffic } : {}),
-        });
-        // A search is as hard whoever ranks for it: the first ranking that knows says.
-        if (gap.difficulty === undefined && row.difficulty !== undefined) gap.difficulty = row.difficulty;
-        if (row.volumeKnown && row.volume > gap.volume) {
-          gap.volume = row.volume;
-          gap.volumeKnown = true;
-        }
-        gaps.set(row.keyword, gap);
-      }
-      if (page.isDone) break;
-      cursor = page.cursor;
-    }
-  }
-
-  // Only rows whose figures changed are written (`writeGaps`); a row this
-  // rebuild did not find is a search the site has now, or no rival has, and
-  // goes (dataforseo-cost-plan.md, A3).
-  const rebuildId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const rows = [...gaps.values()];
-  for (let start = 0; start < rows.length; start += WRITE_BATCH) {
-    await ctx.runMutation(internal.siteContentGap.writeGaps, {
-      companyWebsiteId: args.companyWebsiteId,
-      rebuildId,
-      rows: rows.slice(start, start + WRITE_BATCH),
-    });
-  }
-  let cursor: string | null = null;
-  for (;;) {
-    const held: { rows: Array<{ _id: Id<"siteContentGaps">; keyword: string }>; cursor: string; isDone: boolean } =
-      await ctx.runQuery(internal.siteContentGap.heldGapsPage, { companyWebsiteId: args.companyWebsiteId, cursor });
-    const stale = held.rows.filter((row) => !gaps.has(row.keyword)).map((row) => row._id);
-    if (stale.length > 0) await ctx.runMutation(internal.siteContentGap.removeGaps, { companyWebsiteId: args.companyWebsiteId, ids: stale });
-    if (held.isDone) break;
-    cursor = held.cursor;
-  }
-  // The Content gap page counts from the gap's compact copy: rebuilt from what was just written.
-  await ctx.runMutation(internal.siteListCopies.requestCopies, { requests: [{ kind: "gap", key: `${args.companyWebsiteId}` }] });
-  return null;
-}
-
-/**
- * The site, the place its group is read from, and the rest of its group: the
- * owned site and the competitors tracked against it, less the site itself.
- * Null for a competitor watched against nothing, which has no group.
- */
-export const gapContext = internalQuery({
-  args: { companyWebsiteId: v.id("companyWebsites") },
-  returns: v.union(
-    v.null(),
-    v.object({ websiteId: v.id("websites"), locationCode: v.number(), rivals: v.array(v.id("websites")) }),
-  ),
-  handler: async (ctx, args) => {
-    const hold = await ctx.db.get(args.companyWebsiteId);
-    if (!hold) return null;
-    const owner = isTrackedHold(hold) ? await pairedOwnedHold(ctx, hold) : hold;
-    if (!owner) return null;
-    const competitors = (await ctx.db
-      .query("companyWebsites")
-      .withIndex("by_company_against", (q) => q.eq("companyId", owner.companyId).eq("againstWebsiteId", owner.websiteId))
-      .take(MAX_RIVALS))
-      .filter(isTrackedHold);
-    const rivals = [owner, ...competitors]
-      .filter((row) => row._id !== hold._id)
-      .map((row) => row.websiteId);
-    return { websiteId: hold.websiteId, locationCode: owner.locationCode ?? DEFAULT_LOCATION_CODE, rivals };
-  },
-});
-
-export const rivalKeywords = internalQuery({
-  args: { websiteId: v.id("websites"), locationCode: v.number(), cursor: v.union(v.string(), v.null()) },
-  handler: async (ctx, args) => {
-    const result = await ctx.db
-      .query("siteKeywordRanks")
-      .withIndex("by_site_volume", (q) => q.eq("websiteId", args.websiteId).eq("locationCode", args.locationCode))
-      .order("desc")
-      .paginate({ cursor: args.cursor, numItems: PAGE });
-    return {
-      rows: result.page.map((row) => ({
-        keyword: row.keyword,
-        position: row.position,
-        volume: row.volume,
-        volumeKnown: row.volumeKnown,
-        intent: row.intent,
-        status: row.status,
-        day: row.day,
-        difficulty: row.difficulty,
-        traffic: row.traffic,
-      })),
-      cursor: result.continueCursor,
-      isDone: result.isDone,
-    };
-  },
-});
-
-/** Which of these keywords the site ranks for at its latest check. One point read each. */
-export const keywordsSiteRanksFor = internalQuery({
-  args: {
-    websiteId: v.id("websites"),
-    locationCode: v.number(),
-    keywords: v.array(v.string()),
-    /** The site's latest keyword check (`latestKeywordCheck`): a search held only from before it is not one it ranks for. */
-    latestCheckDay: v.optional(v.union(v.string(), v.null())),
-  },
-  returns: v.array(v.string()),
-  handler: async (ctx, args) => {
-    const found = await Promise.all(args.keywords.slice(0, PAGE).map((keyword) =>
-      ctx.db
-        .query("siteKeywordRanks")
-        .withIndex("by_site_keyword", (q) =>
-          q.eq("websiteId", args.websiteId).eq("locationCode", args.locationCode).eq("keyword", keyword))
-        .unique()));
-    return found.flatMap((row) => (row && rankingNow(row, args.latestCheckDay ?? null) ? [row.keyword] : []));
-  },
-});
-
-export const writeGaps = internalMutation({
-  args: {
-    companyWebsiteId: v.id("companyWebsites"),
-    rebuildId: v.string(),
-    rows: v.array(v.object({
-      keyword: v.string(),
-      volume: v.number(),
-      volumeKnown: v.boolean(),
-      intent: rankIntentValidator,
-      difficulty: v.optional(v.number()),
-      rivals: v.array(v.object({ websiteId: v.id("websites"), position: v.number(), traffic: v.optional(v.number()) })),
-    })),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const now = Date.now();
-    for (const row of args.rows) {
-      const existing = await ctx.db
-        .query("siteContentGaps")
-        .withIndex("by_hold_keyword", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("keyword", row.keyword))
-        .unique();
-      const figures = {
-        ...row,
-        rivalsRanking: row.rivals.length,
-        bestRivalPosition: Math.min(...row.rivals.map((rival) => rival.position)),
+  for (const rivalId of rivalIds.slice(0, MAX_RIVALS)) {
+    const copy = await readKeywordCopy(ctx, rivalId, site.place);
+    if (!copy) continue;
+    const ranking = rankingNow(copy.rows, copy.latestCheckDay)
+      .sort((left, right) => (right.volume ?? -1) - (left.volume ?? -1))
+      .slice(0, GAP_KEYWORDS_PER_RIVAL);
+    for (const row of ranking) {
+      if (ours.has(row.keyword)) continue;
+      const gap = gaps.get(row.keyword) ?? {
+        keyword: row.keyword, volume: null, intent: row.intent, difficulty: null, rivals: [], day: row.day,
       };
-      // Its figures as they stand: the row is left as it is, its stamp and
-      // time too, so nothing reading it is woken (dataforseo-cost-plan.md, A3).
-      if (existing && sameGap(existing, figures)) continue;
-      const fields = { companyWebsiteId: args.companyWebsiteId, ...figures, rebuildId: args.rebuildId, updatedAt: now };
-      if (existing) await ctx.db.replace(existing._id, fields);
-      else await ctx.db.insert("siteContentGaps", fields);
+      gap.rivals.push({ websiteId: rivalId, position: row.position as number, traffic: row.traffic });
+      // A search is as hard whoever ranks for it: the first ranking that knows says.
+      if (gap.difficulty === null) gap.difficulty = row.difficulty;
+      if (row.volume !== null && (gap.volume === null || row.volume > gap.volume)) gap.volume = row.volume;
+      if (row.day > gap.day) gap.day = row.day;
+      gaps.set(row.keyword, gap);
     }
-    return null;
-  },
-});
-
-/** The figures a gap row holds, as `writeGaps` writes them. */
-type GapFigures = Pick<Doc<"siteContentGaps">,
-  "keyword" | "volume" | "volumeKnown" | "intent" | "difficulty" | "rivals" | "rivalsRanking" | "bestRivalPosition">;
-
-/** Whether a stored gap row holds these figures already. */
-function sameGap(row: Doc<"siteContentGaps">, figures: GapFigures): boolean {
-  const held: GapFigures = {
-    keyword: row.keyword,
-    volume: row.volume,
-    volumeKnown: row.volumeKnown,
-    intent: row.intent,
-    difficulty: row.difficulty,
-    rivals: row.rivals,
-    rivalsRanking: row.rivalsRanking,
-    bestRivalPosition: row.bestRivalPosition,
-  };
-  return stableStringify(held) === stableStringify(figures);
+  }
+  const rows = [...gaps.values()].sort((left, right) => (right.volume ?? -1) - (left.volume ?? -1));
+  return rows.length > GAP_MAX ? { rows: rows.slice(0, GAP_MAX), cut: GAP_MAX } : { rows, cut: null };
 }
 
-/** A page of a hold's gap rows as they stand: which searches they are, for a rebuild to find those it no longer has. */
-export const heldGapsPage = internalQuery({
-  args: { companyWebsiteId: v.id("companyWebsites"), cursor: v.union(v.string(), v.null()) },
-  returns: v.object({
-    rows: v.array(v.object({ _id: v.id("siteContentGaps"), keyword: v.string() })),
-    cursor: v.string(),
-    isDone: v.boolean(),
-  }),
-  handler: async (ctx, args) => {
-    const result = await ctx.db
-      .query("siteContentGaps")
-      .withIndex("by_hold_keyword", (q) => q.eq("companyWebsiteId", args.companyWebsiteId))
-      .paginate({ cursor: args.cursor, numItems: WRITE_BATCH });
-    return { rows: result.page.map((row) => ({ _id: row._id, keyword: row.keyword })), cursor: result.continueCursor, isDone: result.isDone };
-  },
-});
-
-/** Remove gap rows a rebuild no longer found: only this hold's. */
-export const removeGaps = internalMutation({
-  args: { companyWebsiteId: v.id("companyWebsites"), ids: v.array(v.id("siteContentGaps")) },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    for (const id of args.ids) {
-      const row = await ctx.db.get(id);
-      if (row && row.companyWebsiteId === args.companyWebsiteId) await ctx.db.delete(id);
-    }
-    return null;
-  },
-});
+/** Stored gap rows cleared a step: each is small. */
+const STORED_GAPS_PER_STEP = 500;
 
 /**
- * When a hold's gap was last worked out from its rivals' rankings: the start
- * of its last gap rebuild to finish. A row whose figures that rebuild found
- * unchanged keeps its own time (`writeGaps`), so the day a row was last
- * checked is the later of the two (dataforseo-cost-plan.md, A3). Null before
- * the first rebuild kept it.
+ * Clear what the gaps kept before they were worked out when read: the rows
+ * (`siteContentGaps`), their compact copies, and the rebuild requests for both
+ * — a step at a time, for the data migration `2026-10-06-drop-stored-gaps`.
+ * Answers whether any is left.
  */
-export async function gapWorkedOutAt(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">): Promise<number | null> {
-  const row = await ctx.db
-    .query("siteSummaryRequests")
-    .withIndex("by_key", (q) => q.eq("key", gapRebuildKey(holdId)))
-    .unique();
-  return row?.builtFrom ?? null;
+export async function dropStoredGapsStep(ctx: MutationCtx): Promise<{ more: boolean; removed: number }> {
+  const rows = await ctx.db.query("siteContentGaps").take(STORED_GAPS_PER_STEP);
+  for (const row of rows) await ctx.db.delete(row._id);
+  if (rows.length > 0) return { more: true, removed: rows.length };
+
+  // Every hold's gap copy: `dropCopies` takes headers and parts a page at a time.
+  if (await dropCopies(ctx, "gap", "")) return { more: true, removed: PARTS_DROPPED_PER_STEP };
+
+  let removed = 0;
+  for (const prefix of ["gap:", "copy:gap:"]) {
+    const requests = await ctx.db
+      .query("siteSummaryRequests")
+      .withIndex("by_key", (q) => q.gte("key", prefix).lt("key", `${prefix}￿`))
+      .take(STORED_GAPS_PER_STEP);
+    for (const request of requests) await ctx.db.delete(request._id);
+    removed += requests.length;
+  }
+  return { more: removed > 0, removed };
 }
-
-/** The same, for the copy's build, which runs as an action. */
-export const gapWorkedOut = internalQuery({
-  args: { holdId: v.id("companyWebsites") },
-  returns: v.union(v.number(), v.null()),
-  handler: async (ctx, args) => await gapWorkedOutAt(ctx, args.holdId),
-});
-
-/** Remove a hold's gap rows, when the hold goes. The caller loops until none are left. */
-export const purgeHoldGaps = internalMutation({
-  args: { companyWebsiteId: v.id("companyWebsites") },
-  returns: v.boolean(),
-  handler: async (ctx, args) => {
-    const rows = await ctx.db
-      .query("siteContentGaps")
-      .withIndex("by_hold_keyword", (q) => q.eq("companyWebsiteId", args.companyWebsiteId))
-      .take(WRITE_BATCH);
-    for (const row of rows) await ctx.db.delete(row._id);
-    if (rows.length === WRITE_BATCH) {
-      await ctx.scheduler.runAfter(0, internal.siteContentGap.purgeHoldGaps, args);
-      return true;
-    }
-    return false;
-  },
-});

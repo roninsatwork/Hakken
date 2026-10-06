@@ -3,7 +3,8 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery, type ActionCtx, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
-import { claimSchedule, gapRebuildKey, holdPagesKey, outOfDate, requestGapRebuild, requestSiteRebuild, siteRebuildKey } from "./siteRankings";
+import { claimSchedule, holdPagesKey, outOfDate, requestSiteRebuild, siteRebuildKey } from "./siteRankings";
+import { KEYWORD_COPY_FIELDS, keywordsCopyKey } from "./utils/keywordCopyLayout";
 import { utf8Length } from "./seoPullAnswers";
 import { stableStringify } from "./utils/lang";
 
@@ -56,9 +57,9 @@ const PART_BYTES = 700_000;
 const COPY_DELAY_MS = 20_000;
 
 /** Parts removed per mutation: each can be most of a megabyte. */
-const PARTS_DROPPED_PER_STEP = 4;
+export const PARTS_DROPPED_PER_STEP = 4;
 
-export const keywordsCopyKey = (websiteId: Id<"websites">, locationCode: number) => `${websiteId}:${locationCode}`;
+export { keywordsCopyKey };
 export const pagesCopyKey = keywordsCopyKey;
 export const linksCopyKey = (websiteId: Id<"websites">) => `${websiteId}`;
 export const gapCopyKey = (holdId: Id<"companyWebsites">) => `${holdId}`;
@@ -353,19 +354,16 @@ export const refreshListCopies = internalMutation({
         const websiteId = ctx.db.normalizeId("websites", id);
         if (!websiteId) continue;
         const site = await requestRow(ctx, siteRebuildKey(websiteId, Number(place)));
-        if (outOfDate(site) || await listPagesSettledSince(ctx, websiteId, site!.builtFrom!, now)) {
+        // A copy in an older layout is as good as none to its readers: built again that night.
+        const oldLayout = copy.fields.join("\u0000") !== KEYWORD_COPY_FIELDS.join("\u0000");
+        if (oldLayout || outOfDate(site) || await listPagesSettledSince(ctx, websiteId, site!.builtFrom!, now)) {
           await requestSiteRebuild(ctx, websiteId, Number(place));
         }
         continue;
       }
-      if (copy.kind === "gap") {
-        // The gap's rows first: their rebuild asks for the copy when it ends.
-        const holdId = ctx.db.normalizeId("companyWebsites", copy.key);
-        if (holdId && outOfDate(await requestRow(ctx, gapRebuildKey(holdId)))) {
-          await requestGapRebuild(ctx, holdId);
-          continue;
-        }
-      }
+      // Content gap is worked out when read (`siteContentGap.ts`): an old gap
+      // copy is cleared by `2026-10-06-drop-stored-gaps`, never rebuilt.
+      if (copy.kind === "gap") continue;
       if (outOfDate(await requestRow(ctx, copyRequestKey(copy.kind as CopyKind, copy.key)))) {
         await requestListCopy(ctx, copy.kind as CopyKind, copy.key);
       }

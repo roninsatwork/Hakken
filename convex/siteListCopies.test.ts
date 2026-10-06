@@ -245,16 +245,15 @@ describe("a compact copy", () => {
   });
 });
 
-describe("the content gap's copy", () => {
-  test("leaves out a rival no longer tracked, and counts the rest again", async () => {
+describe("the content gap, worked out from the keyword copies", () => {
+  test("leaves out a rival no longer tracked, at once", async () => {
     const t = harness();
     const korda = await company(t, "Korda");
     const own = await hold(t, korda, "kordatackle.com");
     const rival = await hold(t, korda, "nashtackle.co.uk", "TRACKED", own.websiteId);
     await fileRanks(t, own.websiteId, "2026-09-23", [{ keyword: "carp rods", position: 2 }]);
     await fileRanks(t, rival.websiteId, "2026-09-23", [{ keyword: "carp rods", position: 1 }, { keyword: "bivvies", position: 3 }]);
-    await t.action(internal.siteContentGap.rebuildGap, { companyWebsiteId: own.holdId });
-    await t.action(internal.siteListCopyBuilders.buildListCopy, { kind: "gap", key: own.holdId });
+    for (const site of [own, rival]) await t.action(internal.siteSummaries.rebuildSite, { websiteId: site.websiteId, locationCode: UK });
 
     const asKorda = await member(t, korda);
     const gap = async () => await asKorda.query(api.siteCompetitors.listContentGap, { siteId: own.holdId, page: 1, rows: 25 });

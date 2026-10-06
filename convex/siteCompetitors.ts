@@ -4,12 +4,13 @@ import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
 import { companyHolds, listHold, listWebsiteId, myRivals, requireMySite } from "./siteAccess";
 import { holdAiSummary, holdQuestionAnswers, holdQuestions } from "./holdLists";
-import { gapCopyKey, readListCopy } from "./siteListCopies";
+import { contentGapOf } from "./siteContentGap";
+import { isTrackedHold } from "./utils/websitePairing";
 import { listOrder, listPageArgs, listPageResult, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { wordStartMatcher } from "./utils/wordStarts";
 import { latestFigures, searchTotalOf } from "./siteFigures";
 import { asOfListCheck, searchStandings, searchStats } from "./siteGoogle";
-import { rankIntentValidator, type NamedOther, type RankIntent } from "./utils/siteShapes";
+import { rankIntentValidator, type NamedOther } from "./utils/siteShapes";
 import { rivalVerdict, rivalVerdictValidator } from "./utils/trackingVerdicts";
 import { MAX_LIST } from "./websiteSiteRows";
 
@@ -55,23 +56,6 @@ export function pickSuggestions(
   }
   return { named, found };
 }
-
-/**
- * The content gap's copy (`siteListCopyBuilders.ts` writes it). Each row's
- * rivals are flattened as [rival, position, traffic, rival, position,
- * traffic, …], a rival being its place in the copy's `rivalIds` and its
- * traffic null when unknown, so the rivals no longer tracked can be left out
- * and the rest recounted when the list is read. A copy in the layout before
- * difficulty and traffic (2026-09-30) reads as none, and is built again.
- */
-export const GAP_COPY_FIELDS = ["id", "keyword", "volume", "intent", "difficulty", "rivals", "day"] as const;
-
-/**
- * The gaps a copy keeps, most-searched first. A gap can in theory reach 25
- * rivals × 5,000 searches; past this, the screen says the list is longer
- * (docs/plans/active/sites-table-pages-plan.md §5.2, T11).
- */
-export const GAP_COPY_MAX = 50_000;
 
 /** Searches a rival is compared on. Enough to rank it; bounded so a big list stays one query. */
 const COMPARED_SEARCHES = 100;
@@ -350,16 +334,16 @@ const gapRival = v.object({ siteId: v.id("companyWebsites"), websiteId: v.id("we
 
 /**
  * Searches the tracked rivals rank for and this site does not, most-searched
- * first, from the gap worked out for this company's hold (`siteContentGap.ts`),
- * counted from its compact copy — laid out as Ahrefs lays out its content gap
+ * first, worked out when read from the keyword copies of the site and its
+ * competitors (`siteContentGap.ts`) — laid out as Ahrefs lays out its content gap
  * (Anthony, 2026-09-30), organic search only: what each search is like, then
  * each competitor's position and traffic for it. The search's cost per click
  * and its page's features were drawn and taken off the same day ("remove it
  * please", "and remove CPC too"). `competitors` names the
  * columns, every rival tracked in the order the site switcher lists them,
- * whether or not it ranks for anything on the page. A rival no longer tracked
- * is left out of each search's rivals and the rest recounted, so "at least two
- * rivals" means two the company still tracks.
+ * whether or not it ranks for anything on the page. For a company's own
+ * websites only (Anthony, 2026-10-06): a competitor's is an empty list, and
+ * its page says so.
  */
 export const listContentGap = tenantQuery({
   args: {
@@ -376,7 +360,6 @@ export const listContentGap = tenantQuery({
   },
   returns: v.object({
     ...listPageResult(v.object({
-      _id: v.id("siteContentGaps"),
       keyword: v.string(),
       volume: v.union(v.number(), v.null()),
       intent: rankIntentValidator,
@@ -390,45 +373,28 @@ export const listContentGap = tenantQuery({
         /** Visits a month DataForSEO estimates the search brings this rival. */
         traffic: v.union(v.number(), v.null()),
       })),
-      /** The day the gap was last worked out from the rivals' rankings. */
+      /** The newest day a rival was seen ranking for it. */
       day: v.string(),
     })).fields,
     competitors: v.array(gapRival),
   }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
+    if (isTrackedHold(site.hold)) return { ...pageOfList([], args.page, args.rows), competitors: [] };
     const rivals = await myRivals(ctx, site);
     const competitors = rivals.map((rival) => ({ siteId: rival.hold._id, websiteId: rival.website._id, host: rival.website.displayHost }));
-    const copy = await readListCopy(ctx, "gap", gapCopyKey(args.siteId), GAP_COPY_FIELDS);
-    if (!copy) return { ...preparingPage(args.rows), competitors };
+    const gap = await contentGapOf(ctx, { websiteId: site.website._id, place: site.place }, competitors.map((rival) => rival.websiteId));
+    if (!gap) return { ...preparingPage(args.rows), competitors };
     const hosts = new Map<string, string>(competitors.map((rival) => [rival.websiteId, rival.host]));
-    const rivalIds = JSON.parse(typeof copy.meta.rivalIds === "string" ? copy.meta.rivalIds : "[]") as string[];
     const matches = wordStartMatcher(args.search);
     const minRivals = Math.max(1, args.minRivals ?? 1);
 
-    const list = copy.rows.flatMap(([id, keyword, volume, intent, difficulty, flat, day]) => {
-      if (args.intent && intent !== args.intent) return [];
-      if (matches && !matches(keyword as string)) return [];
-      // Only the rivals this company still tracks: one removed since the
-      // gap was worked out is not named, nor counted.
-      const tracked: Array<{ websiteId: Id<"websites">; host: string; position: number; traffic: number | null }> = [];
-      const triples = flat as Array<number | null>;
-      for (let index = 0; index < triples.length; index += 3) {
-        const websiteId = rivalIds[triples[index] as number];
-        const host = websiteId ? hosts.get(websiteId) : undefined;
-        if (host) tracked.push({ websiteId: websiteId as Id<"websites">, host, position: triples[index + 1] as number, traffic: triples[index + 2] });
-      }
-      if (tracked.length < minRivals) return [];
-      return [{
-        _id: id as Id<"siteContentGaps">,
-        keyword: keyword as string,
-        volume: volume as number | null,
-        intent: intent as RankIntent,
-        difficulty: difficulty as number | null,
-        rivalsRanking: tracked.length,
-        rivals: tracked,
-        day: day as string,
-      }];
+    const list = gap.rows.flatMap((row) => {
+      if (args.intent && row.intent !== args.intent) return [];
+      if (matches && !matches(row.keyword)) return [];
+      if (row.rivals.length < minRivals) return [];
+      const named = row.rivals.map((rival) => ({ ...rival, host: hosts.get(rival.websiteId) ?? "" }));
+      return [{ ...row, rivalsRanking: named.length, rivals: named }];
     });
     const name = (row: GapListRow) => row.keyword;
     const column = args.sort;
@@ -441,7 +407,7 @@ export const listContentGap = tenantQuery({
     } else {
       list.sort(listOrder(GAP_SORTS, column ?? "volume", args.direction, name));
     }
-    return { ...pageOfList(list, args.page, args.rows, copy.cut), competitors };
+    return { ...pageOfList(list, args.page, args.rows, gap.cut), competitors };
   },
 });
 

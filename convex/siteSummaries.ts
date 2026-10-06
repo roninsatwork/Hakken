@@ -2,14 +2,12 @@ import { v, type Infer } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx } from "./_generated/server";
-import { requestGapRebuild, siteRebuildKey } from "./siteRankings";
+import { siteRebuildKey } from "./siteRankings";
 import { syncListAiLines } from "./siteListAiDays";
 import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
 import { KEYWORD_COPY_FIELDS, keywordCopyTuple } from "./siteKeywordCopy";
 import { LIST_PAGE_STUCK_MS, dropCopyOf, keywordsCopyKey, pagesCopyKey, writeListCopy } from "./siteListCopies";
 import { isThisPlace, shiftDay, syncDayFigures, syncWindows } from "./siteDayFigures";
-import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
-import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
 import { bandCountsValidator, emptyBandCounts, pageTypeByAddress, sectionOf, intentSplitValidator, type IntentSplit } from "./utils/siteShapes";
 
 /**
@@ -330,17 +328,6 @@ async function rebuildSiteNow(
     await syncListAiLines(ctx, window);
   }
 
-  // A few holds a step: a website watched by many companies, each with its
-  // rivals, is more gap rebuilds than one transaction may ask for.
-  for (let cursor: string | null = null; ;) {
-    const asked: { cursor: string; isDone: boolean } = await ctx.runMutation(internal.siteSummaries.requestGapsFor, {
-      websiteId: args.websiteId,
-      locationCode: args.locationCode,
-      cursor,
-    });
-    if (asked.isDone) break;
-    cursor = asked.cursor;
-  }
   // Pages the address could not place are asked about, a few at a time.
   await ctx.scheduler.runAfter(0, internal.sitePageTypes.judgePageTypes, {
     websiteId: args.websiteId,
@@ -853,38 +840,3 @@ function newestCompleteListDay(rows: Doc<"seoWebsiteMetrics">[]): string | null 
   return null;
 }
 
-/**
- * After a site is rebuilt, every content gap it takes part in: the gap of each
- * hold in each group the site belongs to, since every hold is a Site (D17) and
- * each one's gap is read against the rest of its group.
- *
- * A page of `GAP_HOLDS_PER_STEP` holds at a time. All at once, a website
- * watched by two hundred companies with their rivals was tens of thousands of
- * requests in one transaction — past the thousand jobs one may schedule, so
- * the rebuild that asked failed (reliability plan 3.4).
- */
-export const requestGapsFor = internalMutation({
-  args: { websiteId: v.id("websites"), locationCode: v.number(), cursor: v.optional(v.union(v.string(), v.null())) },
-  returns: v.object({ cursor: v.string(), isDone: v.boolean() }),
-  handler: async (ctx, args) => {
-    const page = await ctx.db
-      .query("companyWebsites")
-      .withIndex("by_website", (q) => q.eq("websiteId", args.websiteId))
-      .paginate({ cursor: args.cursor ?? null, numItems: GAP_HOLDS_PER_STEP });
-    for (const hold of page.page) {
-      const owner = isTrackedHold(hold) ? await pairedOwnedHold(ctx, hold) : hold;
-      if (!owner) continue;
-      if ((owner.locationCode ?? DEFAULT_LOCATION_CODE) !== args.locationCode) continue;
-      const competitors = (await ctx.db
-        .query("companyWebsites")
-        .withIndex("by_company_against", (q) => q.eq("companyId", owner.companyId).eq("againstWebsiteId", owner.websiteId))
-        .take(200))
-        .filter(isTrackedHold);
-      for (const member of [owner, ...competitors]) await requestGapRebuild(ctx, member._id);
-    }
-    return { cursor: page.continueCursor, isDone: page.isDone };
-  },
-});
-
-/** Holds a step of `requestGapsFor` asks for: each is its group of up to two hundred, inside a transaction's thousand jobs. */
-const GAP_HOLDS_PER_STEP = 4;

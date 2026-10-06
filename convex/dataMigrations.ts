@@ -33,6 +33,7 @@ import { untickAutomaticQueries } from "./promptFanOut";
 import { followPlatformWhereStartingNumber } from "./companyDataLimits";
 import { detachCompanySchedules } from "./scheduler";
 import { removeSampleResearch } from "./keywordResearchSampleMigration";
+import { dropStoredGapsStep } from "./siteContentGap";
 import {
   rebuildAnswerSummaries,
   rebuildOperationCosts,
@@ -188,6 +189,16 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
   "2026-09-28-company-limits-follow-platform": followPlatformWhereStartingNumber,
   /** Keyword research's sample figures from its removed Test mode go, with any lookup left with none real (keyword-research-plan.md). */
   "2026-10-04-remove-sample-keyword-research": removeSampleResearch,
+  /**
+   * Content gap's stored rows, their compact copies and the rebuild requests
+   * for both go: it is worked out when read since 2026-10-06, from the
+   * keyword copies already kept (`siteContentGap.ts`). Run before
+   * `siteContentGaps` leaves the schema.
+   */
+  "2026-10-06-drop-stored-gaps": async (ctx) => {
+    const step = await dropStoredGapsStep(ctx);
+    return { cursor: null, isDone: !step.more, processed: step.removed, updated: step.removed };
+  },
 
   /**
    * Takes the Collector off each company's Collection schedule, and the next

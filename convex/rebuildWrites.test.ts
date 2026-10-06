@@ -56,7 +56,7 @@ async function ranks(t: Harness, websiteId: Id<"websites">, day: string, positio
 }
 
 describe("a rebuild writes only what changed", () => {
-  test("content gap rows: the same figures leave a row alone; a changed one is written, a gone one removed", async () => {
+  test("content gap: nothing is written at all, since it is worked out when read (2026-10-06)", async () => {
     const t = harness();
     const own = await hold(t, "kordatackle.com");
     const rival = await t.run(async (ctx) => {
@@ -67,30 +67,14 @@ describe("a rebuild writes only what changed", () => {
     });
     await ranks(t, own.websiteId, "2026-10-01", [{ keyword: "carp rods", position: 2 }]);
     await ranks(t, rival, "2026-10-01", [{ keyword: "bivvies", position: 3 }, { keyword: "bait boats", position: 5 }]);
-    const gapRows = () => t.run(async (ctx) => (await ctx.db.query("siteContentGaps").collect()).sort((a, b) => a.keyword.localeCompare(b.keyword)));
-    await t.action(internal.siteContentGap.rebuildGap, { companyWebsiteId: own.holdId });
-    const first = await gapRows();
-    expect(first.map((row) => row.keyword)).toEqual(["bait boats", "bivvies"]);
 
-    later();
-    await t.action(internal.siteContentGap.rebuildGap, { companyWebsiteId: own.holdId });
-    expect(await gapRows()).toEqual(first);
+    for (const websiteId of [own.websiteId, rival]) await t.action(internal.siteSummaries.rebuildSite, { websiteId, locationCode: UK });
 
-    // The rival moves on one and stops ranking for the other.
-    later();
-    await ranks(t, rival, "2026-10-02", [{ keyword: "bivvies", position: 1 }]);
-    await t.action(internal.siteContentGap.rebuildGap, { companyWebsiteId: own.holdId });
-    const third = await gapRows();
-    expect(third.map((row) => [row.keyword, row.bestRivalPosition])).toEqual([["bivvies", 1]]);
-    expect(third[0].updatedAt).toBeGreaterThan(first[1].updatedAt);
-
-    // The gap's copy still says each row was checked at the last rebuild.
-    later(24 * 60 * 60 * 1000);
-    await t.action(internal.siteContentGap.rebuildGap, { companyWebsiteId: own.holdId });
-    await t.action(internal.siteListCopyBuilders.buildListCopy, { kind: "gap", key: own.holdId });
-    const copy = await t.run(async (ctx) => await ctx.db.query("siteListCopyParts").collect());
-    const [row] = JSON.parse(copy[0].data) as unknown[][];
-    expect(row[6]).toBe(new Date().toISOString().slice(0, 10));
+    const stored = await t.run(async (ctx) => ({
+      rows: (await ctx.db.query("siteContentGaps").collect()).length,
+      copies: (await ctx.db.query("siteListCopies").collect()).filter((copy) => copy.kind === "gap").length,
+    }));
+    expect(stored).toEqual({ rows: 0, copies: 0 });
   });
 
   test("a list's copy: the same rows write nothing, so a table reading it is not woken; new rows are written", async () => {

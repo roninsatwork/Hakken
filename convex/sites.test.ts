@@ -333,7 +333,7 @@ describe("rankings, as they are filed", () => {
 });
 
 describe("the content gap", () => {
-  test("lists what the rest of the group ranks for and the site does not, for owned and watched sites alike", async () => {
+  test("lists what the competitors rank for and the site does not, worked out when read; a competitor has none", async () => {
     const t = harness();
     const ronins = await company(t, "Ronins");
     const own = await hold(t, ronins, "ronins.co.uk", "OWNED");
@@ -347,10 +347,9 @@ describe("the content gap", () => {
       },
     ]);
 
-    await t.action(internal.siteContentGap.rebuildGap, { companyWebsiteId: own.holdId });
-    await t.action(internal.siteContentGap.rebuildGap, { companyWebsiteId: rival.holdId });
-    for (const holdId of [own.holdId, rival.holdId]) {
-      await t.action(internal.siteListCopyBuilders.buildListCopy, { kind: "gap", key: holdId });
+    // Each website's keyword copy, which its rebuild writes: the gap is read from these, never stored.
+    for (const websiteId of [own.websiteId, rival.websiteId]) {
+      await t.action(internal.siteSummaries.rebuildSite, { websiteId, locationCode: UK });
     }
 
     const asRonins = await member(t, ronins);
@@ -368,22 +367,29 @@ describe("the content gap", () => {
     expect(gap.rows[0]).not.toHaveProperty("cpc");
     expect(gap.rows[0]).not.toHaveProperty("features");
     expect(gap.competitors).toEqual([{ siteId: rival.holdId, websiteId: rival.websiteId, host: "lightflows.co.uk" }]);
-    // The watched site's gap is read against the owned site it is watched with.
+    // Content gap is for the company's own websites (2026-10-06): a competitor's is empty, and not being prepared.
     const theirs = await asRonins.query(api.siteCompetitors.listContentGap, { siteId: rival.holdId, page: 1, rows: 25 });
-    expect(theirs.rows).toEqual([]);
+    expect(theirs).toMatchObject({ rows: [], competitors: [], preparing: false });
+    // Nothing is stored for either.
+    expect(await t.run(async (ctx) => await ctx.db.query("siteContentGaps").collect())).toEqual([]);
   });
 
-  test("a filing asks for the group's gaps to be rebuilt, and they are", async () => {
+  test("a website with no keyword copy yet is prepared when its gap is opened, then the gap shows", async () => {
     const t = harness();
     const ronins = await company(t, "Ronins");
     const own = await hold(t, ronins, "ronins.co.uk", "OWNED");
     const rival = await hold(t, ronins, "lightflows.co.uk", "TRACKED", own.websiteId);
     await fileRanks(t, rival.websiteId, DAY, [{ keyword: "wordpress agency london", position: 2, searchVolume: 590 }]);
+    await finishScheduled(t);
+    const asRonins = await member(t, ronins);
+    const gap = () => asRonins.query(api.siteCompetitors.listContentGap, { siteId: own.holdId, page: 1, rows: 25 });
+    // The owned site has had nothing filed, so it has no keyword copy to read the gap against.
+    expect(await gap()).toMatchObject({ preparing: true });
 
+    await asRonins.mutation(api.siteListCopyBuilders.ensureSiteListCopy, { siteId: own.holdId, list: "gap" });
     await finishScheduled(t);
 
-    const rows = await t.run(async (ctx) => await ctx.db.query("siteContentGaps").collect());
-    expect(rows.map((row) => [row.companyWebsiteId, row.keyword])).toEqual([[own.holdId, "wordpress agency london"]]);
+    expect((await gap()).rows.map((row) => row.keyword)).toEqual(["wordpress agency london"]);
   });
 });
 
@@ -845,36 +851,24 @@ describe("links and the market", () => {
 });
 
 describe("a website watched by many companies", () => {
-  test("asks for every content gap it takes part in, a few holds a step", async () => {
-    // All at once, a website watched by two hundred companies with their
-    // rivals was more requests than one transaction may schedule, and the
-    // rebuild that asked failed (reliability plan 3.4).
+  test("its rebuild asks for no content gap: each is worked out when read", async () => {
+    // Until 2026-10-06 a rebuild asked for every content gap the website took
+    // part in — each company's own site, the website and its fellow rivals —
+    // a few holds a step; about a third of all Hakken's reading and writing.
     const t = harness();
-    const rivals: Array<Awaited<ReturnType<typeof hold>>> = [];
     let watched: Id<"websites"> | null = null;
     for (let index = 0; index < 12; index += 1) {
       const companyId = await company(t, `Company ${index}`);
       const own = await hold(t, companyId, `own-${index}.co.uk`, "OWNED");
-      const big = await hold(t, companyId, "bigrival.co.uk", "TRACKED", own.websiteId);
-      watched = big.websiteId;
-      rivals.push(await hold(t, companyId, `small-${index}.co.uk`, "TRACKED", own.websiteId));
+      watched = (await hold(t, companyId, "bigrival.co.uk", "TRACKED", own.websiteId)).websiteId;
+      await hold(t, companyId, `small-${index}.co.uk`, "TRACKED", own.websiteId);
     }
 
-    let steps = 0;
-    for (let cursor: string | null = null; ;) {
-      const asked: { cursor: string; isDone: boolean } =
-        await t.mutation(internal.siteSummaries.requestGapsFor, { websiteId: watched!, locationCode: UK, cursor });
-      steps += 1;
-      if (asked.isDone) break;
-      cursor = asked.cursor;
-    }
+    await t.action(internal.siteSummaries.rebuildSite, { websiteId: watched!, locationCode: UK });
 
-    expect(steps).toBeGreaterThan(1);
-    const gaps = await t.run(async (ctx) => (await ctx.db.query("siteSummaryRequests").collect())
-      .filter((row) => row.key.startsWith("gap:")));
-    // Each company's group: its own site, the big rival and its small one.
-    expect(gaps).toHaveLength(12 * 3);
-    expect(gaps.map((row) => row.key)).toEqual(expect.arrayContaining(rivals.map((row) => `gap:${row.holdId}`)));
+    const asked = await t.run(async (ctx) => (await ctx.db.query("siteSummaryRequests").collect())
+      .filter((row) => row.key.startsWith("gap:") || row.key.startsWith("copy:gap:")));
+    expect(asked).toEqual([]);
   });
 });
 

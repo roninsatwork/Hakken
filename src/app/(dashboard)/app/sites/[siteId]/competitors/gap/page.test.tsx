@@ -43,14 +43,14 @@ const SITE = {
 const GAP = {
   rows: [
     {
-      _id: "gap_1", keyword: "single page app", volume: 165000, intent: "RESEARCHING", difficulty: 32, rivalsRanking: 2, day: "2026-09-29",
+      keyword: "single page app", volume: 165000, intent: "RESEARCHING", difficulty: 32, rivalsRanking: 2, day: "2026-09-29",
       rivals: [
         { websiteId: "web_chilli", host: "chilliapple.co.uk", position: 22, traffic: 0.741 },
         { websiteId: "web_pixel", host: "pixelfield.co.uk", position: 27, traffic: 0.502 },
       ],
     },
     {
-      _id: "gap_2", keyword: "mvp meaning", volume: 14800, intent: "RESEARCHING", difficulty: null, rivalsRanking: 1, day: "2026-09-29",
+      keyword: "mvp meaning", volume: 14800, intent: "RESEARCHING", difficulty: null, rivalsRanking: 1, day: "2026-09-29",
       rivals: [{ websiteId: "web_pixel", host: "pixelfield.co.uk", position: 35, traffic: 9.66 }],
     },
   ],
@@ -146,5 +146,18 @@ describe("Content gap", () => {
     render(<SiteContentGapPage />);
     const asked = vi.mocked(useQuery).mock.calls.map(([, args]) => args).filter((args): args is Record<string, unknown> => typeof args === "object" && args !== null && "sort" in args);
     expect(asked.at(-1)).toMatchObject({ sort: "position", rivalId: "hold_pixel", direction: "asc" });
+  });
+
+  it("on a competitor, says Content gap is for the company's own websites and leads to the one it is measured against (2026-10-06)", () => {
+    nav.search = "";
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "sites:getMySite": { ...SITE, host: "pixelfield.co.uk", siteId: "hold_pixel", relationship: "TRACKED", ofSiteId: "site_1", ofHost: "ronins.co.uk" },
+      "siteCompetitors:listContentGap": { ...GAP, rows: [], total: 0, competitors: [] },
+    }));
+    render(<SiteContentGapPage />);
+
+    expect(screen.getByText("sites.gap.notices.competitor")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /sites\.gap\.notices\.competitorLink/ })).toHaveAttribute("href", "/app/sites/site_1/competitors/gap");
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
   });
 });

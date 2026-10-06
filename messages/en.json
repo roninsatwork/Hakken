@@ -10420,7 +10420,11 @@
         "competitor": "Open {host}'s pages"
       },
       "empty": "No gap found yet. It fills in once this website and its competitors have been checked.",
-      "noMatch": "No keyword matches that."
+      "noMatch": "No keyword matches that.",
+      "notices": {
+        "competitor": "Content gap is for your own websites: the searches your competitors rank for and you do not.",
+        "competitorLink": "Open {host}'s content gap"
+      }
     },
     "suggested": {
       "title": "Suggested competitors",

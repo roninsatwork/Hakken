@@ -1,16 +1,14 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { internalAction, internalQuery, type ActionCtx } from "./_generated/server";
+import { internalAction, internalQuery, type ActionCtx, type QueryCtx } from "./_generated/server";
 import { myRivals, requireMySite } from "./siteAccess";
-import { GAP_COPY_FIELDS, GAP_COPY_MAX } from "./siteCompetitors";
 import { KEYWORD_COPY_FIELDS } from "./siteKeywordCopy";
 import { PAGE_COPY_FIELDS } from "./siteKeywords";
 import { LINK_COPY_FIELDS } from "./siteLinkLists";
 import {
   copyRequestKey,
   dropCopyOf,
-  gapCopyKey,
   keywordsCopyKey,
   linksCopyKey,
   pagesCopyKey,
@@ -21,13 +19,16 @@ import { claimSchedule, siteRebuildKey } from "./siteRankings";
 import { REBUILD_WAIT_MS } from "./siteSummaries";
 import { tenantMutation } from "./tenantFunctions";
 import { appError } from "./utils/appError";
+import { isTrackedHold } from "./utils/websitePairing";
 
 /**
- * Building the compact copies of Top pages, every link and the content gap
+ * Building the compact copies of Top pages and every link
  * (docs/plans/active/sites-table-pages-plan.md §5.2). The keyword copy is
  * built by the site rebuild, which reads every keyword anyway
- * (`siteSummaries.ts`); these three read their own tables, a page at a time,
- * and write the copy through `writeListCopy`.
+ * (`siteSummaries.ts`); these two read their own tables, a page at a time,
+ * and write the copy through `writeListCopy`. Content gap has no copy since
+ * 2026-10-06: it is worked out from the keyword copies when read
+ * (`siteContentGap.ts`).
  *
  * One build of a list at a time, under the same turn the site rebuild takes
  * (`beginRebuild`), so two builds never write over each other.
@@ -61,26 +62,14 @@ export const everyLinkPage = internalQuery({
   },
 });
 
-export const gapPage = internalQuery({
-  args: { holdId: v.id("companyWebsites"), cursor: v.union(v.string(), v.null()) },
-  handler: async (ctx, args): Promise<Page<Doc<"siteContentGaps">>> => {
-    const result = await ctx.db
-      .query("siteContentGaps")
-      .withIndex("by_hold_volume", (q) => q.eq("companyWebsiteId", args.holdId))
-      .order("desc")
-      .paginate({ cursor: args.cursor, numItems: BUILD_PAGE });
-    return { rows: result.page, cursor: result.continueCursor, isDone: result.isDone };
-  },
-});
-
-/** Every page of one of the readers above, until done or `limit` rows are in hand. */
-async function readAll<Row>(read: (cursor: string | null) => Promise<Page<Row>>, limit = Number.POSITIVE_INFINITY): Promise<Row[]> {
+/** Every page of one of the readers above. */
+async function readAll<Row>(read: (cursor: string | null) => Promise<Page<Row>>): Promise<Row[]> {
   const rows: Row[] = [];
   let cursor: string | null = null;
   for (;;) {
     const page: Page<Row> = await read(cursor);
     rows.push(...page.rows);
-    if (page.isDone || rows.length >= limit) return rows;
+    if (page.isDone) return rows;
     cursor = page.cursor;
   }
 }
@@ -115,43 +104,6 @@ async function buildLinksCopy(ctx: ActionCtx, key: string): Promise<void> {
   });
 }
 
-async function buildGapCopy(ctx: ActionCtx, key: string): Promise<void> {
-  const read = await readAll((cursor) => ctx.runQuery(internal.siteListCopyBuilders.gapPage, {
-    holdId: key as Id<"companyWebsites">, cursor,
-  }), GAP_COPY_MAX + 1);
-  const cut = read.length > GAP_COPY_MAX ? GAP_COPY_MAX : null;
-  const rows = read.slice(0, GAP_COPY_MAX);
-  // A row its last rebuild found unchanged keeps its own time: it was checked when that rebuild ran.
-  const workedOut: number | null = await ctx.runQuery(internal.siteContentGap.gapWorkedOut, { holdId: key as Id<"companyWebsites"> });
-  const rivalIds: string[] = [];
-  const rivalIndex = new Map<string, number>();
-  const indexOf = (websiteId: string) => {
-    let index = rivalIndex.get(websiteId);
-    if (index === undefined) {
-      index = rivalIds.length;
-      rivalIds.push(websiteId);
-      rivalIndex.set(websiteId, index);
-    }
-    return index;
-  };
-  await writeListCopy(ctx, {
-    kind: "gap",
-    key,
-    fields: GAP_COPY_FIELDS,
-    rows: rows.map((row) => [
-      row._id,
-      row.keyword,
-      row.volumeKnown ? row.volume : null,
-      row.intent,
-      row.difficulty ?? null,
-      row.rivals.flatMap((rival) => [indexOf(rival.websiteId), rival.position, rival.traffic ?? null]),
-      new Date(Math.max(row.updatedAt, workedOut ?? 0)).toISOString().slice(0, 10),
-    ]),
-    cut,
-    meta: { rivalIds: JSON.stringify(rivalIds) },
-  });
-}
-
 const kindValidator = v.union(v.literal("keywords"), v.literal("pages"), v.literal("links"), v.literal("gap"));
 
 /** Build one list's copy, taking its turn: a build already running is waited for, then this runs after it. */
@@ -172,12 +124,13 @@ export const buildListCopy = internalAction({
     }
     let done = false;
     try {
-      // Asked for before its website or hold was deleted: remove the copy, write none.
-      if (!(await ctx.runQuery(internal.siteListCopies.copyOwnerExists, args))) {
+      // Asked for before its website or hold was deleted — or a content gap's,
+      // worked out when read since 2026-10-06 (`siteContentGap.ts`) — remove
+      // the copy, write none.
+      if (args.kind === "gap" || !(await ctx.runQuery(internal.siteListCopies.copyOwnerExists, args))) {
         await dropCopyOf(ctx, args.kind, args.key);
       } else if (args.kind === "pages") await buildPagesCopy(ctx, args.key);
-      else if (args.kind === "links") await buildLinksCopy(ctx, args.key);
-      else await buildGapCopy(ctx, args.key);
+      else await buildLinksCopy(ctx, args.key);
       done = true;
     } finally {
       await ctx.runMutation(internal.siteSummaries.endRebuild, { key: turn, done });
@@ -187,12 +140,20 @@ export const buildListCopy = internalAction({
 });
 
 /** The layout each copy is read in: a copy in any other is as good as none. */
-const FIELDS: Record<CopyKind, readonly string[]> = {
+const FIELDS: Record<Exclude<CopyKind, "gap">, readonly string[]> = {
   keywords: KEYWORD_COPY_FIELDS,
   pages: PAGE_COPY_FIELDS,
   links: LINK_COPY_FIELDS,
-  gap: GAP_COPY_FIELDS,
 };
+
+/** Whether a website's keyword copy from a place is missing, or in an older layout. */
+async function keywordCopyWanted(ctx: QueryCtx, websiteId: Id<"websites">, place: number): Promise<boolean> {
+  const header = await ctx.db
+    .query("siteListCopies")
+    .withIndex("by_kind_key", (q) => q.eq("kind", "keywords").eq("key", keywordsCopyKey(websiteId, place)))
+    .unique();
+  return !header || header.fields.join("\u0000") !== FIELDS.keywords.join("\u0000");
+}
 
 /**
  * Build a list's copy now, when a table finds it has none yet — a site added
@@ -210,6 +171,20 @@ export const ensureSiteListCopy = tenantMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
+    if (args.list === "gap") {
+      // Content gap is worked out from the keyword copies of the site and its
+      // competitors (`siteContentGap.ts`): each one missing is built. A
+      // competitor has none.
+      if (isTrackedHold(site.hold)) return null;
+      const websiteIds = [site.website._id, ...(await myRivals(ctx, site)).map((rival) => rival.website._id)];
+      for (const websiteId of websiteIds) {
+        if (!(await keywordCopyWanted(ctx, websiteId, site.place))) continue;
+        if (await claimSchedule(ctx, siteRebuildKey(websiteId, site.place))) {
+          await ctx.scheduler.runAfter(0, internal.siteSummaries.rebuildSite, { websiteId, locationCode: site.place });
+        }
+      }
+      return null;
+    }
     let websiteId = site.website._id;
     if (args.rivalId) {
       const rival = (await myRivals(ctx, site)).find((entry) => entry.hold._id === args.rivalId);
@@ -218,8 +193,7 @@ export const ensureSiteListCopy = tenantMutation({
     }
     const key = args.list === "keywords" ? keywordsCopyKey(websiteId, site.place)
       : args.list === "pages" ? pagesCopyKey(websiteId, site.place)
-        : args.list === "links" ? linksCopyKey(websiteId)
-          : gapCopyKey(args.siteId);
+        : linksCopyKey(websiteId);
     const header = await ctx.db
       .query("siteListCopies")
       .withIndex("by_kind_key", (q) => q.eq("kind", args.list).eq("key", key))

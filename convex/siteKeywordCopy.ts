@@ -1,6 +1,7 @@
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { keywordsCopyKey, readListCopy } from "./siteListCopies";
+import { KEYWORD_COPY_FIELDS } from "./utils/keywordCopyLayout";
 
 /**
  * The compact copy of a site's keywords (docs/plans/active/
@@ -15,13 +16,8 @@ import { keywordsCopyKey, readListCopy } from "./siteListCopies";
  * search still held was not seen again (T9).
  */
 
-/**
- * The row's id leads, so the rows on screen are read in full by id — the
- * cheapest read there is — rather than looked up by keyword one by one.
- */
-export const KEYWORD_COPY_FIELDS = [
-  "id", "keyword", "position", "band", "page", "volume", "intent", "status", "change", "day", "kdBand", "cpc", "traffic",
-] as const;
+/** The layout of a copy's rows, kept with its key in `utils/keywordCopyLayout.ts`. */
+export { KEYWORD_COPY_FIELDS };
 
 export type KeywordCopyRow = {
   id: Id<"siteKeywordRanks">;
@@ -38,21 +34,23 @@ export type KeywordCopyRow = {
   kdBand: NonNullable<Doc<"siteKeywordRanks">["kdBand"]> | null;
   cpc: number | null;
   traffic: number | null;
+  /** How hard the search is, 0–100: what Content gap shows and sorts by, worked out from these copies (`siteContentGap.ts`). */
+  difficulty: number | null;
 };
 
 /** A keyword as its row stands, or as the rebuild is about to mark it lost. */
 export function keywordCopyTuple(row: Doc<"siteKeywordRanks">, lostOn?: string): unknown[] {
   if (lostOn !== undefined) {
-    return [row._id, row.keyword, null, "zz_none", row.page, row.volumeKnown ? row.volume : null, row.intent, "LOST", 0, lostOn, row.kdBand ?? null, row.cpc ?? null, null];
+    return [row._id, row.keyword, null, "zz_none", row.page, row.volumeKnown ? row.volume : null, row.intent, "LOST", 0, lostOn, row.kdBand ?? null, row.cpc ?? null, null, row.difficulty ?? null];
   }
   return [
     row._id, row.keyword, row.position ?? null, row.band, row.page, row.volumeKnown ? row.volume : null, row.intent, row.status,
-    row.change, row.day, row.kdBand ?? null, row.cpc ?? null, row.traffic ?? null,
+    row.change, row.day, row.kdBand ?? null, row.cpc ?? null, row.traffic ?? null, row.difficulty ?? null,
   ];
 }
 
 function decode(tuple: unknown[]): KeywordCopyRow {
-  const [id, keyword, position, band, page, volume, intent, status, change, day, kdBand, cpc, traffic] = tuple;
+  const [id, keyword, position, band, page, volume, intent, status, change, day, kdBand, cpc, traffic, difficulty] = tuple;
   return {
     id: id as Id<"siteKeywordRanks">,
     keyword: keyword as string,
@@ -67,6 +65,7 @@ function decode(tuple: unknown[]): KeywordCopyRow {
     kdBand: kdBand as KeywordCopyRow["kdBand"],
     cpc: cpc as number | null,
     traffic: traffic as number | null,
+    difficulty: difficulty as number | null,
   };
 }
 

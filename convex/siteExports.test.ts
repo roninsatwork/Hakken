@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
+import { writeKeywordCopy } from "@/src/test/keywordCopies";
 
 /**
  * Downloading a whole Sites table (docs/plans/active/user-sites-plan.md,
@@ -108,15 +109,17 @@ describe("downloading a whole table", () => {
       };
       const chilli = await watch("chilliapple.co.uk");
       const pixel = await watch("pixelfield.co.uk");
-      const gap = (keyword: string, volume: number, rivals: Array<{ websiteId: Id<"websites">; position: number; traffic?: number }>) =>
-        ctx.db.insert("siteContentGaps", {
-          companyWebsiteId: own.holdId, keyword, volume, volumeKnown: true, intent: "BUYING",
-          difficulty: 61,
-          rivalsRanking: rivals.length, bestRivalPosition: Math.min(...rivals.map((rival) => rival.position)), rivals,
-          rebuildId: "r1", updatedAt: Date.parse("2026-09-29T08:00:00Z"),
-        });
-      await gap("development website", 8100, [{ websiteId: chilli.websiteId, position: 2, traffic: 0.08 }, { websiteId: pixel.websiteId, position: 17, traffic: 12.6 }]);
-      await gap("single page app", 165000, [{ websiteId: pixel.websiteId, position: 27, traffic: 0.5 }]);
+      // Each website's keywords as its copy keeps them: the gap is worked out from these when read.
+      await writeKeywordCopy(ctx, own.websiteId, UK, [{ keyword: "web design", position: 1, day: "2026-09-29" }]);
+      await writeKeywordCopy(ctx, chilli.websiteId, UK, [
+        { keyword: "development website", position: 2, volume: 8100, difficulty: 61, traffic: 0.08, day: "2026-09-29" },
+      ]);
+      await writeKeywordCopy(ctx, pixel.websiteId, UK, [
+        { keyword: "development website", position: 17, volume: 8100, difficulty: 61, traffic: 12.6, day: "2026-09-29" },
+        { keyword: "single page app", position: 27, volume: 165000, difficulty: 61, traffic: 0.5, day: "2026-09-29" },
+        // The website ranks for it too: no gap.
+        { keyword: "web design", position: 3, volume: 5000, day: "2026-09-29" },
+      ]);
       return { chilli, pixel };
     });
 

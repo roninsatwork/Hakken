@@ -6,7 +6,6 @@ import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
 import { findOrCreateWebsite, requireHost } from "./websites";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { noteGroupGapsChanged, requestGroupGapRebuilds } from "./siteRankings";
 import { requestListRecount } from "./siteListAi";
 
 /**
@@ -104,10 +103,8 @@ export async function trackWebsiteCore(
     // No shared record of who competes with whom is written: which rivals a
     // company watches is its own (docs/plans/active/
     // company-level-website-facts-plan.md, CL5).
-    // A new rival changes what every site in the group is missing, on the
-    // client's Sites screens — its own gap included — and is counted in the
-    // answers to the owned site's questions.
-    await requestGroupGapRebuilds(ctx, args.against);
+    // A new rival is counted in the answers to the owned site's questions; the
+    // site's content gap reads it as soon as it is read (`siteContentGap.ts`).
     await requestListRecount(ctx, args.against._id);
   }
 
@@ -241,11 +238,9 @@ export const setTrackedPairing = superAdminMutation({
       updatedAt: Date.now(),
     });
     // It leaves one owned site's group and joins another's: both lists count
-    // again, and both groups' gaps are rebuilt that night (dataforseo-cost-plan.md, A1).
+    // again. Their content gaps read their groups as they now stand (`siteContentGap.ts`).
     for (const owner of [before, against]) {
-      if (!owner) continue;
-      await requestListRecount(ctx, owner._id);
-      await noteGroupGapsChanged(ctx, owner);
+      if (owner) await requestListRecount(ctx, owner._id);
     }
 
     await ctx.db.insert("auditLogs", {

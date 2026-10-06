@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Puzzle } from "lucide-react";
@@ -8,6 +9,7 @@ import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { DataTable, type DataTableColumn, type DataTableHeaderGroup } from "@/src/ui/components/screens/DataTable";
+import { Notice } from "@/src/ui/components/screens/Notice";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { IntentLabel, RecordLinkCell } from "../../../_components/SiteCells";
@@ -55,9 +57,11 @@ const blank = <NoFigure />;
  * The search, what it is for, its volume and difficulty — its cost per click
  * and its page's features were taken off the same day — then a Position and
  * Traffic pair per competitor,
- * the keyword kept in place as the table scrolls sideways. Worked out for
- * this company's hold when any site in the group is filed, then searched,
- * filtered, sorted and paged on the server.
+ * the keyword kept in place as the table scrolls sideways. Worked out when
+ * read from the keyword lists kept for the website and its competitors, then
+ * searched, filtered, sorted and paged on the server. For the company's own
+ * websites only (Anthony, 2026-10-06): on a competitor the page says so and
+ * leads to the website it is measured against, as Your pages does.
  */
 export default function SiteContentGapPage() {
   const router = useRouter();
@@ -91,6 +95,23 @@ export default function SiteContentGapPage() {
   }, [{ siteId, list: "gap" }]);
   const competitors = table.result?.competitors ?? [];
   const most = Math.max(1, site?.rivals.length ?? 1);
+
+  if (site?.relationship === "TRACKED") {
+    return (
+      <div className="flex flex-col gap-6">
+        <PageHeader icon={<Puzzle className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+        <Notice
+          action={site.ofSiteId && site.ofHost ? (
+            <Link href={`/app/sites/${site.ofSiteId}/competitors/gap`} className="text-[12.5px] text-info hover:underline">
+              {t("notices.competitorLink", { host: site.ofHost })}
+            </Link>
+          ) : undefined}
+        >
+          {t("notices.competitor")}
+        </Notice>
+      </div>
+    );
+  }
 
   const hinted = (key: "volume" | "kd" | "position" | "traffic") => (
     <span title={t(`hints.${key}`)}>{t(`columns.${key}`)}</span>
@@ -162,7 +183,7 @@ export default function SiteContentGapPage() {
       />
       <DataTable
         rows={table.pageRows}
-        rowKey={(row) => row._id}
+        rowKey={(row) => row.keyword}
         onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
         minWidthClassName="min-w-[1100px]"
         stickyFirstColumn

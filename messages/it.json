@@ -10420,7 +10420,11 @@
         "competitor": "Apri le pagine di {host}"
       },
       "empty": "Nessun divario trovato per ora. Si riempie quando questo sito e i suoi concorrenti sono stati controllati.",
-      "noMatch": "Nessuna parola chiave corrisponde."
+      "noMatch": "Nessuna parola chiave corrisponde.",
+      "notices": {
+        "competitor": "Il divario di contenuti è per i tuoi siti: le ricerche per cui i concorrenti si posizionano e tu no.",
+        "competitorLink": "Apri il divario di contenuti di {host}"
+      }
     },
     "suggested": {
       "title": "Concorrenti suggeriti",

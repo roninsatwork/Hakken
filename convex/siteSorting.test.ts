@@ -106,8 +106,8 @@ describe("Content gap", () => {
       { keyword: "zig rigs", position: 1 },
     ]);
     await fileRanks(t, fox.websiteId, DAY, [{ keyword: "bivvies", position: 5, searchVolume: 900, difficulty: 40, traffic: 8 }]);
-    await t.action(internal.siteContentGap.rebuildGap, { companyWebsiteId: own.holdId });
-    await t.action(internal.siteListCopyBuilders.buildListCopy, { kind: "gap", key: own.holdId });
+    // The keyword copies the gap is worked out from when read.
+    for (const site of [own, nash, fox]) await t.action(internal.siteSummaries.rebuildSite, { websiteId: site.websiteId, locationCode: UK });
 
     const asKorda = await member(t, korda);
     const gap = async (args: Record<string, unknown> = {}) =>

@@ -185,7 +185,8 @@ export async function fileKeywordRank(
 }
 
 /**
- * Carry a search's meaning onto every ranking and gap that holds the search.
+ * Carry a search's meaning onto every ranking that holds the search — and so
+ * onto the keyword copies a content gap is worked out from.
  *
  * The meaning is judged after the rankings are filed, so a new ranking arrives
  * `UNJUDGED` and is brought up to date here when the judgment lands. The first
@@ -200,47 +201,32 @@ export async function patchKeywordIntent(ctx: MutationCtx, keyword: string, inte
     .take(INTENT_PATCH_LIMIT);
   const patchedRanks = ranks.filter((row) => row.intent !== intent);
   for (const row of patchedRanks) await ctx.db.patch(row._id, { intent });
+  await recountAfterIntents(ctx, patchedRanks);
 
-  const gaps = await ctx.db
-    .query("siteContentGaps")
-    .withIndex("by_keyword", (q) => q.eq("keyword", keyword))
-    .take(INTENT_PATCH_LIMIT);
-  const patchedGaps = gaps.filter((row) => row.intent !== intent);
-  for (const row of patchedGaps) await ctx.db.patch(row._id, { intent });
-  await recountAfterIntents(ctx, patchedRanks, patchedGaps);
-
-  for (const [table, read] of [["siteKeywordRanks", ranks.length], ["siteContentGaps", gaps.length]] as const) {
-    if (read === INTENT_PATCH_LIMIT) {
-      await ctx.scheduler.runAfter(0, internal.siteRankings.carryKeywordIntent, { table, keyword, intent, cursor: null });
-    }
+  if (ranks.length === INTENT_PATCH_LIMIT) {
+    await ctx.scheduler.runAfter(0, internal.siteRankings.carryKeywordIntent, { table: "siteKeywordRanks", keyword, intent, cursor: null });
   }
 }
 
 /**
  * A judged intent changes what the counts by intent and the Sites lists'
  * copies hold, so each site whose keywords it changed is rebuilt — once,
- * shortly, however many judgments land — and each content gap it changed has
- * its copy rebuilt (docs/plans/active/sites-table-pages-plan.md §5.2). Before
- * this, the counts by intent trailed the rows until the next filing.
+ * shortly, however many judgments land (docs/plans/active/
+ * sites-table-pages-plan.md §5.2). Before this, the counts by intent trailed
+ * the rows until the next filing.
  */
 async function recountAfterIntents(
   ctx: MutationCtx,
   ranks: ReadonlyArray<Pick<Doc<"siteKeywordRanks">, "websiteId" | "locationCode">>,
-  gaps: ReadonlyArray<Pick<Doc<"siteContentGaps">, "companyWebsiteId">>,
 ): Promise<void> {
   const sites = new Map(ranks.map((row) => [siteRebuildKey(row.websiteId, row.locationCode), row]));
   for (const row of sites.values()) await requestSiteRebuild(ctx, row.websiteId, row.locationCode);
-  const holds = [...new Set(gaps.map((row) => row.companyWebsiteId))];
-  if (holds.length > 0) {
-    await ctx.scheduler.runAfter(0, internal.siteListCopies.requestCopies, {
-      requests: holds.map((holdId) => ({ kind: "gap" as const, key: `${holdId}` })),
-    });
-  }
 }
 
-/** A page of the rankings or gaps holding a search, given its meaning; the next page carries on. */
+/** A page of the rankings holding a search, given its meaning; the next page carries on. */
 export const carryKeywordIntent = internalMutation({
   args: {
+    /** Only the rankings since 2026-10-06; a step asked of the stored gaps before then does nothing. */
     table: v.union(v.literal("siteKeywordRanks"), v.literal("siteContentGaps")),
     keyword: v.string(),
     intent: rankIntentValidator,
@@ -248,14 +234,14 @@ export const carryKeywordIntent = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    if (args.table !== "siteKeywordRanks") return null;
     const page = await ctx.db
-      .query(args.table)
+      .query("siteKeywordRanks")
       .withIndex("by_keyword", (q) => q.eq("keyword", args.keyword))
       .paginate({ cursor: args.cursor, numItems: INTENT_PATCH_LIMIT });
     const patched = page.page.filter((row) => row.intent !== args.intent);
     for (const row of patched) await ctx.db.patch(row._id, { intent: args.intent });
-    if (args.table === "siteKeywordRanks") await recountAfterIntents(ctx, patched as Doc<"siteKeywordRanks">[], []);
-    else await recountAfterIntents(ctx, [], patched as Doc<"siteContentGaps">[]);
+    await recountAfterIntents(ctx, patched);
     if (!page.isDone) {
       await ctx.scheduler.runAfter(0, internal.siteRankings.carryKeywordIntent, { ...args, cursor: page.continueCursor });
     }
@@ -373,10 +359,6 @@ export function siteRebuildKey(websiteId: Id<"websites">, locationCode: number):
   return `site:${websiteId}:${locationCode}`;
 }
 
-/** The key a hold's content-gap rebuild is requested under. */
-export function gapRebuildKey(companyWebsiteId: Id<"companyWebsites">): string {
-  return `gap:${companyWebsiteId}`;
-}
 
 /** The key a hold's Your pages rebuild is asked for and takes its turn under (`holdPages.ts`). */
 export function holdPagesKey(holdId: Id<"companyWebsites">): string {
@@ -574,36 +556,6 @@ export const releaseHeldRebuilds = internalMutation({
     return null;
   },
 });
-
-/** Ask for a hold's content gap to be rebuilt, once, shortly. */
-export async function requestGapRebuild(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites">): Promise<void> {
-  if (!(await claimSchedule(ctx, gapRebuildKey(companyWebsiteId)))) return;
-  await ctx.scheduler.runAfter(REBUILD_DELAY_MS, internal.siteContentGap.rebuildGap, { companyWebsiteId });
-}
-
-/** Ask for the gap of every hold in an owned site's group: the site and its competitors. */
-export async function requestGroupGapRebuilds(ctx: MutationCtx, owner: Doc<"companyWebsites">): Promise<void> {
-  const competitors = (await ctx.db
-    .query("companyWebsites")
-    .withIndex("by_company_against", (q) => q.eq("companyId", owner.companyId).eq("againstWebsiteId", owner.websiteId))
-    .take(HOLDS_READ))
-    .filter(isTrackedHold);
-  for (const member of [owner, ...competitors]) await requestGapRebuild(ctx, member._id);
-}
-
-/**
- * Note that the gap of every hold in an owned site's group changed — a
- * competitor moved between groups, the group's place changed — for the
- * nightly refresh to rebuild (`refreshListCopies`; dataforseo-cost-plan.md, A1).
- */
-export async function noteGroupGapsChanged(ctx: MutationCtx, owner: Doc<"companyWebsites">): Promise<void> {
-  const competitors = (await ctx.db
-    .query("companyWebsites")
-    .withIndex("by_company_against", (q) => q.eq("companyId", owner.companyId).eq("againstWebsiteId", owner.websiteId))
-    .take(HOLDS_READ))
-    .filter(isTrackedHold);
-  for (const member of [owner, ...competitors]) await noteDataChanged(ctx, gapRebuildKey(member._id));
-}
 
 /**
  * Every place a website is watched from, by anyone.

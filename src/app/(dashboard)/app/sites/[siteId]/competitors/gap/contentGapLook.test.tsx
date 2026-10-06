@@ -41,14 +41,14 @@ const SITE = {
 const GAP = {
   rows: [
     {
-      _id: "gap_1", keyword: "single page app", volume: 165000, intent: "RESEARCHING", difficulty: 32, rivalsRanking: 2, day: "2026-09-29",
+      keyword: "single page app", volume: 165000, intent: "RESEARCHING", difficulty: 32, rivalsRanking: 2, day: "2026-09-29",
       rivals: [
         { websiteId: "web_one", host: "rival-one.test", position: 22, traffic: 0.741 },
         { websiteId: "web_two", host: "rival-two.test", position: 27, traffic: 0.502 },
       ],
     },
     {
-      _id: "gap_2", keyword: "mvp meaning", volume: 14800, intent: "RESEARCHING", difficulty: null, rivalsRanking: 1, day: "2026-09-29",
+      keyword: "mvp meaning", volume: 14800, intent: "RESEARCHING", difficulty: null, rivalsRanking: 1, day: "2026-09-29",
       rivals: [{ websiteId: "web_two", host: "rival-two.test", position: 35, traffic: 9.66 }],
     },
   ],

@@ -19,7 +19,6 @@ import {
 import * as websiteShapes from "./utils/websiteShapes";
 import { anyCompanyOwns, isTrackedHold, pairedOwnedHold, refuseIfPaired } from "./utils/websitePairing";
 import { countOpenMoves, purgeHoldMoves } from "./websiteMoves";
-import { noteGroupGapsChanged, requestGroupGapRebuilds } from "./siteRankings";
 import { noteHoldPagesChanged } from "./holdPages";
 import { requestListRecount } from "./siteListAi";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -712,13 +711,11 @@ export const removeCompanyWebsite = superAdminMutation({
     await ctx.scheduler.runAfter(0, internal.fanOutAngles.purgeHoldAngles, { holdId: args.id });
     // Its every page once (Your pages) goes with it.
     await ctx.scheduler.runAfter(0, internal.holdPages.purgeHoldPages, { holdId: args.id });
-    // The hold's content gap goes with it; a rival that goes changes the gap
-    // of the site it was tracked against.
-    await ctx.scheduler.runAfter(0, internal.siteContentGap.purgeHoldGaps, { companyWebsiteId: args.id });
+    // A rival that goes leaves the content gap of the site it was tracked
+    // against as soon as it is read (`siteContentGap.ts`).
     const pairedWith = await pairedOwnedHold(ctx, companyWebsite);
     await ctx.db.delete(args.id);
     if (pairedWith) {
-      await requestGroupGapRebuilds(ctx, pairedWith);
       // Nor is it counted in the answers to that site's questions any more.
       await requestListRecount(ctx, pairedWith._id);
     }
@@ -897,8 +894,7 @@ export const setCompanyWebsiteLocation = superAdminMutation({
     // Its questions are answered from the new place: its AI figures are those answers'.
     if (!isTrackedHold(companyWebsite)) {
       await requestListRecount(ctx, args.companyWebsiteId);
-      // Its group's gaps and its Your pages read rankings from the place: rebuilt that night (dataforseo-cost-plan.md, A1).
-      await noteGroupGapsChanged(ctx, companyWebsite);
+      // Its Your pages reads rankings from the place: rebuilt that night (dataforseo-cost-plan.md, A1).
       await noteHoldPagesChanged(ctx, args.companyWebsiteId);
     }
 

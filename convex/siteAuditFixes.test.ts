@@ -735,8 +735,8 @@ describe("content gap, ranking now (4.10)", () => {
     await ranks(t, rival.websiteId, "bivvies", 1, "2026-09-24");
     await ranks(t, rival.websiteId, "tackle box", 4, "2026-09-20");
 
-    await t.action(internal.siteContentGap.rebuildGap, { companyWebsiteId: own.holdId });
-    // The page's compact copy is built by a function of another module: loaded cold under a busy suite (`finishScheduled`).
+    // The keyword copies the gap is worked out from when read, each with its latest check.
+    for (const site of [own, rival]) await t.action(internal.siteSummaries.rebuildSite, { websiteId: site.websiteId, locationCode: UK });
     await finishScheduled(t);
     const asKorda = await member(t, korda);
     const gap = await asKorda.query(api.siteCompetitors.listContentGap, { siteId: own.holdId, page: 1, rows: 25 });

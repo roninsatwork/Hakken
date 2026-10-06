@@ -7,9 +7,9 @@ import { BACKLINK_LIST_OPERATION_ID } from "./dataForSeoLinkOperations";
 import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
 import { DISCOVERY_OPERATION_ID } from "./siteDiscovery";
 import { dropCopies } from "./siteListCopies";
-import { requestGapRebuild, requestSiteRebuild } from "./siteRankings";
+import { requestSiteRebuild } from "./siteRankings";
 import { sentOffset } from "./sitePagedLists";
-import { anyCompanyOwns, pairedOwnedHold } from "./utils/websitePairing";
+import { anyCompanyOwns } from "./utils/websitePairing";
 import { competitorOnlyWebsites } from "./websites";
 
 /**
@@ -246,19 +246,16 @@ async function discoveryStep(ctx: MutationCtx, site: Id<"websites">, go: boolean
   return { found: rows.length, continueCursor: "", isDone: next >= holds.length, mark: { ...mark, seen: next } };
 }
 
-/** After a competitor's rows go: its keyword summaries rebuilt in each place touched, and the content gaps that read them. */
+/**
+ * After a competitor's rows go: its keyword summaries rebuilt in each place
+ * touched — and with them its keyword copy, which the content gaps it is in
+ * read when they are read (`siteContentGap.ts`).
+ */
 export const afterCleanOut = internalMutation({
   args: { websiteId: v.id("websites"), locations: v.array(v.number()) },
   returns: v.null(),
   handler: async (ctx, args) => {
     for (const location of args.locations) await requestSiteRebuild(ctx, args.websiteId, location);
-    if (args.locations.length === 0) return null;
-    const holds = await ctx.db.query("companyWebsites").withIndex("by_website", (q) => q.eq("websiteId", args.websiteId)).take(100);
-    for (const hold of holds) {
-      await requestGapRebuild(ctx, hold._id);
-      const owner = await pairedOwnedHold(ctx, hold);
-      if (owner) await requestGapRebuild(ctx, owner._id);
-    }
     return null;
   },
 });

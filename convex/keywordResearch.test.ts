@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { writeKeywordCopy } from "@/src/test/keywordCopies";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { removeSampleResearch } from "./keywordResearchSampleMigration";
 import { AI_ENGINES, AI_ENGINE_CALLS } from "./seoAiEngines";
@@ -661,20 +662,18 @@ describe("research lists", () => {
 });
 
 describe("start from a competitor", () => {
-  test("lists each competitor's gap from Content gap's copy — nothing bought — the most searched first", async () => {
+  test("lists each competitor's gap from Content gap — nothing bought — the most searched first", async () => {
     const t = harness();
-    const { as, siteId } = await company(t);
+    const { as, siteId, websiteId } = await company(t);
     const rival = await t.run(async (ctx) => {
       const hold = (await ctx.db.query("companyWebsites").collect()).find((row) => row.relationship === "TRACKED")!;
-      const rows = [
-        ["g1", "web agency surrey", 300, "BUYING", 20, [0, 4, 120], "2026-10-01"],
-        ["g2", "brand agency", 900, "BUYING", 45, [0, 9, 40], "2026-10-01"],
-      ];
-      await ctx.db.insert("siteListCopies", {
-        kind: "gap", key: siteId, buildId: "b1", fields: ["id", "keyword", "volume", "intent", "difficulty", "rivals", "day"],
-        rows: rows.length, parts: 1, cut: null, meta: { rivalIds: JSON.stringify([hold.websiteId]) }, builtAt: Date.now(),
-      });
-      await ctx.db.insert("siteListCopyParts", { kind: "gap", key: siteId, buildId: "b1", part: 0, data: JSON.stringify(rows) });
+      // The keyword copies Content gap is worked out from when read (`siteContentGap.ts`).
+      await writeKeywordCopy(ctx, websiteId, UK, [{ keyword: "web design agency", position: 2, day: "2026-10-01" }]);
+      await writeKeywordCopy(ctx, hold.websiteId, UK, [
+        { keyword: "web agency surrey", position: 4, volume: 300, difficulty: 20, traffic: 120, day: "2026-10-01" },
+        { keyword: "brand agency", position: 9, volume: 900, difficulty: 45, traffic: 40, day: "2026-10-01" },
+        { keyword: "web design agency", position: 1, volume: 2400, day: "2026-10-01" },
+      ]);
       return hold._id;
     });
     const fetch = vi.fn();

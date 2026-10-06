@@ -302,8 +302,10 @@ export const siteTables = {
   /**
    * Searches a company's tracked rivals rank for and its own site does not.
    *
-   * Per hold, because the rivals are the company's own choice. Rebuilt after
-   * any of the sites involved is filed (`siteContentGap.ts`).
+   * **No longer written or read** (2026-10-06): Content gap is worked out when
+   * read, from the keyword copies already kept (`siteContentGap.ts`). Emptied
+   * by the data migration `2026-10-06-drop-stored-gaps`; the table leaves the
+   * schema once that has run on every deployment.
    */
   siteContentGaps: defineTable({
     companyWebsiteId: v.id("companyWebsites"),

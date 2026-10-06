@@ -1,12 +1,12 @@
 import { v } from "convex/values";
 import { competitorGapShape, competitorStartsShape } from "./keywordResearchShapes";
-import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
 import { myRivals, requireMySite, type MyRival } from "./siteAccess";
-import { gapCopyKey, readListCopy } from "./siteListCopies";
-import { GAP_COPY_FIELDS } from "./siteCompetitors";
+import { contentGapOf } from "./siteContentGap";
 import { websiteIconUrl } from "./websiteIcons";
+import type { Site } from "./websiteSiteRows";
+import { isTrackedHold } from "./utils/websitePairing";
 
 /**
  * Start from a competitor (boards 1 and 6; docs/plans/active/keyword-
@@ -18,25 +18,20 @@ import { websiteIconUrl } from "./websiteIcons";
 
 type GapRow = { keyword: string; position: number; volume: number | null; difficulty: number | null; intent: string; traffic: number | null };
 
-/** Each of the website's competitors' gaps, from the gap's compact copy. Null while the copy is being prepared. */
-async function gapsByRival(ctx: QueryCtx, siteId: Id<"companyWebsites">, rivals: MyRival[]): Promise<Map<string, GapRow[]> | null> {
-  const copy = await readListCopy(ctx, "gap", gapCopyKey(siteId), GAP_COPY_FIELDS);
-  if (!copy) return null;
-  const rivalIds = JSON.parse(typeof copy.meta.rivalIds === "string" ? copy.meta.rivalIds : "[]") as string[];
-  const tracked = new Set(rivals.map((rival) => rival.website._id as string));
+/**
+ * Each of the website's competitors' gaps, from Content gap as it is worked
+ * out when read (`siteContentGap.ts`). Null while the website's keyword copy
+ * is being prepared; none for a competitor, which has no Content gap.
+ */
+async function gapsByRival(ctx: QueryCtx, site: Site, rivals: MyRival[]): Promise<Map<string, GapRow[]> | null> {
   const byRival = new Map<string, GapRow[]>(rivals.map((rival) => [rival.website._id as string, []]));
-  for (const [, keyword, volume, intent, difficulty, flat] of copy.rows) {
-    const triples = flat as Array<number | null>;
-    for (let index = 0; index < triples.length; index += 3) {
-      const websiteId = rivalIds[triples[index] as number];
-      if (!websiteId || !tracked.has(websiteId)) continue;
-      byRival.get(websiteId)!.push({
-        keyword: keyword as string,
-        position: triples[index + 1] as number,
-        volume: volume as number | null,
-        difficulty: difficulty as number | null,
-        intent: intent as string,
-        traffic: triples[index + 2] ?? null,
+  if (isTrackedHold(site.hold)) return byRival;
+  const gap = await contentGapOf(ctx, { websiteId: site.website._id, place: site.place }, rivals.map((rival) => rival.website._id));
+  if (!gap) return null;
+  for (const row of gap.rows) {
+    for (const rival of row.rivals) {
+      byRival.get(rival.websiteId)?.push({
+        keyword: row.keyword, position: rival.position, volume: row.volume, difficulty: row.difficulty, intent: row.intent, traffic: rival.traffic,
       });
     }
   }
@@ -50,7 +45,7 @@ export const competitorStarts = tenantQuery({
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const rivals = await myRivals(ctx, site);
-    const gaps = await gapsByRival(ctx, args.siteId, rivals);
+    const gaps = await gapsByRival(ctx, site, rivals);
     return {
       preparing: gaps === null,
       rivals: await Promise.all(rivals.map(async (rival) => ({
@@ -72,7 +67,7 @@ export const competitorGap = tenantQuery({
     const rivals = await myRivals(ctx, site);
     const rival = rivals.find((entry) => entry.hold._id === args.rivalSiteId);
     if (!rival) return null;
-    const gaps = await gapsByRival(ctx, args.siteId, rivals);
+    const gaps = await gapsByRival(ctx, site, rivals);
     const rows = (gaps?.get(rival.website._id) ?? []).sort((left, right) => (right.volume ?? -1) - (left.volume ?? -1));
     // How many searches it ranks for in all, from its newest day that says.
     const days = await ctx.db.query("siteDaySummaries").withIndex("by_site_day", (q) => q.eq("websiteId", rival.website._id).eq("locationCode", site.place)).order("desc").take(30);
