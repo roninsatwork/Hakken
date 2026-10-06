@@ -369,6 +369,13 @@ describe("ai tool execution service", () => {
       "apify.actor.describe",
       // Runs an Apify job the admin has configured.
       "apify.actor.run",
+      // The Assistant's company figures (assistant-foundation-plan.md, item 7):
+      // each read through its screen's own function, for the run's company.
+      "assistant.ai.mentions",
+      "assistant.searchConsole",
+      "assistant.site.overview",
+      "assistant.tasks.open",
+      "assistant.websites",
       "company.overview.update",
       // The four DataForSEO doors: what can be asked, start a company's
       // collection, ask for one website now, and read back what was collected.

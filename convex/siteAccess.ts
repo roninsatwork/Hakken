@@ -44,8 +44,12 @@ export type HoldSummary = {
 
 export type CompanyHold = { hold: Doc<"companyWebsites">; website: Doc<"websites">; summary: HoldSummary };
 
-/** What reading a site needs: the database, and the caller's company. A query's or a mutation's. */
-type SiteReader = Pick<TenantQueryCtx, "companyId"> & Reader;
+/**
+ * What reading a site needs: the database, and the caller's company. A
+ * query's or a mutation's — or the Assistant's, whose company is the
+ * conversation's (`assistantReads.ts`), never anything a model wrote.
+ */
+export type SiteReader = Pick<TenantQueryCtx, "companyId"> & Reader;
 
 /** The site, when it is one of the caller's company's holds; otherwise null. */
 export async function findMySite(ctx: SiteReader, siteId: Id<"companyWebsites">): Promise<Site | null> {

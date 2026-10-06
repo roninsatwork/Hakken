@@ -1,8 +1,10 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { internalAction, internalMutation, internalQuery } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { internalAction, internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
+import { findConnectorInstall, installBuiltInConnector } from "./aiTools";
 import { GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
-import { HAKKEN_ASSISTANT } from "./utils/hakkenAssistant";
+import { COMPANY_FIGURES_CONNECTOR_KEY, HAKKEN_ASSISTANT } from "./utils/hakkenAssistant";
 
 /**
  * The assistant's agent (docs/plans/active/assistant-foundation-plan.md,
@@ -15,9 +17,16 @@ import { HAKKEN_ASSISTANT } from "./utils/hakkenAssistant";
  * overwritten.
  */
 export const ensureAssistantInternal = internalMutation({
-  args: {},
+  args: {
+    /**
+     * Who is asking, when someone is: the company-figures connector is
+     * installed the first time, in their name, as an install from the
+     * Connections screen would be.
+     */
+    installedBy: v.optional(v.id("users")),
+  },
   returns: v.id("agents"),
-  handler: async (ctx) => {
+  handler: async (ctx, args) => {
     const now = Date.now();
     const existing = await ctx.db
       .query("agents")
@@ -28,8 +37,7 @@ export const ensureAssistantInternal = internalMutation({
       description: HAKKEN_ASSISTANT.description,
       standingObjective: HAKKEN_ASSISTANT.standingObjective,
     };
-    if (!existing) {
-      return await ctx.db.insert("agents", {
+    const agentId = existing?._id ?? await ctx.db.insert("agents", {
         ...definition,
         systemKey: HAKKEN_ASSISTANT.systemKey,
         // What it says it is comes from the platform's and the company's
@@ -43,13 +51,40 @@ export const ensureAssistantInternal = internalMutation({
         createdAt: now,
         updatedAt: now,
       });
-    }
-    if (Object.entries(definition).some(([key, value]) => existing[key as keyof typeof definition] !== value)) {
+    if (existing && Object.entries(definition).some(([key, value]) => existing[key as keyof typeof definition] !== value)) {
       await ctx.db.patch(existing._id, { ...definition, updatedAt: now });
     }
-    return existing._id;
+    await bindCompanyFigures(ctx, agentId, args.installedBy);
+    return agentId;
   },
 });
+
+/**
+ * The company-figures tools (item 7), installed once and bound to the
+ * Assistant. Installing again would reset the connector's test state, so an
+ * install that exists is only bound, never redone; a tool an administrator
+ * took off the Assistant on the Agents screen is put back, because the
+ * Assistant's reads are what every door answers from.
+ */
+async function bindCompanyFigures(ctx: MutationCtx, agentId: Id<"agents">, installedBy: Id<"users"> | undefined) {
+  let connector = await findConnectorInstall(ctx, { key: COMPANY_FIGURES_CONNECTOR_KEY });
+  if (!connector) {
+    if (!installedBy) return;
+    await installBuiltInConnector(ctx, { key: COMPANY_FIGURES_CONNECTOR_KEY, installedBy, tenantAvailability: "GLOBAL" });
+    connector = await findConnectorInstall(ctx, { key: COMPANY_FIGURES_CONNECTOR_KEY });
+    if (!connector) return;
+  }
+  const tools = await ctx.db
+    .query("aiTools")
+    .withIndex("by_connector", (q) => q.eq("connectorId", connector._id))
+    .take(20);
+  const bound = new Set(
+    (await ctx.db.query("agentTools").withIndex("by_agent", (q) => q.eq("agentId", agentId)).take(200)).map((row) => row.toolId),
+  );
+  for (const tool of tools) {
+    if (!bound.has(tool._id)) await ctx.db.insert("agentTools", { agentId, toolId: tool._id, assignedAt: Date.now() });
+  }
+}
 
 /** The assistant's agent and whether it is on; null before its first use. */
 export const getAssistantInternal = internalQuery({
@@ -86,7 +121,10 @@ export const answerInternal = internalAction({
     const notice = (content: string) =>
       ctx.runMutation(internal.chat.saveAssistantNoticeInternal, { threadId: args.threadId, content });
 
-    const agentId = await ctx.runMutation(internal.hakkenAssistant.ensureAssistantInternal, {});
+    const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
+    const agentId = await ctx.runMutation(internal.hakkenAssistant.ensureAssistantInternal, {
+      ...(thread?.userId ? { installedBy: thread.userId } : {}),
+    });
     const assistant = await ctx.runQuery(internal.hakkenAssistant.getAssistantInternal, {});
     if (!assistant?.isActive) {
       const { platformName } = await ctx.runQuery(internal.settings.getEmailBranding, {});
@@ -120,7 +158,6 @@ export const answerInternal = internalAction({
     if (args.fileIds && args.fileIds.length > 0) {
       const contentTypes = await ctx.runQuery(internal.chat.getAttachmentContentTypesInternal, { fileIds: args.fileIds });
       if (contentTypes.some((type) => type?.startsWith("image/"))) {
-        const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
         const chat = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
           ...(modelId ? { requestedModelId: modelId } : {}),
           companyId: thread?.companyId,

@@ -570,6 +570,95 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
     // an agent may pick up and use.
     toolDefinitions: [],
   },
+  {
+    // The company's own figures for the Assistant (docs/plans/active/
+    // assistant-foundation-plan.md, item 7). Global: one install serves every
+    // company, because the company is the conversation's, never an argument.
+    key: "assistant-figures",
+    name: "Company figures",
+    description:
+      "Lets the Assistant read the company's own figures — its websites, their Sites overview, Search Console, AI answers and open tasks — through the same reads the screens use.",
+    category: "KNOWLEDGE",
+    authMode: "NONE",
+    tenantAvailability: "GLOBAL",
+    requiredScopes: ["company:read"],
+    requiredSecretRefs: [],
+    toolDefinitions: [
+      {
+        name: "List the company's websites",
+        description:
+          "Lists the company's websites — its own and the competitors each is measured against — with the address of each one's Sites screen. Use it first when you are not sure which website is meant.",
+        handlerMapping: "assistant.websites",
+        modelName: "list_websites",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({ type: "object", properties: {} }),
+      },
+      {
+        name: "Read a website's overview",
+        description:
+          "A website's headline figures from its Sites overview: searches it ranks for, pages ranking, searches in Google's top three, linking websites, searches gained and lost since the last check, AI answers naming it. Give the figures with the link returned, so the reader can check them.",
+        handlerMapping: "assistant.site.overview",
+        modelName: "read_site_overview",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["website"],
+          properties: { website: { type: "string", description: "The website's address, e.g. example.co.uk — one of the company's, from list_websites." }, },
+        }),
+      },
+      {
+        name: "Read Search Console",
+        description:
+          "A website's Google Search Console figures — clicks, impressions, click-through rate and average position — over its last 7, 30 or 90 days held, with the same number of days before, for the whole website or the pages whose address contains `page`. Search Console's newest day is about three days behind. Give the figures with the link returned.",
+        handlerMapping: "assistant.searchConsole",
+        modelName: "read_search_console",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["website", "days"],
+          properties: {
+            website: { type: "string", description: "The website's address, e.g. example.co.uk — one of the company's, from list_websites." },
+            days: { type: "number", description: "7, 30 or 90." },
+            page: { type: "string", description: "Part of a page's address, e.g. /boiler-repair. Leave out for the whole website." },
+          },
+        }),
+      },
+      {
+        name: "Read AI answers",
+        description:
+          "How each AI engine the platform asks treats a website on each question the company tracks: named, recommended, warned against or not named in its latest answer, and how often over its latest answers. Give the answer with the link returned.",
+        handlerMapping: "assistant.ai.mentions",
+        modelName: "read_ai_mentions",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["website"],
+          properties: {
+            website: { type: "string", description: "The website's address, e.g. example.co.uk — one of the company's, from list_websites." },
+            question: { type: "string", description: "Words from a tracked question, to read just that one. Optional." },
+          },
+        }),
+      },
+      {
+        name: "Read open tasks",
+        description: "The company's open tasks — what needs doing, who it is for and when it is due — with the link to the Tasks screen.",
+        handlerMapping: "assistant.tasks.open",
+        modelName: "read_open_tasks",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({ type: "object", properties: {} }),
+      },
+    ],
+  },
 ];
 
 export function getBuiltInToolConnector(key: string) {

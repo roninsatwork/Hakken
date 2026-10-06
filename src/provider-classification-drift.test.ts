@@ -140,6 +140,8 @@ describe('Provider Classification Drift', () => {
       'next_market_discovery_task', 'record_market_group', 'review_market_group',
       'read_market_group_locations', 'record_market_location', 'price_prospects',
       'find_chain_gaps', 'save_report_summary', 'read_mailbox', 'reply_to_email',
+      // The Assistant's company figures (assistant-foundation-plan.md, item 7).
+      'list_websites', 'read_site_overview', 'read_search_console', 'read_ai_mentions', 'read_open_tasks',
     ];
 
     const files = walkRepoFiles(repoRoot, repoTextExtensions);

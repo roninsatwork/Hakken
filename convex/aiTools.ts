@@ -91,7 +91,7 @@ function getEnabledToolMappings(definition: NonNullable<ReturnType<typeof getBui
   return requested;
 }
 
-async function findConnectorInstall(ctx: { db: MutationCtx["db"] | QueryCtx["db"] }, args: {
+export async function findConnectorInstall(ctx: { db: MutationCtx["db"] | QueryCtx["db"] }, args: {
   key: string;
   companyId?: Id<"companies">;
 }) {

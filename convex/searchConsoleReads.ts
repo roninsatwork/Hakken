@@ -5,7 +5,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { tenantAction, tenantQuery } from "./tenantFunctions";
 import { getActiveCompanyId } from "./authz";
-import { companyHolds, requireMySite } from "./siteAccess";
+import { companyHolds, requireMySite, type SiteReader } from "./siteAccess";
 import { isTrackedHold } from "./utils/websitePairing";
 import { websiteIconUrl } from "./websiteIcons";
 import { checkedLongest, consoleLimitsOf } from "./searchConsoleLimits";
@@ -142,30 +142,40 @@ export const searchConsolePerformance = tenantQuery({
     /** A country not kept ready: asked of Google instead. */
     live: v.boolean(),
   }),
-  handler: async (ctx, args) => {
-    checkedRange(args.from, args.to);
-    const site = await requireMySite(ctx, args.siteId);
-    checkedLongest(args.from, args.to, await consoleLimitsOf(ctx, site.hold));
-    const connection = await connectionOf(ctx, site.hold._id);
-    const scope = await countryScope(ctx, site.hold, connection, args.country);
-    if (scope.read === "LIVE") return { days: [], totals: null, previous: null, named: null, live: true };
-    const country = scope.read === "KEPT" ? scope.country : undefined;
-    const oldestDay = scope.read === "KEPT" ? scope.oldestDay : connection?.oldestDay;
-    const before = periodBefore(args.from, args.to);
-    const rows = await daysOf(ctx, site.hold._id, args.searchType, before.from, args.to, country);
-    const inRange = rows.filter((row) => row.day >= args.from);
-    // The change only when the days before are all held; otherwise it would compare with a part.
-    const previousHeld = Boolean(oldestDay && oldestDay <= before.from);
-    const namedKnown = inRange.every((row) => row.clicks === 0 || row.namedClicks !== undefined);
-    return {
-      days: inRange.map((row) => ({ day: row.day, clicks: row.clicks, impressions: row.impressions, ctr: row.ctr, position: row.position })),
-      totals: addUp(inRange),
-      previous: previousHeld ? addUp(rows.filter((row) => row.day < args.from)) : null,
-      named: inRange.length > 0 && namedKnown ? inRange.reduce((sum, row) => sum + (row.namedClicks ?? 0), 0) : null,
-      live: false,
-    };
-  },
+  handler: async (ctx, args) => await readPerformance(ctx, args),
 });
+
+/**
+ * A website's Search Console figures for some days, and the same number of
+ * days before — the one read the Performance screen and the Assistant both
+ * make (assistant-foundation-plan.md, item 7).
+ */
+export async function readPerformance(
+  ctx: SiteReader,
+  args: { siteId: Id<"companyWebsites">; searchType: SearchType; from: string; to: string; country?: string },
+) {
+  checkedRange(args.from, args.to);
+  const site = await requireMySite(ctx, args.siteId);
+  checkedLongest(args.from, args.to, await consoleLimitsOf(ctx, site.hold));
+  const connection = await connectionOf(ctx, site.hold._id);
+  const scope = await countryScope(ctx, site.hold, connection, args.country);
+  if (scope.read === "LIVE") return { days: [], totals: null, previous: null, named: null, live: true };
+  const country = scope.read === "KEPT" ? scope.country : undefined;
+  const oldestDay = scope.read === "KEPT" ? scope.oldestDay : connection?.oldestDay;
+  const before = periodBefore(args.from, args.to);
+  const rows = await daysOf(ctx, site.hold._id, args.searchType, before.from, args.to, country);
+  const inRange = rows.filter((row) => row.day >= args.from);
+  // The change only when the days before are all held; otherwise it would compare with a part.
+  const previousHeld = Boolean(oldestDay && oldestDay <= before.from);
+  const namedKnown = inRange.every((row) => row.clicks === 0 || row.namedClicks !== undefined);
+  return {
+    days: inRange.map((row) => ({ day: row.day, clicks: row.clicks, impressions: row.impressions, ctr: row.ctr, position: row.position })),
+    totals: addUp(inRange),
+    previous: previousHeld ? addUp(rows.filter((row) => row.day < args.from)) : null,
+    named: inRange.length > 0 && namedKnown ? inRange.reduce((sum, row) => sum + (row.namedClicks ?? 0), 0) : null,
+    live: false,
+  };
+}
 
 const problemValidator = v.union(v.literal("NOT_CONNECTED"), v.literal("GOOGLE_REFUSED"), v.literal("GOOGLE_BUSY"));
 

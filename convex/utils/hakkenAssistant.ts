@@ -22,6 +22,9 @@ export const HAKKEN_ASSISTANT = {
   modelUseCase: "chat",
 } as const;
 
+/** The connector holding the Assistant's company-figures tools (item 7; `toolConnectorDefinitions.ts`). */
+export const COMPANY_FIGURES_CONNECTOR_KEY = "assistant-figures";
+
 export type AgentReasoningEffortLevel = "LOW" | "MEDIUM" | "HIGH";
 
 /**

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { tenantQuery } from "./tenantFunctions";
-import { listHold, myRivals, requireMySite } from "./siteAccess";
+import type { Id } from "./_generated/dataModel";
+import { listHold, myRivals, requireMySite, type SiteReader } from "./siteAccess";
 import { holdAiSummary, holdQuestionAnswers, holdQuestions } from "./holdLists";
 import { AI_ENGINES, aiEngineValidator } from "./seoAiEngines";
 import { citedPagesOf, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
@@ -44,36 +45,42 @@ export const listMentions = tenantQuery({
       v.literal("RECOMMENDED"), v.literal("NAMED"), v.literal("WARNED_AGAINST"), v.literal("NOT_NAMED"), v.null(),
     ),
   })),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const websiteId = site.website._id;
-    const holdId = listHold(site);
-    const [questions, answered] = await Promise.all([
-      holdQuestions(ctx, holdId, MAX_LIST),
-      holdQuestionAnswers(ctx, holdId, site.place, MAX_LIST),
-    ]);
-    const byPrompt = new Map(answered.map((row) => [row.prompt, row]));
-
-    const rows = questions.flatMap((question) => question.engines.map((engine) => {
-      // Nothing yet for an engine that has not answered; "not named" once it
-      // has, and its newest answer left the site out.
-      const entry = byPrompt.get(question.prompt)?.engines.find((held) => held.engine === engine);
-      const mine = entry?.sites.find((held) => held.websiteId === websiteId);
-      return {
-        prompt: question.prompt,
-        engine,
-        asked: entry?.asked ?? 0,
-        named: mine?.named ?? 0,
-        recommended: mine?.recommended ?? 0,
-        warnedAgainst: mine?.warnedAgainst ?? 0,
-        lastAskedDay: entry?.lastDay ?? null,
-        lastStance: entry ? mine?.newest ?? ("NOT_NAMED" as const) : null,
-      };
-    }));
-    return rows.sort((left, right) =>
-      left.prompt.localeCompare(right.prompt) || AI_ENGINES.indexOf(left.engine) - AI_ENGINES.indexOf(right.engine));
-  },
+  handler: async (ctx, args) => await readMentions(ctx, args.siteId),
 });
+
+/**
+ * How each engine treats a site on each question — the one read the Mentions
+ * screen and the Assistant both make (assistant-foundation-plan.md, item 7).
+ */
+export async function readMentions(ctx: SiteReader, siteId: Id<"companyWebsites">) {
+  const site = await requireMySite(ctx, siteId);
+  const websiteId = site.website._id;
+  const holdId = listHold(site);
+  const [questions, answered] = await Promise.all([
+    holdQuestions(ctx, holdId, MAX_LIST),
+    holdQuestionAnswers(ctx, holdId, site.place, MAX_LIST),
+  ]);
+  const byPrompt = new Map(answered.map((row) => [row.prompt, row]));
+
+  const rows = questions.flatMap((question) => question.engines.map((engine) => {
+    // Nothing yet for an engine that has not answered; "not named" once it
+    // has, and its newest answer left the site out.
+    const entry = byPrompt.get(question.prompt)?.engines.find((held) => held.engine === engine);
+    const mine = entry?.sites.find((held) => held.websiteId === websiteId);
+    return {
+      prompt: question.prompt,
+      engine,
+      asked: entry?.asked ?? 0,
+      named: mine?.named ?? 0,
+      recommended: mine?.recommended ?? 0,
+      warnedAgainst: mine?.warnedAgainst ?? 0,
+      lastAskedDay: entry?.lastDay ?? null,
+      lastStance: entry ? mine?.newest ?? ("NOT_NAMED" as const) : null,
+    };
+  }));
+  return rows.sort((left, right) =>
+    left.prompt.localeCompare(right.prompt) || AI_ENGINES.indexOf(left.engine) - AI_ENGINES.indexOf(right.engine));
+}
 
 /**
  * How often the engines name this site against its tracked rivals, per engine.
