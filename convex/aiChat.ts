@@ -37,6 +37,7 @@ import {
 } from "./modelTurnService";
 import { buildCompanyMemoryEvidence, buildCompanyRuntimeEvidence } from "./utils/messageEvidence";
 import { companyAnswersFromWiki } from "./wikiRewriteService";
+import { LIBRARY_CONTEXT_MAX_CHARS } from "./utils/libraryPage";
 
 const CHAT_CONTENT_MAX_LENGTH = 10000;
 type RuntimeCompanyMemory = {
@@ -427,6 +428,30 @@ export const generateHakkenResponse = internalAction({
             }
         }
 
+        // The Library (docs/plans/active/content-library-plan.md, L11–L13):
+        // other websites' articles the platform keeps for Ask Hakken, searched
+        // by the question's words and wrapped as reference material — a
+        // scraped page is someone else's text. Never read to a widget
+        // visitor: those are the public, and the words are other publishers'.
+        // Fail-open — the Library must never cost a reply.
+        let libraryContext = "";
+        if (!thread?.widgetId) {
+            try {
+                const sections = await ctx.runQuery(internal.libraryArticles.searchLibraryInternal, {
+                    question: args.content.slice(0, 500),
+                });
+                if (sections.length > 0) {
+                    libraryContext = buildUntrustedKnowledgeContext({
+                        sourceLabel: "the Library — articles from other websites, each headed with its title, publication and original address; when you use one, name it and give its address",
+                        chunks: sections,
+                        maxChars: LIBRARY_CONTEXT_MAX_CHARS,
+                    });
+                }
+            } catch (e) {
+                console.error("Library search failed; replying without it", e);
+            }
+        }
+
         // A widget visitor who gave their email at the gateway is a known
         // customer like any other (wiki plan, phase 2): their page is read
         // whole. Fail-open — a page lookup must never cost a reply.
@@ -455,6 +480,10 @@ User Prompt: ${args.content}`;
 
         if (companyFallbackContext) {
             combinedPrompt += companyFallbackContext;
+        }
+
+        if (libraryContext) {
+            combinedPrompt += libraryContext;
         }
 
         // --- Ad-hoc File Parsing for Chat Uploads ---

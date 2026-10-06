@@ -13,12 +13,15 @@ export function useContentDelete<Row, Args>({
   remove,
   argsFor,
   deleteFailed,
+  onDeleted,
 }: {
   scope: string;
   /** The delete mutation itself; it is only ever called inside the runner below. */
   remove: (args: Args) => Promise<unknown>;
   argsFor: (row: Row) => Args;
   deleteFailed: string;
+  /** After a delete lands — a record's own page leaving for its list (the Library's article page). */
+  onDeleted?: () => void;
 }) {
   const action = useAdminAction({ scope });
   const [deleting, setDeleting] = useState<Row | null>(null);
@@ -27,7 +30,10 @@ export function useContentDelete<Row, Args>({
   const confirmDelete = async () => {
     if (!deleting) return;
     const outcome = await action.run(() => remove(argsFor(deleting)), { suppressErrorToast: true, fallbackMessage: deleteFailed });
-    if (outcome.ok) setDeleting(null);
+    if (outcome.ok) {
+      setDeleting(null);
+      onDeleted?.();
+    }
     else if (outcome.message) setError(outcome.message);
   };
 

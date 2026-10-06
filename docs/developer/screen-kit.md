@@ -436,6 +436,9 @@ does.
 - **Covered on 2026-10-04:** Search Console's 24 boards, Content gap and the
   News front page. A screen approved from now on gets its look test when it is
   built.
+- **Added 2026-10-06:** Admin → Content → Library's three screens — the list,
+  Add an article once its page is read, and an article
+  (`admin/content/library/libraryLook.test.tsx`).
 
 ## What The Build Enforces
 ## What The Build Enforces

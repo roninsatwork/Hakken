@@ -2,6 +2,7 @@ import { knowledgeArticleTables } from "./knowledgeArticlesSchema";
 import { newsTables } from "./newsSchema";
 import { contentTranslationTables } from "./contentTranslationSchema";
 import { outboxTables } from "./outboxSchema";
+import { libraryArticleTables } from "./libraryArticlesSchema";
 
 /**
  * The tables behind Admin → Content (docs/plans/active/
@@ -15,4 +16,6 @@ export const contentTables = {
   ...newsTables,
   ...contentTranslationTables,
   ...outboxTables,
+  // The Library (docs/plans/active/content-library-plan.md).
+  ...libraryArticleTables,
 };

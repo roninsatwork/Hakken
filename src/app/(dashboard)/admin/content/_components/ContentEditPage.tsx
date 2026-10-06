@@ -21,9 +21,12 @@ export function ContentEditPage({
   icon,
   title,
   description,
+  pills,
+  headerAction,
   error,
   isSaving,
   saveLabel,
+  saveDisabled = false,
   onSubmit,
   children,
 }: {
@@ -32,9 +35,20 @@ export function ContentEditPage({
   icon: ReactNode;
   title: string;
   description: string;
+  /**
+   * A saved record's status labels under its description, and its own
+   * controls on the header's right — the Library's article page
+   * (content-library-plan.md): who reads it, Read again, Open the original,
+   * Delete. `DetailHeader` already draws both; an editor without them is
+   * unchanged.
+   */
+  pills?: ReactNode;
+  headerAction?: ReactNode;
   error: string;
   isSaving: boolean;
   saveLabel: string;
+  /** Nothing to save yet: the Library's Add page before its page is read. */
+  saveDisabled?: boolean;
   onSubmit: (event: FormEvent) => void | Promise<void>;
   children: ReactNode;
 }) {
@@ -45,7 +59,14 @@ export function ContentEditPage({
 
   return (
     <div className="flex w-full flex-col gap-5 pb-8">
-      <DetailHeader back={back} icon={icon} title={state === "missing" ? t("missingTitle") : title} description={state === "missing" ? undefined : description} />
+      <DetailHeader
+        back={back}
+        icon={icon}
+        title={state === "missing" ? t("missingTitle") : title}
+        description={state === "missing" ? undefined : description}
+        pills={state === "missing" ? undefined : pills}
+        action={state === "missing" ? undefined : headerAction}
+      />
       {state === "missing" ? (
         <HakkenEmptyState icon={FileQuestion} title={t("missingTitle")} description={t("missingDescription")} />
       ) : (
@@ -56,7 +77,7 @@ export function ContentEditPage({
             <Link href={back.href} className="rounded-[10px] px-4 py-2.5 text-sm text-secondary transition-colors hover:bg-foreground/5 hover:text-foreground">
               {tCommon("cancel")}
             </Link>
-            <SaveAction type="submit" isSaving={isSaving} label={saveLabel} savingLabel={tCommon("saving")} />
+            <SaveAction type="submit" isSaving={isSaving} disabled={saveDisabled} label={saveLabel} savingLabel={tCommon("saving")} />
           </div>
         </form>
       )}

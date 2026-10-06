@@ -90,6 +90,8 @@ Quality flags include:
 
 Production retrieval is centralized in `convex/knowledgeRetrieval.ts`. It embeds the query, runs vector and scoped text search in parallel for each explicit company, agent, thread, or global scope, and fuses the rankings with reciprocal rank fusion from `convex/knowledgeRetrievalService.ts`. Keyword failure is best-effort: vector results can still proceed. When `retrievalPriors` is enabled, recent positive and negative message evidence adds a decaying, bounded per-chunk prior that may move a result a few places but cannot replace relevance or remove the only matching source. The closed scope union deliberately makes an unscoped cross-tenant search impossible to express.
 
+**The Library** (Admin → Content → Library, `docs/plans/active/content-library-plan.md`) is a shelf apart from both the wiki and these documents: other websites' articles, read through Firecrawl (`libraryArticleActions.readPage`, sharing `webScrapeActions.fetchPage`) and kept whole (`libraryArticles`, `libraryArticleTexts`). An article in Ask Hakken's knowledge is cut at its headings into `libraryArticleSections`, with a full-text index; `aiChat.generateHakkenResponse` searches them by the question's distinctive words (`libraryArticles.searchLibraryInternal`: at most three sections sharing two of its words) and adds them inside `buildUntrustedKnowledgeContext`, never for a widget thread. Nothing is embedded and nothing reaches the wiki or the Distiller.
+
 `testRetrieval` remains an admin inspection helper rather than a full simulation of every runtime prompt path. Keep its user-facing explanation honest when production ranking changes.
 
 ## Repair And Cleanup

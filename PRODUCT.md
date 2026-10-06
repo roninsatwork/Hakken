@@ -731,6 +731,7 @@ row that says so must not be described as though it exists.
 | Alerts with the four-part contract | Not built. Platform alerts exist for system health; there is no KPI band model and no "what changed, why, what to do, what to expect" alert contract. |
 | Weekly note and monthly report | Not built. The email system and layout service exist; the content does not. |
 | Knowledge | Built on dev 2026-10-01 (phase 1 of docs/plans/active/knowledge-news-and-digest-plan.md): in Learn on the main menu (one item since the same day's second revision, R4), listing plain-English articles every signed-in user can read, each on its own screen in the reader's language, and each on a topic — Traffic, Rankings, AI answers or Backlinks — that Learn's side menu lists it under (R9); Admin → Content → Knowledge writes them in English on their own pages, as drafts or published (`knowledgeArticles`), and the Translator agent writes every other language. The first, how traffic is worked out, ships through a migration. Every company's Ask Hakken reads the published articles (phase 2): each is a global page on the shared brain that the wiki staff never rewrite, tidy or relink. Never shown inside Sites. |
+| Library | Built on dev 2026-10-06 (docs/plans/active/content-library-plan.md): Admin → Content → Library keeps articles from other websites whole, with their details — title, publication, author, published and last updated, description, topic, language, words. The super admin pastes an article's address and presses Read the page: Firecrawl reads it there and then, the form fills, a detail the page does not give is marked, and a page Firecrawl cannot read (a sign-in wall) says so and takes the words pasted by hand. One article per address. Ask Hakken reads an article while it is "in knowledge": cut at its headings, searched by each question's words, wrapped as someone else's reference text, headed with its title, publication and address — for signed-in users only, never a website widget's visitor. Readers never see the copy. |
 | News | Page and admin built on dev 2026-10-01 (phase 3 of the same plan), redrawn the same day as a front page (R5–R10): in Learn on the main menu, a dateline, one lead story — pinned in Admin, else a Google update while it matters with its rollout line, else the newest — beside the last three Google updates, three more stories in columns, then the rest one to a line; each story on its own page with what it means for the reader, the original, and Ask Hakken about it; "Who to follow" on its own page; Admin → Content manages News, its sources, Google updates (entered by hand, in News at once) and the recommendations, all written in English and translated. Google updates are marked on every dated Sites chart (phase 10, built on dev 2026-10-01): a dashed line on the day each started, the Google "G" on the x-axis line, and its title, dates and description on hover. The News Collector agent reads websites, YouTube channels, watched X accounts and Anthony's X bookmarks (phases 5 and 6, built on dev 2026-10-01). |
 | Weekly News Digest and the outbox | Not built; planned 2026-09-30 (same plan). A Weekly Digest agent queues one "Weekly News Digest" email per subscribed user into an outbox; an Email Sender agent, with no AI, sends it through Resend. Every user is subscribed and can unsubscribe on their profile. No outbox, sent-email log, unsubscribe, email preference or bounce handling exists today. |
 | Agency role and cross-workspace view | Not built. Tenancy has three roles (§21); the agency manager role, client invitation, agency-wide view and white-label report surfaces are phase-one scope. |
@@ -799,6 +800,15 @@ running against the Sonae deployment.
 ---
 
 ## Change Log
+
+* **2026-10-06 (Library)** — **Built: the Library.** §31's new Library
+  row (docs/plans/active/content-library-plan.md): Admin → Content →
+  Library, drawn and approved the same morning — other websites' articles
+  read through Firecrawl on a press, kept whole with their details, and
+  edited or deleted on their own pages. Ask Hakken reads them from a shelf
+  of their own (not the wiki, whose 4,000-character pages and global index
+  they would crowd), as untrusted reference text, never for a widget
+  visitor.
 
 * **2026-10-01 (Learn)** — **Built: Learn and the News front page.**
   §31's Knowledge and News rows: one Learn item on the main menu replaces

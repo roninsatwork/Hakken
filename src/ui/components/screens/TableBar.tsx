@@ -20,7 +20,9 @@ export type TableNoun =
   // A website's own classifications of its pages: admin › Page classification's Classifications view (page-groups-plan.md).
   | "classifications"
   // Keyword research (keyword-research-plan.md): research lists (board 1), keyword ideas (board 5), and the AI assistants asked (board 4).
-  | "lists" | "ideas" | "assistants";
+  | "lists" | "ideas" | "assistants"
+  // Admin → Content → Library's articles (content-library-plan.md).
+  | "articles";
 
 /**
  * The bar across the top of every Sites table, inside its card (`DataTable`'s

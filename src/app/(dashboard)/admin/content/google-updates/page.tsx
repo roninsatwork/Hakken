@@ -7,21 +7,18 @@ import type { FunctionReturnType } from "convex/server";
 import { Edit2, ExternalLink, Plus, Sparkles, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
-import { formatDate } from "@/src/lib/dates";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader, PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { matchesSearchTerm, paginateItems } from "@/src/ui/components/screens/pagination";
 import { ContentDeleteDialog } from "../_components/ContentDialogs";
+import { formatContentDay as formatDay } from "../_components/contentDays";
 import { TranslationStatus } from "../_components/ContentEditPage";
 import { useContentDelete } from "../_components/useContentDelete";
 
 type GoogleUpdate = FunctionReturnType<typeof api.googleUpdates.listGoogleUpdates>[number];
 
 const BASE = "/admin/content/google-updates";
-
-/** A calendar day as the dashboard writes dates, without moving it across a timezone. */
-const formatDay = (day: string) => formatDate(`${day}T12:00:00Z`);
 
 /**
  * Admin → Content → Google updates (docs/plans/active/knowledge-news-and-
