@@ -480,6 +480,7 @@ import type * as utils_governanceShapes from "../utils/governanceShapes.js";
 import type * as utils_healthShapes from "../utils/healthShapes.js";
 import type * as utils_holdPagesJoin from "../utils/holdPagesJoin.js";
 import type * as utils_inventoryRollupService from "../utils/inventoryRollupService.js";
+import type * as utils_keywordCopyLayout from "../utils/keywordCopyLayout.js";
 import type * as utils_knowledgeActionsService from "../utils/knowledgeActionsService.js";
 import type * as utils_knowledgePageGuard from "../utils/knowledgePageGuard.js";
 import type * as utils_knowledgeShapes from "../utils/knowledgeShapes.js";
@@ -1088,6 +1089,7 @@ declare const fullApi: ApiFromModules<{
   "utils/healthShapes": typeof utils_healthShapes;
   "utils/holdPagesJoin": typeof utils_holdPagesJoin;
   "utils/inventoryRollupService": typeof utils_inventoryRollupService;
+  "utils/keywordCopyLayout": typeof utils_keywordCopyLayout;
   "utils/knowledgeActionsService": typeof utils_knowledgeActionsService;
   "utils/knowledgePageGuard": typeof utils_knowledgePageGuard;
   "utils/knowledgeShapes": typeof utils_knowledgeShapes;
