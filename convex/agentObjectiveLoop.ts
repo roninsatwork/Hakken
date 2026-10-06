@@ -21,6 +21,7 @@ import {
   type ModelTurnStream,
 } from "./modelTurnService";
 import { type MessageEvidence } from "./utils/messageEvidence";
+import type { AnswerTiming } from "./utils/answerTiming";
 import {
   EXPLICIT_CACHE_TTL_SECONDS,
   getPromptCacheStyle,
@@ -136,6 +137,8 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
      * has one.
      */
     learning?: Omit<Parameters<typeof learnFromAnswer>[1], "answer" | "messageId">;
+    /** Where the answer's time goes, for the server log (`utils/answerTiming.ts`); a resumed segment has none. */
+    timing?: AnswerTiming;
     state: ObjectiveLoopState;
     runStartedAt: number;
 }) {
@@ -384,11 +387,16 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
             // partial reply is written to the thread at a bounded rate. The
             // adapter call — with its cache-rejection retry — is this
             // runtime's own strategy, handed in whole.
+            params.timing?.mark("modelStarted");
             const response = await runModelTurn(ctx, {
                 threadId,
                 stream,
                 model: modelConfig,
-                callModel: async ({ onText }) => {
+                callModel: async ({ onText: streamText }) => {
+                    const onText = (fragment: string) => {
+                        params.timing?.mark("firstWords");
+                        return streamText(fragment);
+                    };
                     try {
                         return await provider.streamTurn(turnRequest, {
                             operation: toolCallCount === 0 ? "agentGeneratePassOne" : "agentGenerateToolSynthesis",
@@ -958,6 +966,7 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
             photoTurn: params.photoTurn,
             lookedUp,
         });
+        params.timing?.mark("done");
         if (params.learning && finalStepStatus === "SUCCESS") {
             await learnFromAnswer(ctx, {
                 ...params.learning,

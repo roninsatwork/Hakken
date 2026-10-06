@@ -827,7 +827,8 @@ running against the Sonae deployment.
   competitors', any member for their own company, with a "Looked up" line; a
   super admin picks the client. The Swarm and Ask Hakken's single-call path
   are gone. The wider assistant — jobs it takes on, Telegram — is planned
-  after it; speed is proposed, not approved.
+  after it. Speed is measured — each answer logs where its time went
+  (S1) — and the fixes it points to are proposed, not approved.
 * **2026-10-06 (Insights)** — **Built: Helpful content for readers, and
   Insights.** docs/plans/active/insights-helpful-content-plan.md: Learn is
   renamed Insights and the Library Helpful content (§31's rows renamed).

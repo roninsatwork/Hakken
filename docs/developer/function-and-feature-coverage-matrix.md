@@ -288,7 +288,7 @@ every private TypeScript helper one-by-one.
 | `agentRunCheckpoints.ts` | `getCheckpointInternal`, `saveCheckpointInternal`, `clearCheckpointInternal`, `reactivateCheckpointInternal`, `recoverStalledRuns` |
 | `agentObjectiveService.ts` | manual, scheduled, and triggered agent run objective fallback resolution |
 | `agentRuns.ts`, `agentRunApprovals.ts` | run status/detail context, pending approvals/count, approval decision and expiry, run creation/status/usage/steps/tool calls, approval resume settlement, and public run status |
-| `agentRuntime.ts`, `modelTurnService.ts` | `runAgentObjective`, `continueAgentObjective`, `generateAgentResponse`, `runTriggeredAgentObjective`, `resumeApprovedToolCall`, `resumeAfterRefusedToolCall`, `executeAgentNode`, shared model-turn safety/streaming/finish helpers |
+| `agentRuntime.ts`, `modelTurnService.ts` | `runAgentObjective`, `continueAgentObjective`, `runTriggeredAgentObjective`, `resumeApprovedToolCall`, `resumeAfterRefusedToolCall`, `executeAgentNode`, shared model-turn safety/streaming/finish helpers |
 | `agentSkills.ts` | skill import/preview, catalog, analytics, CRUD, archive/delete, binding, upgrade, runtime skill queries |
 | `agentTransactions.ts` | `seedForAgent`, `insertTransactionInternal` |
 | `agents.ts` | agent list/get/create/update/delete, templates, inherited model lookup, internal agent/tool lookup, inline agent creation, promotion |

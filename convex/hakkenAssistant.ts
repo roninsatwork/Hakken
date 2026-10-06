@@ -4,6 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { findConnectorInstall, installBuiltInConnector } from "./aiTools";
 import { GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
+import { answerTiming } from "./utils/answerTiming";
 import { appError } from "./utils/appError";
 import { COMPANY_FIGURES_CONNECTOR_KEY, HAKKEN_ASSISTANT } from "./utils/hakkenAssistant";
 
@@ -116,11 +117,15 @@ export const answerInternal = internalAction({
     modelId: v.optional(v.string()),
     thinkingLevel: v.optional(v.string()),
     fileIds: v.optional(v.array(v.id("_storage"))),
+    /** When the message was saved, so the server log can say where an answer's time went (`utils/answerTiming.ts`). */
+    receivedAt: v.optional(v.number()),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     // Denial of wallet: refused before anything is read or asked, as typed
     // Ask Hakken always did (about 2,500 tokens).
+    const timing = answerTiming({ receivedAt: args.receivedAt ?? Date.now() });
+    timing.mark("firstWorker");
     if (args.content.length > MAX_QUESTION_LENGTH) {
       throw appError("INVALID_INPUT", "Payload Too Large: Input exceeds maximum system context window.");
     }
@@ -188,10 +193,12 @@ export const answerInternal = internalAction({
       }
     }
 
+    timing.mark("handedOn");
     await ctx.runAction(internal.agentRuntime.runAgentObjective, {
       threadId: args.threadId,
       agentId,
       content: args.content,
+      timing: timing.carry(),
       ...(args.modelId && !visionModel ? { modelId: args.modelId } : {}),
       ...(visionModel ? { visionModel: true } : {}),
       ...(args.thinkingLevel ? { thinkingLevel: args.thinkingLevel } : {}),

@@ -19,7 +19,7 @@ super-admin, and internal surfaces separate.
 | Module or family | Main exported functions | Product ownership |
 | --- | --- | --- |
 | `agents.ts`, `agentObjectiveService.ts` | agent list/get/create/update/delete, templates, standing objective and behavior prompt updates, manual/scheduled run objective resolution, inherited model lookup, internal agent/tool lookup, inline agent creation, promotion | [Agents Developer Guide](./agents.md), [Agent Configuration And Catalogs](./agent-configuration-and-catalogs.md) |
-| `agentRuntime.ts` | `runAgentObjective`, `continueAgentObjective`, `generateAgentResponse`, `runTriggeredAgentObjective`, approval resume/refusal, workflow agent node execution | [Agent Runtime Operations](./agent-runtime-operations.md) |
+| `agentRuntime.ts` | `runAgentObjective`, `continueAgentObjective`, `runTriggeredAgentObjective`, approval resume/refusal, workflow agent node execution | [Agent Runtime Operations](./agent-runtime-operations.md) |
 | `agentRuns.ts`, `agentRunApprovals.ts` | run status/detail context, run creation/status/usage/steps/tool calls, pending approval queue/count, approval decisions, approval expiry, and resume settlement | [Agent Runtime Operations](./agent-runtime-operations.md), [Run Observatory](./run-observatory.md) |
 | `agentRunCheckpoints.ts` | checkpoint read/save/clear/reactivate and stalled run recovery | [Agent Runtime Operations](./agent-runtime-operations.md) |
 | `agentLogs.ts`, `agentTransactions.ts` | seed and insert log/transaction records | [Agent Configuration And Catalogs](./agent-configuration-and-catalogs.md), [Agent Runtime Operations](./agent-runtime-operations.md) |

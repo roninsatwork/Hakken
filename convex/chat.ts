@@ -495,6 +495,7 @@ export const sendMessage = publicMutation({
        await ctx.scheduler.runAfter(0, internal.hakkenAssistant.answerInternal, {
          threadId: args.threadId,
          content: safeContent,
+         receivedAt: now,
          ...(args.modelId ? { modelId: args.modelId } : {}),
          ...(args.thinkingLevel ? { thinkingLevel: args.thinkingLevel } : {}),
          ...(args.fileIds ? { fileIds: args.fileIds } : {}),

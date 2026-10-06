@@ -35,6 +35,7 @@ import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval"
 import { knowledgeCutOff, readChunk } from "./knowledgeReading";
 import { searchHelpfulContent } from "./libraryArticleSearch";
 import { resolvePlatformName } from "./settingsService";
+import type { AnswerStep } from "./utils/answerTiming";
 import { LIBRARY_CONTEXT_MAX_CHARS } from "./utils/libraryPage";
 import { companyAnswersFromWiki } from "./wikiRewriteService";
 
@@ -265,6 +266,8 @@ export async function gatherReading(
     forceKnowledgeMode?: "chunks" | "wiki";
     /** Told just before the search starts, so a door can say it is searching. */
     onSearching?: () => Promise<unknown>;
+    /** Told as each lookup ends, for the server log of where an answer's time went (`utils/answerTiming.ts`). */
+    onStep?: (step: AnswerStep) => void;
   },
 ): Promise<AssistantReading> {
   const allowance = READING_ALLOWANCES[args.allowance];
@@ -312,6 +315,7 @@ export async function gatherReading(
   try {
     await args.onSearching?.();
     embedded = await embedRetrievalQuery(ctx, { query: args.question, companyId, operation: args.operation });
+    args.onStep?.("searchKey");
 
     if (embedded) {
       const queryVector = embedded.vector;
@@ -375,6 +379,7 @@ export async function gatherReading(
   } catch (error) {
     console.error("Knowledge search failed; answering without it", error);
   }
+  args.onStep?.("documents");
 
   // The wiki answers company questions where it is the answering brain:
   // index scanned, best pages opened whole, one hop along links.
@@ -449,6 +454,7 @@ export async function gatherReading(
       console.error("Company document fallback failed; answering without it", error);
     }
   }
+  if (wikiAnswers) args.onStep?.("wiki");
 
   // Helpful content (content-library-plan.md, L11–L13; insights-helpful-
   // content-plan.md, IH9): other websites' articles, searched by the
@@ -470,6 +476,7 @@ export async function gatherReading(
     } catch (error) {
       console.error("Helpful content search failed; answering without it", error);
     }
+    args.onStep?.("helpful");
   }
 
   // A website visitor who gave their email at the gateway is a known
@@ -499,6 +506,7 @@ export async function gatherReading(
 
   const leading = [renderCompanyMemories(relevantMemories), visitorPage, wiki].filter(Boolean);
   const trailing = [documents, companyFallback, helpful, agentMemory].filter(Boolean);
+  args.onStep?.("reading");
 
   return {
     leading,

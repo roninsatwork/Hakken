@@ -467,6 +467,7 @@ import type * as utils_agentSkillRollupService from "../utils/agentSkillRollupSe
 import type * as utils_aiModelShapes from "../utils/aiModelShapes.js";
 import type * as utils_analyticsAccess from "../utils/analyticsAccess.js";
 import type * as utils_analyticsShapes from "../utils/analyticsShapes.js";
+import type * as utils_answerTiming from "../utils/answerTiming.js";
 import type * as utils_appError from "../utils/appError.js";
 import type * as utils_assistantLookups from "../utils/assistantLookups.js";
 import type * as utils_authEventTypes from "../utils/authEventTypes.js";
@@ -1094,6 +1095,7 @@ declare const fullApi: ApiFromModules<{
   "utils/aiModelShapes": typeof utils_aiModelShapes;
   "utils/analyticsAccess": typeof utils_analyticsAccess;
   "utils/analyticsShapes": typeof utils_analyticsShapes;
+  "utils/answerTiming": typeof utils_answerTiming;
   "utils/appError": typeof utils_appError;
   "utils/assistantLookups": typeof utils_assistantLookups;
   "utils/authEventTypes": typeof utils_authEventTypes;

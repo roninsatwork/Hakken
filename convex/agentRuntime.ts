@@ -40,6 +40,7 @@ import {
   DEFAULT_AGENT_OBJECTIVE_LIMITS,
 } from "./agentRuntimeService";
 import { getErrorMessage } from "./utils/lang";
+import { answerTiming, carriedTimingValidator } from "./utils/answerTiming";
 import { appError } from "./utils/appError";
 import {
   buildHistoricalReplaySystemPrompt,
@@ -78,8 +79,12 @@ export const runAgentObjective = internalAction({
     replyNotice: v.optional(v.string()),
     /** Answer on the vision job's model: a photo the chosen model cannot see. */
     visionModel: v.optional(v.boolean()),
+    /** When the question was saved and the steps before this worker (`utils/answerTiming.ts`). */
+    timing: v.optional(carriedTimingValidator),
   },
   handler: async (ctx, args) => {
+    const timing = answerTiming(args.timing ?? { receivedAt: Date.now() });
+    timing.mark("run");
     let agentRunId: Id<"agentRuns"> | undefined;
     let companyId: Id<"companies"> | undefined;
     const stream = createModelTurnStream();
@@ -107,8 +112,10 @@ export const runAgentObjective = internalAction({
     });
     if (!safetyDecision.allowed) {
         await setStage(undefined);
+        timing.log(args.threadId);
         return;
     }
+    timing.mark("safety");
 
     try {
         execution = await buildLoopExecutionContext(ctx, {
@@ -120,6 +127,7 @@ export const runAgentObjective = internalAction({
         });
         const { owner, runtimeSkills, modelConfig } = execution;
         companyId = owner.companyId;
+        timing.mark("instructions");
 
         agentRunId = await ctx.runMutation(internal.agentRuns.createRunInternal, {
             agentId: args.agentId,
@@ -242,6 +250,7 @@ export const runAgentObjective = internalAction({
             operation: "agentRagEmbedding",
             agent: { agentId: args.agentId, agentRunId: runId },
             onSearching: () => setStage("SEARCHING_KNOWLEDGE"),
+            onStep: timing.mark,
         });
 
         const memoryMatches = reading.agentMemories;
@@ -308,6 +317,7 @@ export const runAgentObjective = internalAction({
             // both read it off the message.
             replyNotice: `${imageNotice}${args.replyNotice ?? ""}` || undefined,
             photoTurn: imageParts.length > 0 || undefined,
+            timing,
             messageEvidence: {
                 companyMemoryEvidenceJson: buildCompanyMemoryEvidence(ratedCompanyMemories),
                 companyRuntimeEvidenceJson: buildCompanyRuntimeEvidence({
@@ -360,6 +370,7 @@ export const runAgentObjective = internalAction({
         } catch {
             // Clearing the stage must never mask what happened.
         }
+        timing.log(args.threadId);
     }
   },
 });
@@ -473,18 +484,6 @@ export const continueAgentObjective = internalAction({
   },
 });
 
-
-export const generateAgentResponse = internalAction({
-  args: {
-    threadId: v.id("threads"),
-    agentId: v.id("agents"),
-    content: v.string(),
-    fileIds: v.optional(v.array(v.id("_storage"))),
-  },
-  handler: async (ctx, args) => {
-    await ctx.runAction(internal.agentRuntime.runAgentObjective, args);
-  },
-});
 
 const triggeredAgentRunTriggerValidator = v.union(
   v.literal("MANUAL"),
