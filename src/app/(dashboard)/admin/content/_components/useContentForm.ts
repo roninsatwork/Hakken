@@ -36,7 +36,10 @@ export function useContentForm<Row, Form>({
   const [error, setError] = useState("");
   const form = draft ?? (row ? toForm(row) : empty);
 
-  const update = (patch: Partial<Form>) => setDraft({ ...form, ...patch });
+  // Each change lands on the form as it stands then, not as it was when the
+  // handler began: a change that arrives after a wait — Helpful content's
+  // summary, written once its page is read — must not undo the ones before it.
+  const update = (patch: Partial<Form>) => setDraft((current) => ({ ...(current ?? (row ? toForm(row) : empty)), ...patch }));
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();

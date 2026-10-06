@@ -1,8 +1,8 @@
-# Admin → Content → Library → an article — the approved look (board "Article" of docs/plans/assets/content-library/).
+# Admin → Content → Helpful content → an article — the approved look (board "Article" of docs/plans/assets/content-library/).
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 detail-header
-  back: Library
+  back: Helpful content
   page-header: ‹the record's name›
 select: Who reads it
 select: Topic
@@ -13,5 +13,8 @@ field: Author
 field: Published
 field: Last updated
 field: Description
+readers-see
+  field: Summary
+  field: What it means for you
 field: The article
 save

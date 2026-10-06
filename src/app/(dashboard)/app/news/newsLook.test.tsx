@@ -48,7 +48,7 @@ const FEED = [
   story("item_4", "A complete Business Profile", "2026-09-27", "YOUTUBE"),
   story("item_5", "What makes a page worth citing", "2026-09-27", "WEBSITE"),
 ];
-const ARTICLE = { _id: "article_1", title: "How is traffic worked out?", excerpt: "Traffic is an estimate.", topic: "TRAFFIC", publishedAt: at("2026-09-30"), updatedAt: at("2026-09-30") };
+const ARTICLE = { _id: "article_1", title: "How is traffic worked out?", excerpt: "Traffic is an estimate.", words: 400, topic: "TRAFFIC", publishedAt: at("2026-09-30"), updatedAt: at("2026-09-30") };
 const UPDATES = [
   { _id: "update_1", title: "September 2026 spam update", itemId: "item_update", startedOn: "2026-09-24", finishedOn: null, expectedDays: 14 },
   { _id: "update_2", title: "August 2026 core update", itemId: null, startedOn: "2026-08-19", finishedOn: "2026-09-04", expectedDays: 14 },
@@ -57,16 +57,17 @@ const UPDATES = [
 const COUNTS = {
   news: { all: 24, GOOGLE_UPDATE: 3, WEBSITE: 5, YOUTUBE: 9, X: 7 },
   follows: 6,
-  articles: { all: 11, TRAFFIC: 3, RANKINGS: 4, AI_ANSWERS: 2, BACKLINKS: 2 },
+  topics: [{ key: "TRAFFIC", name: "Traffic" }, { key: "RANKINGS", name: "Rankings" }, { key: "AI_ANSWERS", name: "AI answers" }, { key: "BACKLINKS", name: "Backlinks" }], articles: { all: 11, byTopic: { TRAFFIC: 3, RANKINGS: 4, AI_ANSWERS: 2, BACKLINKS: 2 } }, helpful: { all: 0, byTopic: {} },
 };
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-10-01T09:00:00"));
   vi.mocked(useQuery).mockReset().mockImplementation(answerQueries({
-    "news:getFrontPage": { lead: LEAD, weekCount: 24 },
+    "news:getFrontPage": { lead: { source: "NEWS", item: LEAD }, weekCount: 24 },
     "googleUpdates:listLatestGoogleUpdates": UPDATES,
-    "knowledgeArticles:listPublishedArticles": [ARTICLE],
+    "knowledgeArticles:listPublishedSince": [ARTICLE],
+    "libraryArticles:listForReadersSince": [],
     "learnMenu:getLearnMenuCounts": COUNTS,
   }));
   // More stories than one read, so "Show more" is on the page.

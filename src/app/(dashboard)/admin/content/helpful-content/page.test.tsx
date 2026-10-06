@@ -1,17 +1,18 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, usePaginatedQuery, useQuery } from "convex/react";
 
 import { renderWithProviders } from "@/src/test/renderWithProviders";
 import { answerQueries, convexPath } from "@/src/test/siteViewFixtures";
 import LibraryAdminPage from "./page";
 import { LibraryArticleEditor } from "./LibraryArticleEditor";
 
-const { create, update, remove, readPage, push } = vi.hoisted(() => ({
+const { create, update, remove, readPage, write, push } = vi.hoisted(() => ({
   create: vi.fn(),
   update: vi.fn(),
   remove: vi.fn(),
   readPage: vi.fn(),
+  write: vi.fn(),
   push: vi.fn(),
 }));
 
@@ -38,6 +39,8 @@ const ROW = {
   language: "en",
   words: 2140,
   readAt: Date.UTC(2026, 9, 6, 9, 14),
+  summaryEn: "Most clicks go to the first organic result.",
+  meaningEn: null,
   createdAt: 2,
   updatedAt: 2,
 };
@@ -57,26 +60,36 @@ const READ = {
 };
 
 /**
- * Admin → Content → Library (docs/plans/active/content-library-plan.md): the
- * list with its filters, adding an article by reading its page, and one
- * article's page — read again and deleted only after a yes.
+ * Admin → Content → Helpful content (docs/plans/active/content-library-plan.md,
+ * renamed by insights-helpful-content-plan.md, IH18): the list with its
+ * filters, paged on the server (IH21), adding an article by reading its page,
+ * and one article's page — read again and deleted only after a yes.
  */
-describe("Admin Library", () => {
+describe("Admin Helpful content", () => {
   beforeEach(() => {
     push.mockReset();
     create.mockReset().mockResolvedValue("article_3");
     update.mockReset().mockResolvedValue(null);
     remove.mockReset().mockResolvedValue(null);
     readPage.mockReset().mockResolvedValue(READ);
+    write.mockReset().mockResolvedValue({ status: "written", summary: "How Google's AI features choose websites.", meaning: "Be indexable and quotable." });
     vi.mocked(useQuery).mockImplementation(answerQueries({
-      "libraryArticles:listArticles": [ROW, DRAFT],
-      "libraryArticles:getArticle": { ...ROW, body: "# Organic CTR study\n\nWords." },
+      "libraryArticles:listAdminPublications": ["Advanced Web Ranking", "Google Search Central"],
+      "libraryArticles:getArticle": { ...ROW, body: "# Organic CTR study\n\nWords.", translations: { done: 1, total: 1 } },
+      "topics:listTopicChoices": [{ key: "TRAFFIC", nameEn: "Traffic" }, { key: "RANKINGS", nameEn: "Rankings" }],
     }));
+    // The server searches, filters and pages (insights-helpful-content-plan.md, IH21): a draft filter answers with the drafts.
+    vi.mocked(usePaginatedQuery).mockReset().mockImplementation(((_query: unknown, args: { status?: string }) => ({
+      results: args?.status === "DRAFT" ? [DRAFT] : [ROW, DRAFT],
+      status: "Exhausted",
+      isLoading: false,
+      loadMore: vi.fn(),
+    })) as never);
     vi.mocked(useMutation).mockImplementation(((reference: unknown) => {
       const name = convexPath(reference);
       return name.endsWith("createArticle") ? create : name.endsWith("updateArticle") ? update : name.endsWith("deleteArticle") ? remove : vi.fn();
     }) as never);
-    vi.mocked(useAction).mockImplementation((() => readPage) as never);
+    vi.mocked(useAction).mockImplementation(((reference: unknown) => (convexPath(reference).endsWith("writeForReaders") ? write : readPage)) as never);
   });
 
   it("lists every article with its details, filters by status, and opens or deletes one", async () => {
@@ -87,11 +100,12 @@ describe("Admin Library", () => {
     expect(screen.getByText("How Google Search works")).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText("admin.libraryArticles.filters.status"), { target: { value: "DRAFT" } });
+    expect(vi.mocked(usePaginatedQuery).mock.calls.at(-1)?.[1]).toEqual({ status: "DRAFT" });
     expect(screen.queryByText("Organic CTR study")).not.toBeInTheDocument();
     expect(screen.getByText("How Google Search works")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "admin.libraryArticles.edit" }));
-    expect(push).toHaveBeenCalledWith("/admin/content/library/article_2");
+    expect(push).toHaveBeenCalledWith("/admin/content/helpful-content/article_2");
 
     fireEvent.click(screen.getByRole("button", { name: "admin.libraryArticles.delete" }));
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "common.actions.delete" }));
@@ -108,6 +122,9 @@ describe("Admin Library", () => {
 
     await waitFor(() => expect(screen.getByLabelText(/admin\.libraryArticles\.titleLabel/)).toHaveValue("AI features and your website"));
     expect(readPage).toHaveBeenCalledWith({ url: "https://developers.google.com/search/docs/appearance/ai-features/" });
+    // Hakken writes what readers see straight after a new page is read (insights-helpful-content-plan.md, IH2).
+    await waitFor(() => expect(screen.getByLabelText(/admin\.libraryArticles\.summaryLabel/)).toHaveValue("How Google's AI features choose websites."));
+    expect(write).toHaveBeenCalledWith({ title: READ.title, publication: READ.publication, body: READ.body });
     expect(screen.getByText("admin.libraryArticles.readNoticeLanguage")).toBeInTheDocument();
     expect(screen.getByText("admin.libraryArticles.notOnPage")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText(/admin\.libraryArticles\.authorLabel/), { target: { value: "Google" } });
@@ -127,8 +144,10 @@ describe("Admin Library", () => {
       language: "en",
       body: READ.body,
       readAt: 5,
+      summaryEn: "How Google's AI features choose websites.",
+      meaningEn: "Be indexable and quotable.",
     }));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/admin/content/library"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/admin/content/helpful-content"));
   });
 
   it("says plainly when a page cannot be read, and lets its words be pasted", async () => {
@@ -165,8 +184,10 @@ describe("Admin Library", () => {
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "admin.libraryArticles.readAgain" }));
     await waitFor(() => expect(readPage).toHaveBeenCalledWith({ url: ROW.url, articleId: "article_1" }));
     await waitFor(() => expect(screen.getByLabelText(/admin\.libraryArticles\.titleLabel/)).toHaveValue("AI features and your website"));
-    // Read, not saved: nothing is stored until Save changes.
+    // Read, not saved: nothing is stored until Save changes — and a saved article keeps its summary until Write again.
     expect(update).not.toHaveBeenCalled();
+    expect(write).not.toHaveBeenCalled();
+    expect(screen.getByLabelText(/admin\.libraryArticles\.summaryLabel/)).toHaveValue(ROW.summaryEn);
 
     fireEvent.click(screen.getByRole("button", { name: "admin.libraryArticles.delete" }));
     // The read-again pop-up may still be fading out; the delete one is the one that asks to delete.
@@ -174,6 +195,6 @@ describe("Admin Library", () => {
     const deleting = asking.find((dialog) => within(dialog).queryByRole("button", { name: "common.actions.delete" }));
     fireEvent.click(within(deleting as HTMLElement).getByRole("button", { name: "common.actions.delete" }));
     await waitFor(() => expect(remove).toHaveBeenCalledWith({ articleId: "article_1" }));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/admin/content/library"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/admin/content/helpful-content"));
   });
 });

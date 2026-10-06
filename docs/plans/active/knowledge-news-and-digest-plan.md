@@ -11,6 +11,13 @@ Overall: 100% built (17.5 of 17.5 days, plus a day for the revision below).
 Nothing has run for real yet: it waits for the settings in "Configuration
 left" below.
 
+**Superseded in part, 2026-10-06** by the
+[Insights and Helpful content plan](insights-helpful-content-plan.md): R4's
+name "Learn" is now **Insights** (IH18); R7's pin is one pin across News,
+Knowledge and Helpful content (IH11); R11's parked screens — Knowledge and
+Who to follow — are redrawn and built (IH12, IH13). The decisions below are
+kept as they were.
+
 ### Configuration left (Anthony, when ready)
 
 - Admin → AI: a fast model that serves in the deployment's region (the dev

@@ -2,22 +2,25 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { BookOpen, Edit2, Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
+import useDebounce from "@/src/hooks/useDebounce";
+import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import { formatDate } from "@/src/lib/dates";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader, PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
-import { matchesSearchTerm, paginateItems } from "@/src/ui/components/screens/pagination";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { ContentDeleteDialog } from "../_components/ContentDialogs";
 import { TranslationStatus } from "../_components/ContentEditPage";
+import { LeadPinRowButton, LeadStoryNotice, LeadUntilLabel } from "../_components/LeadStory";
 import { useContentDelete } from "../_components/useContentDelete";
 
-type Article = FunctionReturnType<typeof api.knowledgeArticles.listArticles>[number];
+type Article = FunctionReturnType<typeof api.knowledgeArticles.listArticlesPage>["page"][number];
 
 const BASE = "/admin/content/knowledge";
 
@@ -26,11 +29,12 @@ const BASE = "/admin/content/knowledge";
  * plan.md, phase 1, A3): every article, drafts too. New and an article each
  * open on their own page; what is published is what every signed-in user
  * reads under Knowledge, in their language, and what Ask Hakken reads.
+ * Searched and paged on the server; a published article can be pinned to lead
+ * the News front page (insights-helpful-content-plan.md, IH11, IH21, board 11).
  */
 export default function KnowledgeArticlesAdminPage() {
   const t = useTranslations("admin.knowledgeArticles");
   const router = useRouter();
-  const articles = useQuery(api.knowledgeArticles.listArticles, {});
   const deleteArticle = useMutation(api.knowledgeArticles.deleteArticle);
   const remover = useContentDelete({
     scope: "admin-knowledge-articles",
@@ -40,9 +44,9 @@ export default function KnowledgeArticlesAdminPage() {
   });
 
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(1);
-  const matching = articles?.filter((article) => matchesSearchTerm(search, [article.titleEn]));
-  const paged = paginateItems(matching ?? [], page);
+  const searched = useDebounce(search, 300).trim();
+  // The server searches and pages (IH21); a new search starts at page one.
+  const pages = useServerPagedTable(api.knowledgeArticles.listArticlesPage, searched ? { search: searched } : {}, TABLE_PAGE_SIZE);
   const open = (article: Article) => router.push(`${BASE}/${article._id}`);
 
   return (
@@ -59,30 +63,34 @@ export default function KnowledgeArticlesAdminPage() {
         }
       />
 
+      <LeadStoryNotice here="KNOWLEDGE" />
+
       <DataTable
-        rows={articles === undefined ? undefined : paged.items}
+        rows={pages.isLoading ? undefined : pages.rows}
         rowKey={(article) => article._id}
         onRowClick={open}
-        search={{
-          value: search,
-          onChange: (value) => {
-            setSearch(value);
-            setPage(1);
-          },
-          placeholder: t("searchPlaceholder"),
-        }}
+        search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         empty={{ icon: <BookOpen className="h-8 w-8 text-muted/30" />, label: search ? t("noMatch") : t("empty") }}
         footer={{
           mode: "paged",
-          page: paged.page,
-          totalPages: paged.totalPages,
-          totalCount: paged.totalItems,
-          pageSize: paged.pageSize,
-          isLoading: articles === undefined,
-          onPageChange: setPage,
+          page: pages.page,
+          totalPages: pages.totalPages,
+          totalCount: pages.loadedCount,
+          pageSize: pages.pageSize,
+          isLoading: pages.isBusy,
+          onPageChange: pages.goToPage,
         }}
         columns={[
-          { key: "title", header: t("columns.article"), cell: (article) => <span className="text-[13px] font-medium text-foreground">{article.titleEn}</span> },
+          {
+            key: "title",
+            header: t("columns.article"),
+            cell: (article) => (
+              <span className="flex flex-col gap-0.5">
+                <span className="text-[13px] font-medium text-foreground">{article.titleEn}</span>
+                <LeadUntilLabel leadUntil={article.leadUntil} className="mt-1" />
+              </span>
+            ),
+          },
           {
             key: "status",
             header: t("columns.status"),
@@ -100,6 +108,7 @@ export default function KnowledgeArticlesAdminPage() {
             align: "right",
             cell: (article) => (
               <RowActions>
+                <LeadPinRowButton storyId={article._id} leadUntil={article.leadUntil} canLead={article.status === "PUBLISHED"} />
                 <RowIconButton label={t("edit")} navigates onClick={() => open(article)}>
                   <Edit2 className="h-4 w-4" />
                 </RowIconButton>

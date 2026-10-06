@@ -16,6 +16,10 @@ export const LIBRARY_MIN_WORDS = 120;
 export const LIBRARY_MAX_TITLE_LENGTH = 300;
 export const LIBRARY_MAX_NAME_LENGTH = 160;
 export const LIBRARY_MAX_DESCRIPTION_LENGTH = 600;
+/** Hakken's summary for readers (insights-helpful-content-plan.md, IH2): two or three sentences. */
+export const LIBRARY_MAX_SUMMARY_LENGTH = 600;
+/** "What it means for you" (IH2). */
+export const LIBRARY_MAX_MEANING_LENGTH = 400;
 
 /** A page as the Library form takes it. */
 export type LibraryPage = {
@@ -134,17 +138,46 @@ function piecesOf(text: string, max: number): string[] {
   return pieces;
 }
 
+/** Headings over a list of other pages rather than words of the article's own (IH9). */
+const REFERENCE_HEADING = /^(references?|sources?|citations?|bibliography|footnotes|notes and references|further reading|see also|read more|related( articles| posts| reading| links| content)?|more (articles|posts|reading|from .+)|links?|useful links|resources)\s*:?$/i;
+/** A line that is little but a link: a list of other pages, not something the article says. */
+const LINK_LINE_MAX_WORDS = 12;
+
+function isLinkLine(line: string): boolean {
+  if (!/\]\([^)]*\)|https?:\/\//.test(line)) return false;
+  const words = line.replace(/\]\([^)]*\)/g, "]").replace(/https?:\/\/\S+/g, "").match(/[\p{L}\p{N}]+/gu) ?? [];
+  return words.length <= LINK_LINE_MAX_WORDS;
+}
+
+/**
+ * A section Ask Hakken should not read (insights-helpful-content-plan.md,
+ * IH9): a reference list by its heading, or one whose lines are mostly links
+ * — the pages the article points to, not what it says.
+ */
+export function isReferenceSection(heading: string, text: string): boolean {
+  if (REFERENCE_HEADING.test(heading.trim())) return true;
+  const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
+  if (lines.length < 2) return false;
+  return lines.filter(isLinkLine).length / lines.length > 0.5;
+}
+
 /**
  * An article cut at its headings into the sections Ask Hakken searches
  * (L11): each starts with its heading, so it reads on its own, and none is
- * longer than `LIBRARY_SECTION_LENGTH`.
+ * longer than `LIBRARY_SECTION_LENGTH`. Reference lists and sections made
+ * mostly of links are left out (IH9).
  */
 export function librarySections(title: string, body: string): LibrarySection[] {
   const sections: LibrarySection[] = [];
   let heading = title;
   let lines: string[] = [];
   const flush = () => {
-    for (const piece of piecesOf(lines.join("\n"), LIBRARY_SECTION_LENGTH - heading.length - 1)) {
+    const words = lines.join("\n");
+    if (isReferenceSection(heading, words)) {
+      lines = [];
+      return;
+    }
+    for (const piece of piecesOf(words, LIBRARY_SECTION_LENGTH - heading.length - 1)) {
       sections.push({ heading, text: `${heading}\n${piece}` });
     }
     lines = [];
@@ -190,19 +223,63 @@ export function termsFound(text: string, terms: string[]): number {
 }
 
 /** A page Firecrawl read, as the Library form takes it. */
-export function libraryPageFrom(markdown: string, metadata: PageMetadata, url: string): LibraryPage {
+/** What an article's structured data is called: the article itself first, a plain web page last. */
+const ARTICLE_TYPES = ["Article", "BlogPosting", "NewsArticle", "TechArticle", "Report", "ScholarlyArticle", "WebPage"];
+
+/** Every object in a JSON-LD value, through @graph and arrays. */
+function structuredNodes(value: unknown, into: Array<Record<string, unknown>> = []): Array<Record<string, unknown>> {
+  if (Array.isArray(value)) for (const item of value) structuredNodes(item, into);
+  else if (value && typeof value === "object") {
+    const node = value as Record<string, unknown>;
+    into.push(node);
+    if (node["@graph"]) structuredNodes(node["@graph"], into);
+  }
+  return into;
+}
+
+/**
+ * An article's published and updated days from its page's structured data
+ * (insights-helpful-content-plan.md, IH10): the article's own node — never a
+ * work it cites, which carries dates of its own — the article types before a
+ * plain web page.
+ */
+export function datesFromStructuredData(blocks: string[]): { publishedOn?: string; updatedOn?: string } {
+  const nodes: Array<Record<string, unknown>> = [];
+  for (const block of blocks) {
+    try {
+      structuredNodes(JSON.parse(block), nodes);
+    } catch {
+      // A block that is not JSON is the page's mistake; the others still count.
+    }
+  }
+  const rank = (node: Record<string, unknown>) => {
+    const types = ([] as unknown[]).concat(node["@type"] ?? []).map(String);
+    const ranks = types.map((type) => ARTICLE_TYPES.indexOf(type)).filter((at) => at >= 0);
+    return ranks.length ? Math.min(...ranks) : -1;
+  };
+  const article = nodes
+    .filter((node) => rank(node) >= 0 && (node.datePublished || node.dateModified))
+    .sort((left, right) => rank(left) - rank(right))[0];
+  if (!article) return {};
+  const text = (value: unknown) => (typeof value === "string" ? value : undefined);
+  return { publishedOn: dayFrom(text(article.datePublished)), updatedOn: dayFrom(text(article.dateModified)) };
+}
+
+export function libraryPageFrom(markdown: string, metadata: PageMetadata, url: string, structuredData: string[] = []): LibraryPage {
   const publication = publicationFrom(metadata, url);
   const rawTitle = metadataText(metadata, "ogTitle", "og:title", "title") ?? "";
   const text = markdown.trim();
   const cut = text.length > LIBRARY_MAX_BODY_LENGTH;
   const body = cut ? text.slice(0, LIBRARY_MAX_BODY_LENGTH) : text;
   const description = metadataText(metadata, "description", "ogDescription", "og:description");
+  const fromData = datesFromStructuredData(structuredData);
   return {
     title: titleWithoutSite(rawTitle, publication).slice(0, LIBRARY_MAX_TITLE_LENGTH),
     publication,
     author: authorFrom(metadata),
-    publishedOn: dayFrom(metadataText(metadata, "publishedTime", "article:published_time", "datePublished", "dcTermsCreated", "parsely-pub-date", "date")),
-    updatedOn: dayFrom(metadataText(metadata, "modifiedTime", "article:modified_time", "dateModified", "og:updated_time")),
+    // The meta tags first; the page's structured data when they say nothing (IH10).
+    publishedOn: dayFrom(metadataText(metadata, "publishedTime", "article:published_time", "datePublished", "dcTermsCreated", "parsely-pub-date", "date")) ?? fromData.publishedOn,
+    updatedOn: dayFrom(metadataText(metadata, "modifiedTime", "article:modified_time", "dateModified", "og:updated_time")) ?? fromData.updatedOn,
     description: description?.slice(0, LIBRARY_MAX_DESCRIPTION_LENGTH),
     language: languageFrom(metadata),
     body,

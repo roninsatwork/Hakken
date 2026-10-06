@@ -1,0 +1,8 @@
+# Insights → Helpful content → a topic — the approved look (board "Topic" of docs/plans/assets/insights-helpful-content/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Helpful content
+select: Insights
+field: Jump to a page
+compact-list
+show-more: Show more

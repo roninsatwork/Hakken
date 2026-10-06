@@ -40,8 +40,11 @@ const FEED = [
   plain("item_3", "First drops from the spam update", "2026-09-28", "X"),
   plain("item_4", "A complete Business Profile", "2026-09-27", "YOUTUBE"),
 ];
-const ARTICLE = { _id: "article_1", title: "How is traffic worked out?", excerpt: "Traffic is an estimate.", topic: "TRAFFIC", publishedAt: at("2026-09-30"), updatedAt: at("2026-09-30") };
-const OLD_ARTICLE = { ...ARTICLE, _id: "article_2", title: "An old article", publishedAt: at("2026-08-01") };
+const ARTICLE = { _id: "article_1", title: "How is traffic worked out?", excerpt: "Traffic is an estimate.", words: 400, topic: "TRAFFIC", publishedAt: at("2026-09-30"), updatedAt: at("2026-09-30") };
+const HELPFUL = {
+  _id: "helpful_1", url: "https://ahrefs.com/blog/link-building/", title: "Link building for SEO", publication: "Ahrefs", author: null, publishedOn: null,
+  language: "en", topic: "BACKLINKS", words: 3000, addedAt: at("2026-09-27"), summary: "How sites earn links.", meaning: null,
+};
 const UPDATES = [
   { _id: "update_1", title: "September 2026 spam update", itemId: "item_update", startedOn: "2026-09-24", finishedOn: null, expectedDays: 14 },
   { _id: "update_2", title: "August 2026 core update", itemId: null, startedOn: "2026-08-19", finishedOn: "2026-09-04", expectedDays: 14 },
@@ -49,7 +52,7 @@ const UPDATES = [
 const COUNTS = {
   news: { all: 24, GOOGLE_UPDATE: 1, WEBSITE: 5, YOUTUBE: 9, X: 0 },
   follows: 6,
-  articles: { all: 2, TRAFFIC: 1, RANKINGS: 0, AI_ANSWERS: 0, BACKLINKS: 0 },
+  topics: [{ key: "TRAFFIC", name: "Traffic" }, { key: "RANKINGS", name: "Rankings" }, { key: "AI_ANSWERS", name: "AI answers" }, { key: "BACKLINKS", name: "Backlinks" }], articles: { all: 2, byTopic: { TRAFFIC: 1 } }, helpful: { all: 0, byTopic: {} },
 };
 
 const loadMore = vi.fn();
@@ -69,9 +72,10 @@ describe("News", () => {
     loadMore.mockReset();
     vi.mocked(usePaginatedQuery).mockReset().mockReturnValue({ results: FEED, status: "CanLoadMore", isLoading: false, loadMore } as never);
     vi.mocked(useQuery).mockReset().mockImplementation(answerQueries({
-      "news:getFrontPage": { lead: LEAD, weekCount: 24 },
+      "news:getFrontPage": { lead: { source: "NEWS", item: LEAD }, weekCount: 24 },
       "googleUpdates:listLatestGoogleUpdates": UPDATES,
-      "knowledgeArticles:listPublishedArticles": [ARTICLE, OLD_ARTICLE],
+      "knowledgeArticles:listPublishedSince": [ARTICLE],
+      "libraryArticles:listForReadersSince": [HELPFUL],
       "learnMenu:getLearnMenuCounts": COUNTS,
       "news:getNewsItem": LEAD,
     }));
@@ -113,11 +117,42 @@ describe("News", () => {
     const earlier = screen.getByRole("region", { name: "news.front.earlier" });
     expect(within(earlier).getByRole("link", { name: "First drops from the spam update" })).toHaveAttribute("href", "/app/news/item_3");
     expect(within(earlier).getByRole("link", { name: "A complete Business Profile" })).toBeInTheDocument();
-    // Only this week's articles join the stories.
-    expect(screen.queryByText("An old article")).not.toBeInTheDocument();
+    // A Helpful content article added this week takes its place among them (insights-helpful-content-plan.md, IH8).
+    expect(within(earlier).getByRole("link", { name: "Link building for SEO" })).toHaveAttribute("href", "/app/helpful-content/helpful_1");
 
     fireEvent.click(within(earlier).getByRole("button", { name: "news.front.showMore" }));
     expect(loadMore).toHaveBeenCalledWith(20);
+  });
+
+  // One lead story, pinned from News, Knowledge or Helpful content (insights-helpful-content-plan.md, IH11).
+  it("leads with a pinned Knowledge or Helpful content article as it leads its own page, and does not list it again", () => {
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "news:getFrontPage": { lead: { source: "HELPFUL", article: { ...HELPFUL, meaning: "Earn links worth having." } }, weekCount: 24 },
+      "googleUpdates:listLatestGoogleUpdates": UPDATES,
+      "knowledgeArticles:listPublishedSince": [ARTICLE],
+      "libraryArticles:listForReadersSince": [HELPFUL],
+      "learnMenu:getLearnMenuCounts": COUNTS,
+    }));
+    const { unmount } = render(<NewsPage />);
+
+    const lead = screen.getByRole("region", { name: "news.front.leadLabel" });
+    expect(within(within(lead).getByRole("heading", { level: 2 })).getByRole("link", { name: "Link building for SEO" })).toHaveAttribute("href", "/app/helpful-content/helpful_1");
+    expect(within(lead).getByText("Earn links worth having.")).toBeInTheDocument();
+    expect(within(lead).getByRole("link", { name: /learn\.helpful\.readOn/ })).toHaveAttribute("href", HELPFUL.url);
+    expect(screen.getAllByRole("link", { name: "Link building for SEO" })).toHaveLength(1);
+    unmount();
+
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "news:getFrontPage": { lead: { source: "KNOWLEDGE", article: ARTICLE }, weekCount: 24 },
+      "googleUpdates:listLatestGoogleUpdates": UPDATES,
+      "knowledgeArticles:listPublishedSince": [ARTICLE],
+      "libraryArticles:listForReadersSince": [],
+      "learnMenu:getLearnMenuCounts": COUNTS,
+    }));
+    render(<NewsPage />);
+    const knowledgeLead = screen.getByRole("region", { name: "news.front.leadLabel" });
+    expect(within(knowledgeLead).getByRole("link", { name: /knowledgeArticles\.front\.readArticle/ })).toHaveAttribute("href", "/app/knowledge/article_1");
+    expect(screen.getAllByRole("link", { name: "How is traffic worked out?" })).toHaveLength(1);
   });
 
   it("asks for the reader's language and day", () => {
@@ -147,7 +182,7 @@ describe("News", () => {
     expect(screen.getByText("news.front.emptyTitle")).toBeInTheDocument();
   });
 
-  it("has Learn's side menu: news by kind, who to follow, and the topics that have articles", () => {
+  it("has Insights' side menu: news by kind, who to follow, and the topics that have articles", () => {
     render(<NewsPage />);
 
     const menu = screen.getByRole("navigation", { name: "learn.menu.label" });
@@ -155,8 +190,8 @@ describe("News", () => {
     expect(within(menu).getByRole("link", { name: /learn\.menu\.allNews/ })).toHaveTextContent("24");
     expect(within(menu).getByRole("link", { name: /learn\.menu\.kinds\.YOUTUBE/ })).toHaveAttribute("href", "/app/news?kind=YOUTUBE");
     expect(within(menu).getByRole("link", { name: /learn\.menu\.whoToFollow/ })).toHaveAttribute("href", "/app/who-to-follow");
-    expect(within(menu).getByRole("link", { name: /learn\.menu\.topics\.TRAFFIC/ })).toHaveAttribute("href", "/app/knowledge?topic=TRAFFIC");
-    expect(within(menu).queryByRole("link", { name: /learn\.menu\.topics\.RANKINGS/ })).not.toBeInTheDocument();
+    expect(within(menu).getByRole("link", { name: /^Traffic/ })).toHaveAttribute("href", "/app/knowledge?topic=TRAFFIC");
+    expect(within(menu).queryByRole("link", { name: /^Rankings/ })).not.toBeInTheDocument();
   });
 
   it("opens a story on its own page, and says when it has been taken down", () => {

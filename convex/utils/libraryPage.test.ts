@@ -1,11 +1,14 @@
 import { describe, expect, test } from "vitest";
+import { structuredDataBlocks } from "../webScrapeActions";
 import {
   countWords,
+  datesFromStructuredData,
   dayFrom,
   LIBRARY_MAX_BODY_LENGTH,
   LIBRARY_SECTION_LENGTH,
   libraryPageFrom,
   librarySearchTerms,
+  isReferenceSection,
   librarySections,
   libraryUrlKey,
   publicationFrom,
@@ -97,9 +100,74 @@ describe("Ask Hakken's sections", () => {
     }
   });
 
+  // insights-helpful-content-plan.md, IH9: the pages an article points to are not what it says.
+  test("reference lists and sections made mostly of links are left out; a paragraph with a link stays", () => {
+    const body = [
+      "Opening words, with [a study](https://example.com/study) that backs them up and explains why it matters.",
+      "## Sources",
+      "- [Google's guide](https://developers.google.com/search)",
+      "## What else to read",
+      "- [Ranking systems](https://example.com/a)",
+      "- [Spam policies](https://example.com/b)",
+      "- [Core updates](https://example.com/c)",
+      "One short line of words.",
+      "## What it means",
+      "Keep your structured data true to what the page shows.",
+    ].join("\n");
+    expect(librarySections("The title", body).map((section) => section.heading)).toEqual(["The title", "What it means"]);
+    expect(isReferenceSection("Further reading", "Anything at all.")).toBe(true);
+    expect(isReferenceSection("Why it matters", "Plain words.\nMore plain words.")).toBe(false);
+  });
+
   test("a question is searched by its distinctive words, at most sixteen", () => {
     expect(librarySearchTerms("What are the best practices for structured data, and why?")).toEqual(["best", "practices", "structured", "data"]);
     expect(librarySearchTerms(Array.from({ length: 30 }, (_, index) => `word${index}`).join(" "))).toHaveLength(16);
     expect(librarySearchTerms("Is it ok?")).toEqual([]);
+  });
+});
+
+// Dates a page gives only in its structured data (docs/plans/active/insights-helpful-content-plan.md, IH10).
+describe("dates from a page's structured data", () => {
+  // As Nacho Mascort's page writes it: the article's own node, then every work it cites, each with dates of its own.
+  const NACHO = JSON.stringify({
+    "@context": "https://schema.org",
+    "@graph": [
+      { "@type": "Person", "@id": "https://nachomascort.com/#person", name: "Nacho Mascort" },
+      {
+        "@type": "BlogPosting",
+        headline: "Quality at Google",
+        datePublished: "2026-10-03T00:00:00.000Z",
+        dateModified: "2026-10-04T10:00:00.000Z",
+        citation: [
+          { "@type": "CreativeWork", name: "Creating helpful, reliable, people-first content", datePublished: "2025-09-11" },
+          { "@type": "CreativeWork", name: "Google Search's core updates", datePublished: "2026-10-01" },
+        ],
+      },
+    ],
+  });
+
+  test("the article's own dates, never those of a work it cites", () => {
+    expect(datesFromStructuredData([NACHO])).toEqual({ publishedOn: "2026-10-03", updatedOn: "2026-10-04" });
+  });
+
+  test("an article type before a plain web page; a block that is not JSON is passed over", () => {
+    const page = JSON.stringify({ "@type": "WebPage", datePublished: "2020-01-01" });
+    const article = JSON.stringify({ "@type": ["NewsArticle"], datePublished: "2026-09-18" });
+    expect(datesFromStructuredData(["{ not json", page, article])).toEqual({ publishedOn: "2026-09-18", updatedOn: undefined });
+    expect(datesFromStructuredData([page])).toEqual({ publishedOn: "2020-01-01", updatedOn: undefined });
+    expect(datesFromStructuredData([])).toEqual({});
+  });
+
+  test("the meta tags first, the structured data when they say nothing", () => {
+    const url = "https://nachomascort.com/en/blog/google-quality-core-updates";
+    expect(libraryPageFrom("Words.", {}, url, [NACHO]).publishedOn).toBe("2026-10-03");
+    expect(libraryPageFrom("Words.", { publishedTime: "2026-09-30T08:00:00Z" }, url, [NACHO]).publishedOn).toBe("2026-09-30");
+  });
+
+  test("a page's structured-data blocks are picked out of its HTML", () => {
+    const html = `<html><head><script type="application/ld+json">${NACHO}</script><script>var x = 1;</script>`
+      + `<script type='application/ld+json'> {"@type":"WebPage"} </script></head><body></body></html>`;
+    expect(structuredDataBlocks(html)).toEqual([NACHO, '{"@type":"WebPage"}']);
+    expect(structuredDataBlocks("<p>No data here.</p>")).toEqual([]);
   });
 });

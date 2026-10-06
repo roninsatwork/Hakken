@@ -30,6 +30,7 @@ import {
   selectKnowledgeChunksWithinBudget,
 } from "./aiPromptAssembly";
 import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
+import { searchHelpfulContent } from "./libraryArticleSearch";
 import { knowledgeCutOff, readChunk } from "./knowledgeReading";
 import { getOpenAIApiKey } from "./openaiProviderService";
 import { companyAnswersFromWiki } from "./wikiRewriteService";
@@ -59,6 +60,9 @@ export const REALTIME_VOICE_STYLE = `You are speaking out loud, not writing.
   one you are speaking. Read it in whatever language you find it and answer
   in theirs; never read a stored passage out in its original language.`;
 
+
+/** Helpful content read aloud at most: a spoken answer is two sentences, not three articles (IH9). */
+const VOICE_HELPFUL_MAX_CHARS = 3000;
 
 /** The one thing a spoken session can ask this platform for, mid-conversation. */
 export const VOICE_KNOWLEDGE_TOOL_NAME = "search_company_knowledge";
@@ -287,11 +291,24 @@ export const searchKnowledgeForVoiceInternal = internalAction({
         }
       }
 
+      // Helpful content (insights-helpful-content-plan.md, IH9): read to a
+      // signed-in user speaking in their own conversation, as typed; never on
+      // a phone call or to a widget visitor, who are the public (L13).
+      // Fail-open — it must never cost an answer.
+      let helpfulSections: string[] = [];
+      if (thread && !thread.widgetId) {
+        try {
+          helpfulSections = await searchHelpfulContent(ctx, { question: query, embedded });
+        } catch (error) {
+          console.error("Voice Helpful content search failed; answering without it", error);
+        }
+      }
+
       // Nothing found is reported as nothing found. Returning the wrapper
       // around an empty list reads to the model as "here is your evidence",
       // and a model handed an empty evidence block invents rather than
       // admits — which is the one thing this must never do out loud.
-      if (chunkTexts.length === 0 && voiceFallbackTexts.length === 0 && !relevantMemories && !wikiAnswer.context) {
+      if (chunkTexts.length === 0 && voiceFallbackTexts.length === 0 && !relevantMemories && !wikiAnswer.context && helpfulSections.length === 0) {
         return { context: "" };
       }
 
@@ -312,6 +329,14 @@ export const searchKnowledgeForVoiceInternal = internalAction({
         }${
           relevantMemories
             ? `\n\nApproved company notes that apply here:\n${relevantMemories}`
+            : ""
+        }${
+          helpfulSections.length > 0
+            ? `\n\n${buildUntrustedKnowledgeContext({
+                sourceLabel: "Helpful content — articles from other websites, each headed with its title, publication and original address; when you use one, name it",
+                chunks: helpfulSections,
+                maxChars: VOICE_HELPFUL_MAX_CHARS,
+              })}`
             : ""
         }`,
       };

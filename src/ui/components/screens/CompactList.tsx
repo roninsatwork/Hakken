@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import type { ReactNode } from "react";
 
 /**
@@ -68,7 +69,18 @@ type CompactListProps<Row> = {
   /** Only for a list wide enough to need scrolling — most of these are not. */
   minWidthClassName?: string;
   className?: string;
+  /**
+   * Each row one link that lights when the mouse is over it
+   * (docs/plans/active/insights-helpful-content-plan.md, IH17): where it
+   * goes, what a screen reader says for it, and whether it opens in a new tab
+   * (someone's own page). A row whose `href` is null stays plain. Anything
+   * clickable inside a cell needs `relative` and `LAYER.RAISED` to sit above the row's link.
+   */
+  rowLink?: { href: (row: Row) => string | null; label: (row: Row) => string; external?: boolean };
 };
+
+/** A linked row: the whole row lights on hover, as Insights' panels do. */
+const LINKED_ROW = "relative transition-colors hover:bg-hover";
 
 const HEADER_ROW = "text-[11px] uppercase tracking-[0.08em] text-muted";
 const HEADER_CELL = "font-medium px-4 py-1.5";
@@ -87,6 +99,7 @@ export function CompactList<Row>({
   density = "regular",
   minWidthClassName = "",
   className = "",
+  rowLink,
 }: CompactListProps<Row>) {
   const hasHeadings = columns.some((column) => column.header !== undefined);
   const isLoading = rows === undefined;
@@ -119,23 +132,31 @@ export function CompactList<Row>({
           </thead>
         )}
         <tbody>
-          {rows.map((row) => (
-            <tr
-              key={rowKey(row)}
-              className={dividers === "rule" ? "border-b border-border-dim last:border-b-0" : ""}
-            >
-              {columns.map((column) => (
-                <td
-                  key={column.key}
-                  className={[density === "tight" ? CELL_TIGHT : CELL, column.align === "right" ? "text-right" : "", column.className ?? ""]
-                    .filter(Boolean)
-                    .join(" ")}
-                >
-                  {column.cell(row)}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {rows.map((row) => {
+            const href = rowLink?.href(row) ?? null;
+            return (
+              <tr
+                key={rowKey(row)}
+                className={[dividers === "rule" ? "border-b border-border-dim last:border-b-0" : "", href ? LINKED_ROW : ""].filter(Boolean).join(" ")}
+              >
+                {columns.map((column, index) => (
+                  <td
+                    key={column.key}
+                    className={[density === "tight" ? CELL_TIGHT : CELL, column.align === "right" ? "text-right" : "", column.className ?? ""]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
+                    {index === 0 && href && rowLink ? (
+                      rowLink.external
+                        ? <a href={href} target="_blank" rel="noopener noreferrer" aria-label={rowLink.label(row)} className="absolute inset-0" />
+                        : <Link href={href} aria-label={rowLink.label(row)} className="absolute inset-0" />
+                    ) : null}
+                    {column.cell(row)}
+                  </td>
+                ))}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>

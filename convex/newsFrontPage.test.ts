@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { NewsItemKind } from "./newsSchema";
 import schema from "./schema";
 import { updateLeadsOn } from "./news";
@@ -25,6 +25,8 @@ function harness() {
 }
 
 async function people(t: ReturnType<typeof harness>) {
+  // The shared topic list's first rows (topics.ts, IH20): an article's topic must be one of them.
+  await t.mutation(internal.topics.seedFirstTopicsInternal, {});
   const { superAdminId, memberId } = await t.run(async (ctx) => {
     const companyId = await ctx.db.insert("companies", { name: "Korda", createdAt: Date.now() });
     const superAdminId = await ctx.db.insert("users", { email: "admin@hakken.example", role: "SUPER_ADMIN" });
@@ -90,34 +92,78 @@ describe("the News front page", () => {
     await story(t, "AI answers take more clicks", "2026-09-29");
     const newest = await story(t, "Search Console shows AI clicks", "2026-09-30");
 
-    expect((await member.query(api.news.getFrontPage, { language: "en", today: TODAY })).lead?._id).toBe(newest);
+    const leadOn = async (today: string) => (await member.query(api.news.getFrontPage, { language: "en", today })).lead;
+    expect(await leadOn(TODAY)).toMatchObject({ source: "NEWS", item: { _id: newest } });
 
     await superAdmin.mutation(api.googleUpdates.createGoogleUpdate, UPDATE);
-    const withUpdate = await member.query(api.news.getFrontPage, { language: "en", today: TODAY });
-    expect(withUpdate.lead).toMatchObject({ kind: "GOOGLE_UPDATE", title: UPDATE.titleEn, update: { startedOn: "2026-09-24", finishedOn: null, expectedDays: 14 } });
+    expect(await leadOn(TODAY)).toMatchObject({ source: "NEWS", item: { kind: "GOOGLE_UPDATE", title: UPDATE.titleEn, update: { startedOn: "2026-09-24", finishedOn: null, expectedDays: 14 } } });
     // Three weeks on, it has stopped leading.
-    expect((await member.query(api.news.getFrontPage, { language: "en", today: "2026-10-22" })).lead?._id).toBe(newest);
+    expect(await leadOn("2026-10-22")).toMatchObject({ item: { _id: newest } });
 
     const older = await story(t, "Map results move up", "2026-09-28");
-    await superAdmin.mutation(api.news.pinLeadStory, { itemId: older });
-    expect((await member.query(api.news.getFrontPage, { language: "en", today: TODAY })).lead?._id).toBe(older);
+    await superAdmin.mutation(api.leadStory.pinLeadStory, { storyId: older });
+    expect(await leadOn(TODAY)).toMatchObject({ item: { _id: older } });
     // A pin lasts seven days, then the rule chooses again.
-    expect((await member.query(api.news.getFrontPage, { language: "en", today: "2026-10-09" })).lead?.kind).toBe("GOOGLE_UPDATE");
+    expect(await leadOn("2026-10-09")).toMatchObject({ item: { kind: "GOOGLE_UPDATE" } });
 
     // One pin at a time: pinning another unpins the first.
-    await superAdmin.mutation(api.news.pinLeadStory, { itemId: newest });
+    await superAdmin.mutation(api.leadStory.pinLeadStory, { storyId: newest });
     const pinned = (await superAdmin.query(api.news.listNewsItemsForAdmin, { paginationOpts: { numItems: 10, cursor: null } })).page.filter((item) => item.leadUntil !== null);
     expect(pinned.map((item) => item._id)).toEqual([newest]);
 
-    await superAdmin.mutation(api.news.unpinLeadStory, { itemId: newest });
-    expect((await member.query(api.news.getFrontPage, { language: "en", today: TODAY })).lead?.kind).toBe("GOOGLE_UPDATE");
+    await superAdmin.mutation(api.leadStory.unpinLeadStory, { storyId: newest });
+    expect(await leadOn(TODAY)).toMatchObject({ item: { kind: "GOOGLE_UPDATE" } });
   });
 
   test("only the super admin pins the lead", async () => {
     const t = harness();
     const { member } = await people(t);
     const itemId = await story(t, "AI answers take more clicks", "2026-09-29");
-    await expect(member.mutation(api.news.pinLeadStory, { itemId })).rejects.toThrow();
+    await expect(member.mutation(api.leadStory.pinLeadStory, { storyId: itemId })).rejects.toThrow();
+  });
+
+  // One lead story, pinned from News, Knowledge or Helpful content (insights-helpful-content-plan.md, IH11).
+  test("a Knowledge or Helpful content article pinned to lead leads the front page and its own page, and unpins any other", async () => {
+    const t = harness();
+    const { superAdmin, member } = await people(t);
+    const newsStory = await story(t, "Search Console shows AI clicks", "2026-09-30");
+    await superAdmin.mutation(api.leadStory.pinLeadStory, { storyId: newsStory });
+    const knowledgeId = await superAdmin.mutation(api.knowledgeArticles.createArticle, { titleEn: "How is traffic worked out?", bodyEn: "An estimate.", status: "PUBLISHED", topic: "TRAFFIC" });
+    const helpfulId = await superAdmin.mutation(api.libraryArticles.createArticle, {
+      url: "https://nachomascort.com/en/blog/quality", title: "Quality at Google", publication: "Nacho Mascort", author: "", publishedOn: "", updatedOn: "",
+      description: "", topic: "RANKINGS", status: "IN_KNOWLEDGE", language: "en", body: "## Quality\n\nWords.", summaryEn: "How Google judges quality.",
+    });
+    const leadOn = async () => (await member.query(api.news.getFrontPage, { language: "en", today: TODAY })).lead;
+
+    await superAdmin.mutation(api.leadStory.pinLeadStory, { storyId: knowledgeId });
+    expect(await leadOn()).toMatchObject({ source: "KNOWLEDGE", article: { _id: knowledgeId, title: "How is traffic worked out?" } });
+    expect(await member.query(api.knowledgeArticles.getPinnedForReaders, { language: "en", today: TODAY })).toMatchObject({ _id: knowledgeId });
+    // The News story's pin went when the article was pinned.
+    expect((await superAdmin.query(api.news.listNewsItemsForAdmin, { paginationOpts: { numItems: 10, cursor: null } })).page[0].leadUntil).toBeNull();
+    expect(await superAdmin.query(api.news.getLeadForAdmin, { today: TODAY })).toMatchObject({ storyId: knowledgeId, place: "KNOWLEDGE", pinned: true });
+
+    await superAdmin.mutation(api.leadStory.pinLeadStory, { storyId: helpfulId });
+    expect(await leadOn()).toMatchObject({ source: "HELPFUL", article: { _id: helpfulId, summary: "How Google judges quality." } });
+    expect(await member.query(api.libraryArticles.getPinnedForReaders, { language: "en", today: TODAY })).toMatchObject({ _id: helpfulId });
+    expect(await member.query(api.knowledgeArticles.getPinnedForReaders, { language: "en", today: TODAY })).toBeNull();
+
+    // Unpinned, the rule chooses again, and Admin is told so.
+    await superAdmin.mutation(api.leadStory.unpinLeadStory, { storyId: helpfulId });
+    expect(await leadOn()).toMatchObject({ source: "NEWS", item: { _id: newsStory } });
+    expect(await superAdmin.query(api.news.getLeadForAdmin, { today: TODAY })).toMatchObject({ storyId: newsStory, place: "NEWS", pinned: false, leadUntil: null });
+  });
+
+  test("a draft never leads: it cannot be pinned, and going back to a draft takes the pin off", async () => {
+    const t = harness();
+    const { superAdmin } = await people(t);
+    const draft = await superAdmin.mutation(api.knowledgeArticles.createArticle, { titleEn: "Not yet", bodyEn: "", status: "DRAFT" });
+    await expect(superAdmin.mutation(api.leadStory.pinLeadStory, { storyId: draft })).rejects.toThrow("Publish it first");
+
+    const articleId = await superAdmin.mutation(api.knowledgeArticles.createArticle, { titleEn: "How is traffic worked out?", bodyEn: "An estimate.", status: "PUBLISHED" });
+    await superAdmin.mutation(api.leadStory.pinLeadStory, { storyId: articleId });
+    expect((await superAdmin.query(api.knowledgeArticles.getArticle, { articleId }))?.leadUntil).not.toBeNull();
+    await superAdmin.mutation(api.knowledgeArticles.updateArticle, { articleId, titleEn: "How is traffic worked out?", bodyEn: "An estimate.", status: "DRAFT" });
+    expect((await superAdmin.query(api.knowledgeArticles.getArticle, { articleId }))?.leadUntil).toBeNull();
   });
 
   test("the week counts today and the six days before it", async () => {
@@ -217,7 +263,14 @@ describe("Learn's side menu and Knowledge's topics", () => {
     expect(await member.query(api.learnMenu.getLearnMenuCounts, { today: TODAY })).toEqual({
       news: { all: 3, GOOGLE_UPDATE: 0, WEBSITE: 1, YOUTUBE: 2, X: 0 },
       follows: 1,
-      articles: { all: 2, TRAFFIC: 1, RANKINGS: 0, AI_ANSWERS: 0, BACKLINKS: 0 },
+      topics: [
+        { key: "TRAFFIC", name: "Traffic" },
+        { key: "RANKINGS", name: "Rankings" },
+        { key: "AI_ANSWERS", name: "AI answers" },
+        { key: "BACKLINKS", name: "Backlinks" },
+      ],
+      articles: { all: 2, byTopic: { TRAFFIC: 1 } },
+      helpful: { all: 0, byTopic: {} },
     });
   });
 
@@ -231,10 +284,10 @@ describe("Learn's side menu and Knowledge's topics", () => {
       topic: "TRAFFIC",
     });
 
-    expect(await member.query(api.knowledgeArticles.listPublishedArticles, { language: "en", topic: "TRAFFIC" })).toEqual([
+    expect((await member.query(api.knowledgeArticles.listPublishedPage, { language: "en", topic: "TRAFFIC", paginationOpts: { numItems: 50, cursor: null } })).page).toEqual([
       expect.objectContaining({ _id: articleId, topic: "TRAFFIC", excerpt: "The traffic figure is our best estimate of the visits a search sends you, worked out from a study." }),
     ]);
-    expect(await member.query(api.knowledgeArticles.listPublishedArticles, { language: "en", topic: "RANKINGS" })).toEqual([]);
+    expect((await member.query(api.knowledgeArticles.listPublishedPage, { language: "en", topic: "RANKINGS", paginationOpts: { numItems: 50, cursor: null } })).page).toEqual([]);
 
     await superAdmin.mutation(api.knowledgeArticles.updateArticle, { articleId, titleEn: "How is traffic worked out?", bodyEn: "An estimate.", status: "PUBLISHED" });
     expect((await member.query(api.knowledgeArticles.getPublishedArticle, { articleId, language: "en" }))?.topic).toBeNull();

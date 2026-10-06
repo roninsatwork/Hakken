@@ -29,6 +29,7 @@ import { addTrafficArticle, giveTrafficArticleItsTopic, syncPublishedArticles } 
 import { rebuildMemoryOutcomeCounters } from "./agentMemoryCountersMigration";
 import { recountEveryList } from "./siteListAi";
 import { requestMissingIcons } from "./websites";
+import { addFirstTopics, fillInsightsReading, recutHelpfulContent } from "./insightsMigrations";
 import { untickAutomaticQueries } from "./promptFanOut";
 import { followPlatformWhereStartingNumber } from "./companyDataLimits";
 import { detachCompanySchedules } from "./scheduler";
@@ -243,6 +244,15 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
   "2026-10-01-knowledge-articles-to-wiki": syncPublishedArticles,
   /** The traffic article's topic, Traffic, for Learn's side menu (`knowledgeArticleSeeds.ts`, R9). */
   "2026-10-01-knowledge-traffic-topic": (ctx) => giveTrafficArticleItsTopic(ctx),
+  /**
+   * The shared topic list's first rows: the four topics there were before it,
+   * under the keys their articles carry, with their Italian (`topics.ts`,
+   * insights-helpful-content-plan.md, IH20).
+   */
+  // Insights (insights-helpful-content-plan.md; `insightsMigrations.ts`): its topic list, server-side reading, and Helpful content by meaning.
+  "2026-10-06-helpful-content-meaning": (ctx) => recutHelpfulContent(ctx),
+  "2026-10-06-insights-reading": (ctx) => fillInsightsReading(ctx),
+  "2026-10-06-first-topics": (ctx) => addFirstTopics(ctx),
   /** Each website added before icons were looked for asks for its icon (`websiteIcons.ts`, `websites.ts`). */
   "2026-10-01-website-icons": requestMissingIcons,
 

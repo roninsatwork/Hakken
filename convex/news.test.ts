@@ -119,8 +119,8 @@ describe("News", () => {
     generate.mockResolvedValue({ text: JSON.stringify({ why: "Opinioni chiare su ogni core update." }) });
 
     await superAdmin.mutation(api.newsFollows.createFollow, { kind: "X", name: "Lily Ray", url: "https://x.com/lilyraynyc", whyEn: "Clear takes on every core update." });
-    expect((await member.query(api.newsFollows.listFollows, { language: "it" }))[0].why).toBe("Clear takes on every core update.");
+    expect((await member.query(api.newsFollows.listFollowsByPage, { language: "it", page: 1, rows: 25 })).rows[0].why).toBe("Clear takes on every core update.");
     await finishScheduled(t);
-    expect((await member.query(api.newsFollows.listFollows, { language: "it" }))[0].why).toBe("Opinioni chiare su ogni core update.");
+    expect((await member.query(api.newsFollows.listFollowsByPage, { language: "it", page: 1, rows: 25 })).rows[0].why).toBe("Opinioni chiare su ogni core update.");
   });
 });

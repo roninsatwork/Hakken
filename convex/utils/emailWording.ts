@@ -18,6 +18,8 @@ export type EmailWording = {
     /** When the week's issue has no opening. */
     verdict: string;
     readOriginal: string;
+    /** Over the week's Helpful content (IH19). */
+    helpfulHeading: string;
     openNews: string;
     seeAll: (args: { count: number; platformName: string }) => string;
     /** Why the reader gets it, and how to stop. */
@@ -42,6 +44,7 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
       subject: ({ platformName }) => `This week in search, from ${platformName}`,
       verdict: "Here is what happened in search this week.",
       readOriginal: "Read the original",
+      helpfulHeading: "Helpful content",
       openNews: "Open News",
       seeAll: ({ count, platformName }) => `See all ${count} on ${platformName}`,
       whyYouGetIt: ({ platformName }) => `You get this weekly email because you use ${platformName}.`,
@@ -62,6 +65,7 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
       subject: ({ platformName }) => `Questa settimana nella ricerca, da ${platformName}`,
       verdict: "Ecco cosa è successo nella ricerca questa settimana.",
       readOriginal: "Leggi l'originale",
+      helpfulHeading: "Contenuti utili",
       openNews: "Apri Notizie",
       seeAll: ({ count, platformName }) => `Vedi tutte le ${count} su ${platformName}`,
       whyYouGetIt: ({ platformName }) => `Ricevi questa email settimanale perché usi ${platformName}.`,

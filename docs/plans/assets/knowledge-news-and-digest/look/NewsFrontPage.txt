@@ -2,7 +2,7 @@
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: News
-select: Learn
+select: Insights
 field: Jump to a page
 dateline
 lead-story

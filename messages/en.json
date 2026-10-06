@@ -610,21 +610,22 @@
     "yourSites": "Websites",
     "keywordResearch": "Keyword research",
     "knowledge": "Knowledge",
-    "library": "Library",
+    "library": "Helpful content",
     "content": "Content",
     "news": "News",
     "newsSources": "News sources",
     "googleUpdates": "Google updates",
     "whoToFollow": "Who to follow",
     "outbox": "Outbox",
-    "learn": "Learn",
+    "learn": "Insights",
     "usage": "Usage",
     "usageOverview": "Overview",
     "usageByWork": "By work",
     "usageByWebsite": "By website",
     "usageComingUp": "Coming up",
     "usageStatement": "Statement",
-    "creditPrices": "Credit prices"
+    "creditPrices": "Credit prices",
+    "topics": "Topics"
   },
   "header": {
     "adminOverview": "Platform Management",
@@ -6595,7 +6596,7 @@
     },
     "knowledgeArticles": {
       "title": "Knowledge",
-      "subtitle": "The articles every signed-in user reads in Learn, under Knowledge. Only published articles are shown to them.",
+      "subtitle": "The articles every signed-in user reads in Insights, under Knowledge. Only published articles are shown to them.",
       "create": "New article",
       "createTitle": "New article",
       "editTitle": "Edit article",
@@ -6631,9 +6632,9 @@
       "noTopic": "No topic"
     },
     "libraryArticles": {
-      "title": "Library",
-      "subtitle": "Articles from other websites, kept in {platformName}'s knowledge. Ask {platformName} reads them and links to the original.",
-      "explanation": "Paste an article's address and {platformName} reads the page through Firecrawl: its words, title, publication, author and date. Only you see the copy kept here; readers get Ask {platformName}'s answers and the link to the original.",
+      "title": "Helpful content",
+      "subtitle": "Articles from other websites. Readers find them in Insights and open the original; Ask {platformName} reads them and links to it.",
+      "explanation": "Paste an article's address and {platformName} reads the page through Firecrawl — its words, title, publication, author and date — and writes a short summary for readers. Readers see the summary in Insights and open the original to read it; Ask {platformName} reads the whole article to answer questions. Only you see the copy kept here.",
       "create": "Add article",
       "searchPlaceholder": "Search articles and publications…",
       "empty": "No articles yet. Add the first one.",
@@ -6648,7 +6649,7 @@
         "allStatuses": "Every status"
       },
       "statuses": {
-        "IN_KNOWLEDGE": "In knowledge",
+        "IN_KNOWLEDGE": "Published",
         "DRAFT": "Draft"
       },
       "columns": {
@@ -6667,8 +6668,8 @@
       "delete": "Delete article",
       "deleteTitle": "Delete article",
       "deleteWarning": "Ask {platformName} stops reading it straight away. This cannot be undone.",
-      "deleteConfirm": "Delete <highlight>{title}</highlight> from the Library?",
-      "back": "Library",
+      "deleteConfirm": "Delete <highlight>{title}</highlight> from Helpful content?",
+      "back": "Helpful content",
       "createTitle": "Add an article",
       "createSubtitle": "Paste the article's address. {platformName} reads the page through Firecrawl and fills in what it finds; check it, then add it.",
       "addressLabel": "Article address",
@@ -6679,7 +6680,7 @@
       "readAgain": "Read again",
       "readNotice": "Read just now through Firecrawl: {words, plural, =1 {# word} other {# words}}. Check what it found and fill in anything it could not.",
       "readNoticeLanguage": "Read just now through Firecrawl: {words, plural, =1 {# word} other {# words}}, in {language}. Check what it found and fill in anything it could not.",
-      "readCut": "The page was longer than the Library keeps, so its words stop at {limit} characters.",
+      "readCut": "The page was longer than Helpful content keeps, so its words stop at {limit} characters.",
       "unread": {
         "bad_address": "That is not an article's address. Paste one that starts with https://.",
         "not_configured": "Firecrawl is not set up on this deployment, so pages cannot be read. Paste the article's words below yourself.",
@@ -6689,9 +6690,9 @@
         "timeout": "{platformName} could not read this page: it did not answer within 45 seconds. Try again, or paste the article's words below yourself.",
         "failed": "{platformName} could not read this page. Try again, or paste the article's words below yourself."
       },
-      "duplicate": "That article is already in the Library: <link>{title}</link>.",
+      "duplicate": "That article is already in Helpful content: <link>{title}</link>.",
       "whoLabel": "Who reads it",
-      "whoAsk": "Ask {platformName} — added to its knowledge",
+      "whoAsk": "Published — readers in Insights, and Ask {platformName}",
       "whoDraft": "Draft — kept here only",
       "topicLabel": "Topic",
       "noTopic": "No topic",
@@ -6710,7 +6711,7 @@
       "bodyLabel": "The article",
       "bodyPlaceholder": "Paste the article's words here.",
       "bodyHint": "As Firecrawl read it, in plain text with **bold**, - lists, [links](https://…) and ## headings. Cut anything that is not the article: menus, adverts, sign-up boxes.",
-      "bodyHintSaved": "As Firecrawl read it, in plain text with **bold**, - lists, [links](https://…) and ## headings. Reading it again replaces this text; {platformName} asks first.",
+      "bodyHintSaved": "As Firecrawl read it, in plain text with **bold**, - lists, [links](https://…) and ## headings. Only you see this copy: Ask {platformName} reads it to answer questions, and readers open the original. Reading it again replaces this text; {platformName} asks first.",
       "add": "Add to the library",
       "save": "Save changes",
       "byline": {
@@ -6718,15 +6719,28 @@
         "readAt": "read through Firecrawl on {date}",
         "pasted": "words pasted by hand"
       },
-      "inKnowledge": "In Ask {platformName}'s knowledge",
-      "draftLabel": "Draft: Ask {platformName} does not read it",
+      "inKnowledge": "Published",
+      "draftLabel": "Draft",
       "words": "{count, plural, =1 {# word} other {# words}}",
       "readAgainTitle": "Read the page again?",
       "readAgainConfirm": "What the page says now replaces the details and words below. Nothing is saved until you press Save changes.",
       "errors": {
         "saveFailed": "Could not save the article. Try again.",
         "deleteFailed": "Could not delete the article. Try again.",
-        "readFailed": "Could not read the page. Try again."
+        "readFailed": "Could not read the page. Try again.",
+        "writeFailed": "Could not write the summary. Try again."
+      },
+      "readersLabel": "What readers see",
+      "readersHint": "Written by {platformName} from the article, in its own words — never the article's. Change anything; your words are kept and translated.",
+      "summaryLabel": "Summary",
+      "summaryHint": "Two or three sentences: what the article says.",
+      "meaningLabel": "What it means for you",
+      "meaningHint": "For someone who runs a website: what to do about it.",
+      "writeAgain": "Write again",
+      "writing": "Writing…",
+      "writeFailed": {
+        "no_words": "There are no words to write from yet. Read the page or paste the article first.",
+        "model": "{platformName} could not write a summary this time. Press Write again, or write it yourself."
       }
     },
     "googleUpdates": {
@@ -6874,14 +6888,39 @@
         "name": "Name",
         "why": "Why",
         "actions": "Actions",
-        "translations": "Translations"
+        "translations": "Translations",
+        "topic": "Topic",
+        "pick": "Our pick"
       },
       "errors": {
         "saveFailed": "Could not save the recommendation. Try again.",
-        "deleteFailed": "Could not delete the recommendation. Try again."
+        "deleteFailed": "Could not delete the recommendation. Try again.",
+        "pickFailed": "Could not change the picks. Try again."
       },
       "back": "Who to follow",
-      "whyLabel": "Why we recommend them"
+      "whyLabel": "Why we recommend them",
+      "topicLabel": "Topic",
+      "noTopic": "No topic",
+      "topicHint": "What they are best on: readers can filter Who to follow by it.",
+      "picksLabel": "Our picks",
+      "pickCheckbox": "Show at the top of Who to follow",
+      "pickHint": "Up to {max}, shown in the order they were picked, until you change them. {free, plural, =0 {No place is free.} =1 {# place is free.} other {# places are free.}}",
+      "pickHintFull": "{max} are picked: {names}. Untick one of them to pick {name}.",
+      "thisEntry": "this entry",
+      "picksNotice": "Our picks — {names} — show at the top of Who to follow, in the order they were picked, until you change them. {max} is the most: untick one to pick someone else.",
+      "picksNone": "No one is picked yet. Tick “Our pick” on up to {max} people to show them at the top of Who to follow.",
+      "picked": "One of our picks",
+      "pickLabel": "Pick {name}",
+      "pickFull": "{max} are picked: untick one first",
+      "filters": {
+        "where": "Where",
+        "allPlaces": "All places",
+        "topic": "Topic",
+        "allTopics": "All topics",
+        "show": "Show",
+        "everyone": "Everyone",
+        "picks": "Our picks"
+      }
     },
     "outbox": {
       "title": "Outbox",
@@ -6951,12 +6990,8 @@
         "actions": "Actions"
       },
       "errors": {
-        "deleteFailed": "Could not take the item down. Try again.",
-        "pinFailed": "Could not change the lead story. Try again."
-      },
-      "pin": "Lead the News front page with this for 7 days",
-      "unpin": "Stop leading with this",
-      "leadUntil": "Lead story until {date}"
+        "deleteFailed": "Could not take the item down. Try again."
+      }
     },
     "contentEditor": {
       "missingTitle": "That is no longer here",
@@ -7031,6 +7066,61 @@
       "discard": "Discard",
       "save": "Save prices",
       "saving": "Saving…"
+    },
+    "topics": {
+      "title": "Topics",
+      "subtitle": "What readers browse by in Insights. Knowledge, Helpful content and Who to follow share one list.",
+      "explanation": "Written once, in English; readers see each topic in their own language. The order here is the order in Insights' side menu. Deleting a topic asks first, and what used it is left without a topic until you choose another.",
+      "create": "New topic",
+      "createTitle": "New topic",
+      "editorSubtitle": "Written once, in English; readers see it in their own language.",
+      "nameLabel": "Name",
+      "nameHint": "As readers see it in Insights' side menu, its filters and each article's facts.",
+      "orderLabel": "Order",
+      "orderHint": "1 comes first in the side menu and the filters.",
+      "orderHintNew": "1 comes first in the side menu and the filters. Left blank, it goes last.",
+      "searchPlaceholder": "Find a topic…",
+      "empty": "No topics yet.",
+      "noMatch": "No topic matches that.",
+      "columns": {
+        "order": "Order",
+        "topic": "Topic",
+        "knowledge": "Knowledge",
+        "helpful": "Helpful content",
+        "people": "Who to follow",
+        "translations": "Translations",
+        "actions": "Actions"
+      },
+      "uses": {
+        "knowledge": "{count, plural, =1 {# Knowledge article} other {# Knowledge articles}}",
+        "helpful": "{count, plural, =1 {# Helpful content article} other {# Helpful content articles}}",
+        "people": "{count, plural, =1 {# person to follow} other {# people to follow}}"
+      },
+      "edit": "Edit topic",
+      "delete": "Delete topic",
+      "save": "Save topic",
+      "back": "Topics",
+      "deleteTitle": "Delete topic",
+      "deleteWarning": "It leaves Insights' side menu and filters straight away.",
+      "deleteConfirm": "Delete <highlight>{name}</highlight>? {knowledge} Knowledge articles, {helpful} Helpful content articles and {people} people to follow use it; they will have no topic until you choose another.",
+      "errors": {
+        "saveFailed": "Could not save the topic. Try again.",
+        "deleteFailed": "Could not delete the topic. Try again."
+      }
+    },
+    "leadStory": {
+      "pinned": "The News front page leads with “{title}”, pinned in <place>{placeName}</place> until {date}. {here, select, NEWS {Pinning a story here takes its place.} other {Pinning an article here takes its place.}}",
+      "rule": "Nothing is pinned, so the News front page leads with “{title}”: a Google update while it matters, else the newest story. {here, select, NEWS {Pin a story here to lead with it for 7 days.} other {Pin an article here to lead with it for 7 days.}}",
+      "places": {
+        "NEWS": "News",
+        "KNOWLEDGE": "Knowledge",
+        "HELPFUL": "Helpful content"
+      },
+      "pin": "Lead the News front page",
+      "pinRow": "Lead the News front page with this for 7 days",
+      "unpin": "Stop leading with this",
+      "leadUntil": "Lead story until {date}",
+      "pinFailed": "Could not change the lead story. Try again."
     }
   },
   "ai": {
@@ -9071,7 +9161,8 @@
       "lists": "{count, plural, =1 {# list} other {# lists}}",
       "ideas": "{count, plural, =1 {# idea} other {# ideas}}",
       "assistants": "{count, plural, =1 {# assistant} other {# assistants}}",
-      "lines": "{count, plural, =1 {# line} other {# lines}}"
+      "lines": "{count, plural, =1 {# line} other {# lines}}",
+      "people": "{count, plural, =1 {# person} other {# people}}"
     },
     "chart": {
       "download": "Download",
@@ -12303,21 +12394,32 @@
   "knowledgeArticles": {
     "list": {
       "title": "Knowledge",
-      "description": "Short answers to the questions we get asked most, like how the figures in Discovery are worked out.",
-      "searchPlaceholder": "Find an article…",
-      "empty": "No articles yet.",
-      "noMatch": "No article matches that.",
-      "columns": {
-        "article": "Article",
-        "updated": "Updated",
-        "topic": "Topic"
-      }
+      "description": "Short answers to the questions we get asked most, like how the figures in Discovery are worked out."
     },
     "article": {
       "back": "Knowledge",
       "updated": "Updated {date}",
       "notFoundTitle": "That article is not here",
-      "notFoundDescription": "It may have been taken down or replaced. The rest are in Knowledge."
+      "notFoundDescription": "It may have been taken down or replaced. The rest are in Knowledge.",
+      "readingTime": "about {minutes, plural, one {# minute} other {# minutes}} to read",
+      "keepReading": "Keep reading"
+    },
+    "front": {
+      "articleCount": "{count, plural, one {# article} other {# articles}}",
+      "writtenBy": "Written by {platformName}'s team",
+      "lastAdded": "Last added {day}",
+      "leadLabel": "The lead article",
+      "topicsLabel": "Topics",
+      "topicsTitle": "What it covers",
+      "topicsDescription": "The things a website is measured by in {platformName}.",
+      "helpfulContent": "Helpful content",
+      "moreLabel": "More articles",
+      "earlier": "Earlier",
+      "readArticle": "Read the article",
+      "emptyTitle": "Nothing here yet",
+      "empty": "Articles will appear here as they are published.",
+      "emptyTopic": "No articles on this topic yet. All articles has the rest.",
+      "allArticles": "All articles"
     }
   },
   "news": {
@@ -12347,7 +12449,8 @@
         "WEBSITE": "Website",
         "YOUTUBE": "YouTube",
         "X": "X",
-        "KNOWLEDGE": "Knowledge"
+        "KNOWLEDGE": "Knowledge",
+        "HELPFUL": "Helpful content"
       },
       "meaning": "What it means for you",
       "readOriginal": "Read the original",
@@ -12409,13 +12512,14 @@
   },
   "learn": {
     "menu": {
-      "label": "Learn",
+      "label": "Insights",
       "jumpLabel": "Jump to a page",
       "jumpPlaceholder": "Jump to a page…",
       "groups": {
         "news": "News",
         "people": "People",
-        "knowledge": "Knowledge"
+        "knowledge": "Knowledge",
+        "helpful": "Helpful content"
       },
       "allNews": "All news",
       "kinds": {
@@ -12425,13 +12529,7 @@
         "WEBSITE": "From websites"
       },
       "whoToFollow": "Who to follow",
-      "allArticles": "All articles",
-      "topics": {
-        "TRAFFIC": "Traffic",
-        "RANKINGS": "Rankings",
-        "AI_ANSWERS": "AI answers",
-        "BACKLINKS": "Backlinks"
-      }
+      "allArticles": "All articles"
     },
     "follow": {
       "title": "Who to follow",
@@ -12439,11 +12537,49 @@
       "searchPlaceholder": "Find someone…",
       "empty": "Our recommendations will appear here.",
       "noMatch": "No one matches that.",
-      "columns": {
-        "name": "Name",
+      "emptyTitle": "No one here yet",
+      "peopleCount": "{count, plural, one {# person} other {# people}}",
+      "placeCount": "{count, plural, one {# place to follow them} other {# places to follow them}}",
+      "chosenBy": "Chosen by {platformName}'s team",
+      "picks": "Our picks",
+      "filters": {
         "where": "Where",
-        "why": "Why follow them"
+        "allPlaces": "All places",
+        "topic": "Topic",
+        "allTopics": "All topics"
+      },
+      "visit": {
+        "X": "Follow on X",
+        "YOUTUBE": "Watch on YouTube",
+        "LINKEDIN": "Follow on LinkedIn",
+        "WEBSITE": "Read their website"
       }
+    },
+    "helpful": {
+      "title": "Helpful content",
+      "description": "The best of what others have written on search and AI, chosen by {platformName}'s team. Read the original, or ask {platformName}.",
+      "back": "Helpful content",
+      "notFoundTitle": "That article is not here",
+      "notFoundDescription": "It may have been taken down. The rest are in Helpful content.",
+      "emptyTitle": "Nothing here yet",
+      "empty": "Articles will appear here as they are added.",
+      "emptyList": "Nothing here yet. All articles has the rest.",
+      "articleCount": "{count, plural, one {# article} other {# articles}}",
+      "publicationCount": "{count, plural, one {# publication} other {# publications}}",
+      "weekCount": "{count, plural, =0 {None added in the last 7 days} other {# added in the last 7 days}}",
+      "leadLabel": "The lead article",
+      "publicationsLabel": "Publications",
+      "publicationsTitle": "Where they come from",
+      "publicationsDescription": "Who {platformName}'s team reads, and how many of their articles are here.",
+      "whoToFollow": "Who to follow",
+      "moreLabel": "More articles",
+      "earlier": "Earlier",
+      "published": "Published {day}",
+      "length": "{words} words · about {minutes, plural, one {# minute} other {# minutes}} to read",
+      "inLanguage": "In {language}",
+      "readOn": "Read it on {site}",
+      "moreOn": "More on {topic}",
+      "moreArticles": "More helpful content"
     }
   },
   "usage": {

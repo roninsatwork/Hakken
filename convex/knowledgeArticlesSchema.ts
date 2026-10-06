@@ -14,9 +14,6 @@ export const KNOWLEDGE_STATUSES = ["DRAFT", "PUBLISHED"] as const;
 export type KnowledgeStatus = (typeof KNOWLEDGE_STATUSES)[number];
 export const knowledgeStatusValidator = v.union(v.literal("DRAFT"), v.literal("PUBLISHED"));
 
-/** What an article is about (revised again, 2026-10-01, R9; the list is `utils/learnLists.ts`, where a screen reads it). */
-export { KNOWLEDGE_TOPICS, type KnowledgeTopic } from "./utils/learnLists";
-export const knowledgeTopicValidator = v.union(v.literal("TRAFFIC"), v.literal("RANKINGS"), v.literal("AI_ANSWERS"), v.literal("BACKLINKS"));
 
 export const knowledgeArticleTables = {
   knowledgeArticles: defineTable({
@@ -31,12 +28,28 @@ export const knowledgeArticleTables = {
     bodyEn: v.string(),
     /** Readers see only a published article; a draft is Admin's alone. */
     status: knowledgeStatusValidator,
-    /** Absent until one is chosen in its editor. */
-    topic: v.optional(knowledgeTopicValidator),
+    /**
+     * The key of a topic in the shared list (`topics`, insights-helpful-content-
+     * plan.md, IH20); absent until one is chosen, or after its topic is deleted.
+     */
+    topic: v.optional(v.string()),
     /** When it was first published; kept through later edits, cleared when it goes back to a draft. */
     publishedAt: v.optional(v.number()),
+    /**
+     * Pinned as the News front page's lead story, until then (insights-helpful-
+     * content-plan.md, IH11): one pin across News, Knowledge and Helpful
+     * content (`leadStory.ts`); cleared when the article goes back to a draft.
+     */
+    leadUntil: v.optional(v.number()),
     updatedAt: v.number(),
   })
     .index("by_status_published", ["status", "publishedAt"])
-    .index("by_key", ["key"]),
+    .index("by_lead_until", ["leadUntil"])
+    .index("by_key", ["key"])
+    .index("by_topic", ["topic"])
+    // Readers' list by topic, newest first (IH12, IH21).
+    .index("by_status_topic_published", ["status", "topic", "publishedAt"])
+    // Admin's list, the most recently changed first, and searched by title, on the server (IH21).
+    .index("by_updated", ["updatedAt"])
+    .searchIndex("search_title", { searchField: "titleEn" }),
 };

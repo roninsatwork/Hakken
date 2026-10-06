@@ -49,7 +49,7 @@ describe("Knowledge articles", () => {
     const draftId = await superAdmin.mutation(api.knowledgeArticles.createArticle, { ...ARTICLE, titleEn: "Not yet", status: "DRAFT" });
     const publishedId = await superAdmin.mutation(api.knowledgeArticles.createArticle, { ...ARTICLE, status: "PUBLISHED" });
 
-    expect((await member.query(api.knowledgeArticles.listPublishedArticles, { language: "en" })).map((article) => article._id)).toEqual([publishedId]);
+    expect((await member.query(api.knowledgeArticles.listPublishedPage, { language: "en", paginationOpts: { numItems: 50, cursor: null } })).page.map((article) => article._id)).toEqual([publishedId]);
     expect(await member.query(api.knowledgeArticles.getPublishedArticle, { articleId: draftId, language: "en" })).toBeNull();
     expect(await member.query(api.knowledgeArticles.getPublishedArticle, { articleId: publishedId, language: "en" })).toMatchObject({
       title: "Why rankings move",
@@ -59,7 +59,7 @@ describe("Knowledge articles", () => {
     expect(await member.query(api.knowledgeArticles.getPublishedArticle, { articleId: publishedId, language: "it" })).toMatchObject({ title: "Why rankings move" });
     // Admin sees both, drafts too, and how far the translations have got.
     // (Saved in the same moment, the two are a tie for "most recently changed", so the order is not asserted.)
-    const rows = await superAdmin.query(api.knowledgeArticles.listArticles, {});
+    const rows = (await superAdmin.query(api.knowledgeArticles.listArticlesPage, { paginationOpts: { numItems: 50, cursor: null } })).page;
     expect(rows.map((row) => [row.titleEn, row.translations])).toEqual(expect.arrayContaining([
       ["Why rankings move", { done: 0, total: 1 }],
       ["Not yet", { done: 0, total: 0 }],
@@ -71,7 +71,7 @@ describe("Knowledge articles", () => {
     const { superAdmin, member } = await people(t);
 
     await expect(member.mutation(api.knowledgeArticles.createArticle, { ...ARTICLE, status: "DRAFT" })).rejects.toThrow();
-    await expect(member.query(api.knowledgeArticles.listArticles, {})).rejects.toThrow();
+    await expect(member.query(api.knowledgeArticles.listArticlesPage, { paginationOpts: { numItems: 50, cursor: null } })).rejects.toThrow();
     await expect(superAdmin.mutation(api.knowledgeArticles.createArticle, { ...ARTICLE, bodyEn: "  ", status: "PUBLISHED" }))
       .rejects.toThrow("To publish, write the article.");
     // A draft may wait for its words.
@@ -97,6 +97,33 @@ describe("Knowledge articles", () => {
     expect(trail).toEqual(["CREATE_KNOWLEDGE_ARTICLE", "UPDATE_KNOWLEDGE_ARTICLE", "UPDATE_KNOWLEDGE_ARTICLE", "DELETE_KNOWLEDGE_ARTICLE"]);
   });
 
+  test("Admin's list is searched by title and paged on the server, the most recently changed first", async () => {
+    const t = harness();
+    const { superAdmin } = await people(t);
+    await superAdmin.mutation(api.knowledgeArticles.createArticle, { ...ARTICLE, status: "DRAFT" });
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.now() + 60_000);
+    await superAdmin.mutation(api.knowledgeArticles.createArticle, { titleEn: "How is traffic worked out?", bodyEn: "An estimate.", status: "DRAFT" });
+    vi.useRealTimers();
+
+    const page = { paginationOpts: { numItems: 50, cursor: null } };
+    expect((await superAdmin.query(api.knowledgeArticles.listArticlesPage, page)).page.map((row) => row.titleEn)).toEqual(["How is traffic worked out?", "Why rankings move"]);
+    expect((await superAdmin.query(api.knowledgeArticles.listArticlesPage, { ...page, search: "rankings" })).page.map((row) => row.titleEn)).toEqual(["Why rankings move"]);
+  });
+
+  test("Keep reading lists the same topic's newest, never the one being read, and every article says how long it is", async () => {
+    const t = harness();
+    const { superAdmin, member } = await people(t);
+    await t.mutation(internal.topics.seedFirstTopicsInternal, {});
+    const reading = await superAdmin.mutation(api.knowledgeArticles.createArticle, { ...ARTICLE, status: "PUBLISHED", topic: "RANKINGS" });
+    const other = await superAdmin.mutation(api.knowledgeArticles.createArticle, { ...ARTICLE, titleEn: "What a position is", status: "PUBLISHED", topic: "RANKINGS" });
+    await superAdmin.mutation(api.knowledgeArticles.createArticle, { ...ARTICLE, titleEn: "Traffic", status: "PUBLISHED", topic: "TRAFFIC" });
+
+    const more = await member.query(api.knowledgeArticles.listMoreForReaders, { language: "en", topic: "RANKINGS", exclude: reading });
+    expect(more.map((article) => article._id)).toEqual([other]);
+    expect(more[0].words).toBe(3);
+  });
+
   test("ships the traffic article once, published, and running it again changes nothing", async () => {
     const t = harness();
     const { superAdmin, member } = await people(t);
@@ -105,7 +132,7 @@ describe("Knowledge articles", () => {
     await t.mutation(internal.dataMigrations.run, { name: "2026-10-01-knowledge-traffic-article" });
     await finishScheduled(t);
     vi.useRealTimers();
-    const [article] = await member.query(api.knowledgeArticles.listPublishedArticles, { language: "en" });
+    const [article] = (await member.query(api.knowledgeArticles.listPublishedPage, { language: "en", paginationOpts: { numItems: 50, cursor: null } })).page;
     expect(article).toMatchObject({ title: TRAFFIC_ARTICLE.titleEn });
 
     // Edited in Admin, then the migration asked again: the edit stands, and there is still one.
@@ -113,7 +140,7 @@ describe("Knowledge articles", () => {
     await t.run(async (ctx) => {
       await addTrafficArticle(ctx);
     });
-    const after = await superAdmin.query(api.knowledgeArticles.listArticles, {});
+    const after = (await superAdmin.query(api.knowledgeArticles.listArticlesPage, { paginationOpts: { numItems: 50, cursor: null } })).page;
     expect(after.map((row) => [row.key, row.titleEn])).toEqual([["traffic", "Why rankings move"]]);
   });
 

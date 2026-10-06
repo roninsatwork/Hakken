@@ -28,7 +28,15 @@ const MAX_RETURNED_CHARACTERS = 30_000;
 
 /** One page read through Firecrawl, or why it could not be. */
 export type FetchedPage =
-  | { status: "success"; url: string; markdown: string; links: string[]; metadata: PageMetadata }
+  | {
+      status: "success";
+      url: string;
+      markdown: string;
+      links: string[];
+      metadata: PageMetadata;
+      /** The page's structured data (its `application/ld+json` blocks), when asked for. */
+      structuredData?: string[];
+    }
   | {
       status: "error";
       /** Why, for a caller that words it its own way. */
@@ -40,7 +48,29 @@ export type FetchedPage =
     };
 
 /** One page through Firecrawl: its Markdown, its links if asked for, and what its meta tags say. */
-export async function fetchPage(args: { url: string; mainContentOnly?: boolean; withLinks?: boolean }): Promise<FetchedPage> {
+/** Structured data kept from one page: a page's own blocks are a few kilobytes; this stops a pathological one. */
+const STRUCTURED_DATA_MAX_CHARACTERS = 200_000;
+
+/** A page's `application/ld+json` blocks, from its HTML, within the ceiling. */
+export function structuredDataBlocks(html: string): string[] {
+  const blocks: string[] = [];
+  let total = 0;
+  for (const match of html.matchAll(/<script[^>]*type\s*=\s*["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi)) {
+    const block = match[1].trim();
+    if (!block || total + block.length > STRUCTURED_DATA_MAX_CHARACTERS) continue;
+    blocks.push(block);
+    total += block.length;
+  }
+  return blocks;
+}
+
+export async function fetchPage(args: {
+  url: string;
+  mainContentOnly?: boolean;
+  withLinks?: boolean;
+  /** Also the page's structured data — dates a page gives nowhere else (insights-helpful-content-plan.md, IH10). Same read, same cost. */
+  withStructuredData?: boolean;
+}): Promise<FetchedPage> {
   const apiKey = process.env.FIRECRAWL_API_KEY;
   if (!apiKey) return { status: "error", reason: "not_configured", detail: "" };
 
@@ -63,7 +93,7 @@ export async function fetchPage(args: { url: string; mainContentOnly?: boolean; 
       },
       body: JSON.stringify({
         url: target.toString(),
-        formats: args.withLinks ? ["markdown", "links"] : ["markdown"],
+        formats: ["markdown", ...(args.withLinks ? ["links"] : []), ...(args.withStructuredData ? ["rawHtml"] : [])],
         onlyMainContent: args.mainContentOnly ?? true,
       }),
       signal: controller.signal,
@@ -75,7 +105,7 @@ export async function fetchPage(args: { url: string; mainContentOnly?: boolean; 
     }
 
     const payload = await response.json() as {
-      data?: { markdown?: string; links?: unknown[]; metadata?: PageMetadata };
+      data?: { markdown?: string; links?: unknown[]; metadata?: PageMetadata; rawHtml?: string };
     };
     const markdown = payload.data?.markdown ?? "";
     if (!markdown.trim()) return { status: "error", reason: "no_text", detail: "" };
@@ -85,6 +115,7 @@ export async function fetchPage(args: { url: string; mainContentOnly?: boolean; 
       markdown,
       links: (payload.data?.links ?? []).filter((link): link is string => typeof link === "string"),
       metadata: payload.data?.metadata ?? {},
+      ...(args.withStructuredData ? { structuredData: structuredDataBlocks(payload.data?.rawHtml ?? "") } : {}),
     };
   } catch (error: unknown) {
     const aborted = error instanceof Error && error.name === "AbortError";

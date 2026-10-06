@@ -1,6 +1,6 @@
-import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 
 import { renderWithProviders } from "@/src/test/renderWithProviders";
 import { answerQueries, convexPath } from "@/src/test/siteViewFixtures";
@@ -19,8 +19,10 @@ vi.mock("next/navigation", async () => ({
 
 const ARTICLE = {
   _id: "article_1", key: "traffic", titleEn: "How is traffic worked out?", bodyEn: "An estimate.",
-  status: "PUBLISHED", publishedAt: 1, updatedAt: Date.UTC(2026, 9, 1), translations: { done: 0, total: 1 },
+  status: "PUBLISHED", topic: "TRAFFIC", publishedAt: 1, leadUntil: null, updatedAt: Date.UTC(2026, 9, 1), translations: { done: 0, total: 1 },
 };
+const { pin, unpin } = vi.hoisted(() => ({ pin: vi.fn(), unpin: vi.fn() }));
+const LEAD = { storyId: "helpful_1", title: "Quality at Google", place: "HELPFUL", pinned: true, leadUntil: Date.UTC(2026, 9, 13) };
 
 /**
  * Admin → Content → Knowledge (docs/plans/active/knowledge-news-and-digest-plan.md,
@@ -32,9 +34,19 @@ describe("Admin Knowledge articles", () => {
     push.mockReset();
     create.mockReset().mockResolvedValue("article_2");
     update.mockReset().mockResolvedValue(null);
-    vi.mocked(useQuery).mockImplementation(answerQueries({ "knowledgeArticles:listArticles": [ARTICLE], "knowledgeArticles:getArticle": ARTICLE }));
+    pin.mockReset().mockResolvedValue(null);
+    unpin.mockReset().mockResolvedValue(null);
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "knowledgeArticles:getArticle": ARTICLE,
+      "news:getLeadForAdmin": LEAD,
+      "topics:listTopicChoices": [{ key: "TRAFFIC", nameEn: "Traffic" }],
+    }));
+    // Searched and paged on the server (insights-helpful-content-plan.md, IH21).
+    vi.mocked(usePaginatedQuery).mockReset().mockReturnValue({ results: [ARTICLE], status: "Exhausted", isLoading: false, loadMore: vi.fn() } as never);
     vi.mocked(useMutation).mockImplementation(((reference: unknown) => {
       const name = convexPath(reference);
+      if (name.endsWith("unpinLeadStory")) return unpin;
+      if (name.endsWith("pinLeadStory")) return pin;
       return name.endsWith("createArticle") ? create : name.endsWith("updateArticle") ? update : vi.fn();
     }) as never);
   });
@@ -71,6 +83,38 @@ describe("Admin Knowledge articles", () => {
     fireEvent.change(body, { target: { value: "An estimate, worked out." } });
     fireEvent.submit(body.closest("form") as HTMLFormElement);
 
-    await waitFor(() => expect(update).toHaveBeenCalledWith({ articleId: "article_1", titleEn: ARTICLE.titleEn, bodyEn: "An estimate, worked out.", status: "PUBLISHED" }));
+    await waitFor(() => expect(update).toHaveBeenCalledWith({ articleId: "article_1", titleEn: ARTICLE.titleEn, bodyEn: "An estimate, worked out.", status: "PUBLISHED", topic: "TRAFFIC" }));
+  });
+
+  // One lead story, pinned from News, Knowledge or Helpful content (IH11, boards 11 and 12).
+  it("says what leads the News front page and where it was pinned, and pins a published article from its row or its page", async () => {
+    const { unmount } = renderWithProviders(<KnowledgeArticlesAdminPage />);
+
+    expect(screen.getByText("admin.leadStory.pinned")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "admin.leadStory.pinRow" }));
+    await waitFor(() => expect(pin).toHaveBeenCalledWith({ storyId: "article_1" }));
+    unmount();
+
+    renderWithProviders(<ArticleEditor articleId={"article_1" as never} />);
+    expect(screen.getByText("admin.leadStory.pinned")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /admin\.leadStory\.pin$/ }));
+    await waitFor(() => expect(pin).toHaveBeenCalledTimes(2));
+  });
+
+  it("shows where an article leads, offers to stop it, and never offers the pin on a draft", async () => {
+    vi.mocked(usePaginatedQuery).mockReturnValue({
+      results: [{ ...ARTICLE, leadUntil: Date.UTC(2026, 9, 13) }, { ...ARTICLE, _id: "article_2", titleEn: "Not yet", status: "DRAFT" }],
+      status: "Exhausted",
+      isLoading: false,
+      loadMore: vi.fn(),
+    } as never);
+    renderWithProviders(<KnowledgeArticlesAdminPage />);
+
+    const leading = screen.getByText("How is traffic worked out?").closest("tr") as HTMLElement;
+    expect(within(leading).getByText("admin.leadStory.leadUntil")).toBeInTheDocument();
+    fireEvent.click(within(leading).getByRole("button", { name: "admin.leadStory.unpin" }));
+    await waitFor(() => expect(unpin).toHaveBeenCalledWith({ storyId: "article_1" }));
+    const draft = screen.getByText("Not yet").closest("tr") as HTMLElement;
+    expect(within(draft).queryByRole("button", { name: "admin.leadStory.pinRow" })).not.toBeInTheDocument();
   });
 });

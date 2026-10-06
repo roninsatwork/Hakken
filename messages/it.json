@@ -610,21 +610,22 @@
     "yourSites": "Siti web",
     "keywordResearch": "Ricerca parole chiave",
     "knowledge": "Conoscenza",
-    "library": "Biblioteca",
+    "library": "Contenuti utili",
     "content": "Contenuti",
     "news": "Notizie",
     "newsSources": "Fonti delle notizie",
     "googleUpdates": "Aggiornamenti di Google",
     "whoToFollow": "Chi seguire",
     "outbox": "Posta in uscita",
-    "learn": "Impara",
+    "learn": "Insights",
     "usage": "Utilizzo",
     "usageOverview": "Panoramica",
     "usageByWork": "Per lavoro",
     "usageByWebsite": "Per sito web",
     "usageComingUp": "In arrivo",
     "usageStatement": "Estratto conto",
-    "creditPrices": "Prezzi dei crediti"
+    "creditPrices": "Prezzi dei crediti",
+    "topics": "Argomenti"
   },
   "header": {
     "adminOverview": "Protocollo Infrastruttura",
@@ -6595,7 +6596,7 @@
     },
     "knowledgeArticles": {
       "title": "Conoscenza",
-      "subtitle": "Gli articoli che ogni utente connesso legge in Impara, sotto Conoscenza. Vedono solo quelli pubblicati.",
+      "subtitle": "Gli articoli che ogni utente registrato legge in Insights, sotto Conoscenza. Vede solo quelli pubblicati.",
       "create": "Nuovo articolo",
       "createTitle": "Nuovo articolo",
       "editTitle": "Modifica articolo",
@@ -6631,9 +6632,9 @@
       "noTopic": "Nessun argomento"
     },
     "libraryArticles": {
-      "title": "Biblioteca",
-      "subtitle": "Articoli di altri siti, conservati nella conoscenza di {platformName}. Chiedi a {platformName} li legge e rimanda all'originale.",
-      "explanation": "Incolla l'indirizzo di un articolo e {platformName} legge la pagina tramite Firecrawl: testo, titolo, testata, autore e data. Solo tu vedi la copia conservata qui; i lettori ricevono le risposte di Chiedi a {platformName} e il link all'originale.",
+      "title": "Contenuti utili",
+      "subtitle": "Articoli di altri siti. I lettori li trovano in Insights e aprono l'originale; Chiedi a {platformName} li legge e rimanda all'originale.",
+      "explanation": "Incolla l'indirizzo di un articolo e {platformName} legge la pagina tramite Firecrawl — testo, titolo, testata, autore e data — e scrive un breve riassunto per i lettori. I lettori vedono il riassunto in Insights e aprono l'originale per leggerlo; Chiedi a {platformName} legge l'intero articolo per rispondere alle domande. Solo tu vedi la copia conservata qui.",
       "create": "Aggiungi articolo",
       "searchPlaceholder": "Cerca articoli e testate…",
       "empty": "Ancora nessun articolo. Aggiungi il primo.",
@@ -6648,7 +6649,7 @@
         "allStatuses": "Tutti gli stati"
       },
       "statuses": {
-        "IN_KNOWLEDGE": "Nella conoscenza",
+        "IN_KNOWLEDGE": "Pubblicato",
         "DRAFT": "Bozza"
       },
       "columns": {
@@ -6667,8 +6668,8 @@
       "delete": "Elimina articolo",
       "deleteTitle": "Elimina articolo",
       "deleteWarning": "Chiedi a {platformName} smette subito di leggerlo. L'operazione non si può annullare.",
-      "deleteConfirm": "Eliminare <highlight>{title}</highlight> dalla Biblioteca?",
-      "back": "Biblioteca",
+      "deleteConfirm": "Eliminare <highlight>{title}</highlight> da Contenuti utili?",
+      "back": "Contenuti utili",
       "createTitle": "Aggiungi un articolo",
       "createSubtitle": "Incolla l'indirizzo dell'articolo. {platformName} legge la pagina tramite Firecrawl e compila ciò che trova; controlla, poi aggiungilo.",
       "addressLabel": "Indirizzo dell'articolo",
@@ -6679,7 +6680,7 @@
       "readAgain": "Leggi di nuovo",
       "readNotice": "Letta ora tramite Firecrawl: {words, plural, =1 {# parola} other {# parole}}. Controlla ciò che ha trovato e completa quello che manca.",
       "readNoticeLanguage": "Letta ora tramite Firecrawl: {words, plural, =1 {# parola} other {# parole}}, in {language}. Controlla ciò che ha trovato e completa quello che manca.",
-      "readCut": "La pagina era più lunga di quanto la Biblioteca conserva, quindi il testo si ferma a {limit} caratteri.",
+      "readCut": "La pagina era più lunga di quanto conservano i Contenuti utili, quindi il testo si ferma a {limit} caratteri.",
       "unread": {
         "bad_address": "Questo non è l'indirizzo di un articolo. Incollane uno che inizia con https://.",
         "not_configured": "Firecrawl non è configurato in questo ambiente, quindi le pagine non si possono leggere. Incolla tu il testo dell'articolo qui sotto.",
@@ -6689,9 +6690,9 @@
         "timeout": "{platformName} non è riuscito a leggere questa pagina: non ha risposto entro 45 secondi. Riprova, o incolla tu il testo dell'articolo qui sotto.",
         "failed": "{platformName} non è riuscito a leggere questa pagina. Riprova, o incolla tu il testo dell'articolo qui sotto."
       },
-      "duplicate": "Questo articolo è già nella Biblioteca: <link>{title}</link>.",
+      "duplicate": "Questo articolo è già nei Contenuti utili: <link>{title}</link>.",
       "whoLabel": "Chi lo legge",
-      "whoAsk": "Chiedi a {platformName}: aggiunto alla sua conoscenza",
+      "whoAsk": "Pubblicato: lettori in Insights e Chiedi a {platformName}",
       "whoDraft": "Bozza: conservato solo qui",
       "topicLabel": "Argomento",
       "noTopic": "Nessun argomento",
@@ -6710,7 +6711,7 @@
       "bodyLabel": "L'articolo",
       "bodyPlaceholder": "Incolla qui il testo dell'articolo.",
       "bodyHint": "Come l'ha letto Firecrawl, in testo semplice con **grassetto**, - elenchi, [link](https://…) e ## titoli. Togli ciò che non è l'articolo: menu, pubblicità, riquadri di iscrizione.",
-      "bodyHintSaved": "Come l'ha letto Firecrawl, in testo semplice con **grassetto**, - elenchi, [link](https://…) e ## titoli. Leggerlo di nuovo sostituisce questo testo; {platformName} chiede prima.",
+      "bodyHintSaved": "Come l'ha letto Firecrawl, in testo semplice con **grassetto**, - elenchi, [link](https://…) e ## titoli. Solo tu vedi questa copia: Chiedi a {platformName} la legge per rispondere alle domande e i lettori aprono l'originale. Leggerlo di nuovo sostituisce questo testo; {platformName} chiede prima.",
       "add": "Aggiungi alla biblioteca",
       "save": "Salva modifiche",
       "byline": {
@@ -6718,15 +6719,28 @@
         "readAt": "letto tramite Firecrawl il {date}",
         "pasted": "testo incollato a mano"
       },
-      "inKnowledge": "Nella conoscenza di Chiedi a {platformName}",
-      "draftLabel": "Bozza: Chiedi a {platformName} non lo legge",
+      "inKnowledge": "Pubblicato",
+      "draftLabel": "Bozza",
       "words": "{count, plural, =1 {# parola} other {# parole}}",
       "readAgainTitle": "Leggere di nuovo la pagina?",
       "readAgainConfirm": "Ciò che la pagina dice ora sostituisce i dettagli e il testo qui sotto. Nulla viene salvato finché non premi Salva modifiche.",
       "errors": {
         "saveFailed": "Impossibile salvare l'articolo. Riprova.",
         "deleteFailed": "Impossibile eliminare l'articolo. Riprova.",
-        "readFailed": "Impossibile leggere la pagina. Riprova."
+        "readFailed": "Impossibile leggere la pagina. Riprova.",
+        "writeFailed": "Impossibile scrivere il riassunto. Riprova."
+      },
+      "readersLabel": "Cosa vedono i lettori",
+      "readersHint": "Scritto da {platformName} a partire dall'articolo, con parole sue, mai con quelle dell'articolo. Cambia ciò che vuoi: le tue parole restano e vengono tradotte.",
+      "summaryLabel": "Riassunto",
+      "summaryHint": "Due o tre frasi: cosa dice l'articolo.",
+      "meaningLabel": "Cosa significa per te",
+      "meaningHint": "Per chi gestisce un sito: cosa fare.",
+      "writeAgain": "Riscrivi",
+      "writing": "Scrittura in corso…",
+      "writeFailed": {
+        "no_words": "Non c'è ancora un testo da cui scrivere. Leggi prima la pagina o incolla l'articolo.",
+        "model": "{platformName} non è riuscito a scrivere un riassunto questa volta. Premi Riscrivi, o scrivilo tu."
       }
     },
     "googleUpdates": {
@@ -6874,14 +6888,39 @@
         "name": "Nome",
         "why": "Perché",
         "actions": "Azioni",
-        "translations": "Traduzioni"
+        "translations": "Traduzioni",
+        "topic": "Argomento",
+        "pick": "Nostro consiglio"
       },
       "errors": {
         "saveFailed": "Impossibile salvare il consiglio. Riprova.",
-        "deleteFailed": "Impossibile eliminare il consiglio. Riprova."
+        "deleteFailed": "Impossibile eliminare il consiglio. Riprova.",
+        "pickFailed": "Impossibile cambiare i consigli. Riprova."
       },
       "back": "Chi seguire",
-      "whyLabel": "Perché li consigliamo"
+      "whyLabel": "Perché li consigliamo",
+      "topicLabel": "Argomento",
+      "noTopic": "Nessun argomento",
+      "topicHint": "Ciò in cui sono più bravi: i lettori possono filtrare Chi seguire in base a questo.",
+      "picksLabel": "I nostri consigli",
+      "pickCheckbox": "Mostra in cima a Chi seguire",
+      "pickHint": "Fino a {max}, mostrati nell'ordine in cui sono stati scelti, finché non li cambi. {free, plural, =0 {Nessun posto libero.} =1 {# posto libero.} other {# posti liberi.}}",
+      "pickHintFull": "Ne sono già scelti {max}: {names}. Togline uno per scegliere {name}.",
+      "thisEntry": "questa voce",
+      "picksNotice": "I nostri consigli — {names} — compaiono in cima a Chi seguire, nell'ordine in cui sono stati scelti, finché non li cambi. Al massimo {max}: togline uno per sceglierne un altro.",
+      "picksNone": "Nessuno è ancora scelto. Spunta “Nostro consiglio” su un massimo di {max} persone per mostrarle in cima a Chi seguire.",
+      "picked": "Uno dei nostri consigli",
+      "pickLabel": "Scegli {name}",
+      "pickFull": "Ne sono già scelti {max}: togline uno prima",
+      "filters": {
+        "where": "Dove",
+        "allPlaces": "Ovunque",
+        "topic": "Argomento",
+        "allTopics": "Tutti gli argomenti",
+        "show": "Mostra",
+        "everyone": "Tutti",
+        "picks": "I nostri consigli"
+      }
     },
     "outbox": {
       "title": "Posta in uscita",
@@ -6951,12 +6990,8 @@
         "actions": "Azioni"
       },
       "errors": {
-        "deleteFailed": "Impossibile rimuovere la notizia. Riprova.",
-        "pinFailed": "Impossibile cambiare la notizia principale. Riprova."
-      },
-      "pin": "Apri la prima pagina di Notizie con questa per 7 giorni",
-      "unpin": "Non aprire più con questa",
-      "leadUntil": "Notizia principale fino al {date}"
+        "deleteFailed": "Impossibile rimuovere la notizia. Riprova."
+      }
     },
     "contentEditor": {
       "missingTitle": "Non c'è più",
@@ -7031,6 +7066,61 @@
       "discard": "Annulla",
       "save": "Salva i prezzi",
       "saving": "Salvataggio…"
+    },
+    "topics": {
+      "title": "Argomenti",
+      "subtitle": "Ciò che i lettori sfogliano in Insights. Conoscenza, Contenuti utili e Chi seguire condividono un unico elenco.",
+      "explanation": "Scritti una volta, in inglese; i lettori vedono ogni argomento nella loro lingua. L'ordine qui è l'ordine nel menu laterale di Insights. Eliminare un argomento chiede prima conferma, e ciò che lo usava resta senza argomento finché non ne scegli un altro.",
+      "create": "Nuovo argomento",
+      "createTitle": "Nuovo argomento",
+      "editorSubtitle": "Scritto una volta, in inglese; i lettori lo vedono nella loro lingua.",
+      "nameLabel": "Nome",
+      "nameHint": "Come lo vedono i lettori nel menu laterale di Insights, nei suoi filtri e nei dati di ogni articolo.",
+      "orderLabel": "Ordine",
+      "orderHint": "1 viene per primo nel menu laterale e nei filtri.",
+      "orderHintNew": "1 viene per primo nel menu laterale e nei filtri. Se lo lasci vuoto, va in fondo.",
+      "searchPlaceholder": "Trova un argomento…",
+      "empty": "Ancora nessun argomento.",
+      "noMatch": "Nessun argomento corrisponde.",
+      "columns": {
+        "order": "Ordine",
+        "topic": "Argomento",
+        "knowledge": "Conoscenza",
+        "helpful": "Contenuti utili",
+        "people": "Chi seguire",
+        "translations": "Traduzioni",
+        "actions": "Azioni"
+      },
+      "uses": {
+        "knowledge": "{count, plural, =1 {# articolo di Conoscenza} other {# articoli di Conoscenza}}",
+        "helpful": "{count, plural, =1 {# articolo di Contenuti utili} other {# articoli di Contenuti utili}}",
+        "people": "{count, plural, =1 {# persona da seguire} other {# persone da seguire}}"
+      },
+      "edit": "Modifica argomento",
+      "delete": "Elimina argomento",
+      "save": "Salva argomento",
+      "back": "Argomenti",
+      "deleteTitle": "Elimina argomento",
+      "deleteWarning": "Scompare subito dal menu laterale e dai filtri di Insights.",
+      "deleteConfirm": "Eliminare <highlight>{name}</highlight>? Lo usano {knowledge} articoli di Conoscenza, {helpful} articoli di Contenuti utili e {people} persone da seguire; resteranno senza argomento finché non ne scegli un altro.",
+      "errors": {
+        "saveFailed": "Impossibile salvare l'argomento. Riprova.",
+        "deleteFailed": "Impossibile eliminare l'argomento. Riprova."
+      }
+    },
+    "leadStory": {
+      "pinned": "La prima pagina di News si apre con “{title}”, fissato in <place>{placeName}</place> fino al {date}. {here, select, NEWS {Fissare una notizia qui ne prende il posto.} other {Fissare un articolo qui ne prende il posto.}}",
+      "rule": "Non c'è niente di fissato, quindi la prima pagina di News si apre con “{title}”: un aggiornamento di Google finché conta, altrimenti la notizia più recente. {here, select, NEWS {Fissa una notizia qui per aprire con quella per 7 giorni.} other {Fissa un articolo qui per aprire con quello per 7 giorni.}}",
+      "places": {
+        "NEWS": "News",
+        "KNOWLEDGE": "Conoscenza",
+        "HELPFUL": "Contenuti utili"
+      },
+      "pin": "Apri la prima pagina di News",
+      "pinRow": "Apri la prima pagina di News con questo per 7 giorni",
+      "unpin": "Smetti di aprire con questo",
+      "leadUntil": "In apertura fino al {date}",
+      "pinFailed": "Impossibile cambiare la notizia in apertura. Riprova."
     }
   },
   "ai": {
@@ -9071,7 +9161,8 @@
       "lists": "{count, plural, =1 {# lista} other {# liste}}",
       "ideas": "{count, plural, =1 {# idea} other {# idee}}",
       "assistants": "{count, plural, =1 {# assistente} other {# assistenti}}",
-      "lines": "{count, plural, =1 {# riga} other {# righe}}"
+      "lines": "{count, plural, =1 {# riga} other {# righe}}",
+      "people": "{count, plural, =1 {# persona} other {# persone}}"
     },
     "chart": {
       "download": "Scarica",
@@ -12303,21 +12394,32 @@
   "knowledgeArticles": {
     "list": {
       "title": "Conoscenza",
-      "description": "Risposte brevi alle domande che ci fanno più spesso, come il modo in cui vengono calcolati i dati in Scoperta.",
-      "searchPlaceholder": "Trova un articolo…",
-      "empty": "Ancora nessun articolo.",
-      "noMatch": "Nessun articolo corrisponde.",
-      "columns": {
-        "article": "Articolo",
-        "updated": "Aggiornato",
-        "topic": "Argomento"
-      }
+      "description": "Risposte brevi alle domande che ci fanno più spesso, come il modo in cui vengono calcolati i dati in Scoperta."
     },
     "article": {
       "back": "Conoscenza",
       "updated": "Aggiornato il {date}",
       "notFoundTitle": "Questo articolo non c'è",
-      "notFoundDescription": "Potrebbe essere stato rimosso o sostituito. Gli altri sono in Conoscenza."
+      "notFoundDescription": "Potrebbe essere stato rimosso o sostituito. Gli altri sono in Conoscenza.",
+      "readingTime": "circa {minutes, plural, one {# minuto} other {# minuti}} di lettura",
+      "keepReading": "Continua a leggere"
+    },
+    "front": {
+      "articleCount": "{count, plural, one {# articolo} other {# articoli}}",
+      "writtenBy": "Scritti dal team di {platformName}",
+      "lastAdded": "Ultimo aggiunto il {day}",
+      "leadLabel": "L'articolo principale",
+      "topicsLabel": "Argomenti",
+      "topicsTitle": "Di cosa parla",
+      "topicsDescription": "Le cose con cui {platformName} misura un sito.",
+      "helpfulContent": "Contenuti utili",
+      "moreLabel": "Altri articoli",
+      "earlier": "Prima",
+      "readArticle": "Leggi l'articolo",
+      "emptyTitle": "Ancora niente qui",
+      "empty": "Gli articoli appariranno qui man mano che vengono pubblicati.",
+      "emptyTopic": "Ancora nessun articolo su questo argomento. Tutti gli articoli ha il resto.",
+      "allArticles": "Tutti gli articoli"
     }
   },
   "news": {
@@ -12347,7 +12449,8 @@
         "WEBSITE": "Sito web",
         "YOUTUBE": "YouTube",
         "X": "X",
-        "KNOWLEDGE": "Conoscenza"
+        "KNOWLEDGE": "Conoscenza",
+        "HELPFUL": "Contenuti utili"
       },
       "meaning": "Cosa significa per te",
       "readOriginal": "Leggi l'originale",
@@ -12409,13 +12512,14 @@
   },
   "learn": {
     "menu": {
-      "label": "Impara",
+      "label": "Insights",
       "jumpLabel": "Vai a una pagina",
       "jumpPlaceholder": "Vai a una pagina…",
       "groups": {
         "news": "Notizie",
         "people": "Persone",
-        "knowledge": "Conoscenza"
+        "knowledge": "Conoscenza",
+        "helpful": "Contenuti utili"
       },
       "allNews": "Tutte le notizie",
       "kinds": {
@@ -12425,13 +12529,7 @@
         "WEBSITE": "Dai siti web"
       },
       "whoToFollow": "Chi seguire",
-      "allArticles": "Tutti gli articoli",
-      "topics": {
-        "TRAFFIC": "Traffico",
-        "RANKINGS": "Posizionamenti",
-        "AI_ANSWERS": "Risposte AI",
-        "BACKLINKS": "Backlink"
-      }
+      "allArticles": "Tutti gli articoli"
     },
     "follow": {
       "title": "Chi seguire",
@@ -12439,11 +12537,49 @@
       "searchPlaceholder": "Trova qualcuno…",
       "empty": "I nostri consigli compariranno qui.",
       "noMatch": "Nessuno corrisponde.",
-      "columns": {
-        "name": "Nome",
+      "emptyTitle": "Ancora nessuno qui",
+      "peopleCount": "{count, plural, one {# persona} other {# persone}}",
+      "placeCount": "{count, plural, one {# posto dove seguirli} other {# posti dove seguirli}}",
+      "chosenBy": "Scelti dal team di {platformName}",
+      "picks": "I nostri consigli",
+      "filters": {
         "where": "Dove",
-        "why": "Perché seguirli"
+        "allPlaces": "Tutti i posti",
+        "topic": "Argomento",
+        "allTopics": "Tutti gli argomenti"
+      },
+      "visit": {
+        "X": "Segui su X",
+        "YOUTUBE": "Guarda su YouTube",
+        "LINKEDIN": "Segui su LinkedIn",
+        "WEBSITE": "Leggi il loro sito"
       }
+    },
+    "helpful": {
+      "title": "Contenuti utili",
+      "description": "Il meglio di ciò che altri hanno scritto su ricerca e AI, scelto dal team di {platformName}. Leggi l'originale, o chiedi a {platformName}.",
+      "back": "Contenuti utili",
+      "notFoundTitle": "Questo articolo non è qui",
+      "notFoundDescription": "Potrebbe essere stato rimosso. Gli altri sono in Contenuti utili.",
+      "emptyTitle": "Ancora niente qui",
+      "empty": "Gli articoli appariranno qui man mano che vengono aggiunti.",
+      "emptyList": "Ancora niente qui. Tutti gli articoli ha il resto.",
+      "articleCount": "{count, plural, one {# articolo} other {# articoli}}",
+      "publicationCount": "{count, plural, one {# testata} other {# testate}}",
+      "weekCount": "{count, plural, =0 {Nessuno aggiunto negli ultimi 7 giorni} one {# aggiunto negli ultimi 7 giorni} other {# aggiunti negli ultimi 7 giorni}}",
+      "leadLabel": "L'articolo principale",
+      "publicationsLabel": "Testate",
+      "publicationsTitle": "Da dove vengono",
+      "publicationsDescription": "Chi legge il team di {platformName}, e quanti dei loro articoli sono qui.",
+      "whoToFollow": "Chi seguire",
+      "moreLabel": "Altri articoli",
+      "earlier": "Prima",
+      "published": "Pubblicato il {day}",
+      "length": "{words} parole · circa {minutes, plural, one {# minuto} other {# minuti}} di lettura",
+      "inLanguage": "Scritto in {language}",
+      "readOn": "Leggilo su {site}",
+      "moreOn": "Altro su {topic}",
+      "moreArticles": "Altri contenuti utili"
     }
   },
   "usage": {

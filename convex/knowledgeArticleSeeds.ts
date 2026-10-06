@@ -1,5 +1,4 @@
 import type { MutationCtx } from "./_generated/server";
-import type { KnowledgeTopic } from "./knowledgeArticlesSchema";
 import { syncArticleToWiki } from "./knowledgeArticleWiki";
 import { requestTranslation } from "./contentTranslation";
 
@@ -11,7 +10,8 @@ import { requestTranslation } from "./contentTranslation";
  * running the migration again.
  */
 
-type SeedArticle = { key: string; titleEn: string; bodyEn: string; topic: KnowledgeTopic };
+/** `topic` is a key in the shared topic list (`topics.ts`): TRAFFIC is one of its first rows. */
+type SeedArticle = { key: string; titleEn: string; bodyEn: string; topic: string };
 
 /**
  * How traffic is worked out (D2): customer-facing, plain words, citing the

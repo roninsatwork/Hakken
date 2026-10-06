@@ -72,6 +72,8 @@ export const outboxTables = {
     weekKey: v.string(),
     introEn: v.string(),
     itemIds: v.array(v.id("newsItems")),
+    /** The Helpful content articles added that week (insights-helpful-content-plan.md, IH19); absent on issues written before. */
+    helpfulIds: v.optional(v.array(v.id("libraryArticles"))),
     mode: v.union(v.literal("TEST"), v.literal("LIVE")),
     writtenByRunId: v.optional(v.id("agentRuns")),
     createdAt: v.number(),

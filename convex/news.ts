@@ -8,6 +8,9 @@ import { auditContentChange, checkedDay, dayStart } from "./utils/contentAdmin";
 import { newsItemKindValidator } from "./newsSchema";
 import { readerFields, removeTranslations } from "./contentTranslation";
 import { DEFAULT_EXPECTED_DAYS, updateFacts, updateFactsValidator, updateInLanguage } from "./googleUpdates";
+import { leadPlaceValidator, leadTitle, liveLeadUntil, livePin, placeOf, type LeadPin } from "./leadStory";
+import { summaryRow as knowledgeSummaryRow, summaryValidator as knowledgeSummaryValidator } from "./knowledgeArticles";
+import { readerRow as helpfulReaderRow, readerValidator as helpfulReaderValidator } from "./libraryArticles";
 
 /**
  * The News feed (docs/plans/active/knowledge-news-and-digest-plan.md, phase
@@ -19,13 +22,12 @@ import { DEFAULT_EXPECTED_DAYS, updateFacts, updateFactsValidator, updateInLangu
  * has it — a Google update's item through the update's own translation.
  *
  * The front page (revised again, 2026-10-01, R5–R7) leads with one story:
- * one pinned in Admin, else a Google update while it matters, else the newest
- * (`chooseLead`). Each story opens on its own page (R10, `getNewsItem`).
+ * one pinned in Admin — a News story, or a Knowledge or Helpful content
+ * article (insights-helpful-content-plan.md, IH11; `leadStory.ts`) — else a
+ * Google update while it matters, else the newest (`chooseLead`). Each story opens on its own page (R10, `getNewsItem`).
  */
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-/** How long a story pinned as the lead stays the lead (R7). */
-export const LEAD_PIN_DAYS = 7;
 /** How long a Google update stays the lead after it finishes, and after it should have (R7). */
 export const LEAD_AFTER_UPDATE_DAYS = 7;
 /** The front page's week: today and the six days before it. */
@@ -98,31 +100,40 @@ export function updateLeadsOn(update: { startedOn: string; finishedOn?: string; 
   return daysBetween(update.startedOn, today) <= (update.expectedDays ?? DEFAULT_EXPECTED_DAYS) + LEAD_AFTER_UPDATE_DAYS;
 }
 
+/** The front page's lead and why it leads: pinned, wherever it was pinned, or chosen by the rule. */
+export type LeadChoice = LeadPin & { pinned: boolean };
+
 /**
- * The front page's lead story on `today` (R7): the story pinned in Admin while
- * its pin lasts; else the latest Google update that still leads; else the
- * newest story. Null only when there is no news at all.
+ * The front page's lead story on `today` (R7, IH11): the story pinned in
+ * Admin — in News, Knowledge or Helpful content — while its pin lasts; else
+ * the latest Google update that still leads; else the newest story. Null only
+ * when there is nothing at all.
  */
-export async function chooseLead(ctx: QueryCtx, today: string): Promise<Doc<"newsItems"> | null> {
-  const pinned = await ctx.db
-    .query("newsItems")
-    .withIndex("by_lead_until", (q) => q.gt("leadUntil", dayStart(today)))
-    .order("desc")
-    .first();
-  if (pinned) return pinned;
+export async function chooseLead(ctx: QueryCtx, today: string): Promise<LeadChoice | null> {
+  const pin = await livePin(ctx, today);
+  if (pin) return { ...pin, pinned: true };
   const updates = await ctx.db.query("googleUpdates").withIndex("by_started").order("desc").take(UPDATES_CONSIDERED);
   for (const update of updates) {
     if (!updateLeadsOn(update, today)) continue;
     const item = await ctx.db.query("newsItems").withIndex("by_google_update", (q) => q.eq("googleUpdateId", update._id)).first();
-    if (item) return item;
+    if (item) return { table: "newsItems", row: item, pinned: false };
   }
-  return await ctx.db.query("newsItems").withIndex("by_published").order("desc").first();
+  const newest = await ctx.db.query("newsItems").withIndex("by_published").order("desc").first();
+  return newest ? { table: "newsItems", row: newest, pinned: false } : null;
 }
 
 /** The moment the front page's week starts: the start of the day six days before `today`. */
 export function weekStart(today: string): number {
   return dayStart(today) - (WEEK_DAYS - 1) * DAY_MS;
 }
+
+/** The front page's lead in the reader's language: a News story, or a pinned Knowledge or Helpful content article (IH11). */
+const frontLeadValidator = v.union(
+  v.null(),
+  v.object({ source: v.literal("NEWS"), item: itemValidator }),
+  v.object({ source: v.literal("KNOWLEDGE"), article: knowledgeSummaryValidator }),
+  v.object({ source: v.literal("HELPFUL"), article: helpfulReaderValidator }),
+);
 
 /**
  * The front page's own parts (R5): the lead story in the reader's language,
@@ -131,7 +142,7 @@ export function weekStart(today: string): number {
  */
 export const getFrontPage = tenantQuery({
   args: { language: v.string(), today: v.string() },
-  returns: v.object({ lead: v.union(v.null(), itemValidator), weekCount: v.number() }),
+  returns: v.object({ lead: frontLeadValidator, weekCount: v.number() }),
   handler: async (ctx, args) => {
     const today = checkedDay(args.today, "Today");
     const lead = await chooseLead(ctx, today);
@@ -139,7 +150,31 @@ export const getFrontPage = tenantQuery({
       .query("newsItems")
       .withIndex("by_published", (q) => q.gte("publishedAt", weekStart(today)))
       .take(WEEK_COUNT_LIMIT);
-    return { lead: lead ? await readerItem(ctx, lead, args.language) : null, weekCount: week.length };
+    return { lead: lead ? await frontLead(ctx, lead, args.language) : null, weekCount: week.length };
+  },
+});
+
+async function frontLead(ctx: QueryCtx, lead: LeadPin, language: string) {
+  if (lead.table === "knowledgeArticles") return { source: "KNOWLEDGE" as const, article: await knowledgeSummaryRow(ctx, lead.row, language) };
+  if (lead.table === "libraryArticles") return { source: "HELPFUL" as const, article: await helpfulReaderRow(ctx, lead.row, language) };
+  return { source: "NEWS" as const, item: await readerItem(ctx, lead.row, language) };
+}
+
+/**
+ * What leads the News front page today and why, for Admin's notices on News,
+ * Knowledge and Helpful content (IH11): its English title, where it was
+ * pinned and until when — or that the rule chose it.
+ */
+export const getLeadForAdmin = superAdminQuery({
+  args: { today: v.string() },
+  returns: v.union(
+    v.null(),
+    v.object({ storyId: v.string(), title: v.string(), place: leadPlaceValidator, pinned: v.boolean(), leadUntil: v.union(v.number(), v.null()) }),
+  ),
+  handler: async (ctx, args) => {
+    const lead = await chooseLead(ctx, checkedDay(args.today, "Today"));
+    if (!lead) return null;
+    return { storyId: lead.row._id, title: leadTitle(lead), place: placeOf(lead), pinned: lead.pinned, leadUntil: lead.pinned ? lead.row.leadUntil ?? null : null };
   },
 });
 
@@ -189,7 +224,7 @@ export const listNewsItemsForAdmin = superAdminQuery({
         createdAt: row.createdAt,
         isGoogleUpdate: row.googleUpdateId !== undefined,
         // A pin that has run out leads nothing, so it is not shown as one.
-        leadUntil: row.leadUntil !== undefined && row.leadUntil > Date.now() ? row.leadUntil : null,
+        leadUntil: liveLeadUntil(row.leadUntil),
       })),
     };
   },
@@ -211,39 +246,6 @@ export const deleteNewsItem = superAdminMutation({
     await ctx.db.delete(args.itemId);
     await removeTranslations(ctx, "newsItems", args.itemId);
     await auditContentChange(ctx, "DELETE_NEWS_ITEM", "newsItems", args.itemId, { title: item.titleEn, url: item.url });
-    return null;
-  },
-});
-
-/**
- * Makes an item the front page's lead for the next seven days (R7), in place
- * of any other pinned one: the rule chooses again once the pin runs out.
- */
-export const pinLeadStory = superAdminMutation({
-  args: { itemId: v.id("newsItems") },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const item = await ctx.db.get(args.itemId);
-    if (!item) throw appError("NOT_FOUND", "That story is no longer here.");
-    const now = Date.now();
-    const pinned = await ctx.db.query("newsItems").withIndex("by_lead_until", (q) => q.gt("leadUntil", 0)).take(20);
-    for (const other of pinned) if (other._id !== item._id) await ctx.db.patch(other._id, { leadUntil: undefined });
-    const leadUntil = now + LEAD_PIN_DAYS * DAY_MS;
-    await ctx.db.patch(item._id, { leadUntil });
-    await auditContentChange(ctx, "PIN_NEWS_LEAD", "newsItems", item._id, { title: item.titleEn, leadUntil });
-    return null;
-  },
-});
-
-/** Unpins the lead story: the rule chooses the lead again at once. */
-export const unpinLeadStory = superAdminMutation({
-  args: { itemId: v.id("newsItems") },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const item = await ctx.db.get(args.itemId);
-    if (!item || item.leadUntil === undefined) return null;
-    await ctx.db.patch(item._id, { leadUntil: undefined });
-    await auditContentChange(ctx, "UNPIN_NEWS_LEAD", "newsItems", item._id, { title: item.titleEn });
     return null;
   },
 });

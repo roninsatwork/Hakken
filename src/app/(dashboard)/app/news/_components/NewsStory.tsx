@@ -1,12 +1,14 @@
 "use client";
 
+import { useLayoutEffect, useRef, useState, type RefObject } from "react";
 import Link from "next/link";
 import type { FunctionReturnType } from "convex/server";
-import { AtSign, BookOpen, CirclePlay, ExternalLink, Globe, type LucideIcon } from "lucide-react";
+import { AtSign, BookOpen, CirclePlay, ExternalLink, Globe, Library, type LucideIcon } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { NewsItemKind } from "@/convex/newsSchema";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import { LAYER } from "@/src/ui/lib/layers";
 import { cn } from "@/src/ui/lib/utils";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { GoogleMark } from "../../sites/_components/GoogleMark";
@@ -16,14 +18,15 @@ import { addDays, daysBetween, formatShortDay, formatWhen } from "../../_learn/l
 export type NewsItem = NonNullable<FunctionReturnType<typeof api.news.getNewsItem>>;
 type UpdateFacts = NonNullable<NewsItem["update"]>;
 
-/** What a story is: one of News's kinds, or a Knowledge article new this week (R5). */
-export type StoryKind = NewsItemKind | "KNOWLEDGE";
+/** What a story is: one of News's kinds, a Knowledge article, or a Helpful content article (R5; insights-helpful-content-plan.md, IH8). */
+export type StoryKind = NewsItemKind | "KNOWLEDGE" | "HELPFUL";
 
 const KIND_ICONS: Record<Exclude<StoryKind, "GOOGLE_UPDATE">, LucideIcon> = {
   WEBSITE: Globe,
   YOUTUBE: CirclePlay,
   X: AtSign,
   KNOWLEDGE: BookOpen,
+  HELPFUL: Library,
 };
 
 export const storyHref = (itemId: string) => `/app/news/${itemId}`;
@@ -60,6 +63,52 @@ export function rolloutPlace(update: UpdateFacts, today: string) {
   return { end, length, day, done };
 }
 
+/** The least room kept between "Today · day N" and the words at either end of the line. */
+const ROLLOUT_LABEL_GAP_PX = 12;
+
+/**
+ * Where "Today · day N" sits on a rollout line, in px from its left: under the
+ * dot when there is room, moved in from an end whose words it would run into,
+ * and null — left out — when the line is too narrow for all three. Nothing is
+ * lost then: the words beneath the line say the same day. A 1440px window ran
+ * the middle words 20px into "Done by …" on day 13 of 14 (2026-10-06).
+ *
+ * Measured once laid out, and again whenever the line or any of its words
+ * changes size (a narrower window, the fonts arriving); null until then, so
+ * the words never show where they would collide.
+ */
+function useRolloutLabelPlace(
+  preferred: number,
+  line: RefObject<HTMLDivElement | null>,
+  start: RefObject<HTMLSpanElement | null>,
+  middle: RefObject<HTMLSpanElement | null>,
+  end: RefObject<HTMLSpanElement | null>,
+): number | null {
+  const [left, setLeft] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    const box = line.current;
+    if (!box || typeof ResizeObserver === "undefined") return;
+    // A ResizeObserver reports each element once as it starts watching, so this also places the words the first time.
+    const observer = new ResizeObserver(() => {
+      const width = box.clientWidth;
+      const label = middle.current?.offsetWidth ?? 0;
+      if (!width || !label) {
+        setLeft(null);
+        return;
+      }
+      const half = label / 2;
+      const min = (start.current?.offsetWidth ?? 0) + ROLLOUT_LABEL_GAP_PX + half;
+      const max = width - (end.current?.offsetWidth ?? 0) - ROLLOUT_LABEL_GAP_PX - half;
+      setLeft(min > max ? null : Math.min(Math.max(preferred * width, min), max));
+    });
+    for (const element of [box, start.current, middle.current, end.current]) if (element) observer.observe(element);
+    return () => observer.disconnect();
+  }, [preferred, line, start, middle, end]);
+
+  return left;
+}
+
 /**
  * A Google update's rollout (R6): the chart marker's own "G" where it started,
  * a solid line as far as today, dashed to the latest it should finish — solid
@@ -73,10 +122,15 @@ export function RolloutLine({ update, today }: { update: UpdateFacts; today: str
   const finished = update.finishedOn !== null;
   // The middle words follow the dot, kept clear of the words at either end.
   const labelAt = Math.min(Math.max(done, 0.3), 0.7);
+  const lineRef = useRef<HTMLDivElement>(null);
+  const startRef = useRef<HTMLSpanElement>(null);
+  const todayRef = useRef<HTMLSpanElement>(null);
+  const endRef = useRef<HTMLSpanElement>(null);
+  const todayLeft = useRolloutLabelPlace(labelAt, lineRef, startRef, todayRef, endRef);
 
   return (
     <div className="flex flex-col gap-2">
-      <div className="relative mt-2 h-[52px]" aria-hidden="true">
+      <div ref={lineRef} className="relative mt-2 h-[52px]" aria-hidden="true">
         <span className="absolute left-[11px] right-[5px] top-[10px] h-0">
           <span className="absolute left-0 top-0 border-t-2 border-foreground/75" style={{ width: `${done * 100}%` }} />
           {finished ? null : <span className="absolute right-0 top-[0.5px] border-t border-dashed border-foreground/35" style={{ left: `${done * 100}%` }} />}
@@ -91,15 +145,19 @@ export function RolloutLine({ update, today }: { update: UpdateFacts; today: str
           />
         )}
         <span className={cn("absolute right-0 top-[6px] h-[10px] w-[10px] rounded-full border-[1.5px]", finished ? "border-foreground/75 bg-foreground/75" : "border-foreground/45 bg-background")} />
-        <span className="absolute left-0 top-[32px] text-[12px] text-secondary">
+        <span ref={startRef} className="absolute left-0 top-[32px] whitespace-nowrap text-[12px] text-secondary">
           {t.rich("started", { day: formatShortDay(update.startedOn, locale), strong: (chunks) => <span className="font-medium text-foreground">{chunks}</span> })}
         </span>
         {finished ? null : (
-          <span className="absolute top-[32px] hidden -translate-x-1/2 whitespace-nowrap text-[12px] text-secondary sm:inline" style={{ left: `${labelAt * 100}%` }}>
+          <span
+            ref={todayRef}
+            className={cn("absolute top-[32px] hidden -translate-x-1/2 whitespace-nowrap text-[12px] text-secondary sm:inline", todayLeft === null && "invisible")}
+            style={{ left: todayLeft === null ? `${labelAt * 100}%` : todayLeft }}
+          >
             {t.rich("today", { day, strong: (chunks) => <span className="font-medium text-foreground">{chunks}</span> })}
           </span>
         )}
-        <span className="absolute right-0 top-[32px] whitespace-nowrap text-[12px] text-secondary">
+        <span ref={endRef} className="absolute right-0 top-[32px] whitespace-nowrap text-[12px] text-secondary">
           {t.rich(finished ? "finished" : "doneBy", {
             day: formatShortDay(end, locale),
             days: length,
@@ -140,12 +198,12 @@ export function StoryBody({ item, today }: { item: NewsItem; today: string }) {
           href={item.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 underline decoration-foreground/25 underline-offset-4 transition-colors hover:text-foreground"
+          className={`relative ${LAYER.RAISED} inline-flex items-center gap-1.5 underline decoration-foreground/25 underline-offset-4 transition-colors hover:text-foreground`}
         >
           {item.kind === "GOOGLE_UPDATE" ? t("readGoogle") : t("readOriginal")}
           <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
         </a>
-        <Link href={askHref} className="underline decoration-foreground/25 underline-offset-4 transition-colors hover:text-foreground">
+        <Link href={askHref} className={`relative ${LAYER.RAISED} underline decoration-foreground/25 underline-offset-4 transition-colors hover:text-foreground`}>
           {t("askHakken", { platformName })}
         </Link>
       </p>

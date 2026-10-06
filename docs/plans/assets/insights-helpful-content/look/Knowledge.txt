@@ -1,0 +1,15 @@
+# Insights → Knowledge — the approved look (board "Knowledge" of docs/plans/assets/insights-helpful-content/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Knowledge
+select: Insights
+field: Jump to a page
+dateline
+lead-story
+  article-facts
+  knowledge-topics: What it covers
+    compact-list
+story-columns
+earlier-stories: Earlier
+  compact-list
+  show-more: Show more

@@ -10,7 +10,8 @@ import { isoWeekKey } from "./weeklyDigest";
  * The Weekly Digest's job (docs/plans/active/knowledge-news-and-digest-plan.md,
  * phase 9): when its schedule fires, write the week's issue once — a short
  * opening in English from the agent's own instructions and model, over the
- * News items, Google updates and Knowledge articles of the week — have the
+ * News items, Google updates, Knowledge articles and Helpful content of the
+ * week (insights-helpful-content-plan.md, IH19) — have the
  * Translator write every other language at once, add one outbox row per
  * subscribed reader, and start the Email Sender. It sends nothing itself.
  *
@@ -38,7 +39,7 @@ export async function writeWeeklyDigest(ctx: ActionCtx, runId: Id<"agentRuns">):
   if (material.items.length === 0) return "Nothing was added to News this week, so no issue was written.";
   await ctx.runMutation(internal.roleRuns.recordObservation, {
     runId,
-    text: `${plural(material.items.length, "News item", "News items")} and ${plural(material.articles.length, "new Knowledge article", "new Knowledge articles")} this week. Mode: ${setup.mode === "LIVE" ? "Live, to every subscribed user" : "Test, to super admins only"}.`,
+    text: `${plural(material.items.length, "News item", "News items")}, ${plural(material.articles.length, "new Knowledge article", "new Knowledge articles")} and ${plural(material.helpful.length, "new Helpful content article", "new Helpful content articles")} this week. Mode: ${setup.mode === "LIVE" ? "Live, to every subscribed user" : "Test, to super admins only"}.`,
   });
 
   const spend = await ctx.runQuery(internal.roleRuns.runSpendLeft, { runId });
@@ -51,6 +52,7 @@ export async function writeWeeklyDigest(ctx: ActionCtx, runId: Id<"agentRuns">):
     week: weekKey,
     news: material.items.map((item) => ({ kind: item.kind, source: item.sourceName, title: item.title, summary: item.summary })),
     newKnowledgeArticles: material.articles,
+    newHelpfulContent: material.helpful.map((article) => ({ title: article.title, publication: article.publication, summary: article.summary })),
   });
   const response = await generateTextWithResolvedModel({
     model,
@@ -75,6 +77,7 @@ export async function writeWeeklyDigest(ctx: ActionCtx, runId: Id<"agentRuns">):
     weekKey,
     introEn: intro,
     itemIds: material.items.map((item) => item._id),
+    helpfulIds: material.helpful.map((article) => article._id),
     mode: setup.mode,
     runId,
   });

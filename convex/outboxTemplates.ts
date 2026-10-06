@@ -5,6 +5,7 @@ import type { Doc } from "./_generated/dataModel";
 import { readerFields } from "./contentTranslation";
 import { renderEmail, type EmailContent } from "./emailLayoutService";
 import { readerItem } from "./news";
+import { readerRow as helpfulReaderRow } from "./libraryArticles";
 import type { OutboxMessageType } from "./outboxSchema";
 import { resolvePlatformName } from "./settingsService";
 import { emailWording } from "./utils/emailWording";
@@ -62,7 +63,8 @@ function payloadOf(row: Doc<"outboxMessages">): Record<string, unknown> {
 
 /**
  * The week's issue: its opening in the reader's language, then each News item
- * it carries as a card, and the way to stop — a link in the email and the
+ * it carries as a card, then the Helpful content added that week under its
+ * own heading (insights-helpful-content-plan.md, IH19), and the way to stop — a link in the email and the
  * `List-Unsubscribe` headers Gmail and Yahoo require of bulk senders. Never
  * sent to a reader who turned it off, and never without a way to stop.
  */
@@ -86,6 +88,12 @@ const weeklyNewsDigest: Template = async (ctx, row, brand) => {
     const item = await ctx.db.get(itemId);
     if (item) items.push(await readerItem(ctx, item, row.language));
   }
+  // Helpful content added that week (IH19): Hakken's summary in the reader's language and the original — never the article's words.
+  const helpful = [];
+  for (const articleId of issue.helpfulIds ?? []) {
+    const article = await ctx.db.get(articleId);
+    if (article?.shown) helpful.push(await helpfulReaderRow(ctx, article, row.language));
+  }
   const newsUrl = `${brand.appUrl}/app/news`;
   const date = (at: number) => new Date(at).toLocaleDateString(wording.dateLocale, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
   return {
@@ -102,6 +110,15 @@ const weeklyNewsDigest: Template = async (ctx, row, brand) => {
         link: { label: words.readOriginal, url: item.url },
       })),
       overflow: { label: words.seeAll({ count: items.length, platformName: brand.platformName }), url: newsUrl },
+      sections: [{
+        heading: words.helpfulHeading,
+        cards: helpful.map((article) => ({
+          title: article.title,
+          body: article.summary,
+          meta: article.publication,
+          link: { label: words.readOriginal, url: article.url },
+        })),
+      }],
       actions: [{ label: words.openNews, url: newsUrl, emphasis: "primary" }],
       footer: {
         lines: [words.whyYouGetIt({ platformName: brand.platformName })],

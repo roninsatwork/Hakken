@@ -1,8 +1,10 @@
 import { convexTest } from "convex-test";
-import { beforeEach, describe, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
+import { embedVertexContentWithRetry } from "./vertexProviderService";
+import { finishScheduled } from "@/src/test/finishScheduled";
 
 const { generate } = vi.hoisted(() => ({ generate: vi.fn() }));
 vi.mock("./aiProviderRegistry", async (importOriginal) => ({
@@ -29,6 +31,8 @@ function harness() {
 }
 
 async function people(t: ReturnType<typeof harness>) {
+  // The shared topic list's first rows (topics.ts, IH20): an article's topic must be one of them.
+  await t.mutation(internal.topics.seedFirstTopicsInternal, {});
   const ids = await t.run(async (ctx) => {
     const companyId = await ctx.db.insert("companies", { name: "Korda", createdAt: Date.now() });
     const superAdminId = await ctx.db.insert("users", { email: "admin@hakken.example", role: "SUPER_ADMIN" });
@@ -61,15 +65,24 @@ const ARTICLE = {
 };
 
 describe("Library articles", () => {
+  // A published article's save schedules its sections' embedding (IH9); on fake timers it runs only when a test asks, never after the test.
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   test("only the super admin reads or changes the Library", async () => {
     const t = harness();
     const { superAdmin, member } = await people(t);
 
     await expect(member.mutation(api.libraryArticles.createArticle, ARTICLE)).rejects.toThrow();
-    await expect(member.query(api.libraryArticles.listArticles, {})).rejects.toThrow();
+    await expect(member.query(api.libraryArticles.listArticlesPage, { paginationOpts: { numItems: 50, cursor: null } })).rejects.toThrow();
     await expect(member.action(api.libraryArticleActions.readPage, { url: ARTICLE.url })).rejects.toThrow();
     await superAdmin.mutation(api.libraryArticles.createArticle, ARTICLE);
-    expect(await superAdmin.query(api.libraryArticles.listArticles, {})).toHaveLength(1);
+    expect((await superAdmin.query(api.libraryArticles.listArticlesPage, { paginationOpts: { numItems: 50, cursor: null } })).page).toHaveLength(1);
   });
 
   test("an article keeps its details, its words apart from the list, and one address per article", async () => {
@@ -77,7 +90,7 @@ describe("Library articles", () => {
     const { superAdmin } = await people(t);
 
     const articleId = await superAdmin.mutation(api.libraryArticles.createArticle, ARTICLE);
-    const [listed] = await superAdmin.query(api.libraryArticles.listArticles, {});
+    const [listed] = (await superAdmin.query(api.libraryArticles.listArticlesPage, { paginationOpts: { numItems: 50, cursor: null } })).page;
     // The address is kept without its trailing slash; blanks are "not given".
     expect(listed).toMatchObject({
       url: "https://developers.google.com/search/docs/appearance/ai-features",
@@ -95,7 +108,7 @@ describe("Library articles", () => {
 
     // The same page however it was pasted is refused, naming the article that has it.
     await expect(superAdmin.mutation(api.libraryArticles.createArticle, { ...ARTICLE, url: "https://DEVELOPERS.google.com/search/docs/appearance/ai-features#top" }))
-      .rejects.toThrow("That article is already in the Library: “AI features and your website”.");
+      .rejects.toThrow("That article is already in Helpful content: “AI features and your website”.");
     // Its own page saving its own address is not a second copy.
     await superAdmin.mutation(api.libraryArticles.updateArticle, { articleId, ...ARTICLE, author: "Google" });
     expect(await superAdmin.query(api.libraryArticles.getArticle, { articleId })).toMatchObject({ author: "Google" });
@@ -192,7 +205,7 @@ describe("Read the page", () => {
       .toEqual({ status: "unread", why: "few_words", words: 7, publication: "Financial Times" });
   });
 
-  test("an address already in the Library is named before Firecrawl is paid for it", async () => {
+  test("an address already in Helpful content is named before Firecrawl is paid for it", async () => {
     const t = harness();
     const { superAdmin } = await people(t);
     const fetchMock = firecrawlAnswers({});
@@ -215,8 +228,17 @@ describe("Read the page", () => {
 });
 
 describe("Ask Hakken reads the Library", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.mocked(embedVertexContentWithRetry).mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   /** The words Ask Hakken's answer was asked with, for one question in a new thread. */
-  async function promptFor(t: ReturnType<typeof harness>, thread: { userId: Id<"users">; companyId: Id<"companies">; widget: boolean }) {
+  async function promptFor(t: ReturnType<typeof harness>, thread: { userId: Id<"users">; companyId: Id<"companies">; widget: boolean; question?: string }) {
     const threadId = await t.run(async (ctx) => {
       const widgetId = thread.widget
         ? await ctx.db.insert("widgets", { companyId: thread.companyId, name: "Main website", allowedDomains: ["https://korda.example"], isActive: true, createdAt: Date.now() })
@@ -231,7 +253,7 @@ describe("Ask Hakken reads the Library", () => {
       });
     });
     generate.mockReset().mockResolvedValue({ text: "An answer.", inputTokens: 1, outputTokens: 1 });
-    await t.action(internal.aiChat.generateHakkenResponse, { threadId, content: "What are the best practices for structured data in AI features?" });
+    await t.action(internal.aiChat.generateHakkenResponse, { threadId, content: thread.question ?? "What are the best practices for structured data in AI features?" });
     const prompts = generate.mock.calls.map(([request]) =>
       (request.contents as { type: string; text?: string }[]).filter((part) => part.type === "text").map((part) => part.text).join("\n"));
     return prompts.find((text) => text.includes("User Prompt:")) ?? "";
@@ -243,11 +265,146 @@ describe("Ask Hakken reads the Library", () => {
     await superAdmin.mutation(api.libraryArticles.createArticle, ARTICLE);
 
     const signedIn = await promptFor(t, { userId: memberId, companyId, widget: false });
-    expect(signedIn).toContain("[UNTRUSTED REFERENCE DATA: the Library");
+    expect(signedIn).toContain("[UNTRUSTED REFERENCE DATA: Helpful content");
     expect(signedIn).toContain('From "AI features and your website" (Google Search Central, published 2026-09-18)');
 
     const visitor = await promptFor(t, { userId: memberId, companyId, widget: true });
     expect(visitor).toContain("User Prompt:");
     expect(visitor).not.toContain("AI features and your website");
+  });
+
+  // insights-helpful-content-plan.md, IH9: by meaning as well as by words.
+  test("each section is embedded after the save, and a question sharing none of its words still finds it by meaning", async () => {
+    const t = harness();
+    const { superAdmin, memberId, companyId } = await people(t);
+    // One meaning for every text: the question and the article's sections are as close as can be.
+    const vector = Array.from({ length: 768 }, (_, index) => (index % 7) / 7);
+    vi.mocked(embedVertexContentWithRetry).mockResolvedValue({ embeddings: [{ values: vector }] } as never);
+    const articleId = await superAdmin.mutation(api.libraryArticles.createArticle, ARTICLE);
+    await finishScheduled(t);
+    const sections = await t.run(async (ctx) => ctx.db.query("libraryArticleSections").withIndex("by_article", (q) => q.eq("articleId", articleId)).collect());
+    expect(sections.length).toBeGreaterThan(0);
+    expect(sections.every((section) => section.embedding?.length === 768 && section.embeddingModelId)).toBe(true);
+
+    const prompt = await promptFor(t, { userId: memberId, companyId, widget: false, question: "Explain visibility inside automated summaries" });
+    expect(prompt).toContain('From "AI features and your website"');
+  });
+
+  test("the voice assistant reads it to a signed-in user in their own conversation, never on a phone call", async () => {
+    const t = harness();
+    const { superAdmin, memberId, companyId } = await people(t);
+    vi.mocked(embedVertexContentWithRetry).mockResolvedValue({ embeddings: [{ values: Array.from({ length: 768 }, (_, index) => (index % 5) / 5) }] } as never);
+    await superAdmin.mutation(api.libraryArticles.createArticle, ARTICLE);
+    await finishScheduled(t);
+    const threadId = await t.run(async (ctx) => ctx.db.insert("threads", { userId: memberId, companyId, title: "Spoken", createdAt: Date.now(), updatedAt: Date.now() }));
+
+    const spoken = await t.action(internal.aiVoiceSession.searchKnowledgeForVoiceInternal, { threadId, query: "best practices for structured data" });
+    expect(spoken.context).toContain("Helpful content");
+    expect(spoken.context).toContain('From "AI features and your website"');
+    const phone = await t.action(internal.aiVoiceSession.searchKnowledgeForVoiceInternal, { query: "best practices for structured data", fallbackCompanyId: companyId });
+    expect(phone.context).not.toContain("AI features and your website");
+  });
+
+  test("a section embedded by another model is not compared with the question's, and its words must still match", async () => {
+    const t = harness();
+    const { superAdmin } = await people(t);
+    const articleId = await superAdmin.mutation(api.libraryArticles.createArticle, ARTICLE);
+    const [section] = await t.run(async (ctx) => ctx.db.query("libraryArticleSections").withIndex("by_article", (q) => q.eq("articleId", articleId)).collect());
+    await t.run(async (ctx) => ctx.db.patch(section._id, { embedding: Array.from({ length: 768 }, () => 0.1), embeddingModelId: "an-older-model" }));
+
+    expect(await t.query(internal.libraryArticles.searchLibraryInternal, { question: "Explain visibility", byMeaning: [section._id], embeddingModelId: "the-model-now" })).toEqual([]);
+    expect(await t.query(internal.libraryArticles.searchLibraryInternal, { question: "Explain visibility", byMeaning: [section._id], embeddingModelId: "an-older-model" })).toHaveLength(1);
+  });
+});
+
+// Helpful content for readers (docs/plans/active/insights-helpful-content-plan.md, IH1, IH2, IH5–IH7).
+describe("Helpful content for readers", () => {
+  // A save with a summary schedules its translation; on fake timers it runs only when a test asks, never in the next test.
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  test("readers get a published article with a summary — its details and Hakken's words, never the article's", async () => {
+    const t = harness();
+    const { superAdmin, member } = await people(t);
+    const shownId = await superAdmin.mutation(api.libraryArticles.createArticle, {
+      ...ARTICLE,
+      summaryEn: "How Google's AI features choose and link the pages they draw on.",
+      meaningEn: "Be crawlable and keep your structured data true.",
+    });
+    await superAdmin.mutation(api.libraryArticles.createArticle, { ...ARTICLE, url: "https://example.com/no-summary-yet", title: "No summary yet" });
+    await superAdmin.mutation(api.libraryArticles.createArticle, { ...ARTICLE, url: "https://example.com/a-draft", title: "A draft", status: "DRAFT", summaryEn: "Written." });
+
+    const listed = (await member.query(api.libraryArticles.listForReaders, { language: "en", paginationOpts: { numItems: 50, cursor: null } })).page;
+    expect(listed).toEqual([expect.objectContaining({
+      _id: shownId,
+      title: ARTICLE.title,
+      publication: ARTICLE.publication,
+      publishedOn: "2026-09-18",
+      topic: "AI_ANSWERS",
+      summary: "How Google's AI features choose and link the pages they draw on.",
+      meaning: "Be crawlable and keep your structured data true.",
+    })]);
+    expect(Object.keys(listed[0])).not.toContain("body");
+    expect((await member.query(api.libraryArticles.listForReaders, { language: "en", topic: "TRAFFIC", paginationOpts: { numItems: 50, cursor: null } })).page).toEqual([]);
+    expect(await member.query(api.libraryArticles.getForReader, { articleId: shownId, language: "en" })).toMatchObject({ summary: expect.any(String) });
+  });
+
+  test("readers' lists come through their indexes: by topic or publication, the overview's counts, and more on a topic without the one being read", async () => {
+    const t = harness();
+    const { superAdmin, member } = await people(t);
+    const shown = (url: string, extra: Record<string, unknown> = {}) =>
+      superAdmin.mutation(api.libraryArticles.createArticle, { ...ARTICLE, url, summaryEn: "A summary.", ...extra });
+    const first = await shown("https://example.com/one");
+    const second = await shown("https://example.com/two", { publication: "Ahrefs" });
+    await shown("https://example.com/three", { topic: "TRAFFIC" });
+
+    const page = { paginationOpts: { numItems: 50, cursor: null } };
+    expect((await member.query(api.libraryArticles.listForReaders, { language: "en", publication: "Ahrefs", ...page })).page.map((row) => row._id)).toEqual([second]);
+    expect(await member.query(api.libraryArticles.getReaderOverview, {})).toEqual({
+      all: 3,
+      publications: [{ name: "Google Search Central", count: 2 }, { name: "Ahrefs", count: 1 }],
+    });
+    const more = await member.query(api.libraryArticles.listMoreForReaders, { language: "en", topic: "AI_ANSWERS", exclude: first });
+    expect(more.map((row) => row._id)).toEqual([second]);
+  });
+
+  test("a summary is checked for length, and the writer never overwrites one the admin wrote", async () => {
+    const t = harness();
+    const { superAdmin } = await people(t);
+    await expect(superAdmin.mutation(api.libraryArticles.createArticle, { ...ARTICLE, summaryEn: "x".repeat(601) })).rejects.toThrow("at most 600");
+    const articleId = await superAdmin.mutation(api.libraryArticles.createArticle, ARTICLE);
+
+    expect(await t.query(internal.libraryArticles.missingReaderWordsInternal, { limit: 5 })).toEqual([
+      expect.objectContaining({ articleId, title: ARTICLE.title, body: BODY }),
+    ]);
+    expect(await t.mutation(internal.libraryArticles.saveReaderWordsInternal, { articleId, summaryEn: " Written by Hakken. ", meaningEn: "" })).toBe(true);
+    expect(await t.mutation(internal.libraryArticles.saveReaderWordsInternal, { articleId, summaryEn: "A second go.", meaningEn: "" })).toBe(false);
+    expect((await superAdmin.query(api.libraryArticles.getArticle, { articleId }))?.summaryEn).toBe("Written by Hakken.");
+  });
+
+  test("the writer writes from the article's words with the News Collector's model, and its cost lands on that agent", async () => {
+    const t = harness();
+    const { superAdmin } = await people(t);
+    // The Collector left on the platform's default model: the writer asks for that, as News summaries do.
+    const collectorId = await t.run(async (ctx) => await ctx.db.insert("agents", {
+      name: "News Collector", modelId: "model-test", modelSelectionMode: "inherit", thinkingMode: false, isActive: true, systemKey: "NEWS_COLLECTOR", createdAt: 1, updatedAt: 1,
+    }));
+    generate.mockReset().mockResolvedValue({ text: JSON.stringify({ summary: " How AI features pick pages. ", meaning: "Stay crawlable." }), inputTokens: 900, outputTokens: 60 });
+
+    expect(await superAdmin.action(api.libraryArticleWriter.writeForReaders, { title: ARTICLE.title, publication: ARTICLE.publication, body: BODY }))
+      .toEqual({ status: "written", summary: "How AI features pick pages.", meaning: "Stay crawlable." });
+    expect(generate.mock.calls[0][0].systemInstruction).toContain("Never copy or quote");
+    expect(JSON.parse(generate.mock.calls[0][0].contents[0].text)).toMatchObject({ title: ARTICLE.title, words: BODY });
+    const costs = await t.run(async (ctx) => ctx.db.query("agentTransactions").collect());
+    expect(costs).toEqual([expect.objectContaining({ agentId: collectorId, inputTokens: 900, outputTokens: 60 })]);
+
+    expect(await superAdmin.action(api.libraryArticleWriter.writeForReaders, { title: "Empty", publication: "Nobody", body: "  " })).toEqual({ status: "failed", why: "no_words" });
+    generate.mockResolvedValue({ text: "Sorry, I cannot help with that." });
+    expect(await superAdmin.action(api.libraryArticleWriter.writeForReaders, { title: ARTICLE.title, publication: ARTICLE.publication, body: BODY })).toEqual({ status: "failed", why: "model" });
   });
 });

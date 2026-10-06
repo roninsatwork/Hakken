@@ -10,6 +10,10 @@
 export const NEWS_ITEM_KINDS = ["GOOGLE_UPDATE", "WEBSITE", "YOUTUBE", "X"] as const;
 export type NewsItemKind = (typeof NEWS_ITEM_KINDS)[number];
 
-/** What an article is about, the same four things a site is measured by: Learn's side menu lists each topic that has articles. */
-export const KNOWLEDGE_TOPICS = ["TRAFFIC", "RANKINGS", "AI_ANSWERS", "BACKLINKS"] as const;
-export type KnowledgeTopic = (typeof KNOWLEDGE_TOPICS)[number];
+/**
+ * What an article is about is no longer a fixed list here: topics are the
+ * shared list the super admin manages (`convex/topics.ts`,
+ * insights-helpful-content-plan.md, IH20), kept by key. A key is upper case
+ * letters, digits and underscores.
+ */
+export const TOPIC_KEY_PATTERN = /^[A-Z0-9_]{1,40}$/;

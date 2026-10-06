@@ -132,11 +132,13 @@ export function AdminNavTree({
       onToggle={() => toggleSection('content')}
     >
       <SubNavItem label={t('knowledge')} href="/admin/content/knowledge" isActive={pathname.startsWith('/admin/content/knowledge')} onClick={() => setActiveItem('Content')} />
-      <SubNavItem label={t('library')} href="/admin/content/library" isActive={pathname.startsWith('/admin/content/library')} onClick={() => setActiveItem('Content')} />
+      <SubNavItem label={t('library')} href="/admin/content/helpful-content" isActive={pathname.startsWith('/admin/content/helpful-content')} onClick={() => setActiveItem('Content')} />
       <SubNavItem label={t('news')} href="/admin/content/news" isActive={pathname === '/admin/content/news' || pathname.startsWith('/admin/content/news/')} onClick={() => setActiveItem('Content')} />
       <SubNavItem label={t('newsSources')} href="/admin/content/news-sources" isActive={pathname.startsWith('/admin/content/news-sources')} onClick={() => setActiveItem('Content')} />
       <SubNavItem label={t('googleUpdates')} href="/admin/content/google-updates" isActive={pathname.startsWith('/admin/content/google-updates')} onClick={() => setActiveItem('Content')} />
       <SubNavItem label={t('whoToFollow')} href="/admin/content/who-to-follow" isActive={pathname.startsWith('/admin/content/who-to-follow')} onClick={() => setActiveItem('Content')} />
+      {/* The topic list Knowledge, Helpful content and Who to follow share (insights-helpful-content-plan.md, IH20). */}
+      <SubNavItem label={t('topics')} href="/admin/content/topics" isActive={pathname.startsWith('/admin/content/topics')} onClick={() => setActiveItem('Content')} />
       <SubNavItem label={t('outbox')} href="/admin/content/outbox" isActive={pathname.startsWith('/admin/content/outbox')} onClick={() => setActiveItem('Content')} />
     </NavItem>
   )}

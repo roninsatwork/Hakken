@@ -2,14 +2,15 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useMutation, useQuery } from "convex/react";
+import { useConvex, useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { Edit2, ExternalLink, Library, Plus, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import useDebounce from "@/src/hooks/useDebounce";
+import { useServerPagedTable } from "@/src/hooks/useServerPagedTable";
 import type { LibraryStatus } from "@/convex/libraryArticlesSchema";
-import { KNOWLEDGE_TOPICS, type KnowledgeTopic } from "@/convex/utils/learnLists";
 import { safeCsvCell } from "@/src/lib/csv";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { DownloadButton, saveTextFile } from "@/src/ui/components/screens/DownloadButton";
@@ -21,29 +22,34 @@ import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
-import { matchesSearchTerm, paginateItems } from "@/src/ui/components/screens/pagination";
+import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
+import { LeadPinRowButton, LeadStoryNotice, LeadUntilLabel } from "../_components/LeadStory";
 import { ContentDeleteDialog } from "../_components/ContentDialogs";
 import { formatContentDay } from "../_components/contentDays";
 import { useContentDelete } from "../_components/useContentDelete";
-import { shortAddress } from "./libraryFormat";
+import { TopicSelect, topicNameIn, useTopicChoices } from "../_components/TopicSelect";
+import { shortAddress } from "@/src/lib/helpfulContentFormat";
 
-type Article = FunctionReturnType<typeof api.libraryArticles.listArticles>[number];
+type Article = FunctionReturnType<typeof api.libraryArticles.listArticlesPage>["page"][number];
 
-const BASE = "/admin/content/library";
+const BASE = "/admin/content/helpful-content";
 const STATUSES: LibraryStatus[] = ["IN_KNOWLEDGE", "DRAFT"];
 
 /**
- * Admin → Content → Library (docs/plans/active/content-library-plan.md, board
- * 1): every article from another website, newest first, with the search box,
- * its three filters and the table's bar (L10). Adding one and each article
- * open on their own pages (L3); deleting asks yes or no (L8).
+ * Admin → Content → Helpful content (docs/plans/active/content-library-plan.md,
+ * board 1; renamed and paged on the server, insights-helpful-content-plan.md,
+ * IH18, IH21): every article from another website, newest first, with the
+ * search box, its three filters and the table's bar (L10) — searched,
+ * filtered and paged by the server, a page at a time. Adding one and each
+ * article open on their own pages (L3); deleting asks yes or no (L8).
  */
 export default function LibraryAdminPage() {
   const t = useTranslations("admin.libraryArticles");
-  const tTopics = useTranslations("learn.menu.topics");
+  const topicChoices = useTopicChoices();
   const router = useRouter();
   const { platformName } = useSystemSettings();
-  const articles = useQuery(api.libraryArticles.listArticles, {});
+  const convex = useConvex();
+  const publications = useQuery(api.libraryArticles.listAdminPublications, {}) ?? [];
   const deleteArticle = useMutation(api.libraryArticles.deleteArticle);
   const remover = useContentDelete({
     scope: "admin-library-articles",
@@ -54,25 +60,22 @@ export default function LibraryAdminPage() {
 
   const [search, setSearch] = useState("");
   const [publication, setPublication] = useState("");
-  const [topic, setTopic] = useState<KnowledgeTopic | "">("");
+  const [topic, setTopic] = useState("");
   const [status, setStatus] = useState<LibraryStatus | "">("");
-  const [page, setPage] = useState(1);
-
-  const publications = [...new Set((articles ?? []).map((article) => article.publication))].sort((left, right) => left.localeCompare(right));
-  const matching = (articles ?? []).filter((article) =>
-    matchesSearchTerm(search, [article.title, article.publication, article.author, article.description, article.url])
-    && (!publication || article.publication === publication)
-    && (!topic || article.topic === topic)
-    && (!status || article.status === status));
-  const paged = paginateItems(matching, page);
-  const open = (article: Article) => router.push(`${BASE}/${article._id}`);
-  /** A filter's choice, which starts the list again from its first page. */
-  const choose = (set: (value: string) => void) => (value: string) => {
-    set(value);
-    setPage(1);
+  const searched = useDebounce(search, 300);
+  // The server searches, filters and pages (IH21); a new search or filter starts at page one.
+  const filters = {
+    ...(searched.trim() ? { search: searched.trim() } : {}),
+    ...(status ? { status } : {}),
+    ...(topic ? { topic } : {}),
+    ...(publication ? { publication } : {}),
   };
+  const pages = useServerPagedTable(api.libraryArticles.listArticlesPage, filters, TABLE_PAGE_SIZE, { fill: true });
+  const open = (article: Article) => router.push(`${BASE}/${article._id}`);
+  const choose = (set: (value: string) => void) => (value: string) => set(value);
 
-  const download = () => {
+  const download = async () => {
+    const matching = await convex.query(api.libraryArticles.listArticlesForExport, filters);
     const header = ["article", "address", "publication", "author", "published", "topic", "words", "status"].map((column) => safeCsvCell(t(`columns.${column}`)));
     const lines = matching.map((article) => [
       article.title,
@@ -80,21 +83,21 @@ export default function LibraryAdminPage() {
       article.publication,
       article.author ?? "",
       article.publishedOn ?? "",
-      article.topic ? tTopics(article.topic) : "",
+      topicNameIn(topicChoices, article.topic) ?? "",
       article.words,
       t(`statuses.${article.status}`),
     ].map(safeCsvCell).join(","));
-    saveTextFile([header.join(","), ...lines].join("\n"), "library.csv");
+    saveTextFile([header.join(","), ...lines].join("\n"), "helpful-content.csv");
   };
 
   const footer = {
     mode: "paged" as const,
-    page: paged.page,
-    totalPages: paged.totalPages,
-    totalCount: paged.totalItems,
-    pageSize: paged.pageSize,
-    isLoading: articles === undefined,
-    onPageChange: setPage,
+    page: pages.page,
+    totalPages: pages.totalPages,
+    totalCount: pages.loadedCount,
+    pageSize: pages.pageSize,
+    isLoading: pages.isBusy,
+    onPageChange: pages.goToPage,
   };
 
   return (
@@ -112,17 +115,15 @@ export default function LibraryAdminPage() {
       />
 
       <Notice>{t("explanation", { platformName })}</Notice>
+      <LeadStoryNotice here="HELPFUL" />
 
       <DataTable
-        rows={articles === undefined ? undefined : paged.items}
+        rows={pages.isLoading ? undefined : pages.rows}
         rowKey={(article) => article._id}
         onRowClick={open}
         search={{
           value: search,
-          onChange: (value) => {
-            setSearch(value);
-            setPage(1);
-          },
+          onChange: setSearch,
           placeholder: t("searchPlaceholder"),
         }}
         filters={
@@ -133,12 +134,7 @@ export default function LibraryAdminPage() {
                 <option key={name} value={name}>{name}</option>
               ))}
             </Select>
-            <Select chip={{ label: t("filters.topic"), choice: topic ? tTopics(topic) : null }} value={topic} onChange={choose((value) => setTopic(value as KnowledgeTopic | ""))} aria-label={t("filters.topic")}>
-              <option value="">{t("filters.allTopics")}</option>
-              {KNOWLEDGE_TOPICS.map((entry) => (
-                <option key={entry} value={entry}>{tTopics(entry)}</option>
-              ))}
-            </Select>
+            <TopicSelect chip={{ label: t("filters.topic") }} value={topic} onChange={choose(setTopic)} noneLabel={t("filters.allTopics")} aria-label={t("filters.topic")} />
             <Select chip={{ label: t("filters.status"), choice: status ? t(`statuses.${status}`) : null }} value={status} onChange={choose((value) => setStatus(value as LibraryStatus | ""))} aria-label={t("filters.status")}>
               <option value="">{t("filters.allStatuses")}</option>
               {STATUSES.map((entry) => (
@@ -148,7 +144,7 @@ export default function LibraryAdminPage() {
           </>
         }
         cardHeader={
-          <TableBar footer={footer} noun="articles" actions={<DownloadButton label={t("download")} disabled={matching.length === 0} onClick={download} />} />
+          <TableBar footer={footer} noun="articles" actions={<DownloadButton label={t("download")} disabled={pages.loadedCount === 0} onClick={() => void download()} />} />
         }
         empty={{
           icon: <Library className="h-8 w-8 text-muted/30" />,
@@ -171,6 +167,7 @@ export default function LibraryAdminPage() {
                 >
                   {shortAddress(article.url)}
                 </a>
+                <LeadUntilLabel leadUntil={article.leadUntil} className="mt-1" />
               </span>
             ),
           },
@@ -180,7 +177,7 @@ export default function LibraryAdminPage() {
             header: t("columns.published"),
             cell: (article) => article.publishedOn ? <span className="whitespace-nowrap text-[12px] text-secondary">{formatContentDay(article.publishedOn)}</span> : <NoFigure />,
           },
-          { key: "topic", header: t("columns.topic"), cell: (article) => article.topic ? <TagLabel>{tTopics(article.topic)}</TagLabel> : <NoFigure /> },
+          { key: "topic", header: t("columns.topic"), cell: (article) => topicNameIn(topicChoices, article.topic) ? <TagLabel>{topicNameIn(topicChoices, article.topic)}</TagLabel> : <NoFigure /> },
           {
             key: "words",
             header: t("columns.words"),
@@ -200,6 +197,7 @@ export default function LibraryAdminPage() {
             align: "right",
             cell: (article) => (
               <RowActions>
+                <LeadPinRowButton storyId={article._id} leadUntil={article.leadUntil} canLead={article.shown} />
                 <RowIconButton label={t("open")} navigates onClick={() => window.open(article.url, "_blank", "noopener,noreferrer")}>
                   <ExternalLink className="h-4 w-4" />
                 </RowIconButton>

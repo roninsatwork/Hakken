@@ -242,6 +242,16 @@ Do not use `CompactList` as a shortcut for a screen's primary records. If the
 screen is the list, use `DataTable` with `PageHeader` or the correct detail
 header above it.
 
+**A row that is one link** (added 2026-10-06, insights-helpful-content-plan.md,
+IH17): pass `rowLink` — where each row goes, what a screen reader says for it,
+and `external` for someone's own page in a new tab. The whole row lights on
+hover (`hover:bg-hover`) and a click anywhere on it follows the link; a row
+whose `href` is null stays plain. Anything clickable inside a cell sits above
+the row's link with `relative` and `LAYER.RAISED`. Insights' story lists, its
+count panels and Who to follow are built this way; Insights' own panels
+(`app/_learn/StoryParts.tsx`: `PANEL`, `PanelLink`) do the same for a story's
+column or a lead, without a box.
+
 ## Settings Sections
 
 Settings pages use `SettingBlock` and `ColorInput` from `src/app/(dashboard)/admin/settings/_components/SettingBlock.tsx`. Shared settings form types live in `src/app/(dashboard)/admin/settings/_components/types.ts`.
@@ -438,7 +448,7 @@ does.
   built.
 - **Added 2026-10-06:** Admin → Content → Library's three screens — the list,
   Add an article once its page is read, and an article
-  (`admin/content/library/libraryLook.test.tsx`).
+  (`admin/content/helpful-content/libraryLook.test.tsx`).
 
 ## What The Build Enforces
 ## What The Build Enforces

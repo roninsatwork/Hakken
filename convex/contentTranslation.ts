@@ -58,6 +58,19 @@ export function sourceFields(owner: TranslatedOwner, row: Doc<TranslatedOwner>):
     }
     case "weeklyDigestIssues":
       return { intro: (row as Doc<"weeklyDigestIssues">).introEn };
+    case "topics":
+      return { name: (row as Doc<"topics">).nameEn };
+    case "libraryArticles": {
+      // What readers see of a Helpful content article (IH1, IH2): Hakken's
+      // summary and what it means for them — never the article's own words —
+      // while it is published and has a summary. "What it means" joins only
+      // when written, as a Google update's does.
+      const article = row as Doc<"libraryArticles">;
+      const summary = article.summaryEn?.trim();
+      if (article.status !== "IN_KNOWLEDGE" || !summary) return null;
+      const meaning = article.meaningEn?.trim();
+      return meaning ? { summary, meaning } : { summary };
+    }
   }
 }
 

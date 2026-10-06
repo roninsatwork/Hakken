@@ -16,6 +16,8 @@ import { startRoleRun } from "./roleRuns";
 
 /** The most News items one issue carries; the email shows the first eight and links the rest. */
 export const ISSUE_ITEMS = 20;
+/** The most Helpful content articles one issue carries (IH19): as many as the email shows. */
+export const ISSUE_HELPFUL = 8;
 
 /** Readers queued per page: a big list takes more pages, each its own transaction. */
 const READERS_PER_PAGE = 200;
@@ -60,14 +62,16 @@ export const liveIssueFor = internalQuery({
 
 /**
  * What went into News since `since`, Google updates first and then the
- * newest, and the Knowledge articles published since — what the week's
- * opening is written from.
+ * newest, the Knowledge articles published since, and the Helpful content
+ * added since that readers can see (IH19) — what the week's issue carries and
+ * its opening is written from.
  */
 export const readDigestMaterial = internalQuery({
   args: { since: v.number() },
   returns: v.object({
     items: v.array(v.object({ _id: v.id("newsItems"), kind: v.string(), sourceName: v.string(), title: v.string(), summary: v.string() })),
     articles: v.array(v.string()),
+    helpful: v.array(v.object({ _id: v.id("libraryArticles"), title: v.string(), publication: v.string(), summary: v.string() })),
   }),
   handler: async (ctx, args) => {
     const rows = await ctx.db.query("newsItems").withIndex("by_published", (q) => q.gte("publishedAt", args.since)).order("desc").take(200);
@@ -76,20 +80,34 @@ export const readDigestMaterial = internalQuery({
       .query("knowledgeArticles")
       .withIndex("by_status_published", (q) => q.eq("status", "PUBLISHED").gte("publishedAt", args.since))
       .take(20);
+    const helpful = await ctx.db
+      .query("libraryArticles")
+      .withIndex("by_shown_created", (q) => q.eq("shown", true).gte("createdAt", args.since))
+      .order("desc")
+      .take(ISSUE_HELPFUL);
     return {
       items: ordered.map((row) => ({ _id: row._id, kind: row.kind, sourceName: row.sourceName, title: row.titleEn, summary: row.summaryEn })),
       articles: articles.map((article) => article.titleEn),
+      helpful: helpful.map((article) => ({ _id: article._id, title: article.title, publication: article.publication, summary: article.summaryEn ?? "" })),
     };
   },
 });
 
 export const saveIssue = internalMutation({
-  args: { weekKey: v.string(), introEn: v.string(), itemIds: v.array(v.id("newsItems")), mode: modeValidator, runId: v.id("agentRuns") },
+  args: {
+    weekKey: v.string(),
+    introEn: v.string(),
+    itemIds: v.array(v.id("newsItems")),
+    helpfulIds: v.optional(v.array(v.id("libraryArticles"))),
+    mode: modeValidator,
+    runId: v.id("agentRuns"),
+  },
   returns: v.id("weeklyDigestIssues"),
   handler: async (ctx, args) => await ctx.db.insert("weeklyDigestIssues", {
     weekKey: args.weekKey,
     introEn: args.introEn,
     itemIds: args.itemIds,
+    ...(args.helpfulIds?.length ? { helpfulIds: args.helpfulIds } : {}),
     mode: args.mode,
     writtenByRunId: args.runId,
     createdAt: Date.now(),

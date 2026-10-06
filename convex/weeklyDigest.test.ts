@@ -112,6 +112,35 @@ describe("the Weekly Digest", () => {
     expect(finished?.costUsd).toBeTypeOf("number");
   });
 
+  // insights-helpful-content-plan.md, IH19: the week's Helpful content, with Hakken's summary and the original — never the article's words.
+  test("the issue carries the Helpful content added that week that readers can see, each with its summary and the original", async () => {
+    const t = harness();
+    const { digest, admin } = await world(t, "TEST");
+    const helpfulId = await t.run(async (ctx) => {
+      const now = Date.now();
+      const article = (title: string, extra: { shown: boolean; daysAgo: number }) => ctx.db.insert("libraryArticles", {
+        url: `https://ahrefs.test/${title.replaceAll(" ", "-")}`, title, publication: "Ahrefs", status: extra.shown ? "IN_KNOWLEDGE" : "DRAFT",
+        words: 3000, summaryEn: `${title}, summed up.`, shown: extra.shown, createdAt: now - extra.daysAgo * 86_400_000, updatedAt: now,
+      });
+      await article("A draft", { shown: false, daysAgo: 1 });
+      await article("Last month's", { shown: true, daysAgo: 20 });
+      return await article("Link building for SEO", { shown: true, daysAgo: 2 });
+    });
+
+    await run(t, digest);
+    const [issue] = await issues(t);
+    expect(issue.helpfulIds).toEqual([helpfulId]);
+    expect(JSON.parse(generate.mock.calls[0][0].contents[0].text).newHelpfulContent).toEqual([
+      { title: "Link building for SEO", publication: "Ahrefs", summary: "Link building for SEO, summed up." },
+    ]);
+    const [row] = await outbox(t);
+    expect(row.userId).toBe(admin);
+    const rendered = await t.query(internal.outboxTemplates.renderOutboxMessage, { messageId: row._id });
+    expect("email" in rendered && rendered.email.text).toContain("HELPFUL CONTENT");
+    expect("email" in rendered && rendered.email.text).toContain("Link building for SEO, summed up.");
+    expect("email" in rendered && rendered.email.text).toContain("https://ahrefs.test/Link-building-for-SEO");
+  });
+
   test("in Live it queues every user who has it on, in their language, once a week", async () => {
     const t = harness();
     const { digest, admin, anna, marco } = await world(t, "LIVE");

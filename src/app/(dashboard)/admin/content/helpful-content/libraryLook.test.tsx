@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, usePaginatedQuery, useQuery } from "convex/react";
 
 import { expectApprovedLook } from "@/src/test/lookOutline";
 import { answerQueries } from "@/src/test/siteViewFixtures";
@@ -17,7 +17,7 @@ import { LibraryArticleEditor } from "./LibraryArticleEditor";
 
 vi.mock("convex/react", async () => (await import("@/src/test/screenMocks")).convexReact());
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/admin/content/library",
+  usePathname: () => "/admin/content/helpful-content",
   useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ replace: vi.fn(), push: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
   useParams: () => ({}),
@@ -41,15 +41,24 @@ const ROW = {
   language: "en",
   words: 2140,
   readAt: Date.UTC(2026, 9, 6, 9, 14),
+  summaryEn: "Most clicks go to the first organic result, and far fewer when an AI answer sits above it.",
+  meaningEn: "A page-one position can still bring little traffic: check what sits above you.",
   createdAt: 2,
   updatedAt: 2,
 };
 
 beforeEach(() => {
   vi.mocked(useQuery).mockImplementation(answerQueries({
-    "libraryArticles:listArticles": [ROW, { ...ROW, _id: "article_2", title: "How Google Search works", publication: "Google Search Central", status: "DRAFT", createdAt: 1 }],
-    "libraryArticles:getArticle": { ...ROW, body: "# Organic CTR study\n\nHow often people click." },
+    "libraryArticles:listAdminPublications": ["Advanced Web Ranking", "Google Search Central"],
+    "libraryArticles:getArticle": { ...ROW, body: "# Organic CTR study\n\nHow often people click.", translations: { done: 1, total: 1 } },
+    "topics:listTopicChoices": [{ key: "TRAFFIC", nameEn: "Traffic" }, { key: "RANKINGS", nameEn: "Rankings" }],
   }));
+  vi.mocked(usePaginatedQuery).mockReturnValue({
+    results: [ROW, { ...ROW, _id: "article_2", title: "How Google Search works", publication: "Google Search Central", status: "DRAFT", createdAt: 1 }],
+    status: "Exhausted",
+    isLoading: false,
+    loadMore: vi.fn(),
+  } as never);
   vi.mocked(useMutation).mockImplementation((() => vi.fn()) as never);
   vi.mocked(useAction).mockImplementation((() => vi.fn(async () => ({
     status: "read",
@@ -67,11 +76,11 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe("The Library's approved looks", () => {
+describe("Helpful content's approved looks (was the Library)", () => {
   it("Library", async () => {
     const { container } = render(<LibraryAdminPage />);
     await screen.findByText("Organic CTR study");
-    await expectApprovedLook(container, PLAN, "Library", "Admin → Content → Library");
+    await expectApprovedLook(container, PLAN, "Library", "Admin → Content → Helpful content");
   });
 
   it("AddArticle", async () => {
@@ -79,12 +88,12 @@ describe("The Library's approved looks", () => {
     fireEvent.change(screen.getByLabelText(/Article address/), { target: { value: "https://developers.google.com/search/docs/appearance/ai-features" } });
     fireEvent.click(screen.getByRole("button", { name: /Read the page/ }));
     await screen.findByDisplayValue("AI features and your website");
-    await expectApprovedLook(container, PLAN, "AddArticle", "Admin → Content → Library → Add an article, once its page is read");
+    await expectApprovedLook(container, PLAN, "AddArticle", "Admin → Content → Helpful content → Add an article, once its page is read");
   });
 
   it("Article", async () => {
     const { container } = render(<LibraryArticleEditor articleId={"article_1" as never} />);
     await screen.findByDisplayValue("Organic CTR study");
-    await expectApprovedLook(container, PLAN, "Article", "Admin → Content → Library → an article");
+    await expectApprovedLook(container, PLAN, "Article", "Admin → Content → Helpful content → an article");
   });
 });

@@ -23,6 +23,7 @@ export function ContentEditPage({
   description,
   pills,
   headerAction,
+  notice,
   error,
   isSaving,
   saveLabel,
@@ -44,6 +45,8 @@ export function ContentEditPage({
    */
   pills?: ReactNode;
   headerAction?: ReactNode;
+  /** A notice under the header, above the fields: what leads the News front page (insights-helpful-content-plan.md, IH11). */
+  notice?: ReactNode;
   error: string;
   isSaving: boolean;
   saveLabel: string;
@@ -67,6 +70,7 @@ export function ContentEditPage({
         pills={state === "missing" ? undefined : pills}
         action={state === "missing" ? undefined : headerAction}
       />
+      {state === "missing" ? null : notice}
       {state === "missing" ? (
         <HakkenEmptyState icon={FileQuestion} title={t("missingTitle")} description={t("missingDescription")} />
       ) : (

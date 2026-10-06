@@ -6,14 +6,18 @@ import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { KnowledgeStatus } from "@/convex/knowledgeArticlesSchema";
-import { KNOWLEDGE_TOPICS, type KnowledgeTopic } from "@/convex/utils/learnLists";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { Select } from "@/src/ui/components/screens/Select";
+import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
+import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { FieldLabel } from "@/src/ui/components/screens/SettingsCard";
 import { ContentEditPage, TranslationStatus } from "../_components/ContentEditPage";
 import { useContentForm } from "../_components/useContentForm";
+import { TopicSelect, topicNameIn, useTopicChoices } from "../_components/TopicSelect";
+import { LeadPinButton, LeadStoryNotice, LeadUntilLabel } from "../_components/LeadStory";
 
-type ArticleForm = { titleEn: string; bodyEn: string; status: KnowledgeStatus; topic: KnowledgeTopic | "" };
+/** `topic` is a key in the shared topic list, or "" for none. */
+type ArticleForm = { titleEn: string; bodyEn: string; status: KnowledgeStatus; topic: string };
 
 const EMPTY: ArticleForm = { titleEn: "", bodyEn: "", status: "DRAFT", topic: "" };
 const BACK_HREF = "/admin/content/knowledge";
@@ -23,14 +27,16 @@ const BACK_HREF = "/admin/content/knowledge";
  * plan.md, phase 1, revised 2026-10-01): one title and one article, in
  * English, and whether readers can see it yet. Once published, the Translator
  * writes every other language; the page says how far it has got. Its topic
- * (2026-10-01, R9) is where Learn's side menu lists it.
+ * (2026-10-01, R9) is where Learn's side menu lists it. A published one can
+ * lead the News front page from here (insights-helpful-content-plan.md, IH11,
+ * board 12).
  */
 export function ArticleEditor({ articleId }: { articleId?: Id<"knowledgeArticles"> }) {
   const t = useTranslations("admin.knowledgeArticles");
-  const tTopics = useTranslations("learn.menu.topics");
   const article = useQuery(api.knowledgeArticles.getArticle, articleId ? { articleId } : "skip");
   const createArticle = useMutation(api.knowledgeArticles.createArticle);
   const updateArticle = useMutation(api.knowledgeArticles.updateArticle);
+  const topicChoices = useTopicChoices();
   const row = articleId ? article : null;
   const editor = useContentForm({
     scope: "admin-knowledge-article",
@@ -52,6 +58,15 @@ export function ArticleEditor({ articleId }: { articleId?: Id<"knowledgeArticles
       icon={<BookOpen className="h-6 w-6 text-brand" />}
       title={row ? row.titleEn : t("createTitle")}
       description={t("editorSubtitle")}
+      pills={row ? (
+        <>
+          <StatusLabel tone={row.status === "PUBLISHED" ? "success" : "neutral"}>{row.status === "PUBLISHED" ? t("published") : t("draft")}</StatusLabel>
+          {topicNameIn(topicChoices, row.topic) ? <TagLabel>{topicNameIn(topicChoices, row.topic)}</TagLabel> : null}
+          <LeadUntilLabel leadUntil={row.leadUntil} />
+        </>
+      ) : undefined}
+      headerAction={row ? <LeadPinButton storyId={row._id} leadUntil={row.leadUntil} canLead={row.status === "PUBLISHED"} /> : undefined}
+      notice={row ? <LeadStoryNotice here="KNOWLEDGE" storyId={row._id} /> : undefined}
       error={editor.error}
       isSaving={editor.isSaving}
       saveLabel={articleId ? t("save") : t("create")}
@@ -67,12 +82,7 @@ export function ArticleEditor({ articleId }: { articleId?: Id<"knowledgeArticles
         </div>
         <div className="flex flex-col gap-1.5">
           <FieldLabel htmlFor="knowledge-article-topic">{t("topicLabel")}</FieldLabel>
-          <Select id="knowledge-article-topic" value={editor.form.topic} onChange={(value) => editor.update({ topic: value as KnowledgeTopic | "" })} className="w-full">
-            <option value="">{t("noTopic")}</option>
-            {KNOWLEDGE_TOPICS.map((topic) => (
-              <option key={topic} value={topic}>{tTopics(topic)}</option>
-            ))}
-          </Select>
+          <TopicSelect id="knowledge-article-topic" value={editor.form.topic} onChange={(topic) => editor.update({ topic })} noneLabel={t("noTopic")} className="w-full" />
         </div>
       </div>
       <Field label={t("titleLabel")} required value={editor.form.titleEn} onChange={(event) => editor.update({ titleEn: event.target.value })} />

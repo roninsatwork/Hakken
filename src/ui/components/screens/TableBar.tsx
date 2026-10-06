@@ -22,7 +22,9 @@ export type TableNoun =
   // Keyword research (keyword-research-plan.md): research lists (board 1), keyword ideas (board 5), and the AI assistants asked (board 4).
   | "lists" | "ideas" | "assistants"
   // Admin → Content → Library's articles (content-library-plan.md).
-  | "articles";
+  | "articles"
+  // Who to follow's people, a couple of hundred of them (insights-helpful-content-plan.md, IH14).
+  | "people";
 
 /**
  * The bar across the top of every Sites table, inside its card (`DataTable`'s

@@ -77,12 +77,12 @@ export const readPage = superAdminAction({
       await ctx.runQuery(internal.libraryArticles.findByUrlInternal, { url, exceptId: args.articleId });
     if (existing) return { status: "duplicate" as const, articleId: existing.articleId, title: existing.title };
 
-    const page = await fetchPage({ url, mainContentOnly: true });
+    const page = await fetchPage({ url, mainContentOnly: true, withStructuredData: true });
     if (page.status === "error") {
       return { status: "unread" as const, why: page.reason, ...(page.httpStatus ? { httpStatus: page.httpStatus } : {}) };
     }
 
-    const read = libraryPageFrom(page.markdown, page.metadata, url);
+    const read = libraryPageFrom(page.markdown, page.metadata, url, page.structuredData);
     if (read.words < LIBRARY_MIN_WORDS) {
       return { status: "unread" as const, why: "few_words" as const, words: read.words, publication: read.publication };
     }

@@ -21,6 +21,15 @@ and added "in knowledge" under Rankings; Ask Hakken's search finds its "How
 long does a…" sections for a question about recovering from a core update.
 Overall: 100% built; committing and pushing wait for Anthony.
 
+**Superseded in part, 2026-10-06** by the
+[Insights and Helpful content plan](insights-helpful-content-plan.md): the
+Library is renamed **Helpful content** (open question 2, answered), at
+`/admin/content/helpful-content`; readers now see each published article —
+Hakken's summary and what it means, never the article's words — so L7 holds
+for the words alone and "Not in scope: readers seeing the copy anywhere in
+Learn" no longer stands; Ask Hakken searches by meaning as well as words,
+without reference lists (IH9). The decisions below are kept as they were.
+
 **Configuration:** `FIRECRAWL_API_KEY` set on the dev deployment by Anthony,
 2026-10-06. **Not on production** — set it there before this reaches `main`,
 or Read the page says Firecrawl is not set up (the News Collector's

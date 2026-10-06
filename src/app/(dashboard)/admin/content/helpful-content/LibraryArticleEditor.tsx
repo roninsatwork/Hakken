@@ -11,7 +11,6 @@ import { api } from "@/convex/_generated/api";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { LibraryStatus } from "@/convex/libraryArticlesSchema";
-import { KNOWLEDGE_TOPICS, type KnowledgeTopic } from "@/convex/utils/learnLists";
 import { LIBRARY_MAX_BODY_LENGTH } from "@/convex/utils/libraryPage";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { formatDateTime } from "@/src/lib/dates";
@@ -24,12 +23,14 @@ import { FieldHint, FieldLabel } from "@/src/ui/components/screens/SettingsCard"
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { RowIconButton } from "@/src/ui/components/screens/Table";
+import { LeadPinButton, LeadStoryNotice, LeadUntilLabel } from "../_components/LeadStory";
 import { ContentDeleteDialog } from "../_components/ContentDialogs";
-import { ContentEditPage } from "../_components/ContentEditPage";
+import { ContentEditPage, TranslationStatus } from "../_components/ContentEditPage";
 import { formatContentDay } from "../_components/contentDays";
 import { useContentDelete } from "../_components/useContentDelete";
 import { useContentForm } from "../_components/useContentForm";
-import { languageName } from "./libraryFormat";
+import { TopicSelect, topicNameIn, useTopicChoices } from "../_components/TopicSelect";
+import { languageName } from "@/src/lib/helpfulContentFormat";
 
 type LibraryForm = {
   url: string;
@@ -39,15 +40,20 @@ type LibraryForm = {
   publishedOn: string;
   updatedOn: string;
   description: string;
-  topic: KnowledgeTopic | "";
+  /** A key in the shared topic list, or "" for none. */
+  topic: string;
   status: LibraryStatus;
   language: string;
   body: string;
   /** When Firecrawl read the words in the form; null for words pasted by hand. */
   readAt: number | null;
+  /** What readers see (insights-helpful-content-plan.md, IH1, IH2): Hakken's summary, and what it means for them. */
+  summaryEn: string;
+  meaningEn: string;
 };
 
 type ReadResult = FunctionReturnType<typeof api.libraryArticleActions.readPage>;
+type WriteResult = FunctionReturnType<typeof api.libraryArticleWriter.writeForReaders>;
 
 const EMPTY: LibraryForm = {
   url: "",
@@ -62,8 +68,10 @@ const EMPTY: LibraryForm = {
   language: "",
   body: "",
   readAt: null,
+  summaryEn: "",
+  meaningEn: "",
 };
-const BACK_HREF = "/admin/content/library";
+const BACK_HREF = "/admin/content/helpful-content";
 
 /**
  * Adding a Library article, or one article's own page
@@ -77,7 +85,7 @@ const BACK_HREF = "/admin/content/library";
 export function LibraryArticleEditor({ articleId }: { articleId?: Id<"libraryArticles"> }) {
   const t = useTranslations("admin.libraryArticles");
   const tCommon = useTranslations("common");
-  const tTopics = useTranslations("learn.menu.topics");
+  const topicChoices = useTopicChoices();
   const locale = useLocale();
   const { platformName } = useSystemSettings();
   const router = useRouter();
@@ -86,7 +94,9 @@ export function LibraryArticleEditor({ articleId }: { articleId?: Id<"libraryArt
   const updateArticle = useMutation(api.libraryArticles.updateArticle);
   const deleteArticle = useMutation(api.libraryArticles.deleteArticle);
   const readPage = useAction(api.libraryArticleActions.readPage);
+  const writeForReaders = useAction(api.libraryArticleWriter.writeForReaders);
   const reader = useAdminAction({ scope: "admin-library-read" });
+  const writer = useAdminAction({ scope: "admin-library-write" });
   const row = articleId ? article : null;
 
   const editor = useContentForm({
@@ -106,6 +116,8 @@ export function LibraryArticleEditor({ articleId }: { articleId?: Id<"libraryArt
       language: existing.language ?? "",
       body: existing.body,
       readAt: existing.readAt,
+      summaryEn: existing.summaryEn ?? "",
+      meaningEn: existing.meaningEn ?? "",
     }),
     save: ({ topic, language, readAt, ...form }) => {
       const input = { ...form, topic: topic || undefined, language: language || undefined, readAt: readAt ?? undefined };
@@ -123,9 +135,21 @@ export function LibraryArticleEditor({ articleId }: { articleId?: Id<"libraryArt
   });
 
   const [result, setResult] = useState<ReadResult | { status: "error"; message: string } | null>(null);
+  const [written, setWritten] = useState<WriteResult | { status: "error"; message: string } | null>(null);
   const [askingReadAgain, setAskingReadAgain] = useState(false);
   const form = editor.form;
   const reading = reader.isBusy();
+
+  /** Hakken writes what readers see from the words in the form (IH2); nothing is stored until Save. */
+  const write = async (page: { title: string; publication: string; body: string }) => {
+    const outcome = await writer.run(() => writeForReaders(page), { suppressErrorToast: true, fallbackMessage: t("errors.writeFailed") });
+    if (!outcome.ok) {
+      if (outcome.message) setWritten({ status: "error", message: outcome.message });
+      return;
+    }
+    setWritten(outcome.data);
+    if (outcome.data.status === "written") editor.update({ summaryEn: outcome.data.summary, meaningEn: outcome.data.meaning });
+  };
 
   const read = async () => {
     setAskingReadAgain(false);
@@ -151,6 +175,9 @@ export function LibraryArticleEditor({ articleId }: { articleId?: Id<"libraryArt
         body: answer.body,
         readAt: answer.readAt,
       });
+      // A new article's summary is written straight after its page is read;
+      // a saved one keeps its own until Write again.
+      if (!articleId) void write({ title: answer.title, publication: answer.publication, body: answer.body });
     } else if (answer.status === "unread" && answer.publication && !form.publication) {
       editor.update({ publication: answer.publication });
     }
@@ -220,13 +247,16 @@ export function LibraryArticleEditor({ articleId }: { articleId?: Id<"libraryArt
             {row.status === "IN_KNOWLEDGE"
               ? <StatusLabel tone="success">{t("inKnowledge", { platformName })}</StatusLabel>
               : <StatusLabel tone="neutral">{t("draftLabel", { platformName })}</StatusLabel>}
-            {row.topic ? <TagLabel>{tTopics(row.topic)}</TagLabel> : null}
+            {topicNameIn(topicChoices, row.topic) ? <TagLabel>{topicNameIn(topicChoices, row.topic)}</TagLabel> : null}
             <TagLabel>{t("words", { count: row.words })}</TagLabel>
             {row.language ? <TagLabel>{languageName(row.language, locale)}</TagLabel> : null}
+            <LeadUntilLabel leadUntil={row.leadUntil} />
           </>
         ) : undefined}
+        notice={row ? <LeadStoryNotice here="HELPFUL" storyId={row._id} /> : undefined}
         headerAction={row ? (
           <div className="flex items-center gap-2">
+            <LeadPinButton storyId={row._id} leadUntil={row.leadUntil} canLead={row.shown} />
             <Button variant="quiet" disabled={reading} onClick={() => setAskingReadAgain(true)} className="inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2">
               <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
               {reading ? t("reading") : t("readAgain")}
@@ -281,12 +311,7 @@ export function LibraryArticleEditor({ articleId }: { articleId?: Id<"libraryArt
               </div>
               <div className="flex flex-col gap-1.5">
                 <FieldLabel htmlFor="library-article-topic">{t("topicLabel")}</FieldLabel>
-                <Select id="library-article-topic" value={form.topic} onChange={(value) => editor.update({ topic: value as KnowledgeTopic | "" })} className="w-full">
-                  <option value="">{t("noTopic")}</option>
-                  {KNOWLEDGE_TOPICS.map((topic) => (
-                    <option key={topic} value={topic}>{tTopics(topic)}</option>
-                  ))}
-                </Select>
+                <TopicSelect id="library-article-topic" value={form.topic} onChange={(topic) => editor.update({ topic })} noneLabel={t("noTopic")} className="w-full" />
               </div>
             </div>
             {articleId ? address : null}
@@ -324,6 +349,40 @@ export function LibraryArticleEditor({ articleId }: { articleId?: Id<"libraryArt
               value={form.description}
               onChange={(event) => editor.update({ description: event.target.value })}
             />
+            <div data-part="readers-see" className="flex flex-col gap-4 border-t border-border-dim pt-6">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex flex-col gap-1">
+                  <FieldLabel>{t("readersLabel")}</FieldLabel>
+                  <FieldHint>{t("readersHint", { platformName })}</FieldHint>
+                </div>
+                <Button
+                  variant="quiet"
+                  disabled={writer.isBusy() || !form.body.trim()}
+                  onClick={() => void write({ title: form.title, publication: form.publication, body: form.body })}
+                  className="inline-flex items-center gap-1.5 whitespace-nowrap px-3 py-2"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                  {writer.isBusy() ? t("writing") : t("writeAgain")}
+                </Button>
+              </div>
+              {written?.status === "failed" ? <Notice tone="warning">{t(`writeFailed.${written.why}`, { platformName })}</Notice> : null}
+              {written?.status === "error" ? <Notice tone="warning">{written.message}</Notice> : null}
+              <TextAreaField
+                label={t("summaryLabel")}
+                hint={t("summaryHint")}
+                value={form.summaryEn}
+                onChange={(event) => editor.update({ summaryEn: event.target.value })}
+                className="min-h-[96px] resize-y"
+              />
+              <TextAreaField
+                label={t("meaningLabel")}
+                hint={t("meaningHint")}
+                value={form.meaningEn}
+                onChange={(event) => editor.update({ meaningEn: event.target.value })}
+                className="min-h-[96px] resize-y"
+              />
+              {row ? <TranslationStatus progress={row.translations} /> : null}
+            </div>
             <TextAreaField
               label={t("bodyLabel")}
               placeholder={t("bodyPlaceholder")}

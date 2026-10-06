@@ -1,0 +1,16 @@
+# Insights → Who to follow — the approved look (board "WhoC" of docs/plans/assets/insights-helpful-content/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Who to follow
+select: Insights
+field: Jump to a page
+dateline
+our-picks: Our picks
+search: Find someone…
+filter: Where
+filter: Topic
+follow-columns
+  compact-list
+  compact-list
+table-footer
+  select: Rows per page

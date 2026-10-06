@@ -147,7 +147,22 @@ export const newsTables = {
     whyEn: v.string(),
     /** Its place in the list, lowest first. */
     order: v.number(),
+    /** The key of a topic in the shared list (`topics`, insights-helpful-content-plan.md, IH14, IH20); optional. */
+    topic: v.optional(v.string()),
+    /** When it was made one of "Our picks" (IH13, IH14): at most four, shown in the order picked; absent when not. */
+    pickedAt: v.optional(v.number()),
+    /** The name in lower case, so the list reads A to Z through an index (IH21). */
+    nameKey: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_order", ["order"]),
+  })
+    .index("by_order", ["order"])
+    .index("by_topic", ["topic"])
+    .index("by_picked", ["pickedAt"])
+    // Readers' and Admin's lists, A to Z, under Where and Topic, on the server (IH13, IH21).
+    .index("by_name", ["nameKey"])
+    .index("by_kind_name", ["kind", "nameKey"])
+    .index("by_topic_name", ["topic", "nameKey"])
+    .index("by_kind_topic_name", ["kind", "topic", "nameKey"])
+    .searchIndex("search_name", { searchField: "name", filterFields: ["kind", "topic"] }),
 };

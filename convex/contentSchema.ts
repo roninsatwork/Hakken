@@ -3,6 +3,8 @@ import { newsTables } from "./newsSchema";
 import { contentTranslationTables } from "./contentTranslationSchema";
 import { outboxTables } from "./outboxSchema";
 import { libraryArticleTables } from "./libraryArticlesSchema";
+import { topicTables } from "./topicsSchema";
+import { insightsCountsTables } from "./insightsCountsSchema";
 
 /**
  * The tables behind Admin → Content (docs/plans/active/
@@ -18,4 +20,8 @@ export const contentTables = {
   ...outboxTables,
   // The Library (docs/plans/active/content-library-plan.md).
   ...libraryArticleTables,
+  // Topics, shared by Knowledge, Helpful content and Who to follow (insights-helpful-content-plan.md, IH20).
+  ...topicTables,
+  // Insights' counts, kept as they change (IH21).
+  ...insightsCountsTables,
 };

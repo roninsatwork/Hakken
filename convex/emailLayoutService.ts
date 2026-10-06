@@ -256,6 +256,12 @@ export type EmailContent = {
   cards?: EmailCard[];
   /** Shown when the card list was capped. */
   overflow?: EmailAction;
+  /**
+   * More cards under their own heading, after the first list: the weekly
+   * digest's Helpful content under its News (insights-helpful-content-plan.md,
+   * IH19). Each shows at most as many cards as the first list.
+   */
+  sections?: Array<{ heading: string; cards: EmailCard[] }>;
   actions?: EmailAction[];
   /** Small print under the action. */
   quiet?: string[];
@@ -563,6 +569,18 @@ export function renderEmail(content: EmailContent, options: RenderEmailOptions =
     );
   }
 
+  for (const section of content.sections ?? []) {
+    if (section.cards.length === 0) continue;
+    body.push(gap(30));
+    body.push(
+      `<tr><td class="e-ink45" style="${line(12, 16, C.ink45, 600, `padding:0 ${PAD}px;letter-spacing:1.4px;text-transform:uppercase;`)}">${esc(section.heading)}</td></tr>`
+    );
+    for (const card of section.cards.slice(0, MAX_CARDS)) {
+      body.push(gap(14));
+      body.push(`<tr><td style="padding:0 ${PAD}px;">${renderCard(card)}</td></tr>`);
+    }
+  }
+
   if (content.actions?.length) {
     body.push(gap(28));
     const buttons = content.actions
@@ -695,6 +713,19 @@ function renderText(
   const hidden = cards.length - Math.min(cards.length, MAX_CARDS);
   if (hidden > 0 && content.overflow) {
     out.push(`${hidden} more not shown. ${content.overflow.label}: ${safeUrl(content.overflow.url)}`, "");
+  }
+
+  for (const section of content.sections ?? []) {
+    if (section.cards.length === 0) continue;
+    out.push(section.heading.toUpperCase(), "");
+    for (const card of section.cards.slice(0, MAX_CARDS)) {
+      out.push(rule);
+      out.push(card.title);
+      out.push(card.body);
+      if (card.meta) out.push(card.meta);
+      if (card.link) out.push(`${card.link.label}: ${safeUrl(card.link.url)}`);
+      out.push("");
+    }
   }
 
   for (const action of content.actions ?? []) {

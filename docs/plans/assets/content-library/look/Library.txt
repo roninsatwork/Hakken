@@ -1,7 +1,7 @@
-# Admin → Content → Library — the approved look (board "Library" of docs/plans/assets/content-library/).
+# Admin → Content → Helpful content — the approved look (board "Library" of docs/plans/assets/content-library/).
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
-page-header: Library
+page-header: Helpful content
   primary-action: Add article
 notice (info)
 search: Search articles and publications…
