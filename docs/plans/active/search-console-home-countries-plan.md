@@ -38,6 +38,20 @@ figures are the home country's only, "that's ok … the sales are mainly UK too
 - On dev, conterraops.com's Market list begins with Iraq (test data), so Iraq
   is its main country until its list is put right.
 
+**Checked on dev, 2026-10-06.** Before the switch, morehandles.co.uk's United
+Kingdom figures, kept ready beside all countries, were 7,176 clicks and
+781,465 impressions for 5 September to 4 October; after it, its main country
+held exactly the same, and ronins.co.uk's likewise (370 and 275,767). Each
+website collected its 90 days in about seven minutes, its old figures cleared
+first. Google answers every kind of result with a row a day, nothing shown or
+not, so a kind is a tab only where the website was shown in it: morehandles.co.uk
+shows Web and News (4 showings in 90 days), ronins.co.uk Web alone.
+
+| Website | Before (5 Oct, start) | Before (this morning) | After |
+|---|---|---|---|
+| morehandles.co.uk | 830 MB | 205 MB | **84 MB** |
+| ronins.co.uk | 131 MB | 49 MB | **21 MB** |
+
 Anthony, 2026-10-06, looking at morehandles.co.uk's New and lost, empty for
 the United Kingdom: "why is this report empty when the UK is a home country
 for morehandles"; "I'd rather lose all countries and just keep home
