@@ -28,8 +28,14 @@ keywords and Tracked pages.
   until now for Web, all countries only (store less round two, F) — is kept
   for each home country instead, so it is never empty for the country a
   business sells in.
-- **The other kinds of result** (Image, Video, News, Discover, Google News),
-  kept until now for all countries, are kept for the home countries instead.
+- **The other kinds of result** (Video, News, Discover, Google News), kept
+  until now for all countries, are kept for the home countries instead —
+  unless decision 5 takes them off too.
+- **Image search is taken off** (Anthony, 2026-10-06: "I don't think we need
+  to store or show data for images — we can remove this option and data
+  across all pages too"): the Image tab goes from every Search Console page,
+  Google is no longer asked for image figures at each collection, and the
+  image figures held are cleared by the clean-out script (step 5).
 
 ## Why — measured on dev, morehandles.co.uk, 2026-10-06
 
@@ -41,10 +47,12 @@ Of its 205 MB of Search Console data:
 | Search-and-page lines | 38.7 MB | 30.4 MB | 1.7 MB |
 | First- and last-seen register (New and lost) | 17.8 MB | — | — |
 | Page addresses, days, weeks | — | — | 7.4 MB |
+| *of which Image search, all its parts* | | | *7.6 MB* |
+| *Video, News, Discover, Google News* | | | *0 MB on this shop* |
 | **Total** | **116 MB** | **76 MB** | **13.6 MB** |
 
 Keeping the United Kingdom alone, with its own register (estimated 14 MB),
-leaves **about 100 MB — half**. Each rebuild adds up one country instead of
+and no Image search, leaves **about 95 MB — under half**. Each rebuild adds up one country instead of
 two, so the reading and writing that Search Console does after each
 collection, weekly and on a catch-up roughly halves as well
 (docs/product/search-console-running-costs-oct-2026.md).
@@ -74,16 +82,20 @@ collection, weekly and on a catch-up roughly halves as well
 4. **Countries and devices:** keep the small list of every country's totals
    (well under 1 MB), so the page still shows where the traffic comes from.
    Recommended: yes.
+5. **Video, News, Discover and Google News:** keep them (for the home
+   countries), take them off as Image is, or show a tab only for a website
+   Google has figures for. They take no space on morehandles.co.uk, but each
+   collection asks Google for each of them.
 
-## Steps (about 3.5 man-days)
+## Steps (about 3.75 man-days)
 
 | # | Step | Days |
 |---|---|---|
 | 1 | Measure every website on dev by country (done for morehandles.co.uk) | 0.25 |
-| 2 | Collection: fetch and keep the home countries' lines and the other kinds of result per home country; all countries only for decision 4's small list | 0.75 |
+| 2 | Collection: fetch and keep the home countries' lines and the other kinds of result per home country, no Image; all countries only for decision 4's small list | 0.75 |
 | 3 | Rebuilds — after a collection, weekly, catch-up on open: the home countries' periods and register, no all-countries ones | 0.75 |
-| 4 | Screens: open on the first home country, the picker, decision 2 and 3, New and lost's note | 0.75 |
-| 5 | Clean-out script for the all-countries lines, periods and register, as for Search Console's round two; checked first that the United Kingdom's figures read the same before and after | 0.5 |
+| 4 | Screens: open on the first home country, the picker, decision 2 and 3, New and lost's note; the Image tab off every page (and decision 5) | 1 |
+| 5 | Clean-out script for the all-countries lines, periods and register, and every Image figure, as for Search Console's round two; checked first that the United Kingdom's figures read the same before and after | 0.5 |
 | 6 | Tests, the full local check, measure again, release on Anthony's word | 0.5 |
 
 ## Risks
