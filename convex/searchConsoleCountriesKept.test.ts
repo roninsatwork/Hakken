@@ -257,6 +257,9 @@ describe("reading the home countries", () => {
     const thirty = { siteId, searchType: "web" as const, dimension: "query" as const, from: "2026-08-28", to: NEWEST, page: 1, rows: 25 };
 
     expect(await reader.query(api.searchConsoleCountries.searchConsoleCountryChoices, { siteId })).toEqual({ main: "gbr", ready: ["moz"] });
+    // Only the kinds of result the website was shown in are its tabs: here web alone, so no switch.
+    await t.run(async (ctx) => await ctx.db.insert("searchConsoleDays", { companyWebsiteId: siteId, searchType: "video", day: NEWEST, clicks: 0, impressions: 0, ctr: 0, position: 0, fetchedAt: 1 }));
+    expect((await reader.query(api.searchConsoleConnect.searchConsoleStatus, { siteId }))?.kinds).toEqual(["web"]);
     const main = await reader.query(api.searchConsoleLists.searchConsoleListPage, thirty);
     expect(main.rows.map((one) => [one.key, one.clicks])).toEqual([["plumber leeds", 5], ["emergency plumber", 3]]);
     // An address naming the main country reads the same.

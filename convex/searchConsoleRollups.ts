@@ -241,18 +241,21 @@ export const keptBetween = internalQuery({
 });
 
 /**
- * Which kinds of result a website — or one country of it — has any days of:
- * the ones worth building periods for, and the tabs its pages show
- * (search-console-home-countries-plan.md, decision 3).
+ * Which kinds of result a website — or one country of it — was ever shown in
+ * on a day held: the ones worth building periods for, and the tabs its pages
+ * show (search-console-home-countries-plan.md, decision 3). Google answers
+ * every kind with a row a day, nothing shown or not, so a day counts only
+ * with a showing.
  */
 export async function kindsHeld(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"companyWebsites">, country?: string): Promise<SearchType[]> {
   const out: SearchType[] = [];
   for (const searchType of COLLECTED_SEARCH_TYPES) {
-    const any = await ctx.db
+    const shown = await ctx.db
       .query("searchConsoleDays")
       .withIndex("by_hold_country_type_day", (q) => q.eq("companyWebsiteId", companyWebsiteId).eq("country", country).eq("searchType", searchType))
+      .filter((q) => q.gt(q.field("impressions"), 0))
       .first();
-    if (any) out.push(searchType);
+    if (shown) out.push(searchType);
   }
   return out;
 }

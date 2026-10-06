@@ -1,7 +1,42 @@
 # Search Console keeps home countries only — plan, 2026-10-06
 
-**Status: plan only — nothing built.** Decisions answered (below); waiting
-on Anthony's "go".
+**Status: built 2026-10-06 on Anthony's "go"** (commits 721df1fa, d702a0ae,
+557c4eb2), on `dev`, not pushed; switched on dev the same day. Anthony: the
+figures are the home country's only, "that's ok … the sales are mainly UK too
+— I want to focus on commercial revenue".
+
+## As built
+
+- **The main home country is held without a country code**
+  (`mainConsoleCountry`, `searchConsoleCountries.ts`): every ask to Google
+  carries its filter, but the list of every country's totals, asked whole.
+  The connection notes it (`mainCountry`). The rest of the Market list are the
+  countries kept ready beside it, up to `consoleCountriesPerSite` home
+  countries **in all, the main one counted** — so the limit's 3 is the main
+  country and two more, where before it was all countries and three more.
+- **The switch** (`searchConsoleMainCountry.ts`): a website whose figures are
+  not its main country's — every one before today — has them cleared, its
+  connection kept, and a Collector run started once they are gone (retried
+  every 5 minutes while another run is going); one holding nothing collects
+  at once. The data migration `2026-10-06-search-console-home-countries`
+  switches every website at once. **Google is asked for 90 days only**, so the
+  weeks and months a website had built up since connecting beyond that go
+  with the old figures; a website's main country changing later does the
+  same.
+- **A live ask naming no country is of the main one** (`askLive`), so
+  nothing beside the held figures is all countries'.
+- Image search is neither collected nor shown; the other kinds show a tab
+  only where Google has figures (`searchConsoleStatus.kinds`), and with web
+  alone there is no switch. New and lost is kept for every home country.
+- The picker lists the home countries only; an address naming the main
+  country, or one not kept, reads as the main one. The admin Market page marks
+  the first country "Main country: Search Console opens on it".
+- Gone with all countries: the "country nearly all of the searches" rule
+  (`searchConsoleShrink.ts`, finish-off 2B). The round-two tidy script no
+  longer clears a country's New and lost — run again, it would have deleted
+  every kept country's — nor rolls image days.
+- On dev, conterraops.com's Market list begins with Iraq (test data), so Iraq
+  is its main country until its list is put right.
 
 Anthony, 2026-10-06, looking at morehandles.co.uk's New and lost, empty for
 the United Kingdom: "why is this report empty when the UK is a home country
