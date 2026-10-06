@@ -8,6 +8,7 @@ import { holdFirstCheck, holdSearch, holdSearches } from "./holdLists";
 import { searchVerdict, searchVerdictValidator } from "./utils/trackingVerdicts";
 import { MAX_LIST, type Site } from "./websiteSiteRows";
 import { bucketOf, stepValidator } from "./siteFigures";
+import { dailyPositionsKeptFrom } from "./seoCollectionPolicy";
 
 /**
  * The searches chosen for a site and how it does on each, for the client's
@@ -156,6 +157,11 @@ export const searchPositions = tenantQuery({
   returns: v.array(v.object({
     keyword: v.string(),
     points: v.array(v.object({ day: v.string(), lastDay: v.string(), position: v.union(v.number(), v.null()) })),
+    /**
+     * A day's step reaching back past the 90 days kept day by day: the first
+     * day still daily, before which each week shows its last check (B1).
+     */
+    weeklyBefore: v.union(v.string(), v.null()),
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
@@ -168,6 +174,8 @@ export const searchPositions = tenantQuery({
     // 1.2 and F1). A fan-out query this company gave its first check is its own
     // asking, so its checks are read as a tracked search's are.
     const holdId = listHold(site);
+    const dailyFrom = dailyPositionsKeptFrom(site.today);
+    const weeklyBefore = args.step === "day" && args.from < dailyFrom ? dailyFrom : null;
     const charted: Array<{ keyword: string; tracked: boolean }> = [];
     for (const keyword of args.keywords.slice(0, MAX_CHARTED)) {
       if ((await holdSearch(ctx, holdId, keyword)) || (await holdFirstCheck(ctx, holdId, keyword))) {
@@ -207,7 +215,7 @@ export const searchPositions = tenantQuery({
       for (const [day, position] of [...byDay.entries()].sort(([left], [right]) => left.localeCompare(right))) {
         bySteps.set(bucketOf(day, args.step), { day: bucketOf(day, args.step), lastDay: day, position });
       }
-      return { keyword, points: [...bySteps.values()] };
+      return { keyword, points: [...bySteps.values()], weeklyBefore };
     }));
   },
 });

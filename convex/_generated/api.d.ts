@@ -291,6 +291,8 @@ import type * as platformAlerts from "../platformAlerts.js";
 import type * as platformLimitRow from "../platformLimitRow.js";
 import type * as platformLimits from "../platformLimits.js";
 import type * as platformOverview from "../platformOverview.js";
+import type * as positionWeekSchema from "../positionWeekSchema.js";
+import type * as positionWeeks from "../positionWeeks.js";
 import type * as privateListsMigration from "../privateListsMigration.js";
 import type * as promptCacheService from "../promptCacheService.js";
 import type * as promptFanOut from "../promptFanOut.js";
@@ -897,6 +899,8 @@ declare const fullApi: ApiFromModules<{
   platformLimitRow: typeof platformLimitRow;
   platformLimits: typeof platformLimits;
   platformOverview: typeof platformOverview;
+  positionWeekSchema: typeof positionWeekSchema;
+  positionWeeks: typeof positionWeeks;
   privateListsMigration: typeof privateListsMigration;
   promptCacheService: typeof promptCacheService;
   promptFanOut: typeof promptFanOut;

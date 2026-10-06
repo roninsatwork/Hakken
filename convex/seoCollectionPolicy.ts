@@ -167,6 +167,20 @@ export const AI_ANSWER_WORDING_RETENTION_DAYS = 90;
  */
 export const SERP_PAGE_RETENTION_DAYS = 90;
 
+/**
+ * How long a search's position is kept day by day (`seoKeywordPositions`);
+ * before it, each week's last check is kept and the rest of the week's
+ * cleared by the hourly sweep (docs/plans/active/dataforseo-cost-plan.md,
+ * B1; `positionWeeks.ts`). The same point a week's step of a position chart
+ * already shows, so only a day's step shows fewer points before it.
+ */
+export const DAILY_POSITIONS_RETENTION_DAYS = 90;
+
+/** The first day whose positions are still kept day by day, `YYYY-MM-DD`. */
+export function dailyPositionsKeptFrom(today: string): string {
+  return keptFrom(today, DAILY_POSITIONS_RETENTION_DAYS);
+}
+
 /** The first day still kept, `YYYY-MM-DD`, of what is kept `days` days. */
 function keptFrom(today: string, days: number): string {
   return new Date(Date.parse(`${today}T00:00:00Z`) - days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);

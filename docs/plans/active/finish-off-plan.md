@@ -210,10 +210,10 @@ of it is committed on `dev` and not pushed.
 
 | # | Change | They would lose | Decision |
 |---|---|---|---|
-| B1 | Daily keyword positions kept 90 days, then weekly | Day-by-day history older than 90 days | **Not built**: 26 MB on dev, and it saves nothing until day 90 |
-| B2 | Full AI answer wording kept 90 days; who was named and cited kept forever | Reading old answers word for word | **Built, held** on a branch: 0.8 MB on dev — to decide |
-| B3 | Google's full results pages kept 90 days; positions kept forever | Opening an old results page in full | **Built, held** on a branch: 0.5 MB on dev — to decide |
-| B4 | One rebuild at the end of each collection, not during it | Discovery screens fill in at the end of a collection, not bit by bit | **Built, held** on a branch — to decide once reads and writes are measured |
+| B1 | Daily keyword positions kept 90 days, then weekly | Day-by-day history older than 90 days | **Built** 2026-10-06 on Anthony's "yes", not pushed: each week keeps its last check |
+| B2 | Full AI answer wording kept 90 days; who was named and cited kept forever | Reading old answers word for word | **Built**, added 2026-10-06 on Anthony's "yes", not pushed |
+| B3 | Google's full results pages kept 90 days; positions kept forever | Opening an old results page in full | **Built**, added 2026-10-06 on Anthony's "yes", not pushed |
+| B4 | One rebuild at the end of each collection, not during it | Discovery screens fill in at the end of a collection, not bit by bit | **Built**, added 2026-10-06 on Anthony's "yes", not pushed |
 
 ## Next, once this plan is done: what Convex costs (agreed 2026-10-05)
 

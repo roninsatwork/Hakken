@@ -54,11 +54,11 @@ const FROM_AI = {
   }],
 };
 
-function open(fromAi: Record<string, unknown> | null, record: Record<string, unknown> = RECORD) {
+function open(fromAi: Record<string, unknown> | null, record: Record<string, unknown> = RECORD, positions: unknown[] = []) {
   vi.mocked(useQuery).mockImplementation(answerQueries({
     "sites:getMySite": { host: "ronins.co.uk", relationship: "OWNED", counts: {} },
     "siteRecords:keywordRecord": record,
-    "siteGoogle:searchPositions": [],
+    "siteGoogle:searchPositions": positions,
     "siteAngles:keywordAngle": fromAi,
   }));
   render(<SiteKeywordPage />);
@@ -133,6 +133,15 @@ describe("a search's own page, as a fan-out query", () => {
     expect(screen.getByText(/^sites\.keywordRecord\.serp\.checked /)).toBeInTheDocument();
     expect(screen.getByText("sites.keywordRecord.serp.pageNotKept")).toBeInTheDocument();
     expect(screen.queryByText("sites.keywordRecord.serp.thisWebsite")).not.toBeInTheDocument();
+  });
+
+  it("a day by day chart reaching back past the 90 days says where it turns to a check a week (B1)", () => {
+    open(null, RECORD, [{
+      keyword: "carp rods",
+      points: [{ day: "2026-09-27", lastDay: "2026-09-27", position: 16 }, { day: "2026-10-01", lastDay: "2026-10-01", position: 20 }],
+      weeklyBefore: "2026-10-01",
+    }]);
+    expect(screen.getByText(/sites\.range\.weeklyBefore 1 Oct 2026/)).toBeInTheDocument();
   });
 
   it("shows Google Ads' figures for a search the keyword list does not measure", () => {

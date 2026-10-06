@@ -21,6 +21,7 @@ import { dropUnsentRequest } from "./seoCollectionClose";
 import { closeStalledRoleRuns } from "./roleRuns";
 import { sendLongWaiting } from "./seoAgentRuns";
 import { deleteAnswerText } from "./siteAnswers";
+import { thinOldPositions } from "./positionWeeks";
 
 /**
  * The hourly walk round the kitchen.
@@ -41,7 +42,8 @@ import { deleteAnswerText } from "./siteAnswers";
  *  5. Close Planner and Collector runs that died without saying so.
  *  6. Start the Collector for requests left waiting with nothing sending.
  *  7. Clear raw payloads, AI answers' wording, Google's results pages and
- *     cycles that have outlived their retention.
+ *     cycles that have outlived their retention, and thin keyword positions
+ *     past their 90 days to a week's last (`positionWeeks.ts`).
  *
  * It never re-posts a task. A submitted task was paid for; if its result is
  * missing the answer is always to fetch it, never to buy it again.
@@ -60,7 +62,7 @@ import { deleteAnswerText } from "./siteAnswers";
  * transaction inside Convex's limits, and a duty takes pages until it is done,
  * its page budget is spent, or the check has run for `SWEEP_TIME_MS`.
  */
-const DUTIES = ["reclaim", "chase", "close", "resume", "refile", "stalledRuns", "sendWaiting", "purgeRaw", "purgeWording", "purgeSerpPages", "purgeCycles"] as const;
+const DUTIES = ["reclaim", "chase", "close", "resume", "refile", "stalledRuns", "sendWaiting", "purgeRaw", "purgeWording", "purgeSerpPages", "purgeCycles", "thinPositions"] as const;
 type Duty = (typeof DUTIES)[number];
 const dutyValidator = v.union(...DUTIES.map((duty) => v.literal(duty)));
 
@@ -77,6 +79,8 @@ const PAGES_PER_DUTY: Record<Duty, number> = {
   purgeWording: 100,
   purgeSerpPages: 100,
   purgeCycles: 25,
+  // A page is a hundred positions: thirty thousand an hour, a day's past the 90 days and a backlog's besides.
+  thinPositions: 300,
 };
 
 /** The check takes no new page after this, well inside an action's ten minutes. */
@@ -164,6 +168,8 @@ export const sweepDuty = internalMutation({
         return await purgeExpiredSerpPages(ctx, now);
       case "purgeCycles":
         return await purgeExpiredCycles(ctx, now);
+      case "thinPositions":
+        return { ...FINISHED, ...(await thinOldPositions(ctx, now)) };
     }
   },
 });

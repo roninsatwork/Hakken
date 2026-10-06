@@ -16,6 +16,7 @@ import {
   rankStatusValidator,
 } from "./utils/siteShapes";
 import { wordStartMatcher } from "./utils/wordStarts";
+import { positionOnDay } from "./positionWeeks";
 
 /**
  * What a site ranks for on Google: every keyword, every page, every folder, and
@@ -254,11 +255,8 @@ export const keywordsOnDay = tenantQuery({
         .withIndex("by_site_keyword", (q) => q.eq("websiteId", site.website._id).eq("locationCode", site.place).eq("keyword", keyword))
         .first();
       if (!listed) return { keyword, position: null, url: null, checked: false, comparable: false };
-      const row = await ctx.db
-        .query("seoKeywordPositions")
-        .withIndex("by_website_keyword_place_day", (q) =>
-          q.eq("websiteId", site.website._id).eq("keyword", keyword).eq("locationCode", site.place).eq("day", args.day))
-        .first();
+      // Past the 90 days kept day by day, the day's week's last check (B1).
+      const row = await positionOnDay(ctx, { websiteId: site.website._id, keyword, locationCode: site.place, day: args.day, today: site.today });
       return {
         keyword,
         position: row?.position ?? null,

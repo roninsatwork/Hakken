@@ -8,14 +8,12 @@ Search Console as left:
 Anthony, 2026-10-05: "tomorrow we pick up 2", "let's brainstorm and audit it
 now", "make a plan for A and B".
 
-**Status, morning of 2026-10-06:** built overnight on `dev`, committed and
-**not pushed** (Anthony: "build this overnight and double check
-everything"): **A1, A2, A3, A5, A6**, and a fault A1's check found (below).
-Built and **held on their own branches** for Anthony's word, because a
-customer would notice them: **B2 and B3**
-(`worktree-agent-a270321a61606fe0d`), **B4**
-(`worktree-agent-ada3a01b855414cb0`). **Not built: A4 and B1** — see "What
-the night found".
+**Status, 2026-10-06:** on `dev`, committed and **not pushed**: **A1, A2,
+A3, A5, A6** (built overnight; Anthony: "build this overnight and double
+check everything"), a fault A1's check found (below), and **B1, B2, B3 and
+B4** — B2 to B4 built overnight and held on their own branches, then added
+the next morning with B1 built, on Anthony's "yes" (2026-10-06). **Not
+built: A4** — see "What the night found".
 
 ## What the night found, 2026-10-06
 
@@ -42,16 +40,22 @@ the night found".
   finding a brand named in an answer to someone else's question, which is
   where competitor suggestions come from — that changes what customers see,
   so it is a group B question, not A.
-- **B1 not built**: it saves nothing until a website has held positions for
-  90 days, and every chart reading positions would have to read days and
-  weeks; positions are 26 MB on dev. Worth it later, when they are larger.
-- **B2 and B3 built, held**: measured, what they remove is small (0.8 MB and
-  0.5 MB on dev) and a customer would see it. Two wordings to settle first —
-  the "kept from 23 September" note and "word for word" on the answer screen.
-- **B4 built, held**: during a collection the Discovery screens would keep
-  the last collection's figures until its end. A2 already takes the repeat
-  rebuilds AI answers and site-wide figures set off; whether the rest is
-  worth B4 is for the reads-and-writes measurement.
+- **B1 left overnight, built 2026-10-06** on Anthony's "yes": it saves
+  nothing until a website has held positions for 90 days (positions are 26
+  MB on dev), but a daily website adds about 2.5 MB a collection. Built so
+  no chart reader changes: each week keeps its **last check**, the point a
+  week's step of a chart already shows, rather than a week's best and
+  average as first planned — a week's and a month's chart read the same
+  before and after. The hourly sweep reads each day once, the day it passes
+  the 90 days (`positionWeeks.ts`, `positionThinning`).
+- **B2 and B3 held overnight, added 2026-10-06**: what they remove is small
+  (0.8 MB and 0.5 MB on dev) and a customer sees it. The two wordings it left
+  untrue were put right: Full answers says "word for word for 90 days", its
+  note "Each answer's words are kept for 90 days, from 23 September 2026.
+  Older answers show only who they named and cited.", and an old answer's
+  header "Who {engine} named and cited when asked this on {day}."
+- **B4 held overnight, added 2026-10-06**: during a collection the Discovery
+  screens keep the last collection's figures until its end, or three hours.
 - **Content gaps for competitors** (about 77 MB of 81 MB) is a new question:
   the competitor gap tab is a deliberate feature, so nothing was changed.
 
@@ -111,7 +115,7 @@ nothing and changes only when the screens update.
 
 | # | Change | How | What the screens do | Worth it when | Days |
 |---|---|---|---|---|---|
-| B1 | Daily keyword positions kept 90 days, then weekly | Roll older days into a week's best and average position per keyword, as Search Console's days roll into weeks; the history charts read days for 90 days and weeks before; a one-off conversion of the rows kept | A keyword's position chart shows day by day for 90 days and week by week before, with a note when it switches | `seoKeywordPositions` is a large share of a website's storage, or grows by more than a few MB a month | 1.5 |
+| B1 | Daily keyword positions kept 90 days, then weekly | Roll older days into a week's best and average position per keyword, as Search Console's days roll into weeks; the history charts read days for 90 days and weeks before; a one-off conversion of the rows kept. **Built 2026-10-06:** each week keeps its last check instead (Monday to Sunday, inside its month; a keyword list's and a check's apart), so no chart reader changes; the hourly sweep thins each day the day it passes the 90 days, and the first pass the history before (`positionWeeks.ts`) | A keyword's position chart by day shows one point a week before the 90 days, and says so under its title; by week or month it reads as before. Compared with a day past the 90 days, a keyword shows that week's last check | `seoKeywordPositions` is a large share of a website's storage, or grows by more than a few MB a month | 1.5 |
 | B2 | Full AI answer wording kept 90 days; who was named and cited kept for ever | A purge of `aiAnswerTexts` (and `aiAnswerIndex`) older than 90 days; the answer screen says the wording is kept 90 days | An answer older than 90 days shows who it named and cited, and "The full wording is kept for 90 days" instead of its text; search finds answers of the last 90 days | `aiAnswerTexts` is large, which its 60,000-character answers suggest | 0.75 |
 | B3 | Google's full results pages kept 90 days; positions kept for ever | A purge of `siteSerpPages` older than 90 days; the results-page screen says so | A results page older than 90 days shows the website's position, not the page in full | `siteSerpPages` is large | 0.5 |
 | B4 | One rebuild at the end of each collection, not during it | Rebuilds asked for while a collection runs wait for its end (`finishSeoCycle`), with one every few hours for a collection that runs long. **Built 2026-10-05:** a website's rebuild, or its AI-lines or day-figures part (A2), asked for while a collection collecting it runs (found from its newest requests) is held for that collection (`heldFor`), released when it finishes (`releaseHeldRebuilds`) or three hours after the collection began or the website was last rebuilt (`releaseHeldRequest`); "Figures update when it finishes" under a running collection's Doing now | During a collection the Discovery screens keep the last collection's figures, then update at its end; Collection pipeline says "Figures update when it finishes" | Step 0's count shows many full rebuilds per collection | 1 |

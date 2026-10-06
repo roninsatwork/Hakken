@@ -9426,7 +9426,8 @@
       "stepLabel": "Passo",
       "daily": "Giornaliero",
       "weekly": "Settimanale",
-      "monthly": "Mensile"
+      "monthly": "Mensile",
+      "weeklyBefore": "Prima del {day} si conserva un controllo a settimana: l'ultimo di ogni settimana."
     },
     "compare": {
       "label": "Confronta con",

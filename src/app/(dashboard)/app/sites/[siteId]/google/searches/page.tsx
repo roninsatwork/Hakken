@@ -90,6 +90,7 @@ export default function SiteSearchesPage() {
       <SiteChartCard
         title={t("chartTitle")}
         hint={t("chartHint")}
+        weeklyBefore={positions?.[0]?.weeklyBefore ?? null}
         exportName={`${site?.host ?? "site"}-search-positions-${range.from}-to-${range.to}`}
         csv={() => toCsv(["day", ...(positions ?? []).map((line) => line.keyword)], days.map((day) => [day, ...(positions ?? []).map((line) => line.points.find((point) => point.day === day)?.position ?? null)]))}
         enoughData={days.length > 0}

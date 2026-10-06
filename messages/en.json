@@ -9426,7 +9426,8 @@
       "stepLabel": "Step",
       "daily": "Daily",
       "weekly": "Weekly",
-      "monthly": "Monthly"
+      "monthly": "Monthly",
+      "weeklyBefore": "Before {day}, one check a week is kept: each week's last."
     },
     "compare": {
       "label": "Compare with",

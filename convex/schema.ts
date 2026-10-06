@@ -10,6 +10,7 @@ import { pagesTables } from "./pagesSchema";
 import { contentTables } from "./contentSchema";
 import { keywordResearchTables } from "./keywordResearchSchema";
 import { seoPullTables } from "./seoPullSchema";
+import { positionWeekTables } from "./positionWeekSchema";
 import { creditTables } from "./creditSchema";
 import { decisionCertaintyValidator, decisionFallbackReasonValidator, decisionModeValidator, decisionOutcomeValidator, decisionSourceValidator } from "./utils/decisionShapes";
 
@@ -37,6 +38,7 @@ export default defineSchema({
   ...contentTables,
   ...keywordResearchTables,
   ...seoPullTables,
+  ...positionWeekTables,
   ...creditTables,
   
   companies: defineTable({
@@ -545,7 +547,9 @@ export default defineSchema({
     .index("by_website_place_day", ["websiteId", "locationCode", "day"])
     /** One search's history from one place, which is what its verdict reads. */
     .index("by_website_keyword_place_day", ["websiteId", "keyword", "locationCode", "day"])
-    .index("by_pull", ["pullId"]),
+    .index("by_pull", ["pullId"])
+    /** A day's positions, every website's: what the sweep thins to a week's last past 90 days (`positionWeeks.ts`). */
+    .index("by_day", ["day"]),
 
   /**
    * What the collection screens read. Never the pull table.

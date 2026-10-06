@@ -22,6 +22,7 @@ export function SiteChartCard({
   enoughData,
   dated = true,
   dates,
+  weeklyBefore,
   children,
 }: {
   title: string;
@@ -40,6 +41,12 @@ export function SiteChartCard({
    * page's: the Overview's twelve months against the twelve before.
    */
   dates?: string;
+  /**
+   * A positions chart reaching back past the 90 days kept day by day: the
+   * first day still daily, said after the hint, since before it each week
+   * shows only its last check (dataforseo-cost-plan.md, B1).
+   */
+  weeklyBefore?: string | null;
   children: ReactNode;
 }) {
   const tr = useTranslations("sites.range");
@@ -54,7 +61,7 @@ export function SiteChartCard({
     platformName,
   ].filter(Boolean).join(" · ");
   return (
-    <ChartCard title={title} hint={hint} controls={controls} exportName={exportName} csv={csv} caption={caption} enoughData={enoughData}>
+    <ChartCard title={title} hint={weeklyBefore ? [hint, tr("weeklyBefore", { day: formatDay(weeklyBefore) })].filter(Boolean).join(" ") : hint} controls={controls} exportName={exportName} csv={csv} caption={caption} enoughData={enoughData}>
       {children}
     </ChartCard>
   );

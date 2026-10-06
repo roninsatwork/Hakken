@@ -321,6 +321,7 @@ export default function SiteKeywordPage() {
           <SiteChartCard
             title={t("chartTitle")}
             hint={t("chartHint")}
+            weeklyBefore={positions?.[0]?.weeklyBefore ?? null}
             exportName={`${site?.host ?? "site"}-${record.keyword.replace(/[^a-z0-9]+/gi, "-")}-positions-${range.from}-to-${range.to}`}
             csv={() => toCsv(["day", record.keyword], points.map((point) => [point.day, point.position]))}
             enoughData={points.length > 0}

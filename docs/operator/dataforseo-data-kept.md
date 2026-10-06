@@ -48,12 +48,35 @@ download lists the answers whose wording is kept.
 Google's first pages for each tracked search, as each check found them
 (`siteSerpPages`), are kept for **90 days** (`SERP_PAGE_RETENTION_DAYS`; kept
 for ever until 2026-10-05). The hourly collection sweep clears older pages.
-**Where each website stood is kept for ever** (`seoKeywordPositions`,
-`siteKeywordRanks`, and the summary `websiteSearchStats`), so positions,
-their history and every chart of them are unchanged.
+**Where each website stood is kept** (`seoKeywordPositions` — day by day
+for 90 days, then each week's last, below — `siteKeywordRanks`, and the
+summary `websiteSearchStats`), so positions and every chart of them are
+unchanged.
 
 A search checked in the last 90 days shows its results page as before. One
 last checked before them — a paused search, or one whose company has not
 collected since — shows, on its own page and under Who ranks above you, the website's position at that check and "Google's full results page is
 kept for 90 days." in place of the page. Search features and What people also
 ask read the pages kept, so such a search drops out of them.
+
+## Keyword positions — day by day for 90 days, then each week's last
+
+Where a website stood on each search at each check (`seoKeywordPositions`) is
+kept **day by day for 90 days** (`DAILY_POSITIONS_RETENTION_DAYS`; every day
+for ever until 2026-10-06). Before that, each week keeps its last check — a
+week runs Monday to Sunday and stops at the end of its month — and the hourly
+collection sweep clears the rest of the week (`convex/positionWeeks.ts`). A
+keyword list's filings and a tracked search's checks are kept apart, each its
+week's last. A search's first and best checks stay in its summary
+(`websiteSearchStats`).
+
+On the screens, a position chart by week or by month reads exactly as before:
+a week's point was always its last check. A chart by day reaching back past
+the 90 days shows one point a week there, and says "Before {day}, one check a
+week is kept: each week's last." under its title. Keywords compared with a day
+past the 90 days show that week's last check.
+
+The sweep keeps its place in `positionThinning` and reads each day once, the
+day it passes the 90 days, never the weeks already thinned. It thins about
+thirty thousand positions an hour, so a first pass over a long history takes
+some hours, handing itself on each hour.
