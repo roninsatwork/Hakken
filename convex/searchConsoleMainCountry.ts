@@ -29,7 +29,8 @@ export const NOTHING_HELD = {
  * When it is not — every website's figures before 2026-10-06 were all
  * countries', and a website's main country can change on its Market page or
  * with its place — everything collected for it is cleared, its connection
- * kept, and the next collection fetches the main country's 90 days. A
+ * kept, and a collection started once they are gone fetches the main
+ * country's 90 days. A
  * website holding nothing yet only notes its main country, and is collected
  * now. Answers which.
  */
@@ -49,7 +50,7 @@ export async function prepareMainCountryOf(ctx: MutationCtx, connection: Doc<"se
   }
   // Marked as clearing first: a step still running drops what it fetched.
   await ctx.db.patch(connection._id, { clearing: true, mainCountry: main, ...NOTHING_HELD, updatedAt: Date.now() });
-  await ctx.scheduler.runAfter(0, internal.searchConsoleSync.clearFigures, { companyWebsiteId: hold._id });
+  await ctx.scheduler.runAfter(0, internal.searchConsoleSync.clearFigures, { companyWebsiteId: hold._id, collectAfter: true });
   // Your pages' clicks go with them that night (dataforseo-cost-plan.md, A1).
   await noteHoldPagesChanged(ctx, hold._id);
   return "SWITCHING";

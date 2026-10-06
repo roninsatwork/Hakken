@@ -5,6 +5,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { accessTokenFor, type ConnectionProblem } from "./searchConsoleConnect";
 import { noteHoldPagesChanged } from "./holdPages";
+import { startRoleRun } from "./roleRuns";
 import { GOOGLE_DIMENSIONS, LISTS_OF, queryAnalytics, type AnalyticsRow, type GoogleFailure } from "./searchConsoleApi";
 import {
   COLLECTED_SEARCH_TYPES,
@@ -871,10 +872,12 @@ async function clearSome(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites
 /**
  * A site's figures go, a batch at a time — another property chosen, or what
  * was collected cleared (`clearCollected`). Nothing is collected afterwards
- * until the Collector's next run.
+ * until the Collector's next run — but for a website switched to its main
+ * home country (`collectAfter`), which starts one, so its figures are back in
+ * minutes rather than at the next night's (`searchConsoleMainCountry.ts`).
  */
 export const clearFigures = internalMutation({
-  args: { companyWebsiteId: v.id("companyWebsites") },
+  args: { companyWebsiteId: v.id("companyWebsites"), collectAfter: v.optional(v.boolean()) },
   returns: v.null(),
   handler: async (ctx, args) => {
     if (!(await clearSome(ctx, args.companyWebsiteId))) {
@@ -887,6 +890,13 @@ export const clearFigures = internalMutation({
       .first();
     if (!connection) return null;
     await ctx.db.patch(connection._id, { clearing: undefined, updatedAt: Date.now() });
+    if (args.collectAfter) {
+      // A run already going lists its websites at its start, so one cleared since waits for the next.
+      await startRoleRun(ctx, "SEARCH_CONSOLE_COLLECTOR", {
+        title: "Search Console: collect after switching to the main country",
+        objective: "Collect every website connected to Search Console: one just switched to its main home country gets that country's 90 days.",
+      });
+    }
     return null;
   },
 });

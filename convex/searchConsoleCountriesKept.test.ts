@@ -334,7 +334,7 @@ describe("reading the home countries", () => {
 });
 
 describe("switching to the main home country (2026-10-06)", () => {
-  test("a website whose figures were all countries' is cleared at its next run, and its main country collected at the one after", async () => {
+  test("a website whose figures were all countries' is cleared at its next run, and its main country's 90 days collected straight after", async () => {
     const { t, siteId } = await setup(["gbr"], false);
     await t.run(async (ctx) => {
       await ctx.db.insert("searchConsoleDays", { companyWebsiteId: siteId, searchType: "web", day: "2026-09-25", clicks: 12, impressions: 400, ctr: 0.03, position: 3, fetchedAt: 1 });
@@ -343,12 +343,9 @@ describe("switching to the main home country (2026-10-06)", () => {
     const asks = fakeGoogle(figures());
 
     await collect(t);
-    expect(asks).toEqual([]);
-    expect(await t.run(async (ctx) => await ctx.db.query("searchConsoleDays").collect())).toEqual([]);
-    expect(await connectionOf(t, siteId)).toMatchObject({ mainCountry: "gbr" });
-    expect((await connectionOf(t, siteId))?.newestDay).toBeUndefined();
-
-    await collect(t);
+    expect(await connectionOf(t, siteId)).toMatchObject({ mainCountry: "gbr", newestDay: NEWEST });
+    // The all-countries and image days cleared; a run started once they were gone collected the main country whole.
+    expect(asks.length).toBeGreaterThan(0);
     expect(asks.filter((ask) => !ask.dimensions.includes("country")).every((ask) => countryOf(ask) === "gbr")).toBe(true);
     expect(asks.filter((ask) => ask.dimensions[0] === "date").map((ask) => ask.startDate).sort()[0]).toBe(WINDOW_FROM);
     expect((await keptOf(t, siteId, undefined)).days.map((day) => `${day.searchType} ${day.day} ${day.clicks}`)).toEqual(["web 2026-08-01 2", `web ${NEWEST} 8`]);
@@ -370,8 +367,6 @@ describe("switching to the main home country (2026-10-06)", () => {
     await t.run(async (ctx) => await ctx.db.patch(siteId, { searchConsoleCountries: ["moz", "gbr"] }));
     await collect(t);
     expect(await connectionOf(t, siteId)).toMatchObject({ mainCountry: "moz" });
-    expect(await t.run(async (ctx) => await ctx.db.query("searchConsoleDays").collect())).toEqual([]);
-    await collect(t);
     expect((await keptOf(t, siteId, undefined)).days.map((day) => `${day.day} ${day.clicks}`)).toEqual([`${NEWEST} 4`]);
     expect((await keptOf(t, siteId, "gbr")).days.map((day) => `${day.day} ${day.clicks}`)).toEqual(["2026-08-01 2", `${NEWEST} 8`]);
   });
