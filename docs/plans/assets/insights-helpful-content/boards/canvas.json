@@ -1,0 +1,204 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "AdminArticle.dc.html": {
+      "h": 1801,
+      "title": "9 · Admin → Helpful content, an article (pinned here)",
+      "w": 1440,
+      "x": 0,
+      "y": 3703
+    },
+    "AdminKnowledge.dc.html": {
+      "h": 900,
+      "title": "11 · Admin → Knowledge (pinned elsewhere)",
+      "w": 1440,
+      "x": 3040,
+      "y": 3703
+    },
+    "AdminKnowledgeArticle.dc.html": {
+      "h": 1083,
+      "title": "12 · Admin → Knowledge, an article (pinned elsewhere)",
+      "w": 1440,
+      "x": 4560,
+      "y": 3703
+    },
+    "AdminList.dc.html": {
+      "h": 900,
+      "title": "10 · Admin → Helpful content (pinned here)",
+      "w": 1440,
+      "x": 1520,
+      "y": 3703
+    },
+    "AdminNews.dc.html": {
+      "h": 900,
+      "title": "13 · Admin → News (pinned elsewhere)",
+      "w": 1440,
+      "x": 6080,
+      "y": 3703
+    },
+    "AdminWho.dc.html": {
+      "h": 1591,
+      "title": "14 · Admin → Who to follow: topic and our picks",
+      "w": 1440,
+      "x": 0,
+      "y": 5924
+    },
+    "AdminWhoPerson.dc.html": {
+      "h": 900,
+      "title": "15 · Admin → Who to follow, one person (four already picked)",
+      "w": 1440,
+      "x": 1520,
+      "y": 5924
+    },
+    "Article.dc.html": {
+      "h": 1071,
+      "title": "2 · Insights → Helpful content, one article",
+      "w": 1440,
+      "x": 1520,
+      "y": 0
+    },
+    "Knowledge.dc.html": {
+      "h": 1064,
+      "title": "6 · Insights → Knowledge, redrawn",
+      "w": 1440,
+      "x": 0,
+      "y": 1765
+    },
+    "KnowledgeArticle.dc.html": {
+      "h": 1368,
+      "title": "7 · Insights → Knowledge, one article, redrawn",
+      "w": 1440,
+      "x": 1520,
+      "y": 1765
+    },
+    "Main.dc.html": {
+      "h": 1345,
+      "title": "1 · Insights → Helpful content",
+      "w": 1440,
+      "x": 0,
+      "y": 0
+    },
+    "NewsFront.dc.html": {
+      "h": 1096,
+      "title": "4 · Insights → News, a Helpful content article among the stories",
+      "w": 1440,
+      "x": 4560,
+      "y": 0
+    },
+    "NewsLead.dc.html": {
+      "h": 1216,
+      "title": "5 · Insights → News, a pinned Helpful content article leading",
+      "w": 1440,
+      "x": 6080,
+      "y": 0
+    },
+    "Topic.dc.html": {
+      "h": 1063,
+      "title": "3 · Insights → Helpful content, one topic",
+      "w": 1440,
+      "x": 3040,
+      "y": 0
+    },
+    "WhoC.dc.html": {
+      "h": 1518,
+      "title": "8 · Insights → Who to follow, redrawn (C)",
+      "w": 1440,
+      "x": 3040,
+      "y": 1765
+    },
+    "AdminTopics.dc.html": {
+      "x": 3040,
+      "y": 5924,
+      "w": 1440,
+      "h": 900,
+      "title": "16 · Admin → Topics: the shared list"
+    },
+    "AdminTopic.dc.html": {
+      "x": 4560,
+      "y": 5924,
+      "w": 1440,
+      "h": 900,
+      "title": "17 · Admin → Topics, one topic"
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-10-06T12:30:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "about": {
+      "fill": "gray",
+      "size": 24,
+      "text": "Signed off 2026-10-06 (\"All agreed\"). Renamed the same day: Learn is now Insights, and the Library is Helpful content.\n\nEvery panel in Insights is one link and lights up when the mouse is over it — try it here. Boards 1, 4, 5, 6 and 8 draw one panel lit, as if the mouse were on it.\n\nReaders get Hakken's summary of a Helpful content article and a link to the original — never the article's own words. Ask Hakken reads the whole article for every signed-in user.\n\nKnowledge is redrawn in the News front page's style from what admins already enter. Who to follow (C) is drawn as if it held 214 people: clicking anyone opens their page in a new tab. Admin → Who to follow gains an optional Topic and a Pick tick (up to 4; they stay until changed). Topics are one list Knowledge, Helpful content and Who to follow share, added, changed and deleted in Admin → Content → Topics (boards 16, 17; drawn after the sign-off).\n\nOnly the Nacho Mascort article, the traffic article, Edward Sturm and Nacho Mascort's page are real; every other article, person and summary is illustrative.\n\nDrawn from the drawing kit: stylesheet 9f895f5d001e, look 149d9f4fb243.",
+      "w": 520,
+      "x": 7600,
+      "y": 0
+    },
+    "admin": {
+      "kind": "title1",
+      "maxW": 7520,
+      "text": "What the super admin sees — Helpful content, and one lead story pinned from anywhere",
+      "w": 240,
+      "x": 0,
+      "y": 3403
+    },
+    "parked": {
+      "kind": "title1",
+      "maxW": 4480,
+      "text": "What readers see — Knowledge and Who to follow, redrawn",
+      "w": 240,
+      "x": 0,
+      "y": 1465
+    },
+    "pin": {
+      "fill": "gray",
+      "size": 24,
+      "text": "One lead story for the News front page, pinned from anywhere: a News story or Google update (Admin → News), a Knowledge article, or a Helpful content article.\n\nPinning one unpins whatever was pinned before. A pin lasts 7 days, as News pins do now.\n\nWhere the pin is, its row and page say \"Lead story until …\" with \"Stop leading with this\". Every other list says what leads and where it was pinned.\n\nRows 11 and 13 are shown with the mouse over one row, so its pin shows.",
+      "w": 520,
+      "x": 3040,
+      "y": 4683
+    },
+    "readers": {
+      "kind": "title1",
+      "maxW": 7520,
+      "text": "What readers see — Helpful content, and News",
+      "w": 240,
+      "x": 0,
+      "y": -300
+    },
+    "whoAdmin": {
+      "kind": "title1",
+      "maxW": 6000,
+      "text": "What the super admin sees — Who to follow's picks and topics, and the topic list",
+      "w": 240,
+      "x": 0,
+      "y": 5624
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Article.dc.html",
+    "Topic.dc.html",
+    "NewsFront.dc.html",
+    "NewsLead.dc.html",
+    "Knowledge.dc.html",
+    "KnowledgeArticle.dc.html",
+    "WhoC.dc.html",
+    "AdminArticle.dc.html",
+    "AdminList.dc.html",
+    "AdminKnowledge.dc.html",
+    "AdminKnowledgeArticle.dc.html",
+    "AdminNews.dc.html",
+    "AdminWho.dc.html",
+    "AdminWhoPerson.dc.html",
+    "AdminTopics.dc.html",
+    "AdminTopic.dc.html"
+  ],
+  "pages": [],
+  "title": "Helpful content in Insights"
+}
