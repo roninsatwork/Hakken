@@ -28,6 +28,7 @@ import { shouldInjectPersonalNote } from "./aiPromptAssembly";
 import { gatherInstructions, gatherReading } from "./assistantKnowledge";
 import { getOpenAIApiKey } from "./openaiProviderService";
 import { getActiveCompanyId } from "./authz";
+import { isThreadInCallersWorkspace } from "./chatService";
 
 const REALTIME_SESSION_RATE_LIMIT_PER_MINUTE = 10;
 const RATE_LIMIT_WINDOW_MS = 60 * 1000;
@@ -63,7 +64,7 @@ export const searchKnowledgeForVoice = tenantAction({
     if (
       !thread ||
       thread.userId !== ctx.userId ||
-      (thread.companyId !== undefined && thread.companyId !== companyId)
+      (thread.companyId !== undefined && !isThreadInCallersWorkspace(ctx.user, thread))
     ) {
       throw appError("UNAUTHORIZED", "Unauthorized");
     }
@@ -302,7 +303,7 @@ export const createRealtimeVoiceSession = tenantAction({
     if (
       !thread ||
       thread.userId !== userId ||
-      (thread.companyId !== undefined && thread.companyId !== activeCompanyId)
+      (thread.companyId !== undefined && !isThreadInCallersWorkspace(user, thread))
     ) {
       throw appError("UNAUTHORIZED", "Unauthorized");
     }

@@ -7297,6 +7297,11 @@
         "searchConsoleDays": "last {days} days",
         "aiMentions": "AI answers, {website}",
         "tasks": "Open tasks"
+      },
+      "client": {
+        "answeringFor": "Answering for",
+        "title": "Answer for",
+        "platform": "The platform — no client"
       }
     },
     "costs": {

@@ -12,6 +12,7 @@ import { Loader2, Sparkles, RefreshCw } from "lucide-react";
 import { use, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
+import { AssistantClientLabel } from "../_components/AssistantClientPicker";
 
 const ChatMessage = dynamic(() => import("@/src/ui/components/chat/ChatMessage"));
 
@@ -156,6 +157,7 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
       {/* Floating Viewport Bottom Composer Input */}
       <div className="absolute bottom-0 left-0 w-full bg-gradient-to-t from-background via-background/95 to-transparent pt-24 pb-0 z-40 px-6 sm:px-8 pointer-events-none flex justify-center">
         <div className="pointer-events-auto w-full max-w-[660px]">
+            <AssistantClientLabel threadId={threadId} />
             <ChatInput
               threadId={threadId}
               onUploadStateChange={setUploadStatus}

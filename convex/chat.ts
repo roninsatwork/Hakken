@@ -16,6 +16,7 @@ import {
   canAccessThread,
   getThreadMessageDimensions,
   isAnonymousWidgetThread,
+  isThreadInCallersWorkspace,
   incrementChatQuota,
   isChatQuotaExceeded,
   loadPiiConfig,
@@ -270,6 +271,23 @@ export const getThreadHeading = tenantQuery({
   },
 });
 
+/**
+ * Which client the conversation answers for — shown to a super admin, who may
+ * pick one (assistant-foundation-plan.md, item 8); null for everyone else,
+ * who is always answered for their own company.
+ */
+export const getConversationClient = tenantQuery({
+  args: { threadId: v.id("threads") },
+  returns: v.union(v.null(), v.object({ name: v.union(v.string(), v.null()) })),
+  handler: async (ctx, args) => {
+    if (ctx.user.role !== "SUPER_ADMIN") return null;
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread || thread.userId !== ctx.userId) return null;
+    const company = thread.companyId ? await ctx.db.get(thread.companyId) : null;
+    return { name: company?.name ?? null };
+  },
+});
+
 export const getMessagesForAI = internalQuery({
   args: { threadId: v.id("threads") },
   handler: async (ctx, args) => {
@@ -302,13 +320,26 @@ export const generateChatUploadUrl = tenantMutation({
 export const createThread = tenantMutation({
   args: {
     agentId: v.optional(v.id("agents")),
+    /**
+     * The client a super admin picked in Ask Hakken (assistant-foundation-
+     * plan.md, item 8), without changing who they are viewing as; `forPlatform`
+     * for a conversation with no client. Absent, the company they are in.
+     */
+    forCompanyId: v.optional(v.id("companies")),
+    forPlatform: v.optional(v.boolean()),
   },
   returns: v.id("threads"),
   handler: async (ctx, args) => {
     const { userId, user } = ctx;
 
     const now = Date.now();
-    const activeCompanyId = getActiveCompanyId(user);
+    if ((args.forCompanyId !== undefined || args.forPlatform) && user.role !== "SUPER_ADMIN") {
+      throw appError("UNAUTHORIZED", "Only a super admin chooses which client a conversation is for.");
+    }
+    if (args.forCompanyId !== undefined && !(await ctx.db.get(args.forCompanyId))) {
+      throw appError("NOT_FOUND", "That client does not exist.");
+    }
+    const activeCompanyId = args.forPlatform ? undefined : args.forCompanyId ?? getActiveCompanyId(user);
     
     const threadId = await ctx.db.insert("threads", {
       userId,
@@ -351,7 +382,7 @@ export const sendMessage = publicMutation({
     assertWidgetTurnSettingsAllowed(thread, args);
 
     // Strict upload validation: images can be attached inline, documents can be ingested as thread knowledge.
-    if (args.fileIds?.length && !thread.widgetId && thread.companyId !== (current ? getActiveCompanyId(current.user) : undefined)) {
+    if (args.fileIds?.length && !thread.widgetId && !(current && isThreadInCallersWorkspace(current.user, thread))) {
       throw appError("UNAUTHORIZED", "Upload files in the conversation's workspace.");
     }
     for (const storageId of args.fileIds ?? []) {

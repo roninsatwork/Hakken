@@ -66,6 +66,22 @@ export async function canAccessThread(
   return Boolean(current && thread.userId === current.userId);
 }
 
+/**
+ * Whether a conversation sits in the caller's workspace, for the checks that
+ * ask it before files or voice (assistant-foundation-plan.md, item 8): it
+ * belongs to the company the caller is in — or, for a super admin, to any
+ * client they picked for it in Ask Hakken, since they may already view every
+ * company; whose conversation it is is checked separately, and still must be
+ * theirs.
+ */
+export function isThreadInCallersWorkspace(
+  user: { role?: string } & Parameters<typeof getActiveCompanyId>[0],
+  thread: Pick<Doc<"threads">, "companyId">,
+): boolean {
+  if (user.role === "SUPER_ADMIN") return true;
+  return thread.companyId === getActiveCompanyId(user);
+}
+
 export async function assertCanAccessThread(
   ctx: DbCtx,
   thread: Doc<"threads">,

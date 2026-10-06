@@ -27,6 +27,7 @@ import {
   resolveThinkingLevelForModel,
   type ThinkingLevelId,
 } from "@/src/lib/composerPreferences";
+import { AssistantClientPicker, clientThreadArgs, type ClientChoice } from "./_components/AssistantClientPicker";
 
 const loadAssistantModals = () => import("./_components/AssistantModals");
 const AssistantModals = lazy(() =>
@@ -69,6 +70,13 @@ export default function AssistantWelcomePage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const createThread = useMutation(api.chat.createThread);
+  // A super admin chooses which client a new conversation answers for
+  // (assistant-foundation-plan.md, item 8); everyone else is always answered
+  // for their own company and sees no picker.
+  const me = useQuery(api.users.getMe);
+  const isSuperAdmin = me?.role === "SUPER_ADMIN";
+  const viewingAs = me ? (me.impersonatingCompanyId ?? me.companyId) : undefined;
+  const [clientChoice, setClientChoice] = useState<ClientChoice | null>(null);
   const sendMessage = useMutation(api.chat.sendMessage);
   const generateUploadUrl = useMutation(api.chat.generateChatUploadUrl);
   const saveChatDocument = useMutation(api.knowledge.saveChatDocument);
@@ -195,7 +203,7 @@ export default function AssistantWelcomePage() {
     setIsSubmitting(true);
     const outcome = await voiceAction.run(
       async () => {
-        const threadId = await createThread({});
+        const threadId = await createThread(clientThreadArgs(clientChoice, viewingAs));
         router.push(`/app/assistant/${threadId}?voice=1`);
       },
       { fallbackMessage: tCommon("errors.default") },
@@ -225,7 +233,7 @@ export default function AssistantWelcomePage() {
 
     const outcome = await startAction.run(
       async () => {
-        const threadId = await createThread({});
+        const threadId = await createThread(clientThreadArgs(clientChoice, viewingAs));
         let uploadedFileIds: Id<"_storage">[] | undefined = undefined;
 
         if (filesSnapshot.length > 0) {
@@ -304,6 +312,9 @@ export default function AssistantWelcomePage() {
 
       <AssistantComposer
         activeModels={activeModels}
+        clientPicker={isSuperAdmin ? (
+          <AssistantClientPicker choice={clientChoice} viewingAs={viewingAs} onChoose={setClientChoice} />
+        ) : undefined}
         content={content}
         displayedUploadStatus={displayedUploadStatus}
         effectiveSelectedModelId={effectiveSelectedModelId}

@@ -1,4 +1,4 @@
-import type { DragEvent, FormEvent, RefObject } from "react";
+import type { DragEvent, FormEvent, ReactNode, RefObject } from "react";
 import { ArrowUp, AudioLines, Loader2, Mic, MicOff, Plus, ShieldCheck } from "lucide-react";
 import { AssistantModelSelector } from "./AssistantModelSelector";
 import { AssistantThinkingSelector } from "./AssistantThinkingSelector";
@@ -9,6 +9,8 @@ import type { ThinkingLevelId } from "./assistantWelcomeUtils";
 
 type AssistantComposerProps = {
   activeModels: AssistantModel[];
+  /** Above the message box: which client a super admin's new conversation is for (item 8). */
+  clientPicker?: ReactNode;
   content: string;
   displayedUploadStatus: string | null;
   effectiveSelectedModelId: string | null;
@@ -44,6 +46,7 @@ type AssistantComposerProps = {
 
 export function AssistantComposer({
   activeModels,
+  clientPicker,
   content,
   displayedUploadStatus,
   effectiveSelectedModelId,
@@ -81,6 +84,8 @@ export function AssistantComposer({
     <div className="w-full">
       <div className="w-full flex flex-col">
         <AssistantUploadStatus status={displayedUploadStatus} />
+
+        {clientPicker}
 
         <form onSubmit={onStart} className="w-full relative">
           <div

@@ -23,6 +23,7 @@ import {
   isExpiredThreadKnowledgeDocument,
   isWebsiteDocumentUnderRootDomain,
 } from "./knowledgeService";
+import { isThreadInCallersWorkspace } from "./chatService";
 
 const KNOWLEDGE_QUALITY_LIMIT = 500;
 const KNOWLEDGE_INSPECTION_CHUNK_LIMIT = 12;
@@ -870,7 +871,7 @@ export const saveChatDocument = tenantMutation({
 
     // Secure Gate: Prevent malicious injection by verifying thread ownership
     const thread = await ctx.db.get(args.threadId);
-    if (!thread || thread.userId !== userId || thread.companyId !== ctx.companyId) {
+    if (!thread || thread.userId !== userId || !isThreadInCallersWorkspace(ctx.user, thread)) {
       throw appError("UNAUTHORIZED", "Unauthorized access to thread");
     }
 

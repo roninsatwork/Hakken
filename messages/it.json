@@ -7297,6 +7297,11 @@
         "searchConsoleDays": "ultimi {days} giorni",
         "aiMentions": "Risposte AI, {website}",
         "tasks": "Attività aperte"
+      },
+      "client": {
+        "answeringFor": "Risponde per",
+        "title": "Rispondi per",
+        "platform": "La piattaforma — nessun cliente"
       }
     },
     "costs": {
