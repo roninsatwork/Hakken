@@ -4,6 +4,7 @@ import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { positionWeekOf } from "./positionWeeks";
+import { recomputeSearchStats } from "./websiteTrackingStats";
 
 /**
  * A search's positions are kept day by day for 90 days, then a week at a time:
@@ -146,6 +147,25 @@ describe("daily keyword positions kept 90 days, then a week at a time (B1)", () 
       ["2026-09-30", 19],
       ["2026-10-01", 20], ["2026-10-02", 21], ["2026-10-03", 22], ["2026-10-04", 23],
     ]);
+  });
+
+  test("a search checked again after its weeks are thinned keeps its first check in its summary", async () => {
+    const t = harness();
+    const s = await seed(t);
+    const key = { websiteId: s.websiteId, keyword: "carp rods", locationCode: UK };
+    await t.run(async (ctx) => {
+      await ctx.db.insert("websiteSearchStats", {
+        ...key, firstCheckedDay: "2026-09-21", lastCheckedDay: "2026-10-04", lastPosition: 23, bestPosition: 9, everRanked: true, updatedAt: Date.now(),
+      });
+    });
+    await thin(t);
+
+    await t.run(async (ctx) => await recomputeSearchStats(ctx, key));
+
+    // Its 21 September check was cleared, the week keeping its last: the summary still says it was first checked then.
+    const stats = await t.run(async (ctx) => await ctx.db.query("websiteSearchStats").withIndex("by_key", (q) =>
+      q.eq("websiteId", key.websiteId).eq("keyword", key.keyword).eq("locationCode", key.locationCode)).unique());
+    expect(stats).toMatchObject({ firstCheckedDay: "2026-09-21", bestPosition: 9, lastCheckedDay: "2026-10-04", lastPosition: 23 });
   });
 
   test("compared with a day past the 90 days, a keyword shows its week's last check", async () => {

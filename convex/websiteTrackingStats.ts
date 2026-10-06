@@ -3,6 +3,7 @@ import type { MutationCtx } from "./_generated/server";
 import type { AiEngine } from "./seoAiEngines";
 import { recordListAnswer } from "./siteListAi";
 import { requestAiLinesEverywhere } from "./siteRankings";
+import { dailyPositionsKeptFrom } from "./seoCollectionPolicy";
 
 /**
  * Keeping each host's search and question summaries current as results land.
@@ -67,8 +68,11 @@ export async function recomputeSearchStats(
   const windowBest = positions.length > 0 ? Math.min(...positions) : undefined;
 
   // A full window may not reach the first check, so what lies before it is
-  // kept from the last summary. A short one is the whole history, and wins.
-  const reachesStart = rows.length < SEARCH_WINDOW;
+  // kept from the last summary. A short one is the whole history, and wins —
+  // unless it reaches back past the 90 days kept day by day, where each week
+  // keeps only its last check (`positionWeeks.ts`, B1): a search's first and
+  // best checks may be among the days cleared, so the summary keeps them.
+  const reachesStart = rows.length < SEARCH_WINDOW && oldest.day >= dailyPositionsKeptFrom(new Date().toISOString().slice(0, 10));
   const carried = !reachesStart && existing ? existing : null;
   const firstCheckedDay = carried && carried.firstCheckedDay < oldest.day ? carried.firstCheckedDay : oldest.day;
   const bestCandidates = [windowBest, carried?.bestPosition].filter((value): value is number => value !== undefined);
