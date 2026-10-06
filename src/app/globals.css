@@ -212,3 +212,12 @@ button * {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* A chart's hover readout draws above its key. Recharts puts the readout and
+   the key in the same box, both positioned and neither ordered, so the key
+   came later and painted over a readout long enough to reach it — Share of
+   voice's eight websites (2026-10-06). One rule for every chart; 1 is enough
+   to clear the key without climbing over the page's own sticky parts. */
+.recharts-tooltip-wrapper {
+  z-index: 1;
+}
