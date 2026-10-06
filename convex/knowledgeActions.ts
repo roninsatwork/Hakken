@@ -15,6 +15,7 @@ import { getGoogleVertexProviderModelId } from "./aiModelService";
 import { adminAction, tenantAction } from "./tenantFunctions";
 import { getActiveCompanyId } from "./authz";
 import { selectKnowledgeChunksWithinBudget, type KnowledgeMatchTier } from "./aiPromptAssembly";
+import { READING_ALLOWANCES } from "./assistantKnowledge";
 import { knowledgeCutOff, readChunk } from "./knowledgeReading";
 import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
 import type { KnowledgeRetrievalScope } from "./knowledgeRetrievalService";
@@ -210,8 +211,10 @@ async function retrievalTestShelf(
  * gap 2): the search the AI runs, the same choosing within the same 32,000
  * characters chat reads, and the cut-off when it is on — over the shelf being
  * managed, so what it shows is what the AI reads. It was a query matching
- * words; a meaning search can only run in an action. Searches 50 pieces, as
- * chat does, or 100 on an agent's shelf, as agent runs do.
+ * words; a meaning search can only run in an action. It searches as many
+ * pieces, and reads within as much room, as a written answer does
+ * (`READING_ALLOWANCES.full`, assistantKnowledge.ts) — a diagnostic of one
+ * shelf, not an answer, so it is named in the doors guard.
  */
 export const testRetrieval = tenantAction({
   args: {
@@ -236,7 +239,7 @@ export const testRetrieval = tenantAction({
       queryVector: embedded.vector,
       queryText: query,
       scope: shelf.scope,
-      limit: shelf.agent ? 100 : 50,
+      limit: READING_ALLOWANCES.full.searchLimit,
       ...(shelf.companyId ? { priorCompanyId: shelf.companyId } : {}),
     });
     const cutOff = await knowledgeCutOff(ctx, {
@@ -248,7 +251,7 @@ export const testRetrieval = tenantAction({
     const loaded = new Map<string, Awaited<ReturnType<typeof read>>>();
     const picked = await selectKnowledgeChunksWithinBudget({
       ranked: found.map((match) => ({ match, tier: shelf.tier, score: match._score })),
-      maxChars: 32_000,
+      maxChars: READING_ALLOWANCES.full.documentChars,
       threadReserveRatio: 0,
       loadChunk: async (id) => {
         const chunk = await read(id);
