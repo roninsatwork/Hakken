@@ -19,7 +19,7 @@ import { PHOTO_ACTION_PROPOSAL_INSTRUCTION } from "./photoActionService";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import type { AiContentPart } from "./aiRuntimeTypes";
 import { shouldInjectPersonalNote } from "./aiPromptAssembly";
-import { composeWrittenPrompt, gatherInstructions, gatherReading } from "./assistantKnowledge";
+import { composeWrittenPrompt, gatherInstructions, gatherReading, learnFromAnswer } from "./assistantKnowledge";
 import {
   createModelTurnStream,
   finishAssistantReply,
@@ -272,20 +272,6 @@ export const generateHakkenResponse = internalAction({
             });
         }
 
-        // The Filing Clerk considers staff answers that drew on more than
-        // one wiki page (wiki-agents plan, phase 5) — the only place
-        // cross-page synthesis can exist. Widget visitors' answers never
-        // qualify, and a scheduled consideration can never delay the reply.
-        if (thread?.companyId && !thread.widgetId && wikiPageKeys.length >= 2) {
-            await ctx.scheduler.runAfter(0, internal.wikiFilingActions.considerAnswer, {
-                companyId: thread.companyId,
-                threadId: String(args.threadId),
-                question: args.content.slice(0, 500),
-                answer: assistantReply.slice(0, 4000),
-                pageKeys: wikiPageKeys,
-            });
-        }
-
         // Finalize the streamed row, or fall back to the single write when no
         // flush ever happened (short answer, or a non-streaming provider).
         // Both branches live in the shared turn's delivery.
@@ -301,18 +287,17 @@ export const generateHakkenResponse = internalAction({
 
         // Both lists count as used: an always memory reached the model just as
         // surely as a looked-up one, and the screen's "uses" column would
-        // otherwise read zero for exactly the memories that apply most.
-        const usedMemories = [...alwaysMemories, ...relevantMemories];
-        if (thread?.companyId && usedMemories.length > 0 && messageId !== undefined) {
-            await ctx.runMutation(internal.companyMemories.recordRuntimeUsageInternal, {
-                companyId: thread.companyId,
-                threadId: args.threadId,
-                messageId,
-                queryText: args.content,
-                memories: usedMemories.map((memory) => ({
-                    memoryId: memory.memoryId,
-                    score: memory.score,
-                })),
+        // otherwise read zero for exactly the memories that apply most. The
+        // Filing Clerk's offer goes with it, as for every door.
+        if (thread) {
+            await learnFromAnswer(ctx, {
+                ...(thread.companyId ? { companyId: thread.companyId } : {}),
+                thread,
+                question: args.content,
+                answer: assistantReply,
+                ...(messageId !== undefined ? { messageId } : {}),
+                memories: [...alwaysMemories, ...relevantMemories].map((memory) => ({ memoryId: memory.memoryId, score: memory.score })),
+                wikiPageKeys,
             });
         }
 

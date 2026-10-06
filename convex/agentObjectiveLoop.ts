@@ -72,6 +72,7 @@ import {
   type LoopExecutionContext,
   type ObjectiveLoopState,
 } from "./agentObjectiveLoopService";
+import { learnFromAnswer } from "./assistantKnowledge";
 
 /**
  * The objective loop: the run itself.
@@ -128,6 +129,13 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
      * an action chip, however convincingly a block appears in other replies.
      */
     photoTurn?: boolean;
+    /**
+     * What the answer drew on, for the step every door takes once its answer
+     * is written (`learnFromAnswer`, assistantKnowledge.ts): memories counted
+     * as used, the Filing Clerk's offer. Only a run answering a conversation
+     * has one.
+     */
+    learning?: Omit<Parameters<typeof learnFromAnswer>[1], "answer" | "messageId">;
     state: ObjectiveLoopState;
     runStartedAt: number;
 }) {
@@ -934,7 +942,7 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
         // duplicate reply. The final content is authoritative: a budget stop
         // replaces whatever partial text the reader saw with the explanation
         // of why the run ended.
-        await finishAssistantReply(ctx, {
+        const messageId = await finishAssistantReply(ctx, {
             threadId,
             stream,
             content: assistantReply,
@@ -943,6 +951,13 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
             evidence: messageEvidence,
             photoTurn: params.photoTurn,
         });
+        if (params.learning && finalStepStatus === "SUCCESS") {
+            await learnFromAnswer(ctx, {
+                ...params.learning,
+                answer: assistantReply,
+                ...(messageId !== undefined ? { messageId } : {}),
+            });
+        }
 
         await ctx.runMutation(internal.agentRuns.recordRunUsageInternal, {
             runId,

@@ -5,7 +5,6 @@ import type { Translate } from "./types";
 import { THINKING_LEVELS, type ThinkingLevelId } from "./assistantWelcomeUtils";
 
 type AssistantThinkingSelectorProps = {
-  isAutonomousMode: boolean;
   isOpen: boolean;
   isRecording: boolean;
   onOpenChange: (isOpen: boolean) => void;
@@ -16,7 +15,6 @@ type AssistantThinkingSelectorProps = {
 };
 
 export function AssistantThinkingSelector({
-  isAutonomousMode,
   isOpen,
   isRecording,
   onOpenChange,
@@ -30,7 +28,7 @@ export function AssistantThinkingSelector({
       <button
         type="button"
         onClick={() => onOpenChange(!isOpen)}
-        disabled={isRecording || isAutonomousMode}
+        disabled={isRecording}
         className={`h-10 px-4 flex items-center gap-2 rounded-full transition-colors disabled:opacity-50 ${
           isOpen ? "bg-foreground/5 dark:bg-white/10 text-foreground" : "hover:bg-foreground/5 dark:hover:bg-white/10 text-muted"
         }`}

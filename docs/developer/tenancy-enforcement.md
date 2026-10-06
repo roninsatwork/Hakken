@@ -11,7 +11,7 @@ remember to resolve the caller and scope its own reads. The discipline was
 genuinely high — 339 of 360 had a guard — but nothing made an omission
 impossible, and the gap is where incidents come from. One anonymous read of
 another tenant's agent traces reached production this way and was fixed in
-`convex/swarmRuntime.ts`.
+the Swarm's status-log query (since removed with the Swarm, 2026-10-06).
 
 A lint that greps for a guard call does not work. Plenty of functions delegate
 their check into a domain helper — `getKnowledgeDocumentsForScope` authenticates

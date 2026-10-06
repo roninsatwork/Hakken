@@ -74,6 +74,8 @@ export const runAgentObjective = internalAction({
     modelId: v.optional(v.string()),
     /** The conversation's thinking level: NONE, LOW, MEDIUM or HIGH. */
     thinkingLevel: v.optional(v.string()),
+    /** Said after the reply — the model a photo was answered with. */
+    replyNotice: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     let agentRunId: Id<"agentRuns"> | undefined;
@@ -87,6 +89,13 @@ export const runAgentObjective = internalAction({
     // The shared safety gate (modelTurnService): evaluate and, when refused,
     // save the refusal into the thread attributed to this runtime — worded as
     // the deployment's configured platform, not the shipped default.
+    // The pre-reply pill shows these stages, as it always did for typed Ask
+    // Hakken: each written as the run enters that phase and cleared when the
+    // reply lands or fails, so the pill only ever claims work that is happening.
+    const setStage = (stage?: string) =>
+        ctx.runMutation(internal.chat.setAssistantStage, { threadId: args.threadId, stage });
+    await setStage("CHECKING");
+
     const guardedThread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
     const safetyDecision = await guardModelTurn(ctx, {
         content: args.content,
@@ -94,7 +103,10 @@ export const runAgentObjective = internalAction({
         platformName: (await ctx.runQuery(internal.settings.getEmailBranding, {})).platformName,
         ...(guardedThread?.companyId ? { companyId: guardedThread.companyId } : {}),
     });
-    if (!safetyDecision.allowed) return;
+    if (!safetyDecision.allowed) {
+        await setStage(undefined);
+        return;
+    }
 
     // Embeddings only, and pinned to the region that serves the embedding model.
 
@@ -228,6 +240,7 @@ export const runAgentObjective = internalAction({
             allowance: "full",
             operation: "agentRagEmbedding",
             agent: { agentId: args.agentId, agentRunId: runId },
+            onSearching: () => setStage("SEARCHING_KNOWLEDGE"),
         });
 
         const memoryMatches = reading.agentMemories;
@@ -253,8 +266,9 @@ export const runAgentObjective = internalAction({
         }
 
         // Held for the message's evidence trail as well as the prompt, so a
-        // rating on the answer can find the memories and pieces behind it.
-        const ratedCompanyMemories = reading.relevantMemories;
+        // rating on the answer can find the memories, skills, pages and pieces
+        // behind it — the same trail typed Ask Hakken always wrote.
+        const ratedCompanyMemories = [...execution.companyAlwaysMemories, ...reading.relevantMemories];
         const includedChunkIds = reading.chunkIds;
         currentUserContent += [...reading.leading, ...reading.trailing].join("");
 
@@ -278,6 +292,7 @@ export const runAgentObjective = internalAction({
             });
         }
 
+        await setStage("WRITING");
         await executeObjectiveLoop(ctx, {
             runId,
             agentId: args.agentId,
@@ -290,15 +305,25 @@ export const runAgentObjective = internalAction({
             // The same trail the assistant path writes, so an agent's answer is
             // just as ratable: memory counters and the knowledge-evidence sweep
             // both read it off the message.
-            replyNotice: imageNotice || undefined,
+            replyNotice: `${imageNotice}${args.replyNotice ?? ""}` || undefined,
             photoTurn: imageParts.length > 0 || undefined,
             messageEvidence: {
                 companyMemoryEvidenceJson: buildCompanyMemoryEvidence(ratedCompanyMemories),
                 companyRuntimeEvidenceJson: buildCompanyRuntimeEvidence({
-                    skillIds: [],
+                    skillIds: execution.companySkillIds,
                     sourceIds: includedChunkIds,
+                    wikiPageKeys: reading.wikiPageKeys,
                 }),
             },
+            ...(execution.thread ? {
+                learning: {
+                    ...(owner.companyId ? { companyId: owner.companyId } : {}),
+                    thread: execution.thread,
+                    question: args.content,
+                    memories: ratedCompanyMemories.map((memory) => ({ memoryId: memory.memoryId, score: memory.score })),
+                    wikiPageKeys: reading.wikiPageKeys,
+                },
+            } : {}),
             state: {
                 stepIndex: preLoopStepIndex,
                 loopIndex: 0,
@@ -326,6 +351,14 @@ export const runAgentObjective = internalAction({
             provider: execution?.provider,
             error,
         });
+    } finally {
+        // Best-effort: the reply (or the failure notice) has replaced the pill
+        // on screen, and the stale guard would catch a stage this leaves.
+        try {
+            await setStage(undefined);
+        } catch {
+            // Clearing the stage must never mask what happened.
+        }
     }
   },
 });

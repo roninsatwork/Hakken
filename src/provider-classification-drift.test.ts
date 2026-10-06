@@ -178,7 +178,6 @@ describe('Provider Classification Drift', () => {
       'convex/googleProviderAdapter.ts',
       'convex/orchestrator.ts',
       'convex/salesReportActions.ts',
-      'convex/swarmActions.ts',
       'convex/vertexProviderService.test.ts',
       'convex/vertexProviderService.ts',
       'src/provider-classification-drift.test.ts',

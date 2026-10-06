@@ -6,7 +6,6 @@ import type { AssistantModel, Translate } from "./types";
 type AssistantModelSelectorProps = {
   activeModels: AssistantModel[];
   effectiveSelectedModelId: string | null;
-  isAutonomousMode: boolean;
   isOpen: boolean;
   isRecording: boolean;
   onOpenChange: (isOpen: boolean) => void;
@@ -19,7 +18,6 @@ type AssistantModelSelectorProps = {
 export function AssistantModelSelector({
   activeModels,
   effectiveSelectedModelId,
-  isAutonomousMode,
   isOpen,
   isRecording,
   onOpenChange,
@@ -33,7 +31,7 @@ export function AssistantModelSelector({
       <button
         type="button"
         onClick={() => onOpenChange(!isOpen)}
-        disabled={isRecording || activeModels.length === 0 || isAutonomousMode}
+        disabled={isRecording || activeModels.length === 0}
         className={`h-10 px-4 flex items-center gap-2 rounded-full transition-colors disabled:opacity-50 ${
           isOpen ? "bg-foreground/5 dark:bg-white/10 text-foreground" : "hover:bg-foreground/5 dark:hover:bg-white/10 text-muted"
         }`}

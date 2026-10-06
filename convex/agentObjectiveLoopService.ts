@@ -379,6 +379,9 @@ export async function buildLoopExecutionContext(ctx: ActionCtx, args: {
     toolMetadataByName, modelDoc, limits,
     /** The asker's note entries the instructions carry, for their usage stamps. */
     noteMemoryIds: (conversationInstructions?.userMemories ?? []).map((memory) => memory.memoryId),
+    /** The company's always memories and skills the instructions carry, for the answer's evidence trail. */
+    companyAlwaysMemories: conversationInstructions?.alwaysMemories ?? [],
+    companySkillIds: (conversationInstructions?.companySkills ?? []).map((skill) => skill.skillId),
     reasoningEffort: args.reasoningEffort ?? agent.reasoningEffort,
   };
 }

@@ -159,7 +159,6 @@ const FROZEN: ReadonlyMap<string, number> = new Map([
   ['src/ui/components/chat/ChatInput.tsx', 15],
   ['src/ui/components/chat/MessageFeedbackControls.tsx', 8],
   ['src/ui/components/chat/RealtimeVoiceOverlay.tsx', 2],
-  ['src/ui/components/chat/SwarmStatusCard.tsx', 2],
   ['src/ui/components/layout/SidebarNavigation.tsx', 17],
   ['src/ui/components/workflows/AgentEditorModal.tsx', 1],
   ['src/ui/components/workflows/ConfigDrawer.tsx', 1],

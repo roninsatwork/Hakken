@@ -286,7 +286,7 @@ export const manualRunSchedule = superAdminMutation({
       if (!agent || agent.isActive === false) throw appError("NOT_FOUND", "Agent not found or inactive.");
       // A run with nobody asking would only spend (assistant-foundation-plan.md, item 4).
       if (agent.systemKey === HAKKEN_ASSISTANT.systemKey) {
-        throw appError("INVALID_INPUT", "The Assistant answers people in Ask Hakken, so it has no run of its own.");
+        throw appError("INVALID_INPUT", "The Assistant answers people as they ask, so it has no run of its own.");
       }
 
       // What the caller asked for wins, then the agent's own standing job,

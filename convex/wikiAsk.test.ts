@@ -25,14 +25,17 @@ const { askRecorder, pipelineReply } = vi.hoisted(() => ({
 
 // These tests are about the Ask box, not the pipeline behind it, so the
 // pipeline is a stub that records what it was handed. Mocked shallow on
-// purpose: the real aiChat.ts pulls in the whole reply pipeline (provider
+// purpose: the real Assistant pulls in the whole reply pipeline (provider
 // registry, retrieval, model turn) transitively, which these tests must
-// stay isolated from.
-vi.mock("./aiChat", async () => {
+// stay isolated from. Only its answering is stood in for; the rest of the
+// module is the real one.
+vi.mock("./hakkenAssistant", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("./hakkenAssistant")>();
   const { internalAction } = await import("./_generated/server");
   const { v } = await import("convex/values");
   return {
-    generateHakkenResponse: internalAction({
+    ...actual,
+    answerInternal: internalAction({
       args: {
         threadId: v.id("threads"),
         content: v.string(),
@@ -50,6 +53,7 @@ vi.mock("./aiChat", async () => {
             companyRuntimeEvidenceJson: pipelineReply.current.companyRuntimeEvidenceJson,
           });
         }
+        return null;
       },
     }),
   };

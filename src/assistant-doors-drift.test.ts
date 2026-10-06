@@ -41,8 +41,6 @@ const NOT_DOORS: Record<string, string> = {
     "buildTriggeredAgentInstruction: the same runs' instructions — the agent's own, with the company's always memories",
   'convex/knowledgeActions.ts':
     "testRetrieval: the knowledge screen's Test retrieval, a diagnostic of one shelf that reads with the shared allowance",
-  'convex/swarmActions.ts':
-    'the Swarm, a hard-coded demo of five agents — removed in item 5 of the plan',
 };
 
 /** A piece of what Hakken knows, as the code reads it. */

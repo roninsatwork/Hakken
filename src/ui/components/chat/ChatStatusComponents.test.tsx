@@ -1,10 +1,9 @@
 import React, { type ReactElement } from "react";
 import { render as renderBare, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { Doc, Id } from "@/convex/_generated/dataModel";
+import type { Doc } from "@/convex/_generated/dataModel";
 import { ToastProvider } from "@/src/context/ToastContext";
 import ChatMessage from "./ChatMessage";
-import SwarmStatusCard from "./SwarmStatusCard";
 import { STREAM_STALLED_MESSAGE } from "@/convex/streamingService";
 
 // A finished reply carries the rating row, which reports failures through the
@@ -20,7 +19,6 @@ vi.mock("convex/react", () => ({
 
 vi.mock("@/convex/_generated/api", () => ({
   api: {
-    swarmRuntime: { getSwarmLogs: "getSwarmLogs" },
     users: { getMe: "getMe" },
     messageFeedback: {
       getMineForThread: "getMineForThread",
@@ -172,42 +170,6 @@ describe("chat status components", () => {
     );
 
     expect(screen.getByText("Memories used")).toBeInTheDocument();
-  });
-
-  it("hides swarm status for loading or empty logs", () => {
-    useQueryMock.mockReturnValue(undefined);
-    const { container, rerender } = render(<SwarmStatusCard threadId={"thread1" as Id<"threads">} />);
-
-    // Everything here now renders inside the toast provider the chat reports
-    // failures through, and that provider draws its own empty region — so
-    // "renders nothing" means the card drew nothing, not that the tree is
-    // bare. Anything the provider owns carries role="alert".
-    const cardDrewNothing = () =>
-      Array.from(container.children).every((child) => child.getAttribute("role") === "alert");
-
-    rerender(<SwarmStatusCard threadId={"thread1" as Id<"threads">} />);
-    expect(cardDrewNothing()).toBe(true);
-
-    useQueryMock.mockReturnValue([]);
-    rerender(<SwarmStatusCard threadId={"thread1" as Id<"threads">} />);
-    expect(cardDrewNothing()).toBe(true);
-  });
-
-  it("renders swarm execution logs with every status state", () => {
-    useQueryMock.mockReturnValue([
-      { _id: "1", message: "Plan", status: "pending", isHeading: true },
-      { _id: "2", message: "Running tool", status: "running" },
-      { _id: "3", message: "Completed", status: "success" },
-      { _id: "4", message: "Failed", status: "error" },
-    ]);
-
-    render(<SwarmStatusCard threadId={"thread1" as Id<"threads">} />);
-
-    expect(screen.getByText("Autonomous Agent Execution")).toBeInTheDocument();
-    expect(screen.getByText("Plan")).toBeInTheDocument();
-    expect(screen.getByText("Running tool")).toBeInTheDocument();
-    expect(screen.getByText("Completed")).toBeInTheDocument();
-    expect(screen.getByText("Failed")).toBeInTheDocument();
   });
 
   describe("streamed replies", () => {

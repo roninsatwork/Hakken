@@ -435,8 +435,6 @@ import type * as sitemapRead from "../sitemapRead.js";
 import type * as sitemaps from "../sitemaps.js";
 import type * as sites from "../sites.js";
 import type * as streamingService from "../streamingService.js";
-import type * as swarmActions from "../swarmActions.js";
-import type * as swarmRuntime from "../swarmRuntime.js";
 import type * as system from "../system.js";
 import type * as systemHealth from "../systemHealth.js";
 import type * as systemService from "../systemService.js";
@@ -1061,8 +1059,6 @@ declare const fullApi: ApiFromModules<{
   sitemaps: typeof sitemaps;
   sites: typeof sites;
   streamingService: typeof streamingService;
-  swarmActions: typeof swarmActions;
-  swarmRuntime: typeof swarmRuntime;
   system: typeof system;
   systemHealth: typeof systemHealth;
   systemService: typeof systemService;

@@ -209,7 +209,8 @@ export const getMessages = publicQuery({
 /**
  * Note which real phase the assistant run is in, for the pre-reply pill.
  *
- * Written by `generateHakkenResponse` as it enters each phase and cleared when
+ * Written by the run answering — the Assistant's (`agentRuntime.runAgentObjective`,
+ * `hakkenAssistant.answerInternal`) — as it enters each phase and cleared when
  * the reply lands or fails, so the pill can only ever claim work that is
  * actually happening. Passing no stage clears it.
  */
@@ -452,18 +453,16 @@ export const sendMessage = publicMutation({
          content: safeContent,
          fileIds: args.fileIds,
        });
-    } else if (args.thinkingLevel === "SWARM") {
-       await ctx.scheduler.runAfter(0, internal.swarmActions.executeSwarmObjective, {
-         threadId: args.threadId,
-         content: safeContent,
-       });
     } else {
-       await ctx.scheduler.runAfter(0, internal.aiChat.generateHakkenResponse, {
+       // Everything else — Ask Hakken, and a website chat with no agent of its
+       // own — is answered by the Assistant, the one brain every door answers
+       // through (assistant-foundation-plan.md, item 5).
+       await ctx.scheduler.runAfter(0, internal.hakkenAssistant.answerInternal, {
          threadId: args.threadId,
          content: safeContent,
-         modelId: args.modelId,
-         thinkingLevel: args.thinkingLevel,
-         fileIds: args.fileIds,
+         ...(args.modelId ? { modelId: args.modelId } : {}),
+         ...(args.thinkingLevel ? { thinkingLevel: args.thinkingLevel } : {}),
+         ...(args.fileIds ? { fileIds: args.fileIds } : {}),
        });
     }
 

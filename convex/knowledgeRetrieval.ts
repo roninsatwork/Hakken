@@ -1,15 +1,14 @@
 /**
  * The one retrieval spine, shared by every prompt-building action.
  *
- * Its readers are the assistant chat (`aiChat.ts`), agent runs
- * (`agentRuntime.ts`), voice calls, email replies and the wiki's test
- * questions (`aiVoiceSession.ts`), the swarm's Architect (`swarmActions.ts`)
- * and the knowledge screen's "Test retrieval" (`knowledgeActions.ts`). Each
- * once grew its own copy of the same sequence — resolve the embedding model,
- * embed the query, vector-search `knowledgeChunks`, load and budget the
- * winners — so an improvement landed wherever someone remembered to paste
- * it, and the swarm's copy drifted into searching with no filter when it
- * lacked a company, which would have read every tenant's chunks.
+ * Its readers are what every door reads through (`assistantKnowledge.ts`,
+ * assistant-foundation-plan.md) and the knowledge screen's "Test retrieval"
+ * (`knowledgeActions.ts`). Each once grew its own copy of the same sequence —
+ * resolve the embedding model, embed the query, vector-search
+ * `knowledgeChunks`, load and budget the winners — so an improvement landed
+ * wherever someone remembered to paste it, and one copy (the since-removed
+ * Swarm's) drifted into searching with no filter when it lacked a company,
+ * which would have read every tenant's chunks.
  *
  * This module is that spine, once. Sites keep what is genuinely theirs — which
  * scopes to search, how much to read, how to wrap the result — and share what

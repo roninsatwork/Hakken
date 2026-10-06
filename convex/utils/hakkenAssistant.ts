@@ -11,11 +11,13 @@
  * administrator can add to it on the Agents screen like any agent's.
  */
 export const HAKKEN_ASSISTANT = {
-  systemKey: "HAKKEN_ASSISTANT",
+  // Named for what it is, not the platform: a clone renames the platform in
+  // Settings, and every customer-visible word here must survive that.
+  systemKey: "ASSISTANT",
   name: "The Assistant",
   description:
-    "Answers people in Ask Hakken from what Hakken knows — the company's wiki and documents, the platform's, its memories and its rules — and, as its tools grow, looks things up and does things with a person's yes. Every door answers through it: typed and spoken today, Telegram next. It answers conversations, so it has no Run of its own; switched off, Ask Hakken says so rather than answering.",
-  standingObjective: "Answer the people who ask in Ask Hakken, from what Hakken knows.",
+    "Answers the people who ask the platform's assistant, from what the platform knows — the company's wiki and documents, the platform's own, its memories and its rules — and, as its tools grow, looks things up and does things with a person's yes. Every door answers through it: typed and spoken today, Telegram next. It answers conversations, so it has no Run of its own; switched off, the assistant says so rather than answering.",
+  standingObjective: "Answer the people who ask the platform's assistant, from what the platform knows.",
   /** Its model is the chat job's, from Model Defaults, unless a conversation chooses another. */
   modelUseCase: "chat",
 } as const;

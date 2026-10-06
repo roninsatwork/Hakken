@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { finishScheduled } from "@/src/test/finishScheduled";
 import { HAKKEN_ASSISTANT, reasoningEffortFor } from "./utils/hakkenAssistant";
 
 /**
@@ -113,6 +114,74 @@ describe("the assistant's agent", () => {
     const request = agentTurnMock.mock.calls[0][0] as { model: string; config?: { thinkingConfig?: unknown } };
     expect(request.model).toBe("chosen-model-provider");
     expect(request.config?.thinkingConfig).toBeDefined();
+  });
+
+  /** A company, a person and a model; Ask Hakken's thread has no agent of its own. */
+  async function seedAskHakken(t: ReturnType<typeof makeTest>) {
+    return await t.run(async (ctx) => {
+      const now = Date.now();
+      const companyId = await ctx.db.insert("companies", { name: "Asker Ltd", createdAt: now });
+      const userId = await ctx.db.insert("users", { email: "owner@asker.test", role: "ADMIN", companyId, createdAt: now });
+      await ctx.db.insert("aiModels", {
+        modelId: "default-model",
+        providerKey: "google",
+        providerModelId: "default-model-provider",
+        displayName: "Default",
+        isEnabled: true,
+        isDefault: true,
+        lastSyncedAt: now,
+        standardInputCostBelow200k: 1,
+        outputResponseCost: 2,
+      });
+      const threadId = await ctx.db.insert("threads", { userId, companyId, title: "Ask", createdAt: now, updatedAt: now });
+      return { companyId, userId, threadId };
+    });
+  }
+
+  test("a message in Ask Hakken is answered by the Assistant (item 5)", async () => {
+    const t = makeTest();
+    const { userId, threadId } = await seedAskHakken(t);
+
+    vi.useFakeTimers();
+    try {
+      await t.withIdentity({ subject: userId }).mutation(api.chat.sendMessage, { threadId, content: "Hello?" });
+      const scheduled = await t.run(async (ctx) => await ctx.db.system.query("_scheduled_functions").collect());
+      expect(scheduled.map((job) => job.name)).toContain("hakkenAssistant:answerInternal");
+      expect(scheduled.map((job) => job.name).some((name) => name.includes("aiChat") || name.includes("swarm"))).toBe(false);
+      await finishScheduled(t);
+    } finally {
+      vi.useRealTimers();
+    }
+
+    const { runs, messages, thread } = await t.run(async (ctx) => ({
+      runs: await ctx.db.query("agentRuns").collect(),
+      messages: await ctx.db.query("messages").withIndex("by_thread", (q) => q.eq("threadId", threadId)).collect(),
+      thread: await ctx.db.get(threadId),
+    }));
+    const assistant = await t.query(internal.hakkenAssistant.getAssistantInternal, {});
+    expect(runs).toHaveLength(1);
+    expect(runs[0]).toMatchObject({ agentId: assistant?.agentId, threadId, triggerType: "CHAT", status: "SUCCESS" });
+    expect(messages.some((message) => message.role === "assistant" && message.content === "Here you are.")).toBe(true);
+    // The pre-reply pill is cleared once the reply lands.
+    expect(thread?.assistantStage).toBeUndefined();
+  });
+
+  test("switched off, the Assistant does not answer, and the conversation says so", async () => {
+    const t = makeTest();
+    const { threadId } = await seedAskHakken(t);
+    const agentId = await t.mutation(internal.hakkenAssistant.ensureAssistantInternal, {});
+    await t.run(async (ctx) => await ctx.db.patch(agentId, { isActive: false }));
+
+    await t.action(internal.hakkenAssistant.answerInternal, { threadId, content: "Hello?" });
+    const { runs, messages } = await t.run(async (ctx) => ({
+      runs: await ctx.db.query("agentRuns").collect(),
+      messages: await ctx.db.query("messages").withIndex("by_thread", (q) => q.eq("threadId", threadId)).collect(),
+    }));
+    expect(runs).toEqual([]);
+    expect(agentTurnMock).not.toHaveBeenCalled();
+    expect(messages).toHaveLength(1);
+    expect(messages[0].content).toContain("is switched off");
+    expect(messages[0].content).toContain("Admin → Agents");
   });
 
   test("takes Ask Hakken's thinking levels as the runtime's, none as no extra effort", () => {

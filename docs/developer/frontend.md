@@ -90,7 +90,7 @@ Prefer existing shared components before creating page-local variants:
   `AuditLogsTable` and the activity chart parts). These moved out of
   `admin/_components` on 2026-08-25 because the `/app` governance pages had been
   reaching in for them.
-- Chat: `src/ui/components/chat/ChatInput.tsx`, `src/ui/components/chat/ChatMessage.tsx`, `src/ui/components/chat/ChatHistoryList.tsx`, `src/ui/components/chat/HakkenMarkdown.tsx`, and `src/ui/components/chat/SwarmStatusCard.tsx`.
+- Chat: `src/ui/components/chat/ChatInput.tsx`, `src/ui/components/chat/ChatMessage.tsx`, `src/ui/components/chat/ChatHistoryList.tsx`, and `src/ui/components/chat/HakkenMarkdown.tsx`.
 - Charts: `src/ui/components/charts/ChartExportWrapper.tsx` and
   `src/ui/components/charts/ChartTooltip.tsx`.
 - Workflows: `WorkflowSidebar`, `ConfigDrawer` and the three files holding its node-type field sets (`ConfigDrawerEntryPanels`, `ConfigDrawerDataPanels`, `ConfigDrawerHumanPanels`), `AgentEditorModal`, node components, and workflow types.

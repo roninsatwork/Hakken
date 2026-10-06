@@ -6,7 +6,6 @@ import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useEffect, useRef } from "react";
 import ChatInput from "@/src/ui/components/chat/ChatInput";
-import SwarmStatusCard from "@/src/ui/components/chat/SwarmStatusCard";
 import { AssistantStagePill } from "@/src/ui/components/chat/AssistantStagePill";
 import { RealtimeVoiceOverlay } from "@/src/ui/components/chat/RealtimeVoiceOverlay";
 import { Loader2, Sparkles, RefreshCw } from "lucide-react";
@@ -103,10 +102,7 @@ export default function ActiveThreadPage({ params }: { params: Promise<{ threadI
                 {messages.map((msg) => (
                   <ChatMessage key={msg._id} message={msg} />
                 ))}
-                
-                {/* Swarm Live Execution Visualizer */}
-                <SwarmStatusCard threadId={threadId} />
-                
+
                 {/* Your message, echoed in the same form it will settle
                     into, so nothing jumps when the real row arrives. */}
                 {optimisticMessage && (

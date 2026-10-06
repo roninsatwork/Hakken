@@ -62,7 +62,6 @@ export default function AssistantWelcomePage() {
     const restore = setTimeout(() => setSelectedThinkingId(readRememberedThinkingLevel()), 0);
     return () => clearTimeout(restore);
   }, []);
-  const [isAutonomousMode] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const modelRef = useRef<HTMLDivElement>(null);
@@ -266,12 +265,10 @@ export default function AssistantWelcomePage() {
           modelId: effectiveSelectedModelId || undefined,
           // A model that ignores the thinking setting is never sent one, so
           // the request matches what the screen offered.
-          thinkingLevel: isAutonomousMode
-            ? "SWARM"
-            : resolveThinkingLevelForModel({
-                remembered: selectedThinkingId,
-                modelSupportsThinking: modelSupportsThinking(selectedModelData?.providerKey),
-              }),
+          thinkingLevel: resolveThinkingLevelForModel({
+            remembered: selectedThinkingId,
+            modelSupportsThinking: modelSupportsThinking(selectedModelData?.providerKey),
+          }),
           fileIds: uploadedFileIds,
         });
         router.push(`/app/assistant/${threadId}`);
@@ -313,7 +310,6 @@ export default function AssistantWelcomePage() {
         fileInputRef={fileInputRef}
         footerText={t("welcome.footer", { platformName: settings.platformName })}
         handleFileSelect={handleFileSelect}
-        isAutonomousMode={isAutonomousMode}
         isDragging={isDragging}
         isRecording={isRecording}
         isSubmitting={isSubmitting}

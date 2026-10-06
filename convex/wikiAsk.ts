@@ -51,7 +51,8 @@ export async function askCore(
     ...(args.companyId ? { companyId: args.companyId } : {}),
     userId: args.userId,
   });
-  await ctx.runAction(internal.aiChat.generateHakkenResponse, {
+  // The Assistant answers, as it does every door (assistant-foundation-plan.md, item 5).
+  await ctx.runAction(internal.hakkenAssistant.answerInternal, {
     threadId,
     content: args.question.slice(0, 500),
   });

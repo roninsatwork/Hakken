@@ -17,10 +17,11 @@ completed work.
   back. Anthony: "we cannot have two AI giving two different answers". The
   wider assistant's decisions (jobs, watches, Telegram first) recorded at its
   end. **Planned 2026-10-06, decisions taken the same day (everyone at
-  once; Swarm removed); items 1 to 4 (one record of what Hakken knows,
-  email replies under the same instructions, the guard, the built-in
-  Assistant agent) built the same day, saved locally on dev, not pushed;
-  about 6.25 to 8.25 days left.**
+  once; Swarm removed); items 1 to 5 built the same day — one record of
+  what Hakken knows, email replies under the same instructions, the guard,
+  the built-in Assistant agent, and Ask Hakken answering through it with the
+  Swarm removed — saved locally on dev, not pushed; about 4.5 to 6.5 days
+  left.**
 - [Finishing off](./active/finish-off-plan.md) — everything left from the
   usage credits and collection work, in order with days: big websites' Search
   Console figures, storing less, credits counting what came back, Usage while

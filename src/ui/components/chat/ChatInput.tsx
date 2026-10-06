@@ -88,7 +88,6 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
     return () => clearTimeout(restore);
   }, []);
   
-  const [isAutonomousMode] = useState(false);
 
   const sendMessage = useMutation(api.chat.sendMessage);
   const generateUploadUrl = useMutation(api.chat.generateChatUploadUrl);
@@ -245,12 +244,10 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
           modelId: effectiveSelectedModelId || undefined,
           // A model that ignores the thinking setting is never sent one, so the
           // request matches what the screen offered.
-          thinkingLevel: isAutonomousMode
-            ? "SWARM"
-            : resolveThinkingLevelForModel({
-                remembered: selectedThinkingId,
-                modelSupportsThinking: modelSupportsThinking(selectedModelData?.providerKey),
-              }),
+          thinkingLevel: resolveThinkingLevelForModel({
+            remembered: selectedThinkingId,
+            modelSupportsThinking: modelSupportsThinking(selectedModelData?.providerKey),
+          }),
           fileIds: uploadedFileIds,
         });
       },
@@ -440,7 +437,7 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
                   <button
                     type="button"
                     onClick={() => { setModelDropdownOpen(!modelDropdownOpen); setThinkingDropdownOpen(false); }}
-                    disabled={isRecording || activeModels.length === 0 || isAutonomousMode}
+                    disabled={isRecording || activeModels.length === 0}
                     className={`h-10 px-4 flex items-center gap-2 rounded-full transition-colors disabled:opacity-50 ${modelDropdownOpen ? 'bg-foreground/5 dark:bg-white/10 text-foreground' : 'hover:bg-foreground/5 dark:hover:bg-white/10 text-muted'}`}
                   >
                     <span className="text-[14px] font-medium max-w-[140px] truncate">{selectedModelData ? (selectedModelData.friendlyName || selectedModelData.displayName || selectedModelData.modelId) : tComposer("selectModel")}</span>
@@ -486,7 +483,7 @@ export default function ChatInput({ threadId, onUploadStateChange, onOptimisticM
                   <button
                     type="button"
                     onClick={() => { setThinkingDropdownOpen(!thinkingDropdownOpen); setModelDropdownOpen(false); }}
-                    disabled={isRecording || isAutonomousMode}
+                    disabled={isRecording}
                     className={`h-10 px-4 flex items-center gap-2 rounded-full transition-colors disabled:opacity-50 ${thinkingDropdownOpen ? 'bg-foreground/5 dark:bg-white/10 text-foreground' : 'hover:bg-foreground/5 dark:hover:bg-white/10 text-muted'}`}
                   >
                     <span className="text-[14px] font-medium">{selectedThinking.name}</span>

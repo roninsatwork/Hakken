@@ -148,7 +148,6 @@ describe("assistant shared components", () => {
       <AssistantModelSelector
         activeModels={models}
         effectiveSelectedModelId="model-fast"
-        isAutonomousMode={false}
         isOpen
         isRecording={false}
         onOpenChange={onOpenChange}
@@ -174,7 +173,6 @@ describe("assistant shared components", () => {
       <AssistantModelSelector
         activeModels={[]}
         effectiveSelectedModelId={null}
-        isAutonomousMode={false}
         isOpen={false}
         isRecording={false}
         onOpenChange={vi.fn()}
@@ -194,7 +192,6 @@ describe("assistant shared components", () => {
 
     render(
       <AssistantThinkingSelector
-        isAutonomousMode={false}
         isOpen
         isRecording={false}
         onOpenChange={onOpenChange}
@@ -251,7 +248,6 @@ describe("assistant shared components", () => {
       fileInputRef,
       footerText: "AI can make mistakes",
       handleFileSelect,
-      isAutonomousMode: false,
       isDragging: true,
       isRecording: false,
       isSubmitting: false,

@@ -15,7 +15,6 @@ type AssistantComposerProps = {
   fileInputRef: RefObject<HTMLInputElement | null>;
   footerText: string;
   handleFileSelect: (files: FileList | null) => void;
-  isAutonomousMode: boolean;
   isDragging: boolean;
   isRecording: boolean;
   isSubmitting: boolean;
@@ -51,7 +50,6 @@ export function AssistantComposer({
   fileInputRef,
   footerText,
   handleFileSelect,
-  isAutonomousMode,
   isDragging,
   isRecording,
   isSubmitting,
@@ -210,7 +208,6 @@ export function AssistantComposer({
                 <AssistantModelSelector
                   activeModels={activeModels}
                   effectiveSelectedModelId={effectiveSelectedModelId}
-                  isAutonomousMode={isAutonomousMode}
                   isOpen={modelDropdownOpen}
                   isRecording={isRecording}
                   onOpenChange={onModelDropdownChange}
@@ -225,8 +222,7 @@ export function AssistantComposer({
                     there would be a decorative lie. */}
                 {selectedModelData?.providerKey === "google" && (
                   <AssistantThinkingSelector
-                    isAutonomousMode={isAutonomousMode}
-                    isOpen={thinkingDropdownOpen}
+                      isOpen={thinkingDropdownOpen}
                     isRecording={isRecording}
                     onOpenChange={onThinkingDropdownChange}
                     onSelectThinking={onSelectThinking}

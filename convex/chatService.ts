@@ -166,7 +166,7 @@ export async function reserveWidgetMessageSeat(
 /**
  * An anonymous visitor does not get to choose how their message is answered.
  *
- * The model, the thinking level and the swarm are the signed-in chat's
+ * The model and the thinking level are the signed-in chat's
  * controls; the widget's agent and the company's defaults decide for a
  * visitor. A request that names any of them from a widget session is not a
  * widget talking, so it is refused rather than quietly ignored.

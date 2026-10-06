@@ -529,3 +529,47 @@ export function composeWrittenPrompt(args: {
   const before = [history, ...args.reading.leading].filter(Boolean).map((part) => `${part}\n`).join("");
   return `${before}\n\nUser Prompt: ${args.question}${args.reading.trailing.join("")}`;
 }
+
+/**
+ * What a door does once its answer is written, the same for every door: the
+ * company memories under it are counted as used, against the message, and a
+ * staff answer that drew on more than one wiki page is offered to the Filing
+ * Clerk (wiki-agents plan, phase 5) — the only place cross-page synthesis can
+ * exist. A website visitor's answer never qualifies. Never costs the answer:
+ * a failure here is logged and the reply stands.
+ */
+export async function learnFromAnswer(
+  ctx: Pick<ActionCtx, "runMutation" | "scheduler">,
+  args: {
+    companyId?: Id<"companies">;
+    thread: Pick<Doc<"threads">, "_id" | "widgetId">;
+    question: string;
+    answer: string;
+    messageId?: Id<"messages">;
+    memories: Array<{ memoryId: Id<"companyMemories">; score: number }>;
+    wikiPageKeys: string[];
+  },
+) {
+  try {
+    if (args.companyId && args.memories.length > 0 && args.messageId !== undefined) {
+      await ctx.runMutation(internal.companyMemories.recordRuntimeUsageInternal, {
+        companyId: args.companyId,
+        threadId: args.thread._id,
+        messageId: args.messageId,
+        queryText: args.question,
+        memories: args.memories,
+      });
+    }
+    if (args.companyId && !args.thread.widgetId && args.wikiPageKeys.length >= 2) {
+      await ctx.scheduler.runAfter(0, internal.wikiFilingActions.considerAnswer, {
+        companyId: args.companyId,
+        threadId: String(args.thread._id),
+        question: args.question.slice(0, 500),
+        answer: args.answer.slice(0, 4000),
+        pageKeys: args.wikiPageKeys,
+      });
+    }
+  } catch (error) {
+    console.error("Learning from the answer failed; the reply stands", error);
+  }
+}
