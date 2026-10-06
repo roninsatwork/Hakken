@@ -7,14 +7,16 @@ import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
 
 /**
- * Countries kept ready (docs/plans/active/search-console-plan.md §16), end
- * to end with Google faked at the network: a run collects each country on
- * the website's list with Google's country filter after all countries — a
- * country new to the list over the whole 90 days — and settles it as all
- * countries are settled; a read of a kept country reads only its rows, any
- * other country is asked of Google live, and what Google cannot answer live
- * says the country is not kept ready. A country past the limit is cleared
- * when a run starts.
+ * Home countries only (docs/plans/active/search-console-home-countries-plan.md,
+ * 2026-10-06), end to end with Google faked at the network: a run collects the
+ * website's main home country with Google's country filter, held without a
+ * country — but its list of every country's totals, asked whole — then each
+ * country kept ready beside it, a country new to the list over the whole 90
+ * days, and settles each. Image search is never asked. New and lost is kept for
+ * every home country. A website whose figures were all countries' is cleared
+ * at its next run and collected for its main country at the one after; a live
+ * ask naming no country is of the main one. A country past the limit is
+ * cleared when a run starts.
  */
 
 const KEY = Buffer.from(new Uint8Array(32).fill(5)).toString("base64");
@@ -77,10 +79,10 @@ function fakeGoogle(figures: Figures) {
   return asks;
 }
 
-/** The asks for one country, and those for all countries. */
+/** The country an ask is filtered to; undefined for one asked whole. */
 const countryOf = (ask: Ask) => ask.dimensionFilterGroups?.flatMap((group) => group.filters).find((filter) => filter.dimension === "country")?.expression;
 
-/** The website's figures: all of them, the United Kingdom's, and Mozambique's (not kept ready). */
+/** The website's figures: all of them (asked with no filter), the United Kingdom's — its main country — and Mozambique's. */
 function figures(): Figures {
   return {
     all: { web: {
@@ -109,11 +111,12 @@ function figures(): Figures {
 }
 
 /**
- * A company's website, connected, its all-countries days held up to the day
- * before Google's newest — so a run asks all countries for its last few days
- * only — and keeping the countries given ready.
+ * A company's website, connected, its main country's days held up to the day
+ * before Google's newest — so a run asks it for its last few days only — and
+ * its home countries those given, the first its main one; with `switched`
+ * false, its figures held are from before 2026-10-06, all countries'.
  */
-async function setup(countries: string[]) {
+async function setup(countries: string[], switched = true) {
   const t = harness();
   const ids = await t.run(async (ctx) => {
     const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: 1 });
@@ -123,6 +126,7 @@ async function setup(countries: string[]) {
     const connectionId = await ctx.db.insert("searchConsoleConnections", {
       companyId, companyWebsiteId: siteId, websiteId, status: "CONNECTED", googleAccount: "owner@acme-shop.test",
       property: PROPERTY, permission: "siteOwner", dataProperty: PROPERTY, newestDay: "2026-09-25", oldestDay: "2026-06-28", createdAt: 1, updatedAt: 1,
+      ...(switched ? { mainCountry: countries[0] ?? "gbr" } : {}),
     });
     await ctx.db.insert("searchConsoleTokens", {
       connectionId, accessTokenCiphertext: await encryptConnectorToken("ya29.stored"), refreshTokenCiphertext: await encryptConnectorToken("1//refresh"),
@@ -173,54 +177,57 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("collecting a country kept ready", () => {
-  test("a run asks Google for the country with its filter and files its rows with the country: a country new to the list gets its whole 90 days", async () => {
-    const { t, siteId } = await setup(["gbr"]);
+describe("collecting the main country and a country kept ready", () => {
+  test("the main country is asked with its filter and held without a country, its list of every country asked whole; a country kept beside it gets its whole 90 days; image is never asked", async () => {
+    const { t, siteId } = await setup(["gbr", "moz"]);
     const asks = fakeGoogle(figures());
     await collect(t);
 
-    // All countries: only the days since the newest held, and the last four again.
-    const all = asks.filter((ask) => countryOf(ask) === undefined);
-    expect(all.filter((ask) => ask.dimensions[0] === "date").map((ask) => `${ask.type} ${ask.startDate}`)).toContain("web 2026-09-22");
-    expect(all.every((ask) => ask.startDate >= "2026-09-22")).toBe(true);
-    // The country: every ask filtered to it, over its whole 90 days, and never a country list inside it.
-    const country = asks.filter((ask) => countryOf(ask) !== undefined);
-    expect(country.length).toBeGreaterThan(0);
-    expect(country.every((ask) => countryOf(ask) === "gbr" && !ask.dimensions.includes("country"))).toBe(true);
-    expect(country.filter((ask) => ask.dimensions[0] === "date").map((ask) => ask.startDate).sort()[0]).toBe(WINDOW_FROM);
-    expect(country.filter((ask) => ask.dimensions[0] !== "date").map((ask) => ask.dimensions.join("+")).sort())
-      .toEqual(["device", "device", "page", "page", "query+page", "query+page", "searchAppearance", "searchAppearance"]);
+    // The main country: only the days since the newest held, and the last four again — every ask filtered to it but its country list.
+    const main = asks.filter((ask) => countryOf(ask) === "gbr");
+    expect(main.filter((ask) => ask.dimensions[0] === "date").map((ask) => `${ask.type} ${ask.startDate}`)).toContain("web 2026-09-22");
+    expect(main.every((ask) => ask.startDate >= "2026-09-22")).toBe(true);
+    const whole = asks.filter((ask) => countryOf(ask) === undefined);
+    expect(whole.length).toBeGreaterThan(0);
+    expect(whole.every((ask) => ask.dimensions.join("+") === "country")).toBe(true);
+    // The country kept beside it: every ask filtered to it, over its whole 90 days, and never a country list inside it.
+    const kept = asks.filter((ask) => countryOf(ask) === "moz");
+    expect(kept.every((ask) => !ask.dimensions.includes("country"))).toBe(true);
+    expect(kept.filter((ask) => ask.dimensions[0] === "date").map((ask) => ask.startDate).sort()[0]).toBe(WINDOW_FROM);
+    // Image search is neither kept nor shown (2026-10-06).
+    expect(asks.some((ask) => ask.type === "image")).toBe(false);
 
-    const gbr = await keptOf(t, siteId, "gbr");
-    expect(gbr.days.map((day) => `${day.day} ${day.clicks}`).sort()).toEqual(["2026-08-01 2", `${NEWEST} 8`]);
-    expect(gbr.lists.filter((record) => record.list === "pair").map((record) => `${record.start} ${record.keys.join(",")}`).sort())
-      .toEqual(["2026-08-01 boiler repair", `${NEWEST} plumber leeds,emergency plumber`]);
-    expect(gbr.lists.some((record) => record.list === "country")).toBe(false);
-    // All countries' rows are their own: the United Kingdom's are not among them.
-    const everywhere = await keptOf(t, siteId, undefined);
-    expect(everywhere.days.map((day) => `${day.day} ${day.clicks}`)).toEqual([`${NEWEST} 12`]);
+    const held = await keptOf(t, siteId, undefined);
+    expect(held.days.map((day) => `${day.day} ${day.clicks}`)).toEqual([`${NEWEST} 8`]);
+    expect(held.lists.filter((record) => record.list === "pair").map((record) => record.keys.join(","))).toEqual(["plumber leeds,emergency plumber"]);
+    // Every country's totals, for Countries and devices.
+    expect(held.lists.find((record) => record.list === "country")?.keys).toEqual(["gbr", "moz"]);
+    const moz = await keptOf(t, siteId, "moz");
+    expect(moz.days.map((day) => `${day.day} ${day.clicks}`)).toEqual([`${NEWEST} 4`]);
+    expect(moz.lists.some((record) => record.list === "country")).toBe(false);
 
-    expect((await connectionOf(t, siteId))?.countriesHeld).toEqual([{ country: "gbr", newestDay: NEWEST, oldestDay: WINDOW_FROM }]);
+    expect((await connectionOf(t, siteId))?.countriesHeld).toEqual([{ country: "moz", newestDay: NEWEST, oldestDay: WINDOW_FROM }]);
     const runs = await t.run(async (ctx) => await ctx.db.query("agentRuns").collect());
     const own = runs.find((run) => run.title === "Search Console: acme-shop.test")!;
     expect(own.status).toBe("SUCCESS");
-    expect(own.finalOutput).toContain("United Kingdom (GBR)");
+    expect(own.objective).toContain("in United Kingdom (GBR)");
+    expect(own.finalOutput).toContain("Mozambique (MOZ)");
   });
 
-  test("the next run asks the country for its newest days and the last four again, as all countries", async () => {
-    const { t, siteId } = await setup(["gbr"]);
+  test("the next run asks a country kept ready for its newest days and the last four again, as the main one", async () => {
+    const { t, siteId } = await setup(["gbr", "moz"]);
     const asks = fakeGoogle(figures());
     await collect(t);
     asks.length = 0;
     vi.setSystemTime(NOW + 24 * 60 * 60 * 1000);
     await collect(t);
-    const country = asks.filter((ask) => countryOf(ask) === "gbr");
-    expect(country.filter((ask) => ask.dimensions[0] === "date" && ask.type === "web").map((ask) => `${ask.startDate} ${ask.endDate}`)).toEqual(["2026-09-23 2026-09-27"]);
-    expect((await connectionOf(t, siteId))?.countriesHeld).toEqual([{ country: "gbr", newestDay: "2026-09-27", oldestDay: WINDOW_FROM }]);
+    const kept = asks.filter((ask) => countryOf(ask) === "moz");
+    expect(kept.filter((ask) => ask.dimensions[0] === "date" && ask.type === "web").map((ask) => `${ask.startDate} ${ask.endDate}`)).toEqual(["2026-09-23 2026-09-27"]);
+    expect((await connectionOf(t, siteId))?.countriesHeld).toEqual([{ country: "moz", newestDay: "2026-09-27", oldestDay: WINDOW_FROM }]);
   });
 
-  test("settling builds the country's ready-made periods and weeks, as all countries'; New and lost is kept for all countries only", async () => {
-    const { t, siteId } = await setup(["gbr"]);
+  test("settling builds each home country's ready-made periods, and New and lost for each", async () => {
+    const { t, siteId } = await setup(["moz", "gbr"]);
     fakeGoogle(figures());
     await collect(t);
 
@@ -229,126 +236,86 @@ describe("collecting a country kept ready", () => {
     expect(period("query", "NOW", "30")).toMatchObject({ from: "2026-08-28", to: NEWEST, keys: ["plumber leeds", "emergency plumber"], clicks: [5, 3], counts: [1, 1] });
     expect(period("query", "NOW", "90")).toMatchObject({ from: WINDOW_FROM, keys: ["plumber leeds", "emergency plumber", "boiler repair"] });
     expect(period("device", "NOW", "30")).toMatchObject({ keys: ["MOBILE", "DESKTOP"], clicks: [6, 2] });
-    // No country list inside a country.
     expect(gbr.periods.some((part) => part.list === "country")).toBe(false);
     expect(gbr.weeks.filter((week) => week.grain === "WEEK" && week.otherClicks > 0).map((week) => [week.week, week.otherClicks])).toEqual([["2026-07-27", 2], ["2026-09-21", 8]]);
-    // New and lost is kept for web search, all countries (store less round two, F): no register of the country's own.
-    expect(gbr.seen).toEqual([]);
-    expect(gbr.seenDays).toEqual([]);
-    // All countries' periods stand apart, with the searches from Mozambique.
-    const everywhere = await keptOf(t, siteId, undefined);
-    expect(everywhere.periods.find((part) => part.list === "query" && part.which === "NOW" && part.period === "30")?.keys)
-      .toEqual(["plumber leeds", "ai agency", "emergency plumber"]);
-    const lines = await t.run(async (ctx) => await ctx.db.query("agentLogs").collect());
-    // Every country's days rolled up first, then all their lists added up side by side (cost review 4).
-    expect(lines.map((line) => line.interactionType)).toEqual(expect.arrayContaining(["Kept", "Added up"]));
+    // New and lost, kept for every home country.
+    expect(gbr.seen.map((row) => row.key).sort()).toEqual(expect.arrayContaining(["boiler repair", "emergency plumber", "plumber leeds"]));
+    expect(gbr.seenDays.length).toBeGreaterThan(0);
+    // The main country's periods stand apart: Mozambique's searches only.
+    const main = await keptOf(t, siteId, undefined);
+    expect(main.periods.find((part) => part.list === "query" && part.which === "NOW" && part.period === "30")?.keys).toEqual(["ai agency"]);
+    expect(main.seen.map((row) => row.key)).toContain("ai agency");
   });
 });
 
-describe("reading one country", () => {
-  test("a country kept ready reads only its own rows, and Google is not asked", async () => {
-    const { t, siteId, reader } = await setup(["gbr"]);
+describe("reading the home countries", () => {
+  test("the main country reads what is held without a country, by its code too, and a country kept ready its own rows; Google is not asked", async () => {
+    const { t, siteId, reader } = await setup(["gbr", "moz"]);
     const asks = fakeGoogle(figures());
     await collect(t);
     asks.length = 0;
     const thirty = { siteId, searchType: "web" as const, dimension: "query" as const, from: "2026-08-28", to: NEWEST, page: 1, rows: 25 };
 
-    expect(await reader.query(api.searchConsoleCountries.searchConsoleCountryChoices, { siteId })).toEqual({ ready: ["gbr"], asAll: [] });
-    const uk = await reader.query(api.searchConsoleLists.searchConsoleListPage, { ...thirty, country: "gbr" });
-    expect(uk).toMatchObject({ live: false, preparing: false, total: 2 });
-    expect(uk.rows.map((one) => [one.key, one.clicks])).toEqual([["plumber leeds", 5], ["emergency plumber", 3]]);
-    const everywhere = await reader.query(api.searchConsoleLists.searchConsoleListPage, thirty);
-    expect(everywhere.rows.map((one) => one.key)).toEqual(["plumber leeds", "ai agency", "emergency plumber"]);
+    expect(await reader.query(api.searchConsoleCountries.searchConsoleCountryChoices, { siteId })).toEqual({ main: "gbr", ready: ["moz"] });
+    const main = await reader.query(api.searchConsoleLists.searchConsoleListPage, thirty);
+    expect(main.rows.map((one) => [one.key, one.clicks])).toEqual([["plumber leeds", 5], ["emergency plumber", 3]]);
+    // An address naming the main country reads the same.
+    expect((await reader.query(api.searchConsoleLists.searchConsoleListPage, { ...thirty, country: "gbr" })).rows).toEqual(main.rows);
+    const moz = await reader.query(api.searchConsoleLists.searchConsoleListPage, { ...thirty, country: "moz" });
+    expect(moz).toMatchObject({ live: false, preparing: false, total: 1 });
+    expect(moz.rows.map((one) => [one.key, one.clicks])).toEqual([["ai agency", 4]]);
 
     const { page: _page, rows: _rows, ...split } = thirty;
-    const devices = await reader.query(api.searchConsoleLists.searchConsoleSplitList, { ...split, dimension: "device", country: "gbr" });
+    // Every country's totals, on the main country's Countries and devices.
+    const countries = await reader.query(api.searchConsoleLists.searchConsoleSplitList, { ...split, dimension: "country" });
+    expect(countries.rows.map((one) => [one.key, one.clicks])).toEqual([["gbr", 8], ["moz", 4]]);
+    const devices = await reader.query(api.searchConsoleLists.searchConsoleSplitList, { ...split, dimension: "device" });
     expect(devices.rows.map((one) => [one.key, one.clicks])).toEqual([["MOBILE", 6], ["DESKTOP", 2]]);
-    // A country keeps no country list: Google answers it.
-    expect((await reader.query(api.searchConsoleLists.searchConsoleSplitList, { ...split, dimension: "country", country: "gbr" })).live).toBe(true);
 
-    const days = await reader.query(api.searchConsoleReads.searchConsolePerformance, { siteId, searchType: "web", from: "2026-08-01", to: NEWEST, country: "gbr" });
-    expect(days).toMatchObject({ live: false, totals: { clicks: 10 } });
-    expect(days.days.map((day) => day.day)).toEqual(["2026-08-01", NEWEST]);
-    const curve = await reader.query(api.searchConsoleChanges.searchConsoleCurve, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, country: "gbr" });
-    expect(curve).toMatchObject({ live: false, points: [{ position: 4, keywords: 2, clicks: 8 }] });
-    const weeks = await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, { siteId, searchType: "web", country: "gbr", from: "2026-07-01", to: NEWEST, step: "week" });
-    expect(weeks).toMatchObject({ notReady: false, preparing: false, notBuilt: false, step: "week" });
-    expect(weeks.periods.filter((week) => week.top3 + week.top10 + week.top20 + week.rest > 0).map((week) => week.start)).toEqual(["2026-07-27", "2026-09-21"]);
-
-    const newLost = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, step: "week", country: "gbr", page: 1, rows: 25 });
-    // New and lost is kept for web search, all countries (store less round two, F).
-    expect(newLost).toMatchObject({ notKept: true, rows: [] });
-    const allNewLost = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, step: "week", page: 1, rows: 25 });
-    expect(allNewLost.rows.map((one) => one.key)).toContain("ai agency");
+    const days = await reader.query(api.searchConsoleReads.searchConsolePerformance, { siteId, searchType: "web", from: "2026-08-01", to: NEWEST, country: "moz" });
+    expect(days).toMatchObject({ live: false, totals: { clicks: 4 } });
+    const newLost = await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, step: "week", country: "moz", page: 1, rows: 25 });
+    expect(newLost.notKept).toBe(false);
+    expect(newLost.rows.map((one) => one.key)).toContain("ai agency");
+    // Only web search keeps New and lost.
+    expect(await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { siteId, searchType: "video", from: "2026-08-28", to: NEWEST, step: "week", page: 1, rows: 25 }))
+      .toMatchObject({ notKept: true, rows: [] });
 
     expect(asks).toEqual([]);
   });
 
-  test("any other country is asked of Google live, with the country filter", async () => {
+  test("a live ask naming no country is of the main one; the countries of one keyword stay every country", async () => {
     const { t, siteId, reader } = await setup(["gbr"]);
     const asks = fakeGoogle(figures());
     await collect(t);
     asks.length = 0;
     const thirty = { siteId, searchType: "web" as const, dimension: "query" as const, from: "2026-08-28", to: NEWEST };
 
-    expect(await reader.query(api.searchConsoleLists.searchConsoleListPage, { ...thirty, country: "moz", page: 1, rows: 25 })).toMatchObject({ live: true, total: 0 });
-    expect(await reader.query(api.searchConsoleReads.searchConsolePerformance, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, country: "moz" }))
-      .toMatchObject({ live: true, days: [], totals: null });
-    expect(await reader.query(api.searchConsoleChanges.searchConsoleCurve, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, country: "moz" }))
-      .toMatchObject({ live: true, points: [] });
-    expect(await reader.query(api.searchConsoleChanges.searchConsoleUpdates, { siteId, searchType: "web", language: "en", country: "moz", from: "2026-06-01", to: NEWEST })).toMatchObject({ live: true, updates: [] });
-    expect(asks).toEqual([]);
-
-    const list = await reader.action(api.searchConsoleLists.searchConsoleLiveList, { ...thirty, country: "moz" });
-    expect(list.ok && list.rows.flat().map((one) => [one.key, one.clicks])).toEqual([["ai agency", 4]]);
-    const days = await reader.action(api.searchConsoleReads.searchConsoleLiveDays, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, country: "moz" });
-    expect(days).toMatchObject({ ok: true, totals: { clicks: 4, impressions: 150 }, previous: null, named: null });
-    const series = await reader.action(api.searchConsoleLists.searchConsoleKeySeries, {
-      siteId, searchType: "web", dimension: "query", key: "ai agency", from: "2026-08-28", to: NEWEST, country: "moz",
-    });
-    expect(series.ok).toBe(true);
+    const list = await reader.action(api.searchConsoleLists.searchConsoleLiveList, thirty);
+    expect(list.ok && list.rows.flat().map((one) => one.key).sort()).toEqual(["emergency plumber", "plumber leeds"]);
     const splits = await reader.action(api.searchConsoleLists.searchConsoleKeySplits, {
-      siteId, searchType: "web", dimension: "query", key: "ai agency", from: "2026-08-28", to: NEWEST, country: "moz",
+      siteId, searchType: "web", dimension: "query", key: "plumber leeds", from: "2026-08-28", to: NEWEST,
     });
     expect(splits.ok).toBe(true);
-    // Every ask carried the country — but the countries of one keyword, which stay every country.
     expect(asks.length).toBeGreaterThan(0);
-    expect(asks.filter((ask) => !(ask.dimensions.length === 1 && ask.dimensions[0] === "country")).every((ask) => countryOf(ask) === "moz")).toBe(true);
-    expect(asks.filter((ask) => ask.dimensions[0] === "country").every((ask) => countryOf(ask) === undefined)).toBe(true);
-    const dated = asks.find((ask) => ask.dimensions[0] === "date" && !ask.dimensionFilterGroups?.[0].filters.some((filter) => filter.dimension === "query"))!;
-    expect(dated).toMatchObject({ startDate: "2026-07-29", endDate: NEWEST });
+    expect(asks.filter((ask) => !ask.dimensions.includes("country")).every((ask) => countryOf(ask) === "gbr")).toBe(true);
+    expect(asks.filter((ask) => ask.dimensions.includes("country")).every((ask) => countryOf(ask) === undefined)).toBe(true);
   });
 
-  test("Google updates in a country not kept ready come from one live ask", async () => {
-    const { t, siteId, reader } = await setup(["gbr"]);
-    const asks = fakeGoogle(figures());
-    await collect(t);
-    await t.run(async (ctx) => await ctx.db.insert("googleUpdates", {
-      titleEn: "September 2026 spam update", descriptionEn: "Spam.", startedOn: "2026-09-01", finishedOn: "2026-09-05", url: "https://status.search.google.com/", createdAt: 1, updatedAt: 1,
-    }));
-    asks.length = 0;
-    const answer = await reader.action(api.searchConsoleChanges.searchConsoleLiveUpdates, { siteId, searchType: "web", language: "en", country: "moz", from: "2026-06-01", to: NEWEST });
-    expect(answer).toMatchObject({ ok: true, from: "2026-06-28", to: NEWEST, updates: [{ title: "September 2026 spam update", state: "done", before: null, after: null }] });
-    expect(asks.map((ask) => [ask.dimensions.join("+"), countryOf(ask), ask.startDate, ask.endDate])).toEqual([["date", "moz", "2026-06-28", NEWEST]]);
-  });
-
-  test("what Google cannot answer live says the country is not kept ready, or on its way once added", async () => {
-    const { t, siteId, reader } = await setup(["gbr"]);
+  test("a country kept ready before its first collection is on its way; one not kept says so", async () => {
+    const { t, siteId, reader } = await setup(["gbr", "moz"]);
     fakeGoogle(figures());
     const newLost = { siteId, searchType: "web" as const, from: "2026-08-28", to: NEWEST, step: "week" as const, page: 1, rows: 25 };
     const chart = { siteId, searchType: "web" as const, from: "2026-08-28", to: NEWEST, step: "week" as const };
-    // Added, but not yet collected: on its way.
-    expect(await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { ...newLost, country: "gbr" })).toMatchObject({ notKept: true, rows: [] });
-    expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, { ...chart, country: "gbr" })).toMatchObject({ periods: [], notReady: false, preparing: true });
+    expect(await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { ...newLost, country: "moz" })).toMatchObject({ preparing: true, rows: [] });
+    expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, { ...chart, country: "moz" })).toMatchObject({ periods: [], notReady: false, preparing: true });
     await collect(t);
-    expect(await reader.query(api.searchConsoleChanges.searchConsoleNewLost, { ...newLost, country: "moz" })).toMatchObject({ notKept: true, rows: [], total: 0 });
-    expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, { ...chart, country: "moz" })).toMatchObject({ periods: [], notReady: true, preparing: false });
-    // All countries, as before.
+    expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, { ...chart, country: "irl" })).toMatchObject({ periods: [], notReady: true, preparing: false });
     expect((await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, chart)).notReady).toBe(false);
   });
 
   test("another company's website is refused, and a code Google does not name is refused", async () => {
-    const { t, siteId, reader } = await setup(["gbr"]);
+    const { t, siteId, reader } = await setup(["gbr", "moz"]);
     const asks = fakeGoogle(figures());
     const rival = t.withIdentity({ subject: await t.run(async (ctx) => await ctx.db.insert("users", {
       name: "Rival", email: "rival@rival.test", role: "USER", companyId: await ctx.db.insert("companies", { name: "Rival", createdAt: 1 }), createdAt: 1,
@@ -356,79 +323,65 @@ describe("reading one country", () => {
     const thirty = { siteId, searchType: "web" as const, dimension: "query" as const, from: "2026-08-28", to: NEWEST };
 
     await expect(rival.query(api.searchConsoleCountries.searchConsoleCountryChoices, { siteId })).rejects.toThrow("not one your company holds");
-    await expect(rival.query(api.searchConsoleLists.searchConsoleListPage, { ...thirty, country: "gbr", page: 1, rows: 25 })).rejects.toThrow("not one your company holds");
-    await expect(rival.query(api.searchConsoleReads.searchConsolePerformance, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, country: "gbr" })).rejects.toThrow("not one your company holds");
-    await expect(rival.query(api.searchConsolePeriods.searchConsoleChartFigures, { siteId, searchType: "web", country: "gbr", from: "2026-08-28", to: NEWEST, step: "week" })).rejects.toThrow("not one your company holds");
-    expect(await rival.action(api.searchConsoleReads.searchConsoleLiveDays, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, country: "moz" })).toEqual({ ok: false, problem: "NOT_CONNECTED" });
-    expect(await rival.action(api.searchConsoleChanges.searchConsoleLiveUpdates, { siteId, searchType: "web", language: "en", country: "moz", from: "2026-08-28", to: NEWEST })).toEqual({ ok: false, problem: "NOT_CONNECTED" });
+    await expect(rival.query(api.searchConsoleLists.searchConsoleListPage, { ...thirty, country: "moz", page: 1, rows: 25 })).rejects.toThrow("not one your company holds");
+    await expect(rival.query(api.searchConsoleReads.searchConsolePerformance, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, country: "moz" })).rejects.toThrow("not one your company holds");
     expect(await rival.action(api.searchConsoleLists.searchConsoleLiveList, { ...thirty, country: "moz" })).toEqual({ ok: false, problem: "NOT_CONNECTED" });
 
     await expect(reader.query(api.searchConsoleLists.searchConsoleListPage, { ...thirty, country: "xyz", page: 1, rows: 25 })).rejects.toThrow("not a country Google names");
     await expect(reader.action(api.searchConsoleLists.searchConsoleLiveList, { ...thirty, country: "GBR" })).rejects.toThrow("not a country Google names");
-    await expect(reader.action(api.searchConsoleReads.searchConsoleLiveDays, { siteId, searchType: "web", from: "2026-08-28", to: NEWEST, country: "zzz" })).rejects.toThrow("not a country Google names");
     expect(asks).toEqual([]);
   });
 });
 
-describe("a country nearly all of the searches (2026-10-05)", () => {
-  /** Ten days on which the United Kingdom is 95% of the website's showings. */
-  function nearlyAll(): Figures {
-    const all: Record<string, Day> = {};
-    const uk: Record<string, Day> = {};
-    for (let back = 0; back < 10; back += 1) {
-      const day = new Date(Date.parse(`${NEWEST}T00:00:00Z`) - back * 86_400_000).toISOString().slice(0, 10);
-      all[day] = {
-        total: row("", 20, 400),
-        pair: [pair("plumber leeds", "https://acme-shop.test/", 19), pair("ai agency", "https://acme-shop.test/ai/", 1)],
-        page: [row("https://acme-shop.test/", 19), row("https://acme-shop.test/ai/", 1)],
-        country: [row("gbr", 19), row("moz", 1)],
-        device: [row("MOBILE", 20)],
-      };
-      uk[day] = {
-        total: row("", 19, 380),
-        pair: [pair("plumber leeds", "https://acme-shop.test/", 19)],
-        page: [row("https://acme-shop.test/", 19)],
-        device: [row("MOBILE", 19)],
-      };
-    }
-    return { all: { web: all }, gbr: { web: uk } };
-  }
+describe("switching to the main home country (2026-10-06)", () => {
+  test("a website whose figures were all countries' is cleared at its next run, and its main country collected at the one after", async () => {
+    const { t, siteId } = await setup(["gbr"], false);
+    await t.run(async (ctx) => {
+      await ctx.db.insert("searchConsoleDays", { companyWebsiteId: siteId, searchType: "web", day: "2026-09-25", clicks: 12, impressions: 400, ctr: 0.03, position: 3, fetchedAt: 1 });
+      await ctx.db.insert("searchConsoleDays", { companyWebsiteId: siteId, searchType: "image", day: "2026-09-25", clicks: 2, impressions: 90, ctr: 0.02, position: 9, fetchedAt: 1 });
+    });
+    const asks = fakeGoogle(figures());
 
-  test("keeps no search-and-page lines of its own once judged so, and its searches read as all countries'", async () => {
-    const { t, siteId, reader } = await setup(["gbr"]);
-    const held = nearlyAll();
-    const asks = fakeGoogle(held);
     await collect(t);
-    // Nothing held to judge by before the first run: the country is collected whole.
-    expect((await connectionOf(t, siteId))?.countriesAsAll).toBeUndefined();
+    expect(asks).toEqual([]);
+    expect(await t.run(async (ctx) => await ctx.db.query("searchConsoleDays").collect())).toEqual([]);
+    expect(await connectionOf(t, siteId)).toMatchObject({ mainCountry: "gbr" });
+    expect((await connectionOf(t, siteId))?.newestDay).toBeUndefined();
 
-    asks.length = 0;
-    vi.setSystemTime(NOW + 24 * 60 * 60 * 1000);
-    // The newest day's figures settle, so its lists are fetched again (a day Google has not changed is not).
-    held.gbr.web[NEWEST].total = row("", 19, 381);
     await collect(t);
+    expect(asks.filter((ask) => !ask.dimensions.includes("country")).every((ask) => countryOf(ask) === "gbr")).toBe(true);
+    expect(asks.filter((ask) => ask.dimensions[0] === "date").map((ask) => ask.startDate).sort()[0]).toBe(WINDOW_FROM);
+    expect((await keptOf(t, siteId, undefined)).days.map((day) => `${day.searchType} ${day.day} ${day.clicks}`)).toEqual(["web 2026-08-01 2", `web ${NEWEST} 8`]);
+  });
 
-    expect((await connectionOf(t, siteId))?.countriesAsAll).toEqual(["gbr"]);
-    const uk = asks.filter((ask) => countryOf(ask) === "gbr");
-    expect(uk.length).toBeGreaterThan(0);
-    expect(uk.some((ask) => ask.dimensions.includes("page"))).toBe(false);
-    expect(uk.some((ask) => ask.dimensions.includes("device"))).toBe(true);
+  test("a website holding nothing yet notes its main country and is collected at once; with no countries listed, its place's country", async () => {
+    const { t, siteId, connectionId } = await setup([], false);
+    await t.run(async (ctx) => await ctx.db.patch(connectionId, { newestDay: undefined, oldestDay: undefined }));
+    const asks = fakeGoogle(figures());
+    await collect(t);
+    expect(await connectionOf(t, siteId)).toMatchObject({ mainCountry: "gbr", newestDay: NEWEST });
+    expect(asks.filter((ask) => !ask.dimensions.includes("country")).every((ask) => countryOf(ask) === "gbr")).toBe(true);
+  });
 
-    // The United Kingdom's searches are all countries' — "ai agency" was searched from Mozambique.
-    // The last 30 days, ending on the newest day the second run holds.
-    const thirty = { siteId, searchType: "web" as const, dimension: "query" as const, from: "2026-08-29", to: "2026-09-27", page: 1, rows: 25, country: "gbr" };
-    const read = await reader.query(api.searchConsoleLists.searchConsoleListPage, thirty);
-    expect(read).toMatchObject({ live: false });
-    expect(read.rows.map((one: { key: string }) => one.key)).toContain("ai agency");
-    expect(await reader.query(api.searchConsoleCountries.searchConsoleCountryChoices, { siteId })).toEqual({ ready: ["gbr"], asAll: ["gbr"] });
+  test("a main country moved on the Market page is cleared and collected afresh", async () => {
+    const { t, siteId } = await setup(["gbr", "moz"]);
+    fakeGoogle(figures());
+    await collect(t);
+    await t.run(async (ctx) => await ctx.db.patch(siteId, { searchConsoleCountries: ["moz", "gbr"] }));
+    await collect(t);
+    expect(await connectionOf(t, siteId)).toMatchObject({ mainCountry: "moz" });
+    expect(await t.run(async (ctx) => await ctx.db.query("searchConsoleDays").collect())).toEqual([]);
+    await collect(t);
+    expect((await keptOf(t, siteId, undefined)).days.map((day) => `${day.day} ${day.clicks}`)).toEqual([`${NEWEST} 4`]);
+    expect((await keptOf(t, siteId, "gbr")).days.map((day) => `${day.day} ${day.clicks}`)).toEqual(["2026-08-01 2", `${NEWEST} 8`]);
   });
 });
 
 describe("a country past the limit", () => {
   test("is cleared when a run starts, its held days forgotten, and not collected", async () => {
-    const { t, companyId, siteId, connectionId } = await setup(["gbr", "irl"]);
+    const { t, companyId, siteId, connectionId } = await setup(["gbr", "moz", "irl"]);
     await t.run(async (ctx) => {
-      await ctx.db.insert("fanOutLimits", { companyId, companyWebsiteId: siteId, consoleCountriesPerSite: 1, updatedAt: 1 });
+      await ctx.db.insert("fanOutLimits", { companyId, companyWebsiteId: siteId, consoleCountriesPerSite: 2, updatedAt: 1 });
       await ctx.db.patch(connectionId, { countriesHeld: [{ country: "irl", newestDay: "2026-09-25", oldestDay: WINDOW_FROM }] });
       const packed = { keys: ["plumber dublin"], clicks: [1], impressions: [10], positionSums: [30] };
       await ctx.db.insert("searchConsoleDays", { companyWebsiteId: siteId, country: "irl", searchType: "web", day: "2026-09-20", clicks: 1, impressions: 10, ctr: 0.1, position: 3, fetchedAt: 1 });
@@ -443,7 +396,7 @@ describe("a country past the limit", () => {
 
     expect(await keptOf(t, siteId, "irl")).toEqual({ days: [], lists: [], periods: [], weeks: [], seen: [], seenDays: [] });
     expect(asks.some((ask) => countryOf(ask) === "irl")).toBe(false);
-    expect(asks.some((ask) => countryOf(ask) === "gbr")).toBe(true);
-    expect((await connectionOf(t, siteId))?.countriesHeld).toEqual([{ country: "gbr", newestDay: NEWEST, oldestDay: WINDOW_FROM }]);
+    expect(asks.some((ask) => countryOf(ask) === "moz")).toBe(true);
+    expect((await connectionOf(t, siteId))?.countriesHeld).toEqual([{ country: "moz", newestDay: NEWEST, oldestDay: WINDOW_FROM }]);
   });
 });

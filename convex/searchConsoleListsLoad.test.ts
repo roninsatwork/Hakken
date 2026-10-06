@@ -148,9 +148,9 @@ describe("a large website's Search Console", () => {
       for (const row of await ctx.db.query("fanOutLimits").withIndex("by_hold", (q) => q.eq("companyWebsiteId", siteId)).collect()) await ctx.db.delete(row._id);
     });
 
-    // A country kept ready (§16) reads its own ready-made period by the same index, country second: never all countries' parts.
+    // A country kept ready beside the main one reads its own ready-made period by the same index, country second: never the main one's parts.
     await t.run(async (ctx) => {
-      await ctx.db.patch(siteId, { searchConsoleCountries: ["gbr"] });
+      await ctx.db.patch(siteId, { searchConsoleCountries: ["usa", "gbr"] });
       const connection = (await ctx.db.query("searchConsoleConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", siteId)).first())!;
       await ctx.db.patch(connection._id, { countriesHeld: [{ country: "gbr", newestDay: NEWEST, oldestDay: "2026-03-31" }] });
       for (const [which, rows, from, to] of [["NOW", periodRows(COUNTRY_NOW, 0), "2026-08-28", NEWEST], ["BEFORE", periodRows(COUNTRY_BEFORE, 3_000), "2026-07-29", "2026-08-27"]] as const) {

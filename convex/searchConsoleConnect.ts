@@ -27,8 +27,10 @@ import {
   attemptOutcomeValidator,
   connectionProblemValidator,
   connectionStatusValidator,
+  searchTypeValidator,
 } from "./searchConsoleSchema";
 import { historyLimitDay } from "./searchConsoleDays";
+import { kindsHeld } from "./searchConsoleRollups";
 
 /**
  * Connecting an owned website to its Google Search Console
@@ -720,6 +722,12 @@ export const searchConsoleStatus = tenantQuery({
     historyFrom: v.string(),
     /** The website's Search Console limits: what its pages read and the rules they say (§17). */
     limits: consoleLimitsValidator,
+    /**
+     * The kinds of result Google has figures for, for the website's main home
+     * country: web, and video, news, Discover or Google News only where it
+     * has them — the tabs its pages show (search-console-home-countries-plan.md).
+     */
+    kinds: v.array(searchTypeValidator),
     connection: v.union(
       v.null(),
       v.object({
@@ -763,6 +771,7 @@ export const searchConsoleStatus = tenantQuery({
         .map((entry) => ({ siteId: entry.summary.siteId, host: entry.summary.host })),
       historyFrom: historyLimitDay(now),
       limits: await consoleLimitsOf(ctx, site.hold),
+      kinds: connection ? await kindsHeld(ctx, site.hold._id) : [],
       connection: connection
         ? {
           status: connection.status,

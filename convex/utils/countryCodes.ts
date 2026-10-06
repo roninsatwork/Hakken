@@ -27,6 +27,12 @@ export const ALPHA3_TO_ALPHA2: Record<string, string> = Object.fromEntries(
   ).split(" ").map((pair) => pair.split(":") as [string, string]),
 );
 
+/** Google's three-letter code for a two-letter one, as Google writes it: `GB` → `gbr`; the United Kingdom for one it does not name. */
+export function alpha3Of(alpha2: string): string {
+  const found = Object.entries(ALPHA3_TO_ALPHA2).find(([, two]) => two === alpha2.toUpperCase());
+  return found ? found[0].toLowerCase() : "gbr";
+}
+
 /** Every country Google can name, as Google writes it: `gbr`, `usa`. */
 export const GOOGLE_COUNTRIES: readonly string[] = Object.keys(ALPHA3_TO_ALPHA2).map((code) => code.toLowerCase());
 

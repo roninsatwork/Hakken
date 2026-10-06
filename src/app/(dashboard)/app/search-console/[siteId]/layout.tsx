@@ -14,7 +14,7 @@ import { SiteDateRange } from "../../sites/_components/SiteDateRange";
 import { formatDay } from "../../sites/_components/siteFormat";
 import { SiteMark } from "../../sites/_components/SiteMark";
 import { sharedSiteQuery } from "../../sites/_components/useSiteParam";
-import { CountryAskedNote, SearchConsoleCountryPicker } from "../_components/SearchConsoleCountryPicker";
+import { SearchConsoleCountryPicker } from "../_components/SearchConsoleCountryPicker";
 import { SearchConsoleMenu } from "../_components/SearchConsoleMenu";
 import { ConnectionBanner } from "../_components/SearchConsoleNotices";
 import { searchConsoleQuery, useSearchConsoleSiteId, useSearchConsoleStatus } from "../_components/useSearchConsole";
@@ -110,7 +110,6 @@ export default function SearchConsoleSiteLayout({ children }: { children: React.
             {connection?.newestDay && state !== "CHOOSING" ? (
               <p className="text-[12px] text-muted">
                 {t("figuresTo", { day: formatDay(connection.newestDay) })}
-                <CountryAskedNote />
               </p>
             ) : null}
             {children}

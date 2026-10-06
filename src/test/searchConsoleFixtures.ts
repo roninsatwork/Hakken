@@ -15,6 +15,8 @@ export const STATUS = {
   ownSites: [{ siteId: "site_1", host: "acme-shop.test" }],
   historyFrom: "2025-05-26",
   limits: STARTING_CONSOLE_LIMITS,
+  // Google has figures for every kind of result kept: each page's switch shows them all.
+  kinds: ["web", "video", "news", "discover", "googleNews"],
   connection: {
     status: "CONNECTED", signingIn: false, googleAccount: "owner@acme-shop.test", property: "sc-domain:acme-shop.test", permission: "siteOwner",
     choices: [], connectedAt: Date.parse("2026-09-27T10:00:00Z"), disconnectedAt: null, newestDay: "2026-09-26", oldestDay: "2025-05-26", countriesNewest: [],

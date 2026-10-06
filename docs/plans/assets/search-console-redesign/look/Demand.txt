@@ -2,7 +2,7 @@
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Missed demand
-choice: Kind of result: Web | Image | Video | News | Discover | Google News
+choice: Kind of result: Web | Video | News | Discover | Google News
 figures
   figure: Searched a lot, barely shown
   figure: Searches a month behind them

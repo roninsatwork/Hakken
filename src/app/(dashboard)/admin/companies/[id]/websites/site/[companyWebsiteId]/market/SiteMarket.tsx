@@ -32,12 +32,13 @@ const LEAD = "max-w-2xl text-[12px] leading-relaxed text-secondary";
  * search-console-plan.md §16; Anthony, 2026-10-03: "this is an admin screen we
  * don't want results on it"):
  *
- * - **Where it trades** — the countries Search Console keeps ready beside all
- *   countries, in the order added. Past `consoleCountriesPerSite` the ones
- *   added first are kept ready and the rest are marked; the server refuses to
- *   add past it. Search Console always opens on All countries, so the
- *   drawing's "Search Console opens on this" is not here. A competitor has no
- *   Search Console, so no countries.
+ * - **Where it trades** — the website's home countries, the only ones Search
+ *   Console keeps (search-console-home-countries-plan.md, 2026-10-06), in the
+ *   order added: the first is its main country, every Search Console page
+ *   opening on it, and says so. Past `consoleCountriesPerSite` the ones added
+ *   first are kept and the rest are marked; the server refuses to add past it.
+ *   With none, Search Console keeps the country of the place below. A
+ *   competitor has no Search Console, so no countries.
  * - **Where you watch from** — the place rankings and AI answers are collected
  *   from, moved here from Schedules as it was (its save, and the server's
  *   refusal while paired), so nothing is set in two places. A paired
@@ -178,7 +179,9 @@ export function SiteMarket({
               { key: "country", cell: (code) => <span className="text-[13px] text-foreground">{nameOf(code)}</span> },
               {
                 key: "kept",
-                cell: (code) => (countries.indexOf(code) >= limit ? <TagLabel>{t("trades.pastLimit")}</TagLabel> : null),
+                cell: (code) => (countries.indexOf(code) >= limit
+                  ? <TagLabel>{t("trades.pastLimit")}</TagLabel>
+                  : countries.indexOf(code) === 0 ? <TagLabel>{t("trades.main")}</TagLabel> : null),
               },
               {
                 key: "remove",

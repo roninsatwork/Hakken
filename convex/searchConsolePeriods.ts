@@ -38,7 +38,6 @@ import {
 } from "./utils/searchConsolePacks";
 import { bandOf, isBrand, pageWithoutSection } from "./utils/searchConsoleViews";
 import { tenantQuery } from "./tenantFunctions";
-import { searchLinesCountry } from "./searchConsoleShrink";
 import { addressesOf, decodeWith } from "./searchConsolePageRefs";
 import { FIRST_PARTS_READ } from "./searchConsolePeriodReads";
 import { requireMySite } from "./siteAccess";
@@ -147,8 +146,6 @@ export async function readKept(
 ): Promise<Kept[]> {
   const from = widestFrom(newest);
   const out: Kept[] = [];
-  // A country nearly all of the searches keeps no search-and-page lines: read as all countries (`searchConsoleShrink.ts`).
-  if ((list === "pair" || list === "page") && await ctx.runQuery(internal.searchConsoleShrink.countryReadAsAll, { holdId: companyWebsiteId, ...(country === undefined ? {} : { country }) })) return out;
   const scope = country === undefined ? {} : { country };
   // Page by page (`keptBetween`): a busy website's span is more than one read may hold.
   const read = async (grain: Kept["grain"], start: string, end: string) => {
@@ -306,10 +303,9 @@ const WEEKS_READ = 200;
 
 /** One kind of result's days, weeks and months, for all countries or one, oldest first. */
 async function weeksOf(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"companyWebsites">, country: string | undefined, searchType: SearchType) {
-  const scope = await searchLinesCountry(ctx, companyWebsiteId, country);
   return await ctx.db
     .query("searchConsoleWeeks")
-    .withIndex("by_hold_country_type_week", (q) => q.eq("companyWebsiteId", companyWebsiteId).eq("country", scope).eq("searchType", searchType))
+    .withIndex("by_hold_country_type_week", (q) => q.eq("companyWebsiteId", companyWebsiteId).eq("country", country).eq("searchType", searchType))
     .take(WEEKS_READ);
 }
 
@@ -696,8 +692,8 @@ export async function buildSitePeriods(
       builtAt,
     });
     // New and lost's counts by day, from the whole first- and last-seen register (2026-10-04).
-    // New and lost is kept for web search, all countries (store less round two, F).
-    if (searchType === "web" && country === undefined && !onlyLong) await buildSeenDays(ctx, { companyWebsiteId, country, searchType }, builtAt);
+    // New and lost is kept for web search, in each home country (search-console-home-countries-plan.md).
+    if (searchType === "web" && !onlyLong) await buildSeenDays(ctx, { companyWebsiteId, country, searchType }, builtAt);
     for (const slot of slots) {
       if (!pairsKept || !slot.span) {
         for (const list of ["pair", "pairByPage", "competing", "query"] as const) await writeParts(searchType, list, slot, null);

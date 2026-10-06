@@ -6,7 +6,6 @@ import { failureSummary } from "./roleRuns";
 import { STEP_BUDGET_MS, runStep, type StepOutcome } from "./searchConsoleSync";
 import { countriesPastLimit } from "./searchConsoleCountries";
 import { ALPHA3_TO_ALPHA2 } from "./utils/countryCodes";
-import { refreshCountriesAsAll } from "./searchConsoleShrink";
 
 /**
  * The Search Console Collector's job (docs/plans/active/search-console-plan.md
@@ -49,7 +48,9 @@ const siteArgs = {
   property: v.string(),
   from: v.string(),
   top: v.string(),
-  /** The countries kept ready, each from its own held days: collected after all countries, in this order. */
+  /** The main home country, collected first, held without a country (`mainConsoleCountry`). */
+  main: v.string(),
+  /** The countries kept ready beside it, each from its own held days: collected after it, in this order. */
   countries: v.array(v.object({ code: v.string(), from: v.string() })),
 };
 
@@ -117,6 +118,17 @@ export const runSearchConsoleCollectorNow = internalAction({
         text: `${sites.length === 1 ? "1 website is" : `${sites.length} websites are`} connected to Search Console: ${hosts}. Each gets a run of its own.`,
       });
       for (const [index, site] of sites.entries()) {
+        // Its figures are its main home country's, or cleared to be collected so at the next run.
+        if ((await ctx.runMutation(internal.searchConsoleMainCountry.prepareMainCountry, { connectionId: site.connectionId })) === "SWITCHING") {
+          await ctx.runMutation(internal.roleRuns.logRunLine, {
+            runId: args.runId,
+            companyId: site.companyId,
+            heading: site.host,
+            detail: "Its figures were for all countries, or another main country: cleared, to collect its main home country's 90 days at the next run.",
+            failed: false,
+          });
+          continue;
+        }
         await ctx.runMutation(internal.searchConsoleAgentRun.startSiteRun, { parentRunId: args.runId, ...site, delayMs: index * STAGGER_MS });
         await ctx.runMutation(internal.roleRuns.logRunLine, {
           runId: args.runId,
@@ -162,7 +174,7 @@ export const startSiteRun = internalMutation({
     const runId = await ctx.db.insert("agentRuns", {
       agentId: parent.agentId,
       triggerType: "EVENT",
-      objective: `Collect ${args.host}'s newest Search Console days (${args.property}): ${days(args.from, args.top)}.${countriesLine(args.countries)} ${NOT_HISTORY}`,
+      objective: `Collect ${args.host}'s newest Search Console days in ${countryLabel(args.main)} (${args.property}): ${days(args.from, args.top)}.${countriesLine(args.countries)} ${NOT_HISTORY}`,
       title: `Search Console: ${args.host}`,
       status: "QUEUED",
       companyId: args.companyId,
@@ -178,8 +190,6 @@ export const startSiteRun = internalMutation({
     });
     // The days this run fetches, so Collection pipeline can say how far it has got.
     if (connection) await ctx.db.patch(connection._id, { collecting: { runId, from: args.from, top: args.top } });
-    // Which countries kept ready are nearly all of its searches, read as all countries (finish-off plan 2B).
-    if (connection) await refreshCountriesAsAll(ctx, connection);
     await ctx.scheduler.runAfter(args.delayMs, internal.searchConsoleAgentRun.collectSiteStep, {
       runId,
       workflowExecutionId,
@@ -189,6 +199,7 @@ export const startSiteRun = internalMutation({
       property: args.property,
       from: args.from,
       top: args.top,
+      main: args.main,
       countries: args.countries,
       to: args.top,
       rows: 0,
@@ -214,8 +225,8 @@ function stoppedBecause(outcome: StepOutcome, host: string): string {
 
 /**
  * One step of a website's run: up to a week of its days, newest first, as a
- * line on the run — all countries first, then each country kept ready
- * (`at`, its place in `countries`). Days left go to the next step, an action
+ * line on the run — the main home country first, then each country kept
+ * ready beside it (`at`, its place in `countries`). Days left go to the next step, an action
  * of its own; the next country starts once one is done, and the last
  * settles the run.
  */
@@ -224,7 +235,7 @@ export const collectSiteStep = internalAction({
     runId: v.id("agentRuns"),
     workflowExecutionId: v.id("workflowExecutions"),
     ...siteArgs,
-    /** The country kept ready this step is for, as its place in `countries`; missing for all countries. */
+    /** The country kept ready this step is for, as its place in `countries`; missing for the main one. */
     at: v.optional(v.number()),
     to: v.string(),
     rows: v.number(),

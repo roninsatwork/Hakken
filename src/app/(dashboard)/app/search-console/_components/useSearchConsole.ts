@@ -18,16 +18,18 @@ import { SITE_SHARED_KEYS, useSiteParam } from "../../sites/_components/useSiteP
 
 /** The kind of result every page of a site shows, kept in the address and carried by its menu. */
 export const RESULTS_KEY = "results";
-export const RESULT_KINDS = ["web", "image", "video", "news", "discover", "googleNews"] as const;
+/** Image search is neither kept nor shown since 2026-10-06 (search-console-home-countries-plan.md). */
+export const RESULT_KINDS = ["web", "video", "news", "discover", "googleNews"] as const;
 
 /**
  * The country every page of a site shows, kept in the address beside the
- * dates (search-console-plan.md §16): Google's code (`gbr`), or nothing for
- * All countries — what every page opens on.
+ * dates: Google's code (`fra`) for a country kept ready beside the main one,
+ * or nothing for the website's main home country — what every page opens on
+ * (search-console-home-countries-plan.md).
  */
 export const COUNTRY_KEY = "country";
-const ALL_COUNTRIES = "all";
-const COUNTRY_CHOICES = [ALL_COUNTRIES, ...GOOGLE_COUNTRIES.filter((code) => code !== "zzz")] as const;
+const MAIN_COUNTRY = "main";
+const COUNTRY_CHOICES = [MAIN_COUNTRY, ...GOOGLE_COUNTRIES.filter((code) => code !== "zzz")] as const;
 export type ResultKind = (typeof RESULT_KINDS)[number];
 
 /**
@@ -107,13 +109,21 @@ export function useSearchConsoleStatus() {
   return useQuery(api.searchConsoleConnect.searchConsoleStatus, { siteId });
 }
 
-/** The country chosen — Google's code — or null for All countries; and its setter (null back to All countries). */
+/**
+ * The country chosen — Google's code, for a country kept ready beside the
+ * main one — or null for the website's main home country; and its setter
+ * (null back to the main one). An address naming the main country, or one
+ * not kept, reads as the main one: no other country is offered.
+ */
 export function useSearchConsoleCountry(): [string | null, (next: string | null) => void] {
-  const [value, set] = useSiteParam<string>(COUNTRY_KEY, ALL_COUNTRIES, COUNTRY_CHOICES);
-  return [value === ALL_COUNTRIES ? null : value, (next) => set(next ?? ALL_COUNTRIES)];
+  const siteId = useSearchConsoleSiteId();
+  const choices = useQuery(api.searchConsoleCountries.searchConsoleCountryChoices, { siteId });
+  const [value, set] = useSiteParam<string>(COUNTRY_KEY, MAIN_COUNTRY, COUNTRY_CHOICES);
+  const kept = value !== MAIN_COUNTRY && (choices === undefined || choices.ready.includes(value));
+  return [kept ? value : null, (next) => set(next ?? MAIN_COUNTRY)];
 }
 
-/** The country a read is asked for: Google's code, or left out for All countries, as every read takes it. */
+/** The country a read is asked for: Google's code, or left out for the main home country, as every read takes it. */
 export function countryArg(country: string | null): { country?: string } {
   return country ? { country } : {};
 }

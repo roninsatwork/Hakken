@@ -22,7 +22,6 @@ import { holdBrandNames } from "./holdProfiles";
 import { updateInLanguage } from "./googleUpdates";
 import { BANDS, bandOf, ctrCurve, type Band } from "./utils/searchConsoleViews";
 import { stepEnd, stepStart } from "./utils/searchConsolePacks";
-import { searchLinesCountry } from "./searchConsoleShrink";
 import { wordStartMatcher } from "./utils/wordStarts";
 
 /**
@@ -68,8 +67,6 @@ async function seenPage(
   by: "first" | "last",
   span: { from: string; to: string } | { day: string; before: number },
 ): Promise<Seen[]> {
-  // A country nearly all of the searches keeps no register of its own (`searchConsoleShrink.ts`).
-  country = await searchLinesCountry(ctx, companyWebsiteId, country);
   const filed = seenType(searchType);
   const query = ctx.db.query("searchConsoleSeen");
   const ordered = by === "first"
@@ -205,7 +202,8 @@ export const searchConsoleNewLost = tenantQuery({
     const connection = await connectionOf(ctx, holdId);
     const empty = { counts: { newKeywords: 0, lostKeywords: 0, newPages: 0, lostPages: 0 }, periods: [], watchedFrom: null, notKept: false };
     const nothing = (preparing: boolean, notReady: boolean) => ({ ...pageOfList([] as Change[], args.page, args.rows, null), preparing, notReady, ...empty });
-    if (args.searchType !== "web" || args.country !== undefined) return { ...nothing(false, false), notKept: true };
+    // Kept for web search, in each home country (search-console-home-countries-plan.md).
+    if (args.searchType !== "web") return { ...nothing(false, false), notKept: true };
     const scope = await countryScope(ctx, site.hold, connection, args.country);
     if (scope.read === "LIVE") return nothing(scope.kept, !scope.kept);
     const country = scope.read === "KEPT" ? scope.country : undefined;

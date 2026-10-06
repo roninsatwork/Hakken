@@ -730,7 +730,7 @@ describe("collecting", () => {
     expect(month).toMatchObject({ keys: ["/a"], clicks: [9], impressions: [90], positionSums: [260] });
   });
 
-  test("image search's days roll into their week once the week is over; web search keeps its 90 days", async () => {
+  test("image search is no longer added up: days of it left from before are not rolled up, and web search keeps its 90 days", async () => {
     const { t, siteId } = await setup();
     const put = (searchType: "web" | "image", start: string) =>
       t.run(async (ctx) => await ctx.db.insert("searchConsoleLists", {
@@ -742,18 +742,9 @@ describe("collecting", () => {
       await put("web", day);
     }
 
+    // Neither kept nor shown since 2026-10-06 (search-console-home-countries-plan.md); what is left goes when the website switches to its main country.
     const due = await t.query(internal.searchConsoleRollups.rollUpsDue, { companyWebsiteId: siteId, newest: NEWEST });
-    expect(due.days).toEqual([
-      { searchType: "image", list: "device", start: "2026-09-15" },
-      { searchType: "image", list: "device", start: "2026-09-16" },
-    ]);
-    for (const slot of due.days) await t.mutation(internal.searchConsoleRollups.rollUp, { companyWebsiteId: siteId, ...slot, from: "DAY" });
-
-    const kept = await t.run(async (ctx) => await ctx.db.query("searchConsoleLists").collect());
-    expect(kept.filter((record) => record.searchType === "image").map((record) => `${record.grain} ${record.start}`).sort())
-      .toEqual(["DAY 2026-09-21", "WEEK 2026-09-14"]);
-    expect(kept.find((record) => record.grain === "WEEK")).toMatchObject({ keys: ["MOBILE"], clicks: [2], impressions: [20] });
-    expect(kept.filter((record) => record.searchType === "web")).toHaveLength(3);
+    expect(due.days).toEqual([]);
   });
 
   test("Google taking the access back asks for connecting again, and the figures stay", async () => {

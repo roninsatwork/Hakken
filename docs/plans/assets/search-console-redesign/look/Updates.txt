@@ -2,7 +2,7 @@
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Google updates
-choice: Kind of result: Web | Image | Video | News | Discover | Google News
+choice: Kind of result: Web | Video | News | Discover | Google News
 chart-card: Clicks, with Google's updates
   checkbox: Clicks
 search: Search updates…

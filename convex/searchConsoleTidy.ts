@@ -5,7 +5,6 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { isPageRef, turnKeptStep } from "./searchConsolePageRefs";
 import { rollUpSite } from "./searchConsoleRollups";
-import { countriesAsAllNow } from "./searchConsoleShrink";
 import { firstDayKeptFor } from "./utils/searchConsolePacks";
 import { SEARCH_TYPES, searchTypeValidator } from "./searchConsoleSchema";
 import { LISTS_OF } from "./searchConsoleApi";
@@ -75,8 +74,9 @@ export const tidyPlan = internalMutation({
     if (!connection || connection.clearing) return null;
     const hold = await ctx.db.get(connection.companyWebsiteId);
     const website = hold ? await ctx.db.get(hold.websiteId) : null;
-    const countries = await countriesAsAllNow(ctx, connection);
-    if (args.go) await ctx.db.patch(connection._id, { countriesAsAll: countries.length > 0 ? countries : undefined });
+    // No country is read as all countries since 2026-10-06, when all countries stopped being kept
+    // (search-console-home-countries-plan.md): none has search-and-page lines to remove.
+    const countries: string[] = [];
     return { host: website?.displayHost ?? website?.host ?? String(connection.companyWebsiteId), countries };
   },
 });
@@ -302,8 +302,8 @@ async function tasksFor(ctx: ActionCtx, connectionId: Id<"searchConsoleConnectio
   for (const country of [undefined, ...(all?.countries ?? [])]) {
     tasks.push({ kind: "imageSearches", ...(country === undefined ? {} : { country }) }, { kind: "imageSeen", ...(country === undefined ? {} : { country }) });
   }
-  // New and lost kept for web, all countries: every country's register, and each other kind's.
-  for (const country of all?.countries ?? []) tasks.push({ kind: "register", country }, { kind: "registerDays", country });
+  // New and lost is kept for web search, in every home country since 2026-10-06
+  // (search-console-home-countries-plan.md): each other kind's register goes, never a country's.
   for (const searchType of SEARCH_TYPES.filter((type) => type !== "web")) tasks.push({ kind: "register", searchType }, { kind: "registerDays", searchType });
   // Only the searches kept (round two, D): each kind of result with searches, for all countries and each country; then the register.
   for (const country of [undefined, ...(all?.countries ?? [])]) {
@@ -313,12 +313,8 @@ async function tasksFor(ctx: ActionCtx, connectionId: Id<"searchConsoleConnectio
   }
   tasks.push({ kind: "unkeptSeen", searchType: "web" });
   tasks.push({ kind: "addresses" });
-  if (!all?.newestDay) return tasks;
-  tasks.push({ kind: "images", newest: all.newestDay });
-  for (const country of all.countries) {
-    const one = await ctx.runQuery(internal.searchConsoleSync.stepState, { connectionId, country });
-    if (one?.newestDay) tasks.push({ kind: "images", country, newest: one.newestDay });
-  }
+  // Image search's days are no longer rolled into weeks: it is neither kept nor shown since
+  // 2026-10-06, and what is left of it goes when the website switches to its main country.
   return tasks;
 }
 

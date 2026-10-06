@@ -1724,19 +1724,20 @@
         "descriptionCompetitor": "Da dove vengono controllati i posizionamenti di {host}. Solo per questa azienda: un'altra azienda che osserva lo stesso sito imposta i propri.",
         "trades": {
           "title": "Dove vende",
-          "lead": "I paesi in cui si trovano i suoi clienti. Search Console tiene pronto ciascuno accanto a tutti i paesi, così puoi vedere le ricerche di un paese da sole, senza quelle dei luoghi in cui non vende.",
-          "speed": "Ogni paese tenuto pronto viene raccolto a ogni raccolta, quindi sceglierlo in una pagina di Search Console è veloce quanto Tutti i paesi, mentre qualsiasi altro paese viene chiesto a Google quando lo scegli. Search Console si apre sempre su Tutti i paesi.",
-          "limit": "Tiene pronti fino a {limit, plural, one {# paese} other {# paesi}}.",
-          "over": "Tiene pronti fino a {limit, plural, one {# paese} other {# paesi}}: restano pronti quelli aggiunti per primi, e gli altri vengono chiesti a Google quando li scegli.",
+          "lead": "I suoi paesi principali: quelli in cui si trovano i suoi clienti. Search Console tiene questi e nient'altro, non tutti i paesi. Il primo è il paese principale, su cui si apre ogni pagina di Search Console; gli altri si possono scegliere accanto.",
+          "speed": "Ognuno viene raccolto a ogni raccolta. Metti un altro paese per primo e diventa quello principale: i suoi dati vengono raccolti da capo, dagli ultimi 90 giorni di Google.",
+          "limit": "Tiene fino a {limit, plural, one {# paese principale} other {# paesi principali}}.",
+          "over": "Tiene fino a {limit, plural, one {# paese principale} other {# paesi principali}}: restano quelli aggiunti per primi, gli altri no.",
           "changeLimit": "Cambia il limite",
           "changeLimitTip": "Paesi tenuti pronti per sito, nella pagina Limiti di {host}",
-          "empty": "Ancora nessun paese. Search Console mostra tutti i paesi, e chiede a Google qualsiasi paese scelto.",
-          "pastLimit": "Non tenuto pronto: oltre il limite",
+          "empty": "Ancora nessun paese. Search Console tiene il paese del luogo da cui si osserva questo sito, qui sotto.",
+          "pastLimit": "Non tenuto: oltre il limite",
+          "main": "Paese principale: Search Console si apre su questo",
           "remove": "Rimuovi {country}",
           "addLabel": "Aggiungi un paese",
           "choose": "Scegli un paese…",
           "add": "Aggiungi",
-          "fullTip": "Questo sito tiene pronti {limit, plural, one {# paese} other {# paesi}}. Alza il limite nella sua pagina Limiti per aggiungerne altri."
+          "fullTip": "Questo sito tiene {limit, plural, one {# paese principale} other {# paesi principali}}. Alza il limite nella sua pagina Limiti per aggiungerne altri."
         },
         "watch": {
           "title": "Da dove osservi",
@@ -11398,7 +11399,7 @@
       "month": "Mese",
       "byWeek": "Mostrato per settimana: i giorni si tengono per 90 giorni e queste date vanno più indietro.",
       "byMonth": "Mostrato per mese: le settimane si tengono per 6 mesi e queste date vanno più indietro.",
-      "noSearches": "Le ricerche non si tengono per {kind, select, image {Google Immagini} discover {Discover} googleNews {Google News} other {questo tipo di risultato}}, solo i totali e le pagine. Scegli Web per vedere le ricerche.",
+      "noSearches": "Le ricerche non si tengono per {kind, select, discover {Discover} googleNews {Google News} other {questo tipo di risultato}}, solo i totali e le pagine. Scegli Web per vedere le ricerche.",
       "reach": "Mostra le ultime {weeks} settimane, dal {from}: il massimo che i grafici tengono, impostato in Limiti.",
       "partDays": "{dates}, {days, plural, one {# giorno} other {# giorni}}",
       "notBuilt": "Questo passo viene sommato dopo la prossima raccolta."
@@ -11445,7 +11446,7 @@
       "versus": "Variazione rispetto ai {days} giorni precedenti",
       "noVersus": "Nessuna variazione: i giorni precedenti non sono disponibili",
       "preparing": "Sto sommando queste date. L'elenco appare appena è pronto.",
-      "noSearches": "Le ricerche non si tengono per {kind, select, image {Google Immagini} discover {Discover} googleNews {Google News} other {questo tipo di risultato}}, solo i totali e le pagine. Scegli Web per vedere le ricerche.",
+      "noSearches": "Le ricerche non si tengono per {kind, select, discover {Discover} googleNews {Google News} other {questo tipo di risultato}}, solo i totali e le pagine. Scegli Web per vedere le ricerche.",
       "behind": "Mostro l'elenco di prima del giorno più recente di Google; il più recente si sta aggiungendo ora.",
       "cut": "I {count} con più clic",
       "empty": "Niente in queste date.",
@@ -11718,7 +11719,7 @@
       "newOrLost": "Nuove o perse",
       "new": "Nuova",
       "lostWord": "Persa",
-      "notKept": "Nuove e perse si tengono per Web, tutti i paesi. Scegli Web e Tutti i paesi per vederle."
+      "notKept": "Nuove e perse si tengono per Web. Scegli Web per vederle."
     },
     "updates": {
       "title": "Aggiornamenti di Google",
@@ -11814,11 +11815,6 @@
     },
     "country": {
       "label": "Paese",
-      "all": "Tutti i paesi",
-      "ready": "Tenuti pronti",
-      "others": "Tutti gli altri paesi",
-      "asked": "Chiesto a Google quando lo scegli, quindi richiede un momento.",
-      "asAll": "ricerche e pagine di tutti i paesi, perché {country} è quasi tutte le ricerche di questo sito",
       "notReady": "{country} non è tra i paesi tenuti pronti per questo sito, quindi questa pagina non può mostrarlo. Una volta aggiunto, compare qui dopo la prossima raccolta."
     },
     "tracked": {

@@ -7,7 +7,7 @@ import { accessTokenFor, type ConnectionProblem } from "./searchConsoleConnect";
 import { noteHoldPagesChanged } from "./holdPages";
 import { GOOGLE_DIMENSIONS, LISTS_OF, queryAnalytics, type AnalyticsRow, type GoogleFailure } from "./searchConsoleApi";
 import {
-  SEARCH_TYPES,
+  COLLECTED_SEARCH_TYPES,
   listValidator,
   searchTypeValidator,
   seenType,
@@ -20,7 +20,8 @@ import { fromGoogle, pack, rowsOf, DAYS_KEPT, type Packed } from "./utils/search
 import { slotParts } from "./searchConsoleRollups";
 import { deletePageRefs, encodePages, encodePagesFromAction } from "./searchConsolePageRefs";
 import { keptLines, keptSearchesOf } from "./searchConsoleKeep";
-import { countriesKeptReady, heldFor, stillKeptReady, withHeld, type HeldRange } from "./searchConsoleCountries";
+import { countriesKeptReady, heldFor, mainConsoleCountry, stillKeptReady, withHeld, type HeldRange } from "./searchConsoleCountries";
+import { NOTHING_HELD } from "./searchConsoleMainCountry";
 
 /**
  * Collecting a connected site's Search Console figures, and keeping them as
@@ -145,6 +146,8 @@ export const agentCollections = internalQuery({
     property: v.string(),
     from: v.string(),
     top: v.string(),
+    /** The main home country, what is held without a country is of (`mainConsoleCountry`). */
+    main: v.string(),
     countries: v.array(v.object({ code: v.string(), from: v.string() })),
   })),
   handler: async (ctx) => {
@@ -172,6 +175,7 @@ export const agentCollections = internalQuery({
         host: website?.displayHost ?? website?.host ?? connection.property,
         property: connection.property,
         ...recentWindow(connection.newestDay, now, connection.oldestDay),
+        main: hold ? mainConsoleCountry(hold) : "gbr",
         countries: kept.map((code) => {
           const held = heldFor(connection, code);
           return { code, from: recentWindow(held?.newestDay, now, held?.oldestDay).from };
@@ -212,8 +216,8 @@ export const stepState = internalQuery({
       newestDay: held?.newestDay ?? null,
       kept: args.country === undefined || kept.includes(args.country),
       countries: kept.filter((code) => heldFor(connection, code) !== null),
-      /** Nearly all of the website's searches: no search-and-page lines of its own (`searchConsoleShrink.ts`). */
-      asAll: args.country !== undefined && (connection.countriesAsAll ?? []).includes(args.country),
+      /** The country the figures held without a country are of (`mainConsoleCountry`); none before the first collection since 2026-10-06. */
+      mainCountry: connection.mainCountry ?? null,
     };
   },
 });
@@ -308,8 +312,10 @@ export type StepOutcome = {
 /**
  * One step: up to a week of days, newest first — each kind of result's
  * totals for the step's days, then, day by day, each list of each kind that
- * had impressions, kept as one record a day. For one country kept ready,
- * every ask carries Google's country filter and there is no country list.
+ * had impressions, kept as one record a day. Every ask carries Google's
+ * country filter: the main home country's, held without a country, or a
+ * country kept ready beside it. Only the main country keeps a list of every
+ * country's totals, asked of Google unfiltered.
  * Says how it ended; the Collector's run goes on from there
  * (`searchConsoleAgentRun.ts`).
  */
@@ -325,6 +331,9 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
     return ended("NOT_OWNED");
   }
   if (!state.kept) return ended("NOT_KEPT");
+  // Every ask is of a home country: the one named, or the main one, held without a country (`mainConsoleCountry`).
+  const asked = args.country ?? state.mainCountry;
+  if (asked === null) return ended("SKIPPED");
 
   const startedAt = Date.now();
   const runId = await ctx.runMutation(internal.searchConsoleSync.startRun, {
@@ -361,24 +370,23 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
     ...country,
   };
   const held = (day: string) => state.oldestDay !== null && state.newestDay !== null && day >= state.oldestDay && day <= state.newestDay;
-  // One country's figures: every ask filtered to it, and no country list inside it.
-  const filter = args.country === undefined
-    ? {}
-    : { dimensionFilterGroups: [{ filters: [{ dimension: "country", operator: "equals", expression: args.country }] }] };
-  // A country nearly all of the searches asks for no search-and-page lines: they would be all countries' again.
-  const listsOf = (type: SearchType) => LISTS_OF[type].filter((list) => args.country === undefined
-    || (list !== "country" && !(state.asAll && (list === "pair" || list === "page"))));
+  // A home country's figures: every ask filtered to it — but the main country's list of every
+  // country's totals, kept whole so Countries and devices shows where the traffic comes from
+  // (search-console-home-countries-plan.md, decision 4). A country kept beside it has no such list.
+  const countryFilter = { dimensionFilterGroups: [{ filters: [{ dimension: "country", operator: "equals", expression: asked }] }] };
+  const filterFor = (list: SearchConsoleList | "date") => (list === "country" ? {} : countryFilter);
+  const listsOf = (type: SearchType) => LISTS_OF[type].filter((list) => args.country === undefined || list !== "country");
   let failure: GoogleFailure | null = null;
 
   // Each kind of result's totals, a row a day: one ask covers the step.
   const totals = new Map<SearchType, Map<string, Figures>>();
-  for (const type of SEARCH_TYPES) {
+  for (const type of COLLECTED_SEARCH_TYPES) {
     const answer = await ask(session, (accessToken) => queryAnalytics(accessToken, args.property, {
       startDate: stepFrom,
       endDate: args.to,
       type,
       dimensions: ["date"],
-      ...filter,
+      ...filterFor("date"),
     }));
     if (!answer.ok) {
       if (answer.reason === "REFUSED") {
@@ -396,8 +404,8 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
   type Seen = Record<"query" | "page", Map<string, { first: string; last: string }>>;
   const seen = new Map<SearchType, Seen>();
   const see = (type: SearchType, kind: "query" | "page", key: string, day: string) => {
-    // New and lost is kept for web search, all countries (store less round two, F).
-    if (type !== "web" || args.country !== undefined) return;
+    // New and lost is kept for web search, in each home country (search-console-home-countries-plan.md).
+    if (type !== "web") return;
     const lists = seen.get(type) ?? { query: new Map(), page: new Map() };
     seen.set(type, lists);
     const was = lists[kind].get(key);
@@ -450,7 +458,7 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
           endDate: day,
           type,
           dimensions: [...GOOGLE_DIMENSIONS[list]],
-          ...filter,
+          ...filterFor(list),
         }));
         if (!answer.ok) {
           if (answer.reason === "REFUSED") counts.refused.push(`${type}/${list}`);
@@ -731,7 +739,7 @@ export const heldDayTotals = internalQuery({
   })),
   handler: async (ctx, args) => {
     const out = [];
-    for (const searchType of SEARCH_TYPES) {
+    for (const searchType of COLLECTED_SEARCH_TYPES) {
       const days = await ctx.db
         .query("searchConsoleDays")
         .withIndex("by_hold_country_type_day", (q) => q
@@ -900,16 +908,7 @@ export const clearCollected = internalMutation({
       .first();
     if (!connection) return null;
     // Marked as clearing first: a step still running drops what it fetched.
-    await ctx.db.patch(connection._id, {
-      clearing: true,
-      newestDay: undefined,
-      oldestDay: undefined,
-      countriesHeld: undefined,
-      backfilledAt: undefined,
-      historyAt: undefined,
-      lastCollectedAt: undefined,
-      updatedAt: Date.now(),
-    });
+    await ctx.db.patch(connection._id, { clearing: true, ...NOTHING_HELD, updatedAt: Date.now() });
     await ctx.scheduler.runAfter(0, internal.searchConsoleSync.clearFigures, args);
     // Your pages' clicks go with them that night (dataforseo-cost-plan.md, A1).
     await noteHoldPagesChanged(ctx, args.companyWebsiteId);

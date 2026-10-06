@@ -34,6 +34,7 @@ import { followPlatformWhereStartingNumber } from "./companyDataLimits";
 import { detachCompanySchedules } from "./scheduler";
 import { removeSampleResearch } from "./keywordResearchSampleMigration";
 import { dropStoredGapsStep } from "./siteContentGap";
+import { prepareMainCountryOf } from "./searchConsoleMainCountry";
 import {
   rebuildAnswerSummaries,
   rebuildOperationCosts,
@@ -195,6 +196,21 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
    * keyword copies already kept (`siteContentGap.ts`). Run before
    * `siteContentGaps` leaves the schema.
    */
+  /**
+   * Each Search Console connection switched to its main home country now,
+   * rather than at its next run (`prepareMainCountryOf`;
+   * search-console-home-countries-plan.md): its all-countries figures cleared,
+   * and the main country's 90 days collected at the Collector's next run.
+   */
+  "2026-10-06-search-console-home-countries": async (ctx, cursor, batchSize) => {
+    const page = await ctx.db.query("searchConsoleConnections").paginate({ cursor, numItems: Math.min(batchSize, 20) });
+    let updated = 0;
+    for (const connection of page.page) {
+      if (connection.clearing) continue;
+      if ((await prepareMainCountryOf(ctx, connection)) === "SWITCHING") updated += 1;
+    }
+    return { cursor: page.continueCursor, isDone: page.isDone, processed: page.page.length, updated };
+  },
   "2026-10-06-drop-stored-gaps": async (ctx) => {
     const step = await dropStoredGapsStep(ctx);
     return { cursor: null, isDone: !step.more, processed: step.removed, updated: step.removed };

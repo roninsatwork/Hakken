@@ -69,7 +69,7 @@ export async function daysOf(
     .take(MOST_DAYS * 2 + 2);
 }
 
-/** Google's country filter for a live ask: only that country's rows; none for all countries. */
+/** Google's country filter for a live ask: only that country's rows; none for the main one, which `askLive` adds. */
 export function countryFilters(country: string | undefined): Array<{ dimension: string; operator: string; expression: string }> {
   return country === undefined ? [] : [{ dimension: "country", operator: "equals", expression: country }];
 }
@@ -217,16 +217,38 @@ export const searchConsoleLiveDays = tenantAction({
 
 type LiveAsk = Parameters<typeof queryAnalytics>[2];
 
+/**
+ * A live ask of the main home country when it names none (search-console-
+ * home-countries-plan.md): what is held without a country is that country's,
+ * so an ask beside it must be too. One by country — a list of every
+ * country's totals — is asked whole, as the main country keeps it.
+ */
+export function inMainCountry(ask: LiveAsk, main: string | null): LiveAsk {
+  if (main === null || ask.dimensions.includes("country")) return ask;
+  const groups = ask.dimensionFilterGroups ?? [];
+  if (groups.some((group) => group.filters.some((filter) => filter.dimension === "country"))) return ask;
+  const filter = { dimension: "country", operator: "equals", expression: main };
+  return { ...ask, dimensionFilterGroups: groups.length === 0 ? [{ filters: [filter] }] : groups.map((group) => ({ filters: [...group.filters, filter] })) };
+}
+
+/** The main home country a connection's figures held without a country are of; null before its first collection since 2026-10-06. */
+export const connectionMainCountry = internalQuery({
+  args: { connectionId: v.id("searchConsoleConnections") },
+  returns: v.union(v.string(), v.null()),
+  handler: async (ctx, args) => (await ctx.db.get(args.connectionId))?.mainCountry ?? null,
+});
+
 /** One ask of Google through a company's own connection, renewing the token once: its rows, or why not. */
 export async function askLive(
   ctx: ActionCtx,
   target: { connectionId: Id<"searchConsoleConnections">; property: string },
   ask: LiveAsk,
 ): Promise<{ ok: true; rows: AnalyticsRow[] } | { ok: false; problem: "NOT_CONNECTED" | "GOOGLE_REFUSED" | "GOOGLE_BUSY" }> {
+  const asked = inMainCountry(ask, await ctx.runQuery(internal.searchConsoleReads.connectionMainCountry, { connectionId: target.connectionId }));
   for (const renew of [false, true]) {
     const token = await accessTokenFor(ctx, target.connectionId, renew);
     if (!token.ok) return { ok: false, problem: token.problem === "GOOGLE_BUSY" ? "GOOGLE_BUSY" : "NOT_CONNECTED" };
-    const answer = await queryAnalytics(token.accessToken, target.property, ask);
+    const answer = await queryAnalytics(token.accessToken, target.property, asked);
     if (answer.ok) return { ok: true, rows: answer.rows };
     if (answer.reason !== "EXPIRED") return { ok: false, problem: answer.reason === "BUSY" || answer.reason === "UNREACHABLE" ? "GOOGLE_BUSY" : "GOOGLE_REFUSED" };
   }

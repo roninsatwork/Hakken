@@ -16,7 +16,7 @@ import { formatDay } from "../../sites/_components/siteFormat";
 import { SiteViewSwitch } from "../../sites/_components/SiteViewSwitch";
 import { countryName } from "./countries";
 import { readerLanguage } from "./searchConsoleFormat";
-import { RESULT_KINDS, useResultKind, useSearchConsoleHref } from "./useSearchConsole";
+import { RESULT_KINDS, useResultKind, useSearchConsoleHref, useSearchConsoleStatus } from "./useSearchConsole";
 import { SearchConsoleCatchUp } from "./SearchConsoleCatchUp";
 
 export type SearchConsoleStatus = NonNullable<FunctionReturnType<typeof api.searchConsoleConnect.searchConsoleStatus>>;
@@ -173,14 +173,22 @@ export function SearchConsoleGate({ status, siteId, children }: {
   return <ConnectCard status={status} siteId={siteId} />;
 }
 
-/** The kind of result every page of the site shows: web, image, video, news, Discover or Google News. */
+/**
+ * The kind of result every page of the site shows: web, and video, news,
+ * Discover or Google News only where Google has figures for them
+ * (search-console-home-countries-plan.md, decision 3). With web alone there
+ * is nothing to switch, and no switch.
+ */
 export function ResultKindSwitch() {
   const t = useTranslations("searchConsole.kinds");
   const [kind, setKind] = useResultKind();
+  const held = useSearchConsoleStatus()?.kinds ?? [];
+  const kinds = RESULT_KINDS.filter((value) => value === "web" || value === kind || held.includes(value));
+  if (kinds.length < 2) return null;
   return (
     <SiteViewSwitch
       label={t("label")}
-      options={RESULT_KINDS.map((value) => ({ value, label: t(value) }))}
+      options={kinds.map((value) => ({ value, label: t(value) }))}
       value={kind}
       onChange={setKind}
     />

@@ -5,7 +5,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { LISTS_OF } from "./searchConsoleApi";
 import {
-  SEARCH_TYPES,
+  COLLECTED_SEARCH_TYPES,
   listValidator,
   searchTypeValidator,
   type SearchConsoleGrain,
@@ -101,7 +101,7 @@ export const rollUpsDue = internalQuery({
     const weekLine = firstWeekKept(args.newest);
     const days = new Map<string, Slot>();
     const weeks = new Map<string, Slot>();
-    for (const searchType of SEARCH_TYPES) {
+    for (const searchType of COLLECTED_SEARCH_TYPES) {
       // Image search's days go into their weeks once the week is over (finish-off plan 2C).
       const dayLine = firstDayKeptFor(searchType, args.newest);
       for (const list of LISTS_OF[searchType]) {
@@ -240,19 +240,25 @@ export const keptBetween = internalQuery({
   },
 });
 
-/** Which kinds of result a website — or one country of it — has any days of: the ones worth building periods for. */
+/**
+ * Which kinds of result a website — or one country of it — has any days of:
+ * the ones worth building periods for, and the tabs its pages show
+ * (search-console-home-countries-plan.md, decision 3).
+ */
+export async function kindsHeld(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"companyWebsites">, country?: string): Promise<SearchType[]> {
+  const out: SearchType[] = [];
+  for (const searchType of COLLECTED_SEARCH_TYPES) {
+    const any = await ctx.db
+      .query("searchConsoleDays")
+      .withIndex("by_hold_country_type_day", (q) => q.eq("companyWebsiteId", companyWebsiteId).eq("country", country).eq("searchType", searchType))
+      .first();
+    if (any) out.push(searchType);
+  }
+  return out;
+}
+
 export const typesHeld = internalQuery({
   args: { companyWebsiteId: v.id("companyWebsites"), ...countryArg },
   returns: v.array(searchTypeValidator),
-  handler: async (ctx, args) => {
-    const out: SearchType[] = [];
-    for (const searchType of SEARCH_TYPES) {
-      const any = await ctx.db
-        .query("searchConsoleDays")
-        .withIndex("by_hold_country_type_day", (q) => q.eq("companyWebsiteId", args.companyWebsiteId).eq("country", args.country).eq("searchType", searchType))
-        .first();
-      if (any) out.push(searchType);
-    }
-    return out;
-  },
+  handler: async (ctx, args) => await kindsHeld(ctx, args.companyWebsiteId, args.country),
 });

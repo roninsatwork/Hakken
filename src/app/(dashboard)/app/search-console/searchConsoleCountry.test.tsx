@@ -16,9 +16,11 @@ import { STARTING_CONSOLE_LIMITS } from "@/src/test/searchConsoleLimits";
 
 /**
  * The country choice beside the date boxes (docs/plans/active/
- * search-console-plan.md §16): every page reads the country chosen — a
- * country kept ready from what is kept, any other asked of Google — and the
- * tables have no Country filter of their own any more.
+ * search-console-plan.md §16; home countries only since 2026-10-06,
+ * search-console-home-countries-plan.md): it offers the website's home
+ * countries, its main one first; every page reads the country chosen — a
+ * country kept ready from what is kept, or asked of Google before its first
+ * collection — and the tables have no Country filter of their own.
  */
 
 const nav = vi.hoisted(() => ({ pathname: "/app/search-console/site_1", search: "", replace: vi.fn(), push: vi.fn() }));
@@ -143,55 +145,44 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe("the country choice", () => {
-  it("opens on All countries, then the website's countries kept ready in the order added, then every other country by name", () => {
+  it("offers the website's home countries only: its main one first, which every page opens on, then those kept ready beside it (2026-10-06)", () => {
     at("/app/search-console/site_1");
-    answer({ "searchConsoleCountries:searchConsoleCountryChoices": { ready: ["irl", "gbr"] } });
+    answer({ "searchConsoleCountries:searchConsoleCountryChoices": { main: "gbr", ready: ["irl", "usa"] } });
     render(<SearchConsoleCountryPicker />);
     const select = screen.getByRole("combobox", { name: "searchConsole.country.label" }) as HTMLSelectElement;
     expect(select.value).toBe("");
-    expect(select.options[0]).toHaveTextContent("searchConsole.country.all");
-    const groups = [...select.querySelectorAll("optgroup")];
-    expect(groups.map((group) => group.label)).toEqual(["searchConsole.country.ready", "searchConsole.country.others"]);
-    expect([...groups[0].querySelectorAll("option")].map((option) => [option.value, option.textContent])).toEqual([["irl", "Ireland"], ["gbr", "United Kingdom"]]);
-    const others = [...groups[1].querySelectorAll("option")];
-    const names = others.map((option) => option.textContent ?? "");
-    expect(names).toEqual([...names].sort(new Intl.Collator("en-GB").compare));
-    const codes = others.map((option) => option.value);
-    expect(codes).toEqual(expect.arrayContaining(["moz", "usa"]));
-    expect(codes).not.toContain("gbr");
-    expect(codes).not.toContain("irl");
-    expect(codes).not.toContain("zzz");
+    expect([...select.options].map((option) => [option.value, option.textContent])).toEqual([["", "United Kingdom"], ["irl", "Ireland"], ["usa", "United States"]]);
+    expect(select.querySelectorAll("optgroup")).toHaveLength(0);
 
-    fireEvent.change(select, { target: { value: "moz" } });
-    expect(written().get("country")).toBe("moz");
+    fireEvent.change(select, { target: { value: "irl" } });
+    expect(written().get("country")).toBe("irl");
   });
 
-  it("has no kept-ready group when the website keeps none, and All countries takes the country out of the address", () => {
-    at("/app/search-console/site_1", "country=gbr");
-    answer({ "searchConsoleCountries:searchConsoleCountryChoices": { ready: [] } });
+  it("an address naming the main country, or one not kept, reads as the main one; choosing it takes the country out of the address", () => {
+    answer({ "searchConsoleCountries:searchConsoleCountryChoices": { main: "gbr", ready: ["irl"] } });
+    for (const named of ["gbr", "moz"]) {
+      at("/app/search-console/site_1", `country=${named}`);
+      const { unmount } = render(<SearchConsoleCountryPicker />);
+      expect((screen.getByRole("combobox", { name: "searchConsole.country.label" }) as HTMLSelectElement).value).toBe("");
+      unmount();
+    }
+    at("/app/search-console/site_1", "country=irl");
     render(<SearchConsoleCountryPicker />);
     const select = screen.getByRole("combobox", { name: "searchConsole.country.label" }) as HTMLSelectElement;
-    expect(select.value).toBe("gbr");
-    expect([...select.querySelectorAll("optgroup")].map((group) => group.label)).toEqual(["searchConsole.country.others"]);
+    expect(select.value).toBe("irl");
     fireEvent.change(select, { target: { value: "" } });
     expect(written().has("country")).toBe(false);
   });
 
-  it("sits beside the date boxes on every page of a website, and says a country not kept ready is asked of Google", () => {
-    at("/app/search-console/site_1", "country=moz");
+  it("sits beside the date boxes on every page of a website", () => {
+    at("/app/search-console/site_1", "country=irl");
     answer({
       "searchConsoleConnect:searchConsoleStatus": STATUS,
-      "searchConsoleCountries:searchConsoleCountryChoices": { ready: ["gbr"] },
+      "searchConsoleCountries:searchConsoleCountryChoices": { main: "gbr", ready: ["irl"] },
     });
-    const { unmount } = render(<SearchConsoleSiteLayout><p>the page</p></SearchConsoleSiteLayout>);
+    render(<SearchConsoleSiteLayout><p>the page</p></SearchConsoleSiteLayout>);
     expect(screen.getByRole("combobox", { name: "searchConsole.country.label" })).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "sites.range.label" })).toBeInTheDocument();
-    expect(screen.getByText(/searchConsole\.country\.asked/)).toBeInTheDocument();
-    unmount();
-
-    at("/app/search-console/site_1", "country=gbr");
-    render(<SearchConsoleSiteLayout><p>the page</p></SearchConsoleSiteLayout>);
-    expect(screen.queryByText(/searchConsole\.country\.asked/)).not.toBeInTheDocument();
   });
 });
 

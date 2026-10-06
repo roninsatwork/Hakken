@@ -67,7 +67,7 @@ describe("where a website trades", () => {
     const asSuper = t.withIdentity({ subject: superId });
 
     await expect(asSuper.mutation(api.searchConsoleCountries.setSearchConsoleCountries, { companyWebsiteId: siteId, countries: ["gbr", "irl", "usa", "fra"] }))
-      .rejects.toThrow(/keeps 3 countries ready/);
+      .rejects.toThrow(/keeps 3 home countries/);
 
     await t.run(async (ctx) => {
       await ctx.db.patch(siteId, { searchConsoleCountries: ["gbr", "irl", "usa", "fra"] });

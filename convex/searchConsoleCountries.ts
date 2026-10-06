@@ -7,16 +7,31 @@ import { readFanOutLimits } from "./fanOutLimits";
 import { requireMySite } from "./siteAccess";
 import { superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
-import { isGoogleCountry } from "./utils/countryCodes";
+import { alpha3Of, isGoogleCountry } from "./utils/countryCodes";
+import { SEO_LOCATIONS, resolveLocationCode } from "./utils/seoLocations";
 import { isTrackedHold } from "./utils/websitePairing";
 
 /**
- * Where a website trades, for Search Console (docs/plans/active/
- * search-console-plan.md §16): the countries kept ready beside all
- * countries, set only in admin, on the Market page. Each is collected and
- * made ready at every collection, so choosing it on a Search Console page is
- * as quick as all countries; any other country is asked of Google live.
+ * Where a website trades, for Search Console: its home countries, and only
+ * those (docs/plans/active/search-console-home-countries-plan.md; Anthony,
+ * 2026-10-06: "I'd rather lose all countries and just keep home countries …
+ * it's a global rule"). Set only in admin, on the Market page. The first is
+ * its main country (`mainConsoleCountry`), held without a country code and
+ * opened on every Search Console page; the rest are kept ready beside it.
+ * All countries, and countries not on the list, are not kept or offered.
  */
+
+/**
+ * A website's main home country, as Google writes it (`gbr`): the first on its
+ * Market list, or, with none, the country of the place it is watched from —
+ * the United Kingdom when no place is chosen, as everywhere else.
+ */
+export function mainConsoleCountry(hold: Pick<Doc<"companyWebsites">, "searchConsoleCountries" | "locationCode">): string {
+  const listed = hold.searchConsoleCountries?.[0];
+  if (listed) return listed;
+  const place = SEO_LOCATIONS.find((location) => location.code === resolveLocationCode(hold.locationCode));
+  return alpha3Of(place?.countryIso ?? "GB");
+}
 
 /** Google's "we could not tell" — never a country a website trades in. */
 const UNKNOWN_COUNTRY = "zzz";
@@ -25,21 +40,24 @@ const CLEAR_RECORDS = 5;
 const CLEAR_ROWS = 500;
 
 /**
- * The countries a website keeps ready: the first `consoleCountriesPerSite`
- * of its list, the countries added first kept when the limit is lower than
- * the list. None for a competitor, which has no Search Console of its own.
+ * The countries a website keeps ready beside its main one: the rest of its
+ * first `consoleCountriesPerSite` — the home countries a website keeps, its
+ * main one among them — the countries added first kept when the limit is
+ * lower than the list. None for a competitor, which has no Search Console of
+ * its own.
  */
 export async function countriesKeptReady(ctx: { db: QueryCtx["db"] }, hold: Doc<"companyWebsites">): Promise<string[]> {
   const list = hold.searchConsoleCountries ?? [];
-  if (list.length === 0 || isTrackedHold(hold)) return [];
+  if (list.length <= 1 || isTrackedHold(hold)) return [];
   const limits = await readFanOutLimits(ctx, hold.companyId, hold._id);
-  return list.slice(0, limits.consoleCountriesPerSite);
+  return list.slice(1, limits.consoleCountriesPerSite);
 }
 
 /**
  * Whether a write for one country still belongs: the country is still kept
  * ready. A country taken off while a run collected or added it up is not
- * filed again behind its clearing. All countries' writes always belong.
+ * filed again behind its clearing. The main country's writes always belong:
+ * one that changes is cleared whole (`switchMainCountry`).
  */
 export async function stillKeptReady(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"companyWebsites">, country: string | undefined): Promise<boolean> {
   if (country === undefined) return true;
@@ -80,12 +98,13 @@ export function withHeld(list: HeldEntry[] | undefined, country: string, range: 
 }
 
 /**
- * What a read of one country reads (§16). `ALL`: no country named, all
- * countries as before. `KEPT`: a country kept ready whose first collection
- * is in, read from what is kept, to its own newest day. `LIVE`: any other
- * country — or one kept ready before its first collection (`kept`) — asked
- * of Google, as other dates are; a read Google cannot answer live says the
- * country is not kept ready, or, when `kept`, that it is on its way.
+ * What a read of one country reads (§16). `ALL`: no country named, or the
+ * main one — what is held without a country, the main country's since
+ * 2026-10-06. `KEPT`: a country kept ready whose first collection is in,
+ * read from what is kept, to its own newest day. `LIVE`: any other country —
+ * or one kept ready before its first collection (`kept`); the screens offer
+ * none but home countries, so it says the country is not kept ready, or,
+ * when `kept`, that it is on its way.
  */
 export type CountryScope =
   | { read: "ALL" }
@@ -99,28 +118,24 @@ export async function countryScope(
   country: string | undefined,
 ): Promise<CountryScope> {
   const code = checkedCountry(country);
-  if (code === undefined) return { read: "ALL" };
+  if (code === undefined || code === mainConsoleCountry(hold)) return { read: "ALL" };
   const kept = (await countriesKeptReady(ctx, hold)).includes(code);
   const held = kept ? heldFor(connection, code) : null;
   return held ? { read: "KEPT", country: code, ...held } : { read: "LIVE", country: code, kept };
 }
 
 /**
- * The countries a Search Console page's country choice offers first: the
- * website's countries kept ready, in the order added. Any other country is
- * asked of Google live. The company's own website only, as every read.
+ * The countries a Search Console page's country choice offers, and only
+ * these: the website's main country, which every page opens on, then its
+ * countries kept ready, in the order added. The company's own website only,
+ * as every read.
  */
 export const searchConsoleCountryChoices = tenantQuery({
   args: { siteId: v.id("companyWebsites") },
-  returns: v.object({ ready: v.array(v.string()), asAll: v.array(v.string()) }),
+  returns: v.object({ main: v.string(), ready: v.array(v.string()) }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const connection = await ctx.db
-      .query("searchConsoleConnections")
-      .withIndex("by_hold", (q) => q.eq("companyWebsiteId", site.hold._id))
-      .first();
-    // Countries nearly all of its searches, whose searches and pages read as all countries (`searchConsoleShrink.ts`).
-    return { ready: await countriesKeptReady(ctx, site.hold), asAll: connection?.countriesAsAll ?? [] };
+    return { main: mainConsoleCountry(site.hold), ready: await countriesKeptReady(ctx, site.hold) };
   },
 });
 
@@ -173,12 +188,14 @@ export const setSearchConsoleCountries = superAdminMutation({
     if (countries.length > limit && countries.length > before.length) {
       throw appError(
         "INVALID_INPUT",
-        `This website keeps ${limit} ${limit === 1 ? "country" : "countries"} ready. Raise "Countries kept ready per website" on the Limits page to add more.`,
+        `This website keeps ${limit} ${limit === 1 ? "home country" : "home countries"}. Raise "Countries kept ready per website" on the Limits page to add more.`,
       );
     }
 
     await ctx.db.patch(args.companyWebsiteId, { searchConsoleCountries: countries.length > 0 ? countries : undefined, updatedAt: Date.now() });
-    for (const country of before.filter((code) => !countries.includes(code))) {
+    // A country no longer kept ready beside the main one goes; a main country
+    // that changes is cleared whole by the next collection (`switchMainCountry`).
+    for (const country of before.slice(1).filter((code) => !countries.slice(1).includes(code))) {
       await ctx.scheduler.runAfter(0, internal.searchConsoleCountries.clearCountry, { companyWebsiteId: args.companyWebsiteId, country });
     }
 

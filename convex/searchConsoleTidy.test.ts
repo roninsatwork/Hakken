@@ -51,43 +51,43 @@ async function setup() {
 }
 
 describe("tidying the figures kept before 2026-10-05", () => {
-  test("counts first and changes nothing, then removes the country's copy, turns the addresses and rolls image days into weeks", async () => {
+  test("counts first and changes nothing, then turns the addresses; a kept country's searches and New and lost stay, and image days are left to the switch (2026-10-06)", async () => {
     const { t } = await setup();
     const before = await t.run(async (ctx) => (await ctx.db.query("searchConsoleLists").collect()).length);
 
     const counted = await t.action(internal.searchConsoleTidy.tidyKeptFigures, { go: false });
     // Counting changes nothing, so a record two steps would each remove is counted by both.
-    expect(counted?.tally).toEqual({ websites: 1, countries: 1, copies: 2, seen: 1, addresses: 5, imageDays: 2, imageSearches: 2, register: 2, unkept: 0 });
-    expect(counted?.lines[0]).toBe("acme-shop.test: gbr read as all countries; 2 country records and 1 register rows to remove; 5 records to turn to page references; 2 image days to roll into weeks; 2 Google Images search records and 2 New and lost records not kept to remove; 0 lines and register rows of searches not kept to remove.");
+    // No country is read as all countries since all countries stopped being kept (search-console-home-countries-plan.md).
+    expect(counted?.tally).toEqual({ websites: 1, countries: 0, copies: 0, seen: 0, addresses: 5, imageDays: 0, imageSearches: 2, register: 1, unkept: 0 });
     expect(await t.run(async (ctx) => (await ctx.db.query("searchConsoleLists").collect()).length)).toBe(before);
 
     const done = await t.action(internal.searchConsoleTidy.tidyKeptFigures, { go: true });
-    expect(done?.tally).toMatchObject({ websites: 1, countries: 1, copies: 2, seen: 1, addresses: 2, imageSearches: 2 });
+    expect(done?.tally).toMatchObject({ websites: 1, countries: 0, copies: 0, seen: 0, imageSearches: 2 });
 
     const kept = await t.run(async (ctx) => await ctx.db.query("searchConsoleLists").collect());
-    expect(kept.filter((record) => record.country === "gbr").map((record) => record.list)).toEqual(["device"]);
+    expect(kept.filter((record) => record.country === "gbr").map((record) => record.list).sort()).toEqual(["device", "page", "pair"]);
     const pair = kept.find((record) => record.list === "pair")!;
     expect(pair.pages!.every(isPageRef)).toBe(true);
     expect(kept.find((record) => record.list === "page")!.keys.every(isPageRef)).toBe(true);
     expect(kept.filter((record) => record.searchType === "image" && record.list === "pair")).toEqual([]);
     expect(kept.filter((record) => record.searchType === "image").map((record) => `${record.grain} ${record.start}`).sort())
-      .toEqual(["DAY 2026-09-21", "WEEK 2026-09-14"]);
+      .toEqual(["DAY 2026-09-15", "DAY 2026-09-16", "DAY 2026-09-21"]);
     const seen = await t.run(async (ctx) => await ctx.db.query("searchConsoleSeen").collect());
-    expect(seen.map((row) => row.country)).toEqual([undefined]);
+    expect(seen.map((row) => row.country).sort()).toEqual(["gbr", undefined]);
     // The website's periods are asked to be built again from what is left.
     const asked = await t.run(async (ctx) => (await ctx.db.system.query("_scheduled_functions").collect()).map((job) => job.name));
     expect(asked.some((name) => name.includes("rebuildSitePeriods"))).toBe(true);
 
-    // What is kept, measured: the country's searches and pages gone, the page references counted.
+    // What is kept, measured: the country's searches and pages kept, the page references counted.
     const [size] = await t.action(internal.searchConsoleTidy.keptSize, { host: "acme-shop.test" });
     expect(size.complete).toBe(true);
-    expect(size.buckets.map((bucket) => bucket.name)).not.toContain("searchConsoleLists: a country's searches and pages");
+    expect(size.buckets.map((bucket) => bucket.name)).toContain("searchConsoleLists: a country's searches and pages");
     expect(size.buckets.find((bucket) => bucket.name === "searchConsolePageRefs")?.records).toBe(1);
     expect(await t.action(internal.searchConsoleTidy.keptSize, { host: "elsewhere.test" })).toEqual([]);
 
     // A second run finds nothing left to do.
     const again = await t.action(internal.searchConsoleTidy.tidyKeptFigures, { go: false });
-    expect(again?.tally).toEqual({ websites: 1, countries: 1, copies: 0, seen: 0, addresses: 0, imageDays: 0, imageSearches: 0, register: 0, unkept: 0 });
+    expect(again?.tally).toEqual({ websites: 1, countries: 0, copies: 0, seen: 0, addresses: 0, imageDays: 0, imageSearches: 0, register: 0, unkept: 0 });
   });
 
   test("searches not kept go from the lines kept and the register, judged on the 90 days; a website without them is left alone (round two, D)", async () => {

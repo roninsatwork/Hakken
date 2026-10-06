@@ -1,7 +1,6 @@
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { SearchConsolePeriod, SearchConsolePeriodList, SearchType } from "./searchConsoleSchema";
-import { FROM_SEARCH_LINES, searchLinesCountry } from "./searchConsoleShrink";
 import { decodePages, isPageRef, refFor } from "./searchConsolePageRefs";
 import { rowsOf, type Row } from "./utils/searchConsolePacks";
 import { PARTS_MOST } from "./searchConsoleRollups";
@@ -98,8 +97,7 @@ export async function readPeriod(
   which: "NOW" | "BEFORE",
   country?: string,
 ): Promise<{ from: string; to: string; builtAt: number; shown: number | null; rows: PeriodRow[] } | null> {
-  // Read only: a country nearly all of the searches reads its searches and pages as all countries (`searchConsoleShrink.ts`).
-  const scope = FROM_SEARCH_LINES.has(list) ? await searchLinesCountry(ctx, companyWebsiteId, country) : country;
+  const scope = country;
   let parts = (await periodParts(ctx, companyWebsiteId, scope, searchType, list, period, which)).sort((left, right) => left.part - right.part);
   if (parts.length === 0) return null;
   if (await ninetyInstead(ctx, { companyWebsiteId, country: scope, searchType, list }, period, which, parts[0], parts.length)) {
@@ -150,8 +148,8 @@ export async function readKeyed(
   askedKey: string,
   asked?: string,
 ): Promise<{ from: string; to: string; rows: PeriodRow[] } | null> {
-  // As `readPeriod`: a country nearly all of the searches reads all countries', and twelve months kept as the 90 days reads them.
-  const country = await searchLinesCountry(ctx, companyWebsiteId, asked);
+  // As `readPeriod`: twelve months kept as the 90 days reads them.
+  const country = asked;
   const own = await firstPartOf(ctx, companyWebsiteId, country, searchType, list, askedPeriod, which);
   const ninety = await ninetyInstead(ctx, { companyWebsiteId, country, searchType, list }, askedPeriod, which, own, own && own.keys.length === 0 ? 1 : 2);
   const period: SearchConsolePeriod = ninety ? "90" : askedPeriod;

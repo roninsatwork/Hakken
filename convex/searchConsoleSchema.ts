@@ -13,6 +13,14 @@ import { v } from "convex/values";
 /** The kinds of result Search Console reports apart. */
 export const SEARCH_TYPES = ["web", "image", "video", "news", "discover", "googleNews"] as const;
 export type SearchType = (typeof SEARCH_TYPES)[number];
+
+/**
+ * The kinds collected and shown: every one but image search, neither stored
+ * nor shown since 2026-10-06 (Anthony: "I don't think we need to store or
+ * show data for images"; search-console-home-countries-plan.md). `image`
+ * stays a kind a read may name, and finds nothing.
+ */
+export const COLLECTED_SEARCH_TYPES: readonly SearchType[] = SEARCH_TYPES.filter((type) => type !== "image");
 export const searchTypeValidator = v.union(
   v.literal("web"),
   v.literal("image"),
@@ -190,6 +198,15 @@ export const searchConsoleTables = {
     connectedBy: v.optional(v.id("users")),
     connectedAt: v.optional(v.number()),
     disconnectedAt: v.optional(v.number()),
+    /**
+     * The country the figures held without a country are of: the website's
+     * main home country (`mainConsoleCountry`, search-console-home-countries-
+     * plan.md), every ask to Google filtered to it but the list of every
+     * country's totals. Absent on figures collected before 2026-10-06, which
+     * were all countries'; a collection finding it differs from the
+     * website's main country clears them and collects that country afresh.
+     */
+    mainCountry: v.optional(v.string()),
     /** The newest and oldest days held, and when sixteen months were first all in. */
     newestDay: v.optional(v.string()),
     oldestDay: v.optional(v.string()),

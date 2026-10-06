@@ -1724,19 +1724,20 @@
         "descriptionCompetitor": "Where {host}'s rankings are checked from. For this company only: another company watching the same website sets its own.",
         "trades": {
           "title": "Where it trades",
-          "lead": "The countries its customers are in. Search Console keeps each one ready beside all countries, so you can see one country's searches on their own, without the ones from places it doesn't trade.",
-          "speed": "Each country kept ready is collected at every collection, so choosing it on a Search Console page is as quick as All countries, while any other country is asked of Google when it's chosen. Search Console always opens on All countries.",
-          "limit": "Keeps up to {limit, plural, one {# country} other {# countries}} ready.",
-          "over": "Keeps up to {limit, plural, one {# country} other {# countries}} ready: the ones added first are kept ready, and the rest are asked of Google when chosen.",
+          "lead": "Its home countries: the countries its customers are in. Search Console keeps these and nothing else — not all countries. The first is its main country, which every Search Console page opens on; the others can be picked beside it.",
+          "speed": "Each is collected at every collection. Put another country first and it becomes the main one: its figures are collected afresh, from Google's last 90 days.",
+          "limit": "Keeps up to {limit, plural, one {# home country} other {# home countries}}.",
+          "over": "Keeps up to {limit, plural, one {# home country} other {# home countries}}: the ones added first are kept, and the rest are not.",
           "changeLimit": "Change the limit",
           "changeLimitTip": "Countries kept ready per website, on {host}'s Limits page",
-          "empty": "No countries yet. Search Console shows all countries, and asks Google for any one chosen.",
-          "pastLimit": "Not kept ready: past the limit",
+          "empty": "No countries yet. Search Console keeps the country of the place this website is watched from, below.",
+          "pastLimit": "Not kept: past the limit",
+          "main": "Main country: Search Console opens on it",
           "remove": "Remove {country}",
           "addLabel": "Add a country",
           "choose": "Choose a country…",
           "add": "Add",
-          "fullTip": "This website keeps {limit, plural, one {# country} other {# countries}} ready. Raise the limit on its Limits page to add more."
+          "fullTip": "This website keeps {limit, plural, one {# home country} other {# home countries}}. Raise the limit on its Limits page to add more."
         },
         "watch": {
           "title": "Where you watch from",
@@ -11398,7 +11399,7 @@
       "month": "Month",
       "byWeek": "Shown by week: days are kept for 90 days, and these dates reach further back.",
       "byMonth": "Shown by month: weeks are kept for 6 months, and these dates reach further back.",
-      "noSearches": "Searches aren't kept for {kind, select, image {Google Images} discover {Discover} googleNews {Google News} other {this kind of result}}, only its totals and pages. Pick Web to see searches.",
+      "noSearches": "Searches aren't kept for {kind, select, discover {Discover} googleNews {Google News} other {this kind of result}}, only its totals and pages. Pick Web to see searches.",
       "reach": "Showing the last {weeks} weeks, from {from}: the most the charts keep, set in Limits.",
       "partDays": "{dates}, {days, plural, one {# day} other {# days}}",
       "notBuilt": "This step is added up after the next collection."
@@ -11445,7 +11446,7 @@
       "versus": "Change against the {days} days before",
       "noVersus": "No change shown: the days before aren't held",
       "preparing": "Adding these dates up. The list appears as soon as it's ready.",
-      "noSearches": "Searches aren't kept for {kind, select, image {Google Images} discover {Discover} googleNews {Google News} other {this kind of result}}, only its totals and pages. Pick Web to see searches.",
+      "noSearches": "Searches aren't kept for {kind, select, discover {Discover} googleNews {Google News} other {this kind of result}}, only its totals and pages. Pick Web to see searches.",
       "behind": "Showing the list from before Google's newest day; the newest is being added now.",
       "cut": "The {count} with the most clicks",
       "empty": "Nothing in these dates.",
@@ -11718,7 +11719,7 @@
       "newOrLost": "New or lost",
       "new": "New",
       "lostWord": "Lost",
-      "notKept": "New and lost is kept for Web, all countries. Pick Web and All countries to see it."
+      "notKept": "New and lost is kept for Web. Pick Web to see it."
     },
     "updates": {
       "title": "Google updates",
@@ -11814,11 +11815,6 @@
     },
     "country": {
       "label": "Country",
-      "all": "All countries",
-      "ready": "Kept ready",
-      "others": "Every other country",
-      "asked": "Asked of Google when chosen, so it takes a moment.",
-      "asAll": "searches and pages for all countries, as {country} is nearly all of this website’s searches",
       "notReady": "{country} isn't one of the countries kept ready for this website, so this page can't show it. Once it's added to them, it shows here after the next collection."
     },
     "tracked": {

@@ -5,7 +5,7 @@ detail-header
   back: Back to Keywords
   page-header: ‹the record's name›
     checkbox: Track this keyword
-choice: Kind of result: Web | Image | Video | News | Discover | Google News
+choice: Kind of result: Web | Video | News | Discover | Google News
 figures
   figure: Clicks
   figure: Impressions
