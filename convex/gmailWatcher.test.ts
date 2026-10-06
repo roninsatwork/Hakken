@@ -239,6 +239,47 @@ describe("the mailbox that answers itself", () => {
     expect(tasks).toHaveLength(0);
   });
 
+  test("a reply is written under the company's own prompt and rules, then the email's manners", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { companyId, adminId } = await seedMailbox(t);
+    await t.run(async (ctx) => {
+      await ctx.db.patch(companyId, { systemPrompt: "Always mention the five-year guarantee." });
+      await ctx.db.insert("aiRules", {
+        companyId,
+        trigger: "opening hours",
+        instruction: "Mention the Saturday clinic.",
+        priority: "HIGH",
+        isActive: true,
+        createdAt: Date.now(),
+      });
+      // The mailbox owner's own note is theirs, never a sender's.
+      await ctx.db.insert("userMemories", {
+        userId: adminId,
+        content: "Prefers short answers.",
+        normalizedContent: "prefers short answers.",
+        status: "APPROVED",
+        sourceType: "MANUAL",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        usageCount: 0,
+      });
+    });
+    stubGmail([QUESTION]);
+    generateMock.mockResolvedValue({ text: '{"reply": "We are open 9 to 5.", "needsHuman": false}' });
+
+    await t.action(internal.gmailWatcher.pollMailboxes, {});
+
+    // One brain, many doors (assistant-foundation-plan.md, item 2): the email
+    // door used to write under instructions of its own, without the
+    // company's prompt or its rules.
+    const told = (generateMock.mock.calls[0][0] as { systemInstruction: string }).systemInstruction;
+    expect(told).toContain("Always mention the five-year guarantee.");
+    expect(told).toContain("Mention the Saturday clinic.");
+    expect(told).toContain("WRITING THIS EMAIL REPLY:");
+    expect(told).toContain("Answer with strict JSON");
+    expect(told).not.toContain("Prefers short answers.");
+  });
+
   test("a question needing a person still gets a written reply, plus the task and bell", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const { adminId } = await seedMailbox(t);

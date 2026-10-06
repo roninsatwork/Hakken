@@ -6,6 +6,7 @@ import { internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import { gatherInstructions } from "./assistantKnowledge";
 import { runDecisions, type DecisionResult } from "./decisionActions";
 import { isNoReplyAddress, parseAddress } from "./gmailConnector";
 import { resolvePlatformName } from "./settingsService";
@@ -608,12 +609,9 @@ async function fileTriageTask(
 
 /**
  * What goes back to the sender, and whether a person follows up — one model
- * call, structured. The reply must use the company's published facts and
- * figures exactly as the knowledge states them: the first live quote request
- * was answered with a canned brush-off while the published price range sat
- * in the retrieved knowledge, which is the failure this wording exists to
- * prevent. Fail-closed: a call that dies yields no reply text, and the
- * caller sends the plain fallback and files the task.
+ * call, structured, written under `emailReplyStyle`. Fail-closed: a call that
+ * dies yields no reply text, and the caller sends the plain fallback and
+ * files the task.
  */
 async function decideReply(
   ctx: ActionCtx,
@@ -635,27 +633,19 @@ async function decideReply(
       useCase: "fast-chat",
       ...(args.companyId ? { companyId: args.companyId } : {}),
     });
+    // Told what every door is told — the platform's and the company's
+    // prompts, its rules, skills and always memories — then how to write an
+    // email reply (assistantKnowledge.ts, assistant-foundation-plan.md item
+    // 2). The sender is the public: no private note.
+    const { systemInstruction } = await gatherInstructions(ctx, {
+      ...(args.companyId ? { companyId: args.companyId } : {}),
+      surface: "COMPANY_CHAT",
+      presentation: "EMAIL_REPLY",
+      ...(args.platformName !== undefined ? { platformName: args.platformName } : {}),
+    });
     const response = await generateTextWithResolvedModel({
       model: config,
-      systemInstruction:
-        "You write the next reply in a customer email conversation for a company, using ONLY the company " +
-        "knowledge provided. Answer with strict JSON, nothing else: " +
-        '{"reply": string, "needsHuman": boolean, "language": string}. ' +
-        'language is the two-letter ISO code of the language the reply is written in ("en", "it", "fr", ...). ' +
-        "reply is a courteous, complete email answer to the customer's LATEST message, read in the light of " +
-        "the whole conversation — in the sender's own language, plain text, no markdown. Do not add a " +
-        "greeting line or a signature: both are added automatically around your text. Write each " +
-        "paragraph as one unbroken line — never wrap prose at a fixed width; blank lines separate " +
-        "paragraphs. " +
-        "Use the knowledge fully: published facts, price ranges, and how the company works may be stated " +
-        "exactly as the knowledge states them. Never invent a fact or figure, and never commit to a specific " +
-        `bespoke price or delivery date — those are a colleague's to give. Never repeat what an earlier ${resolvePlatformName(args.platformName)} ` +
-        "message in the conversation already said; move the conversation forward. " +
-        "needsHuman is true when the sender needs something beyond what the knowledge settles (a bespoke " +
-        "quote, a complaint, anything account-specific); the reply must then still give whatever the knowledge " +
-        "does cover and say a colleague will follow up with the specifics. " +
-        "If the knowledge offers nothing useful at all, reply is a short, warm acknowledgement that names what " +
-        "they asked about and says a colleague will come back to them; needsHuman is true.",
+      systemInstruction,
       contents: [
         {
           type: "text",

@@ -35,6 +35,7 @@ import {
 import { embedRetrievalQuery, searchKnowledgeScope } from "./knowledgeRetrieval";
 import { knowledgeCutOff, readChunk } from "./knowledgeReading";
 import { searchHelpfulContent } from "./libraryArticleSearch";
+import { resolvePlatformName } from "./settingsService";
 import { LIBRARY_CONTEXT_MAX_CHARS } from "./utils/libraryPage";
 import { companyAnswersFromWiki } from "./wikiRewriteService";
 
@@ -58,6 +59,40 @@ export const REALTIME_VOICE_STYLE = `You are speaking out loud, not writing.
 - The company's knowledge may be written in a different language from the
   one you are speaking. Read it in whatever language you find it and answer
   in theirs; never read a stored passage out in its original language.`;
+
+/**
+ * How an email reply is written: the door's own manners, added after the
+ * instructions every door is given (assistant-foundation-plan.md, item 2).
+ *
+ * The reply must use the company's published facts and figures exactly as
+ * the knowledge states them: the first live quote request was answered with a
+ * canned brush-off while the published price range sat in the retrieved
+ * knowledge, which is the failure this wording exists to prevent. The
+ * greeting, sign-off and AI notice are added in code around the reply
+ * (`gmailWatcher.ts`), so the model writes neither.
+ */
+export function emailReplyStyle(platformName: string | undefined) {
+  return (
+    "You write the next reply in a customer email conversation for a company, using ONLY the company " +
+    "knowledge provided. Answer with strict JSON, nothing else: " +
+    '{"reply": string, "needsHuman": boolean, "language": string}. ' +
+    'language is the two-letter ISO code of the language the reply is written in ("en", "it", "fr", ...). ' +
+    "reply is a courteous, complete email answer to the customer's LATEST message, read in the light of " +
+    "the whole conversation — in the sender's own language, plain text, no markdown. Do not add a " +
+    "greeting line or a signature: both are added automatically around your text. Write each " +
+    "paragraph as one unbroken line — never wrap prose at a fixed width; blank lines separate " +
+    "paragraphs. " +
+    "Use the knowledge fully: published facts, price ranges, and how the company works may be stated " +
+    "exactly as the knowledge states them. Never invent a fact or figure, and never commit to a specific " +
+    `bespoke price or delivery date — those are a colleague's to give. Never repeat what an earlier ${resolvePlatformName(platformName)} ` +
+    "message in the conversation already said; move the conversation forward. " +
+    "needsHuman is true when the sender needs something beyond what the knowledge settles (a bespoke " +
+    "quote, a complaint, anything account-specific); the reply must then still give whatever the knowledge " +
+    "does cover and say a colleague will follow up with the specifics. " +
+    "If the knowledge offers nothing useful at all, reply is a short, warm acknowledgement that names what " +
+    "they asked about and says a colleague will come back to them; needsHuman is true."
+  );
+}
 
 /**
  * How much each kind of answer may read. The one thing allowed to differ
@@ -114,8 +149,8 @@ export async function gatherInstructions(
     surface: AssistantSurface;
     /** The person whose own private note applies; absent for a visitor, a caller or a check (`shouldInjectPersonalNote`). */
     noteFor?: Id<"users">;
-    /** Speaking out loud adds how to speak; nothing else changes. */
-    presentation: "WRITTEN" | "SPOKEN";
+    /** Speaking out loud adds how to speak, an email reply how to write one; nothing else changes. */
+    presentation: "WRITTEN" | "SPOKEN" | "EMAIL_REPLY";
     /** An agent answering the conversation: its prompt, skills and own always memories. */
     agent?: {
       systemPrompt?: string | null;
@@ -163,7 +198,9 @@ export async function gatherInstructions(
     systemInstruction:
       args.presentation === "SPOKEN"
         ? `${written}\n\n====================\nSPEAKING OUT LOUD:\n\n${REALTIME_VOICE_STYLE}`
-        : written,
+        : args.presentation === "EMAIL_REPLY"
+          ? `${written}\n\n====================\nWRITING THIS EMAIL REPLY:\n\n${emailReplyStyle(platformName)}`
+          : written,
     platformName,
     company,
     companySkills: companySkills?.skills ?? [],

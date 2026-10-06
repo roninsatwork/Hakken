@@ -12,9 +12,9 @@ Ask Hakken works in the same way as Telegram — we cannot have two AI giving
 two different answers." And: "Make this a repo plan first and let me know how
 many man days."
 
-**Status, 2026-10-06: planned, the four decisions taken (below), and item 1
-built the same day — saved locally on `dev`, on the dev deployment, not
-pushed. About 8% done; about 9.5 to 12.5 building days left.** The wider
+**Status, 2026-10-06: planned, the four decisions taken (below), and items 1
+and 2 built the same day — saved locally on `dev`, not pushed. About 25%
+done; about 7.75 to 9.75 building days left.** The wider
 assistant (jobs, Telegram) is planned after this one is proven — the
 decisions already taken for it are recorded at the end so they are not
 asked again.
@@ -65,7 +65,7 @@ Hakken's knowledge, the agent runtime's hands.
 |---|---|---|---|
 | **One brain** | | | |
 | 1 | **Built 2026-10-06.** **One record of what Hakken knows** — one shared piece that puts together the instructions (global and company prompt, rules, skills, ALWAYS memories, the personal note) and the reading (wiki, documents, Helpful content, relevant memories, the conversation's files), with a reading allowance per door. Typed and spoken Ask Hakken, the phone line, email replies, the company checks and agents in a conversation all use it; the three copies go | three copies today, each a little different — the cause of "two AI giving two different answers" | 2–3 |
-| 2 | **Email replies written under the same instructions** as every other door, keeping their own manners (the AI notice, the holding reply) | today they read what voice reads but write under instructions of their own | 0.5 |
+| 2 | **Built 2026-10-06.** **Email replies written under the same instructions** as every other door, keeping their own manners (the AI notice, the holding reply). As built: the reply format and "no greeting, no signature" are the email door's presentation in `assistantKnowledge.ts` (`emailReplyStyle`), added after the shared instructions as speaking is; the sender is the public, so no private note; tested in `gmailWatcher.test.ts` | today they read what voice reads but write under instructions of their own | 0.5 |
 | 3 | **A guard so a second brain cannot come back** — a test that fails any file other than the shared one putting together instructions or reading for an answer. Jobs that are not answers (the Translator, the wiki staff, Decisions, an agent's scheduled or workflow run) are named in it | a fresh copy always compiles; only a test notices it, the way the other drift tests do | 0.5 |
 | **One engine** | | | |
 | 4 | **The Hakken assistant** — a built-in agent like the Translator (`utils/contentTranslator.ts:8`): on the Agents screen, can be switched off, its own spending limit, its calls in the cost ledger. Its model comes from the chat setting, and the conversation's model picker still works — the chosen model is passed to the run, which today takes none (`agentRuntime.ts:68`) | the agent runtime needs an agent to run; this one is the assistant | 1 |
