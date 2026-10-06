@@ -5,7 +5,6 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { accessTokenFor, type ConnectionProblem } from "./searchConsoleConnect";
 import { noteHoldPagesChanged } from "./holdPages";
-import { startRoleRun } from "./roleRuns";
 import { GOOGLE_DIMENSIONS, LISTS_OF, queryAnalytics, type AnalyticsRow, type GoogleFailure } from "./searchConsoleApi";
 import {
   COLLECTED_SEARCH_TYPES,
@@ -890,13 +889,7 @@ export const clearFigures = internalMutation({
       .first();
     if (!connection) return null;
     await ctx.db.patch(connection._id, { clearing: undefined, updatedAt: Date.now() });
-    if (args.collectAfter) {
-      // A run already going lists its websites at its start, so one cleared since waits for the next.
-      await startRoleRun(ctx, "SEARCH_CONSOLE_COLLECTOR", {
-        title: "Search Console: collect after switching to the main country",
-        objective: "Collect every website connected to Search Console: one just switched to its main home country gets that country's 90 days.",
-      });
-    }
+    if (args.collectAfter) await ctx.scheduler.runAfter(0, internal.searchConsoleMainCountry.collectSwitched, {});
     return null;
   },
 });

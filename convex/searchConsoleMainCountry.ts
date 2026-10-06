@@ -3,6 +3,7 @@ import { internalMutation, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { noteHoldPagesChanged } from "./holdPages";
+import { startRoleRun } from "./roleRuns";
 import { mainConsoleCountry } from "./searchConsoleCountries";
 
 /**
@@ -65,3 +66,24 @@ export const prepareMainCountry = internalMutation({
   },
 });
 
+/** How long a website switched to its main country waits for a Collector run already going to end. */
+const COLLECT_RETRY_MS = 5 * 60 * 1000;
+
+/**
+ * A Collector run for the websites just switched to their main country, once
+ * their old figures are cleared. A run already going listed its websites at
+ * its start, so one cleared since is not among them: asked again once it has
+ * had time to end, rather than left for the next night's.
+ */
+export const collectSwitched = internalMutation({
+  args: {},
+  returns: v.null(),
+  handler: async (ctx) => {
+    const started = await startRoleRun(ctx, "SEARCH_CONSOLE_COLLECTOR", {
+      title: "Search Console: collect after switching to the main country",
+      objective: "Collect every website connected to Search Console: one just switched to its main home country gets that country's 90 days.",
+    });
+    if (started === "ALREADY_GOING") await ctx.scheduler.runAfter(COLLECT_RETRY_MS, internal.searchConsoleMainCountry.collectSwitched, {});
+    return null;
+  },
+});
