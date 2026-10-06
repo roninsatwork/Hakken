@@ -6,7 +6,7 @@ import schema from "./schema";
 import { embedVertexContentWithRetry } from "./vertexProviderService";
 import { finishScheduled } from "@/src/test/finishScheduled";
 
-const { generate } = vi.hoisted(() => ({ generate: vi.fn() }));
+const { generate, agentTurn } = vi.hoisted(() => ({ generate: vi.fn(), agentTurn: vi.fn() }));
 vi.mock("./aiProviderRegistry", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./aiProviderRegistry")>()),
   generateTextWithResolvedModel: generate,
@@ -17,6 +17,9 @@ vi.mock("./vertexProviderService", async (importOriginal) => ({
   createVertexEmbeddingClient: vi.fn(() => ({})),
   embedVertexContentWithRetry: vi.fn(),
   generateVertexContentWithRetry: vi.fn(),
+  // Ask Hakken answers through the Assistant (assistant-foundation-plan.md, item 9).
+  createVertexPromptCache: async () => undefined,
+  streamVertexContentWithRetry: async (_ai: unknown, params: unknown) => agentTurn(params),
 }));
 
 /**
@@ -252,11 +255,11 @@ describe("Ask Hakken reads the Library", () => {
         updatedAt: Date.now(),
       });
     });
-    generate.mockReset().mockResolvedValue({ text: "An answer.", inputTokens: 1, outputTokens: 1 });
-    await t.action(internal.aiChat.generateHakkenResponse, { threadId, content: thread.question ?? "What are the best practices for structured data in AI features?" });
-    const prompts = generate.mock.calls.map(([request]) =>
-      (request.contents as { type: string; text?: string }[]).filter((part) => part.type === "text").map((part) => part.text).join("\n"));
-    return prompts.find((text) => text.includes("User Prompt:")) ?? "";
+    agentTurn.mockReset().mockResolvedValue({ text: "An answer.", functionCalls: undefined, usageMetadata: { promptTokenCount: 1, candidatesTokenCount: 1 } });
+    await t.action(internal.hakkenAssistant.answerInternal, { threadId, content: thread.question ?? "What are the best practices for structured data in AI features?" });
+    // The turn the model was asked to answer: the question, and what was read for it.
+    const request = agentTurn.mock.calls.at(-1)?.[0] as { contents?: Array<{ parts: Array<{ text?: string }> }> } | undefined;
+    return request?.contents?.at(-1)?.parts.map((part) => part.text ?? "").join("") ?? "";
   }
 
   test("a signed-in user's question gets the article, marked as someone else's words; a widget visitor's never does", async () => {
@@ -269,7 +272,7 @@ describe("Ask Hakken reads the Library", () => {
     expect(signedIn).toContain('From "AI features and your website" (Google Search Central, published 2026-09-18)');
 
     const visitor = await promptFor(t, { userId: memberId, companyId, widget: true });
-    expect(visitor).toContain("User Prompt:");
+    expect(visitor).toContain("best practices for structured data");
     expect(visitor).not.toContain("AI features and your website");
   });
 

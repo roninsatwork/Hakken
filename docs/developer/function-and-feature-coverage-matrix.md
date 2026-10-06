@@ -292,7 +292,8 @@ every private TypeScript helper one-by-one.
 | `agentSkills.ts` | skill import/preview, catalog, analytics, CRUD, archive/delete, binding, upgrade, runtime skill queries |
 | `agentTransactions.ts` | `seedForAgent`, `insertTransactionInternal` |
 | `agents.ts` | agent list/get/create/update/delete, templates, inherited model lookup, internal agent/tool lookup, inline agent creation, promotion |
-| `aiChat.ts` | `generateHakkenResponse`, `generateThreadTitle` |
+| `aiChat.ts` | `generateThreadTitle` |
+| `hakkenAssistant.ts`, `assistantKnowledge.ts`, `assistantReads.ts`, `assistantToolHandlers.ts` | the Assistant: Ask Hakken's answers (`answerInternal`), what every door is told and reads, the company-figure reads |
 | `aiSpeech.ts` | `transcribeAudio`, `synthesizeSpeech` |
 | `aiVoiceSession.ts` | `searchKnowledgeForVoice`, realtime voice session/ticket creation |
 | `workflowNodeConfig.ts` | `generateNodeConfig` |
@@ -344,7 +345,6 @@ every private TypeScript helper one-by-one.
 | `salesOpportunityReports.ts` | opportunity report read/start/watch, matching pass, gap pass, summary save |
 | `scheduler.ts` | schedules CRUD/toggle/manual run, agent execution completion, workflow executions, pending workflow approvals |
 | `settings.ts` | public settings read, settings update, email branding, upload URL |
-| `swarmActions.ts` and `swarmRuntime.ts` | swarm execution, logs, demo agents, company context |
 | `system.ts` | system prompt, analytics id, PII config reads/writes |
 | `schema.ts` | authoritative Convex table, field, validator, and index declarations |
 | `users.ts` | current user, upload URL, user lists, user CRUD, profile update, logins, login/logout record, impersonation, super-admin assignment |

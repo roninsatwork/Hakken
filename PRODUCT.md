@@ -484,10 +484,26 @@ and the cross-workspace agency view do not exist yet.
   serves each use case without a code deployment.
 * **The Behavioural Rule Engine.** Workspaces configure rules (for example,
   "if the user asks about pricing, do not quote figures") that are aggregated by
-  priority and injected into the system instruction. **Rules apply to the
-  assistant chat path.** The agent runtime does not currently read them; agent
-  behaviour is governed by its system prompt, its bound skills, and its tool
-  policy.
+  priority and injected into the system instruction. **Rules apply to every
+  door that answers a person** — typed and spoken Ask Hakken, the phone line,
+  reception, email replies, the website chat and any agent answering a
+  conversation (since 2026-10-06, below). An agent's scheduled, workflow or
+  webhook run, which nobody waits on in a conversation, is governed by its
+  system prompt, its bound skills and its tool policy.
+* **One brain, many doors** (docs/plans/active/assistant-foundation-plan.md,
+  built 2026-10-06). What the model is told — the platform's and the company's
+  prompts, the rules, the skills, the memories, the asker's private note — and
+  what it reads for each question is put together in one place,
+  `convex/assistantKnowledge.ts`, and every door reads it there; only how much
+  it reads differs, for a short spoken or emailed answer.
+  `src/assistant-doors-drift.test.ts` fails a second copy. Ask Hakken answers
+  through **the Assistant**, a built-in agent on the Agents screen
+  (`convex/hakkenAssistant.ts`), which can read the company's own figures —
+  its websites and competitors' Sites overviews, Search Console, AI answers,
+  open tasks — through the screens' own reads, any member of the company for
+  their own company, each answer saying what it looked up with a link to the
+  screen; a super admin picks which client a conversation answers for.
+  Ask Hakken's own single-call path and the Swarm demo were removed.
 * **Agent Runtime.** A durable, audited loop: each run records its steps, model
   calls, tool calls, approvals, final output, failures, tokens, and cost. A
   model turn may request several tool calls at once; all of them are executed
@@ -751,7 +767,7 @@ Inherited foundation gaps, tracked in
 | Prompt caching | Not implemented. |
 | Run cancellation and resumption | Cancellation marks the record but does not interrupt an in-flight run; failed runs cannot be resumed from a checkpoint. |
 | Agent evaluations | The default readiness check validates configuration rather than model behaviour. Model-graded evaluation exists but does not exercise the full agent runtime. |
-| Behavioural rules in agents | The rule engine applies to the assistant chat path only. Agent behaviour is governed by system prompt, skills, and tool policy. |
+| Behavioural rules in agents | Resolved 2026-10-06 for every agent answering a conversation (§22, one brain). An agent's scheduled, workflow or webhook run is still governed by system prompt, skills and tool policy alone. |
 | Workflow resilience | Automatic retries exist, deliberately narrow: a step retries only if the error classifies as transient **and** the node type cannot repeat an externally visible effect. Today that is `agentNode` alone, up to 3 attempts, and even then not when the agent executes tools autonomously or when the failure came after the real work finished. Email, action, and database nodes never retry. No dead-letter queue and no compensating actions; anything unretryable fails to the review list. |
 | Observability | Sentry hooks and configurable tracing are implemented but require deployment configuration. `/api/health` provides liveness and `?deps=1` checks Convex HTTP reachability; neither proves database/function health. Live monitoring, alert delivery and release tags must be verified for each deployment. See `docs/developer/deployment.md`. |
 | Schema migrations | Schema changes are pushed ahead of the application image, but data migrations have tooling: named, resumable, idempotent backfills in `convex/dataMigrations.ts`, run one page at a time with progress recorded so a completed migration never re-runs. |
@@ -801,6 +817,17 @@ running against the Sonae deployment.
 
 ## Change Log
 
+* **2026-10-06 (Assistant)** — **Built: the assistant's foundation — one
+  brain, many doors.** docs/plans/active/assistant-foundation-plan.md, items
+  1 to 9: every door reads what Hakken knows from one place; email replies
+  and agents in a conversation are told the rules and the prompts too; Ask
+  Hakken answers through the built-in Assistant on the agent runtime, compared
+  first with the old path (the same instructions and sources, about four
+  seconds slower); five read tools give the company's own figures and its
+  competitors', any member for their own company, with a "Looked up" line; a
+  super admin picks the client. The Swarm and Ask Hakken's single-call path
+  are gone. The wider assistant — jobs it takes on, Telegram — is planned
+  after it; speed is proposed, not approved.
 * **2026-10-06 (Insights)** — **Built: Helpful content for readers, and
   Insights.** docs/plans/active/insights-helpful-content-plan.md: Learn is
   renamed Insights and the Library Helpful content (§31's rows renamed).

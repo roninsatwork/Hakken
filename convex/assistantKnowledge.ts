@@ -26,7 +26,6 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { ActionCtx } from "./_generated/server";
 import {
   buildAssistantSystemInstruction,
-  buildUntrustedConversationHistory,
   buildUntrustedKnowledgeContext,
   rankAssistantKnowledgeMatches,
   selectKnowledgeChunksWithinBudget,
@@ -513,21 +512,6 @@ export async function gatherReading(
     relevantMemories,
     agentMemories,
   };
-}
-
-/**
- * A written answer's prompt: the conversation so far, what was read before
- * the question, the question, and what was read after it — the order typed
- * Ask Hakken has always used.
- */
-export function composeWrittenPrompt(args: {
-  messages: Parameters<typeof buildUntrustedConversationHistory>[0]["messages"];
-  reading: AssistantReading;
-  question: string;
-}) {
-  const history = buildUntrustedConversationHistory({ messages: args.messages, maxMessages: 20 });
-  const before = [history, ...args.reading.leading].filter(Boolean).map((part) => `${part}\n`).join("");
-  return `${before}\n\nUser Prompt: ${args.question}${args.reading.trailing.join("")}`;
 }
 
 /**

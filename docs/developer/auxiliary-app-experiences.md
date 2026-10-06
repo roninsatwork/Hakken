@@ -164,8 +164,7 @@ The action returns a matched agent only when confidence is greater than `0.65` a
 Response scheduling follows the shared chat rules:
 
 - A target agent schedules `internal.agentRuntime.runAgentObjective`.
-- `thinkingLevel: "SWARM"` schedules `internal.swarmActions.executeSwarmObjective`.
-- Otherwise the standard Hakken response path schedules `internal.aiChat.generateHakkenResponse`.
+- Otherwise the Assistant answers: `internal.hakkenAssistant.answerInternal` (docs/plans/active/assistant-foundation-plan.md). The Swarm mode and Ask Hakken's own single-call path were removed on 2026-10-06.
 
 ### Visibility And Navigation
 

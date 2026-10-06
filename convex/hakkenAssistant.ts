@@ -4,6 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import { findConnectorInstall, installBuiltInConnector } from "./aiTools";
 import { GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
+import { appError } from "./utils/appError";
 import { COMPANY_FIGURES_CONNECTOR_KEY, HAKKEN_ASSISTANT } from "./utils/hakkenAssistant";
 
 /**
@@ -118,6 +119,11 @@ export const answerInternal = internalAction({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
+    // Denial of wallet: refused before anything is read or asked, as typed
+    // Ask Hakken always did (about 2,500 tokens).
+    if (args.content.length > MAX_QUESTION_LENGTH) {
+      throw appError("INVALID_INPUT", "Payload Too Large: Input exceeds maximum system context window.");
+    }
     const notice = (content: string) =>
       ctx.runMutation(internal.chat.saveAssistantNoticeInternal, { threadId: args.threadId, content });
 
@@ -153,13 +159,13 @@ export const answerInternal = internalAction({
     // takes image parts today, so on any other model the photo goes to the
     // vision job's model and the reply says so; where even that cannot see,
     // the conversation is told in a plain sentence instead.
-    let modelId = args.modelId;
+    let visionModel = false;
     let replyNotice: string | undefined;
     if (args.fileIds && args.fileIds.length > 0) {
       const contentTypes = await ctx.runQuery(internal.chat.getAttachmentContentTypesInternal, { fileIds: args.fileIds });
       if (contentTypes.some((type) => type?.startsWith("image/"))) {
         const chat = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
-          ...(modelId ? { requestedModelId: modelId } : {}),
+          ...(args.modelId ? { requestedModelId: args.modelId } : {}),
           companyId: thread?.companyId,
           useCase: HAKKEN_ASSISTANT.modelUseCase,
         });
@@ -174,7 +180,9 @@ export const answerInternal = internalAction({
             );
             return null;
           }
-          modelId = vision.modelId;
+          // Resolved by the run the same way — by the job, not the name — so a
+          // vision model the catalogue does not list is still the one used.
+          visionModel = true;
           replyNotice = `\n\n*Answered with ${vision.modelId} so I could look at your image.*`;
         }
       }
@@ -184,7 +192,8 @@ export const answerInternal = internalAction({
       threadId: args.threadId,
       agentId,
       content: args.content,
-      ...(modelId ? { modelId } : {}),
+      ...(args.modelId && !visionModel ? { modelId: args.modelId } : {}),
+      ...(visionModel ? { visionModel: true } : {}),
       ...(args.thinkingLevel ? { thinkingLevel: args.thinkingLevel } : {}),
       ...(args.fileIds ? { fileIds: args.fileIds } : {}),
       ...(replyNotice ? { replyNotice } : {}),
@@ -192,6 +201,9 @@ export const answerInternal = internalAction({
     return null;
   },
 });
+
+/** The longest question answered: what a message may be (`chat.sendMessage`). */
+const MAX_QUESTION_LENGTH = 10_000;
 
 /** How long a conversation's new files are waited for: a minute, checked every two seconds. */
 const FILE_READ_ATTEMPTS = 30;

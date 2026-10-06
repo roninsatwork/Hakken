@@ -75,11 +75,12 @@ export async function canAccessThread(
  * theirs.
  */
 export function isThreadInCallersWorkspace(
-  user: { role?: string } & Parameters<typeof getActiveCompanyId>[0],
+  user: Pick<Doc<"users">, "role" | "companyId" | "impersonatingCompanyId">,
   thread: Pick<Doc<"threads">, "companyId">,
 ): boolean {
   if (user.role === "SUPER_ADMIN") return true;
-  return thread.companyId === getActiveCompanyId(user);
+  // The caller's active company, as `getActiveCompanyId` reads it.
+  return thread.companyId === (user.impersonatingCompanyId || user.companyId);
 }
 
 export async function assertCanAccessThread(

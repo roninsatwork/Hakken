@@ -7,6 +7,8 @@ import { Check, ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { Button } from "@/src/ui/components/screens/Button";
+import { LAYER } from "@/src/ui/lib/layers";
 
 /**
  * Which client a new conversation answers for — a super admin's choice in Ask
@@ -64,15 +66,15 @@ export function AssistantClientPicker({
   return (
     <div ref={pickerRef} className="relative flex items-center gap-1.5 mb-2 text-[12px] text-muted">
       <span>{t("answeringFor")}</span>
-      <button
-        type="button"
+      <Button
+        variant="ghost"
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
-        className="inline-flex items-center gap-1 text-foreground font-medium hover:text-secondary transition-colors"
+        className="inline-flex items-center gap-1 p-0 text-[12px] text-foreground hover:text-secondary hover:bg-transparent"
       >
         {currentName}
         <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" />
-      </button>
+      </Button>
 
       <AnimatePresence>
         {isOpen && (
@@ -82,9 +84,9 @@ export function AssistantClientPicker({
             exit={{ opacity: 0, scale: 0.95, y: 10 }}
             transition={{ duration: 0.15 }}
             role="listbox"
-            className="absolute bottom-full left-16 mb-2 w-[240px] bg-card border border-border-dim rounded-[14px] shadow-2xl p-1.5 z-50 flex flex-col max-h-[320px] overflow-y-auto custom-scrollbar"
+            className={`absolute bottom-full left-16 mb-2 w-[240px] bg-card border border-border-dim rounded-[14px] shadow-2xl p-1.5 ${LAYER.PAGE_MENU} flex flex-col max-h-[320px] overflow-y-auto custom-scrollbar`}
           >
-            <div className="px-3 py-2 border-b border-border-dim mb-1 sticky top-0 bg-card z-10">
+            <div className={`px-3 py-2 border-b border-border-dim mb-1 sticky top-0 bg-card ${LAYER.RAISED}`}>
               <span className="text-[11px] font-medium text-muted tracking-widest uppercase">{t("title")}</span>
             </div>
             {(companies ?? []).map((company) => (
@@ -106,16 +108,16 @@ export function AssistantClientPicker({
 
 function ClientRow({ name, chosen, onPick }: { name: string; chosen: boolean; onPick: () => void }) {
   return (
-    <button
-      type="button"
+    <Button
+      variant="ghost"
       role="option"
       aria-selected={chosen}
       onClick={onPick}
-      className="w-full flex items-center justify-between px-3 py-2 rounded-[10px] hover:bg-foreground/5 text-left"
+      className="w-full flex items-center justify-between px-3 py-2 rounded-[10px] font-normal hover:bg-foreground/5 text-left"
     >
       <span className={`text-[14px] ${chosen ? "text-foreground font-medium" : "text-secondary"}`}>{name}</span>
       {chosen && <Check className="w-4 h-4 text-brand" />}
-    </button>
+    </Button>
   );
 }
 

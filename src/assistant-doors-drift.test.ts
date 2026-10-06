@@ -78,7 +78,6 @@ const piecesIn = (file: string) => {
 
 /** Every door that answers a person, and what it must read through. */
 const DOORS: Array<{ file: string; declaration: string; reads: string[] }> = [
-  { file: 'convex/aiChat.ts', declaration: 'generateHakkenResponse', reads: ['gatherInstructions', 'gatherReading'] },
   { file: 'convex/aiVoiceSession.ts', declaration: 'createRealtimeVoiceSession', reads: ['gatherInstructions'] },
   { file: 'convex/aiVoiceSession.ts', declaration: 'buildSpokenSessionInstructions', reads: ['gatherInstructions'] },
   { file: 'convex/aiVoiceSession.ts', declaration: 'searchKnowledgeForVoiceInternal', reads: ['gatherReading'] },

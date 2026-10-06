@@ -232,6 +232,8 @@ export async function buildLoopExecutionContext(ctx: ActionCtx, args: {
   requestedModelId?: string;
   /** The thinking the conversation chose; absent, the agent's own. */
   reasoningEffort?: AgentReasoningEffortLevel;
+  /** A photo on a model that cannot see: the vision job's model answers instead (`hakkenAssistant.answerInternal`). */
+  visionModel?: boolean;
 }) {
   const agent = await ctx.runQuery(internal.agents.getAgentInternal, { id: args.agentId });
   if (!agent) throw appError("NOT_FOUND", "Agent not found.");
@@ -253,11 +255,13 @@ export async function buildLoopExecutionContext(ctx: ActionCtx, args: {
   // The assistant answers on the chat job's model, as typed Ask Hakken did;
   // every other agent on the agent job's, or its own.
   const isAssistant = agent.systemKey === HAKKEN_ASSISTANT.systemKey;
-  const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
-    requestedModelId: args.requestedModelId ?? (agent.modelSelectionMode === "inherit" ? undefined : agent.modelId),
-    companyId: owner.companyId,
-    useCase: isAssistant ? HAKKEN_ASSISTANT.modelUseCase : "agent",
-  });
+  const modelConfig = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, args.visionModel
+    ? { companyId: owner.companyId, useCase: "vision" }
+    : {
+        requestedModelId: args.requestedModelId ?? (agent.modelSelectionMode === "inherit" ? undefined : agent.modelId),
+        companyId: owner.companyId,
+        useCase: isAssistant ? HAKKEN_ASSISTANT.modelUseCase : "agent",
+      });
   const agentTools = await ctx.runQuery(internal.agents.getAgentToolsInternal, { agentId: args.agentId });
   const dynamicTools: FunctionDeclaration[] = [];
   const toolMetadataByName = new Map<string, RuntimeToolMetadata>();
@@ -445,10 +449,15 @@ export async function finalizeObjectiveFailure(ctx: ActionCtx, args: {
   // message: the reader would otherwise be left with a half-written answer
   // marked as still typing, plus an error underneath it. The shared delivery
   // makes that choice, and writes nothing for work nobody is watching.
+  // The partial answer stays — the reader already saw it — with the notice
+  // under it, as typed Ask Hakken always did; a run that never streamed gets
+  // the notice alone.
   await finishAssistantReply(ctx, {
     threadId: args.threadId,
     stream: args.stream,
-    content: failureMessage,
+    content: args.stream.messageId !== undefined && args.stream.text.trim()
+      ? `${args.stream.text}\n\n${failureMessage}`
+      : failureMessage,
   });
 }
 

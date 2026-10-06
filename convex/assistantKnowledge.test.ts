@@ -19,10 +19,9 @@ import schema from "./schema";
  * its answer has.
  */
 
-const { embedMock, agentTurnMock, typedTurnMock } = vi.hoisted(() => ({
+const { embedMock, agentTurnMock } = vi.hoisted(() => ({
   embedMock: vi.fn(),
   agentTurnMock: vi.fn(),
-  typedTurnMock: vi.fn(),
 }));
 
 vi.mock("./vertexProviderService", async (importOriginal) => {
@@ -40,11 +39,6 @@ vi.mock("./vertexProviderService", async (importOriginal) => {
   };
 });
 
-vi.mock("./aiProviderRegistry", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("./aiProviderRegistry")>();
-  return { ...actual, generateTextWithResolvedModel: typedTurnMock };
-});
-
 const QUESTION = "How much is a boiler service?";
 const FACT = "A boiler service costs £89 including parts.";
 
@@ -60,8 +54,6 @@ beforeEach(() => {
     functionCalls: undefined,
     usageMetadata: { promptTokenCount: 10, candidatesTokenCount: 5 },
   });
-  typedTurnMock.mockReset();
-  typedTurnMock.mockResolvedValue({ text: "It is £89.", inputTokens: 10, outputTokens: 5 });
 });
 
 /**
@@ -178,14 +170,22 @@ async function seedCompany(t: ReturnType<typeof convexTest>) {
   });
 }
 
-/** What typed Ask Hakken sent the model: its instructions and its prompt. */
-async function askTyped(t: ReturnType<typeof convexTest>, threadId: Id<"threads">) {
-  await t.action(internal.aiChat.generateHakkenResponse, { threadId, content: QUESTION });
-  const request = typedTurnMock.mock.calls[0][0] as { systemInstruction: string; contents: Array<{ type: string; text?: string }> };
-  return {
-    systemInstruction: request.systemInstruction,
-    prompt: request.contents.find((part) => part.type === "text")?.text ?? "",
+/** What a run sent the model last: its instructions, and the turn it was asked to answer. */
+function lastAgentRequest() {
+  const request = agentTurnMock.mock.calls.at(-1)?.[0] as {
+    contents: Array<{ role: string; parts: Array<{ text?: string }> }>;
+    config?: { systemInstruction?: string };
   };
+  return {
+    systemInstruction: request.config?.systemInstruction ?? "",
+    prompt: request.contents.at(-1)?.parts.map((part) => part.text ?? "").join("") ?? "",
+  };
+}
+
+/** What typed Ask Hakken sent the model — answered, since item 5, by the Assistant. */
+async function askTyped(t: ReturnType<typeof convexTest>, threadId: Id<"threads">) {
+  await t.action(internal.hakkenAssistant.answerInternal, { threadId, content: QUESTION });
+  return lastAgentRequest();
 }
 
 /** What an agent answering the conversation sent the model. */
@@ -195,14 +195,7 @@ async function askAgent(t: ReturnType<typeof convexTest>, seeded: Awaited<Return
     agentId: seeded.agentId,
     content: QUESTION,
   });
-  const request = agentTurnMock.mock.calls[0][0] as {
-    contents: Array<{ role: string; parts: Array<{ text?: string }> }>;
-    config?: { systemInstruction?: string };
-  };
-  return {
-    systemInstruction: request.config?.systemInstruction ?? "",
-    prompt: request.contents.at(-1)?.parts.map((part) => part.text ?? "").join("") ?? "",
-  };
+  return lastAgentRequest();
 }
 
 describe("one brain, many doors", () => {

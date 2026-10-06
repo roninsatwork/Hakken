@@ -25,8 +25,9 @@ Core files:
 - `convex/chat.ts` validates attachments, attaches viewable image URLs to
   message rows, extracts photo-action proposals on assistant save/finish, and
   exposes stored attachment content types to model routing.
-- `convex/aiChat.ts` handles plain assistant image routing through the `vision` use
-  case and appends the photo-action proposal instruction on image turns.
+- `convex/hakkenAssistant.ts` (`answerInternal`) handles Ask Hakken's image
+  routing through the `vision` use case, before the Assistant's run; the run
+  appends the photo-action proposal instruction on image turns.
 - `convex/agentRuntime.ts` handles the agent path used by widgets. It inlines
   image bytes for Google models and writes a deterministic unread-photo notice
   when the agent model cannot inspect images.
@@ -66,8 +67,8 @@ meaning.
 Plain Assistant chat routes an image-bearing turn through the model default for
 use case `vision`. The current executable vision path is Google Vertex, because
 the Google adapter accepts inline media parts. If no compatible Google vision
-model is configured, `convex/aiChat.ts` writes a platform notice that the image was
-not processed.
+model is configured, `convex/hakkenAssistant.ts` writes a platform notice that the
+image was not processed.
 
 The widget path normally uses `convex/agentRuntime.ts`. That runtime checks the
 agent model provider before inlining images:

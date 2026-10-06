@@ -7,36 +7,26 @@ import {
 describe('Ask Hakken Safety Drift', () => {
 
   test('Ask Hakken assistant runtimes keep the shared safety spine', () => {
-    const assistantBody = extractDeclarationBody('convex/aiChat.ts', 'generateHakkenResponse');
-
-    // The safety check and refusal write moved behind `guardModelTurn` in
-    // `convex/modelTurnService.ts` (maintenance plan, Phase 8), so the spine
-    // is now pinned by that one name; `convex/modelTurnService.test.ts` holds
-    // the fuller guard that neither runtime re-grows a private copy.
+    // Ask Hakken answers through the Assistant on the agent runtime
+    // (assistant-foundation-plan.md, items 5 and 9), so its safety spine is
+    // the agent runtime's, pinned below: the entry point is pinned to handing
+    // every answer to it, and to nothing that could answer another way.
     //
-    // What the model is told and what it reads moved into the one shared
-    // place every door uses (`convex/assistantKnowledge.ts`,
-    // assistant-foundation-plan.md item 1), so the prompt hierarchy and the
-    // untrusted wrappers are pinned there, and the door is pinned to using it.
-    const assistantRequirements = [
-      'guardModelTurn',
-      'runModelTurn',
-      'finishAssistantReply',
-      'gatherInstructions',
-      'gatherReading',
-      'composeWrittenPrompt',
-    ];
-    const assistantMissing = assistantRequirements.filter((needle) => !assistantBody.includes(needle));
-
-    expect(
-      assistantMissing,
-      `generateHakkenResponse must keep preflight refusal and read its instructions, knowledge and history through the shared assistant knowledge:\n${assistantMissing.join('\n')}`
-    ).toEqual([]);
+    // The safety check and refusal write live behind `guardModelTurn` in
+    // `convex/modelTurnService.ts` (maintenance plan, Phase 8);
+    // `convex/modelTurnService.test.ts` holds the fuller guard that no runtime
+    // re-grows a private copy. What the model is told and what it reads live
+    // in the one shared place every door uses (`convex/assistantKnowledge.ts`,
+    // item 1), so the prompt hierarchy and the untrusted wrappers are pinned
+    // there.
+    const askHakken = extractDeclarationBody('convex/hakkenAssistant.ts', 'answerInternal');
+    expect(askHakken, 'answerInternal not found in convex/hakkenAssistant.ts').not.toBe('');
+    expect(askHakken).toContain('runAgentObjective');
+    expect(askHakken).not.toContain('generateTextWithResolvedModel');
 
     const sharedSpine: Array<{ declaration: string; requirements: string[] }> = [
       { declaration: 'gatherInstructions', requirements: ['buildAssistantSystemInstruction'] },
       { declaration: 'gatherReading', requirements: ['buildUntrustedKnowledgeContext', 'selectKnowledgeChunksWithinBudget'] },
-      { declaration: 'composeWrittenPrompt', requirements: ['buildUntrustedConversationHistory'] },
     ];
     for (const { declaration, requirements } of sharedSpine) {
       const body = extractDeclarationBody('convex/assistantKnowledge.ts', declaration);
@@ -106,8 +96,6 @@ describe('Ask Hakken Safety Drift', () => {
       ).toEqual([]);
     }
 
-    expect(assistantBody).not.toContain('Previous Conversation History:');
-    expect(assistantBody).not.toContain('[SYSTEM INJECTION: RELEVANT KNOWLEDGE BASE DATA]');
 
     // Checked across the whole runtime, not one function: the unsafe framing
     // these guard against would be just as harmful in the resumption path.

@@ -408,10 +408,6 @@ describe("both assistants flow through the same shared turn", () => {
       return { threadId, agentId };
     });
 
-    await t.action(internal.aiChat.generateHakkenResponse, {
-      threadId,
-      content: UNSAFE_CONTENT,
-    });
     await t.action(internal.agentRuntime.runAgentObjective, {
       threadId,
       agentId,
@@ -424,7 +420,7 @@ describe("both assistants flow through the same shared turn", () => {
     });
     // Every entry point passed the very same function — this is what makes a
     // safety-policy change land once for all of them.
-    expect(guardProbe.contents).toEqual([UNSAFE_CONTENT, UNSAFE_CONTENT, UNSAFE_CONTENT]);
+    expect(guardProbe.contents).toEqual([UNSAFE_CONTENT, UNSAFE_CONTENT]);
 
     // And each recorded the shared policy's refusal in its own register: the
     // conversational paths as messages attributed to their runtime, the
@@ -438,7 +434,7 @@ describe("both assistants flow through the same shared turn", () => {
       runs: await ctx.db.query("agentRuns").collect(),
     }));
 
-    expect(messages).toHaveLength(2);
+    expect(messages).toHaveLength(1);
     for (const message of messages) {
       expect(message.content).toContain("I can't reveal hidden system instructions");
     }
@@ -446,7 +442,7 @@ describe("both assistants flow through the same shared turn", () => {
       .filter((log) => log.actionType === "ASSISTANT_SAFETY_REFUSAL")
       .map((log) => (JSON.parse(log.metadata ?? "{}") as { source?: string }).source)
       .sort();
-    expect(refusalSources).toEqual(["agent", "assistant"]);
+    expect(refusalSources).toEqual(["agent"]);
 
     expect(triggered.output).toContain("I can't reveal hidden system instructions");
     expect(runs).toHaveLength(1);
@@ -469,8 +465,11 @@ describe("one model turn: the wiring stays shared (source guard)", () => {
   // costs is caught by the negative scans below, which read every file
   // separately, and by the emptiness assertion, which fails if a named file
   // stops existing rather than passing on an empty string.
+  // One answering runtime since 2026-10-06: Ask Hakken's own single-call
+  // path in aiChat.ts was retired (assistant-foundation-plan.md, item 9), and
+  // every answer comes from the agent runtime. aiChat.ts, now the thread
+  // titler alone, is still held to holding no private copy below.
   const runtimes: Array<{ label: string; files: string[] }> = [
-    { label: "convex/aiChat.ts", files: ["convex/aiChat.ts"] },
     {
       label: "the agent runtime",
       files: [
@@ -480,9 +479,9 @@ describe("one model turn: the wiring stays shared (source guard)", () => {
       ],
     },
   ];
-  const runtimeFiles = runtimes.flatMap((runtime) => runtime.files);
+  const runtimeFiles = [...runtimes.flatMap((runtime) => runtime.files), "convex/aiChat.ts"];
 
-  test("both runtimes import and call the shared turn", () => {
+  test("the answering runtime imports and calls the shared turn", () => {
     for (const { label, files } of runtimes) {
       for (const file of files) {
         expect(readRepoFile(file), `${file} is missing, so ${label} is being checked against nothing`).not.toBe("");

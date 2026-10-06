@@ -76,6 +76,8 @@ export const runAgentObjective = internalAction({
     thinkingLevel: v.optional(v.string()),
     /** Said after the reply — the model a photo was answered with. */
     replyNotice: v.optional(v.string()),
+    /** Answer on the vision job's model: a photo the chosen model cannot see. */
+    visionModel: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     let agentRunId: Id<"agentRuns"> | undefined;
@@ -108,14 +110,13 @@ export const runAgentObjective = internalAction({
         return;
     }
 
-    // Embeddings only, and pinned to the region that serves the embedding model.
-
     try {
         execution = await buildLoopExecutionContext(ctx, {
             agentId: args.agentId,
             threadId: args.threadId,
             ...(args.modelId ? { requestedModelId: args.modelId } : {}),
             ...(reasoningEffortFor(args.thinkingLevel) ? { reasoningEffort: reasoningEffortFor(args.thinkingLevel) } : {}),
+            ...(args.visionModel ? { visionModel: true } : {}),
         });
         const { owner, runtimeSkills, modelConfig } = execution;
         companyId = owner.companyId;

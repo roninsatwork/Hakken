@@ -3066,7 +3066,7 @@ export default defineSchema({
     /**
      * What the assistant is actually doing right now, for the pre-reply pill.
      *
-     * Written by `generateHakkenResponse` as it passes each real phase —
+     * Written by the Assistant's run as it passes each real phase —
      * checking, reading files, searching knowledge, writing — and cleared when
      * the reply lands or fails. Replaced a client-side rotation of invented
      * phrases on a timer; a stage shown on screen must be one the run is in.
