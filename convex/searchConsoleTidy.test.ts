@@ -81,7 +81,7 @@ describe("tidying the figures kept before 2026-10-05", () => {
     // What is kept, measured: the country's searches and pages kept, the page references counted.
     const [size] = await t.action(internal.searchConsoleTidy.keptSize, { host: "acme-shop.test" });
     expect(size.complete).toBe(true);
-    expect(size.buckets.map((bucket) => bucket.name)).toContain("searchConsoleLists: a country's searches and pages");
+    expect(size.buckets.map((bucket) => bucket.name)).toContain("searchConsoleLists: a kept country's searches and pages");
     expect(size.buckets.find((bucket) => bucket.name === "searchConsolePageRefs")?.records).toBe(1);
     expect(await t.action(internal.searchConsoleTidy.keptSize, { host: "elsewhere.test" })).toEqual([]);
 

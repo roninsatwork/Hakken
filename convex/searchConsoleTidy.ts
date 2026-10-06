@@ -500,9 +500,10 @@ type Bucket = typeof bucketValidator.type;
 
 /** Which part of the kept lists a record is: the parts this tidy changes are shown apart. */
 function listBucket(record: { country?: string; searchType: string; list: string }): string {
-  if (record.country !== undefined && (record.list === "pair" || record.list === "page")) return "searchConsoleLists: a country's searches and pages";
+  if (record.country !== undefined && (record.list === "pair" || record.list === "page")) return "searchConsoleLists: a kept country's searches and pages";
   if (record.searchType === "image") return "searchConsoleLists: image search";
-  if (record.list === "pair" || record.list === "page") return "searchConsoleLists: searches and pages, all countries";
+  // Held without a country: the main home country's since 2026-10-06 (search-console-home-countries-plan.md).
+  if (record.list === "pair" || record.list === "page") return "searchConsoleLists: searches and pages, the main country";
   return "searchConsoleLists: the rest";
 }
 
