@@ -894,6 +894,11 @@ export const clearFigures = internalMutation({
   },
 });
 
+/** A page of every connection, whatever its status: for a data migration over them all (`2026-10-06-search-console-home-countries`). */
+export async function connectionsPage(ctx: MutationCtx, cursor: string | null, numItems: number) {
+  return await ctx.db.query("searchConsoleConnections").withIndex("by_status").paginate({ cursor, numItems });
+}
+
 /**
  * Everything collected for a site cleared, its connection kept: the Google
  * sign-in stays, so a later collection needs no new one. Run by hand

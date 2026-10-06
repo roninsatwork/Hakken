@@ -35,6 +35,7 @@ import { detachCompanySchedules } from "./scheduler";
 import { removeSampleResearch } from "./keywordResearchSampleMigration";
 import { dropStoredGapsStep } from "./siteContentGap";
 import { prepareMainCountryOf } from "./searchConsoleMainCountry";
+import { connectionsPage } from "./searchConsoleSync";
 import {
   rebuildAnswerSummaries,
   rebuildOperationCosts,
@@ -203,7 +204,7 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
    * and the main country's 90 days collected at the Collector's next run.
    */
   "2026-10-06-search-console-home-countries": async (ctx, cursor, batchSize) => {
-    const page = await ctx.db.query("searchConsoleConnections").paginate({ cursor, numItems: Math.min(batchSize, 20) });
+    const page = await connectionsPage(ctx, cursor, Math.min(batchSize, 20));
     let updated = 0;
     for (const connection of page.page) {
       if (connection.clearing) continue;
