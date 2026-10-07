@@ -15,16 +15,33 @@ graphs — there must be a better, more efficient way of storing these going
 forward"; "this is about not saving data we don't need to store and don't
 access regularly"; "make a documented plan in the repo for this".
 
-**Status, 2026-10-07: planned; nothing built; waits for the Hakken tasks
-work to finish** (Anthony: "we will wait until they finished before we start
-this"; see "Beside the Hakken tasks work"). Part 5 agreed by Anthony the same
-day ("I agree with all of these"), and part 6's drawing signed off ("add
-this to the plan as it's signed off"). Nine decisions are Anthony's
-(marked **Decision** below, each with a recommendation). Each part starts
-with a measurement where one is needed, and goes ahead only if it bears the
-part out. About **20 to 25 days** of work in all. Part 1 is the one that
-grows without end; part 3 is the biggest for websites with many pages;
-part 5's first steps are the quickest wins; part 6 is the one people see.
+**Status, 2026-10-07: phase 1 built and live on dev; the rest to build.**
+Started the same day, once the Hakken tasks work had finished (Anthony: "the
+other agent has finished … we can start this plan now"; see "Beside the
+Hakken tasks work"), on the `keep-less-history` branch merged into `dev`, not
+pushed. Part 5 agreed by Anthony the same day ("I agree with all of these"),
+and part 6's drawing signed off ("add this to the plan as it's signed off").
+Nine decisions are Anthony's (marked **Decision** below, each with a
+recommendation). Each part starts with a measurement where one is needed, and
+goes ahead only if it bears the part out. About **20 to 25 days** of work in
+all. Part 1 is the one that grows without end; part 3 is the biggest for
+websites with many pages; part 5's first steps are the quickest wins; part 6
+is the one people see.
+
+**Phase 1 — built 2026-10-07** (5.5, 5.6, 5.8; commits `00710159`,
+`01227025`): the nine lookup lists and the two search lists no query used
+removed; the columns written and never read stopped, cleared from the rows
+held by `2026-10-07-clear-unread-columns` (59,552 rows on dev, 301 batches),
+then taken out of the schema; the pages copy's top search and the old
+Search Console copy kind gone. Measured on dev before and after, rows only
+(the lookup lists saved more, not counted by `measureSeoStorage`): the latest
+rankings 32.7 → 27.7 MB, each page's rankings 5.4 → 4.4 MB, a keyword's
+search features 1.6 → 1.2 MB, Your pages 3.6 → 3.3 MB, the sitemap's pages
+1.5 → 1.4 MB; the pages copies shrink as each is rebuilt. Checked with
+`npm run check` and GitHub's own steps (coverage, its thresholds, the
+browser smoke tests) and the build. One change beside the plan: Your pages'
+rebuild now answers what it wrote and removed, which is how its test sees an
+unchanged page is not written again, now that rows carry no `builtAt`.
 
 ## The rule
 
