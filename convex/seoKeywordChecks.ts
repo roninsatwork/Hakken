@@ -44,33 +44,6 @@ const MAX_ROWS_PER_CHECK = 400;
 /** Hosts tracking one phrase that a single check will answer for. */
 const MAX_TRACKERS = 300;
 
-/**
- * Rows for one site, one search, one place and one day. It should only ever
- * find one; the ceiling is the assertion that nothing upstream is writing
- * duplicates.
- */
-const SAME_DAY_LIMIT = 5;
-
-/**
- * Remove an earlier row for the same site, search, place and day.
- *
- * The same search measured twice on one day from one place is one fact, so
- * the later measurement replaces the earlier. From another place it is a
- * different fact, and the index this reads never reaches it.
- */
-export async function replaceSameDayPosition(
-  ctx: MutationCtx,
-  key: { websiteId: Id<"websites">; keyword: string; day: string; locationCode?: number },
-): Promise<void> {
-  const place = key.locationCode ?? DEFAULT_LOCATION_CODE;
-  const sameDay = await ctx.db
-    .query("seoKeywordPositions")
-    .withIndex("by_website_keyword_place_day", (q) =>
-      q.eq("websiteId", key.websiteId).eq("keyword", key.keyword).eq("locationCode", place).eq("day", key.day))
-    .take(SAME_DAY_LIMIT);
-  for (const row of sameDay) await ctx.db.delete(row._id);
-}
-
 export const writeKeywordCheck = internalMutation({
   args: {
     pullId: v.id("seoDataPulls"),
@@ -89,7 +62,6 @@ export const writeKeywordCheck = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const now = Date.now();
     if (args.serp) {
       await fileSerpPage(ctx, {
         pullId: args.pullId, keyword: args.keyword, locationCode: args.locationCode ?? DEFAULT_LOCATION_CODE,
@@ -97,14 +69,10 @@ export const writeKeywordCheck = internalMutation({
       });
     }
 
-    // A re-parse replaces what the last parse of this pull wrote, so a
-    // corrected parser can be run over stored pages without anyone auditing
-    // the result afterwards.
-    const prior = await ctx.db
-      .query("seoKeywordPositions")
-      .withIndex("by_pull", (q) => q.eq("pullId", args.pullId))
-      .take(MAX_ROWS_PER_CHECK);
-    for (const row of prior) await ctx.db.delete(row._id);
+    // A re-parse files each site's point again, replacing the day's, so a
+    // corrected parser can be run over stored pages. Which purchase filed a
+    // point is not kept (keep-less-history-plan.md, Decision 10): a site the
+    // corrected parse no longer finds keeps the earlier point.
     await ctx.db.patch(args.pullId, { error: undefined });
 
     const rows = new Map<Id<"websites">, { position?: number; pagePosition?: number; url?: string }>();
@@ -141,26 +109,8 @@ export const writeKeywordCheck = internalMutation({
     }
 
     for (const [websiteId, entry] of [...rows.entries()].slice(0, MAX_ROWS_PER_CHECK)) {
-      await replaceSameDayPosition(ctx, {
-        websiteId,
-        keyword: args.keyword,
-        day: args.day,
-        ...(args.locationCode !== undefined ? { locationCode: args.locationCode } : {}),
-      });
-      await ctx.db.insert("seoKeywordPositions", {
-        websiteId,
-        keyword: args.keyword,
-        day: args.day,
-        ...(entry.position !== undefined ? { position: entry.position } : {}),
-        ...(entry.pagePosition !== undefined ? { pagePosition: entry.pagePosition } : {}),
-        ...(entry.url ? { url: entry.url } : {}),
-        // Always written, so a watcher's view can be read through the place
-        // index. Unset means the registry default was sent.
-        locationCode: args.locationCode ?? DEFAULT_LOCATION_CODE,
-        pullId: args.pullId,
-        createdAt: now,
-      });
-      // And its point on the search's line (keep-less-history-plan.md, part 1).
+      // Its point on the search's line from this place (keep-less-history-plan.md,
+      // part 1), replacing the day's. Unset place means the registry default was sent.
       await setPoint(ctx, {
         websiteId, keyword: args.keyword, locationCode: args.locationCode ?? DEFAULT_LOCATION_CODE, day: args.day,
       }, { ...entry, kind: "CHECK" });
@@ -194,22 +144,9 @@ export async function fileFirstCheckLate(
   pull: Doc<"seoDataPulls">,
 ): Promise<void> {
   const day = await runDayOf(ctx, pull);
-  const held = await ctx.db
-    .query("seoKeywordPositions")
-    .withIndex("by_website_keyword_place_day", (q) =>
-      q.eq("websiteId", first.websiteId).eq("keyword", first.query).eq("locationCode", first.locationCode).eq("day", day))
-    .first();
   const point = { websiteId: first.websiteId, keyword: first.query, locationCode: first.locationCode, day };
-  if (!(await pointAt(ctx, point))) await setPoint(ctx, point, { kind: "CHECK" });
-  if (!held) {
-    await ctx.db.insert("seoKeywordPositions", {
-      websiteId: first.websiteId,
-      keyword: first.query,
-      day,
-      locationCode: first.locationCode,
-      pullId: pull._id,
-      createdAt: Date.now(),
-    });
+  if (!(await pointAt(ctx, point))) {
+    await setPoint(ctx, point, { kind: "CHECK" });
     await recomputeSearchStats(ctx, { websiteId: first.websiteId, keyword: first.query, locationCode: first.locationCode });
   }
   await ctx.db.patch(first._id, { checkedDay: day });

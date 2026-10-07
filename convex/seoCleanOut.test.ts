@@ -49,7 +49,6 @@ async function collected(t: Harness, websiteId: Id<"websites">, keywordRanks: nu
     // The keyword list: its first page kept, its second gone.
     for (const offset of [0, COMPETITOR_KEYWORDS_KEPT]) {
       const page = await pull("domain_ranked_keywords_list", { offset, limit: COMPETITOR_KEYWORDS_KEPT });
-      await ctx.db.insert("seoKeywordPositions", { websiteId, keyword: `kw ${offset}`, day: DAY, position: 3, pullId: page, locationCode: UK, createdAt: 1 } as never);
       await ctx.db.insert("siteKeywordFeatures", { websiteId, locationCode: UK, keyword: `kw ${offset}`, feature: "featured_snippet", day: DAY, pullId: page } as never);
     }
     for (let index = 0; index < keywordRanks; index += 1) {
@@ -83,7 +82,7 @@ async function setup() {
 /** What a website holds, table by table. */
 async function heldBy(t: Harness, websiteId: Id<"websites">) {
   return await t.run(async (ctx) => {
-    const count = async (table: "siteCrawls" | "siteCrawlPages" | "siteCrawlLinks" | "siteBacklinks" | "siteAnchors" | "siteReferringIps" | "siteReferringSubnets" | "siteLinkDays" | "siteReferringDomains" | "seoWebsiteMetrics" | "seoKeywordPositions" | "siteKeywordFeatures" | "siteKeywordRanks") =>
+    const count = async (table: "siteCrawls" | "siteCrawlPages" | "siteCrawlLinks" | "siteBacklinks" | "siteAnchors" | "siteReferringIps" | "siteReferringSubnets" | "siteLinkDays" | "siteReferringDomains" | "seoWebsiteMetrics" | "siteKeywordFeatures" | "siteKeywordRanks") =>
       (await ctx.db.query(table).collect()).filter((row) => (row as { websiteId?: Id<"websites"> }).websiteId === websiteId).length;
     return {
       crawls: await count("siteCrawls") + await count("siteCrawlPages") + await count("siteCrawlLinks"),
@@ -91,7 +90,7 @@ async function heldBy(t: Harness, websiteId: Id<"websites">) {
       links: await count("siteBacklinks") + await count("siteAnchors") + await count("siteReferringIps") + await count("siteReferringSubnets") + await count("siteLinkDays"),
       linkingWebsites: await count("siteReferringDomains"),
       metrics: (await ctx.db.query("seoWebsiteMetrics").collect()).filter((row) => row.websiteId === websiteId).map((row) => row.operationId).sort(),
-      positions: await count("seoKeywordPositions") + await count("siteKeywordFeatures"),
+      features: await count("siteKeywordFeatures"),
       ranks: await count("siteKeywordRanks"),
     };
   });
@@ -106,7 +105,7 @@ describe("clearing out what competitors no longer have collected", () => {
     expect(counted?.websites).toBe(1);
     expect(counted?.tally).toMatchObject({
       crawls: 1, crawlPages: 1, crawlLinks: 1, crawlFigures: 1, backlinks: 1, anchors: 1, ips: 1, subnets: 1, linkDays: 1,
-      metrics: 2, keywordPages: 2, keywordRanks: 2, discovery: 1,
+      metrics: 2, keywordPages: 1, keywordRanks: 2, discovery: 1,
     });
     expect(await heldBy(t, rival)).toMatchObject({ crawls: 3, links: 5, ranks: COMPETITOR_KEYWORDS_KEPT + 2 });
 
@@ -118,7 +117,7 @@ describe("clearing out what competitors no longer have collected", () => {
       links: 0,
       linkingWebsites: 1,
       metrics: ["backlinks_summary"],
-      positions: 2,
+      features: 1,
       ranks: COMPETITOR_KEYWORDS_KEPT,
     });
     expect(await heldBy(t, own)).toEqual(before);

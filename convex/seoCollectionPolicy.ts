@@ -162,19 +162,29 @@ export const AI_ANSWER_WORDING_RETENTION_DAYS = 90;
  * How long Google's full results page for a search is kept (`siteSerpPages`),
  * then cleared by the hourly sweep (docs/plans/active/dataforseo-cost-plan.md,
  * B3): a page names up to a hundred websites and addresses. Where the website
- * stood on it (`seoKeywordPositions`, `siteKeywordRanks`, and the summary
- * `websiteSearchStats`) is kept for ever, and an older check shows that.
+ * stood on it (its search's line, `keywordPositionMonths`; `siteKeywordRanks`;
+ * and the summary `websiteSearchStats`) is kept, and an older check shows that.
  */
 export const SERP_PAGE_RETENTION_DAYS = 90;
 
 /**
- * How long a search's position is kept day by day (`seoKeywordPositions`);
- * before it, each week's last check is kept and the rest of the week's
- * cleared by the hourly sweep (docs/plans/active/dataforseo-cost-plan.md,
- * B1; `positionWeeks.ts`). The same point a week's step of a position chart
- * already shows, so only a day's step shows fewer points before it.
+ * How long a search's position is kept day by day (its line,
+ * `keywordPositionMonths`); a month wholly before it keeps each week's last
+ * of each kind, past a year each month's last, and nothing past two years —
+ * coarsened by the hourly sweep (`positionHistory.ts`;
+ * keep-less-history-plan.md, part 1, Decision 1; dataforseo-cost-plan.md, B1
+ * before it). The same point a week's step of a position chart already shows,
+ * so only a day's step shows fewer points before it.
  */
 export const DAILY_POSITIONS_RETENTION_DAYS = 90;
+
+/**
+ * How long the searches an AI answer ran are kept by day (`promptFanOutDays`),
+ * then cleared by the hourly sweep: twelve months for the date-based fan-out
+ * report when it is built (keep-less-history-plan.md, part 2, Decision 5).
+ * The searches themselves (`promptFanOutQueries`) are kept.
+ */
+export const FAN_OUT_DAYS_RETENTION_DAYS = 365;
 
 /** The first day whose positions are still kept day by day, `YYYY-MM-DD`. */
 export function dailyPositionsKeptFrom(today: string): string {

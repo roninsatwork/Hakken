@@ -777,15 +777,11 @@ describe("links and the market", () => {
     const rival = await hold(t, ronins, "lightflows.co.uk", "TRACKED", own.websiteId);
     await summary(t, own.websiteId, DAY, { rankedKeywordsTotal: 807, estimatedTraffic: 1937 });
     await summary(t, rival.websiteId, DAY, { rankedKeywordsTotal: 754, estimatedTraffic: 2158 });
-    const pullId = await pull(t, own.websiteId);
     await t.run(async (ctx) => {
       for (const [host, domainKeywords, domainTraffic] of [["found.co.uk", 4757, 1163.4], ["lightflows.co.uk", 754, 2158]] as const) {
         await ctx.db.insert("discoveredCompetitors", {
           companyWebsiteId: own.holdId, companyId: ronins, host, intersections: 120, domainKeywords, domainTraffic,
-          kind: "COMPETITOR", discoveredAt: Date.now(),
-        });
-        await ctx.db.insert("discoveredCompetitorDays", {
-          companyWebsiteId: own.holdId, companyId: ronins, host, day: DAY, intersections: 120, pullId, createdAt: Date.now(),
+          kind: "COMPETITOR", discoveredAt: Date.now(), lastSeenDay: DAY,
         });
       }
     });

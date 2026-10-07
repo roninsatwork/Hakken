@@ -97,7 +97,7 @@ export const purgeWebsiteHoldingsInternal = internalMutation({
 });
 
 /**
- * A hold's discovered competitors, their dated history and the content gap
+ * A hold's discovered competitors and the content gap
  * worked out from its rivals; true once none are left.
  */
 async function purgeHoldDiscoveries(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites">): Promise<boolean> {
@@ -106,18 +106,13 @@ async function purgeHoldDiscoveries(ctx: MutationCtx, companyWebsiteId: Id<"comp
     .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", companyWebsiteId))
     .take(ENTRY_PURGE_BATCH);
   for (const row of found) await ctx.db.delete(row._id);
-  const dated = await ctx.db
-    .query("discoveredCompetitorDays")
-    .withIndex("by_company_website_day", (q) => q.eq("companyWebsiteId", companyWebsiteId))
-    .take(ENTRY_PURGE_BATCH);
-  for (const row of dated) await ctx.db.delete(row._id);
   const gaps = await ctx.db
     .query("siteContentGaps")
     .withIndex("by_hold_keyword", (q) => q.eq("companyWebsiteId", companyWebsiteId))
     .take(ENTRY_PURGE_BATCH);
   for (const row of gaps) await ctx.db.delete(row._id);
   const copyLeft = await dropCopies(ctx, "gap", `${companyWebsiteId}`);
-  return found.length < ENTRY_PURGE_BATCH && dated.length < ENTRY_PURGE_BATCH && gaps.length < ENTRY_PURGE_BATCH && !copyLeft;
+  return found.length < ENTRY_PURGE_BATCH && gaps.length < ENTRY_PURGE_BATCH && !copyLeft;
 }
 
 /**
@@ -175,12 +170,10 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
     }
     if (pulls.length === PULL_PURGE_BATCH) more = true;
 
-    const byWebsite = async (rows: Array<{ _id: Id<"seoKeywordPositions"> | Id<"seoWebsiteMetrics"> | Id<"websiteSearchStats"> | Id<"websiteQuestionStats"> | Id<"aiCitations"> | Id<"siteKeywordRanks"> | Id<"sitePageRanks"> | Id<"siteSections"> | Id<"siteDaySummaries"> | Id<"siteCitedPages"> | Id<"sitePageTypes"> | Id<"siteBacklinks"> | Id<"siteReferringDomains"> | Id<"siteAnchors"> | Id<"siteReferringIps"> | Id<"siteLinkDays"> | Id<"siteReferringSubnets"> | Id<"sitePaidKeywords"> | Id<"siteCrawls"> | Id<"siteListAiDays"> | Id<"siteKeywordFeatures"> | Id<"siteCrawlPages"> | Id<"siteCrawlLinks"> }>) => {
+    const byWebsite = async (rows: Array<{ _id: Id<"seoWebsiteMetrics"> | Id<"websiteSearchStats"> | Id<"websiteQuestionStats"> | Id<"aiCitations"> | Id<"siteKeywordRanks"> | Id<"sitePageRanks"> | Id<"siteSections"> | Id<"siteDaySummaries"> | Id<"siteCitedPages"> | Id<"sitePageTypes"> | Id<"siteBacklinks"> | Id<"siteReferringDomains"> | Id<"siteAnchors"> | Id<"siteReferringIps"> | Id<"siteLinkDays"> | Id<"siteReferringSubnets"> | Id<"sitePaidKeywords"> | Id<"siteCrawls"> | Id<"siteListAiDays"> | Id<"siteKeywordFeatures"> | Id<"siteCrawlPages"> | Id<"siteCrawlLinks"> }>) => {
       for (const row of rows) await ctx.db.delete(row._id);
       if (rows.length === ENTRY_PURGE_BATCH) more = true;
     };
-    await byWebsite(await ctx.db.query("seoKeywordPositions")
-      .withIndex("by_website_day", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
     if ((await clearWebsitePositions(ctx, args.websiteId, ENTRY_PURGE_BATCH)) === ENTRY_PURGE_BATCH) more = true;
     await byWebsite(await ctx.db.query("seoWebsiteMetrics")
       .withIndex("by_website_day", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
@@ -464,11 +457,9 @@ async function purgePurchase(
   for (const row of texts) await deleteAnswerText(ctx, row._id);
   const searchDays = await ctx.db.query("promptFanOutDays").withIndex("by_pull_query", (q) => q.eq("pullId", pullId)).take(ENTRY_PURGE_BATCH);
   for (const row of searchDays) await ctx.db.delete(row._id);
-  const positions = await ctx.db.query("seoKeywordPositions").withIndex("by_pull", (q) => q.eq("pullId", pullId)).take(ENTRY_PURGE_BATCH);
-  for (const row of positions) await ctx.db.delete(row._id);
   const lines = await ctx.db.query("seoCycleLines").withIndex("by_pull", (q) => q.eq("pullId", pullId)).take(ENTRY_PURGE_BATCH);
   for (const row of lines) await ctx.db.delete(row._id);
-  if ([citations, texts, searchDays, positions, lines].some((rows) => rows.length === ENTRY_PURGE_BATCH)) return true;
+  if ([citations, texts, searchDays, lines].some((rows) => rows.length === ENTRY_PURGE_BATCH)) return true;
 
   // Last, the rows the purchase is found by, and the purchase itself.
   for (const row of await ctx.db.query("aiAnswers").withIndex("by_pull", (q) => q.eq("pullId", pullId)).take(ENTRY_PURGE_BATCH)) {

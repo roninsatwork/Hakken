@@ -224,14 +224,15 @@ describe("filing and deciding suggestions", () => {
     // Closest overlap first, and the directory is on the list, labelled.
     expect(listed.data.map((row) => [row.host, row.kind]))
       .toEqual([["yell.com", "DIRECTORY"], ["rival.com", "COMPETITOR"]]);
-    // Each day's figures kept too, one row per competitor per day, however
-    // often that day's result is filed.
+    // The day each was last found is kept on its own row, however often that
+    // day's result is filed; a day's figures are not kept besides
+    // (keep-less-history-plan.md, Decision 4).
     await t.mutation(internal.seoCollectionParse.writeDiscoveredCompetitors, {
       pullId: world.pullId, websiteId: world.websiteId, found,
     });
-    const dated = await t.run(async (ctx) => await ctx.db.query("discoveredCompetitorDays").collect());
-    expect(dated.map((row) => [row.host, row.intersections]).sort())
-      .toEqual([["rival.com", 412], ["yell.com", 1200]]);
+    const rows = await t.run(async (ctx) => await ctx.db.query("discoveredCompetitors").collect());
+    expect(rows.map((row) => [row.host, row.intersections, /^\d{4}-\d{2}-\d{2}$/.test(row.lastSeenDay ?? "")]).sort())
+      .toEqual([["rival.com", 412, true], ["yell.com", 1200, true]]);
   });
 
   test("tracking one adds it exactly as typing it in would", async () => {

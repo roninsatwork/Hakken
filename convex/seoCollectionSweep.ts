@@ -3,6 +3,7 @@ import { internal } from "./_generated/api";
 import { v, type Infer } from "convex/values";
 import {
   AI_ANSWER_WORDING_RETENTION_DAYS,
+  FAN_OUT_DAYS_RETENTION_DAYS,
   SEO_CLAIM_TIMEOUT_MS,
   SEO_CYCLE_RETENTION_DAYS,
   SEO_RAW_RETENTION_DAYS,
@@ -21,7 +22,6 @@ import { dropUnsentRequest } from "./seoCollectionClose";
 import { closeStalledRoleRuns } from "./roleRuns";
 import { sendLongWaiting } from "./seoAgentRuns";
 import { deleteAnswerText } from "./siteAnswers";
-import { thinOldPositions } from "./positionWeeks";
 import { coarsenPositions } from "./positionHistory";
 
 /**
@@ -42,7 +42,8 @@ import { coarsenPositions } from "./positionHistory";
  *  4. Close cycles whose work is all settled.
  *  5. Close Planner and Collector runs that died without saying so.
  *  6. Start the Collector for requests left waiting with nothing sending.
- *  7. Clear raw payloads, AI answers' wording, Google's results pages and
+ *  7. Clear raw payloads, AI answers' wording, Google's results pages, the
+ *     AI's searches by day past a year and
  *     cycles that have outlived their retention, and thin keyword positions
  *     past their 90 days to a week's last, past a year to a month's, and
  *     clear them past two years (`positionHistory.ts`).
@@ -64,7 +65,7 @@ import { coarsenPositions } from "./positionHistory";
  * transaction inside Convex's limits, and a duty takes pages until it is done,
  * its page budget is spent, or the check has run for `SWEEP_TIME_MS`.
  */
-const DUTIES = ["reclaim", "chase", "close", "resume", "refile", "stalledRuns", "sendWaiting", "purgeRaw", "purgeWording", "purgeSerpPages", "purgeCycles", "thinPositions"] as const;
+const DUTIES = ["reclaim", "chase", "close", "resume", "refile", "stalledRuns", "sendWaiting", "purgeRaw", "purgeWording", "purgeSerpPages", "purgeFanOutDays", "purgeCycles", "thinPositions"] as const;
 type Duty = (typeof DUTIES)[number];
 const dutyValidator = v.union(...DUTIES.map((duty) => v.literal(duty)));
 
@@ -80,8 +81,9 @@ const PAGES_PER_DUTY: Record<Duty, number> = {
   purgeRaw: 250,
   purgeWording: 100,
   purgeSerpPages: 100,
+  purgeFanOutDays: 100,
   purgeCycles: 25,
-  // A page is a hundred positions: thirty thousand an hour, a day's past the 90 days and a backlog's besides.
+  // A step is up to a hundred months of each grain: a month's coarsening of every search and a backlog's besides.
   thinPositions: 300,
 };
 
@@ -168,13 +170,12 @@ export const sweepDuty = internalMutation({
         return await purgeExpiredWording(ctx, now);
       case "purgeSerpPages":
         return await purgeExpiredSerpPages(ctx, now);
+      case "purgeFanOutDays":
+        return await purgeExpiredFanOutDays(ctx, now);
       case "purgeCycles":
         return await purgeExpiredCycles(ctx, now);
-      case "thinPositions": {
-        const thinned = await thinOldPositions(ctx, now);
-        const coarsened = await coarsenPositions(ctx, now);
-        return { ...FINISHED, more: thinned.more || coarsened.more };
-      }
+      case "thinPositions":
+        return { ...FINISHED, ...(await coarsenPositions(ctx, now)) };
     }
   },
 });
@@ -439,9 +440,9 @@ const WORDING_PURGE_PAGE = 50;
 /**
  * Clear Google's full results pages past their 90 days
  * (`SERP_PAGE_RETENTION_DAYS`, the DataForSEO cost plan's B3), oldest first.
- * Only the pages: where each website stood on them (`seoKeywordPositions`,
- * `siteKeywordRanks`, `websiteSearchStats`) is kept for ever, and a search's
- * screen shows that instead.
+ * Only the pages: where each website stood on them (its search's line,
+ * `siteKeywordRanks`, `websiteSearchStats`) is kept, and a search's screen
+ * shows that instead.
  */
 async function purgeExpiredSerpPages(ctx: MutationCtx, now: number): Promise<DutyPage> {
   const cutoff = now - SERP_PAGE_RETENTION_DAYS * DAY_MS;
@@ -455,6 +456,24 @@ async function purgeExpiredSerpPages(ctx: MutationCtx, now: number): Promise<Dut
 
 /** Results pages cleared per page: each names up to a hundred results, tens of kilobytes at most. */
 const SERP_PURGE_PAGE = 100;
+
+/**
+ * Clear the searches an AI answer ran, by day, past their twelve months
+ * (`FAN_OUT_DAYS_RETENTION_DAYS`; keep-less-history-plan.md, Decision 5),
+ * oldest first. The searches themselves are kept.
+ */
+async function purgeExpiredFanOutDays(ctx: MutationCtx, now: number): Promise<DutyPage> {
+  const cutoff = now - FAN_OUT_DAYS_RETENTION_DAYS * DAY_MS;
+  const old = await ctx.db
+    .query("promptFanOutDays")
+    .withIndex("by_creation_time", (q) => q.lt("_creationTime", cutoff))
+    .take(FAN_OUT_DAYS_PURGE_PAGE);
+  for (const row of old) await ctx.db.delete(row._id);
+  return { ...FINISHED, more: old.length === FAN_OUT_DAYS_PURGE_PAGE };
+}
+
+/** Fan-out day rows cleared per page: each a search and a day, under a kilobyte. */
+const FAN_OUT_DAYS_PURGE_PAGE = 500;
 
 /**
  * Retire cycles and their lines together.

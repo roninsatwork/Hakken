@@ -5,7 +5,6 @@ import { internalMutation, type ActionCtx, type MutationCtx } from "./_generated
 import { KEYWORD_LIST_OPERATION_ID, KEYWORD_LIST_PAGE } from "./dataForSeoKeywordListOperations";
 import { parseDomainRankedKeywords } from "./dataForSeoParsers";
 import { expandSeoResult } from "./dataForSeoSlim";
-import { replaceSameDayPosition } from "./seoKeywordChecks";
 import { setPoint } from "./positionHistory";
 import { readSiteDataLimits } from "./companyDataLimits";
 import { sentLimit, sentOffset } from "./sitePagedLists";
@@ -78,7 +77,6 @@ export async function fileRankedPositions(
     positions: ReadonlyArray<RankedPosition>;
   },
 ): Promise<void> {
-  const now = Date.now();
   // The searches any company tracks for this host, so the ones a
   // ranked-keywords pull happens to cover bring their summaries up to date
   // too. Only those: a large site ranks for thousands of phrases nobody is
@@ -92,32 +90,10 @@ export async function fileRankedPositions(
   const place = args.locationCode ?? DEFAULT_LOCATION_CODE;
 
   for (const entry of args.positions) {
-    // The same keyword measured twice on one day from one place is one fact,
-    // so an earlier row is replaced rather than joined by a second. From
-    // another place it is another fact, and stays.
-    await replaceSameDayPosition(ctx, {
-      websiteId: args.websiteId,
-      keyword: entry.keyword,
-      day: args.day,
-      ...(args.locationCode !== undefined ? { locationCode: args.locationCode } : {}),
-    });
-
-    await ctx.db.insert("seoKeywordPositions", {
-      websiteId: args.websiteId,
-      keyword: entry.keyword,
-      day: args.day,
-      ...(entry.position !== undefined ? { position: entry.position } : {}),
-      ...(entry.pagePosition !== undefined ? { pagePosition: entry.pagePosition } : {}),
-      ...(entry.url ? { url: entry.url } : {}),
-      ...(entry.searchVolume !== undefined ? { searchVolume: entry.searchVolume } : {}),
-      // Always written, so a watcher's view can be read through the place
-      // index. Unset means the registry default was sent.
-      locationCode: place,
-      pullId: args.pullId,
-      createdAt: now,
-    });
-    // And its point on the search's line (keep-less-history-plan.md, part 1),
-    // which the readers move to once both are filed.
+    // Its point on the search's line from this place (keep-less-history-plan.md,
+    // part 1): the same keyword measured twice on one day from one place is one
+    // fact, so an earlier point that day is replaced. Unset place means the
+    // registry default was sent.
     await setPoint(ctx, { websiteId: args.websiteId, keyword: entry.keyword, locationCode: place, day: args.day }, {
       ...(entry.position !== undefined ? { position: entry.position } : {}),
       ...(entry.pagePosition !== undefined ? { pagePosition: entry.pagePosition } : {}),
@@ -163,9 +139,6 @@ export const writeListPage = internalMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     for (const row of await ctx.db.query("seoWebsiteMetrics").withIndex("by_pull", (q) => q.eq("pullId", args.pullId)).take(10)) {
-      await ctx.db.delete(row._id);
-    }
-    for (const row of await ctx.db.query("seoKeywordPositions").withIndex("by_pull", (q) => q.eq("pullId", args.pullId)).take(1_100)) {
       await ctx.db.delete(row._id);
     }
     for (const row of await ctx.db.query("siteKeywordFeatures").withIndex("by_pull", (q) => q.eq("pullId", args.pullId)).take(1_100)) {

@@ -21,7 +21,7 @@ import { appError } from "./utils/appError";
 import { clearPoundNames, copyPoundNamesToDollars } from "./costCurrencyMigration";
 import { markExistingHoldsOwned } from "./websiteAttachmentMigration";
 import { backfillPositionPlaces } from "./seoPositionPlaceMigration";
-import { packKeywordPositions } from "./positionHistoryMigration";
+import { clearKeptHistory, packKeywordPositions } from "./keepLessHistoryMigration";
 import { clearCountingSwitchMoves } from "./sitePositionRepair";
 import { moveAnswersOffRequests } from "./seoPullAnswers";
 import { backfillAnswerIndex } from "./siteAnswers";
@@ -221,8 +221,8 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
     const step = await dropStoredGapsStep(ctx);
     return { cursor: null, isDone: !step.more, processed: step.removed, updated: step.removed };
   },
-  // Keyword positions packed a month a record (`positionHistoryMigration.ts`): run before the readers move.
   "2026-10-07-pack-keyword-positions": packKeywordPositions,
+  "2026-10-07-clear-kept-history": clearKeptHistory,
 
   /**
    * Takes the Collector off each company's Collection schedule, and the next

@@ -191,13 +191,12 @@ async function keywordPagesStep(ctx: MutationCtx, site: Id<"websites">, go: bool
   if (!pull || sentOffset(pull.taskArgsJson) < COMPETITOR_KEYWORDS_KEPT) {
     return { found: 0, continueCursor: page.continueCursor, isDone: page.isDone, mark };
   }
-  const positions = await ctx.db.query("seoKeywordPositions").withIndex("by_pull", (q) => q.eq("pullId", pull._id)).take(ROWS_PER_STEP);
   const features = await ctx.db.query("siteKeywordFeatures").withIndex("by_pull", (q) => q.eq("pullId", pull._id)).take(ROWS_PER_STEP);
   const figures = await ctx.db.query("seoWebsiteMetrics").withIndex("by_pull", (q) => q.eq("pullId", pull._id)).take(ROWS_PER_STEP);
-  const rows = [...positions, ...features, ...figures];
+  const rows = [...features, ...figures];
   if (!go) return { found: rows.length, continueCursor: page.continueCursor, isDone: page.isDone, mark };
   for (const row of rows) await ctx.db.delete(row._id);
-  const more = positions.length === ROWS_PER_STEP || features.length === ROWS_PER_STEP || figures.length === ROWS_PER_STEP;
+  const more = features.length === ROWS_PER_STEP || figures.length === ROWS_PER_STEP;
   // More of this page's rows left: the same page again; otherwise on.
   return more
     ? { found: rows.length, continueCursor: cursor ?? "", isDone: false, mark }
@@ -238,8 +237,7 @@ async function discoveryStep(ctx: MutationCtx, site: Id<"websites">, go: boolean
   const hold = holds[mark.seen];
   if (!hold) return { found: 0, continueCursor: "", isDone: true, mark };
   const found = await ctx.db.query("discoveredCompetitors").withIndex("by_company_website", (q) => q.eq("companyWebsiteId", hold._id)).take(ROWS_PER_STEP);
-  const dated = await ctx.db.query("discoveredCompetitorDays").withIndex("by_company_website_day", (q) => q.eq("companyWebsiteId", hold._id)).take(ROWS_PER_STEP);
-  const rows = [...found, ...dated];
+  const rows = found;
   if (go) for (const row of rows) await ctx.db.delete(row._id);
   // Counting, or all of this hold's gone: the next hold.
   const next = !go || rows.length < ROWS_PER_STEP ? mark.seen + 1 : mark.seen;

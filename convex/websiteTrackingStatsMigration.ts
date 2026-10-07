@@ -96,13 +96,13 @@ export async function rebuildSearchSummaries(
 
   let updated = 0;
   for (const search of page.page) {
-    const rows = await ctx.db
-      .query("seoKeywordPositions")
-      .withIndex("by_website_keyword_day", (q) =>
+    const lines = await ctx.db
+      .query("keywordPositionMonths")
+      .withIndex("by_website_keyword_place_month", (q) =>
         q.eq("websiteId", search.websiteId).eq("keyword", search.keyword))
       .order("desc")
       .take(PLACES_PER_SEARCH * 4);
-    const places = new Set(rows.map((row) => row.locationCode ?? DEFAULT_LOCATION_CODE));
+    const places = new Set(lines.map((line) => line.locationCode));
     for (const locationCode of [...places].slice(0, PLACES_PER_SEARCH)) {
       await recomputeSearchStats(ctx, { websiteId: search.websiteId, keyword: search.keyword, locationCode });
       updated += 1;

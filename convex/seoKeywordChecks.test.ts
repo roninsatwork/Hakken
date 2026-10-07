@@ -5,6 +5,7 @@ import { internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { listOwnerOf } from "@/src/test/listOwner";
+import { pointsOf } from "./positionHistory";
 
 /**
  * One checked search, filed against every site it answers for.
@@ -49,8 +50,12 @@ async function seedCheck(t: Harness, keyword: string, locationCode: number, item
   } as never));
 }
 
+/** Each point filed: one a website, search, place and day (`positionHistory.ts`). */
 const positions = (t: Harness) =>
-  t.run(async (ctx) => await ctx.db.query("seoKeywordPositions").collect());
+  t.run(async (ctx) => (await ctx.db.query("keywordPositionMonths").collect()).flatMap((line) =>
+    pointsOf(line).map((point) => ({
+      websiteId: line.websiteId, locationCode: line.locationCode, day: point.day, position: point.position ?? undefined,
+    }))));
 
 describe("filing a checked search", () => {
   test("every known site on the page gets its place, and a tracker missing from it gets a row saying so", async () => {

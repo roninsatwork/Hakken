@@ -1,6 +1,5 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
-import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
 import { companyHolds, listHold, listWebsiteId, myRivals, requireMySite } from "./siteAccess";
 import { holdAiSummary, holdQuestionAnswers, holdQuestions } from "./holdLists";
@@ -22,8 +21,6 @@ import { MAX_LIST } from "./websiteSiteRows";
  * The organic competitors and suggestions are what DataForSEO found for this
  * company's hold. Nothing another company chose is ever read.
  */
-
-type Reader = { db: QueryCtx["db"] };
 
 /** Discovered competitors per hold; DataForSEO returns a few hundred at most. */
 export const MAX_DISCOVERED = 300;
@@ -180,23 +177,6 @@ const kindValidator = v.union(
   v.literal("SUPPLIER"), v.literal("OTHER"), v.null(),
 );
 
-/**
- * The day each found website was last seen by discovery for this hold: the
- * "last checked" column (D12). One short read per website, from a list
- * capped on the hold.
- */
-async function lastSeenDays(ctx: Reader, holdId: Id<"companyWebsites">, hosts: string[]): Promise<Map<string, string>> {
-  const days = await Promise.all(hosts.map(async (host) => {
-    const newest = await ctx.db
-      .query("discoveredCompetitorDays")
-      .withIndex("by_company_website_host_day", (q) => q.eq("companyWebsiteId", holdId).eq("host", host))
-      .order("desc")
-      .first();
-    return [host, newest?.day] as const;
-  }));
-  return new Map(days.flatMap(([host, day]) => (day ? [[host, day] as [string, string]] : [])));
-}
-
 /** Every site DataForSEO found ranking for the same searches, most overlap first. */
 export const listOrganicCompetitors = tenantQuery({
   args: { siteId: v.id("companyWebsites") },
@@ -222,7 +202,6 @@ export const listOrganicCompetitors = tenantQuery({
       myRivals(ctx, site),
     ]);
     const tracked = new Set(rivals.map((rival) => rival.website.host));
-    const seen = await lastSeenDays(ctx, args.siteId, found.map((row) => row.host));
     return found
       .filter((row) => row.host !== site.website.host)
       .map((row) => ({
@@ -234,7 +213,8 @@ export const listOrganicCompetitors = tenantQuery({
         domainKeywords: row.domainKeywords ?? null,
         domainTraffic: row.domainTraffic ?? null,
         tracked: tracked.has(row.host),
-        day: seen.get(row.host) ?? null,
+        // The day discovery last found it for this hold: the "last checked" column (D12).
+        day: row.lastSeenDay ?? null,
       }))
       .sort((left, right) => right.intersections - left.intersections);
   },
@@ -285,7 +265,6 @@ export const marketMap = tenantQuery({
       };
     }));
     const listed = found.filter((row) => !heldHosts.has(row.host) && (row.domainKeywords !== undefined || row.domainTraffic !== undefined));
-    const seen = await lastSeenDays(ctx, args.siteId, listed.map((row) => row.host));
     const others = listed
       .map((row) => ({
         host: row.host,
@@ -294,7 +273,7 @@ export const marketMap = tenantQuery({
         keywords: row.domainKeywords ?? null,
         traffic: row.domainTraffic !== undefined ? Math.round(row.domainTraffic) : null,
         sharedKeywords: row.intersections,
-        day: seen.get(row.host) ?? null,
+        day: row.lastSeenDay ?? null,
       }));
     return [...mine, ...others];
   },
@@ -443,7 +422,6 @@ export const listSuggested = tenantQuery({
       websiteIds: new Set(holds.map((entry) => entry.website._id)),
       hosts: new Set(holds.map((entry) => entry.website.host)),
     });
-    const days = await lastSeenDays(ctx, args.siteId, found.map((row) => row.host));
     return [
       ...named.map((entry) => ({
         host: entry.host, reason: "NAMED_BY_AI" as const, times: entry.times, intersections: null, kind: null, day: entry.lastDay,
@@ -454,7 +432,7 @@ export const listSuggested = tenantQuery({
         times: null,
         intersections: row.intersections,
         kind: row.kind ?? null,
-        day: days.get(row.host) ?? null,
+        day: row.lastSeenDay ?? null,
       })),
     ];
   },

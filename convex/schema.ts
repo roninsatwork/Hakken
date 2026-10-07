@@ -679,6 +679,12 @@ export default defineSchema({
     /** The whole domain's keywords and traffic, for the Sites Market map. */
     domainKeywords: v.optional(v.number()),
     domainTraffic: v.optional(v.number()),
+    /**
+     * The day discovery last found it for this hold: the "last checked"
+     * column (D12). A day's figures are not kept besides
+     * (keep-less-history-plan.md, part 2, Decision 4).
+     */
+    lastSeenDay: v.optional(v.string()),
     /** What the judgment made of it, absent when nothing judged it. */
     kind: v.optional(v.union(
       v.literal("COMPETITOR"),

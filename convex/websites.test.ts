@@ -5,6 +5,7 @@ import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { setPoint } from "./positionHistory";
 
 /**
  * A company's websites, and the competitors tracked against each.
@@ -808,7 +809,7 @@ describe("Deleting a website", () => {
           sentCount: 1, readyCount: 1, failedCount: 0, totalCostUsd: 0.02, startedAt: Date.now(),
         });
         await ctx.db.insert("seoCycleLines", { cycleId, companyId: company, websiteId, operationId: "backlinks_summary", pullId, reused: false, createdAt: Date.now() });
-        await ctx.db.insert("seoKeywordPositions", { websiteId, keyword: "web design", day: "2026-09-23", position: 3, locationCode: 2826, pullId, createdAt: Date.now() });
+        await setPoint(ctx, { websiteId, keyword: "web design", locationCode: 2826, day: "2026-09-23" }, { position: 3, kind: "LIST" });
         await ctx.db.insert("seoWebsiteMetrics", { websiteId, day: "2026-09-23", operationId: "backlinks_summary", pullId, metricsJson: "{}", createdAt: Date.now() });
         await ctx.db.insert("aiCitations", { prompt: "q", engine: "chatgpt", day: "2026-09-23", pullId, kind: "BRAND", mentionedWebsiteId: websiteId, mentionedText: "x", position: 1, createdAt: Date.now() } as never);
         await ctx.db.insert("aiAnswers", { prompt: `q-${websiteId}`, engine: "chatgpt", locationCode: 2826, day: "2026-09-23", pullId, named: [websiteId], recommended: [], warnedAgainst: [], createdAt: Date.now() });
@@ -823,7 +824,7 @@ describe("Deleting a website", () => {
     const left = await t.run(async (ctx) => ({
       pulls: (await ctx.db.query("seoDataPulls").collect()).map((row) => row.websiteId),
       lines: (await ctx.db.query("seoCycleLines").collect()).map((row) => row.websiteId),
-      positions: (await ctx.db.query("seoKeywordPositions").collect()).map((row) => row.websiteId),
+      positions: (await ctx.db.query("keywordPositionMonths").collect()).map((row) => row.websiteId),
       metrics: (await ctx.db.query("seoWebsiteMetrics").collect()).map((row) => row.websiteId),
       citations: (await ctx.db.query("aiCitations").collect()).map((row) => row.mentionedWebsiteId),
       discovered: (await ctx.db.query("discoveredCompetitors").collect()).length,

@@ -458,12 +458,6 @@ export const writeSeoMetrics = internalMutation({
       createdAt: now,
     });
 
-    const priorPositions = await ctx.db
-      .query("seoKeywordPositions")
-      .withIndex("by_pull", (q) => q.eq("pullId", args.pullId))
-      .take(REPLACE_LIMIT);
-    for (const row of priorPositions) await ctx.db.delete(row._id);
-
     await fileRankedPositions(ctx, {
       websiteId: args.websiteId,
       pullId: args.pullId,
@@ -855,35 +849,13 @@ export const writeDiscoveredCompetitors = internalMutation({
             q.eq("companyWebsiteId", hold._id).eq("host", row.host))
           .unique();
 
-        // The day's figures, kept whatever the suggestion's state, for
-        // reporting over time — the suggestion row itself is overwritten.
-        const dated = {
-          intersections: row.intersections,
-          ...(row.averagePosition !== undefined ? { averagePosition: row.averagePosition } : {}),
-          ...(row.estimatedTraffic !== undefined ? { estimatedTraffic: row.estimatedTraffic } : {}),
-          ...(row.kind ? { kind: row.kind } : {}),
-          pullId: args.pullId,
-        };
-        const sameDay = await ctx.db
-          .query("discoveredCompetitorDays")
-          .withIndex("by_company_website_host_day", (q) =>
-            q.eq("companyWebsiteId", hold._id).eq("host", row.host).eq("day", day))
-          .first();
-        if (sameDay) await ctx.db.patch(sameDay._id, dated);
-        else {
-          await ctx.db.insert("discoveredCompetitorDays", {
-            companyWebsiteId: hold._id,
-            companyId: hold.companyId,
-            host: row.host,
-            day,
-            createdAt: now,
-            ...dated,
-          });
-        }
-
-        // The domain's own size is a fact, not a suggestion, so it is kept
-        // current even once a person has decided (the Sites Market map).
+        // The domain's own size and the day discovery last found it are
+        // facts, not a suggestion, so they are kept current even once a
+        // person has decided (the Sites Market map; the "last checked"
+        // column). A day's figures are not kept besides
+        // (keep-less-history-plan.md, part 2, Decision 4).
         const domain = {
+          lastSeenDay: day,
           ...(row.domainKeywords !== undefined ? { domainKeywords: row.domainKeywords } : {}),
           ...(row.domainTraffic !== undefined ? { domainTraffic: row.domainTraffic } : {}),
         };
