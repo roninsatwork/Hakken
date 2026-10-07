@@ -31,9 +31,9 @@ export default function CompanyHakkenTasksPage() {
       rows={rows}
       scope="admin-company-hakken-tasks"
       forCompany
-      pause={(taskId) => pause({ taskId })}
-      resume={(taskId) => resume({ taskId })}
-      remove={(taskId) => remove({ taskId })}
+      pause={pause}
+      resume={resume}
+      remove={remove}
     />
   );
 }

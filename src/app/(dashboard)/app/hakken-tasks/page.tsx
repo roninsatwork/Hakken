@@ -39,9 +39,9 @@ export default function HakkenTasksPage() {
         }
         rows={rows}
         scope="hakken-tasks"
-        pause={(taskId) => pause({ taskId })}
-        resume={(taskId) => resume({ taskId })}
-        remove={(taskId) => remove({ taskId })}
+        pause={pause}
+        resume={resume}
+        remove={remove}
       />
     </>
   );

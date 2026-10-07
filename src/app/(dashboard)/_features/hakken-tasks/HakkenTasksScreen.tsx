@@ -87,9 +87,10 @@ export function HakkenTasksScreen({
   scope: string;
   /** A company's, everyone's: who asked, and no link to the owner's own screens. */
   forCompany?: boolean;
-  pause: (taskId: TaskId) => Promise<unknown>;
-  resume: (taskId: TaskId) => Promise<unknown>;
-  remove: (taskId: TaskId) => Promise<unknown>;
+  /** The changes, each run through the screen's action runner, which reports a failure. */
+  pause: (args: { taskId: TaskId }) => Promise<unknown>;
+  resume: (args: { taskId: TaskId }) => Promise<unknown>;
+  remove: (args: { taskId: TaskId }) => Promise<unknown>;
 }) {
   const t = useTranslations("hakkenTasks");
   const locale = useLocale();
@@ -155,7 +156,7 @@ export function HakkenTasksScreen({
   const run = (work: () => Promise<unknown>) => void action.run(work, { fallbackMessage: t("actions.failed") });
   const confirmDelete = async () => {
     if (!deleting) return;
-    const outcome = await removal.run(() => remove(deleting.taskId), { suppressErrorToast: true, fallbackMessage: t("actions.failed") });
+    const outcome = await removal.run(() => remove({ taskId: deleting.taskId }), { suppressErrorToast: true, fallbackMessage: t("actions.failed") });
     if (outcome.ok) setDeleting(null);
   };
 
@@ -201,9 +202,9 @@ export function HakkenTasksScreen({
         canWrite ? (
           <div className="flex items-center justify-end gap-2">
             {row.state === "ON" ? (
-              <Button variant="quiet" className="text-[12px]" disabled={busy} onClick={() => run(() => pause(row.taskId))}>{t("actions.pause")}</Button>
+              <Button variant="quiet" className="text-[12px]" disabled={busy} onClick={() => run(() => pause({ taskId: row.taskId }))}>{t("actions.pause")}</Button>
             ) : (
-              <Button variant="quiet" className="text-[12px]" disabled={busy} onClick={() => run(() => resume(row.taskId))}>{t("actions.resume")}</Button>
+              <Button variant="quiet" className="text-[12px]" disabled={busy} onClick={() => run(() => resume({ taskId: row.taskId }))}>{t("actions.resume")}</Button>
             )}
             <Button variant="quiet" className="text-[12px]" disabled={busy} onClick={() => { removal.clearError(); setDeleting(row); }}>{t("actions.delete")}</Button>
           </div>
