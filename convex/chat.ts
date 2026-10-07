@@ -335,6 +335,8 @@ export const createThread = tenantMutation({
      */
     forCompanyId: v.optional(v.id("companies")),
     forPlatform: v.optional(v.boolean()),
+    /** The website chosen in "Answering for": one the conversation's company holds (keep-less-history-plan.md, 6.1). */
+    forWebsiteId: v.optional(v.id("companyWebsites")),
   },
   returns: v.id("threads"),
   handler: async (ctx, args) => {
@@ -348,10 +350,18 @@ export const createThread = tenantMutation({
       throw appError("NOT_FOUND", "That client does not exist.");
     }
     const activeCompanyId = args.forPlatform ? undefined : args.forCompanyId ?? getActiveCompanyId(user);
-    
+    // Only a website the conversation's own company holds: never another company's.
+    if (args.forWebsiteId !== undefined) {
+      const hold = await ctx.db.get(args.forWebsiteId);
+      if (!hold || activeCompanyId === undefined || hold.companyId !== activeCompanyId) {
+        throw appError("NOT_FOUND", "That website is not one this company holds.");
+      }
+    }
+
     const threadId = await ctx.db.insert("threads", {
       userId,
       companyId: activeCompanyId,
+      ...(args.forWebsiteId !== undefined ? { companyWebsiteId: args.forWebsiteId } : {}),
       agentId: args.agentId,
       title: "New Conversation",
       createdAt: now,

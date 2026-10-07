@@ -15,13 +15,13 @@ graphs — there must be a better, more efficient way of storing these going
 forward"; "this is about not saving data we don't need to store and don't
 access regularly"; "make a documented plan in the repo for this".
 
-**Status, 2026-10-07: phase 1 built and live on dev; the rest to build.**
+**Status, 2026-10-07: phases 1 and 2 built and live on dev; phase 3 measured and waiting on Decision 10; the rest to build.**
 Started the same day, once the Hakken tasks work had finished (Anthony: "the
 other agent has finished … we can start this plan now"; see "Beside the
 Hakken tasks work"), on the `keep-less-history` branch merged into `dev`, not
 pushed. Part 5 agreed by Anthony the same day ("I agree with all of these"),
 and part 6's drawing signed off ("add this to the plan as it's signed off").
-Nine decisions are Anthony's (marked **Decision** below, each with a
+Ten decisions are Anthony's (marked **Decision** below, each with a
 recommendation). Each part starts with a measurement where one is needed, and
 goes ahead only if it bears the part out. About **20 to 25 days** of work in
 all. Part 1 is the one that grows without end; part 3 is the biggest for
@@ -42,6 +42,23 @@ search features 1.6 → 1.2 MB, Your pages 3.6 → 3.3 MB, the sitemap's pages
 browser smoke tests) and the build. One change beside the plan: Your pages'
 rebuild now answers what it wrote and removed, which is how its test sees an
 unchanged page is not written again, now that rows carry no `builtAt`.
+
+**Phase 2 — built 2026-10-07** (part 6, as signed off): Ask Hakken, viewing
+as a company, answers for one of its websites, chosen from the Sites
+website picker rising above its button (`AssistantWebsitePicker.tsx`; the
+picker's `placement`), listing only that company's websites
+(`sites.listPickerHolds`) — at first its own, as drawn; the choice is in the
+address (`?site=`), so a reload keeps it. A new conversation keeps the website
+(`threads.companyWebsiteId`, `chat.createThread`'s `forWebsiteId`, refused for
+a website another company holds), and the Assistant is told it
+(`gatherInstructions`' `websiteHoldId`, `websiteFocusLine`). 発見 in place of
+備; "What will you discover today"; the four questions about Hakken, English
+and Italian, the fourth naming the platform from its setting; the message
+box's contents centred; the look test (`assistantLook.test.tsx`, its outline
+in `look/Main.txt`). Left for their decisions: a company's own people get no
+picker yet (Decision 7), the first choice is the company's own website rather
+than the last chosen (Decision 8), and 備 stays on the public pages
+(Decision 9).
 
 ## The rule
 
@@ -227,6 +244,30 @@ column, the same verdicts and watches.
 - **Decision 3 — a point only when the position changes.** It would save
   more, at the price of every reader working out the gaps. **Recommended:
   not now** — packing takes most of it; step 1.1 measures what is left.
+- **Decision 10 — keep which purchase filed each point?** Raised by step
+  1.1's measurement (below). Kept, re-filing an answer, removing an
+  untracked search's purchases and the competitor clean-out work as today,
+  by purchase — but a keyword checked daily has a different purchase every
+  day, so its month record carries up to 30 purchase ids, and the saving
+  falls short of the plan's "80 to 95%" for the weekly lists that are most
+  rows. Not kept, those three work by keyword, day and kind instead.
+  **Recommended: not kept** — 77 to 94% smaller rather than 64 to 82%; the
+  three are reworked and tested in step 2, at about half a day more.
+
+**Step 1.1 measured, 2026-10-07** (8,000 real rows from dev, five websites;
+dev holds one day of positions, so how many points repeat the one before
+cannot be measured yet): a row today is 396 bytes — the address 78, the
+website 47, the purchase 44, its own id 41, the keyword 34. Packed one record
+a keyword a month, rows only (each row's six lookup entries become three per
+record besides, not counted):
+
+| A keyword | Today, a month | Packed, each point's purchase kept | Packed, not kept |
+|---|---|---|---|
+| Checked weekly (the keyword lists: most rows) | 1.66 KB | 0.59 KB — 64% smaller | 0.39 KB — 77% smaller |
+| Checked daily | 11.59 KB | 2.07 KB — 82% smaller | 0.72 KB — 94% smaller |
+
+5% of the rows sampled were below 50th or not ranking (Decision 2's tail).
+Part 1 waits for Decision 10, then goes on from step 2.
 
 ### Steps
 

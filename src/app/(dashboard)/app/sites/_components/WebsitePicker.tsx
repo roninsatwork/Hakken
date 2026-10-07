@@ -56,6 +56,7 @@ export function WebsitePicker({
   triggerLabel,
   triggerClassName,
   renderTrigger,
+  placement = "below",
 }: {
   holds: readonly PickerHold[];
   /** The site open, or null when every website is. */
@@ -70,12 +71,19 @@ export function WebsitePicker({
   triggerLabel?: string;
   triggerClassName: string;
   renderTrigger: (isOpen: boolean) => ReactNode;
+  /**
+   * Where the list opens on a wide screen: under its button, or above it for
+   * a button at the foot of the page — Ask Hakken's "Answering for", just
+   * above the message box (keep-less-history-plan.md, 6.1). A phone's sheet
+   * rises from the bottom either way.
+   */
+  placement?: "below" | "above";
 }) {
   const t = useTranslations("sites.switcher");
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const findRef = useRef<HTMLInputElement>(null);
-  const [place, setPlace] = useState<{ top: number; left: number } | null>(null);
+  const [place, setPlace] = useState<{ top: number; bottom: number; left: number } | null>(null);
   const [term, setTerm] = useState("");
   const [unfolded, setUnfolded] = useState<ReadonlySet<string>>(new Set());
   const [whole, setWhole] = useState<ReadonlySet<string>>(new Set());
@@ -92,7 +100,7 @@ export function WebsitePicker({
     setTerm("");
     setUnfolded(new Set(currentOwner ? [currentOwner] : []));
     setWhole(new Set());
-    setPlace({ top: rect.bottom + 8, left: rect.left });
+    setPlace({ top: rect.bottom + 8, bottom: window.innerHeight - rect.top + 8, left: rect.left });
   };
   const close = () => setPlace(null);
 
@@ -172,11 +180,14 @@ export function WebsitePicker({
         ref={panelRef}
         role="dialog"
         aria-label={t("title")}
-        style={{ "--switcher-top": `${place?.top ?? 0}px`, "--switcher-left": `${place?.left ?? 0}px` } as CSSProperties}
+        style={{ "--switcher-top": `${place?.top ?? 0}px`, "--switcher-bottom": `${place?.bottom ?? 0}px`, "--switcher-left": `${place?.left ?? 0}px` } as CSSProperties}
         className={cn(
           LAYER.OVERLAY,
           "fixed inset-x-0 bottom-0 flex max-h-[85vh] flex-col rounded-t-[20px] border-t border-border-dim bg-card shadow-2xl",
-          "sm:inset-x-auto sm:bottom-auto sm:left-[var(--switcher-left)] sm:top-[var(--switcher-top)] sm:max-h-[calc(100vh-var(--switcher-top)-16px)] sm:w-[420px] sm:rounded-[14px] sm:border",
+          "sm:inset-x-auto sm:left-[var(--switcher-left)] sm:w-[420px] sm:rounded-[14px] sm:border",
+          placement === "above"
+            ? "sm:top-auto sm:bottom-[var(--switcher-bottom)] sm:max-h-[calc(100vh-var(--switcher-bottom)-16px)]"
+            : "sm:bottom-auto sm:top-[var(--switcher-top)] sm:max-h-[calc(100vh-var(--switcher-top)-16px)]",
         )}
       >
         <div className="flex items-center justify-between pl-4 pr-1 pt-2 sm:hidden">

@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
-import type { QueryCtx } from "./_generated/server";
+import { internalQuery, type QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
 import { companyHolds, findMySite, listHold, myRivals, placeName, type HoldSummary, type SiteReader } from "./siteAccess";
 import { citedPagesIn, coverageOf, coverageValidator, enginesNamingIn, latestBands, latestFigures, latestListAi, linkingWebsitesOf, searchTotalOf } from "./siteFigures";
@@ -92,6 +92,38 @@ const pickerHoldValidator = v.object({ ...holdSummaryValidator.fields, iconUrl: 
 async function withIcon(ctx: Pick<QueryCtx, "db">, entry: { website: Doc<"websites">; summary: HoldSummary }) {
   return { ...entry.summary, iconUrl: await websiteIconUrl(ctx, entry.website._id) };
 }
+
+/**
+ * Every website the company being viewed holds, as the website picker lists
+ * them — its own and the ones it tracks, each with its icon — for Ask
+ * Hakken's "Answering for" (keep-less-history-plan.md, 6.1). Only ever the
+ * caller's company: a super admin viewing as one sees that one's, never
+ * another's.
+ */
+export const listPickerHolds = tenantQuery({
+  args: {},
+  returns: v.array(pickerHoldValidator),
+  handler: async (ctx) => {
+    if (!ctx.companyId) return [];
+    const holds = await companyHolds(ctx, ctx.companyId);
+    return await Promise.all(holds.map((entry) => withIcon(ctx, entry)));
+  },
+});
+
+/**
+ * The website a conversation is about, as the company's own list names it,
+ * and whether the company owns it — what the Assistant is told
+ * (`assistantKnowledge.gatherInstructions`). Null when it is not that
+ * company's.
+ */
+export const holdFocusInternal = internalQuery({
+  args: { holdId: v.id("companyWebsites"), companyId: v.id("companies") },
+  returns: v.union(v.null(), v.object({ host: v.string(), owned: v.boolean() })),
+  handler: async (ctx, args) => {
+    const found = (await companyHolds(ctx, args.companyId)).find((entry) => entry.summary.siteId === args.holdId);
+    return found ? { host: found.summary.host, owned: found.summary.relationship === "OWNED" } : null;
+  },
+});
 
 /** Every website the company holds, owned first, with its headline figures. */
 export const listMySites = tenantQuery({

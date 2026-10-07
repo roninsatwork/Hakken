@@ -330,6 +330,7 @@ export async function buildLoopExecutionContext(ctx: ActionCtx, args: {
         ...(shouldInjectPersonalNote(thread) ? { noteFor: thread.userId } : {}),
         presentation: "WRITTEN",
         agent: { systemPrompt: agent.systemPrompt, skills: runtimeSkills, alwaysMemories: agentAlwaysMemories },
+        ...(thread.companyWebsiteId ? { websiteHoldId: thread.companyWebsiteId } : {}),
       })
     : null;
   const systemInstruction = conversationInstructions

@@ -7177,24 +7177,24 @@
         "question": "Su cosa lavoriamo?",
         "replyPlaceholder": "Rispondi a {platformName}",
         "starters": {
-          "summarise": {
-            "title": "Riassumi un documento",
-            "hint": "Qualcosa che hai caricato"
+          "google": {
+            "title": "Com'è andato il mio sito su Google questo mese?",
+            "hint": "Visitatori e ricerche, rispetto al mese scorso"
           },
-          "draft": {
-            "title": "Scrivi un messaggio",
-            "hint": "Un'email, una nota, una risposta"
+          "pages": {
+            "title": "Quali pagine hanno guadagnato o perso più visitatori?",
+            "hint": "I cambiamenti più grandi di questa settimana"
           },
-          "explain": {
-            "title": "Spiega qualcosa",
-            "hint": "In parole semplici"
+          "aiAnswers": {
+            "title": "Le risposte dell'IA citano noi o i nostri concorrenti?",
+            "hint": "ChatGPT, Gemini, Claude e Perplexity"
           },
-          "plan": {
-            "title": "Pianifica un lavoro",
-            "hint": "Suddividilo in passaggi"
+          "watch": {
+            "title": "Tieni d'occhio una pagina per me",
+            "hint": "{platformName} controlla ogni mattina e ti avvisa"
           }
         },
-        "stamp": "Pronto"
+        "stamp": "Cosa scoprirai oggi"
       },
       "controls": {
         "tools": "Strumenti",
@@ -7337,7 +7337,10 @@
       "client": {
         "answeringFor": "Risponde per",
         "title": "Rispondi per",
-        "platform": "La piattaforma — nessun cliente"
+        "platform": "La piattaforma — nessun cliente",
+        "allWebsites": "Tutti i siti",
+        "chooseWebsite": "Scegli il sito per cui rispondere",
+        "websiteFooter": "{platformName} risponde con i dati di questo sito"
       },
       "taskProposal": {
         "watch": "Terrò d’occhio",

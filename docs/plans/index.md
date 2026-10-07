@@ -15,8 +15,9 @@ completed work.
   what is stored but never read cut (part 5, agreed the same day); and Ask
   Hakken listing only the viewed company's websites, under 発見, with
   questions about Hakken (part 6, drawing signed off the same day).
-  **Planned 2026-10-07; nothing built; waits for the Hakken tasks work to
-  finish; nine decisions open; about 20 to 25 days in seven phases.**
+  **Planned 2026-10-07; phases 1 (quick wins) and 2 (Ask Hakken) built the
+  same day, on dev; phase 3 measured, waiting on Decision 10; ten decisions
+  open; about 20 to 25 days in seven phases.**
 - [Hakken tasks — the assistant that does the work](./active/hakken-tasks-plan.md) —
   on top of the assistant's foundation: a person asks Ask Hakken to keep an
   eye on something, Hakken writes the task back for a yes, checks each

@@ -110,11 +110,13 @@ export function AssistantComposer({
             />
 
             {/* The field reads as a field: its own recessed surface, a real
-                border, and the send button inside it. Items end-aligned so
-                the button sits level with the last line once the box grows
-                rather than floating in the middle of it. */}
+                border, and the send button inside it. The shield, the words
+                and the send arrow sit on the box's middle (Anthony's sign-off,
+                2026-10-07, keep-less-history-plan.md, 6.4); they used to rest
+                on its bottom edge. */}
             <div
-              className={`flex items-end gap-2.5 rounded-[12px] border bg-background/60 dark:bg-black/25 px-3.5 py-3 transition-colors ${
+              data-part="message-box"
+              className={`flex items-center gap-2.5 rounded-[12px] border bg-background/60 dark:bg-black/25 px-3.5 py-3 transition-colors ${
                 isDragging
                   ? "border-brand border-dashed"
                   : isRecording
@@ -123,7 +125,7 @@ export function AssistantComposer({
               }`}
             >
               <ShieldCheck
-                className={`w-[16px] h-[16px] mb-[3px] flex-shrink-0 transition-colors ${
+                className={`w-[16px] h-[16px] flex-shrink-0 transition-colors ${
                   isRecording ? "text-brand" : "text-muted/50"
                 }`}
               />
@@ -153,7 +155,7 @@ export function AssistantComposer({
                 type="submit"
                 disabled={!content.trim() && !isSubmitting}
                 aria-label={t("controls.send")}
-                className={`w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-[8px] transition-all mb-[1px] ${
+                className={`w-7 h-7 flex-shrink-0 flex items-center justify-center rounded-[8px] transition-all ${
                   content.trim() || isSubmitting
                     ? "bg-brand text-on-brand hover:brightness-110 active:scale-95"
                     : "bg-foreground/10 text-muted pointer-events-none"

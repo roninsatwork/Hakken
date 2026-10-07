@@ -113,7 +113,7 @@ describe("assistant shared components", () => {
 
     fireEvent.click(starters[0]);
     expect(onPick).toHaveBeenCalledTimes(1);
-    expect(onPick).toHaveBeenCalledWith("welcome.starters.summarise.title");
+    expect(onPick).toHaveBeenCalledWith("welcome.starters.google.title");
   });
 
   it("shows upload status only when a status is present", () => {

@@ -1,0 +1,10 @@
+# Ask Hakken — the approved look (board "Main" of docs/plans/assets/keep-less-history/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+welcome: What will you discover today
+  way-in: How did my website do on Google this month?
+  way-in: Which pages gained or lost the most visitors?
+  way-in: Do AI answers mention us, or our competitors?
+  way-in: Keep an eye on a page for me
+answering-for: Answering for
+message-box

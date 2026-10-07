@@ -3059,6 +3059,12 @@ export default defineSchema({
     sourceUrl: v.optional(v.string()), // The URL where the user initiated the chat
     title: v.optional(v.string()), // Generated lazily after first exchange
     /**
+     * The website the conversation is about, chosen in Ask Hakken's
+     * "Answering for" (keep-less-history-plan.md, 6.1): one the company owns
+     * or tracks. Absent, the whole company's. The company stays the owner.
+     */
+    companyWebsiteId: v.optional(v.id("companyWebsites")),
+    /**
      * Marks a thread the platform created for itself rather than for a person.
      *
      * An eval has to run through the real chat runtime to test the agent that

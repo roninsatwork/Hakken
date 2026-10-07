@@ -28,6 +28,7 @@ import {
   type ThinkingLevelId,
 } from "@/src/lib/composerPreferences";
 import { AssistantClientPicker, clientThreadArgs, type ClientChoice } from "./_components/AssistantClientPicker";
+import { AssistantWebsitePicker, chosenWebsite } from "./_components/AssistantWebsitePicker";
 
 const loadAssistantModals = () => import("./_components/AssistantModals");
 const AssistantModals = lazy(() =>
@@ -44,7 +45,8 @@ export default function AssistantWelcomePage() {
   // "Ask Hakken about this" on a News story arrives with its question typed
   // and not sent: the reader reads it, changes it if they like, and presses
   // send (knowledge-news-and-digest-plan.md, revised again 2026-10-01, R10).
-  const askedAbout = useSearchParams().get("ask");
+  const searchParams = useSearchParams();
+  const askedAbout = searchParams.get("ask");
 
   const [content, setContent] = useState(() => askedAbout?.slice(0, 2_000) ?? "");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -75,6 +77,16 @@ export default function AssistantWelcomePage() {
   // for their own company and sees no picker.
   const me = useQuery(api.users.getMe);
   const isSuperAdmin = me?.role === "SUPER_ADMIN";
+  // Viewing as a company, a super admin answers for one of its websites, and sees only its websites
+  // (keep-less-history-plan.md, 6.1); viewing as no one, the list of clients as before.
+  const viewingAsCompany = isSuperAdmin && Boolean(me?.impersonatingCompanyId);
+  const pickerHolds = useQuery(api.sites.listPickerHolds, viewingAsCompany ? {} : "skip");
+  const chosenSite = viewingAsCompany && pickerHolds ? chosenWebsite(pickerHolds, searchParams.get("site")) : null;
+  const threadArgs = () => ({
+    ...clientThreadArgs(clientChoice, viewingAs),
+    // The picker's shared shape carries a hold's id as text (`PickerHold`); it is one of `listPickerHolds`' ids.
+    ...(chosenSite ? { forWebsiteId: chosenSite.siteId as Id<"companyWebsites"> } : {}),
+  });
   const viewingAs = me ? (me.impersonatingCompanyId ?? me.companyId) : undefined;
   const [clientChoice, setClientChoice] = useState<ClientChoice | null>(null);
   const sendMessage = useMutation(api.chat.sendMessage);
@@ -203,7 +215,7 @@ export default function AssistantWelcomePage() {
     setIsSubmitting(true);
     const outcome = await voiceAction.run(
       async () => {
-        const threadId = await createThread(clientThreadArgs(clientChoice, viewingAs));
+        const threadId = await createThread(threadArgs());
         router.push(`/app/assistant/${threadId}?voice=1`);
       },
       { fallbackMessage: tCommon("errors.default") },
@@ -233,7 +245,7 @@ export default function AssistantWelcomePage() {
 
     const outcome = await startAction.run(
       async () => {
-        const threadId = await createThread(clientThreadArgs(clientChoice, viewingAs));
+        const threadId = await createThread(threadArgs());
         let uploadedFileIds: Id<"_storage">[] | undefined = undefined;
 
         if (filesSnapshot.length > 0) {
@@ -307,12 +319,15 @@ export default function AssistantWelcomePage() {
         firstName={firstName}
         greeting={t(`welcome.greetings.${greetingKey}`)}
         onPickStarter={handlePickStarter}
+        platformName={settings.platformName}
         t={t}
       />
 
       <AssistantComposer
         activeModels={activeModels}
-        clientPicker={isSuperAdmin ? (
+        clientPicker={viewingAsCompany ? (
+          <AssistantWebsitePicker holds={pickerHolds ?? []} chosen={chosenSite} />
+        ) : isSuperAdmin ? (
           <AssistantClientPicker choice={clientChoice} viewingAs={viewingAs} onChoose={setClientChoice} />
         ) : undefined}
         content={content}

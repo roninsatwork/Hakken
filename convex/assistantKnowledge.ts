@@ -159,9 +159,14 @@ export async function gatherInstructions(
     };
     /** Already read by the door; read here otherwise. */
     platformName?: string;
+    /** The website the conversation is about, chosen in Ask Hakken (keep-less-history-plan.md, 6.1); absent for the whole company. */
+    websiteHoldId?: Id<"companyWebsites">;
   },
 ) {
   const { companyId } = args;
+  const focus = companyId && args.websiteHoldId
+    ? await ctx.runQuery(internal.sites.holdFocusInternal, { holdId: args.websiteHoldId, companyId })
+    : null;
   const [globalSystemPrompt, activeRules, company, companySkills, alwaysMemories, userMemories, platformName] =
     await Promise.all([
       ctx.runQuery(internal.system.getInternalSystemPrompt),
@@ -193,20 +198,32 @@ export async function gatherInstructions(
     userMemories: userMemories.map((memory) => memory.content),
     ...(args.agent ? { agent: args.agent } : {}),
   });
+  const withFocus = focus ? `${written}\n\n====================\nTHE WEBSITE THIS CONVERSATION IS ABOUT:\n\n${websiteFocusLine(focus)}` : written;
 
   return {
     systemInstruction:
       args.presentation === "SPOKEN"
-        ? `${written}\n\n====================\nSPEAKING OUT LOUD:\n\n${REALTIME_VOICE_STYLE}`
+        ? `${withFocus}\n\n====================\nSPEAKING OUT LOUD:\n\n${REALTIME_VOICE_STYLE}`
         : args.presentation === "EMAIL_REPLY"
-          ? `${written}\n\n====================\nWRITING THIS EMAIL REPLY:\n\n${emailReplyStyle(platformName)}`
-          : written,
+          ? `${withFocus}\n\n====================\nWRITING THIS EMAIL REPLY:\n\n${emailReplyStyle(platformName)}`
+          : withFocus,
     platformName,
     company,
     companySkills: companySkills?.skills ?? [],
     alwaysMemories,
     userMemories,
   };
+}
+
+/**
+ * What the Assistant is told of the website a conversation is about: its
+ * name, whose it is, and that it is the one meant when the person names none
+ * — another of the company's websites can still be asked about by name.
+ */
+export function websiteFocusLine(focus: { host: string; owned: boolean }): string {
+  const whose = focus.owned ? "one of the company's own websites" : "a website the company tracks";
+  return `${focus.host}, ${whose}. When the person does not name a website, this is the one they mean: look up ${focus.host}. `
+    + "They can still ask about any other of the company's websites by name.";
 }
 
 /** The company's looked-up memories, as every door shows them to the model. */

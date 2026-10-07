@@ -7177,24 +7177,24 @@
         "question": "What are we working on?",
         "replyPlaceholder": "Reply to {platformName}",
         "starters": {
-          "summarise": {
-            "title": "Summarise a document",
-            "hint": "Something you've uploaded"
+          "google": {
+            "title": "How did my website do on Google this month?",
+            "hint": "Visitors and searches, against last month"
           },
-          "draft": {
-            "title": "Draft a message",
-            "hint": "An email, a note, a reply"
+          "pages": {
+            "title": "Which pages gained or lost the most visitors?",
+            "hint": "The biggest changes this week"
           },
-          "explain": {
-            "title": "Explain something",
-            "hint": "In plain language"
+          "aiAnswers": {
+            "title": "Do AI answers mention us, or our competitors?",
+            "hint": "ChatGPT, Gemini, Claude and Perplexity"
           },
-          "plan": {
-            "title": "Plan a piece of work",
-            "hint": "Break it into steps"
+          "watch": {
+            "title": "Keep an eye on a page for me",
+            "hint": "{platformName} checks each morning and tells you"
           }
         },
-        "stamp": "Prepared"
+        "stamp": "What will you discover today"
       },
       "controls": {
         "tools": "Tools",
@@ -7337,7 +7337,10 @@
       "client": {
         "answeringFor": "Answering for",
         "title": "Answer for",
-        "platform": "The platform — no client"
+        "platform": "The platform — no client",
+        "allWebsites": "All websites",
+        "chooseWebsite": "Choose the website to answer for",
+        "websiteFooter": "{platformName} answers with this website's figures"
       },
       "taskProposal": {
         "watch": "I’ll watch",

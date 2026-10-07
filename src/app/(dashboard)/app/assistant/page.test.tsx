@@ -174,3 +174,81 @@ describe("AssistantWelcomePage", () => {
     });
   });
 });
+
+describe("Answering for, viewing as a company (keep-less-history-plan.md, 6.1)", () => {
+  const createThread = vi.fn();
+  const sendMessage = vi.fn();
+  const HOLDS = [
+    { siteId: "hold_own", host: "morehandles.co.uk", relationship: "OWNED", ofHost: null, ofSiteId: null, iconUrl: null },
+    { siteId: "hold_rival", host: "corston.com", relationship: "TRACKED", ofHost: "morehandles.co.uk", ofSiteId: "hold_own", iconUrl: null },
+  ];
+  const asked = { pickerHolds: 0 };
+  const SUPER_ADMIN_AS_PHG = { _id: "user_1", name: "Anthony Basker", role: "SUPER_ADMIN", impersonatingCompanyId: "company_phg" };
+
+  function signedInAs(me: Record<string, unknown>) {
+    (useQuery as unknown as HookMock).mockImplementation((queryFn: unknown, args?: unknown) => {
+      if (args === "skip") return undefined;
+      const path = getConvexPath(queryFn);
+      if (path.includes("getMe")) return me;
+      if (path.includes("getActiveModels")) return models.filter((model) => model.isEnabled);
+      if (path.includes("listPickerHolds")) {
+        asked.pickerHolds += 1;
+        return HOLDS;
+      }
+      return null;
+    });
+  }
+
+  async function send() {
+    const { unmount } = render(<AssistantWelcomePage />);
+    fireEvent.change(screen.getByLabelText("Message"), { target: { value: "How did we do?" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() => expect(createThread).toHaveBeenCalledTimes(1));
+    const args = createThread.mock.calls[0][0];
+    unmount();
+    createThread.mockClear();
+    return args;
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    asked.pickerHolds = 0;
+    navState.search = "";
+    vi.mocked(useMutation).mockImplementation((mutationFn: unknown) => {
+      const path = getConvexPath(mutationFn);
+      if (path.includes("createThread")) return createThread as unknown as ReturnType<typeof useMutation>;
+      return sendMessage as unknown as ReturnType<typeof useMutation>;
+    });
+    createThread.mockResolvedValue("thread_1");
+    sendMessage.mockResolvedValue(undefined);
+  });
+
+  it("answers for the company's own website at first, as drawn", async () => {
+    signedInAs(SUPER_ADMIN_AS_PHG);
+    expect(await send()).toEqual({ forWebsiteId: "hold_own" });
+  });
+
+  it("answers for the website chosen, and for the whole company when every website is", async () => {
+    signedInAs(SUPER_ADMIN_AS_PHG);
+    navState.search = "site=hold_rival";
+    expect(await send()).toEqual({ forWebsiteId: "hold_rival" });
+    navState.search = "site=all";
+    expect(await send()).toEqual({});
+    navState.search = "";
+  });
+
+  it("a website in the address that is not the company's falls back to its own", async () => {
+    signedInAs(SUPER_ADMIN_AS_PHG);
+    navState.search = "site=somebody_elses_hold";
+    expect(await send()).toEqual({ forWebsiteId: "hold_own" });
+    navState.search = "";
+  });
+
+  it("a company's own people see no websites listed yet, and start for the whole company (Decision 7 is open)", async () => {
+    signedInAs({ _id: "user_2", name: "Jo", role: "ADMIN", companyId: "company_phg" });
+    navState.search = "site=hold_rival";
+    expect(await send()).toEqual({});
+    expect(asked.pickerHolds).toBe(0);
+    navState.search = "";
+  });
+});
