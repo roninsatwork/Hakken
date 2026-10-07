@@ -2,13 +2,16 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type ActionCtx, type QueryCtx } from "./_generated/server";
+import { chargeTaskWork } from "./hakkenTaskCredits";
 import { queueOutboxMessage } from "./outbox";
+import { appUrl } from "./outboxTemplates";
 import { ensureReaderPreferences } from "./readerPreferences";
 import { startRoleRun } from "./roleRuns";
 import { shiftDay } from "./searchConsoleDays";
 import { readList } from "./searchConsoleLists";
 import { emailWording } from "./utils/emailWording";
 import { REPORT_DAYS, pickPages, signed, type PageChange } from "./utils/hakkenReports";
+import { pathOf } from "./utils/hakkenTaskRules";
 import { nextRunOf } from "./utils/hakkenTaskTiming";
 import { REPORT_STEP, STAT_REPORTER } from "./utils/statReporter";
 
@@ -151,6 +154,11 @@ export const sendReportInternal = internalMutation({
     const seen = await ctx.db.query("hakkenTaskChecks").withIndex("by_task_day", (q) => q.eq("taskId", task._id).eq("day", to)).first();
     if (!seen) {
       await ctx.db.insert("hakkenTaskChecks", { taskId: task._id, companyId: task.companyId, day: to, value: total, met: pages.length > 0, streak: 0, alerted: true, checkedAt: now });
+      // A report sent is counted once for its week, at its price (Credit prices).
+      await chargeTaskWork(ctx, {
+        kind: "taskReports", runKey: `taskReports:${task._id}:${to}`, companyId: task.companyId, userId: task.userId, how: "scheduled",
+        companyWebsiteId: target.companyWebsiteId, detail: task.title,
+      }, now);
     }
 
     let emailed = false;
@@ -176,6 +184,19 @@ export const sendReportInternal = internalMutation({
         title: words.bellTitle({ weekday: report.weekday }),
         body: words.bellBody({ change: signed(total, emailWording(language).dateLocale), pages: pages.length, direction: report.direction }),
         href: link,
+      });
+    }
+    if (task.channels.telegram && !seen) {
+      // A message in their Telegram chat, if they have linked one (item 6.1).
+      const locale = emailWording(language).dateLocale;
+      const biggest = pages[0];
+      await ctx.scheduler.runAfter(0, internal.telegramActions.sendToUserInternal, {
+        userId: owner._id,
+        text: emailWording(language).telegram.report({
+          weekday: report.weekday, total: Math.abs(total).toLocaleString(locale), pages: pages.length, direction: report.direction,
+          ...(biggest ? { biggest: { page: pathOf(biggest.page), change: Math.abs(biggest.change).toLocaleString(locale) } } : {}),
+          link: `${appUrl()}${link}`,
+        }),
       });
     }
     if (emailed) await startRoleRun(ctx, "EMAIL_SENDER", { objective: "Send: a report someone asked for.", title: "A task's report" });

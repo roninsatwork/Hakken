@@ -9,11 +9,15 @@ import {
   hakkenTaskRankingValidator,
   hakkenTaskTargetValidator,
 } from "./hakkenTaskSchema";
+import { chargeTaskWork } from "./hakkenTaskCredits";
 import { queueOutboxMessage } from "./outbox";
-import { ensureReaderPreferences } from "./readerPreferences";
+import { appUrl } from "./outboxTemplates";
+import { ensureReaderPreferences, readerPreferencesOf } from "./readerPreferences";
 import { startRoleRun } from "./roleRuns";
 import { resolvePlatformName } from "./settingsService";
+import { emailWording } from "./utils/emailWording";
 import { nextRunOf } from "./utils/hakkenTaskTiming";
+import { readOn } from "./utils/telegramText";
 import { WATCHER } from "./utils/hakkenWatcher";
 
 /**
@@ -189,6 +193,13 @@ export const recordCheckInternal = internalMutation({
       nextCheckAt: nextRunOf(task, now),
       updatedAt: now,
     });
+    // A day looked at is a check, counted once, at its price (Credit prices).
+    if (recorded > 0 && newest) {
+      await chargeTaskWork(ctx, {
+        kind: "taskAlerts", runKey: `taskAlerts:${task._id}:${newest}`, companyId: task.companyId, userId: task.userId, how: "scheduled",
+        ...(task.target ? { companyWebsiteId: task.target.companyWebsiteId } : {}), detail: task.title,
+      }, now);
+    }
 
     if (!args.alert) return { recorded, alerted: false };
     const owner = await ctx.db.get(task.userId);
@@ -220,6 +231,14 @@ export const recordCheckInternal = internalMutation({
     if (task.channels.bell) {
       await ctx.scheduler.runAfter(0, internal.notifications.notifyUserInternal, {
         userId: owner._id, companyId: task.companyId, kind: "HAKKEN_TASK_ALERT", title: args.alert.headline, body: args.alert.body, href: link,
+      });
+    }
+    if (task.channels.telegram) {
+      // A message in their Telegram chat, if they have linked one (item 6.1); replying "why?" asks about it.
+      const { language } = await readerPreferencesOf(ctx, owner._id);
+      await ctx.scheduler.runAfter(0, internal.telegramActions.sendToUserInternal, {
+        userId: owner._id,
+        text: emailWording(language).telegram.alert({ headline: readOn(args.alert.headline), body: args.alert.body, link: `${appUrl()}${link}` }),
       });
     }
     if (emailed) await startRoleRun(ctx, "EMAIL_SENDER", { objective: "Send: an alert someone asked for.", title: "A task's alert" });

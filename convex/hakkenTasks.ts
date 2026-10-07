@@ -4,6 +4,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { readFanOutLimits } from "./fanOutLimits";
+import { chargeTaskWork } from "./hakkenTaskCredits";
 import {
   hakkenTaskChannelsValidator,
   hakkenTaskConditionValidator,
@@ -343,14 +344,15 @@ export const ownTaskInternal = internalQuery({
  * task belongs to the company the conversation is for, and its time zone is
  * their browser's at the moment they say yes.
  */
-export const answerProposal = tenantMutation({
-  args: { messageId: v.id("messages"), yes: v.boolean(), timeZone: v.optional(v.string()) },
-  returns: v.object({ status: v.union(v.literal("PENDING"), v.literal("DONE"), v.literal("DECLINED")), taskId: v.optional(v.id("hakkenTasks")) }),
-  handler: async (ctx, args) => {
+const proposalAnswerValidator = v.object({ status: v.union(v.literal("PENDING"), v.literal("DONE"), v.literal("DECLINED")), taskId: v.optional(v.id("hakkenTasks")) });
+type ProposalAnswer = typeof proposalAnswerValidator.type;
+
+/** The yes or no itself, for the conversation's owner: from Ask Hakken, or a button in Telegram (item 6.1). */
+async function answerProposalAs(ctx: MutationCtx, userId: Id<"users">, args: { messageId: Id<"messages">; yes: boolean; timeZone?: string }): Promise<ProposalAnswer> {
     const message = await ctx.db.get(args.messageId);
     const proposal = message?.taskProposal;
     const thread = message ? await ctx.db.get(message.threadId) : null;
-    if (!message || !proposal || !thread || thread.userId !== ctx.userId || !thread.companyId) {
+    if (!message || !proposal || !thread || thread.userId !== userId || !thread.companyId) {
       throw appError("NOT_FOUND", "That offer isn’t there any more.");
     }
     if (proposal.status !== "PENDING") return { status: proposal.status, ...(proposal.taskId ? { taskId: proposal.taskId } : {}) };
@@ -364,7 +366,11 @@ export const answerProposal = tenantMutation({
     if (proposal.action === "RESEARCH") {
       // Found out in the background by the Research Agent, its write-up into this conversation (item 4.2).
       if (!proposal.research) throw appError("INVALID_INPUT", "That offer doesn’t say what to find out.");
-      await ctx.scheduler.runAfter(0, internal.hakkenResearch.researchInternal, { threadId: thread._id, userId: ctx.userId, research: proposal.research });
+      await ctx.scheduler.runAfter(0, internal.hakkenResearch.researchInternal, { threadId: thread._id, userId: userId, research: proposal.research });
+      // Counted once, for the yes, at its price (Credit prices).
+      await chargeTaskWork(ctx, {
+        kind: "taskResearch", runKey: `taskResearch:${message._id}`, companyId: thread.companyId, userId, how: "byHand", messageId: message._id, detail: proposal.research.question,
+      }, now);
     } else if (proposal.action === "CREATE") {
       // An alert watches a Search Console rule, an AI answer or a ranking (item 4.3); a report (4.1) sends its pages each week.
       const watches = proposal.measure ? Boolean(proposal.condition || proposal.report) : Boolean(proposal.answer || proposal.ranking);
@@ -373,14 +379,14 @@ export const answerProposal = tenantMutation({
       }
       // Not tracked yet: added first, by whoever said yes, within the website's limit (item 4.3).
       if (proposal.adds && proposal.answer) {
-        await addWebsiteQuestionCore(ctx, { companyWebsiteId: proposal.target.companyWebsiteId, prompt: proposal.answer.prompt, engines: [proposal.answer.engine], userId: ctx.userId });
+        await addWebsiteQuestionCore(ctx, { companyWebsiteId: proposal.target.companyWebsiteId, prompt: proposal.answer.prompt, engines: [proposal.answer.engine], userId: userId });
       }
       if (proposal.adds && proposal.ranking) {
-        await addWebsiteKeywordCore(ctx, { companyWebsiteId: proposal.target.companyWebsiteId, keyword: proposal.ranking.keyword, userId: ctx.userId, addedFrom: "HAND" });
+        await addWebsiteKeywordCore(ctx, { companyWebsiteId: proposal.target.companyWebsiteId, keyword: proposal.ranking.keyword, userId: userId, addedFrom: "HAND" });
       }
       taskId = await insertTask(ctx, {
         companyId: thread.companyId,
-        userId: ctx.userId,
+        userId: userId,
         kind: proposal.report ? "REPORT" : "ALERT",
         title: proposal.title,
         ...(proposal.measure ? { measure: proposal.measure } : {}),
@@ -397,12 +403,24 @@ export const answerProposal = tenantMutation({
       });
     } else {
       if (!taskId) throw appError("INVALID_INPUT", "That offer doesn’t say which task.");
-      const task = await ownTask(ctx, { userId: ctx.userId, companyId: thread.companyId }, taskId);
+      const task = await ownTask(ctx, { userId: userId, companyId: thread.companyId }, taskId);
       if (proposal.action === "PAUSE" && task.state !== "PAUSED") await ctx.db.patch(task._id, pausedFields(now));
       if (proposal.action === "RESUME") await resume(ctx, task, now);
       if (proposal.action === "DELETE") await ctx.db.patch(task._id, { state: "DELETED", deletedAt: now, updatedAt: now, nextCheckAt: undefined });
     }
     await ctx.db.patch(message._id, { taskProposal: { ...proposal, status: "DONE", ...(taskId ? { taskId } : {}), answeredAt: now } });
     return { status: "DONE" as const, ...(taskId ? { taskId } : {}) };
-  },
+}
+
+export const answerProposal = tenantMutation({
+  args: { messageId: v.id("messages"), yes: v.boolean(), timeZone: v.optional(v.string()) },
+  returns: proposalAnswerValidator,
+  handler: async (ctx, args) => await answerProposalAs(ctx, ctx.userId, args),
+});
+
+/** A button tapped in Telegram, by the person whose chat it is (`telegramActions.ts`). */
+export const answerProposalInternal = internalMutation({
+  args: { userId: v.id("users"), messageId: v.id("messages"), yes: v.boolean() },
+  returns: proposalAnswerValidator,
+  handler: async (ctx, args): Promise<ProposalAnswer> => await answerProposalAs(ctx, args.userId, { messageId: args.messageId, yes: args.yes }),
 });

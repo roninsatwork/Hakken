@@ -15,6 +15,7 @@ import { seoPullTables } from "./seoPullSchema";
 import { positionWeekTables } from "./positionWeekSchema";
 import { creditTables } from "./creditSchema";
 import { hakkenTaskProposalValidator, hakkenTaskTables } from "./hakkenTaskSchema";
+import { telegramTables } from "./telegramSchema";
 import { decisionCertaintyValidator, decisionFallbackReasonValidator, decisionModeValidator, decisionOutcomeValidator, decisionSourceValidator } from "./utils/decisionShapes";
 
 
@@ -44,6 +45,7 @@ export default defineSchema({
   ...positionWeekTables,
   ...creditTables,
   ...hakkenTaskTables,
+  ...telegramTables,
   
   companies: defineTable({
     name: v.string(),

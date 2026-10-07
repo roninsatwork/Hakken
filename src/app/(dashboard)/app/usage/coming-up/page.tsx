@@ -43,7 +43,7 @@ export default function UsageComingUpPage() {
   const rows = checks?.filter((check) =>
     (!website || check.website?.host === website)
     && (!often || oftenOf(check) === often)
-    && matchesSearchTerm(search, [words.kind(check.kind), check.website?.host, check.setUpBy]));
+    && matchesSearchTerm(search, [words.kind(check.kind), check.title, check.website?.host, check.setUpBy]));
   const paged = paginateItems(rows ?? [], page);
 
   const booked = checks?.reduce((sum, check) => sum + check.toMonthEnd, 0) ?? 0;
@@ -74,7 +74,7 @@ export default function UsageComingUpPage() {
 
             <DataTable
               rows={rows === undefined ? undefined : paged.items}
-              rowKey={(check) => `${check.kind}:${check.website?.websiteId ?? "none"}`}
+              rowKey={(check) => check.taskId ?? `${check.kind}:${check.website?.websiteId ?? "none"}`}
               search={{ value: search, onChange: (next) => { setSearch(next); setPage(1); }, placeholder: words.t("comingUp.search") }}
               filters={(
                 <>
@@ -95,7 +95,7 @@ export default function UsageComingUpPage() {
                   noun="checks"
                   actions={<ListDownload fileName="usage-coming-up" rows={rows} columns={[
                     { header: words.t("comingUp.columns.next"), value: (check) => `${words.date(check.nextAt)} ${words.time(check.nextAt)}` },
-                    { header: words.t("comingUp.columns.task"), value: (check) => words.kind(check.kind) },
+                    { header: words.t("comingUp.columns.task"), value: (check) => check.title ?? words.kind(check.kind) },
                     { header: words.t("comingUp.columns.website"), value: (check) => check.website?.host ?? words.t("websites.none") },
                     { header: words.t("comingUp.columns.often"), value: oftenOf },
                     { header: words.t("comingUp.columns.setUpBy"), value: (check) => check.setUpBy ?? "" },
@@ -119,7 +119,17 @@ export default function UsageComingUpPage() {
                     </span>
                   ),
                 },
-                { key: "task", header: words.t("comingUp.columns.task"), cell: (check) => <span className="text-[13px] text-foreground">{words.kind(check.kind)}</span> },
+                {
+                  key: "task",
+                  header: words.t("comingUp.columns.task"),
+                  // A Hakken task by its title, with its kind beneath (hakken-tasks-plan.md, across all of it).
+                  cell: (check) => check.title ? (
+                    <span className="flex flex-col">
+                      <span className="text-[13px] text-foreground">{check.title}</span>
+                      <span className="text-[11px] text-secondary">{words.kind(check.kind)}</span>
+                    </span>
+                  ) : <span className="text-[13px] text-foreground">{words.kind(check.kind)}</span>,
+                },
                 { key: "website", header: words.t("comingUp.columns.website"), cell: (check) => <UsageWebsiteName website={check.website} words={words} /> },
                 { key: "often", header: words.t("comingUp.columns.often"), cell: (check) => <TagLabel>{oftenOf(check)}</TagLabel> },
                 { key: "setUpBy", header: words.t("comingUp.columns.setUpBy"), cell: (check) => <span className="whitespace-nowrap text-[13px] text-foreground">{check.setUpBy ?? "–"}</span> },

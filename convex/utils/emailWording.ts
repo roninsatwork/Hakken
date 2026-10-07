@@ -117,6 +117,26 @@ export type EmailWording = {
     askWhy: (args: { platformName: string }) => string;
     whyYouGetIt: (args: { platformName: string }) => string;
   };
+  /** What the bot says in Telegram (hakken-tasks-plan.md, item 6.1, board TelegramMessages); Telegram's own look is its own. */
+  telegram: {
+    welcome: (args: { name: string; platformName: string }) => string;
+    /** To a chat that is not linked: how to link it. */
+    intro: (args: { platformName: string }) => string;
+    alreadyLinked: (args: { platformName: string }) => string;
+    codeExpired: string;
+    codeUnknown: string;
+    /** While the Assistant is answering. */
+    lookingIntoIt: string;
+    /** When an answer could not be given. */
+    couldNotAnswer: string;
+    alert: (args: { headline: string; body: string; link: string }) => string;
+    report: (args: { weekday: number; total: string; pages: number; direction: "lost" | "gained"; biggest?: { page: string; change: string }; link: string }) => string;
+    seeChart: (args: { link: string }) => string;
+    /** A tap on an offer's button, said back. */
+    tapped: (args: { yes: boolean; action: "CREATE" | "PAUSE" | "RESUME" | "DELETE" | "RESEARCH"; report: boolean }) => string;
+    notThere: string;
+    buttons: (args: { action: "CREATE" | "PAUSE" | "RESUME" | "DELETE" | "RESEARCH"; report: boolean }) => { yes: string; no: string };
+  };
 };
 
 const EN_WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
@@ -168,6 +188,33 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
       lede: "This is something only a person can fix.",
       open: "Open the collection page",
       whyYouGetIt: ({ platformName }) => `You get this because you’re a super admin of ${platformName}. It’s sent at most once a day for each reason.`,
+    },
+    telegram: {
+      welcome: ({ name, platformName }) => `You’re linked, ${name}! I’ll send your ${platformName} alerts here, and you can ask me anything, just like in ${platformName}.`,
+      intro: ({ platformName }) => `Hello! I’m ${platformName}. To talk with me here, open your profile in ${platformName}, find Telegram, and send me the code you see there.`,
+      alreadyLinked: ({ platformName }) => `You’re already linked. Ask me anything, just like in ${platformName}.`,
+      codeExpired: "That code has run out. Get a new one on your profile and send it to me.",
+      codeUnknown: "I don’t know that code. Check it on your profile, or get a new one there.",
+      lookingIntoIt: "Looking into it now. I’ll reply here in a moment.",
+      couldNotAnswer: "Sorry, I couldn’t answer that just now. Try again in a moment.",
+      alert: ({ headline, body, link }) => `Heads up: ${headline}. ${body}\n\nSee what happened: ${link}\n\nReply “why?” and I’ll look into it for you.`,
+      report: ({ weekday, total, pages, direction, biggest, link }) => {
+        const day = EN_WEEKDAYS[weekday - 1] ?? "weekly";
+        const what = pages === 0
+          ? `none of your pages ${direction} visitors from Google last week.`
+          : `${pages} ${pages === 1 ? "page" : "pages"} ${direction} ${total} visitors from Google last week.${biggest ? ` The biggest ${direction === "lost" ? "drop" : "rise"} was ${biggest.page}, ${biggest.change} ${direction === "lost" ? "fewer" : "more"}.` : ""}`;
+        return `Your ${day} report: ${what}\n\nSee them all: ${link}`;
+      },
+      seeChart: ({ link }) => `See the chart: ${link}`,
+      tapped: ({ yes, action, report }) => {
+        if (!yes) return action === "RESEARCH" ? "Not looked into. Ask me any time." : action === "CREATE" ? "Not set up. Ask me again any time." : "Left as it was.";
+        return { CREATE: report ? "You’re all set: your first report is on its way." : "You’re all set: I’m watching it now.", PAUSE: "Paused.", RESUME: "Back on.", DELETE: "Deleted.", RESEARCH: "On it: I’ll write up what I find here in a few minutes." }[action];
+      },
+      notThere: "That offer isn’t there any more.",
+      buttons: ({ action, report }) => ({
+        yes: { CREATE: report ? "Yes, send it" : "Yes, start watching", PAUSE: "Pause it", RESUME: "Turn it on", DELETE: "Delete task", RESEARCH: "Yes, find out" }[action],
+        no: { CREATE: "Not now", PAUSE: "Keep it on", RESUME: "Leave it paused", DELETE: "Keep it", RESEARCH: "Not now" }[action],
+      }),
     },
     research: {
       bellTitle: ({ platformName }) => `${platformName} looked into it: here’s what it found`,
@@ -271,6 +318,33 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
       lede: "È una cosa che solo una persona può sistemare.",
       open: "Apri la pagina della raccolta",
       whyYouGetIt: ({ platformName }) => `La ricevi perché sei super admin di ${platformName}. Viene inviata al massimo una volta al giorno per ogni motivo.`,
+    },
+    telegram: {
+      welcome: ({ name, platformName }) => `Fatto, ${name}! Ti manderò qui gli avvisi di ${platformName}, e puoi chiedermi qualsiasi cosa, proprio come in ${platformName}.`,
+      intro: ({ platformName }) => `Ciao! Sono ${platformName}. Per parlare con me qui, apri il tuo profilo in ${platformName}, trova Telegram e mandami il codice che vedi lì.`,
+      alreadyLinked: ({ platformName }) => `Sei già collegato. Chiedimi qualsiasi cosa, proprio come in ${platformName}.`,
+      codeExpired: "Quel codice è scaduto. Prendine uno nuovo dal tuo profilo e mandamelo.",
+      codeUnknown: "Non conosco quel codice. Controllalo sul tuo profilo, o prendine uno nuovo lì.",
+      lookingIntoIt: "Ci sto guardando. Ti rispondo qui tra un momento.",
+      couldNotAnswer: "Scusa, non sono riuscito a rispondere. Riprova tra un momento.",
+      alert: ({ headline, body, link }) => `Attenzione: ${headline}. ${body}\n\nGuarda cosa è successo: ${link}\n\nRispondi “perché?” e ci guardo io per te.`,
+      report: ({ weekday, total, pages, direction, biggest, link }) => {
+        const day = itOfWeekday(weekday);
+        const what = pages === 0
+          ? `nessuna delle tue pagine ha ${direction === "lost" ? "perso" : "guadagnato"} visitatori da Google la settimana scorsa.`
+          : `${pages} ${pages === 1 ? "pagina ha" : "pagine hanno"} ${direction === "lost" ? "perso" : "guadagnato"} ${total} visitatori da Google la settimana scorsa.${biggest ? ` ${direction === "lost" ? "Il calo maggiore" : "La crescita maggiore"} è stata ${biggest.page}, ${biggest.change} in ${direction === "lost" ? "meno" : "più"}.` : ""}`;
+        return `Il tuo report ${day}: ${what}\n\nVedile tutte: ${link}`;
+      },
+      seeChart: ({ link }) => `Guarda il grafico: ${link}`,
+      tapped: ({ yes, action, report }) => {
+        if (!yes) return action === "RESEARCH" ? "Non ci ho guardato. Chiedimelo quando vuoi." : action === "CREATE" ? "Non attivato. Chiedimelo di nuovo quando vuoi." : "Lasciato com’era.";
+        return { CREATE: report ? "Fatto: il tuo primo report è in arrivo." : "Fatto: lo sto tenendo d’occhio.", PAUSE: "In pausa.", RESUME: "Di nuovo attivo.", DELETE: "Eliminato.", RESEARCH: "Ci penso io: scriverò qui cosa trovo tra qualche minuto." }[action];
+      },
+      notThere: "Quella proposta non c’è più.",
+      buttons: ({ action, report }) => ({
+        yes: { CREATE: report ? "Sì, mandalo" : "Sì, inizia a controllare", PAUSE: "Mettilo in pausa", RESUME: "Riattivalo", DELETE: "Elimina attività", RESEARCH: "Sì, scoprilo" }[action],
+        no: { CREATE: "Non ora", PAUSE: "Lascialo attivo", RESUME: "Lascialo in pausa", DELETE: "Tienilo", RESEARCH: "Non ora" }[action],
+      }),
     },
     research: {
       bellTitle: ({ platformName }) => `${platformName} ci ha guardato: ecco cosa ha trovato`,

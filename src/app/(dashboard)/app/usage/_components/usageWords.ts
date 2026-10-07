@@ -13,7 +13,7 @@ import { formatDate, formatTime } from "@/src/lib/dates";
  */
 
 /** The kinds of work in the order the menus list them. */
-export const CREDIT_KIND_ORDER: readonly CreditKind[] = ["rankings", "aiAnswers", "keywordResearch", "siteAudit", "backlinks", "assistant"];
+export const CREDIT_KIND_ORDER: readonly CreditKind[] = ["rankings", "aiAnswers", "keywordResearch", "siteAudit", "backlinks", "assistant", "taskAlerts", "taskReports", "taskResearch"];
 
 export type UsageWebsite = { websiteId: string; host: string; relationship: "owned" | "tracked"; iconUrl: string | null };
 

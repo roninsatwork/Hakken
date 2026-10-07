@@ -131,6 +131,8 @@ export const hakkenTaskProposalValidator = v.object({
   usual: v.optional(v.number()),
   timeOfDay: v.optional(v.string()),
   channels: v.optional(hakkenTaskChannelsValidator),
+  /** Credits for one of it — a check, a report, a "find out why" — as Credit prices said when it was offered. */
+  price: v.optional(v.number()),
   /** How often it would have told them over the last four weeks, before they say yes. */
   trial: v.optional(v.object({ tells: v.number(), of: v.number() })),
   answeredAt: v.optional(v.number()),

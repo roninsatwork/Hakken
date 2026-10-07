@@ -18,6 +18,9 @@ export const creditKindValidator = v.union(
   v.literal("siteAudit"),
   v.literal("backlinks"),
   v.literal("assistant"),
+  v.literal("taskAlerts"),
+  v.literal("taskReports"),
+  v.literal("taskResearch"),
 );
 
 export const creditSourceValidator = v.union(v.literal("plan"), v.literal("topup"));

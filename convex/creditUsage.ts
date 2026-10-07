@@ -8,6 +8,7 @@ import { isTrackedHold } from "./utils/websitePairing";
 import { websiteIconUrl } from "./websiteIcons";
 import { cadenceOf, DAY_MS, EVERY_DAYS } from "./seoRunEstimate";
 import { competitorChargeUnderTodaysRules } from "./creditForecastRules";
+import { readCreditPrice } from "./creditLedger";
 import { DEFAULT_CREDIT_PRICES, DEFAULT_PLAN_CREDITS, creditDayOf, creditMonthNamed, creditMonthOf, creditsForUnits, type CreditKind } from "./creditKinds";
 import { creditEntryValidator, creditKindValidator, creditReasonValidator, creditSourceValidator } from "./creditSchema";
 
@@ -142,8 +143,61 @@ const scheduledShape = v.object({
   toMonthEnd: v.number(),
   nextMonth: v.number(),
   setUpBy: v.union(v.string(), v.null()),
+  /** A Hakken task's own row: its title, and the task (hakken-tasks-plan.md, across all of it). */
+  title: v.optional(v.string()),
+  taskId: v.optional(v.id("hakkenTasks")),
 });
 type Scheduled = Infer<typeof scheduledShape>;
+
+/** Hakken tasks' work, booked from the tasks themselves rather than from how their charges ran: one row each. */
+const TASK_KINDS = new Set<CreditKind>(["taskAlerts", "taskReports", "taskResearch"]);
+/** The company's tasks read for Coming up: far more than the 25 a person may have on. */
+const TASKS_READ = 300;
+
+/** How many runs every so often fall from one moment until another. */
+function runsBetween(from: number, until: number, everyMs: number): number {
+  return from >= until ? 0 : Math.floor((until - 1 - from) / everyMs) + 1;
+}
+
+/** Every Hakken task that is on, as a scheduled check: an alert every day, a report every week, at its price. */
+async function taskChecks(ctx: Reader, companyId: Id<"companies">, now: number, endsAt: number, nextEndsAt: number): Promise<Scheduled[]> {
+  const tasks = (await ctx.db.query("hakkenTasks").withIndex("by_company", (q) => q.eq("companyId", companyId)).order("desc").take(TASKS_READ))
+    .filter((task) => task.state === "ON" && task.nextCheckAt !== undefined && (task.kind === "ALERT" || task.kind === "REPORT"));
+  if (tasks.length === 0) return [];
+  const holds = new Map<string, Id<"websites">>();
+  for (const task of tasks) {
+    if (!task.target || holds.has(task.target.companyWebsiteId)) continue;
+    const hold = await ctx.db.get(task.target.companyWebsiteId);
+    if (hold) holds.set(task.target.companyWebsiteId, hold.websiteId);
+  }
+  const websites = await websitesOf(ctx, companyId, holds.values());
+  const names = await namesOf(ctx, tasks.map((task) => task.userId));
+  const prices = {
+    ALERT: creditsForUnits(await readCreditPrice(ctx, "taskAlerts"), 1),
+    REPORT: creditsForUnits(await readCreditPrice(ctx, "taskReports"), 1),
+  };
+  return tasks.map((task) => {
+    const everyDays = task.kind === "REPORT" ? 7 : 1;
+    const everyMs = everyDays * DAY_MS;
+    let nextAt = task.nextCheckAt ?? now;
+    while (nextAt <= now) nextAt += everyMs;
+    const each = task.kind === "REPORT" ? prices.REPORT : prices.ALERT;
+    const toMonthEnd = runsBetween(nextAt, endsAt, everyMs);
+    const websiteId = task.target ? holds.get(task.target.companyWebsiteId) : undefined;
+    return {
+      kind: task.kind === "REPORT" ? "taskReports" as const : "taskAlerts" as const,
+      website: websiteId ? websites.get(websiteId) ?? null : null,
+      everyDays,
+      nextAt,
+      each,
+      toMonthEnd: toMonthEnd * each,
+      nextMonth: runsBetween(Math.max(nextAt + toMonthEnd * everyMs, endsAt), nextEndsAt, everyMs) * each,
+      setUpBy: names.get(task.userId) ?? null,
+      title: task.title,
+      taskId: task._id,
+    };
+  });
+}
 
 /** How far back a scheduled check's runs are read to see how often it runs, and how many of the newest charges at most. */
 const BOOKING_LOOKBACK_MS = 45 * DAY_MS;
@@ -168,7 +222,7 @@ async function scheduledChecks(ctx: Reader, companyId: Id<"companies">, now: num
     .take(BOOKING_READ_LIMIT);
   const groups = new Map<string, Doc<"creditCharges">[]>();
   for (const charge of charges) {
-    if (charge.entry !== "charge" || charge.state !== "charged" || charge.how !== "scheduled" || !charge.kind) continue;
+    if (charge.entry !== "charge" || charge.state !== "charged" || charge.how !== "scheduled" || !charge.kind || TASK_KINDS.has(charge.kind)) continue;
     const key = `${charge.kind}:${charge.websiteId ?? "none"}`;
     groups.set(key, [...(groups.get(key) ?? []), charge]);
   }
@@ -211,6 +265,7 @@ async function scheduledChecks(ctx: Reader, companyId: Id<"companies">, now: num
       setUpBy: last.userId ? names.get(last.userId) ?? null : null,
     });
   }
+  out.push(...await taskChecks(ctx, companyId, now, endsAt, nextEndsAt));
   return out.sort((a, b) => a.nextAt - b.nextAt);
 }
 

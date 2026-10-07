@@ -15,6 +15,7 @@ import { toneForStatus } from "@/src/ui/components/screens/statusTone";
 import { SettingSwitch } from "@/src/ui/components/screens/SettingsCard";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { AssistantNoteTab } from "./AssistantNoteTab";
+import { TelegramSection } from "./TelegramSection";
 
 export default function ProfileTabs() {
   const t = useTranslations('user.logins');
@@ -320,6 +321,9 @@ export default function ProfileTabs() {
               </div>
             ) : null}
           </div>
+
+          {/* Telegram: alerts as messages, and Ask Hakken there too (hakken-tasks-plan.md, item 6.1). */}
+          <TelegramSection />
         </div>
       )}
 

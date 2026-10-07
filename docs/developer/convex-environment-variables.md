@@ -77,6 +77,15 @@ Notes:
   people who can act on the alert — rather than giving up. See
   [System Health And Platform Alerts](./system-health-and-platform-alerts.md).
 
+## Telegram
+
+| Variable | What it is for |
+| --- | --- |
+| `TELEGRAM_BOT_TOKEN` | The platform bot's key from BotFather. Every call to Telegram goes through it (`convex/telegramActions.ts`). Without it nothing is sent to Telegram and the profile shows no Telegram section. |
+| `TELEGRAM_WEBHOOK_SECRET` | A long random string Telegram sends back with each message to `/telegram/webhook` (`X-Telegram-Bot-Api-Secret-Token`); a message without it is refused (`convex/telegramHttp.ts`). Given to Telegram by `telegramActions:setUpTelegram`. |
+
+Setting up: [Telegram: Setting Up the Bot](../operator/telegram.md).
+
 ## Optional Stripe Billing
 
 Billing ships disabled in `hakken.billing.json`; existing Hakken deployments do not

@@ -34,7 +34,16 @@ alerts on AI answers and Google rankings, which can add the question or
 search they watch on a yes (anyone in the company may, Anthony's answer
 that day); and Phase 5, the Caretaker Agent's daily sweep. The Caretaker
 words its notes from plain code rather than a model: what went wrong is a
-fixed list, so a template says it exactly. Estimates come from reading the code each
+fixed list, so a template says it exactly. Phase 6, Telegram, built the same
+day: the profile's code, the bot answering through the same Assistant, its
+buttons, and alerts, reports and write-ups sent there
+([operator guide](../../operator/telegram.md)); the bot itself is created
+with Anthony when it is tried live. Across all of it, the same day: the
+Assistant named from the platform's name ("The Hakken Assistant Agent"),
+and each kind of task work on Credit prices — an alert's check, a report, a
+"find out why" — counted once each through the ledger, said on its offer
+before the yes, and every task that is on booked in Usage → Coming up.
+Estimates come from reading the code each
 item touches, not from building it; each phase is re-estimated before it starts.
 
 ## The rules
@@ -138,7 +147,9 @@ approved again first.
 
 - The Telegram bot: called **AskHakken** for now (Anthony, 2026-10-07; not set up yet). Telegram requires a bot's username to end in "bot", so its shown name is AskHakken and its username something like @AskHakkenBot, if free.
 - Each task kind's price in credits, set by a super admin in Credit prices
-  once the Watcher's real cost per check is measured.
+  once the Watcher's real cost per check is measured. Until then,
+  placeholders (Anthony, 2026-10-07: "Small placeholder prices"): 1 credit an
+  alert's check, 1 a report, 5 a "find out why".
 
 ## Risks
 

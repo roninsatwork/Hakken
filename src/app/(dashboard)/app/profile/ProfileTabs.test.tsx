@@ -11,6 +11,7 @@ vi.mock("next-intl", async () => (await import("@/src/test/screenMocks")).nextIn
 vi.mock("next/navigation", async () => (await import("@/src/test/screenMocks")).nextNavigation());
 vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
 vi.mock("next-themes", () => ({ useTheme: () => ({ theme: "dark", setTheme: vi.fn() }) }));
+vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () => ({ platformName: "Hakken" }) }));
 
 const logins = [
   {

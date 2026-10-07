@@ -115,5 +115,23 @@ describe("a task proposed in a reply", () => {
     expect(screen.getByText("It isn’t one of your tracked questions yet, so I’ll add it")).toBeInTheDocument();
     expect(screen.getByText("About 1 credit each time it’s checked, from your monthly credits")).toBeInTheDocument();
   });
+
+  it("says what each check, report or “find out why” costs, as Credit prices set it, and that Telegram hears too once linked", () => {
+    const { unmount } = renderWithProviders(<TaskProposal messageId={messageId} proposal={{ ...alert, price: 1, channels: { bell: true, email: true, telegram: true } }} />);
+    expect(screen.getByText("1 credit each day it checks, from your monthly credits")).toBeInTheDocument();
+    expect(screen.getByText("Here in Hakken, by email and in Telegram")).toBeInTheDocument();
+    unmount();
+    const { unmount: unmountAdds } = renderWithProviders(<TaskProposal messageId={messageId} proposal={{
+      action: "CREATE", status: "PENDING", title: "a", timeOfDay: "09:00", channels: { bell: true, email: true, telegram: false }, price: 1,
+      target: { companyWebsiteId: "s1" as Id<"companyWebsites">, website: "example.co.uk" },
+      answer: { prompt: "best agency uk", engine: "chatgpt", watch: "notRecommended" }, adds: { credits: 2 },
+    }} />);
+    expect(screen.getByText("1 credit each day it checks, plus about 2 credits each time the question is asked, from your monthly credits")).toBeInTheDocument();
+    unmountAdds();
+    renderWithProviders(<TaskProposal messageId={messageId} proposal={{
+      action: "RESEARCH", status: "PENDING", title: "Why?", research: { question: "Why?" }, price: 5,
+    }} />);
+    expect(screen.getByText("About 5 credits, from your monthly credits")).toBeInTheDocument();
+  });
 });
 

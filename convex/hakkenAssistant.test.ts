@@ -47,7 +47,8 @@ describe("the assistant's agent", () => {
     const created = await t.run(async (ctx) => await ctx.db.get(first));
     expect(created).toMatchObject({
       systemKey: HAKKEN_ASSISTANT.systemKey,
-      name: HAKKEN_ASSISTANT.name,
+      // Named from the platform's name (hakken-tasks-plan.md, across all of it).
+      name: "The Hakken Assistant Agent",
       modelSelectionMode: "inherit",
       isActive: true,
       isGlobal: true,

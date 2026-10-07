@@ -7069,7 +7069,10 @@
         "keywordResearch": "Ogni {per, plural, =1 {parola chiave cercata} other {# parole chiave cercate}}",
         "siteAudit": "Ogni {per, plural, =1 {pagina} other {# pagine}}",
         "backlinks": "Ogni {per, plural, =1 {link} other {# link}}",
-        "assistant": "Ogni {per, plural, =1 {domanda} other {# domande}}"
+        "assistant": "Ogni {per, plural, =1 {domanda} other {# domande}}",
+        "taskAlerts": "Per {per, plural, =1 {controllo} other {# controlli}}: lo sguardo giornaliero di un avviso ai suoi dati",
+        "taskReports": "Per {per, plural, =1 {report inviato} other {# report inviati}}",
+        "taskResearch": "Per {per, plural, =1 {domanda approfondita} other {# domande approfondite}}"
       },
       "was": "era {credits} · non salvato",
       "coveredAt": "{cost} · coperto",
@@ -7339,6 +7342,7 @@
         },
         "at": "Alle {time}",
         "whereBellEmail": "Qui in {platformName} e per email",
+        "whereBellEmailTelegram": "Qui in {platformName}, per email e su Telegram",
         "settle": "I dati di Google si assestano in circa 3 giorni, quindi guarderò sempre a qualche giorno fa",
         "free": "Gratis",
         "yes": "Sì, inizia a controllare",
@@ -7395,7 +7399,8 @@
           "costWhat": "Dai tuoi crediti mensili",
           "yes": "Sì, scoprilo",
           "done": "Ci penso io: scriverò qui cosa trovo tra pochi minuti",
-          "declined": "Non approfondito. Chiedimelo quando vuoi."
+          "declined": "Non approfondito. Chiedimelo quando vuoi.",
+          "costAbout": "{credits, plural, =1 {Circa 1 credito} other {Circa # crediti}}, dai tuoi crediti mensili"
         },
         "watches": {
           "answers": "Le risposte di {engine}",
@@ -7411,8 +7416,12 @@
           "searchWhen": "La tua posizione viene controllata ogni volta che questa ricerca viene verificata",
           "addsQuestion": "Non è ancora tra le tue domande monitorate, quindi la aggiungerò",
           "addsSearch": "Non è ancora tra le tue ricerche monitorate, quindi la aggiungerò",
-          "addsCost": "{credits, plural, =1 {Circa 1 credito} other {Circa # crediti}} ogni volta che viene controllata, dai tuoi crediti mensili"
-        }
+          "addsCost": "{credits, plural, =1 {Circa 1 credito} other {Circa # crediti}} ogni volta che viene controllata, dai tuoi crediti mensili",
+          "costAnswerAdds": "{credits, plural, =1 {1 credito} other {# crediti}} per ogni giorno di controllo, più {adds, plural, =1 {circa 1 credito} other {circa # crediti}} ogni volta che la domanda viene posta, dai tuoi crediti mensili",
+          "costRankingAdds": "{credits, plural, =1 {1 credito} other {# crediti}} per ogni giorno di controllo, più {adds, plural, =1 {circa 1 credito} other {circa # crediti}} ogni volta che la ricerca viene controllata, dai tuoi crediti mensili"
+        },
+        "costAlert": "{credits, plural, =1 {1 credito} other {# crediti}} per ogni giorno di controllo, dai tuoi crediti mensili",
+        "costReport": "{credits, plural, =1 {1 credito} other {# crediti}} per report, dai tuoi crediti mensili"
       },
       "chart": {
         "title": {
@@ -8328,6 +8337,21 @@
           "label": "Digest settimanale delle notizie",
           "description": "Una volta a settimana: cosa è cambiato nella ricerca, nella SEO e nella ricerca con l'IA, e cosa significa per te."
         }
+      },
+      "telegram": {
+        "title": "Telegram",
+        "description": "Ricevi gli avvisi di {platformName} come messaggi su Telegram, e fai domande a {platformName} anche lì.",
+        "search": "Apri Telegram e cerca <strong>{bot}</strong>.",
+        "sendCode": "Mandagli questo codice:",
+        "sendCodeNone": "Prendi un codice da mandargli:",
+        "getCode": "Prendi un codice",
+        "thatsIt": "Fatto. Riceverai un messaggio che ti conferma il collegamento.",
+        "codeLasts": "Il codice vale 10 minuti.",
+        "newCode": "Prendi un nuovo codice",
+        "linkedAs": "Collegato a <strong>{name}</strong>. Anche i tuoi avvisi arrivano lì.",
+        "linked": "Collegato. Anche i tuoi avvisi arrivano lì.",
+        "unlink": "Scollega",
+        "failed": "Non ha funzionato. Riprova tra un momento."
       }
     },
     "assistantNote": {
@@ -12824,7 +12848,10 @@
       "keywordResearch": "Ricerca parole chiave",
       "siteAudit": "Analisi del sito",
       "backlinks": "Backlink",
-      "assistant": "Chiedi a {platformName}"
+      "assistant": "Chiedi a {platformName}",
+      "taskAlerts": "Avvisi delle attività",
+      "taskReports": "Report delle attività",
+      "taskResearch": "Scopri perché"
     },
     "prices": {
       "rankings": "{credits} ogni {per, plural, =1 {parola chiave controllata} other {# parole chiave controllate}}",
@@ -12832,7 +12859,10 @@
       "keywordResearch": "{credits} ogni {per, plural, =1 {parola chiave cercata} other {# parole chiave cercate}}",
       "siteAudit": "{credits} ogni {per, plural, =1 {pagina} other {# pagine}}",
       "backlinks": "{credits} ogni {per, plural, =1 {link} other {# link}}",
-      "assistant": "{credits} ogni {per, plural, =1 {domanda} other {# domande}}"
+      "assistant": "{credits} ogni {per, plural, =1 {domanda} other {# domande}}",
+      "taskAlerts": "{credits} per {per, plural, =1 {controllo} other {# controlli}}",
+      "taskReports": "{credits} per {per, plural, =1 {report inviato} other {# report inviati}}",
+      "taskResearch": "{credits} per {per, plural, =1 {domanda approfondita} other {# domande approfondite}}"
     },
     "units": {
       "rankings": "{count, plural, =1 {# parola chiave} other {# parole chiave}}",
@@ -12840,7 +12870,10 @@
       "keywordResearch": "{count, plural, =1 {# parola chiave cercata} other {# parole chiave cercate}}",
       "siteAudit": "{count, plural, =1 {# pagina} other {# pagine}}",
       "backlinks": "{count, plural, =1 {# link} other {# link}}",
-      "assistant": "{count, plural, =1 {# domanda} other {# domande}}"
+      "assistant": "{count, plural, =1 {# domanda} other {# domande}}",
+      "taskAlerts": "{count, plural, =1 {# controllo} other {# controlli}}",
+      "taskReports": "{count, plural, =1 {# report inviato} other {# report inviati}}",
+      "taskResearch": "{count, plural, =1 {# domanda approfondita} other {# domande approfondite}}"
     },
     "about": {
       "rankings": "Dove si posizionano su Google i tuoi siti e i concorrenti che segui, controllato secondo una pianificazione.",
@@ -12848,7 +12881,10 @@
       "keywordResearch": "Ogni parola chiave cercata da qualcuno del tuo team.",
       "siteAudit": "Ogni pagina del tuo sito letta per trovare problemi.",
       "backlinks": "I link verso i tuoi siti, dai più forti.",
-      "assistant": "Ogni domanda posta da qualcuno del tuo team."
+      "assistant": "Ogni domanda posta da qualcuno del tuo team.",
+      "taskAlerts": "Ogni giorno in cui un avviso impostato da qualcuno guarda i tuoi dati.",
+      "taskReports": "Ogni report settimanale richiesto da qualcuno.",
+      "taskResearch": "Ogni volta che qualcuno ha detto sì a “scopri perché”."
     },
     "often": {
       "byHand": "Quando lo chiedi",

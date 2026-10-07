@@ -9,6 +9,7 @@ Operator docs are for internal launch, release, demo, and packaging workflows. T
 - [Build a New Application from Hakken](./cloning-hakken.md)
 - [Product Setup After Cloning](./product-setup.md)
 - [Optional Stripe Billing](./stripe-billing.md)
+- [Telegram: Setting Up the Bot](./telegram.md)
 - [Reviewed Framework Updates](./framework-updates.md)
 - [Product Recipes](../developer/product-recipes.md)
 - [Vertical App Packaging Checklist](./vertical-app-packaging-checklist.md)

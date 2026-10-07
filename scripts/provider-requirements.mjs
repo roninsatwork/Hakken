@@ -37,6 +37,8 @@ export const BACKEND_REQUIRED_KEYS = ["SITE_URL", "INITIAL_SUPER_ADMIN_EMAIL", "
  */
 export const PLATFORM_PROVIDED_KEYS = ["CONVEX_SITE_URL"];
 export const OPTIONAL_KEYS = [
+  // Telegram (hakken-tasks-plan.md, item 6.1): without the bot's key nothing is sent to Telegram and profiles offer no link.
+  "TELEGRAM_BOT_TOKEN", "TELEGRAM_WEBHOOK_SECRET",
   "TELEPHONY_MAX_CONCURRENT_CALLS", "TELEPHONY_MAX_CALLS_PER_NUMBER_PER_HOUR", "PLATFORM_ALERT_EMAIL", "PLATFORM_ALERT_EMAILS", "ANALYTICS_ALERT_EMAIL", "ANALYTICS_ALERT_EMAILS",
   // The Weekly News Digest (docs/plans/active/knowledge-news-and-digest-plan.md):
   // its own sender address — the Email Sender refuses the digest and says so

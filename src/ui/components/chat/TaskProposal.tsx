@@ -46,7 +46,7 @@ export function TaskProposal({ messageId, proposal, isReadOnly = false }: { mess
       [t("research.lookInto"), proposal.research?.question ?? proposal.title],
       [t("research.using"), t("research.usingWhat")],
       [t("research.tellYou"), t("research.tellWhere")],
-      [t("cost"), t("research.costWhat")],
+      [t("cost"), proposal.price ? t("research.costAbout", { credits: proposal.price }) : t("research.costWhat")],
     ];
     return (
       <div className="flex flex-col gap-3 mt-1">
@@ -103,29 +103,38 @@ export function TaskProposal({ messageId, proposal, isReadOnly = false }: { mess
   // An alert on AI answers or a Google ranking (item 4.3).
   const onAnswers = proposal.answer;
   const ranking = proposal.ranking;
+  // In Telegram too, once its owner has linked it (item 6.1).
+  const where = t(proposal.channels?.telegram ? "whereBellEmailTelegram" : "whereBellEmail", { platformName });
+  // Its price for each check, as Credit prices said when it was offered, and what adding its question or search costs.
+  const watchCost = (withAdds: "costAnswerAdds" | "costRankingAdds") => {
+    const { price, adds } = proposal;
+    if (price && adds) return t(`watches.${withAdds}`, { credits: price, adds: adds.credits });
+    if (adds) return t("watches.addsCost", { credits: adds.credits });
+    return price ? t("costAlert", { credits: price }) : t("free");
+  };
   const rows: Array<[string, React.ReactNode]> = onAnswers ? [
     [t("watch"), t("watches.answers", { engine: engineLabel(onAnswers.engine) })],
     [t("watches.question"), `“${onAnswers.prompt}”`],
     [t("letYouKnow"), t(`watches.${onAnswers.watch}`)],
     [t("when"), t("at", { time })],
-    [t("where"), t("whereBellEmail", { platformName })],
+    [t("where"), where],
     [t("goodToKnow"), proposal.adds ? t("watches.addsQuestion") : t("watches.answersWhen")],
-    [t("cost"), proposal.adds ? t("watches.addsCost", { credits: proposal.adds.credits }) : t("free")],
+    [t("cost"), watchCost("costAnswerAdds")],
   ] : ranking ? [
     [t("watch"), t("watches.google")],
     [t("watches.search"), `“${ranking.keyword}”`],
     [t("letYouKnow"), t(`watches.${ranking.op}`, { position: ranking.position })],
     [t("when"), t("at", { time })],
-    [t("where"), t("whereBellEmail", { platformName })],
+    [t("where"), where],
     [t("goodToKnow"), proposal.adds ? t("watches.addsSearch") : t("watches.searchWhen")],
-    [t("cost"), proposal.adds ? t("watches.addsCost", { credits: proposal.adds.credits }) : t("free")],
+    [t("cost"), watchCost("costRankingAdds")],
   ] : report ? [
     [t("report.send"), t("report.pages", { count: report.count, direction: report.direction })],
     [t("website"), proposal.target?.website ?? ""],
     [t("when"), t("report.every", { weekday: t(`report.weekdays.${report.weekday}` as "report.weekdays.1"), time })],
-    [t("where"), t("whereBellEmail", { platformName })],
+    [t("where"), where],
     [t("goodToKnow"), t("report.compares")],
-    [t("cost"), t("free")],
+    [t("cost"), proposal.price ? t("costReport", { credits: proposal.price }) : t("free")],
   ] : [
     [t("watch"), t(`measures.${proposal.measure ?? "visitors"}`)],
     proposal.target?.page
@@ -133,9 +142,9 @@ export function TaskProposal({ messageId, proposal, isReadOnly = false }: { mess
       : [t("website"), proposal.target?.website ?? ""],
     [t("letYouKnow"), rule],
     [t("when"), t("at", { time })],
-    [t("where"), t("whereBellEmail", { platformName })],
+    [t("where"), where],
     [t("goodToKnow"), t("settle")],
-    [t("cost"), t("free")],
+    [t("cost"), proposal.price ? t("costAlert", { credits: proposal.price }) : t("free")],
   ];
 
   return (

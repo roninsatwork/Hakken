@@ -20,6 +20,7 @@ import {
 import { handleSearchConsoleAuthorize, handleSearchConsoleCallback } from "./searchConsoleConnect";
 import { handleOneClickUnsubscribe, handleResendWebhook } from "./emailHttp";
 import { handleXAuthorize, handleXCallback } from "./xConnect";
+import { handleTelegramWebhook } from "./telegramHttp";
 
 const http = httpRouter();
 http.route({ path: "/api/uploads", method: "POST", handler: handleUpload });
@@ -161,6 +162,8 @@ http.route({ path: "/api/webhooks/resend", method: "POST", handler: handleResend
 // Connecting Anthony's X account for his bookmarks (the same plan, phase 6).
 http.route({ path: "/api/x/oauth/authorize", method: "GET", handler: handleXAuthorize });
 http.route({ path: "/api/x/oauth/callback", method: "GET", handler: handleXCallback });
+// Telegram, another way in to the Assistant (docs/plans/active/hakken-tasks-plan.md, item 6.1).
+http.route({ path: "/telegram/webhook", method: "POST", handler: handleTelegramWebhook });
 
 http.route({
   path: "/apify-webhook",

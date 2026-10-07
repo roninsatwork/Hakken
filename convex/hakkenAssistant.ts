@@ -6,6 +6,7 @@ import { findConnectorInstall, installBuiltInConnector } from "./aiTools";
 import { addNewBuiltInTools } from "./builtInToolSync";
 import { GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
 import { answerTiming } from "./utils/answerTiming";
+import { resolvePlatformName } from "./settingsService";
 import { appError } from "./utils/appError";
 import { ASSISTANT_CONNECTOR_KEYS, HAKKEN_ASSISTANT } from "./utils/hakkenAssistant";
 
@@ -35,8 +36,9 @@ export const ensureAssistantInternal = internalMutation({
       .query("agents")
       .withIndex("by_system_key", (q) => q.eq("systemKey", HAKKEN_ASSISTANT.systemKey))
       .first();
+    const platformName = resolvePlatformName((await ctx.db.query("systemSettings").first())?.platformName);
     const definition = {
-      name: HAKKEN_ASSISTANT.name,
+      name: HAKKEN_ASSISTANT.nameFor(platformName),
       description: HAKKEN_ASSISTANT.description,
       standingObjective: HAKKEN_ASSISTANT.standingObjective,
     };
@@ -145,7 +147,7 @@ export const answerInternal = internalAction({
     if (!assistant?.isActive) {
       const { platformName } = await ctx.runQuery(internal.settings.getEmailBranding, {});
       await notice(
-        `Ask ${platformName} is switched off, so this was not answered. An administrator can switch ${HAKKEN_ASSISTANT.name} back on in Admin → Agents.`,
+        `Ask ${platformName} is switched off, so this was not answered. An administrator can switch ${HAKKEN_ASSISTANT.nameFor(platformName)} back on in Admin → Agents.`,
       );
       return null;
     }

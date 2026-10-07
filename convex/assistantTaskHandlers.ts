@@ -1,4 +1,5 @@
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
 import { shiftDay } from "./searchConsoleDays";
 import { reportCount, reportTitle, weekdayOf } from "./utils/hakkenReports";
@@ -43,6 +44,17 @@ function ruleOf(args: Record<string, unknown>): { measure: TaskMeasure; conditio
   if (op === "dropBy" && value > 100) return { problem: "A drop can be at most 100%." };
   const days = Math.min(14, Math.max(1, Math.round(number(args, "days") ?? 1)));
   return { measure, condition: { op: op as TaskCondition["op"], value, days } };
+}
+
+/** How a new task tells its owner: the bell and email, and Telegram once they have linked it (item 6.1). */
+async function channelsOf(ctx: ToolHandlerExecutionInput["ctx"], userId: Id<"users">) {
+  const telegram = await ctx.runQuery(internal.telegram.userLinkInternal, { userId });
+  return { bell: true, email: true, telegram: telegram !== null };
+}
+
+/** What each kind of task work costs, for the offer to say before the yes (Credit prices). */
+async function pricesOf(ctx: ToolHandlerExecutionInput["ctx"]) {
+  return await ctx.runQuery(internal.hakkenTaskCredits.taskPricesInternal, {});
 }
 
 export const ASSISTANT_TASK_HANDLERS: Record<string, (input: ToolHandlerExecutionInput) => Promise<unknown>> = {
@@ -94,7 +106,8 @@ export const ASSISTANT_TASK_HANDLERS: Record<string, (input: ToolHandlerExecutio
         condition: rule.condition,
         ...(usual !== null ? { usual } : {}),
         timeOfDay: taskTimeOfDay(text(input.args, "time")),
-        channels: { bell: true, email: true, telegram: false },
+        channels: await channelsOf(input.ctx, input.userId),
+        price: (await pricesOf(input.ctx)).taskAlerts,
         trial,
       },
     };
@@ -137,7 +150,8 @@ export const ASSISTANT_TASK_HANDLERS: Record<string, (input: ToolHandlerExecutio
         target: resolved.target,
         report,
         timeOfDay: taskTimeOfDay(text(input.args, "time")),
-        channels: { bell: true, email: true, telegram: false },
+        channels: await channelsOf(input.ctx, input.userId),
+        price: (await pricesOf(input.ctx)).taskReports,
       },
     };
   },
@@ -175,7 +189,7 @@ export const ASSISTANT_TASK_HANDLERS: Record<string, (input: ToolHandlerExecutio
       note: "The alert is written out under your reply with “Yes, start watching” and “Not now”; nothing starts until they tap yes. In one warm sentence, say how its newest answer treated them (or that it isn't tracked yet and what that costs) and that they just need to say yes.",
       proposal: {
         action: "CREATE", status: "PENDING", title: answerTitle(answer), target: found.target, answer, ...(found.adds ? { adds: found.adds } : {}),
-        timeOfDay: taskTimeOfDay(text(input.args, "time")), channels: { bell: true, email: true, telegram: false },
+        timeOfDay: taskTimeOfDay(text(input.args, "time")), channels: await channelsOf(input.ctx, input.userId), price: (await pricesOf(input.ctx)).taskAlerts,
       },
     };
   },
@@ -201,7 +215,7 @@ export const ASSISTANT_TASK_HANDLERS: Record<string, (input: ToolHandlerExecutio
       note: "The alert is written out under your reply with “Yes, start watching” and “Not now”; nothing starts until they tap yes. In one warm sentence, say where it stands now (or that it isn't tracked yet and what that costs) and that they just need to say yes.",
       proposal: {
         action: "CREATE", status: "PENDING", title: rankingTitle(ranking, found.target.website), target: found.target, ranking, ...(found.adds ? { adds: found.adds } : {}),
-        timeOfDay: taskTimeOfDay(text(input.args, "time")), channels: { bell: true, email: true, telegram: false },
+        timeOfDay: taskTimeOfDay(text(input.args, "time")), channels: await channelsOf(input.ctx, input.userId), price: (await pricesOf(input.ctx)).taskAlerts,
       },
     };
   },
@@ -235,6 +249,7 @@ export const ASSISTANT_TASK_HANDLERS: Record<string, (input: ToolHandlerExecutio
         status: "PENDING",
         title: question.slice(0, 300),
         research: { question: question.slice(0, 500), ...(website ? { website } : {}), ...(page ? { page } : {}) },
+        price: (await pricesOf(input.ctx)).taskResearch,
       },
     };
   },

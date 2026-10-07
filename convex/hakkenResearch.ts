@@ -70,6 +70,7 @@ export const researchInternal = internalAction({
   args: { threadId: v.id("threads"), userId: v.id("users"), research: researchValidator },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
+    const startedAt = Date.now();
     const agentId: Id<"agents"> = await ctx.runMutation(internal.hakkenResearch.ensureResearcherInternal, { installedBy: args.userId });
     const thread = await ctx.runQuery(internal.chat.getThreadInternal, { threadId: args.threadId });
     if (!thread) return null;
@@ -89,6 +90,8 @@ export const researchInternal = internalAction({
       content: `Find out: ${args.research.question}${where ? ` (${where})` : ""}. The person said yes to this a moment ago; look with your tools first, then write up what you found for them here.`,
     });
 
+    // Asked in Telegram: the write-up goes there too (item 6.1).
+    await ctx.scheduler.runAfter(0, internal.telegramActions.relayInternal, { threadId: args.threadId, since: startedAt });
     await ctx.runMutation(internal.hakkenResearch.tellOwnerInternal, {
       userId: args.userId, threadId: args.threadId, question: args.research.question, ...(thread.companyId ? { companyId: thread.companyId } : {}),
     });

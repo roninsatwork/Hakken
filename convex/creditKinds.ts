@@ -4,7 +4,7 @@
  * (docs/plans/active/usage-credits-plan.md). Pure: no database.
  */
 
-export type CreditKind = "rankings" | "aiAnswers" | "keywordResearch" | "siteAudit" | "backlinks" | "assistant";
+export type CreditKind = "rankings" | "aiAnswers" | "keywordResearch" | "siteAudit" | "backlinks" | "assistant" | "taskAlerts" | "taskReports" | "taskResearch";
 
 export type CreditPrice = { credits: number; per: number };
 
@@ -19,6 +19,13 @@ export const DEFAULT_CREDIT_PRICES: Record<CreditKind, CreditPrice> = {
   siteAudit: { credits: 1, per: 50 },
   backlinks: { credits: 10, per: 1_000 },
   assistant: { credits: 1, per: 1 },
+  // Hakken tasks (hakken-tasks-plan.md, across all of it): placeholders until
+  // the Watcher's real cost is measured (Anthony, 2026-10-07: "Small
+  // placeholder prices") — an alert's daily check, a weekly report, a
+  // "find out why".
+  taskAlerts: { credits: 1, per: 1 },
+  taskReports: { credits: 1, per: 1 },
+  taskResearch: { credits: 5, per: 1 },
 };
 
 /**

@@ -7069,7 +7069,10 @@
         "keywordResearch": "Per {per, plural, =1 {keyword} other {# keywords}} looked up",
         "siteAudit": "Per {per, plural, =1 {page} other {# pages}}",
         "backlinks": "Per {per, plural, =1 {link} other {# links}}",
-        "assistant": "Per {per, plural, =1 {question} other {# questions}}"
+        "assistant": "Per {per, plural, =1 {question} other {# questions}}",
+        "taskAlerts": "Per {per, plural, =1 {check} other {# checks}}: an alert’s daily look at its figures",
+        "taskReports": "Per {per, plural, =1 {report} other {# reports}} sent",
+        "taskResearch": "Per {per, plural, =1 {question} other {# questions}} looked into"
       },
       "was": "was {credits} · not saved",
       "coveredAt": "{cost} · covered",
@@ -7339,6 +7342,7 @@
         },
         "at": "At {time}",
         "whereBellEmail": "Here in {platformName} and by email",
+        "whereBellEmailTelegram": "Here in {platformName}, by email and in Telegram",
         "settle": "Google’s figures take about 3 days to settle, so I’ll always be looking at a few days ago",
         "free": "Free",
         "yes": "Yes, start watching",
@@ -7395,7 +7399,8 @@
           "costWhat": "From your monthly credits",
           "yes": "Yes, find out",
           "done": "On it: I’ll write up what I find here in a few minutes",
-          "declined": "Not looked into. Ask me any time."
+          "declined": "Not looked into. Ask me any time.",
+          "costAbout": "{credits, plural, =1 {About 1 credit} other {About # credits}}, from your monthly credits"
         },
         "watches": {
           "answers": "{engine}’s answers",
@@ -7411,8 +7416,12 @@
           "searchWhen": "Your position is checked whenever this search is next checked",
           "addsQuestion": "It isn’t one of your tracked questions yet, so I’ll add it",
           "addsSearch": "It isn’t one of your tracked searches yet, so I’ll add it",
-          "addsCost": "{credits, plural, =1 {About 1 credit} other {About # credits}} each time it’s checked, from your monthly credits"
-        }
+          "addsCost": "{credits, plural, =1 {About 1 credit} other {About # credits}} each time it’s checked, from your monthly credits",
+          "costAnswerAdds": "{credits, plural, =1 {1 credit} other {# credits}} each day it checks, plus {adds, plural, =1 {about 1 credit} other {about # credits}} each time the question is asked, from your monthly credits",
+          "costRankingAdds": "{credits, plural, =1 {1 credit} other {# credits}} each day it checks, plus {adds, plural, =1 {about 1 credit} other {about # credits}} each time the search is checked, from your monthly credits"
+        },
+        "costAlert": "{credits, plural, =1 {1 credit} other {# credits}} each day it checks, from your monthly credits",
+        "costReport": "{credits, plural, =1 {1 credit} other {# credits}} a report, from your monthly credits"
       },
       "chart": {
         "title": {
@@ -8328,6 +8337,21 @@
           "label": "Weekly News Digest",
           "description": "Once a week: what changed in search, SEO and AI search, and what it means for you."
         }
+      },
+      "telegram": {
+        "title": "Telegram",
+        "description": "Get your {platformName} alerts as messages in Telegram, and ask {platformName} things there too.",
+        "search": "Open Telegram and search for <strong>{bot}</strong>.",
+        "sendCode": "Send it this code:",
+        "sendCodeNone": "Get a code to send it:",
+        "getCode": "Get a code",
+        "thatsIt": "That’s it. You’ll get a message to say you’re linked.",
+        "codeLasts": "The code works for 10 minutes.",
+        "newCode": "Get a new code",
+        "linkedAs": "Linked to <strong>{name}</strong>. Your alerts come there too.",
+        "linked": "Linked. Your alerts come there too.",
+        "unlink": "Unlink",
+        "failed": "That didn’t work. Try again in a moment."
       }
     },
     "assistantNote": {
@@ -12824,7 +12848,10 @@
       "keywordResearch": "Keyword research",
       "siteAudit": "Site audit",
       "backlinks": "Backlinks",
-      "assistant": "Ask {platformName}"
+      "assistant": "Ask {platformName}",
+      "taskAlerts": "Task alerts",
+      "taskReports": "Task reports",
+      "taskResearch": "Find out why"
     },
     "prices": {
       "rankings": "{credits} per {per, plural, =1 {keyword} other {# keywords}} checked",
@@ -12832,7 +12859,10 @@
       "keywordResearch": "{credits} per {per, plural, =1 {keyword} other {# keywords}} looked up",
       "siteAudit": "{credits} per {per, plural, =1 {page} other {# pages}}",
       "backlinks": "{credits} per {per, plural, =1 {link} other {# links}}",
-      "assistant": "{credits} per {per, plural, =1 {question} other {# questions}}"
+      "assistant": "{credits} per {per, plural, =1 {question} other {# questions}}",
+      "taskAlerts": "{credits} per {per, plural, =1 {check} other {# checks}}",
+      "taskReports": "{credits} per {per, plural, =1 {report} other {# reports}}",
+      "taskResearch": "{credits} per {per, plural, =1 {question} other {# questions}} looked into"
     },
     "units": {
       "rankings": "{count, plural, =1 {# keyword} other {# keywords}}",
@@ -12840,7 +12870,10 @@
       "keywordResearch": "{count, plural, =1 {# keyword looked up} other {# keywords looked up}}",
       "siteAudit": "{count, plural, =1 {# page} other {# pages}}",
       "backlinks": "{count, plural, =1 {# link} other {# links}}",
-      "assistant": "{count, plural, =1 {# question} other {# questions}}"
+      "assistant": "{count, plural, =1 {# question} other {# questions}}",
+      "taskAlerts": "{count, plural, =1 {# check} other {# checks}}",
+      "taskReports": "{count, plural, =1 {# report} other {# reports}}",
+      "taskResearch": "{count, plural, =1 {# question looked into} other {# questions looked into}}"
     },
     "about": {
       "rankings": "Where your websites and the competitors you track rank on Google, checked on a schedule.",
@@ -12848,7 +12881,10 @@
       "keywordResearch": "Every keyword someone on your team looked up.",
       "siteAudit": "Every page of your website read for problems.",
       "backlinks": "The links to your websites, strongest first.",
-      "assistant": "Every question someone on your team asked."
+      "assistant": "Every question someone on your team asked.",
+      "taskAlerts": "Each day an alert someone set up looks at your figures.",
+      "taskReports": "Each weekly report someone asked for.",
+      "taskResearch": "Each time someone said yes to “find out why”."
     },
     "often": {
       "byHand": "When you ask",
