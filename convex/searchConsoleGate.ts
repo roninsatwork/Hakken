@@ -26,17 +26,21 @@ const GOOGLE_MOST_ROWS = 50_000;
 /** Tracked searches read: one list's, capped as everywhere. */
 const TRACKED_READ = 500;
 
-const rowValidator = v.object({ key: v.string(), clicks: v.number() });
+type KeyClicks = Array<{ key: string; clicks: number }>;
 
-/** What the kept days built for the 90 days of web results: its searches and pages, and the searches tracked. */
+/**
+ * What the kept days built for the 90 days of web results: its searches and
+ * pages, as JSON — a busy website's lists are longer than a returned array
+ * may be — and the searches tracked.
+ */
 export const gateInputs = internalQuery({
   args: { connectionId: v.id("searchConsoleConnections") },
   returns: v.union(v.null(), v.object({
     property: v.string(),
     from: v.string(),
     to: v.string(),
-    searches: v.array(rowValidator),
-    pages: v.array(rowValidator),
+    searchesJson: v.string(),
+    pagesJson: v.string(),
     tracked: v.array(v.string()),
   })),
   handler: async (ctx, args) => {
@@ -52,8 +56,8 @@ export const gateInputs = internalQuery({
       property: connection.property,
       from: searches.from,
       to: searches.to,
-      searches: searches.rows.map((row) => ({ key: row.key, clicks: row.clicks })),
-      pages: pages.rows.map((row, index) => ({ key: pageKeys[index], clicks: row.clicks })),
+      searchesJson: JSON.stringify(searches.rows.map((row) => ({ key: row.key, clicks: row.clicks }))),
+      pagesJson: JSON.stringify(pages.rows.map((row, index) => ({ key: pageKeys[index], clicks: row.clicks }))),
       tracked: tracked.map((row) => row.keyword),
     };
   },
@@ -145,7 +149,12 @@ export const measureGate = internalAction({
     for (const { connectionId } of connections) {
       const host: string | null = await ctx.runQuery(internal.searchConsoleTidy.hostOfConnection, { connectionId });
       if (!host || (args.host !== undefined && host !== args.host)) continue;
-      const built = await ctx.runQuery(internal.searchConsoleGate.gateInputs, { connectionId });
+      const inputs = await ctx.runQuery(internal.searchConsoleGate.gateInputs, { connectionId });
+      const built = inputs && {
+        ...inputs,
+        searches: JSON.parse(inputs.searchesJson) as KeyClicks,
+        pages: JSON.parse(inputs.pagesJson) as KeyClicks,
+      };
       if (!built) {
         report.push({ host, problem: "no 90-day lists built" });
         continue;
