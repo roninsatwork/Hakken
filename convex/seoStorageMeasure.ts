@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { internalAction, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { TableNames } from "./_generated/dataModel";
+import { lostKeywordsKeptFrom } from "./seoCollectionPolicy";
 
 /**
  * How much DataForSEO's data takes up, table by table and website by website
@@ -63,6 +64,58 @@ export const tablePage = internalQuery({
       continueCursor: page.continueCursor,
       isDone: page.isDone,
     };
+  },
+});
+
+/**
+ * A page of the latest rankings: each website's rows, those marked lost, and
+ * those lost before the 90 days a lost keyword is kept — what the next
+ * rebuild removes (keep-less-history-plan.md, 5.7).
+ */
+export const lostRanksPage = internalQuery({
+  args: { cursor: v.union(v.string(), v.null()), lostBefore: v.string() },
+  returns: v.object({
+    websites: v.array(v.object({ websiteId: v.string(), rows: v.number(), lost: v.number(), expired: v.number() })),
+    continueCursor: v.string(),
+    isDone: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const page = await ctx.db.query("siteKeywordRanks").paginate({ cursor: args.cursor, numItems: DEFAULT_PAGE });
+    const websites = new Map<string, { rows: number; lost: number; expired: number }>();
+    for (const row of page.page) {
+      const held = websites.get(row.websiteId) ?? { rows: 0, lost: 0, expired: 0 };
+      held.rows += 1;
+      if (row.position === undefined) held.lost += 1;
+      if (row.position === undefined && row.day < args.lostBefore) held.expired += 1;
+      websites.set(row.websiteId, held);
+    }
+    return { websites: [...websites].map(([websiteId, held]) => ({ websiteId, ...held })), continueCursor: page.continueCursor, isDone: page.isDone };
+  },
+});
+
+/** Every website's rankings, those marked lost and those the next rebuild removes, largest first. */
+export const measureLostRanks = internalAction({
+  args: {},
+  returns: v.array(v.object({ host: v.string(), rows: v.number(), lost: v.number(), expired: v.number() })),
+  handler: async (ctx): Promise<Array<{ host: string; rows: number; lost: number; expired: number }>> => {
+    const lostBefore = lostKeywordsKeptFrom(new Date().toISOString().slice(0, 10));
+    const totals = new Map<string, { rows: number; lost: number; expired: number }>();
+    for (let cursor: string | null = null; ;) {
+      const page: { websites: Array<{ websiteId: string; rows: number; lost: number; expired: number }>; continueCursor: string; isDone: boolean } =
+        await ctx.runQuery(internal.seoStorageMeasure.lostRanksPage, { cursor, lostBefore });
+      for (const { websiteId, ...counts } of page.websites) {
+        const held = totals.get(websiteId) ?? { rows: 0, lost: 0, expired: 0 };
+        totals.set(websiteId, { rows: held.rows + counts.rows, lost: held.lost + counts.lost, expired: held.expired + counts.expired });
+      }
+      if (page.isDone) break;
+      cursor = page.continueCursor;
+    }
+    const out: Array<{ host: string; rows: number; lost: number; expired: number }> = [];
+    for (const [websiteId, counts] of totals) {
+      const host: string | null = await ctx.runQuery(internal.seoStorageMeasure.hostOf, { websiteId });
+      out.push({ host: host ?? websiteId, ...counts });
+    }
+    return out.sort((left, right) => right.rows - left.rows);
   },
 });
 

@@ -179,6 +179,21 @@ export const SERP_PAGE_RETENTION_DAYS = 90;
 export const DAILY_POSITIONS_RETENTION_DAYS = 90;
 
 /**
+ * How long a keyword a website no longer ranks for stays in its rankings,
+ * marked lost (`siteKeywordRanks`): New and lost and Wins and losses read the
+ * ones lost lately; older, it is removed at the website's next rebuild
+ * (`siteSummaries.ts`; keep-less-history-plan.md, 5.7, Decision 6). So a
+ * website's rankings — a competitor's top 1,000 among them — stop growing past
+ * what its list keeps.
+ */
+export const LOST_KEYWORDS_KEPT_DAYS = 90;
+
+/** The first day a keyword marked lost on is still kept, `YYYY-MM-DD`. */
+export function lostKeywordsKeptFrom(today: string): string {
+  return keptFrom(today, LOST_KEYWORDS_KEPT_DAYS);
+}
+
+/**
  * How long the searches an AI answer ran are kept by day (`promptFanOutDays`),
  * then cleared by the hourly sweep: twelve months for the date-based fan-out
  * report when it is built (keep-less-history-plan.md, part 2, Decision 5).

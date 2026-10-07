@@ -750,7 +750,8 @@ export async function buildSitePeriods(
         const competing = pairs.filter((pair) => (queries.get(pair.key)?.count ?? 0) >= 2);
         // Each page once, a link to one of its sections being part of it (2026-10-04).
         const shown = new Set([...pages.keys()].map(pageWithoutSection)).size;
-        await writeParts(searchType, "competing", slot, pack(competing, true).map((packed) => ({ ...packed, shown })));
+        // Its positions are never read (`pagesByKeyword`): not kept (keep-less-history-plan.md, 5.2).
+        await writeParts(searchType, "competing", slot, pack(competing, true).map((packed) => ({ ...packed, positionSums: [], shown })));
       } else {
         await writeParts(searchType, "competing", slot, null);
       }
@@ -759,7 +760,8 @@ export async function buildSitePeriods(
         "query",
         slot,
         [...queries.values()].map((summed) => ({ key: summed.key, clicks: summed.clicks, impressions: summed.impressions, positionSum: summed.positionSum })),
-        queryCounts,
+        // Each search's page count and top page, on the period the screens list: a period before's are read for nothing (5.3).
+        slot.which === "NOW" ? queryCounts : undefined,
         queryFacts,
       );
       pageCounts.set(slotKey(slot), pagesCounted);
@@ -783,14 +785,16 @@ export async function buildSitePeriods(
       const asked = kept ? await askedOf(searchType, list) : null;
       const pageFacts = list === "page" && kept ? await factsOf("page", [...keysIn(kept, "keys"), ...keysAsked(asked, "key")]) : undefined;
       for (const slot of slots) {
-        const rows = kept && slot.span ? (isLong(slot) ? rowsFor(asked, slot.span) : addUp(keptIn(kept, slot.span, newest, searchType))) : null;
+        // Countries, devices and rich results show no change on the period before: none is kept for them (5.3).
+        const before = slot.which === "BEFORE" && list !== "page";
+        const rows = kept && slot.span && !before ? (isLong(slot) ? rowsFor(asked, slot.span) : addUp(keptIn(kept, slot.span, newest, searchType))) : null;
         // Google not asked, or not answering: the long period built before stays.
         if (rows === undefined) continue;
         // Rich results' pages for each kind, counted once here on the periods the screens list.
         const appearancePages = list === "appearance" && rows && slot.span && slot.which === "NOW"
           ? await pagesPerAppearance(ctx, google, searchType, slot.span, country, rows, richResultKinds)
           : null;
-        await write(searchType, list, slot, rows, list === "page" ? pageCounts.get(slotKey(slot)) : (appearancePages ?? undefined), pageFacts);
+        await write(searchType, list, slot, rows, list === "page" ? (slot.which === "NOW" ? pageCounts.get(slotKey(slot)) : undefined) : (appearancePages ?? undefined), pageFacts);
       }
     }
   }

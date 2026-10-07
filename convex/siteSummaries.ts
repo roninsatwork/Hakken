@@ -8,6 +8,7 @@ import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
 import { KEYWORD_COPY_FIELDS, keywordCopyTuple } from "./siteKeywordCopy";
 import { LIST_PAGE_STUCK_MS, dropCopyOf, keywordsCopyKey, pagesCopyKey, writeListCopy } from "./siteListCopies";
 import { isThisPlace, shiftDay, syncDayFigures, syncWindows } from "./siteDayFigures";
+import { lostKeywordsKeptFrom } from "./seoCollectionPolicy";
 import { bandCountsValidator, emptyBandCounts, pageTypeByAddress, sectionOf, intentSplitValidator, type IntentSplit } from "./utils/siteShapes";
 
 /**
@@ -156,6 +157,9 @@ async function rebuildSiteNow(
   let keywords = 0;
   let rankingDay = "";
   const lost: Id<"siteKeywordRanks">[] = [];
+  // Lost before the days a lost keyword is kept: removed, counted and copied nowhere (5.7, Decision 6).
+  const lostKeptFrom = lostKeywordsKeptFrom(new Date().toISOString().slice(0, 10));
+  const expired: Id<"siteKeywordRanks">[] = [];
   const pages = new Map<string, PageAggregate>();
   const statusRows: Array<{ status: Doc<"siteKeywordRanks">["status"]; day: string }> = [];
   const copyRows: unknown[][] = [];
@@ -167,6 +171,10 @@ async function rebuildSiteNow(
       { websiteId: args.websiteId, locationCode: args.locationCode, cursor },
     );
     for (const row of page.rows) {
+      if (row.position === undefined && row.day < lostKeptFrom) {
+        expired.push(row._id);
+        continue;
+      }
       if (row.day > rankingDay) rankingDay = row.day;
       const isLost = row.position === undefined || (completeDay !== null && row.day < completeDay);
       if (isLost) {
@@ -236,6 +244,9 @@ async function rebuildSiteNow(
 
   for (const ids of chunks(lost, WRITE_BATCH)) {
     await ctx.runMutation(internal.siteSummaries.markLost, { ids, day: completeDay ?? rankingDay });
+  }
+  for (const ids of chunks(expired, WRITE_BATCH)) {
+    await ctx.runMutation(internal.siteSummaries.removeLost, { ids, before: lostKeptFrom });
   }
 
   await writeListCopy(ctx, {
@@ -600,6 +611,19 @@ export const markLost = internalMutation({
         day: args.day,
         firstSeenDay: row.firstSeenDay,
       });
+    }
+    return null;
+  },
+});
+
+/** Keywords lost before `before` removed — any seen again since it was read stays (keep-less-history-plan.md, 5.7). */
+export const removeLost = internalMutation({
+  args: { ids: v.array(v.id("siteKeywordRanks")), before: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    for (const id of args.ids) {
+      const row = await ctx.db.get(id);
+      if (row && row.position === undefined && row.day < args.before) await ctx.db.delete(id);
     }
     return null;
   },
