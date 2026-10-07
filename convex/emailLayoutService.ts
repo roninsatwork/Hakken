@@ -167,7 +167,8 @@ export type EmailTone = "neutral" | "good" | "warning" | "critical";
 export type EmailSeverity = "info" | "warning" | "critical";
 
 export type EmailStat = { label: string; value: string; tone?: EmailTone };
-export type EmailFact = { term: string; value: string; tone?: EmailTone };
+/** `note`: a line under the term, as a report's page has its visitors last week (board EmailReportB). */
+export type EmailFact = { term: string; value: string; tone?: EmailTone; note?: string };
 export type EmailAction = { label: string; url: string; emphasis?: "primary" | "secondary" };
 
 export type EmailCard = {
@@ -423,8 +424,10 @@ function renderFacts(facts: EmailFact[]) {
       const factTone = tone(fact.tone);
       return (
         `<tr>` +
-        `<td class="e-ink70" style="${line(13, 18, C.ink70, 400, `padding:12px 0;border-bottom:1px solid ${C.edge};`)}">${esc(fact.term)}</td>` +
-        `<td align="right" class="${factTone.cls}" style="${line(14, 18, factTone.colour, 600, `padding:12px 0 12px 14px;border-bottom:1px solid ${C.edge};`)}">${esc(fact.value)}</td>` +
+        `<td class="e-ink" style="${line(14, 20, C.ink, 400, `padding:12px 0;border-bottom:1px solid ${C.edge};`)}">${esc(fact.term)}` +
+        (fact.note ? `<div class="e-ink45" style="${line(12, 18, C.ink45, 400, "padding-top:2px;")}">${esc(fact.note)}</div>` : "") +
+        `</td>` +
+        `<td align="right" valign="top" class="${factTone.cls}" style="${line(15, 20, factTone.colour, 600, `padding:12px 0 12px 14px;border-bottom:1px solid ${C.edge};`, MONO)}">${esc(fact.value)}</td>` +
         `</tr>`
       );
     })
@@ -609,7 +612,7 @@ function renderText(
   for (const stat of content.stats ?? []) out.push(`  ${stat.label}: ${stat.value}`);
   if (content.stats?.length) out.push("");
 
-  for (const fact of content.facts ?? []) out.push(`  ${fact.term}: ${fact.value}`);
+  for (const fact of content.facts ?? []) out.push(`  ${fact.term}: ${fact.value}${fact.note ? ` (${fact.note})` : ""}`);
   if (content.facts?.length) out.push("");
 
   const cards = content.cards ?? [];

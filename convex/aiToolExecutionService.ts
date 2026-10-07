@@ -77,6 +77,8 @@ const MEMBER_READABLE_HANDLERS: ReadonlySet<string> = new Set([
   // company may set one (Anthony, 2026-10-07). Each only proposes — the change
   // waits on the reply for their tap — and only ever for the run's own person.
   "assistant.tasks.propose",
+  // A weekly report, proposed the same way (item 4.1).
+  "assistant.tasks.proposeReport",
   "assistant.tasks.list",
   "assistant.tasks.change",
 ]);

@@ -412,6 +412,7 @@ describe("ai tool execution service", () => {
       "assistant.tasks.list",
       "assistant.tasks.open",
       "assistant.tasks.propose",
+      "assistant.tasks.proposeReport",
       "assistant.websites",
       "company.overview.update",
       // The four DataForSEO doors: what can be asked, start a company's

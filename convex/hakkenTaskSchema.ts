@@ -40,6 +40,21 @@ export const hakkenTaskTargetValidator = v.object({
   page: v.optional(v.string()),
 });
 
+/**
+ * What a report sends (The Stat Report Agent, item 4.1): the pages of the
+ * website that lost, or gained, the most of its measure over the newest 7
+ * days held against the 7 before — Search Console's own Pages list — every
+ * week on `weekday` (1 Monday … 7 Sunday) at the owner's time.
+ */
+export const hakkenTaskReportValidator = v.object({
+  look: v.literal("pagesChange"),
+  direction: v.union(v.literal("lost"), v.literal("gained")),
+  /** How many pages: 3 to 10. */
+  count: v.number(),
+  every: v.literal("week"),
+  weekday: v.number(),
+});
+
 export const hakkenTaskChannelsValidator = v.object({
   bell: v.boolean(),
   email: v.boolean(),
@@ -61,6 +76,8 @@ export const hakkenTaskProposalValidator = v.object({
   measure: v.optional(hakkenTaskMeasureValidator),
   target: v.optional(hakkenTaskTargetValidator),
   condition: v.optional(hakkenTaskConditionValidator),
+  /** A report rather than an alert (item 4.1). */
+  report: v.optional(hakkenTaskReportValidator),
   usual: v.optional(v.number()),
   timeOfDay: v.optional(v.string()),
   channels: v.optional(hakkenTaskChannelsValidator),
@@ -81,6 +98,8 @@ export const hakkenTaskTables = {
     measure: v.optional(hakkenTaskMeasureValidator),
     target: v.optional(hakkenTaskTargetValidator),
     condition: v.optional(hakkenTaskConditionValidator),
+    /** What a report sends, and on which weekday (item 4.1). */
+    report: v.optional(hakkenTaskReportValidator),
     /** Its figure's usual day when it was set, for the alert's words ("it usually gets about 23"). */
     usual: v.optional(v.number()),
     /** The owner's local time to hear from Hakken, "09:00", in `timeZone`. */
@@ -103,7 +122,8 @@ export const hakkenTaskTables = {
   })
     .index("by_owner", ["userId", "companyId", "createdAt"])
     .index("by_company", ["companyId", "createdAt"])
-    .index("by_state_next", ["state", "nextCheckAt"]),
+    // Each agent's own due tasks: the Watcher's alerts, the Stat Report Agent's reports.
+    .index("by_kind_state_next", ["kind", "state", "nextCheckAt"]),
 
   /** Every day a task judged, newest last: the figure, whether its rule was met, and whether its owner was told. */
   hakkenTaskChecks: defineTable({

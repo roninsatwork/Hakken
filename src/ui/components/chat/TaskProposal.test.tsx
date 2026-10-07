@@ -67,4 +67,19 @@ describe("a task proposed in a reply", () => {
     renderWithProviders(<TaskProposal messageId={messageId} proposal={alert} isReadOnly />);
     expect(screen.queryByRole("button")).toBeNull();
   });
+
+  it("writes out a weekly report: what it sends, from where, on which day, and asks for a yes", () => {
+    const report: Proposal = {
+      action: "CREATE", status: "PENDING", title: "Every Monday, send me the five pages that lost the most visitors", measure: "visitors",
+      target: { companyWebsiteId: "s1" as Id<"companyWebsites">, website: "example.co.uk" },
+      report: { look: "pagesChange", direction: "lost", count: 5, every: "week", weekday: 1 },
+      timeOfDay: "09:00", channels: { bell: true, email: true, telegram: false },
+    };
+    renderWithProviders(<TaskProposal messageId={messageId} proposal={report} />);
+    expect(screen.getByText("The 5 pages that lost the most visitors from Google")).toBeInTheDocument();
+    expect(screen.getByText("Every Monday at 9am")).toBeInTheDocument();
+    expect(screen.getByText("example.co.uk")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Yes, send it" })).toBeInTheDocument();
+  });
 });
+

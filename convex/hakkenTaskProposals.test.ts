@@ -6,6 +6,7 @@ import { canExecuteTool, type ToolHandlerExecutionInput } from "./aiToolExecutio
 import { ASSISTANT_TASK_HANDLERS } from "./assistantTaskHandlers";
 import schema from "./schema";
 import { proposalFromToolCalls } from "./utils/hakkenTaskProposals";
+import { weekdayIn } from "./utils/hakkenTaskTiming";
 
 /**
  * Setting a Hakken task up in Ask Hakken, item 1.2 of
@@ -181,3 +182,51 @@ describe("who may have the Assistant propose", () => {
     expect(canExecuteTool({ ...member, handlerMapping: "gmail.read" }).allowed).toBe(false);
   });
 });
+
+describe("a weekly report, proposed for a yes", () => {
+  async function withPages(t: Harness, siteId: Id<"companyWebsites">) {
+    await t.run(async (ctx) => {
+      const pages = ["https://ronins.test/a/", "https://ronins.test/b/", "https://ronins.test/c/"];
+      for (const [which, clicks, from, to] of [["NOW", [412, 188, 50], "2026-09-20", "2026-09-26"], ["BEFORE", [508, 249, 20], "2026-09-13", "2026-09-19"]] as const) {
+        await ctx.db.insert("searchConsolePeriods", {
+          companyWebsiteId: siteId, searchType: "web", list: "page", period: "7", which, part: 0, from, to,
+          keys: pages, clicks: [...clicks], impressions: clicks.map((count) => count * 20), positionSums: clicks.map((count) => count * 80),
+          counts: pages.map(() => 1), tops: pages, builtAt: 1,
+        });
+      }
+    });
+  }
+
+  test("is written out with what this week's would hold, and a yes sets it up for its day", async () => {
+    const t = harness();
+    const seeded = await seed(t);
+    await withPages(t, seeded.siteId);
+    const read = (await ASSISTANT_TASK_HANDLERS["assistant.tasks.proposeReport"]({
+      ctx: runtime(t), handlerMapping: "assistant.tasks.proposeReport", companyId: seeded.companyId, userId: seeded.me,
+      args: { website: "ronins.test", direction: "lost", count: 2, weekday: "Friday" },
+    })) as { ok: boolean; thisWeek?: Array<{ page: string; change: number }>; proposal?: Record<string, unknown> };
+    expect(read.ok).toBe(true);
+    expect(read.thisWeek).toEqual([{ page: "/a/", visitors: 412, change: -96 }, { page: "/b/", visitors: 188, change: -61 }]);
+    expect(read.proposal).toMatchObject({
+      action: "CREATE", title: "Every Friday, send me the three pages that lost the most visitors",
+      report: { look: "pagesChange", direction: "lost", count: 3, every: "week", weekday: 5 },
+    });
+
+    const messageId = await replyWith(t, seeded.threadId, read.proposal!);
+    await t.withIdentity({ subject: seeded.me }).mutation(api.hakkenTasks.answerProposal, { messageId, yes: true, timeZone: "Europe/London" });
+    const [task] = await t.run((ctx) => ctx.db.query("hakkenTasks").collect());
+    expect(task).toMatchObject({ kind: "REPORT", report: { weekday: 5 } });
+    expect(weekdayIn(task.nextCheckAt!, "Europe/London")).toBe(5);
+  });
+
+  test("compares visitors only, for now, and says so", async () => {
+    const t = harness();
+    const seeded = await seed(t);
+    const read = (await ASSISTANT_TASK_HANDLERS["assistant.tasks.proposeReport"]({
+      ctx: runtime(t), handlerMapping: "assistant.tasks.proposeReport", companyId: seeded.companyId, userId: seeded.me,
+      args: { website: "ronins.test", measure: "impressions" },
+    })) as { ok: boolean; problem?: string };
+    expect(read.problem).toMatch(/visitors from Google for now/);
+  });
+});
+

@@ -82,6 +82,8 @@ const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
   "search-console-weekly-rebuild": (ctx) => ctx.runAction(internal.searchConsoleSettling.weeklyRebuilds, {}),
   // Every Hakken alert whose owner's time has come (hakken-tasks-plan.md, item 1.3).
   "hakken-task-watch": (ctx) => ctx.runAction(internal.hakkenWatcherActions.watchDue, {}),
+  // Every Hakken report whose owner's day and time have come (hakken-tasks-plan.md, item 4.1).
+  "hakken-task-reports": (ctx) => ctx.runAction(internal.hakkenStatReporter.reportDue, {}),
 };
 
 /** How often each job is meant to run, in minutes — the screen uses this to
@@ -120,6 +122,7 @@ const EXPECTED_EVERY_MINUTES: Record<string, number> = {
   "credit-ledger-sweep": 60,
   "search-console-weekly-rebuild": 1440,
   "hakken-task-watch": 15,
+  "hakken-task-reports": 15,
 };
 
 export const recordJobOutcomeInternal = internalMutation({

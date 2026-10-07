@@ -726,6 +726,27 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
         inputSchema: JSON.stringify({"type": "object", "required": ["website", "when", "value"], "properties": {"website": {"type": "string", "description": "One of the company's own websites, e.g. example.co.uk — from list_websites."}, "page": {"type": "string", "description": "Part of the page's address, e.g. /web-design-london/ or web-design-london. Leave out for the whole website."}, "measure": {"type": "string", "enum": ["visitors", "impressions"], "description": "visitors: clicks from Google, which count as visitors. impressions: how often it shows up in Google. Default visitors."}, "when": {"type": "string", "enum": ["below", "above", "dropBy", "riseBy"], "description": "below or above a number; dropBy or riseBy a percentage of its usual day (half = dropBy 50)."}, "value": {"type": "number", "description": "The number for below and above; the percentage for dropBy and riseBy."}, "days": {"type": "number", "description": "Days in a row before telling them. Default 1."}, "time": {"type": "string", "description": "When to tell them, 24-hour HH:MM in their own time, e.g. 09:00. Default 09:00."}}}),
       },
       {
+        name: "Propose a weekly report",
+        description:
+          "When someone asks to be sent something regularly — every Monday, the pages that lost the most visitors from Google — propose it with this. It reads this week's figures and writes the report out under your reply with “Yes, send it” and “Not now”: nothing is sent until they tap yes. It compares the newest 7 days Search Console holds against the 7 before, once a week on the day they choose, at their time, by email and here. Visitors only for now. Never promise to send it yourself.",
+        handlerMapping: "assistant.tasks.proposeReport",
+        modelName: "propose_report",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["website"],
+          properties: {
+            website: { type: "string", description: "One of the company's own websites, e.g. example.co.uk, from list_websites." },
+            direction: { type: "string", enum: ["lost", "gained"], description: "The pages that lost the most visitors, or gained the most." },
+            count: { type: "number", description: "How many pages, 3 to 10; 5 if they don't say." },
+            weekday: { type: "string", description: "The day it comes: Monday to Sunday; Monday if they don't say." },
+            time: { type: "string", description: "Their time, HH:MM, 24-hour; 09:00 if they don't say." },
+          },
+        }),
+      },
+      {
         name: "List my tasks",
         description:
           "The person's own tasks — what each keeps an eye on, whether it is on or paused, and its time — each with the taskId a change needs. Their tasks page is linked: they can also pause, resume or delete there.",

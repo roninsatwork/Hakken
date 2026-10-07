@@ -8,13 +8,14 @@ import {
   hakkenTaskConditionValidator,
   hakkenTaskKindValidator,
   hakkenTaskMeasureValidator,
+  hakkenTaskReportValidator,
   hakkenTaskStateValidator,
   hakkenTaskTargetValidator,
 } from "./hakkenTaskSchema";
 import { resolvePlatformName } from "./settingsService";
 import { superAdminMutation, superAdminQuery, tenantMutation, tenantQuery, requireTenant } from "./tenantFunctions";
 import { appError } from "./utils/appError";
-import { nextTaskRun, taskTimeOfDay, taskTimeZone } from "./utils/hakkenTaskTiming";
+import { nextRunOf, taskTimeOfDay, taskTimeZone } from "./utils/hakkenTaskTiming";
 
 /**
  * Hakken tasks (docs/plans/active/hakken-tasks-plan.md, item 1.1): what a
@@ -36,6 +37,7 @@ const taskRowValidator = v.object({
   measure: v.optional(hakkenTaskMeasureValidator),
   target: v.optional(hakkenTaskTargetValidator),
   condition: v.optional(hakkenTaskConditionValidator),
+  report: v.optional(hakkenTaskReportValidator),
   timeOfDay: v.string(),
   timeZone: v.string(),
   channels: hakkenTaskChannelsValidator,
@@ -56,6 +58,7 @@ function toRow(task: Doc<"hakkenTasks">): TaskRow {
     ...(task.measure ? { measure: task.measure } : {}),
     ...(task.target ? { target: task.target } : {}),
     ...(task.condition ? { condition: task.condition } : {}),
+    ...(task.report ? { report: task.report } : {}),
     timeOfDay: task.timeOfDay,
     timeZone: task.timeZone,
     channels: task.channels,
@@ -113,7 +116,7 @@ function pausedFields(now: number) {
 async function resume(ctx: MutationCtx, task: Doc<"hakkenTasks">, now: number) {
   if (task.state === "ON") return;
   await assertRoomFor(ctx, task.userId, task.companyId);
-  await ctx.db.patch(task._id, { state: "ON", pausedAt: undefined, updatedAt: now, nextCheckAt: nextTaskRun(task.timeOfDay, task.timeZone, now) });
+  await ctx.db.patch(task._id, { state: "ON", pausedAt: undefined, updatedAt: now, nextCheckAt: nextRunOf(task, now) });
 }
 
 // ── The owner's ─────────────────────────────────────────────────────────────
@@ -233,6 +236,7 @@ const newTaskArgs = {
   measure: v.optional(hakkenTaskMeasureValidator),
   target: v.optional(hakkenTaskTargetValidator),
   condition: v.optional(hakkenTaskConditionValidator),
+  report: v.optional(hakkenTaskReportValidator),
   usual: v.optional(v.number()),
   timeOfDay: v.optional(v.string()),
   timeZone: v.optional(v.string()),
@@ -254,6 +258,7 @@ type NewTask = {
   measure?: Doc<"hakkenTasks">["measure"];
   target?: Doc<"hakkenTasks">["target"];
   condition?: Doc<"hakkenTasks">["condition"];
+  report?: Doc<"hakkenTasks">["report"];
   usual?: number;
   timeOfDay?: string;
   timeZone?: string;
@@ -276,12 +281,13 @@ async function insertTask(ctx: MutationCtx, args: NewTask): Promise<Id<"hakkenTa
     ...(args.measure ? { measure: args.measure } : {}),
     ...(args.target ? { target: args.target } : {}),
     ...(args.condition ? { condition: args.condition } : {}),
+    ...(args.report ? { report: args.report } : {}),
     ...(args.usual !== undefined ? { usual: args.usual } : {}),
     timeOfDay,
     timeZone,
     channels: args.channels,
     ...(args.threadId ? { threadId: args.threadId } : {}),
-    nextCheckAt: nextTaskRun(timeOfDay, timeZone, now),
+    nextCheckAt: nextRunOf({ timeOfDay, timeZone, ...(args.report ? { report: args.report } : {}) }, now),
     createdAt: now,
     updatedAt: now,
   });
@@ -334,15 +340,18 @@ export const answerProposal = tenantMutation({
 
     let taskId = proposal.taskId;
     if (proposal.action === "CREATE") {
-      if (!proposal.measure || !proposal.target || !proposal.condition || !proposal.channels) throw appError("INVALID_INPUT", "That offer is missing what it would watch.");
+      // An alert watches a rule; a report (item 4.1) sends its pages each week.
+      if (!proposal.measure || !proposal.target || !(proposal.condition || proposal.report) || !proposal.channels) {
+        throw appError("INVALID_INPUT", "That offer is missing what it would watch.");
+      }
       taskId = await insertTask(ctx, {
         companyId: thread.companyId,
         userId: ctx.userId,
-        kind: "ALERT",
+        kind: proposal.report ? "REPORT" : "ALERT",
         title: proposal.title,
         measure: proposal.measure,
         target: proposal.target,
-        condition: proposal.condition,
+        ...(proposal.report ? { report: proposal.report } : { condition: proposal.condition }),
         ...(proposal.usual !== undefined ? { usual: proposal.usual } : {}),
         ...(proposal.timeOfDay ? { timeOfDay: proposal.timeOfDay } : {}),
         ...(args.timeZone ? { timeZone: args.timeZone } : {}),

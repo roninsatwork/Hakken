@@ -5,6 +5,7 @@ import { isDataForSeoRole, isNewsRole, isResearchRole, isSearchConsoleRole } fro
 import { WIKI_STAFF } from "./wikiStaff";
 import { TRANSLATOR } from "./utils/contentTranslator";
 import { WATCHER } from "./utils/hakkenWatcher";
+import { STAT_REPORTER } from "./utils/statReporter";
 
 /**
  * How an agent's run starts, once its run record exists: the one decision the
@@ -29,7 +30,7 @@ import { WATCHER } from "./utils/hakkenWatcher";
  * - The Translator translates whatever is still missing (`contentTranslation.ts`).
  * - Every other agent is given its objective on the model loop.
  */
-export type AgentRunStart = "WIKI_ROUND" | "SEO_JOB" | "RESEARCH_JOB" | "NEWS_JOB" | "SEARCH_CONSOLE_JOB" | "TRANSLATION_ROUND" | "WATCH_ROUND" | "MODEL";
+export type AgentRunStart = "WIKI_ROUND" | "SEO_JOB" | "RESEARCH_JOB" | "NEWS_JOB" | "SEARCH_CONSOLE_JOB" | "TRANSLATION_ROUND" | "WATCH_ROUND" | "REPORT_ROUND" | "MODEL";
 
 export async function startAgentRun(
   ctx: Pick<MutationCtx, "scheduler">,
@@ -67,6 +68,12 @@ export async function startAgentRun(
   if (agent.systemKey === WATCHER.systemKey) {
     await ctx.scheduler.runAfter(0, internal.hakkenWatcherActions.runWatcherNow, { runId, workflowExecutionId });
     return "WATCH_ROUND";
+  }
+
+  // The Stat Report Agent: every report due now (item 4.1).
+  if (agent.systemKey === STAT_REPORTER.systemKey) {
+    await ctx.scheduler.runAfter(0, internal.hakkenStatReporter.runStatReporterNow, { runId, workflowExecutionId });
+    return "REPORT_ROUND";
   }
 
   if (isDataForSeoRole(agent.systemKey)) {

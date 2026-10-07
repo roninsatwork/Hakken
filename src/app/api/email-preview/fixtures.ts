@@ -12,6 +12,7 @@
 import { buildAgentNotificationEmail } from "../../../../convex/aiToolNotificationService";
 import { renderEmail, type RenderedEmail } from "../../../../convex/emailLayoutService";
 import { buildTaskAlertEmail } from "../../../../convex/taskAlertEmail";
+import { buildTaskReportEmail } from "../../../../convex/taskReportEmail";
 import type { EmailPicture } from "../../../../convex/utils/emailPictures";
 import { buildAutomationEmail, buildInvitationEmail, buildSignInCodeEmail, buildSignInEmail } from "../../../../convex/platformEmails";
 import {
@@ -249,6 +250,26 @@ function taskAlertPreview(): Pick<EmailPreview, "email" | "pictures"> {
   return { email: renderEmail(made.content, { platformName: PLATFORM_NAME }), pictures: made.pictures };
 }
 
+/** A Monday report as its owner gets it (board EmailReportB), from the outbox's own builder. */
+function taskReportPreview(): RenderedEmail {
+  const made = buildTaskReportEmail({
+    language: "en",
+    brand: { platformName: PLATFORM_NAME, appUrl: BASE_URL },
+    payload: {
+      website: "example.co.uk", from: "2026-09-28", to: "2026-10-04", direction: "lost", weekday: 1, timeOfDay: "09:00", link: "/app/search-console/site/pages",
+      pages: [
+        { page: "https://example.co.uk/web-design-surrey/", now: 412, change: -96 },
+        { page: "https://example.co.uk/hub/how-to-choose-a-web-design-agency/", now: 188, change: -61 },
+        { page: "https://example.co.uk/web-design-london/", now: 141, change: -30 },
+        { page: "https://example.co.uk/seo-agency-surrey/", now: 97, change: -22 },
+        { page: "https://example.co.uk/case-studies/", now: 64, change: -15 },
+      ],
+    },
+  });
+  if ("skip" in made) throw new Error(made.skip);
+  return renderEmail(made.content, { platformName: PLATFORM_NAME });
+}
+
 export function buildEmailPreviews(): EmailPreview[] {
   return [
     {
@@ -257,6 +278,13 @@ export function buildEmailPreviews(): EmailPreview[] {
       note: "A quiet day on a page, with its four weeks as a picture attached inline (board EmailAlertB).",
       source: "convex/taskAlertEmail.ts",
       ...taskAlertPreview(),
+    },
+    {
+      key: "task-report",
+      title: "Hakken task report",
+      note: "Every Monday, the five pages that lost the most visitors (board EmailReportB).",
+      source: "convex/taskReportEmail.ts",
+      email: taskReportPreview(),
     },
     {
       key: "alert",

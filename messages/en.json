@@ -7367,6 +7367,24 @@
             "no": "Keep it",
             "done": "Deleted."
           }
+        },
+        "report": {
+          "send": "I’ll send you",
+          "pages": "{direction, select, gained {The {count} pages that gained the most visitors from Google} other {The {count} pages that lost the most visitors from Google}}",
+          "every": "Every {weekday} at {time}",
+          "compares": "Each one compares the newest 7 days in Search Console with the 7 before",
+          "yes": "Yes, send it",
+          "hint": "Want something different? Just tell me, like “make it Fridays” or “the ten pages that gained the most”.",
+          "set": "You’re all set: your first report is on its way",
+          "weekdays": {
+            "1": "Monday",
+            "2": "Tuesday",
+            "3": "Wednesday",
+            "4": "Thursday",
+            "5": "Friday",
+            "6": "Saturday",
+            "7": "Sunday"
+          }
         }
       },
       "chart": {
@@ -8417,7 +8435,8 @@
       "bell": "{platformName}",
       "email": "email",
       "telegram": "Telegram",
-      "at": "{channels}, {time}"
+      "at": "{channels}, {time}",
+      "weekly": "{channels}, {weekday} {time}"
     },
     "states": {
       "ON": "On",
@@ -8444,6 +8463,15 @@
     "company": {
       "description": "Everything {platformName} is keeping an eye on for {company}, whoever asked for it.",
       "whoLeft": "Someone who has left"
+    },
+    "weekdaysPlural": {
+      "1": "Mondays",
+      "2": "Tuesdays",
+      "3": "Wednesdays",
+      "4": "Thursdays",
+      "5": "Fridays",
+      "6": "Saturdays",
+      "7": "Sundays"
     }
   },
   "notifications": {

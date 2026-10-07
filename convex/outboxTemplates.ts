@@ -11,6 +11,7 @@ import { resolvePlatformName } from "./settingsService";
 import { emailWording } from "./utils/emailWording";
 import { emailPictureValidator, type EmailPicture } from "./utils/emailPictures";
 import { buildTaskAlertEmail } from "./taskAlertEmail";
+import { buildTaskReportEmail } from "./taskReportEmail";
 import { suppressionOf } from "./emailSuppressions";
 import { readerPreferencesOf } from "./readerPreferences";
 
@@ -40,6 +41,7 @@ export const SENDER_ADDRESS_VARIABLES: Record<OutboxMessageType, string> = {
   WEEKLY_NEWS_DIGEST: "NEWS_DIGEST_FROM_EMAIL",
   COLLECTION_NEEDS_YOU: "ALERTS_FROM_EMAIL",
   TASK_ALERT: "ALERTS_FROM_EMAIL",
+  TASK_REPORT: "ALERTS_FROM_EMAIL",
 };
 
 /**
@@ -172,10 +174,24 @@ const taskAlert: Template = async (ctx, row, brand) => {
   return buildTaskAlertEmail({ language: row.language, brand, task, payload });
 };
 
+/**
+ * A Hakken report, to the person who set it up: built in `taskReportEmail.ts`
+ * from the figures read when it was sent. Not sent if the task was deleted
+ * between the send and now.
+ */
+const taskReport: Template = async (ctx, row, brand) => {
+  const payload = payloadOf(row);
+  const taskId = typeof payload.taskId === "string" ? ctx.db.normalizeId("hakkenTasks", payload.taskId) : null;
+  const task = taskId ? await ctx.db.get(taskId) : null;
+  if (!task || task.state === "DELETED") return { skip: "The task was deleted before its report was sent." };
+  return buildTaskReportEmail({ language: row.language, brand, payload });
+};
+
 const TEMPLATES: Record<OutboxMessageType, Template> = {
   WEEKLY_NEWS_DIGEST: weeklyNewsDigest,
   COLLECTION_NEEDS_YOU: collectionNeedsYou,
   TASK_ALERT: taskAlert,
+  TASK_REPORT: taskReport,
 };
 
 /**

@@ -27,6 +27,14 @@ crons.interval(
   { job: "hakken-task-watch" }
 );
 
+// The Stat Report Agent's round: each report due on its owner's day, at their time (hakken-tasks-plan.md, 4.1).
+crons.interval(
+  "hakken-task-reports",
+  { minutes: 15 },
+  internal.jobLedger.runJob,
+  { job: "hakken-task-reports" }
+);
+
 // Run workflow schedule dispatcher every minute
 crons.interval(
   "workflow-schedule-dispatcher",

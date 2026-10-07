@@ -116,7 +116,11 @@ export function HakkenTasksScreen({
     ].filter((way): way is string => Boolean(way));
     const listed = new Intl.ListFormat(locale === "en" ? "en-GB" : locale, { type: "conjunction" }).format(ways);
     const time = locale.startsWith("en") ? clockOf(row.timeOfDay) : row.timeOfDay;
-    return t("hear.at", { channels: listed.charAt(0).toUpperCase() + listed.slice(1), time });
+    const channels = listed.charAt(0).toUpperCase() + listed.slice(1);
+    // A weekly report says its day: "Hakken and email, Mondays 9am" (item 4.1).
+    return row.report
+      ? t("hear.weekly", { channels, weekday: t(`weekdaysPlural.${row.report.weekday}` as "weekdaysPlural.1"), time })
+      : t("hear.at", { channels, time });
   };
 
   const all = rows ?? [];

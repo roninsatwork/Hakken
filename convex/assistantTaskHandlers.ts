@@ -1,7 +1,8 @@
 import { internal } from "./_generated/api";
 import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
 import { shiftDay } from "./searchConsoleDays";
-import { TRIAL_DAYS, settledDay, taskTitle, trialOf, usualOf, type TaskCondition, type TaskMeasure } from "./utils/hakkenTaskRules";
+import { reportCount, reportTitle, weekdayOf } from "./utils/hakkenReports";
+import { TRIAL_DAYS, pathOf, settledDay, taskTitle, trialOf, usualOf, type TaskCondition, type TaskMeasure } from "./utils/hakkenTaskRules";
 import { taskTimeOfDay } from "./utils/hakkenTaskTiming";
 
 /**
@@ -94,6 +95,48 @@ export const ASSISTANT_TASK_HANDLERS: Record<string, (input: ToolHandlerExecutio
         timeOfDay: taskTimeOfDay(text(input.args, "time")),
         channels: { bell: true, email: true, telegram: false },
         trial,
+      },
+    };
+  },
+
+  /**
+   * A weekly report, written out for a yes (item 4.1): the pages of one of the
+   * company's websites that lost, or gained, the most visitors, every week on
+   * its day at its owner's time — with what it would hold this week.
+   */
+  "assistant.tasks.proposeReport": async (input) => {
+    if (!input.companyId) return NO_COMPANY;
+    if (!input.userId) return NO_PERSON;
+    const website = text(input.args, "website");
+    if (!website) return { ok: false, problem: "Say which of the company's websites the report is for." };
+    if ((text(input.args, "measure") ?? "visitors") !== "visitors") {
+      return { ok: false, problem: "Reports compare visitors from Google for now; impressions are coming. Offer the visitors report instead." };
+    }
+    const direction: "lost" | "gained" = text(input.args, "direction") === "gained" ? "gained" : "lost";
+    const report = { look: "pagesChange" as const, direction, count: reportCount(input.args.count), every: "week" as const, weekday: weekdayOf(input.args.weekday) };
+
+    const resolved = await input.ctx.runQuery(internal.hakkenTaskFigures.resolveTargetInternal, { companyId: input.companyId, website });
+    if (!resolved.ok) return { ok: false, problem: resolved.problem };
+    const now = await input.ctx.runQuery(internal.hakkenStatReporter.reportPreviewInternal, {
+      companyWebsiteId: resolved.target.companyWebsiteId, direction, count: report.count,
+    });
+    const link = `/app/search-console/${resolved.target.companyWebsiteId}/pages`;
+    return {
+      ok: true,
+      website: resolved.target.website,
+      ...(now ? { from: now.from, to: now.to, thisWeek: now.pages.map((page) => ({ page: pathOf(page.page), visitors: page.now, change: page.change })) } : {}),
+      link,
+      note:
+        "The report is written out under your reply with two buttons, “Yes, send it” and “Not now”; nothing is sent until they tap yes. In one or two warm sentences, say what this week's would show and that they just need to say yes. Don't repeat the report's lines.",
+      proposal: {
+        action: "CREATE",
+        status: "PENDING",
+        title: reportTitle(report, "visitors"),
+        measure: "visitors",
+        target: resolved.target,
+        report,
+        timeOfDay: taskTimeOfDay(text(input.args, "time")),
+        channels: { bell: true, email: true, telegram: false },
       },
     };
   },

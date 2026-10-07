@@ -70,6 +70,22 @@ export type EmailWording = {
     open: string;
     whyYouGetIt: (args: { platformName: string }) => string;
   };
+  /** A Hakken report (hakken-tasks-plan.md, item 4.1, board EmailReportB). */
+  taskReport: {
+    /** "Monday report", beside the wordmark. */
+    kind: (args: { weekday: number }) => string;
+    subject: (args: { weekday: number; total: string; pages: number; direction: "lost" | "gained" }) => string;
+    /** Under the total: "visitors from Google, across these 5 pages". */
+    across: (args: { pages: number }) => string;
+    /** "28 September to 4 October, against the 7 days before." */
+    span: (args: { from: string; to: string }) => string;
+    noneMoved: (args: { direction: "lost" | "gained" }) => string;
+    visitorsThen: (args: { count: string }) => string;
+    seeAll: string;
+    youAsked: (args: { weekday: number; time: string; platformName: string }) => string;
+    bellTitle: (args: { weekday: number }) => string;
+    bellBody: (args: { change: string; pages: number; direction: "lost" | "gained" }) => string;
+  };
   /** A Hakken task's alert, to the person who set it up (hakken-tasks-plan.md, item 1.4). */
   taskAlert: {
     kind: string;
@@ -93,6 +109,11 @@ export type EmailWording = {
     whyYouGetIt: (args: { platformName: string }) => string;
   };
 };
+
+const EN_WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+const IT_WEEKDAYS = ["lunedì", "martedì", "mercoledì", "giovedì", "venerdì", "sabato", "domenica"];
+/** "del lunedì", "della domenica": Italian's article for a weekday. */
+const itOfWeekday = (weekday: number) => (weekday === 7 ? "della domenica" : IT_WEEKDAYS[weekday - 1] ? `del ${IT_WEEKDAYS[weekday - 1]}` : "della settimana");
 
 export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
   en: {
@@ -138,6 +159,23 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
       lede: "This is something only a person can fix.",
       open: "Open the collection page",
       whyYouGetIt: ({ platformName }) => `You get this because you’re a super admin of ${platformName}. It’s sent at most once a day for each reason.`,
+    },
+    taskReport: {
+      kind: ({ weekday }) => `${EN_WEEKDAYS[weekday - 1] ?? "Weekly"} report`,
+      subject: ({ weekday, total, pages, direction }) =>
+        `Your ${EN_WEEKDAYS[weekday - 1] ?? "weekly"} report: ${total} ${direction === "lost" ? "fewer" : "more"} visitors on ${pages} ${pages === 1 ? "page" : "pages"}`,
+      across: ({ pages }) => `visitors from Google, across ${pages === 1 ? "this page" : `these ${pages} pages`}`,
+      span: ({ from, to }) => `${from} to ${to}, against the 7 days before.`,
+      noneMoved: ({ direction }) => (direction === "lost" ? "None of your pages lost visitors from Google" : "None of your pages gained visitors from Google"),
+      visitorsThen: ({ count }) => `${count} visitors in these 7 days`,
+      seeAll: "See all your pages",
+      youAsked: ({ weekday, time, platformName }) =>
+        `You asked ${platformName} for this report every ${EN_WEEKDAYS[weekday - 1] ?? "week"} at ${time}. Pause or stop it any time in ${platformName} tasks.`,
+      bellTitle: ({ weekday }) => `Your ${EN_WEEKDAYS[weekday - 1] ?? "weekly"} report is ready`,
+      bellBody: ({ change, pages, direction }) =>
+        pages === 0
+          ? (direction === "lost" ? "None of your pages lost visitors this week." : "None of your pages gained visitors this week.")
+          : `${change} visitors from Google across ${pages} ${pages === 1 ? "page" : "pages"}.`,
     },
     taskAlert: {
       kind: "Alert",
@@ -204,6 +242,23 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
       lede: "È una cosa che solo una persona può sistemare.",
       open: "Apri la pagina della raccolta",
       whyYouGetIt: ({ platformName }) => `La ricevi perché sei super admin di ${platformName}. Viene inviata al massimo una volta al giorno per ogni motivo.`,
+    },
+    taskReport: {
+      kind: ({ weekday }) => `Report ${itOfWeekday(weekday)}`,
+      subject: ({ weekday, total, pages, direction }) =>
+        `Il tuo report ${itOfWeekday(weekday)}: ${total} visitatori ${direction === "lost" ? "in meno" : "in più"} su ${pages} ${pages === 1 ? "pagina" : "pagine"}`,
+      across: ({ pages }) => `visitatori da Google, ${pages === 1 ? "su questa pagina" : `su queste ${pages} pagine`}`,
+      span: ({ from, to }) => `Dal ${from} al ${to}, rispetto ai 7 giorni prima.`,
+      noneMoved: ({ direction }) => (direction === "lost" ? "Nessuna delle tue pagine ha perso visitatori da Google" : "Nessuna delle tue pagine ha guadagnato visitatori da Google"),
+      visitorsThen: ({ count }) => `${count} visitatori in questi 7 giorni`,
+      seeAll: "Vedi tutte le tue pagine",
+      youAsked: ({ weekday, time, platformName }) =>
+        `Hai chiesto a ${platformName} questo report ogni ${IT_WEEKDAYS[weekday - 1] ?? "settimana"} alle ${time}. Puoi metterlo in pausa o fermarlo quando vuoi in Attività di ${platformName}.`,
+      bellTitle: ({ weekday }) => `Il tuo report ${itOfWeekday(weekday)} è pronto`,
+      bellBody: ({ change, pages, direction }) =>
+        pages === 0
+          ? (direction === "lost" ? "Nessuna delle tue pagine ha perso visitatori questa settimana." : "Nessuna delle tue pagine ha guadagnato visitatori questa settimana.")
+          : `${change} visitatori da Google su ${pages} ${pages === 1 ? "pagina" : "pagine"}.`,
     },
     taskAlert: {
       kind: "Avviso",

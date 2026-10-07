@@ -112,6 +112,20 @@ describe("Hakken tasks' approved look", () => {
     expect(await screen.findByText("No tasks match that. Try another word or filter.")).toBeInTheDocument();
   });
 
+  it("says a weekly report's day: Mondays at its time", async () => {
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "hakkenTasks:listMine": [{
+        taskId: "hakkenTasks_9" as Id<"hakkenTasks">, kind: "REPORT", state: "ON", title: "Every Monday, send me the five pages that lost the most visitors",
+        measure: "visitors", target: { companyWebsiteId: site, website: "ronins.test" },
+        report: { look: "pagesChange", direction: "lost", count: 5, every: "week", weekday: 1 },
+        timeOfDay: "09:00", timeZone: "Europe/London", channels, nextCheckAt: NEXT, createdAt: 9,
+      }],
+    }));
+    render(<HakkenTasksPage />);
+    const row = (await screen.findByText("Hakken and email, Mondays 9am")).closest("tr")!;
+    expect(within(row).getByText("Report")).toBeInTheDocument();
+  });
+
   it("with none yet, says how to add one", async () => {
     vi.mocked(useQuery).mockImplementation(answerQueries({ "hakkenTasks:listMine": [] }));
     render(<HakkenTasksPage />);

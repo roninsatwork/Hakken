@@ -7,7 +7,7 @@ import { queueOutboxMessage } from "./outbox";
 import { ensureReaderPreferences } from "./readerPreferences";
 import { startRoleRun } from "./roleRuns";
 import { resolvePlatformName } from "./settingsService";
-import { nextTaskRun } from "./utils/hakkenTaskTiming";
+import { nextRunOf } from "./utils/hakkenTaskTiming";
 import { WATCHER } from "./utils/hakkenWatcher";
 
 /**
@@ -59,9 +59,9 @@ export const dueTasksInternal = internalQuery({
   handler: async (ctx, args) => {
     const due = await ctx.db
       .query("hakkenTasks")
-      .withIndex("by_state_next", (q) => q.eq("state", "ON").lte("nextCheckAt", args.now))
+      .withIndex("by_kind_state_next", (q) => q.eq("kind", "ALERT").eq("state", "ON").lte("nextCheckAt", args.now))
       .take(args.limit);
-    return due.filter((task) => task.kind === "ALERT").map((task) => task._id);
+    return due.map((task) => task._id);
   },
 });
 
@@ -152,7 +152,7 @@ export const recordCheckInternal = internalMutation({
     await ctx.db.patch(task._id, {
       ...(newest ? { lastJudgedDay: newest } : {}),
       ...(args.alert ? { lastAlertedDay: args.alert.day } : {}),
-      nextCheckAt: nextTaskRun(task.timeOfDay, task.timeZone, now),
+      nextCheckAt: nextRunOf(task, now),
       updatedAt: now,
     });
 

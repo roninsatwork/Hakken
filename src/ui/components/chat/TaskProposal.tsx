@@ -71,13 +71,23 @@ export function TaskProposal({ messageId, proposal, isReadOnly = false }: { mess
         return condition.days > 1 ? t("rule.inARow", { rule: one, days: condition.days }) : one;
       })()
     : "";
-  const rows: Array<[string, React.ReactNode]> = [
+  const time = locale.startsWith("en") ? clockOf(proposal.timeOfDay ?? "09:00") : (proposal.timeOfDay ?? "09:00");
+  // A weekly report (item 4.1): what it sends, where from, and on which day.
+  const report = proposal.report;
+  const rows: Array<[string, React.ReactNode]> = report ? [
+    [t("report.send"), t("report.pages", { count: report.count, direction: report.direction })],
+    [t("website"), proposal.target?.website ?? ""],
+    [t("when"), t("report.every", { weekday: t(`report.weekdays.${report.weekday}` as "report.weekdays.1"), time })],
+    [t("where"), t("whereBellEmail", { platformName })],
+    [t("goodToKnow"), t("report.compares")],
+    [t("cost"), t("free")],
+  ] : [
     [t("watch"), t(`measures.${proposal.measure ?? "visitors"}`)],
     proposal.target?.page
       ? [t("page"), <PageLinkCell key="page" href={`/app/search-console/${proposal.target.companyWebsiteId}/pages`} page={pathOf(proposal.target.page)} />]
       : [t("website"), proposal.target?.website ?? ""],
     [t("letYouKnow"), rule],
-    [t("when"), t("at", { time: locale.startsWith("en") ? clockOf(proposal.timeOfDay ?? "09:00") : (proposal.timeOfDay ?? "09:00") })],
+    [t("when"), t("at", { time })],
     [t("where"), t("whereBellEmail", { platformName })],
     [t("goodToKnow"), t("settle")],
     [t("cost"), t("free")],
@@ -95,17 +105,17 @@ export function TaskProposal({ messageId, proposal, isReadOnly = false }: { mess
       </div>
       {answered ? (
         proposal.status === "DONE" ? (
-          <StatusLabel tone="success">{t("set", { date: formatDate(proposal.answeredAt, { locale, fallback: "" }) })}</StatusLabel>
+          <StatusLabel tone="success">{report ? t("report.set") : t("set", { date: formatDate(proposal.answeredAt, { locale, fallback: "" }) })}</StatusLabel>
         ) : (
           <TagLabel>{t("declined")}</TagLabel>
         )
       ) : !isReadOnly ? (
         <>
           <div className="flex items-center gap-2">
-            <Button variant="primary" onClick={() => reply(true)} disabled={busy}>{t("yes")}</Button>
+            <Button variant="primary" onClick={() => reply(true)} disabled={busy}>{report ? t("report.yes") : t("yes")}</Button>
             <Button variant="ghost" onClick={() => reply(false)} disabled={busy}>{t("notNow")}</Button>
           </div>
-          <p className="text-[12px] text-muted">{t("hint")}</p>
+          <p className="text-[12px] text-muted">{report ? t("report.hint") : t("hint")}</p>
         </>
       ) : null}
       {action.error && <p role="alert" className="text-[12px] text-warning">{action.error}</p>}

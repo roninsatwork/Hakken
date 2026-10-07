@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_TASK_TIME, DEFAULT_TASK_TIME_ZONE, clockOf, nextTaskRun, taskTimeOfDay, taskTimeZone } from "./hakkenTaskTiming";
+import { DEFAULT_TASK_TIME, DEFAULT_TASK_TIME_ZONE, clockOf, nextRunOf, nextTaskRun, taskTimeOfDay, taskTimeZone, weekdayIn } from "./hakkenTaskTiming";
 
 describe("when a Hakken task next runs", () => {
   it("runs at its owner's time today when that time is still to come", () => {
@@ -37,5 +37,15 @@ describe("when a Hakken task next runs", () => {
     expect(clockOf("08:30")).toBe("8:30am");
     expect(clockOf("13:00")).toBe("1pm");
     expect(clockOf("00:15")).toBe("12:15am");
+  });
+
+  it("runs a weekly report at its owner's time on its weekday", () => {
+    // Wednesday 7 October 2026, 10:00 in London; a Monday report at 9am runs on Monday 12 October.
+    const now = Date.UTC(2026, 9, 7, 9, 0);
+    const monday = nextRunOf({ timeOfDay: "09:00", timeZone: "Europe/London", report: { every: "week", weekday: 1 } }, now);
+    expect(new Date(monday).toISOString()).toBe("2026-10-12T08:00:00.000Z");
+    expect(weekdayIn(monday, "Europe/London")).toBe(1);
+    // A daily alert runs tomorrow.
+    expect(new Date(nextRunOf({ timeOfDay: "09:00", timeZone: "Europe/London" }, now)).toISOString()).toBe("2026-10-08T08:00:00.000Z");
   });
 });

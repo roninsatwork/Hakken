@@ -7367,6 +7367,24 @@
             "no": "Tienilo",
             "done": "Eliminata."
           }
+        },
+        "report": {
+          "send": "Ti manderò",
+          "pages": "{direction, select, gained {Le {count} pagine che hanno guadagnato più visitatori da Google} other {Le {count} pagine che hanno perso più visitatori da Google}}",
+          "every": "Ogni {weekday} alle {time}",
+          "compares": "Ogni report confronta gli ultimi 7 giorni in Search Console con i 7 precedenti",
+          "yes": "Sì, mandamelo",
+          "hint": "Vuoi qualcosa di diverso? Dimmelo, per esempio “il venerdì” o “le dieci pagine che hanno guadagnato di più”.",
+          "set": "Tutto pronto: il primo report è in arrivo",
+          "weekdays": {
+            "1": "lunedì",
+            "2": "martedì",
+            "3": "mercoledì",
+            "4": "giovedì",
+            "5": "venerdì",
+            "6": "sabato",
+            "7": "domenica"
+          }
         }
       },
       "chart": {
@@ -8417,7 +8435,8 @@
       "bell": "{platformName}",
       "email": "email",
       "telegram": "Telegram",
-      "at": "{channels}, alle {time}"
+      "at": "{channels}, alle {time}",
+      "weekly": "{channels}, {weekday} alle {time}"
     },
     "states": {
       "ON": "Attiva",
@@ -8444,6 +8463,15 @@
     "company": {
       "description": "Tutto ciò che {platformName} tiene d’occhio per {company}, chiunque l’abbia chiesto.",
       "whoLeft": "Qualcuno che non c’è più"
+    },
+    "weekdaysPlural": {
+      "1": "il lunedì",
+      "2": "il martedì",
+      "3": "il mercoledì",
+      "4": "il giovedì",
+      "5": "il venerdì",
+      "6": "il sabato",
+      "7": "la domenica"
     }
   },
   "notifications": {

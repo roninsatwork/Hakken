@@ -70,6 +70,25 @@ export function nextTaskRun(timeOfDay: string, timeZone: string, now: number): n
   return instantOf({ year: tomorrow.getUTCFullYear(), month: tomorrow.getUTCMonth() + 1, day: tomorrow.getUTCDate(), hour, minute }, zone);
 }
 
+/** The weekday a moment falls on in a zone: 1 Monday … 7 Sunday. */
+export function weekdayIn(at: number, timeZone: string): number {
+  const name = new Intl.DateTimeFormat("en-GB", { weekday: "short", timeZone: taskTimeZone(timeZone) }).format(new Date(at));
+  return ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].indexOf(name) + 1;
+}
+
+/**
+ * When a task next runs: an alert at its owner's time each day; a weekly
+ * report at that time on its weekday (item 4.1).
+ */
+export function nextRunOf(task: { timeOfDay: string; timeZone: string; report?: { every: "week"; weekday: number } }, now: number): number {
+  let next = nextTaskRun(task.timeOfDay, task.timeZone, now);
+  if (!task.report) return next;
+  for (let tries = 0; tries < 7 && weekdayIn(next, task.timeZone) !== task.report.weekday; tries += 1) {
+    next = nextTaskRun(task.timeOfDay, task.timeZone, next);
+  }
+  return next;
+}
+
 /** "09:00" as English speakers say it: 9am, 8:30am, 1pm. Other languages show the 24-hour time as it is. */
 export function clockOf(time: string): string {
   const [hours, minutes] = time.split(":").map(Number);
