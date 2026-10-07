@@ -7,6 +7,14 @@ completed work.
 
 ## Active Plans
 
+- [Hakken tasks — the assistant that does the work](./active/hakken-tasks-plan.md) —
+  on top of the assistant's foundation: a person asks Ask Hakken to keep an
+  eye on something, Hakken writes the task back for a yes, checks each
+  morning and lets them know in the bell, by email and in Telegram; six
+  built-in agents (the Hakken Assistant, Watcher, Stat Report, Research,
+  Weekly Digest Email and Caretaker Agents); charts in Ask Hakken; every email
+  Hakken sends moved onto one new style. **Planned 2026-10-07, drawings
+  signed off the same day; nothing built; about 28 to 36 days in six phases.**
 - [The assistant's foundation — one brain, many doors](./active/assistant-foundation-plan.md) —
   before Hakken becomes a personal assistant that takes on jobs, one brain:
   what Hakken knows put together in one place for every door (typed and

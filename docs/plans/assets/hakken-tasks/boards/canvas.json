@@ -1,0 +1,208 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-07T07:16:05Z"
+  },
+  "title": "Hakken tasks — the wider assistant",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1000,
+      "title": "1 · You ask Hakken to keep an eye on a page; it says what it will do"
+    },
+    "JobSet.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 1000,
+      "title": "2 · You said yes: all set"
+    },
+    "MyTasks.dc.html": {
+      "x": 0,
+      "y": 1420,
+      "w": 1440,
+      "h": 1000,
+      "title": "3 · Hakken tasks, in your menu: pause, resume, delete"
+    },
+    "CompanyJobs.dc.html": {
+      "x": 3040,
+      "y": 1420,
+      "w": 1440,
+      "h": 1000,
+      "title": "5 · Admin → Companies → Ronins Agency → Hakken tasks"
+    },
+    "EmailAlertB.dc.html": {
+      "x": 0,
+      "y": 4460,
+      "w": 900,
+      "h": 1000,
+      "title": "9 · A task alert"
+    },
+    "EmailReportB.dc.html": {
+      "x": 980,
+      "y": 4460,
+      "w": 900,
+      "h": 1100,
+      "title": "10 · A task’s report (every Monday)"
+    },
+    "DeleteTask.dc.html": {
+      "x": 1520,
+      "y": 1420,
+      "w": 1440,
+      "h": 1000,
+      "title": "4 · Delete asks first, and offers a pause instead"
+    },
+    "Bell.dc.html": {
+      "x": 0,
+      "y": 2840,
+      "w": 1440,
+      "h": 1000,
+      "title": "6 · The alert waiting in the bell"
+    },
+    "TelegramLink.dc.html": {
+      "x": 1520,
+      "y": 2840,
+      "w": 1440,
+      "h": 1200,
+      "title": "7 · Your profile: linking Telegram with a code"
+    },
+    "TelegramMessages.dc.html": {
+      "x": 3040,
+      "y": 2840,
+      "w": 900,
+      "h": 1000,
+      "title": "8 · The words Hakken sends in Telegram"
+    },
+    "MailSignInLink.dc.html": {
+      "x": 1960,
+      "y": 4460,
+      "w": 900,
+      "h": 760,
+      "title": "11 · Sign in"
+    },
+    "MailSignInCode.dc.html": {
+      "x": 2940,
+      "y": 4460,
+      "w": 900,
+      "h": 760,
+      "title": "12 · Sign-in code"
+    },
+    "MailInvitation.dc.html": {
+      "x": 3920,
+      "y": 4460,
+      "w": 900,
+      "h": 820,
+      "title": "13 · Invitation to a company"
+    },
+    "MailWeeklyNews.dc.html": {
+      "x": 0,
+      "y": 5680,
+      "w": 900,
+      "h": 1500,
+      "title": "14 · Weekly news"
+    },
+    "MailAgent.dc.html": {
+      "x": 980,
+      "y": 5680,
+      "w": 900,
+      "h": 900,
+      "title": "15 · From your agent"
+    },
+    "MailAutomation.dc.html": {
+      "x": 1960,
+      "y": 5680,
+      "w": 900,
+      "h": 820,
+      "title": "16 · An automation’s email"
+    },
+    "MailCollection.dc.html": {
+      "x": 2940,
+      "y": 5680,
+      "w": 900,
+      "h": 880,
+      "title": "17 · Collecting stopped (super admins)"
+    },
+    "MailSystemHealth.dc.html": {
+      "x": 3920,
+      "y": 5680,
+      "w": 900,
+      "h": 1200,
+      "title": "18 · System health (super admins)"
+    },
+    "AskChart.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 1000,
+      "title": "Proposed · Ask Hakken answers with a chart"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "JobSet.dc.html",
+    "AskChart.dc.html",
+    "MyTasks.dc.html",
+    "DeleteTask.dc.html",
+    "CompanyJobs.dc.html",
+    "Bell.dc.html",
+    "TelegramLink.dc.html",
+    "TelegramMessages.dc.html",
+    "EmailAlertB.dc.html",
+    "EmailReportB.dc.html",
+    "MailSignInLink.dc.html",
+    "MailSignInCode.dc.html",
+    "MailInvitation.dc.html",
+    "MailWeeklyNews.dc.html",
+    "MailAgent.dc.html",
+    "MailAutomation.dc.html",
+    "MailCollection.dc.html",
+    "MailSystemHealth.dc.html"
+  ],
+  "notes": {
+    "rowAsk": {
+      "x": 0,
+      "y": -300,
+      "text": "In Ask Hakken: setting a task",
+      "kind": "title1",
+      "maxW": 4480
+    },
+    "rowCompany": {
+      "x": 0,
+      "y": 1120,
+      "text": "Seeing and managing them",
+      "kind": "title1",
+      "maxW": 4480
+    },
+    "kit": {
+      "x": 4560,
+      "y": 0,
+      "w": 360,
+      "maxH": 260,
+      "fill": "gray",
+      "size": "s",
+      "text": "Screens: drawn from the app’s real components on the drawing kit (stylesheet 844c6461de95, look 149d9f4fb243, 07/10/2026). Emails: the chosen style, “the picture” (07/10/2026), now for every email Hakken sends — a big number or code where there is one, a friendly headline, one dark button — in the app’s own colours and fonts. Billing emails are Stripe’s. People, stories and figures are illustrative."
+    },
+    "rowReceive": {
+      "x": 0,
+      "y": 4160,
+      "text": "Every email Hakken sends — in the new style",
+      "kind": "title1",
+      "maxW": 4820
+    },
+    "rowHear": {
+      "x": 0,
+      "y": 2540,
+      "text": "Where you hear from Hakken",
+      "kind": "title1",
+      "maxW": 3940
+    }
+  },
+  "designSystems": []
+}
