@@ -6,6 +6,7 @@ import { KEYWORD_LIST_OPERATION_ID, KEYWORD_LIST_PAGE } from "./dataForSeoKeywor
 import { parseDomainRankedKeywords } from "./dataForSeoParsers";
 import { expandSeoResult } from "./dataForSeoSlim";
 import { replaceSameDayPosition } from "./seoKeywordChecks";
+import { setPoint } from "./positionHistory";
 import { readSiteDataLimits } from "./companyDataLimits";
 import { sentLimit, sentOffset } from "./sitePagedLists";
 import { fileKeywordRank, requestSiteRebuild, type RankExtras } from "./siteRankings";
@@ -114,6 +115,14 @@ export async function fileRankedPositions(
       locationCode: place,
       pullId: args.pullId,
       createdAt: now,
+    });
+    // And its point on the search's line (keep-less-history-plan.md, part 1),
+    // which the readers move to once both are filed.
+    await setPoint(ctx, { websiteId: args.websiteId, keyword: entry.keyword, locationCode: place, day: args.day }, {
+      ...(entry.position !== undefined ? { position: entry.position } : {}),
+      ...(entry.pagePosition !== undefined ? { pagePosition: entry.pagePosition } : {}),
+      ...(entry.url ? { url: entry.url } : {}),
+      kind: "LIST",
     });
     if (tracked.has(entry.keyword)) {
       await recomputeSearchStats(ctx, { websiteId: args.websiteId, keyword: entry.keyword, locationCode: place });

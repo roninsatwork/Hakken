@@ -36,6 +36,7 @@ const COLLECTED_TABLES: ReadonlyArray<{ table: TableNames; page: number }> = [
   { table: "seoCollectionCycles", page: 200 },
   { table: "seoRunReports", page: 200 },
   { table: "seoKeywordPositions", page: 500 },
+  { table: "keywordPositionMonths", page: 500 },
   { table: "seoWebsiteMetrics", page: 200 },
   { table: "aiCitations", page: 500 },
   // One row per answer, read by the AI answers screen. Missed at first, which

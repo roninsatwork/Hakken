@@ -21,6 +21,7 @@ import { appError } from "./utils/appError";
 import { clearPoundNames, copyPoundNamesToDollars } from "./costCurrencyMigration";
 import { markExistingHoldsOwned } from "./websiteAttachmentMigration";
 import { backfillPositionPlaces } from "./seoPositionPlaceMigration";
+import { packKeywordPositions } from "./positionHistoryMigration";
 import { clearCountingSwitchMoves } from "./sitePositionRepair";
 import { moveAnswersOffRequests } from "./seoPullAnswers";
 import { backfillAnswerIndex } from "./siteAnswers";
@@ -127,11 +128,8 @@ type MigrationRunner = (
  * dead code indefinitely.
  *
  * The same was done on 2026-10-07 with `2026-10-07-clear-unread-columns`,
- * which emptied the columns nobody read (keep-less-history-plan.md, 5.6) —
- * the rankings' search text, `updatedAt`, advert competition and
- * DataForSEO's own previous place and move; each page's search text, volume
- * and `updatedAt`; a feature's address and `updatedAt`; Your pages'
- * `builtAt`; the sitemap pages' day — on dev before they left the schema.
+ * which emptied the columns nobody read, on dev before they left the schema
+ * (keep-less-history-plan.md, 5.6, names each).
  * The same was done on 2026-09-23 with `2026-09-23-clear-seo-prefer-live`,
  * which emptied `companies.seoPreferLive` on dev before the field left the
  * schema. There is no production deployment yet, so no other copy carries it.
@@ -223,6 +221,8 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
     const step = await dropStoredGapsStep(ctx);
     return { cursor: null, isDone: !step.more, processed: step.removed, updated: step.removed };
   },
+  // Keyword positions packed a month a record (`positionHistoryMigration.ts`): run before the readers move.
+  "2026-10-07-pack-keyword-positions": packKeywordPositions,
 
   /**
    * Takes the Collector off each company's Collection schedule, and the next

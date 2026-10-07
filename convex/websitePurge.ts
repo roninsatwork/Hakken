@@ -13,6 +13,7 @@ import type { Id } from "./_generated/dataModel";
 import { dropCopies } from "./siteListCopies";
 import { deleteAnswerText } from "./siteAnswers";
 import { purgeHoldListAi } from "./siteListAi";
+import { clearWebsitePositions, removeChecksOfSearch } from "./positionHistory";
 
 /**
  * Rows removed per pass, so one purge is one bounded transaction and chains
@@ -180,6 +181,7 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
     };
     await byWebsite(await ctx.db.query("seoKeywordPositions")
       .withIndex("by_website_day", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    if ((await clearWebsitePositions(ctx, args.websiteId, ENTRY_PURGE_BATCH)) === ENTRY_PURGE_BATCH) more = true;
     await byWebsite(await ctx.db.query("seoWebsiteMetrics")
       .withIndex("by_website_day", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
     await byWebsite(await ctx.db.query("websiteSearchStats")
@@ -399,9 +401,16 @@ export const purgeQuestionAnswersInternal = internalMutation({
   },
 });
 
-/** The Google results pages for a search no website tracks any more, and the purchases behind them. */
+/**
+ * The Google results pages for a search no website tracks any more, and the
+ * purchases behind them: each page's checks taken off every website's line
+ * first, `linesAfter` where the last pass stopped.
+ */
 export const purgeSearchResultsInternal = internalMutation({
-  args: { keyword: v.string() },
+  args: {
+    keyword: v.string(),
+    linesAfter: v.optional(v.object({ pageId: v.id("siteSerpPages"), websiteId: v.id("websites") })),
+  },
   returns: v.null(),
   handler: async (ctx, args) => {
     const tracked = await ctx.db
@@ -416,6 +425,16 @@ export const purgeSearchResultsInternal = internalMutation({
       .withIndex("by_keyword_place_day", (q) => q.eq("keyword", args.keyword))
       .take(SHARED_PURCHASES_BATCH);
     for (const page of pages) {
+      const lines = await removeChecksOfSearch(ctx, { keyword: args.keyword, locationCode: page.locationCode, day: page.day }, {
+        after: args.linesAfter?.pageId === page._id ? args.linesAfter.websiteId : null,
+        take: SEARCH_LINES_BATCH,
+      });
+      if (lines.after !== null) {
+        await ctx.scheduler.runAfter(0, internal.websitePurge.purgeSearchResultsInternal, {
+          keyword: args.keyword, linesAfter: { pageId: page._id, websiteId: lines.after },
+        });
+        return null;
+      }
       if (await purgePurchase(ctx, page.pullId, [])) more = true;
     }
     if (pages.length === SHARED_PURCHASES_BATCH || more) {
@@ -464,6 +483,9 @@ async function purgePurchase(
 
 /** Shared purchases taken per pass: each carries its citations, words and searches. */
 const SHARED_PURCHASES_BATCH = 10;
+
+/** Websites' lines a search's check is taken off per pass: a month's record each. */
+const SEARCH_LINES_BATCH = 400;
 
 /** A removed hold's list rows and AI lines deleted per pass. */
 const HOLD_LIST_BATCH = 500;

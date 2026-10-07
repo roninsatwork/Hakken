@@ -13,6 +13,7 @@ import { contentTables } from "./contentSchema";
 import { keywordResearchTables } from "./keywordResearchSchema";
 import { seoPullTables } from "./seoPullSchema";
 import { positionWeekTables } from "./positionWeekSchema";
+import { positionHistoryTables } from "./positionHistorySchema";
 import { creditTables } from "./creditSchema";
 import { hakkenTaskProposalValidator, hakkenTaskTables } from "./hakkenTaskSchema";
 import { telegramTables } from "./telegramSchema";
@@ -43,6 +44,7 @@ export default defineSchema({
   ...keywordResearchTables,
   ...seoPullTables,
   ...positionWeekTables,
+  ...positionHistoryTables,
   ...creditTables,
   ...hakkenTaskTables,
   ...telegramTables,

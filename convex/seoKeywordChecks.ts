@@ -7,6 +7,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { fileSerpPage, serpSnapshotValidator } from "./siteSerp";
 import { runDayOf } from "./seoRunDay";
+import { pointAt, setPoint } from "./positionHistory";
 
 /**
  * Filing one checked search against every site it answers for.
@@ -159,6 +160,10 @@ export const writeKeywordCheck = internalMutation({
         pullId: args.pullId,
         createdAt: now,
       });
+      // And its point on the search's line (keep-less-history-plan.md, part 1).
+      await setPoint(ctx, {
+        websiteId, keyword: args.keyword, locationCode: args.locationCode ?? DEFAULT_LOCATION_CODE, day: args.day,
+      }, { ...entry, kind: "CHECK" });
       await recomputeSearchStats(ctx, {
         websiteId,
         keyword: args.keyword,
@@ -194,6 +199,8 @@ export async function fileFirstCheckLate(
     .withIndex("by_website_keyword_place_day", (q) =>
       q.eq("websiteId", first.websiteId).eq("keyword", first.query).eq("locationCode", first.locationCode).eq("day", day))
     .first();
+  const point = { websiteId: first.websiteId, keyword: first.query, locationCode: first.locationCode, day };
+  if (!(await pointAt(ctx, point))) await setPoint(ctx, point, { kind: "CHECK" });
   if (!held) {
     await ctx.db.insert("seoKeywordPositions", {
       websiteId: first.websiteId,

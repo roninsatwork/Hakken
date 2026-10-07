@@ -21,7 +21,7 @@ other agent has finished … we can start this plan now"; see "Beside the
 Hakken tasks work"), on the `keep-less-history` branch merged into `dev`, not
 pushed. Part 5 agreed by Anthony the same day ("I agree with all of these"),
 and part 6's drawing signed off ("add this to the plan as it's signed off").
-Ten decisions are Anthony's (marked **Decision** below, each with a
+Ten decisions were Anthony's, all answered on 2026-10-07 (marked **Decision** below, each with a
 recommendation). Each part starts with a measurement where one is needed, and
 goes ahead only if it bears the part out. About **20 to 25 days** of work in
 all. Part 1 is the one that grows without end; part 3 is the biggest for
@@ -268,9 +268,14 @@ record besides, not counted):
 
 5% of the rows sampled were below 50th or not ranking (Decision 2's tail).
 **Decision 10 answered 2026-10-07: not kept** (Anthony: "I will go with your
-recommendation"). Decisions 1 to 3 not yet answered, so part 1 is built
-keeping today's behaviour — daily for 90 days, then each week's last; every
-keyword; a point each check — which the packing does not depend on.
+recommendation").
+
+**Decisions 1 to 3 answered the same day.** 1 — daily for 90 days, each
+week's last to a year, each month's last to two years, **and nothing older
+than two years** (Anthony: "yes for 2 years then we can delete it post
+that"): a busy website's positions stop growing at about 30 MB, where they
+grew about 130 MB a year. 2 — every keyword ("every"). 3 — a point at every
+check, not only on a change ("yes" to "not now").
 
 ### Steps
 
@@ -321,6 +326,10 @@ keyword; a point each check — which the packing does not depend on.
   the report starts with no history when it is built. **Recommended: keep
   writing it, with a keep rule of 12 months** (part 4) — it is 0.1 MB today —
   and pack or trim it when the report is designed, by what the report reads.
+
+**Decisions 4 and 5 answered 2026-10-07** (Anthony: "agree" to both): a
+found competitor's day rows stopped, its last day kept on its own row; the
+fan-out searches by day kept 12 months.
 
 **About half a day to a day.**
 
@@ -428,6 +437,8 @@ Hakken sends is a row (`outboxMessages`, `convex/outboxSchema.ts`) and
 nothing clears it — found on the re-check below. Its keep rule is agreed
 with that work once it is finished, and goes on the same list.
 
+**Answered 2026-10-07: sent emails kept 60 days** (Anthony: "60 days is ok").
+
 **About 1 to 1¼ days.**
 
 ## Part 5 — what is stored and never read
@@ -530,6 +541,7 @@ its top 1,000 automatically. **Decision 6 — how long a lost keyword stays.**
 **Recommended: 90 days**, once step 1 below has measured how many
 lost rows there are and checked how far back New and lost and Wins and
 losses reach.
+**Answered 2026-10-07: 90 days** (Anthony: "agree").
 
 **5.8 — the old Search Console copies.** No longer built (`gsc`,
 `siteListCopies.ts`), and none left on dev on 2026-10-07; the kind is taken
@@ -676,12 +688,12 @@ clients. The website last chosen is remembered in the browser, per company
 first. 発見 replaced 備え with its direct translation — the dashboard's hero
 "発見 · Discovery" (Italian "発見 · Scoperta"), the public home page's
 hero the same, its story's mark and "hak · ken", the sign-in page's mark.
-No new drawing: the screens changed only in the mark. **Left for Anthony:
-the words around it are still Sonae's** — the story's "Prepared before the
+No new drawing: the screens changed only in the mark. **The words around
+it are still Sonae's, and stay** (Anthony, 2026-10-07: "leave the homepage
+alone") — the story's "Prepared before the
 moment arrives." and its paragraph, the sign-in page's and the public "What
 Hakken is" section's "the production layer behind AI products", and both
-heroes' "Build agent-powered products with governance built in" — Hakken's
-own words to be written for them.
+heroes' "Build agent-powered products with governance built in".
 
 ### Steps
 

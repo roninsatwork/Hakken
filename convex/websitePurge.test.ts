@@ -5,6 +5,7 @@ import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { listOwnerOf } from "@/src/test/listOwner";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { setPoint } from "./positionHistory";
 
 /**
  * Deleting a website takes everything about it (Anthony, 2026-09-24: "delete
@@ -133,5 +134,37 @@ describe("deleting a website", () => {
     expect(left.purchases.keptOnly).not.toBeNull();
     for (const [, named] of left.answers) expect(named).not.toContain(gone);
     expect(left.citations.every(([prompt]) => prompt !== "only gone asks")).toBe(true);
+  });
+});
+
+describe("deleting a website's keyword positions (keep-less-history-plan.md, part 1)", () => {
+  test("its own lines go; its search's checks leave other websites' lines, their lists' points stay", async () => {
+    const t = harness();
+    const { gone, kept } = await t.run(async (ctx) => ({
+      gone: await ctx.db.insert("websites", { host: "gone.co.uk", displayHost: "gone.co.uk", firstSeenAt: Date.now() }),
+      kept: await ctx.db.insert("websites", { host: "kept.co.uk", displayHost: "kept.co.uk", firstSeenAt: Date.now() }),
+    }));
+    await t.run(async (ctx) => {
+      await ctx.db.insert("websiteKeywords", {
+        websiteId: gone, companyWebsiteId: await listOwnerOf(ctx, gone), keyword: "only gone tracks", isActive: true, createdAt: Date.now(),
+      });
+    });
+    const check = await resultsPage(t, "only gone tracks");
+    await t.mutation(internal.seoKeywordChecks.writeKeywordCheck, {
+      pullId: check, keyword: "only gone tracks", locationCode: UK, day: DAY, found: [{ websiteId: kept, position: 1 }],
+    });
+    // The other website's own list ranks it too, on another day.
+    await t.run(async (ctx) => {
+      await setPoint(ctx, { websiteId: kept, keyword: "only gone tracks", locationCode: UK, day: "2026-09-24" }, { position: 2, kind: "LIST" });
+    });
+
+    await t.run(async (ctx) => await ctx.db.delete(gone));
+    await t.mutation(internal.websitePurge.purgeWebsiteListsInternal, { websiteId: gone });
+    await t.mutation(internal.websitePurge.purgeWebsiteCollectedDataInternal, { websiteId: gone });
+    await finishScheduled(t);
+
+    const lines = await t.run(async (ctx) => (await ctx.db.query("keywordPositionMonths").collect())
+      .map((record) => [record.websiteId === kept ? "kept" : "gone", record.days, record.kinds]));
+    expect(lines).toEqual([["kept", [24], [0]]]);
   });
 });
