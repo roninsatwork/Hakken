@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Building2, Coins, Globe, Lock } from "lucide-react";
 
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { SaveAction, SaveError } from "@/src/ui/components/screens/SaveControls";
 import { Select } from "@/src/ui/components/screens/Select";
@@ -72,6 +73,7 @@ export function LimitsScreen(props: LimitsScreenProps) {
 /** One topic's limits, saved on their own, like each card on a settings screen. */
 function TopicCard({ topic, level, own, above, choices, others, otherHref, onSave }: LimitsScreenProps & { topic: LimitTopic }) {
   const t = useTranslations("admin.limits");
+  const named = { platformName: useSystemSettings().platformName };
   const tCommon = useTranslations("common");
   const words = useLimitWords();
   const action = useAdminAction({ scope: `admin-limits-${level}-${topic.id}` });
@@ -105,11 +107,11 @@ function TopicCard({ topic, level, own, above, choices, others, otherHref, onSav
   const OtherIcon = level === "platform" ? Building2 : Globe;
 
   return (
-    <SettingsCard title={t(`topics.${topic.id}.title`)}>
-      <p className="max-w-2xl text-[12px] leading-relaxed text-secondary">{t(`topics.${topic.id}.intro`)}</p>
+    <SettingsCard title={t(`topics.${topic.id}.title`, named)}>
+      <p className="max-w-2xl text-[12px] leading-relaxed text-secondary">{t(`topics.${topic.id}.intro`, named)}</p>
 
       {topic.keys.map((key) => {
-        const label = t(`fields.${key}.label`);
+        const label = t(`fields.${key}.label`, named);
         const first = aboveChoice(key);
         return (
           <SettingRow
@@ -117,10 +119,10 @@ function TopicCard({ topic, level, own, above, choices, others, otherHref, onSav
             label={label}
             description={
               <div className="flex flex-col gap-1">
-                <span>{t(`fields.${key}.description`)}</span>
+                <span>{t(`fields.${key}.description`, named)}</span>
                 <span className="flex items-center gap-1.5 text-secondary">
                   <Coins className="h-3.5 w-3.5 shrink-0 text-muted" aria-hidden="true" />
-                  {t(`fields.${key}.cost`)}
+                  {t(`fields.${key}.cost`, named)}
                 </span>
                 {(others?.[key] ?? []).map((other) => (
                   <span key={other.id} className="flex flex-wrap items-center gap-x-1.5 text-secondary">
@@ -155,7 +157,7 @@ function TopicCard({ topic, level, own, above, choices, others, otherHref, onSav
       <SaveError>{error}</SaveError>
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border-dim pt-4">
-        <p className="text-[12px] text-secondary">{t(`topics.${topic.id}.footer`)}</p>
+        <p className="text-[12px] text-secondary">{t(`topics.${topic.id}.footer`, named)}</p>
         <SaveAction
           onClick={handleSave}
           isSaving={action.isBusy()}
@@ -177,20 +179,21 @@ function TopicCard({ topic, level, own, above, choices, others, otherHref, onSav
  */
 function SharedCard({ topic, values }: { topic: LimitTopic; values: Record<string, number> }) {
   const t = useTranslations("admin.limits");
+  const named = { platformName: useSystemSettings().platformName };
   const words = useLimitWords();
   return (
-    <SettingsCard title={t(`topics.${topic.id}.title`)}>
-      <p className="max-w-2xl text-[12px] leading-relaxed text-secondary">{t(`topics.${topic.id}.intro`)}</p>
+    <SettingsCard title={t(`topics.${topic.id}.title`, named)}>
+      <p className="max-w-2xl text-[12px] leading-relaxed text-secondary">{t(`topics.${topic.id}.intro`, named)}</p>
       {topic.keys.map((key) => (
         <SettingRow
           key={key}
-          label={t(`fields.${key}.label`)}
+          label={t(`fields.${key}.label`, named)}
           description={
             <div className="flex flex-col gap-1">
-              <span>{t(`fields.${key}.description`)}</span>
+              <span>{t(`fields.${key}.description`, named)}</span>
               <span className="flex items-center gap-1.5 text-secondary">
                 <Coins className="h-3.5 w-3.5 shrink-0 text-muted" aria-hidden="true" />
-                {t(`fields.${key}.cost`)}
+                {t(`fields.${key}.cost`, named)}
               </span>
             </div>
           }

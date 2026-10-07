@@ -12,9 +12,11 @@
  * without its words in English and Italian.
  */
 
-export type LimitTopic = { id: "google" | "ai" | "matching" | "searchConsole" | "consoleScreens" | "pages" | "research" | "company" | "shared"; keys: readonly string[] };
+export type LimitTopic = { id: "tasks" | "google" | "ai" | "matching" | "searchConsole" | "consoleScreens" | "pages" | "research" | "company" | "shared"; keys: readonly string[] };
 
 export const LIMIT_TOPICS: readonly LimitTopic[] = [
+  // Hakken tasks (hakken-tasks-plan.md): what one person can have Hakken keep doing.
+  { id: "tasks", keys: ["hakkenTasksPerPerson"] },
   {
     id: "google",
     keys: ["keywordsPerSite", "everydayKeywords", "trackedPerSite", "backlinksPerSite", "competitorsPerSite", "consoleDays"],
@@ -76,9 +78,11 @@ export type LimitUnit =
   | "percent"
   | "positions"
   | "updates"
-  | "weeks";
+  | "weeks"
+  | "tasks";
 
 export const LIMIT_UNITS: Record<string, LimitUnit> = {
+  hakkenTasksPerPerson: "tasks",
   keywordsPerSite: "keywords",
   everydayKeywords: "keywords",
   trackedPerSite: "keywords",

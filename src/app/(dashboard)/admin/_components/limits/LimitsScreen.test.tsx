@@ -5,6 +5,10 @@ import { renderWithProviders } from "@/src/test/renderWithProviders";
 import { LimitsScreen, type LimitsScreenProps } from "./LimitsScreen";
 
 vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
+// The words that name the platform ("{platformName} tasks") read it from settings.
+vi.mock("@/src/context/SystemSettingsContext", () => ({
+  useSystemSettings: () => ({ platformName: "Hakken" }),
+}));
 
 /**
  * One Limits page at every level (docs/plans/active/platform-limits-plan.md),

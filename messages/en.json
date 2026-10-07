@@ -6173,9 +6173,15 @@
         "percent": "{count}%",
         "positions": "{count, plural, one {# position} other {# positions}}",
         "updates": "{count, plural, one {# update} other {# updates}}",
-        "weeks": "{count, plural, one {# week} other {# weeks}}"
+        "weeks": "{count, plural, one {# week} other {# weeks}}",
+        "tasks": "{count, plural, one {# task} other {# tasks}}"
       },
       "topics": {
+        "tasks": {
+          "title": "{platformName} tasks",
+          "intro": "What each person can ask {platformName} to keep doing for them: alerts, reports and finding out why. Every task that is on runs a check each day, so this keeps the daily work, and its credits, in proportion.",
+          "footer": "Changes apply straight away. At the limit, {platformName} kindly asks the person to pause one first."
+        },
         "google": {
           "title": "Google data for each website",
           "intro": "What the platform buys from Google, through DataForSEO, for each website: a company’s own sites and every competitor it watches. Higher numbers give fuller lists on the Discovery screens, and cost more.",
@@ -6492,6 +6498,11 @@
           "label": "Google’s AI Overview searches per lookup",
           "description": "How many of the searches Google ran to write its AI Overviews are bought with What the AI says, the most run first. 0 buys none.",
           "cost": "About 10 cents a lookup, and a tenth of a cent for each search."
+        },
+        "hakkenTasksPerPerson": {
+          "label": "Tasks on at once, per person",
+          "description": "How many {platformName} tasks one person can have switched on. Paused and deleted tasks don't count. When someone reaches it, {platformName} tells them and suggests pausing one.",
+          "cost": "Credits show in Usage, under {platformName} tasks."
         }
       }
     },

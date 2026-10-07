@@ -200,6 +200,8 @@ import type * as governanceRegisterService from "../governanceRegisterService.js
 import type * as governanceRollupService from "../governanceRollupService.js";
 import type * as governanceRollups from "../governanceRollups.js";
 import type * as hakkenAssistant from "../hakkenAssistant.js";
+import type * as hakkenTaskSchema from "../hakkenTaskSchema.js";
+import type * as hakkenTasks from "../hakkenTasks.js";
 import type * as holdLists from "../holdLists.js";
 import type * as holdPages from "../holdPages.js";
 import type * as holdProfileSchema from "../holdProfileSchema.js";
@@ -494,6 +496,7 @@ import type * as utils_fanOutAngle from "../utils/fanOutAngle.js";
 import type * as utils_fileParser from "../utils/fileParser.js";
 import type * as utils_governanceShapes from "../utils/governanceShapes.js";
 import type * as utils_hakkenAssistant from "../utils/hakkenAssistant.js";
+import type * as utils_hakkenTaskTiming from "../utils/hakkenTaskTiming.js";
 import type * as utils_healthShapes from "../utils/healthShapes.js";
 import type * as utils_holdPagesJoin from "../utils/holdPagesJoin.js";
 import type * as utils_inventoryRollupService from "../utils/inventoryRollupService.js";
@@ -828,6 +831,8 @@ declare const fullApi: ApiFromModules<{
   governanceRollupService: typeof governanceRollupService;
   governanceRollups: typeof governanceRollups;
   hakkenAssistant: typeof hakkenAssistant;
+  hakkenTaskSchema: typeof hakkenTaskSchema;
+  hakkenTasks: typeof hakkenTasks;
   holdLists: typeof holdLists;
   holdPages: typeof holdPages;
   holdProfileSchema: typeof holdProfileSchema;
@@ -1122,6 +1127,7 @@ declare const fullApi: ApiFromModules<{
   "utils/fileParser": typeof utils_fileParser;
   "utils/governanceShapes": typeof utils_governanceShapes;
   "utils/hakkenAssistant": typeof utils_hakkenAssistant;
+  "utils/hakkenTaskTiming": typeof utils_hakkenTaskTiming;
   "utils/healthShapes": typeof utils_healthShapes;
   "utils/holdPagesJoin": typeof utils_holdPagesJoin;
   "utils/inventoryRollupService": typeof utils_inventoryRollupService;

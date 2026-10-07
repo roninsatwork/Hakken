@@ -793,6 +793,7 @@ export const siteTables = {
     researchKeywordsPerLookup: v.optional(v.number()),
     researchIdeasPerKind: v.optional(v.number()),
     researchReuseDays: v.optional(v.number()),
+    hakkenTasksPerPerson: v.optional(v.number()),
     researchOverviewSearches: v.optional(v.number()),
     // Only the platform sets these: each is about something every company
     // shares (`sharedLimits.ts`).

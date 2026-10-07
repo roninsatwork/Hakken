@@ -74,6 +74,7 @@ export const PERSONAL_DATA_RULES: readonly PersonalDataRule[] = [
   },
   { table: "userMemorySweeps", fields: ["userId"], treatment: "ERASE", reason: "The bookkeeping behind their private note." },
   { table: "notifications", fields: ["userId"], treatment: "ERASE", reason: "Their inbox. A notification exists only for the person it was sent to." },
+  { table: "hakkenTasks", fields: ["userId"], treatment: "ERASE", reason: "What they asked the assistant to keep doing for them. A task exists only for the person who set it up." },
 
   // --- Kept deliberately, because they are the evidence -----------------
   {
@@ -301,6 +302,7 @@ export const PERSONAL_DATA_INDEXES: Readonly<Record<string, string>> = {
   "arcadeRuns.userId": "by_user_started",
   "auditLogs.actorId": "by_actor",
   "logins.userId": "by_user",
+  "hakkenTasks.userId": "by_owner",
   "messages.userId": "by_user_role_created",
   "threads.userId": "by_user",
   "userMemories.userId": "by_user_status_updated",

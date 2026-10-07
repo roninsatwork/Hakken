@@ -1,0 +1,97 @@
+import { defineTable } from "convex/server";
+import { v } from "convex/values";
+
+/**
+ * Hakken tasks: what a person has asked Hakken to keep doing for them
+ * (docs/plans/active/hakken-tasks-plan.md). A task is its owner's — set up by
+ * a user, seen by that user, and its alerts sent to that user alone; a super
+ * admin sees a company's on Admin → Companies. Only `hakkenTasks.ts` writes
+ * these.
+ */
+
+/** An alert watches a figure; a report is sent on a schedule; research finds out why. Phase 1 builds alerts. */
+export const hakkenTaskKindValidator = v.union(v.literal("ALERT"), v.literal("REPORT"), v.literal("RESEARCH"));
+
+/**
+ * `ON` runs; `PAUSED` waits for its owner; `NEEDS_YOU` was paused by Hakken
+ * because it can no longer work (the Caretaker, Phase 5); `DELETED` is gone
+ * from every screen and kept only for the record of what it cost.
+ */
+export const hakkenTaskStateValidator = v.union(v.literal("ON"), v.literal("PAUSED"), v.literal("NEEDS_YOU"), v.literal("DELETED"));
+
+/** What an alert watches, from Search Console (Phase 1): its clicks, read as visitors from Google, and its impressions. */
+export const hakkenTaskMeasureValidator = v.union(v.literal("visitors"), v.literal("impressions"));
+
+/**
+ * When an alert's day counts: under or over a number, or down or up by a
+ * share of its usual. `days` in a row before it tells its owner.
+ */
+export const hakkenTaskConditionValidator = v.object({
+  op: v.union(v.literal("below"), v.literal("above"), v.literal("dropBy"), v.literal("riseBy")),
+  /** A count for below and above; a percentage for dropBy and riseBy. */
+  value: v.number(),
+  days: v.number(),
+});
+
+/** A website of the company's own, and optionally one of its pages. */
+export const hakkenTaskTargetValidator = v.object({
+  companyWebsiteId: v.id("companyWebsites"),
+  website: v.string(),
+  page: v.optional(v.string()),
+});
+
+export const hakkenTaskChannelsValidator = v.object({
+  bell: v.boolean(),
+  email: v.boolean(),
+  telegram: v.boolean(),
+});
+
+export const hakkenTaskTables = {
+  hakkenTasks: defineTable({
+    companyId: v.id("companies"),
+    /** Its owner: the person who set it up, the only one who sees it in the app and the only one told. */
+    userId: v.id("users"),
+    kind: hakkenTaskKindValidator,
+    state: hakkenTaskStateValidator,
+    /** In plain words, as its owner's Hakken tasks page shows it. */
+    title: v.string(),
+    measure: v.optional(hakkenTaskMeasureValidator),
+    target: v.optional(hakkenTaskTargetValidator),
+    condition: v.optional(hakkenTaskConditionValidator),
+    /** Its figure's usual day when it was set, for the alert's words ("it usually gets about 23"). */
+    usual: v.optional(v.number()),
+    /** The owner's local time to hear from Hakken, "09:00", in `timeZone`. */
+    timeOfDay: v.string(),
+    /** An IANA zone from the owner's browser when they set it ("Europe/London"). */
+    timeZone: v.string(),
+    channels: hakkenTaskChannelsValidator,
+    /** The conversation it was set up in, when there was one. */
+    threadId: v.optional(v.id("threads")),
+    /** The last Search Console day judged, "2026-10-04". */
+    lastJudgedDay: v.optional(v.string()),
+    /** When it next runs: its owner's time on the next day. */
+    nextCheckAt: v.optional(v.number()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    pausedAt: v.optional(v.number()),
+    deletedAt: v.optional(v.number()),
+  })
+    .index("by_owner", ["userId", "companyId", "createdAt"])
+    .index("by_company", ["companyId", "createdAt"])
+    .index("by_state_next", ["state", "nextCheckAt"]),
+
+  /** Every day a task judged, newest last: the figure, whether its rule was met, and whether its owner was told. */
+  hakkenTaskChecks: defineTable({
+    taskId: v.id("hakkenTasks"),
+    companyId: v.id("companies"),
+    day: v.string(),
+    value: v.optional(v.number()),
+    met: v.boolean(),
+    /** Days in a row the rule has been met, this one included. */
+    streak: v.number(),
+    alerted: v.boolean(),
+    /** Why a day could not be judged, in plain words. */
+    note: v.optional(v.string()),
+    checkedAt: v.number(),
+  }).index("by_task_day", ["taskId", "day"]),
+};

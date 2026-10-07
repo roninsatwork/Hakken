@@ -18,8 +18,9 @@ more engaging and intuitive"; "can we make this the default email style too …
 update the other emails from the platform at the same time in this plan … we
 crack everything in one go".
 
-**Status, 2026-10-07: planned; the drawings signed off the same day (below);
-nothing built. About 28 to 36 building days, in six phases; the first, about
+**Status, 2026-10-07: planned; the drawings signed off the same day (below),
+the Limits board with them; Phase 1 started the same day ("yes all good. lets
+build this"). About 28 to 36 building days, in six phases; the first, about
 9 to 10.5 days, gives working alerts.** Estimates come from reading the code each
 item touches, not from building it; each phase is re-estimated before it starts.
 
@@ -61,7 +62,7 @@ bell, email or Telegram, once; and asking before anything costs.
 ## The drawings — signed off 2026-10-07
 
 The canvas, "Hakken tasks — the wider assistant":
-https://claude.ai/artifact/7dwwqvq4GHbffypVB5Lnpf — 19 boards in five rows,
+https://claude.ai/artifact/7dwwqvq4GHbffypVB5Lnpf — 20 boards in five rows (the Limits board, Admin → Settings → Limits with the Hakken tasks topic, signed off after the first 19),
 drawn from the app's real components on the drawing kit (stylesheet
 `844c6461de95`, look `149d9f4fb243`), every screen board passing
 `npm run check:drawing`. Copies:

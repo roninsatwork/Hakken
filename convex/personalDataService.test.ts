@@ -20,7 +20,7 @@ import {
  * manifest is checked against it.
  */
 function schemaSource() {
-  return ["schema.ts", "billingSchema.ts", "uploadSchema.ts", "siteSchema.ts", "seoPullSchema.ts", "keywordResearchSchema.ts"].map(file => fs.readFileSync(path.join(process.cwd(), "convex", file), "utf8")).join("\n");
+  return ["schema.ts", "billingSchema.ts", "uploadSchema.ts", "siteSchema.ts", "seoPullSchema.ts", "keywordResearchSchema.ts", "hakkenTaskSchema.ts"].map(file => fs.readFileSync(path.join(process.cwd(), "convex", file), "utf8")).join("\n");
 }
 
 function tablesReferencingUsers(): Map<string, string[]> {
@@ -41,7 +41,9 @@ function indexesLeadingWith(): Map<string, string> {
   const source = schemaSource();
   const found = new Map<string, string>();
 
-  for (const [, table, body] of source.matchAll(/^ {2}(\w+): defineTable\(([\s\S]*?)(?=^ {2}\w+: defineTable\(|\Z)/gm)) {
+  // The end of the source is `$(?![\s\S])`: JavaScript reads `\Z` as the letter Z, which cut a table short
+  // at its first capital Z (hakkenTasks' `timeZone`, 2026-10-07).
+  for (const [, table, body] of source.matchAll(/^ {2}(\w+): defineTable\(([\s\S]*?)(?=^ {2}\w+: defineTable\(|$(?![\s\S]))/gm)) {
     for (const [, name, columns] of body.matchAll(/\.index\("(\w+)",\s*\[([^\]]+)\]/g)) {
       const leading = columns.match(/"(\w+)"/)?.[1];
       if (leading) found.set(`${table}.${leading}`, name);

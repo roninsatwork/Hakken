@@ -175,6 +175,12 @@ export const FAN_OUT_LIMITS = {
   researchIdeasPerKind: { choices: [100, 300, 1_000], fallback: 100, scope: "company" },
   researchReuseDays: { choices: [7, 30, 90], fallback: 30, scope: "company" },
   /**
+   * Hakken tasks one person can have switched on at once
+   * (hakken-tasks-plan.md). Anthony, 2026-10-07: 25 a person, and "can you
+   * update the limits UI for these". Paused and deleted tasks do not count.
+   */
+  hakkenTasksPerPerson: { choices: [10, 25, 50, 100], fallback: 25, scope: "company" },
+  /**
    * Google's AI Overview searches bought with What the AI says: 10 cents a
    * call and a tenth of a cent a search. 0 buys none.
    */

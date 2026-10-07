@@ -6173,9 +6173,15 @@
         "percent": "{count}%",
         "positions": "{count, plural, one {# posizione} other {# posizioni}}",
         "updates": "{count, plural, one {# aggiornamento} other {# aggiornamenti}}",
-        "weeks": "{count, plural, one {# settimana} other {# settimane}}"
+        "weeks": "{count, plural, one {# settimana} other {# settimane}}",
+        "tasks": "{count, plural, one {# attività} other {# attività}}"
       },
       "topics": {
+        "tasks": {
+          "title": "Attività di {platformName}",
+          "intro": "Ciò che ogni persona può chiedere a {platformName} di continuare a fare per sé: avvisi, report e scoprire il perché. Ogni attività attiva esegue un controllo ogni giorno, quindi questo mantiene proporzionati il lavoro quotidiano e i suoi crediti.",
+          "footer": "Le modifiche valgono subito. Al limite, {platformName} chiede gentilmente alla persona di metterne prima una in pausa."
+        },
         "google": {
           "title": "Dati Google per ogni sito",
           "intro": "Ciò che la piattaforma acquista da Google, tramite DataForSEO, per ogni sito: i siti dell’azienda e ogni concorrente che segue. Numeri più alti danno elenchi più completi nelle schermate Scoperta, e costano di più.",
@@ -6492,6 +6498,11 @@
           "label": "Ricerche delle AI Overview di Google per ricerca",
           "description": "Quante delle ricerche fatte da Google per scrivere le sue AI Overview sono acquistate con Cosa dice l’IA, le più eseguite prima. 0 non ne acquista nessuna.",
           "cost": "Circa 10 centesimi per ricerca, e un decimo di centesimo per ogni ricerca di Google."
+        },
+        "hakkenTasksPerPerson": {
+          "label": "Attività attive per persona",
+          "description": "Quante attività di {platformName} una persona può avere attive. Quelle in pausa o eliminate non contano. Quando qualcuno raggiunge il limite, {platformName} lo avvisa e suggerisce di metterne una in pausa.",
+          "cost": "I crediti compaiono in Utilizzo, sotto Attività di {platformName}."
         }
       }
     },

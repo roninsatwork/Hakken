@@ -86,6 +86,7 @@ export const fanOutTables = {
     researchKeywordsPerLookup: maybeLimit,
     researchIdeasPerKind: maybeLimit,
     researchReuseDays: maybeLimit,
+    hakkenTasksPerPerson: maybeLimit,
     researchOverviewSearches: maybeLimit,
     updatedAt: v.number(),
   })
