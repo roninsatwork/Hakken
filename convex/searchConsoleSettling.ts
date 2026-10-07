@@ -3,7 +3,8 @@ import { v } from "convex/values";
 import { internalAction, internalMutation, internalQuery, type QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { searchTypeValidator } from "./searchConsoleSchema";
+import { searchTypeValidator, type SearchType } from "./searchConsoleSchema";
+import { kindsHeld } from "./searchConsoleRollups";
 import { isTrackedHold } from "./utils/websitePairing";
 
 /**
@@ -23,26 +24,42 @@ import { isTrackedHold } from "./utils/websitePairing";
  * old (cost review 1): they barely change from one day to the next.
  */
 
-/** A website's figures added up whole: its 7-day page list's first part, all countries. */
-async function lastBuilt(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, country?: string): Promise<number | null> {
+/** A website's figures added up whole: one kind of result's 7-day page list's first part — web search's unless named — all countries unless named. */
+async function lastBuilt(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, country?: string, searchType: SearchType = "web"): Promise<number | null> {
   const seven = await ctx.db
     .query("searchConsolePeriods")
     .withIndex("by_hold_country_type_list_period", (q) => q
-      .eq("companyWebsiteId", holdId).eq("country", country).eq("searchType", "web").eq("list", "page").eq("period", "7").eq("which", "NOW").eq("part", 0))
+      .eq("companyWebsiteId", holdId).eq("country", country).eq("searchType", searchType).eq("list", "page").eq("period", "7").eq("which", "NOW").eq("part", 0))
     .first();
   return seven?.builtAt ?? null;
 }
 
-/** Whether a website's lists have ever been added up, for all countries and each country kept ready: a first collection adds them up. */
+/**
+ * Whether all countries', or one country's, lists have been added up — or
+ * need none. A kind of result Google showed the website in no search for has
+ * no lists to add up (`kindsHeld`), so a country kept ready with no searches
+ * never has one, and must not make every nightly fetch add the whole website
+ * up as if it were its first (2026-10-07: Yemen, kept ready for
+ * conterraops.com, did). Web search's list is read first, so a website with
+ * it built costs one read; one without web search is judged by the first
+ * kind it has.
+ */
+async function scopeBuilt(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, country?: string): Promise<boolean> {
+  if ((await lastBuilt(ctx, holdId, country)) !== null) return true;
+  const [first] = await kindsHeld(ctx, holdId, country);
+  return first === undefined || (first !== "web" && (await lastBuilt(ctx, holdId, country, first)) !== null);
+}
+
+/** Whether a website's lists have ever been added up, for all countries and each country kept ready, where there is anything to add up: a first collection adds them up. */
 export const reportsBuilt = internalQuery({
   args: { connectionId: v.id("searchConsoleConnections") },
   returns: v.boolean(),
   handler: async (ctx, args) => {
     const connection = await ctx.db.get(args.connectionId);
     if (!connection) return true;
-    if ((await lastBuilt(ctx, connection.companyWebsiteId)) === null) return false;
+    if (!(await scopeBuilt(ctx, connection.companyWebsiteId))) return false;
     for (const held of connection.countriesHeld ?? []) {
-      if ((await lastBuilt(ctx, connection.companyWebsiteId, held.country)) === null) return false;
+      if (!(await scopeBuilt(ctx, connection.companyWebsiteId, held.country))) return false;
     }
     return true;
   },
