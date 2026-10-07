@@ -88,7 +88,7 @@
   },
   "dashboard": {
     "hero": {
-      "eyebrow": "備え · Be Prepared",
+      "eyebrow": "発見 · Discovery",
       "title": "Build agent-powered products with governance built in",
       "body": "Start with the foundations already in place: knowledge, permissions, approvals, cost control, and a record of every agent run. Then build the product your customers came for.",
       "primaryAction": "Try the assistant",

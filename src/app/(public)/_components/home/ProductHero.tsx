@@ -243,7 +243,7 @@ export function ProductHero() {
         <div className="grid items-end gap-x-10 gap-y-7 lg:grid-cols-[minmax(0,1fr)_minmax(0,390px)]">
           <div>
             <span className="ps-hero-eyebrow" data-hero-line>
-              備え · Be Prepared
+              発見 · Discovery
             </span>
             <h1 className="ps-display ps-hero-h1 mt-4" data-hero-line>
               Build agent-powered

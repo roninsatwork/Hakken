@@ -37,7 +37,6 @@ describe('the Italian catalogue is translated, not copied', () => {
    *     to translate.
    */
   const IDENTICAL_ON_PURPOSE: ReadonlyMap<string, string> = new Map([
-    ['dashboard.hero.eyebrow', 'the platform tagline, which is a brand mark rather than a sentence'],
     ['sidebar.postureStudio', 'product name'],
     ['sidebar.roninsRun', 'product name'],
     ['sidebar.roninsRun3D', 'the separate 3D game product name'],

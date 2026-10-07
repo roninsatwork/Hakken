@@ -214,6 +214,7 @@ describe("Answering for, viewing as a company (keep-less-history-plan.md, 6.1)",
     vi.clearAllMocks();
     asked.pickerHolds = 0;
     navState.search = "";
+    window.localStorage.clear();
     vi.mocked(useMutation).mockImplementation((mutationFn: unknown) => {
       const path = getConvexPath(mutationFn);
       if (path.includes("createThread")) return createThread as unknown as ReturnType<typeof useMutation>;
@@ -244,11 +245,30 @@ describe("Answering for, viewing as a company (keep-less-history-plan.md, 6.1)",
     navState.search = "";
   });
 
-  it("a company's own people see no websites listed yet, and start for the whole company (Decision 7 is open)", async () => {
+  it("a company's own people choose among its websites too (Decision 7)", async () => {
+    signedInAs({ _id: "user_2", name: "Jo", role: "ADMIN", companyId: "company_phg" });
+    expect(await send()).toEqual({ forWebsiteId: "hold_own" });
+    expect(asked.pickerHolds).toBeGreaterThan(0);
+  });
+
+  it("remembers the website last chosen, per company, and uses it the next time (Decision 8)", async () => {
     signedInAs({ _id: "user_2", name: "Jo", role: "ADMIN", companyId: "company_phg" });
     navState.search = "site=hold_rival";
+    expect(await send()).toEqual({ forWebsiteId: "hold_rival" });
+    expect(window.localStorage.getItem("hakken.askHakken.website.company_phg")).toBe("hold_rival");
+
+    // Back with nothing in the address: the one last chosen.
+    navState.search = "";
+    expect(await send()).toEqual({ forWebsiteId: "hold_rival" });
+
+    // A remembered website the company no longer holds is passed over for its own.
+    window.localStorage.setItem("hakken.askHakken.website.company_phg", "gone_hold");
+    expect(await send()).toEqual({ forWebsiteId: "hold_own" });
+  });
+
+  it("a super admin viewing as no one keeps the list of clients, and no website", async () => {
+    signedInAs({ _id: "user_1", name: "Anthony Basker", role: "SUPER_ADMIN" });
     expect(await send()).toEqual({});
     expect(asked.pickerHolds).toBe(0);
-    navState.search = "";
   });
 });

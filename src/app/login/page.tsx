@@ -288,7 +288,7 @@ export default function LoginPage() {
         </motion.div>
 
         <p className="ps-login-foot">
-          備え — the production layer behind AI products.
+          発見 — the production layer behind AI products.
         </p>
       </div>
     </div>

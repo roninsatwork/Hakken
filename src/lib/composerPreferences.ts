@@ -43,6 +43,31 @@ export function rememberThinkingLevel(level: ThinkingLevelId) {
 }
 
 /**
+ * The website Ask Hakken last answered for, per company (Decision 8,
+ * keep-less-history-plan.md, 6.1): a hold's id, or "all" for every website.
+ * The screen checks it is still one of the company's before using it.
+ */
+const websiteKey = (companyId: string) => `hakken.askHakken.website.${companyId}`;
+
+export function readRememberedWebsite(companyId: string): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(websiteKey(companyId));
+  } catch {
+    return null;
+  }
+}
+
+export function rememberWebsite(companyId: string, site: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(websiteKey(companyId), site);
+  } catch {
+    // Without storage the choice still holds for this visit, in the address.
+  }
+}
+
+/**
  * What to send for a given model.
  *
  * Only some providers act on the thinking level — the rest ignore it — so the

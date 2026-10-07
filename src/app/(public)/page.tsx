@@ -23,9 +23,9 @@ export default function HomePage() {
 
       <div className="mx-auto w-full max-w-[1180px] px-5 pt-28 sm:px-7">
         <div className="ps-story grid items-center gap-14 p-12 sm:p-16 md:grid-cols-[auto_1fr]" data-reveal>
-          <div className="ps-kanji" data-speed="1.04">備え</div>
+          <div className="ps-kanji" data-speed="1.04">発見</div>
           <div className="relative">
-            <div className="mb-4 text-[12px] uppercase tracking-[0.4em] text-[#8D7F6C]">so · na · e</div>
+            <div className="mb-4 text-[12px] uppercase tracking-[0.4em] text-[#8D7F6C]">hak · ken</div>
             <h2 className="ps-display text-[clamp(30px,4.2vw,48px)] leading-[1.06]">
               Prepared before the moment arrives.
             </h2>

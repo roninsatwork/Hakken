@@ -11,23 +11,32 @@ export function websiteChoiceHref(siteId: string | null): string {
 }
 
 /**
- * The website chosen, from the address: "all" for every website; one the
- * company holds; or, at first, the company's own website — as drawn and
- * signed off (keep-less-history-plan.md, 6.1). Null is the whole company.
+ * The website chosen: the one in the address; else the one last chosen here
+ * (Decision 8); else, the first time, the company's own website — as drawn
+ * and signed off (keep-less-history-plan.md, 6.1). "all" is every website,
+ * null the whole company; a website no longer the company's is passed over.
  */
-export function chosenWebsite(holds: readonly PickerHold[], site: string | null): PickerHold | null {
-  if (site === "all") return null;
-  return holds.find((hold) => hold.siteId === site)
-    ?? holds.find((hold) => hold.relationship === "OWNED")
-    ?? null;
+export function chosenWebsite(holds: readonly PickerHold[], site: string | null, remembered: string | null = null): PickerHold | null {
+  for (const choice of [site, remembered]) {
+    if (choice === "all") return null;
+    const held = holds.find((hold) => hold.siteId === choice);
+    if (held) return held;
+  }
+  return holds.find((hold) => hold.relationship === "OWNED") ?? null;
+}
+
+/** Whether a choice in the address is one to remember: every website, or one the company holds. */
+export function isWebsiteChoice(holds: readonly PickerHold[], site: string | null): site is string {
+  return site === "all" || holds.some((hold) => hold.siteId === site);
 }
 
 /**
- * "Answering for", while a super admin views as a company: only that
- * company's websites — its own, and those it tracks folded beneath each —
- * in the website picker the Sites pages use, rising above its button at the
- * foot of the page (keep-less-history-plan.md, 6.1, drawn and signed off
- * 2026-10-07). Never another company's: the list is the company being viewed.
+ * "Answering for", for a company's own people and a super admin viewing as a
+ * company (Decision 7): only that company's websites — its own, and those it
+ * tracks folded beneath each — in the website picker the Sites pages use,
+ * rising above its button at the foot of the page (keep-less-history-plan.md,
+ * 6.1, drawn and signed off 2026-10-07). Never another company's: the list is
+ * the company being viewed.
  */
 export function AssistantWebsitePicker({ holds, chosen }: { holds: readonly PickerHold[]; chosen: PickerHold | null }) {
   const t = useTranslations("ai.assistant.client");

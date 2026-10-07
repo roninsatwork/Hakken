@@ -55,10 +55,10 @@ a website another company holds), and the Assistant is told it
 備; "What will you discover today"; the four questions about Hakken, English
 and Italian, the fourth naming the platform from its setting; the message
 box's contents centred; the look test (`assistantLook.test.tsx`, its outline
-in `look/Main.txt`). Left for their decisions: a company's own people get no
-picker yet (Decision 7), the first choice is the company's own website rather
-than the last chosen (Decision 8), and 備 stays on the public pages
-(Decision 9).
+in `look/Main.txt`). Decisions 7, 8 and 9 were answered the same day and built:
+a company's own people choose among its websites too, the website last chosen
+is remembered, and 発見 replaced 備え on the public pages and the dashboard
+(part 6, Decisions).
 
 ## The rule
 
@@ -267,7 +267,10 @@ record besides, not counted):
 | Checked daily | 11.59 KB | 2.07 KB — 82% smaller | 0.72 KB — 94% smaller |
 
 5% of the rows sampled were below 50th or not ranking (Decision 2's tail).
-Part 1 waits for Decision 10, then goes on from step 2.
+**Decision 10 answered 2026-10-07: not kept** (Anthony: "I will go with your
+recommendation"). Decisions 1 to 3 not yet answered, so part 1 is built
+keeping today's behaviour — daily for 90 days, then each week's last; every
+keyword; a point each check — which the packing does not depend on.
 
 ### Steps
 
@@ -663,6 +666,22 @@ Look Tests").
   page, the sign-in page and the admin dashboard as well, and "備え · Be
   Prepared" out of `messages`** — the same Sonae leftover; drawn first where
   the screen changes.
+
+**Decisions 7, 8 and 9 — answered 2026-10-07, built the same day.**
+Anthony: "Yes that's the whole point" (7), "Yes that's nice" (8), "Yes
+please" (9). A company's own people choose among its websites as a super
+admin viewing as it does; a super admin viewing as no one keeps the list of
+clients. The website last chosen is remembered in the browser, per company
+(`composerPreferences.ts`, as the composer's speed is), the company's own at
+first. 発見 replaced 備え with its direct translation — the dashboard's hero
+"発見 · Discovery" (Italian "発見 · Scoperta"), the public home page's
+hero the same, its story's mark and "hak · ken", the sign-in page's mark.
+No new drawing: the screens changed only in the mark. **Left for Anthony:
+the words around it are still Sonae's** — the story's "Prepared before the
+moment arrives." and its paragraph, the sign-in page's and the public "What
+Hakken is" section's "the production layer behind AI products", and both
+heroes' "Build agent-powered products with governance built in" — Hakken's
+own words to be written for them.
 
 ### Steps
 

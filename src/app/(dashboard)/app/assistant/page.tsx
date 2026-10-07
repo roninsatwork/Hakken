@@ -23,12 +23,14 @@ import {
 import {
   modelSupportsThinking,
   readRememberedThinkingLevel,
+  readRememberedWebsite,
   rememberThinkingLevel,
+  rememberWebsite,
   resolveThinkingLevelForModel,
   type ThinkingLevelId,
 } from "@/src/lib/composerPreferences";
 import { AssistantClientPicker, clientThreadArgs, type ClientChoice } from "./_components/AssistantClientPicker";
-import { AssistantWebsitePicker, chosenWebsite } from "./_components/AssistantWebsitePicker";
+import { AssistantWebsitePicker, chosenWebsite, isWebsiteChoice } from "./_components/AssistantWebsitePicker";
 
 const loadAssistantModals = () => import("./_components/AssistantModals");
 const AssistantModals = lazy(() =>
@@ -72,23 +74,30 @@ export default function AssistantWelcomePage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const createThread = useMutation(api.chat.createThread);
-  // A super admin chooses which client a new conversation answers for
-  // (assistant-foundation-plan.md, item 8); everyone else is always answered
-  // for their own company and sees no picker.
+  // A super admin viewing as no one chooses which client a new conversation
+  // answers for (assistant-foundation-plan.md, item 8); everyone else is
+  // answered for their own company, and chooses among its websites (below).
   const me = useQuery(api.users.getMe);
   const isSuperAdmin = me?.role === "SUPER_ADMIN";
-  // Viewing as a company, a super admin answers for one of its websites, and sees only its websites
-  // (keep-less-history-plan.md, 6.1); viewing as no one, the list of clients as before.
-  const viewingAsCompany = isSuperAdmin && Boolean(me?.impersonatingCompanyId);
-  const pickerHolds = useQuery(api.sites.listPickerHolds, viewingAsCompany ? {} : "skip");
-  const chosenSite = viewingAsCompany && pickerHolds ? chosenWebsite(pickerHolds, searchParams.get("site")) : null;
+  const viewingAs = me ? (me.impersonatingCompanyId ?? me.companyId) : undefined;
+  const [clientChoice, setClientChoice] = useState<ClientChoice | null>(null);
+  // A company's own people, and a super admin viewing as a company, answer for one of its websites and see
+  // only its websites (keep-less-history-plan.md, 6.1; Decision 7); a super admin viewing as no one, the
+  // list of clients as before. The website last chosen is remembered, per company (Decision 8).
+  const answersForWebsites = Boolean(me) && (isSuperAdmin ? Boolean(me?.impersonatingCompanyId) : Boolean(me?.companyId));
+  const pickerHolds = useQuery(api.sites.listPickerHolds, answersForWebsites ? {} : "skip");
+  const siteInAddress = searchParams.get("site");
+  const chosenSite = answersForWebsites && pickerHolds && viewingAs
+    ? chosenWebsite(pickerHolds, siteInAddress, readRememberedWebsite(viewingAs))
+    : null;
+  useEffect(() => {
+    if (answersForWebsites && pickerHolds && viewingAs && isWebsiteChoice(pickerHolds, siteInAddress)) rememberWebsite(viewingAs, siteInAddress);
+  }, [answersForWebsites, pickerHolds, viewingAs, siteInAddress]);
   const threadArgs = () => ({
     ...clientThreadArgs(clientChoice, viewingAs),
     // The picker's shared shape carries a hold's id as text (`PickerHold`); it is one of `listPickerHolds`' ids.
     ...(chosenSite ? { forWebsiteId: chosenSite.siteId as Id<"companyWebsites"> } : {}),
   });
-  const viewingAs = me ? (me.impersonatingCompanyId ?? me.companyId) : undefined;
-  const [clientChoice, setClientChoice] = useState<ClientChoice | null>(null);
   const sendMessage = useMutation(api.chat.sendMessage);
   const generateUploadUrl = useMutation(api.chat.generateChatUploadUrl);
   const saveChatDocument = useMutation(api.knowledge.saveChatDocument);
@@ -325,7 +334,7 @@ export default function AssistantWelcomePage() {
 
       <AssistantComposer
         activeModels={activeModels}
-        clientPicker={viewingAsCompany ? (
+        clientPicker={answersForWebsites ? (
           <AssistantWebsitePicker holds={pickerHolds ?? []} chosen={chosenSite} />
         ) : isSuperAdmin ? (
           <AssistantClientPicker choice={clientChoice} viewingAs={viewingAs} onChoose={setClientChoice} />
