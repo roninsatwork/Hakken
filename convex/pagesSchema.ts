@@ -68,7 +68,8 @@ export const pagesTables = {
     /** The listing file's own name, as a person reads it: `post-sitemap.xml`. */
     file: v.string(),
     lastmod: v.optional(v.string()),
-    day: v.string(),
+    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). The reading's `readAt` says when. */
+    day: v.optional(v.string()),
     /**
      * The reading it came from (`siteSitemaps.readAt`). A new reading's pages
      * are written beside the last one's, the website's reading switched to
@@ -77,8 +78,7 @@ export const pagesTables = {
      */
     readAt: v.number(),
   })
-    .index("by_website_page", ["websiteId", "page"])
-    .index("by_website_file", ["websiteId", "file"])
+    // By page and by file went on 2026-10-07, used by no query (keep-less-history-plan.md, 5.5).
     // One reading's pages, in the order they were read; and the older readings', to clear.
     .index("by_website_read", ["websiteId", "readAt"]),
 
@@ -101,7 +101,8 @@ export const pagesTables = {
      * One of `PAGE_TYPES` (`utils/siteShapes.ts`), "UNJUDGED" for none yet.
      */
     pageType: v.optional(v.string()),
-    builtAt: v.number(),
+    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). The list's copy says when it was built. */
+    builtAt: v.optional(v.number()),
   })
     .index("by_hold_page", ["companyWebsiteId", "page"])
     .index("by_hold_clicks", ["companyWebsiteId", "clicks"])

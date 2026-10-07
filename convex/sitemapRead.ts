@@ -68,7 +68,6 @@ export const readWebsiteSitemap = internalAction({
           await ctx.runMutation(internal.sitemaps.writeSitemapPages, {
             websiteId: args.websiteId,
             readAt,
-            day,
             rows: reading.pages.slice(start, start + SITEMAP_PAGES_PER_WRITE),
           });
         }

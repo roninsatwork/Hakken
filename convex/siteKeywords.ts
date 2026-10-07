@@ -38,7 +38,8 @@ const COMPARE_LIMIT = SITE_PAGE_MAX;
  * leads, so the pages on screen are read by id; a rebuild replaces each
  * page's row in place (`writePages`), so the id holds from one to the next.
  */
-export const PAGE_COPY_FIELDS = ["id", "page", "section", "pageType", "keywords", "traffic", "topKeyword", "bestPosition", "referringDomains"] as const;
+// Its top search went on 2026-10-07: nothing sorts, filters or shows it from the copy (keep-less-history-plan.md, 5.6).
+export const PAGE_COPY_FIELDS = ["id", "page", "section", "pageType", "keywords", "traffic", "bestPosition", "referringDomains"] as const;
 
 /**
  * One page's citation rows read for its AI columns: a row per form of its
@@ -88,7 +89,6 @@ const pageRowValidator = v.object({
   keywords: v.number(),
   bestPosition: v.number(),
   top3: v.number(),
-  volumeSum: v.number(),
   topKeyword: v.string(),
   topKeywordVolume: v.number(),
   firstSeenDay: v.string(),
@@ -327,7 +327,6 @@ type PageCopyRow = {
   pageType: string;
   keywords: number;
   traffic: number | null;
-  topKeyword: string;
   bestPosition: number | null;
   referringDomains: number | null;
 };
@@ -377,14 +376,13 @@ export const listPages = tenantQuery({
     if (!copy) return preparingPage(args.rows);
     const matches = wordStartMatcher(args.search);
     const kindOf = (row: PageCopyRow) => (pageKinds ? pageKinds.kindOf(row.path) : row.pageType);
-    const pagesHeld: PageCopyRow[] = copy.rows.map(([id, path, section, pageType, keywords, traffic, topKeyword, bestPosition, referringDomains]) => ({
+    const pagesHeld: PageCopyRow[] = copy.rows.map(([id, path, section, pageType, keywords, traffic, bestPosition, referringDomains]) => ({
       id: id as Id<"sitePageRanks">,
       path: path as string,
       section: section as string,
       pageType: pageType as string,
       keywords: keywords as number,
       traffic: traffic as number | null,
-      topKeyword: topKeyword as string,
       bestPosition: bestPosition as number | null,
       referringDomains: referringDomains as number | null,
     }));
@@ -423,7 +421,6 @@ export const listPages = tenantQuery({
         keywords: row.keywords,
         bestPosition: row.bestPosition,
         top3: row.top3,
-        volumeSum: row.volumeSum,
         topKeyword: row.topKeyword,
         topKeywordVolume: row.topKeywordVolume,
         firstSeenDay: row.firstSeenDay,

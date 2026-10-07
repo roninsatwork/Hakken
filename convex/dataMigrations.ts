@@ -37,6 +37,7 @@ import { removeSampleResearch } from "./keywordResearchSampleMigration";
 import { dropStoredGapsStep } from "./siteContentGap";
 import { prepareMainCountryOf } from "./searchConsoleMainCountry";
 import { connectionsPage } from "./searchConsoleSync";
+import { clearUnreadColumns } from "./unreadColumnsMigration";
 import {
   rebuildAnswerSummaries,
   rebuildOperationCosts,
@@ -213,6 +214,11 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
     }
     return { cursor: page.continueCursor, isDone: page.isDone, processed: page.page.length, updated };
   },
+  /**
+   * Columns written and never read, cleared from the rows held before they
+   * leave the schema (keep-less-history-plan.md, 5.6; `unreadColumnsMigration.ts`).
+   */
+  "2026-10-07-clear-unread-columns": clearUnreadColumns,
   "2026-10-06-drop-stored-gaps": async (ctx) => {
     const step = await dropStoredGapsStep(ctx);
     return { cursor: null, isDone: !step.more, processed: step.removed, updated: step.removed };

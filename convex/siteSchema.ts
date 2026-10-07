@@ -90,8 +90,8 @@ export const siteTables = {
     /** The day of the last check. */
     day: v.string(),
     firstSeenDay: v.string(),
-    /** Keyword and page path, for the search box. */
-    searchText: v.string(),
+    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). */
+    searchText: v.optional(v.string()),
     // What a ranked-keywords pull says about the search (Phase 2): what a
     // click costs, how hard it is (0–100, and its band for the filter), how it
     // was searched month by month over the last year, oldest first, and what
@@ -117,31 +117,27 @@ export const siteTables = {
      * how many results Google has for it, and — from the full list — where the
      * site was at DataForSEO's previous check and whether it is new, up or down.
      */
+    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). The keyword screen shows `competitionLevel`. */
     competition: maybeNumber,
     competitionLevel: v.optional(v.string()),
     searchIntent: v.optional(v.string()),
     resultsCount: maybeNumber,
+    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). */
     previousPositionDfs: maybeNumber,
+    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). */
     movementDfs: v.optional(v.union(v.literal("NEW"), v.literal("UP"), v.literal("DOWN"), v.literal("SAME"))),
-    updatedAt: v.number(),
+    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). */
+    updatedAt: v.optional(v.number()),
   })
+    // The lookups no query used — by intent, status, change, difficulty band
+    // and advert price, and the search over `searchText` — went on 2026-10-07
+    // (keep-less-history-plan.md, 5.5): the keyword lists read the table's copy.
     .index("by_site_keyword", ["websiteId", "locationCode", "keyword"])
     .index("by_site_band_position", ["websiteId", "locationCode", "band", "position"])
-    .index("by_site_intent_band_position", ["websiteId", "locationCode", "intent", "band", "position"])
-    .index("by_site_status_band_position", ["websiteId", "locationCode", "status", "band", "position"])
-    // Wins and losses, biggest move first.
-    .index("by_site_status_change", ["websiteId", "locationCode", "status", "change"])
     .index("by_site_volume", ["websiteId", "locationCode", "volume"])
-    .index("by_site_intent_volume", ["websiteId", "locationCode", "intent", "volume"])
     .index("by_site_page_band_position", ["websiteId", "locationCode", "page", "band", "position"])
-    .index("by_site_kd_band_position", ["websiteId", "locationCode", "kdBand", "band", "position"])
     .index("by_site_traffic", ["websiteId", "locationCode", "traffic"])
-    .index("by_site_cpc", ["websiteId", "locationCode", "cpc"])
-    .index("by_keyword", ["keyword"])
-    .searchIndex("search_text", {
-      searchField: "searchText",
-      filterFields: ["websiteId", "locationCode", "band", "intent", "status", "kdBand"],
-    }),
+    .index("by_keyword", ["keyword"]),
 
   /**
    * Each page a website ranks with, from one place: how many searches, its best
@@ -157,12 +153,14 @@ export const siteTables = {
     keywords: v.number(),
     bestPosition: v.number(),
     top3: v.number(),
-    volumeSum: v.number(),
+    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). The folders add up their volume while the pages are built. */
+    volumeSum: v.optional(v.number()),
     topKeyword: v.string(),
     topKeywordVolume: v.number(),
     firstSeenDay: v.string(),
     day: v.string(),
-    searchText: v.string(),
+    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). */
+    searchText: v.optional(v.string()),
     // Summed or carried from its keywords (Phase 2): estimated visits and
     // their value as ads, DataForSEO's page rank (0–1000) and the links to
     // the page, and what kind of page it is.
@@ -174,17 +172,15 @@ export const siteTables = {
     pageType: v.optional(pageTypeValidator),
     /** The rebuild that wrote this row; rows from an older one are removed after it. */
     rebuildId: v.string(),
-    updatedAt: v.number(),
+    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). */
+    updatedAt: v.optional(v.number()),
   })
+    // By folder, by traffic and the search over `searchText` went on
+    // 2026-10-07, used by no query (keep-less-history-plan.md, 5.5): the pages
+    // list reads the table's copy.
     .index("by_site_page", ["websiteId", "locationCode", "page"])
     .index("by_site_keywords", ["websiteId", "locationCode", "keywords"])
-    .index("by_site_section_keywords", ["websiteId", "locationCode", "section", "keywords"])
-    .index("by_site_traffic", ["websiteId", "locationCode", "traffic"])
-    .index("by_site_type_keywords", ["websiteId", "locationCode", "pageType", "keywords"])
-    .searchIndex("search_text", {
-      searchField: "searchText",
-      filterFields: ["websiteId", "locationCode", "section", "pageType"],
-    }),
+    .index("by_site_type_keywords", ["websiteId", "locationCode", "pageType", "keywords"]),
 
   /** The site's folders, from its ranking pages. Rebuilt with `sitePageRanks`. */
   siteSections: defineTable({
@@ -719,11 +715,13 @@ export const siteTables = {
     keyword: v.string(),
     feature: keywordFeatureValidator,
     position: maybeNumber,
+    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). Readers use `page`. */
     url: v.optional(v.string()),
     page: v.optional(v.string()),
     day: v.string(),
     pullId: v.id("seoDataPulls"),
-    updatedAt: v.number(),
+    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). */
+    updatedAt: v.optional(v.number()),
   })
     .index("by_site_feature_keyword", ["websiteId", "locationCode", "feature", "keyword"])
     .index("by_site_keyword", ["websiteId", "locationCode", "keyword"])

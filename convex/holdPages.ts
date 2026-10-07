@@ -329,11 +329,11 @@ const writeRowValidator = v.object({
 
 /** One batch of a rebuild's changes: pages new or changed, and pages no longer found anywhere. Only this hold's rows. */
 export const applyHoldPages = internalMutation({
-  args: { holdId: v.id("companyWebsites"), builtAt: v.number(), rows: v.array(writeRowValidator), removed: v.array(v.id("holdPages")) },
+  args: { holdId: v.id("companyWebsites"), rows: v.array(writeRowValidator), removed: v.array(v.id("holdPages")) },
   returns: v.null(),
   handler: async (ctx, args) => {
     for (const { id, ...row } of args.rows) {
-      const fields = { companyWebsiteId: args.holdId, ...row, builtAt: args.builtAt };
+      const fields = { companyWebsiteId: args.holdId, ...row };
       const existing = id ? await ctx.db.get(id) : null;
       if (existing && existing.companyWebsiteId === args.holdId) await ctx.db.replace(existing._id, fields);
       else await ctx.db.insert("holdPages", fields);
@@ -464,12 +464,11 @@ async function rebuildNow(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promis
     });
   }
   for (const gone of before.values()) removed.push(gone._id);
-  const builtAt = Date.now();
   for (let start = 0; start < writes.length; start += HOLD_ROWS_WRITTEN) {
-    await ctx.runMutation(internal.holdPages.applyHoldPages, { holdId, builtAt, rows: writes.slice(start, start + HOLD_ROWS_WRITTEN), removed: [] });
+    await ctx.runMutation(internal.holdPages.applyHoldPages, { holdId, rows: writes.slice(start, start + HOLD_ROWS_WRITTEN), removed: [] });
   }
   for (let start = 0; start < removed.length; start += HOLD_ROWS_WRITTEN) {
-    await ctx.runMutation(internal.holdPages.applyHoldPages, { holdId, builtAt, rows: [], removed: removed.slice(start, start + HOLD_ROWS_WRITTEN) });
+    await ctx.runMutation(internal.holdPages.applyHoldPages, { holdId, rows: [], removed: removed.slice(start, start + HOLD_ROWS_WRITTEN) });
   }
 
   await writeListCopy(ctx, {

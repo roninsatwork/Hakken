@@ -38,17 +38,15 @@ import { stableStringify } from "./utils/lang";
 export type CopyKind = "keywords" | "pages" | "links" | "gap";
 
 /**
- * Every kind of copy these tables hold: the Sites lists', and Search Console's
- * old ones (`gsc`). Search Console's lists are now its ready-made periods
- * (docs/plans/active/search-console-plan.md §14.3) and no `gsc` copy is built
- * any more; the kind stays so copies already held are left alone by the
- * Sites rebuilds and sweep until they are cleared.
+ * Every kind of copy these tables hold: the Sites lists', and Your pages'.
+ * Search Console's old kind (`gsc`) went on 2026-10-07, none being left
+ * (keep-less-history-plan.md, 5.8): its lists are its ready-made periods.
  *
  * `yourPages` is a company's every page once, per hold (`holdPages.ts`, Your
  * pages in Sites): built by that rebuild, not by `buildListCopy`, so the
  * nightly refresh asks that rebuild for it.
  */
-export type AnyCopyKind = CopyKind | "gsc" | "yourPages";
+export type AnyCopyKind = CopyKind | "yourPages";
 
 /** A part's budget, in bytes of JSON: under a document's 1 MiB with room to spare. */
 const PART_BYTES = 700_000;
@@ -174,8 +172,8 @@ export async function writeListCopy(
 /** The Sites lists' kinds: what the Sites builders and requests deal in. */
 const siteKindValidator = v.union(v.literal("keywords"), v.literal("pages"), v.literal("links"), v.literal("gap"));
 
-/** Every kind a copy is written under: the Sites lists', Search Console's, and Your pages'. */
-const kindValidator = v.union(v.literal("keywords"), v.literal("pages"), v.literal("links"), v.literal("gap"), v.literal("gsc"), v.literal("yourPages"));
+/** Every kind a copy is written under: the Sites lists', and Your pages'. */
+const kindValidator = v.union(v.literal("keywords"), v.literal("pages"), v.literal("links"), v.literal("gap"), v.literal("yourPages"));
 
 export const writeCopyPart = internalMutation({
   args: { kind: kindValidator, key: v.string(), buildId: v.string(), part: v.number(), data: v.string() },
@@ -339,8 +337,6 @@ export const refreshListCopies = internalMutation({
     const page = await ctx.db.query("siteListCopies").paginate({ cursor: args.cursor, numItems: 50 });
     const now = Date.now();
     for (const copy of page.page) {
-      // Search Console's old copies are no longer built: never rebuilt here.
-      if (copy.kind === "gsc") continue;
       if (copy.kind === "yourPages") {
         // A hold's every page once: asked of its own rebuild.
         const holdId = ctx.db.normalizeId("companyWebsites", copy.key);

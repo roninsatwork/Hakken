@@ -569,7 +569,6 @@ export const markLost = internalMutation({
   args: { ids: v.array(v.id("siteKeywordRanks")), day: v.string() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const now = Date.now();
     for (const id of args.ids) {
       const row = await ctx.db.get(id);
       if (!row || row.position === undefined) continue;
@@ -600,8 +599,6 @@ export const markLost = internalMutation({
         ...(row.page ? { previousPage: row.page } : {}),
         day: args.day,
         firstSeenDay: row.firstSeenDay,
-        searchText: row.searchText,
-        updatedAt: now,
       });
     }
     return null;
@@ -617,7 +614,6 @@ export const writePages = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const now = Date.now();
     for (const row of args.rows) {
       const existing = await ctx.db
         .query("sitePageRanks")
@@ -630,14 +626,14 @@ export const writePages = internalMutation({
         .query("sitePageTypes")
         .withIndex("by_site_page", (q) => q.eq("websiteId", args.websiteId).eq("page", row.page))
         .unique();
+      // A page's volume is added up for its folder (`writeSections`), never kept on it (keep-less-history-plan.md, 5.6).
+      const { volumeSum, ...kept } = row;
       const fields = {
-        ...row,
+        ...kept,
         pageType: pageTypeByAddress(row.page) ?? judged?.pageType ?? "UNJUDGED",
         websiteId: args.websiteId,
         locationCode: args.locationCode,
-        searchText: `${row.page} ${row.topKeyword}`,
         rebuildId: args.rebuildId,
-        updatedAt: now,
       };
       if (existing) await ctx.db.replace(existing._id, fields);
       else await ctx.db.insert("sitePageRanks", fields);

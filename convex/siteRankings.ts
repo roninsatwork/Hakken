@@ -41,18 +41,17 @@ const HOLDS_READ = 200;
 export type RankExtras = Partial<Pick<Doc<"siteKeywordRanks">,
   | "cpc" | "difficulty" | "trend" | "serpFeatures" | "traffic" | "trafficValue"
   | "pageRank" | "pageReferringDomains" | "pageBacklinks"
-  | "competition" | "competitionLevel" | "searchIntent" | "resultsCount"
-  | "previousPositionDfs" | "movementDfs">>;
+  | "competitionLevel" | "searchIntent" | "resultsCount">>;
 
 /** The facts about the search itself, which do not depend on who ranks or where. */
-const SEARCH_FACTS = ["cpc", "difficulty", "trend", "serpFeatures", "competition", "competitionLevel", "searchIntent", "resultsCount"] as const;
+const SEARCH_FACTS = ["cpc", "difficulty", "trend", "serpFeatures", "competitionLevel", "searchIntent", "resultsCount"] as const;
 
 /**
- * The facts about the ranking page, which belong to that page and no other —
- * and DataForSEO's own previous place and move for it, which are about this
- * ranking of this page.
+ * The facts about the ranking page, which belong to that page and no other.
+ * DataForSEO's own previous place and move, and the advert competition as a
+ * figure, are no longer kept: no screen read them (keep-less-history-plan.md, 5.6).
  */
-const PAGE_FACTS = ["pageRank", "pageReferringDomains", "pageBacklinks", "previousPositionDfs", "movementDfs"] as const;
+const PAGE_FACTS = ["pageRank", "pageReferringDomains", "pageBacklinks"] as const;
 
 /**
  * The extras a row should hold after a sighting: the sighting's own where it
@@ -157,10 +156,8 @@ export async function fileKeywordRank(
     ...(previousDay !== undefined ? { previousDay } : {}),
     ...(previousPage ? { previousPage } : {}),
     day: entry.day,
-    searchText: `${keyword} ${page}`.trim(),
     ...extras,
     ...(kdBand ? { kdBand } : {}),
-    updatedAt: Date.now(),
   };
 
   if (existing) {

@@ -164,9 +164,13 @@ describe("the full keyword list", () => {
     }));
     expect(filed.ranks.filter((row) => row.keyword.startsWith("carp")).map((row) => row.keyword).sort()).toEqual(["carp reels", "carp rods"]);
     expect(filed.ranks).toHaveLength(999);
-    expect(filed.ranks.find((row) => row.keyword === "carp rods")).toMatchObject({
-      position: 2, day: "2026-09-21", searchIntent: "commercial", movementDfs: "UP", previousPositionDfs: 4,
-    });
+    const carpRods = filed.ranks.find((row) => row.keyword === "carp rods");
+    expect(carpRods).toMatchObject({ position: 2, day: "2026-09-21", searchIntent: "commercial" });
+    // DataForSEO's own previous place and move, and the search box's text, are not kept: no screen read them
+    // (keep-less-history-plan.md, 5.6).
+    expect(carpRods).not.toHaveProperty("movementDfs");
+    expect(carpRods).not.toHaveProperty("previousPositionDfs");
+    expect(carpRods).not.toHaveProperty("searchText");
     expect(filed.features.map((row) => [row.keyword, row.feature, row.position])).toEqual([["best carp bait", "ai_overview_reference", 1]]);
     // The rest of the list, asked for once the first page said how long it is.
     expect(filed.pages.map((pull) => JSON.parse(pull.taskArgsJson).offset)).toEqual([1_000]);

@@ -150,11 +150,11 @@ export const heldSitemapPages = internalQuery({
 
 /** One batch of a new reading's pages, under its stamp, beside the reading before. */
 export const writeSitemapPages = internalMutation({
-  args: { websiteId: v.id("websites"), readAt: v.number(), day: v.string(), rows: v.array(pageRow) },
+  args: { websiteId: v.id("websites"), readAt: v.number(), rows: v.array(pageRow) },
   returns: v.null(),
   handler: async (ctx, args) => {
     for (const row of args.rows) {
-      await ctx.db.insert("siteSitemapPages", { websiteId: args.websiteId, readAt: args.readAt, day: args.day, ...row });
+      await ctx.db.insert("siteSitemapPages", { websiteId: args.websiteId, readAt: args.readAt, ...row });
     }
     return null;
   },

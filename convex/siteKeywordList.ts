@@ -53,11 +53,11 @@ type RankedPosition = Infer<typeof rankedPositionValidator>;
 export function rankExtrasOf(entry: RankedPosition): RankExtras {
   const {
     cpc, difficulty, trend, serpFeatures, traffic, trafficValue, pageRank, pageReferringDomains, pageBacklinks,
-    competition, competitionLevel, searchIntent, resultsCount, previousPositionDfs, movementDfs,
+    competitionLevel, searchIntent, resultsCount,
   } = entry;
   return {
     cpc, difficulty, trend, serpFeatures, traffic, trafficValue, pageRank, pageReferringDomains, pageBacklinks,
-    competition, competitionLevel, searchIntent, resultsCount, previousPositionDfs, movementDfs,
+    competitionLevel, searchIntent, resultsCount,
   };
 }
 
@@ -184,10 +184,9 @@ export const writeListPage = internalMutation({
         keyword: feature.keyword,
         feature: feature.feature,
         ...(feature.position !== undefined ? { position: feature.position } : {}),
-        ...(feature.url ? { url: feature.url, page: pagePath(feature.url) } : {}),
+        ...(feature.url ? { page: pagePath(feature.url) } : {}),
         day: args.day,
         pullId: args.pullId,
-        updatedAt: Date.now(),
       });
     }
 

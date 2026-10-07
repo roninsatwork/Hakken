@@ -84,7 +84,7 @@ async function buildPagesCopy(ctx: ActionCtx, key: string): Promise<void> {
     key,
     fields: PAGE_COPY_FIELDS,
     rows: rows.map((row) => [
-      row._id, row.page, row.section, row.pageType ?? "UNJUDGED", row.keywords, row.traffic ?? null, row.topKeyword,
+      row._id, row.page, row.section, row.pageType ?? "UNJUDGED", row.keywords, row.traffic ?? null,
       row.bestPosition, row.referringDomains ?? null,
     ]),
   });
