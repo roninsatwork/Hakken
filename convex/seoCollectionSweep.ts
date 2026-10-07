@@ -542,7 +542,7 @@ async function purgeExpiredCycles(ctx: MutationCtx, now: number): Promise<DutyPa
 }
 
 /** How a collection can end. Each is retired after `SEO_CYCLE_RETENTION_DAYS`. */
-const RETIRED_STATES = ["DONE", "FAILED", "CAPPED_PLAN"] as const;
+const RETIRED_STATES = ["DONE", "FAILED", "CAPPED_PLAN", "CAPPED_SPEND"] as const;
 
 /** Cycles of each end state looked at per page of retirement. */
 const CYCLES_PER_PAGE = 200;

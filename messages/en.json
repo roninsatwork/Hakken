@@ -4645,6 +4645,14 @@
             "title": "Decision Records",
             "description": "Every judgment the platform made, who answered it, how sure it was and what happened. References to emails, messages and pages, never their text."
           },
+          "hakkenTaskChecks": {
+            "title": "Task Checks",
+            "description": "Each watching task's daily check: whether its rule was met, and its streak. An alert reads only its last four weeks."
+          },
+          "sentEmails": {
+            "title": "Sent Emails",
+            "description": "Each email sent, not sent or skipped, with who it was for. An email still waiting to go is never cleared."
+          },
           "purgeHistory": {
             "title": "Purge History",
             "description": "The purge system's own ledger. Cleans itself; the newest 200 entries are always kept whatever the retention says."

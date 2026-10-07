@@ -195,5 +195,8 @@ export const hakkenTaskTables = {
     /** Why a day could not be judged, in plain words. */
     note: v.optional(v.string()),
     checkedAt: v.number(),
-  }).index("by_task_day", ["taskId", "day"]),
+  })
+    .index("by_task_day", ["taskId", "day"])
+    // The days past their 90 kept, every task's (`purges.ts`, hakkenTaskChecks).
+    .index("by_day", ["day"]),
 };

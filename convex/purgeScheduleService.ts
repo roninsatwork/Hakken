@@ -25,6 +25,8 @@ export const purgePipelineKeyValidator = v.union(
   v.literal("phoneCalls"),
   v.literal("mailboxMessages"),
   v.literal("decisionRuns"),
+  v.literal("hakkenTaskChecks"),
+  v.literal("sentEmails"),
   v.literal("purgeHistory"),
 );
 
@@ -91,6 +93,14 @@ export const DEFAULT_PURGE_CONFIGS: Record<PurgePipelineKey, PipelineConfig> = {
   // emails, messages and pages, never their text; an operational log like
   // the agent logs, kept the same 90 days.
   decisionRuns: { ...DAILY_2AM, retentionDays: 90 },
+  // Each Hakken task's check, a row a task a day. An alert reads its last 28
+  // days and each check carries its own streak, so nothing reads back further
+  // (keep-less-history-plan.md, part 4; Anthony, 2026-10-07).
+  hakkenTaskChecks: { ...DAILY_2AM, retentionDays: 90 },
+  // Each email Hakken sent, failed or skipped (`outboxMessages`); one still
+  // waiting or being sent stays whatever its age (keep-less-history-plan.md,
+  // part 4; Anthony, 2026-10-07: "60 days is ok").
+  sentEmails: { ...DAILY_2AM, retentionDays: 60 },
   // Cleans only the purge system's own log, which the hourly dispatcher
   // grows even when everything else is off. The newest 200 entries are
   // always kept regardless of retention.

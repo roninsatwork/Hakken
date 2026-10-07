@@ -15,7 +15,7 @@ graphs — there must be a better, more efficient way of storing these going
 forward"; "this is about not saving data we don't need to store and don't
 access regularly"; "make a documented plan in the repo for this".
 
-**Status, 2026-10-07: phases 1 to 4 built and live on dev; phases 5 to 7 to build.**
+**Status, 2026-10-07: phases 1 to 4 and 6 built and live on dev; phase 5 measured; phases 5 and 7 to build.**
 Started the same day, once the Hakken tasks work had finished (Anthony: "the
 other agent has finished … we can start this plan now"; see "Beside the
 Hakken tasks work"), on the `keep-less-history` branch merged into `dev`, not
@@ -109,6 +109,43 @@ stopped (Decision 4; 0.2 MB in 490 rows); the Organic competitors, Market map
 and Suggested competitors' "last checked" read it. The AI's searches by day
 are cleared after twelve months by the hourly sweep (`purgeFanOutDays`,
 `FAN_OUT_DAYS_RETENTION_DAYS`; Decision 5); the searches themselves are kept.
+
+**Phase 5's gate measured 2026-10-07** (step 3.1, `searchConsoleGate:measureGate`
+on every connected website): the 90 days' searches and pages from Google,
+in one ask and in weekly pieces, against the lists built from the kept days.
+
+| Website | Kept days | One ask | Weekly pieces |
+|---|---|---|---|
+| morehandles.co.uk (the most pages) | 40,967 searches, 6,451 clicks, 9,152 pages | cut at Google's 50,000 rows: 23,695 searches kept, every click and page | 26 asks, none cut: 39,981 searches kept, every click and page |
+| ronins.co.uk | 10,037 searches, 562 clicks, 232 pages, 4 tracked | the same, every tracked search | the same |
+| conterraops.com | 4 searches, 33 clicks | the same | the same |
+
+**One ask fails the gate** on the busiest website: every click is there, but
+43% of the searches the rule keeps are not — the ones with no clicks that
+Almost there and Pages competing are made of. **Weekly pieces pass**: every
+click, every page and every tracked search; the 2% of searches that differ
+have no clicks, and are the ones a day's figures kept that 90 days' do not.
+Part 3 goes ahead with weekly pieces.
+
+**Phase 6 — built 2026-10-07** (part 4): every table has its keep rule in
+one list (`convex/keepRules.ts`) — a row a thing, written over, cleared after
+so long and by what, thinned, or kept for ever and why — typed against the
+schema, so a table added without one does not type-check, and
+`keepRules.test.ts` checks every job it names is real and every purge's days
+match. Of 233 tables: 93 a row a thing, 49 written over, 41 cleared, 2
+thinned, 48 kept for ever, each with its reason. Hakken tasks' checks are
+cleared after 90 days and settled emails after 60 (`hakkenTaskChecks`,
+`sentEmails`: two new pipelines on Admin → System Settings → Retention
+Rules, beside the others, a super admin able to lengthen them). Found on the
+way and fixed: a collection that stopped at its spending limit
+(`CAPPED_SPEND`) was never cleared with the other finished ones.
+
+Kept for ever and worth a word, not changed (each its own decision): sign-in
+sessions and OAuth starts that are never finished (`authSessions`,
+`authRefreshTokens`, `authVerifiers` — Convex Auth has no sweep for them),
+a Connect started and left (`toolConnectorOAuthConnections`), and a chat
+thread in constant use (a Telegram link's) keeping every message, since the
+chat purge goes by a thread's last message.
 
 ## The rule
 

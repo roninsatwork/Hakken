@@ -35,6 +35,8 @@ export const PURGE_STALL_MS = 30 * 60 * 1000;
  * (the `purgeHistory` pipeline, visible on the rules screen, enforces this).
  */
 const PURGE_HISTORY_PROTECTED_ROWS = 200;
+/** An email settled, and so cleared once past its days kept: one waiting or being sent never is. */
+const SETTLED_EMAILS = ["SENT", "FAILED", "SKIPPED"] as const;
 
 /**
  * "YYYY-MM-DD" for a cutoff instant — analyticsDailySnapshots keys days as
@@ -210,6 +212,10 @@ async function buildPurgePreviewCounts(ctx: { db: Pick<MutationCtx["db"], "query
         rows = (await capped(ctx.db.query("mailboxMessages").withIndex("by_created", (q) => q.lt("createdAt", cutoff)))).length;
       } else if (key === "decisionRuns") {
         rows = (await capped(ctx.db.query("decisionRuns").withIndex("by_createdAt", (q) => q.lt("createdAt", cutoff)))).length;
+      } else if (key === "hakkenTaskChecks") {
+        rows = (await capped(ctx.db.query("hakkenTaskChecks").withIndex("by_day", (q) => q.lt("day", dateKeyForCutoff(cutoff))))).length;
+      } else if (key === "sentEmails") {
+        for (const status of SETTLED_EMAILS) rows += (await capped(ctx.db.query("outboxMessages").withIndex("by_status_created", (q) => q.eq("status", status).lt("createdAt", cutoff)))).length;
       } else if (key === "purgeHistory") {
         const newest = await ctx.db.query("purgeHistory").withIndex("by_started").order("desc").take(PURGE_HISTORY_PROTECTED_ROWS + 1);
         if (newest.length > PURGE_HISTORY_PROTECTED_ROWS) {
@@ -552,6 +558,16 @@ export const executePurgeRecursive = internalMutation({
         for (const record of batch) {
           await ctx.db.delete(record._id);
         }
+        currentDeleted = batch.length;
+        hasMore = batch.length === 500;
+      } else if (pipelineKey === "hakkenTaskChecks" || pipelineKey === "sentEmails") {
+        // A task's alert reads its last 28 days and each check carries its own streak, so an older
+        // day is read by nothing; an email goes once settled, each status oldest first.
+        const batch = pipelineKey === "hakkenTaskChecks"
+          ? await ctx.db.query("hakkenTaskChecks").withIndex("by_day", (q) => q.lt("day", dateKeyForCutoff(cutoffTimestamp))).take(500)
+          : (await Promise.all(SETTLED_EMAILS.map((status) => ctx.db.query("outboxMessages")
+            .withIndex("by_status_created", (q) => q.eq("status", status).lt("createdAt", cutoffTimestamp)).take(500)))).flat().slice(0, 500);
+        for (const record of batch) await ctx.db.delete(record._id);
         currentDeleted = batch.length;
         hasMore = batch.length === 500;
       } else if (pipelineKey === "webhookDeliveries") {

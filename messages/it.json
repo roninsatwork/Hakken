@@ -4645,6 +4645,14 @@
             "title": "Registri delle Decisioni",
             "description": "Ogni giudizio preso dalla piattaforma, chi ha risposto, quanto era sicuro e cosa è successo. Riferimenti a email, messaggi e pagine, mai il loro testo."
           },
+          "hakkenTaskChecks": {
+            "title": "Controlli delle Attività",
+            "description": "Il controllo giornaliero di ogni attività che sorveglia: se la sua regola è stata rispettata, e la sua serie. Un avviso legge solo le ultime quattro settimane."
+          },
+          "sentEmails": {
+            "title": "Email Inviate",
+            "description": "Ogni email inviata, non inviata o saltata, con il destinatario. Un'email ancora in attesa di partire non viene mai cancellata."
+          },
           "purgeHistory": {
             "title": "Cronologia Purge",
             "description": "Il registro del sistema di purge stesso. Si pulisce da solo; le 200 voci più recenti vengono sempre conservate."
