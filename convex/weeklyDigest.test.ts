@@ -6,6 +6,7 @@ import type { Id } from "./_generated/dataModel";
 import { readerFields } from "./contentTranslation";
 import schema from "./schema";
 import { isoWeekKey } from "./weeklyDigest";
+import { readDigestAnswer } from "./weeklyDigestRun";
 
 const { generate } = vi.hoisted(() => ({ generate: vi.fn() }));
 vi.mock("./aiProviderRegistry", async (importOriginal) => ({
@@ -96,7 +97,7 @@ describe("the Weekly Digest", () => {
     const finished = await run(t, digest);
 
     expect(finished).toMatchObject({ status: "SUCCESS" });
-    expect(finished?.finalOutput).toBe("Wrote the 2026-W40 issue in Test, for super admins only, with 3 items; queued 1 email. Started the Email Sender to send them.");
+    expect(finished?.finalOutput).toBe("Wrote the 2026-W40 issue in Test, for super admins only, with all 3 stories of the week; queued 1 email. Started the Email Sender to send them.");
     const [issue] = await issues(t);
     expect(issue).toMatchObject({ weekKey: "2026-W40", mode: "TEST", introEn: "A quiet week, with one Google update." });
     // Google updates first, then the newest; nothing from before the week.
@@ -145,7 +146,7 @@ describe("the Weekly Digest", () => {
     const t = harness();
     const { digest, admin, anna, marco } = await world(t, "LIVE");
 
-    expect((await run(t, digest))?.finalOutput).toMatch(/^Wrote the 2026-W40 issue with 3 items; queued 3 emails\./);
+    expect((await run(t, digest))?.finalOutput).toMatch(/^Wrote the 2026-W40 issue with all 3 stories of the week; queued 3 emails\./);
     const rows = await outbox(t);
     expect(rows.map((row) => [row.userId, row.language, row.idempotencyKey]).sort()).toEqual([
       [admin, "en", `WEEKLY_NEWS_DIGEST:2026-W40:${admin}`],
@@ -177,5 +178,32 @@ describe("the Weekly Digest", () => {
 
     expect((await run(t, digest))?.finalOutput).toMatch(/There is no Email Sender agent to send them: create one from its template and give it the role\.$/);
     expect(await outbox(t)).toHaveLength(1);
+  });
+
+  test("the agent picks the week's most useful stories, most useful first, and the issue holds those", async () => {
+    const t = harness();
+    const { digest } = await world(t, "TEST");
+    let shown: Array<{ number: number; title: string }> = [];
+    generate.mockImplementation(async (args: { systemInstruction: string; contents: Array<{ text: string }> }) => {
+      if (args.systemInstruction.startsWith("Translate")) return { text: JSON.stringify({ intro: "Una settimana." }), inputTokens: 1, outputTokens: 1 };
+      shown = (JSON.parse(args.contents[0].text) as { news: Array<{ number: number; title: string }> }).news;
+      return { text: JSON.stringify({ opening: "One thing mattered this week.", picked: [2, 0, 9] }), inputTokens: 1, outputTokens: 1 };
+    });
+
+    const finished = await run(t, digest);
+
+    expect(finished?.finalOutput).toMatch(/with 2 of the week's 3 stories;/);
+    const [issue] = await issues(t);
+    expect(issue.introEn).toBe("One thing mattered this week.");
+    const titles = await t.run(async (ctx) => await Promise.all(issue.itemIds.map(async (id) => (await ctx.db.get(id))?.titleEn ?? null)));
+    expect(titles).toEqual([shown.find((item) => item.number === 2)?.title, shown.find((item) => item.number === 0)?.title]);
+  });
+});
+
+describe("reading the Weekly Digest Email Agent's answer", () => {
+  test("is its opening and its picks; anything else is the opening alone, with every story", () => {
+    expect(readDigestAnswer(JSON.stringify({ opening: "Big week.", picked: [3, 1, 1, 8, -1] }), 5)).toEqual({ opening: "Big week.", picked: [3, 1] });
+    expect(readDigestAnswer("```json\n{\"opening\": \"Quiet.\", \"picked\": []}\n```", 2)).toEqual({ opening: "Quiet.", picked: [0, 1] });
+    expect(readDigestAnswer("\"A quiet week.\"", 2)).toEqual({ opening: "A quiet week.", picked: [0, 1] });
   });
 });

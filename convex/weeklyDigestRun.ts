@@ -23,7 +23,36 @@ import { isoWeekKey } from "./weeklyDigest";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
-const OPENING_FORMAT = "Reply with only the opening itself, as plain text: no heading, no list, no quotation marks.";
+/**
+ * The Weekly Digest Email Agent picks the week's stories as well as writing
+ * its opening (hakken-tasks-plan.md, item 3.4): the few most useful to a
+ * business owner, most useful first, by their place in the list it is given.
+ */
+const MOST_STORIES = 5;
+const OPENING_FORMAT =
+  `Reply with only JSON: {"opening": the opening as plain text, with no heading, list or quotation marks, "picked": the numbers of the ${MOST_STORIES} or fewer News items most useful to a business owner this week, most useful first}. `
+  + "Every item has its number. Leave out an item that would not change what a business owner does or watches.";
+
+/**
+ * The opening and the stories from the model's answer. An answer that is not
+ * that JSON is the opening itself, as the agent wrote before it picked, and
+ * then every item goes, in the order they came.
+ */
+export function readDigestAnswer(text: string, itemCount: number): { opening: string; picked: number[] } {
+  const every = Array.from({ length: itemCount }, (_, index) => index);
+  const trimmed = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+  try {
+    const parsed = JSON.parse(trimmed) as { opening?: unknown; picked?: unknown };
+    const opening = typeof parsed.opening === "string" ? parsed.opening.trim() : "";
+    const picked = Array.isArray(parsed.picked)
+      ? [...new Set(parsed.picked.filter((entry): entry is number => Number.isInteger(entry) && entry >= 0 && entry < itemCount))].slice(0, MOST_STORIES)
+      : [];
+    if (opening) return { opening, picked: picked.length > 0 ? picked : every };
+  } catch {
+    // Not JSON: the opening alone.
+  }
+  return { opening: trimmed.replace(/^["“]|["”]$/g, "").trim(), picked: every };
+}
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
@@ -50,7 +79,7 @@ export async function writeWeeklyDigest(ctx: ActionCtx, runId: Id<"agentRuns">):
   });
   const prompt = JSON.stringify({
     week: weekKey,
-    news: material.items.map((item) => ({ kind: item.kind, source: item.sourceName, title: item.title, summary: item.summary })),
+    news: material.items.map((item, number) => ({ number, kind: item.kind, source: item.sourceName, title: item.title, summary: item.summary })),
     newKnowledgeArticles: material.articles,
     newHelpfulContent: material.helpful.map((article) => ({ title: article.title, publication: article.publication, summary: article.summary })),
   });
@@ -59,10 +88,11 @@ export async function writeWeeklyDigest(ctx: ActionCtx, runId: Id<"agentRuns">):
     systemInstruction: `${setup.instructions}\n\n${OPENING_FORMAT}`,
     contents: [{ type: "text", text: prompt }],
   });
-  const intro = (response.text ?? "").trim().replace(/^["“]|["”]$/g, "").trim();
+  const { opening: intro, picked } = readDigestAnswer(response.text ?? "", material.items.length);
+  const stories = picked.map((index) => material.items[index]);
   await ctx.runMutation(internal.roleRuns.recordRunModelCall, {
     runId,
-    actionContext: `Writing the opening of the ${weekKey} Weekly News Digest`,
+    actionContext: `Picking the stories and writing the opening of the ${weekKey} Weekly News Digest`,
     modelId: model.modelId,
     providerKey: model.providerKey,
     providerModelId: model.providerModelId,
@@ -76,7 +106,7 @@ export async function writeWeeklyDigest(ctx: ActionCtx, runId: Id<"agentRuns">):
   const issueId = await ctx.runMutation(internal.weeklyDigest.saveIssue, {
     weekKey,
     introEn: intro,
-    itemIds: material.items.map((item) => item._id),
+    itemIds: stories.map((item) => item._id),
     helpfulIds: material.helpful.map((article) => article._id),
     mode: setup.mode,
     runId,
@@ -111,6 +141,9 @@ export async function writeWeeklyDigest(ctx: ActionCtx, runId: Id<"agentRuns">):
       : sender === "NO_AGENT" ? " There is no Email Sender agent to send them: create one from its template and give it the role."
         : sender === "AGENT_OFF" ? " The Email Sender is switched off, so they wait until it is on."
           : "";
-  return `Wrote the ${weekKey} issue${setup.mode === "TEST" ? " in Test, for super admins only," : ""} with ${plural(material.items.length, "item", "items")}; `
+  const picks = stories.length === material.items.length
+    ? `all ${plural(stories.length, "story", "stories")} of the week`
+    : `${stories.length} of the week's ${material.items.length} stories`;
+  return `Wrote the ${weekKey} issue${setup.mode === "TEST" ? " in Test, for super admins only," : ""} with ${picks}; `
     + `queued ${plural(queued, "email", "emails")}.${senderLine}`;
 }

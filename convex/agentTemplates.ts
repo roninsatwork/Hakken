@@ -139,11 +139,12 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
   },
   {
     id: "weekly-digest-agent",
-    name: "Weekly Digest",
-    agentName: "Weekly Digest",
+    // Named by Anthony, 2026-10-07 (hakken-tasks-plan.md, item 3.4).
+    name: "The Weekly Digest Email Agent",
+    agentName: "The Weekly Digest Email Agent",
     description:
-      "Writes the week's news issue once from what the News Collector found, then queues the email for everyone "
-      + "subscribed. It sends nothing itself: the Email Sender does.",
+      "Picks the week's most useful stories from what the News Collector found, writes the opening, and queues the "
+      + "email for everyone subscribed, each in their own language. It sends nothing itself: the Email Sender does.",
     systemPrompt:
       "You write the short opening of a weekly email about what happened in search, SEO and AI search this week, "
       + "for the owners of small and medium businesses. You are given the week's News items, any Google update and "

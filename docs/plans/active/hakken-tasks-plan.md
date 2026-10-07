@@ -26,7 +26,9 @@ the task record, setting one up in Ask Hakken, the Watcher Agent's morning
 round and its bell and email, and the screens — Hakken tasks in the menu and
 Admin → Companies → Hakken tasks, each held to its board by a look test
 ([`look/`](../assets/hakken-tasks/look/)). Phase 2, charts in Ask Hakken,
-built the same day. Estimates come from reading the code each
+built the same day; then Phase 3: every email in style B and its boards'
+words, a task alert's four weeks as a picture carried inline, and The
+Weekly Digest Email Agent picking the week's stories. Estimates come from reading the code each
 item touches, not from building it; each phase is re-estimated before it starts.
 
 ## The rules
