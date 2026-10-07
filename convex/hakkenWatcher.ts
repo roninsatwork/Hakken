@@ -13,7 +13,6 @@ import { chargeTaskWork } from "./hakkenTaskCredits";
 import { queueOutboxMessage } from "./outbox";
 import { appUrl } from "./outboxTemplates";
 import { ensureReaderPreferences, readerPreferencesOf } from "./readerPreferences";
-import { startRoleRun } from "./roleRuns";
 import { resolvePlatformName } from "./settingsService";
 import { emailWording } from "./utils/emailWording";
 import { nextRunOf } from "./utils/hakkenTaskTiming";
@@ -211,10 +210,9 @@ export const recordCheckInternal = internalMutation({
         : task.ranking
           ? `/app/sites/${task.target.companyWebsiteId}/keywords`
           : `/app/search-console/${task.target.companyWebsiteId}${task.target.page ? "/pages" : ""}`;
-    let emailed = false;
     if (task.channels.email && owner.email) {
       const preferences = await ensureReaderPreferences(ctx, owner._id);
-      emailed = Boolean(await queueOutboxMessage(ctx, {
+      await queueOutboxMessage(ctx, {
         messageType: "TASK_ALERT",
         userId: owner._id,
         email: owner.email,
@@ -226,7 +224,7 @@ export const recordCheckInternal = internalMutation({
           ...(args.alert.watch ? { watch: args.alert.watch } : {}),
         },
         idempotencyKey: `TASK_ALERT:${task._id}:${args.alert.day}`,
-      }));
+      });
     }
     if (task.channels.bell) {
       await ctx.scheduler.runAfter(0, internal.notifications.notifyUserInternal, {
@@ -241,7 +239,6 @@ export const recordCheckInternal = internalMutation({
         text: emailWording(language).telegram.alert({ headline: readOn(args.alert.headline), body: args.alert.body, link: `${appUrl()}${link}` }),
       });
     }
-    if (emailed) await startRoleRun(ctx, "EMAIL_SENDER", { objective: "Send: an alert someone asked for.", title: "A task's alert" });
     return { recorded, alerted: true };
   },
 });

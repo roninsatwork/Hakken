@@ -3,8 +3,9 @@
 Telegram is another way in to the same Assistant as Ask Hakken
 ([hakken-tasks-plan.md](../plans/active/hakken-tasks-plan.md), item 6.1). One
 bot serves the whole platform; each person links their own chat from their
-profile with a ten-minute code. Until the bot is set up, the profile shows no
-Telegram section.
+profile → Integrations → Telegram, in one tap ("Open Telegram") or with a
+ten-minute code ([outbox-and-preferences-plan.md](../plans/active/outbox-and-preferences-plan.md), C2).
+Until the bot is set up, Integrations lists no apps.
 
 ## What you need
 
@@ -38,8 +39,8 @@ Telegram section.
    It answers `{ ok: true, username: "AskHakkenBot" }`, or says in plain words
    what to fix.
 
-4. **Check it.** Open your profile, find Telegram, search for the bot in
-   Telegram and send it your code. It replies that you're linked.
+4. **Check it.** Open your profile → Integrations → Telegram and press Open
+   Telegram, then Start. It replies that you're linked.
 
 Each deployment (development, production) runs its own step 3: Telegram sends
 a bot's messages to one address at a time, so the last deployment set up is
@@ -47,9 +48,10 @@ the one that answers.
 
 ## What it does
 
-- **Linking.** A code from the profile links one person to one chat. Linking
-  again from another chat unlinks the first; a chat linked by someone else is
-  moved to them. Unlink on the profile stops everything.
+- **Linking.** A code from Telegram's page links one person to one chat —
+  "Open Telegram" sends it for them (`/start <code>`). Linking again from
+  another chat unlinks the first; a chat linked by someone else is moved to
+  them. Unlink on Telegram's page stops everything.
 - **Asking.** A linked chat's messages are answered by the Assistant, with the
   same limits and redaction as Ask Hakken, in a conversation of its own that
   Ask Hakken also lists. Offers come with their two buttons.

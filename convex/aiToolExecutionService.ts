@@ -2,12 +2,7 @@ import { internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { BUILT_IN_TOOL_CONNECTORS } from "./toolConnectorDefinitions";
-import {
-  UNCONFIGURED_EMAIL_ADDRESS,
-  buildEmailFromAddress,
-  resolveEnvFromAddress,
-} from "./emailBrandingService";
-import { sendResendEmail } from "./resendEmailService";
+import { outboxFromAddress } from "./emailBrandingService";
 import { resolveConnectorSecrets } from "./connectorSecretResolver";
 import { isConnectorOAuthProviderConfigured } from "./connectorOAuthProviders";
 import { isConnectorTokenEncryptionConfigured } from "./connectorTokenCrypto";
@@ -738,8 +733,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
       throw appError("UNAUTHENTICATED", "Notifications require an authenticated actor.");
     }
 
-    const apiKey = process.env.RESEND_API_KEY;
-    if (!apiKey) {
+    if (!process.env.RESEND_API_KEY) {
       // Not a missing feature — a missing configuration. Saying so is the point:
       // the alternative used elsewhere in this codebase is to log a simulated
       // dispatch and report success, which would tell an agent it had notified
@@ -763,14 +757,10 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
     if (!content.ok) throw appError("INVALID_INPUT", content.reason);
 
     const emailBranding = await input.ctx.runQuery(internal.settings.getEmailBranding, {});
-    const fromAddress = buildEmailFromAddress({
-      envFromAddress: resolveEnvFromAddress(process.env),
-      settings: emailBranding,
-    });
-    if (fromAddress.includes(UNCONFIGURED_EMAIL_ADDRESS)) {
+    if (!outboxFromAddress(process.env, emailBranding)) {
       // The placeholder sender exists so misconfigured deployments fail loudly
-      // rather than sending from someone else's domain. Sending to it would be
-      // an immediate bounce reported to the agent as a success.
+      // rather than sending from someone else's domain. Queuing for it would
+      // be an email that never goes, reported to the agent as on its way.
       throw appError("NOT_CONFIGURED", "No sender address is configured for this deployment.");
     }
 
@@ -780,21 +770,14 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
       ...(agent?.name ? { agentName: agent.name } : {}),
     });
 
-    const dispatch = await sendResendEmail({
-      apiKey,
-      operation: "agentNotificationSend",
-      // Keyed on the tool call, so a resumed run that re-issues this call does
-      // not send the same message twice at the provider either.
-      idempotencyKey: input.toolCallId
-        ? `agent-notification:${input.toolCallId}`
-        : undefined,
-      payload: {
-        from: fromAddress,
-        to: decision.recipients,
-        subject: content.subject,
-        html: notification.html,
-        text: notification.text,
-      },
+    // Through the Outbox, on its next hourly run (outbox-and-preferences-plan.md, A3). Keyed on the
+    // tool call, so a resumed run that re-issues this call queues nothing more.
+    const queued: { queued: number } = await input.ctx.runMutation(internal.outbox.queueWrittenEmailInternal, {
+      messageType: "AGENT_EMAIL",
+      to: decision.recipients,
+      email: { subject: content.subject, html: notification.html, text: notification.text },
+      idempotencyKey: input.toolCallId ? `agent-notification:${input.toolCallId}` : `agent-notification:${input.runId ?? "run"}:${Date.now()}`,
+      ...(input.runId ? { queuedByRunId: input.runId } : {}),
     });
 
     await input.ctx.runMutation(internal.aiToolNotificationTools.recordNotificationDispatch, {
@@ -805,11 +788,11 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
       toolCallId: input.toolCallId,
       recipients: decision.recipients,
       subject: content.subject,
-      dispatchId: typeof dispatch === "string" ? dispatch : undefined,
     });
 
     return {
-      delivered: true,
+      queued: queued.queued,
+      sends: "On the Outbox's next hourly run",
       recipients: decision.recipients,
       subject: content.subject,
     };

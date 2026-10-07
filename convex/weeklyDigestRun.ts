@@ -131,16 +131,12 @@ export async function writeWeeklyDigest(ctx: ActionCtx, runId: Id<"agentRuns">):
   await ctx.runMutation(internal.roleRuns.logRunLine, {
     runId,
     heading: `Queued the ${weekKey} issue`,
-    detail: `${plural(queued, "email", "emails")} queued; ${skipped} not, for a reader with the digest off, no address, or one already queued.`,
+    detail: `${plural(queued, "email", "emails")} queued; ${skipped} not, for a reader with no address, or one already queued.`,
     failed: false,
   });
 
-  const sender = queued > 0 ? await ctx.runMutation(internal.weeklyDigest.startEmailSender, { issueWeek: weekKey }) : null;
-  const senderLine = sender === "STARTED" ? " Started the Email Sender to send them."
-    : sender === "ALREADY_GOING" ? " The Email Sender is already sending, and sends them too."
-      : sender === "NO_AGENT" ? " There is no Email Sender agent to send them: create one from its template and give it the role."
-        : sender === "AGENT_OFF" ? " The Email Sender is switched off, so they wait until it is on."
-          : "";
+  // Sent on the Outbox Queue Processing Agent's next hourly run (outbox-and-preferences-plan.md, A2).
+  const senderLine = queued > 0 ? " They go out on the Outbox's next hourly run." : "";
   const picks = stories.length === material.items.length
     ? `all ${plural(stories.length, "story", "stories")} of the week`
     : `${stories.length} of the week's ${material.items.length} stories`;

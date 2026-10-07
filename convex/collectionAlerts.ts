@@ -5,7 +5,6 @@ import { internal } from "./_generated/api";
 import { creditDayOf } from "./creditKinds";
 import { ensureReaderPreferences } from "./readerPreferences";
 import { queueOutboxMessage } from "./outbox";
-import { startRoleRun } from "./roleRuns";
 
 /**
  * Tell the super admins when collecting stops for something only a person can
@@ -51,9 +50,6 @@ export async function alertCollectionNeedsYou(ctx: MutationCtx, kind: NeedsYouKi
       href: "/admin/websites/collection",
     });
     if (rowId) queued += 1;
-  }
-  if (queued > 0) {
-    await startRoleRun(ctx, "EMAIL_SENDER", { objective: "Send: collecting needs a person.", title: "Collecting needs you" });
   }
   return queued;
 }

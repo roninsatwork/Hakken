@@ -35,6 +35,15 @@ crons.daily(
   { job: "hakken-task-care" }
 );
 
+// The Outbox's hourly watch: its Queue Processing Agent and schedule kept there, and the super admins told
+// when emails have waited more than two hours (outbox-and-preferences-plan.md, A4). The agent's own runs are its schedule.
+crons.interval(
+  "outbox-watch",
+  { hours: 1 },
+  internal.jobLedger.runJob,
+  { job: "outbox-watch" }
+);
+
 // The Stat Report Agent's round: each report due on its owner's day, at their time (hakken-tasks-plan.md, 4.1).
 crons.interval(
   "hakken-task-reports",

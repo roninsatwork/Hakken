@@ -6,7 +6,8 @@ import { useQuery } from "convex/react";
 import { Mail } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
-import { formatDateTime } from "@/src/lib/dates";
+import { formatDateTime, formatTime } from "@/src/lib/dates";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { SettingRow, SettingsCard } from "@/src/ui/components/screens/SettingsCard";
@@ -17,12 +18,15 @@ const BASE = "/admin/content/outbox";
 
 /**
  * One email in the outbox (docs/plans/active/knowledge-news-and-digest-plan.md,
- * phase 7): who it is for and what became of it, the runs that queued and
- * sent it, and the email itself as its reader gets it — or why it would not
- * be sent.
+ * phase 7; outbox-and-preferences-plan.md, C1, board OutboxEmail): what it is
+ * and who it is for, when it goes and the address it goes from, what became
+ * of it, the runs that queued and sent it, and the email itself as its reader
+ * gets it — or why it would not be sent.
  */
 export default function OutboxMessagePage() {
   const t = useTranslations("admin.outbox");
+  const tKinds = useTranslations("communications");
+  const { platformName } = useSystemSettings();
   const { id } = useParams<{ id: string }>();
   const message = useQuery(api.outboxAdmin.getOutboxMessageForAdmin, { messageId: id });
   const back = { label: t("back"), href: BASE };
@@ -44,6 +48,7 @@ export default function OutboxMessagePage() {
     );
   }
 
+  const kind = tKinds(`${message.communication}.name`, { platformName });
   const run = (link: typeof message.queuedBy) => (link
     ? <Link href={`/admin/agents/${link.agentId}/observability/${link.runId}`} className="text-[13px] text-brand hover:underline">{t("openRun")}</Link>
     : <span className="text-[13px] text-muted">{t("none")}</span>);
@@ -53,16 +58,28 @@ export default function OutboxMessagePage() {
       <DetailHeader
         back={back}
         icon={<Mail className="h-6 w-6 text-brand" />}
-        title={"subject" in message.preview ? message.preview.subject : t(`types.${message.messageType}`)}
-        description={t("detailSubtitle", { email: message.email, type: t(`types.${message.messageType}`) })}
+        title={"subject" in message.preview ? message.preview.subject : kind}
+        description={t("detailSubtitle", { email: message.email, type: kind })}
         pills={<StatusLabel tone={OUTBOX_STATUS_TONES[message.status]}>{t(`statuses.${message.status}`)}</StatusLabel>}
       />
 
       <SettingsCard title={t("sections.what")}>
         <div className="divide-y divide-border-dim/40">
+          <SettingRow label={t("fields.communication")}><span className="text-[13px] text-foreground">{kind}</span></SettingRow>
           <SettingRow label={t("fields.language")}><span className="text-[13px] text-foreground">{message.language.toUpperCase()}</span></SettingRow>
           <SettingRow label={t("fields.queued")}><span className="text-[13px] text-foreground">{formatDateTime(message.createdAt)}</span></SettingRow>
-          <SettingRow label={t("fields.sent")}><span className="text-[13px] text-foreground">{message.sentAt ? formatDateTime(message.sentAt) : t("notYet")}</span></SettingRow>
+          {message.status === "WAITING" ? (
+            <SettingRow label={t("fields.sends")} description={t("fields.sendsHint")}>
+              <span className="text-[13px] text-foreground">
+                {message.nextRunAt ? t("atNextRun", { time: formatTime(message.nextRunAt, { options: { hour: "2-digit", minute: "2-digit" } }) }) : t("fields.sendsNever")}
+              </span>
+            </SettingRow>
+          ) : (
+            <SettingRow label={t("fields.sent")}><span className="text-[13px] text-foreground">{message.sentAt ? formatDateTime(message.sentAt) : t("notYet")}</span></SettingRow>
+          )}
+          <SettingRow label={t("fields.sentFrom")} description={t("fields.sentFromHint")}>
+            <span className="break-all text-[13px] text-foreground">{message.sentFrom ?? t("fields.sentFromNone")}</span>
+          </SettingRow>
           <SettingRow label={t("fields.tries")}><span className="text-[13px] text-foreground">{message.attempts}</span></SettingRow>
           {message.error ? (
             <SettingRow label={t("fields.why")}><span className="text-[13px] text-foreground">{message.error}</span></SettingRow>

@@ -46,10 +46,12 @@ function ruleOf(args: Record<string, unknown>): { measure: TaskMeasure; conditio
   return { measure, condition: { op: op as TaskCondition["op"], value, days } };
 }
 
-/** How a new task tells its owner: the bell and email, and Telegram once they have linked it (item 6.1). */
+/** How a new task tells its owner: the bell, email unless they turned it off, and Telegram once they have linked it (item 6.1). */
 async function channelsOf(ctx: ToolHandlerExecutionInput["ctx"], userId: Id<"users">) {
   const telegram = await ctx.runQuery(internal.telegram.userLinkInternal, { userId });
-  return { bell: true, email: true, telegram: telegram !== null };
+  // By email only while they get Hakken tasks emails (outbox-and-preferences-plan.md, B2).
+  const email = await ctx.runQuery(internal.readerPreferences.isEmailOnInternal, { userId, communication: "HAKKEN_TASKS" });
+  return { bell: true, email, telegram: telegram !== null };
 }
 
 /** What each kind of task work costs, for the offer to say before the yes (Credit prices). */

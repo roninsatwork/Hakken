@@ -1,0 +1,4 @@
+# Integrations — the approved look (board "ProfileIntegrations" of docs/plans/assets/outbox-and-preferences/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+table: App | What it does | Status | Actions

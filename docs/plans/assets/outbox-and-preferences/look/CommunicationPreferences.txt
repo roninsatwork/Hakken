@@ -1,0 +1,4 @@
+# Communication preferences — the approved look (board "CommunicationPreferences" of docs/plans/assets/outbox-and-preferences/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+table: Email | What it is | How often | Send it to me

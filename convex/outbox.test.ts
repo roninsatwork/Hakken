@@ -8,9 +8,10 @@ import { ensureReaderPreferences } from "./readerPreferences";
 import schema from "./schema";
 
 /**
- * The outbox and the Email Sender (docs/plans/active/knowledge-news-and-
- * digest-plan.md, phase 7). What must hold: queuing the same email twice
- * queues it once; the Sender sends each waiting email once, in its reader's
+ * The outbox and the Outbox Queue Processing Agent (docs/plans/active/
+ * knowledge-news-and-digest-plan.md, phase 7; outbox-and-preferences-plan.md).
+ * What must hold: queuing the same email twice
+ * queues it once; the agent sends each waiting email once, in its reader's
  * language, with its idempotency key, and records Resend's receipt; a failure
  * is tried again later and fails for good after three tries; a reader who is
  * gone is skipped; a claim that died is returned, or failed when it may have
@@ -22,7 +23,7 @@ async function world(t: ReturnType<typeof harness>) {
   return await t.run(async (ctx) => {
     const now = Date.now();
     const agentId = await ctx.db.insert("agents", {
-      name: "Email Sender", modelId: "none", thinkingMode: false, isActive: true, systemKey: "EMAIL_SENDER", createdAt: now, updatedAt: now,
+      name: "Outbox Queue Processing Agent", modelId: "none", thinkingMode: false, isActive: true, systemKey: "OUTBOX_QUEUE_PROCESSOR", createdAt: now, updatedAt: now,
     });
     const anna = await ctx.db.insert("users", { name: "Anna", email: "anna@korda.example", role: "USER" });
     const marco = await ctx.db.insert("users", { name: "Marco", email: "marco@korda.example", role: "USER" });
@@ -51,7 +52,7 @@ async function send(t: ReturnType<typeof harness>, agentId: Id<"agents">) {
   const runId = await t.run(async (ctx) => await ctx.db.insert("agentRuns", {
     agentId, triggerType: "MANUAL", objective: "send", status: "QUEUED", startedAt: Date.now(), updatedAt: Date.now(),
   }));
-  await t.action(internal.newsAgentRunActions.runNewsRoleNow, { role: "EMAIL_SENDER", runId });
+  await t.action(internal.outboxQueueRun.processOutboxNow, { runId });
   return await t.run(async (ctx) => await ctx.db.get(runId));
 }
 
@@ -72,13 +73,13 @@ function resend(answer: (call: number) => Response) {
 describe("the outbox", () => {
   beforeEach(() => {
     process.env.RESEND_API_KEY = "re_test";
-    process.env.NEWS_DIGEST_FROM_EMAIL = "News <news@hakken.example>";
+    process.env.OUTBOX_FROM_EMAIL = "News <news@hakken.example>";
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
     delete process.env.RESEND_API_KEY;
-    delete process.env.NEWS_DIGEST_FROM_EMAIL;
+    delete process.env.OUTBOX_FROM_EMAIL;
   });
 
   test("the same email queued twice is queued once", async () => {
@@ -159,15 +160,50 @@ describe("the outbox", () => {
     const t = harness();
     const { agentId, anna, issueId } = await world(t);
     await queue(t, anna, "anna@korda.example", "en", issueId);
-    delete process.env.NEWS_DIGEST_FROM_EMAIL;
+    delete process.env.OUTBOX_FROM_EMAIL;
     const sent = resend(() => Response.json({ id: "re_1" }));
 
     const finished = await send(t, agentId);
 
     expect(finished).toMatchObject({ status: "FAILED" });
-    expect(finished?.finalOutput).toMatch(/^NEWS_DIGEST_FROM_EMAIL and ALERTS_FROM_EMAIL are not set, so nothing was sent/);
+    expect(finished?.finalOutput).toMatch(/^OUTBOX_FROM_EMAIL is not set, and neither is a general sender address, so nothing was sent/);
     expect((await rows(t))[0]).toMatchObject({ status: "WAITING", attempts: 0 });
     expect(sent).toHaveLength(0);
+  });
+
+  test("an email written when queued goes to an address that is no user's, as written, from the one Outbox address", async () => {
+    const t = harness();
+    const { agentId } = await world(t);
+    await t.mutation(internal.outbox.queueWrittenEmailInternal, {
+      messageType: "SYSTEM_HEALTH", to: ["Ops@Example.co.uk", "ops@example.co.uk"],
+      email: { subject: "Something needs a look", html: "<p>Errors are up.</p>", text: "Errors are up." }, idempotencyKey: "platform-alert:1",
+    });
+    const sent = resend(() => Response.json({ id: "re_1" }));
+
+    expect((await send(t, agentId))?.finalOutput).toBe("Sent 1 email.");
+    expect(sent.map((call) => [call.body.to, call.body.from, call.body.subject, call.body.text])).toEqual([
+      ["ops@example.co.uk", "News <news@hakken.example>", "Something needs a look", "Errors are up."],
+    ]);
+    expect((await rows(t))[0]).toMatchObject({ messageType: "SYSTEM_HEALTH", communication: "SYSTEM_HEALTH", status: "SENT" });
+    expect((await rows(t))[0].userId).toBeUndefined();
+  });
+
+  test("an email someone turned off on their profile is skipped, saying so; one they keep carries its own way to stop", async () => {
+    const t = harness();
+    const { agentId, anna, marco, issueId } = await world(t);
+    await queue(t, anna, "anna@korda.example", "en", issueId);
+    // Turned off as her profile does (readerPreferences.setMyEmail).
+    await t.run(async (ctx) => {
+      const row = await ctx.db.query("readerPreferences").withIndex("by_user", (q) => q.eq("userId", anna)).first();
+      await ctx.db.patch(row!._id, { newsDigest: false });
+    });
+    await queue(t, marco, "marco@korda.example", "it", issueId);
+    const sent = resend(() => Response.json({ id: "re_1" }));
+
+    expect((await send(t, agentId))?.finalOutput).toBe("Sent 1 email; 1 skipped.");
+    const byEmail = Object.fromEntries((await rows(t)).map((row) => [row.email, row]));
+    expect(byEmail["anna@korda.example"]).toMatchObject({ status: "SKIPPED", error: "Turned off on their profile." });
+    expect(sent[0].body.text).toContain("&kind=WEEKLY_NEWS_DIGEST");
   });
 
   test("a claim that died is given back, or failed when its send had started", async () => {
@@ -198,7 +234,7 @@ describe("the outbox", () => {
     const admin = t.withIdentity({ subject: superAdmin });
 
     const page = await admin.query(api.outboxAdmin.listOutboxForAdmin, { paginationOpts: { numItems: 15, cursor: null }, status: "WAITING" });
-    expect(page.page).toMatchObject([{ email: "anna@korda.example", status: "WAITING", messageType: "WEEKLY_NEWS_DIGEST" }]);
+    expect(page.page).toMatchObject([{ email: "anna@korda.example", status: "WAITING", messageType: "WEEKLY_NEWS_DIGEST", communication: "WEEKLY_NEWS_DIGEST" }]);
     const one = await admin.query(api.outboxAdmin.getOutboxMessageForAdmin, { messageId: messageId! });
     expect(one?.preview).toMatchObject({ subject: expect.stringMatching(/^This week in search/) });
 

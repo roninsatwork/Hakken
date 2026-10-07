@@ -2,7 +2,9 @@ import { v } from "convex/values";
 
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { outboxMessageTypeValidator, type OutboxMessageType } from "./outboxSchema";
+import { readerPreferencesOf } from "./readerPreferences";
+import { SOURCE_LANGUAGE } from "./utils/contentLanguages";
+import { COMMUNICATION_OF_TYPE, outboxMessageTypeValidator, type OutboxMessageType } from "./outboxSchema";
 
 /**
  * The outbox's queue (docs/plans/active/knowledge-news-and-digest-plan.md,
@@ -37,7 +39,8 @@ export async function queueOutboxMessage(
   ctx: MutationCtx,
   message: {
     messageType: OutboxMessageType;
-    userId: Id<"users">;
+    /** None for an address that is no user's (outbox-and-preferences-plan.md, A3). */
+    userId?: Id<"users">;
     email: string;
     language: string;
     payload: Record<string, unknown>;
@@ -51,7 +54,8 @@ export async function queueOutboxMessage(
   const now = Date.now();
   return await ctx.db.insert("outboxMessages", {
     messageType: message.messageType,
-    userId: message.userId,
+    communication: COMMUNICATION_OF_TYPE[message.messageType],
+    ...(message.userId ? { userId: message.userId } : {}),
     email: message.email,
     language: message.language,
     payloadJson: JSON.stringify(message.payload),
@@ -97,7 +101,7 @@ export const reclaimOutbox = internalMutation({
 const claimedRow = v.object({
   _id: v.id("outboxMessages"),
   messageType: outboxMessageTypeValidator,
-  userId: v.id("users"),
+  userId: v.optional(v.id("users")),
   email: v.string(),
   language: v.string(),
   payloadJson: v.string(),
@@ -122,7 +126,7 @@ export const claimOutboxBatch = internalMutation({
     return due.map((row) => ({
       _id: row._id,
       messageType: row.messageType,
-      userId: row.userId,
+      ...(row.userId ? { userId: row.userId } : {}),
       email: row.email,
       language: row.language,
       payloadJson: row.payloadJson,
@@ -206,5 +210,42 @@ export const countWaitingOutbox = internalQuery({
     const ceiling = 1_000;
     const rows = await ctx.db.query("outboxMessages").withIndex("by_status_due", (q) => q.eq("status", "WAITING")).take(ceiling + 1);
     return { count: Math.min(rows.length, ceiling), more: rows.length > ceiling };
+  },
+});
+
+/**
+ * An email already written — a system health alert, an automation's email,
+ * an agent's — queued from an action to each of its addresses, one row each
+ * (outbox-and-preferences-plan.md, A3). An address that is a user's is theirs:
+ * their language, and their profile's choices. Nothing is sent here; the
+ * Outbox Queue Processing Agent sends it on its next run.
+ */
+export const queueWrittenEmailInternal = internalMutation({
+  args: {
+    messageType: v.union(v.literal("SYSTEM_HEALTH"), v.literal("AUTOMATION_EMAIL"), v.literal("AGENT_EMAIL")),
+    to: v.array(v.string()),
+    email: v.object({ subject: v.string(), html: v.string(), text: v.string() }),
+    /** Once for each address: a send retried with the same key queues nothing more. */
+    idempotencyKey: v.string(),
+    queuedByRunId: v.optional(v.id("agentRuns")),
+  },
+  returns: v.object({ queued: v.number() }),
+  handler: async (ctx, args) => {
+    let queued = 0;
+    for (const address of [...new Set(args.to.map((entry) => entry.trim().toLowerCase()).filter(Boolean))]) {
+      const user = await ctx.db.query("users").withIndex("email", (q) => q.eq("email", address)).first();
+      const language = user ? (await readerPreferencesOf(ctx, user._id)).language : SOURCE_LANGUAGE;
+      const rowId = await queueOutboxMessage(ctx, {
+        messageType: args.messageType,
+        ...(user ? { userId: user._id } : {}),
+        email: address,
+        language,
+        payload: { written: args.email },
+        idempotencyKey: `${args.idempotencyKey}:${address}`,
+        ...(args.queuedByRunId ? { queuedByRunId: args.queuedByRunId } : {}),
+      });
+      if (rowId) queued += 1;
+    }
+    return { queued };
   },
 });

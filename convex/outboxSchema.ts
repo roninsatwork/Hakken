@@ -1,5 +1,6 @@
 import { defineTable } from "convex/server";
 import { v } from "convex/values";
+import type { Communication } from "./utils/communications";
 
 /**
  * The outbox (docs/plans/active/knowledge-news-and-digest-plan.md, "The
@@ -11,10 +12,45 @@ import { v } from "convex/values";
  * twice however often something retries.
  */
 
-/** What kind of email a row is: the Sender picks its template by it. Every later email type is one more. */
-export const OUTBOX_MESSAGE_TYPES = ["WEEKLY_NEWS_DIGEST", "COLLECTION_NEEDS_YOU", "TASK_ALERT", "TASK_REPORT"] as const;
+/**
+ * What kind of email a row is: the Outbox Queue Processing Agent picks its
+ * template by it. Every later email type is one more, and says which type of
+ * communication it is (`COMMUNICATION_OF_TYPE`) before it can be queued.
+ * SYSTEM_HEALTH, AUTOMATION_EMAIL and AGENT_EMAIL carry the email already
+ * written, as it was when queued (outbox-and-preferences-plan.md, A3).
+ */
+export const OUTBOX_MESSAGE_TYPES = ["WEEKLY_NEWS_DIGEST", "COLLECTION_NEEDS_YOU", "TASK_ALERT", "TASK_REPORT", "SYSTEM_HEALTH", "AUTOMATION_EMAIL", "AGENT_EMAIL"] as const;
 export type OutboxMessageType = (typeof OUTBOX_MESSAGE_TYPES)[number];
-export const outboxMessageTypeValidator = v.union(v.literal("WEEKLY_NEWS_DIGEST"), v.literal("COLLECTION_NEEDS_YOU"), v.literal("TASK_ALERT"), v.literal("TASK_REPORT"));
+export const outboxMessageTypeValidator = v.union(
+  v.literal("WEEKLY_NEWS_DIGEST"),
+  v.literal("COLLECTION_NEEDS_YOU"),
+  v.literal("TASK_ALERT"),
+  v.literal("TASK_REPORT"),
+  v.literal("SYSTEM_HEALTH"),
+  v.literal("AUTOMATION_EMAIL"),
+  v.literal("AGENT_EMAIL"),
+);
+
+export const communicationValidator = v.union(
+  v.literal("WEEKLY_NEWS_DIGEST"),
+  v.literal("WEBSITE_PERFORMANCE"),
+  v.literal("HAKKEN_TASKS"),
+  v.literal("COLLECTING_STOPPED"),
+  v.literal("SYSTEM_HEALTH"),
+  v.literal("AUTOMATIONS"),
+  v.literal("AGENT_EMAILS"),
+);
+
+/** Each email type's type of communication (`utils/communications.ts`): what the Outbox shows and a profile turns off. */
+export const COMMUNICATION_OF_TYPE: Record<OutboxMessageType, Communication> = {
+  WEEKLY_NEWS_DIGEST: "WEEKLY_NEWS_DIGEST",
+  COLLECTION_NEEDS_YOU: "COLLECTING_STOPPED",
+  TASK_ALERT: "HAKKEN_TASKS",
+  TASK_REPORT: "HAKKEN_TASKS",
+  SYSTEM_HEALTH: "SYSTEM_HEALTH",
+  AUTOMATION_EMAIL: "AUTOMATIONS",
+  AGENT_EMAIL: "AGENT_EMAILS",
+};
 
 export const OUTBOX_STATUSES = ["WAITING", "CLAIMED", "SENT", "FAILED", "SKIPPED"] as const;
 export type OutboxStatus = (typeof OUTBOX_STATUSES)[number];
@@ -29,8 +65,14 @@ export const outboxStatusValidator = v.union(
 export const outboxTables = {
   outboxMessages: defineTable({
     messageType: outboxMessageTypeValidator,
-    /** Who it is for; the address and language as they were when queued. */
-    userId: v.id("users"),
+    /** Its type of communication, from its message type when queued (outbox-and-preferences-plan.md, A1). */
+    communication: communicationValidator,
+    /**
+     * Who it is for, when they are a user; the address and language as they
+     * were when queued. None for an address that is no user's — a system
+     * health address, someone an automation writes to.
+     */
+    userId: v.optional(v.id("users")),
     email: v.string(),
     language: v.string(),
     /** What the template needs, as JSON: for the digest, its issue and the reader's name — the issue is stored once. */
@@ -57,6 +99,7 @@ export const outboxTables = {
   })
     .index("by_status_due", ["status", "dueAt"])
     .index("by_status_created", ["status", "createdAt"])
+    .index("by_communication_created", ["communication", "createdAt"])
     .index("by_idempotency", ["idempotencyKey"])
     .index("by_created", ["createdAt"])
     .index("by_user", ["userId", "createdAt"]),
@@ -89,6 +132,12 @@ export const outboxTables = {
     newsDigest: v.boolean(),
     language: v.optional(v.string()),
     languageAt: v.optional(v.number()),
+    /**
+     * The other types of communication they turned off (outbox-and-preferences-
+     * plan.md, B1); the digest keeps `newsDigest`. None means every one is on:
+     * everyone starts subscribed and opts out.
+     */
+    turnedOff: v.optional(v.array(communicationValidator)),
     /** Unguessable: the unsubscribe link carries it, never the user's id. */
     unsubscribeToken: v.string(),
     updatedAt: v.number(),

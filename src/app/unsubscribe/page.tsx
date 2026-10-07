@@ -7,11 +7,14 @@ import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { Button } from "@/src/ui/components/screens/Button";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import { isChoosable } from "@/convex/utils/communications";
 
 /**
- * Where the unsubscribe link in the Weekly News Digest leads (docs/plans/
- * active/knowledge-news-and-digest-plan.md, phase 8). Nobody need be signed
- * in: the link's token is the proof. It turns the digest off only when the
+ * Where the unsubscribe link in an email leads (docs/plans/active/knowledge-
+ * news-and-digest-plan.md, phase 8; outbox-and-preferences-plan.md, B1): each
+ * email a person may opt out of names its own type. Nobody need be signed
+ * in: the link's token is the proof. It turns that type off only when the
  * button is pressed, never on arrival — company mail systems open links
  * before their readers do, as the sign-in link learned (`verify/page.tsx`).
  * A mail client's own one-click unsubscribe goes to the platform directly
@@ -19,7 +22,14 @@ import { Button } from "@/src/ui/components/screens/Button";
  */
 export default function UnsubscribePage() {
   const t = useTranslations("unsubscribe");
-  const token = useSearchParams().get("token") ?? "";
+  const tKinds = useTranslations("communications");
+  const { platformName } = useSystemSettings();
+  const params = useSearchParams();
+  const token = params.get("token") ?? "";
+  // Which type of email the link stops (outbox-and-preferences-plan.md, B1); a link from before the types stops the digest.
+  const asked = params.get("kind") ?? "WEEKLY_NEWS_DIGEST";
+  const kindKey = isChoosable(asked) ? asked : "WEEKLY_NEWS_DIGEST";
+  const kind = tKinds(`${kindKey}.name`, { platformName });
   const unsubscribe = useMutation(api.readerPreferences.unsubscribeWithToken);
   const [state, setState] = useState<"idle" | "working" | "done" | "failed">("idle");
 
@@ -27,14 +37,14 @@ export default function UnsubscribePage() {
     if (!token || state === "working") return;
     setState("working");
     try {
-      setState((await unsubscribe({ token })) ? "done" : "failed");
+      setState((await unsubscribe({ token, kind: kindKey })) ? "done" : "failed");
     } catch {
       setState("failed");
     }
   };
 
-  const heading = !token ? t("incompleteTitle") : state === "done" ? t("doneTitle") : state === "failed" ? t("failedTitle") : t("title");
-  const body = !token ? t("incompleteBody") : state === "done" ? t("doneBody") : state === "failed" ? t("failedBody") : t("body");
+  const heading = !token ? t("incompleteTitle") : state === "done" ? t("doneTitle") : state === "failed" ? t("failedTitle") : t("title", { kind });
+  const body = !token ? t("incompleteBody") : state === "done" ? t("doneBody", { kind }) : state === "failed" ? t("failedBody", { kind }) : t("body", { kind });
 
   return (
     <div className="flex flex-col gap-5 text-center">

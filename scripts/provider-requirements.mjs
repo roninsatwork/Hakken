@@ -40,10 +40,10 @@ export const OPTIONAL_KEYS = [
   // Telegram (hakken-tasks-plan.md, item 6.1): without the bot's key nothing is sent to Telegram and profiles offer no link.
   "TELEGRAM_BOT_TOKEN", "TELEGRAM_WEBHOOK_SECRET",
   "TELEPHONY_MAX_CONCURRENT_CALLS", "TELEPHONY_MAX_CALLS_PER_NUMBER_PER_HOUR", "PLATFORM_ALERT_EMAIL", "PLATFORM_ALERT_EMAILS", "ANALYTICS_ALERT_EMAIL", "ANALYTICS_ALERT_EMAILS",
-  // The Weekly News Digest (docs/plans/active/knowledge-news-and-digest-plan.md):
-  // its own sender address — the Email Sender refuses the digest and says so
-  // until it is set — and the secret Resend signs its bounce webhook with.
-  "NEWS_DIGEST_FROM_EMAIL", "RESEND_WEBHOOK_SECRET",
+  // The Outbox (docs/plans/active/outbox-and-preferences-plan.md): the one
+  // address every Outbox email is sent from — the general sender when it is
+  // not set — and the secret Resend signs its bounce webhook with.
+  "OUTBOX_FROM_EMAIL", "RESEND_WEBHOOK_SECRET",
   // What X charges per post read, so each run's X cost shows on the run.
   "X_READ_COST_USD",
 ];

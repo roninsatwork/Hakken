@@ -549,6 +549,17 @@ export function buildEmailSimulationOutput(args: { toAddresses: string[] | strin
   });
 }
 
+/** An email step's result once its email is in the Outbox, sent on its next hourly run (outbox-and-preferences-plan.md, A3). */
+export function buildEmailQueuedOutput(args: { toAddresses: string[] | string; subject: string; queued: number }) {
+  return JSON.stringify({
+    success: true,
+    queued: args.queued,
+    to: args.toAddresses,
+    subject: args.subject,
+    sends: "On the Outbox's next hourly run",
+  });
+}
+
 export function buildEmailDeliveryOutput(args: EmailDeliveryOutputInput) {
   return JSON.stringify({
     success: true,

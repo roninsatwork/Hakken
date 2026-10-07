@@ -7,8 +7,7 @@ export type AgentTemplateId =
   | "dataforseo-agent"
   | "keyword-research-agent"
   | "news-collector-agent"
-  | "weekly-digest-agent"
-  | "email-sender-agent";
+  | "weekly-digest-agent";
 
 export type AgentTemplate = {
   id: AgentTemplateId;
@@ -152,23 +151,6 @@ const AGENT_TEMPLATES: AgentTemplate[] = [
       + "why, leading with the most useful thing for a business owner. No greeting, no sign-off, no jargon, and "
       + "nothing that is not in what you were given.",
     temperature: 0.3,
-    humanApprovalRequired: false,
-    reasoningEffort: "LOW",
-    triggerType: "SCHEDULE",
-    recommendedToolMappings: [],
-    suggestedEvalFixtures: [],
-  },
-  {
-    id: "email-sender-agent",
-    name: "Email Sender",
-    agentName: "Email Sender",
-    description:
-      "Sends the emails waiting in the outbox, each in its reader's language, at a pace the email service allows, "
-      + "and records each one sent or failed. It calls no model.",
-    systemPrompt:
-      "You send the emails waiting in the outbox. The platform does this as a fixed job: you write nothing, "
-      + "decide nothing and call no model.",
-    temperature: 0,
     humanApprovalRequired: false,
     reasoningEffort: "LOW",
     triggerType: "SCHEDULE",

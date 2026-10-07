@@ -17,12 +17,13 @@ import { v } from "convex/values";
 export const DATAFORSEO_ROLES = ["DATAFORSEO_PLANNER", "DATAFORSEO_COLLECTOR"] as const;
 
 /**
- * The News and email agents (docs/plans/active/knowledge-news-and-digest-
- * plan.md, "The three agents"): the News Collector reads the sources, the
- * Weekly Digest writes the week's issue and queues it, and the Email Sender
- * sends what is queued. Each does a fixed job, like the DataForSEO agents.
+ * The News agents (docs/plans/active/knowledge-news-and-digest-plan.md, "The
+ * three agents"): the News Collector reads the sources and the Weekly Digest
+ * writes the week's issue and queues it. Each does a fixed job, like the
+ * DataForSEO agents. The third, the Email Sender, is now the built-in Outbox
+ * Queue Processing Agent (outbox-and-preferences-plan.md, A2), no role to give.
  */
-export const NEWS_ROLES = ["NEWS_COLLECTOR", "WEEKLY_DIGEST", "EMAIL_SENDER"] as const;
+export const NEWS_ROLES = ["NEWS_COLLECTOR", "WEEKLY_DIGEST"] as const;
 
 /**
  * The Search Console Collector (docs/plans/active/search-console-plan.md
@@ -57,7 +58,6 @@ export const AGENT_ROLE_GROUPS: ReadonlyArray<{ group: "dataforseo" | "news" | "
 export const newsRoleValidator = v.union(
   v.literal("NEWS_COLLECTOR"),
   v.literal("WEEKLY_DIGEST"),
-  v.literal("EMAIL_SENDER"),
 );
 
 /** "NONE" is a general agent: it thinks with its model and holds no role. */
@@ -67,7 +67,6 @@ export const agentRoleChoiceValidator = v.union(
   v.literal("DATAFORSEO_COLLECTOR"),
   v.literal("NEWS_COLLECTOR"),
   v.literal("WEEKLY_DIGEST"),
-  v.literal("EMAIL_SENDER"),
   v.literal("SEARCH_CONSOLE_COLLECTOR"),
   v.literal("KEYWORD_RESEARCH"),
 );

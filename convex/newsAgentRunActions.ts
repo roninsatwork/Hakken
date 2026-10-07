@@ -4,7 +4,6 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalAction, type ActionCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { sendOutbox } from "./emailSenderRun";
 import { collectNews } from "./newsCollectorRun";
 import { writeWeeklyDigest } from "./weeklyDigestRun";
 import { failureSummary } from "./roleRuns";
@@ -13,9 +12,10 @@ import { newsRoleValidator, type NewsRole } from "./utils/agentRoles";
 /**
  * What the News agents do when they are told to run — by the Run button or a
  * schedule (`agentRunStartService.ts`), never found by name: the News
- * Collector reads the sources, the Weekly Digest writes the week's issue and
- * queues it, and the Email Sender sends what is queued (docs/plans/active/
- * knowledge-news-and-digest-plan.md, "The three agents"). On Node, because
+ * Collector reads the sources, and the Weekly Digest writes the week's issue
+ * and queues it (docs/plans/active/knowledge-news-and-digest-plan.md, "The
+ * three agents"); the Outbox Queue Processing Agent sends it on its hourly run
+ * (outbox-and-preferences-plan.md, A2). On Node, because
  * the two that write call a model, and Vertex signs in only there.
  *
  * Each run takes its turn first — one run of an agent at a time — then does
@@ -29,7 +29,6 @@ type Job = (ctx: ActionCtx, runId: Id<"agentRuns">) => Promise<string>;
 const JOBS: Record<NewsRole, Job> = {
   NEWS_COLLECTOR: collectNews,
   WEEKLY_DIGEST: writeWeeklyDigest,
-  EMAIL_SENDER: sendOutbox,
 };
 
 export const runNewsRoleNow = internalAction({

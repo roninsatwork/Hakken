@@ -1,8 +1,9 @@
 /**
  * Turning a bad health report into an email somebody reads:
  * `dispatchPlatformAlerts` runs on the weekly cron, asks `systemHealth.ts`
- * for the report, and mails the configured recipients through the shared
- * email shell when the decision rules say the state is worth a bell. Split
+ * for the report, and queues an email to the configured recipients in the
+ * Outbox (outbox-and-preferences-plan.md, A3) when the decision rules say the
+ * state is worth a bell. Split
  * out of the old `convex/analyticsCron.ts` on 2026-08-21 (foundation-quality
  * plan, phase 3).
  */
@@ -10,8 +11,6 @@
 import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
-import { buildEmailFromAddress, resolveEnvFromAddress } from "./emailBrandingService";
-import { sendResendEmail } from "./resendEmailService";
 import {
   buildSystemHealthPlatformAlertDecision,
   buildSystemHealthAlertEmail,
@@ -74,45 +73,19 @@ export const dispatchPlatformAlerts = internalAction({
       baseUrl: process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL,
     });
 
-    if (!process.env.RESEND_API_KEY) {
-      console.warn("RESEND_API_KEY not found. Simulating platform alert dispatch.", {
-        recipients,
-        subject: email.subject,
-      });
-      return {
-        alerted: true,
-        alertType: decision.alertType,
-        recipients,
-        simulated: true,
-        signals: decision.signals,
-        summary: decision.summary,
-      };
-    }
-
-    const fromAddress = buildEmailFromAddress({
-      envFromAddress: resolveEnvFromAddress(process.env),
-      fallbackName: `${emailBranding.platformName} Operations`,
-      settings: emailBranding,
-    });
-    const data = await sendResendEmail({
-      apiKey: process.env.RESEND_API_KEY,
-      operation: "platformSystemHealthAlert",
+    // Through the Outbox, sent on its next hourly run (outbox-and-preferences-plan.md, A3).
+    const queued: { queued: number } = await ctx.runMutation(internal.outbox.queueWrittenEmailInternal, {
+      messageType: "SYSTEM_HEALTH",
+      to: recipients,
+      email: { subject: email.subject, html: email.html, text: email.text },
       idempotencyKey: `platform-alert:${decision.alertType}:${report.windowStartDate}:${report.checkedDate}`,
-      payload: {
-        from: fromAddress,
-        to: recipients,
-        subject: email.subject,
-        html: email.html,
-        text: email.text,
-      },
     });
 
     return {
       alerted: true,
       alertType: decision.alertType,
-      id: data?.id,
+      queued: queued.queued,
       recipients,
-      simulated: false,
       signals: decision.signals,
       summary: decision.summary,
     };

@@ -5,33 +5,35 @@ import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { PaginationFooter, TableShell, TableHeaderRow, TableHeaderCell } from "@/src/ui/components/screens/Table";
 import { TableSearchInput } from "@/src/ui/components/screens/TableControls";
 import { api } from "@/convex/_generated/api";
-import { Loader2, MonitorSmartphone, MapPin, Palette, Check, Globe, Mail } from "lucide-react";
+import { Loader2, MonitorSmartphone, MapPin, Palette, Check, Globe } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
 import { describeDevice } from "@/src/lib/devices";
 import { Button } from "@/src/ui/components/screens/Button";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { toneForStatus } from "@/src/ui/components/screens/statusTone";
-import { SettingSwitch } from "@/src/ui/components/screens/SettingsCard";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { AssistantNoteTab } from "./AssistantNoteTab";
-import { TelegramSection } from "./TelegramSection";
+import { CommunicationTab } from "./CommunicationTab";
+import { IntegrationsTab } from "./IntegrationsTab";
+import { useSearchParams } from "next/navigation";
 
 export default function ProfileTabs() {
   const t = useTranslations('user.logins');
   const tCommon = useTranslations('common');
   const tPrefs = useTranslations('user.preferences');
   const tNote = useTranslations('user.assistantNote');
-  const tEmails = useTranslations('user.preferences.emails');
-  const emailPreferences = useQuery(api.readerPreferences.getMyEmailPreferences);
-  const setNewsDigest = useMutation(api.readerPreferences.setMyNewsDigest);
+  const tCommunication = useTranslations('user.preferences.communication');
+  const tIntegrations = useTranslations('user.preferences.integrations');
   const recordLanguage = useMutation(api.readerPreferences.recordMyLanguage);
   const preferenceAction = useAdminAction({ scope: "profile-preferences" });
   const { theme, setTheme } = useTheme();
   const user = useQuery(api.users.getMe);
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState("preferences");
+  // A tab can be opened by its address: Telegram's page comes back to Integrations (outbox-and-preferences-plan.md, C2).
+  const askedTab = useSearchParams().get("tab");
+  const [activeTab, setActiveTab] = useState(askedTab === "communication" || askedTab === "integrations" ? askedTab : "preferences");
   const [locale, setLocale] = useState("en");
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
@@ -79,7 +81,7 @@ export default function ProfileTabs() {
 
   const handleLanguageChange = async (newLocale: string) => {
     // Kept on the user as well as the browser: their Weekly News Digest is written in it.
-    await preferenceAction.run(() => recordLanguage({ language: newLocale }), { fallbackMessage: tEmails("saveFailed"), suppressErrorToast: true });
+    await preferenceAction.run(() => recordLanguage({ language: newLocale }), { fallbackMessage: tCommunication("failed"), suppressErrorToast: true });
     document.cookie = `locale=${newLocale}; path=/; max-age=31536000`;
     setLocale(newLocale);
     window.location.reload();
@@ -99,6 +101,26 @@ export default function ProfileTabs() {
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-t-full shadow-[0_-2px_10px_rgba(var(--brand),0.5)]" />
           )}
         </button>
+        <Button
+          variant="ghost"
+          onClick={() => setActiveTab("communication")}
+          className={`px-0 pt-0 pb-3 rounded-none hover:bg-transparent relative ${activeTab === "communication" ? "text-foreground" : ""}`}
+        >
+          {tCommunication('tab')}
+          {activeTab === "communication" && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-t-full shadow-[0_-2px_10px_rgba(var(--brand),0.5)]" />
+          )}
+        </Button>
+        <Button
+          variant="ghost"
+          onClick={() => setActiveTab("integrations")}
+          className={`px-0 pt-0 pb-3 rounded-none hover:bg-transparent relative ${activeTab === "integrations" ? "text-foreground" : ""}`}
+        >
+          {tIntegrations('tab')}
+          {activeTab === "integrations" && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand rounded-t-full shadow-[0_-2px_10px_rgba(var(--brand),0.5)]" />
+          )}
+        </Button>
         <Button
           variant="ghost"
           onClick={() => setActiveTab("assistantNote")}
@@ -298,34 +320,12 @@ export default function ProfileTabs() {
             </div>
           </div>
 
-          <div className="h-px bg-border-dim/30 my-2" />
-
-          {/* Emails: the Weekly News Digest, on until the user turns it off
-              (docs/plans/active/knowledge-news-and-digest-plan.md, phase 8). */}
-          <div className="flex flex-col gap-1">
-            <div>
-              <h4 className="text-[13px] font-medium text-foreground tracking-wide flex items-center gap-2">
-                <Mail className="w-4 h-4 text-brand" />
-                {tEmails('title')}
-              </h4>
-              <p className="text-[11px] text-secondary mt-0.5">{tEmails('description')}</p>
-            </div>
-            {emailPreferences ? (
-              <div className="max-w-[560px]">
-                <SettingSwitch
-                  label={tEmails('newsDigest.label')}
-                  description={tEmails('newsDigest.description')}
-                  checked={emailPreferences.newsDigest}
-                  onChange={(subscribed) => void preferenceAction.run(() => setNewsDigest({ subscribed }), { fallbackMessage: tEmails('saveFailed') })}
-                />
-              </div>
-            ) : null}
-          </div>
-
-          {/* Telegram: alerts as messages, and Ask Hakken there too (hakken-tasks-plan.md, item 6.1). */}
-          <TelegramSection />
         </div>
       )}
+
+      {/* Tab Content: the emails a person may choose, and the apps they can link (outbox-and-preferences-plan.md, C2) */}
+      {activeTab === "communication" && <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-300"><CommunicationTab /></div>}
+      {activeTab === "integrations" && <div className="flex flex-col gap-6 w-full animate-in fade-in slide-in-from-bottom-2 duration-300"><IntegrationsTab /></div>}
 
       {/* Tab Content: What the assistant knows about me */}
       {activeTab === "assistantNote" && <AssistantNoteTab />}

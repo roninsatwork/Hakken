@@ -11,6 +11,8 @@ import type { AppLanguage } from "./contentLanguages";
 export type EmailWording = {
   /** How dates are written in this language. */
   dateLocale: string;
+  /** The link at the foot of every email a person can opt out of (outbox-and-preferences-plan.md, B1). */
+  stopTheseEmails: string;
   /**
    * The sign-in link (`auth.ts`), in style B's friendly words (board
    * MailSignInLink, hakken-tasks-plan.md 3.3). Sent before anyone is known, so
@@ -146,6 +148,7 @@ const itOfWeekday = (weekday: number) => (weekday === 7 ? "della domenica" : IT_
 
 export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
   en: {
+    stopTheseEmails: "Stop these emails",
     dateLocale: "en-GB",
     signIn: {
       kind: "Sign in",
@@ -276,6 +279,7 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
     },
   },
   it: {
+    stopTheseEmails: "Non ricevere più queste email",
     dateLocale: "it-IT",
     signIn: {
       kind: "Accesso",

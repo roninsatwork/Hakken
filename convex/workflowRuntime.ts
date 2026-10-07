@@ -7,7 +7,6 @@ import type { Id } from "./_generated/dataModel";
 import { parseWorkflowEdges, parseWorkflowNodes } from "./utils/workflowTypes";
 import { buildEmailFromAddress, resolveEnvFromAddress } from "./emailBrandingService";
 import { buildAutomationEmail } from "./platformEmails";
-import { sendResendEmail } from "./resendEmailService";
 import { resolvePlatformName } from "./settingsService";
 import { superAdminAction } from "./tenantFunctions";
 import {
@@ -16,9 +15,8 @@ import {
   buildCodeNodeOutput,
   buildDatabaseNodeOutput,
   buildDatabaseOperationInput,
-  buildEmailDeliveryOutput,
+  buildEmailQueuedOutput,
   buildEmailMessage,
-  buildEmailSimulationOutput,
   buildTaskNodeOutput,
   buildWorkflowTask,
   buildMergeNodeOutput,
@@ -113,7 +111,7 @@ async function executeEmailRuntimeNode(ctx: ActionCtx, args: {
   globalStatePayload: Record<string, unknown>;
 }) {
   const emailBranding = await ctx.runQuery(internal.settings.getEmailBranding, {});
-  const { fromAddress, toAddresses, subject, body } = buildEmailMessage({
+  const { toAddresses, subject, body } = buildEmailMessage({
     nodeData: args.currentNodeData,
     globalStatePayload: args.globalStatePayload,
     defaultFromAddress: buildEmailFromAddress({
@@ -123,30 +121,20 @@ async function executeEmailRuntimeNode(ctx: ActionCtx, args: {
     }),
   });
 
-  if (!process.env.RESEND_API_KEY) {
-    console.warn("RESEND_API_KEY not found in environment. Mocking Email dispatch:", { to: toAddresses, subject });
-    return buildEmailSimulationOutput({ toAddresses, subject, body });
-  }
-
   // The body is author-written and then template-substituted with run data, so
   // it is content rather than markup — it used to be sent as raw `html`, which
   // meant anything the workflow interpolated went straight into the message.
   const email = buildAutomationEmail({ platformName: resolvePlatformName(emailBranding?.platformName), subject, body });
 
-  const data = await sendResendEmail({
-    apiKey: process.env.RESEND_API_KEY,
-    operation: "workflowEmailNode",
+  // Through the Outbox, from its one address, on its next hourly run (outbox-and-preferences-plan.md, A3).
+  const queued: { queued: number } = await ctx.runMutation(internal.outbox.queueWrittenEmailInternal, {
+    messageType: "AUTOMATION_EMAIL",
+    to: Array.isArray(toAddresses) ? toAddresses : [toAddresses],
+    email: { subject, html: email.html, text: email.text },
     idempotencyKey: `workflow-email:${args.executionId}:${args.nodeId}`,
-    payload: {
-      from: fromAddress,
-      to: toAddresses,
-      subject,
-      html: email.html,
-      text: email.text,
-    },
   });
 
-  return buildEmailDeliveryOutput({ dispatchId: data, toAddresses, subject });
+  return buildEmailQueuedOutput({ toAddresses, subject, queued: queued.queued });
 }
 
 /**

@@ -104,7 +104,11 @@ export function TaskProposal({ messageId, proposal, isReadOnly = false }: { mess
   const onAnswers = proposal.answer;
   const ranking = proposal.ranking;
   // In Telegram too, once its owner has linked it (item 6.1).
-  const where = t(proposal.channels?.telegram ? "whereBellEmailTelegram" : "whereBellEmail", { platformName });
+  // By email only while they get these emails (outbox-and-preferences-plan.md, B2).
+  const byEmail = proposal.channels?.email ?? true;
+  const where = t(proposal.channels?.telegram
+    ? (byEmail ? "whereBellEmailTelegram" : "whereBellTelegram")
+    : (byEmail ? "whereBellEmail" : "whereBell"), { platformName });
   // Its price for each check, as Credit prices said when it was offered, and what adding its question or search costs.
   const watchCost = (withAdds: "costAnswerAdds" | "costRankingAdds") => {
     const { price, adds } = proposal;

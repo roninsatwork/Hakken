@@ -6,7 +6,6 @@ import { chargeTaskWork } from "./hakkenTaskCredits";
 import { queueOutboxMessage } from "./outbox";
 import { appUrl } from "./outboxTemplates";
 import { ensureReaderPreferences } from "./readerPreferences";
-import { startRoleRun } from "./roleRuns";
 import { shiftDay } from "./searchConsoleDays";
 import { readList } from "./searchConsoleLists";
 import { emailWording } from "./utils/emailWording";
@@ -161,9 +160,8 @@ export const sendReportInternal = internalMutation({
       }, now);
     }
 
-    let emailed = false;
     if (task.channels.email && owner.email) {
-      emailed = Boolean(await queueOutboxMessage(ctx, {
+      await queueOutboxMessage(ctx, {
         messageType: "TASK_REPORT",
         userId: owner._id,
         email: owner.email,
@@ -173,7 +171,7 @@ export const sendReportInternal = internalMutation({
           timeOfDay: task.timeOfDay, total, link, pages: pages.map((page) => ({ page: page.page, now: page.now, change: page.change })),
         },
         idempotencyKey: `TASK_REPORT:${task._id}:${to}`,
-      }));
+      });
     }
     if (task.channels.bell && !seen) {
       const words = emailWording(language).taskReport;
@@ -199,7 +197,6 @@ export const sendReportInternal = internalMutation({
         }),
       });
     }
-    if (emailed) await startRoleRun(ctx, "EMAIL_SENDER", { objective: "Send: a report someone asked for.", title: "A task's report" });
     return "SENT";
   },
 });

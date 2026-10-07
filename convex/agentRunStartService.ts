@@ -2,6 +2,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { isDataForSeoRole, isNewsRole, isResearchRole, isSearchConsoleRole } from "./utils/agentRoles";
+import { OUTBOX_QUEUE_AGENT } from "./utils/outboxQueueAgent";
 import { WIKI_STAFF } from "./wikiStaff";
 import { TRANSLATOR } from "./utils/contentTranslator";
 import { WATCHER } from "./utils/hakkenWatcher";
@@ -31,7 +32,7 @@ import { CARETAKER } from "./utils/hakkenCaretaker";
  * - The Translator translates whatever is still missing (`contentTranslation.ts`).
  * - Every other agent is given its objective on the model loop.
  */
-export type AgentRunStart = "WIKI_ROUND" | "SEO_JOB" | "RESEARCH_JOB" | "NEWS_JOB" | "SEARCH_CONSOLE_JOB" | "TRANSLATION_ROUND" | "WATCH_ROUND" | "REPORT_ROUND" | "CARE_ROUND" | "MODEL";
+export type AgentRunStart = "WIKI_ROUND" | "SEO_JOB" | "RESEARCH_JOB" | "NEWS_JOB" | "SEARCH_CONSOLE_JOB" | "TRANSLATION_ROUND" | "WATCH_ROUND" | "REPORT_ROUND" | "CARE_ROUND" | "OUTBOX_ROUND" | "MODEL";
 
 export async function startAgentRun(
   ctx: Pick<MutationCtx, "scheduler">,
@@ -75,6 +76,12 @@ export async function startAgentRun(
   if (agent.systemKey === CARETAKER.systemKey) {
     await ctx.scheduler.runAfter(0, internal.hakkenCaretaker.careForTasks, { runId, workflowExecutionId });
     return "CARE_ROUND";
+  }
+
+  // The Outbox Queue Processing Agent: everything waiting in the Outbox, sent now (outbox-and-preferences-plan.md, A2).
+  if (agent.systemKey === OUTBOX_QUEUE_AGENT.systemKey) {
+    await ctx.scheduler.runAfter(0, internal.outboxQueueRun.processOutboxNow, { runId, workflowExecutionId });
+    return "OUTBOX_ROUND";
   }
 
   // The Stat Report Agent: every report due now (item 4.1).

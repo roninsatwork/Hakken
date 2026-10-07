@@ -4,7 +4,6 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { queueOutboxMessage } from "./outbox";
 import { ensureReaderPreferences } from "./readerPreferences";
-import { startRoleRun } from "./roleRuns";
 
 /**
  * The Weekly Digest agent's reads and writes (docs/plans/active/knowledge-
@@ -148,11 +147,8 @@ export const queueDigestPage = internalMutation({
         skipped += 1;
         continue;
       }
+      // Queued even when turned off: it shows on the Outbox as skipped, saying so (outbox-and-preferences-plan.md, B1).
       const preferences = await ensureReaderPreferences(ctx, reader._id);
-      if (!preferences.newsDigest) {
-        skipped += 1;
-        continue;
-      }
       const key = issue.mode === "LIVE"
         ? `WEEKLY_NEWS_DIGEST:${issue.weekKey}:${reader._id}`
         : `WEEKLY_NEWS_DIGEST:TEST:${issue._id}:${reader._id}`;
@@ -170,14 +166,4 @@ export const queueDigestPage = internalMutation({
     }
     return { queued, skipped, cursor, isDone };
   },
-});
-
-/** Start the Email Sender to send what was queued — unless one is already sending, which sends it too. */
-export const startEmailSender = internalMutation({
-  args: { issueWeek: v.string() },
-  returns: v.union(v.literal("STARTED"), v.literal("ALREADY_GOING"), v.literal("NO_AGENT"), v.literal("AGENT_OFF")),
-  handler: async (ctx, args) => await startRoleRun(ctx, "EMAIL_SENDER", {
-    objective: `Send the Weekly News Digest for ${args.issueWeek}.`,
-    title: `Weekly News Digest — ${args.issueWeek}`,
-  }),
 });

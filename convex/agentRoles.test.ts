@@ -41,7 +41,7 @@ describe("agent roles", () => {
     expect(await keyOf(t, collector)).toBe("NONE");
   });
 
-  test.each(["NEWS_COLLECTOR", "WEEKLY_DIGEST", "EMAIL_SENDER"] as const)("the %s role is given like any other", async (role) => {
+  test.each(["NEWS_COLLECTOR", "WEEKLY_DIGEST"] as const)("the %s role is given like any other", async (role) => {
     const t = harness();
     const { admin, agent } = await setup(t);
     const news = await agent("From its template");

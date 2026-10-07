@@ -13,7 +13,8 @@ import { emailPictureValidator, type EmailPicture } from "./utils/emailPictures"
 import { buildTaskAlertEmail } from "./taskAlertEmail";
 import { buildTaskReportEmail } from "./taskReportEmail";
 import { suppressionOf } from "./emailSuppressions";
-import { readerPreferencesOf } from "./readerPreferences";
+import { isTurnedOff, readerPreferencesOf } from "./readerPreferences";
+import { isChoosable, type Communication } from "./utils/communications";
 
 /**
  * Each message type's template (docs/plans/active/knowledge-news-and-digest-
@@ -21,7 +22,7 @@ import { readerPreferencesOf } from "./readerPreferences";
  * the reader's language, through the shared shell (`renderEmail`, which takes
  * content, never markup, and the email design system's look). The Sender
  * picks the template by the row's type; every later email type is one more
- * entry here, and one more sender address below.
+ * entry here. All of them are sent from one address (`outboxFromAddress`).
  */
 
 /** `pictures`: what the Email Sender draws and attaches inline, by content id (`utils/emailPictures.ts`). */
@@ -29,28 +30,32 @@ export type OutboxEmail = { subject: string; html: string; text: string; headers
 
 type Brand = { platformName: string; appUrl: string };
 type Template = (ctx: QueryCtx, row: Doc<"outboxMessages">, brand: Brand) => Promise<
-  { subject: string; content: EmailContent; headers?: Record<string, string>; pictures?: EmailPicture[] } | { skip: string }
+  | { subject: string; content: EmailContent; headers?: Record<string, string>; pictures?: EmailPicture[] }
+  | { written: { subject: string; html: string; text: string } }
+  | { skip: string }
 >;
-
-/**
- * The environment variable that holds each type's sender address. Until it is
- * set the Sender refuses that type and says why on its run, rather than
- * sending from the unconfigured fallback (A11).
- */
-export const SENDER_ADDRESS_VARIABLES: Record<OutboxMessageType, string> = {
-  WEEKLY_NEWS_DIGEST: "NEWS_DIGEST_FROM_EMAIL",
-  COLLECTION_NEEDS_YOU: "ALERTS_FROM_EMAIL",
-  TASK_ALERT: "ALERTS_FROM_EMAIL",
-  TASK_REPORT: "ALERTS_FROM_EMAIL",
-};
 
 /**
  * Where a mail client's one-click unsubscribe goes (RFC 8058): the platform's
  * own HTTP route (`emailHttp.ts`), which takes a POST and nothing else.
  */
-function oneClickUnsubscribeUrl(token: string): string | null {
+function oneClickUnsubscribeUrl(token: string, communication: Communication): string | null {
   const site = process.env.CONVEX_SITE_URL?.trim().replace(/\/+$/, "");
-  return site ? `${site}/api/email/unsubscribe?token=${token}` : null;
+  return site ? `${site}/api/email/unsubscribe?token=${token}&kind=${communication}` : null;
+}
+
+/**
+ * The way to stop one type of email, as every email a person can opt out of
+ * carries it (Anthony, 2026-10-07): the page its link opens, and the
+ * `List-Unsubscribe` headers Gmail and Yahoo require of bulk senders.
+ */
+function unsubscribeOf(brand: Brand, token: string, communication: Communication) {
+  const url = `${brand.appUrl}/unsubscribe?token=${token}&kind=${communication}`;
+  const oneClick = oneClickUnsubscribeUrl(token, communication);
+  const headers: Record<string, string> = oneClick
+    ? { "List-Unsubscribe": `<${oneClick}>, <${url}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" }
+    : { "List-Unsubscribe": `<${url}>` };
+  return { url, headers };
 }
 
 /** Where links in an email lead: the app as its readers open it. */
@@ -75,14 +80,10 @@ function payloadOf(row: Doc<"outboxMessages">): Record<string, unknown> {
  * sent to a reader who turned it off, and never without a way to stop.
  */
 const weeklyNewsDigest: Template = async (ctx, row, brand) => {
+  if (!row.userId) return { skip: "The Weekly News Digest goes only to users." };
   const preferences = await readerPreferencesOf(ctx, row.userId);
-  if (!preferences.newsDigest) return { skip: "The reader turned the Weekly News Digest off." };
   if (!preferences.unsubscribeToken) return { skip: "It has no way to unsubscribe yet, so it is not sent." };
-  const unsubscribeUrl = `${brand.appUrl}/unsubscribe?token=${preferences.unsubscribeToken}`;
-  const oneClick = oneClickUnsubscribeUrl(preferences.unsubscribeToken);
-  const headers: Record<string, string> = oneClick
-    ? { "List-Unsubscribe": `<${oneClick}>, <${unsubscribeUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" }
-    : { "List-Unsubscribe": `<${unsubscribeUrl}>` };
+  const { url: unsubscribeUrl, headers } = unsubscribeOf(brand, preferences.unsubscribeToken, "WEEKLY_NEWS_DIGEST");
   const issueId = typeof payloadOf(row).issueId === "string" ? ctx.db.normalizeId("weeklyDigestIssues", payloadOf(row).issueId as string) : null;
   const issue = issueId ? await ctx.db.get(issueId) : null;
   if (!issue) return { skip: "Its week's issue no longer exists." };
@@ -187,21 +188,41 @@ const taskReport: Template = async (ctx, row, brand) => {
   return buildTaskReportEmail({ language: row.language, brand, payload });
 };
 
+/**
+ * An email written when it was queued — a system health alert, an
+ * automation's email, an agent's — sent as it was written
+ * (outbox-and-preferences-plan.md, A3).
+ */
+function writtenEmail(row: Doc<"outboxMessages">): { written: { subject: string; html: string; text: string } } | { skip: string } {
+  const written = payloadOf(row).written as { subject?: unknown; html?: unknown; text?: unknown } | undefined;
+  if (!written || typeof written.subject !== "string" || typeof written.html !== "string" || typeof written.text !== "string") {
+    return { skip: "It holds no email to send." };
+  }
+  return { written: { subject: written.subject, html: written.html, text: written.text } };
+}
+
+const written: Template = async (_ctx, row) => writtenEmail(row);
+
 const TEMPLATES: Record<OutboxMessageType, Template> = {
   WEEKLY_NEWS_DIGEST: weeklyNewsDigest,
   COLLECTION_NEEDS_YOU: collectionNeedsYou,
   TASK_ALERT: taskAlert,
   TASK_REPORT: taskReport,
+  SYSTEM_HEALTH: written,
+  AUTOMATION_EMAIL: written,
+  AGENT_EMAIL: written,
 };
 
 /**
  * A row as its reader will get it, or why it should not be sent: the reader
- * is no longer a user, or what it is about is gone. Shown as a preview on
- * Admin → Content → Outbox too.
+ * is no longer a user, turned this type of email off on their profile, or
+ * what it is about is gone. Shown as a preview on Admin → Content → Outbox too.
  */
 export async function renderOutboxRow(ctx: QueryCtx, row: Doc<"outboxMessages">): Promise<{ email: OutboxEmail } | { skip: string }> {
-  const user = await ctx.db.get(row.userId);
-  if (!user) return { skip: "The reader is no longer a user." };
+  const user = row.userId ? await ctx.db.get(row.userId) : null;
+  if (row.userId && !user) return { skip: "The reader is no longer a user." };
+  const preferences = row.userId ? await readerPreferencesOf(ctx, row.userId) : null;
+  if (preferences && isTurnedOff(preferences, row.communication)) return { skip: "Turned off on their profile." };
   const suppressed = await suppressionOf(ctx, row.email);
   if (suppressed) {
     return { skip: suppressed === "BOUNCED" ? "This address bounced, so nothing more is sent to it." : "This reader marked an email as spam, so nothing more is sent to them." };
@@ -210,8 +231,18 @@ export async function renderOutboxRow(ctx: QueryCtx, row: Doc<"outboxMessages">)
   const brand = { platformName: resolvePlatformName(settings?.platformName), appUrl: appUrl() };
   const made = await TEMPLATES[row.messageType](ctx, row, brand);
   if ("skip" in made) return made;
-  const { html, text } = renderEmail(made.content, { platformName: brand.platformName });
-  return { email: { subject: made.subject, html, text, headers: made.headers ?? {}, pictures: made.pictures ?? [] } };
+  if ("written" in made) return { email: { ...made.written, headers: {}, pictures: [] } };
+  // Every email a person can opt out of carries its own way to stop (the digest writes its own).
+  let content = made.content;
+  let headers = made.headers ?? {};
+  if (preferences && isChoosable(row.communication) && row.communication !== "WEEKLY_NEWS_DIGEST") {
+    if (!preferences.unsubscribeToken) return { skip: "It has no way to unsubscribe yet, so it is not sent." };
+    const stop = unsubscribeOf(brand, preferences.unsubscribeToken, row.communication);
+    content = { ...content, footer: { ...(content.footer ?? {}), links: [...(content.footer?.links ?? []), { label: emailWording(row.language).stopTheseEmails, url: stop.url }] } };
+    headers = { ...headers, ...stop.headers };
+  }
+  const { html, text } = renderEmail(content, { platformName: brand.platformName });
+  return { email: { subject: made.subject, html, text, headers, pictures: made.pictures ?? [] } };
 }
 
 export const renderOutboxMessage = internalQuery({

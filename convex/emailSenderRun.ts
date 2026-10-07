@@ -3,18 +3,17 @@
 import { internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { isLikelyEmailAddress } from "./emailBrandingService";
-import { OUTBOX_MESSAGE_TYPES, type OutboxMessageType } from "./outboxSchema";
-import { SENDER_ADDRESS_VARIABLES } from "./outboxTemplates";
+import { outboxFromAddress } from "./emailBrandingService";
 import { pictureAttachments } from "./emailPictureEncoder";
 import { sendResendEmail } from "./resendEmailService";
 import { appError, appErrorMessage } from "./utils/appError";
 
 /**
- * The Email Sender's job (docs/plans/active/knowledge-news-and-digest-plan.md,
- * phase 7): send what waits in the outbox. It calls no model and costs
- * nothing on its run (A12). Called by `runNewsRoleNow` once the run has its
- * turn — one Sender at a time.
+ * The Outbox Queue Processing Agent's job (docs/plans/active/outbox-and-
+ * preferences-plan.md, A2; first built as the Email Sender's,
+ * knowledge-news-and-digest-plan.md, phase 7): send what waits in the
+ * outbox, oldest first, on its hourly run. It calls no model and costs
+ * nothing on its run (A12).
  *
  * Each row is claimed, rendered with its type's template in its reader's
  * language, marked as posting, sent through Resend with its idempotency key —
@@ -22,10 +21,9 @@ import { appError, appErrorMessage } from "./utils/appError";
  * sent with Resend's receipt, failed and tried again later until its tries
  * are spent, or skipped with the reason. It sends under Resend's rate limit,
  * takes nothing new after seven minutes, and gives back what it claimed and
- * did not reach. A type whose sender address is not set is refused, saying
- * so, rather than sent from the unconfigured fallback.
+ * did not reach. Every row is sent from the one Outbox address; with none
+ * set, nothing is sent from the unconfigured fallback, and the run says so.
  */
-
 /** Between sends: under Resend's rate limit, about two a second on its default plan. */
 export const SEND_GAP_MS = 600;
 
@@ -33,20 +31,6 @@ export const SEND_GAP_MS = 600;
 const SEND_WORK_MS = 7 * 60 * 1000;
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-/** Each type's sender address, from its environment variable, or null when it is not a usable address. */
-function senderAddresses(): Record<OutboxMessageType, string | null> {
-  const found = {} as Record<OutboxMessageType, string | null>;
-  for (const type of OUTBOX_MESSAGE_TYPES) {
-    const value = process.env[SENDER_ADDRESS_VARIABLES[type]]?.replace(/[\r\n]/g, "").trim();
-    const bare = value ? /<([^>]+)>\s*$/.exec(value)?.[1] ?? value : undefined;
-    found[type] = value && isLikelyEmailAddress(bare) ? value : null;
-  }
-  return found;
-}
-
-/** The variables to set for some email types, each named once: several types share an address. */
-const addressNames = (types: OutboxMessageType[]) => [...new Set(types.map((type) => SENDER_ADDRESS_VARIABLES[type]))];
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
@@ -67,16 +51,11 @@ export async function sendOutbox(ctx: ActionCtx, runId: Id<"agentRuns">): Promis
 
   const apiKey = process.env.RESEND_API_KEY?.trim();
   if (!apiKey) throw appError("NOT_CONFIGURED", `RESEND_API_KEY is not set on this deployment, so nothing was sent. ${waitingText}.`);
-  const from = senderAddresses();
-  const unset: OutboxMessageType[] = OUTBOX_MESSAGE_TYPES.filter((type) => !from[type]);
-  const unsetNames = addressNames(unset);
-  const unsetVerb = unsetNames.length === 1 ? "is" : "are";
-  if (unset.length === OUTBOX_MESSAGE_TYPES.length) {
-    throw appError(
-      "NOT_CONFIGURED",
-      `${unsetNames.join(" and ")} ${unsetVerb} not set, so nothing was sent: `
-        + `each email type is sent only from its own address. ${waitingText}.`,
-    );
+  // One address for every Outbox email (outbox-and-preferences-plan.md, A1).
+  const branding = await ctx.runQuery(internal.settings.getEmailBranding, {});
+  const address = outboxFromAddress(process.env, branding);
+  if (!address) {
+    throw appError("NOT_CONFIGURED", `OUTBOX_FROM_EMAIL is not set, and neither is a general sender address, so nothing was sent. ${waitingText}.`);
   }
   await ctx.runMutation(internal.roleRuns.recordObservation, { runId, text: `${waitingText} in the outbox.` });
 
@@ -84,7 +63,6 @@ export async function sendOutbox(ctx: ActionCtx, runId: Id<"agentRuns">): Promis
   let failed = 0;
   let retrying = 0;
   let skipped = 0;
-  const refused = new Set<OutboxMessageType>();
   let stoppedBecause: string | null = null;
 
   for (;;) {
@@ -102,12 +80,6 @@ export async function sendOutbox(ctx: ActionCtx, runId: Id<"agentRuns">): Promis
         await ctx.runMutation(internal.outbox.releaseOutboxClaims, { runId, messageIds: batch.slice(index).map((entry) => entry._id) });
         stoppedBecause = "its time ran out; the rest are sent next run";
         break;
-      }
-      const address = from[row.messageType];
-      if (!address) {
-        refused.add(row.messageType);
-        await ctx.runMutation(internal.outbox.releaseOutboxClaims, { runId, messageIds: [row._id] });
-        continue;
       }
       tried += 1;
       const rendered = await ctx.runQuery(internal.outboxTemplates.renderOutboxMessage, { messageId: row._id });
@@ -161,8 +133,5 @@ export async function sendOutbox(ctx: ActionCtx, runId: Id<"agentRuns">): Promis
     ...(failed > 0 ? [`${failed} failed for good`] : []),
     ...(skipped > 0 ? [`${skipped} skipped`] : []),
   ];
-  const refusal = refused.size > 0
-    ? ` Not sent, because their address is not set: ${addressNames([...refused]).join(", ")}.`
-    : "";
-  return `${parts.join("; ")}.${stoppedBecause ? ` Stopped because ${stoppedBecause}.` : ""}${refusal}`;
+  return `${parts.join("; ")}.${stoppedBecause ? ` Stopped because ${stoppedBecause}.` : ""}`;
 }

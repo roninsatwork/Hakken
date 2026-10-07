@@ -817,6 +817,18 @@ running against the Sonae deployment.
 
 ## Change Log
 
+* **2026-10-07 (Outbox)** — **Built: every email through the Outbox, and
+  what people choose to receive.** docs/plans/active/outbox-and-preferences-
+  plan.md: every email but sign-in and invitations waits in the Outbox, with
+  its type of communication, and goes from one address (`OUTBOX_FROM_EMAIL`)
+  on the hourly run of the new Outbox Queue Processing Agent, which replaces
+  the Email Sender role; system health, automation and agent emails join it;
+  super admins hear in the bell when anything has waited two hours. On the
+  profile, a Communication preferences tab — everyone starts subscribed and
+  opts out, one email at a time or all at once, and every such email carries
+  its own unsubscribe link — and an Integrations tab, with Telegram's own
+  page.
+
 * **2026-10-06 (Assistant)** — **Built: the assistant's foundation — one
   brain, many doors.** docs/plans/active/assistant-foundation-plan.md, items
   1 to 9: every door reads what Hakken knows from one place; email replies

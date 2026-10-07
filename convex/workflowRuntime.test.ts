@@ -188,6 +188,25 @@ describe("workflow runtime actions", () => {
   });
 
 
+  test("an email step queues its email in the Outbox, for its next hourly run, and sends nothing itself", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const { workflowId, executionId, stepId } = await seedRuntimeWorkflow(t, {
+      node: { id: "email", type: "emailNode", data: { _emailConfig: { to: "jo@example.co.uk, sam@example.co.uk", subject: "Your weekly numbers", body: "They are in." } } },
+    });
+
+    await t.action(internal.workflowRuntime.executeNode, { workflowId, executionId, nodeId: "email" });
+
+    const { steps } = await getRuntimeState(t, executionId);
+    const step = steps.find((entry) => entry._id === stepId);
+    expect(step?.status).toBe("SUCCESS");
+    expect(JSON.parse(step!.output!)).toMatchObject({ success: true, queued: 2, subject: "Your weekly numbers", sends: "On the Outbox's next hourly run" });
+    const rows = await t.run((ctx) => ctx.db.query("outboxMessages").collect());
+    expect(rows.map((row) => [row.email, row.messageType, row.communication, row.status]).sort()).toEqual([
+      ["jo@example.co.uk", "AUTOMATION_EMAIL", "AUTOMATIONS", "WAITING"],
+      ["sam@example.co.uk", "AUTOMATION_EMAIL", "AUTOMATIONS", "WAITING"],
+    ]);
+  });
+
   test("executeNode failure marks the claimed step and execution as failed", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const { workflowId, executionId, stepId } = await seedRuntimeWorkflow(t, {

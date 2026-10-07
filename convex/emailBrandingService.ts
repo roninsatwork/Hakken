@@ -110,3 +110,23 @@ export function buildEmailBranding(settings?: Partial<EmailBrandingSettings> | n
     fromAddress: buildEmailFromAddress({ settings }),
   };
 }
+
+/**
+ * The one address every Outbox email is sent from (Anthony, 2026-10-07: "one
+ * email address can handle all the outbox email types"): `OUTBOX_FROM_EMAIL`,
+ * else the platform's general sender (`RESEND_FROM_EMAIL`, `AUTH_EMAIL`, or
+ * Settings' sender address). A bare address is sent under the platform's
+ * sender name. Null until one is set: nothing is sent from the unconfigured
+ * fallback (A11).
+ */
+export function outboxFromAddress(
+  env: Record<string, string | undefined>,
+  settings: { platformName?: string; emailSenderName?: string; emailSenderAddress?: string } | null,
+): string | null {
+  const own = env.OUTBOX_FROM_EMAIL?.replace(/[\r\n]/g, "").trim();
+  const ownBare = own ? /<([^>]+)>\s*$/.exec(own)?.[1] ?? own : undefined;
+  const name = settings?.emailSenderName?.trim() || (settings?.platformName?.trim() || DEFAULT_SETTINGS.platformName);
+  if (own && isLikelyEmailAddress(ownBare)) return own.includes("<") ? own : `${name.replace(/[<>]/g, "")} <${own}>`;
+  const general = buildEmailFromAddress({ envFromAddress: resolveEnvFromAddress(env), fallbackName: name, settings });
+  return general.includes(UNCONFIGURED_EMAIL_ADDRESS) ? null : general;
+}

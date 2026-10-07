@@ -13,8 +13,11 @@ import { verifyWebhookSignature } from "./utils/webhookSignature";
  * send. Answers 200 whatever the token, so a guess learns nothing.
  */
 export const handleOneClickUnsubscribe = httpAction(async (ctx, request) => {
-  const token = new URL(request.url).searchParams.get("token") ?? "";
-  await ctx.runMutation(internal.readerPreferences.unsubscribeWithTokenInternal, { token });
+  const params = new URL(request.url).searchParams;
+  const token = params.get("token") ?? "";
+  // Which type of email to stop (outbox-and-preferences-plan.md, B1); a link from before the types stops the digest.
+  const kind = params.get("kind")?.slice(0, 40) || undefined;
+  await ctx.runMutation(internal.readerPreferences.unsubscribeWithTokenInternal, { token, ...(kind ? { kind } : {}) });
   return new Response(null, { status: 200 });
 });
 

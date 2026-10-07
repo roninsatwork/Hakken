@@ -1,0 +1,10 @@
+# Outbox — the approved look (board "OutboxList" of docs/plans/assets/outbox-and-preferences/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Outbox
+notice (info)
+search: Find an email address…
+filter: Type
+filter: Status
+table: To | Type of communication | Status | Tries | Queued | Sent
+  table-footer

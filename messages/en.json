@@ -6937,11 +6937,11 @@
     },
     "outbox": {
       "title": "Outbox",
-      "subtitle": "Every email queued to be sent, newest first, and what became of it. The Email Sender agent sends what waits here.",
+      "subtitle": "Every email waiting to go out, and what became of each one. The Outbox Queue Processing Agent sends what is waiting once an hour, oldest first.",
       "statusFilter": "Status",
       "allStatuses": "Every status",
       "empty": "Nothing has been queued yet.",
-      "noMatch": "No email has this status.",
+      "noMatch": "No email matches.",
       "notYet": "Not yet",
       "none": "None",
       "openRun": "Open the run",
@@ -6953,7 +6953,12 @@
       "wouldSkip": "It would not be sent: {reason}",
       "types": {
         "WEEKLY_NEWS_DIGEST": "Weekly News Digest",
-        "COLLECTION_NEEDS_YOU": "Collection needs you"
+        "COLLECTION_NEEDS_YOU": "Collection needs you",
+        "TASK_ALERT": "Task alert",
+        "TASK_REPORT": "Task report",
+        "SYSTEM_HEALTH": "System health",
+        "AUTOMATION_EMAIL": "An automation’s email",
+        "AGENT_EMAIL": "An agent’s email"
       },
       "statuses": {
         "WAITING": "Waiting",
@@ -6967,10 +6972,11 @@
         "status": "Status",
         "tries": "Tries",
         "queued": "Queued",
-        "sent": "Sent"
+        "sent": "Sent",
+        "type": "Type of communication"
       },
       "sections": {
-        "what": "What became of it",
+        "what": "What it is",
         "email": "The email"
       },
       "fields": {
@@ -6982,8 +6988,22 @@
         "receipt": "Receipt",
         "receiptHint": "The email service's own id for it.",
         "queuedBy": "Queued by",
-        "sentBy": "Sent by"
-      }
+        "sentBy": "Sent by",
+        "communication": "Type of communication",
+        "sends": "Sends",
+        "sendsHint": "The Outbox Queue Processing Agent runs once an hour.",
+        "sendsNever": "Not until its agent and schedule are switched on",
+        "sentFrom": "Sent from",
+        "sentFromHint": "OUTBOX_FROM_EMAIL, one address for every email here.",
+        "sentFromNone": "No address set yet"
+      },
+      "notice": "Next run at {time} · {count, plural, =0 {nothing waiting} =1 {1 email waiting} other {# emails waiting}} · Sent from {address} (OUTBOX_FROM_EMAIL). Signing in and invitations never come through here: they go out at once.",
+      "noticeNoRun": "Nothing will be sent: the Outbox Queue Processing Agent or its schedule is switched off. {count, plural, =0 {Nothing is waiting.} =1 {1 email is waiting.} other {# emails are waiting.}}",
+      "noticeNoAddress": "No sender address is set, so nothing can be sent. Add OUTBOX_FROM_EMAIL in the backend environment.",
+      "search": "Find an email address…",
+      "typeFilter": "Type",
+      "allTypes": "Every type",
+      "atNextRun": "At the next run, {time}"
     },
     "newsItems": {
       "title": "News",
@@ -7341,6 +7361,8 @@
           "inARow": "{rule}, for {days} days in a row"
         },
         "at": "At {time}",
+        "whereBell": "Here in {platformName}",
+        "whereBellTelegram": "Here in {platformName} and in Telegram",
         "whereBellEmail": "Here in {platformName} and by email",
         "whereBellEmailTelegram": "Here in {platformName}, by email and in Telegram",
         "settle": "Google’s figures take about 3 days to settle, so I’ll always be looking at a few days ago",
@@ -8329,29 +8351,67 @@
         "it": "Italiano (IT)",
         "label": "Workspace Language"
       },
-      "emails": {
-        "title": "Emails",
-        "description": "What we send you, in the language you use here.",
-        "saveFailed": "Could not save that. Try again.",
-        "newsDigest": {
-          "label": "Weekly News Digest",
-          "description": "Once a week: what changed in search, SEO and AI search, and what it means for you."
-        }
-      },
       "telegram": {
         "title": "Telegram",
-        "description": "Get your {platformName} alerts as messages in Telegram, and ask {platformName} things there too.",
-        "search": "Open Telegram and search for <strong>{bot}</strong>.",
-        "sendCode": "Send it this code:",
-        "sendCodeNone": "Get a code to send it:",
-        "getCode": "Get a code",
-        "thatsIt": "That’s it. You’ll get a message to say you’re linked.",
-        "codeLasts": "The code works for 10 minutes.",
+        "back": "Integrations",
+        "linkIt": "Link it",
+        "linkItHint": "It takes a moment, and you can unlink it here any time.",
+        "openTitle": "Open {bot} in Telegram",
+        "openHint": "On your phone, or a computer with Telegram. Press Start when it opens, and you’re linked.",
+        "open": "Open Telegram",
+        "codeTitle": "Or send it this code",
+        "codeHint": "Search for {bot} in Telegram and send it this code. It works for 10 minutes.",
         "newCode": "Get a new code",
-        "linkedAs": "Linked to <strong>{name}</strong>. Your alerts come there too.",
-        "linked": "Linked. Your alerts come there too.",
+        "whatYouGet": "What you’ll get",
+        "get1": "Your alerts and weekly reports as messages, as soon as they’re ready.",
+        "get2": "Ask {platformName} anything, and get the same answers as here.",
+        "get3": "Reply “why?” to an alert and {platformName} looks into it for you.",
+        "linkedTitle": "Linked",
+        "linkedSince": "Linked to {name} since {date}.",
+        "linkedHint": "Your alerts and reports come there too, and you can ask {platformName} anything.",
         "unlink": "Unlink",
+        "unlinkAsk": "Unlink Telegram?",
+        "unlinkBody": "{platformName} will stop sending you messages there, and won’t answer them. You can link it again any time.",
+        "keep": "Keep it",
+        "notSetUp": "Telegram isn’t ready yet. Check back soon.",
         "failed": "That didn’t work. Try again in a moment."
+      },
+      "communication": {
+        "tab": "Communication preferences",
+        "title": "Emails we send you",
+        "description": "Untick any you’d rather not get. Emails to sign in, and invitations, always come.",
+        "columns": {
+          "email": "Email",
+          "what": "What it is",
+          "often": "How often",
+          "on": "Send it to me"
+        },
+        "empty": "Nothing to choose yet.",
+        "unsubscribeAll": "Unsubscribe from all",
+        "subscribeAll": "Subscribe to all",
+        "failed": "That didn’t save. Try again in a moment."
+      },
+      "integrations": {
+        "tab": "Integrations",
+        "title": "Apps you can link",
+        "description": "Link {platformName} to apps you already use, to hear from it and ask it things there.",
+        "columns": {
+          "app": "App",
+          "what": "What it does",
+          "status": "Status"
+        },
+        "empty": "No apps to link yet.",
+        "link": "Link",
+        "manage": "Manage",
+        "notLinked": "Not linked",
+        "linkedAs": "Linked to {name}",
+        "linked": "Linked",
+        "apps": {
+          "telegram": {
+            "name": "Telegram",
+            "what": "Get your alerts and reports as messages, and ask {platformName} anything from your phone."
+          }
+        }
       }
     },
     "assistantNote": {
@@ -12745,16 +12805,16 @@
     }
   },
   "unsubscribe": {
-    "title": "Stop the weekly news emails?",
-    "body": "You will no longer get the Weekly News Digest. You can turn it back on from your profile at any time.",
+    "title": "Stop {kind} emails?",
+    "body": "You’ll no longer get {kind} emails. You can turn them back on from your profile at any time.",
     "stop": "Stop these emails",
     "working": "Stopping…",
     "doneTitle": "Done",
-    "doneBody": "You will not get the Weekly News Digest any more. To have it again, turn it on in your profile.",
+    "doneBody": "You won’t get {kind} emails any more. To have them again, turn them on in your profile.",
     "failedTitle": "That link no longer works",
-    "failedBody": "It may have been changed in transit. You can turn the Weekly News Digest off from your profile instead.",
+    "failedBody": "It may have been changed in transit. You can turn {kind} emails off from your profile instead.",
     "incompleteTitle": "This link is incomplete",
-    "incompleteBody": "It may have been shortened in transit. You can turn the Weekly News Digest off from your profile instead."
+    "incompleteBody": "It may have been shortened in transit. You can choose your emails on your profile instead."
   },
   "learn": {
     "menu": {
@@ -13077,6 +13137,36 @@
         "in": "In",
         "balance": "Balance"
       }
+    }
+  },
+  "communications": {
+    "WEEKLY_NEWS_DIGEST": {
+      "name": "Weekly News Digest",
+      "what": "What changed in search, SEO and AI search, and what it means for you.",
+      "often": "Every week"
+    },
+    "WEBSITE_PERFORMANCE": {
+      "name": "Weekly website performance",
+      "what": "How your websites did in Google and in AI answers.",
+      "often": "Every week"
+    },
+    "HAKKEN_TASKS": {
+      "name": "{platformName} tasks",
+      "yours": "Your {platformName} tasks",
+      "what": "The alerts and reports you’ve asked {platformName} for. You’ll still see them in {platformName}.",
+      "often": "When something happens"
+    },
+    "COLLECTING_STOPPED": {
+      "name": "Collecting stopped"
+    },
+    "SYSTEM_HEALTH": {
+      "name": "System health"
+    },
+    "AUTOMATIONS": {
+      "name": "Automations"
+    },
+    "AGENT_EMAILS": {
+      "name": "Agent emails"
     }
   }
 }

@@ -6937,11 +6937,11 @@
     },
     "outbox": {
       "title": "Posta in uscita",
-      "subtitle": "Ogni email in coda per l'invio, dalla più recente, e cosa ne è stato. L'agente Invio email invia ciò che aspetta qui.",
+      "subtitle": "Ogni email in attesa di partire, e cosa è successo a ciascuna. L’Outbox Queue Processing Agent invia ciò che è in attesa una volta all’ora, dalla più vecchia.",
       "statusFilter": "Stato",
       "allStatuses": "Ogni stato",
       "empty": "Non è ancora stato messo in coda nulla.",
-      "noMatch": "Nessuna email ha questo stato.",
+      "noMatch": "Nessuna email corrisponde.",
       "notYet": "Non ancora",
       "none": "Nessuna",
       "openRun": "Apri l'esecuzione",
@@ -6953,7 +6953,12 @@
       "wouldSkip": "Non verrebbe inviata: {reason}",
       "types": {
         "WEEKLY_NEWS_DIGEST": "Digest settimanale delle notizie",
-        "COLLECTION_NEEDS_YOU": "La raccolta richiede il tuo intervento"
+        "COLLECTION_NEEDS_YOU": "La raccolta richiede il tuo intervento",
+        "TASK_ALERT": "Avviso di un’attività",
+        "TASK_REPORT": "Report di un’attività",
+        "SYSTEM_HEALTH": "Stato del sistema",
+        "AUTOMATION_EMAIL": "Email di un’automazione",
+        "AGENT_EMAIL": "Email di un agente"
       },
       "statuses": {
         "WAITING": "In attesa",
@@ -6967,10 +6972,11 @@
         "status": "Stato",
         "tries": "Tentativi",
         "queued": "In coda dal",
-        "sent": "Inviata"
+        "sent": "Inviata",
+        "type": "Tipo di comunicazione"
       },
       "sections": {
-        "what": "Cosa ne è stato",
+        "what": "Che cos’è",
         "email": "L'email"
       },
       "fields": {
@@ -6982,8 +6988,22 @@
         "receipt": "Ricevuta",
         "receiptHint": "L'identificativo del servizio email.",
         "queuedBy": "Messa in coda da",
-        "sentBy": "Inviata da"
-      }
+        "sentBy": "Inviata da",
+        "communication": "Tipo di comunicazione",
+        "sends": "Parte",
+        "sendsHint": "L’Outbox Queue Processing Agent lavora una volta all’ora.",
+        "sendsNever": "Non finché l’agente e la sua programmazione non sono attivi",
+        "sentFrom": "Inviata da",
+        "sentFromHint": "OUTBOX_FROM_EMAIL, un solo indirizzo per ogni email qui.",
+        "sentFromNone": "Nessun indirizzo ancora"
+      },
+      "notice": "Prossimo invio alle {time} · {count, plural, =0 {niente in attesa} =1 {1 email in attesa} other {# email in attesa}} · Inviate da {address} (OUTBOX_FROM_EMAIL). Accessi e inviti non passano mai da qui: partono subito.",
+      "noticeNoRun": "Non verrà inviato nulla: l’Outbox Queue Processing Agent o la sua programmazione sono disattivati. {count, plural, =0 {Niente in attesa.} =1 {1 email in attesa.} other {# email in attesa.}}",
+      "noticeNoAddress": "Nessun indirizzo mittente impostato, quindi non si può inviare nulla. Aggiungi OUTBOX_FROM_EMAIL nell’ambiente del backend.",
+      "search": "Cerca un indirizzo email…",
+      "typeFilter": "Tipo",
+      "allTypes": "Ogni tipo",
+      "atNextRun": "Al prossimo invio, {time}"
     },
     "newsItems": {
       "title": "Notizie",
@@ -7341,6 +7361,8 @@
           "inARow": "{rule}, per {days} giorni di fila"
         },
         "at": "Alle {time}",
+        "whereBell": "Qui in {platformName}",
+        "whereBellTelegram": "Qui in {platformName} e su Telegram",
         "whereBellEmail": "Qui in {platformName} e per email",
         "whereBellEmailTelegram": "Qui in {platformName}, per email e su Telegram",
         "settle": "I dati di Google si assestano in circa 3 giorni, quindi guarderò sempre a qualche giorno fa",
@@ -8329,29 +8351,67 @@
         "it": "Italiano (IT)",
         "label": "Lingua dell'Area di Lavoro"
       },
-      "emails": {
-        "title": "Email",
-        "description": "Cosa ti inviamo, nella lingua che usi qui.",
-        "saveFailed": "Non è stato possibile salvare. Riprova.",
-        "newsDigest": {
-          "label": "Digest settimanale delle notizie",
-          "description": "Una volta a settimana: cosa è cambiato nella ricerca, nella SEO e nella ricerca con l'IA, e cosa significa per te."
-        }
-      },
       "telegram": {
         "title": "Telegram",
-        "description": "Ricevi gli avvisi di {platformName} come messaggi su Telegram, e fai domande a {platformName} anche lì.",
-        "search": "Apri Telegram e cerca <strong>{bot}</strong>.",
-        "sendCode": "Mandagli questo codice:",
-        "sendCodeNone": "Prendi un codice da mandargli:",
-        "getCode": "Prendi un codice",
-        "thatsIt": "Fatto. Riceverai un messaggio che ti conferma il collegamento.",
-        "codeLasts": "Il codice vale 10 minuti.",
+        "back": "Integrazioni",
+        "linkIt": "Collegala",
+        "linkItHint": "Ci vuole un momento, e puoi scollegarla qui quando vuoi.",
+        "openTitle": "Apri {bot} su Telegram",
+        "openHint": "Sul telefono, o su un computer con Telegram. Premi Avvia quando si apre, ed è fatta.",
+        "open": "Apri Telegram",
+        "codeTitle": "Oppure mandagli questo codice",
+        "codeHint": "Cerca {bot} su Telegram e mandagli questo codice. Vale 10 minuti.",
         "newCode": "Prendi un nuovo codice",
-        "linkedAs": "Collegato a <strong>{name}</strong>. Anche i tuoi avvisi arrivano lì.",
-        "linked": "Collegato. Anche i tuoi avvisi arrivano lì.",
+        "whatYouGet": "Cosa ricevi",
+        "get1": "I tuoi avvisi e i report settimanali come messaggi, appena sono pronti.",
+        "get2": "Chiedi qualsiasi cosa a {platformName}, con le stesse risposte di qui.",
+        "get3": "Rispondi “perché?” a un avviso e {platformName} ci guarda per te.",
+        "linkedTitle": "Collegata",
+        "linkedSince": "Collegata a {name} dal {date}.",
+        "linkedHint": "Avvisi e report arrivano anche lì, e puoi chiedere qualsiasi cosa a {platformName}.",
         "unlink": "Scollega",
+        "unlinkAsk": "Scollegare Telegram?",
+        "unlinkBody": "{platformName} smetterà di mandarti messaggi lì, e non risponderà. Puoi ricollegarla quando vuoi.",
+        "keep": "Tienila",
+        "notSetUp": "Telegram non è ancora pronto. Riprova più avanti.",
         "failed": "Non ha funzionato. Riprova tra un momento."
+      },
+      "communication": {
+        "tab": "Preferenze di comunicazione",
+        "title": "Le email che ti mandiamo",
+        "description": "Togli la spunta a quelle che preferisci non ricevere. Le email per accedere, e gli inviti, arrivano sempre.",
+        "columns": {
+          "email": "Email",
+          "what": "Che cos’è",
+          "often": "Quanto spesso",
+          "on": "Mandamela"
+        },
+        "empty": "Ancora niente da scegliere.",
+        "unsubscribeAll": "Annulla tutte le iscrizioni",
+        "subscribeAll": "Iscriviti a tutte",
+        "failed": "Non è stato salvato. Riprova tra un momento."
+      },
+      "integrations": {
+        "tab": "Integrazioni",
+        "title": "App che puoi collegare",
+        "description": "Collega {platformName} alle app che usi già, per ricevere notizie e fargli domande anche lì.",
+        "columns": {
+          "app": "App",
+          "what": "Cosa fa",
+          "status": "Stato"
+        },
+        "empty": "Ancora nessuna app da collegare.",
+        "link": "Collega",
+        "manage": "Gestisci",
+        "notLinked": "Non collegata",
+        "linkedAs": "Collegata a {name}",
+        "linked": "Collegata",
+        "apps": {
+          "telegram": {
+            "name": "Telegram",
+            "what": "Ricevi avvisi e report come messaggi, e chiedi qualsiasi cosa a {platformName} dal telefono."
+          }
+        }
       }
     },
     "assistantNote": {
@@ -12745,16 +12805,16 @@
     }
   },
   "unsubscribe": {
-    "title": "Vuoi interrompere le email settimanali?",
-    "body": "Non riceverai più il Digest settimanale delle notizie. Puoi riattivarlo dal tuo profilo in qualsiasi momento.",
+    "title": "Vuoi interrompere le email «{kind}»?",
+    "body": "Non riceverai più le email «{kind}». Puoi riattivarle dal tuo profilo in qualsiasi momento.",
     "stop": "Interrompi queste email",
     "working": "Interruzione in corso…",
     "doneTitle": "Fatto",
-    "doneBody": "Non riceverai più il Digest settimanale delle notizie. Per riceverlo di nuovo, attivalo nel tuo profilo.",
+    "doneBody": "Non riceverai più le email «{kind}». Per riceverle di nuovo, attivale nel tuo profilo.",
     "failedTitle": "Questo link non funziona più",
-    "failedBody": "Potrebbe essere stato modificato durante l'invio. Puoi disattivare il Digest settimanale delle notizie dal tuo profilo.",
+    "failedBody": "Potrebbe essere stato modificato durante l'invio. Puoi disattivare le email «{kind}» dal tuo profilo.",
     "incompleteTitle": "Questo link è incompleto",
-    "incompleteBody": "Potrebbe essere stato accorciato durante l'invio. Puoi disattivare il Digest settimanale delle notizie dal tuo profilo."
+    "incompleteBody": "Potrebbe essere stato accorciato durante l'invio. Puoi scegliere le tue email dal tuo profilo."
   },
   "learn": {
     "menu": {
@@ -13077,6 +13137,36 @@
         "in": "Entrata",
         "balance": "Saldo"
       }
+    }
+  },
+  "communications": {
+    "WEEKLY_NEWS_DIGEST": {
+      "name": "Notizie della settimana",
+      "what": "Cosa è cambiato nella ricerca, nella SEO e nella ricerca con l’IA, e cosa significa per te.",
+      "often": "Ogni settimana"
+    },
+    "WEBSITE_PERFORMANCE": {
+      "name": "Andamento settimanale dei siti",
+      "what": "Come sono andati i tuoi siti su Google e nelle risposte dell’IA.",
+      "often": "Ogni settimana"
+    },
+    "HAKKEN_TASKS": {
+      "name": "Attività di {platformName}",
+      "yours": "Le tue attività di {platformName}",
+      "what": "Gli avvisi e i report che hai chiesto a {platformName}. Li vedrai comunque in {platformName}.",
+      "often": "Quando succede qualcosa"
+    },
+    "COLLECTING_STOPPED": {
+      "name": "Raccolta interrotta"
+    },
+    "SYSTEM_HEALTH": {
+      "name": "Stato del sistema"
+    },
+    "AUTOMATIONS": {
+      "name": "Automazioni"
+    },
+    "AGENT_EMAILS": {
+      "name": "Email degli agenti"
     }
   }
 }

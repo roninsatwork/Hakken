@@ -56,16 +56,22 @@ See [Route Protection And Authentication](./route-protection-and-authentication.
 
 | Variable | What it is for |
 | --- | --- |
-| `RESEND_API_KEY` | The Resend key every outbound email goes through: magic-link sign-in, invites, platform alerts, workflow email steps, and the AI send-email tool. |
-| `RESEND_FROM_EMAIL` | Preferred sender address for those emails. A bare address or a `Name <address>` pair. |
+| `RESEND_API_KEY` | The Resend key every outbound email goes through: magic-link sign-in and invites, sent at once, and everything the Outbox sends. |
+| `OUTBOX_FROM_EMAIL` | The one address every Outbox email is sent from — the weekly digest, task alerts and reports, collecting stopped, system health alerts, automation emails and the agent send-email tool ([outbox plan](../plans/active/outbox-and-preferences-plan.md)). A bare address goes out under the platform's sender name. Not set: the general sender below. |
+| `RESEND_FROM_EMAIL` | Preferred sender address for the emails sent at once (sign-in, invites), and the Outbox's when `OUTBOX_FROM_EMAIL` is not set. A bare address or a `Name <address>` pair. |
 | `AUTH_EMAIL` | Fallback sender address, checked after `RESEND_FROM_EMAIL`. Kept because deployments already set it; requiring a second variable for the same fact would be pointless configuration. |
 | `PLATFORM_ALERT_EMAILS` | Comma-separated recipients for platform health alerts. |
 
 Notes:
 
-- Without `RESEND_API_KEY`, sends are **simulated**: the code logs a warning
-  and returns, so magic-link sign-in and platform alerts silently go nowhere.
-  Google OAuth sign-in still works.
+- Without `RESEND_API_KEY`, sign-in and invites are **simulated**: the code
+  logs a warning and returns, so they silently go nowhere. Google OAuth
+  sign-in still works. The Outbox keeps its emails waiting, and its agent's
+  run says the key is missing.
+- Everything but sign-in and invites waits in the Outbox (Admin → Content →
+  Outbox) for the Outbox Queue Processing Agent, which sends once an hour,
+  oldest first; super admins are told in their bell when anything has
+  waited more than two hours.
 - The sender can also be set in Settings → email sender address. An
   unconfigured sender resolves to a deliberately unroutable `.invalid` address
   so a half-configured deployment fails visibly instead of sending as somebody

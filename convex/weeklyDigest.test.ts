@@ -20,25 +20,21 @@ vi.mock("./aiProviderRegistry", async (importOriginal) => ({
  * News with Google updates first, with an opening from its own instructions
  * and model, translated before anything is sent; in Test it queues only super
  * admins, every run; in Live every user who has the digest on, once a week;
- * it sends nothing itself and starts the Email Sender; and a week with no
- * News writes nothing.
+ * it sends nothing itself — the Outbox Queue Processing Agent sends it on its
+ * hourly run (outbox-and-preferences-plan.md, A2) — and a week with no News
+ * writes nothing.
  */
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 
 const NOW = Date.UTC(2026, 9, 1, 9);
 
-async function world(t: ReturnType<typeof harness>, mode: "TEST" | "LIVE", options: { withSender?: boolean } = {}) {
+async function world(t: ReturnType<typeof harness>, mode: "TEST" | "LIVE") {
   return await t.run(async (ctx) => {
     const now = Date.now();
     const digest = await ctx.db.insert("agents", {
       name: "Weekly Digest", modelId: "model-test", thinkingMode: false, isActive: true, systemKey: "WEEKLY_DIGEST",
       plannerMode: mode, systemPrompt: "Write the week's opening plainly.", createdAt: now, updatedAt: now,
     });
-    if (options.withSender !== false) {
-      await ctx.db.insert("agents", {
-        name: "Email Sender", modelId: "none", thinkingMode: false, isActive: true, systemKey: "EMAIL_SENDER", createdAt: now, updatedAt: now,
-      });
-    }
     const admin = await ctx.db.insert("users", { name: "Anthony", email: "anthony@hakken.example", role: "SUPER_ADMIN", lastLoginAt: now });
     const anna = await ctx.db.insert("users", { name: "Anna", email: "anna@korda.example", role: "USER" });
     const marco = await ctx.db.insert("users", { name: "Marco", email: "marco@korda.example", role: "USER" });
@@ -90,14 +86,14 @@ describe("the Weekly Digest", () => {
     expect(isoWeekKey(Date.UTC(2025, 11, 29))).toBe("2026-W01");
   });
 
-  test("in Test it writes the week's issue, translated, and queues only super admins, then starts the Email Sender", async () => {
+  test("in Test it writes the week's issue, translated, and queues only super admins, for the Outbox's next hourly run", async () => {
     const t = harness();
     const { digest, admin, items } = await world(t, "TEST");
 
     const finished = await run(t, digest);
 
     expect(finished).toMatchObject({ status: "SUCCESS" });
-    expect(finished?.finalOutput).toBe("Wrote the 2026-W40 issue in Test, for super admins only, with all 3 stories of the week; queued 1 email. Started the Email Sender to send them.");
+    expect(finished?.finalOutput).toBe("Wrote the 2026-W40 issue in Test, for super admins only, with all 3 stories of the week; queued 1 email. They go out on the Outbox's next hourly run.");
     const [issue] = await issues(t);
     expect(issue).toMatchObject({ weekKey: "2026-W40", mode: "TEST", introEn: "A quiet week, with one Google update." });
     // Google updates first, then the newest; nothing from before the week.
@@ -108,7 +104,8 @@ describe("the Weekly Digest", () => {
     const italian = await t.run(async (ctx) => await readerFields(ctx, "weeklyDigestIssues", issue._id, { intro: issue.introEn }, "it"));
     expect(italian.intro).toBe("Una settimana tranquilla, con un aggiornamento di Google.");
     expect((await outbox(t)).map((row) => [row.userId, row.status])).toEqual([[admin, "WAITING"]]);
-    expect((await scheduled(t)).some((job) => job.name.includes("runNewsRoleNow") && (job.args[0] as { role: string }).role === "EMAIL_SENDER")).toBe(true);
+    // Nothing starts sending now: the Outbox Queue Processing Agent's hourly run sends it.
+    expect((await scheduled(t)).some((job) => job.name.includes("processOutboxNow"))).toBe(false);
     // The opening's cost is on the run, so its spend limit can stop it.
     expect(finished?.costUsd).toBeTypeOf("number");
   });
@@ -142,21 +139,24 @@ describe("the Weekly Digest", () => {
     expect("email" in rendered && rendered.email.text).toContain("https://ahrefs.test/Link-building-for-SEO");
   });
 
-  test("in Live it queues every user who has it on, in their language, once a week", async () => {
+  test("in Live it queues every user with an address, in their language, once a week; one who turned it off shows as skipped when sent", async () => {
     const t = harness();
-    const { digest, admin, anna, marco } = await world(t, "LIVE");
+    const { digest, admin, anna, marco, quiet } = await world(t, "LIVE");
 
-    expect((await run(t, digest))?.finalOutput).toMatch(/^Wrote the 2026-W40 issue with all 3 stories of the week; queued 3 emails\./);
+    expect((await run(t, digest))?.finalOutput).toMatch(/^Wrote the 2026-W40 issue with all 3 stories of the week; queued 4 emails\./);
     const rows = await outbox(t);
     expect(rows.map((row) => [row.userId, row.language, row.idempotencyKey]).sort()).toEqual([
       [admin, "en", `WEEKLY_NEWS_DIGEST:2026-W40:${admin}`],
       [anna, "en", `WEEKLY_NEWS_DIGEST:2026-W40:${anna}`],
       [marco, "it", `WEEKLY_NEWS_DIGEST:2026-W40:${marco}`],
+      [quiet, "en", `WEEKLY_NEWS_DIGEST:2026-W40:${quiet}`],
     ].sort());
+    const quietRow = rows.find((row) => row.userId === quiet)!;
+    expect(await t.query(internal.outboxTemplates.renderOutboxMessage, { messageId: quietRow._id })).toEqual({ skip: "Turned off on their profile." });
 
     // Again the same week: nothing written, nothing queued.
     expect((await run(t, digest))?.finalOutput).toBe("The 2026-W40 issue was already written and queued, so nothing was sent twice.");
-    expect(await outbox(t)).toHaveLength(3);
+    expect(await outbox(t)).toHaveLength(4);
     expect(await issues(t)).toHaveLength(1);
   });
 
@@ -170,14 +170,6 @@ describe("the Weekly Digest", () => {
     expect((await run(t, digest))?.finalOutput).toBe("Nothing was added to News this week, so no issue was written.");
     expect(generate).not.toHaveBeenCalled();
     expect(await issues(t)).toHaveLength(0);
-  });
-
-  test("with no Email Sender, it says how to make one, and the emails wait", async () => {
-    const t = harness();
-    const { digest } = await world(t, "TEST", { withSender: false });
-
-    expect((await run(t, digest))?.finalOutput).toMatch(/There is no Email Sender agent to send them: create one from its template and give it the role\.$/);
-    expect(await outbox(t)).toHaveLength(1);
   });
 
   test("the agent picks the week's most useful stories, most useful first, and the issue holds those", async () => {

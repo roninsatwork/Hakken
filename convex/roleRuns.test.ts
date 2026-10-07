@@ -19,7 +19,7 @@ import { appendRunStep } from "./agentRunStepWriter";
  */
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 
-const NEWS_ROLES = ["NEWS_COLLECTOR", "WEEKLY_DIGEST", "EMAIL_SENDER"] as const;
+const NEWS_ROLES = ["NEWS_COLLECTOR", "WEEKLY_DIGEST"] as const;
 
 async function setup(t: ReturnType<typeof harness>, systemKey: string, extra: { maxCostUsd?: number } = {}) {
   const userId = await t.run(async (ctx) => await ctx.db.insert("users", {
@@ -99,11 +99,11 @@ describe("running a News agent", () => {
 
   test("a second run while one is going stops at once, saying so", async () => {
     const t = harness();
-    const { agentId } = await setup(t, "EMAIL_SENDER");
+    const { agentId } = await setup(t, "OUTBOX_QUEUE_PROCESSOR");
     await startRun(t, agentId, Date.now() - 60_000, "RUNNING");
     const later = await startRun(t, agentId);
 
-    await t.action(internal.newsAgentRunActions.runNewsRoleNow, { role: "EMAIL_SENDER", runId: later });
+    await t.action(internal.outboxQueueRun.processOutboxNow, { runId: later });
 
     const run = await t.run(async (ctx) => await ctx.db.get(later));
     expect(run).toMatchObject({ status: "SUCCESS" });
@@ -213,7 +213,7 @@ describe("a run that died", () => {
 });
 
 describe("the News agents' templates", () => {
-  test.each(["news-collector-agent", "weekly-digest-agent", "email-sender-agent"])("%s makes a switched-off draft with its instructions", async (templateId) => {
+  test.each(["news-collector-agent", "weekly-digest-agent"])("%s makes a switched-off draft with its instructions", async (templateId) => {
     const t = harness();
     const { admin } = await setup(t, "UNRELATED");
     await t.run(async (ctx) => await ctx.db.insert("aiModels", {
