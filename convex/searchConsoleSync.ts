@@ -16,7 +16,7 @@ import {
 } from "./searchConsoleSchema";
 import { daysNewestFirst, newestWholeDay, shiftDay } from "./searchConsoleDays";
 import { isTrackedHold } from "./utils/websitePairing";
-import { fromGoogle, pack, rowsOf, DAYS_KEPT, type Packed } from "./utils/searchConsolePacks";
+import { fromGoogle, pack, rowsOf, type Packed } from "./utils/searchConsolePacks";
 import { slotParts } from "./searchConsoleRollups";
 import { deletePageRefs, encodePages, encodePagesFromAction } from "./searchConsolePageRefs";
 import { keptLines, keptSearchesOf } from "./searchConsoleKeep";
@@ -114,13 +114,20 @@ const packedValidator = {
 // ---------------------------------------------------------------------------
 
 /**
+ * A first run's days: 90, so a website's day totals and charts start with
+ * them (§14.3, item 7). Its lines are kept 60 days (`DAYS_KEPT`): the older
+ * ones go when the run is settled (keep-less-history-plan.md, part 3), and
+ * the 90 days' list is asked of Google.
+ */
+const FIRST_RUN_DAYS = 90;
+
+/**
  * The days a run fetches: from the newest held, and the last four again, up
- * to Google's newest whole day — or, with none held yet, the last 90 days
- * (§14.3, item 7). Never further back than the days kept as days.
+ * to Google's newest whole day — or, with none held yet, the last 90 days.
  */
 export function recentWindow(newestDay: string | undefined, now: number, oldestDay?: string): { from: string; top: string } {
   const top = newestWholeDay(now);
-  const oldest = shiftDay(top, -(DAYS_KEPT - 1));
+  const oldest = shiftDay(top, -(FIRST_RUN_DAYS - 1));
   // Nothing held, or a first 90 days that stopped part-way: the 90 days from their start.
   if (!newestDay || (oldestDay !== undefined && oldestDay > oldest)) return { from: oldest, top };
   const newest = newestDay < top ? newestDay : top;

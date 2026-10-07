@@ -52,15 +52,13 @@ describe("what counts towards a period", () => {
     expect(keptIn(records, before, newest).map((part) => part.keys[0])).toEqual(["WEEK 2026-06-22", "WEEK 2026-06-29"]);
   });
 
-  test("image search's finished weeks count as weeks: its days are kept only for the newest week", () => {
-    // Newest Saturday 2026-09-26: image search's days from Monday 2026-09-21; the week before is a week.
+  test("every kind of result reads its days, image search's too: a week rolled up before 2026-10-07 is not counted", () => {
+    // Newest Saturday 2026-09-26: the days kept run back 60, to 29 July (keep-less-history-plan.md, part 3).
     const records = [kept("WEEK", "2026-09-14"), kept("DAY", "2026-09-21"), kept("DAY", NEWEST)];
-    const week = periodSpan("7", NEWEST, "2026-06-29");
-    expect(keptIn(records, week, NEWEST, "image").map((part) => part.keys[0])).toEqual(["DAY 2026-09-21", `DAY ${NEWEST}`]);
     const month = periodSpan("30", NEWEST, "2026-06-29");
-    expect(keptIn(records, month, NEWEST, "image").map((part) => part.keys[0])).toEqual(["WEEK 2026-09-14", "DAY 2026-09-21", `DAY ${NEWEST}`]);
-    // The same records read as web search: its days run back 90, so a week there is not counted.
-    expect(keptIn(records, month, NEWEST, "web").map((part) => part.keys[0])).toEqual(["DAY 2026-09-21", `DAY ${NEWEST}`]);
+    for (const kind of ["image", "web"]) {
+      expect(keptIn(records, month, NEWEST, kind).map((part) => part.keys[0])).toEqual(["DAY 2026-09-21", `DAY ${NEWEST}`]);
+    }
   });
 
   test("a week or month at the far edge counts when most of its days are inside", () => {
@@ -77,44 +75,40 @@ describe("what counts towards a period", () => {
 describe("the days, weeks and months the charts read", () => {
   const pairs = (rows: [string, string, number, number, number][]) =>
     pack(rows.map(([key, page, clicks, impressions, position]) => ({ key, page, clicks, impressions, positionSum: position * impressions })), true)[0];
-  // Held from Wednesday 10 June; days kept as days from Monday 29 June, the 90-day line.
+  // Held from Wednesday 10 June; days kept from Wednesday 29 July, the 60-day line.
   const OLDEST = "2026-06-10";
   const kept: Kept[] = [
-    { grain: "WEEK", start: "2026-06-08", packed: pairs([["early", "/", 1, 10, 15]]) },
-    { grain: "WEEK", start: "2026-06-22", packed: pairs([["ronins", "/", 4, 10, 1]]) },
-    { grain: "DAY", start: "2026-06-29", packed: pairs([["ronins", "/", 2, 10, 2]]) },
-    { grain: "DAY", start: "2026-07-01", packed: pairs([["ai agency", "/ai/", 3, 100, 8]]) },
+    { grain: "DAY", start: "2026-07-29", packed: pairs([["ronins", "/", 2, 10, 2]]) },
+    { grain: "DAY", start: "2026-08-03", packed: pairs([["ai agency", "/ai/", 3, 100, 8]]) },
+    { grain: "DAY", start: "2026-08-04", packed: pairs([["ronins", "/", 4, 10, 1]]) },
     { grain: "DAY", start: NEWEST, packed: pairs([["web design", "/", 0, 50, 40]]) },
   ];
   const built = chartFigures(kept, NEWEST, OLDEST, ["Ronins"], 16);
   const of = (grain: Kept["grain"], start: string) => built.find((row) => row.grain === grain && row.week === start);
 
-  test("days only from the 90-day line, weeks and months as far as the charts reach", () => {
+  test("each day kept, and each week and month the 90 days read cover: a first collection's are all held", () => {
     const days = built.filter((row) => row.grain === "DAY");
-    expect([days[0].week, days.at(-1)?.week, days.length]).toEqual(["2026-06-29", NEWEST, 90]);
+    expect([days[0].week, days.at(-1)?.week, days.length]).toEqual(["2026-07-29", NEWEST, 60]);
     expect(built.filter((row) => row.grain === "WEEK").map((row) => row.week)).toEqual([
-      "2026-06-08", "2026-06-15", "2026-06-22", "2026-06-29", "2026-07-06", "2026-07-13", "2026-07-20", "2026-07-27",
+      "2026-06-29", "2026-07-06", "2026-07-13", "2026-07-20", "2026-07-27",
       "2026-08-03", "2026-08-10", "2026-08-17", "2026-08-24", "2026-08-31", "2026-09-07", "2026-09-14", "2026-09-21",
     ]);
-    expect(built.filter((row) => row.grain === "MONTH").map((row) => row.week)).toEqual(["2026-06-01", "2026-07-01", "2026-08-01", "2026-09-01"]);
+    expect(built.filter((row) => row.grain === "MONTH").map((row) => row.week)).toEqual(["2026-07-01", "2026-08-01", "2026-09-01"]);
   });
 
-  test("each one's keywords by band and brand clicks, from the records counting towards it", () => {
-    expect(of("DAY", "2026-06-29")).toMatchObject({ top3: 1, top10: 0, brandClicks: 2, otherClicks: 0, days: 1 });
-    expect(of("DAY", "2026-06-30")).toMatchObject({ top3: 0, top10: 0, top20: 0, rest: 0 });
-    expect(of("WEEK", "2026-06-29")).toMatchObject({ top3: 1, top10: 1, brandClicks: 2, otherClicks: 3 });
-    expect(of("WEEK", "2026-06-22")).toMatchObject({ top3: 1, brandClicks: 4 });
-    // June: two rolled-up weeks and its last day kept as a day; "ronins" in both counts once, at its average.
-    expect(of("MONTH", "2026-06-01")).toMatchObject({ top3: 1, top20: 1, brandClicks: 6, otherClicks: 1 });
+  test("each one's keywords by band and brand clicks, from the days counting towards it", () => {
+    expect(of("DAY", "2026-07-29")).toMatchObject({ top3: 1, top10: 0, brandClicks: 2, otherClicks: 0, days: 1 });
+    expect(of("DAY", "2026-07-30")).toMatchObject({ top3: 0, top10: 0, top20: 0, rest: 0 });
+    // "ronins" on two days of the week counts once, at its average.
+    expect(of("WEEK", "2026-08-03")).toMatchObject({ top3: 1, top10: 1, brandClicks: 4, otherClicks: 3 });
+    expect(of("MONTH", "2026-08-01")).toMatchObject({ top3: 1, top10: 1, brandClicks: 4, otherClicks: 3 });
     expect(of("MONTH", "2026-09-01")).toMatchObject({ rest: 1, otherClicks: 0 });
   });
 
-  test("a week or month at an edge of the history holds only some of its days", () => {
-    expect(of("WEEK", "2026-06-08")?.days).toBe(5);
-    expect(of("WEEK", "2026-06-15")?.days).toBe(7);
+  test("a week or month at the near edge holds only some of its days", () => {
+    expect(of("WEEK", "2026-08-03")?.days).toBe(7);
     expect(of("WEEK", "2026-09-21")?.days).toBe(6);
-    expect(of("MONTH", "2026-06-01")?.days).toBe(21);
-    expect(of("MONTH", "2026-07-01")?.days).toBe(31);
+    expect(of("MONTH", "2026-08-01")?.days).toBe(31);
     expect(of("MONTH", "2026-09-01")?.days).toBe(26);
   });
 

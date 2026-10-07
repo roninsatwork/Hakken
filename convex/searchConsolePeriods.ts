@@ -22,6 +22,7 @@ import { askLive, countryFilters } from "./searchConsoleReads";
 import { consoleLimitsOf } from "./searchConsoleLimits";
 import { FAN_OUT_LIMITS } from "./fanOutLimits";
 import { buildSeenDays } from "./searchConsoleSeenDays";
+import { longListRows, rowsFor } from "./searchConsoleLongLists";
 import {
   addUp,
   bySide,
@@ -124,18 +125,21 @@ export function keptIn(kept: readonly Kept[], span: PeriodSpan, newest: string, 
     .map((record) => record.packed);
 }
 
-/** How far back the twelve-month period can reach: its first day, at the start of its month. */
-function widestFrom(newest: string): string {
-  return monthStart(shiftDay(newest, 1 - periodDays("365")));
-}
-
 /** Days of kept day records read per ask, so no one ask reads too much. */
 const DAYS_PER_READ = 15;
 
-/** Weeks of kept week records read per ask. */
-const WEEKS_PER_READ = 4;
+/**
+ * Days of lines read for a build: the 60 kept, and a first collection's 90
+ * until its settle clears the rest — from which its charts take their weeks.
+ */
+const LINES_READ_DAYS = 90;
 
-/** Every kept record of one list a website's periods could need — all countries', or one country's — oldest first. */
+/**
+ * Every kept day of one list — all countries', or one country's — oldest
+ * first: the 60 days kept (keep-less-history-plan.md, part 3), or a first
+ * collection's 90 before they are cleared. The 90 days and twelve months
+ * are asked of Google (`searchConsoleLongLists.ts`).
+ */
 export async function readKept(
   ctx: ActionCtx,
   companyWebsiteId: Id<"companyWebsites">,
@@ -144,7 +148,7 @@ export async function readKept(
   list: SearchConsoleList,
   newest: string,
 ): Promise<Kept[]> {
-  const from = widestFrom(newest);
+  const from = shiftDay(newest, 1 - LINES_READ_DAYS);
   const out: Kept[] = [];
   const scope = country === undefined ? {} : { country };
   // Page by page (`keptBetween`): a busy website's span is more than one read may hold.
@@ -172,13 +176,6 @@ export async function readKept(
       },
     }));
   };
-  // A month at a time, and four weeks at a time: a week of a busy website's pairs is about a megabyte.
-  for (let month = from; month <= newest; month = monthStart(shiftDay(month, 31))) {
-    await read("MONTH", month, shiftDay(monthStart(shiftDay(month, 31)), -1));
-  }
-  for (let week = weekStart(from); week <= newest; week = shiftDay(week, WEEKS_PER_READ * 7)) {
-    await read("WEEK", week, shiftDay(week, WEEKS_PER_READ * 7 - 1));
-  }
   const span = daysBetween(from, newest);
   for (let offset = 0; offset < span; offset += DAYS_PER_READ) {
     const start = shiftDay(from, offset);
@@ -214,18 +211,23 @@ const lastDayOf = (grain: Grain, start: string): string => stepEnd(start, STEP_O
 const chartReach = (newest: string, chartWeeks: number) => weekStart(shiftDay(newest, -7 * (chartWeeks - 1)));
 
 /**
- * The days, weeks and months the charts reach, inside the days held: days
- * only from the 90-day line, since older days are rolled into weeks; the
- * weeks and months at either edge may hold only some of their days.
+ * The days, weeks and months the charts reach that the lines read cover:
+ * each day of the 60 kept, and each week and month whose days held fall
+ * inside the 90 read — whole on a first collection, which brings 90 days
+ * and clears none until it is built. A week or month starting before the 60
+ * days is written only by a first build: one was worked out while its days
+ * were kept, and stays as it was (`writeWeeks`; keep-less-history-plan.md,
+ * part 3). The week or month at either edge may hold only some of its days.
  */
-function chartPeriods(newest: string, oldest: string, chartWeeks: number, searchType: string): Array<{ grain: Grain; start: string }> {
+function chartPeriods(newest: string, oldest: string, chartWeeks: number, dayLine: string): Array<{ grain: Grain; start: string }> {
   const reach = chartReach(newest, chartWeeks);
   const from = reach > oldest ? reach : oldest;
-  const dayLine = firstDayKeptFor(searchType, newest);
+  const readFrom = shiftDay(newest, 1 - LINES_READ_DAYS);
+  const held = (start: string) => (start > oldest ? start : oldest) >= readFrom;
   const periods: Array<{ grain: Grain; start: string }> = [];
   for (let day = from > dayLine ? from : dayLine; day <= newest; day = shiftDay(day, 1)) periods.push({ grain: "DAY", start: day });
-  for (let week = weekStart(from); week <= newest; week = shiftDay(week, 7)) periods.push({ grain: "WEEK", start: week });
-  for (let month = monthStart(from); month <= newest; month = monthStart(shiftDay(month, 31))) periods.push({ grain: "MONTH", start: month });
+  for (let week = weekStart(from); week <= newest; week = shiftDay(week, 7)) if (held(week)) periods.push({ grain: "WEEK", start: week });
+  for (let month = monthStart(from); month <= newest; month = monthStart(shiftDay(month, 31))) if (held(month)) periods.push({ grain: "MONTH", start: month });
   return periods;
 }
 
@@ -237,7 +239,7 @@ function chartPeriods(newest: string, oldest: string, chartWeeks: number, search
  * fall in (§14.3, item 4).
  */
 export function chartFigures(kept: readonly Kept[], newest: string, oldest: string, brandWords: readonly string[], chartWeeks: number, searchType = "web"): ChartPeriod[] {
-  return chartPeriods(newest, oldest, chartWeeks, searchType).map(({ grain, start }) => {
+  return chartPeriods(newest, oldest, chartWeeks, firstDayKeptFor(searchType, newest)).map(({ grain, start }) => {
     const end = lastDayOf(grain, start);
     const held = { from: start > oldest ? start : oldest, to: end < newest ? end : newest };
     const figures: ChartPeriod = { grain, week: start, days: daysBetween(held.from, held.to), top3: 0, top10: 0, top20: 0, rest: 0, brandClicks: 0, otherClicks: 0 };
@@ -272,20 +274,38 @@ const chartPeriodValidator = v.object({
   otherClicks: v.number(),
 });
 
-/** A kind of result's days, weeks and months, all at once, for all countries or one: the ones held before go. */
+/**
+ * A kind of result's days, weeks and months, for all countries or one: the
+ * ones inside the days kept replace theirs; one starting before them is
+ * written by a first build alone — its 90 days all held — and otherwise the
+ * finished week or month worked out before stays as it was
+ * (keep-less-history-plan.md, part 3); a day before the days kept, and a week
+ * or month before the charts' reach, go.
+ */
 export const writeWeeks = internalMutation({
   args: {
     companyWebsiteId: v.id("companyWebsites"),
     country: v.optional(v.string()),
     searchType: searchTypeValidator,
     weeks: v.array(chartPeriodValidator),
+    /** The first day kept as a day, and the first day the charts reach. */
+    dayLine: v.string(),
+    reach: v.string(),
     builtAt: v.number(),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     if (!(await stillKeptReady(ctx, args.companyWebsiteId, args.country))) return null;
-    for (const week of await weeksOf(ctx, args.companyWebsiteId, args.country, args.searchType)) await ctx.db.delete(week._id);
-    for (const week of args.weeks) {
+    const fresh = new Set(args.weeks.map((week) => `${week.grain}|${week.week}`));
+    const firstKept: Record<Grain, string> = { DAY: args.dayLine, WEEK: weekStart(args.reach), MONTH: monthStart(args.reach) };
+    const rows = await weeksOf(ctx, args.companyWebsiteId, args.country, args.searchType);
+    const first = rows.length === 0;
+    for (const held of rows) {
+      // Rows built before 2026-10-04 carry no grain: they are weeks.
+      const grain = held.grain ?? "WEEK";
+      if (held.week < firstKept[grain] || (held.week >= args.dayLine && fresh.has(`${grain}|${held.week}`))) await ctx.db.delete(held._id);
+    }
+    for (const week of args.weeks.filter((one) => one.week >= args.dayLine || (first && one.grain !== "DAY"))) {
       await ctx.db.insert("searchConsoleWeeks", {
         companyWebsiteId: args.companyWebsiteId,
         ...(args.country === undefined ? {} : { country: args.country }),
@@ -669,6 +689,16 @@ export async function buildSitePeriods(
   const types = options.searchType === undefined ? held : held.filter((type) => type === options.searchType);
   const target = await ctx.runQuery(internal.searchConsoleFacts.factsTarget, { companyWebsiteId });
   const { google, chartWeeks, richResultKinds } = await ctx.runQuery(internal.searchConsolePeriods.buildTarget, { companyWebsiteId });
+  // The 90 days, the 90 days before and twelve months asked of Google, a week at a time: the days are
+  // kept 60 days (`searchConsoleLongLists.ts`; keep-less-history-plan.md, part 3). Asked of nobody when
+  // the website is not connected, or Google will not answer: the long periods built before then stay.
+  const isLong = (slot: Slot) => LONG_PERIODS.includes(slot.period) && !asNinety(slot);
+  const longSpans = slots.filter((slot) => isLong(slot) && slot.span !== null).map((slot) => slot.span!);
+  const tracked = google && longSpans.length > 0 ? await ctx.runQuery(internal.searchConsoleKeep.trackedSearches, { holdId: companyWebsiteId }) : [];
+  const askedOf = async (searchType: SearchType, list: SearchConsoleList) =>
+    google && longSpans.length > 0 ? await longListRows(ctx, google, { searchType, list, country }, longSpans, tracked) : null;
+  const keysAsked = (asked: Map<string, Row[]> | null, side: "key" | "page") =>
+    [...(asked?.values() ?? [])].flatMap((rows) => rows.map((row) => (side === "key" ? row.key : row.page ?? "")));
   // Sites' facts for each keyword and page, looked up once for every kind of result.
   const known: Record<"query" | "page", Facts> = { query: new Map(), page: new Map() };
   const factsOf = async (kind: "query" | "page", keys: Iterable<string>): Promise<Facts | undefined> => {
@@ -682,13 +712,16 @@ export async function buildSitePeriods(
     // Each search added up from the pairs, and each page's searches counted from them.
     const pageCounts = new Map<string, Counts>();
     const pairsKept = lists.includes("pair") ? await readKept(ctx, companyWebsiteId, country, searchType, "pair", newest) : null;
-    const queryFacts = pairsKept ? await factsOf("query", keysIn(pairsKept, "keys")) : undefined;
-    const pairPageFacts = pairsKept ? await factsOf("page", keysIn(pairsKept, "pages")) : undefined;
+    const pairsAsked = pairsKept ? await askedOf(searchType, "pair") : null;
+    const queryFacts = pairsKept ? await factsOf("query", [...keysIn(pairsKept, "keys"), ...keysAsked(pairsAsked, "key")]) : undefined;
+    const pairPageFacts = pairsKept ? await factsOf("page", [...keysIn(pairsKept, "pages"), ...keysAsked(pairsAsked, "page")]) : undefined;
     if (!onlyLong) await ctx.runMutation(internal.searchConsolePeriods.writeWeeks, {
       companyWebsiteId,
       ...scope,
       searchType,
       weeks: pairsKept ? chartFigures(pairsKept, newest, oldest, target?.brandWords ?? [], chartWeeks, searchType) : [],
+      dayLine: firstDayKeptFor(searchType, newest),
+      reach: chartReach(newest, chartWeeks),
       builtAt,
     });
     // New and lost's counts by day, from the whole first- and last-seen register (2026-10-04).
@@ -703,7 +736,9 @@ export async function buildSitePeriods(
         for (const list of ["pair", "pairByPage", "competing", "query"] as const) await writeParts(searchType, list, slot, []);
         continue;
       }
-      const pairs = addUp(keptIn(pairsKept, slot.span, newest, searchType));
+      const pairs = isLong(slot) ? rowsFor(pairsAsked, slot.span) : addUp(keptIn(pairsKept, slot.span, newest, searchType));
+      // Google not asked, or not answering: the long period built before stays.
+      if (pairs === undefined) continue;
       const queries = bySide(pairs, "query");
       const pages = bySide(pairs, "page");
       const queryCounts: Counts = new Map([...queries.values()].map((summed) => [summed.key, { count: summed.count, top: summed.top }]));
@@ -745,9 +780,12 @@ export async function buildSitePeriods(
       const kept = lists.includes(list) && !(country !== undefined && list === "country")
         ? await readKept(ctx, companyWebsiteId, country, searchType, list, newest)
         : null;
-      const pageFacts = list === "page" && kept ? await factsOf("page", keysIn(kept, "keys")) : undefined;
+      const asked = kept ? await askedOf(searchType, list) : null;
+      const pageFacts = list === "page" && kept ? await factsOf("page", [...keysIn(kept, "keys"), ...keysAsked(asked, "key")]) : undefined;
       for (const slot of slots) {
-        const rows = kept && slot.span ? addUp(keptIn(kept, slot.span, newest, searchType)) : null;
+        const rows = kept && slot.span ? (isLong(slot) ? rowsFor(asked, slot.span) : addUp(keptIn(kept, slot.span, newest, searchType))) : null;
+        // Google not asked, or not answering: the long period built before stays.
+        if (rows === undefined) continue;
         // Rich results' pages for each kind, counted once here on the periods the screens list.
         const appearancePages = list === "appearance" && rows && slot.span && slot.which === "NOW"
           ? await pagesPerAppearance(ctx, google, searchType, slot.span, country, rows, richResultKinds)

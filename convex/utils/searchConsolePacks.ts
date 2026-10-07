@@ -101,6 +101,25 @@ export function packByKey(rows: readonly Row[], side: "query" | "page"): Array<P
 const SEPARATOR = "\u0001";
 const rowKey = (row: Row) => (row.page === undefined ? row.key : `${row.key}${SEPARATOR}${row.page}`);
 
+/** Rows of several lists added up by their key (a pair by its search and page together): Google's answers for pieces of a period. */
+export function addUpRows(lists: Iterable<readonly Row[]>): Row[] {
+  const sums = new Map<string, Row>();
+  for (const list of lists) {
+    for (const row of list) {
+      const key = rowKey(row);
+      const held = sums.get(key);
+      if (held) {
+        held.clicks += row.clicks;
+        held.impressions += row.impressions;
+        held.positionSum += row.positionSum;
+      } else {
+        sums.set(key, { ...row });
+      }
+    }
+  }
+  return [...sums.values()];
+}
+
 /** Every row of every list added up by its key (a pair by its search and page together). */
 export function addUp(lists: Iterable<Packed>): Row[] {
   const sums = new Map<string, Row>();
@@ -188,11 +207,18 @@ export function stepEnd(start: string, step: ChartStep): string {
 }
 
 /**
- * Days kept as days (plan §14.3: 90); weeks kept as weeks to six months, then
- * months (store less round two, agreed 2026-10-05: "months 4, 5 and 6 weekly,
- * months after 6 months" — was a year of weeks).
+ * Days kept, every kind of result's: 60 (keep-less-history-plan.md, part 3;
+ * 90 and rolled into weeks and months until 2026-10-07) — the 7 and 30 days
+ * and the 30 days before them. The 90 days and twelve months are asked of
+ * Google (`searchConsoleLongLists.ts`); nothing is rolled up.
  */
-export const DAYS_KEPT = 90;
+export const DAYS_KEPT = 60;
+
+/**
+ * How far back a chart's weeks are shown as weeks: before it, by month. The
+ * weeks worked out from days before 2026-10-07 reached six months; those
+ * kept since, the charts' whole reach.
+ */
 export const WEEKS_KEPT_DAYS = 183;
 
 /** The first day still kept as a day, with `newest` the newest day held. */
@@ -201,16 +227,15 @@ export function firstDayKept(newest: string): string {
 }
 
 /**
- * The first day still kept as a day for a kind of result: image search's days
- * are kept as their weeks once the week is over (finish-off plan item 2C —
- * about a fifth of a busy website's storage, for figures nobody reads by the
- * day); every other kind's for 90 days.
+ * The first day still kept as a day for a kind of result: every kind's, since
+ * nothing is rolled up (image search's went into their weeks once the week was
+ * over until 2026-10-07, finish-off plan item 2C).
  */
-export function firstDayKeptFor(searchType: string, newest: string): string {
-  return searchType === "image" ? weekStart(newest) : firstDayKept(newest);
+export function firstDayKeptFor(_searchType: string, newest: string): string {
+  return firstDayKept(newest);
 }
 
-/** A week starting before this goes into its month. */
+/** A chart's week starting before this is shown in its month. */
 export function firstWeekKept(newest: string): string {
   return dayOf(time(newest) - WEEKS_KEPT_DAYS * 86_400_000);
 }

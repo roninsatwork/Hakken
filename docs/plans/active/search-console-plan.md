@@ -719,6 +719,18 @@ entries. No screen reads Google's data at that grain.
 
 ### 14.3 What is agreed
 
+**Changed 2026-10-07** ([keep-less-history-plan.md](./keep-less-history-plan.md),
+part 3): items 3, 4 and 7 below as they now stand. Days are kept **60 days**,
+every kind of result's, and **nothing is rolled into weeks or months** — the
+lines past them are cleared once each settle has added them up. The 90 days,
+the 90 days before and twelve months are **asked of Google once a week**, the
+searches and pages a week at a time (one ask for a busy website's 90 days is
+cut at Google's 50,000 rows), and the 7 and 30 days with the 30 before are
+added up from the days kept. The charts' days reach 60 days; each finished
+week and month is worked out while its days are kept, and kept. A first
+collection still brings 90 days, so its totals and charts start with them.
+The items are left as they were agreed, for the record.
+
 1. **Three asks a day, for each kind of result**: the website's totals by day;
    each page; each keyword with each page. Plus countries, devices and rich
    results, all small. **Keyword totals are added up from the keyword-and-page

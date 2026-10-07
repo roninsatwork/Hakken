@@ -184,9 +184,12 @@ describe("collecting the main country and a country kept ready", () => {
     await collect(t);
 
     // The main country: only the days since the newest held, and the last four again — every ask filtered to it but its country list.
+    // Its collection's days, as its totals by date ask for them: the 90 days and twelve months are asked of Google
+    // when its lists are added up (keep-less-history-plan.md, part 3).
     const main = asks.filter((ask) => countryOf(ask) === "gbr");
-    expect(main.filter((ask) => ask.dimensions[0] === "date").map((ask) => `${ask.type} ${ask.startDate}`)).toContain("web 2026-09-22");
-    expect(main.every((ask) => ask.startDate >= "2026-09-22")).toBe(true);
+    const collected = main.filter((ask) => ask.dimensions[0] === "date");
+    expect(collected.map((ask) => `${ask.type} ${ask.startDate}`)).toContain("web 2026-09-22");
+    expect(collected.every((ask) => ask.startDate >= "2026-09-22")).toBe(true);
     const whole = asks.filter((ask) => countryOf(ask) === undefined);
     expect(whole.length).toBeGreaterThan(0);
     expect(whole.every((ask) => ask.dimensions.join("+") === "country")).toBe(true);

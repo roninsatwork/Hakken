@@ -15,7 +15,7 @@ graphs — there must be a better, more efficient way of storing these going
 forward"; "this is about not saving data we don't need to store and don't
 access regularly"; "make a documented plan in the repo for this".
 
-**Status, 2026-10-07: phases 1 to 4 and 6 built and live on dev; phase 5 measured; phases 5 and 7 to build.**
+**Status, 2026-10-07: phases 1 to 6 built and live on dev; phase 7 to build.**
 Started the same day, once the Hakken tasks work had finished (Anthony: "the
 other agent has finished … we can start this plan now"; see "Beside the
 Hakken tasks work"), on the `keep-less-history` branch merged into `dev`, not
@@ -126,6 +126,30 @@ Almost there and Pages competing are made of. **Weekly pieces pass**: every
 click, every page and every tracked search; the 2% of searches that differ
 have no clicks, and are the ones a day's figures kept that 90 days' do not.
 Part 3 goes ahead with weekly pieces.
+
+**Phase 5 — built 2026-10-07** (part 3, with weekly pieces): Search Console's
+lines are kept **60 days** (`DAYS_KEPT`), every kind of result's — image
+search's too, no longer rolled into its weeks — and **nothing is rolled up**:
+the roll-ups are gone, and the lines past the 60 days, with every week and
+month rolled up before, are cleared by the last job of each settle
+(`dropOldLines`) — after the lists are added up, so a first collection's 90
+days still give its totals and charts their 90 days. The 90 days, the 90 days
+before and twelve months are **asked of Google** when the long periods are
+rebuilt, once a week as before (`searchConsoleLongLists.ts`): the searches and
+pages a week at a time, a week still cut asked a day at a time, and each
+period's pairs keeping the searches the keep rule keeps on its own figures
+and every tracked search; the page, country, device and appearance lists in
+one ask a period, in weekly pieces only when cut. Google not answering leaves
+the long periods built before. The 7 and 30 days and the 30 before stay added
+up from the days kept, and the charts' days reach 60 days; each finished week
+and month is worked out while its days are kept and then kept as it was
+(`writeWeeks`), a first collection writing its 90 days' weeks. Superseded in
+a note on [search-console-plan.md](./search-console-plan.md) §14.3.
+
+Left as it was, and why: a chart by week still turns to months past six
+months back (`WEEKS_KEPT_DAYS`) — the weeks before 2026-10-07 were worked out
+from rolled-up months and hold no figures; from April 2027 the weeks kept
+since will reach the whole reach, and that limit can go.
 
 **Phase 6 — built 2026-10-07** (part 4): every table has its keep rule in
 one list (`convex/keepRules.ts`) — a row a thing, written over, cleared after

@@ -93,13 +93,27 @@ function fakeGoogle(overrides: Partial<Google> = {}): Google {
             .map(([day, entry]) => ({ keys: [day], ...figures(entry.total) })),
         });
       }
-      const day = days[ask.startDate];
-      if (ask.dimensions.length === 2) {
-        const pairs = day?.pair ?? (day?.query ?? []).map((row) => ({ ...row, page: "https://acme-shop.test/" }));
-        return Response.json({ rows: pairs.map((pair) => ({ keys: [pair.key, pair.page], ...figures(pair) })) });
+      // Every day asked for added up, by its keys, as Google does: a day's ask, or the weeks the long lists ask for.
+      const sums = new Map<string, { keys: string[]; clicks: number; impressions: number; positionSum: number }>();
+      for (const [day, held] of Object.entries(days)) {
+        if (day < ask.startDate || day > ask.endDate) continue;
+        const rows = ask.dimensions.length === 2
+          ? (held.pair ?? (held.query ?? []).map((row) => ({ ...row, page: "https://acme-shop.test/" }))).map((pair) => ({ keys: [pair.key, pair.page], row: pair }))
+          : (held[ask.dimensions[0] as "query"] ?? []).map((row) => ({ keys: [row.key], row }));
+        for (const { keys, row: one } of rows) {
+          const { position } = figures(one);
+          const sum = sums.get(keys.join("\u0000")) ?? { keys, clicks: 0, impressions: 0, positionSum: 0 };
+          sum.clicks += one.clicks;
+          sum.impressions += one.impressions;
+          sum.positionSum += position * one.impressions;
+          sums.set(keys.join("\u0000"), sum);
+        }
       }
-      const split = day?.[ask.dimensions[0] as "query"] ?? [];
-      return Response.json({ rows: split.map((row) => ({ keys: [row.key], ...figures(row) })) });
+      return Response.json({
+        rows: [...sums.values()].map((sum) => ({
+          keys: sum.keys, clicks: sum.clicks, impressions: sum.impressions, ctr: sum.clicks / sum.impressions, position: sum.positionSum / sum.impressions,
+        })),
+      });
     }
     throw new Error(`Unexpected fetch in test: ${url}`);
   }));
@@ -521,7 +535,8 @@ describe("collecting", () => {
       .collect());
     const shown = (grain: string) => charted.filter((row) => row.grain === grain && row.top3 + row.top10 + row.top20 + row.rest > 0);
     expect(shown("WEEK").map((week) => [week.week, week.top3, week.top10, week.brandClicks, week.otherClicks])).toEqual([["2026-09-21", 0, 2, 0, 12]]);
-    expect(charted.filter((row) => row.grain === "DAY")).toHaveLength(90);
+    // Each day of the 60 kept (keep-less-history-plan.md, part 3); a first collection's weeks and months over all its 90.
+    expect(charted.filter((row) => row.grain === "DAY")).toHaveLength(60);
     expect(charted.filter((row) => row.grain === "MONTH").map((month) => [month.week, month.days])).toEqual([
       ["2026-06-01", 2], ["2026-07-01", 31], ["2026-08-01", 31], ["2026-09-01", 26],
     ]);
@@ -532,6 +547,28 @@ describe("collecting", () => {
       .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "discover").eq("list", "query"))
       .collect());
     expect(discover).toEqual([]);
+  });
+
+  test("the 90 days are asked of Google a week at a time, and add up to what it shows (keep-less-history-plan.md, part 3)", async () => {
+    const { t, siteId, admin } = await setup();
+    const google = fakeGoogle({ figures: figures() });
+    await signIn(t, admin, siteId);
+    await collect(t);
+    const asks = google.calls
+      .filter((call) => call.url.endsWith("/searchAnalytics/query"))
+      .map((call) => JSON.parse(call.body) as { startDate: string; endDate: string; dimensions: string[] });
+    // The searches and pages: never more than a week an ask, so Google's 50,000 rows do not cut them.
+    const pairs = asks.filter((ask) => ask.dimensions.join("+") === "query+page" && ask.startDate !== ask.endDate);
+    expect(pairs.length).toBeGreaterThan(0);
+    expect(pairs.every((ask) => shiftDay(ask.startDate, 6) >= ask.endDate)).toBe(true);
+    const ninety = await t.run(async (ctx) => await ctx.db
+      .query("searchConsolePeriods")
+      .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", "90").eq("which", "NOW"))
+      .collect());
+    expect(ninety).toEqual([expect.objectContaining({ from: "2026-06-29", to: NEWEST, keys: ["plumber leeds", "emergency plumber"], clicks: [9, 3] })]);
+    // Its days are held 60 days, the first collection's older ones cleared once it was added up.
+    const days = await t.run(async (ctx) => (await ctx.db.query("searchConsoleLists").collect()).map((record) => record.start));
+    expect(days.every((day) => day >= "2026-07-29")).toBe(true);
   });
 
   test("the pairs are kept in key order both ways, with Pages competing's, Rich results' and Fan-out's own lists (drift fixes, 2026-10-03)", async () => {
@@ -559,8 +596,8 @@ describe("collecting", () => {
     // Every keyword here was shown with one page: none competing, and the one page Google showed counted.
     expect(await slot("competing", "30")).toMatchObject([{ keys: [], shown: 1 }]);
     expect(await slot("competing", "30", "BEFORE")).toEqual([]);
-    // Rich results' pages for each kind, counted on the period the screens list only.
-    expect((await slot("appearance", "30"))[0].counts).toEqual([0]);
+    // Rich results' pages for each kind, counted on the period the screens list only: the one page shown with it.
+    expect((await slot("appearance", "30"))[0].counts).toEqual([1]);
     expect((await slot("appearance", "30", "BEFORE"))[0]?.counts).toBeUndefined();
     // Fan-out's 14 and 28 days: web keywords, no period before.
     expect(await slot("query", "14")).toMatchObject([{ from: "2026-09-13", to: NEWEST, keys: ["plumber leeds", "emergency plumber"], clicks: [9, 3] }]);
@@ -700,51 +737,29 @@ describe("collecting", () => {
     expect(pages.reduce((sum, count) => sum + count, 0)).toBe(30);
   });
 
-  test("days past 90 roll into their week, and weeks past 12 months into their month, figures and positions intact", async () => {
+  test("lines past the 60 days kept are cleared, every kind's, with the weeks and months rolled up before 2026-10-07", async () => {
     const { t, siteId } = await setup();
-    const put = (grain: "DAY" | "WEEK", start: string, keys: string[], clicks: number[], impressions: number[], positionSums: number[]) =>
+    const put = (searchType: "web" | "image", grain: "DAY" | "WEEK" | "MONTH", start: string) =>
       t.run(async (ctx) => await ctx.db.insert("searchConsoleLists", {
-        companyWebsiteId: siteId, searchType: "web", list: "page", grain, start, part: 0, keys, clicks, impressions, positionSums, fetchedAt: 1,
+        companyWebsiteId: siteId, searchType, list: "device", grain, start, part: 0, keys: ["MOBILE"], clicks: [1], impressions: [10], positionSums: [20], fetchedAt: 1,
       }));
-    // 2026-06-01 is a Monday; with 2026-09-26 the newest, days before 2026-06-29 are past 90.
-    await put("DAY", "2026-06-01", ["/a", "/b"], [2, 1], [10, 10], [20, 50]);
-    await put("DAY", "2026-06-02", ["/a"], [3], [30], [30]);
-    await put("DAY", "2026-06-29", ["/a"], [9], [90], [90]);
-    // A week starting before 2025-09-26 is past 12 months.
-    await put("WEEK", "2025-09-15", ["/a"], [4], [40], [160]);
-    await put("WEEK", "2025-09-22", ["/a"], [5], [50], [100]);
-
-    const due = await t.query(internal.searchConsoleRollups.rollUpsDue, { companyWebsiteId: siteId, newest: NEWEST });
-    expect(due.days.map((slot) => slot.start)).toEqual(["2026-06-01", "2026-06-02"]);
-    expect(due.weeks.map((slot) => slot.start)).toEqual(["2025-09-15", "2025-09-22"]);
-    for (const slot of due.days) await t.mutation(internal.searchConsoleRollups.rollUp, { companyWebsiteId: siteId, ...slot, from: "DAY" });
-    for (const slot of due.weeks) await t.mutation(internal.searchConsoleRollups.rollUp, { companyWebsiteId: siteId, ...slot, from: "WEEK" });
-
-    const kept = await t.run(async (ctx) => await ctx.db.query("searchConsoleLists").collect());
-    expect(kept.map((record) => `${record.grain} ${record.start}`).sort()).toEqual(["DAY 2026-06-29", "MONTH 2025-09-01", "WEEK 2026-06-01"]);
-    const week = kept.find((record) => record.grain === "WEEK")!;
-    expect(week.keys).toEqual(["/a", "/b"]);
-    expect(week.clicks).toEqual([5, 1]);
-    expect(week.positionSums).toEqual([50, 50]);
-    const month = kept.find((record) => record.grain === "MONTH")!;
-    expect(month).toMatchObject({ keys: ["/a"], clicks: [9], impressions: [90], positionSums: [260] });
-  });
-
-  test("image search is no longer added up: days of it left from before are not rolled up, and web search keeps its 90 days", async () => {
-    const { t, siteId } = await setup();
-    const put = (searchType: "web" | "image", start: string) =>
-      t.run(async (ctx) => await ctx.db.insert("searchConsoleLists", {
-        companyWebsiteId: siteId, searchType, list: "device", grain: "DAY", start, part: 0, keys: ["MOBILE"], clicks: [1], impressions: [10], positionSums: [20], fetchedAt: 1,
-      }));
-    // Newest Saturday 2026-09-26: its week began Monday 2026-09-21.
-    for (const day of ["2026-09-15", "2026-09-16", "2026-09-21"]) {
-      await put("image", day);
-      await put("web", day);
+    // Newest Saturday 2026-09-26: the 60 days kept begin on 29 July (keep-less-history-plan.md, part 3).
+    for (const searchType of ["web", "image"] as const) {
+      await put(searchType, "DAY", "2026-07-28");
+      await put(searchType, "DAY", "2026-07-29");
+      await put(searchType, "DAY", NEWEST);
+      await put(searchType, "WEEK", "2026-06-01");
+      await put(searchType, "MONTH", "2025-09-01");
     }
 
-    // Neither kept nor shown since 2026-10-06 (search-console-home-countries-plan.md); what is left goes when the website switches to its main country.
-    const due = await t.query(internal.searchConsoleRollups.rollUpsDue, { companyWebsiteId: siteId, newest: NEWEST });
-    expect(due.days).toEqual([]);
+    for (const searchType of ["web", "image"] as const) {
+      while (await t.mutation(internal.searchConsoleRollups.dropOldLines, { companyWebsiteId: siteId, newest: NEWEST, searchType })) { /* until none is left */ }
+    }
+
+    const kept = await t.run(async (ctx) => await ctx.db.query("searchConsoleLists").collect());
+    expect(kept.map((record) => `${record.searchType} ${record.grain} ${record.start}`).sort()).toEqual([
+      "image DAY 2026-07-29", `image DAY ${NEWEST}`, "web DAY 2026-07-29", `web DAY ${NEWEST}`,
+    ]);
   });
 
   test("Google taking the access back asks for connecting again, and the figures stay", async () => {

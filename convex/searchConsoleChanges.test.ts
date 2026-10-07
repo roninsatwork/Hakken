@@ -241,13 +241,16 @@ describe("Position bands and Brand charts, in the dates and step chosen (2026-10
     expect(months.periods.map((period) => [period.start, period.lastDay, period.days, period.length])).toEqual([["2026-09-01", NEWEST, 26, 30]]);
   });
 
-  test("daily dates reaching past the 90 days kept as days are drawn by week; past the charts' weeks, from the first of them", async () => {
+  test("daily dates reaching past the 60 days kept as days are drawn by week; past the charts' weeks, from the first of them", async () => {
     const { t, siteId, companyId, reader } = await setup();
     await t.run(async (ctx) => {
       await ctx.db.insert("searchConsoleWeeks", row(siteId, "DAY", NEWEST, 1, 1));
       await ctx.db.insert("searchConsoleWeeks", row(siteId, "WEEK", "2026-09-21", 1, 6));
+      // Held from the 60-day line itself (keep-less-history-plan.md, part 3).
+      const connection = await ctx.db.query("searchConsoleConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", siteId)).first();
+      await ctx.db.patch(connection!._id, { oldestDay: "2026-07-29" });
     });
-    // Held from the 90-day line itself: nothing older is held by week, so days stay days.
+    // Nothing older is held by week, so days stay days.
     expect(await reader.query(api.searchConsolePeriods.searchConsoleChartFigures, ask(siteId, "2026-06-01", "day"))).toMatchObject({ step: "day", byWeek: false });
     await t.run(async (ctx) => {
       const connection = await ctx.db.query("searchConsoleConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", siteId)).first();

@@ -4,7 +4,7 @@ import { internalAction, internalMutation, internalQuery, type ActionCtx } from 
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { isPageRef, turnKeptStep } from "./searchConsolePageRefs";
-import { rollUpSite } from "./searchConsoleRollups";
+import { dropOldLinesOf } from "./searchConsoleRollups";
 import { firstDayKeptFor } from "./utils/searchConsolePacks";
 import { SEARCH_TYPES, searchTypeValidator } from "./searchConsoleSchema";
 import { LISTS_OF } from "./searchConsoleApi";
@@ -361,9 +361,9 @@ async function stepOf(ctx: ActionCtx, holdId: Id<"companyWebsites">, task: Task,
     });
   }
   if (!go) return await ctx.runQuery(internal.searchConsoleTidy.imageDaysStep, { holdId, ...scope, newest: task.newest!, cursor });
-  // Every roll-up due for the scope, image search's finished weeks among them, in one go.
-  const rolled = await rollUpSite(ctx, holdId, task.newest!, task.country);
-  return { found: rolled, continueCursor: "", isDone: true };
+  // Every line past the days kept for the scope, in one go (keep-less-history-plan.md, part 3).
+  const steps = await dropOldLinesOf(ctx, holdId, task.newest!, task.country);
+  return { found: steps, continueCursor: "", isDone: true };
 }
 
 const FIELD_OF: Record<Task["kind"], keyof Tally> = {

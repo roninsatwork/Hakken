@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest";
 import {
   PART_ROWS,
   addUp,
+  addUpRows,
   bySide,
   firstDayKept,
   firstDayKeptFor,
@@ -85,15 +86,19 @@ describe("days, weeks and months", () => {
     expect(monthStart("2026-09-26")).toBe("2026-09-01");
   });
 
-  test("90 days are kept as days, and weeks to six months", () => {
-    expect(firstDayKept("2026-09-26")).toBe("2026-06-29");
+  test("60 days are kept as days (keep-less-history-plan.md, part 3); a chart's weeks shown as weeks to six months", () => {
+    expect(firstDayKept("2026-09-26")).toBe("2026-07-29");
     expect(firstWeekKept("2026-09-26")).toBe("2026-03-27");
   });
 
-  test("image search keeps only the newest week's days; every other kind its 90", () => {
-    expect(firstDayKeptFor("image", "2026-09-26")).toBe("2026-09-21");
-    expect(firstDayKeptFor("image", "2026-09-21")).toBe("2026-09-21");
-    expect(firstDayKeptFor("web", "2026-09-26")).toBe("2026-06-29");
-    expect(firstDayKeptFor("video", "2026-09-26")).toBe("2026-06-29");
+  test("every kind of result keeps its 60 days, image search's too", () => {
+    for (const kind of ["image", "web", "video"]) expect(firstDayKeptFor(kind, "2026-09-26")).toBe("2026-07-29");
+  });
+
+  test("Google's answers for pieces of a period add up by search and page together", () => {
+    const row = (key: string, page: string | undefined, clicks: number) => ({ key, ...(page ? { page } : {}), clicks, impressions: clicks * 10, positionSum: clicks * 20 });
+    expect(addUpRows([[row("hinges", "/a", 1), row("hinges", "/b", 2)], [row("hinges", "/a", 3)]]))
+      .toEqual([row("hinges", "/a", 4), row("hinges", "/b", 2)]);
+    expect(addUpRows([[row("/a", undefined, 1)], [row("/a", undefined, 2)]])).toEqual([row("/a", undefined, 3)]);
   });
 });

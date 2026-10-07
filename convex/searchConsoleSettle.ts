@@ -7,17 +7,19 @@ import type { Id } from "./_generated/dataModel";
 import { searchTypeValidator, type SearchType } from "./searchConsoleSchema";
 import { failureSummary } from "./roleRuns";
 import { count, countryLabel, days, finishRun } from "./searchConsoleAgentRun";
-import { rollUpSite } from "./searchConsoleRollups";
+import { dropOldLinesOf } from "./searchConsoleRollups";
 import { buildSitePeriods } from "./searchConsolePeriods";
 
 /**
  * A website's run settles after its days are in (search-console-plan.md
- * §14.3): days past 90 roll into their weeks and weeks past six months into
- * their months, then the ready-made periods and the charts' weeks are added
- * up again — for all countries and each country kept ready (§16), as one job
- * per kind of result and country, side by side (cost review 4, 2026-10-05:
+ * §14.3): the ready-made periods and the charts' weeks are added up again —
+ * for all countries and each country kept ready (§16), as one job per kind
+ * of result and country, side by side (cost review 4, 2026-10-05:
  * morehandles.co.uk's in one job took four and a half of an action's ten
- * minutes). The last job to finish ends the run (`searchConsoleSettling.ts`).
+ * minutes). The last job to finish clears the lines past the 60 days kept —
+ * after the build, so a first collection's 90 days give its charts their
+ * weeks (keep-less-history-plan.md, part 3) — and ends the run
+ * (`searchConsoleSettling.ts`).
  * In the Node runtime, which gives a job room for a website's 90 days of
  * keyword-and-page pairs at once (reviewed 2026-10-03).
  */
@@ -34,7 +36,7 @@ export const settleSite = internalAction({
   handler: async (ctx, args) => {
     const finish = async () => await finishRun(ctx, args.runId, args.workflowExecutionId, "SUCCESS", args.summary);
     try {
-      const plan = await rollUpAndPlan(ctx, args.connectionId);
+      const plan = await planParts(ctx, args.connectionId);
       if (plan === null) {
         await finish();
         return null;
@@ -43,7 +45,7 @@ export const settleSite = internalAction({
         runId: args.runId,
         companyId: args.companyId,
         heading: "Kept",
-        detail: `${count(plan.rolled)} ${plan.rolled === 1 ? "day or week" : "days and weeks"} rolled up; the lists added up as ${count(plan.parts.length)} ${plan.parts.length === 1 ? "job" : "jobs"} side by side.`,
+        detail: `The lists added up as ${count(plan.parts.length)} ${plan.parts.length === 1 ? "job" : "jobs"} side by side, then the lines past the 60 days kept cleared.`,
         failed: false,
       });
       await startParts(ctx, args.connectionId, plan, {
@@ -57,23 +59,38 @@ export const settleSite = internalAction({
 });
 
 type Part = { country?: string; searchType: SearchType; newest: string; oldest: string };
-type Plan = { holdId: Id<"companyWebsites">; rolled: number; parts: Part[] };
+type Plan = { holdId: Id<"companyWebsites">; parts: Part[] };
 
-/** Each scope's days rolled up, and the jobs that add up its lists: one per kind of result held. Null with nothing held. */
-async function rollUpAndPlan(ctx: ActionCtx, connectionId: Id<"searchConsoleConnections">): Promise<Plan | null> {
+/** Each scope held — all countries, and each country kept ready — with its newest and oldest day; null with nothing held. */
+async function scopesOf(ctx: ActionCtx, connectionId: Id<"searchConsoleConnections">) {
   const all = await ctx.runQuery(internal.searchConsoleSync.stepState, { connectionId });
   if (!all || all.clearing || !all.newestDay || !all.oldestDay) return null;
-  const parts: Part[] = [];
-  let rolled = 0;
+  const scopes: Array<{ holdId: Id<"companyWebsites">; country?: string; newest: string; oldest: string }> = [];
   for (const country of [undefined, ...all.countries]) {
     const scope = country === undefined ? {} : { country };
     const state = country === undefined ? all : await ctx.runQuery(internal.searchConsoleSync.stepState, { connectionId, ...scope });
     if (!state || !state.kept || !state.newestDay || !state.oldestDay) continue;
-    rolled += await rollUpSite(ctx, state.companyWebsiteId, state.newestDay, country);
-    const types = await ctx.runQuery(internal.searchConsoleRollups.typesHeld, { companyWebsiteId: state.companyWebsiteId, ...scope });
-    for (const searchType of types) parts.push({ ...scope, searchType, newest: state.newestDay, oldest: state.oldestDay });
+    scopes.push({ holdId: state.companyWebsiteId, ...scope, newest: state.newestDay, oldest: state.oldestDay });
   }
-  return parts.length > 0 ? { holdId: all.companyWebsiteId, rolled, parts } : null;
+  return { holdId: all.companyWebsiteId, scopes };
+}
+
+/** The jobs that add up each scope's lists: one per kind of result held. Null with nothing held. */
+async function planParts(ctx: ActionCtx, connectionId: Id<"searchConsoleConnections">): Promise<Plan | null> {
+  const held = await scopesOf(ctx, connectionId);
+  if (!held) return null;
+  const parts: Part[] = [];
+  for (const { holdId, newest, oldest, ...scope } of held.scopes) {
+    const types = await ctx.runQuery(internal.searchConsoleRollups.typesHeld, { companyWebsiteId: holdId, ...scope });
+    for (const searchType of types) parts.push({ ...scope, searchType, newest, oldest });
+  }
+  return parts.length > 0 ? { holdId: held.holdId, parts } : null;
+}
+
+/** Each scope's lines past the 60 days kept cleared, once the lists have been added up from them. */
+async function dropOldLinesAll(ctx: ActionCtx, connectionId: Id<"searchConsoleConnections">) {
+  const held = await scopesOf(ctx, connectionId);
+  for (const { holdId, newest, country } of held?.scopes ?? []) await dropOldLinesOf(ctx, holdId, newest, country);
 }
 
 /** The settle's jobs started side by side, counted on the connection. */
@@ -129,7 +146,9 @@ export const settlePart = internalAction({
       connectionId: args.connectionId, token: args.token, written, weekly, ...(failed ? { failed } : {}),
     });
     if (!settle) return null;
-    // The last job: Your pages reads the 90-day page list (asked for, not waited on), and the run ends.
+    // The last job: the lines past the days kept cleared, now built from (keep-less-history-plan.md, part 3).
+    await dropOldLinesAll(ctx, args.connectionId);
+    // Your pages reads the 90-day page list (asked for, not waited on), and the run ends.
     await ctx.runMutation(internal.holdPages.requestRebuild, { holdId: args.holdId });
     if (!settle.runId || !settle.companyId) return null;
     const newest = args.newest;
@@ -162,7 +181,7 @@ export const catchUpSite = internalAction({
   args: { connectionId: v.id("searchConsoleConnections"), long: v.boolean() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const plan = await rollUpAndPlan(ctx, args.connectionId);
+    const plan = await planParts(ctx, args.connectionId);
     if (plan) await startParts(ctx, args.connectionId, plan, undefined, args.long, args.long);
     return null;
   },
@@ -177,25 +196,26 @@ export const refreshSitePeriods = internalAction({
   args: { connectionId: v.id("searchConsoleConnections") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const plan = await rollUpAndPlan(ctx, args.connectionId);
+    const plan = await planParts(ctx, args.connectionId);
     if (plan) await startParts(ctx, args.connectionId, plan);
     return null;
   },
 });
 
 /**
- * A website's ready-made periods built again from what is kept, with no
- * collection, every period whatever its age: for all countries and each
- * country kept ready, as one job per kind of result, side by side. Run by
- * hand when what the periods hold changes shape, and by the tidy after it
- * changes what is kept. Asks Google only for Rich results' pages per kind,
- * free.
+ * A website's ready-made periods built again, with no collection, every
+ * period whatever its age: for all countries and each country kept ready, as
+ * one job per kind of result, side by side. Run by hand when what the periods
+ * hold changes shape, and by the tidy after it changes what is kept. The 7
+ * and 30 days from what is kept; the 90 days and twelve months, and Rich
+ * results' pages per kind, asked of Google — free
+ * (keep-less-history-plan.md, part 3).
  */
 export const rebuildSitePeriods = internalAction({
   args: { connectionId: v.id("searchConsoleConnections") },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const plan = await rollUpAndPlan(ctx, args.connectionId);
+    const plan = await planParts(ctx, args.connectionId);
     if (plan) await startParts(ctx, args.connectionId, plan, undefined, true);
     return null;
   },
