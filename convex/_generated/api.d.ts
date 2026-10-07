@@ -310,6 +310,7 @@ import type * as plans from "../plans.js";
 import type * as platformAlertRecipients from "../platformAlertRecipients.js";
 import type * as platformAlertService from "../platformAlertService.js";
 import type * as platformAlerts from "../platformAlerts.js";
+import type * as platformEmails from "../platformEmails.js";
 import type * as platformLimitRow from "../platformLimitRow.js";
 import type * as platformLimits from "../platformLimits.js";
 import type * as platformOverview from "../platformOverview.js";
@@ -952,6 +953,7 @@ declare const fullApi: ApiFromModules<{
   platformAlertRecipients: typeof platformAlertRecipients;
   platformAlertService: typeof platformAlertService;
   platformAlerts: typeof platformAlerts;
+  platformEmails: typeof platformEmails;
   platformLimitRow: typeof platformLimitRow;
   platformLimits: typeof platformLimits;
   platformOverview: typeof platformOverview;

@@ -167,6 +167,14 @@ describe("rendering the body", () => {
       { subject: "s", body: "b" },
       { platformName: "Acme Ops" }
     );
-    expect(html).toContain("ACME OPS");
+    // The wordmark is the platform's name as written (style B, hakken-tasks-plan.md 3.1).
+    expect(html).toContain(">Acme Ops<");
+  });
+});
+
+describe("the agent's email, in style B", () => {
+  test("names the agent that wrote it beside the wordmark, as drawn", () => {
+    const { html } = buildAgentNotificationEmail({ subject: "A caller asked for a quote", body: "Sarah called at 14:10." }, { platformName: "Acme Ops", agentName: "Reception" });
+    expect(html).toContain(">FROM YOUR AGENT · RECEPTION<");
   });
 });

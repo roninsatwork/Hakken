@@ -6,8 +6,9 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { parseWorkflowEdges, parseWorkflowNodes } from "./utils/workflowTypes";
 import { buildEmailFromAddress, resolveEnvFromAddress } from "./emailBrandingService";
-import { renderEmail } from "./emailLayoutService";
+import { buildAutomationEmail } from "./platformEmails";
 import { sendResendEmail } from "./resendEmailService";
+import { resolvePlatformName } from "./settingsService";
 import { superAdminAction } from "./tenantFunctions";
 import {
   buildActionRequest,
@@ -130,15 +131,7 @@ async function executeEmailRuntimeNode(ctx: ActionCtx, args: {
   // The body is author-written and then template-substituted with run data, so
   // it is content rather than markup — it used to be sent as raw `html`, which
   // meant anything the workflow interpolated went straight into the message.
-  const email = renderEmail(
-    {
-      kind: "Automation",
-      verdict: subject,
-      paragraphs: body.split(/\n{2,}/).filter((part) => part.trim().length > 0),
-      footer: { lines: ["Sent by a workflow you or a colleague set up."] },
-    },
-    { platformName: emailBranding?.platformName }
-  );
+  const email = buildAutomationEmail({ platformName: resolvePlatformName(emailBranding?.platformName), subject, body });
 
   const data = await sendResendEmail({
     apiKey: process.env.RESEND_API_KEY,

@@ -10,7 +10,8 @@
  */
 
 import { buildAgentNotificationEmail } from "../../../../convex/aiToolNotificationService";
-import { renderEmail, type RenderedEmail } from "../../../../convex/emailLayoutService";
+import { type RenderedEmail } from "../../../../convex/emailLayoutService";
+import { buildAutomationEmail, buildInvitationEmail, buildSignInCodeEmail, buildSignInEmail } from "../../../../convex/platformEmails";
 import {
   buildSystemHealthAlertEmail,
   buildSystemHealthPlatformAlertDecision,
@@ -238,46 +239,33 @@ export function buildEmailPreviews(): EmailPreview[] {
     {
       key: "sign-in",
       title: "Sign-in link",
-      note: "The magic link. Was the stock Auth.js template until 2026-07-31 — a blue button and the subject \"Sign in to localhost:3000\".",
-      source: "convex/auth.ts",
-      email: renderEmail(
-        {
-          kind: "Sign in",
-          verdict: `Sign in to ${PLATFORM_NAME}.`,
-          paragraphs: [
-            "Use the button below and you will be signed in — there is no password to enter.",
-          ],
-          actions: [{ label: `Sign in to ${PLATFORM_NAME}`, url: `${BASE_URL}/api/auth/verify` }],
-          quiet: ["This link works once, and expires in about 15 minutes."],
-          footer: {
-            lines: [
-              "If you did not ask to sign in, ignore this email. Nothing happens until the link is used.",
-            ],
-          },
-        },
-        { platformName: PLATFORM_NAME }
-      ),
+      note: "The magic link, in style B (board MailSignInLink).",
+      source: "convex/platformEmails.ts",
+      email: buildSignInEmail({ platformName: PLATFORM_NAME, url: `${BASE_URL}/api/auth/verify`, hours: 24 }),
+    },
+    {
+      key: "sign-in-code",
+      title: "Sign-in code",
+      note: "The code big, in two halves to read (board MailSignInCode).",
+      source: "convex/platformEmails.ts",
+      email: buildSignInCodeEmail({ platformName: PLATFORM_NAME, code: "482913", minutes: 10 }),
     },
     {
       key: "invite",
       title: "Invite",
-      note: "Headline and body come from an editable template record, so both are escaped.",
-      source: "convex/invites.ts",
-      email: renderEmail(
-        {
-          kind: "Invitation",
-          verdict: "You're in.",
-          paragraphs: [
-            "Anthony Basker added you to the Acme workspace as an administrator.",
-            "Sign in with this address and it will pick you up automatically — there is no password to set.",
-          ],
-          actions: [{ label: "Sign in to Acme", url: `${BASE_URL}/login` }],
-          footer: {
-            lines: ["Not expecting this? Ignore it — nothing happens until you sign in."],
-          },
+      note: "The default template, with {inviter}, {company} and {platform} filled in (board MailInvitation).",
+      source: "convex/platformEmails.ts",
+      email: buildInvitationEmail({
+        platformName: PLATFORM_NAME,
+        url: `${BASE_URL}/login`,
+        template: {
+          subject: "{inviter} invited you to join {company} on {platform}",
+          headline: "{inviter} invited you to join {company} on {platform}",
+          body: "{platform} shows how your websites are doing in Google and in AI answers, and keeps an eye on them for you.\n\nIt only takes a minute, and there’s no password to set.",
+          ctaText: "Accept the invitation",
         },
-        { platformName: PLATFORM_NAME }
-      ),
+        names: { inviter: "Jo Hughes", company: "Ronins Agency" },
+      }),
     },
     {
       key: "agent-notification",
@@ -292,7 +280,7 @@ export function buildEmailPreviews(): EmailPreview[] {
             + "Ash Road, 3 bed semi-detached, £425,000\nChesham Mews, 3 bed end terrace, £465,000\n"
             + "Denzil Road, 3 bed terraced, £399,000\nWodeland Avenue, 2 bed terraced, £380,000",
         },
-        { platformName: PLATFORM_NAME }
+        { platformName: PLATFORM_NAME, agentName: "Reception" }
       ),
     },
     {
@@ -300,18 +288,11 @@ export function buildEmailPreviews(): EmailPreview[] {
       title: "Workflow email node",
       note: "Body is author-written and template-substituted, so it is escaped too.",
       source: "convex/workflowRuntime.ts",
-      email: renderEmail(
-        {
-          kind: "Automation",
-          verdict: "Weekly sales summary",
-          paragraphs: [
-            "Revenue for the week to 30 July was £184,200, up 7.4% on forecast.",
-            "Two accounts are flagged for comment. The full breakdown is attached to the run.",
-          ],
-          footer: { lines: ["Sent by a workflow you or a colleague set up."] },
-        },
-        { platformName: PLATFORM_NAME }
-      ),
+      email: buildAutomationEmail({
+        platformName: PLATFORM_NAME,
+        subject: "New lead from the website: Sarah Patel",
+        body: "Sarah filled in the contact form on example.co.uk at 14:22.\n\n“We’d like a new website for our dental practice before January. Could someone call me tomorrow?”",
+      }),
     },
   ];
 }

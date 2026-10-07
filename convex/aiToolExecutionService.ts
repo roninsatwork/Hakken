@@ -767,8 +767,10 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
       throw appError("NOT_CONFIGURED", "No sender address is configured for this deployment.");
     }
 
+    const agent = input.agentId ? await input.ctx.runQuery(internal.agents.getAgentInternal, { id: input.agentId }) : null;
     const notification = buildAgentNotificationEmail(content, {
       platformName: emailBranding?.platformName,
+      ...(agent?.name ? { agentName: agent.name } : {}),
     });
 
     const dispatch = await sendResendEmail({

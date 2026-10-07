@@ -7,11 +7,11 @@ import { internal } from "./_generated/api";
 import { canAccessCompany, getActiveCompanyId, userRoleValidator } from "./authz";
 import { requireActionUser } from "./actionAuth";
 import { buildEmailBranding, buildEmailFromAddress } from "./emailBrandingService";
-import { renderEmail } from "./emailLayoutService";
 import { sendResendEmail } from "./resendEmailService";
 import { getPlatformName } from "./settings";
 import { adminAction, adminMutation, adminQuery, superAdminMutation, softQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
+import { buildInvitationEmail } from "./platformEmails";
 
 const BASE_URL = process.env.SITE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 const COMPANY_INVITE_LIST_LIMIT = 100;
@@ -98,12 +98,13 @@ export const getActiveTemplate = softQuery({
       // Voice matches the invite sample in src/app/api/email-preview.
       // Named after the deployment, not the shipped default: the invite is the
       // first thing a customer's staff ever read from this platform.
+      // In style B's friendly words (board MailInvitation); the names are filled in when it is sent.
       const platformName = await getPlatformName(ctx);
       return {
-        subject: `You have been invited to ${platformName} Workspace`,
-        headline: "Welcome to the Team",
-        body: `You have been added to the ${platformName} workspace. Use the button below and sign in with this email address — it will pick you up automatically, and there is no password to set.`,
-        ctaText: "Accept Invitation",
+        subject: `{inviter} invited you to join {company} on ${platformName}`,
+        headline: `{inviter} invited you to join {company} on ${platformName}`,
+        body: `${platformName} shows how your websites are doing in Google and in AI answers, and keeps an eye on them for you.\n\nIt only takes a minute, and there’s no password to set.`,
+        ctaText: "Accept the invitation",
       };
     }
 
@@ -384,6 +385,7 @@ export const dispatchInviteEmail = adminAction({
     const emailBranding = buildEmailBranding(storedEmailBranding);
     
     const inviteLink = `${BASE_URL}/login`; // They just log in directly via Google matching their invite email.
+    const company = args.companyId ? await ctx.runQuery(internal.companies.getCompanyByIdInternal, { id: args.companyId }) : null;
 
     // 2. Render through the shared shell.
     //
@@ -391,18 +393,13 @@ export const dispatchInviteEmail = adminAction({
     // straight into an inline HTML document. Both come from an editable record,
     // so that was an injection hole as well as a second design to maintain.
     // `renderEmail` escapes at the boundary because callers pass content only.
-    const email = renderEmail(
-      {
-        kind: "Invitation",
-        verdict: args.template.headline,
-        paragraphs: args.template.body.split(/\n{2,}/).filter((part) => part.trim().length > 0),
-        actions: [{ label: args.template.ctaText, url: inviteLink }],
-        footer: {
-          lines: ["Not expecting this? Ignore it — nothing happens until you sign in."],
-        },
-      },
-      { platformName: emailBranding.platformName }
-    );
+    // `{inviter}`, `{company}` and `{platform}` filled in (`platformEmails.ts`).
+    const email = buildInvitationEmail({
+      platformName: emailBranding.platformName,
+      url: inviteLink,
+      template: args.template,
+      names: { inviter: caller.name || caller.email || emailBranding.platformName, company: company?.name ?? emailBranding.platformName },
+    });
 
     // 3. Dispatch through Resend
     // Skip if API key missing (dev environment graceful degradation)
@@ -426,7 +423,7 @@ export const dispatchInviteEmail = adminAction({
         payload: {
           from: fromAddress,
           to: args.email,
-          subject: args.template.subject,
+          subject: email.subject,
           html: email.html,
           text: email.text,
         },

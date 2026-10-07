@@ -176,7 +176,7 @@ describe("renderEmail — legacy Outlook contract", () => {
     expect(light.length).toBeGreaterThan(0);
     // The grounds are what white-on-white depends on, so name them rather than
     // trusting the counts to have covered them.
-    for (const surface of ["e-ground", "e-card", "e-inset"]) {
+    for (const surface of ["e-ground", "e-card"]) {
       expect(css).toContain(`@media (prefers-color-scheme:light){.${surface}{background-color:`);
     }
   });
@@ -229,9 +229,9 @@ describe("renderEmail — legacy Outlook contract", () => {
     const { html } = renderEmail(buildContent(), { platformName: "Acme Ops" });
 
     expect(html).not.toContain("text-transform");
-    expect(html).toContain("ACME OPS");
+    // The wordmark is the platform's name as written, as drawn; the labels are capitals.
+    expect(html).toContain(">Acme Ops<");
     expect(html).toContain("SYSTEM HEALTH");
-    expect(html).toContain("AGENT ERRORS");
     expect(html).toContain("4 X SAME FAULT");
   });
 
@@ -359,7 +359,8 @@ describe("renderEmail — branding", () => {
   test("takes the platform name from settings rather than hardcoding one", () => {
     const { html, text } = renderEmail(buildContent(), { platformName: "Acme Ops" });
 
-    expect(html).toContain("ACME OPS");
+    expect(html).toContain(">Acme Ops<");
+    expect(html).not.toContain(">Hakken<");
     expect(text).toContain("ACME OPS");
   });
 
@@ -492,20 +493,14 @@ describe("renderEmail — contrast", () => {
   const AA = 4.5;
 
   const pairs: Array<[string, string, string]> = [
-    ["headings on the card", P.ink, P.card],
-    ["body copy on the card", P.ink70, P.card],
-    ["small print on the card", P.ink45, P.card],
-    ["small print on an inset block", P.ink45, P.inset],
-    ["body copy on an inset block", P.ink70, P.inset],
-    ["the summary strip text", P.onBanner, P.banner],
-    ["the operational kicker", P.sage, P.card],
-    ["links and the healthy tone", P.blue, P.card],
-    ["the healthy tone on an inset tile", P.blue, P.inset],
+    ["headings and links on the sheet", P.ink, P.card],
+    ["the lede and a row's detail on the sheet", P.ink70, P.card],
+    ["small print on the sheet", P.ink45, P.card],
+    ["a card's label", P.label, P.card],
+    ["the healthy tone", P.blue, P.card],
     ["the warning tone", P.gold, P.card],
-    ["the warning tone on an inset tile", P.gold, P.inset],
     ["the critical tone", P.red, P.card],
-    ["the critical tone on an inset tile", P.red, P.inset],
-    ["the primary button label", P.onOrange, P.orange],
+    ["the button's words", P.onButton, P.button],
   ];
 
   test.each(pairs)("%s meets WCAG AA", (_name, foreground, background) => {
@@ -597,15 +592,64 @@ describe("renderEmail — contrast", () => {
     }
   });
 
-  test("white is never placed on the orange fill", () => {
+  test("the button is the dark fill with white words, as drawn, and nothing else is", () => {
     const { html } = renderEmail(
-      buildContent({ actions: [{ label: "Do the thing", url: "https://app.test/x" }] })
+      buildContent({ actions: [{ label: "Do the thing", url: "https://app.test/x" }, { label: "Ask why", url: "https://app.test/y" }] })
     );
-    const orangeRegions = html.split(EMAIL_PALETTE.orange).slice(1);
+    const buttons = html.match(/<a [^>]*class="e-btn"[^>]*>/g) ?? [];
+    expect(buttons).toHaveLength(1);
+    expect(buttons[0]).toContain(`background-color:${EMAIL_PALETTE.button}`);
+    expect(buttons[0]).toContain(`color:${EMAIL_PALETTE.onButton}`);
+  });
+});
 
-    for (const region of orangeRegions) {
-      expect(region.slice(0, 200)).not.toMatch(/color:#f{6}/i);
-      expect(region.slice(0, 200)).not.toMatch(/color:#ffffff/i);
-    }
+/* ---------------------------------------------------------------------------
+ * Style B, "the picture" (hakken-tasks-plan.md, item 3.1; Anthony, 2026-10-07:
+ * "I think I prefer B, it's more engaging and intuitive", then "can we make
+ * this the default email style too"). The boards are
+ * docs/plans/assets/hakken-tasks/boards/Mail*.dc.html.
+ * ------------------------------------------------------------------------- */
+describe("renderEmail — style B", () => {
+  test("the one number or code is drawn big in the number face, and the headline reads on from it", () => {
+    const { html, text } = renderEmail(buildContent({ figure: "482 913", verdict: "is your sign-in code" }));
+    // Read from the body: the page's title repeats the headline.
+    const from = html.indexOf("<body");
+    const figureAt = html.indexOf(">482 913<", from);
+    const headlineAt = html.indexOf(">is your sign-in code<", from);
+    expect(figureAt).toBeGreaterThan(0);
+    expect(headlineAt).toBeGreaterThan(figureAt);
+    expect(html.slice(html.lastIndexOf("<td", figureAt), figureAt)).toMatch(/JetBrains Mono.*font-size:64px;/);
+    expect(text).toContain("482 913 is your sign-in code");
+  });
+
+  test("with no figure, the headline stands at its own size", () => {
+    const { html } = renderEmail(buildContent({ verdict: "Sign in to Acme" }));
+    const at = html.indexOf(">Sign in to Acme<", html.indexOf("<body"));
+    expect(html.slice(html.lastIndexOf("<td", at), at)).toContain("font-size:26px;");
+  });
+
+  test("one dark button; any other action is an underlined link beside it", () => {
+    const { html } = renderEmail(buildContent());
+    expect(html.match(/class="e-btn"/g)?.length).toBe(1);
+    const link = html.slice(html.lastIndexOf("<a ", html.indexOf(">See all runs<")), html.indexOf(">See all runs<"));
+    expect(link).toContain("text-decoration:underline");
+    expect(link).not.toContain("e-btn");
+  });
+
+  test("cards are plain rows under hairlines, never boxes, each saying how bad it is in words", () => {
+    const { html } = renderEmail(buildContent());
+    const document = html.replace(/<style[\s\S]*?<\/style>/i, "");
+    // The only painted surfaces are the ground and the sheet.
+    const fills = new Set([...document.matchAll(/background-color:(#[0-9a-f]{6})/gi)].map((match) => match[1].toLowerCase()));
+    expect([...fills].sort()).toEqual([EMAIL_PALETTE.button, EMAIL_PALETTE.card, EMAIL_PALETTE.ground].sort());
+    expect(html).toContain(`border-bottom:1px solid ${EMAIL_PALETTE.edge}`);
+    expect(html).toContain(">4 X SAME FAULT<");
+  });
+
+  test("the stats sit side by side, each word in grey and its number in the number face", () => {
+    const { html } = renderEmail(buildContent({ stats: [{ label: "A usual day", value: "23" }, { label: "Quiet days, last 4 weeks", value: "3" }] }));
+    expect(html).toMatch(/A usual day <b [^>]*JetBrains Mono[^>]*>23<\/b>/);
+    const row = html.slice(html.indexOf("A usual day") - 400, html.indexOf("Quiet days"));
+    expect(row).toContain("</td><td");
   });
 });

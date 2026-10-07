@@ -10,7 +10,7 @@ import { v } from "convex/values";
 import { publicAction } from "./tenantFunctions";
 import { createOrUpdateHakkenAuthUser } from "./authUserProvisioning";
 import { buildEmailFromAddress, resolveEnvFromAddress } from "./emailBrandingService";
-import { renderEmail } from "./emailLayoutService";
+import { buildSignInCodeEmail, buildSignInEmail } from "./platformEmails";
 import { buildConsentUrl } from "./magicLinkUrlService";
 import {
   CODE_TTL_MS,
@@ -60,23 +60,7 @@ const providers: AuthProviderConfig[] = [
        */
       const consentUrl = buildConsentUrl(url, process.env.SITE_URL);
 
-      const email = renderEmail(
-        {
-          kind: "Sign in",
-          verdict: `Sign in to ${platformName}.`,
-          paragraphs: [
-            "Use the button below and you will be signed in — there is no password to enter.",
-          ],
-          actions: [{ label: `Sign in to ${platformName}`, url: consentUrl }],
-          quiet: [`This link works once, and expires in about ${hours} hours.`],
-          footer: {
-            lines: [
-              "If you did not ask to sign in, ignore this email. Nothing happens until the link is used.",
-            ],
-          },
-        },
-        { platformName }
-      );
+      const email = buildSignInEmail({ platformName, url: consentUrl, hours });
 
       if (!process.env.RESEND_API_KEY) {
         console.warn("RESEND_API_KEY not found. Simulating sign-in email.", { to: identifier });
@@ -91,7 +75,7 @@ const providers: AuthProviderConfig[] = [
           to: identifier,
           // Never the bare host — "Sign in to localhost:3000" is what the stock
           // template produced, and it reads like a phishing attempt.
-          subject: `Sign in to ${platformName}`,
+          subject: email.subject,
           html: email.html,
           text: email.text,
         },
@@ -132,25 +116,7 @@ const providers: AuthProviderConfig[] = [
       const email = normaliseEmail(identifier);
       const minutes = minutesUntil(expiryFrom(now), now);
 
-      const rendered = renderEmail(
-        {
-          kind: "Sign in",
-          verdict: `Your sign-in code for ${platformName}.`,
-          paragraphs: [
-            "Type this code on the sign-in screen. You do not need to open it on the same device you asked from.",
-          ],
-          // The shell's own stat block, rather than a new field for one email.
-          // It renders large and on its own, which is exactly what a code needs.
-          stats: [{ label: "Your code", value: token }],
-          quiet: [`This code works once, and expires in about ${minutes} minutes.`],
-          footer: {
-            lines: [
-              "If you did not ask to sign in, ignore this email. Nobody can use this code but you.",
-            ],
-          },
-        },
-        { platformName }
-      );
+      const rendered = buildSignInCodeEmail({ platformName, code: token, minutes });
 
       if (!process.env.RESEND_API_KEY) {
         console.warn("RESEND_API_KEY not found. Simulating sign-in code email.", { to: email });
@@ -163,7 +129,7 @@ const providers: AuthProviderConfig[] = [
         payload: {
           from: provider.from as string,
           to: email,
-          subject: `Your ${platformName} sign-in code`,
+          subject: rendered.subject,
           html: rendered.html,
           text: rendered.text,
         },

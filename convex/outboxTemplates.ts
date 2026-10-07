@@ -99,18 +99,17 @@ const weeklyNewsDigest: Template = async (ctx, row, brand) => {
   const date = (at: number) => new Date(at).toLocaleDateString(wording.dateLocale, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
   return {
     subject: words.subject({ platformName: brand.platformName }),
+    // As drawn (board MailWeeklyNews): the week's count big, what it is, the week's opening, then each item.
     content: {
       kind: words.kind,
-      verdict: words.verdict,
-      ...(intro.trim() ? { paragraphs: [intro.trim()] } : {}),
-      // The shell shows the first eight and links the rest.
+      ...(items.length > 0 ? { figure: String(items.length), verdict: words.worthKnowing({ count: items.length }) } : { verdict: words.verdict }),
+      lede: intro.trim() || words.plainWords,
       cards: items.map((item) => ({
         title: item.title,
         body: item.meaning ? `${item.summary} ${item.meaning}` : item.summary,
         meta: `${item.sourceName} · ${date(item.publishedAt)}`,
         link: { label: words.readOriginal, url: item.url },
       })),
-      overflow: { label: words.seeAll({ count: items.length, platformName: brand.platformName }), url: newsUrl },
       sections: [{
         heading: words.helpfulHeading,
         cards: helpful.map((article) => ({
@@ -120,7 +119,11 @@ const weeklyNewsDigest: Template = async (ctx, row, brand) => {
           link: { label: words.readOriginal, url: article.url },
         })),
       }],
-      actions: [{ label: words.openNews, url: newsUrl, emphasis: "primary" }],
+      // The week's News, and every item of it, beside the button (the email shows the first eight).
+      actions: [
+        { label: words.openNews, url: newsUrl, emphasis: "primary" },
+        { label: words.seeAll({ count: items.length, platformName: brand.platformName }), url: newsUrl, emphasis: "secondary" },
+      ],
       footer: {
         lines: [words.whyYouGetIt({ platformName: brand.platformName })],
         links: [{ label: words.unsubscribe, url: unsubscribeUrl }],
@@ -144,7 +147,8 @@ const collectionNeedsYou: Template = async (_ctx, row, brand) => {
     subject: words.subject({ platformName: brand.platformName }),
     content: {
       kind: words.kind,
-      verdict: words.verdict,
+      verdict: words.verdict({ platformName: brand.platformName }),
+      lede: words.lede,
       paragraphs: [reason],
       actions: [{ label: words.open, url: pipelineUrl, emphasis: "primary" }],
       footer: { lines: [words.whyYouGetIt({ platformName: brand.platformName })] },

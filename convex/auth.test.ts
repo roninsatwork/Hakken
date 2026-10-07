@@ -219,9 +219,11 @@ describe("the one-time code email", () => {
     // Typed addresses arrive with stray case and whitespace; the email goes
     // to the normalised form the code tables are keyed on.
     expect(call.payload.to).toBe("mixed@example.com");
-    expect(call.payload.subject).toBe(`Your ${platformName} sign-in code`);
-    expect(call.payload.html).toContain("654321");
-    expect(call.payload.text).toContain("654321");
+    // As drawn (style B, hakken-tasks-plan.md 3.3): the code in the subject,
+    // and big in the body in two halves to read; typed with or without the space.
+    expect(call.payload.subject).toBe(`Your ${platformName} sign-in code: 654321`);
+    expect(call.payload.html).toContain(">654 321<");
+    expect(call.payload.text).toContain("654 321");
     expect(call.payload.text).toContain(`${codes.CODE_TTL_MS / 60_000} minutes`);
   });
 });

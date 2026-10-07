@@ -132,11 +132,12 @@ export function resolveNotificationContent(args: {
  */
 export function buildAgentNotificationEmail(
   content: { subject: string; body: string },
-  options: { platformName?: string } = {}
+  options: { platformName?: string; agentName?: string } = {}
 ): RenderedEmail {
   return renderEmail(
     {
-      kind: "From your agent",
+      // As drawn (style B, board MailAgent): which agent wrote it, beside the wordmark.
+      kind: options.agentName ? `From your agent · ${options.agentName}` : "From your agent",
       verdict: content.subject,
       paragraphs: content.body.split(/\n{2,}/).filter((part) => part.trim().length > 0),
       footer: {

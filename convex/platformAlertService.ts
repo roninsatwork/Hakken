@@ -2,7 +2,6 @@ import {
   renderEmail,
   type EmailCard,
   type EmailContent,
-  type EmailStat,
   type RenderedEmail,
 } from "./emailLayoutService";
 import { resolvePlatformName } from "./settingsService";
@@ -744,12 +743,6 @@ const CRITICAL_KEYS = new Set<PlatformAlertSignal["key"]>([
   "providerFailures",
 ]);
 
-const COUNT_WORDS = ["No", "One", "Two", "Three", "Four", "Five", "Six"];
-
-function countWord(value: number) {
-  return COUNT_WORDS[value] ?? formatNumber(value);
-}
-
 function formatWhen(at: number | undefined) {
   if (at === undefined) return undefined;
   return new Date(at).toISOString().replace("T", " ").slice(0, 16);
@@ -805,9 +798,10 @@ export function buildSystemHealthAlertSubject(
 
   // The old subject counted summed occurrences — "6 signals" for two problems.
   // A person triaging an inbox wants to know how many things need them.
+  // As drawn (style B, board MailSystemHealth): "2 things in Hakken need you".
   return issues > 0
-    ? `${name} · ${formatNumber(issues)} issue${issues === 1 ? "" : "s"} need${issues === 1 ? "s" : ""} attention`
-    : `${name} · all clear`;
+    ? `${formatNumber(issues)} thing${issues === 1 ? "" : "s"} in ${name} need${issues === 1 ? "s" : ""} you`
+    : `Everything in ${name} is clear`;
 }
 
 /**
@@ -830,55 +824,49 @@ export function buildSystemHealthAlertEmail(
 
   const ranked = [...signals].sort((left, right) => right.count - left.count);
 
+  const governance = baseUrl ? { label: "Open agent governance", url: `${baseUrl}/admin/agents` } : undefined;
+
+  // As drawn (style B, board MailSystemHealth): each thing labelled by how
+  // soon it needs someone, in words, with how often it happened beside it.
   const cards: EmailCard[] = ranked.map((signal) => {
     const groups = groupAlertOccurrences(signal.occurrences ?? []);
     const agentGroup = groups.find((group) => group.targetType === "agent" && group.targetId);
+    const meta = [describeBadge(signal, groups), describeMeta(groups)].filter((part) => part && part.length > 0).join(" · ");
 
     return {
       title: signal.label,
-      badge: describeBadge(signal, groups),
+      badge: CRITICAL_KEYS.has(signal.key) ? "Needs you now" : "Worth a look",
       severity: CRITICAL_KEYS.has(signal.key) ? "critical" : "warning",
       body: describeGroups(groups, signal.details),
-      meta: describeMeta(groups),
+      ...(meta ? { meta } : {}),
       fix: signal.runbook,
       link: baseUrl && agentGroup
-        ? { label: "Open the agent log", url: `${baseUrl}/admin/agents/${agentGroup.targetId}/logs` }
-        : undefined,
+        ? { label: "Open the agent’s log", url: `${baseUrl}/admin/agents/${agentGroup.targetId}/logs` }
+        : governance,
     };
   });
 
-  const stats: EmailStat[] = [
-    ...ranked.slice(0, 2).map((signal): EmailStat => ({
-      label: signal.label,
-      value: formatNumber(signal.count),
-      tone: CRITICAL_KEYS.has(signal.key) ? "critical" : "warning",
-    })),
-    { label: "Checks passed", value: formatNumber(passedKeys.length), tone: "good" },
-  ];
+  const clear = passedKeys.map((key) => HEALTH_CHECK_LABELS[key]);
+  const clearList = clear.length > 4 ? `${clear.slice(0, 4).join(", ")} and ${formatNumber(clear.length - 4)} more` : listLabels(clear);
+  const covers = `This covers ${report.windowStartDate} to ${report.checkedDate}.`;
 
   const content: EmailContent = {
     kind: "System health",
-    verdict: signals.length > 0
-      ? `${countWord(signals.length)} thing${signals.length === 1 ? "" : "s"} need${signals.length === 1 ? "s" : ""} you.`
-      : "Everything is clean.",
+    ...(signals.length > 0
+      ? { figure: formatNumber(signals.length), verdict: `thing${signals.length === 1 ? "" : "s"} need${signals.length === 1 ? "s" : ""} you` }
+      : { verdict: "Everything’s clear" }),
     lede: signals.length > 0
-      ? `${listLabels(ranked.map((signal) => signal.label))} need attention. ` +
-        `The other ${formatNumber(passedKeys.length)} checks are clear.`
-      : `All ${formatNumber(TOTAL_HEALTH_CHECKS)} checks passed across ${report.windowStartDate} to ${report.checkedDate}.`,
-    stats: signals.length > 0 ? stats : undefined,
+      ? `The other ${formatNumber(passedKeys.length)} checks are clear. ${covers}`
+      : `All ${formatNumber(TOTAL_HEALTH_CHECKS)} checks passed. ${covers}`,
     cards,
-    overflow: baseUrl ? { label: "Open agent governance", url: `${baseUrl}/admin/agents` } : undefined,
-    actions: baseUrl ? [{ label: "Open agent governance", url: `${baseUrl}/admin/agents` }] : undefined,
-    quiet: passedKeys.length > 0 && signals.length > 0
-      ? [`Also checked and clear: ${passedKeys.map((key) => HEALTH_CHECK_LABELS[key]).join(", ")}.`]
-      : undefined,
+    overflow: governance,
+    actions: governance ? [governance] : undefined,
+    quiet: passedKeys.length > 0 && signals.length > 0 ? [`Also checked and clear: ${clearList}.`] : undefined,
     footer: {
       lines: [
-        `Covering ${report.windowStartDate} to ${report.checkedDate}.`,
         signals.length > 0
-          ? "Sent because a check failed. A clean run sends nothing."
-          : "Sent as a scheduled confirmation.",
-        "Recipients are configured by your platform administrator.",
+          ? "Sent because a check failed. A clean day sends nothing. Your platform administrator chooses who gets this."
+          : "Sent as a scheduled check. Your platform administrator chooses who gets this.",
       ],
     },
   };

@@ -3,6 +3,7 @@ import { convexTest } from "convex-test";
 import { expect, test, describe } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { fillInvitation } from "./platformEmails";
 
 describe("OWASP: Broken Access Control - Invites", () => {
   test("Standard USER cannot read pending invites", async () => {
@@ -120,9 +121,11 @@ describe("OWASP: Broken Access Control - Invites", () => {
     const superAdminClient = t.withIdentity({ subject: superAdminId });
 
     expect(await t.query(api.invites.getActiveTemplate, {})).toBeNull();
+    // The default, in style B's friendly words: the names are filled in when it is sent (fillInvitation).
     expect(await superAdminClient.query(api.invites.getActiveTemplate, {})).toMatchObject({
-      subject: `You have been invited to ${DEFAULT_SETTINGS.platformName} Workspace`,
-      ctaText: "Accept Invitation",
+      subject: `{inviter} invited you to join {company} on ${DEFAULT_SETTINGS.platformName}`,
+      headline: `{inviter} invited you to join {company} on ${DEFAULT_SETTINGS.platformName}`,
+      ctaText: "Accept the invitation",
     });
 
     await superAdminClient.mutation(api.invites.saveTemplate, {
@@ -450,5 +453,13 @@ describe("OWASP: Broken Access Control - Invites", () => {
 
     expect(invite).toMatchObject({ status: "ACCEPTED", token: "original-token", role: "USER" });
     expect(auditLogs).toHaveLength(0);
+  });
+});
+
+describe("an invitation's names", () => {
+  test("are filled in when it is sent, as often as they appear, and nothing else changes", () => {
+    expect(fillInvitation("{inviter} invited you to join {company} on {platform}. {company} is waiting.", { inviter: "Jo Hughes", company: "Ronins Agency", platform: "Hakken" }))
+      .toBe("Jo Hughes invited you to join Ronins Agency on Hakken. Ronins Agency is waiting.");
+    expect(fillInvitation("Welcome {name}", { inviter: "a", company: "b", platform: "c" })).toBe("Welcome {name}");
   });
 });

@@ -329,8 +329,11 @@ describe("platform alert service", () => {
     expect(decision.signals).toHaveLength(2);
     expect(email.html).toContain("Agent execution errors");
     expect(email.html).toContain("Failed agent tool calls");
-    expect(email.html).toContain("4 × SAME FAULT");
-    expect(email.html).toContain("2 CAUSES");
+    // As drawn (style B): each labelled by how soon it needs someone, how often beside it.
+    expect(email.html).toContain(">NEEDS YOU NOW<");
+    expect(email.html).toContain(">WORTH A LOOK<");
+    expect(email.html).toContain("4 × same fault ·");
+    expect(email.html).toContain("2 causes ·");
   });
 
   test("never prints a provider payload", () => {
@@ -378,8 +381,9 @@ describe("platform alert service", () => {
     const email = buildSystemHealthAlertEmail(report, decision, { platformName: "Acme Ops" });
 
     // The original said "(6 signals)" for what a person would call two problems.
-    expect(email.subject).toBe("Acme Ops · 2 issues need attention");
-    expect(email.html).toContain("Two things need you.");
+    // As drawn (style B, board MailSystemHealth): the count big, the headline reading on from it.
+    expect(email.subject).toBe("2 things in Acme Ops need you");
+    expect(email.html).toContain(">things need you<");
   });
 
   test("escapes hostile content coming through a signal", () => {

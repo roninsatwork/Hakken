@@ -81,8 +81,39 @@ therefore a tint and a consolidation, not a reversal.
 
 ## Design Contract
 
+**Since 2026-10-07 every email is style B, "the picture"** — chosen by Anthony
+from three variants ("I think I prefer B, it's more engaging and intuitive"),
+then made the default for every email the platform sends
+([hakken-tasks-plan.md](./hakken-tasks-plan.md), items 3.1 and 3.3; the
+boards are `docs/plans/assets/hakken-tasks/boards/Mail*.dc.html`). The
+sections below this table record the dark design it replaced, and its
+reasons, which still hold: the contrast and colour-blind tests, the Outlook
+rules and the inert colour lock all carried over.
+
 Fixed structure, top to bottom. A caller supplies content for slots 2–4 and
 **never writes markup** — that constraint is the point of the whole plan.
+
+| # | Slot | Rule |
+| --- | --- | --- |
+| 1 | Header | The wordmark — the platform's name as written — and a small label beside it. Drawn in HTML, never an image. |
+| 2 | Verdict | The one number or code the email is about, big in the number face (`figure`), with the headline reading on from it; or the headline alone at 26px. Then a short grey lede. |
+| 3 | Evidence | Figures side by side ("A usual day **23**"), then each event as a plain row under a hairline — its label in words ("Needs you now", "Worth a look") and its title on one line, never a box. |
+| 4 | Action | One dark button back into the app, deep-linked; any other route a plain underlined link beside it. |
+| 5 | Footer | Why they get it and how to stop, then the credit line, under a hairline. |
+
+| Token | Hex | Use |
+| --- | --- | --- |
+| Ground | `#f2f2f2` | Outer page |
+| Card | `#ffffff` | The sheet |
+| Edge | `#e5e5e5` | The sheet's edge and every rule |
+| Ink | `#111111` | Headline, body, links |
+| Ink 70 | `#666666` | The lede and a row's detail (5.74) |
+| Ink 45 | `#767676` | Small print (4.54) — the boards' `#999999` fails AA on white |
+| Label | `#c2410c` | A row's label — the boards' orange, deepened to pass (5.18) |
+| Blue / Gold / Red | `#1d4ed8` / `#a16207` / `#7f1d1d` | Good / needs attention / failed: apart under deuteranopia and protanopia, warning twice as light as critical |
+| Button | `#2c2c2e` | The one button, with white words (13.94) |
+
+### The dark design it replaced (2026-07-31 to 2026-10-07)
 
 | # | Slot | Rule |
 | --- | --- | --- |
@@ -462,6 +493,18 @@ preview route gives us the source to hand to a render service at that point.
   Phase 0.
 
 ## Decisions Log
+
+- **2026-10-07 — every email moved to style B, "the picture".** Anthony chose
+  it on the Hakken tasks canvas and asked for it everywhere: "can we make this
+  the default email style too … we crack everything in one go." A white sheet
+  on light grey, the wordmark and a small label, a big number or code, a
+  friendly headline, rows under hairlines, one dark button. Two colours moved
+  from the boards for legibility (small print `#767676`, labels `#c2410c`); the
+  signal colours were recomputed for a white sheet against the same AA and
+  colour-blind tests. The sign-in, code, invitation and automation emails are
+  built in `convex/platformEmails.ts`, which the preview renders too, so the
+  preview cannot drift from what is sent; the invitation's template takes
+  `{inviter}`, `{company}` and `{platform}`.
 
 - **2026-08-06 — the panel got darker and the design got air.** Anthony,
   comparing our system health alert against a Conterra intelligence digest:
