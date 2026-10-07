@@ -197,6 +197,36 @@ describe("the Assistant's company figures", () => {
     ]);
   });
 
+  test("a tool its connector gained after it was installed reaches the Assistant; one an administrator switched off stays off", async () => {
+    const t = harness();
+    const companyId = await company(t, "Grown Ltd");
+    const userId = await admin(t, companyId);
+    const agentId = await t.mutation(internal.hakkenAssistant.ensureAssistantInternal, { installedBy: userId });
+    // As though the connector was installed before these two tools existed, and an administrator then switched one off.
+    await t.run(async (ctx) => {
+      const tools = await ctx.db.query("aiTools").collect();
+      const gained = tools.find((tool) => tool.handlerMapping === "assistant.tasks.list")!;
+      for (const row of await ctx.db.query("agentTools").withIndex("by_agent", (q) => q.eq("agentId", agentId)).collect()) {
+        if (row.toolId === gained._id) await ctx.db.delete(row._id);
+      }
+      await ctx.db.delete(gained._id);
+      // Switched off as the connector's screen does it: out of its enabled tools, and inactive.
+      const off = tools.find((tool) => tool.handlerMapping === "assistant.tasks.change")!;
+      await ctx.db.patch(off._id, { isActive: false });
+      const connector = (await ctx.db.get(off.connectorId!))!;
+      await ctx.db.patch(connector._id, { enabledToolMappings: (connector.enabledToolMappings ?? []).filter((mapping) => mapping !== "assistant.tasks.change" && mapping !== "assistant.tasks.list") });
+    });
+
+    await t.mutation(internal.hakkenAssistant.ensureAssistantInternal, { installedBy: userId });
+
+    const tools = await t.run(async (ctx) => await ctx.db.query("aiTools").collect());
+    const gained = tools.find((tool) => tool.handlerMapping === "assistant.tasks.list");
+    expect(gained?.isActive).toBe(true);
+    const bound = await t.run(async (ctx) => (await ctx.db.query("agentTools").withIndex("by_agent", (q) => q.eq("agentId", agentId)).collect()).map((row) => row.toolId));
+    expect(bound).toContain(gained?._id);
+    expect(tools.find((tool) => tool.handlerMapping === "assistant.tasks.change")?.isActive).toBe(false);
+  });
+
   test("a competitor's overview and AI answers can be read; its Search Console is the owner's, and says so", async () => {
     const t = harness();
     const companyId = await company(t, "Rival Watch Ltd");

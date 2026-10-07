@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
-import { findConnectorInstall, installBuiltInConnector } from "./aiTools";
+import { addNewBuiltInTools, findConnectorInstall, installBuiltInConnector } from "./aiTools";
 import { GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
 import { answerTiming } from "./utils/answerTiming";
 import { appError } from "./utils/appError";
@@ -76,6 +76,9 @@ async function bindConnector(ctx: MutationCtx, agentId: Id<"agents">, key: strin
     await installBuiltInConnector(ctx, { key, installedBy, tenantAvailability: "GLOBAL" });
     connector = await findConnectorInstall(ctx, { key });
     if (!connector) return;
+  } else {
+    // A tool its definition gained since it was installed (a report, a chart) reaches the Assistant too.
+    await addNewBuiltInTools(ctx, connector, installedBy);
   }
   const tools = await ctx.db
     .query("aiTools")
