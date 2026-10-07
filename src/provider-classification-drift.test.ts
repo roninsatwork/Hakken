@@ -74,6 +74,9 @@ describe('Provider Classification Drift', () => {
       // The finishing-off plan's table of what is bought, how often, names the
       // assistants each AI question is asked of: naming them is the subject.
       'docs/plans/active/finish-off-plan.md',
+      // The keeping-less-history plan's table of what each screen answers names
+      // the assistants a company's AI questions are asked of: naming them is the subject.
+      'docs/plans/active/keep-less-history-plan.md',
       'src/provider-classification-drift.test.ts',
     ]);
 

@@ -7,6 +7,16 @@ completed work.
 
 ## Active Plans
 
+- [Keeping less history](./active/keep-less-history-plan.md) — keep only
+  what a screen reads: keyword positions as graph lines (one record per
+  keyword a month, not a row per check), the day tables nobody reads stopped
+  or capped, Search Console's search and page lines kept 60 days with the
+  long lists asked of Google, a keep rule for every table that grows, and
+  what is stored but never read cut (part 5, agreed the same day); and Ask
+  Hakken listing only the viewed company's websites, under 発見, with
+  questions about Hakken (part 6, drawing signed off the same day).
+  **Planned 2026-10-07; nothing built; waits for the Hakken tasks work to
+  finish; nine decisions open; about 20 to 25 days in seven phases.**
 - [Hakken tasks — the assistant that does the work](./active/hakken-tasks-plan.md) —
   on top of the assistant's foundation: a person asks Ask Hakken to keep an
   eye on something, Hakken writes the task back for a yes, checks each

@@ -1,0 +1,50 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-07T15:55:01Z"
+  },
+  "title": "Ask Hakken — your websites",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 1000,
+      "title": "1 · As Period House Group: answering for its own website, under Hakken’s mark, with questions about Hakken"
+    },
+    "PickerPHG.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 1000,
+      "title": "2 · Choosing a website: morehandles.co.uk and the 7 it tracks — no other company’s"
+    },
+    "PickerKorda.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 1000,
+      "title": "3 · As Korda: its 5 websites, each with the websites it tracks folded beneath"
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "PickerPHG.dc.html",
+    "PickerKorda.dc.html"
+  ],
+  "notes": {
+    "row": {
+      "x": 0,
+      "y": -300,
+      "text": "Ask Hakken — only the websites you can see",
+      "kind": "title1",
+      "maxW": 4400
+    }
+  },
+  "designSystems": []
+}
