@@ -12,11 +12,13 @@ import {
   hakkenTaskReportValidator,
   hakkenTaskAnswerValidator,
   hakkenTaskRankingValidator,
+  hakkenTaskNeedsYouValidator,
   hakkenTaskStateValidator,
   hakkenTaskTargetValidator,
 } from "./hakkenTaskSchema";
 import { resolvePlatformName } from "./settingsService";
 import { addWebsiteKeywordCore, addWebsiteQuestionCore } from "./websiteCanonical";
+import { problemOf } from "./hakkenCaretaker";
 import { superAdminMutation, superAdminQuery, tenantMutation, tenantQuery, requireTenant } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import { nextRunOf, taskTimeOfDay, taskTimeZone } from "./utils/hakkenTaskTiming";
@@ -44,6 +46,7 @@ const taskRowValidator = v.object({
   report: v.optional(hakkenTaskReportValidator),
   answer: v.optional(hakkenTaskAnswerValidator),
   ranking: v.optional(hakkenTaskRankingValidator),
+  needsYou: v.optional(hakkenTaskNeedsYouValidator),
   timeOfDay: v.string(),
   timeZone: v.string(),
   channels: hakkenTaskChannelsValidator,
@@ -67,6 +70,7 @@ function toRow(task: Doc<"hakkenTasks">): TaskRow {
     ...(task.report ? { report: task.report } : {}),
     ...(task.answer ? { answer: task.answer } : {}),
     ...(task.ranking ? { ranking: task.ranking } : {}),
+    ...(task.state === "NEEDS_YOU" && task.needsYou ? { needsYou: task.needsYou } : {}),
     timeOfDay: task.timeOfDay,
     timeZone: task.timeZone,
     channels: task.channels,
@@ -123,8 +127,12 @@ function pausedFields(now: number) {
 
 async function resume(ctx: MutationCtx, task: Doc<"hakkenTasks">, now: number) {
   if (task.state === "ON") return;
+  // One the Caretaker paused comes back on once it is fixed; until then it says what is still wrong.
+  if (task.state === "NEEDS_YOU" && (await problemOf(ctx, task, now))) {
+    throw appError("CONFLICT", "That task still can’t work: fix what its note says first, then turn it back on.");
+  }
   await assertRoomFor(ctx, task.userId, task.companyId);
-  await ctx.db.patch(task._id, { state: "ON", pausedAt: undefined, updatedAt: now, nextCheckAt: nextRunOf(task, now) });
+  await ctx.db.patch(task._id, { state: "ON", pausedAt: undefined, needsYou: undefined, updatedAt: now, nextCheckAt: nextRunOf(task, now) });
 }
 
 // ── The owner's ─────────────────────────────────────────────────────────────

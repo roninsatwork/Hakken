@@ -8499,6 +8499,15 @@
       "5": "il venerdì",
       "6": "il sabato",
       "7": "la domenica"
+    },
+    "needsYou": {
+      "WEBSITE_GONE": "{website} non è più uno dei tuoi siti",
+      "NOT_CONNECTED": "{website} non è più collegato a Search Console: ricollegalo, poi riattiva questa attività",
+      "NO_FIGURES": "Search Console ha smesso di inviare i dati di {website}: controlla il collegamento, poi riattiva questa attività",
+      "PAGE_GONE": "Google non mostra {page} da quattro settimane: potrebbe essere stata spostata o rimossa",
+      "QUESTION_GONE": "“{prompt}” non è più monitorata: torna a monitorarla, poi riattiva questa attività",
+      "SEARCH_GONE": "“{keyword}” non è più monitorata: torna a monitorarla, poi riattiva questa attività",
+      "DUPLICATE": "Hai già attiva questa attività, quindi questa copia è in pausa"
     }
   },
   "notifications": {

@@ -28,7 +28,13 @@ Admin → Companies → Hakken tasks, each held to its board by a look test
 ([`look/`](../assets/hakken-tasks/look/)). Phase 2, charts in Ask Hakken,
 built the same day; then Phase 3: every email in style B and its boards'
 words, a task alert's four weeks as a picture carried inline, and The
-Weekly Digest Email Agent picking the week's stories. Estimates come from reading the code each
+Weekly Digest Email Agent picking the week's stories; Phase 4: The Stat
+Report Agent's weekly reports, the Research Agent's "find out why", and
+alerts on AI answers and Google rankings, which can add the question or
+search they watch on a yes (anyone in the company may, Anthony's answer
+that day); and Phase 5, the Caretaker Agent's daily sweep. The Caretaker
+words its notes from plain code rather than a model: what went wrong is a
+fixed list, so a template says it exactly. Estimates come from reading the code each
 item touches, not from building it; each phase is re-estimated before it starts.
 
 ## The rules

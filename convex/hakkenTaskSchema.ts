@@ -78,6 +78,25 @@ export const hakkenTaskRankingValidator = v.object({
   position: v.number(),
 });
 
+/**
+ * Why the Caretaker paused a task it found could no longer work (Phase 5): its
+ * website gone, Search Console disconnected or silent, its page not shown for
+ * four weeks, its question or search no longer tracked, or the same task
+ * twice. The screen and the bell word it; the task waits for its owner.
+ */
+export const hakkenTaskNeedsYouValidator = v.object({
+  reason: v.union(
+    v.literal("WEBSITE_GONE"),
+    v.literal("NOT_CONNECTED"),
+    v.literal("NO_FIGURES"),
+    v.literal("PAGE_GONE"),
+    v.literal("QUESTION_GONE"),
+    v.literal("SEARCH_GONE"),
+    v.literal("DUPLICATE"),
+  ),
+  since: v.number(),
+});
+
 export const hakkenTaskChannelsValidator = v.object({
   bell: v.boolean(),
   email: v.boolean(),
@@ -134,6 +153,8 @@ export const hakkenTaskTables = {
     /** An alert on AI answers or on a Google ranking (item 4.3). */
     answer: v.optional(hakkenTaskAnswerValidator),
     ranking: v.optional(hakkenTaskRankingValidator),
+    /** Why the Caretaker paused it, while it is NEEDS_YOU (Phase 5). */
+    needsYou: v.optional(hakkenTaskNeedsYouValidator),
     /** Its figure's usual day when it was set, for the alert's words ("it usually gets about 23"). */
     usual: v.optional(v.number()),
     /** The owner's local time to hear from Hakken, "09:00", in `timeZone`. */

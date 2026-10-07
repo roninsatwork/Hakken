@@ -70,6 +70,11 @@ export type EmailWording = {
     open: string;
     whyYouGetIt: (args: { platformName: string }) => string;
   };
+  /** A task the Caretaker paused (Phase 5): the bell, in plain words, with what to do. */
+  caretaker: {
+    title: (args: { title: string }) => string;
+    body: (args: { reason: "WEBSITE_GONE" | "NOT_CONNECTED" | "NO_FIGURES" | "PAGE_GONE" | "QUESTION_GONE" | "SEARCH_GONE" | "DUPLICATE"; website: string; page: string; prompt: string; keyword: string; platformName: string }) => string;
+  };
   /** "Find out why", done (item 4.2): the bell saying the write-up is in the conversation. */
   research: {
     bellTitle: (args: { platformName: string }) => string;
@@ -167,6 +172,23 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
     research: {
       bellTitle: ({ platformName }) => `${platformName} looked into it: here’s what it found`,
     },
+    caretaker: {
+      title: ({ title }) => `Paused: “${title}”`,
+      body: ({ reason, website, page, prompt, keyword, platformName }) => {
+        const what = {
+          WEBSITE_GONE: `${website} isn’t one of your websites any more, so there’s nothing to watch.`,
+          NOT_CONNECTED: `${website} isn’t connected to Search Console any more. Reconnect it on its Search Console page`,
+          NO_FIGURES: `Search Console has stopped sending ${website}’s figures. Check its connection on its Search Console page`,
+          PAGE_GONE: `Google hasn’t shown ${page.replace(/^https?:\/\/[^/]+/, "") || page} for four weeks, so it may have moved or gone. Ask ${platformName} to watch its new address instead`,
+          QUESTION_GONE: `“${prompt}” isn’t one of ${website}’s tracked questions any more. Track it again`,
+          SEARCH_GONE: `“${keyword}” isn’t one of ${website}’s tracked searches any more. Track it again`,
+          DUPLICATE: "You already have this task switched on, so this copy is paused. You can delete it",
+        }[reason];
+        return reason === "WEBSITE_GONE" || reason === "DUPLICATE"
+          ? `${what}${reason === "DUPLICATE" ? ` in ${platformName} tasks.` : ""}`
+          : `${what}, then turn it back on in ${platformName} tasks.`;
+      },
+    },
     taskReport: {
       kind: ({ weekday }) => `${EN_WEEKDAYS[weekday - 1] ?? "Weekly"} report`,
       subject: ({ weekday, total, pages, direction }) =>
@@ -252,6 +274,23 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
     },
     research: {
       bellTitle: ({ platformName }) => `${platformName} ci ha guardato: ecco cosa ha trovato`,
+    },
+    caretaker: {
+      title: ({ title }) => `In pausa: “${title}”`,
+      body: ({ reason, website, page, prompt, keyword, platformName }) => {
+        const what = {
+          WEBSITE_GONE: `${website} non è più uno dei tuoi siti, quindi non c’è nulla da tenere d’occhio.`,
+          NOT_CONNECTED: `${website} non è più collegato a Search Console. Ricollegalo dalla sua pagina di Search Console`,
+          NO_FIGURES: `Search Console ha smesso di inviare i dati di ${website}. Controlla il collegamento dalla sua pagina di Search Console`,
+          PAGE_GONE: `Google non mostra ${page.replace(/^https?:\/\/[^/]+/, "") || page} da quattro settimane: potrebbe essere stata spostata o rimossa. Chiedi a ${platformName} di tenere d’occhio il nuovo indirizzo`,
+          QUESTION_GONE: `“${prompt}” non è più tra le domande monitorate di ${website}. Torna a monitorarla`,
+          SEARCH_GONE: `“${keyword}” non è più tra le ricerche monitorate di ${website}. Torna a monitorarla`,
+          DUPLICATE: "Hai già attiva questa attività, quindi questa copia è in pausa. Puoi eliminarla",
+        }[reason];
+        return reason === "WEBSITE_GONE" || reason === "DUPLICATE"
+          ? `${what}${reason === "DUPLICATE" ? ` in Attività di ${platformName}.` : ""}`
+          : `${what}, poi riattivala in Attività di ${platformName}.`;
+      },
     },
     taskReport: {
       kind: ({ weekday }) => `Report ${itOfWeekday(weekday)}`,

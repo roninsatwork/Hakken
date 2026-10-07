@@ -8499,6 +8499,15 @@
       "5": "Fridays",
       "6": "Saturdays",
       "7": "Sundays"
+    },
+    "needsYou": {
+      "WEBSITE_GONE": "{website} isn’t one of your websites any more",
+      "NOT_CONNECTED": "{website} isn’t connected to Search Console any more: reconnect it, then turn this back on",
+      "NO_FIGURES": "Search Console has stopped sending {website}’s figures: check its connection, then turn this back on",
+      "PAGE_GONE": "Google hasn’t shown {page} for four weeks, so it may have moved or gone",
+      "QUESTION_GONE": "“{prompt}” isn’t tracked any more: track it again, then turn this back on",
+      "SEARCH_GONE": "“{keyword}” isn’t tracked any more: track it again, then turn this back on",
+      "DUPLICATE": "You already have this switched on, so this copy is paused"
     }
   },
   "notifications": {

@@ -27,6 +27,14 @@ crons.interval(
   { job: "hakken-task-watch" }
 );
 
+// The Caretaker Agent's daily sweep: any task that can no longer work paused, its owner told (hakken-tasks-plan.md, Phase 5).
+crons.daily(
+  "hakken-task-care",
+  { hourUTC: 5, minuteUTC: 30 },
+  internal.jobLedger.runJob,
+  { job: "hakken-task-care" }
+);
+
 // The Stat Report Agent's round: each report due on its owner's day, at their time (hakken-tasks-plan.md, 4.1).
 crons.interval(
   "hakken-task-reports",

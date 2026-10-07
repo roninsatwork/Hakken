@@ -52,9 +52,11 @@ function watchedThing(row: HakkenTaskRow): string {
   return row.target?.website ?? row.title;
 }
 
-/** Where its figures are: the Search Console screen it reads. */
+/** Where its figures are: the screen it reads — AI answers, rankings, or Search Console. */
 function figuresHref(row: HakkenTaskRow): string | null {
   if (!row.target) return null;
+  if (row.answer) return `/app/sites/${row.target.companyWebsiteId}/ai/mentions`;
+  if (row.ranking) return `/app/sites/${row.target.companyWebsiteId}/keywords`;
   return `/app/search-console/${row.target.companyWebsiteId}${row.target.page ? "/pages" : ""}`;
 }
 
@@ -178,7 +180,22 @@ export function HakkenTasksScreen({
       sortable: true,
       cell: (row) => {
         const href = forCompany ? null : figuresHref(row);
-        return href ? <RecordLinkCell href={href}>{row.title}</RecordLinkCell> : <span className="text-[13px] text-foreground">{row.title}</span>;
+        const title = href ? <RecordLinkCell href={href}>{row.title}</RecordLinkCell> : <span className="text-[13px] text-foreground">{row.title}</span>;
+        // Paused by the Caretaker (Phase 5): why, in plain words, under its title.
+        if (!row.needsYou) return title;
+        return (
+          <span className="flex flex-col gap-0.5">
+            {title}
+            <span className="text-[12px] text-secondary">
+              {t(`needsYou.${row.needsYou.reason}`, {
+                website: row.target?.website ?? "",
+                page: row.target?.page ? pathOf(row.target.page) : "",
+                prompt: row.answer?.prompt ?? "",
+                keyword: row.ranking?.keyword ?? "",
+              })}
+            </span>
+          </span>
+        );
       },
     },
     { key: "type", header: t("columns.type"), sortable: true, cell: (row) => <TagLabel>{kindWord(row)}</TagLabel> },

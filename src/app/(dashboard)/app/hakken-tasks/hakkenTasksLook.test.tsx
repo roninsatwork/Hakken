@@ -126,6 +126,16 @@ describe("Hakken tasks' approved look", () => {
     expect(within(row).getByText("Report")).toBeInTheDocument();
   });
 
+  it("says why the Caretaker paused one, under its title, with Resume to turn it back on", async () => {
+    vi.mocked(useQuery).mockImplementation(answerQueries({
+      "hakkenTasks:listMine": [{ ...TASKS[0], state: "NEEDS_YOU", needsYou: { reason: "NOT_CONNECTED", since: 1 } }],
+    }));
+    render(<HakkenTasksPage />);
+    expect(await screen.findByText("ronins.test isn’t connected to Search Console any more: reconnect it, then turn this back on")).toBeInTheDocument();
+    const row = screen.getByText("Needs you", { selector: "span" }).closest("tr")!;
+    expect(within(row).getByRole("button", { name: "Resume" })).toBeInTheDocument();
+  });
+
   it("with none yet, says how to add one", async () => {
     vi.mocked(useQuery).mockImplementation(answerQueries({ "hakkenTasks:listMine": [] }));
     render(<HakkenTasksPage />);
