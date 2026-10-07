@@ -5,7 +5,7 @@ import { useQuery } from "convex/react";
 import { DecisionLabel } from "@/src/ui/components/screens/DecisionLabel";
 import Link from "next/link";
 import { ChevronDown, FileText, Lightbulb, Wrench, BookOpen, Scale, Search } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { lookupLabel } from "./LookedUpLine";
@@ -26,6 +26,7 @@ export function AnswerEvidence({ messageId }: { messageId: Id<"messages"> }) {
   const t = useTranslations("ai.assistant.evidence");
   const tDecisions = useTranslations("decisions");
   const tLookedUp = useTranslations("ai.assistant.lookedUp");
+  const locale = useLocale();
   const [isOpen, setIsOpen] = useState(false);
   const evidence = useQuery(api.messageEvidence.getForMessage, isOpen ? { messageId } : "skip");
 
@@ -59,7 +60,7 @@ export function AnswerEvidence({ messageId }: { messageId: Id<"messages"> }) {
               {evidence.lookedUp.map((lookup, index) => (
                 <li key={`${lookup.kind}-${lookup.link}-${index}`}>
                   <Link href={lookup.link} className="text-secondary hover:text-foreground transition-colors">
-                    {lookupLabel(tLookedUp, lookup)}
+                    {lookupLabel(tLookedUp, lookup, undefined, locale)}
                   </Link>
                 </li>
               ))}

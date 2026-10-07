@@ -2,6 +2,7 @@ import { defineSchema, defineTable } from "convex/server";
 import { authTables } from "@convex-dev/auth/server";
 import { v } from "convex/values";
 import { aiEngineValidator } from "./seoAiEngines";
+import { answerChartValidator } from "./utils/assistantCharts";
 import { lookupValidator } from "./utils/assistantLookups";
 import { billingTables } from "./billingSchema";
 import { uploadTables } from "./uploadSchema";
@@ -3099,6 +3100,7 @@ export default defineSchema({
     lookedUp: v.optional(v.array(lookupValidator)), // What the Assistant looked up for it, each with its screen (utils/assistantLookups.ts).
     /** A change the Assistant proposed, waiting for its owner's tap (hakken-tasks-plan.md, item 1.2). */
     taskProposal: v.optional(hakkenTaskProposalValidator),
+    chart: v.optional(answerChartValidator), // The chart drawn under it, from a look-up's own figures (hakken-tasks-plan.md, 2.1).
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
     modelUsed: v.optional(v.string()),

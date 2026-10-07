@@ -52,6 +52,7 @@ vi.mock("framer-motion", () => ({
 }));
 
 vi.mock("next-intl", () => ({
+  useLocale: () => "en",
   useTranslations: () => (key: string) => {
     if (key === "you") return "You asked";
     if (key === "stillWriting") return "Still writing";
@@ -63,6 +64,9 @@ vi.mock("next-intl", () => ({
 vi.mock("@/src/context/SystemSettingsContext", () => ({
   useSystemSettings: () => ({ platformName: "Hakken" }),
 }));
+
+// The chart under an answer has its own tests; here, only where it goes.
+vi.mock("./AnswerChart", () => ({ AnswerChart: () => <figure>The chart</figure> }));
 
 vi.mock("next/image", () => ({
   default: ({ unoptimized, alt, ...props }: React.ImgHTMLAttributes<HTMLImageElement> & { unoptimized?: boolean }) => {
@@ -90,6 +94,19 @@ describe("chat status components", () => {
 
     expect(screen.getByText("Done")).toBeInTheDocument();
     expect(screen.getByText(/\d{2}:\d{2}/)).toBeInTheDocument();
+  });
+
+  it("draws an answer's chart where the answer put its mark, never showing the mark", () => {
+    useQueryMock.mockReturnValue(null);
+    const chart = { look: "searchConsoleDays", measure: "visitors", website: "example.co.uk", from: "2026-09-01", to: "2026-09-30", beforeFrom: "2026-08-01", beforeTo: "2026-08-31", points: [{ day: "2026-09-01", value: 1 }], link: "/x" };
+
+    const { container } = render(
+      <ChatMessage message={{ ...baseMessage, role: "assistant", content: "September was good.\n\n{{chart}}\n\nWant me to keep an eye on it?", chart } as Doc<"messages">} />
+    );
+
+    const order = Array.from(container.querySelectorAll("p, figure")).map((element) => element.textContent);
+    expect(order.slice(0, 3)).toEqual(["September was good.", "The chart", "Want me to keep an eye on it?"]);
+    expect(container.textContent).not.toContain("{{chart}}");
   });
 
   it("renders a user message as a labelled heading, not an avatared bubble", () => {

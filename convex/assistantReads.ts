@@ -9,7 +9,6 @@ import { readList } from "./searchConsoleLists";
 import { shiftDay } from "./searchConsoleDays";
 import { readWebsiteHost } from "./websiteIdentity";
 import { isTrackedHold } from "./utils/websitePairing";
-import { lookupsFromToolCalls } from "./utils/assistantLookups";
 
 /**
  * The company's own figures, as the Assistant reads them
@@ -217,17 +216,5 @@ export const openTasksInternal = internalQuery({
       })),
       link: "/app/tasks",
     };
-  },
-});
-
-/** What a run looked up, for its reply's "Looked up" line (`utils/assistantLookups.ts`). */
-export const runLookupsInternal = internalQuery({
-  args: { runId: v.id("agentRuns") },
-  handler: async (ctx, args) => {
-    const calls = await ctx.db
-      .query("agentToolCalls")
-      .withIndex("by_run_started", (q) => q.eq("runId", args.runId))
-      .take(200);
-    return lookupsFromToolCalls(calls);
   },
 });

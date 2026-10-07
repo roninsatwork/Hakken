@@ -28,6 +28,7 @@ import {
 } from "./chatService";
 import { extractPhotoActionProposal } from "./photoActionService";
 import { creditAssistantReply } from "./creditHooks";
+import { answerChartValidator } from "./utils/assistantCharts";
 import { lookupValidator } from "./utils/assistantLookups";
 import { hakkenTaskProposalValidator } from "./hakkenTaskSchema";
 
@@ -144,6 +145,8 @@ const clientMessageValidator = v.object({
   lookedUp: v.optional(v.array(lookupValidator)),
   /** A change the Assistant proposed, waiting for the reader's tap (hakken-tasks-plan.md, item 1.2). */
   taskProposal: v.optional(hakkenTaskProposalValidator),
+  /** The chart drawn under the answer (hakken-tasks-plan.md, item 2.1). */
+  chart: v.optional(answerChartValidator),
 });
 
 function toClientMessage(
@@ -174,6 +177,7 @@ function toClientMessage(
     ...(imageAttachments && imageAttachments.length > 0 ? { imageAttachments } : {}),
     ...(message.lookedUp && message.lookedUp.length > 0 ? { lookedUp: message.lookedUp } : {}),
     ...(message.taskProposal ? { taskProposal: message.taskProposal } : {}),
+    ...(message.chart ? { chart: message.chart } : {}),
   };
 }
 
@@ -531,6 +535,7 @@ export const saveAssistantMessage = internalMutation({
     companyRuntimeEvidenceJson: v.optional(v.string()),
     lookedUp: v.optional(v.array(lookupValidator)),
     taskProposal: v.optional(hakkenTaskProposalValidator),
+    chart: v.optional(answerChartValidator),
     photoTurn: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
@@ -556,6 +561,7 @@ export const saveAssistantMessage = internalMutation({
       companyRuntimeEvidenceJson: args.companyRuntimeEvidenceJson,
       ...(args.lookedUp && args.lookedUp.length > 0 ? { lookedUp: args.lookedUp } : {}),
       ...(args.taskProposal ? { taskProposal: args.taskProposal } : {}),
+      ...(args.chart ? { chart: args.chart } : {}),
       ...(extracted.proposal ? { photoActionProposal: extracted.proposal } : {}),
       ...getThreadMessageDimensions(thread),
     });
@@ -642,6 +648,7 @@ export const finishStreamingAssistantMessage = internalMutation({
     companyRuntimeEvidenceJson: v.optional(v.string()),
     lookedUp: v.optional(v.array(lookupValidator)),
     taskProposal: v.optional(hakkenTaskProposalValidator),
+    chart: v.optional(answerChartValidator),
     photoTurn: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
@@ -667,6 +674,7 @@ export const finishStreamingAssistantMessage = internalMutation({
       companyRuntimeEvidenceJson: args.companyRuntimeEvidenceJson,
       ...(args.lookedUp && args.lookedUp.length > 0 ? { lookedUp: args.lookedUp } : {}),
       ...(args.taskProposal ? { taskProposal: args.taskProposal } : {}),
+      ...(args.chart ? { chart: args.chart } : {}),
       ...(extracted.proposal ? { photoActionProposal: extracted.proposal } : {}),
     });
     await creditAssistantReply(ctx, await ctx.db.get(message.threadId), args.messageId, args);

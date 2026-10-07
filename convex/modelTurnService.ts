@@ -7,6 +7,7 @@ import { certaintyWords } from "./decisionService";
 import { shouldFlushStreamedText } from "./streamingService";
 import type { MessageEvidence } from "./utils/messageEvidence";
 import type { Lookup } from "./utils/assistantLookups";
+import { CHART_MARK, type AnswerChart } from "./utils/assistantCharts";
 import type { TaskProposal } from "./utils/hakkenTaskProposals";
 
 /**
@@ -297,10 +298,13 @@ export async function finishAssistantReply(
     lookedUp?: Lookup[];
     /** A change it proposed, waiting for the reader's tap (`utils/hakkenTaskProposals.ts`). */
     taskProposal?: TaskProposal;
+    /** The chart drawn under it (`utils/assistantCharts.ts`). */
+    chart?: AnswerChart;
   }
 ): Promise<Id<"messages"> | undefined> {
   const shared = {
-    content: args.content,
+    // The chart's mark stays only where a chart is drawn; anywhere else it would show as words.
+    content: args.chart ? args.content : args.content.replaceAll(CHART_MARK, ""),
     inputTokens: args.usage?.inputTokens,
     outputTokens: args.usage?.outputTokens,
     modelUsed: args.model?.modelId,
@@ -311,6 +315,7 @@ export async function finishAssistantReply(
     photoTurn: args.photoTurn,
     ...(args.lookedUp && args.lookedUp.length > 0 ? { lookedUp: args.lookedUp } : {}),
     ...(args.taskProposal ? { taskProposal: args.taskProposal } : {}),
+    ...(args.chart ? { chart: args.chart } : {}),
   };
 
   if (args.stream.messageId !== undefined) {

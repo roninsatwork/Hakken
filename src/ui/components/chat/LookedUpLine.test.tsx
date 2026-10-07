@@ -27,6 +27,11 @@ describe("the Looked up line", () => {
     expect(screen.getByRole("link", { name: "AI answers, crisis24.com" })).toHaveAttribute("href", "/app/sites/site_2/ai/mentions");
   });
 
+  it("names a whole month read for a chart", () => {
+    renderWithProviders(<LookedUpLine lookups={[{ kind: "searchConsole", website: "conterraops.com", month: "2026-09", link: "/app/search-console/site_1" }]} />);
+    expect(screen.getByRole("link", { name: "Search Console, conterraops.com, September 2026" })).toBeInTheDocument();
+  });
+
   it("says nothing for an answer that looked nothing up", () => {
     const { container } = renderWithProviders(<LookedUpLine lookups={[]} />);
     expect(container.textContent).not.toContain("Looked up");

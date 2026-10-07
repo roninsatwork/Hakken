@@ -16,6 +16,8 @@ import { AnswerEvidence } from "./AnswerEvidence";
 import { PhotoActionChip } from "./PhotoActionChip";
 import { LookedUpLine } from "./LookedUpLine";
 import { TaskProposal } from "./TaskProposal";
+import { AnswerChart } from "./AnswerChart";
+import { splitAtChart } from "@/convex/utils/assistantCharts";
 import type { Lookup } from "@/convex/utils/assistantLookups";
 
 /**
@@ -31,7 +33,7 @@ export type ChatMessageView = Pick<
   "_id" | "threadId" | "role" | "content" | "createdAt"
 > &
   Partial<
-    Pick<Doc<"messages">, "systemKey" | "photoActionProposal" | "photoActionTaskId" | "isStreaming" | "streamStartedAt" | "streamUpdatedAt" | "taskProposal">
+    Pick<Doc<"messages">, "systemKey" | "photoActionProposal" | "photoActionTaskId" | "isStreaming" | "streamStartedAt" | "streamUpdatedAt" | "taskProposal" | "chart">
   > & { imageAttachments?: Array<{ url: string }>; lookedUp?: Lookup[] };
 
 interface ChatMessageProps {
@@ -93,6 +95,7 @@ export default function ChatMessage({
     !isReadOnly
     && presentation !== "stalled"
     && (presentation === "streaming" || (isAssistant && reveal.isRevealing));
+  const words = splitAtChart(reveal.text);
 
   if (!isAssistant) {
     return (
@@ -152,7 +155,11 @@ export default function ChatMessage({
       {/* Held to a reading measure. Tables and code inside the markdown break
           out to the full column on their own. */}
       <div className="text-[14px] leading-[1.75] text-foreground/90 max-w-[34rem]">
-        <HakkenMarkdown content={reveal.text} />
+        {/* The chart goes where the answer put its mark, or after its words;
+            the mark itself is never shown (hakken-tasks-plan.md, item 2.1). */}
+        <HakkenMarkdown content={words.before} />
+        {!isStreaming && message.chart ? <AnswerChart chart={message.chart} /> : null}
+        {words.after ? <HakkenMarkdown content={words.after} /> : null}
         {isStreaming && (
           <span
             aria-label={t("stillWriting")}

@@ -184,6 +184,8 @@ describe("the Assistant's company figures", () => {
     });
     expect(bound.sort()).toEqual([
       "assistant.ai.mentions",
+      // Its chart (hakken-tasks-plan.md, item 2.1).
+      "assistant.chart",
       "assistant.searchConsole",
       "assistant.site.overview",
       // Its Hakken task tools, from their own connector (hakken-tasks-plan.md, item 1.2).

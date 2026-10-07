@@ -402,6 +402,8 @@ describe("ai tool execution service", () => {
       // The Assistant's company figures (assistant-foundation-plan.md, item 7):
       // each read through its screen's own function, for the run's company.
       "assistant.ai.mentions",
+      // A chart under an answer, from Search Console's own days (hakken-tasks-plan.md, item 2.1).
+      "assistant.chart",
       "assistant.searchConsole",
       "assistant.site.overview",
       // The Assistant's Hakken task tools (hakken-tasks-plan.md, item 1.2): each

@@ -25,6 +25,8 @@ export const lookupValidator = v.object({
   kind: lookupKindValidator,
   website: v.optional(v.string()),
   days: v.optional(v.number()),
+  /** A calendar month read whole, "2026-09": a chart of last month says so, not "last 30 days". */
+  month: v.optional(v.string()),
   page: v.optional(v.string()),
   link: v.string(),
 });
@@ -40,6 +42,8 @@ const LOOKUP_KINDS: Record<string, Lookup["kind"]> = {
   "assistant.tasks.open": "tasks",
   // Proposing an alert reads the last four weeks of Search Console first.
   "assistant.tasks.propose": "searchConsole",
+  // A chart reads Search Console's days (hakken-tasks-plan.md, 2.1).
+  "assistant.chart": "searchConsole",
 };
 
 /** At most this many on one reply: a line, not a log. */
@@ -76,12 +80,14 @@ export function lookupsFromToolCalls(
     // The runtime wraps a handler's answer as { status, data }.
     const data = parse(call.resultJson).data as Record<string, unknown> | undefined;
     if (!data || data.ok === false || typeof data.link !== "string") continue;
-    const page = parse(call.argumentsJson).page;
+    const asked = parse(call.argumentsJson);
+    const page = asked.page;
+    const month = kind === "searchConsole" && typeof asked.month === "string" && /^\d{4}-\d{2}$/.test(asked.month) ? asked.month : undefined;
     const lookup: Lookup = {
       kind,
       link: data.link,
       ...(typeof data.website === "string" ? { website: data.website } : {}),
-      ...(kind === "searchConsole" && inclusiveDays(data.from, data.to) ? { days: inclusiveDays(data.from, data.to) } : {}),
+      ...(month ? { month } : kind === "searchConsole" && inclusiveDays(data.from, data.to) ? { days: inclusiveDays(data.from, data.to) } : {}),
       ...(kind === "searchConsole" && typeof page === "string" && page.trim() ? { page: page.trim() } : {}),
     };
     const key = JSON.stringify(lookup);

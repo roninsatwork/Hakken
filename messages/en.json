@@ -7305,9 +7305,9 @@
         "label": "Looked up",
         "websites": "Your websites",
         "overview": "{website} overview",
-        "searchConsole": "Search Console, {website}, last {days} days",
-        "searchConsolePages": "Search Console, {website}, pages matching {page}, last {days} days",
-        "searchConsoleDays": "last {days} days",
+        "searchConsole": "Search Console, {website}, {span}",
+        "searchConsolePages": "Search Console, {website}, pages matching {page}, {span}",
+        "lastDays": "last {days} days",
         "aiMentions": "AI answers, {website}",
         "tasks": "Open tasks"
       },
@@ -7368,6 +7368,18 @@
             "done": "Deleted."
           }
         }
+      },
+      "chart": {
+        "title": {
+          "visitors": "Visitors from Google each day",
+          "impressions": "Times shown in Google each day"
+        },
+        "titlePage": {
+          "visitors": "Visitors to {page} from Google each day",
+          "impressions": "Times {page} was shown in Google each day"
+        },
+        "open": "Open in Search Console",
+        "span": "{from} to {to}"
       }
     },
     "costs": {

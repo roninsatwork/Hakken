@@ -22,14 +22,15 @@ const dayFiguresValidator = v.object({ day: v.string(), clicks: v.number(), impr
 // Said outright: a function that reads another in its own file through `internal` cannot have its type inferred.
 type DayFigures = { day: string; clicks: number; impressions: number };
 type Target = { companyWebsiteId: Id<"companyWebsites">; website: string; page?: string };
-type Resolved = { ok: true; target: Target; newestDay: string } | { ok: false; problem: string };
+type Resolved = { ok: true; target: Target; newestDay: string; oldestDay?: string } | { ok: false; problem: string };
 type TargetDays = { ok: true; days: DayFigures[] } | { ok: false; problem: string };
 
 /** What an alert is about, found from the words a person used: one of the company's own websites, and a page on it by part of its address. */
 export const resolveTargetInternal = internalQuery({
   args: { companyId: v.id("companies"), website: v.string(), page: v.optional(v.string()) },
   returns: v.union(
-    v.object({ ok: v.literal(true), target: hakkenTaskTargetValidator, newestDay: v.string() }),
+    // `oldestDay`: where Search Console's history starts, for a chart's days before.
+    v.object({ ok: v.literal(true), target: hakkenTaskTargetValidator, newestDay: v.string(), oldestDay: v.optional(v.string()) }),
     v.object({ ok: v.literal(false), problem: v.string() }),
   ),
   handler: async (ctx, args): Promise<Resolved> => {
@@ -51,14 +52,15 @@ export const resolveTargetInternal = internalQuery({
     if (!connection.newestDay) {
       return { ok: false as const, problem: `${website} is connected to Search Console, but its first days haven't arrived from Google yet. Once they have, usually within a day, ask again and the alert can start.` };
     }
-    if (!args.page?.trim()) return { ok: true as const, target: { companyWebsiteId: hold._id, website }, newestDay: connection.newestDay };
+    const held = { newestDay: connection.newestDay, ...(connection.oldestDay ? { oldestDay: connection.oldestDay } : {}) };
+    if (!args.page?.trim()) return { ok: true as const, target: { companyWebsiteId: hold._id, website }, ...held };
     const to = connection.newestDay;
     const list = await readList(ctx, hold._id, { searchType: "web", dimension: "page", from: shiftDay(to, -29), to, q: args.page.trim() });
     const page = list.rows[0]?.key;
     if (!page) {
       return { ok: false as const, problem: `There's no page on ${website} with "${args.page.trim()}" in its address among those Google showed in the last 30 days.` };
     }
-    return { ok: true as const, target: { companyWebsiteId: hold._id, website, page }, newestDay: connection.newestDay };
+    return { ok: true as const, target: { companyWebsiteId: hold._id, website, page }, ...held };
   },
 });
 

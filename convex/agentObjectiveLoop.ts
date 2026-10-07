@@ -951,13 +951,12 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
         // duplicate reply. The final content is authoritative: a budget stop
         // replaces whatever partial text the reader saw with the explanation
         // of why the run ended.
-        // What it looked up, from the run's own record of its calls — which
+        // What it looked up, the change it proposed for the reader's tap and
+        // the chart under it, from the run's own record of its calls — which
         // survives a hand-over to a later segment, as memory would not.
-        const lookedUp = threadId
-            ? await ctx.runQuery(internal.assistantReads.runLookupsInternal, { runId })
-            : [];
-        // And the change it proposed for the reader's tap, from the same record (hakken-tasks-plan.md, 1.2).
-        const taskProposal = threadId ? await ctx.runQuery(internal.hakkenTasks.runProposalInternal, { runId }) : null;
+        const extras = threadId
+            ? await ctx.runQuery(internal.assistantReplyExtras.runExtrasInternal, { runId })
+            : { lookedUp: [], taskProposal: null, chart: null };
         const messageId = await finishAssistantReply(ctx, {
             threadId,
             stream,
@@ -966,8 +965,9 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
             model: modelConfig,
             evidence: messageEvidence,
             photoTurn: params.photoTurn,
-            lookedUp,
-            ...(taskProposal ? { taskProposal } : {}),
+            lookedUp: extras.lookedUp,
+            ...(extras.taskProposal ? { taskProposal: extras.taskProposal } : {}),
+            ...(extras.chart ? { chart: extras.chart } : {}),
         });
         params.timing?.mark("done");
         if (params.learning && finalStepStatus === "SUCCESS") {

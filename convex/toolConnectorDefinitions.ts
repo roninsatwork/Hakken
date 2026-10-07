@@ -660,6 +660,46 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
     ],
   },
   {
+    // The Assistant's chart under an answer (docs/plans/active/
+    // hakken-tasks-plan.md, item 2.1). Its own connector rather than one more
+    // figure tool: a connector's tools are written when it is installed, so a
+    // new connector reaches an Assistant already installed, and a new tool in
+    // an installed one would not.
+    key: "assistant-charts",
+    name: "Assistant charts",
+    description:
+      "Lets the Assistant draw a chart under its answer from the company's own Search Console figures, never its own numbers.",
+    category: "KNOWLEDGE",
+    authMode: "NONE",
+    tenantAvailability: "GLOBAL",
+    requiredScopes: ["company:read"],
+    requiredSecretRefs: [],
+    toolDefinitions: [
+      {
+        name: "Show a chart",
+        description:
+          "Draws a chart under your answer: one of the company's own websites' visitors from Google, or how often it showed up in Google (impressions), each day — for the whole website or the page whose address contains `page` — against as many days before. Use it when someone asks how something did over time, for one calendar month (`month`, e.g. last month) or the newest 7, 30 or 90 days. It is drawn from the figures it reads, never from yours, and returns the totals for your words. One chart to an answer. Like Search Console, competitors have none.",
+        handlerMapping: "assistant.chart",
+        modelName: "show_chart",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["website", "measure"],
+          properties: {
+            lookup: { type: "string", enum: ["search_console"], description: "Where the figures come from: search_console." },
+            website: { type: "string", description: "The website's address, e.g. example.co.uk — one of the company's, from list_websites." },
+            measure: { type: "string", enum: ["visitors", "impressions"], description: "visitors (Search Console clicks) or impressions." },
+            month: { type: "string", description: "A calendar month as YYYY-MM, drawn against the month before. Leave out to use days." },
+            days: { type: "number", description: "7, 30 or 90: the newest days, against as many before. Used when there's no month." },
+            page: { type: "string", description: "Part of a page's address, e.g. /boiler-repair. Leave out for the whole website." },
+          },
+        }),
+      },
+    ],
+  },
+  {
     // The Assistant's Hakken tasks (docs/plans/active/hakken-tasks-plan.md,
     // item 1.2). Every tool proposes and nothing more: the change is written
     // onto the reply with two buttons and happens when the person taps yes,

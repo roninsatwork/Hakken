@@ -7305,9 +7305,9 @@
         "label": "Consultato",
         "websites": "I tuoi siti web",
         "overview": "Panoramica di {website}",
-        "searchConsole": "Search Console, {website}, ultimi {days} giorni",
-        "searchConsolePages": "Search Console, {website}, pagine che contengono {page}, ultimi {days} giorni",
-        "searchConsoleDays": "ultimi {days} giorni",
+        "searchConsole": "Search Console di {website}, {span}",
+        "searchConsolePages": "Search Console di {website}, pagine che contengono {page}, {span}",
+        "lastDays": "ultimi {days} giorni",
         "aiMentions": "Risposte AI, {website}",
         "tasks": "Attività aperte"
       },
@@ -7368,6 +7368,18 @@
             "done": "Eliminata."
           }
         }
+      },
+      "chart": {
+        "title": {
+          "visitors": "Visitatori da Google ogni giorno",
+          "impressions": "Volte in cui è apparso su Google ogni giorno"
+        },
+        "titlePage": {
+          "visitors": "Visitatori di {page} da Google ogni giorno",
+          "impressions": "Volte in cui {page} è apparsa su Google ogni giorno"
+        },
+        "open": "Apri in Search Console",
+        "span": "dal {from} al {to}"
       }
     },
     "costs": {

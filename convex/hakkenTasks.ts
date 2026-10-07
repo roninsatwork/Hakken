@@ -8,7 +8,6 @@ import {
   hakkenTaskConditionValidator,
   hakkenTaskKindValidator,
   hakkenTaskMeasureValidator,
-  hakkenTaskProposalValidator,
   hakkenTaskStateValidator,
   hakkenTaskTargetValidator,
 } from "./hakkenTaskSchema";
@@ -16,7 +15,6 @@ import { resolvePlatformName } from "./settingsService";
 import { superAdminMutation, superAdminQuery, tenantMutation, tenantQuery, requireTenant } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import { nextTaskRun, taskTimeOfDay, taskTimeZone } from "./utils/hakkenTaskTiming";
-import { proposalFromToolCalls } from "./utils/hakkenTaskProposals";
 
 /**
  * Hakken tasks (docs/plans/active/hakken-tasks-plan.md, item 1.1): what a
@@ -305,19 +303,6 @@ export const ownTaskInternal = internalQuery({
     const task = taskId ? await ctx.db.get(taskId) : null;
     if (!task || task.state === "DELETED" || task.userId !== args.userId || task.companyId !== args.companyId) return null;
     return toRow(task);
-  },
-});
-
-/** The change a run proposed, for its reply: the last that worked. */
-export const runProposalInternal = internalQuery({
-  args: { runId: v.id("agentRuns") },
-  returns: v.union(v.null(), hakkenTaskProposalValidator),
-  handler: async (ctx, args) => {
-    const calls = await ctx.db
-      .query("agentToolCalls")
-      .withIndex("by_run_started", (q) => q.eq("runId", args.runId))
-      .take(200);
-    return proposalFromToolCalls(calls) ?? null;
   },
 });
 

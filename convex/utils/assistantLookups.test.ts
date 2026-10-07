@@ -31,6 +31,16 @@ describe("a reply's look-ups", () => {
     ])).toEqual([]);
   });
 
+  test("a chart of a calendar month is that month, not its days", () => {
+    expect(lookupsFromToolCalls([
+      call("assistant.chart", { ok: true, website: "a.test", from: "2026-09-01", to: "2026-09-30", link: "/app/search-console/a" }, { month: "2026-09" }),
+      call("assistant.chart", { ok: true, website: "a.test", from: "2026-09-24", to: "2026-09-30", link: "/app/search-console/a" }, { days: 7 }),
+    ])).toEqual([
+      { kind: "searchConsole", website: "a.test", month: "2026-09", link: "/app/search-console/a" },
+      { kind: "searchConsole", website: "a.test", days: 7, link: "/app/search-console/a" },
+    ]);
+  });
+
   test("the same look-up once", () => {
     const overview = call("assistant.site.overview", { ok: true, website: "a.test", link: "/app/sites/a" });
     expect(lookupsFromToolCalls([overview, overview])).toEqual([{ kind: "overview", website: "a.test", link: "/app/sites/a" }]);

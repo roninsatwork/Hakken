@@ -25,7 +25,8 @@ build this"). About 28 to 36 building days, in six phases; the first, about
 the task record, setting one up in Ask Hakken, the Watcher Agent's morning
 round and its bell and email, and the screens — Hakken tasks in the menu and
 Admin → Companies → Hakken tasks, each held to its board by a look test
-([`look/`](../assets/hakken-tasks/look/)). Estimates come from reading the code each
+([`look/`](../assets/hakken-tasks/look/)). Phase 2, charts in Ask Hakken,
+built the same day. Estimates come from reading the code each
 item touches, not from building it; each phase is re-estimated before it starts.
 
 ## The rules
