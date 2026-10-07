@@ -747,6 +747,25 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
         }),
       },
       {
+        name: "Offer to find out why",
+        description:
+          "When someone asks why a figure changed — why a page lost visitors, why the website dropped in Google, why AI answers stopped naming them — and it needs digging, offer to find out with this. It writes the offer out under your reply with “Yes, find out” and “Not now”; on a yes, the Research Agent looks through their Search Console figures, rankings and AI answers in the background and writes up what it found in this conversation, then tells them in the bell. It uses their monthly credits, so it always asks first. Answer a simple question yourself with your read tools instead.",
+        handlerMapping: "assistant.tasks.proposeResearch",
+        modelName: "propose_research",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["question"],
+          properties: {
+            question: { type: "string", description: "What to find out, in their words, e.g. Why did /web-design-london/ lose visitors this week?" },
+            website: { type: "string", description: "One of the company's own websites, e.g. example.co.uk, from list_websites, when the question is about one." },
+            page: { type: "string", description: "The page's address or part of it, when the question is about one." },
+          },
+        }),
+      },
+      {
         name: "List my tasks",
         description:
           "The person's own tasks — what each keeps an eye on, whether it is on or paused, and its time — each with the taskId a change needs. Their tasks page is linked: they can also pause, resume or delete there.",

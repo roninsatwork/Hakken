@@ -79,6 +79,8 @@ const MEMBER_READABLE_HANDLERS: ReadonlySet<string> = new Set([
   "assistant.tasks.propose",
   // A weekly report, proposed the same way (item 4.1).
   "assistant.tasks.proposeReport",
+  // "Find out why", proposed the same way, and found out on a yes (item 4.2).
+  "assistant.tasks.proposeResearch",
   "assistant.tasks.list",
   "assistant.tasks.change",
 ]);

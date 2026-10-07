@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internalMutation, internalQuery } from "./_generated/server";
@@ -339,7 +340,11 @@ export const answerProposal = tenantMutation({
     }
 
     let taskId = proposal.taskId;
-    if (proposal.action === "CREATE") {
+    if (proposal.action === "RESEARCH") {
+      // Found out in the background by the Research Agent, its write-up into this conversation (item 4.2).
+      if (!proposal.research) throw appError("INVALID_INPUT", "That offer doesn’t say what to find out.");
+      await ctx.scheduler.runAfter(0, internal.hakkenResearch.researchInternal, { threadId: thread._id, userId: ctx.userId, research: proposal.research });
+    } else if (proposal.action === "CREATE") {
       // An alert watches a rule; a report (item 4.1) sends its pages each week.
       if (!proposal.measure || !proposal.target || !(proposal.condition || proposal.report) || !proposal.channels) {
         throw appError("INVALID_INPUT", "That offer is missing what it would watch.");

@@ -68,7 +68,8 @@ export const hakkenTaskChannelsValidator = v.object({
  * only proposes. Kept on the reply (`messages.taskProposal`).
  */
 export const hakkenTaskProposalValidator = v.object({
-  action: v.union(v.literal("CREATE"), v.literal("PAUSE"), v.literal("RESUME"), v.literal("DELETE")),
+  // RESEARCH: "find out why", run once in the background on a yes (item 4.2).
+  action: v.union(v.literal("CREATE"), v.literal("PAUSE"), v.literal("RESUME"), v.literal("DELETE"), v.literal("RESEARCH")),
   status: v.union(v.literal("PENDING"), v.literal("DONE"), v.literal("DECLINED")),
   title: v.string(),
   /** The task a change is to, or the task a yes made. */
@@ -78,6 +79,8 @@ export const hakkenTaskProposalValidator = v.object({
   condition: v.optional(hakkenTaskConditionValidator),
   /** A report rather than an alert (item 4.1). */
   report: v.optional(hakkenTaskReportValidator),
+  /** What to find out, and on which of the company's websites or pages (item 4.2). */
+  research: v.optional(v.object({ question: v.string(), website: v.optional(v.string()), page: v.optional(v.string()) })),
   usual: v.optional(v.number()),
   timeOfDay: v.optional(v.string()),
   channels: v.optional(hakkenTaskChannelsValidator),

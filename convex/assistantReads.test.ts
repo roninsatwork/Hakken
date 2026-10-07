@@ -194,6 +194,7 @@ describe("the Assistant's company figures", () => {
       "assistant.tasks.open",
       "assistant.tasks.propose",
       "assistant.tasks.proposeReport",
+      "assistant.tasks.proposeResearch",
       "assistant.websites",
     ]);
   });

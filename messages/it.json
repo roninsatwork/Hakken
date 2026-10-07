@@ -7385,6 +7385,17 @@
             "6": "sabato",
             "7": "domenica"
           }
+        },
+        "research": {
+          "lookInto": "Approfondirò",
+          "using": "Userò",
+          "usingWhat": "I tuoi dati di Search Console, i posizionamenti e le risposte AI",
+          "tellYou": "Ti dirò",
+          "tellWhere": "Qui in questa conversazione, e nella campanella",
+          "costWhat": "Dai tuoi crediti mensili",
+          "yes": "Sì, scoprilo",
+          "done": "Ci penso io: scriverò qui cosa trovo tra pochi minuti",
+          "declined": "Non approfondito. Chiedimelo quando vuoi."
         }
       },
       "chart": {

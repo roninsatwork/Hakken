@@ -7385,6 +7385,17 @@
             "6": "Saturday",
             "7": "Sunday"
           }
+        },
+        "research": {
+          "lookInto": "I’ll look into",
+          "using": "Using",
+          "usingWhat": "Your Search Console figures, rankings and AI answers",
+          "tellYou": "I’ll tell you",
+          "tellWhere": "Here in this conversation, and in the bell",
+          "costWhat": "From your monthly credits",
+          "yes": "Yes, find out",
+          "done": "On it: I’ll write up what I find here in a few minutes",
+          "declined": "Not looked into. Ask me any time."
         }
       },
       "chart": {

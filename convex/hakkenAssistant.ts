@@ -70,7 +70,7 @@ export const ensureAssistantInternal = internalMutation({
  * the Assistant on the Agents screen is put back, because the Assistant's
  * tools are what every door answers from.
  */
-async function bindConnector(ctx: MutationCtx, agentId: Id<"agents">, key: string, installedBy: Id<"users"> | undefined) {
+export async function bindConnector(ctx: MutationCtx, agentId: Id<"agents">, key: string, installedBy: Id<"users"> | undefined) {
   let connector = await findConnectorInstall(ctx, { key });
   if (!connector) {
     if (!installedBy) return;

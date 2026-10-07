@@ -205,6 +205,7 @@ import type * as governanceRegisterService from "../governanceRegisterService.js
 import type * as governanceRollupService from "../governanceRollupService.js";
 import type * as governanceRollups from "../governanceRollups.js";
 import type * as hakkenAssistant from "../hakkenAssistant.js";
+import type * as hakkenResearch from "../hakkenResearch.js";
 import type * as hakkenStatReporter from "../hakkenStatReporter.js";
 import type * as hakkenTaskFigures from "../hakkenTaskFigures.js";
 import type * as hakkenTaskSchema from "../hakkenTaskSchema.js";
@@ -511,6 +512,7 @@ import type * as utils_fileParser from "../utils/fileParser.js";
 import type * as utils_governanceShapes from "../utils/governanceShapes.js";
 import type * as utils_hakkenAssistant from "../utils/hakkenAssistant.js";
 import type * as utils_hakkenReports from "../utils/hakkenReports.js";
+import type * as utils_hakkenResearcher from "../utils/hakkenResearcher.js";
 import type * as utils_hakkenTaskAlerts from "../utils/hakkenTaskAlerts.js";
 import type * as utils_hakkenTaskProposals from "../utils/hakkenTaskProposals.js";
 import type * as utils_hakkenTaskRules from "../utils/hakkenTaskRules.js";
@@ -856,6 +858,7 @@ declare const fullApi: ApiFromModules<{
   governanceRollupService: typeof governanceRollupService;
   governanceRollups: typeof governanceRollups;
   hakkenAssistant: typeof hakkenAssistant;
+  hakkenResearch: typeof hakkenResearch;
   hakkenStatReporter: typeof hakkenStatReporter;
   hakkenTaskFigures: typeof hakkenTaskFigures;
   hakkenTaskSchema: typeof hakkenTaskSchema;
@@ -1162,6 +1165,7 @@ declare const fullApi: ApiFromModules<{
   "utils/governanceShapes": typeof utils_governanceShapes;
   "utils/hakkenAssistant": typeof utils_hakkenAssistant;
   "utils/hakkenReports": typeof utils_hakkenReports;
+  "utils/hakkenResearcher": typeof utils_hakkenResearcher;
   "utils/hakkenTaskAlerts": typeof utils_hakkenTaskAlerts;
   "utils/hakkenTaskProposals": typeof utils_hakkenTaskProposals;
   "utils/hakkenTaskRules": typeof utils_hakkenTaskRules;

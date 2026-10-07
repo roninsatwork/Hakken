@@ -230,3 +230,33 @@ describe("a weekly report, proposed for a yes", () => {
   });
 });
 
+describe("finding out why, offered for a yes", () => {
+  test("is written out with what to find out; a yes starts the Research Agent in this conversation", async () => {
+    const t = harness();
+    const seeded = await seed(t);
+    const offer = (await ASSISTANT_TASK_HANDLERS["assistant.tasks.proposeResearch"]({
+      ctx: runtime(t), handlerMapping: "assistant.tasks.proposeResearch", companyId: seeded.companyId, userId: seeded.me,
+      args: { question: "Why did ronins.test lose visitors this week?", website: "ronins.test" },
+    })) as { ok: boolean; proposal?: Record<string, unknown> };
+    expect(offer.proposal).toMatchObject({ action: "RESEARCH", research: { question: "Why did ronins.test lose visitors this week?", website: "ronins.test" } });
+
+    const messageId = await replyWith(t, seeded.threadId, offer.proposal!);
+    await t.withIdentity({ subject: seeded.me }).mutation(api.hakkenTasks.answerProposal, { messageId, yes: true });
+    const scheduled = await t.run((ctx) => ctx.db.system.query("_scheduled_functions").collect());
+    expect(scheduled.find((job) => job.name.includes("hakkenResearch") && job.name.includes("researchInternal"))?.args[0])
+      .toMatchObject({ threadId: seeded.threadId, userId: seeded.me, research: { website: "ronins.test" } });
+    // Nothing is a standing task: it is done once.
+    expect(await t.run((ctx) => ctx.db.query("hakkenTasks").collect())).toEqual([]);
+  });
+
+  test("says what it needs, and refuses a website not the company's", async () => {
+    const t = harness();
+    const seeded = await seed(t);
+    const ask = async (args: Record<string, unknown>) => (await ASSISTANT_TASK_HANDLERS["assistant.tasks.proposeResearch"]({
+      ctx: runtime(t), handlerMapping: "assistant.tasks.proposeResearch", companyId: seeded.companyId, userId: seeded.me, args,
+    })) as { problem?: string };
+    expect((await ask({})).problem).toMatch(/Say what to find out/);
+    expect((await ask({ question: "Why?", website: "elsewhere.test" })).problem).toMatch(/isn't one of this company's websites/);
+  });
+});
+

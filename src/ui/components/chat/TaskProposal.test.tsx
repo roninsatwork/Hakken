@@ -81,5 +81,17 @@ describe("a task proposed in a reply", () => {
     expect(screen.getByText("example.co.uk")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Yes, send it" })).toBeInTheDocument();
   });
+
+  it("offers to find out why, saying with what, where and that it uses credits, for a yes", () => {
+    const offer: Proposal = {
+      action: "RESEARCH", status: "PENDING", title: "Why did /web-design-london/ lose visitors?",
+      research: { question: "Why did /web-design-london/ lose visitors?", website: "example.co.uk" },
+    };
+    renderWithProviders(<TaskProposal messageId={messageId} proposal={offer} />);
+    expect(screen.getByText("Why did /web-design-london/ lose visitors?")).toBeInTheDocument();
+    expect(screen.getByText("Here in this conversation, and in the bell")).toBeInTheDocument();
+    expect(screen.getByText("From your monthly credits")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Yes, find out" })).toBeInTheDocument();
+  });
 });
 

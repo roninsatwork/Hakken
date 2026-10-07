@@ -38,6 +38,30 @@ export function TaskProposal({ messageId, proposal, isReadOnly = false }: { mess
   const busy = action.isBusy();
   const answered = proposal.status !== "PENDING";
 
+  // "Find out why", for a yes (item 4.2): what it will look into, with what, and where it will say.
+  if (proposal.action === "RESEARCH") {
+    const rows: Array<[string, string]> = [
+      [t("research.lookInto"), proposal.research?.question ?? proposal.title],
+      [t("research.using"), t("research.usingWhat")],
+      [t("research.tellYou"), t("research.tellWhere")],
+      [t("cost"), t("research.costWhat")],
+    ];
+    return (
+      <div className="flex flex-col gap-3 mt-1">
+        <ProposalRows rows={rows} />
+        {answered ? (
+          proposal.status === "DONE" ? <StatusLabel tone="success">{t("research.done")}</StatusLabel> : <TagLabel>{t("research.declined")}</TagLabel>
+        ) : !isReadOnly ? (
+          <div className="flex items-center gap-2">
+            <Button variant="primary" onClick={() => reply(true)} disabled={busy}>{t("research.yes")}</Button>
+            <Button variant="ghost" onClick={() => reply(false)} disabled={busy}>{t("notNow")}</Button>
+          </div>
+        ) : null}
+        {action.error && <p role="alert" className="text-[12px] text-warning">{action.error}</p>}
+      </div>
+    );
+  }
+
   if (proposal.action !== "CREATE") {
     const words = {
       ask: t(`change.${proposal.action}.ask`, { title: proposal.title, platformName }),
@@ -95,14 +119,7 @@ export function TaskProposal({ messageId, proposal, isReadOnly = false }: { mess
 
   return (
     <div className="flex flex-col gap-3 mt-1">
-      <div className="flex flex-col border-t border-border-dim">
-        {rows.map(([label, value]) => (
-          <div key={label} className="flex gap-4 py-2 border-b border-border-dim text-[13px] leading-snug">
-            <span className="w-32 shrink-0 text-muted">{label}</span>
-            <span className="text-foreground">{value}</span>
-          </div>
-        ))}
-      </div>
+      <ProposalRows rows={rows} />
       {answered ? (
         proposal.status === "DONE" ? (
           <StatusLabel tone="success">{report ? t("report.set") : t("set", { date: formatDate(proposal.answeredAt, { locale, fallback: "" }) })}</StatusLabel>
@@ -119,6 +136,20 @@ export function TaskProposal({ messageId, proposal, isReadOnly = false }: { mess
         </>
       ) : null}
       {action.error && <p role="alert" className="text-[12px] text-warning">{action.error}</p>}
+    </div>
+  );
+}
+
+/** An offer written out line by line: plain rows under a rule, no box. */
+function ProposalRows({ rows }: { rows: Array<[string, React.ReactNode]> }) {
+  return (
+    <div className="flex flex-col border-t border-border-dim">
+      {rows.map(([label, value]) => (
+        <div key={label} className="flex gap-4 py-2 border-b border-border-dim text-[13px] leading-snug">
+          <span className="w-32 shrink-0 text-muted">{label}</span>
+          <span className="text-foreground">{value}</span>
+        </div>
+      ))}
     </div>
   );
 }

@@ -141,6 +141,39 @@ export const ASSISTANT_TASK_HANDLERS: Record<string, (input: ToolHandlerExecutio
     };
   },
 
+  /**
+   * "Find out why", written out for a yes (item 4.2): what to find out, on
+   * which of the company's websites or pages. It costs model time, so it asks
+   * first; on a yes the Research Agent looks in the background and writes up
+   * what it found in this conversation.
+   */
+  "assistant.tasks.proposeResearch": async (input) => {
+    if (!input.companyId) return NO_COMPANY;
+    if (!input.userId) return NO_PERSON;
+    const question = text(input.args, "question");
+    if (!question) return { ok: false, problem: "Say what to find out, in their words: why the page dropped, why the website lost visitors." };
+    const website = text(input.args, "website");
+    const page = text(input.args, "page");
+    if (website) {
+      const found = await input.ctx.runQuery(internal.assistantReads.websitesInternal, { companyId: input.companyId });
+      const host = website.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "").toLowerCase();
+      if (!found.websites.some((entry: { website: string }) => entry.website.toLowerCase() === host)) {
+        return { ok: false, problem: `${website} isn't one of this company's websites. Its websites are: ${found.websites.map((entry: { website: string }) => entry.website).join(", ") || "none yet"}.` };
+      }
+    }
+    return {
+      ok: true,
+      note:
+        "The offer is written out under your reply with “Yes, find out” and “Not now”: nothing is looked into until they tap yes, and then it takes a few minutes and lands here. In one warm sentence, say you can look into it and they just need to say yes. Don't start looking yourself.",
+      proposal: {
+        action: "RESEARCH",
+        status: "PENDING",
+        title: question.slice(0, 300),
+        research: { question: question.slice(0, 500), ...(website ? { website } : {}), ...(page ? { page } : {}) },
+      },
+    };
+  },
+
   /** The person's own tasks, with each one's id for a change. */
   "assistant.tasks.list": async (input) => {
     if (!input.companyId) return NO_COMPANY;

@@ -11,8 +11,8 @@ import type { hakkenTaskProposalValidator } from "../hakkenTaskSchema";
 
 export type TaskProposal = Infer<typeof hakkenTaskProposalValidator>;
 
-const PROPOSING = new Set(["assistant.tasks.propose", "assistant.tasks.proposeReport", "assistant.tasks.change"]);
-const ACTIONS = new Set(["CREATE", "PAUSE", "RESUME", "DELETE"]);
+const PROPOSING = new Set(["assistant.tasks.propose", "assistant.tasks.proposeReport", "assistant.tasks.proposeResearch", "assistant.tasks.change"]);
+const ACTIONS = new Set(["CREATE", "PAUSE", "RESUME", "DELETE", "RESEARCH"]);
 
 export function proposalFromToolCalls(calls: ReadonlyArray<{ handlerMapping: string; status: string; resultJson?: string }>): TaskProposal | undefined {
   let found: TaskProposal | undefined;

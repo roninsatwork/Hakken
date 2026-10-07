@@ -70,6 +70,10 @@ export type EmailWording = {
     open: string;
     whyYouGetIt: (args: { platformName: string }) => string;
   };
+  /** "Find out why", done (item 4.2): the bell saying the write-up is in the conversation. */
+  research: {
+    bellTitle: (args: { platformName: string }) => string;
+  };
   /** A Hakken report (hakken-tasks-plan.md, item 4.1, board EmailReportB). */
   taskReport: {
     /** "Monday report", beside the wordmark. */
@@ -160,6 +164,9 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
       open: "Open the collection page",
       whyYouGetIt: ({ platformName }) => `You get this because you’re a super admin of ${platformName}. It’s sent at most once a day for each reason.`,
     },
+    research: {
+      bellTitle: ({ platformName }) => `${platformName} looked into it: here’s what it found`,
+    },
     taskReport: {
       kind: ({ weekday }) => `${EN_WEEKDAYS[weekday - 1] ?? "Weekly"} report`,
       subject: ({ weekday, total, pages, direction }) =>
@@ -242,6 +249,9 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
       lede: "È una cosa che solo una persona può sistemare.",
       open: "Apri la pagina della raccolta",
       whyYouGetIt: ({ platformName }) => `La ricevi perché sei super admin di ${platformName}. Viene inviata al massimo una volta al giorno per ogni motivo.`,
+    },
+    research: {
+      bellTitle: ({ platformName }) => `${platformName} ci ha guardato: ecco cosa ha trovato`,
     },
     taskReport: {
       kind: ({ weekday }) => `Report ${itOfWeekday(weekday)}`,
