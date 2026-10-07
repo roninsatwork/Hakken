@@ -24,7 +24,9 @@ export type TableNoun =
   // Admin → Content → Library's articles (content-library-plan.md).
   | "articles"
   // Who to follow's people, a couple of hundred of them (insights-helpful-content-plan.md, IH14).
-  | "people";
+  | "people"
+  // A person's Hakken tasks, and a company's (hakken-tasks-plan.md, 1.5).
+  | "tasks";
 
 /**
  * The bar across the top of every Sites table, inside its card (`DataTable`'s

@@ -21,6 +21,7 @@ import {
 
 
   ListChecks,
+  ListTodo,
   MonitorSpeaker,
   Phone,
   Gamepad2,
@@ -331,6 +332,15 @@ export function UserNavTree({
     href="/app/assistant"
     isActive={activeItem === 'Assistant' || pathname.startsWith('/app/assistant')}
     onClick={() => setActiveItem('Assistant')}
+  />
+
+  {/* What Hakken keeps doing for the person reading — theirs alone (docs/plans/active/hakken-tasks-plan.md, 1.5). */}
+  <NavItem
+    icon={ListTodo}
+    label={t('hakkenTasks', { platformName: settings.platformName })}
+    href="/app/hakken-tasks"
+    isActive={activeItem === 'PlatformTasks' || pathname.startsWith('/app/hakken-tasks')}
+    onClick={() => setActiveItem('PlatformTasks')}
   />
 
   {hasCapability(CORE_MODULES.tasks) && (

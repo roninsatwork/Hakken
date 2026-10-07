@@ -1,8 +1,7 @@
 import { internal } from "./_generated/api";
 import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
-import { settledDay } from "./hakkenTaskFigures";
 import { shiftDay } from "./searchConsoleDays";
-import { TRIAL_DAYS, taskTitle, trialOf, usualOf, type TaskCondition, type TaskMeasure } from "./utils/hakkenTaskRules";
+import { TRIAL_DAYS, settledDay, taskTitle, trialOf, usualOf, type TaskCondition, type TaskMeasure } from "./utils/hakkenTaskRules";
 import { taskTimeOfDay } from "./utils/hakkenTaskTiming";
 
 /**

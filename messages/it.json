@@ -591,6 +591,7 @@
     "skillCenter": "Centro competenze",
     "widget": "Widget",
     "askPlatform": "Chiedi a {platformName}",
+    "hakkenTasks": "Attività di {platformName}",
     "tasks": "Attività",
     "calls": "Chiamate",
     "reception": "Reception",
@@ -1140,6 +1141,7 @@
           "directory": "Rubrica",
           "invites": "Inviti",
           "ai": "AI",
+          "hakkenTasks": "Attività di {platformName}",
           "aiUsage": "Utilizzo AI",
           "value": "Valore",
           "wiki": "Wiki",
@@ -8369,6 +8371,69 @@
     "reopenFailed": "Impossibile riaprire l'attività. Riprova.",
     "dismissFailed": "Impossibile annullare l'attività. Riprova."
   },
+  "hakkenTasks": {
+    "title": "Attività di {platformName}",
+    "description": "Tutto ciò che {platformName} tiene d’occhio per te. Per aggiungerne una, chiedi a {platformName}, per esempio “avvisami se questa pagina ha meno di 10 visitatori al giorno”.",
+    "addTask": "Aggiungi un’attività",
+    "search": "Trova un’attività…",
+    "filters": {
+      "type": "Tipo",
+      "everyType": "Tutti i tipi",
+      "showing": "Mostra",
+      "active": "Attive e in pausa",
+      "on": "Attive",
+      "paused": "In pausa",
+      "needsYou": "Serve il tuo aiuto",
+      "askedBy": "Chiesta da",
+      "anyone": "Chiunque"
+    },
+    "columns": {
+      "task": "Attività",
+      "type": "Tipo",
+      "askedBy": "Chiesta da",
+      "hear": "Come ti avvisiamo",
+      "nextCheck": "Prossimo controllo",
+      "state": "Stato",
+      "actions": "Azioni"
+    },
+    "kinds": {
+      "ALERT": "Avviso",
+      "REPORT": "Report",
+      "RESEARCH": "Ricerca"
+    },
+    "hear": {
+      "bell": "{platformName}",
+      "email": "email",
+      "telegram": "Telegram",
+      "at": "{channels}, alle {time}"
+    },
+    "states": {
+      "ON": "Attiva",
+      "PAUSED": "In pausa",
+      "NEEDS_YOU": "Serve il tuo aiuto",
+      "alertSent": "Avviso inviato il {date}"
+    },
+    "actions": {
+      "pause": "Metti in pausa",
+      "resume": "Riprendi",
+      "delete": "Elimina",
+      "failed": "Non ha funzionato. Riprova."
+    },
+    "empty": "Ancora niente qui. Chiedi a {platformName} di tenere d’occhio qualcosa per te e lo vedrai qui.",
+    "emptyFiltered": "Nessuna attività corrisponde. Prova un’altra parola o un altro filtro.",
+    "deleteConfirm": {
+      "title": "Eliminare questa attività?",
+      "body": "{platformName} smetterà di tenere d’occhio {what} e non riceverai più avvisi.",
+      "bodyFor": "{platformName} smetterà di tenere d’occhio {what} e {person} non riceverà più avvisi.",
+      "pauseInstead": "Vuoi solo una pausa? Mettila in pausa. Puoi anche chiedere a {platformName} di riprenderla quando vuoi.",
+      "keep": "Tienila",
+      "confirm": "Elimina attività"
+    },
+    "company": {
+      "description": "Tutto ciò che {platformName} tiene d’occhio per {company}, chiunque l’abbia chiesto.",
+      "whoLeft": "Qualcuno che non c’è più"
+    }
+  },
   "notifications": {
     "title": "Notifiche",
     "empty": "Nulla di nuovo.",
@@ -9242,7 +9307,8 @@
       "ideas": "{count, plural, =1 {# idea} other {# idee}}",
       "assistants": "{count, plural, =1 {# assistente} other {# assistenti}}",
       "lines": "{count, plural, =1 {# riga} other {# righe}}",
-      "people": "{count, plural, =1 {# persona} other {# persone}}"
+      "people": "{count, plural, =1 {# persona} other {# persone}}",
+      "tasks": "{count, plural, =1 {# attività} other {# attività}}"
     },
     "chart": {
       "download": "Scarica",

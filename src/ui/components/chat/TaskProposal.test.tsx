@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { TaskProposal as Proposal } from "@/convex/utils/hakkenTaskProposals";
 import { renderWithProviders } from "@/src/test/renderWithProviders";
-import { TaskProposal, clockOf } from "./TaskProposal";
+import { TaskProposal } from "./TaskProposal";
 
 const answer = vi.fn();
 
@@ -66,12 +66,5 @@ describe("a task proposed in a reply", () => {
   it("shows nothing to tap when the conversation is only being read back", () => {
     renderWithProviders(<TaskProposal messageId={messageId} proposal={alert} isReadOnly />);
     expect(screen.queryByRole("button")).toBeNull();
-  });
-
-  it("says a time as people do", () => {
-    expect(clockOf("09:00")).toBe("9am");
-    expect(clockOf("08:30")).toBe("8:30am");
-    expect(clockOf("13:00")).toBe("1pm");
-    expect(clockOf("00:15")).toBe("12:15am");
   });
 });

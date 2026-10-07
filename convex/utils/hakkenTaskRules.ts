@@ -5,11 +5,23 @@
  * Convex function, so the proposal, the Watcher and the screens agree.
  */
 
+import { newestWholeDay, shiftDay } from "../searchConsoleDays";
+
 export type TaskMeasure = "visitors" | "impressions";
 export type TaskCondition = { op: "below" | "above" | "dropBy" | "riseBy"; value: number; days: number };
 
 /** Search Console figures for a day settle over two to three days: a day is judged three days on. */
 export const SETTLE_DAYS = 2;
+
+/**
+ * The newest day an alert judges: settled — three days on — and held. Here,
+ * with no Convex functions, so the browser can reach it through the tool
+ * registry without the backend.
+ */
+export function settledDay(now: number, newestHeld: string): string {
+  const settled = shiftDay(newestWholeDay(now), -SETTLE_DAYS);
+  return settled < newestHeld ? settled : newestHeld;
+}
 
 /** Days read to know a figure's usual day, and to try a rule before it starts. */
 export const TRIAL_DAYS = 28;

@@ -24,6 +24,7 @@ import {
   Inbox,
   LayoutDashboard,
   ListPlus,
+  ListTodo,
   Loader2,
   MessageCircleQuestion,
   MessageSquareText,
@@ -42,6 +43,7 @@ import {
 import { DetailLayout } from "@/src/ui/components/screens/DetailLayout";
 import { useTranslations } from "next-intl";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 
 function matchesCompanyRoute(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -60,6 +62,7 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
   const currentUser = useQuery(api.users.getMe);
   const impersonateCompany = useMutation(api.users.impersonateCompany);
   const action = useAdminAction({ scope: "admin-company-impersonate" });
+  const { platformName } = useSystemSettings();
 
   const handleImpersonate = async () => {
     await action.run(
@@ -259,6 +262,8 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
         },
       ],
     },
+    // Everyone's Hakken tasks in the company, with who asked (docs/plans/active/hakken-tasks-plan.md, 1.5).
+    { label: t("tabs.hakkenTasks", { platformName }), href: `${companyHref}/hakken-tasks`, icon: ListTodo },
     {
       label: t("tabs.widget"),
       href: `${companyHref}/widget`,

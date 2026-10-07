@@ -30,6 +30,9 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+// The Hakken tasks tab is named from the platform's name.
+vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () => ({ platformName: "Hakken" }) }));
+
 describe("CompanyDashboardLayout navigation", () => {
   let currentRole = "ADMIN";
 

@@ -92,6 +92,8 @@ export const hakkenTaskTables = {
     threadId: v.optional(v.id("threads")),
     /** The last Search Console day judged, "2026-10-04". */
     lastJudgedDay: v.optional(v.string()),
+    /** The newest day it told its owner about: "Alert sent" while that is its newest day judged. */
+    lastAlertedDay: v.optional(v.string()),
     /** When it next runs: its owner's time on the next day. */
     nextCheckAt: v.optional(v.number()),
     createdAt: v.number(),

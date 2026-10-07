@@ -4,10 +4,9 @@ import type { Id } from "./_generated/dataModel";
 import { internalAction, internalQuery } from "./_generated/server";
 import { holdFor } from "./assistantReads";
 import { hakkenTaskTargetValidator } from "./hakkenTaskSchema";
-import { newestWholeDay, shiftDay } from "./searchConsoleDays";
+import { shiftDay } from "./searchConsoleDays";
 import { readList } from "./searchConsoleLists";
 import { askLive, daysOf } from "./searchConsoleReads";
-import { SETTLE_DAYS } from "./utils/hakkenTaskRules";
 import { isTrackedHold } from "./utils/websitePairing";
 
 /**
@@ -17,12 +16,6 @@ import { isTrackedHold } from "./utils/websitePairing";
  * the Search Console API is free, and a page's day is not kept on its own.
  * Read only for a website the company owns: Google gives these to its owner.
  */
-
-/** The newest day an alert judges: settled — three days on — and held. */
-export function settledDay(now: number, newestHeld: string): string {
-  const settled = shiftDay(newestWholeDay(now), -SETTLE_DAYS);
-  return settled < newestHeld ? settled : newestHeld;
-}
 
 const dayFiguresValidator = v.object({ day: v.string(), clicks: v.number(), impressions: v.number() });
 
@@ -51,8 +44,12 @@ export const resolveTargetInternal = internalQuery({
       .query("searchConsoleConnections")
       .withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id))
       .first();
-    if (!connection?.newestDay || connection.status !== "CONNECTED") {
+    if (connection?.status !== "CONNECTED") {
       return { ok: false as const, problem: `${website} isn't connected to Search Console yet, so there are no visitors to keep an eye on. It can be connected on its Search Console page.` };
+    }
+    // Connected, and Google has not sent a day yet: the first download is still to come or under way.
+    if (!connection.newestDay) {
+      return { ok: false as const, problem: `${website} is connected to Search Console, but its first days haven't arrived from Google yet. Once they have, usually within a day, ask again and the alert can start.` };
     }
     if (!args.page?.trim()) return { ok: true as const, target: { companyWebsiteId: hold._id, website }, newestDay: connection.newestDay };
     const to = connection.newestDay;

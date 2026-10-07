@@ -144,6 +144,7 @@ export const recordCheckInternal = internalMutation({
     const newest = args.judged.reduce<string | undefined>((latest, day) => (!latest || day.day > latest ? day.day : latest), task.lastJudgedDay);
     await ctx.db.patch(task._id, {
       ...(newest ? { lastJudgedDay: newest } : {}),
+      ...(args.alert ? { lastAlertedDay: args.alert.day } : {}),
       nextCheckAt: nextTaskRun(task.timeOfDay, task.timeZone, now),
       updatedAt: now,
     });

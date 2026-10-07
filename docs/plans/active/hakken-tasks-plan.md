@@ -21,9 +21,11 @@ crack everything in one go".
 **Status, 2026-10-07: planned; the drawings signed off the same day (below),
 the Limits board with them; Phase 1 started the same day ("yes all good. lets
 build this"). About 28 to 36 building days, in six phases; the first, about
-9 to 10.5 days, gives working alerts.** Items 1.1 to 1.4 built on `dev` the
-same day: the task record, setting one up in Ask Hakken, the Watcher Agent's
-morning round and its bell and email; 1.5, the screens, next. Estimates come from reading the code each
+9 to 10.5 days, gives working alerts.** Phase 1 built on `dev` the same day:
+the task record, setting one up in Ask Hakken, the Watcher Agent's morning
+round and its bell and email, and the screens — Hakken tasks in the menu and
+Admin → Companies → Hakken tasks, each held to its board by a look test
+([`look/`](../assets/hakken-tasks/look/)). Estimates come from reading the code each
 item touches, not from building it; each phase is re-estimated before it starts.
 
 ## The rules

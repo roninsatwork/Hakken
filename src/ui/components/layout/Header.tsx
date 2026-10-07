@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, Building2, Gamepad2, Gauge, GraduationCap, LayoutDashboard, ListChecks, User, Settings, LogOut, Sidebar, ShieldCheck, ChevronsUpDown, Phone, Globe, SearchCheck } from "lucide-react";
+import { Bot, Building2, Gamepad2, Gauge, GraduationCap, LayoutDashboard, ListChecks, ListTodo, User, Settings, LogOut, Sidebar, ShieldCheck, ChevronsUpDown, Phone, Globe, SearchCheck } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useQuery, useMutation } from "convex/react";
@@ -60,8 +60,9 @@ export function getAssistantThreadIdFromPath(pathname: string) {
   return match ? match[1] : null;
 }
 
-function getAppHeaderSegments(pathname: string, t: HeaderTranslator, askLabel: string, dashboardLabel: string) {
+function getAppHeaderSegments(pathname: string, t: HeaderTranslator, askLabel: string, dashboardLabel: string, tasksLabel: string) {
   if (pathname.startsWith("/app/assistant")) return [askLabel];
+  if (pathname.startsWith("/app/hakken-tasks")) return [tasksLabel];
   if (pathname.startsWith("/app/tasks")) return [t("tasks")];
   if (pathname.startsWith("/app/calls")) return [t("calls")];
   // Keyword research sits under Discovery beside Websites (keyword-research-plan.md).
@@ -102,15 +103,18 @@ export default function Header({ onOpenModal }: HeaderProps) {
   const recordLogout = useMutation(api.users.recordLogout);
   const profileRef = useRef<HTMLDivElement>(null);
   const askLabel = sidebarT("askPlatform", { platformName: settings.platformName });
+  const tasksLabel = sidebarT("hakkenTasks", { platformName: settings.platformName });
   const headerSegments = isAdmin
     ? getAdminHeaderSegments(pathname, sidebarT)
     : openThread?.title
       ? [askLabel, openThread.title]
-      : getAppHeaderSegments(pathname, sidebarT, askLabel, tc("dashboard"));
+      : getAppHeaderSegments(pathname, sidebarT, askLabel, tc("dashboard"), tasksLabel);
   const HeaderIcon = isAdmin && pathname.startsWith("/admin/ai")
     ? Bot
     : pathname.startsWith("/admin/companies")
       ? Building2
+      : pathname.startsWith("/app/hakken-tasks")
+      ? ListTodo
       : pathname.startsWith("/app/tasks")
       ? ListChecks
       : pathname.startsWith("/app/calls")

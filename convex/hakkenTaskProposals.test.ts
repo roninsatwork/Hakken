@@ -94,6 +94,17 @@ describe("the Assistant proposes an alert", () => {
     expect((await propose(t, seeded, { website: "elsewhere.test", when: "below", value: 10 })).problem).toMatch(/not one of this company's websites/);
     expect((await propose(t, seeded, { website: "ronins.test", when: "below" })).problem).toMatch(/number or percentage/);
   });
+
+  test("tells a website not connected from one connected whose first days are still on their way", async () => {
+    const t = harness();
+    const seeded = await seed(t);
+    const connection = await t.run((ctx) => ctx.db.query("searchConsoleConnections").first());
+    await t.run((ctx) => ctx.db.patch(connection!._id, { newestDay: undefined, oldestDay: undefined }));
+    expect((await propose(t, seeded, { website: "ronins.test", when: "below", value: 10 })).problem)
+      .toBe("ronins.test is connected to Search Console, but its first days haven't arrived from Google yet. Once they have, usually within a day, ask again and the alert can start.");
+    await t.run((ctx) => ctx.db.delete(connection!._id));
+    expect((await propose(t, seeded, { website: "ronins.test", when: "below", value: 10 })).problem).toMatch(/^ronins\.test isn't connected to Search Console yet/);
+  });
 });
 
 describe("nothing changes until its owner taps yes", () => {

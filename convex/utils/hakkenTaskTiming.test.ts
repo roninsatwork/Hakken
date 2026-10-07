@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_TASK_TIME, DEFAULT_TASK_TIME_ZONE, nextTaskRun, taskTimeOfDay, taskTimeZone } from "./hakkenTaskTiming";
+import { DEFAULT_TASK_TIME, DEFAULT_TASK_TIME_ZONE, clockOf, nextTaskRun, taskTimeOfDay, taskTimeZone } from "./hakkenTaskTiming";
 
 describe("when a Hakken task next runs", () => {
   it("runs at its owner's time today when that time is still to come", () => {
@@ -30,5 +30,12 @@ describe("when a Hakken task next runs", () => {
     expect(taskTimeOfDay("25:00")).toBe(DEFAULT_TASK_TIME);
     expect(taskTimeOfDay("nine")).toBe(DEFAULT_TASK_TIME);
     expect(taskTimeOfDay("8:30")).toBe("08:30");
+  });
+
+  it("says a time as people do", () => {
+    expect(clockOf("09:00")).toBe("9am");
+    expect(clockOf("08:30")).toBe("8:30am");
+    expect(clockOf("13:00")).toBe("1pm");
+    expect(clockOf("00:15")).toBe("12:15am");
   });
 });

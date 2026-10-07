@@ -1,0 +1,13 @@
+# Admin → Companies → a company → Hakken tasks — the approved look (board "CompanyJobs" of docs/plans/assets/hakken-tasks/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+record-header: Ronins Agency Workspace
+tabs: Dashboard | Overview | Websites | Directory | AI | Hakken tasks | Widget | Features
+page-header: Hakken tasks
+search: Find a task…
+filter: Type
+filter: Showing
+filter: Asked by
+table: Task | Type | Asked by | How you’ll hear | Next check | State | Actions
+  table-bar
+  table-footer

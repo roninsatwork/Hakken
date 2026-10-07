@@ -42,6 +42,7 @@ const taskRowValidator = v.object({
   timeZone: v.string(),
   channels: hakkenTaskChannelsValidator,
   lastJudgedDay: v.optional(v.string()),
+  lastAlertedDay: v.optional(v.string()),
   nextCheckAt: v.optional(v.number()),
   createdAt: v.number(),
 });
@@ -61,6 +62,7 @@ function toRow(task: Doc<"hakkenTasks">): TaskRow {
     timeZone: task.timeZone,
     channels: task.channels,
     ...(task.lastJudgedDay ? { lastJudgedDay: task.lastJudgedDay } : {}),
+    ...(task.lastAlertedDay ? { lastAlertedDay: task.lastAlertedDay } : {}),
     ...(task.nextCheckAt !== undefined ? { nextCheckAt: task.nextCheckAt } : {}),
     createdAt: task.createdAt,
   };
@@ -160,7 +162,8 @@ export const deleteMine = tenantMutation({
 
 // ── A company's, for a super admin ──────────────────────────────────────────
 
-const companyRowValidator = v.object({ ...taskRowValidator.fields, askedBy: v.string() });
+/** `askedBy` is null for someone no longer a user: the screen words that. */
+const companyRowValidator = v.object({ ...taskRowValidator.fields, askedBy: v.union(v.string(), v.null()) });
 
 /** Admin → Companies → a company → Hakken tasks: everyone's, with who asked. */
 export const listForCompany = superAdminQuery({
@@ -173,12 +176,12 @@ export const listForCompany = superAdminQuery({
       .order("desc")
       .take(MOST_LISTED * 4);
     const shown = rows.filter((task) => task.state !== "DELETED");
-    const names = new Map<Id<"users">, string>();
+    const names = new Map<Id<"users">, string | null>();
     for (const userId of new Set(shown.map((task) => task.userId))) {
       const user = await ctx.db.get(userId);
-      names.set(userId, user?.name || user?.email || "Someone who has left");
+      names.set(userId, user?.name || user?.email || null);
     }
-    return shown.map((task) => ({ ...toRow(task), askedBy: names.get(task.userId) ?? "Someone who has left" }));
+    return shown.map((task) => ({ ...toRow(task), askedBy: names.get(task.userId) ?? null }));
   },
 });
 

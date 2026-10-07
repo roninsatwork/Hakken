@@ -69,3 +69,11 @@ export function nextTaskRun(timeOfDay: string, timeZone: string, now: number): n
   const tomorrow = new Date(Date.UTC(today.year, today.month - 1, today.day + 1));
   return instantOf({ year: tomorrow.getUTCFullYear(), month: tomorrow.getUTCMonth() + 1, day: tomorrow.getUTCDate(), hour, minute }, zone);
 }
+
+/** "09:00" as English speakers say it: 9am, 8:30am, 1pm. Other languages show the 24-hour time as it is. */
+export function clockOf(time: string): string {
+  const [hours, minutes] = time.split(":").map(Number);
+  const suffix = hours < 12 ? "am" : "pm";
+  const hour = hours % 12 === 0 ? 12 : hours % 12;
+  return minutes ? `${hour}:${String(minutes).padStart(2, "0")}${suffix}` : `${hour}${suffix}`;
+}

@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { TaskProposal as Proposal } from "@/convex/utils/hakkenTaskProposals";
 import { pathOf } from "@/convex/utils/hakkenTaskRules";
+import { clockOf } from "@/convex/utils/hakkenTaskTiming";
 import { PageLinkCell } from "@/src/app/(dashboard)/app/sites/_components/SiteCells";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
@@ -110,12 +111,4 @@ export function TaskProposal({ messageId, proposal, isReadOnly = false }: { mess
       {action.error && <p role="alert" className="text-[12px] text-warning">{action.error}</p>}
     </div>
   );
-}
-
-/** "09:00" as people say it: 9am, 8:30am, 1pm. */
-export function clockOf(time: string): string {
-  const [hours, minutes] = time.split(":").map(Number);
-  const suffix = hours < 12 ? "am" : "pm";
-  const hour = hours % 12 === 0 ? 12 : hours % 12;
-  return minutes ? `${hour}:${String(minutes).padStart(2, "0")}${suffix}` : `${hour}${suffix}`;
 }

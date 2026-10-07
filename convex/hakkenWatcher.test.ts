@@ -72,6 +72,7 @@ describe("the Watcher's morning round", () => {
     expect((await checksOf(t, taskId)).map((check) => [check.day, check.value, check.met, check.alerted])).toEqual([["2026-09-26", 7, true, true]]);
     const task = await t.run((ctx) => ctx.db.get(taskId));
     expect(task?.lastJudgedDay).toBe("2026-09-26");
+    expect(task?.lastAlertedDay).toBe("2026-09-26");
     expect(task?.nextCheckAt).toBeGreaterThan(Date.now());
 
     const [notification] = await t.run((ctx) => ctx.db.query("notifications").collect());

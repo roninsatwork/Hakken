@@ -7,10 +7,9 @@ import type { ActionCtx } from "./_generated/server";
 import { internalAction } from "./_generated/server";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import { gatherInstructions } from "./assistantKnowledge";
-import { settledDay } from "./hakkenTaskFigures";
 import { shiftDay } from "./searchConsoleDays";
 import { alertTemplate, checkedAlert, dayWords, type AlertFacts, type AlertWords } from "./utils/hakkenTaskAlerts";
-import { judgeDays, pathOf, usualOf } from "./utils/hakkenTaskRules";
+import { judgeDays, pathOf, settledDay, usualOf } from "./utils/hakkenTaskRules";
 import { WATCHER, WATCH_STEP } from "./utils/hakkenWatcher";
 
 /**
