@@ -15,7 +15,7 @@ graphs — there must be a better, more efficient way of storing these going
 forward"; "this is about not saving data we don't need to store and don't
 access regularly"; "make a documented plan in the repo for this".
 
-**Status, 2026-10-07: phases 1 to 6 built and live on dev; phase 7 to build.**
+**Status, 2026-10-07: phases 1 to 6 built and live on dev; phase 7's 5.2, 5.3 and 5.7 built; 5.1 and 5.4 wait on Anthony (below).**
 Started the same day, once the Hakken tasks work had finished (Anthony: "the
 other agent has finished … we can start this plan now"; see "Beside the
 Hakken tasks work"), on the `keep-less-history` branch merged into `dev`, not
@@ -150,6 +150,43 @@ Left as it was, and why: a chart by week still turns to months past six
 months back (`WEEKS_KEPT_DAYS`) — the weeks before 2026-10-07 were worked out
 from rolled-up months and hold no figures; from April 2027 the weeks kept
 since will reach the whole reach, and that limit can go.
+
+**Phase 7 — built 2026-10-07, in part** (part 5):
+
+- **5.7 — a keyword lost 90 days ago is removed** at its website's next
+  rebuild (`removeLost`, `siteSummaries.ts`; `LOST_KEYWORDS_KEPT_DAYS`,
+  Decision 6): New and lost and Wins and losses read the ones lost lately.
+  A competitor needs nothing more to stay at its top 1,000: each complete
+  list of 1,000 marks the rest lost, and lost ones now go. Measured on dev
+  (`seoStorageMeasure:measureLostRanks`): 31,830 latest rankings across 30 websites, 287 marked lost and none lost longer than 90 days ago — nothing to remove yet; from now on a lost keyword goes after 90 days, so the rankings stop piling up.
+- **5.2 — Pages competing keeps no positions** (`positionSums` empty; read
+  by nothing, `pagesByKeyword`). Its pages stay addresses, not numbers: it is
+  read by a query, and turning thousands of numbers back into addresses on
+  each open would read the website's page list each time. Measured on morehandles.co.uk after a rebuild: Pages competing 8.8 → 8.4 MB, its positions a small part of it; with 5.3 below, the keyword and page lists' periods before 5.6 → 2.1 MB; the website's Search Console 75.9 → 72.2 MB.
+- **5.3 — the periods before carry only what is read**: no page or search
+  counts and tops, and no countries, devices or rich results lists, whose
+  screens show no change.
+
+**Waiting on Anthony:**
+
+- **5.1 — a keyword's pages and a page's keywords asked of Google.** Built as
+  planned, the keyword's or page's own screen would show "–" in its "Your
+  pages" / "Keywords" count column for every period, as it does today for
+  dates that are not a ready-made period: Google's answer for one keyword
+  does not say how many keywords each of its pages has across the website.
+  About 15 MB of morehandles.co.uk's 84 (part 5's audit). The choice: (a)
+  build it, the column showing "–"; (b) keep the two lists as they are; or
+  (c) keep them for 7 and 30 days only, the 90 days and twelve months asked
+  of Google with "–". Recommended: (c) — most of the saving is the 90 days,
+  and the column a person reads most, the 30 days', stays.
+- **5.4 — the first- and last-seen register.** Measured: of
+  morehandles.co.uk's 50,241 rows (11.9 MB), about 9,200 are pages (as many
+  as its page list), about 2 MB; nothing is older than Google's 16 months —
+  the oldest is from July 2026 — so clearing those saves nothing until late
+  2027. Keeping pages as daily counts would need a page's last day kept
+  somewhere to count it lost on the right day, which is the row it replaces.
+  Recommended: leave the register as it is, and add the 16-month clear to
+  the keep rules in 2027, when there is something to clear.
 
 **Phase 6 — built 2026-10-07** (part 4): every table has its keep rule in
 one list (`convex/keepRules.ts`) — a row a thing, written over, cleared after
