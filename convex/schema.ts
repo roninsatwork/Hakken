@@ -12,7 +12,6 @@ import { pagesTables } from "./pagesSchema";
 import { contentTables } from "./contentSchema";
 import { keywordResearchTables } from "./keywordResearchSchema";
 import { seoPullTables } from "./seoPullSchema";
-import { positionWeekTables } from "./positionWeekSchema";
 import { positionHistoryTables } from "./positionHistorySchema";
 import { creditTables } from "./creditSchema";
 import { hakkenTaskProposalValidator, hakkenTaskTables } from "./hakkenTaskSchema";
@@ -43,7 +42,6 @@ export default defineSchema({
   ...contentTables,
   ...keywordResearchTables,
   ...seoPullTables,
-  ...positionWeekTables,
   ...positionHistoryTables,
   ...creditTables,
   ...hakkenTaskTables,
@@ -525,41 +523,6 @@ export default defineSchema({
     .index("by_pull", ["pullId"]),
 
   /**
-   * Where one website ranked for one keyword on one day.
-   *
-   * Only written when per-keyword position tracking is switched on, because
-   * unlike everything else here it is one paid task per keyword per cycle. A
-   * site with ten thousand tracked keywords is ten thousand rows a cycle, and
-   * that is the number the plan allowance exists to bound.
-   *
-   * `position` absent means it did not rank in the page we were given, which
-   * is a different fact from position 100 and must not be stored as one.
-   */
-  seoKeywordPositions: defineTable({
-    websiteId: v.id("websites"),
-    keyword: v.string(),
-    day: v.string(),
-    position: v.optional(v.number()),
-    /** Its place among everything on Google's page, `position` being among the normal results; absent on a row counted on the page (G2). */
-    pagePosition: v.optional(v.number()),
-    url: v.optional(v.string()),
-    searchVolume: v.optional(v.number()),
-    pullId: v.id("seoDataPulls"),
-    /** DataForSEO's location code; absent only on rows from before places were sent — all the UK, filled in by `2026-09-22-position-places`. */
-    locationCode: v.optional(v.number()),
-    createdAt: v.number(),
-  })
-    .index("by_website_keyword_day", ["websiteId", "keyword", "day"])
-    .index("by_website_day", ["websiteId", "day"])
-    /** One watcher's view: a site's rankings from one place, newest first. */
-    .index("by_website_place_day", ["websiteId", "locationCode", "day"])
-    /** One search's history from one place, which is what its verdict reads. */
-    .index("by_website_keyword_place_day", ["websiteId", "keyword", "locationCode", "day"])
-    .index("by_pull", ["pullId"])
-    /** A day's positions, every website's: what the sweep thins to a week's last past 90 days (`positionWeeks.ts`). */
-    .index("by_day", ["day"]),
-
-  /**
    * What the collection screens read. Never the pull table.
    *
    * The same rule the governance and inventory screens follow: a dashboard
@@ -773,25 +736,6 @@ export default defineSchema({
   })
     .index("by_prompt_day", ["prompt", "day"])
     .index("by_pull_query", ["pullId", "query"]),
-
-  /**
-   * A discovered competitor's figures on one day, per company site. The
-   * suggestion row is overwritten each collection; this keeps each day's.
-   */
-  discoveredCompetitorDays: defineTable({
-    companyWebsiteId: v.id("companyWebsites"),
-    companyId: v.id("companies"),
-    host: v.string(),
-    day: v.string(),
-    intersections: v.number(),
-    averagePosition: v.optional(v.number()),
-    estimatedTraffic: v.optional(v.number()),
-    kind: v.optional(v.union(v.literal("COMPETITOR"), v.literal("DIRECTORY"), v.literal("PUBLISHER"), v.literal("SUPPLIER"), v.literal("OTHER"))),
-    pullId: v.id("seoDataPulls"),
-    createdAt: v.number(),
-  })
-    .index("by_company_website_day", ["companyWebsiteId", "day"])
-    .index("by_company_website_host_day", ["companyWebsiteId", "host", "day"]),
 
   /**
    * One name, in one AI answer, to one question, on one day.

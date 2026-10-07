@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
+import { setPoint } from "./positionHistory";
 
 /**
  * Google's full results page for a search is kept 90 days; where the website
@@ -37,7 +38,7 @@ async function checked(t: Harness, websiteId: Id<"websites">, keyword: string, d
       ],
       features: ["people_also_ask"], aiOverviewDomains: [], localPackDomains: [], questions: ["Which carp rod?"], related: [], createdAt: Date.now(),
     });
-    await ctx.db.insert("seoKeywordPositions", { websiteId, keyword, day, position, url: "https://kordatackle.com/rods", pullId, locationCode: UK, createdAt: Date.now() });
+    await setPoint(ctx, { websiteId, keyword, locationCode: UK, day }, { position, url: "https://kordatackle.com/rods", kind: "CHECK" });
     const stats = await ctx.db.query("websiteSearchStats").withIndex("by_key", (q) => q.eq("websiteId", websiteId).eq("keyword", keyword).eq("locationCode", UK)).unique();
     const fields = { websiteId, keyword, locationCode: UK, firstCheckedDay: stats?.firstCheckedDay ?? day, lastCheckedDay: day, lastPosition: position, everRanked: true, updatedAt: Date.now() };
     if (stats) await ctx.db.replace(stats._id, fields);
@@ -83,7 +84,7 @@ describe("Google's full results page, kept 90 days (B3)", () => {
     const t = harness();
     const s = await seed(t);
     const counts = () => t.run(async (ctx) => ({
-      positions: (await ctx.db.query("seoKeywordPositions").collect()).length,
+      positions: (await ctx.db.query("keywordPositionMonths").collect()).length,
       ranks: (await ctx.db.query("siteKeywordRanks").collect()).length,
       stats: (await ctx.db.query("websiteSearchStats").collect()).length,
     }));

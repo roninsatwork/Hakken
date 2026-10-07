@@ -15,7 +15,7 @@ graphs — there must be a better, more efficient way of storing these going
 forward"; "this is about not saving data we don't need to store and don't
 access regularly"; "make a documented plan in the repo for this".
 
-**Status, 2026-10-07: phases 1 and 2 built and live on dev; phase 3 measured and waiting on Decision 10; the rest to build.**
+**Status, 2026-10-07: phases 1 to 4 built and live on dev; phases 5 to 7 to build.**
 Started the same day, once the Hakken tasks work had finished (Anthony: "the
 other agent has finished … we can start this plan now"; see "Beside the
 Hakken tasks work"), on the `keep-less-history` branch merged into `dev`, not
@@ -59,6 +59,56 @@ in `look/Main.txt`). Decisions 7, 8 and 9 were answered the same day and built:
 a company's own people choose among its websites too, the website last chosen
 is remembered, and 発見 replaced 備え on the public pages and the dashboard
 (part 6, Decisions).
+
+**Phase 3 — built 2026-10-07** (part 1; commits `c1e15755`, `bcae93fe`,
+`a6cc2104` and the one removing the old table): keyword positions are kept
+as a line a month (`keywordPositionMonths`, `positionHistorySchema.ts`),
+read and written only through `positionHistory.ts` — one record a website,
+search, place and month, its points as short lists of numbers, each ranking
+page's address once. Built in three steps, each on dev before the next: both
+written, the rows packed into lines (`2026-10-07-pack-keyword-positions`,
+69,193 rows, 346 batches); every reader moved — the position chart, the
+compare column, the search summary, a watch's newest ranking, the admin's
+ranking list, the agent's look-up, the rankings replay — and the packed
+lines checked against every row on dev: **69,193 of 69,193 the same** (day,
+place, position, address and kind); then the rows a check stopped, cleared
+(`2026-10-07-clear-kept-history`) and taken out of the schema with
+`positionThinning` and the old weekly thinning. The hourly sweep coarsens a
+month once it is wholly past the 90 days kept daily — each week's last of
+each kind, past a year each month's last, nothing past two years (Decision
+1); every keyword is kept (Decision 2), a point at every check (Decision 3),
+no purchase named (Decision 10).
+
+Measured on dev: **26.4 MB in 69,193 rows → 13.0 MB in 34,498 lines**, half
+the size on the day, and the gap widens as months fill: a point added to a
+month costs about 25 bytes, where a row cost about 395 — about 90% less for a
+search checked daily, about 73% for one in a weekly list. Most searches on
+dev have one point in a month so far, which costs a line what it cost a row
+(morehandles.co.uk 2.5 → 2.4 MB; kordatackle.com, checked more, 3.0 → 1.1 MB).
+
+Where the build differs from the plan's words, and why: a day holds **one
+point, whatever filed it**, the later standing — as the rows did
+(`replaceSameDayPosition`), so no chart changes; the plan said "the same day
+and kind". A re-parse of a check replaces each site's point for the day, but
+a site the corrected parse no longer finds keeps the earlier one: with no
+purchase named (Decision 10) nothing says which points a parse wrote. The
+agent's look-up now reads from the place the company watches the website
+from, not every place; the rankings replay files only what keyword lists
+filed, never a tracked search's check (`seoKeywordChecks.ts` keeps those off
+a website's list); the competitor clear-out no longer clears list pages'
+positions, which it did on dev on 2026-10-05 and lists are bought to 1,000
+since. The two finished migrations that read the rows: `2026-09-22-position-places`
+retired with them, `2026-09-22-search-summaries` reads the lines.
+[dataforseo-data-kept.md](../../operator/dataforseo-data-kept.md) says what
+is kept now.
+
+**Phase 4 — built 2026-10-07** (part 2): a found competitor's last day is
+kept on its own row (`discoveredCompetitors.lastSeenDay`), filled from its
+day rows by the same clear-out before they were cleared, and its day rows
+stopped (Decision 4; 0.2 MB in 490 rows); the Organic competitors, Market map
+and Suggested competitors' "last checked" read it. The AI's searches by day
+are cleared after twelve months by the hourly sweep (`purgeFanOutDays`,
+`FAN_OUT_DAYS_RETENTION_DAYS`; Decision 5); the searches themselves are kept.
 
 ## The rule
 

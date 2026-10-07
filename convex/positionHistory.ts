@@ -134,8 +134,8 @@ export async function kindOfPull(ctx: Pick<QueryCtx, "db">, pullId: Id<"seoDataP
 /**
  * Points of one month of a search from one place filed together: each
  * replaces the day's point held, whatever filed it — the same search measured
- * twice on one day from one place is one fact, as `replaceSameDayPosition`
- * keeps it — and of two given for one day the later stands. The record keeps
+ * twice on one day from one place is one fact — and of two given for one
+ * day the later stands. The record keeps
  * its grain: a point filed late into a coarsened month is coarsened with it.
  */
 export async function mergePoints(ctx: MutationCtx, key: SearchKey & { month: string }, incoming: readonly PositionPoint[]): Promise<void> {

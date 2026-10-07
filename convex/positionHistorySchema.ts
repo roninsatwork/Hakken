@@ -5,7 +5,7 @@ import { v } from "convex/values";
  * A keyword's positions as a graph line (docs/plans/active/keep-less-history-plan.md,
  * part 1): one record per website, keyword, place and month, holding that
  * month's points as short lists of numbers, row for row across them, in place
- * of a row per keyword per check (`seoKeywordPositions`, 396 bytes a point).
+ * of the row a check kept until 2026-10-07 (396 bytes a point).
  * Read and written only through `positionHistory.ts`.
  *
  * How fine the points are goes with age (Decision 1, 2026-10-07): each check

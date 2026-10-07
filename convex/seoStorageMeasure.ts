@@ -14,13 +14,13 @@ import type { TableNames } from "./_generated/dataModel";
 
 /** The tables the DataForSEO side keeps. */
 const TABLES = [
-  "seoDataPulls", "seoPullAnswers", "seoCycleLines", "seoWebsiteMetrics", "seoKeywordPositions", "keywordPositionMonths",
+  "seoDataPulls", "seoPullAnswers", "seoCycleLines", "seoWebsiteMetrics", "keywordPositionMonths",
   "siteKeywordRanks", "siteKeywordFeatures", "sitePageRanks", "siteSections", "siteDaySummaries", "sitePaidKeywords",
   "siteBacklinks", "siteReferringDomains", "siteAnchors", "siteReferringIps", "siteReferringSubnets", "siteLinkDays",
   "siteCrawls", "siteCrawlPages", "siteCrawlLinks", "siteSitemapPages", "siteCitedPages",
   "siteListCopies", "siteListCopyParts", "siteContentGaps", "holdPages", "siteListAiDays",
   "aiAnswers", "aiCitations", "aiAnswerTexts", "aiAnswerIndex", "promptFanOutQueries", "promptFanOutDays", "siteSerpPages",
-  "discoveredCompetitors", "discoveredCompetitorDays", "websiteSearchStats", "websiteQuestionStats", "siteSummaryRequests",
+  "discoveredCompetitors", "websiteSearchStats", "websiteQuestionStats", "siteSummaryRequests",
 ] as const;
 
 /** Rows read per page: the large rows a few at a time, so no read passes 16 MB. */

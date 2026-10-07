@@ -14,14 +14,13 @@ import {
   weekSpanOf,
   type PositionPoint,
 } from "./positionHistory";
-import { packKeywordPositions } from "./positionHistoryMigration";
 import schema from "./schema";
 
 /**
  * A keyword's positions kept as a line a month (keep-less-history-plan.md,
  * part 1): one point a day, the later sighting standing; coarser with age —
  * each week's last of each kind past 90 days, the month's last past a year,
- * nothing past two years; and the rows kept a check packed into it.
+ * nothing past two years.
  */
 
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
@@ -217,44 +216,7 @@ describe("taking a search's checks away", () => {
   });
 });
 
-describe("packing the rows kept a check", () => {
-  test("each row becomes its month's point, by the kind its purchase was; a place unset was the UK", async () => {
-    const { t, websiteId, listPull, checkPull } = await setup();
-    await t.run(async (ctx) => {
-      const row = (day: string, pullId: Id<"seoDataPulls">, extra: object) =>
-        ctx.db.insert("seoKeywordPositions", { websiteId, keyword: "red shoes", day, pullId, createdAt: 1, ...extra });
-      await row("2026-09-29", listPull, { position: 7, url: "https://acme-shop.test/red", searchVolume: 900 });
-      await row("2026-09-30", checkPull, { locationCode: UK });
-      await row("2026-10-01", checkPull, { locationCode: UK, position: 5, pagePosition: 8, url: "https://acme-shop.test/red" });
-      await row("2026-10-01", listPull, { locationCode: 1006886, position: 9 });
-    });
-    let cursor: string | null = null;
-    for (;;) {
-      const page = await t.run((ctx) => packKeywordPositions(ctx, cursor, 2));
-      cursor = page.cursor;
-      if (page.isDone) break;
-    }
-    const packedOnce = await records(t);
-    expect(packedOnce.map((record) => [record.locationCode, record.month, record.days, record.positions, record.kinds, record.pages]))
-      .toEqual([
-        [UK, "2026-09", [29, 30], [7, null], [0, 1], ["https://acme-shop.test/red"]],
-        [UK, "2026-10", [1], [5], [1], ["https://acme-shop.test/red"]],
-        [1006886, "2026-10", [1], [9], [0], []],
-      ]);
-    // Run again: nothing changes.
-    await t.run((ctx) => packKeywordPositions(ctx, null, 100));
-    expect(await records(t)).toEqual(packedOnce);
-    // And the check over the rows finds each day's point.
-    expect(await t.action(internal.positionHistoryMigration.comparePacked, {})).toEqual({ rows: 4, matched: 4, differing: [] });
-    await t.run(async (ctx) => {
-      const [october] = (await ctx.db.query("keywordPositionMonths").collect()).filter((record) => record.month === "2026-10");
-      await ctx.db.patch(october._id, { positions: [6] });
-    });
-    expect(await t.action(internal.positionHistoryMigration.comparePacked, {})).toMatchObject({ rows: 4, matched: 3 });
-  });
-});
-
-describe("filed beside the rows", () => {
+describe("filed by a check", () => {
   test("a check files a point for every site on the page and every one tracking it", async () => {
     const { t, websiteId, otherId, checkPull } = await setup();
     await t.run(async (ctx) => {
