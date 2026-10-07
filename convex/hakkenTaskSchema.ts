@@ -1,5 +1,6 @@
 import { defineTable } from "convex/server";
 import { v } from "convex/values";
+import { aiEngineValidator } from "./seoAiEngines";
 
 /**
  * Hakken tasks: what a person has asked Hakken to keep doing for them
@@ -55,6 +56,28 @@ export const hakkenTaskReportValidator = v.object({
   weekday: v.number(),
 });
 
+/**
+ * An alert on an AI engine's answers to one of the company's tracked questions
+ * (item 4.3): told when its newest answer stops recommending them, leaves
+ * them out, or warns against them. Checked when the question is next asked.
+ */
+export const hakkenTaskAnswerValidator = v.object({
+  prompt: v.string(),
+  engine: aiEngineValidator,
+  watch: v.union(v.literal("notRecommended"), v.literal("notNamed"), v.literal("warnedAgainst")),
+});
+
+/**
+ * An alert on one of the company's tracked Google searches (item 4.3): told
+ * when the website drops out of the top `position`, or gets into it. Checked
+ * when the search is next checked.
+ */
+export const hakkenTaskRankingValidator = v.object({
+  keyword: v.string(),
+  op: v.union(v.literal("outOfTop"), v.literal("intoTop")),
+  position: v.number(),
+});
+
 export const hakkenTaskChannelsValidator = v.object({
   bell: v.boolean(),
   email: v.boolean(),
@@ -79,6 +102,9 @@ export const hakkenTaskProposalValidator = v.object({
   condition: v.optional(hakkenTaskConditionValidator),
   /** A report rather than an alert (item 4.1). */
   report: v.optional(hakkenTaskReportValidator),
+  /** An alert on AI answers or on a Google ranking, rather than on Search Console (item 4.3). */
+  answer: v.optional(hakkenTaskAnswerValidator),
+  ranking: v.optional(hakkenTaskRankingValidator),
   /** What to find out, and on which of the company's websites or pages (item 4.2). */
   research: v.optional(v.object({ question: v.string(), website: v.optional(v.string()), page: v.optional(v.string()) })),
   usual: v.optional(v.number()),
@@ -103,6 +129,9 @@ export const hakkenTaskTables = {
     condition: v.optional(hakkenTaskConditionValidator),
     /** What a report sends, and on which weekday (item 4.1). */
     report: v.optional(hakkenTaskReportValidator),
+    /** An alert on AI answers or on a Google ranking (item 4.3). */
+    answer: v.optional(hakkenTaskAnswerValidator),
+    ranking: v.optional(hakkenTaskRankingValidator),
     /** Its figure's usual day when it was set, for the alert's words ("it usually gets about 23"). */
     usual: v.optional(v.number()),
     /** The owner's local time to hear from Hakken, "09:00", in `timeZone`. */

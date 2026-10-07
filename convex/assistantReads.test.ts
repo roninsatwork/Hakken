@@ -193,6 +193,8 @@ describe("the Assistant's company figures", () => {
       "assistant.tasks.list",
       "assistant.tasks.open",
       "assistant.tasks.propose",
+      "assistant.tasks.proposeAnswerAlert",
+      "assistant.tasks.proposeRankingAlert",
       "assistant.tasks.proposeReport",
       "assistant.tasks.proposeResearch",
       "assistant.websites",

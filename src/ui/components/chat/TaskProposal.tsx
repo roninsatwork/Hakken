@@ -7,6 +7,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import type { TaskProposal as Proposal } from "@/convex/utils/hakkenTaskProposals";
 import { pathOf } from "@/convex/utils/hakkenTaskRules";
 import { clockOf } from "@/convex/utils/hakkenTaskTiming";
+import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
 import { PageLinkCell } from "@/src/app/(dashboard)/app/sites/_components/SiteCells";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
@@ -25,6 +26,7 @@ import { TagLabel } from "@/src/ui/components/screens/TagLabel";
  */
 export function TaskProposal({ messageId, proposal, isReadOnly = false }: { messageId: Id<"messages">; proposal: Proposal; isReadOnly?: boolean }) {
   const t = useTranslations("ai.assistant.taskProposal");
+  const engineLabel = useEngineLabel();
   const locale = useLocale();
   const { platformName } = useSystemSettings();
   const answer = useMutation(api.hakkenTasks.answerProposal);
@@ -98,7 +100,26 @@ export function TaskProposal({ messageId, proposal, isReadOnly = false }: { mess
   const time = locale.startsWith("en") ? clockOf(proposal.timeOfDay ?? "09:00") : (proposal.timeOfDay ?? "09:00");
   // A weekly report (item 4.1): what it sends, where from, and on which day.
   const report = proposal.report;
-  const rows: Array<[string, React.ReactNode]> = report ? [
+  // An alert on AI answers or a Google ranking (item 4.3).
+  const onAnswers = proposal.answer;
+  const ranking = proposal.ranking;
+  const rows: Array<[string, React.ReactNode]> = onAnswers ? [
+    [t("watch"), t("watches.answers", { engine: engineLabel(onAnswers.engine) })],
+    [t("watches.question"), `“${onAnswers.prompt}”`],
+    [t("letYouKnow"), t(`watches.${onAnswers.watch}`)],
+    [t("when"), t("at", { time })],
+    [t("where"), t("whereBellEmail", { platformName })],
+    [t("goodToKnow"), t("watches.answersWhen")],
+    [t("cost"), t("free")],
+  ] : ranking ? [
+    [t("watch"), t("watches.google")],
+    [t("watches.search"), `“${ranking.keyword}”`],
+    [t("letYouKnow"), t(`watches.${ranking.op}`, { position: ranking.position })],
+    [t("when"), t("at", { time })],
+    [t("where"), t("whereBellEmail", { platformName })],
+    [t("goodToKnow"), t("watches.searchWhen")],
+    [t("cost"), t("free")],
+  ] : report ? [
     [t("report.send"), t("report.pages", { count: report.count, direction: report.direction })],
     [t("website"), proposal.target?.website ?? ""],
     [t("when"), t("report.every", { weekday: t(`report.weekdays.${report.weekday}` as "report.weekdays.1"), time })],

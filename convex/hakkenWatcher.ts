@@ -2,7 +2,13 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalMutation, internalQuery } from "./_generated/server";
-import { hakkenTaskConditionValidator, hakkenTaskMeasureValidator, hakkenTaskTargetValidator } from "./hakkenTaskSchema";
+import {
+  hakkenTaskAnswerValidator,
+  hakkenTaskConditionValidator,
+  hakkenTaskMeasureValidator,
+  hakkenTaskRankingValidator,
+  hakkenTaskTargetValidator,
+} from "./hakkenTaskSchema";
 import { queueOutboxMessage } from "./outbox";
 import { ensureReaderPreferences } from "./readerPreferences";
 import { startRoleRun } from "./roleRuns";
@@ -114,6 +120,32 @@ export const taskForCheckInternal = internalQuery({
   },
 });
 
+/** An alert on AI answers or a ranking (item 4.3), with what checking it needs. */
+export const watchForCheckInternal = internalQuery({
+  args: { taskId: v.id("hakkenTasks") },
+  returns: v.union(
+    v.null(),
+    v.object({
+      companyId: v.id("companies"),
+      target: hakkenTaskTargetValidator,
+      answer: v.optional(hakkenTaskAnswerValidator),
+      ranking: v.optional(hakkenTaskRankingValidator),
+      lastJudgedDay: v.optional(v.string()),
+    }),
+  ),
+  handler: async (ctx, args) => {
+    const task = await ctx.db.get(args.taskId);
+    if (!task || task.state !== "ON" || task.kind !== "ALERT" || !task.target || !(task.answer || task.ranking)) return null;
+    return {
+      companyId: task.companyId,
+      target: task.target,
+      ...(task.answer ? { answer: task.answer } : {}),
+      ...(task.ranking ? { ranking: task.ranking } : {}),
+      ...(task.lastJudgedDay ? { lastJudgedDay: task.lastJudgedDay } : {}),
+    };
+  },
+});
+
 const judgedDayValidator = v.object({ day: v.string(), value: v.number(), met: v.boolean(), streak: v.number(), tells: v.boolean() });
 
 /**
@@ -131,6 +163,8 @@ export const recordCheckInternal = internalMutation({
       day: v.string(), headline: v.string(), body: v.string(), value: v.number(), usual: v.optional(v.number()),
       // The four weeks to its day, for the chart in its email (item 3.2).
       series: v.optional(v.object({ from: v.string(), values: v.array(v.number()), met: v.array(v.boolean()) })),
+      // What an AI answer or a ranking said, for its email (item 4.3).
+      watch: v.optional(v.object({ stance: v.optional(v.string()), position: v.optional(v.union(v.number(), v.null())) })),
     })),
   },
   returns: v.object({ recorded: v.number(), alerted: v.boolean() }),
@@ -159,7 +193,13 @@ export const recordCheckInternal = internalMutation({
     if (!args.alert) return { recorded, alerted: false };
     const owner = await ctx.db.get(task.userId);
     if (!owner) return { recorded, alerted: false };
-    const link = task.target ? `/app/search-console/${task.target.companyWebsiteId}${task.target.page ? "/pages" : ""}` : "/app/hakken-tasks";
+    const link = !task.target
+      ? "/app/hakken-tasks"
+      : task.answer
+        ? `/app/sites/${task.target.companyWebsiteId}/ai/mentions`
+        : task.ranking
+          ? `/app/sites/${task.target.companyWebsiteId}/keywords`
+          : `/app/search-console/${task.target.companyWebsiteId}${task.target.page ? "/pages" : ""}`;
     let emailed = false;
     if (task.channels.email && owner.email) {
       const preferences = await ensureReaderPreferences(ctx, owner._id);
@@ -172,6 +212,7 @@ export const recordCheckInternal = internalMutation({
           taskId: task._id, day: args.alert.day, headline: args.alert.headline, body: args.alert.body, value: args.alert.value,
           ...(args.alert.usual !== undefined ? { usual: args.alert.usual } : {}), measure: task.measure ?? "visitors", link,
           ...(args.alert.series ? { series: args.alert.series } : {}),
+          ...(args.alert.watch ? { watch: args.alert.watch } : {}),
         },
         idempotencyKey: `TASK_ALERT:${task._id}:${args.alert.day}`,
       }));

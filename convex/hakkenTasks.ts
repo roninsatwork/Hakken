@@ -10,6 +10,8 @@ import {
   hakkenTaskKindValidator,
   hakkenTaskMeasureValidator,
   hakkenTaskReportValidator,
+  hakkenTaskAnswerValidator,
+  hakkenTaskRankingValidator,
   hakkenTaskStateValidator,
   hakkenTaskTargetValidator,
 } from "./hakkenTaskSchema";
@@ -39,6 +41,8 @@ const taskRowValidator = v.object({
   target: v.optional(hakkenTaskTargetValidator),
   condition: v.optional(hakkenTaskConditionValidator),
   report: v.optional(hakkenTaskReportValidator),
+  answer: v.optional(hakkenTaskAnswerValidator),
+  ranking: v.optional(hakkenTaskRankingValidator),
   timeOfDay: v.string(),
   timeZone: v.string(),
   channels: hakkenTaskChannelsValidator,
@@ -60,6 +64,8 @@ function toRow(task: Doc<"hakkenTasks">): TaskRow {
     ...(task.target ? { target: task.target } : {}),
     ...(task.condition ? { condition: task.condition } : {}),
     ...(task.report ? { report: task.report } : {}),
+    ...(task.answer ? { answer: task.answer } : {}),
+    ...(task.ranking ? { ranking: task.ranking } : {}),
     timeOfDay: task.timeOfDay,
     timeZone: task.timeZone,
     channels: task.channels,
@@ -238,6 +244,8 @@ const newTaskArgs = {
   target: v.optional(hakkenTaskTargetValidator),
   condition: v.optional(hakkenTaskConditionValidator),
   report: v.optional(hakkenTaskReportValidator),
+  answer: v.optional(hakkenTaskAnswerValidator),
+  ranking: v.optional(hakkenTaskRankingValidator),
   usual: v.optional(v.number()),
   timeOfDay: v.optional(v.string()),
   timeZone: v.optional(v.string()),
@@ -260,6 +268,8 @@ type NewTask = {
   target?: Doc<"hakkenTasks">["target"];
   condition?: Doc<"hakkenTasks">["condition"];
   report?: Doc<"hakkenTasks">["report"];
+  answer?: Doc<"hakkenTasks">["answer"];
+  ranking?: Doc<"hakkenTasks">["ranking"];
   usual?: number;
   timeOfDay?: string;
   timeZone?: string;
@@ -283,6 +293,8 @@ async function insertTask(ctx: MutationCtx, args: NewTask): Promise<Id<"hakkenTa
     ...(args.target ? { target: args.target } : {}),
     ...(args.condition ? { condition: args.condition } : {}),
     ...(args.report ? { report: args.report } : {}),
+    ...(args.answer ? { answer: args.answer } : {}),
+    ...(args.ranking ? { ranking: args.ranking } : {}),
     ...(args.usual !== undefined ? { usual: args.usual } : {}),
     timeOfDay,
     timeZone,
@@ -345,8 +357,9 @@ export const answerProposal = tenantMutation({
       if (!proposal.research) throw appError("INVALID_INPUT", "That offer doesn’t say what to find out.");
       await ctx.scheduler.runAfter(0, internal.hakkenResearch.researchInternal, { threadId: thread._id, userId: ctx.userId, research: proposal.research });
     } else if (proposal.action === "CREATE") {
-      // An alert watches a rule; a report (item 4.1) sends its pages each week.
-      if (!proposal.measure || !proposal.target || !(proposal.condition || proposal.report) || !proposal.channels) {
+      // An alert watches a Search Console rule, an AI answer or a ranking (item 4.3); a report (4.1) sends its pages each week.
+      const watches = proposal.measure ? Boolean(proposal.condition || proposal.report) : Boolean(proposal.answer || proposal.ranking);
+      if (!proposal.target || !watches || !proposal.channels) {
         throw appError("INVALID_INPUT", "That offer is missing what it would watch.");
       }
       taskId = await insertTask(ctx, {
@@ -354,9 +367,12 @@ export const answerProposal = tenantMutation({
         userId: ctx.userId,
         kind: proposal.report ? "REPORT" : "ALERT",
         title: proposal.title,
-        measure: proposal.measure,
+        ...(proposal.measure ? { measure: proposal.measure } : {}),
         target: proposal.target,
-        ...(proposal.report ? { report: proposal.report } : { condition: proposal.condition }),
+        ...(proposal.report ? { report: proposal.report } : {}),
+        ...(proposal.condition ? { condition: proposal.condition } : {}),
+        ...(proposal.answer ? { answer: proposal.answer } : {}),
+        ...(proposal.ranking ? { ranking: proposal.ranking } : {}),
         ...(proposal.usual !== undefined ? { usual: proposal.usual } : {}),
         ...(proposal.timeOfDay ? { timeOfDay: proposal.timeOfDay } : {}),
         ...(args.timeZone ? { timeZone: args.timeZone } : {}),

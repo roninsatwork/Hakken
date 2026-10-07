@@ -210,6 +210,7 @@ import type * as hakkenStatReporter from "../hakkenStatReporter.js";
 import type * as hakkenTaskFigures from "../hakkenTaskFigures.js";
 import type * as hakkenTaskSchema from "../hakkenTaskSchema.js";
 import type * as hakkenTasks from "../hakkenTasks.js";
+import type * as hakkenWatchFigures from "../hakkenWatchFigures.js";
 import type * as hakkenWatcher from "../hakkenWatcher.js";
 import type * as hakkenWatcherActions from "../hakkenWatcherActions.js";
 import type * as holdLists from "../holdLists.js";
@@ -518,6 +519,7 @@ import type * as utils_hakkenTaskProposals from "../utils/hakkenTaskProposals.js
 import type * as utils_hakkenTaskRules from "../utils/hakkenTaskRules.js";
 import type * as utils_hakkenTaskTiming from "../utils/hakkenTaskTiming.js";
 import type * as utils_hakkenWatcher from "../utils/hakkenWatcher.js";
+import type * as utils_hakkenWatches from "../utils/hakkenWatches.js";
 import type * as utils_healthShapes from "../utils/healthShapes.js";
 import type * as utils_holdPagesJoin from "../utils/holdPagesJoin.js";
 import type * as utils_inventoryRollupService from "../utils/inventoryRollupService.js";
@@ -863,6 +865,7 @@ declare const fullApi: ApiFromModules<{
   hakkenTaskFigures: typeof hakkenTaskFigures;
   hakkenTaskSchema: typeof hakkenTaskSchema;
   hakkenTasks: typeof hakkenTasks;
+  hakkenWatchFigures: typeof hakkenWatchFigures;
   hakkenWatcher: typeof hakkenWatcher;
   hakkenWatcherActions: typeof hakkenWatcherActions;
   holdLists: typeof holdLists;
@@ -1171,6 +1174,7 @@ declare const fullApi: ApiFromModules<{
   "utils/hakkenTaskRules": typeof utils_hakkenTaskRules;
   "utils/hakkenTaskTiming": typeof utils_hakkenTaskTiming;
   "utils/hakkenWatcher": typeof utils_hakkenWatcher;
+  "utils/hakkenWatches": typeof utils_hakkenWatches;
   "utils/healthShapes": typeof utils_healthShapes;
   "utils/holdPagesJoin": typeof utils_holdPagesJoin;
   "utils/inventoryRollupService": typeof utils_inventoryRollupService;

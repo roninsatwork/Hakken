@@ -7396,6 +7396,19 @@
           "yes": "Sì, scoprilo",
           "done": "Ci penso io: scriverò qui cosa trovo tra pochi minuti",
           "declined": "Non approfondito. Chiedimelo quando vuoi."
+        },
+        "watches": {
+          "answers": "Le risposte di {engine}",
+          "google": "I risultati di Google",
+          "question": "A questa domanda",
+          "search": "Per questa ricerca",
+          "notRecommended": "Se smette di consigliarti",
+          "notNamed": "Se ti lascia fuori",
+          "warnedAgainst": "Se sconsiglia di sceglierti",
+          "outOfTop": "Se esci dai primi {position}",
+          "intoTop": "Quando entri nei primi {position}",
+          "answersWhen": "Le risposte vengono controllate ogni volta che questa domanda viene posta",
+          "searchWhen": "La tua posizione viene controllata ogni volta che questa ricerca viene verificata"
         }
       },
       "chart": {

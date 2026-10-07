@@ -34,6 +34,19 @@ export function isAiEngine(value: string): value is AiEngine {
   return (AI_ENGINES as readonly string[]).includes(value);
 }
 
+/**
+ * Each engine's name as people write it, for words the server writes — an
+ * alert's headline, a task's title (hakken-tasks-plan.md, item 4.3). Screens
+ * name them through `src/ui/components/seo/engineLabel.ts`, in the reader's
+ * language.
+ */
+export const AI_ENGINE_NAMES: Record<AiEngine, string> = {
+  chatgpt: "ChatGPT",
+  perplexity: "Perplexity",
+  gemini: "Gemini",
+  claude: "Claude",
+};
+
 /** The engines a prompt is asked of when nobody has chosen. All of them. */
 export const DEFAULT_AI_ENGINES: readonly AiEngine[] = AI_ENGINES;
 

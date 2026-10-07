@@ -93,5 +93,17 @@ describe("a task proposed in a reply", () => {
     expect(screen.getByText("From your monthly credits")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Yes, find out" })).toBeInTheDocument();
   });
+
+  it("writes out an alert on AI answers and one on a ranking", () => {
+    const base = { action: "CREATE" as const, status: "PENDING" as const, timeOfDay: "09:00", channels: { bell: true, email: true, telegram: false }, target: { companyWebsiteId: "s1" as Id<"companyWebsites">, website: "example.co.uk" } };
+    const { unmount } = renderWithProviders(<TaskProposal messageId={messageId} proposal={{ ...base, title: "a", answer: { prompt: "best agency uk", engine: "chatgpt", watch: "notRecommended" } }} />);
+    expect(screen.getByText("ChatGPT’s answers")).toBeInTheDocument();
+    expect(screen.getByText("“best agency uk”")).toBeInTheDocument();
+    expect(screen.getByText("If it stops recommending you")).toBeInTheDocument();
+    unmount();
+    renderWithProviders(<TaskProposal messageId={messageId} proposal={{ ...base, title: "b", ranking: { keyword: "web design surrey", op: "outOfTop", position: 3 } }} />);
+    expect(screen.getByText("Google’s results")).toBeInTheDocument();
+    expect(screen.getByText("If you drop out of the top 3")).toBeInTheDocument();
+  });
 });
 

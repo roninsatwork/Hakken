@@ -412,6 +412,8 @@ describe("ai tool execution service", () => {
       "assistant.tasks.list",
       "assistant.tasks.open",
       "assistant.tasks.propose",
+      "assistant.tasks.proposeAnswerAlert",
+      "assistant.tasks.proposeRankingAlert",
       "assistant.tasks.proposeReport",
       "assistant.tasks.proposeResearch",
       "assistant.websites",

@@ -11,6 +11,7 @@ import { shiftDay } from "./searchConsoleDays";
 import { alertTemplate, checkedAlert, dayWords, type AlertFacts, type AlertWords } from "./utils/hakkenTaskAlerts";
 import { TRIAL_DAYS, dayMet, judgeDays, pathOf, settledDay, usualOf, type TaskCondition } from "./utils/hakkenTaskRules";
 import { WATCHER, WATCH_STEP } from "./utils/hakkenWatcher";
+import { answerAlertWords, answerMet, rankingAlertWords, rankingMet, type AnswerWatch, type RankingWatch, type Stance } from "./utils/hakkenWatches";
 
 /**
  * The Hakken Watcher Agent's round (docs/plans/active/hakken-tasks-plan.md,
@@ -26,9 +27,58 @@ const MOST_DAYS_JUDGED = 7;
 
 type CheckOutcome = "ALERTED" | "JUDGED" | "NOTHING_NEW" | "PROBLEM" | "GONE";
 
+/**
+ * An alert on AI answers or a Google ranking (item 4.3): the newest answer or
+ * check since it last looked, judged in plain code; its owner told when it
+ * meets their rule, once for each. Its words are written from the figures,
+ * with no model.
+ */
+async function checkWatch(
+  ctx: ActionCtx,
+  taskId: Id<"hakkenTasks">,
+  watch: { companyId: Id<"companies">; target: { companyWebsiteId: Id<"companyWebsites">; website: string }; answer?: AnswerWatch; ranking?: RankingWatch; lastJudgedDay?: string },
+): Promise<CheckOutcome> {
+  const nothingNew = async () => {
+    await ctx.runMutation(internal.hakkenWatcher.recordCheckInternal, { taskId, judged: [] });
+    return "NOTHING_NEW" as const;
+  };
+  if (watch.answer) {
+    const now = await ctx.runQuery(internal.hakkenWatchFigures.answerNowInternal, {
+      companyId: watch.companyId, companyWebsiteId: watch.target.companyWebsiteId, prompt: watch.answer.prompt, engine: watch.answer.engine,
+    });
+    if (!now || (watch.lastJudgedDay && now.day <= watch.lastJudgedDay)) return await nothingNew();
+    const met = answerMet(now.stance, watch.answer.watch);
+    const judged = [{ day: now.day, value: STANCE_VALUES[now.stance], met, streak: met ? 1 : 0, tells: met }];
+    const words = answerAlertWords(watch.answer, now.stance, now.day, watch.target.website);
+    await ctx.runMutation(internal.hakkenWatcher.recordCheckInternal, {
+      taskId, judged, ...(met ? { alert: { day: now.day, ...words, value: STANCE_VALUES[now.stance], watch: { stance: now.stance } } } : {}),
+    });
+    return met ? "ALERTED" : "JUDGED";
+  }
+  if (watch.ranking) {
+    const now = await ctx.runQuery(internal.hakkenWatchFigures.rankingNowInternal, { companyWebsiteId: watch.target.companyWebsiteId, keyword: watch.ranking.keyword });
+    if (!now || (watch.lastJudgedDay && now.day <= watch.lastJudgedDay)) return await nothingNew();
+    const met = rankingMet(now.position, watch.ranking);
+    const judged = [{ day: now.day, value: now.position ?? 0, met, streak: met ? 1 : 0, tells: met }];
+    const words = rankingAlertWords(watch.ranking, now.position, now.day, watch.target.website);
+    await ctx.runMutation(internal.hakkenWatcher.recordCheckInternal, {
+      taskId, judged, ...(met ? { alert: { day: now.day, ...words, value: now.position ?? 0, watch: { position: now.position } } } : {}),
+    });
+    return met ? "ALERTED" : "JUDGED";
+  }
+  return await nothingNew();
+}
+
+/** A stance as a number for its check's record: higher is better for the website. */
+const STANCE_VALUES: Record<Stance, number> = { RECOMMENDED: 3, NAMED: 2, NOT_NAMED: 1, WARNED_AGAINST: 0 };
+
 async function checkOne(ctx: ActionCtx, taskId: Id<"hakkenTasks">): Promise<CheckOutcome> {
   const task = await ctx.runQuery(internal.hakkenWatcher.taskForCheckInternal, { taskId });
-  if (!task) return "GONE";
+  if (!task) {
+    // Not a Search Console alert: one on AI answers or a ranking, or gone.
+    const watch = await ctx.runQuery(internal.hakkenWatcher.watchForCheckInternal, { taskId });
+    return watch ? await checkWatch(ctx, taskId, watch) : "GONE";
+  }
   if (!task.newestDay) {
     await ctx.runMutation(internal.hakkenWatcher.recordCheckInternal, { taskId, judged: [], problem: "Search Console isn't connected." });
     return "PROBLEM";

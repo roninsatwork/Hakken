@@ -260,3 +260,47 @@ describe("finding out why, offered for a yes", () => {
   });
 });
 
+describe("alerts on AI answers and Google rankings, proposed for a yes", () => {
+  async function tracked(t: Harness, siteId: Id<"companyWebsites">) {
+    await t.run(async (ctx) => {
+      const hold = (await ctx.db.get(siteId))!;
+      await ctx.db.insert("websiteQuestions", { websiteId: hold.websiteId, companyWebsiteId: siteId, prompt: "best web design agency uk", engines: ["chatgpt", "perplexity"], isActive: true, createdAt: 1 });
+      await ctx.db.insert("websiteKeywords", { websiteId: hold.websiteId, companyWebsiteId: siteId, keyword: "web design surrey", isActive: true, createdAt: 1 });
+    });
+  }
+  const call = async (t: Harness, seeded: Awaited<ReturnType<typeof seed>>, handler: string, args: Record<string, unknown>) =>
+    (await ASSISTANT_TASK_HANDLERS[handler]({ ctx: runtime(t), handlerMapping: handler, companyId: seeded.companyId, userId: seeded.me, args })) as { ok: boolean; problem?: string; proposal?: Record<string, unknown> };
+
+  test("an AI answer alert, on a tracked question, for the engine that is asked it", async () => {
+    const t = harness();
+    const seeded = await seed(t);
+    await tracked(t, seeded.siteId);
+    const offer = await call(t, seeded, "assistant.tasks.proposeAnswerAlert", { website: "ronins.test", question: "Best web design agency UK?", engine: "Perplexity" });
+    expect(offer.proposal).toMatchObject({
+      action: "CREATE", title: "Tell me if Perplexity stops recommending us for “best web design agency uk”",
+      answer: { prompt: "best web design agency uk", engine: "perplexity", watch: "notRecommended" },
+    });
+    expect((await call(t, seeded, "assistant.tasks.proposeAnswerAlert", { website: "ronins.test", question: "best web design agency uk", engine: "claude" })).problem)
+      .toMatch(/Claude isn't asked/);
+    expect((await call(t, seeded, "assistant.tasks.proposeAnswerAlert", { website: "ronins.test", question: "cheapest plumber in leeds" })).problem)
+      .toMatch(/isn't one of ronins.test's tracked questions/);
+
+    const messageId = await replyWith(t, seeded.threadId, offer.proposal!);
+    await t.withIdentity({ subject: seeded.me }).mutation(api.hakkenTasks.answerProposal, { messageId, yes: true });
+    const [task] = await t.run((ctx) => ctx.db.query("hakkenTasks").collect());
+    expect(task).toMatchObject({ kind: "ALERT", answer: { engine: "perplexity" } });
+    expect(task.measure).toBeUndefined();
+  });
+
+  test("a ranking alert, on a tracked search", async () => {
+    const t = harness();
+    const seeded = await seed(t);
+    await tracked(t, seeded.siteId);
+    const offer = await call(t, seeded, "assistant.tasks.proposeRankingAlert", { website: "ronins.test", search: "Web design Surrey", position: 3 });
+    expect(offer.proposal).toMatchObject({
+      title: "Tell me if ronins.test drops out of Google’s top 3 for “web design surrey”", ranking: { keyword: "web design surrey", op: "outOfTop", position: 3 },
+    });
+    expect((await call(t, seeded, "assistant.tasks.proposeRankingAlert", { website: "ronins.test", search: "plumbers" })).problem).toMatch(/tracked Google searches/);
+  });
+});
+

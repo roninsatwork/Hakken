@@ -2,6 +2,7 @@ import { internal } from "./_generated/api";
 import type { ToolHandlerExecutionInput } from "./aiToolExecutionService";
 import { shiftDay } from "./searchConsoleDays";
 import { reportCount, reportTitle, weekdayOf } from "./utils/hakkenReports";
+import { answerTitle, engineName, engineOf, rankingTitle, type AiEngine } from "./utils/hakkenWatches";
 import { TRIAL_DAYS, pathOf, settledDay, taskTitle, trialOf, usualOf, type TaskCondition, type TaskMeasure } from "./utils/hakkenTaskRules";
 import { taskTimeOfDay } from "./utils/hakkenTaskTiming";
 
@@ -137,6 +138,67 @@ export const ASSISTANT_TASK_HANDLERS: Record<string, (input: ToolHandlerExecutio
         report,
         timeOfDay: taskTimeOfDay(text(input.args, "time")),
         channels: { bell: true, email: true, telegram: false },
+      },
+    };
+  },
+
+  /**
+   * An alert on an AI engine's answers to one of the company's tracked
+   * questions, written out for a yes (item 4.3), with how its newest answer
+   * treated them. Tracked questions only: asking a new one would spend.
+   */
+  "assistant.tasks.proposeAnswerAlert": async (input) => {
+    if (!input.companyId) return NO_COMPANY;
+    if (!input.userId) return NO_PERSON;
+    const website = text(input.args, "website");
+    const question = text(input.args, "question");
+    if (!website || !question) return { ok: false, problem: "Say which of the company's websites, and which of its tracked questions." };
+    const found = await input.ctx.runQuery(internal.hakkenWatchFigures.trackedQuestionInternal, { companyId: input.companyId, website, question });
+    if (!found.ok) return { ok: false, problem: found.problem };
+    const engine = engineOf(text(input.args, "engine"));
+    if (found.engines && !found.engines.includes(engine)) {
+      return { ok: false, problem: `${engineName(engine)} isn't asked “${found.text}”. It's asked of: ${found.engines.map((each) => engineName(each as AiEngine)).join(", ")}.` };
+    }
+    const said = text(input.args, "watch");
+    const watch = said === "notNamed" || said === "warnedAgainst" ? said : "notRecommended";
+    const answer = { prompt: found.text, engine, watch } as const;
+    const now = await input.ctx.runQuery(internal.hakkenWatchFigures.answerNowInternal, {
+      companyId: input.companyId, companyWebsiteId: found.target.companyWebsiteId, prompt: found.text, engine,
+    });
+    return {
+      ok: true,
+      website: found.target.website,
+      ...(now ? { newestAnswer: { day: now.day, treatedThem: now.stance } } : { newestAnswer: "not answered yet" }),
+      link: `/app/sites/${found.target.companyWebsiteId}/ai/mentions`,
+      note: "The alert is written out under your reply with “Yes, start watching” and “Not now”; nothing starts until they tap yes. In one warm sentence, say how its newest answer treated them and that they just need to say yes.",
+      proposal: {
+        action: "CREATE", status: "PENDING", title: answerTitle(answer), target: found.target, answer,
+        timeOfDay: taskTimeOfDay(text(input.args, "time")), channels: { bell: true, email: true, telegram: false },
+      },
+    };
+  },
+
+  /** An alert on one of the company's tracked Google searches, written out for a yes (item 4.3). Tracked searches only. */
+  "assistant.tasks.proposeRankingAlert": async (input) => {
+    if (!input.companyId) return NO_COMPANY;
+    if (!input.userId) return NO_PERSON;
+    const website = text(input.args, "website");
+    const search = text(input.args, "search");
+    if (!website || !search) return { ok: false, problem: "Say which of the company's websites, and which of its tracked Google searches." };
+    const found = await input.ctx.runQuery(internal.hakkenWatchFigures.trackedSearchInternal, { companyId: input.companyId, website, search });
+    if (!found.ok) return { ok: false, problem: found.problem };
+    const position = Math.min(100, Math.max(1, Math.round(number(input.args, "position") ?? 3)));
+    const ranking = { keyword: found.text, op: text(input.args, "when") === "intoTop" ? "intoTop" : "outOfTop", position } as const;
+    const now = await input.ctx.runQuery(internal.hakkenWatchFigures.rankingNowInternal, { companyWebsiteId: found.target.companyWebsiteId, keyword: found.text });
+    return {
+      ok: true,
+      website: found.target.website,
+      ...(now ? { newestCheck: { day: now.day, position: now.position ?? "not in Google's results" } } : { newestCheck: "not checked yet" }),
+      link: `/app/sites/${found.target.companyWebsiteId}/keywords`,
+      note: "The alert is written out under your reply with “Yes, start watching” and “Not now”; nothing starts until they tap yes. In one warm sentence, say where it stands now and that they just need to say yes.",
+      proposal: {
+        action: "CREATE", status: "PENDING", title: rankingTitle(ranking, found.target.website), target: found.target, ranking,
+        timeOfDay: taskTimeOfDay(text(input.args, "time")), channels: { bell: true, email: true, telegram: false },
       },
     };
   },

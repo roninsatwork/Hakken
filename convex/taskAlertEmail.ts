@@ -23,6 +23,24 @@ export function buildTaskAlertEmail(args: {
   if (!headline || !body) return { skip: "It says nothing of what happened." };
   const wording = emailWording(args.language);
   const words = wording.taskAlert;
+  // An alert on AI answers or a ranking (item 4.3): what the newest answer or check said, in the Watcher's words; no chart.
+  if (payload.watch && typeof payload.watch === "object") {
+    const link = typeof payload.link === "string" && payload.link.startsWith("/") ? payload.link : "/app/hakken-tasks";
+    return {
+      subject: headline,
+      content: {
+        kind: task.target ? `${words.kind} · ${task.target.website}` : words.kind,
+        verdict: headline,
+        lede: body,
+        actions: [
+          { label: words.seeWhatHappened, url: `${brand.appUrl}${link}`, emphasis: "primary" },
+          { label: words.askWhy({ platformName: brand.platformName }), url: `${brand.appUrl}/app/assistant`, emphasis: "secondary" },
+        ],
+        quiet: [words.whyYouGetIt({ platformName: brand.platformName })],
+      },
+      pictures: [],
+    };
+  }
   const value = typeof payload.value === "number" ? payload.value : null;
   const usual = typeof payload.usual === "number" ? payload.usual : null;
   const link = typeof payload.link === "string" && payload.link.startsWith("/") ? payload.link : "/app/hakken-tasks";

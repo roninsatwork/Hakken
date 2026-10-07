@@ -1,3 +1,4 @@
+import { AI_ENGINES, AI_ENGINE_NAMES } from "./seoAiEngines";
 import { type Infer, v } from "convex/values";
 
 export const connectorCategoryValidator = v.union(
@@ -742,6 +743,48 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
             direction: { type: "string", enum: ["lost", "gained"], description: "The pages that lost the most visitors, or gained the most." },
             count: { type: "number", description: "How many pages, 3 to 10; 5 if they don't say." },
             weekday: { type: "string", description: "The day it comes: Monday to Sunday; Monday if they don't say." },
+            time: { type: "string", description: "Their time, HH:MM, 24-hour; 09:00 if they don't say." },
+          },
+        }),
+      },
+      {
+        name: "Propose an alert on AI answers",
+        description:
+          `When someone asks to be told if an AI engine (${AI_ENGINES.map((engine) => AI_ENGINE_NAMES[engine]).join(", ")}) stops recommending them, leaves them out, or warns against them, for one of the company's tracked questions, propose it with this. It reads the newest answer and writes the alert out under your reply for a yes. It is checked whenever the question is next asked. Tracked questions only: if theirs isn't tracked, say so and that their account manager can add it.`,
+        handlerMapping: "assistant.tasks.proposeAnswerAlert",
+        modelName: "propose_answer_alert",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["website", "question"],
+          properties: {
+            website: { type: "string", description: "One of the company's own websites, e.g. example.co.uk, from list_websites." },
+            question: { type: "string", description: "The tracked question, as they said it, e.g. best web design agency uk." },
+            engine: { type: "string", enum: [...AI_ENGINES], description: "Which AI engine; chatgpt if they don't say." },
+            watch: { type: "string", enum: ["notRecommended", "notNamed", "warnedAgainst"], description: "Tell them when it stops recommending them (default), leaves them out, or warns against them." },
+            time: { type: "string", description: "Their time, HH:MM, 24-hour; 09:00 if they don't say." },
+          },
+        }),
+      },
+      {
+        name: "Propose an alert on a Google ranking",
+        description:
+          "When someone asks to be told if they drop out of Google's top 3 (or top 10) for one of the company's tracked searches, or when they get into it, propose it with this. It reads the newest check and writes the alert out under your reply for a yes. It is checked whenever the search is next checked. Tracked searches only: if theirs isn't tracked, say so and that their account manager can add it.",
+        handlerMapping: "assistant.tasks.proposeRankingAlert",
+        modelName: "propose_ranking_alert",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["website", "search"],
+          properties: {
+            website: { type: "string", description: "One of the company's own websites, e.g. example.co.uk, from list_websites." },
+            search: { type: "string", description: "The tracked Google search, e.g. web design surrey." },
+            when: { type: "string", enum: ["outOfTop", "intoTop"], description: "Tell them when it drops out of the top (default), or gets into it." },
+            position: { type: "number", description: "The top what: 3 for the top 3; 3 if they don't say." },
             time: { type: "string", description: "Their time, HH:MM, 24-hour; 09:00 if they don't say." },
           },
         }),

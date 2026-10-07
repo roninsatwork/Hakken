@@ -42,6 +42,8 @@ const LOOKUP_KINDS: Record<string, Lookup["kind"]> = {
   "assistant.tasks.open": "tasks",
   // Proposing an alert reads the last four weeks of Search Console first.
   "assistant.tasks.propose": "searchConsole",
+  // An AI-answer alert's proposal reads the newest answers (4.3).
+  "assistant.tasks.proposeAnswerAlert": "aiMentions",
   // A report's proposal reads this week's pages (4.1).
   "assistant.tasks.proposeReport": "searchConsole",
   // A chart reads Search Console's days (hakken-tasks-plan.md, 2.1).

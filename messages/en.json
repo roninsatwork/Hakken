@@ -7396,6 +7396,19 @@
           "yes": "Yes, find out",
           "done": "On it: I’ll write up what I find here in a few minutes",
           "declined": "Not looked into. Ask me any time."
+        },
+        "watches": {
+          "answers": "{engine}’s answers",
+          "google": "Google’s results",
+          "question": "To this question",
+          "search": "For this search",
+          "notRecommended": "If it stops recommending you",
+          "notNamed": "If it leaves you out",
+          "warnedAgainst": "If it warns against you",
+          "outOfTop": "If you drop out of the top {position}",
+          "intoTop": "When you get into the top {position}",
+          "answersWhen": "Answers are checked whenever this question is next asked",
+          "searchWhen": "Your position is checked whenever this search is next checked"
         }
       },
       "chart": {
