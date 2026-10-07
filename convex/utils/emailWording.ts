@@ -34,6 +34,17 @@ export type EmailWording = {
     open: string;
     whyYouGetIt: (args: { platformName: string }) => string;
   };
+  /** A Hakken task's alert, to the person who set it up (hakken-tasks-plan.md, item 1.4). */
+  taskAlert: {
+    kind: string;
+    visitorsThatDay: string;
+    shownThatDay: string;
+    usualDay: string;
+    about: (args: { count: string }) => string;
+    seeWhatHappened: string;
+    askWhy: (args: { platformName: string }) => string;
+    whyYouGetIt: (args: { platformName: string }) => string;
+  };
 };
 
 export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
@@ -57,6 +68,16 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
       open: "Open the collection pipeline",
       whyYouGetIt: ({ platformName }) => `You get this because you are a super admin of ${platformName}. It is sent at most once a day for each reason.`,
     },
+    taskAlert: {
+      kind: "Alert",
+      visitorsThatDay: "Visitors that day",
+      shownThatDay: "Times shown that day",
+      usualDay: "A usual day",
+      about: ({ count }) => `About ${count}`,
+      seeWhatHappened: "See what happened",
+      askWhy: ({ platformName }) => `Ask ${platformName} why`,
+      whyYouGetIt: ({ platformName }) => `You’re getting this because you asked ${platformName} to keep an eye on this. You can pause or stop it any time in ${platformName} tasks.`,
+    },
   },
   it: {
     dateLocale: "it-IT",
@@ -77,6 +98,16 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
       verdict: "La raccolta dei dati si è fermata e solo una persona può farla ripartire.",
       open: "Apri la pipeline di raccolta",
       whyYouGetIt: ({ platformName }) => `La ricevi perché sei super admin di ${platformName}. Viene inviata al massimo una volta al giorno per ogni motivo.`,
+    },
+    taskAlert: {
+      kind: "Avviso",
+      visitorsThatDay: "Visitatori quel giorno",
+      shownThatDay: "Volte mostrato quel giorno",
+      usualDay: "Un giorno normale",
+      about: ({ count }) => `Circa ${count}`,
+      seeWhatHappened: "Guarda cosa è successo",
+      askWhy: ({ platformName }) => `Chiedi a ${platformName} perché`,
+      whyYouGetIt: ({ platformName }) => `La ricevi perché hai chiesto a ${platformName} di tenerlo d’occhio. Puoi metterlo in pausa o interromperlo quando vuoi in Attività di ${platformName}.`,
     },
   },
 };

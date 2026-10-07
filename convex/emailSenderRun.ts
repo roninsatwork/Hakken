@@ -42,6 +42,9 @@ function senderAddresses(): Record<OutboxMessageType, string | null> {
   return found;
 }
 
+/** The variables to set for some email types, each named once: several types share an address. */
+const addressNames = (types: OutboxMessageType[]) => [...new Set(types.map((type) => SENDER_ADDRESS_VARIABLES[type]))];
+
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`;
 
 export async function sendOutbox(ctx: ActionCtx, runId: Id<"agentRuns">): Promise<string> {
@@ -63,11 +66,12 @@ export async function sendOutbox(ctx: ActionCtx, runId: Id<"agentRuns">): Promis
   if (!apiKey) throw appError("NOT_CONFIGURED", `RESEND_API_KEY is not set on this deployment, so nothing was sent. ${waitingText}.`);
   const from = senderAddresses();
   const unset: OutboxMessageType[] = OUTBOX_MESSAGE_TYPES.filter((type) => !from[type]);
-  const unsetVerb = unset.length === 1 ? "is" : "are";
+  const unsetNames = addressNames(unset);
+  const unsetVerb = unsetNames.length === 1 ? "is" : "are";
   if (unset.length === OUTBOX_MESSAGE_TYPES.length) {
     throw appError(
       "NOT_CONFIGURED",
-      `${unset.map((type) => SENDER_ADDRESS_VARIABLES[type]).join(" and ")} ${unsetVerb} not set, so nothing was sent: `
+      `${unsetNames.join(" and ")} ${unsetVerb} not set, so nothing was sent: `
         + `each email type is sent only from its own address. ${waitingText}.`,
     );
   }
@@ -153,7 +157,7 @@ export async function sendOutbox(ctx: ActionCtx, runId: Id<"agentRuns">): Promis
     ...(skipped > 0 ? [`${skipped} skipped`] : []),
   ];
   const refusal = refused.size > 0
-    ? ` Not sent, because their address is not set: ${[...refused].map((type) => SENDER_ADDRESS_VARIABLES[type]).join(", ")}.`
+    ? ` Not sent, because their address is not set: ${addressNames([...refused]).join(", ")}.`
     : "";
   return `${parts.join("; ")}.${stoppedBecause ? ` Stopped because ${stoppedBecause}.` : ""}${refusal}`;
 }

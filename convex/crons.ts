@@ -18,6 +18,15 @@ crons.interval(
 );
 
 
+// The Hakken Watcher Agent: every alert whose owner's time has come, each
+// quarter of an hour, so "9am" arrives by 9:15 (hakken-tasks-plan.md, 1.3).
+crons.interval(
+  "hakken-task-watch",
+  { minutes: 15 },
+  internal.jobLedger.runJob,
+  { job: "hakken-task-watch" }
+);
+
 // Run workflow schedule dispatcher every minute
 crons.interval(
   "workflow-schedule-dispatcher",

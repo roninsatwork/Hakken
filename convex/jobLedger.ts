@@ -80,6 +80,8 @@ const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
   "credit-ledger-sweep": (ctx) => ctx.runMutation(internal.creditLedger.sweepCreditLedger, {}),
   // Every website's Search Console figures added up once a week, those a week old each day (cost review, 2026-10-05).
   "search-console-weekly-rebuild": (ctx) => ctx.runAction(internal.searchConsoleSettling.weeklyRebuilds, {}),
+  // Every Hakken alert whose owner's time has come (hakken-tasks-plan.md, item 1.3).
+  "hakken-task-watch": (ctx) => ctx.runAction(internal.hakkenWatcherActions.watchDue, {}),
 };
 
 /** How often each job is meant to run, in minutes — the screen uses this to
@@ -117,6 +119,7 @@ const EXPECTED_EVERY_MINUTES: Record<string, number> = {
   "sites-list-copy-refresh": 1440,
   "credit-ledger-sweep": 60,
   "search-console-weekly-rebuild": 1440,
+  "hakken-task-watch": 15,
 };
 
 export const recordJobOutcomeInternal = internalMutation({

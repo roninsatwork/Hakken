@@ -36,6 +36,7 @@ type Template = (ctx: QueryCtx, row: Doc<"outboxMessages">, brand: Brand) => Pro
 export const SENDER_ADDRESS_VARIABLES: Record<OutboxMessageType, string> = {
   WEEKLY_NEWS_DIGEST: "NEWS_DIGEST_FROM_EMAIL",
   COLLECTION_NEEDS_YOU: "ALERTS_FROM_EMAIL",
+  TASK_ALERT: "ALERTS_FROM_EMAIL",
 };
 
 /**
@@ -151,9 +152,48 @@ const collectionNeedsYou: Template = async (_ctx, row, brand) => {
   };
 };
 
+/**
+ * A Hakken task's alert, to the person who set it up (hakken-tasks-plan.md,
+ * item 1.4): the Watcher's checked words, the day's figure beside its usual,
+ * and the way to the screen it came from. Not sent if the task was deleted
+ * between the check and the send.
+ */
+const taskAlert: Template = async (ctx, row, brand) => {
+  const payload = payloadOf(row);
+  const taskId = typeof payload.taskId === "string" ? ctx.db.normalizeId("hakkenTasks", payload.taskId) : null;
+  const task = taskId ? await ctx.db.get(taskId) : null;
+  if (!task || task.state === "DELETED") return { skip: "The task was deleted before its alert was sent." };
+  const headline = typeof payload.headline === "string" ? payload.headline : "";
+  const body = typeof payload.body === "string" ? payload.body : "";
+  if (!headline || !body) return { skip: "It says nothing of what happened." };
+  const words = emailWording(row.language).taskAlert;
+  const value = typeof payload.value === "number" ? payload.value : null;
+  const usual = typeof payload.usual === "number" ? payload.usual : null;
+  const link = typeof payload.link === "string" && payload.link.startsWith("/") ? payload.link : "/app/hakken-tasks";
+  const figure = (count: number) => count.toLocaleString(emailWording(row.language).dateLocale);
+  return {
+    subject: headline,
+    content: {
+      kind: words.kind,
+      verdict: headline,
+      paragraphs: [body],
+      stats: [
+        ...(value !== null ? [{ label: payload.measure === "impressions" ? words.shownThatDay : words.visitorsThatDay, value: figure(value), tone: "warning" as const }] : []),
+        ...(usual !== null ? [{ label: words.usualDay, value: words.about({ count: figure(usual) }) }] : []),
+      ],
+      actions: [
+        { label: words.seeWhatHappened, url: `${brand.appUrl}${link}`, emphasis: "primary" },
+        { label: words.askWhy({ platformName: brand.platformName }), url: `${brand.appUrl}/app/assistant`, emphasis: "secondary" },
+      ],
+      quiet: [words.whyYouGetIt({ platformName: brand.platformName })],
+    },
+  };
+};
+
 const TEMPLATES: Record<OutboxMessageType, Template> = {
   WEEKLY_NEWS_DIGEST: weeklyNewsDigest,
   COLLECTION_NEEDS_YOU: collectionNeedsYou,
+  TASK_ALERT: taskAlert,
 };
 
 /**

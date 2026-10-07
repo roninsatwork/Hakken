@@ -12,9 +12,9 @@ import { v } from "convex/values";
  */
 
 /** What kind of email a row is: the Sender picks its template by it. Every later email type is one more. */
-export const OUTBOX_MESSAGE_TYPES = ["WEEKLY_NEWS_DIGEST", "COLLECTION_NEEDS_YOU"] as const;
+export const OUTBOX_MESSAGE_TYPES = ["WEEKLY_NEWS_DIGEST", "COLLECTION_NEEDS_YOU", "TASK_ALERT"] as const;
 export type OutboxMessageType = (typeof OUTBOX_MESSAGE_TYPES)[number];
-export const outboxMessageTypeValidator = v.union(v.literal("WEEKLY_NEWS_DIGEST"), v.literal("COLLECTION_NEEDS_YOU"));
+export const outboxMessageTypeValidator = v.union(v.literal("WEEKLY_NEWS_DIGEST"), v.literal("COLLECTION_NEEDS_YOU"), v.literal("TASK_ALERT"));
 
 export const OUTBOX_STATUSES = ["WAITING", "CLAIMED", "SENT", "FAILED", "SKIPPED"] as const;
 export type OutboxStatus = (typeof OUTBOX_STATUSES)[number];
