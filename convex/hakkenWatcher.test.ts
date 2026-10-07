@@ -4,6 +4,8 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { pictureAttachments } from "./emailPictureEncoder";
+import { renderOutboxRow } from "./outboxTemplates";
 
 /**
  * The Hakken Watcher Agent's round, items 1.3 and 1.4 of
@@ -80,6 +82,25 @@ describe("the Watcher's morning round", () => {
     expect(notification.body).toContain("7");
     const [email] = await t.run((ctx) => ctx.db.query("outboxMessages").collect());
     expect(email).toMatchObject({ messageType: "TASK_ALERT", userId: seeded.owner, email: "anthony@ronins.test", idempotencyKey: `TASK_ALERT:${taskId}:2026-09-26` });
+
+    // The email as its owner gets it, as drawn (board EmailAlertB, items 1.4 and 3.2).
+    const rendered = await t.run((ctx) => renderOutboxRow(ctx, email));
+    if (!("email" in rendered)) throw new Error(rendered.skip);
+    expect(rendered.email.subject).toBe(notification.title);
+    expect(rendered.email.html).toContain(">7<");
+    expect(rendered.email.html).toContain(">visitors from Google on Saturday 26 September<");
+    expect(rendered.email.html).toContain(">ronins.test usually gets about 23 a day. You asked me to tell you if it dropped below 10.<");
+    expect(rendered.email.html).toContain('src="cid:task-chart"');
+    expect(rendered.email.html).toContain(">Your line: 10<");
+    expect(rendered.email.html).toContain(">Sat 26 Sept<");
+    // From where Search Console's history starts (20 September), never before it; a day Google showed nothing is none.
+    expect(rendered.email.text).toContain("Visitors from Google each day for four weeks, with 5 quiet days marked.");
+    const [picture] = rendered.email.pictures;
+    expect(picture.bars.values).toEqual([0, 0, 0, 0, 23, 24, 7]);
+    expect(picture.bars.marked).toEqual([true, true, true, true, false, false, true]);
+    expect(rendered.email.html).toContain(">20 Sept<");
+    expect(picture.bars.line).toBe(10);
+    expect(pictureAttachments(rendered.email.pictures)[0]).toMatchObject({ content_id: "task-chart", content_type: "image/png" });
 
     // Its next morning has not come: a second round leaves it alone.
     await round(t);

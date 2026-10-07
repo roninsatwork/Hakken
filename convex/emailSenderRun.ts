@@ -1,9 +1,12 @@
+"use node";
+
 import { internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { isLikelyEmailAddress } from "./emailBrandingService";
 import { OUTBOX_MESSAGE_TYPES, type OutboxMessageType } from "./outboxSchema";
 import { SENDER_ADDRESS_VARIABLES } from "./outboxTemplates";
+import { pictureAttachments } from "./emailPictureEncoder";
 import { sendResendEmail } from "./resendEmailService";
 import { appError, appErrorMessage } from "./utils/appError";
 
@@ -126,6 +129,8 @@ export async function sendOutbox(ctx: ActionCtx, runId: Id<"agentRuns">): Promis
             html: rendered.email.html,
             text: rendered.email.text,
             ...(Object.keys(rendered.email.headers).length > 0 ? { headers: rendered.email.headers } : {}),
+            // A chart it carries, drawn here, where Node can encode it, and shown inline by its content id.
+            ...(rendered.email.pictures.length > 0 ? { attachments: pictureAttachments(rendered.email.pictures) } : {}),
           },
         });
         await ctx.runMutation(internal.outbox.settleOutboxMessage, {

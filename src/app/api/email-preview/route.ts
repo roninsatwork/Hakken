@@ -14,7 +14,21 @@
  */
 
 import { NextResponse } from "next/server";
-import { buildEmailPreviews } from "./fixtures";
+import { encodePng } from "../../../../convex/emailPictureEncoder";
+import { rasterBars } from "../../../../convex/utils/emailPictures";
+import { buildEmailPreviews, type EmailPreview } from "./fixtures";
+
+/**
+ * The email's HTML with each chart it carries in place of its content id: a
+ * mail client shows the attachment, and a browser preview has none.
+ */
+function withPictures(preview: EmailPreview): string {
+  return (preview.pictures ?? []).reduce(
+    (html, picture) =>
+      html.replaceAll(`cid:${picture.cid}`, `data:image/png;base64,${encodePng(rasterBars(picture.bars)).toString("base64")}`),
+    preview.email.html,
+  );
+}
 
 function isEnabled() {
   return process.env.NODE_ENV !== "production";
@@ -68,7 +82,7 @@ export async function GET(request: Request) {
               &middot; <a href="?raw=${encodeURIComponent(preview.key)}&amp;format=text">text part</a>
             </p>
           </header>
-          <iframe title="${escapeHtml(preview.title)}" srcdoc="${escapeHtml(preview.email.html)}"></iframe>
+          <iframe title="${escapeHtml(preview.title)}" srcdoc="${escapeHtml(withPictures(preview))}"></iframe>
         </section>`;
     })
     .join("");

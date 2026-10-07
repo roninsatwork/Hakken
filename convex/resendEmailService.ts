@@ -22,6 +22,12 @@ export type ResendEmailPayload = {
    * `List-Unsubscribe-Post`, which Gmail and Yahoo require of bulk senders.
    */
   headers?: Record<string, string>;
+  /**
+   * Files sent with the email. A picture shown in its body goes inline: base64
+   * `content` and a `content_id` the HTML names as `cid:` (a task alert's chart,
+   * `emailPictureEncoder.ts`).
+   */
+  attachments?: Array<{ filename: string; content: string; content_type?: string; content_id?: string }>;
 };
 
 export type ResendEmailResponse = {

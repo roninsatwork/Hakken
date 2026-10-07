@@ -38,13 +38,18 @@
  * - Every text cell carries `mso-line-height-rule:exactly`, or Word adds its
  *   own leading and the rows stop lining up.
  * - No `<style>` carries the design (see `COLOUR_LOCK`).
- * - Nothing is an `<img>`. External images are blocked by default, so an image
- *   can never carry meaning.
+ * - The only `<img>` is a chart the email carries as an attachment, shown by
+ *   its content id (`picture`, `utils/emailPictures.ts`): an image from the web
+ *   is blocked by default, and Gmail strips a chart drawn in markup. Even that
+ *   picture never carries meaning alone — its dates, its line and its figures
+ *   are written beside it, and its description is its alt text.
  *
  * The sheet's corners are square in Outlook and tracking collapses on the
  * labels. Both are accepted: radius and tracking are decoration here. The
  * single place roundness matters — the button — gets a VML fallback.
  */
+
+import { PICTURE_HEIGHT, PICTURE_WIDTH } from "./utils/emailPictures";
 
 /** 600px is the width every mail client agrees on. */
 const WIDTH = 600;
@@ -198,6 +203,12 @@ export type EmailContent = {
    * become line breaks; callers still supply text, never markup.
    */
   paragraphs?: string[];
+  /**
+   * A chart the email carries (`utils/emailPictures.ts`), under the lede: its
+   * content id, what it shows in words for anyone who cannot see it, a note
+   * over its top right ("Your line: 10") and its first and last day under it.
+   */
+  picture?: { cid: string; alt: string; note?: string; from: string; to: string };
   stats?: EmailStat[];
   facts?: EmailFact[];
   cards?: EmailCard[];
@@ -421,6 +432,25 @@ function renderFacts(facts: EmailFact[]) {
   return `${openTable(`width="${INNER}" style="border-top:1px solid ${C.edge};"`)}${rows}</table>`;
 }
 
+/**
+ * The chart, at its drawn size, with what it says written around it: the
+ * note above its right end, its first and last day below.
+ */
+function renderPicture(picture: NonNullable<EmailContent["picture"]>) {
+  const small = (text: string, align: "left" | "right") =>
+    `<td align="${align}" class="e-ink45" style="${line(11, 16, C.ink45, 400)}">${esc(text)}</td>`;
+  return (
+    `${openTable(`width="${INNER}"`)}` +
+    (picture.note ? `<tr>${small("", "left")}${small(picture.note, "right")}</tr>` : "") +
+    `<tr><td colspan="2" style="padding:4px 0 6px;">` +
+    `<img src="cid:${esc(picture.cid)}" width="${PICTURE_WIDTH}" height="${PICTURE_HEIGHT}" alt="${esc(picture.alt)}" ` +
+    `style="display:block;border:0;outline:none;width:${PICTURE_WIDTH}px;height:${PICTURE_HEIGHT}px;" />` +
+    `</td></tr>` +
+    `<tr>${small(picture.from, "left")}${small(picture.to, "right")}</tr>` +
+    `</table>`
+  );
+}
+
 export function renderEmail(content: EmailContent, options: RenderEmailOptions = {}): RenderedEmail {
   const platformName = (options.platformName || "Hakken").trim() || "Hakken";
   const creditLine = options.creditLine ?? `${platformName} · Powered by Ronins`;
@@ -446,6 +476,11 @@ export function renderEmail(content: EmailContent, options: RenderEmailOptions =
   if (content.lede) {
     body.push(gap(8));
     body.push(`<tr><td class="e-ink70" style="${line(15, 23, C.ink70, 400)}">${esc(content.lede)}</td></tr>`);
+  }
+
+  if (content.picture) {
+    body.push(gap(24));
+    body.push(cell(renderPicture(content.picture)));
   }
 
   for (const paragraph of content.paragraphs ?? []) {
@@ -567,6 +602,7 @@ function renderText(
   out.push(`${branding.platformName.toUpperCase()} — ${content.kind.toUpperCase()}`, "");
   out.push(content.figure ? `${content.figure} ${content.verdict}` : content.verdict, "");
   if (content.lede) out.push(content.lede, "");
+  if (content.picture) out.push(content.picture.alt, "");
 
   for (const paragraph of content.paragraphs ?? []) out.push(paragraph, "");
 

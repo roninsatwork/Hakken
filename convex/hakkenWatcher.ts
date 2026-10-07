@@ -83,6 +83,8 @@ export const taskForCheckInternal = internalQuery({
       lastJudgedDay: v.optional(v.string()),
       streakBefore: v.number(),
       newestDay: v.optional(v.string()),
+      /** Where Search Console's history starts: an alert's chart starts no earlier. */
+      oldestDay: v.optional(v.string()),
     }),
   ),
   handler: async (ctx, args) => {
@@ -107,6 +109,7 @@ export const taskForCheckInternal = internalQuery({
       ...(task.lastJudgedDay ? { lastJudgedDay: task.lastJudgedDay } : {}),
       streakBefore: last?.streak ?? 0,
       ...(connection?.newestDay ? { newestDay: connection.newestDay } : {}),
+      ...(connection?.oldestDay ? { oldestDay: connection.oldestDay } : {}),
     };
   },
 });
@@ -124,7 +127,11 @@ export const recordCheckInternal = internalMutation({
     taskId: v.id("hakkenTasks"),
     judged: v.array(judgedDayValidator),
     problem: v.optional(v.string()),
-    alert: v.optional(v.object({ day: v.string(), headline: v.string(), body: v.string(), value: v.number(), usual: v.optional(v.number()) })),
+    alert: v.optional(v.object({
+      day: v.string(), headline: v.string(), body: v.string(), value: v.number(), usual: v.optional(v.number()),
+      // The four weeks to its day, for the chart in its email (item 3.2).
+      series: v.optional(v.object({ from: v.string(), values: v.array(v.number()), met: v.array(v.boolean()) })),
+    })),
   },
   returns: v.object({ recorded: v.number(), alerted: v.boolean() }),
   handler: async (ctx, args) => {
@@ -162,8 +169,9 @@ export const recordCheckInternal = internalMutation({
         email: owner.email,
         language: preferences?.language ?? "en",
         payload: {
-          taskId: task._id, headline: args.alert.headline, body: args.alert.body, value: args.alert.value,
+          taskId: task._id, day: args.alert.day, headline: args.alert.headline, body: args.alert.body, value: args.alert.value,
           ...(args.alert.usual !== undefined ? { usual: args.alert.usual } : {}), measure: task.measure ?? "visitors", link,
+          ...(args.alert.series ? { series: args.alert.series } : {}),
         },
         idempotencyKey: `TASK_ALERT:${task._id}:${args.alert.day}`,
       }));

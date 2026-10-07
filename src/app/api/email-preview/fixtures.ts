@@ -10,7 +10,9 @@
  */
 
 import { buildAgentNotificationEmail } from "../../../../convex/aiToolNotificationService";
-import { type RenderedEmail } from "../../../../convex/emailLayoutService";
+import { renderEmail, type RenderedEmail } from "../../../../convex/emailLayoutService";
+import { buildTaskAlertEmail } from "../../../../convex/taskAlertEmail";
+import type { EmailPicture } from "../../../../convex/utils/emailPictures";
 import { buildAutomationEmail, buildInvitationEmail, buildSignInCodeEmail, buildSignInEmail } from "../../../../convex/platformEmails";
 import {
   buildSystemHealthAlertEmail,
@@ -218,10 +220,44 @@ export type EmailPreview = {
   note: string;
   source: string;
   email: RenderedEmail;
+  /** The charts it carries, which the preview shows in place of their content ids. */
+  pictures?: EmailPicture[];
 };
+
+/**
+ * A task alert as its owner gets it (board EmailAlertB), from the outbox's own
+ * builder: a quiet Monday on a page that usually gets 23 visitors a day.
+ */
+function taskAlertPreview(): Pick<EmailPreview, "email" | "pictures"> {
+  const values = [24, 22, 25, 9, 21, 23, 26, 24, 22, 23, 23, 25, 8, 22, 24, 23, 21, 25, 22, 24, 23, 22, 22, 24, 21, 23, 22, 7];
+  const made = buildTaskAlertEmail({
+    language: "en",
+    brand: { platformName: PLATFORM_NAME, appUrl: BASE_URL },
+    task: {
+      title: "Tell me if /web-design-london/ gets fewer than 10 visitors a day",
+      target: { website: "example.co.uk", page: "https://example.co.uk/web-design-london/" },
+      condition: { op: "below", value: 10, days: 1 },
+    },
+    payload: {
+      day: "2026-10-05", value: 7, usual: 23, measure: "visitors", link: "/app/search-console/site/pages",
+      headline: "7 visitors on Monday: your web design London page",
+      body: "It had 7 visitors from Google on Monday 5 October. It usually gets about 23 a day.",
+      series: { from: "2026-09-08", values, met: values.map((value) => value < 10) },
+    },
+  });
+  if ("skip" in made) throw new Error(made.skip);
+  return { email: renderEmail(made.content, { platformName: PLATFORM_NAME }), pictures: made.pictures };
+}
 
 export function buildEmailPreviews(): EmailPreview[] {
   return [
+    {
+      key: "task-alert",
+      title: "Hakken task alert",
+      note: "A quiet day on a page, with its four weeks as a picture attached inline (board EmailAlertB).",
+      source: "convex/taskAlertEmail.ts",
+      ...taskAlertPreview(),
+    },
     {
       key: "alert",
       title: "Platform alert",

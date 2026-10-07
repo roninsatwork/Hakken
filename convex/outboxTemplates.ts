@@ -9,6 +9,8 @@ import { readerRow as helpfulReaderRow } from "./libraryArticles";
 import type { OutboxMessageType } from "./outboxSchema";
 import { resolvePlatformName } from "./settingsService";
 import { emailWording } from "./utils/emailWording";
+import { emailPictureValidator, type EmailPicture } from "./utils/emailPictures";
+import { buildTaskAlertEmail } from "./taskAlertEmail";
 import { suppressionOf } from "./emailSuppressions";
 import { readerPreferencesOf } from "./readerPreferences";
 
@@ -21,11 +23,12 @@ import { readerPreferencesOf } from "./readerPreferences";
  * entry here, and one more sender address below.
  */
 
-export type OutboxEmail = { subject: string; html: string; text: string; headers: Record<string, string> };
+/** `pictures`: what the Email Sender draws and attaches inline, by content id (`utils/emailPictures.ts`). */
+export type OutboxEmail = { subject: string; html: string; text: string; headers: Record<string, string>; pictures: EmailPicture[] };
 
 type Brand = { platformName: string; appUrl: string };
 type Template = (ctx: QueryCtx, row: Doc<"outboxMessages">, brand: Brand) => Promise<
-  { subject: string; content: EmailContent; headers?: Record<string, string> } | { skip: string }
+  { subject: string; content: EmailContent; headers?: Record<string, string>; pictures?: EmailPicture[] } | { skip: string }
 >;
 
 /**
@@ -157,41 +160,16 @@ const collectionNeedsYou: Template = async (_ctx, row, brand) => {
 };
 
 /**
- * A Hakken task's alert, to the person who set it up (hakken-tasks-plan.md,
- * item 1.4): the Watcher's checked words, the day's figure beside its usual,
- * and the way to the screen it came from. Not sent if the task was deleted
- * between the check and the send.
+ * A Hakken task's alert, to the person who set it up: built in
+ * `taskAlertEmail.ts`. Not sent if the task was deleted between the check
+ * and the send.
  */
 const taskAlert: Template = async (ctx, row, brand) => {
   const payload = payloadOf(row);
   const taskId = typeof payload.taskId === "string" ? ctx.db.normalizeId("hakkenTasks", payload.taskId) : null;
   const task = taskId ? await ctx.db.get(taskId) : null;
   if (!task || task.state === "DELETED") return { skip: "The task was deleted before its alert was sent." };
-  const headline = typeof payload.headline === "string" ? payload.headline : "";
-  const body = typeof payload.body === "string" ? payload.body : "";
-  if (!headline || !body) return { skip: "It says nothing of what happened." };
-  const words = emailWording(row.language).taskAlert;
-  const value = typeof payload.value === "number" ? payload.value : null;
-  const usual = typeof payload.usual === "number" ? payload.usual : null;
-  const link = typeof payload.link === "string" && payload.link.startsWith("/") ? payload.link : "/app/hakken-tasks";
-  const figure = (count: number) => count.toLocaleString(emailWording(row.language).dateLocale);
-  return {
-    subject: headline,
-    content: {
-      kind: words.kind,
-      verdict: headline,
-      paragraphs: [body],
-      stats: [
-        ...(value !== null ? [{ label: payload.measure === "impressions" ? words.shownThatDay : words.visitorsThatDay, value: figure(value), tone: "warning" as const }] : []),
-        ...(usual !== null ? [{ label: words.usualDay, value: words.about({ count: figure(usual) }) }] : []),
-      ],
-      actions: [
-        { label: words.seeWhatHappened, url: `${brand.appUrl}${link}`, emphasis: "primary" },
-        { label: words.askWhy({ platformName: brand.platformName }), url: `${brand.appUrl}/app/assistant`, emphasis: "secondary" },
-      ],
-      quiet: [words.whyYouGetIt({ platformName: brand.platformName })],
-    },
-  };
+  return buildTaskAlertEmail({ language: row.language, brand, task, payload });
 };
 
 const TEMPLATES: Record<OutboxMessageType, Template> = {
@@ -217,13 +195,15 @@ export async function renderOutboxRow(ctx: QueryCtx, row: Doc<"outboxMessages">)
   const made = await TEMPLATES[row.messageType](ctx, row, brand);
   if ("skip" in made) return made;
   const { html, text } = renderEmail(made.content, { platformName: brand.platformName });
-  return { email: { subject: made.subject, html, text, headers: made.headers ?? {} } };
+  return { email: { subject: made.subject, html, text, headers: made.headers ?? {}, pictures: made.pictures ?? [] } };
 }
 
 export const renderOutboxMessage = internalQuery({
   args: { messageId: v.id("outboxMessages") },
   returns: v.union(
-    v.object({ email: v.object({ subject: v.string(), html: v.string(), text: v.string(), headers: v.record(v.string(), v.string()) }) }),
+    v.object({
+      email: v.object({ subject: v.string(), html: v.string(), text: v.string(), headers: v.record(v.string(), v.string()), pictures: v.array(emailPictureValidator) }),
+    }),
     v.object({ skip: v.string() }),
   ),
   handler: async (ctx, args) => {

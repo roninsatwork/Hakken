@@ -208,8 +208,13 @@ describe("renderEmail — legacy Outlook contract", () => {
     }
   });
 
-  test("has no images, because they are blocked by default", () => {
+  test("has no images from the web, because they are blocked by default", () => {
     expect(html).not.toMatch(/<img[\s>]/i);
+    // The one image is a chart the email carries itself, by its content id (hakken-tasks-plan.md, 3.2).
+    const { html: withChart } = renderEmail(buildContent({ picture: { cid: "chart", alt: "Visitors each day", from: "8 Sep", to: "Mon 5 Oct" } }));
+    const images = withChart.match(/<img [^>]*>/gi) ?? [];
+    expect(images).toHaveLength(1);
+    expect(images[0]).toContain('src="cid:chart"');
   });
 
   test("uses no layout Word cannot render", () => {
@@ -653,3 +658,16 @@ describe("renderEmail — style B", () => {
     expect(row).toContain("</td><td");
   });
 });
+
+describe("renderEmail — a chart as a picture", () => {
+  test("never carries meaning alone: what it shows is its alt text and in the text part, its dates and its line beside it", () => {
+    const picture = { cid: "chart", alt: "Visitors from Google a day for four weeks: 3 quiet days under 10.", note: "Your line: 10", from: "8 Sep", to: "Mon 5 Oct" };
+    const { html, text } = renderEmail(buildContent({ picture }));
+    expect(html).toContain(`alt="${picture.alt}"`);
+    expect(html).toContain(">Your line: 10<");
+    expect(html).toContain(">8 Sep<");
+    expect(html).toContain(">Mon 5 Oct<");
+    expect(text).toContain(picture.alt);
+  });
+});
+

@@ -65,6 +65,13 @@ export function judgeDays(days: ReadonlyArray<{ day: string; value: number }>, c
     });
 }
 
+/** Where the rule's line sits, as a figure, for a chart: its number, or its share of the usual day. */
+export function lineOf(condition: TaskCondition, usual: number | null): number | undefined {
+  if (condition.op === "below" || condition.op === "above") return condition.value;
+  if (usual === null || usual <= 0) return undefined;
+  return Math.round(usual * (condition.op === "dropBy" ? 1 - condition.value / 100 : 1 + condition.value / 100));
+}
+
 /** How often the rule would have told its owner over the days read: what a person sees before saying yes. */
 export function trialOf(days: ReadonlyArray<{ day: string; value: number }>, condition: TaskCondition, usual: number | null): { tells: number; of: number } {
   const judged = judgeDays(days, condition, usual);

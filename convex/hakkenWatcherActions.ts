@@ -9,7 +9,7 @@ import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import { gatherInstructions } from "./assistantKnowledge";
 import { shiftDay } from "./searchConsoleDays";
 import { alertTemplate, checkedAlert, dayWords, type AlertFacts, type AlertWords } from "./utils/hakkenTaskAlerts";
-import { judgeDays, pathOf, settledDay, usualOf } from "./utils/hakkenTaskRules";
+import { TRIAL_DAYS, dayMet, judgeDays, pathOf, settledDay, usualOf, type TaskCondition } from "./utils/hakkenTaskRules";
 import { WATCHER, WATCH_STEP } from "./utils/hakkenWatcher";
 
 /**
@@ -67,12 +67,44 @@ async function checkOne(ctx: ActionCtx, taskId: Id<"hakkenTasks">): Promise<Chec
     streak: newest.streak,
   };
   const words = await writeAlert(ctx, task.companyId, task.userId, facts);
+  const series = await fourWeeks(ctx, task, newest.day, usual);
   await ctx.runMutation(internal.hakkenWatcher.recordCheckInternal, {
     taskId,
     judged,
-    alert: { day: newest.day, headline: words.headline, body: words.body, value: newest.value, ...(usual !== null ? { usual } : {}) },
+    alert: { day: newest.day, headline: words.headline, body: words.body, value: newest.value, ...(usual !== null ? { usual } : {}), ...(series ? { series } : {}) },
   });
   return "ALERTED";
+}
+
+/**
+ * The four weeks to the alert's day, for the chart in its email (item 3.2):
+ * each day's figure — a day Google did not show it counting as none — and
+ * whether it met the rule; from where Search Console's history starts, when
+ * that is later, so a day before it is never drawn as a quiet one. Nothing
+ * when the figures cannot be read: the email goes without its chart rather
+ * than not at all.
+ */
+async function fourWeeks(
+  ctx: ActionCtx,
+  task: {
+    companyId: Id<"companies">;
+    target: { companyWebsiteId: Id<"companyWebsites">; website: string; page?: string };
+    measure: "visitors" | "impressions";
+    condition: TaskCondition;
+    oldestDay?: string;
+  },
+  day: string,
+  usual: number | null,
+): Promise<{ from: string; values: number[]; met: boolean[] } | null> {
+  const fourWeeksBack = shiftDay(day, 1 - TRIAL_DAYS);
+  const from = task.oldestDay && task.oldestDay > fourWeeksBack ? task.oldestDay : fourWeeksBack;
+  if (from > day) return null;
+  const read = await ctx.runAction(internal.hakkenTaskFigures.targetDaysInternal, { companyId: task.companyId, target: task.target, from, to: day });
+  if (!read.ok) return null;
+  const byDay = new Map(read.days.map((entry) => [entry.day, task.measure === "visitors" ? entry.clicks : entry.impressions]));
+  const values: number[] = [];
+  for (let each = from; each <= day; each = shiftDay(each, 1)) values.push(byDay.get(each) ?? 0);
+  return { from, values, met: values.map((value) => dayMet(value, task.condition, usual)) };
 }
 
 /**

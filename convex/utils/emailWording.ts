@@ -73,10 +73,21 @@ export type EmailWording = {
   /** A Hakken task's alert, to the person who set it up (hakken-tasks-plan.md, item 1.4). */
   taskAlert: {
     kind: string;
-    visitorsThatDay: string;
-    shownThatDay: string;
+    /** Under the day's figure, as drawn: "7 / visitors from Google on Monday 5 October". */
+    visitorsOn: (args: { day: string }) => string;
+    shownOn: (args: { day: string }) => string;
+    /** "/web-design-london/ usually gets about 23 a day." */
+    usually: (args: { what: string; usual: string; measure: "visitors" | "impressions" }) => string;
+    /** "You asked me to tell you if it dropped below 10." */
+    youAsked: (args: { rule: string }) => string;
+    rule: (args: { op: "below" | "above" | "dropBy" | "riseBy"; value: string; days: number }) => string;
+    /** The chart, in words, for anyone who cannot see it. */
+    chartAlt: (args: { measure: "visitors" | "impressions"; marked: number; quiet: boolean }) => string;
+    yourLine: (args: { value: string }) => string;
     usualDay: string;
-    about: (args: { count: string }) => string;
+    quietDays: string;
+    busyDays: string;
+    settles: (args: { weekday: string; platformName: string }) => string;
     seeWhatHappened: string;
     askWhy: (args: { platformName: string }) => string;
     whyYouGetIt: (args: { platformName: string }) => string;
@@ -130,10 +141,21 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
     },
     taskAlert: {
       kind: "Alert",
-      visitorsThatDay: "Visitors that day",
-      shownThatDay: "Times shown that day",
+      visitorsOn: ({ day }) => `visitors from Google on ${day}`,
+      shownOn: ({ day }) => `times shown in Google on ${day}`,
+      usually: ({ what, usual, measure }) => (measure === "visitors" ? `${what} usually gets about ${usual} a day.` : `${what} usually shows up about ${usual} times a day.`),
+      youAsked: ({ rule }) => `You asked me to tell you if it ${rule}.`,
+      rule: ({ op, value, days }) => {
+        const words = { below: `dropped below ${value}`, above: `went above ${value}`, dropBy: `dropped by ${value}% against a usual day`, riseBy: `rose by ${value}% against a usual day` }[op];
+        return days > 1 ? `${words} for ${days} days in a row` : words;
+      },
+      chartAlt: ({ measure, marked, quiet }) =>
+        `${measure === "visitors" ? "Visitors from Google" : "Times shown in Google"} each day for four weeks, with ${marked} ${quiet ? "quiet" : "busy"} ${marked === 1 ? "day" : "days"} marked.`,
+      yourLine: ({ value }) => `Your line: ${value}`,
       usualDay: "A usual day",
-      about: ({ count }) => `About ${count}`,
+      quietDays: "Quiet days, last 4 weeks",
+      busyDays: "Busy days, last 4 weeks",
+      settles: ({ weekday, platformName }) => `Google’s figures take about 3 days to settle, so ${weekday} is the latest full day. You can pause or stop this alert any time in ${platformName} tasks.`,
       seeWhatHappened: "See what happened",
       askWhy: ({ platformName }) => `Ask ${platformName} why`,
       whyYouGetIt: ({ platformName }) => `You’re getting this because you asked ${platformName} to keep an eye on this. You can pause or stop it any time in ${platformName} tasks.`,
@@ -185,10 +207,21 @@ export const EMAIL_WORDING: Record<AppLanguage, EmailWording> = {
     },
     taskAlert: {
       kind: "Avviso",
-      visitorsThatDay: "Visitatori quel giorno",
-      shownThatDay: "Volte mostrato quel giorno",
+      visitorsOn: ({ day }) => `visitatori da Google ${day}`,
+      shownOn: ({ day }) => `volte su Google ${day}`,
+      usually: ({ what, usual, measure }) => (measure === "visitors" ? `${what} di solito ha circa ${usual} visitatori al giorno.` : `${what} di solito appare circa ${usual} volte al giorno.`),
+      youAsked: ({ rule }) => `Mi hai chiesto di avvisarti se ${rule}.`,
+      rule: ({ op, value, days }) => {
+        const words = { below: `scendeva sotto ${value}`, above: `superava ${value}`, dropBy: `calava del ${value}% rispetto a un giorno normale`, riseBy: `cresceva del ${value}% rispetto a un giorno normale` }[op];
+        return days > 1 ? `${words} per ${days} giorni di fila` : words;
+      },
+      chartAlt: ({ measure, marked, quiet }) =>
+        `${measure === "visitors" ? "Visitatori da Google" : "Volte su Google"} ogni giorno per quattro settimane, con ${marked} ${marked === 1 ? (quiet ? "giorno tranquillo" : "giorno intenso") : (quiet ? "giorni tranquilli" : "giorni intensi")} evidenziati.`,
+      yourLine: ({ value }) => `La tua soglia: ${value}`,
       usualDay: "Un giorno normale",
-      about: ({ count }) => `Circa ${count}`,
+      quietDays: "Giorni tranquilli, ultime 4 settimane",
+      busyDays: "Giorni intensi, ultime 4 settimane",
+      settles: ({ weekday, platformName }) => `I dati di Google si assestano in circa 3 giorni, quindi ${weekday} è l’ultimo giorno completo. Puoi mettere in pausa o fermare questo avviso quando vuoi in Attività di ${platformName}.`,
       seeWhatHappened: "Guarda cosa è successo",
       askWhy: ({ platformName }) => `Chiedi a ${platformName} perché`,
       whyYouGetIt: ({ platformName }) => `La ricevi perché hai chiesto a ${platformName} di tenerlo d’occhio. Puoi metterlo in pausa o interromperlo quando vuoi in Attività di ${platformName}.`,
