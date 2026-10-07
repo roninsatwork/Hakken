@@ -38,6 +38,8 @@ const LOOKUP_KINDS: Record<string, Lookup["kind"]> = {
   "assistant.searchConsole": "searchConsole",
   "assistant.ai.mentions": "aiMentions",
   "assistant.tasks.open": "tasks",
+  // Proposing an alert reads the last four weeks of Search Console first.
+  "assistant.tasks.propose": "searchConsole",
 };
 
 /** At most this many on one reply: a line, not a log. */

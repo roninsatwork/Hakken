@@ -404,7 +404,12 @@ describe("ai tool execution service", () => {
       "assistant.ai.mentions",
       "assistant.searchConsole",
       "assistant.site.overview",
+      // The Assistant's Hakken task tools (hakken-tasks-plan.md, item 1.2): each
+      // proposes, for the run's own person; the change waits on their tap.
+      "assistant.tasks.change",
+      "assistant.tasks.list",
       "assistant.tasks.open",
+      "assistant.tasks.propose",
       "assistant.websites",
       "company.overview.update",
       // The four DataForSEO doors: what can be asked, start a company's

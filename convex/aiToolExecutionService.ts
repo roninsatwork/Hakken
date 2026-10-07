@@ -27,6 +27,7 @@ import {
 import { getErrorMessage, isRecord } from "./utils/lang";
 import { appError } from "./utils/appError";
 import { ASSISTANT_FIGURE_HANDLERS } from "./assistantToolHandlers";
+import { ASSISTANT_TASK_HANDLERS } from "./assistantTaskHandlers";
 
 type JsonSchema = Record<string, unknown>;
 
@@ -69,6 +70,12 @@ const MEMBER_READABLE_HANDLERS: ReadonlySet<string> = new Set([
   "assistant.searchConsole",
   "assistant.ai.mentions",
   "assistant.tasks.open",
+  // A person's own Hakken tasks (hakken-tasks-plan.md, item 1.2): anyone in the
+  // company may set one (Anthony, 2026-10-07). Each only proposes — the change
+  // waits on the reply for their tap — and only ever for the run's own person.
+  "assistant.tasks.propose",
+  "assistant.tasks.list",
+  "assistant.tasks.change",
 ]);
 
 /** The roles that are a company's members without being its administrators. */
@@ -638,6 +645,7 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
   },
   // The Assistant's company-figure reads (assistant-foundation-plan.md, item 7).
   ...ASSISTANT_FIGURE_HANDLERS,
+  ...ASSISTANT_TASK_HANDLERS,
   "knowledge.search": async (input) => {
     const query = getStringToolArg(input.args, "query") || input.fallbackQuery || "";
     const limit = getNumberToolArg(input.args, "limit");

@@ -42,7 +42,7 @@ function bareHost(website: string): string {
 }
 
 /** What a model's website looks like once read: one of the company's own holds, or why there is none. */
-async function holdFor(ctx: Pick<QueryCtx, "db">, companyId: Id<"companies">, website: string) {
+export async function holdFor(ctx: Pick<QueryCtx, "db">, companyId: Id<"companies">, website: string) {
   const host = bareHost(website);
   const holds = await companyHolds(ctx, companyId);
   const held = holds.find((entry) => entry.website.host === host);

@@ -7313,6 +7313,59 @@
         "answeringFor": "Risponde per",
         "title": "Rispondi per",
         "platform": "La piattaforma — nessun cliente"
+      },
+      "taskProposal": {
+        "watch": "Terrò d’occhio",
+        "page": "Su questa pagina",
+        "website": "Su questo sito",
+        "letYouKnow": "Ti avviserò",
+        "when": "Quando",
+        "where": "Dove",
+        "goodToKnow": "Da sapere",
+        "cost": "Costo",
+        "measures": {
+          "visitors": "Visitatori da Google",
+          "impressions": "Quanto spesso compare su Google"
+        },
+        "rule": {
+          "below": "Se riceve meno di {value} in un giorno",
+          "above": "Se riceve più di {value} in un giorno",
+          "dropHalf": "Se scende a metà del suo solito",
+          "dropBy": "Se scende del {value}% rispetto al solito",
+          "riseBy": "Se sale del {value}% rispetto al solito",
+          "inARow": "{rule}, per {days} giorni di fila"
+        },
+        "at": "Alle {time}",
+        "whereBellEmail": "Qui in {platformName} e per email",
+        "settle": "I dati di Google si assestano in circa 3 giorni, quindi guarderò sempre a qualche giorno fa",
+        "free": "Gratis",
+        "yes": "Sì, inizia a controllare",
+        "notNow": "Non ora",
+        "hint": "Vuoi qualcosa di diverso? Dimmelo, ad esempio “fallo alle 8:30” o “controlla tutto il sito”.",
+        "set": "Tutto pronto: controllo dal {date}",
+        "declined": "Non impostato. Chiedimelo di nuovo quando vuoi.",
+        "leftAsItWas": "Lasciato com’era.",
+        "failed": "Non ha funzionato. Riprova tra un momento.",
+        "change": {
+          "PAUSE": {
+            "ask": "Mettere in pausa “{title}”?",
+            "yes": "Metti in pausa",
+            "no": "Lascialo attivo",
+            "done": "In pausa."
+          },
+          "RESUME": {
+            "ask": "Riattivare “{title}”?",
+            "yes": "Riattiva",
+            "no": "Lascialo in pausa",
+            "done": "Di nuovo attivo."
+          },
+          "DELETE": {
+            "ask": "Eliminare “{title}”? {platformName} smetterà di tenerlo d’occhio.",
+            "yes": "Elimina attività",
+            "no": "Tienilo",
+            "done": "Eliminata."
+          }
+        }
       }
     },
     "costs": {

@@ -956,6 +956,8 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
         const lookedUp = threadId
             ? await ctx.runQuery(internal.assistantReads.runLookupsInternal, { runId })
             : [];
+        // And the change it proposed for the reader's tap, from the same record (hakken-tasks-plan.md, 1.2).
+        const taskProposal = threadId ? await ctx.runQuery(internal.hakkenTasks.runProposalInternal, { runId }) : null;
         const messageId = await finishAssistantReply(ctx, {
             threadId,
             stream,
@@ -965,6 +967,7 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
             evidence: messageEvidence,
             photoTurn: params.photoTurn,
             lookedUp,
+            ...(taskProposal ? { taskProposal } : {}),
         });
         params.timing?.mark("done");
         if (params.learning && finalStepStatus === "SUCCESS") {

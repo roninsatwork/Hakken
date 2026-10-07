@@ -13,7 +13,7 @@ import { keywordResearchTables } from "./keywordResearchSchema";
 import { seoPullTables } from "./seoPullSchema";
 import { positionWeekTables } from "./positionWeekSchema";
 import { creditTables } from "./creditSchema";
-import { hakkenTaskTables } from "./hakkenTaskSchema";
+import { hakkenTaskProposalValidator, hakkenTaskTables } from "./hakkenTaskSchema";
 import { decisionCertaintyValidator, decisionFallbackReasonValidator, decisionModeValidator, decisionOutcomeValidator, decisionSourceValidator } from "./utils/decisionShapes";
 
 
@@ -3097,6 +3097,8 @@ export default defineSchema({
      * answer is filed once however many times the button is pressed. */
     savedToWikiAt: v.optional(v.number()),
     lookedUp: v.optional(v.array(lookupValidator)), // What the Assistant looked up for it, each with its screen (utils/assistantLookups.ts).
+    /** A change the Assistant proposed, waiting for its owner's tap (hakken-tasks-plan.md, item 1.2). */
+    taskProposal: v.optional(hakkenTaskProposalValidator),
     inputTokens: v.optional(v.number()),
     outputTokens: v.optional(v.number()),
     modelUsed: v.optional(v.string()),

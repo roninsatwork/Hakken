@@ -15,6 +15,7 @@ import { MessageFeedbackControls } from "./MessageFeedbackControls";
 import { AnswerEvidence } from "./AnswerEvidence";
 import { PhotoActionChip } from "./PhotoActionChip";
 import { LookedUpLine } from "./LookedUpLine";
+import { TaskProposal } from "./TaskProposal";
 import type { Lookup } from "@/convex/utils/assistantLookups";
 
 /**
@@ -30,7 +31,7 @@ export type ChatMessageView = Pick<
   "_id" | "threadId" | "role" | "content" | "createdAt"
 > &
   Partial<
-    Pick<Doc<"messages">, "systemKey" | "photoActionProposal" | "photoActionTaskId" | "isStreaming" | "streamStartedAt" | "streamUpdatedAt">
+    Pick<Doc<"messages">, "systemKey" | "photoActionProposal" | "photoActionTaskId" | "isStreaming" | "streamStartedAt" | "streamUpdatedAt" | "taskProposal">
   > & { imageAttachments?: Array<{ url: string }>; lookedUp?: Lookup[] };
 
 interface ChatMessageProps {
@@ -163,6 +164,14 @@ export default function ChatMessage({
           <p className="mt-2 text-[12px] text-amber-500/90">{STREAM_STALLED_MESSAGE}</p>
         )}
       </div>
+
+      {/* A change it proposed — a new alert, or pausing, resuming or deleting
+          one — waiting for the reader's tap (hakken-tasks-plan.md, item 1.2). */}
+      {!isStreaming && message.taskProposal && (
+        <div className="max-w-[34rem]">
+          <TaskProposal messageId={message._id} proposal={message.taskProposal} isReadOnly={isReadOnly} />
+        </div>
+      )}
 
       {/* What it looked up, each a link to the screen the figures came from
           (assistant-foundation-plan.md, item 7). Once the reply has finished. */}

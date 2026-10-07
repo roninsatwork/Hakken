@@ -167,7 +167,7 @@ describe("the Assistant's company figures", () => {
     expect(read.link).toBe("/app/tasks");
   });
 
-  test("the Assistant is given the five tools once, installed by the first person who asks", async () => {
+  test("the Assistant is given its figure and task tools once, installed by the first person who asks", async () => {
     const t = harness();
     const companyId = await company(t, "Asker Ltd");
     const userId = await admin(t, companyId);
@@ -186,7 +186,11 @@ describe("the Assistant's company figures", () => {
       "assistant.ai.mentions",
       "assistant.searchConsole",
       "assistant.site.overview",
+      // Its Hakken task tools, from their own connector (hakken-tasks-plan.md, item 1.2).
+      "assistant.tasks.change",
+      "assistant.tasks.list",
       "assistant.tasks.open",
+      "assistant.tasks.propose",
       "assistant.websites",
     ]);
   });

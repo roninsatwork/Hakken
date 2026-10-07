@@ -25,6 +25,12 @@ export const HAKKEN_ASSISTANT = {
 /** The connector holding the Assistant's company-figures tools (item 7; `toolConnectorDefinitions.ts`). */
 export const COMPANY_FIGURES_CONNECTOR_KEY = "assistant-figures";
 
+/** The connector holding its task tools: alerts proposed for a yes (hakken-tasks-plan.md, item 1.2). */
+export const TASKS_CONNECTOR_KEY = "assistant-tasks";
+
+/** Every connector the Assistant carries, installed once and bound to it. */
+export const ASSISTANT_CONNECTOR_KEYS = [COMPANY_FIGURES_CONNECTOR_KEY, TASKS_CONNECTOR_KEY] as const;
+
 export type AgentReasoningEffortLevel = "LOW" | "MEDIUM" | "HIGH";
 
 /**

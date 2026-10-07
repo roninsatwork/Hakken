@@ -8,6 +8,7 @@ import {
   hakkenTaskConditionValidator,
   hakkenTaskKindValidator,
   hakkenTaskMeasureValidator,
+  hakkenTaskProposalValidator,
   hakkenTaskStateValidator,
   hakkenTaskTargetValidator,
 } from "./hakkenTaskSchema";
@@ -15,6 +16,7 @@ import { resolvePlatformName } from "./settingsService";
 import { superAdminMutation, superAdminQuery, tenantMutation, tenantQuery, requireTenant } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import { nextTaskRun, taskTimeOfDay, taskTimeZone } from "./utils/hakkenTaskTiming";
+import { proposalFromToolCalls } from "./utils/hakkenTaskProposals";
 
 /**
  * Hakken tasks (docs/plans/active/hakken-tasks-plan.md, item 1.1): what a
@@ -222,51 +224,151 @@ export const deleteForCompany = superAdminMutation({
  * A task, switched on, for its owner: what the Assistant files once its owner
  * says yes (item 1.2). Refused past the person's limit.
  */
+const newTaskArgs = {
+  companyId: v.id("companies"),
+  userId: v.id("users"),
+  kind: hakkenTaskKindValidator,
+  title: v.string(),
+  measure: v.optional(hakkenTaskMeasureValidator),
+  target: v.optional(hakkenTaskTargetValidator),
+  condition: v.optional(hakkenTaskConditionValidator),
+  usual: v.optional(v.number()),
+  timeOfDay: v.optional(v.string()),
+  timeZone: v.optional(v.string()),
+  channels: hakkenTaskChannelsValidator,
+  threadId: v.optional(v.id("threads")),
+};
+
 export const createInternal = internalMutation({
-  args: {
-    companyId: v.id("companies"),
-    userId: v.id("users"),
-    kind: hakkenTaskKindValidator,
-    title: v.string(),
-    measure: v.optional(hakkenTaskMeasureValidator),
-    target: v.optional(hakkenTaskTargetValidator),
-    condition: v.optional(hakkenTaskConditionValidator),
-    usual: v.optional(v.number()),
-    timeOfDay: v.optional(v.string()),
-    timeZone: v.optional(v.string()),
-    channels: hakkenTaskChannelsValidator,
-    threadId: v.optional(v.id("threads")),
-  },
+  args: newTaskArgs,
   returns: v.id("hakkenTasks"),
-  handler: async (ctx, args) => {
-    await assertRoomFor(ctx, args.userId, args.companyId);
-    const now = Date.now();
-    const timeOfDay = taskTimeOfDay(args.timeOfDay);
-    const timeZone = taskTimeZone(args.timeZone);
-    return await ctx.db.insert("hakkenTasks", {
-      companyId: args.companyId,
-      userId: args.userId,
-      kind: args.kind,
-      state: "ON",
-      title: args.title.trim().slice(0, 300),
-      ...(args.measure ? { measure: args.measure } : {}),
-      ...(args.target ? { target: args.target } : {}),
-      ...(args.condition ? { condition: args.condition } : {}),
-      ...(args.usual !== undefined ? { usual: args.usual } : {}),
-      timeOfDay,
-      timeZone,
-      channels: args.channels,
-      ...(args.threadId ? { threadId: args.threadId } : {}),
-      nextCheckAt: nextTaskRun(timeOfDay, timeZone, now),
-      createdAt: now,
-      updatedAt: now,
-    });
-  },
+  handler: async (ctx, args) => await insertTask(ctx, args),
 });
+
+type NewTask = {
+  companyId: Id<"companies">;
+  userId: Id<"users">;
+  kind: Doc<"hakkenTasks">["kind"];
+  title: string;
+  measure?: Doc<"hakkenTasks">["measure"];
+  target?: Doc<"hakkenTasks">["target"];
+  condition?: Doc<"hakkenTasks">["condition"];
+  usual?: number;
+  timeOfDay?: string;
+  timeZone?: string;
+  channels: Doc<"hakkenTasks">["channels"];
+  threadId?: Id<"threads">;
+};
+
+/** A task, switched on, for its owner; refused past their limit. */
+async function insertTask(ctx: MutationCtx, args: NewTask): Promise<Id<"hakkenTasks">> {
+  await assertRoomFor(ctx, args.userId, args.companyId);
+  const now = Date.now();
+  const timeOfDay = taskTimeOfDay(args.timeOfDay);
+  const timeZone = taskTimeZone(args.timeZone);
+  return await ctx.db.insert("hakkenTasks", {
+    companyId: args.companyId,
+    userId: args.userId,
+    kind: args.kind,
+    state: "ON",
+    title: args.title.trim().slice(0, 300),
+    ...(args.measure ? { measure: args.measure } : {}),
+    ...(args.target ? { target: args.target } : {}),
+    ...(args.condition ? { condition: args.condition } : {}),
+    ...(args.usual !== undefined ? { usual: args.usual } : {}),
+    timeOfDay,
+    timeZone,
+    channels: args.channels,
+    ...(args.threadId ? { threadId: args.threadId } : {}),
+    nextCheckAt: nextTaskRun(timeOfDay, timeZone, now),
+    createdAt: now,
+    updatedAt: now,
+  });
+}
 
 /** A person's tasks, for the Assistant's own reads (list, pause, resume, delete by asking). */
 export const listForOwnerInternal = internalQuery({
   args: { userId: v.id("users"), companyId: v.id("companies") },
   returns: v.array(taskRowValidator),
   handler: async (ctx, args) => (await tasksOf(ctx, args.userId, args.companyId)).map(toRow),
+});
+
+/** One of a person's own tasks, by an id the model passed: null when it is not theirs, or not an id at all. */
+export const ownTaskInternal = internalQuery({
+  args: { userId: v.id("users"), companyId: v.id("companies"), taskId: v.string() },
+  returns: v.union(v.null(), taskRowValidator),
+  handler: async (ctx, args) => {
+    const taskId = ctx.db.normalizeId("hakkenTasks", args.taskId);
+    const task = taskId ? await ctx.db.get(taskId) : null;
+    if (!task || task.state === "DELETED" || task.userId !== args.userId || task.companyId !== args.companyId) return null;
+    return toRow(task);
+  },
+});
+
+/** The change a run proposed, for its reply: the last that worked. */
+export const runProposalInternal = internalQuery({
+  args: { runId: v.id("agentRuns") },
+  returns: v.union(v.null(), hakkenTaskProposalValidator),
+  handler: async (ctx, args) => {
+    const calls = await ctx.db
+      .query("agentToolCalls")
+      .withIndex("by_run_started", (q) => q.eq("runId", args.runId))
+      .take(200);
+    return proposalFromToolCalls(calls) ?? null;
+  },
+});
+
+// ── The person's yes or no ──────────────────────────────────────────────────
+
+/**
+ * The answer to a change the Assistant proposed in a reply (item 1.2): yes
+ * sets up the alert, or pauses, resumes or deletes the task; no leaves
+ * everything as it was. Only the conversation's owner answers, once; the
+ * task belongs to the company the conversation is for, and its time zone is
+ * their browser's at the moment they say yes.
+ */
+export const answerProposal = tenantMutation({
+  args: { messageId: v.id("messages"), yes: v.boolean(), timeZone: v.optional(v.string()) },
+  returns: v.object({ status: v.union(v.literal("PENDING"), v.literal("DONE"), v.literal("DECLINED")), taskId: v.optional(v.id("hakkenTasks")) }),
+  handler: async (ctx, args) => {
+    const message = await ctx.db.get(args.messageId);
+    const proposal = message?.taskProposal;
+    const thread = message ? await ctx.db.get(message.threadId) : null;
+    if (!message || !proposal || !thread || thread.userId !== ctx.userId || !thread.companyId) {
+      throw appError("NOT_FOUND", "That offer isn’t there any more.");
+    }
+    if (proposal.status !== "PENDING") return { status: proposal.status, ...(proposal.taskId ? { taskId: proposal.taskId } : {}) };
+    const now = Date.now();
+    if (!args.yes) {
+      await ctx.db.patch(message._id, { taskProposal: { ...proposal, status: "DECLINED", answeredAt: now } });
+      return { status: "DECLINED" as const };
+    }
+
+    let taskId = proposal.taskId;
+    if (proposal.action === "CREATE") {
+      if (!proposal.measure || !proposal.target || !proposal.condition || !proposal.channels) throw appError("INVALID_INPUT", "That offer is missing what it would watch.");
+      taskId = await insertTask(ctx, {
+        companyId: thread.companyId,
+        userId: ctx.userId,
+        kind: "ALERT",
+        title: proposal.title,
+        measure: proposal.measure,
+        target: proposal.target,
+        condition: proposal.condition,
+        ...(proposal.usual !== undefined ? { usual: proposal.usual } : {}),
+        ...(proposal.timeOfDay ? { timeOfDay: proposal.timeOfDay } : {}),
+        ...(args.timeZone ? { timeZone: args.timeZone } : {}),
+        channels: proposal.channels,
+        threadId: thread._id,
+      });
+    } else {
+      if (!taskId) throw appError("INVALID_INPUT", "That offer doesn’t say which task.");
+      const task = await ownTask(ctx, { userId: ctx.userId, companyId: thread.companyId }, taskId);
+      if (proposal.action === "PAUSE" && task.state !== "PAUSED") await ctx.db.patch(task._id, pausedFields(now));
+      if (proposal.action === "RESUME") await resume(ctx, task, now);
+      if (proposal.action === "DELETE") await ctx.db.patch(task._id, { state: "DELETED", deletedAt: now, updatedAt: now, nextCheckAt: undefined });
+    }
+    await ctx.db.patch(message._id, { taskProposal: { ...proposal, status: "DONE", ...(taskId ? { taskId } : {}), answeredAt: now } });
+    return { status: "DONE" as const, ...(taskId ? { taskId } : {}) };
+  },
 });

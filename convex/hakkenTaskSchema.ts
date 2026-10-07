@@ -46,6 +46,29 @@ export const hakkenTaskChannelsValidator = v.object({
   telegram: v.boolean(),
 });
 
+/**
+ * A change the Assistant proposes in a reply, waiting for its owner's tap
+ * (item 1.2): a new alert, written out line by line, or pausing, resuming or
+ * deleting one of their own. Nothing changes until they answer; the model
+ * only proposes. Kept on the reply (`messages.taskProposal`).
+ */
+export const hakkenTaskProposalValidator = v.object({
+  action: v.union(v.literal("CREATE"), v.literal("PAUSE"), v.literal("RESUME"), v.literal("DELETE")),
+  status: v.union(v.literal("PENDING"), v.literal("DONE"), v.literal("DECLINED")),
+  title: v.string(),
+  /** The task a change is to, or the task a yes made. */
+  taskId: v.optional(v.id("hakkenTasks")),
+  measure: v.optional(hakkenTaskMeasureValidator),
+  target: v.optional(hakkenTaskTargetValidator),
+  condition: v.optional(hakkenTaskConditionValidator),
+  usual: v.optional(v.number()),
+  timeOfDay: v.optional(v.string()),
+  channels: v.optional(hakkenTaskChannelsValidator),
+  /** How often it would have told them over the last four weeks, before they say yes. */
+  trial: v.optional(v.object({ tells: v.number(), of: v.number() })),
+  answeredAt: v.optional(v.number()),
+});
+
 export const hakkenTaskTables = {
   hakkenTasks: defineTable({
     companyId: v.id("companies"),

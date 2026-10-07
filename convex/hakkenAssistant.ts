@@ -6,7 +6,7 @@ import { findConnectorInstall, installBuiltInConnector } from "./aiTools";
 import { GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
 import { answerTiming } from "./utils/answerTiming";
 import { appError } from "./utils/appError";
-import { COMPANY_FIGURES_CONNECTOR_KEY, HAKKEN_ASSISTANT } from "./utils/hakkenAssistant";
+import { ASSISTANT_CONNECTOR_KEYS, HAKKEN_ASSISTANT } from "./utils/hakkenAssistant";
 
 /**
  * The assistant's agent (docs/plans/active/assistant-foundation-plan.md,
@@ -56,24 +56,25 @@ export const ensureAssistantInternal = internalMutation({
     if (existing && Object.entries(definition).some(([key, value]) => existing[key as keyof typeof definition] !== value)) {
       await ctx.db.patch(existing._id, { ...definition, updatedAt: now });
     }
-    await bindCompanyFigures(ctx, agentId, args.installedBy);
+    for (const key of ASSISTANT_CONNECTOR_KEYS) await bindConnector(ctx, agentId, key, args.installedBy);
     return agentId;
   },
 });
 
 /**
- * The company-figures tools (item 7), installed once and bound to the
- * Assistant. Installing again would reset the connector's test state, so an
- * install that exists is only bound, never redone; a tool an administrator
- * took off the Assistant on the Agents screen is put back, because the
- * Assistant's reads are what every door answers from.
+ * One of the Assistant's connectors — its company-figures tools (item 7), its
+ * task tools (hakken-tasks-plan.md, item 1.2) — installed once and bound to
+ * it. Installing again would reset the connector's test state, so an install
+ * that exists is only bound, never redone; a tool an administrator took off
+ * the Assistant on the Agents screen is put back, because the Assistant's
+ * tools are what every door answers from.
  */
-async function bindCompanyFigures(ctx: MutationCtx, agentId: Id<"agents">, installedBy: Id<"users"> | undefined) {
-  let connector = await findConnectorInstall(ctx, { key: COMPANY_FIGURES_CONNECTOR_KEY });
+async function bindConnector(ctx: MutationCtx, agentId: Id<"agents">, key: string, installedBy: Id<"users"> | undefined) {
+  let connector = await findConnectorInstall(ctx, { key });
   if (!connector) {
     if (!installedBy) return;
-    await installBuiltInConnector(ctx, { key: COMPANY_FIGURES_CONNECTOR_KEY, installedBy, tenantAvailability: "GLOBAL" });
-    connector = await findConnectorInstall(ctx, { key: COMPANY_FIGURES_CONNECTOR_KEY });
+    await installBuiltInConnector(ctx, { key, installedBy, tenantAvailability: "GLOBAL" });
+    connector = await findConnectorInstall(ctx, { key });
     if (!connector) return;
   }
   const tools = await ctx.db

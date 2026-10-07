@@ -7,6 +7,7 @@ import { certaintyWords } from "./decisionService";
 import { shouldFlushStreamedText } from "./streamingService";
 import type { MessageEvidence } from "./utils/messageEvidence";
 import type { Lookup } from "./utils/assistantLookups";
+import type { TaskProposal } from "./utils/hakkenTaskProposals";
 
 /**
  * The turn both assistants share.
@@ -294,6 +295,8 @@ export async function finishAssistantReply(
     photoTurn?: boolean;
     /** What the Assistant looked up for the answer (`utils/assistantLookups.ts`). */
     lookedUp?: Lookup[];
+    /** A change it proposed, waiting for the reader's tap (`utils/hakkenTaskProposals.ts`). */
+    taskProposal?: TaskProposal;
   }
 ): Promise<Id<"messages"> | undefined> {
   const shared = {
@@ -307,6 +310,7 @@ export async function finishAssistantReply(
     companyRuntimeEvidenceJson: args.evidence?.companyRuntimeEvidenceJson,
     photoTurn: args.photoTurn,
     ...(args.lookedUp && args.lookedUp.length > 0 ? { lookedUp: args.lookedUp } : {}),
+    ...(args.taskProposal ? { taskProposal: args.taskProposal } : {}),
   };
 
   if (args.stream.messageId !== undefined) {

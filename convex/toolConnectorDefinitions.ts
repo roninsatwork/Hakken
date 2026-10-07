@@ -659,6 +659,56 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
       },
     ],
   },
+  {
+    // The Assistant's Hakken tasks (docs/plans/active/hakken-tasks-plan.md,
+    // item 1.2). Every tool proposes and nothing more: the change is written
+    // onto the reply with two buttons and happens when the person taps yes,
+    // so each is a read, a member's to make for their own tasks.
+    key: "assistant-tasks",
+    name: "Assistant tasks",
+    description:
+      "Lets the Assistant set up alerts a person asks for, and pause, resume or delete their own, each written out for their yes.",
+    category: "KNOWLEDGE",
+    authMode: "NONE",
+    tenantAvailability: "GLOBAL",
+    requiredScopes: ["company:read"],
+    requiredSecretRefs: [],
+    toolDefinitions: [
+      {
+        name: "Propose an alert",
+        description:
+          "When someone asks to be told, alerted or warned about one of the company's own websites or pages in Google — fewer or more visitors than a number, or a drop or rise against its usual day — propose it with this. It reads the last four weeks from Search Console and writes the task out under your reply with “Yes, start watching” and “Not now”: nothing starts until they tap yes. Search Console clicks count as visitors. It checks each morning once a day's figures have settled, about three days behind, and tells them in the bell and by email every day the rule is met, until they stop it. Use it whenever someone wants to keep an eye on a figure; never promise to remember it yourself.",
+        handlerMapping: "assistant.tasks.propose",
+        modelName: "propose_task",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({"type": "object", "required": ["website", "when", "value"], "properties": {"website": {"type": "string", "description": "One of the company's own websites, e.g. example.co.uk — from list_websites."}, "page": {"type": "string", "description": "Part of the page's address, e.g. /web-design-london/ or web-design-london. Leave out for the whole website."}, "measure": {"type": "string", "enum": ["visitors", "impressions"], "description": "visitors: clicks from Google, which count as visitors. impressions: how often it shows up in Google. Default visitors."}, "when": {"type": "string", "enum": ["below", "above", "dropBy", "riseBy"], "description": "below or above a number; dropBy or riseBy a percentage of its usual day (half = dropBy 50)."}, "value": {"type": "number", "description": "The number for below and above; the percentage for dropBy and riseBy."}, "days": {"type": "number", "description": "Days in a row before telling them. Default 1."}, "time": {"type": "string", "description": "When to tell them, 24-hour HH:MM in their own time, e.g. 09:00. Default 09:00."}}}),
+      },
+      {
+        name: "List my tasks",
+        description:
+          "The person's own tasks — what each keeps an eye on, whether it is on or paused, and its time — each with the taskId a change needs. Their tasks page is linked: they can also pause, resume or delete there.",
+        handlerMapping: "assistant.tasks.list",
+        modelName: "list_my_tasks",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({ type: "object", properties: {} }),
+      },
+      {
+        name: "Propose a change to a task",
+        description:
+          "When someone asks to pause, resume or delete one of their own tasks, propose it with this, using its taskId from list_my_tasks. The change is written out under your reply with two buttons and happens only when they tap yes.",
+        handlerMapping: "assistant.tasks.change",
+        modelName: "propose_task_change",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({"type": "object", "required": ["taskId", "change"], "properties": {"taskId": {"type": "string", "description": "The task's taskId, from list_my_tasks."}, "change": {"type": "string", "enum": ["pause", "resume", "delete"]}}}),
+      },
+    ],
+  },
 ];
 
 export function getBuiltInToolConnector(key: string) {

@@ -7313,6 +7313,59 @@
         "answeringFor": "Answering for",
         "title": "Answer for",
         "platform": "The platform — no client"
+      },
+      "taskProposal": {
+        "watch": "I’ll watch",
+        "page": "On this page",
+        "website": "On this website",
+        "letYouKnow": "I’ll let you know",
+        "when": "When",
+        "where": "Where",
+        "goodToKnow": "Good to know",
+        "cost": "Cost",
+        "measures": {
+          "visitors": "Visitors from Google",
+          "impressions": "How often it shows up in Google"
+        },
+        "rule": {
+          "below": "If it gets fewer than {value} in a day",
+          "above": "If it gets more than {value} in a day",
+          "dropHalf": "If it drops to half its usual day",
+          "dropBy": "If it drops by {value}% against its usual day",
+          "riseBy": "If it rises by {value}% against its usual day",
+          "inARow": "{rule}, for {days} days in a row"
+        },
+        "at": "At {time}",
+        "whereBellEmail": "Here in {platformName} and by email",
+        "settle": "Google’s figures take about 3 days to settle, so I’ll always be looking at a few days ago",
+        "free": "Free",
+        "yes": "Yes, start watching",
+        "notNow": "Not now",
+        "hint": "Want something different? Just tell me, like “make it 8:30” or “check the whole website instead”.",
+        "set": "You’re all set: watching since {date}",
+        "declined": "Not set up. Ask me again any time.",
+        "leftAsItWas": "Left as it was.",
+        "failed": "That didn’t work. Try again in a moment.",
+        "change": {
+          "PAUSE": {
+            "ask": "Pause “{title}”?",
+            "yes": "Pause it",
+            "no": "Keep it on",
+            "done": "Paused."
+          },
+          "RESUME": {
+            "ask": "Turn “{title}” back on?",
+            "yes": "Turn it on",
+            "no": "Leave it paused",
+            "done": "Back on."
+          },
+          "DELETE": {
+            "ask": "Delete “{title}”? {platformName} will stop keeping an eye on it.",
+            "yes": "Delete task",
+            "no": "Keep it",
+            "done": "Deleted."
+          }
+        }
       }
     },
     "costs": {
