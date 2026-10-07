@@ -136,8 +136,12 @@ export const ignoredRepoPathPrefixes = [
   'package-lock.json',
   'playwright-report/',
   'public/models/',
-  // What a test run writes — the speed check's timings (`npm run test:run`)
-  // and Playwright's results: test names and numbers, not source to police.
+  // What a test run writes — the speed check's timings (`npm run test:run`),
+  // Playwright's results, and coverage's report with the half-written files
+  // its workers leave in `coverage/.tmp` while the run is still going (a
+  // drift test scanning them failed a coverage run on 2026-10-07, on timing
+  // alone): test names and numbers, not source to police.
+  'coverage/',
   'test-results/',
   'tmp/',
   'tsconfig.tsbuildinfo',

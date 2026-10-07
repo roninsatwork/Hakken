@@ -226,6 +226,12 @@ one way to do it, and `src/test-time-limits-drift.test.ts` fails the others.
   find which step costs, and cut what its assertions do not read — the test
   database checks every stored row on each lookup, so rows nobody asserts on
   are the usual cost.
+- **A drift test never reads what a test run writes.** The repo scan
+  (`walkRepoFiles`, `src/test/driftUtils.ts`) skips `coverage/`,
+  `test-results/` and `playwright-report/`: a drift test reading coverage's
+  half-written `coverage/.tmp` files failed a coverage run on timing alone
+  (2026-10-07). A new tool that writes into the tree joins that list in the
+  same change; `src/test/driftUtils.test.ts` holds it.
 - **When one still fails in a full run and passes alone**: find its shape, fix
   every test with that shape through the helpers, extend the guard so it
   cannot be written again, and add the rule here — in the same piece of work.
