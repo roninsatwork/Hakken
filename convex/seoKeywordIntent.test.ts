@@ -228,7 +228,7 @@ describe("a meaning carried onto what holds the search", () => {
           const websiteId = await ctx.db.insert("websites", { host: `site-${index}.co.uk`, displayHost: `site-${index}.co.uk`, firstSeenAt: Date.now() });
           await ctx.db.insert("siteKeywordRanks", {
             websiteId, locationCode: 2826, keyword: "carp bait", band: "p04_10", page: "/", volume: 0, volumeKnown: false,
-            intent: "UNJUDGED", status: "SAME", change: 0, day: "2026-09-25", firstSeenDay: "2026-09-25", searchText: "carp bait /", updatedAt: Date.now(),
+            intent: "UNJUDGED", status: "SAME", change: 0, day: "2026-09-25", firstSeenDay: "2026-09-25",
           } as never);
         }
       });

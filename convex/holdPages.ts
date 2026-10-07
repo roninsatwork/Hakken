@@ -417,14 +417,17 @@ function copyMeta(head: Head, counts: ReturnType<typeof joinHoldPages>["counts"]
   };
 }
 
-async function rebuildNow(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promise<void> {
+/** What a rebuild changed: pages written (new or changed) and pages removed; null when the hold lists nothing of its own. */
+type Rebuilt = { written: number; removed: number } | null;
+
+async function rebuildNow(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promise<Rebuilt> {
   const head: Head | null = await ctx.runQuery(internal.holdPages.rebuildHead, { holdId });
   if (!head) {
     // Gone, or a competitor now: nothing of its own to list.
     while (await ctx.runMutation(internal.holdPages.clearHoldPagesStep, { holdId })) {
       // Each step removes a batch; the next takes the rest.
     }
-    return;
+    return null;
   }
   const { websiteId, place } = head;
   const sitemap = head.sitemap
@@ -478,12 +481,16 @@ async function rebuildNow(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promis
     rows: joined.pages.map((row) => [row.page, row.sitemapFile, row.crawled ? 1 : 0, row.shown ? 1 : 0, row.clicks, row.ranks ? 1 : 0, row.pageType]),
     meta: copyMeta(head, joined.counts, joined.heldCut),
   });
+  return { written: writes.length, removed: removed.length };
 }
 
-/** Rebuild a hold's pages now, taking the hold's turn; one already running sends this one to wait. */
+/**
+ * Rebuild a hold's pages now, taking the hold's turn; one already running sends this one to wait.
+ * Answers what it changed, which says that a page unchanged is not written again.
+ */
 export const rebuildHoldPages = internalAction({
   args: { holdId: v.id("companyWebsites") },
-  returns: v.null(),
+  returns: v.union(v.null(), v.object({ written: v.number(), removed: v.number() })),
   handler: async (ctx, args) => {
     const key = holdPagesKey(args.holdId);
     if (!(await ctx.runMutation(internal.siteSummaries.beginRebuild, { key }))) {
@@ -491,12 +498,13 @@ export const rebuildHoldPages = internalAction({
       return null;
     }
     let done = false;
+    let rebuilt: Rebuilt = null;
     try {
-      await rebuildNow(ctx, args.holdId);
+      rebuilt = await rebuildNow(ctx, args.holdId);
       done = true;
     } finally {
       await ctx.runMutation(internal.siteSummaries.endRebuild, { key, done });
     }
-    return null;
+    return rebuilt;
   },
 });

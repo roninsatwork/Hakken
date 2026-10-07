@@ -153,7 +153,7 @@ describe("clearing the counting change's moves", () => {
     const { websiteId } = await seed(t);
     const row = (keyword: string, fields: Record<string, unknown>) => ({
       websiteId, locationCode: UK, keyword, band: "p01_03", page: "/", volume: 90, volumeKnown: true, intent: "OTHER",
-      day: "2026-09-27", firstSeenDay: "2026-09-01", searchText: keyword, updatedAt: Date.now(), ...fields,
+      day: "2026-09-27", firstSeenDay: "2026-09-01", ...fields,
     });
     await t.run(async (ctx) => {
       await ctx.db.insert("siteKeywordRanks", row("moved by mistake", { position: 3, pagePosition: 5, previousPosition: 5, previousDay: "2026-09-26", change: 2, status: "UP" }) as never);

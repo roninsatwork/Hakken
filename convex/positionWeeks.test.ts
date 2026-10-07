@@ -41,7 +41,7 @@ async function seed(t: Harness) {
     await ctx.db.insert("siteKeywordRanks", {
       websiteId, locationCode: UK, keyword: "carp rods", band: "p04_10", page: "/rods", url: "https://kordatackle.com/rods",
       volume: 480, volumeKnown: true, intent: "BUYING", status: "SAME", change: 0, day: "2026-10-04", firstSeenDay: "2026-09-21",
-      searchText: "carp rods", updatedAt: Date.now(), position: 23,
+      position: 23,
     } as never);
     const pull = async (operationId: string, day: string) => await ctx.db.insert("seoDataPulls", {
       operationId, family: "SERP", mode: "LIVE", taskArgsJson: "{}", status: "READY",

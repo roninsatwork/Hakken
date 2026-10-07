@@ -70,7 +70,7 @@ async function ranked(t: Harness, websiteId: Id<"websites">, keyword: string, po
   await t.run(async (ctx) => await ctx.db.insert("siteKeywordRanks", {
     websiteId, locationCode: DEFAULT_LOCATION_CODE, keyword, position, band: position <= 3 ? "p01_03" : "p04_10",
     page: "/knowledge/a-guide", volume: 0, volumeKnown: false, intent: "UNJUDGED", status: "SAME", change: 0,
-    day: DAY, firstSeenDay: DAY, searchText: keyword, updatedAt: Date.now(),
+    day: DAY, firstSeenDay: DAY,
   }));
 }
 

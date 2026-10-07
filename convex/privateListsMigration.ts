@@ -26,7 +26,7 @@ type BatchResult = { cursor: string | null; isDone: boolean; processed: number; 
  */
 const LIST_FACTS = [
   "cpc", "difficulty", "trend", "serpFeatures", "traffic", "trafficValue", "pageRank", "pageReferringDomains",
-  "pageBacklinks", "competition", "competitionLevel", "searchIntent", "resultsCount", "previousPositionDfs", "movementDfs",
+  "pageBacklinks", "competitionLevel", "searchIntent", "resultsCount",
 ] as const;
 
 /**

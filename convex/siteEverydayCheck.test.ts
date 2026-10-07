@@ -263,7 +263,6 @@ describe("search features", () => {
             operationId: KEYWORD_LIST_OPERATION_ID, family: "DataForSEO Labs", mode: "LIVE", websiteId, status: "READY", tag: "week",
             attempts: 0, costUsd: 0.13, sandbox: false, taskArgsJson: "{}", submittedAt: Date.now(),
           } as never)),
-          updatedAt: Date.now(),
         } as never);
       }
     });

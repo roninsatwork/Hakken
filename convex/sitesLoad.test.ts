@@ -77,9 +77,7 @@ describe("a very large site", () => {
             band: RANK_BANDS[Math.min(4, Math.floor(position / 21))], page: `/section-${index % 40}/page-${index % 5_000}/`,
             volume: (index * 7) % 5_000, volumeKnown: true, intent: RANK_INTENTS[index % RANK_INTENTS.length],
             status: RANK_STATUSES[index % 4], change: (index % 11) - 5, day: "2026-09-23", firstSeenDay: "2025-01-01",
-            searchText: `search number ${index} /section-${index % 40}/page-${index % 5_000}/`,
             kdBand: KD_BANDS[index % KD_BANDS.length], difficulty: index % 100, cpc: (index % 50) / 10, traffic: (index * 3) % 900,
-            updatedAt: Date.now(),
           });
         }
       });
@@ -91,9 +89,9 @@ describe("a very large site", () => {
           await ctx.db.insert("sitePageRanks", {
             websiteId, locationCode: UK, page: `/section-${index % 40}/page-${index}/`, url: `https://big.co.uk/section-${index % 40}/page-${index}/`,
             section: `/section-${index % 40}/`, keywords: (index % 30) + 1, bestPosition: (index % 50) + 1, top3: index % 3,
-            volumeSum: index * 3, topKeyword: `search number ${index}`, topKeywordVolume: index, firstSeenDay: "2025-01-01",
-            day: "2026-09-23", searchText: `/section-${index % 40}/page-${index}/ search number ${index}`,
-            traffic: index % 700, pageType: PAGE_TYPES[index % PAGE_TYPES.length], rebuildId: "load", updatedAt: Date.now(),
+            topKeyword: `search number ${index}`, topKeywordVolume: index, firstSeenDay: "2025-01-01",
+            day: "2026-09-23",
+            traffic: index % 700, pageType: PAGE_TYPES[index % PAGE_TYPES.length], rebuildId: "load",
           });
         }
       });

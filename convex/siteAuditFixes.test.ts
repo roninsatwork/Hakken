@@ -70,7 +70,7 @@ async function position(t: Harness, websiteId: Id<"websites">, keyword: string, 
 async function ranks(t: Harness, websiteId: Id<"websites">, keyword: string, rank: number, day: string) {
   await t.run(async (ctx) => await ctx.db.insert("siteKeywordRanks", {
     websiteId, locationCode: UK, keyword, position: rank, band: "p01_03", page: "/", volume: 50, volumeKnown: true,
-    intent: "BUYING", status: "SAME", change: 0, day, firstSeenDay: day, searchText: keyword, updatedAt: Date.now(),
+    intent: "BUYING", status: "SAME", change: 0, day, firstSeenDay: day,
   } as never));
 }
 

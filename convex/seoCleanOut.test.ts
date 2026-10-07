@@ -50,12 +50,12 @@ async function collected(t: Harness, websiteId: Id<"websites">, keywordRanks: nu
     for (const offset of [0, COMPETITOR_KEYWORDS_KEPT]) {
       const page = await pull("domain_ranked_keywords_list", { offset, limit: COMPETITOR_KEYWORDS_KEPT });
       await ctx.db.insert("seoKeywordPositions", { websiteId, keyword: `kw ${offset}`, day: DAY, position: 3, pullId: page, locationCode: UK, createdAt: 1 } as never);
-      await ctx.db.insert("siteKeywordFeatures", { websiteId, locationCode: UK, keyword: `kw ${offset}`, feature: "featured_snippet", day: DAY, pullId: page, updatedAt: 1 } as never);
+      await ctx.db.insert("siteKeywordFeatures", { websiteId, locationCode: UK, keyword: `kw ${offset}`, feature: "featured_snippet", day: DAY, pullId: page } as never);
     }
     for (let index = 0; index < keywordRanks; index += 1) {
       await ctx.db.insert("siteKeywordRanks", {
         websiteId, locationCode: UK, keyword: `kw ${index}`, band: "p04_10", intent: "BUYING", status: "SAME", page: "/", volume: 10, volumeKnown: true, change: 0, day: DAY, firstSeenDay: DAY,
-        searchText: `kw ${index}`, traffic: keywordRanks - index, updatedAt: 1,
+        traffic: keywordRanks - index,
       } as never);
     }
   });

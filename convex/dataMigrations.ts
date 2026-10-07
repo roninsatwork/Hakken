@@ -37,7 +37,6 @@ import { removeSampleResearch } from "./keywordResearchSampleMigration";
 import { dropStoredGapsStep } from "./siteContentGap";
 import { prepareMainCountryOf } from "./searchConsoleMainCountry";
 import { connectionsPage } from "./searchConsoleSync";
-import { clearUnreadColumns } from "./unreadColumnsMigration";
 import {
   rebuildAnswerSummaries,
   rebuildOperationCosts,
@@ -127,6 +126,12 @@ type MigrationRunner = (
  * that nothing real was live, which is why that trade was taken rather than carrying
  * dead code indefinitely.
  *
+ * The same was done on 2026-10-07 with `2026-10-07-clear-unread-columns`,
+ * which emptied the columns nobody read (keep-less-history-plan.md, 5.6) —
+ * the rankings' search text, `updatedAt`, advert competition and
+ * DataForSEO's own previous place and move; each page's search text, volume
+ * and `updatedAt`; a feature's address and `updatedAt`; Your pages'
+ * `builtAt`; the sitemap pages' day — on dev before they left the schema.
  * The same was done on 2026-09-23 with `2026-09-23-clear-seo-prefer-live`,
  * which emptied `companies.seoPreferLive` on dev before the field left the
  * schema. There is no production deployment yet, so no other copy carries it.
@@ -214,11 +219,6 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
     }
     return { cursor: page.continueCursor, isDone: page.isDone, processed: page.page.length, updated };
   },
-  /**
-   * Columns written and never read, cleared from the rows held before they
-   * leave the schema (keep-less-history-plan.md, 5.6; `unreadColumnsMigration.ts`).
-   */
-  "2026-10-07-clear-unread-columns": clearUnreadColumns,
   "2026-10-06-drop-stored-gaps": async (ctx) => {
     const step = await dropStoredGapsStep(ctx);
     return { cursor: null, isDone: !step.more, processed: step.removed, updated: step.removed };

@@ -43,7 +43,7 @@ async function setUp(t: Harness) {
     const adminId = await ctx.db.insert("users", { name: "Admin", email: "admin@ronins.test", role: "ADMIN", companyId, createdAt: now });
     for (const hold of [siteId, otherSiteId]) {
       for (const [page, clicks, sitemapFile] of PAGES) {
-        await ctx.db.insert("holdPages", { companyWebsiteId: hold, page, sitemapFile, crawled: true, shown: clicks > 0, clicks, ranks: true, builtAt: now });
+        await ctx.db.insert("holdPages", { companyWebsiteId: hold, page, sitemapFile, crawled: true, shown: clicks > 0, clicks, ranks: true });
       }
     }
     return { companyId, siteId, rivalId, otherCompanyId, otherSiteId, superId, adminId };
@@ -469,7 +469,7 @@ describe("the suggested start", () => {
       const websiteId = await ctx.db.insert("websites", { host: "full.test", displayHost: "full.test", firstSeenAt: Date.now() });
       const holdId = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: Date.now() });
       for (const [page, file] of [["/hub/a/", "content-hub-sitemap.xml"], ["/hub/b/", "content-hub-sitemap.xml"], ["/a-post/", "post-sitemap.xml"]]) {
-        await ctx.db.insert("holdPages", { companyWebsiteId: holdId, page, sitemapFile: file, crawled: true, shown: true, clicks: 1, ranks: true, builtAt: Date.now() });
+        await ctx.db.insert("holdPages", { companyWebsiteId: holdId, page, sitemapFile: file, crawled: true, shown: true, clicks: 1, ranks: true });
       }
       await ctx.db.insert("fanOutLimits", { companyId, companyWebsiteId: holdId, classificationsPerSite: 10, updatedAt: Date.now() });
       return holdId;

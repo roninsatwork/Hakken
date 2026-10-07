@@ -507,7 +507,6 @@ describe("keyword ideas", () => {
       await ctx.db.insert("siteKeywordRanks", {
         websiteId, locationCode: UK, keyword: "best web design agency", position: 7, url: "https://ronins.co.uk/web/", band: "p04_10", page: "/web/",
         volume: 400, volumeKnown: true, intent: "BUYING", status: "SAME", change: 0, day: "2026-10-01", firstSeenDay: "2026-09-01",
-        searchText: "best web design agency", updatedAt: Date.now(),
       });
     });
 
@@ -614,7 +613,6 @@ describe("a lookup's overview", () => {
       await ctx.db.insert("siteKeywordRanks", {
         websiteId, locationCode: UK, keyword: "best web design agency", position: 7, url: "https://ronins.co.uk/web/", band: "p04_10", page: "/web/",
         volume: 400, volumeKnown: true, intent: "BUYING", status: "SAME", change: 0, day: "2026-10-01", firstSeenDay: "2026-09-01",
-        searchText: "best web design agency", updatedAt: Date.now(),
       });
     });
     const { lookupIds: [usLookup] } = await as.mutation(api.keywordResearch.lookUp, { keywords: ["web design agency"], locationCode: US });

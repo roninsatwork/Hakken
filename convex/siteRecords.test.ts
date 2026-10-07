@@ -54,7 +54,7 @@ async function rank(t: Harness, websiteId: Id<"websites">, keyword: string, fiel
   await t.run(async (ctx) => await ctx.db.insert("siteKeywordRanks", {
     websiteId, locationCode: UK, keyword, band: "p01_03", page: "/rods", url: "https://kordatackle.com/rods",
     volume: 480, volumeKnown: true, intent: "BUYING", status: "SAME", change: 0, day: DAY, firstSeenDay: DAY,
-    searchText: keyword, updatedAt: Date.now(), ...fields,
+    ...fields,
   } as never));
 }
 
@@ -68,7 +68,7 @@ describe("a keyword's own screen", () => {
     await rank(t, rival.websiteId, "carp rods", { position: 1, page: "/carp-rods" });
     const pullId = await pull(t, own.websiteId);
     await t.run(async (ctx) => await ctx.db.insert("siteKeywordFeatures", {
-      websiteId: own.websiteId, locationCode: UK, keyword: "carp rods", feature: "ai_overview_reference", position: 2, page: "/rods", day: DAY, pullId, updatedAt: Date.now(),
+      websiteId: own.websiteId, locationCode: UK, keyword: "carp rods", feature: "ai_overview_reference", position: 2, page: "/rods", day: DAY, pullId,
     }));
 
     const asKorda = await member(t, korda);
@@ -158,8 +158,8 @@ describe("a page's own screen", () => {
     await t.run(async (ctx) => {
       await ctx.db.insert("sitePageRanks", {
         websiteId: own.websiteId, locationCode: UK, page: "/rods", url: "https://kordatackle.com/rods", section: "/", keywords: 12,
-        bestPosition: 1, top3: 4, volumeSum: 900, topKeyword: "carp rods", topKeywordVolume: 480, firstSeenDay: DAY, day: DAY,
-        searchText: "/rods", traffic: 240, rebuildId: "r1", updatedAt: Date.now(),
+        bestPosition: 1, top3: 4, topKeyword: "carp rods", topKeywordVolume: 480, firstSeenDay: DAY, day: DAY,
+        traffic: 240, rebuildId: "r1",
       });
       await ctx.db.insert("siteCrawlPages", {
         websiteId: own.websiteId, pullId, day: DAY, url: "https://kordatackle.com/rods", page: "/rods", statusCode: 200, problems: ["no_description"], words: 310,

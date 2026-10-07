@@ -53,21 +53,21 @@ describe("downloading a whole table", () => {
       await ctx.db.insert("siteKeywordRanks", {
         websiteId: own.websiteId, locationCode: UK, keyword: '=HYPERLINK("https://evil.example")', position: 1,
         band: "p01_03", page: "/", volume: 10, volumeKnown: true, intent: "OTHER", status: "SAME", change: 0,
-        day: "2026-09-23", firstSeenDay: "2026-09-01", searchText: "hyperlink", updatedAt: Date.now(),
+        day: "2026-09-23", firstSeenDay: "2026-09-01",
       });
       // A carriage return or a semicolon mid-cell must not start a new cell or row.
       for (const keyword of ["x\r=cmd|' /C calc'!A0", "plumber;=1+1"]) {
         await ctx.db.insert("siteKeywordRanks", {
           websiteId: own.websiteId, locationCode: UK, keyword, position: 2,
           band: "p01_03", page: "/", volume: 10, volumeKnown: true, intent: "OTHER", status: "SAME", change: 0,
-          day: "2026-09-23", firstSeenDay: "2026-09-01", searchText: "odd", updatedAt: Date.now(),
+          day: "2026-09-23", firstSeenDay: "2026-09-01",
         });
       }
       for (let index = 0; index < 1_202; index += 1) {
         await ctx.db.insert("siteKeywordRanks", {
           websiteId: own.websiteId, locationCode: UK, keyword: `search, number ${index}`, position: (index % 90) + 1,
           band: "p04_10", page: "/services/", volume: 10, volumeKnown: true, intent: "BUYING", status: "SAME", change: 0,
-          day: "2026-09-23", firstSeenDay: "2026-09-01", searchText: `search ${index}`, updatedAt: Date.now(),
+          day: "2026-09-23", firstSeenDay: "2026-09-01",
         });
       }
     });

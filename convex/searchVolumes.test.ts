@@ -80,7 +80,7 @@ describe("search volumes for fan-out queries", () => {
       // Measured by the website's own keyword list.
       await ctx.db.insert("siteKeywordRanks", {
         websiteId, locationCode: 2826, keyword: "seo agency surrey", band: "p01_03", page: "/seo/", volume: 90, volumeKnown: true,
-        intent: "BUYING", status: "SAME", change: 0, day: "2026-09-28", firstSeenDay: "2026-09-01", searchText: "seo agency surrey", updatedAt: now,
+        intent: "BUYING", status: "SAME", change: 0, day: "2026-09-28", firstSeenDay: "2026-09-01",
       } as never);
       const pullId = await ctx.db.insert("seoDataPulls", {
         operationId: "keyword_search_volume", family: "Keywords Data", mode: "QUEUED", status: "READY", tag: "earlier",

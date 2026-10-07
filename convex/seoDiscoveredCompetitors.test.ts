@@ -321,7 +321,7 @@ describe("what the judge is told about the business", () => {
         websiteId: own, locationCode: 2826, keyword, ...(position !== undefined ? { position } : {}),
         band: position !== undefined ? "p01_03" : "zz_none", page: "/", volume: 100, volumeKnown: true, intent: "UNJUDGED",
         status: position !== undefined ? "SAME" : "LOST", change: 0, day: "2026-09-20", firstSeenDay: "2026-09-01",
-        searchText: keyword, traffic, updatedAt: Date.now(),
+        traffic,
       } as never);
       await ranked("web design surrey", 2, 90);
       await ranked("no longer ranking", undefined, 500);

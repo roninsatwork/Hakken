@@ -77,7 +77,7 @@ async function collected(t: Harness, websiteId: Id<"websites">) {
       websiteId, source: "ROBOTS", pages: SITEMAP.length, cut: false, day: "2026-10-03", readAt,
       files: [{ url: www("/page-sitemap.xml"), pages: 4 }, { url: www("/content-hub-sitemap.xml"), pages: 2 }, { url: www("/post-sitemap.xml"), pages: 1 }],
     });
-    for (const [page, file] of SITEMAP) await ctx.db.insert("siteSitemapPages", { websiteId, page, file, day: "2026-10-03", readAt });
+    for (const [page, file] of SITEMAP) await ctx.db.insert("siteSitemapPages", { websiteId, page, file, readAt });
     const pullId = await ctx.db.insert("seoDataPulls", {
       operationId: "site_crawl", family: "On-Page", mode: "QUEUED", websiteId, taskArgsJson: "{}", status: "READY",
       tag: `crawl-${Math.random()}`, attempts: 0, costUsd: 0, sandbox: false, submittedAt: Date.now(),
@@ -87,8 +87,8 @@ async function collected(t: Harness, websiteId: Id<"websites">) {
       await ctx.db.insert("siteCrawlPages", { websiteId, pullId, day: "2026-09-28", url, page: new URL(url).pathname, resourceType, statusCode, problems: [] });
     }
     const rank = (page: string, locationCode: number) => ctx.db.insert("sitePageRanks", {
-      websiteId, locationCode, page, url: www(page), section: "/", keywords: 3, bestPosition: 4, top3: 0, volumeSum: 100,
-      topKeyword: "ai agency", topKeywordVolume: 90, firstSeenDay: "2026-09-01", day: "2026-10-01", searchText: page, rebuildId: "r1", updatedAt: Date.now(),
+      websiteId, locationCode, page, url: www(page), section: "/", keywords: 3, bestPosition: 4, top3: 0,
+      topKeyword: "ai agency", topKeywordVolume: 90, firstSeenDay: "2026-09-01", day: "2026-10-01", rebuildId: "r1",
     } as never);
     await rank("/ai-agency/", PLACE);
     await rank("/hub/bad-websites/", PLACE);
@@ -200,11 +200,13 @@ describe("every page once", () => {
       const period = await ctx.db.query("searchConsolePeriods").withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", holdId)).first();
       await ctx.db.patch(period!._id, { keys: period!.keys.filter((key) => !key.includes("/author/")), clicks: period!.clicks.slice(0, 4).concat(period!.clicks.slice(5)) });
     });
-    await t.action(internal.holdPages.rebuildHoldPages, { holdId });
+    const rebuilt = await t.action(internal.holdPages.rebuildHoldPages, { holdId });
 
     const after = await holdRows(t, holdId);
     expect(after.some((row) => row.page === "/author/anthony/")).toBe(false);
-    for (const row of after) expect(row.builtAt, row.page).toBe(before.get(row.page)?.builtAt);
+    // The author archive went, and no other page was written again: none of them changed.
+    expect(rebuilt).toEqual({ written: 0, removed: 1 });
+    for (const row of after) expect(row, row.page).toEqual(before.get(row.page));
   });
 
   test("the company's limit holds its list to its own share of the sitemap, and says so", async () => {
@@ -214,7 +216,7 @@ describe("every page once", () => {
       const readAt = Date.now();
       await ctx.db.insert("siteSitemaps", { websiteId: owner.websiteId, source: "ROBOTS", pages: 1_005, cut: false, day: "2026-10-03", readAt, files: [{ url: www("/hub-sitemap.xml"), pages: 1_005 }] });
       for (let at = 0; at < 1_005; at += 1) {
-        await ctx.db.insert("siteSitemapPages", { websiteId: owner.websiteId, page: `/hub/article-${at}/`, file: "hub-sitemap.xml", day: "2026-10-03", readAt });
+        await ctx.db.insert("siteSitemapPages", { websiteId: owner.websiteId, page: `/hub/article-${at}/`, file: "hub-sitemap.xml", readAt });
       }
       await ctx.db.insert("fanOutLimits", { companyId: owner.companyId, companyWebsiteId: owner.holdId, sitemapPagesRead: 1_000, updatedAt: Date.now() } as never);
     });

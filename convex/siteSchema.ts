@@ -90,8 +90,6 @@ export const siteTables = {
     /** The day of the last check. */
     day: v.string(),
     firstSeenDay: v.string(),
-    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). */
-    searchText: v.optional(v.string()),
     // What a ranked-keywords pull says about the search (Phase 2): what a
     // click costs, how hard it is (0–100, and its band for the filter), how it
     // was searched month by month over the last year, oldest first, and what
@@ -117,17 +115,9 @@ export const siteTables = {
      * how many results Google has for it, and — from the full list — where the
      * site was at DataForSEO's previous check and whether it is new, up or down.
      */
-    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). The keyword screen shows `competitionLevel`. */
-    competition: maybeNumber,
     competitionLevel: v.optional(v.string()),
     searchIntent: v.optional(v.string()),
     resultsCount: maybeNumber,
-    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). */
-    previousPositionDfs: maybeNumber,
-    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). */
-    movementDfs: v.optional(v.union(v.literal("NEW"), v.literal("UP"), v.literal("DOWN"), v.literal("SAME"))),
-    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). */
-    updatedAt: v.optional(v.number()),
   })
     // The lookups no query used — by intent, status, change, difficulty band
     // and advert price, and the search over `searchText` — went on 2026-10-07
@@ -153,14 +143,10 @@ export const siteTables = {
     keywords: v.number(),
     bestPosition: v.number(),
     top3: v.number(),
-    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). The folders add up their volume while the pages are built. */
-    volumeSum: v.optional(v.number()),
     topKeyword: v.string(),
     topKeywordVolume: v.number(),
     firstSeenDay: v.string(),
     day: v.string(),
-    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). */
-    searchText: v.optional(v.string()),
     // Summed or carried from its keywords (Phase 2): estimated visits and
     // their value as ads, DataForSEO's page rank (0–1000) and the links to
     // the page, and what kind of page it is.
@@ -172,8 +158,6 @@ export const siteTables = {
     pageType: v.optional(pageTypeValidator),
     /** The rebuild that wrote this row; rows from an older one are removed after it. */
     rebuildId: v.string(),
-    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). */
-    updatedAt: v.optional(v.number()),
   })
     // By folder, by traffic and the search over `searchText` went on
     // 2026-10-07, used by no query (keep-less-history-plan.md, 5.5): the pages
@@ -715,13 +699,9 @@ export const siteTables = {
     keyword: v.string(),
     feature: keywordFeatureValidator,
     position: maybeNumber,
-    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). Readers use `page`. */
-    url: v.optional(v.string()),
     page: v.optional(v.string()),
     day: v.string(),
     pullId: v.id("seoDataPulls"),
-    /** No longer written; cleared by `2026-10-07-clear-unread-columns`, then removed (keep-less-history-plan.md, 5.6). */
-    updatedAt: v.optional(v.number()),
   })
     .index("by_site_feature_keyword", ["websiteId", "locationCode", "feature", "keyword"])
     .index("by_site_keyword", ["websiteId", "locationCode", "keyword"])

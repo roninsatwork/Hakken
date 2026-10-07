@@ -59,7 +59,7 @@ async function seed(t: Harness) {
     await ctx.db.insert("siteKeywordRanks", {
       websiteId, locationCode: UK, keyword: "carp rods", band: "p01_03", page: "/rods", url: "https://kordatackle.com/rods",
       volume: 480, volumeKnown: true, intent: "BUYING", status: "SAME", change: 0, day: OLD_DAY, firstSeenDay: OLD_DAY,
-      searchText: "carp rods", updatedAt: Date.now(), position: 3,
+      position: 3,
     } as never);
     return { companyId, websiteId, holdId };
   });

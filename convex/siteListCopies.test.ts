@@ -325,7 +325,7 @@ describe("a feature's searches", () => {
         ["carp rods", "2026-09-14", 3], ["carp rods", "2026-09-21", 1], ["bait boats", "2026-09-21", 2], ["zig rigs", "2026-09-21", null],
       ] as const) {
         await ctx.db.insert("siteKeywordFeatures", {
-          websiteId: own.websiteId, locationCode: UK, keyword, feature: "featured_snippet", day, pullId, updatedAt: Date.now(),
+          websiteId: own.websiteId, locationCode: UK, keyword, feature: "featured_snippet", day, pullId,
           ...(position === null ? {} : { position }),
         });
       }

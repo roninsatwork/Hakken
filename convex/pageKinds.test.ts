@@ -45,7 +45,7 @@ async function setUp(t: Harness) {
     });
     for (const [page, sitemapFile] of [["/hub/boilers/", "content-hub-sitemap.xml"], ["/our-new-van/", "post-sitemap.xml"], ["/plumbers/", "page-sitemap.xml"], ["/contact/", "page-sitemap.xml"]] as const) {
       for (const hold of [holdId, otherHoldId]) {
-        await ctx.db.insert("holdPages", { companyWebsiteId: hold, page, sitemapFile, crawled: true, shown: true, clicks: 1, ranks: true, builtAt: NOW });
+        await ctx.db.insert("holdPages", { companyWebsiteId: hold, page, sitemapFile, crawled: true, shown: true, clicks: 1, ranks: true });
       }
     }
     return { websiteId, companyId, holdId, otherHoldId, userId, otherUserId };
@@ -230,8 +230,8 @@ describe("Sites' pages", () => {
       for (const [page, pageType, traffic] of rows) {
         await ctx.db.insert("sitePageRanks", {
           websiteId, locationCode: UK, page, url: url(page), section: page.split("/")[1] || "/", keywords: Math.round(traffic / 10), bestPosition: 3, top3: 1,
-          volumeSum: traffic * 4, topKeyword: "plumber", topKeywordVolume: 100, firstSeenDay: "2026-09-01", day: "2026-09-26", searchText: page,
-          traffic, pageType, rebuildId: "r1", updatedAt: NOW,
+          topKeyword: "plumber", topKeywordVolume: 100, firstSeenDay: "2026-09-01", day: "2026-09-26",
+          traffic, pageType, rebuildId: "r1",
         });
       }
     });
