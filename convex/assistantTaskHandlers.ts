@@ -156,7 +156,8 @@ export const ASSISTANT_TASK_HANDLERS: Record<string, (input: ToolHandlerExecutio
     const found = await input.ctx.runQuery(internal.hakkenWatchFigures.trackedQuestionInternal, { companyId: input.companyId, website, question });
     if (!found.ok) return { ok: false, problem: found.problem };
     const engine = engineOf(text(input.args, "engine"));
-    if (found.engines && !found.engines.includes(engine)) {
+    // A tracked question is asked only of its engines; a new one is asked of this engine alone.
+    if (!found.adds && found.engines && !found.engines.includes(engine)) {
       return { ok: false, problem: `${engineName(engine)} isn't asked “${found.text}”. It's asked of: ${found.engines.map((each) => engineName(each as AiEngine)).join(", ")}.` };
     }
     const said = text(input.args, "watch");
@@ -168,11 +169,12 @@ export const ASSISTANT_TASK_HANDLERS: Record<string, (input: ToolHandlerExecutio
     return {
       ok: true,
       website: found.target.website,
+      ...(found.adds ? { notTrackedYet: `It isn't tracked yet: the yes adds it, and each time it's asked costs about ${found.adds.credits} credit${found.adds.credits === 1 ? "" : "s"}.` } : {}),
       ...(now ? { newestAnswer: { day: now.day, treatedThem: now.stance } } : { newestAnswer: "not answered yet" }),
       link: `/app/sites/${found.target.companyWebsiteId}/ai/mentions`,
-      note: "The alert is written out under your reply with “Yes, start watching” and “Not now”; nothing starts until they tap yes. In one warm sentence, say how its newest answer treated them and that they just need to say yes.",
+      note: "The alert is written out under your reply with “Yes, start watching” and “Not now”; nothing starts until they tap yes. In one warm sentence, say how its newest answer treated them (or that it isn't tracked yet and what that costs) and that they just need to say yes.",
       proposal: {
-        action: "CREATE", status: "PENDING", title: answerTitle(answer), target: found.target, answer,
+        action: "CREATE", status: "PENDING", title: answerTitle(answer), target: found.target, answer, ...(found.adds ? { adds: found.adds } : {}),
         timeOfDay: taskTimeOfDay(text(input.args, "time")), channels: { bell: true, email: true, telegram: false },
       },
     };
@@ -193,11 +195,12 @@ export const ASSISTANT_TASK_HANDLERS: Record<string, (input: ToolHandlerExecutio
     return {
       ok: true,
       website: found.target.website,
+      ...(found.adds ? { notTrackedYet: `It isn't tracked yet: the yes adds it, and each check costs about ${found.adds.credits} credit${found.adds.credits === 1 ? "" : "s"}.` } : {}),
       ...(now ? { newestCheck: { day: now.day, position: now.position ?? "not in Google's results" } } : { newestCheck: "not checked yet" }),
       link: `/app/sites/${found.target.companyWebsiteId}/keywords`,
-      note: "The alert is written out under your reply with “Yes, start watching” and “Not now”; nothing starts until they tap yes. In one warm sentence, say where it stands now and that they just need to say yes.",
+      note: "The alert is written out under your reply with “Yes, start watching” and “Not now”; nothing starts until they tap yes. In one warm sentence, say where it stands now (or that it isn't tracked yet and what that costs) and that they just need to say yes.",
       proposal: {
-        action: "CREATE", status: "PENDING", title: rankingTitle(ranking, found.target.website), target: found.target, ranking,
+        action: "CREATE", status: "PENDING", title: rankingTitle(ranking, found.target.website), target: found.target, ranking, ...(found.adds ? { adds: found.adds } : {}),
         timeOfDay: taskTimeOfDay(text(input.args, "time")), channels: { bell: true, email: true, telegram: false },
       },
     };

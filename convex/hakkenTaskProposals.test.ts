@@ -282,8 +282,6 @@ describe("alerts on AI answers and Google rankings, proposed for a yes", () => {
     });
     expect((await call(t, seeded, "assistant.tasks.proposeAnswerAlert", { website: "ronins.test", question: "best web design agency uk", engine: "claude" })).problem)
       .toMatch(/Claude isn't asked/);
-    expect((await call(t, seeded, "assistant.tasks.proposeAnswerAlert", { website: "ronins.test", question: "cheapest plumber in leeds" })).problem)
-      .toMatch(/isn't one of ronins.test's tracked questions/);
 
     const messageId = await replyWith(t, seeded.threadId, offer.proposal!);
     await t.withIdentity({ subject: seeded.me }).mutation(api.hakkenTasks.answerProposal, { messageId, yes: true });
@@ -300,7 +298,43 @@ describe("alerts on AI answers and Google rankings, proposed for a yes", () => {
     expect(offer.proposal).toMatchObject({
       title: "Tell me if ronins.test drops out of Google’s top 3 for “web design surrey”", ranking: { keyword: "web design surrey", op: "outOfTop", position: 3 },
     });
-    expect((await call(t, seeded, "assistant.tasks.proposeRankingAlert", { website: "ronins.test", search: "plumbers" })).problem).toMatch(/tracked Google searches/);
+  });
+
+  test("one not tracked yet is offered with its cost, and the yes adds it, asked of that engine alone (Anthony, 2026-10-07: anyone in the company)", async () => {
+    const t = harness();
+    const seeded = await seed(t);
+    await tracked(t, seeded.siteId);
+    const question = await call(t, seeded, "assistant.tasks.proposeAnswerAlert", { website: "ronins.test", question: "Who is the best web designer in Guildford?", engine: "claude" });
+    expect(question.proposal).toMatchObject({ answer: { prompt: "Who is the best web designer in Guildford?", engine: "claude" }, adds: { credits: 1 } });
+    const search = await call(t, seeded, "assistant.tasks.proposeRankingAlert", { website: "ronins.test", search: "Web Design Guildford" });
+    expect(search.proposal).toMatchObject({ ranking: { keyword: "web design guildford" }, adds: { credits: 1 } });
+
+    // A member says yes to both: each is tracked, then watched.
+    const member = t.withIdentity({ subject: seeded.colleague });
+    const thread = await t.run((ctx) => ctx.db.insert("threads", { userId: seeded.colleague, companyId: seeded.companyId, title: "Watch", createdAt: 1, updatedAt: 1 }));
+    for (const offer of [question, search]) {
+      const messageId = await replyWith(t, thread, offer.proposal!);
+      await member.mutation(api.hakkenTasks.answerProposal, { messageId, yes: true });
+    }
+    const added = await t.run(async (ctx) => ({
+      questions: (await ctx.db.query("websiteQuestions").collect()).map((row) => [row.prompt, row.engines]),
+      searches: (await ctx.db.query("websiteKeywords").collect()).map((row) => row.keyword),
+    }));
+    expect(added.questions).toContainEqual(["Who is the best web designer in Guildford?", ["claude"]]);
+    expect(added.searches).toContain("web design guildford");
+    expect(await t.run((ctx) => ctx.db.query("hakkenTasks").collect())).toHaveLength(2);
+  });
+
+  test("a website at its limit cannot be given one more", async () => {
+    const t = harness();
+    const seeded = await seed(t);
+    await t.run(async (ctx) => {
+      const hold = (await ctx.db.get(seeded.siteId))!;
+      for (let index = 0; index < 60; index += 1) {
+        await ctx.db.insert("websiteQuestions", { websiteId: hold.websiteId, companyWebsiteId: seeded.siteId, prompt: `question number ${index} about web design`, engines: ["chatgpt"], isActive: true, createdAt: 1 });
+      }
+    });
+    expect((await call(t, seeded, "assistant.tasks.proposeAnswerAlert", { website: "ronins.test", question: "a brand new question about web design" })).problem).toMatch(/already tracks its most questions/);
   });
 });
 

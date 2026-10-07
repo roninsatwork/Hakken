@@ -750,7 +750,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
       {
         name: "Propose an alert on AI answers",
         description:
-          `When someone asks to be told if an AI engine (${AI_ENGINES.map((engine) => AI_ENGINE_NAMES[engine]).join(", ")}) stops recommending them, leaves them out, or warns against them, for one of the company's tracked questions, propose it with this. It reads the newest answer and writes the alert out under your reply for a yes. It is checked whenever the question is next asked. Tracked questions only: if theirs isn't tracked, say so and that their account manager can add it.`,
+          `When someone asks to be told if an AI engine (${AI_ENGINES.map((engine) => AI_ENGINE_NAMES[engine]).join(", ")}) stops recommending them, leaves them out, or warns against them, for one of the company's tracked questions, propose it with this. It reads the newest answer and writes the alert out under your reply for a yes. It is checked whenever the question is next asked. If the question isn't tracked yet, the offer adds it on their yes, asked of that engine alone, and says what each check costs in credits.`,
         handlerMapping: "assistant.tasks.proposeAnswerAlert",
         modelName: "propose_answer_alert",
         requiredRole: "ADMIN",
@@ -771,7 +771,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
       {
         name: "Propose an alert on a Google ranking",
         description:
-          "When someone asks to be told if they drop out of Google's top 3 (or top 10) for one of the company's tracked searches, or when they get into it, propose it with this. It reads the newest check and writes the alert out under your reply for a yes. It is checked whenever the search is next checked. Tracked searches only: if theirs isn't tracked, say so and that their account manager can add it.",
+          "When someone asks to be told if they drop out of Google's top 3 (or top 10) for one of the company's tracked searches, or when they get into it, propose it with this. It reads the newest check and writes the alert out under your reply for a yes. It is checked whenever the search is next checked. If the search isn't tracked yet, the offer adds it on their yes and says what each check costs in credits.",
         handlerMapping: "assistant.tasks.proposeRankingAlert",
         modelName: "propose_ranking_alert",
         requiredRole: "ADMIN",

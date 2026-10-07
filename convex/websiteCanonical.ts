@@ -168,6 +168,65 @@ export const listWebsiteQuestions = superAdminQuery({
   },
 });
 
+/**
+ * Add one question to a company's list for one of its websites, as the
+ * screen's add button does and as a Hakken task's yes does (hakken-tasks-plan.md,
+ * item 4.3): the same length rules, the same ceiling and the same audit entry,
+ * however it is added.
+ */
+export async function addWebsiteQuestionCore(
+  ctx: MutationCtx,
+  args: { companyWebsiteId: Id<"companyWebsites">; prompt: string; engines?: string[]; userId?: Id<"users"> },
+): Promise<Id<"websiteQuestions">> {
+  const hold = await requireListHold(ctx, args.companyWebsiteId);
+  await requireWebsite(ctx, hold.websiteId);
+
+  const prompt = readText(args.prompt);
+  if (prompt.length < MIN_PROMPT_LENGTH) {
+    throw appError("INVALID_INPUT", "Write the question as somebody would actually ask it.");
+  }
+  if (prompt.length > MAX_PROMPT_LENGTH) {
+    throw appError("INVALID_INPUT", `A question can be at most ${MAX_PROMPT_LENGTH} characters.`);
+  }
+
+  const existing = await holdQuestions(ctx, hold._id, MAX_CANONICAL_ROWS + 1);
+  const { promptsPerSite } = await readFanOutLimits(ctx, hold.companyId, hold._id);
+
+  if (existing.some((row) => row.prompt.toLowerCase() === prompt.toLowerCase())) {
+    throw appError("INVALID_INPUT", "That question is already asked for this website.");
+  }
+  if (existing.length >= promptsPerSite) {
+    throw appError("INVALID_INPUT", `This website can ask at most ${promptsPerSite} prompts: its limit in Limits.`);
+  }
+
+  const chosen = (args.engines ?? []).filter(isAiEngine);
+  const engines = chosen.length > 0 ? chosen : [...DEFAULT_AI_ENGINES];
+
+  const questionId = await ctx.db.insert("websiteQuestions", {
+    websiteId: hold.websiteId,
+    companyWebsiteId: hold._id,
+    prompt,
+    engines,
+    isActive: true,
+    createdAt: Date.now(),
+  });
+
+  // The answers others' asking already filed count from the start
+  // (docs/plans/active/sites-ai-list-summaries-plan.md).
+  await ctx.scheduler.runAfter(0, internal.siteListAi.recountQuestion, { holdId: hold._id, prompt });
+
+  await ctx.db.insert("auditLogs", {
+    actorId: args.userId,
+    actionType: "ADD_WEBSITE_QUESTION",
+    entityId: questionId,
+    entityType: "websiteQuestions",
+    metadata: JSON.stringify({ prompt, engines, companyId: hold.companyId }),
+    timestamp: Date.now(),
+  });
+
+  return questionId;
+}
+
 /** Add a question to one company's list for one of its websites. */
 export const addWebsiteQuestion = superAdminMutation({
   args: {
@@ -176,55 +235,7 @@ export const addWebsiteQuestion = superAdminMutation({
     engines: v.optional(v.array(v.string())),
   },
   returns: v.id("websiteQuestions"),
-  handler: async (ctx, args) => {
-    const hold = await requireListHold(ctx, args.companyWebsiteId);
-    await requireWebsite(ctx, hold.websiteId);
-
-    const prompt = readText(args.prompt);
-    if (prompt.length < MIN_PROMPT_LENGTH) {
-      throw appError("INVALID_INPUT", "Write the question as somebody would actually ask it.");
-    }
-    if (prompt.length > MAX_PROMPT_LENGTH) {
-      throw appError("INVALID_INPUT", `A question can be at most ${MAX_PROMPT_LENGTH} characters.`);
-    }
-
-    const existing = await holdQuestions(ctx, hold._id, MAX_CANONICAL_ROWS + 1);
-    const { promptsPerSite } = await readFanOutLimits(ctx, hold.companyId, hold._id);
-
-    if (existing.some((row) => row.prompt.toLowerCase() === prompt.toLowerCase())) {
-      throw appError("INVALID_INPUT", "That question is already asked for this website.");
-    }
-    if (existing.length >= promptsPerSite) {
-      throw appError("INVALID_INPUT", `This website can ask at most ${promptsPerSite} prompts: its limit in Limits.`);
-    }
-
-    const chosen = (args.engines ?? []).filter(isAiEngine);
-    const engines = chosen.length > 0 ? chosen : [...DEFAULT_AI_ENGINES];
-
-    const questionId = await ctx.db.insert("websiteQuestions", {
-      websiteId: hold.websiteId,
-      companyWebsiteId: hold._id,
-      prompt,
-      engines,
-      isActive: true,
-      createdAt: Date.now(),
-    });
-
-    // The answers others' asking already filed count from the start
-    // (docs/plans/active/sites-ai-list-summaries-plan.md).
-    await ctx.scheduler.runAfter(0, internal.siteListAi.recountQuestion, { holdId: hold._id, prompt });
-
-    await ctx.db.insert("auditLogs", {
-      actorId: ctx.userId,
-      actionType: "ADD_WEBSITE_QUESTION",
-      entityId: questionId,
-      entityType: "websiteQuestions",
-      metadata: JSON.stringify({ prompt, engines, companyId: hold.companyId }),
-      timestamp: Date.now(),
-    });
-
-    return questionId;
-  },
+  handler: async (ctx, args) => await addWebsiteQuestionCore(ctx, { ...args, userId: ctx.userId }),
 });
 
 export const setWebsiteQuestionActive = superAdminMutation({

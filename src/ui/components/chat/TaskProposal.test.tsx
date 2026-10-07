@@ -105,5 +105,15 @@ describe("a task proposed in a reply", () => {
     expect(screen.getByText("Google’s results")).toBeInTheDocument();
     expect(screen.getByText("If you drop out of the top 3")).toBeInTheDocument();
   });
+
+  it("says when the yes adds a question it does not track yet, and what each check costs", () => {
+    renderWithProviders(<TaskProposal messageId={messageId} proposal={{
+      action: "CREATE", status: "PENDING", title: "a", timeOfDay: "09:00", channels: { bell: true, email: true, telegram: false },
+      target: { companyWebsiteId: "s1" as Id<"companyWebsites">, website: "example.co.uk" },
+      answer: { prompt: "best agency uk", engine: "chatgpt", watch: "notRecommended" }, adds: { credits: 1 },
+    }} />);
+    expect(screen.getByText("It isn’t one of your tracked questions yet, so I’ll add it")).toBeInTheDocument();
+    expect(screen.getByText("About 1 credit each time it’s checked, from your monthly credits")).toBeInTheDocument();
+  });
 });
 

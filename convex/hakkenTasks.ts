@@ -16,6 +16,7 @@ import {
   hakkenTaskTargetValidator,
 } from "./hakkenTaskSchema";
 import { resolvePlatformName } from "./settingsService";
+import { addWebsiteKeywordCore, addWebsiteQuestionCore } from "./websiteCanonical";
 import { superAdminMutation, superAdminQuery, tenantMutation, tenantQuery, requireTenant } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import { nextRunOf, taskTimeOfDay, taskTimeZone } from "./utils/hakkenTaskTiming";
@@ -361,6 +362,13 @@ export const answerProposal = tenantMutation({
       const watches = proposal.measure ? Boolean(proposal.condition || proposal.report) : Boolean(proposal.answer || proposal.ranking);
       if (!proposal.target || !watches || !proposal.channels) {
         throw appError("INVALID_INPUT", "That offer is missing what it would watch.");
+      }
+      // Not tracked yet: added first, by whoever said yes, within the website's limit (item 4.3).
+      if (proposal.adds && proposal.answer) {
+        await addWebsiteQuestionCore(ctx, { companyWebsiteId: proposal.target.companyWebsiteId, prompt: proposal.answer.prompt, engines: [proposal.answer.engine], userId: ctx.userId });
+      }
+      if (proposal.adds && proposal.ranking) {
+        await addWebsiteKeywordCore(ctx, { companyWebsiteId: proposal.target.companyWebsiteId, keyword: proposal.ranking.keyword, userId: ctx.userId, addedFrom: "HAND" });
       }
       taskId = await insertTask(ctx, {
         companyId: thread.companyId,

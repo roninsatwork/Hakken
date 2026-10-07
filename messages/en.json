@@ -7408,7 +7408,10 @@
           "outOfTop": "If you drop out of the top {position}",
           "intoTop": "When you get into the top {position}",
           "answersWhen": "Answers are checked whenever this question is next asked",
-          "searchWhen": "Your position is checked whenever this search is next checked"
+          "searchWhen": "Your position is checked whenever this search is next checked",
+          "addsQuestion": "It isn’t one of your tracked questions yet, so I’ll add it",
+          "addsSearch": "It isn’t one of your tracked searches yet, so I’ll add it",
+          "addsCost": "{credits, plural, =1 {About 1 credit} other {About # credits}} each time it’s checked, from your monthly credits"
         }
       },
       "chart": {

@@ -105,6 +105,8 @@ export const hakkenTaskProposalValidator = v.object({
   /** An alert on AI answers or on a Google ranking, rather than on Search Console (item 4.3). */
   answer: v.optional(hakkenTaskAnswerValidator),
   ranking: v.optional(hakkenTaskRankingValidator),
+  /** Its question or search is not tracked yet: the yes adds it, at about these credits each time it is checked (item 4.3). */
+  adds: v.optional(v.object({ credits: v.number() })),
   /** What to find out, and on which of the company's websites or pages (item 4.2). */
   research: v.optional(v.object({ question: v.string(), website: v.optional(v.string()), page: v.optional(v.string()) })),
   usual: v.optional(v.number()),

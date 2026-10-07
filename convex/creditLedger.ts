@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
-import type { MutationCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { appError } from "./utils/appError";
 import {
@@ -31,7 +31,7 @@ import {
 type Charge = Doc<"creditCharges">;
 
 /** The price line a kind is charged at now: the saved one, or the placeholder. */
-export async function readCreditPrice(ctx: MutationCtx, kind: CreditKind): Promise<CreditPrice> {
+export async function readCreditPrice(ctx: Pick<QueryCtx, "db">, kind: CreditKind): Promise<CreditPrice> {
   const row = await ctx.db.query("creditPrices").withIndex("by_kind", (q) => q.eq("kind", kind)).first();
   return row ? { credits: row.credits, per: row.per } : DEFAULT_CREDIT_PRICES[kind];
 }

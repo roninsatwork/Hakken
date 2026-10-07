@@ -7408,7 +7408,10 @@
           "outOfTop": "Se esci dai primi {position}",
           "intoTop": "Quando entri nei primi {position}",
           "answersWhen": "Le risposte vengono controllate ogni volta che questa domanda viene posta",
-          "searchWhen": "La tua posizione viene controllata ogni volta che questa ricerca viene verificata"
+          "searchWhen": "La tua posizione viene controllata ogni volta che questa ricerca viene verificata",
+          "addsQuestion": "Non è ancora tra le tue domande monitorate, quindi la aggiungerò",
+          "addsSearch": "Non è ancora tra le tue ricerche monitorate, quindi la aggiungerò",
+          "addsCost": "{credits, plural, =1 {Circa 1 credito} other {Circa # crediti}} ogni volta che viene controllata, dai tuoi crediti mensili"
         }
       },
       "chart": {
