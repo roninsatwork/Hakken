@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
+import { setPoint } from "./positionHistory";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { SEO_KEYWORD_CHECK_OPERATION } from "./dataForSeoRegistry";
 import { parseBacklinksSummary } from "./dataForSeoParsers";
@@ -60,8 +61,9 @@ async function position(t: Harness, websiteId: Id<"websites">, keyword: string, 
       operationId, family: "SERP", mode: "LIVE", websiteId, taskArgsJson: "{}", status: "READY",
       tag: `t-${Math.random()}`, attempts: 0, costUsd: 0, sandbox: false, submittedAt: Date.now(),
     } as never);
-    await ctx.db.insert("seoKeywordPositions", {
-      websiteId, keyword, day, pullId, locationCode: UK, createdAt: Date.now(), ...(rank === undefined ? {} : { position: rank }),
+    await setPoint(ctx, { websiteId, keyword, locationCode: UK, day }, {
+      ...(rank === undefined ? {} : { position: rank }),
+      kind: (await ctx.db.get(pullId))?.operationId === "serp_google_organic" ? "CHECK" : "LIST",
     });
   });
 }

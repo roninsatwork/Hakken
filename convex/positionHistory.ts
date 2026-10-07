@@ -252,19 +252,41 @@ export async function pointOnDay(
   return within.length > 0 ? within[within.length - 1] : null;
 }
 
-/** A website's newest month records from one place, newest month first: at most `take`. */
-export async function newestRecordsOfWebsite(
+export type SearchLine = { _id: Id<"keywordPositionMonths">; keyword: string; points: PositionPoint[] };
+
+const lineOf = (record: MonthRecord): SearchLine => ({ _id: record._id, keyword: record.keyword, points: pointsOf(record) });
+
+/**
+ * A website's searches from one place, a month's record each, newest month
+ * first: from `fromMonth` on when named, at most `take`.
+ */
+export async function newestLinesOfWebsite(
   ctx: Pick<QueryCtx, "db">,
-  websiteId: Id<"websites">,
-  locationCode: number,
+  key: { websiteId: Id<"websites">; locationCode: number; fromMonth?: string },
   take: number,
-): Promise<Array<{ keyword: string; points: PositionPoint[] }>> {
+): Promise<SearchLine[]> {
   const records = await ctx.db
     .query("keywordPositionMonths")
-    .withIndex("by_website_place_month", (q) => q.eq("websiteId", websiteId).eq("locationCode", locationCode))
+    .withIndex("by_website_place_month", (q) => {
+      const place = q.eq("websiteId", key.websiteId).eq("locationCode", key.locationCode);
+      return key.fromMonth === undefined ? place : place.gte("month", key.fromMonth);
+    })
     .order("desc")
     .take(take);
-  return records.map((record) => ({ keyword: record.keyword, points: pointsOf(record) }));
+  return records.map(lineOf);
+}
+
+/** A page of a website's searches from one place, oldest month first: each search's months come in order. */
+export async function linesOfWebsitePage(
+  ctx: Pick<QueryCtx, "db">,
+  key: { websiteId: Id<"websites">; locationCode: number },
+  page: { cursor: string | null; numItems: number },
+): Promise<{ page: SearchLine[]; continueCursor: string; isDone: boolean }> {
+  const records = await ctx.db
+    .query("keywordPositionMonths")
+    .withIndex("by_website_place_month", (q) => q.eq("websiteId", key.websiteId).eq("locationCode", key.locationCode))
+    .paginate(page);
+  return { page: records.page.map(lineOf), continueCursor: records.continueCursor, isDone: records.isDone };
 }
 
 /** A batch of a website's records gone, every place: how many. */

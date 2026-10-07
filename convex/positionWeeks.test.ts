@@ -1,17 +1,15 @@
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { api, internal } from "./_generated/api";
+import { internal } from "./_generated/api";
 import schema from "./schema";
-import type { Id } from "./_generated/dataModel";
 import { positionWeekOf } from "./positionWeeks";
-import { recomputeSearchStats } from "./websiteTrackingStats";
 
 /**
  * A search's positions are kept day by day for 90 days, then a week at a time:
  * each week's last check, the point a week's step of a chart already shows
  * (docs/plans/active/dataforseo-cost-plan.md, B1). The hourly sweep thins
- * them; the charts' weeks and months read the same before and after, and a
- * day's step says where it turns weekly.
+ * them. The screens read the month records since keep-less-history-plan.md's
+ * part 1, step B (`positionLines.test.ts`); these rows go in its step C.
  */
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
@@ -60,12 +58,6 @@ async function seed(t: Harness) {
   });
   vi.setSystemTime(NOW);
   return ids;
-}
-
-async function member(t: Harness, companyId: Id<"companies">) {
-  const userId = await t.run(async (ctx) =>
-    await ctx.db.insert("users", { name: "Member", email: `m-${Math.random()}@test.com`, role: "ADMIN" as const, companyId, createdAt: Date.now() }));
-  return t.withIdentity({ subject: userId });
 }
 
 /** The sweep's thinning, page after page, until it has nothing more to do now. */
@@ -122,62 +114,5 @@ describe("daily keyword positions kept 90 days, then a week at a time (B1)", () 
     await thin(t);
 
     expect((await kept(t)).filter((row) => row >= "2026-10")).toEqual(["2026-10-02 check", "2026-10-03 check", "2026-10-04 check"]);
-  });
-
-  test("a chart's weeks and months read the same after, and its days say where they turn weekly", async () => {
-    const t = harness();
-    const s = await seed(t);
-    const asKorda = await member(t, s.companyId);
-    const chart = (step: "day" | "week" | "month") =>
-      asKorda.query(api.siteGoogle.searchPositions, { siteId: s.holdId, keywords: ["carp rods"], from: "2026-09-01", to: "2026-10-31", step });
-    const weeks = await chart("week");
-    const months = await chart("month");
-
-    await thin(t);
-
-    expect(await chart("week")).toEqual(weeks);
-    expect(await chart("month")).toEqual(months);
-    expect(weeks[0].weeklyBefore).toBeNull();
-    const days = await chart("day");
-    expect(days[0].weeklyBefore).toBe(KEPT_FROM);
-    expect(days[0].points.map((point) => [point.day, point.position])).toEqual([
-      // The better of the day's check and its list's filing, as before.
-      ["2026-09-24", 9],
-      ["2026-09-27", 16],
-      ["2026-09-30", 19],
-      ["2026-10-01", 20], ["2026-10-02", 21], ["2026-10-03", 22], ["2026-10-04", 23],
-    ]);
-  });
-
-  test("a search checked again after its weeks are thinned keeps its first check in its summary", async () => {
-    const t = harness();
-    const s = await seed(t);
-    const key = { websiteId: s.websiteId, keyword: "carp rods", locationCode: UK };
-    await t.run(async (ctx) => {
-      await ctx.db.insert("websiteSearchStats", {
-        ...key, firstCheckedDay: "2026-09-21", lastCheckedDay: "2026-10-04", lastPosition: 23, bestPosition: 9, everRanked: true, updatedAt: Date.now(),
-      });
-    });
-    await thin(t);
-
-    await t.run(async (ctx) => await recomputeSearchStats(ctx, key));
-
-    // Its 21 September check was cleared, the week keeping its last: the summary still says it was first checked then.
-    const stats = await t.run(async (ctx) => await ctx.db.query("websiteSearchStats").withIndex("by_key", (q) =>
-      q.eq("websiteId", key.websiteId).eq("keyword", key.keyword).eq("locationCode", key.locationCode)).unique());
-    expect(stats).toMatchObject({ firstCheckedDay: "2026-09-21", bestPosition: 9, lastCheckedDay: "2026-10-04", lastPosition: 23 });
-  });
-
-  test("compared with a day past the 90 days, a keyword shows its week's last check", async () => {
-    const t = harness();
-    const s = await seed(t);
-    await thin(t);
-    const asKorda = await member(t, s.companyId);
-
-    const [onWednesday] = await asKorda.query(api.siteKeywords.keywordsOnDay, { siteId: s.holdId, day: "2026-09-23", keywords: ["carp rods"] });
-    expect(onWednesday).toMatchObject({ position: 16, checked: true });
-    // A day inside the 90 days reads its own check.
-    const [onFriday] = await asKorda.query(api.siteKeywords.keywordsOnDay, { siteId: s.holdId, day: "2026-10-02", keywords: ["carp rods"] });
-    expect(onFriday).toMatchObject({ position: 21, checked: true });
   });
 });

@@ -10,7 +10,9 @@ import {
 } from "./dataForSeoRegistry";
 import { heldByOwnCadence } from "./seoHeldAnswers";
 import { boughtForCompetitor } from "./seoBuyingRules";
-import { isTrackedHold } from "./utils/websitePairing";
+import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
+import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
+import { newestLinesOfWebsite } from "./positionHistory";
 import { cyclePullIn } from "./seoCollectionQueue";
 import { buildSeoIdempotencyKey } from "./seoIdempotency";
 import { WEBSITE_IDENTITY_MESSAGES, readWebsiteHost } from "./websiteIdentity";
@@ -63,7 +65,7 @@ export async function requireCompanyWebsite(
   ctx: QueryCtx,
   companyId: Id<"companies">,
   host: string,
-): Promise<{ websiteId: Id<"websites">; host: string; tracked: boolean }> {
+): Promise<{ websiteId: Id<"websites">; host: string; tracked: boolean; hold: Doc<"companyWebsites"> }> {
   const identity = readWebsiteHost(host);
   if (!identity.ok) {
     throw appError("INVALID_INPUT", WEBSITE_IDENTITY_MESSAGES[identity.problem]);
@@ -85,7 +87,7 @@ export async function requireCompanyWebsite(
     .withIndex("by_company_website", (q) =>
       q.eq("companyId", companyId).eq("websiteId", website._id))
     .first();
-  if (held) return { websiteId: website._id, host: website.host, tracked: isTrackedHold(held) };
+  if (held) return { websiteId: website._id, host: website.host, tracked: isTrackedHold(held), hold: held };
 
   // Same words as "no such website", on purpose. A different message would
   // turn this into a way of asking which hosts the platform knows about.
@@ -347,7 +349,7 @@ export const readSeoMetrics = internalQuery({
     })),
   }),
   handler: async (ctx, args) => {
-    const { websiteId, host } = await requireCompanyWebsite(ctx, args.companyId, args.host);
+    const { websiteId, host, hold } = await requireCompanyWebsite(ctx, args.companyId, args.host);
 
     const since = new Date(Date.now() - (args.days ?? 30) * 24 * 60 * 60 * 1000)
       .toISOString()
@@ -359,11 +361,24 @@ export const readSeoMetrics = internalQuery({
       .order("desc")
       .take(MAX_METRIC_ROWS);
 
-    const keywords = await ctx.db
-      .query("seoKeywordPositions")
-      .withIndex("by_website_day", (q) => q.eq("websiteId", websiteId).gte("day", since))
-      .order("desc")
-      .take(MAX_KEYWORD_ROWS);
+    // Its searches from where this company watches it — a paired
+    // competitor's from its pair's place — newest first.
+    const pair = isTrackedHold(hold) ? await pairedOwnedHold(ctx, hold) : null;
+    const place = (pair ?? hold).locationCode ?? DEFAULT_LOCATION_CODE;
+    const lines = await newestLinesOfWebsite(ctx, { websiteId, locationCode: place, fromMonth: since.slice(0, 7) }, MAX_KEYWORD_ROWS);
+    const keywords = lines
+      .flatMap((line) => line.points.filter((point) => point.day >= since).map((point) => ({ keyword: line.keyword, day: point.day, position: point.position })))
+      .sort((left, right) => right.day.localeCompare(left.day))
+      .slice(0, MAX_KEYWORD_ROWS);
+    // Its searches a month, from the site's latest ranking of it: a point keeps no volume.
+    const volumes = new Map<string, number | null>();
+    for (const keyword of new Set(keywords.map((row) => row.keyword))) {
+      const ranked = await ctx.db
+        .query("siteKeywordRanks")
+        .withIndex("by_site_keyword", (q) => q.eq("websiteId", websiteId).eq("locationCode", place).eq("keyword", keyword))
+        .unique();
+      volumes.set(keyword, ranked?.volumeKnown ? ranked.volume : null);
+    }
 
     return {
       host,
@@ -372,12 +387,7 @@ export const readSeoMetrics = internalQuery({
         operationId: row.operationId,
         metrics: JSON.parse(row.metricsJson) as unknown,
       })),
-      keywords: keywords.map((row) => ({
-        keyword: row.keyword,
-        day: row.day,
-        position: row.position ?? null,
-        searchVolume: row.searchVolume ?? null,
-      })),
+      keywords: keywords.map((row) => ({ ...row, searchVolume: volumes.get(row.keyword) ?? null })),
     };
   },
 });

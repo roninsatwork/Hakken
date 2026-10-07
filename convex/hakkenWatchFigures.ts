@@ -9,6 +9,7 @@ import { holdQuestions, holdSearches } from "./holdLists";
 import { creditsForUnits } from "./creditKinds";
 import { readMentions } from "./siteAi";
 import { listPlace } from "./siteListAi";
+import { newestPoints } from "./positionHistory";
 import type { Stance } from "./utils/hakkenWatches";
 
 /**
@@ -106,11 +107,7 @@ export const rankingNowInternal = internalQuery({
   handler: async (ctx, args): Promise<{ day: string; position: number | null } | null> => {
     const hold = await ctx.db.get(args.companyWebsiteId);
     if (!hold) return null;
-    const newest = await ctx.db
-      .query("seoKeywordPositions")
-      .withIndex("by_website_keyword_place_day", (q) => q.eq("websiteId", hold.websiteId).eq("keyword", args.keyword).eq("locationCode", listPlace(hold)))
-      .order("desc")
-      .first();
-    return newest ? { day: newest.day, position: newest.position ?? null } : null;
+    const [newest] = await newestPoints(ctx, { websiteId: hold.websiteId, keyword: args.keyword, locationCode: listPlace(hold) }, 1);
+    return newest ? { day: newest.day, position: newest.position } : null;
   },
 });

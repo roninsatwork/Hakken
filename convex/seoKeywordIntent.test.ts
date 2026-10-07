@@ -3,6 +3,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { setPoint } from "./positionHistory";
 import type { Id } from "./_generated/dataModel";
 import type { ActionCtx } from "./_generated/server";
 import type { TypesafeAskResult } from "./typesafeProviderService";
@@ -178,26 +179,15 @@ describe("what a website ranks for", () => {
         host: "ourshop.com", displayHost: "ourshop.com", firstSeenAt: Date.now(),
       });
       const hold = await ctx.db.insert("companyWebsites", { companyId, websiteId, createdAt: Date.now() });
-      const pullId = await ctx.db.insert("seoDataPulls", {
-        operationId: "domain_ranked_keywords", family: "DataForSEO Labs", mode: "LIVE",
-        websiteId, taskArgsJson: "{}", status: "READY", tag: "t", costUsd: 0, sandbox: true,
-        submittedAt: Date.now(), completedAt: Date.now(),
-      });
       // The same phrase on two days, plus a second phrase ranking better.
-      await ctx.db.insert("seoKeywordPositions", {
-        websiteId, keyword: "emergency plumber leeds", day: "2026-09-20", position: 9, locationCode: 2826, pullId, createdAt: Date.now(),
-      });
-      await ctx.db.insert("seoKeywordPositions", {
-        websiteId, keyword: "emergency plumber leeds", day: "2026-09-22", position: 4, locationCode: 2826, pullId, createdAt: Date.now(),
-      });
-      await ctx.db.insert("seoKeywordPositions", {
-        websiteId, keyword: "boiler repair", day: "2026-09-22", position: 2, locationCode: 2826, pullId, createdAt: Date.now(),
-      });
+      const ranked = (keyword: string, day: string, position: number, locationCode = 2826) =>
+        setPoint(ctx, { websiteId, keyword, locationCode, day }, { position, kind: "LIST" });
+      await ranked("emergency plumber leeds", "2026-09-20", 9);
+      await ranked("emergency plumber leeds", "2026-09-22", 4);
+      await ranked("boiler repair", "2026-09-22", 2);
       // Checked for another client watching from Leeds. Filed on the same
       // website, and not this watcher's to see.
-      await ctx.db.insert("seoKeywordPositions", {
-        websiteId, keyword: "plumber in leeds", day: "2026-09-22", position: 1, locationCode: 1006925, pullId, createdAt: Date.now(),
-      });
+      await ranked("plumber in leeds", "2026-09-22", 1, 1006925);
       await ctx.db.insert("seoKeywordIntents", {
         keyword: "emergency plumber leeds", intent: "BUYING", judgedAt: Date.now(),
       });

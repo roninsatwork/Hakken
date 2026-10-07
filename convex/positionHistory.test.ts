@@ -244,6 +244,13 @@ describe("packing the rows kept a check", () => {
     // Run again: nothing changes.
     await t.run((ctx) => packKeywordPositions(ctx, null, 100));
     expect(await records(t)).toEqual(packedOnce);
+    // And the check over the rows finds each day's point.
+    expect(await t.action(internal.positionHistoryMigration.comparePacked, {})).toEqual({ rows: 4, matched: 4, differing: [] });
+    await t.run(async (ctx) => {
+      const [october] = (await ctx.db.query("keywordPositionMonths").collect()).filter((record) => record.month === "2026-10");
+      await ctx.db.patch(october._id, { positions: [6] });
+    });
+    expect(await t.action(internal.positionHistoryMigration.comparePacked, {})).toMatchObject({ rows: 4, matched: 3 });
   });
 });
 

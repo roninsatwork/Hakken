@@ -4,6 +4,7 @@ import { useMiddayUtc } from "@/src/test/realTime";
 
 import { internal } from "./_generated/api";
 import schema from "./schema";
+import { setPoint } from "./positionHistory";
 import { findSeoOperation, seoSiteOperationParams } from "./dataForSeoRegistry";
 import type { Id } from "./_generated/dataModel";
 
@@ -129,28 +130,9 @@ describe("reading a website's numbers", () => {
     await hold(t, company, website);
 
     await t.run(async (ctx) => {
-      const pullId = await ctx.db.insert("seoDataPulls", {
-        operationId: "domain_ranked_keywords",
-        family: "DataForSEO Labs",
-        mode: "LIVE",
-        websiteId: website,
-        taskArgsJson: "{}",
-        status: "READY",
-        tag: "t",
-        costUsd: 0,
-        sandbox: false,
-        submittedAt: Date.now(),
-        completedAt: Date.now(),
-      });
-      await ctx.db.insert("seoKeywordPositions", {
-        websiteId: website,
-        keyword: "emergency plumber leeds",
-        day: new Date().toISOString().slice(0, 10),
-        position: 3,
-        url: "https://ourshop.com/leeds",
-        pullId,
-        createdAt: Date.now(),
-      });
+      await setPoint(ctx, {
+        websiteId: website, keyword: "emergency plumber leeds", locationCode: 2826, day: new Date().toISOString().slice(0, 10),
+      }, { position: 3, url: "https://ourshop.com/leeds", kind: "LIST" });
     });
 
     const result = await t.query(internal.seoTools.readSeoMetrics, {

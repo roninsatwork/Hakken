@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
-import { SEO_KEYWORD_CHECK_OPERATION } from "./dataForSeoRegistry";
+import { pointsBetween } from "./positionHistory";
 import { tenantQuery } from "./tenantFunctions";
 import { listHold, listWebsiteId, requireMySite } from "./siteAccess";
 import { holdFirstCheck, holdSearch, holdSearches } from "./holdLists";
@@ -188,32 +188,14 @@ export const searchPositions = tenantQuery({
         .first();
       if (ranked) charted.push({ keyword, tracked: false });
     }
-    const checks = new Map<Id<"seoDataPulls">, Promise<boolean>>();
-    const isCheck = (pullId: Id<"seoDataPulls">) => {
-      const held = checks.get(pullId) ?? ctx.db.get(pullId).then((pull) => pull?.operationId === SEO_KEYWORD_CHECK_OPERATION);
-      checks.set(pullId, held);
-      return held;
-    };
     return await Promise.all(charted.map(async ({ keyword, tracked }) => {
-      const read = await ctx.db
-        .query("seoKeywordPositions")
-        .withIndex("by_website_keyword_place_day", (q) =>
-          q.eq("websiteId", site.website._id).eq("keyword", keyword).eq("locationCode", site.place)
-            .gte("day", args.from).lte("day", args.to))
-        .take(DAYS_PER_SEARCH);
-      const kept = tracked ? read : await Promise.all(read.map(async (row) => ((await isCheck(row.pullId)) ? null : row)));
-      const rows = kept.filter((row): row is Doc<"seoKeywordPositions"> => row !== null);
-      // One point per day: the better of two checks on the same day.
-      const byDay = new Map<string, number | null>();
-      for (const row of rows) {
-        const held = byDay.get(row.day);
-        const position = row.position ?? null;
-        if (held === undefined || (position !== null && (held === null || position < held))) byDay.set(row.day, position);
-      }
-      // Then each day, week or month at its last day's position.
+      // A day holds one point (`positionHistory.ts`), oldest first.
+      const read = await pointsBetween(ctx, { websiteId: site.website._id, keyword, locationCode: site.place }, args.from, args.to, DAYS_PER_SEARCH);
+      const points = tracked ? read : read.filter((point) => point.kind === "LIST");
+      // Each day, week or month at its last day's position.
       const bySteps = new Map<string, { day: string; lastDay: string; position: number | null }>();
-      for (const [day, position] of [...byDay.entries()].sort(([left], [right]) => left.localeCompare(right))) {
-        bySteps.set(bucketOf(day, args.step), { day: bucketOf(day, args.step), lastDay: day, position });
+      for (const point of points) {
+        bySteps.set(bucketOf(point.day, args.step), { day: bucketOf(point.day, args.step), lastDay: point.day, position: point.position });
       }
       return { keyword, points: [...bySteps.values()], weeklyBefore };
     }));

@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import { renderOutboxRow } from "./outboxTemplates";
 import schema from "./schema";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { setPoint } from "./positionHistory";
 
 /**
  * The Watcher on AI answers and Google rankings (docs/plans/active/
@@ -54,8 +55,8 @@ async function answered(t: Harness, seeded: Seeded, day: string, newest: "RECOMM
 }
 
 async function checked(t: Harness, seeded: Seeded, day: string, position: number | undefined) {
-  await t.run((ctx) => ctx.db.insert("seoKeywordPositions", {
-    websiteId: seeded.websiteId, keyword: KEYWORD, day, ...(position !== undefined ? { position } : {}), pullId: seeded.pullId, locationCode: 2826, createdAt: Date.now(),
+  await t.run((ctx) => setPoint(ctx, { websiteId: seeded.websiteId, keyword: KEYWORD, locationCode: 2826, day }, {
+    ...(position !== undefined ? { position } : {}), kind: "CHECK",
   }));
 }
 

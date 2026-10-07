@@ -4,6 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
 import { citedPageOf, fileKeywordRank, recountCitedPages } from "./siteRankings";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
+import { linesOfWebsitePage } from "./positionHistory";
 import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
 
 /**
@@ -18,8 +19,8 @@ import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
  *   npx convex run siteBackfill:backfillSites
  */
 
-/** Rankings replayed per mutation. */
-const REPLAY_PAGE = 500;
+/** Searches' months replayed per mutation: a month is up to 31 points. */
+const REPLAY_PAGE = 50;
 
 /** Citations read a step: each distinct page and question is a recount job, and a step schedules a thousand at most. */
 const CITATION_PAGE = 500;
@@ -82,29 +83,34 @@ export const watchedSites = internalQuery({
   },
 });
 
-/** Replay one page of a site's rankings, oldest first, into its latest rows. */
+/**
+ * Replay one page of a site's rankings, each search's oldest first, into its
+ * latest rows. Only what its keyword lists filed: a check of a search is one
+ * company's tracking, and never goes on the website's list (`seoKeywordChecks.ts`).
+ * A point keeps no volume; the latest row keeps the one it has.
+ */
 export const replayRankings = internalMutation({
   args: { websiteId: v.id("websites"), locationCode: v.number(), cursor: v.union(v.string(), v.null()) },
   returns: v.object({ filed: v.number(), cursor: v.string(), isDone: v.boolean() }),
   handler: async (ctx, args) => {
-    const result = await ctx.db
-      .query("seoKeywordPositions")
-      .withIndex("by_website_place_day", (q) => q.eq("websiteId", args.websiteId).eq("locationCode", args.locationCode))
-      .paginate({ cursor: args.cursor, numItems: REPLAY_PAGE });
+    const result = await linesOfWebsitePage(ctx, { websiteId: args.websiteId, locationCode: args.locationCode }, {
+      cursor: args.cursor, numItems: REPLAY_PAGE,
+    });
     let filed = 0;
-    for (const row of result.page) {
-      if (row.position === undefined) continue;
-      await fileKeywordRank(ctx, {
-        websiteId: row.websiteId,
-        locationCode: args.locationCode,
-        keyword: row.keyword,
-        day: row.day,
-        position: row.position,
-        ...(row.pagePosition !== undefined ? { pagePosition: row.pagePosition } : {}),
-        ...(row.url ? { url: row.url } : {}),
-        ...(row.searchVolume !== undefined ? { volume: row.searchVolume } : {}),
-      });
-      filed += 1;
+    for (const line of result.page) {
+      for (const point of line.points) {
+        if (point.position === null || point.kind !== "LIST") continue;
+        await fileKeywordRank(ctx, {
+          websiteId: args.websiteId,
+          locationCode: args.locationCode,
+          keyword: line.keyword,
+          day: point.day,
+          position: point.position,
+          ...(point.pagePosition !== null ? { pagePosition: point.pagePosition } : {}),
+          ...(point.url ? { url: point.url } : {}),
+        });
+        filed += 1;
+      }
     }
     return { filed, cursor: result.continueCursor, isDone: result.isDone };
   },

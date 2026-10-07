@@ -5,6 +5,7 @@ import { includesSearchTerm, normalizeSearchTerm, paginateItems } from "./adminQ
 import { appError } from "./utils/appError";
 import { pairedOwnedHold } from "./utils/websitePairing";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
+import { newestLinesOfWebsite } from "./positionHistory";
 
 /**
  * What one of a company's websites ranks for.
@@ -33,7 +34,7 @@ export const listWebsiteKeywords = superAdminQuery({
   },
   returns: v.object({
     data: v.array(v.object({
-      _id: v.id("seoKeywordPositions"),
+      _id: v.id("keywordPositionMonths"),
       keyword: v.string(),
       position: v.union(v.number(), v.null()),
       searchVolume: v.union(v.number(), v.null()),
@@ -53,20 +54,17 @@ export const listWebsiteKeywords = superAdminQuery({
     // Through the place index, not filtered after the read: a take followed
     // by a filter reads the newest rows from every place and keeps this one's,
     // so a busier town's rows would push this watcher's out of the window.
-    const rows = await ctx.db
-      .query("seoKeywordPositions")
-      .withIndex("by_website_place_day", (q) =>
-        q.eq("websiteId", companyWebsite.websiteId).eq("locationCode", place))
-      .order("desc")
-      .take(MAX_KEYWORDS);
+    const lines = await newestLinesOfWebsite(ctx, { websiteId: companyWebsite.websiteId, locationCode: place }, MAX_KEYWORDS);
 
     // One row per search: the newest day wins, because a chart of one phrase
     // over time is a different screen from a list of what a site ranks for.
-    const newest = new Map<string, (typeof rows)[number]>();
-    for (const row of rows) {
-      const key = row.keyword.toLowerCase();
-      const held = newest.get(key);
-      if (!held || row.day > held.day) newest.set(key, row);
+    // Its newest month is read first, and that month's last point is its newest.
+    const newest = new Map<string, { _id: (typeof lines)[number]["_id"]; keyword: string; day: string; position: number | null }>();
+    for (const line of lines) {
+      const key = line.keyword.toLowerCase();
+      const last = line.points.at(-1);
+      if (!last || newest.has(key)) continue;
+      newest.set(key, { _id: line._id, keyword: line.keyword, day: last.day, position: last.position });
     }
 
     const term = normalizeSearchTerm(args.searchTerm ?? "");
@@ -79,15 +77,21 @@ export const listWebsiteKeywords = superAdminQuery({
     const paged = paginateItems(matching, args.page, args.pageSize);
 
     const withIntent = await Promise.all(paged.data.map(async (row) => {
+      const normalised = row.keyword.trim().replace(/\s+/g, " ").toLowerCase();
       const intent = await ctx.db
         .query("seoKeywordIntents")
-        .withIndex("by_keyword", (q) => q.eq("keyword", row.keyword.trim().replace(/\s+/g, " ").toLowerCase()))
+        .withIndex("by_keyword", (q) => q.eq("keyword", normalised))
+        .unique();
+      // Its searches a month, from the site's latest ranking of it: a point keeps no volume.
+      const ranked = await ctx.db
+        .query("siteKeywordRanks")
+        .withIndex("by_site_keyword", (q) => q.eq("websiteId", companyWebsite.websiteId).eq("locationCode", place).eq("keyword", normalised))
         .unique();
       return {
         _id: row._id,
         keyword: row.keyword,
-        position: row.position ?? null,
-        searchVolume: row.searchVolume ?? null,
+        position: row.position,
+        searchVolume: ranked?.volumeKnown ? ranked.volume : null,
         day: row.day,
         intent: intent?.intent ?? null,
       };
@@ -97,5 +101,5 @@ export const listWebsiteKeywords = superAdminQuery({
   },
 });
 
-/** Rows read per screen. A large site has more; this is a list, not an export. */
+/** Searches' months read per screen. A large site has more; this is a list, not an export. */
 const MAX_KEYWORDS = 2_000;

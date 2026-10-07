@@ -16,7 +16,7 @@ import {
   rankStatusValidator,
 } from "./utils/siteShapes";
 import { wordStartMatcher } from "./utils/wordStarts";
-import { positionOnDay } from "./positionWeeks";
+import { pointOnDay } from "./positionHistory";
 
 /**
  * What a site ranks for on Google: every keyword, every page, every folder, and
@@ -255,14 +255,14 @@ export const keywordsOnDay = tenantQuery({
         .withIndex("by_site_keyword", (q) => q.eq("websiteId", site.website._id).eq("locationCode", site.place).eq("keyword", keyword))
         .first();
       if (!listed) return { keyword, position: null, url: null, checked: false, comparable: false };
-      // Past the 90 days kept day by day, the day's week's last check (B1).
-      const row = await positionOnDay(ctx, { websiteId: site.website._id, keyword, locationCode: site.place, day: args.day, today: site.today });
+      // Past the 90 days kept day by day, the point kept for the day's week — past a year, its month.
+      const point = await pointOnDay(ctx, { websiteId: site.website._id, keyword, locationCode: site.place, day: args.day, today: site.today });
       return {
         keyword,
-        position: row?.position ?? null,
-        url: row?.url ?? null,
-        checked: row !== null,
-        comparable: row?.position !== undefined && (row.pagePosition !== undefined) === (listed.pagePosition !== undefined),
+        position: point?.position ?? null,
+        url: point?.url ?? null,
+        checked: point !== null,
+        comparable: point !== null && point.position !== null && (point.pagePosition !== null) === (listed.pagePosition !== undefined),
       };
     }));
     return found;

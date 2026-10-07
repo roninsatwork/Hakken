@@ -22,6 +22,7 @@ import { closeStalledRoleRuns } from "./roleRuns";
 import { sendLongWaiting } from "./seoAgentRuns";
 import { deleteAnswerText } from "./siteAnswers";
 import { thinOldPositions } from "./positionWeeks";
+import { coarsenPositions } from "./positionHistory";
 
 /**
  * The hourly walk round the kitchen.
@@ -43,7 +44,8 @@ import { thinOldPositions } from "./positionWeeks";
  *  6. Start the Collector for requests left waiting with nothing sending.
  *  7. Clear raw payloads, AI answers' wording, Google's results pages and
  *     cycles that have outlived their retention, and thin keyword positions
- *     past their 90 days to a week's last (`positionWeeks.ts`).
+ *     past their 90 days to a week's last, past a year to a month's, and
+ *     clear them past two years (`positionHistory.ts`).
  *
  * It never re-posts a task. A submitted task was paid for; if its result is
  * missing the answer is always to fetch it, never to buy it again.
@@ -168,8 +170,11 @@ export const sweepDuty = internalMutation({
         return await purgeExpiredSerpPages(ctx, now);
       case "purgeCycles":
         return await purgeExpiredCycles(ctx, now);
-      case "thinPositions":
-        return { ...FINISHED, ...(await thinOldPositions(ctx, now)) };
+      case "thinPositions": {
+        const thinned = await thinOldPositions(ctx, now);
+        const coarsened = await coarsenPositions(ctx, now);
+        return { ...FINISHED, more: thinned.more || coarsened.more };
+      }
     }
   },
 });

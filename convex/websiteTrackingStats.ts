@@ -4,6 +4,7 @@ import type { AiEngine } from "./seoAiEngines";
 import { recordListAnswer } from "./siteListAi";
 import { requestAiLinesEverywhere } from "./siteRankings";
 import { dailyPositionsKeptFrom } from "./seoCollectionPolicy";
+import { newestPoints } from "./positionHistory";
 
 /**
  * Keeping each host's search and question summaries current as results land.
@@ -22,7 +23,7 @@ import { dailyPositionsKeptFrom } from "./seoCollectionPolicy";
  * is all a verdict needs from that far back.
  */
 
-/** Position rows read per recompute. Months of weekly checks, a few weeks of daily ones. */
+/** Points read per recompute. Months of weekly checks, a few weeks of daily ones. */
 const SEARCH_WINDOW = 30;
 
 /** Answers read per recompute: years of weekly asking. Each company's list counts the same ones (`siteListAi.ts`). */
@@ -43,12 +44,11 @@ export async function recomputeSearchStats(
   ctx: MutationCtx,
   key: { websiteId: Id<"websites">; keyword: string; locationCode: number },
 ): Promise<void> {
-  const rows = await ctx.db
-    .query("seoKeywordPositions")
-    .withIndex("by_website_keyword_place_day", (q) =>
-      q.eq("websiteId", key.websiteId).eq("keyword", key.keyword).eq("locationCode", key.locationCode))
-    .order("desc")
-    .take(SEARCH_WINDOW);
+  const rows = (await newestPoints(ctx, key, SEARCH_WINDOW)).map((point) => ({
+    day: point.day,
+    position: point.position ?? undefined,
+    pagePosition: point.pagePosition ?? undefined,
+  }));
 
   const existing = await ctx.db
     .query("websiteSearchStats")
@@ -70,7 +70,7 @@ export async function recomputeSearchStats(
   // A full window may not reach the first check, so what lies before it is
   // kept from the last summary. A short one is the whole history, and wins —
   // unless it reaches back past the 90 days kept day by day, where each week
-  // keeps only its last check (`positionWeeks.ts`, B1): a search's first and
+  // keeps only its last check, and past a year each month (`positionHistory.ts`): a search's first and
   // best checks may be among the days cleared, so the summary keeps them.
   const reachesStart = rows.length < SEARCH_WINDOW && oldest.day >= dailyPositionsKeptFrom(new Date().toISOString().slice(0, 10));
   const carried = !reachesStart && existing ? existing : null;

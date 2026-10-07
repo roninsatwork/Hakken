@@ -14,7 +14,7 @@ import type { TableNames } from "./_generated/dataModel";
 
 /** The tables the DataForSEO side keeps. */
 const TABLES = [
-  "seoDataPulls", "seoPullAnswers", "seoCycleLines", "seoWebsiteMetrics", "seoKeywordPositions",
+  "seoDataPulls", "seoPullAnswers", "seoCycleLines", "seoWebsiteMetrics", "seoKeywordPositions", "keywordPositionMonths",
   "siteKeywordRanks", "siteKeywordFeatures", "sitePageRanks", "siteSections", "siteDaySummaries", "sitePaidKeywords",
   "siteBacklinks", "siteReferringDomains", "siteAnchors", "siteReferringIps", "siteReferringSubnets", "siteLinkDays",
   "siteCrawls", "siteCrawlPages", "siteCrawlLinks", "siteSitemapPages", "siteCitedPages",

@@ -2,6 +2,7 @@ import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
+import { setPoint } from "./positionHistory";
 import type { Id } from "./_generated/dataModel";
 import { answerPlace } from "./seoAiEngines";
 
@@ -104,9 +105,7 @@ describe("a keyword's own screen", () => {
         websiteId: own.websiteId, keyword, locationCode: UK, firstCheckedDay: DAY, lastCheckedDay: DAY,
         lastPosition: 2, bestPosition: 2, everRanked: true, updatedAt: Date.now(),
       });
-      await ctx.db.insert("seoKeywordPositions", {
-        websiteId: own.websiteId, keyword, day: DAY, position: 2, pullId: checkPull, locationCode: UK, createdAt: Date.now(),
-      });
+      await setPoint(ctx, { websiteId: own.websiteId, keyword, locationCode: UK, day: DAY }, { position: 2, kind: "CHECK" });
       await ctx.db.insert("siteSerpPages", {
         keyword, locationCode: UK, day: DAY, pullId: checkPull, resultCount: 3,
         results: [
