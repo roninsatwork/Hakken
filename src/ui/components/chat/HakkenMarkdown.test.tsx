@@ -79,3 +79,31 @@ describe("An assistant's answer", () => {
     expect([...container.querySelectorAll("td")].map((cell) => cell.textContent)).toEqual(["MVP", "Purrweb"]);
   });
 });
+
+/**
+ * Inline code is drawn in its line (2026-10-07): react-markdown stopped saying
+ * which code is inline, so "a reading of `<1`" came out as the code block's box
+ * — a `<div>` and a `<pre>` inside a `<p>`, which React reports on every such
+ * answer.
+ */
+describe("code in an answer", () => {
+  test("a value in a sentence stays in the sentence, with no box inside the paragraph", () => {
+    const { container } = render(<HakkenMarkdown content={"A traffic reading of `<1` means **under `1` visit** a month."} />);
+
+    const paragraph = container.querySelector("p");
+    expect(paragraph?.querySelector("code")?.textContent).toBe("<1");
+    expect(paragraph?.querySelectorAll("code")).toHaveLength(2);
+    expect(paragraph?.querySelector("div, pre")).toBeNull();
+    expect(container.querySelector("pre")).toBeNull();
+  });
+
+  test("a fenced block keeps its box, its code drawn plain inside it", () => {
+    const { container } = render(<HakkenMarkdown content={"Run this:\n\n```\nnpm run check\n```"} />);
+
+    const block = container.querySelector("pre");
+    expect(block?.textContent).toBe("npm run check\n");
+    expect(block?.closest("p")).toBeNull();
+    expect(block?.querySelector("code")?.className ?? "").not.toContain("bg-foreground/10");
+    expect(container.textContent).toContain("Snippet");
+  });
+});

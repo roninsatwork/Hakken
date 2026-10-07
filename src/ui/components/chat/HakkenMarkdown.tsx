@@ -2,7 +2,7 @@
 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import type { ComponentProps } from 'react';
+import { createContext, useContext, type ComponentProps } from 'react';
 
 interface HakkenMarkdownProps {
   content: string;
@@ -95,12 +95,22 @@ function linkCitations(citations: readonly string[]) {
   return () => (tree: HastNode) => walk(tree);
 }
 
-export function HakkenMarkdown({ content, highlight, highlightOthers, variant = "chat", citations }: HakkenMarkdownProps) {
-  type MarkdownCodeProps = ComponentProps<"code"> & {
-    node?: unknown;
-    inline?: boolean;
-  };
+/**
+ * Set inside a code block's `<pre>`. react-markdown no longer says whether
+ * code is inline, so `code` asks this instead: a value in a sentence ("a
+ * reading of `<1`") is drawn in the line, and only a fenced block gets the
+ * box — which, drawn inside a `<p>`, was a `<div>` and a `<pre>` in a
+ * paragraph, invalid HTML that React reports on every such answer.
+ */
+const InCodeBlock = createContext(false);
 
+function MarkdownCode(props: ComponentProps<"code">) {
+  return useContext(InCodeBlock)
+    ? <code {...props} />
+    : <code className="bg-foreground/10 text-foreground px-1.5 py-0.5 rounded-[4px] font-mono text-[12px] tracking-wider" {...props} />;
+}
+
+export function HakkenMarkdown({ content, highlight, highlightOthers, variant = "chat", citations }: HakkenMarkdownProps) {
   const omitMarkdownNode = <T extends { node?: unknown }>(props: T) => {
     const rest = { ...props };
     delete rest.node;
@@ -156,26 +166,24 @@ export function HakkenMarkdown({ content, highlight, highlightOthers, variant = 
         blockquote: (props) => (
           <blockquote className="border-l-2 border-brand/50 pl-4 py-1 mb-4 italic text-muted bg-foreground/5 rounded-r-[8px]" {...omitMarkdownNode(props)} />
         ),
-        code: (markdownProps: MarkdownCodeProps) => {
-          const { inline, ...props } = omitMarkdownNode(markdownProps);
-          return inline ? (
-            <code className="bg-foreground/10 text-foreground px-1.5 py-0.5 rounded-[4px] font-mono text-[12px] tracking-wider" {...props} />
-          ) : (
-            <div className="relative group mb-5 mt-2 overflow-hidden rounded-[12px] border border-border-dim bg-[#0d0d0d]">
-              <div className="flex items-center justify-between px-4 py-2 border-b border-border-dim bg-white/5">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
-                  <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
-                </div>
-                <span className="text-[10px] uppercase tracking-[0.2em] font-mono text-muted">Snippet</span>
+        code: (props) => <MarkdownCode {...omitMarkdownNode(props)} />,
+        // A fenced block: the box, its colours the theme's. The three dots are
+        // a window's, not a status, so they wear no status colour.
+        pre: (props) => (
+          <div className="relative group mb-5 mt-2 overflow-hidden rounded-[12px] border border-border-dim bg-sidebar">
+            <div className="flex items-center justify-between px-4 py-2 border-b border-border-dim bg-foreground/5">
+              <div className="flex items-center gap-1.5">
+                <div className="w-2.5 h-2.5 rounded-full bg-foreground/20" />
+                <div className="w-2.5 h-2.5 rounded-full bg-foreground/20" />
+                <div className="w-2.5 h-2.5 rounded-full bg-foreground/20" />
               </div>
-              <pre className="p-4 overflow-x-auto text-[13px] font-mono leading-loose text-secondary custom-scrollbar">
-                <code {...props} />
-              </pre>
+              <span className="text-[10px] uppercase tracking-[0.2em] font-mono text-muted">Snippet</span>
             </div>
-          );
-        },
+            <InCodeBlock.Provider value={true}>
+              <pre className="p-4 overflow-x-auto text-[13px] font-mono leading-loose text-secondary custom-scrollbar" {...omitMarkdownNode(props)} />
+            </InCodeBlock.Provider>
+          </div>
+        ),
       }}
     >
       {content}
