@@ -18,7 +18,7 @@ import {
 import { argsToSend, findSeoOperation, seoResultPath } from "./dataForSeoRegistry";
 import { rowsLeftOffIn, rowsReturnedIn, slimSeoResult } from "./dataForSeoSlim";
 import { isCrawlUnfinished } from "./dataForSeoCrawlOperations";
-import { splitAnswer } from "./seoPullAnswers";
+import { keepAnswerFile } from "./seoPullAnswers";
 import { getErrorMessage } from "./utils/lang";
 import type { Id } from "./_generated/dataModel";
 
@@ -190,7 +190,7 @@ export async function sendNextBatch(
     taskId?: string;
     costUsd: number;
     error?: string;
-    resultParts?: string[];
+    resultFile?: { file: Id<"_storage">; bytes: number };
     rawTruncated?: boolean;
     rowsLeftOff?: number;
     rowsReturned?: number;
@@ -224,7 +224,7 @@ export async function sendNextBatch(
       continue;
     }
     const isLive = operation.mode === "LIVE";
-    const kept = isLive && outcome.result !== undefined ? keepAnswer(operation.id, outcome.result) : {};
+    const kept = isLive && outcome.result !== undefined ? await keepAnswer(ctx, operation.id, outcome.result) : {};
     results.push({
       pullId: pull.pullId,
       ...(outcome.taskId ? { taskId: outcome.taskId } : {}),
@@ -348,7 +348,7 @@ export const fetchSeoResult = internalAction({
     // it is fetched. A record that fails leaves it waiting, never failed.
     await ctx.runMutation(internal.seoCollectionQueue.settleSeoResult, {
       pullId: args.pullId,
-      ...keepAnswer(pull.operationId, task.result ?? null),
+      ...(await keepAnswer(ctx, pull.operationId, task.result ?? null)),
       // Collecting is free, so this does not move the cost. What the task
       // cost was recorded when it was set, which is when it was charged.
       costUsd: 0,
@@ -359,11 +359,10 @@ export const fetchSeoResult = internalAction({
 
 /**
  * An answer as it is kept: trimmed to what the parsers read
- * (`dataForSeoSlim.ts`), then cut into parts no larger than a document may
- * be (`seoPullAnswers.ts`) — passed to the mutation that records it as those
- * parts, so no single value is ever larger than that. Kept so a parser bug can
- * be fixed and re-run rather than re-bought, and cleared by the sweep after
- * its retention window.
+ * (`dataForSeoSlim.ts`), then stored as a file (`seoPullAnswers.ts`), the
+ * mutation that records it given the file. Kept so a parser bug can be fixed
+ * and re-run rather than re-bought, and cleared by the sweep after its
+ * retention window.
  *
  * Nothing is left off without saying so: rows left off the end of a list are
  * counted on the request (`rowsLeftOff`), and an answer too large to keep at
@@ -374,16 +373,17 @@ export const fetchSeoResult = internalAction({
  * a list, the pages of a crawl — since credits count that, not what was
  * asked for (finish-off-plan.md, item 3).
  */
-function keepAnswer(
+async function keepAnswer(
+  ctx: ActionCtx,
   operationId: string,
   result: unknown,
-): { resultParts?: string[]; rawTruncated?: boolean; rowsLeftOff?: number; rowsReturned?: number } {
+): Promise<{ resultFile?: { file: Id<"_storage">; bytes: number }; rawTruncated?: boolean; rowsLeftOff?: number; rowsReturned?: number }> {
   const stored = slimSeoResult(operationId, result);
   const rowsLeftOff = rowsLeftOffIn(stored);
   const rowsReturned = rowsReturnedIn(operationId, result);
-  const parts = splitAnswer(JSON.stringify(stored ?? null));
+  const file = await keepAnswerFile(ctx, JSON.stringify(stored ?? null));
   return {
-    ...(parts ? { resultParts: parts } : { rawTruncated: true }),
+    ...(file ? { resultFile: file } : { rawTruncated: true }),
     ...(rowsLeftOff > 0 ? { rowsLeftOff } : {}),
     ...(rowsReturned !== undefined ? { rowsReturned } : {}),
   };

@@ -22,6 +22,7 @@ import { dropUnsentRequest } from "./seoCollectionClose";
 import { closeStalledRoleRuns } from "./roleRuns";
 import { sendLongWaiting } from "./seoAgentRuns";
 import { deleteAnswerText } from "./siteAnswers";
+import { deleteAnswerRow } from "./seoPullAnswers";
 import { coarsenPositions } from "./positionHistory";
 
 /**
@@ -402,7 +403,8 @@ async function purgeExpiredRaw(ctx: MutationCtx, now: number): Promise<DutyPage>
     .query("seoPullAnswers")
     .withIndex("by_stored", (q) => q.lt("storedAt", cutoff))
     .take(ANSWER_PURGE_PAGE);
-  for (const answer of old) await ctx.db.delete(answer._id);
+  // Each answer's file goes with its row (`seoPullAnswers.ts`).
+  for (const answer of old) await deleteAnswerRow(ctx, answer);
   return { ...FINISHED, more: old.length === ANSWER_PURGE_PAGE };
 }
 

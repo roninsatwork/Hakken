@@ -4,23 +4,18 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import {
-  ANSWER_PART_BYTES,
-  MAX_ANSWER_BYTES,
-  moveAnswersOffRequests,
-  splitAnswer,
-  storePullAnswer,
-  utf8Length,
-} from "./seoPullAnswers";
+import { storedAnswer } from "@/src/test/storedAnswer";
+import { ANSWER_PART_BYTES, MAX_ANSWER_BYTES, moveAnswersOffRequests, storePullAnswer, utf8Length } from "./seoPullAnswers";
 
 /**
  * DataForSEO's answers, kept apart from the requests that bought them.
  *
  * What must hold: an answer never sits on its request, so reading requests
  * never reads answers — kept there, one company's answers came to more than a
- * function may read, and its collection could never close (2026-09-25). The
- * parse still finds every answer, old or new; the move takes the old ones
- * across without losing any; and the sweep clears them after their time.
+ * function may read, and its collection could never close (2026-09-25). Each
+ * is a file, its row a pointer (core-data plan §6.5, N7); the parse still
+ * finds every answer, a file or rows kept before; the sweep clears them after
+ * their time, files and all; and a file no request took is never left behind.
  */
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
@@ -40,27 +35,57 @@ async function request(t: Harness, fields: { status: "SUBMITTED" | "READY"; resu
 const answersOf = (t: Harness, pullId: Id<"seoDataPulls">) =>
   t.run(async (ctx) => await ctx.db.query("seoPullAnswers").withIndex("by_pull", (q) => q.eq("pullId", pullId)).collect());
 
+
+
+/** What a stored file holds, or null once it has gone. */
+const fileText = (t: Harness, file: Id<"_storage">) => t.run(async (ctx) => {
+  const blob = await ctx.storage.get(file);
+  return blob ? await blob.text() : null;
+});
+
+/** An answer as filing reads it: its file's text, or its parts joined. */
+async function parsed(t: Harness, pullId: Id<"seoDataPulls">): Promise<string | null> {
+  const read = await t.query(internal.seoCollectionParse.getPullForParse, { pullId });
+  const answer = read?.answer ?? null;
+  if (!answer) return null;
+  return "parts" in answer ? answer.parts.join("") : await fileText(t, answer.file);
+}
+
 describe("an answer, kept apart from its request", () => {
-  test("is stored on its own when it arrives, and the parse still reads it", async () => {
+  test("is stored as a file when it arrives, its row a pointer, and the parse reads it", async () => {
     const t = harness();
     const pullId = await request(t, { status: "SUBMITTED" });
+    const answer = await storedAnswer(t, "{\"items\":[1,2,3]}");
 
-    await t.mutation(internal.seoCollectionQueue.settleSeoResult, { pullId, resultParts: ["{\"items\":[1,2,3]}"] });
+    await t.mutation(internal.seoCollectionQueue.settleSeoResult, { pullId, resultFile: answer });
 
     const pull = await t.run(async (ctx) => await ctx.db.get(pullId));
     expect(pull).toMatchObject({ status: "READY" });
     expect(pull?.resultJson).toBeUndefined();
-    expect((await answersOf(t, pullId)).map((answer) => answer.resultJson)).toEqual(["{\"items\":[1,2,3]}"]);
-    expect(await t.query(internal.seoCollectionParse.getPullForParse, { pullId })).toMatchObject({
-      resultParts: ["{\"items\":[1,2,3]}"],
-    });
+    expect((await answersOf(t, pullId)).map((row) => [row.file, row.bytes, row.resultJson])).toEqual([[answer.file, 17, undefined]]);
+    expect(await parsed(t, pullId)).toBe("{\"items\":[1,2,3]}");
+  });
+
+  test("a file its request did not take goes — a second answer to one settled — and one an answer names stays", async () => {
+    const t = harness();
+    const pullId = await request(t, { status: "SUBMITTED" });
+    const first = await storedAnswer(t, "[1]");
+    const second = await storedAnswer(t, "[2]");
+
+    await t.mutation(internal.seoCollectionQueue.settleSeoResult, { pullId, resultFile: first });
+    // The pingback and the hourly sweep both reached it; and a retried record of the first.
+    await t.mutation(internal.seoCollectionQueue.settleSeoResult, { pullId, resultFile: second });
+    await t.mutation(internal.seoCollectionQueue.settleSeoResult, { pullId, resultFile: first });
+
+    expect(await fileText(t, first.file)).toBe("[1]");
+    expect(await fileText(t, second.file)).toBeNull();
   });
 
   test("an answer still on its request is read there until the move", async () => {
     const t = harness();
     const pullId = await request(t, { status: "READY", resultJson: "{\"old\":true}" });
 
-    expect(await t.query(internal.seoCollectionParse.getPullForParse, { pullId })).toMatchObject({ resultParts: ["{\"old\":true}"] });
+    expect(await t.query(internal.seoCollectionParse.getPullForParse, { pullId })).toMatchObject({ answer: { parts: ["{\"old\":true}"] } });
   });
 
   test("the move takes every answer across and empties its request, and is safe to run twice", async () => {
@@ -82,70 +107,74 @@ describe("an answer, kept apart from its request", () => {
     expect((await t.run(async (ctx) => await ctx.db.get(carrying)))?.resultJson).toBeUndefined();
     expect((await answersOf(t, carrying)).map((answer) => answer.resultJson)).toEqual(["{\"old\":true}"]);
     expect(await answersOf(t, empty)).toEqual([]);
-    expect(await t.query(internal.seoCollectionParse.getPullForParse, { pullId: carrying })).toMatchObject({ resultParts: ["{\"old\":true}"] });
+    expect(await t.query(internal.seoCollectionParse.getPullForParse, { pullId: carrying })).toMatchObject({ answer: { parts: ["{\"old\":true}"] } });
   });
 
-  test("the sweep clears answers past their thirty days and keeps the rest", async () => {
+  test("the sweep clears answers past their days, files and all, and keeps the rest", async () => {
     const t = harness();
     const oldPull = await request(t, { status: "READY" });
     const newPull = await request(t, { status: "READY" });
+    const oldFile = await storedAnswer(t, "{}");
     await t.run(async (ctx) => {
-      await ctx.db.insert("seoPullAnswers", { pullId: oldPull, resultJson: "{}", storedAt: Date.now() - 31 * DAY_MS });
+      await ctx.db.insert("seoPullAnswers", { pullId: oldPull, file: oldFile.file, bytes: 2, storedAt: Date.now() - 31 * DAY_MS });
       await ctx.db.insert("seoPullAnswers", { pullId: newPull, resultJson: "{}", storedAt: Date.now() - DAY_MS });
     });
 
     await t.action(internal.seoCollectionSweep.sweepSeoCollection, {});
 
     expect(await answersOf(t, oldPull)).toEqual([]);
+    expect(await fileText(t, oldFile.file)).toBeNull();
     expect(await answersOf(t, newPull)).toHaveLength(1);
     // The request itself stays: it is the cost record.
     expect(await t.run(async (ctx) => await ctx.db.get(oldPull))).not.toBeNull();
   });
 });
 
-describe("an answer too large for one row", () => {
-  test("is cut into parts of at most a row's size, never inside a character, and joins back exactly", () => {
-    // Every width of character UTF-8 has, a four-byte one astride the first cut.
-    const text = `${"a".repeat(ANSWER_PART_BYTES - 2)}😀${"é日".repeat(300_000)}x`;
-    const parts = splitAnswer(text);
-
-    expect(parts).not.toBeNull();
-    expect(parts!.join("")).toBe(text);
-    expect(parts!.length).toBe(3);
-    for (const part of parts!) {
-      expect(new TextEncoder().encode(part).length).toBeLessThanOrEqual(ANSWER_PART_BYTES);
-      expect(utf8Length(part)).toBe(new TextEncoder().encode(part).length);
-      // No surrogate pair broken across a cut.
-      expect(/^[\uDC00-\uDFFF]|[\uD800-\uDBFF]$/.test(part)).toBe(false);
+describe("an answer kept in rows before 2026-10-08", () => {
+  const inParts = (t: Harness, pullId: Id<"seoDataPulls">, parts: string[]) => t.run(async (ctx) => {
+    for (const [part, resultJson] of parts.entries()) {
+      await ctx.db.insert("seoPullAnswers", { pullId, resultJson, storedAt: Date.now(), part, parts: parts.length });
     }
-    expect(splitAnswer("{}")).toEqual(["{}"]);
   });
 
-  test("past the ceiling, is not kept at all", () => {
-    expect(splitAnswer("a".repeat(MAX_ANSWER_BYTES))).toHaveLength(4);
-    expect(splitAnswer("a".repeat(MAX_ANSWER_BYTES + 1))).toBeNull();
-  });
-
-  test("is stored in numbered parts, read back in order, and replaced whole", async () => {
+  test("is read back in order, and replaced whole by a file", async () => {
     const t = harness();
-    const pullId = await request(t, { status: "SUBMITTED" });
+    const pullId = await request(t, { status: "READY" });
+    await inParts(t, pullId, ["[{\"a\":", "1},{\"b\"", ":2}]"]);
 
-    await t.mutation(internal.seoCollectionQueue.settleSeoResult, { pullId, resultParts: ["[{\"a\":", "1},{\"b\"", ":2}]"] });
-
-    const rows = await answersOf(t, pullId);
-    expect(rows.map((row) => [row.part, row.parts]).sort()).toEqual([[0, 3], [1, 3], [2, 3]]);
     expect(await t.query(internal.seoCollectionParse.getPullForParse, { pullId })).toMatchObject({
-      resultParts: ["[{\"a\":", "1},{\"b\"", ":2}]"],
+      answer: { parts: ["[{\"a\":", "1},{\"b\"", ":2}]"] },
     });
 
-    await t.run(async (ctx) => await storePullAnswer(ctx, pullId, ["{}"]));
-    expect((await answersOf(t, pullId)).map((row) => [row.resultJson, row.part])).toEqual([["{}", undefined]]);
+    const file = await storedAnswer(t, "{}");
+    await t.run(async (ctx) => await storePullAnswer(ctx, pullId, file));
+    expect((await answersOf(t, pullId)).map((row) => [row.file, row.resultJson, row.part])).toEqual([[file.file, undefined, undefined]]);
+  });
+
+  test("is moved into a file, keeping its age, and a second move changes nothing", async () => {
+    const t = harness();
+    const whole = await request(t, { status: "READY" });
+    const split = await request(t, { status: "READY" });
+    const storedAt = Date.now() - 2 * DAY_MS;
+    await t.run(async (ctx) => await ctx.db.insert("seoPullAnswers", { pullId: whole, resultJson: "{\"whole\":1}", storedAt }));
+    await inParts(t, split, ["[1,", "2]"]);
+
+    await t.action(internal.seoPullAnswers.moveAnswersToFiles, {});
+    const moved = await t.run(async (ctx) => await ctx.db.query("seoPullAnswers").collect());
+    await t.action(internal.seoPullAnswers.moveAnswersToFiles, {});
+
+    expect(await t.run(async (ctx) => await ctx.db.query("seoPullAnswers").collect())).toEqual(moved);
+    expect(moved.map((row) => [row.resultJson, row.part, Boolean(row.file)])).toEqual([[undefined, undefined, true], [undefined, undefined, true]]);
+    expect((await answersOf(t, whole))[0].storedAt).toBe(storedAt);
+    expect(await parsed(t, whole)).toBe("{\"whole\":1}");
+    expect(await parsed(t, split)).toBe("[1,2]");
+    expect(await t.run(async (ctx) => (await ctx.db.system.query("_storage").collect()).length)).toBe(2);
   });
 
   test("missing a part — the purge takes a few rows at a time — reads as no answer, never half of one", async () => {
     const t = harness();
-    const pullId = await request(t, { status: "SUBMITTED" });
-    await t.mutation(internal.seoCollectionQueue.settleSeoResult, { pullId, resultParts: ["[1,", "2,", "3]"] });
+    const pullId = await request(t, { status: "READY" });
+    await inParts(t, pullId, ["[1,", "2,", "3]"]);
 
     await t.run(async (ctx) => {
       const middle = (await ctx.db.query("seoPullAnswers").withIndex("by_pull", (q) => q.eq("pullId", pullId)).collect())
@@ -153,7 +182,7 @@ describe("an answer too large for one row", () => {
       await ctx.db.delete(middle!._id);
     });
 
-    expect(await t.query(internal.seoCollectionParse.getPullForParse, { pullId })).toMatchObject({ resultParts: null });
+    expect(await t.query(internal.seoCollectionParse.getPullForParse, { pullId })).toMatchObject({ answer: null });
   });
 });
 
@@ -181,7 +210,7 @@ describe("a large answer, as it arrives", () => {
     tag: "tag-1", taskId: "task-1", status: "SUBMITTED", costUsd: 0.05, sandbox: false, submittedAt: Date.now(),
   }));
 
-  test("over a megabyte, it is kept whole in parts and filed — it used to be dropped, paid for", async () => {
+  test("over a megabyte, it is kept whole and filed — it used to be dropped, paid for", async () => {
     const t = harness();
     const pullId = await submitted(t);
     const result = [{ items: volumes(3_000) }];
@@ -194,9 +223,7 @@ describe("a large answer, as it arrives", () => {
     const pull = await t.run(async (ctx) => await ctx.db.get(pullId));
     expect(pull).toMatchObject({ status: "READY" });
     expect(pull?.rawTruncated).toBeUndefined();
-    const read = await t.query(internal.seoCollectionParse.getPullForParse, { pullId });
-    expect(read?.resultParts?.length).toBe(Math.ceil(size / ANSWER_PART_BYTES));
-    expect(JSON.parse(read!.resultParts!.join(""))).toEqual(result);
+    expect(JSON.parse((await parsed(t, pullId))!)).toEqual(result);
     const jobs = await t.run(async (ctx) => await ctx.db.system.query("_scheduled_functions").collect());
     expect(jobs.filter((job) => job.name.includes("parseSeoResult"))).toHaveLength(1);
   });
@@ -245,9 +272,9 @@ describe("a large answer, as it arrives", () => {
     expect(pull).toMatchObject({ status: "READY" });
     expect(pull?.rowsLeftOff).toBeGreaterThan(0);
     expect(pull?.rowsLeftOff).toBeLessThan(1_000);
-    const read = await t.query(internal.seoCollectionParse.getPullForParse, { pullId });
-    const kept = JSON.parse(read!.resultParts!.join("")) as Array<{ packedItems: { rows: unknown[]; dropped: number } }>;
+    const text = (await parsed(t, pullId))!;
+    const kept = JSON.parse(text) as Array<{ packedItems: { rows: unknown[]; dropped: number } }>;
     expect(kept[0].packedItems.rows.length + (pull?.rowsLeftOff ?? 0)).toBe(1_000);
-    expect(utf8Length(read!.resultParts!.join(""))).toBeLessThanOrEqual(MAX_ANSWER_BYTES);
+    expect(utf8Length(text)).toBeLessThanOrEqual(MAX_ANSWER_BYTES);
   });
 });

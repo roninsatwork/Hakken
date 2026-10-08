@@ -5,6 +5,7 @@ import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
+import { isAnswerFile } from "./seoPullAnswers";
 import { ABANDONED_UPLOAD_MS, UPLOAD_TICKET_MS, UPLOAD_TIMEOUT_MS, digestUploadToken, normalizeUploadType, uploadByteLimit, validateUploadForPurpose, type UploadPurpose } from "./uploadPolicy";
 
 type Owner = { userId?: Id<"users">; companyId?: Id<"companies">; threadId?: Id<"threads"> };
@@ -125,7 +126,9 @@ export const cleanup = internalMutation({
     const control = await ctx.db.query("uploadControl").withIndex("by_key", q => q.eq("key", "gateway")).unique();
     if (!control || control.enforcedSince >= now - ABANDONED_UPLOAD_MS) return null;
     // Also covers a process dying after storage accepted bytes but before finish
-    // recorded the returned id. All production writes must use this gateway.
+    // recorded the returned id. All production uploads must use this gateway;
+    // the one file the server stores itself, DataForSEO's answer, is kept
+    // while an answer names it (`seoPullAnswers.ts`).
     // A cursor belongs to its original query bounds; keep the upper bound
     // fixed across ticks until this pass finishes.
     const scanBefore = control.storageScanBefore ?? now - ABANDONED_UPLOAD_MS;
@@ -133,7 +136,7 @@ export const cleanup = internalMutation({
       .paginate({ cursor: control.storageCursor ?? null, numItems: 100 });
     for (const file of page.page) {
       const reservation = await ctx.db.query("uploadReservations").withIndex("by_storage", q => q.eq("storageId", file._id)).unique();
-      if (!reservation) await ctx.storage.delete(file._id);
+      if (!reservation && !(await isAnswerFile(ctx, file._id))) await ctx.storage.delete(file._id);
     }
     await ctx.db.patch(control._id, {
       storageCursor: page.isDone ? undefined : page.continueCursor,

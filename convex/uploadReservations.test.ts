@@ -144,6 +144,24 @@ describe("single-use owned uploads", () => {
     expect(await t.run(ctx => ctx.db.system.get(attached.storageId))).not.toBeNull();
     expect(await t.run(ctx => ctx.db.system.get(legacy))).not.toBeNull();
   });
+  test("cleanup keeps the file a DataForSEO answer names, and deletes one no answer took", async () => {
+    vi.useFakeTimers();
+    const { t, mint } = await setup();
+    await mint();
+    const { kept, untaken } = await t.run(async ctx => {
+      const pullId = await ctx.db.insert("seoDataPulls", {
+        operationId: "domain_ranked_keywords", family: "DataForSEO Labs", mode: "QUEUED", taskArgsJson: "{}",
+        tag: "answer", costUsd: 0, sandbox: false, submittedAt: Date.now(), status: "READY",
+      });
+      const kept = await ctx.storage.store(new Blob(["{}"]));
+      await ctx.db.insert("seoPullAnswers", { pullId, file: kept, bytes: 2, storedAt: Date.now() });
+      return { kept, untaken: await ctx.storage.store(new Blob(["[]"])) };
+    });
+    vi.advanceTimersByTime(ABANDONED_UPLOAD_MS + 1000);
+    await t.mutation(internal.uploadReservations.cleanup, {});
+    expect(await t.run(ctx => ctx.db.system.get(kept))).not.toBeNull();
+    expect(await t.run(ctx => ctx.db.system.get(untaken))).toBeNull();
+  });
   test("orphan sweep resumes with fixed query bounds across cron ticks", async () => {
     vi.useFakeTimers();
     const { t, mint } = await setup();

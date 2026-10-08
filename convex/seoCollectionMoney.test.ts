@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
+import { storedAnswer } from "@/src/test/storedAnswer";
 import { RESULT_GAVE_UP, RETRY_RUN_ENDED, SEND_UNCERTAIN } from "./seoCollectionQueue";
 import { dataForSeoCodeKind } from "./dataForSeoRest";
 import { reusableByKey } from "./seoCollection";
@@ -533,7 +534,7 @@ describe("counting", () => {
     const pullId = await request(t, { operationId: "serp_google_organic", mode: "QUEUED", status: "CLAIMED", cycleId });
 
     await t.mutation(internal.seoCollectionQueue.settleSeoSend, { pullId, taskId: "task-1", costUsd: 0.002, sandbox: false, ready: false });
-    await t.mutation(internal.seoCollectionQueue.settleSeoResult, { pullId, resultParts: ["{}"] });
+    await t.mutation(internal.seoCollectionQueue.settleSeoResult, { pullId, resultFile: await storedAnswer(t, "{}") });
 
     expect(await t.run(async (ctx) => await ctx.db.get(cycleId))).toMatchObject({ sentCount: 1, readyCount: 1, failedCount: 0 });
     const platform = await t.run(async (ctx) => (await ctx.db.query("seoDayRollups").collect()).find((row) => row.scopeKey === "platform"));

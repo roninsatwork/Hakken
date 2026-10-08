@@ -4,6 +4,7 @@ import { internalAction, internalMutation, internalQuery } from "./_generated/se
 import { internal } from "./_generated/api";
 import { appError } from "./utils/appError";
 import type { TableNames } from "./_generated/dataModel";
+import { deleteAnswerRow } from "./seoPullAnswers";
 
 /**
  * Clear what DataForSEO sent back, so test databases do not bloat.
@@ -153,7 +154,14 @@ export const deletePage = internalMutation({
   returns: v.number(),
   handler: async (ctx, args) => {
     assertAllowed();
-    const rows = await ctx.db.query(collectedTable(args.table)).take(args.page);
+    const table = collectedTable(args.table);
+    // An answer's file goes with its row (`seoPullAnswers.ts`).
+    if (table === "seoPullAnswers") {
+      const answers = await ctx.db.query("seoPullAnswers").take(args.page);
+      for (const answer of answers) await deleteAnswerRow(ctx, answer);
+      return answers.length;
+    }
+    const rows = await ctx.db.query(table).take(args.page);
     for (const row of rows) await ctx.db.delete(row._id);
     return rows.length;
   },

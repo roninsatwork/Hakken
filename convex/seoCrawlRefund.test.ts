@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import type { MutationCtx } from "./_generated/server";
 import schema from "./schema";
+import { storedAnswer } from "@/src/test/storedAnswer";
 import { creditCycleLine } from "./creditHooks";
 import { crawlRefundUsd, recordCrawlRefund } from "./seoCrawlRefund";
 
@@ -64,7 +65,7 @@ describe("a crawl's refund", () => {
     // Charged $1.50 when it is set; its summary comes back finished, having crawled seven pages.
     await t.mutation(internal.seoCollectionQueue.settleSeoSend, { pullId, runId, taskId: "task-crawl", costUsd: 1.5, sandbox: false, ready: false });
     const summary = [{ crawl_progress: "finished", crawl_status: { max_crawl_pages: 1000, pages_crawled: 7 } }];
-    await t.mutation(internal.seoCollectionQueue.settleSeoResult, { pullId, resultParts: [JSON.stringify(summary)], rowsReturned: 7, costUsd: 0 });
+    await t.mutation(internal.seoCollectionQueue.settleSeoResult, { pullId, resultFile: await storedAnswer(t, JSON.stringify(summary)), rowsReturned: 7, costUsd: 0 });
 
     const kept = 7 * 0.0015;
     await t.run(async (raw) => {

@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { PARSE_FAILED } from "./seoFiling";
-import { readPullAnswerParts } from "./seoPullAnswers";
+import { answerText, readPullAnswer } from "./seoPullAnswers";
 
 import { internalAction, internalMutation, internalQuery, type ActionCtx, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -370,15 +370,15 @@ export type PullForParse = {
 };
 
 /**
- * A request as filing reads it, its answer joined from the parts it is kept
- * in. Joined here, in the action: passed between functions, an answer is only
- * ever its parts, none larger than a document may be (`seoPullAnswers.ts`).
+ * A request as filing reads it, its answer read here, in the action: from its
+ * file — only an action reads one — or joined from the parts of one kept
+ * before in rows (`seoPullAnswers.ts`).
  */
 export async function readPullForParse(ctx: ActionCtx, pullId: Id<"seoDataPulls">): Promise<PullForParse | null> {
   const pull = await ctx.runQuery(internal.seoCollectionParse.getPullForParse, { pullId });
   if (!pull) return null;
-  const { resultParts, ...rest } = pull;
-  return { ...rest, resultJson: resultParts ? resultParts.join("") : null };
+  const { answer, ...rest } = pull;
+  return { ...rest, resultJson: await answerText(ctx, answer) };
 }
 
 export const getPullForParse = internalQuery({
@@ -387,7 +387,7 @@ export const getPullForParse = internalQuery({
     operationId: v.string(),
     websiteId: v.union(v.id("websites"), v.null()),
     target: v.union(v.string(), v.null()),
-    resultParts: v.union(v.array(v.string()), v.null()),
+    answer: v.union(v.object({ file: v.id("_storage") }), v.object({ parts: v.array(v.string()) }), v.null()),
     taskArgsJson: v.union(v.string(), v.null()),
     completedAt: v.union(v.number(), v.null()),
     /** The day its results belong to: its run's (`runDayOf`). */
@@ -402,7 +402,7 @@ export const getPullForParse = internalQuery({
       operationId: row.operationId,
       websiteId: row.websiteId ?? null,
       target: row.target ?? null,
-      resultParts: await readPullAnswerParts(ctx, row),
+      answer: await readPullAnswer(ctx, row),
       taskArgsJson: row.taskArgsJson ?? null,
       completedAt: row.completedAt ?? null,
       runDay: await runDayOf(ctx, row),

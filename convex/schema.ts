@@ -572,20 +572,27 @@ export default defineSchema({
    *
    * Kept so a parser bug can be fixed and the answers filed again rather than
    * bought again; for `SEO_RAW_RETENTION_DAYS`, then cleared by the hourly
-   * sweep. Not in file storage: that is swept of anything without an upload
-   * reservation, and a raw answer parked there would be gone within the day.
+   * sweep. The answer itself is a file in Convex's file storage (`file`,
+   * core-data-normalisation-plan.md §6.5, N7), the row its pointer: the
+   * database's largest table, 33.5 MB on dev, and its largest writes. The
+   * upload sweep keeps a file an answer names (`uploadReservations.cleanup`).
    */
   seoPullAnswers: defineTable({
     pullId: v.id("seoDataPulls"),
-    /** The answer as stored (`dataForSeoSlim.ts`), or one part of it. */
-    resultJson: v.string(),
+    /** The answer as stored (`dataForSeoSlim.ts`), whole. */
+    file: v.optional(v.id("_storage")),
+    /** Its size in bytes. */
+    bytes: v.optional(v.number()),
+    /** An answer kept in the row before 2026-10-08, or one part of it: read until it expires or is moved. */
+    resultJson: v.optional(v.string()),
     storedAt: v.number(),
     /** Which part this is, from 0, and of how many — absent on an answer kept whole in one row. */
     part: v.optional(v.number()),
     parts: v.optional(v.number()),
   })
     .index("by_pull", ["pullId"])
-    .index("by_stored", ["storedAt"]),
+    .index("by_stored", ["storedAt"])
+    .index("by_file", ["file"]),
 
   /**
    * What somebody means when they type one search.

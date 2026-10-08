@@ -13,7 +13,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { requestRunReport, scheduleLateRunReports } from "./seoRunReports";
 import { recordOperationCost } from "./websiteTrackingStats";
 import { appendRunStep } from "./agentRunStepWriter";
-import { storePullAnswer } from "./seoPullAnswers";
+import { dropUntakenAnswer, storePullAnswer } from "./seoPullAnswers";
 import { creditCycleFinished, creditPullSettled } from "./creditHooks";
 import { holdToLimits, tallyWebsiteSpend } from "./seoCollectionLimits";
 import { recordCrawlRefund } from "./seoCrawlRefund";
@@ -318,11 +318,11 @@ export async function failUncertainSend(
 
 /**
  * An answer as the action kept it (`keepAnswer` in `seoCollectionActions.ts`):
- * its parts, each no larger than a document may be; whether it was too large
- * to keep at all; and how many rows were left off the end of a list.
+ * the file it stored and its size; whether it was too large to keep at all;
+ * and how many rows were left off the end of a list.
  */
 const keptAnswer = {
-  resultParts: v.optional(v.array(v.string())),
+  resultFile: v.optional(v.object({ file: v.id("_storage"), bytes: v.number() })),
   rawTruncated: v.optional(v.boolean()),
   rowsLeftOff: v.optional(v.number()),
   /** Rows or pages the answer brought back, which credits count (finish-off-plan.md, item 3). */
@@ -403,8 +403,8 @@ async function settleSend(
   runId: Id<"agentRuns"> | undefined,
 ): Promise<void> {
   const row = await ctx.db.get(args.pullId);
-  // Already recorded — a retried record after the first one landed.
-  if (!row || (row.status !== "CLAIMED" && row.status !== "PENDING")) return;
+  // Already recorded — a retried record after the first one landed: its file is the answer's, or goes.
+  if (!row || (row.status !== "CLAIMED" && row.status !== "PENDING")) return await dropUntakenAnswer(ctx, args.resultFile);
 
   const now = Date.now();
   const status = args.error ? "FAILED" : args.ready ? "READY" : "SUBMITTED";
@@ -423,7 +423,7 @@ async function settleSend(
     ...(status === "SUBMITTED" ? {} : { completedAt: now }),
   });
   // Kept apart from the request, so reading requests never reads answers.
-  if (args.resultParts) await storePullAnswer(ctx, args.pullId, args.resultParts);
+  if (args.resultFile) await storePullAnswer(ctx, args.pullId, args.resultFile);
 
   await countSettled(ctx, row, status, args.costUsd, "SEND");
   // What this operation really costs, for the per-row prices on the Tracking
@@ -432,7 +432,7 @@ async function settleSend(
   if (runId) await recordCollectorCall(ctx, runId, row, status, args.costUsd, args.error);
   // Filed from here, in the same transaction that records the answer: filed
   // once, and never lost to a crash between recording and scheduling.
-  if (status === "READY" && args.resultParts) await scheduleFiling(ctx, row);
+  if (status === "READY" && args.resultFile) await scheduleFiling(ctx, row);
 }
 
 /**
@@ -854,11 +854,13 @@ export const settleSeoResult = internalMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const row = await ctx.db.get(args.pullId);
-    if (!row) return null;
     // A row already settled is left alone. The pingback and the hourly sweep
     // can both reach the same task, and the second one to arrive must not
-    // double-count it in the cycle or the rollup.
-    if (row.status === "READY" || row.status === "FAILED") return null;
+    // double-count it in the cycle or the rollup — nor leave its stored file behind.
+    if (!row || row.status === "READY" || row.status === "FAILED") {
+      await dropUntakenAnswer(ctx, args.resultFile);
+      return null;
+    }
 
     const now = Date.now();
     const status = args.error ? "FAILED" : "READY";
@@ -872,12 +874,12 @@ export const settleSeoResult = internalMutation({
       // Answered, or given a definite answer: the waiting is over.
       lastFetch: undefined,
     });
-    if (args.resultParts) await storePullAnswer(ctx, args.pullId, args.resultParts);
+    if (args.resultFile) await storePullAnswer(ctx, args.pullId, args.resultFile);
 
     await countSettled(ctx, row, status, args.costUsd ?? 0, "RESULT");
     // A finished crawl's pages not crawled, given back by DataForSEO (finish-off-plan.md, item 5).
     if (status === "READY") await recordCrawlRefund(ctx, row._id);
-    if (status === "READY" && args.resultParts) await scheduleFiling(ctx, row);
+    if (status === "READY" && args.resultFile) await scheduleFiling(ctx, row);
     return null;
   },
 });
