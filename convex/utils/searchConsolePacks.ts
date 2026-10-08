@@ -10,6 +10,8 @@
  * Google's, which a plain average of averages is not.
  */
 
+import { appError } from "./appError";
+
 /** Rows in one part of a kept list: a Convex record holds 1MB at most, and an array 8,192 items. */
 export const PART_ROWS = 2_000;
 
@@ -38,14 +40,24 @@ export function fromGoogle(rows: readonly GoogleRow[], pairs: boolean): Row[] {
   }));
 }
 
-export function* rowsOf(packed: Packed): Generator<Row> {
+/** A part as stored: its number columns packed as text (`packNumbers`), or lists. */
+export type StoredPacked = Omit<Packed, "clicks" | "impressions" | "positionSums"> & {
+  clicks: StoredNumbers;
+  impressions: StoredNumbers;
+  positionSums: StoredNumbers;
+};
+
+export function* rowsOf(packed: Packed | StoredPacked): Generator<Row> {
+  const clicks = unpackNumbers(packed.clicks);
+  const impressions = unpackNumbers(packed.impressions);
+  const positionSums = unpackNumbers(packed.positionSums);
   for (let index = 0; index < packed.keys.length; index += 1) {
     yield {
       key: packed.keys[index],
       ...(packed.pages ? { page: packed.pages[index] } : {}),
-      clicks: packed.clicks[index] ?? 0,
-      impressions: packed.impressions[index] ?? 0,
-      positionSum: packed.positionSums[index] ?? 0,
+      clicks: clicks[index] ?? 0,
+      impressions: impressions[index] ?? 0,
+      positionSum: positionSums[index] ?? 0,
     };
   }
 }
@@ -143,6 +155,90 @@ export function bySide(pairs: readonly Row[], side: "query" | "page"): Map<strin
     }
   }
   return new Map([...out].map(([key, { topClicks: _clicks, topImpressions: _impressions, ...summed }]) => [key, summed]));
+}
+
+// ── Whole numbers packed as text ───────────────────────────────────────────
+
+/**
+ * A kept list's columns of whole numbers — clicks, impressions, position
+ * sums, counts, searches a month — stored as text (keep-less-history-plan.md,
+ * part 8; 2026-10-08). Convex keeps every number in nine bytes, and nearly
+ * all of these are small: most of a list's clicks are 0. Each number is
+ * written in base 32, five bits a character, lowest first; its last character
+ * comes from the alphabet's second half, so none needs a separator. 0 to 15
+ * take one character, to 511 two, to 16,383 three. A sign is folded in (−1 is
+ * "not known"); a fraction is rounded — a position sum is a whole number of
+ * places, Google's to a millionth.
+ */
+const DIGITS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_";
+const DIGIT_AT = new Map([...DIGITS].map((digit, at) => [digit, at]));
+
+/** A column of whole numbers as stored: packed text, or a list as kept before 2026-10-08. */
+export type StoredNumbers = string | number[];
+
+export function packNumbers(values: readonly number[]): string {
+  let text = "";
+  for (const value of values) {
+    if (!Number.isFinite(value)) throw appError("INVALID_INPUT", `A kept figure must be a number, not ${value}.`);
+    const whole = Math.round(value);
+    let rest = whole >= 0 ? whole * 2 : -whole * 2 - 1;
+    for (; rest >= 32; rest = Math.floor(rest / 32)) text += DIGITS[rest % 32];
+    text += DIGITS[32 + rest];
+  }
+  return text;
+}
+
+export function unpackNumbers(stored: StoredNumbers): number[] {
+  if (typeof stored !== "string") return stored;
+  const values: number[] = [];
+  let rest = 0;
+  let scale = 1;
+  for (const digit of stored) {
+    const at = DIGIT_AT.get(digit) ?? 0;
+    if (at < 32) {
+      rest += at * scale;
+      scale *= 32;
+      continue;
+    }
+    rest += (at - 32) * scale;
+    values.push(rest % 2 === 0 ? rest / 2 : -(rest + 1) / 2);
+    rest = 0;
+    scale = 1;
+  }
+  return values;
+}
+
+const PACKED_COLUMNS = ["clicks", "impressions", "positionSums", "counts", "volumes"] as const;
+type PackedColumn = (typeof PACKED_COLUMNS)[number];
+
+/** A stored part with its number columns as lists. */
+export type Unpacked<T> = { [K in keyof T]: K extends PackedColumn ? Exclude<T[K], string> : T[K] };
+
+/** A part as stored, read back: its number columns as lists, the rest as it is. */
+export function unpackedPart<T extends Partial<Record<PackedColumn, StoredNumbers>>>(part: T): Unpacked<T> {
+  const out: Record<string, unknown> = { ...part };
+  for (const column of PACKED_COLUMNS) {
+    const stored = part[column];
+    if (stored !== undefined) out[column] = unpackNumbers(stored);
+  }
+  return out as Unpacked<T>;
+}
+
+/** A part's number columns as they are stored: spread over the part when writing it. */
+export function packedColumns(part: {
+  clicks: readonly number[];
+  impressions: readonly number[];
+  positionSums: readonly number[];
+  counts?: readonly number[];
+  volumes?: readonly number[];
+}): { clicks: string; impressions: string; positionSums: string; counts?: string; volumes?: string } {
+  return {
+    clicks: packNumbers(part.clicks),
+    impressions: packNumbers(part.impressions),
+    positionSums: packNumbers(part.positionSums),
+    ...(part.counts ? { counts: packNumbers(part.counts) } : {}),
+    ...(part.volumes ? { volumes: packNumbers(part.volumes) } : {}),
+  };
 }
 
 // ── Days, weeks and months ─────────────────────────────────────────────────

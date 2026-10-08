@@ -865,6 +865,29 @@ heroes' "Build agent-powered products with governance built in".
 (`AssistantComposer.tsx`, `AssistantClientPicker.tsx`, `chat.ts`), so this
 part waits for that work with the rest of the plan.
 
+## Part 8 — what is left, stored smaller (agreed 2026-10-08)
+
+Asked once phases 1 to 7 were in: "are there further optimisations to be
+had at all … without compromising functionality". Two were, and Anthony
+agreed both ("lets do it please - these are good savings"); nothing on screen
+changes in either.
+
+- **8.1 — numbers packed as text.** Convex keeps every number in nine bytes
+  (`getDocumentSize`), and a kept list's clicks, impressions and position
+  sums are nearly all small: most clicks are 0. Packed as base-32 text, a
+  character or two each (`packNumbers`, `utils/searchConsolePacks.ts`), in
+  the daily lines and the ready-made periods (their counts and searches a
+  month too). Every position sum held was a whole number, to a millionth, so
+  nothing is rounded away. Measured first: the measuring tools counted rows
+  as JSON, which reads a number as its digits — morehandles.co.uk's numbers
+  were 7 MB by JSON and 24 MB as stored — so they now count as Convex does,
+  and its Search Console was 83.8 MB, not 69.1.
+- **8.2 — page addresses once, in the ready-made periods too.** A keyword's
+  top page and Pages competing's pages repeat each address in full, about 50
+  characters, where the daily lines already hold a reference
+  (`searchConsolePageRefs.ts`). About 18 MB on morehandles.co.uk. The one
+  cost: sorting a keyword table by its top page reads the page list first.
+
 ## Checked, nothing to change: the raw answers
 
 DataForSEO's answers as they came back (`seoPullAnswers`, 36 MB on dev),

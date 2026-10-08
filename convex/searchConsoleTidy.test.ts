@@ -3,6 +3,7 @@ import { describe, expect, test } from "vitest";
 import { internal } from "./_generated/api";
 import schema from "./schema";
 import { isPageRef } from "./searchConsolePageRefs";
+import { unpackedPart } from "./utils/searchConsolePacks";
 
 /**
  * Search Console's figures kept before 2026-10-05 brought to what is kept
@@ -118,5 +119,32 @@ describe("tidying the figures kept before 2026-10-05", () => {
     expect(await linesOf()).toEqual(["almost there"]);
     const register = await t.run(async (ctx) => (await ctx.db.query("searchConsoleSeen").collect()).filter((row) => row.country === undefined && row.searchType === undefined).map((row) => row.key));
     expect(register).toEqual(["almost there"]);
+  });
+});
+
+describe("numbers packed as text (keep-less-history-plan.md, part 8; 2026-10-08)", () => {
+  test("counts the records kept with lists of numbers and changes nothing, then packs them, each read back the same", async () => {
+    const { t, holdId } = await setup();
+    await t.run(async (ctx) => {
+      await ctx.db.insert("searchConsolePeriods", {
+        companyWebsiteId: holdId, searchType: "web", list: "query", period: "30", which: "NOW", part: 0, from: "2026-08-28", to: NEWEST,
+        keys: ["plumber leeds", "boiler repair"], clicks: [3, 0], impressions: [40, 2], positionSums: [120, 18], counts: [2, 1], volumes: [-1, 90], builtAt: 1,
+      });
+    });
+    const read = () => t.run(async (ctx) => ({
+      lists: await ctx.db.query("searchConsoleLists").collect(),
+      periods: await ctx.db.query("searchConsolePeriods").collect(),
+    }));
+    const before = await read();
+
+    expect(await t.action(internal.searchConsoleTidy.packKeptNumbers, { go: false })).toEqual({ lists: 9, periods: 1 });
+    expect(await read()).toEqual(before);
+    expect(await t.action(internal.searchConsoleTidy.packKeptNumbers, { go: true })).toEqual({ lists: 9, periods: 1 });
+    expect(await t.action(internal.searchConsoleTidy.packKeptNumbers, { go: false })).toEqual({ lists: 0, periods: 0 });
+
+    const after = await read();
+    expect([...after.lists, ...after.periods].every((record) => typeof record.clicks === "string" && typeof record.positionSums === "string")).toBe(true);
+    expect(after.lists.map((record) => unpackedPart(record))).toEqual(before.lists);
+    expect(unpackedPart(after.periods[0])).toEqual(before.periods[0]);
   });
 });

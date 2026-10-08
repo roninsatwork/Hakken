@@ -10,8 +10,12 @@ import {
   fromGoogle,
   monthStart,
   pack,
+  packNumbers,
+  packedColumns,
   positionOf,
   rowsOf,
+  unpackNumbers,
+  unpackedPart,
   weekStart,
   type Row,
 } from "./searchConsolePacks";
@@ -48,6 +52,34 @@ describe("packing", () => {
     expect(parts.every((part) => part.pages?.length === part.keys.length)).toBe(true);
     expect(parts[0].clicks[0]).toBe(PART_ROWS * 2);
     expect(pack([], true)).toEqual([{ keys: [], pages: [], clicks: [], impressions: [], positionSums: [] }]);
+  });
+});
+
+describe("whole numbers packed as text (keep-less-history-plan.md, part 8)", () => {
+  test("numbers read back as they went in: small ones a character each, large ones and not known (−1) too", () => {
+    const values = [0, 1, 15, 16, 511, 512, 16_383, 16_384, 2_500_000_000, -1, 7, 0];
+    const text = packNumbers(values);
+    expect(unpackNumbers(text)).toEqual(values);
+    expect(packNumbers([0, 0, 15, 1])).toHaveLength(4);
+    expect(packNumbers([16, 511])).toHaveLength(4);
+    expect(packNumbers([])).toBe("");
+    expect(unpackNumbers("")).toEqual([]);
+  });
+
+  test("a position sum is rounded to its whole number of places; anything not a number is refused", () => {
+    expect(unpackNumbers(packNumbers([13.000000000000002, 41.99999999]))).toEqual([13, 42]);
+    expect(() => packNumbers([Number.NaN])).toThrow();
+    expect(() => packNumbers([Number.POSITIVE_INFINITY])).toThrow();
+  });
+
+  test("a part's number columns are stored as text and read back as lists; one kept as lists is read as it is", () => {
+    const stored = { keys: ["a", "b"], ...packedColumns({ clicks: [3, 0], impressions: [40, 2], positionSums: [120, 18], volumes: [-1, 90] }) };
+    expect(stored).toMatchObject({ clicks: expect.any(String), volumes: expect.any(String) });
+    expect(stored).not.toHaveProperty("counts");
+    expect(unpackedPart(stored)).toEqual({ keys: ["a", "b"], clicks: [3, 0], impressions: [40, 2], positionSums: [120, 18], volumes: [-1, 90] });
+    expect([...rowsOf(stored)].map((row) => row.positionSum)).toEqual([120, 18]);
+    const asLists = { keys: ["a"], clicks: [1], impressions: [2], positionSums: [3] };
+    expect(unpackedPart(asLists)).toEqual(asLists);
   });
 });
 

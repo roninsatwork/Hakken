@@ -5,8 +5,8 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { isPageRef, turnKeptStep } from "./searchConsolePageRefs";
 import { dropOldLinesOf } from "./searchConsoleRollups";
-import { firstDayKeptFor } from "./utils/searchConsolePacks";
-import { SEARCH_TYPES, searchTypeValidator } from "./searchConsoleSchema";
+import { firstDayKeptFor, packedColumns, unpackedPart } from "./utils/searchConsolePacks";
+import { SEARCH_TYPES, searchTypeValidator, storedNumbersValidator } from "./searchConsoleSchema";
 import { LISTS_OF } from "./searchConsoleApi";
 import { keptSearchesOf } from "./searchConsoleKeep";
 
@@ -190,9 +190,9 @@ export const pairRecordsPart = internalQuery({
       recordId: v.id("searchConsoleLists"),
       keys: v.array(v.string()),
       pages: v.optional(v.array(v.string())),
-      clicks: v.array(v.number()),
-      impressions: v.array(v.number()),
-      positionSums: v.array(v.number()),
+      clicks: storedNumbersValidator,
+      impressions: storedNumbersValidator,
+      positionSums: storedNumbersValidator,
     })),
     continueCursor: v.string(),
     isDone: v.boolean(),
@@ -229,12 +229,11 @@ export const keepRecordLines = internalMutation({
       return null;
     }
     const pick = <T,>(values: readonly T[]) => args.lines.map((line) => values[line]);
+    const lists = unpackedPart(record);
     await ctx.db.patch(record._id, {
       keys: pick(record.keys),
       ...(record.pages ? { pages: pick(record.pages) } : {}),
-      clicks: pick(record.clicks),
-      impressions: pick(record.impressions),
-      positionSums: pick(record.positionSums),
+      ...packedColumns({ clicks: pick(lists.clicks), impressions: pick(lists.impressions), positionSums: pick(lists.positionSums) }),
     });
     return null;
   },
@@ -617,6 +616,55 @@ export const keptSize = internalAction({
 });
 
 // ---------------------------------------------------------------------------
+// Numbers packed as text (keep-less-history-plan.md, part 8; 2026-10-08)
+// ---------------------------------------------------------------------------
+
+/** Kept records converted a step: each a few hundred KB at most. */
+const PACK_PER_STEP = 8;
+
+/** One step through a table: its records kept with lists of numbers counted, and packed as text when going ahead. */
+export const packNumbersStep = internalMutation({
+  args: { table: v.union(v.literal("searchConsoleLists"), v.literal("searchConsolePeriods")), go: v.boolean(), cursor: v.union(v.string(), v.null()) },
+  returns: stepValidator,
+  handler: async (ctx, args) => {
+    const paging = { cursor: args.cursor, numItems: PACK_PER_STEP };
+    const page = args.table === "searchConsoleLists"
+      ? await ctx.db.query("searchConsoleLists").paginate(paging)
+      : await ctx.db.query("searchConsolePeriods").paginate(paging);
+    let found = 0;
+    for (const record of page.page) {
+      if (typeof record.clicks === "string") continue;
+      found += 1;
+      if (args.go) await ctx.db.patch(record._id, packedColumns(unpackedPart(record)));
+    }
+    return { found, continueCursor: page.continueCursor, isDone: page.isDone };
+  },
+});
+
+/**
+ * Every kept record's numbers packed as text: counted, and converted with
+ * `go`. Once on a deployment holding records written before 2026-10-08 — the
+ * builds write packed since, and the periods are rebuilt each night anyway.
+ */
+export const packKeptNumbers = internalAction({
+  args: { go: v.boolean() },
+  returns: v.object({ lists: v.number(), periods: v.number() }),
+  handler: async (ctx, args) => {
+    const found = { lists: 0, periods: 0 };
+    for (const table of ["searchConsoleLists", "searchConsolePeriods"] as const) {
+      for (let cursor: string | null = null; ;) {
+        const step: { found: number; continueCursor: string; isDone: boolean } =
+          await ctx.runMutation(internal.searchConsoleTidy.packNumbersStep, { table, go: args.go, cursor });
+        found[table === "searchConsoleLists" ? "lists" : "periods"] += step.found;
+        if (step.isDone) break;
+        cursor = step.continueCursor;
+      }
+    }
+    return found;
+  },
+});
+
+// ---------------------------------------------------------------------------
 // What keeping only a website's top searches would keep (a question, 2026-10-05)
 // ---------------------------------------------------------------------------
 
@@ -630,7 +678,7 @@ export const searchesPart = internalQuery({
       .withIndex("by_hold_country_type_list_period", (q) => q
         .eq("companyWebsiteId", args.holdId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", "90").eq("which", "NOW"))
       .paginate({ cursor: args.cursor, numItems: 1 });
-    const part = page.page[0];
+    const part = page.page[0] ? unpackedPart(page.page[0]) : undefined;
     return { keys: part?.keys ?? [], clicks: part?.clicks ?? [], impressions: part?.impressions ?? [], positionSums: part?.positionSums ?? [], counts: part?.counts ?? [], continueCursor: page.continueCursor, isDone: page.isDone };
   },
 });

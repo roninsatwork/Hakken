@@ -5,6 +5,7 @@ import { describe, expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
+import { packNumbers, unpackNumbers } from "./utils/searchConsolePacks";
 
 /**
  * Every page of a company's website once (docs/plans/active/page-groups-plan.md,
@@ -198,7 +199,8 @@ describe("every page once", () => {
         if (row.url.includes("/author/")) await ctx.db.delete(row._id);
       }
       const period = await ctx.db.query("searchConsolePeriods").withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", holdId)).first();
-      await ctx.db.patch(period!._id, { keys: period!.keys.filter((key) => !key.includes("/author/")), clicks: period!.clicks.slice(0, 4).concat(period!.clicks.slice(5)) });
+      const clicks = unpackNumbers(period!.clicks);
+      await ctx.db.patch(period!._id, { keys: period!.keys.filter((key) => !key.includes("/author/")), clicks: packNumbers(clicks.slice(0, 4).concat(clicks.slice(5))) });
     });
     const rebuilt = await t.action(internal.holdPages.rebuildHoldPages, { holdId });
 

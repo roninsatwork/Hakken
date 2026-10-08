@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
+import { unpackNumbers, unpackedPart } from "./utils/searchConsolePacks";
 import { decodePages } from "./searchConsolePageRefs";
 import { decryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
@@ -181,7 +182,8 @@ const rowsOf = (t: Harness, siteId: Id<"companyWebsites">, list: "query" | "page
     // A page list holds each address once, as a reference (`searchConsolePageRefs.ts`): read back as the app does.
     for (const record of records) {
       const keys = list === "page" ? await decodePages(ctx, siteId, record.keys) : record.keys;
-      keys.forEach((key, index) => sums.set(key, (sums.get(key) ?? 0) + record.clicks[index]));
+      const clicks = unpackNumbers(record.clicks);
+      keys.forEach((key, index) => sums.set(key, (sums.get(key) ?? 0) + clicks[index]));
     }
     return [...sums].sort();
   });
@@ -440,7 +442,8 @@ describe("collecting", () => {
     expect(await rowsOf(t, siteId, "query", "2025-06-01")).toEqual([]);
 
     // One record a day for each list: never one per row.
-    const lists = await t.run(async (ctx) => await ctx.db.query("searchConsoleLists").collect());
+    // Numbers are stored packed as text (`packNumbers`): read back as the app reads them.
+    const lists = (await t.run(async (ctx) => await ctx.db.query("searchConsoleLists").collect())).map((record) => unpackedPart(record));
     expect(lists.filter((record) => record.start === NEWEST && record.searchType === "web").map((record) => record.list).sort())
       .toEqual(["appearance", "country", "device", "page", "pair"]);
     expect(lists.every((record) => record.grain === "DAY" && record.part === 0)).toBe(true);
@@ -500,10 +503,10 @@ describe("collecting", () => {
     fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
     await collect(t);
-    const thirty = await t.run(async (ctx) => await ctx.db
+    const thirty = (await t.run(async (ctx) => await ctx.db
       .query("searchConsolePeriods")
       .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", "30").eq("which", "NOW"))
-      .collect());
+      .collect())).map((part) => unpackedPart(part));
     expect(thirty).toHaveLength(1);
     expect(thirty[0]).toMatchObject({ from: "2026-08-28", to: NEWEST, keys: ["plumber leeds", "emergency plumber"], clicks: [9, 3], counts: [1, 1], tops: ["https://acme-shop.test/", "https://acme-shop.test/"] });
     // The thirty days before are held, and had nothing: kept as held and empty, so the change reads as nothing gained.
@@ -568,10 +571,10 @@ describe("collecting", () => {
     const pairs = asks.filter((ask) => ask.dimensions.join("+") === "query+page" && ask.startDate !== ask.endDate);
     expect(pairs.length).toBeGreaterThan(0);
     expect(pairs.every((ask) => shiftDay(ask.startDate, 6) >= ask.endDate)).toBe(true);
-    const ninety = await t.run(async (ctx) => await ctx.db
+    const ninety = (await t.run(async (ctx) => await ctx.db
       .query("searchConsolePeriods")
       .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", "90").eq("which", "NOW"))
-      .collect());
+      .collect())).map((part) => unpackedPart(part));
     expect(ninety).toEqual([expect.objectContaining({ from: "2026-06-29", to: NEWEST, keys: ["plumber leeds", "emergency plumber"], clicks: [9, 3] })]);
     // Its days are held 60 days, the first collection's older ones cleared once it was added up.
     const days = await t.run(async (ctx) => (await ctx.db.query("searchConsoleLists").collect()).map((record) => record.start));
@@ -583,10 +586,10 @@ describe("collecting", () => {
     fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
     await collect(t);
-    const slot = async (list: "pair" | "pairByPage" | "competing" | "query" | "appearance", period: "14" | "28" | "30", which: "NOW" | "BEFORE" = "NOW") => await t.run(async (ctx) => await ctx.db
+    const slot = async (list: "pair" | "pairByPage" | "competing" | "query" | "appearance", period: "14" | "28" | "30", which: "NOW" | "BEFORE" = "NOW") => (await t.run(async (ctx) => await ctx.db
       .query("searchConsolePeriods")
       .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", list).eq("period", period).eq("which", which))
-      .collect());
+      .collect())).map((part) => unpackedPart(part));
     // One keyword's pages and one page's keywords are not kept (keep-less-history-plan.md, 5.1)…
     expect(await slot("pair", "30")).toEqual([]);
     expect(await slot("pairByPage", "30")).toEqual([]);

@@ -16,7 +16,7 @@ import {
 } from "./searchConsoleSchema";
 import { daysNewestFirst, newestWholeDay, shiftDay } from "./searchConsoleDays";
 import { isTrackedHold } from "./utils/websitePairing";
-import { fromGoogle, pack, rowsOf, type Packed } from "./utils/searchConsolePacks";
+import { fromGoogle, pack, packedColumns, rowsOf, type Packed } from "./utils/searchConsolePacks";
 import { slotParts } from "./searchConsoleRollups";
 import { deletePageRefs, encodePages, encodePagesFromAction } from "./searchConsolePageRefs";
 import { keptLines, keptSearchesOf } from "./searchConsoleKeep";
@@ -723,9 +723,8 @@ export const writeList = internalMutation({
       part: args.part,
       keys,
       ...(pages ? { pages } : {}),
-      clicks: args.clicks,
-      impressions: args.impressions,
-      positionSums: args.positionSums,
+      // Its numbers packed as text, a few characters each where Convex keeps nine bytes (`packNumbers`).
+      ...packedColumns(args),
       fetchedAt: args.fetchedAt,
     });
     return null;

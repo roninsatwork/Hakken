@@ -4,7 +4,7 @@ import { internalQuery, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { searchTypeValidator, type SearchType } from "./searchConsoleSchema";
-import type { Row } from "./utils/searchConsolePacks";
+import { unpackedPart, type Row } from "./utils/searchConsolePacks";
 
 /**
  * Which searches a website keeps line by line (docs/plans/active/
@@ -45,7 +45,8 @@ export const keptSearchesPart = internalQuery({
       .withIndex("by_hold_country_type_list_period", (q) => q
         .eq("companyWebsiteId", args.holdId).eq("country", args.country).eq("searchType", args.searchType).eq("list", "query").eq("period", "90").eq("which", "NOW"))
       .paginate({ cursor: args.cursor, numItems: 1 });
-    const part = page.page[0];
+    const stored = page.page[0];
+    const part = stored ? unpackedPart(stored) : undefined;
     const keys = part
       ? part.keys.filter((_, index) => keepsSearch({
         clicks: part.clicks[index],

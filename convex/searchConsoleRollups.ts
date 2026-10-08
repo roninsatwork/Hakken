@@ -8,6 +8,7 @@ import {
   COLLECTED_SEARCH_TYPES,
   listValidator,
   searchTypeValidator,
+  storedNumbersValidator,
   type SearchConsoleGrain,
   type SearchConsoleList,
   type SearchType,
@@ -46,12 +47,13 @@ const KEPT_PAGE = 12;
  */
 export const PARTS_MOST = 500;
 
+/** A kept record as stored: its number columns packed as text (`packNumbers`), read back by the action. */
 const packedValidator = {
   keys: v.array(v.string()),
   pages: v.optional(v.array(v.string())),
-  clicks: v.array(v.number()),
-  impressions: v.array(v.number()),
-  positionSums: v.array(v.number()),
+  clicks: storedNumbersValidator,
+  impressions: storedNumbersValidator,
+  positionSums: storedNumbersValidator,
 };
 
 const countryArg = { country: v.optional(v.string()) };

@@ -30,11 +30,14 @@ import {
   firstWeekKept,
   monthStart,
   pack,
+  packedColumns,
   stepEnd,
+  unpackedPart,
   weekStart,
   type ChartStep,
   type Packed,
   type Row,
+  type StoredPacked,
 } from "./utils/searchConsolePacks";
 import { bandOf, isBrand, pageWithoutSection } from "./utils/searchConsoleViews";
 import { tenantQuery } from "./tenantFunctions";
@@ -153,11 +156,11 @@ export async function readKept(
   // Page by page (`keptBetween`): a busy website's span is more than one read may hold.
   const read = async (grain: Kept["grain"], start: string, end: string) => {
     for (let cursor: string | null = null; ;) {
-      const page: { records: Array<Packed & { start: string }>; continueCursor: string; isDone: boolean } = await ctx.runQuery(
+      const page: { records: Array<StoredPacked & { start: string }>; continueCursor: string; isDone: boolean } = await ctx.runQuery(
         internal.searchConsoleRollups.keptBetween,
         { companyWebsiteId, ...scope, searchType, list, grain, from: start, to: end < newest ? end : newest, cursor },
       );
-      for (const record of page.records) out.push({ grain, start: record.start, packed: record });
+      for (const record of page.records) out.push({ grain, start: record.start, packed: unpackedPart(record) });
       if (page.isDone) return;
       cursor = page.continueCursor;
     }
@@ -829,7 +832,8 @@ export const writePeriodPart = internalMutation({
         .take(FIRST_PARTS_READ);
       for (const old of firsts) if (old.builtAt <= args.builtAt) await ctx.db.delete(old._id);
     }
-    await ctx.db.insert("searchConsolePeriods", args);
+    // Its numbers packed as text, a few characters each where Convex keeps nine bytes (`packNumbers`).
+    await ctx.db.insert("searchConsolePeriods", { ...args, ...packedColumns(args) });
     return null;
   },
 });

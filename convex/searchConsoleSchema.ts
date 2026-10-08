@@ -165,15 +165,19 @@ export const periodValidator = v.union(v.literal("7"), v.literal("14"), v.litera
  * instead of one record per row, split into parts of 2,000 rows. Parallel
  * arrays, row `i` across them all. Position is kept as a sum weighted by
  * impressions (`position × impressions`), so an average over any days,
- * weeks or months is exactly Google's.
+ * weeks or months is exactly Google's. The number columns are text since
+ * 2026-10-08, a few characters a number where Convex keeps nine bytes
+ * (`packNumbers`, `utils/searchConsolePacks.ts`): lists until converted.
  */
+export const storedNumbersValidator = v.union(v.string(), v.array(v.number()));
+
 const packedRows = {
   keys: v.array(v.string()),
   /** A pair's page, row for row with its search in `keys`. Only on `pair` lists. */
   pages: v.optional(v.array(v.string())),
-  clicks: v.array(v.number()),
-  impressions: v.array(v.number()),
-  positionSums: v.array(v.number()),
+  clicks: storedNumbersValidator,
+  impressions: storedNumbersValidator,
+  positionSums: storedNumbersValidator,
 };
 
 export const searchConsoleTables = {
@@ -351,10 +355,10 @@ export const searchConsoleTables = {
     from: v.string(),
     to: v.string(),
     ...packedRows,
-    counts: v.optional(v.array(v.number())),
+    counts: v.optional(storedNumbersValidator),
     tops: v.optional(v.array(v.string())),
     kinds: v.optional(v.array(v.string())),
-    volumes: v.optional(v.array(v.number())),
+    volumes: v.optional(storedNumbersValidator),
     estimates: v.optional(v.array(v.number())),
     /**
      * A list kept in key order (`pair` by keyword, `pairByPage` by page): the

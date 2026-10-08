@@ -1,7 +1,7 @@
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { SearchConsolePeriod, SearchConsolePeriodList, SearchType } from "./searchConsoleSchema";
-import { rowsOf, type Row } from "./utils/searchConsolePacks";
+import { rowsOf, unpackedPart, type Row, type Unpacked } from "./utils/searchConsolePacks";
 import { PARTS_MOST } from "./searchConsoleRollups";
 import { UNKNOWN } from "./searchConsoleFacts";
 
@@ -35,7 +35,8 @@ export async function periodParts(
     .take(PARTS_MOST);
   // One read: an older build is beside the newest only while it is being cleared.
   const built = parts.filter((part) => part.part === 0).reduce((newest, part) => Math.max(newest, part.builtAt), -Infinity);
-  return parts.filter((part) => part.builtAt === built);
+  // Its number columns as lists: packed as text when stored (`packNumbers`).
+  return parts.filter((part) => part.builtAt === built).map((part) => unpackedPart(part));
 }
 
 /** First parts read for a period: the one being swapped in, and the one before it. */
@@ -113,7 +114,7 @@ export async function readPeriod(
   return { from: parts[0].from, to: parts[0].to, builtAt: parts[0].builtAt, shown: parts[0].shown ?? null, rows };
 }
 
-type KeptBeside = Pick<Doc<"searchConsolePeriods">, "counts" | "tops" | "kinds" | "volumes" | "estimates">;
+type KeptBeside = Unpacked<Pick<Doc<"searchConsolePeriods">, "counts" | "tops" | "kinds" | "volumes" | "estimates">>;
 
 /** A row of a part, with the figures kept beside it at its place. */
 function withKept(row: Row, part: KeptBeside, index: number): PeriodRow {
