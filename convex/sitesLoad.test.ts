@@ -1,6 +1,9 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
+import { getFunctionName, type FunctionReference } from "convex/server";
+import { bytesReadBy } from "@/src/test/readMeter";
+import budgets from "../code-ratchets.json";
 import schema from "./schema";
 import { RANK_BANDS, RANK_INTENTS, RANK_STATUSES, KD_BANDS, PAGE_TYPES } from "./utils/siteShapes";
 import { AI_ENGINES } from "./seoAiEngines";
@@ -205,57 +208,58 @@ describe("a very large site", () => {
     const middle = { page: 1_000, rows: 25 };
     const last = { page: 2_000, rows: 25 };
     const range = { from: "2024-09-24", to: "2026-09-23" };
-    const timed: Array<[string, () => Promise<unknown>]> = [
-      ["keywords, best first", () => asMember.query(api.siteKeywords.listKeywords, { siteId: holdId, ...first })],
-      ["keywords, a middle page", () => asMember.query(api.siteKeywords.listKeywords, { siteId: holdId, ...middle })],
-      ["keywords, the last page", () => asMember.query(api.siteKeywords.listKeywords, { siteId: holdId, ...last })],
-      ["keywords, a hundred a page", () => asMember.query(api.siteKeywords.listKeywords, { siteId: holdId, page: 1, rows: 100 })],
-      ["keywords, one band", () => asMember.query(api.siteKeywords.listKeywords, { siteId: holdId, ...first, band: "p11_20" })],
-      ["keywords, by intent", () => asMember.query(api.siteKeywords.listKeywords, { siteId: holdId, ...first, intent: "BUYING" })],
-      ["keywords, by movement", () => asMember.query(api.siteKeywords.listKeywords, { siteId: holdId, ...first, status: "UP" })],
-      ["keywords, by difficulty", () => asMember.query(api.siteKeywords.listKeywords, { siteId: holdId, ...first, kdBand: "kd31_70" })],
-      ["keywords, most searched", () => asMember.query(api.siteKeywords.listKeywords, { siteId: holdId, ...first, sort: "volume" })],
-      ["keywords, most traffic, last page", () => asMember.query(api.siteKeywords.listKeywords, { siteId: holdId, ...last, sort: "traffic" })],
-      ["keywords, dearest clicks", () => asMember.query(api.siteKeywords.listKeywords, { siteId: holdId, ...first, sort: "cpc" })],
-      ["keywords, searched", () => asMember.query(api.siteKeywords.listKeywords, { siteId: holdId, ...first, search: "number 4" })],
-      ["keywords, on one page", () => asMember.query(api.siteKeywords.listKeywords, { siteId: holdId, ...first, path: "/section-3/page-43/" })],
-      ["wins", () => asMember.query(api.siteKeywords.listMoves, { siteId: holdId, ...first, status: "UP" })],
-      ["compare with a day", () => asMember.query(api.siteKeywords.keywordsOnDay, { siteId: holdId, day: "2026-09-01", keywords: ["search number 1", "search number 2"] })],
-      ["pages, most keywords", () => asMember.query(api.siteKeywords.listPages, { siteId: holdId, ...first })],
-      ["pages, most traffic, last page", () => asMember.query(api.siteKeywords.listPages, { siteId: holdId, page: 200, rows: 25, sort: "traffic" })],
-      ["pages, one type", () => asMember.query(api.siteKeywords.listPages, { siteId: holdId, ...first, pageType: "ARTICLE" })],
+    const screens: Array<[string, FunctionReference<"query">, Record<string, unknown>]> = [
+      ["keywords, best first", api.siteKeywords.listKeywords, { siteId: holdId, ...first }],
+      ["keywords, a middle page", api.siteKeywords.listKeywords, { siteId: holdId, ...middle }],
+      ["keywords, the last page", api.siteKeywords.listKeywords, { siteId: holdId, ...last }],
+      ["keywords, a hundred a page", api.siteKeywords.listKeywords, { siteId: holdId, page: 1, rows: 100 }],
+      ["keywords, one band", api.siteKeywords.listKeywords, { siteId: holdId, ...first, band: "p11_20" }],
+      ["keywords, by intent", api.siteKeywords.listKeywords, { siteId: holdId, ...first, intent: "BUYING" }],
+      ["keywords, by movement", api.siteKeywords.listKeywords, { siteId: holdId, ...first, status: "UP" }],
+      ["keywords, by difficulty", api.siteKeywords.listKeywords, { siteId: holdId, ...first, kdBand: "kd31_70" }],
+      ["keywords, most searched", api.siteKeywords.listKeywords, { siteId: holdId, ...first, sort: "volume" }],
+      ["keywords, most traffic, last page", api.siteKeywords.listKeywords, { siteId: holdId, ...last, sort: "traffic" }],
+      ["keywords, dearest clicks", api.siteKeywords.listKeywords, { siteId: holdId, ...first, sort: "cpc" }],
+      ["keywords, searched", api.siteKeywords.listKeywords, { siteId: holdId, ...first, search: "number 4" }],
+      ["keywords, on one page", api.siteKeywords.listKeywords, { siteId: holdId, ...first, path: "/section-3/page-43/" }],
+      ["wins", api.siteKeywords.listMoves, { siteId: holdId, ...first, status: "UP" }],
+      ["compare with a day", api.siteKeywords.keywordsOnDay, { siteId: holdId, day: "2026-09-01", keywords: ["search number 1", "search number 2"] }],
+      ["pages, most keywords", api.siteKeywords.listPages, { siteId: holdId, ...first }],
+      ["pages, most traffic, last page", api.siteKeywords.listPages, { siteId: holdId, page: 200, rows: 25, sort: "traffic" }],
+      ["pages, one type", api.siteKeywords.listPages, { siteId: holdId, ...first, pageType: "ARTICLE" }],
       // A heading pressed again, and the headings added with it (docs/plans/
       // active/sites-table-sorting-plan.md §8): the whole list either way.
-      ["keywords, fewest searched", () => asMember.query(api.siteKeywords.listKeywords, { siteId: holdId, ...first, sort: "volume", direction: "asc" })],
-      ["keywords, worst position, last page", () => asMember.query(api.siteKeywords.listKeywords, { siteId: holdId, ...last, sort: "position", direction: "desc" })],
-      ["keywords, A to Z, last page", () => asMember.query(api.siteKeywords.listKeywords, { siteId: holdId, ...last, sort: "keyword" })],
-      ["keywords, biggest rise", () => asMember.query(api.siteKeywords.listKeywords, { siteId: holdId, ...first, sort: "change" })],
-      ["pages, best position", () => asMember.query(api.siteKeywords.listPages, { siteId: holdId, ...first, sort: "best" })],
-      ["every link, weakest first", () => asMember.query(api.siteLinkLists.listBacklinks, { siteId: holdId, ...first, every: true, sort: "domainRank", direction: "asc" })],
-      ["pages, one section", () => asMember.query(api.siteKeywords.listPages, { siteId: holdId, ...first, section: "/section-7/" })],
-      ["sections", () => asMember.query(api.siteKeywords.listSections, { siteId: holdId })],
-      ["two years, daily", () => asMember.query(api.siteCharts.siteSeries, { siteId: holdId, ...range, step: "day" })],
-      ["two years, monthly", () => asMember.query(api.siteCharts.siteSeries, { siteId: holdId, ...range, step: "month" })],
-      ["two years, with five rivals", () => asMember.query(api.siteCharts.siteSeries, { siteId: holdId, ...range, step: "week", withRivals: true })],
-      ["AI mentions", () => asMember.query(api.siteAi.listMentions, { siteId: holdId })],
-      ["share of voice", () => asMember.query(api.siteAi.shareOfVoice, { siteId: holdId })],
-      ["side by side", () => asMember.query(api.siteCompetitors.listRivals, { siteId: holdId })],
-      ["the Overview's extras", () => asMember.query(api.siteOverview.overviewExtras, { siteId: holdId })],
+      ["keywords, fewest searched", api.siteKeywords.listKeywords, { siteId: holdId, ...first, sort: "volume", direction: "asc" }],
+      ["keywords, worst position, last page", api.siteKeywords.listKeywords, { siteId: holdId, ...last, sort: "position", direction: "desc" }],
+      ["keywords, A to Z, last page", api.siteKeywords.listKeywords, { siteId: holdId, ...last, sort: "keyword" }],
+      ["keywords, biggest rise", api.siteKeywords.listKeywords, { siteId: holdId, ...first, sort: "change" }],
+      ["pages, best position", api.siteKeywords.listPages, { siteId: holdId, ...first, sort: "best" }],
+      ["every link, weakest first", api.siteLinkLists.listBacklinks, { siteId: holdId, ...first, every: true, sort: "domainRank", direction: "asc" }],
+      ["pages, one section", api.siteKeywords.listPages, { siteId: holdId, ...first, section: "/section-7/" }],
+      ["sections", api.siteKeywords.listSections, { siteId: holdId }],
+      ["two years, daily", api.siteCharts.siteSeries, { siteId: holdId, ...range, step: "day" }],
+      ["two years, monthly", api.siteCharts.siteSeries, { siteId: holdId, ...range, step: "month" }],
+      ["two years, with five rivals", api.siteCharts.siteSeries, { siteId: holdId, ...range, step: "week", withRivals: true }],
+      ["AI mentions", api.siteAi.listMentions, { siteId: holdId }],
+      ["share of voice", api.siteAi.shareOfVoice, { siteId: holdId }],
+      ["side by side", api.siteCompetitors.listRivals, { siteId: holdId }],
+      ["the Overview's extras", api.siteOverview.overviewExtras, { siteId: holdId }],
       // The Keywords screens redesigned on 2026-09-27: Position bands' moves
       // and the searches behind them, and New and lost keywords' checks.
-      ["moves between bands", () => asMember.query(api.siteBands.bandMoves, { siteId: holdId })],
-      ["the searches that changed band", () => asMember.query(api.siteBands.listBandMoves, { siteId: holdId })],
-      ["two years of checks, daily", () => asMember.query(api.siteChecks.siteChecks, { siteId: holdId, ...range, step: "day" })],
-      ["every link, strongest", () => asMember.query(api.siteLinkLists.listBacklinks, { siteId: holdId, ...first, every: true })],
-      ["every link, the last page", () => asMember.query(api.siteLinkLists.listBacklinks, { siteId: holdId, page: 800, rows: 25, every: true })],
-      ["every link, lost", () => asMember.query(api.siteLinkLists.listBacklinks, { siteId: holdId, ...first, every: true, status: "LOST" })],
-      ["every link, nofollow", () => asMember.query(api.siteLinkLists.listBacklinks, { siteId: holdId, ...first, every: true, follow: "NOFOLLOW" })],
-      ["every link, newest", () => asMember.query(api.siteLinkLists.listBacklinks, { siteId: holdId, ...first, every: true, sort: "firstSeen" })],
-      ["every link, searched", () => asMember.query(api.siteLinkLists.listBacklinks, { siteId: holdId, ...first, every: true, search: "anchor 12" })],
-      ["one link per website", () => asMember.query(api.siteLinkLists.listBacklinks, { siteId: holdId, ...first })],
-      ["the site's header", () => asMember.query(api.sites.getMySite, { siteId: holdId })],
-      ["the Sites list", () => asMember.query(api.sites.listMySites, {})],
+      ["moves between bands", api.siteBands.bandMoves, { siteId: holdId }],
+      ["the searches that changed band", api.siteBands.listBandMoves, { siteId: holdId }],
+      ["two years of checks, daily", api.siteChecks.siteChecks, { siteId: holdId, ...range, step: "day" }],
+      ["every link, strongest", api.siteLinkLists.listBacklinks, { siteId: holdId, ...first, every: true }],
+      ["every link, the last page", api.siteLinkLists.listBacklinks, { siteId: holdId, page: 800, rows: 25, every: true }],
+      ["every link, lost", api.siteLinkLists.listBacklinks, { siteId: holdId, ...first, every: true, status: "LOST" }],
+      ["every link, nofollow", api.siteLinkLists.listBacklinks, { siteId: holdId, ...first, every: true, follow: "NOFOLLOW" }],
+      ["every link, newest", api.siteLinkLists.listBacklinks, { siteId: holdId, ...first, every: true, sort: "firstSeen" }],
+      ["every link, searched", api.siteLinkLists.listBacklinks, { siteId: holdId, ...first, every: true, search: "anchor 12" }],
+      ["one link per website", api.siteLinkLists.listBacklinks, { siteId: holdId, ...first }],
+      ["the site's header", api.sites.getMySite, { siteId: holdId }],
+      ["the Sites list", api.sites.listMySites, {}],
     ];
+    const timed = screens.map(([name, query, args]): [string, () => Promise<unknown>] => [name, () => asMember.query(query, args)]);
     // Warm the functions up once, so module loading is not timed as reading.
     await timed[0][1]();
     const scan = await fastest(() => t.run(async (ctx) => (await ctx.db.query("siteKeywordRanks").collect()).length), 2);
@@ -278,6 +282,25 @@ describe("a very large site", () => {
     for (const [name, run] of timed.filter(([name]) => answerScreens.has(name))) await time(`${name}, a thousand questions`, run);
     await time("suggested competitors, a thousand questions", () => asMember.query(api.siteCompetitors.listSuggested, { siteId: holdId }));
     expect(slow).toEqual([]);
+
+    // What each screen reads against its budget (core-data-normalisation-plan.md
+    // §7A.7): its bytes, as Convex counts them, may not grow past what it read
+    // when last measured, so a change that reads more is seen here before it
+    // is merged, not on the bill. Counted, not timed. The budgets
+    // (`code-ratchets.json`, `sitesReadKiB`) may shrink, never grow;
+    // SITES_READ_REPORT=1 prints what each reads.
+    const modules = import.meta.glob("./*.ts");
+    const readBudgets: Record<string, number> = budgets.sitesReadKiB;
+    const read: Record<string, number> = {};
+    const overBudget: string[] = [];
+    for (const [name, query, args] of screens) {
+      const [file, exported] = getFunctionName(query).split(":");
+      const loaded = (await modules[`./${file}.ts`]()) as Record<string, { _handler?: unknown }>;
+      read[name] = Math.ceil((await bytesReadBy(t, userId, loaded[exported], args)) / 1024);
+      if (!(read[name] <= (readBudgets[name] ?? -1))) overBudget.push(`${name}: ${read[name]} KiB read, its budget ${readBudgets[name] ?? "not set"}`);
+    }
+    if (process.env.SITES_READ_REPORT) console.log(JSON.stringify(read, null, 2));
+    expect(overBudget).toEqual([]);
     const mentions = await asMember.query(api.siteAi.listMentions, { siteId: holdId });
     expect(mentions).toHaveLength(1_000 * AI_ENGINES.length);
     expect(mentions[0]).toMatchObject({ asked: 30, named: 10, lastStance: "RECOMMENDED" });

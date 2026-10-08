@@ -74,3 +74,27 @@ export function metered<Db extends object>(
     documents: () => reads.reduce((sum, read) => sum + read.documents, 0),
   };
 }
+
+/** A registered Convex query or mutation, as a module exports it: its handler is kept on it. */
+type Registered = { _handler?: unknown };
+
+/**
+ * What one function reads when called as a screen calls it — signed in as
+ * `subject`, with these arguments — on a metered database: the bytes, as
+ * Convex counts them (core-data-normalisation-plan.md §7A.7, each screen's
+ * budget). The function as its module exports it, not as `api` names it.
+ */
+export async function bytesReadBy(
+  t: { withIdentity: (identity: { subject: string }) => { run: <T>(work: (ctx: { db: object }) => Promise<T>) => Promise<T> } },
+  subject: string,
+  fn: Registered,
+  args: Record<string, unknown>,
+): Promise<number> {
+  const handler = fn._handler as ((ctx: object, args: Record<string, unknown>) => Promise<unknown>) | undefined;
+  if (!handler) throw new Error("Not a registered Convex function.");
+  return await t.withIdentity({ subject }).run(async (ctx) => {
+    const meter = metered(ctx.db);
+    await handler({ ...ctx, db: meter.db }, args);
+    return meter.bytes();
+  });
+}
