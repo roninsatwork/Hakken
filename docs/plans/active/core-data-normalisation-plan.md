@@ -596,6 +596,7 @@ build the plan please". How it is built, as he agreed:
 | Step | State |
 |---|---|
 | 1. The load test at N1's size | **Built 2026-10-08** (`convex/searchConsoleScale.test.ts`, the shared meter `src/test/readMeter.ts`). At five times morehandles.co.uk, today: Keywords for 90 days reads 19.4 MiB, for 30 days compared 16.3, searched 19.4, Pages competing 40.1 — each past Convex's 16 MiB, so each screen would fail; Pages 3.2. 2.7 seconds, so no slower-test exception was needed; run here, not on GitHub. |
+| 2. The period book | **Built 2026-10-08** (`searchConsolePeriodBooks.ts`, `utils/searchConsoleTerms.ts`, `searchConsoleSorts.ts`). At five times morehandles.co.uk: Keywords for 90 days 19.4 → 3.9 MiB, for 30 days compared 16.3 → 3.9, searched 19.4 → 9.3, Pages competing 40.1 → 6.5, Pages 3.2 → 3.8 — every screen within rule 4. On dev, all three websites rebuilt: morehandles.co.uk's ready-made lists 23.0 → 6.2 MB (4.3 of lists, 1.9 of book), its Search Console 43.1 → 26.2 MB. The 30-day keyword, page and wins-and-losses lists the same row for row and in order before and after; the 90 days differ in a few hundred rows, asked of Google again. Checked in Chrome: Keywords for 90 days, sorted A to Z and searched, Pages competing, New and lost, a keyword's own screen — no console errors. Found on the way: the 90-day keyword download passed Convex's one second once rows were named one at a time (0.95 s before); a download is now named from the books read whole. |
 
 ## Change log
 
