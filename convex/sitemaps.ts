@@ -5,11 +5,12 @@ import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from
 import { readFanOutLimits } from "./fanOutLimits";
 import { claimSchedule } from "./siteRankings";
 import { isTrackedHold } from "./utils/websitePairing";
+import { SITEMAP_PART_PAGES, sitemapPagesPage, writeSitemapPart } from "./sitemapParts";
 
 /**
  * A website's sitemap, kept (docs/plans/active/page-groups-plan.md): the
  * newest reading (`siteSitemaps`) and the pages it listed
- * (`siteSitemapPages`), by website — a sitemap is public, so one reading
+ * (`siteSitemapParts`, a thousand a record), by website — a sitemap is public, so one reading
  * serves every company whose own website it is, like the crawl.
  *
  * Read at each collection: when a company's collection finishes, each of its
@@ -24,11 +25,11 @@ import { isTrackedHold } from "./utils/websitePairing";
  * rebuild never reads half of one and half of the other.
  */
 
-/** Sitemap pages written per mutation. */
-export const SITEMAP_PAGES_PER_WRITE = 500;
+/** Sitemap pages written per mutation: one packed record (`sitemapParts.ts`). */
+export const SITEMAP_PAGES_PER_WRITE = SITEMAP_PART_PAGES;
 
-/** An older reading's pages removed per mutation. */
-const SITEMAP_PAGES_CLEARED = 500;
+/** An older reading's records removed per mutation: each up to a thousand pages. */
+const SITEMAP_PARTS_CLEARED = 10;
 
 /** A website's holds read to find its owners: more companies than this holding one website is not a real case. */
 const OWNERS_READ = 200;
@@ -128,24 +129,11 @@ export const readCycleSitemaps = internalMutation({
 
 const pageRow = v.object({ page: v.string(), file: v.string(), lastmod: v.optional(v.string()) });
 
-/** A held reading's pages read per batch when a new reading is compared with it: small rows. */
-const SITEMAP_PAGES_READ = 2_000;
-
 /** One batch of the pages a held reading lists, in the order read: to find whether a new reading lists the same. */
 export const heldSitemapPages = internalQuery({
   args: { websiteId: v.id("websites"), readAt: v.number(), cursor: v.union(v.string(), v.null()) },
   returns: v.object({ rows: v.array(pageRow), cursor: v.string(), isDone: v.boolean() }),
-  handler: async (ctx, args) => {
-    const result = await ctx.db
-      .query("siteSitemapPages")
-      .withIndex("by_website_read", (q) => q.eq("websiteId", args.websiteId).eq("readAt", args.readAt))
-      .paginate({ cursor: args.cursor, numItems: SITEMAP_PAGES_READ });
-    return {
-      rows: result.page.map((row) => ({ page: row.page, file: row.file, ...(row.lastmod !== undefined ? { lastmod: row.lastmod } : {}) })),
-      cursor: result.continueCursor,
-      isDone: result.isDone,
-    };
-  },
+  handler: async (ctx, args) => await sitemapPagesPage(ctx, args),
 });
 
 /** One batch of a new reading's pages, under its stamp, beside the reading before. */
@@ -153,9 +141,8 @@ export const writeSitemapPages = internalMutation({
   args: { websiteId: v.id("websites"), readAt: v.number(), rows: v.array(pageRow) },
   returns: v.null(),
   handler: async (ctx, args) => {
-    for (const row of args.rows) {
-      await ctx.db.insert("siteSitemapPages", { websiteId: args.websiteId, readAt: args.readAt, ...row });
-    }
+    // A batch is one packed record (`sitemapParts.ts`).
+    await writeSitemapPart(ctx, { websiteId: args.websiteId, readAt: args.readAt }, args.rows);
     return null;
   },
 });
@@ -204,16 +191,16 @@ export const dropOldSitemapPages = internalMutation({
   returns: v.number(),
   handler: async (ctx, args) => {
     const before = await ctx.db
-      .query("siteSitemapPages")
+      .query("siteSitemapParts")
       .withIndex("by_website_read", (q) => q.eq("websiteId", args.websiteId).lt("readAt", args.keepReadAt))
-      .take(SITEMAP_PAGES_CLEARED);
-    const rows = before.length > 0
+      .take(SITEMAP_PARTS_CLEARED);
+    const parts = before.length > 0
       ? before
       : await ctx.db
-        .query("siteSitemapPages")
+        .query("siteSitemapParts")
         .withIndex("by_website_read", (q) => q.eq("websiteId", args.websiteId).gt("readAt", args.keepReadAt))
-        .take(SITEMAP_PAGES_CLEARED);
-    for (const row of rows) await ctx.db.delete(row._id);
-    return rows.length;
+        .take(SITEMAP_PARTS_CLEARED);
+    for (const part of parts) await ctx.db.delete(part._id);
+    return parts.length;
   },
 });

@@ -7,7 +7,7 @@ import { slimSeoResult } from "./dataForSeoSlim";
 import { useFixedDay } from "@/src/test/realTime";
 import { rowsOfPart, writeReferringDomainPart } from "./siteReferringDomainParts";
 import { networksOf, readServers } from "./siteLinkGroupParts";
-import { readLinkChanges, packLinkDayRows } from "./siteLinkWeeks";
+import { readLinkChanges } from "./siteLinkWeeks";
 
 /**
  * The Sites link pages (docs/plans/active/user-sites-plan.md, Phase 4): each
@@ -483,25 +483,6 @@ describe("link and ranking history", () => {
     const asRonins = await member(t, ronins);
     const monthly = await asRonins.query(api.siteLinkLists.linkChanges, { siteId: own.holdId, from: "2026-09-01", to: "2026-09-30", step: "month" });
     expect(monthly).toEqual([{ day: "2026-09-01", newBacklinks: 13, lostBacklinks: 3, newReferringDomains: 3, lostReferringDomains: 0 }]);
-  });
-
-  test("dev's weeks kept one a row move into one record a website, every count kept", async () => {
-    const t = harness();
-    const ronins = await company(t, "Ronins");
-    const own = await hold(t, ronins, "ronins.co.uk");
-    const week = (day: string, newBacklinks: number) => ({
-      websiteId: own.websiteId, day, newBacklinks, lostBacklinks: 1, newReferringDomains: 2, lostReferringDomains: 0, newMainDomains: 3, lostMainDomains: 4, updatedAt: 1,
-    });
-    await t.run(async (ctx) => {
-      await ctx.db.insert("siteLinkDays", week("2026-09-14", 6));
-      await ctx.db.insert("siteLinkDays", week("2019-01-14", 1));
-    });
-    for (let step = 0; step < 5; step += 1) if ((await t.run(async (ctx) => await packLinkDayRows(ctx))).isDone) break;
-    expect(await t.run(async (ctx) => (await ctx.db.query("siteLinkDays").collect()).length)).toBe(0);
-    expect(await t.run(async (ctx) => await readLinkChanges(ctx, own.websiteId))).toEqual([
-      { day: "2019-01-14", newBacklinks: 1, lostBacklinks: 1, newReferringDomains: 2, lostReferringDomains: 0, newMainDomains: 3, lostMainDomains: 4 },
-      { day: "2026-09-14", newBacklinks: 6, lostBacklinks: 1, newReferringDomains: 2, lostReferringDomains: 0, newMainDomains: 3, lostMainDomains: 4 },
-    ]);
   });
 
   test("a history fills only the days with no figure of our own, and a ranking history only its own place", async () => {

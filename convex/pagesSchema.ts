@@ -62,6 +62,24 @@ export const pagesTables = {
   }).index("by_website", ["websiteId"]),
 
   /** One page the sitemap lists: its path, the file that lists it, and its last change where given. */
+  /**
+   * The pages a sitemap reading listed, a thousand a record
+   * (core-data-normalisation-plan.md §6.3): each page's address, the listing
+   * file it came from as a place among the reading's files, and its
+   * last-changed date as the sitemap wrote it. Written beside the last
+   * reading and switched to in one step, as before (`sitemaps.ts`).
+   */
+  siteSitemapParts: defineTable({
+    websiteId: v.id("websites"),
+    readAt: v.number(),
+    pages: v.array(v.string()),
+    /** The listing files these pages came from, each once; `fileOf` is each page's place among them. */
+    files: v.array(v.string()),
+    fileOf: v.union(v.string(), v.array(v.union(v.number(), v.null()))),
+    /** Null where the sitemap gave no date. */
+    lastmods: v.array(v.union(v.string(), v.null())),
+  }).index("by_website_read", ["websiteId", "readAt"]),
+
   siteSitemapPages: defineTable({
     websiteId: v.id("websites"),
     page: v.string(),

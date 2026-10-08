@@ -174,7 +174,7 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
     }
     if (pulls.length === PULL_PURGE_BATCH) more = true;
 
-    const byWebsite = async (rows: Array<{ _id: Id<"seoWebsiteMetrics"> | Id<"websiteSearchStats"> | Id<"websiteQuestionStats"> | Id<"aiCitations"> | Id<"siteKeywordRanks"> | Id<"sitePageRanks"> | Id<"siteSections"> | Id<"siteDaySummaries"> | Id<"siteCitedPages"> | Id<"sitePageTypes"> | Id<"siteBacklinks"> | Id<"siteLinkDays"> | Id<"sitePaidKeywords"> | Id<"siteCrawls"> | Id<"siteListAiDays"> | Id<"siteKeywordFeatures"> | Id<"siteCrawlPages"> | Id<"siteCrawlLinks"> }>) => {
+    const byWebsite = async (rows: Array<{ _id: Id<"seoWebsiteMetrics"> | Id<"websiteSearchStats"> | Id<"websiteQuestionStats"> | Id<"aiCitations"> | Id<"siteKeywordRanks"> | Id<"sitePageRanks"> | Id<"siteSections"> | Id<"siteDaySummaries"> | Id<"siteCitedPages"> | Id<"sitePageTypes"> | Id<"siteBacklinks"> | Id<"sitePaidKeywords"> | Id<"siteCrawls"> | Id<"siteListAiDays"> | Id<"siteKeywordFeatures"> | Id<"siteCrawlPages"> | Id<"siteCrawlLinks"> }>) => {
       for (const row of rows) await ctx.db.delete(row._id);
       if (rows.length === ENTRY_PURGE_BATCH) more = true;
     };
@@ -234,8 +234,6 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
     for (const table of ["siteAnchorParts", "siteReferringIpParts"] as const) {
       if (!(await removeGroupPartsBefore(ctx, table, args.websiteId, null, DOMAIN_PARTS_PURGED))) more = true;
     }
-    await byWebsite(await ctx.db.query("siteLinkDays")
-      .withIndex("by_site_day", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
     for (const record of await ctx.db.query("siteLinkWeeks").withIndex("by_website", (q) => q.eq("websiteId", args.websiteId)).take(5)) {
       await ctx.db.delete(record._id);
     }
@@ -248,6 +246,10 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
       if (await dropCopies(ctx, kind, prefix)) more = true;
     }
     // Its sitemap and the pages it listed, read for Your pages.
+    const sitemapParts = await ctx.db.query("siteSitemapParts")
+      .withIndex("by_website_read", (q) => q.eq("websiteId", args.websiteId)).take(DOMAIN_PARTS_PURGED);
+    for (const part of sitemapParts) await ctx.db.delete(part._id);
+    if (sitemapParts.length === DOMAIN_PARTS_PURGED) more = true;
     const sitemapPages = await ctx.db.query("siteSitemapPages")
       .withIndex("by_website_read", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH);
     for (const row of sitemapPages) await ctx.db.delete(row._id);

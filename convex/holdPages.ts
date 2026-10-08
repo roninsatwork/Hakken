@@ -13,6 +13,7 @@ import { joinHoldPages, type JoinedPage } from "./utils/holdPagesJoin";
 import { normalisePage } from "./utils/pageClassification";
 import { onWebsite } from "./utils/sitemapReading";
 import { isTrackedHold } from "./utils/websitePairing";
+import { sitemapPagesPage as readSitemapPages } from "./sitemapParts";
 
 /**
  * Every page of a company's website once (`holdPages`), rebuilt from its
@@ -52,7 +53,6 @@ export const YOUR_PAGES_FIELDS = ["page", "file", "crawled", "shown", "clicks", 
 const REBUILD_DELAY_MS = 20_000;
 
 /** Rows read per request from each source: small rows, well inside a query's read limits. */
-const SITEMAP_ROWS_READ = 2_000;
 const CRAWL_ROWS_READ = 1_000;
 const RANK_ROWS_READ = 1_000;
 const TYPE_ROWS_READ = 1_000;
@@ -173,11 +173,9 @@ export const sitemapPagesPage = internalQuery({
   args: { websiteId: v.id("websites"), readAt: v.number(), cursor: cursorArg },
   returns: pageOf(v.object({ page: v.string(), file: v.string() })),
   handler: async (ctx, args) => {
-    const result = await ctx.db
-      .query("siteSitemapPages")
-      .withIndex("by_website_read", (q) => q.eq("websiteId", args.websiteId).eq("readAt", args.readAt))
-      .paginate({ cursor: args.cursor, numItems: SITEMAP_ROWS_READ });
-    return { rows: result.page.map((row) => ({ page: row.page, file: row.file })), cursor: result.continueCursor, isDone: result.isDone };
+    // A reading's pages, a thousand a record (`sitemapParts.ts`).
+    const read = await readSitemapPages(ctx, args);
+    return { ...read, rows: read.rows.map((row) => ({ page: row.page, file: row.file })) };
   },
 });
 

@@ -632,23 +632,6 @@ export const siteTables = {
   }).index("by_website", ["websiteId"]),
 
   /**
-   * Links a website gained and lost each day, from DataForSEO's own count
-   * (`backlinks_new_lost`). One row per website and day; a later answer about
-   * the same day replaces the earlier.
-   */
-  siteLinkDays: defineTable({
-    websiteId: v.id("websites"),
-    day: v.string(),
-    newBacklinks: v.number(),
-    lostBacklinks: v.number(),
-    newReferringDomains: v.number(),
-    lostReferringDomains: v.number(),
-    newMainDomains: v.number(),
-    lostMainDomains: v.number(),
-    updatedAt: v.number(),
-  }).index("by_site_day", ["websiteId", "day"]),
-
-  /**
    * Every page a site crawl reached, with the problems found on it — never its
    * words: the address, the answer it gave, the checks that failed and a few
    * figures (`siteCrawlDetail.ts`). Fetched free after each crawl; the newest

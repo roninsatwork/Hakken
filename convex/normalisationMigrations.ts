@@ -3,7 +3,7 @@ import { packRankFacts } from "./siteRankings";
 import { rebuildEveryCopy } from "./siteListCopies";
 import { moveDecisionCalls } from "./decisionLedger";
 import { lowerSavedCostRowKeep } from "./purgeScheduleService";
-import { packLinkDayRows } from "./siteLinkWeeks";
+import { packSitemapPageRows } from "./sitemapParts";
 
 type Batch = { cursor: string | null; isDone: boolean; processed: number; updated: number };
 
@@ -22,6 +22,6 @@ export const NORMALISATION_MIGRATIONS: Record<string, (ctx: MutationCtx, cursor:
   "2026-10-08-decision-calls-on-runs": moveDecisionCalls,
   /** A saved purge setting keeping AI calls' costs the old 400 days lowered to 90 (N9). */
   "2026-10-08-cost-rows-90-days": (ctx) => lowerSavedCostRowKeep(ctx),
-  /** A website's weeks of links gained and lost, one packed record (`siteLinkWeeks.ts`, §6.3). */
-  "2026-10-08-link-weeks": (ctx) => packLinkDayRows(ctx),
+  /** A sitemap reading's pages, a thousand a record (`sitemapParts.ts`, §6.3). */
+  "2026-10-08-sitemap-parts": (ctx) => packSitemapPageRows(ctx),
 };

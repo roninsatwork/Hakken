@@ -6,6 +6,7 @@ import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { packNumbers, unpackNumbers } from "./utils/searchConsolePacks";
+import { writeSitemapPart } from "./sitemapParts";
 
 /**
  * Every page of a company's website once (docs/plans/active/page-groups-plan.md,
@@ -78,7 +79,7 @@ async function collected(t: Harness, websiteId: Id<"websites">) {
       websiteId, source: "ROBOTS", pages: SITEMAP.length, cut: false, day: "2026-10-03", readAt,
       files: [{ url: www("/page-sitemap.xml"), pages: 4 }, { url: www("/content-hub-sitemap.xml"), pages: 2 }, { url: www("/post-sitemap.xml"), pages: 1 }],
     });
-    for (const [page, file] of SITEMAP) await ctx.db.insert("siteSitemapPages", { websiteId, page, file, readAt });
+    await writeSitemapPart(ctx, { websiteId, readAt }, SITEMAP.map(([page, file]) => ({ page, file })));
     const pullId = await ctx.db.insert("seoDataPulls", {
       operationId: "site_crawl", family: "On-Page", mode: "QUEUED", websiteId, taskArgsJson: "{}", status: "READY",
       tag: `crawl-${Math.random()}`, attempts: 0, costUsd: 0, sandbox: false, submittedAt: Date.now(),
@@ -219,9 +220,9 @@ describe("every page once", () => {
     await t.run(async (ctx) => {
       const readAt = Date.now();
       await ctx.db.insert("siteSitemaps", { websiteId: owner.websiteId, source: "ROBOTS", pages: 1_005, cut: false, day: "2026-10-03", readAt, files: [{ url: www("/hub-sitemap.xml"), pages: 1_005 }] });
-      for (let at = 0; at < 1_005; at += 1) {
-        await ctx.db.insert("siteSitemapPages", { websiteId: owner.websiteId, page: `/hub/article-${at}/`, file: "hub-sitemap.xml", readAt });
-      }
+      const pages = Array.from({ length: 1_005 }, (_, at) => ({ page: `/hub/article-${at}/`, file: "hub-sitemap.xml" }));
+      await writeSitemapPart(ctx, { websiteId: owner.websiteId, readAt }, pages.slice(0, 1_000));
+      await writeSitemapPart(ctx, { websiteId: owner.websiteId, readAt }, pages.slice(1_000));
       await ctx.db.insert("fanOutLimits", { companyId: owner.companyId, companyWebsiteId: owner.holdId, sitemapPagesRead: 1_000, updatedAt: Date.now() } as never);
     });
     await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId });

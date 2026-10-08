@@ -5,6 +5,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { SITEMAP_FILE_BYTES, SITEMAP_TEXT_BYTES } from "./utils/sitemapFetch";
+import { pagesOfPart } from "./sitemapParts";
 
 /**
  * Reading a website's sitemap for Your pages (docs/plans/active/page-groups-
@@ -86,7 +87,9 @@ async function owned(t: Harness, host = "ronins.co.uk", limit?: number) {
 async function stored(t: Harness, websiteId: Id<"websites">) {
   return await t.run(async (ctx) => ({
     reading: await ctx.db.query("siteSitemaps").withIndex("by_website", (q) => q.eq("websiteId", websiteId)).unique(),
-    pages: await ctx.db.query("siteSitemapPages").withIndex("by_website_read", (q) => q.eq("websiteId", websiteId)).collect(),
+    // A reading's pages, a thousand a record (`sitemapParts.ts`), each with its reading.
+    pages: (await ctx.db.query("siteSitemapParts").withIndex("by_website_read", (q) => q.eq("websiteId", websiteId)).collect())
+      .flatMap((part) => pagesOfPart(part).map((row) => ({ ...row, readAt: part.readAt }))),
     scheduled: (await ctx.db.system.query("_scheduled_functions").collect()).map((job) => ({ name: job.name, args: job.args[0] })),
   }));
 }

@@ -462,6 +462,7 @@ import type * as siteReferringDomainParts from "../siteReferringDomainParts.js";
 import type * as siteSchema from "../siteSchema.js";
 import type * as siteSerp from "../siteSerp.js";
 import type * as siteSummaries from "../siteSummaries.js";
+import type * as sitemapParts from "../sitemapParts.js";
 import type * as sitemapRead from "../sitemapRead.js";
 import type * as sitemaps from "../sitemaps.js";
 import type * as sites from "../sites.js";
@@ -1146,6 +1147,7 @@ declare const fullApi: ApiFromModules<{
   siteSchema: typeof siteSchema;
   siteSerp: typeof siteSerp;
   siteSummaries: typeof siteSummaries;
+  sitemapParts: typeof sitemapParts;
   sitemapRead: typeof sitemapRead;
   sitemaps: typeof sitemaps;
   sites: typeof sites;

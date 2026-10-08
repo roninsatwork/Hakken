@@ -39,16 +39,3 @@ export async function writeLinkChanges(ctx: MutationCtx, websiteId: Id<"websites
   if (record) await ctx.db.replace(record._id, fields);
   else await ctx.db.insert("siteLinkWeeks", fields);
 }
-
-/**
- * Dev's weeks kept one a row before 2026-10-08 moved into one record a website
- * (`2026-10-08-link-weeks`), a website at a time; done when no row is left.
- */
-export async function packLinkDayRows(ctx: MutationCtx): Promise<{ cursor: null; isDone: boolean; processed: number; updated: number }> {
-  const first = await ctx.db.query("siteLinkDays").first();
-  if (!first) return { cursor: null, isDone: true, processed: 0, updated: 0 };
-  const rows = await ctx.db.query("siteLinkDays").withIndex("by_site_day", (q) => q.eq("websiteId", first.websiteId)).take(2_000);
-  await writeLinkChanges(ctx, first.websiteId, rows.map(({ _id, _creationTime, websiteId, updatedAt, ...week }) => week));
-  for (const row of rows) await ctx.db.delete(row._id);
-  return { cursor: null, isDone: false, processed: rows.length, updated: rows.length };
-}
