@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { getDocumentSize, v, type Value } from "convex/values";
 
 import { internalAction, internalMutation, internalQuery, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -512,7 +512,7 @@ function periodBucket(record: { country?: string; searchType: string; list: stri
   return `searchConsolePeriods: ${record.list}, ${record.period} days${record.which === "BEFORE" ? " (the period before)" : ""}${record.country ? `, ${record.country}` : ""}${record.searchType === "web" ? "" : `, ${record.searchType}`}`;
 }
 
-/** One page of a website's rows in one table: how many, and their size as stored, near enough. */
+/** One page of a website's rows in one table: how many, and their size as Convex counts it. */
 export const sizeStep = internalQuery({
   args: { holdId: v.id("companyWebsites"), table: v.union(...TABLES.map((table) => v.literal(table))), cursor: v.union(v.string(), v.null()), detail: v.optional(v.boolean()) },
   returns: v.object({ buckets: v.array(bucketValidator), continueCursor: v.string(), isDone: v.boolean() }),
@@ -533,7 +533,7 @@ export const sizeStep = internalQuery({
                 ? await ctx.db.query("searchConsoleSeenDays").withIndex("by_hold_country_type_kind_day", (q) => q.eq("companyWebsiteId", hold)).paginate(paging)
                 : await ctx.db.query("searchConsolePageRefs").withIndex("by_hold_ref", (q) => q.eq("companyWebsiteId", hold)).paginate(paging);
     const buckets = new Map<string, Bucket>();
-    for (const row of page.page as Array<Record<string, unknown>>) {
+    for (const row of page.page as Array<Record<string, Value>>) {
       const name = args.table === "searchConsoleLists"
         ? listBucket(row as { country?: string; searchType: string; list: string })
         : args.table === "searchConsolePeriods" && args.detail
@@ -541,7 +541,8 @@ export const sizeStep = internalQuery({
           : args.table;
       const bucket = buckets.get(name) ?? { name, records: 0, bytes: 0 };
       bucket.records += 1;
-      bucket.bytes += JSON.stringify(row).length;
+      // As Convex counts it (2026-10-08): JSON counted a number as its digits, a third of what it takes.
+      bucket.bytes += getDocumentSize(row);
       buckets.set(name, bucket);
     }
     return { buckets: [...buckets.values()], continueCursor: page.continueCursor, isDone: page.isDone };
@@ -568,7 +569,7 @@ const mb = (bytes: number) => `${(bytes / 1_000_000).toFixed(1)} MB`;
 /**
  * How much each website's Search Console figures take up, table by table —
  * or one website's, named by its host: run before the tidy and after it.
- * Sizes are each row as JSON, near enough what is stored.
+ * Sizes are each row as Convex counts it (`getDocumentSize`; JSON until 2026-10-08).
  */
 const sizeReportValidator = v.object({
   host: v.string(),

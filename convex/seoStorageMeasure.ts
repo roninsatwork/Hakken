@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { getDocumentSize, v, type Value } from "convex/values";
 
 import { internalAction, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -9,8 +9,11 @@ import { lostKeywordsKeptFrom } from "./seoCollectionPolicy";
  * How much DataForSEO's data takes up, table by table and website by website
  * (docs/plans/active/dataforseo-cost-plan.md, step 0): run by hand on a
  * deployment, before and after each change, as `searchConsoleTidy:keptSize`
- * is for Search Console. Sizes are each row as JSON, near enough what is
- * stored. Reads whole tables a page at a time: a measure, not a screen.
+ * is for Search Console. Sizes are each row as Convex counts it
+ * (`getDocumentSize`: nine bytes a number, a string's own bytes) — until
+ * 2026-10-08 each row as JSON, which counted `0` as one byte and so read
+ * number-heavy tables at a third of their size. Reads whole tables a page at
+ * a time: a measure, not a screen.
  */
 
 /** The tables the DataForSEO side keeps. */
@@ -49,8 +52,8 @@ export const tablePage = internalQuery({
     const page = await ctx.db.query(args.table as TableNames).paginate({ cursor: args.cursor, numItems: PAGE[args.table] ?? DEFAULT_PAGE });
     let bytes = 0;
     const websites = new Map<string, { rows: number; bytes: number }>();
-    for (const row of page.page as Array<Record<string, unknown>>) {
-      const size = JSON.stringify(row).length;
+    for (const row of page.page as Array<Record<string, Value>>) {
+      const size = getDocumentSize(row);
       bytes += size;
       const websiteId = (row.websiteId ?? row.mentionedWebsiteId ?? row.companyWebsiteId) as string | undefined;
       if (websiteId === undefined) continue;
@@ -130,7 +133,7 @@ export const rawAnswerAges = internalQuery({
     let month = 0;
     let older = 0;
     for (const row of page.page) {
-      const size = JSON.stringify(row).length;
+      const size = getDocumentSize(row);
       const age = Date.now() - row.storedAt;
       if (age <= 7 * day) week += size;
       else if (age <= 30 * day) month += size;
