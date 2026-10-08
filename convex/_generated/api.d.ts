@@ -518,6 +518,7 @@ import type * as utils_connectorOAuthUrls from "../utils/connectorOAuthUrls.js";
 import type * as utils_contentAdmin from "../utils/contentAdmin.js";
 import type * as utils_contentLanguages from "../utils/contentLanguages.js";
 import type * as utils_contentTranslator from "../utils/contentTranslator.js";
+import type * as utils_copyColumns from "../utils/copyColumns.js";
 import type * as utils_coreModules from "../utils/coreModules.js";
 import type * as utils_countingReads from "../utils/countingReads.js";
 import type * as utils_countryCodes from "../utils/countryCodes.js";
@@ -1196,6 +1197,7 @@ declare const fullApi: ApiFromModules<{
   "utils/contentAdmin": typeof utils_contentAdmin;
   "utils/contentLanguages": typeof utils_contentLanguages;
   "utils/contentTranslator": typeof utils_contentTranslator;
+  "utils/copyColumns": typeof utils_copyColumns;
   "utils/coreModules": typeof utils_coreModules;
   "utils/countingReads": typeof utils_countingReads;
   "utils/countryCodes": typeof utils_countryCodes;

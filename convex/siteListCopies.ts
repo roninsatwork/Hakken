@@ -7,6 +7,7 @@ import { claimSchedule, holdPagesKey, outOfDate, requestSiteRebuild, siteRebuild
 import { KEYWORD_COPY_FIELDS, keywordsCopyKey } from "./utils/keywordCopyLayout";
 import { utf8Length } from "./seoPullAnswers";
 import { stableStringify } from "./utils/lang";
+import { decodeCopyRows, encodeCopyRows } from "./utils/copyColumns";
 
 /**
  * Compact copies of the big Sites lists (docs/plans/active/
@@ -90,29 +91,32 @@ export async function readListCopy(ctx: QueryCtx, kind: AnyCopyKind, key: string
     .query("siteListCopyParts")
     .withIndex("by_build", (q) => q.eq("kind", kind).eq("key", key).eq("buildId", header.buildId))
     .take(header.parts);
-  const rows = parts.flatMap((part) => JSON.parse(part.data) as unknown[][]);
+  const rows = parts.flatMap((part) => decodeCopyRows(part.data));
   if (parts.length !== header.parts || rows.length !== header.rows) return null;
   return { fields: header.fields, rows, cut: header.cut, meta: header.meta, builtAt: header.builtAt };
 }
 
-/** Split rows into parts of JSON under the part budget. */
-function partsOf(rows: readonly unknown[][]): string[] {
-  const parts: string[] = [];
-  let current: string[] = [];
+/**
+ * Split rows into parts under the part budget, as rows of JSON would measure
+ * them, and keep each as columns (`utils/copyColumns.ts`) — smaller still, so
+ * inside its budget. Rows not all as long as the copy's fields stay rows.
+ */
+function partsOf(rows: readonly unknown[][], width: number): string[] {
+  const chunks: unknown[][][] = [];
+  let current: unknown[][] = [];
   let bytes = 2;
   for (const row of rows) {
-    const text = JSON.stringify(row);
-    const size = utf8Length(text) + 1;
+    const size = utf8Length(JSON.stringify(row)) + 1;
     if (current.length > 0 && bytes + size > PART_BYTES) {
-      parts.push(`[${current.join(",")}]`);
+      chunks.push(current);
       current = [];
       bytes = 2;
     }
-    current.push(text);
+    current.push(row);
     bytes += size;
   }
-  parts.push(`[${current.join(",")}]`);
-  return parts;
+  chunks.push(current);
+  return chunks.map((chunk) => (chunk.every((row) => row.length === width) ? encodeCopyRows(chunk, width) : JSON.stringify(chunk)));
 }
 
 /** A copy's fingerprint: its layout, cut, facts and every part, hashed (SHA-256). */
@@ -145,7 +149,7 @@ export async function writeListCopy(
   ctx: ActionCtx,
   copy: { kind: AnyCopyKind; key: string; fields: readonly string[]; rows: readonly unknown[][]; cut?: number | null; meta?: Record<string, string | number | null> },
 ): Promise<void> {
-  const parts = partsOf(copy.rows);
+  const parts = partsOf(copy.rows, copy.fields.length);
   const hash = await copyHash(copy.fields, copy.cut ?? null, copy.meta ?? {}, parts);
   if ((await ctx.runQuery(internal.siteListCopies.heldCopyHash, { kind: copy.kind, key: copy.key })) === hash) return;
   const buildId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -368,6 +372,33 @@ export const refreshListCopies = internalMutation({
     return null;
   },
 });
+
+/**
+ * Every copy asked to be built again, once, when how copies are kept changed
+ * (`2026-10-08-copies-as-columns`, `utils/copyColumns.ts`): a copy kept as
+ * rows reads as it did, but only a build keeps it as columns. Through the
+ * same requests the nightly refresh makes; a build changes nothing on screen.
+ */
+export async function rebuildEveryCopy(ctx: MutationCtx, cursor: string | null, batchSize: number) {
+  const page = await ctx.db.query("siteListCopies").paginate({ cursor, numItems: Math.min(batchSize, 50) });
+  let updated = 0;
+  for (const copy of page.page) {
+    if (copy.kind === "gap") continue;
+    if (copy.kind === "yourPages") {
+      const holdId = ctx.db.normalizeId("companyWebsites", copy.key);
+      if (holdId) await ctx.scheduler.runAfter(0, internal.holdPages.requestRebuild, { holdId });
+    } else if (copy.kind === "keywords") {
+      const [id, place] = copy.key.split(":");
+      const websiteId = ctx.db.normalizeId("websites", id);
+      if (!websiteId) continue;
+      await requestSiteRebuild(ctx, websiteId, Number(place));
+    } else {
+      await requestListCopy(ctx, copy.kind as CopyKind, copy.key);
+    }
+    updated += 1;
+  }
+  return { cursor: page.isDone ? null : page.continueCursor, isDone: page.isDone, processed: page.page.length, updated };
+}
 
 /**
  * Remove the copies whose key begins with this — a website's, or a hold's,
