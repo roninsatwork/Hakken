@@ -3,6 +3,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
+import { referringDomainNamed } from "./siteReferringDomainParts";
 
 /**
  * The backlinks records' own screens on the client's Sites pages: one linking
@@ -147,11 +148,7 @@ export const linkingWebsiteRecord = tenantQuery({
     // nearest website it sits under.
     const findWebsite = async () => {
       for (const candidate of [domain, ...parentDomains(domain)]) {
-        const found = await ctx.db
-          .query("siteReferringDomains")
-          .withIndex("by_site_domain", (q) => q.eq("websiteId", websiteId).eq("domain", candidate))
-          .order("desc")
-          .first();
+        const found = await referringDomainNamed(ctx, websiteId, candidate);
         if (found) return found;
       }
       return null;

@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { COMPETITOR_KEYWORDS_KEPT } from "./seoCleanOut";
+import { writeReferringDomainPart } from "./siteReferringDomainParts";
 
 /**
  * What competitors no longer have collected, cleared across every website on
@@ -42,7 +43,7 @@ async function collected(t: Harness, websiteId: Id<"websites">, keywordRanks: nu
     });
     // Kept for a competitor: its linking websites, and its link and keyword totals.
     const domains = await pull("referring_domains_list");
-    await ctx.db.insert("siteReferringDomains", { websiteId, pullId: domains, day: DAY, domain: "a.test", rank: 1, backlinks: 1, status: "LIVE" } as never);
+    await writeReferringDomainPart(ctx, { websiteId, pullId: domains, day: DAY }, [{ domain: "a.test", rank: 1, backlinks: 1, status: "LIVE" }]);
     for (const operationId of ["backlinks_all", "backlinks_summary", "domain_competitors"]) {
       await ctx.db.insert("seoWebsiteMetrics", { websiteId, day: DAY, operationId, pullId: links, metricsJson: "{}", locationCode: UK, createdAt: 1 } as never);
     }
@@ -82,13 +83,14 @@ async function setup() {
 /** What a website holds, table by table. */
 async function heldBy(t: Harness, websiteId: Id<"websites">) {
   return await t.run(async (ctx) => {
-    const count = async (table: "siteCrawls" | "siteCrawlPages" | "siteCrawlLinks" | "siteBacklinks" | "siteAnchors" | "siteReferringIps" | "siteReferringSubnets" | "siteLinkDays" | "siteReferringDomains" | "seoWebsiteMetrics" | "siteKeywordFeatures" | "siteKeywordRanks") =>
+    const count = async (table: "siteCrawls" | "siteCrawlPages" | "siteCrawlLinks" | "siteBacklinks" | "siteAnchors" | "siteReferringIps" | "siteReferringSubnets" | "siteLinkDays" | "seoWebsiteMetrics" | "siteKeywordFeatures" | "siteKeywordRanks") =>
       (await ctx.db.query(table).collect()).filter((row) => (row as { websiteId?: Id<"websites"> }).websiteId === websiteId).length;
     return {
       crawls: await count("siteCrawls") + await count("siteCrawlPages") + await count("siteCrawlLinks"),
       crawlFigures: (await ctx.db.query("siteDaySummaries").collect()).filter((row) => row.websiteId === websiteId && row.crawledPages !== undefined).length,
       links: await count("siteBacklinks") + await count("siteAnchors") + await count("siteReferringIps") + await count("siteReferringSubnets") + await count("siteLinkDays"),
-      linkingWebsites: await count("siteReferringDomains"),
+      linkingWebsites: (await ctx.db.query("siteReferringDomainParts").collect()).filter((part) => part.websiteId === websiteId)
+        .reduce((sum, part) => sum + part.domains.length, 0),
       metrics: (await ctx.db.query("seoWebsiteMetrics").collect()).filter((row) => row.websiteId === websiteId).map((row) => row.operationId).sort(),
       features: await count("siteKeywordFeatures"),
       ranks: await count("siteKeywordRanks"),

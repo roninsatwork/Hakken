@@ -24,6 +24,10 @@ import {
 
 /** A number that may be unknown: DataForSEO leaves out what it does not have. */
 const maybeNumber = v.optional(v.number());
+/** A column of whole numbers packed as text (`utils/packedColumns.ts`), or a list where one is not whole. */
+const packedColumnValidator = v.union(v.string(), v.array(v.union(v.number(), v.null())));
+/** A column of days packed as text, or the days as written (`packDays`). */
+const packedDaysValidator = v.union(v.string(), v.array(v.union(v.string(), v.null())));
 
 /** Which list a backlink came from: one per linking website, or every broken one. */
 const linkPassValidator = v.union(v.literal("ONE_PER_DOMAIN"), v.literal("BROKEN"), v.literal("ALL"));
@@ -503,6 +507,34 @@ export const siteTables = {
     .index("by_site_domain", ["websiteId", "domain"])
     .index("by_pull", ["pullId"])
     .searchIndex("search_domain", { searchField: "domain", filterFields: ["websiteId", "status"] }),
+
+  /**
+   * The websites linking to a website, a check's list packed — up to a
+   * thousand a record (core-data-normalisation-plan.md §6.3): one row a
+   * linking website was 22,709 rows and 8.3 MB on dev, most of it each row's
+   * own keeping and six indexes. Each column a list or packed text in step
+   * with `domains` (`siteReferringDomainParts.ts`); read whole by its screens,
+   * which hold 2,500 at most.
+   */
+  siteReferringDomainParts: defineTable({
+    websiteId: v.id("websites"),
+    pullId: v.id("seoDataPulls"),
+    day: v.string(),
+    domains: v.array(v.string()),
+    rank: packedColumnValidator,
+    backlinks: packedColumnValidator,
+    spamScore: packedColumnValidator,
+    brokenBacklinks: packedColumnValidator,
+    referringPages: packedColumnValidator,
+    nofollowPages: packedColumnValidator,
+    /** First seen and lost, as days since 1970. */
+    firstSeen: packedDaysValidator,
+    lostDate: packedDaysValidator,
+    /** 0 live, 1 new, 2 lost. */
+    status: packedColumnValidator,
+  })
+    .index("by_site_day", ["websiteId", "day"])
+    .index("by_pull", ["pullId"]),
 
   /** The words other websites link to a website with, from its newest list (Phase 4). */
   siteAnchors: defineTable({

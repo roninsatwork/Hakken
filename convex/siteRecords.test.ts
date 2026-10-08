@@ -6,6 +6,7 @@ import { setPoint } from "./positionHistory";
 import type { Id } from "./_generated/dataModel";
 import { answerPlace } from "./seoAiEngines";
 import { useFixedDay } from "@/src/test/realTime";
+import { writeReferringDomainPart } from "./siteReferringDomainParts";
 
 /**
  * A record's own screen on the client's Sites pages (docs/plans/active/
@@ -241,9 +242,9 @@ describe("a linking website's and an anchor's own screens", () => {
     const own = await hold(t, korda, "kordatackle.com");
     const pullId = await pull(t, own.websiteId);
     await t.run(async (ctx) => {
-      await ctx.db.insert("siteReferringDomains", {
-        websiteId: own.websiteId, pullId, day: DAY, domain: "anglers.net", rank: 320, backlinks: 2, status: "LIVE", spamScore: 4, referringPages: 2,
-      });
+      await writeReferringDomainPart(ctx, { websiteId: own.websiteId, pullId, day: DAY }, [
+        { domain: "anglers.net", rank: 320, backlinks: 2, status: "LIVE", spamScore: 4, referringPages: 2 },
+      ]);
       const base = {
         websiteId: own.websiteId, pass: "ALL" as const, pullId, day: DAY, domainFrom: "anglers.net", urlTo: "https://kordatackle.com/",
         pageTo: "/", dofollow: true, status: "LIVE" as const, isBroken: false, domainRank: 320, searchText: "anglers.net",

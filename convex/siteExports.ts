@@ -19,6 +19,7 @@ import { yourPagesList, yourPagesSortValue } from "./yourPages";
 import { readPageKinds } from "./pageKinds";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
 import { isTrackedHold } from "./utils/websitePairing";
+import { readReferringDomains, type ReferringDomainRow } from "./siteReferringDomainParts";
 
 /**
  * Downloading a whole Sites table as CSV (docs/plans/active/user-sites-plan.md,
@@ -110,7 +111,7 @@ const HEADERS: Record<ExportKind, string[]> = {
  * leaves it in its own order.
  */
 type ExportRow = Doc<"siteKeywordRanks"> | Doc<"sitePageRanks"> | GapRow | Doc<"siteBacklinks">
-  | Doc<"siteReferringDomains"> | Doc<"siteAnchors"> | Doc<"siteReferringIps"> | Doc<"sitePaidKeywords">;
+  | ReferringDomainRow | Doc<"siteAnchors"> | Doc<"siteReferringIps"> | Doc<"sitePaidKeywords">;
 const EXPORT_SORTS: Partial<Record<ExportKind, Record<string, (row: never) => SortValue>>> = {
   keywords: {
     keyword: (row: Doc<"siteKeywordRanks">) => row.keyword,
@@ -149,11 +150,11 @@ const EXPORT_SORTS: Partial<Record<ExportKind, Record<string, (row: never) => So
     domainRank: (row: Doc<"siteBacklinks">) => row.domainRank,
   },
   domains: {
-    domain: (row: Doc<"siteReferringDomains">) => row.domain,
-    rank: (row: Doc<"siteReferringDomains">) => row.rank,
-    backlinks: (row: Doc<"siteReferringDomains">) => row.backlinks,
-    spam: (row: Doc<"siteReferringDomains">) => row.spamScore,
-    firstSeen: (row: Doc<"siteReferringDomains">) => row.firstSeen,
+    domain: (row: ReferringDomainRow) => row.domain,
+    rank: (row: ReferringDomainRow) => row.rank,
+    backlinks: (row: ReferringDomainRow) => row.backlinks,
+    spam: (row: ReferringDomainRow) => row.spamScore,
+    firstSeen: (row: ReferringDomainRow) => row.firstSeen,
   },
   anchors: {
     anchor: (row: Doc<"siteAnchors">) => row.anchor,
@@ -415,12 +416,15 @@ export const exportPage = internalQuery({
           row.platformTypes?.join(" "), row.linkRank, row.spamScore, row.domainRank, row.pageRank, row.linksOnPage,
           row.indirect, row.language, row.country, row.firstSeen, row.previousSeen, row.lastSeen, row.status, row.day,
         ]), (row) => row.urlFrom);
-      case "domains":
-        return done(await ctx.db.query("siteReferringDomains")
-          .withIndex("by_site_rank", (q) => q.eq("websiteId", websiteId))
-          .order("desc").paginate(page), (row: Doc<"siteReferringDomains">) => line([
+      case "domains": {
+        // Every check's list packed (`siteReferringDomainParts.ts`), strongest first: a page of it from where the last stopped.
+        const every = await readReferringDomains(ctx, websiteId);
+        const from = Number(page.cursor ?? 0) || 0;
+        const rows = every.slice(from, from + page.numItems);
+        return done({ page: rows, continueCursor: String(from + rows.length), isDone: from + rows.length >= every.length }, (row: ReferringDomainRow) => line([
           row.domain, row.rank, row.backlinks, row.referringPages, row.spamScore, row.firstSeen, row.lostDate, row.status, row.day,
         ]), (row) => row.domain);
+      }
       case "anchors":
         return done(await ctx.db.query("siteAnchors")
           .withIndex("by_site_backlinks", (q) => q.eq("websiteId", websiteId))

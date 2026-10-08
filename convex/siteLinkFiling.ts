@@ -19,6 +19,7 @@ import { placesWatching } from "./siteRankings";
 import { getErrorMessage } from "./utils/lang";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { bandCountsValidator } from "./utils/siteShapes";
+import { DOMAIN_PART_ROWS, removeReferringDomainsBefore, writeReferringDomainPart } from "./siteReferringDomainParts";
 
 /**
  * Filing the Sites link calls (`dataForSeoLinkOperations.ts`, Phase 4).
@@ -58,6 +59,8 @@ const ROWS_PER_WRITE = 200;
 
 /** Rows looked at per mutation when clearing an older list. */
 const CLEAR_PAGE = 400;
+/** Referring domains' packed records cleared a call: each up to a thousand linking websites, tens of kilobytes. */
+const DOMAIN_PARTS_CLEARED = 20;
 
 /** Day summaries filled per mutation. */
 const DAYS_PER_WRITE = 60;
@@ -65,12 +68,12 @@ const DAYS_PER_WRITE = 60;
 const linkStatus = v.union(v.literal("LIVE"), v.literal("NEW"), v.literal("LOST"));
 const linkPass = v.union(v.literal("ONE_PER_DOMAIN"), v.literal("BROKEN"), v.literal("ALL"));
 const linkTable = v.union(
-  v.literal("siteBacklinks"), v.literal("siteReferringDomains"), v.literal("siteAnchors"), v.literal("siteReferringIps"),
+  v.literal("siteBacklinks"), v.literal("siteReferringDomainParts"), v.literal("siteAnchors"), v.literal("siteReferringIps"),
 );
 const maybeNumber = v.optional(v.number());
 const maybeString = v.optional(v.string());
 
-type LinkTable = "siteBacklinks" | "siteReferringDomains" | "siteAnchors" | "siteReferringIps";
+type LinkTable = "siteBacklinks" | "siteReferringDomainParts" | "siteAnchors" | "siteReferringIps";
 
 /** The Monday of the week a day falls in, as `bucketOf` counts weeks. */
 function mondayOf(day: string): string {
@@ -182,7 +185,7 @@ const PAGED_LINK_LISTS: Record<string, { table: LinkTable; pass?: "ONE_PER_DOMAI
   backlinks_list: { table: "siteBacklinks", pass: "ONE_PER_DOMAIN" },
   backlinks_broken: { table: "siteBacklinks", pass: "BROKEN" },
   [BACKLINK_LIST_OPERATION_ID]: { table: "siteBacklinks", pass: "ALL" },
-  referring_domains_list: { table: "siteReferringDomains" },
+  referring_domains_list: { table: "siteReferringDomainParts" },
   anchors_list: { table: "siteAnchors" },
   referring_ips_list: { table: "siteReferringIps" },
 };
@@ -218,8 +221,9 @@ async function fileLinkListPage(
     for (const rows of chunks(parseBacklinkList(result).rows, ROWS_PER_WRITE)) {
       await ctx.runMutation(internal.siteLinkFiling.writeBacklinks, { websiteId, pullId, pass: kind.pass ?? "ONE_PER_DOMAIN", day, rows });
     }
-  } else if (kind.table === "siteReferringDomains") {
-    for (const rows of chunks(parseReferringDomains(result).rows, ROWS_PER_WRITE)) {
+  } else if (kind.table === "siteReferringDomainParts") {
+    // A thousand a record, packed (`siteReferringDomainParts.ts`): a page of the list is one.
+    for (const rows of chunks(parseReferringDomains(result).rows, DOMAIN_PART_ROWS)) {
       await ctx.runMutation(internal.siteLinkFiling.writeReferringDomains, { websiteId, pullId, day, rows });
     }
   } else if (kind.table === "siteAnchors") {
@@ -414,16 +418,19 @@ export const removeRowsBefore = internalMutation({
   },
   returns: v.object({ cursor: v.string(), isDone: v.boolean() }),
   handler: async (ctx, args) => {
+    // A check's packed records go by their day, a page of them at a time (`siteReferringDomainParts.ts`).
+    if (args.table === "siteReferringDomainParts") {
+      const done = await removeReferringDomainsBefore(ctx, args.websiteId, args.day, DOMAIN_PARTS_CLEARED);
+      return { cursor: "", isDone: done };
+    }
     const page = { cursor: args.cursor, numItems: CLEAR_PAGE };
     const result = args.table === "siteBacklinks"
       ? await ctx.db.query("siteBacklinks")
         .withIndex("by_site_pass_day", (q) => q.eq("websiteId", args.websiteId).eq("pass", args.pass ?? "ONE_PER_DOMAIN").lt("day", args.day))
         .paginate(page)
-      : args.table === "siteReferringDomains"
-        ? await ctx.db.query("siteReferringDomains").withIndex("by_site_rank", (q) => q.eq("websiteId", args.websiteId)).paginate(page)
-        : args.table === "siteAnchors"
-          ? await ctx.db.query("siteAnchors").withIndex("by_site_backlinks", (q) => q.eq("websiteId", args.websiteId)).paginate(page)
-          : await ctx.db.query("siteReferringIps").withIndex("by_site_backlinks", (q) => q.eq("websiteId", args.websiteId)).paginate(page);
+      : args.table === "siteAnchors"
+        ? await ctx.db.query("siteAnchors").withIndex("by_site_backlinks", (q) => q.eq("websiteId", args.websiteId)).paginate(page)
+        : await ctx.db.query("siteReferringIps").withIndex("by_site_backlinks", (q) => q.eq("websiteId", args.websiteId)).paginate(page);
     for (const row of result.page) if (row.day < args.day) await ctx.db.delete(row._id);
     return { cursor: result.continueCursor, isDone: result.isDone };
   },
@@ -560,9 +567,7 @@ export const writeReferringDomains = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    for (const row of args.rows) {
-      await ctx.db.insert("siteReferringDomains", { websiteId: args.websiteId, pullId: args.pullId, day: args.day, ...row });
-    }
+    await writeReferringDomainPart(ctx, { websiteId: args.websiteId, pullId: args.pullId, day: args.day }, args.rows);
     return null;
   },
 });

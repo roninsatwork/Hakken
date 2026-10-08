@@ -14,11 +14,14 @@ import { dropCopies } from "./siteListCopies";
 import { deleteAnswerText } from "./siteAnswers";
 import { purgeHoldListAi } from "./siteListAi";
 import { clearWebsitePositions, removeChecksOfSearch } from "./positionHistory";
+import { removeReferringDomainsBefore } from "./siteReferringDomainParts";
 
 /**
  * Rows removed per pass, so one purge is one bounded transaction and chains
  * itself for the rest. The same number the rest of the websites code uses.
  */
+/** Referring domains' packed records removed a pass. */
+const DOMAIN_PARTS_PURGED = 20;
 const ENTRY_PURGE_BATCH = 100;
 
 /**
@@ -227,6 +230,8 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
       .withIndex("by_site_pass_rank", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
     await byWebsite(await ctx.db.query("siteReferringDomains")
       .withIndex("by_site_rank", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    // Packed a check's list a record (`siteReferringDomainParts.ts`): a few at a time, each tens of kilobytes.
+    if (!(await removeReferringDomainsBefore(ctx, args.websiteId, null, DOMAIN_PARTS_PURGED))) more = true;
     await byWebsite(await ctx.db.query("siteAnchors")
       .withIndex("by_site_backlinks", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
     await byWebsite(await ctx.db.query("siteReferringIps")

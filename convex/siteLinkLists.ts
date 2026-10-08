@@ -7,6 +7,7 @@ import { linksCopyKey, readListCopy } from "./siteListCopies";
 import { heldTo, listOrder, listPageArgs, listPageResult, newestPerKey, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { ipSortKey, type SortDirection } from "./utils/sortOrder";
 import { wordStartMatcher } from "./utils/wordStarts";
+import { readReferringDomains, type ReferringDomainRow } from "./siteReferringDomainParts";
 
 /**
  * The link lists behind the Sites backlink pages (Phase 4): every link, the
@@ -242,7 +243,7 @@ function shapeGroup(row: { rank: number; backlinks: number; firstSeen?: string; 
  * Referring domains' columns that sort: the website A to Z; the strongest,
  * most links, most suspicious and newest first.
  */
-const DOMAIN_SORTS: ListSorts<Doc<"siteReferringDomains">, "domain" | "rank" | "backlinks" | "spam" | "firstSeen"> = {
+const DOMAIN_SORTS: ListSorts<ReferringDomainRow, "domain" | "rank" | "backlinks" | "spam" | "firstSeen"> = {
   domain: { value: (row) => row.domain, first: "asc" },
   rank: { value: (row) => row.rank, first: "desc" },
   backlinks: { value: (row) => row.backlinks, first: "desc" },
@@ -267,7 +268,6 @@ export const listReferringDomains = tenantQuery({
     direction: sortDirectionArg,
   },
   returns: listPageResult(v.object({
-    _id: v.id("siteReferringDomains"),
     domain: v.string(),
     ...groupShape,
     brokenBacklinks: nullableNumber,
@@ -276,14 +276,11 @@ export const listReferringDomains = tenantQuery({
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const read = await ctx.db
-      .query("siteReferringDomains")
-      .withIndex("by_site_rank", (q) => q.eq("websiteId", site.website._id))
-      .order("desc")
-      .take(LINK_LIST_READ + 1);
+    // Strongest first, the newest list first among equals, as each check's list is packed (`siteReferringDomainParts.ts`).
+    const read = await readReferringDomains(ctx, site.website._id);
     const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
     const matches = wordStartMatcher(args.search);
-    const name = (row: Doc<"siteReferringDomains">) => row.domain;
+    const name = (row: ReferringDomainRow) => row.domain;
     const list = newestPerKey(held, name)
       .filter((row) => (!args.status || row.status === args.status) && (!matches || matches(row.domain)))
       .filter((row) => !args.follow || (row.nofollowPages ?? 0) > 0)
@@ -292,7 +289,6 @@ export const listReferringDomains = tenantQuery({
     return {
       ...page,
       rows: page.rows.map((row) => ({
-        _id: row._id,
         domain: row.domain,
         ...shapeGroup(row),
         brokenBacklinks: row.brokenBacklinks ?? null,

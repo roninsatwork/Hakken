@@ -5,6 +5,7 @@ import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { slimSeoResult } from "./dataForSeoSlim";
 import { useFixedDay } from "@/src/test/realTime";
+import { rowsOfPart, writeReferringDomainPart } from "./siteReferringDomainParts";
 
 /**
  * The Sites link pages (docs/plans/active/user-sites-plan.md, Phase 4): each
@@ -93,7 +94,8 @@ describe("link lists bought past a thousand (sites-data-completeness-plan.md, B2
     await t.run(async (ctx) => {
       await ctx.db.insert("companyDataLimits", { companyId: korda, keywordsPerSite: 1_000, backlinksPerSite: 2_500, updatedAt: Date.now() });
     });
-    const held = async () => (await t.run(async (ctx) => await ctx.db.query("siteReferringDomains").collect())).map((row) => `${row.day}:${row.domain.slice(0, 3)}`);
+    const held = async () => (await t.run(async (ctx) => (await ctx.db.query("siteReferringDomainParts").collect()).flatMap(rowsOfPart)))
+      .map((row) => `${row.day}:${row.domain.slice(0, 3)}`);
     const count = async (day: string) => (await held()).filter((row) => row.startsWith(day)).length;
 
     // Last week's list: 1,500 linking websites in two pages.
@@ -397,14 +399,10 @@ describe("exact pages of the link lists", () => {
   }
 
   async function domains(t: Harness, websiteId: Id<"websites">, pullId: Id<"seoDataPulls">, names: string[], day: string) {
-    await t.run(async (ctx) => {
-      for (const [index, domain] of names.entries()) {
-        await ctx.db.insert("siteReferringDomains", {
-          websiteId, pullId, day, domain, rank: 1_000 - index, backlinks: index + 1, status: "LIVE",
-          firstSeen: `2026-01-${String((index % 28) + 1).padStart(2, "0")}`,
-        });
-      }
-    });
+    await t.run(async (ctx) => await writeReferringDomainPart(ctx, { websiteId, pullId, day }, names.map((domain, index) => ({
+      domain, rank: 1_000 - index, backlinks: index + 1, status: "LIVE" as const,
+      firstSeen: `2026-01-${String((index % 28) + 1).padStart(2, "0")}`,
+    }))));
   }
 
   test("counts each linking website once while a new list is filed over the last, and opens any page", async () => {

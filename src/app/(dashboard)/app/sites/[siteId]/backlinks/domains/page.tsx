@@ -60,7 +60,7 @@ export default function SiteReferringDomainsPage() {
       <ListHeldLine held={!term && !status && !follow ? table.result?.total : undefined} total={totals?.referringDomains} />
       <DataTable
         rows={table.pageRows}
-        rowKey={(row) => row._id}
+        rowKey={(row) => row.domain}
         onRowClick={(row) => router.push(recordHref({ kind: "domain", domain: row.domain }))}
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={

@@ -9,6 +9,7 @@ import { SEO_KEYWORD_CHECK_OPERATION } from "./dataForSeoRegistry";
 import { parseBacklinksSummary } from "./dataForSeoParsers";
 import { answerPlace } from "./seoAiEngines";
 import { useFixedDay } from "@/src/test/realTime";
+import { writeReferringDomainPart } from "./siteReferringDomainParts";
 
 /**
  * What the screen audit of 2026-09-26 found, fixed on the server
@@ -760,12 +761,10 @@ describe("nofollow linking websites (4.13)", () => {
         operationId: "backlinks_referring_domains", family: "Backlinks", mode: "LIVE", websiteId: own.websiteId, taskArgsJson: "{}",
         status: "READY", tag: `t-${Math.random()}`, attempts: 0, costUsd: 0, sandbox: false, submittedAt: Date.now(),
       } as never);
-      for (const [domain, nofollowPages] of [["followed.co.uk", 0], ["mixed.co.uk", 2], ["unknown.co.uk", undefined], ["nofollow.com", 5]] as const) {
-        await ctx.db.insert("siteReferringDomains", {
-          websiteId: own.websiteId, pullId, day: "2026-09-24", domain, rank: 100, backlinks: 5, status: "LIVE", referringPages: 5,
-          ...(nofollowPages === undefined ? {} : { nofollowPages }),
-        });
-      }
+      const linking = [["followed.co.uk", 0], ["mixed.co.uk", 2], ["unknown.co.uk", undefined], ["nofollow.com", 5]] as const;
+      await writeReferringDomainPart(ctx, { websiteId: own.websiteId, pullId, day: "2026-09-24" }, linking.map(([domain, nofollowPages]) => ({
+        domain, rank: 100, backlinks: 5, status: "LIVE" as const, referringPages: 5, ...(nofollowPages === undefined ? {} : { nofollowPages }),
+      })));
     });
     const asRonins = await member(t, ronins);
     const every = await asRonins.query(api.siteLinkLists.listReferringDomains, { siteId: own.holdId, page: 1, rows: 25 });
