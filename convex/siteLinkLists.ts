@@ -9,6 +9,7 @@ import { ipSortKey, type SortDirection } from "./utils/sortOrder";
 import { wordStartMatcher } from "./utils/wordStarts";
 import { readReferringDomains, type ReferringDomainRow } from "./siteReferringDomainParts";
 import { networksOf, readAnchors, readServers, type AnchorRow, type ReferringIpRow } from "./siteLinkGroupParts";
+import { readLinkChanges } from "./siteLinkWeeks";
 
 /**
  * The link lists behind the Sites backlink pages (Phase 4): every link, the
@@ -38,9 +39,6 @@ export const LINK_COPY_FIELDS = ["id", "domainFrom", "urlFrom", "anchor", "pageT
 
 /** Networks shown at once: a chart's worth. */
 const SUBNETS_SHOWN = 15;
-
-/** Days of link changes read for one chart: two years and change. */
-const CHANGE_DAYS = 800;
 
 const status = v.union(v.literal("LIVE"), v.literal("NEW"), v.literal("LOST"));
 const nullableNumber = v.union(v.number(), v.null());
@@ -408,10 +406,8 @@ export const linkChanges = tenantQuery({
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const rows = await ctx.db
-      .query("siteLinkDays")
-      .withIndex("by_site_day", (q) => q.eq("websiteId", site.website._id).gte("day", args.from).lte("day", args.to))
-      .take(CHANGE_DAYS);
+    // The website's weeks, one packed record (`siteLinkWeeks.ts`): those in the dates asked.
+    const rows = (await readLinkChanges(ctx, site.website._id)).filter((row) => row.day >= args.from && row.day <= args.to);
     const points = new Map<string, { day: string; newBacklinks: number; lostBacklinks: number; newReferringDomains: number; lostReferringDomains: number }>();
     for (const row of rows) {
       const key = bucketOf(row.day, args.step);

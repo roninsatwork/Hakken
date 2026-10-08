@@ -443,6 +443,7 @@ import type * as siteLinkFiling from "../siteLinkFiling.js";
 import type * as siteLinkGroupParts from "../siteLinkGroupParts.js";
 import type * as siteLinkLists from "../siteLinkLists.js";
 import type * as siteLinkRecords from "../siteLinkRecords.js";
+import type * as siteLinkWeeks from "../siteLinkWeeks.js";
 import type * as siteLinks from "../siteLinks.js";
 import type * as siteListAi from "../siteListAi.js";
 import type * as siteListAiDays from "../siteListAiDays.js";
@@ -1126,6 +1127,7 @@ declare const fullApi: ApiFromModules<{
   siteLinkGroupParts: typeof siteLinkGroupParts;
   siteLinkLists: typeof siteLinkLists;
   siteLinkRecords: typeof siteLinkRecords;
+  siteLinkWeeks: typeof siteLinkWeeks;
   siteLinks: typeof siteLinks;
   siteListAi: typeof siteListAi;
   siteListAiDays: typeof siteListAiDays;

@@ -4,7 +4,6 @@ import schema from "./schema";
 import {
   anchorNamed,
   networksOf,
-  packAnchorAndServerRows,
   readAnchors,
   readServers,
   removeGroupPartsBefore,
@@ -86,30 +85,5 @@ describe("a check's servers, a record", () => {
       { subnet: "1.2.3.0/24", ips: 2, backlinks: 12, referringDomains: 10 },
       { subnet: "2001:db8::1", ips: 1, backlinks: 1, referringDomains: 0 },
     ]);
-  });
-});
-
-describe("dev's rows moved into records", () => {
-  test("a check at a time, the oldest first, every figure kept and the rows removed", async () => {
-    const { t, websiteId, older, newer } = await seeded();
-    await t.run(async (ctx) => {
-      await ctx.db.insert("siteAnchors", { websiteId, pullId: older, day: "2026-09-01", anchor: "old", rank: 3, backlinks: 1, referringDomains: 1, status: "LIVE" });
-      await ctx.db.insert("siteAnchors", { websiteId, pullId: newer, day: "2026-09-08", anchor: "new", rank: 6, backlinks: 2, referringDomains: 1, status: "NEW", firstSeen: "2026-09-07", spamScore: 4 });
-      await ctx.db.insert("siteReferringIps", {
-        websiteId, pullId: newer, day: "2026-09-08", ip: "1.2.3.4", subnet: "1.2.3.0/24", rank: 9, backlinks: 3, referringDomains: 2, status: "LIVE", searchText: "1.2.3.4 1.2.3.0/24",
-      });
-    });
-    for (let step = 0; step < 10; step += 1) {
-      if ((await t.run(async (ctx) => await packAnchorAndServerRows(ctx))).isDone) break;
-    }
-    const { anchors, servers, left } = await t.run(async (ctx) => ({
-      anchors: await readAnchors(ctx, websiteId),
-      servers: await readServers(ctx, websiteId),
-      left: (await ctx.db.query("siteAnchors").collect()).length + (await ctx.db.query("siteReferringIps").collect()).length,
-    }));
-    expect(left).toBe(0);
-    expect(anchors.map((row) => [row.anchor, row.pullId])).toEqual([["new", newer], ["old", older]]);
-    expect(anchors[0]).toMatchObject({ status: "NEW", firstSeen: "2026-09-07", spamScore: 4, rank: 6 });
-    expect(servers).toEqual([expect.objectContaining({ ip: "1.2.3.4", subnet: "1.2.3.0/24", rank: 9, backlinks: 3, referringDomains: 2 })]);
   });
 });

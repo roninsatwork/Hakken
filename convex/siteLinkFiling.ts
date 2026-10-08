@@ -22,6 +22,7 @@ import { bandCountsValidator } from "./utils/siteShapes";
 import { removeReferringDomainsBefore, writeReferringDomainPart } from "./siteReferringDomainParts";
 import { removeGroupPartsBefore, writeAnchorPart, writeServerPart } from "./siteLinkGroupParts";
 import { LINK_PART_ROWS } from "./utils/linkListParts";
+import { writeLinkChanges } from "./siteLinkWeeks";
 
 /**
  * Filing the Sites link calls (`dataForSeoLinkOperations.ts`, Phase 4).
@@ -126,10 +127,9 @@ export async function fileSiteLinkPull(ctx: ActionCtx, pullId: Id<"seoDataPulls"
         // A week arrives dated by its last day, which for this week is still
         // ahead. Filed under its Monday, every answer about a week lands on
         // the same row — a later, fuller count replaces an earlier one.
+        // One packed record a website (`siteLinkWeeks.ts`): the series written once.
         const weeks = parseNewLostSeries(result).map((row) => ({ ...row, day: mondayOf(row.day) }));
-        for (const rows of chunks(weeks, DAYS_PER_WRITE)) {
-          await ctx.runMutation(internal.siteLinkFiling.writeLinkDays, { websiteId, rows });
-        }
+        await ctx.runMutation(internal.siteLinkFiling.writeLinkDays, { websiteId, rows: weeks });
         break;
       }
       case "backlinks_history": {
@@ -574,16 +574,7 @@ export const writeLinkDays = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const now = Date.now();
-    for (const row of args.rows) {
-      const existing = await ctx.db
-        .query("siteLinkDays")
-        .withIndex("by_site_day", (q) => q.eq("websiteId", args.websiteId).eq("day", row.day))
-        .unique();
-      const fields = { websiteId: args.websiteId, ...row, updatedAt: now };
-      if (existing) await ctx.db.replace(existing._id, fields);
-      else await ctx.db.insert("siteLinkDays", fields);
-    }
+    await writeLinkChanges(ctx, args.websiteId, args.rows);
     return null;
   },
 });

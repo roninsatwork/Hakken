@@ -555,53 +555,6 @@ export const siteTables = {
     .index("by_site_day", ["websiteId", "day"])
     .index("by_pull", ["pullId"]),
 
-  /** The words other websites link to a website with, from its newest list (Phase 4). */
-  siteAnchors: defineTable({
-    websiteId: v.id("websites"),
-    pullId: v.id("seoDataPulls"),
-    day: v.string(),
-    /** Empty for a link with no words — an image. */
-    anchor: v.string(),
-    rank: v.number(),
-    backlinks: v.number(),
-    referringDomains: v.number(),
-    firstSeen: v.optional(v.string()),
-    lostDate: v.optional(v.string()),
-    status: linkStatusValidator,
-    spamScore: maybeNumber,
-  })
-    .index("by_site_backlinks", ["websiteId", "backlinks"])
-    .index("by_site_domains", ["websiteId", "referringDomains"])
-    .index("by_site_status_backlinks", ["websiteId", "status", "backlinks"])
-    // An anchor's own screen.
-    .index("by_site_anchor", ["websiteId", "anchor"])
-    .index("by_pull", ["pullId"])
-    .searchIndex("search_anchor", { searchField: "anchor", filterFields: ["websiteId", "status"] }),
-
-  /** The servers a website's links come from, from its newest list (Phase 4). */
-  siteReferringIps: defineTable({
-    websiteId: v.id("websites"),
-    pullId: v.id("seoDataPulls"),
-    day: v.string(),
-    ip: v.string(),
-    /** The /24 network the address sits in: many linking sites on one is a link network. */
-    subnet: v.string(),
-    rank: v.number(),
-    backlinks: v.number(),
-    referringDomains: v.number(),
-    firstSeen: v.optional(v.string()),
-    lostDate: v.optional(v.string()),
-    status: linkStatusValidator,
-    spamScore: maybeNumber,
-    searchText: v.string(),
-  })
-    .index("by_site_backlinks", ["websiteId", "backlinks"])
-    .index("by_site_domains", ["websiteId", "referringDomains"])
-    .index("by_site_subnet_backlinks", ["websiteId", "subnet", "backlinks"])
-    .index("by_site_subnet_domains", ["websiteId", "subnet", "referringDomains"])
-    .index("by_pull", ["pullId"])
-    .searchIndex("search_text", { searchField: "searchText", filterFields: ["websiteId", "status", "subnet"] }),
-
   /**
    * Each finished crawl of a website (Phase 5): pages reached, DataForSEO's
    * technical score, and the problems it found as counts of pages. One row per
@@ -661,19 +614,22 @@ export const siteTables = {
     .searchIndex("search_text", { searchField: "searchText", filterFields: ["websiteId", "locationCode"] }),
 
   /**
-   * The networks a website's linking servers sit in, counted when its server
-   * list is filed: many linking websites on one network is a link network.
+   * Links a website gained and lost each week, from DataForSEO's own count
+   * (`backlinks_new_lost`): one packed record a website, a week a place in
+   * each column (core-data-normalisation-plan.md §6.3; `siteLinkWeeks.ts`).
    */
-  siteReferringSubnets: defineTable({
+  siteLinkWeeks: defineTable({
     websiteId: v.id("websites"),
-    pullId: v.id("seoDataPulls"),
-    subnet: v.string(),
-    ips: v.number(),
-    backlinks: v.number(),
-    referringDomains: v.number(),
-  })
-    .index("by_site_domains", ["websiteId", "referringDomains"])
-    .index("by_pull", ["pullId"]),
+    /** Each week's Monday, as days since 1970. */
+    days: packedDaysValidator,
+    newBacklinks: packedColumnValidator,
+    lostBacklinks: packedColumnValidator,
+    newReferringDomains: packedColumnValidator,
+    lostReferringDomains: packedColumnValidator,
+    newMainDomains: packedColumnValidator,
+    lostMainDomains: packedColumnValidator,
+    updatedAt: v.number(),
+  }).index("by_website", ["websiteId"]),
 
   /**
    * Links a website gained and lost each day, from DataForSEO's own count

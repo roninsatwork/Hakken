@@ -174,7 +174,7 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
     }
     if (pulls.length === PULL_PURGE_BATCH) more = true;
 
-    const byWebsite = async (rows: Array<{ _id: Id<"seoWebsiteMetrics"> | Id<"websiteSearchStats"> | Id<"websiteQuestionStats"> | Id<"aiCitations"> | Id<"siteKeywordRanks"> | Id<"sitePageRanks"> | Id<"siteSections"> | Id<"siteDaySummaries"> | Id<"siteCitedPages"> | Id<"sitePageTypes"> | Id<"siteBacklinks"> | Id<"siteAnchors"> | Id<"siteReferringIps"> | Id<"siteLinkDays"> | Id<"siteReferringSubnets"> | Id<"sitePaidKeywords"> | Id<"siteCrawls"> | Id<"siteListAiDays"> | Id<"siteKeywordFeatures"> | Id<"siteCrawlPages"> | Id<"siteCrawlLinks"> }>) => {
+    const byWebsite = async (rows: Array<{ _id: Id<"seoWebsiteMetrics"> | Id<"websiteSearchStats"> | Id<"websiteQuestionStats"> | Id<"aiCitations"> | Id<"siteKeywordRanks"> | Id<"sitePageRanks"> | Id<"siteSections"> | Id<"siteDaySummaries"> | Id<"siteCitedPages"> | Id<"sitePageTypes"> | Id<"siteBacklinks"> | Id<"siteLinkDays"> | Id<"sitePaidKeywords"> | Id<"siteCrawls"> | Id<"siteListAiDays"> | Id<"siteKeywordFeatures"> | Id<"siteCrawlPages"> | Id<"siteCrawlLinks"> }>) => {
       for (const row of rows) await ctx.db.delete(row._id);
       if (rows.length === ENTRY_PURGE_BATCH) more = true;
     };
@@ -234,14 +234,11 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
     for (const table of ["siteAnchorParts", "siteReferringIpParts"] as const) {
       if (!(await removeGroupPartsBefore(ctx, table, args.websiteId, null, DOMAIN_PARTS_PURGED))) more = true;
     }
-    await byWebsite(await ctx.db.query("siteAnchors")
-      .withIndex("by_site_backlinks", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
-    await byWebsite(await ctx.db.query("siteReferringIps")
-      .withIndex("by_site_backlinks", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
     await byWebsite(await ctx.db.query("siteLinkDays")
       .withIndex("by_site_day", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
-    await byWebsite(await ctx.db.query("siteReferringSubnets")
-      .withIndex("by_site_domains", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
+    for (const record of await ctx.db.query("siteLinkWeeks").withIndex("by_website", (q) => q.eq("websiteId", args.websiteId)).take(5)) {
+      await ctx.db.delete(record._id);
+    }
     await byWebsite(await ctx.db.query("sitePaidKeywords")
       .withIndex("by_site_traffic", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
     await byWebsite(await ctx.db.query("siteCrawls")

@@ -2,7 +2,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { subnetOf } from "./dataForSeoLinkParsers";
 import { packCodes, packDayFigures, packFigures, unpackCodes, unpackFigureRows } from "./utils/packedColumns";
-import { LINK_PART_ROWS, LINK_PARTS_READ, LINK_STATUSES, newestNamed, strongestFirst, type LinkStatus } from "./utils/linkListParts";
+import { LINK_PARTS_READ, LINK_STATUSES, newestNamed, strongestFirst, type LinkStatus } from "./utils/linkListParts";
 
 /**
  * The words other websites link to a website with, and the servers those links
@@ -134,46 +134,4 @@ export async function removeGroupPartsBefore(
       .take(most);
   for (const part of parts) await ctx.db.delete(part._id);
   return parts.length < most;
-}
-
-/** One check's rows moved a call: a list's page is a thousand, and a call may make 4,096 reads. */
-const MOVED_A_CHECK = 3_000;
-
-/** A kept row's figures, without what it was kept beside. */
-function figuresKept(row: Doc<"siteAnchors"> | Doc<"siteReferringIps">): LinkGroupFigures {
-  return {
-    rank: row.rank, backlinks: row.backlinks, referringDomains: row.referringDomains, status: row.status,
-    ...(row.firstSeen !== undefined ? { firstSeen: row.firstSeen } : {}),
-    ...(row.lostDate !== undefined ? { lostDate: row.lostDate } : {}),
-    ...(row.spamScore !== undefined ? { spamScore: row.spamScore } : {}),
-  };
-}
-
-/**
- * Dev's anchors and servers kept one a row before 2026-10-08, a check's at a
- * time, into records (`2026-10-08-pack-anchors-and-servers`): the oldest
- * check first, so a newer list's record is newer, as its rows were, and each
- * list's rows in the order they were filed. Anchors first, then servers;
- * done when no row of either is left.
- */
-export async function packAnchorAndServerRows(ctx: MutationCtx): Promise<{ cursor: null; isDone: boolean; processed: number; updated: number }> {
-  const anchor = await ctx.db.query("siteAnchors").first();
-  if (anchor) {
-    const rows = await ctx.db.query("siteAnchors").withIndex("by_pull", (q) => q.eq("pullId", anchor.pullId)).take(MOVED_A_CHECK);
-    const list = { websiteId: anchor.websiteId, pullId: anchor.pullId, day: anchor.day };
-    for (let start = 0; start < rows.length; start += LINK_PART_ROWS) {
-      await writeAnchorPart(ctx, list, rows.slice(start, start + LINK_PART_ROWS).map((row) => ({ anchor: row.anchor, ...figuresKept(row) })));
-    }
-    for (const row of rows) await ctx.db.delete(row._id);
-    return { cursor: null, isDone: false, processed: rows.length, updated: rows.length };
-  }
-  const server = await ctx.db.query("siteReferringIps").first();
-  if (!server) return { cursor: null, isDone: true, processed: 0, updated: 0 };
-  const rows = await ctx.db.query("siteReferringIps").withIndex("by_pull", (q) => q.eq("pullId", server.pullId)).take(MOVED_A_CHECK);
-  const list = { websiteId: server.websiteId, pullId: server.pullId, day: server.day };
-  for (let start = 0; start < rows.length; start += LINK_PART_ROWS) {
-    await writeServerPart(ctx, list, rows.slice(start, start + LINK_PART_ROWS).map((row) => ({ ip: row.ip, ...figuresKept(row) })));
-  }
-  for (const row of rows) await ctx.db.delete(row._id);
-  return { cursor: null, isDone: false, processed: rows.length, updated: rows.length };
 }

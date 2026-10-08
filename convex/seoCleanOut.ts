@@ -11,6 +11,7 @@ import { requestSiteRebuild } from "./siteRankings";
 import { sentOffset } from "./sitePagedLists";
 import { anyCompanyOwns } from "./utils/websitePairing";
 import { competitorOnlyWebsites } from "./websites";
+import { readLinkChanges } from "./siteLinkWeeks";
 
 /**
  * Clear out what is no longer collected for competitors, across every
@@ -62,7 +63,6 @@ const TASKS = [
   "backlinks",
   "anchors",
   "ips",
-  "subnets",
   "linkDays",
   "linkCopy",
   "metrics",
@@ -150,10 +150,12 @@ export const cleanStep = internalMutation({
         const page = await ctx.db.query("siteReferringIpParts").withIndex("by_site_day", (q) => q.eq("websiteId", site)).paginate({ cursor: args.cursor, numItems: PARTS_PER_STEP });
         return await clearParts(ctx, page, page.page.reduce((sum, part) => sum + part.ips.length, 0), args.go);
       }
-      case "subnets":
-        return await clearPage(ctx, as(await ctx.db.query("siteReferringSubnets").withIndex("by_site_domains", (q) => q.eq("websiteId", site)).paginate(paging)), args.go);
-      case "linkDays":
-        return await clearPage(ctx, as(await ctx.db.query("siteLinkDays").withIndex("by_site_day", (q) => q.eq("websiteId", site)).paginate(paging)), args.go);
+      case "linkDays": {
+        // One packed record a website (`siteLinkWeeks.ts`), its weeks counted.
+        const record = await ctx.db.query("siteLinkWeeks").withIndex("by_website", (q) => q.eq("websiteId", site)).unique();
+        if (record && args.go) await ctx.db.delete(record._id);
+        return { found: record ? (await readLinkChanges(ctx, site)).length : 0, continueCursor: "", isDone: true, mark: NO_MARK };
+      }
       case "linkCopy": {
         // Every link's compact copy for the screens: its header counted, all of it removed.
         const header = await ctx.db.query("siteListCopies").withIndex("by_kind_key", (q) => q.eq("kind", "links").eq("key", `${site}`)).first();
@@ -280,7 +282,6 @@ const LABELS: Record<Task, string> = {
   backlinks: "links (every link, one per site, broken)",
   anchors: "link words",
   ips: "linking servers",
-  subnets: "linking networks",
   linkDays: "links gained and lost, by day",
   linkCopy: "every link's screen copy",
   metrics: "daily figures of the dropped lists",

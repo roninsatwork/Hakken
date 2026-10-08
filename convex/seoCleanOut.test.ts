@@ -6,6 +6,7 @@ import schema from "./schema";
 import { COMPETITOR_KEYWORDS_KEPT } from "./seoCleanOut";
 import { writeReferringDomainPart } from "./siteReferringDomainParts";
 import { writeAnchorPart, writeServerPart } from "./siteLinkGroupParts";
+import { writeLinkChanges } from "./siteLinkWeeks";
 
 /**
  * What competitors no longer have collected, cleared across every website on
@@ -38,10 +39,7 @@ async function collected(t: Harness, websiteId: Id<"websites">, keywordRanks: nu
     } as never);
     await writeAnchorPart(ctx, { websiteId, pullId: links, day: DAY }, [{ anchor: "x", rank: 1, backlinks: 1, referringDomains: 1, status: "LIVE" }]);
     await writeServerPart(ctx, { websiteId, pullId: links, day: DAY }, [{ ip: "1.2.3.4", rank: 1, backlinks: 1, referringDomains: 1, status: "LIVE" }]);
-    await ctx.db.insert("siteReferringSubnets", { websiteId, pullId: links, subnet: "1.2.3", ips: 1, backlinks: 1, referringDomains: 1 } as never);
-    await ctx.db.insert("siteLinkDays", {
-      websiteId, day: DAY, newBacklinks: 1, lostBacklinks: 0, newReferringDomains: 1, lostReferringDomains: 0, newMainDomains: 0, lostMainDomains: 0, updatedAt: 1,
-    });
+    await writeLinkChanges(ctx, websiteId, [{ day: DAY, newBacklinks: 1, lostBacklinks: 0, newReferringDomains: 1, lostReferringDomains: 0, newMainDomains: 0, lostMainDomains: 0 }]);
     // Kept for a competitor: its linking websites, and its link and keyword totals.
     const domains = await pull("referring_domains_list");
     await writeReferringDomainPart(ctx, { websiteId, pullId: domains, day: DAY }, [{ domain: "a.test", rank: 1, backlinks: 1, status: "LIVE" }]);
@@ -84,12 +82,12 @@ async function setup() {
 /** What a website holds, table by table. */
 async function heldBy(t: Harness, websiteId: Id<"websites">) {
   return await t.run(async (ctx) => {
-    const count = async (table: "siteCrawls" | "siteCrawlPages" | "siteCrawlLinks" | "siteBacklinks" | "siteAnchorParts" | "siteReferringIpParts" | "siteReferringSubnets" | "siteLinkDays" | "seoWebsiteMetrics" | "siteKeywordFeatures" | "siteKeywordRanks") =>
+    const count = async (table: "siteCrawls" | "siteCrawlPages" | "siteCrawlLinks" | "siteBacklinks" | "siteAnchorParts" | "siteReferringIpParts" | "siteLinkWeeks" | "seoWebsiteMetrics" | "siteKeywordFeatures" | "siteKeywordRanks") =>
       (await ctx.db.query(table).collect()).filter((row) => (row as { websiteId?: Id<"websites"> }).websiteId === websiteId).length;
     return {
       crawls: await count("siteCrawls") + await count("siteCrawlPages") + await count("siteCrawlLinks"),
       crawlFigures: (await ctx.db.query("siteDaySummaries").collect()).filter((row) => row.websiteId === websiteId && row.crawledPages !== undefined).length,
-      links: await count("siteBacklinks") + await count("siteAnchorParts") + await count("siteReferringIpParts") + await count("siteReferringSubnets") + await count("siteLinkDays"),
+      links: await count("siteBacklinks") + await count("siteAnchorParts") + await count("siteReferringIpParts") + await count("siteLinkWeeks"),
       linkingWebsites: (await ctx.db.query("siteReferringDomainParts").collect()).filter((part) => part.websiteId === websiteId)
         .reduce((sum, part) => sum + part.domains.length, 0),
       metrics: (await ctx.db.query("seoWebsiteMetrics").collect()).filter((row) => row.websiteId === websiteId).map((row) => row.operationId).sort(),
@@ -107,10 +105,10 @@ describe("clearing out what competitors no longer have collected", () => {
     const counted = await t.action(internal.seoCleanOut.cleanOutCompetitors, { go: false });
     expect(counted?.websites).toBe(1);
     expect(counted?.tally).toMatchObject({
-      crawls: 1, crawlPages: 1, crawlLinks: 1, crawlFigures: 1, backlinks: 1, anchors: 1, ips: 1, subnets: 1, linkDays: 1,
+      crawls: 1, crawlPages: 1, crawlLinks: 1, crawlFigures: 1, backlinks: 1, anchors: 1, ips: 1, linkDays: 1,
       metrics: 2, keywordPages: 1, keywordRanks: 2, discovery: 1,
     });
-    expect(await heldBy(t, rival)).toMatchObject({ crawls: 3, links: 5, ranks: COMPETITOR_KEYWORDS_KEPT + 2 });
+    expect(await heldBy(t, rival)).toMatchObject({ crawls: 3, links: 4, ranks: COMPETITOR_KEYWORDS_KEPT + 2 });
 
     await t.action(internal.seoCleanOut.cleanOutCompetitors, { go: true });
 
