@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
-import type { ActionCtx, QueryCtx } from "./_generated/server";
+import type { ActionCtx, MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { searchTypeValidator, seenType, type SearchType } from "./searchConsoleSchema";
@@ -11,8 +11,15 @@ import { stillKeptReady } from "./searchConsoleCountries";
  * first- and last-seen register holds as first shown, and as last shown, on
  * each day. Its list reads at most `consoleNewLostRows` of each — 5,000 to
  * start — so on a busy website the counts and chart stopped there and July
- * read as nothing. Counted from the whole register after each collection,
- * a page at a time, they count every one; the table keeps its limit.
+ * read as nothing. Counted from the whole register, a page at a time, they
+ * count every one; the table keeps its limit.
+ *
+ * Kept up as the register is written (core-data-normalisation-plan.md, step
+ * 3, 2026-10-08): each entry noted moves the counts of the days it leaves and
+ * reaches (`noteRegister`), so the whole register is counted again only when
+ * no count is held, or the last whole count is a month old — not after every
+ * collection, which read the register whole each night (0.6 GB in two weeks
+ * on dev, beside the 1.4 GB noting it).
  */
 
 type Kind = "query" | "page";
@@ -85,6 +92,101 @@ export const writeSeenDays = internalMutation({
       });
     }
     return null;
+  },
+});
+
+/** The whole register counted again past this: a safety net under the counts kept up as it is written. */
+const RECOUNT_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** One entry of the register as a collection saw it: its key and the first and last days it was shown in the step. */
+export type SeenEntry = { key: string; first: string; last: string };
+
+/**
+ * Entries a collection step saw, noted in the register — a new one added, a
+ * held one's first day moved earlier or last day later — and each day's
+ * counts moved to match, once the kind has been counted at all (before that,
+ * its first whole count counts them).
+ */
+export async function noteRegister(ctx: MutationCtx, scope: Scope, kind: Kind, entries: readonly SeenEntry[]): Promise<void> {
+  const searchType = seenType(scope.searchType);
+  const moved = new Map<string, { first: number; last: number }>();
+  const move = (day: string, side: "first" | "last", by: number) => {
+    const counts = moved.get(day) ?? { first: 0, last: 0 };
+    counts[side] += by;
+    moved.set(day, counts);
+  };
+  for (const entry of entries) {
+    const held = await ctx.db
+      .query("searchConsoleSeen")
+      .withIndex("by_hold_country_type_kind_key", (q) => q
+        .eq("companyWebsiteId", scope.companyWebsiteId).eq("country", scope.country).eq("searchType", searchType).eq("kind", kind).eq("key", entry.key))
+      .unique();
+    if (!held) {
+      await ctx.db.insert("searchConsoleSeen", {
+        companyWebsiteId: scope.companyWebsiteId,
+        ...(scope.country === undefined ? {} : { country: scope.country }),
+        ...(searchType === undefined ? {} : { searchType }),
+        kind,
+        key: entry.key,
+        firstDay: entry.first,
+        lastDay: entry.last,
+      });
+      move(entry.first, "first", 1);
+      move(entry.last, "last", 1);
+      continue;
+    }
+    const firstDay = entry.first < held.firstDay ? entry.first : held.firstDay;
+    const lastDay = entry.last > held.lastDay ? entry.last : held.lastDay;
+    if (firstDay === held.firstDay && lastDay === held.lastDay) continue;
+    await ctx.db.patch(held._id, { firstDay, lastDay });
+    if (firstDay !== held.firstDay) {
+      move(held.firstDay, "first", -1);
+      move(firstDay, "first", 1);
+    }
+    if (lastDay !== held.lastDay) {
+      move(held.lastDay, "last", -1);
+      move(lastDay, "last", 1);
+    }
+  }
+  const counts = () => ctx.db.query("searchConsoleSeenDays").withIndex("by_hold_country_type_kind_day", (q) => q
+    .eq("companyWebsiteId", scope.companyWebsiteId).eq("country", scope.country).eq("searchType", searchType).eq("kind", kind));
+  if (!(await counts().first())) return;
+  for (const [day, by] of moved) {
+    if (by.first === 0 && by.last === 0) continue;
+    const row = await ctx.db.query("searchConsoleSeenDays").withIndex("by_hold_country_type_kind_day", (q) => q
+      .eq("companyWebsiteId", scope.companyWebsiteId).eq("country", scope.country).eq("searchType", searchType).eq("kind", kind).eq("day", day))
+      .first();
+    if (row) await ctx.db.patch(row._id, { first: row.first + by.first, last: row.last + by.last });
+    else {
+      await ctx.db.insert("searchConsoleSeenDays", {
+        companyWebsiteId: scope.companyWebsiteId,
+        ...(scope.country === undefined ? {} : { country: scope.country }),
+        ...(searchType === undefined ? {} : { searchType }),
+        kind,
+        day,
+        first: by.first,
+        last: by.last,
+        builtAt: Date.now(),
+      });
+    }
+  }
+}
+
+/** Whether a kind's counts need the whole register counted: none held, or the last whole count a month old. */
+export const recountDue = internalQuery({
+  args: { companyWebsiteId: v.id("companyWebsites"), country: v.optional(v.string()), searchType: searchTypeValidator, now: v.number() },
+  returns: v.boolean(),
+  handler: async (ctx, args) => {
+    for (const kind of ["query", "page"] as const) {
+      const rows = await ctx.db
+        .query("searchConsoleSeenDays")
+        .withIndex("by_hold_country_type_kind_day", (q) => q
+          .eq("companyWebsiteId", args.companyWebsiteId).eq("country", args.country).eq("searchType", seenType(args.searchType)).eq("kind", kind))
+        .take(DAYS_HELD);
+      // A whole count writes every day with its time, and keeping up never changes it: the oldest is the last whole count.
+      if (rows.length === 0 || args.now - Math.min(...rows.map((row) => row.builtAt)) > RECOUNT_AFTER_MS) return true;
+    }
+    return false;
   },
 });
 

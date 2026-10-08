@@ -710,7 +710,10 @@ export async function buildSitePeriods(
     });
     // New and lost's counts by day, from the whole first- and last-seen register (2026-10-04).
     // New and lost is kept for web search, in each home country (search-console-home-countries-plan.md).
-    if (searchType === "web" && !onlyLong) await buildSeenDays(ctx, { companyWebsiteId, country, searchType }, builtAt);
+    // Kept up as the register is written (`noteRegister`): counted whole only when none is held, or a month on.
+    if (searchType === "web" && !onlyLong && await ctx.runQuery(internal.searchConsoleSeenDays.recountDue, { companyWebsiteId, ...scope, searchType, now: builtAt })) {
+      await buildSeenDays(ctx, { companyWebsiteId, country, searchType }, builtAt);
+    }
     for (const slot of slots) {
       if (!pairsKept || !slot.span) {
         for (const list of ["pair", "pairByPage", "competing", "query"] as const) await writeParts(searchType, list, slot, null);

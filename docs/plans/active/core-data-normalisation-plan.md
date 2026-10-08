@@ -224,6 +224,20 @@ holding a match, up to its limit (`consoleNewLostRows`). Its figures join the
 90-day list by number, through the period book. **This is the part needing
 most care**: its step (§9) starts with a measurement of how fast the register grows.
 
+**Changed when built, 2026-10-08 (the safer way, §12).** Measured first: the
+register's cost is its reading and writing, not its keeping — Convex's usage
+page gave it about 2 GB in two weeks on dev (1.4 GB noting entries, 0.6 GB
+counting the whole register again after every collection), against 10.5 MB
+kept, pennies. And a book read whole would not serve New and lost at N1's
+size: it asks for any dates, and today finds them by index in one short read,
+where a book would be read whole on every ask — past Convex's limit at five
+times morehandles.co.uk. So the register stays as it is for reading, and its
+reading and writing are cut: New and lost's day counts are kept up as each
+entry is noted (`noteRegister`, `searchConsoleSeenDays.ts`) rather than
+counted from the whole register after every collection, which now happens
+only when no count is held or a month on (`recountDue`). Its 10.5 MB stays;
+its nightly read of itself goes.
+
 ### 5.7 The daily lines
 
 Unchanged: keywords once a month (8.3), pages through `searchConsolePageRefs`
@@ -597,6 +611,7 @@ build the plan please". How it is built, as he agreed:
 |---|---|
 | 1. The load test at N1's size | **Built 2026-10-08** (`convex/searchConsoleScale.test.ts`, the shared meter `src/test/readMeter.ts`). At five times morehandles.co.uk, today: Keywords for 90 days reads 19.4 MiB, for 30 days compared 16.3, searched 19.4, Pages competing 40.1 — each past Convex's 16 MiB, so each screen would fail; Pages 3.2. 2.7 seconds, so no slower-test exception was needed; run here, not on GitHub. |
 | 2. The period book | **Built 2026-10-08** (`searchConsolePeriodBooks.ts`, `utils/searchConsoleTerms.ts`, `searchConsoleSorts.ts`). At five times morehandles.co.uk: Keywords for 90 days 19.4 → 3.9 MiB, for 30 days compared 16.3 → 3.9, searched 19.4 → 9.3, Pages competing 40.1 → 6.5, Pages 3.2 → 3.8 — every screen within rule 4. On dev, all three websites rebuilt: morehandles.co.uk's ready-made lists 23.0 → 6.2 MB (4.3 of lists, 1.9 of book), its Search Console 43.1 → 26.2 MB. The 30-day keyword, page and wins-and-losses lists the same row for row and in order before and after; the 90 days differ in a few hundred rows, asked of Google again. Checked in Chrome: Keywords for 90 days, sorted A to Z and searched, Pages competing, New and lost, a keyword's own screen — no console errors. Found on the way: the 90-day keyword download passed Convex's one second once rows were named one at a time (0.95 s before); a download is now named from the books read whole. |
+| 3. The register | **Built 2026-10-08, the safer way** (§5.6): New and lost's day counts kept up as the register is written, the whole register counted again only when none is held or a month on — the night's read of the whole register gone (10.5 MB a night on morehandles.co.uk). Kept as rows for reading, which finds any dates by index. |
 
 ## Change log
 

@@ -10,7 +10,6 @@ import {
   COLLECTED_SEARCH_TYPES,
   listValidator,
   searchTypeValidator,
-  seenType,
   type SearchConsoleList,
   type SearchType,
 } from "./searchConsoleSchema";
@@ -24,6 +23,7 @@ import { deletePeriodBooks } from "./searchConsolePeriodBooks";
 import { keptLines, keptSearchesOf } from "./searchConsoleKeep";
 import { countriesKeptReady, heldFor, mainConsoleCountry, stillKeptReady, withHeld, type HeldRange } from "./searchConsoleCountries";
 import { NOTHING_HELD } from "./searchConsoleMainCountry";
+import { noteRegister } from "./searchConsoleSeenDays";
 
 /**
  * Collecting a connected site's Search Console figures, and keeping them as
@@ -802,32 +802,8 @@ export const noteSeen = internalMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     if (!(await stillCollecting(ctx, args.connectionId, args.property, args.country))) return null;
-    const searchType = seenType(args.searchType);
-    for (const entry of args.entries) {
-      const held = await ctx.db
-        .query("searchConsoleSeen")
-        .withIndex("by_hold_country_type_kind_key", (q) => q
-          .eq("companyWebsiteId", args.companyWebsiteId).eq("country", args.country).eq("searchType", searchType).eq("kind", args.kind).eq("key", entry.key))
-        .unique();
-      if (!held) {
-        await ctx.db.insert("searchConsoleSeen", {
-          companyWebsiteId: args.companyWebsiteId,
-          ...countryField(args.country),
-          ...(searchType === undefined ? {} : { searchType }),
-          kind: args.kind,
-          key: entry.key,
-          firstDay: entry.first,
-          lastDay: entry.last,
-        });
-        continue;
-      }
-      if (entry.first < held.firstDay || entry.last > held.lastDay) {
-        await ctx.db.patch(held._id, {
-          firstDay: entry.first < held.firstDay ? entry.first : held.firstDay,
-          lastDay: entry.last > held.lastDay ? entry.last : held.lastDay,
-        });
-      }
-    }
+    // New and lost's day counts moved with each entry (`noteRegister`): not counted again from the whole register each night.
+    await noteRegister(ctx, { companyWebsiteId: args.companyWebsiteId, country: args.country, searchType: args.searchType }, args.kind, args.entries);
     return null;
   },
 });
