@@ -4,6 +4,7 @@ import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
 import { referringDomainNamed } from "./siteReferringDomainParts";
+import { anchorNamed } from "./siteLinkGroupParts";
 
 /**
  * The backlinks records' own screens on the client's Sites pages: one linking
@@ -217,11 +218,7 @@ export const anchorRecord = tenantQuery({
     const websiteId = site.website._id;
     const anchor = args.anchor.slice(0, MAX_KEY);
     const [row, links] = await Promise.all([
-      ctx.db
-        .query("siteAnchors")
-        .withIndex("by_site_anchor", (q) => q.eq("websiteId", websiteId).eq("anchor", anchor))
-        .order("desc")
-        .first(),
+      anchorNamed(ctx, websiteId, anchor),
       // A link with no words has no anchor at all on its row.
       linksBy(ctx, (pass) => ctx.db
         .query("siteBacklinks")

@@ -6,6 +6,7 @@ import type { Id } from "./_generated/dataModel";
 import { slimSeoResult } from "./dataForSeoSlim";
 import { useFixedDay } from "@/src/test/realTime";
 import { rowsOfPart, writeReferringDomainPart } from "./siteReferringDomainParts";
+import { networksOf, readServers } from "./siteLinkGroupParts";
 
 /**
  * The Sites link pages (docs/plans/active/user-sites-plan.md, Phase 4): each
@@ -148,8 +149,14 @@ describe("link lists bought past a thousand (sites-data-completeness-plan.md, B2
     const server = (index: number) => ({ network_address: `10.0.${Math.floor(index / 250)}.${index % 250}`, backlinks: 2, referring_domains: 1, first_seen: "2026-01-01 00:00:00 +00:00" });
     await listPage(t, own.websiteId, korda, "referring_ips_list", "2026-09-21", 0, Array.from({ length: 1_000 }, (_, index) => server(index)), 1_200, 2_000);
     await listPage(t, own.websiteId, korda, "referring_ips_list", "2026-09-21", 1_000, Array.from({ length: 200 }, (_, index) => server(1_000 + index)), 1_200, 2_000);
-    const networks = await t.run(async (ctx) => await ctx.db.query("siteReferringSubnets").collect());
+    // Counted from the servers held, a check's list packed (`siteLinkGroupParts.ts`).
+    const networks = await t.run(async (ctx) => networksOf(await readServers(ctx, own.websiteId)));
     expect(networks.reduce((sum, row) => sum + row.ips, 0)).toBe(1_200);
+    // Most linking websites first: the four full networks, then the fifth's two hundred.
+    expect(networks.map((row) => [row.subnet, row.ips])).toEqual([
+      ...["3", "2", "1", "0"].map((part) => [`10.0.${part}.0/24`, 250]),
+      ["10.0.4.0/24", 200],
+    ]);
   });
 
   test("plans past a thousand when the website keeps more, and never fewer than a thousand", async () => {

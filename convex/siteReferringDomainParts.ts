@@ -1,6 +1,7 @@
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { packCodes, packColumn, packDays, unpackCodes, unpackColumn, unpackDays } from "./utils/packedColumns";
+import { packCodes, packDayFigures, packFigures, unpackCodes, unpackFigureRows } from "./utils/packedColumns";
+import { LINK_PART_ROWS, LINK_PARTS_READ, LINK_STATUSES, newestNamed, strongestFirst, type LinkStatus } from "./utils/linkListParts";
 
 /**
  * The websites linking to a website, each check's list packed
@@ -15,10 +16,11 @@ import { packCodes, packColumn, packDays, unpackCodes, unpackColumn, unpackDays 
  */
 
 /** Linking websites a record holds: a check's list, at most a thousand a page. */
-export const DOMAIN_PART_ROWS = 1_000;
+export const DOMAIN_PART_ROWS = LINK_PART_ROWS;
 
-const STATUSES = ["LIVE", "NEW", "LOST"] as const;
-type Status = (typeof STATUSES)[number];
+const NUMBERS = ["rank", "backlinks", "spamScore", "brokenBacklinks", "referringPages", "nofollowPages"] as const;
+const DAYS = ["firstSeen", "lostDate"] as const;
+const KEYS = { numbers: NUMBERS, days: DAYS, required: ["rank", "backlinks"] as const };
 
 /** A linking website as a check's list says of it. */
 export type ReferringDomainFigures = {
@@ -27,7 +29,7 @@ export type ReferringDomainFigures = {
   backlinks: number;
   firstSeen?: string;
   lostDate?: string;
-  status: Status;
+  status: LinkStatus;
   spamScore?: number;
   brokenBacklinks?: number;
   referringPages?: number;
@@ -53,46 +55,26 @@ export async function writeReferringDomainPart(
   await ctx.db.insert("siteReferringDomainParts", {
     ...list,
     domains: rows.map((row) => row.domain),
-    rank: packColumn(rows.map((row) => row.rank)),
-    backlinks: packColumn(rows.map((row) => row.backlinks)),
-    spamScore: packColumn(rows.map((row) => row.spamScore)),
-    brokenBacklinks: packColumn(rows.map((row) => row.brokenBacklinks)),
-    referringPages: packColumn(rows.map((row) => row.referringPages)),
-    nofollowPages: packColumn(rows.map((row) => row.nofollowPages)),
-    firstSeen: packDays(rows.map((row) => row.firstSeen)),
-    lostDate: packDays(rows.map((row) => row.lostDate)),
-    status: packCodes(rows.map((row) => row.status), STATUSES),
+    ...packFigures(rows, NUMBERS),
+    ...packDayFigures(rows, DAYS),
+    status: packCodes(rows.map((row) => row.status), LINK_STATUSES),
   });
 }
 
 /** A record's linking websites, as rows. */
 export function rowsOfPart(part: Doc<"siteReferringDomainParts">): ReferringDomainRow[] {
-  const rank = unpackColumn(part.rank);
-  const backlinks = unpackColumn(part.backlinks);
-  const spamScore = unpackColumn(part.spamScore);
-  const brokenBacklinks = unpackColumn(part.brokenBacklinks);
-  const referringPages = unpackColumn(part.referringPages);
-  const nofollowPages = unpackColumn(part.nofollowPages);
-  const firstSeen = unpackDays(part.firstSeen);
-  const lostDate = unpackDays(part.lostDate);
-  const status = unpackCodes(part.status, STATUSES);
-  return part.domains.map((domain, at) => {
-    const row: ReferringDomainRow = {
-      websiteId: part.websiteId, pullId: part.pullId, day: part.day, _creationTime: part._creationTime,
-      domain, rank: rank[at] ?? 0, backlinks: backlinks[at] ?? 0, status: status[at],
-    };
-    if (firstSeen[at] !== undefined) row.firstSeen = firstSeen[at];
-    if (lostDate[at] !== undefined) row.lostDate = lostDate[at];
-    if (spamScore[at] !== undefined) row.spamScore = spamScore[at];
-    if (brokenBacklinks[at] !== undefined) row.brokenBacklinks = brokenBacklinks[at];
-    if (referringPages[at] !== undefined) row.referringPages = referringPages[at];
-    if (nofollowPages[at] !== undefined) row.nofollowPages = nofollowPages[at];
-    return row;
-  });
+  const status = unpackCodes(part.status, LINK_STATUSES);
+  return unpackFigureRows(part.domains.length, part, KEYS).map((figures, at) => ({
+    websiteId: part.websiteId, pullId: part.pullId, day: part.day, _creationTime: part._creationTime,
+    domain: part.domains[at],
+    ...(figures as Omit<ReferringDomainFigures, "domain" | "status">),
+    status: status[at],
+  }));
 }
 
-/** Records a website's lists may run to: a few thousand linking websites, and a list being replaced beside its successor. */
-const PARTS_READ = 64;
+function partsOf(ctx: { db: QueryCtx["db"] }, websiteId: Id<"websites">) {
+  return ctx.db.query("siteReferringDomainParts").withIndex("by_site_day", (q) => q.eq("websiteId", websiteId)).take(LINK_PARTS_READ);
+}
 
 /**
  * Every linking website a website's lists hold, strongest first and, among
@@ -100,29 +82,12 @@ const PARTS_READ = 64;
  * rows were read in by rank, newest first (`by_site_rank`, descending).
  */
 export async function readReferringDomains(ctx: { db: QueryCtx["db"] }, websiteId: Id<"websites">): Promise<ReferringDomainRow[]> {
-  const parts = await ctx.db
-    .query("siteReferringDomainParts")
-    .withIndex("by_site_day", (q) => q.eq("websiteId", websiteId))
-    .take(PARTS_READ);
-  const placed = parts
-    .sort((left, right) => right._creationTime - left._creationTime)
-    .flatMap((part, partAt) => rowsOfPart(part).map((row, at) => ({ row, partAt, at })));
-  return placed
-    .sort((left, right) => right.row.rank - left.row.rank || left.partAt - right.partAt || right.at - left.at)
-    .map((entry) => entry.row);
+  return strongestFirst(await partsOf(ctx, websiteId), rowsOfPart, (row) => row.rank);
 }
 
 /** A linking website's newest row by its domain, or null. */
 export async function referringDomainNamed(ctx: { db: QueryCtx["db"] }, websiteId: Id<"websites">, domain: string): Promise<ReferringDomainRow | null> {
-  const parts = await ctx.db
-    .query("siteReferringDomainParts")
-    .withIndex("by_site_day", (q) => q.eq("websiteId", websiteId))
-    .take(PARTS_READ);
-  for (const part of parts.sort((left, right) => right._creationTime - left._creationTime)) {
-    const at = part.domains.lastIndexOf(domain);
-    if (at !== -1) return rowsOfPart(part)[at];
-  }
-  return null;
+  return newestNamed(await partsOf(ctx, websiteId), (part) => part.domains, rowsOfPart, domain);
 }
 
 /** A check's records, a page at a time: as many removed as `most`, the count returned. */

@@ -88,7 +88,7 @@ export default function SiteAnchorsPage() {
 
       <DataTable
         rows={table.pageRows}
-        rowKey={(row) => row._id}
+        rowKey={(row) => row.anchor}
         onRowClick={(row) => router.push(recordHref({ kind: "anchor", anchor: row.anchor }))}
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         cardHeader={<TableBar footer={table.footer} noun="anchors" actions={<TableDownload siteId={siteId} kind="anchors" sort={order.tableSort} />} />}

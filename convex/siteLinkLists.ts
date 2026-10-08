@@ -8,6 +8,7 @@ import { heldTo, listOrder, listPageArgs, listPageResult, newestPerKey, pageOfLi
 import { ipSortKey, type SortDirection } from "./utils/sortOrder";
 import { wordStartMatcher } from "./utils/wordStarts";
 import { readReferringDomains, type ReferringDomainRow } from "./siteReferringDomainParts";
+import { networksOf, readAnchors, readServers, type AnchorRow, type ReferringIpRow } from "./siteLinkGroupParts";
 
 /**
  * The link lists behind the Sites backlink pages (Phase 4): every link, the
@@ -300,7 +301,7 @@ export const listReferringDomains = tenantQuery({
 });
 
 /** Anchors' columns that sort: the words A to Z; most links, most linking websites and newest first. */
-const ANCHOR_SORTS: ListSorts<Doc<"siteAnchors">, "anchor" | "backlinks" | "domains" | "firstSeen"> = {
+const ANCHOR_SORTS: ListSorts<AnchorRow, "anchor" | "backlinks" | "domains" | "firstSeen"> = {
   anchor: { value: (row) => row.anchor, first: "asc" },
   backlinks: { value: (row) => row.backlinks, first: "desc" },
   domains: { value: (row) => row.referringDomains, first: "desc" },
@@ -317,34 +318,30 @@ export const listAnchors = tenantQuery({
     direction: sortDirectionArg,
   },
   returns: listPageResult(v.object({
-    _id: v.id("siteAnchors"),
     anchor: v.string(),
     ...groupShape,
     referringDomains: v.number(),
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const read = await ctx.db
-      .query("siteAnchors")
-      .withIndex("by_site_backlinks", (q) => q.eq("websiteId", site.website._id))
-      .order("desc")
-      .take(LINK_LIST_READ + 1);
+    // Most links first, the newest list first among equals, as each check's list is packed (`siteLinkGroupParts.ts`).
+    const read = await readAnchors(ctx, site.website._id);
     const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
     const matches = wordStartMatcher(args.search);
-    const name = (row: Doc<"siteAnchors">) => row.anchor;
+    const name = (row: AnchorRow) => row.anchor;
     const list = newestPerKey(held, name)
       .filter((row) => !matches || matches(row.anchor))
       .sort(listOrder(ANCHOR_SORTS, args.sort ?? "backlinks", args.direction, name));
     const page = pageOfList(list, args.page, args.rows, cut);
     return {
       ...page,
-      rows: page.rows.map((row) => ({ _id: row._id, anchor: row.anchor, ...shapeGroup(row), referringDomains: row.referringDomains })),
+      rows: page.rows.map((row) => ({ anchor: row.anchor, ...shapeGroup(row), referringDomains: row.referringDomains })),
     };
   },
 });
 
 /** Referring IPs' columns that sort: the address in number order; most linking websites and most links first. */
-const IP_SORTS: ListSorts<Doc<"siteReferringIps">, "ip" | "domains" | "backlinks"> = {
+const IP_SORTS: ListSorts<ReferringIpRow, "ip" | "domains" | "backlinks"> = {
   ip: { value: (row) => ipSortKey(row.ip), first: "asc" },
   domains: { value: (row) => row.referringDomains, first: "desc" },
   backlinks: { value: (row) => row.backlinks, first: "desc" },
@@ -361,7 +358,6 @@ export const listReferringIps = tenantQuery({
     direction: sortDirectionArg,
   },
   returns: listPageResult(v.object({
-    _id: v.id("siteReferringIps"),
     ip: v.string(),
     subnet: v.string(),
     ...groupShape,
@@ -369,14 +365,11 @@ export const listReferringIps = tenantQuery({
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const read = await ctx.db
-      .query("siteReferringIps")
-      .withIndex("by_site_backlinks", (q) => q.eq("websiteId", site.website._id))
-      .order("desc")
-      .take(LINK_LIST_READ + 1);
+    // Most links first, the newest list first among equals, as each check's list is packed (`siteLinkGroupParts.ts`).
+    const read = await readServers(ctx, site.website._id);
     const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
     const matches = wordStartMatcher(args.search);
-    const name = (row: Doc<"siteReferringIps">) => row.ip;
+    const name = (row: ReferringIpRow) => row.ip;
     // The network chosen holds while searching, and the order holds within it.
     const list = newestPerKey(held, name)
       .filter((row) => (!args.subnet || row.subnet === args.subnet) && (!matches || matches(row.ip, row.subnet)))
@@ -385,7 +378,7 @@ export const listReferringIps = tenantQuery({
     return {
       ...page,
       rows: page.rows.map((row) => ({
-        _id: row._id, ip: row.ip, subnet: row.subnet, ...shapeGroup(row), referringDomains: row.referringDomains,
+        ip: row.ip, subnet: row.subnet, ...shapeGroup(row), referringDomains: row.referringDomains,
       })),
     };
   },
@@ -397,12 +390,9 @@ export const topSubnets = tenantQuery({
   returns: v.array(v.object({ subnet: v.string(), ips: v.number(), backlinks: v.number(), referringDomains: v.number() })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    const rows = await ctx.db
-      .query("siteReferringSubnets")
-      .withIndex("by_site_domains", (q) => q.eq("websiteId", site.website._id))
-      .order("desc")
-      .take(SUBNETS_SHOWN);
-    return rows.map((row) => ({ subnet: row.subnet, ips: row.ips, backlinks: row.backlinks, referringDomains: row.referringDomains }));
+    // Counted from the servers the list beside it shows, not kept a second time (`networksOf`).
+    const { rows: held } = heldTo(await readServers(ctx, site.website._id), LINK_LIST_READ);
+    return networksOf(newestPerKey(held, (row) => row.ip)).slice(0, SUBNETS_SHOWN);
   },
 });
 

@@ -29,6 +29,19 @@ const packedColumnValidator = v.union(v.string(), v.array(v.union(v.number(), v.
 /** A column of days packed as text, or the days as written (`packDays`). */
 const packedDaysValidator = v.union(v.string(), v.array(v.union(v.string(), v.null())));
 
+/** An anchor's or a server's figures, each a packed column in step with its names (`siteLinkGroupParts.ts`). */
+const linkGroupColumns = {
+  rank: packedColumnValidator,
+  backlinks: packedColumnValidator,
+  referringDomains: packedColumnValidator,
+  spamScore: packedColumnValidator,
+  /** First seen and lost, as days since 1970. */
+  firstSeen: packedDaysValidator,
+  lostDate: packedDaysValidator,
+  /** 0 live, 1 new, 2 lost. */
+  status: packedColumnValidator,
+};
+
 /** Which list a backlink came from: one per linking website, or every broken one. */
 const linkPassValidator = v.union(v.literal("ONE_PER_DOMAIN"), v.literal("BROKEN"), v.literal("ALL"));
 
@@ -507,6 +520,37 @@ export const siteTables = {
     lostDate: packedDaysValidator,
     /** 0 live, 1 new, 2 lost. */
     status: packedColumnValidator,
+  })
+    .index("by_site_day", ["websiteId", "day"])
+    .index("by_pull", ["pullId"]),
+
+  /**
+   * The words other websites link to a website with, a check's list packed —
+   * up to a thousand a record, as linking websites are
+   * (core-data-normalisation-plan.md §6.3; `siteLinkGroupParts.ts`).
+   */
+  siteAnchorParts: defineTable({
+    websiteId: v.id("websites"),
+    pullId: v.id("seoDataPulls"),
+    day: v.string(),
+    /** Empty for a link with no words — an image. */
+    anchors: v.array(v.string()),
+    ...linkGroupColumns,
+  })
+    .index("by_site_day", ["websiteId", "day"])
+    .index("by_pull", ["pullId"]),
+
+  /**
+   * The servers a website's links come from, a check's list packed — up to a
+   * thousand a record. Each one's network is worked out from its address
+   * (`subnetOf`), and the networks chart counts them as read.
+   */
+  siteReferringIpParts: defineTable({
+    websiteId: v.id("websites"),
+    pullId: v.id("seoDataPulls"),
+    day: v.string(),
+    ips: v.array(v.string()),
+    ...linkGroupColumns,
   })
     .index("by_site_day", ["websiteId", "day"])
     .index("by_pull", ["pullId"]),

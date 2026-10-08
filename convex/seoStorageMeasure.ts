@@ -20,7 +20,7 @@ import { lostKeywordsKeptFrom } from "./seoCollectionPolicy";
 const TABLES = [
   "seoDataPulls", "seoPullAnswers", "seoCycleLines", "seoWebsiteMetrics", "keywordPositionMonths",
   "siteKeywordRanks", "siteKeywordFeatures", "sitePageRanks", "siteSections", "siteDaySummaries", "sitePaidKeywords",
-  "siteBacklinks", "siteReferringDomainParts", "siteAnchors", "siteReferringIps", "siteReferringSubnets", "siteLinkDays",
+  "siteBacklinks", "siteReferringDomainParts", "siteAnchorParts", "siteReferringIpParts", "siteAnchors", "siteReferringIps", "siteReferringSubnets", "siteLinkDays",
   "siteCrawls", "siteCrawlPages", "siteCrawlLinks", "siteSitemapPages", "siteCitedPages",
   "siteListCopies", "siteListCopyParts", "siteContentGaps", "holdPages", "siteListAiDays",
   "aiAnswers", "aiCitations", "aiAnswerTexts", "aiAnswerIndex", "promptFanOutQueries", "promptFanOutDays", "siteSerpPages",
@@ -32,6 +32,8 @@ const PAGE: Partial<Record<(typeof TABLES)[number], number>> = {
   seoPullAnswers: 8,
   siteListCopyParts: 8,
   siteReferringDomainParts: 20,
+  siteAnchorParts: 20,
+  siteReferringIpParts: 20,
   aiAnswerTexts: 100,
   siteSerpPages: 100,
 };

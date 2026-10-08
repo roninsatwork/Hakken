@@ -103,6 +103,15 @@ async function clearPage(ctx: MutationCtx, page: Paged<{ _id: Id<never> }>, go: 
   return { found: page.page.length, continueCursor: page.continueCursor, isDone: page.isDone, mark: NO_MARK };
 }
 
+/** Packed records looked at a step: each up to a thousand rows. */
+const PARTS_PER_STEP = 20;
+
+/** Count a page of packed records' rows, removing the records when going ahead. */
+async function clearParts(ctx: MutationCtx, page: Paged<{ _id: Id<"siteAnchorParts"> | Id<"siteReferringIpParts"> }>, rows: number, go: boolean): Promise<Step> {
+  if (go) for (const part of page.page) await ctx.db.delete(part._id);
+  return { found: rows, continueCursor: page.continueCursor, isDone: page.isDone, mark: NO_MARK };
+}
+
 /**
  * One step of one task for one competitor: a page of its rows counted, and
  * removed when going ahead. Says where to go on.
@@ -132,10 +141,15 @@ export const cleanStep = internalMutation({
       }
       case "backlinks":
         return await clearPage(ctx, as(await ctx.db.query("siteBacklinks").withIndex("by_site_pass_day", (q) => q.eq("websiteId", site)).paginate(paging)), args.go);
-      case "anchors":
-        return await clearPage(ctx, as(await ctx.db.query("siteAnchors").withIndex("by_site_anchor", (q) => q.eq("websiteId", site)).paginate(paging)), args.go);
-      case "ips":
-        return await clearPage(ctx, as(await ctx.db.query("siteReferringIps").withIndex("by_site_backlinks", (q) => q.eq("websiteId", site)).paginate(paging)), args.go);
+      // Packed a check's list a record (`siteLinkGroupParts.ts`): a few records a step, their rows counted.
+      case "anchors": {
+        const page = await ctx.db.query("siteAnchorParts").withIndex("by_site_day", (q) => q.eq("websiteId", site)).paginate({ cursor: args.cursor, numItems: PARTS_PER_STEP });
+        return await clearParts(ctx, page, page.page.reduce((sum, part) => sum + part.anchors.length, 0), args.go);
+      }
+      case "ips": {
+        const page = await ctx.db.query("siteReferringIpParts").withIndex("by_site_day", (q) => q.eq("websiteId", site)).paginate({ cursor: args.cursor, numItems: PARTS_PER_STEP });
+        return await clearParts(ctx, page, page.page.reduce((sum, part) => sum + part.ips.length, 0), args.go);
+      }
       case "subnets":
         return await clearPage(ctx, as(await ctx.db.query("siteReferringSubnets").withIndex("by_site_domains", (q) => q.eq("websiteId", site)).paginate(paging)), args.go);
       case "linkDays":

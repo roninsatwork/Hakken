@@ -19,7 +19,9 @@ import { placesWatching } from "./siteRankings";
 import { getErrorMessage } from "./utils/lang";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { bandCountsValidator } from "./utils/siteShapes";
-import { DOMAIN_PART_ROWS, removeReferringDomainsBefore, writeReferringDomainPart } from "./siteReferringDomainParts";
+import { removeReferringDomainsBefore, writeReferringDomainPart } from "./siteReferringDomainParts";
+import { removeGroupPartsBefore, writeAnchorPart, writeServerPart } from "./siteLinkGroupParts";
+import { LINK_PART_ROWS } from "./utils/linkListParts";
 
 /**
  * Filing the Sites link calls (`dataForSeoLinkOperations.ts`, Phase 4).
@@ -59,8 +61,8 @@ const ROWS_PER_WRITE = 200;
 
 /** Rows looked at per mutation when clearing an older list. */
 const CLEAR_PAGE = 400;
-/** Referring domains' packed records cleared a call: each up to a thousand linking websites, tens of kilobytes. */
-const DOMAIN_PARTS_CLEARED = 20;
+/** Packed link records cleared a call: each up to a thousand linking websites, anchors or servers, tens of kilobytes. */
+const LINK_PARTS_CLEARED = 20;
 
 /** Day summaries filled per mutation. */
 const DAYS_PER_WRITE = 60;
@@ -68,12 +70,12 @@ const DAYS_PER_WRITE = 60;
 const linkStatus = v.union(v.literal("LIVE"), v.literal("NEW"), v.literal("LOST"));
 const linkPass = v.union(v.literal("ONE_PER_DOMAIN"), v.literal("BROKEN"), v.literal("ALL"));
 const linkTable = v.union(
-  v.literal("siteBacklinks"), v.literal("siteReferringDomainParts"), v.literal("siteAnchors"), v.literal("siteReferringIps"),
+  v.literal("siteBacklinks"), v.literal("siteReferringDomainParts"), v.literal("siteAnchorParts"), v.literal("siteReferringIpParts"),
 );
 const maybeNumber = v.optional(v.number());
 const maybeString = v.optional(v.string());
 
-type LinkTable = "siteBacklinks" | "siteReferringDomainParts" | "siteAnchors" | "siteReferringIps";
+type LinkTable = "siteBacklinks" | "siteReferringDomainParts" | "siteAnchorParts" | "siteReferringIpParts";
 
 /** The Monday of the week a day falls in, as `bucketOf` counts weeks. */
 function mondayOf(day: string): string {
@@ -186,8 +188,8 @@ const PAGED_LINK_LISTS: Record<string, { table: LinkTable; pass?: "ONE_PER_DOMAI
   backlinks_broken: { table: "siteBacklinks", pass: "BROKEN" },
   [BACKLINK_LIST_OPERATION_ID]: { table: "siteBacklinks", pass: "ALL" },
   referring_domains_list: { table: "siteReferringDomainParts" },
-  anchors_list: { table: "siteAnchors" },
-  referring_ips_list: { table: "siteReferringIps" },
+  anchors_list: { table: "siteAnchorParts" },
+  referring_ips_list: { table: "siteReferringIpParts" },
 };
 
 /**
@@ -223,15 +225,17 @@ async function fileLinkListPage(
     }
   } else if (kind.table === "siteReferringDomainParts") {
     // A thousand a record, packed (`siteReferringDomainParts.ts`): a page of the list is one.
-    for (const rows of chunks(parseReferringDomains(result).rows, DOMAIN_PART_ROWS)) {
+    for (const rows of chunks(parseReferringDomains(result).rows, LINK_PART_ROWS)) {
       await ctx.runMutation(internal.siteLinkFiling.writeReferringDomains, { websiteId, pullId, day, rows });
     }
-  } else if (kind.table === "siteAnchors") {
-    for (const rows of chunks(parseAnchors(result).rows, ROWS_PER_WRITE)) {
+  } else if (kind.table === "siteAnchorParts") {
+    // A thousand a record, packed (`siteLinkGroupParts.ts`): a page of the list is one.
+    for (const rows of chunks(parseAnchors(result).rows, LINK_PART_ROWS)) {
       await ctx.runMutation(internal.siteLinkFiling.writeAnchors, { websiteId, pullId, day, rows });
     }
   } else {
-    for (const rows of chunks(parseReferringIps(result).rows, ROWS_PER_WRITE)) {
+    // Each server's network is worked out from its address when read, so it is not kept.
+    for (const rows of chunks(parseReferringIps(result).rows.map(({ subnet: _subnet, ...row }) => row), LINK_PART_ROWS)) {
       await ctx.runMutation(internal.siteLinkFiling.writeReferringIps, { websiteId, pullId, day, rows });
     }
   }
@@ -247,10 +251,7 @@ async function fileLinkListPage(
     listItems: facts.items,
     ...(facts.total !== undefined ? { listTotal: facts.total } : {}),
   });
-  if (replaces) {
-    await clearRowsBefore(ctx, kind, websiteId, day);
-    if (kind.table === "siteReferringIps") await countNetworks(ctx, websiteId, pullId, day);
-  }
+  if (replaces) await clearRowsBefore(ctx, kind, websiteId, day);
   // All backlinks counts every link from its compact copy: rebuilt once this burst of pages is in.
   if (kind.pass === "ALL") await ctx.runMutation(internal.siteListCopies.requestCopies, { requests: [{ kind: "links", key: `${websiteId}` }] });
   if (offset === 0 && facts.total !== undefined) {
@@ -273,26 +274,6 @@ async function clearRowsBefore(
     if (page.isDone) return;
     cursor = page.cursor;
   }
-}
-
-/** The networks of a whole list of servers, counted once so the page reads a few rows. */
-async function countNetworks(ctx: ActionCtx, websiteId: Id<"websites">, pullId: Id<"seoDataPulls">, day: string): Promise<void> {
-  const subnets = new Map<string, { subnet: string; ips: number; backlinks: number; referringDomains: number }>();
-  let cursor: string | null = null;
-  for (;;) {
-    const page: { rows: Array<{ subnet: string; backlinks: number; referringDomains: number }>; cursor: string; isDone: boolean } =
-      await ctx.runQuery(internal.siteLinkFiling.serversOfDay, { websiteId, day, cursor });
-    for (const row of page.rows) {
-      const held = subnets.get(row.subnet) ?? { subnet: row.subnet, ips: 0, backlinks: 0, referringDomains: 0 };
-      held.ips += 1;
-      held.backlinks += row.backlinks;
-      held.referringDomains += row.referringDomains;
-      subnets.set(row.subnet, held);
-    }
-    if (page.isDone) break;
-    cursor = page.cursor;
-  }
-  await ctx.runMutation(internal.siteLinkFiling.writeSubnets, { websiteId, pullId, rows: [...subnets.values()] });
 }
 
 /** Remove whatever an earlier parse of this pull wrote, so a re-parse replaces rather than adds. */
@@ -418,42 +399,20 @@ export const removeRowsBefore = internalMutation({
   },
   returns: v.object({ cursor: v.string(), isDone: v.boolean() }),
   handler: async (ctx, args) => {
-    // A check's packed records go by their day, a page of them at a time (`siteReferringDomainParts.ts`).
+    // A check's packed records go by their day, a page of them at a time (`siteReferringDomainParts.ts`, `siteLinkGroupParts.ts`).
     if (args.table === "siteReferringDomainParts") {
-      const done = await removeReferringDomainsBefore(ctx, args.websiteId, args.day, DOMAIN_PARTS_CLEARED);
+      const done = await removeReferringDomainsBefore(ctx, args.websiteId, args.day, LINK_PARTS_CLEARED);
       return { cursor: "", isDone: done };
     }
-    const page = { cursor: args.cursor, numItems: CLEAR_PAGE };
-    const result = args.table === "siteBacklinks"
-      ? await ctx.db.query("siteBacklinks")
-        .withIndex("by_site_pass_day", (q) => q.eq("websiteId", args.websiteId).eq("pass", args.pass ?? "ONE_PER_DOMAIN").lt("day", args.day))
-        .paginate(page)
-      : args.table === "siteAnchors"
-        ? await ctx.db.query("siteAnchors").withIndex("by_site_backlinks", (q) => q.eq("websiteId", args.websiteId)).paginate(page)
-        : await ctx.db.query("siteReferringIps").withIndex("by_site_backlinks", (q) => q.eq("websiteId", args.websiteId)).paginate(page);
-    for (const row of result.page) if (row.day < args.day) await ctx.db.delete(row._id);
-    return { cursor: result.continueCursor, isDone: result.isDone };
-  },
-});
-
-/** A page of a site's servers from one day's list, for counting its networks. */
-export const serversOfDay = internalQuery({
-  args: { websiteId: v.id("websites"), day: v.string(), cursor: v.union(v.string(), v.null()) },
-  returns: v.object({
-    rows: v.array(v.object({ subnet: v.string(), backlinks: v.number(), referringDomains: v.number() })),
-    cursor: v.string(),
-    isDone: v.boolean(),
-  }),
-  handler: async (ctx, args) => {
-    const result = await ctx.db
-      .query("siteReferringIps")
-      .withIndex("by_site_backlinks", (q) => q.eq("websiteId", args.websiteId))
+    if (args.table !== "siteBacklinks") {
+      const done = await removeGroupPartsBefore(ctx, args.table, args.websiteId, args.day, LINK_PARTS_CLEARED);
+      return { cursor: "", isDone: done };
+    }
+    const result = await ctx.db.query("siteBacklinks")
+      .withIndex("by_site_pass_day", (q) => q.eq("websiteId", args.websiteId).eq("pass", args.pass ?? "ONE_PER_DOMAIN").lt("day", args.day))
       .paginate({ cursor: args.cursor, numItems: CLEAR_PAGE });
-    return {
-      rows: result.page.filter((row) => row.day === args.day).map((row) => ({ subnet: row.subnet, backlinks: row.backlinks, referringDomains: row.referringDomains })),
-      cursor: result.continueCursor,
-      isDone: result.isDone,
-    };
+    for (const row of result.page) await ctx.db.delete(row._id);
+    return { cursor: result.continueCursor, isDone: result.isDone };
   },
 });
 
@@ -581,9 +540,7 @@ export const writeAnchors = internalMutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    for (const row of args.rows) {
-      await ctx.db.insert("siteAnchors", { websiteId: args.websiteId, pullId: args.pullId, day: args.day, ...row });
-    }
+    await writeAnchorPart(ctx, { websiteId: args.websiteId, pullId: args.pullId, day: args.day }, args.rows);
     return null;
   },
 });
@@ -593,41 +550,14 @@ export const writeReferringIps = internalMutation({
     websiteId: v.id("websites"),
     pullId: v.id("seoDataPulls"),
     day: v.string(),
-    rows: v.array(v.object({ ip: v.string(), subnet: v.string(), ...groupFields, referringDomains: v.number() })),
+    rows: v.array(v.object({ ip: v.string(), ...groupFields, referringDomains: v.number() })),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    for (const row of args.rows) {
-      await ctx.db.insert("siteReferringIps", {
-        websiteId: args.websiteId, pullId: args.pullId, day: args.day, ...row, searchText: `${row.ip} ${row.subnet}`,
-      });
-    }
+    await writeServerPart(ctx, { websiteId: args.websiteId, pullId: args.pullId, day: args.day }, args.rows);
     return null;
   },
 });
-
-/** Replace the website's networks with this list's. A list is at most a thousand servers, so a few hundred networks. */
-export const writeSubnets = internalMutation({
-  args: {
-    websiteId: v.id("websites"),
-    pullId: v.id("seoDataPulls"),
-    rows: v.array(v.object({ subnet: v.string(), ips: v.number(), backlinks: v.number(), referringDomains: v.number() })),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const older = await ctx.db
-      .query("siteReferringSubnets")
-      .withIndex("by_site_domains", (q) => q.eq("websiteId", args.websiteId))
-      .take(SUBNETS_KEPT + 100);
-    for (const row of older) await ctx.db.delete(row._id);
-    const kept = [...args.rows].sort((left, right) => right.referringDomains - left.referringDomains).slice(0, SUBNETS_KEPT);
-    for (const row of kept) await ctx.db.insert("siteReferringSubnets", { websiteId: args.websiteId, pullId: args.pullId, ...row });
-    return null;
-  },
-});
-
-/** Networks kept per website: the thousand servers' networks, at most. */
-const SUBNETS_KEPT = 1_000;
 
 export const writeLinkDays = internalMutation({
   args: {

@@ -20,6 +20,7 @@ import { readPageKinds } from "./pageKinds";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
 import { isTrackedHold } from "./utils/websitePairing";
 import { readReferringDomains, type ReferringDomainRow } from "./siteReferringDomainParts";
+import { readAnchors, readServers, type AnchorRow, type ReferringIpRow } from "./siteLinkGroupParts";
 
 /**
  * Downloading a whole Sites table as CSV (docs/plans/active/user-sites-plan.md,
@@ -111,7 +112,7 @@ const HEADERS: Record<ExportKind, string[]> = {
  * leaves it in its own order.
  */
 type ExportRow = Doc<"siteKeywordRanks"> | Doc<"sitePageRanks"> | GapRow | Doc<"siteBacklinks">
-  | ReferringDomainRow | Doc<"siteAnchors"> | Doc<"siteReferringIps"> | Doc<"sitePaidKeywords">;
+  | ReferringDomainRow | AnchorRow | ReferringIpRow | Doc<"sitePaidKeywords">;
 const EXPORT_SORTS: Partial<Record<ExportKind, Record<string, (row: never) => SortValue>>> = {
   keywords: {
     keyword: (row: Doc<"siteKeywordRanks">) => row.keyword,
@@ -157,15 +158,15 @@ const EXPORT_SORTS: Partial<Record<ExportKind, Record<string, (row: never) => So
     firstSeen: (row: ReferringDomainRow) => row.firstSeen,
   },
   anchors: {
-    anchor: (row: Doc<"siteAnchors">) => row.anchor,
-    backlinks: (row: Doc<"siteAnchors">) => row.backlinks,
-    domains: (row: Doc<"siteAnchors">) => row.referringDomains,
-    firstSeen: (row: Doc<"siteAnchors">) => row.firstSeen,
+    anchor: (row: AnchorRow) => row.anchor,
+    backlinks: (row: AnchorRow) => row.backlinks,
+    domains: (row: AnchorRow) => row.referringDomains,
+    firstSeen: (row: AnchorRow) => row.firstSeen,
   },
   ips: {
-    ip: (row: Doc<"siteReferringIps">) => ipSortKey(row.ip),
-    domains: (row: Doc<"siteReferringIps">) => row.referringDomains,
-    backlinks: (row: Doc<"siteReferringIps">) => row.backlinks,
+    ip: (row: ReferringIpRow) => ipSortKey(row.ip),
+    domains: (row: ReferringIpRow) => row.referringDomains,
+    backlinks: (row: ReferringIpRow) => row.backlinks,
   },
   paid: {
     keyword: (row: Doc<"sitePaidKeywords">) => row.keyword,
@@ -258,6 +259,13 @@ export const exportSiteTable = tenantAction({
 });
 
 /** One page of a table as CSV lines, read from the index the page itself reads. */
+/** A page of a list read whole, from where the last page stopped: its cursor counts the rows already sent. */
+function pageOfWhole<Row>(every: readonly Row[], page: { cursor: string | null; numItems: number }) {
+  const from = Number(page.cursor ?? 0) || 0;
+  const rows = every.slice(from, from + page.numItems);
+  return { page: rows, continueCursor: String(from + rows.length), isDone: from + rows.length >= every.length };
+}
+
 export const exportPage = internalQuery({
   args: {
     siteId: v.id("companyWebsites"),
@@ -418,23 +426,16 @@ export const exportPage = internalQuery({
         ]), (row) => row.urlFrom);
       case "domains": {
         // Every check's list packed (`siteReferringDomainParts.ts`), strongest first: a page of it from where the last stopped.
-        const every = await readReferringDomains(ctx, websiteId);
-        const from = Number(page.cursor ?? 0) || 0;
-        const rows = every.slice(from, from + page.numItems);
-        return done({ page: rows, continueCursor: String(from + rows.length), isDone: from + rows.length >= every.length }, (row: ReferringDomainRow) => line([
+        return done(pageOfWhole(await readReferringDomains(ctx, websiteId), page), (row: ReferringDomainRow) => line([
           row.domain, row.rank, row.backlinks, row.referringPages, row.spamScore, row.firstSeen, row.lostDate, row.status, row.day,
         ]), (row) => row.domain);
       }
       case "anchors":
-        return done(await ctx.db.query("siteAnchors")
-          .withIndex("by_site_backlinks", (q) => q.eq("websiteId", websiteId))
-          .order("desc").paginate(page), (row: Doc<"siteAnchors">) => line([
+        return done(pageOfWhole(await readAnchors(ctx, websiteId), page), (row: AnchorRow) => line([
           row.anchor, row.backlinks, row.referringDomains, row.rank, row.firstSeen, row.status, row.day,
         ]), (row) => row.anchor);
       case "ips":
-        return done(await ctx.db.query("siteReferringIps")
-          .withIndex("by_site_backlinks", (q) => q.eq("websiteId", websiteId))
-          .order("desc").paginate(page), (row: Doc<"siteReferringIps">) => line([
+        return done(pageOfWhole(await readServers(ctx, websiteId), page), (row: ReferringIpRow) => line([
           row.ip, row.subnet, row.referringDomains, row.backlinks, row.rank, row.firstSeen, row.status, row.day,
         ]), (row) => row.ip);
       case "yourPages": {

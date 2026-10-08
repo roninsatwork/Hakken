@@ -97,7 +97,7 @@ export default function SiteReferringIpsPage() {
 
       <DataTable
         rows={table.pageRows}
-        rowKey={(row) => row._id}
+        rowKey={(row) => row.ip}
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>

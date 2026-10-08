@@ -65,6 +65,8 @@ const COLLECTED_TABLES: ReadonlyArray<{ table: TableNames; page: number }> = [
   { table: "siteBacklinks", page: 500 },
   // A check's list packed a record (`siteReferringDomainParts.ts`): tens of kilobytes each.
   { table: "siteReferringDomainParts", page: 20 },
+  { table: "siteAnchorParts", page: 20 },
+  { table: "siteReferringIpParts", page: 20 },
   { table: "siteAnchors", page: 500 },
   { table: "siteReferringIps", page: 500 },
   { table: "siteLinkDays", page: 500 },

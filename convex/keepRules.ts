@@ -239,6 +239,8 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   searchVolumes: LATEST,
   siteBacklinks: LATEST,
   siteReferringDomainParts: LATEST,
+  siteAnchorParts: LATEST,
+  siteReferringIpParts: LATEST,
   siteAnchors: LATEST,
   siteReferringIps: LATEST,
   siteReferringSubnets: LATEST,

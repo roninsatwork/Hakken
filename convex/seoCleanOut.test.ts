@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { COMPETITOR_KEYWORDS_KEPT } from "./seoCleanOut";
 import { writeReferringDomainPart } from "./siteReferringDomainParts";
+import { writeAnchorPart, writeServerPart } from "./siteLinkGroupParts";
 
 /**
  * What competitors no longer have collected, cleared across every website on
@@ -35,8 +36,8 @@ async function collected(t: Harness, websiteId: Id<"websites">, keywordRanks: nu
       websiteId, pass: "ALL", pullId: links, day: DAY, domainFrom: "a.test", urlFrom: "https://a.test/", urlTo: "https://x.test/", pageTo: "/",
       dofollow: true, status: "LIVE", isBroken: false, domainRank: 1, searchText: "a.test",
     } as never);
-    await ctx.db.insert("siteAnchors", { websiteId, pullId: links, day: DAY, anchor: "x", rank: 1, backlinks: 1, referringDomains: 1, status: "LIVE" } as never);
-    await ctx.db.insert("siteReferringIps", { websiteId, pullId: links, day: DAY, ip: "1.2.3.4", subnet: "1.2.3", rank: 1, backlinks: 1, referringDomains: 1, status: "LIVE", searchText: "1.2.3.4" } as never);
+    await writeAnchorPart(ctx, { websiteId, pullId: links, day: DAY }, [{ anchor: "x", rank: 1, backlinks: 1, referringDomains: 1, status: "LIVE" }]);
+    await writeServerPart(ctx, { websiteId, pullId: links, day: DAY }, [{ ip: "1.2.3.4", rank: 1, backlinks: 1, referringDomains: 1, status: "LIVE" }]);
     await ctx.db.insert("siteReferringSubnets", { websiteId, pullId: links, subnet: "1.2.3", ips: 1, backlinks: 1, referringDomains: 1 } as never);
     await ctx.db.insert("siteLinkDays", {
       websiteId, day: DAY, newBacklinks: 1, lostBacklinks: 0, newReferringDomains: 1, lostReferringDomains: 0, newMainDomains: 0, lostMainDomains: 0, updatedAt: 1,
@@ -83,12 +84,12 @@ async function setup() {
 /** What a website holds, table by table. */
 async function heldBy(t: Harness, websiteId: Id<"websites">) {
   return await t.run(async (ctx) => {
-    const count = async (table: "siteCrawls" | "siteCrawlPages" | "siteCrawlLinks" | "siteBacklinks" | "siteAnchors" | "siteReferringIps" | "siteReferringSubnets" | "siteLinkDays" | "seoWebsiteMetrics" | "siteKeywordFeatures" | "siteKeywordRanks") =>
+    const count = async (table: "siteCrawls" | "siteCrawlPages" | "siteCrawlLinks" | "siteBacklinks" | "siteAnchorParts" | "siteReferringIpParts" | "siteReferringSubnets" | "siteLinkDays" | "seoWebsiteMetrics" | "siteKeywordFeatures" | "siteKeywordRanks") =>
       (await ctx.db.query(table).collect()).filter((row) => (row as { websiteId?: Id<"websites"> }).websiteId === websiteId).length;
     return {
       crawls: await count("siteCrawls") + await count("siteCrawlPages") + await count("siteCrawlLinks"),
       crawlFigures: (await ctx.db.query("siteDaySummaries").collect()).filter((row) => row.websiteId === websiteId && row.crawledPages !== undefined).length,
-      links: await count("siteBacklinks") + await count("siteAnchors") + await count("siteReferringIps") + await count("siteReferringSubnets") + await count("siteLinkDays"),
+      links: await count("siteBacklinks") + await count("siteAnchorParts") + await count("siteReferringIpParts") + await count("siteReferringSubnets") + await count("siteLinkDays"),
       linkingWebsites: (await ctx.db.query("siteReferringDomainParts").collect()).filter((part) => part.websiteId === websiteId)
         .reduce((sum, part) => sum + part.domains.length, 0),
       metrics: (await ctx.db.query("seoWebsiteMetrics").collect()).filter((row) => row.websiteId === websiteId).map((row) => row.operationId).sort(),
