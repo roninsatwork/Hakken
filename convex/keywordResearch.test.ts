@@ -506,7 +506,7 @@ describe("keyword ideas", () => {
     // The website ranks for one of the ideas: the idea says where.
     await t.run(async (ctx) => {
       await ctx.db.insert("siteKeywordRanks", {
-        websiteId, locationCode: UK, keyword: "best web design agency", position: 7, url: "https://ronins.co.uk/web/", band: "p04_10", page: "/web/",
+        websiteId, locationCode: UK, keyword: "best web design agency", position: 7, address: "https://ronins.co.uk/web/", band: "p04_10", page: "/web/",
         volume: 400, volumeKnown: true, intent: "BUYING", status: "SAME", change: 0, day: "2026-10-01", firstSeenDay: "2026-09-01",
       });
     });
@@ -612,7 +612,7 @@ describe("a lookup's overview", () => {
     await t.run(async (ctx) => {
       await ctx.db.insert("researchIdeas", { keyword: "web design agency", locationCode: US, kind: "TERMS", boughtAt: Date.now(), sandbox: false, limit: 100, total: 1, rows: [{ keyword: "best web design agency", volume: 400, difficulty: 30, intent: null, cpc: null }] });
       await ctx.db.insert("siteKeywordRanks", {
-        websiteId, locationCode: UK, keyword: "best web design agency", position: 7, url: "https://ronins.co.uk/web/", band: "p04_10", page: "/web/",
+        websiteId, locationCode: UK, keyword: "best web design agency", position: 7, address: "https://ronins.co.uk/web/", band: "p04_10", page: "/web/",
         volume: 400, volumeKnown: true, intent: "BUYING", status: "SAME", change: 0, day: "2026-10-01", firstSeenDay: "2026-09-01",
       });
     });

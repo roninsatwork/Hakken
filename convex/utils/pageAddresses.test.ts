@@ -24,10 +24,9 @@ describe("a page's full address beside its path", () => {
     }
   });
 
-  test("no address and no page is none; a row not yet moved reads its whole address", () => {
+  test("no address and no page is none; a page row carries its ranking's", () => {
     expect(keptAddress(undefined, host, "")).toEqual({});
     expect(addressOf({ page: "" }, host)).toBeUndefined();
-    expect(addressOf({ page: "/a/", url: "https://elsewhere.test/a/" }, host)).toBe("https://elsewhere.test/a/");
     expect(sameAddress({ www: true, address: undefined })).toEqual({ www: true });
   });
 });

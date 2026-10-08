@@ -43,7 +43,7 @@ async function seed(t: Harness) {
     const holdId = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", locationCode: UK, createdAt: Date.now() });
     await ctx.db.insert("websiteKeywords", { websiteId, companyWebsiteId: holdId, keyword: "carp rods", isActive: true, createdAt: Date.now() });
     await ctx.db.insert("siteKeywordRanks", {
-      websiteId, locationCode: UK, keyword: "carp rods", band: "p04_10", page: "/rods", url: "https://kordatackle.com/rods",
+      websiteId, locationCode: UK, keyword: "carp rods", band: "p04_10", page: "/rods", address: "https://kordatackle.com/rods",
       volume: 480, volumeKnown: true, intent: "BUYING", status: "SAME", change: 0, day: "2026-10-04", firstSeenDay: "2026-09-21",
       position: 23,
     } as never);

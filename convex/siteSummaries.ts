@@ -38,8 +38,6 @@ const pageRowValidator = v.object({
   /** Its full address as its ranking keeps it: only where not the website's host and `page` (`utils/pageAddresses.ts`). */
   address: v.optional(v.string()),
   www: v.optional(v.boolean()),
-  /** As a ranking not yet moved by `2026-10-08-page-addresses` holds it. */
-  url: v.optional(v.string()),
   section: v.string(),
   keywords: v.number(),
   bestPosition: v.number(),

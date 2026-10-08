@@ -89,7 +89,7 @@ async function collected(t: Harness, websiteId: Id<"websites">) {
       await ctx.db.insert("siteCrawlPages", { websiteId, pullId, day: "2026-09-28", url, page: new URL(url).pathname, resourceType, statusCode, problems: [] });
     }
     const rank = (page: string, locationCode: number) => ctx.db.insert("sitePageRanks", {
-      websiteId, locationCode, page, url: www(page), section: "/", keywords: 3, bestPosition: 4, top3: 0,
+      websiteId, locationCode, page, address: www(page), section: "/", keywords: 3, bestPosition: 4, top3: 0,
       topKeyword: "ai agency", topKeywordVolume: 90, firstSeenDay: "2026-09-01", day: "2026-10-01", rebuildId: "r1",
     } as never);
     await rank("/ai-agency/", PLACE);

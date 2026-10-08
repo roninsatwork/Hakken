@@ -19,20 +19,13 @@ export function keptAddress(url: string | undefined, host: string, page: string)
 }
 
 /** A row's full page address again, from what it keeps and its website's host; none for a row with no page. */
-export function addressOf(row: { address?: string; www?: boolean; page?: string; url?: string }, host: string): string | undefined {
-  // A row not yet moved by `2026-10-08-page-addresses` still holds its whole address.
-  if (row.url !== undefined) return row.url;
+export function addressOf(row: { address?: string; www?: boolean; page?: string }, host: string): string | undefined {
   if (row.address !== undefined) return row.address;
   if (!row.page) return undefined;
   return `https://${row.www ? "www." : ""}${host}${row.page}`;
 }
 
 /** What a row keeps of its address, carried onto another row with the same page. */
-export function sameAddress(row: { address?: string; www?: boolean; url?: string }): KeptAddress & { url?: string } {
-  return {
-    ...(row.address !== undefined ? { address: row.address } : {}),
-    ...(row.www ? { www: true as const } : {}),
-    // A row not yet moved by `2026-10-08-page-addresses` carries its whole address as it was.
-    ...(row.url !== undefined ? { url: row.url } : {}),
-  };
+export function sameAddress(row: { address?: string; www?: boolean }): KeptAddress {
+  return { ...(row.address !== undefined ? { address: row.address } : {}), ...(row.www ? { www: true as const } : {}) };
 }

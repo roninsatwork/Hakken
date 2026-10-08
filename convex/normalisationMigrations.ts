@@ -1,5 +1,5 @@
 import type { MutationCtx } from "./_generated/server";
-import { keepPageAddresses, packRankFacts } from "./siteRankings";
+import { packRankFacts } from "./siteRankings";
 import { rebuildEveryCopy } from "./siteListCopies";
 import { moveDecisionCalls } from "./decisionLedger";
 import { lowerSavedCostRowKeep } from "./purgeScheduleService";
@@ -21,6 +21,4 @@ export const NORMALISATION_MIGRATIONS: Record<string, (ctx: MutationCtx, cursor:
   "2026-10-08-decision-calls-on-runs": moveDecisionCalls,
   /** A saved purge setting keeping AI calls' costs the old 400 days lowered to 90 (N9). */
   "2026-10-08-cost-rows-90-days": (ctx) => lowerSavedCostRowKeep(ctx),
-  /** Rankings' and pages' whole addresses kept only where they are not the website's own host and page (§6.2). */
-  "2026-10-08-page-addresses": keepPageAddresses,
 };

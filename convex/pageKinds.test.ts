@@ -230,7 +230,7 @@ describe("Sites' pages", () => {
       const rows: Array<[string, "ARTICLE" | "SERVICE" | "CONTACT", number]> = [["/hub/boilers/", "ARTICLE", 400], ["/plumbers/", "SERVICE", 300], ["/our-new-van/", "ARTICLE", 20], ["/contact/", "CONTACT", 5]];
       for (const [page, pageType, traffic] of rows) {
         await ctx.db.insert("sitePageRanks", {
-          websiteId, locationCode: UK, page, url: url(page), section: page.split("/")[1] || "/", keywords: Math.round(traffic / 10), bestPosition: 3, top3: 1,
+          websiteId, locationCode: UK, page, address: url(page), section: page.split("/")[1] || "/", keywords: Math.round(traffic / 10), bestPosition: 3, top3: 1,
           topKeyword: "plumber", topKeywordVolume: 100, firstSeenDay: "2026-09-01", day: "2026-09-26",
           traffic, pageType, rebuildId: "r1",
         });

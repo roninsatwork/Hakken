@@ -87,7 +87,7 @@ describe("a very large site", () => {
       await t.run(async (ctx) => {
         for (let index = batch * 1_000; index < (batch + 1) * 1_000; index += 1) {
           await ctx.db.insert("sitePageRanks", {
-            websiteId, locationCode: UK, page: `/section-${index % 40}/page-${index}/`, url: `https://big.co.uk/section-${index % 40}/page-${index}/`,
+            websiteId, locationCode: UK, page: `/section-${index % 40}/page-${index}/`, address: `https://big.co.uk/section-${index % 40}/page-${index}/`,
             section: `/section-${index % 40}/`, keywords: (index % 30) + 1, bestPosition: (index % 50) + 1, top3: index % 3,
             topKeyword: `search number ${index}`, topKeywordVolume: index, firstSeenDay: "2025-01-01",
             day: "2026-09-23",

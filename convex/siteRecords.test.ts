@@ -55,7 +55,7 @@ async function pull(t: Harness, websiteId: Id<"websites">) {
 
 async function rank(t: Harness, websiteId: Id<"websites">, keyword: string, fields: Record<string, unknown> = {}) {
   await t.run(async (ctx) => await ctx.db.insert("siteKeywordRanks", {
-    websiteId, locationCode: UK, keyword, band: "p01_03", page: "/rods", url: "https://kordatackle.com/rods",
+    websiteId, locationCode: UK, keyword, band: "p01_03", page: "/rods", address: "https://kordatackle.com/rods",
     volume: 480, volumeKnown: true, intent: "BUYING", status: "SAME", change: 0, day: DAY, firstSeenDay: DAY,
     ...fields,
   } as never));
@@ -158,7 +158,7 @@ describe("a page's own screen", () => {
     const pullId = await pull(t, own.websiteId);
     await t.run(async (ctx) => {
       await ctx.db.insert("sitePageRanks", {
-        websiteId: own.websiteId, locationCode: UK, page: "/rods", url: "https://kordatackle.com/rods", section: "/", keywords: 12,
+        websiteId: own.websiteId, locationCode: UK, page: "/rods", address: "https://kordatackle.com/rods", section: "/", keywords: 12,
         bestPosition: 1, top3: 4, topKeyword: "carp rods", topKeywordVolume: 480, firstSeenDay: DAY, day: DAY,
         traffic: 240, rebuildId: "r1",
       });

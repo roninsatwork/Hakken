@@ -97,7 +97,7 @@ async function kordaSite(t: Harness) {
     }
     await ctx.db.insert("sitePageRanks", {
       websiteId, locationCode: DEFAULT_LOCATION_CODE, page: "/knowledge/which-carp-fishing-lead-system-should-i-use",
-      url: "https://korda.example/knowledge/which-carp-fishing-lead-system-should-i-use", section: "/knowledge", keywords: 12,
+      address: "https://korda.example/knowledge/which-carp-fishing-lead-system-should-i-use", section: "/knowledge", keywords: 12,
       bestPosition: 3, top3: 1, topKeyword: "carp lead systems", topKeywordVolume: 200, firstSeenDay: DAY, day: DAY,
       rebuildId: "r1",
     });

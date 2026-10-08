@@ -98,8 +98,6 @@ export const siteTables = {
      */
     address: v.optional(v.string()),
     www: v.optional(v.boolean()),
-    /** The full address as every row kept it before 2026-10-08: moved by `2026-10-08-page-addresses`, then gone. */
-    url: v.optional(v.string()),
     /** The ranking page's path, or "" when there is none. */
     page: v.string(),
     /** Monthly searches; 0 when unknown, which `volumeKnown` says. */
@@ -168,8 +166,6 @@ export const siteTables = {
     /** The page's full address where it is not the website's own host and `page` (`utils/pageAddresses.ts`). */
     address: v.optional(v.string()),
     www: v.optional(v.boolean()),
-    /** The full address as every row kept it before 2026-10-08: moved by `2026-10-08-page-addresses`, then gone. */
-    url: v.optional(v.string()),
     section: v.string(),
     keywords: v.number(),
     bestPosition: v.number(),
