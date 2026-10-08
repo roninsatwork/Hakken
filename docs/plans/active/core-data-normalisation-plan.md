@@ -47,7 +47,7 @@ fail. Nothing on screen is meant to change.
 | N6 | What a list says past N1's size | **What it says today when a list is cut** (`consoleListRows`): "showing your 25,000 …" — no new words. | **Settled** — nothing new on screen. |
 | N7 | DataForSEO's raw answers | **Kept their 7 days in Convex's file storage, not the database**: 33.5 MB of 332 answers, read only to file one again (§6.5). | **Agreed** — Anthony, 2026-10-08: "ok do it". |
 | N8 | The Decision Maker's log | **Keep every decision 90 days as now, its probabilities 30**: the probabilities are 4 MB of its 16.9, read only on one admin screen for one run (`chatAdmin.ts:263`). | **Agreed** — Anthony, 2026-10-08: "30 days ok". |
-| N9 | Agent transactions (every AI call's cost) | **Keep 90 days, not 400, then daily totals for good**: the analytics read daily totals (`analyticsSnapshots`). 14.4 MB on dev. | Waiting |
+| N9 | Agent transactions (every AI call's cost) | **The analytics read the daily totals already saved each night (`analyticsDailySnapshots`) for any dates, and the rows are kept 90 days, not 400.** Today the analytics screens (up to 365 days, `TimeframeDropdown`) add up the rows themselves each time, stopping at 10,000 (`ANALYTICS_SCAN`, `analytics.ts:25`) — dev already holds about 40,000 in 90 days, so a long range is already short. 14.4 MB on dev. | Waiting |
 | N10 | The Decision Maker judging one at a time | **Judge keywords' intents and pages' types in batches**, tried on a sample first and kept only if the answers match (§7.3). | **Agreed** — Anthony, 2026-10-08: "add this to the plan too please, we need to optimise everything". |
 
 ## 2. Why — measured on dev, 2026-10-08
@@ -387,8 +387,13 @@ and writing.
 ### 7.2 Kept for less time, totals kept for good
 
 - **The Decision Maker's probabilities 30 days, the Decision 90** (N8).
-- **Cost rows 90 days, then daily totals** per company, agent, purpose and
-  model (N9) — the analytics already read daily totals (`analyticsSnapshots`).
+- **Cost rows 90 days, the analytics on daily totals** (N9). The analytics
+  screens add up the rows themselves on every open, stopping at 10,000
+  (`ANALYTICS_SCAN`): past that a range is short without the screen knowing
+  why. They move to the daily totals saved each night
+  (`analyticsDailySnapshots`, per company, user and model, kept for good),
+  reading rows only for today — every range exact, and a year's view a few
+  hundred records rather than every call.
 - **The job ledger** keeps each job's last outcome and its failures, not every
   successful run — measured first in its step: what reads it, and how often it
   runs.
