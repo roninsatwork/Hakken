@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { readList } from "./searchConsoleLists";
 import { PART_ROWS, pack, type Row } from "./utils/searchConsolePacks";
+import { metered, type MeteredRead } from "@/src/test/readMeter";
 
 /**
  * The Search Console lists stay quick on a large website
@@ -27,42 +28,6 @@ const TRACKED = 200;
 /** A country kept ready's share of the same website: its own, smaller, period. */
 const COUNTRY_NOW = 9_000;
 const COUNTRY_BEFORE = 7_000;
-
-type Read = { table: string; index: string | null; documents: number };
-
-/** The database, every query on it noted: the table, the index it read by, and the documents it returned. */
-function counted<Db extends object>(db: Db): { db: Db; reads: Read[] } {
-  const reads: Read[] = [];
-  const wrap = (read: Read, query: object): object => new Proxy(query, {
-    get(target, property) {
-      const value = Reflect.get(target, property) as unknown;
-      if (typeof value !== "function") return value;
-      return (...args: unknown[]) => {
-        if (property === "withIndex") read.index = String(args[0]);
-        const out = (value as (...rest: unknown[]) => unknown).apply(target, args);
-        if (out instanceof Promise) {
-          return out.then((found: unknown) => {
-            read.documents += Array.isArray(found) ? found.length : found ? 1 : 0;
-            return found;
-          });
-        }
-        return out && typeof out === "object" ? wrap(read, out) : out;
-      };
-    },
-  });
-  const proxied = new Proxy(db, {
-    get(target, property) {
-      const value = Reflect.get(target, property) as unknown;
-      if (property !== "query" || typeof value !== "function") return typeof value === "function" ? value.bind(target) : value;
-      return (table: string) => {
-        const read: Read = { table, index: null, documents: 0 };
-        reads.push(read);
-        return wrap(read, (value as (name: string) => object).call(target, table));
-      };
-    },
-  });
-  return { db: proxied, reads };
-}
 
 const periodRows = (count: number, offset: number) => Array.from({ length: count }, (_, index) => ({
   key: `search ${index + offset}`,
@@ -110,7 +75,7 @@ describe("a large website's Search Console", () => {
     const ask = { searchType: "web" as const, dimension: "query" as const, from: "2026-08-28", to: NEWEST };
     for (const filters of [{}, { sort: "position" as const }, { q: "search 12" }, { tracked: "yes" as const }, { band: "4-10" as const, direction: "asc" as const }]) {
       const { list, reads } = await t.run(async (ctx) => {
-        const { db, reads } = counted(ctx.db);
+        const { db, reads } = metered(ctx.db, { gets: false });
         return { list: await readList({ db }, siteId as Id<"companyWebsites">, { ...ask, ...filters }), reads };
       });
       expect(list.preparing).toBe(false);
@@ -165,7 +130,7 @@ describe("a large website's Search Console", () => {
       }
     });
     const { list, reads } = await t.run(async (ctx) => {
-      const { db, reads } = counted(ctx.db);
+      const { db, reads } = metered(ctx.db, { gets: false });
       return { list: await readList({ db }, siteId as Id<"companyWebsites">, { ...ask, country: "gbr" }), reads };
     });
     expect(list).toMatchObject({ preparing: false, live: false, comparable: true, listed: COUNTRY_NOW });
@@ -220,10 +185,10 @@ describe("a large website's Search Console", () => {
     });
     const ask = { searchType: "web" as const, dimension: "query" as const, from: year.from, to: NEWEST };
     const read = async (extra: Partial<Parameters<typeof readList>[2]>) => await t.run(async (ctx) => {
-      const { db, reads } = counted(ctx.db);
+      const { db, reads } = metered(ctx.db, { gets: false });
       return { list: await readList({ db }, siteId as Id<"companyWebsites">, { ...ask, ...extra }), reads };
     });
-    const periodDocuments = (reads: Read[]) => reads.filter((one) => one.table === "searchConsolePeriods").reduce((sum, one) => sum + one.documents, 0);
+    const periodDocuments = (reads: MeteredRead[]) => reads.filter((one) => one.table === "searchConsolePeriods").reduce((sum, one) => sum + one.documents, 0);
 
     // One keyword's pages, and one page's keywords: asked of Google, no period read.
     const pagesOf = await read({ within: { kind: "query", key: "search 12345" } });

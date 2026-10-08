@@ -579,7 +579,7 @@ build the plan please". How it is built, as he agreed:
 
 | Step | State |
 |---|---|
-| 1. The load test at N1's size | — |
+| 1. The load test at N1's size | **Built 2026-10-08** (`convex/searchConsoleScale.test.ts`, the shared meter `src/test/readMeter.ts`). At five times morehandles.co.uk, today: Keywords for 90 days reads 19.4 MiB, for 30 days compared 16.3, searched 19.4, Pages competing 40.1 — each past Convex's 16 MiB, so each screen would fail; Pages 3.2. 2.7 seconds, so no slower-test exception was needed; run here, not on GitHub. |
 
 ## Change log
 
