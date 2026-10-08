@@ -488,6 +488,7 @@ const TABLES = [
   "searchConsoleSeen",
   "searchConsoleSeenDays",
   "searchConsolePageRefs",
+  "searchConsoleKeywordBooks",
 ] as const;
 type Table = (typeof TABLES)[number];
 /** Large packed records are read a few at a time; small rows many. */
@@ -499,6 +500,7 @@ const SIZE_PAGE: Record<Table, number> = {
   searchConsoleSeen: 2_000,
   searchConsoleSeenDays: 2_000,
   searchConsolePageRefs: 2_000,
+  searchConsoleKeywordBooks: 8,
 };
 
 const bucketValidator = v.object({ name: v.string(), records: v.number(), bytes: v.number() });
@@ -537,7 +539,9 @@ export const sizeStep = internalQuery({
               ? await ctx.db.query("searchConsoleSeen").withIndex("by_hold_country_type_kind_key", (q) => q.eq("companyWebsiteId", hold)).paginate(paging)
               : args.table === "searchConsoleSeenDays"
                 ? await ctx.db.query("searchConsoleSeenDays").withIndex("by_hold_country_type_kind_day", (q) => q.eq("companyWebsiteId", hold)).paginate(paging)
-                : await ctx.db.query("searchConsolePageRefs").withIndex("by_hold_ref", (q) => q.eq("companyWebsiteId", hold)).paginate(paging);
+                : args.table === "searchConsolePageRefs"
+                  ? await ctx.db.query("searchConsolePageRefs").withIndex("by_hold_ref", (q) => q.eq("companyWebsiteId", hold)).paginate(paging)
+                  : await ctx.db.query("searchConsoleKeywordBooks").withIndex("by_hold_country_month_chunk", (q) => q.eq("companyWebsiteId", hold)).paginate(paging);
     const buckets = new Map<string, Bucket>();
     for (const row of page.page as Array<Record<string, Value>>) {
       const name = args.table === "searchConsoleLists"
