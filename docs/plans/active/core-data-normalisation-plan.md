@@ -2,7 +2,7 @@
 
 **Started 2026-10-08. Status: planning — nothing built. Decisions N1 to N10
 below: N1 and N2 agreed, N3, N4 and N6 settled (nothing on screen changes),
-N5 and N10 agreed too; N7, N8 and N9 wait on Anthony.** Follows the
+N5, N7 and N10 agreed too; N8 and N9 wait on Anthony.** Follows the
 [keep-less-history plan](keep-less-history-plan.md), whose part 8 (built the
 same day) packed the numbers and booked addresses inside each stored part —
 the steps that could be taken without redesigning how screens read. This plan
@@ -45,7 +45,7 @@ fail. Nothing on screen is meant to change.
 | N4 | New and lost | **Unchanged on screen**; its register stored as a book (§5.6). | **Settled** — nothing on screen changes. |
 | N5 | Brand words | **Judged when the lists are built, not each time a screen opens**: a change to a website's brand words rebuilds its lists, so the brand split shows the new words a minute or two later rather than at once. | **Agreed** — Anthony, 2026-10-08: "that's ok, a small delay is cool". |
 | N6 | What a list says past N1's size | **What it says today when a list is cut** (`consoleListRows`): "showing your 25,000 …" — no new words. | **Settled** — nothing new on screen. |
-| N7 | DataForSEO's raw answers | **Kept their 7 days in Convex's file storage, not the database**: 33.5 MB of 332 answers, read only to file one again (§6.5). | Waiting |
+| N7 | DataForSEO's raw answers | **Kept their 7 days in Convex's file storage, not the database**: 33.5 MB of 332 answers, read only to file one again (§6.5). | **Agreed** — Anthony, 2026-10-08: "ok do it". |
 | N8 | The Decision Maker's log | **Keep every decision 90 days as now, its probabilities 30**: the probabilities are 4 MB of its 16.9, read only on one admin screen for one run (`chatAdmin.ts:263`). | Waiting |
 | N9 | Agent transactions (every AI call's cost) | **Keep 90 days, not 400, then daily totals for good**: the analytics read daily totals (`analyticsSnapshots`). 14.4 MB on dev. | Waiting |
 | N10 | The Decision Maker judging one at a time | **Judge keywords' intents and pages' types in batches**, tried on a sample first and kept only if the answers match (§7.3). | **Agreed** — Anthony, 2026-10-08: "add this to the plan too please, we need to optimise everything". |
@@ -557,4 +557,4 @@ built.
   part 3 rewritten from how agent data grows per call (§7), N10 added. Then
   "add this to the plan too please, we need to optimise everything": N10
   agreed, and part 4 (§7A) added — every line of Convex's bill. N5 agreed:
-  "that's ok, a small delay is cool".
+  "that's ok, a small delay is cool". N7 agreed: "ok do it".
