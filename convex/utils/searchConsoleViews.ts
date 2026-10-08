@@ -9,6 +9,7 @@
 
 import { countsByType, type ClassificationType } from "./pageKinds";
 import { wordStartMatcher } from "./wordStarts";
+import { compareTermsQuickly } from "./searchConsoleTerms";
 
 export type Band = "1-3" | "4-10" | "11-20" | "21-50" | "51+";
 export const BANDS: readonly Band[] = ["1-3", "4-10", "11-20", "21-50", "51+"];
@@ -230,7 +231,7 @@ export function pagesByKeyword(pairs: readonly { key: string; page?: string; cli
     out.set(pair.key, pages);
   }
   for (const pages of out.values()) {
-    pages.sort((left, right) => right.clicks - left.clicks || right.impressions - left.impressions || left.page.localeCompare(right.page));
+    pages.sort((left, right) => right.clicks - left.clicks || right.impressions - left.impressions || compareTermsQuickly(left.page, right.page));
   }
   return out;
 }
@@ -495,6 +496,13 @@ function brandSplit(rows: readonly { key: string; clicks: number; impressions: n
   return split;
 }
 
+/** Every page any keyword was shown with: for a list kept before Pages competing held the count. */
+function pagesIn(pairs: PairPages): number {
+  const shown = new Set<string>();
+  for (const list of pairs.values()) for (const page of list) shown.add(page.page);
+  return shown.size;
+}
+
 export function summarise(
   listed: readonly ListRow[],
   all: readonly ListRow[],
@@ -554,9 +562,7 @@ export function summarise(
     const pages = new Set<string>();
     for (const row of listed) for (const page of context.pages.get(row.key) ?? []) pages.add(page.page);
     summary.pagesInvolved = pages.size;
-    const shown = new Set<string>();
-    for (const list of context.pages.values()) for (const page of list) shown.add(page.page);
-    summary.pagesShown = context.pagesShown ?? shown.size;
+    summary.pagesShown = context.pagesShown ?? pagesIn(context.pages);
   }
   if (context.brandWords) {
     summary.brand = { now: brandSplit(all, context.brandWords), before: before ? brandSplit(before, context.brandWords) : null };

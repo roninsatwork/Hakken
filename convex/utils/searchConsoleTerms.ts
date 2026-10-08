@@ -12,6 +12,8 @@
  * keyword Google never showed — is told apart and kept as it is.
  */
 
+import { compareText } from "./sortOrder";
+
 const MARK = "\u0001";
 const WIDTH = 7;
 
@@ -34,7 +36,17 @@ export function tokenPlace(value: string): { kind: BookKind; place: number } | n
 }
 
 /** The one A-to-Z order a book is sorted in, and looked up by: the screens' own (`utils/sortOrder.ts`). */
-export const compareTerms = (left: string, right: string): number => left.localeCompare(right);
+export const compareTerms = compareText;
+
+/**
+ * Two keywords or pages as the screens order them, quickly: two tokens of one
+ * book by their characters — the same order as their texts', since the book
+ * is sorted, and a list of 200,000 compares millions of them — and text A to Z.
+ */
+export function compareTermsQuickly(left: string, right: string): number {
+  if (left.charCodeAt(0) === 1 && right.charCodeAt(0) === 1) return left < right ? -1 : left > right ? 1 : 0;
+  return compareText(left, right);
+}
 
 /** Where a text falls in a sorted list of each record's first entry: the record that would hold it. */
 export function recordFor(firsts: readonly string[], text: string): number {

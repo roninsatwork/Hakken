@@ -171,7 +171,9 @@ export function bySide(pairs: readonly Row[], side: "query" | "page"): Map<strin
  * places, Google's to a millionth.
  */
 const DIGITS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ-_";
-const DIGIT_AT = new Map([...DIGITS].map((digit, at) => [digit, at]));
+/** Each character's place in `DIGITS`, by its code: read a character at a time, a long list is millions. */
+const DIGIT_AT = new Int8Array(128);
+for (const [at, digit] of [...DIGITS].entries()) DIGIT_AT[digit.charCodeAt(0)] = at;
 
 /** A column of whole numbers as stored: packed text, or a list as kept before 2026-10-08. */
 export type StoredNumbers = string | number[];
@@ -193,8 +195,9 @@ export function unpackNumbers(stored: StoredNumbers): number[] {
   const values: number[] = [];
   let rest = 0;
   let scale = 1;
-  for (const digit of stored) {
-    const at = DIGIT_AT.get(digit) ?? 0;
+  for (let index = 0; index < stored.length; index += 1) {
+    const code = stored.charCodeAt(index);
+    const at = code < 128 ? DIGIT_AT[code] : 0;
     if (at < 32) {
       rest += at * scale;
       scale *= 32;

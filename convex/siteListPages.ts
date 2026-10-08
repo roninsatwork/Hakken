@@ -114,15 +114,20 @@ export const sortDirectionArg = v.optional(v.union(v.literal("asc"), v.literal("
  */
 export type ListSorts<Row, Key extends string> = Readonly<Record<Key, { value: (row: Row) => SortValue; first: SortDirection }>>;
 
-/** The order asked for, or the column's own first direction, as a comparator: blanks last, ties by name. */
+/**
+ * The order asked for, or the column's own first direction, as a comparator: blanks last, ties by name.
+ * `text` is for a list whose names stand for text and sort as it would, faster — Search Console's
+ * keywords and pages as places in their book (`compareTermsQuickly`); text A to Z otherwise.
+ */
 export function listOrder<Row, Key extends string>(
   sorts: ListSorts<Row, Key>,
   key: Key,
   direction: SortDirection | undefined,
   name: (row: Row) => string,
+  text?: (left: string, right: string) => number,
 ) {
   const column = sorts[key];
-  return byValue(column.value, name, direction ?? column.first);
+  return byValue(column.value, name, direction ?? column.first, text);
 }
 
 /**

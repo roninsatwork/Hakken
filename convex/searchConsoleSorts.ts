@@ -1,6 +1,7 @@
 import type { PageKinds } from "./utils/pageKinds";
 import { BANDS, type ListRow } from "./utils/searchConsoleViews";
 import { listOrder, type ListSorts } from "./siteListPages";
+import { compareTermsQuickly } from "./utils/searchConsoleTerms";
 
 /**
  * How Search Console's lists are ordered by their headings (AGENTS.md, "Every
@@ -52,5 +53,5 @@ export function sortRows(rows: ListRow[], sort: SortKey | undefined, direction: 
   const sorts: ListSorts<ListRow, SortKey> = pageKinds
     ? { ...SORTS, kind: { value: (row) => (row.kind === null ? null : pageKinds.nameOf(row.kind)), first: "asc" } }
     : SORTS;
-  return rows.sort(listOrder(sorts, sort ?? "clicks", direction, (row) => row.key));
+  return rows.sort(listOrder(sorts, sort ?? "clicks", direction, (row) => row.key, compareTermsQuickly));
 }

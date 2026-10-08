@@ -20,12 +20,23 @@ function isBlank(value: SortValue): boolean {
   return value === null || value === undefined || value === "" || (typeof value === "number" && Number.isNaN(value));
 }
 
-/** Two values one way round, blanks after everything else whichever way; 0 when they tie. */
-export function compareSortValues(left: SortValue, right: SortValue, direction: SortDirection): number {
+/**
+ * Text A to Z: what `localeCompare` does with no locale or options, from one
+ * comparer made once. Sorting a list of 200,000 keywords whose clicks mostly
+ * tie compares millions of names, and `localeCompare` makes its comparer anew
+ * each time — most of a long list's sort (core-data-normalisation-plan.md, 2026-10-08).
+ */
+export const compareText: (left: string, right: string) => number = new Intl.Collator().compare;
+
+/**
+ * Two values one way round, blanks after everything else whichever way; 0 when they tie.
+ * `text` compares two texts: A to Z, unless a list's names sort another way it says.
+ */
+export function compareSortValues(left: SortValue, right: SortValue, direction: SortDirection, text: (left: string, right: string) => number = compareText): number {
   const leftBlank = isBlank(left);
   const rightBlank = isBlank(right);
   if (leftBlank || rightBlank) return leftBlank === rightBlank ? 0 : leftBlank ? 1 : -1;
-  const order = typeof left === "number" && typeof right === "number" ? left - right : String(left).localeCompare(String(right));
+  const order = typeof left === "number" && typeof right === "number" ? left - right : text(String(left), String(right));
   return direction === "asc" ? order : -order;
 }
 
@@ -33,8 +44,13 @@ export function compareSortValues(left: SortValue, right: SortValue, direction: 
  * Rows by one value either way round — blanks last — then by a name. What a
  * sortable heading asks for, pressed once and then again.
  */
-export function byValue<Row>(value: (row: Row) => SortValue, name: (row: Row) => string, direction: SortDirection) {
-  return (left: Row, right: Row) => compareSortValues(value(left), value(right), direction) || name(left).localeCompare(name(right));
+export function byValue<Row>(
+  value: (row: Row) => SortValue,
+  name: (row: Row) => string,
+  direction: SortDirection,
+  text: (left: string, right: string) => number = compareText,
+) {
+  return (left: Row, right: Row) => compareSortValues(value(left), value(right), direction, text) || text(name(left), name(right));
 }
 
 /** By a number either way round, rows with none last, then by a name. */

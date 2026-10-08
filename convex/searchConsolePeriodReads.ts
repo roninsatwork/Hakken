@@ -1,7 +1,7 @@
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { SearchConsolePeriod, SearchConsolePeriodList, SearchType } from "./searchConsoleSchema";
-import { rowsOf, unpackNumbers, unpackedPart, type Row, type Unpacked } from "./utils/searchConsolePacks";
+import { unpackNumbers, unpackedPart, type Row, type Unpacked } from "./utils/searchConsolePacks";
 import { termToken, tokenPlace, type BookKind } from "./utils/searchConsoleTerms";
 import { textsFrom, wholeBook, type BookScope } from "./searchConsolePeriodBooks";
 import { PARTS_MOST } from "./searchConsoleRollups";
@@ -128,14 +128,7 @@ export async function readPeriod(
     parts = (await periodParts(ctx, companyWebsiteId, scope, searchType, list, "90", "NOW")).sort((left, right) => left.part - right.part);
   }
   const rows: PeriodRow[] = [];
-  for (const part of parts) {
-    const brands = part.brands ? unpackNumbers(part.brands) : null;
-    let index = 0;
-    for (const row of rowsOf(part)) {
-      rows.push(withKept(row, part, index, brands));
-      index += 1;
-    }
-  }
+  for (const part of parts) rowsOfPart(part, rows);
   const book = parts.some((part) => typeof part.keys[0] === "string" && tokenPlace(part.keys[0]) !== null)
     ? { companyWebsiteId, ...(scope === undefined ? {} : { country: scope }), searchType, builtAt: parts[0].builtAt }
     : null;
@@ -150,19 +143,31 @@ export async function readPeriod(
   return { from: parts[0].from, to: parts[0].to, builtAt: parts[0].builtAt, shown: parts[0].shown ?? null, rows, book };
 }
 
-type KeptBeside = Unpacked<Pick<Doc<"searchConsolePeriods">, "counts" | "tops" | "kinds" | "volumes" | "estimates">>;
+type ReadPart = Unpacked<Pick<Doc<"searchConsolePeriods">, "clicks" | "impressions" | "positionSums" | "counts" | "tops" | "kinds" | "volumes" | "estimates">>
+  & { keys: string[]; pages?: string[]; brands?: string };
 
-/** A row of a part, with the figures kept beside it at its place. */
-function withKept(row: Row, part: KeptBeside, index: number, brands: number[] | null): PeriodRow {
-  return {
-    ...row,
-    ...(brands ? { brand: brands[index] === 1 } : {}),
-    ...(part.counts ? { count: part.counts[index] ?? 0 } : {}),
-    ...(part.tops ? { top: part.tops[index] ?? "" } : {}),
-    ...(part.kinds ? { kind: part.kinds[index] ?? "UNJUDGED" } : {}),
-    ...(part.volumes ? { volume: part.volumes[index] ?? UNKNOWN } : {}),
-    ...(part.estimates ? { estimate: part.estimates[index] ?? UNKNOWN } : {}),
-  };
+/**
+ * A part's rows, each with the figures kept beside it at its place, onto `rows`. Made
+ * one object a row, field by field: at five times morehandles.co.uk a list is hundreds of
+ * thousands of rows, and a row copied through spreads, twice, was a third of its read.
+ */
+function rowsOfPart(part: ReadPart, rows: PeriodRow[]): void {
+  const brands = part.brands ? unpackNumbers(part.brands) : null;
+  const { keys, pages, counts, tops, kinds, volumes, estimates } = part;
+  const clicks = unpackNumbers(part.clicks);
+  const impressions = unpackNumbers(part.impressions);
+  const positionSums = unpackNumbers(part.positionSums);
+  for (let index = 0; index < keys.length; index += 1) {
+    const row: PeriodRow = { key: keys[index], clicks: clicks[index] ?? 0, impressions: impressions[index] ?? 0, positionSum: positionSums[index] ?? 0 };
+    if (pages) row.page = pages[index];
+    if (brands) row.brand = brands[index] === 1;
+    if (counts) row.count = counts[index] ?? 0;
+    if (tops) row.top = tops[index] ?? "";
+    if (kinds) row.kind = kinds[index] ?? "UNJUDGED";
+    if (volumes) row.volume = volumes[index] ?? UNKNOWN;
+    if (estimates) row.estimate = estimates[index] ?? UNKNOWN;
+    rows.push(row);
+  }
 }
 
 /**
