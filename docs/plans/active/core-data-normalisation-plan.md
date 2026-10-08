@@ -1,8 +1,7 @@
 # Core data — each keyword and page once, every screen inside Convex's limits
 
-**Started 2026-10-08. Status: planned — every decision agreed or settled
-(N1–N10, §1); nothing built. Building starts at Anthony's word, at step 1
-(§9).** Follows the
+**Started 2026-10-08. Status: building, from 2026-10-08 — every decision
+agreed or settled (N1–N10, §1); progress in §12.** Follows the
 [keep-less-history plan](keep-less-history-plan.md), whose part 8 (built the
 same day) packed the numbers and booked addresses inside each stored part —
 the steps that could be taken without redesigning how screens read. This plan
@@ -553,6 +552,35 @@ analytics' long ranges become complete). If any
 answer changes what a screen shows, it is drawn on the canvas before it is
 built.
 
+## 12. Building it
+
+Anthony, 2026-10-08: "yes go with it — it's a one-off cost and once it's done
+it will be optimised … commit and don't push … it's just you working now …
+build the plan please". How it is built, as he agreed:
+
+- **Dev's data** is converted and cleared as each step lands, without asking
+  each time: there is no production deployment.
+- **Convex's reading and writing for the build**: up to about 25 GB, paid
+  once; past that, stop and ask.
+- **The load test** is kept under five seconds if it can be; if not, it is
+  the one test allowed slower, run here and never on GitHub, as the Sites
+  speed test is.
+- **Checks**: the full local check before every step is merged; GitHub's own
+  steps (coverage, the browser smoke tests, the build) at the end of each part.
+- **Nothing is pushed**; each step is committed and merged into local `dev`.
+- **When a step does not go to plan** (it saves less, the batching sample
+  disagrees, a detail does not work as written): the safer way, carried on,
+  and said at the end of the part; a change to a screen stops and asks.
+- **After this plan**: "we need to look at what tests run when we push to dev
+  later, as I think this is spiralling too" — what GitHub runs on each push,
+  its own piece of work once this is in.
+
+### Progress
+
+| Step | State |
+|---|---|
+| 1. The load test at N1's size | — |
+
 ## Change log
 
 - **2026-10-08** — Plan written, from Anthony's request the same day. N1
@@ -563,4 +591,5 @@ built.
   part 3 rewritten from how agent data grows per call (§7), N10 added. Then
   "add this to the plan too please, we need to optimise everything": N10
   agreed, and part 4 (§7A) added — every line of Convex's bill. N5 agreed:
-  "that's ok, a small delay is cool". N7 agreed: "ok do it". N8 agreed: "30 days ok". N9 agreed: "daily totals ok" — the plan complete.
+  "that's ok, a small delay is cool". N7 agreed: "ok do it". N8 agreed: "30 days ok". N9 agreed: "daily totals ok" — the plan complete. Building started the same
+  day at Anthony's word (§12).
