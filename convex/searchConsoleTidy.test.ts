@@ -133,6 +133,11 @@ describe("numbers packed as text (keep-less-history-plan.md, part 8; 2026-10-08)
         keys: ["plumber leeds", "boiler repair"], clicks: [3, 0], impressions: [40, 2], positionSums: [120, 18], counts: [2, 1], volumes: [-1, 90], builtAt: 1,
         tops: ["https://acme-shop.test/", "https://acme-shop.test/"], kinds: ["BUYING", "BUYING"],
       });
+      // A page list: its tops are its top keywords, never booked, so once its kinds are it is done.
+      await ctx.db.insert("searchConsolePeriods", {
+        companyWebsiteId: holdId, searchType: "web", list: "page", period: "30", which: "NOW", part: 0, from: "2026-08-28", to: NEWEST,
+        keys: ["https://acme-shop.test/"], tops: ["plumber leeds"], kinds: ["HOME"], ...packedColumns({ clicks: [3], impressions: [40], positionSums: [120], counts: [1] }), builtAt: 1,
+      });
       // Pages competing, its numbers already packed (part 8.1) and its pages kept in full: booked (part 8.2).
       await ctx.db.insert("searchConsolePeriods", {
         companyWebsiteId: holdId, searchType: "web", list: "competing", period: "30", which: "NOW", part: 0, from: "2026-08-28", to: NEWEST,
@@ -147,9 +152,9 @@ describe("numbers packed as text (keep-less-history-plan.md, part 8; 2026-10-08)
     const before = await read();
 
     // Three search-and-page lines name their keywords in full: all countries', the United Kingdom's, Google Images'.
-    expect(await t.action(internal.searchConsoleTidy.packKeptNumbers, { go: false })).toEqual({ lists: 9, periods: 2, keywordLines: 3 });
+    expect(await t.action(internal.searchConsoleTidy.packKeptNumbers, { go: false })).toEqual({ lists: 9, periods: 3, keywordLines: 3 });
     expect(await read()).toEqual(before);
-    expect(await t.action(internal.searchConsoleTidy.packKeptNumbers, { go: true })).toEqual({ lists: 9, periods: 2, keywordLines: 3 });
+    expect(await t.action(internal.searchConsoleTidy.packKeptNumbers, { go: true })).toEqual({ lists: 9, periods: 3, keywordLines: 3 });
     expect(await t.action(internal.searchConsoleTidy.packKeptNumbers, { go: false })).toEqual({ lists: 0, periods: 0, keywordLines: 0 });
 
     const after = await read();
@@ -162,7 +167,8 @@ describe("numbers packed as text (keep-less-history-plan.md, part 8; 2026-10-08)
       keys: await lineKeywordsInQuery(ctx, record.companyWebsiteId, record.country, record.start, record.keys),
     }))));
     expect(readBack).toEqual(before.lists);
-    const [query, competing] = after.periods;
+    const [query, pageList, competing] = after.periods;
+    expect(pageList).toMatchObject({ tops: ["plumber leeds"], kinds: expect.any(String), kindBook: ["HOME"] });
     expect(query).toMatchObject({ tops: expect.any(String), pageBook: ["https://acme-shop.test/"], kinds: expect.any(String), kindBook: ["BUYING"] });
     expect(competing).toMatchObject({ pages: expect.any(String), pageBook: ["https://acme-shop.test/", "https://acme-shop.test/plumbers/"] });
     expect(after.periods.map((part) => { const { pageBook: _pages, kindBook: _kinds, ...read } = unpackedPart(part); return read; }))

@@ -666,7 +666,9 @@ export const packNumbersStep = internalMutation({
       const lists = unpackedPart(record);
       const smaller = {
         ...(typeof record.clicks === "string" ? {} : packedColumns(lists)),
-        ...(Array.isArray(record.tops) || Array.isArray(record.pages) || Array.isArray(record.kinds) ? bookedColumns(lists) : {}),
+        // A page list's tops are its top keywords, never booked: only what `bookedColumns` books counts.
+        ...((record.list === "query" && Array.isArray(record.tops)) || (record.list === "competing" && Array.isArray(record.pages))
+          || (Array.isArray(record.kinds) && record.kinds.length > 0) ? bookedColumns(lists) : {}),
       };
       if (Object.keys(smaller).length === 0) continue;
       found += 1;
