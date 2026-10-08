@@ -384,15 +384,6 @@ export const searchConsoleTables = {
     addresses: v.array(v.string()),
   }).index("by_hold_record", ["companyWebsiteId", "record"]),
 
-  /** One row a page, before §5.7: emptied into `searchConsolePageAddresses` once (`turnRowsIntoRecords`), then removed. */
-  searchConsolePageRefs: defineTable({
-    companyWebsiteId: v.id("companyWebsites"),
-    page: v.string(),
-    ref: v.number(),
-  })
-    .index("by_hold_page", ["companyWebsiteId", "page"])
-    .index("by_hold_ref", ["companyWebsiteId", "ref"]),
-
   /**
    * The ready-made periods the screens read (plan §14.3, item 4): for the last
    * 7, 30 and 90 days and 12 months ending on the newest day held (`NOW`), and
