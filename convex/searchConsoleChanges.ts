@@ -15,6 +15,7 @@ import { addUp, historyLimitDay, shiftDay, type Figures } from "./searchConsoleD
 import { checkedCountry, countryScope } from "./searchConsoleCountries";
 import { chartStepValidator } from "./searchConsolePeriods";
 import { readPeriod } from "./searchConsolePeriodReads";
+import { BookNames } from "./searchConsolePeriodBooks";
 import { seenDaysBetween } from "./searchConsoleSeenDays";
 import { checkedLongest, consoleLimitsOf, type ConsoleLimits } from "./searchConsoleLimits";
 import { periodOf } from "./searchConsoleLists";
@@ -228,8 +229,13 @@ export const searchConsoleNewLost = tenantQuery({
     // Each keyword's figures: the ready-made 90 days hold every one shown in them.
     const ninety = await readPeriod(ctx, holdId, args.searchType, "query", "90", "NOW", country);
     const figures = new Map((ninety?.rows ?? []).map((row) => [row.key, row]));
+    // The 90 days keep each keyword as its token in the build's book (core-data-normalisation-plan.md §5.1): each new or
+    // lost keyword looked up by its text, the book's records read once however many ask.
+    const names = ninety?.book ? new BookNames(ctx, ninety.book) : null;
+    const tokens = new Map<string, string>();
+    if (names) for (const entry of [...keywords.gained, ...keywords.lost]) tokens.set(entry.key, await names.tokenOf("query", entry.key));
     const rowOf = (entry: Seen, status: "new" | "lost"): Change => {
-      const known = figures.get(entry.key);
+      const known = figures.get(tokens.get(entry.key) ?? entry.key);
       const position = known && known.impressions > 0 ? known.positionSum / known.impressions : null;
       return {
         key: entry.key,

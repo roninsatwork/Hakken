@@ -200,7 +200,9 @@ describe("every page once", () => {
       }
       const period = await ctx.db.query("searchConsolePeriods").withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", holdId)).first();
       const clicks = unpackNumbers(period!.clicks);
-      await ctx.db.patch(period!._id, { keys: period!.keys.filter((key) => !key.includes("/author/")), clicks: packNumbers(clicks.slice(0, 4).concat(clicks.slice(5))) });
+      // This test writes its period as text (its setup), not as places in a build's book.
+      const keys = typeof period!.keys === "string" ? [] : period!.keys;
+      await ctx.db.patch(period!._id, { keys: keys.filter((key) => !key.includes("/author/")), clicks: packNumbers(clicks.slice(0, 4).concat(clicks.slice(5))) });
     });
     const rebuilt = await t.action(internal.holdPages.rebuildHoldPages, { holdId });
 

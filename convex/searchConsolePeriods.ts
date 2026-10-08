@@ -31,6 +31,7 @@ import {
   firstWeekKept,
   monthStart,
   pack,
+  packNumbers,
   packedColumns,
   stepEnd,
   unpackedPart,
@@ -43,6 +44,8 @@ import {
 import { bandOf, isBrand, pageWithoutSection } from "./utils/searchConsoleViews";
 import { tenantQuery } from "./tenantFunctions";
 import { addressesOf, decodeWith } from "./searchConsolePageRefs";
+import { forgetListBuild, noteListBuild, writeBook } from "./searchConsolePeriodBooks";
+import type { BookKind } from "./utils/searchConsoleTerms";
 import { lineKeywords } from "./searchConsoleKeywordBooks";
 import { FIRST_PARTS_READ } from "./searchConsolePeriodReads";
 import { requireMySite } from "./siteAccess";
@@ -472,7 +475,7 @@ function sameAsNinety(slot: Slot, ninety: PeriodSpan | null): boolean {
 }
 
 /** A part as written: its rows, and what each row carries beside them. */
-type PartToWrite = Packed & {
+export type PartToWrite = Packed & {
   counts?: number[];
   tops?: string[];
   kinds?: string[];
@@ -601,16 +604,33 @@ export async function buildSitePeriods(
   const scope = country === undefined ? {} : { country };
   const ninety = allSlots.find((slot) => slot.period === "90" && slot.which === "NOW")?.span ?? null;
   const asNinety = (slot: Slot) => sameAsNinety(slot, ninety);
+  // A kind of result's lists, held until all are worked out: then its book, then each list holding places in it
+  // (core-data-normalisation-plan.md §5.1, `searchConsolePeriodBooks.ts`).
+  const waiting: Array<{ searchType: SearchType; list: SearchConsolePeriodList; slot: Slot; parts: PartToWrite[] }> = [];
   const writeParts = async (searchType: SearchType, list: SearchConsolePeriodList, slot: Slot, given: PartToWrite[] | null) => {
     // Twelve months on the 90 days' own days: one empty part saying its days, the 90 days read instead (`sameAsNinety`).
     const parts = given !== null && asNinety(slot) ? [] : given;
     // Not held, or a list this kind of result does not have: the slot is only emptied.
-    const clearOnly = parts === null;
-    const where = { companyWebsiteId, ...scope, searchType, list, period: slot.period, which: slot.which };
-    if (clearOnly) {
+    if (parts === null) {
+      const where = { companyWebsiteId, ...scope, searchType, list, period: slot.period, which: slot.which };
       while (await ctx.runMutation(internal.searchConsolePeriods.clearPeriodSlot, where)) { /* until none is left */ }
       return;
     }
+    waiting.push({ searchType, list, slot, parts });
+  };
+  const writeHeld = async (searchType: SearchType) => {
+    const lists = waiting.filter((one) => one.searchType === searchType);
+    const book = { companyWebsiteId, ...scope, searchType, builtAt };
+    const places = {
+      query: await writeBook(ctx, book, "query", lists.flatMap((one) => one.parts.flatMap((part) => termsOf(one.list, part, "query")))),
+      page: await writeBook(ctx, book, "page", lists.flatMap((one) => one.parts.flatMap((part) => termsOf(one.list, part, "page")))),
+    };
+    const brandWords = target?.brandWords ?? [];
+    for (const one of lists) await writeList(searchType, one.list, one.slot, one.parts.map((part) => inBook(one.list, part, places, brandWords)));
+    while (await ctx.runMutation(internal.searchConsolePeriodBooks.dropUnusedBooks, { companyWebsiteId, ...scope, searchType })) { /* until none is left */ }
+  };
+  const writeList = async (searchType: SearchType, list: SearchConsolePeriodList, slot: Slot, parts: StoredPart[]) => {
+    const where = { companyWebsiteId, ...scope, searchType, list, period: slot.period, which: slot.which };
     // Swapped in whole (2026-10-05): the new build's parts first, its first part — which makes it the one read —
     // last, then the builds before it cleared a few parts at a time. A screen never reads half a list.
     const toWrite = (parts.length > 0 ? parts : [EMPTY_PART]).map((packed, part) => ({ packed, part }));
@@ -716,8 +736,10 @@ export async function buildSitePeriods(
         const competing = pairs.filter((pair) => (queries.get(pair.key)?.count ?? 0) >= 2);
         // Each page once, a link to one of its sections being part of it (2026-10-04).
         const shown = new Set([...pages.keys()].map(pageWithoutSection)).size;
-        // Its positions are never read (`pagesByKeyword`): not kept (keep-less-history-plan.md, 5.2).
-        await writeParts(searchType, "competing", slot, pack(competing, true).map((packed) => ({ ...packed, positionSums: [], shown })));
+        // Its positions are never read (`pagesByKeyword`): not kept (keep-less-history-plan.md, 5.2). A link to one of a
+        // page's sections folded into the page here, at build, so the screen groups by place (core-data plan §5.2).
+        const folded = competing.map((pair) => ({ ...pair, page: pageWithoutSection(pair.page ?? "") }));
+        await writeParts(searchType, "competing", slot, pack(folded, true).map((packed) => ({ ...packed, positionSums: [], shown })));
       } else {
         await writeParts(searchType, "competing", slot, null);
       }
@@ -763,8 +785,39 @@ export async function buildSitePeriods(
         await write(searchType, list, slot, rows, list === "page" ? (slot.which === "NOW" ? pageCounts.get(slotKey(slot)) : undefined) : (appearancePages ?? undefined), pageFacts);
       }
     }
+    await writeHeld(searchType);
   }
   return written;
+}
+
+/** A list's part as written: its keywords and pages as places in the build's book where the list is one of the three that hold them. */
+export type StoredPart = Omit<PartToWrite, "keys" | "tops" | "pages"> & { keys: string[] | string; tops?: string[] | string; pages?: string[] | string; brands?: string };
+
+/** The lists whose keywords and pages go in the build's book: the keyword lists, the page lists and Pages competing. */
+const BOOKED_LISTS: ReadonlySet<SearchConsolePeriodList> = new Set(["query", "page", "competing"]);
+
+/** The keywords (`query`) or pages a list's part names: its own keys, a keyword's top page or a page's top keyword, Pages competing's pages. */
+export function termsOf(list: SearchConsolePeriodList, part: PartToWrite, kind: BookKind): string[] {
+  if (!BOOKED_LISTS.has(list)) return [];
+  const keysKind: BookKind = list === "page" ? "page" : "query";
+  return [
+    ...(keysKind === kind ? part.keys : []),
+    ...(part.tops && (list === "page" ? "query" : "page") === kind ? part.tops : []),
+    ...(part.pages && kind === "page" ? part.pages : []),
+  ];
+}
+
+/** A part with its keywords and pages as places in the build's book, packed, and each keyword's brand flag. Exported for the load test. */
+export function inBook(list: SearchConsolePeriodList, part: PartToWrite, places: Record<BookKind, Map<string, number>>, brandWords: readonly string[]): StoredPart {
+  if (!BOOKED_LISTS.has(list)) return part;
+  const placed = (kind: BookKind, texts: readonly string[]) => packNumbers(texts.map((text) => places[kind].get(text) ?? 0));
+  return {
+    ...part,
+    keys: placed(list === "page" ? "page" : "query", part.keys),
+    ...(part.tops ? { tops: placed(list === "page" ? "query" : "page", part.tops) } : {}),
+    ...(part.pages ? { pages: placed("page", part.pages) } : {}),
+    ...(list === "query" && brandWords.length > 0 ? { brands: packNumbers(part.keys.map((key) => (isBrand(key, brandWords) ? 1 : 0))) } : {}),
+  };
 }
 
 /** Old parts of a ready-made period cleared per step: each up to a few hundred kilobytes, and a step reads at most 16 MB. */
@@ -793,6 +846,10 @@ export const clearPeriodSlot = internalMutation({
       })
       .take(CLEAR_SLOT_PARTS);
     for (const part of old) await ctx.db.delete(part._id);
+    // Emptied whole: the list names no build any more.
+    if (args.before === undefined && old.length < CLEAR_SLOT_PARTS) {
+      await forgetListBuild(ctx, { companyWebsiteId: args.companyWebsiteId, country: args.country, searchType: args.searchType, list: args.list, period: args.period, which: args.which });
+    }
     return old.length === CLEAR_SLOT_PARTS;
   },
 });
@@ -809,13 +866,15 @@ export const writePeriodPart = internalMutation({
     part: v.number(),
     from: v.string(),
     to: v.string(),
-    keys: v.array(v.string()),
-    pages: v.optional(v.array(v.string())),
+    // Places in the build's book, packed, for the keyword and page lists and Pages competing (§5.1); text for the rest.
+    keys: v.union(v.array(v.string()), v.string()),
+    pages: v.optional(v.union(v.array(v.string()), v.string())),
+    brands: v.optional(v.string()),
     clicks: v.array(v.number()),
     impressions: v.array(v.number()),
     positionSums: v.array(v.number()),
     counts: v.optional(v.array(v.number())),
-    tops: v.optional(v.array(v.string())),
+    tops: v.optional(v.union(v.array(v.string()), v.string())),
     kinds: v.optional(v.array(v.string())),
     volumes: v.optional(v.array(v.number())),
     estimates: v.optional(v.array(v.number())),
@@ -837,6 +896,8 @@ export const writePeriodPart = internalMutation({
           .eq("list", args.list).eq("period", args.period).eq("which", args.which).eq("part", 0))
         .take(FIRST_PARTS_READ);
       for (const old of firsts) if (old.builtAt <= args.builtAt) await ctx.db.delete(old._id);
+      // The list is read from this build now: its book stays while it is (`searchConsolePeriodBooks.ts`).
+      await noteListBuild(ctx, { companyWebsiteId: args.companyWebsiteId, country: args.country, searchType: args.searchType, list: args.list, period: args.period, which: args.which }, args.builtAt);
     }
     // Its numbers packed as text, a few characters each where Convex keeps nine bytes (`packNumbers`), and its
     // page addresses once each in its own book (`bookPages`): a keyword's top page, Pages competing's pages.

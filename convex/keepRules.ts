@@ -285,6 +285,8 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   searchConsoleLists: cleared("60 days", "searchConsoleRollups/dropOldLines"),
   searchConsoleKeywordBooks: cleared("with its month's lines", "searchConsoleKeywordBooks/dropOldBooks"),
   searchConsolePeriods: LATEST,
+  searchConsolePeriodBooks: cleared("once no list is read from its build", "searchConsolePeriodBooks/dropUnusedBooks"),
+  searchConsolePeriodUses: LATEST,
   searchConsoleWeeks: LATEST,
   searchConsoleSeenDays: LATEST,
   searchConsoleRuns: forever("each collection, the run log"),

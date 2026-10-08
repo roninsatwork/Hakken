@@ -112,6 +112,8 @@ export type SourceRow = {
   kind?: string;
   volume?: number;
   estimate?: number;
+  /** A keyword using the website's brand words, judged when its list was built (core-data plan, N5). */
+  brand?: boolean;
 };
 
 const known = (value: number | undefined) => (value === undefined || value < 0 ? null : value);
@@ -178,7 +180,7 @@ export function shapeRows(
       kind: row.kind ?? null,
       volume: known(row.volume),
       estimate: known(row.estimate),
-      brand: context.brandWords ? isBrand(row.key, context.brandWords) : null,
+      brand: context.brandWords ? (row.brand ?? isBrand(row.key, context.brandWords)) : null,
       usualCtr: null,
       expected: null,
       topShare: null,
@@ -304,6 +306,8 @@ export type ViewContext = {
   /** Missed demand's first list: the website's most-searched keywords in Sites. */
   sitesKeywords?: readonly SitesKeyword[];
   missedList?: "searched" | "untracked";
+  /** A row's keyword as text, where rows carry its book's token (core-data plan §5.1): Missed demand matches Sites by text. */
+  textOf?: (key: string) => string;
 };
 
 /** Each view's rows: the rows it lists, with the figures it adds. */
@@ -340,7 +344,7 @@ export function applyView(view: View, rows: ListRow[], context: ViewContext): Li
       return rows.filter((row) => row.change !== null && row.change !== 0);
     case "missed": {
       if (context.missedList === "untracked") return rows.filter((row) => !row.tracked);
-      const shown = new Map(rows.map((row) => [row.key, row]));
+      const shown = new Map(rows.map((row) => [context.textOf ? context.textOf(row.key) : row.key, row]));
       return (context.sitesKeywords ?? []).flatMap((keyword) => {
         if (keyword.volume < context.rules.searchedALot) return [];
         const row = shown.get(keyword.keyword);
@@ -384,11 +388,11 @@ export type Filters = {
   verdict?: Verdict;
 };
 
-/** The rows the filters chosen keep. */
-export function filterRows(rows: readonly ListRow[], filters: Filters): ListRow[] {
+/** The rows the filters chosen keep; `textOf` a row's keyword as text where rows carry a token (§5.1). */
+export function filterRows(rows: readonly ListRow[], filters: Filters, textOf?: (key: string) => string): ListRow[] {
   const matches = wordStartMatcher(filters.q?.trim().toLowerCase());
   return rows.filter((row) =>
-    (!matches || matches(row.key))
+    (!matches || matches(textOf ? textOf(row.key) : row.key))
     && (!filters.tracked || (filters.tracked === "yes") === row.tracked)
     && (!filters.band || row.band === filters.band)
     // A row Sites has not judged reads as "Not judged yet", as the Types bars count it.
@@ -476,10 +480,11 @@ export function figuresOf(rows: readonly ListRow[], beforeHeld: boolean): ListFi
   return { clicks, impressions, previousClicks: beforeHeld ? previousClicks : null, position: impressions > 0 ? positionSum / impressions : null };
 }
 
-function brandSplit(rows: readonly { key: string; clicks: number; impressions: number }[], brandWords: readonly string[]): BrandSplit {
+function brandSplit(rows: readonly { key: string; clicks: number; impressions: number; brand?: boolean | null }[], brandWords: readonly string[]): BrandSplit {
   const split = { brandClicks: 0, nonBrandClicks: 0, brandImpressions: 0, nonBrandImpressions: 0 };
   for (const row of rows) {
-    if (isBrand(row.key, brandWords)) {
+    // Judged when the list was built where it was (N5); worked out from the keyword's text where not.
+    if (row.brand ?? isBrand(row.key, brandWords)) {
       split.brandClicks += row.clicks;
       split.brandImpressions += row.impressions;
     } else {

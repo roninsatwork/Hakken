@@ -4,6 +4,8 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { readList } from "./searchConsoleLists";
 import { PART_ROWS, bookedColumns, packedColumns } from "./utils/searchConsolePacks";
+import { bookRecords } from "./searchConsolePeriodBooks";
+import { inBook, termsOf, type PartToWrite } from "./searchConsolePeriods";
 import { metered } from "@/src/test/readMeter";
 
 /**
@@ -12,8 +14,8 @@ import { metered } from "@/src/test/readMeter";
  * list screen reads, as Convex counts it, against rule 4 — under half of
  * Convex's 16 MiB a read without a search, three quarters with one.
  *
- * Written first, before part 1: it pins what each screen reads today, and
- * which pass the limit. Part 1 turns each "today" into a pass.
+ * Written first, before part 1, pinning what each screen read then — four of
+ * five past Convex's whole limit — and turned into passes by part 1's books.
  *
  * Counted, not timed (`metered`, `src/test/readMeter.ts`), so it would hold on
  * any machine; run here and never on GitHub, as the Sites speed test is, since
@@ -25,8 +27,9 @@ const ON_GITHUB = process.env.GITHUB_ACTIONS === "true";
 const MiB = 1 << 20;
 /** Convex's limit on one read. */
 const LIMIT = 16 * MiB;
-/** Rule 4: half of it without a search (three quarters with one, once part 1 is in). */
+/** Rule 4: half of it without a search, three quarters with one. */
 const HALF = LIMIT / 2;
+const THREE_QUARTERS = (LIMIT * 3) / 4;
 
 /** Five times morehandles.co.uk, measured on dev 2026-10-08. */
 const SCALE = 5;
@@ -38,6 +41,7 @@ const KEYWORDS_30_BEFORE = 25_956 * SCALE;
 const PAGES = 50_000;
 
 const NEWEST = "2026-10-06";
+const BUILT = 1_791_400_000_000;
 const WORDS = ["door", "handles", "brass", "lever", "cupboard", "knobs", "sash", "window", "latch", "pull", "black", "chrome", "satin", "antique", "bathroom", "kitchen"];
 /** A keyword of about morehandles.co.uk's length: three words and a number. */
 const keyword = (index: number) => `${WORDS[index % 16]} ${WORDS[(index >> 4) % 16]} ${WORDS[(index >> 8) % 16]} ${index}`;
@@ -59,41 +63,58 @@ describe.skipIf(ON_GITHUB)("Search Console at five times morehandles.co.uk", () 
         companyId, companyWebsiteId: holdId, websiteId, status: "CONNECTED", property: "sc-domain:big-shop.co.uk",
         newestDay: NEWEST, oldestDay: "2025-10-07", createdAt: 1, updatedAt: 1,
       });
-      // Each list written as the build writes it (`writePeriodPart`): numbers packed, page addresses and kinds booked.
-      const write = async (slot: Slot, rows: number, rowOf: (index: number) => { key: string; page?: string; top?: string }) => {
+      // Each list worked out as text, then written as the build writes it (`buildSitePeriods`): one book for the
+      // build, every keyword and page once, and the lists holding places in it; numbers packed, kinds booked.
+      const lists: Array<{ slot: Slot; parts: PartToWrite[] }> = [];
+      const make = (slot: Slot, rows: number, rowOf: (index: number) => { key: string; page?: string; top?: string }) => {
+        const parts: PartToWrite[] = [];
         for (let part = 0; part * PART_ROWS < rows || part === 0; part += 1) {
           const indexes = Array.from({ length: Math.min(PART_ROWS, rows - part * PART_ROWS) }, (_, at) => part * PART_ROWS + at);
           const made = indexes.map(rowOf);
-          const numbers = {
+          const nowOnly = slot.which === "NOW" && slot.list !== "competing";
+          parts.push({
+            keys: made.map((row) => row.key),
+            ...(slot.list === "competing" ? { pages: made.map((row) => row.page ?? "") } : {}),
             clicks: indexes.map((index) => Math.max(0, 500 - Math.floor(index / 50))),
             impressions: indexes.map((index) => 5_000 - Math.floor(index / 50)),
             positionSums: slot.list === "competing" ? [] : indexes.map((index) => (5_000 - Math.floor(index / 50)) * ((index % 40) + 1)),
-          };
-          const nowOnly = slot.which === "NOW" && slot.list !== "competing";
-          const beside = {
-            list: slot.list,
-            ...(slot.list === "competing" ? { pages: made.map((row) => row.page ?? "") } : {}),
-            ...(nowOnly ? { tops: made.map((row) => row.top ?? ""), kinds: indexes.map((index) => ["BUYING", "RESEARCHING", "BRANDED", "UNJUDGED"][index % 4]) } : {}),
-          };
-          await ctx.db.insert("searchConsolePeriods", {
-            companyWebsiteId: holdId, searchType: "web", list: slot.list, period: slot.period, which: slot.which, part, from: slot.from, to: slot.to,
-            keys: made.map((row) => row.key),
-            ...packedColumns({ ...numbers, ...(nowOnly ? { counts: indexes.map((index) => 1 + (index % 5)), volumes: indexes.map((index) => (index % 7 === 0 ? -1 : 10 * (index % 300))) } : {}) }),
-            ...bookedColumns(beside),
+            ...(nowOnly ? {
+              tops: made.map((row) => row.top ?? ""),
+              kinds: indexes.map((index) => ["BUYING", "RESEARCHING", "BRANDED", "UNJUDGED"][index % 4]),
+              counts: indexes.map((index) => 1 + (index % 5)),
+              volumes: indexes.map((index) => (index % 7 === 0 ? -1 : 10 * (index % 300))),
+            } : {}),
             ...(slot.list === "competing" && part === 0 ? { shown: PAGES } : {}),
-            builtAt: 1,
           });
         }
+        lists.push({ slot, parts });
       };
       const keywordRow = (index: number) => ({ key: keyword(index), top: page(index % PAGES) });
-      await write({ list: "query", period: "90", which: "NOW", from: "2026-07-09", to: NEWEST }, KEYWORDS_90, keywordRow);
-      await write({ list: "query", period: "30", which: "NOW", from: "2026-09-07", to: NEWEST }, KEYWORDS_30, keywordRow);
-      await write({ list: "query", period: "30", which: "BEFORE", from: "2026-08-08", to: "2026-09-06" }, KEYWORDS_30_BEFORE, keywordRow);
-      await write({ list: "page", period: "90", which: "NOW", from: "2026-07-09", to: NEWEST }, PAGES_90, (index) => ({ key: page(index), top: keyword(index) }));
+      make({ list: "query", period: "90", which: "NOW", from: "2026-07-09", to: NEWEST }, KEYWORDS_90, keywordRow);
+      make({ list: "query", period: "30", which: "NOW", from: "2026-09-07", to: NEWEST }, KEYWORDS_30, keywordRow);
+      make({ list: "query", period: "30", which: "BEFORE", from: "2026-08-08", to: "2026-09-06" }, KEYWORDS_30_BEFORE, keywordRow);
+      make({ list: "page", period: "90", which: "NOW", from: "2026-07-09", to: NEWEST }, PAGES_90, (index) => ({ key: page(index), top: keyword(index) }));
       // Pages competing: each keyword shown with two or three pages.
-      await write({ list: "competing", period: "90", which: "NOW", from: "2026-07-09", to: NEWEST }, COMPETING_90, (index) => ({
+      make({ list: "competing", period: "90", which: "NOW", from: "2026-07-09", to: NEWEST }, COMPETING_90, (index) => ({
         key: keyword(Math.floor(index / 2.35)), page: page((index * 7) % PAGES),
       }));
+      const places = { query: new Map<string, number>(), page: new Map<string, number>() };
+      for (const kind of ["query", "page"] as const) {
+        const book = bookRecords(lists.flatMap(({ slot, parts }) => parts.flatMap((part) => termsOf(slot.list, part, kind))));
+        places[kind] = book.places;
+        for (const { record, terms } of book.records) {
+          await ctx.db.insert("searchConsolePeriodBooks", { companyWebsiteId: holdId, searchType: "web", builtAt: BUILT, kind, record, terms });
+        }
+      }
+      for (const { slot, parts } of lists) {
+        for (const [part, made] of parts.entries()) {
+          const stored = inBook(slot.list, made, places, []);
+          await ctx.db.insert("searchConsolePeriods", {
+            companyWebsiteId: holdId, searchType: "web", list: slot.list, period: slot.period, which: slot.which, part, from: slot.from, to: slot.to,
+            ...stored, ...packedColumns(stored), ...bookedColumns({ ...stored, list: slot.list }), builtAt: BUILT,
+          });
+        }
+      }
       return holdId;
     });
   });
@@ -107,30 +128,30 @@ describe.skipIf(ON_GITHUB)("Search Console at five times morehandles.co.uk", () 
     return { bytes: meter.bytes(), documents: meter.documents() };
   });
 
-  // Today (2026-10-08, before part 1), as measured: Keywords for 90 days 19.4 MiB, for 30 days compared 16.3,
-  // searched 19.4, Pages competing 40.1 — each past Convex's whole 16 MiB, so each screen would fail; Pages 3.2.
-  // Part 1 turns each "today" into a pass under rule 4's share.
-  test("Keywords for 90 days — today past Convex's limit", async () => {
+  // Before part 1 (2026-10-08, lists holding every row's text): Keywords for 90 days read 19.4 MiB, for 30 days compared
+  // 16.3, searched 19.4, Pages competing 40.1 — each past Convex's whole 16 MiB, so each screen would fail; Pages 3.2.
+  // With each keyword and page once in the build's book (§5.1), each within rule 4's share.
+  test("Keywords for 90 days — within half the limit", async () => {
     const read = await reads({ dimension: "query", from: "2026-07-09" });
-    expect(read.bytes).toBeGreaterThan(LIMIT);
+    expect(read.bytes).toBeLessThan(HALF);
   });
 
-  test("Keywords for 30 days, compared with the 30 before — today past Convex's limit", async () => {
+  test("Keywords for 30 days, compared with the 30 before — within half the limit", async () => {
     const read = await reads({ dimension: "query", from: "2026-09-07" });
-    expect(read.bytes).toBeGreaterThan(LIMIT);
+    expect(read.bytes).toBeLessThan(HALF);
   });
 
-  test("Keywords for 90 days with a search — today past Convex's limit", async () => {
+  test("Keywords for 90 days with a search — within three quarters", async () => {
     const read = await reads({ dimension: "query", from: "2026-07-09", q: "door brass" });
-    expect(read.bytes).toBeGreaterThan(LIMIT);
+    expect(read.bytes).toBeLessThan(THREE_QUARTERS);
   });
 
-  test("Pages competing for 90 days — today more than twice Convex's limit", async () => {
+  test("Pages competing for 90 days — within half the limit", async () => {
     const read = await reads({ dimension: "query", from: "2026-07-09", view: "competing" });
-    expect(read.bytes).toBeGreaterThan(2 * LIMIT);
+    expect(read.bytes).toBeLessThan(HALF);
   });
 
-  test("Pages for 90 days — within half the limit already", async () => {
+  test("Pages for 90 days — within half the limit", async () => {
     const read = await reads({ dimension: "page", from: "2026-07-09" });
     expect(read.bytes).toBeLessThan(HALF);
   });

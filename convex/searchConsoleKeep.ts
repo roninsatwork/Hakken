@@ -4,7 +4,8 @@ import { internalQuery, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { searchTypeValidator, type SearchType } from "./searchConsoleSchema";
-import { unpackedPart, type Row } from "./utils/searchConsolePacks";
+import { unpackNumbers, unpackedPart, type Row } from "./utils/searchConsolePacks";
+import { wholeBookFromAction } from "./searchConsolePeriodBooks";
 
 /**
  * Which searches a website keeps line by line (docs/plans/active/
@@ -35,10 +36,21 @@ export function keepsSearch(figures: { clicks: number; impressions: number; posi
 /** Tracked searches read for the keep rule. */
 const TRACKED_READ = 500;
 
-/** One part of a kind of result's 90 days of searches, for all countries or one: the searches it keeps. */
+/**
+ * One part of a kind of result's 90 days of searches, for all countries or one: the searches it
+ * keeps — as text from a part kept before 2026-10-08, as places in its build's book after
+ * (core-data-normalisation-plan.md §5.1), named by the action from the book read once.
+ */
 export const keptSearchesPart = internalQuery({
   args: { holdId: v.id("companyWebsites"), country: v.optional(v.string()), searchType: searchTypeValidator, cursor: v.union(v.string(), v.null()) },
-  returns: v.object({ keys: v.array(v.string()), held: v.boolean(), continueCursor: v.string(), isDone: v.boolean() }),
+  returns: v.object({
+    keys: v.array(v.string()),
+    places: v.array(v.number()),
+    builtAt: v.union(v.number(), v.null()),
+    held: v.boolean(),
+    continueCursor: v.string(),
+    isDone: v.boolean(),
+  }),
   handler: async (ctx, args) => {
     const page = await ctx.db
       .query("searchConsolePeriods")
@@ -47,15 +59,15 @@ export const keptSearchesPart = internalQuery({
       .paginate({ cursor: args.cursor, numItems: 1 });
     const stored = page.page[0];
     const part = stored ? unpackedPart(stored) : undefined;
-    const keys = part
-      ? part.keys.filter((_, index) => keepsSearch({
-        clicks: part.clicks[index],
-        impressions: part.impressions[index],
-        positionSum: part.positionSums[index],
-        pages: part.counts?.[index] ?? 1,
-      }))
-      : [];
-    return { keys, held: part !== undefined, continueCursor: page.continueCursor, isDone: page.isDone };
+    const keeps = (index: number) => part !== undefined && keepsSearch({
+      clicks: part.clicks[index],
+      impressions: part.impressions[index],
+      positionSum: part.positionSums[index],
+      pages: part.counts?.[index] ?? 1,
+    });
+    const keys = part && typeof part.keys !== "string" ? part.keys.filter((_, index) => keeps(index)) : [];
+    const places = part && typeof part.keys === "string" ? unpackNumbers(part.keys).filter((_, index) => keeps(index)) : [];
+    return { keys, places, builtAt: places.length > 0 && part ? part.builtAt : null, held: part !== undefined, continueCursor: page.continueCursor, isDone: page.isDone };
   },
 });
 
@@ -83,12 +95,22 @@ export async function keptSearchesOf(
 ): Promise<Set<string> & { judged?: boolean }> {
   const keep: Set<string> & { judged?: boolean } = new Set<string>(await ctx.runQuery(internal.searchConsoleKeep.trackedSearches, { holdId }));
   keep.judged = false;
+  // Each build's keyword book read once, however many parts name it.
+  const books = new Map<number, Promise<string[]>>();
+  const bookOf = (builtAt: number) => {
+    const held = books.get(builtAt) ?? wholeBookFromAction(ctx, { companyWebsiteId: holdId, ...(country === undefined ? {} : { country }), searchType, builtAt }, "query");
+    books.set(builtAt, held);
+    return held;
+  };
   for (let cursor: string | null = null; ;) {
-    const part: { keys: string[]; held: boolean; continueCursor: string; isDone: boolean } = await ctx.runQuery(internal.searchConsoleKeep.keptSearchesPart, {
-      holdId, ...(country === undefined ? {} : { country }), searchType, cursor,
-    });
+    const part: { keys: string[]; places: number[]; builtAt: number | null; held: boolean; continueCursor: string; isDone: boolean } =
+      await ctx.runQuery(internal.searchConsoleKeep.keptSearchesPart, { holdId, ...(country === undefined ? {} : { country }), searchType, cursor });
     if (part.held) keep.judged = true;
     for (const key of part.keys) keep.add(key);
+    if (part.builtAt !== null) {
+      const book = await bookOf(part.builtAt);
+      for (const place of part.places) keep.add(book[place] ?? "");
+    }
     if (part.isDone) return keep;
     cursor = part.continueCursor;
   }

@@ -293,6 +293,22 @@ Console is never written to them: Search Console looks a keyword up by text
 when it builds, reading only, and keeps the number it finds; a search no
 website was ever checked for has none.
 
+**Why Search Console keeps its own text of a keyword Sites also holds**
+(Anthony, 2026-10-08: "are you … storing them once and referencing this in
+both places"). Two reasons, and a cost of under 1 MB a website. *Privacy*: a
+company's Search Console keywords are its own (rule 5), so they are never
+written into the platform's shared list, which every company's data points
+to. *Speed*: the search box and A-to-Z order read a list's own sorted book in
+one read (§5.5); a list naming 200,000 keywords by their platform rows would
+need a read each, past Convex's limits. What is shared is the link: Search
+Console keeps, for each keyword the platform list holds, that keyword's
+number (read, never written), so the two are joined by number (§6.6). The
+overlap stored twice: about 6,400 keywords (0.2 MB) and 9,500 pages (0.6 MB)
+on morehandles.co.uk, against tens of megabytes saved. Discussed with Anthony
+the same day, the other way set out (Search Console pointing to the shared
+list for the keywords it holds, its private ones kept itself): "keep as
+planned then please".
+
 ### 6.2 Pages once per website
 
 **`websitePages`**: every page address a website's shared data names, once,

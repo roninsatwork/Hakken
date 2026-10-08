@@ -1,7 +1,9 @@
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { SearchConsolePeriod, SearchConsolePeriodList, SearchType } from "./searchConsoleSchema";
-import { rowsOf, unpackedPart, type Row, type Unpacked } from "./utils/searchConsolePacks";
+import { rowsOf, unpackNumbers, unpackedPart, type Row, type Unpacked } from "./utils/searchConsolePacks";
+import { termToken, tokenPlace, type BookKind } from "./utils/searchConsoleTerms";
+import { textsFrom, wholeBook, type BookScope } from "./searchConsolePeriodBooks";
 import { PARTS_MOST } from "./searchConsoleRollups";
 import { UNKNOWN } from "./searchConsoleFacts";
 
@@ -35,8 +37,27 @@ export async function periodParts(
     .take(PARTS_MOST);
   // One read: an older build is beside the newest only while it is being cleared.
   const built = parts.filter((part) => part.part === 0).reduce((newest, part) => Math.max(newest, part.builtAt), -Infinity);
-  // Its number columns as lists: packed as text when stored (`packNumbers`).
-  return parts.filter((part) => part.builtAt === built).map((part) => unpackedPart(part));
+  // Its number columns as lists: packed as text when stored (`packNumbers`); its places in the build's book as tokens.
+  return parts.filter((part) => part.builtAt === built).map((part) => unpackedPart(withTokens(part)));
+}
+
+/**
+ * A part's places in its build's book as tokens (`termToken`, core-data-normalisation-plan.md
+ * §5.1): a keyword list's and Pages competing's keys in the keyword book, a page list's in the
+ * page book; a keyword's top page or a page's top keyword; Pages competing's pages. A part kept
+ * before 2026-10-08 holds text, read as it is.
+ */
+export function withTokens<T extends { list: SearchConsolePeriodList; keys: string | string[]; tops?: string | string[]; pages?: string | string[]; pageBook?: string[] }>(
+  part: T,
+): Omit<T, "keys"> & { keys: string[] } {
+  if (typeof part.keys !== "string") return { ...part, keys: part.keys };
+  const tokens = (kind: BookKind, packed: string) => unpackNumbers(packed).map((place) => termToken(kind, place));
+  return {
+    ...part,
+    keys: tokens(part.list === "page" ? "page" : "query", part.keys),
+    ...(typeof part.tops === "string" && !part.pageBook ? { tops: tokens(part.list === "page" ? "query" : "page", part.tops) } : {}),
+    ...(typeof part.pages === "string" && !part.pageBook ? { pages: tokens("page", part.pages) } : {}),
+  };
 }
 
 /** First parts read for a period: the one being swapped in, and the one before it. */
@@ -76,7 +97,7 @@ async function ninetyInstead(
   scope: { companyWebsiteId: Id<"companyWebsites">; country: string | undefined; searchType: SearchType; list: SearchConsolePeriodList },
   period: SearchConsolePeriod,
   which: "NOW" | "BEFORE",
-  first: { keys: string[]; from: string; to: string; part: number } | null,
+  first: { keys: string | string[]; from: string; to: string; part: number } | null,
   parts: number,
 ) {
   if (period !== "365" || which !== "NOW" || !first || first.keys.length > 0 || parts > 1) return null;
@@ -84,8 +105,11 @@ async function ninetyInstead(
   return ninety && ninety.from === first.from && ninety.to === first.to ? ninety : null;
 }
 
-/** A row of a ready-made period: its figures, and — where kept — its count and top, and Sites' facts (UNKNOWN for none). */
-export type PeriodRow = Row & { count?: number; top?: string; kind?: string; volume?: number; estimate?: number };
+/**
+ * A row of a ready-made period: its figures, and — where kept — its count and top, Sites' facts
+ * (UNKNOWN for none), and whether a keyword uses the website's brand words (judged at build).
+ */
+export type PeriodRow = Row & { count?: number; top?: string; kind?: string; volume?: number; estimate?: number; brand?: boolean };
 
 /** A ready-made period's list — all countries', or one country's kept ready — its parts put back together; null when nothing is built for it. */
 export async function readPeriod(
@@ -96,7 +120,7 @@ export async function readPeriod(
   period: SearchConsolePeriod,
   which: "NOW" | "BEFORE",
   country?: string,
-): Promise<{ from: string; to: string; builtAt: number; shown: number | null; rows: PeriodRow[] } | null> {
+): Promise<{ from: string; to: string; builtAt: number; shown: number | null; rows: PeriodRow[]; book: BookScope | null } | null> {
   const scope = country;
   let parts = (await periodParts(ctx, companyWebsiteId, scope, searchType, list, period, which)).sort((left, right) => left.part - right.part);
   if (parts.length === 0) return null;
@@ -105,25 +129,56 @@ export async function readPeriod(
   }
   const rows: PeriodRow[] = [];
   for (const part of parts) {
+    const brands = part.brands ? unpackNumbers(part.brands) : null;
     let index = 0;
     for (const row of rowsOf(part)) {
-      rows.push(withKept(row, part, index));
+      rows.push(withKept(row, part, index, brands));
       index += 1;
     }
   }
-  return { from: parts[0].from, to: parts[0].to, builtAt: parts[0].builtAt, shown: parts[0].shown ?? null, rows };
+  const book = parts.some((part) => typeof part.keys[0] === "string" && tokenPlace(part.keys[0]) !== null)
+    ? { companyWebsiteId, ...(scope === undefined ? {} : { country: scope }), searchType, builtAt: parts[0].builtAt }
+    : null;
+  // A list of pages is a website's pages at most — read with their addresses whole (§5.3).
+  if (book && list === "page") {
+    const pages = await wholeBook(ctx, book, "page");
+    for (const row of rows) {
+      const at = tokenPlace(row.key);
+      if (at) row.key = pages[at.place] ?? "";
+    }
+  }
+  return { from: parts[0].from, to: parts[0].to, builtAt: parts[0].builtAt, shown: parts[0].shown ?? null, rows, book };
 }
 
 type KeptBeside = Unpacked<Pick<Doc<"searchConsolePeriods">, "counts" | "tops" | "kinds" | "volumes" | "estimates">>;
 
 /** A row of a part, with the figures kept beside it at its place. */
-function withKept(row: Row, part: KeptBeside, index: number): PeriodRow {
+function withKept(row: Row, part: KeptBeside, index: number, brands: number[] | null): PeriodRow {
   return {
     ...row,
+    ...(brands ? { brand: brands[index] === 1 } : {}),
     ...(part.counts ? { count: part.counts[index] ?? 0 } : {}),
     ...(part.tops ? { top: part.tops[index] ?? "" } : {}),
     ...(part.kinds ? { kind: part.kinds[index] ?? "UNJUDGED" } : {}),
     ...(part.volumes ? { volume: part.volumes[index] ?? UNKNOWN } : {}),
     ...(part.estimates ? { estimate: part.estimates[index] ?? UNKNOWN } : {}),
+  };
+}
+
+/**
+ * A stored part read whole as text: its numbers unpacked, its places in its build's book named
+ * from the books read whole — for a reader wanting every row's text, and the tests.
+ */
+export async function periodPartAsText(ctx: { db: QueryCtx["db"] }, part: Doc<"searchConsolePeriods">) {
+  const tokened = unpackedPart(withTokens(part));
+  if (typeof part.keys !== "string") return tokened;
+  const book = { companyWebsiteId: part.companyWebsiteId, ...(part.country === undefined ? {} : { country: part.country }), searchType: part.searchType, builtAt: part.builtAt };
+  const texts = { query: textsFrom(await wholeBook(ctx, book, "query")), page: textsFrom(await wholeBook(ctx, book, "page")) };
+  const text = (value: string) => (tokenPlace(value)?.kind === "page" ? texts.page(value) : texts.query(value));
+  return {
+    ...tokened,
+    keys: tokened.keys.map(text),
+    ...(Array.isArray(tokened.tops) ? { tops: tokened.tops.map(text) } : {}),
+    ...(Array.isArray(tokened.pages) ? { pages: tokened.pages.map(text) } : {}),
   };
 }

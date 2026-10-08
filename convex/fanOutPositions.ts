@@ -2,6 +2,7 @@ import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { holdFirstCheck, holdSearch } from "./holdLists";
 import { readPeriod } from "./searchConsolePeriodReads";
+import { BookNames } from "./searchConsolePeriodBooks";
 import { positionOf } from "./utils/searchConsolePacks";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 
@@ -35,6 +36,8 @@ export type Lookups = {
   consoleDays: number;
   /** Google's average position for each search, from Search Console's ready-made list; empty when not connected. */
   consolePositions: Map<string, number>;
+  /** The list's book, naming a wording's token (core-data-normalisation-plan.md §5.1); null when its rows hold text. */
+  consoleNames: BookNames | null;
 };
 
 /** The ready-made keyword list each "Days of Search Console averaged" setting reads. */
@@ -55,15 +58,17 @@ export async function positionLookups(ctx: Reader, hold: Doc<"companyWebsites">,
     .first();
   const consoleTo = connection?.status === "CONNECTED" && !connection.clearing && connection.newestDay ? connection.newestDay : null;
   const consolePositions = new Map<string, number>();
+  let consoleNames: BookNames | null = null;
   if (consoleTo) {
     const own = CONSOLE_PERIOD[consoleDays];
     const list = (own ? await readPeriod(ctx, hold._id, "web", "query", own, "NOW") : null) ?? await readPeriod(ctx, hold._id, "web", "query", "30", "NOW");
+    consoleNames = list?.book ? new BookNames(ctx, list.book) : null;
     for (const row of list?.rows ?? []) {
       const position = positionOf(row);
       if (position !== null) consolePositions.set(row.key, position);
     }
   }
-  return { hold, place: hold.locationCode ?? DEFAULT_LOCATION_CODE, consoleTo, consoleDays, consolePositions };
+  return { hold, place: hold.locationCode ?? DEFAULT_LOCATION_CODE, consoleTo, consoleDays, consolePositions, consoleNames };
 }
 
 /**
@@ -100,7 +105,9 @@ export async function wordingPosition(ctx: Reader, lookups: Lookups, wording: Pi
     return { value: ranked.position, from: "RANKED", day: ranked.day, query: wording.query };
   }
 
-  const consolePosition = lookups.consoleTo ? lookups.consolePositions.get(wording.query) : undefined;
+  // The list keeps a keyword as its token in the book: the wording looked up by its text (one small read).
+  const consoleKey = lookups.consoleNames ? await lookups.consoleNames.tokenOf("query", wording.query) : wording.query;
+  const consolePosition = lookups.consoleTo ? lookups.consolePositions.get(consoleKey) : undefined;
   if (lookups.consoleTo && consolePosition !== undefined) {
     return { value: Math.round(consolePosition * 10) / 10, from: "SEARCH_CONSOLE", day: lookups.consoleTo, query: wording.query };
   }

@@ -4,6 +4,7 @@ import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { unpackNumbers, unpackedPart } from "./utils/searchConsolePacks";
+import { periodPartAsText } from "./searchConsolePeriodReads";
 import { lineKeywordsInQuery } from "./searchConsoleKeywordBooks";
 import { decodePages } from "./searchConsolePageRefs";
 import { decryptConnectorToken } from "./connectorTokenCrypto";
@@ -511,10 +512,11 @@ describe("collecting", () => {
     fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
     await collect(t);
-    const thirty = (await t.run(async (ctx) => await ctx.db
+    const thirty = (await t.run(async (ctx) => await Promise.all((await ctx.db
       .query("searchConsolePeriods")
       .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", "30").eq("which", "NOW"))
-      .collect())).map((part) => unpackedPart(part));
+      // Read back as text: a list holds places in its build's book (core-data-normalisation-plan.md §5.1).
+      .collect()).map(async (part) => await periodPartAsText(ctx, part)))));
     expect(thirty).toHaveLength(1);
     expect(thirty[0]).toMatchObject({ from: "2026-08-28", to: NEWEST, keys: ["plumber leeds", "emergency plumber"], clicks: [9, 3], counts: [1, 1], tops: ["https://acme-shop.test/", "https://acme-shop.test/"] });
     // The thirty days before are held, and had nothing: kept as held and empty, so the change reads as nothing gained.
@@ -522,7 +524,8 @@ describe("collecting", () => {
       .query("searchConsolePeriods")
       .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", "30").eq("which", "BEFORE"))
       .collect());
-    expect(before.map((part) => part.keys)).toEqual([[]]);
+    // No rows: an empty list of places in the build's book, packed, is "" (core-data-normalisation-plan.md §5.1).
+    expect(before.map((part) => part.keys.length)).toEqual([0]);
     // One search's pages and one page's searches keep no period before (store less round two, E).
     for (const list of ["pair", "pairByPage"] as const) {
       const pairsBefore = await t.run(async (ctx) => await ctx.db
@@ -581,10 +584,11 @@ describe("collecting", () => {
     const pairs = asks.filter((ask) => ask.dimensions.join("+") === "query+page" && ask.startDate !== ask.endDate);
     expect(pairs.length).toBeGreaterThan(0);
     expect(pairs.every((ask) => shiftDay(ask.startDate, 6) >= ask.endDate)).toBe(true);
-    const ninety = (await t.run(async (ctx) => await ctx.db
+    const ninety = (await t.run(async (ctx) => await Promise.all((await ctx.db
       .query("searchConsolePeriods")
       .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", "90").eq("which", "NOW"))
-      .collect())).map((part) => unpackedPart(part));
+      // Read back as text: a list holds places in its build's book (core-data-normalisation-plan.md §5.1).
+      .collect()).map(async (part) => await periodPartAsText(ctx, part)))));
     expect(ninety).toEqual([expect.objectContaining({ from: "2026-06-29", to: NEWEST, keys: ["plumber leeds", "emergency plumber"], clicks: [9, 3] })]);
     // Its days are held 60 days, the first collection's older ones cleared once it was added up.
     const days = await t.run(async (ctx) => (await ctx.db.query("searchConsoleLists").collect()).map((record) => record.start));
@@ -599,10 +603,11 @@ describe("collecting", () => {
     fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
     await collect(t);
-    const slot = async (list: "pair" | "pairByPage" | "competing" | "query" | "appearance", period: "14" | "28" | "30", which: "NOW" | "BEFORE" = "NOW") => (await t.run(async (ctx) => await ctx.db
+    const slot = async (list: "pair" | "pairByPage" | "competing" | "query" | "appearance", period: "14" | "28" | "30", which: "NOW" | "BEFORE" = "NOW") => (await t.run(async (ctx) => await Promise.all((await ctx.db
       .query("searchConsolePeriods")
       .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", list).eq("period", period).eq("which", which))
-      .collect())).map((part) => unpackedPart(part));
+      // Read back as text: a list holds places in its build's book (core-data-normalisation-plan.md §5.1).
+      .collect()).map(async (part) => await periodPartAsText(ctx, part)))));
     // One keyword's pages and one page's keywords are not kept (keep-less-history-plan.md, 5.1)…
     expect(await slot("pair", "30")).toEqual([]);
     expect(await slot("pairByPage", "30")).toEqual([]);
@@ -680,10 +685,10 @@ describe("collecting", () => {
     await collect(t);
     const newest = "2026-09-27";
     const dates = (days: number) => ({ siteId, from: shiftDay(newest, 1 - days), to: newest });
-    const slot = (period: "30" | "90") => t.run(async (ctx) => await ctx.db
+    const slot = (period: "30" | "90") => t.run(async (ctx) => await Promise.all((await ctx.db
       .query("searchConsolePeriods")
       .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", "query").eq("period", period).eq("which", "NOW"))
-      .collect());
+      .collect()).map(async (part) => await periodPartAsText(ctx, part))));
 
     // The 30 days: behind, caught up once however many screens open.
     expect(await admin.query(api.searchConsoleCatchUp.searchConsoleCatchUp, dates(30))).toMatchObject({ behind: true, heldTo: NEWEST, newest });

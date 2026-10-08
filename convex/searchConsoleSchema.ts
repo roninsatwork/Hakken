@@ -326,6 +326,37 @@ export const searchConsoleTables = {
   }).index("by_hold_country_type_list_grain_start", ["companyWebsiteId", "country", "searchType", "list", "grain", "start", "part"]),
 
   /**
+   * Each build's book (core-data-normalisation-plan.md §5.1,
+   * `searchConsolePeriodBooks.ts`): every keyword (`query`) and page address
+   * (`page`) the build's ready-made lists hold, once, sorted A to Z, in records
+   * of 250; record -1 lists each record's first entry. The lists hold places in it.
+   */
+  searchConsolePeriodBooks: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    country: v.optional(v.string()),
+    searchType: searchTypeValidator,
+    builtAt: v.number(),
+    kind: v.union(v.literal("query"), v.literal("page")),
+    record: v.number(),
+    terms: v.array(v.string()),
+  }).index("by_hold_build_kind_record", ["companyWebsiteId", "country", "searchType", "builtAt", "kind", "record"]),
+
+  /**
+   * Which build each ready-made list is read from, one row a list
+   * (`searchConsolePeriodBooks.ts`): a book goes once no list names its
+   * build. Written with each list's first part.
+   */
+  searchConsolePeriodUses: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    country: v.optional(v.string()),
+    searchType: searchTypeValidator,
+    list: periodListValidator,
+    period: periodValidator,
+    which: v.union(v.literal("NOW"), v.literal("BEFORE")),
+    builtAt: v.number(),
+  }).index("by_hold_slot", ["companyWebsiteId", "country", "searchType", "list", "period", "which"]),
+
+  /**
    * Each keyword the daily lines hold, once a month (keep-less-history-plan.md,
    * part 8.3; `searchConsoleKeywordBooks.ts`): all countries' book and each
    * country kept ready's, in records of 4,000 — a keyword's place is its record
@@ -374,6 +405,16 @@ export const searchConsoleTables = {
     from: v.string(),
     to: v.string(),
     ...packedRows,
+    /**
+     * Each row's keyword or page as its place in the build's book, packed as
+     * text, since 2026-10-08 (core-data-normalisation-plan.md §5.1,
+     * `searchConsolePeriodBooks.ts`): a keyword list's and Pages competing's in
+     * the keyword book, a page list's in the page book. Text before, and for
+     * the lists of countries, devices and rich results.
+     */
+    keys: v.union(v.array(v.string()), v.string()),
+    /** A keyword list's rows using the website's brand words, 1 or 0, packed: judged at build (N5). */
+    brands: v.optional(v.string()),
     /**
      * A keyword's top page (`tops`, keyword lists) and Pages competing's
      * pages (`pages`) as places in the part's own `pageBook`, packed as text,

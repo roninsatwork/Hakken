@@ -20,6 +20,7 @@ import { fromGoogle, pack, packedColumns, rowsOf, type Packed } from "./utils/se
 import { slotParts } from "./searchConsoleRollups";
 import { deletePageRefs, encodePages, encodePagesFromAction } from "./searchConsolePageRefs";
 import { deleteBooks, keywordPlaces } from "./searchConsoleKeywordBooks";
+import { deletePeriodBooks } from "./searchConsolePeriodBooks";
 import { keptLines, keptSearchesOf } from "./searchConsoleKeep";
 import { countriesKeptReady, heldFor, mainConsoleCountry, stillKeptReady, withHeld, type HeldRange } from "./searchConsoleCountries";
 import { NOTHING_HELD } from "./searchConsoleMainCountry";
@@ -872,7 +873,9 @@ async function clearSome(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites
     .take(PURGE_ROWS);
   for (const row of seenDays) await ctx.db.delete(row._id);
   // Its page addresses and keyword books go last, once no kept list points to them.
-  const refsGone = lists.length < PURGE_BATCH ? await deletePageRefs(ctx, companyWebsiteId, PURGE_ROWS) && await deleteBooks(ctx, companyWebsiteId, "ALL", PURGE_ROWS) : false;
+  const refsGone = lists.length < PURGE_BATCH
+    ? await deletePageRefs(ctx, companyWebsiteId, PURGE_ROWS) && await deleteBooks(ctx, companyWebsiteId, "ALL", PURGE_ROWS) && await deletePeriodBooks(ctx, companyWebsiteId, "ALL", PURGE_ROWS)
+    : false;
   return lists.length < PURGE_BATCH && periods.length < PURGE_BATCH && days.length < PURGE_ROWS && seen.length < PURGE_ROWS && weeks.length < PURGE_ROWS
     && seenDays.length < PURGE_ROWS && refsGone;
 }

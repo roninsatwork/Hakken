@@ -5,6 +5,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { readFanOutLimits } from "./fanOutLimits";
 import { deleteBooks } from "./searchConsoleKeywordBooks";
+import { deletePeriodBooks } from "./searchConsolePeriodBooks";
 import { requireMySite } from "./siteAccess";
 import { superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
@@ -246,7 +247,9 @@ async function clearSomeOf(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsit
     .take(CLEAR_ROWS);
   for (const row of seenDays) await ctx.db.delete(row._id);
   // Its keyword books go once its lines have (`searchConsoleKeywordBooks.ts`).
-  const booksGone = lists.length < CLEAR_RECORDS ? await deleteBooks(ctx, companyWebsiteId, { country }, CLEAR_RECORDS) : false;
+  const booksGone = lists.length < CLEAR_RECORDS
+    ? await deleteBooks(ctx, companyWebsiteId, { country }, CLEAR_RECORDS) && await deletePeriodBooks(ctx, companyWebsiteId, { country }, CLEAR_RECORDS)
+    : false;
   return lists.length < CLEAR_RECORDS && periods.length < CLEAR_RECORDS && days.length < CLEAR_ROWS && weeks.length < CLEAR_ROWS && seen.length < CLEAR_ROWS
     && seenDays.length < CLEAR_ROWS && booksGone;
 }

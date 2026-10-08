@@ -7,12 +7,14 @@ import { tenantAction, tenantQuery } from "./tenantFunctions";
 import { getActiveCompanyId } from "./authz";
 import { appError } from "./utils/appError";
 import { requireMySite } from "./siteAccess";
-import { listOrder, listPageArgs, pageOfList, sortDirectionArg, type ListSorts } from "./siteListPages";
+import { listPageArgs, pageOfList, sortDirectionArg } from "./siteListPages";
 import { SEARCH_CONSOLE_PERIODS, searchTypeValidator, type SearchConsolePeriod, type SearchType } from "./searchConsoleSchema";
 import { askLive, checkedRange, countryFilters } from "./searchConsoleReads";
 import { checkedCountry, countryScope, type CountryScope } from "./searchConsoleCountries";
 import { daysIn, historyLimitDay, periodBefore } from "./searchConsoleDays";
 import { readPeriod, type PeriodRow } from "./searchConsolePeriodReads";
+import { BookNames, asText, namedRows, textsFrom, wholeBook } from "./searchConsolePeriodBooks";
+import { SORT_KEYS, sortRows, type SortKey } from "./searchConsoleSorts";
 import { checkedLongest, consoleLimitsOf, consoleLimitsValidator, viewRulesOf, type ConsoleLimits } from "./searchConsoleLimits";
 import { UNKNOWN, factsFor } from "./searchConsoleFacts";
 import { holdBrandNames } from "./holdProfiles";
@@ -120,37 +122,7 @@ const rowValidator = v.object({
   gap: nullable(v.number()),
 });
 
-/** The headings a list orders by, each the best first on its first press. */
-export const SORT_KEYS = [
-  "key", "clicks", "change", "impressions", "ctr", "position", "positionChange", "share", "count", "top",
-  "volume", "estimate", "kind", "brand", "usualCtr", "expected", "topShare", "next", "nextShare", "gap", "band",
-] as const;
-type SortKey = (typeof SORT_KEYS)[number];
-const SORTS: ListSorts<ListRow, SortKey> = {
-  key: { value: (row) => row.key, first: "asc" },
-  clicks: { value: (row) => row.clicks, first: "desc" },
-  change: { value: (row) => row.change, first: "desc" },
-  impressions: { value: (row) => row.impressions, first: "desc" },
-  ctr: { value: (row) => row.ctr, first: "desc" },
-  // A row Google did not show has no position: a blank, last, never "position 0" first.
-  position: { value: (row) => (row.impressions > 0 ? row.position : null), first: "asc" },
-  positionChange: { value: (row) => row.positionChange, first: "desc" },
-  share: { value: (row) => row.share, first: "desc" },
-  count: { value: (row) => row.count, first: "desc" },
-  top: { value: (row) => row.top, first: "asc" },
-  volume: { value: (row) => row.volume, first: "desc" },
-  estimate: { value: (row) => row.estimate, first: "desc" },
-  kind: { value: (row) => row.kind, first: "asc" },
-  brand: { value: (row) => (row.brand === null ? null : row.brand ? 0 : 1), first: "asc" },
-  usualCtr: { value: (row) => row.usualCtr, first: "desc" },
-  expected: { value: (row) => row.expected, first: "desc" },
-  topShare: { value: (row) => row.topShare, first: "desc" },
-  next: { value: (row) => row.next, first: "asc" },
-  nextShare: { value: (row) => row.nextShare, first: "desc" },
-  gap: { value: (row) => row.gap, first: "desc" },
-  // Position bands: the top band first; a row Google did not show has none, last.
-  band: { value: (row) => (row.impressions > 0 ? BANDS.indexOf(row.band) : null), first: "asc" },
-};
+// The headings a list orders by, and its order (`searchConsoleSorts.ts`).
 const sortValidator = v.optional(v.union(...SORT_KEYS.map((key) => v.literal(key))));
 
 const brandSplitValidator = v.object({ brandClicks: v.number(), nonBrandClicks: v.number(), brandImpressions: v.number(), nonBrandImpressions: v.number() });
@@ -275,17 +247,6 @@ function sourceRows(view: View, now: readonly SourceRow[], before: readonly Sour
 }
 
 /**
- * Ordered over the whole list by the heading pressed. A page's classification
- * sorts by its name, A to Z, Not sorted last — never by its id.
- */
-export function sortRows(rows: ListRow[], sort: SortKey | undefined, direction: "asc" | "desc" | undefined, pageKinds: PageKinds | null = null): ListRow[] {
-  const sorts: ListSorts<ListRow, SortKey> = pageKinds
-    ? { ...SORTS, kind: { value: (row) => (row.kind === null ? null : pageKinds.nameOf(row.kind)), first: "asc" } }
-    : SORTS;
-  return rows.sort(listOrder(sorts, sort ?? "clicks", direction, (row) => row.key));
-}
-
-/**
  * A list of pages with each page's kind as the company's own classification
  * — its id, or Not sorted — once the website has any (page-groups-plan.md,
  * decision 2): every row, those Google showed and those a view adds alike.
@@ -317,6 +278,8 @@ type ListAnswer = {
   summary: Summary | null;
   /** The website's classifications, when a list of its pages was read and it has any: what each row's kind names. */
   pageKinds: PageKinds | null;
+  /** The book naming the rows' tokens (§5.1): `namedRows` names the rows a caller shows. Null for rows of text. */
+  names?: BookNames | null;
 };
 
 /**
@@ -354,10 +317,25 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   // (keep-less-history-plan.md, 5.1; Anthony, 2026-10-08: "ok lets do this one").
   if (within) return live;
   const read = async (which: "NOW" | "BEFORE") => await readPeriod(ctx, companyWebsiteId, args.searchType, dimension, period, which, country);
-  const now = await read("NOW");
+  let now = await read("NOW");
   if (!now) return { ...empty, live: false, preparing: true };
-  const before = await read("BEFORE");
-  const tracked = dimension === "query" || dimension === "page" ? await trackedOf(ctx, companyWebsiteId, dimension) : new Set<string>();
+  let before = await read("BEFORE");
+  // Only the pairs of keywords two or more pages were shown for, kept ready, and how many pages Google showed at all.
+  let competing = view === "competing" ? await readPeriod(ctx, companyWebsiteId, args.searchType, "competing", period, "NOW", country) : null;
+  if (view === "competing" && !competing) return { ...empty, live: false, preparing: true };
+  // Keywords and pages as tokens of their build's book (core-data-normalisation-plan.md §5.1), joined, grouped and
+  // sorted by token. Lists from two builds — one rebuilt while the other waited on Google — are read as text instead.
+  if (new Set([now, before, competing].flatMap((list) => (list?.book ? [list.book.builtAt] : []))).size > 1) {
+    now = await asText(ctx, now);
+    before = before ? await asText(ctx, before) : null;
+    competing = competing ? await asText(ctx, competing) : null;
+  }
+  const names = now.book ? new BookNames(ctx, now.book) : null;
+  const trackedTexts = dimension === "query" || dimension === "page" ? await trackedOf(ctx, companyWebsiteId, dimension) : new Set<string>();
+  // The company's tracked searches as tokens, where the book holds them: up to 200 look-ups, each a small record.
+  const tracked = names && dimension === "query"
+    ? new Set(await Promise.all([...trackedTexts].map(async (text) => await names.tokenOf("query", text))))
+    : trackedTexts;
   const brandWords = dimension === "query" ? await brandWordsOf(ctx, companyWebsiteId) : null;
   // A list of pages reads the website's classifications once, and names each page by them.
   const pageKinds = dimension === "page" ? await readPageKinds(ctx, companyWebsiteId) : null;
@@ -367,14 +345,16 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
     const keywords = await readPeriod(ctx, companyWebsiteId, args.searchType, "query", period, "NOW", country);
     context.curve = ctrCurve((keywords?.rows ?? []).map((row) => ({ clicks: row.clicks, impressions: row.impressions, position: positionOf(row) ?? 0 })), limits.curvePositions);
   }
-  if (view === "competing") {
-    // Only the pairs of keywords two or more pages were shown for, kept ready, and how many pages Google showed at all.
-    const competing = await readPeriod(ctx, companyWebsiteId, args.searchType, "competing", period, "NOW", country);
-    if (!competing) return { ...empty, live: false, preparing: true };
+  if (competing) {
     context.pages = pagesByKeyword(competing.rows);
     context.pagesShown = competing.shown ?? undefined;
   }
   if (view === "missed" && context.missedList === "searched") context.sitesKeywords = await sitesKeywordsOf(ctx, companyWebsiteId, limits.missedKeywords);
+  // A search, and Missed demand's match with Sites, read every keyword's text: the keyword book whole (§5.5).
+  const textOf = names && dimension === "query" && (args.q?.trim() || (view === "missed" && context.missedList === "searched"))
+    ? textsFrom(await wholeBook(ctx, names.scope, "query"))
+    : undefined;
+  context.textOf = textOf;
   // A view that compares or counts pages weighs each page once, its section links folded in.
   const weighed = dimension === "page" && VIEWS_BY_WHOLE_PAGE.has(view) ? withSectionsInPages(shaped) : shaped;
   const listed = applyView(view, weighed, context);
@@ -385,7 +365,7 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
     pageList: dimension === "page",
     ...(pageKinds ? { kindType: pageKinds.typeOf } : {}),
   });
-  const sorted = sortRows(filterRows(listed, args), args.sort, args.direction, pageKinds);
+  const sorted = sortRows(filterRows(listed, args, textOf), args.sort, args.direction, pageKinds);
   // A keyword's pages, or a page's keywords, hold their own limit; every other list the list limit.
   const most = within ? limits.pairedRows : limits.listRows;
   const cut = sorted.length > most ? most : null;
@@ -401,6 +381,7 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
     preparing: false,
     summary,
     pageKinds,
+    names,
   };
 }
 
@@ -442,6 +423,8 @@ export const searchConsoleListPage = tenantQuery({
     const page = pageOfList(list.rows, args.page, args.rows, list.cut);
     return {
       ...page,
+      // Only the page's rows named: the rest stay tokens of the book (core-data-normalisation-plan.md §5.3).
+      rows: await namedRows(list, page.rows),
       preparing: list.preparing,
       ...(list.noSearches ? { noSearches: true } : {}),
       summary: list.summary,
@@ -469,7 +452,7 @@ export const searchConsoleSplitList = tenantQuery({
     checkedRange(args.from, args.to);
     const site = await requireMySite(ctx, args.siteId);
     const list = await readList(ctx, site.hold._id, args);
-    return { rows: list.rows.slice(0, SPLIT_ROWS), preparing: list.preparing, current: true, named: list.named, listed: list.listed, comparable: list.comparable, live: list.live, from: list.from, to: list.to };
+    return { rows: await namedRows(list, list.rows.slice(0, SPLIT_ROWS)), preparing: list.preparing, current: true, named: list.named, listed: list.listed, comparable: list.comparable, live: list.live, from: list.from, to: list.to };
   },
 });
 
@@ -677,8 +660,14 @@ export const keptCounts = internalQuery({
     const period = periodOf(args.from, args.to, scope.read === "KEPT" ? scope.newestDay : connection.newestDay);
     if (!period) return [];
     const kept = await readPeriod(ctx, hold._id, args.searchType, args.list, period, "NOW", scope.read === "KEPT" ? scope.country : undefined);
-    const wanted = new Set(args.keys);
-    return (kept?.rows ?? []).flatMap((row) => (wanted.has(row.key) && row.count !== undefined ? [{ key: row.key, count: row.count }] : []));
+    // A keyword list keeps each keyword as its token in the build's book (§5.1): each asked for looked up by its text.
+    const names = kept?.book && args.list === "query" ? new BookNames(ctx, kept.book) : null;
+    const wanted = new Map<string, string>();
+    for (const key of args.keys) wanted.set(names ? await names.tokenOf("query", key) : key, key);
+    return (kept?.rows ?? []).flatMap((row) => {
+      const key = wanted.get(row.key);
+      return key !== undefined && row.count !== undefined ? [{ key, count: row.count }] : [];
+    });
   },
 });
 
@@ -894,9 +883,10 @@ export const exportRows = internalQuery({
     const list = await readList(ctx, hold._id, args);
     // A page's classification by its name in the file, as the screen shows it; Not sorted in words (as Your pages' download).
     const pageKinds = list.pageKinds;
+    const all = await namedRows(list, list.rows);
     const rows = pageKinds
-      ? list.rows.map((row) => (row.kind === null ? row : { ...row, kind: row.kind === NOT_SORTED_KIND ? "Not sorted" : (pageKinds.nameOf(row.kind) ?? row.kind) }))
-      : list.rows;
+      ? all.map((row) => (row.kind === null ? row : { ...row, kind: row.kind === NOT_SORTED_KIND ? "Not sorted" : (pageKinds.nameOf(row.kind) ?? row.kind) }))
+      : all;
     return { host: website?.displayHost ?? "site", rows: inParts(rows), cut: list.cut };
   },
 });

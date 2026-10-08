@@ -243,7 +243,7 @@ export function bookPages(addresses: readonly string[]): { book: string[]; place
  * What a period's part keeps in its own books: a keyword list's top pages, or
  * Pages competing's pages, and any list's kinds.
  */
-export function bookedColumns(part: { list: string; tops?: readonly string[]; pages?: readonly string[]; kinds?: readonly string[] }): {
+export function bookedColumns(part: { list: string; tops?: readonly string[] | string; pages?: readonly string[] | string; kinds?: readonly string[] }): {
   tops?: string;
   pages?: string;
   pageBook?: string[];
@@ -251,8 +251,9 @@ export function bookedColumns(part: { list: string; tops?: readonly string[]; pa
   kindBook?: string[];
 } {
   const column = part.list === "query" ? "tops" : part.list === "competing" ? "pages" : null;
+  // Already places in the build's book (core-data-normalisation-plan.md §5.1): nothing to book here.
   const addresses = column ? part[column] : undefined;
-  const pages = column && addresses && addresses.length > 0 ? bookPages(addresses) : null;
+  const pages = column && Array.isArray(addresses) && addresses.length > 0 ? bookPages(addresses) : null;
   const kinds = part.kinds && part.kinds.length > 0 ? bookPages(part.kinds) : null;
   return {
     ...(column && pages ? { [column]: pages.places, pageBook: pages.book } : {}),
