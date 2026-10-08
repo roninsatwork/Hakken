@@ -141,32 +141,3 @@ export async function removeReferringDomainsBefore(ctx: MutationCtx, websiteId: 
   for (const part of parts) await ctx.db.delete(part._id);
   return parts.length < most;
 }
-
-/**
- * Dev's rows kept one a linking website before 2026-10-08, a check's at a
- * time, into records (`2026-10-08-pack-referring-domains`): the oldest check
- * first, so a newer list's record is newer, as its rows were, and each list's
- * rows in the order they were filed. Done when no row is left.
- */
-export async function packReferringDomainRows(ctx: MutationCtx): Promise<{ cursor: null; isDone: boolean; processed: number; updated: number }> {
-  const oldest = await ctx.db.query("siteReferringDomains").first();
-  if (!oldest) return { cursor: null, isDone: true, processed: 0, updated: 0 };
-  const rows = await ctx.db.query("siteReferringDomains").withIndex("by_pull", (q) => q.eq("pullId", oldest.pullId)).take(MOVED_A_CHECK);
-  for (let start = 0; start < rows.length; start += DOMAIN_PART_ROWS) {
-    const chunk = rows.slice(start, start + DOMAIN_PART_ROWS);
-    await writeReferringDomainPart(ctx, { websiteId: oldest.websiteId, pullId: oldest.pullId, day: oldest.day }, chunk.map((row) => ({
-      domain: row.domain, rank: row.rank, backlinks: row.backlinks, status: row.status,
-      ...(row.firstSeen !== undefined ? { firstSeen: row.firstSeen } : {}),
-      ...(row.lostDate !== undefined ? { lostDate: row.lostDate } : {}),
-      ...(row.spamScore !== undefined ? { spamScore: row.spamScore } : {}),
-      ...(row.brokenBacklinks !== undefined ? { brokenBacklinks: row.brokenBacklinks } : {}),
-      ...(row.referringPages !== undefined ? { referringPages: row.referringPages } : {}),
-      ...(row.nofollowPages !== undefined ? { nofollowPages: row.nofollowPages } : {}),
-    })));
-  }
-  for (const row of rows) await ctx.db.delete(row._id);
-  return { cursor: null, isDone: false, processed: rows.length, updated: rows.length };
-}
-
-/** One check's rows moved a call: a list's page is a thousand, and a call may make 4,096 reads. */
-const MOVED_A_CHECK = 3_000;

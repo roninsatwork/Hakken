@@ -1,7 +1,7 @@
 import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import schema from "./schema";
-import { packReferringDomainRows, readReferringDomains, referringDomainNamed, writeReferringDomainPart, type ReferringDomainFigures } from "./siteReferringDomainParts";
+import { readReferringDomains, referringDomainNamed, writeReferringDomainPart, type ReferringDomainFigures } from "./siteReferringDomainParts";
 import { packColumn, packDays, unpackColumn, unpackDays } from "./utils/packedColumns";
 
 /** The websites linking to a website, a check's list packed a record (core-data-normalisation-plan.md §6.3). */
@@ -54,22 +54,5 @@ describe("a check's linking websites, a record", () => {
     expect(rows[4]).toMatchObject({ status: "LOST", lostDate: "2026-09-05" });
     expect((await t.run(async (ctx) => await referringDomainNamed(ctx, websiteId, "gone.com")))?.pullId).toBe(newer);
     expect(await t.run(async (ctx) => await referringDomainNamed(ctx, websiteId, "nowhere.com"))).toBeNull();
-  });
-
-  test("rows kept one a website before become records, oldest check first, reading back the same", async () => {
-    const { t, websiteId, older, newer } = await seeded();
-    const row = (pullId: typeof older, day: string, domain: string, rank: number) => ({ websiteId, pullId, day, domain, rank, backlinks: 1, status: "LIVE" as const });
-    await t.run(async (ctx) => {
-      await ctx.db.insert("siteReferringDomains", { ...row(older, "2026-09-01", "both.com", 40), firstSeen: "2025-01-01" });
-      await ctx.db.insert("siteReferringDomains", row(older, "2026-09-01", "old-only.com", 30));
-      await ctx.db.insert("siteReferringDomains", { ...row(newer, "2026-09-08", "both.com", 45), spamScore: 9 });
-    });
-    for (let step = 0; step < 5; step += 1) if ((await t.run(async (ctx) => await packReferringDomainRows(ctx))).isDone) break;
-
-    expect(await t.run(async (ctx) => (await ctx.db.query("siteReferringDomains").collect()).length)).toBe(0);
-    const rows = await t.run(async (ctx) => await readReferringDomains(ctx, websiteId));
-    expect(rows.map((one) => [one.domain, one.rank, one.day])).toEqual([["both.com", 45, "2026-09-08"], ["both.com", 40, "2026-09-01"], ["old-only.com", 30, "2026-09-01"]]);
-    // The newer check's record is the newer: its row is the one a linking website's screen reads.
-    expect(await t.run(async (ctx) => await referringDomainNamed(ctx, websiteId, "both.com"))).toMatchObject({ rank: 45, spamScore: 9 });
   });
 });

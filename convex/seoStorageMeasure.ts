@@ -20,7 +20,7 @@ import { lostKeywordsKeptFrom } from "./seoCollectionPolicy";
 const TABLES = [
   "seoDataPulls", "seoPullAnswers", "seoCycleLines", "seoWebsiteMetrics", "keywordPositionMonths",
   "siteKeywordRanks", "siteKeywordFeatures", "sitePageRanks", "siteSections", "siteDaySummaries", "sitePaidKeywords",
-  "siteBacklinks", "siteReferringDomains", "siteReferringDomainParts", "siteAnchors", "siteReferringIps", "siteReferringSubnets", "siteLinkDays",
+  "siteBacklinks", "siteReferringDomainParts", "siteAnchors", "siteReferringIps", "siteReferringSubnets", "siteLinkDays",
   "siteCrawls", "siteCrawlPages", "siteCrawlLinks", "siteSitemapPages", "siteCitedPages",
   "siteListCopies", "siteListCopyParts", "siteContentGaps", "holdPages", "siteListAiDays",
   "aiAnswers", "aiCitations", "aiAnswerTexts", "aiAnswerIndex", "promptFanOutQueries", "promptFanOutDays", "siteSerpPages",

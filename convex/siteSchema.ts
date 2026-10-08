@@ -483,31 +483,6 @@ export const siteTables = {
     .index("by_pull", ["pullId"])
     .searchIndex("search_text", { searchField: "searchText", filterFields: ["websiteId", "pass", "status", "dofollow"] }),
 
-  /** Every website linking to a website, from its newest list (Phase 4). */
-  siteReferringDomains: defineTable({
-    websiteId: v.id("websites"),
-    pullId: v.id("seoDataPulls"),
-    day: v.string(),
-    domain: v.string(),
-    rank: v.number(),
-    backlinks: v.number(),
-    firstSeen: v.optional(v.string()),
-    lostDate: v.optional(v.string()),
-    status: linkStatusValidator,
-    spamScore: maybeNumber,
-    brokenBacklinks: maybeNumber,
-    referringPages: maybeNumber,
-    nofollowPages: maybeNumber,
-  })
-    .index("by_site_rank", ["websiteId", "rank"])
-    .index("by_site_backlinks", ["websiteId", "backlinks"])
-    .index("by_site_first_seen", ["websiteId", "firstSeen"])
-    .index("by_site_status_rank", ["websiteId", "status", "rank"])
-    // A linking website's own screen.
-    .index("by_site_domain", ["websiteId", "domain"])
-    .index("by_pull", ["pullId"])
-    .searchIndex("search_domain", { searchField: "domain", filterFields: ["websiteId", "status"] }),
-
   /**
    * The websites linking to a website, a check's list packed — up to a
    * thousand a record (core-data-normalisation-plan.md §6.3): one row a

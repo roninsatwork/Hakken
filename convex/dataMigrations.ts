@@ -22,7 +22,6 @@ import { clearPoundNames, copyPoundNamesToDollars } from "./costCurrencyMigratio
 import { markExistingHoldsOwned } from "./websiteAttachmentMigration";
 import { clearCountingSwitchMoves } from "./sitePositionRepair";
 import { packRankFacts } from "./siteRankings";
-import { packReferringDomainRows } from "./siteReferringDomainParts";
 import { moveAnswersOffRequests } from "./seoPullAnswers";
 import { backfillAnswerIndex } from "./siteAnswers";
 import { dropCheckOnlyKeywordRows } from "./privateListsMigration";
@@ -170,7 +169,6 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
   "2026-09-27-counting-switch-moves": clearCountingSwitchMoves,
   /** Ranking rows' months and results-page features packed, their stored band cleared (`siteRankings.packRankFacts`). */
   "2026-10-08-pack-rank-facts": packRankFacts,
-  "2026-10-08-pack-referring-domains": packReferringDomainRows, // A check's linking websites a record (`siteReferringDomainParts.ts`).
 
   /**
    * Takes every stored DataForSEO answer off its request and into

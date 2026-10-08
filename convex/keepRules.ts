@@ -238,7 +238,6 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   siteSerpPages: cleared("90 days", "seoCollectionSweep/purgeExpiredSerpPages"),
   searchVolumes: LATEST,
   siteBacklinks: LATEST,
-  siteReferringDomains: LATEST,
   siteReferringDomainParts: LATEST,
   siteAnchors: LATEST,
   siteReferringIps: LATEST,

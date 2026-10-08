@@ -173,7 +173,7 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
     }
     if (pulls.length === PULL_PURGE_BATCH) more = true;
 
-    const byWebsite = async (rows: Array<{ _id: Id<"seoWebsiteMetrics"> | Id<"websiteSearchStats"> | Id<"websiteQuestionStats"> | Id<"aiCitations"> | Id<"siteKeywordRanks"> | Id<"sitePageRanks"> | Id<"siteSections"> | Id<"siteDaySummaries"> | Id<"siteCitedPages"> | Id<"sitePageTypes"> | Id<"siteBacklinks"> | Id<"siteReferringDomains"> | Id<"siteAnchors"> | Id<"siteReferringIps"> | Id<"siteLinkDays"> | Id<"siteReferringSubnets"> | Id<"sitePaidKeywords"> | Id<"siteCrawls"> | Id<"siteListAiDays"> | Id<"siteKeywordFeatures"> | Id<"siteCrawlPages"> | Id<"siteCrawlLinks"> }>) => {
+    const byWebsite = async (rows: Array<{ _id: Id<"seoWebsiteMetrics"> | Id<"websiteSearchStats"> | Id<"websiteQuestionStats"> | Id<"aiCitations"> | Id<"siteKeywordRanks"> | Id<"sitePageRanks"> | Id<"siteSections"> | Id<"siteDaySummaries"> | Id<"siteCitedPages"> | Id<"sitePageTypes"> | Id<"siteBacklinks"> | Id<"siteAnchors"> | Id<"siteReferringIps"> | Id<"siteLinkDays"> | Id<"siteReferringSubnets"> | Id<"sitePaidKeywords"> | Id<"siteCrawls"> | Id<"siteListAiDays"> | Id<"siteKeywordFeatures"> | Id<"siteCrawlPages"> | Id<"siteCrawlLinks"> }>) => {
       for (const row of rows) await ctx.db.delete(row._id);
       if (rows.length === ENTRY_PURGE_BATCH) more = true;
     };
@@ -228,8 +228,6 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
     // Its links, linking websites, anchors, servers and link history (Phase 4).
     await byWebsite(await ctx.db.query("siteBacklinks")
       .withIndex("by_site_pass_rank", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
-    await byWebsite(await ctx.db.query("siteReferringDomains")
-      .withIndex("by_site_rank", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH));
     // Packed a check's list a record (`siteReferringDomainParts.ts`): a few at a time, each tens of kilobytes.
     if (!(await removeReferringDomainsBefore(ctx, args.websiteId, null, DOMAIN_PARTS_PURGED))) more = true;
     await byWebsite(await ctx.db.query("siteAnchors")
