@@ -1,8 +1,8 @@
 # Core data — each keyword and page once, every screen inside Convex's limits
 
-**Started 2026-10-08. Status: planning — nothing built. Decisions N1 to N10
-below: N1 and N2 agreed, N3, N4 and N6 settled (nothing on screen changes),
-N5, N7, N8 and N10 agreed too; N9 waits on Anthony.** Follows the
+**Started 2026-10-08. Status: planned — every decision agreed or settled
+(N1–N10, §1); nothing built. Building starts at Anthony's word, at step 1
+(§9).** Follows the
 [keep-less-history plan](keep-less-history-plan.md), whose part 8 (built the
 same day) packed the numbers and booked addresses inside each stored part —
 the steps that could be taken without redesigning how screens read. This plan
@@ -47,7 +47,7 @@ fail. Nothing on screen is meant to change.
 | N6 | What a list says past N1's size | **What it says today when a list is cut** (`consoleListRows`): "showing your 25,000 …" — no new words. | **Settled** — nothing new on screen. |
 | N7 | DataForSEO's raw answers | **Kept their 7 days in Convex's file storage, not the database**: 33.5 MB of 332 answers, read only to file one again (§6.5). | **Agreed** — Anthony, 2026-10-08: "ok do it". |
 | N8 | The Decision Maker's log | **Keep every decision 90 days as now, its probabilities 30**: the probabilities are 4 MB of its 16.9, read only on one admin screen for one run (`chatAdmin.ts:263`). | **Agreed** — Anthony, 2026-10-08: "30 days ok". |
-| N9 | Agent transactions (every AI call's cost) | **The analytics read the daily totals already saved each night (`analyticsDailySnapshots`) for any dates, and the rows are kept 90 days, not 400.** Today the analytics screens (up to 365 days, `TimeframeDropdown`) add up the rows themselves each time, stopping at 10,000 (`ANALYTICS_SCAN`, `analytics.ts:25`) — dev already holds about 40,000 in 90 days, so a long range is already short. 14.4 MB on dev. | Waiting |
+| N9 | Agent transactions (every AI call's cost) | **The analytics read the daily totals already saved each night (`analyticsDailySnapshots`) for any dates, and the rows are kept 90 days, not 400.** Today the analytics screens (up to 365 days, `TimeframeDropdown`) add up the rows themselves each time, stopping at 10,000 (`ANALYTICS_SCAN`, `analytics.ts:25`) — dev already holds about 40,000 in 90 days, so a long range is already short. 14.4 MB on dev. | **Agreed** — Anthony, 2026-10-08: "daily totals ok". |
 | N10 | The Decision Maker judging one at a time | **Judge keywords' intents and pages' types in batches**, tried on a sample first and kept only if the answers match (§7.3). | **Agreed** — Anthony, 2026-10-08: "add this to the plan too please, we need to optimise everything". |
 
 ## 2. Why — measured on dev, 2026-10-08
@@ -546,9 +546,10 @@ first, nothing pushed without Anthony's word.
 
 ## 11. What changes on screen
 
-**Nothing is meant to change**, so there is nothing to draw. Two decisions
-change *when* something shows rather than what: N5 (brand words, minutes) and
-N8 (a decision's probabilities, after 30 days, on one admin screen). If any
+**Nothing is meant to change**, so there is nothing to draw. Three decisions
+change *when* or *how complete* rather than what: N5 (brand words, minutes),
+N8 (a decision's probabilities, after 30 days, on one admin screen) and N9 (the
+analytics' long ranges become complete). If any
 answer changes what a screen shows, it is drawn on the canvas before it is
 built.
 
@@ -562,4 +563,4 @@ built.
   part 3 rewritten from how agent data grows per call (§7), N10 added. Then
   "add this to the plan too please, we need to optimise everything": N10
   agreed, and part 4 (§7A) added — every line of Convex's bill. N5 agreed:
-  "that's ok, a small delay is cool". N7 agreed: "ok do it". N8 agreed: "30 days ok".
+  "that's ok, a small delay is cool". N7 agreed: "ok do it". N8 agreed: "30 days ok". N9 agreed: "daily totals ok" — the plan complete.
