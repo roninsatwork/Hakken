@@ -8,6 +8,7 @@ import { ownWebsites, partIsBuying, requireLookup, startResearchRun, watchedIn, 
 import { hostOf } from "./keywordResearchCalls";
 import { findResearchCountry } from "./utils/researchCountries";
 import { researchProblemOf } from "./utils/researchProblems";
+import { addressOf } from "./utils/pageAddresses";
 
 /**
  * Keyword ideas (board 5; docs/plans/active/keyword-research-plan.md):
@@ -81,11 +82,12 @@ export const lookupIdeas = tenantQuery({
     // Positions are the website's own, from where it is watched: none to show for a lookup in another country.
     const website = watchedIn(measured, lookup.locationCode) ? measured : null;
     const place = website?.place ?? lookup.locationCode;
+    const host = website ? (await ctx.db.get(website.websiteId))?.host ?? "" : "";
     const rows = await Promise.all((chosen?.rows ?? []).map(async (row) => {
       const ranked = website
         ? await ctx.db.query("siteKeywordRanks").withIndex("by_site_keyword", (q) => q.eq("websiteId", website.websiteId).eq("locationCode", place).eq("keyword", row.keyword)).first()
         : null;
-      return { ...row, position: ranked?.position ?? null, page: ranked?.url ?? null };
+      return { ...row, position: ranked?.position ?? null, page: ranked ? addressOf(ranked, host) ?? null : null };
     }));
     return {
       lookupId: lookup._id,

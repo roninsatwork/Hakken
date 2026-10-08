@@ -11,6 +11,7 @@ import { ownWebsites, partIsBuying, requireLookup, startResearchRun, watchedIn }
 import { findResearchCountry } from "./utils/researchCountries";
 import { researchProblemOf } from "./utils/researchProblems";
 import { holdBrandNames } from "./holdProfiles";
+import { addressOf } from "./utils/pageAddresses";
 
 /**
  * What the AI says (board 4; docs/plans/active/keyword-research-plan.md): the
@@ -106,12 +107,13 @@ export const lookupAnswers = tenantQuery({
     const rivalMost = mostNamed.find((row) => row.who === "RIVAL") ?? null;
 
     // The website's page for each AI Overview search, where it ranks for that search, from what Websites holds.
+    const host = website ? (await ctx.db.get(website.websiteId))?.host ?? "" : "";
     const searches = await Promise.all((held?.overviewSearches ?? []).map(async (search) => {
       // The website's positions are from where it is watched: none for a lookup in another country.
       const ranked = website && watchedIn(website, lookup.locationCode)
         ? await ctx.db.query("siteKeywordRanks").withIndex("by_site_keyword", (q) => q.eq("websiteId", website.websiteId).eq("locationCode", website.place ?? lookup.locationCode).eq("keyword", search.query.toLowerCase())).first()
         : null;
-      return { query: search.query, times: search.times, page: ranked?.url ?? null };
+      return { query: search.query, times: search.times, page: ranked ? addressOf(ranked, host) ?? null : null };
     }));
 
     // The names the company keeps for its website and competitors (`holdProfiles.ts`), read only when there are answers to pick them out in.

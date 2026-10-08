@@ -10,6 +10,7 @@ import { LIST_PAGE_STUCK_MS, dropCopyOf, keywordsCopyKey, pagesCopyKey, writeLis
 import { isThisPlace, shiftDay, syncDayFigures, syncWindows } from "./siteDayFigures";
 import { lostKeywordsKeptFrom } from "./seoCollectionPolicy";
 import { bandCountsValidator, emptyBandCounts, pageTypeByAddress, sectionOf, intentSplitValidator, type IntentSplit } from "./utils/siteShapes";
+import { sameAddress } from "./utils/pageAddresses";
 
 /**
  * Rebuilding a site's summaries from its latest rankings.
@@ -34,7 +35,11 @@ const WRITE_BATCH = 400;
 
 const pageRowValidator = v.object({
   page: v.string(),
-  url: v.string(),
+  /** Its full address as its ranking keeps it: only where not the website's host and `page` (`utils/pageAddresses.ts`). */
+  address: v.optional(v.string()),
+  www: v.optional(v.boolean()),
+  /** As a ranking not yet moved by `2026-10-08-page-addresses` holds it. */
+  url: v.optional(v.string()),
   section: v.string(),
   keywords: v.number(),
   bestPosition: v.number(),
@@ -210,7 +215,7 @@ async function rebuildSiteNow(
       if (!held) {
         const fresh: PageAggregate = {
           page: row.page,
-          url: row.url ?? row.page,
+          ...sameAddress(row),
           section: sectionOf(row.page),
           keywords: 1,
           bestPosition: position,
@@ -597,7 +602,7 @@ export const markLost = internalMutation({
         locationCode: row.locationCode,
         keyword: row.keyword,
         band: "zz_none",
-        ...(row.url ? { url: row.url } : {}),
+        ...sameAddress(row),
         page: row.page,
         volume: row.volume,
         volumeKnown: row.volumeKnown,

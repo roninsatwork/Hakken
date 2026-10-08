@@ -88,6 +88,7 @@ export async function fileRankedPositions(
     .take(TRACKED_SEARCHES_READ))
     .map((row) => row.keyword));
   const place = args.locationCode ?? DEFAULT_LOCATION_CODE;
+  const host = (await ctx.db.get(args.websiteId))?.host ?? "";
 
   for (const entry of args.positions) {
     // Its point on the search's line from this place (keep-less-history-plan.md,
@@ -115,6 +116,7 @@ export async function fileRankedPositions(
         ...(entry.url ? { url: entry.url } : {}),
         ...(entry.searchVolume !== undefined ? { volume: entry.searchVolume } : {}),
         extras: rankExtrasOf(entry),
+        host,
       });
     }
   }

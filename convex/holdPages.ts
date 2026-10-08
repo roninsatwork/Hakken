@@ -14,6 +14,7 @@ import { normalisePage } from "./utils/pageClassification";
 import { onWebsite } from "./utils/sitemapReading";
 import { isTrackedHold } from "./utils/websitePairing";
 import { sitemapPagesPage as readSitemapPages } from "./sitemapParts";
+import { addressOf } from "./utils/pageAddresses";
 
 /**
  * Every page of a company's website once (`holdPages`), rebuilt from its
@@ -209,8 +210,9 @@ export const rankedPagesPage = internalQuery({
       .query("sitePageRanks")
       .withIndex("by_site_page", (q) => q.eq("websiteId", args.websiteId).eq("locationCode", args.place))
       .paginate({ cursor: args.cursor, numItems: RANK_ROWS_READ });
+    const host = (await ctx.db.get(args.websiteId))?.host ?? "";
     return {
-      rows: result.page.map((row) => ({ page: row.page, url: row.url, ...(row.pageType ? { pageType: row.pageType } : {}) })),
+      rows: result.page.map((row) => ({ page: row.page, url: addressOf(row, host), ...(row.pageType ? { pageType: row.pageType } : {}) })),
       cursor: result.continueCursor,
       isDone: result.isDone,
     };

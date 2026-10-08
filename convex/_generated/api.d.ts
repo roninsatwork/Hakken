@@ -564,6 +564,7 @@ import type * as utils_newsFeeds from "../utils/newsFeeds.js";
 import type * as utils_nightHeistRules from "../utils/nightHeistRules.js";
 import type * as utils_outboxQueueAgent from "../utils/outboxQueueAgent.js";
 import type * as utils_packedColumns from "../utils/packedColumns.js";
+import type * as utils_pageAddresses from "../utils/pageAddresses.js";
 import type * as utils_pageClassification from "../utils/pageClassification.js";
 import type * as utils_pageKinds from "../utils/pageKinds.js";
 import type * as utils_pageMetadata from "../utils/pageMetadata.js";
@@ -1249,6 +1250,7 @@ declare const fullApi: ApiFromModules<{
   "utils/nightHeistRules": typeof utils_nightHeistRules;
   "utils/outboxQueueAgent": typeof utils_outboxQueueAgent;
   "utils/packedColumns": typeof utils_packedColumns;
+  "utils/pageAddresses": typeof utils_pageAddresses;
   "utils/pageClassification": typeof utils_pageClassification;
   "utils/pageKinds": typeof utils_pageKinds;
   "utils/pageMetadata": typeof utils_pageMetadata;

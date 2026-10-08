@@ -8,6 +8,7 @@ import { wordsThatMatter } from "./utils/fanOutAngle";
 import { isTrackedHold } from "./utils/websitePairing";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { readFanOutLimits } from "./fanOutLimits";
+import { addressOf } from "./utils/pageAddresses";
 
 /**
  * Which of a site's own pages answers each angle (docs/plans/active/
@@ -287,10 +288,11 @@ export const pagesToOffer = internalQuery({
         .take(rankedPagesRead + 1),
     ]);
     const byPage = new Map<string, SitePage>();
+    const host = (await ctx.db.get(hold.websiteId))?.host ?? "";
     for (const row of rankedRows.slice(0, rankedPagesRead)) {
       byPage.set(row.page, {
         page: row.page,
-        url: row.url,
+        url: addressOf(row, host) ?? row.page,
         ranked: true,
         keywords: row.keywords,
         words: [...new Set([...wordsThatMatter(row.page), ...wordsThatMatter(row.topKeyword)])],

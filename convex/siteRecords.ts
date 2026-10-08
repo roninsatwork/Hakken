@@ -23,6 +23,7 @@ import {
   rankStatusValidator,
 } from "./utils/siteShapes";
 import { featuresOf, trendOf } from "./utils/rankFacts";
+import { addressOf } from "./utils/pageAddresses";
 
 /**
  * One record's own screen on the client's Sites pages: everything stored about
@@ -97,7 +98,7 @@ const rankValidator = v.object({
   resultsCount: nullableNumber,
 });
 
-function rankOf(row: Doc<"siteKeywordRanks">) {
+function rankOf(row: Doc<"siteKeywordRanks">, host: string) {
   return {
     position: row.position ?? null,
     band: row.band,
@@ -105,7 +106,7 @@ function rankOf(row: Doc<"siteKeywordRanks">) {
     change: row.change,
     previousPosition: row.previousPosition ?? null,
     previousDay: row.previousDay ?? null,
-    url: row.url ?? null,
+    url: addressOf(row, host) ?? null,
     page: row.page,
     previousPage: row.previousPage ?? null,
     volume: row.volumeKnown ? row.volume : null,
@@ -289,7 +290,7 @@ export const keywordRecord = tenantQuery({
 
     return {
       keyword,
-      rank: rank ? rankOf(rank) : null,
+      rank: rank ? rankOf(rank, site.website.host) : null,
       search: facts
         ? {
           volume: facts.volumeKnown ? facts.volume : null,
@@ -474,7 +475,7 @@ export const pageRecord = tenantQuery({
       kind: pageKinds ? pageKinds.kindOf(page) : null,
       rank: rank
         ? {
-          url: rank.url,
+          url: addressOf(rank, site.website.host) ?? page,
           section: rank.section,
           keywords: rank.keywords,
           bestPosition: rank.bestPosition,

@@ -97,6 +97,7 @@ export const replayRankings = internalMutation({
       cursor: args.cursor, numItems: REPLAY_PAGE,
     });
     let filed = 0;
+    const host = (await ctx.db.get(args.websiteId))?.host ?? "";
     for (const line of result.page) {
       for (const point of line.points) {
         if (point.position === null || point.kind !== "LIST") continue;
@@ -108,6 +109,7 @@ export const replayRankings = internalMutation({
           position: point.position,
           ...(point.pagePosition !== null ? { pagePosition: point.pagePosition } : {}),
           ...(point.url ? { url: point.url } : {}),
+          host,
         });
         filed += 1;
       }

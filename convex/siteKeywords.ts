@@ -18,6 +18,7 @@ import {
 import { wordStartMatcher } from "./utils/wordStarts";
 import { pointOnDay } from "./positionHistory";
 import { featuresOf, trendOf } from "./utils/rankFacts";
+import { addressOf } from "./utils/pageAddresses";
 
 /**
  * What a site ranks for on Google: every keyword, every page, every folder, and
@@ -110,7 +111,7 @@ const pageRowValidator = v.object({
   kind: v.string(),
 });
 
-function keywordRow(row: Rank) {
+function keywordRow(row: Rank, host: string) {
   return {
     _id: row._id,
     keyword: row.keyword,
@@ -119,7 +120,7 @@ function keywordRow(row: Rank) {
     change: row.change,
     status: row.status,
     band: row.band,
-    url: row.url ?? null,
+    url: addressOf(row, host) ?? null,
     page: row.page,
     previousPage: row.previousPage ?? null,
     volume: row.volumeKnown ? row.volume : null,
@@ -136,10 +137,10 @@ function keywordRow(row: Rank) {
 }
 
 /** The rows of one page of a keyword table, read in full: one read by id per row on screen. */
-async function fullKeywordRows(ctx: QueryCtx, shown: readonly KeywordCopyRow[]) {
+async function fullKeywordRows(ctx: QueryCtx, shown: readonly KeywordCopyRow[], host: string) {
   const rows = await Promise.all(shown.map((row) => ctx.db.get(row.id)));
   // A row removed since the copy was built (a purge) is simply not shown.
-  return rows.flatMap((row) => (row ? [keywordRow(row)] : []));
+  return rows.flatMap((row) => (row ? [keywordRow(row, host)] : []));
 }
 
 const byKeyword = (row: KeywordCopyRow) => row.keyword;
@@ -219,7 +220,7 @@ export const listKeywords = tenantQuery({
         && (!matches || matches(row.keyword));
     }).sort(listOrder(KEYWORD_SORTS, args.sort ?? "position", args.direction, byKeyword));
     const page = pageOfList(list, args.page, args.rows);
-    return { ...page, rows: await fullKeywordRows(ctx, page.rows) };
+    return { ...page, rows: await fullKeywordRows(ctx, page.rows, site.website.host) };
   },
 });
 
@@ -316,7 +317,7 @@ export const listMoves = tenantQuery({
       .filter((row) => moved(row) && (!matches || matches(row.keyword, row.page)))
       .sort(listOrder(MOVE_SORTS, args.sort ?? opening, args.direction, byKeyword));
     const page = pageOfList(list, args.page, args.rows);
-    return { ...page, rows: await fullKeywordRows(ctx, page.rows) };
+    return { ...page, rows: await fullKeywordRows(ctx, page.rows, site.website.host) };
   },
 });
 
@@ -417,7 +418,7 @@ export const listPages = tenantQuery({
       return {
         _id: row._id,
         page: row.page,
-        url: row.url,
+        url: addressOf(row, site.website.host) ?? row.page,
         section: row.section,
         keywords: row.keywords,
         bestPosition: row.bestPosition,

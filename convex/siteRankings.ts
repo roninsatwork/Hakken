@@ -8,6 +8,7 @@ import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
 import { bandForPosition, pagePath, rankIntentValidator, statusFor, type RankIntent } from "./utils/siteShapes";
 import { packFeatures, packTrend } from "./utils/rankFacts";
+import { addressOf, keptAddress } from "./utils/pageAddresses";
 
 /**
  * Keeping the Sites tables current as results are filed.
@@ -107,6 +108,8 @@ export async function fileKeywordRank(
     url?: string;
     volume?: number;
     extras?: RankExtras;
+    /** The website's host: the page's address is kept beside its path only where it is not this host's (`utils/pageAddresses.ts`). */
+    host: string;
   },
 ): Promise<void> {
   const keyword = normaliseKeyword(entry.keyword);
@@ -141,7 +144,7 @@ export async function fileKeywordRank(
     ? previousDay !== undefined && (!sameCounting || (existing?.status === "SAME" && existing.previousPosition === undefined))
     : !sameCounting;
   const previousPage = sameDay ? existing?.previousPage : existing?.page || undefined;
-  const url = entry.url ?? existing?.url;
+  const url = entry.url ?? (existing ? addressOf(existing, entry.host) : undefined);
   const page = pagePath(url);
   const extras = packedFacts(mergeExtras(existing, entry.extras ?? {}, page === (existing?.page ?? page)));
   const volumeKnown = entry.volume !== undefined || Boolean(existing?.volumeKnown);
@@ -159,7 +162,7 @@ export async function fileKeywordRank(
     position,
     ...(pagePosition !== undefined ? { pagePosition } : {}),
     band: bandForPosition(position),
-    ...(url ? { url } : {}),
+    ...keptAddress(url, entry.host, page),
     page,
     volume,
     volumeKnown,
@@ -644,4 +647,31 @@ export async function packRankFacts(ctx: MutationCtx, cursor: string | null, bat
     updated += 1;
   }
   return { cursor: page.continueCursor, isDone: page.isDone, processed: page.page.length, updated };
+}
+
+/**
+ * One-off, 2026-10-08 (`2026-10-08-page-addresses`): every ranking and page
+ * row's whole address moved to what it keeps beside its path — nothing where
+ * it is the website's own host and page (`utils/pageAddresses.ts`).
+ */
+export async function keepPageAddresses(ctx: MutationCtx, cursor: string | null, batchSize: number) {
+  const hosts = new Map<string, string>();
+  const hostOf = async (websiteId: Id<"websites">) => {
+    if (!hosts.has(websiteId)) hosts.set(websiteId, (await ctx.db.get(websiteId))?.host ?? "");
+    return hosts.get(websiteId)!;
+  };
+  // The rankings first, then the pages: a cursor says which, `page:` before a page cursor.
+  const pages = cursor?.startsWith("page:") ?? false;
+  const numItems = Math.min(batchSize, 200);
+  const result = pages
+    ? await ctx.db.query("sitePageRanks").paginate({ cursor: cursor === "page:" ? null : cursor!.slice(5), numItems })
+    : await ctx.db.query("siteKeywordRanks").paginate({ cursor, numItems });
+  let updated = 0;
+  for (const row of result.page) {
+    if (row.url === undefined) continue;
+    await ctx.db.patch(row._id, { url: undefined, ...keptAddress(row.url, await hostOf(row.websiteId), row.page) });
+    updated += 1;
+  }
+  const next = result.isDone ? (pages ? null : "page:") : pages ? `page:${result.continueCursor}` : result.continueCursor;
+  return { cursor: next, isDone: result.isDone && pages, processed: result.page.length, updated };
 }

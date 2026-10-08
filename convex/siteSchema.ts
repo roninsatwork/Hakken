@@ -91,6 +91,14 @@ export const siteTables = {
     position: v.optional(v.number()),
     pagePosition: v.optional(v.number()),
     band: rankBandValidator,
+    /**
+     * The ranking page's full address, kept only where it is not the
+     * website's own host and `page` (`utils/pageAddresses.ts`); `www` when it
+     * is them with `www.`. Read with `addressOf`.
+     */
+    address: v.optional(v.string()),
+    www: v.optional(v.boolean()),
+    /** The full address as every row kept it before 2026-10-08: moved by `2026-10-08-page-addresses`, then gone. */
     url: v.optional(v.string()),
     /** The ranking page's path, or "" when there is none. */
     page: v.string(),
@@ -157,7 +165,11 @@ export const siteTables = {
     websiteId: v.id("websites"),
     locationCode: v.number(),
     page: v.string(),
-    url: v.string(),
+    /** The page's full address where it is not the website's own host and `page` (`utils/pageAddresses.ts`). */
+    address: v.optional(v.string()),
+    www: v.optional(v.boolean()),
+    /** The full address as every row kept it before 2026-10-08: moved by `2026-10-08-page-addresses`, then gone. */
+    url: v.optional(v.string()),
     section: v.string(),
     keywords: v.number(),
     bestPosition: v.number(),
