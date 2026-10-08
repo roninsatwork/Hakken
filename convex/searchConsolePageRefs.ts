@@ -14,11 +14,20 @@ import { appError } from "./utils/appError";
  * `https://www.morehandles.co.uk/valli-yabu-…-pair.html` — on every line of
  * every day: two thirds of a busy website's search-and-page lines. Now a
  * `pair` list's `pages` and a `page` list's `keys` hold a reference, `~` and
- * the page's number in base 36, written when a list is saved (`writeList`) and
- * read back to the address by the action reading the kept records
- * (`readKept`, from the page list read once: `addressesOf`).
+ * the page's number in base 36, given by the action collecting the day
+ * (`encodePagesFromAction`) and read back to the address by the action reading
+ * the kept records (`readKept`, from the page list read once: `addressesOf`).
  * Everything between — the roll-ups, which add lines up by their page — works
  * on the references as they are, and everything after sees addresses.
+ *
+ * The addresses are held 250 to a record, in the order each was first seen: a
+ * page's number is its place, its record times 250 and its place in the
+ * record (core-data-normalisation-plan.md §5.7). Never re-sorted — a number,
+ * once given, is on every kept line naming the page — so a new page goes on
+ * the end. Held one row a page, morehandles.co.uk's 9,243 addresses took 2.1
+ * MB, most of it each row's own keeping, and a second index holding every
+ * address again. An address is found only from the list read whole: once a
+ * run, by the action, which reads it whole to give numbers anyway.
  *
  * A value without the `~` is an address kept before 2026-10-05: read as it is,
  * and turned into a reference by `encodeKeptPages`.
@@ -38,147 +47,190 @@ function numberOf(ref: string): number {
   return Number.parseInt(ref.slice(REF_MARK.length), 36);
 }
 
-/** Addresses as references, a new number for each address the website has not had before. */
-export async function encodePages(ctx: MutationCtx, holdId: Id<"companyWebsites">, pages: readonly string[]): Promise<string[]> {
-  const known = new Map<string, string>();
-  let next: number | null = null;
-  for (const page of new Set(pages)) {
-    if (isPageRef(page)) continue;
-    const held = await ctx.db
-      .query("searchConsolePageRefs")
-      .withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", holdId).eq("page", page))
-      .first();
-    if (held) {
-      known.set(page, refOf(held.ref));
-      continue;
-    }
-    if (next === null) {
-      const last = await ctx.db
-        .query("searchConsolePageRefs")
-        .withIndex("by_hold_ref", (q) => q.eq("companyWebsiteId", holdId))
-        .order("desc")
-        .first();
-      next = (last?.ref ?? -1) + 1;
-    }
-    await ctx.db.insert("searchConsolePageRefs", { companyWebsiteId: holdId, page, ref: next });
-    known.set(page, refOf(next));
-    next += 1;
-  }
-  return pages.map((page) => known.get(page) ?? page);
-}
+/** Addresses a record holds: a few tens of kilobytes. */
+export const PAGE_RECORD = 250;
+/** Records read a step when an action reads a website's whole list. */
+const RECORDS_PER_READ = 20;
+/** New addresses added a call. */
+const PAGES_PER_ADD = 1_000;
+/** Records cleared a call when a website's Search Console goes: each up to 250 addresses. */
+const RECORDS_PER_DELETE = 40;
 
-/** References back to addresses; an address kept before references is returned as it is. */
-export async function decodePages(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, values: readonly string[]): Promise<string[]> {
-  const found = new Map<string, string>();
-  for (const value of new Set(values)) {
-    if (!isPageRef(value)) continue;
-    const held = await ctx.db
-      .query("searchConsolePageRefs")
-      .withIndex("by_hold_ref", (q) => q.eq("companyWebsiteId", holdId).eq("ref", numberOf(value)))
-      .first();
-    if (held) found.set(value, held.page);
-  }
-  return values.map((value) => found.get(value) ?? value);
-}
+/** A website's page list as an action holds it: each address by its number, and each number by its address. */
+export type PageList = { addresses: string[]; numbers: Map<string, number> };
 
-/** Page references read per step when an action reads a website's whole page list: small rows. */
-const REFS_PER_READ = 4_000;
-
-/** One page of a website's page list, reference by reference. */
+/** One page of a website's page list, record by record. */
 export const pageListPart = internalQuery({
   args: { holdId: v.id("companyWebsites"), cursor: v.union(v.string(), v.null()) },
-  returns: v.object({ refs: v.array(v.number()), pages: v.array(v.string()), continueCursor: v.string(), isDone: v.boolean() }),
+  returns: v.object({ records: v.array(v.object({ record: v.number(), addresses: v.array(v.string()) })), continueCursor: v.string(), isDone: v.boolean() }),
   handler: async (ctx, args) => {
     const page = await ctx.db
-      .query("searchConsolePageRefs")
-      .withIndex("by_hold_ref", (q) => q.eq("companyWebsiteId", args.holdId))
-      .paginate({ cursor: args.cursor, numItems: REFS_PER_READ });
-    return { refs: page.page.map((row) => row.ref), pages: page.page.map((row) => row.page), continueCursor: page.continueCursor, isDone: page.isDone };
+      .query("searchConsolePageAddresses")
+      .withIndex("by_hold_record", (q) => q.eq("companyWebsiteId", args.holdId))
+      .paginate({ cursor: args.cursor, numItems: RECORDS_PER_READ });
+    return { records: page.page.map((one) => ({ record: one.record, addresses: one.addresses })), continueCursor: page.continueCursor, isDone: page.isDone };
   },
 });
 
-/** Each action's page lists, read once however many lists it decodes. */
-const addressBooks = new WeakMap<object, Map<string, Promise<Map<string, string>>>>();
+async function readPageList(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promise<PageList> {
+  const addresses: string[] = [];
+  for (let cursor: string | null = null; ;) {
+    const part: { records: Array<{ record: number; addresses: string[] }>; continueCursor: string; isDone: boolean } =
+      await ctx.runQuery(internal.searchConsolePageRefs.pageListPart, { holdId, cursor });
+    for (const one of part.records) one.addresses.forEach((address, place) => (addresses[one.record * PAGE_RECORD + place] = address));
+    if (part.isDone) break;
+    cursor = part.continueCursor;
+  }
+  return { addresses, numbers: new Map(addresses.map((address, number) => [address, number])) };
+}
+
+/** Each action's page lists, read once however many lists it reads or writes. */
+const pageLists = new WeakMap<object, Map<string, Promise<PageList>>>();
 
 /**
- * A website's page list — reference to address — read once per action run,
- * a few thousand a step: what turns kept references back into addresses for
- * the periods. morehandles.co.uk's 26,000 pages are a few reads; looked up
- * one by one inside each read of kept records, they outran a query's second
- * (2026-10-05).
+ * A website's page list, read once per action run, a few records a step: what
+ * turns kept references back into addresses for the periods, and addresses
+ * into references for a collected day. morehandles.co.uk's pages are a few
+ * reads; looked up one by one inside each read of kept records, they outran a
+ * query's second (2026-10-05).
  */
-export async function addressesOf(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promise<Map<string, string>> {
-  const books = addressBooks.get(ctx) ?? new Map<string, Promise<Map<string, string>>>();
-  addressBooks.set(ctx, books);
-  const held = books.get(holdId);
-  if (held) return await held;
-  const reading = (async () => {
-    const book = new Map<string, string>();
-    for (let cursor: string | null = null; ;) {
-      const part: { refs: number[]; pages: string[]; continueCursor: string; isDone: boolean } =
-        await ctx.runQuery(internal.searchConsolePageRefs.pageListPart, { holdId, cursor });
-      part.refs.forEach((ref, index) => book.set(refOf(ref), part.pages[index]));
-      if (part.isDone) return book;
-      cursor = part.continueCursor;
-    }
-  })();
-  books.set(holdId, reading);
+export async function addressesOf(ctx: ActionCtx, holdId: Id<"companyWebsites">, again = false): Promise<PageList> {
+  const lists = pageLists.get(ctx) ?? new Map<string, Promise<PageList>>();
+  pageLists.set(ctx, lists);
+  const held = lists.get(holdId);
+  if (held && !again) return await held;
+  const reading = readPageList(ctx, holdId);
+  lists.set(holdId, reading);
   return await reading;
 }
 
-/** References back to addresses from a page list read whole; an address kept before references is returned as it is. */
-export function decodeWith(book: ReadonlyMap<string, string>, values: readonly string[]): string[] {
-  return values.map((value) => (isPageRef(value) ? book.get(value) ?? value : value));
+/** References back to addresses, from a page list read whole; an address kept before references is returned as it is. */
+export function decodeWith(list: PageList, values: readonly string[]): string[] {
+  return values.map((value) => (isPageRef(value) ? list.addresses[numberOf(value)] ?? value : value));
 }
 
-/** Every page reference a website holds, removed with its Search Console data. A page at a time; true when none is left. */
-export async function deletePageRefs(ctx: MutationCtx, holdId: Id<"companyWebsites">, most: number): Promise<boolean> {
-  const rows = await ctx.db.query("searchConsolePageRefs").withIndex("by_hold_ref", (q) => q.eq("companyWebsiteId", holdId)).take(most);
-  for (const row of rows) await ctx.db.delete(row._id);
-  return rows.length < most;
+/** References back to addresses inside a query, reading only the records they name. */
+export async function decodePages(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, values: readonly string[]): Promise<string[]> {
+  const records = new Map<number, string[]>();
+  for (const value of values) {
+    if (!isPageRef(value)) continue;
+    const record = Math.floor(numberOf(value) / PAGE_RECORD);
+    if (records.has(record)) continue;
+    const held = await ctx.db
+      .query("searchConsolePageAddresses")
+      .withIndex("by_hold_record", (q) => q.eq("companyWebsiteId", holdId).eq("record", record))
+      .first();
+    records.set(record, held?.addresses ?? []);
+  }
+  return values.map((value) => {
+    if (!isPageRef(value)) return value;
+    const number = numberOf(value);
+    return records.get(Math.floor(number / PAGE_RECORD))?.[number % PAGE_RECORD] ?? value;
+  });
+}
+
+/** Every page address a website holds, removed with its Search Console data. A few records a call; true when none is left. */
+export async function deletePageRefs(ctx: MutationCtx, holdId: Id<"companyWebsites">): Promise<boolean> {
+  const records = await ctx.db.query("searchConsolePageAddresses").withIndex("by_hold_record", (q) => q.eq("companyWebsiteId", holdId)).take(RECORDS_PER_DELETE);
+  for (const record of records) await ctx.db.delete(record._id);
+  return records.length < RECORDS_PER_DELETE;
 }
 
 // ---------------------------------------------------------------------------
-// From an action: a few hundred look-ups a step, remembered for the run
+// From an action: the list read once, new addresses put on its end
 // ---------------------------------------------------------------------------
 
 /**
- * Addresses given references in one step, at most: each is a look-up, and a
- * step stops at a few thousand. A busy website's day holds thousands of
- * addresses — morehandles.co.uk's conversion stopped on 2026-10-05 at three
- * kept records a step — so an action asks for them this many at a time.
+ * New addresses on the end of a website's list, numbered from `from` — when
+ * the list still ends there. Otherwise null, and nothing written: another run
+ * added pages since the action read the list, and might have added these.
  */
-const REFS_PER_STEP = 500;
-
-/** References for up to `REFS_PER_STEP` addresses, new numbers for those the website has not had. */
-export const refsForPages = internalMutation({
-  args: { holdId: v.id("companyWebsites"), pages: v.array(v.string()) },
-  returns: v.array(v.string()),
+export const addPages = internalMutation({
+  args: { holdId: v.id("companyWebsites"), from: v.number(), pages: v.array(v.string()) },
+  returns: v.union(v.number(), v.null()),
   handler: async (ctx, args) => {
-    if (args.pages.length > REFS_PER_STEP) throw appError("INVALID_INPUT", `At most ${REFS_PER_STEP} page addresses a step, not ${args.pages.length}.`);
-    return await encodePages(ctx, args.holdId, args.pages);
+    if (args.pages.length > PAGES_PER_ADD) throw appError("INVALID_INPUT", `At most ${PAGES_PER_ADD} page addresses a call, not ${args.pages.length}.`);
+    // Numbers given before the website's rows became records would be given twice (`turnRowsIntoRecords`).
+    const rows = await ctx.db.query("searchConsolePageRefs").withIndex("by_hold_ref", (q) => q.eq("companyWebsiteId", args.holdId)).first();
+    if (rows) throw appError("CONFLICT", "This website's page list is being moved into records; its pages are numbered once that is done.");
+    const last = await ctx.db
+      .query("searchConsolePageAddresses")
+      .withIndex("by_hold_record", (q) => q.eq("companyWebsiteId", args.holdId))
+      .order("desc")
+      .first();
+    const count = last ? last.record * PAGE_RECORD + last.addresses.length : 0;
+    if (count !== args.from) return null;
+    const pages = [...args.pages];
+    if (last && last.addresses.length < PAGE_RECORD) {
+      await ctx.db.patch(last._id, { addresses: [...last.addresses, ...pages.splice(0, PAGE_RECORD - last.addresses.length)] });
+    }
+    for (let record = Math.ceil((count + args.pages.length - pages.length) / PAGE_RECORD); pages.length > 0; record += 1) {
+      await ctx.db.insert("searchConsolePageAddresses", { companyWebsiteId: args.holdId, record, addresses: pages.splice(0, PAGE_RECORD) });
+    }
+    return args.from;
   },
 });
 
 /**
- * Addresses as references from an action: the ones not yet known asked for a
- * few hundred at a time, and remembered in `known` for the rest of the run —
- * a website's pages repeat from day to day.
+ * Addresses as references from an action: the website's list read once a run,
+ * and the addresses it does not hold put on its end, a thousand a call. When
+ * another run has added to the list meanwhile, it is read again and the
+ * addresses still missing added after.
  */
-export async function encodePagesFromAction(
-  ctx: ActionCtx,
-  holdId: Id<"companyWebsites">,
-  pages: readonly string[],
-  known: Map<string, string>,
-): Promise<string[]> {
-  const missing = [...new Set(pages)].filter((page) => !isPageRef(page) && !known.has(page));
-  for (let start = 0; start < missing.length; start += REFS_PER_STEP) {
-    const chunk = missing.slice(start, start + REFS_PER_STEP);
-    const refs: string[] = await ctx.runMutation(internal.searchConsolePageRefs.refsForPages, { holdId, pages: chunk });
-    chunk.forEach((page, index) => known.set(page, refs[index]));
+export async function encodePagesFromAction(ctx: ActionCtx, holdId: Id<"companyWebsites">, pages: readonly string[]): Promise<string[]> {
+  let list = await addressesOf(ctx, holdId);
+  for (let tries = 0; ; tries += 1) {
+    const missing = [...new Set(pages)].filter((page) => !isPageRef(page) && !list.numbers.has(page));
+    if (missing.length === 0) break;
+    const chunk = missing.slice(0, PAGES_PER_ADD);
+    const from: number | null = await ctx.runMutation(internal.searchConsolePageRefs.addPages, { holdId, from: list.addresses.length, pages: chunk });
+    if (from === null) {
+      if (tries >= 5) throw appError("CONFLICT", "The website's page list kept changing while its pages were being numbered.");
+      list = await addressesOf(ctx, holdId, true);
+      continue;
+    }
+    chunk.forEach((page, place) => {
+      list.addresses[from + place] = page;
+      list.numbers.set(page, from + place);
+    });
   }
-  return pages.map((page) => known.get(page) ?? page);
+  return pages.map((page) => (isPageRef(page) ? page : refOf(list.numbers.get(page)!)));
 }
+
+
+// ---------------------------------------------------------------------------
+// One row a page into records of 250, once (core-data plan §5.7)
+// ---------------------------------------------------------------------------
+
+/**
+ * A website's page rows as records, every number kept, in one go: the rows
+ * read in number order, written 250 to a record, and removed. A number with no
+ * row — none is given that way, but the move cannot tell — keeps its place
+ * empty. Run once per website on each deployment; a website already moved has
+ * no rows and is left alone.
+ */
+/** Rows moved in one go: under the 16,000 writes a mutation may make, with the records. */
+const MOVE_MOST = 15_000;
+
+export const turnRowsIntoRecords = internalMutation({
+  args: { holdId: v.id("companyWebsites") },
+  returns: v.object({ rows: v.number(), records: v.number() }),
+  handler: async (ctx, args) => {
+    const rows = await ctx.db.query("searchConsolePageRefs").withIndex("by_hold_ref", (q) => q.eq("companyWebsiteId", args.holdId)).take(MOVE_MOST + 1);
+    if (rows.length === 0) return { rows: 0, records: 0 };
+    if (rows.length > MOVE_MOST) throw appError("INVALID_INPUT", `More than ${MOVE_MOST} page rows: too many to move in one go.`);
+    const held = await ctx.db.query("searchConsolePageAddresses").withIndex("by_hold_record", (q) => q.eq("companyWebsiteId", args.holdId)).first();
+    if (held) throw appError("CONFLICT", "This website has page records and page rows both; nothing was moved.");
+    const addresses: string[] = Array.from({ length: rows.at(-1)!.ref + 1 }, () => "");
+    for (const row of rows) addresses[row.ref] = row.page;
+    let records = 0;
+    for (let start = 0; start < addresses.length; start += PAGE_RECORD, records += 1) {
+      await ctx.db.insert("searchConsolePageAddresses", { companyWebsiteId: args.holdId, record: start / PAGE_RECORD, addresses: addresses.slice(start, start + PAGE_RECORD) });
+    }
+    for (const row of rows) await ctx.db.delete(row._id);
+    return { rows: rows.length, records };
+  },
+});
 
 // ---------------------------------------------------------------------------
 // Turning the addresses kept before 2026-10-05 into references, once
@@ -225,14 +277,13 @@ export async function turnKeptStep(
   ctx: ActionCtx,
   holdId: Id<"companyWebsites">,
   cursor: string | null,
-  known: Map<string, string>,
 ): Promise<{ changed: number; continueCursor: string; isDone: boolean }> {
   const page: { records: Array<typeof addressedValidator.type>; continueCursor: string; isDone: boolean } =
     await ctx.runQuery(internal.searchConsolePageRefs.keptWithAddresses, { holdId, cursor });
   let changed = 0;
   for (const record of page.records) {
-    const keys = record.keys ? await encodePagesFromAction(ctx, holdId, record.keys, known) : undefined;
-    const pages = record.pages ? await encodePagesFromAction(ctx, holdId, record.pages, known) : undefined;
+    const keys = record.keys ? await encodePagesFromAction(ctx, holdId, record.keys) : undefined;
+    const pages = record.pages ? await encodePagesFromAction(ctx, holdId, record.pages) : undefined;
     const set: boolean = await ctx.runMutation(internal.searchConsolePageRefs.setRecordRefs, {
       recordId: record.recordId,
       ...(keys ? { keys } : {}),
@@ -262,18 +313,16 @@ export const encodeKeptPages = internalAction({
       ?? (await ctx.runQuery(internal.searchConsoleSync.connectionsWithFigures, {})).map((connection) => connection.holdId);
     let records = args.records ?? 0;
     let cursor = args.cursor ?? null;
-    let known = new Map<string, string>();
     for (let at = 0; at < holds.length;) {
       if (Date.now() - started > TURN_RUN_MS) {
         await ctx.scheduler.runAfter(0, internal.searchConsolePageRefs.encodeKeptPages, { holds: holds.slice(at), cursor, records });
         return null;
       }
-      const step = await turnKeptStep(ctx, holds[at], cursor, known);
+      const step = await turnKeptStep(ctx, holds[at], cursor);
       records += step.changed;
       if (step.isDone) {
         at += 1;
         cursor = null;
-        known = new Map();
       } else {
         cursor = step.continueCursor;
       }

@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { decodePages, isPageRef } from "./searchConsolePageRefs";
+import { decodePages, isPageRef, PAGE_RECORD } from "./searchConsolePageRefs";
 
 /**
  * Each page address kept once per website, the kept lists pointing to it
@@ -53,7 +53,7 @@ describe("page addresses kept once", () => {
     expect(kept.records[0].pages).toEqual(pair.pages);
     expect(kept.records[0].keys).toEqual(["door handles", "brass knobs", "lever"]);
     const book = await t.query(internal.searchConsolePageRefs.pageListPart, { holdId, cursor: null });
-    expect(book.pages.sort()).toEqual(["https://acme-shop.test/a", "https://acme-shop.test/b"]);
+    expect(book.records.flatMap((record) => record.addresses)).toEqual(["https://acme-shop.test/a", "https://acme-shop.test/b"]);
   });
 
   test("a day of more addresses than one step may look up is turned a few hundred at a time", async () => {
@@ -78,5 +78,63 @@ describe("page addresses kept once", () => {
     expect(new Set(keys).size).toBe(1_200);
     expect(keys.every(isPageRef)).toBe(true);
     expect(await t.run(async (ctx) => await decodePages(ctx, holdId, keys))).toEqual(pages);
+  });
+});
+
+describe("a website's page list, 250 addresses a record", () => {
+  const holdOf = (t: ReturnType<typeof harness>) => t.run(async (ctx) => {
+    const companyId = await ctx.db.insert("companies", { name: "Acme", createdAt: 1 });
+    const websiteId = await ctx.db.insert("websites", { host: "acme-shop.test", displayHost: "acme-shop.test", firstSeenAt: 1 });
+    return await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: 1 });
+  });
+  const records = (t: ReturnType<typeof harness>) => t.run(async (ctx) => (await ctx.db.query("searchConsolePageAddresses").collect())
+    .sort((left, right) => left.record - right.record).map((one) => [one.record, one.addresses.length]));
+
+  test("new pages go on the end, filling the last record first; a number once given never moves", async () => {
+    const t = harness();
+    const holdId = await holdOf(t);
+    const first = Array.from({ length: PAGE_RECORD + 100 }, (_, index) => `https://acme-shop.test/a/${index}`);
+    const more = Array.from({ length: 200 }, (_, index) => `https://acme-shop.test/b/${index}`);
+
+    expect(await t.mutation(internal.searchConsolePageRefs.addPages, { holdId, from: 0, pages: first })).toBe(0);
+    expect(await records(t)).toEqual([[0, PAGE_RECORD], [1, 100]]);
+    expect(await t.mutation(internal.searchConsolePageRefs.addPages, { holdId, from: first.length, pages: more })).toBe(first.length);
+    expect(await records(t)).toEqual([[0, PAGE_RECORD], [1, PAGE_RECORD], [2, 50]]);
+
+    const refs = [0, PAGE_RECORD + 99, first.length, first.length + 199].map((number) => `~${number.toString(36)}`);
+    expect(await t.run(async (ctx) => await decodePages(ctx, holdId, [...refs, "https://acme-shop.test/kept-before"]))).toEqual([
+      first[0], first[PAGE_RECORD + 99], more[0], more[199], "https://acme-shop.test/kept-before",
+    ]);
+  });
+
+  test("a list another run has added to since it was read is not added to", async () => {
+    const t = harness();
+    const holdId = await holdOf(t);
+    await t.mutation(internal.searchConsolePageRefs.addPages, { holdId, from: 0, pages: ["https://acme-shop.test/a"] });
+    // Read when it was empty: the page it would add may be there already.
+    expect(await t.mutation(internal.searchConsolePageRefs.addPages, { holdId, from: 0, pages: ["https://acme-shop.test/a"] })).toBeNull();
+    expect(await records(t)).toEqual([[0, 1]]);
+  });
+
+  test("a website's rows become records with every number kept, and no page is numbered until they have", async () => {
+    const t = harness();
+    const holdId = await holdOf(t);
+    // Numbers 0 to 299, all but 7.
+    await t.run(async (ctx) => {
+      for (let ref = 0; ref < 300; ref += 1) {
+        if (ref !== 7) await ctx.db.insert("searchConsolePageRefs", { companyWebsiteId: holdId, page: `https://acme-shop.test/p/${ref}`, ref });
+      }
+    });
+    await expect(t.mutation(internal.searchConsolePageRefs.addPages, { holdId, from: 0, pages: ["https://acme-shop.test/new"] })).rejects.toThrow(/being moved/);
+
+    expect(await t.mutation(internal.searchConsolePageRefs.turnRowsIntoRecords, { holdId })).toEqual({ rows: 299, records: 2 });
+    expect(await records(t)).toEqual([[0, PAGE_RECORD], [1, 50]]);
+    expect(await t.run(async (ctx) => await decodePages(ctx, holdId, ["~0", "~8", `~${(299).toString(36)}`]))).toEqual([
+      "https://acme-shop.test/p/0", "https://acme-shop.test/p/8", "https://acme-shop.test/p/299",
+    ]);
+    expect(await t.run(async (ctx) => (await ctx.db.query("searchConsolePageRefs").collect()).length)).toBe(0);
+    // Moved already: nothing to do.
+    expect(await t.mutation(internal.searchConsolePageRefs.turnRowsIntoRecords, { holdId })).toEqual({ rows: 0, records: 0 });
+    expect(await t.mutation(internal.searchConsolePageRefs.addPages, { holdId, from: 300, pages: ["https://acme-shop.test/new"] })).toBe(300);
   });
 });

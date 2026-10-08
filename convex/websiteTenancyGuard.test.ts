@@ -194,6 +194,8 @@ describe("Search Console is read only through the company's own hold", () => {
     // Each build's book of the ready-made lists, and which build each list is read from (core-data plan §5.1).
     "searchConsolePeriodBooks",
     "searchConsolePeriodUses",
+    // Each page address the daily lines point to, 250 a record (core-data plan §5.7).
+    "searchConsolePageAddresses",
   ];
 
   test.each(TABLES)("%s names the hold it belongs to", (table) => {

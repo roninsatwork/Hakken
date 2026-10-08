@@ -278,6 +278,7 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   // ── Search Console ────────────────────────────────────────────────────────
   searchConsoleConnections: RECORD,
   searchConsoleTokens: RECORD,
+  searchConsolePageAddresses: RECORD,
   searchConsolePageRefs: RECORD,
   searchConsoleTracked: RECORD,
   searchConsoleSeen: RECORD,

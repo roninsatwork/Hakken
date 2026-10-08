@@ -373,8 +373,18 @@ export const searchConsoleTables = {
   /**
    * Each page address a website's kept lists point to, once (finish-off plan
    * item 2A, `searchConsolePageRefs.ts`): a `pair` list's `pages` and a `page`
-   * list's `keys` hold `~` and `ref` in base 36 rather than the address.
+   * list's `keys` hold `~` and the page's number in base 36 rather than the
+   * address. 250 addresses a record, in the order each was first seen; a
+   * page's number is `record` times 250 and its place in `addresses`
+   * (core-data-normalisation-plan.md §5.7).
    */
+  searchConsolePageAddresses: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    record: v.number(),
+    addresses: v.array(v.string()),
+  }).index("by_hold_record", ["companyWebsiteId", "record"]),
+
+  /** One row a page, before §5.7: emptied into `searchConsolePageAddresses` once (`turnRowsIntoRecords`), then removed. */
   searchConsolePageRefs: defineTable({
     companyWebsiteId: v.id("companyWebsites"),
     page: v.string(),

@@ -17,7 +17,7 @@ import { daysNewestFirst, newestWholeDay, shiftDay } from "./searchConsoleDays";
 import { isTrackedHold } from "./utils/websitePairing";
 import { fromGoogle, pack, packedColumns, rowsOf, type Packed } from "./utils/searchConsolePacks";
 import { slotParts } from "./searchConsoleRollups";
-import { deletePageRefs, encodePages, encodePagesFromAction } from "./searchConsolePageRefs";
+import { deletePageRefs, encodePagesFromAction } from "./searchConsolePageRefs";
 import { deleteBooks, keywordPlaces } from "./searchConsoleKeywordBooks";
 import { deletePeriodBooks } from "./searchConsolePeriodBooks";
 import { keptLines, keptSearchesOf } from "./searchConsoleKeep";
@@ -426,8 +426,6 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
     }
   };
 
-  // The website's page references known so far in the step: its pages repeat from day to day.
-  const pageRefs = new Map<string, string>();
   // Each kind of result's searches kept, read once a step and grown day by day, newest first (`searchConsoleKeep.ts`).
   const keeps = new Map<SearchType, Promise<Set<string>>>();
   const keptFor = (type: SearchType) => {
@@ -486,10 +484,10 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
         parts = pack(rows, list === "pair");
       }
       for (const [index, part] of parts.entries()) {
-        // Page addresses as references, asked for a few hundred at a time and remembered for the step (`searchConsolePageRefs.ts`).
-        const keys = list === "page" ? await encodePagesFromAction(ctx, state.companyWebsiteId, part.keys, pageRefs)
+        // Page addresses as references, from the website's page list read once a step (`searchConsolePageRefs.ts`).
+        const keys = list === "page" ? await encodePagesFromAction(ctx, state.companyWebsiteId, part.keys)
           : list === "pair" ? await keywordPlaces(ctx, state.companyWebsiteId, args.country, day, part.keys) : part.keys;
-        const pages = part.pages ? await encodePagesFromAction(ctx, state.companyWebsiteId, part.pages, pageRefs) : undefined;
+        const pages = part.pages ? await encodePagesFromAction(ctx, state.companyWebsiteId, part.pages) : undefined;
         await ctx.runMutation(internal.searchConsoleSync.writeList, {
           ...where,
           searchType: type,
@@ -714,9 +712,6 @@ export const writeList = internalMutation({
       for (const old of await slotParts(ctx, args.companyWebsiteId, args.country, args.searchType, args.list, "DAY", args.day)) await ctx.db.delete(old._id);
     }
     if (args.keys.length === 0) return null;
-    // Each page address kept once, the lines pointing to it (`searchConsolePageRefs.ts`).
-    const keys = args.list === "page" && typeof args.keys !== "string" ? await encodePages(ctx, args.companyWebsiteId, args.keys) : args.keys;
-    const pages = args.pages ? await encodePages(ctx, args.companyWebsiteId, args.pages) : undefined;
     await ctx.db.insert("searchConsoleLists", {
       companyWebsiteId: args.companyWebsiteId,
       ...countryField(args.country),
@@ -725,8 +720,9 @@ export const writeList = internalMutation({
       grain: "DAY",
       start: args.day,
       part: args.part,
-      keys,
-      ...(pages ? { pages } : {}),
+      // Page addresses arrive as references, given by the action (`searchConsolePageRefs.ts`).
+      keys: args.keys,
+      ...(args.pages ? { pages: args.pages } : {}),
       // Its numbers packed as text, a few characters each where Convex keeps nine bytes (`packNumbers`).
       ...packedColumns(args),
       fetchedAt: args.fetchedAt,
@@ -850,7 +846,7 @@ async function clearSome(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites
   for (const row of seenDays) await ctx.db.delete(row._id);
   // Its page addresses and keyword books go last, once no kept list points to them.
   const refsGone = lists.length < PURGE_BATCH
-    ? await deletePageRefs(ctx, companyWebsiteId, PURGE_ROWS) && await deleteBooks(ctx, companyWebsiteId, "ALL", PURGE_ROWS) && await deletePeriodBooks(ctx, companyWebsiteId, "ALL", PURGE_ROWS)
+    ? await deletePageRefs(ctx, companyWebsiteId) && await deleteBooks(ctx, companyWebsiteId, "ALL", PURGE_ROWS) && await deletePeriodBooks(ctx, companyWebsiteId, "ALL", PURGE_ROWS)
     : false;
   return lists.length < PURGE_BATCH && periods.length < PURGE_BATCH && days.length < PURGE_ROWS && seen.length < PURGE_ROWS && weeks.length < PURGE_ROWS
     && seenDays.length < PURGE_ROWS && refsGone;

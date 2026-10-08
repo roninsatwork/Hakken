@@ -325,7 +325,7 @@ async function tasksFor(ctx: ActionCtx, connectionId: Id<"searchConsoleConnectio
 }
 
 /** One step of a task: what it found, and where to go on. */
-async function stepOf(ctx: ActionCtx, holdId: Id<"companyWebsites">, task: Task, go: boolean, cursor: string | null, known: Map<string, string>, keeps: Map<string, Set<string> & { judged?: boolean }>): Promise<Step> {
+async function stepOf(ctx: ActionCtx, holdId: Id<"companyWebsites">, task: Task, go: boolean, cursor: string | null, keeps: Map<string, Set<string> & { judged?: boolean }>): Promise<Step> {
   if (task.kind === "unkept" || task.kind === "unkeptSeen") {
     const searchType = task.searchType ?? "web";
     const which = `${task.country ?? ""}|${searchType}`;
@@ -355,7 +355,7 @@ async function stepOf(ctx: ActionCtx, holdId: Id<"companyWebsites">, task: Task,
   if (task.kind === "seen") return await ctx.runMutation(internal.searchConsoleTidy.countrySeenStep, { holdId, country: task.country!, go, cursor });
   if (task.kind === "addresses") {
     if (!go) return await ctx.runQuery(internal.searchConsoleTidy.addressesStep, { holdId, cursor });
-    const step = await turnKeptStep(ctx, holdId, cursor, known);
+    const step = await turnKeptStep(ctx, holdId, cursor);
     return { found: step.changed, continueCursor: step.continueCursor, isDone: step.isDone };
   }
   const scope = task.country === undefined ? {} : { country: task.country };
@@ -430,8 +430,6 @@ export const tidyKeptFigures = internalAction({
     let site = args.site ?? null;
     let tally = args.tally ?? NO_TALLY;
     const lines = [...(args.lines ?? [])];
-    // The website's page references known so far: its pages repeat from record to record.
-    let known = new Map<string, string>();
     // Each kind of result's searches kept, for all countries or one, read once a run (round two, D).
     let keeps = new Map<string, Set<string> & { judged?: boolean }>();
     while (at < connections.length) {
@@ -451,7 +449,7 @@ export const tidyKeptFigures = internalAction({
       }
       if (site.task < site.tasks.length) {
         const task = site.tasks[site.task];
-        const step = await stepOf(ctx, holdId, task, args.go, site.cursor, known, keeps);
+        const step = await stepOf(ctx, holdId, task, args.go, site.cursor, keeps);
         const field = FIELD_OF[task.kind];
         site = { ...site, tally: { ...site.tally, [field]: site.tally[field] + step.found } };
         site = step.isDone ? { ...site, task: site.task + 1, cursor: null } : { ...site, cursor: step.continueCursor };
@@ -462,7 +460,6 @@ export const tidyKeptFigures = internalAction({
       lines.push(lineOf(site.host, site.countries, site.tally, args.go));
       tally = add(tally, site.tally);
       site = null;
-      known = new Map();
       keeps = new Map();
       at += 1;
     }
@@ -487,7 +484,7 @@ const TABLES = [
   "searchConsoleWeeks",
   "searchConsoleSeen",
   "searchConsoleSeenDays",
-  "searchConsolePageRefs",
+  "searchConsolePageAddresses",
   "searchConsoleKeywordBooks",
   "searchConsolePeriodBooks",
   "searchConsolePeriodUses",
@@ -501,7 +498,7 @@ const SIZE_PAGE: Record<Table, number> = {
   searchConsoleWeeks: 2_000,
   searchConsoleSeen: 2_000,
   searchConsoleSeenDays: 2_000,
-  searchConsolePageRefs: 2_000,
+  searchConsolePageAddresses: 100,
   searchConsoleKeywordBooks: 8,
   searchConsolePeriodBooks: 50,
   searchConsolePeriodUses: 500,
@@ -543,8 +540,8 @@ export const sizeStep = internalQuery({
               ? await ctx.db.query("searchConsoleSeen").withIndex("by_hold_country_type_kind_key", (q) => q.eq("companyWebsiteId", hold)).paginate(paging)
               : args.table === "searchConsoleSeenDays"
                 ? await ctx.db.query("searchConsoleSeenDays").withIndex("by_hold_country_type_kind_day", (q) => q.eq("companyWebsiteId", hold)).paginate(paging)
-                : args.table === "searchConsolePageRefs"
-                  ? await ctx.db.query("searchConsolePageRefs").withIndex("by_hold_ref", (q) => q.eq("companyWebsiteId", hold)).paginate(paging)
+                : args.table === "searchConsolePageAddresses"
+                  ? await ctx.db.query("searchConsolePageAddresses").withIndex("by_hold_record", (q) => q.eq("companyWebsiteId", hold)).paginate(paging)
                   : args.table === "searchConsoleKeywordBooks"
                     ? await ctx.db.query("searchConsoleKeywordBooks").withIndex("by_hold_country_month_chunk", (q) => q.eq("companyWebsiteId", hold)).paginate(paging)
                     : args.table === "searchConsolePeriodBooks"
