@@ -457,6 +457,7 @@ import type * as siteSummaries from "../siteSummaries.js";
 import type * as sitemapRead from "../sitemapRead.js";
 import type * as sitemaps from "../sitemaps.js";
 import type * as sites from "../sites.js";
+import type * as storageMeasure from "../storageMeasure.js";
 import type * as streamingService from "../streamingService.js";
 import type * as system from "../system.js";
 import type * as systemHealth from "../systemHealth.js";
@@ -1127,6 +1128,7 @@ declare const fullApi: ApiFromModules<{
   sitemapRead: typeof sitemapRead;
   sitemaps: typeof sitemaps;
   sites: typeof sites;
+  storageMeasure: typeof storageMeasure;
   streamingService: typeof streamingService;
   system: typeof system;
   systemHealth: typeof systemHealth;
