@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { decodePages, isPageRef } from "./searchConsolePageRefs";
+import { decodePages } from "./searchConsolePageRefs";
 import { decryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { recentWindow } from "./searchConsoleSync";
@@ -82,7 +82,12 @@ function fakeGoogle(overrides: Partial<Google> = {}): Google {
     if (analytics) {
       if (google.analyticsStatus) return new Response("refused", { status: google.analyticsStatus });
       const property = decodeURIComponent(analytics[1]);
-      const ask = JSON.parse(body) as { startDate: string; endDate: string; type: string; dimensions: string[]; startRow: number };
+      const ask = JSON.parse(body) as {
+        startDate: string; endDate: string; type: string; dimensions: string[]; startRow: number;
+        dimensionFilterGroups?: Array<{ filters: Array<{ dimension: string; expression: string }> }>;
+      };
+      // Only one search's or one page's rows, when asked for them (a country filter it does not split by).
+      const only = (ask.dimensionFilterGroups ?? []).flatMap((group) => group.filters).filter((filter) => filter.dimension === "query" || filter.dimension === "page");
       const days = google.figures[property]?.[ask.type] ?? {};
       if (ask.startRow > 0) return Response.json({});
       const figures = (row: Row) => ({ clicks: row.clicks, impressions: row.impressions, ctr: row.clicks / row.impressions, position: row.position ?? 3.5 });
@@ -101,6 +106,7 @@ function fakeGoogle(overrides: Partial<Google> = {}): Google {
           ? (held.pair ?? (held.query ?? []).map((row) => ({ ...row, page: "https://acme-shop.test/" }))).map((pair) => ({ keys: [pair.key, pair.page], row: pair }))
           : (held[ask.dimensions[0] as "query"] ?? []).map((row) => ({ keys: [row.key], row }));
         for (const { keys, row: one } of rows) {
+          if (only.some((filter) => keys[ask.dimensions.indexOf(filter.dimension)] !== filter.expression)) continue;
           const { position } = figures(one);
           const sum = sums.get(keys.join("\u0000")) ?? { keys, clicks: 0, impressions: 0, positionSum: 0 };
           sum.clicks += one.clicks;
@@ -580,19 +586,18 @@ describe("collecting", () => {
       .query("searchConsolePeriods")
       .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", list).eq("period", period).eq("which", which))
       .collect());
-    // By keyword, each page carrying how many keywords it brought; by page, each keyword how many pages it was shown with.
-    expect(await slot("pair", "30")).toMatchObject([{ firstKey: "emergency plumber", keys: ["emergency plumber", "plumber leeds"], counts: [2, 2] }]);
-    // Each page kept as its number in both (store less round two, C)…
-    const byPage = await slot("pairByPage", "30");
-    expect(byPage).toMatchObject([{ keys: ["plumber leeds", "emergency plumber"], counts: [1, 1] }]);
-    expect(isPageRef(byPage[0].firstKey!)).toBe(true);
-    expect((await slot("pair", "30"))[0].pages!.every(isPageRef)).toBe(true);
-    // …and read back as addresses: one page's keywords found by its address, one keyword's pages named by theirs.
-    const within = (kind: "query" | "page", key: string) => admin.query(api.searchConsoleLists.searchConsoleListPage, {
-      siteId, searchType: "web", dimension: kind === "query" ? "page" : "query", within: { kind, key }, from: "2026-08-28", to: NEWEST, page: 1, rows: 25,
-    });
-    expect((await within("page", "https://acme-shop.test/")).rows.map((one: { key: string }) => one.key)).toEqual(["plumber leeds", "emergency plumber"]);
-    expect((await within("query", "plumber leeds")).rows.map((one: { key: string }) => one.key)).toEqual(["https://acme-shop.test/"]);
+    // One keyword's pages and one page's keywords are not kept (keep-less-history-plan.md, 5.1)…
+    expect(await slot("pair", "30")).toEqual([]);
+    expect(await slot("pairByPage", "30")).toEqual([]);
+    // …but asked of Google when opened, each row's count across the website from the keyword and page lists kept.
+    const within = async (kind: "query" | "page", key: string) => {
+      const answer = await admin.action(api.searchConsoleLists.searchConsoleLiveList, {
+        siteId, searchType: "web", dimension: kind === "query" ? "page" : "query", within: { kind, key }, from: "2026-08-28", to: NEWEST,
+      });
+      return answer.ok ? answer.rows.flat().map((one) => [one.key, one.count]) : answer.problem;
+    };
+    expect(await within("page", "https://acme-shop.test/")).toEqual([["plumber leeds", 1], ["emergency plumber", 1]]);
+    expect(await within("query", "plumber leeds")).toEqual([["https://acme-shop.test/", 2]]);
     // Every keyword here was shown with one page: none competing, and the one page Google showed counted.
     expect(await slot("competing", "30")).toMatchObject([{ keys: [], shown: 1 }]);
     expect(await slot("competing", "30", "BEFORE")).toEqual([]);

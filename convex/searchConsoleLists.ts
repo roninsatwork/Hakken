@@ -12,7 +12,7 @@ import { SEARCH_CONSOLE_PERIODS, searchTypeValidator, type SearchConsolePeriod, 
 import { askLive, checkedRange, countryFilters } from "./searchConsoleReads";
 import { checkedCountry, countryScope, type CountryScope } from "./searchConsoleCountries";
 import { daysIn, historyLimitDay, periodBefore } from "./searchConsoleDays";
-import { readKeyed, readPeriod, type PeriodRow } from "./searchConsolePeriodReads";
+import { readPeriod, type PeriodRow } from "./searchConsolePeriodReads";
 import { checkedLongest, consoleLimitsOf, consoleLimitsValidator, viewRulesOf, type ConsoleLimits } from "./searchConsoleLimits";
 import { UNKNOWN, factsFor } from "./searchConsoleFacts";
 import { holdBrandNames } from "./holdProfiles";
@@ -264,25 +264,6 @@ async function sitesKeywordsOf(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
 }
 
 /**
- * The pairs holding one keyword or one page, as rows keyed by the other
- * side: a page's keywords, or a keyword's pages — each with how many pages
- * (or keywords) it has across the whole website, kept beside it. Read by
- * index from the pairs kept in key order, for every period (drift fixes,
- * 2026-10-03): never a whole period of pairs, never Google.
- */
-async function pairsWithin(
-  ctx: { db: QueryCtx["db"] },
-  companyWebsiteId: Id<"companyWebsites">,
-  searchType: SearchType,
-  period: SearchConsolePeriod,
-  which: "NOW" | "BEFORE",
-  within: { kind: "query" | "page"; key: string },
-  country: string | undefined,
-): Promise<{ from: string; to: string; rows: PeriodRow[] } | null> {
-  return await readKeyed(ctx, companyWebsiteId, searchType, within.kind === "query" ? "pair" : "pairByPage", period, which, within.key, country);
-}
-
-/**
  * The rows a view is shaped from: Wins and losses adds the keywords gone
  * since the days before, a tracked list those it tracks that Google did not
  * show — both read from what the list already holds, nothing more.
@@ -369,9 +350,10 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   }
   // A country keeps no country list of its own: Google answers it, filtered to that one country.
   if (country !== undefined && dimension === "country") return live;
-  const read = async (which: "NOW" | "BEFORE") => (within
-    ? await pairsWithin(ctx, companyWebsiteId, args.searchType, period, which, within, country)
-    : await readPeriod(ctx, companyWebsiteId, args.searchType, dimension, period, which, country));
+  // One keyword's pages, or one page's keywords: asked of Google when opened, for every period
+  // (keep-less-history-plan.md, 5.1; Anthony, 2026-10-08: "ok lets do this one").
+  if (within) return live;
+  const read = async (which: "NOW" | "BEFORE") => await readPeriod(ctx, companyWebsiteId, args.searchType, dimension, period, which, country);
   const now = await read("NOW");
   if (!now) return { ...empty, live: false, preparing: true };
   const before = await read("BEFORE");
@@ -667,6 +649,59 @@ async function withListFacts(
 }
 
 /**
+ * Each row's count across the whole website, kept beside the list it is in
+ * for a ready-made period: a page's keywords on the page list, a keyword's
+ * pages on the keyword list — for the rows of one keyword's pages or one
+ * page's keywords asked of Google (keep-less-history-plan.md, 5.1). Nothing
+ * for other dates, as before.
+ */
+export const keptCounts = internalQuery({
+  args: {
+    companyId: v.id("companies"),
+    siteId: v.id("companyWebsites"),
+    searchType: searchTypeValidator,
+    list: v.union(v.literal("query"), v.literal("page")),
+    from: v.string(),
+    to: v.string(),
+    country: v.optional(v.string()),
+    keys: v.array(v.string()),
+  },
+  returns: v.array(v.object({ key: v.string(), count: v.number() })),
+  handler: async (ctx, args) => {
+    const hold = await ctx.db.get(args.siteId);
+    if (!hold || hold.companyId !== args.companyId) return [];
+    const connection = await connectionOf(ctx, hold._id);
+    if (!connection?.newestDay) return [];
+    const scope = args.country === undefined ? { read: "ALL" as const } : await countryScope(ctx, hold, connection, args.country);
+    if (scope.read === "LIVE") return [];
+    const period = periodOf(args.from, args.to, scope.read === "KEPT" ? scope.newestDay : connection.newestDay);
+    if (!period) return [];
+    const kept = await readPeriod(ctx, hold._id, args.searchType, args.list, period, "NOW", scope.read === "KEPT" ? scope.country : undefined);
+    const wanted = new Set(args.keys);
+    return (kept?.rows ?? []).flatMap((row) => (wanted.has(row.key) && row.count !== undefined ? [{ key: row.key, count: row.count }] : []));
+  },
+});
+
+/** Rows asked of Google with each one's count across the website, where the list kept for the dates has it. */
+async function withKeptCounts(
+  ctx: ActionCtx,
+  companyId: Id<"companies">,
+  args: { siteId: Id<"companyWebsites">; searchType: SearchType; from: string; to: string; country?: string },
+  list: "query" | "page",
+  rows: PeriodRow[],
+  most: number,
+): Promise<PeriodRow[]> {
+  // The rows a screen can list, the most clicks first: each a key one count is looked up for.
+  const keys = [...rows].sort((left, right) => right.clicks - left.clicks).slice(0, most).map((row) => row.key);
+  const counts: Array<{ key: string; count: number }> = await ctx.runQuery(internal.searchConsoleLists.keptCounts, {
+    companyId, siteId: args.siteId, searchType: args.searchType, list, from: args.from, to: args.to,
+    ...(args.country === undefined ? {} : { country: args.country }), keys,
+  });
+  const byKey = new Map(counts.map((one) => [one.key, one.count]));
+  return rows.map((row) => (byKey.has(row.key) ? { ...row, count: byKey.get(row.key) } : row));
+}
+
+/**
  * A list for dates that are not a ready-made period — or for one country or
  * device — asked of Google when chosen and sent whole, put through the
  * page's rule, for the page to search, filter, order and page itself: with
@@ -725,9 +760,12 @@ export const searchConsoleLiveList = tenantAction({
         : { ok: false as const, problem: "GOOGLE_REFUSED" as const },
     ]);
     if (!now.ok) return now;
+    // One keyword's pages, or one page's keywords: each row's count across the whole website — a page's keywords,
+    // a keyword's pages — from the list kept for the dates, when they are a ready-made period (5.1).
+    const counted = within ? await withKeptCounts(ctx, companyId, args, within.kind === "query" ? "page" : "query", now.rows, limits.pairedRows) : now.rows;
     // Real against estimated chooses its rows by Sites' estimates: those are looked up before its rule; every other page's after.
     const factsFirst = view === "estimates" && kind !== null && target.facts !== null;
-    const rows = factsFirst && kind && target.facts ? await withFacts(ctx, target.facts, kind, now.rows, limits.liveFactsRows) : now.rows;
+    const rows = factsFirst && kind && target.facts ? await withFacts(ctx, target.facts, kind, counted, limits.liveFactsRows) : counted;
     const tracked = new Set(target.tracked);
     const earlierRows = earlier.ok ? earlier.rows : null;
     const pageKinds = dimension === "page" && target.pageKinds ? pageKindsFrom(target.pageKinds) : null;

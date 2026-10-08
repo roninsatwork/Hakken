@@ -131,15 +131,6 @@ export function decodeWith(book: ReadonlyMap<string, string>, values: readonly s
   return values.map((value) => (isPageRef(value) ? book.get(value) ?? value : value));
 }
 
-/** One address's reference, as a ready-made period keyed by page keeps it; null for an address the website has not had. */
-export async function refFor(ctx: { db: QueryCtx["db"] }, holdId: Id<"companyWebsites">, page: string): Promise<string | null> {
-  const held = await ctx.db
-    .query("searchConsolePageRefs")
-    .withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", holdId).eq("page", page))
-    .first();
-  return held ? refOf(held.ref) : null;
-}
-
 /** Every page reference a website holds, removed with its Search Console data. A page at a time; true when none is left. */
 export async function deletePageRefs(ctx: MutationCtx, holdId: Id<"companyWebsites">, most: number): Promise<boolean> {
   const rows = await ctx.db.query("searchConsolePageRefs").withIndex("by_hold_ref", (q) => q.eq("companyWebsiteId", holdId)).take(most);

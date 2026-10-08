@@ -4,7 +4,7 @@ import { useAction, useMutation, useQuery } from "convex/react";
 
 import { answerQueries, convexPath } from "@/src/test/siteViewFixtures";
 import { expectApprovedLook } from "@/src/test/lookOutline";
-import { PAGE_ROW, ROW, STATUS, TRACKING, list } from "@/src/test/searchConsoleFixtures";
+import { PAGE_ROW, ROW, STATUS, SUMMARY, TRACKING, list } from "@/src/test/searchConsoleFixtures";
 import SearchConsolePagesPage from "./[siteId]/pages/page";
 import SearchConsolePagePage from "./[siteId]/pages/page/page";
 import SearchConsoleKeywordsPage from "./[siteId]/keywords/page";
@@ -44,6 +44,8 @@ const PERFORMANCE = { days: DAYS, totals: TOTALS, previous: BEFORE, named: 69, l
 
 /** A keyword's or a page's own days, and where its clicks came from, as Google answers them. */
 const SERIES = { ok: true, days: DAYS, totals: TOTALS, previous: BEFORE, previousHeld: true };
+/** One page's keywords, or one keyword's pages, as Google answers them when the screen opens (keep-less-history-plan.md, 5.1). */
+const pairsOf = (row: unknown) => ({ ok: true, rows: [[row]], cut: null, named: 44, comparable: true, summary: SUMMARY });
 const SPLITS = {
   ok: true,
   countries: [{ key: "gbr", clicks: 30, impressions: 1000, share: 0.68 }, { key: "usa", clicks: 14, impressions: 564, share: 0.32 }],
@@ -102,11 +104,10 @@ describe("Search Console's approved looks: pages and keywords", () => {
     answer(
       {
         "searchConsoleConnect:searchConsoleStatus": STATUS,
-        "searchConsoleLists:searchConsoleListPage": list([ROW]),
         "searchConsoleTracking:searchConsoleTracking": TRACKING,
         "searchConsoleTracking:searchConsoleIsTracked": true,
       },
-      { searchConsoleKeySeries: SERIES, searchConsoleKeySplits: SPLITS },
+      { searchConsoleKeySeries: SERIES, searchConsoleKeySplits: SPLITS, searchConsoleLiveList: pairsOf(ROW) },
     );
     const { container } = render(<SearchConsolePagePage />);
     await screen.findByText("ai agency");
@@ -120,11 +121,10 @@ describe("Search Console's approved looks: pages and keywords", () => {
     answer(
       {
         "searchConsoleConnect:searchConsoleStatus": STATUS,
-        "searchConsoleLists:searchConsoleListPage": list([PAGE_ROW]),
         "searchConsoleTracking:searchConsoleTracking": TRACKING,
         "searchConsoleTracking:searchConsoleIsTracked": true,
       },
-      { searchConsoleKeySeries: SERIES, searchConsoleKeySplits: SPLITS },
+      { searchConsoleKeySeries: SERIES, searchConsoleKeySplits: SPLITS, searchConsoleLiveList: pairsOf(PAGE_ROW) },
     );
     const { container } = render(<SearchConsoleKeywordPage />);
     await screen.findByText("/ai-agency/");

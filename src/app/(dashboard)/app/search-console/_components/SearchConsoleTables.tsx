@@ -175,9 +175,10 @@ export function useSearchConsoleList(options: {
     to: range.to,
     ...countryArg(country),
   };
-  // Other dates, or one device, are asked of Google: the periods are kept for the whole website and each country kept ready —
-  // one keyword's pages, one page's keywords and Pages competing included, for every period (drift fixes, 2026-10-03).
-  const asksGoogle = Boolean(device) || !isReadyMade(range, status?.connection?.newestDay);
+  // Other dates, or one device, are asked of Google: the periods are kept for the whole website and each country kept ready,
+  // Pages competing included. One keyword's pages and one page's keywords are asked of Google for every period, their
+  // counts from the lists kept (keep-less-history-plan.md, 5.1).
+  const asksGoogle = Boolean(device) || within !== undefined || !isReadyMade(range, status?.connection?.newestDay);
   const ready = held && (within === undefined || Boolean(within.key));
   // A country the website does not keep ready — or keeps, before its first collection — the server answers `live`.
   // That answer is held for these dates and this country, so a search, a filter or an order, worked out here from

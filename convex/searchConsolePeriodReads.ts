@@ -1,7 +1,6 @@
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { SearchConsolePeriod, SearchConsolePeriodList, SearchType } from "./searchConsoleSchema";
-import { decodePages, isPageRef, refFor } from "./searchConsolePageRefs";
 import { rowsOf, type Row } from "./utils/searchConsolePacks";
 import { PARTS_MOST } from "./searchConsoleRollups";
 import { UNKNOWN } from "./searchConsoleFacts";
@@ -126,76 +125,4 @@ function withKept(row: Row, part: KeptBeside, index: number): PeriodRow {
     ...(part.volumes ? { volume: part.volumes[index] ?? UNKNOWN } : {}),
     ...(part.estimates ? { estimate: part.estimates[index] ?? UNKNOWN } : {}),
   };
-}
-
-/**
- * One keyword's pages (`pair`, kept by keyword) or one page's keywords
- * (`pairByPage`, kept by page) from a ready-made period: the parts starting
- * with the key and the one just before, which may hold its first rows — read
- * by index, never the whole period. Each row is the other side — a
- * keyword's pages keyed by page — with the figures kept beside it. Null when
- * the period is not built, or was built before the pairs were kept in key
- * order (2026-10-03): the screen says it is being prepared until the next
- * build.
- */
-export async function readKeyed(
-  ctx: { db: QueryCtx["db"] },
-  companyWebsiteId: Id<"companyWebsites">,
-  searchType: SearchType,
-  list: "pair" | "pairByPage",
-  askedPeriod: SearchConsolePeriod,
-  which: "NOW" | "BEFORE",
-  askedKey: string,
-  asked?: string,
-): Promise<{ from: string; to: string; rows: PeriodRow[] } | null> {
-  // As `readPeriod`: twelve months kept as the 90 days reads them.
-  const country = asked;
-  const own = await firstPartOf(ctx, companyWebsiteId, country, searchType, list, askedPeriod, which);
-  const ninety = await ninetyInstead(ctx, { companyWebsiteId, country, searchType, list }, askedPeriod, which, own, own && own.keys.length === 0 ? 1 : 2);
-  const period: SearchConsolePeriod = ninety ? "90" : askedPeriod;
-  const first = ninety ?? own;
-  if (!first || (first.firstKey === undefined && first.keys.length > 0)) return null;
-  // A period built since round two C keeps each page as its number: a page asked for is found by it.
-  const pagesNumbered = first.firstKey !== undefined && isPageRef(first.firstKey);
-  const key = list === "pairByPage" && pagesNumbered ? await refFor(ctx, companyWebsiteId, askedKey) : askedKey;
-  if (key === null) return { from: first.from, to: first.to, rows: [] };
-  const before = await ctx.db
-    .query("searchConsolePeriods")
-    .withIndex("by_hold_country_type_list_period_first", (q) => q
-      .eq("companyWebsiteId", companyWebsiteId).eq("country", country).eq("searchType", searchType).eq("list", list).eq("period", period).eq("which", which)
-      .gte("firstKey", "").lt("firstKey", key))
-    .order("desc")
-    // The part just before, of the build read — an older build being cleared may sit beside it.
-    .take(1)
-    .then(async (parts) => (parts[0] === undefined || parts[0].builtAt === first.builtAt ? parts[0] ?? null : (await ctx.db
-      .query("searchConsolePeriods")
-      .withIndex("by_hold_country_type_list_period_first", (q) => q
-        .eq("companyWebsiteId", companyWebsiteId).eq("country", country).eq("searchType", searchType).eq("list", list).eq("period", period).eq("which", which)
-        .gte("firstKey", "").lt("firstKey", key))
-      .order("desc")
-      .take(FIRST_PARTS_READ)).find((part) => part.builtAt === first.builtAt) ?? null));
-  const starting = await ctx.db
-    .query("searchConsolePeriods")
-    .withIndex("by_hold_country_type_list_period_first", (q) => q
-      .eq("companyWebsiteId", companyWebsiteId).eq("country", country).eq("searchType", searchType).eq("list", list).eq("period", period).eq("which", which)
-      .eq("firstKey", key))
-    .take(PARTS_MOST);
-  const byKeyword = list === "pair";
-  const rows: PeriodRow[] = [];
-  const built = starting.filter((part) => part.builtAt === first.builtAt);
-  for (const part of [...(before ? [before] : []), ...built.sort((left, right) => left.part - right.part)]) {
-    let index = 0;
-    for (const row of rowsOf(part)) {
-      if ((byKeyword ? row.key : row.page) === key) {
-        rows.push(withKept({ key: byKeyword ? (row.page ?? "") : row.key, clicks: row.clicks, impressions: row.impressions, positionSum: row.positionSum }, part, index));
-      }
-      index += 1;
-    }
-  }
-  // A keyword's pages are its few rows' numbers: back to addresses here.
-  if (byKeyword) {
-    const addresses = await decodePages(ctx, companyWebsiteId, rows.map((row) => row.key));
-    return { from: first.from, to: first.to, rows: rows.map((row, index) => ({ ...row, key: addresses[index] })) };
-  }
-  return { from: first.from, to: first.to, rows };
 }

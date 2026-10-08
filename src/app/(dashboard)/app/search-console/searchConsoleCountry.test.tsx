@@ -331,10 +331,11 @@ describe("one country choice per page", () => {
     actions = {
       searchConsoleKeySeries: vi.fn().mockResolvedValue({ ok: true, days: PERFORMANCE.days, totals: FIGURES, previous: null, previousHeld: true }),
       searchConsoleKeySplits: vi.fn().mockResolvedValue({ ok: true, countries: [{ key: "gbr", clicks: 8, impressions: 100, share: 1 }], devices: [] }),
+      // Its pages are asked of Google when it opens (keep-less-history-plan.md, 5.1).
+      searchConsoleLiveList: vi.fn().mockResolvedValue({ ok: true, rows: [[{ ...ROW, key: "https://acme-shop.test/plumbers/" }]], cut: null, named: 8, comparable: true, summary: SUMMARY }),
     };
     answer({
       "searchConsoleConnect:searchConsoleStatus": STATUS,
-      "searchConsoleLists:searchConsoleListPage": { ...LIST, rows: [{ ...ROW, key: "https://acme-shop.test/plumbers/" }] },
       "searchConsoleTracking:searchConsoleTracking": TRACKING,
       "searchConsoleTracking:searchConsoleIsTracked": false,
     });
@@ -344,7 +345,7 @@ describe("one country choice per page", () => {
     expect(screen.queryByRole("combobox", { name: /country/i })).not.toBeInTheDocument();
     expect(actions.searchConsoleKeySeries).toHaveBeenCalledWith(expect.objectContaining({ dimension: "query", key: "plumber leeds", country: "gbr" }));
     expect(actions.searchConsoleKeySplits).toHaveBeenCalledWith(expect.objectContaining({ country: "gbr" }));
-    expect(askedOf("searchConsoleListPage").at(-1)).toMatchObject({ within: { kind: "query", key: "plumber leeds" }, country: "gbr" });
+    expect(actions.searchConsoleLiveList).toHaveBeenCalledWith(expect.objectContaining({ within: { kind: "query", key: "plumber leeds" }, country: "gbr" }));
   });
 });
 

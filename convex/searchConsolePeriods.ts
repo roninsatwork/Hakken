@@ -30,7 +30,6 @@ import {
   firstWeekKept,
   monthStart,
   pack,
-  packByKey,
   stepEnd,
   weekStart,
   type ChartStep,
@@ -563,11 +562,10 @@ async function pagesPerAppearance(
  * with nothing now is emptied, so no period outlives its days. One kept list
  * is read at a time, so a run holds one list's days at once, never all.
  *
- * The pairs are written three ways for the screens that read them (drift
- * fixes, 2026-10-03): in keyword order and in page order, so one keyword's
- * pages and one page's keywords are found by index for every period, and the
- * pairs of keywords two or more pages were shown for, for Pages competing —
- * so no screen reads a whole period of pairs, and none asks Google for them.
+ * The pairs of keywords two or more pages were shown for are written for
+ * Pages competing. One keyword's pages and one page's keywords are asked of
+ * Google when opened, their counts read from the keyword and page lists
+ * (keep-less-history-plan.md, 5.1; in key order here until 2026-10-08).
  */
 export async function buildSitePeriods(
   ctx: ActionCtx,
@@ -594,15 +592,6 @@ export async function buildSitePeriods(
   const scope = country === undefined ? {} : { country };
   const ninety = allSlots.find((slot) => slot.period === "90" && slot.which === "NOW")?.span ?? null;
   const asNinety = (slot: Slot) => sameAsNinety(slot, ninety);
-  // The website's page list, both ways, read once a run (`addressesOf`, already read to turn the kept pages back).
-  let numbers: { book: Map<string, string>; refOf: Map<string, string> } | null = null;
-  const pageNumbers = async () => {
-    if (!numbers) {
-      const book = await addressesOf(ctx, companyWebsiteId);
-      numbers = { book, refOf: new Map([...book].map(([ref, address]) => [address, ref])) };
-    }
-    return numbers;
-  };
   const writeParts = async (searchType: SearchType, list: SearchConsolePeriodList, slot: Slot, given: PartToWrite[] | null) => {
     // Twelve months on the 90 days' own days: one empty part saying its days, the 90 days read instead (`sameAsNinety`).
     const parts = given !== null && asNinety(slot) ? [] : given;
@@ -651,39 +640,6 @@ export async function buildSitePeriods(
       } : {}),
     })));
   };
-  /**
-   * The pairs in key order — by keyword (`pair`) or by page (`pairByPage`) —
-   * each row carrying the other side's figures on the periods the screens
-   * list: a keyword's pages each page's keyword count, type and estimated
-   * visits; a page's keywords each keyword's page count, intent and
-   * searches a month.
-   */
-  const writeKeyed = async (searchType: SearchType, list: "pair" | "pairByPage", slot: Slot, pairs: Row[] | null, other: { counts: Counts; facts: Facts | undefined }) => {
-    // One search's pages and one page's searches keep no period before (store less round two, E):
-    // those lists show no change, as twelve months' never did; the searches' and pages' own lists keep theirs.
-    if (pairs === null || slot.which === "BEFORE") return await writeParts(searchType, list, slot, null);
-    const byKeyword = list === "pair";
-    // Each page kept as its number (store less round two, C), packed in that order, so a page's searches are found by it.
-    const pages = await pageNumbers();
-    const numbered = pairs.map((row) => (row.page !== undefined && pages.refOf.has(row.page) ? { ...row, page: pages.refOf.get(row.page)! } : row));
-    // A page's figures are looked up by its address; a keyword's by itself.
-    const lookup = byKeyword ? (value: string) => pages.book.get(value) ?? value : (value: string) => value;
-    await writeParts(searchType, list, slot, packByKey(numbered, byKeyword ? "query" : "page").map((packed): PartToWrite => {
-      if (slot.which !== "NOW") return packed;
-      const others = (byKeyword ? packed.pages : packed.keys).map(lookup);
-      const { counts, facts } = other;
-      return {
-        ...packed,
-        counts: others.map((key) => counts.get(key)?.count ?? 0),
-        ...(facts ? {
-          kinds: others.map((key) => facts.get(key)?.kind ?? "UNJUDGED"),
-          ...(byKeyword
-            ? { estimates: others.map((key) => facts.get(key)?.number ?? UNKNOWN) }
-            : { volumes: others.map((key) => facts.get(key)?.number ?? UNKNOWN) }),
-        } : {}),
-      };
-    }));
-  };
 
   const held = await ctx.runQuery(internal.searchConsoleRollups.typesHeld, { companyWebsiteId, ...scope });
   const types = options.searchType === undefined ? held : held.filter((type) => type === options.searchType);
@@ -714,7 +670,6 @@ export async function buildSitePeriods(
     const pairsKept = lists.includes("pair") ? await readKept(ctx, companyWebsiteId, country, searchType, "pair", newest) : null;
     const pairsAsked = pairsKept ? await askedOf(searchType, "pair") : null;
     const queryFacts = pairsKept ? await factsOf("query", [...keysIn(pairsKept, "keys"), ...keysAsked(pairsAsked, "key")]) : undefined;
-    const pairPageFacts = pairsKept ? await factsOf("page", [...keysIn(pairsKept, "pages"), ...keysAsked(pairsAsked, "page")]) : undefined;
     if (!onlyLong) await ctx.runMutation(internal.searchConsolePeriods.writeWeeks, {
       companyWebsiteId,
       ...scope,
@@ -743,8 +698,10 @@ export async function buildSitePeriods(
       const pages = bySide(pairs, "page");
       const queryCounts: Counts = new Map([...queries.values()].map((summed) => [summed.key, { count: summed.count, top: summed.top }]));
       const pagesCounted: Counts = new Map([...pages.values()].map((summed) => [summed.key, { count: summed.count, top: summed.top }]));
-      await writeKeyed(searchType, "pair", slot, pairs, { counts: pagesCounted, facts: pairPageFacts });
-      await writeKeyed(searchType, "pairByPage", slot, pairs, { counts: queryCounts, facts: queryFacts });
+      // One keyword's pages and one page's keywords are asked of Google when opened (keep-less-history-plan.md, 5.1):
+      // not kept, and the lists kept before cleared.
+      await writeParts(searchType, "pair", slot, null);
+      await writeParts(searchType, "pairByPage", slot, null);
       // Pages competing: the pairs of keywords two or more pages were shown for, and how many pages Google showed at all.
       if (slot.which === "NOW") {
         const competing = pairs.filter((pair) => (queries.get(pair.key)?.count ?? 0) >= 2);

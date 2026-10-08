@@ -15,7 +15,7 @@ graphs — there must be a better, more efficient way of storing these going
 forward"; "this is about not saving data we don't need to store and don't
 access regularly"; "make a documented plan in the repo for this".
 
-**Status, 2026-10-07: phases 1 to 6 built and live on dev; phase 7's 5.2, 5.3 and 5.7 built; 5.1 and 5.4 wait on Anthony (below).**
+**Status, 2026-10-08: phases 1 to 7 built and live on dev; 5.4 left until 2027 (below).**
 Started the same day, once the Hakken tasks work had finished (Anthony: "the
 other agent has finished … we can start this plan now"; see "Beside the
 Hakken tasks work"), on the `keep-less-history` branch merged into `dev`, not
@@ -167,18 +167,22 @@ since will reach the whole reach, and that limit can go.
   counts and tops, and no countries, devices or rich results lists, whose
   screens show no change.
 
-**Waiting on Anthony:**
+- **5.1 — a keyword's pages and a page's keywords asked of Google, built
+  2026-10-08** (Anthony, shown the screen: "ok lets do this one"; the call is
+  free). A keyword's or page's own screen asks Google for its pages or
+  keywords when it opens, for every period (`within` asked live; the screen
+  asks at once); each row's count across the website — a page's keywords, a
+  keyword's pages — comes from the page or keyword list kept for the dates
+  (`keptCounts`, `searchConsoleLists.ts`), so the column stays filled for the
+  ready-made periods and says "–" for other dates, as before. The two pair
+  lists are no longer built, and each build clears those held (`readKeyed`,
+  `packByKey` and `refFor` gone). Pages competing keeps its own list. On
+  morehandles.co.uk they were 15.3 MB of its 72.6 (8.4 MB a keyword's pages,
+  6.9 MB a page's keywords). Asked first whether the column would be lost:
+  it would not, which is what made it worth doing.
 
-- **5.1 — a keyword's pages and a page's keywords asked of Google.** Built as
-  planned, the keyword's or page's own screen would show "–" in its "Your
-  pages" / "Keywords" count column for every period, as it does today for
-  dates that are not a ready-made period: Google's answer for one keyword
-  does not say how many keywords each of its pages has across the website.
-  About 15 MB of morehandles.co.uk's 84 (part 5's audit). The choice: (a)
-  build it, the column showing "–"; (b) keep the two lists as they are; or
-  (c) keep them for 7 and 30 days only, the 90 days and twelve months asked
-  of Google with "–". Recommended: (c) — most of the saving is the 90 days,
-  and the column a person reads most, the 30 days', stays.
+**Left until 2027:**
+
 - **5.4 — the first- and last-seen register.** Measured: of
   morehandles.co.uk's 50,241 rows (11.9 MB), about 9,200 are pages (as many
   as its page list), about 2 MB; nothing is older than Google's 16 months —

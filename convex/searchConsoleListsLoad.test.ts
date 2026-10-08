@@ -4,7 +4,7 @@ import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { readList } from "./searchConsoleLists";
-import { PART_ROWS, pack, packByKey, type Row } from "./utils/searchConsolePacks";
+import { PART_ROWS, pack, type Row } from "./utils/searchConsolePacks";
 
 /**
  * The Search Console lists stay quick on a large website
@@ -177,13 +177,14 @@ describe("a large website's Search Console", () => {
   });
 
   /**
-   * Drift fixes, 2026-10-03: one keyword's pages, one page's keywords and
-   * Pages competing had asked Google for 90 days and 12 months — a year of
-   * Pages competing took 33 seconds. They read the ready-made pairs kept in
-   * key order, and Pages competing its own list: a few parts by index for
-   * every period, never a whole period of pairs.
+   * Drift fixes, 2026-10-03: Pages competing had asked Google for 90 days and
+   * 12 months — a year of it took 33 seconds. It reads its own list, a few
+   * parts, never a whole period of pairs. One keyword's pages and one page's
+   * keywords, each one keyword's or page's few rows, are asked of Google when
+   * opened (keep-less-history-plan.md, 5.1): the server reads no period for
+   * them.
    */
-  test("one keyword's pages, one page's keywords and Pages competing over 12 months read a few parts by index, never the whole year", async () => {
+  test("Pages competing over 12 months reads its own small list, never the year's pairs; one keyword's pages and one page's keywords are asked of Google", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const KEYWORDS = 20_000;
     const PAGES = 500;
@@ -208,12 +209,10 @@ describe("a large website's Search Console", () => {
         companyId, companyWebsiteId: siteId, websiteId, status: "CONNECTED", property: "sc-domain:big.co.uk",
         newestDay: NEWEST, oldestDay: "2025-09-27", createdAt: Date.now(), updatedAt: Date.now(),
       });
-      const parts = (list: "pair" | "pairByPage" | "competing" | "query", packed: ReturnType<typeof pack>) => packed.map((part, index) => ctx.db.insert("searchConsolePeriods", {
+      const parts = (list: "competing" | "query", packed: ReturnType<typeof pack>) => packed.map((part, index) => ctx.db.insert("searchConsolePeriods", {
         companyWebsiteId: siteId, searchType: "web", list, ...year, part: index, ...part, builtAt: 1,
       }));
       await Promise.all([
-        ...parts("pair", packByKey(pairs, "query")),
-        ...parts("pairByPage", packByKey(pairs, "page")),
         ...parts("competing", pack(competing, true).map((part) => ({ ...part, shown: PAGES }))),
         ...parts("query", pack(Array.from({ length: KEYWORDS }, (_, keyword) => ({ key: `search ${String(keyword).padStart(5, "0")}`, clicks: 6, impressions: 90, positionSum: 450 })), false)),
       ]);
@@ -226,14 +225,13 @@ describe("a large website's Search Console", () => {
     });
     const periodDocuments = (reads: Read[]) => reads.filter((one) => one.table === "searchConsolePeriods").reduce((sum, one) => sum + one.documents, 0);
 
-    // One keyword's three pages: the period's first part, the part before the keyword and any starting with it.
+    // One keyword's pages, and one page's keywords: asked of Google, no period read.
     const pagesOf = await read({ within: { kind: "query", key: "search 12345" } });
-    expect(pagesOf.list).toMatchObject({ live: false, preparing: false, listed: 3 });
-    expect(periodDocuments(pagesOf.reads)).toBeLessThanOrEqual(3);
-    // One page's keywords: 120 of them, from the pairs kept by page.
+    expect(pagesOf.list).toMatchObject({ live: true, preparing: false });
+    expect(periodDocuments(pagesOf.reads)).toBe(0);
     const keywordsOf = await read({ dimension: "page", within: { kind: "page", key: "https://big.co.uk/page-250" } });
-    expect(keywordsOf.list).toMatchObject({ live: false, preparing: false, listed: 120 });
-    expect(periodDocuments(keywordsOf.reads)).toBeLessThanOrEqual(3);
+    expect(keywordsOf.list).toMatchObject({ live: true, preparing: false });
+    expect(periodDocuments(keywordsOf.reads)).toBe(0);
     // Pages competing: the keyword list and its own small list, never the year's pairs.
     const competingList = await read({ view: "competing" });
     expect(competingList.list).toMatchObject({ live: false, preparing: false, listed: 2_000 });
