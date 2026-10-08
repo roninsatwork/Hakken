@@ -8307,14 +8307,7 @@
       },
       "saveFailed": "Your profile was not saved. Try again.",
       "photoFailed": "The photo could not be uploaded. Try again.",
-      "photoLabel": "Profile photo",
-      "usage": {
-        "poolTitle": "AI Messaging Pool",
-        "unlimited": "Unlimited",
-        "planLabel": "Plan:",
-        "resets": "(Resets monthly)",
-        "limitReached": "Usage limit reached. All non-critical AI interactions are paused until the next billing cycle."
-      }
+      "photoLabel": "Profile photo"
     },
     "logins": {
       "tabs": {

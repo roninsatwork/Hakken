@@ -8307,14 +8307,7 @@
       },
       "saveFailed": "Il profilo non è stato salvato. Riprova.",
       "photoFailed": "Impossibile caricare la foto. Riprova.",
-      "photoLabel": "Foto del profilo",
-      "usage": {
-        "poolTitle": "Messaggi AI disponibili",
-        "unlimited": "Illimitati",
-        "planLabel": "Piano:",
-        "resets": "(si azzera ogni mese)",
-        "limitReached": "Limite di utilizzo raggiunto. Tutte le interazioni AI non essenziali sono sospese fino al prossimo ciclo di fatturazione."
-      }
+      "photoLabel": "Foto del profilo"
     },
     "logins": {
       "tabs": {

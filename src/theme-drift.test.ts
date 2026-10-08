@@ -107,6 +107,7 @@ function countDrift() {
 // 2026-09-29: every pill went (status-labels plan), and 89 colour literals with them: 772 → 683.
 // 2026-10-07: the chat's code block took the theme's colours (4), and 2 left as slack were taken up: 683 → 677.
 // 2026-10-08: the profile's Preferences tab lost its hand-drawn theme pictures (27): 677 → 650.
+// 2026-10-08: the profile's AI Messaging Pool box went, its red warning with it (1): 650 → 649.
 const DRIFT_BASELINE = ratchets.theme;
 
 /**
