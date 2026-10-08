@@ -72,10 +72,9 @@ describe("a rebuild writes only what changed", () => {
     for (const websiteId of [own.websiteId, rival]) await t.action(internal.siteSummaries.rebuildSite, { websiteId, locationCode: UK });
 
     const stored = await t.run(async (ctx) => ({
-      rows: (await ctx.db.query("siteContentGaps").collect()).length,
       copies: (await ctx.db.query("siteListCopies").collect()).filter((copy) => copy.kind === "gap").length,
     }));
-    expect(stored).toEqual({ rows: 0, copies: 0 });
+    expect(stored).toEqual({ copies: 0 });
   });
 
   test("a list's copy: the same rows write nothing, so a table reading it is not woken; new rows are written", async () => {

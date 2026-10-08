@@ -157,7 +157,6 @@ export default defineSchema({
   })
     /** Every company's rows, and everyone asking one question: writers and purges only, never a screen. */
     .index("by_website", ["websiteId"])
-    .index("by_website_active", ["websiteId", "isActive"])
     .index("by_prompt", ["prompt"])
     /** A company's own list: how every screen and the planner read it. */
     .index("by_hold", ["companyWebsiteId"])
@@ -181,8 +180,6 @@ export default defineSchema({
   })
     /** Every company's rows, and everyone tracking one phrase: writers and purges only, never a screen. */
     .index("by_website", ["websiteId"])
-    .index("by_website_keyword", ["websiteId", "keyword"])
-    .index("by_website_active", ["websiteId", "isActive"])
     .index("by_keyword", ["keyword"])
     /** A company's own list: how every screen and the planner read it. */
     .index("by_hold", ["companyWebsiteId"])
@@ -286,8 +283,7 @@ export default defineSchema({
     decidedBy: v.optional(v.id("users")),
   })
     .index("by_company_website_state", ["companyWebsiteId", "state"])
-    .index("by_key", ["companyWebsiteId", "kind", "subject"])
-    .index("by_company_state", ["companyId", "state"]),
+    .index("by_key", ["companyWebsiteId", "kind", "subject"]),
 
   /**
    * One of a company's own websites.
@@ -673,7 +669,6 @@ export default defineSchema({
     discoveredAt: v.number(),
   })
     .index("by_company_website", ["companyWebsiteId"])
-    .index("by_company", ["companyId"])
     .index("by_company_website_host", ["companyWebsiteId", "host"]),
 
 
@@ -818,7 +813,6 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_website_day", ["mentionedWebsiteId", "day"])
-    .index("by_website_url", ["mentionedWebsiteId", "url"])
     /** One page's citations under one question on one engine: what a recount reads (`recountCitedPage`). */
     .index("by_website_url_question", ["mentionedWebsiteId", "url", "prompt", "engine"])
     .index("by_pull", ["pullId"]),
@@ -1088,7 +1082,6 @@ export default defineSchema({
     truncated: v.boolean(),
     computedAt: v.number(),
   })
-    .index("by_company_date", ["companyKey", "date"])
     .index("by_date", ["date"]),
 
   /**
@@ -1121,7 +1114,7 @@ export default defineSchema({
     /** True when the estate outgrew one rebuild's read — the skills rollup's own honesty flag. */
     isPartial: v.boolean(),
     computedAt: v.number(),
-  }).index("by_company", ["companyKey"]),
+  }),
 
   inventoryRollups: defineTable({
     key: v.string(),
@@ -1234,7 +1227,6 @@ export default defineSchema({
   }).index("email", ["email"])
     .index("by_plan_override", ["planOverrideId"])
     .index("by_company", ["companyId"])
-    .index("by_token", ["tokenIdentifier"])
     /*
      * Sorting the admin user directory by login recency, within a role or a
      * company. The trailing field is what makes the sort server-side; without
@@ -1286,8 +1278,7 @@ export default defineSchema({
     acceptedAt: v.optional(v.number()),
   })
     .index("by_email", ["email"])
-    .index("by_company_status", ["companyId", "status"])
-    .index("by_token", ["token"]),
+    .index("by_company_status", ["companyId", "status"]),
     
   emailTemplates: defineTable({
     templateType: v.string(), // "INVITE"
@@ -1419,7 +1410,6 @@ export default defineSchema({
     revokedAt: v.optional(v.number()),
     revocationReason: v.optional(v.string()),
   })
-    .index("by_company_status_created", ["companyId", "status", "createdAt"])
     .index("by_company_created", ["companyId", "createdAt"])
     .index("by_prefix", ["keyPrefix"])
     .index("by_created", ["createdAt"]),
@@ -1446,8 +1436,6 @@ export default defineSchema({
     error: v.optional(v.string()),
     requestedAt: v.number(),
   })
-    .index("by_company_requested", ["companyId", "requestedAt"])
-    .index("by_api_key_requested", ["apiKeyId", "requestedAt"])
     .index("by_api_key_status_requested", ["apiKeyId", "status", "requestedAt"])
     .index("by_requested", ["requestedAt"]),
 
@@ -1465,7 +1453,6 @@ export default defineSchema({
     requestedAt: v.number(),
   })
     .index("by_actor_action_requested", ["actorId", "actionName", "requestedAt"])
-    .index("by_company_action_requested", ["companyId", "actionName", "requestedAt"])
     .index("by_requested", ["requestedAt"]),
 
   /** One successful admission per signed live-voice ticket, shared by every relay instance. */
@@ -1600,9 +1587,6 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   })
-    .index("by_company_created", ["companyId", "createdAt"])
-    .index("by_company_status_created", ["companyId", "status", "createdAt"])
-    .index("by_status_created", ["status", "createdAt"])
     .index("by_created", ["createdAt"]),
 
   authEvents: defineTable({
@@ -1650,7 +1634,6 @@ export default defineSchema({
     provider: v.optional(v.string()),
     reasonCode: v.optional(v.string()),
   })
-    .index("by_email", ["email", "timestamp"])
     .index("by_email_type_timestamp", ["email", "eventType", "timestamp"])
     .index("by_company", ["companyId", "timestamp"])
     .index("by_type", ["eventType", "timestamp"])
@@ -1684,8 +1667,7 @@ export default defineSchema({
   })
     .index("by_agent", ["agentId", "createdAt"])
     .index("by_createdAt", ["createdAt"])
-    .index("by_company_created", ["companyId", "createdAt"])
-    .index("by_provider_created", ["providerKey", "createdAt"]),
+    .index("by_company_created", ["companyId", "createdAt"]),
 
   // Agent Raw Debug Logs (Execution Payload Storage)
   agentLogs: defineTable({
@@ -1726,7 +1708,6 @@ export default defineSchema({
     .index("by_agent", ["agentId", "createdAt"])
     .index("by_createdAt", ["createdAt"])
     .index("by_run", ["runId", "createdAt"])
-    .index("by_agent_outcome", ["agentId", "outcome", "createdAt"])
     .searchIndex("search_content", {
       searchField: "promptContent",
       filterFields: ["agentId"]
@@ -1841,9 +1822,7 @@ export default defineSchema({
     // The rollup rebuild reads "everything since yesterday" regardless of
     // status; without this that read is a fan-out across every status.
     .index("by_started", ["startedAt"])
-    .index("by_thread_started", ["threadId", "startedAt"])
-    .index("by_workflow_started", ["workflowId", "startedAt"])
-    .index("by_schedule_started", ["scheduleId", "startedAt"]),
+    .index("by_thread_started", ["threadId", "startedAt"]),
 
   /**
    * The resumable state of an in-flight agent run: one row per run, replaced as
@@ -1902,8 +1881,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_run", ["runId"])
-    .index("by_status_updated", ["status", "updatedAt"])
-    .index("by_company_updated", ["companyId", "updatedAt"]),
+    .index("by_status_updated", ["status", "updatedAt"]),
 
   /**
    * Completed side-effecting tool calls, keyed by the caller's idempotency key.
@@ -1966,9 +1944,6 @@ export default defineSchema({
     error: v.optional(v.string()),
   })
     .index("by_run_step", ["runId", "stepIndex"])
-    .index("by_run_status_step", ["runId", "status", "stepIndex"])
-    .index("by_agent_started", ["agentId", "startedAt"])
-    .index("by_company_started", ["companyId", "startedAt"])
     /** One agent's steps for one company: a collection run's calls in the Collector's log. */
     .index("by_agent_company_started", ["agentId", "companyId", "startedAt"]),
 
@@ -2150,8 +2125,7 @@ export default defineSchema({
   })
     .index("by_run_created", ["runId", "createdAt"])
     .index("by_agent_created", ["agentId", "createdAt"])
-    .index("by_company_created", ["companyId", "createdAt"])
-    .index("by_status_created", ["status", "createdAt"]),
+    .index("by_company_created", ["companyId", "createdAt"]),
 
   agentMemoryCandidates: defineTable({
     agentId: v.id("agents"),
@@ -2212,11 +2186,9 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_run_created", ["sourceRunId", "createdAt"])
-    .index("by_reflection_created", ["sourceReflectionId", "createdAt"])
     .index("by_skill_status_created", ["sourceSkillId", "status", "createdAt"])
     .index("by_agent_status_created", ["agentId", "status", "createdAt"])
     .index("by_company_status_created", ["companyId", "status", "createdAt"])
-    .index("by_status_created", ["status", "createdAt"])
     .index("by_agent_rejected_fingerprint", ["agentId", "rejectedFingerprint"]),
 
   agentEvalFixtures: defineTable({
@@ -2260,11 +2232,9 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_run_created", ["sourceRunId", "createdAt"])
-    .index("by_agent_created", ["agentId", "createdAt"])
     .index("by_agent_version_created", ["agentVersionId", "createdAt"])
     .index("by_agent_status_created", ["agentId", "status", "createdAt"])
-    .index("by_company_status_created", ["companyId", "status", "createdAt"])
-    .index("by_status_created", ["status", "createdAt"]),
+    .index("by_company_status_created", ["companyId", "status", "createdAt"]),
 
   agentImprovementSuggestions: defineTable({
     agentId: v.id("agents"),
@@ -2308,10 +2278,7 @@ export default defineSchema({
     .index("by_run_created", ["sourceRunId", "createdAt"])
     .index("by_agent_status_created", ["agentId", "status", "createdAt"])
     .index("by_company_status_created", ["companyId", "status", "createdAt"])
-    .index("by_eval_fixture_created", ["sourceEvalFixtureId", "createdAt"])
-    .index("by_reflection_created", ["sourceReflectionId", "createdAt"])
-    .index("by_skill_status_created", ["sourceSkillId", "status", "createdAt"])
-    .index("by_status_created", ["status", "createdAt"]),
+    .index("by_skill_status_created", ["sourceSkillId", "status", "createdAt"]),
 
   agentVersions: defineTable({
     agentId: v.id("agents"),
@@ -2408,8 +2375,7 @@ export default defineSchema({
   })
     .index("by_agent_enabled", ["agentId", "isEnabled"])
     .index("by_skill_enabled", ["skillId", "isEnabled"])
-    .index("by_agent_skill", ["agentId", "skillId"])
-    .index("by_company_enabled", ["companyId", "isEnabled"]),
+    .index("by_agent_skill", ["agentId", "skillId"]),
 
   agentMemories: defineTable({
     agentId: v.id("agents"),
@@ -2463,10 +2429,8 @@ export default defineSchema({
     deletedBy: v.optional(v.id("users")),
   })
     .index("by_agent_active_updated", ["agentId", "isActive", "updatedAt"])
-    .index("by_company_active_updated", ["companyId", "isActive", "updatedAt"])
     .index("by_agent_company_active_updated", ["agentId", "companyId", "isActive", "updatedAt"])
     .index("by_agent_company_active_applymode_updated", ["agentId", "companyId", "isActive", "applyMode", "updatedAt"])
-    .index("by_source_run", ["sourceRunId"])
     .searchIndex("search_content", {
       searchField: "normalizedContent",
       filterFields: ["agentId", "companyId", "isActive"],
@@ -2489,9 +2453,7 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_memory_used", ["memoryId", "usedAt"])
-    .index("by_run", ["runId"])
-    .index("by_agent_used", ["agentId", "usedAt"])
-    .index("by_company_used", ["companyId", "usedAt"]),
+    .index("by_run", ["runId"]),
 
   companyMemories: defineTable({
     companyId: v.id("companies"),
@@ -2554,9 +2516,7 @@ export default defineSchema({
   })
     .index("by_company_updated", ["companyId", "updatedAt"])
     .index("by_company_status_updated", ["companyId", "status", "updatedAt"])
-    .index("by_company_category_status", ["companyId", "category", "status"])
     .index("by_company_status_applymode_updated", ["companyId", "status", "applyMode", "updatedAt"])
-    .index("by_company_rejected_fingerprint", ["companyId", "rejectedFingerprint"])
     .searchIndex("search_content", {
       searchField: "normalizedContent",
       filterFields: ["companyId", "status"],
@@ -2606,7 +2566,6 @@ export default defineSchema({
   })
     .index("by_company_created", ["companyId", "createdAt"])
     .index("by_company_status_created", ["companyId", "status", "createdAt"])
-    .index("by_company_source", ["companyId", "sourceType", "createdAt"])
     .index("by_company_rejected_fingerprint", ["companyId", "rejectedFingerprint"]),
 
   companyMemoryUsage: defineTable({
@@ -2618,8 +2577,6 @@ export default defineSchema({
     score: v.number(),
     usedAt: v.number(),
   })
-    .index("by_memory_used", ["memoryId", "usedAt"])
-    .index("by_company_used", ["companyId", "usedAt"])
     .index("by_thread_used", ["threadId", "usedAt"]),
 
   /**
@@ -2711,11 +2668,7 @@ export default defineSchema({
     archivedAt: v.optional(v.number()),
   })
     .index("by_company_status_updated", ["companyId", "status", "updatedAt"])
-    .index("by_company_category_status", ["companyId", "category", "status"])
     .index("by_company_source_skill", ["companyId", "sourceAgentSkillId"])
-    // Re-uploading a SKILL.md has to reach every company copy made from it, and
-    // the company is not known at that point — only the skill.
-    .index("by_source_skill", ["sourceAgentSkillId"])
     .searchIndex("search_name", {
       searchField: "name",
       filterFields: ["companyId", "status"],
@@ -2762,8 +2715,6 @@ export default defineSchema({
     resolvedAt: v.optional(v.number()),
     resolvedRunId: v.optional(v.id("companyEvalRuns")),
   })
-    .index("by_company_created", ["companyId", "createdAt"])
-    .index("by_company_source_created", ["companyId", "sourceType", "createdAt"])
     .index("by_company_resolved_created", ["companyId", "resolvedAt", "createdAt"]),
 
   companyEvalCases: defineTable({
@@ -2831,7 +2782,6 @@ export default defineSchema({
     // Must-pass cases drive the readiness gates, so they are selected by index
     // rather than by filtering every active case in memory.
     .index("by_company_status_severity", ["companyId", "status", "severity"])
-    .index("by_company_status_surface_severity", ["companyId", "status", "targetSurface", "severity"])
     .index("by_company_fingerprint", ["companyId", "proposalFingerprint"])
     // The Evals screen searches by name at both heights, filtered to one
     // brain's list — searched where the rows are, like every other table.
@@ -2862,8 +2812,7 @@ export default defineSchema({
     createdBy: v.optional(v.id("users")),
   })
     .index("by_company_completed", ["companyId", "completedAt"])
-    .index("by_case_completed", ["evalCaseId", "completedAt"])
-    .index("by_company_status_completed", ["companyId", "status", "completedAt"]),
+    .index("by_case_completed", ["evalCaseId", "completedAt"]),
 
   // AI Rule Engine (Triggers & Logic Processing)
   aiRules: defineTable({
@@ -2877,7 +2826,6 @@ export default defineSchema({
     createdBy: v.optional(v.id("users")),
     createdAt: v.number(),
   })
-    .index("by_active", ["isActive", "createdAt"])
     .index("by_company_active", ["companyId", "isActive"])
     .index("by_company_created", ["companyId", "createdAt"])
     .index("by_company_active_created", ["companyId", "isActive", "createdAt"])
@@ -2942,7 +2890,6 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_company", ["companyId", "createdAt"])
     .index("by_company_format", ["companyId", "format", "createdAt"])
-    .index("by_company_review", ["companyId", "reviewStatus", "createdAt"])
     .index("by_thread", ["threadId", "createdAt"])
     .index("by_agent", ["agentId", "createdAt"])
     .index("by_agent_format", ["agentId", "format", "createdAt"])
@@ -2950,15 +2897,7 @@ export default defineSchema({
     .index("by_global", ["companyId", "agentId", "threadId", "createdAt"])
     .index("by_global_format", ["companyId", "agentId", "threadId", "format", "createdAt"])
     .index("by_status", ["status", "createdAt"])
-    .index("by_source_company", ["sourceUrl", "companyId", "agentId"])
-    // Saved answers are the documents somebody submitted from a conversation,
-    // and they get their own screen — so they get their own index rather than
-    // being sifted out of every document the company has.
-    .index("by_company_submitted", ["companyId", "submittedBy", "createdAt"])
-    .searchIndex("search_title", {
-      searchField: "title",
-      filterFields: ["companyId"],
-    }),
+    .index("by_source_company", ["sourceUrl", "companyId", "agentId"]),
 
   // One reusable hourly cost counter per knowledge scope. Keeping the counter
   // separate from documents means deleting an imported page cannot reset the
@@ -3116,9 +3055,7 @@ export default defineSchema({
     .index("by_createdAt", ["createdAt"])
     .index("by_role_created", ["role", "createdAt"])
     .index("by_company_role_created", ["companyId", "role", "createdAt"])
-    .index("by_user_role_created", ["userId", "role", "createdAt"])
-    .index("by_agent_role_created", ["agentId", "role", "createdAt"])
-    .index("by_provider_created", ["providerKey", "createdAt"]),
+    .index("by_user_role_created", ["userId", "role", "createdAt"]),
 
   /**
    * End-user ratings of assistant chat messages (self-improvement plan,
@@ -3159,7 +3096,6 @@ export default defineSchema({
     .index("by_message_user", ["messageId", "userId"])
     .index("by_thread_created", ["threadId", "createdAt"])
     .index("by_company_created", ["companyId", "createdAt"])
-    .index("by_company_updated", ["companyId", "updatedAt"])
     .index("by_user_created", ["userId", "createdAt"])
     .index("by_updated", ["updatedAt"]),
 
@@ -3296,7 +3232,6 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_name", ["name"])
-    .index("by_workflow", ["workflowId", "isGlobal"])
     .index("by_workflow_created", ["workflowId", "createdAt"])
     .index("by_active_created", ["isActive", "createdAt"])
     .index("by_system_key", ["systemKey"])
@@ -3316,10 +3251,7 @@ export default defineSchema({
     createdAt: v.number(),
     updatedAt: v.number(),
   })
-    .index("by_agent_created", ["agentId", "createdAt"])
-    .index("by_agent_status_created", ["agentId", "status", "createdAt"])
-    .index("by_agent_release_created", ["agentId", "isReleaseGate", "createdAt"])
-    .index("by_company_created", ["companyId", "createdAt"]),
+    .index("by_agent_status_created", ["agentId", "status", "createdAt"]),
 
   // Installable connector definitions and tenant/global install state.
   toolConnectors: defineTable({
@@ -3378,9 +3310,7 @@ export default defineSchema({
     createdBy: v.optional(v.id("users")),
   })
     .index("by_key", ["key"])
-    .index("by_key_company", ["key", "companyId"])
     .index("by_company", ["companyId"])
-    .index("by_status", ["installStatus"])
     .index("by_createdAt", ["createdAt"]),
 
   toolConnectorTestLogs: defineTable({
@@ -3395,8 +3325,7 @@ export default defineSchema({
     testedAt: v.number(),
     testedBy: v.optional(v.id("users")),
   })
-    .index("by_connector_tested", ["connectorId", "testedAt"])
-    .index("by_company_tested", ["companyId", "testedAt"]),
+    .index("by_connector_tested", ["connectorId", "testedAt"]),
 
   toolConnectorSecretRefs: defineTable({
     connectorId: v.id("toolConnectors"),
@@ -3408,8 +3337,7 @@ export default defineSchema({
     updatedAt: v.number(),
     updatedBy: v.optional(v.id("users")),
   })
-    .index("by_connector", ["connectorId"])
-    .index("by_connector_key", ["connectorId", "key"]),
+    .index("by_connector", ["connectorId"]),
 
   toolConnectorOAuthConnections: defineTable({
     connectorId: v.id("toolConnectors"),
@@ -3434,8 +3362,7 @@ export default defineSchema({
     initiatedBy: v.optional(v.id("users")),
   })
     .index("by_connector_updated", ["connectorId", "updatedAt"])
-    .index("by_state", ["state"])
-    .index("by_company_updated", ["companyId", "updatedAt"]),
+    .index("by_state", ["state"]),
 
   // A connection's OAuth tokens, as ciphertext only (connectorTokenCrypto).
   // No client-callable function reads this table — internal functions only,
@@ -3582,9 +3509,7 @@ export default defineSchema({
     outputSchemaJson: v.optional(v.string()),
     discoveredAt: v.number(),
   })
-    .index("by_server", ["serverId"])
-    .index("by_company", ["companyId"])
-    .index("by_server_name", ["serverId", "name"]),
+    .index("by_server", ["serverId"]),
 
   // Global Tool Library
   aiTools: defineTable({
@@ -3648,10 +3573,7 @@ export default defineSchema({
     createdAt: v.number(),
     createdBy: v.optional(v.id("users")),
   })
-    .index("by_name", ["name"])
     .index("by_connector", ["connectorId"])
-    .index("by_connector_key", ["connectorKey"])
-    .index("by_company", ["companyId"])
     .index("by_mcp_server", ["mcpServerId"])
     .index("by_model_name", ["modelName"])
     .index("by_createdAt", ["createdAt"])
@@ -3684,7 +3606,6 @@ export default defineSchema({
     webhookWindowStart: v.optional(v.number()),
     webhookCountInWindow: v.optional(v.number()),
   })
-    .index("by_name", ["name"])
     .index("by_createdAt", ["createdAt"])
     .searchIndex("search_name", { searchField: "name" }),
 
@@ -3699,8 +3620,7 @@ export default defineSchema({
     completedAt: v.optional(v.number()),
     startedBy: v.optional(v.id("users")),
     state: v.optional(v.string()), // JSON representation of final execution state for debugging
-  }).index("by_workflow", ["workflowId", "startedAt"])
-    .index("by_company_started", ["companyId", "startedAt"])
+  })
     .index("by_startedAt", ["startedAt"]),
   schedules: defineTable({
     name: v.string(),
@@ -3729,9 +3649,7 @@ export default defineSchema({
     .index("by_agent", ["agentId"])
     .index("by_company_agent", ["companyId", "agentId"])
     .index("by_createdAt", ["createdAt"])
-    .index("by_active_next_run", ["isActive", "nextRunAt"])
-    .index("by_active_workflow_last_run", ["isActive", "workflowId", "lastRunTs"])
-    .index("by_active_last_run", ["isActive", "lastRunTs"]),
+    .index("by_active_next_run", ["isActive", "nextRunAt"]),
 
   // Applied-migration ledger. One row per named migration, so a backfill runs
   // once, can resume from its cursor after a failure, and leaves an audit
@@ -3769,8 +3687,7 @@ export default defineSchema({
     isHeading: v.optional(v.boolean()),
     createdAt: v.number(),
   })
-    .index("by_thread", ["threadId", "order"])
-    .index("by_company", ["companyId"]),
+    .index("by_thread", ["threadId", "order"]),
 
   aiModels: defineTable({
     modelId: v.string(), // Provider model identifier
@@ -3815,7 +3732,6 @@ export default defineSchema({
   })
     .index("by_model_id", ["modelId"])
     .index("by_provider", ["providerKey"])
-    .index("by_provider_model", ["providerKey", "providerModelId"])
     .index("by_provider_enabled", ["providerKey", "isEnabled"])
     .index("by_enabled", ["isEnabled"])
     .index("by_default", ["isDefault"])
@@ -3968,8 +3884,7 @@ export default defineSchema({
     companyId: v.optional(v.id("companies")),
     startedAt: v.number(),
     completedAt: v.optional(v.number()),
-  }).index("by_runId", ["runId"])
-    .index("by_company", ["companyId", "startedAt"]),
+  }).index("by_runId", ["runId"]),
 
 
 
@@ -4036,8 +3951,7 @@ export default defineSchema({
     error: v.optional(v.string()),
     metadata: v.optional(v.string()),
   })
-    .index("by_script_started", ["scriptId", "startedAt"])
-    .index("by_started", ["startedAt"]),
+    .index("by_script_started", ["scriptId", "startedAt"]),
 
   // The wiki tables are base-module schema. They sat inside the salesData
   // fence above until 2026-08-19, when the first real strip build showed a
@@ -4209,8 +4123,7 @@ export default defineSchema({
     .index("by_company_key_created", ["companyId", "decisionKey", "createdAt"])
     .index("by_subject", ["subjectKind", "subjectId"])
     .index("by_agent_run", ["agentRunId"])
-    .index("by_thread", ["threadId"])
-    .index("by_message", ["messageId"]),
+    .index("by_thread", ["threadId"]),
 
   /** A Decision's mode, platform-wide or for one company; same shape as `aiModelDefaults`. */
   decisionSettings: defineTable({

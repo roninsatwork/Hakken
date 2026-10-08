@@ -233,7 +233,6 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   siteDaySummaries: forever("a website's figures by day, drawn on the Sites charts"),
   siteListAiDays: forever("a list's AI answers by day, drawn on the AI charts"),
   siteCitedPages: LATEST,
-  siteContentGaps: LATEST,
   siteSerpPages: cleared("90 days", "seoCollectionSweep/purgeExpiredSerpPages"),
   searchVolumes: LATEST,
   siteBacklinks: LATEST,

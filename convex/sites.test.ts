@@ -372,8 +372,6 @@ describe("the content gap", () => {
     // Content gap is for the company's own websites (2026-10-06): a competitor's is empty, and not being prepared.
     const theirs = await asRonins.query(api.siteCompetitors.listContentGap, { siteId: rival.holdId, page: 1, rows: 25 });
     expect(theirs).toMatchObject({ rows: [], competitors: [], preparing: false });
-    // Nothing is stored for either.
-    expect(await t.run(async (ctx) => await ctx.db.query("siteContentGaps").collect())).toEqual([]);
   });
 
   test("a website with no keyword copy yet is prepared when its gap is opened, then the gap shows", async () => {

@@ -83,7 +83,7 @@ describe("Company learning loop", () => {
       candidate: await ctx.db.get(candidateId),
       evalCase: await ctx.db.get(evalCaseId),
       auditLogs: await ctx.db.query("auditLogs").withIndex("by_company", (q) => q.eq("companyId", companyAId)).order("asc").collect(),
-      driftEvents: await ctx.db.query("companyAiDriftEvents").withIndex("by_company_created", (q) => q.eq("companyId", companyAId)).order("asc").collect(),
+      driftEvents: (await ctx.db.query("companyAiDriftEvents").collect()).filter((event) => event.companyId === companyAId),
     }));
 
     expect(state.candidate).toMatchObject({

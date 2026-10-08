@@ -110,13 +110,8 @@ async function purgeHoldDiscoveries(ctx: MutationCtx, companyWebsiteId: Id<"comp
     .withIndex("by_company_website", (q) => q.eq("companyWebsiteId", companyWebsiteId))
     .take(ENTRY_PURGE_BATCH);
   for (const row of found) await ctx.db.delete(row._id);
-  const gaps = await ctx.db
-    .query("siteContentGaps")
-    .withIndex("by_hold_keyword", (q) => q.eq("companyWebsiteId", companyWebsiteId))
-    .take(ENTRY_PURGE_BATCH);
-  for (const row of gaps) await ctx.db.delete(row._id);
   const copyLeft = await dropCopies(ctx, "gap", `${companyWebsiteId}`);
-  return found.length < ENTRY_PURGE_BATCH && gaps.length < ENTRY_PURGE_BATCH && !copyLeft;
+  return found.length < ENTRY_PURGE_BATCH && !copyLeft;
 }
 
 /**

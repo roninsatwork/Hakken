@@ -299,47 +299,6 @@ export const siteTables = {
     .index("by_site_question", ["websiteId", "prompt", "engine", "locationCode"]),
 
   /**
-   * Searches a company's tracked rivals rank for and its own site does not.
-   *
-   * **No longer written or read** (2026-10-06): Content gap is worked out when
-   * read, from the keyword copies already kept (`siteContentGap.ts`). Emptied
-   * by the data migration `2026-10-06-drop-stored-gaps`; the table leaves the
-   * schema once that has run on every deployment.
-   */
-  siteContentGaps: defineTable({
-    companyWebsiteId: v.id("companyWebsites"),
-    keyword: v.string(),
-    volume: v.number(),
-    volumeKnown: v.boolean(),
-    intent: rankIntentValidator,
-    // How hard the search is (0–100), from the rivals' own rankings of it (the
-    // Content gap laid out like Ahrefs, 2026-09-30). Absent on a gap worked
-    // out before, until it is worked out again.
-    difficulty: v.optional(v.number()),
-    rivalsRanking: v.number(),
-    bestRivalPosition: v.number(),
-    /** Each rival ranking for it: where, and the visits a month DataForSEO estimates it brings that rival. */
-    rivals: v.array(v.object({ websiteId: v.id("websites"), position: v.number(), traffic: v.optional(v.number()) })),
-    /**
-     * The rebuild that last changed its figures, and when: a rebuild finding
-     * them the same leaves the row alone (dataforseo-cost-plan.md, A3), so the
-     * day it was last checked is the later of this and its hold's last gap
-     * rebuild (`gapWorkedOutAt`).
-     */
-    rebuildId: v.string(),
-    updatedAt: v.number(),
-  })
-    .index("by_hold_keyword", ["companyWebsiteId", "keyword"])
-    .index("by_hold_volume", ["companyWebsiteId", "volume"])
-    .index("by_hold_rivals_volume", ["companyWebsiteId", "rivalsRanking", "volume"])
-    .index("by_hold_intent_volume", ["companyWebsiteId", "intent", "volume"])
-    .index("by_keyword", ["keyword"])
-    .searchIndex("search_keyword", {
-      searchField: "keyword",
-      filterFields: ["companyWebsiteId", "intent"],
-    }),
-
-  /**
    * Google's first page for a tracked search, as each check found it.
    *
    * Keyed on the search and the place, not on a website, like `aiAnswers`: one
@@ -412,7 +371,6 @@ export const siteTables = {
     createdAt: v.number(),
   })
     .index("by_pull", ["pullId"])
-    .index("by_question", ["prompt", "engine", "locationCode", "day"])
     .index("by_prompt_day", ["prompt", "day"])
     // "Find where they said …" on the Full answers page, within one question.
     .searchIndex("search_text", { searchField: "text", filterFields: ["prompt", "engine", "locationCode"] }),
@@ -484,9 +442,6 @@ export const siteTables = {
     searchText: v.string(),
   })
     .index("by_site_pass_rank", ["websiteId", "pass", "domainRank"])
-    .index("by_site_pass_first_seen", ["websiteId", "pass", "firstSeen"])
-    .index("by_site_pass_status_rank", ["websiteId", "pass", "status", "domainRank"])
-    .index("by_site_pass_follow_rank", ["websiteId", "pass", "dofollow", "domainRank"])
     .index("by_site_pass_day", ["websiteId", "pass", "day"])
     // A page's own screen: the strongest links to it.
     .index("by_site_pass_page_rank", ["websiteId", "pass", "pageTo", "domainRank"])
@@ -608,10 +563,7 @@ export const siteTables = {
     trafficCost: maybeNumber,
     searchText: v.string(),
   })
-    .index("by_site_traffic", ["websiteId", "locationCode", "traffic"])
-    .index("by_site_cost", ["websiteId", "locationCode", "trafficCost"])
-    .index("by_site_volume", ["websiteId", "locationCode", "volume"])
-    .searchIndex("search_text", { searchField: "searchText", filterFields: ["websiteId", "locationCode"] }),
+    .index("by_site_traffic", ["websiteId", "locationCode", "traffic"]),
 
   /**
    * Links a website gained and lost each week, from DataForSEO's own count

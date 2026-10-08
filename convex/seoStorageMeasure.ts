@@ -22,7 +22,7 @@ const TABLES = [
   "siteKeywordRanks", "siteKeywordFeatures", "sitePageRanks", "siteSections", "siteDaySummaries", "sitePaidKeywords",
   "siteBacklinks", "siteReferringDomainParts", "siteAnchorParts", "siteReferringIpParts", "siteLinkWeeks",
   "siteCrawls", "siteCrawlPages", "siteCrawlLinks", "siteSitemapParts", "siteCitedPages",
-  "siteListCopies", "siteListCopyParts", "siteContentGaps", "holdPages", "siteListAiDays",
+  "siteListCopies", "siteListCopyParts", "holdPages", "siteListAiDays",
   "aiAnswers", "aiCitations", "aiAnswerTexts", "aiAnswerIndex", "promptFanOutQueries", "promptFanOutDays", "siteSerpPages",
   "discoveredCompetitors", "websiteSearchStats", "websiteQuestionStats", "siteSummaryRequests",
 ] as const;

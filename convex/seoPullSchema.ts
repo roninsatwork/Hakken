@@ -194,11 +194,9 @@ export const seoPullTables = {
     .index("by_status_filed_completed", ["status", "filedAt", "completedAt"])
     .index("by_submitted", ["submittedAt"])
     .index("by_operation_submitted", ["operationId", "submittedAt"])
-    .index("by_company_submitted", ["companyId", "submittedAt"])
     .index("by_website_submitted", ["websiteId", "submittedAt"])
     /** A site's newest pulls of one operation: what the reuse ladder asks. */
-    .index("by_website_operation_submitted", ["websiteId", "operationId", "submittedAt"])
-    .index("by_run", ["agentRunId"]),
+    .index("by_website_operation_submitted", ["websiteId", "operationId", "submittedAt"]),
 
   /**
    * What one website's requests have cost in one collection, kept as they are

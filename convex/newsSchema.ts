@@ -127,8 +127,7 @@ export const newsTables = {
     .index("by_lead_until", ["leadUntil"])
     .index("by_kind_published", ["kind", "publishedAt"])
     .index("by_external", ["externalKey"])
-    .index("by_google_update", ["googleUpdateId"])
-    .index("by_source", ["sourceId"]),
+    .index("by_google_update", ["googleUpdateId"]),
 
   /**
    * Items taken down in Admin → Content → News, by what made them the same
@@ -156,7 +155,6 @@ export const newsTables = {
     createdAt: v.number(),
     updatedAt: v.number(),
   })
-    .index("by_order", ["order"])
     .index("by_topic", ["topic"])
     .index("by_picked", ["pickedAt"])
     // Readers' and Admin's lists, A to Z, under Where and Topic, on the server (IH13, IH21).

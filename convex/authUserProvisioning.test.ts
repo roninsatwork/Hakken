@@ -15,7 +15,7 @@ async function getAuthEventTypes(t: ReturnType<typeof setup>, email: string) {
   const events = await t.run(async (ctx) =>
     ctx.db
       .query("authEvents")
-      .withIndex("by_email", (q) => q.eq("email", email))
+      .withIndex("by_email_type_timestamp", (q) => q.eq("email", email))
       .collect()
   );
 
@@ -146,7 +146,7 @@ describe("Hakken auth user provisioning", () => {
 
       const events = await ctx.db
         .query("authEvents")
-        .withIndex("by_email", (q) => q.eq("email", "code@example.com"))
+        .withIndex("by_email_type_timestamp", (q) => q.eq("email", "code@example.com"))
         .collect();
       expect(events).toEqual(expect.arrayContaining([
         expect.objectContaining({

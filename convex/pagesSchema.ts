@@ -122,7 +122,6 @@ export const pagesTables = {
     createdAt: v.number(),
   })
     .index("by_hold", ["companyWebsiteId"])
-    .index("by_classification", ["classificationId"])
     // A classification's own lines, read within its website (pageClassifications.ts).
     .index("by_hold_classification", ["companyWebsiteId", "classificationId"]),
 

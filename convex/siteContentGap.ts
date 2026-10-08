@@ -1,6 +1,5 @@
-import type { MutationCtx, QueryCtx } from "./_generated/server";
+import type { QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { dropCopies, PARTS_DROPPED_PER_STEP } from "./siteListCopies";
 import { keywordStanding, readKeywordCopy, type KeywordCopyRow } from "./siteKeywordCopy";
 import { GAP_KEYWORDS_PER_RIVAL, type RankIntent } from "./utils/siteShapes";
 
@@ -92,33 +91,4 @@ export async function contentGapOf(
   }
   const rows = [...gaps.values()].sort((left, right) => (right.volume ?? -1) - (left.volume ?? -1));
   return rows.length > GAP_MAX ? { rows: rows.slice(0, GAP_MAX), cut: GAP_MAX } : { rows, cut: null };
-}
-
-/** Stored gap rows cleared a step: each is small. */
-const STORED_GAPS_PER_STEP = 500;
-
-/**
- * Clear what the gaps kept before they were worked out when read: the rows
- * (`siteContentGaps`), their compact copies, and the rebuild requests for both
- * — a step at a time, for the data migration `2026-10-06-drop-stored-gaps`.
- * Answers whether any is left.
- */
-export async function dropStoredGapsStep(ctx: MutationCtx): Promise<{ more: boolean; removed: number }> {
-  const rows = await ctx.db.query("siteContentGaps").take(STORED_GAPS_PER_STEP);
-  for (const row of rows) await ctx.db.delete(row._id);
-  if (rows.length > 0) return { more: true, removed: rows.length };
-
-  // Every hold's gap copy: `dropCopies` takes headers and parts a page at a time.
-  if (await dropCopies(ctx, "gap", "")) return { more: true, removed: PARTS_DROPPED_PER_STEP };
-
-  let removed = 0;
-  for (const prefix of ["gap:", "copy:gap:"]) {
-    const requests = await ctx.db
-      .query("siteSummaryRequests")
-      .withIndex("by_key", (q) => q.gte("key", prefix).lt("key", `${prefix}￿`))
-      .take(STORED_GAPS_PER_STEP);
-    for (const request of requests) await ctx.db.delete(request._id);
-    removed += requests.length;
-  }
-  return { more: removed > 0, removed };
 }

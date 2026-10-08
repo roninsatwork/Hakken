@@ -127,8 +127,7 @@ export const fanOutTables = {
   })
     .index("by_hold_prompt_angle", ["holdId", "prompt", "angle"])
     .index("by_hold_angle", ["holdId", "angle"])
-    .index("by_hold_seen", ["holdId", "timesSeen"])
-    .index("by_hold_rebuilt", ["holdId", "rebuiltAt"]),
+    .index("by_hold_seen", ["holdId", "timesSeen"]),
 
   /**
    * The searches Google's AI Overviews ran, for Google's own searches on one

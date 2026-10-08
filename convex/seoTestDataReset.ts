@@ -54,7 +54,6 @@ const COLLECTED_TABLES: ReadonlyArray<{ table: TableNames; page: number }> = [
   { table: "siteKeywordFeatures", page: 500 },
   { table: "siteCrawlPages", page: 500 },
   { table: "siteCrawlLinks", page: 500 },
-  { table: "siteContentGaps", page: 500 },
   { table: "siteSummaryRequests", page: 500 },
   { table: "siteSerpPages", page: 200 },
   { table: "aiAnswerTexts", page: 100 },

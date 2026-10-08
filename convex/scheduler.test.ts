@@ -283,7 +283,7 @@ describe("Scheduler Authorization", () => {
 
     const state = await t.run(async (ctx) => {
       const schedule = await ctx.db.get(scheduleId);
-      const runs = await ctx.db.query("agentRuns").withIndex("by_schedule_started", (q) => q.eq("scheduleId", scheduleId)).collect();
+      const runs = (await ctx.db.query("agentRuns").collect()).filter((run) => run.scheduleId === scheduleId);
       const executions = await ctx.db.query("workflowExecutions").withIndex("by_startedAt").collect();
 
       return { schedule, runs, executions };
@@ -343,10 +343,7 @@ describe("Scheduler Authorization", () => {
 
     const { schedule, runs } = await t.run(async (ctx) => ({
       schedule: await ctx.db.get(scheduleId),
-      runs: await ctx.db
-        .query("agentRuns")
-        .withIndex("by_schedule_started", (q) => q.eq("scheduleId", scheduleId))
-        .collect(),
+      runs: (await ctx.db.query("agentRuns").collect()).filter((run) => run.scheduleId === scheduleId),
     }));
 
     expect(runs).toHaveLength(1);

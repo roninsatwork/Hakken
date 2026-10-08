@@ -34,7 +34,6 @@ import { untickAutomaticQueries } from "./promptFanOut";
 import { followPlatformWhereStartingNumber } from "./companyDataLimits";
 import { detachCompanySchedules } from "./scheduler";
 import { removeSampleResearch } from "./keywordResearchSampleMigration";
-import { dropStoredGapsStep } from "./siteContentGap";
 import { prepareMainCountryOf } from "./searchConsoleMainCountry";
 import { connectionsPage } from "./searchConsoleSync";
 import {
@@ -154,6 +153,9 @@ type MigrationRunner = (
  * the Italian a Knowledge article was first written with once the Translator
  * took Italian over (knowledge-news-and-digest-plan.md, revised); it ran on
  * dev before `titleIt` and `bodyIt` left `knowledgeArticles`.
+ * And on 2026-10-08 with `2026-10-06-drop-stored-gaps`, which cleared the
+ * stored content gaps once they were worked out when read; it ran on dev
+ * before `siteContentGaps` left the schema.
  */
 const MIGRATIONS: Record<string, MigrationRunner> = {
   "2026-09-22-costs-in-dollars": copyPoundNamesToDollars,
@@ -196,12 +198,6 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
   /** Keyword research's sample figures from its removed Test mode go, with any lookup left with none real (keyword-research-plan.md). */
   "2026-10-04-remove-sample-keyword-research": removeSampleResearch,
   /**
-   * Content gap's stored rows, their compact copies and the rebuild requests
-   * for both go: it is worked out when read since 2026-10-06, from the
-   * keyword copies already kept (`siteContentGap.ts`). Run before
-   * `siteContentGaps` leaves the schema.
-   */
-  /**
    * Each Search Console connection switched to its main home country now,
    * rather than at its next run (`prepareMainCountryOf`;
    * search-console-home-countries-plan.md): its all-countries figures cleared,
@@ -216,10 +212,7 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
     }
     return { cursor: page.continueCursor, isDone: page.isDone, processed: page.page.length, updated };
   },
-  "2026-10-06-drop-stored-gaps": async (ctx) => {
-    const step = await dropStoredGapsStep(ctx);
-    return { cursor: null, isDone: !step.more, processed: step.removed, updated: step.removed };
-  },
+
 
   /**
    * Takes the Collector off each company's Collection schedule, and the next

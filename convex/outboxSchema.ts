@@ -101,8 +101,7 @@ export const outboxTables = {
     .index("by_status_created", ["status", "createdAt"])
     .index("by_communication_created", ["communication", "createdAt"])
     .index("by_idempotency", ["idempotencyKey"])
-    .index("by_created", ["createdAt"])
-    .index("by_user", ["userId", "createdAt"]),
+    .index("by_created", ["createdAt"]),
 
   /**
    * One week's Weekly News Digest, written once by the Weekly Digest agent

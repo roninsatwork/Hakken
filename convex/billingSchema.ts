@@ -57,6 +57,6 @@ export const billingTables = {
     url: v.optional(v.string()),
     expiresAt: v.number(),
     createdAt: v.number(),
-  }).index("by_account", ["accountId"]).index("by_plan", ["offer.planId"])
+  }).index("by_plan", ["offer.planId"])
     .index("by_price_plan", ["offer.stripePriceId", "offer.planId"]),
 };
