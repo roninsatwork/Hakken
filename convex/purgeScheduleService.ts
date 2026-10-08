@@ -1,6 +1,7 @@
 import { type Infer, v } from "convex/values";
 
 import { appError } from "./utils/appError";
+import type { MutationCtx } from "./_generated/server";
 
 export const purgeScheduleIntervalValidator = v.union(
   v.literal("Hourly"),
@@ -80,7 +81,10 @@ export const DEFAULT_PURGE_CONFIGS: Record<PurgePipelineKey, PipelineConfig> = {
   analyticsSnapshots: { ...DAILY_2AM, retentionDays: 400 },
   webhookDeliveries: { ...DAILY_2AM, retentionDays: 90 },
   agentRunHistory: { ...DAILY_2AM, retentionDays: 180 },
-  agentTransactions: { ...DAILY_2AM, retentionDays: 400 },
+  // Every AI call's cost: 90 days, not 400 (core-data-normalisation-plan.md,
+  // N9; Anthony, 2026-10-08: "daily totals ok"). Past that the analytics read
+  // the nightly totals, `analyticsSnapshots` below, which keep 400.
+  agentTransactions: { ...DAILY_2AM, retentionDays: 90 },
   // Transcripts of calls from members of the public, holding their phone
   // numbers. Kept shorter than most: it is the most personal data on the
   // platform and the least useful once the follow-up task has been done.
@@ -285,4 +289,19 @@ export function calculateNextPurgeRun(
     next.setUTCDate(next.getUTCDate() + 1);
   }
   return next.getTime();
+}
+
+/**
+ * One-off, 2026-10-08 (core-data-normalisation-plan.md, N9): a saved purge
+ * setting still keeping every AI call's cost the old default 400 days is
+ * lowered to the new 90. A number someone chose is left as it is.
+ */
+export async function lowerSavedCostRowKeep(ctx: MutationCtx) {
+  const saved = await ctx.db.query("systemConfig").withIndex("by_key", (q) => q.eq("key", "PURGE_PIPELINES_CONFIG")).first();
+  if (!saved) return { cursor: null, isDone: true, processed: 0, updated: 0 };
+  const configs = parsePurgePipelineConfig(saved.value);
+  if (configs.agentTransactions.retentionDays !== 400) return { cursor: null, isDone: true, processed: 1, updated: 0 };
+  configs.agentTransactions = { ...configs.agentTransactions, retentionDays: DEFAULT_PURGE_CONFIGS.agentTransactions.retentionDays };
+  await ctx.db.patch(saved._id, { value: JSON.stringify(configs), updatedAt: Date.now() });
+  return { cursor: null, isDone: true, processed: 1, updated: 1 };
 }

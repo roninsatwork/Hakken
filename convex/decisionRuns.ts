@@ -35,13 +35,8 @@ const DECISION_AGENT_NAME = "The Decision Maker";
 const DECISION_AGENT_DESCRIPTION =
   "Answers the platform's yes-or-no, pick-one and how-much questions through TypeSafe, so each screen can act or ask a person. Not an agent you run; the cost of every Decision is charged here.";
 
-async function findDecisionAgent(ctx: { db: QueryCtx["db"] }) {
-  const candidates = (
-    await ctx.db.query("agents").withIndex("by_active_created", (q) => q.eq("isActive", true)).take(500)
-  ).concat(
-    await ctx.db.query("agents").withIndex("by_active_created", (q) => q.eq("isActive", false)).take(500),
-  );
-  return candidates.find((agent) => agent.systemKey === DECISION_AGENT_SYSTEM_KEY) ?? null;
+export async function findDecisionAgent(ctx: { db: QueryCtx["db"] }) {
+  return await ctx.db.query("agents").withIndex("by_system_key", (q) => q.eq("systemKey", DECISION_AGENT_SYSTEM_KEY)).first();
 }
 
 async function ensureDecisionAgent(ctx: MutationCtx): Promise<Id<"agents">> {
@@ -139,10 +134,13 @@ const runInsertValidator = v.object({
  * Write one request's worth of runs.
  *
  * Several Decisions asked over the same state travel in one TypeSafe request,
- * so the tokens belong to the request: one cost row on the ledger, charged to
- * the Decision Maker, and each run row carries its equal share so the
- * per-Decision figure on the screen still adds up to the ledger. A request
- * the rule answered has no usage and writes no cost row.
+ * so the tokens belong to the request: the first run a model answered carries
+ * the call — its tokens and model — and every answered run its equal share of
+ * the cost, so the per-Decision figures add up to the call. There is no
+ * second row on `agentTransactions` saying the same: the cost ledger counts
+ * Decisions from these rows, charged to the Decision Maker
+ * (`decisionLedger.ts`; core-data-normalisation-plan.md §7.1). A request the
+ * rule answered has no usage and carries no call.
  *
  * Cost goes through `calculateModelCostUsd` like every other call. The two
  * hand-rolled copies elsewhere are recorded debt in the plan; this is not a
@@ -170,8 +168,9 @@ export const recordRunsInternal = internalMutation({
   handler: async (ctx, args): Promise<{ runIds: Id<"decisionRuns">[]; costUsd: number }> => {
     const now = Date.now();
     let costUsd = 0;
+    const answered = args.runs.filter((run) => run.source !== "RULES");
 
-    if (args.usage && args.runs.length > 0) {
+    if (args.usage && answered.length > 0) {
       const rates = await ctx.db
         .query("aiModels")
         .withIndex("by_model_id", (q) => q.eq("modelId", args.usage!.modelId))
@@ -181,25 +180,15 @@ export const recordRunsInternal = internalMutation({
         outputTokens: args.usage.outputTokens,
         rates: rates ?? null,
       });
-      const agentId = await ensureDecisionAgent(ctx);
-      await ctx.db.insert("agentTransactions", {
-        agentId,
-        ...(args.companyId ? { companyId: args.companyId } : {}),
-        // Each Decision named once: one search asks the knowledge cut-off
-        // about forty passages in a request.
-        actionContext: `decision:${[...new Set(args.runs.map((run) => run.decisionKey))].join(",")}`,
-        modelUsed: args.usage.modelId,
-        providerKey: args.usage.providerKey,
-        providerModelId: args.usage.providerModelId,
-        inputTokens: args.usage.inputTokens,
-        outputTokens: args.usage.outputTokens,
-        costUsd,
-        status: "SUCCESS",
-        createdAt: now,
-      });
+      // The ledger charges every call to it, so it is there whenever one is.
+      await ensureDecisionAgent(ctx);
     }
 
-    const share = args.runs.length > 0 ? costUsd / args.runs.length : 0;
+    // Shared among the runs a model answered, so they add up to the call.
+    const share = answered.length > 0 ? costUsd / answered.length : 0;
+    const call = args.usage && answered.length > 0
+      ? { model: args.usage.modelId, inputTokens: args.usage.inputTokens, outputTokens: args.usage.outputTokens }
+      : null;
     const links = {
       ...(args.companyId ? { companyId: args.companyId } : {}),
       ...(args.agentRunId ? { agentRunId: args.agentRunId } : {}),
@@ -209,13 +198,15 @@ export const recordRunsInternal = internalMutation({
 
     const runIds: Id<"decisionRuns">[] = [];
     for (const run of args.runs) {
+      const answeredByModel = run.source !== "RULES";
       runIds.push(
         await ctx.db.insert("decisionRuns", {
           ...run,
           ...links,
           subjectKind: args.subjectKind,
           subjectId: run.subjectId ?? args.subjectId,
-          costUsd: run.source === "RULES" ? 0 : share,
+          costUsd: answeredByModel ? share : 0,
+          ...(call && run === answered[0] ? call : {}),
           createdAt: now,
         }),
       );

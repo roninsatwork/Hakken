@@ -4189,6 +4189,15 @@ export default defineSchema({
     action: v.optional(v.string()),
     /** What this Decision cost, in US dollars. Was `costGBP`. */
     costUsd: v.number(),
+    /**
+     * The model call, on the first run of a request a model answered: its
+     * model (`aiModels.modelId`) and tokens. The cost ledger counts a call
+     * from these, not from a second row on `agentTransactions`
+     * (`decisionLedger.ts`; core-data-normalisation-plan.md §7.1).
+     */
+    model: v.optional(v.string()),
+    inputTokens: v.optional(v.number()),
+    outputTokens: v.optional(v.number()),
     agentRunId: v.optional(v.id("agentRuns")),
     threadId: v.optional(v.id("threads")),
     messageId: v.optional(v.id("messages")),

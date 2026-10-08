@@ -48,7 +48,7 @@ describe("decision modes", () => {
 });
 
 describe("recording runs", () => {
-  test("a TypeSafe request writes one cost row, a run per Decision with its share, and audits only what acted", async () => {
+  test("a TypeSafe request writes a run per Decision with its share, the call on the first, no cost row, and audits only what acted", async () => {
     const t = setup();
     const companyId = await seedCompany(t);
     await t.run(async (ctx) => {
@@ -104,18 +104,12 @@ describe("recording runs", () => {
       expect(runs.map((run) => run.costUsd)).toEqual([1, 1]);
       expect(runs.every((run) => run.companyId === companyId && run.subjectKind === "email" && run.subjectId === "gmail-123")).toBe(true);
 
-      const transactions = await ctx.db.query("agentTransactions").collect();
-      expect(transactions).toHaveLength(1);
-      expect(transactions[0]).toMatchObject({
-        actionContext: "decision:mailbox.message-kind,mailbox.urgent",
-        providerKey: "typesafe",
-        inputTokens: 500_000,
-        outputTokens: 250_000,
-        costUsd: 2,
-        status: "SUCCESS",
-      });
-      const agent = await ctx.db.get(transactions[0].agentId);
-      expect(agent?.systemKey).toBe(DECISION_AGENT_SYSTEM_KEY);
+      // The call travels on the first run, once; the ledger counts it from there (decisionLedger.ts).
+      expect(runs.map((run) => [run.model, run.inputTokens, run.outputTokens])).toEqual([
+        ["typesafe:jev-latest", 500_000, 250_000],
+        [undefined, undefined, undefined],
+      ]);
+      expect(await ctx.db.query("agentTransactions").collect()).toHaveLength(0);
 
       const audits = await ctx.db.query("auditLogs").collect();
       expect(audits).toHaveLength(1);
@@ -129,7 +123,7 @@ describe("recording runs", () => {
     });
   });
 
-  test("runs that each judged their own passage name it, and the ledger names the Decision once", async () => {
+  test("runs that each judged their own passage name it, and the call is counted once", async () => {
     const t = setup();
     await t.mutation(internal.decisionRuns.recordRunsInternal, {
       subjectKind: "knowledgeChunk",
@@ -146,8 +140,8 @@ describe("recording runs", () => {
         ["knowledgeChunk", "chunk-1", "yes"],
         ["knowledgeChunk", "chunk-2", "no"],
       ]);
-      const transactions = await ctx.db.query("agentTransactions").collect();
-      expect(transactions.map((row) => row.actionContext)).toEqual(["decision:knowledge.passage-answers-question"]);
+      expect(runs.filter((run) => run.model !== undefined)).toHaveLength(1);
+      expect(await ctx.db.query("agentTransactions").collect()).toHaveLength(0);
     });
   });
 

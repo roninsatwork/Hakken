@@ -600,10 +600,11 @@ describe("the mailbox's Decisions, switched on", () => {
     expect(runs.find((run) => run.decisionKey === "mailbox.message-kind")).toMatchObject({
       answer: "spam", certainty: "SURE", outcome: "ACTED", source: "TYPESAFE", action: "skipped the email as spam", subjectId: "sp-1",
     });
-    expect(transactions).toHaveLength(1);
-    expect(transactions[0]).toMatchObject({ providerKey: "typesafe", inputTokens: 400, outputTokens: 40 });
-    // 400 in at £1/M + 40 out at £2/M.
-    expect(transactions[0].costUsd).toBeCloseTo(0.00048);
+    // The call on the first run, no second cost row (decisionLedger.ts).
+    expect(transactions).toHaveLength(0);
+    expect(runs.filter((run) => run.model !== undefined)).toEqual([expect.objectContaining({ inputTokens: 400, outputTokens: 40 })]);
+    // 400 in at £1/M + 40 out at £2/M, shared by the three runs.
+    expect(runs.reduce((sum, run) => sum + run.costUsd, 0)).toBeCloseTo(0.00048);
     expect(audits).toHaveLength(1);
     expect(JSON.parse(audits[0].metadata ?? "{}")).toMatchObject({ decision: "Is this email from a customer?", answer: "spam", certainty: "sure" });
   });

@@ -1,7 +1,6 @@
 import { convexTest } from "convex-test";
 import { expect, test, describe } from "vitest";
 import { api } from "./_generated/api";
-import { Doc } from "./_generated/dataModel";
 import schema from "./schema";
 
 describe("OWASP: BOLA / Data Isolation Shield", () => {
@@ -76,7 +75,7 @@ describe("OWASP: BOLA / Data Isolation Shield", () => {
     });
     
     expect(transactions.page.length).toBe(5);
-    transactions.page.forEach((transaction: Doc<"agentTransactions">) => {
+    transactions.page.forEach((transaction) => {
       expect(transaction.companyId).toBe(companyAId);
     });
   });

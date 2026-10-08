@@ -86,7 +86,43 @@ export type RunDecisionsArgs = {
     threadId?: Id<"threads">;
     messageId?: Id<"messages">;
   };
+  /** The modes and model looked up once for many calls (`prepareDecisions`), rather than again on each. */
+  prepared?: PreparedDecisions;
 };
+
+type ResolvedDecisionModel = Awaited<ReturnType<typeof resolveDecisionModel>>;
+
+/** The Decisions' modes for a company, and the model that would answer them: what every call over many items shares. */
+export type PreparedDecisions = {
+  modes: Record<string, DecisionMode>;
+  /** Absent when every one of these Decisions is off, so nothing will be asked. */
+  model?: ResolvedDecisionModel;
+};
+
+function resolveDecisionModel(ctx: ActionCtx, companyId: Id<"companies"> | undefined) {
+  return ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
+    useCase: DECISION_MODEL_USE_CASE,
+    ...(companyId ? { companyId } : {}),
+  });
+}
+
+/**
+ * The modes and model of these Decisions for a company, looked up once for a
+ * run that asks them of many items — a collection's thousand searches — and
+ * handed to each `runDecisions` call, instead of two look-ups per item
+ * (core-data-normalisation-plan.md §7.1; 73,000 look-ups in two weeks on dev).
+ */
+export async function prepareDecisions(
+  ctx: ActionCtx,
+  args: { keys: string[]; companyId?: Id<"companies"> },
+): Promise<PreparedDecisions> {
+  const modes = await ctx.runQuery(internal.decisionRuns.resolveModesInternal, {
+    decisionKeys: [...new Set(args.keys)],
+    ...(args.companyId ? { companyId: args.companyId } : {}),
+  });
+  if (Object.values(modes).every((mode) => mode === "OFF")) return { modes };
+  return { modes, model: await resolveDecisionModel(ctx, args.companyId) };
+}
 
 type Asker = (args: {
   model: string;
@@ -116,8 +152,10 @@ export async function runDecisions(
   }
   if (args.requests.length === 0) return {};
 
-  const modes = await ctx.runQuery(internal.decisionRuns.resolveModesInternal, {
-    decisionKeys: [...new Set(args.requests.map((request) => request.key))],
+  const keys = [...new Set(args.requests.map((request) => request.key))];
+  const prepared = args.prepared && keys.every((key) => key in args.prepared!.modes) ? args.prepared : undefined;
+  const modes = prepared?.modes ?? await ctx.runQuery(internal.decisionRuns.resolveModesInternal, {
+    decisionKeys: keys,
     ...(args.companyId ? { companyId: args.companyId } : {}),
   });
 
@@ -141,10 +179,7 @@ export async function runDecisions(
   } | null = null;
 
   if (askedRequests.length > 0) {
-    const model = await ctx.runQuery(internal.aiModels.resolveModelConfigForExecution, {
-      useCase: DECISION_MODEL_USE_CASE,
-      ...(args.companyId ? { companyId: args.companyId } : {}),
-    });
+    const model = prepared?.model ?? await resolveDecisionModel(ctx, args.companyId);
 
     if (model.source === "failsafe") {
       // Nothing is configured for the Decisions job, nor as a platform

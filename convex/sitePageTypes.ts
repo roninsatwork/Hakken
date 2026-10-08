@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
-import { runDecisions, type DecisionResult } from "./decisionActions";
+import { prepareDecisions, runDecisions, type DecisionResult } from "./decisionActions";
 import { pageTypeValidator, type PageType } from "./utils/siteShapes";
 import { pagesCopyKey, requestListCopy } from "./siteListCopies";
 import { noteWebsitePagesChanged } from "./holdPages";
@@ -58,10 +58,9 @@ export const judgePageTypes = internalAction({
   args: { websiteId: v.id("websites"), locationCode: v.number(), runsLeft: v.optional(v.number()) },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
-    const modes: Record<string, string> = await ctx.runQuery(internal.decisionRuns.resolveModesInternal, {
-      decisionKeys: [DECISION],
-    });
-    if (modes[DECISION] === "OFF") return null;
+    // Its mode and model looked up once for every page, not again on each.
+    const prepared = await prepareDecisions(ctx, { keys: [DECISION] });
+    if (prepared.modes[DECISION] === "OFF") return null;
 
     const work: { host: string; pages: Array<{ page: string; topKeyword: string }> } | null =
       await ctx.runQuery(internal.sitePageTypes.pagesToJudge, {
@@ -76,6 +75,7 @@ export const judgePageTypes = internalAction({
         let result: DecisionResult | undefined;
         try {
           result = (await runDecisions(ctx, {
+            prepared,
             subject: { kind: "seo-pages", id: args.websiteId },
             state: {
               // A page's kind is kept once for every company watching the site,

@@ -16,6 +16,7 @@ import schema from "./schema";
 import { aggregateDailySnapshots } from "./analyticsSnapshotAggregation";
 import type { Doc, Id } from "./_generated/dataModel";
 import { MODEL_CATALOG_LIMIT } from "./aiModelService";
+import { callsOf } from "./decisionLedger";
 
 type SystemAgentId = "system_assistant";
 export type MessageAnalyticsPatch = {
@@ -224,10 +225,28 @@ export const readDayInteractionsPage = internalQuery({
   args: {
     startTs: v.number(),
     endTs: v.number(),
-    source: v.union(v.literal("messages"), v.literal("transactions")),
+    source: v.union(v.literal("messages"), v.literal("transactions"), v.literal("decisions")),
+    /** For `decisions`: the Decision Maker, every Decision call's agent. */
+    decisionAgentId: v.optional(v.id("agents")),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
+    if (args.source === "decisions") {
+      // Decisions' calls travel on their own rows, not on cost rows (`decisionLedger.ts`).
+      const page = await ctx.db
+        .query("decisionRuns")
+        .withIndex("by_createdAt", (q) => q.gte("createdAt", args.startTs).lte("createdAt", args.endTs))
+        .paginate(args.paginationOpts);
+      const interactions = callsOf(page.page).map((call) => ({
+        companyId: call.companyId,
+        agentId: args.decisionAgentId,
+        inputTokens: call.inputTokens ?? 0,
+        outputTokens: call.outputTokens ?? 0,
+        modelUsed: call.model,
+      }));
+      return { interactions, isDone: page.isDone, continueCursor: page.continueCursor };
+    }
+
     if (args.source === "messages") {
       const page = await ctx.db
         .query("messages")
@@ -352,7 +371,10 @@ export const generateDailySnapshots = internalAction({
       modelUsed?: string;
     }> = [];
 
-    for (const source of ["messages", "transactions"] as const) {
+    // Every Decision call is charged to the Decision Maker, seeded if a fresh deployment has none yet.
+    const decisionAgentId = await ctx.runMutation(internal.decisionRuns.ensureDecisionAgentInternal, {});
+
+    for (const source of ["messages", "transactions", "decisions"] as const) {
       let cursor: string | null = null;
       for (;;) {
         const page: {
@@ -363,6 +385,7 @@ export const generateDailySnapshots = internalAction({
           startTs,
           endTs,
           source,
+          ...(source === "decisions" ? { decisionAgentId } : {}),
           paginationOpts: { numItems: SNAPSHOT_DAY_PAGE_SIZE, cursor },
         });
         rawInteractions.push(...page.interactions);

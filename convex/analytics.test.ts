@@ -687,3 +687,32 @@ describe("the platform-wide analytics read", () => {
       .toEqual(["Board Co", "External Web Traffic", "Independent"]);
   });
 });
+
+describe("the month's active users", () => {
+  /** Counted from the nightly totals' lists of each day's users and today's own rows (core-data-normalisation-plan.md §7.2, N9). */
+  test("are each day's users in the last thirty days, today's included, each once", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const DAY = 86_400_000;
+    const todayStart = Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate());
+    const date = (daysAgo: number) => new Date(todayStart - daysAgo * DAY).toISOString().slice(0, 10);
+    const superAdminId = await t.run(async (ctx) => {
+      const superAdminId = await ctx.db.insert("users", { email: "root@test.com", role: "SUPER_ADMIN" });
+      const [ann, bob, cat, dan] = await Promise.all(["ann", "bob", "cat", "dan"].map((name) => ctx.db.insert("users", { email: `${name}@test.com`, role: "USER" })));
+      const day = (daysAgo: number, users: string[]) => ctx.db.insert("analyticsDailySnapshots", {
+        date: date(daysAgo), type: "global",
+        metrics: { totalMessages: users.length, totalInputTokens: 0, totalOutputTokens: 0, costUsd: 0, activeUsersCount: users.length },
+        uniqueUserIds: users,
+      });
+      await day(1, [ann, bob]);
+      await day(29, [bob, cat]);
+      // Past the month.
+      await day(30, [dan]);
+      const threadId = await ctx.db.insert("threads", { userId: dan, title: "Today", createdAt: Date.now(), updatedAt: Date.now() });
+      await ctx.db.insert("messages", { threadId, userId: dan, role: "assistant", content: "Hello", createdAt: Date.now() });
+      return superAdminId;
+    });
+
+    const analytics = await t.withIdentity({ subject: superAdminId }).query(api.analytics.getGlobalAnalytics, { timeframe: "today" });
+    expect(analytics.aggregates.mau).toBe(4);
+  });
+});

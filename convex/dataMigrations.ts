@@ -21,8 +21,7 @@ import { appError } from "./utils/appError";
 import { clearPoundNames, copyPoundNamesToDollars } from "./costCurrencyMigration";
 import { markExistingHoldsOwned } from "./websiteAttachmentMigration";
 import { clearCountingSwitchMoves } from "./sitePositionRepair";
-import { packRankFacts } from "./siteRankings";
-import { rebuildEveryCopy } from "./siteListCopies";
+import { NORMALISATION_MIGRATIONS } from "./normalisationMigrations";
 import { moveAnswersOffRequests } from "./seoPullAnswers";
 import { backfillAnswerIndex } from "./siteAnswers";
 import { dropCheckOnlyKeywordRows } from "./privateListsMigration";
@@ -168,9 +167,7 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
   "2026-09-22-mark-existing-holds-owned": markExistingHoldsOwned,
 
   "2026-09-27-counting-switch-moves": clearCountingSwitchMoves,
-  /** Ranking rows' months and results-page features packed, their stored band cleared (`siteRankings.packRankFacts`). */
-  "2026-10-08-pack-rank-facts": packRankFacts,
-  "2026-10-08-copies-as-columns": rebuildEveryCopy, // Every compact copy built again, kept as columns (`utils/copyColumns.ts`).
+  ...NORMALISATION_MIGRATIONS,
 
   /**
    * Takes every stored DataForSEO answer off its request and into

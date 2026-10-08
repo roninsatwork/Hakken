@@ -322,9 +322,12 @@ describe('Analytics And Platform Read Drift', () => {
       return queryBlocksForTable(body, 'analyticsDailySnapshots')
         .filter((block) => {
           const hasSnapshotIndex = /\.withIndex\("by_(?:company_date|type_date|user_date)"/.test(block);
+          // Bounded either after the index or inside its range (the month's users, core-data-normalisation-plan.md §7.2).
           const hasDateUpperBound = /\.filter\(\(q\) => q\.lt\(q\.field\("date"\), todayDate\)\)/.test(block) ||
-            /\.filter\(q => q\.lt\(q\.field\("date"\), todayDate\)\)/.test(block);
-          const hasDateLowerBound = /\.gte\("date", snapshotStartDate\)/.test(block);
+            /\.filter\(q => q\.lt\(q\.field\("date"\), todayDate\)\)/.test(block) ||
+            /\.withIndex\([^;]*\.lt\("date", /.test(block);
+          const hasDateLowerBound = /\.gte\("date", snapshotStartDate\)/.test(block) ||
+            /\.withIndex\([^;]*\.gte\("date", \w+\)/.test(block);
           const lowerBoundRequired = exportName !== 'getUserCostOverview';
 
           return !hasSnapshotIndex || !hasDateUpperBound || (lowerBoundRequired && !hasDateLowerBound);

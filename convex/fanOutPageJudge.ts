@@ -2,7 +2,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, internalMutation, internalQuery } from "./_generated/server";
-import { runDecisions, type DecisionResult } from "./decisionActions";
+import { prepareDecisions, runDecisions, type DecisionResult } from "./decisionActions";
 import { pageVerdictValidator } from "./fanOutSchema";
 import { wordsThatMatter } from "./utils/fanOutAngle";
 import { isTrackedHold } from "./utils/websitePairing";
@@ -59,11 +59,9 @@ export const judgeHoldPages = internalAction({
     const work: AnglesToJudge = await ctx.runQuery(internal.fanOutPageJudge.anglesToJudge, { holdId: args.holdId });
     const deriveMoves = () => ctx.scheduler.runAfter(0, internal.websiteMoves.deriveSiteMoves, { companyWebsiteId: args.holdId });
     if (!work) return null;
-    const modes: Record<string, string> = await ctx.runQuery(internal.decisionRuns.resolveModesInternal, {
-      decisionKeys: [DECISION],
-      companyId: work.companyId,
-    });
-    if (modes[DECISION] === "OFF" || work.angles.length === 0) {
+    // Its mode and model looked up once for every angle, not again on each.
+    const prepared = await prepareDecisions(ctx, { keys: [DECISION], companyId: work.companyId });
+    if (prepared.modes[DECISION] === "OFF" || work.angles.length === 0) {
       await deriveMoves();
       return null;
     }
@@ -90,6 +88,7 @@ export const judgeHoldPages = internalAction({
         try {
           result = (await runDecisions(ctx, {
             companyId: work.companyId,
+            prepared,
             subject: { kind: "seo-angles", id: args.holdId },
             state: {
               business: {

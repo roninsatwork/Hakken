@@ -1,4 +1,4 @@
-import { runDecisions, type DecisionResult, type RunDecisionsDeps } from "./decisionActions";
+import { prepareDecisions, runDecisions, type DecisionResult, type RunDecisionsDeps } from "./decisionActions";
 import { couldBeSameBusiness, primaryBrandName } from "./utils/websiteBrands";
 import { internal } from "./_generated/api";
 import type { ActionCtx } from "./_generated/server";
@@ -88,8 +88,10 @@ export async function judgeStances(
 }>> {
   if (args.hits.length === 0) return [];
 
+  const prepared = await prepareDecisions(ctx, { keys: ["seo.citation-stance"], ...(args.companyId ? { companyId: args.companyId } : {}) });
   const answers = await askEach(args.hits, async (hit) => (await runDecisions(ctx, {
     ...(args.companyId ? { companyId: args.companyId } : {}),
+    prepared,
     subject: { kind: "seo-citation", id: args.pullId },
     state: { question: args.prompt, answer: { text: args.answer }, brand: { name: hit.text } },
     requests: [{
@@ -174,8 +176,10 @@ export async function linkCitedAddresses(
 
   const linkedByIndex = new Map<number, Id<"websites">>();
   if (pairs.length > 0) {
+    const prepared = await prepareDecisions(ctx, { keys: ["seo.same-business"], ...(args.companyId ? { companyId: args.companyId } : {}) });
     const answers = await askEach(pairs, async (pair) => (await runDecisions(ctx, {
       ...(args.companyId ? { companyId: args.companyId } : {}),
+      prepared,
       subject: { kind: "seo-address", id: args.pullId },
       state: {
         seen: { address: pair.seenHost },
@@ -256,8 +260,10 @@ export async function judgeCompetitors(
     ...(args.ours?.names.length ? { knownAs: args.ours.names } : {}),
     ...(args.ours?.searches.length ? { searchedFor: args.ours.searches } : {}),
   };
+  const prepared = await prepareDecisions(ctx, { keys: ["seo.real-competitor"], ...(args.companyId ? { companyId: args.companyId } : {}) });
   const results = await askEach(args.found, async (row) => (await runDecisions(ctx, {
     ...(args.companyId ? { companyId: args.companyId } : {}),
+    prepared,
     subject: { kind: "seo-competitors", id: args.pullId },
     state: {
       ours,
@@ -344,11 +350,14 @@ export async function judgeNewKeywords(
 
   // One search per request — see `askEach` — in rounds, so a Decision that
   // is switched off, or a provider that is down, is found out after one round
-  // rather than after every search has been tried.
+  // rather than after every search has been tried. Its mode and model are
+  // looked up once for them all.
+  const prepared = await prepareDecisions(ctx, { keys: ["seo.keyword-intent"], ...(args.companyId ? { companyId: args.companyId } : {}) });
   for (let start = 0; start < unjudged.length; start += KEYWORDS_PER_ROUND) {
     const round = unjudged.slice(start, start + KEYWORDS_PER_ROUND);
     const answers = await askEach(round, async (keyword) => (await runDecisions(ctx, {
       ...(args.companyId ? { companyId: args.companyId } : {}),
+      prepared,
       subject: { kind: "seo-keywords", id: args.pullId },
       state: {
         ...(args.host ? {

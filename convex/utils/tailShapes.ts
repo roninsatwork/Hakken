@@ -10,7 +10,11 @@ import { rowShape } from "./rowShape";
 
 /** Shapes for the surfaces that come one or two to a file. */
 
-export const agentTransactionPageShape = paginationResultValidator(rowShape.agentTransactions);
+/** An agent's cost rows — for the Decision Maker, its Decisions' calls in the same shape (`decisionLedger.ts`). */
+export const agentTransactionPageShape = paginationResultValidator(v.object({
+  ...rowShape.agentTransactions.fields,
+  _id: v.union(v.id("agentTransactions"), v.id("decisionRuns")),
+}));
 
 export const agentTransactionStatsShape = v.object({
   totalGenerations: v.number(),

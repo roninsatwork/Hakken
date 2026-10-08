@@ -17,12 +17,15 @@ import { getGlobalInventoryRollup, getPlanDistributionFromRollup } from "./utils
 import * as analyticsShapes from "./utils/analyticsShapes";
 import { adminQuery, superAdminQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
+import { callsOf, decisionAgentId, decisionCallInteraction, decisionRunsBetween } from "./decisionLedger";
 import { MODEL_CATALOG_LIMIT } from "./aiModelService";
 import { assertAnalyticsUserAccess, requireAnalyticsCompanyAccess } from "./utils/analyticsAccess";
 import { createCoverage } from "./utils/readCoverage";
 
 /** The row cap every analytics scan shares. Read one past it, because the extra row is the only evidence there was more. */
 const ANALYTICS_SCAN = 10000;
+/** The days before today a month's active users are counted over: thirty days with today. */
+const MONTH_DAYS = 29;
 
 type SystemAgentId = "system_assistant";
 type AnalyticsInteraction = {
@@ -405,6 +408,11 @@ export const getCompanyMetrics = adminQuery({
        .withIndex("by_company_created", q => q.eq("companyId", args.companyId).gte("createdAt", realStartTimeStamp))
        .filter(q => q.lte(q.field("createdAt"), endTimeStamp))
        .take(ANALYTICS_SCAN + 1));
+    // Decisions' calls travel on their own rows, not on cost rows (`decisionLedger.ts`).
+    const periodDecisionRuns = coverage.cap("periodDecisionRuns", ANALYTICS_SCAN, await decisionRunsBetween(ctx, {
+       companyId: args.companyId, from: realStartTimeStamp, to: endTimeStamp, most: ANALYTICS_SCAN + 1,
+    }));
+    const decisionAgent = await decisionAgentId(ctx);
        
     const knowledgeDocs = coverage.cap("knowledgeDocs", ANALYTICS_SCAN, await ctx.db.query("knowledgeDocuments").withIndex("by_company", q => q.eq("companyId", args.companyId)).take(ANALYTICS_SCAN + 1));
 
@@ -454,7 +462,8 @@ export const getCompanyMetrics = adminQuery({
           providerKey: t.providerKey,
           providerModelId: t.providerModelId,
           createdAt: t.createdAt
-       }))
+       })),
+       ...callsOf(periodDecisionRuns).map((call) => decisionCallInteraction(call, decisionAgent)),
     ];
 
 
@@ -746,20 +755,30 @@ export const getGlobalAnalytics = superAdminQuery({
       .withIndex("by_createdAt", q => q.gte("createdAt", realStartTimeStamp))
       .filter((q) => q.lte(q.field("createdAt"), endTimeStamp))
       .take(ANALYTICS_SCAN + 1));
+    // Decisions' calls travel on their own rows, not on cost rows (`decisionLedger.ts`).
+    const periodDecisionRuns = coverage.cap("periodDecisionRuns", ANALYTICS_SCAN, await decisionRunsBetween(ctx, {
+      from: realStartTimeStamp, to: endTimeStamp, most: ANALYTICS_SCAN + 1,
+    }));
+    const decisionAgent = await decisionAgentId(ctx);
       
-    const thirtyDaysAgo = now.getTime() - (30 * 24 * 60 * 60 * 1000);
-    const thirtyDayMessages = coverage.cap("thirtyDayMessages", ANALYTICS_SCAN, await ctx.db.query("messages")
-      .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", thirtyDaysAgo))
+    // The month's users from the nightly totals' lists of each day's users, and
+    // today's from today's own rows — not every row of thirty days, read on
+    // every open (core-data-normalisation-plan.md §7.2, N9).
+    const monthStartDate = formatSnapshotDate(new Date(todayStartTs - 29 * 24 * 60 * 60 * 1000));
+    const monthSnapshots = coverage.cap("monthSnapshots", MONTH_DAYS, await ctx.db.query("analyticsDailySnapshots")
+      .withIndex("by_type_date", q => q.eq("type", "global").gte("date", monthStartDate).lt("date", formatSnapshotDate(new Date(todayStartTs))))
+      .take(MONTH_DAYS + 1));
+    const mauSet = new Set<string>(monthSnapshots.flatMap((snapshot) => snapshot.uniqueUserIds ?? []));
+    const todayMessages = coverage.cap("todayMessages", ANALYTICS_SCAN, await ctx.db.query("messages")
+      .withIndex("by_role_created", q => q.eq("role", "assistant").gte("createdAt", todayStartTs))
       .take(ANALYTICS_SCAN + 1));
-
-    const mauSet = new Set<string>();
-    for (const msg of thirtyDayMessages) {
+    for (const msg of todayMessages) {
        if (msg.userId) mauSet.add(msg.userId);
     }
-    const thirtyDayTxs = coverage.cap("thirtyDayTxs", ANALYTICS_SCAN, await ctx.db.query("agentTransactions")
-       .withIndex("by_createdAt", q => q.gte("createdAt", thirtyDaysAgo))
+    const todayTxs = coverage.cap("todayTxs", ANALYTICS_SCAN, await ctx.db.query("agentTransactions")
+       .withIndex("by_createdAt", q => q.gte("createdAt", todayStartTs))
        .take(ANALYTICS_SCAN + 1));
-    for (const tx of thirtyDayTxs) {
+    for (const tx of todayTxs) {
        if (tx.userId) mauSet.add(tx.userId);
     }
 
@@ -800,7 +819,8 @@ export const getGlobalAnalytics = superAdminQuery({
           providerKey: t.providerKey,
           providerModelId: t.providerModelId,
           createdAt: t.createdAt
-       }))
+       })),
+       ...callsOf(periodDecisionRuns).map((call) => decisionCallInteraction(call, decisionAgent)),
     ];
 
 

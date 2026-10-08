@@ -120,7 +120,7 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   agentMemoryUsage: withRun,
   agentRunCheckpoints: LATEST,
   agentLogs: cleared("90 days", "purges/agentLogs"),
-  agentTransactions: cleared("400 days", "purges/agentTransactions"),
+  agentTransactions: cleared("90 days", "purges/agentTransactions"),
   agentToolIdempotency: cleared("24 hours", "aiToolWriteTools/purgeExpiredToolIdempotency"),
   agentRunApprovals: forever("evidence of what a person approved"),
   agentMemoryCandidates: forever("proposals, kept with their review"),

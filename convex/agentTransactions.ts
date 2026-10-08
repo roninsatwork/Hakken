@@ -1,5 +1,8 @@
 import { v } from "convex/values";
-import { internalMutation } from "./_generated/server";
+import { internalMutation, type QueryCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { DECISION_AGENT_SYSTEM_KEY } from "./decisionRuns";
+import { decisionCallRows, type DecisionCall } from "./decisionLedger";
 import { paginationOptsValidator } from "convex/server";
 import { adminQuery } from "./tenantFunctions";
 import * as tailShapes from "./utils/tailShapes";
@@ -10,6 +13,29 @@ import { appError } from "./utils/appError";
 const AGENT_TRANSACTION_STATS_LIMIT = 1000;
 const MODEL_SEED_CATALOG_LIMIT = 500;
 
+/**
+ * The Decision Maker's calls travel on its Decisions' rows, not on cost rows
+ * (`decisionLedger.ts`; core-data-normalisation-plan.md §7.1): its page reads
+ * them there, in the same shape.
+ */
+async function isDecisionMaker(ctx: QueryCtx, agentId: Id<"agents">): Promise<boolean> {
+  return (await ctx.db.get(agentId))?.systemKey === DECISION_AGENT_SYSTEM_KEY;
+}
+
+/** The Decision Maker's calls, newest first: a company admin's own company's, a super admin's every one. */
+function decisionCallsQuery(ctx: QueryCtx, companyId: Id<"companies"> | undefined) {
+  const runs = companyId
+    ? ctx.db.query("decisionRuns").withIndex("by_company_created", (q) => q.eq("companyId", companyId))
+    : ctx.db.query("decisionRuns").withIndex("by_createdAt");
+  return runs.order("desc").filter((q) => q.neq(q.field("model"), undefined));
+}
+
+function adminCompany(user: { role?: string; companyId?: Id<"companies"> }): Id<"companies"> | undefined {
+  if (user.role !== "ADMIN") return undefined;
+  if (!user.companyId) throw appError("UNAUTHORIZED", "Unauthorized");
+  return user.companyId;
+}
+
 export const getForAgent = adminQuery({
   args: {
     agentId: v.id("agents"),
@@ -18,14 +44,18 @@ export const getForAgent = adminQuery({
   returns: tailShapes.agentTransactionPageShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
+    const companyId = adminCompany(user);
+    if (await isDecisionMaker(ctx, args.agentId)) {
+      const page = await decisionCallsQuery(ctx, companyId).paginate(args.paginationOpts);
+      return { ...page, page: await decisionCallRows(ctx, page.page as DecisionCall[], args.agentId) };
+    }
+
     const baseQuery = ctx.db
       .query("agentTransactions")
       .withIndex("by_agent", (ix) => ix.eq("agentId", args.agentId));
-      
-    if (user.role === "ADMIN") {
-      if (!user.companyId) throw appError("UNAUTHORIZED", "Unauthorized");
+    if (companyId) {
       return await baseQuery
-        .filter((filterQ) => filterQ.eq(filterQ.field("companyId"), user.companyId))
+        .filter((filterQ) => filterQ.eq(filterQ.field("companyId"), companyId))
         .order("desc")
         .paginate(args.paginationOpts);
     }
@@ -39,19 +69,20 @@ export const getStatsForAgent = adminQuery({
   returns: tailShapes.agentTransactionStatsShape,
   handler: async (ctx, args) => {
     const { user } = ctx;
-    const baseQuery = ctx.db
-      .query("agentTransactions")
-      .withIndex("by_agent", (ix) => ix.eq("agentId", args.agentId));
-      
-    const txs = await (user.role === "ADMIN"
-      ? (() => {
-      if (!user.companyId) throw appError("UNAUTHORIZED", "Unauthorized");
-      return baseQuery
-        .filter((filterQ) => filterQ.eq(filterQ.field("companyId"), user.companyId))
-        .take(AGENT_TRANSACTION_STATS_LIMIT);
-    })()
-      : baseQuery.take(AGENT_TRANSACTION_STATS_LIMIT));
-      
+    const companyId = adminCompany(user);
+    let txs: Array<{ inputTokens: number; outputTokens: number; costUsd: number }>;
+    if (await isDecisionMaker(ctx, args.agentId)) {
+      const calls = await decisionCallsQuery(ctx, companyId).take(AGENT_TRANSACTION_STATS_LIMIT);
+      txs = await decisionCallRows(ctx, calls as DecisionCall[], args.agentId);
+    } else {
+      const baseQuery = ctx.db
+        .query("agentTransactions")
+        .withIndex("by_agent", (ix) => ix.eq("agentId", args.agentId));
+      txs = await (companyId
+        ? baseQuery.filter((filterQ) => filterQ.eq(filterQ.field("companyId"), companyId)).take(AGENT_TRANSACTION_STATS_LIMIT)
+        : baseQuery.take(AGENT_TRANSACTION_STATS_LIMIT));
+    }
+
     const totalGenerations = txs.length;
     let totalTokensIngested = 0;
     let totalInputTokens = 0;

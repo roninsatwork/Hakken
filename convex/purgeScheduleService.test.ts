@@ -1,10 +1,13 @@
+import { convexTest } from "convex-test";
 import { describe, expect, test, vi } from "vitest";
+import schema from "./schema";
 import {
   calculateNextPurgeRun,
   calculatePurgeCutoffTimestamp,
   DEFAULT_PURGE_CONFIGS,
   getPurgeRetentionDays,
   listDisabledPurgePipelines,
+  lowerSavedCostRowKeep,
   normalizePurgePipelineConfigForUpdate,
   parsePurgePipelineConfig,
   PURGE_PIPELINE_KEYS,
@@ -177,5 +180,27 @@ describe("purge schedule service", () => {
     expect(calculatePurgeCutoffTimestamp(30, Date.parse("2026-06-01T12:00:00.000Z"))).toBe(
       Date.parse("2026-05-02T12:00:00.000Z")
     );
+  });
+});
+
+describe("the cost rows' keep lowered to 90 days (core-data-normalisation-plan.md, N9)", () => {
+  test("a saved 400 becomes 90, and a number someone chose stays", async () => {
+    const t = convexTest(schema, import.meta.glob("./**/*.*s"));
+    const save = (agentTransactions: number) => t.run(async (ctx) => {
+      for (const row of await ctx.db.query("systemConfig").collect()) await ctx.db.delete(row._id);
+      // A copy: the parse hands back the defaults themselves when nothing is saved.
+      const configs = structuredClone(parsePurgePipelineConfig(undefined));
+      configs.agentTransactions = { ...configs.agentTransactions, retentionDays: agentTransactions };
+      await ctx.db.insert("systemConfig", { key: "PURGE_PIPELINES_CONFIG", value: JSON.stringify(configs), updatedAt: 1 });
+    });
+    const kept = () => t.run(async (ctx) => parsePurgePipelineConfig((await ctx.db.query("systemConfig").first())?.value).agentTransactions.retentionDays);
+
+    expect(DEFAULT_PURGE_CONFIGS.agentTransactions.retentionDays).toBe(90);
+    await save(400);
+    expect(await t.run(async (ctx) => lowerSavedCostRowKeep(ctx))).toMatchObject({ updated: 1 });
+    expect(await kept()).toBe(90);
+    await save(200);
+    expect(await t.run(async (ctx) => lowerSavedCostRowKeep(ctx))).toMatchObject({ updated: 0 });
+    expect(await kept()).toBe(200);
   });
 });
