@@ -51,7 +51,7 @@ export const pagesTables = {
     /** Why no sitemap was read, in plain words, when none was: every address tried was missing or would not answer. */
     problem: v.optional(v.string()),
     day: v.string(),
-    /** When this reading was taken: its pages carry the same stamp (`siteSitemapPages.readAt`). */
+    /** When this reading was taken: its pages carry the same stamp (`siteSitemapParts.readAt`). */
     readAt: v.number(),
     /**
      * The stamp its pages carry when it found exactly the pages of the
@@ -61,7 +61,6 @@ export const pagesTables = {
     pagesReadAt: v.optional(v.number()),
   }).index("by_website", ["websiteId"]),
 
-  /** One page the sitemap lists: its path, the file that lists it, and its last change where given. */
   /**
    * The pages a sitemap reading listed, a thousand a record
    * (core-data-normalisation-plan.md §6.3): each page's address, the listing
@@ -79,24 +78,6 @@ export const pagesTables = {
     /** Null where the sitemap gave no date. */
     lastmods: v.array(v.union(v.string(), v.null())),
   }).index("by_website_read", ["websiteId", "readAt"]),
-
-  siteSitemapPages: defineTable({
-    websiteId: v.id("websites"),
-    page: v.string(),
-    /** The listing file's own name, as a person reads it: `post-sitemap.xml`. */
-    file: v.string(),
-    lastmod: v.optional(v.string()),
-    /**
-     * The reading it came from (`siteSitemaps.readAt`). A new reading's pages
-     * are written beside the last one's, the website's reading switched to
-     * them in one step, and only then the last one's removed — so nothing
-     * ever reads half of each (`sitemaps.ts`).
-     */
-    readAt: v.number(),
-  })
-    // By page and by file went on 2026-10-07, used by no query (keep-less-history-plan.md, 5.5).
-    // One reading's pages, in the order they were read; and the older readings', to clear.
-    .index("by_website_read", ["websiteId", "readAt"]),
 
   /** Every page of a company's website once, and where it was found. */
   holdPages: defineTable({

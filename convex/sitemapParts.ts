@@ -52,26 +52,3 @@ export async function sitemapPagesPage(
     .paginate({ cursor: args.cursor, numItems: PARTS_A_READ });
   return { rows: result.page.flatMap(pagesOfPart), cursor: result.continueCursor, isDone: result.isDone };
 }
-
-/**
- * Dev's sitemap pages kept one a row before 2026-10-08 moved into records
- * (`2026-10-08-sitemap-parts`), a reading's at a time in the order listed;
- * done when no row is left.
- */
-export async function packSitemapPageRows(ctx: MutationCtx): Promise<{ cursor: null; isDone: boolean; processed: number; updated: number }> {
-  const first = await ctx.db.query("siteSitemapPages").first();
-  if (!first) return { cursor: null, isDone: true, processed: 0, updated: 0 };
-  const rows = await ctx.db
-    .query("siteSitemapPages")
-    .withIndex("by_website_read", (q) => q.eq("websiteId", first.websiteId).eq("readAt", first.readAt))
-    .take(SITEMAP_PART_PAGES * 3);
-  const reading = { websiteId: first.websiteId, readAt: first.readAt };
-  // A reading longer than one call's rows is moved over several, each to its own records.
-  for (let start = 0; start < rows.length; start += SITEMAP_PART_PAGES) {
-    await writeSitemapPart(ctx, reading, rows.slice(start, start + SITEMAP_PART_PAGES).map((row) => ({
-      page: row.page, file: row.file, ...(row.lastmod !== undefined ? { lastmod: row.lastmod } : {}),
-    })));
-  }
-  for (const row of rows) await ctx.db.delete(row._id);
-  return { cursor: null, isDone: false, processed: rows.length, updated: rows.length };
-}

@@ -21,7 +21,7 @@ const TABLES = [
   "seoDataPulls", "seoPullAnswers", "seoCycleLines", "seoWebsiteMetrics", "keywordPositionMonths",
   "siteKeywordRanks", "siteKeywordFeatures", "sitePageRanks", "siteSections", "siteDaySummaries", "sitePaidKeywords",
   "siteBacklinks", "siteReferringDomainParts", "siteAnchorParts", "siteReferringIpParts", "siteLinkWeeks",
-  "siteCrawls", "siteCrawlPages", "siteCrawlLinks", "siteSitemapPages", "siteSitemapParts", "siteCitedPages",
+  "siteCrawls", "siteCrawlPages", "siteCrawlLinks", "siteSitemapParts", "siteCitedPages",
   "siteListCopies", "siteListCopyParts", "siteContentGaps", "holdPages", "siteListAiDays",
   "aiAnswers", "aiCitations", "aiAnswerTexts", "aiAnswerIndex", "promptFanOutQueries", "promptFanOutDays", "siteSerpPages",
   "discoveredCompetitors", "websiteSearchStats", "websiteQuestionStats", "siteSummaryRequests",

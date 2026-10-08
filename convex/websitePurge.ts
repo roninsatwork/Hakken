@@ -250,10 +250,6 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
       .withIndex("by_website_read", (q) => q.eq("websiteId", args.websiteId)).take(DOMAIN_PARTS_PURGED);
     for (const part of sitemapParts) await ctx.db.delete(part._id);
     if (sitemapParts.length === DOMAIN_PARTS_PURGED) more = true;
-    const sitemapPages = await ctx.db.query("siteSitemapPages")
-      .withIndex("by_website_read", (q) => q.eq("websiteId", args.websiteId)).take(ENTRY_PURGE_BATCH);
-    for (const row of sitemapPages) await ctx.db.delete(row._id);
-    if (sitemapPages.length === ENTRY_PURGE_BATCH) more = true;
     for (const row of await ctx.db.query("siteSitemaps").withIndex("by_website", (q) => q.eq("websiteId", args.websiteId)).take(5)) {
       await ctx.db.delete(row._id);
     }

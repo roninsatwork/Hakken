@@ -251,7 +251,6 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   siteListCopies: LATEST,
   siteListCopyParts: LATEST,
   siteSitemaps: LATEST,
-  siteSitemapPages: LATEST,
   siteSitemapParts: LATEST,
   holdPages: LATEST,
   pageClassifications: RECORD,
