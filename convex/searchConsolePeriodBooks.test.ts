@@ -2,7 +2,8 @@ import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { internal } from "./_generated/api";
 import schema from "./schema";
-import { BOOK_RECORD, BookNames, bookRecords, deletePeriodBooks, noteListBuild, wholeBook, type BookScope } from "./searchConsolePeriodBooks";
+import { BOOK_RECORD, BookNames, bookRecords, deletePeriodBooks, namedRows, noteListBuild, wholeBook, type BookScope } from "./searchConsolePeriodBooks";
+import type { ListRow } from "./utils/searchConsoleViews";
 import { termToken } from "./utils/searchConsoleTerms";
 
 /**
@@ -13,6 +14,12 @@ import { termToken } from "./utils/searchConsoleTerms";
  */
 
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
+
+const EMPTY_ROW: ListRow = {
+  key: "", clicks: 1, impressions: 1, ctr: 1, position: 1, band: "1-3", previousClicks: null, change: null, previousPosition: null,
+  positionChange: null, share: 0, count: null, top: null, tracked: false, kind: null, volume: null, estimate: null, brand: null,
+  usualCtr: null, expected: null, topShare: null, next: null, nextShare: null, verdict: null, gap: null,
+};
 
 async function hold(t: ReturnType<typeof harness>) {
   return await t.run(async (ctx) => {
@@ -69,6 +76,25 @@ describe("a build's book", () => {
       missing: "brass knob",
       whole: 600,
     });
+  });
+
+  test("rows are named one by one for a screen, and from the books read whole for a download", async () => {
+    const t = harness();
+    const holdId = await hold(t);
+    const scope: BookScope = { companyWebsiteId: holdId, searchType: "web", builtAt: 7 };
+    const keywords = Array.from({ length: 800 }, (_, index) => `lever handle ${index}`);
+    const places = await write(t, scope, "query", keywords);
+    await write(t, scope, "page", ["https://acme-shop.test/levers/"]);
+    const row = (keyword: string) => ({ ...EMPTY_ROW, key: termToken("query", places.get(keyword)!), top: termToken("page", 0) });
+    const named = await t.run(async (ctx) => {
+      const names = new BookNames(ctx, scope);
+      const few = await namedRows({ names }, [row("lever handle 3")]);
+      const many = await namedRows({ names }, keywords.map(row));
+      return { few: few.map((one) => [one.key, one.top]), many: many.map((one) => one.key), tops: new Set(many.map((one) => one.top)).size };
+    });
+    expect(named.few).toEqual([["lever handle 3", "https://acme-shop.test/levers/"]]);
+    expect(named.many).toEqual(keywords);
+    expect(named.tops).toBe(1);
   });
 
   test("a book goes once no list is read from its build; all go with the website", async () => {

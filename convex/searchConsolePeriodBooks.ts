@@ -36,6 +36,8 @@ const RECORDS_PER_WRITE = 20;
 const BOOK_RECORDS_MOST = 4_000;
 /** Book records cleared per call. */
 const DROP_PER_STEP = 40;
+/** Rows named a record at a time; past it, from the books read whole. */
+const NAMED_ONE_BY_ONE = 500;
 
 export type BookScope = { companyWebsiteId: Id<"companyWebsites">; country?: string; searchType: SearchType; builtAt: number };
 
@@ -117,7 +119,7 @@ export async function wholeBook(ctx: { db: QueryCtx["db"] }, scope: BookScope, k
 export class BookNames {
   private readonly records = new Map<string, Promise<string[]>>();
 
-  constructor(private readonly ctx: { db: QueryCtx["db"] }, readonly scope: BookScope) {}
+  constructor(readonly ctx: { db: QueryCtx["db"] }, readonly scope: BookScope) {}
 
   private record(kind: BookKind, record: number): Promise<string[]> {
     const key = `${kind}:${record}`;
@@ -278,6 +280,12 @@ export async function asText<List extends { rows: PeriodRow[]; book: BookScope |
 export async function namedRows(list: { names?: BookNames | null }, rows: readonly ListRow[]): Promise<ListRow[]> {
   const names = list.names;
   if (!names) return [...rows];
+  // Many rows — a download — named from the books read whole, once: a look-up a row outran a read's second.
+  if (rows.length > NAMED_ONE_BY_ONE) {
+    const books = { query: textsFrom(await wholeBook(names.ctx, names.scope, "query")), page: textsFrom(await wholeBook(names.ctx, names.scope, "page")) };
+    const text = (value: string) => (tokenPlace(value)?.kind === "page" ? books.page(value) : books.query(value));
+    return rows.map((row) => ({ ...row, key: text(row.key), top: row.top === null ? null : text(row.top), next: row.next === null ? null : text(row.next) }));
+  }
   return await Promise.all(rows.map(async (row) => ({
     ...row,
     key: await names.textOf(row.key),
