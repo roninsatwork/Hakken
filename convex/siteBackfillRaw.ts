@@ -11,7 +11,8 @@ import { normaliseKeyword } from "./seoJudgments";
 import { fileAnswerText } from "./siteAnswers";
 import { fileSerpPage, serpSnapshotOf, serpSnapshotValidator } from "./siteSerp";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
-import { kdBandFor, pagePath, rankedPositionValidator } from "./utils/siteShapes";
+import { pagePath, rankedPositionValidator } from "./utils/siteShapes";
+import { packFeatures, packTrend } from "./utils/rankFacts";
 
 /**
  * Read the Phase 2 fields out of every result already stored.
@@ -331,9 +332,9 @@ export const fileStoredRankExtras = internalMutation({
       };
       set("cpc", entry.cpc);
       set("difficulty", entry.difficulty);
-      set("kdBand", kdBandFor(entry.difficulty));
-      set("trend", entry.trend);
-      set("serpFeatures", entry.serpFeatures);
+      // Packed as rows keep them (`utils/rankFacts.ts`); the difficulty's band is worked out where it is read.
+      set("trend", entry.trend ? packTrend(entry.trend) : undefined);
+      set("serpFeatures", entry.serpFeatures ? packFeatures(entry.serpFeatures) : undefined);
       if (samePage) {
         set("traffic", entry.traffic);
         set("trafficValue", entry.trafficValue);

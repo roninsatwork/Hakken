@@ -6,6 +6,7 @@ import type { Id } from "./_generated/dataModel";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { kdBandFor, pageTypeByAddress } from "./utils/siteShapes";
 import { useFixedDay } from "@/src/test/realTime";
+import { featuresOf, trendOf } from "./utils/rankFacts";
 
 /**
  * The client's Sites screens (docs/plans/active/user-sites-plan.md).
@@ -477,7 +478,9 @@ describe("what the raw answers hold, read out (Phase 2)", () => {
       pageRank: 312, pageReferringDomains: 14, pageBacklinks: 51,
     }]);
     const rank = async () => (await t.run(async (ctx) => await ctx.db.query("siteKeywordRanks").collect()))[0];
-    expect(await rank()).toMatchObject({
+    // The months and the page's features packed on the row, read back as they came; the band worked out from the difficulty.
+    const facts = (row: Awaited<ReturnType<typeof rank>>) => ({ ...row, trend: trendOf(row.trend), serpFeatures: featuresOf(row.serpFeatures), kdBand: kdBandFor(row.difficulty) });
+    expect(facts(await rank())).toMatchObject({
       cpc: 4.2, difficulty: 41, kdBand: "kd31_70", trend: [100, 120, 90], traffic: 58.5, trafficValue: 245.9,
       serpFeatures: ["local_pack"], pageRank: 312, pageReferringDomains: 14, pageBacklinks: 51,
     });
@@ -494,7 +497,7 @@ describe("what the raw answers hold, read out (Phase 2)", () => {
     // still hold; the traffic and the old page's figures do not.
     await fileRanks(t, own.websiteId, DAY, [{ keyword: "web design surrey", position: 3, url: "https://ronins.co.uk/services/web-design/" }]);
     const after = await rank();
-    expect(after).toMatchObject({ position: 3, page: "/services/web-design/", cpc: 4.2, difficulty: 41, kdBand: "kd31_70", serpFeatures: ["local_pack"] });
+    expect(facts(after)).toMatchObject({ position: 3, page: "/services/web-design/", cpc: 4.2, difficulty: 41, kdBand: "kd31_70", serpFeatures: ["local_pack"] });
     expect(after.traffic).toBeUndefined();
     expect(after.pageRank).toBeUndefined();
   });
@@ -913,7 +916,7 @@ describe("reading stored results again (free)", () => {
     await t.action(internal.siteBackfillRaw.readStoredResults, { operationId: "domain_ranked_keywords" });
 
     const rank = (await t.run(async (ctx) => await ctx.db.query("siteKeywordRanks").collect()))[0];
-    expect(rank).toMatchObject({ cpc: 9, difficulty: 55, kdBand: "kd31_70", traffic: 240, pageRank: 126 });
+    expect({ ...rank, kdBand: kdBandFor(rank.difficulty) }).toMatchObject({ cpc: 9, difficulty: 55, kdBand: "kd31_70", traffic: 240, pageRank: 126 });
     const metrics = await t.run(async (ctx) => await ctx.db.query("seoWebsiteMetrics").collect());
     expect(JSON.parse(metrics[0].metricsJson)).toMatchObject({ bandTop3: 1, keywordsNew: 1, trafficValue: 99 });
     // Nothing was asked of a model.

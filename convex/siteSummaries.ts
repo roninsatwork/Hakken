@@ -591,7 +591,6 @@ export const markLost = internalMutation({
       await ctx.db.replace(id, {
         ...(row.cpc !== undefined ? { cpc: row.cpc } : {}),
         ...(row.difficulty !== undefined ? { difficulty: row.difficulty } : {}),
-        ...(row.kdBand ? { kdBand: row.kdBand } : {}),
         ...(row.trend ? { trend: row.trend } : {}),
         ...(row.serpFeatures ? { serpFeatures: row.serpFeatures } : {}),
         websiteId: row.websiteId,

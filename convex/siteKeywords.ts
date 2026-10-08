@@ -17,6 +17,7 @@ import {
 } from "./utils/siteShapes";
 import { wordStartMatcher } from "./utils/wordStarts";
 import { pointOnDay } from "./positionHistory";
+import { featuresOf, trendOf } from "./utils/rankFacts";
 
 /**
  * What a site ranks for on Google: every keyword, every page, every folder, and
@@ -127,10 +128,10 @@ function keywordRow(row: Rank) {
     firstSeenDay: row.firstSeenDay,
     cpc: row.cpc ?? null,
     difficulty: row.difficulty ?? null,
-    trend: row.trend ?? [],
+    trend: trendOf(row.trend),
     traffic: row.traffic ?? null,
     trafficValue: row.trafficValue ?? null,
-    serpFeatures: row.serpFeatures ?? [],
+    serpFeatures: featuresOf(row.serpFeatures),
   };
 }
 

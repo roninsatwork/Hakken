@@ -91,14 +91,16 @@ export const siteTables = {
     day: v.string(),
     firstSeenDay: v.string(),
     // What a ranked-keywords pull says about the search (Phase 2): what a
-    // click costs, how hard it is (0–100, and its band for the filter), how it
-    // was searched month by month over the last year, oldest first, and what
-    // else its results page shows.
+    // click costs, how hard it is (0–100; its band for the filter worked out
+    // from it, `kdBandFor`), how it was searched month by month over the last
+    // year, oldest first, and what else its results page shows — the two
+    // packed (`utils/rankFacts.ts`; lists on a row kept before 2026-10-08).
     cpc: maybeNumber,
     difficulty: maybeNumber,
+    /** Kept before 2026-10-08, cleared by `2026-10-08-pack-rank-facts`: worked out from `difficulty` since. */
     kdBand: v.optional(kdBandValidator),
-    trend: v.optional(v.array(v.number())),
-    serpFeatures: v.optional(v.array(v.string())),
+    trend: v.optional(v.union(v.string(), v.array(v.number()))),
+    serpFeatures: v.optional(v.union(v.string(), v.array(v.string()))),
     // The visits DataForSEO estimates the site gets from it each month, and
     // what they would cost as ads; and the ranking page's page rank and
     // links (never its title — no page text is kept, see

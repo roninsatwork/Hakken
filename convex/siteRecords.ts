@@ -22,6 +22,7 @@ import {
   pagePath,
   rankStatusValidator,
 } from "./utils/siteShapes";
+import { featuresOf, trendOf } from "./utils/rankFacts";
 
 /**
  * One record's own screen on the client's Sites pages: everything stored about
@@ -113,8 +114,8 @@ function rankOf(row: Doc<"siteKeywordRanks">) {
     firstSeenDay: row.firstSeenDay,
     cpc: row.cpc ?? null,
     difficulty: row.difficulty ?? null,
-    trend: row.trend ?? [],
-    serpFeatures: row.serpFeatures ?? [],
+    trend: trendOf(row.trend),
+    serpFeatures: featuresOf(row.serpFeatures),
     traffic: row.traffic ?? null,
     trafficValue: row.trafficValue ?? null,
     pageRank: row.pageRank ?? null,
@@ -297,8 +298,8 @@ export const keywordRecord = tenantQuery({
           competitionLevel: facts.competitionLevel ?? null,
           searchIntent: facts.searchIntent ?? null,
           resultsCount: facts.resultsCount ?? null,
-          trend: facts.trend ?? [],
-          serpFeatures: facts.serpFeatures ?? [],
+          trend: trendOf(facts.trend),
+          serpFeatures: featuresOf(facts.serpFeatures),
           intent: facts.intent,
         }
         : null,

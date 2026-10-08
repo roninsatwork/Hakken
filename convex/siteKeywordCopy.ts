@@ -2,6 +2,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { keywordsCopyKey, readListCopy } from "./siteListCopies";
 import { KEYWORD_COPY_FIELDS } from "./utils/keywordCopyLayout";
+import { kdBandFor, type KdBand } from "./utils/siteShapes";
 
 /**
  * The compact copy of a site's keywords (docs/plans/active/
@@ -31,7 +32,7 @@ export type KeywordCopyRow = {
   status: Doc<"siteKeywordRanks">["status"];
   change: number;
   day: string;
-  kdBand: NonNullable<Doc<"siteKeywordRanks">["kdBand"]> | null;
+  kdBand: KdBand | null;
   cpc: number | null;
   traffic: number | null;
   /** How hard the search is, 0–100: what Content gap shows and sorts by, worked out from these copies (`siteContentGap.ts`). */
@@ -41,11 +42,11 @@ export type KeywordCopyRow = {
 /** A keyword as its row stands, or as the rebuild is about to mark it lost. */
 export function keywordCopyTuple(row: Doc<"siteKeywordRanks">, lostOn?: string): unknown[] {
   if (lostOn !== undefined) {
-    return [row._id, row.keyword, null, "zz_none", row.page, row.volumeKnown ? row.volume : null, row.intent, "LOST", 0, lostOn, row.kdBand ?? null, row.cpc ?? null, null, row.difficulty ?? null];
+    return [row._id, row.keyword, null, "zz_none", row.page, row.volumeKnown ? row.volume : null, row.intent, "LOST", 0, lostOn, kdBandFor(row.difficulty) ?? null, row.cpc ?? null, null, row.difficulty ?? null];
   }
   return [
     row._id, row.keyword, row.position ?? null, row.band, row.page, row.volumeKnown ? row.volume : null, row.intent, row.status,
-    row.change, row.day, row.kdBand ?? null, row.cpc ?? null, row.traffic ?? null, row.difficulty ?? null,
+    row.change, row.day, kdBandFor(row.difficulty) ?? null, row.cpc ?? null, row.traffic ?? null, row.difficulty ?? null,
   ];
 }
 

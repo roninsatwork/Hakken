@@ -6,7 +6,8 @@ import { aiEngineValidator, type AiEngine } from "./seoAiEngines";
 import { normaliseKeyword } from "./seoJudgments";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { isTrackedHold, pairedOwnedHold } from "./utils/websitePairing";
-import { bandForPosition, kdBandFor, pagePath, rankIntentValidator, statusFor, type RankIntent } from "./utils/siteShapes";
+import { bandForPosition, pagePath, rankIntentValidator, statusFor, type RankIntent } from "./utils/siteShapes";
+import { packFeatures, packTrend } from "./utils/rankFacts";
 
 /**
  * Keeping the Sites tables current as results are filed.
@@ -72,6 +73,20 @@ function mergeExtras(existing: Doc<"siteKeywordRanks"> | null, extras: RankExtra
 }
 
 /**
+ * A row's months of searches and results-page features packed, as rows keep
+ * them (`utils/rankFacts.ts`); facts carried from a row kept before, packed
+ * on the way. Its difficulty band is worked out from its difficulty
+ * (`kdBandFor`) where it is read, not kept.
+ */
+function packedFacts(extras: RankExtras): RankExtras {
+  return {
+    ...extras,
+    ...(extras.trend !== undefined && typeof extras.trend !== "string" ? { trend: packTrend(extras.trend) } : {}),
+    ...(extras.serpFeatures !== undefined && typeof extras.serpFeatures !== "string" ? { serpFeatures: packFeatures(extras.serpFeatures) } : {}),
+  };
+}
+
+/**
  * File one sighting of a website on Google's results.
  *
  * Idempotent for a re-parse: the same keyword, site, place and day is one
@@ -128,8 +143,7 @@ export async function fileKeywordRank(
   const previousPage = sameDay ? existing?.previousPage : existing?.page || undefined;
   const url = entry.url ?? existing?.url;
   const page = pagePath(url);
-  const extras = mergeExtras(existing, entry.extras ?? {}, page === (existing?.page ?? page));
-  const kdBand = kdBandFor(extras.difficulty);
+  const extras = packedFacts(mergeExtras(existing, entry.extras ?? {}, page === (existing?.page ?? page)));
   const volumeKnown = entry.volume !== undefined || Boolean(existing?.volumeKnown);
   const volume = entry.volume ?? existing?.volume ?? 0;
 
@@ -157,7 +171,6 @@ export async function fileKeywordRank(
     ...(previousPage ? { previousPage } : {}),
     day: entry.day,
     ...extras,
-    ...(kdBand ? { kdBand } : {}),
   };
 
   if (existing) {
@@ -607,4 +620,28 @@ export async function requestAiLinesEverywhere(ctx: MutationCtx, websiteId: Id<"
  */
 export async function requestDayFiguresEverywhere(ctx: MutationCtx, websiteId: Id<"websites">): Promise<void> {
   for (const place of await placesWatching(ctx, websiteId)) await requestWebsiteWork(ctx, "days", websiteId, place);
+}
+
+/**
+ * Every ranking row's months of searches and results-page features packed,
+ * and its stored difficulty band cleared — worked out from its difficulty
+ * since (`2026-10-08-pack-rank-facts`, `dataMigrations.ts`). A row already
+ * packed is left alone; nothing a screen reads changes, so nothing is rebuilt.
+ */
+export async function packRankFacts(ctx: MutationCtx, cursor: string | null, batchSize: number) {
+  const page = await ctx.db.query("siteKeywordRanks").paginate({ cursor, numItems: Math.min(batchSize, 200) });
+  let updated = 0;
+  for (const row of page.page) {
+    // A list of features one of which is not known stays a list: not a change.
+    const trendPacks = Array.isArray(row.trend);
+    const featuresPack = Array.isArray(row.serpFeatures) && typeof packFeatures(row.serpFeatures) === "string";
+    if (!trendPacks && !featuresPack && row.kdBand === undefined) continue;
+    await ctx.db.patch(row._id, {
+      ...(trendPacks ? { trend: packTrend(row.trend as number[]) } : {}),
+      ...(featuresPack ? { serpFeatures: packFeatures(row.serpFeatures as string[]) } : {}),
+      kdBand: undefined,
+    });
+    updated += 1;
+  }
+  return { cursor: page.continueCursor, isDone: page.isDone, processed: page.page.length, updated };
 }
