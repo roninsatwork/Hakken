@@ -202,33 +202,40 @@ export async function encodePagesFromAction(ctx: ActionCtx, holdId: Id<"companyW
 // One row a page into records of 250, once (core-data plan §5.7)
 // ---------------------------------------------------------------------------
 
-/**
- * A website's page rows as records, every number kept, in one go: the rows
- * read in number order, written 250 to a record, and removed. A number with no
- * row — none is given that way, but the move cannot tell — keeps its place
- * empty. Run once per website on each deployment; a website already moved has
- * no rows and is left alone.
- */
-/** Rows moved in one go: under the 16,000 writes a mutation may make, with the records. */
+/** Rows a website may hold to be moved: read in one call, under the 16,000 a call may read. */
 const MOVE_MOST = 15_000;
+/** Rows removed a call: under the 4,096 reads a call may make, each removal one. */
+const REMOVED_PER_CALL = 3_000;
 
+/**
+ * A website's page rows as records, every number kept: the rows read in number
+ * order and written 250 to a record in one call, then removed a few thousand a
+ * call — a call may make 4,096 reads, and each removal is one. Until the last
+ * row goes no page is numbered (`addPages`), so the records hold every number
+ * given. A number with no row — none is given that way, but the move cannot
+ * tell — keeps its place empty. Run once per website on each deployment until
+ * it says it is done; a website already moved has no rows and is left alone.
+ */
 export const turnRowsIntoRecords = internalMutation({
   args: { holdId: v.id("companyWebsites") },
-  returns: v.object({ rows: v.number(), records: v.number() }),
+  returns: v.object({ rows: v.number(), records: v.number(), done: v.boolean() }),
   handler: async (ctx, args) => {
     const rows = await ctx.db.query("searchConsolePageRefs").withIndex("by_hold_ref", (q) => q.eq("companyWebsiteId", args.holdId)).take(MOVE_MOST + 1);
-    if (rows.length === 0) return { rows: 0, records: 0 };
+    if (rows.length === 0) return { rows: 0, records: 0, done: true };
     if (rows.length > MOVE_MOST) throw appError("INVALID_INPUT", `More than ${MOVE_MOST} page rows: too many to move in one go.`);
+    // Written already by an earlier call, while its rows were being removed.
     const held = await ctx.db.query("searchConsolePageAddresses").withIndex("by_hold_record", (q) => q.eq("companyWebsiteId", args.holdId)).first();
-    if (held) throw appError("CONFLICT", "This website has page records and page rows both; nothing was moved.");
-    const addresses: string[] = Array.from({ length: rows.at(-1)!.ref + 1 }, () => "");
-    for (const row of rows) addresses[row.ref] = row.page;
     let records = 0;
-    for (let start = 0; start < addresses.length; start += PAGE_RECORD, records += 1) {
-      await ctx.db.insert("searchConsolePageAddresses", { companyWebsiteId: args.holdId, record: start / PAGE_RECORD, addresses: addresses.slice(start, start + PAGE_RECORD) });
+    if (!held) {
+      const addresses: string[] = Array.from({ length: rows.at(-1)!.ref + 1 }, () => "");
+      for (const row of rows) addresses[row.ref] = row.page;
+      for (let start = 0; start < addresses.length; start += PAGE_RECORD, records += 1) {
+        await ctx.db.insert("searchConsolePageAddresses", { companyWebsiteId: args.holdId, record: start / PAGE_RECORD, addresses: addresses.slice(start, start + PAGE_RECORD) });
+      }
     }
-    for (const row of rows) await ctx.db.delete(row._id);
-    return { rows: rows.length, records };
+    const removed = rows.slice(0, REMOVED_PER_CALL);
+    for (const row of removed) await ctx.db.delete(row._id);
+    return { rows: removed.length, records, done: removed.length === rows.length };
   },
 });
 
