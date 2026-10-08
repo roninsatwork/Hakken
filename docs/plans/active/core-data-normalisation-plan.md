@@ -244,6 +244,12 @@ Unchanged: keywords once a month (8.3), pages through `searchConsolePageRefs`
 — whose one row per page (2.1 MB, mostly row overhead) becomes sorted records
 as §5.6's, read whole by the build as it is now.
 
+**Changed when built, 2026-10-08 (the safer way, §12).** Records of 250, but
+in the order each page was first seen, not sorted: a page's number is on every
+kept line that names it, so a sorted book would renumber them all whenever a
+page arrived. The collection reads the list whole once a step and puts new
+pages on its end (`addPages`), refusing when another run added to it since.
+
 ### 5.8 What it would store and read — estimates, to be measured
 
 | | Today | After part 1 |
@@ -256,6 +262,24 @@ as §5.6's, read whole by the build as it is now.
 | Read by Keywords, 90 days, no search | 2.6 MB | ~0.8 MB |
 | Read by Pages competing, 90 days | ~6 MB | ~1.5 MB |
 | Largest website every screen handles | ~2.5× morehandles | 5× (N1), proved |
+
+### 5.9 Step 4b — what a screen holds in memory (added 2026-10-08)
+
+Rule 4 says half of Convex's limits; step 1's test measured only one of them,
+the bytes a read returns. Measured on the way through step 4, a list screen at
+N1's size failed two others: a query's **64 MB of memory** and its **second**.
+Made a row object a keyword, Keywords for 90 days held 88 MB at five times
+morehandles.co.uk and Pages competing 184 — Pages competing would fail at
+twice morehandles.co.uk, Keywords at three and a half — and each took two to
+three times as long on Convex as here (550 and 680 ms here).
+
+So a list of keywords is read as **columns** (`searchConsoleKeywordTable.ts`):
+each keyword its place in the book, each figure in a typed array; shaped, put
+through its page's rule, searched, filtered, ordered and counted by column, and
+only the rows shown or downloaded made into rows. The row rules stay for lists
+of pages (a website's pages at most) and lists asked of Google, and the columns
+are held to them row for row in a test. Nothing on screen changes. The load
+test now holds memory to the same shares as bytes.
 
 ## 6. Part 2 — Sites and DataForSEO
 
@@ -528,6 +552,8 @@ both, and reading and writing is already past what the plan includes.
    growth — 2 days.
 4. **Page references as sorted records** (§5.7), the tidy and the record —
    ½ day.
+4b. **Keyword lists read as columns** (§5.9), added 2026-10-08 when step 4
+   measured a screen's memory — 2½ days.
 5. **A normal week measured**: Convex's reading and writing by function,
    the baseline parts 2 and 3 are judged by — ½ day, a week after part 1.
 6. **Keywords once** (§6.1): `keywords` and `keywordPlaces`, the rankings
@@ -612,6 +638,8 @@ build the plan please". How it is built, as he agreed:
 | 1. The load test at N1's size | **Built 2026-10-08** (`convex/searchConsoleScale.test.ts`, the shared meter `src/test/readMeter.ts`). At five times morehandles.co.uk, today: Keywords for 90 days reads 19.4 MiB, for 30 days compared 16.3, searched 19.4, Pages competing 40.1 — each past Convex's 16 MiB, so each screen would fail; Pages 3.2. 2.7 seconds, so no slower-test exception was needed; run here, not on GitHub. |
 | 2. The period book | **Built 2026-10-08** (`searchConsolePeriodBooks.ts`, `utils/searchConsoleTerms.ts`, `searchConsoleSorts.ts`). At five times morehandles.co.uk: Keywords for 90 days 19.4 → 3.9 MiB, for 30 days compared 16.3 → 3.9, searched 19.4 → 9.3, Pages competing 40.1 → 6.5, Pages 3.2 → 3.8 — every screen within rule 4. On dev, all three websites rebuilt: morehandles.co.uk's ready-made lists 23.0 → 6.2 MB (4.3 of lists, 1.9 of book), its Search Console 43.1 → 26.2 MB. The 30-day keyword, page and wins-and-losses lists the same row for row and in order before and after; the 90 days differ in a few hundred rows, asked of Google again. Checked in Chrome: Keywords for 90 days, sorted A to Z and searched, Pages competing, New and lost, a keyword's own screen — no console errors. Found on the way: the 90-day keyword download passed Convex's one second once rows were named one at a time (0.95 s before); a download is now named from the books read whole. |
 | 3. The register | **Built 2026-10-08, the safer way** (§5.6): New and lost's day counts kept up as the register is written, the whole register counted again only when none is held or a month on — the night's read of the whole register gone (10.5 MB a night on morehandles.co.uk). Kept as rows for reading, which finds any dates by index. |
+| 4. Page references | **Built 2026-10-08, the safer way** (§5.7): records of 250 in the order first seen, not sorted, so no kept line is renumbered. On dev, morehandles.co.uk's 9,243 rows (2.1 MB, and two indexes each) became 37 records (0.9 MB); its Search Console 26.2 → 24.9 MB. Found on dev: removing 9,243 rows in one call passed Convex's 4,096 reads a call, so the move removes 3,000 a call. |
+| 4b. Keyword lists as columns | **Built 2026-10-08** (§5.9; `searchConsoleKeywordTable.ts`, `searchConsoleKeywordList.ts`). At five times morehandles.co.uk, what a screen holds: Keywords for 90 days 88 → 12 MB, 30 days compared 67 → 11, searched 108 → 22, Pages competing 184 → 16 (16 to 29 at their fullest); time here 544 → 179 ms and 684 → 284. Held to the row reading row for row in a test, for every view, filter and heading. Also: the sort's ties compared by one comparer, made once; the download's lines made in its query (25,000 rows sent whole were 12 MB, a second). On dev, the keyword screens' code runs 87–162 ms (Convex's limit is a second of it); checked in Chrome, every Search Console screen, no console errors. **Left as it is**: New and lost reads at most 5,000 register rows a list, 20,000 in all — bounded at any size, within Convex's 32,000 records a read, but past half of it; its own row limit (`consoleNewLostRows`) is what holds it. |
 
 ## Change log
 
@@ -625,3 +653,8 @@ build the plan please". How it is built, as he agreed:
   agreed, and part 4 (§7A) added — every line of Convex's bill. N5 agreed:
   "that's ok, a small delay is cool". N7 agreed: "ok do it". N8 agreed: "30 days ok". N9 agreed: "daily totals ok" — the plan complete. Building started the same
   day at Anthony's word (§12).
+- **2026-10-08** — Step 4b added (§5.9): step 1's test counted the bytes a
+  read returns, one of Convex's limits; measured on the way through step 4,
+  a keyword list at N1's size failed a query's 64 MB of memory, so the
+  keyword lists are read as columns and the load test holds memory too.
+  Part 1 grows by 2½ days, the plan to about 28½.

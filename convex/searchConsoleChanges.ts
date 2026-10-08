@@ -226,7 +226,6 @@ export const searchConsoleNewLost = tenantQuery({
     const keywords = await read("query");
     const pages = await read("page");
 
-    // Each keyword's figures: the ready-made 90 days hold every one shown in them.
     // Each keyword's figures: the ready-made 90 days hold every one shown in them, read a keyword at a time (step 4b).
     const ninety = await keywordFiguresOf(ctx, holdId, args.searchType, "90", country);
     // The 90 days keep each keyword as its token in the build's book (core-data-normalisation-plan.md §5.1): each new or
