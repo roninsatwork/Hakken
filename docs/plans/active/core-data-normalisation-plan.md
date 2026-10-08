@@ -2,7 +2,7 @@
 
 **Started 2026-10-08. Status: planning — nothing built. Decisions N1 to N10
 below: N1 and N2 agreed, N3, N4 and N6 settled (nothing on screen changes),
-N5, N7, N8, N9 and N10 wait on Anthony.** Follows the
+N10 agreed too; N5, N7, N8 and N9 wait on Anthony.** Follows the
 [keep-less-history plan](keep-less-history-plan.md), whose part 8 (built the
 same day) packed the numbers and booked addresses inside each stored part —
 the steps that could be taken without redesigning how screens read. This plan
@@ -20,8 +20,9 @@ don't mind as long as it's all covered in the plan overall and at the end
 everything is normalised and optimised."
 
 **What "everything" covers.** Three parts, all in this plan: Search Console
-(part 1, §5), Sites and DataForSEO (part 2, §6), and agents, AI calls and the
-rest of the platform (part 3, §7) — every one of the database's 234 tables measured, and each
+(part 1, §5), Sites and DataForSEO (part 2, §6), agents, AI calls and the
+rest of the platform (part 3, §7), and every other line of Convex's bill —
+function calls, compute, data sent out, scheduled jobs (part 4, §7A) — every one of the database's 234 tables measured, and each
 judged: normalised, packed, or left with its reason.
 
 **In plain words.** Each keyword and each page address is stored once — a
@@ -47,7 +48,7 @@ fail. Nothing on screen is meant to change.
 | N7 | DataForSEO's raw answers | **Kept their 7 days in Convex's file storage, not the database**: 33.5 MB of 332 answers, read only to file one again (§6.5). | Waiting |
 | N8 | The Decision Maker's log | **Keep every decision 90 days as now, its probabilities 30**: the probabilities are 4 MB of its 16.9, read only on one admin screen for one run (`chatAdmin.ts:263`). | Waiting |
 | N9 | Agent transactions (every AI call's cost) | **Keep 90 days, not 400, then daily totals for good**: the analytics read daily totals (`analyticsSnapshots`). 14.4 MB on dev. | Waiting |
-| N10 | The Decision Maker judging one at a time | **Judge keywords' intents and pages' types in batches**, tried on a sample first and kept only if the answers match (§7.3). | Waiting |
+| N10 | The Decision Maker judging one at a time | **Judge keywords' intents and pages' types in batches**, tried on a sample first and kept only if the answers match (§7.3). | **Agreed** — Anthony, 2026-10-08: "add this to the plan too please, we need to optimise everything". |
 
 ## 2. Why — measured on dev, 2026-10-08
 
@@ -420,6 +421,49 @@ Per AI call: a cost row from ~360 to ~150 bytes. Per Decision: one row of
 to about 9 MB; with real companies, the same share of what would be the
 platform's largest tables.
 
+## 7A. Part 4 — everything Convex charges for
+
+Anthony, 2026-10-08: "we need to optimise everything". Parts 1 to 3 cut what is
+kept and what each screen and build reads and writes; this part takes every
+other line of the bill. Convex's usage page for Hakken, 24 September to 8
+October (all its deployments):
+
+| Charged for | Used | Included a month | Largest, by function |
+|---|---|---|---|
+| Reading and writing (database I/O) | **60.3 GB** | 50 GB — **passed** | Content gap's writes ~16 GB (before 6 October), Search Console's rebuild ~19 GB, one-off tidies ~11 GB |
+| Function calls | 835,000 | 25 million | `jobLedger.runJob` and `recordJobOutcomeInternal` 73,000 each, `searchConsoleRollups.keptBetween` 58,000, `auth.isAuthenticated` 52,000, `decisionRuns.resolveModesInternal` 37,000, `aiModels.resolveModelConfigForExecution` 36,000 |
+| Action compute | 4.8 GB-hours | 250 | to be measured (step 5) |
+| Data sent out | 2.87 GB | 50 GB | to be measured (step 5) |
+| Kept (database) | 1.13 GB | 50 GB | parts 1–3 |
+| Search index | 15 MB | 1 GB | — |
+
+Dev has a handful of websites and almost no users; every line grows with
+both, and reading and writing is already past what the plan includes.
+
+- **7A.1 Rebuild only what changed.** The nightly build writes every
+  ready-made list again, changed or not; a list whose days and rows are the
+  same as the night before is left as it is (compared by a hash of its rows,
+  kept with it).
+- **7A.2 Fewer, larger reads in the build.** The build pages the daily lines
+  in small steps (`keptBetween`, 58,000 calls in two weeks): read in parts as
+  large as a read may hold.
+- **7A.3 The job ledger** writes a start and an outcome for every job run
+  (146,000 calls in two weeks): keep a job's last outcome and its failures,
+  and count the rest (§7.2).
+- **7A.4 Asked once, not every time**: the AI model and the Decision mode per
+  run or batch (§7.1); a signed-in check (`auth.isAuthenticated`, 52,000
+  calls) once per screen, not per part of it — measured first: which screens
+  ask, and how often.
+- **7A.5 Every scheduled job justified**: each cron's how-often against what
+  it finds to do; a job that wakes to find nothing costs calls and reads —
+  it waits for work, or runs less often.
+- **7A.6 Action compute and data sent out** measured by function in the
+  normal week (step 5); the largest of each get a target, as reading does.
+- **7A.7 A budget each function keeps.** The load tests record what each
+  screen and build reads and writes; a function passing its budget fails the
+  check, so a change that costs more is seen before it is merged, not on the
+  bill.
+
 ## 8. How it is proved
 
 - **A load test at N1's size, written first**, in the way of
@@ -467,9 +511,14 @@ platform's largest tables.
 14. **Decisions in batches** (§7.3, N10), compared on a sample — 1 day.
 15. **The index audit and its guard, the reading targets** (§7.4, §7.5) —
     1 day.
+16. **Rebuild only what changed, fewer larger reads** (§7A.1, 7A.2) — 1 day.
+17. **The job ledger, asked once, every scheduled job justified** (§7A.3–7A.5)
+    — 1½ days.
+18. **Compute and data sent out, and every function's budget** (§7A.6, 7A.7)
+    — 1 day.
 
-**Part 1: about 6½ days. Part 2: about 11 days. Part 3: about 5 days. In
-all, about 22 days**, each step merged into `dev` on its own, the full check
+**Part 1: about 6½ days. Part 2: about 11 days. Part 3: about 5 days. Part 4:
+about 3½ days. In all, about 26 days**, each step merged into `dev` on its own, the full check
 first, nothing pushed without Anthony's word.
 
 ## 10. Risks
@@ -505,4 +554,6 @@ built.
   overall"): parts 2 and 3 planned here in full, from the whole database
   measured (`storageMeasure.ts`) and Convex's usage page; N3, N4 and N6
   settled as changing nothing on screen. Then "Did you cover the agents too":
-  part 3 rewritten from how agent data grows per call (§7), N10 added.
+  part 3 rewritten from how agent data grows per call (§7), N10 added. Then
+  "add this to the plan too please, we need to optimise everything": N10
+  agreed, and part 4 (§7A) added — every line of Convex's bill.

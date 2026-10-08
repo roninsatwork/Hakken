@@ -11,9 +11,10 @@ completed work.
   — normalising the core before roadmap features (Anthony, 2026-10-08): each
   keyword stored once for the platform, each page once per website, a
   company's private ones once per company, lists holding numbers; every screen
-  proved inside Convex's limits at five times morehandles.co.uk's size. Three
-  parts — Search Console, Sites and DataForSEO, agents and the rest —
-  about 22 days. Planning; N1 and N2 agreed.
+  proved inside Convex's limits at five times morehandles.co.uk's size. Four
+  parts — Search Console, Sites and DataForSEO, agents and the rest, every
+  other line of Convex's bill — about 26 days. Planning; N1, N2 and N10
+  agreed.
 - [Keeping less history](./active/keep-less-history-plan.md) — keep only
   what a screen reads: keyword positions as graph lines (one record per
   keyword a month, not a row per check), the day tables nobody reads stopped
