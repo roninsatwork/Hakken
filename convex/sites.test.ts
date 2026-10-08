@@ -5,6 +5,7 @@ import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { kdBandFor, pageTypeByAddress } from "./utils/siteShapes";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * The client's Sites screens (docs/plans/active/user-sites-plan.md).
@@ -21,7 +22,7 @@ type Harness = ReturnType<typeof harness>;
 const UK = 2826;
 const DAY = "2026-09-23";
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 async function company(t: Harness, name: string) {

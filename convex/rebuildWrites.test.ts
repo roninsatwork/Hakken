@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * A rebuild writes only what changed (docs/plans/active/dataforseo-cost-plan.md,
@@ -16,7 +17,7 @@ type Harness = ReturnType<typeof harness>;
 const UK = 2826;
 
 beforeEach(() => {
-  vi.useFakeTimers();
+  useFixedDay();
   // Midday UTC today: no move of the clock here crosses into another day.
   const now = new Date();
   vi.setSystemTime(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 12));

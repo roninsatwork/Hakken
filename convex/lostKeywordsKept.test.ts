@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import schema from "./schema";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * A keyword a website stops ranking for is marked lost and kept 90 days — New
@@ -16,7 +17,7 @@ const TODAY = "2026-10-07";
 const daysAgo = (days: number) => new Date(Date.parse(`${TODAY}T00:00:00Z`) - days * 86_400_000).toISOString().slice(0, 10);
 
 beforeEach(() => {
-  vi.useFakeTimers();
+  useFixedDay();
   vi.setSystemTime(Date.parse(`${TODAY}T12:00:00Z`));
 });
 afterEach(() => vi.useRealTimers());

@@ -8,6 +8,7 @@ import { decryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { recentWindow } from "./searchConsoleSync";
 import { newestWholeDay, shiftDay } from "./searchConsoleDays";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * An owned website's Search Console, end to end with Google faked at the
@@ -212,7 +213,7 @@ const held = (t: Harness) => t.run(async (ctx) => ({
 const revokes = (google: Google) => google.calls.filter((call) => call.url === "https://oauth2.googleapis.com/revoke");
 
 beforeEach(() => {
-  vi.useFakeTimers();
+  useFixedDay();
   vi.setSystemTime(NOW);
   vi.stubEnv("CONNECTOR_TOKEN_ENCRYPTION_KEY", KEY);
   vi.stubEnv("SEARCH_CONSOLE_GOOGLE_CLIENT_ID", "sc-client.apps.googleusercontent.com");

@@ -6,6 +6,7 @@ import schema from "./schema";
 import { updateLeadsOn } from "./news";
 import { excerptOf } from "./knowledgeArticles";
 import { giveTrafficArticleItsTopic } from "./knowledgeArticleSeeds";
+import { useFixedDay } from "@/src/test/realTime";
 
 const { generate } = vi.hoisted(() => ({ generate: vi.fn() }));
 vi.mock("./aiProviderRegistry", async (importOriginal) => ({
@@ -63,7 +64,7 @@ const TODAY = "2026-10-01";
 
 describe("the News front page", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    useFixedDay();
     vi.setSystemTime(new Date(`${TODAY}T09:00:00Z`));
     generate.mockReset().mockResolvedValue({ text: "{}" });
   });
@@ -206,7 +207,7 @@ describe("the News front page", () => {
 
 describe("Google updates for Learn", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    useFixedDay();
     generate.mockReset().mockResolvedValue({ text: "{}" });
   });
 
@@ -240,7 +241,7 @@ describe("Google updates for Learn", () => {
 
 describe("Learn's side menu and Knowledge's topics", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    useFixedDay();
     generate.mockReset().mockResolvedValue({ text: "{}" });
   });
 

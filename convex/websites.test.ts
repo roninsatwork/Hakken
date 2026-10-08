@@ -6,6 +6,7 @@ import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { setPoint } from "./positionHistory";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * A company's websites, and the competitors tracked against each.
@@ -759,7 +760,7 @@ describe("The add form is told the key before it saves", () => {
 });
 
 describe("Deleting a website", () => {
-  beforeEach(() => vi.useFakeTimers());
+  beforeEach(() => useFixedDay());
   afterEach(() => vi.useRealTimers());
 
   test("takes every company's hold on it, across companies and both roles", async () => {

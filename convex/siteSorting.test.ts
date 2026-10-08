@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * Every Sites list sorts by any of its headings, either way round, over the
@@ -15,7 +16,7 @@ type Harness = ReturnType<typeof harness>;
 const UK = 2826;
 const DAY = "2026-09-23";
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 async function company(t: Harness, name: string) {

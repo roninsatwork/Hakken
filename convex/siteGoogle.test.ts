@@ -4,6 +4,7 @@ import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * Your searches' rows say which searches were ticked from a fan-out query, so
@@ -14,7 +15,7 @@ type Harness = ReturnType<typeof harness>;
 const DAY = "2026-10-03";
 const PROMPT = "who are the best web designers in Surrey, England";
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 /** A company with one website of its own, asking one prompt of Claude, which ran the fan-out queries given. */

@@ -95,6 +95,23 @@ export async function whileMovingClock<T>(work: Promise<T>, step: "next" | "all"
   return await watched;
 }
 
+/** The day `useFixedDay` starts on unless told another: midday UTC, 1 October 2026. */
+export const FIXED_DAY = "2026-10-01";
+
+/**
+ * Run a test whose rows carry fixed days on a fixed day: fake timers, every
+ * clock, from midday UTC on `day`. A plain `vi.useFakeTimers()` starts on the
+ * real date, so a test writing "2026-09-23" beside code that counts from
+ * today ("the last fortnight") passed the week it was written and failed a
+ * fortnight later (2026-10-08: sites.test.ts and siteListCopies.test.ts; ten
+ * tests in six files were found the same way, the suite run as at March
+ * 2027). Call it before each test, before anything is written, and
+ * `vi.useRealTimers()` after.
+ */
+export function useFixedDay(day: string = FIXED_DAY): void {
+  vi.useFakeTimers({ now: Date.parse(`${day}T12:00:00Z`) });
+}
+
 /**
  * Keep a test about days away from midnight: the date set to midday UTC on
  * today's date, moving on with real time from there. A test that works out

@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * Home countries only (docs/plans/active/search-console-home-countries-plan.md,
@@ -164,7 +165,7 @@ const keptOf = (t: Harness, siteId: Id<"companyWebsites">, country: string | und
 }));
 
 beforeEach(() => {
-  vi.useFakeTimers();
+  useFixedDay();
   vi.setSystemTime(NOW);
   vi.stubEnv("CONNECTOR_TOKEN_ENCRYPTION_KEY", KEY);
   vi.stubEnv("SEARCH_CONSOLE_GOOGLE_CLIENT_ID", "sc-client.apps.googleusercontent.com");

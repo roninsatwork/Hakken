@@ -4,6 +4,7 @@ import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * One prompt's fan-out queries (docs/plans/active/prompt-fan-out-queries-plan.md),
@@ -19,7 +20,7 @@ const DAY = "2026-09-27";
 const PROMPT = "who are the best web designers in Surrey, England";
 const DAILY = JSON.stringify({ version: 2, kind: "recurring", cadence: "daily", timeLocal: "09:00", timezone: "UTC" });
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 async function superAdmin(t: Harness) {

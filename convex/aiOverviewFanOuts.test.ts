@@ -14,6 +14,7 @@ import {
 } from "./dataForSeoAiOverviewOperations";
 import { findSeoOperation, seoSiteOperations } from "./dataForSeoRegistry";
 import { spendCategoryOf } from "./seoRunReports";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * Google's own fan-out searches (docs/plans/active/fan-out-angles-plan.md,
@@ -31,7 +32,7 @@ const DAILY = JSON.stringify({ version: 2, kind: "recurring", cadence: "daily", 
 const LEEDS = 1006925;
 const DAY_MS = 86_400_000;
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 /** A company collecting daily, with one owned website asking one question of one assistant. */

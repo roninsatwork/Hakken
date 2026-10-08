@@ -8,6 +8,7 @@ import { finishScheduled } from "@/src/test/finishScheduled";
 import { SEO_KEYWORD_CHECK_OPERATION } from "./dataForSeoRegistry";
 import { parseBacklinksSummary } from "./dataForSeoParsers";
 import { answerPlace } from "./seoAiEngines";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * What the screen audit of 2026-09-26 found, fixed on the server
@@ -18,7 +19,7 @@ const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
 const UK = 2826;
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 async function company(t: Harness, name: string) {

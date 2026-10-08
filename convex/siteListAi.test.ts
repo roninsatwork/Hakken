@@ -9,6 +9,7 @@ import { listHold, listWebsiteId } from "./siteAccess";
 import { citedPagesOf, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
 import { addUpList, questionEngine } from "./siteListAi";
 import { loadSite, MAX_LIST } from "./websiteSiteRows";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * Each company's AI figures from one summary per list
@@ -27,7 +28,7 @@ const SURREY = "who are the best web designers in surrey";
 const WORDPRESS = "best wordpress agency in the south east";
 const CHARITIES = "who builds websites for charities";
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 async function company(t: Harness, name: string) {

@@ -6,6 +6,7 @@ import schema from "./schema";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { positionLookups } from "./fanOutPositions";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * What the Search Console section reads (docs/plans/active/
@@ -83,7 +84,7 @@ async function connected(
 }
 
 beforeEach(() => {
-  vi.useFakeTimers();
+  useFixedDay();
   vi.setSystemTime(NOW);
   vi.stubEnv("CONNECTOR_TOKEN_ENCRYPTION_KEY", KEY);
   vi.stubEnv("SEARCH_CONSOLE_GOOGLE_CLIENT_ID", "sc-client.apps.googleusercontent.com");

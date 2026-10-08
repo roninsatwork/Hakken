@@ -209,6 +209,16 @@ one way to do it, and `src/test-time-limits-drift.test.ts` fails the others.
 - **Keep days away from midnight.** A test that works out "today" or
   "yesterday" from the clock calls `useMiddayUtc()` before each test and
   `vi.useRealTimers()` after, or fixes the date with `vi.setSystemTime`.
+- **A test whose rows carry fixed days runs on a fixed day.** A plain
+  `vi.useFakeTimers()` starts on the real date, so rows written for
+  "2026-09-23" beside code counting from today ("the last fortnight") passed
+  the week they were written and failed a fortnight later (2026-10-08). Such
+  a test starts its clock with `useFixedDay()` (`src/test/realTime.ts`; 1
+  October 2026 unless given a day) before each test. To find tests that will
+  age, run the suite once with `vi.setSystemTime` a year ahead in a setup
+  file: that is how ten were found in six files. Ignore failures from
+  module-level `Date.now()` or real elapsed time, which only that check
+  breaks.
 - **No timer outlives its test.** A screen's timer left running — a "Saved"
   note cleared two seconds later — fired after its test's window was gone on
   GitHub's slower runner and failed a run whose every test had passed (CI #26).

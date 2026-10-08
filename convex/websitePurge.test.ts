@@ -6,6 +6,7 @@ import type { Id } from "./_generated/dataModel";
 import { listOwnerOf } from "@/src/test/listOwner";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { setPoint } from "./positionHistory";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * Deleting a website takes everything about it (Anthony, 2026-09-24: "delete
@@ -20,7 +21,7 @@ type Harness = ReturnType<typeof harness>;
 const UK = 2826;
 const DAY = "2026-09-23";
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 async function purchase(t: Harness, operationId: string) {

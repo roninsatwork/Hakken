@@ -4,6 +4,7 @@ import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * Missing angles on the website's to-do list (docs/plans/active/
@@ -16,7 +17,7 @@ type Harness = ReturnType<typeof harness>;
 const DAY = "2026-09-27";
 const QUESTION = "What is the best carp fishing luggage?";
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 async function superAdmin(t: Harness) {

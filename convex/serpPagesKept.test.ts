@@ -4,6 +4,7 @@ import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { setPoint } from "./positionHistory";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * Google's full results page for a search is kept 90 days; where the website
@@ -20,7 +21,7 @@ const OLD_DAY = "2026-09-25";
 const RECENT_DAY = "2026-12-25";
 const UK = 2826;
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 /** One check of a search, as its filing writes it: the results page, the site's position, its stats. */

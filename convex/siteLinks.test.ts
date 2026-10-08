@@ -4,6 +4,7 @@ import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { slimSeoResult } from "./dataForSeoSlim";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * The Sites link pages (docs/plans/active/user-sites-plan.md, Phase 4): each
@@ -16,7 +17,7 @@ type Harness = ReturnType<typeof harness>;
 const UK = 2826;
 const LEEDS = 1006886;
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 async function company(t: Harness, name: string) {

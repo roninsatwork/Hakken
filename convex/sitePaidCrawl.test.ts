@@ -7,6 +7,7 @@ import { parseDomainRankedKeywords } from "./dataForSeoParsers";
 import { isCrawlUnfinished } from "./dataForSeoCrawlOperations";
 import { findSeoOperation, seoSiteOperationParams } from "./dataForSeoRegistry";
 import { parseCrawlSummary, TURNED_AWAY_PAGES, turnedAwayOf } from "./siteCrawl";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * Phase 5 of the Sites plan: paid search, read from the ranked-keywords
@@ -16,7 +17,7 @@ const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
 const UK = 2826;
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 async function company(t: Harness, name: string) {

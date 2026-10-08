@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { CORE_MODULES, DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * A capability switched off is unreachable, not merely hidden.
@@ -19,7 +20,7 @@ import { finishScheduled } from "@/src/test/finishScheduled";
  */
 
 beforeEach(() => {
-  vi.useFakeTimers();
+  useFixedDay();
 });
 afterEach(() => {
   vi.useRealTimers();

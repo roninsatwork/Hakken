@@ -4,6 +4,7 @@ import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * Where a website trades, for Search Console (search-console-plan.md §16):
@@ -30,7 +31,7 @@ async function keptFor(t: Harness, siteId: Id<"companyWebsites">, country: strin
 }
 
 describe("where a website trades", () => {
-  beforeEach(() => vi.useFakeTimers());
+  beforeEach(() => useFixedDay());
   afterEach(() => vi.useRealTimers());
 
   test("a super admin sets several countries, in the order given, as Google writes them", async () => {

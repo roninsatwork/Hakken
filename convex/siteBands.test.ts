@@ -4,6 +4,7 @@ import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * Position bands' and New and lost keywords' view of the checks, as the
@@ -15,7 +16,7 @@ const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
 const UK = 2826;
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 async function company(t: Harness, name: string) {

@@ -10,6 +10,7 @@ import {
   AGENT_RUN_STALL_MS,
 } from "./agentRunContinuationService";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * Behavioural tests for the agent runtime.
@@ -1269,7 +1270,7 @@ describe("durable runs", () => {
 
 describe("stalled run recovery", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    useFixedDay();
   });
 
   afterEach(() => {
@@ -1423,7 +1424,7 @@ describe("stalled run recovery", () => {
 
 describe("action segment handover", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    useFixedDay();
   });
 
   afterEach(() => {
@@ -1512,7 +1513,7 @@ describe("action segment handover", () => {
 
 describe("human-in-the-loop approval", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    useFixedDay();
   });
 
   afterEach(() => {
@@ -1754,7 +1755,7 @@ describe("human-in-the-loop approval", () => {
 
 describe("a batch of approvals", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    useFixedDay();
   });
 
   afterEach(() => {
@@ -1985,7 +1986,7 @@ describe("a batch of approvals", () => {
 
 describe("autonomous tool execution", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    useFixedDay();
   });
 
   afterEach(() => {
@@ -2345,7 +2346,7 @@ describe("prompt caching", () => {
 
 describe("prompt caching across segments", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    useFixedDay();
   });
 
   afterEach(() => {
@@ -2522,7 +2523,7 @@ describe("connectors that do not exist", () => {
 
 describe("evals run the agent that ships", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    useFixedDay();
   });
 
   afterEach(() => {
@@ -3303,7 +3304,7 @@ describe("a tool that changes something on a connected server", () => {
   // Resuming a parked run happens on a scheduled function, so the clock has to
   // be ours to advance — the same setup the other approval tests use.
   beforeEach(() => {
-    vi.useFakeTimers();
+    useFixedDay();
   });
 
   afterEach(() => {

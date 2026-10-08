@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { AI_ENGINE_CALLS, AI_ENGINES, answerPlace, fanOutPlace, type AiEngine } from "./seoAiEngines";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * Fan-out searches on the Sites screens come from every engine that sends
@@ -22,7 +23,7 @@ const LONDON = 1006886;
 /** The engine asked with no place ever, whatever the watcher chose — from the engine table, not named. */
 const PLACELESS = AI_ENGINES.find((engine) => !AI_ENGINE_CALLS[engine].takesLocation && AI_ENGINE_CALLS[engine].hasWebSearchSwitch) as AiEngine;
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 async function company(t: Harness, name: string) {

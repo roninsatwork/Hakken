@@ -59,6 +59,10 @@ const REAL_SLEEP = /new Promise\s*\(\s*\(?\s*(\w+)\s*\)?\s*=>\s*\{?\s*setTimeout
 const TODAY_FROM_CLOCK = /new Date\(\s*(?:\)|Date\.now\(\)|now\b)[^\n]*\.toISOString\(\)\.slice\(0,\s*10\)/g
 /** A test that fixes the clock, so "today" cannot change under it. */
 const CLOCK_FIXED = /\buseMiddayUtc\s*\(|\bsetSystemTime\s*\(|\buseFakeTimers\s*\(/
+/** A day written into a test: "2026-09-23". */
+const DAY_WRITTEN = /["'`]20\d\d-\d\d-\d\d/
+/** The pretend clock started on the real date. */
+const CLOCK_ON_TODAY = /\bvi\.useFakeTimers\(\s*\)/
 
 /** A wait on screen given its own limit, or Vitest's own wait, which no default reaches. */
 const SCREEN_WAIT = /\b(?:find(?:All)?By\w+|waitFor(?:ElementToBeRemoved)?)\s*\(/g
@@ -194,6 +198,19 @@ describe('test time limits', () => {
       offenders,
       'A test that works out "today" from the real clock, beside code that works it out again, fails on the run that crosses midnight. '
       + 'Call `useMiddayUtc()` (src/test/realTime.ts) before each test, and `vi.useRealTimers()` after.',
+    ).toEqual([])
+  })
+
+  test('a test whose rows carry fixed days runs on a fixed day', () => {
+    const offenders = offendersOf((_, source) => (DAY_WRITTEN.test(source)
+      ? Array.from(source.matchAll(/\bbeforeEach\s*\(/g))
+        .filter((match) => CLOCK_ON_TODAY.test(callArguments(source, (match.index ?? 0) + match[0].length - 1)))
+        .map((match) => match.index ?? 0)
+      : []))
+    expect(
+      offenders,
+      'A plain `vi.useFakeTimers()` starts on the real date: rows written for "2026-09-23", beside code counting from today, '
+      + 'pass the week the test is written and fail a fortnight later (2026-10-08). Start it with `useFixedDay()` (src/test/realTime.ts).',
     ).toEqual([])
   })
 

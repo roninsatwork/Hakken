@@ -4,6 +4,7 @@ import { finishScheduled } from "@/src/test/finishScheduled";
 import { api } from "./_generated/api";
 import schema from "./schema";
 import { checkedAddress } from "./newsSources";
+import { useFixedDay } from "@/src/test/realTime";
 
 const { generate } = vi.hoisted(() => ({ generate: vi.fn() }));
 vi.mock("./aiProviderRegistry", async (importOriginal) => ({
@@ -43,7 +44,7 @@ const firstPage = { numItems: 10, cursor: null };
 
 describe("News", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    useFixedDay();
     generate.mockReset().mockResolvedValue({ text: JSON.stringify({ title: "Core update di marzo 2025", description: "Google ha riordinato i risultati." }) });
   });
 

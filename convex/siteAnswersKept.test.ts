@@ -4,6 +4,7 @@ import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { answerPlace } from "./seoAiEngines";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * An AI answer's full wording is kept 90 days; who it named and cited, for
@@ -23,7 +24,7 @@ const PROMPT = "best carp rods";
 const UK = 2826;
 const PLACE = answerPlace("chatgpt", UK);
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 type Seeded = {

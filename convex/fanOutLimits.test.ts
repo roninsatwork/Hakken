@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { FAN_OUT_LIMITS, readFanOutLimits } from "./fanOutLimits";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * The fan-out limits, set on screen (Anthony, 2026-09-28: "i think we need
@@ -16,7 +17,7 @@ type Harness = ReturnType<typeof harness>;
 const DAY = "2026-09-27";
 const QUESTION = "What is the best line for carp fishing?";
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 async function superAdmin(t: Harness) {

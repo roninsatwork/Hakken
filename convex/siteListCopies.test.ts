@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { backfillAnswerIndex } from "./siteAnswers";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * The compact copies the big Sites lists are counted from, and what the
@@ -17,7 +18,7 @@ const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
 const UK = 2826;
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 async function company(t: Harness, name: string) {

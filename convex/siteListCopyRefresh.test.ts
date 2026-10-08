@@ -6,6 +6,7 @@ import schema from "./schema";
 import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
 import { copyRequestKey, LIST_PAGE_STUCK_MS } from "./siteListCopies";
 import { noteDataChanged, siteRebuildKey } from "./siteRankings";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * The nightly refresh of the Sites lists' compact copies
@@ -20,7 +21,7 @@ const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
 const UK = 2826;
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 /** The clock moved on, firing nothing: the rebuilds asked for stay asked for, and only those the test runs run. */

@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { DEFAULT_COMPANY_MODULE_KEYS } from "./utils/coreModules";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * The governance rollups, end to end: the backfill builds history, the cron's
@@ -19,7 +20,7 @@ import { finishScheduled } from "@/src/test/finishScheduled";
  */
 
 beforeEach(() => {
-  vi.useFakeTimers();
+  useFixedDay();
   // Fixed mid-day UTC so day arithmetic cannot straddle a midnight.
   vi.setSystemTime(new Date("2026-08-18T12:00:00.000Z"));
 });

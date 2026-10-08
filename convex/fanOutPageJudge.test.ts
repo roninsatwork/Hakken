@@ -7,6 +7,7 @@ import { finishScheduled } from "@/src/test/finishScheduled";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { offeredPages, verdictOf, PAGES_OFFERED } from "./fanOutPageJudge";
 import { wordsThatMatter } from "./utils/fanOutAngle";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * Which of a site's own pages answers each angle, judged by the
@@ -23,7 +24,7 @@ const OPTIONS = [
   "none", "off-topic", "other",
 ];
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => {
   vi.useRealTimers();
   vi.unstubAllEnvs();

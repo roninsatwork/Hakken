@@ -6,6 +6,7 @@ import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { attentionOf, spendCategoryOf, stoppedOf } from "./seoRunReports";
 import { boughtUnderTodaysRules, cadenceOf, collectsEveryRun, estimateMonthly, repeatDays } from "./seoRunEstimate";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * The Collection runs screens (Anthony, 2026-09-24): what each run for a
@@ -21,7 +22,7 @@ const MINUTE = 60_000;
 const WEEKLY = JSON.stringify({ version: 2, kind: "recurring", cadence: "weekly", dayOfWeek: 1, timeLocal: "09:00", timezone: "UTC" });
 
 beforeEach(() => {
-  vi.useFakeTimers();
+  useFixedDay();
   vi.setSystemTime(NOW);
 });
 afterEach(() => vi.useRealTimers());

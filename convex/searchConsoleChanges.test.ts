@@ -4,6 +4,7 @@ import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * Search Console's Changes and Breakdowns reads (docs/plans/active/
@@ -21,7 +22,7 @@ const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
 
 beforeEach(() => {
-  vi.useFakeTimers();
+  useFixedDay();
   vi.setSystemTime(Date.parse("2026-09-28T09:00:00Z"));
   vi.stubEnv("CONNECTOR_TOKEN_ENCRYPTION_KEY", KEY);
   vi.stubEnv("SEARCH_CONSOLE_GOOGLE_CLIENT_ID", "sc-client.apps.googleusercontent.com");

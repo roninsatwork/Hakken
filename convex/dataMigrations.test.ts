@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import { getRegisteredMigrationNames } from "./dataMigrations";
 import schema from "./schema";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { useFixedDay } from "@/src/test/realTime";
 
 const SWARM_LOG_MIGRATION = "2026-07-25-swarm-logs-company-id";
 
@@ -12,7 +13,7 @@ const SWARM_LOG_MIGRATION = "2026-07-25-swarm-logs-company-id";
 // convex-test requires fake timers for this; `finishAllScheduledFunctions`
 // loops advanceTimers until nothing further is queued.
 beforeEach(() => {
-  vi.useFakeTimers();
+  useFixedDay();
 });
 
 afterEach(() => {

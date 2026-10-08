@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * A website's own classifications on its charts and screens (docs/plans/
@@ -92,7 +93,7 @@ const week = { searchType: "web" as const, dimension: "page" as const, from: "20
 const kindsOf = (rows: Array<{ key: string; kind: string | null }>) => Object.fromEntries(rows.map((row) => [row.key.replace(url(""), ""), row.kind]));
 
 beforeEach(() => {
-  vi.useFakeTimers();
+  useFixedDay();
   vi.setSystemTime(NOW);
   vi.stubEnv("CONNECTOR_TOKEN_ENCRYPTION_KEY", Buffer.from(new Uint8Array(32).fill(9)).toString("base64"));
   vi.stubEnv("SEARCH_CONSOLE_GOOGLE_CLIENT_ID", "sc-client.apps.googleusercontent.com");

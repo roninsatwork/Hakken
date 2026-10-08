@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * Each company's searches and questions are its own
@@ -19,7 +20,7 @@ type Harness = ReturnType<typeof harness>;
 const UK = 2826;
 const DAY = "2026-09-23";
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 async function company(t: Harness, name: string) {

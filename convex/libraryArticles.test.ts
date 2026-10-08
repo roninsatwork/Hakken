@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { embedVertexContentWithRetry } from "./vertexProviderService";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import { useFixedDay } from "@/src/test/realTime";
 
 const { generate, agentTurn } = vi.hoisted(() => ({ generate: vi.fn(), agentTurn: vi.fn() }));
 vi.mock("./aiProviderRegistry", async (importOriginal) => ({
@@ -70,7 +71,7 @@ const ARTICLE = {
 describe("Library articles", () => {
   // A published article's save schedules its sections' embedding (IH9); on fake timers it runs only when a test asks, never after the test.
   beforeEach(() => {
-    vi.useFakeTimers();
+    useFixedDay();
   });
 
   afterEach(() => {
@@ -232,7 +233,7 @@ describe("Read the page", () => {
 
 describe("Ask Hakken reads the Library", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    useFixedDay();
     vi.mocked(embedVertexContentWithRetry).mockReset();
   });
 
@@ -324,7 +325,7 @@ describe("Ask Hakken reads the Library", () => {
 describe("Helpful content for readers", () => {
   // A save with a summary schedules its translation; on fake timers it runs only when a test asks, never in the next test.
   beforeEach(() => {
-    vi.useFakeTimers();
+    useFixedDay();
   });
 
   afterEach(() => {

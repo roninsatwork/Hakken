@@ -6,6 +6,7 @@ import { writeKeywordCopy } from "@/src/test/keywordCopies";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { removeSampleResearch } from "./keywordResearchSampleMigration";
 import { AI_ENGINES, AI_ENGINE_CALLS } from "./seoAiEngines";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * Keyword research (docs/plans/active/keyword-research-plan.md): Look up
@@ -20,7 +21,7 @@ type Harness = ReturnType<typeof harness>;
 
 beforeEach(() => {
   // Scheduled runs wait until a test runs them itself.
-  vi.useFakeTimers();
+  useFixedDay();
   vi.stubEnv("DATAFORSEO_LOGIN", "login");
   vi.stubEnv("DATAFORSEO_PASSWORD", "password");
 });

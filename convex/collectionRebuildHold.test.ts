@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { finishSeoCycle } from "./seoCollectionQueue";
 import { COLLECTION_REBUILD_EVERY_MS, siteRebuildKey } from "./siteRankings";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * One rebuild at the end of each collection, not during it
@@ -18,7 +19,7 @@ type Harness = ReturnType<typeof harness>;
 const UK = 2826;
 const MINUTE = 60_000;
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 /** The clock moved on, firing nothing. */

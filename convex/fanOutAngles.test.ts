@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * The fan-out searches as angles, with where the site stands for each
@@ -17,7 +18,7 @@ type Harness = ReturnType<typeof harness>;
 const DAY = "2026-09-27";
 const QUESTION = "What tackle do I need for carp fishing?";
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 async function company(t: Harness, name: string) {

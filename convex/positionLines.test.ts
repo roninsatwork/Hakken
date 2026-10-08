@@ -5,6 +5,7 @@ import schema from "./schema";
 import type { Id } from "./_generated/dataModel";
 import { recomputeSearchStats } from "./websiteTrackingStats";
 import { setPoint } from "./positionHistory";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * A search's line kept day by day for 90 days, then a week at a time — each
@@ -23,7 +24,7 @@ const UK = 2826;
 const NOW = Date.parse("2026-12-30T12:00:00Z");
 const KEPT_FROM = "2026-10-01";
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 const dayAfter = (day: string, days: number) => new Date(Date.parse(`${day}T00:00:00Z`) + days * 86_400_000).toISOString().slice(0, 10);

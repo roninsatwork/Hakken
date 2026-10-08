@@ -5,6 +5,7 @@ import schema from "./schema";
 import { setPoint } from "./positionHistory";
 import type { Id } from "./_generated/dataModel";
 import { answerPlace } from "./seoAiEngines";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * A record's own screen on the client's Sites pages (docs/plans/active/
@@ -17,7 +18,7 @@ type Harness = ReturnType<typeof harness>;
 const UK = 2826;
 const DAY = "2026-09-24";
 
-beforeEach(() => vi.useFakeTimers());
+beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());
 
 async function company(t: Harness, name: string) {

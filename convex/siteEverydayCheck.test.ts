@@ -5,6 +5,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { KEYWORD_LIST_OPERATION_ID } from "./dataForSeoKeywordListOperations";
 import { listDayComplete, listDayReach } from "./siteSummaries";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * The everyday check (Anthony, 2026-09-27): of the keywords a site keeps, how
@@ -18,7 +19,7 @@ const UK = 2826;
 const DAY_MS = 86_400_000;
 
 beforeEach(() => {
-  vi.useFakeTimers();
+  useFixedDay();
   vi.setSystemTime(new Date("2026-09-26T23:00:00Z"));
 });
 afterEach(() => vi.useRealTimers());

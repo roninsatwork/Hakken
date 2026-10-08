@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
+import { useFixedDay } from "@/src/test/realTime";
 
 const { generate, fetchPage } = vi.hoisted(() => ({ generate: vi.fn(), fetchPage: vi.fn() }));
 vi.mock("./aiProviderRegistry", async (importOriginal) => ({
@@ -69,7 +70,7 @@ const items = (t: ReturnType<typeof harness>) => t.run(async (ctx) => await ctx.
 
 describe("the News Collector", () => {
   beforeEach(() => {
-    vi.useFakeTimers();
+    useFixedDay();
     vi.setSystemTime(new Date("2026-10-01T09:00:00Z"));
     generate.mockReset().mockImplementation(async (args: { contents: Array<{ text: string }> }) => {
       const asked = JSON.parse(args.contents[0].text) as { title: string };
