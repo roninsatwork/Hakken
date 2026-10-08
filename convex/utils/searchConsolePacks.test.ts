@@ -3,6 +3,8 @@ import {
   PART_ROWS,
   addUp,
   addUpRows,
+  bookPages,
+  bookedColumns,
   bySide,
   firstDayKept,
   firstDayKeptFor,
@@ -80,6 +82,23 @@ describe("whole numbers packed as text (keep-less-history-plan.md, part 8)", () 
     expect([...rowsOf(stored)].map((row) => row.positionSum)).toEqual([120, 18]);
     const asLists = { keys: ["a"], clicks: [1], impressions: [2], positionSums: [3] };
     expect(unpackedPart(asLists)).toEqual(asLists);
+  });
+
+  test("a keyword list's top pages and Pages competing's pages are kept once a part, each row its place in the part's book (part 8.2)", () => {
+    const home = "https://acme-shop.test/";
+    const plumbers = "https://acme-shop.test/plumbers/";
+    expect(bookPages([home, plumbers, home, home])).toEqual({ book: [home, plumbers], places: packNumbers([0, 1, 0, 0]) });
+    const tops = [home, plumbers, home];
+    const booked = bookedColumns({ list: "query", tops });
+    expect(booked).toEqual({ tops: expect.any(String), pageBook: [home, plumbers] });
+    expect(bookedColumns({ list: "competing", pages: [plumbers, plumbers] })).toMatchObject({ pageBook: [plumbers] });
+    // A page list's tops are its top keywords, kept as they are; an empty list has no book.
+    expect(bookedColumns({ list: "page", tops: ["plumber leeds"] })).toEqual({});
+    expect(bookedColumns({ list: "query", tops: [] })).toEqual({});
+    const stored = { keys: ["a", "b", "c"], ...packedColumns({ clicks: [1, 1, 1], impressions: [1, 1, 1], positionSums: [1, 1, 1] }), ...booked };
+    expect(unpackedPart(stored).tops).toEqual(tops);
+    // Addresses kept in full before 2026-10-08 read as they are.
+    expect(unpackedPart({ keys: ["a"], clicks: [1], impressions: [1], positionSums: [1], tops: [home] }).tops).toEqual([home]);
   });
 });
 

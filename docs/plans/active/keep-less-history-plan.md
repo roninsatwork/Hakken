@@ -882,11 +882,18 @@ changes in either.
   as JSON, which reads a number as its digits — morehandles.co.uk's numbers
   were 7 MB by JSON and 24 MB as stored — so they now count as Convex does,
   and its Search Console was 83.8 MB, not 69.1.
-- **8.2 — page addresses once, in the ready-made periods too.** A keyword's
-  top page and Pages competing's pages repeat each address in full, about 50
-  characters, where the daily lines already hold a reference
-  (`searchConsolePageRefs.ts`). About 18 MB on morehandles.co.uk. The one
-  cost: sorting a keyword table by its top page reads the page list first.
+- **8.2 — page addresses once a part, in the ready-made periods.** A
+  keyword's top page and Pages competing's pages repeated each address in
+  full, about 50 characters a row. Proposed as references to the website's
+  page list, as the daily lines hold (about 18 MB on morehandles.co.uk), with
+  one cost: sorting by top page would read the page list first. Built instead
+  as each part's own book of the addresses it holds (`pageBook`; `bookPages`,
+  `utils/searchConsolePacks.ts`), each row its place in it, packed: a part of
+  2,000 rows holds 700 to 950 pages. Measured first: Pages competing folds a
+  page's `#section` links into it from the address text, so with references
+  every reading of it would look up every page — thousands of reads a
+  screen, past Convex's limit on a large enough website. The book needs no
+  look-up and costs no speed anywhere, for about 11 MB rather than 18.
 
 ## Checked, nothing to change: the raw answers
 

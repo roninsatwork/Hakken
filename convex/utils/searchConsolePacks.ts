@@ -211,15 +211,55 @@ export function unpackNumbers(stored: StoredNumbers): number[] {
 const PACKED_COLUMNS = ["clicks", "impressions", "positionSums", "counts", "volumes"] as const;
 type PackedColumn = (typeof PACKED_COLUMNS)[number];
 
-/** A stored part with its number columns as lists. */
-export type Unpacked<T> = { [K in keyof T]: K extends PackedColumn ? Exclude<T[K], string> : T[K] };
+/**
+ * A ready-made period's page addresses — a keyword's top page (`tops`),
+ * Pages competing's pages (`pages`) — kept once a part (part 8.2,
+ * 2026-10-08): the part's own book of the addresses it holds (`pageBook`),
+ * each row its place in the book, packed as text. A part of 2,000 rows holds
+ * 700 to 950 pages, each address about 50 characters a row before. Kept with
+ * the part, not the website's page list (`searchConsolePageRefs.ts`), so a
+ * screen reading it — Pages competing folds a page's `#section` links, a
+ * table sorts by top page — needs no look-up however many pages a website has.
+ */
+const BOOKED_COLUMNS = ["tops", "pages"] as const;
+type BookedColumn = (typeof BOOKED_COLUMNS)[number];
 
-/** A part as stored, read back: its number columns as lists, the rest as it is. */
-export function unpackedPart<T extends Partial<Record<PackedColumn, StoredNumbers>>>(part: T): Unpacked<T> {
+/** Addresses as a book of each once, in the order first met, and each row's place in it, packed. */
+export function bookPages(addresses: readonly string[]): { book: string[]; places: string } {
+  const place = new Map<string, number>();
+  const places = addresses.map((address) => {
+    const held = place.get(address);
+    if (held !== undefined) return held;
+    place.set(address, place.size);
+    return place.size - 1;
+  });
+  return { book: [...place.keys()], places: packNumbers(places) };
+}
+
+/** The page addresses a period's part keeps in its own book: a keyword list's top pages, Pages competing's pages. */
+export function bookedColumns(part: { list: string; tops?: readonly string[]; pages?: readonly string[] }): { tops?: string; pages?: string; pageBook?: string[] } {
+  const column = part.list === "query" ? "tops" : part.list === "competing" ? "pages" : null;
+  const addresses = column ? part[column] : undefined;
+  if (!column || !addresses || addresses.length === 0) return {};
+  const { book, places } = bookPages(addresses);
+  return { [column]: places, pageBook: book };
+}
+
+/** A stored part with its number columns as lists, and its booked addresses as addresses. */
+export type Unpacked<T> = { [K in keyof T]: K extends PackedColumn | BookedColumn ? Exclude<T[K], string> : T[K] };
+
+/** A part as stored, read back: its number columns as lists, its booked addresses as addresses, the rest as it is. */
+export function unpackedPart<T extends Partial<Record<PackedColumn, StoredNumbers>> & { tops?: string | string[]; pages?: string | string[]; pageBook?: string[] }>(
+  part: T,
+): Unpacked<T> {
   const out: Record<string, unknown> = { ...part };
   for (const column of PACKED_COLUMNS) {
     const stored = part[column];
     if (stored !== undefined) out[column] = unpackNumbers(stored);
+  }
+  for (const column of BOOKED_COLUMNS) {
+    const stored = part[column];
+    if (typeof stored === "string") out[column] = unpackNumbers(stored).map((place) => part.pageBook?.[place] ?? "");
   }
   return out as Unpacked<T>;
 }

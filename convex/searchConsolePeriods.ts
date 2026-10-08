@@ -25,6 +25,7 @@ import { buildSeenDays } from "./searchConsoleSeenDays";
 import { longListRows, rowsFor } from "./searchConsoleLongLists";
 import {
   addUp,
+  bookedColumns,
   bySide,
   firstDayKeptFor,
   firstWeekKept,
@@ -832,8 +833,9 @@ export const writePeriodPart = internalMutation({
         .take(FIRST_PARTS_READ);
       for (const old of firsts) if (old.builtAt <= args.builtAt) await ctx.db.delete(old._id);
     }
-    // Its numbers packed as text, a few characters each where Convex keeps nine bytes (`packNumbers`).
-    await ctx.db.insert("searchConsolePeriods", { ...args, ...packedColumns(args) });
+    // Its numbers packed as text, a few characters each where Convex keeps nine bytes (`packNumbers`), and its
+    // page addresses once each in its own book (`bookPages`): a keyword's top page, Pages competing's pages.
+    await ctx.db.insert("searchConsolePeriods", { ...args, ...packedColumns(args), ...bookedColumns(args) });
     return null;
   },
 });

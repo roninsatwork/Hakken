@@ -5,7 +5,7 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { isPageRef, turnKeptStep } from "./searchConsolePageRefs";
 import { dropOldLinesOf } from "./searchConsoleRollups";
-import { firstDayKeptFor, packedColumns, unpackedPart } from "./utils/searchConsolePacks";
+import { bookedColumns, firstDayKeptFor, packedColumns, unpackedPart } from "./utils/searchConsolePacks";
 import { SEARCH_TYPES, searchTypeValidator, storedNumbersValidator } from "./searchConsoleSchema";
 import { LISTS_OF } from "./searchConsoleApi";
 import { keptSearchesOf } from "./searchConsoleKeep";
@@ -622,29 +622,46 @@ export const keptSize = internalAction({
 /** Kept records converted a step: each a few hundred KB at most. */
 const PACK_PER_STEP = 8;
 
-/** One step through a table: its records kept with lists of numbers counted, and packed as text when going ahead. */
+/**
+ * One step through a table: its records kept with lists of numbers — or, a
+ * period's, with page addresses in full (part 8.2) — counted, and stored
+ * smaller when going ahead.
+ */
 export const packNumbersStep = internalMutation({
   args: { table: v.union(v.literal("searchConsoleLists"), v.literal("searchConsolePeriods")), go: v.boolean(), cursor: v.union(v.string(), v.null()) },
   returns: stepValidator,
   handler: async (ctx, args) => {
     const paging = { cursor: args.cursor, numItems: PACK_PER_STEP };
-    const page = args.table === "searchConsoleLists"
-      ? await ctx.db.query("searchConsoleLists").paginate(paging)
-      : await ctx.db.query("searchConsolePeriods").paginate(paging);
     let found = 0;
+    if (args.table === "searchConsoleLists") {
+      const page = await ctx.db.query("searchConsoleLists").paginate(paging);
+      for (const record of page.page) {
+        if (typeof record.clicks === "string") continue;
+        found += 1;
+        if (args.go) await ctx.db.patch(record._id, packedColumns(unpackedPart(record)));
+      }
+      return { found, continueCursor: page.continueCursor, isDone: page.isDone };
+    }
+    const page = await ctx.db.query("searchConsolePeriods").paginate(paging);
     for (const record of page.page) {
-      if (typeof record.clicks === "string") continue;
+      const lists = unpackedPart(record);
+      const smaller = {
+        ...(typeof record.clicks === "string" ? {} : packedColumns(lists)),
+        ...(Array.isArray(record.tops) || Array.isArray(record.pages) ? bookedColumns(lists) : {}),
+      };
+      if (Object.keys(smaller).length === 0) continue;
       found += 1;
-      if (args.go) await ctx.db.patch(record._id, packedColumns(unpackedPart(record)));
+      if (args.go) await ctx.db.patch(record._id, smaller);
     }
     return { found, continueCursor: page.continueCursor, isDone: page.isDone };
   },
 });
 
 /**
- * Every kept record's numbers packed as text: counted, and converted with
- * `go`. Once on a deployment holding records written before 2026-10-08 — the
- * builds write packed since, and the periods are rebuilt each night anyway.
+ * Every kept record's numbers packed as text, and the periods' page addresses
+ * booked (part 8.2): counted, and converted with `go`. Once on a deployment
+ * holding records written before 2026-10-08 — the builds write them so since,
+ * and the periods are rebuilt each night anyway.
  */
 export const packKeptNumbers = internalAction({
   args: { go: v.boolean() },

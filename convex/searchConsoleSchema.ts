@@ -355,8 +355,16 @@ export const searchConsoleTables = {
     from: v.string(),
     to: v.string(),
     ...packedRows,
+    /**
+     * A keyword's top page (`tops`, keyword lists) and Pages competing's
+     * pages (`pages`) as places in the part's own `pageBook`, packed as text,
+     * since 2026-10-08 (`bookPages`, `utils/searchConsolePacks.ts`); lists of
+     * addresses before. A page list's `tops` are its top keywords, as they are.
+     */
+    pages: v.optional(v.union(v.array(v.string()), v.string())),
+    pageBook: v.optional(v.array(v.string())),
     counts: v.optional(storedNumbersValidator),
-    tops: v.optional(v.array(v.string())),
+    tops: v.optional(v.union(v.array(v.string()), v.string())),
     kinds: v.optional(v.array(v.string())),
     volumes: v.optional(storedNumbersValidator),
     estimates: v.optional(v.array(v.number())),
