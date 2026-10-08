@@ -628,13 +628,22 @@ const PACK_PER_STEP = 8;
  * smaller when going ahead.
  */
 export const packNumbersStep = internalMutation({
-  args: { table: v.union(v.literal("searchConsoleLists"), v.literal("searchConsolePeriods")), go: v.boolean(), cursor: v.union(v.string(), v.null()) },
+  args: {
+    holdId: v.id("companyWebsites"),
+    table: v.union(v.literal("searchConsoleLists"), v.literal("searchConsolePeriods")),
+    go: v.boolean(),
+    cursor: v.union(v.string(), v.null()),
+  },
   returns: stepValidator,
   handler: async (ctx, args) => {
     const paging = { cursor: args.cursor, numItems: PACK_PER_STEP };
     let found = 0;
+    // A website at a time, by its hold, as every Search Console read is (`websiteTenancyGuard.test.ts`).
     if (args.table === "searchConsoleLists") {
-      const page = await ctx.db.query("searchConsoleLists").paginate(paging);
+      const page = await ctx.db
+        .query("searchConsoleLists")
+        .withIndex("by_hold_country_type_list_grain_start", (q) => q.eq("companyWebsiteId", args.holdId))
+        .paginate(paging);
       for (const record of page.page) {
         if (typeof record.clicks === "string") continue;
         found += 1;
@@ -642,7 +651,10 @@ export const packNumbersStep = internalMutation({
       }
       return { found, continueCursor: page.continueCursor, isDone: page.isDone };
     }
-    const page = await ctx.db.query("searchConsolePeriods").paginate(paging);
+    const page = await ctx.db
+      .query("searchConsolePeriods")
+      .withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", args.holdId))
+      .paginate(paging);
     for (const record of page.page) {
       const lists = unpackedPart(record);
       const smaller = {
@@ -668,13 +680,17 @@ export const packKeptNumbers = internalAction({
   returns: v.object({ lists: v.number(), periods: v.number() }),
   handler: async (ctx, args) => {
     const found = { lists: 0, periods: 0 };
-    for (const table of ["searchConsoleLists", "searchConsolePeriods"] as const) {
-      for (let cursor: string | null = null; ;) {
-        const step: { found: number; continueCursor: string; isDone: boolean } =
-          await ctx.runMutation(internal.searchConsoleTidy.packNumbersStep, { table, go: args.go, cursor });
-        found[table === "searchConsoleLists" ? "lists" : "periods"] += step.found;
-        if (step.isDone) break;
-        cursor = step.continueCursor;
+    const connections: Array<{ connectionId: Id<"searchConsoleConnections">; holdId: Id<"companyWebsites"> }> =
+      await ctx.runQuery(internal.searchConsoleSync.connectionsWithFigures, {});
+    for (const { holdId } of connections) {
+      for (const table of ["searchConsoleLists", "searchConsolePeriods"] as const) {
+        for (let cursor: string | null = null; ;) {
+          const step: { found: number; continueCursor: string; isDone: boolean } =
+            await ctx.runMutation(internal.searchConsoleTidy.packNumbersStep, { holdId, table, go: args.go, cursor });
+          found[table === "searchConsoleLists" ? "lists" : "periods"] += step.found;
+          if (step.isDone) break;
+          cursor = step.continueCursor;
+        }
       }
     }
     return found;
