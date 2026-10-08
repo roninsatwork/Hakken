@@ -189,6 +189,8 @@ describe("Search Console is read only through the company's own hold", () => {
     "searchConsoleTracked",
     "searchConsoleWeeks",
     "searchConsoleRuns",
+    // Each keyword the daily lines hold, once a month (keep-less-history-plan.md, part 8.3).
+    "searchConsoleKeywordBooks",
   ];
 
   test.each(TABLES)("%s names the hold it belongs to", (table) => {

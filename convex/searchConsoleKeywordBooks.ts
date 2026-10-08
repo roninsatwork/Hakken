@@ -32,6 +32,9 @@ const ADD_PER_STEP = 2_000;
 /** Book records cleared per call. */
 const DROP_PER_STEP = 20;
 
+/** Records of one month's book read inside a query: a million keywords, past any website's month. */
+const BOOK_CHUNKS_MOST = 250;
+
 /** The month whose book a day's line points to: "2026-09". */
 export const monthOfDay = (day: string): string => day.slice(0, 7);
 
@@ -202,7 +205,7 @@ export async function lineKeywordsInQuery(
   const records = await ctx.db
     .query("searchConsoleKeywordBooks")
     .withIndex("by_hold_country_month_chunk", (q) => q.eq("companyWebsiteId", holdId).eq("country", country).eq("month", monthOfDay(day)))
-    .collect();
+    .take(BOOK_CHUNKS_MOST);
   const keywords = records.sort((left, right) => left.chunk - right.chunk).flatMap((record) => record.keywords);
   return unpackNumbers(keys).map((place) => keywords[place] ?? "");
 }
