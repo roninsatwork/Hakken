@@ -59,3 +59,23 @@ in four slices.
 - **An email someone turned off is still queued** (it shows as skipped), so
   the Outbox holds a row per person per week for the digest. Kept on purpose,
   so the screen shows every email.
+
+## The Preferences tab (Anthony, 2026-10-08)
+
+Anthony found the profile's first tab "out of touch with the rest of the app":
+picture boxes for the theme and flag boxes for the language, in colours typed
+by hand. Two layouts were drawn on the same canvas, row "Your profile:
+Preferences"; he chose the table, like the two tabs beside it ("option 2"),
+and approved building it ("go"). Built on `dev` the same day:
+
+- `PreferencesTab.tsx`: "How you see Hakken", a table of two settings —
+  Theme (Light, Dark, Same as my device, the kit's segmented choice) and
+  Language (a dropdown, which stays tidy as more languages arrive). A choice
+  applies at once; a new language is kept on the person, for their emails,
+  and reloads the page in it — both as before.
+- No search box or page footer: two rows, under the same overrule as the
+  tabs beside it (`scripts/screen-kit-allowlist.json`).
+- The 27 colours the theme pictures typed by hand went with them: the colour
+  ratchet fell from 677 to 650.
+- The board, `ProfilePreferences`, is in [`boards/`](../assets/outbox-and-preferences/boards/),
+  held by its look test (`profileLook.test.tsx`).

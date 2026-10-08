@@ -12,11 +12,13 @@ import TelegramIntegrationPage from "./integrations/telegram/page";
  * — the wider assistant" canvas, 2026-10-07 (docs/plans/active/outbox-and-
  * preferences-plan.md, C2; design-drift-plan D4): boards
  * CommunicationPreferences, ProfileIntegrations, ProfileIntegrationsLinked
- * and ProfileTelegram.
+ * and ProfileTelegram. The Preferences tab holds to ProfilePreferences,
+ * approved on the same canvas 2026-10-08.
  */
 
 const where = vi.hoisted(() => ({ search: "" }));
 const push = vi.hoisted(() => vi.fn());
+const setTheme = vi.hoisted(() => vi.fn());
 
 vi.mock("convex/react", async () => (await import("@/src/test/screenMocks")).convexReact());
 vi.mock("next/navigation", () => ({
@@ -26,7 +28,7 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({}),
 }));
 vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
-vi.mock("next-themes", () => ({ useTheme: () => ({ theme: "dark", setTheme: vi.fn() }) }));
+vi.mock("next-themes", () => ({ useTheme: () => ({ theme: "dark", setTheme }) }));
 vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () => ({ platformName: "Hakken" }) }));
 
 const BOT = { username: "AskHakkenBot", name: "AskHakken" };
@@ -34,6 +36,7 @@ const choices = [{ communication: "WEEKLY_NEWS_DIGEST", on: true }, { communicat
 const setMyEmail = vi.fn(async () => null);
 const setAllMyEmails = vi.fn(async () => null);
 const newTelegramCode = vi.fn(async () => ({ code: "482913", expiresAt: Date.now() + 600_000 }));
+const recordMyLanguage = vi.fn(async () => null);
 
 function answer(telegram: unknown) {
   vi.mocked(useQuery).mockImplementation(answerQueries({
@@ -49,8 +52,30 @@ beforeEach(() => {
   answer({ bot: BOT, linked: null, code: { code: "482913", expiresAt: Date.now() + 600_000 } });
   vi.mocked(useMutation).mockImplementation(((reference: unknown) => {
     const name = convexPath(reference);
-    return name.endsWith("setAllMyEmails") ? setAllMyEmails : name.endsWith("setMyEmail") ? setMyEmail : name.endsWith("newTelegramCode") ? newTelegramCode : vi.fn(async () => null);
+    return name.endsWith("setAllMyEmails") ? setAllMyEmails : name.endsWith("setMyEmail") ? setMyEmail : name.endsWith("newTelegramCode") ? newTelegramCode : name.endsWith("recordMyLanguage") ? recordMyLanguage : vi.fn(async () => null);
   }) as never);
+});
+
+describe("Preferences", () => {
+  it("theme and language as a table, as drawn", async () => {
+    const { container } = render(<ProfileTabs />);
+    await screen.findByText("Same as my device");
+    await expectApprovedLook(container.querySelector(".animate-in") ?? container, "outbox-and-preferences", "ProfilePreferences", "Preferences");
+    expect(screen.getByRole("radio", { name: "Dark" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("combobox", { name: "Language" })).toHaveValue("en");
+  });
+
+  it("picking a theme applies it at once", async () => {
+    render(<ProfileTabs />);
+    fireEvent.click(await screen.findByRole("radio", { name: "Light" }));
+    expect(setTheme).toHaveBeenCalledWith("light");
+  });
+
+  it("a new language is kept on the person, for their emails", async () => {
+    render(<ProfileTabs />);
+    fireEvent.change(await screen.findByRole("combobox", { name: "Language" }), { target: { value: "it" } });
+    await waitFor(() => expect(recordMyLanguage).toHaveBeenCalledWith({ language: "it" }));
+  });
 });
 
 describe("Communication preferences", () => {

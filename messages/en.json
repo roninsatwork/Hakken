@@ -8346,21 +8346,26 @@
       }
     },
     "preferences": {
-      "title": "Account Preferences",
-      "description": "Customize your visual appearance and localized workspace settings.",
+      "title": "How you see {platformName}",
+      "description": "How {platformName} looks, and the language it uses with you.",
+      "failed": "That didn’t save. Try again in a moment.",
+      "columns": {
+        "setting": "Setting",
+        "what": "What it changes",
+        "choice": "Your choice"
+      },
       "theme": {
-        "title": "Visual Theme",
-        "description": "Choose between light, dark, or system-adaptive visual layout themes.",
-        "light": "Light Mode",
-        "dark": "Dark Mode",
-        "system": "System Default"
+        "name": "Theme",
+        "what": "How {platformName} looks: light, dark, or the same as your device.",
+        "light": "Light",
+        "dark": "Dark",
+        "system": "Same as my device"
       },
       "language": {
-        "title": "System Language",
-        "description": "Select your preferred language for the administration workspace.",
+        "name": "Language",
+        "what": "{platformName}’s screens, and the emails it sends you.",
         "en": "English (UK)",
-        "it": "Italiano (IT)",
-        "label": "Workspace Language"
+        "it": "Italiano"
       },
       "telegram": {
         "title": "Telegram",

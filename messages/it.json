@@ -8346,21 +8346,26 @@
       }
     },
     "preferences": {
-      "title": "Preferenze Account",
-      "description": "Personalizza l'aspetto visivo e le impostazioni localizzate dell'area di lavoro.",
+      "title": "Come vedi {platformName}",
+      "description": "Come appare {platformName} e la lingua che usa con te.",
+      "failed": "Non è stato salvato. Riprova tra un momento.",
+      "columns": {
+        "setting": "Impostazione",
+        "what": "Cosa cambia",
+        "choice": "La tua scelta"
+      },
       "theme": {
-        "title": "Tema Visivo",
-        "description": "Scegli tra temi con layout visivo chiaro, scuro o adattivo al sistema.",
-        "light": "Modalità Chiara",
-        "dark": "Modalità Scura",
-        "system": "Predefinito di Sistema"
+        "name": "Tema",
+        "what": "Come appare {platformName}: chiaro, scuro o come il tuo dispositivo.",
+        "light": "Chiaro",
+        "dark": "Scuro",
+        "system": "Come il mio dispositivo"
       },
       "language": {
-        "title": "Lingua di Sistema",
-        "description": "Seleziona la tua lingua preferita per l'area di lavoro amministrativa.",
+        "name": "Lingua",
+        "what": "Le schermate di {platformName} e le email che ti invia.",
         "en": "English (UK)",
-        "it": "Italiano (IT)",
-        "label": "Lingua dell'Area di Lavoro"
+        "it": "Italiano"
       },
       "telegram": {
         "title": "Telegram",

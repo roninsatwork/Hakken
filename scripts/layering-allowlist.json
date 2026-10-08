@@ -23,7 +23,6 @@
     "src/app/(dashboard)/app/assistant/_components/AssistantModelSelector.tsx",
     "src/app/(dashboard)/app/assistant/_components/AssistantThinkingSelector.tsx",
     "src/app/(dashboard)/app/assistant/layout.tsx",
-    "src/app/(dashboard)/app/profile/ProfileTabs.tsx",
     "src/app/(dashboard)/app/profile/page.tsx",
     "src/app/(dashboard)/app/settings/page.tsx",
     "src/app/sandbox/[widgetId]/page.tsx",
