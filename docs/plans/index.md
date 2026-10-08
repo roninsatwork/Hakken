@@ -12,8 +12,8 @@ completed work.
   keyword stored once for the platform, each page once per website, a
   company's private ones once per company, lists holding numbers; every screen
   proved inside Convex's limits at five times morehandles.co.uk's size. Three
-  parts — Search Console, Sites and DataForSEO, the rest of the platform —
-  about 20 days. Planning; N1 and N2 agreed.
+  parts — Search Console, Sites and DataForSEO, agents and the rest —
+  about 22 days. Planning; N1 and N2 agreed.
 - [Keeping less history](./active/keep-less-history-plan.md) — keep only
   what a screen reads: keyword positions as graph lines (one record per
   keyword a month, not a row per check), the day tables nobody reads stopped

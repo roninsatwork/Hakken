@@ -1,8 +1,8 @@
 # Core data — each keyword and page once, every screen inside Convex's limits
 
-**Started 2026-10-08. Status: planning — nothing built. Decisions N1 to N9
+**Started 2026-10-08. Status: planning — nothing built. Decisions N1 to N10
 below: N1 and N2 agreed, N3, N4 and N6 settled (nothing on screen changes),
-N5, N7, N8 and N9 wait on Anthony.** Follows the
+N5, N7, N8, N9 and N10 wait on Anthony.** Follows the
 [keep-less-history plan](keep-less-history-plan.md), whose part 8 (built the
 same day) packed the numbers and booked addresses inside each stored part —
 the steps that could be taken without redesigning how screens read. This plan
@@ -20,8 +20,8 @@ don't mind as long as it's all covered in the plan overall and at the end
 everything is normalised and optimised."
 
 **What "everything" covers.** Three parts, all in this plan: Search Console
-(part 1, §5), Sites and DataForSEO (part 2, §6), and the rest of the platform
-(part 3, §7) — every one of the database's 234 tables measured, and each
+(part 1, §5), Sites and DataForSEO (part 2, §6), and agents, AI calls and the
+rest of the platform (part 3, §7) — every one of the database's 234 tables measured, and each
 judged: normalised, packed, or left with its reason.
 
 **In plain words.** Each keyword and each page address is stored once — a
@@ -46,7 +46,8 @@ fail. Nothing on screen is meant to change.
 | N6 | What a list says past N1's size | **What it says today when a list is cut** (`consoleListRows`): "showing your 25,000 …" — no new words. | **Settled** — nothing new on screen. |
 | N7 | DataForSEO's raw answers | **Kept their 7 days in Convex's file storage, not the database**: 33.5 MB of 332 answers, read only to file one again (§6.5). | Waiting |
 | N8 | The Decision Maker's log | **Keep every decision 90 days as now, its probabilities 30**: the probabilities are 4 MB of its 16.9, read only on one admin screen for one run (`chatAdmin.ts:263`). | Waiting |
-| N9 | Agent transactions | **Keep 90 days, not 400**: the analytics read their daily totals (`analyticsSnapshots`), kept for good, beyond a quarter. 14.4 MB on dev. | Waiting |
+| N9 | Agent transactions (every AI call's cost) | **Keep 90 days, not 400, then daily totals for good**: the analytics read daily totals (`analyticsSnapshots`). 14.4 MB on dev. | Waiting |
+| N10 | The Decision Maker judging one at a time | **Judge keywords' intents and pages' types in batches**, tried on a sample first and kept only if the answers match (§7.3). | Waiting |
 
 ## 2. Why — measured on dev, 2026-10-08
 
@@ -341,30 +342,83 @@ rules become one (N3).
 | `seoPullAnswers` | 33.5 MB | pointers only (N7) |
 | New: `keywords`, `keywordPlaces`, `websitePages` | — | about 4 MB, taking in `searchVolumes` and `seoKeywordIntents` (4 MB today) |
 
-## 7. Part 3 — the rest of the platform
+## 7. Part 3 — agents, AI calls and the rest of the platform
 
-Measured 2026-10-08: outside Search Console and DataForSEO only five tables
-pass half a megabyte — the Decision Maker's log (`decisionRuns`, 16.9 MB),
-agent transactions (`agentTransactions`, 14.4 MB), agent run steps (0.9),
-agent logs (0.9) and audit logs (0.7). Chat, the wiki, the library and every
-other table are under 0.2 MB each. These rows already point to companies,
-agents and subjects by id: they are normalised; their size is each row's own
-overhead and its details.
+Anthony, 2026-10-08: "Did you cover the agents too". On dev their tables look
+small, because agents run little there; what matters is how they grow — with
+every AI call, every Decision and every conversation, so with real companies
+they become the largest tables, and after Search Console the largest reading
+and writing.
 
-- **7.1 The Decision Maker's log** (N8): its probabilities, 4 MB of 16.9,
-  kept 30 days rather than 90.
-- **7.2 Agent transactions** (N9): kept 90 days rather than 400, the
-  analytics reading their daily totals beyond.
-- **7.3 Indexes.** Convex keeps every index as well as every row, and charges
-  for both. Each table's indexes are checked against the code that reads
-  them, and an index nothing reads goes — then a guard fails one added that
-  nothing reads, as `keepRules.test.ts` fails a table without a keep rule.
-- **7.4 Reading and writing.** The twenty functions reading and writing most
-  in a normal week (Convex's usage page) each get a target, and the load
-  tests (§8) count what each screen reads.
-- **7.5 Measured each month**: `storageMeasure:measureEveryTable` once a
-  month and once before and after each part — not more, since it reads what it
-  measures.
+**What one call writes, measured 2026-10-08.**
+
+- **Every AI call writes a cost row** (`agentTransactions`, ~360 bytes, kept
+  400 days). Of 8,000 rows, 12 purposes and 7 models — yet each row spells
+  out its purpose ("decision:seo.keyword-intent") and its model, twice
+  (`modelUsed`, `providerModelId`), beside its agent's and company's ids.
+- **Every Decision writes two rows**: its own (`decisionRuns`, ~420 bytes,
+  kept 90 days, a quarter of it its probabilities) and a cost row. The
+  Decision Maker judges keywords' intents and pages' types one at a time:
+  7,791 Decisions on 5 October alone, 40,237 in the 90 days kept, and each
+  asked which model and mode to use again (`aiModels.resolveModelConfigForExecution`
+  36,000 calls and `decisionRuns.resolveModesInternal` 37,000 in two weeks).
+- **Every agent step keeps its prompt and answer in full** (`agentLogs`,
+  `agentRunSteps`): the agent's standing instructions written out again on
+  every call.
+- **The job ledger** records every job's start and outcome
+  (`jobLedger.runJob` and `recordJobOutcomeInternal`, 73,000 calls each in two
+  weeks on dev).
+- Chat, the wiki, the library and every other table are under 0.2 MB each and
+  already point to companies, agents and subjects by id.
+
+### 7.1 Normalised
+
+- **A call's purpose and model by reference**: a call names its purpose and
+  model by a short key from one list each, not in full on every row; the
+  model once, not twice.
+- **One row per Decision**: the Decision's row carries its cost, and the cost
+  ledger counts Decisions from it — not a second row saying the same.
+- **An agent's standing instructions once per version**: a step's log keeps
+  what was said in that step, and points to the instructions it ran with.
+- **Model and mode read once per run, not per call**: a batch of Decisions
+  asks once.
+
+### 7.2 Kept for less time, totals kept for good
+
+- **The Decision Maker's probabilities 30 days, the Decision 90** (N8).
+- **Cost rows 90 days, then daily totals** per company, agent, purpose and
+  model (N9) — the analytics already read daily totals (`analyticsSnapshots`).
+- **The job ledger** keeps each job's last outcome and its failures, not every
+  successful run — measured first in its step: what reads it, and how often it
+  runs.
+
+### 7.3 Fewer calls (N10)
+
+Judging keywords' intents and pages' types **in batches** — one model call for
+a few dozen, rather than one each — cuts calls, cost rows and Decisions'
+overhead together. It changes how the model is asked, so it is tried on a
+sample first and kept only if its answers match the one-at-a-time answers.
+
+### 7.4 Indexes
+
+Convex keeps every index as well as every row, and charges for both. Each
+table's indexes are checked against the code that reads them, and an index
+nothing reads goes — then a guard fails one added that nothing reads, as
+`keepRules.test.ts` fails a table without a keep rule.
+
+### 7.5 Reading and writing, and measuring
+
+The twenty functions reading and writing most in a normal week (Convex's usage
+page) each get a target, and the load tests (§8) count what each screen
+reads. `storageMeasure:measureEveryTable` runs once a month and before and
+after each part — not more, since it reads what it measures.
+
+### 7.6 What it would save — estimates
+
+Per AI call: a cost row from ~360 to ~150 bytes. Per Decision: one row of
+~300 bytes instead of two of ~780. On dev today: about 31 MB of the two logs
+to about 9 MB; with real companies, the same share of what would be the
+platform's largest tables.
 
 ## 8. How it is proved
 
@@ -406,11 +460,16 @@ overhead and its details.
    1½ days.
 10. **Raw answers in file storage** (§6.5, N7) — ½ day.
 11. **Joins by number** (§6.6) — 1 day.
-12. **Part 3** (§7): the logs (N8, N9), the index audit and its guard, the
-    reading targets — 2½ days.
+12. **Agents and AI calls normalised** (§7.1): purpose and model by
+    reference, one row per Decision, instructions once per version, model and
+    mode once per run — 2 days.
+13. **Kept for less time** (§7.2, N8, N9) and the job ledger — 1 day.
+14. **Decisions in batches** (§7.3, N10), compared on a sample — 1 day.
+15. **The index audit and its guard, the reading targets** (§7.4, §7.5) —
+    1 day.
 
-**Part 1: about 6½ days. Part 2: about 11 days. Part 3: about 2½ days. In
-all, about 20 days**, each step merged into `dev` on its own, the full check
+**Part 1: about 6½ days. Part 2: about 11 days. Part 3: about 5 days. In
+all, about 22 days**, each step merged into `dev` on its own, the full check
 first, nothing pushed without Anthony's word.
 
 ## 10. Risks
@@ -445,4 +504,5 @@ built.
   agreed: five times morehandles.co.uk. Then N2 ("all covered in the plan
   overall"): parts 2 and 3 planned here in full, from the whole database
   measured (`storageMeasure.ts`) and Convex's usage page; N3, N4 and N6
-  settled as changing nothing on screen.
+  settled as changing nothing on screen. Then "Did you cover the agents too":
+  part 3 rewritten from how agent data grows per call (§7), N10 added.
