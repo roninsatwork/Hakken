@@ -5,7 +5,8 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { isPageRef, turnKeptStep } from "./searchConsolePageRefs";
 import { dropOldLinesOf } from "./searchConsoleRollups";
-import { bookedColumns, firstDayKeptFor, packedColumns, unpackedPart } from "./utils/searchConsolePacks";
+import { bookedColumns, firstDayKeptFor, packNumbers, packedColumns, unpackNumbers, unpackedPart } from "./utils/searchConsolePacks";
+import { keywordPlaces, lineKeywordsInQuery } from "./searchConsoleKeywordBooks";
 import { SEARCH_TYPES, searchTypeValidator, storedNumbersValidator } from "./searchConsoleSchema";
 import { LISTS_OF } from "./searchConsoleApi";
 import { keptSearchesOf } from "./searchConsoleKeep";
@@ -202,8 +203,13 @@ export const pairRecordsPart = internalQuery({
       .query("searchConsoleLists")
       .withIndex("by_hold_country_type_list_grain_start", (q) => q.eq("companyWebsiteId", args.holdId).eq("country", args.country).eq("searchType", args.searchType).eq("list", "pair"))
       .paginate({ cursor: args.cursor, numItems: 3 });
+    const records = [];
+    for (const record of page.page) {
+      // Keywords read from their month's book when kept as places (`searchConsoleKeywordBooks.ts`).
+      records.push({ ...record, keys: await lineKeywordsInQuery(ctx, args.holdId, args.country, record.start, record.keys) });
+    }
     return {
-      records: page.page.map((record) => ({
+      records: records.map((record) => ({
         recordId: record._id,
         keys: record.keys,
         ...(record.pages ? { pages: record.pages } : {}),
@@ -231,7 +237,8 @@ export const keepRecordLines = internalMutation({
     const pick = <T,>(values: readonly T[]) => args.lines.map((line) => values[line]);
     const lists = unpackedPart(record);
     await ctx.db.patch(record._id, {
-      keys: pick(record.keys),
+      // A keyword book's places picked as they are, packed again.
+      keys: typeof record.keys === "string" ? packNumbers(pick(unpackNumbers(record.keys))) : pick(record.keys),
       ...(record.pages ? { pages: pick(record.pages) } : {}),
       ...packedColumns({ clicks: pick(lists.clicks), impressions: pick(lists.impressions), positionSums: pick(lists.positionSums) }),
     });
@@ -272,7 +279,7 @@ export const addressesStep = internalQuery({
       .withIndex("by_hold_country_type_list_grain_start", (q) => q.eq("companyWebsiteId", args.holdId))
       .paginate({ cursor: args.cursor, numItems: RECORDS_PER_STEP });
     const found = page.page.filter((record) => (record.list === "pair" && record.pages?.some((value) => !isPageRef(value)))
-      || (record.list === "page" && record.keys.some((value) => !isPageRef(value)))).length;
+      || (record.list === "page" && typeof record.keys !== "string" && record.keys.some((value) => !isPageRef(value)))).length;
     return { found, continueCursor: page.continueCursor, isDone: page.isDone };
   },
 });
@@ -659,7 +666,7 @@ export const packNumbersStep = internalMutation({
       const lists = unpackedPart(record);
       const smaller = {
         ...(typeof record.clicks === "string" ? {} : packedColumns(lists)),
-        ...(Array.isArray(record.tops) || Array.isArray(record.pages) ? bookedColumns(lists) : {}),
+        ...(Array.isArray(record.tops) || Array.isArray(record.pages) || Array.isArray(record.kinds) ? bookedColumns(lists) : {}),
       };
       if (Object.keys(smaller).length === 0) continue;
       found += 1;
@@ -669,17 +676,49 @@ export const packNumbersStep = internalMutation({
   },
 });
 
+/** A few of a website's search-and-page lines still naming their keywords in full (before part 8.3): each a few thousand lines. */
+export const linesInFullPart = internalQuery({
+  args: { holdId: v.id("companyWebsites"), cursor: v.union(v.string(), v.null()) },
+  returns: v.object({
+    records: v.array(v.object({ recordId: v.id("searchConsoleLists"), country: v.optional(v.string()), start: v.string(), keys: v.array(v.string()) })),
+    continueCursor: v.string(),
+    isDone: v.boolean(),
+  }),
+  handler: async (ctx, args) => {
+    const page = await ctx.db
+      .query("searchConsoleLists")
+      .withIndex("by_hold_country_type_list_grain_start", (q) => q.eq("companyWebsiteId", args.holdId))
+      .paginate({ cursor: args.cursor, numItems: 3 });
+    const records = page.page.flatMap((record) => (record.list === "pair" && typeof record.keys !== "string"
+      ? [{ recordId: record._id, ...(record.country === undefined ? {} : { country: record.country }), start: record.start, keys: record.keys }]
+      : []));
+    return { records, continueCursor: page.continueCursor, isDone: page.isDone };
+  },
+});
+
+/** A line's keywords set to their places in its month's book; one already set is left alone. */
+export const setLineKeys = internalMutation({
+  args: { recordId: v.id("searchConsoleLists"), keys: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const record = await ctx.db.get(args.recordId);
+    if (record && typeof record.keys !== "string") await ctx.db.patch(record._id, { keys: args.keys });
+    return null;
+  },
+});
+
 /**
- * Every kept record's numbers packed as text, and the periods' page addresses
- * booked (part 8.2): counted, and converted with `go`. Once on a deployment
- * holding records written before 2026-10-08 — the builds write them so since,
- * and the periods are rebuilt each night anyway.
+ * Every kept record's numbers packed as text, the periods' page addresses and
+ * kinds booked (parts 8.2 and 8.4), and the lines' keywords set to their
+ * places in their month's book (part 8.3): counted, and converted with `go`.
+ * Once on a deployment holding records written before 2026-10-08 — the builds
+ * write them so since, and the periods are rebuilt each night anyway.
  */
 export const packKeptNumbers = internalAction({
   args: { go: v.boolean() },
-  returns: v.object({ lists: v.number(), periods: v.number() }),
+  returns: v.object({ lists: v.number(), periods: v.number(), keywordLines: v.number() }),
   handler: async (ctx, args) => {
-    const found = { lists: 0, periods: 0 };
+    const found = { lists: 0, periods: 0, keywordLines: 0 };
     const connections: Array<{ connectionId: Id<"searchConsoleConnections">; holdId: Id<"companyWebsites"> }> =
       await ctx.runQuery(internal.searchConsoleSync.connectionsWithFigures, {});
     for (const { holdId } of connections) {
@@ -691,6 +730,18 @@ export const packKeptNumbers = internalAction({
           if (step.isDone) break;
           cursor = step.continueCursor;
         }
+      }
+      for (let cursor: string | null = null; ;) {
+        const page: { records: Array<{ recordId: Id<"searchConsoleLists">; country?: string; start: string; keys: string[] }>; continueCursor: string; isDone: boolean } =
+          await ctx.runQuery(internal.searchConsoleTidy.linesInFullPart, { holdId, cursor });
+        for (const record of page.records) {
+          found.keywordLines += 1;
+          if (!args.go) continue;
+          const keys = await keywordPlaces(ctx, holdId, record.country, record.start, record.keys);
+          await ctx.runMutation(internal.searchConsoleTidy.setLineKeys, { recordId: record.recordId, keys });
+        }
+        if (page.isDone) break;
+        cursor = page.continueCursor;
       }
     }
     return found;
@@ -729,8 +780,10 @@ export const linesWithin = internalQuery({
     let lines = 0;
     const within = args.caps.map(() => 0);
     for (const record of page.page) {
-      lines += record.keys.length;
-      for (const key of record.keys) {
+      // Keywords read from their month's book when kept as places (`searchConsoleKeywordBooks.ts`).
+      const keys = await lineKeywordsInQuery(ctx, args.holdId, undefined, record.start, record.keys);
+      lines += keys.length;
+      for (const key of keys) {
         const at = rank.get(key);
         if (at === undefined) continue;
         args.caps.forEach((cap, index) => {

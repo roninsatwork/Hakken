@@ -200,7 +200,8 @@ export const keptWithAddresses = internalQuery({
       .paginate({ cursor: args.cursor, numItems: RECORDS_PER_STEP });
     const records = page.page.flatMap((record): Array<typeof addressedValidator.type> => {
       if (record.list === "pair" && record.pages?.some((value) => !isPageRef(value))) return [{ recordId: record._id, pages: record.pages }];
-      if (record.list === "page" && record.keys.some((value) => !isPageRef(value))) return [{ recordId: record._id, keys: record.keys }];
+      // A page list's keys are addresses, never a keyword book's places (`searchConsoleKeywordBooks.ts`).
+      if (record.list === "page" && typeof record.keys !== "string" && record.keys.some((value) => !isPageRef(value))) return [{ recordId: record._id, keys: record.keys }];
       return [];
     });
     return { records, continueCursor: page.continueCursor, isDone: page.isDone };

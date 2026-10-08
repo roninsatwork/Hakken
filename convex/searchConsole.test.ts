@@ -4,6 +4,7 @@ import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { unpackNumbers, unpackedPart } from "./utils/searchConsolePacks";
+import { lineKeywordsInQuery } from "./searchConsoleKeywordBooks";
 import { decodePages } from "./searchConsolePageRefs";
 import { decryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
@@ -181,7 +182,9 @@ const rowsOf = (t: Harness, siteId: Id<"companyWebsites">, list: "query" | "page
     const sums = new Map<string, number>();
     // A page list holds each address once, as a reference (`searchConsolePageRefs.ts`): read back as the app does.
     for (const record of records) {
-      const keys = list === "page" ? await decodePages(ctx, siteId, record.keys) : record.keys;
+      // A line's keywords are places in its month's book (`searchConsoleKeywordBooks.ts`): read back as the app does.
+      const keys = typeof record.keys === "string" ? await lineKeywordsInQuery(ctx, siteId, undefined, record.start, record.keys)
+        : list === "page" ? await decodePages(ctx, siteId, record.keys) : record.keys;
       const clicks = unpackNumbers(record.clicks);
       keys.forEach((key, index) => sums.set(key, (sums.get(key) ?? 0) + clicks[index]));
     }
@@ -491,9 +494,14 @@ describe("collecting", () => {
     } } } } });
     await signIn(t, admin, siteId);
     await collect(t);
-    const kept = await t.run(async (ctx) => (await ctx.db.query("searchConsoleLists").collect())
-      .filter((record) => record.list === "pair" && record.searchType === "web" && record.start === NEWEST && record.country === undefined));
-    expect(kept.flatMap((record) => record.keys).sort()).toEqual(["almost there", "plumber leeds", "two pages", "two pages"]);
+    const kept = await t.run(async (ctx) => {
+      const lines = (await ctx.db.query("searchConsoleLists").collect())
+        .filter((record) => record.list === "pair" && record.searchType === "web" && record.start === NEWEST && record.country === undefined);
+      // Each keyword held once in its month's book, the line its place (keep-less-history-plan.md, part 8.3).
+      expect(lines.every((record) => typeof record.keys === "string")).toBe(true);
+      return await Promise.all(lines.map(async (record) => await lineKeywordsInQuery(ctx, siteId, undefined, record.start, record.keys)));
+    });
+    expect(kept.flat().sort()).toEqual(["almost there", "plumber leeds", "two pages", "two pages"]);
     const seen = await t.run(async (ctx) => (await ctx.db.query("searchConsoleSeen").collect()).filter((entry) => entry.kind === "query").map((entry) => entry.key));
     expect(seen).not.toContain("deep and lonely");
   });
@@ -563,6 +571,8 @@ describe("collecting", () => {
     const { t, siteId, admin } = await setup();
     const google = fakeGoogle({ figures: figures() });
     await signIn(t, admin, siteId);
+    // A keyword book for a month no kept day is in, as one left from June would be (part 8.3).
+    await t.mutation(internal.searchConsoleKeywordBooks.addToBook, { holdId: siteId, month: "2026-06", keywords: ["old keyword"] });
     await collect(t);
     const asks = google.calls
       .filter((call) => call.url.endsWith("/searchAnalytics/query"))
@@ -579,6 +589,9 @@ describe("collecting", () => {
     // Its days are held 60 days, the first collection's older ones cleared once it was added up.
     const days = await t.run(async (ctx) => (await ctx.db.query("searchConsoleLists").collect()).map((record) => record.start));
     expect(days.every((day) => day >= "2026-07-29")).toBe(true);
+    // And a keyword book only for a month still kept (part 8.3): June's goes with its lines.
+    const months = await t.run(async (ctx) => [...new Set((await ctx.db.query("searchConsoleKeywordBooks").collect()).map((record) => record.month))].sort());
+    expect(months).toEqual(["2026-09"]);
   });
 
   test("the pairs are kept in key order both ways, with Pages competing's, Rich results' and Fan-out's own lists (drift fixes, 2026-10-03)", async () => {

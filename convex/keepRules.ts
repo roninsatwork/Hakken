@@ -283,6 +283,7 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   searchConsoleSeen: RECORD,
   searchConsoleDays: forever("a website's totals by day, drawn on the Search Console charts"),
   searchConsoleLists: cleared("60 days", "searchConsoleRollups/dropOldLines"),
+  searchConsoleKeywordBooks: cleared("with its month's lines", "searchConsoleKeywordBooks/dropOldBooks"),
   searchConsolePeriods: LATEST,
   searchConsoleWeeks: LATEST,
   searchConsoleSeenDays: LATEST,

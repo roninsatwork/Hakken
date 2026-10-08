@@ -73,8 +73,10 @@ describe("page addresses kept once", () => {
 
     await t.action(internal.searchConsolePageRefs.encodeKeptPages, { holds: [holdId] });
     const [record] = await t.run(async (ctx) => await ctx.db.query("searchConsoleLists").collect());
-    expect(new Set(record.keys).size).toBe(1_200);
-    expect(record.keys.every(isPageRef)).toBe(true);
-    expect(await t.run(async (ctx) => await decodePages(ctx, holdId, record.keys))).toEqual(pages);
+    // A page list's keys are addresses as references, never a keyword book's places.
+    const keys = typeof record.keys === "string" ? [] : record.keys;
+    expect(new Set(keys).size).toBe(1_200);
+    expect(keys.every(isPageRef)).toBe(true);
+    expect(await t.run(async (ctx) => await decodePages(ctx, holdId, keys))).toEqual(pages);
   });
 });

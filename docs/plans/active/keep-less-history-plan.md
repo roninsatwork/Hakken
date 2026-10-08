@@ -15,7 +15,7 @@ graphs — there must be a better, more efficient way of storing these going
 forward"; "this is about not saving data we don't need to store and don't
 access regularly"; "make a documented plan in the repo for this".
 
-**Status, 2026-10-08: phases 1 to 7 built and live on dev; 5.4 left until 2027 (below).**
+**Status, 2026-10-08: phases 1 to 8 built and live on dev; 5.4 left until 2027 (below).**
 Started the same day, once the Hakken tasks work had finished (Anthony: "the
 other agent has finished … we can start this plan now"; see "Beside the
 Hakken tasks work"), on the `keep-less-history` branch merged into `dev`, not
@@ -204,6 +204,21 @@ cleared after 90 days and settled emails after 60 (`hakkenTaskChecks`,
 Rules, beside the others, a super admin able to lengthen them). Found on the
 way and fixed: a collection that stopped at its spending limit
 (`CAPPED_SPEND`) was never cleared with the other finished ones.
+
+**Phase 8 — built 2026-10-08** (part 8, both items; commits `a9872007`,
+`a74f6b4d`, `fc2b3d9f`): the measuring tools count as Convex does, the kept
+numbers are packed as text, and the ready-made periods keep each page address
+once a part. morehandles.co.uk's Search Console, measured as Convex counts it:
+**83.8 MB → 62.6 MB (8.1) → 52.1 MB (8.2)**, 38% less — the daily lines 26.2
+→ 14.7 MB, the ready-made periods 44.2 → 24.4 MB; the register (10.5 MB) and
+the page list (2.1 MB) as they were. Every kept record on dev converted by
+`packKeptNumbers` (906 lines, 564 periods; then 163 periods' pages booked).
+Its DataForSEO side is about 14 MB as Convex counts it, near what JSON read:
+its rows are mostly words. Checked on screen in Chrome: Keywords' top page
+for 30 days and the year, sorted by top page; Pages competing for 30 and 90
+days — the addresses as before, no console errors. The 365-day lists are not
+a second copy of the 90 days: morehandles.co.uk holds 91 days, one more each
+night, so the twelve months are their own list until a year is held.
 
 Kept for ever and worth a word, not changed (each its own decision): sign-in
 sessions and OAuth starts that are never finished (`authSessions`,
@@ -894,6 +909,20 @@ changes in either.
   every reading of it would look up every page — thousands of reads a
   screen, past Convex's limit on a large enough website. The book needs no
   look-up and costs no speed anywhere, for about 11 MB rather than 18.
+- **8.3 — each keyword once a month in the daily lines** (asked the same
+  day, "are there any more gains"; Anthony: "go keywords"). morehandles.co.uk's
+  60 days of lines named 33,600 keywords 407,000 times, 10.9 MB of their 14.8.
+  A `pair` line's `keys` now hold each keyword's place in its month's book
+  (`searchConsoleKeywordBooks.ts`), packed; a book a month for all countries
+  and one for each country kept ready, cleared once its month's lines have
+  gone (`dropOldBooks`, after `dropOldLines`) and with the website or country.
+  Only the nightly build reads the lines, a book read once a run, so no screen
+  changes. A book a month rather than one for ever: none outlives its lines,
+  and none grows past a month of keywords.
+- **8.4 — kinds once a part.** A search's intent and a page's type
+  ("UNJUDGED", "BUYING", "CATEGORY") were written out on every row of the
+  ready-made periods: each part now books them as it books page addresses
+  (`kindBook`). About 1.3 MB on morehandles.co.uk.
 
 ## Checked, nothing to change: the raw answers
 

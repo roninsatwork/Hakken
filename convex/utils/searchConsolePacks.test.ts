@@ -94,6 +94,10 @@ describe("whole numbers packed as text (keep-less-history-plan.md, part 8)", () 
     expect(bookedColumns({ list: "competing", pages: [plumbers, plumbers] })).toMatchObject({ pageBook: [plumbers] });
     // A page list's tops are its top keywords, kept as they are; an empty list has no book.
     expect(bookedColumns({ list: "page", tops: ["plumber leeds"] })).toEqual({});
+    // Any list's kinds — a search's intent, a page's type — in their own book (part 8.4).
+    const kinds = bookedColumns({ list: "page", kinds: ["CATEGORY", "HOME", "CATEGORY"] });
+    expect(kinds).toEqual({ kinds: packNumbers([0, 1, 0]), kindBook: ["CATEGORY", "HOME"] });
+    expect(unpackedPart({ keys: ["a", "b", "c"], clicks: [1, 1, 1], impressions: [1, 1, 1], positionSums: [1, 1, 1], ...kinds }).kinds).toEqual(["CATEGORY", "HOME", "CATEGORY"]);
     expect(bookedColumns({ list: "query", tops: [] })).toEqual({});
     const stored = { keys: ["a", "b", "c"], ...packedColumns({ clicks: [1, 1, 1], impressions: [1, 1, 1], positionSums: [1, 1, 1] }), ...booked };
     expect(unpackedPart(stored).tops).toEqual(tops);

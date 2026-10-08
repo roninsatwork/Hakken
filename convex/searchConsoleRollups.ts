@@ -14,6 +14,7 @@ import {
   type SearchType,
 } from "./searchConsoleSchema";
 import { firstDayKept, monthStart, weekStart } from "./utils/searchConsolePacks";
+import { monthOfDay } from "./searchConsoleKeywordBooks";
 
 /**
  * What is kept, as it ages and as it is read back
@@ -47,9 +48,12 @@ const KEPT_PAGE = 12;
  */
 export const PARTS_MOST = 500;
 
-/** A kept record as stored: its number columns packed as text (`packNumbers`), read back by the action. */
+/**
+ * A kept record as stored: its number columns packed as text (`packNumbers`), and a `pair` line's keywords as places
+ * in its month's book (`searchConsoleKeywordBooks.ts`), each read back by the action.
+ */
 const packedValidator = {
-  keys: v.array(v.string()),
+  keys: v.union(v.array(v.string()), v.string()),
   pages: v.optional(v.array(v.string())),
   clicks: storedNumbersValidator,
   impressions: storedNumbersValidator,
@@ -123,6 +127,12 @@ export async function dropOldLinesOf(ctx: ActionCtx, companyWebsiteId: Id<"compa
       steps += 1;
       if (!(await ctx.runMutation(internal.searchConsoleRollups.dropOldLines, { companyWebsiteId, newest, searchType, ...scope }))) break;
     }
+  }
+  // The keyword books of the months whose lines have all gone (`searchConsoleKeywordBooks.ts`).
+  const before = monthOfDay(firstDayKept(newest));
+  while (steps < DROP_ROUNDS) {
+    steps += 1;
+    if (!(await ctx.runMutation(internal.searchConsoleKeywordBooks.dropOldBooks, { holdId: companyWebsiteId, before, ...scope }))) break;
   }
   return steps;
 }

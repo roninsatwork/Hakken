@@ -317,8 +317,27 @@ export const searchConsoleTables = {
     start: v.string(),
     part: v.number(),
     ...packedRows,
+    /**
+     * A `pair` line's keywords as their places in its month's book, packed as
+     * text, since 2026-10-08 (`searchConsoleKeywordBooks.ts`); in full before.
+     */
+    keys: v.union(v.array(v.string()), v.string()),
     fetchedAt: v.number(),
   }).index("by_hold_country_type_list_grain_start", ["companyWebsiteId", "country", "searchType", "list", "grain", "start", "part"]),
+
+  /**
+   * Each keyword the daily lines hold, once a month (keep-less-history-plan.md,
+   * part 8.3; `searchConsoleKeywordBooks.ts`): all countries' book and each
+   * country kept ready's, in records of 4,000 — a keyword's place is its record
+   * times 4,000 plus its place in the record. Cleared with its month's lines.
+   */
+  searchConsoleKeywordBooks: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    country: v.optional(v.string()),
+    month: v.string(),
+    chunk: v.number(),
+    keywords: v.array(v.string()),
+  }).index("by_hold_country_month_chunk", ["companyWebsiteId", "country", "month", "chunk"]),
 
   /**
    * Each page address a website's kept lists point to, once (finish-off plan
@@ -365,7 +384,9 @@ export const searchConsoleTables = {
     pageBook: v.optional(v.array(v.string())),
     counts: v.optional(storedNumbersValidator),
     tops: v.optional(v.union(v.array(v.string()), v.string())),
-    kinds: v.optional(v.array(v.string())),
+    /** As places in the part's own `kindBook`, packed, since 2026-10-08 (part 8.4); a list before. */
+    kinds: v.optional(v.union(v.array(v.string()), v.string())),
+    kindBook: v.optional(v.array(v.string())),
     volumes: v.optional(storedNumbersValidator),
     estimates: v.optional(v.array(v.number())),
     /**

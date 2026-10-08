@@ -19,6 +19,7 @@ import { isTrackedHold } from "./utils/websitePairing";
 import { fromGoogle, pack, packedColumns, rowsOf, type Packed } from "./utils/searchConsolePacks";
 import { slotParts } from "./searchConsoleRollups";
 import { deletePageRefs, encodePages, encodePagesFromAction } from "./searchConsolePageRefs";
+import { deleteBooks, keywordPlaces } from "./searchConsoleKeywordBooks";
 import { keptLines, keptSearchesOf } from "./searchConsoleKeep";
 import { countriesKeptReady, heldFor, mainConsoleCountry, stillKeptReady, withHeld, type HeldRange } from "./searchConsoleCountries";
 import { NOTHING_HELD } from "./searchConsoleMainCountry";
@@ -102,7 +103,8 @@ const figuresOf = (row: AnalyticsRow): Figures => ({
 const laterDay = (left: string, right: string) => (left > right ? left : right);
 
 const packedValidator = {
-  keys: v.array(v.string()),
+  // A `pair` line's keywords as places in its month's book, packed (`searchConsoleKeywordBooks.ts`).
+  keys: v.union(v.array(v.string()), v.string()),
   pages: v.optional(v.array(v.string())),
   clicks: v.array(v.number()),
   impressions: v.array(v.number()),
@@ -484,7 +486,8 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
       }
       for (const [index, part] of parts.entries()) {
         // Page addresses as references, asked for a few hundred at a time and remembered for the step (`searchConsolePageRefs.ts`).
-        const keys = list === "page" ? await encodePagesFromAction(ctx, state.companyWebsiteId, part.keys, pageRefs) : part.keys;
+        const keys = list === "page" ? await encodePagesFromAction(ctx, state.companyWebsiteId, part.keys, pageRefs)
+          : list === "pair" ? await keywordPlaces(ctx, state.companyWebsiteId, args.country, day, part.keys) : part.keys;
         const pages = part.pages ? await encodePagesFromAction(ctx, state.companyWebsiteId, part.pages, pageRefs) : undefined;
         await ctx.runMutation(internal.searchConsoleSync.writeList, {
           ...where,
@@ -711,7 +714,7 @@ export const writeList = internalMutation({
     }
     if (args.keys.length === 0) return null;
     // Each page address kept once, the lines pointing to it (`searchConsolePageRefs.ts`).
-    const keys = args.list === "page" ? await encodePages(ctx, args.companyWebsiteId, args.keys) : args.keys;
+    const keys = args.list === "page" && typeof args.keys !== "string" ? await encodePages(ctx, args.companyWebsiteId, args.keys) : args.keys;
     const pages = args.pages ? await encodePages(ctx, args.companyWebsiteId, args.pages) : undefined;
     await ctx.db.insert("searchConsoleLists", {
       companyWebsiteId: args.companyWebsiteId,
@@ -868,8 +871,8 @@ async function clearSome(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites
     .withIndex("by_hold_country_type_kind_day", (q) => q.eq("companyWebsiteId", companyWebsiteId))
     .take(PURGE_ROWS);
   for (const row of seenDays) await ctx.db.delete(row._id);
-  // Its page addresses go last, once no kept list points to them.
-  const refsGone = lists.length < PURGE_BATCH ? await deletePageRefs(ctx, companyWebsiteId, PURGE_ROWS) : false;
+  // Its page addresses and keyword books go last, once no kept list points to them.
+  const refsGone = lists.length < PURGE_BATCH ? await deletePageRefs(ctx, companyWebsiteId, PURGE_ROWS) && await deleteBooks(ctx, companyWebsiteId, "ALL", PURGE_ROWS) : false;
   return lists.length < PURGE_BATCH && periods.length < PURGE_BATCH && days.length < PURGE_ROWS && seen.length < PURGE_ROWS && weeks.length < PURGE_ROWS
     && seenDays.length < PURGE_ROWS && refsGone;
 }

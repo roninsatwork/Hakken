@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import schema from "./schema";
 import { isPageRef } from "./searchConsolePageRefs";
 import { packedColumns, unpackedPart } from "./utils/searchConsolePacks";
+import { lineKeywordsInQuery } from "./searchConsoleKeywordBooks";
 
 /**
  * Search Console's figures kept before 2026-10-05 brought to what is kept
@@ -69,7 +70,8 @@ describe("tidying the figures kept before 2026-10-05", () => {
     expect(kept.filter((record) => record.country === "gbr").map((record) => record.list).sort()).toEqual(["device", "page", "pair"]);
     const pair = kept.find((record) => record.list === "pair")!;
     expect(pair.pages!.every(isPageRef)).toBe(true);
-    expect(kept.find((record) => record.list === "page")!.keys.every(isPageRef)).toBe(true);
+    const pageKeys = kept.find((record) => record.list === "page")!.keys;
+    expect(typeof pageKeys !== "string" && pageKeys.every(isPageRef)).toBe(true);
     expect(kept.filter((record) => record.searchType === "image" && record.list === "pair")).toEqual([]);
     expect(kept.filter((record) => record.searchType === "image").map((record) => `${record.grain} ${record.start}`).sort())
       .toEqual(["DAY 2026-09-15", "DAY 2026-09-16", "DAY 2026-09-21"]);
@@ -129,7 +131,7 @@ describe("numbers packed as text (keep-less-history-plan.md, part 8; 2026-10-08)
       await ctx.db.insert("searchConsolePeriods", {
         companyWebsiteId: holdId, searchType: "web", list: "query", period: "30", which: "NOW", part: 0, from: "2026-08-28", to: NEWEST,
         keys: ["plumber leeds", "boiler repair"], clicks: [3, 0], impressions: [40, 2], positionSums: [120, 18], counts: [2, 1], volumes: [-1, 90], builtAt: 1,
-        tops: ["https://acme-shop.test/", "https://acme-shop.test/"],
+        tops: ["https://acme-shop.test/", "https://acme-shop.test/"], kinds: ["BUYING", "BUYING"],
       });
       // Pages competing, its numbers already packed (part 8.1) and its pages kept in full: booked (part 8.2).
       await ctx.db.insert("searchConsolePeriods", {
@@ -144,18 +146,26 @@ describe("numbers packed as text (keep-less-history-plan.md, part 8; 2026-10-08)
     }));
     const before = await read();
 
-    expect(await t.action(internal.searchConsoleTidy.packKeptNumbers, { go: false })).toEqual({ lists: 9, periods: 2 });
+    // Three search-and-page lines name their keywords in full: all countries', the United Kingdom's, Google Images'.
+    expect(await t.action(internal.searchConsoleTidy.packKeptNumbers, { go: false })).toEqual({ lists: 9, periods: 2, keywordLines: 3 });
     expect(await read()).toEqual(before);
-    expect(await t.action(internal.searchConsoleTidy.packKeptNumbers, { go: true })).toEqual({ lists: 9, periods: 2 });
-    expect(await t.action(internal.searchConsoleTidy.packKeptNumbers, { go: false })).toEqual({ lists: 0, periods: 0 });
+    expect(await t.action(internal.searchConsoleTidy.packKeptNumbers, { go: true })).toEqual({ lists: 9, periods: 2, keywordLines: 3 });
+    expect(await t.action(internal.searchConsoleTidy.packKeptNumbers, { go: false })).toEqual({ lists: 0, periods: 0, keywordLines: 0 });
 
     const after = await read();
     expect([...after.lists, ...after.periods].every((record) => typeof record.clicks === "string" && typeof record.positionSums === "string")).toBe(true);
-    expect(after.lists.map((record) => unpackedPart(record))).toEqual(before.lists);
+    const pairs = after.lists.filter((record) => record.list === "pair");
+    expect(pairs.every((record) => typeof record.keys === "string")).toBe(true);
+    // Each line read back as it was: its keywords from its month's book (part 8.3).
+    const readBack = await t.run(async (ctx) => await Promise.all(after.lists.map(async (record) => ({
+      ...unpackedPart(record),
+      keys: await lineKeywordsInQuery(ctx, record.companyWebsiteId, record.country, record.start, record.keys),
+    }))));
+    expect(readBack).toEqual(before.lists);
     const [query, competing] = after.periods;
-    expect(query).toMatchObject({ tops: expect.any(String), pageBook: ["https://acme-shop.test/"] });
+    expect(query).toMatchObject({ tops: expect.any(String), pageBook: ["https://acme-shop.test/"], kinds: expect.any(String), kindBook: ["BUYING"] });
     expect(competing).toMatchObject({ pages: expect.any(String), pageBook: ["https://acme-shop.test/", "https://acme-shop.test/plumbers/"] });
-    expect(after.periods.map((part) => { const { pageBook: _book, ...read } = unpackedPart(part); return read; }))
+    expect(after.periods.map((part) => { const { pageBook: _pages, kindBook: _kinds, ...read } = unpackedPart(part); return read; }))
       .toEqual(before.periods.map((part) => unpackedPart(part)));
   });
 });

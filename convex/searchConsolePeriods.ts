@@ -43,6 +43,7 @@ import {
 import { bandOf, isBrand, pageWithoutSection } from "./utils/searchConsoleViews";
 import { tenantQuery } from "./tenantFunctions";
 import { addressesOf, decodeWith } from "./searchConsolePageRefs";
+import { lineKeywords } from "./searchConsoleKeywordBooks";
 import { FIRST_PARTS_READ } from "./searchConsolePeriodReads";
 import { requireMySite } from "./siteAccess";
 
@@ -157,11 +158,15 @@ export async function readKept(
   // Page by page (`keptBetween`): a busy website's span is more than one read may hold.
   const read = async (grain: Kept["grain"], start: string, end: string) => {
     for (let cursor: string | null = null; ;) {
-      const page: { records: Array<StoredPacked & { start: string }>; continueCursor: string; isDone: boolean } = await ctx.runQuery(
+      const page: { records: Array<Omit<StoredPacked, "keys"> & { keys: string | string[]; start: string }>; continueCursor: string; isDone: boolean } = await ctx.runQuery(
         internal.searchConsoleRollups.keptBetween,
         { companyWebsiteId, ...scope, searchType, list, grain, from: start, to: end < newest ? end : newest, cursor },
       );
-      for (const record of page.records) out.push({ grain, start: record.start, packed: unpackedPart(record) });
+      for (const record of page.records) {
+        // A `pair` line's keywords from its month's book, read once a run (`searchConsoleKeywordBooks.ts`).
+        const keys = await lineKeywords(ctx, companyWebsiteId, country, record.start, record.keys);
+        out.push({ grain, start: record.start, packed: { ...unpackedPart(record), keys } });
+      }
       if (page.isDone) return;
       cursor = page.continueCursor;
     }

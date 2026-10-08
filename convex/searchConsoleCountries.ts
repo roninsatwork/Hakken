@@ -4,6 +4,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { readFanOutLimits } from "./fanOutLimits";
+import { deleteBooks } from "./searchConsoleKeywordBooks";
 import { requireMySite } from "./siteAccess";
 import { superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
@@ -244,8 +245,10 @@ async function clearSomeOf(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsit
     .withIndex("by_hold_country_type_kind_day", (q) => q.eq("companyWebsiteId", companyWebsiteId).eq("country", country))
     .take(CLEAR_ROWS);
   for (const row of seenDays) await ctx.db.delete(row._id);
+  // Its keyword books go once its lines have (`searchConsoleKeywordBooks.ts`).
+  const booksGone = lists.length < CLEAR_RECORDS ? await deleteBooks(ctx, companyWebsiteId, { country }, CLEAR_RECORDS) : false;
   return lists.length < CLEAR_RECORDS && periods.length < CLEAR_RECORDS && days.length < CLEAR_ROWS && weeks.length < CLEAR_ROWS && seen.length < CLEAR_ROWS
-    && seenDays.length < CLEAR_ROWS;
+    && seenDays.length < CLEAR_ROWS && booksGone;
 }
 
 /** A country's held days forgotten on its connection: the next collection fetches its whole 90 days again. */

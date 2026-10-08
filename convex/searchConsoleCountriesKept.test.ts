@@ -4,6 +4,7 @@ import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { unpackedPart } from "./utils/searchConsolePacks";
+import { lineKeywordsInQuery } from "./searchConsoleKeywordBooks";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { useFixedDay } from "@/src/test/realTime";
@@ -158,7 +159,9 @@ const connectionOf = (t: Harness, siteId: Id<"companyWebsites">) =>
 /** One country's kept rows (or all countries' with none), every table. */
 const keptOf = (t: Harness, siteId: Id<"companyWebsites">, country: string | undefined) => t.run(async (ctx) => ({
   days: await ctx.db.query("searchConsoleDays").withIndex("by_hold_country_type_day", (q) => q.eq("companyWebsiteId", siteId).eq("country", country)).take(500),
-  lists: await ctx.db.query("searchConsoleLists").withIndex("by_hold_country_type_list_grain_start", (q) => q.eq("companyWebsiteId", siteId).eq("country", country)).take(500),
+  // A line's keywords are places in its month's book (`searchConsoleKeywordBooks.ts`): read back as the app does.
+  lists: await Promise.all((await ctx.db.query("searchConsoleLists").withIndex("by_hold_country_type_list_grain_start", (q) => q.eq("companyWebsiteId", siteId).eq("country", country)).take(500))
+    .map(async (record) => ({ ...record, keys: await lineKeywordsInQuery(ctx, siteId, country, record.start, record.keys) }))),
   // Numbers are stored packed as text (`packNumbers`): read back as the app reads them.
   periods: (await ctx.db.query("searchConsolePeriods").withIndex("by_hold_country_type_list_period", (q) => q.eq("companyWebsiteId", siteId).eq("country", country)).take(500)).map((part) => unpackedPart(part)),
   weeks: await ctx.db.query("searchConsoleWeeks").withIndex("by_hold_country_type_week", (q) => q.eq("companyWebsiteId", siteId).eq("country", country)).take(500),
