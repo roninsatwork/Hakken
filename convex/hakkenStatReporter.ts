@@ -104,7 +104,7 @@ export async function readReportPages(
   });
   if (list.live || list.preparing || !list.comparable) return null;
   const pages = pickPages(
-    list.rows.filter((row) => row.previousClicks !== null).map((row) => ({ page: row.key, now: row.clicks, before: row.previousClicks ?? 0 })),
+    list.rows.slice().filter((row) => row.previousClicks !== null).map((row) => ({ page: row.key, now: row.clicks, before: row.previousClicks ?? 0 })),
     report.direction,
     report.count,
   );

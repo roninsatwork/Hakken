@@ -7,6 +7,7 @@ import { PART_ROWS, bookedColumns, packedColumns } from "./utils/searchConsolePa
 import { bookRecords } from "./searchConsolePeriodBooks";
 import { inBook, termsOf, type PartToWrite } from "./searchConsolePeriods";
 import { metered } from "@/src/test/readMeter";
+import { heldBy } from "@/src/test/heapMeter";
 
 /**
  * Search Console at five times morehandles.co.uk's size
@@ -16,6 +17,12 @@ import { metered } from "@/src/test/readMeter";
  *
  * Written first, before part 1, pinning what each screen read then — four of
  * five past Convex's whole limit — and turned into passes by part 1's books.
+ *
+ * And what each holds in memory, against Convex's 64 MB a query, by the same
+ * shares (step 4b): a row object a keyword, the lists held 88 MB here, Pages
+ * competing 184 — past Convex's whole memory at twice morehandles.co.uk. Read
+ * as columns (`searchConsoleKeywordTable.ts`), 11 to 22 MiB; 16 to 29 at their
+ * fullest, measured once.
  *
  * Counted, not timed (`metered`, `src/test/readMeter.ts`), so it would hold on
  * any machine; run here and never on GitHub, as the Sites speed test is, since
@@ -30,6 +37,10 @@ const LIMIT = 16 * MiB;
 /** Rule 4: half of it without a search, three quarters with one. */
 const HALF = LIMIT / 2;
 const THREE_QUARTERS = (LIMIT * 3) / 4;
+/** Convex's memory for a query, and what a screen may hold of it: half without a search, three quarters with one. */
+const MEMORY = 64 * MiB;
+const HALF_MEMORY = MEMORY / 2;
+const THREE_QUARTERS_MEMORY = (MEMORY * 3) / 4;
 
 /** Five times morehandles.co.uk, measured on dev 2026-10-08. */
 const SCALE = 5;
@@ -119,13 +130,23 @@ describe.skipIf(ON_GITHUB)("Search Console at five times morehandles.co.uk", () 
     });
   });
 
-  /** What one screen reads: the list it asks for, read as the screen reads it. */
+  /**
+   * What one screen reads — the list it asks for, read as the screen reads it — and what it
+   * holds in memory with the page of rows it shows, against Convex's 64 MB a query.
+   */
   const reads = async (ask: Partial<Parameters<typeof readList>[2]> & { dimension: "query" | "page"; from: string }) => await t.run(async (ctx) => {
+    const args = { searchType: "web" as const, to: NEWEST, ...ask };
     const meter = metered(ctx.db);
-    const list = await readList({ db: meter.db }, siteId, { searchType: "web", to: NEWEST, ...ask });
+    const list = await readList({ db: meter.db }, siteId, args);
     expect(list.preparing).toBe(false);
     expect(list.rows.length).toBeGreaterThan(0);
-    return { bytes: meter.bytes(), documents: meter.documents() };
+    const held = await heldBy(async () => {
+      const again = await readList(ctx, siteId, args);
+      return { again, page: again.rows.slice(0, 25) };
+    });
+    // A list of keywords read as columns, its rows made only when asked (step 4b); a list of pages is a website's pages.
+    expect(Array.isArray(held.value.again.rows)).toBe(ask.dimension === "page");
+    return { bytes: meter.bytes(), documents: meter.documents(), holds: held.bytes };
   });
 
   // Before part 1 (2026-10-08, lists holding every row's text): Keywords for 90 days read 19.4 MiB, for 30 days compared
@@ -134,25 +155,30 @@ describe.skipIf(ON_GITHUB)("Search Console at five times morehandles.co.uk", () 
   test("Keywords for 90 days — within half the limit", async () => {
     const read = await reads({ dimension: "query", from: "2026-07-09" });
     expect(read.bytes).toBeLessThan(HALF);
+    expect(read.holds).toBeLessThan(HALF_MEMORY);
   });
 
   test("Keywords for 30 days, compared with the 30 before — within half the limit", async () => {
     const read = await reads({ dimension: "query", from: "2026-09-07" });
     expect(read.bytes).toBeLessThan(HALF);
+    expect(read.holds).toBeLessThan(HALF_MEMORY);
   });
 
   test("Keywords for 90 days with a search — within three quarters", async () => {
     const read = await reads({ dimension: "query", from: "2026-07-09", q: "door brass" });
     expect(read.bytes).toBeLessThan(THREE_QUARTERS);
+    expect(read.holds).toBeLessThan(THREE_QUARTERS_MEMORY);
   });
 
   test("Pages competing for 90 days — within half the limit", async () => {
     const read = await reads({ dimension: "query", from: "2026-07-09", view: "competing" });
     expect(read.bytes).toBeLessThan(HALF);
+    expect(read.holds).toBeLessThan(HALF_MEMORY);
   });
 
   test("Pages for 90 days — within half the limit", async () => {
     const read = await reads({ dimension: "page", from: "2026-07-09" });
     expect(read.bytes).toBeLessThan(HALF);
+    expect(read.holds).toBeLessThan(HALF_MEMORY);
   });
 });

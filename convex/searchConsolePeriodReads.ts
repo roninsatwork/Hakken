@@ -25,6 +25,20 @@ export async function periodParts(
   period: SearchConsolePeriod,
   which: "NOW" | "BEFORE",
 ) {
+  // Its number columns as lists: packed as text when stored (`packNumbers`); its places in the build's book as tokens.
+  return (await storedParts(ctx, companyWebsiteId, country, searchType, list, period, which)).map((part) => unpackedPart(withTokens(part)));
+}
+
+/** A ready-made period's parts as stored, from its newest complete build only, in order. */
+async function storedParts(
+  ctx: { db: QueryCtx["db"] | MutationCtx["db"] },
+  companyWebsiteId: Id<"companyWebsites">,
+  country: string | undefined,
+  searchType: SearchType,
+  list: SearchConsolePeriodList,
+  period: SearchConsolePeriod,
+  which: "NOW" | "BEFORE",
+): Promise<Doc<"searchConsolePeriods">[]> {
   const parts = await ctx.db
     .query("searchConsolePeriods")
     .withIndex("by_hold_country_type_list_period", (q) => q
@@ -37,8 +51,32 @@ export async function periodParts(
     .take(PARTS_MOST);
   // One read: an older build is beside the newest only while it is being cleared.
   const built = parts.filter((part) => part.part === 0).reduce((newest, part) => Math.max(newest, part.builtAt), -Infinity);
-  // Its number columns as lists: packed as text when stored (`packNumbers`); its places in the build's book as tokens.
-  return parts.filter((part) => part.builtAt === built).map((part) => unpackedPart(withTokens(part)));
+  return parts.filter((part) => part.builtAt === built).sort((left, right) => left.part - right.part);
+}
+
+/** A period's parts as a list reads them: twelve months kept as the 90 days (`sameAsNinety`) read as the 90 days. */
+export async function partsToRead(
+  ctx: { db: QueryCtx["db"] },
+  companyWebsiteId: Id<"companyWebsites">,
+  searchType: SearchType,
+  list: SearchConsolePeriodList,
+  period: SearchConsolePeriod,
+  which: "NOW" | "BEFORE",
+  country?: string,
+): Promise<Doc<"searchConsolePeriods">[]> {
+  const parts = await storedParts(ctx, companyWebsiteId, country, searchType, list, period, which);
+  if (parts.length === 0) return parts;
+  if (await ninetyInstead(ctx, { companyWebsiteId, country, searchType, list }, period, which, parts[0], parts.length)) {
+    return await storedParts(ctx, companyWebsiteId, country, searchType, list, "90", "NOW");
+  }
+  return parts;
+}
+
+/** The build a period's parts name its keywords and pages in, when they are places in its book (§5.1). */
+export function bookOfParts(parts: readonly Doc<"searchConsolePeriods">[]): BookScope | null {
+  const first = parts[0];
+  if (!first || typeof first.keys !== "string" || first.keys.length === 0) return null;
+  return { companyWebsiteId: first.companyWebsiteId, ...(first.country === undefined ? {} : { country: first.country }), searchType: first.searchType, builtAt: first.builtAt };
 }
 
 /**
@@ -120,13 +158,24 @@ export async function readPeriod(
   period: SearchConsolePeriod,
   which: "NOW" | "BEFORE",
   country?: string,
-): Promise<{ from: string; to: string; builtAt: number; shown: number | null; rows: PeriodRow[]; book: BookScope | null } | null> {
+): Promise<ReadPeriod | null> {
+  return await periodFromParts(ctx, companyWebsiteId, searchType, list, await partsToRead(ctx, companyWebsiteId, searchType, list, period, which, country), country);
+}
+
+export type ReadPeriod = { from: string; to: string; builtAt: number; shown: number | null; rows: PeriodRow[]; book: BookScope | null };
+
+/** A period's parts, read already (`partsToRead`), as rows: what `readPeriod` returns. */
+export async function periodFromParts(
+  ctx: { db: QueryCtx["db"] },
+  companyWebsiteId: Id<"companyWebsites">,
+  searchType: SearchType,
+  list: SearchConsolePeriodList,
+  stored: readonly Doc<"searchConsolePeriods">[],
+  country?: string,
+): Promise<ReadPeriod | null> {
   const scope = country;
-  let parts = (await periodParts(ctx, companyWebsiteId, scope, searchType, list, period, which)).sort((left, right) => left.part - right.part);
+  const parts = stored.map((part) => unpackedPart(withTokens(part)));
   if (parts.length === 0) return null;
-  if (await ninetyInstead(ctx, { companyWebsiteId, country: scope, searchType, list }, period, which, parts[0], parts.length)) {
-    parts = (await periodParts(ctx, companyWebsiteId, scope, searchType, list, "90", "NOW")).sort((left, right) => left.part - right.part);
-  }
   const rows: PeriodRow[] = [];
   for (const part of parts) rowsOfPart(part, rows);
   const book = parts.some((part) => typeof part.keys[0] === "string" && tokenPlace(part.keys[0]) !== null)

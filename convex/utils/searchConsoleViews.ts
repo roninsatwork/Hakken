@@ -7,7 +7,7 @@
  * answer with the same rules, and both are tested on their own.
  */
 
-import { countsByType, type ClassificationType } from "./pageKinds";
+import { countsByType, type ClassificationType, type PageKinds } from "./pageKinds";
 import { wordStartMatcher } from "./wordStarts";
 import { compareTermsQuickly } from "./searchConsoleTerms";
 
@@ -150,6 +150,27 @@ export function withTracked(now: readonly SourceRow[], tracked: ReadonlySet<stri
   return [...now, ...[...tracked].filter((key) => !shown.has(key)).map((key) => ({ key, clicks: 0, impressions: 0, positionSum: 0 }))];
 }
 
+/**
+ * The rows a view is shaped from: Wins and losses adds the keywords gone
+ * since the days before, a tracked list those it tracks that Google did not
+ * show — both read from what the list already holds, nothing more.
+ */
+export function sourceRowsOf(view: View, now: readonly SourceRow[], before: readonly SourceRow[] | null, tracked: ReadonlySet<string>): readonly SourceRow[] {
+  if (view === "moves") return withGone(now, before);
+  if (view === "tracked") return withTracked(now, tracked);
+  return now;
+}
+
+/**
+ * A list of pages with each page's kind as the company's own classification
+ * — its id, or Not sorted — once the website has any (page-groups-plan.md,
+ * decision 2): every row, those Google showed and those a view adds alike.
+ * Without classifications the rows are left as Sites judged them.
+ */
+export function withPageKinds(rows: ListRow[], pageKinds: PageKinds | null): ListRow[] {
+  return pageKinds ? rows.map((row) => ({ ...row, kind: pageKinds.kindOf(row.key) })) : rows;
+}
+
 /** Rows as a list shows them: the figures, the change on the period before, the share, tracked or not. */
 export function shapeRows(
   now: readonly SourceRow[],
@@ -196,7 +217,7 @@ export function shapeRows(
 export type CurvePoint = { position: number; keywords: number; impressions: number; clicks: number; ctr: number };
 
 /** The website's own click rate at each whole position, 1 to `positions`, from its keywords (Click rate by position). */
-export function ctrCurve(keywords: readonly { clicks: number; impressions: number; position: number }[], positions: number): CurvePoint[] {
+export function ctrCurve(keywords: Iterable<{ clicks: number; impressions: number; position: number }>, positions: number): CurvePoint[] {
   const points = new Map<number, CurvePoint>();
   for (const row of keywords) {
     const at = Math.round(row.position);
@@ -370,7 +391,7 @@ export function applyView(view: View, rows: ListRow[], context: ViewContext): Li
 }
 
 /** A keyword Google did not show the website for at all in the dates chosen. */
-function emptyRow(key: string): ListRow {
+export function emptyRow(key: string): ListRow {
   return {
     key, clicks: 0, impressions: 0, ctr: 0, position: 0, band: "51+", previousClicks: null, change: null, previousPosition: null,
     positionChange: null, share: 0, count: null, top: null, tracked: false, kind: null, volume: null, estimate: null, brand: null,

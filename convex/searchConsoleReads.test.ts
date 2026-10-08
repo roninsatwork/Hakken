@@ -305,8 +305,8 @@ describe("the tables", () => {
     const positions = await t.run(async (ctx) => {
       const site = (await ctx.db.get(siteId))!;
       return {
-        twentyEight: (await positionLookups(ctx, site, 28)).consolePositions.get("plumber leeds"),
-        fourteen: (await positionLookups(ctx, site, 14)).consolePositions.get("plumber leeds"),
+        twentyEight: (await positionLookups(ctx, site, 28)).consolePosition("plumber leeds"),
+        fourteen: (await positionLookups(ctx, site, 14)).consolePosition("plumber leeds"),
       };
     });
     expect(positions).toEqual({ twentyEight: 4, fourteen: 6 });

@@ -12,7 +12,9 @@ import { SEARCH_CONSOLE_PERIODS, searchTypeValidator, type SearchConsolePeriod, 
 import { askLive, checkedRange, countryFilters } from "./searchConsoleReads";
 import { checkedCountry, countryScope, type CountryScope } from "./searchConsoleCountries";
 import { daysIn, historyLimitDay, periodBefore } from "./searchConsoleDays";
-import { readPeriod, type PeriodRow } from "./searchConsolePeriodReads";
+import { periodFromParts, readPeriod, type PeriodRow } from "./searchConsolePeriodReads";
+import { curveRows, keywordFiguresOf, keywordListOf, type KeywordParts } from "./searchConsoleKeywordList";
+import type { ListRows } from "./searchConsoleKeywordTable";
 import { BookNames, asText, namedRows, textsFrom, wholeBook } from "./searchConsolePeriodBooks";
 import { SORT_KEYS, sortRows, type SortKey } from "./searchConsoleSorts";
 import { checkedLongest, consoleLimitsOf, consoleLimitsValidator, viewRulesOf, type ConsoleLimits } from "./searchConsoleLimits";
@@ -32,13 +34,12 @@ import {
   pagesByKeyword,
   shapeRows,
   summarise,
-  withGone,
+  sourceRowsOf,
+  withPageKinds,
   withSectionsInPages,
-  withTracked,
   type Filters,
   type ListRow,
   type SitesKeyword,
-  type SourceRow,
   type Summary,
   type View,
   type ViewContext,
@@ -235,29 +236,8 @@ async function sitesKeywordsOf(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   return rows.filter((row) => row.volumeKnown).map((row) => ({ keyword: row.keyword, volume: row.volume, kind: row.intent }));
 }
 
-/**
- * The rows a view is shaped from: Wins and losses adds the keywords gone
- * since the days before, a tracked list those it tracks that Google did not
- * show — both read from what the list already holds, nothing more.
- */
-function sourceRows(view: View, now: readonly SourceRow[], before: readonly SourceRow[] | null, tracked: ReadonlySet<string>): readonly SourceRow[] {
-  if (view === "moves") return withGone(now, before);
-  if (view === "tracked") return withTracked(now, tracked);
-  return now;
-}
-
-/**
- * A list of pages with each page's kind as the company's own classification
- * — its id, or Not sorted — once the website has any (page-groups-plan.md,
- * decision 2): every row, those Google showed and those a view adds alike.
- * Without classifications the rows are left as Sites judged them.
- */
-function withPageKinds(rows: ListRow[], pageKinds: PageKinds | null): ListRow[] {
-  return pageKinds ? rows.map((row) => ({ ...row, kind: pageKinds.kindOf(row.key) })) : rows;
-}
-
 type ListAnswer = {
-  rows: ListRow[];
+  rows: ListRows;
   cut: number | null;
   /** The days the list counts, as held: a 12-month period of a website held for less says so. */
   from: string | null;
@@ -285,9 +265,11 @@ type ListAnswer = {
 /**
  * A ready-made list, shaped, put through the page's rule, searched, filtered
  * and ordered — or what to say instead — for all countries or one country
- * kept ready. Exported for its load test.
+ * kept ready. Exported for its load test. A list of keywords is read as
+ * columns (`keywordListOf`); `how.rows` reads it a row a keyword instead — the
+ * reading the columns are held to, row for row (`searchConsoleKeywordTable.test.ts`).
  */
-export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"companyWebsites">, args: Ask): Promise<ListAnswer> {
+export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id<"companyWebsites">, args: Ask, how: { rows?: boolean } = {}): Promise<ListAnswer> {
   checkedCountry(args.country);
   const empty = { rows: [], cut: null, from: null, to: null, named: null, listed: 0, comparable: false, summary: null, pageKinds: null };
   const live = { ...empty, live: true, preparing: false };
@@ -316,12 +298,28 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   // One keyword's pages, or one page's keywords: asked of Google when opened, for every period
   // (keep-less-history-plan.md, 5.1; Anthony, 2026-10-08: "ok lets do this one").
   if (within) return live;
-  const read = async (which: "NOW" | "BEFORE") => await readPeriod(ctx, companyWebsiteId, args.searchType, dimension, period, which, country);
+  // A list of keywords as columns, never a row a keyword (step 4b): a busy website's would outgrow a read.
+  let held: KeywordParts | null = null;
+  if (dimension === "query" && !how.rows) {
+    const keywords = await keywordListOf(ctx, companyWebsiteId, {
+      searchType: args.searchType, period, country, view, filters: args, sort: args.sort, direction: args.direction, missed: args.missed ?? "searched",
+      days: daysIn(args.from, args.to), rules: viewRulesOf(limits), most: limits.listRows, tracked: async () => await trackedOf(ctx, companyWebsiteId, "query"),
+      brandWords: async () => await brandWordsOf(ctx, companyWebsiteId), sitesKeywords: async () => await sitesKeywordsOf(ctx, companyWebsiteId, limits.missedKeywords),
+    });
+    if (keywords === "PREPARING") return { ...empty, live: false, preparing: true };
+    if ("asRows" in keywords) held = keywords.asRows;
+    else return { ...keywords, live: false, preparing: false, pageKinds: null };
+  }
+  const read = async (which: "NOW" | "BEFORE") => (held
+    ? await periodFromParts(ctx, companyWebsiteId, args.searchType, dimension, which === "NOW" ? held.now : held.before, country)
+    : await readPeriod(ctx, companyWebsiteId, args.searchType, dimension, period, which, country));
   let now = await read("NOW");
   if (!now) return { ...empty, live: false, preparing: true };
   let before = await read("BEFORE");
   // Only the pairs of keywords two or more pages were shown for, kept ready, and how many pages Google showed at all.
-  let competing = view === "competing" ? await readPeriod(ctx, companyWebsiteId, args.searchType, "competing", period, "NOW", country) : null;
+  let competing = view !== "competing" ? null
+    : held?.competing ? await periodFromParts(ctx, companyWebsiteId, args.searchType, "competing", held.competing, country)
+    : await readPeriod(ctx, companyWebsiteId, args.searchType, "competing", period, "NOW", country);
   if (view === "competing" && !competing) return { ...empty, live: false, preparing: true };
   // Keywords and pages as tokens of their build's book (core-data-normalisation-plan.md §5.1), joined, grouped and
   // sorted by token. Lists from two builds — one rebuilt while the other waited on Google — are read as text instead.
@@ -339,11 +337,11 @@ export async function readList(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
   const brandWords = dimension === "query" ? await brandWordsOf(ctx, companyWebsiteId) : null;
   // A list of pages reads the website's classifications once, and names each page by them.
   const pageKinds = dimension === "page" ? await readPageKinds(ctx, companyWebsiteId) : null;
-  const shaped = withPageKinds(shapeRows(sourceRows(view, now.rows, before?.rows ?? null, tracked), before?.rows ?? null, { tracked, brandWords }), pageKinds);
+  const shaped = withPageKinds(shapeRows(sourceRowsOf(view, now.rows, before?.rows ?? null, tracked), before?.rows ?? null, { tracked, brandWords }), pageKinds);
   const context: ViewContext = { rules: viewRulesOf(limits), missedList: args.missed ?? "searched", tracked, days: daysIn(args.from, args.to) };
   if (view === "lowCtr") {
-    const keywords = await readPeriod(ctx, companyWebsiteId, args.searchType, "query", period, "NOW", country);
-    context.curve = ctrCurve((keywords?.rows ?? []).map((row) => ({ clicks: row.clicks, impressions: row.impressions, position: positionOf(row) ?? 0 })), limits.curvePositions);
+    // The website's own click rate at each position, from its keywords a keyword at a time (step 4b).
+    context.curve = ctrCurve(curveRows(await keywordFiguresOf(ctx, companyWebsiteId, args.searchType, period, country)), limits.curvePositions);
   }
   if (competing) {
     context.pages = pagesByKeyword(competing.rows);
@@ -758,7 +756,7 @@ export const searchConsoleLiveList = tenantAction({
     const tracked = new Set(target.tracked);
     const earlierRows = earlier.ok ? earlier.rows : null;
     const pageKinds = dimension === "page" && target.pageKinds ? pageKindsFrom(target.pageKinds) : null;
-    const shaped = withPageKinds(shapeRows(sourceRows(view, rows, earlierRows, tracked), earlierRows, { tracked, brandWords: target.brandWords }), pageKinds);
+    const shaped = withPageKinds(shapeRows(sourceRowsOf(view, rows, earlierRows, tracked), earlierRows, { tracked, brandWords: target.brandWords }), pageKinds);
     const context: ViewContext = { rules: viewRulesOf(limits), missedList: args.missed ?? "searched", sitesKeywords: target.sitesKeywords, tracked, days: daysIn(args.from, args.to) };
     if (view === "lowCtr") {
       const keywords = [...bySide(now.pairs, "query").values()];
@@ -874,20 +872,26 @@ export const searchConsoleKeySplits = tenantAction({
 // ---------------------------------------------------------------------------
 
 /** Every row of a ready-made list in the order on screen, for its download: only a hold of the caller's company. */
+const exportFieldsValidator = v.array(v.union(...EXPORT_FIELDS.map((field) => v.literal(field))));
+
+/** A list's rows as the download's lines, the fields asked for in order: 25,000 rows sent whole were 12 MB, a second (step 4b). */
 export const exportRows = internalQuery({
-  args: { ...listArgs, companyId: v.id("companies") },
+  args: { ...listArgs, companyId: v.id("companies"), fields: exportFieldsValidator },
   handler: async (ctx, args) => {
-    const hold = await ctx.db.get(args.siteId);
-    if (!hold || hold.companyId !== args.companyId) return null;
+    const { fields, companyId, ...ask } = args;
+    const hold = await ctx.db.get(ask.siteId);
+    if (!hold || hold.companyId !== companyId) return null;
     const website = await ctx.db.get(hold.websiteId);
-    const list = await readList(ctx, hold._id, args);
+    const list = await readList(ctx, hold._id, ask);
     // A page's classification by its name in the file, as the screen shows it; Not sorted in words (as Your pages' download).
     const pageKinds = list.pageKinds;
-    const all = await namedRows(list, list.rows);
-    const rows = pageKinds
-      ? all.map((row) => (row.kind === null ? row : { ...row, kind: row.kind === NOT_SORTED_KIND ? "Not sorted" : (pageKinds.nameOf(row.kind) ?? row.kind) }))
-      : all;
-    return { host: website?.displayHost ?? "site", rows: inParts(rows), cut: list.cut };
+    const lines = (await namedRows(list, list.rows.slice())).map((named) => {
+      const row = pageKinds && named.kind !== null
+        ? { ...named, kind: named.kind === NOT_SORTED_KIND ? "Not sorted" : (pageKinds.nameOf(named.kind) ?? named.kind) }
+        : named;
+      return fields.map((field) => cell(exportValue(row, field))).join(",");
+    });
+    return { host: website?.displayHost ?? "site", lines: inParts(lines), cut: list.cut };
   },
 });
 
@@ -908,17 +912,17 @@ export const exportSearchConsoleList = tenantAction({
     ...listArgs,
     headers: v.array(v.string()),
     /** The row's figure under each heading, in the same order. */
-    fields: v.array(v.union(...EXPORT_FIELDS.map((field) => v.literal(field)))),
+    fields: exportFieldsValidator,
   },
   returns: v.object({ fileName: v.string(), csv: v.string(), rows: v.number(), cut: v.union(v.number(), v.null()) }),
   handler: async (ctx, args): Promise<{ fileName: string; csv: string; rows: number; cut: number | null }> => {
     checkedRange(args.from, args.to);
     const companyId = getActiveCompanyId(ctx.user);
     if (!companyId) throw appError("NOT_FOUND", "That website is not one your company holds.");
-    const { headers, fields, ...list } = args;
+    const { headers, ...list } = args;
     const found = await ctx.runQuery(internal.searchConsoleLists.exportRows, { ...list, companyId });
     if (!found) throw appError("NOT_FOUND", "That website is not one your company holds.");
-    const lines = found.rows.flat().map((row) => fields.map((field) => cell(exportValue(row, field))).join(","));
+    const lines = found.lines.flat();
     return {
       fileName: exportFileName(found.host, args.view, args.dimension, args.from, args.to),
       csv: [headers.map(cell).join(","), ...lines].join("\n"),

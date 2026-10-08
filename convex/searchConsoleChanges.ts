@@ -14,7 +14,7 @@ import { askLive, checkedRange, countryFilters, daysOf } from "./searchConsoleRe
 import { addUp, historyLimitDay, shiftDay, type Figures } from "./searchConsoleDays";
 import { checkedCountry, countryScope } from "./searchConsoleCountries";
 import { chartStepValidator } from "./searchConsolePeriods";
-import { readPeriod } from "./searchConsolePeriodReads";
+import { curveRows, keywordFiguresOf } from "./searchConsoleKeywordList";
 import { BookNames } from "./searchConsolePeriodBooks";
 import { seenDaysBetween } from "./searchConsoleSeenDays";
 import { checkedLongest, consoleLimitsOf, type ConsoleLimits } from "./searchConsoleLimits";
@@ -227,15 +227,16 @@ export const searchConsoleNewLost = tenantQuery({
     const pages = await read("page");
 
     // Each keyword's figures: the ready-made 90 days hold every one shown in them.
-    const ninety = await readPeriod(ctx, holdId, args.searchType, "query", "90", "NOW", country);
-    const figures = new Map((ninety?.rows ?? []).map((row) => [row.key, row]));
+    // Each keyword's figures: the ready-made 90 days hold every one shown in them, read a keyword at a time (step 4b).
+    const ninety = await keywordFiguresOf(ctx, holdId, args.searchType, "90", country);
     // The 90 days keep each keyword as its token in the build's book (core-data-normalisation-plan.md §5.1): each new or
     // lost keyword looked up by its text, the book's records read once however many ask.
     const names = ninety?.book ? new BookNames(ctx, ninety.book) : null;
     const tokens = new Map<string, string>();
     if (names) for (const entry of [...keywords.gained, ...keywords.lost]) tokens.set(entry.key, await names.tokenOf("query", entry.key));
     const rowOf = (entry: Seen, status: "new" | "lost"): Change => {
-      const known = figures.get(tokens.get(entry.key) ?? entry.key);
+      const at = ninety ? ninety.rowOf(tokens.get(entry.key) ?? entry.key) : -1;
+      const known = ninety && at !== -1 ? { clicks: ninety.clicks(at), impressions: ninety.impressions(at), positionSum: ninety.positionSum(at) } : null;
       const position = known && known.impressions > 0 ? known.positionSum / known.impressions : null;
       return {
         key: entry.key,
@@ -562,12 +563,9 @@ export const searchConsoleCurve = tenantQuery({
     const scope = await countryScope(ctx, site.hold, connection, args.country);
     const period = scope.read === "LIVE" ? null : periodOf(args.from, args.to, scope.read === "KEPT" ? scope.newestDay : connection?.newestDay);
     if (!period) return { live: Boolean(connection?.newestDay), preparing: false, points: [] };
-    const keywords = await readPeriod(ctx, site.hold._id, args.searchType, "query", period, "NOW", scope.read === "KEPT" ? scope.country : undefined);
+    const keywords = await keywordFiguresOf(ctx, site.hold._id, args.searchType, period, scope.read === "KEPT" ? scope.country : undefined);
     if (!keywords) return { live: false, preparing: true, points: [] };
-    return {
-      live: false,
-      preparing: false,
-      points: ctrCurve(keywords.rows.map((row) => ({ clicks: row.clicks, impressions: row.impressions, position: row.impressions > 0 ? row.positionSum / row.impressions : 0 })), limits.curvePositions),
-    };
+    // A keyword at a time, never a row object for each (step 4b).
+    return { live: false, preparing: false, points: ctrCurve(curveRows(keywords), limits.curvePositions) };
   },
 });

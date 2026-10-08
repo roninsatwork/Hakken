@@ -1,7 +1,7 @@
 import type { Doc } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { holdFirstCheck, holdSearch } from "./holdLists";
-import { readPeriod } from "./searchConsolePeriodReads";
+import { keywordFiguresOf } from "./searchConsoleKeywordList";
 import { BookNames } from "./searchConsolePeriodBooks";
 import { positionOf } from "./utils/searchConsolePacks";
 import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
@@ -34,8 +34,8 @@ export type Lookups = {
   consoleTo: string | null;
   /** Days of Search Console averaged for a position. */
   consoleDays: number;
-  /** Google's average position for each search, from Search Console's ready-made list; empty when not connected. */
-  consolePositions: Map<string, number>;
+  /** Google's average position for a search, by its token, from Search Console's ready-made list; none when not connected. */
+  consolePosition: (key: string) => number | undefined;
   /** The list's book, naming a wording's token (core-data-normalisation-plan.md §5.1); null when its rows hold text. */
   consoleNames: BookNames | null;
 };
@@ -57,18 +57,21 @@ export async function positionLookups(ctx: Reader, hold: Doc<"companyWebsites">,
     .withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id))
     .first();
   const consoleTo = connection?.status === "CONNECTED" && !connection.clearing && connection.newestDay ? connection.newestDay : null;
-  const consolePositions = new Map<string, number>();
+  let consolePosition: Lookups["consolePosition"] = () => undefined;
   let consoleNames: BookNames | null = null;
   if (consoleTo) {
     const own = CONSOLE_PERIOD[consoleDays];
-    const list = (own ? await readPeriod(ctx, hold._id, "web", "query", own, "NOW") : null) ?? await readPeriod(ctx, hold._id, "web", "query", "30", "NOW");
+    // A keyword at a time, never a row object for each of a busy website's (core-data plan, step 4b).
+    const list = (own ? await keywordFiguresOf(ctx, hold._id, "web", own, undefined) : null) ?? await keywordFiguresOf(ctx, hold._id, "web", "30", undefined);
     consoleNames = list?.book ? new BookNames(ctx, list.book) : null;
-    for (const row of list?.rows ?? []) {
-      const position = positionOf(row);
-      if (position !== null) consolePositions.set(row.key, position);
+    if (list) {
+      consolePosition = (key) => {
+        const at = list.rowOf(key);
+        return at === -1 ? undefined : positionOf({ impressions: list.impressions(at), positionSum: list.positionSum(at) }) ?? undefined;
+      };
     }
   }
-  return { hold, place: hold.locationCode ?? DEFAULT_LOCATION_CODE, consoleTo, consoleDays, consolePositions, consoleNames };
+  return { hold, place: hold.locationCode ?? DEFAULT_LOCATION_CODE, consoleTo, consoleDays, consolePosition, consoleNames };
 }
 
 /**
@@ -107,7 +110,7 @@ export async function wordingPosition(ctx: Reader, lookups: Lookups, wording: Pi
 
   // The list keeps a keyword as its token in the book: the wording looked up by its text (one small read).
   const consoleKey = lookups.consoleNames ? await lookups.consoleNames.tokenOf("query", wording.query) : wording.query;
-  const consolePosition = lookups.consoleTo ? lookups.consolePositions.get(consoleKey) : undefined;
+  const consolePosition = lookups.consoleTo ? lookups.consolePosition(consoleKey) : undefined;
   if (lookups.consoleTo && consolePosition !== undefined) {
     return { value: Math.round(consolePosition * 10) / 10, from: "SEARCH_CONSOLE", day: lookups.consoleTo, query: wording.query };
   }

@@ -199,8 +199,8 @@ describe("Search Console's lists of pages", () => {
     await pagesPeriod(t, holdId);
     await classify(t, holdId);
     const { page: _page, rows: _rows, ...dates } = week;
-    const found = await t.query(internal.searchConsoleLists.exportRows, { siteId: holdId, companyId, ...dates });
-    expect(Object.fromEntries((found?.rows.flat() ?? []).map((row) => [row.key.replace(url(""), ""), row.kind]))).toEqual({
+    const found = await t.query(internal.searchConsoleLists.exportRows, { siteId: holdId, companyId, ...dates, fields: ["key", "kind"] });
+    expect(Object.fromEntries((found?.lines.flat() ?? []).map((line) => line.replace(url(""), "").split(",")))).toEqual({
       "/hub/boilers/": "Content hub", "/plumbers/": "Plumbing services", "/our-new-van/": "Journal", "/contact/": "Not sorted",
     });
   });

@@ -53,7 +53,7 @@ function sizeOf(rows: number): number {
 }
 
 /** The page asked for of a list held whole, with its exact total. */
-export function pageOfList<Row>(list: readonly Row[], page: number, rows: number, cut: number | null = null): ListPage<Row> {
+export function pageOfList<Row>(list: { readonly length: number; slice(start?: number, end?: number): Row[] }, page: number, rows: number, cut: number | null = null): ListPage<Row> {
   const size = sizeOf(rows);
   const pages = Math.max(1, Math.ceil(list.length / size));
   const shown = Math.min(Math.max(1, Math.floor(page) || 1), pages);

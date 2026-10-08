@@ -56,7 +56,7 @@ export const resolveTargetInternal = internalQuery({
     if (!args.page?.trim()) return { ok: true as const, target: { companyWebsiteId: hold._id, website }, ...held };
     const to = connection.newestDay;
     const list = await readList(ctx, hold._id, { searchType: "web", dimension: "page", from: shiftDay(to, -29), to, q: args.page.trim() });
-    const page = list.rows[0]?.key;
+    const page = list.rows.slice(0, 1)[0]?.key;
     if (!page) {
       return { ok: false as const, problem: `There's no page on ${website} with "${args.page.trim()}" in its address among those Google showed in the last 30 days.` };
     }

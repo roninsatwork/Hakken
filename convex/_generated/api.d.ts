@@ -348,6 +348,8 @@ import type * as searchConsoleDays from "../searchConsoleDays.js";
 import type * as searchConsoleFacts from "../searchConsoleFacts.js";
 import type * as searchConsoleKeep from "../searchConsoleKeep.js";
 import type * as searchConsoleKeywordBooks from "../searchConsoleKeywordBooks.js";
+import type * as searchConsoleKeywordList from "../searchConsoleKeywordList.js";
+import type * as searchConsoleKeywordTable from "../searchConsoleKeywordTable.js";
 import type * as searchConsoleLimits from "../searchConsoleLimits.js";
 import type * as searchConsoleLists from "../searchConsoleLists.js";
 import type * as searchConsoleLongLists from "../searchConsoleLongLists.js";
@@ -1021,6 +1023,8 @@ declare const fullApi: ApiFromModules<{
   searchConsoleFacts: typeof searchConsoleFacts;
   searchConsoleKeep: typeof searchConsoleKeep;
   searchConsoleKeywordBooks: typeof searchConsoleKeywordBooks;
+  searchConsoleKeywordList: typeof searchConsoleKeywordList;
+  searchConsoleKeywordTable: typeof searchConsoleKeywordTable;
   searchConsoleLimits: typeof searchConsoleLimits;
   searchConsoleLists: typeof searchConsoleLists;
   searchConsoleLongLists: typeof searchConsoleLongLists;
