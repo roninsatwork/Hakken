@@ -17,6 +17,7 @@ import { purgeHoldListAi } from "./siteListAi";
 import { clearWebsitePositions, removeChecksOfSearch } from "./positionHistory";
 import { removeReferringDomainsBefore } from "./siteReferringDomainParts";
 import { removeGroupPartsBefore } from "./siteLinkGroupParts";
+import { deleteSerpPage } from "./siteSerp";
 
 /**
  * Rows removed per pass, so one purge is one bounded transaction and chains
@@ -164,7 +165,7 @@ export const purgeWebsiteCollectedDataInternal = internalMutation({
         await deleteAnswerText(ctx, row._id);
       }
       for (const row of await ctx.db.query("siteSerpPages").withIndex("by_pull", (q) => q.eq("pullId", pull._id)).take(ENTRY_PURGE_BATCH)) {
-        await ctx.db.delete(row._id);
+        await deleteSerpPage(ctx, row);
       }
       // Its stored answer, kept apart from it since 2026-09-25.
       answerRows += await deletePullAnswers(ctx, pull._id);
@@ -466,7 +467,7 @@ async function purgePurchase(
     await ctx.db.delete(row._id);
   }
   for (const row of await ctx.db.query("siteSerpPages").withIndex("by_pull", (q) => q.eq("pullId", pullId)).take(ENTRY_PURGE_BATCH)) {
-    await ctx.db.delete(row._id);
+    await deleteSerpPage(ctx, row);
   }
   if (await ctx.db.get(pullId)) await ctx.db.delete(pullId);
   return false;

@@ -34,7 +34,11 @@ import {
 import { SEO_KEYWORD_CHECK_OPERATION } from "./dataForSeoRegistry";
 import { recordAnswer } from "./websiteTrackingStats";
 
-import { aiEngineValidator, engineForOperationId } from "./seoAiEngines";
+import { aiEngineValidator, engineForOperationId, readsAsShown } from "./seoAiEngines";
+import { parseShownAnswer, type ShownAnswer } from "./aiShownParse";
+import { fileAiDemandPull } from "./aiDemand";
+import { isAiDemandOperation } from "./dataForSeoAiDemandOperations";
+import { findSeoLocation } from "./utils/seoLocations";
 import { resolveWebsiteIdsByHost } from "./websites";
 import { readWebsiteHost } from "./websiteIdentity";
 import { getErrorMessage } from "./utils/lang";
@@ -91,6 +95,8 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
   // Discovery's Local pages: profiles, map checks, markets, posts and found lists (`localFiling.ts`).
   if (isLocalOperation(pull.operationId)) return await fileLocalPull(ctx, args.pullId, pull);
   if (isReviewOperation(pull.operationId)) return await fileReviewPull(ctx, args.pullId, pull);
+  // How often searches are asked of AI tools (`aiDemand.ts`).
+  if (isAiDemandOperation(pull.operationId)) return await fileAiDemandPull(ctx, args.pullId, pull);
 
   // An AI answer is read for who it names, and its text is kept for the
   // Sites Full answers page (D9, docs/plans/active/user-sites-plan.md). The
@@ -99,9 +105,11 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
   if (engine) {
     try {
       const shared = await ctx.runQuery(internal.sharedLimits.getSharedLimits, {});
-      const parsed = parseLlmResponse(JSON.parse(pull.resultJson));
+      // An app or Google AI Mode is read as a person saw it (`aiShownParse.ts`, D5); a model, as it answered.
+      const shown: ShownAnswer | null = readsAsShown(pull.operationId) ? parseShownAnswer(pull.operationId, JSON.parse(pull.resultJson)) : null;
+      const parsed = shown ?? parseLlmResponse(JSON.parse(pull.resultJson));
       const sent = JSON.parse(pull.taskArgsJson ?? "{}") as Record<string, unknown>;
-      const prompt = typeof sent.user_prompt === "string" ? sent.user_prompt : "";
+      const prompt = typeof sent.user_prompt === "string" ? sent.user_prompt : typeof sent.keyword === "string" ? sent.keyword : "";
 
       // Every name any company holds for each website (`holdProfiles.ts`): the
       // answer names whoever it names, one purchase serves every watcher, and
@@ -160,6 +168,18 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
         sources: linked,
         answer: parsed.answer,
       });
+      if (shown && (shown.businesses.length > 0 || shown.read.length > 0 || shown.fanOutQueries.length > 0)) {
+        await ctx.runMutation(internal.aiAnswerExtras.writeAnswerExtras, {
+          pullId: args.pullId,
+          prompt,
+          engine,
+          locationCode: readLocationCode(pull.taskArgsJson ?? undefined) ?? DEFAULT_LOCATION_CODE,
+          day,
+          businesses: shown.businesses,
+          read: shown.read,
+          searches: parsed.fanOutQueries.slice(0, shared.fanOutPerAnswer),
+        });
+      }
 
       // The engine's own expansion of the question. These arrive in every
       // answer we already buy, and they are searches rather than prose, so
@@ -172,7 +192,9 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
           ? sent.web_search_country_iso_code
           : undefined;
         const city = typeof sent.web_search_city === "string" ? sent.web_search_city : undefined;
-        const place = country ? (city ? `${country}/${city}` : country) : undefined;
+        // An app is sent a country's code; the default country is no place, as a website watched from nowhere asks with none (`fanOutPlace`).
+        const appCountry = typeof sent.location_code === "number" && sent.location_code !== DEFAULT_LOCATION_CODE ? findSeoLocation(sent.location_code)?.countryIso : undefined;
+        const place = country ? (city ? `${country}/${city}` : country) : appCountry;
 
         await ctx.runMutation(internal.seoCollectionParse.writeFanOutQueries, {
           pullId: args.pullId,

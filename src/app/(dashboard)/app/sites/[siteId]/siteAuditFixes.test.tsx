@@ -370,6 +370,8 @@ describe("full answers (3.2, 4.7)", () => {
         prompt: "best carp rods", engine: "chatgpt", day: "2026-06-01", text: null,
         sources: [{ url: "https://elsewhere.com/best", page: null }], stance: "NAMED", names: [], searches: [],
       },
+      // Asked through the model: what an app shows beside an answer is not there (discovery plan, step 3).
+      "siteAnswerShown:answerShown": { askedAs: "MODEL", others: [], named: { place: null, of: 0 }, businesses: [], read: [], searches: [] },
     });
     render(<SiteAnswerPage />);
     expect(screen.getByText("sites.aiAnswers.wordingNotKept")).toBeInTheDocument();

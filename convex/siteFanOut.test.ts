@@ -4,7 +4,7 @@ import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { finishScheduled } from "@/src/test/finishScheduled";
-import { AI_ENGINE_CALLS, AI_ENGINES, answerPlace, fanOutPlace, type AiEngine } from "./seoAiEngines";
+import { AI_ENGINE_CALLS, MODEL_ENGINES, answerPlace, fanOutPlace, type AiEngine } from "./seoAiEngines";
 import { useFixedDay } from "@/src/test/realTime";
 
 /**
@@ -21,7 +21,7 @@ type Harness = ReturnType<typeof harness>;
 const DAY = "2026-09-26";
 const LONDON = 1006886;
 /** The engine asked with no place ever, whatever the watcher chose — from the engine table, not named. */
-const PLACELESS = AI_ENGINES.find((engine) => !AI_ENGINE_CALLS[engine].takesLocation && AI_ENGINE_CALLS[engine].hasWebSearchSwitch) as AiEngine;
+const PLACELESS = MODEL_ENGINES.find((engine) => !AI_ENGINE_CALLS[engine].takesLocation && AI_ENGINE_CALLS[engine].hasWebSearchSwitch) as AiEngine;
 
 beforeEach(() => useFixedDay());
 afterEach(() => vi.useRealTimers());

@@ -25,6 +25,7 @@ import { sendLongWaiting } from "./seoAgentRuns";
 import { deleteAnswerText } from "./siteAnswers";
 import { deleteAnswerRow } from "./seoPullAnswers";
 import { coarsenPositions } from "./positionHistory";
+import { deleteSerpPage } from "./siteSerp";
 
 /**
  * The hourly walk round the kitchen.
@@ -458,7 +459,7 @@ async function purgeExpiredSerpPages(ctx: MutationCtx, now: number): Promise<Dut
     .query("siteSerpPages")
     .withIndex("by_creation_time", (q) => q.lt("_creationTime", cutoff))
     .take(SERP_PURGE_PAGE);
-  for (const page of old) await ctx.db.delete(page._id);
+  for (const page of old) await deleteSerpPage(ctx, page);
   return { ...FINISHED, more: old.length === SERP_PURGE_PAGE };
 }
 

@@ -5,7 +5,7 @@ import schema from "./schema";
 import { writeKeywordCopy } from "@/src/test/keywordCopies";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { removeSampleResearch } from "./keywordResearchSampleMigration";
-import { AI_ENGINES, AI_ENGINE_CALLS } from "./seoAiEngines";
+import { AI_ENGINE_CALLS, MODEL_ENGINES } from "./seoAiEngines";
 import { useFixedDay } from "@/src/test/realTime";
 
 /**
@@ -711,7 +711,7 @@ describe("what the AI says", () => {
 
     const asked = fetch.mock.calls.filter(([url]) => String(url).includes("llm_responses")).map(([url, init]) => [String(url).split("/ai_optimization/")[1].split("/")[0], JSON.parse((init as { body: string }).body)[0].user_prompt]);
     // Each of the four assistants, once, the same question.
-    expect(asked.sort()).toEqual(AI_ENGINES.map((engine) => [AI_ENGINE_CALLS[engine].platform, "Who is the best web design agency in United Kingdom?"]).sort());
+    expect(asked.sort()).toEqual(MODEL_ENGINES.map((engine) => [AI_ENGINE_CALLS[engine].platform, "Who is the best web design agency in United Kingdom?"]).sort());
     const answers = await as.query(api.keywordResearchAnswers.lookupAnswers, { lookupId });
     expect(answers?.state).toBe("READY");
     expect(answers?.figures).toEqual({ answered: 4, nameYou: 1, nameARival: 4, rivalMost: "lightflows.co.uk", businessesNamed: 2, pagesCited: 8, pagesCitedYours: 4 });

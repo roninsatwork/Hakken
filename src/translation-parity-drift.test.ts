@@ -67,6 +67,8 @@ describe('the Italian catalogue is translated, not copied', () => {
     ['user.preferences.language.en', 'a language named in its own language, which is the point of the list'],
     ['user.preferences.language.it', 'the other half of the same list'],
     ['sites.reviews.yours.localGuide', "Google's name for its reviewers' programme"],
+    ['aiEngines.aiMode', "Google's product name"],
+    ['sites.aiApps.gaps.where', "Google's name and a place, no words of its own"],
     ['admin.overview.metrics.computeSub', 'placeholders and two abbreviations that are used untranslated in both'],
     ['ai.costs.metrics.tokenSub', 'the same pattern as the line above'],
     ['keywordResearch.placeIn.au', 'Australia takes "in" and the same name in Italian'],

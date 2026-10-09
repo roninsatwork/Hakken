@@ -1,0 +1,21 @@
+# Discovery → AI answers → One answer, five ways — the approved look (board "AiAnswerApp" of docs/plans/assets/discovery-local-reputation-ai/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Back to Full answers
+  page-header: ‹the record's name›
+    choice: Where it was asked: ChatGPT app | Gemini app | Google AI Mode | Claude | Perplexity
+figures
+  figure: Where you came
+  figure: Businesses it showed
+  figure: Pages it read
+  figure: Searches it ran
+settings-card: The answer, as ChatGPT app showed it
+section: Businesses it showed
+table: Place | Business | Rating | Reviews | On Google Maps for this search
+  table-bar
+section: Pages it read
+table: Page | Whose | In the answer
+  table-bar
+section: Searches it ran
+table: Search | Position | Tracked

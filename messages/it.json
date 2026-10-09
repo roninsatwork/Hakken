@@ -5817,6 +5817,10 @@
         "ai_citation_claude": "Chiesto a Claude",
         "ai_citation_gemini": "Chiesto a Gemini",
         "ai_citation_perplexity": "Chiesto a Perplexity",
+        "ai_app_chatgpt": "Letta l'app ChatGPT",
+        "ai_app_gemini": "Letta l'app Gemini",
+        "ai_citation_ai_mode": "Chiesto a Google AI Mode",
+        "ai_keyword_volume": "Quanto spesso le ricerche sono chieste all'IA",
         "ai_overview_fan_out": "Cosa hanno cercato le AI Overview di Google",
         "google_maps_find": "Attività trovata su Google Maps",
         "local_market": "Attività dello stesso tipo nelle vicinanze",
@@ -6228,7 +6232,8 @@
         "tasks": "{count, plural, one {# attività} other {# attività}}",
         "offices": "{count, plural, one {# sede} other {# sedi}}",
         "kilometres": "{count, plural, one {# chilometro} other {# chilometri}}",
-        "reviews": "{count, plural, one {# recensione} other {# recensioni}}"
+        "reviews": "{count, plural, one {# recensione} other {# recensioni}}",
+        "questions": "domande"
       },
       "topics": {
         "tasks": {
@@ -6245,6 +6250,11 @@
           "title": "Locale: profili Google e Maps",
           "intro": "Cosa leggono le pagine Locale di Scoperta per ogni sito web: i suoi profili Google, uno per sede, i profili dei concorrenti seguiti per ciascuna, dove si trova ogni sede su Google Maps e le attività dello stesso tipo nelle vicinanze. Acquistati da DataForSEO solo per le aziende con Locale attivo nella loro pianificazione della raccolta.",
           "footer": "Le modifiche valgono dalla prossima esecuzione di ogni sito web."
+        },
+        "radar": {
+          "title": "Radar del marchio",
+          "intro": "Cosa legge il Radar del marchio di Discovery per ogni sito: le domande in cui le risposte IA di Google lo nominano, e altrettante per i concorrenti seguiti accanto, ogni mese. Acquistato solo per le aziende con il Radar del marchio attivo nella loro pianificazione della raccolta.",
+          "footer": "Le modifiche valgono dalla prossima lettura mensile di ogni sito."
         },
         "ai": {
           "title": "Prompt IA",
@@ -6587,6 +6597,16 @@
           "label": "Recensioni di ogni concorrente lette al mese",
           "description": "Quante delle recensioni più recenti di ogni concorrente vengono lette una volta al mese, per confrontare quanto spesso viene recensito e quanto in fretta risponde.",
           "cost": "Un decimo di centesimo ogni dieci recensioni."
+        },
+        "radarQuestions": {
+          "label": "Domande Brand radar lette al mese",
+          "description": "Quante delle domande in cui le risposte IA di Google nominano il sito vengono lette ogni mese, e altrettante per ogni concorrente seguito accanto.",
+          "cost": "Circa un decimo di centesimo a domanda, ogni mese."
+        },
+        "radarRivals": {
+          "label": "Concorrenti accanto al sito su Brand radar",
+          "description": "Quanti concorrenti monitorati del sito Brand radar legge accanto, a partire dal primo monitorato.",
+          "cost": "Ogni concorrente viene letto come il sito: le sue domande ogni mese."
         },
         "hakkenTasksPerPerson": {
           "label": "Attività attive per persona",
@@ -9949,6 +9969,7 @@
       "jumpPlaceholder": "Vai a una pagina…",
       "groups": {
         "site": "Sito",
+        "radar": "Radar del marchio",
         "ai": "Risposte AI",
         "google": "Risultati Google",
         "local": "Locale",
@@ -9965,6 +9986,10 @@
         "aiAnswers": "Risposte complete",
         "aiSources": "Fonti citate",
         "aiSearched": "Query fan-out",
+        "aiBusinesses": "Attività consigliate",
+        "aiRead": "Lette ma non citate",
+        "aiDemand": "Domanda nell'IA",
+        "radarGaps": "Lacune nelle AI Overview",
         "googleSearches": "Le tue ricerche",
         "googleMoves": "Salite e discese",
         "googleAbove": "Chi ti supera",
@@ -10780,7 +10805,71 @@
       "searchesTitle": "Cosa ha cercato {engine} per questa domanda",
       "searchesHint": "Tra le sue risposte a questa domanda, prima le ricerche a cui è tornato più spesso.",
       "timesSeen": "{count, plural, one {Vista una volta} other {Vista # volte}}",
-      "noSearches": "Nessuna ricerca conservata ancora per questa domanda."
+      "noSearches": "Nessuna ricerca conservata ancora per questa domanda.",
+      "appOf": "App {engine}",
+      "ordinal": "{place}°",
+      "placeOf": "{place} su {of}",
+      "notNamed": "Non nominato",
+      "namedBusinesses": "{count, plural, =1 {Ha nominato un'attività} other {Ha nominato # attività}}",
+      "namedNobody": "Non ha nominato alcuna attività",
+      "whereAsked": "Dove è stato chiesto",
+      "howAsked": "ChatGPT e Gemini sono letti come li mostrano le loro app, con attività, fonti e ricerche sullo schermo. Claude e Perplexity sono interrogati tramite i loro modelli, come fa oggi {platformName}; nessuno dei due offre una vista app. Google AI Mode è la pagina di risposta di Google.",
+      "figures": {
+        "whereYouCame": "La tua posizione",
+        "cameFirst": "{name} è arrivato primo",
+        "businessesShown": "Attività mostrate",
+        "businessesShownDetail": "Come schede, con le valutazioni Google",
+        "pagesRead": "Pagine lette",
+        "pagesReadDetail": "{count, plural, =0 {Non ne ha citata nessuna} other {Ne ha citate #}}",
+        "searchesRan": "Ricerche fatte",
+        "searchesRanDetail": "Dietro le quinte, prima di rispondere",
+        "sourcesCited": "Fonti citate",
+        "yoursOf": "{count, plural, =1 {Una è tua} other {# sono tue}}",
+        "noneYours": "Nessuna è tua",
+        "googlePosition": "La tua posizione su Google",
+        "mapPlace": "La tua posizione sulla mappa",
+        "notTracked": "Non è una delle tue ricerche monitorate",
+        "howAsked": "Come è stato chiesto",
+        "itsApp": "La sua app",
+        "itsAppDetail": "Come la vede una persona",
+        "itsModel": "Il suo modello",
+        "itsModelDetail": "Tramite il modello, con ricerca web"
+      },
+      "answerTitleShown": "La risposta, come l'ha mostrata {engine}",
+      "answerTitleModel": "La risposta, come l'ha data {engine}",
+      "businessesTitle": "Attività mostrate",
+      "businessesDescription": "Le schede che {engine} ha messo accanto alla risposta. La sua immagine di ogni attività, con la valutazione Google.",
+      "noBusinesses": "Non ha mostrato attività accanto a questa risposta.",
+      "columns": {
+        "place": "Posizione",
+        "business": "Attività",
+        "rating": "Valutazione",
+        "reviews": "Recensioni",
+        "onMaps": "Su Google Maps per questa ricerca",
+        "page": "Pagina",
+        "whose": "Di chi",
+        "inAnswer": "Nella risposta",
+        "search": "Ricerca",
+        "position": "Posizione",
+        "tracked": "Monitorata"
+      },
+      "you": "{name} · tu",
+      "noWebsite": "Nessun sito",
+      "notTrackedShort": "Non monitorata",
+      "readTitle": "Pagine lette",
+      "readDescription": "Ogni pagina che {engine} ha aperto mentre rispondeva. Quelle lette ma lasciate fuori hanno perso contro quelle citate.",
+      "citedOfThem": "· {count} citate",
+      "noRead": "Non ha letto pagine per questa risposta.",
+      "yours": "Tue",
+      "cited": "Citata",
+      "readNotCited": "Letta, non citata",
+      "searchesRanTitle": "Ricerche fatte",
+      "searchesRanDescription": "Cosa ha cercato {engine} prima di scrivere la risposta, e dove sei su Google per ciascuna.",
+      "notInTop": "Non nei primi 100",
+      "everyCheck": "A ogni controllo",
+      "trackFailed": "Non è stato possibile monitorare questa ricerca. Riprova.",
+      "sourcesGoogle": "Le pagine che Google ha collegato sotto la risposta.",
+      "sourcesLinked": "Le pagine collegate sotto la risposta."
     },
     "rivalRecord": {
       "description": "Come si confronta {rival} con {site}: su ogni ricerca per cui vi posizionate entrambi, chi è davanti.",
@@ -12327,6 +12416,166 @@
           "seeAll": "Vedi tutte le {count} in attesa"
         }
       }
+    },
+    "aiApps": {
+      "businesses": {
+        "title": "Attività consigliate",
+        "description": "Le attività che l'app ChatGPT mette davanti alle persone per le tue domande, accanto alla posizione di ciascuna su Google Maps.",
+        "of": "{count} su {of}",
+        "figures": {
+          "showing": "Risposte con attività",
+          "showingDetail": "Le tue domande, l'ultimo controllo",
+          "showingYou": "Ti mostrano",
+          "checkBefore": "rispetto al controllo precedente",
+          "noCheckBefore": "Ancora nessun controllo precedente",
+          "most": "Più mostrata",
+          "mostDetail": "In {count} delle {of} risposte",
+          "noneShown": "Nessuna risposta ha mostrato un'attività",
+          "skipped": "Sulla mappa, escluso dall'IA",
+          "skippedDetail": "Ricerche in cui sei nel riquadro della mappa ma ChatGPT ti salta"
+        },
+        "notice": "Essere sulla mappa di Google non basta per essere consigliati dall'IA: una ricerca di quest'anno ha rilevato che solo circa 1 attività su 5 nel riquadro della mappa veniva nominata nella risposta di ChatGPT. Recensioni, directory e citazioni altrove decidono chi sceglie.",
+        "searchPlaceholder": "Cerca un'attività…",
+        "questionFilter": "Domanda",
+        "everyQuestion": "Tutte le domande",
+        "columns": {
+          "business": "Attività",
+          "website": "Sito",
+          "shown": "Mostrata in",
+          "place": "Posizione abituale",
+          "rating": "Valutazione",
+          "reviews": "Recensioni",
+          "map": "Sulla mappa di Google"
+        },
+        "map": {
+          "box": "{count, plural, =1 {Riquadro mappa per 1 ricerca} other {Riquadro mappa per # ricerche}}",
+          "below": "Sotto il riquadro della mappa",
+          "off": "Non sulla mappa di {town}",
+          "unknown": "Nessuna sede collegata"
+        },
+        "you": "{name} · tu",
+        "noWebsite": "Nessun sito",
+        "noMatch": "Nessuna attività corrisponde.",
+        "empty": "Nessuna risposta dell'app ChatGPT ha ancora mostrato un'attività: compaiono dal prossimo controllo."
+      },
+      "read": {
+        "title": "Lette ma non citate",
+        "description": "Le pagine che l'app ChatGPT ha aperto rispondendo alle tue domande, e quanto spesso poi le ha citate. Una pagina letta ma non citata era in gara e ha perso.",
+        "figures": {
+          "read": "Tue pagine lette",
+          "readDetail": "{count, plural, =1 {Volte, su 1 domanda} other {Volte, su # domande}}",
+          "cited": "Poi citate",
+          "citedOf": "{count} su {of}",
+          "rivalsShare": "pagine dei concorrenti {share}%",
+          "least": "Più lette, meno citate",
+          "leastDetail": "{read, plural, =1 {Letta una volta} other {Letta # volte}}, {cited, plural, =0 {mai citata} =1 {citata una volta} other {citata # volte}}",
+          "beats": "Ti batte più spesso",
+          "beatsDetail": "{count, plural, =1 {Citato in 1 risposta che ha letto la tua pagina} other {Citato in # risposte che hanno letto la tua pagina}}",
+          "noneRead": "Nessuna tua pagina ancora letta"
+        },
+        "searchPlaceholder": "Cerca una pagina…",
+        "whoseFilter": "Di chi",
+        "everyone": "Di tutti",
+        "whoseFilters": {
+          "YOURS": "Tue",
+          "RIVAL": "Dei concorrenti",
+          "OTHER": "Altre"
+        },
+        "whose": {
+          "YOURS": "Tue"
+        },
+        "columns": {
+          "page": "Pagina",
+          "whose": "Di chi",
+          "read": "Letta",
+          "cited": "Citata",
+          "wins": "Quanto spesso vince"
+        },
+        "noMatch": "Nessuna pagina corrisponde.",
+        "empty": "L'app ChatGPT non ha ancora letto pagine per le tue domande: compaiono dal prossimo controllo."
+      },
+      "demand": {
+        "title": "Domanda nell'IA",
+        "description": "Quanto spesso le tue ricerche vengono chieste agli strumenti di IA ogni mese, accanto a quanto vengono cercate su Google. Una stima, costruita dalle \"Altre domande\" di Google.",
+        "figures": {
+          "ai": "Chieste all'IA al mese",
+          "google": "Cercate su Google al mese",
+          "yearBefore": "rispetto a 11 mesi prima",
+          "noYearBefore": "Ancora nessun anno di dati",
+          "notYet": "Letta al prossimo controllo mensile",
+          "rising": "In crescita nell'IA",
+          "risingDetail": "Ricerche cresciute di un terzo o più in 3 mesi",
+          "most": "La più chiesta all'IA"
+        },
+        "chartTitle": "IA contro Google, al mese",
+        "chartHint": "{count, plural, =1 {La tua ricerca monitorata} other {Le tue # ricerche monitorate sommate}}, negli ultimi 12 mesi.",
+        "chartMonth": "Mese",
+        "chartAi": "Chieste all'IA",
+        "chartGoogle": "Cercate su Google",
+        "searchPlaceholder": "Cerca una ricerca…",
+        "fromFilter": "Da",
+        "everyList": "Tutte le liste",
+        "fromFilters": {
+          "SEARCH": "Le tue ricerche",
+          "FAN_OUT": "Query fan-out",
+          "KEYWORD": "Parole chiave"
+        },
+        "from": {
+          "SEARCH": "Tua ricerca",
+          "FAN_OUT": "Query fan-out",
+          "KEYWORD": "Parola chiave"
+        },
+        "columns": {
+          "search": "Ricerca",
+          "ai": "IA al mese",
+          "trend": "Andamento IA",
+          "volume": "Volume",
+          "share": "Quota chiesta all'IA",
+          "from": "Da"
+        },
+        "tooFew": "Troppo poche per contarle",
+        "trendLabel": "Quanto spesso \"{keyword}\" è stata chiesta all'IA negli ultimi 12 mesi",
+        "noMatch": "Nessuna ricerca corrisponde.",
+        "empty": "Ancora niente di misurato: le tue ricerche vengono misurate al prossimo controllo mensile."
+      },
+      "gaps": {
+        "title": "Lacune nelle AI Overview",
+        "description": "Ricerche in cui sei su Google ma l'AI Overview in cima cita qualcun altro. La panoramica sta sopra ogni risultato, compreso il tuo.",
+        "where": "Google · {place}",
+        "of": "{count} su {of}",
+        "figures": {
+          "overview": "Ricerche con una AI Overview",
+          "overviewDetail": "Le tue ricerche monitorate",
+          "quotes": "La panoramica ti cita",
+          "monthBefore": "rispetto a 30 giorni prima",
+          "noMonthBefore": "Ancora nessun controllo di 30 giorni prima",
+          "gaps": "Primi {top} su Google, esclusi",
+          "gapsDetail": "Le lacune elencate sotto",
+          "behind": "Ricerche dietro le lacune",
+          "behindDetail": "Al mese"
+        },
+        "notice": "Letto dai controlli Google che {platformName} fa già per le tue ricerche, quindi questa pagina non costa nulla in più. Dove la panoramica cita la pagina di un concorrente sulla stessa domanda della tua, confrontale: di solito risponde alla domanda nelle prime righe.",
+        "searchPlaceholder": "Cerca una ricerca…",
+        "quotesFilter": "Ti cita",
+        "either": "Entrambi",
+        "quotesFilters": {
+          "no": "Non citato",
+          "yes": "Citato"
+        },
+        "withOverview": "con una panoramica",
+        "columns": {
+          "search": "Ricerca",
+          "volume": "Volume",
+          "position": "Posizione",
+          "overview": "Panoramica",
+          "quotes": "Cita",
+          "page": "La tua pagina"
+        },
+        "quotesYou": "Ti cita",
+        "notQuoted": "Non citato",
+        "noMatch": "Nessuna ricerca corrisponde.",
+        "empty": "Nessuna delle tue ricerche monitorate mostra una AI Overview all'ultimo controllo."
+      }
     }
   },
   "searchConsole": {
@@ -13348,6 +13597,7 @@
     "perplexity": "Perplexity",
     "gemini": "Gemini",
     "claude": "Claude",
+    "aiMode": "Google AI Mode",
     "googleAiOverview": "AI Overview di Google"
   },
   "knowledgeArticles": {

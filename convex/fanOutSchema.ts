@@ -94,6 +94,8 @@ export const fanOutTables = {
     localMarketBusinesses: maybeLimit,
     localMarketKm: maybeLimit,
     localRivalReviews: maybeLimit,
+    radarQuestions: maybeLimit,
+    radarRivals: maybeLimit,
     updatedAt: v.number(),
   })
     .index("by_company_hold", ["companyId", "companyWebsiteId"])

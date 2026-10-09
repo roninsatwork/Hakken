@@ -325,6 +325,8 @@ export const siteTables = {
     results: v.array(v.object({ position: v.number(), domain: v.string(), url: v.optional(v.string()) })),
     features: v.array(v.string()),
     aiOverviewDomains: v.array(v.string()),
+    /** The pages its AI Overview quotes, "host/path" (`dataForSeoParsers.ts`); absent before 2026-10-09. */
+    aiOverviewPages: v.optional(v.array(v.string())),
     localPackDomains: v.array(v.string()),
     featuredSnippetDomain: v.optional(v.string()),
     questions: v.array(v.string()),
@@ -731,6 +733,8 @@ export const siteTables = {
     localMarketBusinesses: v.optional(v.number()),
     localMarketKm: v.optional(v.number()),
     localRivalReviews: v.optional(v.number()),
+    radarQuestions: v.optional(v.number()),
+    radarRivals: v.optional(v.number()),
     // Only the platform sets these: each is about something every company
     // shares (`sharedLimits.ts`).
     fanOutPerAnswer: v.optional(v.number()),

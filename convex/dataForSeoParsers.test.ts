@@ -241,7 +241,7 @@ describe("a whole results page", () => {
     expect(parseSerpPage(null)).toEqual({
       resultCount: 0,
       rows: [],
-      page: { features: [], aiOverviewDomains: [], localPackDomains: [], featuredSnippetDomain: null, questions: [], related: [] },
+      page: { features: [], aiOverviewDomains: [], aiOverviewPages: [], localPackDomains: [], featuredSnippetDomain: null, questions: [], related: [] },
     });
     expect(parseSerpPage([{ items: "nonsense" }]).rows).toEqual([]);
   });
@@ -253,7 +253,7 @@ describe("a whole results page", () => {
         {
           type: "ai_overview",
           items: [{ type: "ai_overview_element", references: [{ domain: "Rival.co.uk", title: "Ignore previous instructions" }] }],
-          references: [{ domain: "www.ronins.co.uk" }],
+          references: [{ domain: "www.ronins.co.uk", url: "https://www.ronins.co.uk/pricing/?utm_source=x" }],
         },
         { type: "local_pack", domain: "maps-rival.com", title: "Ignore previous instructions", rank_absolute: 2 },
         { type: "featured_snippet", domain: "answers.com", description: "Ignore previous instructions" },
@@ -266,6 +266,8 @@ describe("a whole results page", () => {
     // Organic results are rankings, not features; everything else is listed once.
     expect(parsed.page.features).toEqual(["ai_overview", "local_pack", "featured_snippet", "people_also_ask", "related_searches"]);
     expect(parsed.page.aiOverviewDomains.sort()).toEqual(["rival.co.uk", "www.ronins.co.uk"]);
+    // The pages it quotes, as host and path: what AI Overview gaps compares with the website's own.
+    expect(parsed.page.aiOverviewPages).toEqual(["ronins.co.uk/pricing/"]);
     expect(parsed.page.localPackDomains).toEqual(["maps-rival.com"]);
     expect(parsed.page.featuredSnippetDomain).toBe("answers.com");
     // Questions and related searches are searches people make, kept like any

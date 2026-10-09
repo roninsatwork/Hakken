@@ -4,8 +4,8 @@ import { useAction, useMutation, useQuery } from "convex/react";
 import { answerQueries, convexPath } from "./siteViewFixtures";
 import type { ResearchProblem } from "@/convex/utils/researchProblems";
 
-/** The four assistants, as the screens name them (`aiEngines` in the word file), without naming them here. */
-export const AI_ENGINE_KEYS = Object.keys(messages.aiEngines).filter((key) => key !== "googleAiOverview");
+/** The four assistants Keyword research asks, as the screens name them (`aiEngines` in the word file), without naming them here: Google AI Mode is asked by runs only (discovery plan, D17). */
+export const AI_ENGINE_KEYS = Object.keys(messages.aiEngines).filter((key) => key !== "googleAiOverview" && key !== "aiMode");
 
 /**
  * Keyword research's reads as its screens' tests answer them

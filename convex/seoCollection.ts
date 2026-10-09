@@ -5,16 +5,16 @@ import { internal } from "./_generated/api";
 import {
   SEO_KEYWORD_CHECK_OPERATION,
   findSeoOperation,
-  seoAiCitationParams,
+  aiAskFor,
   seoKeywordCheckParams,
   seoSiteOperationParams,
   seoSiteOperations,
   type SeoOperation,
 } from "./dataForSeoRegistry";
-import { aiCitationOperationId } from "./seoAiEngines";
 import { AI_OVERVIEW_FAN_OUT_OPERATION, aiOverviewFanOutParams, aiOverviewPeriodStart, googleTopicOf } from "./dataForSeoAiOverviewOperations";
 import { readFanOutLimits } from "./fanOutLimits";
-import { DEFAULT_LOCATION_CODE, findSeoLocation } from "./utils/seoLocations";
+import { partIsOn } from "./collectionParts";
+import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { MAX_PROMPTS_PER_WEBSITE } from "./utils/promptLimits";
 import { buildSeoIdempotencyKey } from "./seoIdempotency";
 import { finishSeoCycle } from "./seoCollectionQueue";
@@ -32,6 +32,8 @@ import { reusableByKey } from "./seoPullReuse";
 import { SEARCH_VOLUME_OPERATION, volumeSteps } from "./searchVolumes";
 import { localSteps } from "./localPlanning";
 import { reviewSteps } from "./reviewPlanning";
+import { aiDemandSteps } from "./aiDemand";
+import { AI_DEMAND_OPERATION } from "./dataForSeoAiDemandOperations";
 import { creditCycleLine } from "./creditHooks";
 import {
   SEO_DUE_SPACING_MS,
@@ -377,6 +379,10 @@ async function websiteSteps(
     ...await localSteps(ctx, cycle, companyWebsite, (operation, params, keyStartedAt, sendIndex) => planSharedPull(ctx, cycle, {
       operation, params, sentinel: "listing", websiteId: companyWebsite.websiteId, sendIndex, keyStartedAt,
     })),
+    // How often its searches are asked of AI tools, monthly, when it has AI demand on (`aiDemand.ts`).
+    ...await aiDemandSteps(ctx, cycle, companyWebsite, (params, sendIndex) => planSharedPull(ctx, cycle, {
+      operation: findSeoOperation(AI_DEMAND_OPERATION)!, params, sentinel: "keyword", websiteId: companyWebsite.websiteId, sendIndex,
+    })),
     // And their reviews, when it has Reviews switched on (`reviewPlanning.ts`).
     ...await reviewSteps(ctx, cycle, companyWebsite, (operation, params, keyStartedAt, sendIndex) => planSharedPull(ctx, cycle, {
       operation, params, sentinel: "listing", websiteId: companyWebsite.websiteId, sendIndex, keyStartedAt,
@@ -442,10 +448,8 @@ async function questionSteps(
   const limits = await readFanOutLimits(ctx, companyWebsite.companyId, companyWebsite._id);
   const prompts = await holdQuestions(ctx, companyWebsite._id, Math.min(MAX_PROMPTS_PER_WEBSITE, limits.promptsPerSite), { activeOnly: true });
 
-  const place = companyWebsite.locationCode !== undefined
-    ? findSeoLocation(companyWebsite.locationCode)
-    : null;
-  const location = place ? { countryIso: place.countryIso, city: place.city } : null;
+  // The two apps read as shown, and Google AI Mode asked, only while the company has "AI apps" on (D5, D16).
+  const appsOn = await partIsOn(ctx, companyWebsite.companyId, "aiApps");
   // Google's own fan-outs for each question's topic (FA8): off unless the
   // company or the website chose how many of Google's AI Overviews to buy.
   const googleRows = limits.googleSearchesRead;
@@ -455,13 +459,13 @@ async function questionSteps(
     let planned = 0;
     let reused = 0;
     for (const engine of prompt.engines) {
-      const operation = findSeoOperation(aiCitationOperationId(engine));
-      if (!operation) continue;
+      const ask = aiAskFor(engine, prompt.prompt, companyWebsite.locationCode, appsOn);
+      if (!ask) continue;
       if (planned >= room) return { planned, reused, capped: true };
 
       const outcome = await planSharedPull(ctx, cycle, {
-        operation,
-        params: seoAiCitationParams(engine, prompt.prompt, location),
+        operation: ask.operation,
+        params: ask.params,
         // A question has no website of its own — the same question from two
         // companies is one purchase. The params carry the text and the place.
         sentinel: "prompt",

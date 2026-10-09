@@ -37,7 +37,7 @@ import { findResearchCountry, searchPlaceOf } from "./utils/researchCountries";
 import { RESEARCH_PROBLEMS, type ResearchProblem } from "./utils/researchProblems";
 
 const problemValidator = v.union(...RESEARCH_PROBLEMS.map((code) => v.literal(code)));
-import { AI_ENGINES, AI_ENGINE_CALLS, type AiEngine } from "./seoAiEngines";
+import { AI_ENGINE_CALLS, MODEL_ENGINES, type ModelEngine } from "./seoAiEngines";
 import { seoAiCitationParams } from "./dataForSeoRegistry";
 import { parseLlmResponse } from "./dataForSeoParsers";
 import { findBrandMentions, type BrandName } from "./utils/websiteBrands";
@@ -733,7 +733,7 @@ async function buyAnswers(buyer: Buyer, place: Place, overviewSearches: number) 
   // Every website some company has named on Hakken, with its names: what an answer is searched for, as collections search it.
   const named: Array<{ websiteId: Id<"websites">; host: string; brandNames: BrandName[] }> =
     await buyer.ctx.runQuery(internal.holdProfiles.listNamedWebsitesInternal, { limit: 2_000 });
-  const askOne = async (engine: AiEngine) => {
+  const askOne = async (engine: ModelEngine) => {
     const call = { id: `research_ai_${engine}`, path: `/v3/ai_optimization/${AI_ENGINE_CALLS[engine].platform}/llm_responses/live`, family: "AI Optimization", name: engine };
     const result = await buy(buyer, call, seoAiCitationParams(engine, question, country ? { countryIso: country.iso } : null), [place]);
     if (result === null) return { engine, answered: false, answer: "", named: [], cited: [] };
@@ -758,7 +758,8 @@ async function buyAnswers(buyer: Buyer, place: Place, overviewSearches: number) 
       ).map((row) => ({ query: row.queryText, times: row.times }))
     : [];
   // The four assistants and the AI Overview at once.
-  const [engines, searches] = await bothOf(allOf(AI_ENGINES.map(askOne)), askOverview());
+  // Asked through the models: Keyword research reads no app (D5 is about runs).
+  const [engines, searches] = await bothOf(allOf(MODEL_ENGINES.map(askOne)), askOverview());
   if (engines.some((engine) => engine.answered)) {
     await buyer.ctx.runMutation(internal.keywordResearchRun.fileAnswers, { ...place, sandbox: buyer.credentials.sandbox, question, engines, overviewSearches: searches });
   }

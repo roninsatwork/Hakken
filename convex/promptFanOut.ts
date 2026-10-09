@@ -8,14 +8,15 @@ import { addWebsiteKeywordCore, readSearchPhrase, requireFanOutRoom } from "./we
 import { readFanOutLimits } from "./fanOutLimits";
 import { listedChecker } from "./fanOutListed";
 import { aiCitationOperationId, aiEngineValidator } from "./seoAiEngines";
-import { SEO_KEYWORD_CHECK_OPERATION, findSeoOperation, seoAiCitationParams } from "./dataForSeoRegistry";
+import { SEO_KEYWORD_CHECK_OPERATION, aiAskFor } from "./dataForSeoRegistry";
+import { partIsOn } from "./collectionParts";
 import { buildSeoIdempotencyKey } from "./seoIdempotency";
 import { reusableByKey } from "./seoCollection";
 import { startCollector } from "./seoAgentRuns";
 import { companyCollectionSchedule } from "./seoScheduleService";
 import { MAX_LIST, unitCosts } from "./websiteSiteRows";
 import { appError, type AppErrorData } from "./utils/appError";
-import { DEFAULT_LOCATION_CODE, findSeoLocation } from "./utils/seoLocations";
+import { DEFAULT_LOCATION_CODE } from "./utils/seoLocations";
 import { isTrackedHold } from "./utils/websitePairing";
 
 /**
@@ -545,15 +546,14 @@ export const generatePromptFanOut = superAdminMutation({
       throw appError("CONFLICT", `Collection is switched off for ${company.name}. Switch it on in Schedules first.`);
     }
 
-    const place = hold.locationCode !== undefined ? findSeoLocation(hold.locationCode) : null;
-    const location = place ? { countryIso: place.countryIso, city: place.city } : null;
+    const appsOn = await partIsOn(ctx, args.companyId, "aiApps");
     const now = Date.now();
     const pulls: Id<"seoDataPulls">[] = [];
     let reused = 0;
     for (const engine of question.engines) {
-      const operation = findSeoOperation(aiCitationOperationId(engine));
-      if (!operation) continue;
-      const params = seoAiCitationParams(engine, question.prompt, location);
+      const ask = aiAskFor(engine, question.prompt, hold.locationCode, appsOn);
+      if (!ask) continue;
+      const { operation, params } = ask;
       // A prompt has no website of its own: the same prompt from two
       // companies, or from a collection today, is one purchase.
       const idempotencyKey = buildSeoIdempotencyKey({ operationId: operation.id, websiteId: "prompt", params, cycleStartedAt: now });

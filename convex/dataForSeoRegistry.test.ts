@@ -384,10 +384,11 @@ describe("asking an AI engine", () => {
     const citation = seoAiCitationOperations().map((operation) => operation.id);
     const perSite = seoSiteOperations().map((operation) => operation.id);
 
-    // Four engines, four operations. A prompt is not a host, so a cycle must
-    // never run these once per website by mistake — that would be a paid call
-    // per website per engine for a question that belongs to one website.
-    expect(citation).toHaveLength(4);
+    // Four models, the two apps and Google AI Mode (discovery-local-reputation-ai-plan.md, D5, D17).
+    // A prompt is not a host, so a cycle must never run these once per
+    // website by mistake — that would be a paid call per website per engine
+    // for a question that belongs to one website.
+    expect(citation).toHaveLength(7);
     for (const id of citation) expect(perSite).not.toContain(id);
   });
 
@@ -397,7 +398,8 @@ describe("asking an AI engine", () => {
     // Two of the four could never queue anyway.
     for (const operation of seoAiCitationOperations()) {
       expect(operation.mode).toBe("LIVE");
-      expect(operation.path).toMatch(/\/live$/);
+      // The apps and AI Mode answer on `/live/advanced` (D5).
+      expect(operation.path).toMatch(/\/live(\/advanced)?$/);
       expect(operation.resultPath).toBeUndefined();
     }
   });

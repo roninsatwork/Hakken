@@ -41,10 +41,10 @@
     "pages, most keywords": 416,
     "sections": 16,
     "two years, daily": 760,
-    "two years, with five rivals": 2904,
-    "AI mentions": 2520,
+    "two years, with five rivals": 2936,
+    "AI mentions": 2760,
     "share of voice": 8,
-    "side by side": 2520,
+    "side by side": 2760,
     "the Overview's extras": 448,
     "moves between bands": 5400,
     "the searches that changed band": 5392,
@@ -70,5 +70,12 @@
     "against rivals": 720,
     "what customers say": 4168,
     "business profile": 488
+  },
+  "aiAppsReadKiB": {
+    "one answer, five ways": 16,
+    "businesses recommended": 992,
+    "read but not cited": 1488,
+    "ai demand": 504,
+    "ai overview gaps": 512
   }
 }

@@ -8,7 +8,7 @@
  * as pages land. Copy lives in `messages/*.json` under `sites.menu`.
  */
 
-export type SitePageGroup = "site" | "ai" | "google" | "local" | "reviews" | "keywords" | "paid" | "competitors" | "backlinks";
+export type SitePageGroup = "site" | "radar" | "ai" | "google" | "local" | "reviews" | "keywords" | "paid" | "competitors" | "backlinks";
 
 export type SitePage = {
   id: string;
@@ -67,7 +67,7 @@ export function setupPaused(page: SitePage, counts: SetupCounts): boolean {
   return false;
 }
 
-export const SITE_PAGE_GROUPS: SitePageGroup[] = ["site", "ai", "google", "local", "reviews", "keywords", "paid", "competitors", "backlinks"];
+export const SITE_PAGE_GROUPS: SitePageGroup[] = ["site", "radar", "ai", "google", "local", "reviews", "keywords", "paid", "competitors", "backlinks"];
 
 export const SITE_PAGES: SitePage[] = [
   { id: "overview", group: "site", segment: "", built: true },
@@ -75,11 +75,18 @@ export const SITE_PAGES: SitePage[] = [
   { id: "yourPages", group: "site", segment: "your-pages", built: true, count: "yourPages" },
   { id: "siteAudit", group: "site", segment: "audit", built: true },
 
+  // Brand radar: what Google's AI says across the web (discovery-local-reputation-ai-plan.md, steps 3 and 4).
+  { id: "radarGaps", group: "radar", segment: "radar/gaps", built: true, needs: "trackedSearches" },
+
   { id: "aiMentions", group: "ai", segment: "ai/mentions", built: true, count: "aiNamed", needs: "questions" },
   { id: "aiShareOfVoice", group: "ai", segment: "ai/share-of-voice", built: true, needs: "questions" },
   { id: "aiAnswers", group: "ai", segment: "ai/answers", built: true, needs: "questions" },
   { id: "aiSources", group: "ai", segment: "ai/sources", built: true, count: "citedPages", needs: "questions" },
   { id: "aiSearched", group: "ai", segment: "ai/searched", built: true, needs: "questions" },
+  // What the ChatGPT app shows beside its answers (discovery-local-reputation-ai-plan.md, step 3, D5).
+  { id: "aiBusinesses", group: "ai", segment: "ai/businesses", built: true, needs: "questions" },
+  { id: "aiRead", group: "ai", segment: "ai/read", built: true, needs: "questions" },
+  { id: "aiDemand", group: "ai", segment: "ai/demand", built: true },
 
   // Wins and losses and Search features read every keyword the site ranks
   // for as well, so they have something to show without tracked searches.

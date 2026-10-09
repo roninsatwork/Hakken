@@ -654,6 +654,8 @@ export function parseSerpPage(result: unknown): {
 export type SerpPageExtras = {
   features: string[];
   aiOverviewDomains: string[];
+  /** The pages an AI Overview quotes, "host/path" (discovery-local-reputation-ai-plan.md, step 3: AI Overview gaps). */
+  aiOverviewPages: string[];
   localPackDomains: string[];
   featuredSnippetDomain: string | null;
   questions: string[];
@@ -661,7 +663,7 @@ export type SerpPageExtras = {
 };
 
 function emptyExtras(): SerpPageExtras {
-  return { features: [], aiOverviewDomains: [], localPackDomains: [], featuredSnippetDomain: null, questions: [], related: [] };
+  return { features: [], aiOverviewDomains: [], aiOverviewPages: [], localPackDomains: [], featuredSnippetDomain: null, questions: [], related: [] };
 }
 
 /** Every `domain` inside a feature, however deep its references sit. Bounded. */
@@ -681,12 +683,39 @@ function domainsIn(value: unknown, found: Set<string>, depth = 0): void {
   }
 }
 
+/** Every quoted page inside an AI Overview, "host/path", however deep its references sit. Bounded. */
+function pagesIn(value: unknown, found: Set<string>, depth = 0): void {
+  if (depth > 5 || found.size >= 30) return;
+  if (Array.isArray(value)) {
+    for (const entry of value) pagesIn(entry, found, depth + 1);
+    return;
+  }
+  const record = asRecord(value);
+  if (!record) return;
+  const url = asString(record.url);
+  if (url && asString(record.domain)) {
+    try {
+      const parsed = new URL(url);
+      found.add(`${parsed.hostname.replace(/^www\./, "").toLowerCase()}${parsed.pathname}`);
+    } catch {
+      // An address that does not read as one is no page.
+    }
+  }
+  for (const [key, child] of Object.entries(record)) {
+    if (key === "url" || typeof child !== "object" || child === null) continue;
+    pagesIn(child, found, depth + 1);
+  }
+}
+
 function collectExtras(page: SerpPageExtras, type: string, record: Unknown): void {
   if (!page.features.includes(type)) page.features.push(type);
   if (type === "ai_overview") {
     const found = new Set(page.aiOverviewDomains);
     domainsIn(record, found);
     page.aiOverviewDomains = [...found];
+    const pages = new Set(page.aiOverviewPages);
+    pagesIn(record, pages);
+    page.aiOverviewPages = [...pages];
   } else if (type === "local_pack") {
     const domain = asString(record.domain)?.toLowerCase();
     if (domain && !page.localPackDomains.includes(domain)) page.localPackDomains.push(domain);

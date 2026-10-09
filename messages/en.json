@@ -5817,6 +5817,10 @@
         "ai_citation_claude": "Asked Claude",
         "ai_citation_gemini": "Asked Gemini",
         "ai_citation_perplexity": "Asked Perplexity",
+        "ai_app_chatgpt": "Read the ChatGPT app",
+        "ai_app_gemini": "Read the Gemini app",
+        "ai_citation_ai_mode": "Asked Google AI Mode",
+        "ai_keyword_volume": "How often searches are asked of AI",
         "ai_overview_fan_out": "What Google's AI Overviews searched",
         "google_maps_find": "Found a business on Google Maps",
         "local_market": "Businesses of its kind nearby",
@@ -6228,7 +6232,8 @@
         "tasks": "{count, plural, one {# task} other {# tasks}}",
         "offices": "{count, plural, one {# office} other {# offices}}",
         "kilometres": "{count, plural, one {# km} other {# km}}",
-        "reviews": "{count, plural, one {# review} other {# reviews}}"
+        "reviews": "{count, plural, one {# review} other {# reviews}}",
+        "questions": "questions"
       },
       "topics": {
         "tasks": {
@@ -6245,6 +6250,11 @@
           "title": "Local: Google profiles and Maps",
           "intro": "What Discovery's Local pages read for each website: its own Google profiles, one per office, the rivals' profiles watched against each, where each office sits on Google Maps, and the businesses of its kind nearby. Bought from DataForSEO only for companies with Local switched on in their Collection schedule.",
           "footer": "Changes apply from each website's next run."
+        },
+        "radar": {
+          "title": "Brand radar",
+          "intro": "What Discovery's Brand radar reads for each website: the questions where Google's AI answers name it, and as many for the rivals watched beside it, each month. Bought only for companies with Brand radar switched on in their Collection schedule.",
+          "footer": "Changes apply from each website's next monthly reading."
         },
         "ai": {
           "title": "AI prompts",
@@ -6587,6 +6597,16 @@
           "label": "Each rival's reviews read a month",
           "description": "How many of each rival's newest reviews are read once a month, to compare how often it is reviewed and how fast it answers.",
           "cost": "A tenth of a cent for each ten reviews."
+        },
+        "radarQuestions": {
+          "label": "Brand radar questions read a month",
+          "description": "How many of the questions where Google's AI answers name the website are read each month, and as many for each rival watched beside it.",
+          "cost": "About a tenth of a cent a question, each month."
+        },
+        "radarRivals": {
+          "label": "Rivals beside the website on Brand radar",
+          "description": "How many of the website's tracked competitors Brand radar reads beside it, the first tracked first.",
+          "cost": "Each rival is read as the website is: its questions each month."
         },
         "hakkenTasksPerPerson": {
           "label": "Tasks on at once, per person",
@@ -9949,6 +9969,7 @@
       "jumpPlaceholder": "Jump to a page…",
       "groups": {
         "site": "Site",
+        "radar": "Brand radar",
         "ai": "AI answers",
         "google": "Google results",
         "local": "Local",
@@ -9965,6 +9986,10 @@
         "aiAnswers": "Full answers",
         "aiSources": "Sources cited",
         "aiSearched": "Fan-out queries",
+        "aiBusinesses": "Businesses recommended",
+        "aiRead": "Read but not cited",
+        "aiDemand": "AI demand",
+        "radarGaps": "AI Overview gaps",
         "googleSearches": "Your searches",
         "googleMoves": "Wins and losses",
         "googleAbove": "Who ranks above you",
@@ -10780,7 +10805,71 @@
       "searchesTitle": "What {engine} searched for this question",
       "searchesHint": "Across its answers to this question, the searches it came back to most first.",
       "timesSeen": "{count, plural, one {Seen once} other {Seen # times}}",
-      "noSearches": "No searches kept for this question yet."
+      "noSearches": "No searches kept for this question yet.",
+      "appOf": "{engine} app",
+      "ordinal": "{place, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
+      "placeOf": "{place} of {of}",
+      "notNamed": "Not named",
+      "namedBusinesses": "{count, plural, =1 {It named one business} other {It named # businesses}}",
+      "namedNobody": "It named no business",
+      "whereAsked": "Where it was asked",
+      "howAsked": "ChatGPT and Gemini are read as their apps show them, with the businesses, sources and searches on screen. Claude and Perplexity are asked through their models, as {platformName} does today; neither offers an app view. Google AI Mode is Google's own answer page.",
+      "figures": {
+        "whereYouCame": "Where you came",
+        "cameFirst": "{name} came first",
+        "businessesShown": "Businesses it showed",
+        "businessesShownDetail": "As cards, with Google ratings",
+        "pagesRead": "Pages it read",
+        "pagesReadDetail": "{count, plural, =0 {It cited none of them} other {It cited # of them}}",
+        "searchesRan": "Searches it ran",
+        "searchesRanDetail": "Behind the scenes, before answering",
+        "sourcesCited": "Sources it cited",
+        "yoursOf": "{count, plural, =1 {One of them yours} other {# of them yours}}",
+        "noneYours": "None of them yours",
+        "googlePosition": "Your Google position",
+        "mapPlace": "Your map place",
+        "notTracked": "Not one of your tracked searches",
+        "howAsked": "How it was asked",
+        "itsApp": "Its app",
+        "itsAppDetail": "As a person sees it",
+        "itsModel": "Its model",
+        "itsModelDetail": "Through its model, with web search"
+      },
+      "answerTitleShown": "The answer, as {engine} showed it",
+      "answerTitleModel": "The answer, as {engine} gave it",
+      "businessesTitle": "Businesses it showed",
+      "businessesDescription": "The cards {engine} put beside the answer. Its own picture of each business, with Google's rating.",
+      "noBusinesses": "It showed no businesses beside this answer.",
+      "columns": {
+        "place": "Place",
+        "business": "Business",
+        "rating": "Rating",
+        "reviews": "Reviews",
+        "onMaps": "On Google Maps for this search",
+        "page": "Page",
+        "whose": "Whose",
+        "inAnswer": "In the answer",
+        "search": "Search",
+        "position": "Position",
+        "tracked": "Tracked"
+      },
+      "you": "{name} · you",
+      "noWebsite": "No website",
+      "notTrackedShort": "Not tracked",
+      "readTitle": "Pages it read",
+      "readDescription": "Every page {engine} opened while answering. The ones it read but left out lost to the ones it cited.",
+      "citedOfThem": "· {count} cited",
+      "noRead": "It read no pages for this answer.",
+      "yours": "Yours",
+      "cited": "Cited",
+      "readNotCited": "Read, not cited",
+      "searchesRanTitle": "Searches it ran",
+      "searchesRanDescription": "What {engine} searched for before writing the answer, and where you rank on Google for each.",
+      "notInTop": "Not in the top 100",
+      "everyCheck": "Every check",
+      "trackFailed": "That search could not be tracked. Try again.",
+      "sourcesGoogle": "The pages Google linked under the answer.",
+      "sourcesLinked": "The pages linked under the answer."
     },
     "rivalRecord": {
       "description": "How {rival} compares with {site}: on every search you both rank for, who is ahead.",
@@ -12327,6 +12416,166 @@
           "seeAll": "See all {count} waiting"
         }
       }
+    },
+    "aiApps": {
+      "businesses": {
+        "title": "Businesses recommended",
+        "description": "The businesses the ChatGPT app puts in front of people for your questions, beside where each sits on Google Maps.",
+        "of": "{count} of {of}",
+        "figures": {
+          "showing": "Answers showing businesses",
+          "showingDetail": "Your questions, the last check",
+          "showingYou": "Showing you",
+          "checkBefore": "on the check before",
+          "noCheckBefore": "No check before yet",
+          "most": "Shown most",
+          "mostDetail": "In {count} of the {of} answers",
+          "noneShown": "No answer showed a business",
+          "skipped": "On the map, left out by AI",
+          "skippedDetail": "Searches where you are in the map box but ChatGPT skips you"
+        },
+        "notice": "Being on Google's map is not enough to be recommended by AI: research this year found only about 1 in 5 businesses in the map box were named in ChatGPT's answer. Reviews, directories and mentions elsewhere decide who it picks.",
+        "searchPlaceholder": "Find a business…",
+        "questionFilter": "Question",
+        "everyQuestion": "Every question",
+        "columns": {
+          "business": "Business",
+          "website": "Website",
+          "shown": "Shown in",
+          "place": "Usual place",
+          "rating": "Rating",
+          "reviews": "Reviews",
+          "map": "On Google's map"
+        },
+        "map": {
+          "box": "{count, plural, =1 {Map box for 1 search} other {Map box for # searches}}",
+          "below": "Below the map box",
+          "off": "Not on the {town} map",
+          "unknown": "No office linked"
+        },
+        "you": "{name} · you",
+        "noWebsite": "No website",
+        "noMatch": "No business matches.",
+        "empty": "No answer from the ChatGPT app has shown a business yet: they show from the next check."
+      },
+      "read": {
+        "title": "Read but not cited",
+        "description": "Pages the ChatGPT app opened while answering your questions, and how often it then quoted them. A page read but not cited was in the running and lost.",
+        "figures": {
+          "read": "Your pages read",
+          "readDetail": "{count, plural, =1 {Times, across 1 question} other {Times, across # questions}}",
+          "cited": "Then cited",
+          "citedOf": "{count} of {of}",
+          "rivalsShare": "rivals' pages {share}%",
+          "least": "Read most, cited least",
+          "leastDetail": "{read, plural, =1 {Read once} other {Read # times}}, {cited, plural, =0 {never cited} =1 {cited once} other {cited # times}}",
+          "beats": "Beats you most often",
+          "beatsDetail": "{count, plural, =1 {Cited in 1 answer that read your page} other {Cited in # answers that read your page}}",
+          "noneRead": "None of your pages read yet"
+        },
+        "searchPlaceholder": "Find a page…",
+        "whoseFilter": "Whose",
+        "everyone": "Everyone's",
+        "whoseFilters": {
+          "YOURS": "Yours",
+          "RIVAL": "Rivals'",
+          "OTHER": "Others"
+        },
+        "whose": {
+          "YOURS": "Yours"
+        },
+        "columns": {
+          "page": "Page",
+          "whose": "Whose",
+          "read": "Read",
+          "cited": "Cited",
+          "wins": "How often it wins"
+        },
+        "noMatch": "No page matches.",
+        "empty": "The ChatGPT app has read no pages for your questions yet: they show from the next check."
+      },
+      "demand": {
+        "title": "AI demand",
+        "description": "How often your searches are asked of AI tools each month, beside how often they are searched on Google. An estimate, built from Google's \"People also ask\".",
+        "figures": {
+          "ai": "Asked of AI a month",
+          "google": "Searched on Google a month",
+          "yearBefore": "on 11 months before",
+          "noYearBefore": "No year of figures yet",
+          "notYet": "Read on the next monthly check",
+          "rising": "Rising in AI",
+          "risingDetail": "Searches up a third or more in 3 months",
+          "most": "Asked of AI most"
+        },
+        "chartTitle": "AI against Google, a month",
+        "chartHint": "{count, plural, =1 {Your tracked search} other {Your # tracked searches added together}}, the last 12 months.",
+        "chartMonth": "Month",
+        "chartAi": "Asked of AI",
+        "chartGoogle": "Searched on Google",
+        "searchPlaceholder": "Find a search…",
+        "fromFilter": "From",
+        "everyList": "Every list",
+        "fromFilters": {
+          "SEARCH": "Your searches",
+          "FAN_OUT": "Fan-out queries",
+          "KEYWORD": "Keywords"
+        },
+        "from": {
+          "SEARCH": "Your search",
+          "FAN_OUT": "Fan-out query",
+          "KEYWORD": "Keyword"
+        },
+        "columns": {
+          "search": "Search",
+          "ai": "AI a month",
+          "trend": "AI trend",
+          "volume": "Volume",
+          "share": "Share asked of AI",
+          "from": "From"
+        },
+        "tooFew": "Too few to count",
+        "trendLabel": "How often \"{keyword}\" was asked of AI over the last 12 months",
+        "noMatch": "No search matches.",
+        "empty": "Nothing measured yet: your searches are measured on the next monthly check."
+      },
+      "gaps": {
+        "title": "AI Overview gaps",
+        "description": "Searches where you rank on Google but the AI Overview at the top quotes someone else. The overview sits above every result, yours included.",
+        "where": "Google · {place}",
+        "of": "{count} of {of}",
+        "figures": {
+          "overview": "Searches with an AI Overview",
+          "overviewDetail": "Your tracked searches",
+          "quotes": "The overview quotes you",
+          "monthBefore": "on 30 days before",
+          "noMonthBefore": "No check 30 days before yet",
+          "gaps": "Top {top} on Google, left out",
+          "gapsDetail": "The gaps listed below",
+          "behind": "Searches behind the gaps",
+          "behindDetail": "A month"
+        },
+        "notice": "Read from the Google checks {platformName} already makes for your searches, so this page costs nothing extra. Where the overview quotes a rival's page on the same question as yours, compare the two: it usually answers the question in its first lines.",
+        "searchPlaceholder": "Find a search…",
+        "quotesFilter": "Quotes you",
+        "either": "Either",
+        "quotesFilters": {
+          "no": "Not quoted",
+          "yes": "Quoted"
+        },
+        "withOverview": "with an overview",
+        "columns": {
+          "search": "Search",
+          "volume": "Volume",
+          "position": "Position",
+          "overview": "Overview",
+          "quotes": "It quotes",
+          "page": "Your page"
+        },
+        "quotesYou": "Quotes you",
+        "notQuoted": "Not quoted",
+        "noMatch": "No search matches.",
+        "empty": "None of your tracked searches shows an AI Overview on its last check."
+      }
     }
   },
   "searchConsole": {
@@ -13348,6 +13597,7 @@
     "perplexity": "Perplexity",
     "gemini": "Gemini",
     "claude": "Claude",
+    "aiMode": "Google AI Mode",
     "googleAiOverview": "Google AI Overviews"
   },
   "knowledgeArticles": {

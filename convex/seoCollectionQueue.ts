@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 
 import { discoveryPartOf } from "./discoveryParts";
+import { engineForOperationId } from "./seoAiEngines";
 import { partIsOn } from "./collectionParts";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -557,8 +558,9 @@ function describeCall(row: Doc<"seoDataPulls">): string {
   } catch {
     // An unreadable payload still names its operation.
   }
-  const what = row.operationId.startsWith("ai_citation_")
-    ? row.operationId.slice("ai_citation_".length)
+  const engine = engineForOperationId(row.operationId);
+  const what = engine
+    ? `${engine}${row.operationId.startsWith("ai_app_") ? " app" : ""}`
     // Keyword research's own answers are named by their engine, as the collection's are.
     : CALL_NAMES[row.operationId] ?? (row.operationId.startsWith("research_ai_") ? row.operationId.slice("research_ai_".length) : row.operationId);
   const about = args.keyword ?? args.user_prompt ?? args.target

@@ -102,6 +102,10 @@ export async function indexAnswerText(
 export async function deleteAnswerText(ctx: MutationCtx, textId: Id<"aiAnswerTexts">): Promise<void> {
   const index = await ctx.db.query("aiAnswerIndex").withIndex("by_text", (q) => q.eq("textId", textId)).first();
   if (index) await ctx.db.delete(index._id);
+  // What an app showed beside the answer goes with its wording (`aiAppSchema.ts`).
+  const text = await ctx.db.get(textId);
+  const extras = text ? await ctx.db.query("aiAnswerExtras").withIndex("by_pull", (q) => q.eq("pullId", text.pullId)).first() : null;
+  if (extras) await ctx.db.delete(extras._id);
   await ctx.db.delete(textId);
 }
 
@@ -133,7 +137,7 @@ export async function citedSourcesOf(ctx: Reader, pullId: Id<"seoDataPulls">): P
  * the answer's own after. An answer opened by its own id still shows its
  * wording when it is kept.
  */
-async function answerById(
+export async function answerById(
   ctx: Reader,
   id: Id<"aiAnswerTexts"> | Id<"aiAnswers">,
 ): Promise<{ text: Doc<"aiAnswerTexts"> | null; answer: Doc<"aiAnswers"> | null } | null> {

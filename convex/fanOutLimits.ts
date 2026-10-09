@@ -200,6 +200,10 @@ export const FAN_OUT_LIMITS = {
   localMarketKm: { choices: [5, 10, 25], fallback: 10, scope: "site" },
   /** Each rival's newest reviews read once a month (D9): enough to compare how often and how fast it answers. */
   localRivalReviews: { choices: [20, 50, 100], fallback: 50, scope: "site" },
+  /** Questions read each month where Google's AI answers name the website, and each rival watched (D9): Brand radar. */
+  radarQuestions: { choices: [50, 100, 200, 500], fallback: 200, scope: "site" },
+  /** Rivals Brand radar reads beside the website, its tracked competitors first. */
+  radarRivals: { choices: [2, 4, 6], fallback: 4, scope: "site" },
 } as const satisfies Record<string, LimitSpec>;
 
 export type FanOutLimitKey = keyof typeof FAN_OUT_LIMITS;
@@ -316,6 +320,8 @@ const limitsArg = v.object({
   localMarketBusinesses: limitValue,
   localMarketKm: limitValue,
   localRivalReviews: limitValue,
+  radarQuestions: limitValue,
+  radarRivals: limitValue,
 });
 
 /** Each limit's own value where set, null where it uses the level above. */

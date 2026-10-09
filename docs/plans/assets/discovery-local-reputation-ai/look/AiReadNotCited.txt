@@ -1,0 +1,16 @@
+# Discovery → AI answers → Read but not cited — the approved look (board "AiReadNotCited" of docs/plans/assets/discovery-local-reputation-ai/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Read but not cited
+figures
+  figure: Your pages read
+  figure: Then cited
+  figure: Read most, cited least
+  figure: Beats you most often
+search: Find a page…
+filter: Whose
+table: Page | Whose | Read | Cited | How often it wins
+  table-bar
+    download: Download CSV
+  table-footer
+    select: Rows per page

@@ -36,6 +36,7 @@ import { detachCompanySchedules } from "./scheduler";
 import { removeSampleResearch } from "./keywordResearchSampleMigration";
 import { prepareMainCountryOf } from "./searchConsoleMainCountry";
 import { connectionsPage } from "./searchConsoleSync";
+import { addAiModeToQuestions, fillSerpOverviews } from "./discoveryMigrations";
 import {
   rebuildAnswerSummaries,
   rebuildOperationCosts,
@@ -805,6 +806,9 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
       updated,
     };
   },
+  // Discovery's step 3 (discovery-local-reputation-ai-plan.md): in `discoveryMigrations.ts`.
+  "2026-10-09-serp-overviews": fillSerpOverviews,
+  "2026-10-09-ai-mode-on-every-question": addAiModeToQuestions,
 };
 
 export function getRegisteredMigrationNames() {

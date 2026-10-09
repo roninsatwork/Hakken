@@ -31,6 +31,8 @@ export function readLocationCode(taskArgsJson: string | undefined): number | und
   if (!taskArgsJson) return undefined;
   try {
     const args = JSON.parse(taskArgsJson) as Record<string, unknown>;
+    // An app and Google AI Mode are sent the code itself (`seoAiShownParams`).
+    if (typeof args.location_code === "number") return args.location_code;
     // The engines take a country and city, not a code; the code is what the
     // company website stored, and it is recovered from the city when present.
     const city = typeof args.web_search_city === "string" ? args.web_search_city : undefined;

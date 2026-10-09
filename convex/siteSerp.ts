@@ -1,5 +1,5 @@
 import { v, type Infer } from "convex/values";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import type { SerpPageExtras } from "./dataForSeoParsers";
 
@@ -29,6 +29,8 @@ export const serpSnapshotValidator = v.object({
   results: v.array(v.object({ position: v.number(), domain: v.string(), url: v.optional(v.string()) })),
   features: v.array(v.string()),
   aiOverviewDomains: v.array(v.string()),
+  /** The pages it quotes, "host/path"; absent from a page filed before 2026-10-09. */
+  aiOverviewPages: v.optional(v.array(v.string())),
   localPackDomains: v.array(v.string()),
   featuredSnippetDomain: v.optional(v.string()),
   questions: v.array(v.string()),
@@ -51,6 +53,7 @@ export function serpSnapshotOf(page: {
     })),
     features: page.page.features,
     aiOverviewDomains: page.page.aiOverviewDomains,
+    ...(page.page.aiOverviewPages.length > 0 ? { aiOverviewPages: page.page.aiOverviewPages } : {}),
     localPackDomains: page.page.localPackDomains,
     ...(page.page.featuredSnippetDomain ? { featuredSnippetDomain: page.page.featuredSnippetDomain } : {}),
     questions: page.page.questions,
@@ -71,13 +74,13 @@ export async function fileSerpPage(
     .query("siteSerpPages")
     .withIndex("by_pull", (q) => q.eq("pullId", entry.pullId))
     .take(SAME_PULL_LIMIT);
-  for (const row of fromPull) await ctx.db.delete(row._id);
+  for (const row of fromPull) await deleteSerpPage(ctx, row);
   const sameDay = await ctx.db
     .query("siteSerpPages")
     .withIndex("by_keyword_place_day", (q) =>
       q.eq("keyword", entry.keyword).eq("locationCode", entry.locationCode).eq("day", entry.day))
     .take(SAME_PULL_LIMIT);
-  for (const row of sameDay) await ctx.db.delete(row._id);
+  for (const row of sameDay) await deleteSerpPage(ctx, row);
 
   await ctx.db.insert("siteSerpPages", {
     keyword: entry.keyword,
@@ -87,4 +90,23 @@ export async function fileSerpPage(
     ...entry.snapshot,
     createdAt: Date.now(),
   });
+  // Its AI Overview in small, for AI Overview gaps (`aiAppSchema.ts`).
+  await ctx.db.insert("serpOverviews", {
+    keyword: entry.keyword,
+    locationCode: entry.locationCode,
+    day: entry.day,
+    pullId: entry.pullId,
+    overview: entry.snapshot.features.includes("ai_overview"),
+    domains: entry.snapshot.aiOverviewDomains,
+  });
+}
+
+/** A results page and its AI Overview in small, cleared together. */
+export async function deleteSerpPage(ctx: MutationCtx, page: Pick<Doc<"siteSerpPages">, "_id" | "keyword" | "locationCode" | "day" | "pullId">): Promise<void> {
+  const small = await ctx.db
+    .query("serpOverviews")
+    .withIndex("by_keyword_place_day", (q) => q.eq("keyword", page.keyword).eq("locationCode", page.locationCode).eq("day", page.day))
+    .take(SAME_PULL_LIMIT);
+  for (const row of small) if (row.pullId === page.pullId) await ctx.db.delete(row._id);
+  await ctx.db.delete(page._id);
 }

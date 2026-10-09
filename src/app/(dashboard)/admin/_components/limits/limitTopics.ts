@@ -12,7 +12,7 @@
  * without its words in English and Italian.
  */
 
-export type LimitTopic = { id: "tasks" | "google" | "local" | "ai" | "matching" | "searchConsole" | "consoleScreens" | "pages" | "research" | "company" | "shared"; keys: readonly string[] };
+export type LimitTopic = { id: "tasks" | "google" | "local" | "radar" | "ai" | "matching" | "searchConsole" | "consoleScreens" | "pages" | "research" | "company" | "shared"; keys: readonly string[] };
 
 export const LIMIT_TOPICS: readonly LimitTopic[] = [
   // Hakken tasks (hakken-tasks-plan.md): what one person can have Hakken keep doing.
@@ -23,6 +23,8 @@ export const LIMIT_TOPICS: readonly LimitTopic[] = [
   },
   // Discovery's Local pages (discovery-local-reputation-ai-plan.md, D9): a website's offices, its rivals' profiles, Maps and the local market.
   { id: "local", keys: ["localOffices", "localRivalsPerOffice", "localMapDepth", "localMarketBusinesses", "localMarketKm", "localRivalReviews"] },
+  // Discovery's Brand radar (the same plan, D9): Google's AI answers naming the website and its rivals, monthly.
+  { id: "radar", keys: ["radarQuestions", "radarRivals"] },
   { id: "ai", keys: ["promptsPerSite", "fanOutTrackedPerSite", "searchesPerEngine", "wordingsPerAngle", "anglesShown", "googleSearchesRead"] },
   {
     id: "matching",
@@ -84,7 +86,8 @@ export type LimitUnit =
   | "tasks"
   | "offices"
   | "kilometres"
-  | "reviews";
+  | "reviews"
+  | "questions";
 
 export const LIMIT_UNITS: Record<string, LimitUnit> = {
   hakkenTasksPerPerson: "tasks",
@@ -142,6 +145,8 @@ export const LIMIT_UNITS: Record<string, LimitUnit> = {
   localMarketBusinesses: "businesses",
   localMarketKm: "kilometres",
   localRivalReviews: "reviews",
+  radarQuestions: "questions",
+  radarRivals: "competitors",
   fanOutPerAnswer: "searches",
   sourcesPerAnswer: "sources",
   businessesPerAnswer: "businesses",

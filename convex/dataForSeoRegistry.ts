@@ -1,18 +1,26 @@
 import { readWebsiteHost } from "./websiteIdentity";
 import {
-  AI_ENGINES,
   AI_ENGINE_CALLS,
+  AI_MODE_ENGINE,
+  APP_ENGINES,
+  APP_PLATFORMS,
+  MODEL_ENGINES,
+  aiAppOperationId,
   aiCitationOperationId,
+  isAppEngine,
   type AiEngine,
+  type AppEngine,
+  type ModelEngine,
 } from "./seoAiEngines";
+import { DEFAULT_LOCATION_CODE, countryCodeOf, findSeoLocation } from "./utils/seoLocations";
 import { SITE_LINK_OPERATIONS } from "./dataForSeoLinkOperations";
 import { CRAWL_OPERATIONS } from "./dataForSeoCrawlOperations";
 import { KEYWORD_LIST_OPERATIONS } from "./dataForSeoKeywordListOperations";
 import { AI_OVERVIEW_OPERATIONS } from "./dataForSeoAiOverviewOperations";
 import { LOCAL_OPERATIONS } from "./dataForSeoLocalOperations";
 import { REVIEW_OPERATIONS } from "./dataForSeoReviewOperations";
+import { AI_DEMAND_OPERATIONS } from "./dataForSeoAiDemandOperations";
 import { appError } from "./utils/appError";
-import { countryCodeOf } from "./utils/seoLocations";
 
 /**
  * What Hakken can ask DataForSEO, as a list.
@@ -137,7 +145,7 @@ export type SeoOperation = {
  * prompt is `text`, not `keyword`: it is a sentence somebody would type, and
  * the keyword coercion would mangle it.
  */
-const AI_CITATION_OPERATIONS: readonly SeoOperation[] = AI_ENGINES.map((engine) => {
+const AI_CITATION_OPERATIONS: readonly SeoOperation[] = MODEL_ENGINES.map((engine) => {
   const call = AI_ENGINE_CALLS[engine];
   const base = `/v3/ai_optimization/${call.platform}/llm_responses`;
   return {
@@ -159,14 +167,47 @@ const AI_CITATION_OPERATIONS: readonly SeoOperation[] = AI_ENGINES.map((engine) 
   };
 });
 
+/**
+ * The two apps (`APP_ENGINES`), read as a person sees them, and Google AI
+ * Mode's answer page (docs/plans/active/discovery-local-reputation-ai-plan.md,
+ * D5, D17): asked the same question as the models, by `keyword`, for a
+ * country — $0.004 each, tried 2026-10-09. Each answers to the same engine as
+ * before, so its answers carry on that engine's line.
+ */
+const AI_APP_OPERATIONS: readonly SeoOperation[] = [
+  ...APP_ENGINES.map((engine): SeoOperation => ({
+    id: aiAppOperationId(engine),
+    question: `What does the ${engine} app show when asked this: its answer, the businesses, pages and searches?`,
+    family: "AI Optimization",
+    mode: "LIVE",
+    path: `/v3/ai_optimization/${APP_PLATFORMS[engine]}/llm_scraper/live/advanced`,
+    costBand: "low",
+    aiEngine: engine,
+    params: { keyword: { kind: "text", required: true, description: "The question, as a person would ask it." } },
+  })),
+  {
+    id: aiCitationOperationId(AI_MODE_ENGINE),
+    question: "What does Google AI Mode answer when asked this, and who does it name?",
+    // A Google results page by its path, but an AI answer by what it is: charged as AI answers.
+    family: "AI Optimization",
+    mode: "LIVE",
+    path: "/v3/serp/google/ai_mode/live/advanced",
+    costBand: "low",
+    aiEngine: AI_MODE_ENGINE,
+    params: { keyword: { kind: "text", required: true, description: "The question, as a person would ask it." } },
+  },
+];
+
 export const SEO_OPERATIONS: readonly SeoOperation[] = [
   ...AI_CITATION_OPERATIONS,
+  ...AI_APP_OPERATIONS,
   ...SITE_LINK_OPERATIONS,
   ...CRAWL_OPERATIONS,
   ...KEYWORD_LIST_OPERATIONS,
   ...AI_OVERVIEW_OPERATIONS,
   ...LOCAL_OPERATIONS,
   ...REVIEW_OPERATIONS,
+  ...AI_DEMAND_OPERATIONS,
   {
     id: "serp_google_organic",
     question: "Where does a website rank on Google for a given search, and who else is on that page?",
@@ -428,7 +469,7 @@ export function seoSiteOperations(): readonly SeoOperation[] {
  * otherwise.
  */
 export function seoAiCitationParams(
-  engine: AiEngine,
+  engine: ModelEngine,
   prompt: string,
   location: { countryIso: string; city?: string } | null,
 ): Record<string, unknown> {
@@ -444,6 +485,42 @@ export function seoAiCitationParams(
       }
       : {}),
   };
+}
+
+/**
+ * What an app or Google AI Mode is sent: the question, the website's place —
+ * its country for an app, which takes no town (`APP_ENGINES`), the place
+ * itself for AI Mode — and English, as every Google check is asked.
+ */
+export function seoAiShownParams(engine: AppEngine | typeof AI_MODE_ENGINE, prompt: string, locationCode: number | undefined): Record<string, unknown> {
+  const place = locationCode ?? DEFAULT_LOCATION_CODE;
+  return {
+    keyword: prompt,
+    location_code: engine === AI_MODE_ENGINE ? place : countryCodeOf(place),
+    language_code: "en",
+    ...(engine === "chatgpt" ? { force_web_search: true } : {}),
+  };
+}
+
+/**
+ * How one engine is asked one question for a website (D5, D16): the two apps
+ * (`APP_ENGINES`) read as shown while the company has "AI apps" on, else through
+ * their models; Google AI Mode only while it is on; the rest through their
+ * models. Null when the engine is not asked at all.
+ */
+export function aiAskFor(
+  engine: AiEngine,
+  prompt: string,
+  locationCode: number | undefined,
+  appsOn: boolean,
+): { operation: SeoOperation; params: Record<string, unknown> } | null {
+  const shown = engine === AI_MODE_ENGINE || (appsOn && isAppEngine(engine));
+  if (shown && !appsOn) return null;
+  const operation = findSeoOperation(shown && isAppEngine(engine) ? aiAppOperationId(engine) : aiCitationOperationId(engine));
+  if (!operation) return null;
+  if (shown) return { operation, params: seoAiShownParams(engine as AppEngine | typeof AI_MODE_ENGINE, prompt, locationCode) };
+  const place = locationCode !== undefined ? findSeoLocation(locationCode) : null;
+  return { operation, params: seoAiCitationParams(engine as ModelEngine, prompt, place ? { countryIso: place.countryIso, city: place.city } : null) };
 }
 
 /** The operations that ask an AI engine a question. One per engine. */

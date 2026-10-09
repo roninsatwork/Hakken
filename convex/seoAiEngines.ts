@@ -15,7 +15,7 @@ import { DEFAULT_LOCATION_CODE, findSeoLocation } from "./utils/seoLocations";
  * `/v3/ai_optimization/{platform}/...` and inventing our own spelling would
  * mean a translation table that can only ever go wrong.
  */
-export const AI_ENGINES = ["chatgpt", "perplexity", "gemini", "claude"] as const;
+export const AI_ENGINES = ["chatgpt", "perplexity", "gemini", "claude", "ai_mode"] as const;
 
 export type AiEngine = (typeof AI_ENGINES)[number];
 
@@ -28,6 +28,7 @@ export const aiEngineValidator = v.union(
   v.literal("perplexity"),
   v.literal("gemini"),
   v.literal("claude"),
+  v.literal("ai_mode"),
 );
 
 export function isAiEngine(value: string): value is AiEngine {
@@ -45,7 +46,44 @@ export const AI_ENGINE_NAMES: Record<AiEngine, string> = {
   perplexity: "Perplexity",
   gemini: "Gemini",
   claude: "Claude",
+  ai_mode: "Google AI Mode",
 };
+
+/**
+ * The engines asked through their models (`llm_responses`): every engine but
+ * Google AI Mode, which is Google's own answer page and has no model to ask.
+ * Keyword research asks these; a run asks ChatGPT and Gemini through their
+ * apps instead while a company has "AI apps" on (D5, below).
+ */
+export const MODEL_ENGINES = ["chatgpt", "perplexity", "gemini", "claude"] as const;
+export type ModelEngine = (typeof MODEL_ENGINES)[number];
+export function isModelEngine(engine: AiEngine): engine is ModelEngine {
+  return (MODEL_ENGINES as readonly string[]).includes(engine);
+}
+
+/**
+ * Read as a person sees them (docs/plans/active/discovery-local-reputation-ai-
+ * plan.md, D5, D17): ChatGPT's and Gemini's apps, through DataForSEO's LLM
+ * Scraper, with the businesses, sources, pages read and searches on screen —
+ * $0.004 a question, tried 2026-10-09. Their answers carry on the engines'
+ * own lines. Asked only for a company with "AI apps" switched on (D16); the
+ * rest are asked through the models as before.
+ *
+ * Each takes a country, not a town (ChatGPT's list holds countries only), so
+ * a website watched from a town is asked for its country: its answers are
+ * filed under the country, and a reader of that town's answers misses them —
+ * no client is watched from a town today (2026-10-09).
+ */
+export const APP_ENGINES = ["chatgpt", "gemini"] as const;
+export type AppEngine = (typeof APP_ENGINES)[number];
+export function isAppEngine(engine: AiEngine): engine is AppEngine {
+  return (APP_ENGINES as readonly string[]).includes(engine);
+}
+/** DataForSEO's path segment for each app, verbatim. */
+export const APP_PLATFORMS: Record<AppEngine, string> = { chatgpt: "chat_gpt", gemini: "gemini" };
+
+/** Google AI Mode: Google's own answer page, bought as a Google results page ($0.004, D17). */
+export const AI_MODE_ENGINE = "ai_mode" as const;
 
 /** The engines a prompt is asked of when nobody has chosen. All of them. */
 export const DEFAULT_AI_ENGINES: readonly AiEngine[] = AI_ENGINES;
@@ -76,7 +114,7 @@ export const DEFAULT_AI_ENGINES: readonly AiEngine[] = AI_ENGINES;
  * `web_search` is on for every engine that has the switch. It is the whole
  * point: an answer with no sources is an answer with nothing to cite.
  */
-export const AI_ENGINE_CALLS: Record<AiEngine, {
+export const AI_ENGINE_CALLS: Record<ModelEngine, {
   /** DataForSEO's path segment, verbatim. */
   platform: string;
   mode: "QUEUED" | "LIVE";
@@ -133,6 +171,8 @@ export const AI_ENGINE_CALLS: Record<AiEngine, {
  * writer and reader of answers, is what keeps the two from disagreeing again.
  */
 export function answerPlace(engine: AiEngine, locationCode: number | undefined): number {
+  // Google AI Mode is asked from the website's own place, as Google's results are.
+  if (!isModelEngine(engine)) return locationCode ?? DEFAULT_LOCATION_CODE;
   return AI_ENGINE_CALLS[engine].takesLocation ? locationCode ?? DEFAULT_LOCATION_CODE : DEFAULT_LOCATION_CODE;
 }
 
@@ -144,6 +184,8 @@ export function answerPlace(engine: AiEngine, locationCode: number | undefined):
  * place at all. A chosen "United Kingdom" sends the country, so it is "GB".
  */
 export function fanOutPlace(engine: AiEngine, locationCode: number | undefined): string | undefined {
+  // Google AI Mode runs no searches of its own that it shows.
+  if (!isModelEngine(engine)) return undefined;
   if (!AI_ENGINE_CALLS[engine].takesLocation || locationCode === undefined) return undefined;
   const place = findSeoLocation(locationCode);
   if (!place) return undefined;
@@ -164,18 +206,29 @@ export const fanOutSourceValidator = v.union(
   v.literal("perplexity"),
   v.literal("gemini"),
   v.literal("claude"),
+  v.literal("ai_mode"),
   v.literal("google_ai_overview"),
 );
 
-/** The registry operation id that asks one engine. One per engine. */
+/** The registry operation id that asks one engine — through its model, or Google AI Mode's page. One per engine. */
 export function aiCitationOperationId(engine: AiEngine): string {
   return `ai_citation_${engine}`;
 }
 
+/** The registry operation id that reads one engine's app (D5). */
+export function aiAppOperationId(engine: AppEngine): string {
+  return `ai_app_${engine}`;
+}
+
 /** The engine an operation id asks, or null if it is not one of these. */
 export function engineForOperationId(operationId: string): AiEngine | null {
-  const prefix = "ai_citation_";
-  if (!operationId.startsWith(prefix)) return null;
+  const prefix = ["ai_citation_", "ai_app_"].find((candidate) => operationId.startsWith(candidate));
+  if (!prefix) return null;
   const engine = operationId.slice(prefix.length);
   return isAiEngine(engine) ? engine : null;
+}
+
+/** Whether an operation reads an app or Google AI Mode's page, rather than asking a model. */
+export function readsAsShown(operationId: string): boolean {
+  return operationId.startsWith("ai_app_") || operationId === aiCitationOperationId(AI_MODE_ENGINE);
 }

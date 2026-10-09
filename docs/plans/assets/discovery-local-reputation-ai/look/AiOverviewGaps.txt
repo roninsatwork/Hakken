@@ -1,0 +1,17 @@
+# Discovery → Brand radar → AI Overview gaps — the approved look (board "AiOverviewGaps" of docs/plans/assets/discovery-local-reputation-ai/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: AI Overview gaps
+figures
+  figure: Searches with an AI Overview
+  figure: The overview quotes you
+  figure: Top # on Google, left out
+  figure: Searches behind the gaps
+notice (info)
+search: Find a search…
+filter: Quotes you
+table: Search | Volume | Position | Overview | It quotes | Your page
+  table-bar
+    download: Download CSV
+  table-footer
+    select: Rows per page

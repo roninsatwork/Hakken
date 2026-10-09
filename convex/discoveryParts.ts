@@ -1,3 +1,5 @@
+import { readsAsShown } from "./seoAiEngines";
+import { isAiDemandOperation } from "./dataForSeoAiDemandOperations";
 import type { CollectionPart } from "./collectionParts";
 import { isLocalOperation } from "./dataForSeoLocalOperations";
 import { isReviewOperation } from "./dataForSeoReviewOperations";
@@ -11,5 +13,8 @@ import { isReviewOperation } from "./dataForSeoReviewOperations";
 export function discoveryPartOf(operationId: string): CollectionPart | null {
   if (isLocalOperation(operationId)) return "local";
   if (isReviewOperation(operationId)) return "reviews";
+  // The two apps read as shown and Google AI Mode (D5, D17).
+  if (readsAsShown(operationId)) return "aiApps";
+  if (isAiDemandOperation(operationId)) return "aiDemand";
   return null;
 }
