@@ -123,6 +123,16 @@ The normalisation plan's five rules, and the storage rules it built
 9. **No queue waits on a person**: every purchase is the Collector's, on the
    schedule, as today.
 10. **No screen names the supplier.**
+11. **Write only what changed** (normalisation plan §7A.1): a listing, a
+    week, a summary is rewritten only when what it holds is different — a map
+    check that names a business seen yesterday with the same rating writes
+    nothing to it. Reading and writing is Convex's largest charge, already
+    past what the plan includes (§7A there).
+12. **AI judgements in batches** (normalisation plan §7.3, N10): Web
+    mentions' check (D20) asks about a few dozen pages a call, never one.
+13. **No new timers** (normalisation plan §7A.5): menu numbers and Your
+    assets are worked out after a filing that changes them, never on a
+    schedule of their own.
 
 ## 4. What exists to build on
 
@@ -340,5 +350,6 @@ three new assistants in their assistant filters.
   2026-10-08. Town by town dropped (Anthony, 2026-10-09).
 - 2026-10-09 — D3, D4, D5, D10 and D11 agreed by Anthony.
 - 2026-10-09 — Test calls made (17, $0.35): prices into §6, findings §6A, D13 added.
+- 2026-10-09 — Rules 11–13 added from the normalisation plan's Part 4 on rereading it: write only what changed, AI judgements in batches, no new timers.
 - 2026-10-09 — D14–D21 asked all at once and agreed (Anthony: "i want all questions asked upfront and i want you to finish this in one go"); building waits for his "start".
 - 2026-10-09 — D1, D2, D6–D9, D12 and D13 agreed: Local first, every office tracked, cadence and limits as drawn, Web mentions last after a test on Korda (steps 5 and 6 swapped).
