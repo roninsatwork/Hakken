@@ -31,7 +31,7 @@ const ENGINE = "chatgpt" as const;
 type AppAnswer = { prompt: string; day: string; extras: Doc<"aiAnswerExtras">; pullId: Id<"seoDataPulls"> };
 
 /** Each of a website's questions' newest answers read from the app, newest first. */
-async function appAnswers(ctx: Reader, site: Site): Promise<Map<string, AppAnswer[]>> {
+export async function appAnswers(ctx: Reader, site: Site, read = ANSWERS_READ): Promise<Map<string, AppAnswer[]>> {
   const owner = site.hold;
   const limits = await readFanOutLimits(ctx, owner.companyId, owner._id);
   const questions = await holdQuestions(ctx, listHold(site), Math.min(MAX_PROMPTS_PER_WEBSITE, limits.promptsPerSite), { activeOnly: true });
@@ -41,7 +41,7 @@ async function appAnswers(ctx: Reader, site: Site): Promise<Map<string, AppAnswe
       .query("aiAnswerIndex")
       .withIndex("by_question", (q) => q.eq("prompt", question.prompt).eq("engine", ENGINE).eq("locationCode", answerPlace(ENGINE, site.place)))
       .order("desc")
-      .take(ANSWERS_READ);
+      .take(read);
     const answers: AppAnswer[] = [];
     for (const row of index) {
       const extras = await ctx.db.query("aiAnswerExtras").withIndex("by_pull", (q) => q.eq("pullId", row.pullId)).first();

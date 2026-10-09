@@ -290,6 +290,7 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   reviewReplyDrafts: LATEST,
   collectionParts: RECORD,
   localSummaries: LATEST,
+  assetSummaries: LATEST,
 
   // ── Search Console ────────────────────────────────────────────────────────
   searchConsoleConnections: RECORD,

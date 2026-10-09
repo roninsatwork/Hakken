@@ -34,7 +34,8 @@ export type SitePage = {
     | "localMarket"
     | "localRivalPosts"
     | "localListings"
-    | "localReviews";
+    | "localReviews"
+    | "assets";
   /**
    * What the page cannot show anything without, set up by the team for the
    * site: the questions asked of AI assistants, or the searches checked one
@@ -71,6 +72,8 @@ export const SITE_PAGE_GROUPS: SitePageGroup[] = ["site", "radar", "ai", "google
 
 export const SITE_PAGES: SitePage[] = [
   { id: "overview", group: "site", segment: "", built: true },
+  // Every place people can find the business (discovery-local-reputation-ai-plan.md, step 5).
+  { id: "assets", group: "site", segment: "assets", built: true, count: "assets" },
   // Every page of the website once, against its sitemap (docs/plans/active/page-groups-plan.md, decision 4).
   { id: "yourPages", group: "site", segment: "your-pages", built: true, count: "yourPages" },
   { id: "siteAudit", group: "site", segment: "audit", built: true },

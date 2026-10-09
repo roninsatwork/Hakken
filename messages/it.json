@@ -9572,7 +9572,8 @@
       "rivalActions": "{count, plural, =1 {# cosa fatta dai concorrenti} other {# cose fatte dai concorrenti}}",
       "questions": "{count, plural, =1 {# domanda} other {# domande}}",
       "found": "{count, plural, =1 {# trovata} other {# trovate}}",
-      "reviews": "{count, plural, =1 {# recensione} other {# recensioni}}"
+      "reviews": "{count, plural, =1 {# recensione} other {# recensioni}}",
+      "assets": "{count, plural, =1 {# asset} other {# asset}}"
     },
     "chart": {
       "download": "Scarica",
@@ -9982,6 +9983,7 @@
       },
       "pages": {
         "overview": "Panoramica",
+        "assets": "I tuoi asset",
         "aiMentions": "Menzioni",
         "aiShareOfVoice": "Quota di voce",
         "aiAnswers": "Risposte complete",
@@ -12689,6 +12691,87 @@
         "topPages": "le più citate",
         "pagesEmpty": "Ancora nessuna pagina citata."
       }
+    },
+    "assets": {
+      "title": "I tuoi asset",
+      "description": "Ogni posto in cui le persone possono trovare l'attività, cosa porta ciascuno, e la fase in cui le perde.",
+      "figures": {
+        "assets": "Asset",
+        "assetsDetail": "Sito, {profiles, plural, =1 {1 profilo Google} other {# profili Google}}, {reviews, plural, =1 {1 sito di recensioni} other {# siti di recensioni}}, {ai, plural, =1 {1 tipo di risposta IA} other {# tipi di risposta IA}} e {others, plural, =1 {1 altro posto} other {# altri posti}}",
+        "working": "Funzionano",
+        "workingDetail": "Visti e scelti",
+        "losing": "Perdono persone",
+        "losingDetail": "Poco visti, o visti e non scelti",
+        "missing": "Del tutto assenti",
+        "missingDetail": "Posti dove sono i concorrenti e tu no"
+      },
+      "notice": "Ogni asset accompagna le persone in tre fasi: visto, scelto, poi contattato. Le chiamate e le richieste di indicazioni di un profilo Google richiedono i dati del profilo di Google stesso, che {platformName} non legge ancora; fino ad allora un profilo mostra quanto spesso è visto sulla mappa.",
+      "searchPlaceholder": "Cerca un asset…",
+      "kindFilter": "Tipo",
+      "everyKind": "Ogni tipo",
+      "stageFilter": "Fase",
+      "everyStage": "Ogni fase",
+      "groups": {
+        "website": "Sito e pagine",
+        "profiles": "Profili Google",
+        "reviews": "Siti di recensioni",
+        "ai": "Risposte IA",
+        "places": "Directory e stampa"
+      },
+      "stages": {
+        "NOT_SEEN": "Poco visto",
+        "SEEN_NOT_CHOSEN": "Visto, non scelto",
+        "WORKING": "Funziona",
+        "NOT_THERE": "Assente"
+      },
+      "kinds": {
+        "WEBSITE": "Sito",
+        "PAGE": "Pagina del sito",
+        "PROFILE": "Profilo dell'attività su Google",
+        "REVIEW_SITE": "Sito di recensioni",
+        "AI_APP": "App di IA",
+        "AI_OVERVIEW": "Risposta IA su Google",
+        "DIRECTORY": "Elenco"
+      },
+      "profileOf": "Profilo Google · {town}",
+      "appAnswers": "Risposte di {name}",
+      "columns": {
+        "asset": "Asset",
+        "kind": "Tipo",
+        "seen": "Visto",
+        "chosen": "Scelto",
+        "stage": "Fase più debole",
+        "fix": "Da sistemare prima"
+      },
+      "seen": {
+        "pageOne": "{count, plural, =1 {Nella prima pagina di Google per 1 ricerca} other {Nella prima pagina di Google per {a} ricerche}}",
+        "mapBox": "Riquadro mappa per {a} ricerche su {b}",
+        "aiQuoted": "{count, plural, =0 {Non citato dall'IA} =1 {Citato dall'IA una volta} other {Citato dall'IA {a} volte}}",
+        "pagesRead": "{count, plural, =0 {Non ha letto le tue pagine} =1 {Ha letto le tue pagine una volta} other {Ha letto le tue pagine {a} volte}}",
+        "overviews": "{count, plural, =1 {Su 1 delle tue ricerche} other {Su {a} delle tue ricerche}}"
+      },
+      "chosen": {
+        "visits": "{a} visite al mese",
+        "notRead": "Non ancora letto",
+        "recommended": "Ti ha consigliato in {a} su {b}",
+        "quotesYou": "Ti cita su {a}",
+        "reviews": "{a} recensioni · {rating}"
+      },
+      "fix": {
+        "fewOnPageOne": "In prima pagina solo per {a} ricerche: lavora sulle pagine appena sotto.",
+        "fewVisits": "{a} visite al mese da {b} ricerche in prima pagina: riscrivi i titoli che le persone saltano.",
+        "answerReviews": "Rispondi alle recensioni: solo il {a}% ha una risposta.",
+        "climbMap": "Nel riquadro della mappa per meno della metà delle ricerche: completa il profilo e aggiungi foto.",
+        "moreReviews": "Troppe poche recensioni perché l'IA si fidi: {a} finora.",
+        "readNotQuoted": "{count, plural, =1 {La tua pagina {text} è letta una volta e non ti fa mai consigliare: rispondi alla domanda nelle prime righe.} other {La tua pagina {text} è letta {a} volte e non ti fa mai consigliare: rispondi alla domanda nelle prime righe.}}",
+        "getRead": "ChatGPT non ti nomina né legge le tue pagine: fatti elencare dove cerca.",
+        "answerRivalPage": "Una pagina di un concorrente, {text}, è citata {a} volte: scrivine una che risponda allo stesso.",
+        "beQuoted": "Citato su meno della metà delle ricerche con una panoramica: rispondi alla domanda nelle prime righe delle tue pagine.",
+        "getListed": "{count, plural, =1 {Fatti elencare: c'è 1 concorrente} other {Fatti elencare: ci sono {a} concorrenti}}"
+      },
+      "nothingToFix": "Niente da sistemare",
+      "noMatch": "Nessun asset corrisponde.",
+      "empty": "I tuoi asset vengono calcolati dopo la prossima raccolta."
     }
   },
   "searchConsole": {

@@ -2,6 +2,7 @@ import { v } from "convex/values";
 
 import { discoveryPartOf } from "./discoveryParts";
 import { engineForOperationId } from "./seoAiEngines";
+import { bookAssetsAfter } from "./assetSummaries";
 import { partIsOn } from "./collectionParts";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -749,6 +750,8 @@ export async function finishSeoCycle(
   await ctx.scheduler.runAfter(0, internal.sitemaps.readCycleSitemaps, { cycleId });
   // And their Search Console figures added up after it (Anthony, 2026-10-05: "after each website collection").
   await ctx.scheduler.runAfter(0, internal.searchConsoleSettling.afterCompanyCollection, { cycleId });
+  // And Your assets, once its answers have landed (`assetSummaries.ts`, discovery plan step 5).
+  await bookAssetsAfter(ctx, cycleId);
   await creditCycleFinished(ctx, cycleId);
 }
 

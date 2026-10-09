@@ -25,7 +25,7 @@ type Reader = { db: QueryCtx["db"] };
 type Reading = { website: Doc<"websites">; you: boolean; part: Doc<"brandRadarQuestionParts"> | null; months: Doc<"brandRadarMonths"> | null };
 
 /** The website's reading and its rivals', in the country it is watched from. */
-async function readings(ctx: Reader, site: Site): Promise<{ readings: Reading[]; locationCode: number }> {
+export async function readings(ctx: Reader, site: Site): Promise<{ readings: Reading[]; locationCode: number }> {
   const hold = groupOwner(site);
   const locationCode = countryCodeOf(site.place);
   if (!hold) return { readings: [], locationCode };
@@ -44,7 +44,7 @@ async function readings(ctx: Reader, site: Site): Promise<{ readings: Reading[];
 }
 
 /** A reading's questions, each with its asks, where the website is named, and the pages quoted. */
-function questionsOf(part: Doc<"brandRadarQuestionParts">) {
+export function questionsOf(part: Doc<"brandRadarQuestionParts">) {
   const volumes = unpackColumn(part.volumes);
   const firstAt = unpackColumn(part.firstAt);
   const starts = unpackColumn(part.starts);

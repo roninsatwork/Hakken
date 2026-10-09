@@ -62,6 +62,7 @@ const COLLECTED_TABLES: ReadonlyArray<{ table: TableNames; page: number }> = [
   { table: "serpOverviews", page: 500 },
   { table: "brandRadarMonths", page: 200 },
   { table: "brandRadarQuestionParts", page: 10 },
+  { table: "assetSummaries", page: 100 },
   { table: "aiAnswerIndex", page: 500 },
   { table: "siteListCopies", page: 500 },
   { table: "siteListCopyParts", page: 4 },

@@ -1,0 +1,18 @@
+# Discovery → Site → Your assets — the approved look (board "Assets" of docs/plans/assets/discovery-local-reputation-ai/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Your assets
+figures
+  figure: Assets
+  figure: Working
+  figure: Losing people
+  figure: Not there at all →
+notice (info)
+search: Find an asset…
+filter: Kind
+filter: Stage
+table: Asset | Seen | Chosen | Weakest stage | Fix first
+  table-bar
+    download: Download CSV
+  table-footer
+    select: Rows per page

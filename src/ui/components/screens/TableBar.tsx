@@ -29,8 +29,8 @@ export type TableNoun =
   | "tasks"
   // Discovery's Local pages (discovery-local-reputation-ai-plan.md): profiles, businesses, a profile's details and review topics, what rivals did, questions.
   | "listings" | "businesses" | "offices" | "rivals" | "details" | "topics" | "rivalActions" | "questions" | "found"
-  // Discovery's Reviews pages: a listing's reviews (step 2).
-  | "reviews";
+  // Discovery's Reviews pages: a listing's reviews (step 2); Your assets (step 5).
+  | "reviews" | "assets";
 
 /**
  * The bar across the top of every Sites table, inside its card (`DataTable`'s

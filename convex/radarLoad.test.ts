@@ -3,7 +3,9 @@ import { describe, expect, test } from "vitest";
 import { getFunctionName, type FunctionReference } from "convex/server";
 import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { bytesReadBy } from "@/src/test/readMeter";
+import { bytesReadBy, metered } from "@/src/test/readMeter";
+import { loadSite } from "./websiteSiteRows";
+import { workOutAssets } from "./assetSummaries";
 import budgets from "../code-ratchets.json";
 import schema from "./schema";
 import { packColumn } from "./utils/packedColumns";
@@ -81,6 +83,16 @@ describe("Brand radar at its largest", () => {
       if (bytes > HALF_A_READ) over.push(`${name}: ${read[name]} KiB, past half of what one read may hold`);
       if (!(read[name] <= (readBudgets[name] ?? -1))) over.push(`${name}: ${read[name]} KiB read, its budget ${readBudgets[name] ?? "not set"}`);
     }
+    // And Your assets, worked out after each collection from what these screens read (`assetSummaries.ts`).
+    const assetBytes = await t.run(async (ctx) => {
+      const meter = metered(ctx.db);
+      const site = await loadSite({ db: meter.db } as never, siteId);
+      if (site) await workOutAssets({ db: meter.db } as never, site);
+      return meter.bytes();
+    });
+    read["your assets"] = Math.ceil(assetBytes / 1024);
+    if (assetBytes > HALF_A_READ) over.push(`your assets: ${read["your assets"]} KiB, past half of what one read may hold`);
+    if (!(read["your assets"] <= (readBudgets["your assets"] ?? -1))) over.push(`your assets: ${read["your assets"]} KiB read, its budget ${readBudgets["your assets"] ?? "not set"}`);
     if (process.env.RADAR_READ_REPORT) process.stdout.write(`${JSON.stringify(read, null, 2)}\n`);
     expect(over).toEqual([]);
 

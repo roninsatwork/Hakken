@@ -67,7 +67,7 @@ function lightProfile(profile: ListingProfile): ListingProfile {
 }
 
 /** A value as text with its keys in order and nothing undefined, so two equal values always read the same. */
-function stableText(value: unknown): string {
+export function stableText(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(stableText).join(",")}]`;
   if (value && typeof value === "object") {
     return `{${Object.entries(value as Record<string, unknown>)

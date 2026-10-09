@@ -76,10 +76,12 @@
     "businesses recommended": 992,
     "read but not cited": 1488,
     "ai demand": 504,
-    "ai overview gaps": 512
+    "ai overview gaps": 512,
+    "your assets": 776
   },
   "radarReadKiB": {
     "brand radar": 1136,
-    "websites ai cites": 1136
+    "websites ai cites": 1136,
+    "your assets": 1136
   }
 }

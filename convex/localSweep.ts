@@ -57,7 +57,7 @@ async function clearListing(ctx: MutationCtx, listingId: Id<"listings">): Promis
   return true;
 }
 
-/** A website's own Local links, its last finds, its menu numbers and its drafted replies, when the website leaves the company. */
+/** A website's own Local links, its last finds, its menu numbers, its drafted replies and its assets, when the website leaves the company. */
 export async function purgeHoldLocal(ctx: { db: MutationCtx["db"] }, companyWebsiteId: Id<"companyWebsites">): Promise<void> {
   const links = await ctx.db.query("holdListings").withIndex("by_hold", (q) => q.eq("companyWebsiteId", companyWebsiteId)).take(500);
   for (const link of links) await ctx.db.delete(link._id);
@@ -67,4 +67,7 @@ export async function purgeHoldLocal(ctx: { db: MutationCtx["db"] }, companyWebs
   if (summary) await ctx.db.delete(summary._id);
   const drafts = await ctx.db.query("reviewReplyDrafts").withIndex("by_hold", (q) => q.eq("companyWebsiteId", companyWebsiteId)).take(500);
   for (const draft of drafts) await ctx.db.delete(draft._id);
+  // Its assets as last worked out (`assetSummaries.ts`).
+  const assets = await ctx.db.query("assetSummaries").withIndex("by_hold", (q) => q.eq("companyWebsiteId", companyWebsiteId)).unique();
+  if (assets) await ctx.db.delete(assets._id);
 }

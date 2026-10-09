@@ -1,3 +1,4 @@
+import { assetsOf } from "./assetSummaries";
 import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internalQuery, type QueryCtx } from "./_generated/server";
@@ -264,6 +265,8 @@ export const getMySite = tenantQuery({
       localListings: v.number(),
       /** Discovery's Reviews: the reviews held on the company's own listings. */
       localReviews: v.number(),
+      /** Your assets as last worked out (`assetSummaries.ts`): the menu's count beside it. */
+      assets: v.number(),
     }),
     /** What the keyword list holds of the site against the supplier's totals: every screen's "X of Y". */
     coverage: coverageValidator,
@@ -315,6 +318,8 @@ export async function readMySite(ctx: SiteReader, siteId: Id<"companyWebsites">)
   const local = holdId
     ? await ctx.db.query("localSummaries").withIndex("by_hold", (q) => q.eq("companyWebsiteId", holdId)).unique()
     : null;
+  // And Your assets' count, worked out after each collection (`assetSummaries.ts`).
+  const assets = holdId ? await assetsOf(ctx, holdId) : null;
 
   const me: HoldSummary = holds.find((entry) => entry.hold._id === siteId)?.summary ?? {
     siteId: siteId,
@@ -370,6 +375,7 @@ export async function readMySite(ctx: SiteReader, siteId: Id<"companyWebsites">)
       localRivalPosts: local?.rivalPosts ?? 0,
       localListings: local?.ownListings ?? 0,
       localReviews: local?.ownReviews ?? 0,
+      assets: assets?.rows.length ?? 0,
     },
     coverage: coverageOf(latest),
   };

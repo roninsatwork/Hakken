@@ -9572,7 +9572,8 @@
       "rivalActions": "{count, plural, =1 {# thing rivals did} other {# things rivals did}}",
       "questions": "{count, plural, =1 {# question} other {# questions}}",
       "found": "{count, plural, =1 {# found} other {# found}}",
-      "reviews": "{count, plural, =1 {# review} other {# reviews}}"
+      "reviews": "{count, plural, =1 {# review} other {# reviews}}",
+      "assets": "{count, plural, =1 {# asset} other {# assets}}"
     },
     "chart": {
       "download": "Download",
@@ -9982,6 +9983,7 @@
       },
       "pages": {
         "overview": "Overview",
+        "assets": "Your assets",
         "aiMentions": "Mentions",
         "aiShareOfVoice": "Share of voice",
         "aiAnswers": "Full answers",
@@ -12689,6 +12691,87 @@
         "topPages": "the most cited",
         "pagesEmpty": "No page cited yet."
       }
+    },
+    "assets": {
+      "title": "Your assets",
+      "description": "Every place people can find the business, what each one brings in, and the stage where it loses them.",
+      "figures": {
+        "assets": "Assets",
+        "assetsDetail": "Website, {profiles, plural, =1 {1 Google profile} other {# Google profiles}}, {reviews, plural, =1 {1 review site} other {# review sites}}, {ai, plural, =1 {1 kind of AI answer} other {# kinds of AI answer}} and {others, plural, =1 {1 other place} other {# other places}}",
+        "working": "Working",
+        "workingDetail": "Seen and chosen",
+        "losing": "Losing people",
+        "losingDetail": "Not seen enough, or seen and not chosen",
+        "missing": "Not there at all",
+        "missingDetail": "Places rivals are and you are not"
+      },
+      "notice": "Each asset moves people through three stages: seen, chosen, then enquiring. The calls and direction requests a Google profile brings need Google's own profile figures, which {platformName} does not read yet; until then a profile shows how often it is seen on the map.",
+      "searchPlaceholder": "Find an asset…",
+      "kindFilter": "Kind",
+      "everyKind": "Every kind",
+      "stageFilter": "Stage",
+      "everyStage": "Every stage",
+      "groups": {
+        "website": "Website and pages",
+        "profiles": "Google profiles",
+        "reviews": "Review sites",
+        "ai": "AI answers",
+        "places": "Directories and press"
+      },
+      "stages": {
+        "NOT_SEEN": "Not seen enough",
+        "SEEN_NOT_CHOSEN": "Seen, not chosen",
+        "WORKING": "Working",
+        "NOT_THERE": "Not there"
+      },
+      "kinds": {
+        "WEBSITE": "Website",
+        "PAGE": "Website page",
+        "PROFILE": "Google Business Profile",
+        "REVIEW_SITE": "Review site",
+        "AI_APP": "AI app",
+        "AI_OVERVIEW": "AI answer on Google",
+        "DIRECTORY": "Directory"
+      },
+      "profileOf": "Google profile · {town}",
+      "appAnswers": "{name} answers",
+      "columns": {
+        "asset": "Asset",
+        "kind": "Kind",
+        "seen": "Seen",
+        "chosen": "Chosen",
+        "stage": "Weakest stage",
+        "fix": "Fix first"
+      },
+      "seen": {
+        "pageOne": "{count, plural, =1 {On Google's page one for 1 search} other {On Google's page one for {a} searches}}",
+        "mapBox": "Map box for {a} of {b} searches",
+        "aiQuoted": "{count, plural, =0 {Not quoted by AI} =1 {Quoted by AI once} other {Quoted by AI {a} times}}",
+        "pagesRead": "{count, plural, =0 {Read none of your pages} =1 {Read your pages once} other {Read your pages {a} times}}",
+        "overviews": "{count, plural, =1 {On 1 of your searches} other {On {a} of your searches}}"
+      },
+      "chosen": {
+        "visits": "{a} visits a month",
+        "notRead": "Not read yet",
+        "recommended": "Recommended you in {a} of {b}",
+        "quotesYou": "Quotes you on {a}",
+        "reviews": "{a} reviews · {rating}"
+      },
+      "fix": {
+        "fewOnPageOne": "On page one for only {a} searches: work on the pages ranking just below it.",
+        "fewVisits": "{a} visits a month from {b} searches on page one: rewrite the titles people pass over.",
+        "answerReviews": "Answer reviews: only {a}% have a reply.",
+        "climbMap": "In the map box for under half its searches: complete the profile and add photos.",
+        "moreReviews": "Too few reviews for AI to trust: {a} so far.",
+        "readNotQuoted": "{count, plural, =1 {Your {text} page is read once and never recommends you: answer the question in its first lines.} other {Your {text} page is read {a} times and never recommends you: answer the question in its first lines.}}",
+        "getRead": "ChatGPT neither names you nor reads your pages: get listed where it looks.",
+        "answerRivalPage": "A rival's page, {text}, is quoted {a} times: write one that answers the same.",
+        "beQuoted": "Quoted on under half the searches showing an overview: answer the question in your pages' first lines.",
+        "getListed": "{count, plural, =1 {Get listed: 1 rival is} other {Get listed: {a} rivals are}}"
+      },
+      "nothingToFix": "Nothing to fix",
+      "noMatch": "No asset matches.",
+      "empty": "Your assets are worked out after the next collection."
     }
   },
   "searchConsole": {
