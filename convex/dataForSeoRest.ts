@@ -140,6 +140,9 @@ export type DataForSeoCodeKind = "OK" | "IN_PROGRESS" | "RATE_LIMITED" | "SUPPLI
  * 40601 "task handed" and 40602 "task in queue" mean still running — reading
  * them as failures threw away answers that were paid for and on their way.
  */
+/** "No Search Results": the task ran and found nothing. */
+export const NO_RESULTS_STATUS = 40102;
+
 export function dataForSeoCodeKind(code: number | undefined): DataForSeoCodeKind {
   if (code === OK_STATUS || code === TASK_CREATED_STATUS) return "OK";
   if (code === 40601 || code === 40602) return "IN_PROGRESS";

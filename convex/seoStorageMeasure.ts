@@ -25,6 +25,7 @@ const TABLES = [
   "siteListCopies", "siteListCopyParts", "holdPages", "siteListAiDays",
   "aiAnswers", "aiCitations", "aiAnswerTexts", "aiAnswerIndex", "promptFanOutQueries", "promptFanOutDays", "siteSerpPages",
   "discoveredCompetitors", "websiteSearchStats", "websiteQuestionStats", "siteSummaryRequests",
+  "listings", "listingWeeks", "holdListings", "mapChecks", "mapPositionWeeks", "localMarketParts", "listingActivityParts",
 ] as const;
 
 /** Rows read per page: the large rows a few at a time, so no read passes 16 MB. */
@@ -36,6 +37,7 @@ const PAGE: Partial<Record<(typeof TABLES)[number], number>> = {
   siteReferringIpParts: 20,
   aiAnswerTexts: 100,
   siteSerpPages: 100,
+  localMarketParts: 20,
 };
 const DEFAULT_PAGE = 500;
 

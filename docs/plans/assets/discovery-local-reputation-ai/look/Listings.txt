@@ -1,0 +1,17 @@
+# Discovery → Local → Your listings — the approved look (board "Listings" of docs/plans/assets/discovery-local-reputation-ai/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Your listings
+section: Yours
+table: Listing | Where | Reviews | Rating | Status | Actions
+  table-bar
+settings-card: Find a listing
+  field: Business name and town
+  choice: Where to look: Google | Trustpilot | Tripadvisor
+  primary-action: Find
+section: Is one of these yours?
+table: Business | Category | Rating | Reviews | Actions
+  table-bar
+section: Rivals you watch
+table: Business | Against | Reviews | Rating | Listings read | Actions
+  table-bar

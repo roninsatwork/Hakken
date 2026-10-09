@@ -49,6 +49,10 @@ export function creditKindOfFamily(family: string): CreditKind | null {
     case "SERP":
     case "DataForSEO Labs":
     case "Keywords Data":
+    // Discovery's Local pages: profiles, map checks and local markets are
+    // Google results of their own, charged as rankings until the cost audit
+    // says otherwise (discovery-local-reputation-ai-plan.md).
+    case "Business Data":
       return "rankings";
     case "AI Optimization":
       return "aiAnswers";

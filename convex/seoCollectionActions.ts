@@ -14,10 +14,12 @@ import {
   readDataForSeoCredentials,
   type DataForSeoCredentials,
   type DataForSeoEnvelope,
+  NO_RESULTS_STATUS,
 } from "./dataForSeoRest";
 import { argsToSend, findSeoOperation, seoResultPath } from "./dataForSeoRegistry";
 import { rowsLeftOffIn, rowsReturnedIn, slimSeoResult } from "./dataForSeoSlim";
 import { isCrawlUnfinished } from "./dataForSeoCrawlOperations";
+import { emptyIsAnAnswer } from "./dataForSeoLocalOperations";
 import { keepAnswerFile } from "./seoPullAnswers";
 import { getErrorMessage } from "./utils/lang";
 import type { Id } from "./_generated/dataModel";
@@ -336,6 +338,15 @@ export const fetchSeoResult = internalAction({
     if (kind === "RATE_LIMITED") return await waiting(`DataForSEO said not now: ${said}`);
     if (kind === "ACCOUNT") return await waiting(`DataForSEO refused the account: ${said}`);
     if (task.status_code !== undefined && task.status_code >= 50000) return await waiting(`A fault on DataForSEO's side: ${said}`);
+    // Nothing found, where nothing is an answer: filed as an empty list (`emptyIsAnAnswer`).
+    if (task.status_code === NO_RESULTS_STATUS && emptyIsAnAnswer(pull.operationId)) {
+      await ctx.runMutation(internal.seoCollectionQueue.settleSeoResult, {
+        pullId: args.pullId,
+        ...(await keepAnswer(ctx, pull.operationId, [{ items: [] }])),
+        costUsd: 0,
+      });
+      return null;
+    }
     if (kind === "REFUSED") {
       await ctx.runMutation(internal.seoCollectionQueue.settleSeoResult, {
         pullId: args.pullId,

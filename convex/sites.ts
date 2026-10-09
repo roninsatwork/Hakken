@@ -257,6 +257,11 @@ export const getMySite = tenantQuery({
       paidKeywords: numberOrNull,
       /** Every page of the company's own website once: the menu's count beside Your pages; null on a competitor or before it is built. */
       yourPages: numberOrNull,
+      /** Discovery's Local numbers (`localSummaries.ts`): searches checked on Maps, the local market, rivals' posts in 30 days, the company's own listings. */
+      localMapSearches: v.number(),
+      localMarket: v.number(),
+      localRivalPosts: v.number(),
+      localListings: v.number(),
     }),
     /** What the keyword list holds of the site against the supplier's totals: every screen's "X of Y". */
     coverage: coverageValidator,
@@ -304,6 +309,10 @@ export async function readMySite(ctx: SiteReader, siteId: Id<"companyWebsites">)
   ]);
   // One header read: the list's own length (`yourPages.ts`).
   const yourPages = isTrackedHold(site.hold) ? null : await yourPagesCount(ctx, siteId);
+  // And one for Local's numbers, kept on the list's own website (`localSummaries.ts`).
+  const local = holdId
+    ? await ctx.db.query("localSummaries").withIndex("by_hold", (q) => q.eq("companyWebsiteId", holdId)).unique()
+    : null;
 
   const me: HoldSummary = holds.find((entry) => entry.hold._id === siteId)?.summary ?? {
     siteId: siteId,
@@ -354,6 +363,10 @@ export async function readMySite(ctx: SiteReader, siteId: Id<"companyWebsites">)
       citedPages: citedPagesIn(summary, websiteId).pages,
       paidKeywords: latest.metrics?.paidKeywords ?? null,
       yourPages,
+      localMapSearches: local?.mapSearches ?? 0,
+      localMarket: local?.marketBusinesses ?? 0,
+      localRivalPosts: local?.rivalPosts ?? 0,
+      localListings: local?.ownListings ?? 0,
     },
     coverage: coverageOf(latest),
   };

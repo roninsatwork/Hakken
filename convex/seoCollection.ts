@@ -30,6 +30,7 @@ import { holdQuestions, holdSearches } from "./holdLists";
 import { counted, firstCheckSteps, withinFanOutLimit, type PlannedCheck } from "./fanOutFirstCheckSteps";
 import { reusableByKey } from "./seoPullReuse";
 import { SEARCH_VOLUME_OPERATION, volumeSteps } from "./searchVolumes";
+import { localSteps } from "./localPlanning";
 import { creditCycleLine } from "./creditHooks";
 import {
   SEO_DUE_SPACING_MS,
@@ -371,6 +372,10 @@ async function websiteSteps(
     ...await volumeSteps(ctx, cycle, companyWebsite, (params, sendIndex) => planSharedPull(ctx, cycle, {
       operation: findSeoOperation(SEARCH_VOLUME_OPERATION)!, params, sentinel: "keyword", websiteId: companyWebsite.websiteId, sendIndex,
     })),
+    // Discovery's Local pages, when the company has them switched on (`localPlanning.ts`).
+    ...await localSteps(ctx, cycle, companyWebsite, (operation, params, keyStartedAt, sendIndex) => planSharedPull(ctx, cycle, {
+      operation, params, sentinel: "listing", websiteId: companyWebsite.websiteId, sendIndex, keyStartedAt,
+    })),
   ];
   for (const websiteId of targets) {
     // A competitor gets only what benchmarking needs (`seoBuyingRules.ts`).
@@ -530,7 +535,7 @@ async function planSharedPull(
   args: {
     operation: SeoOperation;
     params: Record<string, unknown>;
-    sentinel: "prompt" | "keyword";
+    sentinel: "prompt" | "keyword" | "listing";
     websiteId: Id<"websites">;
     sendIndex: number;
     /** What the key is dated by, when a purchase holds longer than a day; the run's start otherwise. */

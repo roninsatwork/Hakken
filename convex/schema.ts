@@ -16,6 +16,7 @@ import { positionHistoryTables } from "./positionHistorySchema";
 import { creditTables } from "./creditSchema";
 import { hakkenTaskProposalValidator, hakkenTaskTables } from "./hakkenTaskSchema";
 import { telegramTables } from "./telegramSchema";
+import { localTables } from "./localSchema";
 import { decisionCertaintyValidator, decisionFallbackReasonValidator, decisionModeValidator, decisionOutcomeValidator, decisionSourceValidator } from "./utils/decisionShapes";
 
 
@@ -46,6 +47,7 @@ export default defineSchema({
   ...creditTables,
   ...hakkenTaskTables,
   ...telegramTables,
+  ...localTables,
   
   companies: defineTable({
     name: v.string(),

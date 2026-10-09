@@ -9,6 +9,7 @@ import { SITE_LINK_OPERATIONS } from "./dataForSeoLinkOperations";
 import { CRAWL_OPERATIONS } from "./dataForSeoCrawlOperations";
 import { KEYWORD_LIST_OPERATIONS } from "./dataForSeoKeywordListOperations";
 import { AI_OVERVIEW_OPERATIONS } from "./dataForSeoAiOverviewOperations";
+import { LOCAL_OPERATIONS } from "./dataForSeoLocalOperations";
 import { appError } from "./utils/appError";
 import { countryCodeOf } from "./utils/seoLocations";
 
@@ -163,6 +164,7 @@ export const SEO_OPERATIONS: readonly SeoOperation[] = [
   ...CRAWL_OPERATIONS,
   ...KEYWORD_LIST_OPERATIONS,
   ...AI_OVERVIEW_OPERATIONS,
+  ...LOCAL_OPERATIONS,
   {
     id: "serp_google_organic",
     question: "Where does a website rank on Google for a given search, and who else is on that page?",

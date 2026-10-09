@@ -318,3 +318,47 @@ describe("a fan-out query's first check is read only through its company's own h
     ).toEqual([]);
   });
 });
+
+/**
+ * The sixth rule: which businesses are a company's offices and rivals, what
+ * it typed into Find, and its Local menu numbers are its own
+ * (docs/plans/active/discovery-local-reputation-ai-plan.md, §3 rule 1). The
+ * businesses themselves are the platform's (`listings`), read by anyone; the
+ * company's links to them are read through its hold — but by the filing and
+ * the sweeps, which find everyone watching a business to tell their menus, or
+ * to keep it, and show nothing to anybody. May shrink, never grow.
+ */
+describe("a company's Local links are read only through its own hold", () => {
+  const schemaSource = readFileSync(join(CONVEX, "localSchema.ts"), "utf8");
+  const files = readdirSync(CONVEX, { recursive: true, encoding: "utf8" })
+    .filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts") && !file.startsWith("_generated"));
+  const PRIVATE = ["holdListings", "listingFinds", "localSummaries"];
+  const ACROSS = new Map([
+    ["localSummaries.ts", new Set(["by_listing"])],
+    ["localSweep.ts", new Set(["by_listing"])],
+    ["localFiling.ts", new Set(["by_pull"])],
+    ["siteLocalListings.ts", new Set(["by_pull"])],
+  ]);
+
+  test.each(PRIVATE)("%s names the hold it belongs to", (table) => {
+    const start = schemaSource.indexOf(`${table}: defineTable({`);
+    expect(start, `${table} is not in localSchema.ts. If it was renamed, rename it here too.`).toBeGreaterThan(-1);
+    expect(schemaSource.slice(start, schemaSource.indexOf(".index(", start))).toMatch(/\bcompanyWebsiteId: /);
+  });
+
+  test("every other read goes through a hold", () => {
+    expect(files.length).toBeGreaterThan(200);
+    const reads = /\.query\(\s*["'](holdListings|listingFinds|localSummaries)["']\s*\)([\s\S]{0,200})/g;
+    const offenders = files.flatMap((file) => Array.from(readFileSync(join(CONVEX, file), "utf8").matchAll(reads))
+      .flatMap((match) => {
+        const index = /withIndex\(\s*["']([a-z_]+)["']/.exec(match[2])?.[1] ?? "(no index)";
+        if (index.startsWith("by_hold") || ACROSS.get(file)?.has(index)) return [];
+        return [`${file}: ${match[1]} read by ${index}`];
+      }));
+    expect(
+      offenders,
+      "A company's Local links read other than through its hold, outside the filing and the sweeps. "
+      + "Read them by the website's hold, so no screen can show one company another's offices or rivals.",
+    ).toEqual([]);
+  });
+});

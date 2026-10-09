@@ -725,6 +725,11 @@ export const siteTables = {
     researchReuseDays: v.optional(v.number()),
     hakkenTasksPerPerson: v.optional(v.number()),
     researchOverviewSearches: v.optional(v.number()),
+    localOffices: v.optional(v.number()),
+    localRivalsPerOffice: v.optional(v.number()),
+    localMapDepth: v.optional(v.number()),
+    localMarketBusinesses: v.optional(v.number()),
+    localMarketKm: v.optional(v.number()),
     // Only the platform sets these: each is about something every company
     // shares (`sharedLimits.ts`).
     fanOutPerAnswer: v.optional(v.number()),

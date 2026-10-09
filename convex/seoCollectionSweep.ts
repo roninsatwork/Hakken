@@ -1,6 +1,7 @@
 import { internalAction, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { v, type Infer } from "convex/values";
+import { purgeExpiredLocal } from "./localSweep";
 import {
   AI_ANSWER_WORDING_RETENTION_DAYS,
   FAN_OUT_DAYS_RETENTION_DAYS,
@@ -66,7 +67,7 @@ import { coarsenPositions } from "./positionHistory";
  * transaction inside Convex's limits, and a duty takes pages until it is done,
  * its page budget is spent, or the check has run for `SWEEP_TIME_MS`.
  */
-const DUTIES = ["reclaim", "chase", "close", "resume", "refile", "stalledRuns", "sendWaiting", "purgeRaw", "purgeWording", "purgeSerpPages", "purgeFanOutDays", "purgeCycles", "thinPositions"] as const;
+const DUTIES = ["reclaim", "chase", "close", "resume", "refile", "stalledRuns", "sendWaiting", "purgeRaw", "purgeWording", "purgeSerpPages", "purgeFanOutDays", "purgeCycles", "thinPositions", "purgeLocal"] as const;
 type Duty = (typeof DUTIES)[number];
 const dutyValidator = v.union(...DUTIES.map((duty) => v.literal(duty)));
 
@@ -86,6 +87,8 @@ const PAGES_PER_DUTY: Record<Duty, number> = {
   purgeCycles: 25,
   // A step is up to a hundred months of each grain: a month's coarsening of every search and a backlog's besides.
   thinPositions: 300,
+  // Two hundred map checks and fifty businesses a page.
+  purgeLocal: 50,
 };
 
 /** The check takes no new page after this, well inside an action's ten minutes. */
@@ -177,6 +180,9 @@ export const sweepDuty = internalMutation({
         return await purgeExpiredCycles(ctx, now);
       case "thinPositions":
         return { ...FINISHED, ...(await coarsenPositions(ctx, now)) };
+      case "purgeLocal":
+        // Discovery's Local map checks and the businesses nobody links (`localSweep.ts`).
+        return { ...FINISHED, ...(await purgeExpiredLocal(ctx, now)) };
     }
   },
 });

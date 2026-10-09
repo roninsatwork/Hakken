@@ -185,6 +185,19 @@ export const FAN_OUT_LIMITS = {
    * call and a tenth of a cent a search. 0 buys none.
    */
   researchOverviewSearches: { choices: [0, 25, 50, 100], fallback: 25, scope: "company" },
+  /**
+   * Discovery's Local pages (docs/plans/active/discovery-local-reputation-ai-plan.md,
+   * D9, agreed 2026-10-09 "as drawn"). Offices: a website's own Google
+   * profiles, each one its own map checks — every tracked search from each
+   * office is $0.002 a run. Rival profiles watched against each office.
+   */
+  localOffices: { choices: [1, 2, 3, 5, 10], fallback: 5, scope: "site" },
+  localRivalsPerOffice: { choices: [3, 5, 10], fallback: 5, scope: "site" },
+  /** Businesses read on each search on Google Maps: Google's own map box is the first three. */
+  localMapDepth: { choices: [10, 20], fallback: 20, scope: "site" },
+  /** Businesses of an office's kind listed in its local market each month, at $0.0004 each, and how far round the office. */
+  localMarketBusinesses: { choices: [50, 100, 250], fallback: 100, scope: "site" },
+  localMarketKm: { choices: [5, 10, 25], fallback: 10, scope: "site" },
 } as const satisfies Record<string, LimitSpec>;
 
 export type FanOutLimitKey = keyof typeof FAN_OUT_LIMITS;
@@ -295,6 +308,11 @@ const limitsArg = v.object({
   researchIdeasPerKind: limitValue,
   researchReuseDays: limitValue,
   researchOverviewSearches: limitValue,
+  localOffices: limitValue,
+  localRivalsPerOffice: limitValue,
+  localMapDepth: limitValue,
+  localMarketBusinesses: limitValue,
+  localMarketKm: limitValue,
 });
 
 /** Each limit's own value where set, null where it uses the level above. */

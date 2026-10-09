@@ -1,8 +1,8 @@
 # Discovery — local, reviews, AI apps, Brand radar and web mentions
 
 **Started 2026-10-09. Status: every decision in §1 agreed 2026-10-09 (D1–D21);
-waiting for Anthony's "start". Then everything is built in one go (Anthony:
-"finish this in one go"), beginning with D14's test calls.** Built the way the
+started 2026-10-09 (Anthony: "ok start and good luck"), built in one go.
+Step 1 (Local) built and run on Ronins and Korda; step 2 (Reviews) next.** Built the way the
 [core data normalisation plan](core-data-normalisation-plan.md) built the
 core: its rules (§3 there) hold here, every new screen is held to a reading
 budget before it is merged, and every new table is packed from its first day.
@@ -167,9 +167,12 @@ it says "existing".
 | `holdListings` | Which listings a company calls its own (and which office) or a rival, on which website hold. | Private | While linked |
 | `listingReviewParts` | A listing's reviews, 1,000 a record: review number, stars, date, replied or not, reply date, Local Guide, Google's topics for the review. **Text only for the company's own listings (D4)**, kept once a record. | Shared numbers; text only for own listings | For good while the review stands |
 | `mapChecks` | One search at one office's map point on one day: the businesses in order (listing numbers), Google's reason for each ("Their website mentions…") kept once a record. | Shared | 90 days, like `siteSerpPages` |
-| `mapPositionWeeks` | One packed record per office and search: the office's place each check. Map rankings' change and trend read it. | Private | For good |
+| `mapPositionWeeks` | One packed record per office listing and search: its place each check — the history kept past the checks' 90 days. A fact about the listing, so shared (built 2026-10-09); the screens read a place from the newest checks themselves. | Shared | For good |
 | `localMarketParts` | Every business of the kind within the radius of an office, as listing numbers with their distance. | Shared | Latest only |
 | `listingActivityParts` | A listing's newest posts, offers and questions, with dates. | Shared | Latest only |
+| `listingFinds` | A company's last Find on Your listings: what it typed, and the listings found. One a website and place to look. | Private | Latest only |
+| `collectionParts` | Which new kinds of data a company buys on its schedule (D16), each off until switched on. | Company | While the company is |
+| `localSummaries` | The numbers beside Local's pages in a website's menu, rebuilt at most once in ten minutes after a filing that changes them (rule 13). | Private | Latest only |
 | `aiAnswers`, `aiCitations`, `aiAnswerTexts` | **Existing.** The ChatGPT app, Gemini app and Google AI Mode join as three more assistants (D5). | Existing | Existing (wording 90 days, counts for good) |
 | `aiAnswerExtras` | Per app answer, packed: businesses shown (listing numbers where matched, else name once), pages read but not cited, the searches it ran, ads. | Shared | 90 days, with the wording |
 | `aiSearchVolumes` | AI asks a month for one search and place, with its 12 months packed — once per search, like `searchVolumes`. | Shared | Latest only |
@@ -192,23 +195,24 @@ Prices are DataForSEO's charge on each test call (D11), read from the answer's o
 
 | What | Supplier endpoint | How often (D8) | Price, from the test calls of 2026-10-09 |
 |---|---|---|---|
-| Find a profile | Business listings search; Trustpilot and Tripadvisor search | When the client presses Find | $0.0127 for 2 results, $0.0192 for 20 (about $0.012 a call and $0.0004 a result); Trustpilot search $0.00075 |
+| Find a profile | Google Maps by name and town (business listings search needs the exact title: "Ronins Guildford" found nothing); Trustpilot and Tripadvisor search | When the client presses Find, while Local is on | Maps $0.002; Trustpilot search $0.00075; Tripadvisor search $0.00075 |
 | A profile | Google My Business Info (live) | Weekly | $0.0054 |
 | Your reviews | Google Reviews, newest first (queued) | Every run, new ones only; all the first time | $0.00075 per 10 reviews |
 | Rivals' reviews | The same, 50 newest | Monthly | $0.00375 a rival |
 | Map positions | Google Maps results at the office's map point, 20 deep (live) | Every run | $0.002 a search and office |
 | Local market | Business listings search by category and radius | Monthly | about $0.05 for 100 businesses |
-| Rival activity | Google My Business Updates (queued); Questions and Answers (queued) | Weekly | $0.00225 per 10 posts; $0.00075 |
+| Rival activity | Google My Business Updates (queued); Questions and Answers (queued) | Weekly | $0.00225 per 10 posts; $0.00075 for 20 questions |
+| Trustpilot and Tripadvisor reviews (step 2) | Trustpilot reviews; Tripadvisor reviews (queued) | As Google reviews | Trustpilot $0.00075 per 20; Tripadvisor $0.0015 per 10 |
 | ChatGPT as people see it | ChatGPT LLM Scraper (live) | Every run | $0.004 a question |
 | Gemini as people see it | Gemini LLM Scraper (live) | Every run | $0.004 a question |
 | Google AI Mode | Google AI Mode results (live) | Every run | $0.004 a question |
 | AI demand | AI Keyword Data, up to 1,000 searches a call | Monthly | $0.0105 for 5 searches |
-| Brand radar | LLM Mentions: search, aggregated metrics, top domains and pages — Google, UK | Monthly | search $0.11 for 10 rows; aggregated $0.101 |
+| Brand radar | LLM Mentions: search, aggregated metrics, top domains and pages — Google, UK | Monthly | search $0.11 for 10 rows; aggregated $0.101; top domains $0.101; top pages $0.101 |
 | Web mentions | Content Analysis: search and summary | Weekly | $0.0244 for 10 results; summary $0.024 |
-| Where to get listed | Backlinks domain intersection | Monthly | not tested — the Backlinks family already in use |
+| Where to get listed | Backlinks domain intersection | Monthly | $0.024 for 10 websites linking to both rivals |
 | AI Overview gaps, What customers say, Businesses recommended, Read but not cited, Your assets | Nothing new: read from the above and from the Google checks already bought | — | — |
 
-17 test calls, $0.35 in all.
+17 test calls, $0.35 in all; D14's eleven more, and two to settle how Find works, $0.33.
 
 **What costs most**, now with prices: the AI apps at $0.004 a question each
 — 10 questions × 3 (ChatGPT app, Gemini app, AI Mode) is $0.12 a run, beside
@@ -251,6 +255,23 @@ AI Keyword Data all cover the United Kingdom; AI Mode answered for the UK.
 - **Trustpilot**: Ronins has no page; the search returns look-alikes
   (Rowgins, Ronain), so a listing is linked only when the client says "This
   is us" (D3).
+
+**D14's calls (2026-10-09, $0.33):**
+
+- **Tripadvisor**: search found The Ivy's places by name and town, each with its path, rating and reviews; reviews come with the reviewer, the text, the date of the visit, the owner's reply and Tripadvisor's own scores (food, service, value).
+- **Trustpilot reviews**: text, stars, language, verified or not, the owner's reply — twenty for $0.00075.
+- **Questions and answers**: IKEA Wembley has thirty, the newest years old, dated only "4 years ago": Google's questions are a quiet feature now. Built, as drawn.
+- **Brand radar's top websites and pages** answer as groups, the cited websites under `sources_domain` with their mentions and AI asks — $0.10 each.
+- **Where to get listed**: 23 websites link to two Guildford web designers and not to Ronins, many of them spam (a poker site); the answer carries each one's spam score, so the list is cut by it.
+- **Web mentions on Korda**: "korda" alone finds 2.1 million pages — European shops selling Korda kit, and Petr Korda the tennis player; "kordatackle.com" finds 10, mostly about Korda. Noisy, so D20's AI check goes in.
+- **Finding a business by name**: the business listings search wants the business's exact title ("Ronins Guildford" found nothing); Google Maps takes a name and town as a person types them ("Ronins Guildford" found Ronins) for $0.002, so Find searches Maps.
+
+**Local's real runs (2026-10-09, D15):** Ronins $0.15 (25 purchases: two offices, two rivals, four tracked searches), Korda $0.06 (5). Found on real data:
+
+- Ronins is on Google Maps' first 20 for none of its Guildford office's two searches, though its website ranks 1st and 5th on Google for them; the London office is 2nd for "web design surrey".
+- **Korda's profile is a bare, unclaimed "Corporate office"** in Basildon — no website, hours, description or services — so its local market is every corporate office within 10 km (Honeywell, IVECO, a law firm): no use as rivals. The profile check says what to fix; the market waits on a better category.
+- Korda tracks no searches, so its Map rankings stays empty until it does.
+- A profile with no posts or questions answers "No Search Results"; filed as an empty list, not a failure (`emptyIsAnAnswer`).
 
 ## 7. The screens
 
@@ -336,7 +357,7 @@ three new assistants in their assistant filters.
 | Step | State |
 |---|---|
 | 0. Prove before building | **Prices and coverage done 2026-10-09** (§6, §6A): 17 calls, $0.35. The load test's fixtures are built with step 1. |
-| 1. Local | Not started |
+| 1. Local | **Built 2026-10-09**: records, purchases, filing, the planner step, the hold switch per company and part (D16), Find and linking, six screens and Every office, each matching its drawing part for part and locked by a look test (`localLook.test.tsx`), read within budgets at five times a large client (`localLoad.test.ts`, `localReadKiB`), and run for real on Ronins and Korda. |
 | 2. Reviews | Not started |
 | 3. AI apps | Not started |
 | 4. Brand radar | Not started |
@@ -350,6 +371,7 @@ three new assistants in their assistant filters.
   2026-10-08. Town by town dropped (Anthony, 2026-10-09).
 - 2026-10-09 — D3, D4, D5, D10 and D11 agreed by Anthony.
 - 2026-10-09 — Test calls made (17, $0.35): prices into §6, findings §6A, D13 added.
+- 2026-10-09 — Step 1 (Local) built and run on Ronins and Korda. Changes made while building, each smaller than a decision: Find searches Google Maps by name and town; Find and linking need only the Local switch (D16), not the company's runs — Korda's runs are off; the queue keeps a Local purchase while Local is on; a linked Google profile is read whole at once ($0.005); the menu's Local numbers are the first office's, as the pages open on it; `mapPositionWeeks` is shared history and the screens read places from the newest checks (Every office read 6.9 MB at five times a large client before, 1.5 MB after); questions and answers built; Tripadvisor added to Find.
 - 2026-10-09 — Rules 11–13 added from the normalisation plan's Part 4 on rereading it: write only what changed, AI judgements in batches, no new timers.
 - 2026-10-09 — D14–D21 asked all at once and agreed (Anthony: "i want all questions asked upfront and i want you to finish this in one go"); building waits for his "start".
 - 2026-10-09 — D1, D2, D6–D9, D12 and D13 agreed: Local first, every office tracked, cadence and limits as drawn, Web mentions last after a test on Korda (steps 5 and 6 swapped).

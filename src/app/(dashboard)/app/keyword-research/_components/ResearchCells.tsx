@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
+import { PageSection } from "../../_components/PageSection";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { PositionCell } from "../../sites/_components/SiteCells";
@@ -59,21 +60,9 @@ export function FigureCell({ value, text }: { value: number | null; text?: strin
   return <span className="font-mono text-[12px] tabular-nums text-foreground">{text ?? formatNumber(value)}</span>;
 }
 
-/**
- * A section's own title and what it holds, above the part it introduces —
- * Past lookups and Research lists above their search boxes, as drawn. The
- * title is marked for the screen's look test.
- */
+/** A section's title above what it holds: the app's shared `PageSection`, as drawn for Past lookups and Research lists. */
 export function ResearchSection({ title, description, children }: { title: string; description: string; children: ReactNode }) {
-  return (
-    <section className="flex flex-col gap-3">
-      <div data-part="section" className="flex flex-col gap-3">
-        <h2 data-part-title className="text-[14px] font-medium text-foreground">{title}</h2>
-        <p className="text-[12px] text-secondary">{description}</p>
-      </div>
-      {children}
-    </section>
-  );
+  return <PageSection title={title} description={description}>{children}</PageSection>;
 }
 
 /** The country a lookup is in, in the reader's language where we have its name. */

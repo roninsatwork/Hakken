@@ -1,0 +1,264 @@
+{
+  "v": 3,
+  "createdOnFiles": {
+    "v": 1,
+    "at": "2026-10-08T20:30:00Z"
+  },
+  "title": "Discovery — local, reviews, AI apps and mentions",
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 2300,
+      "title": "Local · Business profile",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "MapRankings.dc.html": {
+      "x": 3040,
+      "y": 0,
+      "w": 1440,
+      "h": 1500,
+      "title": "Local · Map rankings",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "MapSearch.dc.html": {
+      "x": 4560,
+      "y": 0,
+      "w": 1440,
+      "h": 1600,
+      "title": "Local · One search on the map",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Listings.dc.html": {
+      "x": 6080,
+      "y": 0,
+      "w": 1440,
+      "h": 1850,
+      "title": "Local · Your listings",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Reviews.dc.html": {
+      "x": 0,
+      "y": 2800,
+      "w": 1440,
+      "h": 1900,
+      "title": "Reviews · Your reviews",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "ReviewsRivals.dc.html": {
+      "x": 1520,
+      "y": 2800,
+      "w": 1440,
+      "h": 1400,
+      "title": "Reviews · Against rivals",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "WebMentions.dc.html": {
+      "x": 0,
+      "y": 5200,
+      "w": 1440,
+      "h": 1800,
+      "title": "Web mentions · All mentions",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "WebMentionsRivals.dc.html": {
+      "x": 1520,
+      "y": 5200,
+      "w": 1440,
+      "h": 1400,
+      "title": "Web mentions · Against rivals",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "ProfileOffices.dc.html": {
+      "x": 1520,
+      "y": 0,
+      "w": 1440,
+      "h": 1500,
+      "title": "Local · Business profile, every office",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "AiRadar.dc.html": {
+      "x": 0,
+      "y": 7500,
+      "w": 1440,
+      "h": 2000,
+      "title": "Brand radar · Overview",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "AiRadarSources.dc.html": {
+      "x": 1520,
+      "y": 7500,
+      "w": 1440,
+      "h": 1750,
+      "title": "Brand radar · Websites AI cites",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "AiAnswerApp.dc.html": {
+      "x": 3040,
+      "y": 7500,
+      "w": 1440,
+      "h": 2400,
+      "title": "AI answers · One answer, as the app shows it",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "AiBusinesses.dc.html": {
+      "x": 4560,
+      "y": 7500,
+      "w": 1440,
+      "h": 1500,
+      "title": "AI answers · Businesses recommended",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "AiReadNotCited.dc.html": {
+      "x": 6080,
+      "y": 7500,
+      "w": 1440,
+      "h": 1500,
+      "title": "AI answers · Read but not cited",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "AiDemand.dc.html": {
+      "x": 7600,
+      "y": 7500,
+      "w": 1440,
+      "h": 1750,
+      "title": "AI answers · AI demand",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "Assets.dc.html": {
+      "x": 0,
+      "y": 10400,
+      "w": 1440,
+      "h": 1700,
+      "title": "More · Your assets",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "ReviewsSay.dc.html": {
+      "x": 1520,
+      "y": 10400,
+      "w": 1440,
+      "h": 2000,
+      "title": "More · What customers say",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "ListingsGap.dc.html": {
+      "x": 3040,
+      "y": 10400,
+      "w": 1440,
+      "h": 1600,
+      "title": "More · Where to get listed",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "LocalMarket.dc.html": {
+      "x": 4560,
+      "y": 10400,
+      "w": 1440,
+      "h": 1600,
+      "title": "More · Local market",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "RivalActivity.dc.html": {
+      "x": 6080,
+      "y": 10400,
+      "w": 1440,
+      "h": 1700,
+      "title": "More · Rival activity",
+      "expand": "fill",
+      "is_interactive": true
+    },
+    "AiOverviewGaps.dc.html": {
+      "x": 7600,
+      "y": 10400,
+      "w": 1440,
+      "h": 1600,
+      "title": "More · AI Overview gaps",
+      "expand": "fill",
+      "is_interactive": true
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "ProfileOffices.dc.html",
+    "MapRankings.dc.html",
+    "MapSearch.dc.html",
+    "Listings.dc.html",
+    "Reviews.dc.html",
+    "ReviewsRivals.dc.html",
+    "WebMentions.dc.html",
+    "WebMentionsRivals.dc.html",
+    "AiRadar.dc.html",
+    "AiRadarSources.dc.html",
+    "AiAnswerApp.dc.html",
+    "AiBusinesses.dc.html",
+    "AiReadNotCited.dc.html",
+    "AiDemand.dc.html",
+    "Assets.dc.html",
+    "ReviewsSay.dc.html",
+    "ListingsGap.dc.html",
+    "LocalMarket.dc.html",
+    "RivalActivity.dc.html",
+    "AiOverviewGaps.dc.html"
+  ],
+  "notes": {
+    "local": {
+      "x": 0,
+      "y": -300,
+      "text": "1 + 2 · Local — Business Profile and Google Maps",
+      "kind": "title1",
+      "maxW": 9040
+    },
+    "reviews": {
+      "x": 0,
+      "y": 2500,
+      "text": "1 · Reviews — Google, Trustpilot, Tripadvisor",
+      "kind": "title1",
+      "maxW": 9040
+    },
+    "mentions": {
+      "x": 0,
+      "y": 4900,
+      "text": "8 · Web mentions — the brand across the web",
+      "kind": "title1",
+      "maxW": 9040
+    },
+    "ai": {
+      "x": 0,
+      "y": 7200,
+      "text": "7 · Brand radar and AI answers — what people see in the AI apps",
+      "kind": "title1",
+      "maxW": 9040
+    },
+    "more": {
+      "x": 0,
+      "y": 10100,
+      "text": "More from the same data — for choosing",
+      "kind": "title1",
+      "maxW": 9040
+    }
+  },
+  "designSystems": []
+}

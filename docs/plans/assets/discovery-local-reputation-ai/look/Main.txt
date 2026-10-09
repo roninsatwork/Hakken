@@ -1,0 +1,21 @@
+# Discovery → Local → Business profile — the approved look (board "Main" of docs/plans/assets/discovery-local-reputation-ai/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Business profile
+  select: Office
+figures
+  figure: Rating
+  figure: Reviews →
+  figure: In the map box →
+  figure: Photos
+section: What your profile shows
+table: Detail | What Google shows | Check
+  table-bar
+    download: Download CSV
+section: People also look at
+table: Business | Category | Rating | Reviews | Photos | Booking link | Map box | Actions
+  table-bar
+    download: Download CSV
+section: What reviewers talk about
+table: Topic | Reviews | Share of reviews | Their stars
+  table-bar

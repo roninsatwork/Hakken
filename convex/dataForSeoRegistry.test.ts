@@ -40,7 +40,8 @@ describe("the registry holds well-formed entries", () => {
     // never arrives or a result nobody reads.
     for (const operation of SEO_OPERATIONS) {
       if (operation.mode === "QUEUED") expect(operation.path.endsWith("/task_post")).toBe(true);
-      else expect(operation.path.endsWith("/live")).toBe(true);
+      // Google Maps answers live only in its full form (`/live/advanced`).
+      else expect(/\/live(\/advanced)?$/.test(operation.path)).toBe(true);
     }
   });
 
@@ -96,6 +97,9 @@ describe("the registry holds well-formed entries", () => {
       // The AI engines, asked a question each. See seoAiEngines.ts.
       "AI Optimization",
       "Backlinks",
+      // Google profiles, Trustpilot and the businesses of a kind near a map
+      // point, for Discovery's Local pages (discovery-local-reputation-ai-plan.md).
+      "Business Data",
       "DataForSEO Labs",
       "Keywords Data",
       // The site crawl behind the Sites Site audit (Phase 5).

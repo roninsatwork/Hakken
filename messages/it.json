@@ -1977,6 +1977,37 @@
         "standaloneHint": "Quanto costerebbe senza altri clienti che condividono i dati. Basa il prezzo su questo.",
         "saving": "Risparmiato · 30gg",
         "savingHint": "Servito con dati già pagati da un altro cliente."
+      },
+      "parts": {
+        "title": "Nuovi tipi di dati",
+        "intro": "Le pagine più recenti di Scoperta, acquistate per questa azienda solo dopo averle attivate qui. Spente, non si acquista nulla in nessuna esecuzione e il pulsante Trova lo dice. Attivate, vengono pianificate alla prossima esecuzione dell'azienda.",
+        "local": {
+          "label": "Locale: profili Google e Maps",
+          "description": "Il profilo Google di ogni sede e quelli dei concorrenti ogni settimana, ogni ricerca seguita su Google Maps da ogni sede a ogni esecuzione (0,002 $ ciascuna) e il mercato locale di ogni sede ogni mese."
+        },
+        "reviews": {
+          "label": "Recensioni",
+          "description": "Le recensioni sui profili dell'azienda man mano che arrivano, e le più recenti dei concorrenti ogni mese: circa un decimo di centesimo ogni dieci."
+        },
+        "aiApps": {
+          "label": "App di IA come le vedono le persone",
+          "description": "ChatGPT e Gemini letti dalle loro app invece che chiesti tramite il modello, e Google AI Mode interrogato su ogni domanda: 0,004 $ a domanda ciascuno, a ogni esecuzione."
+        },
+        "aiDemand": {
+          "label": "Domanda nelle IA",
+          "description": "Quanto spesso le ricerche e le domande seguite vengono poste agli assistenti IA ogni mese: circa un centesimo ogni mille."
+        },
+        "brandRadar": {
+          "label": "Radar del marchio",
+          "description": "Quanto spesso le risposte IA di Google nel Regno Unito citano il sito e i suoi concorrenti, ogni mese: circa 0,10 $ a richiesta."
+        },
+        "webMentions": {
+          "label": "Menzioni sul web",
+          "description": "Le pagine sul web che citano l'attività, ogni settimana, ciascuna verificata dall'IA come relativa a questa attività: circa 0,02 $ a richiesta."
+        },
+        "saved": "Salvato",
+        "saveFailed": "Non è stato possibile salvare gli interruttori.",
+        "saveParts": "Salva gli interruttori"
       }
     },
     "collectionRuns": {
@@ -5787,6 +5818,14 @@
         "ai_citation_gemini": "Chiesto a Gemini",
         "ai_citation_perplexity": "Chiesto a Perplexity",
         "ai_overview_fan_out": "Cosa hanno cercato le AI Overview di Google",
+        "google_maps_find": "Attività trovata su Google Maps",
+        "local_market": "Attività dello stesso tipo nelle vicinanze",
+        "google_business_profile": "Il suo profilo Google",
+        "google_maps_check": "Dove compare su Google Maps per una ricerca",
+        "google_business_posts": "I post del suo profilo Google",
+        "trustpilot_find": "Attività trovata su Trustpilot",
+        "tripadvisor_find": "Luogo trovato su Tripadvisor",
+        "google_business_questions": "Domande sul suo profilo Google",
         "backlinks_list": "Ogni sito che la collega",
         "backlinks_all": "Ogni link verso il sito",
         "backlinks_broken": "Link alle sue pagine non funzionanti",
@@ -6183,7 +6222,9 @@
         "positions": "{count, plural, one {# posizione} other {# posizioni}}",
         "updates": "{count, plural, one {# aggiornamento} other {# aggiornamenti}}",
         "weeks": "{count, plural, one {# settimana} other {# settimane}}",
-        "tasks": "{count, plural, one {# attività} other {# attività}}"
+        "tasks": "{count, plural, one {# attività} other {# attività}}",
+        "offices": "{count, plural, one {# sede} other {# sedi}}",
+        "kilometres": "{count, plural, one {# chilometro} other {# chilometri}}"
       },
       "topics": {
         "tasks": {
@@ -6195,6 +6236,11 @@
           "title": "Dati Google per ogni sito",
           "intro": "Ciò che la piattaforma acquista da Google, tramite DataForSEO, per ogni sito: i siti dell’azienda e ogni concorrente che segue. Numeri più alti danno elenchi più completi nelle schermate Scoperta, e costano di più.",
           "footer": "Le modifiche valgono dalla prossima raccolta di ogni sito, o dal suo prossimo aggiornamento settimanale."
+        },
+        "local": {
+          "title": "Locale: profili Google e Maps",
+          "intro": "Cosa leggono le pagine Locale di Scoperta per ogni sito web: i suoi profili Google, uno per sede, i profili dei concorrenti seguiti per ciascuna, dove si trova ogni sede su Google Maps e le attività dello stesso tipo nelle vicinanze. Acquistati da DataForSEO solo per le aziende con Locale attivo nella loro pianificazione della raccolta.",
+          "footer": "Le modifiche valgono dalla prossima esecuzione di ogni sito web."
         },
         "ai": {
           "title": "Prompt IA",
@@ -6507,6 +6553,31 @@
           "label": "Ricerche delle AI Overview di Google per ricerca",
           "description": "Quante delle ricerche fatte da Google per scrivere le sue AI Overview sono acquistate con Cosa dice l’IA, le più eseguite prima. 0 non ne acquista nessuna.",
           "cost": "Circa 10 centesimi per ricerca, e un decimo di centesimo per ogni ricerca di Google."
+        },
+        "localOffices": {
+          "label": "Sedi per sito web",
+          "description": "Quanti profili Google del sito web vengono seguiti, uno per sede. Le posizioni su Maps di ogni sede sono controllate dal suo indirizzo.",
+          "cost": "Ogni ricerca seguita è controllata su Google Maps da ogni sede, a 0,002 $ per ricerca a ogni esecuzione."
+        },
+        "localRivalsPerOffice": {
+          "label": "Profili dei concorrenti per sede",
+          "description": "Quanti profili Google di concorrenti vengono seguiti per ogni sede, abbinati ai concorrenti seguiti o aggiunti a mano.",
+          "cost": "Il profilo di ogni concorrente è letto ogni settimana, a circa mezzo centesimo."
+        },
+        "localMapDepth": {
+          "label": "Attività lette per ricerca su Maps",
+          "description": "Fin dove viene letta ogni ricerca su Google Maps. Il riquadro della mappa nei risultati di Google mostra le prime tre.",
+          "cost": "0,002 $ a ricerca, qualunque sia la scelta."
+        },
+        "localMarketBusinesses": {
+          "label": "Attività nel mercato locale di ogni sede",
+          "description": "Quante attività dello stesso tipo della sede compaiono ogni mese in Mercato locale.",
+          "cost": "Circa 0,04 $ al mese per sede con 100."
+        },
+        "localMarketKm": {
+          "label": "Raggio del mercato locale",
+          "description": "Fin dove arriva il mercato locale intorno a ogni sede.",
+          "cost": "Nessun costo proprio."
         },
         "hakkenTasksPerPerson": {
           "label": "Attività attive per persona",
@@ -9448,7 +9519,16 @@
       "assistants": "{count, plural, =1 {# assistente} other {# assistenti}}",
       "lines": "{count, plural, =1 {# riga} other {# righe}}",
       "people": "{count, plural, =1 {# persona} other {# persone}}",
-      "tasks": "{count, plural, =1 {# attività} other {# attività}}"
+      "tasks": "{count, plural, =1 {# attività} other {# attività}}",
+      "listings": "{count, plural, =1 {# scheda} other {# schede}}",
+      "businesses": "{count, plural, =1 {# attività} other {# attività}}",
+      "offices": "{count, plural, =1 {# sede} other {# sedi}}",
+      "rivals": "{count, plural, =1 {# concorrente} other {# concorrenti}}",
+      "details": "{count, plural, =1 {# dettaglio} other {# dettagli}}",
+      "topics": "{count, plural, =1 {# argomento} other {# argomenti}}",
+      "rivalActions": "{count, plural, =1 {# cosa fatta dai concorrenti} other {# cose fatte dai concorrenti}}",
+      "questions": "{count, plural, =1 {# domanda} other {# domande}}",
+      "found": "{count, plural, =1 {# trovata} other {# trovate}}"
     },
     "chart": {
       "download": "Scarica",
@@ -9848,6 +9928,7 @@
         "site": "Sito",
         "ai": "Risposte AI",
         "google": "Risultati Google",
+        "local": "Locale",
         "keywords": "Ricerca organica",
         "competitors": "Concorrenti",
         "backlinks": "Backlink",
@@ -9865,6 +9946,11 @@
         "googleAbove": "Chi ti supera",
         "googleFeatures": "Elementi della ricerca",
         "googleQuestions": "Domande frequenti",
+        "localProfile": "Profilo dell'attività",
+        "localMaps": "Posizioni su Maps",
+        "localMarket": "Mercato locale",
+        "localActivity": "Attività dei concorrenti",
+        "localListings": "Le tue schede",
         "keywordsAll": "Parole chiave",
         "keywordsPages": "Pagine principali",
         "keywordsBands": "Fasce di posizione",
@@ -11654,6 +11740,413 @@
         "seen": "Vista"
       },
       "cannotUntrack": "Nessuna domanda la elenca più, quindi qui non si può togliere la spunta."
+    },
+    "local": {
+      "officeOf": "Sede di {town}",
+      "officeChoice": "Sede",
+      "everyOffice": "Tutte le sedi a confronto",
+      "you": "{name} · tu",
+      "youShort": "Tu",
+      "of": "{count} su {of}",
+      "watched": "Seguito",
+      "watchAsRival": "Segui come concorrente",
+      "watchFailed": "Non è stato possibile seguire questa attività. Riprova.",
+      "setup": {
+        "off": "Locale non è ancora attivo per la tua azienda. Lo attiva il tuo referente.",
+        "noOffice": "Collega il tuo profilo Google in Le tue schede, uno per sede, e questa pagina si riempie dal prossimo controllo.",
+        "notChecked": "Per questa sede non è ancora stato letto nulla: viene letta al prossimo controllo.",
+        "openListings": "Apri Le tue schede",
+        "noRivals": "Segui un concorrente da Le tue schede o da Mercato locale, e cosa fa su Google compare qui dal prossimo controllo."
+      },
+      "listings": {
+        "title": "Le tue schede",
+        "description": "I profili che sono tuoi, uno per sede, e i profili dei concorrenti da seguire. Ogni controllo li legge tutti.",
+        "notOwnSite": "Le schede si collegano ai tuoi siti web. Aprine uno dei tuoi per collegarne i profili.",
+        "yoursTitle": "Le tue",
+        "yoursDescription": "Ogni profilo Google è una sede. Il suo indirizzo è il punto da cui partono i controlli sulla mappa.",
+        "yoursEmpty": "Nessuna scheda ancora collegata. Trova la tua qui sotto.",
+        "columns": {
+          "listing": "Scheda",
+          "where": "Dove",
+          "reviews": "Recensioni",
+          "rating": "Valutazione",
+          "status": "Stato",
+          "actions": "Azioni",
+          "business": "Attività",
+          "category": "Categoria",
+          "against": "Rispetto a",
+          "listingsRead": "Schede lette"
+        },
+        "sources": {
+          "GOOGLE": "Google",
+          "TRUSTPILOT": "Trustpilot",
+          "TRIPADVISOR": "Tripadvisor"
+        },
+        "where": {
+          "GOOGLE": "Profilo dell'attività su Google",
+          "TRUSTPILOT": "Trustpilot",
+          "TRIPADVISOR": "Tripadvisor"
+        },
+        "linked": "Collegata il {day}",
+        "stopReading": "Smetti di leggere questa scheda",
+        "stopWatching": "Smetti di seguire questo concorrente",
+        "findTitle": "Trova una scheda",
+        "findLabel": "Nome dell'attività e città",
+        "findHint": "Il nome come appare su Google e la città della sede.",
+        "findPlaceholder": "Nome e città, come su Google",
+        "whereToLook": "Dove cercare",
+        "findCost": "Meno di un centesimo a ricerca. Nulla viene riletto finché non colleghi una scheda.",
+        "find": "Trova",
+        "finding": "Ricerca in corso…",
+        "findFailed": "Non è stato possibile fare la ricerca. Riprova.",
+        "looking": "Ricerca in corso… bastano pochi secondi.",
+        "foundTitle": "Una di queste è la tua?",
+        "foundDescription": "Cosa ha trovato {where} per \"{name}\". Scegli la tua, o seguine una come concorrente.",
+        "foundEmpty": "Nessun risultato con quel nome. Prova a scriverlo esattamente come appare lì, con la città.",
+        "alreadyYours": "Già tua",
+        "watched": "Seguita",
+        "thisIsUs": "Siamo noi",
+        "watchAsRival": "Segui come concorrente",
+        "linkFailed": "Non è stato possibile collegare la scheda. Riprova.",
+        "unlinkFailed": "Non è stato possibile rimuovere la scheda. Riprova.",
+        "rivalsTitle": "Concorrenti che segui",
+        "rivalsDescription": "I loro profili vengono letti insieme ai tuoi, così ogni pagina può metterli a confronto.",
+        "rivalsEmpty": "Nessun concorrente seguito. Trovane uno qui sopra o seguilo da Mercato locale.",
+        "noWebsite": "Nessun sito web",
+        "everyOffice": "Tutte le sedi"
+      },
+      "profile": {
+        "title": "Profilo dell'attività",
+        "description": "Il tuo Profilo dell'attività su Google come lo vedono le persone su Google e Maps.",
+        "descriptionRead": "Il tuo Profilo dell'attività su Google come lo vedono le persone su Google e Maps. Letto il {day}.",
+        "openOnGoogle": "Apri su Google",
+        "figures": {
+          "rating": "Valutazione",
+          "rivalsAverage": "Media dei concorrenti {value}",
+          "noRivals": "Nessun concorrente seguito",
+          "reviews": "Recensioni",
+          "reviewsNoWeeks": "Contate ogni settimana dal prossimo controllo",
+          "inThirtyDays": "negli ultimi 30 giorni",
+          "mapBox": "Nel riquadro della mappa",
+          "of": "{count} su {of}",
+          "mapBoxDetail": "Le tue ricerche in cui compari tra le prime 3 attività di Google",
+          "photos": "Foto"
+        },
+        "details": {
+          "title": "Cosa mostra il tuo profilo",
+          "description": "Ogni dettaglio che Google ha sull'attività, e cosa manca rispetto alle attività che le persone guardano anche.",
+          "toFix": "· {count} da sistemare",
+          "empty": "Letto al prossimo controllo.",
+          "columns": {
+            "detail": "Dettaglio",
+            "shows": "Cosa mostra Google",
+            "check": "Verifica"
+          },
+          "names": {
+            "CLAIMED": "Rivendicato da te",
+            "CATEGORY": "Categoria principale",
+            "OTHER_CATEGORIES": "Altre categorie",
+            "DESCRIPTION": "Descrizione",
+            "ADDRESS": "Indirizzo e telefono",
+            "WEBSITE": "Sito web",
+            "HOURS": "Orari di apertura",
+            "BOOKING": "Link per prenotare",
+            "SERVICES": "Servizi",
+            "PHOTOS": "Foto",
+            "REPLIES": "Risposte alle recensioni"
+          },
+          "none": "Nessuno",
+          "yes": "Sì",
+          "no": "No",
+          "notKnown": "Non noto",
+          "hasOne": "Presente",
+          "bookingNone": "Nessuno · {count} delle {of} attività che le persone guardano anche ne hanno uno",
+          "services": "{count} elencati: {names}",
+          "servicesNoPrices": "{count} elencati: {names} · senza prezzi",
+          "photos": "{count} · media dei concorrenti {average}",
+          "readWithReviews": "Contate con le tue recensioni",
+          "notReadYet": "Non ancora letto",
+          "good": "Bene",
+          "sameAsTop": "Uguale alle prime 3 della mappa",
+          "claimIt": "Rivendicalo",
+          "topIs": "Le prime 3 della mappa sono {category}",
+          "addOne": "Aggiungilo",
+          "addMore": "Aggiungine altre",
+          "addPhone": "Aggiungi il telefono",
+          "addAddress": "Aggiungi l'indirizzo",
+          "pointsElsewhere": "Rimanda a un altro sito",
+          "addWebsite": "Aggiungi il tuo sito",
+          "addHours": "Aggiungi gli orari",
+          "addPrices": "Aggiungi i prezzi",
+          "addServices": "Aggiungi i tuoi servizi",
+          "fewerThanRivals": "Meno dei concorrenti",
+          "days": {
+            "0": "Lunedì",
+            "1": "Martedì",
+            "2": "Mercoledì",
+            "3": "Giovedì",
+            "4": "Venerdì",
+            "5": "Sabato",
+            "6": "Domenica"
+          },
+          "dayRange": "da {from} a {to}",
+          "dayHours": "{days}: {hours}",
+          "closed": "chiuso",
+          "hoursChange": "{day}: ora {now}, prima {was}"
+        },
+        "also": {
+          "title": "Le persone guardano anche",
+          "description": "Le attività che Google mostra accanto alla tua sotto \"Le persone cercano anche\", misurate come il tuo profilo.",
+          "andYou": "e tu",
+          "empty": "Google non mostra ancora altre attività accanto alla tua.",
+          "columns": {
+            "business": "Attività",
+            "category": "Categoria",
+            "rating": "Valutazione",
+            "reviews": "Recensioni",
+            "photos": "Foto",
+            "booking": "Link per prenotare",
+            "mapBox": "Riquadro della mappa",
+            "actions": "Azioni"
+          },
+          "hasOne": "Presente",
+          "none": "Nessuno"
+        },
+        "topics": {
+          "title": "Di cosa parlano le recensioni",
+          "description": "Le parole che Google estrae dalle tue recensioni, e quante recensioni usano ciascuna.",
+          "from": "da {count} recensioni",
+          "empty": "Google non estrae ancora parole dalle tue recensioni.",
+          "columns": {
+            "topic": "Argomento",
+            "reviews": "Recensioni",
+            "share": "Quota di recensioni",
+            "stars": "Le loro stelle"
+          }
+        }
+      },
+      "offices": {
+        "description": "Il Profilo dell'attività su Google di ogni sede, a confronto. Apri una sede per vederne tutto il profilo.",
+        "figures": {
+          "offices": "Sedi",
+          "officesDetail": "Ognuna con il proprio profilo Google",
+          "reviews": "Recensioni, tutte le sedi",
+          "mapBox": "Nel riquadro della mappa",
+          "mapBoxDetail": "Ricerche, ognuna controllata dalla sua sede",
+          "toFix": "Da sistemare",
+          "toFixDetail": "Dettagli mancanti {count, plural, one {nel profilo} other {nei # profili}}"
+        },
+        "officesTitle": "Le tue sedi",
+        "officesDescription": "Una riga per Profilo dell'attività su Google. Gli stessi dettagli per ciascuna, così si vede la sede più debole.",
+        "officesEmpty": "Nessuna sede ancora collegata.",
+        "columns": {
+          "office": "Sede",
+          "rating": "Valutazione",
+          "reviews": "Recensioni",
+          "answered": "Con risposta",
+          "photos": "Foto",
+          "mapBox": "Riquadro della mappa",
+          "check": "Verifica del profilo",
+          "search": "Ricerca",
+          "volume": "Volume",
+          "top": "Prima sulla mappa"
+        },
+        "toFix": "{count} da sistemare",
+        "allGood": "Tutto a posto",
+        "searchesTitle": "Dove si trova ogni sede sulla mappa",
+        "searchesDescription": "Le tue ricerche seguite, ognuna controllata dalla sede a cui appartiene. Un trattino significa che la ricerca non è controllata da quella sede.",
+        "searchesEmpty": "Nessuna ricerca ancora controllata su Maps.",
+        "notOnMap": "Non sulla mappa"
+      },
+      "maps": {
+        "title": "Posizioni su Maps",
+        "description": "Dove si trova la tua attività su Google Maps per ciascuna delle tue ricerche seguite.",
+        "figures": {
+          "mapBox": "Nel riquadro della mappa",
+          "firstCheck": "Dal primo controllo",
+          "onLastCheck": "all'ultimo controllo",
+          "average": "Posizione media su Maps",
+          "averageDetail": "Sulle {count} ricerche in cui compari",
+          "notOnMap": "Non sulla mappa",
+          "notOnMapDetail": "Ricerche in cui Maps non ti mostra tra i primi {depth}",
+          "topMost": "Più spesso prima sulla mappa",
+          "topMostDetail": "Prima per {count} delle tue {of} ricerche",
+          "notChecked": "Non ancora controllata"
+        },
+        "notice": "Controllata dall'indirizzo della {office}, come la vedrebbe su Google Maps chi si trova lì; ogni sede è controllata dal proprio indirizzo. Il riquadro della mappa sono le tre attività che Google mostra nella pagina dei risultati. Un quinto di centesimo a ricerca, per sede, a ogni controllo.",
+        "searchPlaceholder": "Trova una ricerca…",
+        "boxFilter": "Riquadro della mappa",
+        "everySearch": "Tutte le ricerche",
+        "boxes": {
+          "in": "Nel riquadro della mappa",
+          "below": "Sotto il riquadro",
+          "off": "Non sulla mappa"
+        },
+        "moveFilter": "Spostamento",
+        "anyMove": "Qualsiasi spostamento",
+        "moves": {
+          "up": "Salita",
+          "down": "Scesa"
+        },
+        "columns": {
+          "search": "Ricerca",
+          "volume": "Volume",
+          "onMaps": "Su Maps",
+          "change": "Variazione",
+          "box": "Riquadro della mappa",
+          "position": "Posizione",
+          "top": "Prima sulla mappa"
+        },
+        "noMatch": "Nessuna ricerca corrisponde.",
+        "empty": "Nessuna ricerca ancora controllata su Maps: vengono controllate alla prossima esecuzione.",
+        "noOffice": "Collega prima il tuo profilo Google in Le tue schede.",
+        "notChecked": "Non ancora controllata"
+      },
+      "mapSearch": {
+        "description": "Su Google Maps, controllata dalla {office} · {day} · {volume}",
+        "volume": "{shown} ricerche al mese",
+        "volumeUnknown": "ricerche al mese non note",
+        "notChecked": "Questa ricerca non è ancora stata controllata su Maps da questa sede.",
+        "figures": {
+          "place": "La tua posizione su Maps",
+          "firstCheck": "Dal primo controllo",
+          "sinceBefore": "dal controllo precedente",
+          "results": "Nella pagina dei risultati di Google",
+          "inBox": "Nel riquadro della mappa",
+          "notInBox": "Sotto il riquadro della mappa",
+          "websiteAt": "Il tuo sito è {place}° sotto di esso",
+          "websiteNotOnPage": "Il tuo sito non è tra i primi 100",
+          "rating": "La tua valutazione",
+          "reviews": "Le tue recensioni",
+          "boxAverage": "La media del riquadro della mappa è {value}"
+        },
+        "notOnMap": "Non sulla mappa",
+        "tableTitle": "Tutti quelli sulla mappa per questa ricerca",
+        "tableDescription": "Nell'ordine di Google. \"Perché Google l'ha mostrata\" è il motivo dato da Google, scritto sotto l'attività su Maps.",
+        "columns": {
+          "place": "Posizione",
+          "business": "Attività",
+          "rating": "Valutazione",
+          "reviews": "Recensioni",
+          "category": "Categoria",
+          "claimed": "Rivendicata",
+          "why": "Perché Google l'ha mostrata"
+        },
+        "claimed": "Rivendicata",
+        "notClaimed": "Non rivendicata",
+        "noWebsite": "Nessun sito web",
+        "empty": "Nessuno sulla mappa per questa ricerca."
+      },
+      "market": {
+        "title": "Mercato locale",
+        "description": "Tutte le attività che Google classifica come la tua vicino alla sede: chi sono, come appaiono su Google e con chi competi senza saperlo.",
+        "descriptionRead": "Tutte le attività che Google classifica come la tua vicino alla sede: chi sono, come appaiono su Google e con chi competi senza saperlo. Letto il {day}.",
+        "figures": {
+          "businesses": "Attività del tuo tipo",
+          "businessesDetail": "Entro {km} km dalla sede",
+          "manyReviews": "Con {count} recensioni o più",
+          "youAmong": "Tu sei una di queste",
+          "youNotAmong": "Tu non sei ancora tra queste",
+          "highRating": "Valutate {rating} o più",
+          "highRatingDetail": "Qui una valutazione alta da sola non basta a distinguersi",
+          "unwatched": "Non le segui ancora",
+          "unwatchedDetail": "Nel tuo riquadro della mappa ma non tra i tuoi concorrenti"
+        },
+        "searchPlaceholder": "Trova un'attività…",
+        "categoryFilter": "Categoria",
+        "everyCategory": "Tutte le categorie",
+        "distanceFilter": "Distanza",
+        "anyDistance": "Qualsiasi distanza",
+        "within": "Entro {km} km",
+        "claimedFilter": "Rivendicata",
+        "claimedOrNot": "Rivendicata o no",
+        "claims": {
+          "claimed": "Rivendicata",
+          "notClaimed": "Non rivendicata"
+        },
+        "columns": {
+          "business": "Attività",
+          "website": "Sito web",
+          "category": "Categoria",
+          "distance": "Distanza",
+          "rating": "Valutazione",
+          "reviews": "Recensioni",
+          "claimed": "Rivendicata",
+          "mapBox": "Nelle tue ricerche",
+          "actions": "Azioni"
+        },
+        "km": "{km} km",
+        "mapBoxFor": "Riquadro della mappa per {count}",
+        "noWebsite": "Nessun sito web",
+        "noMatch": "Nessuna attività corrisponde.",
+        "empty": "Letto al prossimo controllo."
+      },
+      "activity": {
+        "title": "Attività dei concorrenti",
+        "description": "Cosa fanno su Google i concorrenti che segui: i loro post e le offerte, le modifiche ai profili e le domande che le persone fanno.",
+        "figures": {
+          "posts": "Post dei concorrenti",
+          "postsDetail": "In 30 giorni · tu hai pubblicato {count}",
+          "offers": "Offerte in corso",
+          "noOffers": "Nessuna in 30 giorni",
+          "questions": "Domande sul tuo profilo",
+          "questionsDetail": "In attesa di risposta",
+          "changes": "Modifiche ai profili",
+          "changesDetail": "Foto, orari e categorie"
+        },
+        "searchPlaceholder": "Trova una parola in un post…",
+        "rivalFilter": "Concorrente",
+        "everyRival": "Tutti i concorrenti",
+        "whatFilter": "Cosa",
+        "everything": "Tutto",
+        "whats": {
+          "posts": "Post",
+          "offers": "Offerte",
+          "changes": "Modifiche ai profili",
+          "ratings": "Variazioni di valutazione"
+        },
+        "columns": {
+          "date": "Data",
+          "rival": "Concorrente",
+          "what": "Cosa",
+          "detail": "Dettaglio"
+        },
+        "kinds": {
+          "POST": "Post",
+          "OFFER": "Offerta",
+          "EVENT": "Evento",
+          "CATEGORY_ADDED": "Categoria aggiunta",
+          "CATEGORY_REMOVED": "Categoria rimossa",
+          "HOURS_CHANGED": "Orari cambiati",
+          "NAME_CHANGED": "Nome cambiato",
+          "WEBSITE_CHANGED": "Sito cambiato",
+          "RATING_CHANGE": "Variazione di valutazione",
+          "PHOTOS_ADDED": "Nuove foto"
+        },
+        "details": {
+          "rating": "Da {from} a {to}",
+          "photos": "{count} foto aggiunte, ora {total} in tutto",
+          "categoryAdded": "Ha aggiunto \"{category}\" al profilo",
+          "categoryRemoved": "Ha tolto \"{category}\" dal profilo",
+          "name": "Ora si chiama \"{name}\"",
+          "website": "Ora rimanda a {website}"
+        },
+        "noMatch": "Nulla corrisponde.",
+        "empty": "Ancora nulla: i profili dei concorrenti vengono letti ogni settimana.",
+        "questionsTitle": "Le domande sui profili Google",
+        "questionsDescription": "Sul tuo e su quelli dei concorrenti. Una domanda senza risposta sul tuo profilo è un contatto lasciato in attesa, in pubblico.",
+        "questionsEmpty": "Nessuna domanda su questi profili.",
+        "questionColumns": {
+          "question": "Domanda",
+          "profile": "Profilo",
+          "asked": "Fatta il",
+          "answered": "Risposta"
+        },
+        "yours": "Tuo · {office}",
+        "notAnswered": "Senza risposta · {days, plural, one {# giorno} other {# giorni}}",
+        "answeredSameDay": "Risposta lo stesso giorno",
+        "answeredAfter": "Risposta dopo {days, plural, one {# giorno} other {# giorni}}"
+      }
     }
   },
   "searchConsole": {

@@ -8,7 +8,7 @@
  * as pages land. Copy lives in `messages/*.json` under `sites.menu`.
  */
 
-export type SitePageGroup = "site" | "ai" | "google" | "keywords" | "paid" | "competitors" | "backlinks";
+export type SitePageGroup = "site" | "ai" | "google" | "local" | "keywords" | "paid" | "competitors" | "backlinks";
 
 export type SitePage = {
   id: string;
@@ -29,7 +29,11 @@ export type SitePage = {
     | "moves"
     | "suggestions"
     | "citedPages"
-    | "yourPages";
+    | "yourPages"
+    | "localMapSearches"
+    | "localMarket"
+    | "localRivalPosts"
+    | "localListings";
   /**
    * What the page cannot show anything without, set up by the team for the
    * site: the questions asked of AI assistants, or the searches checked one
@@ -62,7 +66,7 @@ export function setupPaused(page: SitePage, counts: SetupCounts): boolean {
   return false;
 }
 
-export const SITE_PAGE_GROUPS: SitePageGroup[] = ["site", "ai", "google", "keywords", "paid", "competitors", "backlinks"];
+export const SITE_PAGE_GROUPS: SitePageGroup[] = ["site", "ai", "google", "local", "keywords", "paid", "competitors", "backlinks"];
 
 export const SITE_PAGES: SitePage[] = [
   { id: "overview", group: "site", segment: "", built: true },
@@ -87,6 +91,14 @@ export const SITE_PAGES: SitePage[] = [
   { id: "googleAbove", group: "google", segment: "google/above", built: true, needs: "trackedSearches" },
   { id: "googleFeatures", group: "google", segment: "google/features", built: true },
   { id: "googleQuestions", group: "google", segment: "google/questions", built: true, needs: "trackedSearches" },
+
+  // Local: a business's Google profiles, one per office, and where each sits
+  // on Google Maps (docs/plans/active/discovery-local-reputation-ai-plan.md, §7).
+  { id: "localProfile", group: "local", segment: "local", built: true },
+  { id: "localMaps", group: "local", segment: "local/maps", built: true, count: "localMapSearches" },
+  { id: "localMarket", group: "local", segment: "local/market", built: true, count: "localMarket" },
+  { id: "localActivity", group: "local", segment: "local/activity", built: true, count: "localRivalPosts" },
+  { id: "localListings", group: "local", segment: "local/listings", built: true, count: "localListings" },
 
   { id: "keywordsAll", group: "keywords", segment: "keywords", built: true, count: "keywords" },
   { id: "keywordsPages", group: "keywords", segment: "keywords/pages", built: true, count: "pages" },

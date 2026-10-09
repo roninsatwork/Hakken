@@ -26,7 +26,9 @@ export type TableNoun =
   // Who to follow's people, a couple of hundred of them (insights-helpful-content-plan.md, IH14).
   | "people"
   // A person's Hakken tasks, and a company's (hakken-tasks-plan.md, 1.5).
-  | "tasks";
+  | "tasks"
+  // Discovery's Local pages (discovery-local-reputation-ai-plan.md): profiles, businesses, a profile's details and review topics, what rivals did, questions.
+  | "listings" | "businesses" | "offices" | "rivals" | "details" | "topics" | "rivalActions" | "questions" | "found";
 
 /**
  * The bar across the top of every Sites table, inside its card (`DataTable`'s

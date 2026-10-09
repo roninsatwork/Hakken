@@ -1,3 +1,4 @@
+import { purgeHoldLocal } from "./localSweep";
 import { v } from "convex/values";
 import { deletePullAnswers } from "./seoPullAnswers";
 
@@ -61,6 +62,8 @@ export const purgeWebsiteHoldingsInternal = internalMutation({
       await purgeHoldFanOutLimits(ctx, owner._id);
       await purgeHoldClassifications(ctx, owner._id);
       await purgeHoldProfile(ctx, owner._id);
+      // Its Local offices and rivals, finds and menu numbers (`localSweep.ts`); the businesses themselves are the platform's.
+      await purgeHoldLocal(ctx, owner._id);
       // Its Search Console connection and figures, the company's alone, and the angles of its questions' searches.
       await ctx.scheduler.runAfter(0, internal.searchConsoleConnect.forgetHold, { companyWebsiteId: owner._id });
       await ctx.scheduler.runAfter(0, internal.fanOutAngles.purgeHoldAngles, { holdId: owner._id });

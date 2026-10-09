@@ -1977,6 +1977,37 @@
         "standaloneHint": "What they would cost with no other client sharing the data. Price against this.",
         "saving": "Saved by sharing · 30d",
         "savingHint": "Served from data another client had already paid for."
+      },
+      "parts": {
+        "title": "New kinds of data",
+        "intro": "Discovery's newer pages, each bought for this company only once it is switched on here. Off, nothing of it is bought on any run, and its Find button says so. Switched on, it is planned on the company's next run.",
+        "local": {
+          "label": "Local: Google profiles and Maps",
+          "description": "Each office's Google profile and its rivals' weekly, every tracked search on Google Maps from each office every run ($0.002 each), and each office's local market monthly."
+        },
+        "reviews": {
+          "label": "Reviews",
+          "description": "The reviews on the company's own profiles as they come in, and its rivals' newest each month: about a tenth of a cent for ten."
+        },
+        "aiApps": {
+          "label": "AI apps as people see them",
+          "description": "ChatGPT and Gemini read from their apps rather than asked through the model, and Google AI Mode asked every question: $0.004 a question each, every run."
+        },
+        "aiDemand": {
+          "label": "AI demand",
+          "description": "How often the tracked searches and questions are asked of AI assistants each month: about a cent for each thousand."
+        },
+        "brandRadar": {
+          "label": "Brand radar",
+          "description": "How often Google's AI answers in the United Kingdom name the website and its rivals, monthly: about $0.10 a request."
+        },
+        "webMentions": {
+          "label": "Web mentions",
+          "description": "Pages across the web that mention the business, weekly, each checked by AI to be about this business: about $0.02 a request."
+        },
+        "saved": "Saved",
+        "saveFailed": "The switches could not be saved.",
+        "saveParts": "Save switches"
       }
     },
     "collectionRuns": {
@@ -5787,6 +5818,14 @@
         "ai_citation_gemini": "Asked Gemini",
         "ai_citation_perplexity": "Asked Perplexity",
         "ai_overview_fan_out": "What Google's AI Overviews searched",
+        "google_maps_find": "Found a business on Google Maps",
+        "local_market": "Businesses of its kind nearby",
+        "google_business_profile": "Its Google profile",
+        "google_maps_check": "Where it sits on Google Maps for one search",
+        "google_business_posts": "Its Google profile's posts",
+        "trustpilot_find": "Found a business on Trustpilot",
+        "tripadvisor_find": "Found a place on Tripadvisor",
+        "google_business_questions": "Questions asked on its Google profile",
         "backlinks_list": "Every site linking to it",
         "backlinks_all": "Every link to it",
         "backlinks_broken": "Links to its broken pages",
@@ -6183,7 +6222,9 @@
         "positions": "{count, plural, one {# position} other {# positions}}",
         "updates": "{count, plural, one {# update} other {# updates}}",
         "weeks": "{count, plural, one {# week} other {# weeks}}",
-        "tasks": "{count, plural, one {# task} other {# tasks}}"
+        "tasks": "{count, plural, one {# task} other {# tasks}}",
+        "offices": "{count, plural, one {# office} other {# offices}}",
+        "kilometres": "{count, plural, one {# km} other {# km}}"
       },
       "topics": {
         "tasks": {
@@ -6195,6 +6236,11 @@
           "title": "Google data for each website",
           "intro": "What the platform buys from Google, through DataForSEO, for each website: a company’s own sites and every competitor it watches. Higher numbers give fuller lists on the Discovery screens, and cost more.",
           "footer": "Changes apply from each website’s next run, or its next weekly refresh."
+        },
+        "local": {
+          "title": "Local: Google profiles and Maps",
+          "intro": "What Discovery's Local pages read for each website: its own Google profiles, one per office, the rivals' profiles watched against each, where each office sits on Google Maps, and the businesses of its kind nearby. Bought from DataForSEO only for companies with Local switched on in their Collection schedule.",
+          "footer": "Changes apply from each website's next run."
         },
         "ai": {
           "title": "AI prompts",
@@ -6507,6 +6553,31 @@
           "label": "Google’s AI Overview searches per lookup",
           "description": "How many of the searches Google ran to write its AI Overviews are bought with What the AI says, the most run first. 0 buys none.",
           "cost": "About 10 cents a lookup, and a tenth of a cent for each search."
+        },
+        "localOffices": {
+          "label": "Offices per website",
+          "description": "How many of a website's own Google profiles are tracked, one per office. Each office's map positions are checked from its own address.",
+          "cost": "Every tracked search is checked on Google Maps from each office, at $0.002 a search each run."
+        },
+        "localRivalsPerOffice": {
+          "label": "Rival profiles per office",
+          "description": "How many rivals' Google profiles are watched against each office, matched to the tracked competitors or added by hand.",
+          "cost": "Each rival's profile is read weekly, at about half a cent."
+        },
+        "localMapDepth": {
+          "label": "Businesses read on each Maps search",
+          "description": "How far down Google Maps each search is read. Google's map box on its results page is the first three.",
+          "cost": "$0.002 a search whichever you choose."
+        },
+        "localMarketBusinesses": {
+          "label": "Businesses in each office's local market",
+          "description": "How many businesses of the office's kind are listed on Local market each month.",
+          "cost": "About $0.04 a month an office for 100."
+        },
+        "localMarketKm": {
+          "label": "Local market's distance",
+          "description": "How far round each office its local market reaches.",
+          "cost": "No cost of its own."
         },
         "hakkenTasksPerPerson": {
           "label": "Tasks on at once, per person",
@@ -9448,7 +9519,16 @@
       "assistants": "{count, plural, =1 {# assistant} other {# assistants}}",
       "lines": "{count, plural, =1 {# line} other {# lines}}",
       "people": "{count, plural, =1 {# person} other {# people}}",
-      "tasks": "{count, plural, =1 {# task} other {# tasks}}"
+      "tasks": "{count, plural, =1 {# task} other {# tasks}}",
+      "listings": "{count, plural, =1 {# listing} other {# listings}}",
+      "businesses": "{count, plural, =1 {# business} other {# businesses}}",
+      "offices": "{count, plural, =1 {# office} other {# offices}}",
+      "rivals": "{count, plural, =1 {# rival} other {# rivals}}",
+      "details": "{count, plural, =1 {# detail} other {# details}}",
+      "topics": "{count, plural, =1 {# topic} other {# topics}}",
+      "rivalActions": "{count, plural, =1 {# thing rivals did} other {# things rivals did}}",
+      "questions": "{count, plural, =1 {# question} other {# questions}}",
+      "found": "{count, plural, =1 {# found} other {# found}}"
     },
     "chart": {
       "download": "Download",
@@ -9848,6 +9928,7 @@
         "site": "Site",
         "ai": "AI answers",
         "google": "Google results",
+        "local": "Local",
         "keywords": "Organic search",
         "competitors": "Competitors",
         "backlinks": "Backlinks",
@@ -9865,6 +9946,11 @@
         "googleAbove": "Who ranks above you",
         "googleFeatures": "Search features",
         "googleQuestions": "Questions people ask",
+        "localProfile": "Business profile",
+        "localMaps": "Map rankings",
+        "localMarket": "Local market",
+        "localActivity": "Rival activity",
+        "localListings": "Your listings",
         "keywordsAll": "Keywords",
         "keywordsPages": "Top pages",
         "keywordsBands": "Position bands",
@@ -11654,6 +11740,413 @@
         "seen": "Seen"
       },
       "cannotUntrack": "No question lists this any more, so it can't be unticked here."
+    },
+    "local": {
+      "officeOf": "{town} office",
+      "officeChoice": "Office",
+      "everyOffice": "Every office side by side",
+      "you": "{name} · you",
+      "youShort": "You",
+      "of": "{count} of {of}",
+      "watched": "Watched",
+      "watchAsRival": "Watch as a rival",
+      "watchFailed": "That business could not be watched. Try again.",
+      "setup": {
+        "off": "Local is not switched on for your company yet. Your account manager switches it on.",
+        "noOffice": "Link your Google profile on Your listings, one per office, and this page fills in from the next check.",
+        "notChecked": "Nothing has been read for this office yet: it is read on the next check.",
+        "openListings": "Open Your listings",
+        "noRivals": "Watch a rival from Your listings or Local market, and what it does on Google shows here from the next check."
+      },
+      "listings": {
+        "title": "Your listings",
+        "description": "The profiles that are yours, one per office, and the rivals' profiles to watch. Every check reads them all.",
+        "notOwnSite": "Listings are linked on your own websites. Open one of yours to link its profiles.",
+        "yoursTitle": "Yours",
+        "yoursDescription": "Each Google profile is one office. Its address is where its map checks are made from.",
+        "yoursEmpty": "No listing linked yet. Find yours below.",
+        "columns": {
+          "listing": "Listing",
+          "where": "Where",
+          "reviews": "Reviews",
+          "rating": "Rating",
+          "status": "Status",
+          "actions": "Actions",
+          "business": "Business",
+          "category": "Category",
+          "against": "Against",
+          "listingsRead": "Listings read"
+        },
+        "sources": {
+          "GOOGLE": "Google",
+          "TRUSTPILOT": "Trustpilot",
+          "TRIPADVISOR": "Tripadvisor"
+        },
+        "where": {
+          "GOOGLE": "Google Business Profile",
+          "TRUSTPILOT": "Trustpilot",
+          "TRIPADVISOR": "Tripadvisor"
+        },
+        "linked": "Linked {day}",
+        "stopReading": "Stop reading this listing",
+        "stopWatching": "Stop watching this rival",
+        "findTitle": "Find a listing",
+        "findLabel": "Business name and town",
+        "findHint": "The name as it shows on Google, and the town of the office.",
+        "findPlaceholder": "Name and town, as on Google",
+        "whereToLook": "Where to look",
+        "findCost": "Under a cent a search. Nothing is read again until you link a listing.",
+        "find": "Find",
+        "finding": "Finding…",
+        "findFailed": "That search could not be made. Try again.",
+        "looking": "Looking… this takes a few seconds.",
+        "foundTitle": "Is one of these yours?",
+        "foundDescription": "What {where} found for \"{name}\". Pick yours, or watch one as a rival.",
+        "foundEmpty": "Nothing found by that name. Try it exactly as it shows there, with its town.",
+        "alreadyYours": "Already yours",
+        "watched": "Watched",
+        "thisIsUs": "This is us",
+        "watchAsRival": "Watch as a rival",
+        "linkFailed": "That listing could not be linked. Try again.",
+        "unlinkFailed": "That listing could not be taken off. Try again.",
+        "rivalsTitle": "Rivals you watch",
+        "rivalsDescription": "Their profiles are read with yours, so every page can put them side by side.",
+        "rivalsEmpty": "No rivals watched yet. Find one above, or watch one from Local market.",
+        "noWebsite": "No website",
+        "everyOffice": "Every office"
+      },
+      "profile": {
+        "title": "Business profile",
+        "description": "Your Google Business Profile as people see it on Google and Maps.",
+        "descriptionRead": "Your Google Business Profile as people see it on Google and Maps. Read {day}.",
+        "openOnGoogle": "Open on Google",
+        "figures": {
+          "rating": "Rating",
+          "rivalsAverage": "Rivals average {value}",
+          "noRivals": "No rivals watched yet",
+          "reviews": "Reviews",
+          "reviewsNoWeeks": "Counted weekly from the next check",
+          "inThirtyDays": "in the last 30 days",
+          "mapBox": "In the map box",
+          "of": "{count} of {of}",
+          "mapBoxDetail": "Your searches where you show in Google's top 3 businesses",
+          "photos": "Photos"
+        },
+        "details": {
+          "title": "What your profile shows",
+          "description": "Each detail Google holds about the business, and what is missing against the businesses people also look at.",
+          "toFix": "· {count} to fix",
+          "empty": "Read on the next check.",
+          "columns": {
+            "detail": "Detail",
+            "shows": "What Google shows",
+            "check": "Check"
+          },
+          "names": {
+            "CLAIMED": "Claimed by you",
+            "CATEGORY": "Main category",
+            "OTHER_CATEGORIES": "Other categories",
+            "DESCRIPTION": "Description",
+            "ADDRESS": "Address and phone",
+            "WEBSITE": "Website",
+            "HOURS": "Opening hours",
+            "BOOKING": "Booking link",
+            "SERVICES": "Services",
+            "PHOTOS": "Photos",
+            "REPLIES": "Replies to reviews"
+          },
+          "none": "None",
+          "yes": "Yes",
+          "no": "No",
+          "notKnown": "Not known",
+          "hasOne": "Has one",
+          "bookingNone": "None · {count} of the {of} businesses people also look at have one",
+          "services": "{count} listed: {names}",
+          "servicesNoPrices": "{count} listed: {names} · no prices",
+          "photos": "{count} · rivals average {average}",
+          "readWithReviews": "Counted with your reviews",
+          "notReadYet": "Not read yet",
+          "good": "Good",
+          "sameAsTop": "Same as the top 3 on the map",
+          "claimIt": "Claim it",
+          "topIs": "The top 3 on the map are {category}",
+          "addOne": "Add one",
+          "addMore": "Add more",
+          "addPhone": "Add the phone",
+          "addAddress": "Add the address",
+          "pointsElsewhere": "Points to another website",
+          "addWebsite": "Add your website",
+          "addHours": "Add your hours",
+          "addPrices": "Add prices",
+          "addServices": "Add your services",
+          "fewerThanRivals": "Fewer than rivals",
+          "days": {
+            "0": "Monday",
+            "1": "Tuesday",
+            "2": "Wednesday",
+            "3": "Thursday",
+            "4": "Friday",
+            "5": "Saturday",
+            "6": "Sunday"
+          },
+          "dayRange": "{from} to {to}",
+          "dayHours": "{days}, {hours}",
+          "closed": "closed",
+          "hoursChange": "{day}: now {now}, was {was}"
+        },
+        "also": {
+          "title": "People also look at",
+          "description": "The businesses Google shows beside yours under \"People also search for\", measured the same way as your profile.",
+          "andYou": "and you",
+          "empty": "Google shows no others beside yours yet.",
+          "columns": {
+            "business": "Business",
+            "category": "Category",
+            "rating": "Rating",
+            "reviews": "Reviews",
+            "photos": "Photos",
+            "booking": "Booking link",
+            "mapBox": "Map box",
+            "actions": "Actions"
+          },
+          "hasOne": "Has one",
+          "none": "None"
+        },
+        "topics": {
+          "title": "What reviewers talk about",
+          "description": "The words Google picks out of your reviews, and how many reviews use each.",
+          "from": "from {count} reviews",
+          "empty": "Google picks out no words from your reviews yet.",
+          "columns": {
+            "topic": "Topic",
+            "reviews": "Reviews",
+            "share": "Share of reviews",
+            "stars": "Their stars"
+          }
+        }
+      },
+      "offices": {
+        "description": "Each office's Google Business Profile, side by side. Open an office to see its whole profile.",
+        "figures": {
+          "offices": "Offices",
+          "officesDetail": "Each with its own Google profile",
+          "reviews": "Reviews, every office",
+          "mapBox": "In the map box",
+          "mapBoxDetail": "Searches, each checked from its office",
+          "toFix": "To fix",
+          "toFixDetail": "Details missing across the {count, plural, one {profile} other {# profiles}}"
+        },
+        "officesTitle": "Your offices",
+        "officesDescription": "One row per Google Business Profile. The same details for each, so the weaker office shows.",
+        "officesEmpty": "No office linked yet.",
+        "columns": {
+          "office": "Office",
+          "rating": "Rating",
+          "reviews": "Reviews",
+          "answered": "Answered",
+          "photos": "Photos",
+          "mapBox": "Map box",
+          "check": "Profile check",
+          "search": "Search",
+          "volume": "Volume",
+          "top": "Top of the map"
+        },
+        "toFix": "{count} to fix",
+        "allGood": "All good",
+        "searchesTitle": "Where each office sits on the map",
+        "searchesDescription": "Your tracked searches, each checked from the office it belongs to. A dash means the search is not checked from that office.",
+        "searchesEmpty": "No searches checked on Maps yet.",
+        "notOnMap": "Not on the map"
+      },
+      "maps": {
+        "title": "Map rankings",
+        "description": "Where your business sits on Google Maps for each of your tracked searches.",
+        "figures": {
+          "mapBox": "In the map box",
+          "firstCheck": "From the first check",
+          "onLastCheck": "on the last check",
+          "average": "Average place on Maps",
+          "averageDetail": "Across the {count} searches you appear for",
+          "notOnMap": "Not on the map",
+          "notOnMapDetail": "Searches where Maps doesn't show you in the first {depth}",
+          "topMost": "Top of the map most often",
+          "topMostDetail": "First for {count} of your {of} searches",
+          "notChecked": "Not checked yet"
+        },
+        "notice": "Checked from the {office}'s address, as someone standing there would see Google Maps; each office is checked from its own address. The map box is the three businesses Google shows on its results page. A fifth of a cent a search, per office, each check.",
+        "searchPlaceholder": "Find a search…",
+        "boxFilter": "Map box",
+        "everySearch": "Every search",
+        "boxes": {
+          "in": "In the map box",
+          "below": "Below the box",
+          "off": "Not on the map"
+        },
+        "moveFilter": "Moved",
+        "anyMove": "Any move",
+        "moves": {
+          "up": "Moved up",
+          "down": "Moved down"
+        },
+        "columns": {
+          "search": "Search",
+          "volume": "Volume",
+          "onMaps": "On Maps",
+          "change": "Change",
+          "box": "Map box",
+          "position": "Position",
+          "top": "Top of the map"
+        },
+        "noMatch": "No search matches that.",
+        "empty": "No search checked on Maps yet: they are checked on the next run.",
+        "noOffice": "Link your Google profile on Your listings first.",
+        "notChecked": "Not checked yet"
+      },
+      "mapSearch": {
+        "description": "On Google Maps, checked from the {office} · {day} · {volume}",
+        "volume": "{shown} searches a month",
+        "volumeUnknown": "searches a month not known",
+        "notChecked": "This search has not been checked on Maps from this office yet.",
+        "figures": {
+          "place": "Your place on Maps",
+          "firstCheck": "From the first check",
+          "sinceBefore": "since the check before",
+          "results": "On Google's results page",
+          "inBox": "In the map box",
+          "notInBox": "Below the map box",
+          "websiteAt": "Your website is {place, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} below it",
+          "websiteNotOnPage": "Your website is not in its first 100",
+          "rating": "Your rating",
+          "reviews": "Your reviews",
+          "boxAverage": "The map box averages {value}"
+        },
+        "notOnMap": "Not on the map",
+        "tableTitle": "Everyone on the map for this search",
+        "tableDescription": "In Google's order. \"Why Google showed it\" is Google's own reason, printed under the business on Maps.",
+        "columns": {
+          "place": "Place",
+          "business": "Business",
+          "rating": "Rating",
+          "reviews": "Reviews",
+          "category": "Category",
+          "claimed": "Claimed",
+          "why": "Why Google showed it"
+        },
+        "claimed": "Claimed",
+        "notClaimed": "Not claimed",
+        "noWebsite": "No website",
+        "empty": "Nobody on the map for this search."
+      },
+      "market": {
+        "title": "Local market",
+        "description": "Every business Google lists as your kind near the office: who they are, how they look on Google, and who you are up against without knowing it.",
+        "descriptionRead": "Every business Google lists as your kind near the office: who they are, how they look on Google, and who you are up against without knowing it. Read {day}.",
+        "figures": {
+          "businesses": "Businesses of your kind",
+          "businessesDetail": "Within {km} km of the office",
+          "manyReviews": "With {count} reviews or more",
+          "youAmong": "You are one of them",
+          "youNotAmong": "You are not one of them yet",
+          "highRating": "Rated {rating} or more",
+          "highRatingDetail": "A high rating alone does not stand out here",
+          "unwatched": "You don't watch yet",
+          "unwatchedDetail": "In your map box but not on your rivals list"
+        },
+        "searchPlaceholder": "Find a business…",
+        "categoryFilter": "Category",
+        "everyCategory": "Every category",
+        "distanceFilter": "Distance",
+        "anyDistance": "Any distance",
+        "within": "Within {km} km",
+        "claimedFilter": "Claimed",
+        "claimedOrNot": "Claimed or not",
+        "claims": {
+          "claimed": "Claimed",
+          "notClaimed": "Not claimed"
+        },
+        "columns": {
+          "business": "Business",
+          "website": "Website",
+          "category": "Category",
+          "distance": "Distance",
+          "rating": "Rating",
+          "reviews": "Reviews",
+          "claimed": "Claimed",
+          "mapBox": "On your searches",
+          "actions": "Actions"
+        },
+        "km": "{km} km",
+        "mapBoxFor": "Map box for {count}",
+        "noWebsite": "No website",
+        "noMatch": "No business matches that.",
+        "empty": "Read on the next check."
+      },
+      "activity": {
+        "title": "Rival activity",
+        "description": "What the rivals you watch are doing on Google: their posts and offers, changes to their profiles, and the questions people ask.",
+        "figures": {
+          "posts": "Rival posts",
+          "postsDetail": "In 30 days · you posted {count}",
+          "offers": "Offers running",
+          "noOffers": "None in 30 days",
+          "questions": "Questions on your profile",
+          "questionsDetail": "Waiting for an answer",
+          "changes": "Profile changes",
+          "changesDetail": "Photos, hours and categories"
+        },
+        "searchPlaceholder": "Find a word in a post…",
+        "rivalFilter": "Rival",
+        "everyRival": "Every rival",
+        "whatFilter": "What",
+        "everything": "Everything",
+        "whats": {
+          "posts": "Posts",
+          "offers": "Offers",
+          "changes": "Profile changes",
+          "ratings": "Rating changes"
+        },
+        "columns": {
+          "date": "Date",
+          "rival": "Rival",
+          "what": "What",
+          "detail": "Detail"
+        },
+        "kinds": {
+          "POST": "Post",
+          "OFFER": "Offer",
+          "EVENT": "Event",
+          "CATEGORY_ADDED": "Category added",
+          "CATEGORY_REMOVED": "Category removed",
+          "HOURS_CHANGED": "Hours changed",
+          "NAME_CHANGED": "Name changed",
+          "WEBSITE_CHANGED": "Website changed",
+          "RATING_CHANGE": "Rating change",
+          "PHOTOS_ADDED": "New photos"
+        },
+        "details": {
+          "rating": "{from} to {to}",
+          "photos": "{count} photos added, now {total} in all",
+          "categoryAdded": "Added \"{category}\" to their profile",
+          "categoryRemoved": "Took \"{category}\" off their profile",
+          "name": "Now named \"{name}\"",
+          "website": "Now links to {website}"
+        },
+        "noMatch": "Nothing matches that.",
+        "empty": "Nothing yet: rivals' profiles are read weekly.",
+        "questionsTitle": "Questions people ask on Google profiles",
+        "questionsDescription": "On yours and your rivals'. An unanswered question on your profile is a lead left waiting, in public.",
+        "questionsEmpty": "No questions on these profiles.",
+        "questionColumns": {
+          "question": "Question",
+          "profile": "Profile",
+          "asked": "Asked",
+          "answered": "Answered"
+        },
+        "yours": "Yours · {office}",
+        "notAnswered": "Not answered · {days, plural, one {# day} other {# days}}",
+        "answeredSameDay": "Answered the same day",
+        "answeredAfter": "Answered after {days, plural, one {# day} other {# days}}"
+      }
     }
   },
   "searchConsole": {

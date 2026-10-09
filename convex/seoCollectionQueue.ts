@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 
+import { isLocalOperation } from "./dataForSeoLocalOperations";
+import { partIsOn } from "./collectionParts";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
 import {
@@ -170,6 +172,14 @@ async function stillWanted(ctx: MutationCtx, pull: Doc<"seoDataPulls">): Promise
   const lines = await ctx.db.query("seoCycleLines").withIndex("by_pull", (q) => q.eq("pullId", pull._id)).take(LINES_READ_FOR_SWITCH);
   for (const line of lines) companies.add(line.companyId);
   if (companies.size === 0) return true;
+
+  // Discovery's Local purchases are held by the company's Local switch
+  // (discovery-local-reputation-ai-plan.md, D16), not its collection schedule:
+  // a Find on a company whose runs are off is still wanted while Local is on.
+  if (isLocalOperation(pull.operationId)) {
+    for (const companyId of companies) if (await partIsOn(ctx, companyId, "local")) return true;
+    return false;
+  }
 
   for (const companyId of companies) {
     const schedule = await ctx.db

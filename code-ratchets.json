@@ -54,5 +54,14 @@
     "one link per website": 456,
     "the site's header": 200,
     "the Sites list": 24
+  },
+  "localReadKiB": {
+    "business profile": 656,
+    "every office": 1472,
+    "map rankings": 704,
+    "one search on the map": 336,
+    "local market": 648,
+    "rival activity": 1968,
+    "your listings": 248
   }
 }

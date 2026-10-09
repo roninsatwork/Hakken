@@ -1,0 +1,14 @@
+# Discovery → Local → One search on the map — the approved look (board "MapSearch" of docs/plans/assets/discovery-local-reputation-ai/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: web design guildford
+figures
+  figure: Your place on Maps
+  figure: On Google's results page
+  figure: Your rating
+  figure: Your reviews
+section: Everyone on the map for this search
+table: Place | Business | Rating | Reviews | Category | Claimed | Why Google showed it
+  table-bar
+    download: Download CSV
+  table-footer

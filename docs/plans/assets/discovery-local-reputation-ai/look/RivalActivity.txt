@@ -1,0 +1,18 @@
+# Discovery → Local → Rival activity — the approved look (board "RivalActivity" of docs/plans/assets/discovery-local-reputation-ai/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Rival activity
+figures
+  figure: Rival posts
+  figure: Offers running
+  figure: Questions on your profile
+  figure: Profile changes
+search: Find a word in a post…
+filter: Rival
+filter: What
+table: Date | Rival | What | Detail
+  table-bar
+    download: Download CSV
+  table-footer
+section: Questions people ask on Google profiles
+table: Question | Profile | Asked | Answered

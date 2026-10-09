@@ -1,0 +1,18 @@
+# Discovery → Local → Map rankings — the approved look (board "MapRankings" of docs/plans/assets/discovery-local-reputation-ai/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Map rankings
+  select: Office
+figures
+  figure: In the map box
+  figure: Average place on Maps
+  figure: Not on the map
+  figure: Top of the map most often
+notice (info)
+search: Find a search…
+filter: Map box
+filter: Moved
+table: Search | Volume | On Maps | Change | Map box | Position | Top of the map
+  table-bar
+    download: Download CSV
+  table-footer

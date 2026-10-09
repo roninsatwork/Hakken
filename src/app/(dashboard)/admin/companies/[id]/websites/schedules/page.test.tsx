@@ -49,6 +49,7 @@ const collectorAgent = { _id: "agent_1", name: "DataForSEO Agent Collector", sys
 describe("CompanyDataCollectionPage", () => {
   const saveCompanySchedule = vi.fn();
   const collectNow = vi.fn();
+  const setCollectionParts = vi.fn();
 
   function mockQueries({
     schedule = null as unknown,
@@ -58,6 +59,7 @@ describe("CompanyDataCollectionPage", () => {
       const path = convexPath(reference);
       if (path.includes("getCompanyById")) return { _id: "company_1", name: "Ronins Agency" };
       if (path.includes("getCompanySchedule")) return schedule;
+      if (path.includes("getCollectionParts")) return { local: false, reviews: false, aiApps: false, aiDemand: false, brandRadar: false, webMentions: false };
       if (path.includes("agents")) return agents;
       return undefined;
     }) as never);
@@ -71,6 +73,7 @@ describe("CompanyDataCollectionPage", () => {
       const path = convexPath(reference);
       if (path.includes("saveCompanySchedule")) return saveCompanySchedule as never;
       if (path.includes("collectNow")) return collectNow as never;
+      if (path.includes("setCollectionParts")) return setCollectionParts as never;
       return vi.fn() as never;
     });
 
@@ -100,7 +103,7 @@ describe("CompanyDataCollectionPage", () => {
     render(<CompanyDataCollectionPage />);
 
     fireEvent.click(await screen.findByRole("switch", { name: "collectionLabel" }));
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
 
     await waitFor(() => {
       expect(saveCompanySchedule).toHaveBeenCalledWith({
@@ -119,7 +122,7 @@ describe("CompanyDataCollectionPage", () => {
     render(<CompanyDataCollectionPage />);
 
     fireEvent.click(await screen.findByRole("switch", { name: "collectionLabel" }));
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
 
     await waitFor(() => {
       expect(saveCompanySchedule).toHaveBeenCalledWith(
@@ -133,7 +136,7 @@ describe("CompanyDataCollectionPage", () => {
     render(<CompanyDataCollectionPage />);
 
     fireEvent.click(await screen.findByRole("switch", { name: "collectionLabel" }));
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
 
     await waitFor(() => {
       expect(saveCompanySchedule).toHaveBeenCalledWith(expect.objectContaining({ isActive: true }));
@@ -145,7 +148,7 @@ describe("CompanyDataCollectionPage", () => {
     render(<CompanyDataCollectionPage />);
 
     fireEvent.click(await screen.findByRole("switch", { name: "collectionLabel" }));
-    fireEvent.click(screen.getByRole("button", { name: /save/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
 
     await waitFor(() => {
       expect(screen.getByText(/Unauthorized|errors\.saveFailed/)).toBeInTheDocument();
@@ -198,5 +201,21 @@ describe("CompanyDataCollectionPage", () => {
 
       expect(await screen.findByText(/Collection is switched off for Ronins Agency/)).toBeInTheDocument();
     });
+  });
+  it("holds each new kind of data off until it is switched on, and saves the switches on their own", async () => {
+    // discovery-local-reputation-ai-plan.md, D16: "hold until I say", per company, per part.
+    setCollectionParts.mockResolvedValue(null);
+    render(<CompanyDataCollectionPage />);
+
+    const local = await screen.findByRole("switch", { name: "local.label" });
+    expect(local).toHaveAttribute("aria-checked", "false");
+    fireEvent.click(local);
+    fireEvent.click(screen.getByRole("button", { name: "saveParts" }));
+
+    await waitFor(() => expect(setCollectionParts).toHaveBeenCalledWith({
+      companyId: "company_1",
+      parts: { local: true, reviews: false, aiApps: false, aiDemand: false, brandRadar: false, webMentions: false },
+    }));
+    expect(saveCompanySchedule).not.toHaveBeenCalled();
   });
 });

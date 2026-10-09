@@ -1,0 +1,19 @@
+# Discovery → Local → Business profile, every office — the approved look (board "ProfileOffices" of docs/plans/assets/discovery-local-reputation-ai/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Business profile
+  select: Office
+figures
+  figure: Offices
+  figure: Reviews, every office
+  figure: In the map box
+  figure: To fix
+section: Your offices
+table: Office | Rating | Reviews | Answered | Photos | Map box | Profile check
+  table-bar
+    download: Download CSV
+section: Where each office sits on the map
+table: Search | Volume | Guildford | London | Top of the map
+  table-bar
+    download: Download CSV
+  table-footer

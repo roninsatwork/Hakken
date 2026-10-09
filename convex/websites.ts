@@ -27,6 +27,7 @@ import { purgeHoldDataLimits, readCompanyDataLimits, resolveSiteDataLimits } fro
 import { purgeHoldFanOutLimits } from "./fanOutLimits";
 import { purgeHoldClassifications } from "./pageClassifications";
 import { purgeHoldProfile } from "./holdProfiles";
+import { purgeHoldLocal } from "./localSweep";
 import { forgetWebsiteIcon, iconAnswered, requestWebsiteIcon, websiteIconUrl } from "./websiteIcons";
 
 /**
@@ -702,6 +703,7 @@ export const removeCompanyWebsite = superAdminMutation({
     await purgeHoldFanOutLimits(ctx, args.id);
     await purgeHoldClassifications(ctx, args.id);
     await purgeHoldProfile(ctx, args.id);
+    await purgeHoldLocal(ctx, args.id);
     // The company's own searches, questions and AI lines for it go too; what
     // was collected stays with the website (docs/plans/active/
     // private-tracking-lists-plan.md, V9).
