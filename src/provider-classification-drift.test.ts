@@ -80,6 +80,9 @@ describe('Provider Classification Drift', () => {
       // The Discovery local and AI-apps plan reads the ChatGPT and Gemini apps
       // as people see them, and prices each: naming them is the subject.
       'docs/plans/active/discovery-local-reputation-ai-plan.md',
+      // The Google Analytics plan lists the AI assistants whose visitors get a
+      // channel of their own (gemini.google.com among them): naming them is the subject.
+      'docs/plans/active/google-analytics-plan.md',
       'src/provider-classification-drift.test.ts',
     ]);
 

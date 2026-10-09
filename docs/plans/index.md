@@ -7,6 +7,19 @@ completed work.
 
 ## Active Plans
 
+- [Google Analytics — for your own websites](./active/google-analytics-plan.md)
+  — a new "Google Analytics" item in the main menu, beside Search Console,
+  showing each owned website's Google Analytics alone: visits, channels (AI
+  assistants their own, every channel opening into its sources), landing
+  pages and each page's own screen, all pages, and conversions with their £
+  value, plus a weekly tracking health check. One Google sign-in per owned
+  website serves both Search Console and Analytics, and everything the two
+  have in common is stored once (GA18). Its own Google Analytics: Collector
+  Agent and schedule, collecting at once on connecting. Five phases, about
+  fifteen and a half days. **Planned 2026-10-09: every question answered and
+  the twenty screens agreed and locked (pictures in
+  `docs/plans/assets/google-analytics/`); nothing built; on hold until the
+  SEO API coverage work is complete.**
 - [Core data — each keyword and page once](./active/core-data-normalisation-plan.md)
   — normalising the core before roadmap features (Anthony, 2026-10-08): each
   keyword stored once for the platform, each page once per website, a
