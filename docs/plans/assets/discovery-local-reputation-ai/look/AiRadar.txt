@@ -1,0 +1,21 @@
+# Discovery → Brand radar → Overview — the approved look (board "AiRadar" of docs/plans/assets/discovery-local-reputation-ai/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Brand radar
+figures
+  figure: AI answers naming you
+  figure: Asked a month
+  figure: Your share of voice
+  figure: Your pages cited →
+notice (info)
+chart-card: Share of voice a month
+section: You against rivals
+table: Business | Mentions | Change | Share of voice | Asked a month | Pages cited
+  table-bar
+    download: Download CSV
+section: Questions where AI names you or a rival
+table: Question | Asked a month | You | Rivals named | Your page cited | Actions
+  table-bar
+    download: Download CSV
+  table-footer
+    select: Rows per page

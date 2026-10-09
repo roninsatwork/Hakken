@@ -1,0 +1,20 @@
+# Discovery → Brand radar → Websites AI cites — the approved look (board "AiRadarSources" of docs/plans/assets/discovery-local-reputation-ai/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Websites AI cites
+figures
+  figure: Websites cited
+  figure: You are on them
+  figure: Rivals there, you are not
+  figure: Your own site
+search: Find a website…
+filter: Kind
+filter: You there
+table: Website | Kind | Times cited | Beside you | Beside rivals | You there
+  table-bar
+    download: Download CSV
+  table-footer
+    select: Rows per page
+section: Pages AI cites most
+table: Page | Whose | Times cited | Cited for
+  table-bar

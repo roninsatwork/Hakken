@@ -5821,6 +5821,7 @@
         "ai_app_gemini": "Letta l'app Gemini",
         "ai_citation_ai_mode": "Chiesto a Google AI Mode",
         "ai_keyword_volume": "Quanto spesso le ricerche sono chieste all'IA",
+        "radar_mentions": "Letto il Radar del marchio",
         "ai_overview_fan_out": "Cosa hanno cercato le AI Overview di Google",
         "google_maps_find": "Attività trovata su Google Maps",
         "local_market": "Attività dello stesso tipo nelle vicinanze",
@@ -9989,6 +9990,8 @@
         "aiBusinesses": "Attività consigliate",
         "aiRead": "Lette ma non citate",
         "aiDemand": "Domanda nell'IA",
+        "radarOverview": "Panoramica",
+        "radarSources": "Siti citati dall'IA",
         "radarGaps": "Lacune nelle AI Overview",
         "googleSearches": "Le tue ricerche",
         "googleMoves": "Salite e discese",
@@ -12575,6 +12578,116 @@
         "notQuoted": "Non citato",
         "noMatch": "Nessuna ricerca corrisponde.",
         "empty": "Nessuna delle tue ricerche monitorate mostra una AI Overview all'ultimo controllo."
+      }
+    },
+    "radar": {
+      "title": "Radar del marchio",
+      "description": "Quanto spesso le risposte IA nominano te e i tuoi concorrenti, su tutte le domande che le persone fanno, non solo quelle che monitori.",
+      "where": "Risposte IA di Google · {place}",
+      "you": "{name} · tu",
+      "youShort": "Tu",
+      "figures": {
+        "naming": "Risposte IA che ti nominano",
+        "monthBefore": "rispetto al mese prima",
+        "firstMonth": "Il primo mese letto",
+        "asked": "Chieste al mese",
+        "askedDetail": "Quanto spesso vengono fatte quelle domande",
+        "share": "La tua quota di voce",
+        "shareDetail": "{place}° su {of} che segui",
+        "pages": "Tue pagine citate",
+        "pagesDetail": "{count, plural, =0 {In nessuna delle risposte che ti nominano} =1 {In 1 delle risposte che ti nominano} other {In # delle risposte che ti nominano}}"
+      },
+      "notice": "Letto dalle risposte IA di Google nel tuo paese: l'AI Overview in cima ai risultati. Non scegli tu le domande, quindi mostra dove compari dove non avresti mai pensato di chiedere. Le tue domande monitorate, sotto Risposte IA, coprono ChatGPT, Gemini, Google AI Mode, Claude e Perplexity. {cost} per ogni controllo, ogni sito, una volta al mese.",
+      "noticeUnpriced": "Letto dalle risposte IA di Google nel tuo paese: l'AI Overview in cima ai risultati. Non scegli tu le domande, quindi mostra dove compari dove non avresti mai pensato di chiedere. Le tue domande monitorate, sotto Risposte IA, coprono ChatGPT, Gemini, Google AI Mode, Claude e Perplexity. Letto una volta al mese.",
+      "chartTitle": "Quota di voce al mese",
+      "chartHint": "Di tutte le risposte IA che nominano te o un concorrente che segui, la quota che nomina ogni attività.",
+      "chartMonth": "Mese",
+      "rivalsTitle": "Tu contro i concorrenti",
+      "rivalsDescription": "L'ultimo mese. \"Chieste al mese\" somma quanto spesso vengono fatte le domande dietro le citazioni di ogni attività.",
+      "youAndRivals": "{count, plural, =0 {solo tu} =1 {tu e 1 concorrente} other {tu e # concorrenti}}",
+      "rivalsEmpty": "Ancora niente di letto: il Radar del marchio viene letto una volta al mese, dal prossimo controllo.",
+      "questionsTitle": "Domande in cui l'IA nomina te o un concorrente",
+      "questionsDescription": "Domande vere fatte a Google. Monitorane una per farla a ogni controllo, a ogni assistente.",
+      "questionsEmpty": "Ancora nessuna domanda letta: il Radar del marchio viene letto una volta al mese, dal prossimo controllo.",
+      "columns": {
+        "business": "Attività",
+        "mentions": "Citazioni",
+        "change": "Variazione",
+        "share": "Quota di voce",
+        "asked": "Chieste al mese",
+        "pages": "Pagine citate",
+        "question": "Domanda",
+        "you": "Tu",
+        "rivals": "Concorrenti nominati",
+        "yourPage": "Tua pagina citata",
+        "actions": "Azioni"
+      },
+      "notNamed": "Non nominato",
+      "namedAt": "Nominato {place}°",
+      "tracked": "Monitorata",
+      "track": "Monitora",
+      "trackFailed": "Non è stato possibile monitorare questa domanda. Riprova.",
+      "sources": {
+        "title": "Siti citati dall'IA",
+        "description": "I siti che le risposte IA di Google citano quando parlano del tuo tipo di lavoro, e se vieni citato accanto a loro.",
+        "figures": {
+          "cited": "Siti citati",
+          "citedDetail": "In risposte che nominano te o un concorrente",
+          "there": "Sei presente",
+          "thereDetail": "Citati in risposte che ti nominano",
+          "missing": "Concorrenti presenti, tu no",
+          "missingDetail": "Posti dove farsi elencare o citare",
+          "own": "Il tuo sito",
+          "ownDetail": "{count, plural, =0 {Volte citato, da nessuna delle tue pagine} =1 {Volte citato, da 1 delle tue pagine} other {Volte citato, da # delle tue pagine}}"
+        },
+        "searchPlaceholder": "Cerca un sito…",
+        "kindFilter": "Tipo",
+        "everyKind": "Ogni tipo",
+        "kindFilters": {
+          "DIRECTORY": "Directory",
+          "NEWS": "Notizie",
+          "FORUM": "Forum",
+          "REVIEWS": "Siti di recensioni",
+          "RIVAL": "Concorrenti"
+        },
+        "thereFilter": "Tu presente",
+        "either": "Entrambi",
+        "thereFilters": {
+          "missing": "Concorrenti presenti, tu no",
+          "there": "Sei presente"
+        },
+        "kinds": {
+          "DIRECTORY": "Elenco",
+          "REVIEWS": "Sito di recensioni",
+          "FORUM": "Forum di discussione",
+          "NEWS": "Notizie",
+          "VIDEO": "Video",
+          "REFERENCE": "Riferimento",
+          "WEBSITE": "Sito",
+          "RIVAL": "Concorrente",
+          "YOURS": "Tuo"
+        },
+        "there": {
+          "beside": "{count, plural, =1 {Accanto a te una volta} other {Accanto a te # volte}}",
+          "missing": "{count, plural, =1 {Non accanto a te · 1 concorrente sì} other {Non accanto a te · # concorrenti sì}}"
+        },
+        "columns": {
+          "website": "Sito",
+          "kind": "Tipo",
+          "times": "Volte citato",
+          "you": "Accanto a te",
+          "rivals": "Accanto ai concorrenti",
+          "there": "Tu presente",
+          "page": "Pagina",
+          "whose": "Di chi",
+          "for": "Citata per"
+        },
+        "noMatch": "Nessun sito corrisponde.",
+        "empty": "Ancora niente di letto: il Radar del marchio viene letto una volta al mese, dal prossimo controllo.",
+        "pagesTitle": "Pagine più citate dall'IA",
+        "pagesDescription": "Le singole pagine citate più spesso. Una guida di un concorrente citata più volte è una pagina a cui vale la pena rispondere con una tua.",
+        "topPages": "le più citate",
+        "pagesEmpty": "Ancora nessuna pagina citata."
       }
     }
   },

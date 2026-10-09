@@ -38,6 +38,8 @@ import { aiEngineValidator, engineForOperationId, readsAsShown } from "./seoAiEn
 import { parseShownAnswer, type ShownAnswer } from "./aiShownParse";
 import { fileAiDemandPull } from "./aiDemand";
 import { isAiDemandOperation } from "./dataForSeoAiDemandOperations";
+import { fileRadarPull } from "./brandRadar";
+import { isRadarOperation } from "./dataForSeoRadarOperations";
 import { findSeoLocation } from "./utils/seoLocations";
 import { resolveWebsiteIdsByHost } from "./websites";
 import { readWebsiteHost } from "./websiteIdentity";
@@ -97,6 +99,8 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
   if (isReviewOperation(pull.operationId)) return await fileReviewPull(ctx, args.pullId, pull);
   // How often searches are asked of AI tools (`aiDemand.ts`).
   if (isAiDemandOperation(pull.operationId)) return await fileAiDemandPull(ctx, args.pullId, pull);
+  // What Google's AI answers say of a website, monthly (`brandRadar.ts`).
+  if (isRadarOperation(pull.operationId)) return await fileRadarPull(ctx, args.pullId, pull);
 
   // An AI answer is read for who it names, and its text is kept for the
   // Sites Full answers page (D9, docs/plans/active/user-sites-plan.md). The

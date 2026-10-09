@@ -2,7 +2,7 @@
 
 **Started 2026-10-09. Status: every decision in §1 agreed 2026-10-09 (D1–D21);
 started 2026-10-09 (Anthony: "ok start and good luck"), built in one go.
-Steps 1 (Local), 2 (Reviews) and 3 (AI apps) built and run on Ronins and Korda; step 4 (Brand radar) next.** Built the way the
+Steps 1 (Local) to 4 (Brand radar) built and run on Ronins and Korda; step 5 (Your assets) next.** Built the way the
 [core data normalisation plan](core-data-normalisation-plan.md) built the
 core: its rules (§3 there) hold here, every new screen is held to a reading
 budget before it is merged, and every new table is packed from its first day.
@@ -209,7 +209,7 @@ Prices are DataForSEO's charge on each test call (D11), read from the answer's o
 | Gemini as people see it | Gemini LLM Scraper (live) | Every run | $0.004 a question |
 | Google AI Mode | Google AI Mode results (live) | Every run | $0.004 a question |
 | AI demand | AI Keyword Data, up to 1,000 searches a call | Monthly | $0.0105 for 5 searches |
-| Brand radar | LLM Mentions: search, aggregated metrics, top domains and pages — Google, UK | Monthly | search $0.11 for 10 rows; aggregated $0.101; top domains $0.101; top pages $0.101 |
+| Brand radar | LLM Mentions search — Google, UK — for the website and each rival watched (aggregated metrics, top domains and top pages not needed: the search's own answers carry what they would) | Monthly | $0.10 a call plus $0.001 a question (tried 2026-10-09: 10 for $0.11, 20 for $0.12): 200 questions, $0.30 a website |
 | Web mentions | Content Analysis: search and summary | Weekly | $0.0244 for 10 results; summary $0.024 |
 | Where to get listed | Backlinks domain intersection | Monthly | $0.024 for 10 websites linking to both rivals |
 | AI Overview gaps, What customers say, Businesses recommended, Read but not cited, Your assets | Nothing new: read from the above and from the Google checks already bought | — | — |
@@ -290,6 +290,12 @@ AI Keyword Data all cover the United Kingdom; AI Mode answered for the UK.
 - Ronins ranks 1st on Google for "ai agency" and the AI Overview there quotes three other websites: the gap the page is for.
 - **AI demand is real for Ronins' biggest keywords** ("ronins" 2,275 a month, "web app" 1,640) and 0 for its local searches, as §6A said.
 - AI Overview gaps first read every whole results page, 9.7 MB at 500 searches; each check is now also kept in small (`serpOverviews`), 0.5 MB.
+
+**Brand radar's real runs (2026-10-09, D15):** 14 readings — Ronins and its four tracked competitors, Korda's two websites and theirs — 200 questions each, $3.58. Found on real data:
+
+- **Google's AI answers name or cite ronins.co.uk in 222 answers** a month, behind 143,670 asks; its four rivals 113 to 764. Most of Ronins' are for what its pages explain ("web app", 90,500 asks), not for agencies.
+- The search finds answers by the website's address, so nearly every answer read cites one of the website's own pages: "Your pages cited" counts its pages, not how rarely it is quoted.
+- 1,512 websites are quoted in the answers naming Ronins or a rival; 940 are quoted beside a rival and never beside Ronins — the places to be.
 
 ## 7. The screens
 
@@ -378,7 +384,7 @@ three new assistants in their assistant filters.
 | 1. Local | **Built 2026-10-09**: records, purchases, filing, the planner step, the hold switch per company and part (D16), Find and linking, six screens and Every office, each matching its drawing part for part and locked by a look test (`localLook.test.tsx`), read within budgets at five times a large client (`localLoad.test.ts`, `localReadKiB`), and run for real on Ronins and Korda. |
 | 2. Reviews | **Built 2026-10-09**: reviews bought, filed once by their own number and packed (own listings' words only, D4), written only when changed; the AI reads each own review against its topics (Decision `discovery.review-topic`, on, acts on its own) and drafts a reply in the company's voice for each still waiting; Your reviews, Against rivals and What customers say, each matching its drawing part for part (`reviewsLook.test.tsx`); Business profile's replies and topic stars and Every office's answered share filled in; read within budgets at five times a large client (`reviewsLoad.test.ts`, `reviewsReadKiB`); run for real on Ronins and Korda. |
 | 3. AI apps | **Built 2026-10-09**: ChatGPT and Gemini read through their apps and Google AI Mode asked every question while a company has "AI apps" on (D5, D16, D17 — every existing question given AI Mode by a migration), their answers on the engines' own lines; what an app shows kept with each answer (`aiAnswerExtras`); the answer screen's five-way switch, Businesses recommended, Read but not cited, AI demand (bought monthly, `aiSearchVolumes`) and AI Overview gaps, each matching its drawing (`aiAppsLook.test.tsx`), read within budgets at five times a large client (`aiAppsLoad.test.ts`, `aiAppsReadKiB`), and run for real on Ronins and Korda. |
-| 4. Brand radar | Not started |
+| 4. Brand radar | **Built 2026-10-09**: each website's monthly reading of Google's AI answers, and its rivals' (`radarQuestions` 200, `radarRivals` 4 — Data limits choices, D9), kept once for everyone (`brandRadarQuestionParts`, `brandRadarMonths`) and written only when something moved; Overview and Websites AI cites, each matching its drawing (`radarLook.test.tsx`), read within budgets at their largest (`radarLoad.test.ts`, `radarReadKiB`), and run for real on Ronins and Korda. |
 | 5. Your assets | Not started |
 | 6. Web mentions | Not started — waits for the Korda test (D13) |
 | 7. Real runs on Ronins and Korda | Not started |
@@ -393,6 +399,7 @@ three new assistants in their assistant filters.
 - 2026-10-09 — Rules 11–13 added from the normalisation plan's Part 4 on rereading it: write only what changed, AI judgements in batches, no new timers.
 - 2026-10-09 — D14–D21 asked all at once and agreed (Anthony: "i want all questions asked upfront and i want you to finish this in one go"); building waits for his "start".
 - 2026-10-09 — D1, D2, D6–D9, D12 and D13 agreed: Local first, every office tracked, cadence and limits as drawn, Web mentions last after a test on Korda (steps 5 and 6 swapped).
+- 2026-10-09 — Step 4 (Brand radar) built and run on Ronins and Korda. Changes made while building, each smaller than a decision: one call a website a month (the search) — the aggregated, top websites and top pages calls are not bought, as the search's own answers carry the same; where a business comes in an answer is where the answer first names it; a cited website's kind is read from its address (the well-known directories, review sites, forums, news, video); "You are on them" counts the websites quoted beside the website, as whether a directory lists it is not known; "Track" on a question is for super admins (D19), as only they add questions; Brand radar asks the website's country, as its answers are national.
 - 2026-10-09 — Three Sites read budgets raised (`sitesReadKiB`: two years with five rivals 2,904 → 2,936 KiB; AI mentions and side by side 2,520 → 2,760): the very large site's sample asks every assistant, and Google AI Mode (D17) is a fifth — a quarter more answers, read about 9% more. More data by decision, not a slower read.
 - 2026-10-09 — Step 3 (AI apps) built and run on Ronins and Korda. Changes made while building, each smaller than a decision: Keyword research keeps asking the models (D5 is about runs); an app is asked for the country, as ChatGPT's app takes no town; Google AI Mode is charged as AI answers; AI demand measures the website's tracked searches and its 100 biggest keywords (said to Anthony); Businesses recommended and Read but not cited read each question's newest four answers from the ChatGPT app; AI Overview gaps reads the tracked searches only, as only they are checked on Google, and moved to the Brand radar group as §7 says; the answer screen's "On Google Maps for this search", "Your Google position" and "Your map place" say "Not tracked" — a question is not a tracked search.
 - 2026-10-09 — Step 2 (Reviews) built and run on Ronins and Korda. Changes made while building, each smaller than a decision: a reply Google dates only "a year ago" counts as answered, never as a time to answer; the AI reads each review and topic as its own request; Against rivals' chart comes from the reviews held; the "Rivals praised" column counts Google's own topic mentions on rivals' profiles (D4 keeps no rival's words); `queueLocalNow` buys one part alone (`only`) for testing; each Sites table on these pages sorts by its headings, How the stars split's too (its drawing showed no sort marks).

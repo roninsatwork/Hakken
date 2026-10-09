@@ -1,5 +1,6 @@
 import { readsAsShown } from "./seoAiEngines";
 import { isAiDemandOperation } from "./dataForSeoAiDemandOperations";
+import { isRadarOperation } from "./dataForSeoRadarOperations";
 import type { CollectionPart } from "./collectionParts";
 import { isLocalOperation } from "./dataForSeoLocalOperations";
 import { isReviewOperation } from "./dataForSeoReviewOperations";
@@ -16,5 +17,6 @@ export function discoveryPartOf(operationId: string): CollectionPart | null {
   // The two apps read as shown and Google AI Mode (D5, D17).
   if (readsAsShown(operationId)) return "aiApps";
   if (isAiDemandOperation(operationId)) return "aiDemand";
+  if (isRadarOperation(operationId)) return "brandRadar";
   return null;
 }

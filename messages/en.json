@@ -5821,6 +5821,7 @@
         "ai_app_gemini": "Read the Gemini app",
         "ai_citation_ai_mode": "Asked Google AI Mode",
         "ai_keyword_volume": "How often searches are asked of AI",
+        "radar_mentions": "Read Brand radar",
         "ai_overview_fan_out": "What Google's AI Overviews searched",
         "google_maps_find": "Found a business on Google Maps",
         "local_market": "Businesses of its kind nearby",
@@ -9989,6 +9990,8 @@
         "aiBusinesses": "Businesses recommended",
         "aiRead": "Read but not cited",
         "aiDemand": "AI demand",
+        "radarOverview": "Overview",
+        "radarSources": "Websites AI cites",
         "radarGaps": "AI Overview gaps",
         "googleSearches": "Your searches",
         "googleMoves": "Wins and losses",
@@ -12575,6 +12578,116 @@
         "notQuoted": "Not quoted",
         "noMatch": "No search matches.",
         "empty": "None of your tracked searches shows an AI Overview on its last check."
+      }
+    },
+    "radar": {
+      "title": "Brand radar",
+      "description": "How often AI answers name you and your rivals, across every question people ask, not only the ones you track.",
+      "where": "Google AI answers · {place}",
+      "you": "{name} · you",
+      "youShort": "You",
+      "figures": {
+        "naming": "AI answers naming you",
+        "monthBefore": "on the month before",
+        "firstMonth": "The first month read",
+        "asked": "Asked a month",
+        "askedDetail": "How often those questions are asked",
+        "share": "Your share of voice",
+        "shareDetail": "{place, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} of the {of} you watch",
+        "pages": "Your pages cited",
+        "pagesDetail": "{count, plural, =0 {In none of the answers naming you} =1 {In 1 of the answers naming you} other {In # of the answers naming you}}"
+      },
+      "notice": "Read from Google's AI answers in your country: the AI Overview at the top of results. You do not choose the questions, so it shows where you appear that you would never have thought to ask. Your own tracked questions, under AI answers, cover ChatGPT, Gemini, Google AI Mode, Claude and Perplexity. {cost} each check, each website, once a month.",
+      "noticeUnpriced": "Read from Google's AI answers in your country: the AI Overview at the top of results. You do not choose the questions, so it shows where you appear that you would never have thought to ask. Your own tracked questions, under AI answers, cover ChatGPT, Gemini, Google AI Mode, Claude and Perplexity. Read once a month.",
+      "chartTitle": "Share of voice a month",
+      "chartHint": "Of all the AI answers naming you or a rival you watch, the share that name each business.",
+      "chartMonth": "Month",
+      "rivalsTitle": "You against rivals",
+      "rivalsDescription": "The last month. \"Asked a month\" adds up how often the questions behind each business's mentions are asked.",
+      "youAndRivals": "{count, plural, =0 {you alone} =1 {you and 1 rival} other {you and # rivals}}",
+      "rivalsEmpty": "Nothing read yet: Brand radar is read once a month, from the next check.",
+      "questionsTitle": "Questions where AI names you or a rival",
+      "questionsDescription": "Real questions people asked Google. Track one to ask it every check, on every assistant.",
+      "questionsEmpty": "No question read yet: Brand radar is read once a month, from the next check.",
+      "columns": {
+        "business": "Business",
+        "mentions": "Mentions",
+        "change": "Change",
+        "share": "Share of voice",
+        "asked": "Asked a month",
+        "pages": "Pages cited",
+        "question": "Question",
+        "you": "You",
+        "rivals": "Rivals named",
+        "yourPage": "Your page cited",
+        "actions": "Actions"
+      },
+      "notNamed": "Not named",
+      "namedAt": "Named {place, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
+      "tracked": "Tracked",
+      "track": "Track",
+      "trackFailed": "That question could not be tracked. Try again.",
+      "sources": {
+        "title": "Websites AI cites",
+        "description": "The websites Google's AI answers quote when they talk about your kind of work, and whether you are cited beside them.",
+        "figures": {
+          "cited": "Websites cited",
+          "citedDetail": "In answers naming you or a rival",
+          "there": "You are on them",
+          "thereDetail": "Cited in answers naming you",
+          "missing": "Rivals there, you are not",
+          "missingDetail": "Places to get listed or mentioned",
+          "own": "Your own site",
+          "ownDetail": "{count, plural, =0 {Times cited, from none of your pages} =1 {Times cited, from 1 of your pages} other {Times cited, from # of your pages}}"
+        },
+        "searchPlaceholder": "Find a website…",
+        "kindFilter": "Kind",
+        "everyKind": "Every kind",
+        "kindFilters": {
+          "DIRECTORY": "Directories",
+          "NEWS": "News",
+          "FORUM": "Forums",
+          "REVIEWS": "Review sites",
+          "RIVAL": "Rivals"
+        },
+        "thereFilter": "You there",
+        "either": "Either",
+        "thereFilters": {
+          "missing": "Rivals there, you are not",
+          "there": "You are there"
+        },
+        "kinds": {
+          "DIRECTORY": "Directory",
+          "REVIEWS": "Review site",
+          "FORUM": "Forum",
+          "NEWS": "News",
+          "VIDEO": "Video",
+          "REFERENCE": "Reference",
+          "WEBSITE": "Website",
+          "RIVAL": "Rival",
+          "YOURS": "Yours"
+        },
+        "there": {
+          "beside": "{count, plural, =1 {Beside you once} other {Beside you # times}}",
+          "missing": "{count, plural, =1 {Not beside you · 1 rival is} other {Not beside you · # rivals are}}"
+        },
+        "columns": {
+          "website": "Website",
+          "kind": "Kind",
+          "times": "Times cited",
+          "you": "Beside you",
+          "rivals": "Beside rivals",
+          "there": "You there",
+          "page": "Page",
+          "whose": "Whose",
+          "for": "Cited for"
+        },
+        "noMatch": "No website matches.",
+        "empty": "Nothing read yet: Brand radar is read once a month, from the next check.",
+        "pagesTitle": "Pages AI cites most",
+        "pagesDescription": "The single pages quoted most often. A rival's guide cited again and again is a page worth answering with one of your own.",
+        "topPages": "the most cited",
+        "pagesEmpty": "No page cited yet."
       }
     }
   },

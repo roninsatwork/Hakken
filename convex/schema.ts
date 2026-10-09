@@ -18,6 +18,7 @@ import { hakkenTaskProposalValidator, hakkenTaskTables } from "./hakkenTaskSchem
 import { telegramTables } from "./telegramSchema";
 import { localTables } from "./localSchema";
 import { aiAppTables } from "./aiAppSchema";
+import { radarTables } from "./radarSchema";
 import { decisionCertaintyValidator, decisionFallbackReasonValidator, decisionModeValidator, decisionOutcomeValidator, decisionSourceValidator } from "./utils/decisionShapes";
 
 
@@ -50,6 +51,7 @@ export default defineSchema({
   ...telegramTables,
   ...localTables,
   ...aiAppTables,
+  ...radarTables,
   
   companies: defineTable({
     name: v.string(),

@@ -76,6 +76,8 @@ export const SITE_PAGES: SitePage[] = [
   { id: "siteAudit", group: "site", segment: "audit", built: true },
 
   // Brand radar: what Google's AI says across the web (discovery-local-reputation-ai-plan.md, steps 3 and 4).
+  { id: "radarOverview", group: "radar", segment: "radar", built: true },
+  { id: "radarSources", group: "radar", segment: "radar/sources", built: true },
   { id: "radarGaps", group: "radar", segment: "radar/gaps", built: true, needs: "trackedSearches" },
 
   { id: "aiMentions", group: "ai", segment: "ai/mentions", built: true, count: "aiNamed", needs: "questions" },
