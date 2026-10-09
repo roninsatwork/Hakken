@@ -59,6 +59,7 @@ Search Console later (§4.3), but no Search Console figure appears here.
 | GA20 | Devices and storage | Kept by device: only the small lists — the totals, the channels, and conversions by channel. The page lists (landing pages, all pages, conversions by landing page) are kept once, for every device; a device chosen on one is asked of Google there and then. Every page keeps its device filter (GA13). Estimated on 2026-10-09: keeping every list by device would take a shop the size of morehandles.co.uk from about 8 MB to about 25 MB, the size of its whole Search Console store; this keeps it near 8 MB. Measured in Phase 2. | Agreed, 2026-10-09: "ok agree" (on the canvas, asked "is this a big data store burden") |
 | GA21 | The agent that collects | A new agent in Admin → Agents, "Google Analytics: Collector Agent", given a new role, "Google Analytics Collector", and a schedule of its own, "Google Analytics: Data Collection Scheduler", daily at 04:00 local (03:00 UTC) — the same time as Search Console's. Built as the Search Console: Collector Agent is (§4.1). | Agreed, 2026-10-09: "can we get them the same time as search console — i think we need to create a new agent for this in the agents section and give it a role of google analytics … I think we should call it "Google Analytics: Collector Agent" … and we need to create a schedule for it too" |
 | GA22 | The screens, after review | Six changes: Overview leads with what changed most, and every table opens sorted by value; every landing page opens its own screen and every channel its sources; one matching property is shown for a yes, and the address step only when a property has several; the states people meet first are drawn; Tracking health shows its failing checks first; a conversion rate from fewer than 100 visits is greyed. | Agreed, 2026-10-09: "yes i agree with this" … "all of it", on the canvas review. The 100 visits, the five rows of what changed most and Tracking health's 5% unknown were confirmed the same day (§10, Q13) |
+| GA23 | Storage, speed and spend | Six changes under the surface, none to the screens: (1) the page lists are kept only as ready-made periods asked of Google, with days kept only for the small lists that draw the charts; (2) conversions are stored as columns of the list they belong to, never as a second list of the same pages; (3) the last two days are collected again, not four; (4) only what changed is written; (5) a list asked live is held until the next collection; (6) every screen has a reading-budget test at five times morehandles.co.uk, and storage is measured on Ronins and morehandles.co.uk before any client connects. (§4.1–§4.3) | Agreed, 2026-10-09: "Yes please", asked "Is this plan fully optimise for storage speed and spend" |
 
 ## 2. How Google Analytics integration works
 
@@ -236,8 +237,9 @@ The screens (pages, never pop-ups):
     most, then settles; one schedule's runs at a time; every line in the
     agent's Observability. Free, so every connected website daily, whatever
     its company's collection schedule.
-- **Each run**: the newest days, and the last four again while Google's
-  figures settle.
+- **Each run**: the newest day, and the last two again while Google's
+  figures settle — they settle in 24 to 48 hours (§2.5); Search Console's
+  four days are for its own slower settling (GA23).
 - **A newly connected website** starts collecting at once (§10, Q15):
   saving what counts starts a run of the Google Analytics: Collector Agent
   for that website alone — as Search Console's main-country change already
@@ -255,42 +257,57 @@ The screens (pages, never pop-ups):
 
 ### 4.2 What, per website
 
-Six asks a day, each for the website's own address. Only the three small
-ones are kept by device; the three page lists are kept once, for every
-device (GA20):
+Four lists, each for the website's own address (GA20, GA23). Each carries
+its conversions as columns of its own rows — every ticked event's count and
+value, and purchases and revenue (GA7) — never as a second list of the same
+pages or channels. How one ask brings the conversions with the visits is
+confirmed in Phase 0 (the Data API's `keyEvents:<event>` metrics).
 
-| Ask | Kept | Read by |
+| List | Kept | Read by |
 |---|---|---|
-| The website's totals | By device | Overview's figures and chart |
-| Channels, with each source | By device | Channels; the AI assistants channel (§4.4) |
-| Ticked events by channel | By device | Conversions; Channels' conversions and value |
-| Landing pages | Every device | Landing pages; page groups (GA15) |
-| All pages | Every device | All pages |
-| Ticked events by landing page | Every device | Conversions; Landing pages' conversions and value |
+| The website's totals, with its conversions | Day by day, 60 days, by device | Overview's figures and chart; Conversions' figures and chart |
+| Channels with each source, with their conversions | Day by day, 60 days, by device | Channels, a channel's sources, AI assistants (§4.4); Conversions' channels |
+| Landing pages, with their conversions | Ready-made periods only, every device | Landing pages, page groups (GA15); Conversions' landing pages |
+| All pages, with the conversions made on each | Ready-made periods only, every device | All pages |
 
-A device chosen on a page list (GA13) is asked of Google there and then,
-for that one list and those dates, and not kept — as Search Console asks
-for a country it does not keep ready. Every page keeps its device filter.
+The two small lists are kept by day because the charts draw them. The two
+page lists are the big ones, so they are never kept by day: Google sends
+their periods ready-made (§4.3).
 
-Purchases and revenue ride on the same asks (GA7). Nothing is crossed that no
-screen reads: no country, no landing page by channel.
+Asked live and held: a device chosen on a page list (GA13, GA20), and a
+landing page's own chart and channels when its screen opens (GA22). Each is
+asked of Google there and then and held until the next collection, so
+paging, sorting and searching never ask again (GA23). Nothing is crossed
+that no screen reads: no country, and no landing page by channel kept.
 
 ### 4.3 Storage — Search Console's, from the start
 
 - A day is one record per website and kind, holding that day's whole list,
-  split into records of 2,000 rows (Convex: 1MB a record).
+  split into records of 2,000 rows (Convex: 1MB a record) — for the two small
+  lists only (§4.2, GA23).
 - Pages by number, through the hold's one page numbering, shared with
   Search Console (§4.6). Search Console and Analytics then name the same page
   by the same number — what Reports will join on.
-- Days kept 60. Ready-made totals for the last 7, 30 and 90 days and 12
-  months, with the period before each, rebuilt after each collection. Any
-  other dates are asked of Google when chosen.
+- Days kept 60. Ready-made periods for the last 7, 30 and 90 days and 12
+  months, each with the period before it and the same period a year before
+  (§10, Q2). The small lists' periods are added up from their days; the page
+  lists' periods are asked of Google ready-made — 7 and 30 days each day, 90
+  days and 12 months each week — and never added up from days, so neither a
+  screen nor a collection adds up a page list (GA23). Any other dates are
+  asked of Google when chosen.
+- Only what changed is written (GA23): a period, or a page's record in
+  `holdPages`, whose figures did not move is left as it is.
 - Every screen reads its ready-made period by index, searched, sorted and
   paged on the server; nothing is added up while a screen loads.
 - A keep rule for every table ([keep-less-history-plan](keep-less-history-plan.md)),
   each in the storage measure.
 - A Hakken value (GA6) is applied when read, not written into the days:
   changing it re-prices all history at once, with nothing rewritten.
+- Proved, as the core data plan proves its screens (its rule 4): every
+  screen has a reading-budget test at five times morehandles.co.uk's size,
+  inside half of Convex's limits, or three quarters with a search; and
+  storage is measured on Ronins and morehandles.co.uk before any client
+  connects — a gate the build passes, not a note (GA23).
 
 ### 4.4 AI assistants
 
@@ -326,7 +343,7 @@ then makes the hold the one owner of both.
 | Keywords | Search Console's keyword books, per hold, country and month | Analytics brings no search words (§2.4), so what a keyword earns is joined through the shared page number (Reports). If a later ask reads words — a campaign's `utm_term`, a Google Ads keyword — they go into the hold's same keyword store, never a second one. |
 | Countries and devices | Google's own strings as Search Console sends them (`gbr`, `MOBILE`) | One list of codes each, in one place in the code. Analytics' `deviceCategory` (`mobile`) and any country it sends are mapped onto the same codes. |
 | Page groups | Read by page address | Read through the same page numbers by both sections (GA15). |
-| Days and periods | Day records packed 2,000 rows a part (`utils/searchConsolePacks.ts`), days kept 60, periods of 7, 30, 90 days and 12 months with the period before each, a build swapped in whole when it is ready | The same packing, the same periods and the code that builds them, the same settle-and-swap, one days-kept setting — moved into shared code and used by both. |
+| Days and periods | Day records packed 2,000 rows a part (`utils/searchConsolePacks.ts`), days kept 60, periods of 7, 30, 90 days and 12 months with the period before each, a build swapped in whole when it is ready | The same packing, the same periods and the code that builds them, the same settle-and-swap, one days-kept setting — moved into shared code and used by both. Analytics keeps days only for its two small lists, and asks Google for its page lists' periods ready-made (GA23). |
 | Collecting | The Search Console Collector's own dispatch and steps on the generic `roleRuns.ts` | One runner for both sections' steps. The Google Analytics: Collector Agent holds a second role on it, with a schedule of its own at the same time (§4.1, GA21), not a second runner. |
 | Keep rules and the storage measure | `keepRules.ts`, `storageMeasure.ts` | Analytics' tables join the same rules and the same measure. |
 | Tenancy | The guard lists Search Console's tables | Analytics' tables join the same list under the same rule. |
@@ -440,7 +457,7 @@ No one else can: it is his Google account.
 | 0 | Anthony's Google setup (§7) | Half an hour of his time, plus Google's review if the scope is sensitive |
 | — | The drawings (GA17), agreed before any code | One day |
 | 1 | Connecting: the shared Google connection, with Search Console's moved into it (§4.6), Analytics added, the property and address, events and values (§3) | Three days |
-| 2 | Collecting: the Google Analytics Collector role built, then the Google Analytics: Collector Agent and its schedule created in Admin on dev (GA21), the first 90 days, the daily and weekly asks, day records, the shared page numbering, codes and packing (§4.6), ready-made periods, keep rules, measured on Ronins (§4) | Four and a half days |
+| 2 | Collecting: the Google Analytics Collector role built, then the Google Analytics: Collector Agent and its schedule created in Admin on dev (GA21), the four lists and their ready-made periods (GA23), the first 90 days, the daily and weekly asks, day records, the shared page numbering, codes and packing (§4.6), ready-made periods, keep rules, measured on Ronins (§4) | Four and a half days |
 | 3 | The section and its pages (§5), with the page screen, a channel's sources and the first states (GA22) | Five and a half days |
 | 4 | Tracking health and the bell (§6) | One and a half days |
 
@@ -466,8 +483,10 @@ complete.**
   be well under the real ones. Said on screen? §10, Q6.
 - **"(other)" and thresholds** (§2.5): a big or quiet website loses rows; the
   screens say so whenever Google says so.
-- **Quotas** (§2.5): six small asks a day are far inside them, and so are
-  the page lists asked when someone picks a device (GA20); the weekly
+- **Quotas** (§2.5): about twenty small asks a day for a website — the two
+  small lists, and the page lists' 7- and 30-day periods with the period
+  before and the year before (GA23) — are far inside them, and so are the
+  lists asked live (GA20, GA22), each asked once and held. The weekly
   12-month asks are the heaviest, measured on Ronins in Phase 2.
 - **An event's value** (§2.3): how a value set in Analytics reaches the API
   is confirmed in Phase 0, before Phase 1's value choice is built.
@@ -478,8 +497,10 @@ complete.**
   (`/admin/settings/analytics`, the platform's own usage). The sidebar's
   active-item key `'Analytics'` (`SidebarNavigation.tsx`) stays Admin's; the
   new item takes its own key.
-- **Size**: estimated small — a few thousand records a website — and measured
-  on Ronins before any client connects.
+- **Size**: estimated on 2026-10-09 at about a third of keeping every page
+  list day by day (GA23) — for a shop the size of morehandles.co.uk roughly
+  3 MB rather than 8 — and measured on Ronins and morehandles.co.uk before
+  any client connects, as a gate (§4.3).
 
 ## 10. Questions — every one answered, 2026-10-09
 
@@ -626,3 +647,9 @@ screen is built it gets a look test against its picture
   locked (§11), with a picture of each in
   `docs/plans/assets/google-analytics/`. Building on hold until the SEO API
   coverage work under way is complete.
+- 2026-10-09 — GA23 agreed, asked whether the plan was fully optimised for
+  storage, speed and spend: the page lists kept only as ready-made periods
+  from Google, conversions as columns of their own lists, two days settled
+  again not four, only what changed written, live lists held, and every
+  screen proved by a reading-budget test with storage measured before any
+  client (§4.1–§4.3, §9). No screen changes.
