@@ -434,6 +434,13 @@ export async function finalizeObjectiveFailure(ctx: ActionCtx, args: {
   });
 
   if (args.runId) {
+    // What it spent before failing, charged once: a failed run once wrote no
+    // cost row at all.
+    await ctx.runMutation(internal.modelSpend.chargeEndedRunInternal, {
+      runId: args.runId,
+      status: "FAILED",
+      actionContext: "Agent run, failed",
+    });
     await ctx.runMutation(internal.agentRuns.updateRunStatusInternal, {
       runId: args.runId,
       status: "FAILED",

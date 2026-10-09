@@ -276,7 +276,8 @@ export function parseQuestions(result: unknown): ParsedQuestion[] {
 /** A Trustpilot search: each business's page, by its website, with its rating and reviews. */
 export function parseTrustpilotSearch(result: unknown): ParsedListing[] {
   return itemsOf(result).flatMap((item) => {
-    const key = hostOfWebsite(asText(item.domain) ?? asText(item.url));
+    // Trustpilot's own page is the domain exactly as it registered it, "www." and all.
+    const key = asText(item.domain)?.toLowerCase();
     const name = asText(item.title);
     if (!key || !name) return [];
     const rating = asItem(item.rating);
@@ -284,7 +285,7 @@ export function parseTrustpilotSearch(result: unknown): ParsedListing[] {
       source: "TRUSTPILOT" as const,
       key,
       name,
-      websiteHost: key,
+      websiteHost: hostOfWebsite(key),
       ...(asNumber(rating?.value) !== undefined ? { rating: asNumber(rating?.value) } : {}),
       ...(asCount(item.reviews_count) !== undefined ? { reviews: asCount(item.reviews_count) } : {}),
     }];

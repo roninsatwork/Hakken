@@ -141,7 +141,8 @@ describe("anthropic agent provider", () => {
     expect(response).toEqual({
       text: "Two bookings this morning.",
       toolCalls: [],
-      inputTokens: 120,
+      // Anthropic reports the 80 read from cache apart from the 120 sent fresh.
+      inputTokens: 200,
       outputTokens: 9,
       cachedInputTokens: 80,
       outcome: "COMPLETE",

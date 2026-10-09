@@ -31,6 +31,7 @@ import { counted, firstCheckSteps, withinFanOutLimit, type PlannedCheck } from "
 import { reusableByKey } from "./seoPullReuse";
 import { SEARCH_VOLUME_OPERATION, volumeSteps } from "./searchVolumes";
 import { localSteps } from "./localPlanning";
+import { reviewSteps } from "./reviewPlanning";
 import { creditCycleLine } from "./creditHooks";
 import {
   SEO_DUE_SPACING_MS,
@@ -374,6 +375,10 @@ async function websiteSteps(
     })),
     // Discovery's Local pages, when the company has them switched on (`localPlanning.ts`).
     ...await localSteps(ctx, cycle, companyWebsite, (operation, params, keyStartedAt, sendIndex) => planSharedPull(ctx, cycle, {
+      operation, params, sentinel: "listing", websiteId: companyWebsite.websiteId, sendIndex, keyStartedAt,
+    })),
+    // And their reviews, when it has Reviews switched on (`reviewPlanning.ts`).
+    ...await reviewSteps(ctx, cycle, companyWebsite, (operation, params, keyStartedAt, sendIndex) => planSharedPull(ctx, cycle, {
       operation, params, sentinel: "listing", websiteId: companyWebsite.websiteId, sendIndex, keyStartedAt,
     })),
   ];

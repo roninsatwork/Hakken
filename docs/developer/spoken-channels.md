@@ -48,6 +48,15 @@ at 2,000 characters. Redemption records outlive the one-minute ticket until the
 `/api/voice/control` on shutdown; expiry is the backstop if that notification fails.
 Authenticated browser voice-search actions separately allow ten requests per minute.
 
+The close carries the session's spend (2026-10-09): the relay adds up the
+`usageMetadata` Google puts on its messages (thinking counted as output) and
+sends `usage: { inputTokens, outputTokens }` with the close, on either door. The
+backend records it once, as the session record closes, charged to the Assistant
+and priced from the ticket's `modelId` (`modelSpend.ts`); counts are capped at
+ten million tokens a session. A relay older than this change sends no usage, so
+voice sessions go unrecorded until it is redeployed. A failed close notification
+loses that session's cost row as well as its close.
+
 Deploy the backend and relay together in an authorized maintenance window.
 Legacy plaintext signed tickets are deliberately refused; do not add a fallback
 that restores prompt disclosure. Mixed versions cannot start working sessions.

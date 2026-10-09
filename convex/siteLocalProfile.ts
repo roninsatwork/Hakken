@@ -18,6 +18,8 @@ import {
   searchVolumesOf,
 } from "./localReads";
 import { hostOfWebsite } from "./localParse";
+import { readReviews } from "./localReviews";
+import { starsByTopic } from "./siteReviews";
 
 /**
  * Discovery → Local → Business profile, and Every office side by side
@@ -31,6 +33,8 @@ import { hostOfWebsite } from "./localParse";
 type Reader = { db: QueryCtx["db"] };
 
 const DAY_MS = 86_400_000;
+/** The share of reviews answered past which replies are good: most of them. */
+const ANSWERED_ENOUGH = 0.8;
 /** Services named in "What Google shows" before the count says the rest. */
 const SERVICES_NAMED = 6;
 
@@ -107,8 +111,10 @@ function profileDetails(args: {
     row("PHOTOS", office.photos === undefined ? "UNKNOWN" : args.rivalPhotos !== null && office.photos < args.rivalPhotos ? "FIX" : "GOOD", {
       count: office.photos ?? null, average: args.rivalPhotos === null ? null : Math.round(args.rivalPhotos),
     }),
-    // Read with Reviews (plan step 2): the replies are counted from the reviews themselves.
-    row("REPLIES", "UNKNOWN"),
+    // Counted as the reviews are filed (`localReviews.ts`): answered against held.
+    office.reviewsHeld === undefined
+      ? row("REPLIES", "UNKNOWN")
+      : row("REPLIES", (office.reviewsAnswered ?? 0) >= office.reviewsHeld * ANSWERED_ENOUGH ? "GOOD" : "FIX", { count: office.reviewsAnswered ?? 0, of: office.reviewsHeld }),
   ];
 }
 
@@ -163,7 +169,7 @@ export const businessProfile = tenantQuery({
       }),
       details: v.array(detailRowValidator),
       alsoLookAt: v.array(alsoRowValidator),
-      topics: v.array(v.object({ topic: v.string(), reviews: v.number() })),
+      topics: v.array(v.object({ topic: v.string(), reviews: v.number(), stars: v.union(v.number(), v.null()) })),
     })),
   }),
   handler: async (ctx, args) => {
@@ -187,6 +193,8 @@ export const businessProfile = tenantQuery({
     const known = [...alsoListings.values()].filter((listing) => listing.profile);
     const rivalPhotos = averageOf(mine.map((rival) => rival.photos));
     const weeks = await readListingWeeks(ctx, office._id);
+    // Each topic's average stars, across the office's reviews its AI read (Reviews, `reviewJudging.ts`).
+    const topicStars = starsByTopic(await readReviews(ctx, office._id));
 
     const alsoRows = [
       { listing: office, entry: { key: office.key, name: office.name, rating: office.rating, reviews: office.reviews }, you: true },
@@ -225,7 +233,7 @@ export const businessProfile = tenantQuery({
           rivalPhotos,
         }),
         alsoLookAt: alsoRows,
-        topics: office.profile?.topics ?? [],
+        topics: (office.profile?.topics ?? []).map((entry) => ({ ...entry, stars: topicStars.get(entry.topic) ?? null })),
       },
     };
   },
@@ -236,6 +244,8 @@ export const everyOffice = tenantQuery({
   returns: v.object({
     offices: v.array(v.object({
       ...listingRowValidator.fields,
+      /** Of its reviews held, the share answered; null before its reviews are read. */
+      answered: v.union(v.number(), v.null()),
       mapBox: mapBoxValidator,
       toFix: v.number(),
       reviewsGained: v.union(v.number(), v.null()),
@@ -270,6 +280,7 @@ export const everyOffice = tenantQuery({
       });
       rows.push({
         ...listingRowOf(office),
+        answered: office.reviewsHeld ? (office.reviewsAnswered ?? 0) / office.reviewsHeld : null,
         mapBox: mapBoxOf(checks),
         toFix: details.filter((detail) => detail.verdict === "FIX").length,
         reviewsGained: reviewsGained(await readListingWeeks(ctx, office._id), Date.now()),

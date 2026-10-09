@@ -26,6 +26,7 @@ import {
   resolveApprovalExpiryHours,
 } from "./approvalExpiryService";
 import { AGENT_RUN_DETAIL_LIMIT } from "./agentRuns";
+import { chargeEndedRun } from "./modelSpend";
 import { appError } from "./utils/appError";
 
 /**
@@ -327,6 +328,7 @@ export const decideApproval = superAdminMutation({
       completedAt: now,
     });
 
+    await chargeEndedRun(ctx, approval.runId, { status: "SUCCESS", actionContext: "Agent run, cancelled at its approval" });
     await ctx.db.patch(approval.runId, {
       status: runStatus,
       updatedAt: now,
@@ -660,6 +662,7 @@ export const expireStalePendingApprovals = internalMutation({
         completedAt: now,
       });
 
+      await chargeEndedRun(ctx, approval.runId, { status: "SUCCESS", actionContext: "Agent run, approval expired" });
       await ctx.db.patch(approval.runId, {
         status: "CANCELLED",
         updatedAt: now,

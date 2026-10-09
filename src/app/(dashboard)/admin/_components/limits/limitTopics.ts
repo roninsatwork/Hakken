@@ -22,7 +22,7 @@ export const LIMIT_TOPICS: readonly LimitTopic[] = [
     keys: ["keywordsPerSite", "everydayKeywords", "trackedPerSite", "backlinksPerSite", "competitorsPerSite", "consoleDays"],
   },
   // Discovery's Local pages (discovery-local-reputation-ai-plan.md, D9): a website's offices, its rivals' profiles, Maps and the local market.
-  { id: "local", keys: ["localOffices", "localRivalsPerOffice", "localMapDepth", "localMarketBusinesses", "localMarketKm"] },
+  { id: "local", keys: ["localOffices", "localRivalsPerOffice", "localMapDepth", "localMarketBusinesses", "localMarketKm", "localRivalReviews"] },
   { id: "ai", keys: ["promptsPerSite", "fanOutTrackedPerSite", "searchesPerEngine", "wordingsPerAngle", "anglesShown", "googleSearchesRead"] },
   {
     id: "matching",
@@ -83,7 +83,8 @@ export type LimitUnit =
   | "weeks"
   | "tasks"
   | "offices"
-  | "kilometres";
+  | "kilometres"
+  | "reviews";
 
 export const LIMIT_UNITS: Record<string, LimitUnit> = {
   hakkenTasksPerPerson: "tasks",
@@ -140,6 +141,7 @@ export const LIMIT_UNITS: Record<string, LimitUnit> = {
   localMapDepth: "businesses",
   localMarketBusinesses: "businesses",
   localMarketKm: "kilometres",
+  localRivalReviews: "reviews",
   fanOutPerAnswer: "searches",
   sourcesPerAnswer: "sources",
   businessesPerAnswer: "businesses",

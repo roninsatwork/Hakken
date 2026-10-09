@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import { generationSpend, recordModelSpend } from "./modelSpend";
 import { tenantAction } from "./tenantFunctions";
 import * as governanceShapes from "./utils/governanceShapes";
 
@@ -14,7 +15,7 @@ export const routeAgentIntent = tenantAction({
   returns: governanceShapes.intentRouteShape,
   handler: async (ctx, args) => {
     // Authenticate routing dispatch
-    const { user } = ctx;
+    const { user, userId } = ctx;
 
     try {
         // Fetch pool of active agents available to this company
@@ -74,6 +75,12 @@ Output your intent alignment as JSON.
              contents: [{ type: "text", text: routingPrompt }],
              temperature: 0.1, // Near deterministic
              jsonSchema: responseSchema,
+        });
+        await recordModelSpend(ctx, {
+            userId,
+            ...(user.companyId ? { companyId: user.companyId } : {}),
+            actionContext: "Choosing which agent should answer",
+            ...generationSpend(modelConfig, response),
         });
 
         const jsonStr = response.text;

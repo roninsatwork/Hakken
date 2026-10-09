@@ -5826,6 +5826,9 @@
         "trustpilot_find": "Attività trovata su Trustpilot",
         "tripadvisor_find": "Luogo trovato su Tripadvisor",
         "google_business_questions": "Domande sul suo profilo Google",
+        "google_reviews": "Le sue recensioni Google",
+        "trustpilot_reviews": "Le sue recensioni Trustpilot",
+        "tripadvisor_reviews": "Le sue recensioni Tripadvisor",
         "backlinks_list": "Ogni sito che la collega",
         "backlinks_all": "Ogni link verso il sito",
         "backlinks_broken": "Link alle sue pagine non funzionanti",
@@ -6224,7 +6227,8 @@
         "weeks": "{count, plural, one {# settimana} other {# settimane}}",
         "tasks": "{count, plural, one {# attività} other {# attività}}",
         "offices": "{count, plural, one {# sede} other {# sedi}}",
-        "kilometres": "{count, plural, one {# chilometro} other {# chilometri}}"
+        "kilometres": "{count, plural, one {# chilometro} other {# chilometri}}",
+        "reviews": "{count, plural, one {# recensione} other {# recensioni}}"
       },
       "topics": {
         "tasks": {
@@ -6578,6 +6582,11 @@
           "label": "Raggio del mercato locale",
           "description": "Fin dove arriva il mercato locale intorno a ogni sede.",
           "cost": "Nessun costo proprio."
+        },
+        "localRivalReviews": {
+          "label": "Recensioni di ogni concorrente lette al mese",
+          "description": "Quante delle recensioni più recenti di ogni concorrente vengono lette una volta al mese, per confrontare quanto spesso viene recensito e quanto in fretta risponde.",
+          "cost": "Un decimo di centesimo ogni dieci recensioni."
         },
         "hakkenTasksPerPerson": {
           "label": "Attività attive per persona",
@@ -9131,7 +9140,8 @@
       "chat": "Chat",
       "wiki": "Wiki",
       "seo": "SEO",
-      "knowledge": "Conoscenza"
+      "knowledge": "Conoscenza",
+      "discovery": "Scoperta"
     },
     "certainty": {
       "SURE": "Sicuro",
@@ -9354,6 +9364,18 @@
           "off-topic": "Non riguarda questa attività",
           "other": "Impossibile dirlo"
         }
+      },
+      "discoveryReviewTopic": {
+        "name": "Questa recensione loda o critica questo argomento?",
+        "description": "Legge ogni recensione dell'azienda rispetto alle cose di cui parlano i suoi clienti, per Cosa dicono i clienti.",
+        "rule": "Senza, Cosa dicono i clienti conta solo quante volte Google vede citato ogni argomento.",
+        "answers": {
+          "praises": "Lo loda",
+          "complains": "Lo critica",
+          "mentioned": "Lo cita",
+          "not_mentioned": "Non ne parla",
+          "other": "Non si può dire"
+        }
       }
     }
   },
@@ -9528,7 +9550,8 @@
       "topics": "{count, plural, =1 {# argomento} other {# argomenti}}",
       "rivalActions": "{count, plural, =1 {# cosa fatta dai concorrenti} other {# cose fatte dai concorrenti}}",
       "questions": "{count, plural, =1 {# domanda} other {# domande}}",
-      "found": "{count, plural, =1 {# trovata} other {# trovate}}"
+      "found": "{count, plural, =1 {# trovata} other {# trovate}}",
+      "reviews": "{count, plural, =1 {# recensione} other {# recensioni}}"
     },
     "chart": {
       "download": "Scarica",
@@ -9929,6 +9952,7 @@
         "ai": "Risposte AI",
         "google": "Risultati Google",
         "local": "Locale",
+        "reviews": "Recensioni",
         "keywords": "Ricerca organica",
         "competitors": "Concorrenti",
         "backlinks": "Backlink",
@@ -9951,6 +9975,9 @@
         "localMarket": "Mercato locale",
         "localActivity": "Attività dei concorrenti",
         "localListings": "Le tue schede",
+        "reviewsYours": "Le tue recensioni",
+        "reviewsSay": "Cosa dicono i clienti",
+        "reviewsRivals": "Contro i concorrenti",
         "keywordsAll": "Parole chiave",
         "keywordsPages": "Pagine principali",
         "keywordsBands": "Fasce di posizione",
@@ -11745,6 +11772,7 @@
       "officeOf": "Sede di {town}",
       "officeChoice": "Sede",
       "everyOffice": "Tutte le sedi a confronto",
+      "allOffices": "Tutte le sedi",
       "you": "{name} · tu",
       "youShort": "Tu",
       "of": "{count} su {of}",
@@ -11865,6 +11893,8 @@
           "servicesNoPrices": "{count} elencati: {names} · senza prezzi",
           "photos": "{count} · media dei concorrenti {average}",
           "readWithReviews": "Contate con le tue recensioni",
+          "answeredOf": "{count} su {of} con risposta",
+          "answerMore": "Rispondi a più recensioni",
           "notReadYet": "Non ancora letto",
           "good": "Bene",
           "sameAsTop": "Uguale alle prime 3 della mappa",
@@ -12146,6 +12176,156 @@
         "notAnswered": "Senza risposta · {days, plural, one {# giorno} other {# giorni}}",
         "answeredSameDay": "Risposta lo stesso giorno",
         "answeredAfter": "Risposta dopo {days, plural, one {# giorno} other {# giorni}}"
+      }
+    },
+    "reviews": {
+      "sources": {
+        "GOOGLE": "Google",
+        "TRUSTPILOT": "Trustpilot",
+        "TRIPADVISOR": "Tripadvisor"
+      },
+      "yours": {
+        "title": "Le tue recensioni",
+        "description": "Ogni recensione sulle tue schede collegate, dalla più recente, e se hai risposto.",
+        "figures": {
+          "rating": "Valutazione",
+          "ratingGoogle": "{offices, plural, =1 {Google} =2 {Google, entrambe le sedi} other {Google, # sedi}}",
+          "new": "Nuove negli ultimi 30 giorni",
+          "newBefore": "rispetto ai 30 giorni precedenti",
+          "waiting": "Senza risposta",
+          "noneWaiting": "Ogni recensione ha una risposta",
+          "oldestWaiting": "La più vecchia aspetta da {days, plural, =1 {# giorno} other {# giorni}}",
+          "daysToAnswer": "Giorni per rispondere",
+          "daysToAnswerDetail": "Media degli ultimi 90 giorni"
+        },
+        "chartTitle": "Recensioni al mese",
+        "chartHint": "Nuove recensioni ogni mese su tutte le schede, e la media delle stelle.",
+        "chartMonth": "Mese",
+        "chartReviews": "Nuove recensioni",
+        "chartStars": "Media stelle",
+        "chartReviewsLeft": "Nuove recensioni (sinistra)",
+        "chartStarsRight": "Media stelle (destra)",
+        "searchPlaceholder": "Cerca parole in una recensione…",
+        "listingFilter": "Scheda",
+        "everyListing": "Tutte le schede",
+        "starsFilter": "Stelle",
+        "anyStars": "Qualsiasi stella",
+        "stars": {
+          "low": "Da 1 a 3 stelle",
+          "high": "4 e 5 stelle"
+        },
+        "answeredFilter": "Risposta",
+        "answeredOrNot": "Con o senza risposta",
+        "answers": {
+          "waiting": "Non ancora",
+          "answered": "Con risposta"
+        },
+        "notAnsweredBar": "senza risposta",
+        "columns": {
+          "date": "Data",
+          "listing": "Scheda",
+          "stars": "Stelle",
+          "review": "Recensione",
+          "reviewer": "Autore",
+          "answered": "Risposta"
+        },
+        "noMatch": "Nessuna recensione corrisponde a questi filtri.",
+        "empty": "Nessuna recensione è stata ancora letta: verranno lette al prossimo controllo.",
+        "starsOnly": "Solo stelle, senza parole",
+        "localGuide": "Local Guide",
+        "answeredAfter": "Dopo {days, plural, =0 {lo stesso giorno} =1 {# giorno} other {# giorni}}",
+        "notYet": "Non ancora · {days, plural, =1 {# giorno} other {# giorni}}"
+      },
+      "rivals": {
+        "title": "Recensioni a confronto con i concorrenti",
+        "description": "Le tue recensioni accanto ai concorrenti che segui: quante, quanto buone e quanto rapidamente risponde ogni attività.",
+        "figures": {
+          "place": "La tua posizione per recensioni",
+          "placeOf": "{place}° su {of}",
+          "placeDetail": "Recensioni Google, concorrenti di {office}",
+          "gap": "Distanza dal primo",
+          "gapDetail": "{name} riceve {times} recensioni per ognuna delle tue",
+          "youLead": "Hai più recensioni di tutti",
+          "fastest": "Il più rapido a rispondere",
+          "days": "{days, plural, =0 {Lo stesso giorno} =1 {# giorno} other {# giorni}}",
+          "fastestDetail": "{name} · tu impieghi {days}",
+          "noReplies": "Non ancora noto: Google data le risposte più vecchie solo per anno",
+          "best": "Valutazione migliore",
+          "bestDetail": "{name} · tu {rating}"
+        },
+        "chartTitle": "Recensioni Google negli ultimi 12 mesi",
+        "chartHint": "Quante recensioni ha ogni attività, mese per mese. Una linea più ripida indica un'attività che raccoglie recensioni più in fretta.",
+        "chartMonth": "Mese",
+        "youAndRivals": "tu e {count, plural, =1 {# concorrente} other {# concorrenti}}",
+        "columns": {
+          "business": "Attività",
+          "listing": "Scheda",
+          "rating": "Valutazione",
+          "reviews": "Recensioni",
+          "new": "Nuove in 30 giorni",
+          "answered": "Con risposta",
+          "days": "Giorni per rispondere"
+        },
+        "empty": "Segui un concorrente da Le tue schede o Mercato locale, e le sue recensioni compariranno qui dal prossimo controllo."
+      },
+      "say": {
+        "title": "Cosa dicono i clienti",
+        "description": "Cosa lodano e di cosa si lamentano i recensori, letto da ogni recensione sulle tue schede, accanto ai tuoi concorrenti.",
+        "reading": "{count, plural, =1 {# recensione è} other {# recensioni sono}} ancora in lettura; gli argomenti si completano man mano.",
+        "figures": {
+          "praised": "Il più lodato",
+          "inReviews": "In {count, plural, =1 {# recensione} other {# recensioni}}",
+          "nothingYet": "Ancora niente di letto",
+          "complained": "Il più criticato",
+          "complainedDetail": "In {count, plural, =1 {# recensione} other {# recensioni}}, {thisYear} quest'anno",
+          "noComplaints": "Nessuna critica letta",
+          "rivalsFor": "Lodato nei concorrenti",
+          "rivalsForDetail": "{name}, in {count, plural, =1 {# recensione} other {# recensioni}} · tu {yours}",
+          "noRivals": "Segui un concorrente per confrontare",
+          "fiveStar": "Recensioni a 5 stelle",
+          "rivalsShare": "Concorrenti {share}%",
+          "oneStar": "1 stella {share}%"
+        },
+        "topics": {
+          "title": "Argomenti nelle tue recensioni",
+          "description": "Quante recensioni lodano o criticano ogni aspetto, e quanto spesso lo lodano le recensioni dei concorrenti.",
+          "from": "da {count, plural, =1 {# recensione} other {# recensioni}}",
+          "empty": "Ancora nessun argomento: compaiono quando Google estrae parole dalle tue recensioni e ogni recensione è stata letta.",
+          "columns": {
+            "topic": "Argomento",
+            "praise": "Lodi",
+            "complaints": "Critiche",
+            "rivals": "Lodi ai concorrenti",
+            "against": "Contro i concorrenti"
+          }
+        },
+        "verdicts": {
+          "losing": "Perso a favore dei concorrenti",
+          "complaints": "Più critiche che lodi",
+          "own": "Tutto tuo · i concorrenti raramente vincono qui",
+          "strength": "Un punto di forza",
+          "mixed": "Misto"
+        },
+        "stars": {
+          "title": "Come si dividono le stelle",
+          "description": "Recensioni Google di ogni attività, per stelle. Poche recensioni basse abbassano la media più in fretta di quanto molte alte la alzino.",
+          "empty": "Google non ha ancora mostrato la suddivisione delle stelle: viene letta con ogni profilo.",
+          "columns": {
+            "business": "Attività",
+            "stars": "{count, plural, =1 {# stella} other {# stelle}}",
+            "rating": "Valutazione"
+          }
+        },
+        "drafts": {
+          "title": "In attesa di risposta · bozze pronte",
+          "hint": "{platformName} scrive una bozza di risposta con il tuo tono per ogni recensione in attesa. Copiala, cambia ciò che vuoi e pubblicala su Google. Usa l'IA · circa {cost} a risposta.",
+          "hintUnpriced": "{platformName} scrive una bozza di risposta con il tuo tono per ogni recensione in attesa. Copiala, cambia ciò che vuoi e pubblicala su Google. Usa l'IA, con il costo indicato dalla prima bozza.",
+          "none": "Le risposte sono in preparazione: compaiono qui man mano che vengono scritte.",
+          "stars": "{count, plural, =1 {# stella} other {# stelle}}",
+          "copy": "Copia la risposta",
+          "copied": "Copiata",
+          "seeAll": "Vedi tutte le {count} in attesa"
+        }
       }
     }
   },

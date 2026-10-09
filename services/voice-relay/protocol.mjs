@@ -141,6 +141,25 @@ export function isTurnComplete(raw) {
 }
 
 /**
+ * The tokens one Vertex message reports, for the session's cost row: Google
+ * puts `usageMetadata` on the messages that close a response, and thinking is
+ * billed as output. Null on every other message.
+ */
+export function readUsage(raw) {
+  try {
+    const usage = JSON.parse(raw)?.usageMetadata;
+    if (!usage || typeof usage !== "object") return null;
+    const count = (value) => (typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0);
+    return {
+      inputTokens: count(usage.promptTokenCount),
+      outputTokens: count(usage.responseTokenCount ?? usage.candidatesTokenCount) + count(usage.thoughtsTokenCount),
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Only setup may not come from the page — that is the relay's to send, and a
  * browser that sends its own would rewrite the company's instructions. Audio
  * and tool answers pass straight through.

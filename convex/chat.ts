@@ -28,6 +28,8 @@ import {
 } from "./chatService";
 import { extractPhotoActionProposal } from "./photoActionService";
 import { creditAssistantReply } from "./creditHooks";
+import { writeModelSpend } from "./modelSpend";
+import { HAKKEN_ASSISTANT } from "./utils/hakkenAssistant";
 import { answerChartValidator } from "./utils/assistantCharts";
 import { lookupValidator } from "./utils/assistantLookups";
 import { hakkenTaskProposalValidator } from "./hakkenTaskSchema";
@@ -856,6 +858,50 @@ export const recordVoiceTurn = tenantMutation({
     }
 
     await ctx.db.patch(args.threadId, { updatedAt: now });
+    return null;
+  },
+});
+
+/** One spoken reply is far below this; anything past it is not a real count. */
+const VOICE_REPLY_MAX_TOKENS = 1_000_000;
+
+/**
+ * What one spoken reply cost, as OpenAI's own `response.done` reported it to
+ * the browser — the only place a direct OpenAI voice session's usage arrives.
+ * Charged to the Assistant, whose voice it is (`modelSpend.ts`).
+ */
+export const recordVoiceUsage = tenantMutation({
+  args: {
+    threadId: v.id("threads"),
+    modelUsed: v.string(),
+    inputTokens: v.number(),
+    outputTokens: v.number(),
+    cachedInputTokens: v.optional(v.number()),
+  },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    const thread = await ctx.db.get(args.threadId);
+    if (!thread) throw appError("NOT_FOUND", "Thread not found");
+    const current = await getCurrentUser(ctx);
+    await assertCanAccessThread(ctx, thread, current, undefined);
+    const count = (value: number | undefined) =>
+      typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.min(Math.round(value), VOICE_REPLY_MAX_TOKENS) : 0;
+    const inputTokens = count(args.inputTokens);
+    const outputTokens = count(args.outputTokens);
+    if (inputTokens === 0 && outputTokens === 0) return null;
+    await writeModelSpend(ctx, {
+      systemKey: HAKKEN_ASSISTANT.systemKey,
+      threadId: args.threadId,
+      ...(thread.userId ? { userId: thread.userId } : {}),
+      ...(thread.companyId ? { companyId: thread.companyId } : {}),
+      actionContext: "A live voice reply",
+      modelId: args.modelUsed.slice(0, 200),
+      providerKey: "openai",
+      providerModelId: args.modelUsed.slice(0, 200),
+      inputTokens,
+      outputTokens,
+      cachedInputTokens: Math.min(count(args.cachedInputTokens), inputTokens),
+    });
     return null;
   },
 });

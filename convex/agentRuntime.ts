@@ -861,6 +861,8 @@ export const runTriggeredAgentObjective = internalAction({
         outputTokens,
         config: runModel ?? undefined,
       });
+      // The cost row every cost screen reads; this path once recorded only the run's usage.
+      await ctx.runMutation(internal.modelSpend.recordRunCostInternal, { runId, inputTokens, outputTokens, costUsd, modelId: modelConfig.modelId, providerKey: modelConfig.providerKey, providerModelId: modelConfig.providerModelId, actionContext: "Triggered Execution", status: "SUCCESS" });
 
       await ctx.runMutation(internal.agentRuns.appendStepInternal, {
         runId,

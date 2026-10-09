@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import { generationSpend, recordModelSpend } from "./modelSpend";
 import { normalizeAiRuntimeError } from "./aiToolExecutionService";
 import { SWEEP_SYSTEM_INSTRUCTION, buildTranscript, parseNotes } from "./userMemories";
 
@@ -79,6 +80,11 @@ export const sweepUser = internalAction({
         systemInstruction: SWEEP_SYSTEM_INSTRUCTION,
         contents: [{ type: "text", text: buildTranscript(input.messages) }],
         temperature: 0.1,
+      });
+      await recordModelSpend(ctx, {
+        userId: args.userId,
+        actionContext: "Reading conversations for personal memories",
+        ...generationSpend(modelConfig, response),
       });
 
       const notes = parseNotes(response.text ?? "");

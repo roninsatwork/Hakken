@@ -41,6 +41,8 @@ export type AiGenerationResponse = {
   text: string;
   inputTokens?: number;
   outputTokens?: number;
+  /** The part of `inputTokens` served from cache, where the provider says. */
+  cachedInputTokens?: number;
 };
 
 export interface AiProviderAdapter {

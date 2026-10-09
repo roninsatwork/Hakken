@@ -16,6 +16,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { normalizeAiRuntimeError } from "./aiToolExecutionService";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import { generationSpend, recordModelSpend } from "./modelSpend";
 
 const NODE_CONFIG_PROMPT_MAX_LENGTH = 4000;
 const NODE_CONFIG_NODE_TYPE_MAX_LENGTH = 80;
@@ -127,6 +128,12 @@ Your job is to translate the user's plain-English intent into exact system paylo
           },
           required: ["mapping", "template"]
         },
+      });
+      await recordModelSpend(ctx, {
+        userId,
+        ...(user.companyId ? { companyId: user.companyId } : {}),
+        actionContext: `Writing a ${nodeType} workflow step's settings`,
+        ...generationSpend(modelConfig, response),
       });
 
       if (!response.text) {

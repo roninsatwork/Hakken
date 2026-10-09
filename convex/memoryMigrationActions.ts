@@ -4,6 +4,7 @@ import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import { generationSpend, recordModelSpend } from "./modelSpend";
 import { ABOUT_PAGE_SUBJECT } from "./memoryMigration";
 
 /**
@@ -88,6 +89,11 @@ export const migrateCompanyMemories = internalAction({
                       .join("\n"),
                 },
               ],
+            });
+            await recordModelSpend(ctx, {
+              companyId: args.companyId,
+              actionContext: "Filing a company memory onto the wiki",
+              ...generationSpend(model, response),
             });
             const jsonMatch = (response.text ?? "").match(/\{[\s\S]*\}/);
             const parsed = jsonMatch ? (JSON.parse(jsonMatch[0]) as { page?: unknown }) : {};

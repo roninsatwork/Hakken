@@ -5,6 +5,7 @@ import type { GenerateContentConfig, Part } from "@google/genai";
 import { GOOGLE_VERTEX_PROVIDER_KEY } from "./aiModelService";
 import type { AiGenerationRequest, AiGenerationResponse, AiProviderAdapter } from "./aiRuntimeTypes";
 import { createVertexGenAIClient, generateVertexContentWithRetry, streamVertexContentWithRetry } from "./vertexProviderService";
+import { vertexUsage } from "./vertexUsage";
 
 function toGoogleParts(contents: AiGenerationRequest["contents"]): Part[] {
   return contents.map((part) => {
@@ -79,8 +80,7 @@ export function createGoogleProviderAdapter(args: { location?: string } = {}): A
 
       return {
         text: response.text || "",
-        inputTokens: response.usageMetadata?.promptTokenCount,
-        outputTokens: response.usageMetadata?.candidatesTokenCount,
+        ...vertexUsage(response.usageMetadata),
       };
     },
   };

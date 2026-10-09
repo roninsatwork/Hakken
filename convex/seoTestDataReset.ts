@@ -93,6 +93,9 @@ const COLLECTED_TABLES: ReadonlyArray<{ table: TableNames; page: number }> = [
   { table: "localMarketParts", page: 20 },
   { table: "listingActivityParts", page: 100 },
   { table: "localSummaries", page: 500 },
+  // Reviews and the replies drafted for them: tens of kilobytes a record.
+  { table: "listingReviewParts", page: 10 },
+  { table: "reviewReplyDrafts", page: 200 },
 ];
 
 /** Keep each pass comfortably inside an action's ten minutes; the rest continues in the next. */

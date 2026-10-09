@@ -281,6 +281,8 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   mapPositionWeeks: forever("an office's place on Google Maps for each search, drawn on Map rankings"),
   localMarketParts: LATEST,
   listingActivityParts: LATEST,
+  listingReviewParts: forever("a listing's reviews, each once, read by Your reviews, Against rivals and What customers say; cleared with its listing"),
+  reviewReplyDrafts: LATEST,
   collectionParts: RECORD,
   localSummaries: LATEST,
 

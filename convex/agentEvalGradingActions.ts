@@ -5,6 +5,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import { generationSpend, recordModelSpend } from "./modelSpend";
 import { normalizeAiRuntimeError } from "./aiToolExecutionService";
 import {
   buildGradingPrompt,
@@ -187,6 +188,15 @@ export const gradeSmokeEvalWithModel = internalAction({
             }),
           }],
           temperature: 0,
+        });
+        // Charged to the agent under test, whose check it is.
+        await recordModelSpend(ctx, {
+          agentId: args.agentId,
+          threadId: evalThreadId,
+          userId: args.userId,
+          ...(args.companyId ? { companyId: args.companyId } : {}),
+          actionContext: "Grading an agent check",
+          ...generationSpend(graderConfig, gradingResponse),
         });
         gradingOutput = gradingResponse.text || "";
         gradingInputTokens += gradingResponse.inputTokens || 0;

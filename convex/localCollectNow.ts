@@ -3,11 +3,12 @@ import { internalMutation } from "./_generated/server";
 import { buildSeoIdempotencyKey } from "./seoIdempotency";
 import { reusableByKey } from "./seoPullReuse";
 import { startCollector } from "./seoAgentRuns";
-import { localSteps } from "./localPlanning";
+import { localSteps, type LocalPlan } from "./localPlanning";
+import { reviewSteps } from "./reviewPlanning";
 import { appError } from "./utils/appError";
 
 /**
- * Buy one company's Local purchases now, and nothing else
+ * Buy one company's Local and Reviews purchases now, and nothing else
  * (docs/plans/active/discovery-local-reputation-ai-plan.md, D15): what its
  * next run would plan for Local (`localPlanning.ts`), keyed exactly as the run
  * keys it — so the run then reuses it rather than buying again — sent by the
@@ -17,9 +18,11 @@ import { appError } from "./utils/appError";
  *   npx convex run localCollectNow:queueLocalNow '{"companyId":"…"}'
  *
  * Refused while the company has Local switched off (D16), as its run would be.
+ * `only` buys one part's alone — `{"only":"reviews"}` — so testing one part
+ * does not buy the other's every-run checks again.
  */
 export const queueLocalNow = internalMutation({
-  args: { companyId: v.id("companies") },
+  args: { companyId: v.id("companies"), only: v.optional(v.union(v.literal("local"), v.literal("reviews"))) },
   returns: v.object({ queued: v.number(), reused: v.number(), sending: v.boolean() }),
   handler: async (ctx, args) => {
     const company = await ctx.db.get(args.companyId);
@@ -29,7 +32,7 @@ export const queueLocalNow = internalMutation({
     let queued = 0;
     let reused = 0;
     for (const hold of holds) {
-      const steps = await localSteps(ctx, { companyId: args.companyId, startedAt }, hold, async (operation, params, keyStartedAt) => {
+      const plan: LocalPlan = async (operation, params, keyStartedAt) => {
         const idempotencyKey = buildSeoIdempotencyKey({ operationId: operation.id, websiteId: "listing", params, cycleStartedAt: keyStartedAt ?? startedAt });
         const existing = await reusableByKey(ctx, idempotencyKey);
         const pullId = existing?._id ?? await ctx.db.insert("seoDataPulls", {
@@ -48,7 +51,12 @@ export const queueLocalNow = internalMutation({
           submittedAt: Date.now(),
         });
         return { reused: Boolean(existing), pullId, pull: existing };
-      });
+      };
+      const cycle = { companyId: args.companyId, startedAt };
+      const steps = [
+        ...(args.only === "reviews" ? [] : await localSteps(ctx, cycle, hold, plan)),
+        ...(args.only === "local" ? [] : await reviewSteps(ctx, cycle, hold, plan)),
+      ];
       for (const [at, step] of steps.entries()) {
         const done = await step(at);
         queued += done.planned;

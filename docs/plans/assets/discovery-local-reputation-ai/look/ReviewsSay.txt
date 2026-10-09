@@ -1,0 +1,19 @@
+# Discovery → Reviews → What customers say — the approved look (board "ReviewsSay" of docs/plans/assets/discovery-local-reputation-ai/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: What customers say
+  select: Office
+figures
+  figure: Praised most
+  figure: Complained about most
+  figure: Rivals praised for
+  figure: #-star reviews
+section: Topics in your reviews
+table: Topic | Praise | Complaints | Rivals praised | Against rivals
+  table-bar
+    download: Download CSV
+section: How the stars split
+table: Business | (# stars) for each | # star | Rating
+settings-card: Waiting for a reply · drafted for you
+  notice (info)
+  notice (info)

@@ -6,6 +6,8 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
 import { maskPhoneNumber } from "./telephonyService";
+import { generationSpend, recordModelSpend } from "./modelSpend";
+import { HAKKEN_ASSISTANT } from "./utils/hakkenAssistant";
 
 /**
  * The hang-up-and-watch step.
@@ -46,6 +48,13 @@ export const runAfterCallStep = internalAction({
         systemInstruction:
           "You summarise phone calls for a follow-up task. Reply with two plain sentences: what the caller wanted, and what should happen next. No preamble, no markdown.",
         contents: [{ type: "text", text: transcript.slice(0, 12_000) }],
+      });
+      // The phone is one of the Assistant's doors: its calls are charged there.
+      await recordModelSpend(ctx, {
+        systemKey: HAKKEN_ASSISTANT.systemKey,
+        ...(call.companyId ? { companyId: call.companyId } : {}),
+        actionContext: "Summarising a phone call",
+        ...generationSpend(model, response),
       });
       summary = response.text?.trim() ?? "";
     } catch (error) {
@@ -94,6 +103,7 @@ export const runAfterCallStep = internalAction({
         source: `PHONE_CALL:${args.callId}`,
         sourceLabel: `Phone call · ${matchedKey}`,
         eventText: `Summary: ${summary}\n\nTranscript:\n${transcript}`,
+        systemKey: HAKKEN_ASSISTANT.systemKey,
       });
     }
   },

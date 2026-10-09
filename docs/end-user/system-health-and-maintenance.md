@@ -115,7 +115,7 @@ For failed tool calls, inspect the tool call evidence, connector diagnostics, si
 
 For provider failure clusters, check provider credentials, provider connectivity, model defaults, recent deploys, and provider status before editing prompts.
 
-For high-cost agents, review run volume, token usage, model choice, retrieval scope, and budget settings before disabling an agent.
+High-cost agents counts AI model spend only; data an agent buys is not included. For high-cost agents, review run volume, token usage, model choice, retrieval scope, and budget settings before disabling an agent.
 
 For failed scheduled executions, inspect the target workflow or agent run, repair the configuration, then rerun manually if appropriate.
 

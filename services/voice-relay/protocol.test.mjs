@@ -12,6 +12,7 @@ import {
   pcm16HasSpeech,
   readTicket,
   readToolCalls,
+  readUsage,
 } from "./protocol.mjs";
 
 const SECRET = "test-relay-secret";
@@ -147,6 +148,13 @@ describe("metering kiosk speech", () => {
     expect(isTurnComplete(JSON.stringify({ serverContent: { turnComplete: true } }))).toBe(true);
     expect(isTurnComplete(JSON.stringify({ serverContent: { interrupted: true } }))).toBe(false);
     expect(isTurnComplete("not json")).toBe(false);
+  });
+
+  test("a message's usage is read for the session's cost, thinking counted as output", () => {
+    expect(readUsage(JSON.stringify({ usageMetadata: { promptTokenCount: 120, responseTokenCount: 30, thoughtsTokenCount: 5 } })))
+      .toEqual({ inputTokens: 120, outputTokens: 35 });
+    expect(readUsage(JSON.stringify({ serverContent: { turnComplete: true } }))).toBeNull();
+    expect(readUsage("not json")).toBeNull();
   });
 });
 

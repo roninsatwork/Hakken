@@ -89,6 +89,7 @@ export const mintVoicePreviewTicket = tenantAction({
     const platformName = (await ctx.runQuery(internal.settings.getEmailBranding, {})).platformName;
     const ticket = signVoiceTicket(
       {
+        modelId: modelConfig.modelId,
         model: modelConfig.providerModelId,
         voice: args.voice,
         instructions: buildPreviewInstructions(platformName),

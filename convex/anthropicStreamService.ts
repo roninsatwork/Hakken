@@ -19,7 +19,7 @@ export type AnthropicStreamEvent = {
   type?: string;
   index?: number;
   message?: {
-    usage?: { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number };
+    usage?: { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number };
     stop_reason?: string | null;
   };
   content_block?: { type?: string; id?: string; name?: string; text?: string };
@@ -29,7 +29,7 @@ export type AnthropicStreamEvent = {
     partial_json?: string;
     stop_reason?: string | null;
   };
-  usage?: { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number };
+  usage?: { input_tokens?: number; output_tokens?: number; cache_read_input_tokens?: number; cache_creation_input_tokens?: number };
 };
 
 export type AccumulatedToolCall = { id: string; name: string; args: Record<string, unknown> };
@@ -69,9 +69,14 @@ export function createAnthropicStreamAccumulator(args: {
     switch (event.type) {
       case "message_start": {
         const usage = event.message?.usage;
-        state.inputTokens += usage?.input_tokens ?? 0;
+        // Anthropic's `input_tokens` leaves out what was read from or written
+        // to the cache, where the cost calculation takes the cached part as
+        // inside the total (`aiCostService.ts`): so the total is all three,
+        // and cache reads were once taken off a figure that never held them.
+        const cacheRead = usage?.cache_read_input_tokens ?? 0;
+        state.inputTokens += (usage?.input_tokens ?? 0) + cacheRead + (usage?.cache_creation_input_tokens ?? 0);
         state.outputTokens += usage?.output_tokens ?? 0;
-        state.cachedInputTokens += usage?.cache_read_input_tokens ?? 0;
+        state.cachedInputTokens += cacheRead;
         return;
       }
 

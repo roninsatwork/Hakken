@@ -4,6 +4,8 @@ import { internalAction } from "./_generated/server";
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import { generationSpend, recordModelSpend } from "./modelSpend";
+import type { AiGenerationResponse, ResolvedAiModelConfig } from "./aiRuntimeTypes";
 import { runDecisions } from "./decisionActions";
 import {
   buildRewriteSystemInstruction,
@@ -34,6 +36,10 @@ export const selectWikiContextForQuery = internalAction({
     maxChars: v.optional(v.number()),
     /** The conversation this reading serves, so its Decision runs show in "Why this answer?". */
     threadId: v.optional(v.id("threads")),
+    /** Whom the picker's cost row is charged to: the answering agent, or a system agent; Platform AI when neither. */
+    agentId: v.optional(v.id("agents")),
+    systemKey: v.optional(v.string()),
+    userId: v.optional(v.id("users")),
   },
   handler: async (
     ctx,
@@ -134,6 +140,15 @@ export const selectWikiContextForQuery = internalAction({
             },
           ],
         });
+        await recordModelSpend(ctx, {
+          ...(args.agentId ? { agentId: args.agentId } : {}),
+          ...(args.systemKey ? { systemKey: args.systemKey } : {}),
+          ...(args.threadId ? { threadId: args.threadId } : {}),
+          ...(args.userId ? { userId: args.userId } : {}),
+          ...(args.companyId ? { companyId: args.companyId } : {}),
+          actionContext: "Choosing wiki pages for a question",
+          ...generationSpend(model, response),
+        });
         const jsonMatch = (response.text ?? "").match(/\{[\s\S]*\}/);
         const parsed = jsonMatch ? (JSON.parse(jsonMatch[0]) as { pages?: unknown }) : {};
         const valid = new Set(index.map((entry) => entry.key));
@@ -232,8 +247,17 @@ export const rewriteCustomerPageAfterEvent = internalAction({
     /** What the page's source list shows for this event. */
     sourceLabel: v.optional(v.string()),
     eventText: v.string(),
+    /** The agent the event's door answers through, charged for the rewrite; Platform AI when unset. */
+    systemKey: v.optional(v.string()),
   },
   handler: async (ctx, args): Promise<void> => {
+    const charge = (actionContext: string, model: ResolvedAiModelConfig, response: AiGenerationResponse) =>
+      recordModelSpend(ctx, {
+        ...(args.systemKey ? { systemKey: args.systemKey } : {}),
+        companyId: args.companyId,
+        actionContext,
+        ...generationSpend(model, response),
+      });
     const page = await ctx.runQuery(internal.wikiPages.getCustomerPageInternal, {
       companyId: args.companyId,
       subjectKey: args.subjectKey,
@@ -272,6 +296,7 @@ export const rewriteCustomerPageAfterEvent = internalAction({
           },
         ],
       });
+      await charge(`Rewriting the wiki page for ${title} after a ${args.eventLabel}`, model, response);
       rewritten = response.text ?? "";
     } catch (error) {
       console.error("Wiki rewrite model call failed; the page stands as it was", error);
@@ -306,6 +331,7 @@ export const rewriteCustomerPageAfterEvent = internalAction({
         systemInstruction: buildTopicSuggestionInstruction(),
         contents: [{ type: "text", text: args.eventText.slice(0, 8000) }],
       });
+      await charge(`Finding what a ${args.eventLabel} taught about the company`, model, suggestionResponse);
       const topics = parseTopicSuggestions(suggestionResponse.text ?? "");
 
       for (const topic of topics) {
@@ -331,6 +357,7 @@ export const rewriteCustomerPageAfterEvent = internalAction({
             },
           ],
         });
+        await charge(`Rewriting the wiki page for ${topic.slug} after a ${args.eventLabel}`, model, topicResponse);
         const topicVerdict = validateRewrittenPage(topicResponse.text ?? "");
         if (!topicVerdict.ok) continue;
         await ctx.runMutation(internal.wikiPages.applyRewriteInternal, {

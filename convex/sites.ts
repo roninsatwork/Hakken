@@ -262,6 +262,8 @@ export const getMySite = tenantQuery({
       localMarket: v.number(),
       localRivalPosts: v.number(),
       localListings: v.number(),
+      /** Discovery's Reviews: the reviews held on the company's own listings. */
+      localReviews: v.number(),
     }),
     /** What the keyword list holds of the site against the supplier's totals: every screen's "X of Y". */
     coverage: coverageValidator,
@@ -367,6 +369,7 @@ export async function readMySite(ctx: SiteReader, siteId: Id<"companyWebsites">)
       localMarket: local?.marketBusinesses ?? 0,
       localRivalPosts: local?.rivalPosts ?? 0,
       localListings: local?.ownListings ?? 0,
+      localReviews: local?.ownReviews ?? 0,
     },
     coverage: coverageOf(latest),
   };

@@ -270,16 +270,21 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
         const concludeStoppedRun = async (message: string) => {
             await releasePromptCache();
             await ctx.runMutation(internal.agentRunCheckpoints.clearCheckpointInternal, { runId });
+            const stoppedUsage = buildRunUsagePayload({
+                inputTokens: inTokens,
+                outputTokens: outTokens,
+                cachedInputTokens: cachedInTokens,
+                rates: config,
+                model: modelConfig,
+            });
             await ctx.runMutation(internal.agentRuns.recordRunUsageInternal, {
                 runId,
-                ...buildRunUsagePayload({
-                    inputTokens: inTokens,
-                    outputTokens: outTokens,
-                    cachedInputTokens: cachedInTokens,
-                    rates: config,
-                    model: modelConfig,
-                }),
+                ...stoppedUsage,
             });
+            // Its cost row: the spend up to the stop is real, and a stopped run once wrote none.
+            if (inTokens > 0 || outTokens > 0) {
+                await ctx.runMutation(internal.modelSpend.recordRunCostInternal, { runId, ...stoppedUsage, actionContext: "Agent run, stopped", status: "SUCCESS" });
+            }
 
             // Nothing streamed yet means the thread's last message is the
             // user's and the surface is showing a thinking indicator that
@@ -983,6 +988,12 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
             ...runUsage,
         });
 
+        // The run's cost row, written before the run is marked ended: a run ended
+        // without one is charged by the failure path (`modelSpend.chargeEndedRun`),
+        // never twice. Every run has one — a kiosk, a widget visitor or a webhook
+        // has no signed-in person, and these runs once wrote none.
+        await ctx.runMutation(internal.modelSpend.recordRunCostInternal, { runId, ...runUsage, actionContext: "Sandbox Execution", status: finalStepStatus });
+
         await ctx.runMutation(internal.agentRuns.updateRunStatusInternal, {
             runId,
             status: finalStepStatus,
@@ -1008,26 +1019,6 @@ export async function executeObjectiveLoop(ctx: ActionCtx, params: {
             outcome: finalStepStatus === "SUCCESS" ? "SUCCESS" : "FAILED",
         });
 
-        if (owner.userId) {
-            await ctx.runMutation(internal.agentTransactions.insertTransactionInternal, {
-                agentId,
-                threadId,
-                userId: owner.userId,
-                companyId,
-                // Drills carry their flag into the ledger: the spend is real
-                // and stays in cost figures, but interaction analytics must
-                // not read a rehearsal as customer traffic.
-                ...(isRehearsalRun ? { isRehearsal: true } : {}),
-                actionContext: "Sandbox Execution",
-                modelUsed: modelConfig.modelId,
-                providerKey: modelConfig.providerKey,
-                providerModelId: modelConfig.providerModelId,
-                inputTokens: inTokens,
-                outputTokens: outTokens,
-                costUsd: runUsage.costUsd,
-                status: finalStepStatus,
-            });
-        }
 }
 
 /**

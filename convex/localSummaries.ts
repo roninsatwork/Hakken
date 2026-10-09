@@ -76,8 +76,12 @@ export async function localNumbers(ctx: Reader, hold: Doc<"companyWebsites">) {
   for (const rival of rivals) {
     rivalPosts += (await readListingActivity(ctx, rival._id)).filter((line) => ["POST", "OFFER", "EVENT"].includes(line.kind) && line.day >= since).length;
   }
+  // Every own listing's reviews held, from its light reading — never the reviews themselves.
+  let ownReviews = 0;
+  for (const link of links.filter((entry) => entry.role === "OWN")) ownReviews += (await ctx.db.get(link.listingId))?.reviewsHeld ?? 0;
   return {
     ownListings: links.filter((link) => link.role === "OWN").length,
+    ownReviews,
     mapSearches: searches,
     marketBusinesses: market?.total ?? 0,
     rivalPosts,
@@ -108,7 +112,8 @@ export async function writeLocalSummary(ctx: MutationCtx, holdId: Id<"companyWeb
   }
   const same = summary.rebuildAt === undefined
     && summary.ownListings === numbers.ownListings && summary.mapSearches === numbers.mapSearches
-    && summary.marketBusinesses === numbers.marketBusinesses && summary.rivalPosts === numbers.rivalPosts;
+    && summary.marketBusinesses === numbers.marketBusinesses && summary.rivalPosts === numbers.rivalPosts
+    && summary.ownReviews === numbers.ownReviews;
   if (!same) await ctx.db.patch(summary._id, { ...numbers, rebuildAt: undefined, updatedAt: Date.now() });
 }
 

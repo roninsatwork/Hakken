@@ -1,0 +1,14 @@
+# Discovery → Reviews → Against rivals — the approved look (board "ReviewsRivals" of docs/plans/assets/discovery-local-reputation-ai/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Reviews against rivals
+  select: Office
+figures
+  figure: Your place on reviews
+  figure: Gap to the leader
+  figure: Fastest to answer
+  figure: Best rated
+chart-card: Google reviews over the last # months
+table: Business | Listing | Rating | Reviews | New in # days | Answered | Days to answer
+  table-bar
+    download: Download CSV

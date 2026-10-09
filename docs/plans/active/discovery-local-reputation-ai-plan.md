@@ -2,7 +2,7 @@
 
 **Started 2026-10-09. Status: every decision in §1 agreed 2026-10-09 (D1–D21);
 started 2026-10-09 (Anthony: "ok start and good luck"), built in one go.
-Step 1 (Local) built and run on Ronins and Korda; step 2 (Reviews) next.** Built the way the
+Steps 1 (Local) and 2 (Reviews) built and run on Ronins and Korda; step 3 (AI apps) next.** Built the way the
 [core data normalisation plan](core-data-normalisation-plan.md) built the
 core: its rules (§3 there) hold here, every new screen is held to a reading
 budget before it is merged, and every new table is packed from its first day.
@@ -165,7 +165,8 @@ it says "existing".
 | `listings` | One business on Google, Trustpilot or Tripadvisor: its number there, name, address, map point, category, claimed, rating, review count, photo count, website host, and a packed record of the rest of the profile (hours, services, attributes, booking link, Google's review topics, "People also search for"). | Shared | Latest only |
 | `listingWeeks` | One packed record per listing: rating, reviews, photos and claimed, each week. "Profile changes" on Rival activity are worked out from it. | Shared | For good |
 | `holdListings` | Which listings a company calls its own (and which office) or a rival, on which website hold. | Private | While linked |
-| `listingReviewParts` | A listing's reviews, 1,000 a record: review number, stars, date, replied or not, reply date, Local Guide, Google's topics for the review. **Text only for the company's own listings (D4)**, kept once a record. | Shared numbers; text only for own listings | For good while the review stands |
+| `listingReviewParts` | A listing's reviews, 1,000 a record: review number, stars, date, replied or not, reply date (and whether that date is only "a year ago"), Local Guide, what the company's AI read in it. **Text only for the company's own listings (D4)**, kept once a record. | Shared numbers; text only for own listings | For good while the review stands |
+| `reviewReplyDrafts` | A reply drafted in the company's voice for each of its reviews still waiting; gone once the review is answered. | Private | Until answered |
 | `mapChecks` | One search at one office's map point on one day: the businesses in order (listing numbers), Google's reason for each ("Their website mentions…") kept once a record. | Shared | 90 days, like `siteSerpPages` |
 | `mapPositionWeeks` | One packed record per office listing and search: its place each check — the history kept past the checks' 90 days. A fact about the listing, so shared (built 2026-10-09); the screens read a place from the newest checks themselves. | Shared | For good |
 | `localMarketParts` | Every business of the kind within the radius of an office, as listing numbers with their distance. | Shared | Latest only |
@@ -273,6 +274,14 @@ AI Keyword Data all cover the United Kingdom; AI Mode answered for the UK.
 - Korda tracks no searches, so its Map rankings stays empty until it does.
 - A profile with no posts or questions answers "No Search Results"; filed as an empty list, not a failure (`emptyIsAnAnswer`).
 
+**Reviews' real runs (2026-10-09, D15):** Ronins and Korda, six purchases, $0.016; the AI's reading of 44 reviews against their topics, read twice as the first reading was wrong, $0.006; 30 drafted replies, $0.035 (about $0.001 each); one test call to see how replies are dated, $0.00075. Found on real data:
+
+- **Google dates an owner's reply from its "a year ago"**: a reply a year old reads as today's date a year back, so it can fall before its own review. Such a reply now counts as answered but never in "days to answer" (`replyRough`); a reply read within weeks — every waiting review is read again for 90 days — keeps its day.
+- **Asked one request a review with a question a topic, the AI gave every topic the same answer** — a T-shirt delivery review praising "fishing". Each review and topic is now its own small request (the Decision's question names the topic); Korda's "poor quality hooklink" review reads as a complaint about fishing, as it should.
+- Ronins answers 1 of its 31 reviews; Air Social and The Website Space answer nearly all theirs.
+- Rivals' Google topics are other words than Ronins' own ("project" against "team", "skills"), so What customers say marks most of Ronins' topics as its own to win.
+- Against rivals' chart is worked out from the reviews held (a business's count now, less the reviews dated after each month), not from weekly readings, so it shows a year on the first day — as far back as a rival's newest fifty reach.
+
 ## 7. The screens
 
 All under a website in Discovery. New menu groups and items — nothing else on
@@ -358,7 +367,7 @@ three new assistants in their assistant filters.
 |---|---|
 | 0. Prove before building | **Prices and coverage done 2026-10-09** (§6, §6A): 17 calls, $0.35. The load test's fixtures are built with step 1. |
 | 1. Local | **Built 2026-10-09**: records, purchases, filing, the planner step, the hold switch per company and part (D16), Find and linking, six screens and Every office, each matching its drawing part for part and locked by a look test (`localLook.test.tsx`), read within budgets at five times a large client (`localLoad.test.ts`, `localReadKiB`), and run for real on Ronins and Korda. |
-| 2. Reviews | Not started |
+| 2. Reviews | **Built 2026-10-09**: reviews bought, filed once by their own number and packed (own listings' words only, D4), written only when changed; the AI reads each own review against its topics (Decision `discovery.review-topic`, on, acts on its own) and drafts a reply in the company's voice for each still waiting; Your reviews, Against rivals and What customers say, each matching its drawing part for part (`reviewsLook.test.tsx`); Business profile's replies and topic stars and Every office's answered share filled in; read within budgets at five times a large client (`reviewsLoad.test.ts`, `reviewsReadKiB`); run for real on Ronins and Korda. |
 | 3. AI apps | Not started |
 | 4. Brand radar | Not started |
 | 5. Your assets | Not started |
@@ -375,3 +384,4 @@ three new assistants in their assistant filters.
 - 2026-10-09 — Rules 11–13 added from the normalisation plan's Part 4 on rereading it: write only what changed, AI judgements in batches, no new timers.
 - 2026-10-09 — D14–D21 asked all at once and agreed (Anthony: "i want all questions asked upfront and i want you to finish this in one go"); building waits for his "start".
 - 2026-10-09 — D1, D2, D6–D9, D12 and D13 agreed: Local first, every office tracked, cadence and limits as drawn, Web mentions last after a test on Korda (steps 5 and 6 swapped).
+- 2026-10-09 — Step 2 (Reviews) built and run on Ronins and Korda. Changes made while building, each smaller than a decision: a reply Google dates only "a year ago" counts as answered, never as a time to answer; the AI reads each review and topic as its own request; Against rivals' chart comes from the reviews held; the "Rivals praised" column counts Google's own topic mentions on rivals' profiles (D4 keeps no rival's words); `queueLocalNow` buys one part alone (`only`) for testing; each Sites table on these pages sorts by its headings, How the stars split's too (its drawing showed no sort marks).

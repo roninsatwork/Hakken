@@ -38,6 +38,7 @@ import {
   isTurnComplete,
   pcm16HasSpeech,
   readToolCalls,
+  readUsage,
 } from "./protocol.mjs";
 import {
   buildGreetingNudge,
@@ -166,6 +167,10 @@ relay.on("connection", (browser) => {
     PRE_AUTH_TIMEOUT_MS
   );
 
+  // What Vertex reported spending, sent with the close so the session's cost
+  // is recorded once, by the app, against the ticket's company and thread.
+  const usage = { inputTokens: 0, outputTokens: 0 };
+
   const postControl = async (action, index) => {
     if (!admittedTicket || !admittedPayload?.controlUrl) return { ok: true };
     const response = await fetch(admittedPayload.controlUrl, {
@@ -175,6 +180,7 @@ relay.on("connection", (browser) => {
         ticket: admittedTicket,
         action,
         ...(index !== undefined ? { turnIndex: index } : {}),
+        ...(action === "close" ? { usage } : {}),
       }),
       signal: AbortSignal.timeout(KNOWLEDGE_TIMEOUT_MS),
     });
@@ -192,7 +198,7 @@ relay.on("connection", (browser) => {
       } else if (KNOWLEDGE_URL) {
         void fetch(KNOWLEDGE_URL, {
           method: "POST", headers: relayHeaders(admittedTicket),
-          body: JSON.stringify({ ticket: admittedTicket, close: true }),
+          body: JSON.stringify({ ticket: admittedTicket, close: true, usage }),
           signal: AbortSignal.timeout(KNOWLEDGE_TIMEOUT_MS),
         }).catch(() => {});
       }
@@ -361,6 +367,12 @@ relay.on("connection", (browser) => {
       // is thinking. Answering the lookup is this relay's job, not the
       // page's — a phone call has no page.
       if (browser.readyState === WebSocket.OPEN) browser.send(text);
+
+      const spent = readUsage(text);
+      if (spent) {
+        usage.inputTokens += spent.inputTokens;
+        usage.outputTokens += spent.outputTokens;
+      }
 
       const calls = readToolCalls(text);
       if (calls.length > 0) void answerToolCalls(calls, rawTicket);

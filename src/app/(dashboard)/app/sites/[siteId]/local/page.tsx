@@ -38,7 +38,7 @@ type Also = {
   you: boolean;
   watched: boolean;
 };
-type Topic = { topic: string; reviews: number };
+type Topic = { topic: string; reviews: number; stars: number | null };
 
 const DETAIL_SORTS: SiteSortColumns<DetailRow, "detail"> = { detail: { value: () => null, first: "asc" } };
 const ALSO_SORTS: SiteSortColumns<Also, "business" | "category" | "rating" | "reviews" | "photos" | "mapBox"> = {
@@ -49,10 +49,11 @@ const ALSO_SORTS: SiteSortColumns<Also, "business" | "category" | "rating" | "re
   photos: { value: (row) => row.photos, first: "desc" },
   mapBox: { value: (row) => row.mapBox, first: "desc" },
 };
-const TOPIC_SORTS: SiteSortColumns<Topic, "topic" | "reviews" | "share"> = {
+const TOPIC_SORTS: SiteSortColumns<Topic, "topic" | "reviews" | "share" | "stars"> = {
   topic: { value: (row) => row.topic, first: "asc" },
   reviews: { value: (row) => row.reviews, first: "desc" },
   share: { value: (row) => row.reviews, first: "desc" },
+  stars: { value: (row) => row.stars, first: "desc" },
 };
 const nameOf = (row: { name: string }) => row.name;
 const topicOf = (row: Topic) => row.topic;
@@ -192,8 +193,8 @@ export default function LocalProfilePage() {
                     return <span className="flex items-center gap-2"><Meter value={share} className="w-24" /><FigureCell value={share === null ? null : Math.round(share * 100)} text={share === null ? undefined : `${Math.round(share * 100)}%`} /></span>;
                   },
                 },
-                // Read from the reviews themselves, with Reviews (plan step 2).
-                { key: "stars", header: t("topics.columns.stars"), cell: () => <FigureCell value={null} /> },
+                // Each topic's average stars, from the reviews the company's AI read it in (Reviews).
+                { key: "stars", header: t("topics.columns.stars"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.stars} text={ratingText(row.stars)} /> },
               ]}
             />
           </PageSection>

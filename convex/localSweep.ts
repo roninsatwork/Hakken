@@ -51,11 +51,13 @@ async function clearListing(ctx: MutationCtx, listingId: Id<"listings">): Promis
   if (weeks) await ctx.db.delete(weeks._id);
   const activity = await ctx.db.query("listingActivityParts").withIndex("by_listing", (q) => q.eq("listingId", listingId)).unique();
   if (activity) await ctx.db.delete(activity._id);
+  const reviews = await ctx.db.query("listingReviewParts").withIndex("by_listing_part", (q) => q.eq("listingId", listingId)).take(20);
+  for (const part of reviews) await ctx.db.delete(part._id);
   await ctx.db.delete(listingId);
   return true;
 }
 
-/** A website's own Local links, its last finds and its menu numbers, when the website leaves the company. */
+/** A website's own Local links, its last finds, its menu numbers and its drafted replies, when the website leaves the company. */
 export async function purgeHoldLocal(ctx: { db: MutationCtx["db"] }, companyWebsiteId: Id<"companyWebsites">): Promise<void> {
   const links = await ctx.db.query("holdListings").withIndex("by_hold", (q) => q.eq("companyWebsiteId", companyWebsiteId)).take(500);
   for (const link of links) await ctx.db.delete(link._id);
@@ -63,4 +65,6 @@ export async function purgeHoldLocal(ctx: { db: MutationCtx["db"] }, companyWebs
   for (const find of finds) await ctx.db.delete(find._id);
   const summary = await ctx.db.query("localSummaries").withIndex("by_hold", (q) => q.eq("companyWebsiteId", companyWebsiteId)).unique();
   if (summary) await ctx.db.delete(summary._id);
+  const drafts = await ctx.db.query("reviewReplyDrafts").withIndex("by_hold", (q) => q.eq("companyWebsiteId", companyWebsiteId)).take(500);
+  for (const draft of drafts) await ctx.db.delete(draft._id);
 }

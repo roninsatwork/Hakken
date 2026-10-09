@@ -56,6 +56,15 @@ const OVERDUE_SCHEDULE_THRESHOLD_MINUTES = 15;
 const STALE_RUNNING_THRESHOLD_MINUTES = 60;
 const PENDING_APPROVAL_THRESHOLD_MINUTES = 30;
 const HIGH_COST_AGENT_THRESHOLD_USD = 5;
+/**
+ * Paid services an agent buys from rather than models it asks: the SEO data
+ * the Collector buys (`seoCollectionQueue.ts`, `seoCrawlRefund.ts`) and X's
+ * reads (`roleRuns.recordRunServiceCall`). Buying data is the platform's work,
+ * already capped by each agent's own run limit, so the high-cost check counts
+ * AI model spend only (Anthony, 2026-10-09: a normal week's data, about $20,
+ * read as a $34 "high-cost agent" every week).
+ */
+const PAID_SERVICE_PROVIDER_KEYS = new Set(["dataforseo", "x"]);
 const BUDGET_WARNING_PERCENT = 80;
 const REPEATED_PROVIDER_FAILURE_THRESHOLD = 3;
 const TOOL_FAILURE_THRESHOLD = 3;
@@ -546,8 +555,10 @@ async function getOperationalHealthReport(ctx: QueryCtx, args: { daysBack?: numb
     targetName: providerKey,
   }));
 
+  // AI model spend only: what an agent buys from a paid service is left out.
   const costByAgent = new Map<Id<"agents">, { costUsd: number; transactions: number; lastSeenAt: number }>();
   for (const transaction of recentAgentTransactions) {
+    if (transaction.providerKey && PAID_SERVICE_PROVIDER_KEYS.has(transaction.providerKey)) continue;
     const existing = costByAgent.get(transaction.agentId) ?? {
       costUsd: 0,
       transactions: 0,
@@ -566,7 +577,7 @@ async function getOperationalHealthReport(ctx: QueryCtx, args: { daysBack?: numb
       id: agentId,
       label: "Cost threshold",
       occurredAt: row.lastSeenAt,
-      summary: `$${row.costUsd.toFixed(2)} across ${row.transactions} transaction${row.transactions === 1 ? "" : "s"}`,
+      summary: `$${row.costUsd.toFixed(2)} of AI model spend across ${row.transactions} call${row.transactions === 1 ? "" : "s"}`,
       targetName: await getAgentName(ctx, agentId),
       targetType: "agent",
     }))
@@ -821,7 +832,7 @@ function buildAlertRules(args: { budgetHealth: BudgetHealthReport; operations: O
       label: "Cost and budget pressure",
       nextAction: "Review model choice, run budget, tenant plan usage, and retrieval/tool breadth.",
       status: getRuleStatus(costPressureCount, 1),
-      threshold: `Agent spend above $${HIGH_COST_AGENT_THRESHOLD_USD.toFixed(2)} or any budget above ${BUDGET_WARNING_PERCENT}%`,
+      threshold: `An agent's AI model spend above $${HIGH_COST_AGENT_THRESHOLD_USD.toFixed(2)} or any budget above ${BUDGET_WARNING_PERCENT}%`,
     },
     {
       count: operations.failedToolCalls.count,

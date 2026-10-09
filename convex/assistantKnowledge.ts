@@ -36,6 +36,8 @@ import { knowledgeCutOff, readChunk } from "./knowledgeReading";
 import { searchHelpfulContent } from "./libraryArticleSearch";
 import { resolvePlatformName } from "./settingsService";
 import type { AnswerStep } from "./utils/answerTiming";
+import { HAKKEN_ASSISTANT } from "./utils/hakkenAssistant";
+import type { SpendOwner } from "./modelSpend";
 import { LIBRARY_CONTEXT_MAX_CHARS } from "./utils/libraryPage";
 import { companyAnswersFromWiki } from "./wikiRewriteService";
 
@@ -301,6 +303,13 @@ export async function gatherReading(
   // widget, a platform check) and answers from the global brain alone
   // (Anthony's SaaS ruling, 2026-08-17).
   const knowledgeMode = args.forceKnowledgeMode ?? (companyId && !companyAnswersFromWiki(company) ? "chunks" : "wiki");
+  // The reading's model calls are charged to whoever answers: the agent, else
+  // the conversation's agent, else the Assistant every door answers through.
+  const chargeTo: SpendOwner = {
+    ...(args.agent ? { agentId: args.agent.agentId } : thread?.agentId ? { agentId: thread.agentId } : { systemKey: HAKKEN_ASSISTANT.systemKey }),
+    ...(thread ? { threadId: thread._id } : {}),
+    ...(thread?.userId ? { userId: thread.userId } : {}),
+  };
   const wikiAnswers = knowledgeMode === "wiki";
 
   // Started now, read at the end; a failed lookup reads as nothing found.
@@ -332,6 +341,9 @@ export async function gatherReading(
   const wikiRead = wikiAnswers
     ? ctx.runAction(internal.wikiActions.selectWikiContextForQuery, {
         ...(thread ? { threadId: thread._id } : {}),
+        ...(chargeTo.agentId ? { agentId: chargeTo.agentId } : {}),
+        ...(chargeTo.systemKey ? { systemKey: chargeTo.systemKey } : {}),
+        ...(chargeTo.userId ? { userId: chargeTo.userId } : {}),
         // No company means the global AI's own conversation: the chooser
         // reads the platform shelf alone.
         ...(companyId ? { companyId } : {}),
@@ -356,7 +368,7 @@ export async function gatherReading(
 
   try {
     await args.onSearching?.();
-    embedded = await embedRetrievalQuery(ctx, { query: args.question, companyId, operation: args.operation });
+    embedded = await embedRetrievalQuery(ctx, { query: args.question, companyId, operation: args.operation, chargeTo });
     args.onStep?.("searchKey");
 
     if (embedded) {

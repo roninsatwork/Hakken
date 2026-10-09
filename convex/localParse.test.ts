@@ -111,7 +111,7 @@ test("posts come newest first, each kind named and its words cut short", () => {
 
 test("Trustpilot and Tripadvisor pages are found by their website and their path", () => {
   expect(parseTrustpilotSearch([{ items: [{ title: "Rains", domain: "www.rains.com", rating: { value: 4 }, reviews_count: 3087 }] }]))
-    .toEqual([{ source: "TRUSTPILOT", key: "rains.com", name: "Rains", websiteHost: "rains.com", rating: 4, reviews: 3087 }]);
+    .toEqual([{ source: "TRUSTPILOT", key: "www.rains.com", name: "Rains", websiteHost: "rains.com", rating: 4, reviews: 3087 }]);
   expect(parseTripadvisorSearch([{ items: [{ title: "The Ivy Castle View", url_path: "/Restaurant_Review-g186390-d13958195.html", rating: { value: 4, votes_count: 1491 }, reviews_count: 1491 }] }]))
     .toEqual([{ source: "TRIPADVISOR", key: "/Restaurant_Review-g186390-d13958195.html", name: "The Ivy Castle View", rating: 4, reviews: 1491 }]);
 });

@@ -5,6 +5,8 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { internalAction } from "./_generated/server";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import { generationSpend, recordModelSpend } from "./modelSpend";
+import { HAKKEN_ASSISTANT } from "./utils/hakkenAssistant";
 import { normalizeAiRuntimeError } from "./aiToolExecutionService";
 import {
   combineGradeSamples,
@@ -170,6 +172,7 @@ export const runCompanyCheck = internalAction({
         });
 
         let gradingResponse;
+        let gradingConfig = graderConfig;
         let gradedIndependently = grader.independent;
         try {
           gradingResponse = await generateTextWithResolvedModel({
@@ -197,8 +200,18 @@ export const runCompanyCheck = internalAction({
             temperature: 0,
           });
           graderModelId = fallbackConfig.modelId;
+          gradingConfig = fallbackConfig;
           gradedIndependently = false;
         }
+        // A check grades the Assistant's answer, so its grading is charged there.
+        await recordModelSpend(ctx, {
+          systemKey: HAKKEN_ASSISTANT.systemKey,
+          threadId,
+          userId: args.userId,
+          ...(args.companyId ? { companyId: args.companyId } : {}),
+          actionContext: "Grading a company check",
+          ...generationSpend(gradingConfig, gradingResponse),
+        });
 
         tokens.gradeIn += gradingResponse.inputTokens ?? 0;
         tokens.gradeOut += gradingResponse.outputTokens ?? 0;

@@ -29,6 +29,7 @@ export type MenuCounts = {
   localMarket?: number;
   localRivalPosts?: number;
   localListings?: number;
+  localReviews?: number;
 };
 
 /**

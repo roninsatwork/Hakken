@@ -10,6 +10,7 @@ import { appError } from "./utils/appError";
 import schema from "./schema";
 import * as agentRunShapes from "./utils/agentRunShapes";
 import { ensureAgentVersionSnapshot } from "./agentVersioningService";
+import { chargeEndedRun } from "./modelSpend";
 import {
   getNextStepIndex,
   recordAgentAction,
@@ -1048,6 +1049,11 @@ export const cancelRun = adminMutation({
       completedAt: now,
     });
 
+    // A run waiting on a person has no loop left to close it: its spend so
+    // far is charged here. A running one is charged by its loop as it stops.
+    if (run.status === "PENDING_APPROVAL") {
+      await chargeEndedRun(ctx, args.runId, { status: "SUCCESS", actionContext: "Agent run, cancelled while waiting for approval" });
+    }
     await ctx.db.patch(args.runId, {
       status: "CANCELLED",
       updatedAt: now,

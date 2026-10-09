@@ -36,6 +36,8 @@ import {
   createVertexEmbeddingClient,
   embedVertexContentWithRetry,
 } from "./vertexProviderService";
+import { embeddingInputTokens } from "./vertexUsage";
+import { generationSpend, recordModelSpend, type SpendOwner } from "./modelSpend";
 
 type RetrievalCtx = GenericActionCtx<DataModel>;
 
@@ -57,6 +59,8 @@ export async function embedRetrievalQuery(
     companyId: Id<"companies"> | undefined;
     /** Telemetry label, e.g. "assistantRagEmbedding". */
     operation: string;
+    /** Whom the embedding's cost row is charged to; Platform AI when unset. */
+    chargeTo?: SpendOwner;
   }
 ): Promise<{ vector: number[]; modelId: string } | null> {
   const embeddingModel = await ctx.runQuery(
@@ -69,6 +73,12 @@ export async function embedRetrievalQuery(
     { model: providerModelId, contents: args.query },
     { operation: args.operation }
   );
+  await recordModelSpend(ctx, {
+    ...args.chargeTo,
+    ...(args.companyId ? { companyId: args.companyId } : {}),
+    actionContext: "Embedding a question to search knowledge",
+    ...generationSpend(embeddingModel, { inputTokens: embeddingInputTokens(response, [args.query]) }),
+  });
 
   const vector = response.embeddings?.[0]?.values;
   if (!vector || vector.length !== embeddingModel.embeddingDimensions) return null;

@@ -38,13 +38,15 @@ export function useOfficeName(): (office: { name: string; town: string | null })
  * after them. Hidden while there is only one office to choose and no
  * side-by-side page.
  */
-export function OfficeSwitch({ offices, open, profile = false, every = false }: {
+export function OfficeSwitch({ offices, open, profile = false, every = false, allOffices = false }: {
   offices: readonly OfficeOption[];
   open: Id<"listings"> | null;
   /** Business profile's own: it offers every office side by side. */
   profile?: boolean;
   /** The side-by-side page is the one open. */
   every?: boolean;
+  /** Reviews' own: "Every office" first, the page's whole scope, chosen when no office is. */
+  allOffices?: boolean;
 }) {
   const t = useTranslations("sites.local");
   const officeName = useOfficeName();
@@ -55,8 +57,13 @@ export function OfficeSwitch({ offices, open, profile = false, every = false }: 
   const sideBySide = profile && offices.length > 1;
   if (offices.length < 2 && !sideBySide) return null;
   const EVERY = "every";
+  const ALL = "";
   const go = (next: string) => {
     const query = new URLSearchParams(sharedSiteQuery(params).replace(/^\?/, ""));
+    if (allOffices && next === ALL) {
+      router.push(`${pathname}${query.toString() ? `?${query}` : ""}`);
+      return;
+    }
     if (next === EVERY) {
       router.push(`/app/sites/${siteId}/local/offices${query.toString() ? `?${query}` : ""}`);
       return;
@@ -66,7 +73,8 @@ export function OfficeSwitch({ offices, open, profile = false, every = false }: 
     router.push(`${base}?${query}`);
   };
   return (
-    <Select aria-label={t("officeChoice")} className="w-[220px]" value={every ? EVERY : (open ?? "")} onChange={go}>
+    <Select aria-label={t("officeChoice")} className="w-[220px]" value={every ? EVERY : (open ?? ALL)} onChange={go}>
+      {allOffices ? <option value={ALL}>{t("allOffices")}</option> : null}
       {offices.map((office) => <option key={office.listingId} value={office.listingId}>{officeName(office)}</option>)}
       {sideBySide ? <option value={EVERY}>{t("everyOffice")}</option> : null}
     </Select>

@@ -94,6 +94,7 @@ export const createKioskVoiceSession = publicAction({
     const expiresAt = Date.now() + 60_000;
     const ticket = signVoiceTicket(
       {
+        modelId: modelConfig.modelId,
         model: modelConfig.providerModelId,
         voice: args.voice ?? companyVoice,
         instructions,

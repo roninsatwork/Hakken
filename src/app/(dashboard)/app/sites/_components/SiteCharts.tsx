@@ -7,6 +7,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  ComposedChart,
   Legend,
   Line,
   LineChart,
@@ -242,6 +243,7 @@ export function SiteBarChart({
   formatValue,
   formatScale,
   seriesLabel,
+  line,
 }: {
   data: Array<Record<string, unknown>>;
   series: SiteSeries[];
@@ -261,14 +263,22 @@ export function SiteBarChart({
   formatScale?: (value: number) => string;
   /** What each readout line is called, when more than the series name. */
   seriesLabel?: (entry: ChartTooltipEntry) => ReactNode;
+  /**
+   * A line over upright bars, on a scale of its own on the right in its
+   * colour — Your reviews' average stars over its reviews a month
+   * (discovery-local-reputation-ai-plan.md, D18). Added 2026-10-09: the one
+   * chart drawn so, extended here rather than drawn again.
+   */
+  line?: SiteSeries & { domain?: [number, number]; formatScale?: (value: number) => string };
 }) {
   const scale = formatScale ? { allowDecimals: true, tickFormatter: formatScale } : { allowDecimals: false, tickFormatter: formatCompact };
+  // Bars along compare named things; upright bars may run over dates.
+  const google = useGoogleUpdates(data, { dated: !horizontal });
+  if (line && !horizontal) return <BarLineChart data={data} series={series} line={line} xKey={xKey} height={height} scale={scale} google={google} formatValue={formatValue} seriesLabel={seriesLabel} />;
   const barsPerRow = stacked ? 1 : series.length;
   const rowHeight = barsPerRow * ALONG_BAR + (barsPerRow - 1) * ALONG_BAR_GAP + ALONG_ROW_SPACE;
   // The rows, then the margin, the scale along the bottom and the legend under it.
   const alongHeight = data.length * rowHeight + 8 + 30 + (series.length > 1 ? 30 : 0);
-  // Bars along compare named things; upright bars may run over dates.
-  const google = useGoogleUpdates(data, { dated: !horizontal });
   return (
     <GoogleUpdateFrame google={google}>
       {/* Upright bars rise; bars along grow from the left, as they read. */}
@@ -317,6 +327,53 @@ export function SiteBarChart({
             ))}
             <GoogleUpdateMarkers google={google} />
           </BarChart>
+        </ResponsiveContainer>
+      </ChartReveal>
+    </GoogleUpdateFrame>
+  );
+}
+
+/** Upright bars on the left scale and one line on the right: `SiteBarChart`'s `line`. */
+function BarLineChart({ data, series, line, xKey, height, scale, google, formatValue, seriesLabel }: {
+  data: Array<Record<string, unknown>>;
+  series: SiteSeries[];
+  line: SiteSeries & { domain?: [number, number]; formatScale?: (value: number) => string };
+  xKey: string;
+  height: number;
+  scale: { allowDecimals: boolean; tickFormatter: (value: number) => string };
+  google: ReturnType<typeof useGoogleUpdates>;
+  formatValue?: (value: number, entry: ChartTooltipEntry) => ReactNode;
+  seriesLabel?: (entry: ChartTooltipEntry) => ReactNode;
+}) {
+  const every = [...series, line];
+  return (
+    <GoogleUpdateFrame google={google}>
+      <ChartReveal replay={revealKey(data, xKey)} motion="rise">
+        <ResponsiveContainer width="100%" height={height} debounce={50}>
+          <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border-dim" />
+            <XAxis {...AXIS_PROPS} minTickGap={12} {...google.axis(xKey)} />
+            <YAxis yAxisId="bars" width={48} {...scale} {...AXIS_PROPS} />
+            <YAxis
+              yAxisId="line"
+              orientation="right"
+              width={48}
+              allowDecimals
+              domain={line.domain ?? ["auto", "auto"]}
+              // A whole-number scale across a set range: 0 to 5 stars reads 0, 1, 2, 3, 4, 5.
+              {...(line.domain ? { tickCount: line.domain[1] - line.domain[0] + 1 } : {})}
+              tickFormatter={line.formatScale ?? formatCompact}
+              {...AXIS_PROPS}
+              stroke={line.colour}
+            />
+            <Tooltip active={google.open ? false : undefined} cursor={CHART_CURSOR} content={<ChartTooltip title={google.readoutTitle} formatValue={formatValue} seriesLabel={seriesLabel} />} />
+            <Legend wrapperStyle={{ fontSize: 12 }} itemSorter={inSeriesOrder(every)} content={googleLegend(google, { seriesShown: true })} />
+            {series.map((entry) => (
+              <Bar key={entry.key} yAxisId="bars" dataKey={entry.key} name={entry.name} fill={entry.colour} radius={3} activeBar={CHART_ACTIVE_BAR} isAnimationActive={false} />
+            ))}
+            <Line yAxisId="line" type="monotone" dataKey={line.key} name={line.name} stroke={line.colour} strokeWidth={2.25} dot={false} connectNulls isAnimationActive={false} />
+            <GoogleUpdateMarkers google={google} />
+          </ComposedChart>
         </ResponsiveContainer>
       </ChartReveal>
     </GoogleUpdateFrame>

@@ -68,13 +68,13 @@ The report covers:
 - pending approvals older than the approval threshold
 - failed tool calls
 - repeated provider failures
-- high-cost agents above the configured threshold
+- high-cost agents: an agent's AI model spend above the configured threshold. Paid services it buys from — the SEO data the Collector buys, X's reads — are left out (2026-10-09): buying data is the platform's work, capped by each agent's own run limit
 - failed scheduled workflow executions
 - stale running scheduled executions
 - overdue active schedules
 - active schedules missing `nextRunAt`
 
-Current thresholds include 60 minutes for stale running work, 30 minutes for pending approvals, 15 minutes for overdue schedules, GBP 5 for high-cost agents, 80 percent for budget warnings, 3 repeated provider failures, and 3 failed tool calls.
+Current thresholds include 60 minutes for stale running work, 30 minutes for pending approvals, 15 minutes for overdue schedules, $5 of AI model spend in the window for high-cost agents, 80 percent for budget warnings, 3 repeated provider failures, and 3 failed tool calls.
 
 Health examples are intentionally capped. The page and email should show enough evidence for an operator to start investigation without turning health reports into full data exports.
 

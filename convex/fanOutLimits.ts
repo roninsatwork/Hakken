@@ -198,6 +198,8 @@ export const FAN_OUT_LIMITS = {
   /** Businesses of an office's kind listed in its local market each month, at $0.0004 each, and how far round the office. */
   localMarketBusinesses: { choices: [50, 100, 250], fallback: 100, scope: "site" },
   localMarketKm: { choices: [5, 10, 25], fallback: 10, scope: "site" },
+  /** Each rival's newest reviews read once a month (D9): enough to compare how often and how fast it answers. */
+  localRivalReviews: { choices: [20, 50, 100], fallback: 50, scope: "site" },
 } as const satisfies Record<string, LimitSpec>;
 
 export type FanOutLimitKey = keyof typeof FAN_OUT_LIMITS;
@@ -313,6 +315,7 @@ const limitsArg = v.object({
   localMapDepth: limitValue,
   localMarketBusinesses: limitValue,
   localMarketKm: limitValue,
+  localRivalReviews: limitValue,
 });
 
 /** Each limit's own value where set, null where it uses the level above. */

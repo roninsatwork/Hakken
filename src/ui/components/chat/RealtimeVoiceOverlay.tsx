@@ -44,6 +44,7 @@ export function RealtimeVoiceOverlay({
   const settings = useSystemSettings();
   const createSession = useAction(api.aiVoiceSession.createRealtimeVoiceSession);
   const recordVoiceTurn = useMutation(api.chat.recordVoiceTurn);
+  const recordVoiceUsage = useMutation(api.chat.recordVoiceUsage);
   const searchKnowledge = useAction(api.aiVoiceSession.searchKnowledgeForVoice);
 
   const [sessionState, setSessionState] = useState<VoiceSessionState>("idle");
@@ -160,7 +161,12 @@ export function RealtimeVoiceOverlay({
   }, []);
 
   const handleServerEvent = useCallback(
-    (event: { type?: string; transcript?: string; delta?: string }) => {
+    (event: {
+      type?: string;
+      transcript?: string;
+      delta?: string;
+      response?: { usage?: { input_tokens?: number; output_tokens?: number; input_token_details?: { cached_tokens?: number } } };
+    }) => {
       switch (event.type) {
         // The model heard speech start — it handles turn taking itself, so
         // these events drive the display rather than any decision.
@@ -243,10 +249,25 @@ export function RealtimeVoiceOverlay({
             });
           break;
         }
-        case "response.done":
+        case "response.done": {
           flushTurn();
           setSessionState("listening");
+          // The reply's cost, as OpenAI reported it: this browser is the only
+          // place a direct session's usage arrives.
+          const usage = event.response?.usage;
+          if (usage && modelRef.current) {
+            void recordVoiceUsage({
+              threadId,
+              modelUsed: modelRef.current,
+              inputTokens: usage.input_tokens ?? 0,
+              outputTokens: usage.output_tokens ?? 0,
+              cachedInputTokens: usage.input_token_details?.cached_tokens ?? 0,
+            }).catch(() => {
+              // Losing the cost record must never interrupt the conversation.
+            });
+          }
           break;
+        }
         case "error":
           setNotice(t("connectionLost"));
           break;
@@ -254,7 +275,7 @@ export function RealtimeVoiceOverlay({
           break;
       }
     },
-    [flushTurn, searchKnowledge, t, threadId]
+    [flushTurn, recordVoiceUsage, searchKnowledge, t, threadId]
   );
 
 

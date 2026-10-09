@@ -19,6 +19,8 @@ import { fileAiOverviewPull } from "./aiOverviewFanOuts";
 import { SEARCH_VOLUME_OPERATION, fileSearchVolumePull } from "./searchVolumes";
 import { isLocalOperation } from "./dataForSeoLocalOperations";
 import { fileLocalPull } from "./localFiling";
+import { isReviewOperation } from "./dataForSeoReviewOperations";
+import { fileReviewPull } from "./localReviews";
 import { serpSnapshotOf } from "./siteSerp";
 import { rankedPositionValidator } from "./utils/siteShapes";
 import { findBrandMentions } from "./utils/websiteBrands";
@@ -88,6 +90,7 @@ async function fileSeoResult(ctx: ActionCtx, args: { pullId: Id<"seoDataPulls"> 
   if (pull.operationId === SEARCH_VOLUME_OPERATION) return await fileSearchVolumePull(ctx, args.pullId, pull);
   // Discovery's Local pages: profiles, map checks, markets, posts and found lists (`localFiling.ts`).
   if (isLocalOperation(pull.operationId)) return await fileLocalPull(ctx, args.pullId, pull);
+  if (isReviewOperation(pull.operationId)) return await fileReviewPull(ctx, args.pullId, pull);
 
   // An AI answer is read for who it names, and its text is kept for the
   // Sites Full answers page (D9, docs/plans/active/user-sites-plan.md). The

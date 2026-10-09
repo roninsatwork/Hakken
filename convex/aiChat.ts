@@ -14,6 +14,7 @@ import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import { normalizeAiRuntimeError } from "./aiToolExecutionService";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import { generationSpend, recordModelSpend } from "./modelSpend";
 
 export const generateThreadTitle = internalAction({
   args: {
@@ -33,6 +34,14 @@ export const generateThreadTitle = internalAction({
         contents: [{ type: "text", text: `User Message: "${args.content}"` }],
         systemInstruction: "You are a professional assistant. Generate a concise, 3-to-4 word description of the user's message. Use standard Title Case. Do not include quotes, periods, or other punctuation. Your output must ONLY be the title.",
         temperature: 0.2,
+      });
+      await recordModelSpend(ctx, {
+        ...(thread?.agentId ? { agentId: thread.agentId } : {}),
+        threadId: args.threadId,
+        ...(thread?.userId ? { userId: thread.userId } : {}),
+        ...(thread?.companyId ? { companyId: thread.companyId } : {}),
+        actionContext: "Writing a thread title",
+        ...generationSpend(modelConfig, response),
       });
 
       const title = response.text?.trim().replace(/^["']|["']$/g, '');

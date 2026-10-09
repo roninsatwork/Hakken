@@ -101,6 +101,11 @@ export const localTables = {
     profileReadAt: v.optional(v.number()),
     /** When anything about it was last filed. */
     seenAt: v.number(),
+    /** Its reviews held (`listingReviewParts`), and how many of the newest to read again so a late reply shows: the planner's light reading. */
+    reviewsHeld: v.optional(v.number()),
+    reviewsRecheck: v.optional(v.number()),
+    /** Of the reviews held, how many the owner answered: Every office's and Business profile's "answered". */
+    reviewsAnswered: v.optional(v.number()),
   })
     .index("by_source_key", ["source", "key"])
     .index("by_point", ["point"])
@@ -234,6 +239,53 @@ export const localTables = {
   }).index("by_listing", ["listingId"]),
 
   /**
+   * A listing's reviews, a thousand a record, newest first (plan step 2, D4):
+   * each review's own number (what files it once), day, stars, the owner's
+   * reply day, and whether a Google Local Guide wrote it. The words and the
+   * reviewer's name are kept only where a company calls the listing its own,
+   * with the topics its AI read in them; a rival's reviews keep the figures.
+   */
+  listingReviewParts: defineTable({
+    listingId: v.id("listings"),
+    /** The record's place among the listing's, 0 the newest. */
+    part: v.number(),
+    ids: v.array(v.string()),
+    days: packedDaysValidator,
+    stars: packedColumnValidator,
+    /** Missing where the owner has not replied. */
+    replyDays: packedDaysValidator,
+    /** 1 a Google Local Guide, missing otherwise. */
+    guides: packedColumnValidator,
+    /** 1 where the reply's day is known only to the month or year (`reviewParse.ts`); absent when none is. */
+    replyRough: v.optional(packedColumnValidator),
+    /** Own listings only (D4); null where a review has no words. */
+    texts: v.optional(v.array(v.union(v.string(), v.null()))),
+    names: v.optional(v.array(v.union(v.string(), v.null()))),
+    /**
+     * What the company's AI read in each review, own listings only: the
+     * topics it praises and complains about, "website design+|speed-"; ""
+     * where it names none, null where not read yet (`reviewJudging.ts`).
+     */
+    topics: v.optional(v.array(v.union(v.string(), v.null()))),
+    updatedAt: v.number(),
+  }).index("by_listing_part", ["listingId", "part"]),
+
+  /**
+   * A reply drafted in a company's own voice for one of its reviews still
+   * waiting (plan step 2): the company's alone, gone once the review is
+   * answered. Read through its hold.
+   */
+  reviewReplyDrafts: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    listingId: v.id("listings"),
+    reviewId: v.string(),
+    text: v.string(),
+    draftedAt: v.number(),
+  })
+    .index("by_hold", ["companyWebsiteId"])
+    .index("by_hold_review", ["companyWebsiteId", "reviewId"]),
+
+  /**
    * Which of the new kinds of data a company buys on its schedule
    * (discovery-local-reputation-ai-plan.md, D16; Anthony, 2026-10-09: "hold
    * until I say", per company, per part). Each is off until switched on, on
@@ -261,6 +313,8 @@ export const localTables = {
     mapSearches: v.number(),
     marketBusinesses: v.number(),
     rivalPosts: v.number(),
+    /** Reviews held on the company's own listings: Your reviews' count (step 2); absent before Reviews. */
+    ownReviews: v.optional(v.number()),
     /** When a rebuild is booked; absent once it has run (`localSummaries.ts`). */
     rebuildAt: v.optional(v.number()),
     updatedAt: v.number(),

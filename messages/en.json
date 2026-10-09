@@ -5826,6 +5826,9 @@
         "trustpilot_find": "Found a business on Trustpilot",
         "tripadvisor_find": "Found a place on Tripadvisor",
         "google_business_questions": "Questions asked on its Google profile",
+        "google_reviews": "Its Google reviews",
+        "trustpilot_reviews": "Its Trustpilot reviews",
+        "tripadvisor_reviews": "Its Tripadvisor reviews",
         "backlinks_list": "Every site linking to it",
         "backlinks_all": "Every link to it",
         "backlinks_broken": "Links to its broken pages",
@@ -6224,7 +6227,8 @@
         "weeks": "{count, plural, one {# week} other {# weeks}}",
         "tasks": "{count, plural, one {# task} other {# tasks}}",
         "offices": "{count, plural, one {# office} other {# offices}}",
-        "kilometres": "{count, plural, one {# km} other {# km}}"
+        "kilometres": "{count, plural, one {# km} other {# km}}",
+        "reviews": "{count, plural, one {# review} other {# reviews}}"
       },
       "topics": {
         "tasks": {
@@ -6578,6 +6582,11 @@
           "label": "Local market's distance",
           "description": "How far round each office its local market reaches.",
           "cost": "No cost of its own."
+        },
+        "localRivalReviews": {
+          "label": "Each rival's reviews read a month",
+          "description": "How many of each rival's newest reviews are read once a month, to compare how often it is reviewed and how fast it answers.",
+          "cost": "A tenth of a cent for each ten reviews."
         },
         "hakkenTasksPerPerson": {
           "label": "Tasks on at once, per person",
@@ -9131,7 +9140,8 @@
       "chat": "Chat",
       "wiki": "Wiki",
       "seo": "SEO",
-      "knowledge": "Knowledge"
+      "knowledge": "Knowledge",
+      "discovery": "Discovery"
     },
     "certainty": {
       "SURE": "Sure",
@@ -9354,6 +9364,18 @@
           "off-topic": "Not about this business",
           "other": "Cannot tell"
         }
+      },
+      "discoveryReviewTopic": {
+        "name": "Does this review praise or complain about this topic?",
+        "description": "Reads each of a company's own reviews against the things its customers talk about, for What customers say.",
+        "rule": "Without it, What customers say counts only how often Google sees each topic mentioned.",
+        "answers": {
+          "praises": "Praises it",
+          "complains": "Complains about it",
+          "mentioned": "Mentions it",
+          "not_mentioned": "Not about it",
+          "other": "Cannot tell"
+        }
       }
     }
   },
@@ -9528,7 +9550,8 @@
       "topics": "{count, plural, =1 {# topic} other {# topics}}",
       "rivalActions": "{count, plural, =1 {# thing rivals did} other {# things rivals did}}",
       "questions": "{count, plural, =1 {# question} other {# questions}}",
-      "found": "{count, plural, =1 {# found} other {# found}}"
+      "found": "{count, plural, =1 {# found} other {# found}}",
+      "reviews": "{count, plural, =1 {# review} other {# reviews}}"
     },
     "chart": {
       "download": "Download",
@@ -9929,6 +9952,7 @@
         "ai": "AI answers",
         "google": "Google results",
         "local": "Local",
+        "reviews": "Reviews",
         "keywords": "Organic search",
         "competitors": "Competitors",
         "backlinks": "Backlinks",
@@ -9951,6 +9975,9 @@
         "localMarket": "Local market",
         "localActivity": "Rival activity",
         "localListings": "Your listings",
+        "reviewsYours": "Your reviews",
+        "reviewsSay": "What customers say",
+        "reviewsRivals": "Against rivals",
         "keywordsAll": "Keywords",
         "keywordsPages": "Top pages",
         "keywordsBands": "Position bands",
@@ -11745,6 +11772,7 @@
       "officeOf": "{town} office",
       "officeChoice": "Office",
       "everyOffice": "Every office side by side",
+      "allOffices": "Every office",
       "you": "{name} · you",
       "youShort": "You",
       "of": "{count} of {of}",
@@ -11865,6 +11893,8 @@
           "servicesNoPrices": "{count} listed: {names} · no prices",
           "photos": "{count} · rivals average {average}",
           "readWithReviews": "Counted with your reviews",
+          "answeredOf": "{count} of {of} answered",
+          "answerMore": "Answer more of them",
           "notReadYet": "Not read yet",
           "good": "Good",
           "sameAsTop": "Same as the top 3 on the map",
@@ -12146,6 +12176,156 @@
         "notAnswered": "Not answered · {days, plural, one {# day} other {# days}}",
         "answeredSameDay": "Answered the same day",
         "answeredAfter": "Answered after {days, plural, one {# day} other {# days}}"
+      }
+    },
+    "reviews": {
+      "sources": {
+        "GOOGLE": "Google",
+        "TRUSTPILOT": "Trustpilot",
+        "TRIPADVISOR": "Tripadvisor"
+      },
+      "yours": {
+        "title": "Your reviews",
+        "description": "Every review on your linked listings, newest first, and whether you answered it.",
+        "figures": {
+          "rating": "Rating",
+          "ratingGoogle": "{offices, plural, =1 {Google} =2 {Google, both offices} other {Google, # offices}}",
+          "new": "New in 30 days",
+          "newBefore": "on the 30 days before",
+          "waiting": "Not answered",
+          "noneWaiting": "Every review has an answer",
+          "oldestWaiting": "The oldest has waited {days, plural, =1 {# day} other {# days}}",
+          "daysToAnswer": "Days to answer",
+          "daysToAnswerDetail": "Average, the last 90 days"
+        },
+        "chartTitle": "Reviews a month",
+        "chartHint": "New reviews each month across every listing, and their average stars.",
+        "chartMonth": "Month",
+        "chartReviews": "New reviews",
+        "chartStars": "Average stars",
+        "chartReviewsLeft": "New reviews (left)",
+        "chartStarsRight": "Average stars (right)",
+        "searchPlaceholder": "Find words in a review…",
+        "listingFilter": "Listing",
+        "everyListing": "Every listing",
+        "starsFilter": "Stars",
+        "anyStars": "Any stars",
+        "stars": {
+          "low": "1 to 3 stars",
+          "high": "4 and 5 stars"
+        },
+        "answeredFilter": "Answered",
+        "answeredOrNot": "Answered or not",
+        "answers": {
+          "waiting": "Not yet",
+          "answered": "Answered"
+        },
+        "notAnsweredBar": "not answered",
+        "columns": {
+          "date": "Date",
+          "listing": "Listing",
+          "stars": "Stars",
+          "review": "Review",
+          "reviewer": "Reviewer",
+          "answered": "Answered"
+        },
+        "noMatch": "No review matches these filters.",
+        "empty": "No reviews have been read yet: they are read on the next check.",
+        "starsOnly": "Stars only, no words",
+        "localGuide": "Local Guide",
+        "answeredAfter": "After {days, plural, =0 {the same day} =1 {# day} other {# days}}",
+        "notYet": "Not yet · {days, plural, =1 {# day} other {# days}}"
+      },
+      "rivals": {
+        "title": "Reviews against rivals",
+        "description": "Your reviews beside the rivals you watch: how many, how good, and how fast each business answers.",
+        "figures": {
+          "place": "Your place on reviews",
+          "placeOf": "{place, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} of {of}",
+          "placeDetail": "Google reviews, {office} rivals",
+          "gap": "Gap to the leader",
+          "gapDetail": "{name} gets {times} reviews for each of yours",
+          "youLead": "You have the most reviews",
+          "fastest": "Fastest to answer",
+          "days": "{days, plural, =0 {Same day} =1 {# day} other {# days}}",
+          "fastestDetail": "{name} · you take {days}",
+          "noReplies": "Not known yet: Google dates older replies only to the year",
+          "best": "Best rated",
+          "bestDetail": "{name} · you {rating}"
+        },
+        "chartTitle": "Google reviews over the last 12 months",
+        "chartHint": "How many reviews each business has, month by month. A steeper line is a business collecting reviews faster.",
+        "chartMonth": "Month",
+        "youAndRivals": "you and {count, plural, =1 {# rival} other {# rivals}}",
+        "columns": {
+          "business": "Business",
+          "listing": "Listing",
+          "rating": "Rating",
+          "reviews": "Reviews",
+          "new": "New in 30 days",
+          "answered": "Answered",
+          "days": "Days to answer"
+        },
+        "empty": "Watch a rival from Your listings or Local market, and its reviews show here from the next check."
+      },
+      "say": {
+        "title": "What customers say",
+        "description": "What reviewers praise and complain about, read from every review on your listings, beside your rivals.",
+        "reading": "{count, plural, =1 {# review is} other {# reviews are}} still being read; the topics fill in as each is read.",
+        "figures": {
+          "praised": "Praised most",
+          "inReviews": "In {count, plural, =1 {# review} other {# reviews}}",
+          "nothingYet": "Nothing read yet",
+          "complained": "Complained about most",
+          "complainedDetail": "In {count, plural, =1 {# review} other {# reviews}}, {thisYear} of them this year",
+          "noComplaints": "No complaints read",
+          "rivalsFor": "Rivals praised for",
+          "rivalsForDetail": "{name}, in {count, plural, =1 {# review} other {# reviews}} · you {yours}",
+          "noRivals": "Watch a rival to compare",
+          "fiveStar": "5-star reviews",
+          "rivalsShare": "Rivals {share}%",
+          "oneStar": "1-star {share}%"
+        },
+        "topics": {
+          "title": "Topics in your reviews",
+          "description": "How many reviews praise or complain about each thing, and how often rivals' reviews praise it.",
+          "from": "from {count, plural, =1 {# review} other {# reviews}}",
+          "empty": "No topics yet: they show once Google picks words out of your reviews and each review has been read.",
+          "columns": {
+            "topic": "Topic",
+            "praise": "Praise",
+            "complaints": "Complaints",
+            "rivals": "Rivals praised",
+            "against": "Against rivals"
+          }
+        },
+        "verdicts": {
+          "losing": "Losing to rivals",
+          "complaints": "More complaints than praise",
+          "own": "Yours to own · rivals rarely win it",
+          "strength": "A strength",
+          "mixed": "Mixed"
+        },
+        "stars": {
+          "title": "How the stars split",
+          "description": "Google reviews for each business, by stars. A handful of low reviews pulls an average down faster than many high ones lift it.",
+          "empty": "Google has not shown the split of stars yet: it is read with each profile.",
+          "columns": {
+            "business": "Business",
+            "stars": "{count, plural, =1 {# star} other {# stars}}",
+            "rating": "Rating"
+          }
+        },
+        "drafts": {
+          "title": "Waiting for a reply · drafted for you",
+          "hint": "{platformName} drafts a reply in your voice for each review still waiting. Copy it, change what you like, and post it on Google. Uses AI · about {cost} a reply.",
+          "hintUnpriced": "{platformName} drafts a reply in your voice for each review still waiting. Copy it, change what you like, and post it on Google. Uses AI, priced once the first reply is drafted.",
+          "none": "The replies are being drafted: they show here as each is written.",
+          "stars": "{count, plural, =1 {# star} other {# stars}}",
+          "copy": "Copy reply",
+          "copied": "Copied",
+          "seeAll": "See all {count} waiting"
+        }
       }
     }
   },

@@ -17,8 +17,11 @@ import {
   createVertexGenAIClient,
   generateVertexContentWithRetry,
 } from "./vertexProviderService";
+import { vertexUsage } from "./vertexUsage";
 import { normalizeAiRuntimeError } from "./aiToolExecutionService";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
+import { generationSpend, recordModelSpend } from "./modelSpend";
+import { HAKKEN_ASSISTANT } from "./utils/hakkenAssistant";
 
 const TRANSCRIPTION_AUDIO_MAX_BYTES = 10 * 1024 * 1024;
 const TRANSCRIPTION_RATE_LIMIT_PER_MINUTE = 6;
@@ -151,6 +154,14 @@ export const transcribeAudio = tenantAction({
         }, {
             operation: "transcribeAudio",
         });
+        // Dictation and read-aloud are the Assistant's voice, charged there.
+        await recordModelSpend(ctx, {
+            systemKey: HAKKEN_ASSISTANT.systemKey,
+            userId,
+            ...(user.companyId ? { companyId: user.companyId } : {}),
+            actionContext: "Transcribing dictation",
+            ...generationSpend(modelConfig, vertexUsage(response.usageMetadata)),
+        });
 
         return response.text ? response.text.trim() : "";
     } catch (error) {
@@ -198,6 +209,13 @@ export const synthesizeSpeech = tenantAction({
         },
       }, {
         operation: "synthesizeSpeech",
+      });
+      await recordModelSpend(ctx, {
+        systemKey: HAKKEN_ASSISTANT.systemKey,
+        userId,
+        ...(user.companyId ? { companyId: user.companyId } : {}),
+        actionContext: "Reading an answer aloud",
+        ...generationSpend(modelConfig, vertexUsage(response.usageMetadata)),
       });
 
       const audioPart = response.candidates?.[0]?.content?.parts?.find(

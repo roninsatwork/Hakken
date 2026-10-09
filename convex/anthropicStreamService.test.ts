@@ -110,6 +110,14 @@ describe("assembling a reply", () => {
     expect(result.cachedInputTokens).toBe(90);
   });
 
+  test("counts cache reads and writes inside the input total, which Anthropic reports apart", async () => {
+    const result = await accumulate([
+      sse({ type: "message_start", message: { usage: { input_tokens: 10, cache_read_input_tokens: 90, cache_creation_input_tokens: 40 } } }),
+    ]);
+    expect(result.inputTokens).toBe(140);
+    expect(result.cachedInputTokens).toBe(90);
+  });
+
   test("emits a tool call only once its arguments are complete", async () => {
     // Arguments arrive as JSON fragments that are not parseable until the block
     // closes. Emitting on each delta would hand the runtime a broken object.

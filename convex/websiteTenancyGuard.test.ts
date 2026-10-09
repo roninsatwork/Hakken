@@ -332,12 +332,15 @@ describe("a company's Local links are read only through its own hold", () => {
   const schemaSource = readFileSync(join(CONVEX, "localSchema.ts"), "utf8");
   const files = readdirSync(CONVEX, { recursive: true, encoding: "utf8" })
     .filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts") && !file.startsWith("_generated"));
-  const PRIVATE = ["holdListings", "listingFinds", "localSummaries"];
+  const PRIVATE = ["holdListings", "listingFinds", "localSummaries", "reviewReplyDrafts"];
   const ACROSS = new Map([
     ["localSummaries.ts", new Set(["by_listing"])],
     ["localSweep.ts", new Set(["by_listing"])],
     ["localFiling.ts", new Set(["by_pull"])],
     ["siteLocalListings.ts", new Set(["by_pull"])],
+    ["localReviews.ts", new Set(["by_listing"])],
+    ["reviewJudging.ts", new Set(["by_listing"])],
+    ["reviewReplies.ts", new Set(["by_listing"])],
   ]);
 
   test.each(PRIVATE)("%s names the hold it belongs to", (table) => {
@@ -348,7 +351,7 @@ describe("a company's Local links are read only through its own hold", () => {
 
   test("every other read goes through a hold", () => {
     expect(files.length).toBeGreaterThan(200);
-    const reads = /\.query\(\s*["'](holdListings|listingFinds|localSummaries)["']\s*\)([\s\S]{0,200})/g;
+    const reads = /\.query\(\s*["'](holdListings|listingFinds|localSummaries|reviewReplyDrafts)["']\s*\)([\s\S]{0,200})/g;
     const offenders = files.flatMap((file) => Array.from(readFileSync(join(CONVEX, file), "utf8").matchAll(reads))
       .flatMap((match) => {
         const index = /withIndex\(\s*["']([a-z_]+)["']/.exec(match[2])?.[1] ?? "(no index)";

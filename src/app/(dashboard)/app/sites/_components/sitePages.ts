@@ -8,7 +8,7 @@
  * as pages land. Copy lives in `messages/*.json` under `sites.menu`.
  */
 
-export type SitePageGroup = "site" | "ai" | "google" | "local" | "keywords" | "paid" | "competitors" | "backlinks";
+export type SitePageGroup = "site" | "ai" | "google" | "local" | "reviews" | "keywords" | "paid" | "competitors" | "backlinks";
 
 export type SitePage = {
   id: string;
@@ -33,7 +33,8 @@ export type SitePage = {
     | "localMapSearches"
     | "localMarket"
     | "localRivalPosts"
-    | "localListings";
+    | "localListings"
+    | "localReviews";
   /**
    * What the page cannot show anything without, set up by the team for the
    * site: the questions asked of AI assistants, or the searches checked one
@@ -66,7 +67,7 @@ export function setupPaused(page: SitePage, counts: SetupCounts): boolean {
   return false;
 }
 
-export const SITE_PAGE_GROUPS: SitePageGroup[] = ["site", "ai", "google", "local", "keywords", "paid", "competitors", "backlinks"];
+export const SITE_PAGE_GROUPS: SitePageGroup[] = ["site", "ai", "google", "local", "reviews", "keywords", "paid", "competitors", "backlinks"];
 
 export const SITE_PAGES: SitePage[] = [
   { id: "overview", group: "site", segment: "", built: true },
@@ -99,6 +100,10 @@ export const SITE_PAGES: SitePage[] = [
   { id: "localMarket", group: "local", segment: "local/market", built: true, count: "localMarket" },
   { id: "localActivity", group: "local", segment: "local/activity", built: true, count: "localRivalPosts" },
   { id: "localListings", group: "local", segment: "local/listings", built: true, count: "localListings" },
+  // Its reviews, against rivals', and what they say (the same plan, step 2).
+  { id: "reviewsYours", group: "reviews", segment: "reviews", built: true, count: "localReviews" },
+  { id: "reviewsSay", group: "reviews", segment: "reviews/say", built: true },
+  { id: "reviewsRivals", group: "reviews", segment: "reviews/rivals", built: true },
 
   { id: "keywordsAll", group: "keywords", segment: "keywords", built: true, count: "keywords" },
   { id: "keywordsPages", group: "keywords", segment: "keywords/pages", built: true, count: "pages" },

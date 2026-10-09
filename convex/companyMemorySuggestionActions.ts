@@ -4,6 +4,7 @@ import { v } from "convex/values";
 import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import { generationSpend, recordModelSpend } from "./modelSpend";
 import { normalizeAiRuntimeError } from "./aiToolExecutionService";
 import { SWEEP_SYSTEM_INSTRUCTION, buildTranscript, parseSuggestions } from "./companyMemorySuggestions";
 
@@ -94,6 +95,11 @@ export const sweepCompany = internalAction({
         systemInstruction: SWEEP_SYSTEM_INSTRUCTION,
         contents: [{ type: "text", text: buildTranscript(input.messages) }],
         temperature: 0.1,
+      });
+      await recordModelSpend(ctx, {
+        companyId: args.companyId,
+        actionContext: "Reading conversations for company memories",
+        ...generationSpend(modelConfig, response),
       });
 
       const suggestions = parseSuggestions(response.text ?? "");

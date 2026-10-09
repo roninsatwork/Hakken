@@ -1,8 +1,10 @@
 import { readBoundedBody } from "./utils/boundedRequestBody";
-import { httpAction, internalMutation } from "./_generated/server";
+import { httpAction, internalMutation, type MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { v } from "convex/values";
+import { v, type Infer } from "convex/values";
+import { writeModelSpend } from "./modelSpend";
+import { HAKKEN_ASSISTANT } from "./utils/hakkenAssistant";
 import { incrementChatQuota, isChatQuotaExceeded, resolveChatQuota } from "./chatService";
 import { KIOSK_SESSIONS_PER_HOUR } from "./kiosk";
 import { effectiveModulesFor } from "./tenantFunctions";
@@ -44,6 +46,9 @@ const MAX_SESSION_MS = 15 * 60 * 1000;
 const REDEMPTION_CLEANUP_BATCH = 20;
 
 type VoiceTicketPayload = {
+  /** The catalogue's model id, which the session's cost is priced from; `model` is the provider's. */
+  modelId?: string;
+  model?: string;
   threadId?: string;
   companyId?: string | null;
   expiresAt?: number;
@@ -53,6 +58,58 @@ type VoiceTicketPayload = {
   kioskWidgetId?: string;
   meteredVoiceTurns?: boolean;
 };
+
+/** A session lasts fifteen minutes at most; anything past this is not a real count. */
+const MAX_SESSION_TOKENS = 10_000_000;
+
+/**
+ * What a closing session spent, as the relay counted it from Google's own
+ * reports, recorded once as the session closes — charged to the Assistant,
+ * whose voice it is (`modelSpend.ts`).
+ */
+const voiceSpendValidator = v.optional(v.object({
+  inputTokens: v.number(),
+  outputTokens: v.number(),
+  modelId: v.string(),
+  threadId: v.optional(v.id("threads")),
+  companyId: v.optional(v.id("companies")),
+}));
+
+function readVoiceSpend(usage: unknown, payload: VoiceTicketPayload) {
+  if (!usage || typeof usage !== "object") return undefined;
+  const count = (value: unknown) =>
+    typeof value === "number" && Number.isFinite(value) && value > 0 ? Math.min(Math.round(value), MAX_SESSION_TOKENS) : 0;
+  const inputTokens = count((usage as { inputTokens?: unknown }).inputTokens);
+  const outputTokens = count((usage as { outputTokens?: unknown }).outputTokens);
+  const modelId = payload.modelId ?? payload.model;
+  if ((inputTokens === 0 && outputTokens === 0) || !modelId) return undefined;
+  return {
+    inputTokens,
+    outputTokens,
+    modelId,
+    ...(payload.threadId ? { threadId: payload.threadId as Id<"threads"> } : {}),
+    ...(payload.companyId ? { companyId: payload.companyId as Id<"companies"> } : {}),
+  };
+}
+
+/** The close's `spend` argument, present only when there is something to record. */
+function spendArg(usage: unknown, payload: VoiceTicketPayload) {
+  const spend = readVoiceSpend(usage, payload);
+  return spend ? { spend } : {};
+}
+
+async function recordVoiceSpend(ctx: MutationCtx, spend: Infer<typeof voiceSpendValidator>) {
+  if (!spend) return;
+  await writeModelSpend(ctx, {
+    systemKey: HAKKEN_ASSISTANT.systemKey,
+    ...(spend.threadId ? { threadId: spend.threadId } : {}),
+    ...(spend.companyId ? { companyId: spend.companyId } : {}),
+    actionContext: "A live voice session",
+    modelId: spend.modelId,
+    inputTokens: spend.inputTokens,
+    outputTokens: spend.outputTokens,
+  });
+}
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -211,6 +268,7 @@ export const controlKioskVoiceTurn = internalMutation({
     ticketId: v.string(),
     action: v.union(v.literal("begin-turn"), v.literal("complete-turn"), v.literal("close")),
     turnIndex: v.optional(v.number()),
+    spend: voiceSpendValidator,
   },
   returns: voiceControlResult,
   handler: async (ctx, args): Promise<{ ok: boolean; reason?: "quota" | "session" }> => {
@@ -246,6 +304,7 @@ export const controlKioskVoiceTurn = internalMutation({
         quotaCompanyId: undefined,
         quotaCountAfterReservation: undefined,
       });
+      await recordVoiceSpend(ctx, args.spend);
       return { ok: true };
     }
 
@@ -286,7 +345,7 @@ export const controlKioskVoiceTurn = internalMutation({
 
 /** Quota and admission are one transaction across every relay instance. */
 export const admitKnowledgeLookup = internalMutation({
-  args: { ticketId: v.string(), close: v.optional(v.boolean()) },
+  args: { ticketId: v.string(), close: v.optional(v.boolean()), spend: voiceSpendValidator },
   returns: v.boolean(),
   handler: async (ctx, args) => {
     const row = await ctx.db.query("voiceTicketRedemptions")
@@ -295,6 +354,7 @@ export const admitKnowledgeLookup = internalMutation({
     if (!row || row.closedAt || row.expiresAt <= now) return false;
     if (args.close) {
       await ctx.db.patch(row._id, { closedAt: now });
+      await recordVoiceSpend(ctx, args.spend);
       return true;
     }
     const inWindow = (row.windowAt ?? 0) > now - 60_000;
@@ -360,7 +420,7 @@ export const handleVoiceControl = httpAction(async (ctx, request) => {
   const bounded = await readBoundedBody(request, MAX_BODY_BYTES);
   if (!bounded.ok) return jsonResponse({ error: "Body must be valid JSON." }, bounded.reason === "too_large" ? 413 : 400);
 
-  let body: { ticket?: unknown; action?: unknown; turnIndex?: unknown };
+  let body: { ticket?: unknown; action?: unknown; turnIndex?: unknown; usage?: unknown };
   try { body = JSON.parse(bounded.text) as typeof body; }
   catch { return jsonResponse({ error: "Body must be JSON." }, 400); }
   const ticket = typeof body.ticket === "string" ? body.ticket : "";
@@ -380,6 +440,7 @@ export const handleVoiceControl = httpAction(async (ctx, request) => {
     ticketId: payload.jti,
     action: body.action,
     ...(typeof body.turnIndex === "number" ? { turnIndex: body.turnIndex } : {}),
+    ...(body.action === "close" ? spendArg(body.usage, payload) : {}),
   });
   if (!result.ok) return jsonResponse({ error: result.reason }, result.reason === "quota" ? 429 : 409);
   return jsonResponse({ ok: true });
@@ -398,7 +459,7 @@ export const handleVoiceKnowledgeLookup = httpAction(async (ctx, request) => {
   }
   const raw = bounded.text;
 
-  let body: { ticket?: unknown; query?: unknown; close?: unknown };
+  let body: { ticket?: unknown; query?: unknown; close?: unknown; usage?: unknown };
   try {
     body = JSON.parse(raw) as { ticket?: unknown; query?: unknown };
   } catch {
@@ -421,7 +482,7 @@ export const handleVoiceKnowledgeLookup = httpAction(async (ctx, request) => {
   if (!payload.threadId && !payload.companyId) return jsonResponse({ error: "Refused." }, 401);
   if (body.close !== true && (!query.trim() || query.length > 2_000)) return jsonResponse({ error: "Invalid query." }, 400);
   const admitted = await ctx.runMutation(internal.voiceRelay.admitKnowledgeLookup, {
-    ticketId: payload.jti, ...(body.close === true ? { close: true } : {}),
+    ticketId: payload.jti, ...(body.close === true ? { close: true, ...spendArg(body.usage, payload) } : {}),
   });
   if (!admitted) return jsonResponse({ error: "Session unavailable or search limit reached." }, 429);
   if (body.close === true) return jsonResponse({ ok: true });

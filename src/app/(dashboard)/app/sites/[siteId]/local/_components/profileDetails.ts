@@ -69,7 +69,7 @@ export function useDetailWords(): (row: DetailRow) => { detail: string; shows: s
           if (row.count === null) return t("notKnown");
           return row.average === null ? String(row.count) : t("photos", { count: row.count, average: row.average });
         case "REPLIES":
-          return t("readWithReviews");
+          return row.of === null ? t("readWithReviews") : t("answeredOf", { count: row.count ?? 0, of: row.of });
         default:
           return row.text ?? none;
       }
@@ -86,6 +86,7 @@ export function useDetailWords(): (row: DetailRow) => { detail: string; shows: s
         case "HOURS": return t("addHours");
         case "SERVICES": return row.count ? t("addPrices") : t("addServices");
         case "PHOTOS": return t("fewerThanRivals");
+        case "REPLIES": return t("answerMore");
         default: return t("addOne");
       }
     })();

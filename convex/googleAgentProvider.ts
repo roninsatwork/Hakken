@@ -8,6 +8,7 @@ import {
   deleteVertexPromptCache,
   streamVertexContentWithRetry,
 } from "./vertexProviderService";
+import { vertexUsage } from "./vertexUsage";
 import type {
   AgentProviderAdapter,
   AgentReasoningEffort,
@@ -146,9 +147,7 @@ export function createGoogleAgentProvider(): AgentProviderAdapter {
       return {
         text: response.text ?? "",
         toolCalls,
-        inputTokens: response.usageMetadata?.promptTokenCount ?? 0,
-        outputTokens: response.usageMetadata?.candidatesTokenCount ?? 0,
-        cachedInputTokens: response.usageMetadata?.cachedContentTokenCount ?? 0,
+        ...vertexUsage(response.usageMetadata),
         // Google reports a finish reason per candidate rather than a single
         // stop reason. The loop's own decision is "did it ask for tools?",
         // which the presence of function calls answers directly.

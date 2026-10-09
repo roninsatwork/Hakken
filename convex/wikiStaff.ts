@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import { writeModelSpend } from "./modelSpend";
 
 /**
  * The wiki's staff, as real agents (wiki-agents plan, phase 0 — corrected
@@ -163,18 +164,10 @@ async function staffAgent(
   ctx: { db: import("./_generated/server").QueryCtx["db"] },
   systemKey: string
 ) {
-  const candidates = (
-    await ctx.db
-      .query("agents")
-      .withIndex("by_active_created", (q) => q.eq("isActive", true))
-      .take(500)
-  ).concat(
-    await ctx.db
-      .query("agents")
-      .withIndex("by_active_created", (q) => q.eq("isActive", false))
-      .take(500)
-  );
-  return candidates.find((agent) => agent.systemKey === systemKey) ?? null;
+  return await ctx.db
+    .query("agents")
+    .withIndex("by_system_key", (q) => q.eq("systemKey", systemKey))
+    .first();
 }
 
 /** The switch, honoured before any spend. A missing row reads as active so
@@ -277,37 +270,13 @@ export const recordStaffModelCallInternal = internalMutation({
     responseContent: v.string(),
   },
   handler: async (ctx, args): Promise<void> => {
-    const agent = await staffAgent(ctx, args.systemKey);
-    if (!agent) return;
-    const rates = await ctx.db
-      .query("aiModels")
-      .withIndex("by_model_id", (q) => q.eq("modelId", args.modelId))
-      .first();
-    const inRate = rates
-      ? args.inputTokens > 200000
-        ? rates.standardInputCostAbove200k ?? 0
-        : rates.standardInputCostBelow200k ?? 0
-      : 0;
-    const outRate = rates?.outputResponseCost ?? 0;
-    const costUsd =
-      (args.inputTokens / 1_000_000) * inRate +
-      (args.outputTokens / 1_000_000) * outRate;
+    // Priced and charged the one way (`modelSpend.ts`): a missing staff agent
+    // charges Platform AI rather than dropping the row, as it once did.
+    const { promptContent: _prompt, responseContent: _response, ...spend } = args;
+    const { agentId } = await writeModelSpend(ctx, spend);
     const now = Date.now();
-    await ctx.db.insert("agentTransactions", {
-      agentId: agent._id as Id<"agents">,
-      ...(args.companyId ? { companyId: args.companyId } : {}),
-      actionContext: args.actionContext,
-      modelUsed: args.modelId,
-      ...(args.providerKey ? { providerKey: args.providerKey } : {}),
-      ...(args.providerModelId ? { providerModelId: args.providerModelId } : {}),
-      inputTokens: args.inputTokens,
-      outputTokens: args.outputTokens,
-      costUsd,
-      status: "SUCCESS",
-      createdAt: now,
-    });
     await ctx.db.insert("agentLogs", {
-      agentId: agent._id as Id<"agents">,
+      agentId,
       interactionType: args.actionContext,
       promptContent: args.promptContent,
       responseContent: args.responseContent,

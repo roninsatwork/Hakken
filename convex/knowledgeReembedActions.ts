@@ -6,6 +6,8 @@ import { internal } from "./_generated/api";
 import { internalAction } from "./_generated/server";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
 import { createVertexEmbeddingClient, embedVertexContentWithRetry } from "./vertexProviderService";
+import { embeddingInputTokens } from "./vertexUsage";
+import { generationSpend, recordModelSpend } from "./modelSpend";
 import { appError } from "./utils/appError";
 
 /** Small enough that one batch stays well inside an action's budget. */
@@ -56,6 +58,7 @@ export const reembedStaleChunks = internalAction({
       const providerModelId = getGoogleVertexProviderModelId(embeddingModel, "knowledge re-embedding");
       const embeddingAi = createVertexEmbeddingClient();
 
+      let embeddedTokens = 0;
       for (const chunk of page.batch) {
         const response = await embedVertexContentWithRetry(embeddingAi, {
           model: providerModelId,
@@ -63,6 +66,7 @@ export const reembedStaleChunks = internalAction({
         }, {
           operation: "knowledgeReembed",
         });
+        embeddedTokens += embeddingInputTokens(response, [chunk.text]);
         const values = response.embeddings?.[0]?.values;
 
         // A vector of the wrong length would be rejected by the index, and writing a
@@ -80,6 +84,11 @@ export const reembedStaleChunks = internalAction({
         });
         if (saved) reembedded += 1;
       }
+      // One row a batch, charged to Platform AI: re-embedding is the platform's upkeep.
+      await recordModelSpend(ctx, {
+        actionContext: `Re-embedding ${page.batch.length} knowledge pieces`,
+        ...generationSpend(embeddingModel, { inputTokens: embeddedTokens }),
+      });
 
       // The page held stale chunks and none could be written. Rescheduling would
       // walk the whole table producing nothing, so stop and say why.

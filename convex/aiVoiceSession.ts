@@ -247,6 +247,7 @@ ${args.callerPage}`
 
     return signVoiceTicket(
       {
+        modelId: modelConfig.modelId,
         model: modelConfig.providerModelId,
         voice: args.voice ?? companyVoice,
         instructions,
@@ -382,6 +383,7 @@ export const createRealtimeVoiceSession = tenantAction({
       const expiresAt = Date.now() + 60_000;
       const ticket = signVoiceTicket(
         {
+          modelId: modelConfig.modelId,
           model: modelConfig.providerModelId,
           voice: args.voice ?? companyVoice,
           instructions,

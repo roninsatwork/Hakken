@@ -33,6 +33,7 @@ The agent implementation is split across several Convex modules:
 - `convex/agentSkills.ts` implements the reusable skill catalog, skill versions, import/export, starter seeding, bindings, rollout analytics, and runtime skill lookup.
 - `convex/agentVersions.ts` creates and reads version snapshots.
 - `convex/agentTransactions.ts` and `convex/agentLogs.ts` provide dashboard telemetry and log detail.
+- `convex/modelSpend.ts` is how every AI model call writes its cost row (2026-10-09): priced from the model catalogue, charged to the agent the call worked for, else its system agent by key, else the **Platform AI** agent (made on first use) — never dropped. A new model call records through `recordModelSpend` (actions) or `writeModelSpend` (mutations); `generationSpend` takes a resolved model and a response's tokens. An agent run writes one row when it ends: the loop's close, a stop, or `chargeEndedRun` for a run that failed, or was cancelled or expired while waiting for approval. Live voice is charged to the Assistant: the relay sends Google's token counts with its close signal, and the browser's direct OpenAI session reports each reply's. Decisions keep their cost on `decisionRuns`.
 
 Related systems include `convex/aiModels.ts`, `convex/aiModelService.ts`, `convex/aiTools.ts`, `convex/knowledge.ts`, `convex/knowledgeActions.ts`, `convex/aiRules.ts`, `convex/scheduler.ts`, `convex/workflowRuntime.ts`, and `convex/orchestrator.ts`.
 

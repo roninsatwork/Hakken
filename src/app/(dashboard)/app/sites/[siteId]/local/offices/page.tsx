@@ -31,13 +31,15 @@ type OfficeRow = {
   mapBox: { inBox: number; of: number };
   toFix: number;
   reviewsGained: number | null;
+  answered: number | null;
 };
 type SearchRow = { keyword: string; volume: number | null; places: Array<number | null>; top: string[] };
 
-const OFFICE_SORTS: SiteSortColumns<OfficeRow, "office" | "rating" | "reviews" | "photos" | "mapBox" | "check"> = {
+const OFFICE_SORTS: SiteSortColumns<OfficeRow, "office" | "rating" | "reviews" | "answered" | "photos" | "mapBox" | "check"> = {
   office: { value: (row) => row.town ?? row.name, first: "asc" },
   rating: { value: (row) => row.rating, first: "desc" },
   reviews: { value: (row) => row.reviews, first: "desc" },
+  answered: { value: (row) => row.answered, first: "desc" },
   photos: { value: (row) => row.photos, first: "desc" },
   mapBox: { value: (row) => row.mapBox.inBox, first: "desc" },
   check: { value: (row) => row.toFix, first: "asc" },
@@ -114,15 +116,14 @@ export default function LocalOfficesPage() {
           rows={officesPager.pageRows}
           rowKey={(row) => row.listingId}
           onRowClick={(row) => router.push(`/app/sites/${siteId}/local?office=${row.listingId}`)}
-          cardHeader={<TableBar footer={officesPager.footer} noun="offices" actions={<ListDownload fileName={fileBase} rows={officesSorted.rows ?? []} columns={[{ header: t("columns.office"), value: (row) => officeName(row) }, { header: t("columns.rating"), value: (row) => row.rating }, { header: t("columns.reviews"), value: (row) => row.reviews }, { header: t("columns.photos"), value: (row) => row.photos }, { header: t("columns.mapBox"), value: (row) => `${row.mapBox.inBox}/${row.mapBox.of}` }, { header: t("columns.check"), value: (row) => row.toFix }]} />} />}
+          cardHeader={<TableBar footer={officesPager.footer} noun="offices" actions={<ListDownload fileName={fileBase} rows={officesSorted.rows ?? []} columns={[{ header: t("columns.office"), value: (row) => officeName(row) }, { header: t("columns.rating"), value: (row) => row.rating }, { header: t("columns.reviews"), value: (row) => row.reviews }, { header: t("columns.answered"), value: (row) => (row.answered === null ? null : Math.round(row.answered * 100)) }, { header: t("columns.photos"), value: (row) => row.photos }, { header: t("columns.mapBox"), value: (row) => `${row.mapBox.inBox}/${row.mapBox.of}` }, { header: t("columns.check"), value: (row) => row.toFix }]} />} />}
           empty={{ icon: <Store className="h-8 w-8 text-muted/30" />, label: t("officesEmpty") }}
           sort={officesSorted.tableSort}
           columns={[
             { key: "office", header: t("columns.office"), sortable: true, cell: (row) => <BusinessCell name={officeName(row)} sub={[row.address, row.category].filter(Boolean).join(" · ") || null} href={`/app/sites/${siteId}/local?office=${row.listingId}`} /> },
             { key: "rating", header: t("columns.rating"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.rating} text={ratingText(row.rating)} /> },
             { key: "reviews", header: t("columns.reviews"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.reviews} /> },
-            // Answered: counted from the reviews themselves, with Reviews (plan step 2).
-            { key: "answered", header: t("columns.answered"), cell: () => <FigureCell value={null} /> },
+            { key: "answered", header: t("columns.answered"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.answered} text={row.answered === null ? undefined : `${Math.round(row.answered * 100)}%`} /> },
             { key: "photos", header: t("columns.photos"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.photos} /> },
             { key: "mapBox", header: t("columns.mapBox"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.mapBox.inBox} text={tp("figures.of", { count: row.mapBox.inBox, of: row.mapBox.of })} /> },
             { key: "check", header: t("columns.check"), sortable: true, cell: (row) => <StatusLabel tone={row.toFix > 0 ? "warning" : "success"}>{row.toFix > 0 ? t("toFix", { count: row.toFix }) : t("allGood")}</StatusLabel> },

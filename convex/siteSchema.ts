@@ -730,6 +730,7 @@ export const siteTables = {
     localMapDepth: v.optional(v.number()),
     localMarketBusinesses: v.optional(v.number()),
     localMarketKm: v.optional(v.number()),
+    localRivalReviews: v.optional(v.number()),
     // Only the platform sets these: each is about something every company
     // shares (`sharedLimits.ts`).
     fanOutPerAnswer: v.optional(v.number()),

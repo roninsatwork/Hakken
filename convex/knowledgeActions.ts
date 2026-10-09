@@ -11,6 +11,8 @@ import mammoth from "mammoth";
 import { validateSafeUrl } from "./utils/security";
 import { chunkKnowledgeText, isMarkdownFormat, prepareKnowledgeMarkdown } from "./utils/knowledgeActionsService";
 import { createVertexEmbeddingClient, embedVertexContentWithRetry } from "./vertexProviderService";
+import { embeddingInputTokens } from "./vertexUsage";
+import { generationSpend, recordModelSpend } from "./modelSpend";
 import { getGoogleVertexProviderModelId } from "./aiModelService";
 import { adminAction, tenantAction } from "./tenantFunctions";
 import { getActiveCompanyId } from "./authz";
@@ -233,6 +235,7 @@ export const testRetrieval = tenantAction({
       query,
       companyId: shelf.companyId,
       operation: "knowledgeRetrievalTest",
+      chargeTo: { userId: ctx.userId },
     });
     if (!embedded) return nothing;
     const found = await searchKnowledgeScope(ctx, {
@@ -381,6 +384,7 @@ async function embedAndStoreDoc(
 
       const embeddedChunks = [];
       let failedChunkCount = 0;
+      let embeddedTokens = 0;
       for (const textChunk of chunks) {
          try {
              const embedResponse = await embedVertexContentWithRetry(embeddingAi, {
@@ -392,6 +396,7 @@ async function embedAndStoreDoc(
                     maxAttempts: 5,
                  },
              });
+             embeddedTokens += embeddingInputTokens(embedResponse, [textChunk]);
              
              if (embedResponse.embeddings && embedResponse.embeddings.length > 0) {
                 const vector = embedResponse.embeddings[0].values;
@@ -406,6 +411,17 @@ async function embedAndStoreDoc(
             failedChunkCount++;
             console.error("Vector Embed Failure on chunk", e);
          }
+      }
+
+      // One row for the document: the agent's when it is an agent's, else Platform AI's.
+      if (embeddedTokens > 0) {
+          await recordModelSpend(ctx, {
+              ...(agentId ? { agentId } : {}),
+              ...(threadId ? { threadId } : {}),
+              ...(companyId ? { companyId } : {}),
+              actionContext: `Embedding a document into knowledge (${chunks.length} pieces)`,
+              ...generationSpend(embeddingModel, { inputTokens: embeddedTokens }),
+          });
       }
 
       if (failedChunkCount > 0) {

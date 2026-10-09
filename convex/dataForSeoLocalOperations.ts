@@ -61,6 +61,8 @@ export function isLocalOperation(operationId: string): boolean {
  */
 const EMPTY_IS_AN_ANSWER: ReadonlySet<string> = new Set([
   BUSINESS_POSTS_OPERATION, BUSINESS_QUESTIONS_OPERATION, TRUSTPILOT_FIND_OPERATION, TRIPADVISOR_FIND_OPERATION,
+  // A listing with no reviews yet (`dataForSeoReviewOperations.ts`).
+  "google_reviews", "trustpilot_reviews", "tripadvisor_reviews",
 ]);
 
 export function emptyIsAnAnswer(operationId: string): boolean {

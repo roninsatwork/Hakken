@@ -3,6 +3,7 @@
 import { internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { generateTextWithResolvedModel } from "./aiProviderRegistry";
+import { generationSpend, recordModelSpend } from "./modelSpend";
 import {
   buildRewriteSystemInstruction,
   buildRewriteUserContent,
@@ -88,6 +89,7 @@ export const runFixtures = internalAction({
           },
         ],
       });
+      await recordModelSpend(ctx, { actionContext: "Wiki rewrite check: rewriting", ...generationSpend(model, rewriteResponse) });
       const verdict = validateRewrittenPage(rewriteResponse.text ?? "");
       if (!verdict.ok) {
         verdicts.push({ fixture: fixture.name, pass: false, judge: `refused: ${verdict.reason}`, rewrittenChars: 0 });
@@ -114,6 +116,7 @@ export const runFixtures = internalAction({
           },
         ],
       });
+      await recordModelSpend(ctx, { actionContext: "Wiki rewrite check: grading", ...generationSpend(model, judgeResponse) });
       const judge = judgeResponse.text?.trim() ?? "";
       verdicts.push({
         fixture: fixture.name,

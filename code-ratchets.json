@@ -63,5 +63,12 @@
     "local market": 648,
     "rival activity": 1968,
     "your listings": 248
+  },
+  "reviewsReadKiB": {
+    "your reviews, every office": 4016,
+    "your reviews, one office": 488,
+    "against rivals": 720,
+    "what customers say": 4168,
+    "business profile": 488
   }
 }

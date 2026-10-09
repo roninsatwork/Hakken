@@ -1,0 +1,20 @@
+# Discovery → Reviews → Your reviews — the approved look (board "Reviews" of docs/plans/assets/discovery-local-reputation-ai/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Your reviews
+  select: Office
+figures
+  figure: Rating
+  figure: New in # days
+  figure: Not answered
+  figure: Days to answer
+chart-card: Reviews a month
+search: Find words in a review…
+filter: Listing
+filter: Stars
+filter: Answered
+table: Date | Listing | Stars | Review | Reviewer | Answered
+  table-bar
+    download: Download CSV
+  table-footer
+    select: Rows per page
