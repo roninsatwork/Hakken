@@ -1,7 +1,8 @@
 # Discovery — local, reviews, AI apps, Brand radar and web mentions
 
-**Started 2026-10-09. Status: every decision in §1 agreed 2026-10-09; step 1
-(Local) being built.** Built the way the
+**Started 2026-10-09. Status: every decision in §1 agreed 2026-10-09 (D1–D21);
+waiting for Anthony's "start". Then everything is built in one go (Anthony:
+"finish this in one go"), beginning with D14's test calls.** Built the way the
 [core data normalisation plan](core-data-normalisation-plan.md) built the
 core: its rules (§3 there) hold here, every new screen is held to a reading
 budget before it is merged, and every new table is packed from its first day.
@@ -53,6 +54,14 @@ once, packed, and read by each screen within half of Convex's limits.
 | D11 | Prices | **One test call per new kind of data before its part is built** — a few pence in all, needs Anthony's go — and each price written into §6. | **Agreed** — Anthony, 2026-10-09: "yes, go" to one test call per new kind of data. |
 | D12 | Calls and direction requests from a Google profile | **Not in this plan.** They come from Google's own profile figures, not from the supplier, and need Google's approval of a verified profile 60 days old (PRODUCT.md §31). Your assets says "not read yet" until then. | **Agreed** — Anthony, 2026-10-09, with D1: calls and directions stay out. |
 | D13 | Web mentions are noisy for short brand names (§6A). | **Search with the website's host and each brand name in quotes, UK and English pages only, then let the Decision Maker judge each new page "about this business or not"** (a small AI cost a page, shown on Admin's costs), and show only those it keeps. | **Agreed** — Anthony, 2026-10-09: **build last, and test on Korda first** — one paid test on Korda (his go) before step 6 is built; the page-by-page AI check is decided then. |
+| D14 | Kinds of data not yet tried with a real call | **One test call each, all before building**: Tripadvisor search and reviews, Trustpilot reviews, Google questions and answers on a business that has them, Brand radar's top websites and pages, Where to get listed, and Web mentions on Korda (D13) — about $0.50 in all. | **Agreed** — Anthony, 2026-10-09: "yes, all up front". |
+| D15 | Checking the screens on real data | **Real collections for Ronins and Korda as each part is finished** — small and large — about $10 in all for the first runs, most of it Brand radar. | **Agreed** — Anthony, 2026-10-09. |
+| D16 | Does new buying join the schedule once built? | **Held until Anthony says.** A switch per company and per part, on the company's Collection schedule screen, off from the start: a part a company has off is not planned for it on any run. Switched on for Ronins and Korda for D15's runs only. | **Agreed** — Anthony, 2026-10-09: "hold until I say", per company, per part. |
+| D17 | ChatGPT and Gemini read from the apps (D5): their history, and Google AI Mode | **The app's answers carry on ChatGPT's and Gemini's own lines** on every chart; **Google AI Mode is asked every existing question** ($0.004 a question each run), as a fifth assistant. | **Agreed** — Anthony, 2026-10-09. |
+| D18 | The drawings | **Every screen built exactly as drawn on the canvas, and locked with a look test.** Where real data has less than the drawing (the Gemini app names no businesses), the screen says so in words; nothing else moves. | **Agreed** — Anthony, 2026-10-09. |
+| D19 | Admin's way in (D3) | **Super admins link profiles through the company's own Discovery pages**, as they manage its AI questions; no new admin page. | **Agreed** — Anthony, 2026-10-09. |
+| D20 | Web mentions, if Korda's test is noisy (D13) | **An AI check on each new page**, "about this business or not", by the Decision Maker; only what it keeps is shown, and its cost is on Admin's costs. | **Agreed** — Anthony, 2026-10-09. |
+| D21 | Said to Anthony, 2026-10-09, without objection | **Map rankings checks every tracked search from each office** — a search naming one office's town, from that office only — at $0.002 a search and office each run. **Finding a business by name looks within 400 km of the middle of England**, the radius tried; further north is not found by name yet. **Local and Reviews are charged as "rankings" credits** until the cost audit says otherwise. | Noted |
 
 ## 2. What Hakken knows today
 
@@ -274,15 +283,16 @@ merged, not after.
 
 | Step | What | Days (estimate) |
 |---|---|---|
-| 0 | **Prove before building** (D10, D11): one call each, with Anthony's go — prices, UK coverage for the app readers, Brand radar and Business Data — written into §6. The load test's fixtures at §8's size, failing until each part is in. | 1½ |
-| 1 | **Local**: `listings`, `holdListings`, `listingWeeks`; Your listings (find and link); Business profile and Every office; `mapChecks`, `mapPositionWeeks`; Map rankings and one search on the map; Local market; Rival activity. | 4 |
+| 0 | **Prove before building** (D10, D11): one call each, with Anthony's go — prices, UK coverage for the app readers, Brand radar and Business Data — written into §6. The load test's fixtures at §8's size, failing until each part is in. Done 2026-10-09 for the first 17 calls; D14's test calls remain. | ½ |
+| 1 | **Local**: `listings`, `holdListings`, `listingWeeks`; Your listings (find and link); Business profile and Every office; `mapChecks`, `mapPositionWeeks`; Map rankings and one search on the map; Local market; Rival activity. The hold switch per company and part (D16) on the Collection schedule screen. | 5 |
 | 2 | **Reviews**: `listingReviewParts`; Your reviews, Against rivals, What customers say with drafted replies (the company's own AI model from its settings). | 3 |
 | 3 | **AI apps**: the three new assistants into the existing answers; `aiAnswerExtras`; the answer screen's switch; Businesses recommended; Read but not cited; `aiSearchVolumes` and AI demand; AI Overview gaps (keep the quoted pages). | 4 |
 | 4 | **Brand radar**: `brandRadarMonths`, `brandRadarQuestionParts`, `aiCitedSiteParts`; Overview and Websites AI cites. | 2 |
 | 5 | **Your assets**: `assetSummaries`, built after each collection. | 1½ |
-| 6 | **Web mentions** (last, D13): one paid test on Korda first, with Anthony's go; then `webMentionParts`, `webMentionMonths`, `linkGapParts`; All mentions, Against rivals, Where to get listed. Your assets gains its mentions line. | 2½ |
+| 6 | **Web mentions** (last, D13): one paid test on Korda first, with Anthony's go; then `webMentionParts`, `webMentionMonths`, `linkGapParts`; All mentions, Against rivals, Where to get listed. Your assets gains its mentions line. The AI check on each page (D20) if Korda's test is noisy. | 3½ |
+| 7 | **Real runs on Ronins and Korda (D15)**, each part as it is finished, and what they show to fix. | 1 |
 
-About 18½ days in all. Each step: the full local check, GitHub's own steps
+About 20½ days in all (18½ when first written; D14–D21 added two). Each step: the full local check, GitHub's own steps
 at the end of each part, committed locally on `dev`, not pushed.
 
 ## 10. Risks
@@ -322,6 +332,7 @@ three new assistants in their assistant filters.
 | 4. Brand radar | Not started |
 | 5. Your assets | Not started |
 | 6. Web mentions | Not started — waits for the Korda test (D13) |
+| 7. Real runs on Ronins and Korda | Not started |
 
 ## Change log
 
@@ -329,4 +340,5 @@ three new assistants in their assistant filters.
   2026-10-08. Town by town dropped (Anthony, 2026-10-09).
 - 2026-10-09 — D3, D4, D5, D10 and D11 agreed by Anthony.
 - 2026-10-09 — Test calls made (17, $0.35): prices into §6, findings §6A, D13 added.
+- 2026-10-09 — D14–D21 asked all at once and agreed (Anthony: "i want all questions asked upfront and i want you to finish this in one go"); building waits for his "start".
 - 2026-10-09 — D1, D2, D6–D9, D12 and D13 agreed: Local first, every office tracked, cadence and limits as drawn, Web mentions last after a test on Korda (steps 5 and 6 swapped).
