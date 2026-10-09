@@ -83,7 +83,6 @@ const DOORS: Array<{ file: string; declaration: string; reads: string[] }> = [
   { file: 'convex/aiVoiceSession.ts', declaration: 'searchKnowledgeForVoiceInternal', reads: ['gatherReading'] },
   { file: 'convex/agentRuntime.ts', declaration: 'runAgentObjective', reads: ['gatherReading'] },
   { file: 'convex/agentObjectiveLoopService.ts', declaration: 'buildLoopExecutionContext', reads: ['gatherInstructions'] },
-  { file: 'convex/gmailWatcher.ts', declaration: 'decideReply', reads: ['gatherInstructions'] },
   // The phone line and reception start their sessions here.
   { file: 'convex/aiVoiceSession.ts', declaration: 'createVoiceTicketForCompany', reads: ['buildSpokenSessionInstructions'] },
   { file: 'convex/kioskActions.ts', declaration: 'createKioskVoiceSession', reads: ['buildSpokenSessionInstructions'] },

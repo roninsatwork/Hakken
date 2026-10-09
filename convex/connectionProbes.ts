@@ -16,8 +16,8 @@ import { appError } from "./utils/appError";
  * which is a different promise wearing the same words. A mailbox that had
  * silently stopped answering was discovered by a customer.
  *
- * This probes for real, once an hour and on demand: Gmail is asked for its
- * inbox, the model providers are asked for their model lists (the same body
+ * This probes for real, once an hour and on demand: the model providers are
+ * asked for their model lists (the same body
  * the provider button runs), and the phone line is asked about its account
  * when an account id is configured. Where a live check is impossible we say
  * so rather than reporting a green light we have not earned.
@@ -43,9 +43,6 @@ export const listProbeTargetsInternal = internalQuery({
       .take(CONNECTOR_CEILING);
     const providers = await ctx.db.query("aiProviders").take(PROVIDER_CEILING);
     return {
-      mailboxes: connectors
-        .filter((c) => c.category === "EMAIL" && c.authConnectionStatus === "CONNECTED")
-        .map((c) => ({ connectorId: c._id, name: c.name })),
       phoneLines: connectors
         .filter((c) => c.category === "VOICE")
         .map((c) => ({ connectorId: c._id, name: c.name, number: c.authAccountRef })),
@@ -105,28 +102,6 @@ export const probeConnections = internalAction({
   args: {},
   handler: async (ctx) => {
     const targets = await ctx.runQuery(internal.connectionProbes.listProbeTargetsInternal, {});
-
-    for (const mailbox of targets.mailboxes) {
-      let ok = false;
-      let message = "";
-      try {
-        const listing = (await ctx.runAction(internal.gmailConnector.readMailbox, {
-          connectorId: mailbox.connectorId,
-          query: "in:inbox",
-        })) as { ok: boolean; error?: string; messages?: unknown[] };
-        ok = listing.ok;
-        message = listing.ok
-          ? "The inbox answered."
-          : (listing.error ?? "The inbox did not answer.");
-      } catch (error) {
-        message = getErrorMessage(error);
-      }
-      await ctx.runMutation(internal.connectionProbes.recordConnectorProbeInternal, {
-        connectorId: mailbox.connectorId,
-        ok,
-        message,
-      });
-    }
 
     const phoneVerdict = await probePhoneLine();
     if (phoneVerdict) {

@@ -96,10 +96,10 @@ describe("the job ledger", () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const now = Date.now();
     await t.run(async (ctx) => {
-      // The mailbox watcher runs every minute; ten minutes of silence is
+      // Stall recovery runs every two minutes; ten minutes of silence is
       // more than three intervals and must be flagged.
       await ctx.db.insert("jobRuns", {
-        job: "gmail-mailbox-watcher",
+        job: "agent-run-stall-recovery",
         lastRanAt: now - 10 * 60_000,
         lastOk: true,
         lastDurationMs: 5,
@@ -123,7 +123,7 @@ describe("the job ledger", () => {
       .withIdentity({ subject: superAdminId })
       .query(api.jobLedger.listJobRuns, {});
 
-    const stale = rows.find((row) => row.job === "gmail-mailbox-watcher");
+    const stale = rows.find((row) => row.job === "agent-run-stall-recovery");
     expect(stale?.isOverdue).toBe(true);
     const fresh = rows.find((row) => row.job === "workflow-schedule-dispatcher");
     expect(fresh?.isOverdue).toBe(false);

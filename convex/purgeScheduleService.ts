@@ -24,7 +24,6 @@ export const purgePipelineKeyValidator = v.union(
   v.literal("agentRunHistory"),
   v.literal("agentTransactions"),
   v.literal("phoneCalls"),
-  v.literal("mailboxMessages"),
   v.literal("decisionRuns"),
   v.literal("hakkenTaskChecks"),
   v.literal("sentEmails"),
@@ -89,10 +88,6 @@ export const DEFAULT_PURGE_CONFIGS: Record<PurgePipelineKey, PipelineConfig> = {
   // numbers. Kept shorter than most: it is the most personal data on the
   // platform and the least useful once the follow-up task has been done.
   phoneCalls: { ...DAILY_2AM, retentionDays: 90 },
-  // The mailbox watcher's ledger: sender addresses and subjects, so it gets
-  // the same short window as the phone records it mirrors. The mail itself
-  // lives in Gmail under Gmail's own retention, untouched by this.
-  mailboxMessages: { ...DAILY_2AM, retentionDays: 90 },
   // Every judgment the platform made and how sure it was. References to
   // emails, messages and pages, never their text; an operational log like
   // the agent logs, kept the same 90 days.

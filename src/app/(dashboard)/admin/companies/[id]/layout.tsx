@@ -21,7 +21,6 @@ import {
   FileText,
   Gauge,
   Globe,
-  Inbox,
   LayoutDashboard,
   ListPlus,
   ListTodo,
@@ -254,12 +253,7 @@ export default function CompanyDashboardLayout({ children }: { children: React.R
           href: `${companyHref}/calls`,
           icon: PhoneCall,
         },
-        {
-          // The mail it handled — recorded from day one, on a screen at last.
-          label: t("tabs.mailbox"),
-          href: `${companyHref}/mailbox`,
-          icon: Inbox,
-        },
+        // No Mailbox: Hakken does not use Gmail (Anthony, 2026-10-09), so there is no mail to show.
       ],
     },
     // Everyone's Hakken tasks in the company, with who asked (docs/plans/active/hakken-tasks-plan.md, 1.5).

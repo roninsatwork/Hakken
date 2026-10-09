@@ -6,6 +6,28 @@ import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { decryptConnectorToken, encryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
+import type { ToolConnectorDefinition } from "./toolConnectorDefinitions";
+
+// No connector in the catalogue signs in with OAuth since Gmail went
+// (2026-10-09: Hakken does not use it). The shared flow is tested here with a
+// stand-in mailbox connector of its own, shaped as Gmail's was.
+vi.mock("./toolConnectorDefinitions", async (original) => {
+  const real = await original<typeof import("./toolConnectorDefinitions")>();
+  const standIn: ToolConnectorDefinition = {
+    key: "google-gmail",
+    name: "Stand-in mailbox",
+    description: "An OAuth connector for testing the consent flow.",
+    category: "EMAIL",
+    authMode: "OAUTH",
+    oauthProvider: "google",
+    tenantAvailability: "TENANT_RESTRICTED",
+    requiredScopes: ["https://www.googleapis.com/auth/gmail.modify"],
+    requiredSecretRefs: [],
+    toolDefinitions: [],
+  };
+  const catalogue = [...real.BUILT_IN_TOOL_CONNECTORS, standIn];
+  return { ...real, BUILT_IN_TOOL_CONNECTORS: catalogue, getBuiltInToolConnector: (key: string) => catalogue.find((connector) => connector.key === key) };
+});
 
 /**
  * The consent plumbing, end to end with the provider stubbed at the network

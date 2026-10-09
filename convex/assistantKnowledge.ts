@@ -68,8 +68,9 @@ export const REALTIME_VOICE_STYLE = `You are speaking out loud, not writing.
  * the knowledge states them: the first live quote request was answered with a
  * canned brush-off while the published price range sat in the retrieved
  * knowledge, which is the failure this wording exists to prevent. The
- * greeting, sign-off and AI notice are added in code around the reply
- * (`gmailWatcher.ts`), so the model writes neither.
+ * greeting, sign-off and AI notice were added in code around the reply by
+ * the Gmail mailbox watcher, gone with Gmail on 2026-10-09, so the model
+ * writes neither.
  */
 export function emailReplyStyle(platformName: string | undefined) {
   return (

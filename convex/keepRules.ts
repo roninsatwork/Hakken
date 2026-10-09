@@ -60,7 +60,6 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   analyticsDailySnapshots: cleared("400 days", "purges/analyticsSnapshots"),
   purgeHistory: cleared("365 days, the newest 200 kept", "purges/purgeHistory"),
   phoneCalls: cleared("90 days", "purges/phoneCalls"),
-  mailboxMessages: cleared("90 days", "purges/mailboxMessages"),
   decisionRuns: cleared("90 days", "purges/decisionRuns"),
   decisionSettings: RECORD,
   voiceTicketRedemptions: cleared("its ticket's life", "voiceRelay/redeemVoiceTicketInternal"),

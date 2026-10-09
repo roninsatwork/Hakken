@@ -21,7 +21,7 @@ Agent tool binding UI is part of agent administration and consumes the same `aiT
 
 - `getConnectorMarketplace` merges built-in connector definitions with visible install records.
 - `installConnector` installs or syncs a built-in connector and its generated tools.
-- `getConnectorInstallDetails`, `updateConnectorInstall`, and `testConnectorConnection` manage connector state. OAuth functions now back the Gmail mailbox connector and are guarded by provider credential availability.
+- `getConnectorInstallDetails`, `updateConnectorInstall`, and `testConnectorConnection` manage connector state. OAuth functions are guarded by provider credential availability; no connector in the catalogue uses them since Gmail went on 2026-10-09.
 - `getPaginatedTools`, `getToolById`, `createTool`, `updateTool`, and `deleteTool` manage Hakken action tools.
 - `getAgentTools` supports agent tool binding reads.
 
@@ -49,7 +49,6 @@ Relevant schema areas include:
 - `toolConnectorTestLogs`: recent connector diagnostics.
 - `toolConnectorOAuthConnections`: OAuth connection metadata.
 - `connectorOAuthTokens`: OAuth token ciphertext, expiry, scopes, and connector ownership.
-- `mailboxMessages`: Gmail watcher ledger and reply-rail counters.
 - `aiTools`: tool name, description, handler mapping, connector linkage, secret ref keys, required role, input/output schemas, side-effect level, confirmation requirement, active state, version, and audit metadata.
 - `agentTools`: agent-to-tool bindings.
 - `agentToolCalls`: run-time tool call evidence for agent executions.
@@ -58,7 +57,7 @@ Connector installs can be global or tenant-restricted. Tenant-restricted connect
 
 There is no implemented dedicated MCP tool creation route in the current app. Custom or connector-style behavior must go through the implemented tool creation route, connector detail pages, and the registered runtime handler system. Do not document MCP proxy creation as live behavior unless a concrete route and runtime handler are added.
 
-The built-in connector catalog is broader than the runtime handler registry. `convex/toolConnectorDefinitions.ts` currently includes scaffold definitions for Hakken-native tools plus external systems such as Slack, Google Drive, Gmail, Google Calendar, Microsoft Outlook, Microsoft Teams, Notion, HubSpot, Salesforce, Zendesk, Jira, Linear, GitHub, Stripe, Airtable, and Shopify. Installing one of these connectors can create generated `aiTools` rows, but generated rows are not proof that a runtime handler is registered. Gmail is the live exception: `google-gmail` has registered `gmail.read` and `gmail.reply` handlers and dedicated behavior in [Gmail Mailbox](./gmail-mailbox.md). Runtime execution still depends on `REGISTERED_TOOL_HANDLERS` in `convex/aiToolExecutionService.ts`.
+The built-in connector catalog is broader than the runtime handler registry. `convex/toolConnectorDefinitions.ts` currently includes scaffold definitions for Hakken-native tools plus external systems such as Slack, Google Drive, Google Calendar, Microsoft Outlook, Microsoft Teams, Notion, HubSpot, Salesforce, Zendesk, Jira, Linear, GitHub, Stripe, Airtable, and Shopify. Installing one of these connectors can create generated `aiTools` rows, but generated rows are not proof that a runtime handler is registered. Gmail was the live exception until it was removed on 2026-10-09 ([Gmail Mailbox](./gmail-mailbox.md)). Runtime execution still depends on `REGISTERED_TOOL_HANDLERS` in `convex/aiToolExecutionService.ts`.
 
 ## Tool Contract Validation
 
@@ -88,8 +87,6 @@ Current registered handler mappings include:
 
 - `knowledge.search`: queries scoped knowledge through `internal.aiToolReadTools.searchKnowledge`.
 - `company.overview.update`: updates company overview state through `internal.aiToolWriteTools.updateCompanyOverview`.
-- `gmail.read`: reads the connected tenant Gmail mailbox through `internal.gmailConnector.readMailbox`.
-- `gmail.reply`: replies in the original Gmail thread through `internal.gmailConnector.replyToMessage`, with recipient and reply rails enforced server-side.
 - `workflow.task.create`: connector stub.
 - `http.request`: connector stub.
 - `notification.send`: connector stub.
@@ -121,7 +118,7 @@ Generated connector tools inherit required role, side-effect level, confirmation
 
 `updateConnectorInstall` can change configured secret refs, enabled mappings, active state, and, for super admins, tenant assignment and tenant availability. It resets connector test status to `UNTESTED` and resyncs generated tool activity after changes.
 
-OAuth connector state is implemented for Google Gmail. `beginConnectorOAuth` creates a pending connection and authorize URL, the Convex HTTP authorize/callback routes exchange the provider code server-side, token ciphertext is stored in `connectorOAuthTokens`, `getConnectorAccessToken` refreshes near expiry, and disconnect revokes at the provider before deleting token rows. Availability still depends on deployment configuration: `CONNECTOR_GOOGLE_CLIENT_ID`, `CONNECTOR_GOOGLE_CLIENT_SECRET`, and `CONNECTOR_TOKEN_ENCRYPTION_KEY` must all be present.
+OAuth connector state is implemented, and was used by Google Gmail until 2026-10-09; it is tested now with a stand-in connector. `beginConnectorOAuth` creates a pending connection and authorize URL, the Convex HTTP authorize/callback routes exchange the provider code server-side, token ciphertext is stored in `connectorOAuthTokens`, `getConnectorAccessToken` refreshes near expiry, and disconnect revokes at the provider before deleting token rows. Availability still depends on deployment configuration: `CONNECTOR_GOOGLE_CLIENT_ID`, `CONNECTOR_GOOGLE_CLIENT_SECRET`, and `CONNECTOR_TOKEN_ENCRYPTION_KEY` must all be present.
 
 ## Audit And Diagnostics
 
@@ -137,8 +134,6 @@ Focused tests include:
 - `convex/aiToolExecutionService.test.ts`
 - `convex/aiToolReadTools.test.ts`
 - `convex/aiToolWriteTools.test.ts`
-- `convex/gmailConnector.test.ts`
-- `convex/gmailWatcher.test.ts`
 - agent runtime and run tests that exercise tool calls
 - `src/app/(dashboard)/admin/ai/tools/page.test.tsx`
 

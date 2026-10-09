@@ -69,11 +69,11 @@ describe("purge schedule service", () => {
       listDisabledPurgePipelines(
         JSON.stringify({
           phoneCalls: { enabled: false },
-          mailboxMessages: { enabled: false },
+          chatHistory: { enabled: false },
           agentLogs: { enabled: true },
         })
       )
-    ).toEqual(["phoneCalls", "mailboxMessages"]);
+    ).toEqual(["chatHistory", "phoneCalls"]);
   });
 
   test("parses missing or invalid pipeline config as defaults", () => {

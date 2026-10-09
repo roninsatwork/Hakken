@@ -10,7 +10,7 @@ import schema from "./schema";
  */
 
 describe("the admin's view of a company's work", () => {
-  test("calls list masks numbers, detail shows them, mailbox lists decisions, walls hold", async () => {
+  test("calls list masks numbers, detail shows them, walls hold", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const now = Date.now();
 
@@ -44,31 +44,6 @@ describe("the admin's view of a company's work", () => {
           summary: "Asked about Saturday opening.",
           startedAt: now - 90_000,
           endedAt: now - 30_000,
-        });
-        const connectorId = await ctx.db.insert("toolConnectors", {
-          key: "google-gmail",
-          name: "Gmail",
-          description: "The connected inbox",
-          category: "EMAIL",
-          authMode: "OAUTH",
-          tenantAvailability: "TENANT_RESTRICTED",
-          companyId,
-          installStatus: "INSTALLED",
-          isActive: true,
-          createdAt: now,
-          updatedAt: now,
-        });
-        await ctx.db.insert("mailboxMessages", {
-          companyId,
-          connectorId,
-          gmailMessageId: "m-1",
-          gmailThreadId: "t-1",
-          sender: "customer@example.com",
-          subject: "Quote for a garden wall",
-          decision: "REPLIED",
-          repliedAt: now - 10_000,
-          createdAt: now - 20_000,
-          updatedAt: now - 10_000,
         });
         return { companyId, otherCompanyId, adminId, otherAdminId, callId };
       }
@@ -107,18 +82,6 @@ describe("the admin's view of a company's work", () => {
       asAdmin.query(api.telephony.getCallForCompany, { companyId, callId: "not-an-id" })
     ).resolves.toBeNull();
 
-    // The mailbox lists sender, subject and decision — nothing more.
-    const mail = await asAdmin.query(api.mailbox.listMailboxForCompany, {
-      companyId,
-      paginationOpts: paging,
-    });
-    expect(mail.page).toHaveLength(1);
-    expect(mail.page[0]).toMatchObject({
-      sender: "customer@example.com",
-      subject: "Quote for a garden wall",
-      decision: "REPLIED",
-    });
-
     // The walls: another company's admin can read none of it.
     const asOther = t.withIdentity({ subject: otherAdminId });
     await expect(
@@ -126,9 +89,6 @@ describe("the admin's view of a company's work", () => {
     ).rejects.toThrow();
     await expect(
       asOther.query(api.telephony.getCallForCompany, { companyId, callId })
-    ).rejects.toThrow();
-    await expect(
-      asOther.query(api.mailbox.listMailboxForCompany, { companyId, paginationOpts: paging })
     ).rejects.toThrow();
 
     // And a call from one company never answers to another's door.

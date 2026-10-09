@@ -60,16 +60,9 @@ crons.interval(
   { job: "workflow-schedule-dispatcher" }
 );
 
-// The mailbox that answers itself: poll every connected Gmail mailbox for
-// new mail, answer what company knowledge can answer, and turn the rest
-// into tasks with a holding reply. Idempotent per message id, so an
-// overlapping poll can never answer twice.
-crons.interval(
-  "gmail-mailbox-watcher",
-  { minutes: 1 },
-  internal.jobLedger.runJob,
-  { job: "gmail-mailbox-watcher" }
-);
+// No Gmail mailbox watcher: it polled every connected Gmail inbox every
+// minute, the platform's largest use of compute, and Hakken will never use it
+// (Anthony, 2026-10-09: "can we disable gmail this app will never use it").
 
 // Keep connector OAuth tokens alive: refresh anything dying within the next
 // two hours, so a long-idle connection works the moment it is needed and a

@@ -61,21 +61,11 @@ afterEach(() => {
 });
 
 describe("choosing what to probe", () => {
-  test("only active connected mailboxes, active phone lines, and enabled providers are targets", async () => {
+  test("only active phone lines and enabled providers are targets", async () => {
     const t = setup();
     const now = Date.now();
-    const connected = await seedConnector(t, {
-      name: "Working inbox",
-      authConnectionStatus: "CONNECTED",
-    });
-    // Active but never connected: there is no mailbox to ask.
-    await seedConnector(t, { name: "Unconnected inbox", authConnectionStatus: "NOT_CONNECTED" });
-    // Connected but switched off: probing it would report on a thing nobody uses.
-    await seedConnector(t, {
-      name: "Disabled inbox",
-      authConnectionStatus: "CONNECTED",
-      isActive: false,
-    });
+    // A mailbox is no target: Hakken does not use Gmail (2026-10-09).
+    await seedConnector(t, { name: "Working inbox", authConnectionStatus: "CONNECTED" });
     const phone = await seedConnector(t, {
       key: "twilio-voice",
       name: "Phone line",
@@ -100,7 +90,6 @@ describe("choosing what to probe", () => {
     });
 
     const targets = await t.query(internal.connectionProbes.listProbeTargetsInternal, {});
-    expect(targets.mailboxes).toEqual([{ connectorId: connected, name: "Working inbox" }]);
     expect(targets.phoneLines).toEqual([
       { connectorId: phone, name: "Phone line", number: "+441onenumber" },
     ]);
@@ -122,24 +111,6 @@ describe("recording a probe", () => {
     expect(row?.lastProbeOk).toBe(false);
     expect(row?.lastProbeMessage).toHaveLength(300);
     expect(row?.lastProbeAt).toBeGreaterThanOrEqual(before);
-  });
-});
-
-describe("probing the mailbox", () => {
-  test("a mailbox that cannot answer is recorded broken with the reason, not skipped", async () => {
-    const t = setup();
-    // Marked CONNECTED but with no OAuth token rows behind it — the shape a
-    // revoked or half-torn-down connection leaves in the database.
-    const connectorId = await seedConnector(t, { authConnectionStatus: "CONNECTED" });
-
-    await t.action(internal.connectionProbes.probeConnections, {});
-
-    const row = await readConnector(t, connectorId);
-    expect(row?.lastProbeOk).toBe(false);
-    expect(row?.lastProbeAt).toBeGreaterThan(0);
-    // The reason travels to the row: a bare false would send whoever reads
-    // the screen off to reproduce the failure by hand.
-    expect(row?.lastProbeMessage?.length).toBeGreaterThan(0);
   });
 });
 

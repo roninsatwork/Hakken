@@ -208,8 +208,6 @@ async function buildPurgePreviewCounts(ctx: { db: Pick<MutationCtx["db"], "query
         // These three fell through to zero before, so the dry-run promised
         // "nothing to delete" for tables the run then emptied.
         rows = (await capped(ctx.db.query("phoneCalls").withIndex("by_started", (q) => q.lt("startedAt", cutoff)))).length;
-      } else if (key === "mailboxMessages") {
-        rows = (await capped(ctx.db.query("mailboxMessages").withIndex("by_created", (q) => q.lt("createdAt", cutoff)))).length;
       } else if (key === "decisionRuns") {
         rows = (await capped(ctx.db.query("decisionRuns").withIndex("by_createdAt", (q) => q.lt("createdAt", cutoff)))).length;
       } else if (key === "hakkenTaskChecks") {
@@ -532,18 +530,6 @@ export const executePurgeRecursive = internalMutation({
         const batch = await ctx.db
           .query("phoneCalls")
           .withIndex("by_started", (q) => q.lt("startedAt", cutoffTimestamp))
-          .take(500);
-        for (const record of batch) {
-          await ctx.db.delete(record._id);
-        }
-        currentDeleted = batch.length;
-        hasMore = batch.length === 500;
-      } else if (pipelineKey === "mailboxMessages") {
-        // The watcher's ledger ages out whole: a row old enough to purge is
-        // long past every rail window that reads it.
-        const batch = await ctx.db
-          .query("mailboxMessages")
-          .withIndex("by_created", (q) => q.lt("createdAt", cutoffTimestamp))
           .take(500);
         for (const record of batch) {
           await ctx.db.delete(record._id);

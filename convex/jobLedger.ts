@@ -28,7 +28,6 @@ const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
   "stripe-billing-reconciliation": (ctx) => ctx.runMutation(internal.billingSync.scheduleReconciliation, {}),
   "workflow-schedule-dispatcher": (ctx) =>
     ctx.runMutation(internal.workflowEngine.scheduleDispatcher, {}),
-  "gmail-mailbox-watcher": (ctx) => ctx.runAction(internal.gmailWatcher.pollMailboxes, {}),
   "connector-oauth-token-refresh": (ctx) =>
     ctx.runAction(internal.connectorOAuth.refreshExpiringTokens, {}),
   "connection-probes": (ctx) => ctx.runAction(internal.connectionProbes.probeConnections, {}),
@@ -95,7 +94,6 @@ const JOBS: Record<string, (ctx: ActionCtx) => Promise<unknown>> = {
 const EXPECTED_EVERY_MINUTES: Record<string, number> = {
   "upload-garbage-collection": 5,
   "workflow-schedule-dispatcher": 1,
-  "gmail-mailbox-watcher": 1,
   "agent-run-stall-recovery": 2,
   "agent-skill-rollup-rebuild": 10,
   "governance-rollup-rebuild": 10,

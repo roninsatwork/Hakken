@@ -474,13 +474,6 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
    * own database.
    */
   /**
-   * Read the connected Gmail mailbox.
-   *
-   * Tenant comes from the run context, never from model args — the same rule
-   * every handler here follows. The connector resolves through the invoked
-   * tool's own install, so a global and a tenant install cannot be confused.
-   */
-  /**
    * Any tool on any server a company has connected.
    *
    * **One entry for all of them, and deny-by-default is untouched.** The
@@ -503,33 +496,6 @@ const REGISTERED_TOOL_HANDLERS: Record<string, RegisteredToolHandler> = {
       toolId: input.toolId,
       ...(input.companyId ? { companyId: input.companyId } : {}),
       args: input.args,
-    });
-  },
-  "gmail.read": async (input) => {
-    const messageId = getOptionalStringToolArg(input.args, "messageId");
-    return await input.ctx.runAction(internal.gmailConnector.readMailbox, {
-      ...(input.toolId ? { toolId: input.toolId } : {}),
-      ...(input.companyId ? { companyId: input.companyId } : {}),
-      ...(messageId ? { messageId } : {}),
-    });
-  },
-  /**
-   * Reply from the connected Gmail mailbox, inside the rails.
-   *
-   * The model supplies a message id and a body — never an address. Who
-   * receives the reply is read off the original message server-side, and the
-   * no-reply, per-thread and per-day rails live in the handler's action
-   * (commitment 6 of the Gmail plan); a breached rail files a task instead.
-   */
-  "gmail.reply": async (input) => {
-    const messageId = getStringToolArg(input.args, "messageId");
-    const body = getStringToolArg(input.args, "body");
-    return await input.ctx.runAction(internal.gmailConnector.replyToMessage, {
-      ...(input.toolId ? { toolId: input.toolId } : {}),
-      ...(input.companyId ? { companyId: input.companyId } : {}),
-      ...(input.userId ? { userId: input.userId } : {}),
-      messageId,
-      body,
     });
   },
   "web.scrape": async (input) => {

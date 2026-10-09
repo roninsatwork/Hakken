@@ -141,7 +141,7 @@ describe("platform alert service", () => {
 
   test("alerts when retention pipelines are switched off", () => {
     const decision = buildSystemHealthPlatformAlertDecision(
-      buildSystemReport({ disabledPurgePipelines: ["phoneCalls", "mailboxMessages"] })
+      buildSystemReport({ disabledPurgePipelines: ["phoneCalls", "chatHistory"] })
     );
 
     expect(decision.shouldAlert).toBe(true);

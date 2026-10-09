@@ -178,8 +178,7 @@ describe("ai tool execution service", () => {
       allowed: false,
       reason: "Tool execution is not allowed across tenant boundaries.",
     });
-    // Other reads stay administrators': a company's mailbox is its admins'.
-    expect(member("USER", "gmail.read")).toEqual(refused);
+    // Other reads stay administrators'.
     expect(member("USER", "knowledge.search")).toEqual(refused);
     // A change is never a member's, even one misfiled under a figures handler.
     expect(member("USER", "task.create", { sideEffectLevel: "WRITE" })).toEqual(refused);
@@ -425,10 +424,6 @@ describe("ai tool execution service", () => {
       "dataforseo.metrics.read",
       "dataforseo.operations.list",
       "dataforseo.pull.request",
-      // The Gmail mailbox: read the connected inbox, and reply inside the
-      // rails (sender-only, no no-reply, per-thread and per-day caps).
-      "gmail.read",
-      "gmail.reply",
       "http.request",
       "knowledge.search",
       // Every tool on every connected server, through one entry. The allowlist

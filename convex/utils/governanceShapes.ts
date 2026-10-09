@@ -141,36 +141,6 @@ export const jobLedgerShape = v.array(v.object({
   isOverdue: v.boolean(),
 }));
 
-export const mailboxListShape = v.object({
-  page: v.array(v.object({
-    _id: v.id("mailboxMessages"),
-    sender: v.string(),
-    subject: v.optional(v.string()),
-    decision: v.optional(v.string()),
-    decisionReason: v.optional(v.string()),
-    taskId: v.optional(v.id("tasks")),
-    repliedAt: v.optional(v.number()),
-    createdAt: v.number(),
-    /** The Decisions that ran on this email, oldest first; empty before Phase D or with every mode off. */
-    decisions: v.array(v.object({
-      key: v.string(),
-      copyKey: v.string(),
-      answer: v.string(),
-      certainty: v.optional(v.union(v.literal("SURE"), v.literal("FAIRLY_SURE"), v.literal("NOT_SURE"))),
-      source: v.union(v.literal("TYPESAFE"), v.literal("TEXT_MODEL"), v.literal("RULES")),
-      probabilities: v.optional(v.string()),
-    })),
-  })),
-  isDone: v.boolean(),
-  continueCursor: v.string(),
-  splitCursor: v.optional(v.union(v.string(), v.null())),
-  pageStatus: v.optional(v.union(
-    v.literal("SplitRecommended"),
-    v.literal("SplitRequired"),
-    v.null(),
-  )),
-});
-
 export const documentEvidenceShape = v.array(v.object({
   documentId: v.id("knowledgeDocuments"),
   positiveEvidence: v.number(),

@@ -71,7 +71,6 @@ in the same documentation pass.
 | `/admin/companies/[id]/directory/invites` | Directory invitation list. | [Company Workspace Administration](../end-user/company-workspace-administration.md), [Company And User Management](./company-user-management.md) |
 | `/admin/companies/[id]/calls` | Company call list for platform operators. | [Spoken Channels](../end-user/spoken-channels.md), [Spoken Channels Developer Guide](./spoken-channels.md) |
 | `/admin/companies/[id]/calls/[callId]` | Company call detail for platform operators. | [Spoken Channels](../end-user/spoken-channels.md), [Spoken Channels Developer Guide](./spoken-channels.md) |
-| `/admin/companies/[id]/mailbox` | Company mailbox view for platform operators. | [Gmail Mailbox](../end-user/gmail-mailbox.md), [Gmail Mailbox Developer Guide](./gmail-mailbox.md) |
 | `/admin/companies/[id]/widget` | Company widget configuration, including Receptionist screen opt-in. | [Embedded Widgets](../end-user/embedded-widgets.md), [Embedded Widgets Developer Guide](./embedded-widgets.md), [Receptionist Screen](../end-user/receptionist-screen.md) |
 
 ## Company AI Routes

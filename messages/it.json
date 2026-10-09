@@ -1155,7 +1155,6 @@
           "evals": "Valutazioni",
           "chatLogs": "Registri chat",
           "calls": "Chiamate",
-          "mailbox": "Casella di posta",
           "widget": "Widget",
           "appearance": "Aspetto",
           "welcomeScreen": "Schermata di benvenuto",
@@ -2973,7 +2972,7 @@
         },
         "groups": {
           "email": "Email",
-          "emailBlurb": "Leggere e rispondere in una casella di posta collegata.",
+          "emailBlurb": "Inviare email e notifiche alle persone del tuo spazio di lavoro.",
           "phone": "Telefono",
           "phoneBlurb": "Il numero a cui risponde {platformName}.",
           "knowledge": "Conoscenza",
@@ -9285,34 +9284,6 @@
           "other": "Impossibile dirlo"
         }
       }
-    }
-  },
-  "aiMailbox": {
-    "title": "Casella di posta",
-    "subtitle": "Ogni email vista dall'AI di questa azienda, e cosa ne ha fatto.",
-    "hint": "{platformName} conserva mittente, oggetto e la sua decisione - mai il corpo del messaggio. Per leggere una conversazione completa, aprila nella casella collegata.",
-    "searchPlaceholder": "Cerca per mittente o oggetto...",
-    "columns": {
-      "from": "Da",
-      "subject": "Oggetto",
-      "decision": "Cosa ha fatto {platformName}",
-      "when": "Quando"
-    },
-    "decision": {
-      "PENDING": "In attesa",
-      "REPLIED": "Ha risposto",
-      "TASK": "Ha creato un'attività",
-      "SKIPPED": "Lasciata stare"
-    },
-    "empty": "Nessuna email",
-    "emptyState": "Ancora niente. Quando la casella collegata riceve posta, appare qui.",
-    "emptyFiltered": "Nessuna email corrisponde a questa ricerca.",
-    "filter": {
-      "all": "Tutte",
-      "replied": "Ha risposto",
-      "task": "Ha creato un'attività",
-      "skipped": "Lasciata stare",
-      "notSure": "Non sicura"
     }
   },
   "aiDiary": {

@@ -1155,7 +1155,6 @@
           "evals": "Evals",
           "chatLogs": "Chat Logs",
           "calls": "Calls",
-          "mailbox": "Mailbox",
           "widget": "Widget",
           "appearance": "Appearance",
           "welcomeScreen": "Welcome Screen",
@@ -2973,7 +2972,7 @@
         },
         "groups": {
           "email": "Email",
-          "emailBlurb": "Reading and replying in a connected mailbox.",
+          "emailBlurb": "Sending email and notifications to people in your workspace.",
           "phone": "Phone",
           "phoneBlurb": "The number {platformName} answers.",
           "knowledge": "Knowledge",
@@ -9285,34 +9284,6 @@
           "other": "Cannot tell"
         }
       }
-    }
-  },
-  "aiMailbox": {
-    "title": "Mailbox",
-    "subtitle": "Every email this company's AI has seen, and what it did with each.",
-    "hint": "{platformName} keeps the sender, the subject and its decision - never the body of the mail. To read a full conversation, open it in the connected inbox itself.",
-    "searchPlaceholder": "Search by sender or subject...",
-    "columns": {
-      "from": "From",
-      "subject": "Subject",
-      "decision": "What {platformName} did",
-      "when": "When"
-    },
-    "decision": {
-      "PENDING": "Waiting",
-      "REPLIED": "Replied",
-      "TASK": "Made a task",
-      "SKIPPED": "Left alone"
-    },
-    "empty": "No mail",
-    "emptyState": "Nothing yet. When the connected inbox receives mail, it appears here.",
-    "emptyFiltered": "No mail matches this search.",
-    "filter": {
-      "all": "All",
-      "replied": "Replied",
-      "task": "Made a task",
-      "skipped": "Left alone",
-      "notSure": "Not sure"
     }
   },
   "aiDiary": {

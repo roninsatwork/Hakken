@@ -3310,7 +3310,6 @@ export default defineSchema({
     createdBy: v.optional(v.id("users")),
   })
     .index("by_key", ["key"])
-    .index("by_company", ["companyId"])
     .index("by_createdAt", ["createdAt"]),
 
   toolConnectorTestLogs: defineTable({
@@ -3386,43 +3385,6 @@ export default defineSchema({
     .index("by_connection", ["connectionId"])
     .index("by_connector", ["connectorId"])
     .index("by_expiry", ["expiresAt"]),
-
-  // Every Gmail message the mailbox watcher has seen, recorded before action
-  // (commitment 7 of the Gmail plan) so double delivery or cron overlap can
-  // never answer twice. Also the reply rails' ledger: the per-thread hourly
-  // cap and per-day ceiling are counted off `repliedAt`.
-  mailboxMessages: defineTable({
-    companyId: v.optional(v.id("companies")),
-    connectorId: v.id("toolConnectors"),
-    gmailMessageId: v.string(),
-    gmailThreadId: v.string(),
-    // The counterparty and subject, never body text — the same restraint the
-    // audit trail shows.
-    sender: v.string(),
-    subject: v.string(),
-    decision: v.union(
-      v.literal("PENDING"),
-      v.literal("REPLIED"),
-      v.literal("TASK"),
-      v.literal("SKIPPED")
-    ),
-    decisionReason: v.optional(v.string()),
-    taskId: v.optional(v.id("tasks")),
-    repliedAt: v.optional(v.number()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  })
-    .index("by_connector_message", ["connectorId", "gmailMessageId"])
-    .index("by_thread_replied", ["gmailThreadId", "repliedAt"])
-    .index("by_connector_replied", ["connectorId", "repliedAt"])
-    .index("by_created", ["createdAt"])
-    // The admin Mailbox screen (seven-gaps plan, phase 1): the handled
-    // mail was recorded from day one but had no screen; this is its door.
-    .index("by_company_created", ["companyId", "createdAt"])
-    .searchIndex("search_subject", {
-      searchField: "subject",
-      filterFields: ["companyId"],
-    }),
 
   /**
    * A tool server a company has connected.
@@ -3909,6 +3871,7 @@ export default defineSchema({
       v.literal("agentRunHistory"),
       v.literal("agentTransactions"),
       v.literal("phoneCalls"),
+      // Gone with Gmail (2026-10-09); named here for the purges it ran before.
       v.literal("mailboxMessages"),
       v.literal("decisionRuns"),
       v.literal("hakkenTaskChecks"),

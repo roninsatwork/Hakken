@@ -416,7 +416,7 @@ describe("AI Tools Authorization", () => {
    * deployment with no provider credentials configured — nobody gets sent to
    * a consent screen that cannot complete.
    */
-  test("exactly the Gmail connector uses OAuth, and the flow refuses everywhere it should", async () => {
+  test("no connector offered uses OAuth since Gmail went, and the flow refuses everywhere it should", async () => {
     const t = convexTest(schema, import.meta.glob("./**/*.*s"));
     const superAdminId = await t.run(async (ctx) => {
       return await ctx.db.insert("users", {
@@ -428,7 +428,8 @@ describe("AI Tools Authorization", () => {
 
     const marketplace = await superAdminClient.query(api.aiTools.getConnectorMarketplace, {});
     const oauthConnectors = marketplace.filter((connector) => connector.authMode === "OAUTH");
-    expect(oauthConnectors.map((connector) => connector.key)).toEqual(["google-gmail"]);
+    // Gmail was the one, and Hakken does not use it (2026-10-09).
+    expect(oauthConnectors.map((connector) => connector.key)).toEqual([]);
 
     // A non-OAuth connector still cannot start the flow.
     const connectorId = await superAdminClient.mutation(api.aiTools.installConnector, {
@@ -439,17 +440,8 @@ describe("AI Tools Authorization", () => {
       superAdminClient.mutation(api.aiTools.beginConnectorOAuth, { connectorId })
     ).rejects.toThrow("Connector does not use OAuth.");
 
-    // And with no provider credentials configured, neither can the Gmail one.
-    const companyId = await t.run(async (ctx) =>
-      ctx.db.insert("companies", { name: "Mail Co", createdAt: Date.now() })
-    );
-    const gmailConnectorId = await superAdminClient.mutation(api.aiTools.installConnector, {
-      key: "google-gmail",
-      companyId,
-    });
-    await expect(
-      superAdminClient.mutation(api.aiTools.beginConnectorOAuth, { connectorId: gmailConnectorId })
-    ).rejects.toThrow("OAuth connections are not available");
+    // Nor can Gmail be installed at all.
+    await expect(superAdminClient.mutation(api.aiTools.installConnector, { key: "google-gmail" })).rejects.toThrow("Connector definition not found.");
   });
 
   test("super admins can page and search tool inventory", async () => {

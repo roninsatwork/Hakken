@@ -283,17 +283,21 @@ describe("a very large site", () => {
     await time("suggested competitors, a thousand questions", () => asMember.query(api.siteCompetitors.listSuggested, { siteId: holdId }));
     expect(slow).toEqual([]);
 
-    // What each screen reads against its budget (core-data-normalisation-plan.md
+    // What each kind of screen reads against its budget (core-data-normalisation-plan.md
     // §7A.7): its bytes, as Convex counts them, may not grow past what it read
     // when last measured, so a change that reads more is seen here before it
-    // is merged, not on the bill. Counted, not timed. The budgets
-    // (`code-ratchets.json`, `sitesReadKiB`) may shrink, never grow;
+    // is merged, not on the bill. Counted, not timed. One screen of each kind
+    // of read: a screen that only filters or sorts the same list in memory
+    // reads what that list reads — thirteen keyword screens read 4,906 KiB
+    // each on 2026-10-08 — and metering all forty-five ran this test past its
+    // limit in a full run. The budgets (`code-ratchets.json`, `sitesReadKiB`)
+    // name the screens metered, and may shrink, never grow;
     // SITES_READ_REPORT=1 prints what each reads.
     const modules = import.meta.glob("./*.ts");
     const readBudgets: Record<string, number> = budgets.sitesReadKiB;
     const read: Record<string, number> = {};
     const overBudget: string[] = [];
-    for (const [name, query, args] of screens) {
+    for (const [name, query, args] of screens.filter(([name]) => name in readBudgets)) {
       const [file, exported] = getFunctionName(query).split(":");
       const loaded = (await modules[`./${file}.ts`]()) as Record<string, { _handler?: unknown }>;
       read[name] = Math.ceil((await bytesReadBy(t, userId, loaded[exported], args)) / 1024);
