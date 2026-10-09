@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { internal } from "./_generated/api";
 import schema from "./schema";
 import { useFixedDay } from "@/src/test/realTime";
+import { pressAsset } from "./assetSummaries";
 
 /**
  * Your assets (discovery-local-reputation-ai-plan.md, step 5): worked out
@@ -37,5 +38,14 @@ describe("Your assets", () => {
 
     await t.mutation(internal.assetSummaries.rebuildAssets, { holdId: rivalId });
     expect(await t.run(async (ctx) => await ctx.db.query("assetSummaries").collect())).toHaveLength(1);
+  });
+
+  test("the press line: not there with no page in a year, not seen under one a month, not chosen when most do not link", () => {
+    const page = (linked: number) => ({ url: "https://a.example/x", host: "a.example", title: null, day: "2026-09-01", kind: 1, tone: 0, strength: 0, linked, about: 1 });
+    expect(pressAsset(null)).toBeNull();
+    expect(pressAsset([])).toMatchObject({ kind: "PRESS", stage: "NOT_THERE", fix: { code: "getMentioned" } });
+    expect(pressAsset([page(1), page(0)])).toMatchObject({ stage: "NOT_SEEN", chosen: { code: "linked", a: 1, b: 2 }, fix: { code: "fewMentions", a: 2 } });
+    expect(pressAsset([...Array(10).fill(page(0)), page(1), page(1)])).toMatchObject({ stage: "SEEN_NOT_CHOSEN", fix: { code: "askForLinks", a: 10 } });
+    expect(pressAsset(Array(12).fill(page(1)))).toMatchObject({ stage: "WORKING", fix: null });
   });
 });

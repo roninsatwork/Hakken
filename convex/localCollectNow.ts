@@ -10,6 +10,7 @@ import { partIsOn } from "./collectionParts";
 import { aiAskFor, findSeoOperation } from "./dataForSeoRegistry";
 import { aiDemandSteps } from "./aiDemand";
 import { radarSteps } from "./brandRadar";
+import { mentionSteps } from "./webMentions";
 import { RADAR_OPERATION } from "./dataForSeoRadarOperations";
 import { AI_DEMAND_OPERATION } from "./dataForSeoAiDemandOperations";
 import { readFanOutLimits } from "./fanOutLimits";
@@ -36,7 +37,7 @@ import { appError } from "./utils/appError";
  * D17), keyed as the day's run keys them, and nothing else.
  */
 export const queueLocalNow = internalMutation({
-  args: { companyId: v.id("companies"), only: v.optional(v.union(v.literal("local"), v.literal("reviews"), v.literal("aiApps"), v.literal("aiDemand"), v.literal("brandRadar"))) },
+  args: { companyId: v.id("companies"), only: v.optional(v.union(v.literal("local"), v.literal("reviews"), v.literal("aiApps"), v.literal("aiDemand"), v.literal("brandRadar"), v.literal("webMentions"))) },
   returns: v.object({ queued: v.number(), reused: v.number(), sending: v.boolean() }),
   handler: async (ctx, args) => {
     const company = await ctx.db.get(args.companyId);
@@ -68,6 +69,15 @@ export const queueLocalNow = internalMutation({
         return { reused: Boolean(existing), pullId, pull: existing };
       };
       const cycle = { companyId: args.companyId, startedAt };
+      if (args.only === "webMentions") {
+        const keyed = planAs("keyword");
+        for (const [at, step] of (await mentionSteps(ctx, cycle, hold, async (operationId, params, keyStartedAt, sendIndex) => await keyed(findSeoOperation(operationId)!, params, keyStartedAt, sendIndex))).entries()) {
+          const done = await step(at, 1);
+          queued += done.planned;
+          reused += done.reused;
+        }
+        continue;
+      }
       if (args.only === "brandRadar") {
         const operation = findSeoOperation(RADAR_OPERATION)!;
         const keyed = planAs("keyword");

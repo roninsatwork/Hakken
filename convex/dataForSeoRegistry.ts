@@ -21,6 +21,7 @@ import { LOCAL_OPERATIONS } from "./dataForSeoLocalOperations";
 import { REVIEW_OPERATIONS } from "./dataForSeoReviewOperations";
 import { AI_DEMAND_OPERATIONS } from "./dataForSeoAiDemandOperations";
 import { RADAR_OPERATIONS } from "./dataForSeoRadarOperations";
+import { MENTION_OPERATIONS } from "./dataForSeoMentionOperations";
 import { appError } from "./utils/appError";
 
 /**
@@ -210,6 +211,7 @@ export const SEO_OPERATIONS: readonly SeoOperation[] = [
   ...REVIEW_OPERATIONS,
   ...AI_DEMAND_OPERATIONS,
   ...RADAR_OPERATIONS,
+  ...MENTION_OPERATIONS,
   {
     id: "serp_google_organic",
     question: "Where does a website rank on Google for a given search, and who else is on that page?",

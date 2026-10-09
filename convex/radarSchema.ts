@@ -13,7 +13,7 @@ const packedColumnValidator = v.union(v.string(), v.array(v.union(v.number(), v.
 /** One of a website's assets (`assetSummaries.ts`): what it is, how often it is seen and chosen, where it loses people, and the first fix. */
 const kindValidator = v.union(
   v.literal("WEBSITE"), v.literal("PAGE"), v.literal("PROFILE"), v.literal("REVIEW_SITE"),
-  v.literal("AI_APP"), v.literal("AI_OVERVIEW"), v.literal("DIRECTORY"),
+  v.literal("AI_APP"), v.literal("AI_OVERVIEW"), v.literal("DIRECTORY"), v.literal("PRESS"),
 );
 const stageValidator = v.union(v.literal("NOT_THERE"), v.literal("NOT_SEEN"), v.literal("SEEN_NOT_CHOSEN"), v.literal("WORKING"));
 /** A figure or a fix as a code and its numbers: the words are the screen's, in the reader's language. */

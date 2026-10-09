@@ -24,7 +24,7 @@ export const LIMIT_TOPICS: readonly LimitTopic[] = [
   // Discovery's Local pages (discovery-local-reputation-ai-plan.md, D9): a website's offices, its rivals' profiles, Maps and the local market.
   { id: "local", keys: ["localOffices", "localRivalsPerOffice", "localMapDepth", "localMarketBusinesses", "localMarketKm", "localRivalReviews"] },
   // Discovery's Brand radar (the same plan, D9): Google's AI answers naming the website and its rivals, monthly.
-  { id: "radar", keys: ["radarQuestions", "radarRivals"] },
+  { id: "radar", keys: ["radarQuestions", "radarRivals", "mentionsPerCheck"] },
   { id: "ai", keys: ["promptsPerSite", "fanOutTrackedPerSite", "searchesPerEngine", "wordingsPerAngle", "anglesShown", "googleSearchesRead"] },
   {
     id: "matching",
@@ -147,6 +147,7 @@ export const LIMIT_UNITS: Record<string, LimitUnit> = {
   localRivalReviews: "reviews",
   radarQuestions: "questions",
   radarRivals: "competitors",
+  mentionsPerCheck: "pages",
   fanOutPerAnswer: "searches",
   sourcesPerAnswer: "sources",
   businessesPerAnswer: "businesses",

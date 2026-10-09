@@ -21,13 +21,13 @@ import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
 
 type Phrase = { code: string; a?: number; b?: number; text?: string };
-type Kind = "WEBSITE" | "PAGE" | "PROFILE" | "REVIEW_SITE" | "AI_APP" | "AI_OVERVIEW" | "DIRECTORY";
+type Kind = "WEBSITE" | "PAGE" | "PROFILE" | "REVIEW_SITE" | "AI_APP" | "AI_OVERVIEW" | "DIRECTORY" | "PRESS";
 type Stage = "NOT_THERE" | "NOT_SEEN" | "SEEN_NOT_CHOSEN" | "WORKING";
 type Row = { key: string; kind: Kind; name: string; sub?: string; seen: Phrase; chosen: Phrase | null; stage: Stage; fix: Phrase | null };
 
 const GROUPS = ["website", "profiles", "reviews", "ai", "places"] as const;
 const GROUP_OF: Record<Kind, (typeof GROUPS)[number]> = {
-  WEBSITE: "website", PAGE: "website", PROFILE: "profiles", REVIEW_SITE: "reviews", AI_APP: "ai", AI_OVERVIEW: "ai", DIRECTORY: "places",
+  WEBSITE: "website", PAGE: "website", PROFILE: "profiles", REVIEW_SITE: "reviews", AI_APP: "ai", AI_OVERVIEW: "ai", DIRECTORY: "places", PRESS: "places",
 };
 const STAGES = ["NOT_SEEN", "SEEN_NOT_CHOSEN", "WORKING", "NOT_THERE"] as const;
 const STAGE_TONE = { NOT_THERE: "danger", NOT_SEEN: "warning", SEEN_NOT_CHOSEN: "warning", WORKING: "success" } as const;
@@ -64,7 +64,7 @@ export default function YourAssetsPage() {
   // A figure's or a fix's words from its code (`assetSummaries.ts`): one message a code, its numbers filled in.
   const coded = t as unknown as (key: string, values: Record<string, string | number>) => string;
   const phrase = (prefix: "seen" | "chosen" | "fix", value: Phrase | null) => (value ? coded(`${prefix}.${value.code}`, { a: formatNumber(value.a ?? 0), count: value.a ?? 0, b: value.b ?? 0, rating: ((value.b ?? 0) / 10).toFixed(1), text: value.text ?? "" }) : "–");
-  const nameWords = (row: Row) => (row.kind === "PROFILE" ? t("profileOf", { town: row.sub ?? row.name }) : row.kind === "AI_APP" ? t("appAnswers", { name: row.name }) : row.name);
+  const nameWords = (row: Row) => (row.kind === "PROFILE" ? t("profileOf", { town: row.sub ?? row.name }) : row.kind === "AI_APP" ? t("appAnswers", { name: row.name }) : row.kind === "PRESS" ? t("pressName") : row.name);
   const fileBase = `${site?.host ?? "site"}-your-assets`;
 
   return (
@@ -76,7 +76,7 @@ export default function YourAssetsPage() {
           <Figure
             label={t("figures.assets")}
             value={all.length}
-            detail={<span className="text-secondary">{t("figures.assetsDetail", { profiles: count(["PROFILE"]), reviews: count(["REVIEW_SITE"]), ai: count(["AI_APP", "AI_OVERVIEW"]), others: count(["PAGE", "DIRECTORY"]) })}</span>}
+            detail={<span className="text-secondary">{t("figures.assetsDetail", { profiles: count(["PROFILE"]), reviews: count(["REVIEW_SITE"]), ai: count(["AI_APP", "AI_OVERVIEW"]), others: count(["PAGE", "DIRECTORY", "PRESS"]) })}</span>}
           />
           <Figure label={t("figures.working")} value={all.filter((row) => row.stage === "WORKING").length} detail={<span className="text-secondary">{t("figures.workingDetail")}</span>} />
           <Figure label={t("figures.losing")} emphasis value={all.filter((row) => row.stage === "NOT_SEEN" || row.stage === "SEEN_NOT_CHOSEN").length} detail={<span className="text-secondary">{t("figures.losingDetail")}</span>} />

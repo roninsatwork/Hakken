@@ -26,7 +26,7 @@ const TABLES = [
   "aiAnswers", "aiCitations", "aiAnswerTexts", "aiAnswerIndex", "promptFanOutQueries", "promptFanOutDays", "siteSerpPages",
   "discoveredCompetitors", "websiteSearchStats", "websiteQuestionStats", "siteSummaryRequests",
   "listings", "listingWeeks", "holdListings", "mapChecks", "mapPositionWeeks", "localMarketParts", "listingActivityParts",
-  "listingReviewParts", "reviewReplyDrafts", "aiAnswerExtras", "aiSearchVolumes", "serpOverviews", "brandRadarMonths", "brandRadarQuestionParts", "assetSummaries",
+  "listingReviewParts", "reviewReplyDrafts", "aiAnswerExtras", "aiSearchVolumes", "serpOverviews", "brandRadarMonths", "brandRadarQuestionParts", "assetSummaries", "webMentionParts", "linkGapPairs",
 ] as const;
 
 /** Rows read per page: the large rows a few at a time, so no read passes 16 MB. */

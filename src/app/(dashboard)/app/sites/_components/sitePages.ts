@@ -8,7 +8,7 @@
  * as pages land. Copy lives in `messages/*.json` under `sites.menu`.
  */
 
-export type SitePageGroup = "site" | "radar" | "ai" | "google" | "local" | "reviews" | "keywords" | "paid" | "competitors" | "backlinks";
+export type SitePageGroup = "site" | "radar" | "ai" | "google" | "local" | "reviews" | "keywords" | "paid" | "competitors" | "backlinks" | "mentions";
 
 export type SitePage = {
   id: string;
@@ -68,7 +68,7 @@ export function setupPaused(page: SitePage, counts: SetupCounts): boolean {
   return false;
 }
 
-export const SITE_PAGE_GROUPS: SitePageGroup[] = ["site", "radar", "ai", "google", "local", "reviews", "keywords", "paid", "competitors", "backlinks"];
+export const SITE_PAGE_GROUPS: SitePageGroup[] = ["site", "radar", "ai", "google", "local", "reviews", "keywords", "paid", "competitors", "backlinks", "mentions"];
 
 export const SITE_PAGES: SitePage[] = [
   { id: "overview", group: "site", segment: "", built: true },
@@ -143,6 +143,11 @@ export const SITE_PAGES: SitePage[] = [
   { id: "backlinksIps", group: "backlinks", segment: "backlinks/ips", built: true },
   { id: "backlinksBroken", group: "backlinks", segment: "backlinks/broken", built: true },
   { id: "backlinksNewLost", group: "backlinks", segment: "backlinks/new-lost", built: true },
+
+  // Web mentions: pages across the web naming the business (discovery-local-reputation-ai-plan.md, step 6).
+  { id: "mentionsAll", group: "mentions", segment: "mentions", built: true },
+  { id: "mentionsRivals", group: "mentions", segment: "mentions/rivals", built: true },
+  { id: "mentionsListed", group: "mentions", segment: "mentions/listed", built: true },
 ];
 
 /** The part of a path after the site, without its slashes: "keywords/pages" for Top pages. */

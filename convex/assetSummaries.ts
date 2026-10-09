@@ -8,6 +8,8 @@ import { localSetup, officeChecks, officeSearches } from "./localReads";
 import { appAnswers } from "./siteAiApps";
 import { readOverviews } from "./siteAiOverviewGaps";
 import { questionsOf, readings } from "./siteBrandRadar";
+import { shownMentionsOf } from "./siteWebMentions";
+import type { MentionRow } from "./webMentions";
 import { holdBrandNames } from "./holdProfiles";
 import { siteKindOf } from "./utils/siteKinds";
 import { isTrackedHold } from "./utils/websitePairing";
@@ -25,14 +27,15 @@ import { stableText } from "./localListings";
  *
  * The stages, as built (said in the plan's change log):
  * - **Not there**: a directory or review site AI quotes beside rivals and
- *   never beside the website.
+ *   never beside the website; no page on the web naming it in a year.
  * - **Not seen enough**: the website on page one of Google for under ten
  *   searches; a Google profile in the map box for under half its searches; a
  *   review page with under twenty reviews; AI answers that neither name the
- *   website nor read its pages.
+ *   website nor read its pages; fewer than twelve pages naming it in a year.
  * - **Seen, not chosen**: the website bringing fewer visits a month than it
  *   has searches on page one; AI answers that read its pages but never
- *   recommend it; AI Overviews quoting it on under half the searches showing one.
+ *   recommend it; AI Overviews quoting it on under half the searches showing one;
+ *   pages naming it of which under half link to it.
  * - **Working**: the rest.
  */
 
@@ -50,6 +53,8 @@ const AFTER_COLLECTION_MS = 15 * 60 * 1000;
 const ENOUGH_REVIEWS = 20;
 /** A Google profile's reviews answered past which replies are good, as Business profile judges them. */
 const ANSWERED_ENOUGH = 0.8;
+/** Pages naming the business in a year that count as seen in the press and on the web: one a month. */
+const ENOUGH_MENTIONS = 12;
 
 const hostOf = (url: string) => {
   try {
@@ -208,7 +213,33 @@ export async function workOutAssets(ctx: Reader, site: Site): Promise<AssetRow[]
       fix: missing ? { code: "getListed", a: row.rivals.size } : null,
     });
   }
+  // Press and the web: the pages naming the business this year (Web mentions), and how many link to it.
+  const press = pressAsset(await shownMentionsOf(ctx, site.website._id));
+  if (press) rows.push(press);
   return rows;
+}
+
+/** The press line from the website's pages found by Web mentions (a year of them), or none before any were read. */
+export function pressAsset(mentions: MentionRow[] | null): AssetRow | null {
+  if (!mentions) return null;
+  const linked = mentions.filter((row) => row.linked === 1).length;
+  const unlinked = mentions.length - linked;
+  const stage = mentions.length === 0 ? "NOT_THERE" : mentions.length < ENOUGH_MENTIONS ? "NOT_SEEN" : linked * 2 < mentions.length ? "SEEN_NOT_CHOSEN" : "WORKING";
+  return {
+    key: "press",
+    kind: "PRESS",
+    name: "press",
+    seen: { code: "mentions", a: mentions.length },
+    chosen: mentions.length === 0 ? null : { code: "linked", a: linked, b: mentions.length },
+    stage,
+    fix: stage === "NOT_THERE"
+      ? { code: "getMentioned" }
+      : stage === "NOT_SEEN"
+        ? { code: "fewMentions", a: mentions.length }
+        : stage === "SEEN_NOT_CHOSEN"
+          ? { code: "askForLinks", a: unlinked }
+          : null,
+  };
 }
 
 /** Work a website's assets out now and keep them, writing nothing when nothing changed (rule 11). */

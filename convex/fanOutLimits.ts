@@ -204,6 +204,8 @@ export const FAN_OUT_LIMITS = {
   radarQuestions: { choices: [50, 100, 200, 500], fallback: 200, scope: "site" },
   /** Rivals Brand radar reads beside the website, its tracked competitors first. */
   radarRivals: { choices: [2, 4, 6], fallback: 4, scope: "site" },
+  /** Pages read each week for each name a website is searched by, and its rivals' (D9): Web mentions. */
+  mentionsPerCheck: { choices: [50, 100, 200], fallback: 100, scope: "site" },
 } as const satisfies Record<string, LimitSpec>;
 
 export type FanOutLimitKey = keyof typeof FAN_OUT_LIMITS;
@@ -322,6 +324,7 @@ const limitsArg = v.object({
   localRivalReviews: limitValue,
   radarQuestions: limitValue,
   radarRivals: limitValue,
+  mentionsPerCheck: limitValue,
 });
 
 /** Each limit's own value where set, null where it uses the level above. */

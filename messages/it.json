@@ -5822,6 +5822,8 @@
         "ai_citation_ai_mode": "Chiesto a Google AI Mode",
         "ai_keyword_volume": "Quanto spesso le ricerche sono chieste all'IA",
         "radar_mentions": "Letto il Radar del marchio",
+        "web_mentions": "Cercato il suo nome sul web",
+        "link_gap": "Letto chi collega due concorrenti",
         "ai_overview_fan_out": "Cosa hanno cercato le AI Overview di Google",
         "google_maps_find": "Attività trovata su Google Maps",
         "local_market": "Attività dello stesso tipo nelle vicinanze",
@@ -6253,8 +6255,8 @@
           "footer": "Le modifiche valgono dalla prossima esecuzione di ogni sito web."
         },
         "radar": {
-          "title": "Radar del marchio",
-          "intro": "Cosa legge il Radar del marchio di Discovery per ogni sito: le domande in cui le risposte IA di Google lo nominano, e altrettante per i concorrenti seguiti accanto, ogni mese. Acquistato solo per le aziende con il Radar del marchio attivo nella loro pianificazione della raccolta.",
+          "title": "Radar del marchio e citazioni sul web",
+          "intro": "Cosa leggono il Radar del marchio e le Citazioni sul web di Discovery per ogni sito: le domande in cui le risposte IA di Google lo nominano ogni mese, le pagine sul web che lo nominano ogni settimana, e altrettante per i concorrenti seguiti accanto. Acquistato solo per le aziende con il Radar del marchio o le Citazioni sul web attivi nella loro pianificazione della raccolta.",
           "footer": "Le modifiche valgono dalla prossima lettura mensile di ogni sito."
         },
         "ai": {
@@ -6608,6 +6610,11 @@
           "label": "Concorrenti accanto al sito su Brand radar",
           "description": "Quanti concorrenti monitorati del sito Brand radar legge accanto, a partire dal primo monitorato.",
           "cost": "Ogni concorrente viene letto come il sito: le sue domande ogni mese."
+        },
+        "mentionsPerCheck": {
+          "label": "Citazioni sul web lette a settimana, per ogni nome",
+          "description": "Quante pagine che nominano il sito vengono lette ogni settimana per il suo indirizzo e il suo nome, e altrettante per ogni concorrente seguito accanto.",
+          "cost": "Circa $0,03 a ricerca, ogni settimana, e un piccolo controllo IA per ogni nuova pagina."
         },
         "hakkenTasksPerPerson": {
           "label": "Attività attive per persona",
@@ -9397,6 +9404,16 @@
           "not_mentioned": "Non ne parla",
           "other": "Non si può dire"
         }
+      },
+      "discoveryMentionAbout": {
+        "name": "Questa pagina parla di questa attività?",
+        "description": "Legge ogni nuova pagina trovata che nomina un sito, per Citazioni sul web: questa attività, o qualcos'altro con lo stesso nome.",
+        "rule": "Senza, una pagina conta quando nomina l'indirizzo del sito, o il suo nome come parola intera.",
+        "answers": {
+          "about": "Parla di questa attività",
+          "another": "Qualcos'altro con lo stesso nome",
+          "other": "Non si può dire"
+        }
       }
     }
   },
@@ -9573,7 +9590,9 @@
       "questions": "{count, plural, =1 {# domanda} other {# domande}}",
       "found": "{count, plural, =1 {# trovata} other {# trovate}}",
       "reviews": "{count, plural, =1 {# recensione} other {# recensioni}}",
-      "assets": "{count, plural, =1 {# asset} other {# asset}}"
+      "assets": "{count, plural, =1 {# asset} other {# asset}}",
+      "mentions": "{count, plural, =1 {# citazione} other {# citazioni}}",
+      "places": "{count, plural, =1 {# posto} other {# posti}}"
     },
     "chart": {
       "download": "Scarica",
@@ -9979,6 +9998,7 @@
         "keywords": "Ricerca organica",
         "competitors": "Concorrenti",
         "backlinks": "Backlink",
+        "mentions": "Citazioni sul web",
         "paid": "Ricerca a pagamento"
       },
       "pages": {
@@ -9995,6 +10015,9 @@
         "radarOverview": "Panoramica",
         "radarSources": "Siti citati dall'IA",
         "radarGaps": "Lacune nelle AI Overview",
+        "mentionsAll": "Tutte le citazioni",
+        "mentionsRivals": "Contro i concorrenti",
+        "mentionsListed": "Dove farsi elencare",
         "googleSearches": "Le tue ricerche",
         "googleMoves": "Salite e discese",
         "googleAbove": "Chi ti supera",
@@ -12731,10 +12754,12 @@
         "REVIEW_SITE": "Sito di recensioni",
         "AI_APP": "App di IA",
         "AI_OVERVIEW": "Risposta IA su Google",
-        "DIRECTORY": "Elenco"
+        "DIRECTORY": "Elenco",
+        "PRESS": "Stampa e web"
       },
       "profileOf": "Profilo Google · {town}",
       "appAnswers": "Risposte di {name}",
+      "pressName": "Pagine che ti nominano",
       "columns": {
         "asset": "Asset",
         "kind": "Tipo",
@@ -12748,14 +12773,16 @@
         "mapBox": "Riquadro mappa per {a} ricerche su {b}",
         "aiQuoted": "{count, plural, =0 {Non citato dall'IA} =1 {Citato dall'IA una volta} other {Citato dall'IA {a} volte}}",
         "pagesRead": "{count, plural, =0 {Non ha letto le tue pagine} =1 {Ha letto le tue pagine una volta} other {Ha letto le tue pagine {a} volte}}",
-        "overviews": "{count, plural, =1 {Su 1 delle tue ricerche} other {Su {a} delle tue ricerche}}"
+        "overviews": "{count, plural, =1 {Su 1 delle tue ricerche} other {Su {a} delle tue ricerche}}",
+        "mentions": "{count, plural, =0 {Nessuna pagina ti nomina quest'anno} =1 {Nominato in 1 pagina quest'anno} other {Nominato in {a} pagine quest'anno}}"
       },
       "chosen": {
         "visits": "{a} visite al mese",
         "notRead": "Non ancora letto",
         "recommended": "Ti ha consigliato in {a} su {b}",
         "quotesYou": "Ti cita su {a}",
-        "reviews": "{a} recensioni · {rating}"
+        "reviews": "{a} recensioni · {rating}",
+        "linked": "{a} su {b} rimandano a te"
       },
       "fix": {
         "fewOnPageOne": "In prima pagina solo per {a} ricerche: lavora sulle pagine appena sotto.",
@@ -12767,11 +12794,166 @@
         "getRead": "ChatGPT non ti nomina né legge le tue pagine: fatti elencare dove cerca.",
         "answerRivalPage": "Una pagina di un concorrente, {text}, è citata {a} volte: scrivine una che risponda allo stesso.",
         "beQuoted": "Citato su meno della metà delle ricerche con una panoramica: rispondi alla domanda nelle prime righe delle tue pagine.",
-        "getListed": "{count, plural, =1 {Fatti elencare: c'è 1 concorrente} other {Fatti elencare: ci sono {a} concorrenti}}"
+        "getListed": "{count, plural, =1 {Fatti elencare: c'è 1 concorrente} other {Fatti elencare: ci sono {a} concorrenti}}",
+        "getMentioned": "Nessuna pagina ti nomina quest'anno: manda le tue notizie ai siti che citano i tuoi concorrenti.",
+        "fewMentions": "{count, plural, =1 {Nominato in 1 pagina quest'anno: punta a una al mese.} other {Nominato in {a} pagine quest'anno: punta a una al mese.}}",
+        "askForLinks": "{count, plural, =1 {1 pagina ti nomina senza un link: chiedine uno.} other {{a} pagine ti nominano senza un link: chiedine uno.}}"
       },
       "nothingToFix": "Niente da sistemare",
       "noMatch": "Nessun asset corrisponde.",
       "empty": "I tuoi asset vengono calcolati dopo la prossima raccolta."
+    },
+    "mentions": {
+      "title": "Citazioni sul web",
+      "description": "Pagine sul web che ti nominano, come parlano di te e se ti collegano.",
+      "you": "{name} · tu",
+      "youShort": "Tu",
+      "and": " e ",
+      "figures": {
+        "new": "Nuove citazioni",
+        "monthBefore": "rispetto ai 30 giorni prima",
+        "well": "Parlano bene di te",
+        "wellDetail": "{count} su {of}",
+        "badly": "Parlano male di te",
+        "badlyDetail": "Negli ultimi 30 giorni",
+        "badlyOn": "Tutte su {kind}",
+        "noLink": "Ti nominano senza link",
+        "noLinkDetail": "Pagine a cui vale la pena chiedere un link"
+      },
+      "notice": "Trovate cercando {names} sul web, in inglese, dal Regno Unito. Le pagine su qualcos'altro con lo stesso nome, come una persona o un'altra attività, vengono escluse da un controllo IA. {platformName} cerca ogni settimana, per circa 3 centesimi a ricerca.",
+      "chartTitle": "Citazioni al mese, per come parlano di te",
+      "chartHint": "Nuove pagine che ti nominano ogni mese, negli ultimi 12 mesi.",
+      "chartMonth": "Mese",
+      "chartWell": "Parlano bene di te",
+      "chartNeutral": "Neutre",
+      "chartBadly": "Parlano male di te (in cima a ogni barra)",
+      "searchPlaceholder": "Cerca una pagina o un sito…",
+      "toneFilter": "Tono",
+      "anyTone": "Qualsiasi tono",
+      "tones": {
+        "WELL": "Parlano bene di te",
+        "NEUTRAL": "Neutre",
+        "BADLY": "Parlano male di te"
+      },
+      "toneOne": {
+        "WELL": "Ne parla bene",
+        "NEUTRAL": "Neutra",
+        "BADLY": "Ne parla male"
+      },
+      "kindFilter": "Tipo di sito",
+      "everyKind": "Ogni tipo",
+      "kindsMany": {
+        "NEWS": "Notizie",
+        "BLOG": "Blog personali",
+        "FORUM": "Forum di discussione",
+        "SHOP": "Negozi",
+        "ORGANISATION": "Organizzazioni",
+        "OTHER": "Altri siti"
+      },
+      "kinds": {
+        "NEWS": "Notizie",
+        "BLOG": "Blog personale",
+        "FORUM": "Forum di discussione",
+        "SHOP": "Negozio",
+        "ORGANISATION": "Organizzazione",
+        "OTHER": "Sito"
+      },
+      "linkFilter": "Link",
+      "linkedOrNot": "Con o senza link",
+      "links": {
+        "linked": "Ti collega",
+        "unlinked": "Senza link"
+      },
+      "link": {
+        "linked": "Ti collega",
+        "ask": "Senza link · chiedine uno",
+        "none": "Senza link"
+      },
+      "inTwelveMonths": "in 12 mesi",
+      "columns": {
+        "date": "Data",
+        "page": "Pagina",
+        "address": "Indirizzo",
+        "kind": "Tipo",
+        "tone": "Tono",
+        "link": "Link",
+        "strength": "Forza"
+      },
+      "noMatch": "Nessuna pagina corrisponde.",
+      "empty": "Ancora nessuna pagina che ti nomina: il web viene cercato ogni settimana, dal prossimo controllo.",
+      "rivals": {
+        "title": "Citazioni sul web contro i concorrenti",
+        "description": "Quanto spesso il web nomina te e i concorrenti che segui, e come parla di ciascuno.",
+        "figures": {
+          "share": "La tua quota di citazioni",
+          "shareDetail": "{place}° su {of} · ultimi 30 giorni",
+          "most": "Il più nominato",
+          "mostDetail": "{count, plural, =1 {1 citazione} other {# citazioni}} · quota {share}%",
+          "fastest": "In crescita più rapida",
+          "worst": "Il peggio citato",
+          "worstDetail": "{count} su {of} ne parlano male",
+          "noneBadly": "Nessuno citato male"
+        },
+        "chartTitle": "Citazioni al mese",
+        "chartHint": "Nuove pagine che nominano ogni attività, negli ultimi 12 mesi.",
+        "youAndRivals": "{count, plural, =0 {solo tu} =1 {tu e 1 concorrente} other {tu e # concorrenti}} · ultimi 30 giorni",
+        "columns": {
+          "business": "Attività",
+          "mentions": "Citazioni",
+          "change": "Variazione",
+          "well": "Ne parlano bene",
+          "badly": "Ne parlano male",
+          "noLink": "Senza link",
+          "share": "Quota di citazioni"
+        },
+        "empty": "Ancora niente: il web viene cercato ogni settimana, dal prossimo controllo."
+      },
+      "listed": {
+        "title": "Dove farsi elencare",
+        "description": "Directory, siti di recensioni e stampa di cui si fidano le risposte IA di Google nel tuo settore, o che collegano i tuoi concorrenti, dove i concorrenti compaiono e tu no. Prima i migliori.",
+        "figures": {
+          "places": "Posti dove essere",
+          "placesDetail": "I concorrenti ci sono, tu no",
+          "quoted": "Citati dall'IA",
+          "quotedDetail": "Di questi compaiono nelle risposte IA sul tuo lavoro",
+          "links": "Collegano {count} concorrenti o più",
+          "linksDetail": "Dai backlink dei concorrenti",
+          "there": "Già presente",
+          "thereDetail": "Posti dove sei citato accanto o nominato"
+        },
+        "searchPlaceholder": "Cerca un sito…",
+        "kindFilter": "Tipo",
+        "everyKind": "Ogni tipo",
+        "kindFilters": {
+          "DIRECTORY": "Elenchi",
+          "REVIEWS": "Siti di recensioni",
+          "NEWS": "Stampa",
+          "WEBSITE": "Altri siti"
+        },
+        "statusFilter": "Stato",
+        "everyStatus": "Ogni stato",
+        "statuses": {
+          "missing": "Non ancora presente",
+          "there": "Già presente"
+        },
+        "bestFirst": "prima i migliori",
+        "why": {
+          "quoted": "{count, plural, =1 {Citato dall'IA una volta} other {Citato dall'IA # volte}}",
+          "links": "{count, plural, =1 {collega 1 concorrente} other {collega # concorrenti}}"
+        },
+        "rivalsCount": "{count} concorrenti",
+        "columns": {
+          "website": "Sito",
+          "kind": "Tipo",
+          "why": "Perché conta",
+          "rivals": "Concorrenti presenti",
+          "strength": "Forza",
+          "actions": "Azioni"
+        },
+        "visit": "Visita",
+        "noMatch": "Nessun posto corrisponde.",
+        "empty": "Ancora nessun posto: dalla lettura mensile del Radar del marchio e dai link dei concorrenti, dal prossimo controllo."
+      }
     }
   },
   "searchConsole": {

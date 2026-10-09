@@ -735,6 +735,7 @@ export const siteTables = {
     localRivalReviews: v.optional(v.number()),
     radarQuestions: v.optional(v.number()),
     radarRivals: v.optional(v.number()),
+    mentionsPerCheck: v.optional(v.number()),
     // Only the platform sets these: each is about something every company
     // shares (`sharedLimits.ts`).
     fanOutPerAnswer: v.optional(v.number()),

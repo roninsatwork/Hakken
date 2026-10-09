@@ -291,6 +291,8 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   collectionParts: RECORD,
   localSummaries: LATEST,
   assetSummaries: LATEST,
+  webMentionParts: thinned("the newest 1,000 pages within 12 months, trimmed as each week is filed", "webMentions/writeMentions"),
+  linkGapPairs: LATEST,
 
   // ── Search Console ────────────────────────────────────────────────────────
   searchConsoleConnections: RECORD,

@@ -1,0 +1,17 @@
+# Discovery → Web mentions → Where to get listed — the approved look (board "ListingsGap" of docs/plans/assets/discovery-local-reputation-ai/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Where to get listed
+figures
+  figure: Places to be
+  figure: Quoted by AI
+  figure: Link to # rivals or more
+  figure: Already there
+search: Find a website…
+filter: Kind
+filter: Status
+table: Website | Kind | Why it matters | Rivals there | Strength | Actions
+  table-bar
+    download: Download CSV
+  table-footer
+    select: Rows per page

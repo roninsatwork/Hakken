@@ -19,6 +19,7 @@ import { telegramTables } from "./telegramSchema";
 import { localTables } from "./localSchema";
 import { aiAppTables } from "./aiAppSchema";
 import { radarTables } from "./radarSchema";
+import { mentionTables } from "./mentionSchema";
 import { decisionCertaintyValidator, decisionFallbackReasonValidator, decisionModeValidator, decisionOutcomeValidator, decisionSourceValidator } from "./utils/decisionShapes";
 
 
@@ -52,6 +53,7 @@ export default defineSchema({
   ...localTables,
   ...aiAppTables,
   ...radarTables,
+  ...mentionTables,
   
   companies: defineTable({
     name: v.string(),

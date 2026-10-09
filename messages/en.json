@@ -5822,6 +5822,8 @@
         "ai_citation_ai_mode": "Asked Google AI Mode",
         "ai_keyword_volume": "How often searches are asked of AI",
         "radar_mentions": "Read Brand radar",
+        "web_mentions": "Searched the web for its name",
+        "link_gap": "Read who links to two rivals",
         "ai_overview_fan_out": "What Google's AI Overviews searched",
         "google_maps_find": "Found a business on Google Maps",
         "local_market": "Businesses of its kind nearby",
@@ -6253,8 +6255,8 @@
           "footer": "Changes apply from each website's next run."
         },
         "radar": {
-          "title": "Brand radar",
-          "intro": "What Discovery's Brand radar reads for each website: the questions where Google's AI answers name it, and as many for the rivals watched beside it, each month. Bought only for companies with Brand radar switched on in their Collection schedule.",
+          "title": "Brand radar and web mentions",
+          "intro": "What Discovery's Brand radar and Web mentions read for each website: the questions where Google's AI answers name it each month, the pages across the web naming it each week, and as many for the rivals watched beside it. Bought only for companies with Brand radar or Web mentions switched on in their Collection schedule.",
           "footer": "Changes apply from each website's next monthly reading."
         },
         "ai": {
@@ -6608,6 +6610,11 @@
           "label": "Rivals beside the website on Brand radar",
           "description": "How many of the website's tracked competitors Brand radar reads beside it, the first tracked first.",
           "cost": "Each rival is read as the website is: its questions each month."
+        },
+        "mentionsPerCheck": {
+          "label": "Web mentions read a week, for each name",
+          "description": "How many pages naming the website are read each week for its address and its name, and as many for each rival watched beside it.",
+          "cost": "About $0.03 a search, each week, and a small AI check for each new page."
         },
         "hakkenTasksPerPerson": {
           "label": "Tasks on at once, per person",
@@ -9397,6 +9404,16 @@
           "not_mentioned": "Not about it",
           "other": "Cannot tell"
         }
+      },
+      "discoveryMentionAbout": {
+        "name": "Is this page about this business?",
+        "description": "Reads each new page found naming a website, for Web mentions: about this business, or something else of the same name.",
+        "rule": "Without it, a page counts when it names the website's address, or its name as a whole word.",
+        "answers": {
+          "about": "About this business",
+          "another": "Something else of the name",
+          "other": "Cannot tell"
+        }
       }
     }
   },
@@ -9573,7 +9590,9 @@
       "questions": "{count, plural, =1 {# question} other {# questions}}",
       "found": "{count, plural, =1 {# found} other {# found}}",
       "reviews": "{count, plural, =1 {# review} other {# reviews}}",
-      "assets": "{count, plural, =1 {# asset} other {# assets}}"
+      "assets": "{count, plural, =1 {# asset} other {# assets}}",
+      "mentions": "{count, plural, =1 {# mention} other {# mentions}}",
+      "places": "{count, plural, =1 {# place} other {# places}}"
     },
     "chart": {
       "download": "Download",
@@ -9979,6 +9998,7 @@
         "keywords": "Organic search",
         "competitors": "Competitors",
         "backlinks": "Backlinks",
+        "mentions": "Web mentions",
         "paid": "Paid search"
       },
       "pages": {
@@ -9995,6 +10015,9 @@
         "radarOverview": "Overview",
         "radarSources": "Websites AI cites",
         "radarGaps": "AI Overview gaps",
+        "mentionsAll": "All mentions",
+        "mentionsRivals": "Against rivals",
+        "mentionsListed": "Where to get listed",
         "googleSearches": "Your searches",
         "googleMoves": "Wins and losses",
         "googleAbove": "Who ranks above you",
@@ -12731,10 +12754,12 @@
         "REVIEW_SITE": "Review site",
         "AI_APP": "AI app",
         "AI_OVERVIEW": "AI answer on Google",
-        "DIRECTORY": "Directory"
+        "DIRECTORY": "Directory",
+        "PRESS": "Press and the web"
       },
       "profileOf": "Google profile · {town}",
       "appAnswers": "{name} answers",
+      "pressName": "Pages naming you",
       "columns": {
         "asset": "Asset",
         "kind": "Kind",
@@ -12748,14 +12773,16 @@
         "mapBox": "Map box for {a} of {b} searches",
         "aiQuoted": "{count, plural, =0 {Not quoted by AI} =1 {Quoted by AI once} other {Quoted by AI {a} times}}",
         "pagesRead": "{count, plural, =0 {Read none of your pages} =1 {Read your pages once} other {Read your pages {a} times}}",
-        "overviews": "{count, plural, =1 {On 1 of your searches} other {On {a} of your searches}}"
+        "overviews": "{count, plural, =1 {On 1 of your searches} other {On {a} of your searches}}",
+        "mentions": "{count, plural, =0 {Named on no page this year} =1 {Named on 1 page this year} other {Named on {a} pages this year}}"
       },
       "chosen": {
         "visits": "{a} visits a month",
         "notRead": "Not read yet",
         "recommended": "Recommended you in {a} of {b}",
         "quotesYou": "Quotes you on {a}",
-        "reviews": "{a} reviews · {rating}"
+        "reviews": "{a} reviews · {rating}",
+        "linked": "{a} of {b} link to you"
       },
       "fix": {
         "fewOnPageOne": "On page one for only {a} searches: work on the pages ranking just below it.",
@@ -12767,11 +12794,166 @@
         "getRead": "ChatGPT neither names you nor reads your pages: get listed where it looks.",
         "answerRivalPage": "A rival's page, {text}, is quoted {a} times: write one that answers the same.",
         "beQuoted": "Quoted on under half the searches showing an overview: answer the question in your pages' first lines.",
-        "getListed": "{count, plural, =1 {Get listed: 1 rival is} other {Get listed: {a} rivals are}}"
+        "getListed": "{count, plural, =1 {Get listed: 1 rival is} other {Get listed: {a} rivals are}}",
+        "getMentioned": "No page names you this year: send your news to the places that quote your rivals.",
+        "fewMentions": "{count, plural, =1 {Named on 1 page this year: aim for one a month.} other {Named on {a} pages this year: aim for one a month.}}",
+        "askForLinks": "{count, plural, =1 {1 page names you without a link: ask it for one.} other {{a} pages name you without a link: ask them for one.}}"
       },
       "nothingToFix": "Nothing to fix",
       "noMatch": "No asset matches.",
       "empty": "Your assets are worked out after the next collection."
+    },
+    "mentions": {
+      "title": "Web mentions",
+      "description": "Pages across the web that name you, how they speak about you, and whether they link to you.",
+      "you": "{name} · you",
+      "youShort": "You",
+      "and": " and ",
+      "figures": {
+        "new": "New mentions",
+        "monthBefore": "on the 30 days before",
+        "well": "Speak well of you",
+        "wellDetail": "{count} of the {of}",
+        "badly": "Speak badly of you",
+        "badlyDetail": "In the last 30 days",
+        "badlyOn": "All on {kind}",
+        "noLink": "Name you without a link",
+        "noLinkDetail": "Pages worth asking for a link"
+      },
+      "notice": "Found by looking for {names} across the web, in English, from the UK. Pages about something else of the same name, like a person or another business, are left out by an AI check. {platformName} looks each week, for about 3 cents a search.",
+      "chartTitle": "Mentions a month, by how they speak about you",
+      "chartHint": "New pages naming you each month, the last 12 months.",
+      "chartMonth": "Month",
+      "chartWell": "Speak well of you",
+      "chartNeutral": "Neutral",
+      "chartBadly": "Speak badly of you (top of each bar)",
+      "searchPlaceholder": "Find a page or website…",
+      "toneFilter": "Tone",
+      "anyTone": "Any tone",
+      "tones": {
+        "WELL": "Speak well of you",
+        "NEUTRAL": "Neutral",
+        "BADLY": "Speak badly of you"
+      },
+      "toneOne": {
+        "WELL": "Speaks well",
+        "NEUTRAL": "Neutral",
+        "BADLY": "Speaks badly"
+      },
+      "kindFilter": "Kind of site",
+      "everyKind": "Every kind",
+      "kindsMany": {
+        "NEWS": "News",
+        "BLOG": "Blogs",
+        "FORUM": "Forums",
+        "SHOP": "Shops",
+        "ORGANISATION": "Organisations",
+        "OTHER": "Other websites"
+      },
+      "kinds": {
+        "NEWS": "News",
+        "BLOG": "Blog",
+        "FORUM": "Forum",
+        "SHOP": "Shop",
+        "ORGANISATION": "Organisation",
+        "OTHER": "Website"
+      },
+      "linkFilter": "Link",
+      "linkedOrNot": "Linked or not",
+      "links": {
+        "linked": "Links to you",
+        "unlinked": "No link"
+      },
+      "link": {
+        "linked": "Links to you",
+        "ask": "No link · ask for one",
+        "none": "No link"
+      },
+      "inTwelveMonths": "in 12 months",
+      "columns": {
+        "date": "Date",
+        "page": "Page",
+        "address": "Address",
+        "kind": "Kind",
+        "tone": "Tone",
+        "link": "Link",
+        "strength": "Strength"
+      },
+      "noMatch": "No page matches.",
+      "empty": "No page naming you found yet: the web is searched each week, from the next check.",
+      "rivals": {
+        "title": "Web mentions against rivals",
+        "description": "How often the web names you and the rivals you watch, and how it speaks about each.",
+        "figures": {
+          "share": "Your share of mentions",
+          "shareDetail": "{place, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} of {of} · the last 30 days",
+          "most": "Most talked about",
+          "mostDetail": "{count, plural, =1 {1 mention} other {# mentions}} · {share}% share",
+          "fastest": "Growing fastest",
+          "worst": "Spoken of worst",
+          "worstDetail": "{count} of {of} speak badly",
+          "noneBadly": "None spoken of badly"
+        },
+        "chartTitle": "Mentions a month",
+        "chartHint": "New pages naming each business, the last 12 months.",
+        "youAndRivals": "{count, plural, =0 {you alone} =1 {you and 1 rival} other {you and # rivals}} · the last 30 days",
+        "columns": {
+          "business": "Business",
+          "mentions": "Mentions",
+          "change": "Change",
+          "well": "Speak well",
+          "badly": "Speak badly",
+          "noLink": "No link",
+          "share": "Share of mentions"
+        },
+        "empty": "Nothing found yet: the web is searched each week, from the next check."
+      },
+      "listed": {
+        "title": "Where to get listed",
+        "description": "Directories, review sites and press that Google's AI answers trust in your field, or that link to your rivals, where rivals appear and you do not. Best first.",
+        "figures": {
+          "places": "Places to be",
+          "placesDetail": "Rivals are there, you are not",
+          "quoted": "Quoted by AI",
+          "quotedDetail": "Of them appear in AI answers about your work",
+          "links": "Link to {count} rivals or more",
+          "linksDetail": "From the rivals' backlinks",
+          "there": "Already there",
+          "thereDetail": "Places you are quoted beside or named on"
+        },
+        "searchPlaceholder": "Find a website…",
+        "kindFilter": "Kind",
+        "everyKind": "Every kind",
+        "kindFilters": {
+          "DIRECTORY": "Directories",
+          "REVIEWS": "Review sites",
+          "NEWS": "Press",
+          "WEBSITE": "Other websites"
+        },
+        "statusFilter": "Status",
+        "everyStatus": "Every status",
+        "statuses": {
+          "missing": "Not there yet",
+          "there": "Already there"
+        },
+        "bestFirst": "best first",
+        "why": {
+          "quoted": "{count, plural, =1 {Quoted by AI once} other {Quoted by AI # times}}",
+          "links": "{count, plural, =1 {links to 1 rival} other {links to # rivals}}"
+        },
+        "rivalsCount": "{count} rivals",
+        "columns": {
+          "website": "Website",
+          "kind": "Kind",
+          "why": "Why it matters",
+          "rivals": "Rivals there",
+          "strength": "Strength",
+          "actions": "Actions"
+        },
+        "visit": "Visit",
+        "noMatch": "No place matches.",
+        "empty": "No place found yet: from Brand radar's monthly reading and the rivals' links, from the next check."
+      }
     }
   },
   "searchConsole": {

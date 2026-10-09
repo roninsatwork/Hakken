@@ -1,6 +1,7 @@
 import { readsAsShown } from "./seoAiEngines";
 import { isAiDemandOperation } from "./dataForSeoAiDemandOperations";
 import { isRadarOperation } from "./dataForSeoRadarOperations";
+import { isMentionOperation } from "./dataForSeoMentionOperations";
 import type { CollectionPart } from "./collectionParts";
 import { isLocalOperation } from "./dataForSeoLocalOperations";
 import { isReviewOperation } from "./dataForSeoReviewOperations";
@@ -18,5 +19,6 @@ export function discoveryPartOf(operationId: string): CollectionPart | null {
   if (readsAsShown(operationId)) return "aiApps";
   if (isAiDemandOperation(operationId)) return "aiDemand";
   if (isRadarOperation(operationId)) return "brandRadar";
+  if (isMentionOperation(operationId)) return "webMentions";
   return null;
 }

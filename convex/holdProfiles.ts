@@ -77,6 +77,30 @@ export const listNamedWebsitesInternal = internalQuery({
 });
 
 /**
+ * What a company says one of its own websites' business does: what the AI
+ * check on a page naming the business reads beside its name, so a casino
+ * game that shares an agency's name is told apart (discovery plan, D20).
+ * Only the asking company's own words, never another's.
+ */
+export const businessOfInternal = internalQuery({
+  args: { companyId: v.id("companies"), websiteId: v.id("websites") },
+  returns: v.union(v.object({ sector: v.union(v.string(), v.null()), description: v.union(v.string(), v.null()) }), v.null()),
+  handler: async (ctx, args) => {
+    const holds = await ctx.db
+      .query("companyWebsites")
+      .withIndex("by_company_website", (q) => q.eq("companyId", args.companyId).eq("websiteId", args.websiteId))
+      .take(5);
+    for (const hold of holds) {
+      const profile = await holdProfileOf(ctx, hold._id);
+      if (profile?.sector || profile?.businessDescription) {
+        return { sector: profile.sector ?? null, description: profile.businessDescription ?? null };
+      }
+    }
+    return null;
+  },
+});
+
+/**
  * Whether a mention of a website counts for a company: whether any name found
  * in the answer is one of the company's own for that website. A mention filed
  * before names were each company's names only the one matched.

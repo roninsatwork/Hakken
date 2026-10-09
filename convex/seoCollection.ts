@@ -34,6 +34,7 @@ import { localSteps } from "./localPlanning";
 import { reviewSteps } from "./reviewPlanning";
 import { aiDemandSteps } from "./aiDemand";
 import { radarSteps } from "./brandRadar";
+import { mentionSteps } from "./webMentions";
 import { RADAR_OPERATION } from "./dataForSeoRadarOperations";
 import { AI_DEMAND_OPERATION } from "./dataForSeoAiDemandOperations";
 import { creditCycleLine } from "./creditHooks";
@@ -388,6 +389,10 @@ async function websiteSteps(
     // What Google's AI answers say of it and its rivals, monthly, when it has Brand radar on (`brandRadar.ts`).
     ...await radarSteps(ctx, cycle, companyWebsite, (params, keyStartedAt, sendIndex) => planSharedPull(ctx, cycle, {
       operation: findSeoOperation(RADAR_OPERATION)!, params, sentinel: "keyword", websiteId: companyWebsite.websiteId, sendIndex, keyStartedAt,
+    })),
+    // Pages across the web naming it and its rivals, weekly, when it has Web mentions on (`webMentions.ts`).
+    ...await mentionSteps(ctx, cycle, companyWebsite, (operationId, params, keyStartedAt, sendIndex) => planSharedPull(ctx, cycle, {
+      operation: findSeoOperation(operationId)!, params, sentinel: "keyword", websiteId: companyWebsite.websiteId, sendIndex, keyStartedAt,
     })),
     // And their reviews, when it has Reviews switched on (`reviewPlanning.ts`).
     ...await reviewSteps(ctx, cycle, companyWebsite, (operation, params, keyStartedAt, sendIndex) => planSharedPull(ctx, cycle, {

@@ -100,6 +100,8 @@ describe("the registry holds well-formed entries", () => {
       // Google profiles, Trustpilot and the businesses of a kind near a map
       // point, for Discovery's Local pages (discovery-local-reputation-ai-plan.md).
       "Business Data",
+      // Pages across the web naming a business, for Discovery's Web mentions (the same plan, step 6).
+      "Content Analysis",
       "DataForSEO Labs",
       "Keywords Data",
       // The site crawl behind the Sites Site audit (Phase 5).

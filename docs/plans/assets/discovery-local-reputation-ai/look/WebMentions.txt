@@ -1,0 +1,20 @@
+# Discovery → Web mentions → All mentions — the approved look (board "WebMentions" of docs/plans/assets/discovery-local-reputation-ai/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Web mentions
+figures
+  figure: New mentions
+  figure: Speak well of you
+  figure: Speak badly of you
+  figure: Name you without a link
+notice (info)
+chart-card: Mentions a month, by how they speak about you
+search: Find a page or website…
+filter: Tone
+filter: Kind of site
+filter: Link
+table: Date | Page | Kind | Tone | Link | Strength
+  table-bar
+    download: Download CSV
+  table-footer
+    select: Rows per page

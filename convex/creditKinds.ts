@@ -59,6 +59,9 @@ export function creditKindOfFamily(family: string): CreditKind | null {
     case "On-Page":
       return "siteAudit";
     case "Backlinks":
+    // Discovery's Web mentions: pages across the web naming a business, off-site
+    // like links, charged as links until the cost audit says otherwise.
+    case "Content Analysis":
       return "backlinks";
     default:
       return null;

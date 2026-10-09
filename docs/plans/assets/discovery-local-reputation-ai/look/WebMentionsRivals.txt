@@ -1,0 +1,13 @@
+# Discovery → Web mentions → Against rivals — the approved look (board "WebMentionsRivals" of docs/plans/assets/discovery-local-reputation-ai/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Web mentions against rivals
+figures
+  figure: Your share of mentions
+  figure: Most talked about
+  figure: Growing fastest
+  figure: Spoken of worst
+chart-card: Mentions a month
+table: Business | Mentions | Change | Speak well | Speak badly | No link | Share of mentions
+  table-bar
+    download: Download CSV
