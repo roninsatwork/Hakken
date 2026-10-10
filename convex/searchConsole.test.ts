@@ -170,7 +170,13 @@ async function signIn(t: Harness, admin: Caller, siteId: Id<"companyWebsites">, 
 const connectionOf = (t: Harness, siteId: Id<"companyWebsites">) =>
   t.run(async (ctx) => await ctx.db.query("searchConsoleConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", siteId)).first());
 
-const tokensOf = (t: Harness) => t.run(async (ctx) => await ctx.db.query("searchConsoleTokens").collect());
+const tokensOf = (t: Harness) => t.run(async (ctx) => await ctx.db.query("googleTokens").collect());
+
+/** The Google account a website's Search Console reads with, through the shared sign-in (google-analytics-plan.md §4.6). */
+const accountOfSite = (t: Harness, siteId: Id<"companyWebsites">) => t.run(async (ctx) => {
+  const connection = await ctx.db.query("searchConsoleConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", siteId)).first();
+  return connection?.googleConnectionId ? (await ctx.db.get(connection.googleConnectionId))?.account ?? null : null;
+});
 
 /** A list kept for one day, as [key, clicks] — a search's own clicks added up from its pairs. */
 const rowsOf = (t: Harness, siteId: Id<"companyWebsites">, list: "query" | "page" | "country" | "device" | "appearance", day: string, grain: "DAY" | "WEEK" | "MONTH" = "DAY") =>
@@ -252,6 +258,8 @@ describe("connecting a website's Search Console", () => {
     expect(google.searchParams.get("redirect_uri")).toMatch(/\/api\/search-console\/oauth\/callback$/);
     expect(google.searchParams.get("access_type")).toBe("offline");
     expect(google.searchParams.get("prompt")).toBe("select_account consent");
+    // What the account granted before stays: adding Analytics never takes Search Console away.
+    expect(google.searchParams.get("include_granted_scopes")).toBe("true");
     expect(google.searchParams.get("state")).toBe(state);
   });
 
@@ -291,8 +299,8 @@ describe("connecting a website's Search Console", () => {
       status: "CONNECTED",
       property: "sc-domain:acme-shop.test",
       permission: "siteOwner",
-      googleAccount: "owner@acme-shop.test",
     });
+    expect(await accountOfSite(t, siteId)).toBe("owner@acme-shop.test");
     expect(connection?.pendingState).toBeUndefined();
 
     const [token] = await tokensOf(t);
@@ -962,7 +970,7 @@ describe("the Search Console Collector agent", () => {
     await t.run(async (ctx) => {
       const blog = (await ctx.db.query("searchConsoleConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", blogId)).first())!;
       // The blog's token was renewed by someone else just now: still good.
-      const token = (await ctx.db.query("searchConsoleTokens").withIndex("by_connection", (q) => q.eq("connectionId", blog._id)).first())!;
+      const token = (await ctx.db.query("googleTokens").withIndex("by_connection", (q) => q.eq("googleConnectionId", blog.googleConnectionId!)).first())!;
       await ctx.db.patch(token._id, { expiresAt: Date.now() + 60 * 60 * 1000 });
     });
 
@@ -1039,14 +1047,15 @@ describe("disconnecting", () => {
 
     const left = await t.run(async (ctx) => ({
       connections: await ctx.db.query("searchConsoleConnections").collect(),
-      tokens: await ctx.db.query("searchConsoleTokens").collect(),
+      tokens: await ctx.db.query("googleTokens").collect(),
+      google: await ctx.db.query("googleConnections").collect(),
       days: await ctx.db.query("searchConsoleDays").collect(),
       lists: await ctx.db.query("searchConsoleLists").collect(),
       periods: await ctx.db.query("searchConsolePeriods").collect(),
       seen: await ctx.db.query("searchConsoleSeen").collect(),
       runs: await ctx.db.query("searchConsoleRuns").collect(),
     }));
-    expect(left).toEqual({ connections: [], tokens: [], days: [], lists: [], periods: [], seen: [], runs: [] });
+    expect(left).toEqual({ connections: [], tokens: [], google: [], days: [], lists: [], periods: [], seen: [], runs: [] });
     expect(revokes(google)).toHaveLength(1);
   });
 });

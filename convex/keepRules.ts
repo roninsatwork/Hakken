@@ -294,6 +294,13 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   webMentionParts: thinned("the newest 1,000 pages within 12 months, trimmed as each week is filed", "webMentions/writeMentions"),
   linkGapPairs: LATEST,
 
+  // ── The Google sign-in Search Console and Google Analytics share ──────────
+  googleConnections: RECORD,
+  googleTokens: RECORD,
+
+  // ── Google Analytics (google-analytics-plan.md §4.3) ─────────────────────
+  googleAnalyticsConnections: RECORD,
+
   // ── Search Console ────────────────────────────────────────────────────────
   searchConsoleConnections: RECORD,
   searchConsoleTokens: RECORD,

@@ -66,7 +66,7 @@ export const purgeWebsiteHoldingsInternal = internalMutation({
       // Its Local offices and rivals, finds and menu numbers (`localSweep.ts`); the businesses themselves are the platform's.
       await purgeHoldLocal(ctx, owner._id);
       // Its Search Console connection and figures, the company's alone, and the angles of its questions' searches.
-      await ctx.scheduler.runAfter(0, internal.searchConsoleConnect.forgetHold, { companyWebsiteId: owner._id });
+      await ctx.scheduler.runAfter(0, internal.googleConnection.forgetHold, { companyWebsiteId: owner._id });
       await ctx.scheduler.runAfter(0, internal.fanOutAngles.purgeHoldAngles, { holdId: owner._id });
       await ctx.scheduler.runAfter(0, internal.holdPages.purgeHoldPages, { holdId: owner._id });
       // A competitor's counts stay in the rows of the list it was watched
@@ -545,7 +545,7 @@ export const purgeCompanyWebsitesInternal = internalMutation({
       await purgeHoldProfile(ctx, row._id);
       // Its own searches, questions and AI lines go with it (V9), and its Search Console.
       await ctx.scheduler.runAfter(0, internal.websitePurge.purgeHoldListsInternal, { companyWebsiteId: row._id });
-      await ctx.scheduler.runAfter(0, internal.searchConsoleConnect.forgetHold, { companyWebsiteId: row._id });
+      await ctx.scheduler.runAfter(0, internal.googleConnection.forgetHold, { companyWebsiteId: row._id });
       await ctx.scheduler.runAfter(0, internal.fanOutAngles.purgeHoldAngles, { holdId: row._id });
       await ctx.scheduler.runAfter(0, internal.holdPages.purgeHoldPages, { holdId: row._id });
       await ctx.db.delete(row._id);

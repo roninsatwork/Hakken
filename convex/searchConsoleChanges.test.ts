@@ -3,8 +3,9 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { useFixedDay } from "@/src/test/realTime";
+import { seedGoogleSignIn } from "@/src/test/googleGrant";
+import { encryptConnectorToken } from "./connectorTokenCrypto";
 
 /**
  * Search Console's Changes and Breakdowns reads (docs/plans/active/
@@ -46,10 +47,7 @@ async function setup(role: "USER" | "SUPER_ADMIN" = "USER") {
       companyId, companyWebsiteId: siteId, websiteId, status: "CONNECTED", property: "sc-domain:acme-shop.test", dataProperty: "sc-domain:acme-shop.test",
       newestDay: NEWEST, oldestDay: OLDEST, createdAt: 1, updatedAt: 1,
     });
-    await ctx.db.insert("searchConsoleTokens", {
-      connectionId, accessTokenCiphertext: await encryptConnectorToken("ya29.stored"), refreshTokenCiphertext: await encryptConnectorToken("1//refresh"),
-      expiresAt: Date.now() + 3_000_000, scopes: [], createdAt: 1, updatedAt: 1,
-    });
+    await seedGoogleSignIn(ctx, encryptConnectorToken, { companyWebsiteId: siteId, connectionId });
     return { companyId, userId, websiteId, siteId };
   });
   return { t, ...ids, reader: t.withIdentity({ subject: ids.userId }) };

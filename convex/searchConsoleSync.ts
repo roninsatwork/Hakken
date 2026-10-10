@@ -911,7 +911,7 @@ export const clearCollected = internalMutation({
 /**
  * A website the company no longer holds: everything Search Console brought
  * for it, its runs, its tracked lists and its connection, a batch at a time.
- * Its grant has already been given back (`searchConsoleConnect.forgetHold`).
+ * Its grant has already been given back (`googleConnection.forgetHold`).
  */
 export const purgeHold = internalMutation({
   args: { companyWebsiteId: v.id("companyWebsites") },
@@ -940,15 +940,8 @@ export const purgeHold = internalMutation({
       await ctx.scheduler.runAfter(0, internal.searchConsoleSync.purgeHold, args);
       return null;
     }
-    if (connection) {
-      for (const token of await ctx.db
-        .query("searchConsoleTokens")
-        .withIndex("by_connection", (q) => q.eq("connectionId", connection._id))
-        .take(10)) {
-        await ctx.db.delete(token._id);
-      }
-      await ctx.db.delete(connection._id);
-    }
+    // Its Google sign-in was given back and forgotten first (`googleConnection.forgetHold`).
+    if (connection) await ctx.db.delete(connection._id);
     return null;
   },
 });

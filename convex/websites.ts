@@ -709,7 +709,7 @@ export const removeCompanyWebsite = superAdminMutation({
     // private-tracking-lists-plan.md, V9).
     await ctx.scheduler.runAfter(0, internal.websitePurge.purgeHoldListsInternal, { companyWebsiteId: args.id });
     // Its Search Console connection and figures are the company's alone, and go too, as do its fan-out angles.
-    await ctx.scheduler.runAfter(0, internal.searchConsoleConnect.forgetHold, { companyWebsiteId: args.id });
+    await ctx.scheduler.runAfter(0, internal.googleConnection.forgetHold, { companyWebsiteId: args.id });
     await ctx.scheduler.runAfter(0, internal.fanOutAngles.purgeHoldAngles, { holdId: args.id });
     // Its every page once (Your pages) goes with it.
     await ctx.scheduler.runAfter(0, internal.holdPages.purgeHoldPages, { holdId: args.id });

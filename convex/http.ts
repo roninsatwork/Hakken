@@ -17,7 +17,7 @@ import {
   handleConnectorOAuthAuthorize,
   handleConnectorOAuthCallback,
 } from "./connectorOAuth";
-import { handleSearchConsoleAuthorize, handleSearchConsoleCallback } from "./searchConsoleConnect";
+import { handleGoogleAuthorize, handleGoogleCallback } from "./googleConnection";
 import { handleOneClickUnsubscribe, handleResendWebhook } from "./emailHttp";
 import { handleXAuthorize, handleXCallback } from "./xConnect";
 import { handleTelegramWebhook } from "./telegramHttp";
@@ -134,20 +134,22 @@ http.route({
   handler: handleConnectorOAuthCallback,
 });
 
-// An owned website's Search Console: the admin is sent on to Google's sign-in
-// from here, and Google sends them back with a code, exchanged server-side.
-// Both legs are authenticated by the connection's own single-use state
-// (docs/plans/active/search-console-plan.md §3).
+// An owned website's Google sign-in, shared by Search Console and Google
+// Analytics: the admin is sent on to Google's sign-in from here, and Google
+// sends them back with a code, exchanged server-side. Both legs are
+// authenticated by the section's own single-use state
+// (docs/plans/active/search-console-plan.md §3; google-analytics-plan.md §3).
+// The paths stay Search Console's: the return address is registered with Google.
 http.route({
   path: "/api/search-console/oauth/authorize",
   method: "GET",
-  handler: handleSearchConsoleAuthorize,
+  handler: handleGoogleAuthorize,
 });
 
 http.route({
   path: "/api/search-console/oauth/callback",
   method: "GET",
-  handler: handleSearchConsoleCallback,
+  handler: handleGoogleCallback,
 });
 
 // Attach `@convex-dev/auth` endpoints to the Convex HTTP router

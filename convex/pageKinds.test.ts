@@ -3,9 +3,10 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { NOT_SORTED_KIND } from "./utils/pageKinds";
 import { useFixedDay } from "@/src/test/realTime";
+import { seedGoogleSignIn } from "@/src/test/googleGrant";
+import { encryptConnectorToken } from "./connectorTokenCrypto";
 
 /**
  * A website's own classifications on its charts and screens (docs/plans/
@@ -169,12 +170,7 @@ describe("Search Console's lists of pages", () => {
     const own = await classify(t, holdId);
     await t.run(async (ctx) => {
       const connection = (await ctx.db.query("searchConsoleConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", holdId)).first())!;
-      await ctx.db.insert("searchConsoleTokens", {
-        connectionId: connection._id,
-        accessTokenCiphertext: await encryptConnectorToken("ya29.stored"),
-        refreshTokenCiphertext: await encryptConnectorToken("1//refresh"),
-        expiresAt: Date.now() + 3_000_000, scopes: [], createdAt: NOW, updatedAt: NOW,
-      });
+      await seedGoogleSignIn(ctx, encryptConnectorToken, { companyWebsiteId: holdId, connectionId: connection._id });
     });
     // Google's pairs and pages for any dates: the same four pages.
     vi.stubGlobal("fetch", vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {

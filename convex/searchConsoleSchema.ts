@@ -190,6 +190,9 @@ export const searchConsoleTables = {
     pendingState: v.optional(v.string()),
     pendingAt: v.optional(v.number()),
     pendingBy: v.optional(v.id("users")),
+    /** The shared Google sign-in this connection reads with (`googleSchema.ts`, google-analytics-plan.md §4.6). */
+    googleConnectionId: v.optional(v.id("googleConnections")),
+    /** Before the shared sign-in: moved into it by `2026-10-10-shared-google-connection`, then removed. */
     googleAccount: v.optional(v.string()),
     /** The account's properties that are this website, while one is chosen. */
     choices: v.optional(v.array(v.object({ property: v.string(), permission: v.string() }))),
@@ -272,7 +275,9 @@ export const searchConsoleTables = {
 
   /**
    * A connection's Google tokens, as ciphertext only (`connectorTokenCrypto`).
-   * Read by internal functions alone, as `connectorOAuthTokens` is.
+   * Read by internal functions alone, as `connectorOAuthTokens` is. Moved into
+   * the shared `googleTokens` by `2026-10-10-shared-google-connection`, then
+   * removed.
    */
   searchConsoleTokens: defineTable({
     connectionId: v.id("searchConsoleConnections"),

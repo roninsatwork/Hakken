@@ -5,9 +5,10 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { periodPartAsText } from "./searchConsolePeriodReads";
 import { lineKeywordsInQuery } from "./searchConsoleKeywordBooks";
-import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { useFixedDay } from "@/src/test/realTime";
+import { seedGoogleSignIn } from "@/src/test/googleGrant";
+import { encryptConnectorToken } from "./connectorTokenCrypto";
 
 /**
  * Home countries only (docs/plans/active/search-console-home-countries-plan.md,
@@ -127,14 +128,11 @@ async function setup(countries: string[], switched = true) {
     const websiteId = await ctx.db.insert("websites", { host: "acme-shop.test", displayHost: "acme-shop.test", firstSeenAt: 1 });
     const siteId = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", searchConsoleCountries: countries, createdAt: 1 });
     const connectionId = await ctx.db.insert("searchConsoleConnections", {
-      companyId, companyWebsiteId: siteId, websiteId, status: "CONNECTED", googleAccount: "owner@acme-shop.test",
+      companyId, companyWebsiteId: siteId, websiteId, status: "CONNECTED",
       property: PROPERTY, permission: "siteOwner", dataProperty: PROPERTY, newestDay: "2026-09-25", oldestDay: "2026-06-28", createdAt: 1, updatedAt: 1,
       ...(switched ? { mainCountry: countries[0] ?? "gbr" } : {}),
     });
-    await ctx.db.insert("searchConsoleTokens", {
-      connectionId, accessTokenCiphertext: await encryptConnectorToken("ya29.stored"), refreshTokenCiphertext: await encryptConnectorToken("1//refresh"),
-      expiresAt: Date.now() + 3_000_000, scopes: [], createdAt: 1, updatedAt: 1,
-    });
+    await seedGoogleSignIn(ctx, encryptConnectorToken, { companyWebsiteId: siteId, connectionId });
     return { companyId, userId, siteId, connectionId };
   });
   return { t, ...ids, reader: t.withIdentity({ subject: ids.userId }) };

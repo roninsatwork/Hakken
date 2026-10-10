@@ -8,6 +8,8 @@ import { billingTables } from "./billingSchema";
 import { uploadTables } from "./uploadSchema";
 import { siteTables } from "./siteSchema";
 import { searchConsoleTables } from "./searchConsoleSchema";
+import { googleTables } from "./googleSchema";
+import { googleAnalyticsTables } from "./googleAnalyticsSchema";
 import { pagesTables } from "./pagesSchema";
 import { contentTables } from "./contentSchema";
 import { keywordResearchTables } from "./keywordResearchSchema";
@@ -42,6 +44,8 @@ export default defineSchema({
   ...uploadTables,
   ...siteTables,
   ...searchConsoleTables,
+  ...googleTables,
+  ...googleAnalyticsTables,
   ...pagesTables,
   ...contentTables,
   ...keywordResearchTables,

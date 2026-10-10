@@ -169,10 +169,9 @@ describe("a company's lists are read only through its own hold", () => {
  * names the hold it belongs to, and is read through it.
  *
  * The connection is also found by its sign-in's state (the return from
- * Google), by its status (the daily job) and by its Google account (whether a
- * grant is still in use before it is revoked). Those lookups live in the two
- * Search Console modules and show nothing to anybody. The tokens are read by
- * those two modules alone.
+ * Google) and by its status (the daily job). Those lookups live in the two
+ * Search Console modules and show nothing to anybody. Its Google sign-in is
+ * shared with Google Analytics, and guarded below with Analytics' tables.
  */
 describe("Search Console is read only through the company's own hold", () => {
   const schemaSource = readFileSync(join(CONVEX, "searchConsoleSchema.ts"), "utf8");
@@ -206,7 +205,7 @@ describe("Search Console is read only through the company's own hold", () => {
   });
 
   const MODULES = new Set(["searchConsoleConnect.ts", "searchConsoleSync.ts"]);
-  const LOOKUPS = new Set(["by_pending_state", "by_status", "by_google_account"]);
+  const LOOKUPS = new Set(["by_pending_state", "by_status"]);
   const READS = new RegExp(`\\.query\\(\\s*["'](${TABLES.join("|")})["']\\s*\\)([\\s\\S]{0,200})`, "g");
 
   test("every read goes through a hold, but the connection's own lookups", () => {
@@ -226,9 +225,61 @@ describe("Search Console is read only through the company's own hold", () => {
     ).toEqual([]);
   });
 
-  test("the tokens are read by the Search Console modules alone", () => {
-    const readers = files.filter((file) => /\.query\(\s*["']searchConsoleTokens["']\s*\)/.test(readFileSync(join(CONVEX, file), "utf8")));
-    expect(readers.sort()).toEqual([...MODULES].sort());
+});
+
+/**
+ * The same rule for Google Analytics and the Google sign-in it shares with
+ * Search Console (docs/plans/active/google-analytics-plan.md §3, §4.6): every
+ * table names the owned hold it belongs to and is read through it. The sign-in
+ * is also found by its Google account (whether a grant is still in use before
+ * it is revoked) and Analytics' connection by its sign-in's state and its
+ * status (the daily job) — lookups in the modules that sign in and collect,
+ * which show nothing to anybody. The tokens are read by `googleConnection.ts`
+ * alone.
+ */
+describe("Google Analytics and the Google sign-in are read only through the company's own hold", () => {
+  const sources = ["googleSchema.ts", "googleAnalyticsSchema.ts"].map((file) => readFileSync(join(CONVEX, file), "utf8")).join("\n");
+  const files = readdirSync(CONVEX, { recursive: true, encoding: "utf8" })
+    .filter((file) => file.endsWith(".ts") && !file.endsWith(".test.ts") && !file.startsWith("_generated"));
+
+  const TABLES = [
+    "googleConnections",
+    "googleTokens",
+    "googleAnalyticsConnections",
+  ];
+
+  test.each(TABLES.filter((table) => table !== "googleTokens"))("%s names the hold it belongs to", (table) => {
+    const start = sources.indexOf(`${table}: defineTable({`);
+    expect(start, `${table} is not in googleSchema.ts or googleAnalyticsSchema.ts. If it was renamed, rename it here too.`).toBeGreaterThan(-1);
+    expect(sources.slice(start, sources.indexOf(".index(", start))).toMatch(/\bcompanyWebsiteId: /);
+  });
+
+  const LOOKUPS: Record<string, ReadonlySet<string>> = {
+    "googleConnection.ts": new Set(["by_account", "by_connection"]),
+    "googleAnalyticsConnect.ts": new Set(["by_pending_state"]),
+    "googleAnalyticsCollect.ts": new Set(["by_status"]),
+  };
+  const READS = new RegExp(`\\.query\\(\\s*["'](${TABLES.join("|")})["']\\s*\\)([\\s\\S]{0,200})`, "g");
+
+  test("every read goes through a hold, but the sign-in's and the collection's own lookups", () => {
+    const offenders = files.flatMap((file) => {
+      const source = readFileSync(join(CONVEX, file), "utf8");
+      return Array.from(source.matchAll(READS)).flatMap((match) => {
+        const index = /withIndex\(\s*["']([a-z_]+)["']/.exec(match[2])?.[1] ?? "(no index)";
+        if (index.startsWith("by_hold") || LOOKUPS[file]?.has(index)) return [];
+        return [`${file}: ${match[1]} read by ${index}`];
+      });
+    });
+    expect(
+      offenders,
+      "A Google Analytics or Google sign-in read that is not through the company's hold. Find the site "
+      + "with requireMySite and read by its hold, so no screen can reach another company's.",
+    ).toEqual([]);
+  });
+
+  test("the tokens are read by the shared sign-in alone", () => {
+    const readers = files.filter((file) => /\.query\(\s*["']googleTokens["']\s*\)/.test(readFileSync(join(CONVEX, file), "utf8")));
+    expect(readers).toEqual(["googleConnection.ts"]);
   });
 });
 

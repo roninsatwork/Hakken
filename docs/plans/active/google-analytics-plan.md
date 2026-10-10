@@ -1,13 +1,11 @@
 # Google Analytics — for your own websites
 
-**Started 2026-10-09. Status: planned and drawn — every decision agreed
-(§1), every question answered (§10) and the screens agreed and locked (§11),
-all on 2026-10-09; nothing built. On hold until the SEO API coverage work
-under way in another session is complete (Anthony, 2026-10-09: "there is an
-agent workign on SEO APO coverage enhaincements as we speak this is on hold
-until thats complete"), then built on the hold's page numbering from the
-start (§4.6).** Change a decision here, with a date, before building anything
-that disagrees with it. Follow `AGENTS.md`: no code until Anthony says start.
+**Started 2026-10-09. Status: building since 2026-10-10 (Anthony, 2026-10-10:
+"ok lets build this please"), phase by phase, with Google faked in the tests
+until Phase 0 (§7) is done. Every decision agreed (§1), every question
+answered (§10) and the screens agreed and locked (§11), all on 2026-10-09.**
+Change a decision here, with a date, before building anything that
+disagrees with it. Progress: §8.
 
 Anthony, 2026-10-09: "i want to integrate google analytics data inot the
 platofmr … I ffeel like we have impression adn clicks and AI searches that
@@ -173,6 +171,20 @@ website, read by both sections; each section keeps its own choice — Search
 Console's property, Analytics' property and address. How the shared record is
 named and how today's Search Console connections move into it is settled in
 the build, with a test that both sections read the same tokens.
+
+**Built 2026-10-10** (`convex/googleConnection.ts`, `googleSchema.ts`): the
+shared record is `googleConnections` (the website, the Google account, the
+access granted) with its tokens in `googleTokens`; each section's connection
+names it by `googleConnectionId`. It is one per website **and Google
+account**: nearly always one account serves both, so there is one set of
+tokens. An agency whose Search Console is on its own account and whose
+client's Analytics is on the client's keeps two, and neither section's
+sign-in breaks the other's. A section waiting for a sign-in — never
+connected, choosing, or needing reconnecting — takes up one started from the
+other section; a working section keeps its own. The return address stays
+`/api/search-console/oauth/callback`, as registered with Google (§7, step 3).
+Today's Search Console sign-ins move across with the migration
+`2026-10-10-shared-google-connection`.
 
 The screens (pages, never pop-ups):
 
@@ -471,9 +483,10 @@ thresholds, the four days again, two websites in one property, tenant
 isolation, the screens), and the full gate. Phase 3 ends in the browser on
 Ronins' own connected website.
 
-**Progress: overall 0% built. Plan written, every question answered and the
-screens agreed on 2026-10-09; on hold until the SEO API coverage work is
-complete.**
+**Progress (2026-10-10): overall 10%. Phase 1: 75% — the shared Google
+sign-in, Search Console moved onto it, and Analytics' connection (properties,
+addresses, what counts, values, disconnecting) built and tested with Google
+faked; its screens come with Phase 3.**
 
 ## 9. Risks
 
@@ -653,3 +666,7 @@ screen is built it gets a look test against its picture
   again not four, only what changed written, live lists held, and every
   screen proved by a reading-budget test with storage measured before any
   client (§4.1–§4.3, §9). No screen changes.
+- 2026-10-10 — Building started (Anthony: "ok lets build this please"). The
+  shared Google sign-in is one per website and Google account (§3, "Built"),
+  so an agency's Search Console and its client's Analytics on two accounts
+  both stand; nearly always it is one.

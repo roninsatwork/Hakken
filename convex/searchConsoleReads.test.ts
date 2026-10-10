@@ -3,10 +3,11 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { positionLookups } from "./fanOutPositions";
 import { useFixedDay } from "@/src/test/realTime";
+import { seedGoogleSignIn } from "@/src/test/googleGrant";
+import { encryptConnectorToken } from "./connectorTokenCrypto";
 
 /**
  * What the Search Console section reads (docs/plans/active/
@@ -57,7 +58,6 @@ async function connected(
       companyWebsiteId: siteId,
       websiteId: hold.websiteId,
       status: "CONNECTED",
-      googleAccount: "owner@acme-shop.test",
       property: PROPERTY,
       permission: "siteOwner",
       dataProperty: PROPERTY,
@@ -65,15 +65,7 @@ async function connected(
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
-    await ctx.db.insert("searchConsoleTokens", {
-      connectionId,
-      accessTokenCiphertext: await encryptConnectorToken("ya29.stored"),
-      refreshTokenCiphertext: await encryptConnectorToken("1//refresh"),
-      expiresAt: Date.now() + 3_000_000,
-      scopes: [],
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
+    await seedGoogleSignIn(ctx, encryptConnectorToken, { companyWebsiteId: siteId, connectionId });
     for (const day of days) {
       await ctx.db.insert("searchConsoleDays", {
         companyWebsiteId: siteId, searchType: "web", day: day.day, clicks: day.clicks, impressions: day.impressions,
@@ -435,7 +427,7 @@ describe("the tables", () => {
     const { t, siteId, reader } = await withSearches();
     await reader.mutation(api.searchConsoleTracking.trackSearchConsoleItem, { siteId, kind: "query", key: "boiler repair", track: true });
     vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 200 })));
-    await t.action(internal.searchConsoleConnect.forgetHold, { companyWebsiteId: siteId });
+    await t.action(internal.googleConnection.forgetHold, { companyWebsiteId: siteId });
     await finishScheduled(t);
     const left = await t.run(async (ctx) => ({
       periods: (await ctx.db.query("searchConsolePeriods").collect()).length,

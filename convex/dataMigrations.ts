@@ -36,6 +36,7 @@ import { detachCompanySchedules } from "./scheduler";
 import { removeSampleResearch } from "./keywordResearchSampleMigration";
 import { prepareMainCountryOf } from "./searchConsoleMainCountry";
 import { connectionsPage } from "./searchConsoleSync";
+import { moveSearchConsoleSignIns } from "./googleConnection";
 import { addAiModeToQuestions, fillSerpOverviews } from "./discoveryMigrations";
 import {
   rebuildAnswerSummaries,
@@ -809,6 +810,12 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
   // Discovery's step 3 (discovery-local-reputation-ai-plan.md): in `discoveryMigrations.ts`.
   "2026-10-09-serp-overviews": fillSerpOverviews,
   "2026-10-09-ai-mode-on-every-question": addAiModeToQuestions,
+  /**
+   * Search Console's Google sign-ins moved into the one shared with Google
+   * Analytics (google-analytics-plan.md §4.6, §10 Q11): each connection's
+   * account and tokens into `googleConnections` and `googleTokens`.
+   */
+  "2026-10-10-shared-google-connection": moveSearchConsoleSignIns,
 };
 
 export function getRegisteredMigrationNames() {
