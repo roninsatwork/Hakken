@@ -17,7 +17,7 @@ import { daysNewestFirst, newestWholeDay, shiftDay } from "./searchConsoleDays";
 import { isTrackedHold } from "./utils/websitePairing";
 import { fromGoogle, pack, packedColumns, rowsOf, type Packed } from "./utils/searchConsolePacks";
 import { slotParts } from "./searchConsoleRollups";
-import { deletePageRefs, encodePagesFromAction } from "./searchConsolePageRefs";
+import { encodePagesFromAction } from "./holdPageRefs";
 import { deleteBooks, keywordPlaces } from "./searchConsoleKeywordBooks";
 import { deletePeriodBooks } from "./searchConsolePeriodBooks";
 import { keptLines, keptSearchesOf } from "./searchConsoleKeep";
@@ -484,7 +484,7 @@ export async function runStep(ctx: ActionCtx, args: StepArgs, budgetMs: number):
         parts = pack(rows, list === "pair");
       }
       for (const [index, part] of parts.entries()) {
-        // Page addresses as references, from the website's page list read once a step (`searchConsolePageRefs.ts`).
+        // Page addresses as references, from the website's page list read once a step (`holdPageRefs.ts`).
         const keys = list === "page" ? await encodePagesFromAction(ctx, state.companyWebsiteId, part.keys)
           : list === "pair" ? await keywordPlaces(ctx, state.companyWebsiteId, args.country, day, part.keys) : part.keys;
         const pages = part.pages ? await encodePagesFromAction(ctx, state.companyWebsiteId, part.pages) : undefined;
@@ -720,7 +720,7 @@ export const writeList = internalMutation({
       grain: "DAY",
       start: args.day,
       part: args.part,
-      // Page addresses arrive as references, given by the action (`searchConsolePageRefs.ts`).
+      // Page addresses arrive as references, given by the action (`holdPageRefs.ts`).
       keys: args.keys,
       ...(args.pages ? { pages: args.pages } : {}),
       // Its numbers packed as text, a few characters each where Convex keeps nine bytes (`packNumbers`).
@@ -765,7 +765,7 @@ export const heldDayTotals = internalQuery({
 /**
  * Every connection whose figures are kept — connected, or waiting to be
  * connected again, which keeps its figures — for the one-off changes to what
- * is kept (`searchConsolePageRefs.ts`, `searchConsoleTidy.ts`).
+ * is kept (`holdPageRefs.ts`, `searchConsoleTidy.ts`).
  */
 export const connectionsWithFigures = internalQuery({
   args: {},
@@ -844,9 +844,10 @@ async function clearSome(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites
     .withIndex("by_hold_country_type_kind_day", (q) => q.eq("companyWebsiteId", companyWebsiteId))
     .take(PURGE_ROWS);
   for (const row of seenDays) await ctx.db.delete(row._id);
-  // Its page addresses and keyword books go last, once no kept list points to them.
+  // Its keyword books go last, once no kept list points to them. The page numbers stay: they are the
+  // website's, and Google Analytics' lists point to them too (`holdPageRefs.ts`).
   const refsGone = lists.length < PURGE_BATCH
-    ? await deletePageRefs(ctx, companyWebsiteId) && await deleteBooks(ctx, companyWebsiteId, "ALL", PURGE_ROWS) && await deletePeriodBooks(ctx, companyWebsiteId, "ALL", PURGE_ROWS)
+    ? await deleteBooks(ctx, companyWebsiteId, "ALL", PURGE_ROWS) && await deletePeriodBooks(ctx, companyWebsiteId, "ALL", PURGE_ROWS)
     : false;
   return lists.length < PURGE_BATCH && periods.length < PURGE_BATCH && days.length < PURGE_ROWS && seen.length < PURGE_ROWS && weeks.length < PURGE_ROWS
     && seenDays.length < PURGE_ROWS && refsGone;

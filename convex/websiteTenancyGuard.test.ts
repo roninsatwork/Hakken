@@ -246,6 +246,8 @@ describe("Google Analytics and the Google sign-in are read only through the comp
     "googleConnections",
     "googleTokens",
     "googleAnalyticsConnections",
+    // The website's page numbers, shared by both sections (§10, Q11).
+    "holdPageAddresses",
   ];
 
   test.each(TABLES.filter((table) => table !== "googleTokens"))("%s names the hold it belongs to", (table) => {

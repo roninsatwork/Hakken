@@ -381,7 +381,9 @@ export const searchConsoleTables = {
    * list's `keys` hold `~` and the page's number in base 36 rather than the
    * address. 250 addresses a record, in the order each was first seen; a
    * page's number is `record` times 250 and its place in `addresses`
-   * (core-data-normalisation-plan.md §5.7).
+   * (core-data-normalisation-plan.md §5.7). Moved to the website's own,
+   * `holdPageAddresses`, shared with Google Analytics, by
+   * `2026-10-10-hold-page-addresses`, then removed.
    */
   searchConsolePageAddresses: defineTable({
     companyWebsiteId: v.id("companyWebsites"),

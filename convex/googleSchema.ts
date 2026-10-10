@@ -45,4 +45,17 @@ export const googleTables = {
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_connection", ["googleConnectionId"]),
+
+  /**
+   * Each page address of a company's own website, numbered once, 250 to a
+   * record in the order first seen (`holdPageRefs.ts`): the numbers every
+   * Search Console and Google Analytics list names its pages by, so the two
+   * name one page by one number (google-analytics-plan.md §4.6; named in
+   * §10, Q11). Moved from `searchConsolePageAddresses` on 2026-10-10.
+   */
+  holdPageAddresses: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    record: v.number(),
+    addresses: v.array(v.string()),
+  }).index("by_hold_record", ["companyWebsiteId", "record"]),
 };

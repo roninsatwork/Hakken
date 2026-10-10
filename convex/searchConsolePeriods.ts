@@ -43,7 +43,7 @@ import {
 } from "./utils/searchConsolePacks";
 import { bandOf, isBrand, pageWithoutSection } from "./utils/searchConsoleViews";
 import { tenantQuery } from "./tenantFunctions";
-import { addressesOf, decodeWith } from "./searchConsolePageRefs";
+import { addressesOf, decodeWith } from "./holdPageRefs";
 import { forgetListBuild, noteListBuild, writeBook } from "./searchConsolePeriodBooks";
 import type { BookKind } from "./utils/searchConsoleTerms";
 import { lineKeywords } from "./searchConsoleKeywordBooks";
@@ -174,7 +174,7 @@ export async function readKept(
       cursor = page.continueCursor;
     }
   };
-  // Page references back to addresses, from the website's page list read once a run (`searchConsolePageRefs.ts`).
+  // Page references back to addresses, from the website's page list read once a run (`holdPageRefs.ts`).
   const addresses = async () => {
     if (list !== "pair" && list !== "page") return out;
     const book = await addressesOf(ctx, companyWebsiteId);

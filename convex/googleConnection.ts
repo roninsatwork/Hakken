@@ -503,7 +503,8 @@ export const dropConnection = internalMutation({
 
 /**
  * A website the company no longer holds: every grant it signed in with given
- * back, then everything Search Console and Google Analytics brought for it.
+ * back, then everything Search Console and Google Analytics brought for it,
+ * and its page numbers.
  */
 export const forgetHold = internalAction({
   args: { companyWebsiteId: v.id("companyWebsites") },
@@ -512,6 +513,8 @@ export const forgetHold = internalAction({
     await ctx.runAction(internal.googleConnection.releaseUnused, { companyWebsiteId: args.companyWebsiteId, all: true });
     await ctx.runMutation(internal.searchConsoleSync.purgeHold, { companyWebsiteId: args.companyWebsiteId });
     await ctx.runMutation(internal.googleAnalyticsConnect.purgeHold, { companyWebsiteId: args.companyWebsiteId });
+    // The website's page numbers last, once neither section's lists point to them.
+    await ctx.runMutation(internal.holdPageRefs.purgeHold, { companyWebsiteId: args.companyWebsiteId });
     return null;
   },
 });

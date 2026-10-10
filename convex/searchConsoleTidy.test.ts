@@ -2,7 +2,7 @@ import { convexTest } from "convex-test";
 import { describe, expect, test } from "vitest";
 import { internal } from "./_generated/api";
 import schema from "./schema";
-import { isPageRef } from "./searchConsolePageRefs";
+import { isPageRef } from "./holdPageRefs";
 import { packedColumns, unpackedPart } from "./utils/searchConsolePacks";
 import { lineKeywordsInQuery } from "./searchConsoleKeywordBooks";
 
@@ -85,7 +85,7 @@ describe("tidying the figures kept before 2026-10-05", () => {
     const [size] = await t.action(internal.searchConsoleTidy.keptSize, { host: "acme-shop.test" });
     expect(size.complete).toBe(true);
     expect(size.buckets.map((bucket) => bucket.name)).toContain("searchConsoleLists: a kept country's searches and pages");
-    expect(size.buckets.find((bucket) => bucket.name === "searchConsolePageAddresses")?.records).toBe(1);
+    expect(size.buckets.find((bucket) => bucket.name === "holdPageAddresses")?.records).toBe(1);
     expect(await t.action(internal.searchConsoleTidy.keptSize, { host: "elsewhere.test" })).toEqual([]);
 
     // A second run finds nothing left to do.

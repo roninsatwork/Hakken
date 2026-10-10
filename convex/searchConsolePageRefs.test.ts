@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { decodePages, isPageRef, PAGE_RECORD } from "./searchConsolePageRefs";
+import { decodePages, isPageRef, PAGE_RECORD } from "./holdPageRefs";
 
 /**
  * Each page address kept once per website, the kept lists pointing to it
@@ -52,7 +52,7 @@ describe("page addresses kept once", () => {
     });
     expect(kept.records[0].pages).toEqual(pair.pages);
     expect(kept.records[0].keys).toEqual(["door handles", "brass knobs", "lever"]);
-    const book = await t.query(internal.searchConsolePageRefs.pageListPart, { holdId, cursor: null });
+    const book = await t.query(internal.holdPageRefs.pageListPart, { holdId, cursor: null });
     expect(book.records.flatMap((record) => record.addresses)).toEqual(["https://acme-shop.test/a", "https://acme-shop.test/b"]);
   });
 
@@ -87,7 +87,7 @@ describe("a website's page list, 250 addresses a record", () => {
     const websiteId = await ctx.db.insert("websites", { host: "acme-shop.test", displayHost: "acme-shop.test", firstSeenAt: 1 });
     return await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", createdAt: 1 });
   });
-  const records = (t: ReturnType<typeof harness>) => t.run(async (ctx) => (await ctx.db.query("searchConsolePageAddresses").collect())
+  const records = (t: ReturnType<typeof harness>) => t.run(async (ctx) => (await ctx.db.query("holdPageAddresses").collect())
     .sort((left, right) => left.record - right.record).map((one) => [one.record, one.addresses.length]));
 
   test("new pages go on the end, filling the last record first; a number once given never moves", async () => {
@@ -96,9 +96,9 @@ describe("a website's page list, 250 addresses a record", () => {
     const first = Array.from({ length: PAGE_RECORD + 100 }, (_, index) => `https://acme-shop.test/a/${index}`);
     const more = Array.from({ length: 200 }, (_, index) => `https://acme-shop.test/b/${index}`);
 
-    expect(await t.mutation(internal.searchConsolePageRefs.addPages, { holdId, from: 0, pages: first })).toBe(0);
+    expect(await t.mutation(internal.holdPageRefs.addPages, { holdId, from: 0, pages: first })).toBe(0);
     expect(await records(t)).toEqual([[0, PAGE_RECORD], [1, 100]]);
-    expect(await t.mutation(internal.searchConsolePageRefs.addPages, { holdId, from: first.length, pages: more })).toBe(first.length);
+    expect(await t.mutation(internal.holdPageRefs.addPages, { holdId, from: first.length, pages: more })).toBe(first.length);
     expect(await records(t)).toEqual([[0, PAGE_RECORD], [1, PAGE_RECORD], [2, 50]]);
 
     const refs = [0, PAGE_RECORD + 99, first.length, first.length + 199].map((number) => `~${number.toString(36)}`);
@@ -110,9 +110,9 @@ describe("a website's page list, 250 addresses a record", () => {
   test("a list another run has added to since it was read is not added to", async () => {
     const t = harness();
     const holdId = await holdOf(t);
-    await t.mutation(internal.searchConsolePageRefs.addPages, { holdId, from: 0, pages: ["https://acme-shop.test/a"] });
+    await t.mutation(internal.holdPageRefs.addPages, { holdId, from: 0, pages: ["https://acme-shop.test/a"] });
     // Read when it was empty: the page it would add may be there already.
-    expect(await t.mutation(internal.searchConsolePageRefs.addPages, { holdId, from: 0, pages: ["https://acme-shop.test/a"] })).toBeNull();
+    expect(await t.mutation(internal.holdPageRefs.addPages, { holdId, from: 0, pages: ["https://acme-shop.test/a"] })).toBeNull();
     expect(await records(t)).toEqual([[0, 1]]);
   });
 });

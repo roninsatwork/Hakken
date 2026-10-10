@@ -234,6 +234,7 @@ import type * as hakkenWatchFigures from "../hakkenWatchFigures.js";
 import type * as hakkenWatcher from "../hakkenWatcher.js";
 import type * as hakkenWatcherActions from "../hakkenWatcherActions.js";
 import type * as holdLists from "../holdLists.js";
+import type * as holdPageRefs from "../holdPageRefs.js";
 import type * as holdPages from "../holdPages.js";
 import type * as holdProfileSchema from "../holdProfileSchema.js";
 import type * as holdProfiles from "../holdProfiles.js";
@@ -971,6 +972,7 @@ declare const fullApi: ApiFromModules<{
   hakkenWatcher: typeof hakkenWatcher;
   hakkenWatcherActions: typeof hakkenWatcherActions;
   holdLists: typeof holdLists;
+  holdPageRefs: typeof holdPageRefs;
   holdPages: typeof holdPages;
   holdProfileSchema: typeof holdProfileSchema;
   holdProfiles: typeof holdProfiles;

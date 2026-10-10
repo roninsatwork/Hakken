@@ -6,7 +6,7 @@ import schema from "./schema";
 import { unpackNumbers, unpackedPart } from "./utils/searchConsolePacks";
 import { periodPartAsText } from "./searchConsolePeriodReads";
 import { lineKeywordsInQuery } from "./searchConsoleKeywordBooks";
-import { decodePages } from "./searchConsolePageRefs";
+import { decodePages } from "./holdPageRefs";
 import { decryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { recentWindow } from "./searchConsoleSync";
@@ -187,7 +187,7 @@ const rowsOf = (t: Harness, siteId: Id<"companyWebsites">, list: "query" | "page
         .eq("companyWebsiteId", siteId).eq("country", undefined).eq("searchType", "web").eq("list", list === "query" ? "pair" : list).eq("grain", grain).eq("start", day))
       .collect();
     const sums = new Map<string, number>();
-    // A page list holds each address once, as a reference (`searchConsolePageRefs.ts`): read back as the app does.
+    // A page list holds each address once, as a reference (`holdPageRefs.ts`): read back as the app does.
     for (const record of records) {
       // A line's keywords are places in its month's book (`searchConsoleKeywordBooks.ts`): read back as the app does.
       const keys = typeof record.keys === "string" ? await lineKeywordsInQuery(ctx, siteId, undefined, record.start, record.keys)
@@ -460,7 +460,7 @@ describe("collecting", () => {
       .toEqual(["appearance", "country", "device", "page", "pair"]);
     expect(lists.every((record) => record.grain === "DAY" && record.part === 0)).toBe(true);
     const pair = lists.find((record) => record.list === "pair" && record.start === NEWEST)!;
-    // Each page address kept once: the pair's lines point to it (`searchConsolePageRefs.ts`).
+    // Each page address kept once: the pair's lines point to it (`holdPageRefs.ts`).
     expect(pair.pages).toEqual(["~0", "~0"]);
     expect(await t.run(async (ctx) => await decodePages(ctx, siteId, pair.pages!))).toEqual(["https://acme-shop.test/", "https://acme-shop.test/"]);
     // Position kept as a sum weighted by impressions: 3.5 for each of 50 impressions.

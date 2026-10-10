@@ -3,7 +3,8 @@ import { getDocumentSize, v, type Value } from "convex/values";
 import { internalAction, internalMutation, internalQuery, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
-import { isPageRef, turnKeptStep } from "./searchConsolePageRefs";
+import { isPageRef } from "./holdPageRefs";
+import { turnKeptStep } from "./searchConsolePageRefs";
 import { dropOldLinesOf } from "./searchConsoleRollups";
 import { bookedColumns, firstDayKeptFor, packNumbers, packedColumns, unpackNumbers, unpackedPart } from "./utils/searchConsolePacks";
 import { keywordPlaces, lineKeywordsInQuery } from "./searchConsoleKeywordBooks";
@@ -484,7 +485,7 @@ const TABLES = [
   "searchConsoleWeeks",
   "searchConsoleSeen",
   "searchConsoleSeenDays",
-  "searchConsolePageAddresses",
+  "holdPageAddresses",
   "searchConsoleKeywordBooks",
   "searchConsolePeriodBooks",
   "searchConsolePeriodUses",
@@ -498,7 +499,7 @@ const SIZE_PAGE: Record<Table, number> = {
   searchConsoleWeeks: 2_000,
   searchConsoleSeen: 2_000,
   searchConsoleSeenDays: 2_000,
-  searchConsolePageAddresses: 100,
+  holdPageAddresses: 100,
   searchConsoleKeywordBooks: 8,
   searchConsolePeriodBooks: 50,
   searchConsolePeriodUses: 500,
@@ -540,8 +541,8 @@ export const sizeStep = internalQuery({
               ? await ctx.db.query("searchConsoleSeen").withIndex("by_hold_country_type_kind_key", (q) => q.eq("companyWebsiteId", hold)).paginate(paging)
               : args.table === "searchConsoleSeenDays"
                 ? await ctx.db.query("searchConsoleSeenDays").withIndex("by_hold_country_type_kind_day", (q) => q.eq("companyWebsiteId", hold)).paginate(paging)
-                : args.table === "searchConsolePageAddresses"
-                  ? await ctx.db.query("searchConsolePageAddresses").withIndex("by_hold_record", (q) => q.eq("companyWebsiteId", hold)).paginate(paging)
+                : args.table === "holdPageAddresses"
+                  ? await ctx.db.query("holdPageAddresses").withIndex("by_hold_record", (q) => q.eq("companyWebsiteId", hold)).paginate(paging)
                   : args.table === "searchConsoleKeywordBooks"
                     ? await ctx.db.query("searchConsoleKeywordBooks").withIndex("by_hold_country_month_chunk", (q) => q.eq("companyWebsiteId", hold)).paginate(paging)
                     : args.table === "searchConsolePeriodBooks"

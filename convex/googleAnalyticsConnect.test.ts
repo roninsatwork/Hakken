@@ -385,4 +385,24 @@ describe("Search Console's sign-ins moved across once", () => {
     await finishScheduled(t);
     expect((await signIns(t)).tokens).toHaveLength(1);
   });
+
+  test("Search Console's page numbers become the website's own: the same records, the same places", async () => {
+    const { t, siteId } = await setup();
+    await t.run(async (ctx) => {
+      await ctx.db.insert("searchConsolePageAddresses", { companyWebsiteId: siteId, record: 0, addresses: ["https://acme-shop.test/", "https://acme-shop.test/a"] });
+      await ctx.db.insert("searchConsolePageAddresses", { companyWebsiteId: siteId, record: 1, addresses: ["https://acme-shop.test/b"] });
+    });
+    // Numbering afresh beside numbers not yet moved would give one number two pages.
+    await expect(t.mutation(internal.holdPageRefs.addPages, { holdId: siteId, from: 0, pages: ["https://acme-shop.test/c"] })).rejects.toThrow("still being moved");
+
+    await t.mutation(internal.dataMigrations.run, { name: "2026-10-10-hold-page-addresses" });
+    await finishScheduled(t);
+    const moved = await t.run(async (ctx) => await ctx.db.query("holdPageAddresses").withIndex("by_hold_record", (q) => q.eq("companyWebsiteId", siteId)).collect());
+    expect(moved.map((record) => [record.record, record.addresses])).toEqual([
+      [0, ["https://acme-shop.test/", "https://acme-shop.test/a"]],
+      [1, ["https://acme-shop.test/b"]],
+    ]);
+    expect(await t.run(async (ctx) => await ctx.db.query("searchConsolePageAddresses").collect())).toEqual([]);
+    expect(await t.mutation(internal.holdPageRefs.addPages, { holdId: siteId, from: 251, pages: ["https://acme-shop.test/c"] })).toBe(251);
+  });
 });

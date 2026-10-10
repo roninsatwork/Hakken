@@ -297,6 +297,7 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   // ── The Google sign-in Search Console and Google Analytics share ──────────
   googleConnections: RECORD,
   googleTokens: RECORD,
+  holdPageAddresses: RECORD,
 
   // ── Google Analytics (google-analytics-plan.md §4.3) ─────────────────────
   googleAnalyticsConnections: RECORD,

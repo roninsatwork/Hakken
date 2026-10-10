@@ -37,6 +37,7 @@ import { removeSampleResearch } from "./keywordResearchSampleMigration";
 import { prepareMainCountryOf } from "./searchConsoleMainCountry";
 import { connectionsPage } from "./searchConsoleSync";
 import { moveSearchConsoleSignIns } from "./googleConnection";
+import { moveSearchConsolePageNumbers } from "./holdPageRefs";
 import { addAiModeToQuestions, fillSerpOverviews } from "./discoveryMigrations";
 import {
   rebuildAnswerSummaries,
@@ -816,6 +817,8 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
    * account and tokens into `googleConnections` and `googleTokens`.
    */
   "2026-10-10-shared-google-connection": moveSearchConsoleSignIns,
+  /** Search Console's page numbers moved to the website's own, shared with Google Analytics (§4.6, §10 Q11). */
+  "2026-10-10-hold-page-addresses": moveSearchConsolePageNumbers,
 };
 
 export function getRegisteredMigrationNames() {
