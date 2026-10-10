@@ -21,6 +21,8 @@ import { heldIcon } from "../../_components/siteGroups";
 import { MarkedHost } from "../../_components/SiteMark";
 import { useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
+import { sideBySideSees } from "@/convex/sees/competitors";
+import { SiteSees } from "../../_components/SiteSees";
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
 import { useSiteSearch } from "../../_components/useSiteParam";
@@ -93,6 +95,7 @@ export default function SiteSideBySidePage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Swords className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="competitors" seen={rivals && sideBySideSees(rivals, (host) => site?.holds.find((entry) => entry.host === host)?.siteId ?? null)} />
 
       <SiteChartCard
         title={t("chartTitle")}

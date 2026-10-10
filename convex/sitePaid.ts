@@ -2,7 +2,8 @@ import { v } from "convex/values";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
 import { requireMySite } from "./siteAccess";
-import { heldTo, listOrder, listPageArgs, listPageResult, pageOfList, sortDirectionArg, type ListSorts } from "./siteListPages";
+import { heldTo, listOrder, listPageArgs, listPageResult, listPageSeenResult, pageOfList, sortDirectionArg, type ListSorts } from "./siteListPages";
+import { paidKeywordsSees } from "./sees/paid";
 import { tenantQuery } from "./tenantFunctions";
 import { normaliseKeyword } from "./seoJudgments";
 import { pagePath } from "./utils/siteShapes";
@@ -119,7 +120,7 @@ export const listPaidKeywords = tenantQuery({
     )),
     direction: sortDirectionArg,
   },
-  returns: listPageResult(v.object({
+  returns: listPageSeenResult(v.object({
     _id: v.id("sitePaidKeywords"),
     keyword: v.string(),
     position: v.union(v.number(), v.null()),
@@ -158,6 +159,8 @@ export const listPaidKeywords = tenantQuery({
         trafficCost: row.trafficCost ?? null,
         day: row.day,
       })),
+      // What Hakken sees is of every search advertised on, whatever the search box holds.
+      seen: paidKeywordsSees(held.map((row) => ({ keyword: row.keyword, traffic: row.traffic ?? null, trafficCost: row.trafficCost ?? null }))),
     };
   },
 });

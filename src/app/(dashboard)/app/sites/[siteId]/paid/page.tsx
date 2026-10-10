@@ -16,6 +16,8 @@ import { formatDay, formatDollars, formatNumber, toCsv } from "../../_components
 import { Figure } from "@/src/ui/components/screens/Figure";
 import { useSiteListHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
+import { paidSees } from "@/convex/sees/paid";
+import { SiteSees } from "../../_components/SiteSees";
 
 const MEASURES = ["paidKeywords", "paidTraffic", "paidTrafficCost"] as const;
 type Measure = (typeof MEASURES)[number];
@@ -51,6 +53,7 @@ export default function SitePaidPage() {
         description={t("description")}
         pills={latest ? <span className="text-[12px] text-secondary">{t("asOf", { day: formatDay(latest.lastDay) })}</span> : null}
       />
+      <SiteSees screen="paid" seen={series && paidSees(series[0]?.points ?? [])} />
 
       {notAdvertising ? (
         <Notice>{t("notAdvertising")}</Notice>

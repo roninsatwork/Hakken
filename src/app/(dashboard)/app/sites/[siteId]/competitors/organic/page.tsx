@@ -16,6 +16,8 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { organicCompetitorsSees } from "@/convex/sees/competitors";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -89,6 +91,7 @@ export default function SiteOrganicCompetitorsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Radar className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="competitorsOrganic" seen={rows && organicCompetitorsSees(rows)} />
       {rows && everyOne && everyOne > rows.length ? (
         <p className="text-[12px] leading-relaxed text-secondary">{t("readOf", { count: formatNumber(rows.length), total: formatNumber(everyOne) })}</p>
       ) : null}

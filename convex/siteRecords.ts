@@ -14,6 +14,7 @@ import { keywordStanding, readKeywordCopy } from "./siteKeywordCopy";
 import { heldTo, listOrder, listPageArgs, listPageResult, listPageSeenResult, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { seen } from "./utils/hakkenSees";
 import { featureRecordSees } from "./sees/google";
+import { rivalSees } from "./sees/competitors";
 import { bare, isHost } from "./siteGoogleSerp";
 import { serpPagesKeptFrom } from "./seoCollectionPolicy";
 import { askedQuestions, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
@@ -645,7 +646,7 @@ export const sharedSearches = tenantQuery({
     )),
     direction: sortDirectionArg,
   },
-  returns: listPageResult(v.object({
+  returns: listPageSeenResult(v.object({
     _id: v.id("siteKeywordRanks"),
     keyword: v.string(),
     theirPosition: v.number(),
@@ -665,22 +666,24 @@ export const sharedSearches = tenantQuery({
       readKeywordCopy(ctx, rival.website._id, place),
       readKeywordCopy(ctx, site.website._id, place),
     ]);
-    if (!theirs || !ours) return preparingPage(args.rows);
+    if (!theirs || !ours) return { ...preparingPage(args.rows), seen: seen([]) };
     const yours = new Map(ours.rows
       .filter((row) => keywordStanding(row, ours.latestCheckDay) === "current")
       .map((row) => [row.keyword, row.position as number]));
-    const shared = theirs.rows.flatMap((row) => {
+    const every = theirs.rows.flatMap((row) => {
       if (keywordStanding(row, theirs.latestCheckDay) !== "current") return [];
       const yourPosition = yours.get(row.keyword);
       const theirPosition = row.position as number;
       if (yourPosition === undefined) return [];
-      if (args.lead === "THEM" && !(theirPosition < yourPosition)) return [];
-      if (args.lead === "YOU" && !(yourPosition < theirPosition)) return [];
       return [{ id: row.id, keyword: row.keyword, theirPosition, yourPosition, volume: row.volume, theirTraffic: row.traffic }];
-    }).sort(listOrder(SHARED_SORTS, args.sort ?? "theirVisits", args.direction, (row) => row.keyword));
+    });
+    const shared = every
+      .filter((row) => (args.lead !== "THEM" || row.theirPosition < row.yourPosition) && (args.lead !== "YOU" || row.yourPosition < row.theirPosition))
+      .sort(listOrder(SHARED_SORTS, args.sort ?? "theirVisits", args.direction, (row) => row.keyword));
     const shown = pageOfList(shared, args.page, args.rows);
     // Read in full by id, to be sure each row on screen is still there.
     const rows = await Promise.all(shown.rows.map(async ({ id, ...row }) => ((await ctx.db.get(id)) ? { _id: id, ...row } : null)));
-    return { ...shown, rows: rows.filter((row) => row !== null) };
+    // What Hakken sees is of every search both rank for, whichever lead is chosen.
+    return { ...shown, rows: rows.filter((row) => row !== null), seen: rivalSees(every) };
   },
 });

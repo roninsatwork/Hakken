@@ -19,6 +19,8 @@ import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteScatterChart, type SiteScatterGroup } from "../../../_components/SiteCharts";
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { marketMapSees } from "@/convex/sees/competitors";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
@@ -95,6 +97,7 @@ export default function SiteMarketMapPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<MapIcon className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="competitorsMap" seen={rows && marketMapSees(rows)} />
 
       <SiteChartCard
         dated={false}

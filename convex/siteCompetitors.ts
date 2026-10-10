@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { seen, seenValidator } from "./utils/hakkenSees";
+import { contentGapSees } from "./sees/competitors";
 import type { Doc, Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
 import { companyHolds, listHold, listWebsiteId, myRivals, requireMySite } from "./siteAccess";
@@ -356,14 +358,15 @@ export const listContentGap = tenantQuery({
       day: v.string(),
     })).fields,
     competitors: v.array(gapRival),
+    seen: seenValidator,
   }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
-    if (isTrackedHold(site.hold)) return { ...pageOfList([], args.page, args.rows), competitors: [] };
+    if (isTrackedHold(site.hold)) return { ...pageOfList([], args.page, args.rows), competitors: [], seen: seen([]) };
     const rivals = await myRivals(ctx, site);
     const competitors = rivals.map((rival) => ({ siteId: rival.hold._id, websiteId: rival.website._id, host: rival.website.displayHost }));
     const gap = await contentGapOf(ctx, { websiteId: site.website._id, place: site.place }, competitors.map((rival) => rival.websiteId));
-    if (!gap) return { ...preparingPage(args.rows), competitors };
+    if (!gap) return { ...preparingPage(args.rows), competitors, seen: seen([]) };
     const hosts = new Map<string, string>(competitors.map((rival) => [rival.websiteId, rival.host]));
     const matches = wordStartMatcher(args.search);
     const minRivals = Math.max(1, args.minRivals ?? 1);
@@ -386,7 +389,8 @@ export const listContentGap = tenantQuery({
     } else {
       list.sort(listOrder(GAP_SORTS, column ?? "volume", args.direction, name));
     }
-    return { ...pageOfList(list, args.page, args.rows, gap.cut), competitors };
+    // What Hakken sees is of the whole gap, whatever the filters.
+    return { ...pageOfList(list, args.page, args.rows, gap.cut), competitors, seen: contentGapSees(gap.rows, competitors.length) };
   },
 });
 

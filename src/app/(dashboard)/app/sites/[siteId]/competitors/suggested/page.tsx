@@ -15,6 +15,8 @@ import { MarkedHost } from "../../../_components/SiteMark";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { suggestedSees } from "@/convex/sees/competitors";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -60,6 +62,7 @@ export default function SiteSuggestedPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Lightbulb className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="competitorsSuggested" seen={rows && suggestedSees(rows)} />
       <DataTable
         rows={pager.pageRows}
         rowKey={(row) => row.host}

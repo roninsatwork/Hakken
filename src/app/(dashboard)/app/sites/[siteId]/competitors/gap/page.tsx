@@ -20,6 +20,7 @@ import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { formatNumber, formatVisits } from "../../../_components/siteFormat";
 import { useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
@@ -181,6 +182,7 @@ export default function SiteContentGapPage() {
         description={t("description")}
         pills={<span className="text-[12px] text-secondary">{t("ceiling")}</span>}
       />
+      <SiteSees screen="competitorsGap" seen={table.result?.seen} />
       <DataTable
         rows={table.pageRows}
         rowKey={(row) => row.keyword}

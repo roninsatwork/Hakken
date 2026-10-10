@@ -13480,7 +13480,11 @@
         "seeFeature": "See the feature",
         "movedSearches": "Searches that moved",
         "folderPages": "See the folder's pages",
-        "seeProblem": "See the problem"
+        "seeProblem": "See the problem",
+        "paidKeywords": "Paid keywords",
+        "suggestedCompetitors": "Suggested competitors",
+        "seeRival": "See the competitor",
+        "contentGap": "Content gap"
       },
       "website": {
         "notQuoted": "Google's AI has not quoted {text} in answers about you or your rivals.",
@@ -13991,6 +13995,65 @@
         "cited": "AI answers cited it {count, plural, one {once} other {# times}}.",
         "fixProblem": "Fix it: {text}.",
         "seeTopSearch": "See who ranks beside it for “{text}”."
+      },
+      "paid": {
+        "none": "No paid search read yet: the next check reads it.",
+        "notAdvertising": "It does not advertise on Google at the newest check.",
+        "advertising": "It advertises on {a} searches on Google, bringing about {b} visits a month.",
+        "cost": "Those visits would cost about ${a} a month in adverts.",
+        "seeKeywords": "See which searches it pays for, and what each costs."
+      },
+      "paidKeywords": {
+        "none": "No paid search read: it does not advertise on Google at the newest check.",
+        "keywords": "It pays for {a} searches, worth about ${b} a month in clicks.",
+        "dearest": "“{text}” costs most: about ${a} a month.",
+        "mostVisits": "“{text}” brings the most paid visits: about {a} a month.",
+        "seeSearch": "See who ranks for “{text}” without paying."
+      },
+      "competitors": {
+        "noRivals": "You do not watch a competitor yet.",
+        "findRivals": "See the suggested competitors, and watch the ones that matter.",
+        "notCompared": "Your {a} competitors have not been compared with you on searches yet.",
+        "leadOver": "You lead {a} of the {b} competitors you watch on the searches you share.",
+        "trailMost": "{text} beats you on {a} shared searches; you beat it on {b}.",
+        "seeRival": "See the searches {text} beats you on.",
+        "seeGap": "See the searches your competitors rank for and you do not."
+      },
+      "competitorsRival": {
+        "noneShared": "You share no search with this competitor at the newest check.",
+        "shared": "You both rank for {a} searches; it is ahead on {b}.",
+        "biggest": "The biggest: “{text}”, where it is {a} and you are {b}.",
+        "aheadOnAll": "You are ahead on every search you share.",
+        "seeSearch": "See what Google shows for “{text}”.",
+        "seeGap": "See the searches it ranks for and you do not."
+      },
+      "competitorsOrganic": {
+        "none": "No website sharing your searches has been read yet.",
+        "sharing": "{count, plural, one {# website shares} other {# websites share}} your searches; {text} the most, on {b}.",
+        "unwatched": "{count, plural, one {# of them is} other {# of them are}} not watched, {text} sharing the most.",
+        "allWatched": "You watch every one of them.",
+        "lookAt": "Look at {text}, and watch it if it competes for your customers."
+      },
+      "competitorsGap": {
+        "none": "No gap: your competitors rank for no search you do not, or it has not been worked out yet.",
+        "gap": "Your competitors rank for {a} searches you do not.",
+        "biggest": "The biggest: “{text}”, searched {a} times a month.",
+        "everyRival": "All {b} of your competitors rank for {a} of them.",
+        "seeSearch": "See who ranks for “{text}”, and plan a page for it."
+      },
+      "competitorsMap": {
+        "none": "Your market has not been read yet.",
+        "place": "You come {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} of {b} by visits from Google.",
+        "justAbove": "{text} is just above you, with about {a} visits a month to your {b}.",
+        "top": "No website in your market gets more visits from Google.",
+        "lookAt": "See where {text} is named and you are not."
+      },
+      "competitorsSuggested": {
+        "none": "No competitor to suggest yet.",
+        "reasons": "{a} are named by AI answers beside you; {b} rank for your searches.",
+        "strongestAi": "{text} is named most: {count, plural, one {once} other {# times}}.",
+        "strongestSearch": "{text} shares the most searches with you: {a}.",
+        "lookAt": "See where {text} is quoted and you are not."
       }
     }
   },

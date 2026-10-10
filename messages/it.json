@@ -13480,7 +13480,11 @@
         "seeFeature": "Vedi la funzione",
         "movedSearches": "Ricerche che si sono mosse",
         "folderPages": "Vedi le pagine della cartella",
-        "seeProblem": "Vedi il problema"
+        "seeProblem": "Vedi il problema",
+        "paidKeywords": "Parole chiave a pagamento",
+        "suggestedCompetitors": "Concorrenti suggeriti",
+        "seeRival": "Vedi il concorrente",
+        "contentGap": "Divario di contenuti"
       },
       "website": {
         "notQuoted": "L'IA di Google non ha citato {text} nelle risposte su di te o sui concorrenti.",
@@ -13991,6 +13995,65 @@
         "cited": "Le risposte IA l'hanno citata {count, plural, one {una volta} other {# volte}}.",
         "fixProblem": "Correggi: {text}.",
         "seeTopSearch": "Guarda chi è posizionato accanto a lei per “{text}”."
+      },
+      "paid": {
+        "none": "Ancora nessuna ricerca a pagamento letta: la legge il prossimo controllo.",
+        "notAdvertising": "Non fa pubblicità su Google nel controllo più recente.",
+        "advertising": "Fa pubblicità su {a} ricerche su Google, che portano circa {b} visite al mese.",
+        "cost": "Quelle visite costerebbero circa {a} $ al mese in annunci.",
+        "seeKeywords": "Guarda per quali ricerche paga e quanto costa ciascuna."
+      },
+      "paidKeywords": {
+        "none": "Nessuna ricerca a pagamento letta: non fa pubblicità su Google nel controllo più recente.",
+        "keywords": "Paga per {a} ricerche, circa {b} $ al mese in clic.",
+        "dearest": "“{text}” costa di più: circa {a} $ al mese.",
+        "mostVisits": "“{text}” porta più visite a pagamento: circa {a} al mese.",
+        "seeSearch": "Guarda chi è posizionato per “{text}” senza pagare."
+      },
+      "competitors": {
+        "noRivals": "Non segui ancora un concorrente.",
+        "findRivals": "Guarda i concorrenti suggeriti e segui quelli che contano.",
+        "notCompared": "I tuoi {a} concorrenti non sono ancora stati confrontati con te sulle ricerche.",
+        "leadOver": "Sei davanti a {a} dei {b} concorrenti che segui sulle ricerche in comune.",
+        "trailMost": "{text} ti batte su {a} ricerche in comune; tu lo batti su {b}.",
+        "seeRival": "Guarda le ricerche su cui {text} ti batte.",
+        "seeGap": "Guarda le ricerche per cui sono posizionati i tuoi concorrenti e tu no."
+      },
+      "competitorsRival": {
+        "noneShared": "Non condividi nessuna ricerca con questo concorrente nel controllo più recente.",
+        "shared": "Siete entrambi posizionati per {a} ricerche; è davanti su {b}.",
+        "biggest": "La più grande: “{text}”, dove è {a} e tu {b}.",
+        "aheadOnAll": "Sei davanti su ogni ricerca in comune.",
+        "seeSearch": "Guarda cosa mostra Google per “{text}”.",
+        "seeGap": "Guarda le ricerche per cui è posizionato e tu no."
+      },
+      "competitorsOrganic": {
+        "none": "Ancora nessun sito che condivide le tue ricerche letto.",
+        "sharing": "{count, plural, one {# sito condivide} other {# siti condividono}} le tue ricerche; {text} più di tutti, su {b}.",
+        "unwatched": "{count, plural, one {# non è seguito} other {# non sono seguiti}}, {text} quello che ne condivide di più.",
+        "allWatched": "Li segui tutti.",
+        "lookAt": "Guarda {text} e seguilo se compete per i tuoi clienti."
+      },
+      "competitorsGap": {
+        "none": "Nessun gap: i tuoi concorrenti non sono posizionati per ricerche in cui tu non ci sei, o non è ancora stato calcolato.",
+        "gap": "I tuoi concorrenti sono posizionati per {a} ricerche in cui tu non ci sei.",
+        "biggest": "La più grande: “{text}”, cercata {a} volte al mese.",
+        "everyRival": "Tutti i tuoi {b} concorrenti sono posizionati per {a} di esse.",
+        "seeSearch": "Guarda chi è posizionato per “{text}” e progetta una pagina."
+      },
+      "competitorsMap": {
+        "none": "Il tuo mercato non è ancora stato letto.",
+        "place": "Sei {count}º su {b} per visite da Google.",
+        "justAbove": "{text} è appena sopra di te, con circa {a} visite al mese contro le tue {b}.",
+        "top": "Nessun sito del tuo mercato riceve più visite da Google.",
+        "lookAt": "Guarda dove viene nominato {text} e tu no."
+      },
+      "competitorsSuggested": {
+        "none": "Ancora nessun concorrente da suggerire.",
+        "reasons": "{a} sono nominati dalle risposte IA accanto a te; {b} sono posizionati per le tue ricerche.",
+        "strongestAi": "{text} è il più nominato: {count, plural, one {una volta} other {# volte}}.",
+        "strongestSearch": "{text} condivide più ricerche con te: {a}.",
+        "lookAt": "Guarda dove viene citato {text} e tu no."
       }
     }
   },

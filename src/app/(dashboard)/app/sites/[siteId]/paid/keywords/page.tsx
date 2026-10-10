@@ -11,6 +11,7 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatCpc, formatNumber } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
@@ -54,6 +55,7 @@ export default function SitePaidKeywordsPage() {
         description={t("description")}
         pills={partial ? <span className="text-[12px] text-secondary">{t("listing", { listed: formatNumber(listed), reported: formatNumber(reported) })}</span> : null}
       />
+      <SiteSees screen="paidKeywords" seen={table.result?.seen} />
       <DataTable
         rows={table.pageRows}
         rowKey={(row) => row._id}
