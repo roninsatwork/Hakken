@@ -26,6 +26,7 @@ import {
   propertyChoiceValidator,
 } from "./googleAnalyticsSchema";
 import { tickedAtFirst } from "./utils/analyticsEvents";
+import { startFirstCollection } from "./googleAnalyticsAgentRun";
 
 /**
  * Connecting an owned website to its Google Analytics
@@ -451,6 +452,9 @@ export const saveWhatCounts = adminMutation({
         counted: args.events.filter((event) => event.counted).map((event) => event.eventName),
       }),
     });
+    // Another property's figures go first; collecting starts at once, for this website alone (§10, Q15).
+    if (another) await ctx.scheduler.runAfter(0, internal.googleAnalyticsCollect.clearFigures, { companyWebsiteId: connection.companyWebsiteId });
+    else if (first) await startFirstCollection(ctx, (await ctx.db.get(connection._id))!);
     return null;
   },
 });
@@ -501,15 +505,19 @@ export const disconnectGoogleAnalytics = adminMutation({
 
 /**
  * A website the company no longer holds: its Analytics connection and
- * everything it brought. Its Google sign-in has already been given back
- * (`googleConnection.forgetHold`).
+ * everything it brought, a batch at a time (`googleAnalyticsCollect.purgeFigures`).
+ * Its Google sign-in has already been given back (`googleConnection.forgetHold`).
  */
 export const purgeHold = internalMutation({
   args: { companyWebsiteId: v.id("companyWebsites") },
   returns: v.null(),
   handler: async (ctx, args) => {
     const connection = await connectionOfHold(ctx, args.companyWebsiteId);
-    if (connection) await ctx.db.delete(connection._id);
+    // Stop anything still collecting before the figures go.
+    if (connection && connection.status !== "DISCONNECTED") {
+      await ctx.db.patch(connection._id, { status: "DISCONNECTED", disconnectedAt: Date.now() });
+    }
+    await ctx.scheduler.runAfter(0, internal.googleAnalyticsCollect.purgeFigures, args);
     return null;
   },
 });

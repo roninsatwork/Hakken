@@ -301,6 +301,10 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
 
   // ── Google Analytics (google-analytics-plan.md §4.3) ─────────────────────
   googleAnalyticsConnections: RECORD,
+  googleAnalyticsDays: cleared("60 days", "googleAnalyticsCollect/finishCollection"),
+  googleAnalyticsPeriodSlots: LATEST,
+  googleAnalyticsPeriods: LATEST,
+  googleAnalyticsLive: cleared("at the next collection", "googleAnalyticsCollect/dropLive"),
 
   // ── Search Console ────────────────────────────────────────────────────────
   searchConsoleConnections: RECORD,

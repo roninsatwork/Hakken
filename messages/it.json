@@ -3397,7 +3397,8 @@
                 "dataforseo": "DataForSEO",
                 "builtIn": "Ruoli integrati",
                 "news": "Notizie ed email",
-                "searchConsole": "Search Console"
+                "searchConsole": "Search Console",
+                "googleAnalytics": "Google Analytics"
               },
               "takenBy": "{role} — assegnato a {name}",
               "roles": {
@@ -3407,6 +3408,7 @@
                 "WEEKLY_DIGEST": "Digest settimanale",
                 "EMAIL_SENDER": "Invio email",
                 "SEARCH_CONSOLE_COLLECTOR": "Raccoglitore Search Console",
+                "GOOGLE_ANALYTICS_COLLECTOR": "Raccoglitore Google Analytics",
                 "KEYWORD_RESEARCH": "Ricerca parole chiave"
               },
               "mode": {

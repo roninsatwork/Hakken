@@ -33,6 +33,14 @@ export const NEWS_ROLES = ["NEWS_COLLECTOR", "WEEKLY_DIGEST"] as const;
 export const SEARCH_CONSOLE_ROLES = ["SEARCH_CONSOLE_COLLECTOR"] as const;
 
 /**
+ * The Google Analytics Collector (docs/plans/active/google-analytics-plan.md
+ * §4.1, GA21): each run starts a run of its own for every website connected
+ * to Google Analytics, which collects that website's newest days and asks
+ * Google for its ready-made lists.
+ */
+export const GOOGLE_ANALYTICS_ROLES = ["GOOGLE_ANALYTICS_COLLECTOR"] as const;
+
+/**
  * The Keyword research agent (docs/plans/active/keyword-research-plan.md):
  * buys a company's lookups from DataForSEO when someone presses Look up, and
  * only those (Anthony, 2026-10-04: "A new Keyword research agent"). Its own
@@ -40,19 +48,21 @@ export const SEARCH_CONSOLE_ROLES = ["SEARCH_CONSOLE_COLLECTOR"] as const;
  */
 export const RESEARCH_ROLES = ["KEYWORD_RESEARCH"] as const;
 
-export const ASSIGNABLE_AGENT_ROLES = [...DATAFORSEO_ROLES, ...RESEARCH_ROLES, ...NEWS_ROLES, ...SEARCH_CONSOLE_ROLES] as const;
+export const ASSIGNABLE_AGENT_ROLES = [...DATAFORSEO_ROLES, ...RESEARCH_ROLES, ...NEWS_ROLES, ...SEARCH_CONSOLE_ROLES, ...GOOGLE_ANALYTICS_ROLES] as const;
 
 export type DataForSeoRole = (typeof DATAFORSEO_ROLES)[number];
 export type NewsRole = (typeof NEWS_ROLES)[number];
 export type SearchConsoleRole = (typeof SEARCH_CONSOLE_ROLES)[number];
+export type GoogleAnalyticsRole = (typeof GOOGLE_ANALYTICS_ROLES)[number];
 export type ResearchRole = (typeof RESEARCH_ROLES)[number];
 export type AssignableAgentRole = (typeof ASSIGNABLE_AGENT_ROLES)[number];
 
 /** The roles in the groups the Role dropdown shows them under. */
-export const AGENT_ROLE_GROUPS: ReadonlyArray<{ group: "dataforseo" | "news" | "searchConsole"; roles: readonly AssignableAgentRole[] }> = [
+export const AGENT_ROLE_GROUPS: ReadonlyArray<{ group: "dataforseo" | "news" | "searchConsole" | "googleAnalytics"; roles: readonly AssignableAgentRole[] }> = [
   { group: "dataforseo", roles: [...DATAFORSEO_ROLES, ...RESEARCH_ROLES] },
   { group: "news", roles: NEWS_ROLES },
   { group: "searchConsole", roles: SEARCH_CONSOLE_ROLES },
+  { group: "googleAnalytics", roles: GOOGLE_ANALYTICS_ROLES },
 ];
 
 export const newsRoleValidator = v.union(
@@ -68,6 +78,7 @@ export const agentRoleChoiceValidator = v.union(
   v.literal("NEWS_COLLECTOR"),
   v.literal("WEEKLY_DIGEST"),
   v.literal("SEARCH_CONSOLE_COLLECTOR"),
+  v.literal("GOOGLE_ANALYTICS_COLLECTOR"),
   v.literal("KEYWORD_RESEARCH"),
 );
 
@@ -91,4 +102,8 @@ export function isResearchRole(key: string | undefined): key is ResearchRole {
 
 export function isSearchConsoleRole(key: string | undefined): key is SearchConsoleRole {
   return key !== undefined && (SEARCH_CONSOLE_ROLES as readonly string[]).includes(key);
+}
+
+export function isGoogleAnalyticsRole(key: string | undefined): key is GoogleAnalyticsRole {
+  return key !== undefined && (GOOGLE_ANALYTICS_ROLES as readonly string[]).includes(key);
 }

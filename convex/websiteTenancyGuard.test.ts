@@ -246,6 +246,10 @@ describe("Google Analytics and the Google sign-in are read only through the comp
     "googleAnalyticsConnections",
     // The website's page numbers, shared by both sections (§10, Q11).
     "holdPageAddresses",
+    "googleAnalyticsDays",
+    "googleAnalyticsPeriodSlots",
+    "googleAnalyticsPeriods",
+    "googleAnalyticsLive",
   ];
 
   test.each(TABLES.filter((table) => table !== "googleTokens"))("%s names the hold it belongs to", (table) => {
@@ -257,7 +261,7 @@ describe("Google Analytics and the Google sign-in are read only through the comp
   const LOOKUPS: Record<string, ReadonlySet<string>> = {
     "googleConnection.ts": new Set(["by_account", "by_connection"]),
     "googleAnalyticsConnect.ts": new Set(["by_pending_state"]),
-    "googleAnalyticsCollect.ts": new Set(["by_status"]),
+    "googleAnalyticsAgentRun.ts": new Set(["by_status"]),
   };
   const READS = new RegExp(`\\.query\\(\\s*["'](${TABLES.join("|")})["']\\s*\\)([\\s\\S]{0,200})`, "g");
 

@@ -83,6 +83,10 @@ describe('Provider Classification Drift', () => {
       // The Google Analytics plan lists the AI assistants whose visitors get a
       // channel of their own (gemini.google.com among them): naming them is the subject.
       'docs/plans/active/google-analytics-plan.md',
+      // And the one list in the code of the assistants whose visitors Google
+      // Analytics' channels show apart (that plan's §4.4): naming them is the subject.
+      'convex/utils/aiAssistants.ts',
+      'convex/utils/aiAssistants.test.ts',
       'src/provider-classification-drift.test.ts',
     ]);
 

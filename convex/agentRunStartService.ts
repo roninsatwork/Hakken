@@ -1,7 +1,7 @@
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
-import { isDataForSeoRole, isNewsRole, isResearchRole, isSearchConsoleRole } from "./utils/agentRoles";
+import { isDataForSeoRole, isGoogleAnalyticsRole, isNewsRole, isResearchRole, isSearchConsoleRole } from "./utils/agentRoles";
 import { OUTBOX_QUEUE_AGENT } from "./utils/outboxQueueAgent";
 import { WIKI_STAFF } from "./wikiStaff";
 import { TRANSLATOR } from "./utils/contentTranslator";
@@ -29,10 +29,13 @@ import { CARETAKER } from "./utils/hakkenCaretaker";
  * - A News agent — the News Collector, the Weekly Digest, the Email Sender —
  *   does its role's fixed job (`newsAgentRunActions.ts`). Until 2026-10-01
  *   every role that could be given went to the DataForSEO job.
+ * - The Search Console and Google Analytics Collectors start a run of their
+ *   own for each connected website (`searchConsoleAgentRun.ts`,
+ *   `googleAnalyticsAgentRun.ts`), with no model call.
  * - The Translator translates whatever is still missing (`contentTranslation.ts`).
  * - Every other agent is given its objective on the model loop.
  */
-export type AgentRunStart = "WIKI_ROUND" | "SEO_JOB" | "RESEARCH_JOB" | "NEWS_JOB" | "SEARCH_CONSOLE_JOB" | "TRANSLATION_ROUND" | "WATCH_ROUND" | "REPORT_ROUND" | "CARE_ROUND" | "OUTBOX_ROUND" | "MODEL";
+export type AgentRunStart = "WIKI_ROUND" | "SEO_JOB" | "RESEARCH_JOB" | "NEWS_JOB" | "SEARCH_CONSOLE_JOB" | "GOOGLE_ANALYTICS_JOB" | "TRANSLATION_ROUND" | "WATCH_ROUND" | "REPORT_ROUND" | "CARE_ROUND" | "OUTBOX_ROUND" | "MODEL";
 
 export async function startAgentRun(
   ctx: Pick<MutationCtx, "scheduler">,
@@ -116,6 +119,11 @@ export async function startAgentRun(
   if (isSearchConsoleRole(agent.systemKey)) {
     await ctx.scheduler.runAfter(0, internal.searchConsoleAgentRun.runSearchConsoleCollectorNow, { runId, workflowExecutionId });
     return "SEARCH_CONSOLE_JOB";
+  }
+
+  if (isGoogleAnalyticsRole(agent.systemKey)) {
+    await ctx.scheduler.runAfter(0, internal.googleAnalyticsAgentRun.runGoogleAnalyticsCollectorNow, { runId, workflowExecutionId });
+    return "GOOGLE_ANALYTICS_JOB";
   }
 
   await ctx.scheduler.runAfter(0, internal.agentRuntime.runTriggeredAgentObjective, {
