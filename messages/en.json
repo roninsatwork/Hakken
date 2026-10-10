@@ -13457,7 +13457,16 @@
         "seeMentions": "See the mentions",
         "readNotCited": "Read but not cited",
         "sourcesCited": "Sources cited",
-        "untrackedQueries": "Searches not tracked"
+        "untrackedQueries": "Searches not tracked",
+        "yourListings": "Your listings",
+        "profileManager": "Open your Google profile",
+        "mapRankings": "Map rankings",
+        "seeOffice": "See the office",
+        "seeMapSearch": "See the search on the map",
+        "localMarket": "Local market",
+        "waitingReviews": "Reviews waiting",
+        "againstRivals": "Against rivals",
+        "seeReviews": "See the reviews"
       },
       "website": {
         "notQuoted": "Google's AI has not quoted {text} in answers about you or your rivals.",
@@ -13625,6 +13634,115 @@
         "mostAsked": "“{text}” is asked of AI most: {a} times a month.",
         "answerOnPage": "Answer “{text}” plainly on one of your pages.",
         "checkPages": "Check your pages answer the searches people now ask AI."
+      },
+      "localProfile": {
+        "noOffice": "No Google profile is linked as your office yet.",
+        "linkOffice": "Link your Google profile as your office.",
+        "mapBox": "You are in Google's map box for {a} of the {b} searches checked.",
+        "mapNotChecked": "Your searches have not been checked on the map from this office yet.",
+        "ratingBehind": "Your rating is {a}, against {b} for your rivals.",
+        "ratingAhead": "Your rating of {a} is ahead of your rivals' {b}.",
+        "toFix": "{count, plural, one {# detail of your profile needs} other {# details of your profile need}} putting right.",
+        "nothingToFix": "Every detail of your profile checks out.",
+        "seeMap": "See the searches where you are not in the map box.",
+        "fix": {
+          "CLAIMED": "Claim your Google profile, so you can answer reviews and keep it right.",
+          "CATEGORY": "Change your main category to the one the top three on the map use.",
+          "OTHER_CATEGORIES": "Add the other categories your business covers.",
+          "DESCRIPTION": "Write a description of what you do and where.",
+          "ADDRESS": "Add your address and phone number.",
+          "WEBSITE": "Point your profile's website at your own site.",
+          "HOURS": "Add your opening hours.",
+          "BOOKING": "Add a booking link, as the businesses people also look at have.",
+          "SERVICES": "List your services with their prices.",
+          "PHOTOS": "Add photos: your rivals have more.",
+          "REPLIES": "Answer more of your reviews."
+        }
+      },
+      "localOffices": {
+        "noOffices": "No Google profile is linked as an office yet.",
+        "linkOffice": "Link your Google profiles as your offices.",
+        "offices": "Across your {a} offices you are in Google's map box for {b} of {c} searches checked.",
+        "furthestBehind": "{text} is furthest behind: in the map box for {a} of {b}.",
+        "mostToFix": "{text} has the most to put right: {count, plural, one {# detail} other {# details}}.",
+        "seeOffice": "Open {text}'s profile and see what it lacks.",
+        "fixOffice": "Put right {text}'s profile."
+      },
+      "localMaps": {
+        "noOffice": "No Google profile is linked as your office yet.",
+        "linkOffice": "Link your Google profile as your office.",
+        "notChecked": "Your searches have not been checked on the map yet: the next check does it.",
+        "inBox": "You are in Google's map box for {a} of the {b} searches checked.",
+        "belowBox": "You are below the box, or off the map, for {count, plural, one {# search} other {# searches}}, “{text}” the biggest.",
+        "topMost": "{text} tops the map most: first for {count, plural, one {# search} other {# searches}}.",
+        "upCheck": "That is {a} more in the box than the check before.",
+        "downCheck": "That is {a} fewer in the box than the check before.",
+        "seeSearch": "See who is above you for “{text}”, and what they have."
+      },
+      "localMapSearch": {
+        "notOnMap": "You are not among the businesses Google shows on the map for this search.",
+        "inBox": "You are {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} on the map: in Google's map box.",
+        "belowBox": "You are {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} on the map, below the box of three.",
+        "firstIs": "{text} is first.",
+        "moreReviews": "It has {a} Google reviews to your {b}.",
+        "morePhotos": "It has {a} photos to your {b}.",
+        "otherCategory": "Its main category is {more}, not yours.",
+        "seeFirst": "See what {text} has that you do not.",
+        "checkCategory": "Check whether {more} fits your business better as your main category."
+      },
+      "localMarket": {
+        "notRead": "Your local market has not been read yet: the next check does it.",
+        "businesses": "There are {a} businesses of your kind within {b} km.",
+        "outReview": "{count, plural, one {# of them has} other {# of them have}} more Google reviews than you.",
+        "mostReviews": "None of them has more Google reviews than you.",
+        "unwatched": "{count, plural, one {# business in your map box is} other {# businesses in your map box are}} not watched, {text} the strongest.",
+        "lookAt": "Look at {text}, and watch it as a rival."
+      },
+      "localActivity": {
+        "noRivals": "You do not watch a rival on Google Maps yet.",
+        "findRivals": "Find the businesses near you, and watch the ones that matter.",
+        "questionsWaiting": "{count, plural, one {# question waits} other {# questions wait}} for an answer on your profile: “{text}”.",
+        "posts": "Your rivals posted {a} times in 30 days; you posted {b}.",
+        "offers": "{count, plural, one {# offer is} other {# offers are}} running, “{text}” among them.",
+        "answerQuestion": "Answer “{text}” on your Google profile.",
+        "postMore": "Post on your Google profile each week: offers, news and work done."
+      },
+      "localListings": {
+        "notOwnSite": "Profiles are linked from your own website; here they are only shown.",
+        "off": "Local is not switched on for your company.",
+        "noOffice": "No Google profile is linked as your office yet: find yours below and mark it as yours.",
+        "linked": "{count, plural, one {# office} other {# offices}} and {b} rival businesses are linked.",
+        "onlyGoogle": "Only Google profiles are linked: reviews on other websites are not counted until you link them.",
+        "seeReviews": "See your reviews, and those waiting for an answer."
+      },
+      "reviews": {
+        "noProfile": "No Google profile is linked yet, so no reviews are read.",
+        "linkOffice": "Link your Google profile as your office.",
+        "waiting": "{count, plural, one {# review waits} other {# reviews wait}} for an answer, the oldest for {b} days.",
+        "allAnswered": "Every review has an answer.",
+        "newReviews": "You gained {a} reviews in the last 30 days, against {b} in the 30 days before.",
+        "daysToAnswer": "You answer in {count, plural, one {# day} other {# days}} on average.",
+        "answerWaiting": "Answer the {count, plural, one {review} other {# reviews}} waiting, the oldest first.",
+        "askForReviews": "Ask every client for a review: fewer came in this month than the month before."
+      },
+      "reviewsSay": {
+        "notRead": "Your reviews have not been read for what they say yet.",
+        "complaints": "Customers complain most about {text}: {count, plural, one {# review} other {# reviews}}.",
+        "praised": "They praise {text} most: {count, plural, one {# review} other {# reviews}}.",
+        "rivalsPraised": "Rivals are praised for {text} more than you: {count, plural, one {# review} other {# reviews}}.",
+        "draftsReady": "{count, plural, one {# reply is} other {# replies are}} drafted and ready to send.",
+        "readComplaints": "Read the reviews about {text}, and answer each one.",
+        "seeRival": "See how {text} is praised for {more}."
+      },
+      "reviewsRivals": {
+        "noProfile": "No Google profile is linked yet, so no reviews are read.",
+        "linkOffice": "Link your Google profile as your office.",
+        "lead": "You have the most Google reviews of the {a} businesses here.",
+        "place": "You come {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} of {b} by Google reviews.",
+        "gap": "{text} leads by {a} reviews.",
+        "faster": "{text} answers reviews in {count, plural, one {# day} other {# days}}; you take {b}.",
+        "seeLeader": "See what {text} does that you do not.",
+        "answerFaster": "Answer each new review within a day."
       }
     }
   },

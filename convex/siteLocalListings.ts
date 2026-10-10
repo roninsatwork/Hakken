@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { localListingsSees } from "./sees/local";
+import { seeing, seenValidator } from "./utils/hakkenSees";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx } from "./_generated/server";
@@ -148,8 +150,9 @@ export const localListings = tenantQuery({
       rows: v.array(findRowValidator),
     })),
     limits: v.object({ offices: v.number(), rivalsPerOffice: v.number() }),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
     const site = await requireMySite(ctx, args.siteId);
     const hold = site.hold;
     const [on, limits] = await Promise.all([partIsOn(ctx, hold.companyId, "local"), readFanOutLimits(ctx, hold.companyId, hold._id)]);
@@ -199,7 +202,7 @@ export const localListings = tenantQuery({
       finds: findRows,
       limits: { offices: limits.localOffices, rivalsPerOffice: limits.localRivalsPerOffice },
     };
-  },
+  }, localListingsSees),
 });
 
 /** Find: one search of Google Maps, Trustpilot or Tripadvisor by name and town, bought now through the Collector. */

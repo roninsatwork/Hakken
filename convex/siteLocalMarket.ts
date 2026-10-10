@@ -1,5 +1,7 @@
 import { v } from "convex/values";
-import type { Doc } from "./_generated/dataModel";
+import { localMarketSees, rivalActivitySees } from "./sees/local";
+import { seeing, seenValidator } from "./utils/hakkenSees";
+import type { Doc, Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
 import { ACTIVITY_KINDS } from "./localSchema";
@@ -34,8 +36,9 @@ export const localMarket = tenantQuery({
       you: v.boolean(),
       watched: v.boolean(),
     })),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings"> }) => {
     const site = await requireMySite(ctx, args.siteId);
     const { offices, rivals, limits } = await localSetup(ctx, site);
     const office = openOffice(offices, args.officeId);
@@ -66,7 +69,7 @@ export const localMarket = tenantQuery({
     });
     if (!rows.some((row) => row.you)) rows.unshift({ ...listingRowOf(office), metres: null, mapBox: boxes.filter((box) => box.includes(office._id)).length, you: true, watched: false });
     return { offices: options, km, day: part.day, total: part.total, rows };
-  },
+  }, localMarketSees),
 });
 
 /** What a rival's activity line says happened: a post, an offer, a change to its profile. */
@@ -121,8 +124,9 @@ export const rivalActivity = tenantQuery({
       day: v.string(),
       answeredDay: v.union(v.string(), v.null()),
     })),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
     const site = await requireMySite(ctx, args.siteId);
     const { offices, rivals } = await localSetup(ctx, site);
     const since = new Date(Date.now() - 30 * DAY_MS).toISOString().slice(0, 10);
@@ -164,5 +168,5 @@ export const rivalActivity = tenantQuery({
       lines,
       questions,
     };
-  },
+  }, rivalActivitySees),
 });

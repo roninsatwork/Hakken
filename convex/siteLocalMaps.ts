@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { mapRankingsSees, mapSearchSees } from "./sees/local";
+import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
@@ -68,8 +70,9 @@ export const mapRankings = tenantQuery({
       topIsYou: v.boolean(),
       checkedDay: v.union(v.string(), v.null()),
     })),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings"> }) => {
     const site = await requireMySite(ctx, args.siteId);
     const { offices, limits } = await localSetup(ctx, site);
     const office = openOffice(offices, args.officeId);
@@ -126,7 +129,7 @@ export const mapRankings = tenantQuery({
       },
       rows,
     };
-  },
+  }, mapRankingsSees),
 });
 
 export const mapSearch = tenantQuery({
@@ -149,6 +152,7 @@ export const mapSearch = tenantQuery({
       you: v.boolean(),
       watched: v.boolean(),
     })),
+    seen: seenValidator,
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
@@ -179,7 +183,7 @@ export const mapSearch = tenantQuery({
       searchVolumesOf(ctx, site, [args.keyword]),
       googlePositions(ctx, site.website._id, site.place, [args.keyword]),
     ]);
-    return {
+    const search = {
       office: { listingId: office._id, name: office.name, town: office.town ?? null },
       keyword: args.keyword,
       day: latest.day,
@@ -192,5 +196,6 @@ export const mapSearch = tenantQuery({
       you: listingRowOf(office as Doc<"listings">),
       businesses,
     };
+    return { ...search, seen: mapSearchSees(search) };
   },
 });

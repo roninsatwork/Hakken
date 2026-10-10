@@ -15,6 +15,7 @@ import { PageSection } from "../../../../_components/PageSection";
 import { CUT_COLUMN } from "../../../_components/SiteCells";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -100,6 +101,7 @@ export default function LocalOfficesPage() {
         description={t("description")}
         action={options ? <OfficeSwitch offices={options.offices} open={null} profile every /> : undefined}
       />
+      <SiteSees screen="localOffices" seen={data?.seen} />
       {offices && offices.length === 0 ? <LocalSetupNotice siteId={siteId} reason="noOffice" /> : null}
 
       <FigureRow>

@@ -20,6 +20,7 @@ import { PageSection } from "../../../../_components/PageSection";
 import { formatDay } from "../../../_components/siteFormat";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { businessRecord, useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -109,6 +110,7 @@ export default function WhatCustomersSayPage() {
         description={t("description")}
         action={data ? <OfficeSwitch offices={data.offices} open={officeId ?? null} allOffices /> : undefined}
       />
+      <SiteSees screen="reviewsSay" seen={data?.seen} />
       {data && data.unread > 0 ? <Notice>{t("reading", { count: data.unread })}</Notice> : null}
 
       {data ? (

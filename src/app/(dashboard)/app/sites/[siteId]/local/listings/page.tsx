@@ -21,6 +21,7 @@ import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { PageSection } from "../../../../_components/PageSection";
 import { formatDay } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { businessRecord, useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -140,6 +141,7 @@ export default function LocalListingsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Link2 className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="localListings" seen={data?.seen} />
       {data && !data.ownSite ? <Notice>{t("notOwnSite")}</Notice> : null}
       {data && data.ownSite && !data.on ? <LocalSetupNotice siteId={siteId} reason="off" /> : null}
 

@@ -23,12 +23,15 @@ export function SiteSees({ screen, seen }: { screen: string; seen: Seen | null |
   const engineLabel = useEngineLabel();
   if (!seen || seen.says.length === 0) return null;
 
-  // A sentence's code and numbers as words: `a`, `b` and `c` formatted, `count` for a plural, names as written, an engine by its name.
+  // A sentence's code and numbers as words: `a`, `b` and `c` formatted — a
+  // rating keeps its one decimal, as Local shows it — `count` for a plural,
+  // names as written, an engine by its name.
   const coded = t as unknown as (key: string, values: Record<string, string | number>) => string;
+  const number = (value = 0) => (Number.isInteger(value) ? formatNumber(value) : value.toFixed(1));
   const words = (phrase: SeenPhrase) => coded(`${screen}.${phrase.code}`, {
-    a: formatNumber(phrase.a ?? 0),
-    b: formatNumber(phrase.b ?? 0),
-    c: formatNumber(phrase.c ?? 0),
+    a: number(phrase.a),
+    b: number(phrase.b),
+    c: number(phrase.c),
     count: phrase.a ?? 0,
     text: phrase.text ?? "",
     more: phrase.more ?? "",

@@ -1,4 +1,6 @@
 import { v, type Infer } from "convex/values";
+import { businessProfileSees, everyOfficeSees } from "./sees/local";
+import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
@@ -171,8 +173,9 @@ export const businessProfile = tenantQuery({
       alsoLookAt: v.array(alsoRowValidator),
       topics: v.array(v.object({ topic: v.string(), reviews: v.number(), stars: v.union(v.number(), v.null()) })),
     })),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings"> }) => {
     const site = await requireMySite(ctx, args.siteId);
     const { offices, rivals, rivalOffice } = await localSetup(ctx, site);
     const office = openOffice(offices, args.officeId);
@@ -236,7 +239,7 @@ export const businessProfile = tenantQuery({
         topics: (office.profile?.topics ?? []).map((entry) => ({ ...entry, stars: topicStars.get(entry.topic) ?? null })),
       },
     };
-  },
+  }, businessProfileSees),
 });
 
 export const everyOffice = tenantQuery({
@@ -258,8 +261,9 @@ export const everyOffice = tenantQuery({
       /** The business first on the map from each office that checks it, each once. */
       top: v.array(v.string()),
     })),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
     const site = await requireMySite(ctx, args.siteId);
     const { offices, rivals, rivalOffice } = await localSetup(ctx, site);
     const searchesOf = await searchesByOffice(ctx, site, offices);
@@ -301,5 +305,5 @@ export const everyOffice = tenantQuery({
         }))],
       })),
     };
-  },
+  }, everyOfficeSees),
 });

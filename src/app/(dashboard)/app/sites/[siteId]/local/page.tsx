@@ -21,6 +21,7 @@ import { formatDay } from "../../_components/siteFormat";
 import { VisitLink } from "../../_components/VisitLink";
 import { ListDownload } from "../../_components/SiteDownloads";
 import { useSiteId, useSite } from "../../_components/useSite";
+import { SiteSees } from "../../_components/SiteSees";
 import { businessRecord, useSiteListHref, useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
@@ -111,6 +112,7 @@ export default function LocalProfilePage() {
           </div>
         ) : undefined}
       />
+      <SiteSees screen="localProfile" seen={data?.seen} />
       {data && !office ? <LocalSetupNotice siteId={siteId} reason="noOffice" /> : null}
 
       {office ? (

@@ -17,6 +17,7 @@ import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { CUT_COLUMN, PositionCell } from "../../../_components/SiteCells";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { sharedSiteQuery, useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -104,6 +105,7 @@ export default function LocalMapsPage() {
         description={t("description")}
         action={data ? <OfficeSwitch offices={data.offices} open={office?.listingId ?? null} /> : undefined}
       />
+      <SiteSees screen="localMaps" seen={data?.seen} />
       {data && !office ? <LocalSetupNotice siteId={siteId} reason="noOffice" /> : null}
 
       {office && figures ? (

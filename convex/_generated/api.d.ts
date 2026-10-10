@@ -422,6 +422,7 @@ import type * as searchVolumes from "../searchVolumes.js";
 import type * as seedUsers from "../seedUsers.js";
 import type * as seedWorkflows from "../seedWorkflows.js";
 import type * as sees_aiAnswers from "../sees/aiAnswers.js";
+import type * as sees_local from "../sees/local.js";
 import type * as sees_radar from "../sees/radar.js";
 import type * as selfImprovementConfig from "../selfImprovementConfig.js";
 import type * as seoAgentRuns from "../seoAgentRuns.js";
@@ -1182,6 +1183,7 @@ declare const fullApi: ApiFromModules<{
   seedUsers: typeof seedUsers;
   seedWorkflows: typeof seedWorkflows;
   "sees/aiAnswers": typeof sees_aiAnswers;
+  "sees/local": typeof sees_local;
   "sees/radar": typeof sees_radar;
   selfImprovementConfig: typeof selfImprovementConfig;
   seoAgentRuns: typeof seoAgentRuns;

@@ -13457,7 +13457,16 @@
         "seeMentions": "Vedi le menzioni",
         "readNotCited": "Lette ma non citate",
         "sourcesCited": "Fonti citate",
-        "untrackedQueries": "Ricerche non seguite"
+        "untrackedQueries": "Ricerche non seguite",
+        "yourListings": "Le tue schede",
+        "profileManager": "Apri il tuo profilo Google",
+        "mapRankings": "Posizioni sulla mappa",
+        "seeOffice": "Vedi la sede",
+        "seeMapSearch": "Vedi la ricerca sulla mappa",
+        "localMarket": "Mercato locale",
+        "waitingReviews": "Recensioni in attesa",
+        "againstRivals": "Contro i concorrenti",
+        "seeReviews": "Vedi le recensioni"
       },
       "website": {
         "notQuoted": "L'IA di Google non ha citato {text} nelle risposte su di te o sui concorrenti.",
@@ -13625,6 +13634,115 @@
         "mostAsked": "“{text}” è la più chiesta all'IA: {a} volte al mese.",
         "answerOnPage": "Rispondi chiaramente a “{text}” in una delle tue pagine.",
         "checkPages": "Controlla che le tue pagine rispondano alle ricerche che ora si fanno all'IA."
+      },
+      "localProfile": {
+        "noOffice": "Nessun profilo Google è ancora collegato come tua sede.",
+        "linkOffice": "Collega il tuo profilo Google come tua sede.",
+        "mapBox": "Sei nel riquadro mappa di Google per {a} delle {b} ricerche controllate.",
+        "mapNotChecked": "Le tue ricerche non sono ancora state controllate sulla mappa da questa sede.",
+        "ratingBehind": "La tua valutazione è {a}, contro {b} dei tuoi concorrenti.",
+        "ratingAhead": "La tua valutazione di {a} è sopra il {b} dei tuoi concorrenti.",
+        "toFix": "{count, plural, one {# dettaglio del tuo profilo va sistemato} other {# dettagli del tuo profilo vanno sistemati}}.",
+        "nothingToFix": "Ogni dettaglio del tuo profilo è in ordine.",
+        "seeMap": "Guarda le ricerche in cui non sei nel riquadro mappa.",
+        "fix": {
+          "CLAIMED": "Rivendica il tuo profilo Google, così puoi rispondere alle recensioni e tenerlo aggiornato.",
+          "CATEGORY": "Cambia la categoria principale in quella usata dai primi tre sulla mappa.",
+          "OTHER_CATEGORIES": "Aggiungi le altre categorie che copre la tua attività.",
+          "DESCRIPTION": "Scrivi una descrizione di cosa fai e dove.",
+          "ADDRESS": "Aggiungi indirizzo e numero di telefono.",
+          "WEBSITE": "Fai puntare il sito del profilo al tuo sito.",
+          "HOURS": "Aggiungi gli orari di apertura.",
+          "BOOKING": "Aggiungi un link per prenotare, come le attività che le persone guardano anche.",
+          "SERVICES": "Elenca i tuoi servizi con i prezzi.",
+          "PHOTOS": "Aggiungi foto: i tuoi concorrenti ne hanno di più.",
+          "REPLIES": "Rispondi a più recensioni."
+        }
+      },
+      "localOffices": {
+        "noOffices": "Nessun profilo Google è ancora collegato come sede.",
+        "linkOffice": "Collega i tuoi profili Google come tue sedi.",
+        "offices": "Nelle tue {a} sedi sei nel riquadro mappa di Google per {b} delle {c} ricerche controllate.",
+        "furthestBehind": "{text} è la più indietro: nel riquadro mappa per {a} su {b}.",
+        "mostToFix": "{text} ha più cose da sistemare: {count, plural, one {# dettaglio} other {# dettagli}}.",
+        "seeOffice": "Apri il profilo di {text} e guarda cosa gli manca.",
+        "fixOffice": "Sistema il profilo di {text}."
+      },
+      "localMaps": {
+        "noOffice": "Nessun profilo Google è ancora collegato come tua sede.",
+        "linkOffice": "Collega il tuo profilo Google come tua sede.",
+        "notChecked": "Le tue ricerche non sono ancora state controllate sulla mappa: lo fa il prossimo controllo.",
+        "inBox": "Sei nel riquadro mappa di Google per {a} delle {b} ricerche controllate.",
+        "belowBox": "Sei sotto il riquadro, o fuori dalla mappa, per {count, plural, one {# ricerca} other {# ricerche}}, “{text}” la più grande.",
+        "topMost": "{text} è primo sulla mappa più spesso: per {count, plural, one {# ricerca} other {# ricerche}}.",
+        "upCheck": "Sono {a} in più nel riquadro rispetto al controllo prima.",
+        "downCheck": "Sono {a} in meno nel riquadro rispetto al controllo prima.",
+        "seeSearch": "Guarda chi è sopra di te per “{text}” e cosa ha."
+      },
+      "localMapSearch": {
+        "notOnMap": "Non sei tra le attività che Google mostra sulla mappa per questa ricerca.",
+        "inBox": "Sei {count}º sulla mappa: nel riquadro mappa di Google.",
+        "belowBox": "Sei {count}º sulla mappa, sotto il riquadro dei primi tre.",
+        "firstIs": "{text} è primo.",
+        "moreReviews": "Ha {a} recensioni Google contro le tue {b}.",
+        "morePhotos": "Ha {a} foto contro le tue {b}.",
+        "otherCategory": "La sua categoria principale è {more}, non la tua.",
+        "seeFirst": "Guarda cosa ha {text} che a te manca.",
+        "checkCategory": "Valuta se {more} descrive meglio la tua attività come categoria principale."
+      },
+      "localMarket": {
+        "notRead": "Il tuo mercato locale non è ancora stato letto: lo fa il prossimo controllo.",
+        "businesses": "Ci sono {a} attività come la tua entro {b} km.",
+        "outReview": "{count, plural, one {# di esse ha} other {# di esse hanno}} più recensioni Google di te.",
+        "mostReviews": "Nessuna ha più recensioni Google di te.",
+        "unwatched": "{count, plural, one {# attività nel tuo riquadro mappa non è seguita} other {# attività nel tuo riquadro mappa non sono seguite}}, {text} la più forte.",
+        "lookAt": "Guarda {text} e seguila come concorrente."
+      },
+      "localActivity": {
+        "noRivals": "Non segui ancora un concorrente su Google Maps.",
+        "findRivals": "Trova le attività vicino a te e segui quelle che contano.",
+        "questionsWaiting": "{count, plural, one {# domanda attende} other {# domande attendono}} una risposta sul tuo profilo: “{text}”.",
+        "posts": "I tuoi concorrenti hanno pubblicato {a} volte in 30 giorni; tu {b}.",
+        "offers": "{count, plural, one {# offerta è attiva} other {# offerte sono attive}}, tra cui “{text}”.",
+        "answerQuestion": "Rispondi a “{text}” sul tuo profilo Google.",
+        "postMore": "Pubblica sul tuo profilo Google ogni settimana: offerte, novità e lavori fatti."
+      },
+      "localListings": {
+        "notOwnSite": "I profili si collegano dal tuo sito; qui vengono solo mostrati.",
+        "off": "Local non è attivo per la tua azienda.",
+        "noOffice": "Nessun profilo Google è ancora collegato come tua sede: trova il tuo qui sotto e segnalo come tuo.",
+        "linked": "{count, plural, one {# sede} other {# sedi}} e {b} attività concorrenti sono collegate.",
+        "onlyGoogle": "Sono collegati solo profili Google: le recensioni su altri siti non contano finché non li colleghi.",
+        "seeReviews": "Guarda le tue recensioni e quelle in attesa di risposta."
+      },
+      "reviews": {
+        "noProfile": "Nessun profilo Google è ancora collegato, quindi non si leggono recensioni.",
+        "linkOffice": "Collega il tuo profilo Google come tua sede.",
+        "waiting": "{count, plural, one {# recensione attende} other {# recensioni attendono}} una risposta, la più vecchia da {b} giorni.",
+        "allAnswered": "Ogni recensione ha una risposta.",
+        "newReviews": "Hai ricevuto {a} recensioni negli ultimi 30 giorni, contro {b} nei 30 giorni prima.",
+        "daysToAnswer": "Rispondi in media in {count, plural, one {# giorno} other {# giorni}}.",
+        "answerWaiting": "Rispondi {count, plural, one {alla recensione in attesa} other {alle # recensioni in attesa}}, dalla più vecchia.",
+        "askForReviews": "Chiedi una recensione a ogni cliente: questo mese ne sono arrivate meno del mese prima."
+      },
+      "reviewsSay": {
+        "notRead": "Le tue recensioni non sono ancora state lette per quello che dicono.",
+        "complaints": "I clienti si lamentano soprattutto di {text}: {count, plural, one {# recensione} other {# recensioni}}.",
+        "praised": "Lodano soprattutto {text}: {count, plural, one {# recensione} other {# recensioni}}.",
+        "rivalsPraised": "I concorrenti sono lodati per {text} più di te: {count, plural, one {# recensione} other {# recensioni}}.",
+        "draftsReady": "{count, plural, one {# risposta è pronta} other {# risposte sono pronte}} da inviare.",
+        "readComplaints": "Leggi le recensioni su {text} e rispondi a ciascuna.",
+        "seeRival": "Guarda come {text} viene lodato per {more}."
+      },
+      "reviewsRivals": {
+        "noProfile": "Nessun profilo Google è ancora collegato, quindi non si leggono recensioni.",
+        "linkOffice": "Collega il tuo profilo Google come tua sede.",
+        "lead": "Hai più recensioni Google delle {a} attività qui.",
+        "place": "Sei {count}º su {b} per recensioni Google.",
+        "gap": "{text} è in testa di {a} recensioni.",
+        "faster": "{text} risponde alle recensioni in {count, plural, one {# giorno} other {# giorni}}; tu in {b}.",
+        "seeLeader": "Guarda cosa fa {text} che tu non fai.",
+        "answerFaster": "Rispondi a ogni nuova recensione entro un giorno."
       }
     }
   },

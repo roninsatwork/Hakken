@@ -18,6 +18,7 @@ import { PageSection } from "../../../../../_components/PageSection";
 import { formatDay, formatNumber } from "../../../../_components/siteFormat";
 import { ListDownload } from "../../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../../_components/useSite";
+import { SiteSees } from "../../../../_components/SiteSees";
 import { businessRecord, useSiteListHref, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../../_components/useSiteSort";
@@ -80,6 +81,7 @@ export default function LocalMapSearchPage() {
           volume: data.volume === null ? t("volumeUnknown") : t("volume", { count: data.volume, shown: formatNumber(data.volume) }),
         }) : undefined}
       />
+      <SiteSees screen="localMapSearch" seen={data?.seen} />
       {data === null ? <Notice>{t("notChecked")}</Notice> : null}
 
       {data ? (

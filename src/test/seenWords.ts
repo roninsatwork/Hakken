@@ -19,8 +19,10 @@ export function expectWords(screen: string, box: Seen) {
       a: String(phrase.a ?? 0), b: String(phrase.b ?? 0), c: String(phrase.c ?? 0), count: phrase.a ?? 0,
       text: phrase.text ?? "", more: phrase.more ?? "", engine: phrase.engine ?? "",
     });
+    // A code may name a group's own sentence: "fix.HOURS" is `fix` → `HOURS`.
+    const wordsOf = (code: string) => code.split(".").reduce<unknown>((node, part) => (node as Record<string, unknown> | undefined)?.[part], seen[screen]);
     for (const phrase of [...box.says, ...box.steps]) {
-      expect(seen[screen]?.[phrase.code], `sites.seen.${screen}.${phrase.code}`).toBeTypeOf("string");
+      expect(wordsOf(phrase.code), `sites.seen.${screen}.${phrase.code}`).toBeTypeOf("string");
       expect(t(`sites.seen.${screen}.${phrase.code}`, values(phrase)), `${locale}: sites.seen.${screen}.${phrase.code}`).not.toMatch(/[{}]/);
     }
     for (const step of box.steps) expect(seen.links?.[step.link], `sites.seen.links.${step.link}`).toBeTypeOf("string");

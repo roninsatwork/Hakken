@@ -17,6 +17,7 @@ import { SITE_SERIES_COLOURS, SiteBarChart } from "../../_components/SiteCharts"
 import { formatDay, formatMonth, toCsv } from "../../_components/siteFormat";
 import { ListDownload } from "../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../_components/useSite";
+import { SiteSees } from "../../_components/SiteSees";
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
@@ -79,6 +80,7 @@ export default function YourReviewsPage() {
         description={t("description")}
         action={data ? <OfficeSwitch offices={data.offices} open={officeId ?? null} allOffices /> : undefined}
       />
+      <SiteSees screen="reviews" seen={data?.seen} />
       {data && data.listings.length === 0 ? <LocalSetupNotice siteId={siteId} reason="noOffice" /> : null}
 
       {figures ? (

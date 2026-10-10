@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { customersSaySees, reviewsRivalsSees, yourReviewsSees } from "./sees/local";
+import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
@@ -84,8 +86,9 @@ export const yourReviews = tenantQuery({
     }),
     months: v.array(v.object({ month: v.string(), reviews: v.number(), stars: v.union(v.number(), v.null()) })),
     rows: v.array(reviewRowValidator),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings"> }) => {
     const site = await requireMySite(ctx, args.siteId);
     const { setup, listings } = await ownListings(ctx, site, args.officeId);
     const rows: Array<StoredReview & { listingId: Id<"listings"> }> = [];
@@ -125,7 +128,7 @@ export const yourReviews = tenantQuery({
         text: row.text ?? null, name: row.name ?? null, guide: row.guide === true, replyDay: row.replyDay ?? null, replyRough: row.replyRough === true,
       })),
     };
-  },
+  }, yourReviewsSees),
 });
 
 const businessRowValidator = v.object({
@@ -153,8 +156,9 @@ export const reviewsAgainstRivals = tenantQuery({
      * (a rival's newest few): the chart's lines.
      */
     lines: v.array(v.object({ listingId: v.id("listings"), name: v.string(), you: v.boolean(), counts: v.array(v.union(v.number(), v.null())) })),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings"> }) => {
     const site = await requireMySite(ctx, args.siteId);
     const setup = await localSetup(ctx, site);
     const office = setup.offices.find((entry) => entry._id === args.officeId) ?? setup.offices[0] ?? null;
@@ -201,7 +205,7 @@ export const reviewsAgainstRivals = tenantQuery({
       counts: reviewsAtMonthEnds(held.get(listing._id) ?? [], listing.reviews ?? null, months),
     }));
     return { offices, office: { listingId: office._id, name: office.name, town: office.town ?? null }, rows, months, lines };
-  },
+  }, reviewsRivalsSees),
 });
 
 /**
@@ -246,8 +250,9 @@ export const whatCustomersSay = tenantQuery({
     drafts: v.array(v.object({ listingId: v.id("listings"), reviewId: v.string(), source: listingSourceValidator, town: v.union(v.string(), v.null()), day: v.string(), stars: v.number(), name: v.union(v.string(), v.null()), text: v.string(), reply: v.string() })),
     /** What a drafted reply has cost, on average over the replier's last few: the card's cost line. */
     perReplyUsd: v.union(v.number(), v.null()),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; officeId?: Id<"listings"> }) => {
     const site = await requireMySite(ctx, args.siteId);
     const { setup, office, listings } = await ownListings(ctx, site, args.officeId);
     const reviews: Array<StoredReview & { listing: Doc<"listings"> }> = [];
@@ -309,7 +314,7 @@ export const whatCustomersSay = tenantQuery({
       }).slice(0, 20),
       perReplyUsd: await perReplyUsd(ctx),
     };
-  },
+  }, customersSaySees),
 });
 
 /** Drafted replies averaged for the cost line. */

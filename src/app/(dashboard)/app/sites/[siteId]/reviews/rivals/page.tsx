@@ -15,6 +15,7 @@ import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCha
 import { formatMonth, formatNumber, toCsv } from "../../../_components/siteFormat";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { businessRecord, useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -88,6 +89,7 @@ export default function ReviewsAgainstRivalsPage() {
         description={t("description")}
         action={data ? <OfficeSwitch offices={data.offices} open={data.office?.listingId ?? null} /> : undefined}
       />
+      <SiteSees screen="reviewsRivals" seen={data?.seen} />
       {data && !data.office ? <LocalSetupNotice siteId={siteId} reason="noOffice" /> : null}
 
       {data?.office && you ? (
