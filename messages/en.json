@@ -9860,6 +9860,10 @@
       "new": "New",
       "same": "The same",
       "places": "{places} places"
+    },
+    "hakkenSees": {
+      "title": "What {platformName} sees",
+      "doFirst": "Do first"
     }
   },
   "agenticTesting": {
@@ -13209,6 +13213,9 @@
         "noMatch": "No place matches.",
         "empty": "No place found yet: from Brand radar's monthly reading and the rivals' links, from the next check."
       }
+    },
+    "seen": {
+      "links": {}
     }
   },
   "searchConsole": {

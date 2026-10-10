@@ -1,7 +1,8 @@
 # Discovery — detail screens, rows that open, and What Hakken sees
 
 **Started 2026-10-10. Status: drawn and approved 2026-10-10 (Anthony: "im
-happy with these screens"); the build waits for his "build".** Follow
+happy with these screens"); building since 2026-10-10 ("Ok can start this
+please").** Follow
 `AGENTS.md`, the [drawing guide](../../developer/drawing-guide.md) and the
 [core data normalisation plan](core-data-normalisation-plan.md)'s rules (§3
 there): nothing here is bought, nothing is stored twice, and every screen is
@@ -193,6 +194,7 @@ opens today.
 | Businesses recommended | Businesses | **One business** |
 | Read but not cited | Pages | **One page** |
 | AI demand | Searches | the search's record (today) |
+| Business profile | What your profile shows | stays: each row is the whole check |
 | Business profile | People also look at | **One business** |
 | Business profile | What reviewers talk about | Your reviews, on that topic |
 | Every office | Offices / searches | the office's profile / One search on the map (today) |
@@ -214,6 +216,8 @@ opens today.
 | New and lost links | Weeks | All backlinks, that week's new or lost links (§5) |
 | Where links come from | Groups | All backlinks, that group (§5) |
 | Referring IPs | Servers | stays as it is (DS7) |
+| Link quality | Checks | stays: each row is one check's whole reading |
+| New and lost keywords | Checks | stays: each row is one check's whole reading (its moves table opens each search, as today) |
 | Suggested competitors | Websites | **One website** |
 
 Every other Discovery table already opens its record (keywords, pages,
@@ -465,7 +469,8 @@ About thirteen days. Progress is reported per step as a percentage.
 | Step | State |
 |---|---|
 | Drawings | **Approved 2026-10-10**: four detail screens, What Hakken sees on 19 list pages, the five older-table boards (`docs/plans/assets/discovery-detail-screens/`) |
-| 1–7 | Not started — waits for Anthony's "build" |
+| 1. `HakkenSees` and its guards | **Done 2026-10-10**: the kit part (`HakkenSees`, in the drawing kit too), the codes it is sent in (`convex/utils/hakkenSees.ts`), Sites' `SiteSees`, and two guards — every Discovery screen carries the box (`src/hakken-sees-drift.test.ts`) and every Discovery table's rows open something (`src/discovery-rows-drift.test.ts`), each with a list of screens still to do that may only shrink |
+| 2–7 | Started 2026-10-10 (Anthony: "Ok can start this please") |
 
 ## Change log
 

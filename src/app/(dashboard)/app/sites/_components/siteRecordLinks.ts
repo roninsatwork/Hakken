@@ -84,6 +84,32 @@ function identityOf(record: SiteRecord): string {
   }
 }
 
+/** A record from its kind and key as the server names it (What Hakken sees' links), or null for a kind this screen does not know. */
+export function siteRecordOf(kind: string, key: string): SiteRecord | null {
+  switch (kind) {
+    case "keyword":
+      return { kind, keyword: key };
+    case "page":
+      return { kind, page: key };
+    case "feature":
+      return { kind, feature: key };
+    case "answer":
+      return { kind, answerId: key };
+    case "rival":
+      return { kind, rivalId: key };
+    case "domain":
+      return { kind, domain: key };
+    case "anchor":
+      return { kind, anchor: key };
+    case "problem":
+      return { kind, check: key };
+    case "bandMove":
+      return { kind, move: key };
+    default:
+      return null;
+  }
+}
+
 /** The menu page a kind of record belongs to. */
 export function recordParent(kind: SiteRecord["kind"]): SitePage {
   const parent = RECORDS[kind].parent;

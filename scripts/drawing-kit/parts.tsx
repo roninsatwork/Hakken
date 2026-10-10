@@ -22,6 +22,7 @@ import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/Dat
 import { DownloadButton } from "@/src/ui/components/screens/DownloadButton";
 import { Field } from "@/src/ui/components/screens/Field";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
+import { HakkenSees } from "@/src/ui/components/screens/HakkenSees";
 import { Meter } from "@/src/ui/components/screens/Meter";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { Notice } from "@/src/ui/components/screens/Notice";
@@ -276,6 +277,24 @@ const PARTS: Part[] = [
         sort={{ key: "volume", direction: "desc", onSort: noop }}
         footer={{ mode: "paged", page: 1, totalPages: 40, totalCount: 1000, pageSize: 25, isLoading: false, onPageChange: noop, numbered: true, rowsChoice: { choices: [25, 50, 75, 100], value: 25, onChange: noop } }}
         minWidthClassName=""
+      />
+    ),
+  },
+  {
+    id: "hakken-sees",
+    name: "What Hakken sees",
+    source: "src/ui/components/screens/HakkenSees.tsx",
+    use: "Under the title of every Discovery screen: what the page means, then up to three steps to do first.",
+    render: () => (
+      <HakkenSees
+        says={[
+          "Google's AI names you in 64 answers a month: 18% of the answers about you and your rivals, behind Brightside Digital's 34%.",
+          "You are missing from the most-asked question, about website costs.",
+        ]}
+        steps={[
+          { words: "Put plain prices at the top of your /pricing/ page.", link: "See the question", href: "#" },
+          { words: "Get listed on clutch.co.", link: "See clutch.co", href: "#" },
+        ]}
       />
     ),
   },

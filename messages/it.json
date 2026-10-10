@@ -9860,6 +9860,10 @@
       "new": "Nuovo",
       "same": "Invariato",
       "places": "{places} posizioni"
+    },
+    "hakkenSees": {
+      "title": "Cosa vede {platformName}",
+      "doFirst": "Prima di tutto"
     }
   },
   "agenticTesting": {
@@ -13209,6 +13213,9 @@
         "noMatch": "Nessun posto corrisponde.",
         "empty": "Ancora nessun posto: dalla lettura mensile del Radar del marchio e dai link dei concorrenti, dal prossimo controllo."
       }
+    },
+    "seen": {
+      "links": {}
     }
   },
   "searchConsole": {
