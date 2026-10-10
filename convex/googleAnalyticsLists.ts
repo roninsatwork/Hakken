@@ -1,4 +1,4 @@
-import type { AnalyticsList } from "./googleAnalyticsSchema";
+import type { AnalyticsList, AnalyticsPeriod, AnalyticsWhich } from "./googleAnalyticsSchema";
 import type { ReportRow } from "./googleAnalyticsApi";
 import { PART_ROWS, packNumbers, unpackNumbers } from "./utils/searchConsolePacks";
 
@@ -230,4 +230,14 @@ export function pageAddress(origin: string, path: string): string {
   if (!path || path === "(not set)") return "(not set)";
   const clean = path.split("#")[0].split("?")[0];
   return `${origin.replace(/\/+$/, "")}${clean.startsWith("/") ? clean : `/${clean}`}`;
+}
+
+/**
+ * A ready-made list's name: the list, the period, which span, and the device
+ * (empty for every device). Here rather than beside the collection, so a
+ * reader such as the hold's page list (`holdPages.ts`) names it without
+ * importing the collection.
+ */
+export function slotKey(list: AnalyticsList, period: AnalyticsPeriod, which: AnalyticsWhich, device: string): string {
+  return `${list}|${period}|${which}|${device}`;
 }

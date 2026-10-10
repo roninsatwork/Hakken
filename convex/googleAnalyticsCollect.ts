@@ -22,6 +22,7 @@ import {
   joinAsks,
   packList,
   pageAddress,
+  slotKey,
   type ListRow,
   type PackedPart,
 } from "./googleAnalyticsLists";
@@ -111,10 +112,8 @@ export function periodRange(period: AnalyticsPeriod, which: AnalyticsWhich, top:
   return { from: shiftDay(to, -(days - 1)), to };
 }
 
-/** A ready-made list's name: the list, the period, which span, and the device (empty for every device). */
-export function slotKey(list: AnalyticsList, period: AnalyticsPeriod, which: AnalyticsWhich, device: string): string {
-  return `${list}|${period}|${which}|${device}`;
-}
+/** A ready-made list's name, as every reader of the lists names it (`googleAnalyticsLists.ts`). */
+export { slotKey };
 
 export type PeriodJob = { list: AnalyticsList; period: AnalyticsPeriod; which: AnalyticsWhich };
 
@@ -637,6 +636,9 @@ export const finishCollection = internalMutation({
     await ctx.scheduler.runAfter(0, internal.googleAnalyticsCollect.dropLive, { companyWebsiteId: connection.companyWebsiteId });
     // Tracking health when the first collection is in, and every week (GA11).
     if (first || args.weekly) await ctx.scheduler.runAfter(0, internal.googleAnalyticsHealth.runHealthChecks, { connectionId: connection._id });
+    // Each page's visits sit beside Search Console's clicks in the website's page list (§4.6): it is rebuilt, as
+    // Search Console's settle asks, and writes only the pages whose figures moved.
+    await ctx.scheduler.runAfter(0, internal.holdPages.requestRebuild, { holdId: connection.companyWebsiteId });
     return null;
   },
 });

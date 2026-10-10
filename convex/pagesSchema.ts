@@ -9,8 +9,9 @@ import { v } from "convex/values";
  *   collection: public, so kept by website and shared by every company that
  *   watches it, like the crawl and the rankings.
  * - **Every page, once** (`holdPages`) joins the sitemap with what was found —
- *   crawled, shown by Google (the company's own Search Console), ranking —
- *   per company hold, rebuilt after each collection. Google's jump links
+ *   crawled, shown by Google (the company's own Search Console), visited (its
+ *   own Google Analytics), ranking — per company hold, rebuilt after each
+ *   collection. Google's jump links
  *   (`#…`) count with their page. Your pages in Sites and the admin Page
  *   classification page read it by index.
  * - **Classifications** are the company's own (per hold, set only in admin for
@@ -90,6 +91,15 @@ export const pagesTables = {
     shown: v.boolean(),
     /** Search Console clicks in the last 90 days. */
     clicks: v.number(),
+    /**
+     * A page visits landed on in Google Analytics' last 90 days (the
+     * company's own connection), and how many (google-analytics-plan.md
+     * §4.6). Absent on a row written before 2026-10-10, or not rewritten
+     * since, which reads as none: the next rebuild that changes the row
+     * writes them.
+     */
+    visited: v.optional(v.boolean()),
+    visits: v.optional(v.number()),
     ranks: v.boolean(),
     /**
      * Hakken's own kind of page — by its address, or as judged for the

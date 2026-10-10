@@ -9,6 +9,7 @@ import { companyHolds, findMySite, requireMySite } from "./siteAccess";
 import { isTrackedHold } from "./utils/websitePairing";
 import { appError } from "./utils/appError";
 import { websiteIconUrl } from "./websiteIcons";
+import { noteHoldPagesChanged } from "./holdPages";
 import {
   STATE_MAX_AGE_MS,
   accountOf,
@@ -249,6 +250,8 @@ export const chooseGoogleAnalyticsProperty = adminMutation({
       updatedAt: now,
     });
     await ctx.scheduler.runAfter(0, internal.googleAnalyticsConnect.readWhatCounts, { connectionId: connection._id });
+    // Another property than the figures came from: their visits leave the website's page list that night (dataforseo-cost-plan.md, A1).
+    if (connection.dataProperty !== undefined && connection.dataProperty !== choice.property) await noteHoldPagesChanged(ctx, connection.companyWebsiteId);
     return null;
   },
 });
@@ -513,6 +516,8 @@ export const disconnectGoogleAnalytics = adminMutation({
       metadata: JSON.stringify({ account: await accountOf(ctx, connection.googleConnectionId), property: connection.property }),
     });
     await ctx.scheduler.runAfter(0, internal.googleConnection.releaseUnused, { companyWebsiteId: connection.companyWebsiteId });
+    // The website's page list shows Analytics' visits only while connected: rebuilt that night (dataforseo-cost-plan.md, A1).
+    await noteHoldPagesChanged(ctx, connection.companyWebsiteId);
     return null;
   },
 });

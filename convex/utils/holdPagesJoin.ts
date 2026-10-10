@@ -11,7 +11,14 @@ import { onWebsite } from "./sitemapReading";
  * count with the page they belong to. Files — a PDF, an image — are left
  * out wherever they come from (`isWebPage`): the list is pages only.
  *
- * Plain code, no Convex: the rebuild (`holdPages.ts`) reads the four sources
+ * Google Analytics' visits go beside Search Console's clicks
+ * (google-analytics-plan.md §4.6), so one row says what every source knows of
+ * a page: how often it was the page a visit landed on in the last 90 days.
+ * They add to the pages the other sources found, and add none of their own:
+ * Your pages does not show visits yet, so a page only visited would be a row
+ * with nothing ticked.
+ *
+ * Plain code, no Convex: the rebuild (`holdPages.ts`) reads the sources
  * and hands them here, and the screen's filters use the same gap rules
  * (`inGap`), so the figures and the lists they open can never disagree.
  */
@@ -28,6 +35,8 @@ export type PageSources = {
   ranked: ReadonlyArray<{ page: string; url?: string; pageType?: string }>;
   /** Search Console's page list for the last 90 days, by address, or null when the company has not connected it. */
   shown: ReadonlyArray<{ key: string; clicks: number }> | null;
+  /** Google Analytics' landing pages for the last 90 days, by address, or null when the company has not connected it. */
+  visited: ReadonlyArray<{ key: string; visits: number }> | null;
   /** Kinds judged for the website's pages (`sitePageTypes`). */
   judged: ReadonlyArray<{ page: string; pageType: string }>;
 };
@@ -38,6 +47,9 @@ export type JoinedPage = {
   crawled: boolean;
   shown: boolean;
   clicks: number;
+  /** A page a visit landed on in Google Analytics' last 90 days, and how many visits landed there. */
+  visited: boolean;
+  visits: number;
   ranks: boolean;
   /** Hakken's own kind of page: by its address, else as judged, else "UNJUDGED". */
   pageType: string;
@@ -134,7 +146,7 @@ export function joinHoldPages(sources: PageSources): { pages: JoinedPage[]; coun
   const entry = (page: string): JoinedPage => {
     let held = byPage.get(page);
     if (!held) {
-      held = { page, sitemapFile: null, crawled: false, shown: false, clicks: 0, ranks: false, pageType: "UNJUDGED" };
+      held = { page, sitemapFile: null, crawled: false, shown: false, clicks: 0, visited: false, visits: 0, ranks: false, pageType: "UNJUDGED" };
       byPage.set(page, held);
     }
     return held;
@@ -173,12 +185,21 @@ export function joinHoldPages(sources: PageSources): { pages: JoinedPage[]; coun
     held.shown = true;
     held.clicks += row.clicks;
   }
+  // "(not set)" and any address off the website never match a page.
+  for (const row of sources.visited ?? []) {
+    if (!onWebsite(row.key, sources.host) || !isWebPage(row.key)) continue;
+    const held = byPage.get(normalisePage(row.key));
+    if (!held) continue;
+    held.visited = true;
+    held.visits += row.visits;
+  }
 
   const judged = new Map(sources.judged.map((row) => [normalisePage(row.page), row.pageType]));
   const pages = [...byPage.values()].sort((left, right) => left.page.localeCompare(right.page));
   for (const row of pages) {
     row.pageType = pageTypeByAddress(row.page) ?? judged.get(row.page) ?? rankedKinds.get(row.page) ?? "UNJUDGED";
     row.clicks = Math.round(row.clicks);
+    row.visits = Math.round(row.visits);
   }
   return { pages, counts: countPages(pages), heldCut };
 }

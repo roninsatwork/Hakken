@@ -15,21 +15,27 @@ import { onWebsite } from "./utils/sitemapReading";
 import { isTrackedHold } from "./utils/websitePairing";
 import { sitemapPagesPage as readSitemapPages } from "./sitemapParts";
 import { addressOf } from "./utils/pageAddresses";
+import { addressesOf, decodeWith, isPageRef } from "./holdPageRefs";
+import { slotKey } from "./googleAnalyticsLists";
+import { unpackNumbers } from "./utils/searchConsolePacks";
 
 /**
  * Every page of a company's website once (`holdPages`), rebuilt from its
  * sources (docs/plans/active/page-groups-plan.md, decision 4): the website's
  * sitemap, the newest crawl's HTML pages, the pages ranking on Google from
  * the place the company watches from, and — the company's own — the pages
- * its Search Console shows over the last 90 days, with their clicks.
+ * its Search Console shows over the last 90 days, with their clicks, and the
+ * visits its Google Analytics saw land on each (google-analytics-plan.md §4.6).
  *
  * **When.** After the sitemap is read, after a crawl's pages are filed, after
- * the rankings are rebuilt, and after Search Console settles — each asks
+ * the rankings are rebuilt, after Search Console settles and after Google
+ * Analytics is collected — each asks
  * (`requestRebuild`, `requestWebsiteRebuilds`) and the rebuild runs shortly,
  * once for a burst of asks, one rebuild of a hold at a time (the site
  * rebuilds' own turn-taking, `beginRebuild`). The first visit to Your pages
- * asks too. A source that changes without asking — a Search Console
- * stopped, a limit or a place changed, a page's kind judged — notes it
+ * asks too. A source that changes without asking — a Search Console or
+ * Google Analytics stopped or switched to another property, a limit or a
+ * place changed, a page's kind judged — notes it
  * (`noteHoldPagesChanged`), and the nightly refresh of the compact copies
  * (`refreshListCopies`) asks for any hold whose sources changed after its
  * last rebuild began, or whose last rebuild failed.
@@ -124,6 +130,8 @@ const headValidator = v.object({
   })),
   crawl: v.union(v.null(), v.object({ pullId: v.id("seoDataPulls"), day: v.string(), cut: v.boolean() })),
   console: v.object({ connected: v.boolean(), from: nullableString, to: nullableString }),
+  /** Whether the company's own Google Analytics is connected with figures: its landing pages' visits are read only then. */
+  analytics: v.boolean(),
 });
 type Head = Infer<typeof headValidator>;
 
@@ -135,11 +143,12 @@ export const rebuildHead = internalQuery({
     const site = await loadSite(ctx, args.holdId);
     if (!site || isTrackedHold(site.hold)) return null;
     const websiteId = site.website._id;
-    const [limits, reading, crawl, connection] = await Promise.all([
+    const [limits, reading, crawl, connection, analytics] = await Promise.all([
       readFanOutLimits(ctx, site.hold.companyId, site.hold._id),
       sitemapReadingOf(ctx, websiteId),
       ctx.db.query("siteCrawls").withIndex("by_site_day", (q) => q.eq("websiteId", websiteId)).order("desc").first(),
       ctx.db.query("searchConsoleConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first(),
+      ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first(),
     ]);
     const connected = connection?.status === "CONNECTED" && !connection.clearing && Boolean(connection.newestDay);
     const period = connected ? await readPeriod(ctx, args.holdId, "web", "page", "90", "NOW") : null;
@@ -159,6 +168,7 @@ export const rebuildHead = internalQuery({
       } : null,
       crawl: crawl ? { pullId: crawl.pullId, day: crawl.day, cut: crawl.detailCut === true } : null,
       console: { connected, from: period?.from ?? null, to: period?.to ?? null },
+      analytics: analytics?.status === "CONNECTED" && !analytics.clearing && Boolean(analytics.newestDay),
     };
   },
 });
@@ -279,6 +289,88 @@ async function allConsolePages(ctx: ActionCtx, holdId: Id<"companyWebsites">, ho
   return pages;
 }
 
+/** Google Analytics' landing pages over the last 90 days, for every device: the ready-made list a collection keeps. */
+const LANDING_90 = slotKey("landing", "90", "NOW", "");
+
+/** Parts of the landing list read a call: up to 2,000 rows each, inside the 8,192 a function's answer holds to a list. */
+const LANDING_PARTS_PER_READ = 3;
+
+/** Times the landing list is read again from its start when a collection swaps in a new build part-way through. */
+const LANDING_READ_TRIES = 3;
+
+/**
+ * Part of the company's own Google Analytics landing pages over the last 90
+ * days (`googleAnalyticsCollect.ts`): each page by its number in the hold's
+ * page numbering, with its visits, read by the hold. A few parts at a time
+ * from `start`, from the build in `slot` — the one screens read when the
+ * first part was — with `next` where the next part starts, null after the
+ * last. Null when there is no list yet; `moved` when a new build was swapped
+ * in since the first part.
+ */
+export const landingVisits = internalQuery({
+  args: { holdId: v.id("companyWebsites"), slot: v.optional(v.number()), start: v.optional(v.number()) },
+  returns: v.union(
+    v.null(),
+    v.object({ moved: v.literal(true) }),
+    v.object({ slot: v.number(), rows: v.array(v.object({ key: v.string(), visits: v.number() })), next: v.union(v.number(), v.null()) }),
+  ),
+  handler: async (ctx, args) => {
+    const held = await ctx.db
+      .query("googleAnalyticsPeriodSlots")
+      .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", args.holdId).eq("key", LANDING_90))
+      .first();
+    if (!held) return null;
+    if (args.slot !== undefined && held.slot !== args.slot) return { moved: true as const };
+    const start = args.start ?? 0;
+    const end = Math.min(held.parts, start + LANDING_PARTS_PER_READ);
+    const parts = await ctx.db
+      .query("googleAnalyticsPeriods")
+      .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", args.holdId).eq("key", LANDING_90).eq("slot", held.slot).gte("part", start).lt("part", end))
+      .take(LANDING_PARTS_PER_READ);
+    const rows: Array<{ key: string; visits: number }> = [];
+    for (const part of parts) {
+      const visits = unpackNumbers(part.visits);
+      // "(not set)" — visits Google could not name the landing page of — is no page.
+      part.keys.forEach((key, at) => {
+        if (isPageRef(key)) rows.push({ key, visits: visits[at] ?? 0 });
+      });
+    }
+    return { slot: held.slot, rows, next: end < held.parts ? end : null };
+  },
+});
+
+type LandingPart = { moved: true } | { slot: number; rows: Array<{ key: string; visits: number }>; next: number | null } | null;
+
+/**
+ * Every landing page of the company's own Google Analytics over the last 90
+ * days, by address: read a part at a time (`landingVisits`), all from one
+ * build, and the page numbers read back with the hold's numbering, read once
+ * this run (`addressesOf`).
+ */
+async function allLandingVisits(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promise<Array<{ key: string; visits: number }>> {
+  for (let tries = 1; ; tries += 1) {
+    const rows: Array<{ key: string; visits: number }> = [];
+    let slot: number | undefined;
+    let moved = false;
+    for (let start: number | null = 0; start !== null;) {
+      const part: LandingPart = await ctx.runQuery(internal.holdPages.landingVisits, { holdId, slot, start });
+      if (part === null) return [];
+      if ("moved" in part) {
+        moved = true;
+        break;
+      }
+      slot = part.slot;
+      rows.push(...part.rows);
+      start = part.next;
+    }
+    // A new build swapped in part-way: read again from its start. Should it keep moving, the rows read stand
+    // until the next rebuild, which that collection asks for when it finishes.
+    if (moved && tries < LANDING_READ_TRIES) continue;
+    const addresses = decodeWith(await addressesOf(ctx, holdId), rows.map((row) => row.key));
+    return rows.map((row, at) => ({ key: addresses[at], visits: row.visits }));
+  }
+}
+
 const holdRowValidator = v.object({
   _id: v.id("holdPages"),
   page: v.string(),
@@ -286,6 +378,9 @@ const holdRowValidator = v.object({
   crawled: v.boolean(),
   shown: v.boolean(),
   clicks: v.number(),
+  /** Absent on a row not rewritten since visits were added: none. */
+  visited: v.optional(v.boolean()),
+  visits: v.optional(v.number()),
   ranks: v.boolean(),
   pageType: v.optional(v.string()),
 });
@@ -307,6 +402,8 @@ export const holdPagesPage = internalQuery({
         crawled: row.crawled,
         shown: row.shown,
         clicks: row.clicks,
+        ...(row.visited !== undefined ? { visited: row.visited } : {}),
+        ...(row.visits !== undefined ? { visits: row.visits } : {}),
         ranks: row.ranks,
         ...(row.pageType !== undefined ? { pageType: row.pageType } : {}),
       })),
@@ -323,6 +420,8 @@ const writeRowValidator = v.object({
   crawled: v.boolean(),
   shown: v.boolean(),
   clicks: v.number(),
+  visited: v.boolean(),
+  visits: v.number(),
   ranks: v.boolean(),
   pageType: v.string(),
 });
@@ -389,11 +488,14 @@ async function readAll<Row>(read: (cursor: string | null) => Promise<Page<Row>>)
 
 type HoldRow = Infer<typeof holdRowValidator>;
 
+/** Whether a row already says what the sources say. A row written before visits were added has none. */
 function unchanged(old: HoldRow, row: JoinedPage): boolean {
   return (old.sitemapFile ?? null) === row.sitemapFile
     && old.crawled === row.crawled
     && old.shown === row.shown
     && old.clicks === row.clicks
+    && (old.visited ?? false) === row.visited
+    && (old.visits ?? 0) === row.visits
     && old.ranks === row.ranks
     && (old.pageType ?? "UNJUDGED") === row.pageType;
 }
@@ -438,7 +540,8 @@ async function rebuildNow(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promis
   const ranked = await readAll((cursor) => ctx.runQuery(internal.holdPages.rankedPagesPage, { websiteId, place, cursor }));
   const judged = await readAll((cursor) => ctx.runQuery(internal.holdPages.judgedTypesPage, { websiteId, cursor }));
   const shown = head.console.connected ? await allConsolePages(ctx, holdId, head.host) : null;
-  const joined = joinHoldPages({ host: head.host, sitemap, sitemapLimit: head.limit, crawled, ranked, shown, judged });
+  const visited = head.analytics ? await allLandingVisits(ctx, holdId) : null;
+  const joined = joinHoldPages({ host: head.host, sitemap, sitemapLimit: head.limit, crawled, ranked, shown, visited, judged });
 
   // Only what changed is written: the rest of the rows stay as they are.
   const existing = await readAll((cursor) => ctx.runQuery(internal.holdPages.holdPagesPage, { holdId, cursor }));
@@ -462,6 +565,8 @@ async function rebuildNow(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promis
       crawled: row.crawled,
       shown: row.shown,
       clicks: row.clicks,
+      visited: row.visited,
+      visits: row.visits,
       ranks: row.ranks,
       pageType: row.pageType,
     });

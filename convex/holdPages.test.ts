@@ -1,12 +1,18 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { convexTest } from "convex-test";
-import { describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
 import schema from "./schema";
 import { packNumbers, unpackNumbers } from "./utils/searchConsolePacks";
 import { writeSitemapPart } from "./sitemapParts";
+import { PAGE_RECORD } from "./holdPageRefs";
+import { holdPagesKey } from "./siteRankings";
+import { packList, slotKey, type ListRow } from "./googleAnalyticsLists";
+import { finishScheduled } from "@/src/test/finishScheduled";
+import { useFixedDay } from "@/src/test/realTime";
 
 /**
  * Every page of a company's website once (docs/plans/active/page-groups-plan.md,
@@ -122,6 +128,63 @@ async function ronins(t: Harness) {
   await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId });
   return owner;
 }
+
+/** The company's own Google Analytics, connected with figures, or still being set up. */
+async function analytics(t: Harness, at: { companyId: Id<"companies">; websiteId: Id<"websites">; holdId: Id<"companyWebsites"> }, status: "CONNECTED" | "COUNTING" = "CONNECTED") {
+  return await t.run(async (ctx) => await ctx.db.insert("googleAnalyticsConnections", {
+    companyId: at.companyId, companyWebsiteId: at.holdId, websiteId: at.websiteId, status, property: "properties/1", dataProperty: "properties/1",
+    addresses: ["www.ronins.co.uk"], currency: "GBP", newestDay: "2026-10-08", oldestDay: "2026-08-10", createdAt: 1, updatedAt: 1,
+  }));
+}
+
+/** Addresses as the hold's page numbers, as a collection numbers them: those it lacks put on the end. A test's few fit one record. */
+async function numbersOf(ctx: Pick<MutationCtx, "db">, holdId: Id<"companyWebsites">, addresses: readonly string[]): Promise<number[]> {
+  const record = await ctx.db.query("holdPageAddresses").withIndex("by_hold_record", (q) => q.eq("companyWebsiteId", holdId).eq("record", 0)).first();
+  const held = [...(record?.addresses ?? [])];
+  for (const address of addresses) if (!held.includes(address)) held.push(address);
+  expect(held.length).toBeLessThanOrEqual(PAGE_RECORD);
+  if (record) await ctx.db.patch(record._id, { addresses: held });
+  else await ctx.db.insert("holdPageAddresses", { companyWebsiteId: holdId, record: 0, addresses: held });
+  return addresses.map((address) => held.indexOf(address));
+}
+
+/**
+ * Its ready-made 90 days of landing pages, as a collection keeps them: each
+ * address by its number in the hold's numbering, Google's "(not set)" as it is.
+ */
+async function landing90(ctx: Pick<MutationCtx, "db">, holdId: Id<"companyWebsites">, landed: Array<[string, number]>) {
+  const key = slotKey("landing", "90", "NOW", "");
+  const named = landed.filter(([address]) => address !== "(not set)").map(([address]) => address);
+  const numbers = await numbersOf(ctx, holdId, named);
+  const refs = new Map(named.map((address, at) => [address, `~${numbers[at].toString(36)}`]));
+  const rows: ListRow[] = landed.map(([address, visits]) => ({
+    key: refs.get(address) ?? "(not set)", visits, engaged: 0, seconds: 0, views: visits, purchases: 0, revenue: 0, counts: new Map(), values: new Map(),
+  }));
+  for (const old of await ctx.db.query("googleAnalyticsPeriods").withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", holdId).eq("key", key)).collect()) {
+    await ctx.db.delete(old._id);
+  }
+  for (const old of await ctx.db.query("googleAnalyticsPeriodSlots").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", holdId).eq("key", key)).collect()) {
+    await ctx.db.delete(old._id);
+  }
+  const parts = packList("landing", rows, []);
+  await ctx.db.insert("googleAnalyticsPeriodSlots", { companyWebsiteId: holdId, key, slot: 0, parts: parts.length, from: "2026-07-11", to: "2026-10-08", hash: "x", builtAt: 1 });
+  for (const [part, packed] of parts.entries()) await ctx.db.insert("googleAnalyticsPeriods", { companyWebsiteId: holdId, key, slot: 0, part, ...packed });
+}
+
+/** Analytics' last 90 days: the page Search Console shows most, a page it never showed, a page off the website, and visits Google could not name. */
+const LANDED: Array<[string, number]> = [
+  [www("/ai-agency/"), 120],
+  [www("/journal/"), 4],
+  ["https://blog.ronins.co.uk/x/", 30],
+  ["(not set)", 50],
+];
+
+/** Whether the hold's pages are waiting on the nightly refresh: something they are built from changed since the last rebuild began. */
+const notedChanged = (t: Harness, holdId: Id<"companyWebsites">) =>
+  t.run(async (ctx) => {
+    const row = await ctx.db.query("siteSummaryRequests").withIndex("by_key", (q) => q.eq("key", holdPagesKey(holdId))).unique();
+    return row !== null && (row.changedAt ?? row.requestedAt) > (row.builtFrom ?? 0);
+  });
 
 const holdRows = (t: Harness, holdId: Id<"companyWebsites">) =>
   t.run(async (ctx) => await ctx.db.query("holdPages").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", holdId)).collect());
@@ -280,6 +343,156 @@ describe("the group", () => {
     const sorted = (await list(member, holdId, { sort: "group" })).rows.map((row) => row.group);
     expect(sorted[0]).toBe("AI services");
     expect(sorted.at(-1)).toBeNull();
+  });
+});
+
+/**
+ * Analytics' visits beside Search Console's clicks (google-analytics-plan.md
+ * §4.6): one row says what every source knows of a page.
+ */
+describe("visits", () => {
+  test("a page in Search Console and Analytics shows its clicks and its visits on one row", async () => {
+    const t = harness();
+    const owner = await company(t, "Ronins");
+    await collected(t, owner.websiteId);
+    await console90(t, owner, SHOWN);
+    await analytics(t, owner);
+    await t.run(async (ctx) => await landing90(ctx, owner.holdId, LANDED));
+    await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId });
+
+    const rows = await holdRows(t, owner.holdId);
+    const row = (page: string) => rows.find((one) => one.page === page);
+    expect(row("/ai-agency/")).toMatchObject({ shown: true, clicks: 453, visited: true, visits: 120 });
+    expect(row("/journal/")).toMatchObject({ shown: false, clicks: 0, visited: true, visits: 4 });
+    // "/ai-agency" without its slash is another page; nothing landed on it.
+    expect(row("/ai-agency")).toMatchObject({ visited: false, visits: 0 });
+    // Another website's page and "(not set)" land on none, and add no page.
+    expect(rows.reduce((sum, one) => sum + (one.visits ?? 0), 0)).toBe(124);
+    expect(rows).toHaveLength(9);
+    // Your pages reads as before: no visits on its list yet.
+    expect((await list(owner.member, owner.holdId)).summary).toMatchObject({ pages: 9, shown: 5 });
+  });
+
+  test("without Google Analytics connected with figures, no page was visited", async () => {
+    const t = harness();
+    const owner = await company(t, "Ronins");
+    await collected(t, owner.websiteId);
+    await analytics(t, owner, "COUNTING");
+    await t.run(async (ctx) => await landing90(ctx, owner.holdId, LANDED));
+    await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId });
+
+    expect((await holdRows(t, owner.holdId)).every((row) => row.visited === false && row.visits === 0)).toBe(true);
+  });
+
+  test("rebuilt, a row is written again only when its visits moved", async () => {
+    const t = harness();
+    const owner = await company(t, "Ronins");
+    await collected(t, owner.websiteId);
+    await console90(t, owner, SHOWN);
+    await analytics(t, owner);
+    await t.run(async (ctx) => await landing90(ctx, owner.holdId, LANDED));
+    await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId });
+    const before = new Map((await holdRows(t, owner.holdId)).map((row) => [row.page, row]));
+
+    expect(await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId })).toEqual({ written: 0, removed: 0 });
+
+    // The next collection: two more visits landed on the journal.
+    await t.run(async (ctx) => await landing90(ctx, owner.holdId, LANDED.map(([address, visits]) => [address, address === www("/journal/") ? visits + 2 : visits])));
+    expect(await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId })).toEqual({ written: 1, removed: 0 });
+    for (const row of await holdRows(t, owner.holdId)) {
+      if (row.page === "/journal/") expect(row).toMatchObject({ _id: before.get(row.page)!._id, visits: 6 });
+      else expect(row, row.page).toEqual(before.get(row.page));
+    }
+  });
+
+  test("a row from before visits reads as none: rewritten only for a page visits landed on", async () => {
+    const t = harness();
+    const owner = await ronins(t);
+    // As written before visits were added: no visited, no visits.
+    await t.run(async (ctx) => {
+      for (const row of await ctx.db.query("holdPages").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", owner.holdId)).collect()) {
+        const { _id, _creationTime, visited: _visited, visits: _visits, ...rest } = row;
+        await ctx.db.replace(_id, rest);
+      }
+    });
+    expect(await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId })).toEqual({ written: 0, removed: 0 });
+
+    await analytics(t, owner);
+    await t.run(async (ctx) => await landing90(ctx, owner.holdId, LANDED));
+    expect(await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId })).toEqual({ written: 2, removed: 0 });
+    const rows = await holdRows(t, owner.holdId);
+    expect(rows.filter((row) => row.visited !== undefined).map((row) => [row.page, row.visits])).toEqual([["/ai-agency/", 120], ["/journal/", 4]]);
+  });
+
+  test("a read part-way through a new build reads the new build from its start", async () => {
+    const t = harness();
+    const owner = await company(t, "Ronins");
+    await analytics(t, owner);
+    await t.run(async (ctx) => await landing90(ctx, owner.holdId, LANDED));
+
+    const first = await t.query(internal.holdPages.landingVisits, { holdId: owner.holdId });
+    expect(first).toMatchObject({ slot: 0, next: null });
+    // "(not set)" is no page: only the three numbered.
+    expect(first && "rows" in first ? first.rows : []).toHaveLength(3);
+    // A collection swapped its new build into the other slot.
+    await t.run(async (ctx) => {
+      const slot = await ctx.db.query("googleAnalyticsPeriodSlots").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", owner.holdId)).first();
+      await ctx.db.patch(slot!._id, { slot: 1 });
+    });
+    expect(await t.query(internal.holdPages.landingVisits, { holdId: owner.holdId, slot: 0, start: 0 })).toEqual({ moved: true });
+  });
+});
+
+describe("when Google Analytics is collected, stopped or switched", () => {
+  beforeEach(() => useFixedDay());
+  afterEach(() => vi.useRealTimers());
+
+  test("a finished collection asks for the website's pages, which then carry its visits", async () => {
+    const t = harness();
+    const owner = await company(t, "Ronins");
+    await collected(t, owner.websiteId);
+    const connectionId = await analytics(t, owner);
+    await t.run(async (ctx) => await landing90(ctx, owner.holdId, LANDED));
+
+    await t.mutation(internal.googleAnalyticsCollect.finishCollection, { connectionId, property: "properties/1", weekly: false, firstDone: false });
+    const asked = await t.run(async (ctx) => (await ctx.db.system.query("_scheduled_functions").collect()).map((job) => job.name));
+    expect(asked).toContain("holdPages:requestRebuild");
+    await finishScheduled(t);
+
+    expect((await holdRows(t, owner.holdId)).find((row) => row.page === "/ai-agency/")).toMatchObject({ visited: true, visits: 120 });
+  });
+
+  test("disconnecting it, or choosing another property than its figures came from, notes the website's pages for that night", async () => {
+    const t = harness();
+    const owner = await company(t, "Ronins");
+    await collected(t, owner.websiteId);
+    const connectionId = await analytics(t, owner);
+    const admin = await t.run(async (ctx) => await ctx.db.insert("users", { name: "Admin", email: "admin@ronins.test", role: "ADMIN", companyId: owner.companyId, createdAt: Date.now() }));
+    const asAdmin = t.withIdentity({ subject: admin });
+    // Rebuilt, then a minute on: what changes next is after the rebuild began. The clock moves; nothing scheduled runs.
+    const rebuilt = async () => {
+      await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId });
+      vi.setSystemTime(Date.now() + 60_000);
+    };
+
+    await rebuilt();
+    expect(await notedChanged(t, owner.holdId)).toBe(false);
+    await asAdmin.mutation(api.googleAnalyticsConnect.disconnectGoogleAnalytics, { siteId: owner.holdId });
+    expect(await notedChanged(t, owner.holdId)).toBe(true);
+
+    // Signed in again, the same property chosen: its figures stand, nothing to note.
+    const choices = [
+      { property: "properties/1", displayName: "Ronins", accountName: "Ronins", stream: null, checked: true },
+      { property: "properties/2", displayName: "Ronins (old)", accountName: "Ronins", stream: null, checked: true },
+    ];
+    await rebuilt();
+    await t.run(async (ctx) => await ctx.db.patch(connectionId, { status: "CHOOSING", choices }));
+    await asAdmin.mutation(api.googleAnalyticsConnect.chooseGoogleAnalyticsProperty, { siteId: owner.holdId, property: "properties/1" });
+    expect(await notedChanged(t, owner.holdId)).toBe(false);
+    // Another property: its figures go, and their visits with them.
+    await t.run(async (ctx) => await ctx.db.patch(connectionId, { status: "CHOOSING", choices }));
+    await asAdmin.mutation(api.googleAnalyticsConnect.chooseGoogleAnalyticsProperty, { siteId: owner.holdId, property: "properties/2" });
+    expect(await notedChanged(t, owner.holdId)).toBe(true);
   });
 });
 
