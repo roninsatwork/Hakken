@@ -281,7 +281,7 @@ export async function askList(
  * Where a website's pages are, as its page numbers name them: the address its
  * visits are read on (`hostName`, `www.` and all), so a page reads as Search
  * Console names it — never the web stream's own address, which may leave
- * `www.` off (ronins.co.uk's does).
+ * `www.` off (our own agency's site's does).
  */
 export function siteOrigin(addresses: readonly string[], host: string): string {
   return `https://${(addresses[0] ?? host).toLowerCase()}`;
