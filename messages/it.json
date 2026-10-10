@@ -13996,7 +13996,7 @@
       "notYet": "I controlli partono quando è arrivata la prima raccolta.",
       "see": "Vedi la salute del tracciamento",
       "lineTitle": "Salute del tracciamento: {failing} controlli su {total} da guardare",
-      "toldOnce": "Gli amministratori dell'azienda sono stati avvisati nella campanella quando ciascuno ha iniziato a fallire, una volta sola.",
+      "toldOnce": "Il team di {platformName} è stato avvisato nella campanella quando ciascuno ha iniziato a fallire, una volta sola.",
       "allPassing": "Tutti i {total} controlli sono superati.",
       "passing": "Superato",
       "needsLook": "Da guardare",

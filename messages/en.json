@@ -13996,7 +13996,7 @@
       "notYet": "The checks run once the first collection is in.",
       "see": "See tracking health",
       "lineTitle": "Tracking health: {failing} of {total} checks need a look",
-      "toldOnce": "The company's admins were told in the bell when each started failing, once.",
+      "toldOnce": "{platformName}'s team was told in the bell when each started failing, once.",
       "allPassing": "All {total} checks pass.",
       "passing": "Passing",
       "needsLook": "Needs a look",

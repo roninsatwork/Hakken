@@ -9,6 +9,7 @@ import { Button } from "@/src/ui/components/screens/Button";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { formatDateTime } from "@/src/lib/dates";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { AnalyticsGate } from "../../_components/AnalyticsNotices";
 import { useHealthWords } from "../../_components/useHealthWords";
 import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, type AnalyticsStatus } from "../../_components/useAnalytics";
@@ -46,6 +47,7 @@ function HealthBody({ status }: { status: AnalyticsStatus }) {
   const siteId = useAnalyticsSiteId();
   const hrefFor = useAnalyticsHref(siteId);
   const words = useHealthWords(status);
+  const { platformName } = useSystemSettings();
   const [showPassing, setShowPassing] = useState(false);
   const checks = status.connection?.health?.checks;
   if (!checks) return <Notice>{t("notYet")}</Notice>;
@@ -57,7 +59,7 @@ function HealthBody({ status }: { status: AnalyticsStatus }) {
       {failing.length > 0 ? (
         <Notice tone="warning">
           <span className="block font-medium text-foreground">{t("lineTitle", { failing: failing.length, total: checks.length })}</span>
-          <span className="block">{t("toldOnce")}</span>
+          <span className="block">{t("toldOnce", { platformName })}</span>
         </Notice>
       ) : (
         <Notice>{t("allPassing", { total: checks.length })}</Notice>

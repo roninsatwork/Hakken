@@ -46,7 +46,7 @@ Search Console later (§4.3), but no Search Console figure appears here.
 | GA9 | History | As Search Console (GA16): the last 90 days on the first collection, days kept 60, longer periods asked of Google each week (§4). Anthony first chose "16 months"; that option said it matched Search Console, which was out of date — Search Console has kept days 60 and fetched 90 since 2026-10-07 ([keep-less-history-plan.md](keep-less-history-plan.md), part 3). | Settled by GA16, 2026-10-09. Year-on-year: §10, Q2 |
 | GA10 | Visitors from AI assistants | Their own channel, "AI assistants", with each assistant listed under it (ChatGPT, Perplexity, Gemini, Copilot, Claude and others). | Agreed, 2026-10-09 (the recommendation). How: §4.4 |
 | GA11 | A tracking health check | When a website connects, and every week (§6). | Agreed, 2026-10-09 (the recommendation) |
-| GA12 | How a tracking problem reaches the client | On the Analytics pages, and in the bell to the company's admins, saying what is wrong and how to fix it. | Agreed, 2026-10-09 (the recommendation) |
+| GA12 | How a tracking problem is told | On the Analytics pages, and in the bell — to the platform's super admins only, never a company's own admins: they are system alerts. The connected notice too. | Agreed, 2026-10-09 (the recommendation, then to the company's admins); changed 2026-10-10 (Anthony: "These are system alerts not company alerts they need to only go to sys admins") |
 | GA13 | Filters | Dates and device (mobile, desktop, tablet) on every page. No country filter. | Agreed, 2026-10-09 (the recommendation) |
 | GA14 | Credits | Free in every plan, as Search Console: Google charges nothing for the data. | Agreed, 2026-10-09 (the recommendation) |
 | GA15 | Landing pages by page group | A switch between each page and the website's own page groups ([page-groups-plan.md](page-groups-plan.md)). A website with no groups shows pages only. | Agreed, 2026-10-09 (the recommendation) |
@@ -444,8 +444,9 @@ wrong, why it matters and how to fix it, in plain words:
 
 Shown on Overview and on its own Tracking health page, the failing checks
 first and the passing ones folded into one line (GA22). When a check starts
-failing, the company's admins get one notification in the bell (GA12) —
-once, not every week it stays failing.
+failing, the platform's super admins get one alert in the bell (GA12, changed
+2026-10-10) — once, not every week it stays failing. A company's own admins
+are never told in the bell: these are system alerts.
 
 ## 7. What Anthony does (Phase 0)
 
@@ -717,9 +718,10 @@ device, dates and chart step sit at the top of every page.
 **Phase 4 — tracking health** (`googleAnalyticsHealth.ts`): the eight checks,
 run when the first collection is in, every week, and when what counts is
 saved; the failing ones first on their page; a check that starts failing
-tells the company's admins in the bell once. Payment pages are a list in the
+tells the platform's super admins in the bell once (GA12, as changed on
+2026-10-10). Payment pages are a list in the
 code (PayPal, Stripe, Worldpay, Opayo, Klarna, Clearpay and others).
-Connecting tells the admins too, as board 10 shows.
+Connecting tells the super admins too, as board 10 shows.
 
 ## Change log
 
@@ -771,3 +773,7 @@ Connecting tells the admins too, as board 10 shows.
 - 2026-10-10 — Built through Phases 1 to 4 with Google faked (§12): the
   shared sign-in and page numbers, the collector, the section's screens and
   tracking health. Waiting: Phase 0, the agent and schedule in Admin, Q12.
+- 2026-10-10 — Ronins connected and collected (60 days, 6,518 rows, about
+  0.4 MB). GA12 changed: tracking health's bell alerts, and the connected
+  notice, go to the platform's super admins only, never a company's admins
+  (Anthony: "These are system alerts not company alerts").

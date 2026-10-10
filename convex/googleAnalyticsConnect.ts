@@ -29,7 +29,7 @@ import {
 } from "./googleAnalyticsSchema";
 import { tickedAtFirst } from "./utils/analyticsEvents";
 import { startFirstCollection } from "./googleAnalyticsAgentRun";
-import { tellAdmins } from "./googleAnalyticsHealth";
+import { tellSuperAdmins } from "./googleAnalyticsHealth";
 
 /**
  * Connecting an owned website to its Google Analytics
@@ -463,7 +463,7 @@ export const saveWhatCounts = adminMutation({
     if (first) {
       const website = await ctx.db.get(connection.websiteId);
       const host = website?.displayHost ?? website?.host ?? "";
-      await tellAdmins(ctx, connection, `${host} is connected to Google Analytics`, "Its last 90 days are coming in now, newest week first.", `/app/analytics/${connection.companyWebsiteId}`, "GOOGLE_ANALYTICS_CONNECTED");
+      await tellSuperAdmins(ctx, connection, `${host} is connected to Google Analytics`, "Its last 90 days are coming in now, newest week first.", `/app/analytics/${connection.companyWebsiteId}`, "GOOGLE_ANALYTICS_CONNECTED");
     } else if (connection.newestDay) {
       // What counts changed: the checks that read it say so at once.
       await ctx.scheduler.runAfter(0, internal.googleAnalyticsHealth.runHealthChecks, { connectionId: connection._id });

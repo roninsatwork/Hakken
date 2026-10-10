@@ -14,8 +14,8 @@ import { HEALTH_CHECKS, type HealthCheck } from "./googleAnalyticsSchema";
  * (docs/plans/active/google-analytics-plan.md §6, GA11, GA12): eight checks,
  * run when the first collection finishes and with every weekly one, each
  * saying what is wrong, why it matters and how to fix it on the Tracking
- * health page. When a check starts failing the company's admins get one
- * notification in the bell — once, never every week it stays failing.
+ * health page. When a check starts failing the platform's super admins get
+ * one alert in the bell — once, never every week it stays failing.
  *
  * Read from what the collection already keeps: the days, the 30 days' channels
  * and landing pages, the addresses' visits asked weekly. Nothing is asked of
@@ -143,7 +143,7 @@ const BELL: Partial<Record<HealthCheck, (result: Result, host: string) => { titl
 
 /**
  * Run the checks and keep their results. Each check that starts failing
- * tells the company's admins in the bell, once (GA12).
+ * tells the platform's super admins in the bell, once (GA12).
  */
 export const runHealthChecks = internalMutation({
   args: { connectionId: v.id("googleAnalyticsConnections") },
@@ -160,22 +160,21 @@ export const runHealthChecks = internalMutation({
       if (result.passing || wasFailing.has(result.check)) continue;
       const words = BELL[result.check]?.(result, host);
       if (!words) continue;
-      await tellAdmins(ctx, connection, words.title, words.body, `/app/analytics/${connection.companyWebsiteId}/tracking-health`, "GOOGLE_ANALYTICS_HEALTH");
+      await tellSuperAdmins(ctx, connection, words.title, words.body, `/app/analytics/${connection.companyWebsiteId}/tracking-health`, "GOOGLE_ANALYTICS_HEALTH");
     }
     return null;
   },
 });
 
-/** Users read for a company's admins, and for the platform's super admins: people, small by nature. */
-const PEOPLE_READ = 200;
-const PLATFORM_PEOPLE_READ = 500;
+/** The platform's super admins read for a notice: people, few by nature. */
+const SUPER_ADMINS_READ = 500;
 
 /**
- * The company's admins, each told in the bell. A company with no admin of
- * its own — one the platform's super admins run for it, as Ronins Agency —
- * tells the super admins instead, so a notice always reaches someone (board 10).
+ * A system alert in the bell, for the platform's super admins alone — never a
+ * company's own admins (Anthony, 2026-10-10: "These are system alerts not
+ * company alerts; they need to only go to sys admins").
  */
-export async function tellAdmins(
+export async function tellSuperAdmins(
   ctx: MutationCtx,
   connection: Doc<"googleAnalyticsConnections">,
   title: string,
@@ -183,15 +182,11 @@ export async function tellAdmins(
   href: string,
   kind: string,
 ) {
-  const members = await ctx.db
+  const superAdmins = await ctx.db
     .query("users")
-    .withIndex("by_company", (q) => q.eq("companyId", connection.companyId))
-    .take(PEOPLE_READ);
-  let told = members.filter((row) => row.role === "ADMIN");
-  if (told.length === 0) {
-    told = (await ctx.db.query("users").withIndex("by_role_lastLogin", (q) => q.eq("role", "SUPER_ADMIN")).take(PLATFORM_PEOPLE_READ));
-  }
-  for (const person of told) {
+    .withIndex("by_role_lastLogin", (q) => q.eq("role", "SUPER_ADMIN"))
+    .take(SUPER_ADMINS_READ);
+  for (const person of superAdmins) {
     await ctx.runMutation(internal.notifications.notifyUserInternal, { userId: person._id, companyId: connection.companyId, kind, title, body, href });
   }
 }
