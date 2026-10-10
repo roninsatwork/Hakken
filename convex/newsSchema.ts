@@ -12,38 +12,45 @@ import { v } from "convex/values";
  * writes every other language (`contentTranslation.ts`, revised 2026-10-01).
  */
 
-/** Where a source is read from. Anthony's own X bookmarks are a connection, not a source (phase 6). */
-export const NEWS_SOURCE_KINDS = ["WEBSITE", "YOUTUBE", "X_ACCOUNT"] as const;
-export type NewsSourceKind = (typeof NEWS_SOURCE_KINDS)[number];
-export const newsSourceKindValidator = v.union(v.literal("WEBSITE"), v.literal("YOUTUBE"), v.literal("X_ACCOUNT"));
-
 /** What a News item is, and the side menu's kinds (`utils/learnLists.ts`, where a screen reads them). */
 export { NEWS_ITEM_KINDS, type NewsItemKind } from "./utils/learnLists";
 export const newsItemKindValidator = v.union(v.literal("GOOGLE_UPDATE"), v.literal("WEBSITE"), v.literal("YOUTUBE"), v.literal("X"));
 
-/** Who a "Who to follow" entry is followed on. */
-export const FOLLOW_KINDS = ["X", "YOUTUBE", "WEBSITE", "LINKEDIN"] as const;
-export type FollowKind = (typeof FOLLOW_KINDS)[number];
+/** Where a person in "Who to follow" publishes: a channel's kind, read from its address (`utils/followChannels.ts`). */
+export { FOLLOW_KINDS, type FollowKind } from "./utils/followChannels";
 export const followKindValidator = v.union(v.literal("X"), v.literal("YOUTUBE"), v.literal("WEBSITE"), v.literal("LINKEDIN"));
 
 export const newsTables = {
-  /** A website, YouTube channel or X account the News Collector reads while it is on. */
-  newsSources: defineTable({
-    kind: newsSourceKindValidator,
-    name: v.string(),
-    /** The page or feed address for a website or channel; the handle, without "@", for an X account. */
+  /**
+   * One place a person in "Who to follow" publishes, which the News Collector
+   * reads while `collect` is on (content-people-knowledge-plan.md, C2, C3):
+   * added by hand, on Add a person or on the person's own page. It replaced
+   * News sources, a list of its own (2026-10-10). LinkedIn cannot be read, so
+   * a LinkedIn channel is shown in Insights and never collected.
+   */
+  followChannels: defineTable({
+    followId: v.id("newsFollows"),
+    kind: followKindValidator,
+    /** The address as kept: a web address; for X, the profile's (`https://x.com/<handle>`). */
     address: v.string(),
-    isOn: v.boolean(),
-    /** When the collector last read it, and when it last found something new: Admin's list says both. */
+    collect: v.boolean(),
+    /** When the collector last read it, and when it last found something new: the person's page says both. */
     lastCheckedAt: v.optional(v.number()),
     lastItemAt: v.optional(v.number()),
-    /** An X account's own id, found from its handle once (phase 6). */
+    /** Why the last read failed, in plain words; cleared by the next read that works. */
+    problem: v.optional(v.string()),
+    /** An X account's own id, found from its handle once. */
     externalId: v.optional(v.string()),
     /** The newest X post already read, so a run reads — and pays for — only what is newer. */
     sinceId: v.optional(v.string()),
+    /** How many items it has brought into News. */
+    found: v.number(),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_on", ["isOn"]),
+  })
+    .index("by_follow", ["followId"])
+    // The collector's turn: channels being collected, never read first, then the longest unread.
+    .index("by_collect_checked", ["collect", "lastCheckedAt"]),
 
   /**
    * Anthony's X account, connected once on the News sources screen so the
@@ -104,9 +111,11 @@ export const newsTables = {
    */
   newsItems: defineTable({
     kind: newsItemKindValidator,
-    sourceId: v.optional(v.id("newsSources")),
+    /** The person in "Who to follow" it came from, and their channel; absent for a Google update or an X bookmark. */
+    followId: v.optional(v.id("newsFollows")),
+    channelId: v.optional(v.id("followChannels")),
     googleUpdateId: v.optional(v.id("googleUpdates")),
-    /** The source's name as it was when collected, so a renamed or deleted source still reads. */
+    /** The person's name as it was when collected, so a renamed or deleted person still reads. */
     sourceName: v.string(),
     titleEn: v.string(),
     summaryEn: v.string(),
@@ -127,7 +136,10 @@ export const newsTables = {
     .index("by_lead_until", ["leadUntil"])
     .index("by_kind_published", ["kind", "publishedAt"])
     .index("by_external", ["externalKey"])
-    .index("by_google_update", ["googleUpdateId"]),
+    .index("by_google_update", ["googleUpdateId"])
+    // A person's page: what they published, newest first, and searched by title (content-people-knowledge-plan.md, board 2).
+    .index("by_follow_published", ["followId", "publishedAt"])
+    .searchIndex("search_title", { searchField: "titleEn", filterFields: ["followId", "kind"] }),
 
   /**
    * Items taken down in Admin → Content → News, by what made them the same
@@ -138,12 +150,25 @@ export const newsTables = {
     takenDownAt: v.number(),
   }).index("by_external", ["externalKey"]),
 
-  /** "Who to follow": people and channels Anthony recommends, shown on the News page. Nobody watches these. */
+  /**
+   * "Who to follow": a person Anthony recommends, shown in Insights, whose
+   * channels (`followChannels`) the News Collector reads
+   * (content-people-knowledge-plan.md, C2). `kind` and `url` are the person's
+   * first channel, kept in step with it, for the Insights page's link and its
+   * Where filter.
+   */
   newsFollows: defineTable({
     kind: followKindValidator,
     name: v.string(),
     url: v.string(),
     whyEn: v.string(),
+    /** Every channel's kind, in the order added, kept in step with the channels: Admin's Channel filter and column. */
+    channelKinds: v.optional(v.array(followKindValidator)),
+    /** How many items their channels have brought into News, and when the newest was published. */
+    collected: v.optional(v.number()),
+    newestAt: v.optional(v.number()),
+    /** How many of those items are in Knowledge, kept whole (content-people-knowledge-plan.md, C4). */
+    inKnowledge: v.optional(v.number()),
     /** Its place in the list, lowest first. */
     order: v.number(),
     /** The key of a topic in the shared list (`topics`, insights-helpful-content-plan.md, IH14, IH20); optional. */

@@ -30,6 +30,7 @@ import { rebuildMemoryOutcomeCounters } from "./agentMemoryCountersMigration";
 import { recountEveryList } from "./siteListAi";
 import { requestMissingIcons } from "./websites";
 import { addFirstTopics, fillInsightsReading, recutHelpfulContent } from "./insightsMigrations";
+import { channelsFromFollows } from "./contentPeopleMigrations";
 import { untickAutomaticQueries } from "./promptFanOut";
 import { followPlatformWhereStartingNumber } from "./companyDataLimits";
 import { detachCompanySchedules } from "./scheduler";
@@ -254,6 +255,12 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
   "2026-10-06-helpful-content-meaning": (ctx) => recutHelpfulContent(ctx),
   "2026-10-06-insights-reading": (ctx) => fillInsightsReading(ctx),
   "2026-10-06-first-topics": (ctx) => addFirstTopics(ctx),
+  /**
+   * Who to follow's people and their channels (content-people-knowledge-plan.md,
+   * phase 1; `contentPeopleMigrations.ts`): each row's link becomes its first
+   * channel, and rows for the same person become one.
+   */
+  "2026-10-10-follow-channels": (ctx) => channelsFromFollows(ctx),
   /** Each website added before icons were looked for asks for its icon (`websiteIcons.ts`, `websites.ts`). */
   "2026-10-01-website-icons": requestMissingIcons,
 

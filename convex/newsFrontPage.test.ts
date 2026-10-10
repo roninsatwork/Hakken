@@ -256,7 +256,7 @@ describe("Learn's side menu and Knowledge's topics", () => {
     await story(t, "A website story", "2026-09-30");
     await story(t, "A video", "2026-09-30", "YOUTUBE");
     await story(t, "Another video", TODAY, "YOUTUBE");
-    await superAdmin.mutation(api.newsFollows.createFollow, { kind: "YOUTUBE", name: "Edward Sturm", url: "https://youtube.com/@edwardsturm", whyEn: "Short, useful videos." });
+    await superAdmin.mutation(api.newsFollows.createFollow, { name: "Edward Sturm", whyEn: "Short, useful videos.", channels: ["https://youtube.com/@edwardsturm"] });
     await superAdmin.mutation(api.knowledgeArticles.createArticle, { titleEn: "How is traffic worked out?", bodyEn: "An estimate.", status: "PUBLISHED", topic: "TRAFFIC" });
     await superAdmin.mutation(api.knowledgeArticles.createArticle, { titleEn: "Why rankings move", bodyEn: "Many reasons.", status: "PUBLISHED" });
     await superAdmin.mutation(api.knowledgeArticles.createArticle, { titleEn: "A draft", bodyEn: "", status: "DRAFT", topic: "BACKLINKS" });

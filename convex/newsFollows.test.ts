@@ -27,12 +27,17 @@ async function people(t: ReturnType<typeof harness>) {
   return { superAdmin: t.withIdentity({ subject: superAdminId }), member: t.withIdentity({ subject: memberId }) };
 }
 
-const entry = (name: string, extra: { topic?: string; picked?: boolean } = {}) => ({
-  kind: "X" as const,
+/** A person's details, as Edit details saves them. */
+const details = (name: string, extra: { topic?: string; picked?: boolean } = {}) => ({
   name,
-  url: `https://x.com/${name.toLowerCase().replace(/\s+/g, "")}`,
   whyEn: `Why ${name}.`,
   ...extra,
+});
+
+/** A person as Add a person saves them: their details and one X account. */
+const entry = (name: string, extra: { topic?: string; picked?: boolean } = {}) => ({
+  ...details(name, extra),
+  channels: [`https://x.com/${name.toLowerCase().replace(/\s+/g, "").slice(0, 15)}`],
 });
 
 describe("Who to follow: topics and our picks", () => {
@@ -55,7 +60,7 @@ describe("Who to follow: topics and our picks", () => {
     ]);
     await expect(superAdmin.mutation(api.newsFollows.createFollow, entry("Someone", { topic: "GARDENING" }))).rejects.toThrow("no longer in the list");
     // Blank is none.
-    await superAdmin.mutation(api.newsFollows.updateFollow, { followId, ...entry("Lily Ray", { topic: "" }) });
+    await superAdmin.mutation(api.newsFollows.updateFollow, { followId, ...details("Lily Ray", { topic: "" }) });
     expect((await superAdmin.query(api.newsFollows.getFollow, { followId }))?.topic).toBeNull();
   });
 
@@ -72,10 +77,10 @@ describe("Who to follow: topics and our picks", () => {
     await expect(superAdmin.mutation(api.newsFollows.setFollowPick, { followId: ids[4], picked: true }))
       .rejects.toThrow("4 are picked already: Nacho Mascort, Lily Ray, Kevin Indig, Google Search Central. Untick one of them first.");
     // Saving the entry's page with the tick on is refused the same way.
-    await expect(superAdmin.mutation(api.newsFollows.updateFollow, { followId: ids[4], ...entry("Edward Sturm", { picked: true }) })).rejects.toThrow("Untick one of them first");
+    await expect(superAdmin.mutation(api.newsFollows.updateFollow, { followId: ids[4], ...details("Edward Sturm", { picked: true }) })).rejects.toThrow("Untick one of them first");
 
     await superAdmin.mutation(api.newsFollows.setFollowPick, { followId: ids[1], picked: false });
-    await superAdmin.mutation(api.newsFollows.updateFollow, { followId: ids[4], ...entry("Edward Sturm", { picked: true }) });
+    await superAdmin.mutation(api.newsFollows.updateFollow, { followId: ids[4], ...details("Edward Sturm", { picked: true }) });
     expect((await superAdmin.query(api.newsFollows.listPicksForAdmin, {})).map((pick) => pick.name)).toEqual(["Nacho Mascort", "Kevin Indig", "Google Search Central", "Edward Sturm"]);
   });
 
@@ -83,7 +88,7 @@ describe("Who to follow: topics and our picks", () => {
     const t = harness();
     const { superAdmin, member } = await people(t);
     const followId = await superAdmin.mutation(api.newsFollows.createFollow, entry("Kevin Indig", { picked: true }));
-    await superAdmin.mutation(api.newsFollows.updateFollow, { followId, ...entry("Kevin Indig") });
+    await superAdmin.mutation(api.newsFollows.updateFollow, { followId, ...details("Kevin Indig") });
     expect((await superAdmin.query(api.newsFollows.getFollow, { followId }))?.pickedAt).not.toBeNull();
     await expect(member.mutation(api.newsFollows.setFollowPick, { followId, picked: false })).rejects.toThrow();
   });
@@ -104,7 +109,7 @@ describe("Who to follow for readers: numbered pages from the server", () => {
     for (const name of ["Rand Fishkin", "aleyda Solis", "Lily Ray", "Kevin Indig", "Barry Schwartz"]) {
       await superAdmin.mutation(api.newsFollows.createFollow, entry(name, { topic: name === "Lily Ray" ? "RANKINGS" : undefined }));
     }
-    await superAdmin.mutation(api.newsFollows.createFollow, { ...entry("Google Search Central"), kind: "YOUTUBE", topic: "RANKINGS" });
+    await superAdmin.mutation(api.newsFollows.createFollow, { ...details("Google Search Central", { topic: "RANKINGS" }), channels: ["https://www.youtube.com/@googlesearchcentral"] });
     const read = (args: { page: number; rows: number; kind?: "X" | "YOUTUBE"; topic?: string; search?: string }) =>
       member.query(api.newsFollows.listFollowsByPage, { language: "en", ...args });
 

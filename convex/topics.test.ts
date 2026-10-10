@@ -104,7 +104,7 @@ describe("Topics", () => {
     const { superAdmin } = await people(t);
     await t.mutation(internal.topics.seedFirstTopicsInternal, {});
     const articleId = await superAdmin.mutation(api.knowledgeArticles.createArticle, { titleEn: "Ranks", bodyEn: "Words.", status: "PUBLISHED", topic: "RANKINGS" });
-    const followId = await superAdmin.mutation(api.newsFollows.createFollow, { kind: "X", name: "Barry", url: "https://x.com/rustybrick", whyEn: "News.", topic: "RANKINGS" });
+    const followId = await superAdmin.mutation(api.newsFollows.createFollow, { name: "Barry", whyEn: "News.", topic: "RANKINGS", channels: ["https://x.com/rustybrick"] });
     const libraryId = await superAdmin.mutation(api.libraryArticles.createArticle, {
       url: "https://example.com/ranking-systems",
       title: "Ranking systems",

@@ -15,19 +15,20 @@ const OUTCOMES = ["connected", "declined", "failed", "missing-scope"] as const;
 type Outcome = (typeof OUTCOMES)[number];
 
 /**
- * X on News sources (docs/plans/active/knowledge-news-and-digest-plan.md,
- * phase 6): whether watched X accounts can be read — the X app's token — and
+ * X on Who to follow (docs/plans/active/knowledge-news-and-digest-plan.md,
+ * phase 6; moved from News sources when it went, content-people-knowledge-
+ * plan.md, C2): whether people's X accounts can be read — the X app's token — and
  * Anthony's own account, connected so his bookmarks come into News. The
  * sign-in leaves for X and comes back here, saying how it went; disconnecting
  * asks first. The access itself is never shown.
  */
 export function XConnectionPanel() {
-  const t = useTranslations("admin.newsSources.x");
+  const t = useTranslations("admin.newsFollows.x");
   const tCommon = useTranslations("common");
   const x = useQuery(api.xConnect.getXForAdmin, {});
   const begin = useMutation(api.xConnect.beginXConnect);
   const disconnect = useMutation(api.xConnect.disconnectX);
-  const action = useAdminAction({ scope: "admin-news-sources-x" });
+  const action = useAdminAction({ scope: "admin-news-follows-x" });
   const [confirming, setConfirming] = useState(false);
   const came = useSearchParams().get("x");
   const outcome = OUTCOMES.find((entry) => entry === came) ?? null;

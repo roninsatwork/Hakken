@@ -4,18 +4,22 @@ import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
-import { auditContentChange, checkedText, checkedUrl } from "./utils/contentAdmin";
+import { auditContentChange, checkedText } from "./utils/contentAdmin";
 import { followKindValidator } from "./newsSchema";
+import { deleteChannelsOf, insertChannels, syncFollowChannels } from "./followChannels";
+import { MAX_CHANNELS, type FollowKind } from "./utils/followChannels";
+import { byValue, compareText, type SortDirection, type SortValue } from "./utils/sortOrder";
 import { readerFields, removeTranslations, requestTranslation, sourceFields, translationProgress, translationProgressValidator } from "./contentTranslation";
 import { checkedTopicKey } from "./topics";
 import { kindTopicKey, readInsightsCounts, refreshInsightsCounts, type InsightsCounts } from "./insightsCounts";
-import { listPageArgs, listPageResult } from "./siteListPages";
+import { listPageArgs, listPageResult, pageOfList } from "./siteListPages";
 
 /**
  * "Who to follow" (docs/plans/active/knowledge-news-and-digest-plan.md, phase
- * 3): people and channels Anthony recommends, with why — written in English,
- * translated by the Translator — shown on the News page and written in Admin
- * → Content. A written list: nothing reads these.
+ * 3): people Anthony recommends, with why — written in English, translated by
+ * the Translator — shown in Insights and written in Admin → Content. Since
+ * 2026-10-10 each person has channels (`followChannels.ts`) that the News
+ * Collector reads (content-people-knowledge-plan.md, C2, C3).
  */
 
 /**
@@ -42,22 +46,39 @@ const readerValidator = v.object({
   pickedAt: v.union(v.number(), v.null()),
 });
 
-const adminValidator = v.object({
+/** A person as Admin lists them (board 1). */
+const adminListValidator = v.object({
   _id: v.id("newsFollows"),
-  kind: followKindValidator,
   name: v.string(),
-  url: v.string(),
   whyEn: v.string(),
+  /** Every channel's kind, in the order added. */
+  channelKinds: v.array(followKindValidator),
   topic: v.union(v.string(), v.null()),
   pickedAt: v.union(v.number(), v.null()),
+  /** Items their channels brought into News, how many are in Knowledge, and when the newest was published. */
+  collected: v.number(),
+  inKnowledge: v.number(),
+  newestAt: v.union(v.number(), v.null()),
+});
+
+/** A person for their own page and their editing page. */
+const adminValidator = v.object({
+  _id: v.id("newsFollows"),
+  name: v.string(),
+  whyEn: v.string(),
+  channelKinds: v.array(followKindValidator),
+  topic: v.union(v.string(), v.null()),
+  pickedAt: v.union(v.number(), v.null()),
+  collected: v.number(),
+  inKnowledge: v.number(),
+  newestAt: v.union(v.number(), v.null()),
+  createdAt: v.number(),
   translations: translationProgressValidator,
 });
 
-/** `topic` left out or blank is none; `picked` left out leaves "Our picks" as it is. */
-const followInput = {
-  kind: followKindValidator,
+/** `topic` left out or blank is none; `picked` left out leaves "Our picks" as it is. Channels are added on their own. */
+const followDetails = {
   name: v.string(),
-  url: v.string(),
   whyEn: v.string(),
   topic: v.optional(v.string()),
   picked: v.optional(v.boolean()),
@@ -84,25 +105,36 @@ async function applyPick(ctx: MutationCtx & { userId: Id<"users"> }, row: Doc<"n
 /** The name as the A to Z index keeps it (IH21). */
 export const nameKeyOf = (name: string) => name.trim().toLocaleLowerCase("en-GB");
 
-function checkedFollow(input: { name: string; url: string; whyEn: string }) {
+function checkedFollow(input: { name: string; whyEn: string }) {
   const name = checkedText(input.name, "A name", MAX_NAME);
   return {
     name,
     nameKey: nameKeyOf(name),
-    url: checkedUrl(input.url, "The link"),
     whyEn: checkedText(input.whyEn, "Why", MAX_WHY),
+  };
+}
+
+/** Every channel's kind; a person from before channels has their one link's. */
+const channelKindsOf = (row: Doc<"newsFollows">): FollowKind[] => row.channelKinds ?? [row.kind];
+
+function adminListRow(row: Doc<"newsFollows">) {
+  return {
+    _id: row._id,
+    name: row.name,
+    whyEn: row.whyEn,
+    channelKinds: channelKindsOf(row),
+    topic: row.topic ?? null,
+    pickedAt: row.pickedAt ?? null,
+    collected: row.collected ?? 0,
+    inKnowledge: row.inKnowledge ?? 0,
+    newestAt: row.newestAt ?? null,
   };
 }
 
 async function adminRow(ctx: QueryCtx, row: Doc<"newsFollows">) {
   return {
-    _id: row._id,
-    kind: row.kind,
-    name: row.name,
-    url: row.url,
-    whyEn: row.whyEn,
-    topic: row.topic ?? null,
-    pickedAt: row.pickedAt ?? null,
+    ...adminListRow(row),
+    createdAt: row.createdAt,
     translations: await translationProgress(ctx, "newsFollows", row._id, sourceFields("newsFollows", row)),
   };
 }
@@ -205,19 +237,48 @@ export const getFollowTotals = tenantQuery({
   handler: async (ctx) => (await readInsightsCounts(ctx)).follows,
 });
 
-/** Admin → Content → Who to follow: a page at a time, searched and filtered on the server, or only the picks (IH14, IH21). */
-export const listFollowsForAdminPage = superAdminQuery({
-  args: { ...followFilters, picks: v.optional(v.boolean()), paginationOpts: paginationOptsValidator },
-  returns: paginationResultValidator(adminValidator),
+/** What Admin's list sorts by (board 1): a person A to Z, or by their topic, articles or newest item. */
+type AdminSort = "name" | "topic" | "collected" | "inKnowledge" | "newest";
+const adminSortValidator = v.union(v.literal("name"), v.literal("topic"), v.literal("collected"), v.literal("inKnowledge"), v.literal("newest"));
+
+const ADMIN_SORT_VALUES: Record<AdminSort, (row: Doc<"newsFollows">) => SortValue> = {
+  name: (row) => row.nameKey ?? nameKeyOf(row.name),
+  topic: (row) => row.topic ?? null,
+  collected: (row) => row.collected ?? 0,
+  inKnowledge: (row) => row.inKnowledge ?? 0,
+  newest: (row) => row.newestAt ?? null,
+};
+
+/**
+ * Admin → Content → Who to follow (content-people-knowledge-plan.md, board
+ * 1): one page of people, searched, filtered by a channel they have, their
+ * topic or "Our picks", and sorted by any heading over the whole list — on
+ * the server, which reads at most `MAX_FOLLOWS` (IH21) and counts exactly.
+ */
+export const listFollowsForAdmin = superAdminQuery({
+  args: {
+    search: v.optional(v.string()),
+    channel: v.optional(followKindValidator),
+    topic: v.optional(v.string()),
+    picks: v.optional(v.boolean()),
+    sort: adminSortValidator,
+    direction: v.union(v.literal("asc"), v.literal("desc")),
+    ...listPageArgs,
+  },
+  returns: listPageResult(adminListValidator),
   handler: async (ctx, args) => {
-    const page = args.picks
-      ? await ctx.db.query("newsFollows").withIndex("by_picked", (q) => q.gt("pickedAt", 0)).paginate(args.paginationOpts)
-      : await followsQuery(ctx, args).paginate(args.paginationOpts);
-    return { ...page, page: await Promise.all(page.page.map((row) => adminRow(ctx, row))) };
+    const read = await followsQuery(ctx, { search: args.search, topic: args.topic }).take(MAX_FOLLOWS);
+    const narrowed = read.filter((row) =>
+      (!args.channel || channelKindsOf(row).includes(args.channel)) && (!args.picks || row.pickedAt !== undefined));
+    const sorted = args.search?.trim()
+      ? narrowed
+      : [...narrowed].sort(byValue(ADMIN_SORT_VALUES[args.sort], (row) => row.name, args.direction as SortDirection, compareText));
+    const page = pageOfList(sorted, args.page, args.rows);
+    return { ...page, rows: page.rows.map(adminListRow) };
   },
 });
 
-/** One entry for its editing page; null when it has gone. */
+/** One person for their page and their editing page; null when they have gone. */
 export const getFollow = superAdminQuery({
   args: { followId: v.id("newsFollows") },
   returns: v.union(v.null(), adminValidator),
@@ -227,30 +288,40 @@ export const getFollow = superAdminQuery({
   },
 });
 
+/**
+ * Add a person (board 3): their name, why, topic and pick, and their channels —
+ * one address each, at least one, at most `MAX_CHANNELS`. Each channel added is
+ * collected; LinkedIn is shown in Insights only.
+ */
 export const createFollow = superAdminMutation({
-  args: followInput,
+  args: { ...followDetails, channels: v.array(v.string()) },
   returns: v.id("newsFollows"),
-  handler: async (ctx, args) => {
+  handler: async (ctx, { channels, ...args }) => {
+    const addresses = channels.filter((address) => address.trim());
+    if (addresses.length === 0) throw appError("INVALID_INPUT", "Add at least one of their channels.");
+    if (addresses.length > MAX_CHANNELS) throw appError("INVALID_INPUT", `A person has at most ${MAX_CHANNELS} channels.`);
     const now = Date.now();
-    // New entries go last.
     const topic = await checkedTopicKey(ctx, args.topic);
-    const followId = await ctx.db.insert("newsFollows", { kind: args.kind, ...checkedFollow(args), topic, order: now, createdAt: now, updatedAt: now });
+    // The first channel is filled in by `syncFollowChannels` once the channels are in.
+    const followId = await ctx.db.insert("newsFollows", { kind: "WEBSITE", url: "", ...checkedFollow(args), topic, order: now, collected: 0, createdAt: now, updatedAt: now });
+    await insertChannels(ctx, followId, addresses);
+    await syncFollowChannels(ctx, followId);
     const created = await ctx.db.get(followId);
     if (created && args.picked) await applyPick(ctx, created, true);
-    await refreshInsightsCounts(ctx);
     await requestTranslation(ctx, "newsFollows", followId);
-    await auditContentChange(ctx, "CREATE_NEWS_FOLLOW", "newsFollows", followId, { name: args.name });
+    await auditContentChange(ctx, "CREATE_NEWS_FOLLOW", "newsFollows", followId, { name: args.name, channels: addresses.length });
     return followId;
   },
 });
 
+/** A person's details (Edit details on their page); their channels are changed on the page itself. */
 export const updateFollow = superAdminMutation({
-  args: { followId: v.id("newsFollows"), ...followInput },
+  args: { followId: v.id("newsFollows"), ...followDetails },
   returns: v.null(),
   handler: async (ctx, { followId, ...input }) => {
     const existing = await ctx.db.get(followId);
-    if (!existing) throw appError("NOT_FOUND", "That entry is no longer here.");
-    await ctx.db.patch(followId, { kind: input.kind, ...checkedFollow(input), topic: await checkedTopicKey(ctx, input.topic), updatedAt: Date.now() });
+    if (!existing) throw appError("NOT_FOUND", "That person is no longer here.");
+    await ctx.db.patch(followId, { ...checkedFollow(input), topic: await checkedTopicKey(ctx, input.topic), updatedAt: Date.now() });
     if (input.picked !== undefined) await applyPick(ctx, existing, input.picked);
     await refreshInsightsCounts(ctx);
     await requestTranslation(ctx, "newsFollows", followId);
@@ -287,10 +358,54 @@ export const deleteFollow = superAdminMutation({
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.followId);
     if (!existing) return null;
+    await deleteChannelsOf(ctx, args.followId);
     await ctx.db.delete(args.followId);
     await removeTranslations(ctx, "newsFollows", args.followId);
     await refreshInsightsCounts(ctx);
     await auditContentChange(ctx, "DELETE_NEWS_FOLLOW", "newsFollows", args.followId, { name: existing.name });
     return null;
+  },
+});
+
+/** What one of a person's items shows on their page (board 2). */
+const followItemValidator = v.object({
+  _id: v.id("newsItems"),
+  kind: v.union(v.literal("WEBSITE"), v.literal("YOUTUBE"), v.literal("X"), v.literal("GOOGLE_UPDATE")),
+  titleEn: v.string(),
+  summaryEn: v.string(),
+  url: v.string(),
+  publishedAt: v.number(),
+});
+
+/**
+ * What a person published (board 2): a page at a time, newest first or
+ * oldest first, narrowed to one kind of channel or searched by title — on the
+ * server, through the item's own indexes.
+ */
+export const listFollowItemsForAdmin = superAdminQuery({
+  args: {
+    followId: v.id("newsFollows"),
+    search: v.optional(v.string()),
+    channel: v.optional(v.union(v.literal("WEBSITE"), v.literal("YOUTUBE"), v.literal("X"))),
+    direction: v.union(v.literal("asc"), v.literal("desc")),
+    paginationOpts: paginationOptsValidator,
+  },
+  returns: paginationResultValidator(followItemValidator),
+  handler: async (ctx, args) => {
+    const search = args.search?.trim();
+    const { followId, channel } = args;
+    const page = search
+      ? await ctx.db.query("newsItems").withSearchIndex("search_title", (q) => {
+        const found = q.search("titleEn", search).eq("followId", followId);
+        return channel ? found.eq("kind", channel) : found;
+      }).paginate(args.paginationOpts)
+      : await (channel
+        ? ctx.db.query("newsItems").withIndex("by_follow_published", (q) => q.eq("followId", followId)).order(args.direction).filter((q) => q.eq(q.field("kind"), channel))
+        : ctx.db.query("newsItems").withIndex("by_follow_published", (q) => q.eq("followId", followId)).order(args.direction)
+      ).paginate(args.paginationOpts);
+    return {
+      ...page,
+      page: page.page.map((row) => ({ _id: row._id, kind: row.kind, titleEn: row.titleEn, summaryEn: row.summaryEn, url: row.url, publishedAt: row.publishedAt })),
+    };
   },
 });

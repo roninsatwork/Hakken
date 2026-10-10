@@ -52,10 +52,16 @@ async function collector(t: ReturnType<typeof harness>, extra: { maxCostUsd?: nu
   }));
 }
 
-async function source(t: ReturnType<typeof harness>, kind: "WEBSITE" | "YOUTUBE" | "X_ACCOUNT", name: string, address: string, lastCheckedAt?: number) {
-  return await t.run(async (ctx) => await ctx.db.insert("newsSources", {
-    kind, name, address, isOn: true, createdAt: Date.now(), updatedAt: Date.now(), ...(lastCheckedAt ? { lastCheckedAt } : {}),
-  }));
+/** A person in "Who to follow" with one channel being collected; returns the channel. */
+async function source(t: ReturnType<typeof harness>, kind: "WEBSITE" | "YOUTUBE" | "X", name: string, address: string, lastCheckedAt?: number) {
+  return await t.run(async (ctx) => {
+    const followId = await ctx.db.insert("newsFollows", {
+      kind, name, url: address, whyEn: `Why ${name}.`, channelKinds: [kind], order: 1, createdAt: Date.now(), updatedAt: Date.now(),
+    });
+    return await ctx.db.insert("followChannels", {
+      followId, kind, address, collect: true, found: 0, createdAt: Date.now(), updatedAt: Date.now(), ...(lastCheckedAt ? { lastCheckedAt } : {}),
+    });
+  });
 }
 
 async function run(t: ReturnType<typeof harness>, agentId: Id<"agents">) {
@@ -109,7 +115,11 @@ describe("the News Collector", () => {
     // The agent's own instructions lead what the model is told.
     expect(generate.mock.calls[0][0].systemInstruction).toMatch(/^Summarise plainly\./);
     const read = await t.run(async (ctx) => await ctx.db.get(sourceId));
-    expect(read).toMatchObject({ lastCheckedAt: Date.now(), lastItemAt: Date.now() });
+    expect(read).toMatchObject({ lastCheckedAt: Date.now(), lastItemAt: Date.now(), found: 2 });
+    // Each item is filed under the person and their channel, whose counts follow.
+    expect(saved.every((item) => item.channelId === sourceId && item.followId === read?.followId)).toBe(true);
+    const person = await t.run(async (ctx) => (read ? await ctx.db.get(read.followId) : null));
+    expect(person).toMatchObject({ collected: 2, newestAt: saved[0].publishedAt });
     const scheduled = await t.run(async (ctx) => (await ctx.db.system.query("_scheduled_functions").collect()).map((job) => job.name));
     expect(scheduled.filter((name) => name.includes("translateNow"))).toHaveLength(2);
     // Each model call is on the run, as a step and in the ledger.
@@ -182,7 +192,7 @@ describe("the News Collector", () => {
     const t = harness();
     const agentId = await collector(t);
     await source(t, "WEBSITE", "Gone", "https://gone.example/feed", Date.now() - 2 * 86_400_000);
-    await source(t, "X_ACCOUNT", "Search Liaison", "searchliaison", Date.now() - 86_400_000);
+    await source(t, "X", "Search Liaison", "https://x.com/searchliaison", Date.now() - 86_400_000);
     await source(t, "WEBSITE", "The Blog", "https://blog.example/news/feed/", Date.now() - 3600_000);
     serve({ "https://blog.example/news/feed/": rss([{ slug: "still-read", day: 29 }]) });
 
@@ -191,8 +201,8 @@ describe("the News Collector", () => {
     expect(finished).toMatchObject({ status: "SUCCESS" });
     expect((await items(t)).map((item) => item.titleEn)).toEqual(["Post still-read"]);
     const steps = await t.run(async (ctx) => await ctx.db.query("agentRunSteps").collect());
-    expect(steps.find((step) => step.input === "Could not read Gone")).toMatchObject({ status: "FAILED" });
-    expect(steps.find((step) => step.input === "Skipped Search Liaison")?.output).toMatch(/X_BEARER_TOKEN/);
+    expect(steps.find((step) => step.input === "Could not read Gone's website")).toMatchObject({ status: "FAILED" });
+    expect(steps.find((step) => step.input === "Skipped Search Liaison's X account")?.output).toMatch(/X_BEARER_TOKEN/);
   });
 
   test("stops at the agent's spend limit, saying so", async () => {
@@ -216,7 +226,7 @@ describe("the News Collector", () => {
     const t = harness();
     const agentId = await collector(t);
 
-    expect((await run(t, agentId))?.finalOutput).toBe("No News source is switched on, so nothing was read.");
+    expect((await run(t, agentId))?.finalOutput).toBe("No one in Who to follow has a channel being collected, so nothing was read.");
     expect(generate).not.toHaveBeenCalled();
   });
 });

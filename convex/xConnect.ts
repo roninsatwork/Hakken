@@ -12,7 +12,7 @@ import { appError } from "./utils/appError";
 /**
  * Connecting Anthony's X account (docs/plans/active/knowledge-news-and-
  * digest-plan.md, phase 6): X gives bookmarks only to a personal sign-in, so
- * he connects once on Admin → Content → News sources and approves reading
+ * he connects once on Admin → Content → Who to follow and approves reading
  * bookmarks, and the News Collector imports each new one. The flow is Search
  * Console's (`searchConsoleConnect.ts`) — a single-use state minted for the
  * signed-in super admin, the code exchanged on the server only, the tokens
@@ -36,9 +36,9 @@ export function isXAppTokenConfigured(): boolean {
   return Boolean(process.env.X_BEARER_TOKEN?.trim());
 }
 
-function newsSourcesScreen(outcome: string) {
+function whoToFollowScreen(outcome: string) {
   const base = (process.env.SITE_URL?.trim() || "http://localhost:3000").replace(/\/+$/, "");
-  return `${base}/admin/content/news-sources?x=${outcome}`;
+  return `${base}/admin/content/who-to-follow?x=${outcome}`;
 }
 
 function redirectTo(url: string) {
@@ -109,7 +109,7 @@ export const handleXAuthorize = httpAction(async (ctx, request) => {
   const state = url.searchParams.get("state")?.trim() ?? "";
   if (!state) return new Response("Missing state.", { status: 400 });
   const pending = await ctx.runQuery(internal.xConnect.pendingByState, { state });
-  if (!pending) return new Response("This sign-in has expired. Start again from News sources.", { status: 400 });
+  if (!pending) return new Response("This sign-in has expired. Start again from Who to follow.", { status: 400 });
   const provider = getConnectorOAuthProvider(X_PROVIDER);
   const credentials = getConnectorOAuthClientCredentials(X_PROVIDER);
   if (!provider || !credentials || !isConnectorTokenEncryptionConfigured()) {
@@ -137,7 +137,7 @@ export const handleXAuthorize = httpAction(async (ctx, request) => {
  * GET /api/x/oauth/callback?code=…&state=… — the state is single-use, the
  * code exchanged here and nowhere else. A sign-in that cannot read bookmarks
  * keeps nothing of X's; one that was working before keeps working. Back to
- * News sources, saying how it went.
+ * Who to follow, saying how it went.
  */
 export const handleXCallback = httpAction(async (ctx, request) => {
   const url = new URL(request.url);
@@ -146,14 +146,14 @@ export const handleXCallback = httpAction(async (ctx, request) => {
   const refusal = url.searchParams.get("error")?.trim() ?? "";
   if (!state) return new Response("Missing state.", { status: 400 });
   const pending = await ctx.runQuery(internal.xConnect.pendingByState, { state });
-  if (!pending) return new Response("This sign-in has expired. Start again from News sources.", { status: 400 });
+  if (!pending) return new Response("This sign-in has expired. Start again from Who to follow.", { status: 400 });
   const provider = getConnectorOAuthProvider(X_PROVIDER);
   const credentials = getConnectorOAuthClientCredentials(X_PROVIDER);
 
   const fail = async (outcome: "declined" | "failed" | "missing-scope", problem: string, grant?: string) => {
     await ctx.runMutation(internal.xConnect.endSignIn, { state, problem });
     if (provider && credentials && grant) await revokeOAuthToken(provider, grant, credentials);
-    return redirectTo(newsSourcesScreen(outcome));
+    return redirectTo(whoToFollowScreen(outcome));
   };
 
   if (refusal) return await fail(refusal === "access_denied" ? "declined" : "failed", refusal === "access_denied" ? "The X sign-in was declined." : "X did not finish the sign-in.");
@@ -186,7 +186,7 @@ export const handleXCallback = httpAction(async (ctx, request) => {
     refreshTokenCiphertext: await encryptConnectorToken(tokens.refresh_token),
     ...(tokens.expires_in ? { expiresAt: Date.now() + tokens.expires_in * 1000 } : {}),
   });
-  return redirectTo(newsSourcesScreen("connected"));
+  return redirectTo(whoToFollowScreen("connected"));
 });
 
 /** A sign-in that ended without connecting: over, saying why; a working connection is left as it was. */
@@ -237,7 +237,7 @@ export const completeXConnect = internalMutation({
 
 // ── The screen ─────────────────────────────────────────────────────────────
 
-/** What News sources says about X: whether it can be set up, and the connected account — never its access. */
+/** What Who to follow says about X: whether it can be set up, and the connected account — never its access. */
 export const getXForAdmin = superAdminQuery({
   args: {},
   returns: v.object({
@@ -346,14 +346,14 @@ export const markBookmarksRead = internalMutation({
   },
 });
 
-/** An X account's id and the newest post already read, kept on its source. */
+/** An X account's id and the newest post already read, kept on its channel. */
 export const keepXAccountPlace = internalMutation({
-  args: { sourceId: v.id("newsSources"), externalId: v.optional(v.string()), sinceId: v.optional(v.string()) },
+  args: { channelId: v.id("followChannels"), externalId: v.optional(v.string()), sinceId: v.optional(v.string()) },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const source = await ctx.db.get(args.sourceId);
-    if (!source) return null;
-    await ctx.db.patch(args.sourceId, {
+    const channel = await ctx.db.get(args.channelId);
+    if (!channel) return null;
+    await ctx.db.patch(args.channelId, {
       ...(args.externalId ? { externalId: args.externalId } : {}),
       ...(args.sinceId ? { sinceId: args.sinceId } : {}),
       updatedAt: Date.now(),

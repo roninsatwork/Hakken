@@ -109,7 +109,7 @@ describe("connecting Anthony's X account", () => {
       .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
     expect(xUrl.searchParams.get("code_challenge")).toBe(challenge);
 
-    expect(back.headers.get("location")).toMatch(/\/admin\/content\/news-sources\?x=connected$/);
+    expect(back.headers.get("location")).toMatch(/\/admin\/content\/who-to-follow\?x=connected$/);
     const row = await t.run(async (ctx) => (await ctx.db.query("xConnections").first())!);
     expect(row).toMatchObject({ status: "CONNECTED", account: "@ants", xUserId: "42" });
     expect(row.accessTokenCiphertext).not.toContain("access-1");
@@ -146,9 +146,14 @@ describe("reading X", () => {
     vi.stubEnv("X_READ_COST_USD", "0.005");
     const t = harness();
     const agentId = await collector(t);
-    await t.run(async (ctx) => await ctx.db.insert("newsSources", {
-      kind: "X_ACCOUNT", name: "Search Liaison", address: "searchliaison", isOn: true, createdAt: Date.now(), updatedAt: Date.now(),
-    }));
+    await t.run(async (ctx) => {
+      const followId = await ctx.db.insert("newsFollows", {
+        kind: "X", name: "Search Liaison", url: "https://x.com/searchliaison", whyEn: "Google's own word.", channelKinds: ["X"], order: 1, createdAt: Date.now(), updatedAt: Date.now(),
+      });
+      await ctx.db.insert("followChannels", {
+        followId, kind: "X", address: "https://x.com/searchliaison", collect: true, found: 0, createdAt: Date.now(), updatedAt: Date.now(),
+      });
+    });
     const posts = Array.from({ length: 8 }, (_, index) => post(String(108 - index), `Post number ${8 - index}`));
     const calls = x({
       "https://api.x.com/2/users/by/username/searchliaison": () => Response.json({ data: { id: "777", username: "searchliaison" } }),

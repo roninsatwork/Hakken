@@ -2,17 +2,19 @@ import { v } from "convex/values";
 
 import { internalMutation, internalQuery } from "./_generated/server";
 import { requestTranslation } from "./contentTranslation";
-import { newsSourceKindValidator } from "./newsSchema";
+import { followKindValidator } from "./newsSchema";
 
 /**
  * The News Collector's reads and writes (docs/plans/active/knowledge-news-
  * and-digest-plan.md, phase 5); its job is `newsCollectorRun.ts`. What it
  * collects goes live in News at once (A4), in English, and the Translator is
- * asked for every other language as each item is saved.
+ * asked for every other language as each item is saved. Since 2026-10-10 it
+ * reads the channels of the people in "Who to follow" whose Collect tick is
+ * on (content-people-knowledge-plan.md, C2), in place of a list of sources.
  */
 
-/** Sources read in one run; more than this waits for the next. */
-const SOURCES_PER_RUN = 100;
+/** Channels read in one run; more than this waits for the next. */
+const CHANNELS_PER_RUN = 100;
 
 /** The agent's own instructions and model, which the collector's summaries follow. */
 export const readCollectorAgent = internalQuery({
@@ -32,12 +34,16 @@ export const readCollectorAgent = internalQuery({
   },
 });
 
-/** Every source that is on, the longest unread first. */
-export const listSourcesToRead = internalQuery({
+/**
+ * Every channel being collected, never read first and then the longest
+ * unread, each with its person's name — what their items are filed under.
+ */
+export const listChannelsToRead = internalQuery({
   args: {},
   returns: v.array(v.object({
-    _id: v.id("newsSources"),
-    kind: newsSourceKindValidator,
+    _id: v.id("followChannels"),
+    followId: v.id("newsFollows"),
+    kind: followKindValidator,
     name: v.string(),
     address: v.string(),
     firstRead: v.boolean(),
@@ -45,18 +51,25 @@ export const listSourcesToRead = internalQuery({
     sinceId: v.optional(v.string()),
   })),
   handler: async (ctx) => {
-    const on = await ctx.db.query("newsSources").withIndex("by_on", (q) => q.eq("isOn", true)).take(SOURCES_PER_RUN);
-    return on
-      .sort((one, other) => (one.lastCheckedAt ?? 0) - (other.lastCheckedAt ?? 0))
-      .map((source) => ({
-        _id: source._id,
-        kind: source.kind,
-        name: source.name,
-        address: source.address,
-        firstRead: source.lastCheckedAt === undefined,
-        ...(source.externalId ? { externalId: source.externalId } : {}),
-        ...(source.sinceId ? { sinceId: source.sinceId } : {}),
-      }));
+    const due = await ctx.db.query("followChannels").withIndex("by_collect_checked", (q) => q.eq("collect", true)).take(CHANNELS_PER_RUN);
+    const rows = [];
+    for (const channel of due) {
+      // LinkedIn can't be read, whatever its tick says.
+      if (channel.kind === "LINKEDIN") continue;
+      const follow = await ctx.db.get(channel.followId);
+      if (!follow) continue;
+      rows.push({
+        _id: channel._id,
+        followId: channel.followId,
+        kind: channel.kind,
+        name: follow.name,
+        address: channel.address,
+        firstRead: channel.lastCheckedAt === undefined,
+        ...(channel.externalId ? { externalId: channel.externalId } : {}),
+        ...(channel.sinceId ? { sinceId: channel.sinceId } : {}),
+      });
+    }
+    return rows;
   },
 });
 
@@ -75,11 +88,16 @@ export const knownKeys = internalQuery({
   },
 });
 
-/** One collected item, live in News at once; nothing when it was collected meanwhile or taken down. */
+/**
+ * One collected item, live in News at once; nothing when it was collected
+ * meanwhile or taken down. An item from a person's channel is filed under them,
+ * and their counts and the channel's follow.
+ */
 export const saveCollectedItem = internalMutation({
   args: {
-    /** Absent for an X bookmark, which belongs to no source. */
-    sourceId: v.optional(v.id("newsSources")),
+    /** Absent for an X bookmark, which belongs to no one in "Who to follow". */
+    followId: v.optional(v.id("newsFollows")),
+    channelId: v.optional(v.id("followChannels")),
     kind: v.union(v.literal("WEBSITE"), v.literal("YOUTUBE"), v.literal("X")),
     sourceName: v.string(),
     titleEn: v.string(),
@@ -96,19 +114,37 @@ export const saveCollectedItem = internalMutation({
     if (held || down) return null;
     const itemId = await ctx.db.insert("newsItems", { ...args, createdAt: Date.now() });
     await requestTranslation(ctx, "newsItems", itemId);
+    const channel = args.channelId ? await ctx.db.get(args.channelId) : null;
+    if (channel) await ctx.db.patch(channel._id, { found: channel.found + 1 });
+    const follow = args.followId ? await ctx.db.get(args.followId) : null;
+    if (follow) {
+      await ctx.db.patch(follow._id, {
+        collected: (follow.collected ?? 0) + 1,
+        newestAt: Math.max(follow.newestAt ?? 0, args.publishedAt),
+      });
+    }
     return itemId;
   },
 });
 
-/** When a source was read, and when it last brought something new: Admin's list says both. */
-export const markSourceRead = internalMutation({
-  args: { sourceId: v.id("newsSources"), foundNew: v.boolean() },
+/**
+ * When a channel was read, and when it last brought something new: the
+ * person's page says both. A read that failed keeps why, in plain words, until
+ * one works.
+ */
+export const markChannelRead = internalMutation({
+  args: { channelId: v.id("followChannels"), foundNew: v.boolean(), problem: v.optional(v.string()) },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const source = await ctx.db.get(args.sourceId);
-    if (!source) return null;
+    const channel = await ctx.db.get(args.channelId);
+    if (!channel) return null;
     const now = Date.now();
-    await ctx.db.patch(args.sourceId, { lastCheckedAt: now, ...(args.foundNew ? { lastItemAt: now } : {}), updatedAt: now });
+    await ctx.db.patch(args.channelId, {
+      lastCheckedAt: now,
+      ...(args.foundNew ? { lastItemAt: now } : {}),
+      problem: args.problem,
+      updatedAt: now,
+    });
     return null;
   },
 });

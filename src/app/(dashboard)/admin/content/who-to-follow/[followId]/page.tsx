@@ -2,10 +2,10 @@
 
 import { useParams } from "next/navigation";
 import type { Id } from "@/convex/_generated/dataModel";
-import { FollowEditor } from "../FollowEditor";
+import { PersonPage } from "../PersonPage";
 
-/** Admin → Content → Who to follow → a recommendation, on its own page. */
-export default function EditFollowPage() {
+/** Admin → Content → Who to follow → a person: their channels and what they published (content-people-knowledge-plan.md, board 2). */
+export default function FollowPersonPage() {
   const params = useParams();
-  return <FollowEditor followId={params.followId as Id<"newsFollows">} />;
+  return <PersonPage followId={params.followId as Id<"newsFollows">} />;
 }

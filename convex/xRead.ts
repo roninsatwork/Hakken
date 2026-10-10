@@ -136,7 +136,7 @@ export async function connectedXAccess(ctx: ActionCtx, connection: {
   const renewed = await refreshAccessToken({ provider, credentials, refreshToken: await decryptConnectorToken(connection.refreshTokenCiphertext) });
   if (!renewed.ok) {
     if (renewed.refused) {
-      await ctx.runMutation(internal.xConnect.keepRenewedAccess, { broken: "X would no longer renew the access. Connect X again on News sources." });
+      await ctx.runMutation(internal.xConnect.keepRenewedAccess, { broken: "X would no longer renew the access. Connect X again on Who to follow." });
     }
     return null;
   }

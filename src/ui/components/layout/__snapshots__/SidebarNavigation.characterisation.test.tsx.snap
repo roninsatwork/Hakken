@@ -118,7 +118,6 @@ exports[`sidebar navigation characterisation > super admin navigation is unchang
     "manageGlobalAi -> /admin/ai",
     "manageWorkflows -> /admin/workflows",
     "news -> /admin/content/news",
-    "newsSources -> /admin/content/news-sources",
     "outbox -> /admin/content/outbox",
     "plans -> /admin/settings/plans",
     "policiesInForce -> /admin/governance/policies",

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { api } from "./_generated/api";
 import schema from "./schema";
-import { checkedAddress } from "./newsSources";
+import { checkedChannel } from "./followChannels";
 import { useFixedDay } from "@/src/test/realTime";
 
 const { generate } = vi.hoisted(() => ({ generate: vi.fn() }));
@@ -100,18 +100,23 @@ describe("News", () => {
     expect(await t.run(async (ctx) => (await ctx.db.query("newsTakenDown").collect()).map((row) => row.externalKey))).toEqual(["https://searchengineland.com/old"]);
   });
 
-  test("keeps an X account as its handle, however it was typed, and only the super admin manages sources", async () => {
+  test("a channel's kind is read from its address, X is kept as its profile however it was typed, and only the super admin manages channels", async () => {
     const t = harness();
     const { superAdmin, member } = await people(t);
 
-    expect(checkedAddress("X_ACCOUNT", "@googlesearchc")).toBe("googlesearchc");
-    expect(checkedAddress("X_ACCOUNT", "https://x.com/googlesearchc?lang=en")).toBe("googlesearchc");
-    expect(() => checkedAddress("X_ACCOUNT", "not a handle!")).toThrow("handle");
-    expect(() => checkedAddress("WEBSITE", "searchengineland.com")).toThrow("web address");
+    expect(checkedChannel("@googlesearchc")).toEqual({ kind: "X", address: "https://x.com/googlesearchc" });
+    expect(checkedChannel("https://twitter.com/googlesearchc?lang=en")).toEqual({ kind: "X", address: "https://x.com/googlesearchc" });
+    expect(checkedChannel("searchengineland.com")).toEqual({ kind: "WEBSITE", address: "https://searchengineland.com" });
+    expect(checkedChannel("https://www.youtube.com/@GoogleSearchCentral")).toMatchObject({ kind: "YOUTUBE" });
+    expect(checkedChannel("https://www.linkedin.com/in/lily-ray-44755615/")).toMatchObject({ kind: "LINKEDIN" });
+    expect(() => checkedChannel("https://x.com/not a handle!")).toThrow("An X account is its address");
+    expect(() => checkedChannel("  ")).toThrow("A channel's address is needed");
 
-    await superAdmin.mutation(api.newsSources.createNewsSource, { kind: "X_ACCOUNT", name: "Google Search Central", address: "@googlesearchc", isOn: true });
-    expect((await superAdmin.query(api.newsSources.listNewsSources, {}))[0]).toMatchObject({ address: "googlesearchc", isOn: true, lastCheckedAt: null });
-    await expect(member.query(api.newsSources.listNewsSources, {})).rejects.toThrow();
+    const followId = await superAdmin.mutation(api.newsFollows.createFollow, { name: "Google Search Central", whyEn: "Google's own word.", channels: ["@googlesearchc"] });
+    expect(await superAdmin.query(api.followChannels.listChannelsForAdmin, { followId })).toEqual([
+      expect.objectContaining({ kind: "X", address: "https://x.com/googlesearchc", collect: true, lastCheckedAt: null, found: 0 }),
+    ]);
+    await expect(member.query(api.followChannels.listChannelsForAdmin, { followId })).rejects.toThrow();
   });
 
   test("Who to follow is read in the reader's language once translated", async () => {
@@ -119,7 +124,7 @@ describe("News", () => {
     const { superAdmin, member } = await people(t);
     generate.mockResolvedValue({ text: JSON.stringify({ why: "Opinioni chiare su ogni core update." }) });
 
-    await superAdmin.mutation(api.newsFollows.createFollow, { kind: "X", name: "Lily Ray", url: "https://x.com/lilyraynyc", whyEn: "Clear takes on every core update." });
+    await superAdmin.mutation(api.newsFollows.createFollow, { name: "Lily Ray", whyEn: "Clear takes on every core update.", channels: ["https://x.com/lilyraynyc"] });
     expect((await member.query(api.newsFollows.listFollowsByPage, { language: "it", page: 1, rows: 25 })).rows[0].why).toBe("Clear takes on every core update.");
     await finishScheduled(t);
     expect((await member.query(api.newsFollows.listFollowsByPage, { language: "it", page: 1, rows: 25 })).rows[0].why).toBe("Opinioni chiare su ogni core update.");

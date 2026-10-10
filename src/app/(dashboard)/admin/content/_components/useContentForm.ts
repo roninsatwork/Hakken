@@ -18,6 +18,7 @@ export function useContentForm<Row, Form>({
   toForm,
   save,
   backHref,
+  doneHref,
   saveFailed,
 }: {
   scope: string;
@@ -27,6 +28,12 @@ export function useContentForm<Row, Form>({
   toForm: (row: Row) => Form;
   save: (form: Form) => Promise<unknown>;
   backHref: string;
+  /**
+   * Where a save lands, from what it returned, when that is not back to the
+   * list: Add a person opens the new person's page
+   * (content-people-knowledge-plan.md, board 3).
+   */
+  doneHref?: (saved: unknown) => string;
   saveFailed: string;
 }) {
   const router = useRouter();
@@ -45,7 +52,7 @@ export function useContentForm<Row, Form>({
     event.preventDefault();
     setError("");
     const outcome = await action.run(() => save(form), { suppressErrorToast: true, fallbackMessage: saveFailed });
-    if (outcome.ok) router.push(backHref);
+    if (outcome.ok) router.push(doneHref ? doneHref(outcome.data) : backHref);
     else if (outcome.message) setError(outcome.message);
   };
 

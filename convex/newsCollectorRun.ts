@@ -9,6 +9,7 @@ import { parseTranslation } from "./utils/contentTranslator";
 import { fetchWorkflowAction } from "./utils/safeWorkflowHttp";
 import { isXAppTokenConfigured } from "./xConnect";
 import { BOOKMARKS_PER_RUN, connectedXAccess, readAccountPosts, readNewBookmarks, xReadCostPerPost } from "./xRead";
+import { xHandleOf } from "./utils/followChannels";
 import {
   articleLinks,
   feedGuesses,
@@ -23,7 +24,9 @@ import {
 
 /**
  * The News Collector's job (docs/plans/active/knowledge-news-and-digest-
- * plan.md, phase 5): read every source that is on, keep what is new, and
+ * plan.md, phase 5): read every channel of the people in "Who to follow"
+ * whose Collect tick is on (content-people-knowledge-plan.md, C2), keep what
+ * is new, and
  * write each new item a plain English summary and "what this means for you"
  * with the agent's own instructions and model — live in News at once, every
  * other language written by the Translator. Called by `runNewsRoleNow` once
@@ -65,7 +68,17 @@ const HEADERS = {
 /** Articles fetched through Firecrawl per source per run, for a site with no feed: each is a paid page. */
 export const PAGES_PER_SOURCE = 10;
 
-type Source = { _id: Id<"newsSources">; kind: "WEBSITE" | "YOUTUBE" | "X_ACCOUNT"; name: string; address: string; firstRead: boolean };
+/** A channel to read, with its person's name: what its items are filed under. */
+type Channel = {
+  _id: Id<"followChannels">;
+  followId: Id<"newsFollows">;
+  kind: "WEBSITE" | "YOUTUBE" | "X" | "LINKEDIN";
+  name: string;
+  address: string;
+  firstRead: boolean;
+  externalId?: string;
+  sinceId?: string;
+};
 
 async function fetchText(url: string): Promise<string> {
   const response = await fetchWorkflowAction(url, { method: "GET", headers: HEADERS }, {
@@ -78,11 +91,11 @@ async function fetchText(url: string): Promise<string> {
 }
 
 /**
- * The source's items, newest first, or why there were none. An item read from
- * a page rather than a feed has no words yet: they are fetched when it is
- * summarised.
+ * A website's or YouTube channel's items, newest first, or why there were
+ * none. An item read from a page rather than a feed has no words yet: they are
+ * fetched when it is summarised.
  */
-async function readSource(ctx: ActionCtx, source: Source): Promise<{ entries: FeedEntry[]; fromPage: boolean }> {
+async function readSource(ctx: ActionCtx, source: Channel): Promise<{ entries: FeedEntry[]; fromPage: boolean }> {
   if (source.kind === "YOUTUBE") {
     const feedUrl = youtubeFeedFromAddress(source.address) ?? youtubeFeedFromPage(await fetchText(source.address));
     if (!feedUrl) throw appError("UPSTREAM_FAILURE", "No channel could be found at this address. Use the channel's own page.");
@@ -149,7 +162,7 @@ async function resolveModel(ctx: ActionCtx, requestedModelId: string | undefined
 async function summariseAndSave(
   run: Run,
   entries: FeedEntry[],
-  origin: { kind: "WEBSITE" | "YOUTUBE" | "X"; sourceId?: Id<"newsSources">; sourceName: (entry: FeedEntry) => string },
+  origin: { kind: "WEBSITE" | "YOUTUBE" | "X"; channel?: Channel; sourceName: (entry: FeedEntry) => string },
   onDone?: (entry: FeedEntry) => void,
 ): Promise<{ added: number; stoppedBecause: string | null }> {
   const { ctx, runId, model } = run;
@@ -180,7 +193,7 @@ async function summariseAndSave(
     });
     if (written && written.summary.trim()) {
       const saved = await ctx.runMutation(internal.newsCollector.saveCollectedItem, {
-        ...(origin.sourceId ? { sourceId: origin.sourceId } : {}),
+        ...(origin.channel ? { followId: origin.channel.followId, channelId: origin.channel._id } : {}),
         kind: origin.kind,
         sourceName,
         titleEn: (written.title.trim() || entry.title || entry.text.slice(0, 80)).slice(0, 300),
@@ -214,16 +227,18 @@ async function chargeXReads(run: Run, posts: number, what: string) {
   });
 }
 
-/** A watched X account: its posts since the last read, through the app token. */
-async function readXAccount(run: Run, source: Source & { externalId?: string; sinceId?: string }) {
+/** A person's X account: its posts since the last read, through the app token. */
+async function readXAccount(run: Run, channel: Channel) {
   const bearer = process.env.X_BEARER_TOKEN?.trim() ?? "";
-  const read = await readAccountPosts({ bearer, handle: source.address, xUserId: source.externalId, sinceId: source.sinceId });
+  const handle = xHandleOf(channel.address);
+  if (!handle) throw appError("INVALID_INPUT", `${channel.address} is not an X account's address.`);
+  const read = await readAccountPosts({ bearer, handle, xUserId: channel.externalId, sinceId: channel.sinceId });
   await run.ctx.runMutation(internal.xConnect.keepXAccountPlace, {
-    sourceId: source._id,
+    channelId: channel._id,
     externalId: read.xUserId,
     ...(read.newestId ? { sinceId: read.newestId } : {}),
   });
-  const charged = await chargeXReads(run, read.postsRead, `from @${source.address.replace(/^@/, "")}`);
+  const charged = await chargeXReads(run, read.postsRead, `from @${handle}`);
   return { entries: read.entries, limitReached: charged.limitReached };
 }
 
@@ -238,7 +253,7 @@ async function readBookmarks(run: Run): Promise<{ added: number; stoppedBecause:
   const access = await connectedXAccess(ctx, connection);
   if (!access) {
     await ctx.runMutation(internal.roleRuns.logRunLine, {
-      runId, heading: `Could not read ${connection.account}'s bookmarks`, detail: "X would not renew the access. Connect X again on News sources.", failed: true,
+      runId, heading: `Could not read ${connection.account}'s bookmarks`, detail: "X would not renew the access. Connect X again on Who to follow.", failed: true,
     });
     return null;
   }
@@ -277,12 +292,12 @@ export async function collectNews(ctx: ActionCtx, runId: Id<"agentRuns">): Promi
   const started = Date.now();
   const agent = await ctx.runQuery(internal.newsCollector.readCollectorAgent, { runId });
   if (!agent) return "This run's agent no longer exists, so nothing was read.";
-  const sources: Array<Source & { externalId?: string; sinceId?: string }> = await ctx.runQuery(internal.newsCollector.listSourcesToRead, {});
+  const channels: Channel[] = await ctx.runQuery(internal.newsCollector.listChannelsToRead, {});
   const bookmarks = await ctx.runQuery(internal.xConnect.connectionForRun, {});
-  if (sources.length === 0 && !bookmarks) return "No News source is switched on, so nothing was read.";
+  if (channels.length === 0 && !bookmarks) return "No one in Who to follow has a channel being collected, so nothing was read.";
   await ctx.runMutation(internal.roleRuns.recordObservation, {
     runId,
-    text: `${sources.length} ${sources.length === 1 ? "source is" : "sources are"} on${sources.length ? `: ${sources.map((source) => source.name).join(", ")}` : ""}.`
+    text: `${channels.length} ${channels.length === 1 ? "channel is" : "channels are"} being collected${channels.length ? `: ${channels.map((channel) => `${channel.name} (${channel.kind === "X" ? "X" : channel.kind === "YOUTUBE" ? "YouTube" : "website"})`).join(", ")}` : ""}.`
       + (bookmarks ? ` ${bookmarks.account}'s X bookmarks are connected.` : ""),
   });
 
@@ -290,12 +305,13 @@ export async function collectNews(ctx: ActionCtx, runId: Id<"agentRuns">): Promi
   let added = 0;
   let stoppedBecause: string | null = null;
 
-  for (const source of sources) {
+  for (const channel of channels) {
     if (Date.now() - started > RUN_WORK_MS) stoppedBecause = OUT_OF_TIME;
     if (stoppedBecause) break;
-    if (source.kind === "X_ACCOUNT" && !isXAppTokenConfigured()) {
+    const label = `${channel.name}'s ${channel.kind === "X" ? "X account" : channel.kind === "YOUTUBE" ? "YouTube channel" : "website"}`;
+    if (channel.kind === "X" && !isXAppTokenConfigured()) {
       await ctx.runMutation(internal.roleRuns.logRunLine, {
-        runId, heading: `Skipped ${source.name}`, detail: "X accounts are read once X_BEARER_TOKEN, the X app's token, is set.", failed: false,
+        runId, heading: `Skipped ${label}`, detail: "X accounts are read once X_BEARER_TOKEN, the X app's token, is set.", failed: false,
       });
       continue;
     }
@@ -304,36 +320,35 @@ export async function collectNews(ctx: ActionCtx, runId: Id<"agentRuns">): Promi
     let limit: number;
     let what: string;
     try {
-      if (source.kind === "X_ACCOUNT") {
-        const read = await readXAccount(run, source);
+      if (channel.kind === "X") {
+        const read = await readXAccount(run, channel);
         if (read.limitReached) stoppedBecause = "it reached its spend limit reading X";
         entries = read.entries;
-        limit = source.sinceId ? ITEMS_PER_SOURCE : FIRST_READ_ITEMS;
+        limit = channel.sinceId ? ITEMS_PER_SOURCE : FIRST_READ_ITEMS;
         what = "new posts";
       } else {
-        const read = await readSource(ctx, source);
+        const read = await readSource(ctx, channel);
         entries = read.entries;
-        limit = source.firstRead ? FIRST_READ_ITEMS : read.fromPage ? PAGES_PER_SOURCE : ITEMS_PER_SOURCE;
+        limit = channel.firstRead ? FIRST_READ_ITEMS : read.fromPage ? PAGES_PER_SOURCE : ITEMS_PER_SOURCE;
         what = read.fromPage ? "articles on its page" : "in its feed";
       }
     } catch (error: unknown) {
-      await ctx.runMutation(internal.roleRuns.logRunLine, {
-        runId, heading: `Could not read ${source.name}`, detail: appErrorMessage(error, "No reason given."), failed: true,
-      });
-      await ctx.runMutation(internal.newsCollector.markSourceRead, { sourceId: source._id, foundNew: false });
+      const problem = appErrorMessage(error, "No reason given.");
+      await ctx.runMutation(internal.roleRuns.logRunLine, { runId, heading: `Could not read ${label}`, detail: problem, failed: true });
+      await ctx.runMutation(internal.newsCollector.markChannelRead, { channelId: channel._id, foundNew: false, problem });
       continue;
     }
     if (stoppedBecause) break;
 
     const fresh = await freshOf(ctx, entries, limit);
-    const kind = source.kind === "YOUTUBE" ? "YOUTUBE" : source.kind === "X_ACCOUNT" ? "X" : "WEBSITE";
-    const outcome = await summariseAndSave(run, fresh, { kind, sourceId: source._id, sourceName: () => source.name });
+    const kind = channel.kind === "YOUTUBE" ? "YOUTUBE" : channel.kind === "X" ? "X" : "WEBSITE";
+    const outcome = await summariseAndSave(run, fresh, { kind, channel, sourceName: () => channel.name });
     added += outcome.added;
     stoppedBecause = outcome.stoppedBecause;
-    await ctx.runMutation(internal.newsCollector.markSourceRead, { sourceId: source._id, foundNew: outcome.added > 0 });
+    await ctx.runMutation(internal.newsCollector.markChannelRead, { channelId: channel._id, foundNew: outcome.added > 0 });
     await ctx.runMutation(internal.roleRuns.logRunLine, {
       runId,
-      heading: `Read ${source.name}`,
+      heading: `Read ${label}`,
       detail: `${entries.length} ${what}, ${fresh.length} new to News, ${outcome.added} added.`,
       failed: false,
     });
