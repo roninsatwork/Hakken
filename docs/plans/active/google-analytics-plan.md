@@ -3,9 +3,9 @@
 **Started 2026-10-09. Status: Phases 0 to 4 built and running on dev since
 2026-10-10 (Anthony, 2026-10-10: "ok lets build this please") — Ronins'
 website connected and collecting, its Collector Agent and daily schedule
-created. Phase 5 (§13–§16) is drawn, its 19 screens signed off and its
-build started on 2026-10-10 (Anthony: "1 yes"), with the two page-list
-changes in §12 ("yes to all"). Every decision agreed (§1), every question
+created. Phase 5 (§13–§16) built the same evening (Anthony: "1 yes"), in
+local commits on dev, not pushed (§17), with Analytics' visits beside Search
+Console's clicks (§12); Q12 built and held for Anthony (§17). Every decision agreed (§1), every question
 answered (§10) and the screens agreed and locked (§11), all on 2026-10-09.**
 Change a decision here, with a date, before building anything that
 disagrees with it. Progress: §8.
@@ -502,9 +502,10 @@ Phase 2: 100% built — the Collector Agent and its daily 04:00 schedule were
 created in Admin on dev on 2026-10-10 and are switched on; two decisions wait
 on Anthony (§12), and storage on morehandles.co.uk is measured once it
 connects. Phase 3: 100% — the section reads Ronins' real figures. Phase 4:
-100%. Phase 5: drawn, all 19 screens signed off and building since
-2026-10-10 — about eight and a half days, and three and a half more for the
-two page-list changes (§12), about twelve in all.** What was built, and
+100%. Phase 5: 100% built 2026-10-10 (§17), and Analytics' visits beside
+Search Console's clicks; Q12, about three days, built and held for
+Anthony's word. Everything but Q12 is built: about 24½ of 24½ days; with
+Q12, about 89% is on dev.** What was built, and
 where the build differs from the words above, is §12.
 
 ## 9. Risks
@@ -937,6 +938,111 @@ as 3), and the list behind "See all".
   (3) and "gemini" (1). Assistants should be folded regardless of case; the
   drawing shows 4.
 
+## 17. Built — Phase 5, 2026-10-10
+
+Building since the evening of 2026-10-10 (Anthony: "1 yes"). What exists so
+far, and where the build had to say something the sections above did not.
+
+**§16, the three things found while drawing** (`b965bbc0`):
+
+- A tracking alert reaches the bell once: a person whose bell already holds
+  the same alert unread is not told again (`tellSuperAdmins`, `once`), on
+  top of the checks' own "was failing" rule. The 07:43 and 07:58 alerts
+  could not be traced to one code path; the bell itself now holds "once".
+- The common event-name variants are likely conversions — Ronins'
+  `form_submission`, `live_chat_event`, `phone_number_click` and
+  `email_link_click` among them — each named in English and Italian, a test
+  holding every likely conversion to a name in both. Purchase stays on the
+  list: whether to tick an event that never fired is left as it was.
+- An assistant named as a bare word (`gemini`, `ChatGPT`, `openai`) is that
+  assistant in any case. Checked on Ronins: Gemini shows once, 4 visits.
+
+**§13, Heroes and attention, and §15 screen 7** (`c2ad9ac8`): the rules
+(`convex/utils/heroes.ts`), the reads (`convex/googleAnalyticsHeroes.ts`),
+the page, a page's own view, and a landing page's own screen redrawn as the
+four stages. Changes made while building, each smaller than a decision:
+
+- **The click rate at each position is read from the website's searches**,
+  as Search Console's Click rate by position reads it — not from its pages.
+  A page's average position mixes every search it is shown for, so hardly a
+  page averages a top-three place: read from pages, every push was worth
+  nothing. Bands: the top three, 4–5, 6–10, 11–20, 21 and over.
+- **The website's four figures read Search Console's own totals**: Google
+  leaves some clicks off its page-by-page figures (Ronins, 30 days to 8
+  October: 367 clicks in all, 189 across its pages). Each page reads its own.
+- **Losing the click needs 100 showings**, as a conversion rate needs 100
+  visits (GA22): without it Ronins listed eleven pages, ten shown under 30
+  times, each worth under £1; the drawing showed one. It now lists two.
+- **A page is one page however a source writes it**: Search Console's
+  `/hub/what-makes-a-good-app/` and Analytics' `/hub/what-makes-a-good-app`
+  were two rows; they join without the last slash, shown as Search Console
+  writes it.
+- **The stages' gains**: Clicked carries Push to page one and Losing the
+  click; Visits from Google carries Not converting, People leave and
+  Falling. The stage with more to gain is marked.
+- **Read within half of Convex's limits at five times morehandles.co.uk**
+  (`googleAnalyticsHeroesLoad.test.ts`): naming every page from both sources
+  read 18.5 MiB; a page is now named only when a rule could flag it, and a
+  page's own view reads that page alone. Search Console's period read gained
+  `readPeriodUnnamed` for it.
+- **"Make it a Hakken task"** opens Ask Hakken with the request written for
+  the page and its problem, for Hakken to set up for a yes, as the Knowledge
+  screens do; a row whose page a task already watches shows a tick.
+- **A landing page's own screen** reads its four stages over the last 30
+  days, whatever dates are chosen; where its visits came from keeps the
+  dates chosen.
+
+Checked on Ronins in Chrome: 38 pages to fix (the drawing's 38); 4 heroes
+making £200 of £240; about £388 a month to gain, £327 of it in Google's
+results; the Kapferer guide Not converting at about £55 a month, as drawn.
+
+**§14 and §15, What Hakken sees on the other screens and the screens as
+signed off** (`e6fb70cb`, `720d1da5`, `66de4ac9`, `657dfce6`, joined up in
+`693fc24f`): the rules in `convex/utils/sees/analytics.ts`, one a screen,
+each tested with its words in English and Italian; the box on Your
+websites, Overview (and Needs reconnecting), Channels, a channel's own
+screen, Landing pages (and a device asked of Google), All pages,
+Conversions (and Nothing counted yet), Tracking health, Connection (and
+Choose what counts) and Not connected yet; a guard that every one carries
+it (`src/analytics-sees-drift.test.ts`). The screens as §15 lists:
+Overview's chart is visits a day with engaged visits and a dot on each day
+with a conversion, its panels, cookie line and tracking health line gone;
+a channel's own screen has its four figures; a landing page's conversion
+rate sits beside its count ("4 · 2.8%"); All pages shows the conversions
+made there with their value; Conversions has its four figures, What
+counts, and Where they came from switching between pages and channels,
+its chart gone. Changes made while building, each smaller than a decision:
+
+- A conversion-day mark on Overview's chart is a solid dot, so it cannot be
+  taken for the ring a part week already wears.
+- A step whose worth is Heroes' sum (Overview's "move your pages up") names
+  no £ figure and links to Heroes and attention's Push tab.
+- Left out for want of a figure the screen reads: Tracking health's "about
+  £25 a month", Conversions' step on why direct visits stopped converting,
+  and All pages' step on case studies.
+- Landing pages counts its unsorted pages only in the page groups view:
+  counting them among pages reads every page's address.
+- Checked on Ronins in Chrome: each box says what §14's table drew, with
+  the newer figures.
+
+**Analytics' visits beside Search Console's clicks** (`b9be7b2c`, `7af7f6c1`):
+each `holdPages` row carries the page's visits as a landing page over the
+last 90 days, read from the hold's ready-made list and joined to the page
+as Search Console's clicks are; both fields optional, so no row needed
+moving — each fills at its hold's next rebuild, which every finished
+collection now asks for. Disconnecting, choosing another property, or
+Google taking access back notes the hold's pages changed. No screen shows
+them yet (§4.6: what Reports will join on).
+
+**Q12, built and held.** `holdPages` holding the page number was built and
+tested on its own branch (`worktree-agent-a9b1ac417609e64a9`, `3af9c77f`,
+`456feabb`), then held for Anthony: measured, it saves about 0.3 to 0.5 MB on
+dev, not 1.3 — the numbering gains each cleaned path, which it did not hold —
+and a page's own screen on a website with a "listed in sitemap file" line
+reads up to 4.9 MiB at five times morehandles.co.uk, where it read one row.
+Nothing on dev changed. Analytics' visits beside Search Console's clicks
+(§4.6) is built without it.
+
 ## Change log
 
 - 2026-10-09 — Plan written from the brainstorm the same day: seventeen
@@ -1014,3 +1120,12 @@ as 3), and the list behind "See all".
   Console's clicks in `holdPages`, and Q12, `holdPages` holding the page
   number). morehandles.co.uk is not connected for now (Anthony: "no I don't
   want to cement yet"). About twelve days with the two changes.
+- 2026-10-10 — Phase 5 built (§17): §16's three fixes, Heroes and attention
+  and a page's own view, What Hakken sees on sixteen screens, the screens as
+  §15 drew them, and Analytics' visits beside Search Console's clicks, each
+  checked on Ronins in Chrome. All 7,199 tests, coverage, the 19 smoke tests
+  and the build pass; `npm run check`'s speed step fails on Discovery's
+  `aiAppsLoad.test.ts` (8.5s alone), slow before this build too.
+  Q12 built on its own branch and held: it saves about 0.3 to 0.5 MB, not
+  1.3, and a page's own screen on a website with a sitemap-file line would
+  read up to 4.9 MiB.

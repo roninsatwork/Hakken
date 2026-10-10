@@ -46,8 +46,9 @@ completed work.
   Ronins connected and collecting, the Collector Agent and its daily 04:00
   schedule switched on. Phase 5 — Heroes and attention, What Hakken sees on
   sixteen screens, the review canvas's changes (§13–§16), about eight and a
-  half days, with three and a half more for two changes to the hold's page
-  list — is drawn, its 19 screens signed off and building since 2026-10-10.**
+  half days — built 2026-10-10 in local commits on dev, not pushed, with
+  Analytics' visits beside Search Console's clicks in the hold's page list;
+  the page-number change (Q12) built and held for Anthony's word (§17).**
 - [Core data — each keyword and page once](./active/core-data-normalisation-plan.md)
   — normalising the core before roadmap features (Anthony, 2026-10-08): each
   keyword stored once for the platform, each page once per website, a
