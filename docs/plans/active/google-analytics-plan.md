@@ -35,7 +35,7 @@ Search Console later (§4.3), but no Search Console figure appears here.
 
 | # | Question | Decision | Status |
 |---|---|---|---|
-| GA1 | Where it lives | Its own item in the main left-hand menu, "Google Analytics" (named by §10, Q7), beside Search Console, listing the company's own websites; each opens its own Analytics pages. Google Analytics data only. Mixing sources waits for a later Reports item. | Agreed, 2026-10-09: "it its own analytcs seciton"; "i want the analyticst o be ts on nav item … We will createa a ntoehr nav item later for reprots where we will mix the data soucrces" |
+| GA1 | Where it lives | Its own item in the main left-hand menu, "Google Analytics" (named by §10, Q7), beside Search Console, listing the company's own websites; each opens its own Analytics pages. Mostly Google Analytics data — but since 2026-10-10 its strategy page joins Search Console to Analytics page by page (§13), the one place in the section that mixes them. Other mixing still waits for Reports. | Agreed, 2026-10-09: "it its own analytcs seciton"; changed 2026-10-10 (Anthony: "this platform is supposed to do the job of an SEO agency and SEO specialist — so the screen needs to be so powerful that strategies can be derived from them … i want it for the GA1 we need it") |
 | GA2 | One connection per what | Per owned website, one "Connect with Google" serving both Search Console and Analytics. A company with several owned websites connects each. | Agreed, 2026-10-09: "one - per owned website - remeber that a lcient can have more than 1 owned site" |
 | GA3 | An enquiry with no £ value in Analytics | The client chooses: set the value in Google Analytics (Hakken shows how, step by step — Hakken itself stays read-only and never changes their Analytics), or set it in Hakken. | Agreed, 2026-10-09: "agree if its not set in analytics we give them the coice set it it analytics or attribute teh balue in our platomt". Which wins when both exist: §10, Q1 |
 | GA4 | The pages | Overview, Channels, Landing pages, All pages, Conversions (§5; named by GA19), plus the connection and tracking health pages. | Agreed, 2026-10-09 (all four offered, and All pages added) |
@@ -723,6 +723,29 @@ tells the platform's super admins in the bell once (GA12, as changed on
 code (PayPal, Stripe, Worldpay, Opayo, Klarna, Clearpay and others).
 Connecting tells the super admins too, as board 10 shows.
 
+## 13. UX amends — the strategy page (to draw, 2026-10-10)
+
+Anthony, 2026-10-10, on the built screens: "its not easy to see which pages
+need our attention and which are our heroes … this platform is supposed to do
+the job of an SEO agency and SEO specialist — so the screen needs to be so
+powerful that strategies can be derived from them." GA1 changed to allow it.
+
+**Its job, in one sentence:** follow each landing page from Google's results
+to the money it makes, say which stage is broken and what to do about it, and
+what fixing it is worth — so the strategy is written, not left to be read
+out of charts.
+
+Read on Ronins' real figures the same day (30 days, Search Console joined to
+Analytics by the shared page number — 70 pages in both): `/ai-agency/` is
+shown 13,818 times at position 14 for 71 clicks, and converts 3.6% of its
+visits — a page two that would pay most for moving up; `/wordpress-agency/`
+is shown 17,854 times at position 15 for 10 clicks; a guide,
+`/hub/kapferer-brand-identity-prism/`, brings 188 visits at position 4 and no
+conversion; `/chatbot-agency/` fell from 16 visits to 7.
+
+The parts, and the rules each diagnosis follows, are agreed with the drawing
+before any code. Nothing here is built.
+
 ## Change log
 
 - 2026-10-09 — Plan written from the brainstorm the same day: seventeen
@@ -777,3 +800,5 @@ Connecting tells the super admins too, as board 10 shows.
   0.4 MB). GA12 changed: tracking health's bell alerts, and the connected
   notice, go to the platform's super admins only, never a company's admins
   (Anthony: "These are system alerts not company alerts").
+- 2026-10-10 — GA1 changed: the section gets a strategy page joining Search
+  Console to Analytics page by page (§13), to be drawn and agreed first.
