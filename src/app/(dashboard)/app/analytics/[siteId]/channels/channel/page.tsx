@@ -3,7 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { Waypoints } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { AI_ASSISTANTS_CHANNEL } from "@/convex/utils/aiAssistants";
+import { AI_ASSISTANTS_CHANNEL, DESCRIBED_CHANNELS } from "@/convex/utils/aiAssistants";
 import { AnalyticsListScreen } from "../../../_components/AnalyticsListScreen";
 import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod } from "../../../_components/useAnalytics";
 
@@ -21,7 +21,7 @@ export default function AnalyticsChannelPage() {
   const [period] = usePeriod();
   const channel = useSearchParams().get("key") ?? "";
   const assistants = channel === AI_ASSISTANTS_CHANNEL;
-  const known = ["Referral", "Organic Search", "Organic Social", "Paid Search", "Email", "Direct", AI_ASSISTANTS_CHANNEL].includes(channel);
+  const known = DESCRIBED_CHANNELS.includes(channel) || assistants;
   return (
     <AnalyticsListScreen
       header={{

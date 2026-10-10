@@ -61,10 +61,10 @@ describe("Google Analytics' approved looks", () => {
   it("1 · your websites", async () => {
     at("/app/analytics");
     answer({
-      "googleAnalyticsReads:analyticsSites": [{ siteId: "site_1", host: "ronins.co.uk", iconUrl: null, status: "CONNECTED", visits: 2412, conversions: 23, value: 440_000, currency: "GBP", lastCollectedAt: 1 }],
+      "googleAnalyticsReads:analyticsSites": [{ siteId: "site_1", host: "acme-shop.test", iconUrl: null, status: "CONNECTED", visits: 2412, conversions: 23, value: 440_000, currency: "GBP", lastCollectedAt: 1 }],
     });
     const { container } = render(<GoogleAnalyticsPage />);
-    await screen.findByText("ronins.co.uk");
+    await screen.findByText("acme-shop.test");
     await expectApprovedLook(container, PLAN, "Main", "Google Analytics → your websites");
   });
 
@@ -168,9 +168,9 @@ describe("Google Analytics' approved looks", () => {
       "googleAnalyticsConnect:googleAnalyticsStatus": statusWith({
         status: "CHOOSING",
         choices: [
-          { property: "properties/312456789", displayName: "Ronins", accountName: "Ronins Ltd", stream: "https://www.ronins.co.uk", checked: true, addresses: ["www.ronins.co.uk"], others: ["staging.ronins.co.uk", "localhost"] },
-          { property: "properties/111", displayName: "Another client", accountName: "Ronins Ltd", stream: null, checked: true, addresses: [], others: [] },
-          { property: "properties/222", displayName: "Old site", accountName: "Ronins Ltd", stream: null, checked: true, addresses: [], others: [] },
+          { property: "properties/312456789", displayName: "Acme", accountName: "Acme Ltd", stream: "https://www.acme-shop.test", checked: true, addresses: ["www.acme-shop.test"], others: ["staging.acme-shop.test", "localhost"] },
+          { property: "properties/111", displayName: "Another client", accountName: "Acme Ltd", stream: null, checked: true, addresses: [], others: [] },
+          { property: "properties/222", displayName: "Old site", accountName: "Acme Ltd", stream: null, checked: true, addresses: [], others: [] },
         ],
       }),
     });
@@ -197,7 +197,7 @@ describe("Google Analytics' approved looks", () => {
 
   it("17 · the first 90 days coming in", async () => {
     at("/app/analytics/site_1");
-    answer({ "googleAnalyticsConnect:googleAnalyticsStatus": statusWith({ newestDay: null as unknown as string, historyDone: false, lastCollectedAt: null }) });
+    answer({ "googleAnalyticsConnect:googleAnalyticsStatus": statusWith({ newestDay: null, historyDone: false, lastCollectedAt: null }) });
     const { container } = render(<AnalyticsOverviewPage />);
     await screen.findByText("Connected. Collecting the last 90 days now.");
     await expectApprovedLook(container, PLAN, "FirstCollect", "Google Analytics → the first 90 days coming in");

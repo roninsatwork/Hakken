@@ -126,12 +126,9 @@ type MigrationRunner = (
  * that nothing real was live, which is why that trade was taken rather than carrying
  * dead code indefinitely.
  *
- * The same was done on 2026-10-10 with `2026-10-10-shared-google-connection`
- * and `2026-10-10-hold-page-addresses` (google-analytics-plan.md §4.6, §10
- * Q11), which moved Search Console's Google sign-ins into `googleConnections`
- * and `googleTokens`, and its page numbers into `holdPageAddresses`. Both ran
- * on dev before `searchConsoleTokens`, `searchConsolePageAddresses` and
- * `searchConsoleConnections.googleAccount` left the schema.
+ * And on 2026-10-10 with `2026-10-10-shared-google-connection` and `-hold-page-
+ * addresses` (google-analytics-plan.md §4.6), run on dev before Search Console's
+ * own tokens, page numbers and Google account left the schema.
  *
  * The same was done on 2026-10-07 with `2026-10-07-clear-unread-columns`,
  * which emptied the columns nobody read, on dev before they left the schema

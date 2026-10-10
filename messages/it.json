@@ -13679,13 +13679,13 @@
       },
       "attempt": {
         "DECLINED": "Non è stato collegato nulla. Collega di nuovo quando sei pronto.",
-        "MISSING_SCOPE": "Google chiede quale accesso dare; spunta Google Analytics, altrimenti Hakken non può leggerlo. Non è stato tenuto nulla.",
+        "MISSING_SCOPE": "Google chiede quale accesso dare; spunta Google Analytics, altrimenti {platformName} non può leggerlo. Non è stato tenuto nulla.",
         "NO_PROPERTY": "Accedi con l'account Google che apre il Google Analytics di {host}, oppure chiedi l'accesso.",
         "FAILED": "Google non ha risposto come previsto. Non è stato tenuto nulla; riprova."
       },
       "failed": "Non ha funzionato. Riprova.",
-      "addressesLine": "Le sue visite arrivano da {count} indirizzi: Hakken legge quello di {host}, {read}, e lascia fuori gli altri.",
-      "addressLine": "Hakken legge le sue visite su {read}.",
+      "addressesLine": "Le sue visite arrivano da {count} indirizzi: {platformName} legge quello di {host}, {read}, e lascia fuori gli altri.",
+      "addressLine": "{platformName} legge le sue visite su {read}.",
       "oneTitle": "Questa è la proprietà di {host}",
       "oneDescription": "Accesso come {account}. Delle {count} proprietà che questo account vede, una ha uno stream web per {host}.",
       "propertyLine": "Proprietà {id} · stream web {stream}",
@@ -13713,7 +13713,7 @@
       "collected": "Raccolta",
       "collectedDetail": "Ogni giorno dal Google Analytics: Collector Agent · gratuito in ogni piano",
       "countsTitle": "Cosa conta",
-      "countsDescription": "Le conversioni che Hakken conta su {host}, e quanto vale ciascuna.",
+      "countsDescription": "Le conversioni che {platformName} conta su {host}, e quanto vale ciascuna.",
       "change": "Cambia",
       "nothingCounted": "Ancora niente conta come conversione.",
       "conversion": "Conversione",
@@ -13723,7 +13723,7 @@
       "setInHeading": "Impostato in",
       "setIn": {
         "ANALYTICS": "Google Analytics",
-        "HAKKEN": "Hakken"
+        "HAKKEN": "{platformName}"
       },
       "disconnect": "Disconnetti Google Analytics",
       "disconnectHint": "Search Console resta collegato, e ciò che è stato raccolto si conserva.",
@@ -13755,7 +13755,7 @@
       "askFailedTitle": "Google non ha potuto rispondere ora",
       "askFailedBody": "Al loro posto si vedono i dati di ogni dispositivo. Scegli di nuovo il dispositivo tra un momento.",
       "askingTitle": "Richiesta a Google delle visite da {device}…",
-      "askingBody": "Gli elenchi di pagine per dispositivo non si conservano, quindi Hakken li chiede a Google quando ne scegli uno. Le pagine sono già elencate; i loro dati da {device} arrivano in pochi secondi.",
+      "askingBody": "Gli elenchi di pagine per dispositivo non si conservano, quindi {platformName} li chiede a Google quando ne scegli uno. Le pagine sono già elencate; i loro dati da {device} arrivano in pochi secondi.",
       "noMatch": "Niente corrisponde alla ricerca.",
       "columns": {
         "channel": "Canale",
@@ -13790,7 +13790,8 @@
         "conversions": "Conversioni",
         "value": "Valore ({currency})",
         "change": "Variazione delle visite (%)"
-      }
+      },
+      "downloadFailed": "Impossibile preparare il download. Riprova."
     },
     "chart": {
       "title": "Visite e conversioni nel tempo",
@@ -13913,7 +13914,7 @@
       "noValue": "Nessun valore",
       "setIn": {
         "ANALYTICS": "impostato in Analytics",
-        "HAKKEN": "impostato in Hakken",
+        "HAKKEN": "impostato in {platformName}",
         "REVENUE": "quello di ogni ordine"
       },
       "conversionPicker": "Conversione",
@@ -13961,16 +13962,16 @@
     },
     "counts": {
       "reading": "Lettura degli eventi chiave della proprietà da Google…",
-      "addresses": "La proprietà {property} registra visite su {count} indirizzi. Hakken legge quello di {host}, {read}, e lascia {others} fuori da ogni dato.",
+      "addresses": "La proprietà {property} registra visite su {count} indirizzi. {platformName} legge quello di {host}, {read}, e lascia {others} fuori da ogni dato.",
       "title": "Scegli cosa conta come conversione",
-      "description": "Gli eventi chiave della proprietà {property}. Spunta ognuno che è una conversione — una richiesta, una vendita, una prenotazione; Hakken ha spuntato quelli probabili. Uno scorrimento o un video avviato non vengono mai spuntati per te.",
+      "description": "Gli eventi chiave della proprietà {property}. Spunta ognuno che è una conversione — una richiesta, una vendita, una prenotazione; {platformName} ha spuntato quelli probabili. Uno scorrimento o un video avviato non vengono mai spuntati per te.",
       "noKeyEvents": "La proprietà non ha ancora eventi chiave. Segna come eventi chiave quelli che contano in Google Analytics, poi torna qui.",
       "lastThirty": "{count} negli ultimi 30 giorni",
       "inAnalytics": "{value} su Google Analytics",
       "noValueInAnalytics": "Nessun valore in Google Analytics",
       "neverTicked": "Mai spuntato per te: non è una conversione.",
       "whereLabel": "Dove si imposta il suo valore",
-      "setInHakken": "Impostalo in Hakken",
+      "setInHakken": "Impostalo in {platformName}",
       "setInAnalytics": "Impostalo in Google Analytics",
       "valueLabel": "Valore di ciascuna, in {sign}",
       "valuePlaceholder": "Per esempio 250",
@@ -13980,9 +13981,9 @@
         "one": "In Google Analytics apri Amministrazione, poi Visualizzazione dati, poi Eventi chiave.",
         "two": "Trova {event} e apri il suo menu.",
         "three": "Scegli Imposta valore predefinito, e scrivi quanto vale uno.",
-        "four": "Salva. Il valore arriva a Hakken alla prossima raccolta; Hakken non cambia mai Google Analytics."
+        "four": "Salva. Il valore arriva a {platformName} alla prossima raccolta; {platformName} non cambia mai Google Analytics."
       },
-      "appliesToHistory": "Un valore impostato in Hakken vale per tutto lo storico: i mesi passati lo mostrano subito, e cambiarlo li riprezza. Hakken non cambia mai Google Analytics.",
+      "appliesToHistory": "Un valore impostato in {platformName} vale per tutto lo storico: i mesi passati lo mostrano subito, e cambiarlo li riprezza. {platformName} non cambia mai Google Analytics.",
       "failed": "Impossibile salvare cosa conta. Riprova.",
       "save": "Salva · {count} contate",
       "back": "Indietro",
@@ -14018,7 +14019,7 @@
         "NO_VALUE": {
           "title": "Ogni conversione ha un valore",
           "passing": "Ogni conversione contata ha un valore.",
-          "failing": "{names} non ha valore né in Google Analytics né in Hakken, quindi le sue {count} conversioni non aggiungono nulla al Valore.",
+          "failing": "{names} non ha valore né in Google Analytics né in {platformName}, quindi le sue {count} conversioni non aggiungono nulla al Valore.",
           "why": "Il Valore è il modo in cui una pagina o un canale si pesa rispetto a un altro; una conversione senza valore lì non conta nulla.",
           "fix": "dalle un valore qui, o in Google Analytics.",
           "short": "{names} non ha valore."
@@ -14066,7 +14067,7 @@
         "STRANGERS": {
           "title": "Nella proprietà c'è solo questo sito",
           "passing": "Nessun altro indirizzo manda visite a questa proprietà.",
-          "failing": "{count} visite negli ultimi 30 giorni sono state registrate su {names}. Hakken le lascia fuori da questi dati.",
+          "failing": "{count} visite negli ultimi 30 giorni sono state registrate su {names}. {platformName} le lascia fuori da questi dati.",
           "why": "un sito di prova o lo spam nella stessa proprietà gonfia i rapporti di Google Analytics e può nascondere cosa fanno i visitatori veri.",
           "fix": "fai smettere l'altro indirizzo di mandare dati a Google Analytics — togli il tag, o dagli una proprietà sua.",
           "short": "{count} visite registrate su {names}."

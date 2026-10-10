@@ -77,7 +77,7 @@ export async function listAnalyticsProperties(accessToken: string): Promise<{ ok
   return { ok: true, properties };
 }
 
-/** A property's web streams' addresses (`https://www.ronins.co.uk`). */
+/** A property's web streams' addresses (`https://www.example.co.uk`). */
 export async function webStreamAddresses(accessToken: string, property: string): Promise<{ ok: true; addresses: string[] } | GoogleFailure> {
   const answer = await callGoogle(`${ADMIN}/${property}/dataStreams?pageSize=50`, accessToken);
   if (!answer.ok) return answer;

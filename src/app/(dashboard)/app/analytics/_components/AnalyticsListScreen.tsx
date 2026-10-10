@@ -7,6 +7,8 @@ import type { FunctionReturnType } from "convex/server";
 import { useTranslations } from "next-intl";
 import { SearchX } from "lucide-react";
 import { api } from "@/convex/_generated/api";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { DataTable, type DataTableColumn } from "@/src/ui/components/screens/DataTable";
 import { DownloadButton, saveTextFile } from "@/src/ui/components/screens/DownloadButton";
 import { Notice } from "@/src/ui/components/screens/Notice";
@@ -83,6 +85,7 @@ function AnalyticsTable({ list, channel, group, noun, searchPlaceholder, rowHref
   const t = useTranslations("googleAnalytics.table");
   const tf = useTranslations("googleAnalytics.filters");
   const router = useRouter();
+  const { platformName } = useSystemSettings();
   const status = useAnalyticsStatus();
   const args = useAnalyticsArgs();
   const [period] = usePeriod();
@@ -113,7 +116,7 @@ function AnalyticsTable({ list, channel, group, noun, searchPlaceholder, rowHref
       {live ? (
         <Notice>
           <span className="block font-medium text-foreground">{asking === "FAILED" ? t("askFailedTitle") : t("askingTitle", { device: tf(`devices.${device}`).toLowerCase() })}</span>
-          <span className="block">{asking === "FAILED" ? t("askFailedBody") : t("askingBody", { device: tf(`devices.${device}`).toLowerCase() })}</span>
+          <span className="block">{asking === "FAILED" ? t("askFailedBody") : t("askingBody", { device: tf(`devices.${device}`).toLowerCase(), platformName })}</span>
         </Notice>
       ) : null}
       <DataTable
@@ -198,20 +201,22 @@ function columnOf(
  * answer; the screen keeps what it has.
  */
 export function useLiveAsk(ask: { siteId: string; period: string; device: string; pages?: "landing" | "page"; page?: { ref: string; path: string } } | null): "ASKING" | "FAILED" | "IDLE" {
+  const t = useTranslations("googleAnalytics.table");
   const askLive = useAction(api.googleAnalyticsLive.askGoogleAnalyticsLive);
+  const { run } = useAdminAction({ scope: "google-analytics-live" });
   const [failed, setFailed] = useState<ReadonlySet<string>>(() => new Set());
   const asked = useRef(new Set<string>());
   const key = ask ? JSON.stringify(ask) : null;
   useEffect(() => {
     if (!key || asked.current.has(key)) return;
     asked.current.add(key);
-    const fail = () => setFailed((before) => new Set([...before, key]));
-    askLive(JSON.parse(key) as Parameters<typeof askLive>[0])
-      .then((answer) => {
-        if (!answer.ok) fail();
-      })
-      .catch(fail);
-  }, [key, askLive]);
+    // The screen says when Google could not answer: a notice, not a toast.
+    const asking = async () => {
+      const outcome = await run(() => askLive(JSON.parse(key) as Parameters<typeof askLive>[0]), { key, suppressErrorToast: true, fallbackMessage: t("askFailedTitle") });
+      if (!outcome.ok || !outcome.data.ok) setFailed((before) => new Set([...before, key]));
+    };
+    void asking();
+  }, [key, askLive, run, t]);
   if (!key) return "IDLE";
   return failed.has(key) ? "FAILED" : "ASKING";
 }
@@ -224,23 +229,22 @@ function AnalyticsDownload({ args, list, currency }: {
 }) {
   const t = useTranslations("googleAnalytics.table");
   const convex = useConvex();
-  const [busy, setBusy] = useState(false);
+  const { run, isBusy } = useAdminAction({ scope: "google-analytics-download" });
   const columns = COLUMNS[list];
   return (
     <DownloadButton
       label={t("download")}
       busyLabel={t("downloading")}
-      busy={busy}
+      busy={isBusy()}
       onClick={async () => {
-        setBusy(true);
-        try {
-          const all = await convex.query(api.googleAnalyticsReads.analyticsListAll, args as Parameters<typeof convex.query<typeof api.googleAnalyticsReads.analyticsListAll>>[1]);
-          const headers = columns.map((column) => t(`csv.${column}`, { currency: currency ?? "" }));
-          const rows = all.rows.map((row) => columns.map((column) => csvValue(row, column)));
-          saveTextFile(toCsv(headers, rows), `google-analytics-${list}.csv`);
-        } finally {
-          setBusy(false);
-        }
+        const outcome = await run(
+          () => convex.query(api.googleAnalyticsReads.analyticsListAll, args as Parameters<typeof convex.query<typeof api.googleAnalyticsReads.analyticsListAll>>[1]),
+          { fallbackMessage: t("downloadFailed") },
+        );
+        if (!outcome.ok) return;
+        const headers = columns.map((column) => t(`csv.${column}`, { currency: currency ?? "" }));
+        const rows = outcome.data.rows.map((row) => columns.map((column) => csvValue(row, column)));
+        saveTextFile(toCsv(headers, rows), `google-analytics-${list}.csv`);
       }}
     />
   );

@@ -7,6 +7,7 @@ import { Plug, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { Button } from "@/src/ui/components/screens/Button";
 import { Checkbox } from "@/src/ui/components/screens/Checkbox";
 import { CompactList } from "@/src/ui/components/screens/CompactList";
@@ -70,13 +71,14 @@ function ConnectionBody({ status }: { status: AnalyticsStatus }) {
 /** Why the last sign-in did not connect, with the account it was tried with. */
 function AttemptNote({ status }: { status: AnalyticsStatus }) {
   const t = useTranslations("googleAnalytics.connection");
+  const { platformName } = useSystemSettings();
   const attempt = status.connection?.attempt;
   if (!attempt) return null;
   const account = attempt.account ?? t("someone");
   return (
     <Notice tone="warning">
       <span className="block font-medium text-foreground">{t(`attemptTitle.${attempt.outcome}`, { host: status.host, account })}</span>
-      <span className="block">{t(`attempt.${attempt.outcome}`, { host: status.host, account })}</span>
+      <span className="block">{t(`attempt.${attempt.outcome}`, { host: status.host, account, platformName })}</span>
     </Notice>
   );
 }
@@ -92,6 +94,7 @@ function ChooseProperty({ status }: { status: AnalyticsStatus }) {
   const choose = useMutation(api.googleAnalyticsConnect.chooseGoogleAnalyticsProperty);
   const { run, isBusy } = useAdminAction({ scope: "google-analytics-choose" });
   const { start, busy } = useBeginAnalyticsConnect(siteId);
+  const { platformName } = useSystemSettings();
   const choices = status.connection?.choices ?? [];
   const matching = choices.filter((choice) => choice.stream !== null);
   const [seeAll, setSeeAll] = useState(matching.length !== 1);
@@ -100,8 +103,8 @@ function ChooseProperty({ status }: { status: AnalyticsStatus }) {
   const use = (property: string) => void run(() => choose({ siteId, property }), { fallbackMessage: t("failed") });
   const addressLine = (choice: (typeof choices)[number]) => (choice.addresses.length > 0
     ? choice.others.length > 0
-      ? t("addressesLine", { count: choice.addresses.length + choice.others.length, read: choice.addresses.join(", "), host: status.host })
-      : t("addressLine", { read: choice.addresses.join(", ") })
+      ? t("addressesLine", { count: choice.addresses.length + choice.others.length, read: choice.addresses.join(", "), host: status.host, platformName })
+      : t("addressLine", { read: choice.addresses.join(", "), platformName })
     : null);
 
   if (!seeAll && matching.length === 1) {
@@ -190,6 +193,7 @@ function ChooseWhatCounts({ status, changing }: { status: AnalyticsStatus; chang
   const save = useMutation(api.googleAnalyticsConnect.saveWhatCounts);
   const reread = useMutation(api.googleAnalyticsConnect.changeWhatCounts);
   const { run, isBusy } = useAdminAction({ scope: "google-analytics-counts" });
+  const { platformName } = useSystemSettings();
   const connection = status.connection!;
   const events = connection.events;
   const sign = currencySign(connection.currency);
@@ -220,12 +224,12 @@ function ChooseWhatCounts({ status, changing }: { status: AnalyticsStatus; chang
   return (
     <div className="flex flex-col gap-4">
       {others.length > 0 ? (
-        <Notice>{t("addresses", { count: connection.addresses.length + others.length, property: connection.propertyName ?? "", host: status.host, read: connection.addresses.join(", "), others: others.join(", ") })}</Notice>
+        <Notice>{t("addresses", { count: connection.addresses.length + others.length, property: connection.propertyName ?? "", host: status.host, read: connection.addresses.join(", "), others: others.join(", "), platformName })}</Notice>
       ) : null}
       <div className={`${PANEL} flex flex-col gap-4`}>
         <div className="flex flex-col gap-1">
           <h2 className="text-[15px] font-medium text-foreground">{t("title")}</h2>
-          <p className="text-[13px] text-secondary">{t("description", { property: connection.propertyName ?? "" })}</p>
+          <p className="text-[13px] text-secondary">{t("description", { property: connection.propertyName ?? "", platformName })}</p>
         </div>
         {events.length === 0 ? <Notice tone="warning">{t("noKeyEvents")}</Notice> : null}
         <div className="flex flex-col divide-y divide-border-dim/50 overflow-hidden rounded-xl border border-border-dim">
@@ -251,7 +255,7 @@ function ChooseWhatCounts({ status, changing }: { status: AnalyticsStatus; chang
                   <div className="flex flex-col items-start gap-3 pl-7">
                     <SiteViewSwitch
                       label={t("whereLabel")}
-                      options={[{ value: "HAKKEN" as const, label: t("setInHakken") }, { value: "ANALYTICS" as const, label: t("setInAnalytics") }]}
+                      options={[{ value: "HAKKEN" as const, label: t("setInHakken", { platformName }) }, { value: "ANALYTICS" as const, label: t("setInAnalytics") }]}
                       value={draft.where}
                       onChange={(where) => set(event.eventName, { where })}
                     />
@@ -271,7 +275,7 @@ function ChooseWhatCounts({ status, changing }: { status: AnalyticsStatus; chang
                       />
                     ) : (
                       <ol className="max-w-2xl list-decimal pl-5 text-[12.5px] text-secondary">
-                        {(["one", "two", "three", "four"] as const).map((step) => <li key={step}>{t(`analyticsSteps.${step}`, { event: event.eventName })}</li>)}
+                        {(["one", "two", "three", "four"] as const).map((step) => <li key={step}>{t(`analyticsSteps.${step}`, { event: event.eventName, platformName })}</li>)}
                       </ol>
                     )}
                   </div>
@@ -280,7 +284,7 @@ function ChooseWhatCounts({ status, changing }: { status: AnalyticsStatus; chang
             );
           })}
         </div>
-        <p className="text-[12px] text-muted">{t("appliesToHistory")}</p>
+        <p className="text-[12px] text-muted">{t("appliesToHistory", { platformName })}</p>
         {status.canManage ? (
           <div className="flex flex-wrap items-center gap-3">
             <Button
@@ -317,6 +321,7 @@ function ConnectionDetails({ status }: { status: AnalyticsStatus }) {
   const hrefFor = useAnalyticsHref(siteId);
   const nameOf = useEventName();
   const disconnect = useMutation(api.googleAnalyticsConnect.disconnectGoogleAnalytics);
+  const { platformName } = useSystemSettings();
   const { run, isBusy } = useAdminAction({ scope: "google-analytics-disconnect" });
   const [confirming, setConfirming] = useState(false);
   const connection = status.connection!;
@@ -358,7 +363,7 @@ function ConnectionDetails({ status }: { status: AnalyticsStatus }) {
         <div className="flex items-start justify-between gap-4">
           <div className="flex flex-col gap-1">
             <h2 className="text-[15px] font-medium text-foreground">{t("countsTitle")}</h2>
-            <p className="text-[13px] text-secondary">{t("countsDescription", { host: status.host })}</p>
+            <p className="text-[13px] text-secondary">{t("countsDescription", { host: status.host, platformName })}</p>
           </div>
           {status.canManage && connection.status === "CONNECTED" ? (
             <Button variant="quiet" className="px-3 py-2 text-[12px]" onClick={() => router.push(hrefFor("connection", { change: "1" }))}>{t("change")}</Button>
@@ -381,7 +386,7 @@ function ConnectionDetails({ status }: { status: AnalyticsStatus }) {
                   ? <span className="font-mono text-[12px] text-secondary">{formatMoney(Math.round(event.hakkenValue * 100), connection.currency)}</span>
                   : <span className="inline-flex items-center gap-1.5 text-[12px] text-secondary"><TriangleAlert className="h-3.5 w-3.5 text-warning" aria-hidden="true" />{t("noValue")}</span>),
             },
-            { key: "setIn", header: t("setInHeading"), cell: (event) => <span className="text-[12px] text-secondary">{event.analyticsValue !== null ? t("setIn.ANALYTICS") : event.hakkenValue !== null ? t("setIn.HAKKEN") : "–"}</span> },
+            { key: "setIn", header: t("setInHeading"), cell: (event) => <span className="text-[12px] text-secondary">{event.analyticsValue !== null ? t("setIn.ANALYTICS") : event.hakkenValue !== null ? t("setIn.HAKKEN", { platformName }) : "–"}</span> },
           ]}
         />
       </div>

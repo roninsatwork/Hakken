@@ -402,8 +402,8 @@ export function UserNavTree({
     icon={ChartColumn}
     label={t('googleAnalytics')}
     href="/app/analytics"
-    isActive={activeItem === 'Google Analytics' || pathname.startsWith('/app/analytics')}
-    onClick={() => setActiveItem('Google Analytics')}
+    isActive={activeItem === 'GoogleAnalytics' || pathname.startsWith('/app/analytics')}
+    onClick={() => setActiveItem('GoogleAnalytics')}
   />
 
   {/*

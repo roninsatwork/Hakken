@@ -15,6 +15,7 @@ import {
 } from "./connectorTokenCrypto";
 import { exchangeAuthorizationCode, refreshAccessToken, revokeOAuthToken } from "./oauthTokenCalls";
 import { SEARCH_CONSOLE_READ_SCOPE, SEARCH_CONSOLE_SCOPES, listProperties, propertiesForHost } from "./searchConsoleApi";
+import { appError } from "./utils/appError";
 import { GOOGLE_ANALYTICS_READ_SCOPE, propertiesForSite, siteAddresses, yesterdayUtc, type PropertyChoice } from "./googleAnalyticsApi";
 
 /**
@@ -347,7 +348,7 @@ export const keepGrant = internalMutation({
   returns: v.id("googleConnections"),
   handler: async (ctx, args) => {
     const hold = await ctx.db.get(args.companyWebsiteId);
-    if (!hold) throw new Error("The website is no longer held.");
+    if (!hold) throw appError("NOT_FOUND", "The website is no longer held.");
     const now = Date.now();
     const existing = await ctx.db
       .query("googleConnections")

@@ -132,7 +132,7 @@ export async function checksOf(ctx: MutationCtx, connection: Doc<"googleAnalytic
 
 const BELL: Partial<Record<HealthCheck, (result: Result, host: string) => { title: string; body: string }>> = {
   NOTHING_COUNTED: (_, host) => ({ title: `${host}: nothing counts as a conversion`, body: "Tick the events that are a conversion on its Google Analytics Connection page, and they are counted for the past 90 days too." }),
-  NO_VALUE: (result, host) => ({ title: `${host}: a conversion has no value`, body: `${(result.names ?? []).join(", ")} has no value in Google Analytics or Hakken, so it adds nothing to Value. Set one from Tracking health.` }),
+  NO_VALUE: (result, host) => ({ title: `${host}: a conversion has no value`, body: `${(result.names ?? []).join(", ")} has no value in Google Analytics or here, so it adds nothing to Value. Set one from Tracking health.` }),
   TRACKING_STOPPED: (_, host) => ({ title: `${host}: Google Analytics stopped counting`, body: "A day went by with no visits after weeks of steady ones: the tracking tag may have come off the website. Tracking health says how to check." }),
   SUDDEN_FALL: (result, host) => ({ title: `${host}: a sudden fall`, body: `The last week's ${(result.names ?? ["visits"])[0]} were ${Math.round((result.share ?? 0) * 100)}% under the four weeks before. Tracking health says what to check.` }),
   SELF_REFERRAL: (_, host) => ({ title: `${host}: its own address as a referral`, body: "Visits are being split in two by a redirect or a second domain. Tracking health says how to fix it." }),

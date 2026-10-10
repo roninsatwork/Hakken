@@ -1,5 +1,5 @@
 /**
- * Sample Google Analytics answers for rendering whole screens — ronins.co.uk,
+ * Sample Google Analytics answers for rendering whole screens — acme-shop.test,
  * connected, three conversions counted — shared by the look tests
  * (docs/plans/active/google-analytics-plan.md §11). A screen's own test keeps
  * its own rows.
@@ -14,26 +14,26 @@ const EVENTS = [
 ];
 
 export const CONNECTION = {
-  status: "CONNECTED" as const,
+  status: "CONNECTED" as "CONNECTING" | "CHOOSING" | "COUNTING" | "CONNECTED" | "NEEDS_RECONNECT" | "DISCONNECTED",
   signingIn: false,
   googleAccount: "anthony@example.com",
   sharedWithSearchConsole: true,
   choices: [] as Array<{ property: string; displayName: string; accountName: string; stream: string | null; checked: boolean; addresses: string[]; others: string[] }>,
   property: "properties/312456789",
-  propertyName: "Ronins",
-  stream: "https://www.ronins.co.uk",
-  addresses: ["www.ronins.co.uk"],
-  otherAddresses: ["staging.ronins.co.uk", "localhost"],
+  propertyName: "Acme",
+  stream: "https://www.acme-shop.test",
+  addresses: ["www.acme-shop.test"],
+  otherAddresses: ["staging.acme-shop.test", "localhost"],
   timeZone: "Europe/London",
   currency: "GBP",
   events: EVENTS as typeof EVENTS | null,
   connectedAt: Date.parse("2026-10-08T15:22:00Z"),
   disconnectedAt: null,
-  newestDay: "2026-10-08",
+  newestDay: "2026-10-08" as string | null,
   oldestDay: "2026-08-10",
   historyDone: true,
   clearing: false,
-  lastCollectedAt: Date.parse("2026-10-09T03:10:00Z"),
+  lastCollectedAt: Date.parse("2026-10-09T03:10:00Z") as number | null,
   collecting: null,
   problem: null,
   attempt: null,
@@ -47,7 +47,7 @@ export const CONNECTION = {
       { check: "SELF_REFERRAL" as const, passing: true },
       { check: "PAYMENT_REFERRALS" as const, passing: true },
       { check: "TOO_MUCH_UNKNOWN" as const, passing: true, share: 0.01 },
-      { check: "STRANGERS" as const, passing: false, names: ["staging.ronins.co.uk"], count: 61 },
+      { check: "STRANGERS" as const, passing: false, names: ["staging.acme-shop.test"], count: 61 },
     ],
   } as { checkedAt: number; checks: Array<{ check: string; passing: boolean; names?: string[]; count?: number; share?: number }> } | null,
 };
@@ -56,9 +56,9 @@ export const STATUS = {
   configured: true,
   owned: true,
   canManage: true,
-  host: "ronins.co.uk",
+  host: "acme-shop.test",
   iconUrl: null,
-  ownSites: [{ siteId: "site_1", host: "ronins.co.uk" }],
+  ownSites: [{ siteId: "site_1", host: "acme-shop.test" }],
   searchConsoleConnected: true,
   connection: CONNECTION as typeof CONNECTION | null,
 };
@@ -70,7 +70,7 @@ export function statusWith(change: Partial<typeof CONNECTION> | null) {
 
 export const ROW = {
   key: "~0",
-  label: "https://www.ronins.co.uk/ai-agency/",
+  label: "https://www.acme-shop.test/ai-agency/",
   visits: 288,
   engagementRate: 0.615,
   timePerVisit: 84,
@@ -108,7 +108,7 @@ export const OVERVIEW = {
   to: "2026-10-08",
   now: FIGURES,
   before: { ...FIGURES, visits: 2225, engaged: 1190, conversions: 19, value: 350_000 },
-  changedMost: [{ kind: "landing" as const, key: "~0", label: "https://www.ronins.co.uk/ai-agency/", conversions: 2, value: 30_000 }],
+  changedMost: [{ kind: "landing" as const, key: "~0", label: "https://www.acme-shop.test/ai-agency/", conversions: 2, value: 30_000 }],
   landingLive: false,
 };
 
@@ -135,7 +135,7 @@ export const CONVERSIONS = {
 };
 
 export const LANDING_PAGE = {
-  address: "https://www.ronins.co.uk/ai-agency/",
+  address: "https://www.acme-shop.test/ai-agency/",
   path: "/ai-agency/",
   group: "AI services",
   row: ROW,

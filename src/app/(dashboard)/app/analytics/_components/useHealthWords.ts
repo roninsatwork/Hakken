@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { formatPercent } from "./analyticsFormat";
 import { useEventName } from "./useEventName";
@@ -15,6 +16,7 @@ type Check = NonNullable<NonNullable<AnalyticsStatus["connection"]>["health"]>["
 export function useHealthWords(status: AnalyticsStatus): (check: Check) => { title: string; wrong: string; why: string; fix: string; short: string } {
   const t = useTranslations("googleAnalytics.health.checks");
   const nameOf = useEventName();
+  const { platformName } = useSystemSettings();
   return (check) => {
     const names = check.check === "NO_VALUE" ? (check.names ?? []).map(nameOf) : check.names ?? [];
     const values = {
@@ -23,6 +25,7 @@ export function useHealthWords(status: AnalyticsStatus): (check: Check) => { tit
       count: formatNumber(check.count ?? 0),
       share: formatPercent(check.share ?? 0),
       measure: names[0] ?? "",
+      platformName,
     };
     const state = check.passing ? "passing" : "failing";
     return {

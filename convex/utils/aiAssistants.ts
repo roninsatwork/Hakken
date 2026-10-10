@@ -27,6 +27,9 @@ export const AI_ASSISTANT_SOURCES: ReadonlyArray<{ name: string; sources: readon
 /** Google's own channel for them, as `sessionDefaultChannelGroup` names it. */
 export const GOOGLE_AI_CHANNEL = "AI Assistant";
 
+/** Google's channels whose sources a channel's screen describes in words of its own (google-analytics-plan.md GA22). */
+export const DESCRIBED_CHANNELS: readonly string[] = ["Referral", "Organic Search", "Organic Social", "Paid Search", "Email", "Direct"];
+
 /** The channel every assistant's visits are shown under. */
 export const AI_ASSISTANTS_CHANNEL = "AI assistants";
 

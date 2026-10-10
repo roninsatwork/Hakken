@@ -6,6 +6,7 @@ import type { FunctionReturnType } from "convex/server";
 import { HandCoins, TriangleAlert } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
@@ -69,6 +70,7 @@ function ConversionsBody({ status }: { status: AnalyticsStatus }) {
   const args = useAnalyticsArgs();
   const hrefFor = useAnalyticsHref(args.siteId);
   const nameOf = useEventName();
+  const { platformName } = useSystemSettings();
   const answer = useQuery(api.googleAnalyticsReads.analyticsConversions, args);
   const chart = useQuery(api.googleAnalyticsReads.analyticsChart, args);
   const [chosen, setChosen] = useSiteParam<string>("conversion", EVERY);
@@ -180,7 +182,7 @@ function ConversionsBody({ status }: { status: AnalyticsStatus }) {
             ) : (
               <span className="flex flex-col items-end leading-tight">
                 <span className="font-mono text-[12px] text-secondary">{formatMoney(row.each, currency)}</span>
-                <span className="text-[11.5px] text-muted">{t(`setIn.${row.setIn}`)}</span>
+                <span className="text-[11.5px] text-muted">{t(`setIn.${row.setIn}`, { platformName })}</span>
               </span>
             )),
           },

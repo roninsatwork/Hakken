@@ -13679,13 +13679,13 @@
       },
       "attempt": {
         "DECLINED": "Nothing was connected. Connect again when you're ready.",
-        "MISSING_SCOPE": "Google asks which access to give; tick Google Analytics, or Hakken can't read it. Nothing was kept.",
+        "MISSING_SCOPE": "Google asks which access to give; tick Google Analytics, or {platformName} can't read it. Nothing was kept.",
         "NO_PROPERTY": "Sign in with the Google account that can open {host}'s Google Analytics, or ask for access to it.",
         "FAILED": "Google didn't answer as expected. Nothing was kept; try again."
       },
       "failed": "That didn't work. Try again.",
-      "addressesLine": "Its visits come from {count} addresses: Hakken reads {host}'s own, {read}, and leaves the others out.",
-      "addressLine": "Hakken reads its visits on {read}.",
+      "addressesLine": "Its visits come from {count} addresses: {platformName} reads {host}'s own, {read}, and leaves the others out.",
+      "addressLine": "{platformName} reads its visits on {read}.",
       "oneTitle": "This is {host}'s property",
       "oneDescription": "Signed in as {account}. Of the {count} properties this account can see, one has a web stream for {host}.",
       "propertyLine": "Property {id} · web stream {stream}",
@@ -13713,7 +13713,7 @@
       "collected": "Collected",
       "collectedDetail": "Every day by the Google Analytics: Collector Agent · free in every plan",
       "countsTitle": "What counts",
-      "countsDescription": "The conversions Hakken counts on {host}, and what each is worth.",
+      "countsDescription": "The conversions {platformName} counts on {host}, and what each is worth.",
       "change": "Change",
       "nothingCounted": "Nothing counts as a conversion yet.",
       "conversion": "Conversion",
@@ -13723,7 +13723,7 @@
       "setInHeading": "Set in",
       "setIn": {
         "ANALYTICS": "Google Analytics",
-        "HAKKEN": "Hakken"
+        "HAKKEN": "{platformName}"
       },
       "disconnect": "Disconnect Google Analytics",
       "disconnectHint": "Search Console stays connected, and what was collected is kept.",
@@ -13755,7 +13755,7 @@
       "askFailedTitle": "Google couldn't answer just now",
       "askFailedBody": "Every device's figures are shown instead. Choose the device again in a moment.",
       "askingTitle": "Asking Google for {device} visits…",
-      "askingBody": "Page lists by device are not kept, so Hakken asks Google when you choose one. The pages are listed already; their {device} figures arrive in a few seconds.",
+      "askingBody": "Page lists by device are not kept, so {platformName} asks Google when you choose one. The pages are listed already; their {device} figures arrive in a few seconds.",
       "noMatch": "Nothing matches that search.",
       "columns": {
         "channel": "Channel",
@@ -13790,7 +13790,8 @@
         "conversions": "Conversions",
         "value": "Value ({currency})",
         "change": "Change in visits (%)"
-      }
+      },
+      "downloadFailed": "Couldn't prepare the download. Try again."
     },
     "chart": {
       "title": "Visits and conversions over time",
@@ -13913,7 +13914,7 @@
       "noValue": "No value",
       "setIn": {
         "ANALYTICS": "set in Analytics",
-        "HAKKEN": "set in Hakken",
+        "HAKKEN": "set in {platformName}",
         "REVENUE": "each order's own"
       },
       "conversionPicker": "Conversion",
@@ -13961,16 +13962,16 @@
     },
     "counts": {
       "reading": "Reading the property's key events from Google…",
-      "addresses": "The property {property} records visits on {count} addresses. Hakken reads {host}'s own, {read}, and leaves {others} out of every figure.",
+      "addresses": "The property {property} records visits on {count} addresses. {platformName} reads {host}'s own, {read}, and leaves {others} out of every figure.",
       "title": "Choose what counts as a conversion",
-      "description": "The key events in the property {property}. Tick each one that is a conversion — an enquiry, a sale, a booking; Hakken has ticked the likely ones. A scroll or a video play is never ticked for you.",
+      "description": "The key events in the property {property}. Tick each one that is a conversion — an enquiry, a sale, a booking; {platformName} has ticked the likely ones. A scroll or a video play is never ticked for you.",
       "noKeyEvents": "The property has no key events yet. Mark the events that matter as key events in Google Analytics, then come back here.",
       "lastThirty": "{count} in the last 30 days",
       "inAnalytics": "{value} in Google Analytics",
       "noValueInAnalytics": "No value in Google Analytics",
       "neverTicked": "Never ticked for you: this is not a conversion.",
       "whereLabel": "Where its value is set",
-      "setInHakken": "Set it in Hakken",
+      "setInHakken": "Set it in {platformName}",
       "setInAnalytics": "Set it in Google Analytics",
       "valueLabel": "Value of each, in {sign}",
       "valuePlaceholder": "For example 250",
@@ -13980,9 +13981,9 @@
         "one": "In Google Analytics, open Admin, then Data display, then Key events.",
         "two": "Find {event} and open its menu.",
         "three": "Choose Set default value, and type what one is worth.",
-        "four": "Save. The value reaches Hakken at the next collection; Hakken never changes Google Analytics itself."
+        "four": "Save. The value reaches {platformName} at the next collection; {platformName} never changes Google Analytics itself."
       },
-      "appliesToHistory": "A value set in Hakken applies to all history: past months show it at once, and changing it re-prices them too. Hakken never changes Google Analytics.",
+      "appliesToHistory": "A value set in {platformName} applies to all history: past months show it at once, and changing it re-prices them too. {platformName} never changes Google Analytics.",
       "failed": "Couldn't save what counts. Try again.",
       "save": "Save · {count} counted",
       "back": "Back",
@@ -14018,7 +14019,7 @@
         "NO_VALUE": {
           "title": "Every conversion has a value",
           "passing": "Every conversion counted has a value.",
-          "failing": "{names} has no value in Google Analytics or in Hakken, so its {count} conversions add nothing to Value.",
+          "failing": "{names} has no value in Google Analytics or in {platformName}, so its {count} conversions add nothing to Value.",
           "why": "Value is how one page or channel is weighed against another; a conversion with no value counts for nothing there.",
           "fix": "give it a value here, or in Google Analytics.",
           "short": "{names} has no value."
@@ -14066,7 +14067,7 @@
         "STRANGERS": {
           "title": "Only this website is in the property",
           "passing": "No other address sends visits to this property.",
-          "failing": "{count} visits in the last 30 days were recorded on {names}. Hakken leaves them out of these figures.",
+          "failing": "{count} visits in the last 30 days were recorded on {names}. {platformName} leaves them out of these figures.",
           "why": "a staging site or spam in the same property swells Google Analytics' own reports and can hide what real visitors do.",
           "fix": "stop the other address sending to Google Analytics — take the tracking tag off it, or give it a property of its own.",
           "short": "{count} visits were recorded on {names}."

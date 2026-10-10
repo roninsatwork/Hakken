@@ -248,7 +248,7 @@ function getActiveItemFromPathname(pathname: string) {
   if (pathname.startsWith('/app/calls')) return 'Calls';
   if (pathname.startsWith('/app/sites') || pathname.startsWith('/app/keyword-research')) return 'Sites';
   if (pathname.startsWith('/app/search-console')) return 'Search Console';
-  if (pathname.startsWith('/app/analytics')) return 'Google Analytics';
+  if (pathname.startsWith('/app/analytics')) return 'GoogleAnalytics';
   if (isLearnPath(pathname)) return 'Learn';
   if (pathname.startsWith('/app/reception')) return 'Reception';
   if (pathname.startsWith('/app/profile')) return 'Profile';
