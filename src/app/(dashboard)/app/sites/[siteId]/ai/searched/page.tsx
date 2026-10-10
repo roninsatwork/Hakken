@@ -17,6 +17,7 @@ import { CUT_COLUMN, IntentText, RecordLinkCell } from "../../../_components/Sit
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
@@ -133,6 +134,7 @@ export default function SiteSearchedPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Telescope className="h-5 w-5 text-brand" />} title={t("title")} description={t(own ? "description" : "descriptionCompetitor")} />
+      <SiteSees screen="aiSearched" seen={answer?.seen} />
       {answer && !answer.built ? <p className="text-[12px] text-muted">{t("notBuilt")}</p> : null}
       <div className="flex flex-col gap-3">
         <DataTable

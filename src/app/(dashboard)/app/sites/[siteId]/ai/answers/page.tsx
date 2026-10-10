@@ -20,6 +20,7 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
@@ -90,6 +91,7 @@ export default function SiteAnswersPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<MessageSquareQuote className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="aiAnswers" seen={catalogue?.seen} />
       <Notice>{t("keptFrom")}</Notice>
 
       {missing ? (

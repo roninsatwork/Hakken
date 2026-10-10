@@ -14,6 +14,7 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { useSiteSearch } from "../../../_components/useSiteParam";
@@ -58,6 +59,7 @@ export default function SiteSourcesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Link2 className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="aiSources" seen={answer?.seen} />
       <DataTable
         rows={table.pageRows}
         rowKey={(row) => row.page}

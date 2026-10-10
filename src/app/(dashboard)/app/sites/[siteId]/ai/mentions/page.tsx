@@ -19,6 +19,8 @@ import { useSiteRange } from "../../../_components/SiteDateRange";
 import { datedRow } from "../../../_components/datedRows";
 import { toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { mentionsSees } from "@/convex/sees/aiAnswers";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
@@ -89,6 +91,7 @@ export default function SiteMentionsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Sparkles className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="aiMentions" seen={rows && mentionsSees(rows)} />
 
       <SiteChartCard
         title={t("chartTitle")}

@@ -17,6 +17,8 @@ export const seenPhraseValidator = v.object({
   c: v.optional(v.number()),
   text: v.optional(v.string()),
   more: v.optional(v.string()),
+  /** An AI engine's id ("chatgpt"), named on screen in the reader's language. */
+  engine: v.optional(v.string()),
 });
 
 /**
@@ -40,6 +42,7 @@ export const seenStepValidator = v.object({
   c: v.optional(v.number()),
   text: v.optional(v.string()),
   more: v.optional(v.string()),
+  engine: v.optional(v.string()),
   link: v.string(),
   to: seenTargetValidator,
 });
@@ -81,4 +84,16 @@ export function toRecord(record: string, key: string): SeenTarget {
 /** A step to one of the site's pages, narrowed by its filters. */
 export function toPage(segment: string, filters?: Record<string, string>): SeenTarget {
   return filters ? { segment, filters } : { segment };
+}
+
+/**
+ * A query's handler whose result carries its box: `rule` worked out over the
+ * result the handler already returns, so the box costs no read of its own.
+ * Wraps the handler as written, early returns and all.
+ */
+export function seeing<Ctx, Args, Result extends object>(handler: (ctx: Ctx, args: Args) => Promise<Result>, rule: (result: Result) => Seen) {
+  return async (ctx: Ctx, args: Args): Promise<Result & { seen: Seen }> => {
+    const result = await handler(ctx, args);
+    return { ...result, seen: rule(result) };
+  };
 }

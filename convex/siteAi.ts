@@ -7,6 +7,8 @@ import { AI_ENGINES, aiEngineValidator } from "./seoAiEngines";
 import { citedPagesOf, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
 import { MAX_LIST } from "./websiteSiteRows";
 import { listWithCut } from "./siteListPages";
+import { seenValidator } from "./utils/hakkenSees";
+import { citedSees } from "./sees/aiAnswers";
 
 /**
  * What the AI engines say about a site, for the client's Sites screens.
@@ -133,18 +135,21 @@ export const shareOfVoice = tenantQuery({
  */
 export const listCitedPages = tenantQuery({
   args: { siteId: v.id("companyWebsites") },
-  returns: listWithCut(v.object({
-    url: v.string(),
-    page: v.string(),
-    engines: v.array(aiEngineValidator),
-    times: v.number(),
-    firstDay: v.string(),
-    lastDay: v.string(),
-  })),
+  returns: v.object({
+    ...listWithCut(v.object({
+      url: v.string(),
+      page: v.string(),
+      engines: v.array(aiEngineValidator),
+      times: v.number(),
+      firstDay: v.string(),
+      lastDay: v.string(),
+    })).fields,
+    seen: seenValidator,
+  }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const coverage = { cut: false };
     const rows = await citedPagesOf(ctx, site.website._id, listHold(site), site.place, QUESTIONS_FOR_CITED_PAGES, coverage);
-    return { rows, cut: coverage.cut ? rows.length : null };
+    return { rows, cut: coverage.cut ? rows.length : null, seen: citedSees(rows) };
   },
 });

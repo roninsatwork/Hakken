@@ -13,6 +13,9 @@ import { wordStartMatcher, wordsOf } from "./utils/wordStarts";
 import { MAX_LIST } from "./websiteSiteRows";
 import { wordingKeptFrom } from "./seoCollectionPolicy";
 import { sharedLimitCeiling } from "./sharedLimits";
+import { seenValidator } from "./utils/hakkenSees";
+import { fullAnswersSees } from "./sees/aiAnswers";
+import { readMentions } from "./siteAi";
 
 /**
  * Keeping what each AI engine said, word for word (D9).
@@ -173,6 +176,7 @@ export const answerQuestions = tenantQuery({
     questions: v.array(v.object({ prompt: v.string(), engines: v.array(aiEngineValidator), isActive: v.boolean() })),
     /** The site's names and misspellings, to pick out in the text. */
     names: v.array(v.string()),
+    seen: seenValidator,
   }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
@@ -184,6 +188,8 @@ export const answerQuestions = tenantQuery({
         .sort((left, right) => Number(right.isActive) - Number(left.isActive) || left.prompt.localeCompare(right.prompt)),
       // The names this company knows the site by (holdProfiles.ts).
       names: (await holdBrandNames(ctx, site.hold._id)).map((entry) => entry.name),
+      // What Hakken sees: the newest answers naming the website, from the list's own rows.
+      seen: fullAnswersSees(await readMentions(ctx, args.siteId)),
     };
   },
 });

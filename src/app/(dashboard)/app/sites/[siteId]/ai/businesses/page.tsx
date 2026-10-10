@@ -17,6 +17,7 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { ExternalUrlCell } from "../../../_components/SiteCells";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { businessRecord, useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
@@ -83,6 +84,7 @@ export default function BusinessesRecommendedPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Store className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="aiBusinesses" seen={data?.seen} />
 
       {data ? (
         <FigureRow>

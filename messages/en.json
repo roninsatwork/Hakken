@@ -13452,7 +13452,12 @@
         "yourReviews": "Your reviews",
         "seeBusiness": "See the business",
         "whereToGetListed": "Where to get listed",
-        "seeSearch": "See the search"
+        "seeSearch": "See the search",
+        "seeAnswers": "See the answers",
+        "seeMentions": "See the mentions",
+        "readNotCited": "Read but not cited",
+        "sourcesCited": "Sources cited",
+        "untrackedQueries": "Searches not tracked"
       },
       "website": {
         "notQuoted": "Google's AI has not quoted {text} in answers about you or your rivals.",
@@ -13532,6 +13537,94 @@
         "quotedUp": "{count, plural, one {# more overview quotes} other {# more overviews quote}} you than a month before.",
         "quotedDown": "{count, plural, one {# fewer overview quotes} other {# fewer overviews quote}} you than a month before.",
         "fixGap": "Make your page for “{text}” answer it in its first lines, so the overview can quote it."
+      },
+      "aiMentions": {
+        "noAnswers": "No answers yet: your questions are put to the AI assistants at the next check.",
+        "notNamed": "No assistant names you for {a} of your {b} questions, “{text}” among them.",
+        "allNamed": "{count, plural, one {At least one assistant names you for your question.} other {At least one assistant names you for each of your # questions.}}",
+        "leastEngine": "{engine} names you least: for {a} of the {b} questions it answered.",
+        "warned": "{engine} warned people off you in its newest answer to “{text}”.",
+        "seeAnswers": "Read what the assistants say for “{text}”, and who they name instead.",
+        "readWarning": "Read {engine}'s warning, and answer it on your site and your profiles."
+      },
+      "aiShare": {
+        "noAnswers": "No answers yet: your questions are put to the AI assistants at the next check.",
+        "noneNamed": "None of the answers names you or a competitor you track yet.",
+        "youLead": "You have {a}% of the mentions across the AI assistants, more than any competitor you track.",
+        "behindLeader": "You have {a}% of the mentions across the AI assistants; {text} leads with {b}%.",
+        "weakestEngine": "{engine} names you least: {a}% of its mentions.",
+        "seeLeader": "See where {text} is named and you are not.",
+        "seeEngine": "See the questions {engine} answers without you."
+      },
+      "aiAnswers": {
+        "noAnswers": "No answers yet: your questions are put to the AI assistants at the next check.",
+        "namedIn": "Of the newest answer from each assistant to each of your questions, {a} of {b} name you.",
+        "dropped": "{count, plural, one {# answer} other {# answers}} dropped you after naming you before; the newest, {engine} on “{text}”.",
+        "recommended": "{count, plural, one {# recommends} other {# recommend}} you outright.",
+        "readDropped": "Read {engine}'s newest answer to “{text}” and see who it names instead."
+      },
+      "aiAnswer": {
+        "first": "Of the websites you watch, it names you first.",
+        "place": "Of the {b} websites you watch that it names, you come {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}.",
+        "leftOut": "It names {count, plural, one {# website} other {# websites}} you watch, and not you.",
+        "noneNamed": "It names none of the websites you watch, you included.",
+        "firstShown": "The first business it shows is {text}.",
+        "moreReviews": "{text} has {a} Google reviews to your {b}.",
+        "higherRating": "{text} is rated {a} on Google to your {b}.",
+        "readNotCited": "It read {count, plural, one {# of your pages and did not quote it} other {# of your pages and did not quote them}}.",
+        "seeFirst": "See what {text} has that you do not.",
+        "fixPage": "Make {text} answer the question in its first lines."
+      },
+      "aiSources": {
+        "noneCited": "No AI answer to your questions links to a page of yours yet.",
+        "seeRead": "See your pages the assistants read but did not quote.",
+        "cited": "AI answers link to {count, plural, one {# of your pages} other {# of your pages}}.",
+        "mostCited": "{text} is linked most: {count, plural, one {once} other {# times}}.",
+        "stale": "{count, plural, one {# page has} other {# pages have}} not been linked for a month, {text} among them.",
+        "refresh": "Bring {text} up to date: AI answers linked to it before and no longer do.",
+        "buildOn": "Build on {text}: link to it from your other pages on the same subject."
+      },
+      "aiSearched": {
+        "notBuilt": "No fan-out queries yet: the next check records the searches the assistants run.",
+        "noQueries": "The assistants ran no searches for these questions yet.",
+        "competitor": "The assistants ran {a} searches to answer this website's questions, “{text}” most often.",
+        "untracked": "You do not track {a} of the {b} searches the assistants ran, “{text}” the most repeated.",
+        "allTracked": "{count, plural, one {You track the one search the assistants ran.} other {You track all # searches the assistants ran.}}",
+        "noPage": "No page of yours answers {a} of them.",
+        "firstPage": "You are on Google's first page for {a} of the {b}.",
+        "track": "Tick “{text}” to track it on Google every run.",
+        "writePage": "Write a page that answers “{text}”."
+      },
+      "aiBusinesses": {
+        "noAnswers": "No answer read from the ChatGPT app yet: your questions are asked at the next check.",
+        "showing": "The ChatGPT app showed businesses in {a} of your {b} questions' answers; you in {c}.",
+        "shownMost": "It shows {text} most: in {count, plural, one {# answer} other {# answers}}.",
+        "skipped": "You are in Google's map box for {count, plural, one {# search} other {# searches}} where it leaves you out.",
+        "upCheck": "That is {a} more than the check before.",
+        "downCheck": "That is {a} fewer than the check before.",
+        "seeShownMost": "See what {text} has that you do not.",
+        "askReviews": "Ask every client for a Google review: the business shown most has more than you."
+      },
+      "aiRead": {
+        "nothingRead": "The ChatGPT app has not opened a page for your questions yet.",
+        "noneRead": "The ChatGPT app read other websites for your questions, and none of your pages.",
+        "seeCited": "See the pages of yours AI answers do link to.",
+        "winRate": "Your pages are quoted in {a}% of the answers that read them; rivals' pages in {b}%.",
+        "winRateAlone": "Your pages are quoted in {a}% of the answers that read them.",
+        "readMost": "{text} was read {count, plural, one {once} other {# times}}, and quoted in {b} of those answers.",
+        "beatsYou": "{text} is quoted instead most often: in {count, plural, one {# answer} other {# answers}} that read your page.",
+        "fixFirstLines": "Make {text} answer the question in its first lines.",
+        "seeWinner": "See where {text} is quoted and you are not."
+      },
+      "aiDemand": {
+        "notYet": "No AI figures yet: they are read on the next monthly check.",
+        "aiAgainstGoogle": "Your searches are asked of AI about {a} times a month, against {b} searches on Google.",
+        "yearUp": "Asks of AI are up {a}% on the year.",
+        "yearDown": "Asks of AI are down {a}% on the year.",
+        "rising": "{count, plural, one {# search is} other {# searches are}} rising in AI, “{text}” the most asked.",
+        "mostAsked": "“{text}” is asked of AI most: {a} times a month.",
+        "answerOnPage": "Answer “{text}” plainly on one of your pages.",
+        "checkPages": "Check your pages answer the searches people now ask AI."
       }
     }
   },

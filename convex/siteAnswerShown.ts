@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { seenValidator } from "./utils/hakkenSees";
+import { answerSees } from "./sees/aiAnswers";
 import type { Id } from "./_generated/dataModel";
 import { aiCitationOperationId, AI_MODE_ENGINE, aiEngineValidator, answerPlace } from "./seoAiEngines";
 import { listHold, requireMySite } from "./siteAccess";
@@ -38,6 +40,7 @@ export const answerShown = tenantQuery({
     })),
     read: v.array(v.object({ url: v.string(), host: v.string(), yours: v.boolean(), cited: v.boolean() })),
     searches: v.array(v.object({ query: v.string(), text: v.string(), position: v.union(v.number(), v.null()), tracked: v.boolean() })),
+    seen: seenValidator,
   })),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
@@ -83,7 +86,7 @@ export const answerShown = tenantQuery({
       ]);
       searches.push({ query: phrase.keyword, text: phrase.text, position: rank?.position ?? null, tracked: tracked?.isActive === true });
     }
-    return {
+    const shown = {
       askedAs,
       others,
       named: { place: named.includes(websiteId) ? named.indexOf(websiteId) + 1 : null, of: named.length },
@@ -97,5 +100,6 @@ export const answerShown = tenantQuery({
       read: (extras?.read ?? []).map((url) => ({ url, host: hostOf(url), yours: ownHost(hostOf(url)), cited: cited.has(url.replace(/\/$/, "")) })),
       searches,
     };
+    return { ...shown, seen: answerSees(shown) };
   },
 });

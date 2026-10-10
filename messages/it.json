@@ -13452,7 +13452,12 @@
         "yourReviews": "Le tue recensioni",
         "seeBusiness": "Vedi l'attività",
         "whereToGetListed": "Dove farsi elencare",
-        "seeSearch": "Vedi la ricerca"
+        "seeSearch": "Vedi la ricerca",
+        "seeAnswers": "Vedi le risposte",
+        "seeMentions": "Vedi le menzioni",
+        "readNotCited": "Lette ma non citate",
+        "sourcesCited": "Fonti citate",
+        "untrackedQueries": "Ricerche non seguite"
       },
       "website": {
         "notQuoted": "L'IA di Google non ha citato {text} nelle risposte su di te o sui concorrenti.",
@@ -13532,6 +13537,94 @@
         "quotedUp": "{count, plural, one {# overview in più ti cita} other {# overview in più ti citano}} rispetto a un mese prima.",
         "quotedDown": "{count, plural, one {# overview in meno ti cita} other {# overview in meno ti citano}} rispetto a un mese prima.",
         "fixGap": "Fai rispondere la tua pagina per “{text}” nelle prime righe, così l'overview può citarla."
+      },
+      "aiMentions": {
+        "noAnswers": "Ancora nessuna risposta: le tue domande vengono poste agli assistenti IA al prossimo controllo.",
+        "notNamed": "Nessun assistente ti nomina per {a} delle tue {b} domande, tra cui “{text}”.",
+        "allNamed": "{count, plural, one {Almeno un assistente ti nomina per la tua domanda.} other {Almeno un assistente ti nomina per ognuna delle tue # domande.}}",
+        "leastEngine": "{engine} ti nomina meno di tutti: per {a} delle {b} domande a cui ha risposto.",
+        "warned": "{engine} ha sconsigliato la tua attività nella sua risposta più recente a “{text}”.",
+        "seeAnswers": "Leggi cosa dicono gli assistenti per “{text}” e chi nominano al tuo posto.",
+        "readWarning": "Leggi l'avvertimento di {engine} e rispondi sul tuo sito e sui tuoi profili."
+      },
+      "aiShare": {
+        "noAnswers": "Ancora nessuna risposta: le tue domande vengono poste agli assistenti IA al prossimo controllo.",
+        "noneNamed": "Nessuna risposta nomina ancora te o un concorrente che segui.",
+        "youLead": "Hai il {a}% delle menzioni tra gli assistenti IA, più di qualsiasi concorrente che segui.",
+        "behindLeader": "Hai il {a}% delle menzioni tra gli assistenti IA; {text} è in testa con il {b}%.",
+        "weakestEngine": "{engine} ti nomina meno di tutti: il {a}% delle sue menzioni.",
+        "seeLeader": "Guarda dove viene nominato {text} e tu no.",
+        "seeEngine": "Guarda le domande a cui {engine} risponde senza di te."
+      },
+      "aiAnswers": {
+        "noAnswers": "Ancora nessuna risposta: le tue domande vengono poste agli assistenti IA al prossimo controllo.",
+        "namedIn": "Della risposta più recente di ogni assistente a ognuna delle tue domande, {a} su {b} ti nominano.",
+        "dropped": "{count, plural, one {# risposta ti ha tolto} other {# risposte ti hanno tolto}} dopo averti nominato in passato; la più recente, {engine} su “{text}”.",
+        "recommended": "{count, plural, one {# ti consiglia} other {# ti consigliano}} apertamente.",
+        "readDropped": "Leggi la risposta più recente di {engine} a “{text}” e guarda chi nomina al tuo posto."
+      },
+      "aiAnswer": {
+        "first": "Tra i siti che segui, ti nomina per primo.",
+        "place": "Tra i {b} siti che segui e che nomina, sei al {count}º posto.",
+        "leftOut": "Nomina {count, plural, one {# sito} other {# siti}} che segui, e non te.",
+        "noneNamed": "Non nomina nessuno dei siti che segui, compreso il tuo.",
+        "firstShown": "La prima attività che mostra è {text}.",
+        "moreReviews": "{text} ha {a} recensioni Google contro le tue {b}.",
+        "higherRating": "{text} ha una valutazione Google di {a} contro la tua di {b}.",
+        "readNotCited": "Ha letto {count, plural, one {# delle tue pagine senza citarla} other {# delle tue pagine senza citarle}}.",
+        "seeFirst": "Guarda cosa ha {text} che a te manca.",
+        "fixPage": "Fai rispondere {text} alla domanda nelle prime righe."
+      },
+      "aiSources": {
+        "noneCited": "Nessuna risposta IA alle tue domande rimanda ancora a una tua pagina.",
+        "seeRead": "Guarda le tue pagine che gli assistenti hanno letto ma non citato.",
+        "cited": "Le risposte IA rimandano a {count, plural, one {# delle tue pagine} other {# delle tue pagine}}.",
+        "mostCited": "{text} è la più citata: {count, plural, one {una volta} other {# volte}}.",
+        "stale": "{count, plural, one {# pagina non è citata} other {# pagine non sono citate}} da un mese, tra cui {text}.",
+        "refresh": "Aggiorna {text}: le risposte IA la citavano e ora non più.",
+        "buildOn": "Punta su {text}: collegala dalle tue altre pagine sullo stesso argomento."
+      },
+      "aiSearched": {
+        "notBuilt": "Ancora nessuna query di fan-out: il prossimo controllo registra le ricerche fatte dagli assistenti.",
+        "noQueries": "Gli assistenti non hanno ancora fatto ricerche per queste domande.",
+        "competitor": "Gli assistenti hanno fatto {a} ricerche per rispondere alle domande di questo sito, “{text}” più spesso.",
+        "untracked": "Non segui {a} delle {b} ricerche fatte dagli assistenti, “{text}” la più ripetuta.",
+        "allTracked": "{count, plural, one {Segui l'unica ricerca fatta dagli assistenti.} other {Segui tutte le # ricerche fatte dagli assistenti.}}",
+        "noPage": "Nessuna tua pagina risponde a {a} di esse.",
+        "firstPage": "Sei nella prima pagina di Google per {a} delle {b}.",
+        "track": "Spunta “{text}” per seguirla su Google a ogni esecuzione.",
+        "writePage": "Scrivi una pagina che risponda a “{text}”."
+      },
+      "aiBusinesses": {
+        "noAnswers": "Ancora nessuna risposta letta dall'app di ChatGPT: le tue domande vengono poste al prossimo controllo.",
+        "showing": "L'app di ChatGPT ha mostrato attività in {a} delle risposte alle tue {b} domande; te in {c}.",
+        "shownMost": "Mostra più spesso {text}: in {count, plural, one {# risposta} other {# risposte}}.",
+        "skipped": "Sei nel riquadro mappa di Google per {count, plural, one {# ricerca} other {# ricerche}} in cui ti lascia fuori.",
+        "upCheck": "Sono {a} in più del controllo prima.",
+        "downCheck": "Sono {a} in meno del controllo prima.",
+        "seeShownMost": "Guarda cosa ha {text} che a te manca.",
+        "askReviews": "Chiedi a ogni cliente una recensione Google: l'attività mostrata di più ne ha più di te."
+      },
+      "aiRead": {
+        "nothingRead": "L'app di ChatGPT non ha ancora aperto una pagina per le tue domande.",
+        "noneRead": "L'app di ChatGPT ha letto altri siti per le tue domande, e nessuna tua pagina.",
+        "seeCited": "Guarda le tue pagine a cui le risposte IA rimandano.",
+        "winRate": "Le tue pagine sono citate nel {a}% delle risposte che le leggono; quelle dei concorrenti nel {b}%.",
+        "winRateAlone": "Le tue pagine sono citate nel {a}% delle risposte che le leggono.",
+        "readMost": "{text} è stata letta {count, plural, one {una volta} other {# volte}} e citata in {b} di quelle risposte.",
+        "beatsYou": "{text} viene citato al tuo posto più spesso: in {count, plural, one {# risposta} other {# risposte}} che hanno letto la tua pagina.",
+        "fixFirstLines": "Fai rispondere {text} alla domanda nelle prime righe.",
+        "seeWinner": "Guarda dove viene citato {text} e tu no."
+      },
+      "aiDemand": {
+        "notYet": "Ancora nessun dato IA: viene letto al prossimo controllo mensile.",
+        "aiAgainstGoogle": "Le tue ricerche vengono chieste all'IA circa {a} volte al mese, contro {b} ricerche su Google.",
+        "yearUp": "Le richieste all'IA sono salite del {a}% in un anno.",
+        "yearDown": "Le richieste all'IA sono scese del {a}% in un anno.",
+        "rising": "{count, plural, one {# ricerca è} other {# ricerche sono}} in crescita nell'IA, “{text}” la più chiesta.",
+        "mostAsked": "“{text}” è la più chiesta all'IA: {a} volte al mese.",
+        "answerOnPage": "Rispondi chiaramente a “{text}” in una delle tue pagine.",
+        "checkPages": "Controlla che le tue pagine rispondano alle ricerche che ora si fanno all'IA."
       }
     }
   },

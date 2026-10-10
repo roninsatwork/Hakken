@@ -19,6 +19,8 @@ import { heldIcon } from "../../../_components/siteGroups";
 import { MarkedHost } from "../../../_components/SiteMark";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { shareSees } from "@/convex/sees/aiAnswers";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { useSiteSearch } from "../../../_components/useSiteParam";
@@ -99,6 +101,7 @@ export default function SiteShareOfVoicePage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<PieChart className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="aiShare" seen={engines && shareSees(engines)} />
       <Notice>{t("note")}</Notice>
 
       <SiteChartCard

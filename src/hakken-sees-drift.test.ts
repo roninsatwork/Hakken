@@ -24,15 +24,6 @@ const FORMS = new Set([
  * off it in the same change, and a new screen is born with one.
  */
 const PENDING = new Set([
-  "src/app/(dashboard)/app/sites/[siteId]/ai/answers/answer/page.tsx",
-  "src/app/(dashboard)/app/sites/[siteId]/ai/answers/page.tsx",
-  "src/app/(dashboard)/app/sites/[siteId]/ai/businesses/page.tsx",
-  "src/app/(dashboard)/app/sites/[siteId]/ai/demand/page.tsx",
-  "src/app/(dashboard)/app/sites/[siteId]/ai/mentions/page.tsx",
-  "src/app/(dashboard)/app/sites/[siteId]/ai/read/page.tsx",
-  "src/app/(dashboard)/app/sites/[siteId]/ai/searched/page.tsx",
-  "src/app/(dashboard)/app/sites/[siteId]/ai/share-of-voice/page.tsx",
-  "src/app/(dashboard)/app/sites/[siteId]/ai/sources/page.tsx",
   "src/app/(dashboard)/app/sites/[siteId]/assets/page.tsx",
   "src/app/(dashboard)/app/sites/[siteId]/audit/page.tsx",
   "src/app/(dashboard)/app/sites/[siteId]/audit/problem/page.tsx",

@@ -16,6 +16,7 @@ import { RecordLinkCell } from "../../../_components/SiteCells";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -66,6 +67,7 @@ export default function ReadNotCitedPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<BookOpenCheck className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="aiRead" seen={data?.seen} />
 
       {data ? (
         <FigureRow>

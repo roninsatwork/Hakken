@@ -23,6 +23,7 @@ import { ExternalUrlCell, RecordLinkCell } from "../../../../_components/SiteCel
 import { formatDay } from "../../../../_components/siteFormat";
 import { businessRecord, useRecordBack, useRecordKey, useSiteListHref, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../../_components/useSite";
+import { SiteSees } from "../../../../_components/SiteSees";
 import { useSitePager } from "../../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../../_components/useSiteSort";
 import { FigureCell, ratingText } from "../../../local/_components/LocalParts";
@@ -130,6 +131,7 @@ export default function SiteAnswerPage() {
           />
         ) : undefined}
       />
+      <SiteSees screen="aiAnswer" seen={shown?.seen} />
       <p className="max-w-2xl text-[12px] text-secondary">{t("howAsked", { platformName })}</p>
 
       {record === undefined || shown === undefined ? (

@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { HakkenSees, type HakkenSeesStep } from "@/src/ui/components/screens/HakkenSees";
+import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
 import type { Seen, SeenPhrase, SeenTarget } from "@/convex/utils/hakkenSees";
 import { formatNumber } from "./siteFormat";
 import { siteRecordOf, useSiteListHref, useSiteRecordHref } from "./siteRecordLinks";
@@ -19,9 +20,10 @@ export function SiteSees({ screen, seen }: { screen: string; seen: Seen | null |
   const siteId = useSiteId();
   const recordHref = useSiteRecordHref(siteId);
   const listHref = useSiteListHref(siteId);
+  const engineLabel = useEngineLabel();
   if (!seen || seen.says.length === 0) return null;
 
-  // A sentence's code and numbers as words: `a`, `b` and `c` formatted, `count` for a plural, names as written.
+  // A sentence's code and numbers as words: `a`, `b` and `c` formatted, `count` for a plural, names as written, an engine by its name.
   const coded = t as unknown as (key: string, values: Record<string, string | number>) => string;
   const words = (phrase: SeenPhrase) => coded(`${screen}.${phrase.code}`, {
     a: formatNumber(phrase.a ?? 0),
@@ -30,6 +32,7 @@ export function SiteSees({ screen, seen }: { screen: string; seen: Seen | null |
     count: phrase.a ?? 0,
     text: phrase.text ?? "",
     more: phrase.more ?? "",
+    engine: phrase.engine ? engineLabel(phrase.engine) : "",
   });
   const hrefOf = (to: SeenTarget): { href: string; external?: boolean } => {
     if (to.url) return { href: to.url, external: true };

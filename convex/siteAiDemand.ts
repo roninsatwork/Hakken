@@ -1,4 +1,7 @@
 import { v } from "convex/values";
+import { seeing, seenValidator } from "./utils/hakkenSees";
+import { demandSees } from "./sees/aiAnswers";
+import type { Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
 import { groupOwner, requireMySite } from "./siteAccess";
 import { aiVolumeOf, demandSearches } from "./aiDemand";
@@ -27,8 +30,9 @@ export const aiDemand = tenantQuery({
       google: v.union(v.number(), v.null()),
       googleMonths: v.array(v.number()),
     })),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
     const site = await requireMySite(ctx, args.siteId);
     const hold = groupOwner(site);
     if (!hold) return { month: null, rows: [] };
@@ -52,5 +56,5 @@ export const aiDemand = tenantQuery({
       });
     }
     return { month, rows };
-  },
+  }, demandSees),
 });

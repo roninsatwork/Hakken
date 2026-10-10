@@ -16,6 +16,8 @@ import { tickedCount } from "./promptFanOut";
 import { angleOf } from "./utils/fanOutAngle";
 import { answerIdValidator } from "./siteAnswers";
 import { wordingKeptFrom } from "./seoCollectionPolicy";
+import { seeing, seenValidator } from "./utils/hakkenSees";
+import { anglesSees } from "./sees/aiAnswers";
 
 /**
  * The Sites Fan-out queries page (docs/plans/active/fan-out-angles-plan.md,
@@ -77,8 +79,9 @@ export const listAngles = tenantQuery({
     audit: v.union(v.null(), v.object({ pagesCrawled: v.number(), maxPages: v.union(v.number(), v.null()) })),
     /** The company's own site: how many fan-out queries it tracks, and its limit. Null for a competitor. */
     tracking: v.union(v.null(), v.object({ count: v.number(), limit: v.number() })),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
     const site = await requireMySite(ctx, args.siteId);
     const holdId = listHold(site);
     const own = !isTrackedHold(site.hold);
@@ -151,7 +154,7 @@ export const listAngles = tenantQuery({
       audit: crawl ? { pagesCrawled: crawl.pagesCrawled, maxPages: crawl.maxPages ?? null } : null,
       tracking: own ? { count: tickedCount(searches), limit: fanOutTrackedPerSite } : null,
     };
-  },
+  }, anglesSees),
 });
 
 const stanceValidator = v.union(v.literal("RECOMMENDED"), v.literal("NAMED"), v.literal("WARNED_AGAINST"), v.literal("NOT_NAMED"));

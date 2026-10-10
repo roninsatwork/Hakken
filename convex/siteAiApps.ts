@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { seeing, seenValidator } from "./utils/hakkenSees";
+import { businessesSees, readSees } from "./sees/aiAnswers";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { answerPlace } from "./seoAiEngines";
@@ -95,8 +97,9 @@ export const businessesRecommended = tenantQuery({
       map: v.union(v.literal("BOX"), v.literal("BELOW"), v.literal("OFF"), v.literal("UNKNOWN")),
       boxSearches: v.number(),
     })),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
     const site = await requireMySite(ctx, args.siteId);
     const byQuestion = await appAnswers(ctx, site);
     const host = site.website.host;
@@ -163,7 +166,7 @@ export const businessesRecommended = tenantQuery({
         };
       }),
     };
-  },
+  }, businessesSees),
 });
 
 export const readNotCited = tenantQuery({
@@ -180,8 +183,9 @@ export const readNotCited = tenantQuery({
     })),
     /** Who was cited most in the answers that read one of the website's pages. */
     beatsYou: v.union(v.null(), v.object({ host: v.string(), answers: v.number() })),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
     const site = await requireMySite(ctx, args.siteId);
     const byQuestion = await appAnswers(ctx, site);
     const host = site.website.host;
@@ -218,5 +222,5 @@ export const readNotCited = tenantQuery({
       rows: [...pages.values()].map((row) => ({ ...row, whose: whose(row.host) })),
       beatsYou: top ? { host: top[0], answers: top[1] } : null,
     };
-  },
+  }, readSees),
 });
