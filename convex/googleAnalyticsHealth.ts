@@ -166,7 +166,15 @@ export const runHealthChecks = internalMutation({
   },
 });
 
-/** The company's admins, each told in the bell. */
+/** Users read for a company's admins, and for the platform's super admins: people, small by nature. */
+const PEOPLE_READ = 200;
+const PLATFORM_PEOPLE_READ = 500;
+
+/**
+ * The company's admins, each told in the bell. A company with no admin of
+ * its own — one the platform's super admins run for it, as Ronins Agency —
+ * tells the super admins instead, so a notice always reaches someone (board 10).
+ */
 export async function tellAdmins(
   ctx: MutationCtx,
   connection: Doc<"googleAnalyticsConnections">,
@@ -178,8 +186,12 @@ export async function tellAdmins(
   const members = await ctx.db
     .query("users")
     .withIndex("by_company", (q) => q.eq("companyId", connection.companyId))
-    .take(200);
-  for (const admin of members.filter((row) => row.role === "ADMIN")) {
-    await ctx.runMutation(internal.notifications.notifyUserInternal, { userId: admin._id, companyId: connection.companyId, kind, title, body, href });
+    .take(PEOPLE_READ);
+  let told = members.filter((row) => row.role === "ADMIN");
+  if (told.length === 0) {
+    told = (await ctx.db.query("users").withIndex("by_role_lastLogin", (q) => q.eq("role", "SUPER_ADMIN")).take(PLATFORM_PEOPLE_READ));
+  }
+  for (const person of told) {
+    await ctx.runMutation(internal.notifications.notifyUserInternal, { userId: person._id, companyId: connection.companyId, kind, title, body, href });
   }
 }

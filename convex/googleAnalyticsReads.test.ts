@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import schema from "./schema";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
@@ -220,6 +220,7 @@ describe("tracking health", () => {
     const health = (await t.run(async (ctx) => await ctx.db.get(connectionId)))!.health!;
     expect(health.checks.filter((check) => !check.passing).map((check) => check.check)).toEqual(["NO_VALUE", "STRANGERS"]);
     const told = async () => (await t.run(async (ctx) => await ctx.db.query("notifications").collect())).filter((row) => row.kind === "GOOGLE_ANALYTICS_HEALTH");
+    // The company's own admin is told, never the platform's super admins while it has one.
     expect((await told()).map((row) => row.title)).toEqual(["acme-shop.test: a conversion has no value", "acme-shop.test: visits on another address"]);
     // Saved again with the same gap: no second bell.
     await admin.mutation(api.googleAnalyticsConnect.saveWhatCounts, { siteId, events: [{ eventName: "click_tel", counted: true, hakkenValue: null }] });
@@ -230,5 +231,30 @@ describe("tracking health", () => {
     await finishScheduled(t);
     const after = (await t.run(async (ctx) => await ctx.db.get(connectionId)))!.health!;
     expect(after.checks.find((check) => check.check === "NO_VALUE")?.passing).toBe(true);
+  });
+
+  test("a company with no admin of its own tells the platform's super admins", async () => {
+    const t = harness();
+    await t.run(async (ctx) => {
+      const superCompany = await ctx.db.insert("companies", { name: "Platform", createdAt: 1 });
+      await ctx.db.insert("users", { name: "Super", email: "super@platform.test", role: "SUPER_ADMIN", companyId: superCompany, createdAt: 1 });
+    });
+    const { connectionId } = await collected(t, history(40));
+    await t.run(async (ctx) => {
+      // The company's own admin leaves: only the platform's super admins are left to tell.
+      const connection = (await ctx.db.get(connectionId))!;
+      for (const user of await ctx.db.query("users").withIndex("by_company", (q) => q.eq("companyId", connection.companyId)).collect()) {
+        await ctx.db.patch(user._id, { role: "USER" });
+      }
+      await ctx.db.patch(connectionId, { health: undefined });
+      for (const row of await ctx.db.query("notifications").collect()) await ctx.db.delete(row._id);
+    });
+    await t.mutation(internal.googleAnalyticsHealth.runHealthChecks, { connectionId });
+    const told = await t.run(async (ctx) => {
+      const rows = (await ctx.db.query("notifications").collect()).filter((row) => row.kind === "GOOGLE_ANALYTICS_HEALTH");
+      return await Promise.all(rows.map(async (row) => (await ctx.db.get(row.userId))?.role));
+    });
+    expect(told.length).toBeGreaterThan(0);
+    expect(new Set(told)).toEqual(new Set(["SUPER_ADMIN"]));
   });
 });
