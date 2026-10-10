@@ -29,6 +29,32 @@ export function useSeenHref() {
 }
 
 /**
+ * A box's sentences in the reader's words: each code looked up in `namespace`
+ * (`sites.seen` for a website's screens, `keywordResearch.seen` for Keyword
+ * research's), its `a`, `b` and `c` formatted — a rating keeps its one
+ * decimal, as Local shows it — `count` for a plural, names as written, an
+ * engine by its name.
+ */
+export function useSeenWords(namespace: "sites.seen" | "keywordResearch.seen", screen: string) {
+  const t = useTranslations(namespace);
+  const engineLabel = useEngineLabel();
+  const coded = t as unknown as (key: string, values: Record<string, string | number>) => string;
+  const number = (value = 0) => (Number.isInteger(value) ? formatNumber(value) : value.toFixed(1));
+  return {
+    words: (phrase: SeenPhrase) => coded(`${screen}.${phrase.code}`, {
+      a: number(phrase.a),
+      b: number(phrase.b),
+      c: number(phrase.c),
+      count: phrase.a ?? 0,
+      text: phrase.text ?? "",
+      more: phrase.more ?? "",
+      engine: phrase.engine ? engineLabel(phrase.engine) : "",
+    }),
+    linkWords: (link: string) => coded(`links.${link}`, {}),
+  };
+}
+
+/**
  * A Discovery screen's What Hakken sees box (discovery-detail-and-hakken-sees-
  * plan.md §6): the codes its query worked out, in this screen's words
  * (`sites.seen.<screen>`), each step's link (`sites.seen.links`) leading to a
@@ -36,26 +62,9 @@ export function useSeenHref() {
  * query is loading, so the page's title never jumps.
  */
 export function SiteSees({ screen, seen }: { screen: string; seen: Seen | null | undefined }) {
-  const t = useTranslations("sites.seen");
+  const { words, linkWords } = useSeenWords("sites.seen", screen);
   const hrefOf = useSeenHref();
-  const engineLabel = useEngineLabel();
   if (!seen || seen.says.length === 0) return null;
-
-  // A sentence's code and numbers as words: `a`, `b` and `c` formatted — a
-  // rating keeps its one decimal, as Local shows it — `count` for a plural,
-  // names as written, an engine by its name.
-  const coded = t as unknown as (key: string, values: Record<string, string | number>) => string;
-  const number = (value = 0) => (Number.isInteger(value) ? formatNumber(value) : value.toFixed(1));
-  const words = (phrase: SeenPhrase) => coded(`${screen}.${phrase.code}`, {
-    a: number(phrase.a),
-    b: number(phrase.b),
-    c: number(phrase.c),
-    count: phrase.a ?? 0,
-    text: phrase.text ?? "",
-    more: phrase.more ?? "",
-    engine: phrase.engine ? engineLabel(phrase.engine) : "",
-  });
-  const steps: HakkenSeesStep[] = seen.steps.map((step) => ({ words: words(step), link: coded(`links.${step.link}`, {}), ...hrefOf(step.to) }));
-
+  const steps: HakkenSeesStep[] = seen.steps.map((step) => ({ words: words(step), link: linkWords(step.link), ...hrefOf(step.to) }));
   return <HakkenSees says={seen.says.map(words)} steps={steps} />;
 }

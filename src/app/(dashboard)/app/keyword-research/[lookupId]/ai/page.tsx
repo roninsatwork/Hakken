@@ -24,6 +24,8 @@ import { ResearchAnswer } from "../../_components/ResearchAnswer";
 import { LookupState } from "../../_components/LookupState";
 import { useLookupAnswers, useLookupId, useLookupOverview, type LookupAnswers } from "../../_components/useLookup";
 import { useProblemWords } from "../../_components/ResearchCells";
+import { ResearchSees } from "../../_components/ResearchSees";
+import { answersSees } from "@/convex/sees/research";
 
 type Engine = LookupAnswers["engines"][number];
 
@@ -91,6 +93,7 @@ export default function LookupAnswersPage() {
         title={t("title")}
         description={host ? t("description", { host }) : t("descriptionNoWebsite")}
       />
+      <ResearchSees screen="ai" seen={answers ? answersSees(answers) : answers} />
       {answers?.sample ? <Notice>{tk("sample")}</Notice> : null}
       {lookup.state !== "READY" ? <LookupState lookup={lookup} /> : null}
       {answers?.state === "WAITING" ? (

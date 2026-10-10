@@ -4,6 +4,7 @@
 detail-header
   back: Keyword research
   page-header: ‹the record's name›
+settings-card: What Hakken sees
 notice (info)
 figures
   figure: Keywords

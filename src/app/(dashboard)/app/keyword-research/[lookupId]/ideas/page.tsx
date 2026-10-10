@@ -39,6 +39,8 @@ import {
   type IdeaKey,
 } from "../../_components/researchWords";
 import { useLookupId, useLookupIdeas, useLookupOverview, type LookupIdeas } from "../../_components/useLookup";
+import { ResearchSees } from "../../_components/ResearchSees";
+import { ideasSees } from "@/convex/sees/research";
 
 type Row = LookupIdeas["rows"][number];
 
@@ -179,6 +181,7 @@ export default function LookupIdeasPage() {
             : t(`kinds.${key}.description`, { keyword: lookup.keyword })
         }
       />
+      <ResearchSees screen="ideas" seen={ideas ? ideasSees(ideas) : ideas} />
       {ideas?.sample ? <Notice>{tk("sample")}</Notice> : null}
       {lookup.state !== "READY" ? <LookupState lookup={lookup} /> : null}
       {ideas?.state === "WAITING" ? <Notice>{t("waiting")}</Notice> : null}

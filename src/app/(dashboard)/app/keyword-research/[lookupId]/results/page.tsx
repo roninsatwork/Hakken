@@ -26,6 +26,8 @@ import { WhereYouAre, WhoLabel } from "../../_components/WhereYouAre";
 import { FigureCell, usePlaceIn, useProblemWords } from "../../_components/ResearchCells";
 import { readableAddress } from "../../_components/researchWords";
 import { useLookupId, useLookupOverview } from "../../_components/useLookup";
+import { ResearchSees } from "../../_components/ResearchSees";
+import { resultsSees } from "@/convex/sees/research";
 
 type Results = NonNullable<FunctionReturnType<typeof api.keywordResearch.lookupResults>>;
 type Row = Results["rows"][number];
@@ -87,6 +89,7 @@ export default function LookupResultsPage() {
         title={t("title")}
         description={results?.from ? t("descriptionFrom", { city: results.from }) : t("description", { place: placeIn(lookup.locationCode, lookup.country) })}
       />
+      <ResearchSees screen="results" seen={results ? resultsSees(results) : results} />
       {results?.sample ? <Notice>{tk("sample")}</Notice> : null}
       {lookup.state !== "READY" ? <LookupState lookup={lookup} /> : null}
       {results?.state === "WAITING" ? <Notice>{t("waiting")}</Notice> : null}

@@ -9,6 +9,7 @@ detail-header
 field: Look up another keyword
 select: This keyword
 page-header: What the AI says
+settings-card: What Hakken sees
 notice (info)
 chart-card: The question asked
 figures

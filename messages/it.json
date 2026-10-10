@@ -15694,6 +15694,73 @@
       "SPEND_LIMIT": "L'agente Keyword research ha raggiunto il suo limite di spesa per un'esecuzione. Riprova per acquistare il resto.",
       "TOO_LONG": "L'acquisto ha richiesto troppo tempo in una volta. Riprova per acquistare il resto.",
       "STOPPED": "La ricerca si è fermata prima di finire. Riprova."
+    },
+    "seen": {
+      "links": {
+        "openLookup": "Apri la ricerca",
+        "keywordIdeas": "Idee di parole chiave",
+        "googleResults": "Risultati di Google",
+        "seeSearch": "Vedi la ricerca",
+        "visitPage": "Apri la pagina"
+      },
+      "start": {
+        "start": "Cerca una parola chiave per vedere quanto viene cercata, quanto è difficile e chi è posizionato.",
+        "lookups": "Hai cercato {count, plural, one {# parola chiave} other {# parole chiave}} e tieni {b} liste.",
+        "bestChance": "La tua migliore occasione non ancora in prima pagina: “{text}”, cercata {a} volte al mese, difficoltà {b} su 100.",
+        "openLookup": "Apri “{text}” e guarda chi è posizionato."
+      },
+      "overview": {
+        "waiting": "Questa ricerca è in lettura: la pagina si completa da sola.",
+        "none": "Non è stato trovato nulla per questa ricerca.",
+        "volume": "Viene cercata {a} volte al mese; la difficoltà è {b} su 100.",
+        "youDont": "{text} non è tra i primi 100 di Google.",
+        "youRank": "{text} è {a} su Google.",
+        "youRankLow": "{text} è {a} su Google, oltre la prima pagina.",
+        "verdict": {
+          "WINNING": "La stai già vincendo: mantieni forte la pagina.",
+          "IMPROVE": "Una tua pagina è posizionata: migliorala.",
+          "NEW_PAGE": "Vale una pagina nuova tutta sua.",
+          "TOO_HARD": "I primi dieci sono troppo forti per entrarci, per ora."
+        },
+        "top": "{text} è primo, con circa {a} visite al mese.",
+        "seeIdeas": "Guarda le idee collegate.",
+        "seeResults": "Guarda chi è nella prima pagina di Google."
+      },
+      "ideas": {
+        "none": "Ancora nessuna idea.",
+        "ideas": "{count, plural, one {# idea trovata} other {# idee trovate}}.",
+        "ideasRanking": "{count, plural, one {# idea trovata} other {# idee trovate}}; il tuo sito è posizionato per {b}.",
+        "best": "La migliore occasione non ancora in prima pagina: “{text}”, cercata {a} volte al mese, difficoltà {b} su 100.",
+        "seeSearch": "Guarda dove sei per “{text}”."
+      },
+      "results": {
+        "none": "I risultati di Google non sono ancora stati letti.",
+        "top": "{text} è primo, con circa {a} visite al mese.",
+        "youAt": "Il tuo sito è {a}.",
+        "rivals": "{count, plural, one {# concorrente che segui è} other {# concorrenti che segui sono}} nella pagina.",
+        "seeTop": "Guarda la pagina prima su {text}."
+      },
+      "ai": {
+        "none": "Gli assistenti IA non sono ancora stati interpellati.",
+        "answered": "{count, plural, one {# assistente ha risposto} other {# assistenti hanno risposto}}.",
+        "named": "{a} dei {b} assistenti che hanno risposto nominano il tuo sito.",
+        "rivalMost": "{text} è il concorrente più nominato: da {count, plural, one {# assistente} other {# assistenti}}.",
+        "cited": "Citano {a} delle tue pagine, su {b} pagine citate in tutto."
+      },
+      "list": {
+        "empty": "Questa lista non ha ancora ricerche.",
+        "tracked": "{a} delle sue {b} ricerche sono seguite su Google.",
+        "notRanked": "Il tuo sito non è posizionato per {count, plural, one {# di esse} other {# di esse}}, “{text}” la più cercata.",
+        "allRanked": "Il tuo sito è posizionato per tutte.",
+        "seeSearch": "Guarda dove sei per “{text}”."
+      },
+      "competitor": {
+        "preparing": "Le ricerche di {text} sono in confronto con le tue: la pagina si completa da sola.",
+        "none": "{text} non è posizionato per ricerche in cui il tuo sito non c'è.",
+        "gap": "{text} è posizionato per {a} ricerche in cui il tuo sito non c'è.",
+        "biggest": "La più grande: “{text}”, cercata {a} volte al mese, dove è {b}.",
+        "seeSearch": "Guarda dove sei per “{text}”."
+      }
     }
   },
   "aiEngines": {

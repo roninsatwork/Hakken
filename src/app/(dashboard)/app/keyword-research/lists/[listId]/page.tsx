@@ -32,6 +32,8 @@ import { useSiteSortedList, type SiteSortColumns } from "../../../sites/_compone
 import { DifficultyCell, FigureCell, IntentWord, ResearchPositionCell, VerdictLabel } from "../../_components/ResearchCells";
 import { VERDICTS, isIntent, keywordKey, pathOf, verdictRank, type Verdict } from "../../_components/researchWords";
 import { KEYWORD_RESEARCH_HREF, listHref, lookupHref } from "../../_components/useLookup";
+import { ResearchSees } from "../../_components/ResearchSees";
+import { researchListSees } from "@/convex/sees/research";
 
 type List = NonNullable<FunctionReturnType<typeof api.keywordResearch.researchList>>;
 type Row = List["rows"][number];
@@ -227,6 +229,7 @@ export default function ResearchListPage() {
           }
           description={t(host ? "description" : "descriptionNoWebsite", { host: host ?? "", who: list.createdBy ?? t("someone"), day: formatDate(list.createdAt) })}
         />
+        <ResearchSees screen="list" seen={list ? researchListSees(list) : list} />
 
         <Notice>{host ? t("notice", { host }) : t("noticeNoWebsite")}</Notice>
 

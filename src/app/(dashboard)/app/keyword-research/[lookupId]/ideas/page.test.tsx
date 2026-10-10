@@ -28,6 +28,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
 vi.mock("@/src/ui/components/layout/Header", () => ({ default: () => null }));
+vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () => ({ platformName: "Hakken" }) }));
 
 async function open(ideas: Partial<typeof IDEAS> = {}, overview: Partial<typeof OVERVIEW> = {}) {
   const mutation = answerResearch({

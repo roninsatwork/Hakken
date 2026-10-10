@@ -9,6 +9,7 @@ detail-header
 field: Look up another keyword
 select: This keyword
 page-header: Google's results
+settings-card: What Hakken sees
 choice: Which results: Every result | You and your competitors
 table: # | Page | Kind | Strength | Linking websites | Traffic | Keywords | Top keyword
   table-bar

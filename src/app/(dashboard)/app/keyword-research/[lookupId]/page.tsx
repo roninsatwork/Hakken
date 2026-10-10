@@ -23,6 +23,8 @@ import { DifficultyCell, FigureCell, IntentWord, ResearchSection, useCountryName
 import { KeywordOpener, useOpenKeyword } from "../_components/KeywordActions";
 import { IDEA_KEYS, IDEA_KINDS, difficultyWord, ideaKindOf, isIntent, type IdeaKey } from "../_components/researchWords";
 import { ideasHref, lookupHref, useLookupIdeas, useLookupOverview, type LookupIdeas, type LookupOverview } from "../_components/useLookup";
+import { ResearchSees } from "../_components/ResearchSees";
+import { lookupSees } from "@/convex/sees/research";
 
 /**
  * A keyword's overview (board 2 of the approved drawings, docs/plans/active/
@@ -54,6 +56,7 @@ export default function LookupOverviewPage() {
         title={t("title")}
         description={host ? t("description", { host }) : t("descriptionNoWebsite")}
       />
+      <ResearchSees screen="overview" seen={lookupSees(lookup)} />
       {lookup.sample ? <Notice>{tk("sample")}</Notice> : null}
       <LookupState lookup={lookup} />
       {figures ? (

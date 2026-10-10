@@ -15694,6 +15694,73 @@
       "SPEND_LIMIT": "The Keyword research agent reached its spend limit for one run. Try again to buy the rest.",
       "TOO_LONG": "This took too long to buy in one go. Try again to buy the rest.",
       "STOPPED": "The lookup stopped before it finished. Try again."
+    },
+    "seen": {
+      "links": {
+        "openLookup": "Open the lookup",
+        "keywordIdeas": "Keyword ideas",
+        "googleResults": "Google's results",
+        "seeSearch": "See the search",
+        "visitPage": "Open the page"
+      },
+      "start": {
+        "start": "Look up a search to see how often it is searched, how hard it is, and who ranks for it.",
+        "lookups": "You have looked up {count, plural, one {# search} other {# searches}} and keep {b} lists.",
+        "bestChance": "Your best chance not yet on page one: “{text}”, searched {a} times a month, difficulty {b} of 100.",
+        "openLookup": "Open “{text}” and see who ranks for it."
+      },
+      "overview": {
+        "waiting": "This search is being read: the page fills in by itself.",
+        "none": "Nothing was found for this search.",
+        "volume": "It is searched {a} times a month; its difficulty is {b} of 100.",
+        "youDont": "{text} is not in Google's top 100 for it.",
+        "youRank": "{text} is {a} on Google for it.",
+        "youRankLow": "{text} is {a} on Google for it, past page one.",
+        "verdict": {
+          "WINNING": "You are already winning it: keep the page strong.",
+          "IMPROVE": "A page of yours ranks for it: improve that page.",
+          "NEW_PAGE": "It is worth a new page of its own.",
+          "TOO_HARD": "The top ten is too strong to join for now."
+        },
+        "top": "{text} is first, with about {a} visits a month.",
+        "seeIdeas": "See the ideas around it.",
+        "seeResults": "See who ranks on Google's first page."
+      },
+      "ideas": {
+        "none": "No ideas held yet.",
+        "ideas": "{count, plural, one {# idea} other {# ideas}} found.",
+        "ideasRanking": "{count, plural, one {# idea} other {# ideas}} found; your website ranks for {b} of them.",
+        "best": "The best chance not yet on page one: “{text}”, searched {a} times a month, difficulty {b} of 100.",
+        "seeSearch": "See where you stand for “{text}”."
+      },
+      "results": {
+        "none": "Google's results have not been read yet.",
+        "top": "{text} is first, with about {a} visits a month.",
+        "youAt": "Your website is {a}.",
+        "rivals": "{count, plural, one {# competitor you watch is} other {# competitors you watch are}} on the page.",
+        "seeTop": "See the page that ranks first on {text}."
+      },
+      "ai": {
+        "none": "The AI assistants have not been asked yet.",
+        "answered": "{count, plural, one {# assistant answered} other {# assistants answered}}.",
+        "named": "{a} of the {b} assistants that answered name your website.",
+        "rivalMost": "{text} is the competitor named most: by {count, plural, one {# assistant} other {# assistants}}.",
+        "cited": "They cite {a} of your pages, of {b} pages cited in all."
+      },
+      "list": {
+        "empty": "This list has no searches yet.",
+        "tracked": "{a} of its {b} searches are tracked on Google.",
+        "notRanked": "Your website does not rank for {count, plural, one {# of them} other {# of them}}, “{text}” the most searched.",
+        "allRanked": "Your website ranks for every one of them.",
+        "seeSearch": "See where you stand for “{text}”."
+      },
+      "competitor": {
+        "preparing": "{text}'s searches are being compared with yours: the page fills in by itself.",
+        "none": "{text} ranks for no search your website does not.",
+        "gap": "{text} ranks for {a} searches your website does not.",
+        "biggest": "The biggest: “{text}”, searched {a} times a month, where it is {b}.",
+        "seeSearch": "See where you stand for “{text}”."
+      }
     }
   },
   "aiEngines": {

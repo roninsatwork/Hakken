@@ -2,6 +2,7 @@
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Keyword research
+settings-card: What Hakken sees
 settings-card: Look up
   field: Keywords
   select: Country

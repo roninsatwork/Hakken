@@ -28,6 +28,8 @@ import { LookUpCard } from "./_components/LookUpCard";
 import { DifficultyCell, FigureCell, IntentWord, ResearchPositionCell, ResearchSection, useCountryName } from "./_components/ResearchCells";
 import { INTENTS, isIntent } from "./_components/researchWords";
 import { listHref, lookupHref } from "./_components/useLookup";
+import { ResearchSees } from "./_components/ResearchSees";
+import { researchStartSees } from "@/convex/sees/research";
 
 type Lookup = FunctionReturnType<typeof api.keywordResearch.pastLookups>[number];
 type List = FunctionReturnType<typeof api.keywordResearch.researchLists>[number];
@@ -102,6 +104,7 @@ export default function KeywordResearchPage() {
       <Header />
       <div className="flex flex-col gap-6 pb-8">
         <PageHeader divider icon={<TextSearch className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} />
+        <ResearchSees screen="start" seen={lookups && lists && researchStartSees(lookups, lists)} />
 
         {setup && canLookUp ? <LookUpCard setup={setup} siteId={siteId} onSiteId={setSiteId} /> : null}
         {measured ? <CompetitorStartCards siteId={measured.siteId} host={measured.host} /> : null}

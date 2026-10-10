@@ -9,6 +9,7 @@ detail-header
 field: Look up another keyword
 select: This keyword
 page-header: Overview
+settings-card: What Hakken sees
 figures
   figure: Searches a month
   figure: Difficulty

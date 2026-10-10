@@ -9,6 +9,7 @@ detail-header
 field: Look up another keyword
 select: This keyword
 page-header: Terms match
+settings-card: What Hakken sees
 choice: Kind of idea: Terms match · # | Questions · # | Also rank for · #
 search: Find an idea…
 filter: Intent

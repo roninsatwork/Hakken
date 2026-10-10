@@ -29,6 +29,8 @@ import { CompetitorPicker, useCompetitorStarts, usePreparedGap } from "../../_co
 import { AddTickedToList, KeywordOpener, useOpenKeyword } from "../../_components/KeywordActions";
 import { DifficultyCell, FigureCell } from "../../_components/ResearchCells";
 import { KEYWORD_RESEARCH_HREF } from "../../_components/useLookup";
+import { ResearchSees } from "../../_components/ResearchSees";
+import { competitorStartSees } from "@/convex/sees/research";
 
 type Gap = NonNullable<FunctionReturnType<typeof api.keywordResearchCompetitors.competitorGap>>;
 type Row = Gap["rows"][number];
@@ -147,6 +149,7 @@ export default function CompetitorStartPage() {
           pills={<StatusLabel tone="success">{t("noCost")}</StatusLabel>}
           action={siteId && starts && starts.rivals.length > 0 ? <CompetitorPicker siteId={siteId} rivalSiteId={rivalSiteId} rivals={starts.rivals} /> : undefined}
         />
+        <ResearchSees screen="competitor" seen={gap ? competitorStartSees(gap, siteId) : gap} />
 
         <FigureRow>
           <Figure
