@@ -6,7 +6,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { isTrackedHold } from "./utils/websitePairing";
 import { DAYS_KEPT } from "./utils/searchConsolePacks";
 import { shiftDay } from "./searchConsoleDays";
-import { encodePagesFromAction } from "./holdPageRefs";
+import { addressesOf, encodePagesFromAction } from "./holdPageRefs";
 import { accessTokenFor } from "./googleAnalyticsConnect";
 import { startFirstCollection } from "./googleAnalyticsAgentRun";
 import { runReport, type ReportAsk, type Report } from "./googleAnalyticsApi";
@@ -118,7 +118,8 @@ export function slotKey(list: AnalyticsList, period: AnalyticsPeriod, which: Ana
 
 export type PeriodJob = { list: AnalyticsList; period: AnalyticsPeriod; which: AnalyticsWhich };
 
-const PAGE_LISTS: readonly AnalyticsList[] = ["total", "channel", "landing", "page"];
+/** All pages before landing pages: a landing page finds its address, slash and all, already numbered (`numberPages`). */
+const PAGE_LISTS: readonly AnalyticsList[] = ["total", "channel", "page", "landing"];
 
 /**
  * The ready-made lists a run asks for: the 7 and 30 days every run, and the
@@ -175,7 +176,7 @@ export const collectTarget = internalQuery({
       companyWebsiteId: connection.companyWebsiteId,
       property: connection.property ?? null,
       addresses,
-      origin: connection.stream ? new URL(connection.stream).origin : `https://${addresses[0] ?? website?.host ?? ""}`,
+      origin: siteOrigin(addresses, website?.host ?? ""),
       timeZone: connection.timeZone ?? "Europe/London",
       events: (connection.events ?? []).map((event) => event.eventName),
       newestDay: connection.newestDay,
@@ -242,7 +243,7 @@ export async function askList(
   list: AnalyticsList,
   lead: readonly ("date" | "deviceCategory")[],
   range: { from: string; to: string },
-  only: { device?: string; landingPage?: string } = {},
+  only: { device?: string; landingPage?: string[] } = {},
 ): Promise<Asked> {
   const dimensions = [...lead, ...LIST_DIMENSIONS[list]];
   const base = {
@@ -250,7 +251,7 @@ export async function askList(
     endDate: range.to,
     hostNames: target.addresses,
     ...(only.device ? { device: only.device } : {}),
-    ...(only.landingPage !== undefined ? { only: { dimension: "landingPage", value: only.landingPage } } : {}),
+    ...(only.landingPage !== undefined ? { only: { dimension: "landingPage", values: only.landingPage } } : {}),
   };
   const main = await ask(session, target.property!, { ...base, dimensions, metrics: [...MAIN_METRICS] });
   if (!main.ok) return main;
@@ -276,9 +277,31 @@ export async function askList(
   };
 }
 
-/** A page list's addresses as the website's page numbers (`holdPageRefs.ts`), shared with Search Console (§4.6). */
-export async function numberPages(ctx: ActionCtx, target: CollectTarget, rows: ListRow[]): Promise<ListRow[]> {
-  const addresses = rows.map((row) => pageAddress(target.origin, row.key));
+/**
+ * Where a website's pages are, as its page numbers name them: the address its
+ * visits are read on (`hostName`, `www.` and all), so a page reads as Search
+ * Console names it — never the web stream's own address, which may leave
+ * `www.` off (ronins.co.uk's does).
+ */
+export function siteOrigin(addresses: readonly string[], host: string): string {
+  return `https://${(addresses[0] ?? host).toLowerCase()}`;
+}
+
+/**
+ * A page list's addresses as the website's page numbers (`holdPageRefs.ts`),
+ * shared with Search Console (§4.6). Analytics names a landing page without
+ * its trailing slash (`landingPage`) where All pages and Search Console keep
+ * it: a landing page is given the slashed address when the website holds that
+ * one and not its own, so one page has one number.
+ */
+export async function numberPages(ctx: ActionCtx, target: CollectTarget, rows: ListRow[], list: "landing" | "page"): Promise<ListRow[]> {
+  const known = (await addressesOf(ctx, target.companyWebsiteId)).numbers;
+  const addressOf = (path: string) => {
+    const address = pageAddress(target.origin, path);
+    if (list !== "landing" || address === "(not set)" || address.endsWith("/") || known.has(address)) return address;
+    return known.has(`${address}/`) ? `${address}/` : address;
+  };
+  const addresses = rows.map((row) => addressOf(row.key));
   const numbered = await encodePagesFromAction(ctx, target.companyWebsiteId, addresses.filter((address) => address !== "(not set)"));
   const refs = new Map<string, string>();
   let at = 0;
@@ -561,7 +584,7 @@ export async function collectPeriod(
     await ctx.runQuery(internal.googleAnalyticsCollect.slotsOf, { companyWebsiteId: target.companyWebsiteId, keys });
   let rows = 0;
   for (const [device, deviceRows] of devices) {
-    const listRows = job.list === "landing" || job.list === "page" ? await numberPages(ctx, target, deviceRows) : deviceRows;
+    const listRows = job.list === "landing" || job.list === "page" ? await numberPages(ctx, target, deviceRows, job.list) : deviceRows;
     rows += listRows.length;
     const parts = packList(job.list, listRows, target.events);
     const key = slotKey(job.list, job.period, job.which, device);

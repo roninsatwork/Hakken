@@ -149,6 +149,18 @@ describe("the standard tables", () => {
     expect(found.rows.map((row) => row.label)).toEqual(["https://www.acme-shop.test/contact/"]);
   });
 
+  test("a landing page Analytics names without its trailing slash shares its number with All pages, on the visits' own host", async () => {
+    const t = harness();
+    const visits = history(10).map((visit) => (visit.landing === "/ai-agency/" ? { ...visit, landing: "/ai-agency" } : visit));
+    const { siteId, user } = await collected(t, visits);
+    const landing = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", ...listArgs });
+    const pages = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", ...listArgs });
+    const landed = landing.rows.find((row) => row.label.includes("ai-agency"))!;
+    const viewed = pages.rows.find((row) => row.label.includes("ai-agency"))!;
+    expect(landed.label).toBe("https://www.acme-shop.test/ai-agency/");
+    expect(landed.key).toBe(viewed.key);
+  });
+
   test("a page list for one device is asked of Google, then read from what it held", async () => {
     const t = harness();
     const { siteId, user } = await collected(t, growing());

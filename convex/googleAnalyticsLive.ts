@@ -6,7 +6,7 @@ import { tenantAction } from "./tenantFunctions";
 import { getActiveCompanyId } from "./authz";
 import { isTrackedHold } from "./utils/websitePairing";
 import { appError } from "./utils/appError";
-import { askList, numberPages, openSession, slotKey, type CollectTarget } from "./googleAnalyticsCollect";
+import { askList, numberPages, openSession, siteOrigin, slotKey, type CollectTarget } from "./googleAnalyticsCollect";
 import { packList, type ListRow } from "./googleAnalyticsLists";
 import { analyticsPackedRows, analyticsPeriodValidator } from "./googleAnalyticsSchema";
 import { liveAsk } from "./googleAnalyticsReads";
@@ -45,7 +45,7 @@ export const liveTarget = internalQuery({
       companyWebsiteId: hold._id,
       property: connection.property,
       addresses,
-      origin: connection.stream ? new URL(connection.stream).origin : `https://${addresses[0] ?? ""}`,
+      origin: siteOrigin(addresses, website?.host ?? ""),
       timeZone: connection.timeZone ?? "Europe/London",
       events: (connection.events ?? []).map((event) => event.eventName),
       newestDay: connection.newestDay,
@@ -131,12 +131,14 @@ export const askGoogleAnalyticsLive = tenantAction({
       if (!device) throw appError("INVALID_INPUT", "A page list is asked live only for one device.");
       const asked = await askList(opened.session, found.target, args.pages, [], range, { device });
       if (!asked.ok) return failed(asked);
-      const rows = await numberPages(ctx, found.target, [...asked.groups.values()].flat());
+      const rows = await numberPages(ctx, found.target, [...asked.groups.values()].flat(), args.pages);
       await write(liveAsk(args.pages, args.period, range.from, range.to, args.device), args.pages, rows, asked.flags);
       return { ok: true, problem: null };
     }
     if (args.page) {
-      const only = { landingPage: args.page.path, ...(device ? { device } : {}) };
+      // Analytics names a landing page without its trailing slash: asked both ways.
+      const bare = args.page.path.length > 1 ? args.page.path.replace(/\/+$/, "") : args.page.path;
+      const only = { landingPage: [...new Set([args.page.path, bare])], ...(device ? { device } : {}) };
       const series = await askList(opened.session, found.target, "series", [], range, only);
       if (!series.ok) return failed(series);
       await write(pageAsk("series", args.page.ref, args.period, range.from, range.to, args.device), "series", [...series.groups.values()].flat(), series.flags);

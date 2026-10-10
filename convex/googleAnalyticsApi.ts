@@ -190,8 +190,8 @@ export type ReportAsk = {
   eventNames?: string[];
   /** Only this device (`deviceCategory`), when a page list is asked for one. */
   device?: string;
-  /** Only rows whose dimension is one value (a landing page's own screen). */
-  only?: { dimension: string; value: string };
+  /** Only rows whose dimension is one of these values (a landing page's own screen, slashed or not). */
+  only?: { dimension: string; values: string[] };
 };
 
 export type ReportRow = { keys: string[]; values: number[] };
@@ -219,7 +219,7 @@ function filterOf(ask: ReportAsk) {
     filters.push({ filter: { fieldName: "deviceCategory", stringFilter: { matchType: "EXACT", value: ask.device, caseSensitive: false } } });
   }
   if (ask.only) {
-    filters.push({ filter: { fieldName: ask.only.dimension, stringFilter: { matchType: "EXACT", value: ask.only.value, caseSensitive: true } } });
+    filters.push({ filter: { fieldName: ask.only.dimension, inListFilter: { values: ask.only.values, caseSensitive: true } } });
   }
   if (filters.length === 0) return undefined;
   return filters.length === 1 ? filters[0] : { andGroup: { expressions: filters } };

@@ -787,8 +787,7 @@ export const analyticsLandingPage = tenantQuery({
     if (!connection?.newestDay) return null;
     const counted = countedOf(connection);
     const [address] = await decodePages(ctx, holdId, [args.page]);
-    const origin = connection.stream ? new URL(connection.stream).origin : null;
-    const path = origin && address.startsWith(origin) ? address.slice(origin.length) || "/" : address.replace(/^https?:\/\/[^/]+/, "") || "/";
+    const path = address.replace(/^https?:\/\/[^/]+/, "") || "/";
     const now = await readFor(ctx, holdId, "landing", args.period, "NOW", args.device);
     const before = await readFor(ctx, holdId, "landing", args.period, "BEFORE", args.device);
     const own = now && now !== "LIVE" ? now.rows.find((row) => row.key === args.page) ?? null : null;
