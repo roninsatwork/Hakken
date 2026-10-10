@@ -483,10 +483,13 @@ thresholds, the four days again, two websites in one property, tenant
 isolation, the screens), and the full gate. Phase 3 ends in the browser on
 Ronins' own connected website.
 
-**Progress (2026-10-10): overall 10%. Phase 1: 75% — the shared Google
-sign-in, Search Console moved onto it, and Analytics' connection (properties,
-addresses, what counts, values, disconnecting) built and tested with Google
-faked; its screens come with Phase 3.**
+**Progress (2026-10-10): overall about 70% of the build, everything that can
+be built and tested with Google faked. Phase 1: 100%. Phase 2: 90% — the
+agent and its schedule are still to be created in Admin on dev, and Q12 waits
+on a decision (§12). Phase 3: 95% — checked in the real app only in its
+not-connected state until Phase 0 is done. Phase 4: 100%. Phase 0 (§7) is
+Anthony's and blocks every real figure.** What was built, and where the build
+differs from the words above, is §12.
 
 ## 9. Risks
 
@@ -623,6 +626,94 @@ Changing any of this means drawing it and agreeing it again first. When a
 screen is built it gets a look test against its picture
 (`docs/developer/drawing-guide.md`, "Building").
 
+
+## 12. Built — 2026-10-10
+
+What exists, by phase, and every place the build had to say something the
+sections above did not. Everything was built and tested with Google faked;
+nothing has read a real Google Analytics property yet (Phase 0, §7).
+
+**Phase 1 — connecting** (`googleConnection.ts`, `googleAnalyticsConnect.ts`,
+`googleAnalyticsApi.ts`): the shared sign-in (§3, "Built"); Search Console
+moved onto it, its tokens and page numbers moved on dev by two one-time
+migrations, then the old tables removed. Analytics' connection: the
+properties with the website's first; one matching property shown for a yes;
+the website's own addresses read (`hostName`) and the rest left out; the key
+events, the likely ones ticked and a scroll never; Analytics' value or Hakken's
+(Analytics' wins, §10 Q1); disconnecting; a website no longer held taking
+everything with it.
+
+- An event's value "in Analytics" is the key event's default value, or else
+  the average value sent with it over 30 days. Phase 0 confirms this (§9).
+- The property's role ("Viewer" on board 14) is left off the Connection
+  page: Google gives no one's role to a read-only sign-in.
+
+**Phase 2 — collecting** (`googleAnalyticsAgentRun.ts`,
+`googleAnalyticsCollect.ts`, `googleAnalyticsLists.ts`): the role "Google
+Analytics Collector" in a Google Analytics group of its own; a run per
+website; saving what counts starts the first collection at once; the days of
+the totals and channels by device; every list's ready-made periods asked of
+Google; only what changed written; each build written into the slot screens
+are not reading and flipped whole; live lists held until the next
+collection; the hold's page numbers shared with Search Console
+(`holdPageAddresses`, §10 Q11); keep rules; the tenancy guard; a reading
+budget at five times morehandles.co.uk (`googleAnalyticsLoad.test.ts`).
+
+- **The first collection fetches the 60 days kept, not 90**, a week a step
+  newest first: days past 60 would be dropped at once (§4.3). The 90 days and
+  12 months come as ready-made lists in the same run, so board 17's words
+  stand.
+- **The days asked each run** are every day after the newest held and the two
+  before it again: a morning missed is caught by the next.
+- **Every list's ready-made periods are asked of Google**, the small lists'
+  too (§4.3 had the small lists' added up from their days): one way for all
+  four, and the days kept 60 could not add up a 90 days or 12 months anyway.
+  Each ask costs little; a run asks about 32 lists a day and 52 more weekly.
+- **The year before** is asked weekly for the 90 days and 12 months, as §4.1
+  says. For the 7 and 30 days it waits for the "Compare with" choice to be
+  drawn (§4.1), as nothing shows it yet. "A year before" is 52 weeks before,
+  so each day falls on the same weekday.
+- **Every key event of the property is kept as a column**, not only those
+  counted: ticking one later counts its past at once (GA6's rule, applied to
+  what counts too).
+- **Not yet done:** the Google Analytics: Collector Agent and its schedule
+  ("Google Analytics: Data Collection Scheduler", daily 04:00) are not created
+  in Admin on dev; Analytics' visits beside Search Console's clicks in
+  `holdPages`, and Q12 (`holdPages` holding the page number), wait on
+  Anthony (below); storage is measured on Ronins and morehandles.co.uk once
+  each has real figures — the gate before any client connects (§4.3).
+
+**Q12, measured on dev 2026-10-10.** `holdPages` holds 11,462 pages in
+2.87 MB, of which the addresses are 0.73 MB (plus their index, about as
+much again). Holding the page number instead saves about 1.3 MB on dev, but
+every reader of `holdPages` — Discovery's Your pages, page groups, the
+sitemap checks, under work in another session — then needs the address from
+the numbering, which only an action can read whole. The measurement says
+small saving, wide change: Anthony to decide.
+
+**Phase 3 — the screens** (`src/app/(dashboard)/app/analytics/`): the section
+in the main menu after Search Console; every locked screen but the bell's
+(board 10, the bell's own part) built from the kit, in English and Italian,
+with a look test against its outline (`googleAnalyticsLook.test.tsx`). The
+device, dates and chart step sit at the top of every page.
+
+- **Dates:** the four ready-made periods. Other dates asked live are not
+  offered yet; none of the locked boards draws them.
+- **The cookie line** (§10, Q6) always shows, worded "Unless {host} uses
+  Google's Consent Mode…": the API does not say whether a website uses it.
+- **Conversions' chart** puts every kind of conversion on one scale and
+  value on its own: the Sites line chart learned to share a scale among some
+  lines (`scaleOf`).
+- **Channel names** are Google's own, in English in both languages, as in
+  Google Analytics.
+
+**Phase 4 — tracking health** (`googleAnalyticsHealth.ts`): the eight checks,
+run when the first collection is in, every week, and when what counts is
+saved; the failing ones first on their page; a check that starts failing
+tells the company's admins in the bell once. Payment pages are a list in the
+code (PayPal, Stripe, Worldpay, Opayo, Klarna, Clearpay and others).
+Connecting tells the admins too, as board 10 shows.
+
 ## Change log
 
 - 2026-10-09 — Plan written from the brainstorm the same day: seventeen
@@ -670,3 +761,6 @@ screen is built it gets a look test against its picture
   shared Google sign-in is one per website and Google account (§3, "Built"),
   so an agency's Search Console and its client's Analytics on two accounts
   both stand; nearly always it is one.
+- 2026-10-10 — Built through Phases 1 to 4 with Google faked (§12): the
+  shared sign-in and page numbers, the collector, the section's screens and
+  tracking health. Waiting: Phase 0, the agent and schedule in Admin, Q12.
