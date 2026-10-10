@@ -14992,6 +14992,7 @@
         "time": "Time",
         "timeTitle": "Time engaged a visit",
         "conversions": "Conversions",
+        "conversionsHere": "Conversions made here",
         "value": "Value",
         "change": "Change",
         "changeTitle": "Visits against the span before",
@@ -15024,6 +15025,12 @@
       "conversions": "Conversions",
       "value": "Value ({sign})",
       "empty": "Nothing to draw for these dates yet.",
+      "visitsTitle": {
+        "day": "Visits a day",
+        "week": "Visits a week",
+        "month": "Visits a month"
+      },
+      "visitsHint": "{period}. A dot marks {step, select, day {a day} week {a week} other {a month}} with a conversion.",
       "conversionsTitle": "Conversions over time",
       "conversionsHint": "One line for each kind of conversion, on one scale. Tick Value to add the money on a scale of its own."
     },
@@ -15221,7 +15228,16 @@
       },
       "findAssistant": "Find an assistant…",
       "findSource": "Find a source…",
-      "empty": "No visits from this channel in these dates."
+      "empty": "No visits from this channel in these dates.",
+      "figures": {
+        "visits": "Visits",
+        "engagement": "Engagement rate",
+        "siteRate": "{rate} for the whole website",
+        "conversions": "Conversions",
+        "value": "Value",
+        "noneBefore": "None in {before}",
+        "noConversions": "No conversions yet"
+      }
     },
     "landing": {
       "title": "Landing pages",
@@ -15258,6 +15274,24 @@
       "withoutValue": "Without a value",
       "setValue": "{names} · set a value",
       "allValued": "Every conversion has a value",
+      "rateBefore": "{rate} {before}",
+      "kindsHappened": "Kinds that happened",
+      "kindsOf": "{happened} of {counted}",
+      "onlyKind": "Only {name}",
+      "everyKind": "Every kind happened",
+      "noKind": "None happened yet",
+      "whatCountsTitle": "What counts",
+      "whatCountsDescription": "The events counted as conversions, set on the Connection page.",
+      "whatCountsSameValue": "The events counted as conversions, set on the Connection page. Every one is worth {value}, set in {platformName}.",
+      "whereTitle": "Where they came from",
+      "whereDescription": "The landing pages or channels of the visits that converted.",
+      "whereSalesTitle": "Where the sales came from",
+      "whereSalesDescription": "The landing pages or channels of the visits that bought.",
+      "show": "Show",
+      "sources": {
+        "landing": "Landing pages",
+        "channel": "Channels"
+      },
       "findConversion": "Find a conversion…",
       "changeWhatCounts": "Change what counts",
       "chosenOnConnection": "Chosen on the Connection page",
@@ -15299,11 +15333,25 @@
       "openPage": "Open the page",
       "notFound": "This page isn't one of the website's.",
       "noVisits": "No visit started on this page in the {period}.",
+      "visits": "Visits",
+      "engagementRate": "Engagement rate",
+      "wholeWebsite": "{rate} for the whole website",
+      "conversions": "Conversions",
+      "value": "Value",
       "askFailed": "Google couldn't answer for this page's chart and channels just now. Open the page again in a moment.",
       "channelsTitle": "Where its visits came from",
       "channelsDescription": "The channels that brought visits to this page, by value.",
       "asking": "Asking Google…",
-      "noChannels": "No visits in these dates."
+      "noChannels": "No visits in these dates.",
+      "convertedTitle": "What its visits converted into",
+      "convertedDescription": "Each conversion made by a visit that started here.",
+      "nothingConverted": "Nothing counts as a conversion yet.",
+      "conversion": "Conversion",
+      "howMany": "How many",
+      "valueEach": "Value each",
+      "byBeforeUp": "▲ {by} on {before}",
+      "byBeforeDown": "▼ {by} on {before}",
+      "byBeforeSame": "No change on {before}"
     },
     "counts": {
       "reading": "Reading the property's key events from Google…",
@@ -15451,13 +15499,227 @@
         "whatChanged": "Check what changed on the page this month: {count, plural, one {one fewer conversion} other {# fewer conversions}}.",
         "hero": "It's one of your heroes: change it only with a test."
       },
+      "websites": {
+        "none": "None of your company's own websites is here yet. Add one in Discovery to see what Google Analytics counts on it.",
+        "noneConnected": "{count, plural, =1 {Your website isn't} other {None of your # websites is}} connected to Google Analytics yet, so nobody can say which pages bring in enquiries or sales.",
+        "notCounting": "{text} had {a} visits in the last 30 days, but nothing counts as a conversion there yet, so its pages can't be weighed by what they bring in.",
+        "made": "{text} made {aMoney} from {countB, plural, =1 {one conversion} other {# conversions}} in the last 30 days.",
+        "fellVisitsUp": "{text} made {aMoney} in the last 30 days, down from {bMoney}, although its visits rose {cRate}.",
+        "value": {
+          "down": "{text} made {aMoney} in the last 30 days, down from {bMoney}.",
+          "up": "{text} made {aMoney} in the last 30 days, up from {bMoney}.",
+          "same": "{text} made {aMoney} in the last 30 days, the same as the 30 days before."
+        },
+        "unknown": "{text}'s tracking needs fixing too: {aRate} of its visits can't be put to a channel or a landing page.",
+        "tracking": "{text}'s tracking needs a look: {count, plural, =1 {one} other {#}} of its {b} checks {count, plural, =1 {fails} other {fail}}.",
+        "notConnected": "{count, plural, =1 {One of your websites isn't} other {# of your websites aren't}} connected yet.",
+        "whereLost": "See where {text} lost its conversions.",
+        "open": "See what brought {text}'s conversions.",
+        "count": "Choose what counts as a conversion on {text}.",
+        "fixTracking": "Fix {text}'s tracking before trusting its page figures.",
+        "connect": "Connect {text} to Google Analytics."
+      },
+      "overview": {
+        "notCounting": "{a} visits came in these dates, but nothing counts as a conversion yet, so nobody can say which pages or channels make money.",
+        "made": "These dates brought {count, plural, =1 {one conversion} other {# conversions}}, worth {bMoney}.",
+        "lead": {
+          "down": {
+            "up": "Visits rose {aRate}, but conversions fell from {b} to {c}.",
+            "down": "Visits fell {aRate}, and conversions with them, from {b} to {c}.",
+            "same": "Visits held steady, but conversions fell from {b} to {c}."
+          },
+          "up": {
+            "up": "Visits rose {aRate}, and conversions with them, from {b} to {c}.",
+            "down": "Visits fell {aRate}, yet conversions rose from {b} to {c}.",
+            "same": "Visits held steady, and conversions rose from {b} to {c}."
+          },
+          "same": {
+            "up": "Visits rose {aRate}, but conversions stayed at {c}.",
+            "down": "Visits fell {aRate}, and conversions held at {c}.",
+            "same": "Visits and conversions held steady, at {c} conversions."
+          }
+        },
+        "cause": {
+          "fellBoth": "Most of the fall is in {text} visits ({count, plural, =1 {one fewer conversion} other {# fewer conversions}}) and on {more} ({countB} fewer).",
+          "fellChannel": "Most of the fall is in {text} visits: {count, plural, =1 {one fewer conversion} other {# fewer conversions}}.",
+          "fellPage": "Most of the fall is on {text}: {count, plural, =1 {one fewer conversion} other {# fewer conversions}}.",
+          "roseBoth": "Most of the rise is in {text} visits ({count, plural, =1 {one more conversion} other {# more conversions}}) and on {more} ({countB} more).",
+          "roseChannel": "Most of the rise is in {text} visits: {count, plural, =1 {one more conversion} other {# more conversions}}.",
+          "rosePage": "Most of the rise is on {text}: {count, plural, =1 {one more conversion} other {# more conversions}}."
+        },
+        "googleRarely": "Google showed your pages {a} times in the last 30 days, yet only {bRate} of those were clicked.",
+        "google": "Google showed your pages {a} times in the last 30 days, and {bRate} of those were clicked.",
+        "chooseWhatCounts": "Choose what counts as a conversion, and what each is worth.",
+        "channel": {
+          "fell": "Find out why {text} visits stopped converting: {count, plural, =1 {one conversion} other {# conversions}}, down from {b}.",
+          "rose": "See what made {text} visits convert more: {count, plural, =1 {one conversion} other {# conversions}}, up from {b}."
+        },
+        "page": {
+          "fell": "Check {text}: {count, plural, =1 {one conversion} other {# conversions}}, down from {b}.",
+          "rose": "See what's working on {text}: {count, plural, =1 {one conversion} other {# conversions}}, up from {b}."
+        },
+        "push": "Move your pages up Google's results, where they're shown but rarely clicked."
+      },
+      "channels": {
+        "none": "No visits in these dates.",
+        "lead": "{text} sends {a} of your {b} visits, and {cMoney} of their value.",
+        "leadVisits": "{text} sends the most visits: {a} of your {b}.",
+        "fell": "{text} visits converted less than before: {count, plural, =1 {once} other {# times}}, down from {b}.",
+        "rose": "{text} visits converted more than before: {count, plural, =1 {once} other {# times}}, up from {b}.",
+        "assistants": "AI assistants sent {a} visits, yet only {bRate} of those visitors stayed and none converted.",
+        "assistantsConverted": "AI assistants sent {a} visits: {bRate} of those visitors stayed, and {countC, plural, =1 {one converted} other {# converted}}.",
+        "whyFell": "Find out why {text} visits convert less: {count, plural, =1 {one conversion} other {# conversions}}, down from {b}.",
+        "assistantsStay": "Give AI assistants' visitors a reason to stay: {a} visits, {bRate} engaged.",
+        "unassigned": "Check the {a} Unassigned visits: Google Analytics can't tell where they came from."
+      },
+      "channel": {
+        "none": "No visits from {text} in these dates.",
+        "top": {
+          "up": "{text} sent the most visits: {a}, up from {b}.",
+          "down": "{text} sent the most visits: {a}, down from {b}.",
+          "same": "{text} sent the most visits: {a}, as many as before."
+        },
+        "topNew": "{text} sent the most visits: {a}, where it sent none before.",
+        "topOnly": "{text} sent the most visits: {a}.",
+        "leaveSooner": "These visitors leave quickly: only {aRate} stayed, against {bRate} of all visits to the website.",
+        "stayLonger": "These visitors stay: {aRate} engaged, against {bRate} of all visits to the website.",
+        "converted": "They converted {count, plural, =1 {once} other {# times}}, worth {bMoney}.",
+        "noneConverted": "None of them converted.",
+        "nextStep": "See which pages {text} sends people to, and give each one a clear next step.",
+        "checkAnswers": "Check what {text} says about your services, so the visitors it sends find what it promised."
+      },
+      "landing": {
+        "none": "No landing pages in these dates.",
+        "leakTop": "{text} brings the most visits, {a}, but no conversions.",
+        "leak": "{text} brings {a} visits but no conversions.",
+        "earners": "{text} and {more} make {aMoney} of your {bMoney}.",
+        "earner": "{text} makes {aMoney} of your {bMoney}.",
+        "notSet": "{a} visits, {bRate} of them, landed on a page Google Analytics couldn't name, so you can't tell where those people started.",
+        "noConversions": "None of these {a} visits converted yet.",
+        "groupLead": "Your {text} pages make {aMoney} of your {bMoney}.",
+        "groupsNoValue": "No page group made money in these dates.",
+        "unsorted": "{count, plural, =1 {One page isn't} other {# pages aren't}} in a page group yet, so {count, plural, =1 {its} other {their}} {b} visits don't add up with the rest.",
+        "device": {
+          "mobile": "Phones brought {a} of the {b} visits, and {countC, plural, =0 {no conversions} =1 {one conversion} other {# conversions}}.",
+          "desktop": "Computers brought {a} of the {b} visits, and {countC, plural, =0 {no conversions} =1 {one conversion} other {# conversions}}.",
+          "tablet": "Tablets brought {a} of the {b} visits, and {countC, plural, =0 {no conversions} =1 {one conversion} other {# conversions}}."
+        },
+        "allFrom": "{count, plural, =1 {It came} =2 {Both came} other {All # came}} from {text} ({bMoney}).",
+        "mostFrom": "The most came from {text}: {count, plural, =1 {one conversion} other {# conversions}}, worth {bMoney}.",
+        "engagesLess": "{text} is the most visited page here, with {a} visits, but only {bRate} of them engaged, against {cRate} on every device.",
+        "nextStep": "Give {text} a next step to the service it supports.",
+        "fixNotSet": "Fix the {a} visits that have no landing page.",
+        "seeUnsorted": "Put the {count, plural, =1 {unsorted page} other {# unsorted pages}} into page groups, so their figures add up with the rest.",
+        "readOn": {
+          "mobile": "Read {text} on a phone: its visitors there leave sooner than the rest.",
+          "desktop": "Read {text} on a computer: its visitors there leave sooner than the rest.",
+          "tablet": "Read {text} on a tablet: its visitors there leave sooner than the rest."
+        }
+      },
+      "allPages": {
+        "none": "No pages viewed in these dates.",
+        "notCounting": "{a} pages were viewed, but nothing counts as a conversion yet, so none can be weighed by what it brings in.",
+        "noConversions": "None of the {a} pages viewed made a conversion in these dates.",
+        "madeOn": "Your {count, plural, =1 {one conversion was} other {# conversions were}} made on {countB, plural, =1 {just one page} other {# pages}}.",
+        "best": "{text} made {count, plural, =1 {one} other {#}} of them, from {b} views.",
+        "idleMostViewed": "{text} is your most viewed page, with {a} views, and made none.",
+        "idle": "{text} has {a} views and made none.",
+        "copy": "Copy the next step that works on {text} onto {more}.",
+        "chooseWhatCounts": "Choose what counts as a conversion."
+      },
+      "conversions": {
+        "nothingCounted": "The visits are all here, {a} in these dates, but with nothing counted nobody can say which pages or channels make money.",
+        "fired": "Your property does record {event}: it happened {count, plural, =1 {once} other {# times}} in the same dates.",
+        "tick": "Tick {event} and say what one is worth.",
+        "chooseWhatCounts": "Choose what counts as a conversion, and what each is worth.",
+        "noneHappened": "None of the {count, plural, =1 {kind} other {# kinds}} counted happened in these dates.",
+        "allOne": "{count, plural, =1 {The one conversion was} other {All # conversions were}} {event}.",
+        "topKind": "{event} made {a} of the {b} conversions.",
+        "silent": "{event} {count, plural, =1 {is counted too, but never happened} other {are counted too, but none happened}} in these dates, so either nobody uses {count, plural, =1 {it} other {them}} or Google Analytics isn't recording {count, plural, =1 {it} other {them}}.",
+        "rateDown": "The share of visits that convert fell from {aRate} to {bRate}.",
+        "rateUp": "The share of visits that convert rose from {aRate} to {bRate}.",
+        "trySilent": "Try {event} yourself, and check Google Analytics records {count, plural, =1 {it} other {them}}.",
+        "setValue": "Say what {event} {count, plural, =1 {is} other {are}} worth, so {count, plural, =1 {it adds} other {they add}} to Value."
+      },
+      "trackingHealth": {
+        "allPassing": "All {a} checks pass: Google Analytics is counting this website properly.",
+        "failing": "{count, plural, =1 {One} other {#}} of the {b} checks {count, plural, =1 {needs} other {need}} a look.",
+        "check": {
+          "TRACKING_STOPPED": "A day went by with no visits after weeks of steady ones, so the tracking tag may have come off the website.",
+          "NOTHING_COUNTED": "Nothing counts as a conversion, so no page or channel can be weighed by what it brings in.",
+          "TOO_MUCH_UNKNOWN": "{aRate} of visits can't be put to a channel or a landing page, so their conversions can't be credited to anything.",
+          "SUDDEN_FALL": {
+            "visits": "Last week's visits were {aRate} under the four weeks before, which is usually tracking breaking rather than visitors leaving.",
+            "conversions": "Last week's conversions were {aRate} under the four weeks before, which is usually tracking breaking rather than visitors leaving."
+          },
+          "NO_VALUE": "{event} {countC, plural, =1 {has} other {have}} no value, so {countC, plural, =1 {its} other {their}} {b} conversions add nothing to Value.",
+          "PAYMENT_REFERRALS": "Payment pages show up as referrals, taking the credit for sales.",
+          "SELF_REFERRAL": "The website shows up as its own referral, splitting visits in two.",
+          "STRANGERS": "{b} visits were recorded on other addresses; they're left out of these figures."
+        },
+        "fix": {
+          "TRACKING_STOPPED": "Check the tracking tag is still on every page.",
+          "NOTHING_COUNTED": "Choose what counts as a conversion.",
+          "TOO_MUCH_UNKNOWN": "Make the tracking tag load before anything redirects, so every visit keeps its landing page.",
+          "SUDDEN_FALL": "Send your contact form yourself and check Google Analytics counts it.",
+          "NO_VALUE": "Say what each conversion is worth.",
+          "PAYMENT_REFERRALS": "Add the payment pages to Google Analytics' list of unwanted referrals.",
+          "SELF_REFERRAL": "Add the website's own address to Google Analytics' list of unwanted referrals.",
+          "STRANGERS": "Stop the other addresses sending to Google Analytics: take the tag off them, or give them a property of their own."
+        }
+      },
+      "connection": {
+        "collected": "{text} is connected and collected every day.",
+        "stopped": "Nothing new is coming in for {text}; the figures already collected stay.",
+        "nothingCounted": "Nothing counts as a conversion yet, so no page or channel can be weighed by what it brings in.",
+        "oneKindValued": "You count {event}, worth {aMoney} each.",
+        "oneKind": "You count {event} as a conversion.",
+        "kindsValued": "You count {a} kinds of conversion, each worth {bMoney}.",
+        "kinds": "You count {a} kinds of conversion.",
+        "noneHappened": "None of them happened in the last 30 days.",
+        "onlyHappened": "Only {event} happened in the last 30 days.",
+        "chooseWhatCounts": "Choose what counts as a conversion.",
+        "setMissing": "Say what {event} {count, plural, =1 {is} other {are}} worth, so {count, plural, =1 {it adds} other {they add}} to Value.",
+        "setWorth": "Set what {event} is really worth: every money figure here rests on its {aMoney}.",
+        "checkSilent": "Check {event} {count, plural, =1 {is} other {are}} recorded: {count, plural, =1 {it never happens} other {they never happen}}."
+      },
+      "connect": {
+        "searchConsole": "Search Console shows Google sent {text} {a} clicks in the last 30 days, from {b} showings.",
+        "cantSay": "It can't say which of those visits became an enquiry or a sale, so nobody can yet say which pages make money and which only bring visits.",
+        "add": "Add Google Analytics: one sign-in, as Search Console is connected already."
+      },
+      "chooseEvents": {
+        "noKeyEvents": "The property has no key events yet, so nothing can count as a conversion. Mark the form sent, the call clicked or the purchase as a key event in Google Analytics first.",
+        "noneFired": "None of the property's {a} key events happened in the last 30 days.",
+        "onlyFired": "Of the property's {b} key events, only {event} happened in the last 30 days: {count, plural, =1 {once} other {# times}}.",
+        "fired": "{a} of the property's {b} key events happened in the last 30 days, {event} the most: {c} times.",
+        "purchaseSilent": "“Purchase” is ticked because on most websites it's a sale, but nothing was bought on {text} in the last 30 days.",
+        "silent": "{event} never happened, so {count, plural, =1 {its} other {their}} tracking may not work.",
+        "silentToo": "{event} never happened either, so {count, plural, =1 {its} other {their}} tracking may not work.",
+        "tick": "Tick {event} and say what one is worth.",
+        "tickUntickPurchase": "Tick {event} and say what one is worth; untick “Purchase”.",
+        "untickPurchase": "Untick “Purchase”: nothing is sold here.",
+        "checkSilent": "Tick {event} if {count, plural, =1 {it is an enquiry} other {they are enquiries}}, and have {count, plural, =1 {its} other {their}} tracking checked."
+      },
       "links": {
-        "pagesToPush": "Pages to push",
+        "overview": "Overview",
+        "chooseWhatCounts": "Choose what counts",
+        "changeWhatCounts": "Change what counts",
+        "trackingHealth": "Tracking health",
+        "connection": "Connection",
+        "channels": "Channels",
         "seePage": "See the page",
         "theHeroes": "The heroes",
         "itsSearches": "Its searches in Search Console",
         "openPage": "Open the page",
-        "conversions": "Conversions"
+        "pagesToPush": "Pages to push",
+        "conversions": "Conversions",
+        "landingPages": "Landing pages",
+        "aiAssistants": "AI assistants",
+        "aiAnswers": "AI answers in Discovery",
+        "unsortedPages": "The unsorted pages",
+        "referrals": "Referral",
+        "addGoogleAnalytics": "Add Google Analytics"
       }
     }
   },

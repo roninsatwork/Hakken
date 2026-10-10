@@ -1,11 +1,12 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { HakkenSees, type HakkenSeesStep } from "@/src/ui/components/screens/HakkenSees";
 import type { Seen, SeenPhrase, SeenTarget } from "@/convex/utils/hakkenSees";
 import { formatNumber } from "../../sites/_components/siteFormat";
 import { formatMoney } from "./analyticsFormat";
 import { useAnalyticsHref, useAnalyticsSiteId } from "./useAnalytics";
+import { useEventName } from "./useEventName";
 
 /**
  * What Hakken sees on the Google Analytics screens
@@ -18,17 +19,23 @@ import { useAnalyticsHref, useAnalyticsSiteId } from "./useAnalytics";
  * written (`{a}`), as money in the property's currency (`{aMoney}`, the rules
  * sending money in hundredths, as every Analytics figure is kept), as a share
  * (`{aRate}`, the rules sending a fraction: 0.0014 is "0.14%"), and for
- * plurals (`count`, `countB`, `countC`). A step's link leads to a page of this
- * website's section, with the dates and device chosen (`segment`, `filters`),
- * or to an address of its own (`url`).
+ * plurals (`count`, `countB`, `countC`). A conversion is named by its own
+ * name (`{event}`, GA19): the rules send its event in `text`, several joined
+ * by commas, named here in the reader's words and listed as their language
+ * lists ("“Form sent” and “Live chat started”"). A step's link leads to a
+ * page of this website's section, with the dates and device chosen
+ * (`segment`, `filters`), or to an address of its own (`url`).
  */
 export function AnalyticsSees({ screen, seen, currency }: { screen: string; seen: Seen | null | undefined; currency: string | null | undefined }) {
   const t = useTranslations("googleAnalytics.seen");
   const siteId = useAnalyticsSiteId();
   const hrefOf = useAnalyticsHref(siteId);
+  const nameOf = useEventName();
+  const locale = useLocale();
   if (!seen || seen.says.length === 0) return null;
   const coded = t as unknown as (key: string, values: Record<string, string | number>) => string;
-  const words = (phrase: SeenPhrase) => coded(`${screen}.${phrase.code}`, valuesOf(phrase, currency));
+  const events = (text: string) => eventList(text, nameOf, locale);
+  const words = (phrase: SeenPhrase) => coded(`${screen}.${phrase.code}`, valuesOf(phrase, currency, events));
   const target = (to: SeenTarget): { href: string; external?: boolean } => {
     if (to.url) return to.url.startsWith("/") ? { href: to.url } : { href: to.url, external: true };
     return { href: hrefOf(to.segment ?? "", to.filters) };
@@ -37,8 +44,18 @@ export function AnalyticsSees({ screen, seen, currency }: { screen: string; seen
   return <HakkenSees says={seen.says.map(words)} steps={steps} />;
 }
 
-/** A phrase's numbers as its words take them: as written, as money, and for plurals. */
-export function valuesOf(phrase: SeenPhrase, currency: string | null | undefined): Record<string, string | number> {
+/** Conversions' events, sent joined by commas, by their own names in the reader's language, as it lists them. */
+export function eventList(text: string, nameOf: (eventName: string) => string, locale: string): string {
+  const named = text.split(",").filter(Boolean).map((eventName) => `“${nameOf(eventName)}”`);
+  return new Intl.ListFormat(locale === "en" ? "en-GB" : locale, { type: "conjunction" }).format(named);
+}
+
+/** A phrase's numbers as its words take them: as written, as money, as a share and for plurals; its conversions by name. */
+export function valuesOf(
+  phrase: SeenPhrase,
+  currency: string | null | undefined,
+  events: (text: string) => string = (text) => text,
+): Record<string, string | number> {
   const number = (value = 0) => (Number.isInteger(value) || Math.abs(value) >= 10 ? formatNumber(Math.round(value)) : value.toFixed(1));
   return {
     a: number(phrase.a),
@@ -55,6 +72,7 @@ export function valuesOf(phrase: SeenPhrase, currency: string | null | undefined
     countC: phrase.c ?? 0,
     text: phrase.text ?? "",
     more: phrase.more ?? "",
+    event: events(phrase.text ?? ""),
   };
 }
 

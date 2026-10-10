@@ -30,6 +30,7 @@ import {
 import { tickedAtFirst } from "./utils/analyticsEvents";
 import { startFirstCollection } from "./googleAnalyticsAgentRun";
 import { tellSuperAdmins } from "./googleAnalyticsHealth";
+import { shiftDay } from "./searchConsoleDays";
 
 /**
  * Connecting an owned website to its Google Analytics
@@ -597,6 +598,44 @@ async function searchConsoleOf(ctx: { db: QueryCtx["db"] }, companyWebsiteId: Id
     .first();
 }
 
+/** The days in Search Console's month: its 30 days to its newest, a record each, with room to spare. */
+const SEARCH_CONSOLE_MONTH = 30;
+
+export const searchConsoleMonthValidator = v.union(v.null(), v.object({ clicks: v.number(), impressions: v.number() }));
+
+/**
+ * Search Console's last 30 days — Google's showings of the website's pages and
+ * the clicks they got — for What Hakken sees on Overview and on Not connected
+ * yet (google-analytics-plan.md §14): its day totals, about 30 small records,
+ * read by the website's own hold. Null when Search Console holds nothing.
+ */
+export async function searchConsoleMonth(
+  ctx: { db: QueryCtx["db"] },
+  companyWebsiteId: Id<"companyWebsites">,
+  consoleConnection?: Doc<"searchConsoleConnections"> | null,
+): Promise<{ clicks: number; impressions: number } | null> {
+  const held = consoleConnection === undefined ? await searchConsoleOf(ctx, companyWebsiteId) : consoleConnection;
+  const newest = held?.newestDay;
+  if (!newest) return null;
+  const days = await ctx.db
+    .query("searchConsoleDays")
+    .withIndex("by_hold_country_type_day", (q) => q
+      .eq("companyWebsiteId", companyWebsiteId).eq("country", undefined).eq("searchType", "web")
+      .gte("day", shiftDay(newest, -(SEARCH_CONSOLE_MONTH - 1))).lte("day", newest))
+    .take(SEARCH_CONSOLE_MONTH + 1);
+  if (days.length === 0) return null;
+  return {
+    clicks: days.reduce((sum, day) => sum + day.clicks, 0),
+    impressions: days.reduce((sum, day) => sum + day.impressions, 0),
+  };
+}
+
+/** Whether a website's pages show the way to connect (`AnalyticsGate`): nothing connected, or nothing ever collected. */
+function connectShown(connection: Doc<"googleAnalyticsConnections"> | null): boolean {
+  if (!connection || connection.status === "CONNECTING") return true;
+  return !connection.newestDay && (connection.status === "NEEDS_RECONNECT" || connection.status === "DISCONNECTED");
+}
+
 export const statusConnectionValidator = v.object({
   status: analyticsStatusValidator,
   signingIn: v.boolean(),
@@ -648,6 +687,12 @@ export const googleAnalyticsStatus = tenantQuery({
     ownSites: v.array(v.object({ siteId: v.id("companyWebsites"), host: v.string() })),
     /** Search Console is connected: the first screen offers to add Analytics to that sign-in (§3, screen 1). */
     searchConsoleConnected: v.boolean(),
+    /**
+     * Search Console's last 30 days, read only while the pages show the way
+     * to connect and Search Console is connected: What Hakken sees on Not
+     * connected yet says what its clicks cannot (§14, screen 12).
+     */
+    searchConsole: searchConsoleMonthValidator,
     connection: v.union(v.null(), statusConnectionValidator),
   })),
   handler: async (ctx, args) => {
@@ -655,6 +700,7 @@ export const googleAnalyticsStatus = tenantQuery({
     if (!site) return null;
     const connection = await connectionOfHold(ctx, site.hold._id);
     const consoleConnection = await searchConsoleOf(ctx, site.hold._id);
+    const consoleConnected = consoleConnection?.status === "CONNECTED";
     const holds = await companyHolds(ctx, site.hold.companyId);
     return {
       configured: isGoogleAnalyticsConfigured(),
@@ -665,7 +711,8 @@ export const googleAnalyticsStatus = tenantQuery({
       ownSites: holds
         .filter((entry) => entry.summary.relationship === "OWNED")
         .map((entry) => ({ siteId: entry.summary.siteId, host: entry.summary.host })),
-      searchConsoleConnected: consoleConnection?.status === "CONNECTED",
+      searchConsoleConnected: consoleConnected,
+      searchConsole: consoleConnected && connectShown(connection) ? await searchConsoleMonth(ctx, site.hold._id, consoleConnection) : null,
       connection: connection ? await asStatus(ctx, connection, consoleConnection) : null,
     };
   },

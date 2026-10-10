@@ -4,7 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { metered } from "@/src/test/readMeter";
 import { packList, type ListRow } from "./googleAnalyticsLists";
-import { readAnalyticsList } from "./googleAnalyticsReads";
+import { listSeen, readAnalyticsList } from "./googleAnalyticsReads";
 import { slotKey } from "./googleAnalyticsCollect";
 import { PAGE_RECORD } from "./holdPageRefs";
 
@@ -90,5 +90,23 @@ describe("a large website's Google Analytics", () => {
       // Every read by the website's own hold, or one record by its id.
       expect(reads.every((read) => read.index === null || read.index.startsWith("by_hold")), JSON.stringify(reads.map((read) => read.index))).toBe(true);
     }
+  });
+
+  test("What Hakken sees adds only the few page names it quotes to the list's own budget (§14)", async () => {
+    const { t, siteId } = await bigWebsite();
+    const args = { list: "landing" as const, period: "90" as const, device: "" };
+    const { box, listReads, boxReads } = await t.run(async (ctx) => {
+      const { db, reads } = metered(ctx.db);
+      const list = await readAnalyticsList({ db }, siteId, args);
+      const listReads = reads.length;
+      const box = await listSeen({ db }, { holdId: siteId, siteId }, args, list);
+      return { box, listReads: reads.slice(0, listReads), boxReads: reads.slice(listReads) };
+    });
+    expect(box.says.length).toBeGreaterThan(0);
+    // Each page it names, read from its record of 250 addresses: never the list's every address.
+    expect(boxReads.reduce((sum, read) => sum + read.documents, 0)).toBeLessThanOrEqual(3);
+    const every = [...listReads, ...boxReads];
+    expect(every.reduce((sum, read) => sum + read.bytes, 0)).toBeLessThan(16 * MIB * 0.5);
+    expect(every.reduce((sum, read) => sum + read.documents, 0)).toBeLessThan(32_000 * 0.5);
   });
 });

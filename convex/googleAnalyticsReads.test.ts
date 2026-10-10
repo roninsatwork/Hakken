@@ -1,6 +1,7 @@
 import { convexTest } from "convex-test";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { encryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
@@ -224,6 +225,83 @@ describe("a landing page's own screen", () => {
     expect(opened.live).toBe(false);
     expect(opened.points).toHaveLength(30);
     expect(opened.channels.map((row) => row.label)).toEqual(["AI assistants"]);
+  });
+});
+
+describe("What Hakken sees, from what each screen already reads (§14)", () => {
+  /** Search Console connected for the website, with its last 30 days held: 100 clicks from 20,000 showings. */
+  async function withSearchConsole(t: Harness, siteId: Id<"companyWebsites">) {
+    await t.run(async (ctx) => {
+      const hold = (await ctx.db.get(siteId))!;
+      await ctx.db.insert("searchConsoleConnections", {
+        companyId: hold.companyId, companyWebsiteId: siteId, websiteId: hold.websiteId, status: "CONNECTED", newestDay: "2026-10-07", createdAt: 1, updatedAt: 1,
+      });
+      for (let at = 0; at < 40; at += 1) {
+        await ctx.db.insert("searchConsoleDays", {
+          companyWebsiteId: siteId, searchType: "web", day: shiftDay("2026-10-07", -at), clicks: at < 30 ? 4 : 99, impressions: at < 30 ? 800 : 99, ctr: 0, position: 10, fetchedAt: 1,
+        });
+      }
+    });
+  }
+
+  test("Overview's box weighs conversions against visits and Google's showings, with the page named", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, growing());
+    await withSearchConsole(t, siteId);
+    const overview = await user.query(api.googleAnalyticsReads.analyticsOverview, { siteId, period: "30", device: "" });
+    expect(overview.counting).toBe(true);
+    // The last 30 of the 40 days held: 4 clicks from 800 showings a day.
+    expect(overview.searchConsole).toEqual({ clicks: 120, impressions: 24_000 });
+    expect(overview.seen.says[0]).toEqual({ code: "lead.up.up", a: (990 - 480) / 480, b: 60, c: 150 });
+    expect(overview.seen.says.at(-1)).toEqual({ code: "googleRarely", a: 24_000, b: 0.005 });
+    expect(overview.seen.steps.at(-1)).toMatchObject({ code: "push", to: { segment: "heroes", filters: { tab: "push" } } });
+  });
+
+  test("each list's box is of the whole list, whatever is searched, its pages named by their paths", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, growing());
+    const channels = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "channel", ...listArgs, q: "dir" });
+    expect(channels.rows.map((row) => row.label)).toEqual(["Direct"]);
+    expect(channels.seen.says[0]).toMatchObject({ code: "lead", text: "Organic Search" });
+    expect(channels.figures).toBeNull();
+    const assistants = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "source", channel: "AI assistants", ...listArgs });
+    expect(assistants.figures).toMatchObject({ visits: 270, conversions: 90, value: 30_000, siteVisits: 990 });
+    expect(assistants.seen.says[0]).toMatchObject({ code: "top.up", text: "Perplexity" });
+    const landing = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", ...listArgs });
+    const quoted = [...landing.seen.says, ...landing.seen.steps].flatMap((phrase) => [phrase.text, phrase.more]).filter((value) => value !== undefined);
+    expect(quoted.length).toBeGreaterThan(0);
+    expect(quoted.every((value) => value!.startsWith("/"))).toBe(true);
+    const pages = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", ...listArgs });
+    expect(pages.seen.says[0]).toMatchObject({ code: "madeOn" });
+  });
+
+  test("a device's box waits for Google's answer, then weighs it against every device", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, growing());
+    const asking = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", ...listArgs, device: "mobile" });
+    expect(asking.seen).toEqual({ says: [], steps: [] });
+    await user.action(api.googleAnalyticsLive.askGoogleAnalyticsLive, { siteId, period: "30", device: "mobile", pages: "landing" });
+    const answered = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "landing", ...listArgs, device: "mobile" });
+    expect(answered.seen.says[0]).toMatchObject({ code: "device.mobile", a: 630 });
+  });
+
+  test("Conversions' box, Your websites' figures before, and Search Console only while the way to connect shows", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, growing());
+    await withSearchConsole(t, siteId);
+    const conversions = await user.query(api.googleAnalyticsReads.analyticsConversions, { siteId, period: "30", device: "" });
+    expect(conversions.seen.says[0]).toEqual({ code: "topKind", text: "generate_lead", a: 60, b: 150 });
+    expect(conversions.fired).toEqual([]);
+    const [site] = await user.query(api.googleAnalyticsReads.analyticsSites, {});
+    expect(site).toMatchObject({ visits: 990, visitsBefore: 480, counting: true, checks: 8 });
+    const connected = await user.query(api.googleAnalyticsConnect.googleAnalyticsStatus, { siteId });
+    expect(connected?.searchConsole).toBeNull();
+    await t.run(async (ctx) => {
+      const connection = (await ctx.db.query("googleAnalyticsConnections").collect())[0];
+      await ctx.db.delete(connection._id);
+    });
+    const unconnected = await user.query(api.googleAnalyticsConnect.googleAnalyticsStatus, { siteId });
+    expect(unconnected?.searchConsole).toEqual({ clicks: 120, impressions: 24_000 });
   });
 });
 
