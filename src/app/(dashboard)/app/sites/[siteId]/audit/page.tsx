@@ -20,6 +20,8 @@ import { useSiteRange } from "../../_components/SiteDateRange";
 import { datedRow } from "../../_components/datedRows";
 import { formatDay, formatNumber, toCsv } from "../../_components/siteFormat";
 import { useSite, useSiteId } from "../../_components/useSite";
+import { auditSees } from "@/convex/sees/site";
+import { SiteSees } from "../../_components/SiteSees";
 import { Figure } from "@/src/ui/components/screens/Figure";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { useSiteRecordHref } from "../../_components/siteRecordLinks";
@@ -114,6 +116,7 @@ export default function SiteAuditPage() {
           </span>
         ) : null}
       />
+      <SiteSees screen="audit" seen={audit === undefined ? undefined : auditSees(audit, label)} />
 
       {/* A crawl turned away at the door says so, rather than reading as an empty or a perfect audit (finish-off plan, item 7). */}
       {audit?.turnedAway ? (

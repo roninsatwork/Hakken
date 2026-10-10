@@ -20,6 +20,8 @@ import { TableDownload } from "../../_components/SiteDownloads";
 import { formatDay, formatNumber } from "../../_components/siteFormat";
 import { useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
+import { yourPagesSees } from "@/convex/sees/site";
+import { SiteSees } from "../../_components/SiteSees";
 import { TABLE_PAGE_KEY, useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
 import { useSiteListPage } from "../../_components/useSitePagedTable";
 import { useSiteSort } from "../../_components/useSiteSort";
@@ -159,6 +161,7 @@ export default function SiteYourPagesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<FileStack className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="yourPages" seen={table.result && yourPagesSees(table.result.own, table.result.summary)} />
 
       <FigureRow>
         {FIGURES.map((key) => (

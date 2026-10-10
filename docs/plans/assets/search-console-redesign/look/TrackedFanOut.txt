@@ -2,6 +2,7 @@
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Tracked fan-out queries
+settings-card: What Hakken sees
 search: Find a query…
 filter: How it's doing
 table: Track | Fan-out query | Asked by | Seen | Position | How it's doing | Last checked

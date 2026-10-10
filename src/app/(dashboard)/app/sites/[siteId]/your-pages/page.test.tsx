@@ -26,6 +26,7 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ siteId: "site_1" }),
 }));
 vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
+vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () => ({ platformName: "Hakken" }) }));
 
 /** ronins.co.uk's figures as drawn on 2026-10-03: 139 in four sitemap files, 157 crawled, 158 shown by Google, 66 ranking, 175 pages. */
 const SUMMARY = {

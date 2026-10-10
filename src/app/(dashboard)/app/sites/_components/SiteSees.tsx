@@ -9,6 +9,26 @@ import { siteRecordOf, useSiteListHref, useSiteRecordHref } from "./siteRecordLi
 import { useSiteId } from "./useSite";
 
 /**
+ * Where a box's step leads, as an address with the way back: a record or a
+ * page of this site, or a page by its own address — one of Hakken's ("/app/…")
+ * opened in place, one elsewhere in a new tab. Also for a screen whose rows
+ * open the same places as its box (Your assets).
+ */
+export function useSeenHref() {
+  const siteId = useSiteId();
+  const recordHref = useSiteRecordHref(siteId);
+  const listHref = useSiteListHref(siteId);
+  return (to: SeenTarget): { href: string; external?: boolean } => {
+    if (to.url) return to.url.startsWith("/") ? { href: to.url } : { href: to.url, external: true };
+    if (to.record && to.key !== undefined) {
+      const record = siteRecordOf(to.record, to.key);
+      if (record) return { href: recordHref(record) };
+    }
+    return { href: listHref(to.segment ?? "", to.filters ?? {}) };
+  };
+}
+
+/**
  * A Discovery screen's What Hakken sees box (discovery-detail-and-hakken-sees-
  * plan.md §6): the codes its query worked out, in this screen's words
  * (`sites.seen.<screen>`), each step's link (`sites.seen.links`) leading to a
@@ -17,9 +37,7 @@ import { useSiteId } from "./useSite";
  */
 export function SiteSees({ screen, seen }: { screen: string; seen: Seen | null | undefined }) {
   const t = useTranslations("sites.seen");
-  const siteId = useSiteId();
-  const recordHref = useSiteRecordHref(siteId);
-  const listHref = useSiteListHref(siteId);
+  const hrefOf = useSeenHref();
   const engineLabel = useEngineLabel();
   if (!seen || seen.says.length === 0) return null;
 
@@ -37,14 +55,6 @@ export function SiteSees({ screen, seen }: { screen: string; seen: Seen | null |
     more: phrase.more ?? "",
     engine: phrase.engine ? engineLabel(phrase.engine) : "",
   });
-  const hrefOf = (to: SeenTarget): { href: string; external?: boolean } => {
-    if (to.url) return { href: to.url, external: true };
-    if (to.record && to.key !== undefined) {
-      const record = siteRecordOf(to.record, to.key);
-      if (record) return { href: recordHref(record) };
-    }
-    return { href: listHref(to.segment ?? "", to.filters ?? {}) };
-  };
   const steps: HakkenSeesStep[] = seen.steps.map((step) => ({ words: words(step), link: coded(`links.${step.link}`, {}), ...hrefOf(step.to) }));
 
   return <HakkenSees says={seen.says.map(words)} steps={steps} />;

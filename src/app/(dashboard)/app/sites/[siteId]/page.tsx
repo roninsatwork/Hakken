@@ -15,6 +15,8 @@ import { datedRow } from "../_components/datedRows";
 import { formatDay, formatMonthName, toCsv } from "../_components/siteFormat";
 import { shiftDay, shiftMonth } from "../_components/siteRange";
 import { useSite, useSiteId } from "../_components/useSite";
+import { overviewSees } from "@/convex/sees/site";
+import { SiteSees } from "../_components/SiteSees";
 import { SiteViewSwitch } from "../_components/SiteViewSwitch";
 import { newestOfEach } from "./newestOfEach";
 import { OverviewPanels } from "./OverviewPanels";
@@ -219,6 +221,7 @@ export default function SiteOverviewPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<LayoutDashboard className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="overview" seen={overviewSees(line)} />
 
       <OverviewPanels latest={latest} before={before} extras={extras} />
 

@@ -13484,7 +13484,12 @@
         "paidKeywords": "Parole chiave a pagamento",
         "suggestedCompetitors": "Concorrenti suggeriti",
         "seeRival": "Vedi il concorrente",
-        "contentGap": "Divario di contenuti"
+        "contentGap": "Divario di contenuti",
+        "newAndLostKeywords": "Parole chiave nuove e perse",
+        "topPages": "Pagine principali",
+        "seeAsset": "Vedi la risorsa",
+        "seePages": "Vedi le pagine",
+        "openWebsite": "Apri il sito"
       },
       "website": {
         "notQuoted": "L'IA di Google non ha citato {text} nelle risposte su di te o sui concorrenti.",
@@ -14054,6 +14059,72 @@
         "strongestAi": "{text} è il più nominato: {count, plural, one {una volta} other {# volte}}.",
         "strongestSearch": "{text} condivide più ricerche con te: {a}.",
         "lookAt": "Guarda dove viene citato {text} e tu no."
+      },
+      "overview": {
+        "none": "Ancora nessun dato in queste date: lo riempie il prossimo controllo.",
+        "visitsUp": "Le visite da Google sono salite di circa {a} al mese in queste date, a {b}.",
+        "visitsDown": "Le visite da Google sono scese di circa {a} al mese in queste date, a {b}.",
+        "visitsSteady": "Le visite da Google sono rimaste a circa {a} al mese in queste date.",
+        "searchesUp": "Sei posizionato per {a} ricerche in più, {b} in tutto.",
+        "searchesDown": "Sei posizionato per {a} ricerche in meno, {b} in tutto.",
+        "linksUp": "{a} siti in più ti linkano.",
+        "linksDown": "{a} siti in meno ti linkano.",
+        "seeLosses": "Guarda le ricerche perse o in calo.",
+        "seeTopPages": "Guarda le pagine che portano le tue visite.",
+        "seeLostLinks": "Guarda i siti che hanno smesso di linkarti."
+      },
+      "assets": {
+        "none": "Le tue risorse non sono ancora state calcolate: lo fa il prossimo controllo.",
+        "stages": "{a} delle tue risorse funzionano, {b} sono viste ma perdono e {c} mancano.",
+        "allWorking": "Ogni risorsa trovata funziona.",
+        "mostAt": {
+          "NOT_THERE": "La maggior parte si perde perché non c'è proprio: {a}.",
+          "NOT_SEEN": "La maggior parte si perde perché non viene vista: {a}.",
+          "SEEN_NOT_CHOSEN": "La maggior parte si perde dopo essere stata vista, quando le persone scelgono qualcun altro: {a}."
+        },
+        "fix": {
+          "NOT_THERE": "Fatti trovare prima su {text}.",
+          "NOT_SEEN": "Fai vedere prima {text}.",
+          "SEEN_NOT_CHOSEN": "Fai di {text} quella che le persone scelgono."
+        }
+      },
+      "yourPages": {
+        "notOwn": "Le tue pagine riguarda i tuoi siti: aprine uno.",
+        "none": "Le tue pagine non sono ancora state elencate: le elenca il prossimo controllo.",
+        "pages": "Sul tuo sito sono note {a} pagine; Google ne ha mostrate {b} nei risultati.",
+        "neverShown": "Google non ha mai mostrato {count, plural, one {# pagina} other {# pagine}}.",
+        "notInSitemap": "{count, plural, one {# pagina manca} other {# pagine mancano}} dalla tua sitemap.",
+        "notCrawled": "L'audit del sito non ha raggiunto {count, plural, one {# pagina} other {# pagine}}.",
+        "nothingMissing": "Ogni pagina è nella sitemap, raggiunta e mostrata da Google.",
+        "see": {
+          "neverShown": "Guarda {count, plural, one {la pagina} other {le # pagine}} che Google non ha mai mostrato e collegale dalle tue altre pagine.",
+          "notInSitemap": "Aggiungi {count, plural, one {la pagina mancante} other {le # pagine mancanti}} alla tua sitemap.",
+          "notCrawled": "Guarda {count, plural, one {la pagina} other {le # pagine}} che l'audit del sito non ha raggiunto."
+        }
+      },
+      "audit": {
+        "notCrawled": "Il tuo sito non è ancora stato analizzato: lo fa il prossimo audit del sito.",
+        "turnedAway": "L'audit del sito ha letto solo {a} pagine: il sito l'ha respinto.",
+        "crawled": "L'audit del sito ha letto {a} pagine; il loro punteggio è {b} su 100.",
+        "crawledNoScore": "L'audit del sito ha letto {a} pagine.",
+        "worst": "Il problema peggiore: {text}, su {count, plural, one {# pagina} other {# pagine}}.",
+        "noProblems": "Non ha trovato problemi.",
+        "errors": "In tutto sono stati trovati {a} tipi di errore.",
+        "fix": "Correggi prima {text}."
+      },
+      "auditProblem": {
+        "none": "Nessuna pagina ha {text} nell'audit del sito più recente.",
+        "pages": "{text} è su {count, plural, one {# pagina} other {# pagine}}.",
+        "brokenLinks": "Contengono {count, plural, one {# link rotto} other {# link rotti}} in tutto.",
+        "fixFirst": "Inizia da {text}."
+      },
+      "websites": {
+        "none": "Non hai ancora nessun sito.",
+        "websites": "Hai {count, plural, one {# sito tuo} other {# siti tuoi}} e segui {b} concorrenti.",
+        "mostDown": "{text} si è mosso di più nel controllo più recente: in calo su {a} ricerche, in salita su {b}.",
+        "mostUp": "{text} è salito sul maggior numero di ricerche: {a}.",
+        "notChecked": "Nessuno è ancora stato controllato.",
+        "open": "Apri {text} e guarda cosa si è mosso."
       }
     }
   },

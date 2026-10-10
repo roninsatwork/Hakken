@@ -24,6 +24,7 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ siteId: "site_1" }),
 }));
 vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
+vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () => ({ platformName: "Hakken" }) }));
 
 const PLAN = "search-console-redesign";
 

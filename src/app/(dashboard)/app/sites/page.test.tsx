@@ -27,6 +27,7 @@ vi.mock("next/navigation", () => ({
 }));
 vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
 vi.mock("@/src/ui/components/layout/Header", () => ({ default: () => null }));
+vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () => ({ platformName: "Hakken" }) }));
 
 const row = (siteId: string, host: string, of: { siteId: string; host: string } | null = null) => ({
   siteId,

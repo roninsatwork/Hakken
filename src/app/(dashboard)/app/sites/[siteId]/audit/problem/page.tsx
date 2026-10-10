@@ -14,6 +14,8 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatDay } from "../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../_components/useSite";
+import { problemSees } from "@/convex/sees/site";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 
@@ -85,6 +87,7 @@ export default function SiteAuditProblemPage() {
           </>
         ) : undefined}
       />
+      <SiteSees screen="auditProblem" seen={found && problemSees(found.rows, issue?.pages ?? null, label)} />
 
       <DataTable
         rows={table.pageRows}

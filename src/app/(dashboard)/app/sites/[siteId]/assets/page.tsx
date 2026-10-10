@@ -17,7 +17,8 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../_components/siteFormat";
 import { ListDownload } from "../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../_components/useSite";
-import { useSiteListHref, useSiteRecordHref } from "../../_components/siteRecordLinks";
+import { assetTarget, assetsSees } from "@/convex/sees/site";
+import { SiteSees, useSeenHref } from "../../_components/SiteSees";
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
@@ -52,8 +53,7 @@ export default function YourAssetsPage() {
   const { platformName } = useSystemSettings();
   const siteId = useSiteId();
   const router = useRouter();
-  const recordHref = useSiteRecordHref(siteId);
-  const listHref = useSiteListHref(siteId);
+  const seenHref = useSeenHref();
   const site = useSite();
   const data = useQuery(api.siteAssets.yourAssets, { siteId });
   const [search, setSearch, term] = useSiteSearch();
@@ -72,23 +72,13 @@ export default function YourAssetsPage() {
   const nameWords = (row: Row) => (row.kind === "PROFILE" ? t("profileOf", { town: row.sub ?? row.name }) : row.kind === "AI_APP" ? t("appAnswers", { name: row.name }) : row.kind === "PRESS" ? t("pressName") : row.name);
   const fileBase = `${site?.host ?? "site"}-your-assets`;
   // Where each asset's detail is (discovery-detail-and-hakken-sees-plan.md §4).
-  const assetHref = (row: Row): string => {
-    const rest = row.key.slice(row.key.indexOf(":") + 1);
-    switch (row.kind) {
-      case "WEBSITE": return listHref("");
-      case "PAGE": return recordHref({ kind: "page", page: row.name });
-      case "PROFILE": return listHref("local", { office: rest });
-      case "REVIEW_SITE": return listHref("reviews");
-      case "AI_APP": return listHref("ai/answers");
-      case "AI_OVERVIEW": return listHref("radar/gaps");
-      case "DIRECTORY": return recordHref({ kind: "website", host: row.name });
-      case "PRESS": return listHref("mentions");
-    }
-  };
+  // A row opens where the asset is worked on, as What Hakken sees' step does.
+  const assetHref = (row: Row): string => seenHref(assetTarget(row)).href;
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Layers className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="assets" seen={data && assetsSees(data.rows)} />
 
       {data ? (
         <FigureRow>

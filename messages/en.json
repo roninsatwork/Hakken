@@ -13484,7 +13484,12 @@
         "paidKeywords": "Paid keywords",
         "suggestedCompetitors": "Suggested competitors",
         "seeRival": "See the competitor",
-        "contentGap": "Content gap"
+        "contentGap": "Content gap",
+        "newAndLostKeywords": "New and lost keywords",
+        "topPages": "Top pages",
+        "seeAsset": "See the asset",
+        "seePages": "See the pages",
+        "openWebsite": "Open the website"
       },
       "website": {
         "notQuoted": "Google's AI has not quoted {text} in answers about you or your rivals.",
@@ -14054,6 +14059,72 @@
         "strongestAi": "{text} is named most: {count, plural, one {once} other {# times}}.",
         "strongestSearch": "{text} shares the most searches with you: {a}.",
         "lookAt": "See where {text} is quoted and you are not."
+      },
+      "overview": {
+        "none": "No figures in these dates yet: the next check fills them.",
+        "visitsUp": "Visits from Google rose by about {a} a month over these dates, to {b}.",
+        "visitsDown": "Visits from Google fell by about {a} a month over these dates, to {b}.",
+        "visitsSteady": "Visits from Google held at about {a} a month over these dates.",
+        "searchesUp": "You rank for {a} more searches, {b} in all.",
+        "searchesDown": "You rank for {a} fewer searches, {b} in all.",
+        "linksUp": "{a} more websites link to you.",
+        "linksDown": "{a} fewer websites link to you.",
+        "seeLosses": "See the searches you lost or fell on.",
+        "seeTopPages": "See the pages bringing your visits.",
+        "seeLostLinks": "See the websites that stopped linking to you."
+      },
+      "assets": {
+        "none": "Your assets have not been worked out yet: the next check does it.",
+        "stages": "{a} of your assets are working, {b} are seen but losing, and {c} are missing.",
+        "allWorking": "Every asset found is working.",
+        "mostAt": {
+          "NOT_THERE": "Most are lost by not being there at all: {a}.",
+          "NOT_SEEN": "Most are lost by not being seen: {a}.",
+          "SEEN_NOT_CHOSEN": "Most are lost after being seen, when people choose someone else: {a}."
+        },
+        "fix": {
+          "NOT_THERE": "Get onto {text} first.",
+          "NOT_SEEN": "Get {text} seen first.",
+          "SEEN_NOT_CHOSEN": "Make {text} the one people choose."
+        }
+      },
+      "yourPages": {
+        "notOwn": "Your pages is for your own websites: open one of them.",
+        "none": "Your pages have not been listed yet: the next check lists them.",
+        "pages": "{a} pages are known on your website; Google showed {b} of them in its results.",
+        "neverShown": "Google never showed {count, plural, one {# page} other {# pages}}.",
+        "notInSitemap": "{count, plural, one {# page is} other {# pages are}} missing from your sitemap.",
+        "notCrawled": "The site audit could not reach {count, plural, one {# page} other {# pages}}.",
+        "nothingMissing": "Every page is in your sitemap, reached, and shown by Google.",
+        "see": {
+          "neverShown": "See the {count, plural, one {page} other {# pages}} Google never showed, and link to them from your other pages.",
+          "notInSitemap": "Add the {count, plural, one {page} other {# pages}} missing from your sitemap.",
+          "notCrawled": "See the {count, plural, one {page} other {# pages}} the site audit could not reach."
+        }
+      },
+      "audit": {
+        "notCrawled": "Your website has not been crawled yet: the next site audit does it.",
+        "turnedAway": "The site audit read only {a} pages: the website turned it away.",
+        "crawled": "The site audit read {a} pages; their score is {b} of 100.",
+        "crawledNoScore": "The site audit read {a} pages.",
+        "worst": "The worst problem: {text}, on {count, plural, one {# page} other {# pages}}.",
+        "noProblems": "It found no problem.",
+        "errors": "{a} kinds of error were found in all.",
+        "fix": "Fix {text} first."
+      },
+      "auditProblem": {
+        "none": "No page has {text} at the newest site audit.",
+        "pages": "{text} is on {count, plural, one {# page} other {# pages}}.",
+        "brokenLinks": "They hold {count, plural, one {# broken link} other {# broken links}} in all.",
+        "fixFirst": "Start with {text}."
+      },
+      "websites": {
+        "none": "No website is held yet.",
+        "websites": "You hold {count, plural, one {# website} other {# websites}} of your own and watch {b} competitors.",
+        "mostDown": "{text} moved most at its newest check: down on {a} searches, up on {b}.",
+        "mostUp": "{text} rose on the most searches: {a}.",
+        "notChecked": "None has been checked yet.",
+        "open": "Open {text} and see what moved."
       }
     }
   },
