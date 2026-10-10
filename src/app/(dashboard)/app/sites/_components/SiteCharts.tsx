@@ -78,6 +78,12 @@ export type SiteSeries = {
    * that are not (Search Console's average position beside its clicks).
    */
   reversed?: boolean;
+  /**
+   * A key of the data whose truthy value marks that point of this line with a
+   * dot: Google Analytics' Overview marks each day with a conversion on its
+   * visits (google-analytics-plan.md §15, screen 2).
+   */
+  marks?: string;
 };
 
 /**
@@ -96,12 +102,15 @@ const isPart = (row: Record<string, unknown> | undefined) => row?.part === true;
 
 /**
  * A line's point for a part-week or part-month (`DatedRow.part`): an open
- * ring in the line's colour, so its dip reads as fewer days, not a fall. The
- * other points draw nothing, or the usual dot on a line too short to read.
+ * ring in the line's colour, so its dip reads as fewer days, not a fall. A
+ * point the line marks (`SiteSeries.marks`) is a solid dot in its colour,
+ * kept apart from the ring. The other points draw nothing, or the usual dot
+ * on a line too short to read.
  */
-function PartDot({ cx, cy, stroke, payload, index, solid }: { cx?: number; cy?: number; stroke?: string; payload?: Record<string, unknown>; index?: number; solid: boolean }) {
+function PartDot({ cx, cy, stroke, payload, index, solid, marks }: { cx?: number; cy?: number; stroke?: string; payload?: Record<string, unknown>; index?: number; solid: boolean; marks?: string }) {
   if (cx === undefined || cy === undefined) return <g key={index} />;
   if (isPart(payload)) return <circle key={index} cx={cx} cy={cy} r={4} stroke={stroke} strokeWidth={2} className="fill-background" />;
+  if (marks && payload?.[marks]) return <circle key={index} cx={cx} cy={cy} r={4} fill={stroke} strokeWidth={1.5} className="stroke-background" />;
   return solid ? <circle key={index} cx={cx} cy={cy} r={3} fill={stroke} /> : <g key={index} />;
 }
 
@@ -178,7 +187,7 @@ export function SiteLineChart({
                 stroke={entry.colour}
                 strokeWidth={entry.dashed ? 1.5 : 2.25}
                 strokeDasharray={entry.dashed ? "5 4" : undefined}
-                dot={data.some(isPart) ? (props: Record<string, unknown>) => <PartDot {...props} solid={data.length < 3} /> : data.length < 3}
+                dot={entry.marks || data.some(isPart) ? (props: Record<string, unknown>) => <PartDot {...props} solid={data.length < 3} marks={entry.marks} /> : data.length < 3}
                 connectNulls
                 isAnimationActive={false}
               />
