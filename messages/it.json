@@ -15111,10 +15111,10 @@
         "page": "Pagina",
         "what": "Cosa fare",
         "worth": "Valore al mese",
-        "task": "Attività Hakken"
+        "task": "Attività {platformName}"
       },
-      "taskMake": "Crea un'attività Hakken",
-      "taskMade": "Un'attività Hakken controlla questa pagina",
+      "taskMake": "Crea un'attività {platformName}",
+      "taskMade": "Un'attività {platformName} controlla questa pagina",
       "taskAsk": {
         "push": "Tieni d'occhio {page} su {host} mentre la portiamo in prima pagina: dimmi quando i suoi visitatori da Google aumentano della metà.",
         "click": "Tieni d'occhio {page} su {host} mentre riscriviamo titolo e descrizione: dimmi quando i suoi visitatori da Google aumentano di un quinto.",

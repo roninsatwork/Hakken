@@ -15111,10 +15111,10 @@
         "page": "Page",
         "what": "What to do",
         "worth": "Worth a month",
-        "task": "Hakken task"
+        "task": "{platformName} task"
       },
-      "taskMake": "Make it a Hakken task",
-      "taskMade": "A Hakken task watches this page",
+      "taskMake": "Make it a {platformName} task",
+      "taskMade": "A {platformName} task watches this page",
       "taskAsk": {
         "push": "Keep an eye on {page} on {host} while we push it onto page one: tell me when its visitors from Google rise by half.",
         "click": "Keep an eye on {page} on {host} while we rewrite its title and description: tell me when its visitors from Google rise by a fifth.",

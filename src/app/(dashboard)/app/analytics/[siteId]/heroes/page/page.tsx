@@ -6,6 +6,7 @@ import { useQuery } from "convex/react";
 import { ArrowUpRight, Check, ListTodo, LogIn } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
@@ -37,6 +38,7 @@ export default function AnalyticsHeroPage() {
 
 function HeroPageBody({ status }: { status: AnalyticsStatus }) {
   const t = useTranslations("googleAnalytics.heroes");
+  const { platformName } = useSystemSettings();
   const tp = useTranslations("googleAnalytics.heroes.page");
   const siteId = useAnalyticsSiteId();
   const hrefFor = useAnalyticsHref(siteId);
@@ -72,12 +74,12 @@ function HeroPageBody({ status }: { status: AnalyticsStatus }) {
             {found.task ? (
               <span className="inline-flex items-center gap-1.5 text-[12px] text-success">
                 <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                {t("taskMade")}
+                {t("taskMade", { platformName })}
               </span>
             ) : taskHref ? (
               <Link href={taskHref} className="inline-flex items-center gap-1.5 text-[12px] text-secondary hover:text-foreground">
                 <ListTodo className="h-3.5 w-3.5" aria-hidden="true" />
-                {t("taskMake")}
+                {t("taskMake", { platformName })}
               </Link>
             ) : null}
           </div>

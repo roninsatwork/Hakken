@@ -7,6 +7,7 @@ import type { FunctionReturnType } from "convex/server";
 import { Check, ListTodo, SearchX, Target } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
@@ -65,6 +66,7 @@ export default function AnalyticsHeroesPage() {
 
 function HeroesBody({ status }: { status: AnalyticsStatus }) {
   const t = useTranslations("googleAnalytics.heroes");
+  const { platformName } = useSystemSettings();
   const router = useRouter();
   const siteId = useAnalyticsSiteId();
   const hrefFor = useAnalyticsHref(siteId);
@@ -112,19 +114,19 @@ function HeroesBody({ status }: { status: AnalyticsStatus }) {
     },
     {
       key: "task",
-      header: t("columns.task"),
+      header: t("columns.task", { platformName }),
       align: "right",
       sortable: true,
       cell: (row) => row.task ? (
-        <span className="inline-flex text-success" title={t("taskMade")} aria-label={t("taskMade")}>
+        <span className="inline-flex text-success" title={t("taskMade", { platformName })} aria-label={t("taskMade", { platformName })}>
           <Check className="h-4 w-4" aria-hidden="true" />
         </span>
       ) : (
         <Link
           href={taskHref(row)}
           className="inline-flex text-secondary hover:text-foreground"
-          title={t("taskMake")}
-          aria-label={t("taskMake")}
+          title={t("taskMake", { platformName })}
+          aria-label={t("taskMake", { platformName })}
           onClick={(event) => event.stopPropagation()}
         >
           <ListTodo className="h-4 w-4" aria-hidden="true" />

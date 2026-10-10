@@ -566,6 +566,8 @@ export const noteProblem = internalMutation({
       ...(reconnect && working ? { status: "NEEDS_RECONNECT" as const } : {}),
       updatedAt: now,
     });
+    // Its visits leave the hold's pages at their next rebuild, as Search Console's clicks do when it stops.
+    if (reconnect && connection.status === "CONNECTED") await noteHoldPagesChanged(ctx, connection.companyWebsiteId);
     return null;
   },
 });
