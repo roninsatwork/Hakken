@@ -14,6 +14,7 @@ import { checkedTopicKey } from "./topics";
 import { kindTopicKey, readInsightsCounts, refreshInsightsCounts, type InsightsCounts } from "./insightsCounts";
 import { listPageArgs, listPageResult, pageOfList } from "./siteListPages";
 import { knowledgeStateOf, knowledgeStateValidator } from "./newsKnowledge";
+import { syncFollowInList } from "./knowledgeList";
 
 /**
  * "Who to follow" (docs/plans/active/knowledge-news-and-digest-plan.md, phase
@@ -325,6 +326,8 @@ export const updateFollow = superAdminMutation({
     await ctx.db.patch(followId, { ...checkedFollow(input), topic: await checkedTopicKey(ctx, input.topic), updatedAt: Date.now() });
     if (input.picked !== undefined) await applyPick(ctx, existing, input.picked);
     await refreshInsightsCounts(ctx);
+    // Knowledge's list names them on what was ticked from them.
+    if (existing.name !== input.name.trim()) await syncFollowInList(ctx, followId);
     await requestTranslation(ctx, "newsFollows", followId);
     await auditContentChange(ctx, "UPDATE_NEWS_FOLLOW", "newsFollows", followId, { name: input.name });
     return null;
@@ -363,6 +366,7 @@ export const deleteFollow = superAdminMutation({
     await ctx.db.delete(args.followId);
     await removeTranslations(ctx, "newsFollows", args.followId);
     await refreshInsightsCounts(ctx);
+    await syncFollowInList(ctx, args.followId);
     await auditContentChange(ctx, "DELETE_NEWS_FOLLOW", "newsFollows", args.followId, { name: existing.name });
     return null;
   },

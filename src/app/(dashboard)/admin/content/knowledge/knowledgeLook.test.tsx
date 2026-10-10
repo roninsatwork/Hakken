@@ -1,23 +1,25 @@
 import { cleanup, fireEvent, renderWithProviders as render, screen } from "@/src/test/renderWithProviders";
 import { afterEach, beforeEach, describe, it, vi } from "vitest";
-import { useAction, useMutation, usePaginatedQuery, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 
 import { expectApprovedLook } from "@/src/test/lookOutline";
 import { answerQueries } from "@/src/test/siteViewFixtures";
-import LibraryAdminPage from "./page";
+import KnowledgeAdminPage from "./page";
 import { LibraryArticleEditor } from "./LibraryArticleEditor";
 
 /**
- * The Library holds to the looks Anthony approved on the "Content Library"
- * canvas, 2026-10-06 (docs/plans/active/content-library-plan.md;
- * design-drift-plan D4): each screen, rendered with sample rows in English,
- * reads as the outline saved beside its board in
- * docs/plans/assets/content-library/look/.
+ * Knowledge holds to the looks Anthony approved (design-drift-plan D4): its
+ * one list and Add from a link on the "Content — people and knowledge" canvas,
+ * 2026-10-10 (docs/plans/active/content-people-knowledge-plan.md, boards 5 and
+ * 6), and a web article's own page on the "Content Library" canvas,
+ * 2026-10-06 (content-library-plan.md, board 3), now opened from Knowledge.
+ * Each screen, rendered with sample rows in English, reads as the outline
+ * saved beside its board.
  */
 
 vi.mock("convex/react", async () => (await import("@/src/test/screenMocks")).convexReact());
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/admin/content/helpful-content",
+  usePathname: () => "/admin/content/knowledge",
   useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ replace: vi.fn(), push: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
   useParams: () => ({}),
@@ -25,7 +27,20 @@ vi.mock("next/navigation", () => ({
 vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
 vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () => ({ platformName: "Hakken" }) }));
 
-const PLAN = "content-library";
+const PLAN = "content-people-knowledge";
+const LIBRARY_PLAN = "content-library";
+const LIST_ROW = {
+  _id: "list_1", kind: "WEB", articleId: "article_1", title: "Organic CTR study", came: "LINK", fromName: "Advanced Web Ranking", followId: null,
+  topic: "TRAFFIC", words: 2140, status: "PUBLISHED", addedAt: 2, leadUntil: null, canLead: true, translations: { done: 1, total: 1 },
+};
+const LIST = {
+  page: {
+    rows: [LIST_ROW, { ...LIST_ROW, _id: "list_2", kind: "OURS", articleId: "ours_1", title: "How is traffic worked out?", came: "WRITTEN", fromName: "", status: "DRAFT", addedAt: 1 }],
+    total: 2, page: 1, pages: 1, size: 15, cut: null, preparing: false,
+  },
+  counts: { published: 1, ours: 1, web: 1 },
+  people: [],
+};
 
 const ROW = {
   _id: "article_1",
@@ -49,16 +64,10 @@ const ROW = {
 
 beforeEach(() => {
   vi.mocked(useQuery).mockImplementation(answerQueries({
-    "libraryArticles:listAdminPublications": ["Advanced Web Ranking", "Google Search Central"],
+    "knowledgeList:listKnowledgeForAdmin": LIST,
     "libraryArticles:getArticle": { ...ROW, body: "# Organic CTR study\n\nHow often people click.", translations: { done: 1, total: 1 } },
     "topics:listTopicChoices": [{ key: "TRAFFIC", nameEn: "Traffic" }, { key: "RANKINGS", nameEn: "Rankings" }],
   }));
-  vi.mocked(usePaginatedQuery).mockReturnValue({
-    results: [ROW, { ...ROW, _id: "article_2", title: "How Google Search works", publication: "Google Search Central", status: "DRAFT", createdAt: 1 }],
-    status: "Exhausted",
-    isLoading: false,
-    loadMore: vi.fn(),
-  } as never);
   vi.mocked(useMutation).mockImplementation((() => vi.fn()) as never);
   vi.mocked(useAction).mockImplementation((() => vi.fn(async () => ({
     status: "read",
@@ -76,24 +85,24 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-describe("Helpful content's approved looks (was the Library)", () => {
-  it("Library", async () => {
-    const { container } = render(<LibraryAdminPage />);
+describe("Knowledge's approved looks", () => {
+  it("Knowledge", async () => {
+    const { container } = render(<KnowledgeAdminPage />);
     await screen.findByText("Organic CTR study");
-    await expectApprovedLook(container, PLAN, "Library", "Admin → Content → Helpful content");
+    await expectApprovedLook(container, PLAN, "Knowledge", "Admin → Content → Knowledge");
   });
 
-  it("AddArticle", async () => {
+  it("Article", async () => {
     const { container } = render(<LibraryArticleEditor />);
     fireEvent.change(screen.getByLabelText(/Article address/), { target: { value: "https://developers.google.com/search/docs/appearance/ai-features" } });
     fireEvent.click(screen.getByRole("button", { name: /Read the page/ }));
     await screen.findByDisplayValue("AI features and your website");
-    await expectApprovedLook(container, PLAN, "AddArticle", "Admin → Content → Helpful content → Add an article, once its page is read");
+    await expectApprovedLook(container, PLAN, "Article", "Admin → Content → Knowledge → Add from a link, once its page is read");
   });
 
-  it("Article", async () => {
+  it("a web article's own page", async () => {
     const { container } = render(<LibraryArticleEditor articleId={"article_1" as never} />);
     await screen.findByDisplayValue("Organic CTR study");
-    await expectApprovedLook(container, PLAN, "Article", "Admin → Content → Helpful content → an article");
+    await expectApprovedLook(container, LIBRARY_PLAN, "Article", "Admin → Content → Knowledge → an article from the web");
   });
 });

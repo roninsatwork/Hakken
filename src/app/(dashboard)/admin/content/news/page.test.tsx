@@ -11,6 +11,7 @@ const { setInKnowledge } = vi.hoisted(() => ({ setInKnowledge: vi.fn() }));
 vi.mock("convex/react", async () => (await import("@/src/test/screenMocks")).convexReact());
 vi.mock("next-intl", async () => (await import("@/src/test/screenMocks")).nextIntl());
 vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
+vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () => ({ platformName: "Hakken" }) }));
 vi.mock("next/navigation", async () => (await import("@/src/test/screenMocks")).nextNavigation({}));
 
 const story = (id: string, title: string, extra: Record<string, unknown> = {}) => ({

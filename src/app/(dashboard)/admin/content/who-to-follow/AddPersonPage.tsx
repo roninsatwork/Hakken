@@ -4,6 +4,7 @@ import { useMutation } from "convex/react";
 import { Plus, UserPlus, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import { channelKindOf, MAX_CHANNELS } from "@/convex/utils/followChannels";
 import { Button } from "@/src/ui/components/screens/Button";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
@@ -29,6 +30,7 @@ const EMPTY: PersonForm = { name: "", channels: ["", ""], whyEn: "", topic: "", 
  */
 export function AddPersonPage() {
   const t = useTranslations("admin.newsFollows");
+  const { platformName } = useSystemSettings();
   const tKinds = useTranslations("admin.newsFollows.kinds");
   const createFollow = useMutation(api.newsFollows.createFollow);
   const editor = useContentForm({
@@ -36,7 +38,9 @@ export function AddPersonPage() {
     row: null,
     empty: EMPTY,
     toForm: (form: PersonForm) => form,
-    save: ({ topic, channels, ...form }) => createFollow({ ...form, channels: channels.filter((address) => address.trim()), topic: topic || undefined }),
+    save: ({ topic, channels, ...form }) => {
+      return createFollow({ ...form, channels: channels.filter((address) => address.trim()), topic: topic || undefined });
+    },
     backHref: BASE,
     doneHref: (followId) => `${BASE}/${String(followId)}`,
     saveFailed: t("errors.saveFailed"),
@@ -50,14 +54,14 @@ export function AddPersonPage() {
       back={{ label: t("back"), href: BASE }}
       icon={<UserPlus className="h-6 w-6 text-brand" />}
       title={t("add.title")}
-      description={t("add.subtitle")}
+      description={t("add.subtitle", { platformName })}
       error={editor.error}
       isSaving={editor.isSaving}
       saveLabel={t("add.save")}
       onSubmit={editor.submit}
     >
       <SettingsCard title={t("add.cardTitle")}>
-        <Field label={t("nameLabel")} required value={editor.form.name} onChange={(event) => editor.update({ name: event.target.value })} placeholder="Aleyda Solis" />
+        <Field label={t("nameLabel")} required value={editor.form.name} onChange={(event) => editor.update({ name: event.target.value })} placeholder={t("add.namePlaceholder")} />
         <div className="flex flex-col gap-1.5">
           <FieldLabel htmlFor="person-channel-0">{t("add.channelsLabel")}</FieldLabel>
           {channels.map((address, index) => (
@@ -90,10 +94,10 @@ export function AddPersonPage() {
           ) : null}
           <FieldHint>{t("add.channelsHint")}</FieldHint>
         </div>
-        <TextAreaField label={t("whyLabel")} hint={t("whyHint")} required value={editor.form.whyEn} onChange={(event) => editor.update({ whyEn: event.target.value })} className="min-h-[96px] resize-y" />
+        <TextAreaField label={t("whyLabel")} hint={t("whyHint", { platformName })} required value={editor.form.whyEn} onChange={(event) => editor.update({ whyEn: event.target.value })} className="min-h-[96px] resize-y" />
         <FollowDetailsFields name={editor.form.name} details={editor.form} onChange={editor.update} />
       </SettingsCard>
-      <Notice>{t("add.notice")}</Notice>
+      <Notice>{t("add.notice", { platformName })}</Notice>
     </ContentEditPage>
   );
 }

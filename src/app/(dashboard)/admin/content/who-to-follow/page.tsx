@@ -7,6 +7,7 @@ import type { FunctionReturnType } from "convex/server";
 import { Edit2, Plus, Trash2, UserPlus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import type { FollowKind } from "@/convex/newsSchema";
 import useDebounce from "@/src/hooks/useDebounce";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
@@ -48,6 +49,7 @@ const FIRST_DIRECTION: Record<SortKey, "asc" | "desc"> = { name: "asc", topic: "
  */
 export default function WhoToFollowAdminPage() {
   const t = useTranslations("admin.newsFollows");
+  const { platformName } = useSystemSettings();
   const router = useRouter();
   const picks = useQuery(api.newsFollows.listPicksForAdmin, {});
   const topicChoices = useTopicChoices();
@@ -108,7 +110,7 @@ export default function WhoToFollowAdminPage() {
         divider
         icon={<UserPlus className="h-6 w-6 text-brand" />}
         title={t("title")}
-        description={t("subtitle")}
+        description={t("subtitle", { platformName })}
         action={
           <PagePrimaryAction variant="brand" icon={<Plus className="h-4 w-4" />} onClick={() => router.push(`${BASE}/new`)}>
             {t("create")}

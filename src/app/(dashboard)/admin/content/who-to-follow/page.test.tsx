@@ -16,6 +16,7 @@ const { update, create, setPick, setCollect, setInKnowledge, push } = vi.hoisted
 vi.mock("convex/react", async () => (await import("@/src/test/screenMocks")).convexReact());
 vi.mock("next-intl", async () => (await import("@/src/test/screenMocks")).nextIntl());
 vi.mock("next/link", async () => (await import("@/src/test/screenMocks")).nextLink());
+vi.mock("@/src/context/SystemSettingsContext", () => ({ useSystemSettings: () => ({ platformName: "Hakken" }) }));
 vi.mock("next/navigation", async () => ({
   ...(await import("@/src/test/screenMocks")).nextNavigation({}),
   useRouter: () => ({ push, replace: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),

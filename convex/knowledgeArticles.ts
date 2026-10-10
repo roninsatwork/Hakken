@@ -11,6 +11,7 @@ import { refreshInsightsCounts } from "./insightsCounts";
 import { liveLeadUntil } from "./leadStory";
 import { removeArticleFromWiki, syncArticleToWiki } from "./knowledgeArticleWiki";
 import { readerFields, removeTranslations, requestTranslation, sourceFields, translationProgress, translationProgressValidator } from "./contentTranslation";
+import { syncOursInList } from "./knowledgeList";
 
 /**
  * Knowledge articles (docs/plans/active/knowledge-news-and-digest-plan.md, phase 1):
@@ -286,6 +287,7 @@ export const createArticle = superAdminMutation({
     if (created) await syncArticleToWiki(ctx, created, ctx.userId);
     if (article.status === "PUBLISHED") await requestTranslation(ctx, "knowledgeArticles", articleId);
     await refreshInsightsCounts(ctx);
+    await syncOursInList(ctx, articleId);
     return articleId;
   },
 });
@@ -310,6 +312,7 @@ export const updateArticle = superAdminMutation({
     if (updated) await syncArticleToWiki(ctx, updated, ctx.userId);
     if (article.status === "PUBLISHED") await requestTranslation(ctx, "knowledgeArticles", articleId);
     await refreshInsightsCounts(ctx);
+    await syncOursInList(ctx, articleId);
     return null;
   },
 });
@@ -325,6 +328,7 @@ export const deleteArticle = superAdminMutation({
     await removeTranslations(ctx, "knowledgeArticles", args.articleId);
     await auditContentChange(ctx, "DELETE_KNOWLEDGE_ARTICLE", "knowledgeArticles", args.articleId, { title: existing.titleEn, status: existing.status });
     await refreshInsightsCounts(ctx);
+    await syncOursInList(ctx, args.articleId);
     return null;
   },
 });

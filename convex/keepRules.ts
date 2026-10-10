@@ -178,6 +178,7 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   libraryArticleSections: RECORD,
   topics: RECORD,
   insightsCounts: LATEST,
+  knowledgeList: RECORD,
   newsTakenDown: RECORD,
   newsFollows: RECORD,
   followChannels: RECORD,

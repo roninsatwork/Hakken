@@ -25,6 +25,7 @@ import {
   libraryUrlKey,
   termsFound,
 } from "./utils/libraryPage";
+import { syncWebInList } from "./knowledgeList";
 
 /**
  * Helpful content — the Library until 2026-10-06 (docs/plans/active/content-
@@ -313,6 +314,7 @@ export async function storeArticle(
   await syncSections(ctx, articleId, article, body);
   await translateForReaders(ctx, articleId);
   await refreshInsightsCounts(ctx);
+  await syncWebInList(ctx, articleId);
   return articleId;
 }
 
@@ -327,6 +329,7 @@ export async function removeArticle(ctx: MutationCtx, articleId: Id<"libraryArti
   await ctx.db.delete(articleId);
   await removeTranslations(ctx, "libraryArticles", articleId);
   await refreshInsightsCounts(ctx);
+  await syncWebInList(ctx, articleId);
 }
 
 /**
@@ -375,6 +378,9 @@ export const updateArticle = superAdminMutation({
       ...article,
       readAt: article.readAt ?? existing.readAt,
       leadUntil: article.shown ? existing.leadUntil : undefined,
+      // Where it came from stays: the News story and the person it was ticked from.
+      ...(existing.newsItemId ? { newsItemId: existing.newsItemId } : {}),
+      ...(existing.followId ? { followId: existing.followId } : {}),
       createdAt: existing.createdAt,
       updatedAt: Date.now(),
     });
@@ -384,6 +390,7 @@ export const updateArticle = superAdminMutation({
     await syncSections(ctx, articleId, article, body);
     await translateForReaders(ctx, articleId);
     await refreshInsightsCounts(ctx);
+    await syncWebInList(ctx, articleId);
     await auditContentChange(ctx, "UPDATE_LIBRARY_ARTICLE", "libraryArticles", articleId, { title: article.title, status: article.status, was: existing.status });
     return null;
   },

@@ -14,6 +14,7 @@ import {
   translationProgressValidator,
 } from "./contentTranslation";
 import { readInsightsCounts, refreshInsightsCounts } from "./insightsCounts";
+import { syncOursInList, syncWebInList } from "./knowledgeList";
 
 /**
  * Topics (docs/plans/active/insights-helpful-content-plan.md, IH20): one list,
@@ -211,6 +212,8 @@ export const deleteTopic = superAdminMutation({
       ctx.db.query("newsFollows").withIndex("by_topic", (q) => q.eq("topic", key)).take(USES_READ),
     ]);
     await Promise.all([...knowledge, ...helpful, ...people].map((row) => ctx.db.patch(row._id, { topic: undefined })));
+    for (const article of knowledge) await syncOursInList(ctx, article._id);
+    for (const article of helpful) await syncWebInList(ctx, article._id);
     await ctx.db.delete(args.topicId);
     await removeTranslations(ctx, "topics", args.topicId);
     // Close the gap its place left.

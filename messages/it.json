@@ -6726,7 +6726,7 @@
     },
     "knowledgeArticles": {
       "title": "Conoscenza",
-      "subtitle": "Gli articoli che ogni utente registrato legge in Insights, sotto Conoscenza. Vede solo quelli pubblicati.",
+      "subtitle": "L'esperienza SEO di {platformName}. Chiedi a {platformName} consiglia i clienti da questi, come farebbe un'agenzia SEO: articoli che scriviamo noi e articoli interi conservati dagli esperti che seguiamo.",
       "create": "Nuovo articolo",
       "createTitle": "Nuovo articolo",
       "editTitle": "Modifica articolo",
@@ -6746,20 +6746,51 @@
       "deleteConfirm": "Eliminare <highlight>{title}</highlight>?",
       "columns": {
         "article": "Articolo",
+        "from": "Da",
+        "topic": "Argomento",
+        "words": "Parole",
         "status": "Stato",
+        "added": "Aggiunto",
+        "translations": "Traduzioni",
         "updated": "Aggiornato",
-        "actions": "Azioni",
-        "translations": "Traduzioni"
+        "actions": "Azioni"
       },
       "errors": {
         "saveFailed": "Impossibile salvare l'articolo. Riprova.",
-        "deleteFailed": "Impossibile eliminare l'articolo. Riprova."
+        "deleteFailed": "Impossibile eliminare l'articolo. Riprova.",
+        "downloadFailed": "Impossibile creare il CSV. Riprova."
       },
       "back": "Conoscenza",
       "titleLabel": "Titolo",
       "bodyLabel": "Articolo",
       "topicLabel": "Argomento",
-      "noTopic": "Nessun argomento"
+      "noTopic": "Nessun argomento",
+      "addFromLink": "Aggiungi da un link",
+      "clientsNotice": "I clienti leggono ogni articolo pubblicato in Insights. Per un articolo dal web vedono il nostro riassunto e cosa significa per loro, poi aprono l'originale: mai il testo copiato. Gli articoli spuntati in Notizie arrivano qui da soli.",
+      "counts": "{published, plural, one {# pubblicato} other {# pubblicati}} · {ours, plural, one {# nostro} other {# nostri}}, {web, plural, other {# dal web}}",
+      "download": "Scarica CSV",
+      "downloading": "Preparazione…",
+      "deleteWarningNews": "Lettori e Chiedi a {platformName} smettono subito di vederlo, e la sua storia in Notizie viene tolta da Conoscenza. Non si può annullare.",
+      "from": {
+        "ours": "Nostri",
+        "web": "Dal web"
+      },
+      "came": {
+        "WRITTEN": "Scritto qui",
+        "LINK": "Aggiunto da un link",
+        "NEWS": "Spuntato in Notizie"
+      },
+      "csv": {
+        "came": "Come è arrivato"
+      },
+      "filters": {
+        "from": "Da",
+        "everyone": "Tutti",
+        "topic": "Argomento",
+        "allTopics": "Ogni argomento",
+        "status": "Stato",
+        "allStatuses": "Ogni stato"
+      }
     },
     "libraryArticles": {
       "title": "Contenuti utili",
@@ -6798,10 +6829,10 @@
       "delete": "Elimina articolo",
       "deleteTitle": "Elimina articolo",
       "deleteWarning": "Chiedi a {platformName} smette subito di leggerlo. L'operazione non si può annullare.",
-      "deleteConfirm": "Eliminare <highlight>{title}</highlight> da Contenuti utili?",
-      "back": "Contenuti utili",
-      "createTitle": "Aggiungi un articolo",
-      "createSubtitle": "Incolla l'indirizzo dell'articolo. {platformName} legge la pagina tramite Firecrawl e compila ciò che trova; controlla, poi aggiungilo.",
+      "deleteConfirm": "Eliminare <highlight>{title}</highlight> da Conoscenza?",
+      "back": "Conoscenza",
+      "createTitle": "Aggiungi un articolo da un link",
+      "createSubtitle": "Per un buon articolo di un sito che non segui. {platformName} legge l'intera pagina una volta tramite Firecrawl, scrive ciò che leggono i clienti e consiglia da tutto il testo. Controlla ciò che ha trovato, poi aggiungilo.",
       "addressLabel": "Indirizzo dell'articolo",
       "addressHint": "La pagina di un solo articolo, non un intero sito.",
       "addressHintSaved": "Se l'articolo è stato spostato, cambia l'indirizzo e leggilo di nuovo.",
@@ -6810,7 +6841,7 @@
       "readAgain": "Leggi di nuovo",
       "readNotice": "Letta ora tramite Firecrawl: {words, plural, =1 {# parola} other {# parole}}. Controlla ciò che ha trovato e completa quello che manca.",
       "readNoticeLanguage": "Letta ora tramite Firecrawl: {words, plural, =1 {# parola} other {# parole}}, in {language}. Controlla ciò che ha trovato e completa quello che manca.",
-      "readCut": "La pagina era più lunga di quanto conservano i Contenuti utili, quindi il testo si ferma a {limit} caratteri.",
+      "readCut": "La pagina era più lunga di quanto conserva Conoscenza, quindi il testo si ferma a {limit} caratteri.",
       "unread": {
         "bad_address": "Questo non è l'indirizzo di un articolo. Incollane uno che inizia con https://.",
         "not_configured": "Firecrawl non è configurato in questo ambiente, quindi le pagine non si possono leggere. Incolla tu il testo dell'articolo qui sotto.",
@@ -6820,7 +6851,7 @@
         "timeout": "{platformName} non è riuscito a leggere questa pagina: non ha risposto entro 45 secondi. Riprova, o incolla tu il testo dell'articolo qui sotto.",
         "failed": "{platformName} non è riuscito a leggere questa pagina. Riprova, o incolla tu il testo dell'articolo qui sotto."
       },
-      "duplicate": "Questo articolo è già nei Contenuti utili: <link>{title}</link>.",
+      "duplicate": "Questo articolo è già in Conoscenza: <link>{title}</link>.",
       "whoLabel": "Chi lo legge",
       "whoAsk": "Pubblicato: lettori in Insights e Chiedi a {platformName}",
       "whoDraft": "Bozza: conservato solo qui",
@@ -6842,7 +6873,7 @@
       "bodyPlaceholder": "Incolla qui il testo dell'articolo.",
       "bodyHint": "Come l'ha letto Firecrawl, in testo semplice con **grassetto**, - elenchi, [link](https://…) e ## titoli. Togli ciò che non è l'articolo: menu, pubblicità, riquadri di iscrizione.",
       "bodyHintSaved": "Come l'ha letto Firecrawl, in testo semplice con **grassetto**, - elenchi, [link](https://…) e ## titoli. Solo tu vedi questa copia: Chiedi a {platformName} la legge per rispondere alle domande e i lettori aprono l'originale. Leggerlo di nuovo sostituisce questo testo; {platformName} chiede prima.",
-      "add": "Aggiungi alla biblioteca",
+      "add": "Aggiungi a Conoscenza",
       "save": "Salva modifiche",
       "byline": {
         "published": "pubblicato il {date}",
@@ -6917,7 +6948,7 @@
     },
     "newsFollows": {
       "title": "Chi seguire",
-      "subtitle": "Le persone che Hakken legge per te. Aggiungi una persona e i suoi canali: Hakken raccoglie ciò che pubblica in Notizie.",
+      "subtitle": "Le persone che {platformName} legge per te. Aggiungi una persona e i suoi canali: {platformName} raccoglie ciò che pubblica in Notizie.",
       "create": "Aggiungi una persona",
       "searchPlaceholder": "Trova una persona…",
       "empty": "Ancora nessuno. Aggiungi una persona e i suoi canali.",
@@ -6968,7 +6999,7 @@
       "save": "Salva",
       "nameLabel": "Nome",
       "whyLabel": "Perché li consigliamo",
-      "whyHint": "I clienti lo leggono in Insights. Scritto in inglese; Hakken lo traduce.",
+      "whyHint": "I clienti lo leggono in Insights. Scritto in inglese; {platformName} lo traduce.",
       "topicLabel": "Argomento",
       "noTopic": "Nessun argomento",
       "topicHint": "Ciò che i clienti sfogliano in Insights.",
@@ -6979,7 +7010,7 @@
       "thisEntry": "questa persona",
       "add": {
         "title": "Aggiungi una persona",
-        "subtitle": "Il nome e i canali su cui pubblica. Hakken raccoglie ciò che pubblica in Notizie.",
+        "subtitle": "Il nome e i canali su cui pubblica. {platformName} raccoglie ciò che pubblica in Notizie.",
         "cardTitle": "La persona",
         "channelsLabel": "Canali",
         "firstPlaceholder": "https://x.com/…",
@@ -6989,8 +7020,9 @@
         "removeOne": "Togli questo indirizzo",
         "channelsHint": "Un indirizzo per riga: il suo sito, YouTube, X o LinkedIn. Potrai aggiungerne altri sulla sua pagina.",
         "kindIs": "{kind}",
-        "notice": "Quando la aggiungi, Hakken legge i cinque articoli più recenti di ogni canale che può leggere, poi raccoglie ciò che pubblica dopo. LinkedIn non si può leggere: compare solo in Insights.",
-        "save": "Aggiungi la persona"
+        "notice": "Quando la aggiungi, {platformName} legge i cinque articoli più recenti di ogni canale che può leggere, poi raccoglie ciò che pubblica dopo. LinkedIn non si può leggere: compare solo in Insights.",
+        "save": "Aggiungi la persona",
+        "namePlaceholder": "Aleyda Solis"
       },
       "person": {
         "editDetails": "Modifica i dettagli",
@@ -7157,8 +7189,8 @@
     },
     "newsItems": {
       "title": "Notizie",
-      "subtitle": "Tutto ciò che Hakken ha raccolto dalle persone che segui, e gli aggiornamenti di Google, dal più recente. Va online appena raccolto; rimuovi ciò che non dovrebbe esserci.",
-      "knowledgeNotice": "Notizie conserva un riassunto di ogni storia. Spunta In Conoscenza su quelle buone: Hakken legge e conserva l'intero articolo, Chiedi a Hakken ne impara, ed entra in Conoscenza.",
+      "subtitle": "Tutto ciò che {platformName} ha raccolto dalle persone che segui, e gli aggiornamenti di Google, dal più recente. Va online appena raccolto; rimuovi ciò che non dovrebbe esserci.",
+      "knowledgeNotice": "Notizie conserva un riassunto di ogni storia. Spunta In Conoscenza su quelle buone: {platformName} legge e conserva l'intero articolo, Chiedi a {platformName} ne impara, ed entra in Conoscenza.",
       "searchPlaceholder": "Cerca le storie per titolo",
       "inKnowledge": "{count, plural, =1 {# in Conoscenza} other {# in Conoscenza}}",
       "inKnowledgeMore": "{count}+ in Conoscenza",
@@ -7319,7 +7351,7 @@
       "places": {
         "NEWS": "News",
         "KNOWLEDGE": "Conoscenza",
-        "HELPFUL": "Contenuti utili"
+        "HELPFUL": "Conoscenza"
       },
       "pin": "Apri la prima pagina di News",
       "pinRow": "Apri la prima pagina di News con questo per 7 giorni",

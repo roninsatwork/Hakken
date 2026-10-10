@@ -6726,7 +6726,7 @@
     },
     "knowledgeArticles": {
       "title": "Knowledge",
-      "subtitle": "The articles every signed-in user reads in Insights, under Knowledge. Only published articles are shown to them.",
+      "subtitle": "{platformName}'s SEO expertise. Ask {platformName} advises clients from these, the way an SEO agency would: articles we write, and whole articles kept from the experts we follow.",
       "create": "New article",
       "createTitle": "New article",
       "editTitle": "Edit article",
@@ -6746,20 +6746,51 @@
       "deleteConfirm": "Delete <highlight>{title}</highlight>?",
       "columns": {
         "article": "Article",
+        "from": "From",
+        "topic": "Topic",
+        "words": "Words",
         "status": "Status",
+        "added": "Added",
+        "translations": "Translations",
         "updated": "Updated",
-        "actions": "Actions",
-        "translations": "Translations"
+        "actions": "Actions"
       },
       "errors": {
         "saveFailed": "Could not save the article. Try again.",
-        "deleteFailed": "Could not delete the article. Try again."
+        "deleteFailed": "Could not delete the article. Try again.",
+        "downloadFailed": "Could not make the CSV. Try again."
       },
       "back": "Knowledge",
       "titleLabel": "Title",
       "bodyLabel": "Article",
       "topicLabel": "Topic",
-      "noTopic": "No topic"
+      "noTopic": "No topic",
+      "addFromLink": "Add from a link",
+      "clientsNotice": "Clients read every published article in Insights. For an article from the web they see our summary and what it means for them, then open the original: never its copied words. Articles ticked in News arrive here on their own.",
+      "counts": "{published, plural, other {# published}} · {ours, plural, other {# ours}}, {web, plural, other {# from the web}}",
+      "download": "Download CSV",
+      "downloading": "Preparing…",
+      "deleteWarningNews": "Readers and Ask {platformName} stop seeing it straight away, and its story in News is unticked. This cannot be undone.",
+      "from": {
+        "ours": "Ours",
+        "web": "From the web"
+      },
+      "came": {
+        "WRITTEN": "Written here",
+        "LINK": "Added from a link",
+        "NEWS": "Ticked in News"
+      },
+      "csv": {
+        "came": "How it came"
+      },
+      "filters": {
+        "from": "From",
+        "everyone": "Everyone",
+        "topic": "Topic",
+        "allTopics": "Every topic",
+        "status": "Status",
+        "allStatuses": "Every status"
+      }
     },
     "libraryArticles": {
       "title": "Helpful content",
@@ -6798,10 +6829,10 @@
       "delete": "Delete article",
       "deleteTitle": "Delete article",
       "deleteWarning": "Ask {platformName} stops reading it straight away. This cannot be undone.",
-      "deleteConfirm": "Delete <highlight>{title}</highlight> from Helpful content?",
-      "back": "Helpful content",
-      "createTitle": "Add an article",
-      "createSubtitle": "Paste the article's address. {platformName} reads the page through Firecrawl and fills in what it finds; check it, then add it.",
+      "deleteConfirm": "Delete <highlight>{title}</highlight> from Knowledge?",
+      "back": "Knowledge",
+      "createTitle": "Add an article from a link",
+      "createSubtitle": "For one good article from a site you don't follow. {platformName} reads the whole page once through Firecrawl, writes what clients read, and advises from all of it. Check what it found, then add it.",
       "addressLabel": "Article address",
       "addressHint": "One article's page, not a whole website.",
       "addressHintSaved": "If the article has moved, change the address and read it again.",
@@ -6810,7 +6841,7 @@
       "readAgain": "Read again",
       "readNotice": "Read just now through Firecrawl: {words, plural, =1 {# word} other {# words}}. Check what it found and fill in anything it could not.",
       "readNoticeLanguage": "Read just now through Firecrawl: {words, plural, =1 {# word} other {# words}}, in {language}. Check what it found and fill in anything it could not.",
-      "readCut": "The page was longer than Helpful content keeps, so its words stop at {limit} characters.",
+      "readCut": "The page was longer than Knowledge keeps, so its words stop at {limit} characters.",
       "unread": {
         "bad_address": "That is not an article's address. Paste one that starts with https://.",
         "not_configured": "Firecrawl is not set up on this deployment, so pages cannot be read. Paste the article's words below yourself.",
@@ -6820,7 +6851,7 @@
         "timeout": "{platformName} could not read this page: it did not answer within 45 seconds. Try again, or paste the article's words below yourself.",
         "failed": "{platformName} could not read this page. Try again, or paste the article's words below yourself."
       },
-      "duplicate": "That article is already in Helpful content: <link>{title}</link>.",
+      "duplicate": "That article is already in Knowledge: <link>{title}</link>.",
       "whoLabel": "Who reads it",
       "whoAsk": "Published — readers in Insights, and Ask {platformName}",
       "whoDraft": "Draft — kept here only",
@@ -6842,7 +6873,7 @@
       "bodyPlaceholder": "Paste the article's words here.",
       "bodyHint": "As Firecrawl read it, in plain text with **bold**, - lists, [links](https://…) and ## headings. Cut anything that is not the article: menus, adverts, sign-up boxes.",
       "bodyHintSaved": "As Firecrawl read it, in plain text with **bold**, - lists, [links](https://…) and ## headings. Only you see this copy: Ask {platformName} reads it to answer questions, and readers open the original. Reading it again replaces this text; {platformName} asks first.",
-      "add": "Add to the library",
+      "add": "Add to knowledge",
       "save": "Save changes",
       "byline": {
         "published": "published {date}",
@@ -6917,7 +6948,7 @@
     },
     "newsFollows": {
       "title": "Who to follow",
-      "subtitle": "The people Hakken reads for you. Add a person and their channels: Hakken collects what they publish into News.",
+      "subtitle": "The people {platformName} reads for you. Add a person and their channels: {platformName} collects what they publish into News.",
       "create": "Add a person",
       "searchPlaceholder": "Find a person…",
       "empty": "No one yet. Add a person and their channels.",
@@ -6968,7 +6999,7 @@
       "save": "Save",
       "nameLabel": "Name",
       "whyLabel": "Why we recommend them",
-      "whyHint": "Clients read this in Insights. Written in English; Hakken translates it.",
+      "whyHint": "Clients read this in Insights. Written in English; {platformName} translates it.",
       "topicLabel": "Topic",
       "noTopic": "No topic",
       "topicHint": "What clients browse by in Insights.",
@@ -6979,7 +7010,7 @@
       "thisEntry": "this person",
       "add": {
         "title": "Add a person",
-        "subtitle": "Their name and the channels they publish on. Hakken collects what they publish into News.",
+        "subtitle": "Their name and the channels they publish on. {platformName} collects what they publish into News.",
         "cardTitle": "The person",
         "channelsLabel": "Channels",
         "firstPlaceholder": "https://x.com/…",
@@ -6989,8 +7020,9 @@
         "removeOne": "Remove this address",
         "channelsHint": "One address a line: their website, YouTube, X or LinkedIn. You can add more later on their page.",
         "kindIs": "{kind}",
-        "notice": "When you add them, Hakken reads the newest five articles from each channel it can read, then collects whatever they publish next. LinkedIn can't be read: it shows in Insights only.",
-        "save": "Add person"
+        "notice": "When you add them, {platformName} reads the newest five articles from each channel it can read, then collects whatever they publish next. LinkedIn can't be read: it shows in Insights only.",
+        "save": "Add person",
+        "namePlaceholder": "Aleyda Solis"
       },
       "person": {
         "editDetails": "Edit details",
@@ -7157,8 +7189,8 @@
     },
     "newsItems": {
       "title": "News",
-      "subtitle": "Everything Hakken collected from the people you follow, and Google's updates, newest first. It goes live as it is collected; take down anything that should not be there.",
-      "knowledgeNotice": "News keeps a summary of each story. Tick In knowledge on the good ones: Hakken reads and keeps the whole article, Ask Hakken learns from it, and it joins Knowledge.",
+      "subtitle": "Everything {platformName} collected from the people you follow, and Google's updates, newest first. It goes live as it is collected; take down anything that should not be there.",
+      "knowledgeNotice": "News keeps a summary of each story. Tick In knowledge on the good ones: {platformName} reads and keeps the whole article, Ask {platformName} learns from it, and it joins Knowledge.",
       "searchPlaceholder": "Search stories by title",
       "inKnowledge": "{count, plural, =1 {# in knowledge} other {# in knowledge}}",
       "inKnowledgeMore": "{count}+ in knowledge",
@@ -7319,7 +7351,7 @@
       "places": {
         "NEWS": "News",
         "KNOWLEDGE": "Knowledge",
-        "HELPFUL": "Helpful content"
+        "HELPFUL": "Knowledge"
       },
       "pin": "Lead the News front page",
       "pinRow": "Lead the News front page with this for 7 days",

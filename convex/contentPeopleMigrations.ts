@@ -4,12 +4,12 @@ import { removeTranslations } from "./contentTranslation";
 import { checkedChannel, syncFollowChannels } from "./followChannels";
 import { MAX_FOLLOWS, nameKeyOf } from "./newsFollows";
 import { canCollect } from "./utils/followChannels";
+import { rebuildKnowledgeList } from "./knowledgeList";
 
 /**
- * The one-off migration for people and their channels
- * (docs/plans/active/content-people-knowledge-plan.md, phase 1), registered by
- * name in `dataMigrations.ts`. One batch: "Who to follow" is read whole at its
- * limit.
+ * The one-off migrations of docs/plans/active/content-people-knowledge-plan.md,
+ * registered by name in `dataMigrations.ts` through `CONTENT_PEOPLE_MIGRATIONS`.
+ * One batch each: the lists are read whole at their limits.
  */
 
 type OneBatch = { cursor: null; isDone: true; processed: number; updated: number };
@@ -62,3 +62,14 @@ export async function channelsFromFollows(ctx: MutationCtx): Promise<OneBatch> {
   }
   return { cursor: null, isDone: true, processed: follows.length, updated };
 }
+
+/** Never rename or reuse a key: the name is the migration ledger's identity. */
+export const CONTENT_PEOPLE_MIGRATIONS: Record<string, (ctx: MutationCtx) => Promise<OneBatch>> = {
+  /** Phase 1: each row's link becomes its first channel, and rows for the same person become one. */
+  "2026-10-10-follow-channels": (ctx) => channelsFromFollows(ctx),
+  /** Phase 3 (`knowledgeList.ts`): a row for every article of ours and the web's, so Admin → Knowledge pages and sorts across both. */
+  "2026-10-10-knowledge-list": async (ctx) => {
+    const { ours, web } = await rebuildKnowledgeList(ctx);
+    return { cursor: null, isDone: true, processed: ours + web, updated: ours + web };
+  },
+};

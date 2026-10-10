@@ -1,10 +1,9 @@
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { useAction, useMutation, usePaginatedQuery, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 
 import { renderWithProviders } from "@/src/test/renderWithProviders";
 import { answerQueries, convexPath } from "@/src/test/siteViewFixtures";
-import LibraryAdminPage from "./page";
 import { LibraryArticleEditor } from "./LibraryArticleEditor";
 
 const { create, update, remove, readPage, write, push } = vi.hoisted(() => ({
@@ -44,7 +43,6 @@ const ROW = {
   createdAt: 2,
   updatedAt: 2,
 };
-const DRAFT = { ...ROW, _id: "article_2", url: "https://developers.google.com/search/docs/fundamentals/how-search-works", title: "How Google Search works", publication: "Google Search Central", topic: "RANKINGS", status: "DRAFT", createdAt: 1 };
 const READ = {
   status: "read",
   url: "https://developers.google.com/search/docs/appearance/ai-features",
@@ -60,12 +58,13 @@ const READ = {
 };
 
 /**
- * Admin → Content → Helpful content (docs/plans/active/content-library-plan.md,
- * renamed by insights-helpful-content-plan.md, IH18): the list with its
- * filters, paged on the server (IH21), adding an article by reading its page,
- * and one article's page — read again and deleted only after a yes.
+ * Admin → Content → Knowledge → Add from a link, and a web article's own page
+ * (docs/plans/active/content-people-knowledge-plan.md, board 6; Helpful
+ * content's reader, content-library-plan.md, moved): adding an article by
+ * reading its page, and one article's page — read again and deleted only after
+ * a yes, then back to Knowledge's list.
  */
-describe("Admin Helpful content", () => {
+describe("Admin Knowledge from a link", () => {
   beforeEach(() => {
     push.mockReset();
     create.mockReset().mockResolvedValue("article_3");
@@ -78,38 +77,11 @@ describe("Admin Helpful content", () => {
       "libraryArticles:getArticle": { ...ROW, body: "# Organic CTR study\n\nWords.", translations: { done: 1, total: 1 } },
       "topics:listTopicChoices": [{ key: "TRAFFIC", nameEn: "Traffic" }, { key: "RANKINGS", nameEn: "Rankings" }],
     }));
-    // The server searches, filters and pages (insights-helpful-content-plan.md, IH21): a draft filter answers with the drafts.
-    vi.mocked(usePaginatedQuery).mockReset().mockImplementation(((_query: unknown, args: { status?: string }) => ({
-      results: args?.status === "DRAFT" ? [DRAFT] : [ROW, DRAFT],
-      status: "Exhausted",
-      isLoading: false,
-      loadMore: vi.fn(),
-    })) as never);
     vi.mocked(useMutation).mockImplementation(((reference: unknown) => {
       const name = convexPath(reference);
       return name.endsWith("createArticle") ? create : name.endsWith("updateArticle") ? update : name.endsWith("deleteArticle") ? remove : vi.fn();
     }) as never);
     vi.mocked(useAction).mockImplementation(((reference: unknown) => (convexPath(reference).endsWith("writeForReaders") ? write : readPage)) as never);
-  });
-
-  it("lists every article with its details, filters by status, and opens or deletes one", async () => {
-    renderWithProviders(<LibraryAdminPage />);
-
-    expect(screen.getByText("Organic CTR study")).toBeInTheDocument();
-    expect(screen.getByText("advancedwebranking.com/seo/organic-ctr")).toBeInTheDocument();
-    expect(screen.getByText("How Google Search works")).toBeInTheDocument();
-
-    fireEvent.change(screen.getByLabelText("admin.libraryArticles.filters.status"), { target: { value: "DRAFT" } });
-    expect(vi.mocked(usePaginatedQuery).mock.calls.at(-1)?.[1]).toEqual({ status: "DRAFT" });
-    expect(screen.queryByText("Organic CTR study")).not.toBeInTheDocument();
-    expect(screen.getByText("How Google Search works")).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole("button", { name: "admin.libraryArticles.edit" }));
-    expect(push).toHaveBeenCalledWith("/admin/content/helpful-content/article_2");
-
-    fireEvent.click(screen.getByRole("button", { name: "admin.libraryArticles.delete" }));
-    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "common.actions.delete" }));
-    await waitFor(() => expect(remove).toHaveBeenCalledWith({ articleId: "article_2" }));
   });
 
   it("adds an article: reads its page, fills the details, marks what the page did not say, and saves", async () => {
@@ -147,7 +119,7 @@ describe("Admin Helpful content", () => {
       summaryEn: "How Google's AI features choose websites.",
       meaningEn: "Be indexable and quotable.",
     }));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/admin/content/helpful-content"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/admin/content/knowledge"));
   });
 
   it("says plainly when a page cannot be read, and lets its words be pasted", async () => {
@@ -195,6 +167,6 @@ describe("Admin Helpful content", () => {
     const deleting = asking.find((dialog) => within(dialog).queryByRole("button", { name: "common.actions.delete" }));
     fireEvent.click(within(deleting as HTMLElement).getByRole("button", { name: "common.actions.delete" }));
     await waitFor(() => expect(remove).toHaveBeenCalledWith({ articleId: "article_1" }));
-    await waitFor(() => expect(push).toHaveBeenCalledWith("/admin/content/helpful-content"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/admin/content/knowledge"));
   });
 });

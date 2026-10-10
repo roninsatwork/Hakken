@@ -38,6 +38,7 @@ describe('the Italian catalogue is translated, not copied', () => {
    */
   const IDENTICAL_ON_PURPOSE: ReadonlyMap<string, string> = new Map([
     ['sidebar.postureStudio', 'product name'],
+    ['admin.newsFollows.add.namePlaceholder', "an example person's name, the same in every language"],
     ['sidebar.roninsRun', 'product name'],
     ['sidebar.roninsRun3D', 'the separate 3D game product name'],
     ['sidebar.searchConsole', "Google's product name"],

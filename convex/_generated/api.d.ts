@@ -277,6 +277,8 @@ import type * as knowledgeArticles from "../knowledgeArticles.js";
 import type * as knowledgeArticlesSchema from "../knowledgeArticlesSchema.js";
 import type * as knowledgeEvidence from "../knowledgeEvidence.js";
 import type * as knowledgeImportPolicy from "../knowledgeImportPolicy.js";
+import type * as knowledgeList from "../knowledgeList.js";
+import type * as knowledgeListSchema from "../knowledgeListSchema.js";
 import type * as knowledgeReading from "../knowledgeReading.js";
 import type * as knowledgeReembed from "../knowledgeReembed.js";
 import type * as knowledgeReembedActions from "../knowledgeReembedActions.js";
@@ -1025,6 +1027,8 @@ declare const fullApi: ApiFromModules<{
   knowledgeArticlesSchema: typeof knowledgeArticlesSchema;
   knowledgeEvidence: typeof knowledgeEvidence;
   knowledgeImportPolicy: typeof knowledgeImportPolicy;
+  knowledgeList: typeof knowledgeList;
+  knowledgeListSchema: typeof knowledgeListSchema;
   knowledgeReading: typeof knowledgeReading;
   knowledgeReembed: typeof knowledgeReembed;
   knowledgeReembedActions: typeof knowledgeReembedActions;

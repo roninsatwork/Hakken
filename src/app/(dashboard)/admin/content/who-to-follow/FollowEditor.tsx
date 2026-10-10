@@ -4,6 +4,7 @@ import { useMutation, useQuery } from "convex/react";
 import { UserPlus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Field, TextAreaField } from "@/src/ui/components/screens/Field";
 import { ContentEditPage, TranslationStatus } from "../_components/ContentEditPage";
@@ -21,6 +22,7 @@ const BASE = "/admin/content/who-to-follow";
  */
 export function FollowEditor({ followId }: { followId: Id<"newsFollows"> }) {
   const t = useTranslations("admin.newsFollows");
+  const { platformName } = useSystemSettings();
   const row = useQuery(api.newsFollows.getFollow, { followId });
   const updateFollow = useMutation(api.newsFollows.updateFollow);
   const personHref = `${BASE}/${followId}`;
@@ -29,7 +31,9 @@ export function FollowEditor({ followId }: { followId: Id<"newsFollows"> }) {
     row,
     empty: { name: "", whyEn: "", topic: "", picked: false } satisfies FollowDetails & { name: string; whyEn: string },
     toForm: (existing) => ({ name: existing.name, whyEn: existing.whyEn, topic: existing.topic ?? "", picked: existing.pickedAt !== null }),
-    save: ({ topic, ...form }) => updateFollow({ followId, ...form, topic: topic || undefined }),
+    save: ({ topic, ...form }) => {
+      return updateFollow({ followId, ...form, topic: topic || undefined });
+    },
     backHref: personHref,
     saveFailed: t("errors.saveFailed"),
   });
@@ -47,7 +51,7 @@ export function FollowEditor({ followId }: { followId: Id<"newsFollows"> }) {
       onSubmit={editor.submit}
     >
       <Field label={t("nameLabel")} required value={editor.form.name} onChange={(event) => editor.update({ name: event.target.value })} />
-      <TextAreaField label={t("whyLabel")} hint={t("whyHint")} required value={editor.form.whyEn} onChange={(event) => editor.update({ whyEn: event.target.value })} className="min-h-[110px] resize-y" />
+      <TextAreaField label={t("whyLabel")} hint={t("whyHint", { platformName })} required value={editor.form.whyEn} onChange={(event) => editor.update({ whyEn: event.target.value })} className="min-h-[110px] resize-y" />
       <FollowDetailsFields followId={followId} name={editor.form.name} details={editor.form} onChange={editor.update} />
       {row ? <TranslationStatus progress={row.translations} /> : null}
     </ContentEditPage>

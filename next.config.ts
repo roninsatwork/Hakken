@@ -89,6 +89,13 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // Content (content-people-knowledge-plan.md, 2026-10-10): News sources
+      // became each person's channels in Who to follow, and Helpful content's
+      // articles joined Knowledge's one list.
+      { source: "/admin/content/news-sources/:path*", destination: "/admin/content/who-to-follow", permanent: false },
+      { source: "/admin/content/helpful-content", destination: "/admin/content/knowledge", permanent: false },
+      { source: "/admin/content/helpful-content/new", destination: "/admin/content/knowledge/from-link", permanent: false },
+      { source: "/admin/content/helpful-content/:articleId", destination: "/admin/content/knowledge/web/:articleId", permanent: false },
       // The site Calendar was removed on 2026-10-01: most sites are checked
       // weekly or monthly, so a month of day cells was mostly empty.
       {

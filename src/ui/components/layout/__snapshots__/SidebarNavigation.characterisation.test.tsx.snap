@@ -112,7 +112,6 @@ exports[`sidebar navigation characterisation > super admin navigation is unchang
     "health -> /admin/health",
     "invitations -> /admin/super-admins/invite",
     "knowledge -> /admin/content/knowledge",
-    "library -> /admin/content/helpful-content",
     "manageAgents -> /admin/agents",
     "manageCompanies -> /admin/companies",
     "manageGlobalAi -> /admin/ai",

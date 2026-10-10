@@ -1,6 +1,7 @@
 import type { MutationCtx } from "./_generated/server";
 import { syncArticleToWiki } from "./knowledgeArticleWiki";
 import { requestTranslation } from "./contentTranslation";
+import { syncOursInList } from "./knowledgeList";
 
 /**
  * The Knowledge articles the platform ships with (docs/plans/active/
@@ -68,6 +69,7 @@ export async function addTrafficArticle(ctx: MutationCtx) {
     // Written by the platform's team, not by anyone signed in: the brain's copy says so.
     if (article) await syncArticleToWiki(ctx, article, "platform");
     await requestTranslation(ctx, "knowledgeArticles", articleId);
+    await syncOursInList(ctx, articleId);
   }
   return { cursor: null, isDone: true, processed: 1, updated: existing ? 0 : 1 };
 }

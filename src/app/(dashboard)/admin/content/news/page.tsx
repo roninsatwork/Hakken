@@ -7,6 +7,7 @@ import type { FunctionReturnType } from "convex/server";
 import { ExternalLink, Newspaper, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/convex/_generated/api";
+import { useSystemSettings } from "@/src/context/SystemSettingsContext";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { NewsItemKind } from "@/convex/newsSchema";
 import useDebounce from "@/src/hooks/useDebounce";
@@ -42,6 +43,7 @@ const KINDS: NewsItemKind[] = ["GOOGLE_UPDATE", "WEBSITE", "YOUTUBE", "X"];
  */
 export default function NewsItemsAdminPage() {
   const t = useTranslations("admin.newsItems");
+  const { platformName } = useSystemSettings();
   const tNews = useTranslations("news");
   const tKinds = useTranslations("admin.newsFollows.kinds");
   // A story's channel: Google's own updates, or the person's website, YouTube or X.
@@ -74,9 +76,9 @@ export default function NewsItemsAdminPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <PageHeader divider icon={<Newspaper className="h-6 w-6 text-brand" />} title={t("title")} description={t("subtitle")} />
+      <PageHeader divider icon={<Newspaper className="h-6 w-6 text-brand" />} title={t("title")} description={t("subtitle", { platformName })} />
 
-      <Notice>{t("knowledgeNotice")}</Notice>
+      <Notice>{t("knowledgeNotice", { platformName })}</Notice>
 
       <LeadStoryNotice here="NEWS" />
 

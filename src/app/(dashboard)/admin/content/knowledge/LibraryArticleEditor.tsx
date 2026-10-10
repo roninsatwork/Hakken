@@ -71,11 +71,14 @@ const EMPTY: LibraryForm = {
   summaryEn: "",
   meaningEn: "",
 };
-const BACK_HREF = "/admin/content/helpful-content";
+/** Knowledge's one list (content-people-knowledge-plan.md, phase 3): the web's articles are listed and opened there. */
+const BACK_HREF = "/admin/content/knowledge";
+const WEB_HREF = `${BACK_HREF}/web`;
 
 /**
- * Adding a Library article, or one article's own page
- * (docs/plans/active/content-library-plan.md, boards 2 and 3): its address,
+ * Add from a link, or a web article's own page, in Knowledge
+ * (docs/plans/active/content-people-knowledge-plan.md, board 6; moved from
+ * Helpful content, content-library-plan.md, boards 2 and 3): its address,
  * read through Firecrawl on a press (L3), the details the page gave — a blank
  * author says "Not on the page" (L4) — who reads it (L5), and its words. A
  * page that cannot be read says why, and the words can be pasted (L6). On an
@@ -293,7 +296,7 @@ export function LibraryArticleEditor({ articleId }: { articleId?: Id<"libraryArt
           <Notice tone="warning">
             {t.rich("duplicate", {
               title: result.title,
-              link: (chunks) => <Link href={`${BACK_HREF}/${result.articleId}`} className="text-foreground underline">{chunks}</Link>,
+              link: (chunks) => <Link href={`${WEB_HREF}/${result.articleId}`} className="text-foreground underline">{chunks}</Link>,
             })}
           </Notice>
         ) : null}

@@ -5,6 +5,7 @@ import { outboxTables } from "./outboxSchema";
 import { libraryArticleTables } from "./libraryArticlesSchema";
 import { topicTables } from "./topicsSchema";
 import { insightsCountsTables } from "./insightsCountsSchema";
+import { knowledgeListTables } from "./knowledgeListSchema";
 
 /**
  * The tables behind Admin → Content (docs/plans/active/
@@ -24,4 +25,6 @@ export const contentTables = {
   ...topicTables,
   // Insights' counts, kept as they change (IH21).
   ...insightsCountsTables,
+  // Knowledge's one list of ours and the web's (content-people-knowledge-plan.md, phase 3).
+  ...knowledgeListTables,
 };

@@ -28,8 +28,12 @@ type Place = "NEWS" | "KNOWLEDGE" | "HELPFUL";
 const PLACE_HREF: Record<Place, string> = {
   NEWS: "/admin/content/news",
   KNOWLEDGE: "/admin/content/knowledge",
-  HELPFUL: "/admin/content/helpful-content",
+  // Helpful content's articles are in Knowledge's one list (content-people-knowledge-plan.md, phase 3).
+  HELPFUL: "/admin/content/knowledge",
 };
+
+/** The list a place's stories are shown in: Knowledge holds ours and the web's. */
+const LIST_OF: Record<Place, Place> = { NEWS: "NEWS", KNOWLEDGE: "KNOWLEDGE", HELPFUL: "KNOWLEDGE" };
 
 /**
  * What leads the front page today and where it was pinned (IH11): above every
@@ -41,7 +45,7 @@ export function LeadStoryNotice({ here, storyId }: { here: Place; storyId?: stri
   const t = useTranslations("admin.leadStory");
   const lead = useQuery(api.news.getLeadForAdmin, { today: localDay() });
   if (!lead) return null;
-  const saidElsewhere = storyId === undefined ? lead.pinned && lead.place === here : lead.pinned && lead.storyId === storyId;
+  const saidElsewhere = storyId === undefined ? lead.pinned && LIST_OF[lead.place] === LIST_OF[here] : lead.pinned && lead.storyId === storyId;
   if (saidElsewhere) return null;
   return (
     <Notice>

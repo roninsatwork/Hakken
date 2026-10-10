@@ -1,0 +1,14 @@
+# Admin → Content → Knowledge — the approved look (board "Knowledge" of docs/plans/assets/content-people-knowledge/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Knowledge
+  primary-action: New article
+notice (info)
+search: Search articles…
+filter: From
+filter: Topic
+filter: Status
+table: Article | From | Topic | Words | Status | Added | Actions
+  table-bar
+    download: Download CSV
+  table-footer
