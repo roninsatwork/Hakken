@@ -1,4 +1,4 @@
-import { seen, type Seen, type SeenPhrase, type SeenStep, type SeenTarget } from "../utils/hakkenSees";
+import { seen, type Seen, type SeenPhrase, type SeenStep, type SeenTarget } from "../hakkenSees";
 
 /**
  * What Hakken sees on Keyword research's screens (docs/plans/active/

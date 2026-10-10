@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { seeing, seenValidator } from "./utils/hakkenSees";
-import { demandSees } from "./sees/aiAnswers";
+import { demandSees } from "./utils/sees/aiAnswers";
 import type { Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
 import { groupOwner, requireMySite } from "./siteAccess";

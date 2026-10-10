@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { localListingsSees } from "./sees/local";
+import { localListingsSees } from "./utils/sees/local";
 import { seeing, seenValidator } from "./utils/hakkenSees";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";

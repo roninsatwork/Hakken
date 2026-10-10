@@ -14,7 +14,7 @@ import { MAX_LIST } from "./websiteSiteRows";
 import { wordingKeptFrom } from "./seoCollectionPolicy";
 import { sharedLimitCeiling } from "./sharedLimits";
 import { seenValidator } from "./utils/hakkenSees";
-import { fullAnswersSees } from "./sees/aiAnswers";
+import { fullAnswersSees } from "./utils/sees/aiAnswers";
 import { readMentions } from "./siteAi";
 
 /**

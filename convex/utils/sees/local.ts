@@ -1,4 +1,4 @@
-import { seen, toPage, toRecord, type Seen, type SeenPhrase, type SeenStep, type SeenTarget } from "../utils/hakkenSees";
+import { seen, toPage, toRecord, type Seen, type SeenPhrase, type SeenStep, type SeenTarget } from "../hakkenSees";
 
 /**
  * What Hakken sees on the Local and Reviews screens (docs/plans/active/
@@ -191,7 +191,7 @@ export function yourReviewsSees(result: {
   const { newIn30, newBefore, waiting, oldestWaitingDays, daysToAnswer } = result.figures;
   const says: Array<Maybe<SeenPhrase>> = [
     waiting > 0 ? { code: "waiting", a: waiting, b: oldestWaitingDays ?? 0 } : { code: "allAnswered" },
-    { code: "newReviews", a: newIn30, b: newBefore },
+    newIn30 === 0 && newBefore === 0 ? { code: "noNewReviews" } : { code: "newReviews", a: newIn30, b: newBefore },
     daysToAnswer !== null ? { code: "daysToAnswer", a: daysToAnswer } : null,
   ];
   const steps: Array<Maybe<SeenStep>> = [

@@ -17,7 +17,7 @@ import { angleOf } from "./utils/fanOutAngle";
 import { answerIdValidator } from "./siteAnswers";
 import { wordingKeptFrom } from "./seoCollectionPolicy";
 import { seeing, seenValidator } from "./utils/hakkenSees";
-import { anglesSees } from "./sees/aiAnswers";
+import { anglesSees } from "./utils/sees/aiAnswers";
 
 /**
  * The Sites Fan-out queries page (docs/plans/active/fan-out-angles-plan.md,

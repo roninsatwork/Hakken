@@ -15,7 +15,7 @@ import { formatNumber, toCsv } from "../../_components/siteFormat";
 import { Figure } from "@/src/ui/components/screens/Figure";
 import { useSiteListHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
-import { backlinksSummarySees } from "@/convex/sees/backlinks";
+import { backlinksSummarySees } from "@/convex/utils/sees/backlinks";
 import { SiteSees } from "../../_components/SiteSees";
 import { newestOfEach } from "../newestOfEach";
 

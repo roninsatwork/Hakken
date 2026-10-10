@@ -25,7 +25,7 @@ import { LookupState } from "../../_components/LookupState";
 import { useLookupAnswers, useLookupId, useLookupOverview, type LookupAnswers } from "../../_components/useLookup";
 import { useProblemWords } from "../../_components/ResearchCells";
 import { ResearchSees } from "../../_components/ResearchSees";
-import { answersSees } from "@/convex/sees/research";
+import { answersSees } from "@/convex/utils/sees/research";
 
 type Engine = LookupAnswers["engines"][number];
 

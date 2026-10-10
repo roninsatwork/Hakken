@@ -19,7 +19,7 @@ import { heldIcon } from "../../../_components/siteGroups";
 import { MarkedHost } from "../../../_components/SiteMark";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { shareSees } from "@/convex/sees/aiAnswers";
+import { shareSees } from "@/convex/utils/sees/aiAnswers";
 import { SiteSees } from "../../../_components/SiteSees";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";

@@ -19,7 +19,7 @@ import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteScatterChart, type SiteScatterGroup } from "../../../_components/SiteCharts";
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { marketMapSees } from "@/convex/sees/competitors";
+import { marketMapSees } from "@/convex/utils/sees/competitors";
 import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";

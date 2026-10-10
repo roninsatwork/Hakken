@@ -19,7 +19,7 @@ import { useSiteRange } from "../../../_components/SiteDateRange";
 import { datedRow } from "../../../_components/datedRows";
 import { toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { mentionsSees } from "@/convex/sees/aiAnswers";
+import { mentionsSees } from "@/convex/utils/sees/aiAnswers";
 import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";

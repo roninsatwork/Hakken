@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { localMarketSees, rivalActivitySees } from "./sees/local";
+import { localMarketSees, rivalActivitySees } from "./utils/sees/local";
 import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";

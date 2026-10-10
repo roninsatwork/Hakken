@@ -21,7 +21,7 @@ import { heldIcon } from "../../_components/siteGroups";
 import { MarkedHost } from "../../_components/SiteMark";
 import { useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
-import { sideBySideSees } from "@/convex/sees/competitors";
+import { sideBySideSees } from "@/convex/utils/sees/competitors";
 import { SiteSees } from "../../_components/SiteSees";
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";

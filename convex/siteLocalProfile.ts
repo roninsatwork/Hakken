@@ -1,5 +1,5 @@
 import { v, type Infer } from "convex/values";
-import { businessProfileSees, everyOfficeSees } from "./sees/local";
+import { businessProfileSees, everyOfficeSees } from "./utils/sees/local";
 import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";

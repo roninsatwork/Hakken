@@ -22,7 +22,7 @@ import { ExternalUrlCell } from "../../_components/SiteCells";
 import { formatDay, formatMonth, toCsv } from "../../_components/siteFormat";
 import { ListDownload } from "../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../_components/useSite";
-import { WORTH_ASKING } from "@/convex/sees/mentions";
+import { WORTH_ASKING } from "@/convex/utils/sees/mentions";
 import { SiteSees } from "../../_components/SiteSees";
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";

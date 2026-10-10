@@ -29,7 +29,7 @@ import { DifficultyCell, FigureCell, IntentWord, ResearchPositionCell, ResearchS
 import { INTENTS, isIntent } from "./_components/researchWords";
 import { listHref, lookupHref } from "./_components/useLookup";
 import { ResearchSees } from "./_components/ResearchSees";
-import { researchStartSees } from "@/convex/sees/research";
+import { researchStartSees } from "@/convex/utils/sees/research";
 
 type Lookup = FunctionReturnType<typeof api.keywordResearch.pastLookups>[number];
 type List = FunctionReturnType<typeof api.keywordResearch.researchLists>[number];

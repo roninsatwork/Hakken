@@ -1,6 +1,6 @@
-import { seen, toPage, toRecord, type Seen, type SeenPhrase, type SeenStep } from "../utils/hakkenSees";
-import { BREAKDOWN_REST } from "../utils/siteShapes";
-import { pathOfUrl } from "../utils/urlParts";
+import { seen, toPage, toRecord, type Seen, type SeenPhrase, type SeenStep } from "../hakkenSees";
+import { BREAKDOWN_REST } from "../siteShapes";
+import { pathOfUrl } from "../urlParts";
 
 /**
  * What Hakken sees on the Backlinks screens (docs/plans/active/discovery-
@@ -136,7 +136,7 @@ export function domainsSees(list: ReadonlyArray<{ domain: string; rank: number; 
 export function anchorsSees(list: ReadonlyArray<{ anchor: string; backlinks: number }>, host: string): Seen {
   const worded = list.filter((row) => row.anchor.trim() !== "").sort((left, right) => right.backlinks - left.backlinks);
   if (worded.length === 0) return seen([{ code: "none" }]);
-  // The business's own name, as its website spells it: "ronins" of ronins.co.uk.
+  // The business's own name, as its website spells it: "acme" of acme.co.uk.
   const brand = host.toLowerCase().replace(/^www\./, "").split(".")[0];
   const total = list.reduce((sum, row) => sum + row.backlinks, 0);
   const named = list.filter((row) => row.anchor.toLowerCase().replace(/\s+/g, "").includes(brand)).reduce((sum, row) => sum + row.backlinks, 0);
@@ -182,7 +182,7 @@ export function brokenSees(list: ReadonlyArray<{ pageTo: string; domainFrom: str
   const path = (page: string) => (page.startsWith("http") ? pathOfUrl(page) : page || "/");
   const says: Array<Maybe<SeenPhrase>> = [
     { code: "broken", a: list.length, b: pages.size },
-    { code: "topPage", text: path(topPage), a: top.links },
+    pages.size > 1 ? { code: "topPage", text: path(topPage), a: top.links } : null,
     strongest.pageTo !== topPage ? { code: "strongest", text: strongest.domainFrom, more: path(strongest.pageTo), a: strongest.domainRank } : null,
   ];
   const steps: Array<Maybe<SeenStep>> = [
@@ -204,13 +204,14 @@ export function newLostSees(
   const worst = [...rows].sort((left, right) => right.lostReferringDomains - left.lostReferringDomains)[0];
   const best = [...rows].sort((left, right) => right.newReferringDomains - left.newReferringDomains)[0];
   const lead = lost > 0 ? worst : best;
+  // Each sentence names the stretch as the chart steps it: a day, a week, a month.
   const says: Array<Maybe<SeenPhrase>> = [
     { code: "gainedLost", a: gained, b: lost },
-    lost > 0 ? { code: "mostLost", text: dayName(worst.day), a: worst.lostReferringDomains } : null,
-    gained > 0 ? { code: "mostGained", text: dayName(best.day), a: best.newReferringDomains } : null,
+    lost > 0 ? { code: `mostLost.${step}`, text: dayName(worst.day), a: worst.lostReferringDomains } : null,
+    gained > 0 ? { code: `mostGained.${step}`, text: dayName(best.day), a: best.newReferringDomains } : null,
   ];
   const steps: Array<Maybe<SeenStep>> = [
-    { code: lost > 0 ? "seeLostThen" : "seeGainedThen", text: dayName(lead.day), link: "seeLinks", to: toPage("backlinks/all", { changedFrom: lead.day, changedUntil: stepEnd(lead.day, step) }) },
+    { code: `${lost > 0 ? "seeLostThen" : "seeGainedThen"}.${step}`, text: dayName(lead.day), link: "seeLinks", to: toPage("backlinks/all", { changedFrom: lead.day, changedUntil: stepEnd(lead.day, step) }) },
   ];
   return seen(says, steps);
 }
@@ -226,7 +227,7 @@ export function domainRecordSees(record: { domain: string; website: { backlinks:
   const best = strongestLink(record.links);
   const says: Array<Maybe<SeenPhrase>> = [
     record.website.status === "LOST" ? { code: "lost", text: record.domain } : null,
-    { code: "links", text: record.domain, a: record.website.backlinks, b: record.links.filter((link) => link.dofollow).length },
+    { code: record.website.status === "LOST" ? "linked" : "links", text: record.domain, a: record.website.backlinks, b: record.links.filter((link) => link.dofollow).length },
     record.website.spamScore !== null ? { code: "spam", a: record.website.spamScore } : null,
   ];
   const steps: Array<Maybe<SeenStep>> = [

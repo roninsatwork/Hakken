@@ -11,7 +11,7 @@ import { unpackColumn } from "./utils/packedColumns";
 import { siteKindOf } from "./utils/siteKinds";
 import { hostOfUrl, pathOfUrl, urlIsOnHost } from "./utils/urlParts";
 import { seenValidator } from "./utils/hakkenSees";
-import { radarOverviewSees, radarSourcesSees } from "./sees/radar";
+import { radarOverviewSees, radarSourcesSees } from "./utils/sees/radar";
 import { MAX_PROMPTS_PER_WEBSITE } from "./utils/promptLimits";
 import type { Site } from "./websiteSiteRows";
 

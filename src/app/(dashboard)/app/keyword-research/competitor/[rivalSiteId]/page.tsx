@@ -30,7 +30,7 @@ import { AddTickedToList, KeywordOpener, useOpenKeyword } from "../../_component
 import { DifficultyCell, FigureCell } from "../../_components/ResearchCells";
 import { KEYWORD_RESEARCH_HREF } from "../../_components/useLookup";
 import { ResearchSees } from "../../_components/ResearchSees";
-import { competitorStartSees } from "@/convex/sees/research";
+import { competitorStartSees } from "@/convex/utils/sees/research";
 
 type Gap = NonNullable<FunctionReturnType<typeof api.keywordResearchCompetitors.competitorGap>>;
 type Row = Gap["rows"][number];

@@ -33,7 +33,7 @@ import { DifficultyCell, FigureCell, IntentWord, ResearchPositionCell, VerdictLa
 import { VERDICTS, isIntent, keywordKey, pathOf, verdictRank, type Verdict } from "../../_components/researchWords";
 import { KEYWORD_RESEARCH_HREF, listHref, lookupHref } from "../../_components/useLookup";
 import { ResearchSees } from "../../_components/ResearchSees";
-import { researchListSees } from "@/convex/sees/research";
+import { researchListSees } from "@/convex/utils/sees/research";
 
 type List = NonNullable<FunctionReturnType<typeof api.keywordResearch.researchList>>;
 type Row = List["rows"][number];

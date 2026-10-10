@@ -164,6 +164,7 @@ describe("Broken backlinks", () => {
       { pageTo: "https://ronins.co.uk/case-study/", domainFrom: "bbc.co.uk", domainRank: 800 },
     ]);
     expect(box.says).toEqual([{ code: "broken", a: 3, b: 2 }, { code: "topPage", text: "/old-pricing/", a: 2 }, { code: "strongest", text: "bbc.co.uk", more: "/case-study/", a: 800 }]);
+    expect(brokenSees([{ pageTo: "/old/", domainFrom: "a.example", domainRank: 9 }]).says).toEqual([{ code: "broken", a: 1, b: 1 }]);
     expect(box.steps).toEqual([
       { code: "putBack", text: "/old-pricing/", link: "seePage", to: { record: "page", key: "/old-pricing/" } },
       { code: "putBack", text: "/case-study/", link: "seePage", to: { record: "page", key: "/case-study/" } },
@@ -178,16 +179,19 @@ describe("New and lost links", () => {
 
   test("gained against lost, the step that lost most, and its links", () => {
     const box = newLostSees([row("2026-09-21", 3, 1), row("2026-09-28", 1, 6), row("2026-10-05", 4, 0)], "week", (day) => `w/c ${day}`);
-    expect(box.says).toEqual([{ code: "gainedLost", a: 8, b: 7 }, { code: "mostLost", text: "w/c 2026-09-28", a: 6 }, { code: "mostGained", text: "w/c 2026-10-05", a: 4 }]);
-    expect(box.steps).toEqual([{ code: "seeLostThen", text: "w/c 2026-09-28", link: "seeLinks", to: { segment: "backlinks/all", filters: { changedFrom: "2026-09-28", changedUntil: "2026-10-05" } } }]);
+    expect(box.says).toEqual([{ code: "gainedLost", a: 8, b: 7 }, { code: "mostLost.week", text: "w/c 2026-09-28", a: 6 }, { code: "mostGained.week", text: "w/c 2026-10-05", a: 4 }]);
+    expect(box.steps).toEqual([{ code: "seeLostThen.week", text: "w/c 2026-09-28", link: "seeLinks", to: { segment: "backlinks/all", filters: { changedFrom: "2026-09-28", changedUntil: "2026-10-05" } } }]);
     expectWords("backlinksNewLost", box);
   });
 
   test("only gained; nothing moved; a step's end", () => {
     const box = newLostSees([row("2026-09-01", 2, 0)], "month", String);
-    expect(box.steps).toEqual([{ code: "seeGainedThen", text: "2026-09-01", link: "seeLinks", to: { segment: "backlinks/all", filters: { changedFrom: "2026-09-01", changedUntil: "2026-10-01" } } }]);
+    expect(box.steps).toEqual([{ code: "seeGainedThen.month", text: "2026-09-01", link: "seeLinks", to: { segment: "backlinks/all", filters: { changedFrom: "2026-09-01", changedUntil: "2026-10-01" } } }]);
     expectWords("backlinksNewLost", box);
     expect(newLostSees([row("2026-09-01", 0, 0)], "day", String).says).toEqual([{ code: "none" }]);
+    for (const stretch of ["day", "week", "month"] as const) {
+      expectWords("backlinksNewLost", newLostSees([row("2026-09-01", 2, 1)], stretch, String));
+    }
     expect(stepEnd("2026-10-09", "day")).toBe("2026-10-10");
   });
 });
@@ -205,7 +209,7 @@ describe("One linking website and one anchor", () => {
     });
     expectWords("backlinksDomain", box);
     const gone = domainRecordSees({ domain: "bbc.co.uk", website: { backlinks: 2, status: "LOST", spamScore: null }, links });
-    expect(gone.says[0]).toEqual({ code: "lost", text: "bbc.co.uk" });
+    expect(gone.says.slice(0, 2)).toEqual([{ code: "lost", text: "bbc.co.uk" }, { code: "linked", text: "bbc.co.uk", a: 2, b: 1 }]);
     expect(gone.steps[0]).toMatchObject({ code: "askBack" });
     expectWords("backlinksDomain", gone);
     expect(domainRecordSees({ domain: "x.example", website: null, links: [] }).says).toEqual([{ code: "notHeld", text: "x.example" }]);

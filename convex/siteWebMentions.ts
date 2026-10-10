@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mentionsRivalsSees, webMentionsSees, whereListedSees } from "./sees/mentions";
+import { mentionsRivalsSees, webMentionsSees, whereListedSees } from "./utils/sees/mentions";
 import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";

@@ -1,4 +1,4 @@
-import { seen, toPage, toRecord, type Seen, type SeenPhrase, type SeenStep } from "../utils/hakkenSees";
+import { seen, toPage, toRecord, type Seen, type SeenPhrase, type SeenStep } from "../hakkenSees";
 
 /**
  * What Hakken sees on the Competitors screens (docs/plans/active/discovery-
@@ -24,7 +24,7 @@ export function sideBySideSees(
   const leading = compared.filter((rival) => rival.youBeatOn > rival.beatsYouOn).length;
   const key = rivalKey(trailing.host);
   const says: Array<Maybe<SeenPhrase>> = [
-    { code: "leadOver", a: leading, b: compared.length },
+    leading === compared.length ? { code: "leadAll", a: leading } : { code: "leadOver", a: leading, b: compared.length },
     trailing.beatsYouOn > trailing.youBeatOn ? { code: "trailMost", text: trailing.host, a: trailing.beatsYouOn, b: trailing.youBeatOn } : null,
   ];
   const steps: Array<Maybe<SeenStep>> = [

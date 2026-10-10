@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { seenValidator } from "./utils/hakkenSees";
-import { overviewGapsSees } from "./sees/radar";
+import { overviewGapsSees } from "./utils/sees/radar";
 import { tenantQuery } from "./tenantFunctions";
 import { listHold, listWebsiteId, requireMySite } from "./siteAccess";
 import { holdSearches } from "./holdLists";

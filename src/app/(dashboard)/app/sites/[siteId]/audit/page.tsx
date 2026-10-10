@@ -20,7 +20,7 @@ import { useSiteRange } from "../../_components/SiteDateRange";
 import { datedRow } from "../../_components/datedRows";
 import { formatDay, formatNumber, toCsv } from "../../_components/siteFormat";
 import { useSite, useSiteId } from "../../_components/useSite";
-import { auditSees } from "@/convex/sees/site";
+import { auditSees } from "@/convex/utils/sees/site";
 import { SiteSees } from "../../_components/SiteSees";
 import { Figure } from "@/src/ui/components/screens/Figure";
 import { Notice } from "@/src/ui/components/screens/Notice";

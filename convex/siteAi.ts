@@ -8,7 +8,7 @@ import { citedPagesOf, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
 import { MAX_LIST } from "./websiteSiteRows";
 import { listWithCut } from "./siteListPages";
 import { seenValidator } from "./utils/hakkenSees";
-import { citedSees } from "./sees/aiAnswers";
+import { citedSees } from "./utils/sees/aiAnswers";
 
 /**
  * What the AI engines say about a site, for the client's Sites screens.

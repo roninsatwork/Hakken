@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { seen, seenValidator } from "./utils/hakkenSees";
-import { contentGapSees } from "./sees/competitors";
+import { contentGapSees } from "./utils/sees/competitors";
 import type { Doc, Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
 import { companyHolds, listHold, listWebsiteId, myRivals, requireMySite } from "./siteAccess";

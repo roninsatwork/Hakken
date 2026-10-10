@@ -13531,7 +13531,7 @@
         "aheadInAi": "L'IA di Google nomina {text} in {a} risposte al mese, contro le tue {b}.",
         "behindInAi": "L'IA di Google nomina {text} in {a} risposte al mese; tu sei nominato in {b}.",
         "biggestLead": "Il suo vantaggio maggiore è “{text}”, posta {a} volte al mese, dove tu non sei nominato.",
-        "chatgptAhead": "ChatGPT la mostra in {a} delle risposte alle tue {c} domande, e te in {b}.",
+        "chatgptAhead": "ChatGPT la mostra in {a} delle risposte alle tue {countC, plural, one {# domanda} other {# domande}}, e te in {b}.",
         "answersFaster": "Risponde alle recensioni in {count, plural, one {# giorno} other {# giorni}} in media; tu ne impieghi {b}.",
         "nothingKnown": "Non si sa ancora nulla di {text}: non è un concorrente che segui e non è su Google Maps vicino al tuo ufficio.",
         "notWatched": "{text} non è tra i concorrenti che segui, quindi si conosce solo ciò che ne mostrano Google Maps e ChatGPT.",
@@ -13555,7 +13555,7 @@
       "radarSources": {
         "noReading": "Ancora nessuna lettura: Brand radar legge le risposte dell'IA di Google una volta al mese, dal prossimo controllo.",
         "websitesQuoted": "L'IA di Google cita {a} siti in queste risposte; {b} compaiono in risposte che ti nominano.",
-        "placesMissing": "{count, plural, one {# sito citato} other {# siti citati}} accanto ai tuoi concorrenti non {count, plural, one {compare} other {compaiono}} mai accanto a te, {text} più spesso.",
+        "placesMissing": "{count, plural, one {# sito citato accanto ai tuoi concorrenti non compare} other {# siti citati accanto ai tuoi concorrenti non compaiono}} mai accanto a te, {text} più spesso.",
         "ownPages": "Il tuo sito è citato {count, plural, one {una volta} other {# volte}}.",
         "ownPagesNone": "Nessuna di queste risposte cita una pagina del tuo sito.",
         "getOnto": "Fatti elencare su {text}: l'IA di Google lo cita accanto ai tuoi concorrenti e mai accanto a te.",
@@ -13563,8 +13563,8 @@
       },
       "overviewGaps": {
         "noChecks": "Nessuna ricerca è ancora stata controllata per una AI Overview.",
-        "overviews": "{a} delle {b} ricerche controllate mostrano una AI Overview; {c} di queste ti citano.",
-        "gaps": "Sei in prima pagina per {count, plural, one {# ricerca} other {# ricerche}} la cui overview ti lascia fuori, chieste {b} volte al mese.",
+        "overviews": "{a} delle {countB, plural, one {# ricerca} other {# ricerche}} controllate mostrano una AI Overview; {c} di queste ti citano.",
+        "gaps": "Sei in prima pagina per {count, plural, one {# ricerca} other {# ricerche}} la cui overview ti lascia fuori, chieste {countB, plural, one {una volta} other {# volte}} al mese.",
         "noGaps": "Ogni overview su una ricerca in cui sei in prima pagina ti cita.",
         "quotedUp": "{count, plural, one {# overview in più ti cita} other {# overview in più ti citano}} rispetto a un mese prima.",
         "quotedDown": "{count, plural, one {# overview in meno ti cita} other {# overview in meno ti citano}} rispetto a un mese prima.",
@@ -13572,9 +13572,9 @@
       },
       "aiMentions": {
         "noAnswers": "Ancora nessuna risposta: le tue domande vengono poste agli assistenti IA al prossimo controllo.",
-        "notNamed": "Nessun assistente ti nomina per {a} delle tue {b} domande, tra cui “{text}”.",
+        "notNamed": "Nessun assistente ti nomina per {a} delle tue {countB, plural, one {# domanda} other {# domande}}, tra cui “{text}”.",
         "allNamed": "{count, plural, one {Almeno un assistente ti nomina per la tua domanda.} other {Almeno un assistente ti nomina per ognuna delle tue # domande.}}",
-        "leastEngine": "{engine} ti nomina meno di tutti: per {a} delle {b} domande a cui ha risposto.",
+        "leastEngine": "{engine} ti nomina meno di tutti: per {a} delle {countB, plural, one {# domanda} other {# domande}} a cui ha risposto.",
         "warned": "{engine} ha sconsigliato la tua attività nella sua risposta più recente a “{text}”.",
         "seeAnswers": "Leggi cosa dicono gli assistenti per “{text}” e chi nominano al tuo posto.",
         "readWarning": "Leggi l'avvertimento di {engine} e rispondi sul tuo sito e sui tuoi profili."
@@ -13597,7 +13597,7 @@
       },
       "aiAnswer": {
         "first": "Tra i siti che segui, ti nomina per primo.",
-        "place": "Tra i {b} siti che segui e che nomina, sei al {count}º posto.",
+        "place": "Tra i {countB, plural, one {# sito} other {# siti}} che segui e che nomina, sei al {count}º posto.",
         "leftOut": "Nomina {count, plural, one {# sito} other {# siti}} che segui, e non te.",
         "noneNamed": "Non nomina nessuno dei siti che segui, compreso il tuo.",
         "firstShown": "La prima attività che mostra è {text}.",
@@ -13620,7 +13620,8 @@
         "notBuilt": "Ancora nessuna query di fan-out: il prossimo controllo registra le ricerche fatte dagli assistenti.",
         "noQueries": "Gli assistenti non hanno ancora fatto ricerche per queste domande.",
         "competitor": "Gli assistenti hanno fatto {a} ricerche per rispondere alle domande di questo sito, “{text}” più spesso.",
-        "untracked": "Non segui {a} delle {b} ricerche fatte dagli assistenti, “{text}” la più ripetuta.",
+        "untracked": "Non segui {a} delle {countB, plural, one {# ricerca} other {# ricerche}} fatte dagli assistenti, “{text}” la più ripetuta.",
+        "noneTracked": "Non segui nessuna delle {count, plural, one {# ricerca} other {# ricerche}} fatte dagli assistenti; “{text}” è la più ripetuta.",
         "allTracked": "{count, plural, one {Segui l'unica ricerca fatta dagli assistenti.} other {Segui tutte le # ricerche fatte dagli assistenti.}}",
         "noPage": "Nessuna tua pagina risponde a {a} di esse.",
         "firstPage": "Sei nella prima pagina di Google per {a} delle {b}.",
@@ -13629,7 +13630,7 @@
       },
       "aiBusinesses": {
         "noAnswers": "Ancora nessuna risposta letta dall'app di ChatGPT: le tue domande vengono poste al prossimo controllo.",
-        "showing": "L'app di ChatGPT ha mostrato attività in {a} delle risposte alle tue {b} domande; te in {c}.",
+        "showing": "L'app di ChatGPT ha mostrato attività in {a} delle risposte alle tue {countB, plural, one {# domanda} other {# domande}}; {countC, plural, =0 {te in nessuna} other {te in #}}.",
         "shownMost": "Mostra più spesso {text}: in {count, plural, one {# risposta} other {# risposte}}.",
         "skipped": "Sei nel riquadro mappa di Google per {count, plural, one {# ricerca} other {# ricerche}} in cui ti lascia fuori.",
         "upCheck": "Sono {a} in più del controllo prima.",
@@ -13650,7 +13651,7 @@
       },
       "aiDemand": {
         "notYet": "Ancora nessun dato IA: viene letto al prossimo controllo mensile.",
-        "aiAgainstGoogle": "Le tue ricerche vengono chieste all'IA circa {a} volte al mese, contro {b} ricerche su Google.",
+        "aiAgainstGoogle": "Le tue ricerche vengono chieste all'IA circa {a} volte al mese, contro {countB, plural, one {# ricerca} other {# ricerche}} su Google.",
         "yearUp": "Le richieste all'IA sono salite del {a}% in un anno.",
         "yearDown": "Le richieste all'IA sono scese del {a}% in un anno.",
         "rising": "{count, plural, one {# ricerca è} other {# ricerche sono}} in crescita nell'IA, “{text}” la più chiesta.",
@@ -13661,7 +13662,7 @@
       "localProfile": {
         "noOffice": "Nessun profilo Google è ancora collegato come tua sede.",
         "linkOffice": "Collega il tuo profilo Google come tua sede.",
-        "mapBox": "Sei nel riquadro mappa di Google per {a} delle {b} ricerche controllate.",
+        "mapBox": "Sei nel riquadro mappa di Google per {a} delle {countB, plural, one {# ricerca} other {# ricerche}} controllate.",
         "mapNotChecked": "Le tue ricerche non sono ancora state controllate sulla mappa da questa sede.",
         "ratingBehind": "La tua valutazione è {a}, contro {b} dei tuoi concorrenti.",
         "ratingAhead": "La tua valutazione di {a} è sopra il {b} dei tuoi concorrenti.",
@@ -13685,7 +13686,7 @@
       "localOffices": {
         "noOffices": "Nessun profilo Google è ancora collegato come sede.",
         "linkOffice": "Collega i tuoi profili Google come tue sedi.",
-        "offices": "Nelle tue {a} sedi sei nel riquadro mappa di Google per {b} delle {c} ricerche controllate.",
+        "offices": "Nelle tue {a} sedi sei nel riquadro mappa di Google per {b} delle {countC, plural, one {# ricerca} other {# ricerche}} controllate.",
         "furthestBehind": "{text} è la più indietro: nel riquadro mappa per {a} su {b}.",
         "mostToFix": "{text} ha più cose da sistemare: {count, plural, one {# dettaglio} other {# dettagli}}.",
         "seeOffice": "Apri il profilo di {text} e guarda cosa gli manca.",
@@ -13695,7 +13696,7 @@
         "noOffice": "Nessun profilo Google è ancora collegato come tua sede.",
         "linkOffice": "Collega il tuo profilo Google come tua sede.",
         "notChecked": "Le tue ricerche non sono ancora state controllate sulla mappa: lo fa il prossimo controllo.",
-        "inBox": "Sei nel riquadro mappa di Google per {a} delle {b} ricerche controllate.",
+        "inBox": "Sei nel riquadro mappa di Google per {a} delle {countB, plural, one {# ricerca} other {# ricerche}} controllate.",
         "belowBox": "Sei sotto il riquadro, o fuori dalla mappa, per {count, plural, one {# ricerca} other {# ricerche}}, “{text}” la più grande.",
         "topMost": "{text} è primo sulla mappa più spesso: per {count, plural, one {# ricerca} other {# ricerche}}.",
         "upCheck": "Sono {a} in più nel riquadro rispetto al controllo prima.",
@@ -13734,16 +13735,17 @@
         "notOwnSite": "I profili si collegano dal tuo sito; qui vengono solo mostrati.",
         "off": "Local non è attivo per la tua azienda.",
         "noOffice": "Nessun profilo Google è ancora collegato come tua sede: trova il tuo qui sotto e segnalo come tuo.",
-        "linked": "{count, plural, one {# sede} other {# sedi}} e {b} attività concorrenti sono collegate.",
+        "linked": "{count, plural, one {# sede} other {# sedi}} e {countB, plural, one {# attività concorrente} other {# attività concorrenti}} collegate.",
         "onlyGoogle": "Sono collegati solo profili Google: le recensioni su altri siti non contano finché non li colleghi.",
         "seeReviews": "Guarda le tue recensioni e quelle in attesa di risposta."
       },
       "reviews": {
         "noProfile": "Nessun profilo Google è ancora collegato, quindi non si leggono recensioni.",
         "linkOffice": "Collega il tuo profilo Google come tua sede.",
-        "waiting": "{count, plural, one {# recensione attende} other {# recensioni attendono}} una risposta, la più vecchia da {b} giorni.",
+        "waiting": "{count, plural, one {# recensione attende} other {# recensioni attendono}} una risposta, la più vecchia da {countB, plural, one {# giorno} other {# giorni}}.",
         "allAnswered": "Ogni recensione ha una risposta.",
         "newReviews": "Hai ricevuto {a} recensioni negli ultimi 30 giorni, contro {b} nei 30 giorni prima.",
+        "noNewReviews": "Nessuna nuova recensione negli ultimi 60 giorni.",
         "daysToAnswer": "Rispondi in media in {count, plural, one {# giorno} other {# giorni}}.",
         "answerWaiting": "Rispondi {count, plural, one {alla recensione in attesa} other {alle # recensioni in attesa}}, dalla più vecchia.",
         "askForReviews": "Chiedi una recensione a ogni cliente: questo mese ne sono arrivate meno del mese prima."
@@ -13751,7 +13753,7 @@
       "reviewsSay": {
         "notRead": "Le tue recensioni non sono ancora state lette per quello che dicono.",
         "complaints": "I clienti si lamentano soprattutto di {text}: {count, plural, one {# recensione} other {# recensioni}}.",
-        "praised": "Lodano soprattutto {text}: {count, plural, one {# recensione} other {# recensioni}}.",
+        "praised": "I clienti lodano soprattutto {text}: {count, plural, one {# recensione} other {# recensioni}}.",
         "rivalsPraised": "I concorrenti sono lodati per {text} più di te: {count, plural, one {# recensione} other {# recensioni}}.",
         "draftsReady": "{count, plural, one {# risposta è pronta} other {# risposte sono pronte}} da inviare.",
         "readComplaints": "Leggi le recensioni su {text} e rispondi a ciascuna.",
@@ -13779,22 +13781,22 @@
         "none": "Non è ancora stata trovata una pagina che nomina te o un concorrente che segui.",
         "lead": "Hai il {a}% delle pagine che nominano te e i concorrenti che segui, più di ognuno di loro.",
         "behind": "Hai il {a}% delle pagine che nominano te e i concorrenti che segui; {text} è in testa con il {b}%.",
-        "upMonth": "Sono {a} pagine in più del mese prima.",
-        "downMonth": "Sono {a} pagine in meno del mese prima.",
+        "upMonth": "{count, plural, one {È # pagina in più} other {Sono # pagine in più}} del mese prima.",
+        "downMonth": "{count, plural, one {È # pagina in meno} other {Sono # pagine in meno}} del mese prima.",
         "seeLeader": "Guarda dove viene nominato {text} e tu no.",
         "getListed": "Fatti elencare sui siti che nominano i tuoi concorrenti e non te."
       },
       "mentionsListed": {
         "none": "Ancora nessun posto noto: arrivano dalle risposte IA di Google e dai link dei concorrenti, dal prossimo controllo.",
         "everywhere": "Sei già su tutti i {a} posti dove sono i tuoi concorrenti.",
-        "places": "I tuoi concorrenti sono su {a} di questi {b} posti e tu no.",
+        "places": "I tuoi concorrenti sono su {a} di questi {countB, plural, one {# posto} other {# posti}} e tu no.",
         "mostRivals": "{text} ha {a} dei tuoi concorrenti e non te.",
         "strongest": "{text} è il più forte di questi.",
         "getOnto": "Fatti elencare su {text}."
       },
       "backlinks": {
         "none": "Ancora nessun backlink letto: li legge il prossimo controllo.",
-        "linkingWebsites": "{a} siti rimandano a te, con {b} link in tutto.",
+        "linkingWebsites": "{a} siti rimandano a te, con {countB, plural, one {# link} other {# link}} in tutto.",
         "up": "Sono {a} siti in più rispetto all'inizio di queste date.",
         "down": "Sono {a} siti in meno rispetto all'inizio di queste date.",
         "steady": "Ti linkano tanti siti quanti all'inizio di queste date.",
@@ -13813,10 +13815,10 @@
       },
       "backlinksQuality": {
         "none": "Ancora nessun backlink letto: li legge il prossimo controllo.",
-        "broken": "{count, plural, one {# link punta} other {# link puntano}} a {b} tue pagine che non funzionano più.",
+        "broken": "{count, plural, one {# link punta} other {# link puntano}} a tue pagine che non funzionano più; in tutto {countB, plural, one {# tua pagina è rotta} other {# tue pagine sono rotte}}.",
         "noBroken": "Nessun link punta a una tua pagina che non funziona più.",
         "spam": "Il punteggio spam dei tuoi link è {a} su 100, dove più basso è meglio.",
-        "nofollow": "{a} dei {b} siti che ti linkano segnano i link da non seguire.",
+        "nofollow": "{a} dei {countB, plural, one {# sito} other {# siti}} che ti linkano segnano i link da non seguire.",
         "fixBroken": "Ripristina o reindirizza le pagine a cui puntano quei link."
       },
       "backlinksWhere": {
@@ -13828,7 +13830,7 @@
       "backlinksAll": {
         "none": "Ancora nessun backlink letto: li legge il prossimo controllo.",
         "noneMatch": "Nessun link corrisponde a questi filtri.",
-        "links": "{count, plural, one {# link elencato} other {# link elencati}}, da {b} siti.",
+        "links": "{count, plural, one {# link elencato} other {# link elencati}}, da {countB, plural, one {# sito} other {# siti}}.",
         "strongest": "Il più forte arriva da {text}, con rank {a}.",
         "followed": "Il {a}% è seguito dai motori di ricerca.",
         "lost": "{count, plural, one {# è stato perso} other {# sono stati persi}}.",
@@ -13853,7 +13855,7 @@
       },
       "backlinksIps": {
         "none": "Ancora nessun server letto: li legge il prossimo controllo.",
-        "spread": "I {a} siti che ti linkano stanno su {b} reti.",
+        "spread": "I {a} siti che ti linkano stanno su {countB, plural, one {# rete} other {# reti}}.",
         "crowded": "{text} ne ospita {a}: i link da una stessa rete contano meno.",
         "oneEach": "Nessuna rete ne ospita più di uno.",
         "seeNetwork": "Guarda i siti su {text}.",
@@ -13861,7 +13863,7 @@
       },
       "backlinksBroken": {
         "none": "Nessun link punta a una tua pagina che non funziona più.",
-        "broken": "{count, plural, one {# link punta} other {# link puntano}} a {b} pagine che non funzionano più.",
+        "broken": "{count, plural, one {# link punta} other {# link puntano}} a {countB, plural, one {# pagina che non funziona più} other {# pagine che non funzionano più}}.",
         "topPage": "{text} ne ha di più: {count, plural, one {# link} other {# link}}.",
         "strongest": "Il più forte, da {text}, punta a {more}.",
         "putBack": "Ripristina {text}, o reindirizzala alla pagina che l'ha sostituita."
@@ -13869,32 +13871,50 @@
       "backlinksNewLost": {
         "none": "Nessun link guadagnato o perso in queste date.",
         "gainedLost": "{a} siti hanno iniziato a linkarti in queste date, e {b} hanno smesso.",
-        "mostLost": "La perdita maggiore dal {text}: {a}.",
-        "mostGained": "Il guadagno maggiore dal {text}: {a}.",
-        "seeLostThen": "Guarda i link persi dal {text}.",
-        "seeGainedThen": "Guarda i link guadagnati dal {text}."
+        "mostLost": {
+          "day": "La perdita maggiore il {text}: {a}.",
+          "week": "La perdita maggiore nella settimana del {text}: {a}.",
+          "month": "La perdita maggiore nel mese dal {text}: {a}."
+        },
+        "mostGained": {
+          "day": "Il guadagno maggiore il {text}: {a}.",
+          "week": "Il guadagno maggiore nella settimana del {text}: {a}.",
+          "month": "Il guadagno maggiore nel mese dal {text}: {a}."
+        },
+        "seeLostThen": {
+          "day": "Guarda i link persi il {text}.",
+          "week": "Guarda i link persi nella settimana del {text}.",
+          "month": "Guarda i link persi nel mese dal {text}."
+        },
+        "seeGainedThen": {
+          "day": "Guarda i link guadagnati il {text}.",
+          "week": "Guarda i link guadagnati nella settimana del {text}.",
+          "month": "Guarda i link guadagnati nel mese dal {text}."
+        }
       },
       "backlinksDomain": {
         "notHeld": "{text} non è tra i siti che ti linkano nel controllo più recente.",
         "lost": "{text} non ti linka più.",
-        "links": "{text} ti linka {count, plural, one {una volta} other {# volte}}; {b} dei link letti sono seguiti.",
+        "links": "{text} ti linka {count, plural, one {una volta} other {# volte}}; {countB, plural, =0 {nessuno dei link letti è seguito} one {# dei link letti è seguito} other {# dei link letti sono seguiti}}.",
         "spam": "Il suo punteggio spam è {a} su 100, dove più basso è meglio.",
         "seeLink": "Guarda il suo link più forte sulla sua pagina.",
-        "askBack": "Chiedi a {text} di rimettere il link."
+        "askBack": "Chiedi a {text} di rimettere il link.",
+        "linked": "Ti linkava {count, plural, one {una volta} other {# volte}}; {countB, plural, =0 {nessuno di quei link era seguito} one {# era seguito} other {# erano seguiti}}."
       },
       "backlinksAnchor": {
         "notHeld": "“{text}” non è tra le parole che ti linkano nel controllo più recente.",
-        "links": "“{text}” ti linka {count, plural, one {una volta} other {# volte}}, da {b} siti.",
+        "links": "“{text}” ti linka {count, plural, one {una volta} other {# volte}}, da {countB, plural, one {# sito} other {# siti}}.",
         "page": "La maggior parte di questi link punta a {text}: {a}.",
         "seeLink": "Guarda il suo link più forte sulla sua pagina."
       },
       "googleSearches": {
         "noSearches": "Non segui ancora una ricerca su Google.",
         "notChecked": "Le tue ricerche non sono ancora state controllate su Google: lo fa il prossimo controllo.",
+        "noMoves": "Nessuna delle tue ricerche si è mossa dal controllo prima.",
         "moves": "Dal controllo prima, {a} delle tue ricerche sono salite e {b} sono scese.",
-        "biggestFall": "“{text}” è scesa di più: da {a} a {b}.",
-        "droppedOut": "“{text}” è uscita dai primi 100, da {a}.",
-        "firstPage": "{a} delle tue {b} ricerche sono nella prima pagina di Google.",
+        "biggestFall": "“{text}” è scesa di più: da {count}º a {countB}º.",
+        "droppedOut": "“{text}” è uscita dai primi 100, da {count}º.",
+        "firstPage": "{a} delle tue {countB, plural, one {# ricerca} other {# ricerche}} sono nella prima pagina di Google.",
         "seeFall": "Guarda chi ti ha superato su “{text}” e quale pagina mostra Google."
       },
       "googleFanOut": {
@@ -13909,15 +13929,15 @@
       "googleMoves": {
         "noMoves": "Nessuna ricerca si è mossa nel controllo più recente.",
         "winsLosses": "Nel controllo più recente sei salito o entrato su {a} ricerche, e sceso o uscito su {b}.",
-        "biggestLoss": "La perdita più grande: “{text}”, ora {a}, cercata {b} volte al mese.",
+        "biggestLoss": "La perdita più grande: “{text}”, ora {count}º, cercata {countB, plural, one {una volta} other {# volte}} al mese.",
         "biggestLost": "La perdita più grande: “{text}”, uscita dai primi 100, cercata {a} volte al mese.",
-        "biggestWin": "Il guadagno più grande: “{text}”, ora {a}, cercata {b} volte al mese.",
+        "biggestWin": "Il guadagno più grande: “{text}”, ora {count}º, cercata {countB, plural, one {una volta} other {# volte}} al mese.",
         "seeLoss": "Guarda cosa è cambiato su “{text}”: la pagina, e chi ti ha superato.",
         "seeWin": "Guarda cosa ha fatto salire “{text}”."
       },
       "googleAbove": {
         "notChecked": "Le pagine Google delle tue ricerche non sono ancora state lette.",
-        "aboveMost": "{text} è sopra di te più spesso: su {a} delle tue {b} ricerche.",
+        "aboveMost": "{text} è sopra di te più spesso: su {a} delle tue {countB, plural, one {# ricerca} other {# ricerche}}.",
         "nobodyAbove": "Nessuno è sopra di te nelle tue ricerche.",
         "rivalsAbove": "Un concorrente che segui è sopra di te su {count, plural, one {# ricerca} other {# ricerche}}.",
         "youFirst": "Sei primo su {count, plural, one {# ricerca} other {# ricerche}}.",
@@ -13925,7 +13945,7 @@
       },
       "googleFeatures": {
         "notChecked": "Le pagine Google delle tue ricerche non sono ancora state lette.",
-        "checked": "{a} delle tue ricerche sono state lette per {b} tipi di funzione Google.",
+        "checked": "{a} delle tue ricerche sono state lette per {countB, plural, one {# tipo} other {# tipi}} di funzione Google.",
         "missed": "{text} compare su {b} di esse, e ti lascia fuori da {a}.",
         "inAll": "Dove una funzione compare sulle tue ricerche, ci sei.",
         "missedToo": "Anche {text} ti lascia fuori da {a}.",
@@ -13933,7 +13953,7 @@
       },
       "googleFeature": {
         "none": "Nessuna delle tue ricerche mostra questa funzione.",
-        "inIt": "Ci sei su {a} delle {b} ricerche che la mostrano.",
+        "inIt": "Ci sei su {a} delle {countB, plural, one {# ricerca} other {# ricerche}} che la mostrano.",
         "biggestOut": "La ricerca più grande in cui non ci sei: “{text}”, cercata {a} volte al mese.",
         "seeSearch": "Guarda cosa mostra Google per “{text}”."
       },
@@ -13962,7 +13982,7 @@
       },
       "keywordsBands": {
         "none": "Ancora nessuna ricerca posizionata letta: la legge il prossimo controllo.",
-        "pageOne": "{a} delle tue {b} ricerche sono nella prima pagina di Google.",
+        "pageOne": "{a} delle tue {countB, plural, one {# ricerca} other {# ricerche}} sono nella prima pagina di Google.",
         "movedOnOff": "Nel controllo più recente {a} sono entrate in prima pagina e {b} ne sono uscite.",
         "closest": "{count, plural, one {# ricerca è} other {# ricerche sono}} tra 11 e 13, le più vicine alla prima pagina: “{text}” la più cercata.",
         "pushUp": "Rafforza la tua pagina per “{text}” per portarla in prima pagina.",
@@ -13971,7 +13991,7 @@
       "keywordsBandsMoved": {
         "none": "Nessuna ricerca ha cambiato fascia nel controllo più recente.",
         "moved": "{a} ricerche sono salite di fascia e {b} sono scese.",
-        "biggestDrop": "Il calo più grande: “{text}”, da {a} a {b}.",
+        "biggestDrop": "Il calo più grande: “{text}”, da {count}º a {countB}º.",
         "seeDrop": "Guarda cosa è cambiato su “{text}”."
       },
       "keywordsStructure": {
@@ -13983,8 +14003,8 @@
       },
       "keywordRecord": {
         "notRanking": "Non sei nei primi 100 di Google per “{text}”.",
-        "moved": "Sei {a} su Google, da {b} al controllo prima.",
-        "position": "Sei {a} su Google.",
+        "moved": "Sei {count}º su Google, da {countB}º al controllo prima.",
+        "position": "Sei {count}º su Google.",
         "above": "{text} è in testa {count, plural, one {al sito} other {ai # siti}} sopra di te.",
         "pageChanged": "Google ora mostra {text}, al posto di {more}.",
         "seePage": "Guarda {text}, la pagina che mostra Google.",
@@ -14004,7 +14024,7 @@
       "paid": {
         "none": "Ancora nessuna ricerca a pagamento letta: la legge il prossimo controllo.",
         "notAdvertising": "Non fa pubblicità su Google nel controllo più recente.",
-        "advertising": "Fa pubblicità su {a} ricerche su Google, che portano circa {b} visite al mese.",
+        "advertising": "Fa pubblicità su {a} ricerche su Google, che portano circa {countB, plural, one {# visita} other {# visite}} al mese.",
         "cost": "Quelle visite costerebbero circa {a} $ al mese in annunci.",
         "seeKeywords": "Guarda per quali ricerche paga e quanto costa ciascuna."
       },
@@ -14019,7 +14039,8 @@
         "noRivals": "Non segui ancora un concorrente.",
         "findRivals": "Guarda i concorrenti suggeriti e segui quelli che contano.",
         "notCompared": "I tuoi {a} concorrenti non sono ancora stati confrontati con te sulle ricerche.",
-        "leadOver": "Sei davanti a {a} dei {b} concorrenti che segui sulle ricerche in comune.",
+        "leadAll": "{count, plural, one {Sei davanti al concorrente che segui sulle ricerche in comune.} other {Sei davanti a tutti i # concorrenti che segui sulle ricerche in comune.}}",
+        "leadOver": "Sei davanti a {a} dei {countB, plural, one {# concorrente} other {# concorrenti}} che segui sulle ricerche in comune.",
         "trailMost": "{text} ti batte su {a} ricerche in comune; tu lo batti su {b}.",
         "seeRival": "Guarda le ricerche su cui {text} ti batte.",
         "seeGap": "Guarda le ricerche per cui sono posizionati i tuoi concorrenti e tu no."
@@ -14027,7 +14048,7 @@
       "competitorsRival": {
         "noneShared": "Non condividi nessuna ricerca con questo concorrente nel controllo più recente.",
         "shared": "Siete entrambi posizionati per {a} ricerche; è davanti su {b}.",
-        "biggest": "La più grande: “{text}”, dove è {a} e tu {b}.",
+        "biggest": "La più grande: “{text}”, dove è {count}º e tu {countB}º.",
         "aheadOnAll": "Sei davanti su ogni ricerca in comune.",
         "seeSearch": "Guarda cosa mostra Google per “{text}”.",
         "seeGap": "Guarda le ricerche per cui è posizionato e tu no."
@@ -14043,7 +14064,7 @@
         "none": "Nessun gap: i tuoi concorrenti non sono posizionati per ricerche in cui tu non ci sei, o non è ancora stato calcolato.",
         "gap": "I tuoi concorrenti sono posizionati per {a} ricerche in cui tu non ci sei.",
         "biggest": "La più grande: “{text}”, cercata {a} volte al mese.",
-        "everyRival": "Tutti i tuoi {b} concorrenti sono posizionati per {a} di esse.",
+        "everyRival": "Tutti i tuoi {countB} concorrenti sono posizionati per {a} di esse.",
         "seeSearch": "Guarda chi è posizionato per “{text}” e progetta una pagina."
       },
       "competitorsMap": {
@@ -14120,7 +14141,7 @@
       },
       "websites": {
         "none": "Non hai ancora nessun sito.",
-        "websites": "Hai {count, plural, one {# sito tuo} other {# siti tuoi}} e segui {b} concorrenti.",
+        "websites": "Hai {count, plural, one {# sito tuo} other {# siti tuoi}} e segui {countB, plural, one {# concorrente} other {# concorrenti}}.",
         "mostDown": "{text} si è mosso di più nel controllo più recente: in calo su {a} ricerche, in salita su {b}.",
         "mostUp": "{text} è salito sul maggior numero di ricerche: {a}.",
         "notChecked": "Nessuno è ancora stato controllato.",
@@ -15705,7 +15726,7 @@
       },
       "start": {
         "start": "Cerca una parola chiave per vedere quanto viene cercata, quanto è difficile e chi è posizionato.",
-        "lookups": "Hai cercato {count, plural, one {# parola chiave} other {# parole chiave}} e tieni {b} liste.",
+        "lookups": "Hai cercato {count, plural, one {# parola chiave} other {# parole chiave}} e {countB, plural, =0 {non tieni liste} one {tieni # lista} other {tieni # liste}}.",
         "bestChance": "La tua migliore occasione non ancora in prima pagina: “{text}”, cercata {a} volte al mese, difficoltà {b} su 100.",
         "openLookup": "Apri “{text}” e guarda chi è posizionato."
       },
@@ -15714,8 +15735,8 @@
         "none": "Non è stato trovato nulla per questa ricerca.",
         "volume": "Viene cercata {a} volte al mese; la difficoltà è {b} su 100.",
         "youDont": "{text} non è tra i primi 100 di Google.",
-        "youRank": "{text} è {a} su Google.",
-        "youRankLow": "{text} è {a} su Google, oltre la prima pagina.",
+        "youRank": "{text} è {count}º su Google.",
+        "youRankLow": "{text} è {count}º su Google, oltre la prima pagina.",
         "verdict": {
           "WINNING": "La stai già vincendo: mantieni forte la pagina.",
           "IMPROVE": "Una tua pagina è posizionata: migliorala.",
@@ -15729,27 +15750,27 @@
       "ideas": {
         "none": "Ancora nessuna idea.",
         "ideas": "{count, plural, one {# idea trovata} other {# idee trovate}}.",
-        "ideasRanking": "{count, plural, one {# idea trovata} other {# idee trovate}}; il tuo sito è posizionato per {b}.",
+        "ideasRanking": "{count, plural, one {# idea trovata} other {# idee trovate}}; il tuo sito {countB, plural, =0 {non è posizionato per nessuna} other {è posizionato per #}}.",
         "best": "La migliore occasione non ancora in prima pagina: “{text}”, cercata {a} volte al mese, difficoltà {b} su 100.",
         "seeSearch": "Guarda dove sei per “{text}”."
       },
       "results": {
         "none": "I risultati di Google non sono ancora stati letti.",
         "top": "{text} è primo, con circa {a} visite al mese.",
-        "youAt": "Il tuo sito è {a}.",
+        "youAt": "Il tuo sito è {count}º.",
         "rivals": "{count, plural, one {# concorrente che segui è} other {# concorrenti che segui sono}} nella pagina.",
         "seeTop": "Guarda la pagina prima su {text}."
       },
       "ai": {
         "none": "Gli assistenti IA non sono ancora stati interpellati.",
         "answered": "{count, plural, one {# assistente ha risposto} other {# assistenti hanno risposto}}.",
-        "named": "{a} dei {b} assistenti che hanno risposto nominano il tuo sito.",
+        "named": "{count, plural, =0 {Nessuno dei {b} assistenti che hanno risposto nomina il tuo sito.} other {# dei {b} assistenti che hanno risposto nominano il tuo sito.}}",
         "rivalMost": "{text} è il concorrente più nominato: da {count, plural, one {# assistente} other {# assistenti}}.",
-        "cited": "Citano {a} delle tue pagine, su {b} pagine citate in tutto."
+        "cited": "{count, plural, =0 {Nessuna delle {b} pagine che citano è tua.} other {Citano # delle tue pagine, su {b} citate in tutto.}}"
       },
       "list": {
         "empty": "Questa lista non ha ancora ricerche.",
-        "tracked": "{a} delle sue {b} ricerche sono seguite su Google.",
+        "tracked": "{a} delle sue {countB, plural, one {# ricerca} other {# ricerche}} sono seguite su Google.",
         "notRanked": "Il tuo sito non è posizionato per {count, plural, one {# di esse} other {# di esse}}, “{text}” la più cercata.",
         "allRanked": "Il tuo sito è posizionato per tutte.",
         "seeSearch": "Guarda dove sei per “{text}”."
@@ -15758,7 +15779,7 @@
         "preparing": "Le ricerche di {text} sono in confronto con le tue: la pagina si completa da sola.",
         "none": "{text} non è posizionato per ricerche in cui il tuo sito non c'è.",
         "gap": "{text} è posizionato per {a} ricerche in cui il tuo sito non c'è.",
-        "biggest": "La più grande: “{text}”, cercata {a} volte al mese, dove è {b}.",
+        "biggest": "La più grande: “{text}”, cercata {a} volte al mese, dove è {countB}º.",
         "seeSearch": "Guarda dove sei per “{text}”."
       }
     }

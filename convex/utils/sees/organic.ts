@@ -1,4 +1,4 @@
-import { seen, toPage, toRecord, type Seen, type SeenPhrase, type SeenStep } from "../utils/hakkenSees";
+import { seen, toPage, toRecord, type Seen, type SeenPhrase, type SeenStep } from "../hakkenSees";
 
 /**
  * What Hakken sees on the Organic search screens (docs/plans/active/

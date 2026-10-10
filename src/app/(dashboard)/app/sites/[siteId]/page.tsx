@@ -15,7 +15,7 @@ import { datedRow } from "../_components/datedRows";
 import { formatDay, formatMonthName, toCsv } from "../_components/siteFormat";
 import { shiftDay, shiftMonth } from "../_components/siteRange";
 import { useSite, useSiteId } from "../_components/useSite";
-import { overviewSees } from "@/convex/sees/site";
+import { overviewSees } from "@/convex/utils/sees/site";
 import { SiteSees } from "../_components/SiteSees";
 import { SiteViewSwitch } from "../_components/SiteViewSwitch";
 import { newestOfEach } from "./newestOfEach";

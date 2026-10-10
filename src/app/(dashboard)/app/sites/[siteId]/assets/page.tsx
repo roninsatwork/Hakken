@@ -17,7 +17,7 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../_components/siteFormat";
 import { ListDownload } from "../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../_components/useSite";
-import { assetTarget, assetsSees } from "@/convex/sees/site";
+import { assetTarget, assetsSees } from "@/convex/utils/sees/site";
 import { SiteSees, useSeenHref } from "../../_components/SiteSees";
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";

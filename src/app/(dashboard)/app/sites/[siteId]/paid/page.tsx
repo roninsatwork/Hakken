@@ -16,7 +16,7 @@ import { formatDay, formatDollars, formatNumber, toCsv } from "../../_components
 import { Figure } from "@/src/ui/components/screens/Figure";
 import { useSiteListHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
-import { paidSees } from "@/convex/sees/paid";
+import { paidSees } from "@/convex/utils/sees/paid";
 import { SiteSees } from "../../_components/SiteSees";
 
 const MEASURES = ["paidKeywords", "paidTraffic", "paidTrafficCost"] as const;

@@ -7,10 +7,10 @@ import { listHold, requireMySite, SITE_PAGE_MAX } from "./siteAccess";
 import { askedQuestions, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
 import { keywordStanding, readKeywordCopy, type KeywordCopyRow } from "./siteKeywordCopy";
 import { pagesCopyKey, readListCopy } from "./siteListCopies";
-import { listOrder, listPageArgs, listPageResult, listPageSeenResult, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
+import { listOrder, listPageArgs, listPageSeenResult, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { seen } from "./utils/hakkenSees";
-import { movesSees } from "./sees/google";
-import { keywordsSees, pagesSees, sectionsSees } from "./sees/organic";
+import { movesSees } from "./utils/sees/google";
+import { keywordsSees, pagesSees, sectionsSees } from "./utils/sees/organic";
 import { readPageKinds } from "./pageKinds";
 import {
   kdBandValidator,

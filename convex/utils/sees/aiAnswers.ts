@@ -1,5 +1,5 @@
-import { seen, toPage, toRecord, type Seen, type SeenPhrase, type SeenStep } from "../utils/hakkenSees";
-import { pathOfUrl } from "../utils/urlParts";
+import { seen, toPage, toRecord, type Seen, type SeenPhrase, type SeenStep } from "../hakkenSees";
+import { pathOfUrl } from "../urlParts";
 
 /**
  * What Hakken sees on the AI answers screens (docs/plans/active/discovery-
@@ -172,6 +172,7 @@ export function anglesSees(result: {
   const firstPage = result.rows.filter((row) => row.position?.value != null && row.position.value <= 10).length;
   const says: Array<Maybe<SeenPhrase>> = [
     !result.own ? { code: "competitor", a: result.rows.length, text: byTimes[0].queryText }
+    : untracked.length === result.rows.length ? { code: "noneTracked", a: result.rows.length, text: untracked[0].queryText }
     : untracked[0] ? { code: "untracked", a: untracked.length, b: result.rows.length, text: untracked[0].queryText }
     : { code: "allTracked", a: result.rows.length },
     noPage.length > 0 ? { code: "noPage", a: noPage.length, b: result.rows.length } : null,

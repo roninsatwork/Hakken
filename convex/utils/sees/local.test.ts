@@ -217,6 +217,9 @@ describe("Your reviews", () => {
     const box = yourReviewsSees({ listings: [{}], figures: { newIn30: 5, newBefore: 2, waiting: 0, oldestWaitingDays: null, daysToAnswer: null } });
     expect(box).toEqual({ says: [{ code: "allAnswered" }, { code: "newReviews", a: 5, b: 2 }], steps: [] });
     expectWords("reviews", box);
+    const quiet = yourReviewsSees({ listings: [{}], figures: { newIn30: 0, newBefore: 0, waiting: 0, oldestWaitingDays: null, daysToAnswer: null } });
+    expect(quiet.says).toEqual([{ code: "allAnswered" }, { code: "noNewReviews" }]);
+    expectWords("reviews", quiet);
     const none = yourReviewsSees({ listings: [], figures: { newIn30: 0, newBefore: 0, waiting: 0, oldestWaitingDays: null, daysToAnswer: null } });
     expect(none).toEqual({ says: [{ code: "noProfile" }], steps: [LINK_OFFICE] });
     expectWords("reviews", none);

@@ -17,7 +17,7 @@ import { cn } from "@/src/ui/lib/utils";
 import { formatDay, formatNumber } from "./_components/siteFormat";
 import { SiteMark } from "./_components/SiteMark";
 import { SiteSees } from "./_components/SiteSees";
-import { websitesSees } from "@/convex/sees/site";
+import { websitesSees } from "@/convex/utils/sees/site";
 import { groupHolds } from "./_components/siteGroups";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";

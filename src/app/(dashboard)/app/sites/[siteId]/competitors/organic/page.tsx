@@ -16,7 +16,7 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { organicCompetitorsSees } from "@/convex/sees/competitors";
+import { organicCompetitorsSees } from "@/convex/utils/sees/competitors";
 import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";

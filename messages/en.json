@@ -13531,7 +13531,7 @@
         "aheadInAi": "Google's AI names {text} in {a} answers a month to your {b}.",
         "behindInAi": "Google's AI names {text} in {a} answers a month; you are named in {b}.",
         "biggestLead": "Its biggest lead is “{text}”, asked {a} times a month, where you are not named.",
-        "chatgptAhead": "ChatGPT shows it in {a} of your {c} questions' answers, and you in {b}.",
+        "chatgptAhead": "ChatGPT shows it in {a} of your {countC, plural, one {# question} other {# questions}}' answers, and you in {b}.",
         "answersFaster": "It answers reviews in {count, plural, one {# day} other {# days}} on average; you take {b}.",
         "nothingKnown": "Nothing is held about {text} yet: it is not a rival you watch, and not on Google Maps near your office.",
         "notWatched": "{text} is not one of the rivals you watch, so only what Google Maps and ChatGPT show of it is known.",
@@ -13563,8 +13563,8 @@
       },
       "overviewGaps": {
         "noChecks": "No search has been checked for an AI Overview yet.",
-        "overviews": "{a} of {b} searches checked show an AI Overview; {c} of those quote you.",
-        "gaps": "You rank on the first page for {count, plural, one {# search} other {# searches}} whose overview leaves you out, asked {b} times a month.",
+        "overviews": "{a} of {countB, plural, one {# search} other {# searches}} checked show an AI Overview; {c} of those quote you.",
+        "gaps": "You rank on the first page for {count, plural, one {# search} other {# searches}} whose overview leaves you out, asked {countB, plural, one {once} other {# times}} a month.",
         "noGaps": "Every overview on a search where you rank on the first page quotes you.",
         "quotedUp": "{count, plural, one {# more overview quotes} other {# more overviews quote}} you than a month before.",
         "quotedDown": "{count, plural, one {# fewer overview quotes} other {# fewer overviews quote}} you than a month before.",
@@ -13572,9 +13572,9 @@
       },
       "aiMentions": {
         "noAnswers": "No answers yet: your questions are put to the AI assistants at the next check.",
-        "notNamed": "No assistant names you for {a} of your {b} questions, “{text}” among them.",
+        "notNamed": "No assistant names you for {a} of your {countB, plural, one {# question} other {# questions}}, “{text}” among them.",
         "allNamed": "{count, plural, one {At least one assistant names you for your question.} other {At least one assistant names you for each of your # questions.}}",
-        "leastEngine": "{engine} names you least: for {a} of the {b} questions it answered.",
+        "leastEngine": "{engine} names you least: for {a} of the {countB, plural, one {# question} other {# questions}} it answered.",
         "warned": "{engine} warned people off you in its newest answer to “{text}”.",
         "seeAnswers": "Read what the assistants say for “{text}”, and who they name instead.",
         "readWarning": "Read {engine}'s warning, and answer it on your site and your profiles."
@@ -13597,7 +13597,7 @@
       },
       "aiAnswer": {
         "first": "Of the websites you watch, it names you first.",
-        "place": "Of the {b} websites you watch that it names, you come {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}.",
+        "place": "Of the {countB, plural, one {# website} other {# websites}} you watch that it names, you come {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}.",
         "leftOut": "It names {count, plural, one {# website} other {# websites}} you watch, and not you.",
         "noneNamed": "It names none of the websites you watch, you included.",
         "firstShown": "The first business it shows is {text}.",
@@ -13620,7 +13620,8 @@
         "notBuilt": "No fan-out queries yet: the next check records the searches the assistants run.",
         "noQueries": "The assistants ran no searches for these questions yet.",
         "competitor": "The assistants ran {a} searches to answer this website's questions, “{text}” most often.",
-        "untracked": "You do not track {a} of the {b} searches the assistants ran, “{text}” the most repeated.",
+        "untracked": "You do not track {a} of the {countB, plural, one {# search} other {# searches}} the assistants ran, “{text}” the most repeated.",
+        "noneTracked": "You track none of the {count, plural, one {# search} other {# searches}} the assistants ran; “{text}” is the most repeated.",
         "allTracked": "{count, plural, one {You track the one search the assistants ran.} other {You track all # searches the assistants ran.}}",
         "noPage": "No page of yours answers {a} of them.",
         "firstPage": "You are on Google's first page for {a} of the {b}.",
@@ -13629,7 +13630,7 @@
       },
       "aiBusinesses": {
         "noAnswers": "No answer read from the ChatGPT app yet: your questions are asked at the next check.",
-        "showing": "The ChatGPT app showed businesses in {a} of your {b} questions' answers; you in {c}.",
+        "showing": "The ChatGPT app showed businesses in {a} of your {countB, plural, one {# question} other {# questions}}' answers; {countC, plural, =0 {it showed you in none} other {it showed you in #}}.",
         "shownMost": "It shows {text} most: in {count, plural, one {# answer} other {# answers}}.",
         "skipped": "You are in Google's map box for {count, plural, one {# search} other {# searches}} where it leaves you out.",
         "upCheck": "That is {a} more than the check before.",
@@ -13650,7 +13651,7 @@
       },
       "aiDemand": {
         "notYet": "No AI figures yet: they are read on the next monthly check.",
-        "aiAgainstGoogle": "Your searches are asked of AI about {a} times a month, against {b} searches on Google.",
+        "aiAgainstGoogle": "Your searches are asked of AI about {a} times a month, against {countB, plural, one {# search} other {# searches}} on Google.",
         "yearUp": "Asks of AI are up {a}% on the year.",
         "yearDown": "Asks of AI are down {a}% on the year.",
         "rising": "{count, plural, one {# search is} other {# searches are}} rising in AI, “{text}” the most asked.",
@@ -13661,7 +13662,7 @@
       "localProfile": {
         "noOffice": "No Google profile is linked as your office yet.",
         "linkOffice": "Link your Google profile as your office.",
-        "mapBox": "You are in Google's map box for {a} of the {b} searches checked.",
+        "mapBox": "You are in Google's map box for {a} of the {countB, plural, one {# search} other {# searches}} checked.",
         "mapNotChecked": "Your searches have not been checked on the map from this office yet.",
         "ratingBehind": "Your rating is {a}, against {b} for your rivals.",
         "ratingAhead": "Your rating of {a} is ahead of your rivals' {b}.",
@@ -13685,7 +13686,7 @@
       "localOffices": {
         "noOffices": "No Google profile is linked as an office yet.",
         "linkOffice": "Link your Google profiles as your offices.",
-        "offices": "Across your {a} offices you are in Google's map box for {b} of {c} searches checked.",
+        "offices": "Across your {a} offices you are in Google's map box for {b} of {countC, plural, one {# search} other {# searches}} checked.",
         "furthestBehind": "{text} is furthest behind: in the map box for {a} of {b}.",
         "mostToFix": "{text} has the most to put right: {count, plural, one {# detail} other {# details}}.",
         "seeOffice": "Open {text}'s profile and see what it lacks.",
@@ -13695,7 +13696,7 @@
         "noOffice": "No Google profile is linked as your office yet.",
         "linkOffice": "Link your Google profile as your office.",
         "notChecked": "Your searches have not been checked on the map yet: the next check does it.",
-        "inBox": "You are in Google's map box for {a} of the {b} searches checked.",
+        "inBox": "You are in Google's map box for {a} of the {countB, plural, one {# search} other {# searches}} checked.",
         "belowBox": "You are below the box, or off the map, for {count, plural, one {# search} other {# searches}}, “{text}” the biggest.",
         "topMost": "{text} tops the map most: first for {count, plural, one {# search} other {# searches}}.",
         "upCheck": "That is {a} more in the box than the check before.",
@@ -13734,16 +13735,17 @@
         "notOwnSite": "Profiles are linked from your own website; here they are only shown.",
         "off": "Local is not switched on for your company.",
         "noOffice": "No Google profile is linked as your office yet: find yours below and mark it as yours.",
-        "linked": "{count, plural, one {# office} other {# offices}} and {b} rival businesses are linked.",
+        "linked": "{count, plural, one {# office} other {# offices}} and {countB, plural, one {# rival business} other {# rival businesses}} are linked.",
         "onlyGoogle": "Only Google profiles are linked: reviews on other websites are not counted until you link them.",
         "seeReviews": "See your reviews, and those waiting for an answer."
       },
       "reviews": {
         "noProfile": "No Google profile is linked yet, so no reviews are read.",
         "linkOffice": "Link your Google profile as your office.",
-        "waiting": "{count, plural, one {# review waits} other {# reviews wait}} for an answer, the oldest for {b} days.",
+        "waiting": "{count, plural, one {# review waits} other {# reviews wait}} for an answer, the oldest for {countB, plural, one {# day} other {# days}}.",
         "allAnswered": "Every review has an answer.",
         "newReviews": "You gained {a} reviews in the last 30 days, against {b} in the 30 days before.",
+        "noNewReviews": "No new review came in over the last 60 days.",
         "daysToAnswer": "You answer in {count, plural, one {# day} other {# days}} on average.",
         "answerWaiting": "Answer the {count, plural, one {review} other {# reviews}} waiting, the oldest first.",
         "askForReviews": "Ask every client for a review: fewer came in this month than the month before."
@@ -13751,7 +13753,7 @@
       "reviewsSay": {
         "notRead": "Your reviews have not been read for what they say yet.",
         "complaints": "Customers complain most about {text}: {count, plural, one {# review} other {# reviews}}.",
-        "praised": "They praise {text} most: {count, plural, one {# review} other {# reviews}}.",
+        "praised": "Customers praise {text} most: {count, plural, one {# review} other {# reviews}}.",
         "rivalsPraised": "Rivals are praised for {text} more than you: {count, plural, one {# review} other {# reviews}}.",
         "draftsReady": "{count, plural, one {# reply is} other {# replies are}} drafted and ready to send.",
         "readComplaints": "Read the reviews about {text}, and answer each one.",
@@ -13779,22 +13781,22 @@
         "none": "No page naming you or a rival you watch has been found yet.",
         "lead": "You have {a}% of the pages naming you and the rivals you watch, more than any of them.",
         "behind": "You have {a}% of the pages naming you and the rivals you watch; {text} leads with {b}%.",
-        "upMonth": "That is {a} more pages than the month before.",
-        "downMonth": "That is {a} fewer pages than the month before.",
+        "upMonth": "{count, plural, one {That is # more page} other {That is # more pages}} than the month before.",
+        "downMonth": "{count, plural, one {That is # page fewer} other {That is # pages fewer}} than the month before.",
         "seeLeader": "See where {text} is named and you are not.",
         "getListed": "Get onto the websites that name your rivals and not you."
       },
       "mentionsListed": {
         "none": "No place is known yet: they come from Google's AI answers and your rivals' links, from the next check.",
         "everywhere": "You are already on all {a} places your rivals are on.",
-        "places": "Your rivals are on {a} of these {b} places and you are not.",
+        "places": "Your rivals are on {a} of these {countB, plural, one {# place} other {# places}} and you are not.",
         "mostRivals": "{text} has {a} of your rivals and not you.",
         "strongest": "{text} is the strongest of them.",
         "getOnto": "Get onto {text}."
       },
       "backlinks": {
         "none": "No backlinks read yet: the next check reads them.",
-        "linkingWebsites": "{a} websites link to you, with {b} links in all.",
+        "linkingWebsites": "{a} websites link to you, with {countB, plural, one {# link} other {# links}} in all.",
         "up": "That is {a} more linking websites than at the start of these dates.",
         "down": "That is {a} fewer linking websites than at the start of these dates.",
         "steady": "As many websites link to you as at the start of these dates.",
@@ -13813,10 +13815,10 @@
       },
       "backlinksQuality": {
         "none": "No backlinks read yet: the next check reads them.",
-        "broken": "{count, plural, one {# link points} other {# links point}} at {b} pages of yours that no longer work.",
+        "broken": "{count, plural, one {# link points} other {# links point}} at pages of yours that no longer work; {countB, plural, one {# of your pages is} other {# of your pages are}} broken in all.",
         "noBroken": "No link points at a page of yours that no longer works.",
         "spam": "Your links' spam score is {a} of 100, where lower is better.",
-        "nofollow": "{a} of the {b} websites linking to you mark their links not to be followed.",
+        "nofollow": "{a} of the {countB, plural, one {# website} other {# websites}} linking to you mark their links not to be followed.",
         "fixBroken": "Put back or redirect the pages those links point at."
       },
       "backlinksWhere": {
@@ -13828,7 +13830,7 @@
       "backlinksAll": {
         "none": "No backlinks read yet: the next check reads them.",
         "noneMatch": "No link matches these filters.",
-        "links": "{count, plural, one {# link} other {# links}} listed, from {b} websites.",
+        "links": "{count, plural, one {# link} other {# links}} listed, from {countB, plural, one {# website} other {# websites}}.",
         "strongest": "The strongest comes from {text}, ranked {a}.",
         "followed": "{a}% of them are followed by search engines.",
         "lost": "{count, plural, one {# of them has} other {# of them have}} been lost.",
@@ -13853,7 +13855,7 @@
       },
       "backlinksIps": {
         "none": "No servers read yet: the next check reads them.",
-        "spread": "The {a} websites linking to you sit on {b} networks.",
+        "spread": "The {a} websites linking to you sit on {countB, plural, one {# network} other {# networks}}.",
         "crowded": "{text} hosts {a} of them: links from one network count for less.",
         "oneEach": "No network hosts more than one of them.",
         "seeNetwork": "See the websites on {text}.",
@@ -13861,7 +13863,7 @@
       },
       "backlinksBroken": {
         "none": "No link points at a page of yours that no longer works.",
-        "broken": "{count, plural, one {# link points} other {# links point}} at {b} pages that no longer work.",
+        "broken": "{count, plural, one {# link points} other {# links point}} at {countB, plural, one {# page that no longer works} other {# pages that no longer work}}.",
         "topPage": "{text} has the most: {count, plural, one {# link} other {# links}}.",
         "strongest": "The strongest, from {text}, points at {more}.",
         "putBack": "Put back {text}, or redirect it to the page that replaced it."
@@ -13869,32 +13871,50 @@
       "backlinksNewLost": {
         "none": "No link gained or lost in these dates.",
         "gainedLost": "{a} websites started linking to you in these dates, and {b} stopped.",
-        "mostLost": "Most were lost from {text}: {a}.",
-        "mostGained": "Most were gained from {text}: {a}.",
-        "seeLostThen": "See the links lost from {text}.",
-        "seeGainedThen": "See the links gained from {text}."
+        "mostLost": {
+          "day": "Most were lost on {text}: {a}.",
+          "week": "Most were lost in the week of {text}: {a}.",
+          "month": "Most were lost in the month from {text}: {a}."
+        },
+        "mostGained": {
+          "day": "Most were gained on {text}: {a}.",
+          "week": "Most were gained in the week of {text}: {a}.",
+          "month": "Most were gained in the month from {text}: {a}."
+        },
+        "seeLostThen": {
+          "day": "See the links lost on {text}.",
+          "week": "See the links lost in the week of {text}.",
+          "month": "See the links lost in the month from {text}."
+        },
+        "seeGainedThen": {
+          "day": "See the links gained on {text}.",
+          "week": "See the links gained in the week of {text}.",
+          "month": "See the links gained in the month from {text}."
+        }
       },
       "backlinksDomain": {
         "notHeld": "{text} is not among the websites linking to you on the newest check.",
         "lost": "{text} no longer links to you.",
-        "links": "{text} links to you {count, plural, one {once} other {# times}}; {b} of the links held are followed.",
+        "links": "{text} links to you {count, plural, one {once} other {# times}}; {countB, plural, =0 {none of the links held is followed} one {# of the links held is followed} other {# of the links held are followed}}.",
         "spam": "Its spam score is {a} of 100, where lower is better.",
         "seeLink": "See its strongest link on its page.",
-        "askBack": "Ask {text} to put its link back."
+        "askBack": "Ask {text} to put its link back.",
+        "linked": "It linked to you {count, plural, one {once} other {# times}}; {countB, plural, =0 {none of those links was followed} one {# of them was followed} other {# of them were followed}}."
       },
       "backlinksAnchor": {
         "notHeld": "“{text}” is not among the words linking to you on the newest check.",
-        "links": "“{text}” links to you {count, plural, one {once} other {# times}}, from {b} websites.",
+        "links": "“{text}” links to you {count, plural, one {once} other {# times}}, from {countB, plural, one {# website} other {# websites}}.",
         "page": "Most of these links point at {text}: {a}.",
         "seeLink": "See its strongest link on its page."
       },
       "googleSearches": {
         "noSearches": "You do not track a search on Google yet.",
         "notChecked": "Your searches have not been checked on Google yet: the next check does it.",
+        "noMoves": "None of your searches moved since the check before.",
         "moves": "Since the check before, {a} of your searches went up and {b} went down.",
-        "biggestFall": "“{text}” fell most: from {a} to {b}.",
-        "droppedOut": "“{text}” dropped out of the top 100, from {a}.",
-        "firstPage": "{a} of your {b} searches are on Google's first page.",
+        "biggestFall": "“{text}” fell most: from {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} to {countB, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}.",
+        "droppedOut": "“{text}” dropped out of the top 100, from {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}.",
+        "firstPage": "{a} of your {countB, plural, one {# search} other {# searches}} are on Google's first page.",
         "seeFall": "See who passed you on “{text}”, and which page Google shows."
       },
       "googleFanOut": {
@@ -13909,15 +13929,15 @@
       "googleMoves": {
         "noMoves": "No search moved at the newest check.",
         "winsLosses": "At the newest check you gained or rose on {a} searches, and fell or lost {b}.",
-        "biggestLoss": "The biggest loss: “{text}”, now {a}, searched {b} times a month.",
+        "biggestLoss": "The biggest loss: “{text}”, now {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}, searched {countB, plural, one {once} other {# times}} a month.",
         "biggestLost": "The biggest loss: “{text}”, gone from the top 100, searched {a} times a month.",
-        "biggestWin": "The biggest win: “{text}”, now {a}, searched {b} times a month.",
+        "biggestWin": "The biggest win: “{text}”, now {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}, searched {countB, plural, one {once} other {# times}} a month.",
         "seeLoss": "See what moved on “{text}”: the page, and who passed you.",
         "seeWin": "See what lifted “{text}”."
       },
       "googleAbove": {
         "notChecked": "Your searches' Google pages have not been read yet.",
-        "aboveMost": "{text} is above you most often: on {a} of your {b} searches.",
+        "aboveMost": "{text} is above you most often: on {a} of your {countB, plural, one {# search} other {# searches}}.",
         "nobodyAbove": "Nobody ranks above you on your searches.",
         "rivalsAbove": "A rival you watch is above you on {count, plural, one {# search} other {# searches}}.",
         "youFirst": "You are first on {count, plural, one {# search} other {# searches}}.",
@@ -13925,7 +13945,7 @@
       },
       "googleFeatures": {
         "notChecked": "Your searches' Google pages have not been read yet.",
-        "checked": "{a} of your searches were read for {b} kinds of Google feature.",
+        "checked": "{a} of your searches were read for {countB, plural, one {# kind} other {# kinds}} of Google feature.",
         "missed": "{text} shows on {b} of them, and leaves you out of {a}.",
         "inAll": "Where a feature shows on your searches, you are in it.",
         "missedToo": "{text} leaves you out of {a} too.",
@@ -13933,7 +13953,7 @@
       },
       "googleFeature": {
         "none": "None of your searches shows this feature.",
-        "inIt": "You are in it on {a} of the {b} searches that show it.",
+        "inIt": "You are in it on {a} of the {countB, plural, one {# search} other {# searches}} that show it.",
         "biggestOut": "The biggest search you are not in it on: “{text}”, searched {a} times a month.",
         "seeSearch": "See what Google shows for “{text}”."
       },
@@ -13962,7 +13982,7 @@
       },
       "keywordsBands": {
         "none": "No ranked searches read yet: the next check reads them.",
-        "pageOne": "{a} of your {b} searches are on Google's first page.",
+        "pageOne": "{a} of your {countB, plural, one {# search} other {# searches}} are on Google's first page.",
         "movedOnOff": "At the newest check {a} moved onto page one and {b} fell off it.",
         "closest": "{count, plural, one {# search is} other {# searches are}} at 11 to 13, closest to page one: “{text}” the most searched.",
         "pushUp": "Strengthen your page for “{text}” to lift it onto page one.",
@@ -13971,7 +13991,7 @@
       "keywordsBandsMoved": {
         "none": "No search changed band at the newest check.",
         "moved": "{a} searches moved up a band and {b} moved down.",
-        "biggestDrop": "The biggest drop: “{text}”, from {a} to {b}.",
+        "biggestDrop": "The biggest drop: “{text}”, from {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} to {countB, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}.",
         "seeDrop": "See what changed on “{text}”."
       },
       "keywordsStructure": {
@@ -13983,8 +14003,8 @@
       },
       "keywordRecord": {
         "notRanking": "You do not rank in Google's top 100 for “{text}”.",
-        "moved": "You are {a} on Google, from {b} at the check before.",
-        "position": "You are {a} on Google.",
+        "moved": "You are {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} on Google, from {countB, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} at the check before.",
+        "position": "You are {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} on Google.",
         "above": "{text} leads the {count, plural, one {website} other {# websites}} above you.",
         "pageChanged": "Google now shows {text} for it, in place of {more}.",
         "seePage": "See {text}, the page Google shows.",
@@ -14004,7 +14024,7 @@
       "paid": {
         "none": "No paid search read yet: the next check reads it.",
         "notAdvertising": "It does not advertise on Google at the newest check.",
-        "advertising": "It advertises on {a} searches on Google, bringing about {b} visits a month.",
+        "advertising": "It advertises on {a} searches on Google, bringing about {countB, plural, one {# visit} other {# visits}} a month.",
         "cost": "Those visits would cost about ${a} a month in adverts.",
         "seeKeywords": "See which searches it pays for, and what each costs."
       },
@@ -14019,7 +14039,8 @@
         "noRivals": "You do not watch a competitor yet.",
         "findRivals": "See the suggested competitors, and watch the ones that matter.",
         "notCompared": "Your {a} competitors have not been compared with you on searches yet.",
-        "leadOver": "You lead {a} of the {b} competitors you watch on the searches you share.",
+        "leadAll": "{count, plural, one {You lead the competitor you watch on the searches you share.} other {You lead all # competitors you watch on the searches you share.}}",
+        "leadOver": "You lead {a} of the {countB, plural, one {# competitor} other {# competitors}} you watch on the searches you share.",
         "trailMost": "{text} beats you on {a} shared searches; you beat it on {b}.",
         "seeRival": "See the searches {text} beats you on.",
         "seeGap": "See the searches your competitors rank for and you do not."
@@ -14027,7 +14048,7 @@
       "competitorsRival": {
         "noneShared": "You share no search with this competitor at the newest check.",
         "shared": "You both rank for {a} searches; it is ahead on {b}.",
-        "biggest": "The biggest: “{text}”, where it is {a} and you are {b}.",
+        "biggest": "The biggest: “{text}”, where it is {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} and you are {countB, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}.",
         "aheadOnAll": "You are ahead on every search you share.",
         "seeSearch": "See what Google shows for “{text}”.",
         "seeGap": "See the searches it ranks for and you do not."
@@ -14043,7 +14064,7 @@
         "none": "No gap: your competitors rank for no search you do not, or it has not been worked out yet.",
         "gap": "Your competitors rank for {a} searches you do not.",
         "biggest": "The biggest: “{text}”, searched {a} times a month.",
-        "everyRival": "All {b} of your competitors rank for {a} of them.",
+        "everyRival": "All {countB} of your competitors rank for {a} of them.",
         "seeSearch": "See who ranks for “{text}”, and plan a page for it."
       },
       "competitorsMap": {
@@ -14120,7 +14141,7 @@
       },
       "websites": {
         "none": "No website is held yet.",
-        "websites": "You hold {count, plural, one {# website} other {# websites}} of your own and watch {b} competitors.",
+        "websites": "You hold {count, plural, one {# website} other {# websites}} of your own and watch {countB, plural, one {# competitor} other {# competitors}}.",
         "mostDown": "{text} moved most at its newest check: down on {a} searches, up on {b}.",
         "mostUp": "{text} rose on the most searches: {a}.",
         "notChecked": "None has been checked yet.",
@@ -15705,7 +15726,7 @@
       },
       "start": {
         "start": "Look up a search to see how often it is searched, how hard it is, and who ranks for it.",
-        "lookups": "You have looked up {count, plural, one {# search} other {# searches}} and keep {b} lists.",
+        "lookups": "You have looked up {count, plural, one {# search} other {# searches}} and keep {countB, plural, =0 {no lists} one {# list} other {# lists}}.",
         "bestChance": "Your best chance not yet on page one: “{text}”, searched {a} times a month, difficulty {b} of 100.",
         "openLookup": "Open “{text}” and see who ranks for it."
       },
@@ -15714,8 +15735,8 @@
         "none": "Nothing was found for this search.",
         "volume": "It is searched {a} times a month; its difficulty is {b} of 100.",
         "youDont": "{text} is not in Google's top 100 for it.",
-        "youRank": "{text} is {a} on Google for it.",
-        "youRankLow": "{text} is {a} on Google for it, past page one.",
+        "youRank": "{text} is {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} on Google for it.",
+        "youRankLow": "{text} is {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}} on Google for it, past page one.",
         "verdict": {
           "WINNING": "You are already winning it: keep the page strong.",
           "IMPROVE": "A page of yours ranks for it: improve that page.",
@@ -15729,27 +15750,27 @@
       "ideas": {
         "none": "No ideas held yet.",
         "ideas": "{count, plural, one {# idea} other {# ideas}} found.",
-        "ideasRanking": "{count, plural, one {# idea} other {# ideas}} found; your website ranks for {b} of them.",
+        "ideasRanking": "{count, plural, one {# idea} other {# ideas}} found; your website ranks for {countB, plural, =0 {none of them} other {# of them}}.",
         "best": "The best chance not yet on page one: “{text}”, searched {a} times a month, difficulty {b} of 100.",
         "seeSearch": "See where you stand for “{text}”."
       },
       "results": {
         "none": "Google's results have not been read yet.",
         "top": "{text} is first, with about {a} visits a month.",
-        "youAt": "Your website is {a}.",
+        "youAt": "Your website is {count, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}.",
         "rivals": "{count, plural, one {# competitor you watch is} other {# competitors you watch are}} on the page.",
         "seeTop": "See the page that ranks first on {text}."
       },
       "ai": {
         "none": "The AI assistants have not been asked yet.",
         "answered": "{count, plural, one {# assistant answered} other {# assistants answered}}.",
-        "named": "{a} of the {b} assistants that answered name your website.",
+        "named": "{count, plural, =0 {None of the {b} assistants that answered names your website.} other {# of the {b} assistants that answered name your website.}}",
         "rivalMost": "{text} is the competitor named most: by {count, plural, one {# assistant} other {# assistants}}.",
-        "cited": "They cite {a} of your pages, of {b} pages cited in all."
+        "cited": "{count, plural, =0 {None of the {b} pages they cite is yours.} other {They cite # of your pages, of {b} cited in all.}}"
       },
       "list": {
         "empty": "This list has no searches yet.",
-        "tracked": "{a} of its {b} searches are tracked on Google.",
+        "tracked": "{a} of its {countB, plural, one {# search} other {# searches}} are tracked on Google.",
         "notRanked": "Your website does not rank for {count, plural, one {# of them} other {# of them}}, “{text}” the most searched.",
         "allRanked": "Your website ranks for every one of them.",
         "seeSearch": "See where you stand for “{text}”."
@@ -15758,7 +15779,7 @@
         "preparing": "{text}'s searches are being compared with yours: the page fills in by itself.",
         "none": "{text} ranks for no search your website does not.",
         "gap": "{text} ranks for {a} searches your website does not.",
-        "biggest": "The biggest: “{text}”, searched {a} times a month, where it is {b}.",
+        "biggest": "The biggest: “{text}”, searched {a} times a month, where it is {countB, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}.",
         "seeSearch": "See where you stand for “{text}”."
       }
     }

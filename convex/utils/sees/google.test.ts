@@ -18,6 +18,9 @@ describe("Your searches", () => {
     expect(searchesSees([search("a", 18, 6), search("b", 30, 25)]).says[1]).toEqual({ code: "biggestFall", text: "a", a: 6, b: 18 });
     expectWords("googleSearches", { says: [{ code: "biggestFall", text: "a", a: 6, b: 18 }], steps: [] });
     expect(searchesSees([search("a", 2, 4)])).toEqual({ says: [{ code: "moves", a: 1, b: 0 }, { code: "firstPage", a: 1, b: 1 }], steps: [] });
+    const still = searchesSees([search("a", 2, 2)]);
+    expect(still.says[0]).toEqual({ code: "noMoves" });
+    expectWords("googleSearches", still);
     const unchecked = searchesSees([search("a", null, null, true, null)]);
     expect(unchecked.says).toEqual([{ code: "notChecked" }]);
     expectWords("googleSearches", unchecked);

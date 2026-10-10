@@ -40,7 +40,7 @@ import {
 } from "../../_components/researchWords";
 import { useLookupId, useLookupIdeas, useLookupOverview, type LookupIdeas } from "../../_components/useLookup";
 import { ResearchSees } from "../../_components/ResearchSees";
-import { ideasSees } from "@/convex/sees/research";
+import { ideasSees } from "@/convex/utils/sees/research";
 
 type Row = LookupIdeas["rows"][number];
 

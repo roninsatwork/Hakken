@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { seenValidator } from "./utils/hakkenSees";
-import { answerSees } from "./sees/aiAnswers";
+import { answerSees } from "./utils/sees/aiAnswers";
 import type { Id } from "./_generated/dataModel";
 import { aiCitationOperationId, AI_MODE_ENGINE, aiEngineValidator, answerPlace } from "./seoAiEngines";
 import { listHold, requireMySite } from "./siteAccess";

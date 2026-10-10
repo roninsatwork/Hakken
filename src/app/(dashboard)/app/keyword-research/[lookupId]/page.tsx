@@ -24,7 +24,7 @@ import { KeywordOpener, useOpenKeyword } from "../_components/KeywordActions";
 import { IDEA_KEYS, IDEA_KINDS, difficultyWord, ideaKindOf, isIntent, type IdeaKey } from "../_components/researchWords";
 import { ideasHref, lookupHref, useLookupIdeas, useLookupOverview, type LookupIdeas, type LookupOverview } from "../_components/useLookup";
 import { ResearchSees } from "../_components/ResearchSees";
-import { lookupSees } from "@/convex/sees/research";
+import { lookupSees } from "@/convex/utils/sees/research";
 
 /**
  * A keyword's overview (board 2 of the approved drawings, docs/plans/active/

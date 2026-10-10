@@ -20,7 +20,7 @@ import { TableDownload } from "../../_components/SiteDownloads";
 import { formatDay, formatNumber } from "../../_components/siteFormat";
 import { useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
-import { yourPagesSees } from "@/convex/sees/site";
+import { yourPagesSees } from "@/convex/utils/sees/site";
 import { SiteSees } from "../../_components/SiteSees";
 import { TABLE_PAGE_KEY, useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
 import { useSiteListPage } from "../../_components/useSitePagedTable";

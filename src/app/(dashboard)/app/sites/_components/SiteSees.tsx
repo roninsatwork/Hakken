@@ -31,21 +31,23 @@ export function useSeenHref() {
 /**
  * A box's sentences in the reader's words: each code looked up in `namespace`
  * (`sites.seen` for a website's screens, `keywordResearch.seen` for Keyword
- * research's), its `a`, `b` and `c` formatted — a rating keeps its one
- * decimal, as Local shows it — `count` for a plural, names as written, an
- * engine by its name.
+ * research's), its `a`, `b` and `c` formatted — a small figure such as a
+ * rating keeps its one decimal, as Local shows it, a larger one is whole — `count`, `countB` and `countC` for plurals of
+ * each, names as written, an engine by its name.
  */
 export function useSeenWords(namespace: "sites.seen" | "keywordResearch.seen", screen: string) {
   const t = useTranslations(namespace);
   const engineLabel = useEngineLabel();
   const coded = t as unknown as (key: string, values: Record<string, string | number>) => string;
-  const number = (value = 0) => (Number.isInteger(value) ? formatNumber(value) : value.toFixed(1));
+  const number = (value = 0) => (Number.isInteger(value) || Math.abs(value) >= 10 ? formatNumber(value) : value.toFixed(1));
   return {
     words: (phrase: SeenPhrase) => coded(`${screen}.${phrase.code}`, {
       a: number(phrase.a),
       b: number(phrase.b),
       c: number(phrase.c),
       count: phrase.a ?? 0,
+      countB: phrase.b ?? 0,
+      countC: phrase.c ?? 0,
       text: phrase.text ?? "",
       more: phrase.more ?? "",
       engine: phrase.engine ? engineLabel(phrase.engine) : "",

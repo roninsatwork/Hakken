@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { anchorRecordSees, domainRecordSees } from "./sees/backlinks";
+import { anchorRecordSees, domainRecordSees } from "./utils/sees/backlinks";
 import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";

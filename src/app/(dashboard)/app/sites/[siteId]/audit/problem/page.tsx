@@ -14,7 +14,7 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatDay } from "../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../_components/useSite";
-import { problemSees } from "@/convex/sees/site";
+import { problemSees } from "@/convex/utils/sees/site";
 import { SiteSees } from "../../../_components/SiteSees";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";

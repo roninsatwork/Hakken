@@ -22,7 +22,7 @@ import { formatDay, formatNumber } from "../../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
 import { sharedSiteQuery } from "../../../../_components/useSiteParam";
 import { useSite, useSiteId } from "../../../../_components/useSite";
-import { pageRecordSees } from "@/convex/sees/organic";
+import { pageRecordSees } from "@/convex/utils/sees/organic";
 import { SiteSees } from "../../../../_components/SiteSees";
 import { useSiteListPage } from "../../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../../_components/useSiteSort";

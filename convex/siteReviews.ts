@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { customersSaySees, reviewsRivalsSees, yourReviewsSees } from "./sees/local";
+import { customersSaySees, reviewsRivalsSees, yourReviewsSees } from "./utils/sees/local";
 import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";

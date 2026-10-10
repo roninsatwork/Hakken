@@ -15,7 +15,7 @@ import { MarkedHost } from "../../../_components/SiteMark";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { suggestedSees } from "@/convex/sees/competitors";
+import { suggestedSees } from "@/convex/utils/sees/competitors";
 import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";

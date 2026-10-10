@@ -42,7 +42,9 @@ describe("Side by side", () => {
   });
 
   test("ahead of all; not compared; no rival", () => {
-    expect(sideBySideSees([rival("a", 1, 9)], () => "x").says).toEqual([{ code: "leadOver", a: 1, b: 1 }]);
+    const all = sideBySideSees([rival("a", 1, 9)], () => "x");
+    expect(all.says).toEqual([{ code: "leadAll", a: 1 }]);
+    expectWords("competitors", all);
     const unread = sideBySideSees([rival("a", 0, 0, 0)], () => null);
     expect(unread.says).toEqual([{ code: "notCompared", a: 1 }]);
     expectWords("competitors", unread);

@@ -13,19 +13,19 @@ const row = (prompt: string, engine: string, lastStance: MentionRow["lastStance"
 describe("Mentions", () => {
   test("the questions no assistant names you for, the assistant naming you least, and a warning", () => {
     const box = mentionsSees([
-      row(COST, "chatgpt", "NOT_NAMED", 0, 9), row(COST, "gemini", "NOT_NAMED"),
-      row(SURREY, "chatgpt", "RECOMMENDED", 5), row(SURREY, "gemini", "WARNED_AGAINST", 1),
-      row("web design guildford", "chatgpt", "NAMED", 3), row("web design guildford", "gemini", "NOT_NAMED"),
+      row(COST, "chatgpt", "NOT_NAMED", 0, 9), row(COST, "perplexity", "NOT_NAMED"),
+      row(SURREY, "chatgpt", "RECOMMENDED", 5), row(SURREY, "perplexity", "WARNED_AGAINST", 1),
+      row("web design guildford", "chatgpt", "NAMED", 3), row("web design guildford", "perplexity", "NOT_NAMED"),
       row("never asked", "claude", null),
     ]);
     expect(box.says).toEqual([
       { code: "notNamed", a: 1, b: 3, text: COST },
-      { code: "leastEngine", engine: "gemini", a: 0, b: 3 },
-      { code: "warned", engine: "gemini", text: SURREY },
+      { code: "leastEngine", engine: "perplexity", a: 0, b: 3 },
+      { code: "warned", engine: "perplexity", text: SURREY },
     ]);
     expect(box.steps).toEqual([
       { code: "seeAnswers", text: COST, link: "seeAnswers", to: { segment: "ai/answers", filters: { question: COST } } },
-      { code: "readWarning", engine: "gemini", link: "seeAnswers", to: { segment: "ai/answers", filters: { question: SURREY, engine: "gemini" } } },
+      { code: "readWarning", engine: "perplexity", link: "seeAnswers", to: { segment: "ai/answers", filters: { question: SURREY, engine: "perplexity" } } },
     ]);
     expectWords("aiMentions", box);
   });
@@ -41,8 +41,8 @@ describe("Mentions", () => {
 describe("Full answers", () => {
   test("the newest answers naming you, and the newest that dropped you", () => {
     const box = fullAnswersSees([
-      row(SURREY, "chatgpt", "RECOMMENDED", 4), row(SURREY, "gemini", "NOT_NAMED", 2, 5, "2026-10-01"),
-      row(COST, "chatgpt", "NOT_NAMED", 1, 5, "2026-10-08"), row(COST, "gemini", "NOT_NAMED", 0),
+      row(SURREY, "chatgpt", "RECOMMENDED", 4), row(SURREY, "perplexity", "NOT_NAMED", 2, 5, "2026-10-01"),
+      row(COST, "chatgpt", "NOT_NAMED", 1, 5, "2026-10-08"), row(COST, "perplexity", "NOT_NAMED", 0),
     ]);
     expect(box.says).toEqual([
       { code: "namedIn", a: 1, b: 4 },
@@ -59,11 +59,11 @@ describe("Share of voice", () => {
   const sites = (you: number, rival: number) => [{ host: "ronins.co.uk", isYou: true, named: you }, { host: "www.brightside.co.uk", isYou: false, named: rival }];
 
   test("behind the leader, and the engine naming you least", () => {
-    const box = shareSees([{ engine: "chatgpt", sites: sites(6, 4) }, { engine: "gemini", sites: sites(1, 9) }]);
-    expect(box.says).toEqual([{ code: "behindLeader", a: 35, b: 65, text: "www.brightside.co.uk" }, { code: "weakestEngine", engine: "gemini", a: 10 }]);
+    const box = shareSees([{ engine: "chatgpt", sites: sites(6, 4) }, { engine: "perplexity", sites: sites(1, 9) }]);
+    expect(box.says).toEqual([{ code: "behindLeader", a: 35, b: 65, text: "www.brightside.co.uk" }, { code: "weakestEngine", engine: "perplexity", a: 10 }]);
     expect(box.steps).toEqual([
       { code: "seeLeader", text: "www.brightside.co.uk", link: "seeBusiness", to: { record: "business", key: "brightside.co.uk" } },
-      { code: "seeEngine", engine: "gemini", link: "seeMentions", to: { segment: "ai/mentions", filters: { engine: "gemini" } } },
+      { code: "seeEngine", engine: "perplexity", link: "seeMentions", to: { segment: "ai/mentions", filters: { engine: "perplexity" } } },
     ]);
     expectWords("aiShare", box);
   });
@@ -148,6 +148,9 @@ describe("Fan-out queries", () => {
     const rival = anglesSees({ built: true, own: false, rows: rows.slice(1, 2) });
     expect(rival).toEqual({ says: [{ code: "competitor", a: 1, text: "web agency surrey" }, { code: "firstPage", a: 1, b: 1 }], steps: [] });
     expectWords("aiSearched", rival);
+    const none = anglesSees({ built: true, own: true, rows: [rows[0], rows[2]] });
+    expect(none.says[0]).toEqual({ code: "noneTracked", a: 2, text: "web design cost uk" });
+    expectWords("aiSearched", none);
     const tracked = anglesSees({ built: true, own: true, rows: rows.slice(1, 2) });
     expect(tracked.says[0]).toEqual({ code: "allTracked", a: 1 });
     expectWords("aiSearched", tracked);

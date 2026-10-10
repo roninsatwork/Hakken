@@ -18,7 +18,7 @@ import { useSiteRange } from "../../../_components/SiteDateRange";
 import { datedRow } from "../../../_components/datedRows";
 import { toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { searchesSees } from "@/convex/sees/google";
+import { searchesSees } from "@/convex/utils/sees/google";
 import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";

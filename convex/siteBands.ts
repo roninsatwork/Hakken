@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { bandMovesSees, bandsSees } from "./sees/organic";
+import { bandMovesSees, bandsSees } from "./utils/sees/organic";
 import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";

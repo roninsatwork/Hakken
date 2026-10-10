@@ -27,7 +27,7 @@ import { FigureCell, usePlaceIn, useProblemWords } from "../../_components/Resea
 import { readableAddress } from "../../_components/researchWords";
 import { useLookupId, useLookupOverview } from "../../_components/useLookup";
 import { ResearchSees } from "../../_components/ResearchSees";
-import { resultsSees } from "@/convex/sees/research";
+import { resultsSees } from "@/convex/utils/sees/research";
 
 type Results = NonNullable<FunctionReturnType<typeof api.keywordResearch.lookupResults>>;
 type Row = Results["rows"][number];

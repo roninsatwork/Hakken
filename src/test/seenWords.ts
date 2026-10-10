@@ -16,7 +16,7 @@ export function expectWords(screen: string, box: Seen, namespace: "sites.seen" |
     const seen = (namespace === "sites.seen" ? messages.sites.seen : messages.keywordResearch.seen) as unknown as Record<string, Record<string, string> | undefined>;
     const t = createTranslator({ locale, messages, onError: (error) => { throw error; } }) as unknown as (key: string, values?: Record<string, string | number>) => string;
     const values = (phrase: SeenPhrase) => ({
-      a: String(phrase.a ?? 0), b: String(phrase.b ?? 0), c: String(phrase.c ?? 0), count: phrase.a ?? 0,
+      a: String(phrase.a ?? 0), b: String(phrase.b ?? 0), c: String(phrase.c ?? 0), count: phrase.a ?? 0, countB: phrase.b ?? 0, countC: phrase.c ?? 0,
       text: phrase.text ?? "", more: phrase.more ?? "", engine: phrase.engine ?? "",
     });
     // A code may name a group's own sentence: "fix.HOURS" is `fix` → `HOURS`.

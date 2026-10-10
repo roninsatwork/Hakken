@@ -1,4 +1,4 @@
-import { seen, toPage, toRecord, type Seen, type SeenPhrase, type SeenStep, type SeenTarget } from "../utils/hakkenSees";
+import { seen, toPage, toRecord, type Seen, type SeenPhrase, type SeenStep, type SeenTarget } from "../hakkenSees";
 
 /**
  * What Hakken sees on a website's own screens and on the Websites list

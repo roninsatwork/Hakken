@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { seeing, seenValidator } from "./utils/hakkenSees";
-import { businessesSees, readSees } from "./sees/aiAnswers";
+import { businessesSees, readSees } from "./utils/sees/aiAnswers";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { answerPlace } from "./seoAiEngines";

@@ -9,7 +9,7 @@ import { holdSearches } from "./holdLists";
 import { MAX_LIST, type Site } from "./websiteSiteRows";
 import { listWithCut } from "./siteListPages";
 import { seenValidator } from "./utils/hakkenSees";
-import { questionsSees } from "./sees/google";
+import { questionsSees } from "./utils/sees/google";
 
 /**
  * Google's results for each of the site's searches, down to position 100, as

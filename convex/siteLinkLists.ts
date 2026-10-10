@@ -6,7 +6,7 @@ import { bucketOf, stepValidator } from "./siteFigures";
 import { linksCopyKey, readListCopy } from "./siteListCopies";
 import { heldTo, listOrder, listPageArgs, listPageResult, listPageSeenResult, newestPerKey, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { seen } from "./utils/hakkenSees";
-import { allLinksSees, anchorsSees, brokenSees, domainsSees } from "./sees/backlinks";
+import { allLinksSees, anchorsSees, brokenSees, domainsSees } from "./utils/sees/backlinks";
 import { ipSortKey, type SortDirection } from "./utils/sortOrder";
 import { wordStartMatcher } from "./utils/wordStarts";
 import { readReferringDomains, type ReferringDomainRow } from "./siteReferringDomainParts";

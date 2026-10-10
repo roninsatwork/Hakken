@@ -18,7 +18,7 @@ import { useSiteRange } from "../../../_components/SiteDateRange";
 import { Figure } from "@/src/ui/components/screens/Figure";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
-import { featuresSees } from "@/convex/sees/google";
+import { featuresSees } from "@/convex/utils/sees/google";
 import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";

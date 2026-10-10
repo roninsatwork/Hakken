@@ -1,4 +1,4 @@
-import { seen, toPage, toRecord, type Seen, type SeenPhrase, type SeenStep } from "../utils/hakkenSees";
+import { seen, toPage, toRecord, type Seen, type SeenPhrase, type SeenStep } from "../hakkenSees";
 
 /**
  * What Hakken sees on the Google results screens (docs/plans/active/
@@ -29,7 +29,7 @@ export function searchesSees(rows: ReadonlyArray<Standing & { isActive: boolean 
     .sort((left, right) => (right.lastPosition ?? 101) - right.previousPosition! - ((left.lastPosition ?? 101) - left.previousPosition!));
   const fall = falls[0] ?? null;
   const says: Array<Maybe<SeenPhrase>> = [
-    { code: "moves", a: up, b: falls.length },
+    up === 0 && falls.length === 0 ? { code: "noMoves" } : { code: "moves", a: up, b: falls.length },
     fall ? (fall.lastPosition === null ? { code: "droppedOut", text: fall.keyword, a: fall.previousPosition! } : { code: "biggestFall", text: fall.keyword, a: fall.previousPosition!, b: fall.lastPosition }) : null,
     { code: "firstPage", a: checked.filter((row) => row.lastPosition !== null && row.lastPosition <= PAGE_ONE).length, b: checked.length },
   ];
