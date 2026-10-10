@@ -23,6 +23,7 @@ import { formatMonth, formatNumber, toCsv } from "../../_components/siteFormat";
 import { ListDownload } from "../../_components/SiteDownloads";
 import { useSiteListHref, useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
+import { SiteSees } from "../../_components/SiteSees";
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
 import { FigureCell } from "../local/_components/LocalParts";
@@ -100,6 +101,7 @@ export default function BrandRadarPage() {
         description={t("description")}
         action={site ? <TagLabel>{t("where", { place: site.placeLabel })}</TagLabel> : undefined}
       />
+      <SiteSees screen="radarOverview" seen={data?.seen} />
 
       {data ? (
         <FigureRow>

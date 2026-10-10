@@ -10,6 +10,8 @@ import { countryCodeOf } from "./utils/seoLocations";
 import { unpackColumn } from "./utils/packedColumns";
 import { siteKindOf } from "./utils/siteKinds";
 import { hostOfUrl, pathOfUrl, urlIsOnHost } from "./utils/urlParts";
+import { seenValidator } from "./utils/hakkenSees";
+import { radarOverviewSees, radarSourcesSees } from "./sees/radar";
 import { MAX_PROMPTS_PER_WEBSITE } from "./utils/promptLimits";
 import type { Site } from "./websiteSiteRows";
 
@@ -94,6 +96,7 @@ export const radarOverview = tenantQuery({
       yourPage: v.union(v.string(), v.null()),
       tracked: v.boolean(),
     })),
+    seen: seenValidator,
   }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
@@ -140,7 +143,7 @@ export const radarOverview = tenantQuery({
     }
     const pull = all.find((reading) => reading.you)?.part?.pullId;
     const cost = pull ? (await ctx.db.get(pull as Id<"seoDataPulls">))?.costUsd ?? null : null;
-    return {
+    const result = {
       month: months.at(-1) ?? null,
       perCheckUsd: cost && cost > 0 ? cost : null,
       businesses,
@@ -159,6 +162,7 @@ export const radarOverview = tenantQuery({
         };
       }),
     };
+    return { ...result, seen: radarOverviewSees(result) };
   },
 });
 
@@ -179,6 +183,7 @@ export const radarSources = tenantQuery({
     pages: v.array(v.object({ url: v.string(), host: v.string(), kind: kindValidator, times: v.number(), citedFor: v.string() })),
     yourPages: v.number(),
     yourTimes: v.number(),
+    seen: seenValidator,
   }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
@@ -209,12 +214,13 @@ export const radarSources = tenantQuery({
       }
     }
     const yours = [...pages.entries()].filter(([url]) => kindOf(hostOf(url)) === "YOURS");
-    return {
+    const result = {
       websites: [...websites.entries()].map(([host, row]) => ({ host, kind: kindOf(host), times: row.times, besideYou: row.besideYou, besideRivals: row.besideRivals, rivalsBeside: row.rivals.size })),
       pages: [...pages.entries()].sort((left, right) => right[1].times - left[1].times).slice(0, 5)
         .map(([url, row]) => ({ url, host: hostOf(url), kind: kindOf(hostOf(url)), times: row.times, citedFor: row.citedFor })),
       yourPages: yours.length,
       yourTimes: yours.reduce((sum, [, row]) => sum + row.times, 0),
     };
+    return { ...result, seen: radarSourcesSees(result) };
   },
 });

@@ -13449,7 +13449,10 @@
         "yourPages": "Le tue pagine",
         "seeWebsite": "Vedi il sito",
         "seePage": "Vedi la pagina",
-        "yourReviews": "Le tue recensioni"
+        "yourReviews": "Le tue recensioni",
+        "seeBusiness": "Vedi l'attività",
+        "whereToGetListed": "Dove farsi elencare",
+        "seeSearch": "Vedi la ricerca"
       },
       "website": {
         "notQuoted": "L'IA di Google non ha citato {text} nelle risposte su di te o sui concorrenti.",
@@ -13501,6 +13504,34 @@
         "moreReviews": "Su Google ha {a} recensioni contro le tue {b}.",
         "mapOnly": "{text} è un concorrente che segui su Google Maps; il suo sito non è tra i concorrenti che monitori, quindi le risposte IA di Google e il web non vengono letti per lei.",
         "askForReviews": "Chiedi a ogni cliente una recensione su Google: è avanti di {count, plural, one {# recensione} other {# recensioni}}."
+      },
+      "radarOverview": {
+        "noReading": "Ancora nessuna lettura: Brand radar legge le risposte dell'IA di Google una volta al mese, dal prossimo controllo.",
+        "behindLeader": "L'IA di Google ti nomina in {a} risposte questo mese: il {b}% della quota di voce, contro il {c}% di {text}, in testa.",
+        "youLead": "L'IA di Google ti nomina in {a} risposte questo mese: il {b}% della quota di voce, più di qualsiasi concorrente che segui.",
+        "upMonth": "Sono {a} in più del mese prima.",
+        "downMonth": "Sono {a} in meno del mese prima.",
+        "missingQuestion": "Per “{text}”, chiesta {a} volte al mese, vengono nominati i concorrenti e non tu.",
+        "answerQuestion": "Rispondi a “{text}” sul tuo sito.",
+        "seeLeader": "Guarda per quali domande viene nominato {text} e tu no."
+      },
+      "radarSources": {
+        "noReading": "Ancora nessuna lettura: Brand radar legge le risposte dell'IA di Google una volta al mese, dal prossimo controllo.",
+        "websitesQuoted": "L'IA di Google cita {a} siti in queste risposte; {b} compaiono in risposte che ti nominano.",
+        "placesMissing": "{count, plural, one {# sito citato} other {# siti citati}} accanto ai tuoi concorrenti non {count, plural, one {compare} other {compaiono}} mai accanto a te, {text} più spesso.",
+        "ownPages": "Il tuo sito è citato {count, plural, one {una volta} other {# volte}}.",
+        "ownPagesNone": "Nessuna di queste risposte cita una pagina del tuo sito.",
+        "getOnto": "Fatti elencare su {text}: l'IA di Google lo cita accanto ai tuoi concorrenti e mai accanto a te.",
+        "workThrough": "Passa in rassegna gli altri posti dove sono elencati i tuoi concorrenti e tu no."
+      },
+      "overviewGaps": {
+        "noChecks": "Nessuna ricerca è ancora stata controllata per una AI Overview.",
+        "overviews": "{a} delle {b} ricerche controllate mostrano una AI Overview; {c} di queste ti citano.",
+        "gaps": "Sei in prima pagina per {count, plural, one {# ricerca} other {# ricerche}} la cui overview ti lascia fuori, chieste {b} volte al mese.",
+        "noGaps": "Ogni overview su una ricerca in cui sei in prima pagina ti cita.",
+        "quotedUp": "{count, plural, one {# overview in più ti cita} other {# overview in più ti citano}} rispetto a un mese prima.",
+        "quotedDown": "{count, plural, one {# overview in meno ti cita} other {# overview in meno ti citano}} rispetto a un mese prima.",
+        "fixGap": "Fai rispondere la tua pagina per “{text}” nelle prime righe, così l'overview può citarla."
       }
     }
   },

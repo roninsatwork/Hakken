@@ -17,6 +17,7 @@ import { RecordLinkCell } from "../../../_components/SiteCells";
 import { useSiteRecordHref, type SiteRecord } from "../../../_components/siteRecordLinks";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -93,6 +94,7 @@ export default function RadarSourcesPage() {
         description={t("description")}
         action={site ? <TagLabel>{tr("where", { place: site.placeLabel })}</TagLabel> : undefined}
       />
+      <SiteSees screen="radarSources" seen={data?.seen} />
 
       {data ? (
         <FigureRow>

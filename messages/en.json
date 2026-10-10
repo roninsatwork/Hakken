@@ -13449,7 +13449,10 @@
         "yourPages": "Your pages",
         "seeWebsite": "See the website",
         "seePage": "See the page",
-        "yourReviews": "Your reviews"
+        "yourReviews": "Your reviews",
+        "seeBusiness": "See the business",
+        "whereToGetListed": "Where to get listed",
+        "seeSearch": "See the search"
       },
       "website": {
         "notQuoted": "Google's AI has not quoted {text} in answers about you or your rivals.",
@@ -13501,6 +13504,34 @@
         "moreReviews": "On Google it has {a} reviews to your {b}.",
         "mapOnly": "{text} is a rival you watch on Google Maps; its website is not one of the competitors you track, so Google's AI answers and the web are not read for it.",
         "askForReviews": "Ask every client for a Google review: it is {count, plural, one {# review} other {# reviews}} ahead."
+      },
+      "radarOverview": {
+        "noReading": "Nothing read yet: Brand radar reads Google's AI answers once a month, from the next check.",
+        "behindLeader": "Google's AI names you in {a} answers this month: {b}% of the share of voice, against {c}% for {text}, the leader.",
+        "youLead": "Google's AI names you in {a} answers this month: {b}% of the share of voice, more than any rival you watch.",
+        "upMonth": "That is {a} more than the month before.",
+        "downMonth": "That is {a} fewer than the month before.",
+        "missingQuestion": "Rivals are named for “{text}”, asked {a} times a month, and you are not.",
+        "answerQuestion": "Answer “{text}” on your own site.",
+        "seeLeader": "See which questions {text} is named for and you are not."
+      },
+      "radarSources": {
+        "noReading": "Nothing read yet: Brand radar reads Google's AI answers once a month, from the next check.",
+        "websitesQuoted": "Google's AI quotes {a} websites in these answers; {b} of them appear in answers that name you.",
+        "placesMissing": "{count, plural, one {# website} other {# websites}} quoted beside your rivals never appear beside you, {text} most often.",
+        "ownPages": "Your own site is quoted {count, plural, one {once} other {# times}}.",
+        "ownPagesNone": "None of these answers quotes a page of your own site.",
+        "getOnto": "Get onto {text}: Google's AI quotes it beside your rivals and never beside you.",
+        "workThrough": "Work through the other places your rivals are listed and you are not."
+      },
+      "overviewGaps": {
+        "noChecks": "No search has been checked for an AI Overview yet.",
+        "overviews": "{a} of {b} searches checked show an AI Overview; {c} of those quote you.",
+        "gaps": "You rank on the first page for {count, plural, one {# search} other {# searches}} whose overview leaves you out, asked {b} times a month.",
+        "noGaps": "Every overview on a search where you rank on the first page quotes you.",
+        "quotedUp": "{count, plural, one {# more overview quotes} other {# more overviews quote}} you than a month before.",
+        "quotedDown": "{count, plural, one {# fewer overview quotes} other {# fewer overviews quote}} you than a month before.",
+        "fixGap": "Make your page for “{text}” answer it in its first lines, so the overview can quote it."
       }
     }
   },

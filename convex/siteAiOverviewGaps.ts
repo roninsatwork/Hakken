@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { seenValidator } from "./utils/hakkenSees";
+import { overviewGapsSees } from "./sees/radar";
 import { tenantQuery } from "./tenantFunctions";
 import { listHold, listWebsiteId, requireMySite } from "./siteAccess";
 import { holdSearches } from "./holdLists";
@@ -33,8 +35,12 @@ export const overviewGaps = tenantQuery({
       quotes: v.array(v.string()),
       yourPage: v.union(v.string(), v.null()),
     })),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => await readOverviews(ctx, await requireMySite(ctx, args.siteId)),
+  handler: async (ctx, args) => {
+    const result = await readOverviews(ctx, await requireMySite(ctx, args.siteId));
+    return { ...result, seen: overviewGapsSees(result) };
+  },
 });
 
 /** Each tracked search's AI Overview from its newest check, and how many quoted the website a month before: the page's rows, and Your assets'. */

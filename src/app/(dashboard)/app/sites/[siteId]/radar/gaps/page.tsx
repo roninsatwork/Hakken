@@ -22,6 +22,7 @@ import { formatNumber } from "../../../_components/siteFormat";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -75,6 +76,7 @@ export default function AiOverviewGapsPage() {
         description={t("description")}
         action={site ? <TagLabel>{t("where", { place: site.placeLabel })}</TagLabel> : undefined}
       />
+      <SiteSees screen="overviewGaps" seen={data?.seen} />
 
       {data ? (
         <FigureRow>
