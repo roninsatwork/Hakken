@@ -473,10 +473,15 @@ No one else can: it is his Google account.
 | 2 | Collecting: the Google Analytics Collector role built, then the Google Analytics: Collector Agent and its schedule created in Admin on dev (GA21), the four lists and their ready-made periods (GA23), the first 90 days, the daily and weekly asks, day records, the shared page numbering, codes and packing (§4.6), ready-made periods, keep rules, measured on Ronins (§4) | Four and a half days |
 | 3 | The section and its pages (§5), with the page screen, a channel's sources and the first states (GA22) | Five and a half days |
 | 4 | Tracking health and the bell (§6) | One and a half days |
+| 5 | Added 2026-10-10, once the review canvas is agreed (§13–§16): | Eight and a half days |
+| | Heroes and attention: Search Console joined to Analytics page by page, the six rules and what each fix is worth, the page's own view, making a Hakken task (§13) | Four days |
+| | What Hakken sees on sixteen screens, from the shared part (§14) | Two and a half days |
+| | The locked screens changed as the canvas draws them (§15), each only once agreed | One and a half days |
+| | The three things found while drawing (§16) | Half a day |
 
 About fourteen and a half days of building after Phase 0 and the drawings;
 about fifteen and a half with them (two and a half more since GA18, §4.6,
-and a day and a half since GA22).
+and a day and a half since GA22). With Phase 5, about twenty-four.
 
 Every phase ends with its tests, Google faked as for Search Console (the
 sign-in, a missing scope, renewal, revocation, paging, quotas, "(other)" and
@@ -491,6 +496,9 @@ on a decision (§12). Phase 3: 95% — checked in the real app only in its
 not-connected state until Phase 0 is done. Phase 4: 100%. Phase 0 (§7) is
 Anthony's and blocks every real figure.** What was built, and where the build
 differs from the words above, is §12.
+
+**With Phase 5 (2026-10-10): overall about 45% of the twenty-four days.
+Phase 5: drawn, 0 of 19 screens signed off, nothing built.**
 
 ## 9. Risks
 
@@ -723,7 +731,7 @@ tells the platform's super admins in the bell once (GA12, as changed on
 code (PayPal, Stripe, Worldpay, Opayo, Klarna, Clearpay and others).
 Connecting tells the super admins too, as board 10 shows.
 
-## 13. UX amends — the strategy page (to draw, 2026-10-10)
+## 13. UX amends — the strategy page (drawn 2026-10-10, to agree)
 
 Anthony, 2026-10-10, on the built screens: "its not easy to see which pages
 need our attention and which are our heroes … this platform is supposed to do
@@ -745,6 +753,177 @@ conversion; `/chatbot-agency/` fell from 16 visits to 7.
 
 The parts, and the rules each diagnosis follows, are agreed with the drawing
 before any code. Nothing here is built.
+
+**Drawn 2026-10-10** on the review canvas (§15, screen 3), after three
+rounds with Anthony the same day: "this is just information overload — its
+TLDR"; "these table rows are too deep … need to show more info on a click
+through"; "i dont like two set of hero boxes"; "will you stop making the
+[expletive] long pages"; "these tabs should be above the search bar". What
+follows is the drawing, to agree page by page with the rest of §15.
+
+**Where:** its own page in the side menu, "Heroes and attention", after
+Overview.
+
+**What it joins:** Search Console's figures for each page (shown, position,
+clicks, 30 days to Search Console's newest day) with Analytics' for the same
+page as a landing page (visits, engaged visits, conversions, value, and the
+30 days before), matched by the hold's shared page number (§4.6). On Ronins,
+70 pages are in both.
+
+**The parts, in order:**
+
+1. What Hakken sees (§14).
+2. One row of four figures, one per stage from Google to money: Shown in
+   Google (264,403, at position 18 on average), Clicked (367, 0.14% of the
+   showings), Visits from Google (466; 53% engaged, 6 converted), Value from
+   Google (£120, half the website's £240). Under each, what there is to gain
+   at that stage, or the heroes' share ("4 hero pages make £200"), linking to
+   its tab below. The stage that loses most is marked as Overview's Value
+   figure is. Never a second row of boxes.
+3. "Pages to fix", then its tabs, then the search box, then the standard
+   table (§5). The tabs: All, Heroes, Push to page one, Losing the click, Not
+   converting, People leave, Falling, each with its count (on Ronins 38, 4,
+   33, 1, 1, 0, 1). The table: Page, What to do (the page's biggest problem
+   as a status label, and "Hero" beside it when it is one), Worth a month,
+   and an icon to make it a Hakken task. One line a row; 25 rows to start,
+   with the 25 / 50 / 75 / 100 choice; sorted by worth, the most first.
+4. A row opens the page's own view: the way back, the same four stages for
+   that page with the one where it loses most marked, then What to do — each
+   problem the page has, why in one sentence with its own figures, what
+   fixing it is worth a month, and the rule that flagged it — and "Make it a
+   Hakken task". Links go to the page's screen (§5) and its searches in
+   Search Console.
+
+**The rules.** A page can have several; the row shows the one worth most.
+
+| Label | When | What to do |
+|---|---|---|
+| Hero | One of the pages that, biggest first, make 80% of the website's value | Leave it alone; change it only with a test |
+| Push to page one | At position 8 to 20, and shown 500 times or more | Work on the searches it is shown for on page two |
+| Losing the click | In the top five, and clicked less than the website's own click rate at that position | Rewrite its title and description |
+| Not converting | 50 visits or more, converting under half the website's own rate (Ronins: 1.45%) | Give it a next step to the service it supports |
+| People leave | 30 visits or more, under 40% of them engaged | Make the page answer what was searched |
+| Falling | Visits down 30% or more on the 30 days before, from at least 20 | Check its place in Google and what changed on it |
+
+**What a fix is worth a month** uses the website's own figures, never an
+industry average. These are: its click rate at each position, read from
+Search Console over the same 30 days (Ronins' top three: 0.70%); the page's
+own conversion rate when it has 100 visits or more, otherwise the website's
+(1.45%); and the website's value per conversion (£20).
+
+- Push to page one: the extra clicks in the top three (shown × the top
+  three's click rate, less the click rate where it is now) × the conversion
+  rate × the value per conversion.
+- Losing the click: the clicks it should get at its position, less those it
+  gets, × the conversion rate × the value per conversion.
+- Not converting: visits × (the website's rate − the page's) × the value per
+  conversion.
+- People leave: visits × (the website's engaged share − the page's) × the
+  website's conversions per engaged visit × the value per conversion.
+- Falling: the visits lost × the conversion rate × the value per conversion.
+
+On Ronins, about £435 a month in all; £373 of it in Google's results rather
+than on the pages.
+
+## 14. What Hakken sees — on every screen (drawn 2026-10-10, to agree)
+
+Anthony, 2026-10-10, on the panel another session built for Discovery: "Its
+the system acting as an SEO agent and SEO expert giving advice on the screen
+… could add them across each of the analytics screens."
+
+The same box as Discovery's
+([discovery-detail-and-hakken-sees-plan.md](discovery-detail-and-hakken-sees-plan.md)),
+built from its shared part, `HakkenSees`
+(`src/ui/components/screens/HakkenSees.tsx`). So the built box follows that
+part's look, not the drawing's slightly larger text. It sits under the page's
+title. It says, in two or three sentences, what an SEO specialist would say
+about that screen's figures. Then "Do first" lists up to three steps, each
+with a quiet link to where it is done. As Discovery's DS5, it is written by
+fixed rules over the figures the page already reads, with its words in
+`messages/<language>.json`. There is no AI model, no purchase and no extra
+read.
+
+Sixteen screens carry it. The other three have nothing to read yet: Choose
+the property, The first 90 days coming in, and the bell. What each said on
+Ronins' figures:
+
+| Screen | What it says first | Do first |
+|---|---|---|
+| Your websites | £240 from 12 conversions, down from £340 though visits rose 11%; one visit in ten lands on a page Analytics can't name | Open the website; fix tracking |
+| Overview | Conversions fell from 17 to 12; most of the fall is direct visits (6 fewer) and the home page (3 fewer); 0.14% of Google's showings are clicked | Why direct stopped converting; the home page; move pages up Google |
+| Heroes and attention | £373 of the £435 to gain is in Google's results; four pages make £200 | Push `/ai-consultancy/` and `/wordpress-agency/`; give the Kapferer guide a next step; leave the heroes alone |
+| Channels | Google sends 466 of 826 visits and £120; direct converted 5 times, down from 11; AI assistants sent 61 visits | Direct visitors; AI assistants' landing pages |
+| A channel's own screen (AI assistants) | ChatGPT sent 57, up from 7; only 28% stayed, against half of all visits; none converted | The pages ChatGPT sends people to |
+| Landing pages | The Kapferer guide brings most visits (188) and no conversion; the home page and `/ai-agency/` make £140; 86 visits have no landing page | A next step on the guide; the 86 visits; unsorted pages into page groups |
+| A landing page's own screen (the home page) | £80 a month, all 4 conversions from visits that didn't come from a search; its 37 Google visits converted none; position 30 | — |
+| All pages | 12 conversions on 7 pages; `/ai-agency/` made 4 from 318 views; the Kapferer guide 417 views and none | Copy `/ai-agency/`'s next step; link service pages to the case studies that converted |
+| Conversions | All 12 were form submissions; chat, phone and email are counted but never happened | Check those three fire |
+| Tracking health | Three of 8 checks fail; one visit in ten can't be credited (about £25 a month) | Send the form and check it counts; load the tag before redirects |
+| Connection | Four conversions at £20 each, only forms happened; every £ figure rests on that £20 | Check the £20 |
+| Not connected yet | Search Console's 367 clicks can't say which became an enquiry | Add Google Analytics |
+| Choose what counts | Only Form submission fired (12); Purchase is ticked though nothing is sold | Tick Form submission, untick Purchase; check chat, phone and email |
+| Nothing counted yet | 826 visits but no way to say which pages make money; Form submission fired 12 times | Tick it |
+| A device asked of Google | Phones brought 118 visits and 2 conversions, both from the home page; the Kapferer guide's phone visitors engage less (32% against 43%) | Read the guide on a phone |
+| Needs reconnecting | As Overview, over the figures kept | As Overview |
+
+## 15. The review canvas — every screen, 2026-10-10
+
+Anthony, 2026-10-10: "can i see the entire analytics section screens on the
+canvas please so i can sign off in one go … draw them all again on the screen
+so i can review them and we can take it page by page".
+
+The canvas "Google Analytics — every screen, for review"
+(https://claude.ai/artifact/9HVzSBYntWP63s7in2UkJB) redraws the section on
+Ronins' real figures: Analytics to 9 Oct, Search Console to 8 Oct. The top
+row is the screens with figures and the bottom row the states people meet on
+the way. Long lists keep the built standard: 25 rows to start, with the 25 /
+50 / 75 / 100 choice (Anthony: "Don't change the list lengths keep them as
+they are"). The locked canvas (§11) stays the record of what was agreed on
+2026-10-09. Nothing in this section is agreed yet: each screen is signed off
+page by page.
+
+| # | Screen | Against the locked screen (§11) |
+|---|---|---|
+| 1 | Google Analytics — your websites | What Hakken sees added |
+| 2 | Overview | What Hakken sees added. The chart is visits a day with engaged visits, a dot on each day with a conversion. Kept: the four figures and What changed most. Left off to keep the page short: Channels and Landing pages that made the most, the cookie line and the tracking health line |
+| 3 | Heroes and attention | New (§13) |
+| 4 | Channels | What Hakken sees added |
+| 5 | A channel's own screen (AI assistants) | What Hakken sees added, and four figures above its list: visits, engagement rate against the whole website's, conversions, value |
+| 6 | Landing pages | What Hakken sees added; one line a row, the conversion rate beside the count ("4 · 2.8%") rather than under it |
+| 7 | A landing page's own screen | What Hakken sees added. Its figures become the four stages from Google to money (Shown in Google, Clicked, Visits, Conversions), joining Search Console as §13 does. Left off: its chart and What its visits converted into |
+| 8 | All pages | What Hakken sees added; conversions made here with their value beside them |
+| 9 | Conversions | What Hakken sees added. Four figures: conversions, value, conversion rate, kinds that happened ("1 of 4"). Then What counts, each kind with how many, value and change. Then Where they came from, one table switching between landing pages and channels. Left off: the chart |
+| 10 | Tracking health | What Hakken sees added; otherwise as built |
+| 11 | Connection | What Hakken sees added; otherwise as built |
+| 12 | Not connected yet | What Hakken sees added (when Search Console is connected) |
+| 13 | Choose the property | As built |
+| 14 | Choose what counts | What Hakken sees added; the ticks as Hakken sets them today (§16) |
+| 15 | The first 90 days coming in | As built |
+| 16 | Nothing counted yet | What Hakken sees added |
+| 17 | A device asked of Google | What Hakken sees added once the answer is in; Ronins' real mobile figures |
+| 18 | Needs reconnecting | As built, over Overview as drawn at 2 |
+| 19 | Tracking alerts in the bell | As built: Hakken's super admins only (GA12) |
+
+Conversions — a shop (§11, board 8) is not redrawn: Ronins sells nothing.
+It stays as locked.
+
+Two things on the canvas are stand-ins, said on it. Hakken forgets both once
+a property is chosen: how many properties the Google account can see (drawn
+as 3), and the list behind "See all".
+
+## 16. Found while drawing — 2026-10-10
+
+- **Each tracking alert reached the bell twice.** The same super admin got
+  each of Ronins' three alerts at 07:43 and again at 07:58. GA12 says once.
+- **The first ticks miss Ronins' conversions.** Ronins' key events are
+  `purchase`, `form_submission`, `live_chat_event`, `phone_number_click` and
+  `email_link_click`. Of these, only `purchase` is on Hakken's list of likely
+  conversions (`convex/utils/analyticsEvents.ts`). So a first connect ticks
+  Purchase, which never fired, and leaves Form submission (12 in 30 days)
+  unticked. The common variants want adding, with names in both languages.
+- **Gemini is listed twice** on the built AI assistants screen, as "Gemini"
+  (3) and "gemini" (1). Assistants should be folded regardless of case; the
+  drawing shows 4.
 
 ## Change log
 
@@ -802,3 +981,9 @@ before any code. Nothing here is built.
   (Anthony: "These are system alerts not company alerts").
 - 2026-10-10 — GA1 changed: the section gets a strategy page joining Search
   Console to Analytics page by page (§13), to be drawn and agreed first.
+- 2026-10-10 — The new screens written in (Anthony: "Can you add the new
+  screens into the plan please"). Heroes and attention as drawn (§13);
+  What Hakken sees on sixteen screens (§14); every screen redrawn for review
+  on Ronins' figures, and what each changes against the locked screens
+  (§15); three things found while drawing (§16). Phase 5 added, eight and a
+  half days, about twenty-four in all (§8). None of it agreed or built yet.
