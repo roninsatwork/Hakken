@@ -1,0 +1,5 @@
+# Google Analytics → the first 90 days coming in — the approved look (board "FirstCollect" of docs/plans/assets/google-analytics/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Overview
+notice (info)

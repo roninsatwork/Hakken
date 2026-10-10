@@ -1,0 +1,22 @@
+# Google Analytics → Overview — the approved look (board "Overview" of docs/plans/assets/google-analytics/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Overview
+figures
+  figure: Visits
+  figure: Engaged visits
+  figure: Conversions →
+  figure: Value →
+chart-card: What changed most
+compact-list: Page or channel | Kind | Conversions | Value
+notice (info)
+chart-card: Visits and conversions over time
+  checkbox: Visits
+  checkbox: Engaged visits
+  checkbox: Conversions
+  checkbox: Value (£)
+chart-card: Channels that made the most
+compact-list: Channel | Visits | Conversions | Value
+chart-card: Landing pages that made the most
+compact-list: Page | Visits | Conversions | Value
+notice (warning)

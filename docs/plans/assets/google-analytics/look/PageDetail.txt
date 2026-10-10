@@ -1,0 +1,20 @@
+# Google Analytics → a landing page — the approved look (board "PageDetail" of docs/plans/assets/google-analytics/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Landing pages
+  page-header: ‹the record's name›
+figures
+  figure: Visits
+  figure: Engagement rate
+  figure: Conversions
+  figure: Value
+chart-card: Visits and conversions over time
+  checkbox: Visits
+  checkbox: Engaged visits
+  checkbox: Conversions
+  checkbox: Value (£)
+chart-card: Where its visits came from
+compact-list: Channel | Visits | Conversions | Value
+chart-card: What its visits converted into
+compact-list: Conversion | How many | Value each | Value

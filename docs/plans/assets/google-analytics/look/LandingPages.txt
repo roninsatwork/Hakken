@@ -1,0 +1,11 @@
+# Google Analytics → Landing pages — the approved look (board "LandingPages" of docs/plans/assets/google-analytics/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Landing pages
+search: Find a page…
+filter: Page group
+choice: Show: Pages | Page groups
+table: Page | Visits | Engaged | Time | Conversions | Value | Change
+  table-bar
+    download: Download CSV
+  table-footer

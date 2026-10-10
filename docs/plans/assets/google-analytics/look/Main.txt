@@ -1,0 +1,9 @@
+# Google Analytics → your websites — the approved look (board "Main" of docs/plans/assets/google-analytics/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Google Analytics
+search: Find a website…
+table: Website | Status | Visits | Conversions | Value | Updated
+  table-bar
+    download: Download CSV
+  table-footer

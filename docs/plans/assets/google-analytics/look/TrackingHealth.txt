@@ -1,0 +1,5 @@
+# Google Analytics → Tracking health — the approved look (board "TrackingHealth" of docs/plans/assets/google-analytics/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Tracking health
+notice (warning)

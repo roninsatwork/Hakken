@@ -1,0 +1,16 @@
+# Google Analytics → choose what counts — the approved look (board "ChooseEvents" of docs/plans/assets/google-analytics/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Connection
+notice (info)
+checkbox: Contact form sent
+choice: Where its value is set: Set it in Hakken | Set it in Google Analytics
+field: Value of each, in £
+checkbox: Phone number clicked
+choice: Where its value is set: Set it in Hakken | Set it in Google Analytics
+field: Value of each, in £
+checkbox: Email address clicked
+choice: Where its value is set: Set it in Hakken | Set it in Google Analytics
+field: Value of each, in £
+checkbox: Newsletter sign-up
+checkbox: Scrolled to the end

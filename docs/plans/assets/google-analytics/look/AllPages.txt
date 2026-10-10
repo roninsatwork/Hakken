@@ -1,0 +1,9 @@
+# Google Analytics → All pages — the approved look (board "AllPages" of docs/plans/assets/google-analytics/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: All pages
+search: Find a page…
+table: Page | Views | Time | Conversions | Value
+  table-bar
+    download: Download CSV
+  table-footer

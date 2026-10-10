@@ -1,0 +1,6 @@
+# Google Analytics → Connection — the approved look (board "Connected" of docs/plans/assets/google-analytics/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Connection
+compact-list
+compact-list: Conversion | In Google Analytics | Value each | Set in

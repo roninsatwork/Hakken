@@ -1,0 +1,9 @@
+# Google Analytics → Channels — the approved look (board "Channels" of docs/plans/assets/google-analytics/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Channels
+search: Find a channel…
+table: Channel | Visits | Engaged | Conversions | Value | Change
+  table-bar
+    download: Download CSV
+  table-footer
