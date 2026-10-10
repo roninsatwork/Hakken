@@ -196,7 +196,7 @@ describe("5 · A channel's own screen", () => {
   const figures = { visits: 61, visitsBefore: 10, engaged: 17, conversions: 0, conversionsBefore: 0, value: 0, valueBefore: 0, siteVisits: 826, siteEngaged: 410 };
   const assistants = [
     row("ChatGPT", { visits: 57, engagementRate: 0.298, change: (57 - 7) / 7, conversionsBefore: 0 }),
-    row("Gemini", { visits: 4, engagementRate: 0, change: 3, conversionsBefore: 0 }),
+    row("Perplexity", { visits: 4, engagementRate: 0, change: 3, conversionsBefore: 0 }),
   ];
 
   test("ChatGPT up from 7; its visitors leave sooner than the website's; none converted", () => {

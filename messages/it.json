@@ -15598,7 +15598,7 @@
         "noConversions": "Nessuna di queste {a} visite ha ancora convertito.",
         "groupLead": "Le tue pagine {text} fanno {aMoney} dei tuoi {bMoney}.",
         "groupsNoValue": "Nessun gruppo di pagine ha fatto guadagnare in queste date.",
-        "unsorted": "{count, plural, =1 {Una pagina non è} other {# pagine non sono}} ancora in un gruppo di pagine, quindi le {b} visite non si sommano al resto.",
+        "unsorted": "{count, plural, =1 {Una pagina non è} other {# pagine non sono}} ancora in un gruppo di pagine, quindi le {count, plural, =1 {sue} other {loro}} {b} visite non si sommano al resto.",
         "device": {
           "mobile": "I telefoni hanno portato {a} delle {b} visite, e {countC, plural, =0 {nessuna conversione} =1 {una conversione} other {# conversioni}}.",
           "desktop": "I computer hanno portato {a} delle {b} visite, e {countC, plural, =0 {nessuna conversione} =1 {una conversione} other {# conversioni}}.",
@@ -15681,7 +15681,7 @@
         "chooseWhatCounts": "Scegli cosa conta come conversione.",
         "setMissing": "Indica quanto {count, plural, =1 {vale} other {valgono}} {event}, così {count, plural, =1 {si somma} other {si sommano}} al Valore.",
         "setWorth": "Imposta quanto vale davvero {event}: ogni cifra in denaro qui poggia sui suoi {aMoney}.",
-        "checkSilent": "Controlla che {event} {count, plural, =1 {venga registrato: non succede mai} other {vengano registrati: non succedono mai}}."
+        "checkSilent": "Controlla che {event} {count, plural, =1 {venga registrato} other {vengano registrati}}: {count, plural, =1 {non succede mai} other {non succedono mai}}."
       },
       "connect": {
         "searchConsole": "Search Console mostra che Google ha mandato a {text} {a} clic negli ultimi 30 giorni, su {b} visualizzazioni nei risultati.",
