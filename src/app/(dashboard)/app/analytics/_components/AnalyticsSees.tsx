@@ -16,7 +16,8 @@ import { useAnalyticsHref, useAnalyticsSiteId } from "./useAnalytics";
  *
  * A phrase's `a`, `b` and `c` are numbers; each is offered to its words as
  * written (`{a}`), as money in the property's currency (`{aMoney}`, the rules
- * sending money in hundredths, as every Analytics figure is kept), and for
+ * sending money in hundredths, as every Analytics figure is kept), as a share
+ * (`{aRate}`, the rules sending a fraction: 0.0014 is "0.14%"), and for
  * plurals (`count`, `countB`, `countC`). A step's link leads to a page of this
  * website's section, with the dates and device chosen (`segment`, `filters`),
  * or to an address of its own (`url`).
@@ -46,10 +47,19 @@ export function valuesOf(phrase: SeenPhrase, currency: string | null | undefined
     aMoney: formatMoney(phrase.a ?? 0, currency),
     bMoney: formatMoney(phrase.b ?? 0, currency),
     cMoney: formatMoney(phrase.c ?? 0, currency),
+    aRate: rateOf(phrase.a),
+    bRate: rateOf(phrase.b),
+    cRate: rateOf(phrase.c),
     count: phrase.a ?? 0,
     countB: phrase.b ?? 0,
     countC: phrase.c ?? 0,
     text: phrase.text ?? "",
     more: phrase.more ?? "",
   };
+}
+
+/** A share as a percentage: two decimals under 1%, where one would round a real rate to nothing; one above. */
+function rateOf(share = 0): string {
+  const percent = share * 100;
+  return `${percent.toFixed(percent > 0 && percent < 1 ? 2 : 1)}%`;
 }

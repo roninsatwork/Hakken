@@ -14715,6 +14715,7 @@
         "settings": "Impostazioni"
       },
       "overview": "Panoramica",
+      "heroes": "Eroi e attenzione",
       "channels": "Canali",
       "landingPages": "Pagine di destinazione",
       "allPages": "Tutte le pagine",
@@ -15063,6 +15064,142 @@
       "landingLive": "Richiesta a Google delle pagine di destinazione di questo dispositivo…",
       "noPages": "Nessuna pagina di destinazione in queste date."
     },
+    "heroes": {
+      "title": "Eroi e attenzione",
+      "description": "Ogni pagina di destinazione seguita dai risultati di Google fino al denaro che porta: cosa fare e quanto vale.",
+      "figuresTo": "Dati di Search Console fino al {console} e di Analytics fino al {analytics}; gli ultimi due giorni possono ancora cambiare.",
+      "figuresToAnalytics": "Dati di Analytics fino al {analytics}; gli ultimi due giorni possono ancora cambiare.",
+      "preparing": "Eroi e attenzione ha bisogno dei primi 30 giorni di dati. Stanno arrivando adesso.",
+      "website": {
+        "shown": "Mostrate in Google",
+        "position": "In posizione {position} in media",
+        "connectConsole": "Collega Search Console →",
+        "noConsole": "Search Console non è collegato",
+        "clicked": "Clic",
+        "ofShowings": "{rate} delle visualizzazioni",
+        "toGain": "{money} al mese da guadagnare →",
+        "visits": "Visite da Google",
+        "visitsLine": "{engaged} coinvolte, {conversions} convertite",
+        "value": "Valore da Google",
+        "valueLine": "{share} del valore del sito di {total}",
+        "heroes": "{count, plural, one {# pagina eroe porta {money}} other {# pagine eroe portano {money}}} →"
+      },
+      "listTitle": "Pagine da sistemare",
+      "listDescription": "Circa {money} al mese in tutto, le più grandi per prime. Apri una pagina per vederne i dati e il perché.",
+      "listDescriptionNone": "Niente da sistemare questo mese. Apri una pagina per vederne i dati.",
+      "tabsLabel": "Mostra",
+      "tabs": {
+        "all": "Tutte",
+        "hero": "Eroi",
+        "push": "Da portare in prima pagina",
+        "click": "Perde il clic",
+        "convert": "Non converte",
+        "leave": "Le persone se ne vanno",
+        "fall": "In calo"
+      },
+      "kinds": {
+        "hero": "Eroe",
+        "push": "Da portare in prima pagina",
+        "click": "Perde il clic",
+        "convert": "Non converte",
+        "leave": "Le persone se ne vanno",
+        "fall": "In calo"
+      },
+      "search": "Trova una pagina…",
+      "bar": "Ultimi 30 giorni · tutti i dispositivi",
+      "columns": {
+        "page": "Pagina",
+        "what": "Cosa fare",
+        "worth": "Valore al mese",
+        "task": "Attività Hakken"
+      },
+      "taskMake": "Crea un'attività Hakken",
+      "taskMade": "Un'attività Hakken controlla questa pagina",
+      "taskAsk": {
+        "push": "Tieni d'occhio {page} su {host} mentre la portiamo in prima pagina: dimmi quando i suoi visitatori da Google aumentano della metà.",
+        "click": "Tieni d'occhio {page} su {host} mentre riscriviamo titolo e descrizione: dimmi quando i suoi visitatori da Google aumentano di un quinto.",
+        "convert": "Tieni d'occhio {page} su {host} mentre le diamo un passo successivo: dimmi se i suoi visitatori da Google calano di un terzo.",
+        "leave": "Tieni d'occhio {page} su {host} mentre la facciamo rispondere a ciò che è stato cercato: dimmi se i suoi visitatori da Google calano di un terzo.",
+        "fall": "Tieni d'occhio {page} su {host}: dimmi se i suoi visitatori da Google calano di nuovo di un terzo.",
+        "hero": "Tieni d'occhio {page} su {host}, una delle sue pagine eroe: dimmi se i suoi visitatori da Google calano di un terzo."
+      },
+      "under": "Meno di {money}",
+      "noMatch": "Nessuna pagina corrisponde a “{q}”.",
+      "empty": {
+        "all": "Niente richiede attenzione.",
+        "hero": "Nessuna pagina porta ancora valore.",
+        "push": "Nessuna pagina è in posizione da 8 a 20 con 500 visualizzazioni o più.",
+        "click": "Ogni pagina tra le prime cinque riceve clic al tasso abituale del sito o meglio.",
+        "convert": "Ogni pagina con 50 visite o più converte almeno la metà del tasso del sito.",
+        "leave": "Nessuna pagina perde i suoi visitatori: ogni pagina con 30 visite o più ne tiene almeno il 40%.",
+        "fall": "Nessuna pagina è calata del 30% o più."
+      },
+      "download": "Scarica CSV",
+      "downloading": "Download in corso…",
+      "downloadFailed": "Il download non è riuscito. Riprova tra un momento.",
+      "csv": {
+        "page": "Pagina",
+        "what": "Cosa fare",
+        "hero": "Eroe",
+        "worth": "Valore al mese ({currency})",
+        "shown": "Mostrata in Google",
+        "position": "Posizione",
+        "clicks": "Clic",
+        "visits": "Visite",
+        "conversions": "Conversioni",
+        "value": "Valore ({currency})"
+      },
+      "stages": {
+        "shown": "Mostrata in Google",
+        "position": "In posizione {position}",
+        "positionFrom": "In posizione {position}, da {before}",
+        "notInGoogle": "Non è nei risultati di Google",
+        "noConsole": "Collega Search Console per vederlo",
+        "clicked": "Clic",
+        "ofShowings": "{rate} delle visualizzazioni",
+        "visits": "Visite",
+        "engaged": "{rate} coinvolte",
+        "noVisit": "Nessuna visita è iniziata qui",
+        "conversions": "Conversioni",
+        "value": "{money} di valore",
+        "noValue": "Ancora nessun valore",
+        "up": "▲ {change} sui 30 giorni precedenti",
+        "down": "▼ {change} sui 30 giorni precedenti",
+        "same": "Come nei 30 giorni precedenti",
+        "nothingBefore": "Niente da confrontare con i 30 giorni precedenti"
+      },
+      "page": {
+        "back": "Eroi e attenzione",
+        "description": "Una pagina di destinazione su {host}. I dati di Google riguardano le sue visualizzazioni nei risultati di Google; quelli di Analytics ogni visita iniziata qui.",
+        "openPage": "Apri la pagina",
+        "notFound": "Questa pagina non ha nulla da mostrare negli ultimi 30 giorni.",
+        "todoTitle": "Cosa fare",
+        "todoDescription": "La fase evidenziata sopra è dove questa pagina perde di più.",
+        "nothingToDo": "Niente da sistemare su questa pagina questo mese.",
+        "worth": "Vale circa {money} al mese",
+        "worthUnder": "Vale meno di {money} al mese",
+        "notPriced": "Non ancora valutata: il sito non ha conversioni con cui valutarla",
+        "why": {
+          "push": "Mostrata {shown} volte in posizione {position}. Tra le prime tre riceverebbe circa {gain} clic in più al mese: lavora sulle ricerche per cui compare in seconda pagina.",
+          "click": "Cliccata {clicks} volte su {shown} in posizione {position}; il valore abituale del sito lì è {expected}. Riscrivi titolo e descrizione.",
+          "convert": "{visits} visite, {conversions, plural, =0 {nessuna conversione} one {una conversione} other {# conversioni}}. Dalle un passo successivo verso il servizio che sostiene.",
+          "leave": "Resta solo il {rate} delle sue {visits} visite. Fai in modo che la pagina risponda a ciò che è stato cercato.",
+          "fall": "Le visite sono calate da {before} a {visits}. Controlla la sua posizione in Google e cosa è cambiato sulla pagina.",
+          "hero": "Porta {money} dei {total} al mese del sito. Cambiala solo con un test."
+        },
+        "rule": "Perché è segnalata: {rule}.",
+        "rules": {
+          "hero": "è una delle pagine che insieme portano l'80% del valore del sito",
+          "push": "è in posizione da 8 a 20 ed è stata mostrata 500 volte o più",
+          "click": "è tra le prime cinque, è stata mostrata 100 volte o più e riceve meno clic del tasso del sito in quella posizione",
+          "convert": "ha 50 visite o più e converte meno della metà del tasso del sito del {rate}",
+          "leave": "ha 30 visite o più e meno del 40% è coinvolto",
+          "fall": "le visite sono calate del 30% o più sui 30 giorni precedenti, partendo da almeno 20"
+        },
+        "allFigures": "Tutti i suoi dati",
+        "itsSearches": "Le sue ricerche in Search Console"
+      }
+    },
     "channels": {
       "title": "Canali",
       "description": "Da dove sono arrivate le visite, nei canali di Google, e cosa ha portato ciascuno. La variazione sono le visite rispetto a {before}.",
@@ -15162,25 +15299,11 @@
       "openPage": "Apri la pagina",
       "notFound": "Questa pagina non è del sito.",
       "noVisits": "Nessuna visita è iniziata su questa pagina negli {period}.",
-      "visits": "Visite",
-      "engagementRate": "Tasso di coinvolgimento",
-      "wholeWebsite": "{rate} per tutto il sito",
-      "conversions": "Conversioni",
-      "value": "Valore",
       "askFailed": "Google non ha potuto rispondere ora per il grafico e i canali di questa pagina. Riaprila tra un momento.",
       "channelsTitle": "Da dove sono arrivate le sue visite",
       "channelsDescription": "I canali che hanno portato visite a questa pagina, per valore.",
       "asking": "Richiesta a Google…",
-      "noChannels": "Nessuna visita in queste date.",
-      "convertedTitle": "In cosa si sono convertite le sue visite",
-      "convertedDescription": "Ogni conversione fatta da una visita iniziata qui.",
-      "nothingConverted": "Ancora niente conta come conversione.",
-      "conversion": "Conversione",
-      "howMany": "Quante",
-      "valueEach": "Valore di ciascuna",
-      "byBeforeUp": "▲ {by} rispetto a {before}",
-      "byBeforeDown": "▼ {by} rispetto a {before}",
-      "byBeforeSame": "Nessuna variazione rispetto a {before}"
+      "noChannels": "Nessuna visita in queste date."
     },
     "counts": {
       "reading": "Lettura degli eventi chiave della proprietà da Google…",
@@ -15294,6 +15417,47 @@
           "fix": "fai smettere l'altro indirizzo di mandare dati a Google Analytics — togli il tag, o dagli una proprietà sua.",
           "short": "{count} visite registrate su {names}."
         }
+      }
+    },
+    "seen": {
+      "heroes": {
+        "mostInGoogle": "Google mostra le tue pagine {a} volte al mese, ma solo il {bRate} di queste visualizzazioni diventa un clic, quindi la maggior parte dei {cMoney} al mese da guadagnare è nei risultati di Google, non sulle pagine.",
+        "mostOnPages": "La maggior parte dei {aMoney} al mese da guadagnare è sulle pagine stesse, una volta che le persone arrivano: {bMoney}.",
+        "nothingToGain": "Nessuna pagina ha qualcosa da sistemare questo mese: ognuna riceve clic, converte e trattiene le visite come il resto del sito.",
+        "heroes": "{count, plural, one {Una pagina porta} other {# pagine portano}} {bMoney} dei tuoi {cMoney}.",
+        "noConsole": "Collega Search Console per vedere cosa succede nei risultati di Google prima che le persone arrivino.",
+        "pushTwo": "Porta {text} e {more} in prima pagina: circa {aMoney} al mese.",
+        "pushOne": "Porta {text} in prima pagina: circa {aMoney} al mese.",
+        "rewrite": "Riscrivi titolo e descrizione di {text}: circa {aMoney} al mese.",
+        "nextStep": "Dai a {text} un passo successivo: {a} visite e {countB, plural, =0 {nessuna conversione} one {una conversione} other {# conversioni}}.",
+        "answerSearch": "Fai in modo che {text} risponda a ciò che è stato cercato: la maggior parte delle sue {a} visite se ne va.",
+        "whyFell": "Scopri perché {text} è calata, da {a} visite a {b}.",
+        "leaveHeroesTwo": "Lascia {text} e {more} come sono: portano {aMoney} al mese.",
+        "leaveHeroesOne": "Lascia {text} com'è: porta {aMoney} al mese."
+      },
+      "landingPage": {
+        "makes": "{text} porta {aMoney} al mese, il {bRate} del valore del sito.",
+        "makesNothing": "{text} ha portato {a} visite questo mese e ancora nessuna conversione.",
+        "noVisits": "Nessuna visita è iniziata su {text} questo mese.",
+        "noneFromGoogle": "Tutte le sue {a} conversioni sono arrivate da persone giunte senza una ricerca: le sue {b} visite da Google non hanno convertito.",
+        "inGoogle": "In Google è in posizione {a}, ed è stata cliccata {b} volte su {c} visualizzazioni.",
+        "conversionsFell": "Le sue conversioni sono calate da {a} a {b}.",
+        "conversionsRose": "Le sue conversioni sono salite da {a} a {b}.",
+        "fixPush": "Lavora sulle ricerche per cui compare in seconda pagina: circa {aMoney} al mese.",
+        "fixClick": "Riscrivi titolo e descrizione: circa {aMoney} al mese.",
+        "fixConvert": "Dalle un passo successivo verso il servizio che sostiene: circa {aMoney} al mese.",
+        "fixLeave": "Fai in modo che la pagina risponda a ciò che è stato cercato: circa {aMoney} al mese.",
+        "fixFall": "Controlla la sua posizione in Google e cosa è cambiato sulla pagina: circa {aMoney} al mese.",
+        "whatChanged": "Controlla cosa è cambiato sulla pagina questo mese: {count, plural, one {una conversione in meno} other {# conversioni in meno}}.",
+        "hero": "È una delle tue pagine eroe: cambiala solo con un test."
+      },
+      "links": {
+        "pagesToPush": "Pagine da portare in prima pagina",
+        "seePage": "Vedi la pagina",
+        "theHeroes": "Le pagine eroe",
+        "itsSearches": "Le sue ricerche in Search Console",
+        "openPage": "Apri la pagina",
+        "conversions": "Conversioni"
       }
     }
   },

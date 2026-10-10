@@ -164,6 +164,24 @@ export async function readPeriod(
 
 export type ReadPeriod = { from: string; to: string; builtAt: number; shown: number | null; rows: PeriodRow[]; book: BookScope | null };
 
+/**
+ * A ready-made period's list with its pages left as places in the build's
+ * book, for a reader that names only the few rows it needs (`BookNames`):
+ * Heroes and attention reads every page's figures but names only those its
+ * rules could flag — the whole book of a large website's pages, read whole,
+ * was most of what its screen read (google-analytics-plan.md §13).
+ */
+export async function readPeriodUnnamed(
+  ctx: { db: QueryCtx["db"] },
+  companyWebsiteId: Id<"companyWebsites">,
+  searchType: SearchType,
+  list: SearchConsolePeriodList,
+  period: SearchConsolePeriod,
+  which: "NOW" | "BEFORE",
+): Promise<ReadPeriod | null> {
+  return await periodFromParts(ctx, companyWebsiteId, searchType, list, await partsToRead(ctx, companyWebsiteId, searchType, list, period, which), undefined, false);
+}
+
 /** A period's parts, read already (`partsToRead`), as rows: what `readPeriod` returns. */
 export async function periodFromParts(
   ctx: { db: QueryCtx["db"] },
@@ -172,6 +190,8 @@ export async function periodFromParts(
   list: SearchConsolePeriodList,
   stored: readonly Doc<"searchConsolePeriods">[],
   country?: string,
+  /** False to leave a page list's pages as places in its book (`readPeriodUnnamed`). */
+  named = true,
 ): Promise<ReadPeriod | null> {
   const scope = country;
   const parts = stored.map((part) => unpackedPart(withTokens(part)));
@@ -182,7 +202,7 @@ export async function periodFromParts(
     ? { companyWebsiteId, ...(scope === undefined ? {} : { country: scope }), searchType, builtAt: parts[0].builtAt }
     : null;
   // A list of pages is a website's pages at most — read with their addresses whole (§5.3).
-  if (book && list === "page") {
+  if (book && list === "page" && named) {
     const pages = await wholeBook(ctx, book, "page");
     for (const row of rows) {
       const at = tokenPlace(row.key);

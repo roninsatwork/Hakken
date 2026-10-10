@@ -4,13 +4,12 @@ import { useAction, useMutation, useQuery } from "convex/react";
 
 import { answerQueries } from "@/src/test/siteViewFixtures";
 import { expectApprovedLook } from "@/src/test/lookOutline";
-import { CHANNEL, CHART, CONVERSIONS, LANDING_PAGE, OVERVIEW, ROW, STATUS, list, statusWith, top } from "@/src/test/googleAnalyticsFixtures";
+import { CHANNEL, CHART, CONVERSIONS, OVERVIEW, ROW, STATUS, list, statusWith, top } from "@/src/test/googleAnalyticsFixtures";
 import GoogleAnalyticsPage from "./page";
 import AnalyticsOverviewPage from "./[siteId]/page";
 import AnalyticsChannelsPage from "./[siteId]/channels/page";
 import AnalyticsChannelPage from "./[siteId]/channels/channel/page";
 import AnalyticsLandingPagesPage from "./[siteId]/landing-pages/page";
-import AnalyticsLandingPage from "./[siteId]/landing-pages/page/page";
 import AnalyticsAllPagesPage from "./[siteId]/all-pages/page";
 import AnalyticsConversionsPage from "./[siteId]/conversions/page";
 import AnalyticsTrackingHealthPage from "./[siteId]/tracking-health/page";
@@ -117,13 +116,7 @@ describe("Google Analytics' approved looks", () => {
     await expectApprovedLook(container, PLAN, "AllPages", "Google Analytics → All pages");
   });
 
-  it("15 · a landing page's own screen", async () => {
-    at("/app/analytics/site_1/landing-pages/page", "key=~0");
-    answer({ "googleAnalyticsConnect:googleAnalyticsStatus": STATUS, "googleAnalyticsReads:analyticsLandingPage": LANDING_PAGE });
-    const { container } = render(<AnalyticsLandingPage />);
-    await screen.findByText("288");
-    await expectApprovedLook(container, PLAN, "PageDetail", "Google Analytics → a landing page");
-  });
+  // 15 · a landing page's own screen, redrawn with Search Console's stages (§15 screen 7): googleAnalyticsHeroesLook.test.tsx.
 
   it("7 · Conversions", async () => {
     at("/app/analytics/site_1/conversions");

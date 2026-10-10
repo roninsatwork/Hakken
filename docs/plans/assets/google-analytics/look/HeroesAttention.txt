@@ -1,0 +1,16 @@
+# Google Analytics → Heroes and attention — the approved look (board "HeroesAttention" of docs/plans/assets/google-analytics/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Heroes and attention
+settings-card: What Hakken sees
+figures
+  figure: Shown in Google
+  figure: Clicked
+  figure: Visits from Google
+  figure: Value from Google
+choice: Show: All # | Heroes # | Push to page one # | Losing the click # | Not converting # | People leave # | Falling #
+search: Find a page…
+table: Page | What to do | Worth a month | Hakken task
+  table-bar
+    download: Download CSV
+  table-footer

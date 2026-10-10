@@ -105,7 +105,7 @@ function grouped(rows: readonly ListRow[], keyOf: (row: ListRow) => string | nul
 // Reading a ready-made list
 // ---------------------------------------------------------------------------
 
-async function connectionOf(ctx: Reader, holdId: Id<"companyWebsites">) {
+export async function connectionOf(ctx: Reader, holdId: Id<"companyWebsites">) {
   return await ctx.db
     .query("googleAnalyticsConnections")
     .withIndex("by_hold", (q) => q.eq("companyWebsiteId", holdId))
@@ -115,7 +115,7 @@ async function connectionOf(ctx: Reader, holdId: Id<"companyWebsites">) {
 type Held = { rows: ListRow[]; from: string; to: string; folded: boolean; thresholded: boolean; cut: boolean };
 
 /** A ready-made list, every part of the build screens read, at one moment. */
-async function readSlot(ctx: Reader, holdId: Id<"companyWebsites">, key: string): Promise<Held | null> {
+export async function readSlot(ctx: Reader, holdId: Id<"companyWebsites">, key: string): Promise<Held | null> {
   const slot = await ctx.db
     .query("googleAnalyticsPeriodSlots")
     .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", holdId).eq("key", key))

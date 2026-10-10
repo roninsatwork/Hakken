@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Globe } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Header from "@/src/ui/components/layout/Header";
@@ -15,7 +15,7 @@ import { SiteMark } from "../../sites/_components/SiteMark";
 import { AnalyticsFilters } from "../_components/AnalyticsFilters";
 import { AnalyticsMenu } from "../_components/AnalyticsMenu";
 import { AnalyticsConnectionBanner } from "../_components/AnalyticsNotices";
-import { analyticsQuery, useAnalyticsSiteId, useAnalyticsStatus } from "../_components/useAnalytics";
+import { analyticsQuery, pageForPath, useAnalyticsSiteId, useAnalyticsStatus } from "../_components/useAnalytics";
 
 /**
  * One website in the Google Analytics section (docs/plans/active/google-analytics-plan.md
@@ -28,6 +28,7 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
   const t = useTranslations("googleAnalytics.site");
   const ts = useTranslations("googleAnalytics.status");
   const router = useRouter();
+  const pathname = usePathname();
   const params = useSearchParams();
   const siteId = useAnalyticsSiteId();
   const status = useAnalyticsStatus();
@@ -63,6 +64,7 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
     ? t("withProperty", { name: connection.propertyName, id: connection.property.replace(/^properties\//, "") })
     : t("yourWebsite");
   const firstComing = state === "CONNECTED" && !connection?.historyDone;
+  const ownDates = pageForPath(pathname, siteId) === "heroes" || /\/landing-pages\/page\/?$/.test(pathname);
 
   return (
     <>
@@ -106,7 +108,8 @@ export default function AnalyticsSiteLayout({ children }: { children: React.Reac
             <AnalyticsMenu siteId={siteId} />
           </aside>
           <section className="flex min-w-0 flex-col gap-3">
-            {connection?.newestDay && state !== "CHOOSING" && state !== "COUNTING" ? (
+            {/* Heroes and attention and a landing page's own screen join Search Console's days to Analytics' and say both themselves (§13, §15). */}
+            {connection?.newestDay && state !== "CHOOSING" && state !== "COUNTING" && !ownDates ? (
               <p className="text-[12px] text-muted">{t("figuresTo", { day: formatDay(connection.newestDay) })}</p>
             ) : null}
             {children}

@@ -4,17 +4,11 @@
 detail-header
   back: Landing pages
   page-header: ‹the record's name›
+settings-card: What Hakken sees
 figures
+  figure: Shown in Google
+  figure: Clicked
   figure: Visits
-  figure: Engagement rate
   figure: Conversions
-  figure: Value
-chart-card: Visits and conversions over time
-  checkbox: Visits
-  checkbox: Engaged visits
-  checkbox: Conversions
-  checkbox: Value (£)
 chart-card: Where its visits came from
 compact-list: Channel | Visits | Conversions | Value
-chart-card: What its visits converted into
-compact-list: Conversion | How many | Value each | Value

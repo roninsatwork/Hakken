@@ -1,0 +1,11 @@
+# Google Analytics → a page of Heroes and attention — the approved look (board "HeroesAttentionPage" of docs/plans/assets/google-analytics/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Heroes and attention
+  page-header: ‹the record's name›
+figures
+  figure: Shown in Google
+  figure: Clicked
+  figure: Visits
+  figure: Conversions

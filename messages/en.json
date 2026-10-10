@@ -14715,6 +14715,7 @@
         "settings": "Settings"
       },
       "overview": "Overview",
+      "heroes": "Heroes and attention",
       "channels": "Channels",
       "landingPages": "Landing pages",
       "allPages": "All pages",
@@ -15063,6 +15064,142 @@
       "landingLive": "Asking Google for this device's landing pages…",
       "noPages": "No landing pages in these dates."
     },
+    "heroes": {
+      "title": "Heroes and attention",
+      "description": "Each landing page followed from Google's results to the money it makes: what to do, and what it is worth.",
+      "figuresTo": "Search Console's figures to {console} and Analytics' to {analytics}; the last two days can still change.",
+      "figuresToAnalytics": "Analytics' figures to {analytics}; the last two days can still change.",
+      "preparing": "Heroes and attention needs the first 30 days of figures. They're coming in now.",
+      "website": {
+        "shown": "Shown in Google",
+        "position": "At position {position} on average",
+        "connectConsole": "Connect Search Console →",
+        "noConsole": "Search Console isn't connected",
+        "clicked": "Clicked",
+        "ofShowings": "{rate} of the showings",
+        "toGain": "{money} a month to gain →",
+        "visits": "Visits from Google",
+        "visitsLine": "{engaged} engaged, {conversions} converted",
+        "value": "Value from Google",
+        "valueLine": "{share} of the website's {total}",
+        "heroes": "{count, plural, one {# hero page makes {money}} other {# hero pages make {money}}} →"
+      },
+      "listTitle": "Pages to fix",
+      "listDescription": "About {money} a month in all, the biggest first. Open a page for its figures and why.",
+      "listDescriptionNone": "Nothing to fix this month. Open a page for its figures.",
+      "tabsLabel": "Show",
+      "tabs": {
+        "all": "All",
+        "hero": "Heroes",
+        "push": "Push to page one",
+        "click": "Losing the click",
+        "convert": "Not converting",
+        "leave": "People leave",
+        "fall": "Falling"
+      },
+      "kinds": {
+        "hero": "Hero",
+        "push": "Push to page one",
+        "click": "Losing the click",
+        "convert": "Not converting",
+        "leave": "People leave",
+        "fall": "Falling"
+      },
+      "search": "Find a page…",
+      "bar": "Last 30 days · every device",
+      "columns": {
+        "page": "Page",
+        "what": "What to do",
+        "worth": "Worth a month",
+        "task": "Hakken task"
+      },
+      "taskMake": "Make it a Hakken task",
+      "taskMade": "A Hakken task watches this page",
+      "taskAsk": {
+        "push": "Keep an eye on {page} on {host} while we push it onto page one: tell me when its visitors from Google rise by half.",
+        "click": "Keep an eye on {page} on {host} while we rewrite its title and description: tell me when its visitors from Google rise by a fifth.",
+        "convert": "Keep an eye on {page} on {host} while we give it a next step: tell me if its visitors from Google drop by a third.",
+        "leave": "Keep an eye on {page} on {host} while we make it answer what was searched: tell me if its visitors from Google drop by a third.",
+        "fall": "Keep an eye on {page} on {host}: tell me if its visitors from Google drop by a third again.",
+        "hero": "Keep an eye on {page} on {host}, one of its hero pages: tell me if its visitors from Google drop by a third."
+      },
+      "under": "Under {money}",
+      "noMatch": "No page matches “{q}”.",
+      "empty": {
+        "all": "Nothing needs attention.",
+        "hero": "No page makes any value yet.",
+        "push": "No page sits at position 8 to 20 with 500 showings or more.",
+        "click": "Every page in the top five is clicked at the website's usual rate or better.",
+        "convert": "Every page with 50 visits or more converts at least half the website's rate.",
+        "leave": "No page loses its visitors: every page with 30 visits or more keeps at least 40% of them.",
+        "fall": "No page fell by 30% or more."
+      },
+      "download": "Download CSV",
+      "downloading": "Downloading…",
+      "downloadFailed": "The download didn't work. Try again in a moment.",
+      "csv": {
+        "page": "Page",
+        "what": "What to do",
+        "hero": "Hero",
+        "worth": "Worth a month ({currency})",
+        "shown": "Shown in Google",
+        "position": "Position",
+        "clicks": "Clicks",
+        "visits": "Visits",
+        "conversions": "Conversions",
+        "value": "Value ({currency})"
+      },
+      "stages": {
+        "shown": "Shown in Google",
+        "position": "At position {position}",
+        "positionFrom": "At position {position}, from {before}",
+        "notInGoogle": "Not in Google's results",
+        "noConsole": "Connect Search Console to see this",
+        "clicked": "Clicked",
+        "ofShowings": "{rate} of the showings",
+        "visits": "Visits",
+        "engaged": "{rate} of them engaged",
+        "noVisit": "No visit started on it",
+        "conversions": "Conversions",
+        "value": "{money} of value",
+        "noValue": "No value yet",
+        "up": "▲ {change} on the 30 days before",
+        "down": "▼ {change} on the 30 days before",
+        "same": "The same as the 30 days before",
+        "nothingBefore": "Nothing to compare with the 30 days before"
+      },
+      "page": {
+        "back": "Heroes and attention",
+        "description": "A landing page on {host}. Google's figures are for its showings in Google's results; Analytics' are for every visit that started on it.",
+        "openPage": "Open the page",
+        "notFound": "This page has nothing to show for the last 30 days.",
+        "todoTitle": "What to do",
+        "todoDescription": "The stage marked above is where this page loses most.",
+        "nothingToDo": "Nothing to fix on this page this month.",
+        "worth": "Worth about {money} a month",
+        "worthUnder": "Worth under {money} a month",
+        "notPriced": "Not priced yet: the website has no conversions to price it by",
+        "why": {
+          "push": "Shown {shown} times at position {position}. In the top three it would get about {gain} more clicks a month: work on the searches it is shown for on page two.",
+          "click": "Clicked {clicks} times of {shown} at position {position}; the website's usual there is {expected}. Rewrite its title and description.",
+          "convert": "{visits} visits, {conversions, plural, =0 {no conversion} one {one conversion} other {# conversions}}. Give it a next step to the service it supports.",
+          "leave": "Only {rate} of its {visits} visits stay. Make the page answer what was searched.",
+          "fall": "Visits fell from {before} to {visits}. Check its place in Google and what changed on it.",
+          "hero": "Makes {money} of the website's {total} a month. Change it only with a test."
+        },
+        "rule": "Why it is flagged: {rule}.",
+        "rules": {
+          "hero": "one of the pages that together make 80% of the website's value",
+          "push": "at position 8 to 20, and shown 500 times or more",
+          "click": "in the top five, shown 100 times or more, and clicked less than the website's own click rate at that position",
+          "convert": "50 visits or more, converting under half the website's rate of {rate}",
+          "leave": "30 visits or more, and under 40% of them engaged",
+          "fall": "visits down 30% or more on the 30 days before, from at least 20"
+        },
+        "allFigures": "All its figures",
+        "itsSearches": "Its searches in Search Console"
+      }
+    },
     "channels": {
       "title": "Channels",
       "description": "Where the visits came from, in Google's own channels, and what each brought in. Change is the visits against {before}.",
@@ -15162,25 +15299,11 @@
       "openPage": "Open the page",
       "notFound": "This page isn't one of the website's.",
       "noVisits": "No visit started on this page in the {period}.",
-      "visits": "Visits",
-      "engagementRate": "Engagement rate",
-      "wholeWebsite": "{rate} for the whole website",
-      "conversions": "Conversions",
-      "value": "Value",
       "askFailed": "Google couldn't answer for this page's chart and channels just now. Open the page again in a moment.",
       "channelsTitle": "Where its visits came from",
       "channelsDescription": "The channels that brought visits to this page, by value.",
       "asking": "Asking Google…",
-      "noChannels": "No visits in these dates.",
-      "convertedTitle": "What its visits converted into",
-      "convertedDescription": "Each conversion made by a visit that started here.",
-      "nothingConverted": "Nothing counts as a conversion yet.",
-      "conversion": "Conversion",
-      "howMany": "How many",
-      "valueEach": "Value each",
-      "byBeforeUp": "▲ {by} on {before}",
-      "byBeforeDown": "▼ {by} on {before}",
-      "byBeforeSame": "No change on {before}"
+      "noChannels": "No visits in these dates."
     },
     "counts": {
       "reading": "Reading the property's key events from Google…",
@@ -15294,6 +15417,47 @@
           "fix": "stop the other address sending to Google Analytics — take the tracking tag off it, or give it a property of its own.",
           "short": "{count} visits were recorded on {names}."
         }
+      }
+    },
+    "seen": {
+      "heroes": {
+        "mostInGoogle": "Google shows your pages {a} times a month, but only {bRate} of those showings become clicks, so most of the {cMoney} a month to gain is in Google's results, not on the pages.",
+        "mostOnPages": "Most of the {aMoney} a month to gain is on the pages themselves, once people arrive: {bMoney} of it.",
+        "nothingToGain": "No page has anything to fix this month: every one is clicked, converts and holds its visits as well as the website does.",
+        "heroes": "{count, plural, one {One page makes} other {# pages make}} {bMoney} of your {cMoney}.",
+        "noConsole": "Connect Search Console to see what happens in Google's results before people arrive.",
+        "pushTwo": "Push {text} and {more} onto page one: about {aMoney} a month.",
+        "pushOne": "Push {text} onto page one: about {aMoney} a month.",
+        "rewrite": "Rewrite the title and description of {text}: about {aMoney} a month.",
+        "nextStep": "Give {text} a next step: {a} visits and {countB, plural, =0 {no conversion} one {one conversion} other {# conversions}}.",
+        "answerSearch": "Make {text} answer what was searched: most of its {a} visits leave.",
+        "whyFell": "Find out why {text} fell, from {a} visits to {b}.",
+        "leaveHeroesTwo": "Leave {text} and {more} as they are: they make {aMoney} a month.",
+        "leaveHeroesOne": "Leave {text} as it is: it makes {aMoney} a month."
+      },
+      "landingPage": {
+        "makes": "{text} makes {aMoney} a month, {bRate} of the website's value.",
+        "makesNothing": "{text} brought {a} visits this month and no conversion yet.",
+        "noVisits": "No visit started on {text} this month.",
+        "noneFromGoogle": "Every one of its {a} conversions came from people who arrived without a search: its {b} visits from Google converted none.",
+        "inGoogle": "In Google it sits at position {a}, and was clicked {b} times in {c} showings.",
+        "conversionsFell": "Its conversions fell from {a} to {b}.",
+        "conversionsRose": "Its conversions rose from {a} to {b}.",
+        "fixPush": "Work on the searches it's shown for on page two: about {aMoney} a month.",
+        "fixClick": "Rewrite its title and description: about {aMoney} a month.",
+        "fixConvert": "Give it a next step to the service it supports: about {aMoney} a month.",
+        "fixLeave": "Make the page answer what was searched: about {aMoney} a month.",
+        "fixFall": "Check its place in Google and what changed on it: about {aMoney} a month.",
+        "whatChanged": "Check what changed on the page this month: {count, plural, one {one fewer conversion} other {# fewer conversions}}.",
+        "hero": "It's one of your heroes: change it only with a test."
+      },
+      "links": {
+        "pagesToPush": "Pages to push",
+        "seePage": "See the page",
+        "theHeroes": "The heroes",
+        "itsSearches": "Its searches in Search Console",
+        "openPage": "Open the page",
+        "conversions": "Conversions"
       }
     }
   },

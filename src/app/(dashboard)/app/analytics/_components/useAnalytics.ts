@@ -23,6 +23,8 @@ export type AnalyticsGroup = (typeof ANALYTICS_GROUPS)[number];
 /** The section's pages, in the order its menu lists them. */
 export const ANALYTICS_PAGES = [
   { id: "overview", segment: "", group: "figures" },
+  // Each landing page from Google's results to its money (§13), after Overview.
+  { id: "heroes", segment: "heroes", group: "figures" },
   { id: "channels", segment: "channels", group: "figures" },
   { id: "landingPages", segment: "landing-pages", group: "figures" },
   { id: "allPages", segment: "all-pages", group: "figures" },

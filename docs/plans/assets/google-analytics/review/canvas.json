@@ -1,0 +1,46 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-10-10T09:30:00Z" },
+  "title": "Google Analytics — every screen, for review",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 1440, "h": 900, "title": "1 · Google Analytics — your websites", "expand": "fill", "is_interactive": true },
+    "Overview.dc.html": { "x": 1520, "y": 0, "w": 1440, "h": 1640, "title": "2 · Overview", "expand": "fill", "is_interactive": true },
+    "HeroesAttention.dc.html": { "x": 3040, "y": 0, "w": 1440, "h": 2470, "title": "3 · Heroes and attention", "expand": "fill", "is_interactive": true },
+    "Channels.dc.html": { "x": 4560, "y": 0, "w": 1440, "h": 1350, "title": "4 · Channels", "expand": "fill", "is_interactive": true },
+    "ChannelSources.dc.html": { "x": 6080, "y": 0, "w": 1440, "h": 1170, "title": "5 · A channel's own screen (AI assistants)", "expand": "fill", "is_interactive": true },
+    "LandingPages.dc.html": { "x": 7600, "y": 0, "w": 1440, "h": 2320, "title": "6 · Landing pages", "expand": "fill", "is_interactive": true },
+    "PageDetail.dc.html": { "x": 9120, "y": 0, "w": 1440, "h": 1360, "title": "7 · A landing page's own screen (the home page)", "expand": "fill", "is_interactive": true },
+    "AllPages.dc.html": { "x": 10640, "y": 0, "w": 1440, "h": 2160, "title": "8 · All pages", "expand": "fill", "is_interactive": true },
+    "Conversions.dc.html": { "x": 12160, "y": 0, "w": 1440, "h": 1600, "title": "9 · Conversions", "expand": "fill", "is_interactive": true },
+    "TrackingHealth.dc.html": { "x": 13680, "y": 0, "w": 1440, "h": 1260, "title": "10 · Tracking health", "expand": "fill", "is_interactive": true },
+    "Connection.dc.html": { "x": 15200, "y": 0, "w": 1440, "h": 1400, "title": "11 · Connection", "expand": "fill", "is_interactive": true },
+    "Connect.dc.html": { "x": 0, "y": 2640, "w": 1440, "h": 900, "title": "12 · Not connected yet", "expand": "fill", "is_interactive": true },
+    "ChooseProperty.dc.html": { "x": 1520, "y": 2640, "w": 1440, "h": 900, "title": "13 · Choose the property (one match: just a yes)", "expand": "fill", "is_interactive": true },
+    "ChooseEvents.dc.html": { "x": 3040, "y": 2640, "w": 1440, "h": 1580, "title": "14 · Choose what counts (as Hakken first ticks them)", "expand": "fill", "is_interactive": true },
+    "FirstCollect.dc.html": { "x": 4560, "y": 2640, "w": 1440, "h": 900, "title": "15 · The first 90 days coming in", "expand": "fill", "is_interactive": true },
+    "NothingCounted.dc.html": { "x": 6080, "y": 2640, "w": 1440, "h": 900, "title": "16 · Nothing counted yet", "expand": "fill", "is_interactive": true },
+    "DeviceLoading.dc.html": { "x": 7600, "y": 2640, "w": 1440, "h": 2130, "title": "17 · A device asked of Google (Mobile; the answer comes in after 2½ seconds)", "expand": "fill", "is_interactive": true },
+    "NeedsFixing.dc.html": { "x": 9120, "y": 2640, "w": 1440, "h": 1750, "title": "18 · Needs reconnecting", "expand": "fill", "is_interactive": true },
+    "Bell.dc.html": { "x": 10640, "y": 2640, "w": 1440, "h": 1260, "title": "19 · Tracking alerts in the bell (Hakken's super admins only)", "expand": "fill", "is_interactive": true }
+  },
+  "order": ["Main.dc.html", "Overview.dc.html", "HeroesAttention.dc.html", "Channels.dc.html", "ChannelSources.dc.html", "LandingPages.dc.html", "PageDetail.dc.html", "AllPages.dc.html", "Conversions.dc.html", "TrackingHealth.dc.html", "Connection.dc.html", "Connect.dc.html", "ChooseProperty.dc.html", "ChooseEvents.dc.html", "FirstCollect.dc.html", "NothingCounted.dc.html", "DeviceLoading.dc.html", "NeedsFixing.dc.html", "Bell.dc.html"],
+  "notes": {
+    "kit": {
+      "x": -480,
+      "y": 0,
+      "w": 400,
+      "text": "Every Google Analytics screen, redrawn on 10 Oct 2026 for review page by page.\n\nTop row: the screens with figures. Bottom row: the states people meet on the way — connecting, choosing, the first collection, a device asked of Google, reconnecting, and the bell.\n\nRonins' real figures for the last 30 days: Google Analytics to 9 Oct, Search Console to 8 Oct. Long lists open at 25 rows, with the 25 / 50 / 75 / 100 choice, as built.\n\nEach screen with figures opens with What Hakken sees: what an SEO specialist would say about that screen's figures, and what to do first.\n\nClick through it: the side menu, the rows and the headings work.\n\nDrawn from the drawing kit: stylesheet d9c1f591dab2, look 149d9f4fb243.",
+      "fill": "gray"
+    },
+    "states": {
+      "x": -480,
+      "y": 2640,
+      "w": 400,
+      "text": "Not kept, so drawn as stand-ins: how many properties the Google account can see (3) and the list behind \"See all\". Hakken forgets them once a property is chosen.\n\nChoose what counts shows the ticks as Hakken would set them for Ronins today: only Purchase, because Ronins' own event names aren't on Hakken's list of likely conversions.\n\nNot connected yet has two switches in its settings: who is looking (an admin or not) and whether Search Console is connected.",
+      "fill": "gray"
+    }
+  },
+  "designSystems": []
+}
