@@ -423,6 +423,7 @@ import type * as seedUsers from "../seedUsers.js";
 import type * as seedWorkflows from "../seedWorkflows.js";
 import type * as sees_aiAnswers from "../sees/aiAnswers.js";
 import type * as sees_backlinks from "../sees/backlinks.js";
+import type * as sees_google from "../sees/google.js";
 import type * as sees_local from "../sees/local.js";
 import type * as sees_mentions from "../sees/mentions.js";
 import type * as sees_radar from "../sees/radar.js";
@@ -1186,6 +1187,7 @@ declare const fullApi: ApiFromModules<{
   seedWorkflows: typeof seedWorkflows;
   "sees/aiAnswers": typeof sees_aiAnswers;
   "sees/backlinks": typeof sees_backlinks;
+  "sees/google": typeof sees_google;
   "sees/local": typeof sees_local;
   "sees/mentions": typeof sees_mentions;
   "sees/radar": typeof sees_radar;

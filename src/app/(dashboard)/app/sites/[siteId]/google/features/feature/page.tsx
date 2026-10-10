@@ -11,6 +11,7 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../../_components/useSite";
+import { SiteSees } from "../../../../_components/SiteSees";
 import { isPartHeld } from "../../../../_components/SiteCoverage";
 import { useSiteListPage } from "../../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../../_components/useSiteSort";
@@ -65,6 +66,7 @@ export default function SiteFeatureKeywordsPage() {
   return (
     <div className="flex flex-col gap-6">
       <DetailHeader back={back} icon={<Sparkles className="h-6 w-6 text-brand" />} title={t(`titles.${feature}`)} description={t("description")} />
+      <SiteSees screen="googleFeature" seen={table.result?.seen} />
       {/* A list held in part: how many of every such search it holds (sites-data-completeness-plan.md, §4.E). */}
       {partHeld && table.result && everyInFeature !== null && table.result.total < everyInFeature ? (
         <p className="text-[12px] leading-relaxed text-secondary">

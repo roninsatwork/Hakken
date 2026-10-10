@@ -18,6 +18,8 @@ import { useSiteRange } from "../../../_components/SiteDateRange";
 import { datedRow } from "../../../_components/datedRows";
 import { toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { searchesSees } from "@/convex/sees/google";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
@@ -86,6 +88,7 @@ export default function SiteSearchesPage() {
         title={t("title")}
         description={t("description", { place: site?.placeLabel ?? "" })}
       />
+      <SiteSees screen="googleSearches" seen={rows && searchesSees(rows)} />
 
       <SiteChartCard
         title={t("chartTitle")}

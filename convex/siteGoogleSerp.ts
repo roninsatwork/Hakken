@@ -8,6 +8,8 @@ import { serpPagesKeptFrom } from "./seoCollectionPolicy";
 import { holdSearches } from "./holdLists";
 import { MAX_LIST, type Site } from "./websiteSiteRows";
 import { listWithCut } from "./siteListPages";
+import { seenValidator } from "./utils/hakkenSees";
+import { questionsSees } from "./sees/google";
 
 /**
  * Google's results for each of the site's searches, down to position 100, as
@@ -216,12 +218,15 @@ export const listFeatures = tenantQuery({
  */
 export const listQuestions = tenantQuery({
   args: { siteId: v.id("companyWebsites") },
-  returns: listWithCut(v.object({
-    text: v.string(),
-    kind: v.union(v.literal("QUESTION"), v.literal("RELATED")),
-    searches: v.array(v.string()),
-    day: v.string(),
-  })),
+  returns: v.object({
+    ...listWithCut(v.object({
+      text: v.string(),
+      kind: v.union(v.literal("QUESTION"), v.literal("RELATED")),
+      searches: v.array(v.string()),
+      day: v.string(),
+    })).fields,
+    seen: seenValidator,
+  }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const found = new Map<string, { text: string; kind: "QUESTION" | "RELATED"; searches: string[]; day: string }>();
@@ -247,6 +252,6 @@ export const listQuestions = tenantQuery({
       right.searches.length - left.searches.length
       || left.kind.localeCompare(right.kind)
       || left.text.localeCompare(right.text));
-    return { rows, cut: cut ? rows.length : null };
+    return { rows, cut: cut ? rows.length : null, seen: questionsSees(rows) };
   },
 });

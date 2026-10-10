@@ -9,7 +9,9 @@ import { listHold, listWebsiteId, myRivals, requireMySite } from "./siteAccess";
 import { holdFirstCheck, holdSearch } from "./holdLists";
 import { asOfListCheck, searchStats } from "./siteGoogle";
 import { keywordStanding, readKeywordCopy } from "./siteKeywordCopy";
-import { heldTo, listOrder, listPageArgs, listPageResult, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
+import { heldTo, listOrder, listPageArgs, listPageResult, listPageSeenResult, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
+import { seen } from "./utils/hakkenSees";
+import { featureRecordSees } from "./sees/google";
 import { bare, isHost } from "./siteGoogleSerp";
 import { serpPagesKeptFrom } from "./seoCollectionPolicy";
 import { askedQuestions, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
@@ -559,7 +561,7 @@ export const featureKeywords = tenantQuery({
     sort: v.optional(v.union(v.literal("keyword"), v.literal("position"), v.literal("organic"), v.literal("volume"))),
     direction: sortDirectionArg,
   },
-  returns: listPageResult(v.object({
+  returns: listPageSeenResult(v.object({
     _id: v.id("siteKeywordFeatures"),
     keyword: v.string(),
     position: nullableNumber,
@@ -586,7 +588,7 @@ export const featureKeywords = tenantQuery({
       if (!kept || row.day > kept.day) newest.set(row.keyword, row);
     }
     const copy = await readKeywordCopy(ctx, websiteId, place);
-    if (!copy) return preparingPage(args.rows);
+    if (!copy) return { ...preparingPage(args.rows), seen: seen([]) };
     const ranks = new Map(copy.rows.map((row) => [row.keyword, row]));
     const list = [...newest.values()].map((row) => {
       const rank = ranks.get(row.keyword);
@@ -600,7 +602,7 @@ export const featureKeywords = tenantQuery({
         volume: rank?.volume ?? null,
       };
     }).sort(listOrder(FEATURE_SORTS, args.sort ?? "volume", args.direction, (row) => row.keyword));
-    return pageOfList(list, args.page, args.rows, cut);
+    return { ...pageOfList(list, args.page, args.rows, cut), seen: featureRecordSees(list) };
   },
 });
 

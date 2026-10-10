@@ -21,6 +21,8 @@ import { useEngineLabel } from "@/src/ui/components/seo/engineLabel";
 import { CUT_COLUMN, CheckedCell, PositionCell, RecordLinkCell } from "../../../_components/SiteCells";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { fanOutTrackedSees } from "@/convex/sees/google";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
@@ -136,6 +138,7 @@ export default function SiteTrackedFanOutPage() {
         title={t("title")}
         description={t("description", { place: site?.placeLabel ?? "" })}
       />
+      <SiteSees screen="googleFanOut" seen={rows && fanOutTrackedSees(rows, own)} />
 
       <DataTable
         rows={pager.pageRows}

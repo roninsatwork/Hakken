@@ -14,6 +14,7 @@ import { CUT_COLUMN, RecordLinkCell } from "../../../_components/SiteCells";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -63,6 +64,7 @@ export default function SiteQuestionsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<MessageCircleQuestion className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="googleQuestions" seen={answer?.seen} />
       <DataTable
         rows={pager.pageRows}
         rowKey={(row) => `${row.kind}:${row.text}`}

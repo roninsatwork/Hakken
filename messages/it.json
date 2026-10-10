@@ -13475,7 +13475,9 @@
         "seeDomain": "Vedi il sito",
         "seeAnchor": "Vedi le parole",
         "seeNetwork": "Vedi la rete",
-        "referringDomains": "Domini di riferimento"
+        "referringDomains": "Domini di riferimento",
+        "fanOutQueries": "Query di fan-out",
+        "seeFeature": "Vedi la funzione"
       },
       "website": {
         "notQuoted": "L'IA di Google non ha citato {text} nelle risposte su di te o sui concorrenti.",
@@ -13873,6 +13875,62 @@
         "links": "“{text}” ti linka {count, plural, one {una volta} other {# volte}}, da {b} siti.",
         "page": "La maggior parte di questi link punta a {text}: {a}.",
         "seeLink": "Guarda il suo link più forte sulla sua pagina."
+      },
+      "googleSearches": {
+        "noSearches": "Non segui ancora una ricerca su Google.",
+        "notChecked": "Le tue ricerche non sono ancora state controllate su Google: lo fa il prossimo controllo.",
+        "moves": "Dal controllo prima, {a} delle tue ricerche sono salite e {b} sono scese.",
+        "biggestFall": "“{text}” è scesa di più: da {a} a {b}.",
+        "droppedOut": "“{text}” è uscita dai primi 100, da {a}.",
+        "firstPage": "{a} delle tue {b} ricerche sono nella prima pagina di Google.",
+        "seeFall": "Guarda chi ti ha superato su “{text}” e quale pagina mostra Google."
+      },
+      "googleFanOut": {
+        "none": "Nessuna query di fan-out è ancora seguita su Google.",
+        "pickSome": "Spunta le query di fan-out che vale la pena seguire su Google a ogni esecuzione.",
+        "notChecked": "Le tue {a} query di fan-out seguite non sono ancora state controllate su Google.",
+        "tracked": "Sei nella prima pagina di Google per {b} delle {a} query di fan-out controllate.",
+        "pageTwo": "{count, plural, one {# è} other {# sono}} in seconda pagina, “{text}” la più ripetuta.",
+        "notRanking": "Non sei nei primi 100 per {a} di esse.",
+        "pushUp": "Migliora la tua pagina per “{text}” per portarla in prima pagina."
+      },
+      "googleMoves": {
+        "noMoves": "Nessuna ricerca si è mossa nel controllo più recente.",
+        "winsLosses": "Nel controllo più recente sei salito o entrato su {a} ricerche, e sceso o uscito su {b}.",
+        "biggestLoss": "La perdita più grande: “{text}”, ora {a}, cercata {b} volte al mese.",
+        "biggestLost": "La perdita più grande: “{text}”, uscita dai primi 100, cercata {a} volte al mese.",
+        "biggestWin": "Il guadagno più grande: “{text}”, ora {a}, cercata {b} volte al mese.",
+        "seeLoss": "Guarda cosa è cambiato su “{text}”: la pagina, e chi ti ha superato.",
+        "seeWin": "Guarda cosa ha fatto salire “{text}”."
+      },
+      "googleAbove": {
+        "notChecked": "Le pagine Google delle tue ricerche non sono ancora state lette.",
+        "aboveMost": "{text} è sopra di te più spesso: su {a} delle tue {b} ricerche.",
+        "nobodyAbove": "Nessuno è sopra di te nelle tue ricerche.",
+        "rivalsAbove": "Un concorrente che segui è sopra di te su {count, plural, one {# ricerca} other {# ricerche}}.",
+        "youFirst": "Sei primo su {count, plural, one {# ricerca} other {# ricerche}}.",
+        "seeWebsite": "Guarda per cosa viene citato e linkato {text}."
+      },
+      "googleFeatures": {
+        "notChecked": "Le pagine Google delle tue ricerche non sono ancora state lette.",
+        "checked": "{a} delle tue ricerche sono state lette per {b} tipi di funzione Google.",
+        "missed": "{text} compare su {b} di esse, e ti lascia fuori da {a}.",
+        "inAll": "Dove una funzione compare sulle tue ricerche, ci sei.",
+        "missedToo": "Anche {text} ti lascia fuori da {a}.",
+        "seeFeature": "Guarda le ricerche in cui {text} ti lascia fuori."
+      },
+      "googleFeature": {
+        "none": "Nessuna delle tue ricerche mostra questa funzione.",
+        "inIt": "Ci sei su {a} delle {b} ricerche che la mostrano.",
+        "biggestOut": "La ricerca più grande in cui non ci sei: “{text}”, cercata {a} volte al mese.",
+        "seeSearch": "Guarda cosa mostra Google per “{text}”."
+      },
+      "googleQuestions": {
+        "none": "Ancora nessuna domanda letta dalle pagine Google delle tue ricerche.",
+        "questions": "Le persone fanno {a} domande sulle pagine Google di {b} delle tue ricerche.",
+        "mostCommon": "“{text}” compare più spesso: su {count, plural, one {# ricerca} other {# ricerche}}.",
+        "answer": "Rispondi a “{text}” nella tua pagina per “{more}”.",
+        "checkPages": "Controlla che le tue pagine rispondano alle domande che le persone fanno."
       }
     }
   },

@@ -13475,7 +13475,9 @@
         "seeDomain": "See the website",
         "seeAnchor": "See the words",
         "seeNetwork": "See the network",
-        "referringDomains": "Referring domains"
+        "referringDomains": "Referring domains",
+        "fanOutQueries": "Fan-out queries",
+        "seeFeature": "See the feature"
       },
       "website": {
         "notQuoted": "Google's AI has not quoted {text} in answers about you or your rivals.",
@@ -13873,6 +13875,62 @@
         "links": "“{text}” links to you {count, plural, one {once} other {# times}}, from {b} websites.",
         "page": "Most of these links point at {text}: {a}.",
         "seeLink": "See its strongest link on its page."
+      },
+      "googleSearches": {
+        "noSearches": "You do not track a search on Google yet.",
+        "notChecked": "Your searches have not been checked on Google yet: the next check does it.",
+        "moves": "Since the check before, {a} of your searches went up and {b} went down.",
+        "biggestFall": "“{text}” fell most: from {a} to {b}.",
+        "droppedOut": "“{text}” dropped out of the top 100, from {a}.",
+        "firstPage": "{a} of your {b} searches are on Google's first page.",
+        "seeFall": "See who passed you on “{text}”, and which page Google shows."
+      },
+      "googleFanOut": {
+        "none": "No fan-out query is tracked on Google yet.",
+        "pickSome": "Tick the fan-out queries worth tracking on Google every run.",
+        "notChecked": "Your {a} tracked fan-out queries have not been checked on Google yet.",
+        "tracked": "You rank on Google's first page for {b} of the {a} fan-out queries checked.",
+        "pageTwo": "{count, plural, one {# is} other {# are}} on page two, “{text}” the most repeated.",
+        "notRanking": "You do not rank in the top 100 for {a} of them.",
+        "pushUp": "Improve your page for “{text}” to move it onto page one."
+      },
+      "googleMoves": {
+        "noMoves": "No search moved at the newest check.",
+        "winsLosses": "At the newest check you gained or rose on {a} searches, and fell or lost {b}.",
+        "biggestLoss": "The biggest loss: “{text}”, now {a}, searched {b} times a month.",
+        "biggestLost": "The biggest loss: “{text}”, gone from the top 100, searched {a} times a month.",
+        "biggestWin": "The biggest win: “{text}”, now {a}, searched {b} times a month.",
+        "seeLoss": "See what moved on “{text}”: the page, and who passed you.",
+        "seeWin": "See what lifted “{text}”."
+      },
+      "googleAbove": {
+        "notChecked": "Your searches' Google pages have not been read yet.",
+        "aboveMost": "{text} is above you most often: on {a} of your {b} searches.",
+        "nobodyAbove": "Nobody ranks above you on your searches.",
+        "rivalsAbove": "A rival you watch is above you on {count, plural, one {# search} other {# searches}}.",
+        "youFirst": "You are first on {count, plural, one {# search} other {# searches}}.",
+        "seeWebsite": "See what {text} is quoted and linked for."
+      },
+      "googleFeatures": {
+        "notChecked": "Your searches' Google pages have not been read yet.",
+        "checked": "{a} of your searches were read for {b} kinds of Google feature.",
+        "missed": "{text} shows on {b} of them, and leaves you out of {a}.",
+        "inAll": "Where a feature shows on your searches, you are in it.",
+        "missedToo": "{text} leaves you out of {a} too.",
+        "seeFeature": "See the searches where {text} leaves you out."
+      },
+      "googleFeature": {
+        "none": "None of your searches shows this feature.",
+        "inIt": "You are in it on {a} of the {b} searches that show it.",
+        "biggestOut": "The biggest search you are not in it on: “{text}”, searched {a} times a month.",
+        "seeSearch": "See what Google shows for “{text}”."
+      },
+      "googleQuestions": {
+        "none": "No question has been read from your searches' Google pages yet.",
+        "questions": "People ask {a} questions on {b} of your searches' Google pages.",
+        "mostCommon": "“{text}” comes up most: on {count, plural, one {# search} other {# searches}}.",
+        "answer": "Answer “{text}” on your page for “{more}”.",
+        "checkPages": "Check your pages answer the questions people ask."
       }
     }
   },

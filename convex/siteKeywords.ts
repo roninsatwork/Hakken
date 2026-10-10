@@ -6,7 +6,9 @@ import { listHold, requireMySite, SITE_PAGE_MAX } from "./siteAccess";
 import { askedQuestions, QUESTIONS_FOR_CITED_PAGES } from "./siteFigures";
 import { keywordStanding, readKeywordCopy, type KeywordCopyRow } from "./siteKeywordCopy";
 import { pagesCopyKey, readListCopy } from "./siteListCopies";
-import { listOrder, listPageArgs, listPageResult, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
+import { listOrder, listPageArgs, listPageResult, listPageSeenResult, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
+import { seen } from "./utils/hakkenSees";
+import { movesSees } from "./sees/google";
 import { readPageKinds } from "./pageKinds";
 import {
   kdBandValidator,
@@ -303,11 +305,11 @@ export const listMoves = tenantQuery({
     sort: v.optional(v.union(v.literal("keyword"), v.literal("fromTo"), v.literal("change"), v.literal("volume"))),
     direction: sortDirectionArg,
   },
-  returns: listPageResult(keywordRowValidator),
+  returns: listPageSeenResult(keywordRowValidator),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const copy = await readKeywordCopy(ctx, site.website._id, site.place);
-    if (!copy) return preparingPage(args.rows);
+    if (!copy) return { ...preparingPage(args.rows), seen: seen([]) };
     const matches = wordStartMatcher(args.search);
     const opening = args.status === "UP" || args.status === "DOWN" ? "change" : "keyword";
     const moved = (row: KeywordCopyRow) => (args.status === "LEFT"
@@ -317,7 +319,8 @@ export const listMoves = tenantQuery({
       .filter((row) => moved(row) && (!matches || matches(row.keyword, row.page)))
       .sort(listOrder(MOVE_SORTS, args.sort ?? opening, args.direction, byKeyword));
     const page = pageOfList(list, args.page, args.rows);
-    return { ...page, rows: await fullKeywordRows(ctx, page.rows, site.website.host) };
+    // What Hakken sees is of every move at the newest check, whichever tab is open.
+    return { ...page, rows: await fullKeywordRows(ctx, page.rows, site.website.host), seen: movesSees(copy.rows, copy.rankingDay ?? "") };
   },
 });
 

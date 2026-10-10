@@ -18,6 +18,8 @@ import { useSiteRange } from "../../../_components/SiteDateRange";
 import { Figure } from "@/src/ui/components/screens/Figure";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { featuresSees } from "@/convex/sees/google";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -86,6 +88,7 @@ export default function SiteFeaturesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Sparkles className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="googleFeatures" seen={data && featuresSees(data, label)} />
 
       {across ? (
         <section aria-label={t("acrossAll")} className="flex flex-col gap-2">
