@@ -174,7 +174,10 @@ type ConsoleFound = { section: "SEARCH_CONSOLE"; choices: { property: string; pe
 type AnalyticsFound = { section: "GOOGLE_ANALYTICS"; choices: (PropertyChoice & { addresses?: string[]; others?: string[] })[] };
 type Found =
   | { ok: true; found: ConsoleFound | AnalyticsFound }
-  | { ok: false; outcome: "NO_PROPERTY" | "UNVERIFIED" | "FAILED" };
+  | { ok: false; outcome: "NO_PROPERTY" | "UNVERIFIED" | "FAILED"; detail?: string };
+
+/** Google's own words for a refusal, for the deployment's logs: its status and message, never a token. */
+const said = (failure: { status: number; detail: string }) => `${failure.status} ${failure.detail}`.replace(/\s+/g, " ").slice(0, 300);
 
 /** Properties whose addresses are read on the way back, to say on the choice which addresses Hakken reads (§3, step 4). */
 const ADDRESSES_READ_FOR = 3;
@@ -183,13 +186,13 @@ const ADDRESSES_READ_FOR = 3;
 async function findFor(section: GoogleSection, accessToken: string, host: string): Promise<Found> {
   if (section === "SEARCH_CONSOLE") {
     const listed = await listProperties(accessToken);
-    if (!listed.ok) return { ok: false, outcome: "FAILED" };
+    if (!listed.ok) return { ok: false, outcome: "FAILED", detail: `Search Console's properties: ${said(listed)}` };
     const fit = propertiesForHost(listed.properties, host);
     if (fit.readable.length === 0) return { ok: false, outcome: fit.unverified.length > 0 ? "UNVERIFIED" : "NO_PROPERTY" };
     return { ok: true, found: { section, choices: fit.readable, only: fit.only } };
   }
   const listed = await propertiesForSite(accessToken, host);
-  if (!listed.ok) return { ok: false, outcome: "FAILED" };
+  if (!listed.ok) return { ok: false, outcome: "FAILED", detail: `Google Analytics' properties: ${said(listed)}` };
   if (listed.choices.length === 0) return { ok: false, outcome: "NO_PROPERTY" };
   const choices: AnalyticsFound["choices"] = listed.choices;
   for (const choice of choices.filter((entry) => entry.stream !== null).slice(0, ADDRESSES_READ_FOR)) {
@@ -220,7 +223,9 @@ export const handleGoogleCallback = httpAction(async (ctx, request) => {
   const section = pending.section;
   const back = redirectTo(connectScreenUrl(section, pending.companyWebsiteId));
   const provider = getConnectorOAuthProvider(SEARCH_CONSOLE_PROVIDER);
-  const fail = async (outcome: "DECLINED" | "MISSING_SCOPE" | "NO_PROPERTY" | "UNVERIFIED" | "FAILED", account?: string, grant?: string) => {
+  const fail = async (outcome: "DECLINED" | "MISSING_SCOPE" | "NO_PROPERTY" | "UNVERIFIED" | "FAILED", account?: string, grant?: string, detail?: string) => {
+    // Why, in the deployment's logs: the screen says only that it failed.
+    console.warn(`Google sign-in from ${section} did not connect: ${outcome}${detail ? ` — ${detail}` : ""}`);
     if (section === "SEARCH_CONSOLE") {
       await ctx.runMutation(internal.searchConsoleConnect.recordAttempt, { state, outcome, account });
     } else {
@@ -234,7 +239,7 @@ export const handleGoogleCallback = httpAction(async (ctx, request) => {
     return back;
   };
 
-  if (refusal) return await fail(refusal === "access_denied" ? "DECLINED" : "FAILED");
+  if (refusal) return await fail(refusal === "access_denied" ? "DECLINED" : "FAILED", undefined, undefined, `Google answered "${refusal.slice(0, 80)}"`);
   const credentials = getConnectorOAuthClientCredentials(SEARCH_CONSOLE_PROVIDER);
   if (!code || !provider || !credentials || !isConnectorTokenEncryptionConfigured()) return await fail("FAILED");
 
@@ -244,7 +249,9 @@ export const handleGoogleCallback = httpAction(async (ctx, request) => {
     code,
     redirectUri: `${url.origin}/api/search-console/oauth/callback`,
   });
-  if (!exchanged.ok || !exchanged.tokens.access_token) return await fail("FAILED");
+  if (!exchanged.ok || !exchanged.tokens.access_token) {
+    return await fail("FAILED", undefined, undefined, exchanged.ok ? "no access token in Google's answer" : exchanged.message.slice(0, 300));
+  }
   const tokens = exchanged.tokens;
   const accessToken = tokens.access_token!;
   const grant = tokens.refresh_token ?? accessToken;
@@ -253,10 +260,10 @@ export const handleGoogleCallback = httpAction(async (ctx, request) => {
   const granted = tokens.scope ? tokens.scope.split(" ").filter(Boolean) : [...SCOPES_OF[section]];
   if (!granted.includes(READ_SCOPE_OF[section])) return await fail("MISSING_SCOPE", account, grant);
   // Without a refresh token the connection would die within the hour.
-  if (!tokens.refresh_token) return await fail("FAILED", account, grant);
+  if (!tokens.refresh_token) return await fail("FAILED", account, grant, "Google sent no refresh token");
 
   const found = await findFor(section, accessToken, pending.host);
-  if (!found.ok) return await fail(found.outcome, account, grant);
+  if (!found.ok) return await fail(found.outcome, account, grant, found.detail);
 
   const googleConnectionId = await ctx.runMutation(internal.googleConnection.keepGrant, {
     companyWebsiteId: pending.companyWebsiteId,
