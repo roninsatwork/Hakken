@@ -212,6 +212,8 @@ async function buildPurgePreviewCounts(ctx: { db: Pick<MutationCtx["db"], "query
         rows = (await capped(ctx.db.query("decisionRuns").withIndex("by_createdAt", (q) => q.lt("createdAt", cutoff)))).length;
       } else if (key === "hakkenTaskChecks") {
         rows = (await capped(ctx.db.query("hakkenTaskChecks").withIndex("by_day", (q) => q.lt("day", dateKeyForCutoff(cutoff))))).length;
+      } else if (key === "readingEvents") {
+        rows = (await capped(ctx.db.query("readingEvents").withIndex("by_at", (q) => q.lt("at", cutoff)))).length;
       } else if (key === "sentEmails") {
         for (const status of SETTLED_EMAILS) rows += (await capped(ctx.db.query("outboxMessages").withIndex("by_status_created", (q) => q.eq("status", status).lt("createdAt", cutoff)))).length;
       } else if (key === "purgeHistory") {
@@ -553,6 +555,11 @@ export const executePurgeRecursive = internalMutation({
           ? await ctx.db.query("hakkenTaskChecks").withIndex("by_day", (q) => q.lt("day", dateKeyForCutoff(cutoffTimestamp))).take(500)
           : (await Promise.all(SETTLED_EMAILS.map((status) => ctx.db.query("outboxMessages")
             .withIndex("by_status_created", (q) => q.eq("status", status).lt("createdAt", cutoffTimestamp)).take(500)))).flat().slice(0, 500);
+        for (const record of batch) await ctx.db.delete(record._id);
+        currentDeleted = batch.length;
+        hasMore = batch.length === 500;
+      } else if (pipelineKey === "readingEvents") {
+        const batch = await ctx.db.query("readingEvents").withIndex("by_at", (q) => q.lt("at", cutoffTimestamp)).take(500);
         for (const record of batch) await ctx.db.delete(record._id);
         currentDeleted = batch.length;
         hasMore = batch.length === 500;

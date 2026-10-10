@@ -27,6 +27,7 @@ export const purgePipelineKeyValidator = v.union(
   v.literal("decisionRuns"),
   v.literal("hakkenTaskChecks"),
   v.literal("sentEmails"),
+  v.literal("readingEvents"),
   v.literal("purgeHistory"),
 );
 
@@ -100,6 +101,10 @@ export const DEFAULT_PURGE_CONFIGS: Record<PurgePipelineKey, PipelineConfig> = {
   // waiting or being sent stays whatever its age (keep-less-history-plan.md,
   // part 4; Anthony, 2026-10-07: "60 days is ok").
   sentEmails: { ...DAILY_2AM, retentionDays: 60 },
+  // Each view, read, click and use in an answer in Insights; Analytics reads
+  // the daily totals, kept for good, never these (content-people-knowledge-
+  // plan.md, Q4; Anthony, 2026-10-10: "90 days").
+  readingEvents: { ...DAILY_2AM, retentionDays: 90 },
   // Cleans only the purge system's own log, which the hourly dispatcher
   // grows even when everything else is off. The newest 200 entries are
   // always kept regardless of retention.

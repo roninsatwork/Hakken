@@ -500,13 +500,15 @@ export async function gatherReading(
   // website visitor, a caller or an email sender, who are the public, since
   // the words are other publishers'.
   let helpful = "";
+  let helpfulArticleIds: Id<"libraryArticles">[] = [];
   if (staff) {
     try {
       const sections = await searchHelpfulContent(ctx, { question: args.question, embedded });
       if (sections.length > 0) {
+        helpfulArticleIds = sections.map((section) => section.articleId);
         helpful = buildUntrustedKnowledgeContext({
           sourceLabel: `Helpful content — articles from other websites, each headed with its title, publication and original address; ${allowance.helpfulCitation}`,
-          chunks: sections,
+          chunks: sections.map((section) => section.text),
           maxChars: allowance.helpfulChars,
         });
       }
@@ -544,6 +546,15 @@ export async function gatherReading(
   const leading = [renderCompanyMemories(relevantMemories), visitorPage, wiki].filter(Boolean);
   const trailing = [documents, companyFallback, helpful, agentMemory].filter(Boolean);
   args.onStep?.("reading");
+
+  // In answers (content-people-knowledge-plan.md, Q2): the articles a client's
+  // answer drew on are counted for Analytics. Scheduled, so it never delays
+  // the answer; counted only for a signed-in person in their own conversation.
+  if (staff && thread?.userId && companyId && (helpfulArticleIds.length > 0 || wikiPageKeys.length > 0)) {
+    await ctx.scheduler.runAfter(0, internal.reading.recordAnswerInternal, {
+      userId: thread.userId, companyId, libraryArticleIds: helpfulArticleIds, wikiPageKeys,
+    });
+  }
 
   return {
     leading,

@@ -23,7 +23,7 @@ export const LIBRARY_MIN_SIMILARITY = 0.65;
 export async function searchHelpfulContent(
   ctx: ActionCtx,
   args: { question: string; embedded: { vector: number[]; modelId: string } | null },
-): Promise<string[]> {
+): Promise<Array<{ articleId: Id<"libraryArticles">; text: string }>> {
   let byMeaning: Id<"libraryArticleSections">[] = [];
   if (args.embedded) {
     const matches = await ctx.vectorSearch("libraryArticleSections", "by_embedding", { vector: args.embedded.vector, limit: SEARCHED_BY_MEANING });

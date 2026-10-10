@@ -17,6 +17,7 @@ import { formatDate } from "@/src/lib/dates";
 import { LearnShell } from "../../_learn/LearnShell";
 import { ArticleFacts, LIST_HEADING, StoryList, readingMinutes } from "../../_learn/StoryParts";
 import { useTopicNames } from "../../_learn/useTopicNames";
+import { useCountReading } from "../../_learn/useReading";
 import { StoryKicker } from "../../news/_components/NewsStory";
 import { helpfulStory } from "../../helpful-content/_components/HelpfulArticle";
 import { knowledgeStory } from "../_components/KnowledgeFront";
@@ -43,6 +44,8 @@ export default function KnowledgeArticlePage() {
   const topicName = useTopicNames();
   const params = useParams();
   const article = useQuery(api.knowledgeArticles.getPublishedArticle, { articleId: params.articleId as Id<"knowledgeArticles">, language: locale });
+  // A view, then a read at 30 seconds or its end (content-people-knowledge-plan.md, phase 4).
+  const endRef = useCountReading(article ? { type: "OURS", id: article._id } : null);
   const back = { label: t("back"), href: "/app/knowledge" };
   const icon = <BookOpen className="h-6 w-6 text-brand" />;
 
@@ -80,6 +83,7 @@ export default function KnowledgeArticlePage() {
       <article className="max-w-2xl pt-2 text-[14px] leading-relaxed text-foreground [&_table]:mb-4 [&_table]:w-full [&_table]:border-collapse [&_table]:text-[13px] [&_td]:border-t [&_td]:border-border-dim [&_td]:px-3 [&_td]:py-2 [&_th]:px-3 [&_th]:py-2 [&_th]:text-left [&_th]:text-[11px] [&_th]:font-medium [&_th]:uppercase [&_th]:tracking-[0.12em] [&_th]:text-secondary">
         <HakkenMarkdown content={article.body} />
       </article>
+      <div ref={endRef} aria-hidden="true" />
       <p className="text-[13px] text-secondary">
         <Link href={askHref} className="underline decoration-foreground/25 underline-offset-4 transition-colors hover:text-foreground">
           {tStory("askHakken", { platformName })}

@@ -3888,6 +3888,7 @@ export default defineSchema({
       v.literal("decisionRuns"),
       v.literal("hakkenTaskChecks"),
       v.literal("sentEmails"),
+      v.literal("readingEvents"),
       v.literal("purgeHistory")
     ),
     triggerType: v.union(v.literal("SCHEDULED"), v.literal("MANUAL")),

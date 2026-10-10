@@ -10,6 +10,7 @@ import { languageName, siteOf } from "@/src/lib/helpfulContentFormat";
 import { formatShortDay } from "../../_learn/learnDates";
 import { ABOVE_PANEL, ArticleFacts, LIST_HEADING, readingMinutes, type Story } from "../../_learn/StoryParts";
 import { useTopicNames } from "../../_learn/useTopicNames";
+import { useCountClick } from "../../_learn/useReading";
 
 /** A Helpful content article as a reader sees it, in their language — never its words (IH1). */
 export type HelpfulArticle = NonNullable<FunctionReturnType<typeof api.libraryArticles.getForReader>>;
@@ -30,6 +31,7 @@ export function helpfulStory(article: Article): Story {
  */
 export function HelpfulBody({ article }: { article: Article }) {
   const t = useTranslations("learn.helpful");
+  const countClick = useCountClick();
   const tStory = useTranslations("news.story");
   const locale = useLocale();
   const { platformName } = useSystemSettings();
@@ -59,6 +61,7 @@ export function HelpfulBody({ article }: { article: Article }) {
           href={article.url}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => countClick({ type: "WEB", id: article._id })}
           className={`${ABOVE_PANEL} inline-flex items-center gap-1.5 underline decoration-foreground/25 underline-offset-4 transition-colors hover:text-foreground`}
         >
           {t("readOn", { site: siteOf(article.url) })}

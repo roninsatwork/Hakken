@@ -620,7 +620,8 @@ export const searchLibraryInternal = internalQuery({
     byMeaning: v.optional(v.array(v.id("libraryArticleSections"))),
     embeddingModelId: v.optional(v.string()),
   },
-  returns: v.array(v.string()),
+  // Each section with its article, so Analytics can count the articles an answer drew on (content-people-knowledge-plan.md, Q2).
+  returns: v.array(v.object({ articleId: v.id("libraryArticles"), text: v.string() })),
   handler: async (ctx, args) => {
     const close: Doc<"libraryArticleSections">[] = [];
     for (const sectionId of args.byMeaning ?? []) {
@@ -638,12 +639,12 @@ export const searchLibraryInternal = internalQuery({
         if (termsFound(section.text, terms) >= needed && !close.some((kept) => kept._id === section._id)) close.push(section);
       }
     }
-    const answers: string[] = [];
+    const answers: Array<{ articleId: Id<"libraryArticles">; text: string }> = [];
     for (const section of close) {
       if (answers.length === LIBRARY_SECTIONS_PER_ANSWER) break;
       const article = await ctx.db.get(section.articleId);
       // A section outlives its article only between two writes; never read it.
-      if (article?.status === "IN_KNOWLEDGE") answers.push(sectionForAnswer(article, section.text));
+      if (article?.status === "IN_KNOWLEDGE") answers.push({ articleId: article._id, text: sectionForAnswer(article, section.text) });
     }
     return answers;
   },

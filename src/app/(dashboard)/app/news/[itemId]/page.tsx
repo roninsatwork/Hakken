@@ -12,6 +12,7 @@ import { DetailHeader } from "@/src/ui/components/screens/PageHeader";
 import { LearnShell } from "../../_learn/LearnShell";
 import { localDay } from "../../_learn/learnDates";
 import { StoryBody, StoryKicker } from "../_components/NewsStory";
+import { useCountReading } from "../../_learn/useReading";
 
 /**
  * One story on its own page (docs/plans/active/knowledge-news-and-digest-
@@ -25,6 +26,8 @@ export default function NewsStoryPage() {
   const language = useLocale();
   const params = useParams();
   const item = useQuery(api.news.getNewsItem, { itemId: params.itemId as Id<"newsItems">, language });
+  // A view, then a read at 30 seconds or its end (content-people-knowledge-plan.md, phase 4).
+  const endRef = useCountReading(item ? { type: "STORY", id: item._id } : null);
   const back = { label: t("back"), href: "/app/news" };
 
   if (item === undefined) {
@@ -50,6 +53,7 @@ export default function NewsStoryPage() {
         <StoryKicker kind={item.kind} sourceName={item.sourceName} publishedAt={item.publishedAt} />
         <StoryBody item={item} today={localDay()} />
       </article>
+      <div ref={endRef} aria-hidden="true" />
     </LearnShell>
   );
 }

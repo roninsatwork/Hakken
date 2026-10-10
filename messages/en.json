@@ -4685,6 +4685,10 @@
             "title": "Sent Emails",
             "description": "Each email sent, not sent or skipped, with who it was for. An email still waiting to go is never cleared."
           },
+          "readingEvents": {
+            "title": "Reading Events",
+            "description": "Each time a client viewed, read or clicked an article, story or person in Insights, and each article an answer drew on. Analytics reads the daily totals, kept for good, never these."
+          },
           "purgeHistory": {
             "title": "Purge History",
             "description": "The purge system's own ledger. Cleans itself; the newest 200 entries are always kept whatever the retention says."

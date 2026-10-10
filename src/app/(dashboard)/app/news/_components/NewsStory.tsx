@@ -13,6 +13,7 @@ import { cn } from "@/src/ui/lib/utils";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { GoogleMark } from "../../sites/_components/GoogleMark";
 import { addDays, daysBetween, formatShortDay, formatWhen } from "../../_learn/learnDates";
+import { useCountClick } from "../../_learn/useReading";
 
 /** One story as News reads it, in the reader's language. */
 export type NewsItem = NonNullable<FunctionReturnType<typeof api.news.getNewsItem>>;
@@ -181,6 +182,7 @@ export function RolloutLine({ update, today }: { update: UpdateFacts; today: str
  */
 export function StoryBody({ item, today }: { item: NewsItem; today: string }) {
   const t = useTranslations("news.story");
+  const countClick = useCountClick();
   const { platformName } = useSystemSettings();
   const askHref = `/app/assistant?ask=${encodeURIComponent(t("askQuestion", { title: item.title }))}`;
   return (
@@ -198,6 +200,7 @@ export function StoryBody({ item, today }: { item: NewsItem; today: string }) {
           href={item.url}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => countClick({ type: "STORY", id: item._id })}
           className={`relative ${LAYER.RAISED} inline-flex items-center gap-1.5 underline decoration-foreground/25 underline-offset-4 transition-colors hover:text-foreground`}
         >
           {item.kind === "GOOGLE_UPDATE" ? t("readGoogle") : t("readOriginal")}

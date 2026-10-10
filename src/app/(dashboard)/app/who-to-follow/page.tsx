@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type MouseEvent } from "react";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { AtSign, Briefcase, CirclePlay, ExternalLink, Globe, Users, type LucideIcon } from "lucide-react";
@@ -18,6 +18,7 @@ import { cn } from "@/src/ui/lib/utils";
 import { LearnShell } from "../_learn/LearnShell";
 import { ABOVE_PANEL, Dateline, LIST_HEADING, PANEL, PanelLink } from "../_learn/StoryParts";
 import { useSiteListPage } from "../sites/_components/useSitePagedTable";
+import { useCountClick } from "../_learn/useReading";
 
 type Follow = FunctionReturnType<typeof api.newsFollows.listPicks>[number];
 
@@ -55,6 +56,14 @@ export default function WhoToFollowPage() {
     set(value);
     if (footer.page > 1) footer.onPageChange(1);
   };
+  const countClick = useCountClick();
+  // A click through to someone's channel counts for Analytics (content-people-knowledge-plan.md, phase 4):
+  // every person on the page is a link to their channel, in "Our picks" and in the columns.
+  const countChannelClick = (event: MouseEvent<HTMLElement>) => {
+    const href = (event.target as Element).closest("a")?.getAttribute("href");
+    const person = href ? [...(picks ?? []), ...(pageRows ?? [])].find((follow) => follow.url === href) : undefined;
+    if (person) countClick({ type: "PERSON", id: person._id });
+  };
   const places = totals ? KINDS.filter((entry) => (totals.byKind[entry] ?? 0) > 0).length : 0;
   const half = Math.ceil((pageRows?.length ?? 0) / 2);
   const narrowed = Boolean(searched || kind || topic);
@@ -64,7 +73,7 @@ export default function WhoToFollowPage() {
       {totals !== undefined && totals.all === 0 ? (
         <HakkenEmptyState icon={Users} title={t("emptyTitle")} description={t("empty")} />
       ) : (
-        <div className="flex flex-col">
+        <div className="flex flex-col" onClick={countChannelClick}>
           <Dateline
             left={<><span className="font-medium text-foreground">{t("peopleCount", { count: totals?.all ?? 0 })}</span>{" · "}{t("placeCount", { count: places })}</>}
             right={t("chosenBy", { platformName })}

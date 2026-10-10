@@ -376,6 +376,8 @@ import type * as purgeScheduleService from "../purgeScheduleService.js";
 import type * as purges from "../purges.js";
 import type * as radarSchema from "../radarSchema.js";
 import type * as readerPreferences from "../readerPreferences.js";
+import type * as reading from "../reading.js";
+import type * as readingSchema from "../readingSchema.js";
 import type * as rehearsalEvalService from "../rehearsalEvalService.js";
 import type * as resendEmailService from "../resendEmailService.js";
 import type * as reviewJudging from "../reviewJudging.js";
@@ -1126,6 +1128,8 @@ declare const fullApi: ApiFromModules<{
   purges: typeof purges;
   radarSchema: typeof radarSchema;
   readerPreferences: typeof readerPreferences;
+  reading: typeof reading;
+  readingSchema: typeof readingSchema;
   rehearsalEvalService: typeof rehearsalEvalService;
   resendEmailService: typeof resendEmailService;
   reviewJudging: typeof reviewJudging;

@@ -14,6 +14,7 @@ import { LIST_HEADING, StoryList } from "../../_learn/StoryParts";
 import { useTopicNames } from "../../_learn/useTopicNames";
 import { StoryKicker } from "../../news/_components/NewsStory";
 import { HelpfulBody, helpfulStory, type HelpfulArticle } from "../_components/HelpfulArticle";
+import { useCountReading } from "../../_learn/useReading";
 
 /**
  * One Helpful content article on its own page (docs/plans/active/insights-
@@ -26,6 +27,8 @@ export default function HelpfulArticlePage() {
   const language = useLocale();
   const params = useParams();
   const article = useQuery(api.libraryArticles.getForReader, { articleId: params.articleId as Id<"libraryArticles">, language });
+  // A view, then a read at 30 seconds or its end (content-people-knowledge-plan.md, phase 4).
+  const endRef = useCountReading(article ? { type: "WEB", id: article._id } : null);
   const back = { label: t("back"), href: "/app/helpful-content" };
   const icon = <Library className="h-6 w-6 text-brand" />;
 
@@ -52,6 +55,7 @@ export default function HelpfulArticlePage() {
         <StoryKicker kind="HELPFUL" sourceName={article.publication} publishedAt={article.addedAt} />
         <HelpfulBody article={article} />
       </article>
+      <div ref={endRef} aria-hidden="true" />
       <MoreOnTopic article={article} />
     </LearnShell>
   );

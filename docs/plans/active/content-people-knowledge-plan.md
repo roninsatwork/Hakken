@@ -234,10 +234,10 @@ production before this reaches `main`.
 
 | # | Question | Needed by |
 |---|---|---|
-| Q1 | Is 30 seconds, or reaching the end, the right line for a **read**? | Phase 4 |
-| Q2 | Keep **In answers** (times Ask Hakken drew on an article)? It was added on the drawing, not asked for. | Phase 4 |
-| Q3 | Count our own team's reading, or leave super admins out? | Phase 4 |
-| Q4 | How long to keep each raw view: 90 days, with daily totals kept for good? | Phase 4 |
+| Q1 | ~~Is 30 seconds, or reaching the end, the right line for a **read**?~~ **Answered 2026-10-10: yes — 30 seconds or the end, whichever comes first.** | — |
+| Q2 | ~~Keep **In answers** (times Ask Hakken drew on an article)?~~ **Answered 2026-10-10: keep it.** | — |
+| Q3 | ~~Count our own team's reading, or leave super admins out?~~ **Answered 2026-10-10: leave super admins out.** | — |
+| Q4 | ~~How long to keep each raw view: 90 days, with daily totals kept for good?~~ **Answered 2026-10-10: 90 days; daily totals kept for good.** | — |
 | Q5 | A YouTube video or an X post that links to no article: summary only, or pay for a transcript? | Phase 2 |
 | Q6 | ~~The channel finder: links on the person's own pages only, or a paid web search?~~ **Answered 2026-10-10: no channel finder — channels are added by hand (C3).** | — |
 | Q7 | Outbox is the email queue, not content: keep it under Content or move it? | Phase 3 |

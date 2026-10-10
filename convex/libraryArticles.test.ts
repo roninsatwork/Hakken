@@ -129,11 +129,11 @@ describe("Library articles", () => {
     const articleId = await superAdmin.mutation(api.libraryArticles.createArticle, ARTICLE);
     expect((await sections()).map((section) => section.heading)).toEqual(["AI features and your website", "Best practices that still matter"]);
     expect(await t.query(internal.libraryArticles.searchLibraryInternal, { question: "What are the best practices for structured data?" }))
-      .toEqual([expect.stringContaining('From "AI features and your website" (Google Search Central, published 2026-09-18) — https://developers.google.com/search/docs/appearance/ai-features\nBest practices that still matter')]);
+      .toEqual([{ articleId, text: expect.stringContaining('From "AI features and your website" (Google Search Central, published 2026-09-18) — https://developers.google.com/search/docs/appearance/ai-features\nBest practices that still matter') }]);
     // A one-person blog's author and publication are named once.
     await superAdmin.mutation(api.libraryArticles.updateArticle, { articleId, ...ARTICLE, author: "Google Search Central" });
     expect(await t.query(internal.libraryArticles.searchLibraryInternal, { question: "best practices structured data" }))
-      .toEqual([expect.stringContaining('From "AI features and your website" (Google Search Central, published 2026-09-18) —')]);
+      .toEqual([{ articleId, text: expect.stringContaining('From "AI features and your website" (Google Search Central, published 2026-09-18) —') }]);
     // One shared word is not enough to bring an article into an answer.
     expect(await t.query(internal.libraryArticles.searchLibraryInternal, { question: "How many backlinks does my website have?" })).toEqual([]);
 

@@ -4685,6 +4685,10 @@
             "title": "Email Inviate",
             "description": "Ogni email inviata, non inviata o saltata, con il destinatario. Un'email ancora in attesa di partire non viene mai cancellata."
           },
+          "readingEvents": {
+            "title": "Eventi di lettura",
+            "description": "Ogni volta che un cliente ha visto, letto o cliccato un articolo, una storia o una persona in Insights, e ogni articolo usato in una risposta. Analytics legge i totali giornalieri, conservati per sempre, mai questi."
+          },
           "purgeHistory": {
             "title": "Cronologia Purge",
             "description": "Il registro del sistema di purge stesso. Si pulisce da solo; le 200 voci più recenti vengono sempre conservate."
