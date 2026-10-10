@@ -1,0 +1,18 @@
+# Discovery → One website — the approved look (board "DetailWebsite" of docs/plans/assets/discovery-detail-screens/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Back to Websites AI cites
+  page-header: ‹the record's name›
+settings-card: What Hakken sees
+figures
+  figure: Quoted beside your rivals
+  figure: Rivals it links to
+  figure: Questions it answers
+  figure: Its strength
+choice: What the list shows: Questions · # | Its pages · # | Who is on it · #
+search: Find in this list…
+table: Question | Asked a month | Named beside it | Its page quoted
+  table-bar
+    download: Download CSV
+  table-footer

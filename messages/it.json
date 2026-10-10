@@ -13214,8 +13214,136 @@
         "empty": "Ancora nessun posto: dalla lettura mensile del Radar del marchio e dai link dei concorrenti, dal prossimo controllo."
       }
     },
+    "websiteRecord": {
+      "missingTitle": "Nessun sito scelto",
+      "missingBody": "Apri un sito da Siti citati dall'IA o Dove farsi elencare.",
+      "description": "{kind} · citato dalle risposte IA di Google sul tuo tipo di lavoro",
+      "descriptionLoading": "Citato dalle risposte IA di Google sul tuo tipo di lavoro",
+      "you": "tu",
+      "youName": "{name} · tu",
+      "visit": "Visita {host}",
+      "labels": {
+        "namesYou": "Ti nomina",
+        "rivalsNotYou": "Rimanda a {count, plural, one {# concorrente} other {# concorrenti}}, non a te"
+      },
+      "figures": {
+        "besideRivals": "Citato accanto ai concorrenti",
+        "besideRivalsDetail": "Volte · accanto a te {you}",
+        "linksTo": "Concorrenti a cui rimanda",
+        "linksToValue": "{count} su {of}",
+        "linksToDetail": "Non a te",
+        "linksToNone": "Nessuno, dai link condivisi dei concorrenti",
+        "questions": "Domande a cui risponde",
+        "questionsDetail": "Poste {asks} volte al mese",
+        "strength": "La sua forza",
+        "strengthDetail": "Su 1.000, dai link condivisi dei concorrenti"
+      },
+      "viewLabel": "Cosa mostra l'elenco",
+      "views": {
+        "questions": "Domande · {count}",
+        "pages": "Le sue pagine · {count}",
+        "who": "Chi c'è · {count}"
+      },
+      "searchPlaceholder": "Cerca in questo elenco…",
+      "noMatch": "Nessun risultato.",
+      "questionsEmpty": "L'IA di Google non lo ha citato per nessuna domanda su di te o sui concorrenti.",
+      "pagesEmpty": "Nessuna delle sue pagine è stata citata.",
+      "whoEmpty": "Nessuna attività seguita.",
+      "columns": {
+        "question": "Domanda",
+        "asked": "Poste al mese",
+        "named": "Nominati accanto",
+        "page": "Sua pagina citata",
+        "times": "Volte citata",
+        "besideYou": "Accanto a te",
+        "besideRivals": "Accanto ai concorrenti",
+        "business": "Attività",
+        "on": "Presenza",
+        "beside": "Citato accanto a loro"
+      },
+      "on": {
+        "LINKS": "Rimanda a loro",
+        "NAMES": "Ti nomina",
+        "NOT_LINKED": "Non rimanda a te"
+      }
+    },
+    "questionRecord": {
+      "missingTitle": "Nessuna domanda scelta",
+      "missingBody": "Apri una domanda da Brand radar.",
+      "description": "Posta all'IA di Google circa {asks} volte al mese · {place}",
+      "descriptionLoading": "Una domanda posta all'IA di Google",
+      "youName": "{name} · tu",
+      "yours": "Tuo",
+      "track": "Segui questa domanda",
+      "trackFailed": "Impossibile seguire la domanda.",
+      "labels": {
+        "namesYou": "Ti nomina {place}°",
+        "notNamed": "Non ti nomina",
+        "tracked": "Seguita"
+      },
+      "notFound": "Brand radar non legge più questa domanda per te o per i concorrenti.",
+      "figures": {
+        "asked": "Poste al mese",
+        "askedDetail": "All'IA di Google, in {place}",
+        "named": "Attività nominate",
+        "namedFirst": "{name} per prima",
+        "namedNone": "Né te né i concorrenti",
+        "pages": "Pagine citate",
+        "pagesYours": "Tra queste la tua: {page}",
+        "pagesNoneYours": "Nessuna tua",
+        "rivalPages": "Pagine dei concorrenti citate",
+        "rivalPagesNone": "Nessuna"
+      },
+      "viewLabel": "Cosa mostra l'elenco",
+      "views": {
+        "named": "Attività nominate · {count}",
+        "pages": "Pagine citate · {count}"
+      },
+      "searchPlaceholder": "Cerca in questo elenco…",
+      "noMatch": "Nessun risultato.",
+      "namedEmpty": "Non nomina nessuna delle attività che segui.",
+      "pagesEmpty": "Non cita pagine.",
+      "columns": {
+        "place": "Posizione",
+        "business": "Attività",
+        "page": "Loro pagina citata",
+        "website": "Sito",
+        "kind": "Tipo",
+        "address": "Pagina"
+      }
+    },
     "seen": {
-      "links": {}
+      "links": {
+        "visit": "Visitalo",
+        "seeQuestion": "Vedi la domanda",
+        "yourPages": "Le tue pagine",
+        "seeWebsite": "Vedi il sito"
+      },
+      "website": {
+        "notQuoted": "L'IA di Google non ha citato {text} nelle risposte su di te o sui concorrenti.",
+        "onlyRivals": "L'IA di Google cita {text} {a} volte nelle risposte sul tuo tipo di lavoro, sempre accanto ai concorrenti e mai accanto a te.",
+        "mostlyRivals": "L'IA di Google cita {text} {a} volte nelle risposte sul tuo tipo di lavoro: {b} accanto ai concorrenti, {c} accanto a te.",
+        "besideYou": "L'IA di Google cita {text} {a} volte nelle risposte sul tuo tipo di lavoro, {c} accanto a te.",
+        "linksToRivals": "Rimanda a {count, plural, one {uno dei tuoi concorrenti} other {# dei tuoi concorrenti}} ({more}) e non a te.",
+        "namesYou": "{count, plural, one {Una delle sue pagine ti nomina.} other {# delle sue pagine ti nominano.}}",
+        "notOnIt": "Nulla su questo sito ti nomina ancora.",
+        "getListed": "Fatti elencare su {text}.",
+        "getMentioned": "Fai scrivere di te su {text}: è citato accanto ai concorrenti.",
+        "makeVideo": "Pubblica su {text} un breve video che risponda alle domande per cui è citato.",
+        "joinForum": "Rispondi alle domande che le persone fanno su {text}, come attività.",
+        "answerQuestion": "Rispondi a “{text}” sul tuo sito."
+      },
+      "question": {
+        "notFound": "Brand radar non legge più questa domanda per te o per i concorrenti.",
+        "namesYou": "L'IA di Google risponde a questa domanda circa {a} volte al mese e ti nomina {b}°.",
+        "namesOther": "L'IA di Google risponde a questa domanda circa {a} volte al mese e nomina per prima {text}; non nomina te.",
+        "namesNone": "L'IA di Google risponde a questa domanda circa {a} volte al mese senza nominare te o i concorrenti che segui.",
+        "yourPage": "Cita la tua pagina {text}.",
+        "noPage": "Nessuna delle tue pagine è citata.",
+        "rivalPages": "{count, plural, one {Cita una pagina dei tuoi concorrenti, {text}.} other {Cita # pagine dei tuoi concorrenti, tra cui {text}.}}",
+        "answerOnPage": "Rispondi nelle prime righe di una pagina del tuo sito.",
+        "getListedOn": "Fatti elencare su {text}, che viene citato."
+      }
     }
   },
   "searchConsole": {

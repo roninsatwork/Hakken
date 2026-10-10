@@ -177,6 +177,13 @@ type DataTableProps<Row> = {
   search?: { value: string; onChange: (next: string) => void; placeholder: string };
   /** Filter chips or dropdowns, beside the search box on the same row. */
   filters?: ReactNode;
+  /**
+   * A switch between the table's views (`SegmentedChoice size="compact"`),
+   * first on the search row: a Discovery detail screen's one table, which
+   * lists questions, pages or businesses as the switch says
+   * (docs/plans/active/discovery-detail-and-hakken-sees-plan.md §2).
+   */
+  views?: ReactNode;
 
   onRowClick?: (row: Row) => void;
   /**
@@ -254,6 +261,7 @@ export function DataTable<Row>({
   footer,
   search,
   filters,
+  views,
   onRowClick,
   rowClickable,
   rowClassName,
@@ -269,7 +277,7 @@ export function DataTable<Row>({
 }: DataTableProps<Row>) {
   const t = useTranslations("ui.table");
   const isLoading = rows === undefined;
-  const hasControls = Boolean(search || filters);
+  const hasControls = Boolean(search || filters || views);
   const box = useRef<HTMLDivElement>(null);
   const height = useRef(0);
   const [opened, setOpened] = useState<ReadonlySet<string>>(() => new Set());
@@ -298,6 +306,7 @@ export function DataTable<Row>({
     <div ref={box} className={`flex flex-col ${CONTROLS_GAP} w-full ${className}`.trim()}>
       {hasControls && (
         <div className="flex items-center gap-3 flex-wrap">
+          {views}
           {search && (
             <div className="flex-1 min-w-[240px]">
               <SearchBar

@@ -13214,8 +13214,136 @@
         "empty": "No place found yet: from Brand radar's monthly reading and the rivals' links, from the next check."
       }
     },
+    "websiteRecord": {
+      "missingTitle": "No website chosen",
+      "missingBody": "Open a website from Websites AI cites or Where to get listed.",
+      "description": "{kind} · quoted by Google's AI answers about your kind of work",
+      "descriptionLoading": "Quoted by Google's AI answers about your kind of work",
+      "you": "you",
+      "youName": "{name} · you",
+      "visit": "Visit {host}",
+      "labels": {
+        "namesYou": "Names you",
+        "rivalsNotYou": "Links to {count, plural, one {# rival} other {# rivals}}, not you"
+      },
+      "figures": {
+        "besideRivals": "Quoted beside your rivals",
+        "besideRivalsDetail": "Times · beside you {you}",
+        "linksTo": "Rivals it links to",
+        "linksToValue": "{count} of {of}",
+        "linksToDetail": "Not to you",
+        "linksToNone": "None, from their shared links",
+        "questions": "Questions it answers",
+        "questionsDetail": "Asked {asks} times a month",
+        "strength": "Its strength",
+        "strengthDetail": "Out of 1,000, from your rivals' shared links"
+      },
+      "viewLabel": "What the list shows",
+      "views": {
+        "questions": "Questions · {count}",
+        "pages": "Its pages · {count}",
+        "who": "Who is on it · {count}"
+      },
+      "searchPlaceholder": "Find in this list…",
+      "noMatch": "Nothing matches that.",
+      "questionsEmpty": "Google's AI has not quoted it for any question about you or your rivals.",
+      "pagesEmpty": "None of its pages has been quoted.",
+      "whoEmpty": "No businesses watched yet.",
+      "columns": {
+        "question": "Question",
+        "asked": "Asked a month",
+        "named": "Named beside it",
+        "page": "Its page quoted",
+        "times": "Times quoted",
+        "besideYou": "Beside you",
+        "besideRivals": "Beside rivals",
+        "business": "Business",
+        "on": "On it",
+        "beside": "Quoted beside them"
+      },
+      "on": {
+        "LINKS": "Links to them",
+        "NAMES": "Names you",
+        "NOT_LINKED": "Not linked to you"
+      }
+    },
+    "questionRecord": {
+      "missingTitle": "No question chosen",
+      "missingBody": "Open a question from Brand radar.",
+      "description": "Asked of Google's AI about {asks} times a month · {place}",
+      "descriptionLoading": "A question asked of Google's AI",
+      "youName": "{name} · you",
+      "yours": "Yours",
+      "track": "Track this question",
+      "trackFailed": "The question could not be tracked.",
+      "labels": {
+        "namesYou": "Names you {place, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
+        "notNamed": "Does not name you",
+        "tracked": "Tracked"
+      },
+      "notFound": "Brand radar no longer reads this question for you or your rivals.",
+      "figures": {
+        "asked": "Asked a month",
+        "askedDetail": "Of Google's AI, in {place}",
+        "named": "Businesses it names",
+        "namedFirst": "{name} first",
+        "namedNone": "None of you or your rivals",
+        "pages": "Pages it quotes",
+        "pagesYours": "Yours among them: {page}",
+        "pagesNoneYours": "None of them yours",
+        "rivalPages": "Rivals' pages quoted",
+        "rivalPagesNone": "None"
+      },
+      "viewLabel": "What the list shows",
+      "views": {
+        "named": "Businesses named · {count}",
+        "pages": "Pages quoted · {count}"
+      },
+      "searchPlaceholder": "Find in this list…",
+      "noMatch": "Nothing matches that.",
+      "namedEmpty": "It names none of the businesses you watch.",
+      "pagesEmpty": "It quotes no pages.",
+      "columns": {
+        "place": "Place",
+        "business": "Business",
+        "page": "Their page quoted",
+        "website": "Website",
+        "kind": "Kind",
+        "address": "Page"
+      }
+    },
     "seen": {
-      "links": {}
+      "links": {
+        "visit": "Visit it",
+        "seeQuestion": "See the question",
+        "yourPages": "Your pages",
+        "seeWebsite": "See the website"
+      },
+      "website": {
+        "notQuoted": "Google's AI has not quoted {text} in answers about you or your rivals.",
+        "onlyRivals": "Google's AI quotes {text} {a} times in answers about your kind of work, every time beside your rivals and never beside you.",
+        "mostlyRivals": "Google's AI quotes {text} {a} times in answers about your kind of work: {b} beside your rivals, {c} beside you.",
+        "besideYou": "Google's AI quotes {text} {a} times in answers about your kind of work, {c} of them beside you.",
+        "linksToRivals": "It links to {count, plural, one {one of your rivals} other {# of your rivals}} ({more}) and not to you.",
+        "namesYou": "{count, plural, one {One of its pages names you.} other {# of its pages name you.}}",
+        "notOnIt": "Nothing on it names you yet.",
+        "getListed": "Get listed on {text}.",
+        "getMentioned": "Get {text} to write about you: it is quoted beside your rivals.",
+        "makeVideo": "Put a short video on {text} that answers the questions it is quoted for.",
+        "joinForum": "Answer the questions people ask on {text}, as your business.",
+        "answerQuestion": "Answer “{text}” on your own site."
+      },
+      "question": {
+        "notFound": "Brand radar no longer reads this question for you or your rivals.",
+        "namesYou": "Google's AI answers this about {a} times a month and names you {b, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}.",
+        "namesOther": "Google's AI answers this about {a} times a month and names {text} first; it does not name you.",
+        "namesNone": "Google's AI answers this about {a} times a month without naming you or the rivals you watch.",
+        "yourPage": "It quotes your page {text}.",
+        "noPage": "None of your pages is quoted.",
+        "rivalPages": "{count, plural, one {It quotes one of your rivals' pages, {text}.} other {It quotes # of your rivals' pages, among them {text}.}}",
+        "answerOnPage": "Answer it in the first lines of a page on your site.",
+        "getListedOn": "Get listed on {text}, which it quotes."
+      }
     }
   },
   "searchConsole": {

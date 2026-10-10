@@ -34,7 +34,15 @@ export type SiteRecord =
   | { kind: "anchor"; anchor: string }
   | { kind: "problem"; check: string }
   /** One square of Position bands' grid: the searches that moved from one band to another, `from.to`. */
-  | { kind: "bandMove"; move: string };
+  | { kind: "bandMove"; move: string }
+  /** A website Google's AI answers quote, by its host (One website, discovery-detail-and-hakken-sees-plan.md §3). */
+  | { kind: "website"; host: string }
+  /** A question Google's AI answers are given for, as Brand radar reads it (One question). */
+  | { kind: "question"; question: string }
+  /** A business, by its website host or else its Google place number (One business). */
+  | { kind: "business"; business: string }
+  /** A page the AI answers read or quote, by its address (One page). */
+  | { kind: "aiPage"; url: string };
 
 type RecordAddress = { segment: string; key: string; parent: SitePage["id"] };
 
@@ -49,6 +57,10 @@ const RECORDS: Record<SiteRecord["kind"], RecordAddress> = {
   anchor: { segment: "backlinks/anchors/anchor", key: "anchor", parent: "backlinksAnchors" },
   problem: { segment: "audit/problem", key: "check", parent: "siteAudit" },
   bandMove: { segment: "keywords/bands/moved", key: "move", parent: "keywordsBands" },
+  website: { segment: "radar/sources/website", key: "website", parent: "radarSources" },
+  question: { segment: "radar/question", key: "question", parent: "radarOverview" },
+  business: { segment: "local/market/business", key: "business", parent: "localMarket" },
+  aiPage: { segment: "ai/read/page", key: "url", parent: "aiRead" },
 };
 
 /** The address key holding the way back. */
@@ -81,6 +93,14 @@ function identityOf(record: SiteRecord): string {
       return record.check;
     case "bandMove":
       return record.move;
+    case "website":
+      return record.host;
+    case "question":
+      return record.question;
+    case "business":
+      return record.business;
+    case "aiPage":
+      return record.url;
   }
 }
 
@@ -105,6 +125,14 @@ export function siteRecordOf(kind: string, key: string): SiteRecord | null {
       return { kind, check: key };
     case "bandMove":
       return { kind, move: key };
+    case "website":
+      return { kind, host: key };
+    case "question":
+      return { kind, question: key };
+    case "business":
+      return { kind, business: key };
+    case "aiPage":
+      return { kind, url: key };
     default:
       return null;
   }

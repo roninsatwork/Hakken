@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Lightbulb } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -8,6 +9,7 @@ import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { CheckedCell } from "../../../_components/SiteCells";
+import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { heldIcon } from "../../../_components/siteGroups";
 import { MarkedHost } from "../../../_components/SiteMark";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
@@ -44,6 +46,8 @@ export default function SiteSuggestedPage() {
   const to = useTranslations("sites.organic.kinds");
   const tc = useTranslations("sites.common");
   const siteId = useSiteId();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
   const site = useSite();
   const rows = useQuery(api.siteCompetitors.listSuggested, { siteId });
   const [search, setSearch, settled] = useSiteSearch();
@@ -59,6 +63,8 @@ export default function SiteSuggestedPage() {
       <DataTable
         rows={pager.pageRows}
         rowKey={(row) => row.host}
+        // Each suggestion opens One website: what Google's AI says of it beside you (discovery-detail-and-hakken-sees-plan.md §4).
+        onRowClick={(row) => router.push(recordHref({ kind: "website", host: row.host }))}
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         cardHeader={<TableBar footer={pager.footer} noun="websites" actions={<ListDownload fileName={"suggested-competitors"} rows={sorted} columns={[{ header: t("columns.website"), value: (row) => row.host }, { header: t("columns.why"), value: (row) => (row.reason === "NAMED_BY_AI" ? t("namedByAi", { times: row.times ?? 0 }) : t("ranksFor", { count: String(row.intersections ?? 0) })) }, { header: tc("lastChecked"), value: (row) => row.day }]} />} />}
         empty={{ icon: <Lightbulb className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}

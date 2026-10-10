@@ -170,6 +170,8 @@ export function ExternalUrlCell({ url, label, cut = false }: { url: string; labe
       target="_blank"
       rel="noopener noreferrer nofollow"
       title={cut ? url : undefined}
+      // A page elsewhere opens in its own tab; the row it sits in stays where it is.
+      onClick={(event) => event.stopPropagation()}
       className={`${cut ? "block truncate" : "break-all"} text-[12px] text-info hover:underline`}
     >
       {label ?? url}

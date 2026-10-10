@@ -1,6 +1,8 @@
 "use client";
 
+import { Fragment } from "react";
 import { useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Sparkles } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -50,6 +52,7 @@ export default function AiOverviewGapsPage() {
   const siteId = useSiteId();
   const site = useSite();
   const recordHref = useSiteRecordHref(siteId);
+  const router = useRouter();
   const data = useQuery(api.siteAiOverviewGaps.overviewGaps, { siteId });
   const [search, setSearch, term] = useSiteSearch();
   const [quotes, setQuotes] = useSiteParam<(typeof QUOTES)[number] | "">("quotes", "", QUOTES);
@@ -90,6 +93,7 @@ export default function AiOverviewGapsPage() {
       <DataTable
         rows={pager.pageRows}
         rowKey={(row) => row.keyword}
+        onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <Select chip={{ label: t("quotesFilter"), choice: quotes ? t(`quotesFilters.${quotes}`) : null }} value={quotes} onChange={(value) => setQuotes(value as (typeof QUOTES)[number] | "")}>
@@ -106,7 +110,21 @@ export default function AiOverviewGapsPage() {
           { key: "volume", header: t("columns.volume"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.volume} /> },
           { key: "position", header: t("columns.position"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.position} /> },
           { key: "overview", header: t("columns.overview"), cell: (row) => <StatusLabel tone={row.quotesYou ? "success" : "warning"}>{row.quotesYou ? t("quotesYou") : t("notQuoted")}</StatusLabel> },
-          { key: "quotes", header: t("columns.quotes"), cell: (row) => <span className="text-[12px] text-secondary">{row.quotes.join(" · ") || "–"}</span> },
+          {
+            key: "quotes",
+            header: t("columns.quotes"),
+            // Each website quoted opens One website (discovery-detail-and-hakken-sees-plan.md §4).
+            cell: (row) => (row.quotes.length === 0 ? <span className="text-[12px] text-muted">–</span> : (
+              <span className="text-[12px] text-secondary">
+                {row.quotes.map((host, at) => (
+                  <Fragment key={host}>
+                    {at > 0 ? " · " : null}
+                    <RecordLinkCell href={recordHref({ kind: "website", host })} className="text-[12px] text-secondary">{host}</RecordLinkCell>
+                  </Fragment>
+                ))}
+              </span>
+            )),
+          },
           { key: "page", header: t("columns.page"), cell: (row) => (row.yourPage ? <RecordLinkCell href={recordHref({ kind: "page", page: row.yourPage })} className="text-[12px] text-info">{row.yourPage}</RecordLinkCell> : <span className="text-[12px] text-muted">–</span>) },
         ]}
       />

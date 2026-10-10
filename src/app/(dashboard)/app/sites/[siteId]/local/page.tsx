@@ -17,6 +17,7 @@ import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { PageSection } from "../../../_components/PageSection";
 import { formatDay } from "../../_components/siteFormat";
+import { VisitLink } from "../../_components/VisitLink";
 import { ListDownload } from "../../_components/SiteDownloads";
 import { useSiteId, useSite } from "../../_components/useSite";
 import { useSitePager } from "../../_components/useSitePagedTable";
@@ -100,9 +101,7 @@ export default function LocalProfilePage() {
           <div className="flex flex-wrap items-center gap-3">
             <OfficeSwitch offices={data.offices} open={office?.row.listingId ?? null} profile />
             {office ? (
-              <a href={office.row.url} target="_blank" rel="noreferrer" className="rounded-[8px] border border-border-dim bg-white/[0.03] px-3 py-1.5 text-[12px] font-medium text-secondary transition-all hover:bg-white/[0.06] hover:text-foreground">
-                {t("openOnGoogle")}
-              </a>
+              <VisitLink href={office.row.url}>{t("openOnGoogle")}</VisitLink>
             ) : null}
           </div>
         ) : undefined}

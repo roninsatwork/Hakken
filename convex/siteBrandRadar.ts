@@ -9,6 +9,7 @@ import { radarRivals } from "./brandRadar";
 import { countryCodeOf } from "./utils/seoLocations";
 import { unpackColumn } from "./utils/packedColumns";
 import { siteKindOf } from "./utils/siteKinds";
+import { hostOfUrl, pathOfUrl, urlIsOnHost } from "./utils/urlParts";
 import { MAX_PROMPTS_PER_WEBSITE } from "./utils/promptLimits";
 import type { Site } from "./websiteSiteRows";
 
@@ -61,21 +62,9 @@ export function questionsOf(part: Doc<"brandRadarQuestionParts">) {
   });
 }
 
-const hostOf = (url: string) => {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
-  } catch {
-    return url.toLowerCase();
-  }
-};
-const pathOf = (url: string) => {
-  try {
-    return new URL(url).pathname || "/";
-  } catch {
-    return url;
-  }
-};
-const onHost = (url: string, host: string) => hostOf(url) === host || hostOf(url).endsWith(`.${host}`);
+const hostOf = hostOfUrl;
+const pathOf = pathOfUrl;
+const onHost = urlIsOnHost;
 
 export const radarOverview = tenantQuery({
   args: { siteId: v.id("companyWebsites") },

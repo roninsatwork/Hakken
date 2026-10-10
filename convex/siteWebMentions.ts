@@ -38,6 +38,27 @@ async function mentionsOf(ctx: Reader, website: Doc<"websites">): Promise<Mentio
   return (await shownMentionsOf(ctx, website._id)) ?? [];
 }
 
+/**
+ * The websites linking to two or more of the rivals and not to the website,
+ * from the rivals' shared links (`linkGapPairs`, monthly): each with the
+ * rivals it links to and its strength. Pairs of rivals no longer watched are
+ * left out.
+ */
+export async function linkGapOf(ctx: Reader, ownWebsiteId: Id<"websites">, rivalHosts: readonly string[]): Promise<Map<string, { rivals: Set<string>; strength: number }>> {
+  const out = new Map<string, { rivals: Set<string>; strength: number }>();
+  const pairs = await ctx.db.query("linkGapPairs").withIndex("by_website", (q) => q.eq("websiteId", ownWebsiteId)).take(50);
+  for (const pair of pairs.filter((entry) => entry.rivals.every((rival) => rivalHosts.includes(rival)))) {
+    const strength = unpackColumn(pair.strength);
+    pair.domains.forEach((domain, at) => {
+      const row = out.get(domain) ?? { rivals: new Set<string>(), strength: 0 };
+      for (const rival of pair.rivals) row.rivals.add(rival);
+      row.strength = Math.max(row.strength, strength[at] ?? 0);
+      out.set(domain, row);
+    });
+  }
+  return out;
+}
+
 /** The company's own website and the rivals watched beside it. */
 async function watched(ctx: Reader, site: Site): Promise<Array<{ website: Doc<"websites">; you: boolean }>> {
   const hold = groupOwner(site);
@@ -168,18 +189,14 @@ export const whereToGetListed = tenantQuery({
       }
     }
     // Linking to two of the rivals and not to the website (their shared links, monthly).
-    const pairs = await ctx.db.query("linkGapPairs").withIndex("by_website", (q) => q.eq("websiteId", own._id)).take(50);
-    for (const pair of pairs.filter((entry) => entry.rivals.every((rival) => rivalHosts.includes(rival)))) {
-      const strength = unpackColumn(pair.strength);
-      pair.domains.forEach((domain, at) => {
-        if (isOwnOrRival(domain)) return;
-        const row = place(domain);
-        for (const rival of pair.rivals) {
-          row.linksTo.add(rival);
-          row.rivals.add(rival);
-        }
-        row.strength = Math.max(row.strength ?? 0, strength[at] ?? 0);
-      });
+    for (const [domain, gap] of await linkGapOf(ctx, own._id, rivalHosts)) {
+      if (isOwnOrRival(domain)) continue;
+      const row = place(domain);
+      for (const rival of gap.rivals) {
+        row.linksTo.add(rival);
+        row.rivals.add(rival);
+      }
+      row.strength = Math.max(row.strength ?? 0, gap.strength);
     }
     // Naming the website on a page found: already there.
     for (const row of await mentionsOf(ctx, own)) if (places.has(row.host)) places.get(row.host)!.there = true;

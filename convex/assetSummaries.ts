@@ -14,6 +14,7 @@ import { holdBrandNames } from "./holdProfiles";
 import { siteKindOf } from "./utils/siteKinds";
 import { isTrackedHold } from "./utils/websitePairing";
 import { assetRowValidator } from "./radarSchema";
+import { hostOfUrl, isOnHost, pathOfUrl } from "./utils/urlParts";
 import { stableText } from "./localListings";
 
 /**
@@ -56,21 +57,9 @@ const ANSWERED_ENOUGH = 0.8;
 /** Pages naming the business in a year that count as seen in the press and on the web: one a month. */
 const ENOUGH_MENTIONS = 12;
 
-const hostOf = (url: string) => {
-  try {
-    return new URL(url).hostname.replace(/^www\./, "").toLowerCase();
-  } catch {
-    return url.toLowerCase();
-  }
-};
-const pathOf = (url: string) => {
-  try {
-    return new URL(url).pathname || "/";
-  } catch {
-    return url;
-  }
-};
-const onHost = (host: string, own: string) => host === own || host.endsWith(`.${own}`);
+const hostOf = hostOfUrl;
+const pathOf = pathOfUrl;
+const onHost = isOnHost;
 
 /** Every asset of one of a company's own websites, as it stands. */
 export async function workOutAssets(ctx: Reader, site: Site): Promise<AssetRow[]> {

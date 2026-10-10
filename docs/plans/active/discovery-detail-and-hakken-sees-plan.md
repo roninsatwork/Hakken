@@ -470,10 +470,12 @@ About thirteen days. Progress is reported per step as a percentage.
 |---|---|
 | Drawings | **Approved 2026-10-10**: four detail screens, What Hakken sees on 19 list pages, the five older-table boards (`docs/plans/assets/discovery-detail-screens/`) |
 | 1. `HakkenSees` and its guards | **Done 2026-10-10**: the kit part (`HakkenSees`, in the drawing kit too), the codes it is sent in (`convex/utils/hakkenSees.ts`), Sites' `SiteSees`, and two guards — every Discovery screen carries the box (`src/hakken-sees-drift.test.ts`) and every Discovery table's rows open something (`src/discovery-rows-drift.test.ts`), each with a list of screens still to do that may only shrink |
-| 2–7 | Started 2026-10-10 (Anthony: "Ok can start this please") |
+| 2. One website and One question | **Done 2026-10-10**: `convex/siteRadarDetails.ts` (`websiteDetail`, `questionDetail`), the two screens (`radar/sources/website`, `radar/question`) matching their drawings (`detailLook.test.tsx`, five outlines in `look/`), read within the Brand radar budgets at their largest (`radarLoad.test.ts`: `one website`, `one question`, 1,136 KiB), rows opening them from Websites AI cites, Brand radar, Where to get listed, Suggested competitors and AI Overview gaps. Checked in Chrome on Ronins: youtube.com, clutch.co and "software development co". |
+| 3–7 | Started 2026-10-10 (Anthony: "Ok can start this please") |
 
 ## Change log
 
+- 2026-10-10 — Step 2 built. Changes made while building, each smaller than a decision: One website counts every page quoted, by its exact address, as Websites AI cites does, so the two screens give the same numbers (youtube.com 526); its first step depends on the kind of website — be listed on a directory or review site, put a video on a video site, answer on a forum, be written about on news or other websites; its figure titles are "Rivals it links to" and "Questions it answers"; a rival's row on Websites AI cites opens One business rather than One website; Brand radar's You against rivals opens One business, and your own row Business profile; addresses are cut to one line, whole on hover; a page elsewhere opened from a clickable row no longer also opens the row. The shared parts gained: `DataTable`'s `views` slot (the switch, first on the search row), `VisitLink` (Business profile's "Open on Google" is it too), `convex/utils/urlParts.ts` (three copies of the address helpers became one) and `linkGapOf` (Where to get listed and One website share it).
 - 2026-10-10 — Written. The detail screens were drawn twice: six tables to a
   screen first ("table after table … TLDR"), then verdict first with one
   table behind a switch, approved. What Hakken sees approved and extended to

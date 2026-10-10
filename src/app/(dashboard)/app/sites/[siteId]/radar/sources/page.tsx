@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Globe } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -12,7 +13,8 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
 import { PageSection } from "../../../../_components/PageSection";
-import { ExternalUrlCell } from "../../../_components/SiteCells";
+import { RecordLinkCell } from "../../../_components/SiteCells";
+import { useSiteRecordHref, type SiteRecord } from "../../../_components/siteRecordLinks";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSitePager } from "../../../_components/useSitePagedTable";
@@ -59,6 +61,10 @@ export default function RadarSourcesPage() {
   const siteId = useSiteId();
   const site = useSite();
   const data = useQuery(api.siteBrandRadar.radarSources, { siteId });
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
+  // A rival's row opens the business; any other website opens One website (discovery-detail-and-hakken-sees-plan.md §4).
+  const opens = (row: Website): SiteRecord => (row.kind === "RIVAL" ? { kind: "business", business: row.host } : { kind: "website", host: row.host });
   const [search, setSearch, term] = useSiteSearch();
   const [kind, setKind] = useSiteParam<(typeof KINDS)[number] | "">("kind", "", KINDS);
   const [there, setThere] = useSiteParam<(typeof THERE)[number] | "">("there", "", THERE);
@@ -100,6 +106,7 @@ export default function RadarSourcesPage() {
       <DataTable
         rows={pager.pageRows}
         rowKey={(row) => row.host}
+        onRowClick={(row) => router.push(recordHref(opens(row)))}
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
@@ -118,7 +125,7 @@ export default function RadarSourcesPage() {
         footer={pager.footer}
         sort={tableSort}
         columns={[
-          { key: "website", header: t("columns.website"), sortable: true, cell: (row) => <ExternalUrlCell url={`https://${row.host}`} label={row.host} /> },
+          { key: "website", header: t("columns.website"), sortable: true, cell: (row) => <RecordLinkCell href={recordHref(opens(row))}>{row.host}</RecordLinkCell> },
           { key: "kind", header: t("columns.kind"), cell: (row) => <TagLabel>{t(`kinds.${row.kind}`)}</TagLabel> },
           { key: "times", header: t("columns.times"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.times} /> },
           { key: "you", header: t("columns.you"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.besideYou} /> },
@@ -131,11 +138,12 @@ export default function RadarSourcesPage() {
         <DataTable
           rows={pagesPager.pageRows}
           rowKey={(row) => row.url}
+          onRowClick={(row) => router.push(recordHref({ kind: "aiPage", url: row.url }))}
           cardHeader={<TableBar footer={pagesPager.footer} noun="pages"><span className="text-[13px] text-secondary">{t("topPages")}</span></TableBar>}
           empty={{ icon: <Globe className="h-8 w-8 text-muted/30" />, label: t("pagesEmpty") }}
           sort={pagesSorted.tableSort}
           columns={[
-            { key: "page", header: t("columns.page"), cell: (row) => <ExternalUrlCell url={row.url} label={pathOf(row.url)} /> },
+            { key: "page", header: t("columns.page"), cell: (row) => <RecordLinkCell href={recordHref({ kind: "aiPage", url: row.url })} className="text-[12px] text-info">{pathOf(row.url)}</RecordLinkCell> },
             { key: "whose", header: t("columns.whose"), cell: (row) => <TagLabel>{row.kind === "RIVAL" ? row.host : t(`kinds.${row.kind}`)}</TagLabel> },
             { key: "times", header: t("columns.times"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.times} /> },
             { key: "for", header: t("columns.for"), cell: (row) => <span className="text-[12px] text-secondary">{row.citedFor}</span> },

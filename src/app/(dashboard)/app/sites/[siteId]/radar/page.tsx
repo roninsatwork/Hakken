@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Radar } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -20,7 +21,7 @@ import { SITE_SERIES_COLOURS, SiteLineChart } from "../../_components/SiteCharts
 import { RecordLinkCell } from "../../_components/SiteCells";
 import { formatMonth, formatNumber, toCsv } from "../../_components/siteFormat";
 import { ListDownload } from "../../_components/SiteDownloads";
-import { useSiteRecordHref } from "../../_components/siteRecordLinks";
+import { useSiteListHref, useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../_components/useSite";
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
@@ -60,6 +61,8 @@ export default function BrandRadarPage() {
   const siteId = useSiteId();
   const site = useSite();
   const recordHref = useSiteRecordHref(siteId);
+  const listHref = useSiteListHref(siteId);
+  const router = useRouter();
   const data = useQuery(api.siteBrandRadar.radarOverview, { siteId });
   const me = useQuery(api.users.getMe);
   const addQuestion = useMutation(api.websiteCanonical.addWebsiteQuestion);
@@ -85,6 +88,9 @@ export default function BrandRadarPage() {
   });
   const fileBase = `${site?.host ?? "site"}-brand-radar`;
   const nameOf = (row: { host: string; you: boolean }) => (row.you ? t("you", { name: row.host }) : row.host);
+  // A business opens One business, yours its Business profile; a question opens One question (discovery-detail-and-hakken-sees-plan.md §4).
+  const businessHref = (row: Business) => (row.you ? listHref("local") : recordHref({ kind: "business", business: row.host }));
+  const questionHref = (row: Question) => recordHref({ kind: "question", question: row.question });
 
   return (
     <div className="flex flex-col gap-6">
@@ -130,12 +136,13 @@ export default function BrandRadarPage() {
           rows={businessesPager.pageRows}
           rowKey={(row) => row.websiteId}
           rowClassName={(row) => (row.you ? "bg-brand/5" : "")}
+          onRowClick={(row) => router.push(businessHref(row))}
           cardHeader={<TableBar footer={businessesPager.footer} noun="businesses" actions={<ListDownload fileName={`${fileBase}-rivals`} rows={businessesSorted.rows ?? []} columns={[{ header: t("columns.business"), value: (row) => row.host }, { header: t("columns.mentions"), value: (row) => row.mentions }, { header: t("columns.change"), value: (row) => (row.mentions !== null && row.before !== null ? row.mentions - row.before : null) }, { header: t("columns.share"), value: (row) => (row.share === null ? null : Math.round(row.share * 100)) }, { header: t("columns.asked"), value: (row) => row.asks }, { header: t("columns.pages"), value: (row) => row.pagesCited }]} />}><span className="text-[13px] text-secondary">{t("youAndRivals", { count: Math.max(0, (businesses?.length ?? 1) - 1) })}</span></TableBar>}
           empty={{ icon: <Radar className="h-8 w-8 text-muted/30" />, label: t("rivalsEmpty") }}
           footer={pagedOnly(businessesPager.footer)}
           sort={businessesSorted.tableSort}
           columns={[
-            { key: "business", header: t("columns.business"), sortable: true, cell: (row) => <span className="text-[13px] text-foreground">{nameOf(row)}</span> },
+            { key: "business", header: t("columns.business"), sortable: true, cell: (row) => <RecordLinkCell href={businessHref(row)}>{nameOf(row)}</RecordLinkCell> },
             { key: "mentions", header: t("columns.mentions"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.mentions} /> },
             { key: "change", header: t("columns.change"), align: "right", sortable: true, cell: (row) => (row.mentions !== null && row.before !== null ? <Change by={row.mentions - row.before} /> : <FigureCell value={null} />) },
             { key: "share", header: t("columns.share"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.share} text={row.share === null ? undefined : `${Math.round(row.share * 100)}%`} /> },
@@ -149,12 +156,13 @@ export default function BrandRadarPage() {
         <DataTable
           rows={questionsPager.pageRows}
           rowKey={(row) => row.question}
+          onRowClick={(row) => router.push(questionHref(row))}
           cardHeader={<TableBar footer={questionsPager.footer} noun="questions" actions={<ListDownload fileName={`${fileBase}-questions`} rows={questionsSorted.rows ?? []} columns={[{ header: t("columns.question"), value: (row) => row.question }, { header: t("columns.asked"), value: (row) => row.volume }, { header: t("columns.you"), value: (row) => row.you }, { header: t("columns.rivals"), value: (row) => row.rivals.join(" · ") }, { header: t("columns.yourPage"), value: (row) => row.yourPage }]} />} />}
           empty={{ icon: <Radar className="h-8 w-8 text-muted/30" />, label: t("questionsEmpty") }}
           footer={questionsPager.footer}
           sort={questionsSorted.tableSort}
           columns={[
-            { key: "question", header: t("columns.question"), sortable: true, cell: (row) => <span className="text-[13px] text-foreground">{row.question}</span> },
+            { key: "question", header: t("columns.question"), sortable: true, cell: (row) => <RecordLinkCell href={questionHref(row)}>{row.question}</RecordLinkCell> },
             { key: "volume", header: t("columns.asked"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.volume} /> },
             { key: "you", header: t("columns.you"), sortable: true, cell: (row) => (row.you === null ? <span className="text-[12px] text-muted">{t("notNamed")}</span> : <span className="whitespace-nowrap text-[12px] text-foreground">{t("namedAt", { place: row.you })}</span>) },
             { key: "rivals", header: t("columns.rivals"), cell: (row) => <span className="text-[12px] text-secondary">{row.rivals.join(" · ") || "–"}</span> },
@@ -170,7 +178,10 @@ export default function BrandRadarPage() {
                       variant="quiet"
                       className="whitespace-nowrap"
                       disabled={action.isBusy(`track:${row.question}`)}
-                      onClick={() => void action.run(() => addQuestion({ companyWebsiteId: siteId, prompt: row.question }), { key: `track:${row.question}`, fallbackMessage: t("trackFailed") })}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void action.run(() => addQuestion({ companyWebsiteId: siteId, prompt: row.question }), { key: `track:${row.question}`, fallbackMessage: t("trackFailed") });
+                      }}
                     >
                       {t("track")}
                     </Button>

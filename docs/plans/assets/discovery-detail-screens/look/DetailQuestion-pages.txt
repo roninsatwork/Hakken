@@ -1,0 +1,19 @@
+# Discovery → One question (pages) — the approved look (board "DetailQuestion-pages" of docs/plans/assets/discovery-detail-screens/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Back to Overview
+  page-header: ‹the record's name›
+    primary-action: Track this question
+settings-card: What Hakken sees
+figures
+  figure: Asked a month
+  figure: Businesses it names
+  figure: Pages it quotes
+  figure: Rivals' pages quoted
+choice: What the list shows: Businesses named · # | Pages quoted · #
+search: Find in this list…
+table: Page | Website | Kind
+  table-bar
+    download: Download CSV
+  table-footer

@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { MapPinPlus } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -11,7 +12,8 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
-import { ExternalUrlCell } from "../../../_components/SiteCells";
+import { ExternalUrlCell, RecordLinkCell } from "../../../_components/SiteCells";
+import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSitePager } from "../../../_components/useSitePagedTable";
@@ -49,6 +51,10 @@ export default function WhereToGetListedPage() {
   const siteId = useSiteId();
   const site = useSite();
   const data = useQuery(api.siteWebMentions.whereToGetListed, { siteId });
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
+  // Each place opens One website (discovery-detail-and-hakken-sees-plan.md §4); Visit still leaves for it.
+  const websiteHref = (row: Row) => recordHref({ kind: "website", host: row.host });
   const [search, setSearch, term] = useSiteSearch();
   const [kind, setKind] = useSiteParam<(typeof KINDS)[number] | "">("kind", "", KINDS);
   const [status, setStatus] = useSiteParam<(typeof STATUSES)[number] | "">("status", "missing", STATUSES);
@@ -79,6 +85,7 @@ export default function WhereToGetListedPage() {
       <DataTable
         rows={pager.pageRows}
         rowKey={hostOf}
+        onRowClick={(row) => router.push(websiteHref(row))}
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
@@ -97,7 +104,7 @@ export default function WhereToGetListedPage() {
         footer={pager.footer}
         sort={tableSort}
         columns={[
-          { key: "website", header: t("columns.website"), sortable: true, cell: (row) => <ExternalUrlCell url={`https://${row.host}`} label={row.host} /> },
+          { key: "website", header: t("columns.website"), sortable: true, cell: (row) => <RecordLinkCell href={websiteHref(row)}>{row.host}</RecordLinkCell> },
           { key: "kind", header: t("columns.kind"), cell: (row) => <TagLabel>{tk(`kinds.${row.kind}`)}</TagLabel> },
           { key: "best", header: t("columns.why"), sortable: true, cell: (row) => <span className="text-[12px] text-secondary">{why(row)}</span> },
           { key: "rivals", header: t("columns.rivals"), sortable: true, cell: (row) => <span className="text-[12px] text-secondary">{rivalsWords(row)}</span> },

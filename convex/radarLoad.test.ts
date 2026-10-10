@@ -70,6 +70,9 @@ describe("Brand radar at its largest", () => {
     const screens: Array<[string, FunctionReference<"query">, Record<string, unknown>]> = [
       ["brand radar", api.siteBrandRadar.radarOverview, { siteId }],
       ["websites ai cites", api.siteBrandRadar.radarSources, { siteId }],
+      // The detail screens they open (discovery-detail-and-hakken-sees-plan.md §3).
+      ["one website", api.siteRadarDetails.websiteDetail, { siteId, host: "source7.co.uk" }],
+      ["one question", api.siteRadarDetails.questionDetail, { siteId, question: "how much does thing 7 cost in the uk for a small business" }],
     ];
     const modules = import.meta.glob("./*.ts");
     const readBudgets: Record<string, number> = budgets.radarReadKiB;
