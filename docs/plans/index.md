@@ -7,6 +7,16 @@ completed work.
 
 ## Active Plans
 
+- [Content — people and their channels, News into Knowledge, and reading analytics](./active/content-people-knowledge-plan.md)
+  — Admin → Content reshaped so Hakken works as an SEO agency would: Who to
+  follow becomes the only source list (a person, then their channels on
+  their own page, added by hand), News sources goes; an In knowledge tick on News keeps the whole article for Ask Hakken;
+  Knowledge and Helpful content become one list, with Add from a link for a
+  single article; and a new Analytics page — views, reads and clicks over
+  time by article, person, company and user. Six phases, about eighteen
+  days. **Drawn and approved 2026-10-10 (twelve boards in
+  `docs/plans/assets/content-people-knowledge/boards/`); build started the
+  same day; ten open questions.**
 - [Google Analytics — for your own websites](./active/google-analytics-plan.md)
   — a new "Google Analytics" item in the main menu, beside Search Console,
   showing each owned website's Google Analytics alone: visits, channels (AI
