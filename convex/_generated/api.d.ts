@@ -478,6 +478,7 @@ import type * as siteBackfill from "../siteBackfill.js";
 import type * as siteBackfillRaw from "../siteBackfillRaw.js";
 import type * as siteBands from "../siteBands.js";
 import type * as siteBrandRadar from "../siteBrandRadar.js";
+import type * as siteBusinessDetail from "../siteBusinessDetail.js";
 import type * as siteCharts from "../siteCharts.js";
 import type * as siteChecks from "../siteChecks.js";
 import type * as siteCompetitors from "../siteCompetitors.js";
@@ -1235,6 +1236,7 @@ declare const fullApi: ApiFromModules<{
   siteBackfillRaw: typeof siteBackfillRaw;
   siteBands: typeof siteBands;
   siteBrandRadar: typeof siteBrandRadar;
+  siteBusinessDetail: typeof siteBusinessDetail;
   siteCharts: typeof siteCharts;
   siteChecks: typeof siteChecks;
   siteCompetitors: typeof siteCompetitors;

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -19,6 +20,7 @@ import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { formatDay } from "../../../_components/siteFormat";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { businessRecord, useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -66,6 +68,9 @@ export default function LocalMarketPage() {
   const t = useTranslations("sites.local.market");
   const tl = useTranslations("sites.local");
   const siteId = useSiteId();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
+  const listHref = useSiteListHref(siteId);
   const site = useSite();
   const officeId = useOfficeId();
   const data = useQuery(api.siteLocalMarket.localMarket, { siteId, ...(officeId ? { officeId } : {}) });
@@ -115,6 +120,7 @@ export default function LocalMarketPage() {
       <DataTable
         rows={pager.pageRows}
         rowKey={(row) => row.listingId}
+        onRowClick={(row) => router.push(row.you ? listHref("local") : recordHref(businessRecord({ host: row.websiteHost, listingId: row.listingId })!))}
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
@@ -137,7 +143,7 @@ export default function LocalMarketPage() {
         footer={pager.footer}
         sort={tableSort}
         columns={[
-          { key: "business", header: t("columns.business"), sortable: true, cell: (row) => <BusinessCell name={row.name} sub={row.websiteHost ?? t("noWebsite")} you={row.you} href={row.url} /> },
+          { key: "business", header: t("columns.business"), sortable: true, cell: (row) => <BusinessCell name={row.name} sub={row.websiteHost ?? t("noWebsite")} you={row.you} href={row.you ? listHref("local") : recordHref(businessRecord({ host: row.websiteHost, listingId: row.listingId })!)} /> },
           { key: "category", header: t("columns.category"), sortable: true, cell: (row) => (row.category ? <TagLabel>{row.category}</TagLabel> : <FigureCell value={null} />) },
           { key: "distance", header: t("columns.distance"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.metres} text={km(row.metres)} /> },
           { key: "rating", header: t("columns.rating"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.rating} text={ratingText(row.rating)} /> },
@@ -150,7 +156,7 @@ export default function LocalMarketPage() {
             cell: (row) => row.you ? null : row.watched ? (
               <StatusLabel tone="success">{tl("watched")}</StatusLabel>
             ) : (
-              <Button variant="quiet" className="whitespace-nowrap" disabled={action.isBusy(`watch:${row.listingId}`)} onClick={() => void action.run(() => link({ siteId, listingId: row.listingId, role: "RIVAL" }), { key: `watch:${row.listingId}`, fallbackMessage: tl("watchFailed") })}>
+              <Button variant="quiet" className="whitespace-nowrap" disabled={action.isBusy(`watch:${row.listingId}`)} onClick={(event) => { event.stopPropagation(); void action.run(() => link({ siteId, listingId: row.listingId, role: "RIVAL" }), { key: `watch:${row.listingId}`, fallbackMessage: tl("watchFailed") }); }}>
                 {tl("watchAsRival")}
               </Button>
             ),

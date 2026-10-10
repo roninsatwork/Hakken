@@ -1,0 +1,18 @@
+# Discovery → One business (chatgpt) — the approved look (board "DetailBusiness-chatgpt" of docs/plans/assets/discovery-detail-screens/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Back to Local market
+  page-header: ‹the record's name›
+settings-card: What Hakken sees
+figures
+  figure: Named by Google's AI
+  figure: Recommended by ChatGPT
+  figure: Google rating
+  figure: Pages naming it
+choice: What the list shows: Google's AI · # | ChatGPT · # | Google Maps · # | Pages naming it · # | Posts · #
+search: Find in this list…
+table: Question | It came | You came | Asked
+  table-bar
+    download: Download CSV
+  table-footer

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -17,6 +18,7 @@ import { PageSection } from "../../../../../_components/PageSection";
 import { formatDay, formatNumber } from "../../../../_components/siteFormat";
 import { ListDownload } from "../../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../../_components/useSite";
+import { businessRecord, useSiteListHref, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../../_components/useSiteSort";
 import { BusinessCell, FigureCell, ratingText, useOfficeId, useOfficeName } from "../../_components/LocalParts";
@@ -54,6 +56,9 @@ const nameOf = (row: Business) => row.name;
 export default function LocalMapSearchPage() {
   const t = useTranslations("sites.local.mapSearch");
   const siteId = useSiteId();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
+  const listHref = useSiteListHref(siteId);
   const site = useSite();
   const params = useSearchParams();
   const keyword = params.get("keyword") ?? "";
@@ -100,13 +105,14 @@ export default function LocalMapSearchPage() {
           <DataTable
             rows={pager.pageRows}
             rowKey={(row) => row.listingId}
+            onRowClick={(row) => router.push(row.you ? listHref("local") : recordHref(businessRecord({ host: row.websiteHost, listingId: row.listingId })!))}
             cardHeader={<TableBar footer={pager.footer} noun="businesses" actions={<ListDownload fileName={`${site?.host ?? "site"}-${keyword.replace(/\s+/g, "-")}-on-maps`} rows={sorted ?? []} columns={[{ header: t("columns.place"), value: (row) => row.place }, { header: t("columns.business"), value: (row) => row.name }, { header: t("columns.rating"), value: (row) => row.rating }, { header: t("columns.reviews"), value: (row) => row.reviews }, { header: t("columns.category"), value: (row) => row.category }, { header: t("columns.claimed"), value: (row) => (row.claimed === null ? null : row.claimed ? t("claimed") : t("notClaimed")) }, { header: t("columns.why"), value: (row) => row.reason }]} />} />}
             empty={{ icon: <MapPin className="h-8 w-8 text-muted/30" />, label: t("empty") }}
             footer={pager.footer}
             sort={tableSort}
             columns={[
               { key: "place", header: t("columns.place"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.place} /> },
-              { key: "business", header: t("columns.business"), sortable: true, cell: (row) => <BusinessCell name={row.name} sub={row.websiteHost ?? t("noWebsite")} you={row.you} href={row.url} /> },
+              { key: "business", header: t("columns.business"), sortable: true, cell: (row) => <BusinessCell name={row.name} sub={row.websiteHost ?? t("noWebsite")} you={row.you} href={row.you ? listHref("local") : recordHref(businessRecord({ host: row.websiteHost, listingId: row.listingId })!)} /> },
               { key: "rating", header: t("columns.rating"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.rating} text={ratingText(row.rating)} /> },
               { key: "reviews", header: t("columns.reviews"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.reviews} /> },
               { key: "category", header: t("columns.category"), sortable: true, cell: (row) => (row.category ? <TagLabel>{row.category}</TagLabel> : <FigureCell value={null} />) },

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { AtSign } from "lucide-react";
@@ -14,6 +15,7 @@ import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCha
 import { formatMonth, toCsv } from "../../../_components/siteFormat";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { FigureCell } from "../../local/_components/LocalParts";
@@ -42,6 +44,9 @@ export default function MentionsAgainstRivalsPage() {
   const t = useTranslations("sites.mentions.rivals");
   const tm = useTranslations("sites.mentions");
   const siteId = useSiteId();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
+  const listHref = useSiteListHref(siteId);
   const site = useSite();
   const data = useQuery(api.siteWebMentions.mentionsAgainstRivals, { siteId });
   const total = (data?.businesses ?? []).reduce((sum, row) => sum + row.mentions, 0);
@@ -94,6 +99,7 @@ export default function MentionsAgainstRivalsPage() {
       <DataTable
         rows={pager.pageRows}
         rowKey={hostOf}
+        onRowClick={(row) => router.push(row.you ? listHref("mentions") : recordHref({ kind: "business", business: row.host }))}
         rowClassName={(row) => (row.you ? "bg-brand/5" : "")}
         cardHeader={<TableBar footer={pager.footer} noun="businesses" actions={<ListDownload fileName={fileBase} rows={sorted ?? []} columns={[{ header: t("columns.business"), value: (row) => row.host }, { header: t("columns.mentions"), value: (row) => row.mentions }, { header: t("columns.change"), value: (row) => row.mentions - row.before }, { header: t("columns.well"), value: (row) => row.well }, { header: t("columns.badly"), value: (row) => row.badly }, { header: t("columns.noLink"), value: (row) => row.noLink }, { header: t("columns.share"), value: (row) => (row.share === null ? null : Math.round(row.share * 100)) }]} />}><span className="text-[13px] text-secondary">{t("youAndRivals", { count: Math.max(0, (businesses?.length ?? 1) - 1) })}</span></TableBar>}
         empty={{ icon: <AtSign className="h-8 w-8 text-muted/30" />, label: t("empty") }}

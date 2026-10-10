@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "convex/react";
@@ -19,6 +20,7 @@ import { PageSection } from "../../../../_components/PageSection";
 import { formatDay } from "../../../_components/siteFormat";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { businessRecord, useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { FigureCell, OfficeSwitch, ratingText, useOfficeId } from "../../local/_components/LocalParts";
@@ -71,6 +73,9 @@ export default function WhatCustomersSayPage() {
   const tr = useTranslations("sites.reviews");
   const tl = useTranslations("sites.local");
   const siteId = useSiteId();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
+  const listHref = useSiteListHref(siteId);
   const site = useSite();
   const officeId = useOfficeId();
   const data = useQuery(api.siteReviews.whatCustomersSay, { siteId, ...(officeId ? { officeId } : {}) });
@@ -132,6 +137,7 @@ export default function WhatCustomersSayPage() {
         <DataTable
           rows={topicsPager.pageRows}
           rowKey={(row) => row.topic}
+          onRowClick={(row) => router.push(listHref("reviews", { q: row.topic }))}
           cardHeader={<TableBar footer={topicsPager.footer} noun="topics" actions={<ListDownload fileName={`${fileBase}-topics`} rows={topicsSorted.rows ?? []} columns={[{ header: t("topics.columns.topic"), value: (row) => row.topic }, { header: t("topics.columns.praise"), value: (row) => row.praise }, { header: t("topics.columns.complaints"), value: (row) => row.complaints }, { header: t("topics.columns.rivals"), value: (row) => row.rivalsPraised }, { header: t("topics.columns.against"), value: verdictWords }]} />}>{reviewsRead > 0 ? <span className="text-[13px] text-secondary">{t("topics.from", { count: reviewsRead })}</span> : null}</TableBar>}
           empty={{ icon: <MessagesSquare className="h-8 w-8 text-muted/30" />, label: t("topics.empty") }}
           footer={topicsPager.footer.totalCount > topicsPager.footer.pageSize ? topicsPager.footer : undefined}
@@ -150,6 +156,7 @@ export default function WhatCustomersSayPage() {
         <DataTable
           rows={splitSorted.rows}
           rowKey={(row) => row.listingId}
+          onRowClick={(row) => router.push(row.you ? listHref("reviews") : recordHref(businessRecord({ listingId: row.listingId })!))}
           sort={splitSorted.tableSort}
           rowClassName={(row) => (row.you ? "bg-brand/5" : "")}
           empty={{ icon: <MessagesSquare className="h-8 w-8 text-muted/30" />, label: t("stars.empty") }}

@@ -13366,13 +13366,78 @@
         "you": "Tu"
       }
     },
+    "businessRecord": {
+      "missingTitle": "Nessuna attività scelta",
+      "missingBody": "Apri un'attività da Brand radar, Mercato locale o qualsiasi elenco di attività.",
+      "descriptionLoading": "Un'attività con cui competi",
+      "townAway": "{town}, a {km} km dal tuo ufficio",
+      "labels": {
+        "rival": "Concorrente seguito",
+        "rankings": "Le sue posizioni su Google accanto alle tue"
+      },
+      "visit": "Visita {host}",
+      "openOnGoogle": "Apri su Google",
+      "figures": {
+        "named": "Nominata dall'IA di Google",
+        "namedDetail": "Al mese · tu {you}",
+        "notRead": "Letto per i siti concorrenti che monitori",
+        "shown": "Consigliata da ChatGPT",
+        "ofAnswers": "{count} su {of}",
+        "shownDetail": "Risposte · tu {you} su {of}",
+        "rating": "Valutazione Google",
+        "ratingDetail": "{reviews} recensioni · tu {you} da {youReviews}",
+        "mentions": "Pagine che la nominano",
+        "mentionsDetail": "Ultimi 30 giorni · tu {you}",
+        "ratingNone": "Nessun profilo Google noto · tu {you} da {youReviews}"
+      },
+      "viewLabel": "Cosa mostra l'elenco",
+      "views": {
+        "ai": "IA di Google · {count}",
+        "chatgpt": "ChatGPT · {count}",
+        "map": "Google Maps · {count}",
+        "pages": "Pagine che la nominano · {count}",
+        "posts": "Post · {count}"
+      },
+      "searchPlaceholder": "Cerca in questo elenco…",
+      "noMatch": "Nessun risultato.",
+      "aiEmpty": "L'IA di Google non la nomina in nessuna delle risposte lette da Brand radar.",
+      "notWatched": "Letto solo per i siti concorrenti che monitori.",
+      "chatgptEmpty": "Nessuna risposta di ChatGPT alle tue domande l'ha mostrata.",
+      "mapEmpty": "Non è su Google Maps per le tue ricerche, o il suo profilo non è noto.",
+      "pagesEmpty": "Nessuna pagina l'ha nominata nell'ultimo anno.",
+      "postsEmpty": "Nulla pubblicato o cambiato sul suo profilo per ora.",
+      "place": "{place}°",
+      "notNamed": "Non nominato",
+      "notShown": "Non mostrato",
+      "notOnMap": "Non tra i primi 20",
+      "linksToIt": "Rimanda a lei",
+      "noLink": "Nessun link",
+      "columns": {
+        "question": "Domanda",
+        "asked": "Poste al mese",
+        "it": "Lei",
+        "you": "Tu",
+        "page": "Sua pagina citata",
+        "day": "Posta il",
+        "search": "Ricerca",
+        "volume": "Volume",
+        "date": "Data",
+        "kind": "Tipo",
+        "tone": "Tono",
+        "link": "Link",
+        "what": "Cosa",
+        "detail": "Dettaglio",
+        "address": "Pagina"
+      }
+    },
     "seen": {
       "links": {
         "visit": "Visitalo",
         "seeQuestion": "Vedi la domanda",
         "yourPages": "Le tue pagine",
         "seeWebsite": "Vedi il sito",
-        "seePage": "Vedi la pagina"
+        "seePage": "Vedi la pagina",
+        "yourReviews": "Le tue recensioni"
       },
       "website": {
         "notQuoted": "L'IA di Google non ha citato {text} nelle risposte su di te o sui concorrenti.",
@@ -13409,6 +13474,21 @@
         "firstLines": "Rispondi alla domanda nelle prime righe di questa pagina: chi aiuti, quanto costa e cosa dicono i clienti.",
         "answerBetter": "Rispondi meglio alle stesse domande su una tua pagina.",
         "getListedOn": "Fatti elencare su {text}, citato al suo posto."
+      },
+      "business": {
+        "aheadInAi": "L'IA di Google nomina {text} in {a} risposte al mese, contro le tue {b}.",
+        "behindInAi": "L'IA di Google nomina {text} in {a} risposte al mese; tu sei nominato in {b}.",
+        "biggestLead": "Il suo vantaggio maggiore è “{text}”, posta {a} volte al mese, dove tu non sei nominato.",
+        "chatgptAhead": "ChatGPT la mostra in {a} delle risposte alle tue {c} domande, e te in {b}.",
+        "answersFaster": "Risponde alle recensioni in {count, plural, one {# giorno} other {# giorni}} in media; tu ne impieghi {b}.",
+        "nothingKnown": "Non si sa ancora nulla di {text}: non è un concorrente che segui e non è su Google Maps vicino al tuo ufficio.",
+        "notWatched": "{text} non è tra i concorrenti che segui, quindi si conosce solo ciò che ne mostrano Google Maps e ChatGPT.",
+        "answerQuestion": "Rispondi a “{text}” sul tuo sito.",
+        "getListedOn": "Fatti elencare su {text}, che l'IA di Google cita accanto a lei.",
+        "answerReviews": "Rispondi a ogni nuova recensione entro un giorno e chiedine una a ogni cliente.",
+        "moreReviews": "Su Google ha {a} recensioni contro le tue {b}.",
+        "mapOnly": "{text} è un concorrente che segui su Google Maps; il suo sito non è tra i concorrenti che monitori, quindi le risposte IA di Google e il web non vengono letti per lei.",
+        "askForReviews": "Chiedi a ogni cliente una recensione su Google: è avanti di {count, plural, one {# recensione} other {# recensioni}}."
       }
     }
   },

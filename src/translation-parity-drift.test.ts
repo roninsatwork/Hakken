@@ -37,6 +37,8 @@ describe('the Italian catalogue is translated, not copied', () => {
    *     to translate.
    */
   const IDENTICAL_ON_PURPOSE: ReadonlyMap<string, string> = new Map([
+    ['sites.businessRecord.views.chatgpt', 'Product name (ChatGPT) and a count'],
+    ['sites.businessRecord.views.map', 'Product name (Google Maps) and a count'],
     ['sidebar.postureStudio', 'product name'],
     ['admin.newsFollows.add.namePlaceholder', "an example person's name, the same in every language"],
     ['sidebar.roninsRun', 'product name'],

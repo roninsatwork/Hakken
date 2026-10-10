@@ -88,7 +88,7 @@ export function BusinessCell({ name, sub, href, you }: { name: string; sub: stri
   return (
     <span className="flex min-w-0 flex-col">
       {href ? (
-        <Link href={href} className="text-[13px] text-foreground hover:underline">{title}</Link>
+        <Link href={href} onClick={(event) => event.stopPropagation()} className="text-[13px] text-foreground hover:underline">{title}</Link>
       ) : (
         <span className="text-[13px] text-foreground">{title}</span>
       )}

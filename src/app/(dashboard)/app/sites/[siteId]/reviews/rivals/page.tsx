@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Scale } from "lucide-react";
@@ -14,6 +15,7 @@ import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCha
 import { formatMonth, formatNumber, toCsv } from "../../../_components/siteFormat";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { businessRecord, useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { BusinessCell, FigureCell, LocalSetupNotice, OfficeSwitch, ratingText, useOfficeId, useOfficeName } from "../../local/_components/LocalParts";
@@ -53,6 +55,9 @@ export default function ReviewsAgainstRivalsPage() {
   const tr = useTranslations("sites.reviews");
   const tl = useTranslations("sites.local");
   const siteId = useSiteId();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
+  const listHref = useSiteListHref(siteId);
   const site = useSite();
   const officeId = useOfficeId();
   const officeName = useOfficeName();
@@ -124,12 +129,13 @@ export default function ReviewsAgainstRivalsPage() {
       <DataTable
         rows={pager.pageRows}
         rowKey={(row) => row.listingId}
+        onRowClick={(row) => router.push(row.you ? listHref("reviews") : recordHref(businessRecord({ listingId: row.listingId })!))}
         cardHeader={<TableBar footer={pager.footer} noun="listings" actions={<ListDownload fileName={`${site?.host ?? "site"}-reviews-against-rivals`} rows={sorted ?? []} columns={[{ header: t("columns.business"), value: (row) => row.name }, { header: t("columns.listing"), value: (row) => tr(`sources.${row.source}`) }, { header: t("columns.rating"), value: (row) => row.rating }, { header: t("columns.reviews"), value: (row) => row.reviews }, { header: t("columns.new"), value: (row) => row.newIn30 }, { header: t("columns.answered"), value: (row) => (row.answered === null ? null : Math.round(row.answered * 100)) }, { header: t("columns.days"), value: (row) => (row.daysToAnswer === null ? null : Math.round(row.daysToAnswer)) }]} />}><span className="text-[13px] text-secondary">{t("youAndRivals", { count: rivals })}</span></TableBar>}
         empty={{ icon: <Scale className="h-8 w-8 text-muted/30" />, label: t("empty") }}
         footer={pagedOnly(pager.footer)}
         sort={tableSort}
         columns={[
-          { key: "business", header: t("columns.business"), sortable: true, cell: (row) => <BusinessCell name={row.name} sub={null} you={row.you} /> },
+          { key: "business", header: t("columns.business"), sortable: true, cell: (row) => <BusinessCell name={row.name} sub={null} you={row.you} href={row.you ? listHref("reviews") : recordHref(businessRecord({ listingId: row.listingId })!)} /> },
           { key: "listing", header: t("columns.listing"), cell: (row) => <TagLabel>{tr(`sources.${row.source}`)}</TagLabel> },
           { key: "rating", header: t("columns.rating"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.rating} text={ratingText(row.rating)} /> },
           { key: "reviews", header: t("columns.reviews"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.reviews} /> },

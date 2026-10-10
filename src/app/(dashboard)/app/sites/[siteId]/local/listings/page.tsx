@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -20,6 +21,7 @@ import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { PageSection } from "../../../../_components/PageSection";
 import { formatDay } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
+import { businessRecord, useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { BusinessCell, FigureCell, LocalSetupNotice, ratingText, useOfficeName } from "../_components/LocalParts";
@@ -75,6 +77,9 @@ export default function LocalListingsPage() {
   const t = useTranslations("sites.local.listings");
   const tl = useTranslations("sites.local");
   const siteId = useSiteId();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
+  const listHref = useSiteListHref(siteId);
   const officeName = useOfficeName();
   const data = useQuery(api.siteLocalListings.localListings, { siteId });
   const find = useMutation(api.siteLocalListings.findListing);
@@ -142,6 +147,7 @@ export default function LocalListingsPage() {
         <DataTable
           rows={officesPager.pageRows}
           rowKey={(row) => row.listingId}
+          onRowClick={(row) => router.push(row.source === "GOOGLE" ? `/app/sites/${siteId}/local?office=${row.listingId}` : listHref("reviews"))}
           cardHeader={<TableBar footer={officesPager.footer} noun="listings" />}
           empty={{ icon: <Store className="h-8 w-8 text-muted/30" />, label: t("yoursEmpty") }}
           footer={pagedOnly(officesPager.footer)}
@@ -231,12 +237,13 @@ export default function LocalListingsPage() {
         <DataTable
           rows={rivalsPager.pageRows}
           rowKey={(row) => row.key}
+          onRowClick={(row) => router.push(recordHref(businessRecord({ host: row.websiteHost, listingId: row.listings[0] ?? null })!))}
           cardHeader={<TableBar footer={rivalsPager.footer} noun="rivals" />}
           empty={{ icon: <Store className="h-8 w-8 text-muted/30" />, label: t("rivalsEmpty") }}
           footer={pagedOnly(rivalsPager.footer)}
           sort={rivalsSorted.tableSort}
           columns={[
-            { key: "business", header: t("columns.business"), sortable: true, cell: (row) => <BusinessCell name={row.name} sub={row.websiteHost ?? t("noWebsite")} href={row.url} /> },
+            { key: "business", header: t("columns.business"), sortable: true, cell: (row) => <BusinessCell name={row.name} sub={row.websiteHost ?? t("noWebsite")} href={recordHref(businessRecord({ host: row.websiteHost, listingId: row.listings[0] ?? null })!)} /> },
             { key: "against", header: t("columns.against"), sortable: true, cell: (row) => <span className="text-[12px] text-secondary">{row.against ?? t("everyOffice")}</span> },
             { key: "reviews", header: t("columns.reviews"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.reviews} /> },
             { key: "rating", header: t("columns.rating"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.rating} text={ratingText(row.rating)} /> },

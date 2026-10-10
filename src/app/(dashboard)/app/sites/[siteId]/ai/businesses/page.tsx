@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -16,6 +17,7 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { ExternalUrlCell } from "../../../_components/SiteCells";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { businessRecord, useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -53,6 +55,9 @@ const nameOf = (row: Row) => `${row.host ?? ""}${row.name}`;
 export default function BusinessesRecommendedPage() {
   const t = useTranslations("sites.aiApps.businesses");
   const siteId = useSiteId();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
+  const listHref = useSiteListHref(siteId);
   const site = useSite();
   const data = useQuery(api.siteAiApps.businessesRecommended, { siteId });
   const [search, setSearch, term] = useSiteSearch();
@@ -102,6 +107,8 @@ export default function BusinessesRecommendedPage() {
       <DataTable
         rows={pager.pageRows}
         rowKey={(row) => nameOf(row)}
+        rowClickable={(row) => row.you || Boolean(businessRecord({ host: row.host, listingId: null }))}
+        onRowClick={(row) => router.push(row.you ? listHref("local") : recordHref(businessRecord({ host: row.host, listingId: null })!))}
         rowClassName={(row) => (row.you ? "bg-brand/5" : "")}
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={

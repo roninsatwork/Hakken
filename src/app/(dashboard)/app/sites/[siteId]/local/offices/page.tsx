@@ -15,6 +15,7 @@ import { PageSection } from "../../../../_components/PageSection";
 import { CUT_COLUMN } from "../../../_components/SiteCells";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { BusinessCell, FigureCell, LocalSetupNotice, OfficeSwitch, ratingText, useOfficeName } from "../_components/LocalParts";
@@ -66,6 +67,7 @@ export default function LocalOfficesPage() {
   const t = useTranslations("sites.local.offices");
   const tp = useTranslations("sites.local.profile");
   const siteId = useSiteId();
+  const listHref = useSiteListHref(siteId);
   const site = useSite();
   const router = useRouter();
   const officeName = useOfficeName();
@@ -135,6 +137,7 @@ export default function LocalOfficesPage() {
         <DataTable
           rows={searchesPager.pageRows}
           rowKey={(row) => row.keyword}
+          onRowClick={(row) => router.push(listHref("local/maps/search", { keyword: row.keyword }))}
           cardHeader={<TableBar footer={searchesPager.footer} noun="searches" actions={<ListDownload fileName={`${fileBase}-searches`} rows={searchesSorted.rows ?? []} columns={[{ header: t("columns.search"), value: (row) => row.keyword }, { header: t("columns.volume"), value: (row) => row.volume }, ...shown.map((office, at) => ({ header: office.town ?? office.name, value: (row: SearchRow) => placeText(row.places[at]) })), { header: t("columns.top"), value: (row) => row.top.join(" · ") }]} />} />}
           empty={{ icon: <Store className="h-8 w-8 text-muted/30" />, label: t("searchesEmpty") }}
           footer={searchesPager.footer}

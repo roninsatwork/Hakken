@@ -21,7 +21,7 @@ import { ENGINE_SCREEN_ORDER, useEngineLabel } from "@/src/ui/components/seo/eng
 import { PageSection } from "../../../../../_components/PageSection";
 import { ExternalUrlCell, RecordLinkCell } from "../../../../_components/SiteCells";
 import { formatDay } from "../../../../_components/siteFormat";
-import { useRecordBack, useRecordKey, useSiteListHref, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
+import { businessRecord, useRecordBack, useRecordKey, useSiteListHref, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../../_components/useSite";
 import { useSitePager } from "../../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../../_components/useSiteSort";
@@ -189,7 +189,7 @@ export default function SiteAnswerPage() {
                   rowClassName={(row) => (row.you ? "bg-brand/5" : "")}
                   // A business opens One business, yours Business profile; a card with no website has nothing to open (discovery-detail-and-hakken-sees-plan.md §4).
                   rowClickable={(row) => row.you || Boolean(row.host)}
-                  onRowClick={(row) => router.push(row.you ? listHref("local") : recordHref({ kind: "business", business: row.host ?? row.name }))}
+                  onRowClick={(row) => router.push(row.you ? listHref("local") : recordHref(businessRecord({ host: row.host })!))}
                   cardHeader={<TableBar footer={businessesPager.footer} noun="businesses" />}
                   empty={{ icon: <MessageSquareQuote className="h-8 w-8 text-muted/30" />, label: t("noBusinesses") }}
                   sort={businessesSorted.tableSort}
@@ -201,7 +201,7 @@ export default function SiteAnswerPage() {
                       cell: (row) => (
                         <span className="flex min-w-0 flex-col">
                           {row.you || row.host
-                            ? <RecordLinkCell href={row.you ? listHref("local") : recordHref({ kind: "business", business: row.host ?? row.name })}>{row.you ? t("you", { name: row.name }) : row.name}</RecordLinkCell>
+                            ? <RecordLinkCell href={row.you ? listHref("local") : recordHref(businessRecord({ host: row.host })!)}>{row.you ? t("you", { name: row.name }) : row.name}</RecordLinkCell>
                             : <span className="text-[13px] text-foreground">{row.name}</span>}
                           {row.host ? <ExternalUrlCell url={`https://${row.host}`} label={row.host} /> : <span className="text-[12px] text-muted">{t("noWebsite")}</span>}
                         </span>

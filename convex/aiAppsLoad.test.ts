@@ -100,6 +100,8 @@ describe("AI app screens at five times a large client", () => {
       ["read but not cited", api.siteAiApps.readNotCited, { siteId }],
       // The page it opens (discovery-detail-and-hakken-sees-plan.md §3): every answer read, and the Brand radar readings.
       ["one page", api.siteAiPageDetail.aiPageDetail, { siteId, url: "https://read12.co.uk/a-long-page-address/0/" }],
+      // One business, shown on every answer's cards.
+      ["one business", api.siteBusinessDetail.businessDetail, { siteId, business: "business1.co.uk" }],
       ["ai demand", api.siteAiDemand.aiDemand, { siteId }],
       ["ai overview gaps", api.siteAiOverviewGaps.overviewGaps, { siteId }],
     ];

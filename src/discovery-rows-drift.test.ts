@@ -28,21 +28,11 @@ const STAYS: Record<string, { tables: number; why: string }> = {
  * same change.
  */
 const PENDING: Record<string, number> = {
-  "src/app/(dashboard)/app/sites/[siteId]/ai/businesses/page.tsx": 1,
   "src/app/(dashboard)/app/sites/[siteId]/ai/demand/page.tsx": 1,
   "src/app/(dashboard)/app/sites/[siteId]/assets/page.tsx": 1,
   "src/app/(dashboard)/app/sites/[siteId]/backlinks/new-lost/page.tsx": 1,
   "src/app/(dashboard)/app/sites/[siteId]/backlinks/where/page.tsx": 1,
-  "src/app/(dashboard)/app/sites/[siteId]/local/activity/page.tsx": 2,
-  "src/app/(dashboard)/app/sites/[siteId]/local/listings/page.tsx": 2,
-  "src/app/(dashboard)/app/sites/[siteId]/local/maps/search/page.tsx": 1,
-  "src/app/(dashboard)/app/sites/[siteId]/local/market/page.tsx": 1,
-  "src/app/(dashboard)/app/sites/[siteId]/local/offices/page.tsx": 1,
-  "src/app/(dashboard)/app/sites/[siteId]/local/page.tsx": 2,
   "src/app/(dashboard)/app/sites/[siteId]/mentions/page.tsx": 1,
-  "src/app/(dashboard)/app/sites/[siteId]/mentions/rivals/page.tsx": 1,
-  "src/app/(dashboard)/app/sites/[siteId]/reviews/rivals/page.tsx": 1,
-  "src/app/(dashboard)/app/sites/[siteId]/reviews/say/page.tsx": 2,
 };
 
 const count = (text: string, pattern: RegExp) => (text.match(pattern) ?? []).length;

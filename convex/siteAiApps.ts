@@ -67,8 +67,10 @@ const pathOf = (url: string) => {
     return url;
   }
 };
-const sameHost = (candidate: string | null | undefined, host: string) => Boolean(candidate && (candidate === host || candidate.endsWith(`.${host}`)));
-const normalName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+/** Whether a host is this website's or one of its subdomains. */
+export const sameHost = (candidate: string | null | undefined, host: string) => Boolean(candidate && (candidate === host || candidate.endsWith(`.${host}`)));
+/** A business's name as compared across Google, the AI apps and Brand radar: lowercase letters and digits, single spaces. */
+export const normalName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
 
 export const businessesRecommended = tenantQuery({
   args: { siteId: v.id("companyWebsites") },

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Activity } from "lucide-react";
@@ -15,11 +16,12 @@ import { PageSection } from "../../../../_components/PageSection";
 import { formatDay } from "../../../_components/siteFormat";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { businessRecord, useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { LocalSetupNotice, useOfficeName } from "../_components/LocalParts";
-import { useHoursChangeWords } from "../_components/profileDetails";
+import { useActivityWords } from "../_components/profileDetails";
 
 type Kind = "POST" | "OFFER" | "EVENT" | "CATEGORY_ADDED" | "CATEGORY_REMOVED" | "HOURS_CHANGED" | "NAME_CHANGED" | "WEBSITE_CHANGED" | "RATING_CHANGE" | "PHOTOS_ADDED";
 type Line = { day: string; listingId: string; name: string; kind: Kind; text: string | null; from: number | null; to: number | null };
@@ -59,9 +61,11 @@ const DAY_MS = 86_400_000;
 export default function LocalActivityPage() {
   const t = useTranslations("sites.local.activity");
   const siteId = useSiteId();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
+  const listHref = useSiteListHref(siteId);
   const site = useSite();
   const officeName = useOfficeName();
-  const hoursWords = useHoursChangeWords();
   const data = useQuery(api.siteLocalMarket.rivalActivity, { siteId });
   const [search, setSearch, term] = useSiteSearch();
   const [rival, setRival] = useSiteParam<string>("rival", "");
@@ -76,18 +80,7 @@ export default function LocalActivityPage() {
   const questionsSorted = useSiteSortedList(data?.questions as Question[] | undefined, QUESTION_SORTS, { opening: "asked", name: questionName, table: "questions" });
   const questionsPager = useSitePager(questionsSorted.rows, { isLoading: data === undefined, table: "questions" });
 
-  const detail = (row: Line): string => {
-    switch (row.kind) {
-      case "RATING_CHANGE": return t("details.rating", { from: row.from?.toFixed(1) ?? "", to: row.to?.toFixed(1) ?? "" });
-      case "PHOTOS_ADDED": return t("details.photos", { count: (row.to ?? 0) - (row.from ?? 0), total: row.to ?? 0 });
-      case "CATEGORY_ADDED": return t("details.categoryAdded", { category: row.text ?? "" });
-      case "CATEGORY_REMOVED": return t("details.categoryRemoved", { category: row.text ?? "" });
-      case "HOURS_CHANGED": return hoursWords(row.text ?? "");
-      case "NAME_CHANGED": return t("details.name", { name: row.text ?? "" });
-      case "WEBSITE_CHANGED": return t("details.website", { website: row.text ?? "" });
-      default: return row.text ? `"${row.text}"` : "–";
-    }
-  };
+  const { detail } = useActivityWords();
   const answered = (row: Question) => {
     if (!row.answeredDay) {
       const days = Math.max(0, Math.round((Date.now() - Date.parse(row.day)) / DAY_MS));
@@ -115,6 +108,7 @@ export default function LocalActivityPage() {
       <DataTable
         rows={pager.pageRows}
         rowKey={(row) => `${row.day}|${row.listingId}|${row.kind}|${row.text ?? ""}|${row.to ?? ""}`}
+        onRowClick={(row) => router.push(recordHref(businessRecord({ listingId: row.listingId })!))}
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
@@ -144,6 +138,7 @@ export default function LocalActivityPage() {
         <DataTable
           rows={questionsPager.pageRows}
           rowKey={(row) => `${row.listingId}|${row.day}|${row.text}`}
+          onRowClick={(row) => router.push(row.yours ? listHref("local") : recordHref(businessRecord({ listingId: row.listingId })!))}
           empty={{ icon: <Activity className="h-8 w-8 text-muted/30" />, label: t("questionsEmpty") }}
           // As drawn, without a footer — until there is more than one page of questions.
           footer={questionsPager.footer.totalCount > questionsPager.footer.pageSize ? questionsPager.footer : undefined}

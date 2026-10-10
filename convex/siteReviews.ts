@@ -35,6 +35,20 @@ async function ownListings(ctx: Reader, site: Site, officeId: Id<"listings"> | u
 }
 
 /** The average of how many days the owner took to reply, over the reviews answered since `since`. */
+/**
+ * A business's reviews in three figures, as Reviews against rivals counts
+ * them: new in the last 30 days, the share of the last year's answered, and
+ * the days a reply takes on average — and One business beside it.
+ */
+export function reviewFiguresOf(reviews: readonly StoredReview[], now = Date.now()) {
+  const recent = reviews.filter((review) => review.day >= dayBefore(365, now));
+  return {
+    newIn30: reviews.length > 0 ? reviews.filter((review) => review.day >= dayBefore(30, now)).length : null,
+    answered: recent.length > 0 ? recent.filter((review) => review.replyDay).length / recent.length : null,
+    daysToAnswer: daysToAnswer(reviews, dayBefore(365, now)),
+  };
+}
+
 function daysToAnswer(reviews: readonly StoredReview[], since: string): number | null {
   // A reply dated only "a year ago" says it was answered, never how fast.
   const waits = reviews.filter((review) => review.replyDay && !review.replyRough && review.day >= since).map((review) => daysBetween(review.day, review.replyDay!));
@@ -164,7 +178,6 @@ export const reviewsAgainstRivals = tenantQuery({
     for (const { listing, you } of businesses) {
       const reviews = await readReviews(ctx, listing._id);
       held.set(listing._id, reviews);
-      const recent = reviews.filter((review) => review.day >= dayBefore(365, now));
       rows.push({
         listingId: listing._id,
         name: listing.name,
@@ -172,9 +185,7 @@ export const reviewsAgainstRivals = tenantQuery({
         you,
         rating: listing.rating ?? null,
         reviews: listing.reviews ?? null,
-        newIn30: reviews.length > 0 ? reviews.filter((review) => review.day >= dayBefore(30, now)).length : null,
-        answered: recent.length > 0 ? recent.filter((review) => review.replyDay).length / recent.length : null,
-        daysToAnswer: daysToAnswer(reviews, dayBefore(365, now)),
+        ...reviewFiguresOf(reviews, now),
       });
     }
     const months = Array.from({ length: 12 }, (_, at) => {

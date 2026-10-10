@@ -138,6 +138,18 @@ export function siteRecordOf(kind: string, key: string): SiteRecord | null {
   }
 }
 
+/**
+ * One business's record, by its website when it has one, else its Google
+ * profile (`listing:<id>`) — the key One business finds it by
+ * (discovery-detail-and-hakken-sees-plan.md §3). Null when neither is known,
+ * as for a ChatGPT card with no website: nothing is held to open.
+ */
+export function businessRecord(from: { host?: string | null; listingId?: string | null }): SiteRecord | null {
+  if (from.host) return { kind: "business", business: from.host };
+  if (from.listingId) return { kind: "business", business: `listing:${from.listingId}` };
+  return null;
+}
+
 /** The menu page a kind of record belongs to. */
 export function recordParent(kind: SiteRecord["kind"]): SitePage {
   const parent = RECORDS[kind].parent;

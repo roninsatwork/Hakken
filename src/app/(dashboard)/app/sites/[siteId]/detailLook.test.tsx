@@ -7,6 +7,7 @@ import { expectApprovedLook } from "@/src/test/lookOutline";
 import OneWebsitePage from "./radar/sources/website/page";
 import OneQuestionPage from "./radar/question/page";
 import OnePagePage from "./ai/read/page/page";
+import OneBusinessPage from "./local/market/business/page";
 
 /**
  * Discovery's detail screens hold to the looks Anthony approved on the canvas
@@ -94,6 +95,28 @@ const PAGE = {
   },
 };
 
+const BUSINESS = {
+  found: true,
+  name: "Brightside Digital",
+  host: "brightsidedigital.co.uk",
+  category: "Website designer",
+  town: "Guildford",
+  km: 1.2,
+  profileUrl: "https://www.google.com/maps?cid=123",
+  rivalId: "rival_1",
+  watched: true,
+  figures: { named: 121, namedYou: 64, shown: 8, shownYou: 3, answers: 9, rating: 4.9, reviews: 212, ratingYou: 4.8, reviewsYou: 127, mentions: 41, mentionsYou: 23, daysToAnswer: 1, daysToAnswerYou: 3 },
+  questions: many(38, (at) => ({ question: at === 0 ? "how much does a website cost in the uk" : `question ${at}`, volume: 2900 - at * 50, it: 1, you: at % 2 ? 2 : null, page: at === 0 ? "https://brightsidedigital.co.uk/website-cost-guide/" : null })),
+  answers: many(8, (at) => ({ question: at === 0 ? "Who is the best web design agency in Guildford?" : `answer ${at}`, answerId: `answer_${at}`, day: "2026-10-08", it: 1, you: at === 0 ? 3 : null })),
+  map: many(9, (at) => ({ search: at === 0 ? "web design guildford" : `search ${at}`, volume: 590 - at * 10, it: 1, you: at === 0 ? 2 : null })),
+  mentions: many(41, (at) => ({ url: `https://news${at}.co.uk/best`, host: `news${at}.co.uk`, title: at === 0 ? "The 10 best web design agencies in Surrey for 2026" : `Story ${at}`, day: "2026-10-07", kind: 1, tone: 1, linked: at % 2 })),
+  posts: many(6, (at) => ({ day: "2026-10-06", kind: at === 0 ? "OFFER" : "POST", text: at === 0 ? "Free website check for Surrey businesses" : `Post ${at}`, from: null, to: null })),
+  seen: {
+    says: [{ code: "aheadInAi", text: "Brightside Digital", a: 121, b: 64 }, { code: "biggestLead", text: "how much does a website cost in the uk", a: 2900 }],
+    steps: [{ code: "answerQuestion", text: "how much does a website cost in the uk", link: "seeQuestion", to: { record: "question", key: "how much does a website cost in the uk" } }],
+  },
+};
+
 function answer(queries: Record<string, unknown>) {
   vi.mocked(useQuery).mockImplementation(answerQueries({ "sites:getMySite": SITE, "users:getMe": { role: "SUPER_ADMIN" }, ...queries }));
   vi.mocked(useMutation).mockImplementation((() => vi.fn(async () => null)) as never);
@@ -120,6 +143,22 @@ describe("Discovery's detail screens' approved looks", () => {
       const { container } = render(<OneWebsitePage />);
       await screen.findByText(row);
       await expectApprovedLook(container, PLAN, board, `Discovery → One website${view ? ` (${view})` : ""}`);
+    });
+  }
+
+  for (const [view, board, row] of [
+    ["", "DetailBusiness", "how much does a website cost in the uk"],
+    ["chatgpt", "DetailBusiness-chatgpt", "Who is the best web design agency in Guildford?"],
+    ["map", "DetailBusiness-map", "web design guildford"],
+    ["pages", "DetailBusiness-pages", "The 10 best web design agencies in Surrey for 2026"],
+    ["posts", "DetailBusiness-posts", "\"Free website check for Surrey businesses\""],
+  ] as const) {
+    it(`One business${view ? `, ${view}` : ""}`, async () => {
+      at("/app/sites/site_1/local/market/business", `business=brightsidedigital.co.uk${view ? `&view=${view}` : ""}`);
+      answer({ "siteBusinessDetail:businessDetail": BUSINESS });
+      const { container } = render(<OneBusinessPage />);
+      await screen.findAllByText(row);
+      await expectApprovedLook(container, PLAN, board, `Discovery → One business${view ? ` (${view})` : ""}`);
     });
   }
 

@@ -69,14 +69,15 @@ export const localMarket = tenantQuery({
   },
 });
 
-const activityKindValidator = v.union(
+/** What a rival's activity line says happened: a post, an offer, a change to its profile. */
+export const activityKindValidator = v.union(
   ...ACTIVITY_KINDS.filter((kind) => kind !== "QUESTION").map((kind) => v.literal(kind)),
   v.literal("RATING_CHANGE"),
   v.literal("PHOTOS_ADDED"),
 );
 
-/** The changes a listing's weeks show: its rating moving, photos added. */
-function weekLines(weeks: Awaited<ReturnType<typeof readListingWeeks>>) {
+/** A listing's weekly readings as the changes between them: a rating moving, reviews or photos added. */
+export function weekLines(weeks: Awaited<ReturnType<typeof readListingWeeks>>) {
   const lines: Array<{ kind: "RATING_CHANGE" | "PHOTOS_ADDED"; day: string; from: number; to: number }> = [];
   for (let at = 1; at < weeks.length; at += 1) {
     const [was, now] = [weeks[at - 1], weeks[at]];

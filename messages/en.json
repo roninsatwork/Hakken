@@ -13366,13 +13366,78 @@
         "you": "You came"
       }
     },
+    "businessRecord": {
+      "missingTitle": "No business chosen",
+      "missingBody": "Open a business from Brand radar, Local market or any list of businesses.",
+      "descriptionLoading": "A business you are up against",
+      "townAway": "{town}, {km} km from your office",
+      "labels": {
+        "rival": "Rival you watch",
+        "rankings": "Its Google rankings beside yours"
+      },
+      "visit": "Visit {host}",
+      "openOnGoogle": "Open on Google",
+      "figures": {
+        "named": "Named by Google's AI",
+        "namedDetail": "A month · you {you}",
+        "notRead": "Read for the competitor websites you track",
+        "shown": "Recommended by ChatGPT",
+        "ofAnswers": "{count} of {of}",
+        "shownDetail": "Answers · you {you} of {of}",
+        "rating": "Google rating",
+        "ratingDetail": "{reviews} reviews · you {you} from {youReviews}",
+        "mentions": "Pages naming it",
+        "mentionsDetail": "Last 30 days · you {you}",
+        "ratingNone": "No Google profile known · you {you} from {youReviews}"
+      },
+      "viewLabel": "What the list shows",
+      "views": {
+        "ai": "Google's AI · {count}",
+        "chatgpt": "ChatGPT · {count}",
+        "map": "Google Maps · {count}",
+        "pages": "Pages naming it · {count}",
+        "posts": "Posts · {count}"
+      },
+      "searchPlaceholder": "Find in this list…",
+      "noMatch": "Nothing matches that.",
+      "aiEmpty": "Google's AI names it in none of the answers Brand radar reads.",
+      "notWatched": "Read only for the competitor websites you track.",
+      "chatgptEmpty": "No ChatGPT answer to your questions has shown it.",
+      "mapEmpty": "It is not on Google Maps for your searches, or its profile is not known.",
+      "pagesEmpty": "No page has named it in the last year.",
+      "postsEmpty": "Nothing posted or changed on its profile yet.",
+      "place": "{place, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
+      "notNamed": "Not named",
+      "notShown": "Not shown",
+      "notOnMap": "Not in the top 20",
+      "linksToIt": "Links to it",
+      "noLink": "No link",
+      "columns": {
+        "question": "Question",
+        "asked": "Asked a month",
+        "it": "It came",
+        "you": "You came",
+        "page": "Its page quoted",
+        "day": "Asked",
+        "search": "Search",
+        "volume": "Volume",
+        "date": "Date",
+        "kind": "Kind",
+        "tone": "Tone",
+        "link": "Link",
+        "what": "What",
+        "detail": "Detail",
+        "address": "Page"
+      }
+    },
     "seen": {
       "links": {
         "visit": "Visit it",
         "seeQuestion": "See the question",
         "yourPages": "Your pages",
         "seeWebsite": "See the website",
-        "seePage": "See the page"
+        "seePage": "See the page",
+        "yourReviews": "Your reviews"
       },
       "website": {
         "notQuoted": "Google's AI has not quoted {text} in answers about you or your rivals.",
@@ -13409,6 +13474,21 @@
         "firstLines": "Answer the question in this page's first lines: who you help, what it costs and what clients say.",
         "answerBetter": "Answer the same questions better on a page of your own.",
         "getListedOn": "Get listed on {text}, cited in its place."
+      },
+      "business": {
+        "aheadInAi": "Google's AI names {text} in {a} answers a month to your {b}.",
+        "behindInAi": "Google's AI names {text} in {a} answers a month; you are named in {b}.",
+        "biggestLead": "Its biggest lead is “{text}”, asked {a} times a month, where you are not named.",
+        "chatgptAhead": "ChatGPT shows it in {a} of your {c} questions' answers, and you in {b}.",
+        "answersFaster": "It answers reviews in {count, plural, one {# day} other {# days}} on average; you take {b}.",
+        "nothingKnown": "Nothing is held about {text} yet: it is not a rival you watch, and not on Google Maps near your office.",
+        "notWatched": "{text} is not one of the rivals you watch, so only what Google Maps and ChatGPT show of it is known.",
+        "answerQuestion": "Answer “{text}” on your own site.",
+        "getListedOn": "Get listed on {text}, which Google's AI quotes beside it.",
+        "answerReviews": "Answer each new review within a day, and ask every client for one.",
+        "moreReviews": "On Google it has {a} reviews to your {b}.",
+        "mapOnly": "{text} is a rival you watch on Google Maps; its website is not one of the competitors you track, so Google's AI answers and the web are not read for it.",
+        "askForReviews": "Ask every client for a Google review: it is {count, plural, one {# review} other {# reviews}} ahead."
       }
     }
   },

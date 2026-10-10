@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useMemo } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
@@ -20,6 +21,7 @@ import { formatDay } from "../../_components/siteFormat";
 import { VisitLink } from "../../_components/VisitLink";
 import { ListDownload } from "../../_components/SiteDownloads";
 import { useSiteId, useSite } from "../../_components/useSite";
+import { businessRecord, useSiteListHref, useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
 import { BusinessCell, FigureCell, LocalSetupNotice, OfficeSwitch, ratingText, useOfficeId } from "./_components/LocalParts";
@@ -71,6 +73,9 @@ export default function LocalProfilePage() {
   const t = useTranslations("sites.local.profile");
   const tl = useTranslations("sites.local");
   const siteId = useSiteId();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
+  const listHref = useSiteListHref(siteId);
   const site = useSite();
   const officeId = useOfficeId();
   const data = useQuery(api.siteLocalProfile.businessProfile, { siteId, ...(officeId ? { officeId } : {}) });
@@ -147,11 +152,13 @@ export default function LocalProfilePage() {
             <DataTable
               rows={alsoPager.pageRows}
               rowKey={(row) => row.key}
+              rowClickable={(row) => row.you || Boolean(businessRecord({ host: row.websiteHost, listingId: row.listingId }))}
+              onRowClick={(row) => router.push(row.you ? listHref("local") : recordHref(businessRecord({ host: row.websiteHost, listingId: row.listingId })!))}
               cardHeader={<TableBar footer={{ ...alsoPager.footer, totalCount: Math.max(0, alsoPager.footer.totalCount - 1) }} noun="businesses" actions={<ListDownload fileName={`${fileBase}-also`} rows={alsoSorted.rows ?? []} columns={[{ header: t("also.columns.business"), value: (row) => row.name }, { header: t("also.columns.category"), value: (row) => row.category }, { header: t("also.columns.rating"), value: (row) => row.rating }, { header: t("also.columns.reviews"), value: (row) => row.reviews }, { header: t("also.columns.photos"), value: (row) => row.photos }, { header: t("also.columns.booking"), value: (row) => (row.booking === null ? null : row.booking ? t("also.hasOne") : t("also.none")) }, { header: t("also.columns.mapBox"), value: (row) => row.mapBox }]} />}><span className="text-[13px] text-secondary">{t("also.andYou")}</span></TableBar>}
               empty={{ icon: <Store className="h-8 w-8 text-muted/30" />, label: t("also.empty") }}
               sort={alsoSorted.tableSort}
               columns={[
-                { key: "business", header: t("also.columns.business"), sortable: true, cell: (row) => <BusinessCell name={row.name} sub={row.websiteHost} you={row.you} /> },
+                { key: "business", header: t("also.columns.business"), sortable: true, cell: (row) => <BusinessCell name={row.name} sub={row.websiteHost} you={row.you} href={row.you ? undefined : businessRecord({ host: row.websiteHost, listingId: row.listingId }) ? recordHref(businessRecord({ host: row.websiteHost, listingId: row.listingId })!) : undefined} /> },
                 { key: "category", header: t("also.columns.category"), sortable: true, cell: (row) => (row.category ? <TagLabel>{row.category}</TagLabel> : <FigureCell value={null} />) },
                 { key: "rating", header: t("also.columns.rating"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.rating} text={ratingText(row.rating)} /> },
                 { key: "reviews", header: t("also.columns.reviews"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.reviews} /> },
@@ -164,7 +171,7 @@ export default function LocalProfilePage() {
                   cell: (row) => row.you ? null : row.watched ? (
                     <StatusLabel tone="success">{tl("watched")}</StatusLabel>
                   ) : row.listingId ? (
-                    <Button variant="quiet" className="whitespace-nowrap" disabled={action.isBusy(`watch:${row.key}`)} onClick={() => void action.run(() => link({ siteId, listingId: row.listingId as never, role: "RIVAL" }), { key: `watch:${row.key}`, fallbackMessage: tl("watchFailed") })}>
+                    <Button variant="quiet" className="whitespace-nowrap" disabled={action.isBusy(`watch:${row.key}`)} onClick={(event) => { event.stopPropagation(); void action.run(() => link({ siteId, listingId: row.listingId as never, role: "RIVAL" }), { key: `watch:${row.key}`, fallbackMessage: tl("watchFailed") }); }}>
                       {tl("watchAsRival")}
                     </Button>
                   ) : null,
@@ -177,6 +184,7 @@ export default function LocalProfilePage() {
             <DataTable
               rows={topicsPager.pageRows}
               rowKey={(row) => row.topic}
+              onRowClick={(row) => router.push(listHref("reviews", { q: row.topic }))}
               cardHeader={<TableBar footer={topicsPager.footer} noun="topics">{reviewsTotal !== null ? <span className="text-[13px] text-secondary">{t("topics.from", { count: reviewsTotal })}</span> : null}</TableBar>}
               empty={{ icon: <Store className="h-8 w-8 text-muted/30" />, label: t("topics.empty") }}
               sort={topicsSorted.tableSort}

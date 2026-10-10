@@ -110,3 +110,31 @@ export function useHoursChangeWords(): (text: string) => string {
     return [t("hoursChange", { day: t(`days.${at}`), now: hours(now ?? ""), was: hours(was ?? "") })];
   }).join(" · ");
 }
+
+/** What a rival's activity line says happened, and the change it made: a post, a category, its rating moving. */
+export type ActivityKind = "POST" | "OFFER" | "EVENT" | "CATEGORY_ADDED" | "CATEGORY_REMOVED" | "HOURS_CHANGED" | "NAME_CHANGED" | "WEBSITE_CHANGED" | "RATING_CHANGE" | "PHOTOS_ADDED";
+export type ActivityLine = { kind: ActivityKind; text: string | null; from: number | null; to: number | null };
+
+/**
+ * An activity line's "What" and "Detail" in words, as Rival activity says
+ * them — and One business, which lists one rival's lines the same way.
+ */
+export function useActivityWords(): { what: (line: ActivityLine) => string; detail: (line: ActivityLine) => string } {
+  const t = useTranslations("sites.local.activity");
+  const hoursWords = useHoursChangeWords();
+  return {
+    what: (line) => t(`kinds.${line.kind}`),
+    detail: (line) => {
+      switch (line.kind) {
+        case "RATING_CHANGE": return t("details.rating", { from: line.from?.toFixed(1) ?? "", to: line.to?.toFixed(1) ?? "" });
+        case "PHOTOS_ADDED": return t("details.photos", { count: (line.to ?? 0) - (line.from ?? 0), total: line.to ?? 0 });
+        case "CATEGORY_ADDED": return t("details.categoryAdded", { category: line.text ?? "" });
+        case "CATEGORY_REMOVED": return t("details.categoryRemoved", { category: line.text ?? "" });
+        case "HOURS_CHANGED": return hoursWords(line.text ?? "");
+        case "NAME_CHANGED": return t("details.name", { name: line.text ?? "" });
+        case "WEBSITE_CHANGED": return t("details.website", { website: line.text ?? "" });
+        default: return line.text ? `"${line.text}"` : "–";
+      }
+    },
+  };
+}
