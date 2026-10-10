@@ -19,6 +19,7 @@ import { datedRow } from "../../_components/datedRows";
 import { formatCpc, formatDay, formatNumber, formatVisits, toCsv } from "../../_components/siteFormat";
 import { useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useCompareDay, useSite, useSiteId } from "../../_components/useSite";
+import { SiteSees } from "../../_components/SiteSees";
 import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
 import { useSiteSort } from "../../_components/useSiteSort";
 import { TableDownload } from "../../_components/SiteDownloads";
@@ -133,6 +134,7 @@ export default function SiteKeywordsPage() {
         description={t("description")}
         pills={isPartHeld(coverage) ? <HeldLine coverage={coverage} className="text-[12px] text-secondary" /> : null}
       />
+      <SiteSees screen="keywords" seen={table.result?.seen} />
 
       {/* A competitor's list is its top 1,000, refreshed monthly (finish-off plan, items 6b, 6c and 14). */}
       {site?.relationship === "TRACKED" ? <Notice>{t("competitorTop")}</Notice> : null}

@@ -426,6 +426,7 @@ import type * as sees_backlinks from "../sees/backlinks.js";
 import type * as sees_google from "../sees/google.js";
 import type * as sees_local from "../sees/local.js";
 import type * as sees_mentions from "../sees/mentions.js";
+import type * as sees_organic from "../sees/organic.js";
 import type * as sees_radar from "../sees/radar.js";
 import type * as selfImprovementConfig from "../selfImprovementConfig.js";
 import type * as seoAgentRuns from "../seoAgentRuns.js";
@@ -1190,6 +1191,7 @@ declare const fullApi: ApiFromModules<{
   "sees/google": typeof sees_google;
   "sees/local": typeof sees_local;
   "sees/mentions": typeof sees_mentions;
+  "sees/organic": typeof sees_organic;
   "sees/radar": typeof sees_radar;
   selfImprovementConfig: typeof selfImprovementConfig;
   seoAgentRuns: typeof seoAgentRuns;

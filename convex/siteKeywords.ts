@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
@@ -9,6 +10,7 @@ import { pagesCopyKey, readListCopy } from "./siteListCopies";
 import { listOrder, listPageArgs, listPageResult, listPageSeenResult, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
 import { seen } from "./utils/hakkenSees";
 import { movesSees } from "./sees/google";
+import { keywordsSees, pagesSees, sectionsSees } from "./sees/organic";
 import { readPageKinds } from "./pageKinds";
 import {
   kdBandValidator,
@@ -199,11 +201,11 @@ export const listKeywords = tenantQuery({
      */
     direction: sortDirectionArg,
   },
-  returns: listPageResult(keywordRowValidator),
+  returns: listPageSeenResult(keywordRowValidator),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const copy = await readKeywordCopy(ctx, site.website._id, site.place);
-    if (!copy) return preparingPage(args.rows);
+    if (!copy) return { ...preparingPage(args.rows), seen: seen([]) };
     const matches = wordStartMatcher(args.search);
     const list = copy.rows.filter((row) => {
       const standing = keywordStanding(row, copy.latestCheckDay);
@@ -222,7 +224,9 @@ export const listKeywords = tenantQuery({
         && (!matches || matches(row.keyword));
     }).sort(listOrder(KEYWORD_SORTS, args.sort ?? "position", args.direction, byKeyword));
     const page = pageOfList(list, args.page, args.rows);
-    return { ...page, rows: await fullKeywordRows(ctx, page.rows, site.website.host) };
+    // What Hakken sees is of every search ranked for now, whatever the filters.
+    const current = copy.rows.filter((row) => keywordStanding(row, copy.latestCheckDay) === "current");
+    return { ...page, rows: await fullKeywordRows(ctx, page.rows, site.website.host), seen: keywordsSees(current) };
   },
 });
 
@@ -369,7 +373,7 @@ export const listPages = tenantQuery({
     sort: v.optional(v.union(v.literal("page"), v.literal("traffic"), v.literal("keywords"), v.literal("best"), v.literal("linking"))),
     direction: sortDirectionArg,
   },
-  returns: listPageResult(pageRowValidator),
+  returns: listPageSeenResult(pageRowValidator),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const websiteId = site.website._id;
@@ -378,7 +382,7 @@ export const listPages = tenantQuery({
       readListCopy(ctx, "pages", pagesCopyKey(websiteId, place), PAGE_COPY_FIELDS),
       readPageKinds(ctx, site.hold._id),
     ]);
-    if (!copy) return preparingPage(args.rows);
+    if (!copy) return { ...preparingPage(args.rows), seen: seen([]) };
     const matches = wordStartMatcher(args.search);
     const kindOf = (row: PageCopyRow) => (pageKinds ? pageKinds.kindOf(row.path) : row.pageType);
     const pagesHeld: PageCopyRow[] = copy.rows.map(([id, path, section, pageType, keywords, traffic, bestPosition, referringDomains]) => ({
@@ -441,7 +445,7 @@ export const listPages = tenantQuery({
         kind: pageKinds ? pageKinds.kindOf(row.page) : (row.pageType ?? "UNJUDGED"),
       };
     }));
-    return { ...shown, rows: page };
+    return { ...shown, rows: page, seen: pagesSees(pagesHeld) };
   },
 });
 
@@ -460,8 +464,9 @@ export const listSections = tenantQuery({
     })),
     /** How many folders are shown when the site has more, the most keywords first; null when every folder is here. */
     cut: v.union(v.number(), v.null()),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
     const site = await requireMySite(ctx, args.siteId);
     // One past the limit, to know whether there are more.
     const read = await ctx.db
@@ -479,5 +484,5 @@ export const listSections = tenantQuery({
       day: row.day ?? null,
     }));
     return { rows, cut: read.length > MAX_SECTIONS ? rows.length : null };
-  },
+  }, (result) => sectionsSees(result.rows)),
 });

@@ -20,6 +20,7 @@ import { datedRow } from "../../../_components/datedRows";
 import { formatCpc, formatDay, formatNumber, movement, toCsv } from "../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { isPartHeld } from "../../../_components/SiteCoverage";
 import { heldIcon } from "../../../_components/siteGroups";
 import { MarkedHost } from "../../../_components/SiteMark";
@@ -293,6 +294,7 @@ export default function SiteKeywordPage() {
           </>
         ) : undefined}
       />
+      <SiteSees screen="keywordRecord" seen={record?.seen} />
 
       {record === undefined ? (
         <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" aria-label={tr("loading")} />

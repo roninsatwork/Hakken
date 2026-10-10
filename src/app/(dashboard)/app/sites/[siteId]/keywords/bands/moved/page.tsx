@@ -14,6 +14,7 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber, formatShortDay } from "../../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../../_components/useSite";
+import { SiteSees } from "../../../../_components/SiteSees";
 import { useSitePager } from "../../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../../_components/useSiteSort";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
@@ -73,6 +74,7 @@ export default function SiteBandMovePage() {
         title={title}
         description={moved?.day ? t("cell.description", { day: formatShortDay(moved.day) }) : undefined}
       />
+      <SiteSees screen="keywordsBandsMoved" seen={moved?.seen} />
 
       <DataTable
         rows={pager.pageRows}

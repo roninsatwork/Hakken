@@ -17,6 +17,7 @@ import { SiteTreemap } from "../../../_components/SiteTreemap";
 import { SiteViewSwitch } from "../../../_components/SiteViewSwitch";
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
@@ -113,6 +114,7 @@ export default function SiteStructurePage() {
           </span>
         ) : null}
       />
+      <SiteSees screen="keywordsStructure" seen={answer?.seen} />
       {partHeld ? (
         <div className="flex flex-col gap-1">
           <HeldLine coverage={coverage} />

@@ -13477,7 +13477,10 @@
         "seeNetwork": "Vedi la rete",
         "referringDomains": "Domini di riferimento",
         "fanOutQueries": "Query di fan-out",
-        "seeFeature": "Vedi la funzione"
+        "seeFeature": "Vedi la funzione",
+        "movedSearches": "Ricerche che si sono mosse",
+        "folderPages": "Vedi le pagine della cartella",
+        "seeProblem": "Vedi il problema"
       },
       "website": {
         "notQuoted": "L'IA di Google non ha citato {text} nelle risposte su di te o sui concorrenti.",
@@ -13931,6 +13934,63 @@
         "mostCommon": "“{text}” compare più spesso: su {count, plural, one {# ricerca} other {# ricerche}}.",
         "answer": "Rispondi a “{text}” nella tua pagina per “{more}”.",
         "checkPages": "Controlla che le tue pagine rispondano alle domande che le persone fanno."
+      },
+      "keywords": {
+        "none": "Ancora nessuna ricerca posizionata letta: la legge il prossimo controllo.",
+        "ranking": "Sei posizionato per {a} ricerche su Google, {b} nella prima pagina.",
+        "mostVisits": "“{text}” porta più visite: circa {a} al mese.",
+        "justOff": "{count, plural, one {# ricerca è} other {# ricerche sono}} appena fuori dalla prima pagina, tra 11 e 13, “{text}” la più cercata.",
+        "pushUp": "Rafforza la tua pagina per “{text}” per portarla in prima pagina.",
+        "keepTop": "Tieni “{text}” dov'è: guarda chi ti segue da vicino."
+      },
+      "keywordsPages": {
+        "none": "Ancora nessuna pagina posizionata letta: la legge il prossimo controllo.",
+        "pages": "{count, plural, one {# pagina è posizionata} other {# pagine sono posizionate}} su Google.",
+        "topPage": "{text} porta più visite: il {a}%.",
+        "offPageOne": "{count, plural, one {# pagina è posizionata} other {# pagine sono posizionate}} solo oltre la prima pagina, {text} per più ricerche.",
+        "seeTop": "Guarda le ricerche per cui è posizionata {text}.",
+        "lift": "Rafforza {text}: le sue ricerche sono vicine alla prima pagina."
+      },
+      "keywordsBands": {
+        "none": "Ancora nessuna ricerca posizionata letta: la legge il prossimo controllo.",
+        "pageOne": "{a} delle tue {b} ricerche sono nella prima pagina di Google.",
+        "movedOnOff": "Nel controllo più recente {a} sono entrate in prima pagina e {b} ne sono uscite.",
+        "closest": "{count, plural, one {# ricerca è} other {# ricerche sono}} tra 11 e 13, le più vicine alla prima pagina: “{text}” la più cercata.",
+        "pushUp": "Rafforza la tua pagina per “{text}” per portarla in prima pagina.",
+        "seeOff": "Guarda {count, plural, one {la ricerca uscita} other {le # ricerche uscite}} dalla prima pagina."
+      },
+      "keywordsBandsMoved": {
+        "none": "Nessuna ricerca ha cambiato fascia nel controllo più recente.",
+        "moved": "{a} ricerche sono salite di fascia e {b} sono scese.",
+        "biggestDrop": "Il calo più grande: “{text}”, da {a} a {b}.",
+        "seeDrop": "Guarda cosa è cambiato su “{text}”."
+      },
+      "keywordsStructure": {
+        "none": "Ancora nessuna cartella letta: la legge il prossimo controllo.",
+        "folders": "Le tue pagine posizionate stanno in {count, plural, one {# cartella} other {# cartelle}}.",
+        "topFolder": "{text} porta più visite: il {a}%.",
+        "weakFolder": "{text} è posizionata per {a} ricerche ma solo {b} tra i primi tre.",
+        "seeFolder": "Guarda le pagine in {text}."
+      },
+      "keywordRecord": {
+        "notRanking": "Non sei nei primi 100 di Google per “{text}”.",
+        "moved": "Sei {a} su Google, da {b} al controllo prima.",
+        "position": "Sei {a} su Google.",
+        "above": "{text} è in testa {count, plural, one {al sito} other {ai # siti}} sopra di te.",
+        "pageChanged": "Google ora mostra {text}, al posto di {more}.",
+        "seePage": "Guarda {text}, la pagina che mostra Google.",
+        "seeAbove": "Guarda per cosa viene citato e linkato {text}."
+      },
+      "pageRecord": {
+        "notHeld": "Ancora niente su questa pagina: non è posizionata e l'audit del sito non l'ha letta.",
+        "searches": "È posizionata per {a} ricerche, {b} tra i primi tre, “{text}” la più grande.",
+        "notRanking": "Non è posizionata su Google per nessuna ricerca.",
+        "problems": "L'audit del sito ha trovato {count, plural, one {# problema} other {# problemi}}: per primo {text}.",
+        "noProblems": "L'audit del sito non ha trovato problemi.",
+        "links": "{count, plural, =0 {Nessun sito la linka.} one {# link punta a lei.} other {# link puntano a lei.}}",
+        "cited": "Le risposte IA l'hanno citata {count, plural, one {una volta} other {# volte}}.",
+        "fixProblem": "Correggi: {text}.",
+        "seeTopSearch": "Guarda chi è posizionato accanto a lei per “{text}”."
       }
     }
   },

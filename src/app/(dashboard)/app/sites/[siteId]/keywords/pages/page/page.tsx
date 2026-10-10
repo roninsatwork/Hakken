@@ -22,6 +22,8 @@ import { formatDay, formatNumber } from "../../../../_components/siteFormat";
 import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
 import { sharedSiteQuery } from "../../../../_components/useSiteParam";
 import { useSite, useSiteId } from "../../../../_components/useSite";
+import { pageRecordSees } from "@/convex/sees/organic";
+import { SiteSees } from "../../../../_components/SiteSees";
 import { useSiteListPage } from "../../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../../_components/useSiteSort";
 import { isPartHeld } from "../../../../_components/SiteCoverage";
@@ -164,6 +166,7 @@ export default function SitePageRecordPage() {
         ) : undefined}
         action={address ? <ExternalUrlCell url={address} label={`${t("openPage")} ↗`} /> : undefined}
       />
+      <SiteSees screen="pageRecord" seen={record && pageRecordSees(record, problemLabel)} />
 
       {record === undefined ? (
         <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" aria-label={tr("loading")} />

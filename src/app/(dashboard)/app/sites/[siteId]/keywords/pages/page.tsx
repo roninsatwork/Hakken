@@ -17,6 +17,7 @@ import { datedRow } from "../../../_components/datedRows";
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
@@ -79,6 +80,7 @@ export default function SitePagesPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<FileText className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="keywordsPages" seen={table.result?.seen} />
       {/* A list held in part (sites-data-completeness-plan.md, §4.E): the pages are those of the searches held. */}
       {isPartHeld(site?.coverage) ? (
         <div className="flex flex-col gap-1">

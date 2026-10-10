@@ -1,6 +1,8 @@
 import { searchVolumeOf } from "./searchVolumes";
 import { v } from "convex/values";
-import type { Doc } from "./_generated/dataModel";
+import { keywordRecordSees } from "./sees/organic";
+import { seeing, seenValidator } from "./utils/hakkenSees";
+import type { Doc, Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
 import { aiEngineValidator } from "./seoAiEngines";
@@ -211,8 +213,9 @@ export const keywordRecord = tenantQuery({
     // a search last checked before them, where the site stood at that check,
     // from the positions kept for ever, in place of the page.
     serpNotKept: v.union(v.object({ day: v.string(), position: nullableNumber }), v.null()),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; keyword: string }) => {
     const site = await requireMySite(ctx, args.siteId);
     const keyword = normaliseKeyword(args.keyword).slice(0, MAX_KEYWORD);
     const websiteId = site.website._id;
@@ -350,7 +353,7 @@ export const keywordRecord = tenantQuery({
         : null,
       serpNotKept,
     };
-  },
+  }, keywordRecordSees),
 });
 
 /**

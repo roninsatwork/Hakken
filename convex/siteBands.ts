@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { bandMovesSees, bandsSees } from "./sees/organic";
+import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { requireMySite } from "./siteAccess";
@@ -89,8 +91,9 @@ export const bandMoves = tenantQuery({
       })),
       total: v.number(),
     }),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
     const site = await requireMySite(ctx, args.siteId);
     const websiteId = site.website._id;
     const { copy, start } = await readNewest(ctx, websiteId, site.place);
@@ -133,7 +136,7 @@ export const bandMoves = tenantQuery({
         total: closest.length,
       },
     };
-  },
+  }, bandsSees),
 });
 
 /**
@@ -165,14 +168,15 @@ export const listBandMoves = tenantQuery({
     })).fields,
     /** The newest check the moves were made at. */
     day: v.union(v.string(), v.null()),
+    seen: seenValidator,
   }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const { copy, start } = await readNewest(ctx, site.website._id, site.place);
-    if (!copy) return { rows: [], cut: null, day: null };
+    if (!copy) return { rows: [], cut: null, day: null, seen: bandMovesSees([]) };
     const list = bandMovesIn(copy, start !== null)
       .filter((row) => (args.from === undefined || row.from === args.from) && (args.to === undefined || row.to === args.to))
       .sort((left, right) => (right.volume ?? -1) - (left.volume ?? -1) || left.keyword.localeCompare(right.keyword));
-    return { ...heldTo(list, MOVED_KEPT), day: copy.rankingDay };
+    return { ...heldTo(list, MOVED_KEPT), day: copy.rankingDay, seen: bandMovesSees(list) };
   },
 });

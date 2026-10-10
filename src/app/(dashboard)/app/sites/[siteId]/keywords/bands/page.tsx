@@ -23,6 +23,7 @@ import { datedRow } from "../../../_components/datedRows";
 import { formatNumber, formatShortDay, toCsv } from "../../../_components/siteFormat";
 import { useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
@@ -147,6 +148,7 @@ export default function SiteBandsPage() {
           </span>
         ) : null}
       />
+      <SiteSees screen="keywordsBands" seen={moves?.seen} />
 
       {latest ? (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)]">

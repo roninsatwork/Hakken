@@ -13477,7 +13477,10 @@
         "seeNetwork": "See the network",
         "referringDomains": "Referring domains",
         "fanOutQueries": "Fan-out queries",
-        "seeFeature": "See the feature"
+        "seeFeature": "See the feature",
+        "movedSearches": "Searches that moved",
+        "folderPages": "See the folder's pages",
+        "seeProblem": "See the problem"
       },
       "website": {
         "notQuoted": "Google's AI has not quoted {text} in answers about you or your rivals.",
@@ -13931,6 +13934,63 @@
         "mostCommon": "“{text}” comes up most: on {count, plural, one {# search} other {# searches}}.",
         "answer": "Answer “{text}” on your page for “{more}”.",
         "checkPages": "Check your pages answer the questions people ask."
+      },
+      "keywords": {
+        "none": "No ranked searches read yet: the next check reads them.",
+        "ranking": "You rank for {a} searches on Google, {b} of them on the first page.",
+        "mostVisits": "“{text}” brings the most visits: about {a} a month.",
+        "justOff": "{count, plural, one {# search sits} other {# searches sit}} just off page one, at 11 to 13, “{text}” the most searched.",
+        "pushUp": "Strengthen your page for “{text}” to lift it onto page one.",
+        "keepTop": "Keep “{text}” where it is: see who is close behind."
+      },
+      "keywordsPages": {
+        "none": "No ranking pages read yet: the next check reads them.",
+        "pages": "{count, plural, one {# page ranks} other {# pages rank}} on Google.",
+        "topPage": "{text} brings the most visits: {a}% of them.",
+        "offPageOne": "{count, plural, one {# page ranks} other {# pages rank}} only past page one, {text} for the most searches.",
+        "seeTop": "See the searches {text} ranks for.",
+        "lift": "Strengthen {text}: its searches are close to page one."
+      },
+      "keywordsBands": {
+        "none": "No ranked searches read yet: the next check reads them.",
+        "pageOne": "{a} of your {b} searches are on Google's first page.",
+        "movedOnOff": "At the newest check {a} moved onto page one and {b} fell off it.",
+        "closest": "{count, plural, one {# search is} other {# searches are}} at 11 to 13, closest to page one: “{text}” the most searched.",
+        "pushUp": "Strengthen your page for “{text}” to lift it onto page one.",
+        "seeOff": "See the {count, plural, one {search} other {# searches}} that fell off page one."
+      },
+      "keywordsBandsMoved": {
+        "none": "No search changed band at the newest check.",
+        "moved": "{a} searches moved up a band and {b} moved down.",
+        "biggestDrop": "The biggest drop: “{text}”, from {a} to {b}.",
+        "seeDrop": "See what changed on “{text}”."
+      },
+      "keywordsStructure": {
+        "none": "No folders read yet: the next check reads them.",
+        "folders": "Your ranking pages sit in {count, plural, one {# folder} other {# folders}}.",
+        "topFolder": "{text} brings the most visits: {a}% of them.",
+        "weakFolder": "{text} ranks for {a} searches but only {b} in the top three.",
+        "seeFolder": "See the pages in {text}."
+      },
+      "keywordRecord": {
+        "notRanking": "You do not rank in Google's top 100 for “{text}”.",
+        "moved": "You are {a} on Google, from {b} at the check before.",
+        "position": "You are {a} on Google.",
+        "above": "{text} leads the {count, plural, one {website} other {# websites}} above you.",
+        "pageChanged": "Google now shows {text} for it, in place of {more}.",
+        "seePage": "See {text}, the page Google shows.",
+        "seeAbove": "See what {text} is quoted and linked for."
+      },
+      "pageRecord": {
+        "notHeld": "Nothing is held about this page yet: it neither ranks nor was read by the site audit.",
+        "searches": "It ranks for {a} searches, {b} in the top three, “{text}” the biggest.",
+        "notRanking": "It does not rank on Google for any search.",
+        "problems": "The site audit found {count, plural, one {# problem} other {# problems}} on it: {text} first.",
+        "noProblems": "The site audit found no problem on it.",
+        "links": "{count, plural, =0 {No website links to it.} one {# link points to it.} other {# links point to it.}}",
+        "cited": "AI answers cited it {count, plural, one {once} other {# times}}.",
+        "fixProblem": "Fix it: {text}.",
+        "seeTopSearch": "See who ranks beside it for “{text}”."
       }
     }
   },

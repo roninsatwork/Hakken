@@ -21,6 +21,7 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber, formatShortDay, toCsv } from "../../../_components/siteFormat";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteParam } from "../../../_components/useSiteParam";
 import { useSiteListPage, useSitePager } from "../../../_components/useSitePagedTable";
 import { dayOf, dayTableSorts, useSiteSort, useSiteSortedList } from "../../../_components/useSiteSort";
@@ -146,6 +147,7 @@ export default function SiteNewLostPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<ArrowUpDown className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="googleMoves" seen={moves.result?.seen} />
 
       {newest ? (
         <div className="flex flex-wrap items-center gap-3">
