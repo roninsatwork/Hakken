@@ -154,9 +154,6 @@ export const addPages = internalMutation({
   returns: v.union(v.number(), v.null()),
   handler: async (ctx, args) => {
     if (args.pages.length > PAGES_PER_ADD) throw appError("INVALID_INPUT", `At most ${PAGES_PER_ADD} page addresses a call, not ${args.pages.length}.`);
-    // Numbers given before the move still on Search Console's table: never number afresh beside them.
-    const unmoved = await ctx.db.query("searchConsolePageAddresses").withIndex("by_hold_record", (q) => q.eq("companyWebsiteId", args.holdId)).first();
-    if (unmoved) throw appError("CONFLICT", "The website's page numbers are still being moved (2026-10-10-hold-page-addresses): run the migration first.");
     const last = await ctx.db
       .query("holdPageAddresses")
       .withIndex("by_hold_record", (q) => q.eq("companyWebsiteId", args.holdId))
@@ -214,31 +211,3 @@ export const purgeHold = internalMutation({
     return null;
   },
 });
-
-// ---------------------------------------------------------------------------
-// Moving Search Console's numbers across, once (§10, Q11)
-// ---------------------------------------------------------------------------
-
-/**
- * Search Console's page numbers moved to the website's own
- * (`2026-10-10-hold-page-addresses`): each record copied as it is — the same
- * record, the same places, so every kept reference still names its page —
- * then removed. Run once on each deployment before `searchConsolePageAddresses`
- * leaves the schema; a record already moved is passed over.
- */
-export async function moveSearchConsolePageNumbers(ctx: MutationCtx, cursor: string | null, batchSize: number) {
-  const page = await ctx.db.query("searchConsolePageAddresses").withIndex("by_hold_record").paginate({ cursor, numItems: Math.min(batchSize, 50) });
-  let updated = 0;
-  for (const record of page.page) {
-    const moved = await ctx.db
-      .query("holdPageAddresses")
-      .withIndex("by_hold_record", (q) => q.eq("companyWebsiteId", record.companyWebsiteId).eq("record", record.record))
-      .first();
-    if (!moved) {
-      await ctx.db.insert("holdPageAddresses", { companyWebsiteId: record.companyWebsiteId, record: record.record, addresses: record.addresses });
-      updated += 1;
-    }
-    await ctx.db.delete(record._id);
-  }
-  return { cursor: page.continueCursor, isDone: page.isDone, processed: page.page.length, updated };
-}

@@ -22,7 +22,7 @@ async function setup() {
     const websiteId = await ctx.db.insert("websites", { host: "acme-shop.test", displayHost: "acme-shop.test", firstSeenAt: 1 });
     const holdId = await ctx.db.insert("companyWebsites", { companyId, websiteId, relationship: "OWNED", searchConsoleCountries: ["gbr"], createdAt: 1 });
     await ctx.db.insert("searchConsoleConnections", {
-      companyId, companyWebsiteId: holdId, websiteId, status: "NEEDS_RECONNECT", googleAccount: "owner@acme-shop.test",
+      companyId, companyWebsiteId: holdId, websiteId, status: "NEEDS_RECONNECT",
       property: "sc-domain:acme-shop.test", permission: "siteOwner", newestDay: NEWEST, oldestDay: "2026-06-29",
       countriesHeld: [{ country: "gbr", newestDay: NEWEST, oldestDay: "2026-06-29" }],
       // Judged so on an earlier run; with too few days held to judge again, it stays so.

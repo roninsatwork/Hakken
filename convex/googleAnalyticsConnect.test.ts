@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
-import { decryptConnectorToken, encryptConnectorToken } from "./connectorTokenCrypto";
+import { decryptConnectorToken } from "./connectorTokenCrypto";
 import { finishScheduled } from "@/src/test/finishScheduled";
 import { useFixedDay } from "@/src/test/realTime";
 
@@ -13,8 +13,8 @@ import { useFixedDay } from "@/src/test/realTime";
  * Google sign-in it shares with Search Console (§4.6): the properties listed
  * with the website's first, one chosen, the website's own addresses read, what
  * counts ticked and valued, the other section taking up the same sign-in, an
- * agency's two accounts kept apart, disconnecting, and Search Console's old
- * sign-ins moved across once. Nothing here reaches Google.
+ * agency's two accounts kept apart, and disconnecting. Nothing here reaches
+ * Google.
  */
 
 const KEY = Buffer.from(new Uint8Array(32).fill(7)).toString("base64");
@@ -352,57 +352,5 @@ describe("one Google sign-in for both sections", () => {
     expect(await analyticsOf(t, siteId)).toBeNull();
     expect(await signIns(t)).toEqual({ connections: [], tokens: [] });
     expect(revokes(google)).toHaveLength(1);
-  });
-});
-
-describe("Search Console's sign-ins moved across once", () => {
-  test("each connection's account and tokens become the shared sign-in, still ciphertext", async () => {
-    const { t, siteId, companyId, websiteId } = await setup();
-    const connectionId = await t.run(async (ctx) => {
-      const id = await ctx.db.insert("searchConsoleConnections", {
-        companyId, companyWebsiteId: siteId, websiteId, status: "CONNECTED", googleAccount: "owner@acme-shop.test",
-        property: "sc-domain:acme-shop.test", createdAt: 1, updatedAt: 1,
-      });
-      await ctx.db.insert("searchConsoleTokens", {
-        connectionId: id, accessTokenCiphertext: await encryptConnectorToken("ya29.old"), refreshTokenCiphertext: await encryptConnectorToken("1//old"),
-        expiresAt: NOW + 1000, scopes: [SC_SCOPE], createdAt: 1, updatedAt: 1,
-      });
-      return id;
-    });
-    await t.mutation(internal.dataMigrations.run, { name: "2026-10-10-shared-google-connection" });
-    await finishScheduled(t);
-
-    const connection = (await t.run(async (ctx) => await ctx.db.get(connectionId)))!;
-    expect(connection.googleAccount).toBeUndefined();
-    const held = await signIns(t);
-    expect(held.connections).toMatchObject([{ account: "owner@acme-shop.test", scopes: [SC_SCOPE], companyWebsiteId: siteId }]);
-    expect(connection.googleConnectionId).toBe(held.connections[0]._id);
-    expect(await decryptConnectorToken(held.tokens[0].refreshTokenCiphertext!)).toBe("1//old");
-    expect(await t.run(async (ctx) => await ctx.db.query("searchConsoleTokens").collect())).toEqual([]);
-
-    // Run again: nothing moves twice.
-    await t.mutation(internal.dataMigrations.run, { name: "2026-10-10-shared-google-connection", force: true });
-    await finishScheduled(t);
-    expect((await signIns(t)).tokens).toHaveLength(1);
-  });
-
-  test("Search Console's page numbers become the website's own: the same records, the same places", async () => {
-    const { t, siteId } = await setup();
-    await t.run(async (ctx) => {
-      await ctx.db.insert("searchConsolePageAddresses", { companyWebsiteId: siteId, record: 0, addresses: ["https://acme-shop.test/", "https://acme-shop.test/a"] });
-      await ctx.db.insert("searchConsolePageAddresses", { companyWebsiteId: siteId, record: 1, addresses: ["https://acme-shop.test/b"] });
-    });
-    // Numbering afresh beside numbers not yet moved would give one number two pages.
-    await expect(t.mutation(internal.holdPageRefs.addPages, { holdId: siteId, from: 0, pages: ["https://acme-shop.test/c"] })).rejects.toThrow("still being moved");
-
-    await t.mutation(internal.dataMigrations.run, { name: "2026-10-10-hold-page-addresses" });
-    await finishScheduled(t);
-    const moved = await t.run(async (ctx) => await ctx.db.query("holdPageAddresses").withIndex("by_hold_record", (q) => q.eq("companyWebsiteId", siteId)).collect());
-    expect(moved.map((record) => [record.record, record.addresses])).toEqual([
-      [0, ["https://acme-shop.test/", "https://acme-shop.test/a"]],
-      [1, ["https://acme-shop.test/b"]],
-    ]);
-    expect(await t.run(async (ctx) => await ctx.db.query("searchConsolePageAddresses").collect())).toEqual([]);
-    expect(await t.mutation(internal.holdPageRefs.addPages, { holdId: siteId, from: 251, pages: ["https://acme-shop.test/c"] })).toBe(251);
   });
 });

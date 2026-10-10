@@ -192,8 +192,6 @@ export const searchConsoleTables = {
     pendingBy: v.optional(v.id("users")),
     /** The shared Google sign-in this connection reads with (`googleSchema.ts`, google-analytics-plan.md §4.6). */
     googleConnectionId: v.optional(v.id("googleConnections")),
-    /** Before the shared sign-in: moved into it by `2026-10-10-shared-google-connection`, then removed. */
-    googleAccount: v.optional(v.string()),
     /** The account's properties that are this website, while one is chosen. */
     choices: v.optional(v.array(v.object({ property: v.string(), permission: v.string() }))),
     property: v.optional(v.string()),
@@ -269,25 +267,7 @@ export const searchConsoleTables = {
   })
     .index("by_hold", ["companyWebsiteId"])
     .index("by_pending_state", ["pendingState"])
-    .index("by_status", ["status"])
-    /** Whether anyone else still uses an account's grant, before it is revoked at Google. */
-    .index("by_google_account", ["googleAccount"]),
-
-  /**
-   * A connection's Google tokens, as ciphertext only (`connectorTokenCrypto`).
-   * Read by internal functions alone, as `connectorOAuthTokens` is. Moved into
-   * the shared `googleTokens` by `2026-10-10-shared-google-connection`, then
-   * removed.
-   */
-  searchConsoleTokens: defineTable({
-    connectionId: v.id("searchConsoleConnections"),
-    accessTokenCiphertext: v.string(),
-    refreshTokenCiphertext: v.optional(v.string()),
-    expiresAt: v.optional(v.number()),
-    scopes: v.array(v.string()),
-    createdAt: v.number(),
-    updatedAt: v.number(),
-  }).index("by_connection", ["connectionId"]),
+    .index("by_status", ["status"]),
 
   /** A day's totals, rare searches Google hides included. */
   searchConsoleDays: defineTable({
@@ -374,22 +354,6 @@ export const searchConsoleTables = {
     chunk: v.number(),
     keywords: v.array(v.string()),
   }).index("by_hold_country_month_chunk", ["companyWebsiteId", "country", "month", "chunk"]),
-
-  /**
-   * Each page address a website's kept lists point to, once (finish-off plan
-   * item 2A, `searchConsolePageRefs.ts`): a `pair` list's `pages` and a `page`
-   * list's `keys` hold `~` and the page's number in base 36 rather than the
-   * address. 250 addresses a record, in the order each was first seen; a
-   * page's number is `record` times 250 and its place in `addresses`
-   * (core-data-normalisation-plan.md §5.7). Moved to the website's own,
-   * `holdPageAddresses`, shared with Google Analytics, by
-   * `2026-10-10-hold-page-addresses`, then removed.
-   */
-  searchConsolePageAddresses: defineTable({
-    companyWebsiteId: v.id("companyWebsites"),
-    record: v.number(),
-    addresses: v.array(v.string()),
-  }).index("by_hold_record", ["companyWebsiteId", "record"]),
 
   /**
    * The ready-made periods the screens read (plan §14.3, item 4): for the last

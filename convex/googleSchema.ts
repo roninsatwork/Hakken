@@ -51,7 +51,7 @@ export const googleTables = {
    * record in the order first seen (`holdPageRefs.ts`): the numbers every
    * Search Console and Google Analytics list names its pages by, so the two
    * name one page by one number (google-analytics-plan.md §4.6; named in
-   * §10, Q11). Moved from `searchConsolePageAddresses` on 2026-10-10.
+   * §10, Q11). Search Console's own numbers until 2026-10-10.
    */
   holdPageAddresses: defineTable({
     companyWebsiteId: v.id("companyWebsites"),

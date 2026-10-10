@@ -16,7 +16,6 @@ import {
 import { exchangeAuthorizationCode, refreshAccessToken, revokeOAuthToken } from "./oauthTokenCalls";
 import { SEARCH_CONSOLE_READ_SCOPE, SEARCH_CONSOLE_SCOPES, listProperties, propertiesForHost } from "./searchConsoleApi";
 import { GOOGLE_ANALYTICS_READ_SCOPE, propertiesForSite, siteAddresses, type PropertyChoice } from "./googleAnalyticsApi";
-import { connectionsPage } from "./searchConsoleSync";
 
 /**
  * The one Google sign-in a company's own website connects with, shared by
@@ -619,61 +618,4 @@ export async function googleAccessToken(
 export async function accountOf(ctx: { db: QueryCtx["db"] }, googleConnectionId: Id<"googleConnections"> | undefined) {
   if (!googleConnectionId) return null;
   return (await ctx.db.get(googleConnectionId))?.account ?? null;
-}
-
-// ---------------------------------------------------------------------------
-// Moving Search Console's sign-ins across, once (§10, Q11)
-// ---------------------------------------------------------------------------
-
-/**
- * Each Search Console connection's own Google account and tokens moved into
- * the shared sign-in (`2026-10-10-shared-google-connection`): the website's
- * Google connection for that account found or made, the tokens moved as they
- * are — still ciphertext, never read — and the connection pointed at it. Run
- * once on each deployment before `searchConsoleTokens` and
- * `searchConsoleConnections.googleAccount` leave the schema. A connection
- * already moved is passed over.
- */
-export async function moveSearchConsoleSignIns(ctx: MutationCtx, cursor: string | null, batchSize: number) {
-  const page = await connectionsPage(ctx, cursor, Math.min(batchSize, 50));
-  let updated = 0;
-  for (const connection of page.page) {
-    const tokens = await ctx.db
-      .query("searchConsoleTokens")
-      .withIndex("by_connection", (q) => q.eq("connectionId", connection._id))
-      .take(10);
-    if (tokens.length === 0 && connection.googleAccount === undefined) continue;
-    const now = Date.now();
-    const token = tokens[0];
-    if (token && connection.googleConnectionId === undefined) {
-      const existing = await ctx.db
-        .query("googleConnections")
-        .withIndex("by_hold_account", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("account", connection.googleAccount))
-        .first();
-      const googleConnectionId = existing?._id ?? await ctx.db.insert("googleConnections", {
-        companyId: connection.companyId,
-        companyWebsiteId: connection.companyWebsiteId,
-        websiteId: connection.websiteId,
-        account: connection.googleAccount,
-        scopes: token.scopes,
-        createdAt: token.createdAt,
-        updatedAt: now,
-      });
-      if (!existing) {
-        await ctx.db.insert("googleTokens", {
-          googleConnectionId,
-          accessTokenCiphertext: token.accessTokenCiphertext,
-          refreshTokenCiphertext: token.refreshTokenCiphertext,
-          expiresAt: token.expiresAt,
-          createdAt: token.createdAt,
-          updatedAt: now,
-        });
-      }
-      await ctx.db.patch(connection._id, { googleConnectionId });
-    }
-    for (const row of tokens) await ctx.db.delete(row._id);
-    await ctx.db.patch(connection._id, { googleAccount: undefined, updatedAt: now });
-    updated += 1;
-  }
-  return { cursor: page.continueCursor, isDone: page.isDone, processed: page.page.length, updated };
 }

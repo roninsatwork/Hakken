@@ -36,8 +36,6 @@ import { detachCompanySchedules } from "./scheduler";
 import { removeSampleResearch } from "./keywordResearchSampleMigration";
 import { prepareMainCountryOf } from "./searchConsoleMainCountry";
 import { connectionsPage } from "./searchConsoleSync";
-import { moveSearchConsoleSignIns } from "./googleConnection";
-import { moveSearchConsolePageNumbers } from "./holdPageRefs";
 import { addAiModeToQuestions, fillSerpOverviews } from "./discoveryMigrations";
 import {
   rebuildAnswerSummaries,
@@ -127,6 +125,13 @@ type MigrationRunner = (
  * running both migrations, then deploying forward. Anthony confirmed on 2026-07-26
  * that nothing real was live, which is why that trade was taken rather than carrying
  * dead code indefinitely.
+ *
+ * The same was done on 2026-10-10 with `2026-10-10-shared-google-connection`
+ * and `2026-10-10-hold-page-addresses` (google-analytics-plan.md §4.6, §10
+ * Q11), which moved Search Console's Google sign-ins into `googleConnections`
+ * and `googleTokens`, and its page numbers into `holdPageAddresses`. Both ran
+ * on dev before `searchConsoleTokens`, `searchConsolePageAddresses` and
+ * `searchConsoleConnections.googleAccount` left the schema.
  *
  * The same was done on 2026-10-07 with `2026-10-07-clear-unread-columns`,
  * which emptied the columns nobody read, on dev before they left the schema
@@ -811,14 +816,6 @@ const MIGRATIONS: Record<string, MigrationRunner> = {
   // Discovery's step 3 (discovery-local-reputation-ai-plan.md): in `discoveryMigrations.ts`.
   "2026-10-09-serp-overviews": fillSerpOverviews,
   "2026-10-09-ai-mode-on-every-question": addAiModeToQuestions,
-  /**
-   * Search Console's Google sign-ins moved into the one shared with Google
-   * Analytics (google-analytics-plan.md §4.6, §10 Q11): each connection's
-   * account and tokens into `googleConnections` and `googleTokens`.
-   */
-  "2026-10-10-shared-google-connection": moveSearchConsoleSignIns,
-  /** Search Console's page numbers moved to the website's own, shared with Google Analytics (§4.6, §10 Q11). */
-  "2026-10-10-hold-page-addresses": moveSearchConsolePageNumbers,
 };
 
 export function getRegisteredMigrationNames() {

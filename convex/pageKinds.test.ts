@@ -41,7 +41,7 @@ async function setUp(t: Harness) {
     const userId = await ctx.db.insert("users", { name: "Member", email: "member@acme-shop.test", role: "USER", companyId, createdAt: NOW });
     const otherUserId = await ctx.db.insert("users", { name: "Other", email: "member@other.test", role: "USER", companyId: otherCompanyId, createdAt: NOW });
     await ctx.db.insert("searchConsoleConnections", {
-      companyId, companyWebsiteId: holdId, websiteId, status: "CONNECTED", googleAccount: "owner@acme-shop.test",
+      companyId, companyWebsiteId: holdId, websiteId, status: "CONNECTED",
       property: `sc-domain:${HOST}`, permission: "siteOwner", dataProperty: `sc-domain:${HOST}`,
       oldestDay: "2026-09-01", newestDay: "2026-09-26", createdAt: NOW, updatedAt: NOW,
     });
