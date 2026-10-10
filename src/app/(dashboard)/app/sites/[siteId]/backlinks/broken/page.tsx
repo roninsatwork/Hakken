@@ -12,6 +12,7 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { formatNumber } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
@@ -59,6 +60,7 @@ export default function SiteBrokenBacklinksPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Unlink className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="backlinksBroken" seen={table.result?.seen} />
       <ListHeldLine held={!term ? table.result?.total : undefined} total={totals?.broken} />
       <DataTable
         rows={table.pageRows}

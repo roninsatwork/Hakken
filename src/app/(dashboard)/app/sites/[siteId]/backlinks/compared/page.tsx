@@ -16,6 +16,8 @@ import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteChar
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { comparedSees } from "@/convex/sees/backlinks";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { useSiteSearch } from "../../../_components/useSiteParam";
@@ -68,6 +70,7 @@ export default function SiteBacklinksComparedPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Scale className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="backlinksCompared" seen={rows && comparedSees(rows)} />
 
       <SiteChartCard
         dated={false}

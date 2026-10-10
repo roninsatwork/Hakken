@@ -14,6 +14,7 @@ import { SiteFacts, type SiteFact } from "../../../../_components/SiteRecordPart
 import { formatDay, formatNumber } from "../../../../_components/siteFormat";
 import { useRecordBack, useRecordKey } from "../../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../../_components/useSite";
+import { SiteSees } from "../../../../_components/SiteSees";
 
 /**
  * One linking website's own screen (Backlinks › Referring domains › a
@@ -57,6 +58,7 @@ export default function SiteLinkingWebsitePage() {
         description={t("description")}
         pills={website ? <LinkStatusLabel status={website.status} /> : undefined}
       />
+      <SiteSees screen="backlinksDomain" seen={record?.seen} />
 
       {record === undefined ? (
         <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" aria-label={tr("loading")} />

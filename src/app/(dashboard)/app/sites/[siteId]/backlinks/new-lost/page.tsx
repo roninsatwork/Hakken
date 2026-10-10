@@ -14,8 +14,10 @@ import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { useSiteRange } from "../../../_components/SiteDateRange";
 import { datedRow } from "../../../_components/datedRows";
-import { formatNumber, toCsv } from "../../../_components/siteFormat";
+import { formatDay, formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { newLostSees, stepEnd } from "@/convex/sees/backlinks";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
@@ -31,14 +33,6 @@ const SORTS = dayTableSorts<{ day: string } & Record<Key, number | null>, Key>(K
 
 /** What a row of this table is, as the dates are stepped. */
 const STEP_NOUNS = { day: "days", week: "weeks", month: "months" } as const;
-
-/** The day after a step's last: a day, a week or a calendar month on from its first. */
-function stepEnd(day: string, step: "day" | "week" | "month"): string {
-  const date = new Date(`${day}T00:00:00Z`);
-  if (step === "month") date.setUTCMonth(date.getUTCMonth() + 1);
-  else date.setUTCDate(date.getUTCDate() + (step === "week" ? 7 : 1));
-  return date.toISOString().slice(0, 10);
-}
 
 /**
  * New and lost links: links and linking websites gained and lost in the
@@ -78,6 +72,7 @@ export default function SiteLinksNewLostPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<ArrowLeftRight className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="backlinksNewLost" seen={points && newLostSees(points, range.step, formatDay)} />
 
       <SiteChartCard
         title={t("chartTitle")}

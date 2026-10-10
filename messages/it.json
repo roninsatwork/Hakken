@@ -13467,7 +13467,15 @@
         "waitingReviews": "Recensioni in attesa",
         "againstRivals": "Contro i concorrenti",
         "seeReviews": "Vedi le recensioni",
-        "visitPage": "Apri la pagina"
+        "visitPage": "Apri la pagina",
+        "newAndLost": "Link nuovi e persi",
+        "brokenBacklinks": "Backlink rotti",
+        "seeLinks": "Vedi i link",
+        "lostLinks": "Link persi",
+        "seeDomain": "Vedi il sito",
+        "seeAnchor": "Vedi le parole",
+        "seeNetwork": "Vedi la rete",
+        "referringDomains": "Domini di riferimento"
       },
       "website": {
         "notQuoted": "L'IA di Google non ha citato {text} nelle risposte su di te o sui concorrenti.",
@@ -13769,6 +13777,102 @@
         "mostRivals": "{text} ha {a} dei tuoi concorrenti e non te.",
         "strongest": "{text} è il più forte di questi.",
         "getOnto": "Fatti elencare su {text}."
+      },
+      "backlinks": {
+        "none": "Ancora nessun backlink letto: li legge il prossimo controllo.",
+        "linkingWebsites": "{a} siti rimandano a te, con {b} link in tutto.",
+        "up": "Sono {a} siti in più rispetto all'inizio di queste date.",
+        "down": "Sono {a} siti in meno rispetto all'inizio di queste date.",
+        "steady": "Ti linkano tanti siti quanti all'inizio di queste date.",
+        "broken": "{count, plural, one {# link punta} other {# link puntano}} a tue pagine che non funzionano più.",
+        "seeNew": "Guarda i link guadagnati e persi, e da chi arrivano.",
+        "seeLost": "Guarda quali siti hanno smesso di linkarti, e quando.",
+        "fixBroken": "Ripristina o reindirizza le pagine a cui puntano quei link."
+      },
+      "backlinksCompared": {
+        "none": "Ancora nessun backlink letto per te e i tuoi concorrenti.",
+        "lead": "{a} siti rimandano a te: più che a qualsiasi concorrente che segui.",
+        "behind": "{a} siti rimandano a te; {b} a {text}, in testa.",
+        "strongerRank": "{text} è il sito più forte per i suoi link: {a} contro il tuo {b}.",
+        "getListed": "Fatti elencare sui siti che linkano o citano i tuoi concorrenti e non te.",
+        "seeLeader": "Guarda dove viene nominato {text} e tu no."
+      },
+      "backlinksQuality": {
+        "none": "Ancora nessun backlink letto: li legge il prossimo controllo.",
+        "broken": "{count, plural, one {# link punta} other {# link puntano}} a {b} tue pagine che non funzionano più.",
+        "noBroken": "Nessun link punta a una tua pagina che non funziona più.",
+        "spam": "Il punteggio spam dei tuoi link è {a} su 100, dove più basso è meglio.",
+        "nofollow": "{a} dei {b} siti che ti linkano segnano i link da non seguire.",
+        "fixBroken": "Ripristina o reindirizza le pagine a cui puntano quei link."
+      },
+      "backlinksWhere": {
+        "none": "Ancora nessuna suddivisione dei tuoi link.",
+        "largest": "{text} è il gruppo più grande: il {a}% dei tuoi link, {b} in tutto.",
+        "second": "Segue {text}, con il {a}%.",
+        "seeGroup": "Guarda i link da {text}."
+      },
+      "backlinksAll": {
+        "none": "Ancora nessun backlink letto: li legge il prossimo controllo.",
+        "noneMatch": "Nessun link corrisponde a questi filtri.",
+        "links": "{count, plural, one {# link elencato} other {# link elencati}}, da {b} siti.",
+        "strongest": "Il più forte arriva da {text}, con rank {a}.",
+        "followed": "Il {a}% è seguito dai motori di ricerca.",
+        "lost": "{count, plural, one {# è stato perso} other {# sono stati persi}}.",
+        "visitStrongest": "Guarda il link sulla pagina di {text}.",
+        "seeLost": "Guarda {count, plural, one {il link perso} other {i # link persi}} e chiedi di rimetterli."
+      },
+      "backlinksDomains": {
+        "none": "Ancora nessun sito che ti linka letto: li legge il prossimo controllo.",
+        "domains": "{a} siti ti linkano ora, su {b} visti in tutto.",
+        "strongest": "Il più forte è {text}, con rank {a}.",
+        "lost": "{count, plural, one {# sito ha} other {# siti hanno}} smesso di linkarti, {text} il più forte.",
+        "new": "{count, plural, one {# è nuovo} other {# sono nuovi}} dal controllo prima.",
+        "winBack": "Chiedi a {text} di linkarti di nuovo.",
+        "seeStrongest": "Guarda tutti i link da {text}."
+      },
+      "backlinksAnchors": {
+        "none": "Ancora nessuna parola dei link letta: la legge il prossimo controllo.",
+        "top": "Le parole più usate sono “{text}”: {count, plural, one {# link} other {# link}}.",
+        "brand": "Il {a}% dei tuoi link usa il tuo nome o il tuo indirizzo.",
+        "otherWords": "Il {a}% usa altre parole, come quello che fai.",
+        "seeAnchor": "Guarda chi ti linka con “{text}”."
+      },
+      "backlinksIps": {
+        "none": "Ancora nessun server letto: li legge il prossimo controllo.",
+        "spread": "I {a} siti che ti linkano stanno su {b} reti.",
+        "crowded": "{text} ne ospita {a}: i link da una stessa rete contano meno.",
+        "oneEach": "Nessuna rete ne ospita più di uno.",
+        "seeNetwork": "Guarda i siti su {text}.",
+        "checkDomains": "Controlla se tra i siti che ti linkano ce n'è qualcuno che non conosci."
+      },
+      "backlinksBroken": {
+        "none": "Nessun link punta a una tua pagina che non funziona più.",
+        "broken": "{count, plural, one {# link punta} other {# link puntano}} a {b} pagine che non funzionano più.",
+        "topPage": "{text} ne ha di più: {count, plural, one {# link} other {# link}}.",
+        "strongest": "Il più forte, da {text}, punta a {more}.",
+        "putBack": "Ripristina {text}, o reindirizzala alla pagina che l'ha sostituita."
+      },
+      "backlinksNewLost": {
+        "none": "Nessun link guadagnato o perso in queste date.",
+        "gainedLost": "{a} siti hanno iniziato a linkarti in queste date, e {b} hanno smesso.",
+        "mostLost": "La perdita maggiore dal {text}: {a}.",
+        "mostGained": "Il guadagno maggiore dal {text}: {a}.",
+        "seeLostThen": "Guarda i link persi dal {text}.",
+        "seeGainedThen": "Guarda i link guadagnati dal {text}."
+      },
+      "backlinksDomain": {
+        "notHeld": "{text} non è tra i siti che ti linkano nel controllo più recente.",
+        "lost": "{text} non ti linka più.",
+        "links": "{text} ti linka {count, plural, one {una volta} other {# volte}}; {b} dei link letti sono seguiti.",
+        "spam": "Il suo punteggio spam è {a} su 100, dove più basso è meglio.",
+        "seeLink": "Guarda il suo link più forte sulla sua pagina.",
+        "askBack": "Chiedi a {text} di rimettere il link."
+      },
+      "backlinksAnchor": {
+        "notHeld": "“{text}” non è tra le parole che ti linkano nel controllo più recente.",
+        "links": "“{text}” ti linka {count, plural, one {una volta} other {# volte}}, da {b} siti.",
+        "page": "La maggior parte di questi link punta a {text}: {a}.",
+        "seeLink": "Guarda il suo link più forte sulla sua pagina."
       }
     }
   },

@@ -13,6 +13,8 @@ import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { ipsSees } from "@/convex/sees/backlinks";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
@@ -72,6 +74,7 @@ export default function SiteReferringIpsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<Server className="h-5 w-5 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="backlinksIps" seen={profile === undefined || subnets === undefined ? undefined : ipsSees(profile, subnets)} />
       <ListHeldLine held={!term && !subnet ? table.result?.total : undefined} total={totals?.ips} />
 
       <SiteChartCard

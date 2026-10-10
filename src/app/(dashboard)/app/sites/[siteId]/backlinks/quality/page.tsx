@@ -19,6 +19,8 @@ import { formatDay, formatNumber, toCsv } from "../../../_components/siteFormat"
 import { Figure } from "@/src/ui/components/screens/Figure";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { qualitySees } from "@/convex/sees/backlinks";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { dayOf, dayTableSorts, useSiteSortedList } from "../../../_components/useSiteSort";
 import { ListDownload } from "../../../_components/SiteDownloads";
@@ -61,6 +63,7 @@ export default function SiteLinkQualityPage() {
         description={t("description")}
         pills={profile ? <span className="text-[12px] text-secondary">{t("asOf", { day: formatDay(profile.day) })}</span> : null}
       />
+      <SiteSees screen="backlinksQuality" seen={profile === undefined ? undefined : qualitySees(profile)} />
 
       {profile === null ? (
         <HakkenEmptyState icon={ShieldCheck} title={t("title")} description={t("empty")} />

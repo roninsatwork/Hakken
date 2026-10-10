@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { anchorRecordSees, domainRecordSees } from "./sees/backlinks";
+import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
@@ -140,8 +142,9 @@ export const linkingWebsiteRecord = tenantQuery({
       day: v.string(),
     }), v.null()),
     links: v.array(linkValidator),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; domain: string }) => {
     const site = await requireMySite(ctx, args.siteId);
     const websiteId: Id<"websites"> = site.website._id;
     const domain = args.domain.trim().toLowerCase().slice(0, MAX_KEY);
@@ -190,7 +193,7 @@ export const linkingWebsiteRecord = tenantQuery({
         : null,
       links: links.sort((left, right) => right.domainRank - left.domainRank || (right.linkRank ?? 0) - (left.linkRank ?? 0)).map(linkOf),
     };
-  },
+  }, domainRecordSees),
 });
 
 /**
@@ -212,8 +215,9 @@ export const anchorRecord = tenantQuery({
       day: v.string(),
     }), v.null()),
     links: v.array(linkValidator),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites">; anchor: string }) => {
     const site = await requireMySite(ctx, args.siteId);
     const websiteId = site.website._id;
     const anchor = args.anchor.slice(0, MAX_KEY);
@@ -240,5 +244,5 @@ export const anchorRecord = tenantQuery({
         : null,
       links: links.sort((left, right) => right.domainRank - left.domainRank).map(linkOf),
     };
-  },
+  }, anchorRecordSees),
 });

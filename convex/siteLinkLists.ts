@@ -4,7 +4,9 @@ import { tenantQuery } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
 import { bucketOf, stepValidator } from "./siteFigures";
 import { linksCopyKey, readListCopy } from "./siteListCopies";
-import { heldTo, listOrder, listPageArgs, listPageResult, newestPerKey, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
+import { heldTo, listOrder, listPageArgs, listPageResult, listPageSeenResult, newestPerKey, pageOfList, preparingPage, sortDirectionArg, type ListSorts } from "./siteListPages";
+import { seen } from "./utils/hakkenSees";
+import { allLinksSees, anchorsSees, brokenSees, domainsSees } from "./sees/backlinks";
 import { ipSortKey, type SortDirection } from "./utils/sortOrder";
 import { wordStartMatcher } from "./utils/wordStarts";
 import { readReferringDomains, type ReferringDomainRow } from "./siteReferringDomainParts";
@@ -183,11 +185,13 @@ export const listBacklinks = tenantQuery({
     changedFrom: v.optional(v.string()),
     changedUntil: v.optional(v.string()),
   },
-  returns: listPageResult(backlinkRow),
+  returns: listPageSeenResult(backlinkRow),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const websiteId = site.website._id;
     const narrowed = Boolean(args.group || (args.changedFrom && args.changedUntil));
+    // What Hakken sees is of the links listed: those the filters and search leave.
+    const filtered = narrowed || Boolean(args.search || args.status || args.follow);
     if (!args.every || narrowed) {
       const read = await ctx.db
         .query("siteBacklinks")
@@ -200,11 +204,11 @@ export const listBacklinks = tenantQuery({
           && (!args.changedFrom || !args.changedUntil || linkChangedIn(row, args.changedFrom, args.changedUntil)));
       const list = narrowLinks(inView, args);
       const page = pageOfList(list, args.page, args.rows, cut);
-      return { ...page, rows: page.rows.map(shapeBacklink) };
+      return { ...page, rows: page.rows.map(shapeBacklink), seen: allLinksSees(list, filtered) };
     }
 
     const copy = await readListCopy(ctx, "links", linksCopyKey(websiteId), LINK_COPY_FIELDS);
-    if (!copy) return preparingPage(args.rows);
+    if (!copy) return { ...preparingPage(args.rows), seen: seen([]) };
     const links = copy.rows.map(([id, domainFrom, urlFrom, anchor, pageTo, dofollow, linkStatus, domainRank, firstSeen]) => ({
       id: id as Id<"siteBacklinks">,
       domainFrom: domainFrom as string,
@@ -216,9 +220,10 @@ export const listBacklinks = tenantQuery({
       domainRank: domainRank as number,
       firstSeen: firstSeen as string | null,
     }));
-    const page = pageOfList(narrowLinks(links, args), args.page, args.rows, copy.cut);
+    const list = narrowLinks(links, args);
+    const page = pageOfList(list, args.page, args.rows, copy.cut);
     const full = await Promise.all(page.rows.map((link) => ctx.db.get(link.id)));
-    return { ...page, rows: full.flatMap((row) => (row ? [shapeBacklink(row)] : [])) };
+    return { ...page, rows: full.flatMap((row) => (row ? [shapeBacklink(row)] : [])), seen: allLinksSees(list, filtered) };
   },
 });
 
@@ -242,7 +247,7 @@ export const listBrokenBacklinks = tenantQuery({
     sort: v.optional(v.union(v.literal("from"), v.literal("code"), v.literal("domainRank"))),
     direction: sortDirectionArg,
   },
-  returns: listPageResult(backlinkRow),
+  returns: listPageSeenResult(backlinkRow),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const read = await ctx.db
@@ -252,11 +257,12 @@ export const listBrokenBacklinks = tenantQuery({
       .take(LINK_LIST_READ + 1);
     const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
     const matches = wordStartMatcher(args.search);
-    const list = newestPerKey(held, (row) => `${row.urlFrom} ${row.urlTo} ${row.anchor ?? ""}`)
+    const every = newestPerKey(held, (row) => `${row.urlFrom} ${row.urlTo} ${row.anchor ?? ""}`);
+    const list = every
       .filter((row) => !matches || matches(row.domainFrom, row.urlFrom, row.anchor, row.pageTo))
       .sort(listOrder(BROKEN_SORTS, args.sort ?? "domainRank", args.direction, (row) => row.urlFrom));
     const page = pageOfList(list, args.page, args.rows, cut);
-    return { ...page, rows: page.rows.map(shapeBacklink) };
+    return { ...page, rows: page.rows.map(shapeBacklink), seen: brokenSees(every) };
   },
 });
 
@@ -310,7 +316,7 @@ export const listReferringDomains = tenantQuery({
     sort: v.optional(v.union(v.literal("domain"), v.literal("rank"), v.literal("backlinks"), v.literal("spam"), v.literal("firstSeen"))),
     direction: sortDirectionArg,
   },
-  returns: listPageResult(v.object({
+  returns: listPageSeenResult(v.object({
     domain: v.string(),
     ...groupShape,
     brokenBacklinks: nullableNumber,
@@ -324,7 +330,8 @@ export const listReferringDomains = tenantQuery({
     const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
     const matches = wordStartMatcher(args.search);
     const name = (row: ReferringDomainRow) => row.domain;
-    const list = newestPerKey(held, name)
+    const every = newestPerKey(held, name);
+    const list = every
       .filter((row) => (!args.status || row.status === args.status) && (!matches || matches(row.domain)))
       .filter((row) => !args.follow || (row.nofollowPages ?? 0) > 0)
       .sort(listOrder(DOMAIN_SORTS, args.sort ?? "rank", args.direction, name));
@@ -338,6 +345,7 @@ export const listReferringDomains = tenantQuery({
         referringPages: row.referringPages ?? null,
         nofollowPages: row.nofollowPages ?? null,
       })),
+      seen: domainsSees(every),
     };
   },
 });
@@ -359,7 +367,7 @@ export const listAnchors = tenantQuery({
     sort: v.optional(v.union(v.literal("anchor"), v.literal("backlinks"), v.literal("domains"), v.literal("firstSeen"))),
     direction: sortDirectionArg,
   },
-  returns: listPageResult(v.object({
+  returns: listPageSeenResult(v.object({
     anchor: v.string(),
     ...groupShape,
     referringDomains: v.number(),
@@ -371,13 +379,15 @@ export const listAnchors = tenantQuery({
     const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
     const matches = wordStartMatcher(args.search);
     const name = (row: AnchorRow) => row.anchor;
-    const list = newestPerKey(held, name)
+    const every = newestPerKey(held, name);
+    const list = every
       .filter((row) => !matches || matches(row.anchor))
       .sort(listOrder(ANCHOR_SORTS, args.sort ?? "backlinks", args.direction, name));
     const page = pageOfList(list, args.page, args.rows, cut);
     return {
       ...page,
       rows: page.rows.map((row) => ({ anchor: row.anchor, ...shapeGroup(row), referringDomains: row.referringDomains })),
+      seen: anchorsSees(every, site.website.host),
     };
   },
 });

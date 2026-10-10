@@ -14,6 +14,7 @@ import { SiteLinkList } from "../../../../_components/SiteLinkList";
 import { formatDay, formatNumber } from "../../../../_components/siteFormat";
 import { useRecordBack } from "../../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../../_components/useSite";
+import { SiteSees } from "../../../../_components/SiteSees";
 
 /**
  * One anchor's own screen (Backlinks › Anchors › an anchor): the words other
@@ -48,6 +49,7 @@ export default function SiteAnchorPage() {
         description={t("description")}
         pills={summary ? <LinkStatusLabel status={summary.status} /> : undefined}
       />
+      <SiteSees screen="backlinksAnchor" seen={record?.seen} />
 
       {record === undefined ? (
         <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" aria-label={tr("loading")} />

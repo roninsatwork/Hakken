@@ -13467,7 +13467,15 @@
         "waitingReviews": "Reviews waiting",
         "againstRivals": "Against rivals",
         "seeReviews": "See the reviews",
-        "visitPage": "Open the page"
+        "visitPage": "Open the page",
+        "newAndLost": "New and lost links",
+        "brokenBacklinks": "Broken backlinks",
+        "seeLinks": "See the links",
+        "lostLinks": "Lost links",
+        "seeDomain": "See the website",
+        "seeAnchor": "See the words",
+        "seeNetwork": "See the network",
+        "referringDomains": "Referring domains"
       },
       "website": {
         "notQuoted": "Google's AI has not quoted {text} in answers about you or your rivals.",
@@ -13769,6 +13777,102 @@
         "mostRivals": "{text} has {a} of your rivals and not you.",
         "strongest": "{text} is the strongest of them.",
         "getOnto": "Get onto {text}."
+      },
+      "backlinks": {
+        "none": "No backlinks read yet: the next check reads them.",
+        "linkingWebsites": "{a} websites link to you, with {b} links in all.",
+        "up": "That is {a} more linking websites than at the start of these dates.",
+        "down": "That is {a} fewer linking websites than at the start of these dates.",
+        "steady": "As many websites link to you as at the start of these dates.",
+        "broken": "{count, plural, one {# link points} other {# links point}} at pages of yours that no longer work.",
+        "seeNew": "See the links gained and lost, and who they came from.",
+        "seeLost": "See which websites stopped linking to you, and when.",
+        "fixBroken": "Put back or redirect the pages those links point at."
+      },
+      "backlinksCompared": {
+        "none": "No backlinks read yet for you and your rivals.",
+        "lead": "{a} websites link to you: more than to any rival you watch.",
+        "behind": "{a} websites link to you; {b} link to {text}, the leader.",
+        "strongerRank": "{text} is the strongest website by its links: {a} against your {b}.",
+        "getListed": "Get onto the websites that link to or quote your rivals and not you.",
+        "seeLeader": "See where {text} is named and you are not."
+      },
+      "backlinksQuality": {
+        "none": "No backlinks read yet: the next check reads them.",
+        "broken": "{count, plural, one {# link points} other {# links point}} at {b} pages of yours that no longer work.",
+        "noBroken": "No link points at a page of yours that no longer works.",
+        "spam": "Your links' spam score is {a} of 100, where lower is better.",
+        "nofollow": "{a} of the {b} websites linking to you mark their links not to be followed.",
+        "fixBroken": "Put back or redirect the pages those links point at."
+      },
+      "backlinksWhere": {
+        "none": "No breakdown of your links is held yet.",
+        "largest": "{text} is the largest group: {a}% of your links, {b} in all.",
+        "second": "{text} comes next, with {a}%.",
+        "seeGroup": "See the links from {text}."
+      },
+      "backlinksAll": {
+        "none": "No backlinks read yet: the next check reads them.",
+        "noneMatch": "No link matches these filters.",
+        "links": "{count, plural, one {# link} other {# links}} listed, from {b} websites.",
+        "strongest": "The strongest comes from {text}, ranked {a}.",
+        "followed": "{a}% of them are followed by search engines.",
+        "lost": "{count, plural, one {# of them has} other {# of them have}} been lost.",
+        "visitStrongest": "See the link on {text}'s page.",
+        "seeLost": "See the {count, plural, one {lost link} other {# lost links}}, and ask for them back."
+      },
+      "backlinksDomains": {
+        "none": "No linking websites read yet: the next check reads them.",
+        "domains": "{a} websites link to you now, of {b} ever seen.",
+        "strongest": "The strongest is {text}, ranked {a}.",
+        "lost": "{count, plural, one {# website has} other {# websites have}} stopped linking, {text} the strongest.",
+        "new": "{count, plural, one {# is} other {# are}} new since the check before.",
+        "winBack": "Ask {text} to link to you again.",
+        "seeStrongest": "See every link from {text}."
+      },
+      "backlinksAnchors": {
+        "none": "No link words read yet: the next check reads them.",
+        "top": "The words used most are “{text}”: {count, plural, one {# link} other {# links}}.",
+        "brand": "{a}% of your links use your name or your address.",
+        "otherWords": "{a}% use other words, such as what you do.",
+        "seeAnchor": "See who links to you with “{text}”."
+      },
+      "backlinksIps": {
+        "none": "No servers read yet: the next check reads them.",
+        "spread": "The {a} websites linking to you sit on {b} networks.",
+        "crowded": "{text} hosts {a} of them: links from one network count for less.",
+        "oneEach": "No network hosts more than one of them.",
+        "seeNetwork": "See the websites on {text}.",
+        "checkDomains": "Check the websites linking to you for any you do not know."
+      },
+      "backlinksBroken": {
+        "none": "No link points at a page of yours that no longer works.",
+        "broken": "{count, plural, one {# link points} other {# links point}} at {b} pages that no longer work.",
+        "topPage": "{text} has the most: {count, plural, one {# link} other {# links}}.",
+        "strongest": "The strongest, from {text}, points at {more}.",
+        "putBack": "Put back {text}, or redirect it to the page that replaced it."
+      },
+      "backlinksNewLost": {
+        "none": "No link gained or lost in these dates.",
+        "gainedLost": "{a} websites started linking to you in these dates, and {b} stopped.",
+        "mostLost": "Most were lost from {text}: {a}.",
+        "mostGained": "Most were gained from {text}: {a}.",
+        "seeLostThen": "See the links lost from {text}.",
+        "seeGainedThen": "See the links gained from {text}."
+      },
+      "backlinksDomain": {
+        "notHeld": "{text} is not among the websites linking to you on the newest check.",
+        "lost": "{text} no longer links to you.",
+        "links": "{text} links to you {count, plural, one {once} other {# times}}; {b} of the links held are followed.",
+        "spam": "Its spam score is {a} of 100, where lower is better.",
+        "seeLink": "See its strongest link on its page.",
+        "askBack": "Ask {text} to put its link back."
+      },
+      "backlinksAnchor": {
+        "notHeld": "“{text}” is not among the words linking to you on the newest check.",
+        "links": "“{text}” links to you {count, plural, one {once} other {# times}}, from {b} websites.",
+        "page": "Most of these links point at {text}: {a}.",
+        "seeLink": "See its strongest link on its page."
       }
     }
   },

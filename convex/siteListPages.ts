@@ -1,6 +1,7 @@
 import { v, type Validator } from "convex/values";
 import { SITE_PAGE_MAX } from "./siteAccess";
 import { byValue, type SortDirection, type SortValue } from "./utils/sortOrder";
+import { seenValidator } from "./utils/hakkenSees";
 
 /**
  * One page of a Sites list, counted exactly (docs/plans/active/
@@ -35,6 +36,11 @@ export function listPageResult<Row extends Validator<unknown, "required", string
     cut: v.union(v.number(), v.null()),
     preparing: v.boolean(),
   });
+}
+
+/** A page of a Discovery list with its What Hakken sees box, worked out over the whole list the page is cut from. */
+export function listPageSeenResult<Row extends Validator<unknown, "required", string>>(row: Row) {
+  return v.object({ ...listPageResult(row).fields, seen: seenValidator });
 }
 
 export type ListPage<Row> = {

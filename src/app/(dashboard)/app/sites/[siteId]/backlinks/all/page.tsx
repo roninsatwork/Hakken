@@ -14,6 +14,7 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { formatDay, formatNumber } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSetSiteParams, useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
@@ -98,6 +99,7 @@ export default function SiteAllBacklinksPage() {
         title={t("title")}
         description={every ? t("descriptionEvery") : t("description")}
       />
+      <SiteSees screen="backlinksAll" seen={table.result?.seen} />
       {narrowed ? <Notice>{t("narrowedNotice")}</Notice> : <ListHeldLine held={!term && !status && !follow ? table.result?.total : undefined} total={totals?.[every ? "backlinks" : "oneEach"]} />}
       <DataTable
         rows={table.pageRows}

@@ -16,6 +16,8 @@ import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { formatDay, formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { whereLinksSees } from "@/convex/sees/backlinks";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
@@ -94,6 +96,7 @@ export default function SiteLinkSourcesPage() {
           ? <span className="text-[12px] text-secondary">{overlapping ? t("overlapping", { links: formatNumber(profile.backlinks) }) : t("largestOnly", { count: KEPT })}</span>
           : null}
       />
+      <SiteSees screen="backlinksWhere" seen={profile === undefined ? undefined : whereLinksSees({ breakdown, groups, total }, nameOf)} />
 
       {profile === null ? (
         <HakkenEmptyState icon={Globe2} title={t("title")} description={t("empty")} />
