@@ -76,6 +76,9 @@ const PARTS_PER_DELETE = 64;
 /** Live lists removed a call. */
 const LIVE_PER_DELETE = 200;
 
+/** A day's records of one list: a part or two for each of a handful of devices. */
+const DAY_RECORDS_READ = 100;
+
 /** The newest whole day in the property's own time zone (§2.5): yesterday there. */
 export function newestWholeDayIn(now: number, timeZone: string): string {
   let today: string;
@@ -227,18 +230,28 @@ async function ask(session: Session, property: string, report: ReportAsk): Promi
   }
 }
 
-type Asked = { ok: true; groups: Map<string, ListRow[]>; flags: { folded: boolean; thresholded: boolean; cut: boolean } } | GoogleFailure;
+export type Asked = { ok: true; groups: Map<string, ListRow[]>; flags: { folded: boolean; thresholded: boolean; cut: boolean } } | GoogleFailure;
 
-/** A list's two asks — its figures and its key events — joined (`joinAsks`). */
-async function askList(
+/**
+ * A list's two asks — its figures and its key events — joined (`joinAsks`):
+ * for one device, or one landing page, when a screen asks live (GA20, GA22).
+ */
+export async function askList(
   session: Session,
   target: CollectTarget,
   list: AnalyticsList,
   lead: readonly ("date" | "deviceCategory")[],
   range: { from: string; to: string },
+  only: { device?: string; landingPage?: string } = {},
 ): Promise<Asked> {
   const dimensions = [...lead, ...LIST_DIMENSIONS[list]];
-  const base = { startDate: range.from, endDate: range.to, hostNames: target.addresses };
+  const base = {
+    startDate: range.from,
+    endDate: range.to,
+    hostNames: target.addresses,
+    ...(only.device ? { device: only.device } : {}),
+    ...(only.landingPage !== undefined ? { only: { dimension: "landingPage", value: only.landingPage } } : {}),
+  };
   const main = await ask(session, target.property!, { ...base, dimensions, metrics: [...MAIN_METRICS] });
   if (!main.ok) return main;
   let events: ({ ok: true } & Report) | null = null;
@@ -264,7 +277,7 @@ async function askList(
 }
 
 /** A page list's addresses as the website's page numbers (`holdPageRefs.ts`), shared with Search Console (§4.6). */
-async function numberPages(ctx: ActionCtx, target: CollectTarget, rows: ListRow[]): Promise<ListRow[]> {
+export async function numberPages(ctx: ActionCtx, target: CollectTarget, rows: ListRow[]): Promise<ListRow[]> {
   const addresses = rows.map((row) => pageAddress(target.origin, row.key));
   const numbered = await encodePagesFromAction(ctx, target.companyWebsiteId, addresses.filter((address) => address !== "(not set)"));
   const refs = new Map<string, string>();
@@ -375,7 +388,7 @@ export const writeDay = internalMutation({
       const held = await ctx.db
         .query("googleAnalyticsDays")
         .withIndex("by_hold_list_day_device", (q) => q.eq("companyWebsiteId", hold).eq("list", list).eq("day", args.day))
-        .collect();
+        .take(DAY_RECORDS_READ);
       for (const record of fresh) {
         for (const [part, packed] of record.parts.entries()) {
           const before = held.find((row) => row.device === record.device && row.part === part);
@@ -576,13 +589,17 @@ export const finishCollection = internalMutation({
     property: v.string(),
     weekly: v.boolean(),
     firstDone: v.boolean(),
+    /** Every address's visits over the 30 days, asked with the weekly lists: the strangers check. */
+    hostVisits: v.optional(v.array(v.object({ host: v.string(), visits: v.number() }))),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const connection = await ctx.db.get(args.connectionId);
     if (!connection || connection.property !== args.property) return null;
     const now = Date.now();
+    const first = args.firstDone && connection.backfilledAt === undefined;
     await ctx.db.patch(connection._id, {
+      ...(args.hostVisits ? { hostVisits: args.hostVisits } : {}),
       lastCollectedAt: now,
       dailyPeriodsAt: now,
       ...(args.weekly ? { weeklyPeriodsAt: now } : {}),
@@ -595,6 +612,8 @@ export const finishCollection = internalMutation({
     if (connection.newestDay) await dropOldDays(ctx, connection.companyWebsiteId, connection.newestDay);
     // What screens asked of Google live is held until now (GA23): the ready-made lists are fresher.
     await ctx.scheduler.runAfter(0, internal.googleAnalyticsCollect.dropLive, { companyWebsiteId: connection.companyWebsiteId });
+    // Tracking health when the first collection is in, and every week (GA11).
+    if (first || args.weekly) await ctx.scheduler.runAfter(0, internal.googleAnalyticsHealth.runHealthChecks, { connectionId: connection._id });
     return null;
   },
 });

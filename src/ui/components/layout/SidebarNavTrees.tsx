@@ -11,6 +11,7 @@ import {
   Globe,
   GraduationCap,
   SearchCheck,
+  ChartColumn,
   Bot,
   Workflow,
   ShieldCheck,
@@ -390,6 +391,19 @@ export function UserNavTree({
     href="/app/search-console"
     isActive={activeItem === 'Search Console' || pathname.startsWith('/app/search-console')}
     onClick={() => setActiveItem('Search Console')}
+  />
+
+  {/*
+    Each own website's Google Analytics (docs/plans/active/google-analytics-plan.md,
+    GA1): its own item after Search Console, "Google Analytics" (§10, Q7), with
+    its own key — Admin's System Settings → Analytics keeps 'Analytics'.
+  */}
+  <NavItem
+    icon={ChartColumn}
+    label={t('googleAnalytics')}
+    href="/app/analytics"
+    isActive={activeItem === 'Google Analytics' || pathname.startsWith('/app/analytics')}
+    onClick={() => setActiveItem('Google Analytics')}
   />
 
   {/*

@@ -120,6 +120,7 @@ export function SiteLineChart({
   height = 260,
   reversed = false,
   sharedScale = false,
+  scaleOf,
 }: {
   data: Array<Record<string, unknown>>;
   series: SiteSeries[];
@@ -129,8 +130,19 @@ export function SiteLineChart({
   reversed?: boolean;
   /** One scale for every line, when they measure the same thing (a site and its rivals). */
   sharedScale?: boolean;
+  /**
+   * The scale each line is drawn on, when some share one and others have
+   * their own: Google Analytics' conversions, each kind on one scale and their
+   * value on its own (google-analytics-plan.md §11, board 7). Lines naming the
+   * same scale share it.
+   */
+  scaleOf?: (entry: SiteSeries) => string;
 }) {
   const google = useGoogleUpdates(data);
+  const axisOf = (entry: SiteSeries) => (scaleOf ? scaleOf(entry) : sharedScale ? "shared" : entry.key);
+  // Each scale once, coloured as its line when it holds only one.
+  const axes = [...new Map(series.map((entry) => [axisOf(entry), entry])).entries()]
+    .map(([id, entry]) => ({ id, entry, alone: series.filter((other) => axisOf(other) === id).length === 1 }));
   return (
     <GoogleUpdateFrame google={google}>
       <ChartReveal replay={revealKey(data, xKey)}>
@@ -138,20 +150,20 @@ export function SiteLineChart({
           <LineChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" className="text-border-dim" />
             <XAxis {...AXIS_PROPS} minTickGap={24} {...google.axis(xKey)} />
-            {sharedScale ? (
+            {sharedScale && !scaleOf ? (
               <YAxis yAxisId="shared" width={48} reversed={reversed} allowDecimals={false} tickFormatter={formatCompact} {...AXIS_PROPS} />
-            ) : series.map((entry, index) => (
+            ) : axes.map(({ id, entry, alone }, index) => (
               <YAxis
-                key={entry.key}
-                yAxisId={entry.key}
+                key={id}
+                yAxisId={id}
                 orientation={index === 1 ? "right" : "left"}
                 hide={index > 1}
                 width={48}
-                reversed={reversed || entry.reversed}
+                reversed={reversed || (alone && entry.reversed)}
                 allowDecimals={false}
                 tickFormatter={formatCompact}
                 {...AXIS_PROPS}
-                stroke={entry.colour}
+                {...(alone ? { stroke: entry.colour } : {})}
               />
             ))}
             <Tooltip active={google.open ? false : undefined} cursor={CHART_CROSSHAIR} content={<ChartTooltip title={google.readoutTitle} />} />
@@ -159,7 +171,7 @@ export function SiteLineChart({
             {series.map((entry) => (
               <Line
                 key={entry.key}
-                yAxisId={sharedScale ? "shared" : entry.key}
+                yAxisId={axisOf(entry)}
                 type="monotone"
                 dataKey={entry.key}
                 name={entry.name}

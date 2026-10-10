@@ -15,7 +15,7 @@ import {
 } from "./connectorTokenCrypto";
 import { exchangeAuthorizationCode, refreshAccessToken, revokeOAuthToken } from "./oauthTokenCalls";
 import { SEARCH_CONSOLE_READ_SCOPE, SEARCH_CONSOLE_SCOPES, listProperties, propertiesForHost } from "./searchConsoleApi";
-import { GOOGLE_ANALYTICS_READ_SCOPE, propertiesForSite, siteAddresses, type PropertyChoice } from "./googleAnalyticsApi";
+import { GOOGLE_ANALYTICS_READ_SCOPE, propertiesForSite, siteAddresses, yesterdayUtc, type PropertyChoice } from "./googleAnalyticsApi";
 
 /**
  * The one Google sign-in a company's own website connects with, shared by
@@ -192,7 +192,7 @@ async function findFor(section: GoogleSection, accessToken: string, host: string
   if (listed.choices.length === 0) return { ok: false, outcome: "NO_PROPERTY" };
   const choices: AnalyticsFound["choices"] = listed.choices;
   for (const choice of choices.filter((entry) => entry.stream !== null).slice(0, ADDRESSES_READ_FOR)) {
-    const read = await siteAddresses(accessToken, choice.property, host, "today");
+    const read = await siteAddresses(accessToken, choice.property, host, yesterdayUtc(Date.now()));
     if (read.ok) Object.assign(choice, { addresses: read.found.addresses, others: read.found.others });
   }
   return { ok: true, found: { section, choices } };

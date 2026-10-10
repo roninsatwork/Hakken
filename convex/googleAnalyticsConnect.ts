@@ -17,16 +17,19 @@ import {
   isGoogleConfigured,
   newSignInState,
 } from "./googleConnection";
-import { listKeyEvents, propertyDetails, runReport, siteAddresses } from "./googleAnalyticsApi";
+import { lastThirtyDays, listKeyEvents, propertyDetails, runReport, siteAddresses, yesterdayUtc } from "./googleAnalyticsApi";
+import { newestWholeDayIn } from "./googleAnalyticsCollect";
 import {
   analyticsAttemptValidator,
   analyticsProblemValidator,
   analyticsStatusValidator,
   countedEventValidator,
+  healthResultValidator,
   propertyChoiceValidator,
 } from "./googleAnalyticsSchema";
 import { tickedAtFirst } from "./utils/analyticsEvents";
 import { startFirstCollection } from "./googleAnalyticsAgentRun";
+import { tellAdmins } from "./googleAnalyticsHealth";
 
 /**
  * Connecting an owned website to its Google Analytics
@@ -297,9 +300,11 @@ export const readWhatCounts = internalAction({
     const token = await accessTokenFor(ctx, args.connectionId);
     if (!token.ok) return null;
     const details = await propertyDetails(token.accessToken, target.property);
+    // The property's own time zone is known from here on; until then, yesterday in UTC.
+    const newest = details.ok ? newestWholeDayIn(Date.now(), details.details.timeZone) : yesterdayUtc(Date.now());
     const addresses = target.addresses
       ? { ok: true as const, found: { addresses: target.addresses, others: null } }
-      : await siteAddresses(token.accessToken, target.property, target.host, "today");
+      : await siteAddresses(token.accessToken, target.property, target.host, newest);
     const keyEvents = await listKeyEvents(token.accessToken, target.property);
     if (!details.ok || !addresses.ok || !keyEvents.ok) {
       const refused = [details, addresses, keyEvents].find((answer) => !answer.ok);
@@ -313,8 +318,8 @@ export const readWhatCounts = internalAction({
     const counts = new Map<string, { count: number; value: number }>();
     if (names.length > 0) {
       const report = await runReport(token.accessToken, target.property, {
-        startDate: "30daysAgo",
-        endDate: "today",
+        startDate: lastThirtyDays(newest).from,
+        endDate: newest,
         dimensions: ["eventName"],
         metrics: ["eventCount", "eventValue"],
         hostNames: addresses.found.addresses,
@@ -455,6 +460,14 @@ export const saveWhatCounts = adminMutation({
     // Another property's figures go first; collecting starts at once, for this website alone (§10, Q15).
     if (another) await ctx.scheduler.runAfter(0, internal.googleAnalyticsCollect.clearFigures, { companyWebsiteId: connection.companyWebsiteId });
     else if (first) await startFirstCollection(ctx, (await ctx.db.get(connection._id))!);
+    if (first) {
+      const website = await ctx.db.get(connection.websiteId);
+      const host = website?.displayHost ?? website?.host ?? "";
+      await tellAdmins(ctx, connection, `${host} is connected to Google Analytics`, "Its last 90 days are coming in now, newest week first.", `/app/analytics/${connection.companyWebsiteId}`, "GOOGLE_ANALYTICS_CONNECTED");
+    } else if (connection.newestDay) {
+      // What counts changed: the checks that read it say so at once.
+      await ctx.scheduler.runAfter(0, internal.googleAnalyticsHealth.runHealthChecks, { connectionId: connection._id });
+    }
     return null;
   },
 });
@@ -614,6 +627,8 @@ export const statusConnectionValidator = v.object({
   collecting: v.union(v.null(), v.object({ from: v.string(), top: v.string() })),
   problem: v.union(analyticsProblemValidator, v.null()),
   attempt: v.union(v.null(), v.object({ outcome: analyticsAttemptValidator, account: orNull(v.string()), at: v.number() })),
+  /** The tracking health checks' last results (§6). */
+  health: v.union(v.null(), v.object({ checkedAt: v.number(), checks: v.array(healthResultValidator) })),
 });
 
 /**
@@ -696,5 +711,6 @@ async function asStatus(
     attempt: connection.attempt
       ? { outcome: connection.attempt.outcome, account: connection.attempt.account ?? null, at: connection.attempt.at }
       : null,
+    health: connection.health ?? null,
   };
 }

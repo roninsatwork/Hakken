@@ -272,22 +272,36 @@ export type SiteAddresses = {
   addresses: string[];
   /** The property's other addresses with visits, busiest first, left out of every figure. */
   others: string[];
+  /** Every address's visits over the 30 days, busiest first. */
+  visits: { host: string; visits: number }[];
 };
+
+/** The 30 days to a newest day: what the address and key event asks read. */
+export function lastThirtyDays(newest: string): { from: string; to: string } {
+  const from = new Date(Date.parse(`${newest}T00:00:00Z`) - 29 * 86_400_000).toISOString().slice(0, 10);
+  return { from, to: newest };
+}
+
+/** Yesterday in UTC: the newest day asked before a property's own time zone is known. */
+export function yesterdayUtc(now: number): string {
+  return new Date(now - 86_400_000).toISOString().slice(0, 10);
+}
 
 /**
  * Which of a property's addresses are this website (§3, step 4, chosen for the
- * client by §10, Q16): its visits by `hostName` over the last 30 days. A
- * property with no visits yet reads the website's own host.
+ * client by §10, Q16): its visits by `hostName` over the last 30 days to
+ * `newest`. A property with no visits yet reads the website's own host.
  */
 export async function siteAddresses(
   accessToken: string,
   property: string,
   siteHost: string,
-  today: string,
+  newest: string,
 ): Promise<{ ok: true; found: SiteAddresses } | GoogleFailure> {
+  const days = lastThirtyDays(newest);
   const report = await runReport(accessToken, property, {
-    startDate: "30daysAgo",
-    endDate: today,
+    startDate: days.from,
+    endDate: days.to,
     dimensions: ["hostName"],
     metrics: ["sessions"],
   });
@@ -296,5 +310,12 @@ export async function siteAddresses(
   const site = bareHost(siteHost);
   const addresses = busiest.filter((row) => row.keys[0] && bareHost(row.keys[0]) === site).map((row) => row.keys[0].toLowerCase());
   const others = busiest.filter((row) => row.keys[0] && bareHost(row.keys[0]) !== site && row.keys[0] !== "(not set)").map((row) => row.keys[0]);
-  return { ok: true, found: { addresses: addresses.length > 0 ? [...new Set(addresses)] : [siteHost.toLowerCase()], others } };
+  return {
+    ok: true,
+    found: {
+      addresses: addresses.length > 0 ? [...new Set(addresses)] : [siteHost.toLowerCase()],
+      others,
+      visits: busiest.filter((row) => row.keys[0]).map((row) => ({ host: row.keys[0], visits: row.values[0] })),
+    },
+  };
 }

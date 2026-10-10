@@ -4,6 +4,7 @@ import { internalAction, internalMutation, internalQuery, type MutationCtx } fro
 import type { Doc, Id } from "./_generated/dataModel";
 import { failureSummary, lastMoved, ROLE_RUN_LIVE_MS } from "./roleRuns";
 import { shiftDay } from "./searchConsoleDays";
+import { siteAddresses } from "./googleAnalyticsApi";
 import { count, days, finishRun } from "./searchConsoleAgentRun";
 import {
   DAYS_PER_STEP,
@@ -333,11 +334,14 @@ export const collectSiteStep = internalAction({
           continue;
         }
         if (jobAt >= jobs.length) {
+          // With the weekly lists, every address's visits, for tracking health's strangers check (§6, check 8).
+          const hosts = weekly ? await siteAddresses(open.accessToken, args.property, target.addresses[0] ?? args.host, args.top) : null;
           await ctx.runMutation(internal.googleAnalyticsCollect.finishCollection, {
             connectionId: args.connectionId,
             property: args.property,
             weekly,
             firstDone: true,
+            ...(hosts?.ok ? { hostVisits: hosts.found.visits.slice(0, 50) } : {}),
           });
           await ctx.runMutation(internal.roleRuns.logRunLine, {
             runId: args.runId,

@@ -32,7 +32,9 @@ export type TableNoun =
   // Discovery's Reviews pages: a listing's reviews (step 2); Your assets (step 5).
   | "reviews" | "assets"
   // Web mentions (step 6): pages naming a business, and places to get listed.
-  | "mentions" | "places";
+  | "mentions" | "places"
+  // Google Analytics (google-analytics-plan.md §5): channels, a channel's sources, landing pages, kinds of conversion.
+  | "channels" | "sources" | "landingPages" | "conversionKinds";
 
 /**
  * The bar across the top of every Sites table, inside its card (`DataTable`'s

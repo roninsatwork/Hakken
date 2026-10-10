@@ -21,6 +21,8 @@ const REPORTING_ROOTS = [
   'src/app/(dashboard)/app/sites',
   'src/app/(dashboard)/app/search-console',
   'src/app/(dashboard)/app/keyword-research',
+  // Google Analytics (docs/plans/active/google-analytics-plan.md §5): its tables are the same standard ones.
+  'src/app/(dashboard)/app/analytics',
 ];
 const reportingFiles = () => REPORTING_ROOTS.flatMap((root) => walkFiles(path.join(repoRoot, root), new Set(['.tsx'])));
 

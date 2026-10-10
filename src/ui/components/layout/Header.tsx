@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, Building2, Gamepad2, Gauge, GraduationCap, LayoutDashboard, ListChecks, ListTodo, User, Settings, LogOut, Sidebar, ShieldCheck, ChevronsUpDown, Phone, Globe, SearchCheck } from "lucide-react";
+import { Bot, Building2, Gamepad2, Gauge, GraduationCap, LayoutDashboard, ListChecks, ListTodo, User, Settings, LogOut, Sidebar, ShieldCheck, ChevronsUpDown, Phone, Globe, SearchCheck, ChartColumn } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useQuery, useMutation } from "convex/react";
@@ -68,6 +68,7 @@ function getAppHeaderSegments(pathname: string, t: HeaderTranslator, askLabel: s
   // Keyword research sits under Discovery beside Websites (keyword-research-plan.md).
   if (pathname.startsWith("/app/sites") || pathname.startsWith("/app/keyword-research")) return [t("sites")];
   if (pathname.startsWith("/app/search-console")) return [t("searchConsole")];
+  if (pathname.startsWith("/app/analytics")) return [t("googleAnalytics")];
   if (isLearnPath(pathname)) return [t("learn")];
   // Usage, after Learn (usage-credits-plan.md, step 3).
   if (pathname.startsWith("/app/usage")) return [t("usage")];
@@ -123,6 +124,8 @@ export default function Header({ onOpenModal }: HeaderProps) {
       ? Globe
       : pathname.startsWith("/app/search-console")
       ? SearchCheck
+      : pathname.startsWith("/app/analytics")
+      ? ChartColumn
       : isLearnPath(pathname)
       ? GraduationCap
       : pathname.startsWith("/app/usage")

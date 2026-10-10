@@ -131,6 +131,29 @@ const leftOut = {
   cut: v.optional(v.boolean()),
 };
 
+/** The tracking health checks (§6), in the order the plan lists them. */
+export const HEALTH_CHECKS = [
+  "NOTHING_COUNTED",
+  "NO_VALUE",
+  "TRACKING_STOPPED",
+  "SUDDEN_FALL",
+  "SELF_REFERRAL",
+  "PAYMENT_REFERRALS",
+  "TOO_MUCH_UNKNOWN",
+  "STRANGERS",
+] as const;
+export type HealthCheck = (typeof HEALTH_CHECKS)[number];
+export const healthCheckValidator = v.union(...HEALTH_CHECKS.map((check) => v.literal(check)));
+
+/** One check's result, with what its words name: events, addresses or sources, a count, a share. */
+export const healthResultValidator = v.object({
+  check: healthCheckValidator,
+  passing: v.boolean(),
+  names: v.optional(v.array(v.string())),
+  count: v.optional(v.number()),
+  share: v.optional(v.number()),
+});
+
 export const googleAnalyticsTables = {
   googleAnalyticsConnections: defineTable({
     companyId: v.id("companies"),
@@ -176,6 +199,10 @@ export const googleAnalyticsTables = {
     weeklyPeriodsAt: v.optional(v.number()),
     /** The run collecting it now, and the days it fetches, newest first from `top` back to `from`. */
     collecting: v.optional(v.object({ runId: v.id("agentRuns"), from: v.string(), top: v.string() })),
+    /** Visits on each of the property's addresses over the last 30 days, asked weekly: the strangers check (§6, check 8). */
+    hostVisits: v.optional(v.array(v.object({ host: v.string(), visits: v.number() }))),
+    /** The tracking health checks' last results (§6): when a check starts failing, the company's admins are told once. */
+    health: v.optional(v.object({ checkedAt: v.number(), checks: v.array(healthResultValidator) })),
     /** What stopped the connection or its last collection; cleared when a collection goes right. */
     problem: v.optional(analyticsProblemValidator),
     problemAt: v.optional(v.number()),

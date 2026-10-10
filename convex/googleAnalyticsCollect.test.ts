@@ -11,6 +11,7 @@ import { unpackPart, splitChannelKey } from "./googleAnalyticsLists";
 import { decodePages } from "./holdPageRefs";
 import { analyticsWindow, dueJobs, newestWholeDayIn, periodRange } from "./googleAnalyticsCollect";
 import { shiftDay } from "./searchConsoleDays";
+import { NEWEST, PROPERTY, dayOf, fakeGoogle, history } from "@/src/test/googleAnalyticsFake";
 
 /**
  * Collecting a website's Google Analytics, end to end with Google faked at the
@@ -22,126 +23,9 @@ import { shiftDay } from "./searchConsoleDays";
  */
 
 const NOW = Date.parse("2026-10-09T09:30:00Z");
-const NEWEST = "2026-10-08";
-const PROPERTY = "properties/312456789";
 
 const harness = () => convexTest(schema, import.meta.glob("./**/*.*s"));
 type Harness = ReturnType<typeof harness>;
-
-/** One line of the fake property's log: a day's visits on one device, channel, source, landing page and page. */
-type Visit = {
-  date: string;
-  device: string;
-  channel: string;
-  source: string;
-  landing: string;
-  page: string;
-  host?: string;
-  sessions: number;
-  engaged: number;
-  seconds: number;
-  views: number;
-  purchases?: number;
-  revenue?: number;
-  events?: Record<string, [number, number]>;
-};
-
-const FIELD: Record<string, (visit: Visit) => string> = {
-  date: (visit) => visit.date.replaceAll("-", ""),
-  deviceCategory: (visit) => visit.device,
-  sessionDefaultChannelGroup: (visit) => visit.channel,
-  sessionSource: (visit) => visit.source,
-  landingPage: (visit) => visit.landing,
-  pagePath: (visit) => visit.page,
-  hostName: (visit) => visit.host ?? "www.acme-shop.test",
-};
-
-type Google = { visits: Visit[]; reportStatus?: number; calls: { url: string; body: string }[] };
-
-type Filter = { filter?: { fieldName: string; inListFilter?: { values: string[] }; stringFilter?: { value: string } }; andGroup?: { expressions: Filter[] } };
-
-function passes(visit: Visit, filter: Filter | undefined, eventName?: string): boolean {
-  if (!filter) return true;
-  if (filter.andGroup) return filter.andGroup.expressions.every((one) => passes(visit, one, eventName));
-  const field = filter.filter!;
-  const value = field.fieldName === "eventName" ? eventName ?? "" : FIELD[field.fieldName](visit);
-  if (field.inListFilter) return field.inListFilter.values.map((entry) => entry.toLowerCase()).includes(value.toLowerCase());
-  return value.toLowerCase() === (field.stringFilter?.value ?? "").toLowerCase();
-}
-
-function fakeGoogle(visits: Visit[]): Google {
-  const google: Google = { visits, calls: [] };
-  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = String(input);
-    const body = typeof init?.body === "string" ? init.body : "";
-    google.calls.push({ url, body });
-    if (url === "https://oauth2.googleapis.com/token") return Response.json({ access_token: "ya29.renewed", expires_in: 3599 });
-    if (url === `https://analyticsdata.googleapis.com/v1beta/${PROPERTY}:runReport`) {
-      if (google.reportStatus) return new Response("refused", { status: google.reportStatus });
-      const ask = JSON.parse(body) as {
-        dateRanges: { startDate: string; endDate: string }[];
-        dimensions: { name: string }[];
-        metrics: { name: string }[];
-        dimensionFilter?: Filter;
-        offset: number;
-      };
-      if (ask.offset > 0) return Response.json({ rows: [], rowCount: 0 });
-      const { startDate, endDate } = ask.dateRanges[0];
-      const names = ask.dimensions.map((dimension) => dimension.name);
-      const byEvent = names.includes("eventName");
-      const sums = new Map<string, { keys: string[]; values: number[] }>();
-      for (const visit of google.visits) {
-        if (visit.date < startDate || visit.date > endDate) continue;
-        const lines: Array<{ eventName?: string; values: number[] }> = byEvent
-          ? Object.entries(visit.events ?? {}).map(([eventName, [count, value]]) => ({ eventName, values: [count, value] }))
-          : [{ values: [visit.sessions, visit.engaged, visit.seconds, visit.views, visit.purchases ?? 0, visit.revenue ?? 0] }];
-        for (const line of lines) {
-          if (!passes(visit, ask.dimensionFilter, line.eventName)) continue;
-          const keys = names.map((name) => (name === "eventName" ? line.eventName! : FIELD[name](visit)));
-          const sum = sums.get(keys.join("|")) ?? { keys, values: line.values.map(() => 0) };
-          line.values.forEach((value, index) => (sum.values[index] += value));
-          sums.set(keys.join("|"), sum);
-        }
-      }
-      const rows = [...sums.values()].map((sum) => ({
-        dimensionValues: sum.keys.map((value) => ({ value })),
-        metricValues: sum.values.map((value) => ({ value: String(value) })),
-      }));
-      return Response.json({ rows, rowCount: rows.length, metadata: {} });
-    }
-    throw new Error(`Unexpected fetch in test: ${url}`);
-  }));
-  return google;
-}
-
-/** A plain day on the website: two devices, two channels, a lead from organic search. */
-function dayOf(date: string, scale = 1): Visit[] {
-  return [
-    {
-      date, device: "mobile", channel: "Organic Search", source: "google", landing: "/", page: "/",
-      sessions: 10 * scale, engaged: 6 * scale, seconds: 300 * scale, views: 20 * scale, events: { generate_lead: [1 * scale, 0] },
-    },
-    {
-      date, device: "desktop", channel: "Referral", source: "perplexity.ai", landing: "/ai-agency/", page: "/ai-agency/",
-      sessions: 4 * scale, engaged: 3 * scale, seconds: 200 * scale, views: 9 * scale, events: { click_tel: [1 * scale, 0] },
-    },
-    {
-      date, device: "desktop", channel: "Direct", source: "(direct)", landing: "/contact/?utm=x", page: "/contact/",
-      sessions: 2 * scale, engaged: 2 * scale, seconds: 90 * scale, views: 3 * scale,
-    },
-    // Another address in the property: never read.
-    {
-      date, device: "desktop", channel: "Direct", source: "(direct)", landing: "/", page: "/", host: "staging.acme-shop.test",
-      sessions: 50, engaged: 50, seconds: 50, views: 50,
-    },
-  ];
-}
-
-function history(days: number, newest = NEWEST): Visit[] {
-  const out: Visit[] = [];
-  for (let at = 0; at < days; at += 1) out.push(...dayOf(shiftDay(newest, -at)));
-  return out;
-}
 
 /** A website connected to Analytics with what counts read, ready to save; the agent created unless asked not to. */
 async function connected(t: Harness, withAgent = true) {
@@ -273,9 +157,13 @@ describe("collecting a website's Google Analytics", () => {
     ]);
     // Nothing older than the 60 days kept was asked for.
     expect(await dayRows(t, siteId, "total", "", shiftDay(NEWEST, -60))).toEqual([]);
-    // Each report was for the website's own address.
-    const asks = google.calls.filter((call) => call.url.endsWith(":runReport")).map((call) => JSON.parse(call.body) as { dimensionFilter?: unknown });
+    // Each report was for the website's own address — but the weekly one of every address, for tracking health.
+    const asks = google.calls.filter((call) => call.url.endsWith(":runReport"))
+      .map((call) => JSON.parse(call.body) as { dimensions: { name: string }[]; dimensionFilter?: unknown })
+      .filter((ask) => ask.dimensions[0].name !== "hostName");
     expect(asks.every((ask) => JSON.stringify(ask.dimensionFilter).includes("www.acme-shop.test"))).toBe(true);
+    // Tracking health ran on the first collection: the other address is a stranger.
+    expect((await connectionOf(t, connectionId))?.health?.checks.find((check) => check.check === "STRANGERS")).toMatchObject({ passing: false, names: ["staging.acme-shop.test"], count: 1500 });
 
     // The landing pages' ready-made 30 days: numbered as Search Console's pages are, the query left off.
     const landing = (await periodRows(t, siteId, "landing|30|NOW|"))!;
