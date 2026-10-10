@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { ArrowLeftRight } from "lucide-react";
@@ -15,6 +16,7 @@ import { useSiteRange } from "../../../_components/SiteDateRange";
 import { datedRow } from "../../../_components/datedRows";
 import { formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { dayOf, dayTableSorts, useSiteSortedList } from "../../../_components/useSiteSort";
@@ -30,6 +32,14 @@ const SORTS = dayTableSorts<{ day: string } & Record<Key, number | null>, Key>(K
 /** What a row of this table is, as the dates are stepped. */
 const STEP_NOUNS = { day: "days", week: "weeks", month: "months" } as const;
 
+/** The day after a step's last: a day, a week or a calendar month on from its first. */
+function stepEnd(day: string, step: "day" | "week" | "month"): string {
+  const date = new Date(`${day}T00:00:00Z`);
+  if (step === "month") date.setUTCMonth(date.getUTCMonth() + 1);
+  else date.setUTCDate(date.getUTCDate() + (step === "week" ? 7 : 1));
+  return date.toISOString().slice(0, 10);
+}
+
 /**
  * New and lost links: links and linking websites gained and lost in the
  * dates chosen, per step, from DataForSEO's daily count. Gained and lost sit
@@ -40,6 +50,8 @@ export default function SiteLinksNewLostPage() {
   const t = useTranslations("sites.backlinksNewLost");
   const competitor = useIsCompetitor();
   const siteId = useSiteId();
+  const router = useRouter();
+  const listHref = useSiteListHref(siteId);
   const site = useSite();
   const range = useSiteRange();
   const points = useQuery(api.siteLinkLists.linkChanges, { siteId, from: range.from, to: range.to, step: range.step });
@@ -92,6 +104,7 @@ export default function SiteLinksNewLostPage() {
       <DataTable
         rows={pager.pageRows}
         rowKey={(row) => row.day}
+        onRowClick={(row) => router.push(listHref("backlinks/all", { changedFrom: row.day, changedUntil: stepEnd(row.day, range.step) }))}
         cardHeader={<TableBar footer={pager.footer} noun={STEP_NOUNS[range.step]} actions={<ListDownload fileName={`${site?.host ?? "site"}-links-gained-lost`} rows={sorted} columns={[{ header: t(`columns.${range.step}`), value: (row) => row.day }, ...KEYS.map((key) => ({ header: t(`columns.${key}`), value: (row: NonNullable<typeof points>[number]) => row[key] }))]} />} />}
         empty={{ icon: <ArrowLeftRight className="h-8 w-8 text-muted/30" />, label: t("empty") }}
         footer={pager.footer}

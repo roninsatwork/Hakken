@@ -133,6 +133,7 @@ export default function WebMentionsPage() {
       <DataTable
         rows={pager.pageRows}
         rowKey={urlOf}
+        onRowClick={(row) => window.open(row.url, "_blank", "noopener,noreferrer")}
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>

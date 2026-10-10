@@ -11799,7 +11799,19 @@
       "noAnchor": "Nessuna parola (un'immagine o un indirizzo nudo)",
       "empty": "Nessun backlink raccolto ancora.",
       "noMatch": "Nessun link corrisponde.",
-      "competitor": "Tutti i link, e il link più forte di ogni sito che rimanda qui, vengono raccolti solo per i tuoi siti web. Per un concorrente si conserva ciò che serve al confronto: i totali dei link a ogni raccolta e, una volta al mese, i siti che rimandano a lui, in Domini di riferimento."
+      "competitor": "Tutti i link, e il link più forte di ogni sito che rimanda qui, vengono raccolti solo per i tuoi siti web. Per un concorrente si conserva ciò che serve al confronto: i totali dei link a ogni raccolta e, una volta al mese, i siti che rimandano a lui, in Domini di riferimento.",
+      "narrowedNotice": "Ristretto a ciò che hai aperto, dal link più forte di ogni sito che rimanda.",
+      "groupFilters": {
+        "countries": "Paese",
+        "tlds": "Dominio",
+        "platforms": "Tipo di sito",
+        "linkTypes": "Tipo di link",
+        "attributes": "Attributo del link"
+      },
+      "everyGroup": "Ogni gruppo",
+      "changedFilter": "Acquisiti o persi",
+      "changedRange": "dal {from} al {until}",
+      "anyTime": "Sempre"
     },
     "backlinksDomains": {
       "title": "Domini di riferimento",

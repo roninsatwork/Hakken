@@ -122,6 +122,37 @@ function narrowLinks<Link extends LinkFacts>(
     .sort(listOrder(LINK_SORTS, args.sort ?? "domainRank", args.direction, (link) => link.urlFrom));
 }
 
+/** A summary group's key for a link with none: no country, no kind of site (Where links come from). */
+const NO_GROUP = "(none)";
+
+/**
+ * Whether a link is in one of Where links come from's groups, `<breakdown>:<key>`
+ * as that screen's rows name them (discovery-detail-and-hakken-sees-plan.md §5):
+ * its country, its domain ending, a kind of site it is on, its kind of link,
+ * or an attribute it carries — each read from the stored link itself.
+ */
+export function linkInGroup(row: Pick<Doc<"siteBacklinks">, "domainFrom" | "country" | "platformTypes" | "itemType" | "attributes">, group: string): boolean {
+  const at = group.indexOf(":");
+  const [breakdown, key] = at < 0 ? [group, ""] : [group.slice(0, at), group.slice(at + 1)];
+  switch (breakdown) {
+    case "countries": return key === NO_GROUP ? !row.country : row.country === key;
+    case "tlds": return row.domainFrom.toLowerCase().endsWith(`.${key.toLowerCase()}`);
+    case "platforms": return key === NO_GROUP || key === "unknown" ? !(row.platformTypes?.length) || row.platformTypes.includes(key) : (row.platformTypes ?? []).includes(key);
+    case "linkTypes": return (row.itemType ?? NO_GROUP) === key;
+    case "attributes": return (row.attributes ?? []).includes(key);
+    default: return true;
+  }
+}
+
+/**
+ * Whether a link was gained or lost in a stretch of days, as New and lost
+ * links counts them: first seen in it, or lost and last seen in it.
+ */
+export function linkChangedIn(row: Pick<Doc<"siteBacklinks">, "firstSeen" | "lastSeen" | "status">, from: string, until: string): boolean {
+  const within = (day: string | undefined) => Boolean(day && day >= from && day < until);
+  return within(row.firstSeen) || (row.status === "LOST" && within(row.lastSeen));
+}
+
 /**
  * The links to the site — the strongest from each linking website, or with
  * `every` every link its limit keeps (`backlinks_all`) — strongest first,
@@ -142,19 +173,32 @@ export const listBacklinks = tenantQuery({
     follow: v.optional(v.union(v.literal("FOLLOW"), v.literal("NOFOLLOW"))),
     sort: v.optional(v.union(v.literal("from"), v.literal("domainRank"), v.literal("firstSeen"))),
     direction: sortDirectionArg,
+    /**
+     * Where links come from's group (`<breakdown>:<key>`) and New and lost
+     * links' stretch of days (`changedFrom` up to `changedUntil`): both narrow
+     * the strongest link from each website, a list read whole, so neither
+     * needs a copy of every link's every field (§5, measured 2026-10-10).
+     */
+    group: v.optional(v.string()),
+    changedFrom: v.optional(v.string()),
+    changedUntil: v.optional(v.string()),
   },
   returns: listPageResult(backlinkRow),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const websiteId = site.website._id;
-    if (!args.every) {
+    const narrowed = Boolean(args.group || (args.changedFrom && args.changedUntil));
+    if (!args.every || narrowed) {
       const read = await ctx.db
         .query("siteBacklinks")
         .withIndex("by_site_pass_rank", (q) => q.eq("websiteId", websiteId).eq("pass", "ONE_PER_DOMAIN"))
         .order("desc")
         .take(LINK_LIST_READ + 1);
       const { rows: held, cut } = heldTo(read, LINK_LIST_READ);
-      const list = narrowLinks(newestPerKey(held, (row) => `${row.urlFrom} ${row.urlTo} ${row.anchor ?? ""}`), args);
+      const inView = newestPerKey(held, (row) => `${row.urlFrom} ${row.urlTo} ${row.anchor ?? ""}`)
+        .filter((row) => (!args.group || linkInGroup(row, args.group))
+          && (!args.changedFrom || !args.changedUntil || linkChangedIn(row, args.changedFrom, args.changedUntil)));
+      const list = narrowLinks(inView, args);
       const page = pageOfList(list, args.page, args.rows, cut);
       return { ...page, rows: page.rows.map(shapeBacklink) };
     }

@@ -14,11 +14,13 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { formatDay, formatNumber } from "../../../_components/siteFormat";
 import { useSiteId } from "../../../_components/useSite";
-import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
+import { useSetSiteParams, useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { TableDownload } from "../../../_components/SiteDownloads";
 import { useSiteListPage } from "../../../_components/useSitePagedTable";
 import { useSiteSort } from "../../../_components/useSiteSort";
 import { ListHeldLine } from "../../../_components/SiteCoverage";
+import { Notice } from "@/src/ui/components/screens/Notice";
+import { readLinkGroup, useLinkGroupName } from "../_components/linkGroups";
 import { CompetitorNotCollected, useIsCompetitor } from "../../../_components/CompetitorNotCollected";
 
 type Status = "LIVE" | "NEW" | "LOST";
@@ -49,10 +51,24 @@ export default function SiteAllBacklinksPage() {
   const [follow, setFollow] = useSiteParam<Follow | "">("follow", "", ["FOLLOW", "NOFOLLOW"]);
   const order = useSiteSort(SORTS, "domainRank");
   const [links, setLinks] = useSiteParam<"one" | "every">("links", "one", ["one", "every"]);
-  const every = links === "every";
+  // Opened from Where links come from (a group) or New and lost links (a stretch of days):
+  // both narrow the strongest link from each website (discovery-detail-and-hakken-sees-plan.md §5).
+  const [group, setGroup] = useSiteParam<string>("group", "");
+  const [changedFrom] = useSiteParam<string>("changedFrom", "");
+  const [changedUntil] = useSiteParam<string>("changedUntil", "");
+  const setParams = useSetSiteParams();
+  const groupName = useLinkGroupName();
+  const chosenGroup = group ? readLinkGroup(group) : null;
+  const changed = Boolean(changedFrom && changedUntil);
+  // The stretch's last day: its end is the day after (`changedUntil`).
+  const lastDay = changed ? new Date(Date.parse(`${changedUntil}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10) : "";
+  const narrowed = Boolean(chosenGroup) || changed;
+  const every = links === "every" && !narrowed;
   const table = useSiteListPage(api.siteLinkLists.listBacklinks, {
     siteId,
     ...(every ? { every } : {}),
+    ...(chosenGroup ? { group } : {}),
+    ...(changed ? { changedFrom, changedUntil } : {}),
     ...(term ? { search: term } : {}),
     ...(status ? { status } : {}),
     ...(follow ? { follow } : {}),
@@ -82,7 +98,7 @@ export default function SiteAllBacklinksPage() {
         title={t("title")}
         description={every ? t("descriptionEvery") : t("description")}
       />
-      <ListHeldLine held={!term && !status && !follow ? table.result?.total : undefined} total={totals?.[every ? "backlinks" : "oneEach"]} />
+      {narrowed ? <Notice>{t("narrowedNotice")}</Notice> : <ListHeldLine held={!term && !status && !follow ? table.result?.total : undefined} total={totals?.[every ? "backlinks" : "oneEach"]} />}
       <DataTable
         rows={table.pageRows}
         rowKey={(row) => row._id}
@@ -90,10 +106,24 @@ export default function SiteAllBacklinksPage() {
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
-            <Select chip={{ label: every ? t("showEvery") : t("showOne") }} aria-label={t("showLabel")} value={links} onChange={(value) => setLinks(value as "one" | "every")}>
-              <option value="one">{t("showOne")}</option>
-              <option value="every">{t("showEvery")}</option>
-            </Select>
+            {narrowed ? null : (
+              <Select chip={{ label: every ? t("showEvery") : t("showOne") }} aria-label={t("showLabel")} value={links} onChange={(value) => setLinks(value as "one" | "every")}>
+                <option value="one">{t("showOne")}</option>
+                <option value="every">{t("showEvery")}</option>
+              </Select>
+            )}
+            {chosenGroup ? (
+              <Select chip={{ label: t(`groupFilters.${chosenGroup.breakdown}`), choice: groupName(chosenGroup.breakdown, chosenGroup.key) }} aria-label={t(`groupFilters.${chosenGroup.breakdown}`)} value={group} onChange={(value) => setGroup(value)}>
+                <option value={group}>{groupName(chosenGroup.breakdown, chosenGroup.key)}</option>
+                <option value="">{t("everyGroup")}</option>
+              </Select>
+            ) : null}
+            {changed ? (
+              <Select chip={{ label: t("changedFilter"), choice: t("changedRange", { from: formatDay(changedFrom), until: formatDay(lastDay) }) }} aria-label={t("changedFilter")} value="chosen" onChange={() => setParams({ changedFrom: null, changedUntil: null })}>
+                <option value="chosen">{t("changedRange", { from: formatDay(changedFrom), until: formatDay(lastDay) })}</option>
+                <option value="">{t("anyTime")}</option>
+              </Select>
+            ) : null}
             <Select chip={{ label: tl("statusFilter"), choice: status ? tl(`statuses.${status}`) : null }} value={status} onChange={(value) => setStatus(value as Status | "")}>
               <option value="">{tl("anyStatus")}</option>
               {(["LIVE", "NEW", "LOST"] as const).map((entry) => <option key={entry} value={entry}>{tl(`statuses.${entry}`)}</option>)}

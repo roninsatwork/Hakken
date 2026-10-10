@@ -27,13 +27,7 @@ const STAYS: Record<string, { tables: number; why: string }> = {
  * may shrink, never grow: a table given its row link comes off it in the
  * same change.
  */
-const PENDING: Record<string, number> = {
-  "src/app/(dashboard)/app/sites/[siteId]/ai/demand/page.tsx": 1,
-  "src/app/(dashboard)/app/sites/[siteId]/assets/page.tsx": 1,
-  "src/app/(dashboard)/app/sites/[siteId]/backlinks/new-lost/page.tsx": 1,
-  "src/app/(dashboard)/app/sites/[siteId]/backlinks/where/page.tsx": 1,
-  "src/app/(dashboard)/app/sites/[siteId]/mentions/page.tsx": 1,
-};
+const PENDING: Record<string, number> = {};
 
 const count = (text: string, pattern: RegExp) => (text.match(pattern) ?? []).length;
 const unopened = () => Object.fromEntries(

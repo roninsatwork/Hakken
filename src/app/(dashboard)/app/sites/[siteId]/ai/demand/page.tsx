@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Sparkles } from "lucide-react";
@@ -55,6 +56,7 @@ const percentChange = (now: number, before: number) => (before > 0 ? Math.round(
 export default function AiDemandPage() {
   const t = useTranslations("sites.aiApps.demand");
   const siteId = useSiteId();
+  const router = useRouter();
   const site = useSite();
   const recordHref = useSiteRecordHref(siteId);
   const data = useQuery(api.siteAiDemand.aiDemand, { siteId });
@@ -122,6 +124,7 @@ export default function AiDemandPage() {
       <DataTable
         rows={pager.pageRows}
         rowKey={(row) => row.keyword}
+        onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.keyword }))}
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <Select chip={{ label: t("fromFilter"), choice: from ? t(`fromFilters.${from}`) : null }} value={from} onChange={(value) => setFrom(value as (typeof FROM)[number] | "")}>

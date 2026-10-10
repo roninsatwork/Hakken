@@ -1,8 +1,9 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useMemo } from "react";
 import { useQuery } from "convex/react";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { Globe2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
@@ -15,15 +16,17 @@ import { SiteChartCard } from "../../../_components/SiteChartCard";
 import { SITE_SERIES_COLOURS, SiteBarChart } from "../../../_components/SiteCharts";
 import { formatDay, formatNumber, toCsv } from "../../../_components/siteFormat";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { useSiteListHref } from "../../../_components/siteRecordLinks";
 import { useSiteParam, useSiteSearch } from "../../../_components/useSiteParam";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { BREAKDOWN_REST } from "@/convex/utils/siteShapes";
+import { LINK_BREAKDOWNS, useLinkGroupName, type LinkBreakdown } from "../_components/linkGroups";
 
-const BREAKDOWNS = ["countries", "tlds", "platforms", "linkTypes", "attributes"] as const;
-type Breakdown = (typeof BREAKDOWNS)[number];
+const BREAKDOWNS = LINK_BREAKDOWNS;
+type Breakdown = LinkBreakdown;
 
 /** Groups drawn on the chart; the table lists them all. */
 const CHARTED = 12;
@@ -47,28 +50,16 @@ const restLast = (row: Group) => (row.key === BREAKDOWN_REST ? 1 : 0);
 export default function SiteLinkSourcesPage() {
   const t = useTranslations("sites.linkSources");
   const tc = useTranslations("sites.common");
-  const locale = useLocale();
   const siteId = useSiteId();
+  const router = useRouter();
+  const listHref = useSiteListHref(siteId);
   const site = useSite();
   const profile = useQuery(api.siteLinks.linkProfile, { siteId });
   const [breakdown, setBreakdown] = useSiteParam<Breakdown>("by", "countries", BREAKDOWNS);
   const [search, setSearch, term] = useSiteSearch();
 
-  const regions = useMemo(() => (typeof Intl.DisplayNames === "function" ? new Intl.DisplayNames([locale], { type: "region" }) : null), [locale]);
-  const nameOf = useCallback((key: string) => {
-    if (key === BREAKDOWN_REST) return t("rest");
-    if (key === "(none)" || key === "") return t("unknown");
-    if (breakdown === "countries" && key === "WW") return t("worldwide");
-    if (breakdown === "countries" && /^[A-Z]{2}$/.test(key)) {
-      try {
-        return regions?.of(key) ?? key;
-      } catch {
-        return key;
-      }
-    }
-    if (breakdown === "tlds") return `.${key}`;
-    return key.replace(/[_-]/g, " ");
-  }, [breakdown, regions, t]);
+  const linkGroupName = useLinkGroupName();
+  const nameOf = useCallback((key: string) => linkGroupName(breakdown, key), [breakdown, linkGroupName]);
 
   const groups = profile ? profile[breakdown] : [];
   // A share is of every link (docs/plans/active/sites-audit-fixes-plan.md,
@@ -133,6 +124,8 @@ export default function SiteLinkSourcesPage() {
           <DataTable
             rows={pager.pageRows}
             rowKey={(row) => row.key}
+            rowClickable={(row) => row.key !== BREAKDOWN_REST}
+            onRowClick={(row) => router.push(listHref("backlinks/all", { group: `${breakdown}:${row.key}` }))}
             search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
             cardHeader={<TableBar footer={pager.footer} noun="groups" actions={<ListDownload fileName={`${site?.host ?? "site"}-links-${breakdown}`} rows={sorted} columns={[{ header: t("columns.group"), value: (row) => nameOf(row.key) }, { header: t("columns.links"), value: (row) => row.count }, { header: t("columns.share"), value: (row) => (total ? ((row.count / total) * 100).toFixed(1) : null) }]} />} />}
             empty={{ icon: <Globe2 className="h-8 w-8 text-muted/30" />, label: term ? t("noMatch") : t("empty") }}

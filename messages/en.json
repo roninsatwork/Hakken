@@ -11799,7 +11799,19 @@
       "noAnchor": "No words (an image or a bare address)",
       "empty": "No backlinks collected yet.",
       "noMatch": "No link matches that.",
-      "competitor": "Every link, and each linking website's strongest link, are collected for your own websites only. For a competitor, what comparing needs is kept: its link totals at every collection, and the websites linking to it once a month, under Referring domains."
+      "competitor": "Every link, and each linking website's strongest link, are collected for your own websites only. For a competitor, what comparing needs is kept: its link totals at every collection, and the websites linking to it once a month, under Referring domains.",
+      "narrowedNotice": "Narrowed to what you opened, from the strongest link of each linking website.",
+      "groupFilters": {
+        "countries": "Country",
+        "tlds": "Domain ending",
+        "platforms": "Kind of site",
+        "linkTypes": "Kind of link",
+        "attributes": "Link attribute"
+      },
+      "everyGroup": "Every group",
+      "changedFilter": "Gained or lost",
+      "changedRange": "{from} to {until}",
+      "anyTime": "Any time"
     },
     "backlinksDomains": {
       "title": "Referring domains",

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { Layers } from "lucide-react";
@@ -16,6 +17,7 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { formatNumber } from "../../_components/siteFormat";
 import { ListDownload } from "../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../_components/useSite";
+import { useSiteListHref, useSiteRecordHref } from "../../_components/siteRecordLinks";
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
@@ -49,6 +51,9 @@ export default function YourAssetsPage() {
   const t = useTranslations("sites.assets");
   const { platformName } = useSystemSettings();
   const siteId = useSiteId();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
+  const listHref = useSiteListHref(siteId);
   const site = useSite();
   const data = useQuery(api.siteAssets.yourAssets, { siteId });
   const [search, setSearch, term] = useSiteSearch();
@@ -66,6 +71,20 @@ export default function YourAssetsPage() {
   const phrase = (prefix: "seen" | "chosen" | "fix", value: Phrase | null) => (value ? coded(`${prefix}.${value.code}`, { a: formatNumber(value.a ?? 0), count: value.a ?? 0, b: value.b ?? 0, rating: ((value.b ?? 0) / 10).toFixed(1), text: value.text ?? "" }) : "–");
   const nameWords = (row: Row) => (row.kind === "PROFILE" ? t("profileOf", { town: row.sub ?? row.name }) : row.kind === "AI_APP" ? t("appAnswers", { name: row.name }) : row.kind === "PRESS" ? t("pressName") : row.name);
   const fileBase = `${site?.host ?? "site"}-your-assets`;
+  // Where each asset's detail is (discovery-detail-and-hakken-sees-plan.md §4).
+  const assetHref = (row: Row): string => {
+    const rest = row.key.slice(row.key.indexOf(":") + 1);
+    switch (row.kind) {
+      case "WEBSITE": return listHref("");
+      case "PAGE": return recordHref({ kind: "page", page: row.name });
+      case "PROFILE": return listHref("local", { office: rest });
+      case "REVIEW_SITE": return listHref("reviews");
+      case "AI_APP": return listHref("ai/answers");
+      case "AI_OVERVIEW": return listHref("radar/gaps");
+      case "DIRECTORY": return recordHref({ kind: "website", host: row.name });
+      case "PRESS": return listHref("mentions");
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -88,6 +107,7 @@ export default function YourAssetsPage() {
       <DataTable
         rows={pager.pageRows}
         rowKey={keyOf}
+        onRowClick={(row) => router.push(assetHref(row))}
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <>
