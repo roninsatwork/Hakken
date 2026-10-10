@@ -1,6 +1,14 @@
 # The Seven Gaps — the Product Around the AI
 
 Status: **Planned 2026-08-16**, from Anthony's "make a plan for them all".
+**Corrected against the code 2026-10-10:** Phases 1 and 2 built 2026-08-16
+(`0b6a7af9`, `bfb2814f`) — admin Calls, the Connections screen, the real
+probes, the job ledger and Health; Phase 1's Mailbox screen went when Gmail
+was removed from the app on 2026-10-09. Phase 7 is overtaken by Billing
+(`/app/settings/billing`) and Usage (`/app/usage`), except the 90% in-product
+warning, which is not built. Phases 3 (the visitor book), 4 (the day view),
+5 (search from anywhere) and 6 (the look screen for company admins) are not
+built — about 5½ days.
 Every gap below was verified against the code first (his standing rule):
 three earlier ideas were dropped because they already exist (one-time-code
 sign-in, the company audit view, plans with prices and enforced limits).

@@ -18,10 +18,13 @@ more engaging and intuitive"; "can we make this the default email style too …
 update the other emails from the platform at the same time in this plan … we
 crack everything in one go".
 
-**Status, 2026-10-07: planned; the drawings signed off the same day (below),
+**Status, corrected against the code 2026-10-10: all six phases built
+2026-10-07; the live Telegram bot is still to be created with Anthony when it
+is tried.** Planned 2026-10-07; the drawings signed off the same day (below),
 the Limits board with them; Phase 1 started the same day ("yes all good. lets
-build this"). About 28 to 36 building days, in six phases; the first, about
-9 to 10.5 days, gives working alerts.** Phase 1 built on `dev` the same day:
+build this"). About 28 to 36 building days were estimated, in six phases; the
+first, about 9 to 10.5 days, gives working alerts. Phase 1 built on `dev` the
+same day:
 the task record, setting one up in Ask Hakken, the Watcher Agent's morning
 round and its bell and email, and the screens — Hakken tasks in the menu and
 Admin → Companies → Hakken tasks, each held to its board by a look test

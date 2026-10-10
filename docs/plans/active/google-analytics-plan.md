@@ -1,8 +1,11 @@
 # Google Analytics — for your own websites
 
-**Started 2026-10-09. Status: building since 2026-10-10 (Anthony, 2026-10-10:
-"ok lets build this please"), phase by phase, with Google faked in the tests
-until Phase 0 (§7) is done. Every decision agreed (§1), every question
+**Started 2026-10-09. Status: Phases 0 to 4 built and running on dev since
+2026-10-10 (Anthony, 2026-10-10: "ok lets build this please") — Ronins'
+website connected and collecting, its Collector Agent and daily schedule
+created. Phase 5 (§13–§16) is drawn, its 19 screens signed off and its
+build started on 2026-10-10 (Anthony: "1 yes"), with the two page-list
+changes in §12 ("yes to all"). Every decision agreed (§1), every question
 answered (§10) and the screens agreed and locked (§11), all on 2026-10-09.**
 Change a decision here, with a date, before building anything that
 disagrees with it. Progress: §8.
@@ -450,6 +453,9 @@ are never told in the bell: these are system alerts.
 
 ## 7. What Anthony does (Phase 0)
 
+**Done 2026-10-10:** Ronins' website connected with Analytics and its first
+60 days collected (change log).
+
 No one else can: it is his Google account.
 
 1. In the Google Cloud project that holds Search Console's app, enable the
@@ -489,16 +495,17 @@ thresholds, the four days again, two websites in one property, tenant
 isolation, the screens), and the full gate. Phase 3 ends in the browser on
 Ronins' own connected website.
 
-**Progress (2026-10-10): overall about 70% of the build, everything that can
-be built and tested with Google faked. Phase 1: 100%. Phase 2: 90% — the
-agent and its schedule are still to be created in Admin on dev, and Q12 waits
-on a decision (§12). Phase 3: 95% — checked in the real app only in its
-not-connected state until Phase 0 is done. Phase 4: 100%. Phase 0 (§7) is
-Anthony's and blocks every real figure.** What was built, and where the build
-differs from the words above, is §12.
-
-**With Phase 5 (2026-10-10): overall about 45% of the twenty-four days.
-Phase 5: drawn, 0 of 19 screens signed off, nothing built.**
+**Progress (corrected 2026-10-10, against the dev database and the app):
+Phases 0 to 4 built and running — about fifteen and a half of the
+twenty-four days, about 65%. Phase 0: done, Ronins connected. Phase 1: 100%.
+Phase 2: 100% built — the Collector Agent and its daily 04:00 schedule were
+created in Admin on dev on 2026-10-10 and are switched on; two decisions wait
+on Anthony (§12), and storage on morehandles.co.uk is measured once it
+connects. Phase 3: 100% — the section reads Ronins' real figures. Phase 4:
+100%. Phase 5: drawn, all 19 screens signed off and building since
+2026-10-10 — about eight and a half days, and three and a half more for the
+two page-list changes (§12), about twelve in all.** What was built, and
+where the build differs from the words above, is §12.
 
 ## 9. Risks
 
@@ -639,8 +646,8 @@ screen is built it gets a look test against its picture
 ## 12. Built — 2026-10-10
 
 What exists, by phase, and every place the build had to say something the
-sections above did not. Everything was built and tested with Google faked;
-nothing has read a real Google Analytics property yet (Phase 0, §7).
+sections above did not. Everything was built and tested with Google faked,
+then Ronins' real property was connected and collected the same day (§7).
 
 **Checked on dev, 10 Oct 04:00:** Search Console's scheduled collection ran on
 the shared sign-in after the move — ronins.co.uk 1,258 rows, morehandles.co.uk
@@ -692,12 +699,16 @@ budget at five times morehandles.co.uk (`googleAnalyticsLoad.test.ts`).
 - **Every key event of the property is kept as a column**, not only those
   counted: ticking one later counts its past at once (GA6's rule, applied to
   what counts too).
-- **Not yet done:** the Google Analytics: Collector Agent and its schedule
-  ("Google Analytics: Data Collection Scheduler", daily 04:00) are not created
-  in Admin on dev; Analytics' visits beside Search Console's clicks in
-  `holdPages`, and Q12 (`holdPages` holding the page number), wait on
-  Anthony (below); storage is measured on Ronins and morehandles.co.uk once
-  each has real figures — the gate before any client connects (§4.3).
+- **The agent and its schedule exist:** the Google Analytics: Collector
+  Agent and "Google Analytics: Data Collection Scheduler" (daily 04:00) were
+  created in Admin on dev on 2026-10-10 and are switched on.
+- **Decided 2026-10-10 (Anthony: "yes to all"):** Analytics' visits go
+  beside Search Console's clicks in `holdPages` (§4.6), and `holdPages` holds
+  the shared page number instead of the address (Q12, below) — built with
+  Phase 5. Storage is measured on Ronins (60 days, about 0.4 MB); connecting
+  morehandles.co.uk to measure it there waits (Anthony, 2026-10-10: "no I
+  don't want to cement yet"). It stays the gate before any client connects
+  (§4.3).
 
 **Q12, measured on dev 2026-10-10.** `holdPages` holds 11,462 pages in
 2.87 MB, of which the addresses are 0.73 MB (plus their index, about as
@@ -705,7 +716,8 @@ much again). Holding the page number instead saves about 1.3 MB on dev, but
 every reader of `holdPages` — Discovery's Your pages, page groups, the
 sitemap checks, under work in another session — then needs the address from
 the numbering, which only an action can read whole. The measurement says
-small saving, wide change: Anthony to decide.
+small saving, wide change: Anthony to decide. **Decided 2026-10-10: yes**
+(Anthony: "yes to all").
 
 **Phase 3 — the screens** (`src/app/(dashboard)/app/analytics/`): the section
 in the main menu after Search Console; every locked screen but the bell's
@@ -731,7 +743,7 @@ tells the platform's super admins in the bell once (GA12, as changed on
 code (PayPal, Stripe, Worldpay, Opayo, Klarna, Clearpay and others).
 Connecting tells the super admins too, as board 10 shows.
 
-## 13. UX amends — the strategy page (drawn 2026-10-10, to agree)
+## 13. UX amends — the strategy page (drawn and signed off 2026-10-10)
 
 Anthony, 2026-10-10, on the built screens: "its not easy to see which pages
 need our attention and which are our heroes … this platform is supposed to do
@@ -825,7 +837,7 @@ own conversion rate when it has 100 visits or more, otherwise the website's
 On Ronins, about £435 a month in all; £373 of it in Google's results rather
 than on the pages.
 
-## 14. What Hakken sees — on every screen (drawn 2026-10-10, to agree)
+## 14. What Hakken sees — on every screen (drawn and signed off 2026-10-10)
 
 Anthony, 2026-10-10, on the panel another session built for Discovery: "Its
 the system acting as an SEO agent and SEO expert giving advice on the screen
@@ -879,8 +891,8 @@ row is the screens with figures and the bottom row the states people meet on
 the way. Long lists keep the built standard: 25 rows to start, with the 25 /
 50 / 75 / 100 choice (Anthony: "Don't change the list lengths keep them as
 they are"). The locked canvas (§11) stays the record of what was agreed on
-2026-10-09. Nothing in this section is agreed yet: each screen is signed off
-page by page.
+2026-10-09. **All 19 screens signed off 2026-10-10** (Anthony: "I'm good with
+the 19 screens"), and the build started the same evening (Anthony: "1 yes").
 
 | # | Screen | Against the locked screen (§11) |
 |---|---|---|
@@ -987,3 +999,18 @@ as 3), and the list behind "See all".
   on Ronins' figures, and what each changes against the locked screens
   (§15); three things found while drawing (§16). Phase 5 added, eight and a
   half days, about twenty-four in all (§8). None of it agreed or built yet.
+- 2026-10-10 — Status corrected against the dev database and the app
+  (Anthony: "Most of this is done it's already collecting data"). The
+  Collector Agent and its daily 04:00 schedule were created at 07:38 and are
+  switched on, next run 11 October 04:00; the section shows ronins.co.uk
+  connected, 826 visits, 12 conversions and £240 over 30 days. Phases 0 to 4
+  marked done; the old "about 45%" read the 70% written before Phase 0 as a
+  share of all twenty-four days. Left: Phase 5, the two decisions in §12, and
+  storage on morehandles.co.uk.
+- 2026-10-10 — All 19 screens on the review canvas signed off (Anthony: "I'm
+  good with the 19 screens"). Phase 5 waits for "build".
+- 2026-10-10 — Phase 5's build started (Anthony: "1 yes"), with both
+  page-list changes (Anthony: "yes to all": Analytics' visits beside Search
+  Console's clicks in `holdPages`, and Q12, `holdPages` holding the page
+  number). morehandles.co.uk is not connected for now (Anthony: "no I don't
+  want to cement yet"). About twelve days with the two changes.

@@ -2,7 +2,9 @@
 
 **Started 2026-08-10. Status: Phases 0–3 built and green same day; Phase 4
 built except the ongoing 4.4 sweep.** Ratchet baseline recorded at **1,231**
-(from ~2,039). As built, deviations from spec worth knowing:
+(from ~2,039) on 2026-08-10; **649** on 2026-10-10 (`code-ratchets.json`,
+"theme"), the 4.4 sweep continuing. As built, deviations from spec worth
+knowing:
 
 - Migrated screens kept their local badge geometry where StatusPill's
   rounded-full recipe would have changed layout — those sites use

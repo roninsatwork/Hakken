@@ -1,8 +1,9 @@
 # Discovery — detail screens, rows that open, and What Hakken sees
 
 **Started 2026-10-10. Status: drawn and approved 2026-10-10 (Anthony: "im
-happy with these screens"); building since 2026-10-10 ("Ok can start this
-please").** Follow
+happy with these screens"); built 2026-10-10 ("Ok can start this please"),
+all seven steps — What Hakken sees on all 73 Discovery screens, the four
+detail screens, every row opening something (Progress, below).** Follow
 `AGENTS.md`, the [drawing guide](../../developer/drawing-guide.md) and the
 [core data normalisation plan](core-data-normalisation-plan.md)'s rules (§3
 there): nothing here is bought, nothing is stored twice, and every screen is
@@ -486,6 +487,8 @@ About thirteen days. Progress is reported per step as a percentage.
 
 ## Change log
 
+- 2026-10-10 — Status corrected against the code: built, all seven steps (it
+  still read "building since").
 - 2026-10-10 — Steps 6 and 7 built. Changes made while building, each smaller than a decision: a screen whose query returns a plain list, or a query other screens share (Mentions, Share of voice, the Backlinks summary and its charts, Your searches, Who ranks above you, Search features, the Overview, Your assets, Site audit, the Websites list, Keyword research), runs the same tested rules over the rows it already holds instead of reshaping the query — the box still costs no read; a list's box is of the whole list it is cut from, whatever page is shown, and of the filters only on All backlinks, as §6 says; New and lost keywords shares Wins and losses' box (one query); a box names an AI engine in the reader's language, keeps one decimal for a rating, says places as places ("3rd") and "none" for nought; a step that fixes a Google profile opens Google's own profile manager; Keyword research's steps never buy — they open a lookup, or the website's record of a search. Limits set while building, each said here: a folder must rank for 10 searches before Site structure calls it weak; "just off page one" is 11 to 13, as Position bands' closest searches are; Keyword research's "best chance" weighs searches a month by how easy the top ten is (volume × (100 − difficulty)), with no cut-off.
 - 2026-10-10 — Step 5 built. Changes made while building, each smaller than a decision: the two filters narrow the strongest link from each linking website (§5, chosen on cost); a filter shows as a filter chip whose other choice clears it, rather than a separate remove button; Where links come from and All backlinks name groups alike (`useLinkGroupName`); "Everything else" on Where links come from opens nothing, as it is no one group; New and lost links' row opens the links gained or lost in that day, week or month, whichever the dates are counted in.
 - 2026-10-10 — Step 4 built. Changes made while building, each smaller than a decision: a business is "a rival you watch" when it is watched as a competitor website or as a rival's Google profile — Air Social is the second kind, so its box says Google's AI and the web are not read for it, rather than that it is not watched; the screen opens on the first view with rows (a Google Maps rival opens on its map places); a business's name in a table now opens One business, as its row does, where it opened its Google profile and left the app — "Open on Google" is on One business; the review step says what the gap is (more reviews to ask for, or a faster answer); Rival activity's lines and One business's posts share one way of wording a change (`useActivityWords`); "Google rating" says when no Google profile is known.

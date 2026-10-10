@@ -22,4 +22,5 @@ What stays:
 - Past purge runs of the mailbox ledger, named in `purgeHistory`.
 
 The design as it was is in git history before 2026-10-09 and in
-[the Gmail inbox plan](../plans/active/gmail-inbox-plan.md).
+[the Gmail inbox plan](../plans/completed/gmail-inbox-plan.md), retired
+2026-10-10 and kept as history only.

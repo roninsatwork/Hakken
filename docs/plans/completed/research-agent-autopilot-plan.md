@@ -1,3 +1,7 @@
+> **Retired 2026-10-10.** Built 2026-08-03; stripped from the app with the
+> Sales Data module on 2026-09-21 (commit `c0c5092f`), so nothing it describes
+> is in the code. Kept as history only; it must not drive new work.
+
 # Research Agent Autopilot Plan
 
 Written 2026-08-03, after a run that did a thirtieth of the job and reported

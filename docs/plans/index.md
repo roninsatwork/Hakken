@@ -14,8 +14,9 @@ completed work.
   the title of every Discovery screen, written by fixed rules over what the
   page already reads; All backlinks gains week and group filters. Nothing
   bought, no new table. **Drawn and approved 2026-10-10 (28 boards in
-  `docs/plans/assets/discovery-detail-screens/`); the build waits for his
-  "build".**
+  `docs/plans/assets/discovery-detail-screens/`); built the same day, all
+  seven steps: What Hakken sees on all 73 Discovery screens, the four detail
+  screens, and every row opening something.**
 - [Discovery — local, reviews, AI apps, Brand radar and web mentions](./active/discovery-local-reputation-ai-plan.md)
   — Google profiles, Maps, reviews, the AI apps, Brand radar, Your assets and
   web mentions in Discovery. **Built 2026-10-09 and run on Ronins and Korda.**
@@ -29,7 +30,9 @@ completed work.
   time by article, person, company and user. Six phases, about eighteen
   days. **Drawn and approved 2026-10-10 (twelve boards in
   `docs/plans/assets/content-people-knowledge/boards/`); built the same day,
-  all six phases, in local commits on `dev`; Q1–Q4 and Q6 answered.**
+  all six phases, and pushed to dev. Nothing collected yet: the News
+  Collector agent and the X and Firecrawl keys are still to set up. Q5 and
+  Q7–Q11 open.**
 - [Google Analytics — for your own websites](./active/google-analytics-plan.md)
   — a new "Google Analytics" item in the main menu, beside Search Console,
   showing each owned website's Google Analytics alone: visits, channels (AI
@@ -38,19 +41,22 @@ completed work.
   value, plus a weekly tracking health check. One Google sign-in per owned
   website serves both Search Console and Analytics, and everything the two
   have in common is stored once (GA18). Its own Google Analytics: Collector
-  Agent and schedule, collecting at once on connecting. Five phases, about
-  fifteen and a half days. **Planned 2026-10-09: every question answered and
-  the twenty screens agreed and locked (pictures in
-  `docs/plans/assets/google-analytics/`); nothing built; on hold until the
-  SEO API coverage work is complete.**
+  Agent and schedule, collecting at once on connecting. Six phases, about
+  twenty-four days. **Phases 0 to 4 built 2026-10-10 and running on dev:
+  Ronins connected and collecting, the Collector Agent and its daily 04:00
+  schedule switched on. Phase 5 — Heroes and attention, What Hakken sees on
+  sixteen screens, the review canvas's changes (§13–§16), about eight and a
+  half days, with three and a half more for two changes to the hold's page
+  list — is drawn, its 19 screens signed off and building since 2026-10-10.**
 - [Core data — each keyword and page once](./active/core-data-normalisation-plan.md)
   — normalising the core before roadmap features (Anthony, 2026-10-08): each
   keyword stored once for the platform, each page once per website, a
   company's private ones once per company, lists holding numbers; every screen
   proved inside Convex's limits at five times morehandles.co.uk's size. Four
   parts — Search Console, Sites and DataForSEO, agents and the rest, every
-  other line of Convex's bill — about 26 days. Planned, every decision
-  agreed; nothing built.
+  other line of Convex's bill — about 26 days. **Done 2026-10-08: every
+  step built, or measured and judged with its reasons; a clean week of
+  Convex usage is still to be read on 2026-10-15.**
 - [Keeping less history](./active/keep-less-history-plan.md) — keep only
   what a screen reads: keyword positions as graph lines (one record per
   keyword a month, not a row per check), the day tables nobody reads stopped
@@ -69,7 +75,8 @@ completed work.
   built-in agents (the Hakken Assistant, Watcher, Stat Report, Research,
   Weekly Digest Email and Caretaker Agents); charts in Ask Hakken; every email
   Hakken sends moved onto one new style. **Planned 2026-10-07, drawings
-  signed off the same day; nothing built; about 28 to 36 days in six phases.**
+  signed off the same day; all six phases built the same day. The live
+  Telegram bot is still to be created with Anthony when it is tried.**
 - [The assistant's foundation — one brain, many doors](./active/assistant-foundation-plan.md) —
   before Hakken becomes a personal assistant that takes on jobs, one brain:
   what Hakken knows put together in one place for every door (typed and
@@ -87,7 +94,7 @@ completed work.
   cost, about 4 seconds slower), item 7, the company's own figures and its
   competitors' with a "Looked up" line, item 8, the client picker, and
   item 9, the old answer path removed, and item 10, every check passed —
-  committed locally on dev, not pushed; the push waits for Anthony's word.
+  committed and pushed to dev.
   Speed: S1 measured where an answer's time goes, and S3 built — the wiki's
   page-picker started first, about 0.9 s off every answer that reads it,
   the same pages read.**
@@ -105,7 +112,7 @@ completed work.
   at a time, a $3 limit per website instead of $15 a run, $100 a day for all
   of it) and Admin → Websites → Collection pipeline says what it is doing:
   progress, what it is on, time left, cost and credits. **Planned, drawn,
-  approved and built 2026-10-05, local on dev and on the dev deployment; the
+  approved and built 2026-10-05, pushed to dev and on the dev deployment; the
   Collector's two limits to be set on production when it is deployed.**
 - [Usage and credits](./active/usage-credits-plan.md) — £200 a month per
   company including 1,000 credits (placeholders until the cost audit); every
@@ -154,7 +161,10 @@ completed work.
   Weekly Digest agent into an outbox that an Email Sender agent (no AI) sends
   through Resend. Three agents with roles, schedules, logs and costs. Ten
   phases, 17.5 days, with Google updates marked on every dated Sites chart.
-  Planning, 2026-09-30; nothing built.
+  **Every phase built on dev 2026-10-01. Nothing has run for real: it waits
+  on configuration — a fast model, Resend's domain and webhook, X's keys, the
+  agents and their schedules. News sources replaced 2026-10-10 by the
+  [Content plan](./active/content-people-knowledge-plan.md)'s Who to follow.**
 - [Status labels: icon and words, no pills](./active/status-labels-plan.md) —
   every rounded, tinted status pill on the dashboard (104 kit uses, about
   nine parts built on it, about 70 drawn by hand) becomes a small line icon
@@ -215,7 +225,9 @@ completed work.
   own sections in its own words (admin, by address rules and sitemap files),
   replacing Hakken's page kinds on its screens once set, and a Your pages page
   in Sites setting its sitemap against what was crawled, shown by Google and
-  ranking. **Agreed and drawn 2026-10-03; not built.**
+  ranking. **Agreed and drawn 2026-10-03; stages 1 and 2 built the same day,
+  and stage 3 but for classifications in reports — there is no reports
+  feature yet for them to go in; classifications in downloads are done.**
 
 - [Tracked pages — what a company tracks, from the menu](./active/tracked-pages-plan.md) —
   a page per tracked list inside its own section: Search Console's Tracked
@@ -243,9 +255,9 @@ completed work.
   count rows instead of searches, lists cut at 1,000 whatever the setting,
   moves that can never show a loss on a cut-short site, two meanings for "top
   3" and for "linking websites", and screens that show part of a list as the
-  whole. Two bugs in the uncommitted everyday check. **Audit done 2026-09-27;
-  approved the same day, all of it; built the same day, not committed — three
-  decisions left (§8.5).**
+  whole. Two bugs in the everyday check, built earlier that day. **Audit done
+  2026-09-27; approved the same day, all of it; built the same day, committed
+  2026-09-28 and pushed to dev — three decisions left (§8.5).**
 
 - [Sites — fixing what the screen audit found](./active/sites-audit-fixes-plan.md) —
   every Sites screen opened in Chrome on Korda and Ronins, and the code behind
@@ -254,13 +266,13 @@ completed work.
   phases with four decisions for Anthony. **Agreed 2026-09-26; built and
   checked in Chrome 2026-09-26, each fix with a test. Position bands, New and
   lost keywords and Site structure redesigned 2026-09-27 (§10), which settles
-  G1; G2 and the commit to come.**
+  G1; committed 2026-09-28 and pushed to dev; G2 still open.**
 
 - [Sites — the AI figures from one summary per list](./active/sites-ai-list-summaries-plan.md) —
   Mentions, Share of voice, the header's counts and the Sites list read one
   summary per list, written when answers are filed, instead of a row or two
-  per question and engine each time a page opens. **Built 2026-09-26
-  on dev; not pushed.**
+  per question and engine each time a page opens. **Built 2026-09-26;
+  committed 2026-09-28 and pushed to dev.**
 
 - [Sites — every table sorts the same way, by its headings](./active/sites-table-sorting-plan.md) —
   all 36 Sites tables sort like Keywords: press a heading for its best first,
@@ -287,7 +299,8 @@ completed work.
   site with a side menu of one sub menu per kind of data we collect (AI
   answers, Google results, organic keywords, competitors, backlinks) and a
   date range on every page. Base layer first: only data we already collect,
-  read-only, editing stays in admin. **Planned 2026-09-23, nothing built.**
+  read-only, editing stays in admin. **Planned 2026-09-23; all five phases
+  built the same night, storing everything 2026-09-24.**
 
 - [One Website, Many Watchers — Websites, Competitors and the Collection Pipeline](./active/websites-and-competitors-plan.md) —
   the admin structure Hakken's SEO data hangs off, and the DataForSEO pipeline
@@ -312,18 +325,18 @@ completed work.
   two companies would not disagree about them, location sits on the join row
   because they would, and the thing we buy is the prompt rather than the brand —
   so one purchase answers every watcher, exactly as one row per host already
-  does. **Built 2026-09-21 and 2026-09-22.** Four judgments for Jev, through the
-  existing Decisions framework, are designed and not built. All four are to be
-  built, because Jev is far cheaper than a text model and is the default
-  wherever a judgment is needed; the first, whether a brand was recommended or
-  merely mentioned, goes first.
+  does. **Built 2026-09-21 and 2026-09-22, with all four judgments for Jev
+  through the Decisions framework (`convex/seoJudgments.ts`), each shipped
+  switched off. Brand names moved to the company level 2026-09-28
+  ([company-level website facts](./active/company-level-website-facts-plan.md)).**
 
 - [Product-building foundations after cloning](./active/product-building-foundations-plan.md) — all four phases implemented; dated checks distinguish the original work, audit repairs and the September 14 billing experience. Live Stripe acceptance and release remain separate.
 - [Optional Billing Starter and Current Handoff](./active/optional-billing-starter-proposal.md) — approved company frontend, private super-admin setup/oversight, access rules, metric definitions and verification status.
 
 - [Ronin's Run 3D](./active/ronins-run-3d-plan.md) — separate first-person game
-  using all four original map layouts. Playable prototype verified locally;
-  visual target remains unmet. Overall estimate 55%.
+  using all four original map layouts. **Gameplay 100% (2026-09-13); the
+  former overall figure withdrawn, as it did not measure the visual gap.
+  Final visual acceptance and real-device tests remain.**
 
 - [Ronin's Run — Night Heist Plan](./active/ronins-run-night-heist-plan.md) —
   four playable maps with saved unlocks, per-map bests, the preserved visual
@@ -366,7 +379,11 @@ completed work.
   write-up until it is deliberately archived.
 - [Admin UI/UX Plan](./active/admin-ux-plan.md) — the current admin usability
   plan for model catalogue, Skill Center, skill detail, model defaults, system
-  options, API keys, and related admin surfaces.
+  options, API keys, and related admin surfaces. **Every phase done but D,
+  corrected against the code 2026-10-10: D1 done 2026-07-25; D2 done, then
+  made moot when the White Label section was deleted 2026-08-10; D3 in part —
+  the create form still sits open above "Keys you have", so the list does not
+  lead.**
 - [OpenRouter And Model Scale Plan](./active/openrouter-and-model-scale-plan.md) —
   adding OpenRouter as a provider across the whole app, and the database-side
   paging, search indexes and rollups the model catalogue needs to hold hundreds
@@ -435,13 +452,6 @@ completed work.
   access to workspace customer data, before adding anything to the customer
   list that is not an imported account, and it defers autonomy and approval
   behaviour to the Agent Autonomy And Approvals Plan.
-- [Market Discovery Agent Plan](./active/market-discovery-agent-plan.md) —
-  the plan for the separate agent lane that finds new parent companies outside
-  imported customer groups, then files their locations as clearly labelled
-  market-discovery prospects. Owns the future `Find new groups` button, its
-  queue-backed progress bar, discovered-parent-company records, prospect origin
-  labels, and opportunity-report separation between warm existing-chain
-  prospects and colder market-discovery prospects.
 - Comax Opportunity Report Plan (not included in this copy) —
   the plan for the Comax - Opportunity Report Agent and its screen: pricing
   every prospect from the spend of similar-sized customers (bedrooms for care
@@ -451,11 +461,6 @@ completed work.
   `salesOpportunityReports` table, the `opportunityReport.*` tools, and
   `/app/<workspace>/opportunity-report`. Read it before adding anything
   opportunity-or-revenue-shaped to the sales data vertical.
-- [Research Agent Autopilot Plan](./active/research-agent-autopilot-plan.md) —
-  turning the customer research and prospecting sweeps into one job that runs all
-  three tasks to completion under a single press, replacing the fan-out of one
-  agent run per customer and per chain. Read it before touching the sweeps in
-  optional module (not included in this copy).
 - [Governance And Trust Plan](./active/governance-and-trust-plan.md) — delivered
   2026-08-06, and kept in `active/` because its framework test and its recorded
   decisions govern what comes next. The phased plan for the AI register, risk
@@ -467,9 +472,15 @@ completed work.
   adding a governance surface, a new role, or a sign-in method.
 - [Seven Gaps Plan](./active/seven-gaps-plan.md) — the active product gap map
   for the final customer-visible surface areas that make the platform feel
-  complete: channel access, task routing, personal assistance, and related
-  experience gaps. Read it before claiming those gaps are closed or adding a
-  new top-level user-facing gap.
+  complete: seeing calls and email, connections really checked, the visitor
+  book, the day view, search from anywhere, a company's own look and its own
+  bill. Read it before claiming those gaps are closed or adding a new
+  top-level user-facing gap. **Phases 1 and 2 built 2026-08-16 (admin Calls,
+  the Connections screen, real probes, the job ledger, Health); Phase 1's
+  Mailbox went with Gmail 2026-10-09. Phase 7 overtaken by Billing and Usage,
+  except the 90% in-product warning, not built. Phases 3 to 6 — the visitor
+  book, the day view, search from anywhere, the look screen for company
+  admins — not built, about 5½ days.**
 - [Audit Trail Plan](./active/audit-trail-plan.md) — the plan to make the audit
   trail say what happened rather than only what fields changed, written after
   most rows on the finished screen read "nothing recorded" over records that
@@ -537,6 +548,9 @@ completed work.
   `useSystemSettingsForm`. Scope is the dashboard app only — the public
   site, login, and emails keep their own fixed designs by owner decision.
   Read it before adding a colour, a status pill, or a settings row anywhere.
+  **Phases 0–3 built 2026-08-10, and Phase 4 but for the 4.4 sweep, which
+  continues: the hard-coded colour ratchet, recorded at 1,231 then, is 649 on
+  2026-10-10 (`code-ratchets.json`, "theme").**
 - [Assistant Streaming All Providers Plan](./active/assistant-streaming-all-providers-plan.md) —
   the plan to make plain assistant replies stream word by word on OpenRouter,
   OpenAI, and Anthropic, matching what Google Vertex and the agent loop already
@@ -566,7 +580,9 @@ completed work.
   the platform's first working connector (Gmail, one dedicated mailbox,
   consent-screen key, no passwords ever), and that the rest of the connector
   catalogue stays out of scope. Each phase has its own detailed plan, listed
-  next.
+  next, but for the telephone agent (completed) and the Gmail inbox, retired
+  2026-10-10 after Gmail was removed from the app on 2026-10-09; both are under
+  Completed below.
 - [Hakken Speaks — The Voice Session And The Talking Character](./active/voice-session-plan.md) —
   phase 1: the voice session in Ask Hakken — speech in, spoken replies out,
   the moving sound-shape on screen. Owns the `speech` use case, the
@@ -586,16 +602,6 @@ completed work.
   dormant upload endpoints, and the fix for the agent path silently
   dropping images. Records the decision that photos are inline evidence,
   never ingested knowledge.
-- [The Gmail Inbox That Answers Itself](./active/gmail-inbox-plan.md) —
-  phase 5: the platform's first working connector. Owns the generic OAuth
-  consent plumbing (authorize/callback routes, encrypted
-  `connectorOAuthTokens`, refresh, real revocation), the `google-gmail`
-  connector definition and its read/reply tools with hard reply rails,
-  the mailbox watcher, the answer-versus-task rules, and the
-  `mailboxMessages` table with its purge pipeline. Records the decisions
-  that replies go out through Gmail itself (threading, human-visible
-  Sent) and that the connected mailbox is a dedicated account, never a
-  person's.
 - [The Receptionist Screen](./active/receptionist-kiosk-plan.md) —
   phase 6: the walk-up kiosk. Owns the `/kiosk/[widgetId]` surface on the
   widget's anonymous machinery, the kiosk enable flag, tap-to-wake,
@@ -609,8 +615,11 @@ completed work.
   entry when it acts, and one shared pill on every screen that shows a
   result, including Health, agent runs and chat logs. The rules Hakken uses
   today stay as each Decision's fallback. Mailbox first, then chat safety,
-  then the wiki checkers. **Agreed 2026-09-17, not started; 0%.** Waiting on
-  a TypeSafe account and key.
+  then the wiki checkers. **About 95% built 2026-09-17 and 18 (TypeSafe's
+  key set on dev 2026-09-18), the four SEO judgments 2026-09-22. The mailbox
+  proof can no longer happen: Gmail was removed 2026-10-09, and its four
+  Decisions stay registered, switched off. Only TypeSafe's output price on
+  the catalogue is left.**
 - [Documentation Coverage Audit](./active/documentation-coverage-audit.md) —
   the current documentation audit map, work queue, and validation notes.
 - [Outstanding Tasks](./active/OUTSTANDING-TASKS.md) — the current queue of
@@ -627,9 +636,10 @@ the AI Checks Plan. If work touches how an agent's activity is displayed — the
 Observability menu, the job detail, or raw logs — use the Agent Observability
 Plan, which defers approvals behaviour to the Agent Autonomy And Approvals Plan
 and eval content to the AI Checks Plan. If work touches an agent filling in customer
-details from the internet, use the Workspace Customer Research Agent Plan. If
-work touches new parent-company discovery outside imported groups, use the
-Market Discovery Agent Plan. If it touches the customer screens themselves, the
+details from the internet, use the Workspace Customer Research Agent Plan.
+New parent-company discovery outside imported groups was the Market Discovery
+Agent Plan's, retired 2026-10-10 with the Sales Data module it belonged to: it
+is history, not guidance. If it touches the customer screens themselves, the
 Workspace Customer CRM Plan wins.
 If work touches revenue opportunities — prospect valuation, group gap analysis,
 or the opportunity report screen — use the Comax Opportunity Report Plan.
@@ -654,13 +664,16 @@ behaviour from the Agent Autonomy And Approvals Plan and email from the Email
 Design System Plan; it owns neither.
 If work touches a new way of reaching Hakken, the umbrella Hakken Can Be
 Spoken To, Phoned, Emailed, And Shown A Photo plan owns the build order and
-the channel decisions, and the six phase plans own their features: voice
+the channel decisions, and the phase plans own their features: voice
 sessions, speech synthesis, and the sound-shape belong to the Voice Session
 plan; reply language and voice-per-language to the Voice Languages plan;
 the phone number, call loop, and call records to the Telephone Agent plan;
 images in chat or widget and acting on them to the Photo Actions plan;
-OAuth consent plumbing, token storage, and the connected mailbox to the
-Gmail Inbox plan; the walk-up surface to the Receptionist Kiosk plan.
+the walk-up surface to the Receptionist Kiosk plan. The Gmail Inbox plan was
+retired 2026-10-10, Gmail having been removed from the app on 2026-10-09; the
+OAuth consent flow it built stays in `convex/connectorOAuth.ts`, used by
+Search Console and X (`docs/developer/gmail-mailbox.md` says what went and
+what stays).
 Tasks raised from any channel stay with the Tasks And Notifications Plan,
 outbound platform email styling stays with the Email Design System Plan,
 and approvals behaviour stays with the Agent Autonomy And Approvals Plan.
@@ -726,6 +739,22 @@ instructions unless they are deliberately reopened.
   archived 2026-09-21 when the demo modules were stripped. History of making
   manual and scheduled agent runs use the real tool-capable agent loop; its
   driving case, the Rightmove property agent, is no longer in this repository.
+- [The Gmail Inbox That Answers Itself](./completed/gmail-inbox-plan.md) —
+  archived 2026-10-10 when Gmail had been removed from the app (2026-10-09,
+  `862d367e`; Anthony: "this app will never use it"). History of phase 5 of
+  the showcase channels roadmap, built 2026-08-14: the Gmail connector, the
+  mailbox watcher and its reply rails. The consent flow it built,
+  `convex/connectorOAuth.ts`, stays — Search Console and X use it.
+- [Market Discovery Agent Plan](./completed/market-discovery-agent-plan.md) —
+  archived 2026-10-10 when the Sales Data module it belonged to had been
+  stripped (2026-09-21, `c0c5092f`). History of the agent lane for finding new
+  parent companies outside imported customer groups, about 70% built; none of
+  it is in this repository any more.
+- [Research Agent Autopilot Plan](./completed/research-agent-autopilot-plan.md) —
+  archived 2026-10-10 when it had been stripped with the Sales Data module
+  (2026-09-21, `c0c5092f`). History of turning the customer research and
+  prospecting sweeps into one job run to completion under a single press,
+  built 2026-08-03; none of it is in this repository any more.
 - [The Self-Improving Wiki](./completed/self-improving-wiki-plan.md) —
   delivered 2026-08-14: Karpathy's LLM Wiki pattern built faithfully into
   Hakken — whole pages the AI rewrites after every conversation, tended on a

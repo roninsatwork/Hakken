@@ -3,7 +3,11 @@
 **Started 2026-09-17.** Agreed with Anthony the same day: TypeSafe comes in
 as a provider, and every judgment it makes becomes a named **Decision** you
 can see on screen, switch on and off, and trace through the observability
-screens. Phase A is built; see Progress below.
+screens. **Status, corrected against the code 2026-10-10: about 95% built
+2026-09-17 and 18 (TypeSafe's key set on dev 2026-09-18), the SEO judgments
+2026-09-22 (Phase G); only TypeSafe's output price on the catalogue is left —
+the mailbox proof can no longer happen (see "Waiting on Anthony").** See
+Progress below.
 
 TypeSafe ("System One", model `jev-latest`) is not a chat model. You hand it
 some text plus one or more questions and it returns typed answers with a
@@ -608,6 +612,13 @@ the rules, because that means the Decision is off or the provider is down.
 - A slider or number for certainty anywhere in the UI.
 
 ## Waiting on Anthony
+
+**2026-10-10, corrected against the code:** the key is set (on dev,
+2026-09-18), so the first item below is done. Phase D's mailbox proof can no
+longer happen: Gmail was removed from the app on 2026-10-09, and the four
+`mailbox.*` Decisions stay registered in `convex/decisionRegistry.ts`,
+switched off and never asked. What is left is TypeSafe's output price on the
+model catalogue row.
 
 - A TypeSafe account and an API key, set as `TYPESAFE_API_KEY` on dev
   first. Phase A can be built and tested against a stub without it; Phase

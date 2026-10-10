@@ -149,3 +149,8 @@ Search Console ones) wider than the ~900px beside the two menus.
     pages of "listed in sitemap file" lines per read, 3 pages for a folder to
     be suggested.
   - Kit: `TableBar` gained the noun "classifications".
+- **2026-10-10** — Status corrected against the code: the build above is
+  committed and pushed to dev (`d0aee97b`), not local. Stages 1 and 2 are
+  built; stage 3 is built but for classifications in reports — there is no
+  reports feature yet for them to go in; classifications in downloads are done
+  (`convex/siteExports.ts`).

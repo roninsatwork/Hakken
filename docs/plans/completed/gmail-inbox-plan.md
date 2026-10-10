@@ -1,3 +1,10 @@
+> **Retired 2026-10-10.** Phases A–C were built 2026-08-14; Gmail was removed
+> from the app on 2026-10-09 (commit `862d367e`; Anthony: "this app will never
+> use it"). The shared consent flow it built, `convex/connectorOAuth.ts`, stays:
+> Search Console and X use it — see
+> [Gmail Mailbox — removed](../../developer/gmail-mailbox.md). Kept as history
+> only; it must not drive new work.
+
 # The Gmail Inbox That Answers Itself
 
 Status: **Phases A–C built and tested 2026-08-14.** The consent plumbing is

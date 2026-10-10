@@ -78,9 +78,9 @@ Convex modules, workflows, scripts, and operator procedures continue to change.
 - Workspace Sales Data Plan (not included in this copy) — active plan for the optional workspace spreadsheet-import vertical and module gating.
 - Workspace Customer CRM Plan (not included in this copy) — active plan for customer records, profiles, typed-in details, and sales history inside workspace sections.
 - Workspace Customer Research Agent Plan (not included in this copy) — active plan for internet backfill, prospect discovery, researched-field provenance, and customer/prospect write boundaries.
-- [Market Discovery Agent Plan](./plans/active/market-discovery-agent-plan.md) — active plan for finding new parent companies outside imported groups, filing their locations as market-discovery prospects, and tracking the job with a visible progress bar.
+- [Market Discovery Agent Plan](./plans/completed/market-discovery-agent-plan.md) — retired 2026-10-10: the plan for finding new parent companies outside imported groups, about 70% built before the Sales Data module it belonged to was stripped on 2026-09-21. History only.
 - Comax Opportunity Report Plan (not included in this copy) — active plan for prospect valuation, chain gap analysis, opportunity-report tools, and the workspace opportunity report screen.
-- [Research Agent Autopilot Plan](./plans/active/research-agent-autopilot-plan.md) — active plan for turning customer research and prospecting sweeps into a supervised queue-backed job.
+- [Research Agent Autopilot Plan](./plans/completed/research-agent-autopilot-plan.md) — retired 2026-10-10: the queue-backed job for customer research and prospecting sweeps, built 2026-08-03 and stripped with the Sales Data module on 2026-09-21. History only.
 - [Governance And Trust Plan](./plans/active/governance-and-trust-plan.md) — delivered 2026-08-06; kept active for its framework test and recorded decisions. Covers the AI register, risk classification, evidence export, the Governance section, and the roles, one-time-code sign-in and personal-data-rights work behind it.
 - [Governance Screens Read A Summary Plan](./plans/active/governance-screens-read-a-summary-plan.md) — active plan for replacing expensive governance overview reads with maintained rollups and snapshots.
 - [Audit Trail Plan](./plans/active/audit-trail-plan.md) — active plan for the real audit-trail screen, filters, detail view, event export, and trust-report path.
@@ -98,7 +98,7 @@ Convex modules, workflows, scripts, and operator procedures continue to change.
 - [Voice Session Plan](./plans/active/voice-session-plan.md) — active spoken-session plan for speech input, spoken replies, and the sound-shape presentation.
 - [Voice Languages Plan](./plans/active/voice-languages-plan.md) — active plan for detecting spoken language and answering in kind.
 - [Photo Actions Plan](./plans/active/photo-actions-plan.md) — active plan for image attachments, vision-aware routing, and task creation from photos.
-- [Gmail Inbox Plan](./plans/active/gmail-inbox-plan.md) — active plan for the dedicated Gmail connector, mailbox watcher, and reply/task handling.
+- [Gmail Inbox Plan](./plans/completed/gmail-inbox-plan.md) — retired 2026-10-10: the dedicated Gmail connector, mailbox watcher and reply/task handling, built 2026-08-14; Gmail was removed from the app on 2026-10-09. History only.
 - [Receptionist Kiosk Plan](./plans/active/receptionist-kiosk-plan.md) — active plan for the walk-up kiosk surface and visitor-session handling.
 - [Documentation Coverage Audit](./plans/active/documentation-coverage-audit.md) — current documentation audit map, work queue, and validation notes.
 - [Hakken Speaks The Standard Tool Plug](./plans/active/tool-server-plan.md) — active plan for connecting Hakken to a service's own published tool server, so its tools arrive without an integration being written.

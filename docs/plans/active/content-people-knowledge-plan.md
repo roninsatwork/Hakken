@@ -45,8 +45,10 @@ company and user.
   out please".
 
 **Status, 2026-10-10:** drawn, approved and planned; built the same day,
-phases 1–6, on `dev` in local commits (see "Build record" below). Overall:
-built; not pushed, and nothing collected or paid for yet.
+phases 1–6, and pushed to dev (see "Build record" below). Overall: built;
+nothing collected or paid for yet — the News Collector agent and the X and
+Firecrawl keys are still to set up ("Configuration"). Q5 and Q7–Q11 are
+open.
 
 ## The approved drawings
 

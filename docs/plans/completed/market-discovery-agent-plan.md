@@ -1,3 +1,7 @@
+> **Retired 2026-10-10.** About 70% built; the Sales Data module it belonged
+> to was stripped from the app on 2026-09-21 (commit `c0c5092f`), so nothing it
+> describes is in the code. Kept as history only; it must not drive new work.
+
 # Market Discovery Agent Plan
 
 Written 2026-08-04, after the customer research agent, warm-chain prospecting

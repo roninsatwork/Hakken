@@ -643,9 +643,15 @@ UI problems:
 
 | # | Item | Size | State |
 |---|---|---|---|
-| D1 | One toggle, stated once, in plain words | 0.25 | — |
-| D2 | Readiness rows that link to their own fix | 0.25 | — |
-| D3 | API Keys | 0.5 | — |
+| D1 | One toggle, stated once, in plain words | 0.25 | **done** (`4c57022e`, 2026-07-25) |
+| D2 | Readiness rows that link to their own fix | 0.25 | **done**, then moot: the White Label section was deleted (`48009a21`, 2026-08-10) |
+| D3 | API Keys | 0.5 | **in part** |
+
+States corrected against the code 2026-10-10. D3: the one-time secret panel
+shows only when there is a key to show, the plain warning to copy it now is
+in, and the scope for an unbuilt feature (`webhook:deliver`) is no longer
+offered; but the create form is still always open above "Keys you have", so
+the list does not lead.
 
 **D1.** *Diagnostic Routing Matrix* currently appears twice on one screen with
 the same sentence under both, wrapped in three levels of box around a control

@@ -1,6 +1,8 @@
 # Sites — what a client sees for each website they track
 
-**Started 2026-09-23. Status: planned, nothing built.** Owner decisions are
+**Started 2026-09-23. Status, corrected against the code 2026-10-10: built —
+all five phases 2026-09-23 (night), storing everything 2026-09-24 (see the
+build log).** Owner decisions are
 recorded below; change them here, with a date, before building anything that
 disagrees with them.
 
@@ -961,3 +963,6 @@ Added 2026-09-23 (night), for Anthony in the morning:
   crawl from the run that last bought them, where it used to read the last
   run alone and leave them out on an ordinary day (`estimateMonthly`,
   `newestPrices` in `seoRunReports.ts`).
+- 2026-10-10 — Status line corrected against the code: it still read
+  "planned, nothing built", though the build log records all five phases
+  built 2026-09-23 (night) and storing everything 2026-09-24.
