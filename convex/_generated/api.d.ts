@@ -377,6 +377,7 @@ import type * as purges from "../purges.js";
 import type * as radarSchema from "../radarSchema.js";
 import type * as readerPreferences from "../readerPreferences.js";
 import type * as reading from "../reading.js";
+import type * as readingAnalytics from "../readingAnalytics.js";
 import type * as readingSchema from "../readingSchema.js";
 import type * as rehearsalEvalService from "../rehearsalEvalService.js";
 import type * as resendEmailService from "../resendEmailService.js";
@@ -1129,6 +1130,7 @@ declare const fullApi: ApiFromModules<{
   radarSchema: typeof radarSchema;
   readerPreferences: typeof readerPreferences;
   reading: typeof reading;
+  readingAnalytics: typeof readingAnalytics;
   readingSchema: typeof readingSchema;
   rehearsalEvalService: typeof rehearsalEvalService;
   resendEmailService: typeof resendEmailService;

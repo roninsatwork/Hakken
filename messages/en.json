@@ -626,7 +626,8 @@
     "usageComingUp": "Coming up",
     "usageStatement": "Statement",
     "creditPrices": "Credit prices",
-    "topics": "Topics"
+    "topics": "Topics",
+    "contentAnalytics": "Analytics"
   },
   "header": {
     "adminOverview": "Platform Management",
@@ -7370,6 +7371,153 @@
       "reading": "Reading the page…",
       "couldNotKeep": "Could not be kept.",
       "summaryOnly": "Summary only"
+    },
+    "contentAnalytics": {
+      "title": "Analytics",
+      "subtitle": "How clients use what {platformName} publishes: views, reads and clicks over time, for every article and person, and who is reading.",
+      "tabs": {
+        "overview": "Overview",
+        "articles": "Articles",
+        "people": "People",
+        "companies": "Companies"
+      },
+      "periods": {
+        "label": "Period",
+        "7": "Last 7 days",
+        "30": "Last 30 days",
+        "90": "Last 90 days",
+        "365": "Last 12 months"
+      },
+      "overview": {
+        "title": "Overview",
+        "range": "{from} to {to}, compared with the {days} days before.",
+        "nothingBefore": "Nothing in the period before",
+        "up": "▲ {amount}% on the {days} days before",
+        "down": "▼ {amount}% on the {days} days before",
+        "same": "The same as the {days} days before",
+        "noViews": "No views yet",
+        "readRate": "{rate}% of views were read",
+        "clicksDetail": "To originals and people's channels",
+        "inCompanies": "{count, plural, =1 {In # company} other {In # companies}}"
+      },
+      "measures": {
+        "views": "Views",
+        "reads": "Reads",
+        "clicks": "Clicks",
+        "answers": "In answers",
+        "readers": "Readers",
+        "companies": "Companies"
+      },
+      "chart": {
+        "day": "Day",
+        "empty": "Nothing read in this period yet.",
+        "allTitle": "Views, reads and clicks, by day",
+        "allHint": "Every article and story, every client.",
+        "articlesHint": "All articles and stories together. Narrow it with the filters below.",
+        "narrowedHint": "The articles and stories the filters below leave.",
+        "narrowedCut": "The most-viewed of the articles and stories the filters leave: there are too many to add up every one.",
+        "articleTitle": "Views and reads, by day",
+        "articleHint": "Every client who opened it.",
+        "companyHint": "Everyone at {name}, every article and story.",
+        "readersTitle": "Readers and companies, by day",
+        "readersHint": "How many people read something each day, and how many companies they came from."
+      },
+      "definitions": "A view is a client opening an article or story in Insights. A read is staying on it for 30 seconds or reaching the end. A click is opening the original, or one of a person's channels. Our own team's reading is not counted.",
+      "top": {
+        "title": "The top five",
+        "hint": "The most read and most active in these {days} days.",
+        "tabs": {
+          "articles": "Articles",
+          "people": "People",
+          "companies": "Companies",
+          "users": "Users"
+        },
+        "empty": "Nothing read in this period yet.",
+        "seeArticles": "{count, plural, =1 {See the # article} other {See all # articles}}",
+        "seePeople": "{count, plural, =1 {See the # person} other {See all # people}}",
+        "seeCompanies": "{count, plural, =1 {See the # company} other {See all # companies}}"
+      },
+      "columns": {
+        "article": "Article",
+        "from": "From",
+        "person": "Person",
+        "company": "Company",
+        "user": "User",
+        "where": "Where",
+        "topic": "Topic",
+        "readRate": "Read rate",
+        "trend": "Trend",
+        "trendLabel": "Views by day: {title}",
+        "articles": "Articles",
+        "lastRead": "Last read",
+        "lastActive": "Last active",
+        "readMost": "Read most"
+      },
+      "from": {
+        "ours": "Ours",
+        "google": "Google"
+      },
+      "where": {
+        "KNOWLEDGE": "In knowledge",
+        "NEWS": "News only"
+      },
+      "filters": {
+        "from": "From",
+        "everyone": "Everyone",
+        "where": "Where",
+        "everywhere": "Knowledge and News",
+        "topic": "Topic",
+        "allTopics": "Every topic"
+      },
+      "download": "Download CSV",
+      "downloading": "Preparing…",
+      "errors": {
+        "downloadFailed": "Could not make the CSV. Try again."
+      },
+      "articles": {
+        "title": "Articles",
+        "subtitle": "Every article and story clients read, and what they did with it in these {days} days. Open one to see it over time.",
+        "noMatch": "No article or story matches.",
+        "empty": "Nothing read in this period yet."
+      },
+      "article": {
+        "notFound": "Not read yet",
+        "notFoundDescription": "No client has opened this article or story, so there is nothing to show.",
+        "published": "published {date}",
+        "keptSince": "in knowledge since {date}",
+        "clicks": "Clicks to the original",
+        "clicksOn": "On {site}",
+        "noOriginal": "Written here: no original",
+        "answersDetail": "Times Ask {platformName} drew on it",
+        "readersBetween": "{count, plural, =1 {# person between them} other {# people between them}}",
+        "noCompanies": "No company read it in these {days} days."
+      },
+      "back": {
+        "articles": "Articles",
+        "companies": "Companies"
+      },
+      "people": {
+        "title": "People",
+        "subtitle": "The people you follow, by how much clients read them. Clicks are clients opening their originals or their channels.",
+        "noMatch": "No one followed has that topic.",
+        "empty": "No one is followed yet.",
+        "pick": "Our pick"
+      },
+      "companies": {
+        "title": "Companies",
+        "subtitle": "Which client companies read what {platformName} publishes. Open one to see its people and what they read.",
+        "readersBetween": "{count, plural, =1 {# reader between them} other {# readers between them}}",
+        "empty": "No company read anything in these {days} days."
+      },
+      "company": {
+        "notFound": "Company not found",
+        "notFoundDescription": "This company is no longer on the platform.",
+        "subtitle": "How {name}'s people read what {platformName} publishes. Last active {date}.",
+        "subtitleNever": "How {name}'s people read what {platformName} publishes. Nobody there has read anything yet.",
+        "ofPeople": "{count, plural, =1 {Of # person at {name}} other {Of # people at {name}}}",
+        "notOpened": "{count, plural, =1 {# more at {name} has not opened anything in these {days} days} other {# more at {name} have not opened anything in these {days} days}}",
+        "noReaders": "Nobody here read anything in these {days} days."
+      }
     }
   },
   "ai": {
@@ -9696,7 +9844,10 @@
       "landingPages": "{count, plural, =1 {# landing page} other {# landing pages}}",
       "conversionKinds": "{count, plural, =1 {# kind of conversion} other {# kinds of conversion}}",
       "stories": "{count, plural, =1 {# story} other {# stories}}",
-      "storiesSoFar": "{count, plural, other {#+ stories}}"
+      "storiesSoFar": "{count, plural, other {#+ stories}}",
+      "articlesAndStories": "{count, plural, =1 {# article or story} other {# articles and stories}}",
+      "companies": "{count, plural, =1 {# company} other {# companies}}",
+      "peopleRead": "{count, plural, =1 {# person read} other {# people read}}"
     },
     "chart": {
       "download": "Download",

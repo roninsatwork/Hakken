@@ -36,7 +36,9 @@ export type TableNoun =
   // Google Analytics (google-analytics-plan.md §5): channels, a channel's sources, landing pages, kinds of conversion.
   | "channels" | "sources" | "landingPages" | "conversionKinds"
   // Admin → Content → News (content-people-knowledge-plan.md, board 4): it pages by cursor, so "so far" until the last page is in.
-  | "stories" | "storiesSoFar";
+  | "stories" | "storiesSoFar"
+  // Admin → Content → Analytics (content-people-knowledge-plan.md, boards 8, 9, 11, 12).
+  | "articlesAndStories" | "companies" | "peopleRead";
 
 /**
  * The bar across the top of every Sites table, inside its card (`DataTable`'s

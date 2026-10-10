@@ -626,7 +626,8 @@
     "usageComingUp": "In arrivo",
     "usageStatement": "Estratto conto",
     "creditPrices": "Prezzi dei crediti",
-    "topics": "Argomenti"
+    "topics": "Argomenti",
+    "contentAnalytics": "Analytics"
   },
   "header": {
     "adminOverview": "Protocollo Infrastruttura",
@@ -7370,6 +7371,153 @@
       "reading": "Lettura della pagina…",
       "couldNotKeep": "Non è stato possibile conservarlo.",
       "summaryOnly": "Solo riassunto"
+    },
+    "contentAnalytics": {
+      "title": "Analytics",
+      "subtitle": "Come i clienti usano ciò che {platformName} pubblica: visualizzazioni, letture e clic nel tempo, per ogni articolo e persona, e chi legge.",
+      "tabs": {
+        "overview": "Panoramica",
+        "articles": "Articoli",
+        "people": "Persone",
+        "companies": "Aziende"
+      },
+      "periods": {
+        "label": "Periodo",
+        "7": "Ultimi 7 giorni",
+        "30": "Ultimi 30 giorni",
+        "90": "Ultimi 90 giorni",
+        "365": "Ultimi 12 mesi"
+      },
+      "overview": {
+        "title": "Panoramica",
+        "range": "Dal {from} al {to}, rispetto ai {days} giorni precedenti.",
+        "nothingBefore": "Niente nel periodo precedente",
+        "up": "▲ {amount}% rispetto ai {days} giorni precedenti",
+        "down": "▼ {amount}% rispetto ai {days} giorni precedenti",
+        "same": "Uguale ai {days} giorni precedenti",
+        "noViews": "Ancora nessuna visualizzazione",
+        "readRate": "{rate}% delle visualizzazioni sono state lette",
+        "clicksDetail": "Verso gli originali e i canali delle persone",
+        "inCompanies": "{count, plural, =1 {In # azienda} other {In # aziende}}"
+      },
+      "measures": {
+        "views": "Visualizzazioni",
+        "reads": "Letture",
+        "clicks": "Clic",
+        "answers": "Nelle risposte",
+        "readers": "Lettori",
+        "companies": "Aziende"
+      },
+      "chart": {
+        "day": "Giorno",
+        "empty": "Ancora niente letto in questo periodo.",
+        "allTitle": "Visualizzazioni, letture e clic, per giorno",
+        "allHint": "Ogni articolo e storia, ogni cliente.",
+        "articlesHint": "Tutti gli articoli e le storie insieme. Restringi con i filtri qui sotto.",
+        "narrowedHint": "Gli articoli e le storie che restano con i filtri qui sotto.",
+        "narrowedCut": "I più visti tra gli articoli e le storie che restano con i filtri: sono troppi per sommarli tutti.",
+        "articleTitle": "Visualizzazioni e letture, per giorno",
+        "articleHint": "Ogni cliente che l'ha aperto.",
+        "companyHint": "Tutti in {name}, ogni articolo e storia.",
+        "readersTitle": "Lettori e aziende, per giorno",
+        "readersHint": "Quante persone hanno letto qualcosa ogni giorno, e da quante aziende venivano."
+      },
+      "definitions": "Una visualizzazione è un cliente che apre un articolo o una storia in Insights. Una lettura è restarci 30 secondi o arrivare alla fine. Un clic è aprire l'originale, o uno dei canali di una persona. Le letture del nostro team non sono contate.",
+      "top": {
+        "title": "I primi cinque",
+        "hint": "I più letti e i più attivi in questi {days} giorni.",
+        "tabs": {
+          "articles": "Articoli",
+          "people": "Persone",
+          "companies": "Aziende",
+          "users": "Utenti"
+        },
+        "empty": "Ancora niente letto in questo periodo.",
+        "seeArticles": "{count, plural, =1 {Vedi l'articolo} other {Vedi tutti i # articoli}}",
+        "seePeople": "{count, plural, =1 {Vedi la persona} other {Vedi tutte le # persone}}",
+        "seeCompanies": "{count, plural, =1 {Vedi l'azienda} other {Vedi tutte le # aziende}}"
+      },
+      "columns": {
+        "article": "Articolo",
+        "from": "Da",
+        "person": "Persona",
+        "company": "Azienda",
+        "user": "Utente",
+        "where": "Dove",
+        "topic": "Argomento",
+        "readRate": "Tasso di lettura",
+        "trend": "Andamento",
+        "trendLabel": "Visualizzazioni per giorno: {title}",
+        "articles": "Articoli",
+        "lastRead": "Ultima lettura",
+        "lastActive": "Ultima attività",
+        "readMost": "Legge di più"
+      },
+      "from": {
+        "ours": "Nostri",
+        "google": "Google"
+      },
+      "where": {
+        "KNOWLEDGE": "In Conoscenza",
+        "NEWS": "Solo Notizie"
+      },
+      "filters": {
+        "from": "Da",
+        "everyone": "Tutti",
+        "where": "Dove",
+        "everywhere": "Conoscenza e Notizie",
+        "topic": "Argomento",
+        "allTopics": "Ogni argomento"
+      },
+      "download": "Scarica CSV",
+      "downloading": "Preparazione…",
+      "errors": {
+        "downloadFailed": "Impossibile creare il CSV. Riprova."
+      },
+      "articles": {
+        "title": "Articoli",
+        "subtitle": "Ogni articolo e storia che i clienti hanno letto, e cosa ne hanno fatto in questi {days} giorni. Aprine uno per vederlo nel tempo.",
+        "noMatch": "Nessun articolo o storia corrisponde.",
+        "empty": "Ancora niente letto in questo periodo."
+      },
+      "article": {
+        "notFound": "Non ancora letto",
+        "notFoundDescription": "Nessun cliente ha aperto questo articolo o storia, quindi non c'è niente da mostrare.",
+        "published": "pubblicato il {date}",
+        "keptSince": "in Conoscenza dal {date}",
+        "clicks": "Clic verso l'originale",
+        "clicksOn": "Su {site}",
+        "noOriginal": "Scritto qui: nessun originale",
+        "answersDetail": "Volte in cui Chiedi a {platformName} lo ha usato",
+        "readersBetween": "{count, plural, =1 {# persona in tutto} other {# persone in tutto}}",
+        "noCompanies": "Nessuna azienda l'ha letto in questi {days} giorni."
+      },
+      "back": {
+        "articles": "Articoli",
+        "companies": "Aziende"
+      },
+      "people": {
+        "title": "Persone",
+        "subtitle": "Le persone che segui, in base a quanto i clienti le leggono. I clic sono i clienti che aprono i loro originali o i loro canali.",
+        "noMatch": "Nessuna persona seguita ha quell'argomento.",
+        "empty": "Ancora nessuna persona seguita.",
+        "pick": "Scelta nostra"
+      },
+      "companies": {
+        "title": "Aziende",
+        "subtitle": "Quali aziende clienti leggono ciò che {platformName} pubblica. Aprine una per vedere le sue persone e cosa leggono.",
+        "readersBetween": "{count, plural, =1 {# lettore in tutto} other {# lettori in tutto}}",
+        "empty": "Nessuna azienda ha letto niente in questi {days} giorni."
+      },
+      "company": {
+        "notFound": "Azienda non trovata",
+        "notFoundDescription": "Questa azienda non è più sulla piattaforma.",
+        "subtitle": "Come le persone di {name} leggono ciò che {platformName} pubblica. Ultima attività {date}.",
+        "subtitleNever": "Come le persone di {name} leggono ciò che {platformName} pubblica. Nessuno lì ha ancora letto niente.",
+        "ofPeople": "{count, plural, =1 {Su # persona in {name}} other {Su # persone in {name}}}",
+        "notOpened": "{count, plural, =1 {Un'altra persona in {name} non ha aperto niente in questi {days} giorni} other {Altre # persone in {name} non hanno aperto niente in questi {days} giorni}}",
+        "noReaders": "Nessuno qui ha letto niente in questi {days} giorni."
+      }
     }
   },
   "ai": {
@@ -9696,7 +9844,10 @@
       "landingPages": "{count, plural, =1 {# pagina di destinazione} other {# pagine di destinazione}}",
       "conversionKinds": "{count, plural, =1 {# tipo di conversione} other {# tipi di conversione}}",
       "stories": "{count, plural, =1 {# storia} other {# storie}}",
-      "storiesSoFar": "{count, plural, other {#+ storie}}"
+      "storiesSoFar": "{count, plural, other {#+ storie}}",
+      "articlesAndStories": "{count, plural, =1 {# articolo o storia} other {# articoli e storie}}",
+      "companies": "{count, plural, =1 {# azienda} other {# aziende}}",
+      "peopleRead": "{count, plural, =1 {# persona ha letto} other {# persone hanno letto}}"
     },
     "chart": {
       "download": "Scarica",

@@ -133,6 +133,7 @@ export function AdminNavTree({
       isOpen={openSections.content}
       onToggle={() => toggleSection('content')}
     >
+      <SubNavItem label={t('contentAnalytics')} href="/admin/content/analytics" isActive={pathname.startsWith('/admin/content/analytics')} onClick={() => setActiveItem('Content')} />
       <SubNavItem label={t('knowledge')} href="/admin/content/knowledge" isActive={pathname.startsWith('/admin/content/knowledge')} onClick={() => setActiveItem('Content')} />
       <SubNavItem label={t('news')} href="/admin/content/news" isActive={pathname === '/admin/content/news' || pathname.startsWith('/admin/content/news/')} onClick={() => setActiveItem('Content')} />
       <SubNavItem label={t('googleUpdates')} href="/admin/content/google-updates" isActive={pathname.startsWith('/admin/content/google-updates')} onClick={() => setActiveItem('Content')} />
