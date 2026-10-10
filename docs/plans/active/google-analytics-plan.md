@@ -633,6 +633,13 @@ What exists, by phase, and every place the build had to say something the
 sections above did not. Everything was built and tested with Google faked;
 nothing has read a real Google Analytics property yet (Phase 0, §7).
 
+**Checked on dev, 10 Oct 04:00:** Search Console's scheduled collection ran on
+the shared sign-in after the move — ronins.co.uk 1,258 rows, morehandles.co.uk
+2,990, conterraops.com collected — and its Connection page reads the account
+from the shared record. The Google Analytics section shows in the menu after
+Search Console, and ronins.co.uk offers "Add Google Analytics". The whole test
+suite passes (857 files).
+
 **Phase 1 — connecting** (`googleConnection.ts`, `googleAnalyticsConnect.ts`,
 `googleAnalyticsApi.ts`): the shared sign-in (§3, "Built"); Search Console
 moved onto it, its tokens and page numbers moved on dev by two one-time
