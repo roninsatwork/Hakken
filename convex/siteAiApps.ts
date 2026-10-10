@@ -28,7 +28,7 @@ const ANSWERS_READ = 4;
 /** The one app that shows businesses and the pages it read. */
 const ENGINE = "chatgpt" as const;
 
-type AppAnswer = { prompt: string; day: string; extras: Doc<"aiAnswerExtras">; pullId: Id<"seoDataPulls"> };
+type AppAnswer = { prompt: string; day: string; extras: Doc<"aiAnswerExtras">; pullId: Id<"seoDataPulls">; textId: Id<"aiAnswerTexts"> };
 
 /** Each of a website's questions' newest answers read from the app, newest first. */
 export async function appAnswers(ctx: Reader, site: Site, read = ANSWERS_READ): Promise<Map<string, AppAnswer[]>> {
@@ -45,7 +45,7 @@ export async function appAnswers(ctx: Reader, site: Site, read = ANSWERS_READ): 
     const answers: AppAnswer[] = [];
     for (const row of index) {
       const extras = await ctx.db.query("aiAnswerExtras").withIndex("by_pull", (q) => q.eq("pullId", row.pullId)).first();
-      if (extras) answers.push({ prompt: question.prompt, day: row.day, extras, pullId: row.pullId });
+      if (extras) answers.push({ prompt: question.prompt, day: row.day, extras, pullId: row.pullId, textId: row.textId });
     }
     byQuestion.set(question.prompt, answers);
   }
@@ -193,8 +193,9 @@ export const readNotCited = tenantQuery({
       for (const answer of answers) {
         const cited = new Set((await citedSourcesOf(ctx, answer.pullId)).map(pathOf));
         let readYours = false;
-        for (const url of answer.extras.read) {
-          const page = pathOf(url);
+        // Each page once an answer: two addresses of one page (a tracking code apart) are one read.
+        const readOnce = new Map(answer.extras.read.map((url) => [pathOf(url), url]));
+        for (const [page, url] of readOnce) {
           const pageHost = hostOf(url);
           const row = pages.get(page) ?? { page, url, host: pageHost, read: 0, cited: 0 };
           row.read += 1;

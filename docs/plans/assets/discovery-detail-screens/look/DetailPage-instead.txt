@@ -1,0 +1,18 @@
+# Discovery → One page (instead) — the approved look (board "DetailPage-instead" of docs/plans/assets/discovery-detail-screens/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Back to Read but not cited
+  page-header: ‹the record's name›
+settings-card: What Hakken sees
+figures
+  figure: Read by ChatGPT
+  figure: How often it wins
+  figure: Cited instead
+  figure: Quoted by Google's AI
+choice: What the list shows: Answers that read it · # | Cited instead · # | Google's AI · #
+search: Find in this list…
+table: Page | Whose | Times cited instead
+  table-bar
+    download: Download CSV
+  table-footer

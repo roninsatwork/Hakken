@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { BookOpenCheck } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -11,7 +12,8 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
 import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { TagLabel } from "@/src/ui/components/screens/TagLabel";
-import { ExternalUrlCell } from "../../../_components/SiteCells";
+import { RecordLinkCell } from "../../../_components/SiteCells";
+import { useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
 import { useSitePager } from "../../../_components/useSitePagedTable";
@@ -41,6 +43,8 @@ const share = (part: number, whole: number) => (whole > 0 ? Math.round((part / w
 export default function ReadNotCitedPage() {
   const t = useTranslations("sites.aiApps.read");
   const siteId = useSiteId();
+  const router = useRouter();
+  const recordHref = useSiteRecordHref(siteId);
   const site = useSite();
   const data = useQuery(api.siteAiApps.readNotCited, { siteId });
   const [search, setSearch, term] = useSiteSearch();
@@ -80,6 +84,8 @@ export default function ReadNotCitedPage() {
       <DataTable
         rows={pager.pageRows}
         rowKey={(row) => row.page}
+        // Each page opens One page: every answer that read it, and what won in its place (discovery-detail-and-hakken-sees-plan.md §4).
+        onRowClick={(row) => router.push(recordHref({ kind: "aiPage", url: row.url }))}
         search={{ value: search, onChange: setSearch, placeholder: t("searchPlaceholder") }}
         filters={
           <Select chip={{ label: t("whoseFilter"), choice: whose ? t(`whoseFilters.${whose}`) : null }} value={whose} onChange={(value) => setWhose(value as (typeof WHOSE)[number] | "")}>
@@ -92,7 +98,7 @@ export default function ReadNotCitedPage() {
         footer={pager.footer}
         sort={tableSort}
         columns={[
-          { key: "page", header: t("columns.page"), sortable: true, cell: (row) => <ExternalUrlCell url={row.url} label={row.page} /> },
+          { key: "page", header: t("columns.page"), sortable: true, cell: (row) => <RecordLinkCell href={recordHref({ kind: "aiPage", url: row.url })} className="text-[12px] text-info">{row.page}</RecordLinkCell> },
           { key: "whose", header: t("columns.whose"), cell: (row) => <TagLabel>{whoseWords(row)}</TagLabel> },
           { key: "read", header: t("columns.read"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.read} /> },
           { key: "cited", header: t("columns.cited"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.cited} /> },

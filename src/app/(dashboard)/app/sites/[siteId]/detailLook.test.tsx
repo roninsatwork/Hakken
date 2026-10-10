@@ -6,6 +6,7 @@ import { answerQueries } from "@/src/test/siteViewFixtures";
 import { expectApprovedLook } from "@/src/test/lookOutline";
 import OneWebsitePage from "./radar/sources/website/page";
 import OneQuestionPage from "./radar/question/page";
+import OnePagePage from "./ai/read/page/page";
 
 /**
  * Discovery's detail screens hold to the looks Anthony approved on the canvas
@@ -74,6 +75,25 @@ const QUESTION = {
   },
 };
 
+const PAGE = {
+  url: "https://www.ronins.co.uk/web-design-surrey/",
+  host: "ronins.co.uk",
+  path: "/web-design-surrey/",
+  whose: "YOURS",
+  read: 11,
+  cited: 1,
+  answers: many(11, (at) => ({ question: at === 0 ? "Who is the best web design agency in Guildford?" : `question ${at}`, day: "2026-10-08", answerId: `answer_${at}`, cited: at === 1 })),
+  instead: [
+    { url: "https://clutch.co/uk/web-designers/surrey", host: "clutch.co", whose: "OTHER", times: 8, wins: 0.83 },
+    { url: "https://brightsidedigital.co.uk/", host: "brightsidedigital.co.uk", whose: "RIVAL", times: 6, wins: 0.6 },
+  ],
+  questions: [{ question: "best web design agency in surrey", volume: 1300, you: 2 }],
+  seen: {
+    says: [{ code: "readCitedSome", a: 11, b: 1 }, { code: "citedInstead", text: "clutch.co/uk/web-designers/surrey", a: 8 }],
+    steps: [{ code: "firstLines", link: "seePage", to: { record: "page", key: "/web-design-surrey/" } }],
+  },
+};
+
 function answer(queries: Record<string, unknown>) {
   vi.mocked(useQuery).mockImplementation(answerQueries({ "sites:getMySite": SITE, "users:getMe": { role: "SUPER_ADMIN" }, ...queries }));
   vi.mocked(useMutation).mockImplementation((() => vi.fn(async () => null)) as never);
@@ -100,6 +120,16 @@ describe("Discovery's detail screens' approved looks", () => {
       const { container } = render(<OneWebsitePage />);
       await screen.findByText(row);
       await expectApprovedLook(container, PLAN, board, `Discovery → One website${view ? ` (${view})` : ""}`);
+    });
+  }
+
+  for (const [view, board, row] of [["", "DetailPage", "Who is the best web design agency in Guildford?"], ["instead", "DetailPage-instead", "clutch.co/uk/web-designers/surrey"], ["google", "DetailPage-google", "best web design agency in surrey"]] as const) {
+    it(`One page${view ? `, ${view}` : ""}`, async () => {
+      at("/app/sites/site_1/ai/read/page", `url=https%3A%2F%2Fwww.ronins.co.uk%2Fweb-design-surrey%2F${view ? `&view=${view}` : ""}`);
+      answer({ "siteAiPageDetail:aiPageDetail": PAGE });
+      const { container } = render(<OnePagePage />);
+      await screen.findAllByText(row);
+      await expectApprovedLook(container, PLAN, board, `Discovery → One page${view ? ` (${view})` : ""}`);
     });
   }
 

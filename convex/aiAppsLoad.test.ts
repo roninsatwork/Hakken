@@ -98,6 +98,8 @@ describe("AI app screens at five times a large client", () => {
       ["one answer, five ways", api.siteAnswerShown.answerShown, { siteId, answerId: seeded.firstText }],
       ["businesses recommended", api.siteAiApps.businessesRecommended, { siteId }],
       ["read but not cited", api.siteAiApps.readNotCited, { siteId }],
+      // The page it opens (discovery-detail-and-hakken-sees-plan.md §3): every answer read, and the Brand radar readings.
+      ["one page", api.siteAiPageDetail.aiPageDetail, { siteId, url: "https://read12.co.uk/a-long-page-address/0/" }],
       ["ai demand", api.siteAiDemand.aiDemand, { siteId }],
       ["ai overview gaps", api.siteAiOverviewGaps.overviewGaps, { siteId }],
     ];

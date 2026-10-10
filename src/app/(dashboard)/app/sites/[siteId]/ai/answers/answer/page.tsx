@@ -21,7 +21,7 @@ import { ENGINE_SCREEN_ORDER, useEngineLabel } from "@/src/ui/components/seo/eng
 import { PageSection } from "../../../../../_components/PageSection";
 import { ExternalUrlCell, RecordLinkCell } from "../../../../_components/SiteCells";
 import { formatDay } from "../../../../_components/siteFormat";
-import { useRecordBack, useRecordKey, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
+import { useRecordBack, useRecordKey, useSiteListHref, useSiteRecordHref } from "../../../../_components/siteRecordLinks";
 import { useSiteId } from "../../../../_components/useSite";
 import { useSitePager } from "../../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../../_components/useSiteSort";
@@ -70,6 +70,7 @@ export default function SiteAnswerPage() {
   const siteId = useSiteId();
   const back = useRecordBack("answer");
   const recordHref = useSiteRecordHref(siteId);
+  const listHref = useSiteListHref(siteId);
   const asked = useRecordKey("answer");
   // An id is 32 lowercase letters and digits; anything else is not one.
   // Its wording's id while that is kept, the answer's own after (90 days).
@@ -186,6 +187,9 @@ export default function SiteAnswerPage() {
                   rowKey={(row) => row.name}
                   footer={pagedOnly(businessesPager.footer)}
                   rowClassName={(row) => (row.you ? "bg-brand/5" : "")}
+                  // A business opens One business, yours Business profile; a card with no website has nothing to open (discovery-detail-and-hakken-sees-plan.md §4).
+                  rowClickable={(row) => row.you || Boolean(row.host)}
+                  onRowClick={(row) => router.push(row.you ? listHref("local") : recordHref({ kind: "business", business: row.host ?? row.name }))}
                   cardHeader={<TableBar footer={businessesPager.footer} noun="businesses" />}
                   empty={{ icon: <MessageSquareQuote className="h-8 w-8 text-muted/30" />, label: t("noBusinesses") }}
                   sort={businessesSorted.tableSort}
@@ -196,7 +200,9 @@ export default function SiteAnswerPage() {
                       header: t("columns.business"),
                       cell: (row) => (
                         <span className="flex min-w-0 flex-col">
-                          <span className="text-[13px] text-foreground">{row.you ? t("you", { name: row.name }) : row.name}</span>
+                          {row.you || row.host
+                            ? <RecordLinkCell href={row.you ? listHref("local") : recordHref({ kind: "business", business: row.host ?? row.name })}>{row.you ? t("you", { name: row.name }) : row.name}</RecordLinkCell>
+                            : <span className="text-[13px] text-foreground">{row.name}</span>}
                           {row.host ? <ExternalUrlCell url={`https://${row.host}`} label={row.host} /> : <span className="text-[12px] text-muted">{t("noWebsite")}</span>}
                         </span>
                       ),
@@ -213,10 +219,11 @@ export default function SiteAnswerPage() {
                   rows={readPager.pageRows}
                   rowKey={(row) => row.url}
                   footer={pagedOnly(readPager.footer)}
+                  onRowClick={(row) => router.push(recordHref({ kind: "aiPage", url: row.url }))}
                   cardHeader={<TableBar footer={readPager.footer} noun="pages"><span className="text-[13px] text-secondary">{t("citedOfThem", { count: cited })}</span></TableBar>}
                   empty={{ icon: <MessageSquareQuote className="h-8 w-8 text-muted/30" />, label: t("noRead") }}
                   columns={[
-                    { key: "page", header: t("columns.page"), cell: (row) => <ExternalUrlCell url={row.url} /> },
+                    { key: "page", header: t("columns.page"), cell: (row) => <RecordLinkCell href={recordHref({ kind: "aiPage", url: row.url })} className="break-all text-[12px] text-info">{row.url}</RecordLinkCell> },
                     { key: "whose", header: t("columns.whose"), cell: (row) => <span className="text-[12px] text-secondary">{row.yours ? t("yours") : row.host}</span> },
                     { key: "inAnswer", header: t("columns.inAnswer"), cell: (row) => <StatusLabel tone={row.cited ? "success" : "neutral"}>{row.cited ? t("cited") : t("readNotCited")}</StatusLabel> },
                   ]}
@@ -228,6 +235,7 @@ export default function SiteAnswerPage() {
                   rows={searchesPager.pageRows}
                   rowKey={(row) => row.query}
                   footer={pagedOnly(searchesPager.footer)}
+                  onRowClick={(row) => router.push(recordHref({ kind: "keyword", keyword: row.query }))}
                   empty={{ icon: <MessageSquareQuote className="h-8 w-8 text-muted/30" />, label: t("noSearches") }}
                   sort={searchesSorted.tableSort}
                   columns={[
@@ -237,12 +245,15 @@ export default function SiteAnswerPage() {
                       key: "tracked",
                       header: t("columns.tracked"),
                       cell: (row) => (
+                        // The tick is its own control: ticking it does not open the search.
+                        <span onClick={(event) => event.stopPropagation()}>
                         <Checkbox
                           label={t("everyCheck")}
                           checked={row.tracked}
                           disabled={action.isBusy(`track:${row.query}`)}
                           onChange={(next) => void action.run(() => track({ siteId, prompt: record.prompt, queries: [row.text], track: next }), { key: `track:${row.query}`, fallbackMessage: t("trackFailed") })}
                         />
+                        </span>
                       ),
                     },
                   ]}
@@ -255,6 +266,7 @@ export default function SiteAnswerPage() {
                 rows={sourcesPager.pageRows}
                 rowKey={(row) => row.url}
                 footer={pagedOnly(sourcesPager.footer)}
+                onRowClick={(row) => router.push(row.page !== null ? recordHref({ kind: "page", page: row.page }) : recordHref({ kind: "website", host: hostOf(row.url) }))}
                 empty={{ icon: <MessageSquareQuote className="h-8 w-8 text-muted/30" />, label: t("noSources") }}
                 columns={[
                   {
@@ -264,7 +276,7 @@ export default function SiteAnswerPage() {
                       ? <RecordLinkCell href={recordHref({ kind: "page", page: row.page })} className="break-all text-[12px] text-info">{row.url}</RecordLinkCell>
                       : <ExternalUrlCell url={row.url} />),
                   },
-                  { key: "whose", header: t("columns.whose"), cell: (row) => <span className="text-[12px] text-secondary">{row.page !== null ? t("yours") : hostOf(row.url)}</span> },
+                  { key: "whose", header: t("columns.whose"), cell: (row) => (row.page !== null ? <span className="text-[12px] text-secondary">{t("yours")}</span> : <RecordLinkCell href={recordHref({ kind: "website", host: hostOf(row.url) })} className="text-[12px] text-secondary">{hostOf(row.url)}</RecordLinkCell>) },
                 ]}
               />
             </PageSection>

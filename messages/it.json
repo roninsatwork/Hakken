@@ -13312,12 +13312,67 @@
         "address": "Pagina"
       }
     },
+    "aiPageRecord": {
+      "missingTitle": "Nessuna pagina scelta",
+      "missingBody": "Apri una pagina da Lette ma non citate o Siti citati dall'IA.",
+      "description": {
+        "YOURS": "La tua pagina · {address}",
+        "RIVAL": "Una pagina di un concorrente · {address}",
+        "OTHER": "Una pagina su {host} · {address}"
+      },
+      "descriptionLoading": "Una pagina che le risposte IA leggono o citano",
+      "visit": "Visita la pagina",
+      "labels": {
+        "readCited": "Letta {read, plural, one {una volta} other {# volte}}, citata {cited, plural, =0 {mai} one {una volta} other {# volte}}"
+      },
+      "figures": {
+        "read": "Letta da ChatGPT",
+        "readDetail": "Volte · citata {count, plural, =0 {mai} one {una volta} other {# volte}}",
+        "wins": "Quanto spesso vince",
+        "winsDetail": "{page} vince il {wins}",
+        "winsNone": "Citata ogni volta che è stata letta",
+        "instead": "Citata al suo posto",
+        "insteadDetail": "{count, plural, one {Una volta} other {# volte}}, quando questa pagina è stata esclusa",
+        "insteadNone": "Nulla l'ha battuta",
+        "google": "Citata dall'IA di Google",
+        "googleDetail": "Domande, da Brand radar"
+      },
+      "viewLabel": "Cosa mostra l'elenco",
+      "views": {
+        "answers": "Risposte che l'hanno letta · {count}",
+        "instead": "Citate al suo posto · {count}",
+        "google": "IA di Google · {count}"
+      },
+      "searchPlaceholder": "Cerca in questo elenco…",
+      "noMatch": "Nessun risultato.",
+      "answersEmpty": "ChatGPT non ha aperto questa pagina rispondendo alle tue domande.",
+      "insteadEmpty": "Nulla è stato citato al suo posto.",
+      "googleEmpty": "L'IA di Google non la cita per le domande lette da Brand radar.",
+      "cited": "Citata",
+      "readNotCited": "Letta, non citata",
+      "notNamed": "Non nominato",
+      "namedAt": "Nominato {place}°",
+      "whose": {
+        "YOURS": "Tua"
+      },
+      "columns": {
+        "question": "Domanda",
+        "asked": "Posta il",
+        "inAnswer": "Nella risposta",
+        "page": "Pagina",
+        "whose": "Di chi",
+        "times": "Volte citata al suo posto",
+        "volume": "Poste al mese",
+        "you": "Tu"
+      }
+    },
     "seen": {
       "links": {
         "visit": "Visitalo",
         "seeQuestion": "Vedi la domanda",
         "yourPages": "Le tue pagine",
-        "seeWebsite": "Vedi il sito"
+        "seeWebsite": "Vedi il sito",
+        "seePage": "Vedi la pagina"
       },
       "website": {
         "notQuoted": "L'IA di Google non ha citato {text} nelle risposte su di te o sui concorrenti.",
@@ -13343,6 +13398,17 @@
         "rivalPages": "{count, plural, one {Cita una pagina dei tuoi concorrenti, {text}.} other {Cita # pagine dei tuoi concorrenti, tra cui {text}.}}",
         "answerOnPage": "Rispondi nelle prime righe di una pagina del tuo sito.",
         "getListedOn": "Fatti elencare su {text}, che viene citato."
+      },
+      "aiPage": {
+        "notRead": "ChatGPT non ha aperto questa pagina rispondendo alle tue domande.",
+        "readNeverCited": "ChatGPT ha aperto questa pagina {count, plural, one {una volta} other {# volte}} rispondendo alle tue domande e non l'ha mai citata.",
+        "readCitedSome": "ChatGPT ha aperto questa pagina {count, plural, one {una volta} other {# volte}} rispondendo alle tue domande e l'ha citata {b} di quelle volte.",
+        "alwaysCited": "ChatGPT ha aperto questa pagina {count, plural, one {una volta} other {# volte}} rispondendo alle tue domande e l'ha citata ogni volta.",
+        "citedInstead": "Quando l'ha esclusa, ha citato al suo posto {text}, {count, plural, one {una volta} other {# volte}}.",
+        "googleQuotes": "L'IA di Google la cita per {count, plural, one {una domanda} other {# domande}} lette da Brand radar.",
+        "firstLines": "Rispondi alla domanda nelle prime righe di questa pagina: chi aiuti, quanto costa e cosa dicono i clienti.",
+        "answerBetter": "Rispondi meglio alle stesse domande su una tua pagina.",
+        "getListedOn": "Fatti elencare su {text}, citato al suo posto."
       }
     }
   },

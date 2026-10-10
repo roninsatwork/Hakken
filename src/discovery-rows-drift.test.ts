@@ -28,10 +28,8 @@ const STAYS: Record<string, { tables: number; why: string }> = {
  * same change.
  */
 const PENDING: Record<string, number> = {
-  "src/app/(dashboard)/app/sites/[siteId]/ai/answers/answer/page.tsx": 4,
   "src/app/(dashboard)/app/sites/[siteId]/ai/businesses/page.tsx": 1,
   "src/app/(dashboard)/app/sites/[siteId]/ai/demand/page.tsx": 1,
-  "src/app/(dashboard)/app/sites/[siteId]/ai/read/page.tsx": 1,
   "src/app/(dashboard)/app/sites/[siteId]/assets/page.tsx": 1,
   "src/app/(dashboard)/app/sites/[siteId]/backlinks/new-lost/page.tsx": 1,
   "src/app/(dashboard)/app/sites/[siteId]/backlinks/where/page.tsx": 1,

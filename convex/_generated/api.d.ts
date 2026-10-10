@@ -469,6 +469,7 @@ import type * as siteAi from "../siteAi.js";
 import type * as siteAiApps from "../siteAiApps.js";
 import type * as siteAiDemand from "../siteAiDemand.js";
 import type * as siteAiOverviewGaps from "../siteAiOverviewGaps.js";
+import type * as siteAiPageDetail from "../siteAiPageDetail.js";
 import type * as siteAngles from "../siteAngles.js";
 import type * as siteAnswerShown from "../siteAnswerShown.js";
 import type * as siteAnswers from "../siteAnswers.js";
@@ -1225,6 +1226,7 @@ declare const fullApi: ApiFromModules<{
   siteAiApps: typeof siteAiApps;
   siteAiDemand: typeof siteAiDemand;
   siteAiOverviewGaps: typeof siteAiOverviewGaps;
+  siteAiPageDetail: typeof siteAiPageDetail;
   siteAngles: typeof siteAngles;
   siteAnswerShown: typeof siteAnswerShown;
   siteAnswers: typeof siteAnswers;

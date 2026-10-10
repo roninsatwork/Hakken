@@ -31,3 +31,13 @@ export function isOnHost(host: string, own: string): boolean {
 export function urlIsOnHost(url: string, own: string): boolean {
   return isOnHost(hostOfUrl(url), own);
 }
+
+/** A page's identity across answers: its website and path, without "www.", its query or its fragment. */
+export function pageKeyOfUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    return `${parsed.hostname.replace(/^www\./, "").toLowerCase()}${parsed.pathname}`;
+  } catch {
+    return url.replace(/^https?:\/\/(www\.)?/, "").split(/[?#]/)[0];
+  }
+}

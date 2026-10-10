@@ -13312,12 +13312,67 @@
         "address": "Page"
       }
     },
+    "aiPageRecord": {
+      "missingTitle": "No page chosen",
+      "missingBody": "Open a page from Read but not cited or Websites AI cites.",
+      "description": {
+        "YOURS": "Your page · {address}",
+        "RIVAL": "A rival's page · {address}",
+        "OTHER": "A page on {host} · {address}"
+      },
+      "descriptionLoading": "A page the AI answers read or quote",
+      "visit": "Visit the page",
+      "labels": {
+        "readCited": "Read {read, plural, one {once} other {# times}}, cited {cited, plural, =0 {never} one {once} other {# times}}"
+      },
+      "figures": {
+        "read": "Read by ChatGPT",
+        "readDetail": "Times · cited {count, plural, =0 {never} one {once} other {# times}}",
+        "wins": "How often it wins",
+        "winsDetail": "{page} wins {wins}",
+        "winsNone": "Cited every time it was read",
+        "instead": "Cited instead",
+        "insteadDetail": "{count, plural, one {Once} other {# times}}, when this page was left out",
+        "insteadNone": "Nothing beat it",
+        "google": "Quoted by Google's AI",
+        "googleDetail": "Questions, from Brand radar"
+      },
+      "viewLabel": "What the list shows",
+      "views": {
+        "answers": "Answers that read it · {count}",
+        "instead": "Cited instead · {count}",
+        "google": "Google's AI · {count}"
+      },
+      "searchPlaceholder": "Find in this list…",
+      "noMatch": "Nothing matches that.",
+      "answersEmpty": "ChatGPT has not opened this page while answering your questions.",
+      "insteadEmpty": "Nothing was cited in its place.",
+      "googleEmpty": "Google's AI does not quote it for the questions Brand radar reads.",
+      "cited": "Cited",
+      "readNotCited": "Read, not cited",
+      "notNamed": "Not named",
+      "namedAt": "Named {place, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}",
+      "whose": {
+        "YOURS": "Yours"
+      },
+      "columns": {
+        "question": "Question",
+        "asked": "Asked",
+        "inAnswer": "In the answer",
+        "page": "Page",
+        "whose": "Whose",
+        "times": "Times cited instead",
+        "volume": "Asked a month",
+        "you": "You came"
+      }
+    },
     "seen": {
       "links": {
         "visit": "Visit it",
         "seeQuestion": "See the question",
         "yourPages": "Your pages",
-        "seeWebsite": "See the website"
+        "seeWebsite": "See the website",
+        "seePage": "See the page"
       },
       "website": {
         "notQuoted": "Google's AI has not quoted {text} in answers about you or your rivals.",
@@ -13343,6 +13398,17 @@
         "rivalPages": "{count, plural, one {It quotes one of your rivals' pages, {text}.} other {It quotes # of your rivals' pages, among them {text}.}}",
         "answerOnPage": "Answer it in the first lines of a page on your site.",
         "getListedOn": "Get listed on {text}, which it quotes."
+      },
+      "aiPage": {
+        "notRead": "ChatGPT has not opened this page while answering your questions.",
+        "readNeverCited": "ChatGPT opened this page {count, plural, one {once} other {# times}} while answering your questions and never cited it.",
+        "readCitedSome": "ChatGPT opened this page {count, plural, one {once} other {# times}} while answering your questions and cited it {b} of those times.",
+        "alwaysCited": "ChatGPT opened this page {count, plural, one {once} other {# times}} while answering your questions and cited it every time.",
+        "citedInstead": "When it left it out, it cited {text} instead, {count, plural, one {once} other {# times}}.",
+        "googleQuotes": "Google's AI quotes it for {count, plural, one {one question} other {# questions}} Brand radar reads.",
+        "firstLines": "Answer the question in this page's first lines: who you help, what it costs and what clients say.",
+        "answerBetter": "Answer the same questions better on a page of your own.",
+        "getListedOn": "Get listed on {text}, cited in its place."
       }
     }
   },
