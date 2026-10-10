@@ -1,4 +1,6 @@
 import { v } from "convex/values";
+import { mentionsRivalsSees, webMentionsSees, whereListedSees } from "./sees/mentions";
+import { seeing, seenValidator } from "./utils/hakkenSees";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { tenantQuery } from "./tenantFunctions";
@@ -78,8 +80,9 @@ export const webMentions = tenantQuery({
   returns: v.object({
     names: v.array(v.string()),
     rows: v.array(mentionRowValidator),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
     const site = await requireMySite(ctx, args.siteId);
     const hold = groupOwner(site);
     const own = hold ? await ctx.db.get(hold.websiteId) : null;
@@ -90,7 +93,7 @@ export const webMentions = tenantQuery({
       names: [...(primary ? [primary] : []), own.host],
       rows: (await mentionsOf(ctx, own)).map(({ about: _about, ...row }) => row),
     };
-  },
+  }, (result) => webMentionsSees(result, new Date().toISOString().slice(0, 10))),
 });
 
 export const mentionsAgainstRivals = tenantQuery({
@@ -107,8 +110,9 @@ export const mentionsAgainstRivals = tenantQuery({
       noLink: v.number(),
       series: v.array(v.number()),
     })),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
     const site = await requireMySite(ctx, args.siteId);
     const now = Date.now();
     const months = Array.from({ length: 12 }, (_, at) => {
@@ -133,7 +137,7 @@ export const mentionsAgainstRivals = tenantQuery({
       });
     }
     return { months, businesses };
-  },
+  }, mentionsRivalsSees),
 });
 
 const placeKindValidator = v.union(v.literal("DIRECTORY"), v.literal("REVIEWS"), v.literal("NEWS"), v.literal("FORUM"), v.literal("VIDEO"), v.literal("REFERENCE"), v.literal("WEBSITE"));
@@ -154,8 +158,9 @@ export const whereToGetListed = tenantQuery({
       /** Already there: quoted beside you, or naming you on a page found. */
       there: v.boolean(),
     })),
+    seen: seenValidator,
   }),
-  handler: async (ctx, args) => {
+  handler: seeing(async (ctx, args: { siteId: Id<"companyWebsites"> }) => {
     const site = await requireMySite(ctx, args.siteId);
     const hold = groupOwner(site);
     const own = hold ? await ctx.db.get(hold.websiteId) : null;
@@ -213,5 +218,5 @@ export const whereToGetListed = tenantQuery({
           there: row.there,
         })),
     };
-  },
+  }, whereListedSees),
 });

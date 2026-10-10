@@ -22,6 +22,8 @@ import { ExternalUrlCell } from "../../_components/SiteCells";
 import { formatDay, formatMonth, toCsv } from "../../_components/siteFormat";
 import { ListDownload } from "../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../_components/useSite";
+import { WORTH_ASKING } from "@/convex/sees/mentions";
+import { SiteSees } from "../../_components/SiteSees";
 import { useSitePager } from "../../_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../../_components/useSiteSort";
@@ -37,8 +39,6 @@ const TONE_FILTERS = ["WELL", "NEUTRAL", "BADLY"] as const;
 const LINKS = ["linked", "unlinked"] as const;
 const TONE_TONE = { WELL: "success", NEUTRAL: "neutral", BADLY: "danger" } as const;
 const DAY_MS = 86_400_000;
-/** A page this strong naming the business without a link is worth asking for one. */
-const WORTH_ASKING = 100;
 const SORTS: SiteSortColumns<Row, "date" | "strength"> = {
   date: { value: (row) => row.day, first: "desc" },
   strength: { value: (row) => row.strength, first: "desc" },
@@ -100,6 +100,7 @@ export default function WebMentionsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<AtSign className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="mentions" seen={data?.seen} />
 
       {data ? (
         <FigureRow>

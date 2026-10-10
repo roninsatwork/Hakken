@@ -15,6 +15,7 @@ import { SITE_SERIES_COLOURS, SiteLineChart } from "../../../_components/SiteCha
 import { formatMonth, toCsv } from "../../../_components/siteFormat";
 import { ListDownload } from "../../../_components/SiteDownloads";
 import { useSite, useSiteId } from "../../../_components/useSite";
+import { SiteSees } from "../../../_components/SiteSees";
 import { useSiteListHref, useSiteRecordHref } from "../../../_components/siteRecordLinks";
 import { useSitePager } from "../../../_components/useSitePagedTable";
 import { useSiteSortedList, type SiteSortColumns } from "../../../_components/useSiteSort";
@@ -67,6 +68,7 @@ export default function MentionsAgainstRivalsPage() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader icon={<AtSign className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} />
+      <SiteSees screen="mentionsRivals" seen={data?.seen} />
 
       {data ? (
         <FigureRow>

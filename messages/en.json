@@ -13466,7 +13466,8 @@
         "localMarket": "Local market",
         "waitingReviews": "Reviews waiting",
         "againstRivals": "Against rivals",
-        "seeReviews": "See the reviews"
+        "seeReviews": "See the reviews",
+        "visitPage": "Open the page"
       },
       "website": {
         "notQuoted": "Google's AI has not quoted {text} in answers about you or your rivals.",
@@ -13743,6 +13744,31 @@
         "faster": "{text} answers reviews in {count, plural, one {# day} other {# days}}; you take {b}.",
         "seeLeader": "See what {text} does that you do not.",
         "answerFaster": "Answer each new review within a day."
+      },
+      "mentions": {
+        "none": "No page naming you has been found yet: the web is searched for your name at each check.",
+        "newPages": "{count, plural, one {# new page} other {# new pages}} named you in the last 30 days, of {b} found in all.",
+        "badly": "{count, plural, one {# of them speaks} other {# of them speak}} badly of you, the newest on {text}.",
+        "noLink": "{count, plural, one {# strong page names} other {# strong pages name}} you without a link, {text} the strongest.",
+        "reply": "Read what {text} says, and answer it where you can.",
+        "askForLink": "Ask {text} to link to you where it names you."
+      },
+      "mentionsRivals": {
+        "none": "No page naming you or a rival you watch has been found yet.",
+        "lead": "You have {a}% of the pages naming you and the rivals you watch, more than any of them.",
+        "behind": "You have {a}% of the pages naming you and the rivals you watch; {text} leads with {b}%.",
+        "upMonth": "That is {a} more pages than the month before.",
+        "downMonth": "That is {a} fewer pages than the month before.",
+        "seeLeader": "See where {text} is named and you are not.",
+        "getListed": "Get onto the websites that name your rivals and not you."
+      },
+      "mentionsListed": {
+        "none": "No place is known yet: they come from Google's AI answers and your rivals' links, from the next check.",
+        "everywhere": "You are already on all {a} places your rivals are on.",
+        "places": "Your rivals are on {a} of these {b} places and you are not.",
+        "mostRivals": "{text} has {a} of your rivals and not you.",
+        "strongest": "{text} is the strongest of them.",
+        "getOnto": "Get onto {text}."
       }
     }
   },

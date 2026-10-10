@@ -13466,7 +13466,8 @@
         "localMarket": "Mercato locale",
         "waitingReviews": "Recensioni in attesa",
         "againstRivals": "Contro i concorrenti",
-        "seeReviews": "Vedi le recensioni"
+        "seeReviews": "Vedi le recensioni",
+        "visitPage": "Apri la pagina"
       },
       "website": {
         "notQuoted": "L'IA di Google non ha citato {text} nelle risposte su di te o sui concorrenti.",
@@ -13743,6 +13744,31 @@
         "faster": "{text} risponde alle recensioni in {count, plural, one {# giorno} other {# giorni}}; tu in {b}.",
         "seeLeader": "Guarda cosa fa {text} che tu non fai.",
         "answerFaster": "Rispondi a ogni nuova recensione entro un giorno."
+      },
+      "mentions": {
+        "none": "Non è ancora stata trovata una pagina che ti nomina: il web viene cercato per il tuo nome a ogni controllo.",
+        "newPages": "{count, plural, one {# nuova pagina ti ha nominato} other {# nuove pagine ti hanno nominato}} negli ultimi 30 giorni, su {b} trovate in tutto.",
+        "badly": "{count, plural, one {# di esse parla} other {# di esse parlano}} male di te, la più recente su {text}.",
+        "noLink": "{count, plural, one {# pagina forte ti nomina} other {# pagine forti ti nominano}} senza un link, {text} la più forte.",
+        "reply": "Leggi cosa dice {text} e rispondi dove puoi.",
+        "askForLink": "Chiedi a {text} di mettere un link dove ti nomina."
+      },
+      "mentionsRivals": {
+        "none": "Non è ancora stata trovata una pagina che nomina te o un concorrente che segui.",
+        "lead": "Hai il {a}% delle pagine che nominano te e i concorrenti che segui, più di ognuno di loro.",
+        "behind": "Hai il {a}% delle pagine che nominano te e i concorrenti che segui; {text} è in testa con il {b}%.",
+        "upMonth": "Sono {a} pagine in più del mese prima.",
+        "downMonth": "Sono {a} pagine in meno del mese prima.",
+        "seeLeader": "Guarda dove viene nominato {text} e tu no.",
+        "getListed": "Fatti elencare sui siti che nominano i tuoi concorrenti e non te."
+      },
+      "mentionsListed": {
+        "none": "Ancora nessun posto noto: arrivano dalle risposte IA di Google e dai link dei concorrenti, dal prossimo controllo.",
+        "everywhere": "Sei già su tutti i {a} posti dove sono i tuoi concorrenti.",
+        "places": "I tuoi concorrenti sono su {a} di questi {b} posti e tu no.",
+        "mostRivals": "{text} ha {a} dei tuoi concorrenti e non te.",
+        "strongest": "{text} è il più forte di questi.",
+        "getOnto": "Fatti elencare su {text}."
       }
     }
   },
