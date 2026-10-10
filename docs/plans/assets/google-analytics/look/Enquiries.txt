@@ -2,22 +2,14 @@
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Conversions
+settings-card: What Hakken sees
 figures
   figure: Conversions
   figure: Value
   figure: Conversion rate
-  figure: Without a value →
-chart-card: Conversions over time
-  checkbox: Contact form sent
-  checkbox: Phone number clicked
-  checkbox: Email address clicked
-  checkbox: Value (£)
-search: Find a conversion…
-table: Conversion | Event | How many | Value each | Value | Change
-  table-bar
-  table-footer
-filter: Conversion
-chart-card: Landing pages that brought them
+  figure: Kinds that happened
+chart-card: What counts
+compact-list: Event | How many | Value | Change
+chart-card: Where they came from
+  choice: Show: Landing pages | Channels
 compact-list: Page | Conversions | Value
-chart-card: Channels that brought them
-compact-list: Channel | Conversions | Value

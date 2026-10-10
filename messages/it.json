@@ -15235,7 +15235,7 @@
         "siteRate": "{rate} per tutto il sito",
         "conversions": "Conversioni",
         "value": "Valore",
-        "noneBefore": "Nessuna nei {before}",
+        "noneBefore": "Nessuna neanche {before}",
         "noConversions": "Ancora nessuna conversione"
       }
     },
@@ -15274,7 +15274,7 @@
       "withoutValue": "Senza un valore",
       "setValue": "{names} · imposta un valore",
       "allValued": "Ogni conversione ha un valore",
-      "rateBefore": "{rate} {before}",
+      "rateBefore": "{before}: {rate}",
       "kindsHappened": "Tipi successi",
       "kindsOf": "{happened} su {counted}",
       "onlyKind": "Solo {name}",

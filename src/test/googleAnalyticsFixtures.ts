@@ -1,3 +1,6 @@
+import type { Seen } from "@/convex/utils/hakkenSees";
+import { conversionsSees, overviewSees } from "@/convex/utils/sees/analytics";
+
 /**
  * Sample Google Analytics answers for rendering whole screens — acme-shop.test,
  * connected, three conversions counted — shared by the look tests
@@ -60,6 +63,8 @@ export const STATUS = {
   iconUrl: null,
   ownSites: [{ siteId: "site_1", host: "acme-shop.test" }],
   searchConsoleConnected: true,
+  /** Search Console's last 30 days: read only while the way to connect shows. */
+  searchConsole: null as { clicks: number; impressions: number } | null,
   connection: CONNECTION as typeof CONNECTION | null,
 };
 
@@ -88,13 +93,17 @@ export const ROW = {
 
 export const CHANNEL = { ...ROW, key: "Organic Search", label: "Organic Search", visits: 1104, conversions: 11, value: 220_000, conversionRate: 11 / 1104 };
 
-/** One server page of a list. */
-export function list(rows: unknown[]) {
+/** One server page of a list, with the screen's What Hakken sees (none unless given) and a channel's own figures. */
+export function list(rows: unknown[], extra: { seen?: Seen; figures?: unknown } = {}) {
   return {
     rows, total: rows.length, page: 1, pages: 1, size: 25, cut: null,
     live: false, preparing: false, from: "2026-09-09", to: "2026-10-08", folded: false, thresholded: false, longer: false, groups: null,
+    seen: extra.seen ?? NO_BOX, figures: extra.figures ?? null,
   };
 }
+
+/** A box with nothing to say: the screen shows none. */
+export const NO_BOX: Seen = { says: [], steps: [] };
 
 export function top(rows: unknown[]) {
   return { rows, total: rows.length, live: false, preparing: false, from: "2026-09-09", to: "2026-10-08", folded: false, thresholded: false, longer: false, groups: null };
@@ -102,15 +111,20 @@ export function top(rows: unknown[]) {
 
 export const FIGURES = { visits: 2412, engaged: 1289, conversions: 23, value: 440_000, purchases: 0, revenue: 0, unvalued: 3 };
 
-export const OVERVIEW = {
+const OVERVIEW_FIGURES = {
   preparing: false,
   from: "2026-09-09",
   to: "2026-10-08",
   now: FIGURES,
   before: { ...FIGURES, visits: 2225, engaged: 1190, conversions: 19, value: 350_000 },
-  changedMost: [{ kind: "landing" as const, key: "~0", label: "https://www.acme-shop.test/ai-agency/", conversions: 2, value: 30_000 }],
+  changedMost: [{ kind: "landing" as const, key: "~0", label: "https://www.acme-shop.test/ai-agency/", conversions: 2, value: 30_000, conversionsNow: 3 }],
   landingLive: false,
+  counting: true,
+  searchConsole: { clicks: 1_840, impressions: 212_000 } as { clicks: number; impressions: number } | null,
 };
+
+/** Overview's answer, its What Hakken sees worked out by its own rules. */
+export const OVERVIEW = { ...OVERVIEW_FIGURES, seen: overviewSees(OVERVIEW_FIGURES) };
 
 export const CHART = {
   points: Array.from({ length: 30 }, (_, index) => ({
@@ -120,19 +134,27 @@ export const CHART = {
   events: ["generate_lead", "click_tel", "click_email"],
 };
 
-export const CONVERSIONS = {
+const CONVERSION_KINDS = {
   preparing: false,
   from: "2026-09-09",
   to: "2026-10-08",
   visits: 2412,
   visitsBefore: 2225,
   kinds: [
-    { eventName: "generate_lead", count: 14, countBefore: 11, each: 25_000, setIn: "HAKKEN" as const, value: 350_000, valueBefore: 275_000 },
-    { eventName: "click_tel", count: 6, countBefore: 5, each: 15_000, setIn: "HAKKEN" as const, value: 90_000, valueBefore: 75_000 },
-    { eventName: "click_email", count: 3, countBefore: 3, each: null, setIn: null, value: null, valueBefore: null },
+    { eventName: "generate_lead", count: 14, countBefore: 11, each: 25_000, setIn: "HAKKEN" as "ANALYTICS" | "HAKKEN" | "REVENUE" | null, value: 350_000 as number | null, valueBefore: 275_000 as number | null },
+    { eventName: "click_tel", count: 6, countBefore: 5, each: 15_000, setIn: "HAKKEN" as "ANALYTICS" | "HAKKEN" | "REVENUE" | null, value: 90_000 as number | null, valueBefore: 75_000 as number | null },
+    { eventName: "click_email", count: 3, countBefore: 3, each: null, setIn: null as "ANALYTICS" | "HAKKEN" | "REVENUE" | null, value: null as number | null, valueBefore: null as number | null },
   ],
   shop: null,
+  fired: [] as Array<{ eventName: string; count: number }>,
 };
+
+/** Conversions' answer, its What Hakken sees worked out by its own rules. */
+export const CONVERSIONS = { ...CONVERSION_KINDS, seen: conversionsSees(CONVERSION_KINDS) };
+
+/** Conversions with nothing counted (§15 screen 16): the visits, and the key event the property records. */
+const NOTHING_COUNTED_KINDS = { ...CONVERSION_KINDS, kinds: [], fired: [{ eventName: "sign_up", count: 5 }] };
+export const NOTHING_COUNTED = { ...NOTHING_COUNTED_KINDS, seen: conversionsSees(NOTHING_COUNTED_KINDS) };
 
 export const LANDING_PAGE = {
   address: "https://www.acme-shop.test/ai-agency/",

@@ -15,6 +15,7 @@ import { TableBar } from "@/src/ui/components/screens/TableBar";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
 import { formatDateTime } from "@/src/lib/dates";
 import { wordStartMatcher } from "@/convex/utils/wordStarts";
+import { websitesSees } from "@/convex/utils/sees/analytics";
 import { formatNumber } from "../sites/_components/siteFormat";
 import { ListDownload } from "../sites/_components/SiteDownloads";
 import { useSitePager } from "../sites/_components/useSitePagedTable";
@@ -22,6 +23,7 @@ import { useSiteSearch } from "../sites/_components/useSiteParam";
 import { useSiteSortedList, type SiteSortColumns } from "../sites/_components/useSiteSort";
 import { SiteMark } from "../sites/_components/SiteMark";
 import { formatMoney } from "./_components/analyticsFormat";
+import { AnalyticsSees } from "./_components/AnalyticsSees";
 import { analyticsQuery } from "./_components/useAnalytics";
 
 type SiteRow = FunctionReturnType<typeof api.googleAnalyticsReads.analyticsSites>[number];
@@ -48,7 +50,8 @@ const hostOf = (row: SiteRow) => row.host;
 /**
  * The Google Analytics section (docs/plans/active/google-analytics-plan.md
  * GA1, §11 board 1): the company's own websites — never one it only watches —
- * each with its connection and the last 30 days to Analytics' newest day.
+ * each with its connection and the last 30 days to Analytics' newest day,
+ * under What Hakken sees (§15 screen 1), worked out over the same rows.
  * Opening one gives its Overview, Channels, Landing pages, All pages and
  * Conversions, its tracking health and its connection.
  */
@@ -70,6 +73,8 @@ export default function GoogleAnalyticsPage() {
       <Header />
       <div className="flex flex-col gap-6 pb-8">
         <PageHeader icon={<ChartColumn className="h-6 w-6 text-brand" />} title={t("title")} description={t("description")} divider />
+
+        <AnalyticsSees screen="websites" seen={sites && websitesSees(sites)} currency={sites?.find((row) => row.currency)?.currency ?? null} />
 
         <DataTable
           rows={paged.pageRows}

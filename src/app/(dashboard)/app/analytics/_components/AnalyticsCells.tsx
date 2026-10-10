@@ -29,8 +29,24 @@ export function MoneyCell({ value, currency }: { value: number | null; currency:
   return <span className="font-mono text-[12px] text-secondary">{formatMoney(value, currency)}</span>;
 }
 
-export function ConversionsCell({ conversions, rate, fewVisits }: { conversions: number; rate: number | null; fewVisits: boolean }) {
+/**
+ * A row's conversions with their rate: under the count ("1.0% of visits"), or
+ * on Landing pages beside it on the row's one line ("4 · 2.8%", §15).
+ */
+export function ConversionsCell({ conversions, rate, fewVisits, oneLine = false }: { conversions: number; rate: number | null; fewVisits: boolean; oneLine?: boolean }) {
   const t = useTranslations("googleAnalytics.table");
+  if (oneLine) {
+    return (
+      <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
+        <span className="font-mono text-[12px] text-foreground">{formatNumber(conversions)}</span>
+        {rate !== null ? (
+          <span className={`font-mono text-[12px] ${fewVisits ? "text-muted" : "text-secondary"}`} title={fewVisits ? t("fewVisits") : undefined}>
+            · {formatPercent(rate)}
+          </span>
+        ) : null}
+      </span>
+    );
+  }
   return (
     <span className="flex flex-col items-end leading-tight">
       <span className="font-mono text-[12px] text-foreground">{formatNumber(conversions)}</span>
@@ -39,6 +55,16 @@ export function ConversionsCell({ conversions, rate, fewVisits }: { conversions:
           {t("ofVisits", { rate: formatPercent(rate) })}
         </span>
       ) : null}
+    </span>
+  );
+}
+
+/** The conversions made on a page, with their value beside them ("4 · £80"; All pages, §15): a page with none is quiet. */
+export function ConversionsHereCell({ conversions, value, currency }: { conversions: number; value: number; currency: string | null }) {
+  return (
+    <span className="inline-flex items-baseline gap-1.5 whitespace-nowrap">
+      <span className={`font-mono text-[12px] ${conversions > 0 ? "text-foreground" : "text-muted"}`}>{formatNumber(conversions)}</span>
+      {value > 0 ? <span className="font-mono text-[12px] text-secondary">· {formatMoney(value, currency)}</span> : null}
     </span>
   );
 }

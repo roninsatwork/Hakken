@@ -17,24 +17,35 @@ import { toCsv } from "../../sites/_components/siteFormat";
 import { useSiteListPage } from "../../sites/_components/useSitePagedTable";
 import { useSiteSearch } from "../../sites/_components/useSiteParam";
 import { useSiteSort } from "../../sites/_components/useSiteSort";
-import { ChangeCell, ConversionsCell, FigureCell, MoneyCell, PageLink, TextFigure } from "./AnalyticsCells";
+import { ChangeCell, ConversionsCell, ConversionsHereCell, FigureCell, MoneyCell, PageLink, TextFigure } from "./AnalyticsCells";
 import { formatPercent, formatTime } from "./analyticsFormat";
 import { useAnalyticsArgs, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePeriod } from "./useAnalytics";
 import { AnalyticsGate } from "./AnalyticsNotices";
 import { DetailHeader, PageHeader } from "@/src/ui/components/screens/PageHeader";
 
-export type ShownRow = FunctionReturnType<typeof api.googleAnalyticsReads.analyticsListPage>["rows"][number];
+export type ListPageAnswer = FunctionReturnType<typeof api.googleAnalyticsReads.analyticsListPage>;
+export type ShownRow = ListPageAnswer["rows"][number];
 export type ListKind = "channel" | "source" | "landing" | "groups" | "page";
 type Column = "name" | "visits" | "engaged" | "time" | "views" | "conversions" | "value" | "change";
 
-/** Each list's columns, as drawn (§11): every table fits the page at 1440 and 1366 pixels. */
+/**
+ * Each list's columns, as drawn (§11, §15): every table fits the page at 1440
+ * and 1366 pixels. All pages shows the conversions made on a page with their
+ * value beside them ("4 · £80"), and the change, rather than a Value column.
+ */
 const COLUMNS: Record<ListKind, readonly Column[]> = {
   channel: ["name", "visits", "engaged", "conversions", "value", "change"],
   source: ["name", "visits", "engaged", "conversions", "value", "change"],
   landing: ["name", "visits", "engaged", "time", "conversions", "value", "change"],
   groups: ["name", "visits", "engaged", "time", "conversions", "value", "change"],
-  page: ["name", "views", "time", "conversions", "value"],
+  page: ["name", "views", "time", "conversions", "change"],
 };
+
+/** Each list's download: its columns, and All pages' value as a column of its own. */
+const CSV_COLUMNS: Record<ListKind, readonly Column[]> = { ...COLUMNS, page: ["name", "views", "time", "conversions", "value", "change"] };
+
+/** The lists whose conversion rate sits beside the count on one line ("4 · 2.8%"), as Landing pages are drawn (§15). */
+const ONE_LINE: ReadonlySet<ListKind> = new Set(["landing", "groups"]);
 
 /** Which way each heading's first press runs: the most first, names A to Z. */
 const FIRSTS = {
@@ -71,7 +82,12 @@ export function AnalyticsListScreen({ header, ...table }: Parameters<typeof Anal
   );
 }
 
-function AnalyticsTable({ list, channel, group, noun, searchPlaceholder, rowHref, filters, opening = "value", emptyLabel }: {
+function AnalyticsTable({ list, channel, group, noun, searchPlaceholder, rowHref, filters, opening = "value", emptyLabel, head }: {
+  /**
+   * What the page shows between its title and its table, from the same
+   * answer: its What Hakken sees, and a channel's own figures (§14, §15).
+   */
+  head?: (answer: ListPageAnswer | undefined) => ReactNode;
   list: ListKind;
   channel?: string;
   group?: string;
@@ -113,6 +129,7 @@ function AnalyticsTable({ list, channel, group, noun, searchPlaceholder, rowHref
 
   return (
     <div className="flex flex-col gap-4">
+      {head ? head(paged.result) : null}
       {live ? (
         <Notice>
           <span className="block font-medium text-foreground">{asking === "FAILED" ? t("askFailedTitle") : t("askingTitle", { device: tf(`devices.${device}`).toLowerCase() })}</span>
@@ -181,12 +198,12 @@ function columnOf(
     case "conversions":
       return {
         key: "conversions",
-        header: t("columns.conversions"),
+        header: list === "page" ? t("columns.conversionsHere") : t("columns.conversions"),
         align: "right",
         sortable: true,
         cell: (row) => list === "page"
-          ? <FigureCell value={row.conversions} />
-          : <ConversionsCell conversions={row.conversions} rate={row.conversionRate} fewVisits={row.fewVisits} />,
+          ? <ConversionsHereCell conversions={row.conversions} value={row.value} currency={currency} />
+          : <ConversionsCell conversions={row.conversions} rate={row.conversionRate} fewVisits={row.fewVisits} oneLine={ONE_LINE.has(list)} />,
       };
     case "value":
       return { key: "value", header: t("columns.value"), align: "right", sortable: true, cell: (row) => <MoneyCell value={row.value} currency={currency} /> };
@@ -230,7 +247,7 @@ function AnalyticsDownload({ args, list, currency }: {
   const t = useTranslations("googleAnalytics.table");
   const convex = useConvex();
   const { run, isBusy } = useAdminAction({ scope: "google-analytics-download" });
-  const columns = COLUMNS[list];
+  const columns = CSV_COLUMNS[list];
   return (
     <DownloadButton
       label={t("download")}

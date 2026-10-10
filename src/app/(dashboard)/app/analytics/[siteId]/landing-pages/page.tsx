@@ -8,23 +8,27 @@ import { Select } from "@/src/ui/components/screens/Select";
 import { SiteViewSwitch } from "../../../sites/_components/SiteViewSwitch";
 import { useSiteParam } from "../../../sites/_components/useSiteParam";
 import { AnalyticsListScreen } from "../../_components/AnalyticsListScreen";
-import { useAnalyticsHref, useAnalyticsSiteId, usePeriod } from "../../_components/useAnalytics";
+import { AnalyticsSees } from "../../_components/AnalyticsSees";
+import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod } from "../../_components/useAnalytics";
 
 const VIEWS = ["pages", "groups"] as const;
 type View = (typeof VIEWS)[number];
 const ANY_GROUP = "all";
 
 /**
- * Landing pages (§5; §11 board 5): the first page of each visit, and what
- * those visits went on to do — each page, or the website's own page groups
- * (GA15), with a Page group filter. Every page opens its own screen (GA22).
- * A website with no groups shows pages only.
+ * Landing pages (§5; §11 board 5; §15 screens 6 and 17): the first page of
+ * each visit, and what those visits went on to do — each page, or the
+ * website's own page groups (GA15), with a Page group filter — one line a
+ * row, the conversion rate beside the count, under What Hakken sees; for one
+ * device, once Google has answered, weighed against every device. Every page
+ * opens its own screen (GA22). A website with no groups shows pages only.
  */
 export default function AnalyticsLandingPagesPage() {
   const t = useTranslations("googleAnalytics.landing");
   const tf = useTranslations("googleAnalytics.filters");
   const siteId = useAnalyticsSiteId();
   const hrefFor = useAnalyticsHref(siteId);
+  const currency = useAnalyticsStatus()?.connection?.currency ?? null;
   const [period] = usePeriod();
   const choices = useQuery(api.pageKinds.pageKindChoices, { siteId });
   const [view, setView] = useSiteParam<View>("view", "pages", VIEWS);
@@ -47,6 +51,7 @@ export default function AnalyticsLandingPagesPage() {
     <AnalyticsListScreen
       key={byGroups ? "groups" : "pages"}
       header={{ icon: <LogIn className="h-5 w-5 text-brand" />, title: t("title"), description: t("description", { before: tf(`before.${period}`) }) }}
+      head={(answer) => <AnalyticsSees screen="landing" seen={answer?.seen} currency={currency} />}
       list={byGroups ? "groups" : "landing"}
       {...(!byGroups && group !== ANY_GROUP ? { group } : {})}
       noun={byGroups ? "groups" : "landingPages"}

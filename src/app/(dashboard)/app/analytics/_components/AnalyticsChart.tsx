@@ -3,12 +3,12 @@
 import { useTranslations } from "next-intl";
 import { weekStart } from "@/convex/utils/searchConsolePacks";
 import { CHART_SERIES_AMBER, CHART_SERIES_BLUE, CHART_SERIES_ORANGE, CHART_SERIES_VIOLET } from "@/src/ui/components/charts/chartPalette";
-import { SITE_SERIES_COLOURS, SiteLineChart, type SiteSeries } from "../../sites/_components/SiteCharts";
+import { SiteLineChart, type SiteSeries } from "../../sites/_components/SiteCharts";
 import { datedRow } from "../../sites/_components/datedRows";
 import { formatMonth, formatShortDay, toCsv } from "../../sites/_components/siteFormat";
 import { SearchConsoleChartCard, useSeriesTicks } from "../../search-console/_components/SearchConsoleChartCard";
 import { currencySign } from "./analyticsFormat";
-import { useStep, type Step } from "./useAnalytics";
+import { usePeriod, useStep, type Step } from "./useAnalytics";
 
 /** One day of the chart: the website's figures, and each counted event's own count. */
 export type ChartDay = { day: string; visits: number; engaged: number; conversions: number; value: number; events?: number[] };
@@ -88,41 +88,38 @@ export function AnalyticsChart({ days, host, from, to, currency, exportName }: {
 }
 
 /**
- * "Conversions over time" (§11 board 7): one line for each kind of conversion,
- * on one scale; tick Value to add the money on a scale of its own.
+ * Overview's "Visits a day" (§15, screen 2): visits and engaged visits on one
+ * scale, a dot on each day — or week, or month, as the chart steps — with a
+ * conversion. Steps by day, week or month as chosen at the top.
  */
-export function ConversionsChart({ days, events, names, host, from, to, currency }: {
+export function VisitsChart({ days, host, from, to, exportName }: {
   days: readonly ChartDay[];
-  events: readonly string[];
-  names: (eventName: string) => string;
   host: string;
   from: string | null;
   to: string | null;
-  currency: string | null;
+  exportName: string;
 }) {
   const t = useTranslations("googleAnalytics.chart");
+  const tf = useTranslations("googleAnalytics.filters");
   const [step] = useStep();
+  const [period] = usePeriod();
   const series: SiteSeries[] = [
-    ...events.map((eventName, index) => ({ key: `event${index}`, name: names(eventName), colour: SITE_SERIES_COLOURS[index % SITE_SERIES_COLOURS.length] })),
-    { key: "value", name: t("value", { sign: currencySign(currency) }), colour: CHART_SERIES_AMBER },
+    { key: "visits", name: t("visits"), colour: MEASURE_COLOURS.visits, marks: "converted" },
+    { key: "engaged", name: t("engaged"), colour: MEASURE_COLOURS.engaged },
   ];
-  const { shown, controls } = useSeriesTicks(series, ["value"]);
-  const data = stepped(days, step, events.length);
+  const data = stepped(days, step).map((row): Record<string, unknown> => ({ ...row, converted: Number(row.conversions) > 0 }));
   return (
     <SearchConsoleChartCard
-      title={t("conversionsTitle")}
-      hint={t("conversionsHint")}
-      controls={controls}
-      exportName="google-analytics-conversions"
-      csv={() => toCsv(["day", ...series.map((entry) => entry.name)], data.map((row) => [String(row.day), ...series.map((entry) => row[entry.key] as number)]))}
+      title={t(`visitsTitle.${step}`)}
+      hint={t("visitsHint", { period: tf(`periods.${period}`), step })}
+      exportName={exportName}
+      csv={() => toCsv(["day", ...series.map((entry) => entry.name), t("conversions")], data.map((row) => [String(row.day), ...series.map((entry) => row[entry.key] as number), row.conversions as number]))}
       host={host}
       from={from}
       to={to}
       step={step}
     >
-      {data.length > 0
-        ? <SiteLineChart data={data} series={shown} scaleOf={(entry) => (entry.key === "value" ? "value" : "conversions")} />
-        : <p className="py-10 text-center text-[12px] text-muted">{t("empty")}</p>}
+      {data.length > 0 ? <SiteLineChart data={data} series={series} sharedScale /> : <p className="py-10 text-center text-[12px] text-muted">{t("empty")}</p>}
     </SearchConsoleChartCard>
   );
 }

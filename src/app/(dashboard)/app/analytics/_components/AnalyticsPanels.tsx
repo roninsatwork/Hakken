@@ -11,15 +11,20 @@ import { formatNumber } from "../../sites/_components/siteFormat";
 import { formatMoney } from "./analyticsFormat";
 import { PageLink } from "./AnalyticsCells";
 
-/** A panel holding a short list, with its title, a line saying what it is, and "See all" to its full table (§10, Q14). */
-export function AnalyticsPanel({ title, description, seeAll, children }: {
+/**
+ * A panel holding a short list, with its title, a line saying what it is, and
+ * "See all" to its full table (§10, Q14). `controls` switches what the list
+ * shows — Conversions' Where they came from, landing pages or channels (§15).
+ */
+export function AnalyticsPanel({ title, description, seeAll, controls, children }: {
   title: string;
   description?: string;
   seeAll?: { href: string; label: string } | null;
+  controls?: ReactNode;
   children: ReactNode;
 }) {
   return (
-    <ChartCard title={title} hint={description}>
+    <ChartCard title={title} hint={description} controls={controls}>
       <div className="flex flex-col gap-4">
         {children}
         {seeAll ? (

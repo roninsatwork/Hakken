@@ -11,7 +11,9 @@ import { useAdminAction } from "@/src/hooks/useAdminAction";
 import { Button } from "@/src/ui/components/screens/Button";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { formatDate } from "@/src/lib/dates";
+import { connectSees } from "@/convex/utils/sees/analytics";
 import { formatDay } from "../../sites/_components/siteFormat";
+import { AnalyticsSees } from "./AnalyticsSees";
 import { hasFigures, useAnalyticsHref, type AnalyticsStatus } from "./useAnalytics";
 
 const PANEL = "flex gap-5 rounded-2xl border border-border-dim bg-card/40 p-6";
@@ -38,7 +40,9 @@ export function useBeginAnalyticsConnect(siteId: Id<"companyWebsites">): { start
  * A website with nothing from Google Analytics yet (§3, screen 1; §11 board
  * 11): what connecting brings and the way to connect for an admin — "Add
  * Google Analytics" when Search Console is connected already, since Google
- * then asks only for the extra access — or who can, for anyone else.
+ * then asks only for the extra access — or who can, for anyone else. With
+ * Search Console connected, What Hakken sees above it says what its clicks
+ * cannot (§15, screen 12).
  */
 export function AnalyticsConnectCard({ status, siteId }: { status: AnalyticsStatus; siteId: Id<"companyWebsites"> }) {
   const t = useTranslations("googleAnalytics.connect");
@@ -56,25 +60,29 @@ export function AnalyticsConnectCard({ status, siteId }: { status: AnalyticsStat
   }
   const adding = status.searchConsoleConnected;
   return (
-    <div className={PANEL}>
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary/15">
-        <Plug className="h-5 w-5 text-foreground" aria-hidden="true" />
-      </span>
-      <div className="flex max-w-2xl flex-col gap-3">
-        <div className="flex flex-col gap-1.5">
-          <h2 className="text-[15px] font-medium text-foreground">{adding ? t("addTitle") : t("title")}</h2>
-          <p className="text-[13px] text-secondary">{t("body", { host: status.host })}</p>
-        </div>
-        {status.canManage ? (
-          <div className="flex flex-col items-start gap-2">
-            <Button variant="brand" disabled={busy} onClick={() => void start()}>{adding ? t("addButton") : t("button")}</Button>
-            <p className="text-[12px] text-muted">{adding ? t("addHint", { host: status.host }) : t("hint")}</p>
+    <>
+      {/* Under the page's title: what Search Console's clicks cannot say (§15, screen 12). */}
+      <AnalyticsSees screen="connect" seen={connectSees(status.host, status.searchConsole ?? null)} currency={null} />
+      <div className={PANEL}>
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-secondary/15">
+          <Plug className="h-5 w-5 text-foreground" aria-hidden="true" />
+        </span>
+        <div className="flex max-w-2xl flex-col gap-3">
+          <div className="flex flex-col gap-1.5">
+            <h2 className="text-[15px] font-medium text-foreground">{adding ? t("addTitle") : t("title")}</h2>
+            <p className="text-[13px] text-secondary">{t("body", { host: status.host })}</p>
           </div>
-        ) : (
-          <p className="rounded-xl border border-border-dim px-3 py-2 text-[12.5px] text-secondary">{t("askAdmin")}</p>
-        )}
+          {status.canManage ? (
+            <div className="flex flex-col items-start gap-2">
+              <Button variant="brand" disabled={busy} onClick={() => void start()}>{adding ? t("addButton") : t("button")}</Button>
+              <p className="text-[12px] text-muted">{adding ? t("addHint", { host: status.host }) : t("hint")}</p>
+            </div>
+          ) : (
+            <p className="rounded-xl border border-border-dim px-3 py-2 text-[12.5px] text-secondary">{t("askAdmin")}</p>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

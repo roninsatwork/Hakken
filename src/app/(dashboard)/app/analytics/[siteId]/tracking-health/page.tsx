@@ -10,15 +10,18 @@ import { Notice } from "@/src/ui/components/screens/Notice";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { formatDateTime } from "@/src/lib/dates";
 import { useSystemSettings } from "@/src/context/SystemSettingsContext";
+import { trackingHealthSees } from "@/convex/utils/sees/analytics";
 import { AnalyticsGate } from "../../_components/AnalyticsNotices";
+import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { useHealthWords } from "../../_components/useHealthWords";
 import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, type AnalyticsStatus } from "../../_components/useAnalytics";
 
 /**
- * Tracking health (§6; §11 board 9): whether Google Analytics is counting the
- * website properly — the failing checks first, each saying what is wrong, why
- * it matters and how to fix it, and the passing ones folded into one line
- * (GA22). Checked when it connected and every week since.
+ * Tracking health (§6; §11 board 9; §15 screen 10): whether Google Analytics
+ * is counting the website properly — What Hakken sees, then the failing
+ * checks first, each saying what is wrong, why it matters and how to fix it,
+ * and the passing ones folded into one line (GA22). Checked when it connected
+ * and every week since. The box reads the checks the page already has.
  */
 export default function AnalyticsTrackingHealthPage() {
   const t = useTranslations("googleAnalytics.health");
@@ -56,6 +59,7 @@ function HealthBody({ status }: { status: AnalyticsStatus }) {
   const fixable = new Set(["NOTHING_COUNTED", "NO_VALUE"]);
   return (
     <div className="flex flex-col gap-4">
+      <AnalyticsSees screen="trackingHealth" seen={trackingHealthSees({ checks })} currency={status.connection?.currency} />
       {failing.length > 0 ? (
         <Notice tone="warning">
           <span className="block font-medium text-foreground">{t("lineTitle", { failing: failing.length, total: checks.length })}</span>

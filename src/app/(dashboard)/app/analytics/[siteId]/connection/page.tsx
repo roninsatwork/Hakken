@@ -18,6 +18,8 @@ import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { formatDate, formatDateTime } from "@/src/lib/dates";
 import { NEVER_TICKED } from "@/convex/utils/analyticsEvents";
+import { chooseEventsSees, connectionSees } from "@/convex/utils/sees/analytics";
+import { AnalyticsSees } from "../../_components/AnalyticsSees";
 import { SiteFacts } from "../../../sites/_components/SiteRecordParts";
 import { SiteViewSwitch } from "../../../sites/_components/SiteViewSwitch";
 import { formatDay, formatNumber } from "../../../sites/_components/siteFormat";
@@ -48,18 +50,32 @@ export default function AnalyticsConnectionPage() {
   );
 }
 
+/**
+ * What the page shows for the connection's stage, under What Hakken sees for
+ * that stage (§15 screens 11, 12 and 14): the clicks Search Console cannot
+ * weigh before connecting (in `AnalyticsConnectCard`), the key events while
+ * choosing what counts — the ticks as Hakken set them — and, connected, what
+ * counts and what it is worth. Choosing the property has nothing to read yet.
+ */
 function ConnectionBody({ status }: { status: AnalyticsStatus }) {
   const siteId = useAnalyticsSiteId();
   const connection = status.connection;
   const changing = useSearchParams().get("change") === "1";
+  const currency = connection?.currency ?? null;
+  const choosing = connection !== null && (connection.status === "COUNTING" || (changing && status.canManage && connection.status === "CONNECTED"));
   return (
     <>
+      {connection && choosing ? (
+        <AnalyticsSees screen="chooseEvents" seen={chooseEventsSees(status.host, connection.events)} currency={currency} />
+      ) : connection ? (
+        <AnalyticsSees screen="connection" seen={connectionSees(status.host, connection.status, connection.events)} currency={currency} />
+      ) : null}
       {connection?.attempt ? <AttemptNote status={status} /> : null}
       {!connection || connection.status === "CONNECTING" ? (
         <AnalyticsConnectCard status={status} siteId={siteId} />
       ) : connection.status === "CHOOSING" ? (
         <ChooseProperty status={status} />
-      ) : connection.status === "COUNTING" || (changing && status.canManage && connection.status === "CONNECTED") ? (
+      ) : choosing ? (
         <ChooseWhatCounts status={status} changing={connection.status === "CONNECTED"} />
       ) : (
         <ConnectionDetails status={status} />

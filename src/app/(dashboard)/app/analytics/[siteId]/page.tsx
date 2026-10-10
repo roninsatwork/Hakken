@@ -11,18 +11,21 @@ import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { Change } from "@/src/ui/components/screens/Change";
 import { AnalyticsGate, countsAnything } from "../_components/AnalyticsNotices";
 import { AnalyticsFigures } from "../_components/AnalyticsFigures";
-import { AnalyticsChart } from "../_components/AnalyticsChart";
-import { AnalyticsPanel, TopList } from "../_components/AnalyticsPanels";
+import { VisitsChart } from "../_components/AnalyticsChart";
+import { AnalyticsPanel } from "../_components/AnalyticsPanels";
+import { AnalyticsSees } from "../_components/AnalyticsSees";
 import { PageLink } from "../_components/AnalyticsCells";
 import { formatMoney } from "../_components/analyticsFormat";
-import { TrackingHealthLine } from "../_components/TrackingHealthLine";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod, type AnalyticsStatus } from "../_components/useAnalytics";
 
 /**
- * Overview (§5; §11 board 2): visits, engaged visits, conversions and value,
- * each against the span before; what changed most (GA22); one line on
- * cookies (§10, Q6); the chart; the channels and landing pages that made the
- * most; and the tracking health line (§6).
+ * Overview (§5; §15 screen 2, signed off 2026-10-10): What Hakken sees; the
+ * four figures — visits, engaged visits, conversions and value, each against
+ * the span before; visits a day with engaged visits, a dot on each day with a
+ * conversion; and what changed most (GA22). Channels and Landing pages that
+ * made the most, the cookie line and the tracking health line are left off to
+ * keep the page short (§15). A connection that needs fixing shows its banner
+ * over the same page (screen 18).
  */
 export default function AnalyticsOverviewPage() {
   const t = useTranslations("googleAnalytics.overview");
@@ -48,8 +51,6 @@ function OverviewBody({ status }: { status: AnalyticsStatus }) {
   const hrefFor = useAnalyticsHref(args.siteId);
   const overview = useQuery(api.googleAnalyticsReads.analyticsOverview, args);
   const chart = useQuery(api.googleAnalyticsReads.analyticsChart, args);
-  const channels = useQuery(api.googleAnalyticsReads.analyticsTopList, { ...args, list: "channel" });
-  const landing = useQuery(api.googleAnalyticsReads.analyticsTopList, { ...args, list: "landing" });
   const currency = status.connection?.currency ?? null;
   const counting = countsAnything(status);
   const pageHref = (row: { key: string }) => (row.key.startsWith("~") ? hrefFor("landing-pages/page", { key: row.key }) : null);
@@ -59,9 +60,19 @@ function OverviewBody({ status }: { status: AnalyticsStatus }) {
   }
   return (
     <div className="flex flex-col gap-6">
+      <AnalyticsSees screen="overview" seen={overview?.seen} currency={currency} />
+
       {overview?.now ? (
         <AnalyticsFigures now={overview.now} before={overview.before} currency={currency} conversionsHref={hrefFor("conversions")} counting={counting} />
       ) : <div className="h-24 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />}
+
+      <VisitsChart
+        days={chart?.points ?? []}
+        host={status.host}
+        from={overview?.from ?? null}
+        to={overview?.to ?? null}
+        exportName="google-analytics-overview"
+      />
 
       {counting ? (
         <AnalyticsPanel title={t("changedTitle")} description={t("changedDescription", { before: tf(`before.${period}`) })}>
@@ -84,35 +95,6 @@ function OverviewBody({ status }: { status: AnalyticsStatus }) {
           />
         </AnalyticsPanel>
       ) : null}
-
-      <Notice>{t("cookies", { host: status.host })}</Notice>
-
-      <AnalyticsChart
-        days={chart?.points ?? []}
-        host={status.host}
-        from={overview?.from ?? null}
-        to={overview?.to ?? null}
-        currency={currency}
-        exportName="google-analytics-overview"
-      />
-
-      <AnalyticsPanel
-        title={t("channelsTitle")}
-        description={t("channelsDescription")}
-        seeAll={channels && channels.total > 0 ? { href: hrefFor("channels"), label: t("seeAll", { count: channels.total }) } : null}
-      >
-        <TopList rows={channels?.rows} kind="channel" currency={currency} channelHref={(row) => hrefFor("channels/channel", { key: row.label })} empty={t("noChannels")} />
-      </AnalyticsPanel>
-
-      <AnalyticsPanel
-        title={t("landingTitle")}
-        description={landing?.live ? t("landingLive") : t("landingDescription")}
-        seeAll={landing && landing.total > 0 ? { href: hrefFor("landing-pages"), label: t("seeAll", { count: landing.total }) } : null}
-      >
-        <TopList rows={landing?.rows} kind="page" currency={currency} pageHref={pageHref} empty={landing?.live ? t("landingLive") : t("noPages")} />
-      </AnalyticsPanel>
-
-      <TrackingHealthLine status={status} />
     </div>
   );
 }

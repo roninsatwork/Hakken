@@ -2,8 +2,9 @@
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: All pages
+settings-card: What Hakken sees
 search: Find a page…
-table: Page | Views | Time | Conversions | Value
+table: Page | Views | Time | Conversions made here | Change
   table-bar
     download: Download CSV
   table-footer

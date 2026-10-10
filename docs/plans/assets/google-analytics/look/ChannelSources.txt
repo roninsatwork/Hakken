@@ -4,6 +4,12 @@
 detail-header
   back: Channels
   page-header: ‹the record's name›
+settings-card: What Hakken sees
+figures
+  figure: Visits
+  figure: Engagement rate
+  figure: Conversions
+  figure: Value
 search: Find a source…
 table: Source | Visits | Engaged | Conversions | Value | Change
   table-bar

@@ -2,5 +2,6 @@
 # Its kit parts top to bottom, each with its title, and each table's headings.
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Connection
+settings-card: What Hakken sees
 compact-list
 compact-list: Conversion | In Google Analytics | Value each | Set in
