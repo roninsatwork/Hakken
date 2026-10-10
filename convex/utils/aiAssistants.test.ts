@@ -11,6 +11,17 @@ describe("visitors from AI assistants (google-analytics-plan.md §4.4)", () => {
     expect(assistantOf("news.google.com")).toBeNull();
   });
 
+  test("an assistant named as a bare word is the same assistant, whatever its case", () => {
+    // Ronins' AI assistants screen listed "Gemini" (3) and "gemini" (1) on 2026-10-10 (plan §16).
+    expect(assistantOf("gemini")).toBe("Gemini");
+    expect(assistantOf("Gemini")).toBe("Gemini");
+    expect(assistantOf("ChatGPT")).toBe("ChatGPT");
+    expect(assistantOf("openai")).toBe("ChatGPT");
+    expect(assistantOf("chatgpt / referral")).toBe("ChatGPT");
+    expect(assistantOf("bing")).toBeNull();
+    expect(assistantOf("(direct)")).toBeNull();
+  });
+
   test("Google's own AI channel and the list both count as AI assistants; the rest keep Google's channel", () => {
     expect(channelOf("AI Assistant", "chatgpt.com")).toBe(AI_ASSISTANTS_CHANNEL);
     expect(channelOf("Referral", "perplexity.ai")).toBe(AI_ASSISTANTS_CHANNEL);

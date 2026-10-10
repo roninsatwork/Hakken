@@ -35,14 +35,29 @@ export const AI_ASSISTANTS_CHANNEL = "AI assistants";
 
 const BY_SOURCE = new Map(AI_ASSISTANT_SOURCES.flatMap((assistant) => assistant.sources.map((source) => [source, assistant.name] as const)));
 
-/** The assistant a visit's source is, when it is one: `chatgpt.com`, `www.perplexity.ai`, `chatgpt.com / referral`. */
+/** A word without its spaces and dots, in lower case: "Meta AI" and "meta.ai" are "metaai". */
+const bareWord = (words: string) => words.toLowerCase().replace(/[\s.]+/g, "");
+
+/**
+ * An assistant named as a bare word rather than a website — `gemini`,
+ * `ChatGPT`, a campaign's `utm_source=openai` — in any case. Google sent
+ * Ronins' Gemini visits as both `gemini.google.com` and `gemini`, and the
+ * AI assistants screen listed "Gemini" twice (plan §16).
+ */
+const BY_WORD = new Map<string, string>([
+  ...AI_ASSISTANT_SOURCES.map((assistant) => [bareWord(assistant.name), assistant.name] as const),
+  ["openai", "ChatGPT"],
+  ["bard", "Gemini"],
+]);
+
+/** The assistant a visit's source is, when it is one: `chatgpt.com`, `www.perplexity.ai`, `chatgpt.com / referral`, `gemini`. */
 export function assistantOf(source: string): string | null {
   const host = source.trim().toLowerCase().split(/[\s/]/)[0].replace(/^www\./, "");
   for (let at = host; at.includes("."); at = at.slice(at.indexOf(".") + 1)) {
     const name = BY_SOURCE.get(at);
     if (name) return name;
   }
-  return null;
+  return host.includes(".") ? null : BY_WORD.get(bareWord(host)) ?? null;
 }
 
 /** The channel a visit is shown under: AI assistants when Google or the list says so, else Google's own. */

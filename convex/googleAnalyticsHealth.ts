@@ -160,7 +160,7 @@ export const runHealthChecks = internalMutation({
       if (result.passing || wasFailing.has(result.check)) continue;
       const words = BELL[result.check]?.(result, host);
       if (!words) continue;
-      await tellSuperAdmins(ctx, connection, words.title, words.body, `/app/analytics/${connection.companyWebsiteId}/tracking-health`, "GOOGLE_ANALYTICS_HEALTH");
+      await tellSuperAdmins(ctx, connection, words.title, words.body, `/app/analytics/${connection.companyWebsiteId}/tracking-health`, "GOOGLE_ANALYTICS_HEALTH", { once: true });
     }
     return null;
   },
@@ -168,11 +168,19 @@ export const runHealthChecks = internalMutation({
 
 /** The platform's super admins read for a notice: people, few by nature. */
 const SUPER_ADMINS_READ = 500;
+/** A person's unread notices read to find the same alert already waiting. */
+const UNREAD_READ = 200;
 
 /**
  * A system alert in the bell, for the platform's super admins alone — never a
  * company's own admins (Anthony, 2026-10-10: "These are system alerts not
  * company alerts; they need to only go to sys admins").
+ *
+ * With `once`, a person whose bell already holds the same alert unread is not
+ * told again: Ronins' three alerts reached the same super admin at 07:43 and
+ * again at 07:58 on 2026-10-10 (plan §16), and GA12 says once. The checks'
+ * own "was failing" rule stays the first guard; this one holds even when two
+ * runs see the same old results.
  */
 export async function tellSuperAdmins(
   ctx: MutationCtx,
@@ -181,12 +189,20 @@ export async function tellSuperAdmins(
   body: string,
   href: string,
   kind: string,
+  options: { once?: boolean } = {},
 ) {
   const superAdmins = await ctx.db
     .query("users")
     .withIndex("by_role_lastLogin", (q) => q.eq("role", "SUPER_ADMIN"))
     .take(SUPER_ADMINS_READ);
   for (const person of superAdmins) {
+    if (options.once) {
+      const unread = await ctx.db
+        .query("notifications")
+        .withIndex("by_user_unread", (q) => q.eq("userId", person._id).eq("readAt", undefined))
+        .take(UNREAD_READ);
+      if (unread.some((notice) => notice.kind === kind && notice.href === href && notice.title === title)) continue;
+    }
     await ctx.runMutation(internal.notifications.notifyUserInternal, { userId: person._id, companyId: connection.companyId, kind, title, body, href });
   }
 }
