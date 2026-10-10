@@ -7,6 +7,19 @@ completed work.
 
 ## Active Plans
 
+- [Discovery — detail screens, rows that open, and What Hakken sees](./active/discovery-detail-and-hakken-sees-plan.md)
+  — every row in Discovery opens something: four new detail screens (one
+  business, one website, one question in Google's AI answers, one page), each
+  verdict first with one table behind a switch; a What Hakken sees box under
+  the title of every Discovery screen, written by fixed rules over what the
+  page already reads; All backlinks gains week and group filters. Nothing
+  bought, no new table. **Drawn and approved 2026-10-10 (28 boards in
+  `docs/plans/assets/discovery-detail-screens/`); the build waits for his
+  "build".**
+- [Discovery — local, reviews, AI apps, Brand radar and web mentions](./active/discovery-local-reputation-ai-plan.md)
+  — Google profiles, Maps, reviews, the AI apps, Brand radar, Your assets and
+  web mentions in Discovery. **Built 2026-10-09 and run on Ronins and Korda.**
+
 - [Content — people and their channels, News into Knowledge, and reading analytics](./active/content-people-knowledge-plan.md)
   — Admin → Content reshaped so Hakken works as an SEO agency would: Who to
   follow becomes the only source list (a person, then their channels on
