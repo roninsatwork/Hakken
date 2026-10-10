@@ -1,0 +1,13 @@
+# Admin → Content → Who to follow — the approved look (board "Main" of docs/plans/assets/content-people-knowledge/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Who to follow
+  primary-action: Add a person
+notice (info)
+search: Find a person…
+filter: Channel
+filter: Topic
+filter: Show
+table: Person | Channels | Topic | Articles | In knowledge | Newest | Our pick | Actions
+  table-bar
+  table-footer

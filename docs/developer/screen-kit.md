@@ -64,10 +64,12 @@ the set but i need to be told"):
 - `src/ui/components/screens/Meter.tsx`: a share as a thin bar, always beside its number, coloured from `chartPalette.ts`. `then` adds a lighter second band for work under way but not done — a collection's requests out, beside those back (Collection pipeline, 2026-10-05).
 - `SegmentedChoice` (in `SettingsCard.tsx`) gained `size="compact"`: as wide as its choices, for switching between views of one card or table. Sites' `SiteViewSwitch` is it.
 
-Two parts shared by one area rather than the whole app, in the narrowest folder their callers reach:
+Parts shared by one area rather than the whole app, in the narrowest folder their callers reach:
 
 - `src/app/(dashboard)/app/_components/KindBars.tsx`: kinds as deep bars on one scale — pages by kind, keywords by intent — each row answering the pointer and opening its records. Sites' Overview and Search Console's Types.
 - `src/app/(dashboard)/admin/companies/[id]/websites/_components/AddBar.tsx`: the quiet card a Websites list is added to from — its field, any picker, and an Add button the field's own height.
+- `src/app/(dashboard)/admin/content/_components/KnowledgeTick.tsx`: a News story's In knowledge tick and its Words kept — on News and a person's page in Who to follow (content-people-knowledge-plan.md, boards 2 and 4). Added 2026-10-10.
+- `src/app/(dashboard)/admin/content/analytics/_components/TrendLine.tsx`: a row's views by day across the period as one small line, the Trend column of Analytics' Articles and People (boards 8 and 10); `ReadingChart` beside it is `ChartCard` with `SiteLineChart`, every day of the period drawn. Added 2026-10-10.
 
 And `src/app/(dashboard)/app/_components/SectionMenu.tsx` (below) gained a page icon per item and an optional jump box, so the websites admin's menu is it too.
 

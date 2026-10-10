@@ -11,6 +11,13 @@ Overall: 100% built (17.5 of 17.5 days, plus a day for the revision below).
 Nothing has run for real yet: it waits for the settings in "Configuration
 left" below.
 
+**2026-10-10:** Admin → Content → News sources is gone: the News Collector
+reads each person's channels in "Who to follow", X's connection moved below
+that list, and a News story can be ticked into Knowledge
+([content-people-knowledge-plan.md](content-people-knowledge-plan.md), phases
+1 and 2). Mentions of News sources below are the record of what was built
+then.
+
 **Superseded in part, 2026-10-06** by the
 [Insights and Helpful content plan](insights-helpful-content-plan.md): R4's
 name "Learn" is now **Insights** (IH18); R7's pin is one pin across News,

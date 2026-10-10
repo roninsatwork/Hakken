@@ -44,8 +44,9 @@ company and user.
 - "can you commit the plan when you finish please · then can you build this
   out please".
 
-**Status, 2026-10-10:** drawn, approved and planned; build started the same
-day. Overall: 0% built.
+**Status, 2026-10-10:** drawn, approved and planned; built the same day,
+phases 1–6, on `dev` in local commits (see "Build record" below). Overall:
+built; not pushed, and nothing collected or paid for yet.
 
 ## The approved drawings
 
@@ -204,10 +205,44 @@ new). Outbox's place is Q7.
 | People in Who to follow | 500 | Unchanged |
 | Our picks | 4 | Unchanged |
 | Admin tables | 15 rows a page | Admin standard |
-| A read | 30 seconds, or the end reached | Proposed, Q1 |
+| A read | 30 seconds, or the end reached | Answered, Q1 |
 | The top five | 5 a tab | As drawn |
 | Analytics periods | 7, 30, 90 days, 12 months | As drawn |
-| Raw reading events kept | 90 days; daily totals kept for good | Proposed, Q4 |
+| Raw reading events kept | 90 days; daily totals kept for good | Answered, Q4 (`purges/readingEvents`) |
+| Knowledge's one list | 900 articles read; past it the list says it was cut | Added in the build (`KNOWLEDGE_LIST_MAX`): each list row is small, and the read limit band starts at 1,000 |
+| "In knowledge" count above News | 5,000; past it "5,000+" | Added in the build (`IN_KNOWLEDGE_COUNT_LIMIT`) |
+| Things Analytics reads for one period | 900 each of items, people, companies, users | Added in the build (`ANALYTICS_ACTIVE_MAX`) |
+| Day rows the Articles chart adds up when narrowed | 6,000; past it the chart is drawn from the most-viewed, and says so | Added in the build (`NARROWED_SERIES_BUDGET`) |
+| A kept article's least words | 120; fewer is "too few to be the article" | Helpful content's, unchanged (`LIBRARY_MIN_WORDS`) |
+
+## Build record — 2026-10-10
+
+Built on `dev` the day the plan was approved, phase by phase, each a local
+commit: `42cfb317` (1, people and channels), `2fedd608` (2, News into
+Knowledge), `a7d221ef` (3, one Knowledge list), `824d7f79` (4, counting
+reading), `7de1f9e2` (5, the Analytics screens), then phase 6's look tests and
+these records. The first fills ran on dev: `2026-10-10-follow-channels`
+(7 rows → 6 people) and `2026-10-10-knowledge-list` (4 articles).
+
+Where the build differs from the boards, each said to Anthony:
+
+- **Who to follow**: the X connection panel sits below the list; the person's
+  stories table sorts by Published only.
+- **News**: sorts by Published only, both ways — News keeps every story for
+  good, so it pages by cursor rather than reading the whole list, and its
+  count reads "45+ stories" until the last page is in.
+- **Knowledge**: each row keeps the pin (lead the front page), which the board
+  left out. Add from a link keeps Helpful content's Updated, Description,
+  Status and Language fields.
+- **Analytics**: one article's and one company's tables are short and do not
+  sort; a person's row opens their page in Who to follow.
+- **New part**: `TrendLine` (`admin/content/analytics/_components/`), a row's
+  views by day as one small line — the Trend column on boards 8 and 10.
+
+Other changes the build needed: Ask Hakken's Helpful content search now
+returns each section's article, so In answers can count it; an edit of a web
+article no longer drops the News story and person it was ticked from; and a
+story taken down from News leaves its kept article in Knowledge.
 
 ## Phases — with days
 

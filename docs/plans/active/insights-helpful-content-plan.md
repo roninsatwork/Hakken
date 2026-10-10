@@ -58,6 +58,11 @@ dev, 2026-10-06, not committed** — below; the full local gate passes,
 GitHub's own steps included. Overall: 100% (15.5 of 15.5 days, with IH21's
 server-side reading added). Committing and pushing wait for Anthony.
 
+**2026-10-10:** in Admin, Helpful content is now part of Knowledge's one list,
+and "Who to follow" is the only source list — each person with their
+channels ([content-people-knowledge-plan.md](content-people-knowledge-plan.md),
+phases 1 and 3). What clients read in Insights is unchanged (that plan's Q10).
+
 ### Built
 
 - **Phase 1, what the screens read (2026-10-06).**

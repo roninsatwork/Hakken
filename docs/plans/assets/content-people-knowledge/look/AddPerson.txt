@@ -1,0 +1,15 @@
+# Admin → Content → Who to follow → Add a person — the approved look (board "AddPerson" of docs/plans/assets/content-people-knowledge/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Who to follow
+  page-header: ‹the record's name›
+settings-card: The person
+  field: Name
+  field: Channels
+  field: Another channel
+  field: Why we recommend them
+  select: Topic
+  checkbox: One of our picks
+notice (info)
+save

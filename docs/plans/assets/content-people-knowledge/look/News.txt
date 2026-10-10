@@ -1,0 +1,12 @@
+# Admin → Content → News — the approved look (board "News" of docs/plans/assets/content-people-knowledge/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: News
+notice (info)
+search: Search stories by title
+filter: From
+filter: Channel
+filter: Knowledge
+table: Story | From | Published | Words kept | In knowledge | Actions
+  table-bar
+  table-footer

@@ -1,0 +1,19 @@
+# Admin → Content → Analytics → an article — the approved look (board "AnalyticsArticle" of docs/plans/assets/content-people-knowledge/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Articles
+  page-header: ‹the record's name›
+    choice: Period: Last # days | Last # days | Last # days | Last # months
+figures
+  figure: Views
+  figure: Reads
+  figure: Clicks to the original
+  figure: In answers
+chart-card: Views and reads, by day
+  checkbox: Views
+  checkbox: Reads
+table: Company | Readers | Views | Reads | Clicks | Last read
+  table-bar
+    download: Download CSV
+  table-footer

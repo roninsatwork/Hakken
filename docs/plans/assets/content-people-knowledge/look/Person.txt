@@ -1,0 +1,18 @@
+# Admin → Content → Who to follow → a person — the approved look (board "Person" of docs/plans/assets/content-people-knowledge/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Who to follow
+  page-header: ‹the record's name›
+figures
+  figure: Channels
+  figure: Articles collected
+  figure: In knowledge
+  figure: Newest
+table: Channel | Address | Collect | Status | Last read | Found | Actions
+  table-bar
+search: Find one of their articles…
+filter: Channel
+table: Article | Channel | Published | Words kept | In knowledge | Actions
+  table-bar
+  table-footer

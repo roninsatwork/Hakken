@@ -21,6 +21,13 @@ and added "in knowledge" under Rankings; Ask Hakken's search finds its "How
 long does a…" sections for a question about recovering from a core update.
 Overall: 100% built; committing and pushing wait for Anthony.
 
+**2026-10-10:** Admin's Helpful content list joined Knowledge's one list, and
+its reader and editor moved to Knowledge → Add from a link and
+`/admin/content/knowledge/web/[id]`; its old addresses redirect
+([content-people-knowledge-plan.md](content-people-knowledge-plan.md), phase
+3). The Library's list look (board "Library") went with it; Add an article's
+is held as board 6 of that plan.
+
 **Superseded in part, 2026-10-06** by the
 [Insights and Helpful content plan](insights-helpful-content-plan.md): the
 Library is renamed **Helpful content** (open question 2, answered), at

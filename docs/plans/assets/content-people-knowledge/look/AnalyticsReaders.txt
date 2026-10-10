@@ -1,0 +1,14 @@
+# Admin → Content → Analytics → Companies — the approved look (board "AnalyticsReaders" of docs/plans/assets/content-people-knowledge/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+record-header: Analytics
+  choice: Period: Last # days | Last # days | Last # days | Last # months
+tabs: Overview | Articles # | People # | Companies #
+page-header: Companies
+chart-card: Readers and companies, by day
+  checkbox: Readers
+  checkbox: Companies
+table: Company | Readers | Views | Reads | Clicks | Last active
+  table-bar
+    download: Download CSV
+  table-footer
