@@ -106,6 +106,7 @@ export const saveCollectedItem = internalMutation({
     url: v.string(),
     publishedAt: v.number(),
     externalKey: v.string(),
+    linkUrl: v.optional(v.string()),
   },
   returns: v.union(v.id("newsItems"), v.null()),
   handler: async (ctx, args) => {

@@ -202,6 +202,7 @@ async function summariseAndSave(
         url: entry.url,
         publishedAt: entry.publishedAt ?? Date.now(),
         externalKey: entry.key,
+        ...(entry.link ? { linkUrl: entry.link } : {}),
       });
       if (saved) added += 1;
     }

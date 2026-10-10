@@ -7046,6 +7046,8 @@
             "article": "Articolo",
             "channel": "Canale",
             "published": "Pubblicato",
+            "words": "Parole conservate",
+            "inKnowledge": "In Conoscenza",
             "actions": "Azioni"
           },
           "filters": {
@@ -7155,23 +7157,42 @@
     },
     "newsItems": {
       "title": "Notizie",
-      "subtitle": "Tutto ciò che c'è nel feed Notizie, dal più recente. Le voci vanno online appena raccolte; rimuovi quella che non dovrebbe esserci.",
-      "kindFilter": "Mostra",
-      "allKinds": "Tutto",
+      "subtitle": "Tutto ciò che Hakken ha raccolto dalle persone che segui, e gli aggiornamenti di Google, dal più recente. Va online appena raccolto; rimuovi ciò che non dovrebbe esserci.",
+      "knowledgeNotice": "Notizie conserva un riassunto di ogni storia. Spunta In Conoscenza su quelle buone: Hakken legge e conserva l'intero articolo, Chiedi a Hakken ne impara, ed entra in Conoscenza.",
+      "searchPlaceholder": "Cerca le storie per titolo",
+      "inKnowledge": "{count, plural, =1 {# in Conoscenza} other {# in Conoscenza}}",
+      "inKnowledgeMore": "{count}+ in Conoscenza",
       "empty": "Ancora niente in Notizie.",
+      "noMatch": "Nessuna storia corrisponde.",
       "open": "Apri l'originale",
       "delete": "Rimuovi",
-      "deleteTitle": "Rimuovi notizia",
+      "deleteTitle": "Rimuovi storia",
       "deleteWarning": "Scompare da Notizie per tutti e non viene raccolta di nuovo.",
+      "deleteWarningKept": "Scompare da Notizie per tutti e non viene raccolta di nuovo. L'articolo conservato resta in Conoscenza; eliminalo lì se deve sparire anche quello.",
       "deleteConfirm": "Rimuovere <highlight>{title}</highlight>?",
+      "from": {
+        "google": "Google"
+      },
+      "filters": {
+        "from": "Da",
+        "everyone": "Tutti",
+        "channel": "Canale",
+        "allChannels": "Ogni canale",
+        "knowledge": "Conoscenza",
+        "everything": "Tutto",
+        "IN": "In Conoscenza",
+        "OUT": "Non in Conoscenza"
+      },
       "columns": {
-        "item": "Notizia",
-        "kind": "Tipo",
+        "story": "Storia",
+        "from": "Da",
         "published": "Pubblicata",
+        "words": "Parole conservate",
+        "inKnowledge": "In Conoscenza",
         "actions": "Azioni"
       },
       "errors": {
-        "deleteFailed": "Impossibile rimuovere la notizia. Riprova."
+        "deleteFailed": "Impossibile rimuovere la storia. Riprova."
       }
     },
     "contentEditor": {
@@ -7305,6 +7326,14 @@
       "unpin": "Smetti di aprire con questo",
       "leadUntil": "In apertura fino al {date}",
       "pinFailed": "Impossibile cambiare la notizia in apertura. Riprova."
+    },
+    "knowledgeTick": {
+      "label": "Conserva {title} in Conoscenza",
+      "failed": "Impossibile cambiare se è in Conoscenza. Riprova.",
+      "kept": "Conservato",
+      "reading": "Lettura della pagina…",
+      "couldNotKeep": "Non è stato possibile conservarlo.",
+      "summaryOnly": "Solo riassunto"
     }
   },
   "ai": {
@@ -9629,7 +9658,9 @@
       "channels": "{count, plural, =1 {# canale} other {# canali}}",
       "sources": "{count, plural, =1 {# fonte} other {# fonti}}",
       "landingPages": "{count, plural, =1 {# pagina di destinazione} other {# pagine di destinazione}}",
-      "conversionKinds": "{count, plural, =1 {# tipo di conversione} other {# tipi di conversione}}"
+      "conversionKinds": "{count, plural, =1 {# tipo di conversione} other {# tipi di conversione}}",
+      "stories": "{count, plural, =1 {# storia} other {# storie}}",
+      "storiesSoFar": "{count, plural, other {#+ storie}}"
     },
     "chart": {
       "download": "Scarica",

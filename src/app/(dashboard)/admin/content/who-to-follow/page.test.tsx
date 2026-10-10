@@ -9,8 +9,8 @@ import { AddPersonPage } from "./AddPersonPage";
 import { FollowEditor } from "./FollowEditor";
 import { PersonPage } from "./PersonPage";
 
-const { update, create, setPick, setCollect, push } = vi.hoisted(() => ({
-  update: vi.fn(), create: vi.fn(), setPick: vi.fn(), setCollect: vi.fn(), push: vi.fn(),
+const { update, create, setPick, setCollect, setInKnowledge, push } = vi.hoisted(() => ({
+  update: vi.fn(), create: vi.fn(), setPick: vi.fn(), setCollect: vi.fn(), setInKnowledge: vi.fn(), push: vi.fn(),
 }));
 
 vi.mock("convex/react", async () => (await import("@/src/test/screenMocks")).convexReact());
@@ -36,13 +36,21 @@ const CHANNELS = [
   { _id: "c_yt", kind: "YOUTUBE", address: "https://www.youtube.com/@buildinpublic", collect: true, status: "COLLECTING", problem: null, lastCheckedAt: 1, lastItemAt: 1, found: 22 },
   { _id: "c_li", kind: "LINKEDIN", address: "https://linkedin.com/in/edwardsturm", collect: false, status: "LINKEDIN", problem: null, lastCheckedAt: null, lastItemAt: null, found: 0 },
 ];
+const ITEMS = {
+  results: [{
+    _id: "item_1", kind: "YOUTUBE", titleEn: "I tested internal links for 30 days", summaryEn: "What moved.", url: "https://www.youtube.com/watch?v=1",
+    publishedAt: 1, knowledge: { state: null, words: null, problem: null },
+  }],
+  status: "Exhausted", isLoading: false, loadMore: vi.fn(),
+};
 
 /**
  * Admin → Content → Who to follow (docs/plans/active/content-people-
  * knowledge-plan.md, boards 1–3): one row a person with their channels,
  * narrowed and sorted on the server, "Our picks" ticked on the list; a
- * person's page with their channels' Collect ticks; Add a person from their
- * channels' addresses; and Edit details.
+ * person's page with their channels' Collect ticks and their stories' In
+ * knowledge ticks; Add a person from their channels' addresses; and Edit
+ * details.
  */
 describe("Admin Who to follow", () => {
   beforeEach(() => {
@@ -51,22 +59,25 @@ describe("Admin Who to follow", () => {
     create.mockReset().mockResolvedValue("new_person");
     setPick.mockReset().mockResolvedValue(null);
     setCollect.mockReset().mockResolvedValue(null);
+    setInKnowledge.mockReset().mockResolvedValue(null);
+    const others: (reference: unknown, args: unknown) => unknown = answerQueries({
+      "newsFollows:getFollow": { ...EDWARD, createdAt: 1, translations: { done: 1, total: 1 } },
+      "newsFollows:listPicksForAdmin": PICKED.map((pick) => ({ _id: pick._id, name: pick.name })),
+      "followChannels:listChannelsForAdmin": CHANNELS,
+      "topics:listTopicChoices": TOPICS,
+    });
     vi.mocked(useQuery).mockImplementation(((reference: unknown, args: unknown) => {
       if (convexPath(reference).endsWith("listFollowsForAdmin")) return (args as { picks?: boolean }).picks ? PICKS_ONLY : EVERYONE;
-      return answerQueries({
-        "newsFollows:getFollow": { ...EDWARD, createdAt: 1, translations: { done: 1, total: 1 } },
-        "newsFollows:listPicksForAdmin": PICKED.map((pick) => ({ _id: pick._id, name: pick.name })),
-        "followChannels:listChannelsForAdmin": CHANNELS,
-        "topics:listTopicChoices": TOPICS,
-      })(reference, args);
+      return others(reference, args);
     }) as never);
-    vi.mocked(usePaginatedQuery).mockReset().mockImplementation((() => ({ results: [], status: "Exhausted", isLoading: false, loadMore: vi.fn() })) as never);
+    vi.mocked(usePaginatedQuery).mockReset().mockImplementation((() => ITEMS) as never);
     vi.mocked(useMutation).mockImplementation(((reference: unknown) => {
       const name = convexPath(reference);
       if (name.endsWith("updateFollow")) return update;
       if (name.endsWith("createFollow")) return create;
       if (name.endsWith("setFollowPick")) return setPick;
       if (name.endsWith("setChannelCollect")) return setCollect;
+      if (name.endsWith("setNewsItemInKnowledge")) return setInKnowledge;
       return vi.fn();
     }) as never);
   });
@@ -117,6 +128,15 @@ describe("Admin Who to follow", () => {
     const youtube = screen.getByText("youtube.com/@buildinpublic").closest("tr") as HTMLElement;
     fireEvent.click(within(youtube).getByRole("checkbox"));
     await waitFor(() => expect(setCollect).toHaveBeenCalledWith({ channelId: "c_yt", collect: false }));
+  });
+
+  it("a person's stories each have the In knowledge tick, beside the words kept", async () => {
+    renderWithProviders(<PersonPage followId={"edward" as never} />);
+
+    const video = screen.getByText("I tested internal links for 30 days").closest("tr") as HTMLElement;
+    expect(within(video).getByText("admin.knowledgeTick.summaryOnly")).toBeInTheDocument();
+    fireEvent.click(within(video).getByRole("checkbox"));
+    await waitFor(() => expect(setInKnowledge).toHaveBeenCalledWith({ itemId: "item_1", keep: true }));
   });
 
   it("Add a person names each address's channel as it is typed, sends only the filled ones, and opens their page", async () => {

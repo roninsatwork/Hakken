@@ -28,7 +28,30 @@ export const BOOKMARKS_PER_RUN = 100;
 /** Renew the access when it has less life than this left. */
 const RENEW_MARGIN_MS = 2 * 60 * 1000;
 
-type XPost = { id: string; text?: string; created_at?: string; author_id?: string; note_tweet?: { text?: string } };
+type XPost = {
+  id: string;
+  text?: string;
+  created_at?: string;
+  author_id?: string;
+  note_tweet?: { text?: string };
+  /** The links in the post, with where each really goes (`entities`). */
+  entities?: { urls?: Array<{ expanded_url?: string; unwound_url?: string }> };
+};
+
+/** The first link in a post that leaves X: the article it points to, if any. */
+export function articleLinkOf(post: XPost): string | undefined {
+  for (const link of post.entities?.urls ?? []) {
+    const url = link.unwound_url ?? link.expanded_url;
+    if (!url) continue;
+    try {
+      const host = new URL(url).hostname.replace(/^www\./, "");
+      if (host !== "x.com" && host !== "twitter.com" && host !== "t.co") return url;
+    } catch {
+      // Not an address: the next link.
+    }
+  }
+  return undefined;
+}
 type XUser = { id: string; username?: string; name?: string };
 
 /** What X charges per post read, as entered for this deployment; nothing until it is. */
@@ -56,6 +79,7 @@ function entryOf(post: XPost, handle: string): FeedEntry {
     key: url,
     publishedAt: Number.isFinite(published) ? published : null,
     text: (post.note_tweet?.text ?? post.text ?? "").slice(0, ENTRY_TEXT_LIMIT),
+    ...(articleLinkOf(post) ? { link: articleLinkOf(post) } : {}),
   };
 }
 
@@ -79,7 +103,7 @@ export async function readAccountPosts(args: { bearer: string; handle: string; x
   const query = new URLSearchParams({
     max_results: String(POSTS_PER_ACCOUNT),
     exclude: "retweets,replies",
-    "tweet.fields": "created_at,note_tweet",
+    "tweet.fields": "created_at,note_tweet,entities",
     ...(args.sinceId ? { since_id: args.sinceId } : {}),
   });
   const page = await xGet<{ data?: XPost[]; meta?: { newest_id?: string } }>(`/users/${xUserId}/tweets?${query}`, args.bearer);
@@ -99,7 +123,7 @@ export async function readNewBookmarks(args: { accessToken: string; xUserId: str
 }> {
   const query = new URLSearchParams({
     max_results: String(BOOKMARKS_PER_RUN),
-    "tweet.fields": "created_at,note_tweet,author_id",
+    "tweet.fields": "created_at,note_tweet,author_id,entities",
     expansions: "author_id",
     "user.fields": "username,name",
   });

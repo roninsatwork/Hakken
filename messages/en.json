@@ -7046,6 +7046,8 @@
             "article": "Article",
             "channel": "Channel",
             "published": "Published",
+            "words": "Words kept",
+            "inKnowledge": "In knowledge",
             "actions": "Actions"
           },
           "filters": {
@@ -7155,23 +7157,42 @@
     },
     "newsItems": {
       "title": "News",
-      "subtitle": "Everything in the News feed, newest first. Items go live as they are collected; take down one that should not be there.",
-      "kindFilter": "Show",
-      "allKinds": "Everything",
+      "subtitle": "Everything Hakken collected from the people you follow, and Google's updates, newest first. It goes live as it is collected; take down anything that should not be there.",
+      "knowledgeNotice": "News keeps a summary of each story. Tick In knowledge on the good ones: Hakken reads and keeps the whole article, Ask Hakken learns from it, and it joins Knowledge.",
+      "searchPlaceholder": "Search stories by title",
+      "inKnowledge": "{count, plural, =1 {# in knowledge} other {# in knowledge}}",
+      "inKnowledgeMore": "{count}+ in knowledge",
       "empty": "Nothing in News yet.",
+      "noMatch": "No stories match.",
       "open": "Open the original",
       "delete": "Take down",
-      "deleteTitle": "Take down news item",
+      "deleteTitle": "Take down story",
       "deleteWarning": "It leaves News for everyone, and is not collected again.",
+      "deleteWarningKept": "It leaves News for everyone, and is not collected again. The article it kept stays in Knowledge; delete it there if it should go too.",
       "deleteConfirm": "Take down <highlight>{title}</highlight>?",
+      "from": {
+        "google": "Google"
+      },
+      "filters": {
+        "from": "From",
+        "everyone": "Everyone",
+        "channel": "Channel",
+        "allChannels": "Every channel",
+        "knowledge": "Knowledge",
+        "everything": "Everything",
+        "IN": "In knowledge",
+        "OUT": "Not in knowledge"
+      },
       "columns": {
-        "item": "Item",
-        "kind": "Kind",
+        "story": "Story",
+        "from": "From",
         "published": "Published",
+        "words": "Words kept",
+        "inKnowledge": "In knowledge",
         "actions": "Actions"
       },
       "errors": {
-        "deleteFailed": "Could not take the item down. Try again."
+        "deleteFailed": "Could not take the story down. Try again."
       }
     },
     "contentEditor": {
@@ -7305,6 +7326,14 @@
       "unpin": "Stop leading with this",
       "leadUntil": "Lead story until {date}",
       "pinFailed": "Could not change the lead story. Try again."
+    },
+    "knowledgeTick": {
+      "label": "Keep {title} in knowledge",
+      "failed": "Could not change whether it is in Knowledge. Try again.",
+      "kept": "Kept",
+      "reading": "Reading the page…",
+      "couldNotKeep": "Could not be kept.",
+      "summaryOnly": "Summary only"
     }
   },
   "ai": {
@@ -9629,7 +9658,9 @@
       "channels": "{count, plural, =1 {# channel} other {# channels}}",
       "sources": "{count, plural, =1 {# source} other {# sources}}",
       "landingPages": "{count, plural, =1 {# landing page} other {# landing pages}}",
-      "conversionKinds": "{count, plural, =1 {# kind of conversion} other {# kinds of conversion}}"
+      "conversionKinds": "{count, plural, =1 {# kind of conversion} other {# kinds of conversion}}",
+      "stories": "{count, plural, =1 {# story} other {# stories}}",
+      "storiesSoFar": "{count, plural, other {#+ stories}}"
     },
     "chart": {
       "download": "Download",

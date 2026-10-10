@@ -295,6 +295,58 @@ export const findByUrlInternal = internalQuery({
   },
 });
 
+/**
+ * A checked article stored whole: its row, its words, Ask Hakken's sections,
+ * its translation asked for and Insights' counts brought up to date. Add from
+ * a link saves through it, and so does a News story ticked into Knowledge
+ * (content-people-knowledge-plan.md, C4), which passes where it came from.
+ */
+export async function storeArticle(
+  ctx: MutationCtx,
+  article: StoredArticle,
+  body: string,
+  from: { newsItemId?: Id<"newsItems">; followId?: Id<"newsFollows"> } = {},
+): Promise<Id<"libraryArticles">> {
+  const now = Date.now();
+  const articleId = await ctx.db.insert("libraryArticles", { ...article, ...from, createdAt: now, updatedAt: now });
+  await ctx.db.insert("libraryArticleTexts", { articleId, body });
+  await syncSections(ctx, articleId, article, body);
+  await translateForReaders(ctx, articleId);
+  await refreshInsightsCounts(ctx);
+  return articleId;
+}
+
+/** An article taken out whole: its words, its sections, its translations and the row; Insights' counts follow. */
+export async function removeArticle(ctx: MutationCtx, articleId: Id<"libraryArticles">): Promise<void> {
+  // One text and at most LIBRARY_MAX_SECTIONS sections an article, by how they are written.
+  const [text, sections] = await Promise.all([
+    ctx.db.query("libraryArticleTexts").withIndex("by_article", (q) => q.eq("articleId", articleId)).first(),
+    ctx.db.query("libraryArticleSections").withIndex("by_article", (q) => q.eq("articleId", articleId)).take(LIBRARY_MAX_SECTIONS),
+  ]);
+  await Promise.all([...(text ? [text] : []), ...sections].map((doc) => ctx.db.delete(doc._id)));
+  await ctx.db.delete(articleId);
+  await removeTranslations(ctx, "libraryArticles", articleId);
+  await refreshInsightsCounts(ctx);
+}
+
+/**
+ * A kept article deleted from Knowledge: the News story it came from is no
+ * longer ticked, and its person's In knowledge count follows.
+ */
+async function releaseNewsLink(ctx: MutationCtx, article: Doc<"libraryArticles">): Promise<void> {
+  const linked = await ctx.db.query("newsItems").withIndex("by_knowledge_article", (q) => q.eq("knowledgeArticleId", article._id)).take(10);
+  for (const item of linked) {
+    await ctx.db.patch(item._id, { knowledgeArticleId: undefined, keeping: undefined, keepProblem: undefined });
+    const follow = item.followId ? await ctx.db.get(item.followId) : null;
+    if (follow) await ctx.db.patch(follow._id, { inKnowledge: Math.max(0, (follow.inKnowledge ?? 0) - 1) });
+  }
+}
+
+/** The article already at this address, if any (L2): a ticked News story joins it rather than keeping a second copy. */
+export async function articleAtAddress(ctx: QueryCtx, url: string) {
+  return await articleAt(ctx, libraryUrlKey(url));
+}
+
 export const createArticle = superAdminMutation({
   args: articleInput,
   returns: v.id("libraryArticles"),
@@ -302,12 +354,7 @@ export const createArticle = superAdminMutation({
     const { article, body } = checkedLibraryArticle(args);
     article.topic = await checkedTopicKey(ctx, args.topic);
     await refuseSecondCopy(ctx, article.url);
-    const now = Date.now();
-    const articleId = await ctx.db.insert("libraryArticles", { ...article, createdAt: now, updatedAt: now });
-    await ctx.db.insert("libraryArticleTexts", { articleId, body });
-    await syncSections(ctx, articleId, article, body);
-    await translateForReaders(ctx, articleId);
-    await refreshInsightsCounts(ctx);
+    const articleId = await storeArticle(ctx, article, body);
     await auditContentChange(ctx, "CREATE_LIBRARY_ARTICLE", "libraryArticles", articleId, { title: article.title, url: article.url, status: article.status });
     return articleId;
   },
@@ -348,15 +395,8 @@ export const deleteArticle = superAdminMutation({
   handler: async (ctx, args) => {
     const existing = await ctx.db.get(args.articleId);
     if (!existing) return null;
-    // One text and at most LIBRARY_MAX_SECTIONS sections an article, by how they are written.
-    const [text, sections] = await Promise.all([
-      ctx.db.query("libraryArticleTexts").withIndex("by_article", (q) => q.eq("articleId", args.articleId)).first(),
-      ctx.db.query("libraryArticleSections").withIndex("by_article", (q) => q.eq("articleId", args.articleId)).take(LIBRARY_MAX_SECTIONS),
-    ]);
-    await Promise.all([...(text ? [text] : []), ...sections].map((doc) => ctx.db.delete(doc._id)));
-    await ctx.db.delete(args.articleId);
-    await removeTranslations(ctx, "libraryArticles", args.articleId);
-    await refreshInsightsCounts(ctx);
+    await removeArticle(ctx, args.articleId);
+    await releaseNewsLink(ctx, existing);
     await auditContentChange(ctx, "DELETE_LIBRARY_ARTICLE", "libraryArticles", args.articleId, { title: existing.title, url: existing.url });
     return null;
   },

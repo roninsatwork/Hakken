@@ -56,6 +56,13 @@ export const libraryArticleTables = {
      * when the article is no longer shown.
      */
     leadUntil: v.optional(v.number()),
+    /**
+     * Kept from News by its In knowledge tick (content-people-knowledge-plan.md,
+     * C4): the story it came from, and the person in "Who to follow" who
+     * published it. Unticking the story takes the article out again.
+     */
+    newsItemId: v.optional(v.id("newsItems")),
+    followId: v.optional(v.id("newsFollows")),
     createdAt: v.number(),
     updatedAt: v.number(),
   })

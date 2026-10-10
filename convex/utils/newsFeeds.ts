@@ -21,6 +21,12 @@ export type FeedEntry = {
   publishedAt: number | null;
   /** The item's words as plain text — its description, summary or content — cut to a length worth summarising. */
   text: string;
+  /**
+   * The article an X post points to, when it points to one: what ticking it
+   * into Knowledge keeps (content-people-knowledge-plan.md, C4). Absent for
+   * anything else, whose own address is the article.
+   */
+  link?: string;
 };
 
 /** Enough of an item to summarise; the rest is left on its own page. */

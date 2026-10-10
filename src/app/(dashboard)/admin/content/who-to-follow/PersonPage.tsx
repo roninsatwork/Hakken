@@ -27,6 +27,7 @@ import { RowActions, RowIconButton } from "@/src/ui/components/screens/Table";
 import { TABLE_PAGE_SIZE } from "@/src/ui/components/screens/pagination";
 import { AddBar } from "../../companies/[id]/websites/_components/AddBar";
 import { ContentDeleteDialog } from "../_components/ContentDialogs";
+import { KnowledgeTick, WordsKept } from "../_components/KnowledgeTick";
 import { useContentDelete } from "../_components/useContentDelete";
 import { topicNameIn, useTopicChoices } from "../_components/TopicSelect";
 
@@ -335,6 +336,12 @@ function PersonItems({ followId, collected }: { followId: Id<"newsFollows">; col
           header: t("person.items.columns.published"),
           sortable: true,
           cell: (item) => <span className="text-[12px] text-secondary">{formatDate(item.publishedAt)}</span>,
+        },
+        { key: "words", header: t("person.items.columns.words"), align: "right", cell: (item) => <WordsKept knowledge={item.knowledge} /> },
+        {
+          key: "inKnowledge",
+          header: t("person.items.columns.inKnowledge"),
+          cell: (item) => <KnowledgeTick itemId={item._id} title={item.titleEn} knowledge={item.knowledge} />,
         },
         {
           key: "actions",

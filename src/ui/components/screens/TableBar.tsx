@@ -34,7 +34,9 @@ export type TableNoun =
   // Web mentions (step 6): pages naming a business, and places to get listed.
   | "mentions" | "places"
   // Google Analytics (google-analytics-plan.md §5): channels, a channel's sources, landing pages, kinds of conversion.
-  | "channels" | "sources" | "landingPages" | "conversionKinds";
+  | "channels" | "sources" | "landingPages" | "conversionKinds"
+  // Admin → Content → News (content-people-knowledge-plan.md, board 4): it pages by cursor, so "so far" until the last page is in.
+  | "stories" | "storiesSoFar";
 
 /**
  * The bar across the top of every Sites table, inside its card (`DataTable`'s

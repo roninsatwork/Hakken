@@ -13,6 +13,7 @@ import { readerFields, removeTranslations, requestTranslation, sourceFields, tra
 import { checkedTopicKey } from "./topics";
 import { kindTopicKey, readInsightsCounts, refreshInsightsCounts, type InsightsCounts } from "./insightsCounts";
 import { listPageArgs, listPageResult, pageOfList } from "./siteListPages";
+import { knowledgeStateOf, knowledgeStateValidator } from "./newsKnowledge";
 
 /**
  * "Who to follow" (docs/plans/active/knowledge-news-and-digest-plan.md, phase
@@ -375,6 +376,8 @@ const followItemValidator = v.object({
   summaryEn: v.string(),
   url: v.string(),
   publishedAt: v.number(),
+  /** Its place in Knowledge, beside its In knowledge tick (C4). */
+  knowledge: knowledgeStateValidator,
 });
 
 /**
@@ -405,7 +408,16 @@ export const listFollowItemsForAdmin = superAdminQuery({
       ).paginate(args.paginationOpts);
     return {
       ...page,
-      page: page.page.map((row) => ({ _id: row._id, kind: row.kind, titleEn: row.titleEn, summaryEn: row.summaryEn, url: row.url, publishedAt: row.publishedAt })),
+      page: await Promise.all(page.page.map(async (row) => ({
+        _id: row._id, kind: row.kind, titleEn: row.titleEn, summaryEn: row.summaryEn, url: row.url, publishedAt: row.publishedAt, knowledge: await knowledgeStateOf(ctx, row),
+      }))),
     };
   },
+});
+
+/** Everyone in "Who to follow" by name, A to Z: News's From filter (board 4). */
+export const listFollowNamesForAdmin = superAdminQuery({
+  args: {},
+  returns: v.array(v.object({ _id: v.id("newsFollows"), name: v.string() })),
+  handler: async (ctx) => (await ctx.db.query("newsFollows").withIndex("by_name").take(MAX_FOLLOWS)).map((row) => ({ _id: row._id, name: row.name })),
 });

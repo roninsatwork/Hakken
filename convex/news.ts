@@ -1,6 +1,6 @@
 import { v } from "convex/values";
-import { paginationOptsValidator, paginationResultValidator } from "convex/server";
-import type { Doc } from "./_generated/dataModel";
+import { paginationOptsValidator, paginationResultValidator, type OrderedQuery } from "convex/server";
+import type { DataModel, Doc, Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { superAdminMutation, superAdminQuery, tenantQuery } from "./tenantFunctions";
 import { appError } from "./utils/appError";
@@ -9,6 +9,7 @@ import { newsItemKindValidator } from "./newsSchema";
 import { readerFields, removeTranslations } from "./contentTranslation";
 import { DEFAULT_EXPECTED_DAYS, updateFacts, updateFactsValidator, updateInLanguage } from "./googleUpdates";
 import { leadPlaceValidator, leadTitle, liveLeadUntil, livePin, placeOf, type LeadPin } from "./leadStory";
+import { forgetTakenDownStory, knowledgeStateOf, knowledgeStateValidator } from "./newsKnowledge";
 import { summaryRow as knowledgeSummaryRow, summaryValidator as knowledgeSummaryValidator } from "./knowledgeArticles";
 import { readerRow as helpfulReaderRow, readerValidator as helpfulReaderValidator } from "./libraryArticles";
 
@@ -55,8 +56,13 @@ const adminItemValidator = v.object({
   _id: v.id("newsItems"),
   kind: newsItemKindValidator,
   sourceName: v.string(),
+  /** The person in "Who to follow" it came from; null for a Google update or an X bookmark. */
+  followId: v.union(v.id("newsFollows"), v.null()),
   titleEn: v.string(),
+  summaryEn: v.string(),
   url: v.string(),
+  /** Its place in Knowledge, beside its In knowledge tick (content-people-knowledge-plan.md, C4, board 4). */
+  knowledge: knowledgeStateValidator,
   publishedAt: v.number(),
   createdAt: v.number(),
   /** A Google update's own item: taken down with the update, not here. */
@@ -202,31 +208,84 @@ export const listNewsItems = tenantQuery({
   },
 });
 
-/** Admin → Content → News: a page of every item, newest first, to take one down. */
+/**
+ * Admin → Content → News (content-people-knowledge-plan.md, board 4): a page
+ * of every story, newest first or oldest first — searched by title (best
+ * match first), or narrowed to one person or Google, one kind and whether it
+ * is in Knowledge — each with its place in Knowledge beside its tick. News
+ * keeps every story for good, so it pages by cursor rather than reading the
+ * whole list.
+ */
 export const listNewsItemsForAdmin = superAdminQuery({
-  args: { paginationOpts: paginationOptsValidator, kind: v.optional(newsItemKindValidator) },
+  args: {
+    paginationOpts: paginationOptsValidator,
+    kind: v.optional(newsItemKindValidator),
+    /** One person, or "GOOGLE" for Google's updates. */
+    from: v.optional(v.union(v.id("newsFollows"), v.literal("GOOGLE"))),
+    knowledge: v.optional(v.union(v.literal("IN"), v.literal("OUT"))),
+    search: v.optional(v.string()),
+    direction: v.optional(v.union(v.literal("asc"), v.literal("desc"))),
+  },
   returns: paginationResultValidator(adminItemValidator),
   handler: async (ctx, args) => {
-    const kind = args.kind;
-    const query = kind
-      ? ctx.db.query("newsItems").withIndex("by_kind_published", (q) => q.eq("kind", kind))
-      : ctx.db.query("newsItems").withIndex("by_published");
-    const page = await query.order("desc").paginate(args.paginationOpts);
+    const { from, knowledge } = args;
+    // Google's stories are its updates: any other kind from Google is none.
+    if (from === "GOOGLE" && args.kind && args.kind !== "GOOGLE_UPDATE") return { page: [], isDone: true, continueCursor: "" };
+    const kind = from === "GOOGLE" ? "GOOGLE_UPDATE" : args.kind;
+    const followId = from === "GOOGLE" ? undefined : from;
+    const direction = args.direction ?? "desc";
+    const search = args.search?.trim();
+    let query: OrderedQuery<DataModel["newsItems"]> = search
+      ? ctx.db.query("newsItems").withSearchIndex("search_title", (q) => {
+        let found = q.search("titleEn", search);
+        if (followId) found = found.eq("followId", followId);
+        if (kind) found = found.eq("kind", kind);
+        return found;
+      })
+      : followId
+        ? ctx.db.query("newsItems").withIndex("by_follow_published", (q) => q.eq("followId", followId)).order(direction)
+          .filter((q) => (kind ? q.eq(q.field("kind"), kind) : true))
+        : kind
+          ? ctx.db.query("newsItems").withIndex("by_kind_published", (q) => q.eq("kind", kind)).order(direction)
+          : ctx.db.query("newsItems").withIndex("by_published").order(direction);
+    if (knowledge) {
+      query = query.filter((q) => (knowledge === "IN" ? q.neq(q.field("knowledgeArticleId"), undefined) : q.eq(q.field("knowledgeArticleId"), undefined)));
+    }
+    const page = await query.paginate(args.paginationOpts);
     return {
       ...page,
-      page: page.page.map((row) => ({
+      page: await Promise.all(page.page.map(async (row) => ({
         _id: row._id,
         kind: row.kind,
         sourceName: row.sourceName,
+        followId: row.followId ?? null,
         titleEn: row.titleEn,
+        summaryEn: row.summaryEn,
         url: row.url,
+        knowledge: await knowledgeStateOf(ctx, row),
         publishedAt: row.publishedAt,
         createdAt: row.createdAt,
         isGoogleUpdate: row.googleUpdateId !== undefined,
         // A pin that has run out leads nothing, so it is not shown as one.
         leadUntil: liveLeadUntil(row.leadUntil),
-      })),
+      }))),
     };
+  },
+});
+
+/** The most News stories counted as in Knowledge; past it the count reads "5,000+". */
+export const IN_KNOWLEDGE_COUNT_LIMIT = 5_000;
+
+/** How many stories are in Knowledge, for the bar above News's table (board 4). */
+export const countNewsInKnowledgeForAdmin = superAdminQuery({
+  args: {},
+  returns: v.object({ count: v.number(), more: v.boolean() }),
+  handler: async (ctx) => {
+    // Every id sorts after "", and a story not in Knowledge has none, so this reads only the ticked ones.
+    const rows = await ctx.db.query("newsItems")
+      .withIndex("by_knowledge_article", (q) => q.gte("knowledgeArticleId", "" as Id<"libraryArticles">))
+      .take(IN_KNOWLEDGE_COUNT_LIMIT + 1);
+    return { count: Math.min(rows.length, IN_KNOWLEDGE_COUNT_LIMIT), more: rows.length > IN_KNOWLEDGE_COUNT_LIMIT };
   },
 });
 
@@ -243,6 +302,7 @@ export const deleteNewsItem = superAdminMutation({
     if (!item) return null;
     if (item.googleUpdateId) throw appError("INVALID_INPUT", "This is a Google update. Delete it in Google updates.");
     await ctx.db.insert("newsTakenDown", { externalKey: item.externalKey, takenDownAt: Date.now() });
+    await forgetTakenDownStory(ctx, item);
     await ctx.db.delete(args.itemId);
     await removeTranslations(ctx, "newsItems", args.itemId);
     await auditContentChange(ctx, "DELETE_NEWS_ITEM", "newsItems", args.itemId, { title: item.titleEn, url: item.url });

@@ -328,6 +328,7 @@ import type * as newsAgentRunActions from "../newsAgentRunActions.js";
 import type * as newsCollector from "../newsCollector.js";
 import type * as newsCollectorRun from "../newsCollectorRun.js";
 import type * as newsFollows from "../newsFollows.js";
+import type * as newsKnowledge from "../newsKnowledge.js";
 import type * as newsSchema from "../newsSchema.js";
 import type * as normalisationMigrations from "../normalisationMigrations.js";
 import type * as notifications from "../notifications.js";
@@ -1075,6 +1076,7 @@ declare const fullApi: ApiFromModules<{
   newsCollector: typeof newsCollector;
   newsCollectorRun: typeof newsCollectorRun;
   newsFollows: typeof newsFollows;
+  newsKnowledge: typeof newsKnowledge;
   newsSchema: typeof newsSchema;
   normalisationMigrations: typeof normalisationMigrations;
   notifications: typeof notifications;

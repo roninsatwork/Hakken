@@ -125,6 +125,17 @@ export const newsTables = {
     publishedAt: v.number(),
     /** What makes it the same item again — its address, or a post's id — so nothing is collected twice. */
     externalKey: v.string(),
+    /** The article an X post points to, when it points to one: what ticking it keeps. */
+    linkUrl: v.optional(v.string()),
+    /**
+     * Ticked into Knowledge (content-people-knowledge-plan.md, C4): its whole
+     * article, kept in Knowledge (`libraryArticles`) for Ask Hakken; while the
+     * page is being read, `keeping` is READING, and FAILED with why when it
+     * could not be.
+     */
+    knowledgeArticleId: v.optional(v.id("libraryArticles")),
+    keeping: v.optional(v.union(v.literal("READING"), v.literal("FAILED"))),
+    keepProblem: v.optional(v.string()),
     /**
      * Pinned in Admin → Content → News as the front page's lead story, until
      * this moment (seven days from pinning, R7). One item at a time.
@@ -139,6 +150,8 @@ export const newsTables = {
     .index("by_google_update", ["googleUpdateId"])
     // A person's page: what they published, newest first, and searched by title (content-people-knowledge-plan.md, board 2).
     .index("by_follow_published", ["followId", "publishedAt"])
+    // An article deleted from Knowledge unticks the story it was kept from.
+    .index("by_knowledge_article", ["knowledgeArticleId"])
     .searchIndex("search_title", { searchField: "titleEn", filterFields: ["followId", "kind"] }),
 
   /**
