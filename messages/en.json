@@ -15030,9 +15030,7 @@
         "week": "Visits a week",
         "month": "Visits a month"
       },
-      "visitsHint": "{period}. A dot marks {step, select, day {a day} week {a week} other {a month}} with a conversion.",
-      "conversionsTitle": "Conversions over time",
-      "conversionsHint": "One line for each kind of conversion, on one scale. Tick Value to add the money on a scale of its own."
+      "visitsHint": "{period}. A dot marks {step, select, day {a day} week {a week} other {a month}} with a conversion."
     },
     "figures": {
       "nothingBefore": "Nothing to compare with yet",
@@ -15061,15 +15059,10 @@
       },
       "conversions": "Conversions",
       "value": "Value",
-      "cookies": "Google Analytics counts only visitors who accept cookies. Unless {host} uses Google's Consent Mode, its real visits and conversions are higher than these.",
       "channelsTitle": "Channels that made the most",
       "channelsDescription": "Where the visits came from, by the value they brought.",
-      "seeAll": "See all {count}",
       "noChannels": "No visits in these dates.",
-      "landingTitle": "Landing pages that made the most",
-      "landingDescription": "The first page of each visit, by the value its visits brought.",
-      "landingLive": "Asking Google for this device's landing pages…",
-      "noPages": "No landing pages in these dates."
+      "landingLive": "Asking Google for this device's landing pages…"
     },
     "heroes": {
       "title": "Heroes and attention",
@@ -15270,10 +15263,7 @@
       "ofVisits": "Of {visits} visits",
       "conversions": "Conversions",
       "value": "Value",
-      "points": "{points} points",
-      "withoutValue": "Without a value",
       "setValue": "{names} · set a value",
-      "allValued": "Every conversion has a value",
       "rateBefore": "{rate} {before}",
       "kindsHappened": "Kinds that happened",
       "kindsOf": "{happened} of {counted}",
@@ -15292,9 +15282,6 @@
         "landing": "Landing pages",
         "channel": "Channels"
       },
-      "findConversion": "Find a conversion…",
-      "changeWhatCounts": "Change what counts",
-      "chosenOnConnection": "Chosen on the Connection page",
       "empty": "Nothing counts as a conversion yet.",
       "columns": {
         "conversion": "Conversion",
@@ -15310,21 +15297,10 @@
         "HAKKEN": "set in {platformName}",
         "REVENUE": "each order's own"
       },
-      "conversionPicker": "Conversion",
-      "everyConversion": "Every conversion",
-      "whereFrom": "Where the visits that made them came from",
-      "landingTitle": "Landing pages that brought them",
-      "landingDescription": "The page each of those visits started on.",
-      "landingSalesTitle": "Landing pages that brought sales",
-      "landingSalesDescription": "The page each buying visit started on.",
-      "seeEveryLandingPage": "See every landing page",
       "landingLive": "Asking Google for this device's landing pages…",
       "noneBrought": "None in these dates.",
       "channelsTitle": "Channels that brought them",
-      "channelsDescription": "Where each of those visits came from.",
-      "channelsSalesTitle": "Channels that brought sales",
-      "channelsSalesDescription": "Where each buying visit came from.",
-      "seeEveryChannel": "See every channel"
+      "channelsDescription": "Where each of those visits came from."
     },
     "landingPage": {
       "back": "Landing pages",
@@ -15333,25 +15309,11 @@
       "openPage": "Open the page",
       "notFound": "This page isn't one of the website's.",
       "noVisits": "No visit started on this page in the {period}.",
-      "visits": "Visits",
-      "engagementRate": "Engagement rate",
-      "wholeWebsite": "{rate} for the whole website",
-      "conversions": "Conversions",
-      "value": "Value",
       "askFailed": "Google couldn't answer for this page's chart and channels just now. Open the page again in a moment.",
       "channelsTitle": "Where its visits came from",
       "channelsDescription": "The channels that brought visits to this page, by value.",
       "asking": "Asking Google…",
-      "noChannels": "No visits in these dates.",
-      "convertedTitle": "What its visits converted into",
-      "convertedDescription": "Each conversion made by a visit that started here.",
-      "nothingConverted": "Nothing counts as a conversion yet.",
-      "conversion": "Conversion",
-      "howMany": "How many",
-      "valueEach": "Value each",
-      "byBeforeUp": "▲ {by} on {before}",
-      "byBeforeDown": "▼ {by} on {before}",
-      "byBeforeSame": "No change on {before}"
+      "noChannels": "No visits in these dates."
     },
     "counts": {
       "reading": "Reading the property's key events from Google…",

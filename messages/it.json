@@ -15030,9 +15030,7 @@
         "week": "Visite a settimana",
         "month": "Visite al mese"
       },
-      "visitsHint": "{period}. Un punto segna {step, select, day {un giorno} week {una settimana} other {un mese}} con una conversione.",
-      "conversionsTitle": "Conversioni nel tempo",
-      "conversionsHint": "Una linea per ogni tipo di conversione, su una sola scala. Spunta Valore per aggiungere il denaro su una scala sua."
+      "visitsHint": "{period}. Un punto segna {step, select, day {un giorno} week {una settimana} other {un mese}} con una conversione."
     },
     "figures": {
       "nothingBefore": "Ancora niente con cui confrontare",
@@ -15061,15 +15059,10 @@
       },
       "conversions": "Conversioni",
       "value": "Valore",
-      "cookies": "Google Analytics conta solo i visitatori che accettano i cookie. Se {host} non usa la Consent Mode di Google, le sue visite e conversioni reali sono più alte di queste.",
       "channelsTitle": "I canali che hanno reso di più",
       "channelsDescription": "Da dove sono arrivate le visite, per il valore che hanno portato.",
-      "seeAll": "Vedili tutti e {count}",
       "noChannels": "Nessuna visita in queste date.",
-      "landingTitle": "Le pagine di destinazione che hanno reso di più",
-      "landingDescription": "La prima pagina di ogni visita, per il valore che le sue visite hanno portato.",
-      "landingLive": "Richiesta a Google delle pagine di destinazione di questo dispositivo…",
-      "noPages": "Nessuna pagina di destinazione in queste date."
+      "landingLive": "Richiesta a Google delle pagine di destinazione di questo dispositivo…"
     },
     "heroes": {
       "title": "Eroi e attenzione",
@@ -15270,10 +15263,7 @@
       "ofVisits": "Su {visits} visite",
       "conversions": "Conversioni",
       "value": "Valore",
-      "points": "{points} punti",
-      "withoutValue": "Senza un valore",
       "setValue": "{names} · imposta un valore",
-      "allValued": "Ogni conversione ha un valore",
       "rateBefore": "{before}: {rate}",
       "kindsHappened": "Tipi successi",
       "kindsOf": "{happened} su {counted}",
@@ -15292,9 +15282,6 @@
         "landing": "Pagine di destinazione",
         "channel": "Canali"
       },
-      "findConversion": "Trova una conversione…",
-      "changeWhatCounts": "Cambia cosa conta",
-      "chosenOnConnection": "Scelte nella pagina Connessione",
       "empty": "Ancora niente conta come conversione.",
       "columns": {
         "conversion": "Conversione",
@@ -15310,21 +15297,10 @@
         "HAKKEN": "impostato in {platformName}",
         "REVENUE": "quello di ogni ordine"
       },
-      "conversionPicker": "Conversione",
-      "everyConversion": "Ogni conversione",
-      "whereFrom": "Da dove sono arrivate le visite che le hanno fatte",
-      "landingTitle": "Le pagine di destinazione che le hanno portate",
-      "landingDescription": "La pagina su cui è iniziata ciascuna di quelle visite.",
-      "landingSalesTitle": "Le pagine di destinazione che hanno portato vendite",
-      "landingSalesDescription": "La pagina su cui è iniziata ogni visita che ha comprato.",
-      "seeEveryLandingPage": "Vedi ogni pagina di destinazione",
       "landingLive": "Richiesta a Google delle pagine di destinazione di questo dispositivo…",
       "noneBrought": "Nessuna in queste date.",
       "channelsTitle": "I canali che le hanno portate",
-      "channelsDescription": "Da dove è arrivata ciascuna di quelle visite.",
-      "channelsSalesTitle": "I canali che hanno portato vendite",
-      "channelsSalesDescription": "Da dove è arrivata ogni visita che ha comprato.",
-      "seeEveryChannel": "Vedi ogni canale"
+      "channelsDescription": "Da dove è arrivata ciascuna di quelle visite."
     },
     "landingPage": {
       "back": "Pagine di destinazione",
@@ -15333,25 +15309,11 @@
       "openPage": "Apri la pagina",
       "notFound": "Questa pagina non è del sito.",
       "noVisits": "Nessuna visita è iniziata su questa pagina negli {period}.",
-      "visits": "Visite",
-      "engagementRate": "Tasso di coinvolgimento",
-      "wholeWebsite": "{rate} per tutto il sito",
-      "conversions": "Conversioni",
-      "value": "Valore",
       "askFailed": "Google non ha potuto rispondere ora per il grafico e i canali di questa pagina. Riaprila tra un momento.",
       "channelsTitle": "Da dove sono arrivate le sue visite",
       "channelsDescription": "I canali che hanno portato visite a questa pagina, per valore.",
       "asking": "Richiesta a Google…",
-      "noChannels": "Nessuna visita in queste date.",
-      "convertedTitle": "In cosa si sono convertite le sue visite",
-      "convertedDescription": "Ogni conversione fatta da una visita iniziata qui.",
-      "nothingConverted": "Ancora niente conta come conversione.",
-      "conversion": "Conversione",
-      "howMany": "Quante",
-      "valueEach": "Valore di ciascuna",
-      "byBeforeUp": "▲ {by} rispetto a {before}",
-      "byBeforeDown": "▼ {by} rispetto a {before}",
-      "byBeforeSame": "Nessuna variazione rispetto a {before}"
+      "noChannels": "Nessuna visita in queste date."
     },
     "counts": {
       "reading": "Lettura degli eventi chiave della proprietà da Google…",

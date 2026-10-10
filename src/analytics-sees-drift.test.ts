@@ -20,19 +20,19 @@ import { readRepoFile, relativePath, repoRoot, walkFiles } from "./test/driftUti
  * read and carry none: Choose the property (13), The first 90 days coming in
  * (15) and the bell (19).
  *
- * Heroes and attention (3, `[siteId]/heroes/page.tsx`) and A landing page's
- * own screen (7, `[siteId]/landing-pages/page/page.tsx`) are built by another
- * session in parallel: each joins this list, carrying its box, when it lands.
- * Neither is excused.
+ * Heroes and attention (3) carries its box on its list; a page of it opens
+ * with its four stages and What to do instead, as drawn, so carries none.
  */
 const ANALYTICS = "src/app/(dashboard)/app/analytics";
 
 const ANALYTICS_SCREENS = [
   `${ANALYTICS}/page.tsx`, // 1 · Your websites
   `${ANALYTICS}/[siteId]/page.tsx`, // 2 · Overview, and 18 · Needs reconnecting
+  `${ANALYTICS}/[siteId]/heroes/page.tsx`, // 3 · Heroes and attention
   `${ANALYTICS}/[siteId]/channels/page.tsx`, // 4 · Channels
   `${ANALYTICS}/[siteId]/channels/channel/page.tsx`, // 5 · A channel's own screen
   `${ANALYTICS}/[siteId]/landing-pages/page.tsx`, // 6 · Landing pages, and 17 · a device asked of Google
+  `${ANALYTICS}/[siteId]/landing-pages/page/page.tsx`, // 7 · A landing page's own screen
   `${ANALYTICS}/[siteId]/all-pages/page.tsx`, // 8 · All pages
   `${ANALYTICS}/[siteId]/conversions/page.tsx`, // 9 · Conversions, and 16 · Nothing counted yet
   `${ANALYTICS}/[siteId]/tracking-health/page.tsx`, // 10 · Tracking health

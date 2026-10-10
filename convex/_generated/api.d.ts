@@ -657,6 +657,7 @@ import type * as utils_searchConsoleTerms from "../utils/searchConsoleTerms.js";
 import type * as utils_searchConsoleViews from "../utils/searchConsoleViews.js";
 import type * as utils_security from "../utils/security.js";
 import type * as utils_sees_aiAnswers from "../utils/sees/aiAnswers.js";
+import type * as utils_sees_analytics from "../utils/sees/analytics.js";
 import type * as utils_sees_analyticsHeroes from "../utils/sees/analyticsHeroes.js";
 import type * as utils_sees_backlinks from "../utils/sees/backlinks.js";
 import type * as utils_sees_competitors from "../utils/sees/competitors.js";
@@ -1429,6 +1430,7 @@ declare const fullApi: ApiFromModules<{
   "utils/searchConsoleViews": typeof utils_searchConsoleViews;
   "utils/security": typeof utils_security;
   "utils/sees/aiAnswers": typeof utils_sees_aiAnswers;
+  "utils/sees/analytics": typeof utils_sees_analytics;
   "utils/sees/analyticsHeroes": typeof utils_sees_analyticsHeroes;
   "utils/sees/backlinks": typeof utils_sees_backlinks;
   "utils/sees/competitors": typeof utils_sees_competitors;
