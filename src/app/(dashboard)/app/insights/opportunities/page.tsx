@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useTranslations } from "next-intl";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { Target } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { ChartCard } from "@/src/ui/components/screens/ChartCard";
@@ -34,8 +34,8 @@ const PLACES = ["4-30", "4-10", "11-20", "21-30"] as const;
  * together, as the newest run worked them out.
  */
 export default function InsightsOpportunitiesPage() {
-  const t = useTranslations("insights.opportunities");
-  const tPlace = useTranslations("insights.place");
+  const t = usePlatformTranslations("insights.opportunities");
+  const tPlace = usePlatformTranslations("insights.place");
   const href = useInsightsHref();
   const site = useInsightsSite();
   const data = useQuery(api.insightsReads.insightsPlan, site ? { siteId: site } : {});

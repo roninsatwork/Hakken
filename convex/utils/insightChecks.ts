@@ -347,7 +347,7 @@ export function candidatesFor(facts: readonly Fact[], own: string): Candidate[] 
     if (notIndexed.length > 0 && read.has("tech.indexed") && read.has("tech.inspected")) {
       add({
         specialist: "technical", pattern: "moneyPageNotIndexed", stake: 6 * notIndexed.length,
-        seen: `Google has indexed [[tech.indexed]] of the [[tech.inspected]] money pages Hakken asked about; ${notIndexed.slice(0, 3).map((key) => `[[${key}]]`).join(", ")} is not.`,
+        seen: `Google has indexed [[tech.indexed]] of the [[tech.inspected]] money pages asked about; ${notIndexed.slice(0, 3).map((key) => `[[${key}]]`).join(", ")} is not.`,
         facts: ["tech.indexed", "tech.inspected", ...notIndexed.slice(0, 3)],
       });
     }

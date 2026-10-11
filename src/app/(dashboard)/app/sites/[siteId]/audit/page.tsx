@@ -132,6 +132,7 @@ export default function SiteAuditPage() {
           <DataTable
             rows={money.pager.pageRows}
             rowKey={(row) => row.page}
+            onRowClick={(row) => router.push(recordHref({ kind: "page", page: row.page }))}
             search={money.search}
             cardHeader={<TableBar footer={money.pager.footer} noun="results" title={money.title} actions={money.download} />}
             empty={money.empty}

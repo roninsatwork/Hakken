@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useTranslations } from "next-intl";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { CalendarDays } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
@@ -22,8 +22,8 @@ import { useInsightsSite } from "../_components/useInsights";
  * PDF.
  */
 export default function InsightsYourMonthPage() {
-  const t = useTranslations("insights.month");
-  const tr = useTranslations("insights.reports");
+  const t = usePlatformTranslations("insights.month");
+  const tr = usePlatformTranslations("insights.reports");
   const site = useInsightsSite();
   const report = useQuery(api.insightsReads.insightsLatestReport, site ? { kind: "MONTHLY", siteId: site } : { kind: "MONTHLY" });
   const did = report?.body.did;

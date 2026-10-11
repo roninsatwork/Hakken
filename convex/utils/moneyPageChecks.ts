@@ -36,6 +36,9 @@ export const speedValidator = v.object({
 });
 export type Speed = Infer<typeof speedValidator>;
 
+/** How the checks name themselves to a website: a plain checker, never the platform's name. */
+export const PAGE_READER_AGENT = "Mozilla/5.0 (compatible; WebsiteCheck/1.0)";
+
 /** Google's three thresholds for a good visit (Core Web Vitals). */
 export const GOOD = { lcpMs: 2500, inpMs: 200, cls: 0.1 } as const;
 

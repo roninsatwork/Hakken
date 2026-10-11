@@ -7,7 +7,7 @@ import { callGoogle } from "./googleApi";
 import { tenantQuery } from "./tenantFunctions";
 import { requireMySite } from "./siteAccess";
 import { orphanPagesOf } from "./insightsReading";
-import { indexedFrom, indexedValidator, pageFactsOf, pageFactsValidator, speedFrom, speedValidator, structuredDataOf, type Indexed, type PageFacts, type Speed } from "./utils/moneyPageChecks";
+import { PAGE_READER_AGENT, indexedFrom, indexedValidator, pageFactsOf, pageFactsValidator, speedFrom, speedValidator, structuredDataOf, type Indexed, type PageFacts, type Speed } from "./utils/moneyPageChecks";
 
 /**
  * The weekly checks on a website's money pages (docs/plans/active/
@@ -51,7 +51,7 @@ export const checkTargets = internalQuery({
     const last = await ctx.db.query("moneyPageChecks").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", hold._id)).first();
     const host = (website.displayHost ?? website.host).replace(/^https?:\/\//, "");
     // A page's address as Search Console's property names it: a web-address property is that address
-    // (www.ronins.co.uk, not ronins.co.uk, else Google refuses the inspection); a domain property takes any.
+    // (the www address, not the bare one, else Google refuses the inspection); a domain property takes any.
     const property = console?.status === "CONNECTED" ? console.property ?? null : null;
     const origin = property && /^https?:\/\//.test(property) ? property.replace(/\/$/, "") : `https://${host}`;
     return {
@@ -106,7 +106,7 @@ async function checkPage(origin: string, page: string, inspect: ((address: strin
       return response.ok ? speedFrom(await response.json()) : null;
     })().catch(() => null),
     (async () => {
-      const response = await fetch(address, { headers: { "User-Agent": "HakkenBot/1.0 (+https://hakken.ai)", Accept: "text/html" } });
+      const response = await fetch(address, { headers: { "User-Agent": PAGE_READER_AGENT, Accept: "text/html" } });
       if (!response.ok) return null;
       const html = await response.text();
       let facts = pageFactsOf(html);

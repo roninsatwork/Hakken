@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
 import { Compass } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { ChangeLine } from "@/src/ui/components/screens/Change";
@@ -27,8 +27,8 @@ import { percentMoved, useServiceName } from "../../_components/strategyWords";
  * for with the best rival on each, and its page's figures.
  */
 export default function InsightsServicePage() {
-  const t = useTranslations("insights.service");
-  const ts = useTranslations("insights.strategy");
+  const t = usePlatformTranslations("insights.service");
+  const ts = usePlatformTranslations("insights.strategy");
   const params = useSearchParams();
   const page = params.get("page") ?? "";
   const site = useInsightsSite();

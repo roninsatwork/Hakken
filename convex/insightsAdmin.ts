@@ -14,7 +14,7 @@ import { INSIGHT_SPECIALISTS } from "./utils/insightTeam";
 /** Weeks listed at most: the newest, a page at a time on the screen. */
 const MOST_WEEKS = 300;
 /** Findings read when counting the patterns: the newest. */
-const MOST_FINDINGS = 3000;
+const MOST_FINDINGS = 900;
 
 const weekRow = v.object({
   weekId: v.id("insightWeeks"),

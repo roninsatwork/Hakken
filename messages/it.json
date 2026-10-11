@@ -2015,7 +2015,7 @@
         "saveParts": "Salva gli interruttori",
         "buyerPanel": {
           "label": "Domande dei clienti",
-          "description": "Il gruppo di circa 40 domande che i clienti farebbero a un assistente AI, costruito da Hakken a partire dalle ricerche e dai servizi dell'azienda, posto a ogni assistente ogni settimana e pagato come le domande dell'azienda."
+          "description": "Un gruppo di circa 40 domande che i clienti farebbero a un assistente AI, costruito a partire dalle ricerche e dai servizi dell'azienda, posto a ogni assistente ogni settimana e pagato come le domande dell'azienda."
         }
       },
       "insights": {
@@ -12151,7 +12151,7 @@
       },
       "notComplete": "È stata scansionata troppo poca parte del sito per giudicarlo.",
       "money": {
-        "notYet": "Hakken controlla le tue pagine che portano clienti una volta a settimana: velocità per i visitatori reali, dati strutturati e se Google le ha indicizzate. Il primo controllo è in arrivo.",
+        "notYet": "Le tue pagine che portano clienti vengono controllate una volta a settimana: velocità per i visitatori reali, dati strutturati e se Google le ha indicizzate. Il primo controllo è in arrivo.",
         "noSpeed": "I dati di velocità di Google per i visitatori reali non sono ancora collegati, quindi la velocità aspetta; dati strutturati e indicizzazione sono controllati.",
         "of": "{a} su {b}",
         "seconds": "{value}s",
@@ -14333,16 +14333,16 @@
         "DISMISSED": "Scartata"
       },
       "titles": {
-        "LOCAL": "{count, plural, one {# correzione} other {# correzioni}} · Scritte da Hakken per i tuoi profili",
-        "REVIEWS": "{count, plural, one {# bozza} other {# bozze}} · Scritte da Hakken",
+        "LOCAL": "{count, plural, one {# correzione} other {# correzioni}} · Scritte per i tuoi profili",
+        "REVIEWS": "{count, plural, one {# bozza} other {# bozze}} · Pronte per te",
         "LINKS": "{count, plural, one {# sito} other {# siti}} · Siti che rimandano ai tuoi concorrenti e non a te, ognuno con un'email pronta"
       },
       "download": "Scarica CSV",
       "noMatch": "Nessuna bozza corrisponde",
       "empty": {
-        "LOCAL": "Niente da correggere sui tuoi profili questa settimana. Hakken guarda di nuovo con le scoperte di ogni settimana.",
-        "REVIEWS": "Nessuna bozza per le recensioni questa settimana. Hakken guarda di nuovo con le scoperte di ogni settimana.",
-        "LINKS": "Nessun sito a cui scrivere questa settimana. Hakken guarda di nuovo con le scoperte di ogni settimana."
+        "LOCAL": "Niente da correggere sui tuoi profili questa settimana. Si guarda di nuovo con le scoperte di ogni settimana.",
+        "REVIEWS": "Nessuna bozza per le recensioni questa settimana. Si guarda di nuovo con le scoperte di ogni settimana.",
+        "LINKS": "Nessun sito a cui scrivere questa settimana. Si guarda di nuovo con le scoperte di ogni settimana."
       },
       "seeInsights": {
         "LOCAL": "Vedi le scoperte di Insights sui tuoi profili",
@@ -14363,7 +14363,7 @@
         "why": "Perché",
         "status": "Stato"
       },
-      "googleAccess": "Finché Google non approva l'accesso di Hakken al Profilo dell'attività, una correzione approvata viene copiata perché tu la incolli. Dopo l'approvazione, Hakken la fa da sé, e chiamate, richieste di indicazioni e clic al sito si aggiungono a questa pagina.",
+      "googleAccess": "Finché Google non approva l'accesso al Profilo dell'attività, una correzione approvata viene copiata perché tu la incolli. Dopo l'approvazione, la correzione viene fatta per te, e chiamate, richieste di indicazioni e clic al sito si aggiungono a questa pagina.",
       "gone": "Questa bozza non c'è più",
       "goneDescription": "Le bozze si tengono due anni, e solo per i siti della tua azienda.",
       "failed": "Non è stato possibile aggiornare la bozza. Riprova.",
@@ -14377,7 +14377,7 @@
       "copyAgain": "Copia di nuovo",
       "dismiss": "Non questa",
       "undo": "Rimettila come bozza",
-      "copied": "Copiata. Incollala dove serve; il link al suo interno dice a Hakken cosa ha portato.",
+      "copied": "Copiata. Incollala dove serve; il link al suo interno mostra cosa ha portato.",
       "tagged": "Il link porta la campagna {campaign}, così Google Analytics conta le visite e le richieste che porta, e lo Storico le mostra accanto a questa modifica.",
       "howTo": {
         "CATEGORY": "Cambiala nel tuo Profilo dell'attività su Google: Modifica profilo, poi Categoria dell'attività.",
@@ -14390,8 +14390,8 @@
       }
     },
     "buyerPanel": {
-      "noticeOff": "Il gruppo di domande dei clienti di Hakken: {count} domande costruite da ciò che i tuoi clienti cercano e dai servizi che vendi, con e senza il tuo nome. Saranno poste a ChatGPT, Gemini, Perplexity, Claude e alla Modalità AI di Google ogni settimana, una volta attivate le Domande dei clienti per la tua azienda.",
-      "noticeOn": "Il gruppo di domande dei clienti di Hakken: {count} domande costruite da ciò che i tuoi clienti cercano e dai servizi che vendi, con e senza il tuo nome; {asking} sono poste a ogni assistente ogni settimana, e le risposte entrano nella tabella qui sotto.",
+      "noticeOff": "Il gruppo di domande dei clienti: {count} domande costruite da ciò che i tuoi clienti cercano e dai servizi che vendi, con e senza il tuo nome. Saranno poste a ChatGPT, Gemini, Perplexity, Claude e alla Modalità AI di Google ogni settimana, una volta attivate le Domande dei clienti per la tua azienda.",
+      "noticeOn": "Il gruppo di domande dei clienti: {count} domande costruite da ciò che i tuoi clienti cercano e dai servizi che vendi, con e senza il tuo nome; {asking} sono poste a ogni assistente ogni settimana, e le risposte entrano nella tabella qui sotto.",
       "search": "Trova una domanda",
       "builtFrom": "Costruita da",
       "everySource": "Ogni fonte",
@@ -15224,7 +15224,7 @@
         "growBest": "Metti l'impegno del prossimo trimestre su {text}."
       },
       "indexing": {
-        "noIndexing": "Hakken non ha ancora chiesto a Google delle tue pagine che portano clienti: il primo controllo settimanale è in arrivo.",
+        "noIndexing": "Le tue pagine che portano clienti non sono ancora state controllate con Google: il primo controllo settimanale è in arrivo.",
         "indexedOf": "Google ha indicizzato {a} delle tue {b} pagine che portano clienti.",
         "notIndexed": "{text} non è indicizzata, quindi non può comparire nei risultati di Google.",
         "oldestRead": "La pagina che Google ha letto da più tempo è {text}, il {day1}: una modifica fatta dopo non è ancora nei risultati.",
@@ -15280,7 +15280,7 @@
       "tableTitle": "{count, plural, one {# pagina} other {# pagine}} · Le tue pagine che portano clienti",
       "download": "Scarica CSV",
       "noMatch": "Nessuna pagina corrisponde",
-      "empty": "Hakken chiede a Google delle tue pagine che portano clienti una volta a settimana. Il primo controllo è in arrivo.",
+      "empty": "Le tue pagine che portano clienti vengono controllate con Google una volta a settimana. Il primo controllo è in arrivo.",
       "indexed": "Indicizzata",
       "notIndexed": "Non indicizzata",
       "notAsked": "Non ancora chiesto",
@@ -17824,11 +17824,11 @@
     "section": {
       "title": "Insights",
       "description": "{company}, letta come farebbe un'agenzia: Google, le risposte dell'IA, il profilo dell'attività, Search Console e Google Analytics, a confronto con i concorrenti.",
-      "lastLooked": "Ultima lettura di Hakken {when}",
+      "lastLooked": "Ultima lettura di {platformName} {when}",
       "website": "Sito",
       "everyWebsite": "Tutti i siti",
       "noCompanyTitle": "Insights legge i siti di un'azienda",
-      "noCompanyDescription": "Apri lo spazio di lavoro di un'azienda per vedere cosa ha trovato Hakken."
+      "noCompanyDescription": "Apri lo spazio di lavoro di un'azienda per vedere cosa ha trovato {platformName}."
     },
     "menu": {
       "label": "Insights",
@@ -17911,7 +17911,7 @@
       "recommended": {
         "title": "Consigliato per le domande dei tuoi clienti",
         "short": "consigli dell'IA",
-        "hint": "Le risposte che nominano ogni sito, tra gli assistenti di IA a cui Hakken pone le domande dei tuoi clienti.",
+        "hint": "Le risposte che nominano ogni sito, tra gli assistenti di IA a cui {platformName} pone le domande dei tuoi clienti.",
         "figure": "Risposte che lo nominano"
       },
       "cited": {
@@ -17941,10 +17941,10 @@
     },
     "leaderboards": {
       "title": "Classifiche",
-      "description": "La tua posizione rispetto a {rivals, plural, one {un concorrente} other {# concorrenti}}: prima le quattro classifiche principali, poi ogni altra misura che Hakken legge. Apri una classifica per i dettagli.",
+      "description": "La tua posizione rispetto a {rivals, plural, one {un concorrente} other {# concorrenti}}: prima le quattro classifiche principali, poi ogni altra misura che {platformName} legge. Apri una classifica per i dettagli.",
       "descriptionLoading": "La tua posizione rispetto ai concorrenti.",
       "emptyTitle": "Ancora nessuna classifica",
-      "emptyDescription": "Le classifiche si riempiono quando Hakken ha letto questo sito e i suoi concorrenti.",
+      "emptyDescription": "Le classifiche si riempiono quando {platformName} ha letto questo sito e i suoi concorrenti.",
       "and": ", ",
       "asOf": "Dati fino al {day}.",
       "sees": {
@@ -17969,12 +17969,12 @@
       "notFound": "Questa classifica non esiste",
       "notFoundDescription": "Apri le classifiche per vederle tutte.",
       "emptyTitle": "Ancora nessuna classifica",
-      "emptyDescription": "Questa classifica si riempie quando Hakken ha letto questo sito e i suoi concorrenti.",
+      "emptyDescription": "Questa classifica si riempie quando {platformName} ha letto questo sito e i suoi concorrenti.",
       "seeAll": "Vedi le classifiche",
       "sees": {
         "lead": "Sei in testa con {figure}; segue {second} con {secondFigure}.",
         "place": "Sei {place} su {total} con {figure}; è in testa {leader} con {leaderFigure}.",
-        "noMove": "I movimenti compaiono quando Hakken ha un anno di questa classifica.",
+        "noMove": "I movimenti compaiono quando {platformName} ha un anno di questa classifica.",
         "held": "Hai mantenuto la posizione nell'anno.",
         "rose": "Sei salito di {count, plural, one {un posto} other {# posti}} in un anno.",
         "fell": "Sei sceso di {count, plural, one {un posto} other {# posti}} in un anno.",
@@ -18073,7 +18073,7 @@
     },
     "findings": {
       "title": "Tutti i risultati",
-      "description": "Ogni risultato che Hakken ha scritto per te. Ognuno è una storia tra le tue fonti, con cosa fare e come sapremo se ha funzionato.",
+      "description": "Ogni risultato che {platformName} ha scritto per te. Ognuno è una storia tra le tue fonti, con cosa fare e come sapremo se ha funzionato.",
       "table": {
         "search": "Cerca risultati...",
         "pattern": "Schema",
@@ -18094,19 +18094,19 @@
     },
     "week": {
       "title": "Questa settimana",
-      "description": "Cosa ha trovato Hakken nella sua ultima lettura di tutte le tue fonti insieme. Ogni risultato è qualcosa che nessuna fonte mostra da sola.",
+      "description": "Cosa ha trovato {platformName} nella sua ultima lettura di tutte le tue fonti insieme. Ogni risultato è qualcosa che nessuna fonte mostra da sola.",
       "seeFinding": "Vedi il risultato",
       "sees": {
-        "count": "{count, plural, one {Un risultato} other {# risultati}} nell'ultima lettura di Hakken. Il primo su cui agire: {first}",
-        "checked": "Hakken ha controllato {checked} dati tra le tue fonti e i concorrenti, e ha escluso {ruledOut, plural, one {una spiegazione} other {# spiegazioni}} prima di scriverli.",
-        "none": "Nell'ultima lettura di Hakken nulla si è mosso abbastanza da segnalarlo. I dati sono stabili."
+        "count": "{count, plural, one {Un risultato} other {# risultati}} nell'ultima lettura di {platformName}. Il primo su cui agire: {first}",
+        "checked": "{platformName} ha controllato {checked} dati tra le tue fonti e i concorrenti, e ha escluso {ruledOut, plural, one {una spiegazione} other {# spiegazioni}} prima di scriverli.",
+        "none": "Nell'ultima lettura di {platformName} nulla si è mosso abbastanza da segnalarlo. I dati sono stabili."
       },
       "figures": {
         "new": "Nuovi questa settimana",
         "open": "{count} aperti in tutto",
         "atStake": "Richieste in gioco",
         "atStakeDetail": "a trimestre, al ritmo dell'anno scorso",
-        "checked": "Dati controllati da Hakken",
+        "checked": "Dati controllati da {platformName}",
         "checkedDetail": "in {sources, plural, one {una fonte} other {# fonti}} e tra i concorrenti",
         "ruledOut": "Spiegazioni escluse",
         "ruledOutDetail": "prima di scriverli"
@@ -18119,7 +18119,7 @@
         "now": "Gli ultimi 90 giorni",
         "visitorsPerEnquiry": "Visitatori per ogni richiesta",
         "googleClicksPerEnquiry": "Clic da Google per ogni richiesta",
-        "empty": "Si riempie quando Hakken ha un anno dei tuoi dati."
+        "empty": "Si riempie quando {platformName} ha un anno dei tuoi dati."
       }
     },
     "finding": {
@@ -18147,20 +18147,20 @@
         "empty": "Nessuna prova disponibile."
       },
       "ruledOut": {
-        "title": "Cosa ha escluso Hakken",
+        "title": "Cosa ha escluso {platformName}",
         "explanation": "Spiegazione",
-        "why": "Perché Hakken l'ha esclusa",
+        "why": "Perché {platformName} l'ha esclusa",
         "empty": "Per questo risultato non è stato escluso nulla."
       },
       "download": "Scarica CSV",
-      "howWeKnow": "Come lo sapremo: Hakken ricontrolla il {day}. {how} Il risultato va nel tuo storico in ogni caso.",
-      "taskAsk": "Imposta delle attività Hakken per {host}: {action} Poi tienilo d'occhio: {how} Dimmi com'è andata entro il {day}.",
-      "toTasks": "Aggiungi i passi alle attività Hakken"
+      "howWeKnow": "Come lo sapremo: {platformName} ricontrolla il {day}. {how} Il risultato va nel tuo storico in ogni caso.",
+      "taskAsk": "Imposta delle attività {platformName} per {host}: {action} Poi tienilo d'occhio: {how} Dimmi com'è andata entro il {day}.",
+      "toTasks": "Aggiungi i passi alle attività {platformName}"
     },
     "summary": {
       "title": "Sintesi per la direzione",
       "description": "{company} in breve: gli ultimi 90 giorni rispetto alle stesse settimane dell'anno scorso e ai concorrenti.",
-      "noWeek": "Hakken non ha ancora letto le tue fonti: la sintesi si riempie dopo la prima esecuzione del team.",
+      "noWeek": "{platformName} non ha ancora letto le tue fonti: la sintesi si riempie dopo la prima esecuzione del team.",
       "seeFinding": "Vedi il risultato",
       "noYear": "Ancora nessun dato per l'anno scorso",
       "changeOn": "{percent}% rispetto a {before} l'anno scorso",
@@ -18178,7 +18178,7 @@
         "hint": "I tuoi visitatori stimati da Google come quota dei tuoi e di quelli dei concorrenti, mese per mese.",
         "month": "Mese",
         "figure": "La tua quota",
-        "empty": "Si riempie quando Hakken ha qualche mese del tuo mercato."
+        "empty": "Si riempie quando {platformName} ha qualche mese del tuo mercato."
       },
       "per": {
         "title": "Visite per ogni richiesta, mese per mese",
@@ -18217,7 +18217,7 @@
         "rivals": "Rispetto ai concorrenti",
         "noMatch": "Nessuna misura corrisponde alla ricerca."
       },
-      "did": "Nella sua ultima lettura Hakken ha controllato {checked} dati tra le tue fonti e i concorrenti, ha escluso {ruledOut, plural, one {una spiegazione} other {# spiegazioni}} e ha scritto {findings, plural, one {un risultato} other {# risultati}}.",
+      "did": "Nella sua ultima lettura {platformName} ha controllato {checked} dati tra le tue fonti e i concorrenti, ha escluso {ruledOut, plural, one {una spiegazione} other {# spiegazioni}} e ha scritto {findings, plural, one {un risultato} other {# risultati}}.",
       "downloadBoard": "Scarica il report per il consiglio"
     },
     "pdf": {
@@ -18237,28 +18237,28 @@
       "status": "Stato",
       "shareTitle": "La nostra quota dei visitatori da Google del nostro mercato",
       "enquiriesTitle": "Richieste al mese",
-      "findings": "Cosa ha trovato Hakken",
+      "findings": "Cosa ha trovato {platformName}",
       "risks": "Rischi",
       "opportunities": "Opportunità",
       "next": "Le priorità del prossimo trimestre",
       "decision": "La decisione che raccomandiamo",
       "whatHappened": "Cosa è successo",
       "whatsNext": "Cosa succede ora",
-      "did": "Cosa ha fatto Hakken",
-      "writtenBy": "Scritto da Hakken",
+      "did": "Cosa ha fatto {platformName}",
+      "writtenBy": "Scritto da {platformName}",
       "confidential": "Riservato al consiglio di {company}",
-      "footer": "Scritto da Hakken da Google Search Console, Google Analytics e dati di mercato, fino al {day}.",
+      "footer": "Scritto da {platformName} da Google Search Console, Google Analytics e dati di mercato, fino al {day}.",
       "page": "{page} / {of}",
       "covers": "Report di marketing per il consiglio, dal {from} al {to}",
       "points": "punti",
-      "author": "Hakken",
+      "author": "{platformName}",
       "visits": "Visite",
       "googleClicks": "Clic da Google",
       "drawing": "Preparazione del PDF…"
     },
     "reports": {
       "title": "Report",
-      "description": "Ogni sintesi, report mensile e report per il consiglio che Hakken ha scritto per te, esattamente come è stato scritto. Conservati per due anni.",
+      "description": "Ogni sintesi, report mensile e report per il consiglio che {platformName} ha scritto per te, esattamente come è stato scritto. Conservati per due anni.",
       "search": "Cerca report...",
       "kind": "Tipo",
       "everyKind": "Tutti i tipi",
@@ -18324,17 +18324,17 @@
     "month": {
       "title": "Il tuo mese: {month}",
       "titleNone": "Il tuo mese",
-      "description": "Cosa è successo, perché, cosa ha fatto Hakken e cosa succede ora. Scritto il 4 di ogni mese.",
+      "description": "Cosa è successo, perché, cosa ha fatto {platformName} e cosa succede ora. Scritto il 4 di ogni mese.",
       "download": "Scarica il report",
       "noneTitle": "Ancora nessun report mensile",
-      "noneDescription": "Hakken scrive il report del mese dal 4 del mese successivo.",
-      "didTitle": "Cosa ha fatto Hakken",
-      "work": "Lavoro svolto da Hakken",
+      "noneDescription": "{platformName} scrive il report del mese dal 4 del mese successivo.",
+      "didTitle": "Cosa ha fatto {platformName}",
+      "work": "Lavoro svolto da {platformName}",
       "howMuch": "Quanto",
       "noWork": "Niente di registrato per questo mese."
     },
     "enquiryCheck": {
-      "intro": "Hakken non è sicuro che ogni richiesta sia contata una sola volta, quindi i dati basati sul conteggio potrebbero risultare alti. {problems} La verifica delle misurazioni dice cosa controllare.",
+      "intro": "{platformName} non è sicuro che ogni richiesta sia contata una sola volta, quindi i dati basati sul conteggio potrebbero risultare alti. {problems} La verifica delle misurazioni dice cosa controllare.",
       "countedTwice": "\"{event}\" e \"{other}\" sono avvenuti {a} e {b} volte in 12 mesi: una richiesta potrebbe essere contata due volte.",
       "repeated": "\"{event}\" è avvenuto {a} volte da {b} persone in 12 mesi: alcune sono ripetizioni, o non sono persone.",
       "leavesBefore": "{a} delle {b} persone che hanno cliccato un link verso un altro sito hanno poi fatto una richiesta: il tuo modulo potrebbe contare come uscita dal sito, o dei bot potrebbero compilarlo."
@@ -18460,10 +18460,10 @@
     },
     "track": {
       "title": "Storico",
-      "description": "Ogni risultato che Hakken ha scritto, se hai agito e se si è rivelato giusto, verificato nella data che ognuno indica.",
+      "description": "Ogni risultato che {platformName} ha scritto, se hai agito e se si è rivelato giusto, verificato nella data che ognuno indica.",
       "sees": {
         "checked": "Dei {checked} risultati verificati finora, {right} si sono rivelati giusti e {wrong} non hanno tenuto.",
-        "none": "Hakken ha scritto {written} risultati e nessuno è ancora da verificare: le prime verifiche sono il {day}, e questa pagina si riempie man mano.",
+        "none": "{platformName} ha scritto {written} risultati e nessuno è ancora da verificare: le prime verifiche sono il {day}, e questa pagina si riempie man mano.",
         "act": "Agisci su un risultato perché se ne possa misurare l'esito."
       },
       "seeFinding": "Vedi il risultato",
@@ -18506,7 +18506,7 @@
           "MERGED": "unire pagine",
           "FIX": "approvare una correzione scritta"
         },
-        "empty": "Ancora nessuna modifica vista: Hakken registra ogni modifica che vede nei tuoi dati, con cosa è seguito.",
+        "empty": "Ancora nessuna modifica vista: {platformName} registra ogni modifica che vede nei tuoi dati, con cosa è seguito.",
         "campaigns": "Campagne di Analytics",
         "fixFollowed": "{visits, plural, one {# visita} other {# visite}} e {enquiries, plural, one {# richiesta} other {# richieste}} dal suo link"
       },
@@ -18514,7 +18514,7 @@
         "intro": "Cosa insegnano le tue modifiche: {learnings}",
         "own": "Dalle tue modifiche, {kind} ha mantenuto le richieste in {held} casi su {all}.",
         "across": "Su {companies} aziende, le ha mantenute in {held} casi su {all}.",
-        "none": "Man mano che le modifiche vengono misurate, Hakken dice cosa ha fatto ogni tipo di intervento per te, e quanto spesso funziona per aziende come la tua."
+        "none": "Man mano che le modifiche vengono misurate, {platformName} dice cosa ha fatto ogni tipo di intervento per te, e quanto spesso funziona per aziende come la tua."
       },
       "search": "Cerca risultati...",
       "result": "Esito",
@@ -18540,7 +18540,7 @@
     },
     "measurement": {
       "title": "Verifica delle misure",
-      "description": "Prima di consigliare sulle conversioni, Hakken verifica che i dati siano affidabili: ogni richiesta contata, ogni visita su una pagina, e Google e Analytics d'accordo.",
+      "description": "Prima di consigliare sulle conversioni, {platformName} verifica che i dati siano affidabili: ogni richiesta contata, ogni visita su una pagina, e Google e Analytics d'accordo.",
       "emptyTitle": "Nessuna verifica ancora",
       "emptyDescription": "La verifica delle misure gira con le scoperte di ogni settimana e compare dopo la prima.",
       "search": "Cerca verifiche",
@@ -18551,7 +18551,7 @@
       "noMatch": "Nessuna verifica corrisponde",
       "columns": {
         "check": "Verifica",
-        "found": "Cosa ha trovato Hakken",
+        "found": "Cosa ha trovato {platformName}",
         "status": "Stato"
       },
       "statuses": {
@@ -18657,9 +18657,9 @@
     },
     "sources": {
       "title": "Fonti",
-      "description": "Cosa legge Hakken per ognuno dei tuoi siti, quanto indietro arriva e cosa ti direbbe collegando o impostando il resto.",
+      "description": "Cosa legge {platformName} per ognuno dei tuoi siti, quanto indietro arriva e cosa ti direbbe collegando o impostando il resto.",
       "emptyTitle": "Ancora nessun sito",
-      "emptyDescription": "Aggiungi il tuo sito in Siti e Hakken inizia a leggerlo.",
+      "emptyDescription": "Aggiungi il tuo sito in Siti e {platformName} inizia a leggerlo.",
       "search": "Cerca fonti",
       "website": "Sito",
       "tableTitle": "{count} fonti · {host}",
@@ -18669,14 +18669,14 @@
         "source": "Fonte",
         "status": "Stato",
         "history": "Storico",
-        "gives": "Cosa dà a Hakken"
+        "gives": "Cosa dà a {platformName}"
       },
       "names": {
         "market": "I risultati di Google e i tuoi concorrenti",
         "searchConsole": "Google Search Console",
         "analytics": "Google Analytics",
         "businessProfiles": "Profilo dell'attività su Google",
-        "pages": "Le tue pagine, lette da Hakken",
+        "pages": "Le tue pagine, lette da {platformName}",
         "enquiryValue": "Un valore per una richiesta"
       },
       "gives": {
@@ -18701,8 +18701,8 @@
         "analytics": "Gli ultimi 12 mesi e i 12 precedenti"
       },
       "sees": {
-        "everything": "{host} dà a Hakken ogni fonte che legge. Altro storico di Search Console arriva da solo ogni giorno.",
-        "missing": "A {host} {count, plural, one {manca una fonte} other {mancano # fonti}}. La prima permetterebbe a Hakken di {first}."
+        "everything": "{host} dà a {platformName} ogni fonte che legge. Altro storico di Search Console arriva da solo ogni giorno.",
+        "missing": "A {host} {count, plural, one {manca una fonte} other {mancano # fonti}}. La prima permetterebbe a {platformName} di {first}."
       },
       "unlocks": {
         "market": "metterti a confronto con i concorrenti",
@@ -18717,7 +18717,7 @@
         "searchConsole": "Collega Google Search Console.",
         "analytics": "Collega Google Analytics.",
         "businessProfiles": "Aggiungi il profilo dell'attività su Google.",
-        "pages": "Niente da fare: Hakken leggerà le pagine da solo.",
+        "pages": "Niente da fare: {platformName} leggerà le pagine da solo.",
         "enquiryValue": "Dai un valore a una richiesta in Salute del tracciamento."
       },
       "fixLink": {
@@ -18733,7 +18733,7 @@
       "title": "Opportunità",
       "description": "Ricerche che quasi vinci, ordinate per quanto vale vincerle: quanto spesso si fanno, dove sei e quanto converte la pagina.",
       "emptyTitle": "Ancora nessuna opportunità",
-      "emptyDescription": "Hakken calcola le ricerche che quasi vinci con le scoperte di ogni settimana. Compaiono dopo la prima.",
+      "emptyDescription": "{platformName} calcola le ricerche che quasi vinci con le scoperte di ogni settimana. Compaiono dopo la prima.",
       "search": "Trova una ricerca",
       "service": "Servizio",
       "everyService": "Ogni servizio",
@@ -18775,14 +18775,14 @@
       "title": "Piano delle pagine",
       "description": "Quale pagina dovrebbe vincere quale ricerca, e cosa fare con ognuna: ricostruire, ripristinare, rafforzare, aggiornare, tenere o ritirare.",
       "emptyTitle": "Ancora nessun piano",
-      "emptyDescription": "Hakken scrive il piano delle pagine con le scoperte di ogni settimana. Compare dopo la prima.",
+      "emptyDescription": "{platformName} scrive il piano delle pagine con le scoperte di ogni settimana. Compare dopo la prima.",
       "search": "Cerca pagine",
       "action": "Cosa fare",
       "everyAction": "Ogni azione",
       "tableTitle": "{count, plural, one {# pagina} other {# pagine}} · Prima quelle con più in gioco",
       "download": "Scarica CSV",
       "noMatch": "Nessuna pagina corrisponde",
-      "addTask": "Aggiungi ai compiti di Hakken",
+      "addTask": "Aggiungi ai compiti di {platformName}",
       "columns": {
         "page": "Pagina",
         "shouldWin": "Dovrebbe vincere",
@@ -18842,7 +18842,7 @@
       "title": "Funnel",
       "description": "Dall'essere trovati su Google al fare una richiesta, rispetto all'anno scorso, e da dove arrivano i visitatori.",
       "emptyTitle": "Ancora nessun funnel",
-      "emptyDescription": "Hakken costruisce il funnel con le scoperte di ogni settimana, da Search Console e Google Analytics. Compare dopo la prima.",
+      "emptyDescription": "{platformName} costruisce il funnel con le scoperte di ogni settimana, da Search Console e Google Analytics. Compare dopo la prima.",
       "search": "Trova una fonte",
       "noMatch": "Nessuna fonte corrisponde",
       "download": "Scarica CSV",
@@ -18892,9 +18892,9 @@
     },
     "pageReviews": {
       "title": "Revisioni delle pagine",
-      "description": "Ogni pagina che porta richieste: quanti visitatori servono per averne una, rispetto all'anno scorso, e il verdetto di Hakken. Apri una pagina per la sua revisione.",
+      "description": "Ogni pagina che porta richieste: quanti visitatori servono per averne una, rispetto all'anno scorso, e il verdetto di {platformName}. Apri una pagina per la sua revisione.",
       "emptyTitle": "Ancora nessuna revisione",
-      "emptyDescription": "Hakken rivede le pagine che portano clienti con le scoperte di ogni settimana, una volta lette. Compaiono dopo la prima.",
+      "emptyDescription": "{platformName} rivede le pagine che portano clienti con le scoperte di ogni settimana, una volta lette. Compaiono dopo la prima.",
       "search": "Trova una pagina",
       "verdict": "Verdetto",
       "everyVerdict": "Ogni verdetto",
@@ -18925,10 +18925,10 @@
     "pageReview": {
       "back": "Revisioni delle pagine",
       "emptyTitle": "Nessuna revisione per questa pagina",
-      "emptyDescription": "Hakken rivede le pagine che portano clienti con le scoperte di ogni settimana. Questa pagina non è tra loro.",
-      "description": "{host} · {title} · Da Google Analytics, Search Console e la lettura della pagina di Hakken",
-      "toTasks": "Aggiungi i passi ai compiti di Hakken",
-      "taskAsk": "Su {host}, per la pagina {page}: {steps} Imposta un compito di Hakken così me lo ricordo e vediamo cosa cambia.",
+      "emptyDescription": "{platformName} rivede le pagine che portano clienti con le scoperte di ogni settimana. Questa pagina non è tra loro.",
+      "description": "{host} · {title} · Da Google Analytics, Search Console e la lettura della pagina di {platformName}",
+      "toTasks": "Aggiungi i passi ai compiti di {platformName}",
+      "taskAsk": "Su {host}, per la pagina {page}: {steps} Imposta un compito di {platformName} così me lo ricordo e vediamo cosa cambia.",
       "seeExperiments": "Vedi gli esperimenti",
       "searchesTitle": "{count, plural, one {# ricerca} other {# ricerche}} · Le ricerche per cui questa pagina si posiziona, prima le più cercate",
       "noSearches": "I risultati di Google non mostrano ancora questa pagina per nessuna ricerca.",
@@ -18972,7 +18972,7 @@
       "do": "Inizia con {page}: ha più visitatori.",
       "seeReviews": "Vedi le revisioni delle pagine",
       "sees": {
-        "ready": "{count, plural, one {Una modifica è pronta} other {# modifiche sono pronte}} da provare, e {running, plural, =0 {nessuna è} one {una è} other {# sono}} in misurazione. Quando una modifica va online, dillo qui: Hakken misura gli ultimi 30 giorni della pagina otto settimane dopo contro i 30 giorni prima, e scrive il risultato."
+        "ready": "{count, plural, one {Una modifica è pronta} other {# modifiche sono pronte}} da provare, e {running, plural, =0 {nessuna è} one {una è} other {# sono}} in misurazione. Quando una modifica va online, dillo qui: {platformName} misura gli ultimi 30 giorni della pagina otto settimane dopo contro i 30 giorni prima, e scrive il risultato."
       },
       "filter": {
         "READY": "Pronta",
@@ -18996,7 +18996,7 @@
     "quick": {
       "intro": "Il controllo rapido di oggi, {day}: {found}",
       "PAGE_DOWN": "{page} non si è caricata ({status}).",
-      "CLICKS_FELL": "I clic da Google del {day} sono stati {clicks}, contro i soliti {usual}; Hakken controlla se dura.",
+      "CLICKS_FELL": "I clic da Google del {day} sono stati {clicks}, contro i soliti {usual}; {platformName} controlla se dura.",
       "noAnswer": "nessuna risposta"
     }
   }

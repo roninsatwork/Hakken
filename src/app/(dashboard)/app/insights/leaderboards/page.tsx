@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { Trophy } from "lucide-react";
 import { HakkenSees } from "@/src/ui/components/screens/HakkenSees";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
@@ -20,10 +20,10 @@ import { formatNumber } from "../../sites/_components/siteFormat";
  * league, then every other measure Hakken reads. Each opens its own page.
  */
 export default function InsightsLeaderboardsPage() {
-  const t = useTranslations("insights.leaderboards");
-  const tl = useTranslations("insights.leagues");
-  const tPlace = useTranslations("insights.place");
-  const tMenu = useTranslations("insights.menu.pages");
+  const t = usePlatformTranslations("insights.leaderboards");
+  const tl = usePlatformTranslations("insights.leagues");
+  const tPlace = usePlatformTranslations("insights.place");
+  const tMenu = usePlatformTranslations("insights.menu.pages");
   const href = useInsightsHref();
   const data = useInsightsLeagues();
 

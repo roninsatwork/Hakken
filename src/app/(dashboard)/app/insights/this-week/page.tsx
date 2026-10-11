@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useTranslations } from "next-intl";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { CalendarCheck } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { ChartCard } from "@/src/ui/components/screens/ChartCard";
@@ -25,7 +25,7 @@ import { useInsightsHref, useInsightsSite } from "../_components/useInsights";
  * Google clicks it now takes for one enquiry against a year before (I12).
  */
 export default function InsightsThisWeekPage() {
-  const t = useTranslations("insights.week");
+  const t = usePlatformTranslations("insights.week");
   const href = useInsightsHref();
   const site = useInsightsSite();
   const data = useQuery(api.insightsReads.insightsThisWeek, site ? { siteId: site } : {});

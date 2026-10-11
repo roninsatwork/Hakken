@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { Lightbulb } from "lucide-react";
 import type { FunctionReturnType } from "convex/server";
 import type { api } from "@/convex/_generated/api";
@@ -36,7 +36,7 @@ const SORTS: SiteSortColumns<FindingRow, "headline" | "pattern" | "atStake" | "w
  * table's props, for each page to draw under its own header.
  */
 export function useFindingsTable({ rows, when, opening }: { rows: FindingRow[] | undefined; when: "sure" | "found"; opening: "rank" | "week" }): Parameters<typeof DataTable<FindingRow>>[0] {
-  const t = useTranslations("insights.findings.table");
+  const t = usePlatformTranslations("insights.findings.table");
   const words = useInsightWords();
   const router = useRouter();
   const href = useInsightsHref();

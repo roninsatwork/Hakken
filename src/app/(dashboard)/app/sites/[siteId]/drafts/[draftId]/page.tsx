@@ -10,6 +10,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import HakkenEmptyState from "@/src/ui/components/feedback/HakkenEmptyState";
 import { Button } from "@/src/ui/components/screens/Button";
 import { DetailHeader, PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
+import { HakkenSees } from "@/src/ui/components/screens/HakkenSees";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { StatusLabel } from "@/src/ui/components/screens/StatusLabel";
 import { useAdminAction } from "@/src/hooks/useAdminAction";
@@ -56,7 +57,7 @@ export default function SiteDraftPage() {
         pills={<><StatusLabel tone={tone}>{t(`statuses.${draft.status}`)}</StatusLabel><span className="text-[12px] text-secondary">{t("drafted", { day: formatDay(new Date(draft.createdAt).toISOString().slice(0, 10)), target: draft.target })}</span></>}
         action={draft.status === "DISMISSED" ? undefined : <PagePrimaryAction variant="brand" onClick={() => answer("APPROVED")} disabled={busy}>{t(draft.status === "APPROVED" ? "copyAgain" : "approve")}</PagePrimaryAction>}
       />
-      <Notice>{t(`howTo.${draft.kind}`)}</Notice>
+      <HakkenSees says={[draft.why]} steps={[{ words: t(`howTo.${draft.kind}`), link: t(`back.${draft.area}`), href: back }]} />
       <div className="max-w-3xl whitespace-pre-wrap border-l-2 border-border-dim pl-4 text-[14px] leading-relaxed text-foreground">{draft.body}</div>
       {draft.link ? <p className="max-w-2xl text-[12px] text-secondary">{t("tagged", { campaign: draft.campaign })}</p> : null}
       {copied ? <Notice tone="info">{t("copied")}</Notice> : null}

@@ -6,7 +6,7 @@ page-header: Business profile
 search: Find a draft
 filter: Status
 table: Fix | Profile | Why | Status
-  table-bar: # fixes · Drafted by Hakken for your profiles
+  table-bar: # fixes · Drafted for your profiles
     download: Download CSV
   table-footer
 notice (info)

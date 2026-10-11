@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useTranslations } from "next-intl";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { api } from "@/convex/_generated/api";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import { formatDay, formatNumber } from "../../sites/_components/siteFormat";
@@ -14,7 +14,7 @@ import { useInsightsSite } from "./useInsights";
  * before the week's findings come.
  */
 export function QuickCheckNotice() {
-  const t = useTranslations("insights.quick");
+  const t = usePlatformTranslations("insights.quick");
   const site = useInsightsSite();
   const quick = useQuery(api.insightsQuick.insightsQuickCheck, site ? { siteId: site } : {});
   if (!quick || quick.alerts.length === 0) return null;

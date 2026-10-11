@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
 import { Compass } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { ChartCard } from "@/src/ui/components/screens/ChartCard";
@@ -37,7 +37,7 @@ const MONTHS = ["january", "february", "march", "april", "may", "june", "july", 
  * its own page.
  */
 export default function InsightsStrategyPage() {
-  const t = useTranslations("insights.strategy");
+  const t = usePlatformTranslations("insights.strategy");
   const router = useRouter();
   const href = useInsightsHref();
   const site = useInsightsSite();

@@ -1,6 +1,7 @@
 "use node";
 
 import { v } from "convex/values";
+import { appError } from "./utils/appError";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { internalAction, type ActionCtx } from "./_generated/server";
@@ -273,7 +274,7 @@ async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
   }
   const top = saved.find((finding) => finding.status === "PUBLISHED");
   const verdictText = verdictFrom(verdict, fresh.size > 0 ? fresh : facts) ?? top?.headline ?? (reading.facts.length === 0
-    ? "Hakken has nothing to read for this website yet: connect Search Console or Google Analytics."
+    ? "There is nothing to read for this website yet: connect Search Console or Google Analytics."
     : "Nothing this week moved enough to call: the figures are steady.");
   // The executive summary's scorecard and charts, kept with the week (§8).
   const monthly = await ctx.runQuery(internal.insightsReading.monthlyInternal, { holdId: args.holdId });
@@ -663,7 +664,7 @@ async function modelFor(ctx: ActionCtx, args: RunArgs, member: TeamMember | unde
 /** Ask the model, record the call and its cost on the run, and give back its JSON (or null). */
 async function ask(ctx: ActionCtx, args: RunArgs, member: TeamMember | undefined, what: string, system: string, prompt: string): Promise<unknown> {
   const spend = await ctx.runQuery(internal.roleRuns.runSpendLeft, { runId: args.runId });
-  if (spend.limitReached) throw new Error(`The run reached its spend limit ($${spend.spentUsd.toFixed(2)}), so ${what} was not asked.`);
+  if (spend.limitReached) throw appError("CONFLICT", `The run reached its spend limit ($${spend.spentUsd.toFixed(2)}), so ${what} was not asked.`);
   const model = await modelFor(ctx, args, member);
   let text = "";
   let tokens = { input: 0, output: 0 };
@@ -695,7 +696,7 @@ async function ask(ctx: ActionCtx, args: RunArgs, member: TeamMember | undefined
     responseContent: text,
     failed: failed || parsed === null,
   });
-  if (failed) throw new Error(text);
+  if (failed) throw appError("UPSTREAM_FAILURE", text);
   return parsed;
 }
 

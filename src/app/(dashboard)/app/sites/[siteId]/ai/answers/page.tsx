@@ -102,6 +102,7 @@ export default function SiteAnswersPage() {
           <DataTable
             rows={panel.pager.pageRows}
             rowKey={(row) => row.prompt}
+            onRowClick={(row) => setQuestion(row.prompt)}
             search={panel.search}
             filters={panel.filters}
             cardHeader={<TableBar footer={panel.pager.footer} noun="results" title={panel.title} actions={panel.download} />}

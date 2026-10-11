@@ -41,6 +41,9 @@ import { NEAR, opportunitiesFrom, pagePlanFrom, planValidator, siteRateOf, type 
 
 type Reader = { db: QueryCtx["db"] };
 
+/** A website's pages read for their kinds and titles: the most clicked, every page that brings visits. */
+const HOLD_PAGES_READ = 900;
+
 /** The search-and-page rows a fact list names at most: the biggest, enough for any finding. */
 const TOP_ROWS = 25;
 
@@ -367,7 +370,7 @@ export async function marketFacts(ctx: Reader, hold: Doc<"companyWebsites">): Pr
     const day = new Date(Math.max(...checks.map((check) => check.checkedAt))).toISOString().slice(0, 10);
     const inspected = checks.filter((check) => check.indexed);
     if (inspected.length > 0) {
-      facts.add({ key: factKey("tech", "inspected"), value: inspected.length, unit: "count", source: "searchConsole", label: "money pages Hakken asked Google about", to: day });
+      facts.add({ key: factKey("tech", "inspected"), value: inspected.length, unit: "count", source: "searchConsole", label: "money pages asked about in Google's URL inspection", to: day });
       facts.add({ key: factKey("tech", "indexed"), value: inspected.filter((check) => check.indexed?.verdict === "PASS").length, unit: "count", source: "searchConsole", label: "money pages Google has indexed", to: day });
     }
     const timed = checks.filter((check) => check.speed?.lcpMs !== null && check.speed?.lcpMs !== undefined);
@@ -377,7 +380,7 @@ export async function marketFacts(ctx: Reader, hold: Doc<"companyWebsites">): Pr
     }
     const read = checks.filter((check) => check.structured !== null);
     if (read.length > 0) {
-      facts.add({ key: factKey("tech", "marked"), value: read.length, unit: "count", source: "crawl", label: "money pages whose structured data Hakken read", to: day });
+      facts.add({ key: factKey("tech", "marked"), value: read.length, unit: "count", source: "crawl", label: "money pages whose structured data was read", to: day });
       facts.add({ key: factKey("tech", "missingMarkup"), value: read.filter((check) => missingStructuredData(check.kind, check.structured ?? []).length > 0).length, unit: "count", source: "crawl", label: "money pages missing the structured data their kind should carry", to: day });
     }
     for (const check of checks) {
@@ -480,7 +483,7 @@ export const planInternal = internalQuery({
     const site = hold ? await loadSite(ctx, hold._id) : null;
     if (!hold || !site) return none;
     // Each page's kind and title, and its 12 months against the 12 before.
-    const held = await ctx.db.query("holdPages").withIndex("by_hold_clicks", (q) => q.eq("companyWebsiteId", hold._id)).order("desc").take(3000);
+    const held = await ctx.db.query("holdPages").withIndex("by_hold_clicks", (q) => q.eq("companyWebsiteId", hold._id)).order("desc").take(HOLD_PAGES_READ);
     const kindOf = new Map(held.map((page) => [page.page, page]));
     const figures = new Map<string, PageFigures>();
     const connection = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
@@ -721,7 +724,7 @@ export const strategyInternal = internalQuery({
   handler: async (ctx, args) => {
     const hold = await ctx.db.get(args.holdId);
     if (!hold) return [];
-    const pages = await ctx.db.query("holdPages").withIndex("by_hold_clicks", (q) => q.eq("companyWebsiteId", hold._id)).order("desc").take(3000);
+    const pages = await ctx.db.query("holdPages").withIndex("by_hold_clicks", (q) => q.eq("companyWebsiteId", hold._id)).order("desc").take(HOLD_PAGES_READ);
     const kindOf = new Map(pages.map((page) => [page.page, page.pageType]));
     const titleOf = new Map(pages.map((page) => [page.page, page.title ?? null]));
     const sum = new Map<string, Omit<Service, "verdict">>();

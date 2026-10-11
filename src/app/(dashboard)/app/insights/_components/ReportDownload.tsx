@@ -1,18 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { Download } from "lucide-react";
 import { PagePrimaryAction } from "@/src/ui/components/screens/PageHeader";
 import { formatDay } from "../../sites/_components/siteFormat";
-import type { PdfWords, ReportView } from "./reportPdf";
+import type { PdfWords, ReportView } from "./ReportPdf";
 
 /** The PDF's words, in the screen's language. */
 function usePdfWords(report: ReportView | null): PdfWords {
-  const t = useTranslations("insights.pdf");
-  const tm = useTranslations("insights.summary.measures");
-  const ts = useTranslations("insights.summary.status");
-  const tw = useTranslations("insights.reports.work");
+  const t = usePlatformTranslations("insights.pdf");
+  const tm = usePlatformTranslations("insights.summary.measures");
+  const ts = usePlatformTranslations("insights.summary.status");
+  const tw = usePlatformTranslations("insights.reports.work");
   const measures = ["enquiries", "visitors", "visitorsPerEnquiry", "googleVisits", "googleClicksPerEnquiry", "googleEnquiries", "aiVisits", "marketShare", "aiMentions", "strength", "reviews"];
   return {
     boardReport: t("boardReport"), monthlyReport: t("monthlyReport"), summary: t("summary"), market: t("market"), quarter: t("quarter"), plan: t("plan"), month: t("month"),
@@ -37,14 +37,14 @@ function usePdfWords(report: ReportView | null): PdfWords {
  * library loaded only now, so no screen carries it. Never emailed (I17).
  */
 export function ReportDownloadAction({ report, label }: { report: ReportView | null | undefined; label: string }) {
-  const t = useTranslations("insights.pdf");
+  const t = usePlatformTranslations("insights.pdf");
   const words = usePdfWords(report ?? null);
   const [busy, setBusy] = useState(false);
   if (!report || report.kind === "WEEKLY") return null;
   const download = async () => {
     setBusy(true);
     try {
-      const { downloadReportPdf } = await import("./reportPdf");
+      const { downloadReportPdf } = await import("./ReportPdf");
       await downloadReportPdf(report, words, formatDay(new Date(report.createdAt).toISOString().slice(0, 10)));
     } finally {
       setBusy(false);

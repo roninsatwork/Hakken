@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
 import { FileText } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
@@ -26,7 +26,7 @@ import { useInsightsHref, useInsightsSite } from "../_components/useInsights";
  * opens the report.
  */
 export default function InsightsReportsPage() {
-  const t = useTranslations("insights.reports");
+  const t = usePlatformTranslations("insights.reports");
   const router = useRouter();
   const href = useInsightsHref();
   const site = useInsightsSite();

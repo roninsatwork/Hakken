@@ -6,7 +6,7 @@ page-header: Your reviews
 search: Find a draft
 filter: Status
 table: Draft | For | Why | Status
-  table-bar: # drafts · Drafted by Hakken
+  table-bar: # drafts · Ready for you
     download: Download CSV
   table-footer
 figures

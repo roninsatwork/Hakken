@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { Trophy } from "lucide-react";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
 import { HakkenSees } from "@/src/ui/components/screens/HakkenSees";
@@ -39,9 +39,9 @@ const SORTS: SiteSortColumns<Row, "place" | "label" | "value" | "move" | "gap"> 
 export default function InsightsLeaguePage() {
   const params = useParams();
   const id = String(params.league ?? "");
-  const t = useTranslations("insights.league");
-  const tl = useTranslations("insights.leagues");
-  const tPlace = useTranslations("insights.place");
+  const t = usePlatformTranslations("insights.league");
+  const tl = usePlatformTranslations("insights.leagues");
+  const tPlace = usePlatformTranslations("insights.place");
   const href = useInsightsHref();
   const data = useInsightsLeagues();
   const league = data?.leagues.find((entry) => entry.id === id) ?? null;

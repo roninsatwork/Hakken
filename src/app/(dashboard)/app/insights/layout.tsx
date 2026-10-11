@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { Lightbulb } from "lucide-react";
-import { useTranslations } from "next-intl";
 import Header from "@/src/ui/components/layout/Header";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
 import { Select } from "@/src/ui/components/screens/Select";
@@ -19,7 +19,7 @@ import { useInsightsHome } from "./_components/useInsights";
  * read the whole company with a filter for one website (`site`).
  */
 export default function InsightsLayout({ children }: { children: React.ReactNode }) {
-  const t = useTranslations("insights.section");
+  const t = usePlatformTranslations("insights.section");
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();

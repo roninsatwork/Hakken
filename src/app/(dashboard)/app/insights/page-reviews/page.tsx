@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
 import { ScanSearch } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { ChartCard } from "@/src/ui/components/screens/ChartCard";
@@ -30,8 +30,8 @@ import { useInsightsHref, useInsightsSite } from "../_components/useInsights";
  * specialist's verdict. A page opens its own review.
  */
 export default function InsightsPageReviewsPage() {
-  const t = useTranslations("insights.pageReviews");
-  const tVerdict = useTranslations("insights.verdicts");
+  const t = usePlatformTranslations("insights.pageReviews");
+  const tVerdict = usePlatformTranslations("insights.verdicts");
   const router = useRouter();
   const href = useInsightsHref();
   const site = useInsightsSite();

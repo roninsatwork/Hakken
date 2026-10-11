@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useTranslations } from "next-intl";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { ListChecks } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { PageHeader } from "@/src/ui/components/screens/PageHeader";
@@ -16,7 +16,7 @@ import { useInsightsSite } from "../_components/useInsights";
  * we'll know. Kept two years (I7).
  */
 export default function InsightsAllFindingsPage() {
-  const t = useTranslations("insights.findings");
+  const t = usePlatformTranslations("insights.findings");
   const site = useInsightsSite();
   const rows = useQuery(api.insightsReads.insightsAllFindings, site ? { siteId: site } : {});
   const table = useFindingsTable({ rows, when: "found", opening: "week" });

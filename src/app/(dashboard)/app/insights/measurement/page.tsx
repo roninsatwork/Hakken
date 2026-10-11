@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useTranslations } from "next-intl";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { Gauge } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { ChartCard } from "@/src/ui/components/screens/ChartCard";
@@ -40,7 +40,7 @@ const FIX_AT: Partial<Record<MeasurementCheck["check"], "trackingHealth" | "anal
  * so the page and the findings agree; each check says where it is put right.
  */
 export default function InsightsMeasurementPage() {
-  const t = useTranslations("insights.measurement");
+  const t = usePlatformTranslations("insights.measurement");
   const site = useInsightsSite();
   const data = useQuery(api.insightsReads.insightsMeasurement, site ? { siteId: site } : {});
   const [search, setSearch, term] = useSiteSearch();

@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { ArrowUpRight } from "lucide-react";
-import { useTranslations } from "next-intl";
 import type { FunctionReturnType } from "convex/server";
 import type { api } from "@/convex/_generated/api";
 import { ChartCard } from "@/src/ui/components/screens/ChartCard";
@@ -25,8 +25,8 @@ export function leagueName(league: LeagueData, row: LeagueData["rows"][number]):
  * — Sites' own bar chart, never a copy — with the way to the league's page.
  */
 export function LeagueCard({ league, host, href, title }: { league: LeagueData; host: string; href?: string; title?: string }) {
-  const t = useTranslations("insights.leagues");
-  const tPlace = useTranslations("insights.place");
+  const t = usePlatformTranslations("insights.leagues");
+  const tPlace = usePlatformTranslations("insights.place");
   const data = league.rows.map((row) => ({
     label: `${row.place}  ${row.you ? t("you") : leagueName(league, row)}`,
     value: row.value,
@@ -60,9 +60,9 @@ export function LeagueCard({ league, host, href, title }: { league: LeagueData; 
 
 /** Where you rank in every league, first to last: each league a bar as long as the places you're ahead of last. */
 export function RankStrip({ leagues, host, title, hint }: { leagues: Leagues["leagues"]; host: string; title?: string; hint?: string }) {
-  const t = useTranslations("insights.leagues");
-  const tPlace = useTranslations("insights.place");
-  const tMenu = useTranslations("insights.menu.pages");
+  const t = usePlatformTranslations("insights.leagues");
+  const tPlace = usePlatformTranslations("insights.place");
+  const tMenu = usePlatformTranslations("insights.menu.pages");
   const ranked = leagues.filter((league) => league.place !== null);
   const data = ranked.map((league) => ({
     label: tMenu(league.id),

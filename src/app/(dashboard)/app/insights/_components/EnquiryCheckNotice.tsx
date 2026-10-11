@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { Notice } from "@/src/ui/components/screens/Notice";
 import type { EnquiryCheck } from "@/convex/utils/insightEnquiryCheck";
 import { formatNumber } from "../../sites/_components/siteFormat";
@@ -11,7 +11,7 @@ import { formatNumber } from "../../sites/_components/siteFormat";
  * why in plain words, so no figure built on the count reads surer than it is.
  */
 export function EnquiryCheckNotice({ check }: { check: EnquiryCheck | null | undefined }) {
-  const t = useTranslations("insights.enquiryCheck");
+  const t = usePlatformTranslations("insights.enquiryCheck");
   if (!check || check.ok) return null;
   const said = check.problems.map((problem) => t(problem.code, { event: problem.event, other: problem.other ?? "", a: formatNumber(problem.a), b: formatNumber(problem.b) }));
   return <Notice tone="warning">{t("intro", { problems: said.join(" ") })}</Notice>;

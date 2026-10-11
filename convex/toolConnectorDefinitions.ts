@@ -691,7 +691,7 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
       {
         name: "Read Insights' findings",
         description:
-          "Insights' newest week for one of the company's own websites: the Head of Strategy's verdict and each finding — what Hakken found across Search Console, Google Analytics, Visibility and AI answers, what to do first and how we'll know it worked — checked by its Editor, with each finding's link; and the newest monthly report's headline. Read it before you say what a website should do next, why enquiries moved, or what matters most, and give its findings as written, with their links: add detail when asked, never different advice, and never a figure it doesn't give.",
+          "Insights' newest week for one of the company's own websites: the Head of Strategy's verdict and each finding — what was found across Search Console, Google Analytics, Visibility and AI answers, what to do first and how we'll know it worked — checked by its Editor, with each finding's link; and the newest monthly report's headline. Read it before you say what a website should do next, why enquiries moved, or what matters most, and give its findings as written, with their links: add detail when asked, never different advice, and never a figure it doesn't give.",
         handlerMapping: "assistant.insights.read",
         modelName: "read_insights",
         requiredRole: "ADMIN",

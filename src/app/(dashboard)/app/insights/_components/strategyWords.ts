@@ -1,12 +1,12 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import type { Service } from "@/convex/utils/insightStrategy";
 import { useInsightsHref } from "./useInsights";
 
 /** A service's name: the guides, the home page, or its page's title (before any "|") or path. */
 export function useServiceName() {
-  const t = useTranslations("insights.strategy");
+  const t = usePlatformTranslations("insights.strategy");
   return (service: Pick<Service, "kind" | "title" | "page">) => (service.kind === "GUIDES" ? t("guides") : service.kind === "HOME" ? t("home") : service.title?.split("|")[0].trim() || service.page);
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useTranslations } from "next-intl";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { ListChecks } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { ChartCard } from "@/src/ui/components/screens/ChartCard";
@@ -31,8 +31,8 @@ import { useInsightsSite } from "../_components/useInsights";
  * its words (I22). Each step goes to Hakken tasks from here.
  */
 export default function InsightsPagePlanPage() {
-  const t = useTranslations("insights.pagePlan");
-  const tPlace = useTranslations("insights.place");
+  const t = usePlatformTranslations("insights.pagePlan");
+  const tPlace = usePlatformTranslations("insights.place");
   const site = useInsightsSite();
   const data = useQuery(api.insightsReads.insightsPlan, site ? { siteId: site } : {});
   const [search, setSearch, term] = useSiteSearch();

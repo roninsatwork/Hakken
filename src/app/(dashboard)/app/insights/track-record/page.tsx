@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
 import { History } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
@@ -33,7 +33,7 @@ const CHANGE_TONE = { GREW: "success", HELD: "neutral", LOST: "warning", WAITING
  * across Hakken.
  */
 export default function InsightsTrackRecordPage() {
-  const t = useTranslations("insights.track");
+  const t = usePlatformTranslations("insights.track");
   const router = useRouter();
   const href = useInsightsHref();
   const site = useInsightsSite();

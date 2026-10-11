@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { SectionMenu, type SectionMenuGroup } from "../../_components/SectionMenu";
 import { INSIGHTS_GROUPS, INSIGHTS_PAGES, isLeague, pageForPath, useInsightsHome, useInsightsHref, useInsightsLeagues, useInsightsPath } from "./useInsights";
 
@@ -11,8 +11,8 @@ import { INSIGHTS_GROUPS, INSIGHTS_PAGES, isLeague, pageForPath, useInsightsHome
  * the pages still to be built greyed until their phase lands.
  */
 export function InsightsMenu() {
-  const t = useTranslations("insights.menu");
-  const tPlace = useTranslations("insights.place");
+  const t = usePlatformTranslations("insights.menu");
+  const tPlace = usePlatformTranslations("insights.place");
   const href = useInsightsHref();
   const current = pageForPath(useInsightsPath());
   const home = useInsightsHome();

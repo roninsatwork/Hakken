@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { ChartCard } from "@/src/ui/components/screens/ChartCard";
 import { ChangeLine } from "@/src/ui/components/screens/Change";
 import { Figure, FigureRow } from "@/src/ui/components/screens/Figure";
@@ -8,7 +8,7 @@ import { HakkenSees } from "@/src/ui/components/screens/HakkenSees";
 import { CHART_SERIES_ORANGE } from "@/src/ui/components/charts/chartPalette";
 import { SiteBarChart } from "../../sites/_components/SiteCharts";
 import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
-import type { ReportView } from "./reportPdf";
+import type { ReportView } from "./ReportPdf";
 import { useInsightsHref } from "./useInsights";
 
 /** A report's rows of words, section by section: what the report's table lists. */
@@ -31,8 +31,8 @@ export function reportLines(report: ReportView, t: (key: string) => string): Arr
  * they were the day it was written.
  */
 export function ReportTop({ report }: { report: ReportView }) {
-  const t = useTranslations("insights.reports");
-  const tm = useTranslations("insights.summary.measures");
+  const t = usePlatformTranslations("insights.reports");
+  const tm = usePlatformTranslations("insights.summary.measures");
   const href = useInsightsHref();
   const body = report.body;
   const fact = (key: string) => body.facts.find((entry) => entry.key === key)?.value ?? null;

@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useTranslations } from "next-intl";
 import { ScanSearch } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { DataTable } from "@/src/ui/components/screens/DataTable";
@@ -31,8 +31,8 @@ const moved = (now: number | null, before: number | null) => (now !== null && be
  * searches that bring people to it, with the best rival on each.
  */
 export default function InsightsPageReviewPage() {
-  const t = useTranslations("insights.pageReview");
-  const tVerdict = useTranslations("insights.verdicts");
+  const t = usePlatformTranslations("insights.pageReview");
+  const tVerdict = usePlatformTranslations("insights.verdicts");
   const router = useRouter();
   const href = useInsightsHref();
   const site = useInsightsSite();

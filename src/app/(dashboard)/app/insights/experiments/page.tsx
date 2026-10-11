@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
-import { useTranslations } from "next-intl";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { FlaskConical } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -34,8 +34,8 @@ const EIGHT_WEEKS = 56 * 86_400_000;
  * traffic for a split test.
  */
 export default function InsightsExperimentsPage() {
-  const t = useTranslations("insights.experiments");
-  const tVerdict = useTranslations("insights.verdicts");
+  const t = usePlatformTranslations("insights.experiments");
+  const tVerdict = usePlatformTranslations("insights.verdicts");
   const href = useInsightsHref();
   const site = useInsightsSite();
   const data = useQuery(api.insightsConversion.insightsConversion, site ? { siteId: site } : {});

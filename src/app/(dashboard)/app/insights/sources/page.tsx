@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useTranslations } from "next-intl";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { Plug } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -29,7 +29,7 @@ const TONE: Record<Status, "success" | "warning" | "neutral"> = { CONNECTED: "su
  * No supplier is named (Anthony): a source is what it gives, not who sells it.
  */
 export default function InsightsSourcesPage() {
-  const t = useTranslations("insights.sources");
+  const t = usePlatformTranslations("insights.sources");
   const [siteParam, setSite] = useSiteParam<string>("site", "");
   const data = useQuery(api.insightsReads.insightsSources, {});
   const [search, setSearch, term] = useSiteSearch();

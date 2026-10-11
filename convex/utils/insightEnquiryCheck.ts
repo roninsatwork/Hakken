@@ -5,7 +5,7 @@ import type { Fact } from "./insightFacts";
  * The enquiry check (docs/plans/active/insights-analyst-plan.md I42): before
  * any finding about enquiries goes out, does each real enquiry count once?
  * Three signs it doesn't, each from figures Hakken already reads — and the
- * Google Analytics work found the third on ronins.co.uk: 255 of the 271
+ * Google Analytics work found the third on a client's website: 255 of the 271
  * people who clicked a link to another website "sent a form after it".
  *
  * - Two ways of counting rise and fall together: one enquiry counted twice.

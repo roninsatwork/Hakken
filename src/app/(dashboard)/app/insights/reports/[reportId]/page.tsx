@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
+import { useAdminAction } from "@/src/hooks/useAdminAction";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { useMutation, useQuery } from "convex/react";
 import { useParams } from "next/navigation";
-import { useTranslations } from "next-intl";
 import { FileText } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -27,15 +28,18 @@ import { useInsightsHref } from "../../_components/useInsights";
  */
 export default function InsightsReportPage() {
   const params = useParams();
-  const t = useTranslations("insights.reports");
+  const t = usePlatformTranslations("insights.reports");
   const href = useInsightsHref();
   const report = useQuery(api.insightsReads.insightsReport, { reportId: params.reportId as Id<"insightReports"> });
   const markRead = useMutation(api.insightsReads.markInsightReportRead);
   const lines = report ? reportLines(report, t) : undefined;
   const pages = useSitePager(lines, { isLoading: report === undefined });
+  // Opening a report marks it read, quietly: a failure is retried in the background and never interrupts the reader.
+  const action = useAdminAction({ scope: "insight-report-read" });
+  const { run } = action;
   useEffect(() => {
-    if (report && report.status === "WRITTEN") void markRead({ reportId: report.reportId });
-  }, [report, markRead]);
+    if (report && report.status === "WRITTEN") void run(() => markRead({ reportId: report.reportId }), { key: `read:${report.reportId}`, backgroundRetry: true, suppressErrorToast: true });
+  }, [report, markRead, run]);
 
   if (report === undefined) return <div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />;
   if (report === null) return <HakkenEmptyState icon={FileText} title={t("notFound")} description={t("notFoundDescription")} />;

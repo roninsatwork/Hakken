@@ -1,6 +1,6 @@
 "use client";
 
-import { useTranslations } from "next-intl";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { formatDay } from "../../sites/_components/siteFormat";
 
 /**
@@ -9,7 +9,7 @@ import { formatDay } from "../../sites/_components/siteFormat";
  * name yet reads as its code made plain.
  */
 export function useInsightWords() {
-  const t = useTranslations("insights.words");
+  const t = usePlatformTranslations("insights.words");
   const plain = (code: string) => {
     const spaced = code.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase();
     return spaced.charAt(0).toUpperCase() + spaced.slice(1);

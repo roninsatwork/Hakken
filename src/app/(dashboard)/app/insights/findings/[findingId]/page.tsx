@@ -1,8 +1,8 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { useParams, useRouter } from "next/navigation";
-import { useTranslations } from "next-intl";
 import { Lightbulb } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -47,7 +47,7 @@ function spanOf(fact: Fact): string {
  */
 export default function InsightsFindingPage() {
   const params = useParams();
-  const t = useTranslations("insights.finding");
+  const t = usePlatformTranslations("insights.finding");
   const words = useInsightWords();
   const href = useInsightsHref();
   const finding = useQuery(api.insightsReads.insightsFinding, { findingId: params.findingId as Id<"insightFindings"> });

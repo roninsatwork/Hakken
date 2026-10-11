@@ -2015,7 +2015,7 @@
         "saveParts": "Save switches",
         "buyerPanel": {
           "label": "Buyer questions",
-          "description": "Hakken's panel of about 40 questions buyers would ask an AI assistant, built from the company's searches and services, asked of every assistant each week and charged as the company's own questions are."
+          "description": "A panel of about 40 questions buyers would ask an AI assistant, built from the company's searches and services, asked of every assistant each week and charged as the company's own questions are."
         }
       },
       "insights": {
@@ -12151,7 +12151,7 @@
       },
       "notComplete": "Too little of the website was crawled to judge it.",
       "money": {
-        "notYet": "Hakken checks your money pages once a week: their speed for real visitors, their structured data and whether Google has indexed them. The first check is on its way.",
+        "notYet": "Your money pages are checked once a week: their speed for real visitors, their structured data and whether Google has indexed them. The first check is on its way.",
         "noSpeed": "Google's speed figures for real visitors aren't connected yet, so speed waits; structured data and indexing are checked.",
         "of": "{a} of {b}",
         "seconds": "{value}s",
@@ -14333,16 +14333,16 @@
         "DISMISSED": "Dismissed"
       },
       "titles": {
-        "LOCAL": "{count, plural, one {# fix} other {# fixes}} · Drafted by Hakken for your profiles",
-        "REVIEWS": "{count, plural, one {# draft} other {# drafts}} · Drafted by Hakken",
+        "LOCAL": "{count, plural, one {# fix} other {# fixes}} · Drafted for your profiles",
+        "REVIEWS": "{count, plural, one {# draft} other {# drafts}} · Ready for you",
         "LINKS": "{count, plural, one {# site} other {# sites}} · Sites that link to your rivals and not to you, each with an email drafted"
       },
       "download": "Download CSV",
       "noMatch": "No draft matches",
       "empty": {
-        "LOCAL": "Nothing to fix on your profiles this week. Hakken looks again with each week's findings.",
-        "REVIEWS": "No review drafts this week. Hakken looks again with each week's findings.",
-        "LINKS": "No sites to write to this week. Hakken looks again with each week's findings."
+        "LOCAL": "Nothing to fix on your profiles this week. They're looked at again with each week's findings.",
+        "REVIEWS": "No review drafts this week. They're looked at again with each week's findings.",
+        "LINKS": "No sites to write to this week. They're looked at again with each week's findings."
       },
       "seeInsights": {
         "LOCAL": "See the Insights findings about your profiles",
@@ -14363,7 +14363,7 @@
         "why": "Why",
         "status": "Status"
       },
-      "googleAccess": "Until Google approves Hakken's Business Profile access, an approved fix is copied for you to paste. Once approved, Hakken makes it itself, and calls, direction requests and website clicks join this page.",
+      "googleAccess": "Until Google approves Business Profile access, an approved fix is copied for you to paste. Once it's approved, the fix is made for you, and calls, direction requests and website clicks join this page.",
       "gone": "This draft is gone",
       "goneDescription": "Drafts are kept two years, and only for your company's own websites.",
       "failed": "The draft couldn't be updated. Try again.",
@@ -14377,7 +14377,7 @@
       "copyAgain": "Copy again",
       "dismiss": "Not this one",
       "undo": "Put it back as a draft",
-      "copied": "Copied. Paste it where it belongs; the link in it tells Hakken what it brought.",
+      "copied": "Copied. Paste it where it belongs; the link in it shows what it brought.",
       "tagged": "The link carries the campaign {campaign}, so Google Analytics counts the visits and enquiries it brings, and the Track record shows them beside this change.",
       "howTo": {
         "CATEGORY": "Change it in your Google Business Profile: Edit profile, then Business category.",
@@ -14390,8 +14390,8 @@
       }
     },
     "buyerPanel": {
-      "noticeOff": "Hakken's buyer-question panel: {count} questions built from what your buyers search for and the services you sell, phrased with and without your name. They'll be asked of ChatGPT, Gemini, Perplexity, Claude and Google's AI Mode every week once Buyer questions is switched on for your company.",
-      "noticeOn": "Hakken's buyer-question panel: {count} questions built from what your buyers search for and the services you sell, phrased with and without your name; {asking} are asked of every assistant each week, and their answers join the table below.",
+      "noticeOff": "The buyer-question panel: {count} questions built from what your buyers search for and the services you sell, phrased with and without your name. They'll be asked of ChatGPT, Gemini, Perplexity, Claude and Google's AI Mode every week once Buyer questions is switched on for your company.",
+      "noticeOn": "The buyer-question panel: {count} questions built from what your buyers search for and the services you sell, phrased with and without your name; {asking} are asked of every assistant each week, and their answers join the table below.",
       "search": "Find a question",
       "builtFrom": "Built from",
       "everySource": "Every source",
@@ -15224,7 +15224,7 @@
         "growBest": "Put next quarter's effort into {text}."
       },
       "indexing": {
-        "noIndexing": "Hakken hasn't asked Google about your money pages yet: the first weekly check is on its way.",
+        "noIndexing": "Your money pages haven't been checked with Google yet: the first weekly check is on its way.",
         "indexedOf": "Google has indexed {a} of your {b} money pages.",
         "notIndexed": "{text} isn't indexed, so it can't show in Google's results.",
         "oldestRead": "The page Google read longest ago is {text}, on {day1}: a change made since isn't in its results yet.",
@@ -15280,7 +15280,7 @@
       "tableTitle": "{count, plural, one {# page} other {# pages}} · Your money pages",
       "download": "Download CSV",
       "noMatch": "No page matches",
-      "empty": "Hakken asks Google about your money pages once a week. The first check is on its way.",
+      "empty": "Your money pages are checked with Google once a week. The first check is on its way.",
       "indexed": "Indexed",
       "notIndexed": "Not indexed",
       "notAsked": "Not asked yet",
@@ -17824,11 +17824,11 @@
     "section": {
       "title": "Insights",
       "description": "{company}, read the way an agency would: Google, AI answers, your Business Profile, Search Console and Google Analytics, against your rivals.",
-      "lastLooked": "Hakken last looked {when}",
+      "lastLooked": "{platformName} last looked {when}",
       "website": "Website",
       "everyWebsite": "Every website",
       "noCompanyTitle": "Insights reads a company's own websites",
-      "noCompanyDescription": "Open a company's workspace to see what Hakken found."
+      "noCompanyDescription": "Open a company's workspace to see what {platformName} found."
     },
     "menu": {
       "label": "Insights",
@@ -17911,7 +17911,7 @@
       "recommended": {
         "title": "Recommended for your buyers' questions",
         "short": "AI recommendations",
-        "hint": "Answers naming each website, across the AI assistants Hakken asks your buyers' questions.",
+        "hint": "Answers naming each website, across the AI assistants {platformName} asks your buyers' questions.",
         "figure": "Answers naming it"
       },
       "cited": {
@@ -17941,10 +17941,10 @@
     },
     "leaderboards": {
       "title": "Leaderboards",
-      "description": "Where you rank against your {rivals, plural, one {rival} other {# rivals}}: the four main leagues first, then every other measure Hakken reads. Open a league for the detail.",
+      "description": "Where you rank against your {rivals, plural, one {rival} other {# rivals}}: the four main leagues first, then every other measure {platformName} reads. Open a league for the detail.",
       "descriptionLoading": "Where you rank against your rivals.",
       "emptyTitle": "No leagues yet",
-      "emptyDescription": "The leagues fill in once Hakken has read this website and its rivals.",
+      "emptyDescription": "The leagues fill in once {platformName} has read this website and its rivals.",
       "and": ", ",
       "asOf": "Figures to {day}.",
       "sees": {
@@ -17969,12 +17969,12 @@
       "notFound": "That league doesn't exist",
       "notFoundDescription": "Open the leaderboards to see every league.",
       "emptyTitle": "No league yet",
-      "emptyDescription": "This league fills in once Hakken has read this website and its rivals.",
+      "emptyDescription": "This league fills in once {platformName} has read this website and its rivals.",
       "seeAll": "See the leaderboards",
       "sees": {
         "lead": "You lead this league with {figure}; {second} is next with {secondFigure}.",
         "place": "You're {place} of {total} with {figure}; {leader} leads with {leaderFigure}.",
-        "noMove": "Movement shows once Hakken holds a year of this league.",
+        "noMove": "Movement shows once {platformName} holds a year of this league.",
         "held": "You held your place over the year.",
         "rose": "You rose {count, plural, one {one place} other {# places}} in a year.",
         "fell": "You fell {count, plural, one {one place} other {# places}} in a year.",
@@ -18073,7 +18073,7 @@
     },
     "findings": {
       "title": "All findings",
-      "description": "Every finding Hakken has written for you. Each is a story across your sources, with what to do and how we'll know.",
+      "description": "Every finding {platformName} has written for you. Each is a story across your sources, with what to do and how we'll know.",
       "table": {
         "search": "Search findings...",
         "pattern": "Pattern",
@@ -18094,19 +18094,19 @@
     },
     "week": {
       "title": "This week",
-      "description": "What Hakken found in its newest read of all your sources together. Each finding is something none of them shows on its own.",
+      "description": "What {platformName} found in its newest read of all your sources together. Each finding is something none of them shows on its own.",
       "seeFinding": "See the finding",
       "sees": {
-        "count": "{count, plural, one {One finding} other {# findings}} in Hakken's newest read. The one to act on first: {first}",
-        "checked": "Hakken checked {checked} figures across your sources and rivals, and ruled out {ruledOut, plural, one {one explanation} other {# explanations}} before writing these.",
-        "none": "Nothing in Hakken's newest read moved enough to call. The figures are steady."
+        "count": "{count, plural, one {One finding} other {# findings}} in {platformName}'s newest read. The one to act on first: {first}",
+        "checked": "{platformName} checked {checked} figures across your sources and rivals, and ruled out {ruledOut, plural, one {one explanation} other {# explanations}} before writing these.",
+        "none": "Nothing in {platformName}'s newest read moved enough to call. The figures are steady."
       },
       "figures": {
         "new": "New this week",
         "open": "{count} open in all",
         "atStake": "Enquiries at stake",
         "atStakeDetail": "a quarter, at last year's rate",
-        "checked": "Figures Hakken checked",
+        "checked": "Figures {platformName} checked",
         "checkedDetail": "across {sources, plural, one {one source} other {# sources}} and your rivals",
         "ruledOut": "Explanations ruled out",
         "ruledOutDetail": "before these were written"
@@ -18119,7 +18119,7 @@
         "now": "The last 90 days",
         "visitorsPerEnquiry": "Visitors for each enquiry",
         "googleClicksPerEnquiry": "Google clicks for each enquiry",
-        "empty": "These fill in once Hakken holds a year of your figures."
+        "empty": "These fill in once {platformName} holds a year of your figures."
       }
     },
     "finding": {
@@ -18147,20 +18147,20 @@
         "empty": "No evidence held."
       },
       "ruledOut": {
-        "title": "What Hakken ruled out",
+        "title": "What {platformName} ruled out",
         "explanation": "Explanation",
-        "why": "Why Hakken ruled it out",
+        "why": "Why {platformName} ruled it out",
         "empty": "Nothing was ruled out for this finding."
       },
       "download": "Download CSV",
-      "howWeKnow": "How we'll know: Hakken checks again on {day}. {how} The result goes on your Track record either way.",
-      "taskAsk": "Set up Hakken tasks for {host}: {action} Then keep an eye on it: {how} Tell me how it went by {day}.",
-      "toTasks": "Add the steps to Hakken tasks"
+      "howWeKnow": "How we'll know: {platformName} checks again on {day}. {how} The result goes on your Track record either way.",
+      "taskAsk": "Set up {platformName} tasks for {host}: {action} Then keep an eye on it: {how} Tell me how it went by {day}.",
+      "toTasks": "Add the steps to {platformName} tasks"
     },
     "summary": {
       "title": "Executive summary",
       "description": "{company} at a glance: the last 90 days against the same weeks last year, and against your rivals.",
-      "noWeek": "Hakken hasn't read your sources yet: the summary fills in after the team's first run.",
+      "noWeek": "{platformName} hasn't read your sources yet: the summary fills in after the team's first run.",
       "seeFinding": "See the finding",
       "noYear": "No figure for last year yet",
       "changeOn": "{percent}% on {before} last year",
@@ -18178,7 +18178,7 @@
         "hint": "Your estimated visitors from Google as a share of yours and your rivals', month by month.",
         "month": "Month",
         "figure": "Your share",
-        "empty": "This fills in once Hakken holds a few months of your market."
+        "empty": "This fills in once {platformName} holds a few months of your market."
       },
       "per": {
         "title": "Visits for each enquiry, month by month",
@@ -18217,7 +18217,7 @@
         "rivals": "Against your rivals",
         "noMatch": "No measure matches that search."
       },
-      "did": "In its newest read Hakken checked {checked} figures across your sources and rivals, ruled out {ruledOut, plural, one {one explanation} other {# explanations}}, and wrote {findings, plural, one {one finding} other {# findings}}.",
+      "did": "In its newest read {platformName} checked {checked} figures across your sources and rivals, ruled out {ruledOut, plural, one {one explanation} other {# explanations}}, and wrote {findings, plural, one {one finding} other {# findings}}.",
       "downloadBoard": "Download the board report"
     },
     "pdf": {
@@ -18237,28 +18237,28 @@
       "status": "Status",
       "shareTitle": "Our share of our market's Google visitors",
       "enquiriesTitle": "Enquiries a month",
-      "findings": "What Hakken found",
+      "findings": "What {platformName} found",
       "risks": "Risks",
       "opportunities": "Opportunities",
       "next": "Next quarter's priorities",
       "decision": "The decision we recommend",
       "whatHappened": "What happened",
       "whatsNext": "What's next",
-      "did": "What Hakken did",
-      "writtenBy": "Written by Hakken",
+      "did": "What {platformName} did",
+      "writtenBy": "Written by {platformName}",
       "confidential": "Confidential to the board of {company}",
-      "footer": "Written by Hakken from Google Search Console, Google Analytics and market data, to {day}.",
+      "footer": "Written by {platformName} from Google Search Console, Google Analytics and market data, to {day}.",
       "page": "{page} / {of}",
       "covers": "Marketing report to the board, {from} to {to}",
       "points": "pts",
-      "author": "Hakken",
+      "author": "{platformName}",
       "visits": "Visits",
       "googleClicks": "Google clicks",
       "drawing": "Drawing the PDF…"
     },
     "reports": {
       "title": "Reports",
-      "description": "Every brief, monthly report and board report Hakken has written for you, exactly as it was written. Kept for two years.",
+      "description": "Every brief, monthly report and board report {platformName} has written for you, exactly as it was written. Kept for two years.",
       "search": "Search reports...",
       "kind": "Kind",
       "everyKind": "Every kind",
@@ -18324,17 +18324,17 @@
     "month": {
       "title": "Your month: {month}",
       "titleNone": "Your month",
-      "description": "What happened, why, what Hakken did and what's next. Written on the 4th of each month.",
+      "description": "What happened, why, what {platformName} did and what's next. Written on the 4th of each month.",
       "download": "Download the report",
       "noneTitle": "No monthly report yet",
-      "noneDescription": "Hakken writes the month's report from the 4th of the next month.",
-      "didTitle": "What Hakken did",
-      "work": "Work Hakken did",
+      "noneDescription": "{platformName} writes the month's report from the 4th of the next month.",
+      "didTitle": "What {platformName} did",
+      "work": "Work {platformName} did",
       "howMuch": "How much",
       "noWork": "Nothing recorded for this month."
     },
     "enquiryCheck": {
-      "intro": "Hakken isn't sure every enquiry is counted once, so figures built on the count may read high. {problems} The Measurement check says what to test.",
+      "intro": "{platformName} isn't sure every enquiry is counted once, so figures built on the count may read high. {problems} The Measurement check says what to test.",
       "countedTwice": "\"{event}\" and \"{other}\" happened {a} and {b} times in 12 months: one enquiry may be counted twice.",
       "repeated": "\"{event}\" happened {a} times from {b} people in 12 months: some are repeats, or not people.",
       "leavesBefore": "{a} of the {b} people who clicked a link off your website went on to enquire: your form may count as leaving the website, or bots may be filling it in."
@@ -18460,10 +18460,10 @@
     },
     "track": {
       "title": "Track record",
-      "description": "Every finding Hakken has written, whether you acted on it, and whether it proved right, checked on the date each one names.",
+      "description": "Every finding {platformName} has written, whether you acted on it, and whether it proved right, checked on the date each one names.",
       "sees": {
         "checked": "Of {checked} findings checked so far, {right} proved right and {wrong} didn't hold.",
-        "none": "Hakken has written {written} findings and none is due yet: the first checks are on {day}, and this page fills in as they come.",
+        "none": "{platformName} has written {written} findings and none is due yet: the first checks are on {day}, and this page fills in as they come.",
         "act": "Act on a finding so its result can be measured."
       },
       "seeFinding": "See the finding",
@@ -18506,7 +18506,7 @@
           "MERGED": "merging pages",
           "FIX": "approving a drafted fix"
         },
-        "empty": "No changes seen yet: Hakken logs each change it sees in your figures, with what followed.",
+        "empty": "No changes seen yet: {platformName} logs each change it sees in your figures, with what followed.",
         "campaigns": "Analytics' campaigns",
         "fixFollowed": "{visits, plural, one {# visit} other {# visits}} and {enquiries, plural, one {# enquiry} other {# enquiries}} from its link"
       },
@@ -18514,7 +18514,7 @@
         "intro": "What your changes teach: {learnings}",
         "own": "From your own changes, {kind} kept the enquiries in {held} of {all}.",
         "across": "Across {companies} businesses, it kept them in {held} of {all}.",
-        "none": "As changes are measured, Hakken says what each kind of fix has done for you, and how often it works for businesses like yours."
+        "none": "As changes are measured, {platformName} says what each kind of fix has done for you, and how often it works for businesses like yours."
       },
       "search": "Search findings...",
       "result": "Result",
@@ -18540,7 +18540,7 @@
     },
     "measurement": {
       "title": "Measurement check",
-      "description": "Before Hakken advises on conversion, it checks the figures can be trusted: every enquiry counted, every visit on a page, and Google and Analytics agreeing.",
+      "description": "Before {platformName} advises on conversion, it checks the figures can be trusted: every enquiry counted, every visit on a page, and Google and Analytics agreeing.",
       "emptyTitle": "No check yet",
       "emptyDescription": "The Measurement check runs with each week's findings, and appears after the first.",
       "search": "Search checks",
@@ -18551,7 +18551,7 @@
       "noMatch": "No check matches",
       "columns": {
         "check": "Check",
-        "found": "What Hakken found",
+        "found": "What {platformName} found",
         "status": "Status"
       },
       "statuses": {
@@ -18657,9 +18657,9 @@
     },
     "sources": {
       "title": "Sources",
-      "description": "What Hakken reads for each of your websites, how far back it goes, and what connecting or setting the rest would let it tell you.",
+      "description": "What {platformName} reads for each of your websites, how far back it goes, and what connecting or setting the rest would let it tell you.",
       "emptyTitle": "No websites yet",
-      "emptyDescription": "Add your website in Sites, and Hakken starts reading it.",
+      "emptyDescription": "Add your website in Sites, and {platformName} starts reading it.",
       "search": "Search sources",
       "website": "Website",
       "tableTitle": "{count} sources · {host}",
@@ -18669,14 +18669,14 @@
         "source": "Source",
         "status": "Status",
         "history": "History",
-        "gives": "What it gives Hakken"
+        "gives": "What it gives {platformName}"
       },
       "names": {
         "market": "Google's results and your rivals",
         "searchConsole": "Google Search Console",
         "analytics": "Google Analytics",
         "businessProfiles": "Google Business Profile",
-        "pages": "Your pages, read by Hakken",
+        "pages": "Your pages, read by {platformName}",
         "enquiryValue": "A value for an enquiry"
       },
       "gives": {
@@ -18701,8 +18701,8 @@
         "analytics": "The last 12 months and the 12 before"
       },
       "sees": {
-        "everything": "{host} gives Hakken every source it reads. More Search Console history arrives on its own each day.",
-        "missing": "{host} is missing {count, plural, one {one source} other {# sources}}. The first would let Hakken {first}."
+        "everything": "{host} gives {platformName} every source it reads. More Search Console history arrives on its own each day.",
+        "missing": "{host} is missing {count, plural, one {one source} other {# sources}}. The first would let {platformName} {first}."
       },
       "unlocks": {
         "market": "rank you against your rivals",
@@ -18717,7 +18717,7 @@
         "searchConsole": "Connect Google Search Console.",
         "analytics": "Connect Google Analytics.",
         "businessProfiles": "Add your Google Business Profile.",
-        "pages": "Nothing to do: Hakken will read your pages itself.",
+        "pages": "Nothing to do: {platformName} will read your pages itself.",
         "enquiryValue": "Give an enquiry a value in Tracking health."
       },
       "fixLink": {
@@ -18733,7 +18733,7 @@
       "title": "Opportunities",
       "description": "Searches you nearly win, ranked by what winning them is worth: how often they're made, where you stand, and how well the page converts.",
       "emptyTitle": "No opportunities yet",
-      "emptyDescription": "Hakken works out the searches you nearly win with each week's findings. They appear after the first.",
+      "emptyDescription": "{platformName} works out the searches you nearly win with each week's findings. They appear after the first.",
       "search": "Find a search",
       "service": "Service",
       "everyService": "Every service",
@@ -18775,14 +18775,14 @@
       "title": "Page plan",
       "description": "Which page should win which search, and what to do with each: rebuild, restore, strengthen, refresh, keep or retire.",
       "emptyTitle": "No page plan yet",
-      "emptyDescription": "Hakken writes the page plan with each week's findings. It appears after the first.",
+      "emptyDescription": "{platformName} writes the page plan with each week's findings. It appears after the first.",
       "search": "Search pages",
       "action": "What to do",
       "everyAction": "Every action",
       "tableTitle": "{count, plural, one {# page} other {# pages}} · Most at stake first",
       "download": "Download CSV",
       "noMatch": "No page matches",
-      "addTask": "Add to Hakken tasks",
+      "addTask": "Add to {platformName} tasks",
       "columns": {
         "page": "Page",
         "shouldWin": "Should win",
@@ -18842,7 +18842,7 @@
       "title": "Funnel",
       "description": "From being found on Google to making an enquiry, against last year, and by where visitors came from.",
       "emptyTitle": "No funnel yet",
-      "emptyDescription": "Hakken builds the funnel with each week's findings, from Search Console and Google Analytics. It appears after the first.",
+      "emptyDescription": "{platformName} builds the funnel with each week's findings, from Search Console and Google Analytics. It appears after the first.",
       "search": "Find a source",
       "noMatch": "No source matches",
       "download": "Download CSV",
@@ -18892,9 +18892,9 @@
     },
     "pageReviews": {
       "title": "Page reviews",
-      "description": "Each page that brings enquiries: how many visitors it takes to win one, against last year, and Hakken's verdict. Open a page for its review.",
+      "description": "Each page that brings enquiries: how many visitors it takes to win one, against last year, and {platformName}'s verdict. Open a page for its review.",
       "emptyTitle": "No page reviews yet",
-      "emptyDescription": "Hakken reviews your money pages with each week's findings, once it has read them. They appear after the first.",
+      "emptyDescription": "{platformName} reviews your money pages with each week's findings, once it has read them. They appear after the first.",
       "search": "Find a page",
       "verdict": "Verdict",
       "everyVerdict": "Every verdict",
@@ -18925,10 +18925,10 @@
     "pageReview": {
       "back": "Page reviews",
       "emptyTitle": "No review for this page",
-      "emptyDescription": "Hakken reviews the money pages with each week's findings. This page isn't among them.",
-      "description": "{host} · {title} · From Google Analytics, Search Console and Hakken's read of the page",
-      "toTasks": "Add the steps to Hakken tasks",
-      "taskAsk": "On {host}, for the page {page}: {steps} Set up a Hakken task so I'm reminded and we can see what it changes.",
+      "emptyDescription": "{platformName} reviews the money pages with each week's findings. This page isn't among them.",
+      "description": "{host} · {title} · From Google Analytics, Search Console and {platformName}'s read of the page",
+      "toTasks": "Add the steps to {platformName} tasks",
+      "taskAsk": "On {host}, for the page {page}: {steps} Set up a {platformName} task so I'm reminded and we can see what it changes.",
       "seeExperiments": "See the experiments",
       "searchesTitle": "{count, plural, one {# search} other {# searches}} · The searches this page ranks for, the most searched first",
       "noSearches": "Google's results don't show this page for any search yet.",
@@ -18972,7 +18972,7 @@
       "do": "Start with {page}: it has the most visitors.",
       "seeReviews": "See the page reviews",
       "sees": {
-        "ready": "{count, plural, one {One change is} other {# changes are}} ready to try, and {running, plural, =0 {none is} one {one is} other {# are}} being measured. When a change goes live, say so here: Hakken measures the page's last 30 days eight weeks on against the 30 days before it, and writes up the result."
+        "ready": "{count, plural, one {One change is} other {# changes are}} ready to try, and {running, plural, =0 {none is} one {one is} other {# are}} being measured. When a change goes live, say so here: {platformName} measures the page's last 30 days eight weeks on against the 30 days before it, and writes up the result."
       },
       "filter": {
         "READY": "Ready",
@@ -18996,7 +18996,7 @@
     "quick": {
       "intro": "Today's quick check, {day}: {found}",
       "PAGE_DOWN": "{page} didn't load ({status}).",
-      "CLICKS_FELL": "Google's clicks on {day} were {clicks}, against a usual {usual}; Hakken is watching whether it lasts.",
+      "CLICKS_FELL": "Google's clicks on {day} were {clicks}, against a usual {usual}; {platformName} is watching whether it lasts.",
       "noAnswer": "no answer"
     }
   }

@@ -8,7 +8,7 @@ import { classifyPages, readClassificationSetup } from "./pageClassifications";
 import { pagePath } from "./utils/siteShapes";
 
 /** The pages read to name and sort a website's pages: its pages, most clicks first. */
-const PAGES_READ = 3000;
+const PAGES_READ = 900;
 
 const serviceRow = v.object({
   /** A classification's id; a service page's path; GUIDES; or OTHER. */

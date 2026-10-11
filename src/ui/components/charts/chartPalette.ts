@@ -79,7 +79,7 @@ export const PRINT_PALETTE = {
   muted: "#999999",
   rule: "#E5E5E5",
   cover: "#18181A",
-  coverInk: "#FFFFFF",
+  coverInk: "white",
   coverAccent: "#E8E4DC",
   coverMuted: "#A1A1A6",
   you: CHART_SERIES_ORANGE,

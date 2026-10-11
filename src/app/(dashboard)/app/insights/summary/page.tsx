@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "convex/react";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { QuickCheckNotice } from "../_components/QuickCheckNotice";
-import { useTranslations } from "next-intl";
 import { LayoutDashboard } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { ChartCard } from "@/src/ui/components/screens/ChartCard";
@@ -39,8 +39,8 @@ const STATUS_TONE = { ON_TRACK: "success", WATCH: "warning", BEHIND: "danger" } 
  * newest week the team saved; nothing is worked out when it opens (§8).
  */
 export default function InsightsSummaryPage() {
-  const t = useTranslations("insights.summary");
-  const tPlace = useTranslations("insights.place");
+  const t = usePlatformTranslations("insights.summary");
+  const tPlace = usePlatformTranslations("insights.place");
   const href = useInsightsHref();
   const site = useInsightsSite();
   const home = useInsightsHome();

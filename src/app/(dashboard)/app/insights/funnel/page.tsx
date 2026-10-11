@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "convex/react";
-import { useTranslations } from "next-intl";
+import { usePlatformTranslations } from "@/src/hooks/usePlatformTranslations";
 import { Filter } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { Change } from "@/src/ui/components/screens/Change";
@@ -32,7 +32,7 @@ const moved = (now: number | null, before: number | null) => (now !== null && be
  * source that counts it; and each source's enquiry rate over 12 months.
  */
 export default function InsightsFunnelPage() {
-  const t = useTranslations("insights.funnel");
+  const t = usePlatformTranslations("insights.funnel");
   const href = useInsightsHref();
   const site = useInsightsSite();
   const data = useQuery(api.insightsConversion.insightsConversion, site ? { siteId: site } : {});

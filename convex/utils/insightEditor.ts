@@ -117,7 +117,7 @@ export function editFinding(draft: DraftFinding, facts: ReadonlyMap<string, Fact
   for (const pair of draft.comparisons) {
     if (pair.length !== 2) continue;
     const [a, b] = [facts.get(pair[0]), facts.get(pair[1])];
-    if (!a || !b) return { ok: false, note: `Compares a figure Hakken doesn't hold: ${!a ? pair[0] : pair[1]}.` };
+    if (!a || !b) return { ok: false, note: `Compares a figure that isn't held: ${!a ? pair[0] : pair[1]}.` };
     const reason = unlike(a, b);
     if (reason) return { ok: false, note: `Not like with like: ${reason}.` };
     const claimsChange = Math.abs(a.value - b.value) >= Math.max(a.value, b.value) * 0.1;
@@ -132,7 +132,7 @@ export function editFinding(draft: DraftFinding, facts: ReadonlyMap<string, Fact
   if (contradiction) return { ok: false, note: contradiction };
   const filled = words.map((text) => fillFacts(text, facts));
   const missing = [...new Set(filled.flatMap((answer) => answer.missing))];
-  if (missing.length > 0) return { ok: false, note: `Names figures Hakken doesn't hold: ${missing.slice(0, 3).join(", ")}.` };
+  if (missing.length > 0) return { ok: false, note: `Names figures that aren't held: ${missing.slice(0, 3).join(", ")}.` };
   const ruledOut = draft.ruledOut.map((line) => fillFacts(line, facts));
   const used = [...new Set([...named, ...draft.comparisons.flat(), ...draft.ruledOut.flatMap(namedFacts)])]
     .map((key) => facts.get(key))

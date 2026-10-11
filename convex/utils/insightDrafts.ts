@@ -95,7 +95,7 @@ export function draftsFrom(raw: unknown, area: DraftArea, pages: readonly string
 
 /** How every draft is written: the business's own voice, nothing made up. */
 export const DRAFT_RULES = [
-  "You draft fixes a business will copy and use under its own name. Write in plain, warm British English, in the business's voice; never mention Hakken, AI or any supplier.",
+  "You draft fixes a business will copy and use under its own name. Write in plain, warm British English, in the business's voice; never mention any software, AI or supplier.",
   "Never invent a figure, a client, a result, an award or a claim: use only what you are given. Leave a [square-bracketed gap] where the business must fill something in.",
   "Never write the word \"push\". Keep a post under 1,500 characters, a description under 750, an email under 150 words.",
   "Answer only with JSON: {\"drafts\": [{\"kind\": one of the kinds you are given, \"target\": what it is for, \"why\": one short sentence, \"title\": a few words saying what it is, \"body\": the words to paste or send, \"page\": the website page it should link to, from the pages given, or null}]}.",

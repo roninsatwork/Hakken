@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { renderToBuffer } from "@react-pdf/renderer";
-import { reportDocument, type PdfWords, type ReportView } from "./reportPdf";
+import { reportDocument, type PdfWords, type ReportView } from "./ReportPdf";
 
 /**
  * The reports' PDFs (docs/plans/active/insights-analyst-plan.md §4.2): the
