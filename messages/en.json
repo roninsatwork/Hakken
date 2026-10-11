@@ -18086,6 +18086,125 @@
       "countedTwice": "\"{event}\" and \"{other}\" happened {a} and {b} times in 12 months: one enquiry may be counted twice.",
       "repeated": "\"{event}\" happened {a} times from {b} people in 12 months: some are repeats, or not people.",
       "leavesBefore": "{a} of the {b} people who clicked a link off your website went on to enquire: your form may count as leaving the website, or bots may be filling it in."
+    },
+    "strategy": {
+      "title": "Strategy: {quarter}",
+      "quarter": "{from} to {to} {year}",
+      "months": {
+        "january": "January",
+        "february": "February",
+        "march": "March",
+        "april": "April",
+        "may": "May",
+        "june": "June",
+        "july": "July",
+        "august": "August",
+        "september": "September",
+        "october": "October",
+        "november": "November",
+        "december": "December"
+      },
+      "description": "Which of your services to grow, keep steady or change, judged on which pages bring enquiries against a year before and how often Google shows them. Open a service for the detail.",
+      "emptyTitle": "No strategy yet",
+      "emptyDescription": "The strategy fills in after the team's next run.",
+      "guides": "Guides",
+      "home": "Home page",
+      "guidesDetail": "Your articles together",
+      "new": "New",
+      "search": "Search services...",
+      "call": "What to do",
+      "everyCall": "Everything",
+      "download": "Download CSV",
+      "servicesTitle": "Your services",
+      "roadmapTitle": "The roadmap for the quarter",
+      "roadmapEmpty": "No priorities yet.",
+      "noMatch": "No service matches that search.",
+      "seeService": "See the service",
+      "verdicts": {
+        "GROW": "Grow it",
+        "STEADY": "Keep it steady",
+        "BUYERS_WORDS": "Use buyers' words",
+        "YOUR_CALL": "Your call: grow or stop",
+        "READERS": "For readers, not sales"
+      },
+      "do": {
+        "GROW": "Grow {service}: it brings more enquiries than a year ago.",
+        "STEADY": "Keep {service} steady.",
+        "BUYERS_WORDS": "Rebuild {service} around the words buyers use now: its enquiries halved.",
+        "YOUR_CALL": "Decide whether to grow {service} or let it go.",
+        "READERS": "Give {service} a way to an enquiry."
+      },
+      "sees": {
+        "grow": "{count, plural, =0 {No service is growing its enquiries yet.} one {One service to grow: {services}.} other {# services to grow: {services}.}}",
+        "change": "{count, plural, one {One to change: {services}.} other {# to change: {services}.}}",
+        "noChange": "None is losing its enquiries fast."
+      },
+      "chart": {
+        "title": "Enquiries by service",
+        "hint": "The last 12 months against the 12 before, from Google Analytics.",
+        "before": "The 12 months before",
+        "now": "The last 12 months"
+      },
+      "columns": {
+        "service": "Service",
+        "enquiries": "Enquiries",
+        "before": "The 12 months before",
+        "change": "Change",
+        "interest": "Shown on Google",
+        "call": "What to do"
+      },
+      "roadmap": {
+        "what": "Priority",
+        "expect": "Why",
+        "know": "How we'll know",
+        "by": "By"
+      }
+    },
+    "service": {
+      "back": "Strategy",
+      "notFound": "That service can't be found",
+      "notFoundDescription": "Open Strategy to see your services.",
+      "description": "One of your services · Its main page is {page} · {host}",
+      "descriptionGuides": "Your articles together · {host}",
+      "seeStrategy": "See the strategy",
+      "sees": {
+        "enquiries": "It brought {enquiries} enquiries in the last 12 months, against {before} the 12 before.",
+        "noYear": "It brought {enquiries} enquiries in the last 12 months.",
+        "call": {
+          "GROW": "Its enquiries are growing: give it more.",
+          "STEADY": "It holds its own: keep it as it is.",
+          "BUYERS_WORDS": "Its enquiries halved while Google still shows it: buyers now search with other words.",
+          "YOUR_CALL": "It was always small and it fell: decide whether it's worth growing.",
+          "READERS": "People read these, but rarely enquire."
+        }
+      },
+      "figures": {
+        "enquiries": "Enquiries a year",
+        "noYear": "No figure for the year before yet",
+        "onYear": "{percent}% on {before} the year before",
+        "share": "Share of your services' Google clicks",
+        "shareDetail": "{clicks} clicks in 90 days",
+        "perEnquiry": "Visitors for each enquiry",
+        "perEnquiryDetail": "{people} visitors in 12 months",
+        "shown": "Shown on Google",
+        "shownDetail": "times in 90 days"
+      },
+      "searchesTitle": "Where you stand on its searches",
+      "pagesTitle": "Its page",
+      "download": "Download CSV",
+      "noSearches": "No searches tracked for this page yet.",
+      "noPages": "No page.",
+      "rivalAt": "{rival}, {place}",
+      "columns": {
+        "search": "Search",
+        "volume": "Searches a month",
+        "place": "Your place",
+        "rival": "Best rival",
+        "page": "Page",
+        "visitors": "Visitors",
+        "enquiries": "Enquiries",
+        "per": "For one enquiry"
+      }
     }
   }
 }

@@ -21,6 +21,7 @@ import { loadRivalHolds, loadSite } from "./websiteSiteRows";
 import { unpackColumn } from "./utils/packedColumns";
 import { factKey, factValidator, percentOf, shiftDay, spansOf, type Fact, type FactWhich } from "./utils/insightFacts";
 import { monthValidator, shareMonthValidator } from "./utils/insightSummary";
+import { rankedServices, serviceValidator, type Service } from "./utils/insightStrategy";
 
 /**
  * Insights' reading layer (docs/plans/active/insights-analyst-plan.md §2,
@@ -542,5 +543,78 @@ export const monthFactsInternal = internalQuery({
       }
     }
     return facts.list;
+  },
+});
+
+/**
+ * Each service of a website for the quarter's strategy (§4.1): its service
+ * pages and home page, and its articles together as its guides, each with
+ * its enquiries and visits over 12 months against the 12 before (Analytics'
+ * landing pages, I43) and its Google clicks and showings over 90 days against
+ * the 90 before. Pages by Hakken's own kind of page (`holdPages.pageType`).
+ */
+export const strategyInternal = internalQuery({
+  args: holdArgs,
+  returns: v.array(serviceValidator),
+  handler: async (ctx, args) => {
+    const hold = await ctx.db.get(args.holdId);
+    if (!hold) return [];
+    const pages = await ctx.db.query("holdPages").withIndex("by_hold_clicks", (q) => q.eq("companyWebsiteId", hold._id)).order("desc").take(3000);
+    const kindOf = new Map(pages.map((page) => [page.page, page.pageType]));
+    const titleOf = new Map(pages.map((page) => [page.page, page.title ?? null]));
+    const sum = new Map<string, Omit<Service, "verdict">>();
+    const entry = (path: string) => {
+      const type = kindOf.get(path);
+      const kind = type === "SERVICE" ? "SERVICE" : type === "HOME" || path === "/" ? "HOME" : type === "ARTICLE" ? "GUIDES" : null;
+      if (!kind) return null;
+      const key = kind === "GUIDES" ? "guides" : path;
+      const held = sum.get(key) ?? { page: key, title: kind === "GUIDES" ? null : titleOf.get(path) ?? null, kind, enquiries: 0, enquiriesBefore: 0, visits: 0, people: 0, clicks: 0, clicksBefore: 0, impressions: 0, impressionsBefore: 0 };
+      sum.set(key, held);
+      return held;
+    };
+    const connection = await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", hold._id)).first();
+    let yearHeld = false;
+    if (connection?.property) {
+      const counted = countedOf(connection);
+      for (const which of ["NOW", "YEAR"] as const) {
+        const landing = await readSlot(ctx, hold._id, slotKey("landing", "365", which, EVERY_DEVICE));
+        if (!landing) continue;
+        if (which === "YEAR") yearHeld = true;
+        const addresses = await decodePages(ctx, hold._id, landing.rows.map((row) => row.key));
+        landing.rows.forEach((row, index) => {
+          const held = entry(pathOf(addresses[index]));
+          if (!held) return;
+          const done = conversionsOf(row, counted).conversions;
+          if (which === "NOW") {
+            held.enquiries += done;
+            held.visits += row.visits;
+            held.people += row.people;
+          } else held.enquiriesBefore = (held.enquiriesBefore ?? 0) + done;
+        });
+      }
+    }
+    let beforeHeld = false;
+    for (const which of ["NOW", "BEFORE"] as const) {
+      const list = await readPeriod(ctx, hold._id, "web", "page", "90", which);
+      if (list && which === "BEFORE") beforeHeld = true;
+      for (const row of list?.rows ?? []) {
+        const held = entry(pathOf(row.key));
+        if (!held) continue;
+        if (which === "NOW") {
+          held.clicks += row.clicks;
+          held.impressions += row.impressions;
+        } else {
+          held.clicksBefore = (held.clicksBefore ?? 0) + row.clicks;
+          held.impressionsBefore = (held.impressionsBefore ?? 0) + row.impressions;
+        }
+      }
+    }
+    // A year not held is not a fall: its figures are left unsaid.
+    const services = [...sum.values()].map((service) => ({
+      ...service,
+      ...(yearHeld ? {} : { enquiriesBefore: null }),
+      ...(beforeHeld ? {} : { clicksBefore: null, impressionsBefore: null }),
+    }));
+    return rankedServices(services);
   },
 });

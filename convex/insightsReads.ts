@@ -6,6 +6,8 @@ import { marketFacts } from "./insightsReading";
 import { LEAGUE_IDS, leaguesFrom } from "./utils/insightLeagues";
 import { factValidator } from "./utils/insightFacts";
 import { REPORT_KINDS, reportBodyValidator, weekSummaryValidator } from "./utils/insightSummary";
+import { serviceValidator } from "./utils/insightStrategy";
+import { loadRivalHolds, loadSite } from "./websiteSiteRows";
 
 /**
  * What the Insights screens read (docs/plans/active/insights-analyst-plan.md
@@ -395,5 +397,78 @@ export const markInsightReportRead = tenantMutation({
     if (!report || report.companyId !== ctx.companyId || report.status === "READ") return null;
     await ctx.db.patch(report._id, { status: "READ", readAt: Date.now() });
     return null;
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Strategy and a service (§4.1, drawn as the Strategy and ServiceDetail boards)
+
+/** The quarter's strategy: each service and its call from the newest week, and the roadmap — the week's three findings most at stake. */
+export const insightsStrategy = tenantQuery({
+  args: { siteId: v.optional(v.id("companyWebsites")) },
+  returns: v.union(v.null(), v.object({
+    siteId: v.id("companyWebsites"),
+    host: v.string(),
+    week: v.string(),
+    verdict: v.string(),
+    services: v.array(serviceValidator),
+    roadmap: v.array(v.object({ findingId: v.id("insightFindings"), action: v.string(), expect: v.string(), howWeKnow: v.string(), checkOn: v.union(v.string(), v.null()) })),
+  })),
+  handler: async (ctx, args) => {
+    const sites = await sitesFor(ctx, args.siteId);
+    const [newest] = await newestWeeks(ctx, sites.slice(0, 1));
+    if (!newest) return null;
+    const findings = (await ctx.db.query("insightFindings").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", newest.week.companyWebsiteId).eq("week", newest.week.week)).take(60))
+      .filter((finding) => finding.status === "PUBLISHED")
+      .sort((a, b) => a.rank - b.rank)
+      .slice(0, 3);
+    return {
+      siteId: newest.week.companyWebsiteId,
+      host: newest.host,
+      week: newest.week.week,
+      verdict: newest.week.verdict,
+      services: newest.week.summary?.services ?? [],
+      roadmap: findings.map((finding) => ({ findingId: finding._id, action: finding.action, expect: finding.headline, howWeKnow: finding.howWeKnow, checkOn: finding.checkOn ?? null })),
+    };
+  },
+});
+
+/** Searches a service's page is listed at most. */
+const SERVICE_SEARCHES = 15;
+
+/** One service: its figures from the newest week, the searches its page ranks for, and the best rival on each (DataForSEO's rankings, §5). */
+export const insightsService = tenantQuery({
+  args: { siteId: v.optional(v.id("companyWebsites")), page: v.string() },
+  returns: v.union(v.null(), v.object({
+    host: v.string(),
+    service: serviceValidator,
+    siteClicks: v.union(v.number(), v.null()),
+    searches: v.array(v.object({ keyword: v.string(), volume: v.number(), position: v.union(v.number(), v.null()), rival: v.union(v.string(), v.null()), rivalPosition: v.union(v.number(), v.null()) })),
+  })),
+  handler: async (ctx, args) => {
+    const sites = await sitesFor(ctx, args.siteId);
+    const [newest] = await newestWeeks(ctx, sites.slice(0, 1));
+    const service = newest?.week.summary?.services?.find((entry) => entry.page === args.page);
+    if (!newest || !service) return null;
+    const site = await loadSite(ctx, newest.week.companyWebsiteId);
+    if (!site) return null;
+    const own = service.kind === "GUIDES"
+      ? []
+      : await ctx.db.query("siteKeywordRanks").withIndex("by_site_page_band_position", (q) => q.eq("websiteId", site.website._id).eq("locationCode", site.place).eq("page", service.page)).take(300);
+    const rivals = await loadRivalHolds(ctx, site);
+    const rivalSites = await Promise.all(rivals.map(async (rival) => ({ id: rival.websiteId, website: await ctx.db.get(rival.websiteId) })));
+    const top = [...own].sort((a, b) => b.volume - a.volume).slice(0, SERVICE_SEARCHES);
+    const searches = [];
+    for (const rank of top) {
+      let best: { host: string; position: number } | null = null;
+      for (const rival of rivalSites) {
+        const theirs = await ctx.db.query("siteKeywordRanks").withIndex("by_site_keyword", (q) => q.eq("websiteId", rival.id).eq("locationCode", site.place).eq("keyword", rank.keyword)).first();
+        if (theirs?.position !== undefined && (!best || theirs.position < best.position)) best = { host: rival.website?.displayHost ?? rival.website?.host ?? "", position: theirs.position };
+      }
+      searches.push({ keyword: rank.keyword, volume: rank.volume, position: rank.position ?? null, rival: best?.host ?? null, rivalPosition: best?.position ?? null });
+    }
+    // The website's own Google clicks in the same 90 days, for the service's share of them.
+    const siteClicks = (newest.week.summary?.services ?? []).reduce((sum, entry) => sum + entry.clicks, 0);
+    return { host: newest.host, service, siteClicks: siteClicks > 0 ? siteClicks : null, searches };
   },
 });

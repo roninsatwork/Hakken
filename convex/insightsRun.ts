@@ -228,9 +228,11 @@ async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
     : "Nothing this week moved enough to call: the figures are steady.");
   // The executive summary's scorecard and charts, kept with the week (§8).
   const monthly = await ctx.runQuery(internal.insightsReading.monthlyInternal, { holdId: args.holdId });
+  const services = await ctx.runQuery(internal.insightsReading.strategyInternal, { holdId: args.holdId }).catch(() => []);
   const summary = {
     scorecard: scorecardFrom(reading.facts, args.host),
     enquiryCheck: check,
+    services,
     ...monthly,
     checked: reading.facts.length,
     ruledOut: saved.filter((finding) => finding.status === "PUBLISHED").reduce((sum, finding) => sum + finding.ruledOut.length, 0),

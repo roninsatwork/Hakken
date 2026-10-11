@@ -1,0 +1,16 @@
+# Insights → Strategy — the approved look (board "Strategy" of docs/plans/assets/insights-analyst/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Strategy: October to December #
+settings-card: What Hakken sees
+chart-card: Enquiries by service
+search: Search services...
+filter: What to do
+table: Service | Enquiries | Change | Shown on Google | What to do
+  table-bar: Your services
+    download: Download CSV
+  table-footer
+table: Priority | Why | How we'll know | By
+  table-bar: The roadmap for the quarter
+    download: Download CSV
+  table-footer

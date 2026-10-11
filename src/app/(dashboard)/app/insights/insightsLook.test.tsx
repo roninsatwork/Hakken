@@ -14,6 +14,8 @@ import InsightsAllFindingsPage from "./findings/page";
 import InsightsFindingPage from "./findings/[findingId]/page";
 import InsightsYourMonthPage from "./your-month/page";
 import InsightsReportsPage from "./reports/page";
+import InsightsStrategyPage from "./strategy/page";
+import InsightsServicePage from "./strategy/service/page";
 
 /**
  * Insights' screens hold to the looks drawn and approved on 2026-10-11
@@ -108,6 +110,7 @@ const MONTH_REPORT = {
     facts: [{ key: "month.enquiries.now", label: "enquiries", value: 10, unit: "count" }, { key: "month.enquiries.before", label: "enquiries", value: 7, unit: "count" }],
   },
 };
+const SERVICE = { page: "/ai-agency/", title: "AI Agency | London", kind: "SERVICE", enquiries: 31, enquiriesBefore: 26, visits: 700, people: 594, clicks: 204, clicksBefore: null, impressions: 42377, impressionsBefore: null, verdict: "STEADY" };
 const HOME = { company: "Ronins Agency", sites: [{ siteId: "site_1", host: "ronins.co.uk" }], lastLooked: Date.parse("2026-10-11T05:00:00Z"), thisWeek: 9, findings: 9 };
 
 function answer(queries: Record<string, unknown>) {
@@ -188,5 +191,23 @@ describe("Insights' looks", () => {
     const { container } = render(<InsightsReportsPage />);
     await screen.findByText("Monthly report: September 2026");
     await expectApprovedLook(container, PLAN, "Reports", "Insights → Reports");
+  });
+
+  it("4 · Strategy", async () => {
+    nav.pathname = "/app/insights/strategy";
+    answer({ "insightsReads:insightsHome": HOME, "insightsReads:insightsStrategy": { siteId: "site_1", host: "ronins.co.uk", week: "2026-10-05", verdict: "v", services: [SERVICE], roadmap: [{ findingId: "finding_1", action: "Rebuild the chatbot page.", expect: "Enquiries fell.", howWeKnow: "Enquiries from the page.", checkOn: "2026-11-30" }] } });
+    const { container } = render(<InsightsStrategyPage />);
+    await screen.findAllByText("AI Agency");
+    await expectApprovedLook(container, PLAN, "Strategy", "Insights → Strategy");
+  });
+
+  it("5 · A service", async () => {
+    nav.pathname = "/app/insights/strategy/service";
+    nav.search = "page=%2Fai-agency%2F";
+    answer({ "insightsReads:insightsHome": HOME, "insightsReads:insightsService": { host: "ronins.co.uk", service: SERVICE, siteClicks: 540, searches: [{ keyword: "ai agency", volume: 9900, position: 1, rival: null, rivalPosition: null }] } });
+    const { container } = render(<InsightsServicePage />);
+    await screen.findByText("ai agency");
+    await expectApprovedLook(container, PLAN, "ServiceDetail", "Insights → A service");
+    nav.search = "";
   });
 });

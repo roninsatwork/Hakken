@@ -23,7 +23,7 @@ export const INSIGHTS_PAGES: readonly InsightsPage[] = [
   { id: "summary", segment: "summary", group: "overview", built: true },
   { id: "week", segment: "this-week", group: "overview", built: true },
   { id: "month", segment: "your-month", group: "overview", built: true },
-  { id: "strategy", segment: "strategy", group: "overview", built: false },
+  { id: "strategy", segment: "strategy", group: "overview", built: true },
   { id: "reports", segment: "reports", group: "overview", built: true },
   { id: "findings", segment: "findings", group: "findings", built: true },
   { id: "track", segment: "track-record", group: "findings", built: false },

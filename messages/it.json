@@ -18086,6 +18086,125 @@
       "countedTwice": "\"{event}\" e \"{other}\" sono avvenuti {a} e {b} volte in 12 mesi: una richiesta potrebbe essere contata due volte.",
       "repeated": "\"{event}\" è avvenuto {a} volte da {b} persone in 12 mesi: alcune sono ripetizioni, o non sono persone.",
       "leavesBefore": "{a} delle {b} persone che hanno cliccato un link verso un altro sito hanno poi fatto una richiesta: il tuo modulo potrebbe contare come uscita dal sito, o dei bot potrebbero compilarlo."
+    },
+    "strategy": {
+      "title": "Strategia: {quarter}",
+      "quarter": "da {from} a {to} {year}",
+      "months": {
+        "january": "gennaio",
+        "february": "febbraio",
+        "march": "marzo",
+        "april": "aprile",
+        "may": "maggio",
+        "june": "giugno",
+        "july": "luglio",
+        "august": "agosto",
+        "september": "settembre",
+        "october": "ottobre",
+        "november": "novembre",
+        "december": "dicembre"
+      },
+      "description": "Quali dei tuoi servizi far crescere, mantenere o cambiare, in base a quali pagine portano richieste rispetto a un anno prima e a quanto Google le mostra. Apri un servizio per i dettagli.",
+      "emptyTitle": "Ancora nessuna strategia",
+      "emptyDescription": "La strategia si riempie dopo la prossima esecuzione del team.",
+      "guides": "Guide",
+      "home": "Pagina principale",
+      "guidesDetail": "I tuoi articoli insieme",
+      "new": "Nuovo",
+      "search": "Cerca servizi...",
+      "call": "Cosa fare",
+      "everyCall": "Tutto",
+      "download": "Scarica CSV",
+      "servicesTitle": "I tuoi servizi",
+      "roadmapTitle": "Il piano del trimestre",
+      "roadmapEmpty": "Ancora nessuna priorità.",
+      "noMatch": "Nessun servizio corrisponde alla ricerca.",
+      "seeService": "Vedi il servizio",
+      "verdicts": {
+        "GROW": "Da far crescere",
+        "STEADY": "Da mantenere",
+        "BUYERS_WORDS": "Usa le parole dei clienti",
+        "YOUR_CALL": "Decidi tu: crescere o fermarsi",
+        "READERS": "Per i lettori, non per le vendite"
+      },
+      "do": {
+        "GROW": "Fai crescere {service}: porta più richieste di un anno fa.",
+        "STEADY": "Mantieni {service}.",
+        "BUYERS_WORDS": "Ricostruisci {service} con le parole che i clienti usano oggi: le sue richieste si sono dimezzate.",
+        "YOUR_CALL": "Decidi se far crescere {service} o lasciarlo.",
+        "READERS": "Dai a {service} una strada verso una richiesta."
+      },
+      "sees": {
+        "grow": "{count, plural, =0 {Nessun servizio sta ancora crescendo nelle richieste.} one {Un servizio da far crescere: {services}.} other {# servizi da far crescere: {services}.}}",
+        "change": "{count, plural, one {Uno da cambiare: {services}.} other {# da cambiare: {services}.}}",
+        "noChange": "Nessuno sta perdendo richieste rapidamente."
+      },
+      "chart": {
+        "title": "Richieste per servizio",
+        "hint": "Gli ultimi 12 mesi rispetto ai 12 precedenti, da Google Analytics.",
+        "before": "I 12 mesi precedenti",
+        "now": "Gli ultimi 12 mesi"
+      },
+      "columns": {
+        "service": "Servizio",
+        "enquiries": "Richieste",
+        "before": "I 12 mesi precedenti",
+        "change": "Variazione",
+        "interest": "Mostrato su Google",
+        "call": "Cosa fare"
+      },
+      "roadmap": {
+        "what": "Priorità",
+        "expect": "Perché",
+        "know": "Come lo sapremo",
+        "by": "Entro"
+      }
+    },
+    "service": {
+      "back": "Strategia",
+      "notFound": "Servizio non trovato",
+      "notFoundDescription": "Apri la strategia per vedere i tuoi servizi.",
+      "description": "Uno dei tuoi servizi · La sua pagina principale è {page} · {host}",
+      "descriptionGuides": "I tuoi articoli insieme · {host}",
+      "seeStrategy": "Vedi la strategia",
+      "sees": {
+        "enquiries": "Ha portato {enquiries} richieste negli ultimi 12 mesi, rispetto a {before} nei 12 precedenti.",
+        "noYear": "Ha portato {enquiries} richieste negli ultimi 12 mesi.",
+        "call": {
+          "GROW": "Le sue richieste crescono: dagli di più.",
+          "STEADY": "Tiene: lascialo com'è.",
+          "BUYERS_WORDS": "Le sue richieste si sono dimezzate mentre Google lo mostra ancora: i clienti ora cercano con altre parole.",
+          "YOUR_CALL": "È sempre stato piccolo ed è calato: decidi se vale la pena farlo crescere.",
+          "READERS": "Le persone le leggono, ma raramente fanno una richiesta."
+        }
+      },
+      "figures": {
+        "enquiries": "Richieste in un anno",
+        "noYear": "Ancora nessun dato per l'anno precedente",
+        "onYear": "{percent}% rispetto a {before} l'anno prima",
+        "share": "Quota dei clic da Google dei tuoi servizi",
+        "shareDetail": "{clicks} clic in 90 giorni",
+        "perEnquiry": "Visitatori per ogni richiesta",
+        "perEnquiryDetail": "{people} visitatori in 12 mesi",
+        "shown": "Mostrato su Google",
+        "shownDetail": "volte in 90 giorni"
+      },
+      "searchesTitle": "Dove sei sulle sue ricerche",
+      "pagesTitle": "La sua pagina",
+      "download": "Scarica CSV",
+      "noSearches": "Ancora nessuna ricerca seguita per questa pagina.",
+      "noPages": "Nessuna pagina.",
+      "rivalAt": "{rival}, {place}º",
+      "columns": {
+        "search": "Ricerca",
+        "volume": "Ricerche al mese",
+        "place": "La tua posizione",
+        "rival": "Miglior concorrente",
+        "page": "Pagina",
+        "visitors": "Visitatori",
+        "enquiries": "Richieste",
+        "per": "Per una richiesta"
+      }
     }
   }
 }
