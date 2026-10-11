@@ -14341,7 +14341,8 @@
       "estimates": "Real against estimated",
       "trackedKeywords": "Tracked keywords",
       "trackedPages": "Tracked pages",
-      "volatility": "Volatility"
+      "volatility": "Volatility",
+      "services": "Demand by service"
     },
     "kinds": {
       "label": "Kind of result",
@@ -14914,7 +14915,8 @@
         "seeLosing": "See the keywords losing",
         "keywordResearch": "Open Keyword research",
         "seeDemand": "See Missed demand",
-        "connect": "Connect it"
+        "connect": "Connect it",
+        "seeStrategy": "See the strategy"
       },
       "keywords": {
         "noKeywords": "Google showed your website for no keywords in the last {c} days.",
@@ -15046,6 +15048,13 @@
         "notConnected": "{text} has no Search Console yet, so its clicks cannot be seen here.",
         "connect": "Connect Search Console for {text}.",
         "oneWebsite": "{text} brought {a} clicks in the last 30 days."
+      },
+      "services": {
+        "noDemand": "Google hasn't shown your pages in these dates.",
+        "shownMore": "Google showed you {a}% more than the days before, and clicks went from {c} to {b}.",
+        "shownFewer": "Google showed you {a}% less than the days before, and clicks went from {c} to {b}.",
+        "bestWorst": "Among your services, interest held best for {text}, {countC, plural, =1 {up} other {down}} {a}%, and fell most for {more}, down {b}%.",
+        "growBest": "Put next quarter's effort into {text}."
       }
     },
     "pageGap": {
@@ -15059,6 +15068,34 @@
       "worldwide": "Clicks worldwide",
       "worldwideDetail": "from the country list",
       "why": "Google ties only part of your clicks in {place} to a page: the rest come from searches it keeps private. So the pages below add up to the clicks tied to a page, not to every click."
+    },
+    "services": {
+      "title": "Demand by service",
+      "description": "How often Google showed you for each of your services in the last {days} days against the {days} before, and what buyers clicked.",
+      "readyMade": "Demand by service reads Google's ready-made figures: choose the last 7, 30 or 90 days, or the last year.",
+      "search": "Find a service",
+      "tableTitle": "{count, plural, one {# service} other {# services}} · The last {days} days against the {days} before",
+      "download": "Download CSV",
+      "noMatch": "No service matches",
+      "empty": "Google hasn't shown your pages in these dates.",
+      "guides": "Guides and articles",
+      "other": "Everything else",
+      "notSorted": "Not sorted",
+      "seeInsights": "See the Insights findings about demand",
+      "columns": {
+        "service": "Service",
+        "shown": "Times shown",
+        "change": "Change",
+        "clicks": "Clicks",
+        "clicksBefore": "Clicks before"
+      },
+      "chart": {
+        "title": "How often Google showed you, by service",
+        "hint": "The last {days} days against the {days} before.",
+        "before": "The days before",
+        "now": "The last days"
+      },
+      "home": "Home page"
     }
   },
   "googleAnalytics": {
@@ -18501,11 +18538,11 @@
         "converts": "Page converts"
       },
       "sees": {
-        "best": "Your best opportunity is '{search}': searched {volume} times a month{known, select, yes {, and the page it lands on turns {rate}% of visitors into enquiries} other {}}. You're {place} on Google.",
-        "bestShown": "Your best opportunity is '{search}': Google showed you for it {shown} times in 90 days{known, select, yes {, and the page it lands on turns {rate}% of visitors into enquiries} other {}}. You're {place} on Google.",
-        "next": "'{search}' is next: you're {place}."
+        "best": "Your best opportunity is ‘{search}’: searched {volume} times a month{known, select, yes {, and the page it lands on turns {rate}% of visitors into enquiries} other {}}. You're {place} on Google.",
+        "bestShown": "Your best opportunity is ‘{search}’: Google showed you for it {shown} times in 90 days{known, select, yes {, and the page it lands on turns {rate}% of visitors into enquiries} other {}}. You're {place} on Google.",
+        "next": "‘{search}’ is next: you're {place}."
       },
-      "do": "Strengthen {page} for '{search}'.",
+      "do": "Strengthen {page} for ‘{search}’.",
       "seePlan": "See the page plan",
       "chart": {
         "title": "Your opportunities by place and how often they're shown",
@@ -18556,7 +18593,7 @@
       "do": {
         "REBUILD": "Rebuild {page} around the searches it should win.",
         "RESTORE": "Restore what {page} lost when it took over another page's work.",
-        "STRENGTHEN": "Strengthen {page} for '{search}'.",
+        "STRENGTHEN": "Strengthen {page} for ‘{search}’.",
         "CREATE": "Create {page}.",
         "REFRESH": "Refresh {page}: it turns fewer visitors into enquiries than it did.",
         "REFRESH_OR_RETIRE": "Refresh {page}, or retire it.",

@@ -47,6 +47,7 @@ export const SEARCH_CONSOLE_PAGES = [
   { id: "performance", segment: "", group: "figures" },
   { id: "keywords", segment: "keywords", group: "figures" },
   { id: "pages", segment: "pages", group: "figures" },
+  { id: "services", segment: "demand-by-service", group: "figures" },
   { id: "places", segment: "countries-and-devices", group: "figures" },
   { id: "bands", segment: "position-bands", group: "changes" },
   { id: "newLost", segment: "new-and-lost", group: "changes" },

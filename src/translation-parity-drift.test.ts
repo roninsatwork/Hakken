@@ -165,3 +165,32 @@ describe('the Italian catalogue is translated, not copied', () => {
     ).toEqual([]);
   });
 });
+
+/**
+ * A straight apostrophe before a brace starts a quoted run in the message
+ * format, so `'{search}'` prints "{search}", never the search: Insights'
+ * Opportunities said "Your best opportunity is {search}" on 2026-10-11. Quote
+ * a value with curly quotes (‘{search}’); a sample that means to show braces
+ * as written is listed here with its reason.
+ */
+const QUOTED_ON_PURPOSE = new Set([
+  'admin.workflows.designer.drawer.logic.comparisonPlaceholder', // shows the {{nodes…}} syntax as written
+  'admin.aiTools.edit.outputPlaceholder', // shows a JSON sample as written
+]);
+
+const catalogue = (name: string): unknown => JSON.parse(fs.readFileSync(path.join(repoRoot, 'messages', `${name}.json`), 'utf8'));
+
+describe('no value is hidden behind an apostrophe', () => {
+  test.each(['en', 'it'])('%s', (locale) => {
+    const hidden: string[] = [];
+    const walk = (node: unknown, trail: string) => {
+      if (typeof node === 'string') {
+        if (/'\{/.test(node) && !QUOTED_ON_PURPOSE.has(trail)) hidden.push(`${trail} — ${node}`);
+        return;
+      }
+      if (node && typeof node === 'object') for (const [key, value] of Object.entries(node)) walk(value, trail ? `${trail}.${key}` : key);
+    };
+    walk(catalogue(locale), '');
+    expect(hidden, `These print a placeholder's name, not its value: put the value in curly quotes (‘{value}’):\n${hidden.join('\n')}`).toEqual([]);
+  });
+});

@@ -14341,7 +14341,8 @@
       "estimates": "Reali contro stimati",
       "trackedKeywords": "Parole chiave monitorate",
       "trackedPages": "Pagine monitorate",
-      "volatility": "Volatilità"
+      "volatility": "Volatilità",
+      "services": "Domanda per servizio"
     },
     "kinds": {
       "label": "Tipo di risultato",
@@ -14914,7 +14915,8 @@
         "seeLosing": "Vedi le parole chiave in calo",
         "keywordResearch": "Apri Ricerca parole chiave",
         "seeDemand": "Vedi Domanda persa",
-        "connect": "Collegalo"
+        "connect": "Collegalo",
+        "seeStrategy": "Vedi la strategia"
       },
       "keywords": {
         "noKeywords": "Google non ha mostrato il tuo sito per nessuna parola chiave negli ultimi {c} giorni.",
@@ -15046,6 +15048,13 @@
         "notConnected": "{text} non ha ancora Search Console, quindi i suoi clic non si vedono qui.",
         "connect": "Collega Search Console per {text}.",
         "oneWebsite": "{text} ha portato {a} clic negli ultimi 30 giorni."
+      },
+      "services": {
+        "noDemand": "Google non ha mostrato le tue pagine in queste date.",
+        "shownMore": "Google ti ha mostrato il {a}% in più dei giorni precedenti, e i clic sono passati da {c} a {b}.",
+        "shownFewer": "Google ti ha mostrato il {a}% in meno dei giorni precedenti, e i clic sono passati da {c} a {b}.",
+        "bestWorst": "Tra i tuoi servizi, l'interesse ha tenuto meglio per {text}, {countC, plural, =1 {in crescita del} other {in calo del}} {a}%, ed è sceso di più per {more}, in calo del {b}%.",
+        "growBest": "Metti l'impegno del prossimo trimestre su {text}."
       }
     },
     "pageGap": {
@@ -15059,6 +15068,34 @@
       "worldwide": "Clic in tutto il mondo",
       "worldwideDetail": "dall'elenco dei paesi",
       "why": "Google lega a una pagina solo una parte dei tuoi clic in {place}: il resto viene da ricerche che tiene private. Per questo le pagine qui sotto sommano ai clic legati a una pagina, non a tutti i clic."
+    },
+    "services": {
+      "title": "Domanda per servizio",
+      "description": "Quante volte Google ti ha mostrato per ognuno dei tuoi servizi negli ultimi {days} giorni rispetto ai {days} precedenti, e cosa hanno cliccato i clienti.",
+      "readyMade": "La domanda per servizio legge i dati già pronti di Google: scegli gli ultimi 7, 30 o 90 giorni, o l'ultimo anno.",
+      "search": "Trova un servizio",
+      "tableTitle": "{count, plural, one {# servizio} other {# servizi}} · Gli ultimi {days} giorni rispetto ai {days} precedenti",
+      "download": "Scarica CSV",
+      "noMatch": "Nessun servizio corrisponde",
+      "empty": "Google non ha mostrato le tue pagine in queste date.",
+      "guides": "Guide e articoli",
+      "other": "Tutto il resto",
+      "notSorted": "Non classificate",
+      "seeInsights": "Vedi le scoperte di Insights sulla domanda",
+      "columns": {
+        "service": "Servizio",
+        "shown": "Volte mostrato",
+        "change": "Variazione",
+        "clicks": "Clic",
+        "clicksBefore": "Clic prima"
+      },
+      "chart": {
+        "title": "Quante volte Google ti ha mostrato, per servizio",
+        "hint": "Gli ultimi {days} giorni rispetto ai {days} precedenti.",
+        "before": "I giorni precedenti",
+        "now": "Gli ultimi giorni"
+      },
+      "home": "Pagina principale"
     }
   },
   "googleAnalytics": {
@@ -18501,11 +18538,11 @@
         "converts": "La pagina converte"
       },
       "sees": {
-        "best": "La tua migliore opportunità è '{search}': cercata {volume} volte al mese{known, select, yes {, e la pagina su cui arriva trasforma il {rate}% dei visitatori in richieste} other {}}. Sei in posizione {place} su Google.",
-        "bestShown": "La tua migliore opportunità è '{search}': Google ti ha mostrato {shown} volte in 90 giorni{known, select, yes {, e la pagina su cui arriva trasforma il {rate}% dei visitatori in richieste} other {}}. Sei in posizione {place} su Google.",
-        "next": "Poi '{search}': sei in posizione {place}."
+        "best": "La tua migliore opportunità è ‘{search}’: cercata {volume} volte al mese{known, select, yes {, e la pagina su cui arriva trasforma il {rate}% dei visitatori in richieste} other {}}. Sei in posizione {place} su Google.",
+        "bestShown": "La tua migliore opportunità è ‘{search}’: Google ti ha mostrato {shown} volte in 90 giorni{known, select, yes {, e la pagina su cui arriva trasforma il {rate}% dei visitatori in richieste} other {}}. Sei in posizione {place} su Google.",
+        "next": "Poi ‘{search}’: sei in posizione {place}."
       },
-      "do": "Rafforza {page} per '{search}'.",
+      "do": "Rafforza {page} per ‘{search}’.",
       "seePlan": "Vedi il piano delle pagine",
       "chart": {
         "title": "Le tue opportunità per posizione e per quante volte sei mostrato",
@@ -18556,7 +18593,7 @@
       "do": {
         "REBUILD": "Ricostruisci {page} attorno alle ricerche che dovrebbe vincere.",
         "RESTORE": "Ripristina ciò che {page} ha perso quando ha preso il lavoro di un'altra pagina.",
-        "STRENGTHEN": "Rafforza {page} per '{search}'.",
+        "STRENGTHEN": "Rafforza {page} per ‘{search}’.",
         "CREATE": "Crea {page}.",
         "REFRESH": "Aggiorna {page}: trasforma in richieste meno visitatori di prima.",
         "REFRESH_OR_RETIRE": "Aggiorna {page}, o ritirala.",

@@ -20,7 +20,8 @@ const OLD_NAMES: Record<"en" | "it", RegExp> = {
   en: /\b(Discovery|Insights)\b/,
   it: /\b(Discovery|Scoperta|Insights)\b/,
 };
-const KEPT = new Set(["dashboard.hero.eyebrow"]);
+// A source's link to the analyst's own findings names the section it opens (insights-analyst-plan.md §4.4).
+const KEPT = new Set(["dashboard.hero.eyebrow", "searchConsole.services.seeInsights"]);
 /** The analyst's section, the one place "Insights" belongs (menu-names-plan.md phase 7). */
 const INSIGHTS_KEYS = /^(insights\.|sidebar\.insights|admin\.insights\.|admin\.companyDataCollection\.insights\.|admin\.agents\.details\.settings\.sections\.role\.(groups\.insights|roles\.INSIGHTS_))/;
 const DISCOVERY: Record<"en" | "it", RegExp> = { en: /\bDiscovery\b/, it: /\b(Discovery|Scoperta)\b/ };

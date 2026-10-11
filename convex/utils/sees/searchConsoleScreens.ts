@@ -276,3 +276,37 @@ export function websitesSees(sites: ReadonlyArray<{ siteId: string; host: string
     [waiting && { code: "connect", text: waiting.host, link: "connect", to: { url: `/app/search-console/${waiting.siteId}/connection` } }],
   );
 }
+
+/** A service's showings and clicks, now and before, named by the screen. */
+export type ServiceDemand = { name: string; shown: number; shownBefore: number | null; clicks: number; clicksBefore: number | null; service: boolean };
+
+/** A service needs this many showings before its change says anything. */
+const DEMAND_FLOOR = 100;
+
+/**
+ * Demand by service (insights-analyst-plan.md §4.4, phase 9): whether Google
+ * showed the website more or less than the days before and what happened to
+ * the clicks, and which service held up best and which fell most — the one
+ * to put next quarter's effort into.
+ */
+export function servicesSees(services: readonly ServiceDemand[]): Seen {
+  const shown = services.reduce((sum, service) => sum + service.shown, 0);
+  if (shown === 0) return seen([{ code: "noDemand" }]);
+  const held = services.filter((service) => service.shownBefore !== null);
+  const shownBefore = held.reduce((sum, service) => sum + (service.shownBefore ?? 0), 0);
+  const clicks = services.reduce((sum, service) => sum + service.clicks, 0);
+  const clicksBefore = held.reduce((sum, service) => sum + (service.clicksBefore ?? 0), 0);
+  const moved = (now: number, before: number) => Math.round(((now - before) / before) * 100);
+  // Best and worst among the services themselves, never the guides or the company's other groups.
+  const sized = held.filter((service) => service.service && (service.shownBefore ?? 0) >= DEMAND_FLOOR).map((service) => ({ ...service, change: moved(service.shown, service.shownBefore ?? 0) }));
+  const ranked = [...sized].sort((a, b) => b.change - a.change);
+  const best = ranked[0], worst = ranked.at(-1);
+  return seen(
+    [
+      shownBefore > 0 && { code: shown >= shownBefore ? "shownMore" : "shownFewer", a: Math.abs(moved(shown, shownBefore)), b: clicks, c: clicksBefore },
+      // Sizes as plain numbers, `c` 1 when the best still rose: the words say up or down.
+      best && worst && best !== worst && { code: "bestWorst", text: best.name, more: worst.name, a: Math.abs(best.change), b: Math.abs(worst.change), c: best.change >= 0 ? 1 : 0 },
+    ],
+    [best && { code: "growBest", text: best.name, link: "seeStrategy", to: { url: "/app/insights/strategy" } }],
+  );
+}

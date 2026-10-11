@@ -12,6 +12,7 @@ import SearchConsoleBrandPage from "./[siteId]/brand-and-non-brand/page";
 import SearchConsoleCtrCurvePage from "./[siteId]/click-rate-by-position/page";
 import SearchConsoleAppearancePage from "./[siteId]/rich-results/page";
 import SearchConsoleEstimatesPage from "./[siteId]/real-against-estimated/page";
+import SearchConsoleServicesPage from "./[siteId]/demand-by-service/page";
 
 /**
  * Search Console's last opportunities and its breakdowns hold to the looks
@@ -150,6 +151,23 @@ describe("Search Console's approved looks: missed demand, pages competing and th
     const { container } = render(<SearchConsoleDemandPage />);
     await screen.findByText("ai agency");
     await expectApprovedLook(container, PLAN, "Demand", "Search Console → Missed demand");
+  });
+
+  it("Insights 37 · Demand by service", async () => {
+    at("/app/search-console/site_1/demand-by-service");
+    answer({
+      "searchConsoleConnect:searchConsoleStatus": STATUS,
+      "searchConsoleDemand:searchConsoleDemand": {
+        from: "2026-09-10", to: "2026-10-09", beforeFrom: "2026-08-11", beforeTo: "2026-09-09", classified: false,
+        services: [
+          { id: "/ai-agency/", name: "AI Agency | Automation", kind: "SERVICE", shown: 13048, shownBefore: 14660, clicks: 66, clicksBefore: 84, pages: 3 },
+          { id: "GUIDES", name: null, kind: "GUIDES", shown: 5389, shownBefore: 5555, clicks: 16, clicksBefore: 7, pages: 40 },
+        ],
+      },
+    });
+    const { container } = render(<SearchConsoleServicesPage />);
+    await screen.findAllByText("AI Agency");
+    await expectApprovedLook(container, "insights-analyst", "ScDemand", "Search Console → Demand by service");
   });
 
   it("12 · Pages competing", async () => {

@@ -16,6 +16,7 @@ import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import type { Opportunity } from "@/convex/utils/insightPlan";
 import { SiteScatterChart } from "../../sites/_components/SiteCharts";
 import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
+import { formatPosition } from "../../search-console/_components/searchConsoleFormat";
 import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
@@ -34,6 +35,7 @@ const PLACES = ["4-30", "4-10", "11-20", "21-30"] as const;
  */
 export default function InsightsOpportunitiesPage() {
   const t = useTranslations("insights.opportunities");
+  const tPlace = useTranslations("insights.place");
   const href = useInsightsHref();
   const site = useInsightsSite();
   const data = useQuery(api.insightsReads.insightsPlan, site ? { siteId: site } : {});
@@ -49,13 +51,15 @@ export default function InsightsOpportunitiesPage() {
   if (data === undefined) return <>{header}<div className="h-40 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" /></>;
   if (!data?.plan || !rows || rows.length === 0) return <>{header}<HakkenEmptyState icon={Target} title={t("emptyTitle")} description={t("emptyDescription")} /></>;
 
-  const place = (value: number) => formatNumber(Math.round(value * 10) / 10);
+  // A place to one decimal in the table, as Search Console averages it; in words, its nearest ordinal.
+  const place = (value: number) => formatPosition(value);
+  const ordinal = (value: number) => tPlace("ordinal", { place: Math.max(1, Math.round(value)) });
   const [best, next] = rows;
   const says = [
     best.volume !== null
-      ? t("sees.best", { search: best.search, volume: formatNumber(best.volume), rate: best.rate ?? 0, known: best.rate !== null ? "yes" : "no", place: place(best.place) })
-      : t("sees.bestShown", { search: best.search, shown: formatNumber(best.shown ?? 0), rate: best.rate ?? 0, known: best.rate !== null ? "yes" : "no", place: place(best.place) }),
-    ...(next ? [t("sees.next", { search: next.search, place: place(next.place) })] : []),
+      ? t("sees.best", { search: best.search, volume: formatNumber(best.volume), rate: formatPosition(best.rate), known: best.rate !== null ? "yes" : "no", place: ordinal(best.place) })
+      : t("sees.bestShown", { search: best.search, shown: formatNumber(best.shown ?? 0), rate: formatPosition(best.rate), known: best.rate !== null ? "yes" : "no", place: ordinal(best.place) }),
+    ...(next ? [t("sees.next", { search: next.search, place: ordinal(next.place) })] : []),
   ];
   const steps: HakkenSeesStep[] = rows.filter((row) => row.page).slice(0, 1).map((row) => ({ words: t("do", { page: row.page!, search: row.search }), link: t("seePlan"), href: href("page-plan") }));
   const services = [...new Set(rows.map((row) => row.service).filter((value): value is string => Boolean(value)))].sort();
@@ -72,7 +76,7 @@ export default function InsightsOpportunitiesPage() {
     <>
       {header}
       <HakkenSees says={says} steps={steps} />
-      <ChartCard title={t("chart.title")} hint={t("chart.hint", { rate: rate ?? 0 })} exportName={`${data.host}-opportunities`} csv={csv} enoughData={dots.length > 1}>
+      <ChartCard title={t("chart.title")} hint={t("chart.hint", { rate: formatPosition(rate) })} exportName={`${data.host}-opportunities`} csv={csv} enoughData={dots.length > 1}>
         <SiteScatterChart groups={groups} xLabel={t("chart.x")} yLabel={t("chart.y")} readout={{ x: t("columns.place"), y: t("columns.shown") }} />
       </ChartCard>
       <DataTable
@@ -99,7 +103,7 @@ export default function InsightsOpportunitiesPage() {
           { key: "volume", header: t("columns.volume"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.volume === null ? "–" : formatNumber(row.volume)}</span> },
           { key: "shown", header: t("columns.shown"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.shown === null ? "–" : formatNumber(row.shown)}</span> },
           { key: "page", header: t("columns.page"), cell: (row) => <span className="truncate text-[12px] text-secondary">{row.page ?? "–"}</span> },
-          { key: "converts", header: t("columns.converts"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{row.rate === null ? "–" : `${formatNumber(row.rate)}%`}</span> },
+          { key: "converts", header: t("columns.converts"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{row.rate === null ? "–" : `${formatPosition(row.rate)}%`}</span> },
         ]}
       />
     </>

@@ -1162,7 +1162,8 @@
         "seeLosing": "See the keywords losing",
         "keywordResearch": "Open Keyword research",
         "seeDemand": "See Missed demand",
-        "connect": "Connect it"
+        "connect": "Connect it",
+        "seeStrategy": "See the strategy"
       },
       "keywords": {
         "noKeywords": "Google showed your website for no keywords in the last {c} days.",
@@ -1294,6 +1295,13 @@
         "notConnected": "{text} has no Search Console yet, so its clicks cannot be seen here.",
         "connect": "Connect Search Console for {text}.",
         "oneWebsite": "{text} brought {a} clicks in the last 30 days."
+      },
+      "services": {
+        "noDemand": "Google hasn't shown your pages in these dates.",
+        "shownMore": "Google showed you {a}% more than the days before, and clicks went from {c} to {b}.",
+        "shownFewer": "Google showed you {a}% less than the days before, and clicks went from {c} to {b}.",
+        "bestWorst": "Among your services, interest held best for {text}, {countC, plural, =1 {up} other {down}} {a}%, and fell most for {more}, down {b}%.",
+        "growBest": "Put next quarter's effort into {text}."
       }
     }
   },
@@ -2460,7 +2468,8 @@
         "seeLosing": "Vedi le parole chiave in calo",
         "keywordResearch": "Apri Ricerca parole chiave",
         "seeDemand": "Vedi Domanda persa",
-        "connect": "Collegalo"
+        "connect": "Collegalo",
+        "seeStrategy": "Vedi la strategia"
       },
       "keywords": {
         "noKeywords": "Google non ha mostrato il tuo sito per nessuna parola chiave negli ultimi {c} giorni.",
@@ -2592,6 +2601,13 @@
         "notConnected": "{text} non ha ancora Search Console, quindi i suoi clic non si vedono qui.",
         "connect": "Collega Search Console per {text}.",
         "oneWebsite": "{text} ha portato {a} clic negli ultimi 30 giorni."
+      },
+      "services": {
+        "noDemand": "Google non ha mostrato le tue pagine in queste date.",
+        "shownMore": "Google ti ha mostrato il {a}% in più dei giorni precedenti, e i clic sono passati da {c} a {b}.",
+        "shownFewer": "Google ti ha mostrato il {a}% in meno dei giorni precedenti, e i clic sono passati da {c} a {b}.",
+        "bestWorst": "Tra i tuoi servizi, l'interesse ha tenuto meglio per {text}, {countC, plural, =1 {in crescita del} other {in calo del}} {a}%, ed è sceso di più per {more}, in calo del {b}%.",
+        "growBest": "Metti l'impegno del prossimo trimestre su {text}."
       }
     }
   }

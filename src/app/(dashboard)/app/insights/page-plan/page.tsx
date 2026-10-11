@@ -17,6 +17,7 @@ import { wordStartMatcher } from "@/convex/utils/wordStarts";
 import { PLAN_ACTIONS, type PlanPage } from "@/convex/utils/insightPlan";
 import { SiteBarChart } from "../../sites/_components/SiteCharts";
 import { formatNumber, toCsv } from "../../sites/_components/siteFormat";
+import { formatPosition } from "../../search-console/_components/searchConsoleFormat";
 import { ListDownload } from "../../sites/_components/SiteDownloads";
 import { useSitePager } from "../../sites/_components/useSitePagedTable";
 import { useSiteParam, useSiteSearch } from "../../sites/_components/useSiteParam";
@@ -37,7 +38,10 @@ export default function InsightsPagePlanPage() {
   const [search, setSearch, term] = useSiteSearch();
   const [action, setAction] = useSiteParam<string>("action", "");
   const rows = data?.plan?.pages;
-  const why = (row: PlanPage) => t(`why.${row.why}`, { a: row.a === null ? "" : formatNumber(row.a), b: row.b === null ? "" : formatNumber(row.b), count: row.b ?? 0, place: row.b === null ? "" : tPlace("ordinal", { place: row.b }) });
+  // Rates keep their decimal (5.1%); counts are whole.
+  const rated = (row: PlanPage) => row.why === "bestRate" || row.why === "rateFell";
+  const figure = (row: PlanPage, value: number | null) => (value === null ? "" : rated(row) ? formatPosition(value) : formatNumber(value));
+  const why = (row: PlanPage) => t(`why.${row.why}`, { a: figure(row, row.a), b: row.why === "bestRate" ? "" : figure(row, row.b), count: row.b ?? 0, place: row.b === null ? "" : tPlace("ordinal", { place: row.b }) });
   const matches = wordStartMatcher(term.toLowerCase());
   const shown = rows?.filter((row) => (!action || row.action === action) && (!matches || matches(`${row.page} ${row.shouldWin.join(" ")}`)));
   const pages = useSitePager(data ? shown : undefined, { isLoading: data === undefined });
