@@ -676,6 +676,38 @@ export const BUILT_IN_TOOL_CONNECTORS: ToolConnectorDefinition[] = [
     ],
   },
   {
+    // Insights' findings for the Assistant (docs/plans/active/insights-analyst-plan.md
+    // I14, phase 16): its own connector, so it reaches an Assistant already installed.
+    key: "assistant-insights",
+    name: "Assistant insights",
+    description:
+      "Lets the Assistant read Insights' findings on a website, so it gives the same advice as Insights and its reports, never advice of its own.",
+    category: "KNOWLEDGE",
+    authMode: "NONE",
+    tenantAvailability: "GLOBAL",
+    requiredScopes: ["company:read"],
+    requiredSecretRefs: [],
+    toolDefinitions: [
+      {
+        name: "Read Insights' findings",
+        description:
+          "Insights' newest week for one of the company's own websites: the Head of Strategy's verdict and each finding — what Hakken found across Search Console, Google Analytics, Visibility and AI answers, what to do first and how we'll know it worked — checked by its Editor, with each finding's link; and the newest monthly report's headline. Read it before you say what a website should do next, why enquiries moved, or what matters most, and give its findings as written, with their links: add detail when asked, never different advice, and never a figure it doesn't give.",
+        handlerMapping: "assistant.insights.read",
+        modelName: "read_insights",
+        requiredRole: "ADMIN",
+        sideEffectLevel: "READ",
+        confirmationRequired: false,
+        inputSchema: JSON.stringify({
+          type: "object",
+          required: ["website"],
+          properties: {
+            website: { type: "string", description: "The website's address, e.g. example.co.uk — one of the company's own, from list_websites." },
+          },
+        }),
+      },
+    ],
+  },
+  {
     // The Assistant's chart under an answer (docs/plans/active/
     // hakken-tasks-plan.md, item 2.1). Its own connector rather than one more
     // figure tool: a connector's tools are written when it is installed, so a

@@ -68,6 +68,8 @@ const MEMBER_READABLE_HANDLERS: ReadonlySet<string> = new Set([
   "assistant.tasks.open",
   // What Hakken sees on a website's screens, as the member can already read them there (search-console-volatility-plan.md §8, HS7).
   "assistant.advice.read",
+  // Insights' findings, as the member can already read them in Insights (insights-analyst-plan.md I14).
+  "assistant.insights.read",
   // A chart under an answer, drawn from the Search Console figures a member can already open (hakken-tasks-plan.md, 2.1).
   "assistant.chart",
   // Every Google Analytics screen and Live, as a member can already open them (google-analytics-plan.md §18.6.8).

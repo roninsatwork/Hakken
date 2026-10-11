@@ -78,6 +78,49 @@ export const adviceInternal = internalQuery({
   },
 });
 
+/** Findings Ask Hakken reads at most: the week's, and the newest unresolved before it. */
+const INSIGHT_FINDINGS_READ = 60;
+
+/**
+ * Insights for Ask Hakken (docs/plans/active/insights-analyst-plan.md I14,
+ * phase 16): the newest week's verdict and findings for one of the company's
+ * own websites, each with its first step and how we'll know, worded exactly
+ * as saved — so Ask Hakken gives the same advice as the screens and reports,
+ * adds detail when asked and never contradicts them.
+ */
+export const insightsInternal = internalQuery({
+  args: { ...companyArg, website: v.string() },
+  handler: async (ctx, args) => {
+    const found = await holdFor(ctx, args.companyId, args.website);
+    if ("problem" in found) return { ok: false, problem: found.problem };
+    const holdId = found.held.hold._id;
+    const week = await ctx.db.query("insightWeeks").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", holdId)).order("desc").first();
+    if (!week) return { ok: true, website: found.held.summary.host, none: "Insights hasn't read this website yet: its first week's findings come with the team's next run." };
+    const findings = (await ctx.db.query("insightFindings").withIndex("by_hold_week", (q) => q.eq("companyWebsiteId", holdId).eq("week", week.week)).take(INSIGHT_FINDINGS_READ))
+      .filter((finding) => finding.status === "PUBLISHED")
+      .sort((a, b) => a.rank - b.rank);
+    const report = await ctx.db.query("insightReports").withIndex("by_hold_kind_period", (q) => q.eq("companyWebsiteId", holdId).eq("kind", "MONTHLY")).order("desc").first().catch(() => null);
+    return {
+      ok: true,
+      website: found.held.summary.host,
+      rule: "These are Insights' findings, as the team wrote and the Editor checked them. Give them as written, with the way to each; add detail when asked, never different advice, and never a figure that isn't here.",
+      week: week.week,
+      verdict: week.verdict,
+      findings: findings.map((finding) => ({
+        headline: finding.headline,
+        story: finding.story,
+        do_first: finding.action,
+        how_we_will_know: finding.howWeKnow,
+        check_on: finding.checkOn ?? null,
+        sure: finding.sure,
+        link: `/app/insights/findings/${finding._id}`,
+      })),
+      ...(report?.body ? { month: { title: report.title, headline: report.body.headline, link: `/app/insights/reports/${report._id}` } } : {}),
+      links: { summary: "/app/insights/summary", thisWeek: "/app/insights/this-week", strategy: "/app/insights/strategy", pagePlan: "/app/insights/page-plan" },
+    };
+  },
+});
+
 /** The company's websites — its own, and the competitors each is measured against. */
 export const websitesInternal = internalQuery({
   args: companyArg,

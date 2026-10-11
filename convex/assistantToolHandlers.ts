@@ -81,6 +81,11 @@ export const ASSISTANT_FIGURE_HANDLERS: Record<string, (input: ToolHandlerExecut
       ...(question ? { question } : {}),
     });
   },
+  /** Insights' findings, as written (insights-analyst-plan.md I14, phase 16). */
+  "assistant.insights.read": async (input) => {
+    if (!input.companyId) return NO_COMPANY_FIGURES;
+    return await input.ctx.runQuery(internal.assistantReads.insightsInternal, { companyId: input.companyId, website: stringArg(input.args, "website") });
+  },
   "assistant.advice.read": async (input) => {
     if (!input.companyId) return NO_COMPANY_FIGURES;
     return await input.ctx.runQuery(internal.assistantReads.adviceInternal, {

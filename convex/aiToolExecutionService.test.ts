@@ -408,6 +408,8 @@ describe("ai tool execution service", () => {
       // Every Google Analytics screen, and Live, through the screens' own reads (google-analytics-plan.md §18.6.8).
       "assistant.googleAnalytics",
       "assistant.googleAnalytics.live",
+      // Insights' findings, as written (insights-analyst-plan.md I14, phase 16).
+      "assistant.insights.read",
       "assistant.searchConsole",
       "assistant.site.overview",
       // The Assistant's Hakken task tools (hakken-tasks-plan.md, item 1.2): each
