@@ -18,6 +18,8 @@ const EVENTS = [
 
 export const CONNECTION = {
   status: "CONNECTED" as "CONNECTING" | "CHOOSING" | "COUNTING" | "CONNECTED" | "NEEDS_RECONNECT" | "DISCONNECTED",
+  /** A shop: Products shows only for one (§18.6.6). */
+  shop: false,
   signingIn: false,
   googleAccount: "anthony@example.com",
   sharedWithSearchConsole: true,

@@ -1,0 +1,19 @@
+# Google Analytics → Visitors — the approved look (board "Visitors" of docs/plans/assets/google-analytics/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Visitors
+settings-card: What Hakken sees
+figures
+  figure: People
+  figure: New visitors
+  figure: Returning visitors
+  figure: Visits a person
+chart-card: New and returning visitors a day
+chart-card: Visits by browser
+notice (info)
+search: Find a browser…
+choice: Showing: New or returning | Browsers | Operating systems | Age | Gender | Interests
+table: Browser | People | Visits | Engaged | Conversions | Change
+  table-bar
+    download: Download CSV
+  table-footer

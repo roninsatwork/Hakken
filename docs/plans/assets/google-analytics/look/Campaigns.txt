@@ -1,0 +1,13 @@
+# Google Analytics → Campaigns — the approved look (board "Campaigns" of docs/plans/assets/google-analytics/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Campaigns
+settings-card: What Hakken sees
+chart-card: Visits from tagged links a day
+chart-card: Visits by campaign
+search: Find a campaign…
+choice: Showing: Campaigns | Ad keywords
+table: Campaign | Source | Visits | Engaged | Conversions | Value | Change
+  table-bar
+    download: Download CSV
+  table-footer

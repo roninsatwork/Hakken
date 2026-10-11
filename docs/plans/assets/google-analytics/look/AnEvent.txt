@@ -1,0 +1,20 @@
+# Google Analytics → an event's own screen — the approved look (board "AnEvent" of docs/plans/assets/google-analytics/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+detail-header
+  back: Events
+  page-header: ‹the record's name›
+settings-card: What Hakken sees
+figures
+  figure: Times
+  figure: People
+  figure: Visits with one
+  figure: People who converted after it
+chart-card: Times a day
+chart-card: Links clicked
+search: Find a link…
+choice: Showing: Links clicked | Pages it happened on
+table: Link clicked | Times | People | Change
+  table-bar
+    download: Download CSV
+  table-footer

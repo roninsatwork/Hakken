@@ -1,0 +1,18 @@
+# Google Analytics → Live — the approved look (board "Live" of docs/plans/assets/google-analytics/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Live
+settings-card: What Hakken sees
+figures
+  figure: On the website now
+  figure: People
+  figure: Views
+  figure: Conversions
+chart-card: People each minute
+chart-card: Where they are
+search: Find a page…
+choice: Showing: Pages | Places | Devices | Events
+table: Page | People | Views
+  table-bar
+    download: Download CSV
+  table-footer

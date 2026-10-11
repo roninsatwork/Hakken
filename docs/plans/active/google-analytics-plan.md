@@ -530,11 +530,11 @@ Q12, about 89% is on dev.** What was built, and
 where the build differs from the words above, is §12.
 
 **Progress, 2026-10-11: the second round (§18) drawn, agreed and planned,
-with how it is built (§18.6) and its What Hakken sees (§18.7). Phases 6 to 15
+with how it is built (§18.6) and its What Hakken sees (§18.7). Phases 6 to 16
 built on dev, each committed and none pushed, and "people who converted
-after it" (half a day more) — twenty-five and a half of twenty-seven days,
-about 94%; one and a half left. Both rounds: about fifty-one of fifty-two
-and a half days, about 97%.**
+after it" (half a day more) — all twenty-seven days, 100%. Both rounds:
+about fifty-two and a half of fifty-two and a half days, 100%: everything
+agreed is built on dev; nothing is pushed.**
 
 ## 9. Risks
 
@@ -1513,6 +1513,24 @@ nothing on lists that have none. Every new list joins the keep rules: days
 60, ready-made periods replaced, live answers cleared at the next
 collection, all of it cleared when the website disconnects, changes
 property or changes main country.
+
+*Built 2026-10-11 (Phase 16): measured and checked.* **Reading budgets**
+(`googleAnalyticsSecondRoundLoad.test.ts`): every new screen over 12 months
+on a website five times morehandles.co.uk's size — 45,000 pages, 45,000
+products, 150 events, 2,500 campaigns — reads well inside half of a read's
+limits (16 MiB, 32,000 records): Products 5.1 MiB and 63 records, its list
+5.1 MiB, a page's own screen 3.4 MiB, Events and an event's screen 2.0 MiB,
+Campaigns 0.3 MiB, Visitors 0.04 MiB. **Storage on Ronins** (dev, all of
+Analytics' tables): about 740 KB — the ready-made lists 480 KB, their slots
+59 KB, the 60 days kept 174 KB, page titles 24 KB, nothing held live. The
+second round's own share is about 280 KB, the largest each event a day for
+the 12 months' chart (141 KB). **Looks**: the seven new screens'
+outlines (`googleAnalyticsSecondRoundLook.test.tsx`, saved in
+`look/`) match their pictures part for part — Live, Campaigns, a page's own
+screen, Events, an event's own screen (its fourth figure "People who
+converted after it", as agreed), Visitors and Products. **Ronins in Chrome**:
+every screen opened without an error. **The gate**: the full check (7,300
+tests), coverage and its floors, the browser smoke tests and the build.
 
 ### 18.7 What Hakken sees on the new screens
 

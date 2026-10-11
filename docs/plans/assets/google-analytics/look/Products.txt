@@ -1,0 +1,18 @@
+# Google Analytics → Products — the approved look (board "Products" of docs/plans/assets/google-analytics/).
+# Its kit parts top to bottom, each with its title, and each table's headings.
+# Change it only after Anthony approves a redrawn look: design-drift-plan D4.
+page-header: Products
+settings-card: What Hakken sees
+figures
+  figure: Looked at a product
+  figure: Added to the basket
+  figure: Started checkout
+  figure: Bought
+chart-card: The shop's steps
+chart-card: Products bought a day
+search: Find a product…
+filter: Category
+table: Product | Looks | Basket | Bought | Revenue | Change
+  table-bar
+    download: Download CSV
+  table-footer
