@@ -23,6 +23,7 @@ import {
   FINDINGS_FORMAT,
   MONTH_FORMAT,
   GROUND_RULES,
+  SHOP_RULE,
   READS,
   SIDE_BY_SIDE,
   SPECIALIST_ROLE,
@@ -149,9 +150,14 @@ export const runWebsite = internalAction({
   },
 });
 
-type RunArgs = { runId: Id<"agentRuns">; holdId: Id<"companyWebsites">; companyId: Id<"companies">; host: string };
+type RunArgs = { runId: Id<"agentRuns">; holdId: Id<"companyWebsites">; companyId: Id<"companies">; host: string; shop?: boolean };
 
-async function readAndWrite(ctx: ActionCtx, args: RunArgs): Promise<string> {
+/** The ground rules every brief starts from, with a shop read in sales (I40). */
+const rulesFor = (args: RunArgs) => (args.shop ? `${GROUND_RULES}\n${SHOP_RULE}` : GROUND_RULES);
+
+async function readAndWrite(ctx: ActionCtx, runArgs: RunArgs): Promise<string> {
+  // A shop is read in sales wherever enquiries are counted (I40).
+  const args: RunArgs = { ...runArgs, shop: await ctx.runQuery(internal.insightsReading.isShopInternal, { holdId: runArgs.holdId }).catch(() => false) };
   const now = Date.now();
   const today = new Date(now).toISOString().slice(0, 10);
   const setup = await ctx.runQuery(internal.insightsTeam.teamSetup, {});
@@ -424,7 +430,7 @@ async function reviewPages(ctx: ActionCtx, args: RunArgs, week: string, facts: r
   const inputs = (await ctx.runQuery(internal.insightsConversion.reviewInputs, { holdId: args.holdId })).slice(0, PAGES_REVIEWED);
   let answered = new Map<string, { verdict: Verdict; reason: string; steps: string[] }>();
   if (inputs.length > 0) {
-    const system = [REVIEW_RULES, member?.instructions ?? ""].filter(Boolean).join("\n\n");
+    const system = [REVIEW_RULES, args.shop ? SHOP_RULE : "", member?.instructions ?? ""].filter(Boolean).join("\n\n");
     const prompt = JSON.stringify({
       website: args.host,
       pages: inputs.map((page) => ({
@@ -535,7 +541,7 @@ async function writeReports(
   if (due.month) {
     const monthFacts = await ctx.runQuery(internal.insightsReading.monthFactsInternal, { holdId: args.holdId, month: due.month });
     const facts = factsByKey([...monthFacts, ...input.facts.filter((fact) => fact.source === "market" && fact.key.endsWith(".now"))]);
-    const system = [GROUND_RULES, MONTH_FORMAT, input.writer?.instructions ?? ""].filter(Boolean).join("\n\n");
+    const system = [rulesFor(args), MONTH_FORMAT, input.writer?.instructions ?? ""].filter(Boolean).join("\n\n");
     const prompt = JSON.stringify({ website: args.host, month: monthName(due.month), facts: factLines([...facts.values()]), findings: input.findings.slice(0, 5).map((finding) => ({ headline: finding.headline, action: finding.action })) });
     const answer = await ask(ctx, args, input.writer, "the Report Writer's monthly report", system, prompt) as Record<string, unknown> | null;
     const headline = filled(answer?.headline, facts) ?? input.verdict;
@@ -556,7 +562,7 @@ async function writeReports(
   }
   if (due.quarter) {
     const facts = factsByKey(input.facts.filter((fact) => /\.(90|365)\.(now|year|before)$/.test(fact.key) && /^(ga\.(conversions|people|visits|peoplePerConversion|channel\.(Organic Search|AI assistants|Direct)\.(visits|conversions))|sc\.clicks)/.test(fact.key) || fact.source === "market" || /^ai\.[^.]+\.mentions/.test(fact.key) || /^local\./.test(fact.key)));
-    const system = [GROUND_RULES, BOARD_FORMAT, input.writer?.instructions ?? ""].filter(Boolean).join("\n\n");
+    const system = [rulesFor(args), BOARD_FORMAT, input.writer?.instructions ?? ""].filter(Boolean).join("\n\n");
     const prompt = JSON.stringify({ website: args.host, quarter: due.quarter, facts: factLines([...facts.values()]), findings: input.findings.slice(0, 6).map((finding) => ({ headline: finding.headline, story: finding.story, action: finding.action })) });
     const answer = await ask(ctx, args, input.writer, "the Report Writer's board report", system, prompt) as Record<string, unknown> | null;
     const from = shiftDay(input.today, -90);
@@ -761,7 +767,7 @@ async function askSpecialist(
   member: TeamMember | undefined,
   caveat: string | null,
 ): Promise<Draft[]> {
-  const system = [GROUND_RULES, `Your discipline is ${DISCIPLINE[specialist]}.`, caveat ?? "", member?.instructions ?? "", FINDINGS_FORMAT].filter(Boolean).join("\n\n");
+  const system = [rulesFor(args), `Your discipline is ${DISCIPLINE[specialist]}.`, caveat ?? "", member?.instructions ?? "", FINDINGS_FORMAT].filter(Boolean).join("\n\n");
   const prompt = JSON.stringify({
     website: args.host,
     candidates: candidates.map((candidate, number) => ({ number, pattern: candidate.pattern, seen: candidate.seen, atStake: Math.round(candidate.stake * 10) / 10, facts: candidate.facts })),
@@ -785,7 +791,7 @@ async function askStrategy(
   all: readonly Fact[],
   lead: TeamMember | undefined,
 ): Promise<{ ordered: Draft[]; verdict: string }> {
-  const system = [GROUND_RULES, `You are the Head of Strategy: ${DISCIPLINE.strategy}. Connect findings that share one cause across specialists into one story, rank everything by what is at stake for the business — enquiries or sales won or lost first (each finding's "atStake" is the checklist's measure of it); a measurement problem ranks first only when it makes the other findings untrustworthy — and keep one voice. The week's biggest story must be a finding of its own, not only the verdict.`, lead?.instructions ?? "", FINDINGS_FORMAT, STRATEGY_FORMAT].filter(Boolean).join("\n\n");
+  const system = [rulesFor(args), `You are the Head of Strategy: ${DISCIPLINE.strategy}. Connect findings that share one cause across specialists into one story, rank everything by what is at stake for the business — enquiries or sales won or lost first (each finding's "atStake" is the checklist's measure of it); a measurement problem ranks first only when it makes the other findings untrustworthy — and keep one voice. The week's biggest story must be a finding of its own, not only the verdict.`, lead?.instructions ?? "", FINDINGS_FORMAT, STRATEGY_FORMAT].filter(Boolean).join("\n\n");
   const used = new Set(drafts.flatMap((draft) => [...draft.comparisons.flat(), ...[draft.headline, draft.story].flatMap((text) => [...text.matchAll(/\[\[([^\]]+)\]\]/g)].map((match) => match[1]))]));
   const headline = ["ga.visits.365.now", "ga.visits.365.before", "ga.conversions.365.now", "ga.conversions.365.before", "sc.clicks.90.now", "sc.clicks.30.now", "sc.clicks.30.before"];
   const prompt = JSON.stringify({

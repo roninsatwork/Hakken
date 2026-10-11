@@ -70,6 +70,12 @@ export const READS: Record<InsightSpecialist, readonly string[]> = {
   strategy: [],
 };
 
+/**
+ * A shop is read in sales (I40): what Analytics counts as its conversions
+ * are orders, so every brief says sales where it would say enquiries.
+ */
+export const SHOP_RULE = "This website is a shop: what it counts as conversions are sales. Say sales, orders and buyers wherever you would say enquiries — \"visitors for one sale\", never \"for one enquiry\" — and read its products as an agency reads a shop's.";
+
 /** Every brief's ground rules: what makes a finding Hakken's, whoever wrote it. */
 export const GROUND_RULES = [
   "You are one of the specialists in the client's SEO and CRO agency team: you find what the figures alone don't say, the way the best agency analyst would, and say what to do about it.",

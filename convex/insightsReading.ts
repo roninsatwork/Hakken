@@ -429,6 +429,13 @@ export const analyticsFactsInternal = internalQuery({
   },
 });
 
+/** Whether a website is a shop, as the Google Analytics work marks it (I40): its conversions are sales. */
+export const isShopInternal = internalQuery({
+  args: holdArgs,
+  returns: v.boolean(),
+  handler: async (ctx, args) => Boolean((await ctx.db.query("googleAnalyticsConnections").withIndex("by_hold", (q) => q.eq("companyWebsiteId", args.holdId)).first())?.shop),
+});
+
 /** The days the Measurement check's chart draws: eight weeks, as Analytics keeps its channel days. */
 const MEASUREMENT_DAYS = 56;
 
