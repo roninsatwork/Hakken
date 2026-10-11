@@ -35,6 +35,8 @@ export type TableNoun =
   | "mentions" | "places"
   // Google Analytics (google-analytics-plan.md §5): channels, a channel's sources, landing pages, kinds of conversion.
   | "channels" | "sources" | "landingPages" | "conversionKinds"
+  // A page's own screen (§18.2 board 21): where its views came from just before.
+  | "pagesAndWebsites"
   // Admin → Content → News (content-people-knowledge-plan.md, board 4): it pages by cursor, so "so far" until the last page is in.
   | "stories" | "storiesSoFar"
   // Admin → Content → Analytics (content-people-knowledge-plan.md, boards 8, 9, 11, 12).

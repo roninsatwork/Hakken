@@ -228,6 +228,38 @@ describe("a landing page's own screen", () => {
   });
 });
 
+describe("a page's own screen from All pages (GA29)", () => {
+  test("its figures from All pages; its views a day and where visitors were just before, asked of Google when it opens", async () => {
+    const t = harness();
+    // /ai-agency/'s desktop views came from the home page, its phone views from ChatGPT.
+    const visits = growing().map((visit) => (visit.page !== "/ai-agency/" ? visit : { ...visit, referrer: visit.device === "desktop" ? "https://www.acme-shop.test/" : "https://chatgpt.com/" }));
+    const { siteId, user } = await collected(t, visits);
+    const all = await user.query(api.googleAnalyticsReads.analyticsListPage, { siteId, list: "page", ...listArgs });
+    const page = all.rows.find((row) => row.label.endsWith("/ai-agency/"))!.key;
+    const home = all.rows.find((row) => row.label === "https://www.acme-shop.test/")!.key;
+    const args = { siteId, page, period: "30" as const, device: "" };
+    const first = (await user.query(api.googleAnalyticsPageReads.analyticsPage, args))!;
+    expect(first).toMatchObject({ address: "https://www.acme-shop.test/ai-agency/", path: "/ai-agency/", live: true, viewsBefore: 30 * 9, before: [], points: [] });
+    expect(first.row).toMatchObject({ views: 30 * 18 + 30 * 2 });
+    expect(first.seen).toEqual({ says: [], steps: [] });
+
+    await user.action(api.googleAnalyticsLive.askGoogleAnalyticsLive, { siteId, period: "30", device: "", viewed: { ref: page, path: first.path } });
+    const opened = (await user.query(api.googleAnalyticsPageReads.analyticsPage, args))!;
+    expect(opened.live).toBe(false);
+    expect(opened.points).toHaveLength(30);
+    expect(opened.points.reduce((sum, point) => sum + point.views, 0)).toBe(600);
+    expect(opened.before).toMatchObject([
+      { kind: "page", key: home, label: "https://www.acme-shop.test/", views: 540, share: 0.9 },
+      { kind: "site", key: "chatgpt.com", label: "ChatGPT", views: 60, share: 0.1 },
+    ]);
+    expect(opened.seen.says[0]).toEqual({ code: "twoSources", text: "/", a: 0.9, more: "ChatGPT", b: 0.1 });
+    expect(opened.seen.steps).toMatchObject([
+      { code: "keepLink", text: "/", to: { segment: "all-pages/page", filters: { key: home } } },
+      { code: "checkAssistant", text: "ChatGPT" },
+    ]);
+  });
+});
+
 describe("What Hakken sees, from what each screen already reads (§14)", () => {
   /** Search Console connected for the website, with its last 30 days held: 100 clicks from 20,000 showings. */
   async function withSearchConsole(t: Harness, siteId: Id<"companyWebsites">) {

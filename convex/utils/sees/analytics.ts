@@ -361,13 +361,48 @@ export function allPagesSees(rows: readonly ListRowFacts[], counting: boolean): 
   const best = [...converting].sort((left, right) => right.conversions - left.conversions || right.value - left.value)[0];
   const viewed = [...rows].sort((left, right) => right.views - left.views);
   const idle = viewed.find((row) => row.conversions === 0 && row.views > 0) ?? null;
-  const idleTo = idle ? pageTarget(idle.key) : null;
+  // A page of All pages opens its own screen there (GA29).
+  const idleTo = idle?.key.startsWith("~") ? toPage("all-pages/page", { key: idle.key }) : null;
   return seen([
     { code: "madeOn", a: total, b: converting.length },
     { code: "best", text: best.label, a: best.conversions, b: best.views },
     idle && { code: idle === viewed[0] ? "idleMostViewed" : "idle", text: idle.label, a: idle.views },
   ], [
     idle && idleTo && { code: "copy", text: best.label, more: idle.label, link: "seePage", to: idleTo },
+  ]);
+}
+
+/** Views with no page before reading as worth a sentence (§18.7): a fifth or more. */
+export const NO_PAGE_BEFORE_SHARE = 0.2;
+
+/** Where a page's views came from just before (GA29): a page of the website by its number, another website by its name, or none. */
+export type BeforeFacts = { kind: "page" | "site" | "none"; key: string; name: string; views: number };
+
+/**
+ * A page's own screen from All pages (§18.7): the two biggest sources of its
+ * views and their shares, views with no page before when a fifth or more, an
+ * AI assistant among its sources; then keep the link on the page that sends
+ * most, and check what that assistant says about the page. The page before
+ * a view of itself — reloaded, opened again — is never one of its sources.
+ */
+export function pageSees(rows: readonly BeforeFacts[], siteId: string, isAssistant: (name: string) => boolean, self: string): Seen {
+  const total = sum(rows, (row) => row.views);
+  if (total === 0) return seen([{ code: "none" }]);
+  const sources = rows.filter((row) => row.kind !== "none" && row.key !== self && row.views > 0).sort((left, right) => right.views - left.views);
+  const none = sum(rows.filter((row) => row.kind === "none"), (row) => row.views);
+  const nameOf = (row: BeforeFacts) => (row.kind === "page" ? row.key : row.name);
+  const [first, second] = sources;
+  const assistant = sources.find((row) => row.kind === "site" && isAssistant(row.name)) ?? null;
+  const sender = sources.find((row) => row.kind === "page") ?? null;
+  return seen([
+    second
+      ? { code: "twoSources", text: nameOf(first), a: first.views / total, more: nameOf(second), b: second.views / total }
+      : first ? { code: "oneSource", text: nameOf(first), a: first.views / total } : { code: "noSources" },
+    none / total >= NO_PAGE_BEFORE_SHARE && sources.length > 0 && { code: "noneBefore", a: none / total },
+    assistant && { code: "assistant", text: assistant.name, a: assistant.views },
+  ], [
+    sender && { code: "keepLink", text: sender.key, link: "seePage", to: toPage("all-pages/page", { key: sender.key }) },
+    assistant && { code: "checkAssistant", text: assistant.name, link: "aiAnswers", to: { url: `/app/sites/${siteId}/ai/answers` } },
   ]);
 }
 

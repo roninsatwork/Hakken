@@ -530,9 +530,10 @@ Q12, about 89% is on dev.** What was built, and
 where the build differs from the words above, is §12.
 
 **Progress, 2026-10-11: the second round (§18) drawn, agreed and planned,
-with how it is built (§18.6) and its What Hakken sees (§18.7); none of its
-eleven phases built — 0 of twenty-six and a half days. Both rounds: about
-twenty-five and a half of fifty-two days, about 49%.**
+with how it is built (§18.6) and its What Hakken sees (§18.7). Phases 6 to 9
+built on dev, each committed and none pushed — eleven of twenty-six and a
+half days, about 42%; fifteen and a half left. Both rounds: about thirty-six
+and a half of fifty-two days, about 70%.**
 
 ## 9. Risks
 
@@ -1327,6 +1328,21 @@ held until the next collection. A referrer on the website becomes the
 page's number (its title and address shown); another website becomes its
 host, named where Hakken knows it (Google, Bing, ChatGPT, Perplexity, as
 §4.4's list); none becomes "No page before".
+
+*Built 2026-10-11 (Phase 9, GA29).* Every page of All pages opens its own
+screen (`all-pages/page`), as board 21 draws it: What Hakken sees, views,
+people, time and the conversions made on the page, its views a day, and where
+visitors were just before as bars and a table. The asks are
+`askGoogleAnalyticsLive` with `viewed` (`pageAsk("viewed" | "before", …)`),
+the read `analyticsPage` (`googleAnalyticsPageReads.ts`); the website's own
+pages are numbered as every list numbers them, so a page before opens its own
+screen in turn. Three things learned on Ronins' figures: **a page counts
+itself** as the page before when it is reloaded — the table keeps that row,
+but What Hakken sees never names a page as its own source or the link to
+keep; Microsoft Teams arrives as `teams.public.onecdn.static.microsoft` and
+is named "Microsoft Teams"; and the views-a-day chart draws views alone,
+since a visit belongs to the whole website, not one page. All pages' own
+"copy the next step" now opens the page's screen there, not Landing pages'.
 
 **5. Every event.** A new list, `event`: `eventName` with `eventCount` and
 `totalUsers`, as ready-made periods and by day for the charts, every device.

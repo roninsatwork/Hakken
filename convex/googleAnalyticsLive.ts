@@ -7,8 +7,9 @@ import { getActiveCompanyId } from "./authz";
 import { isTrackedHold } from "./utils/websitePairing";
 import { mainConsoleCountry } from "./searchConsoleCountries";
 import { appError } from "./utils/appError";
-import { askList, numberPages, openSession, siteOrigin, slotKey, type CollectTarget } from "./googleAnalyticsCollect";
-import { packList, type ListRow } from "./googleAnalyticsLists";
+import { ask, askList, numberPages, openSession, siteOrigin, slotKey, type CollectTarget } from "./googleAnalyticsCollect";
+import { beforeKey, emptyRow, packList, pageAddress, type ListRow } from "./googleAnalyticsLists";
+import { encodePagesFromAction } from "./holdPageRefs";
 import { analyticsPackedRows, analyticsPeriodValidator } from "./googleAnalyticsSchema";
 import { liveAsk } from "./googleAnalyticsReads";
 import { DAY_JOIN, channelSeriesAsk } from "./googleAnalyticsChartReads";
@@ -98,8 +99,13 @@ export const putLive = internalMutation({
   },
 });
 
-/** The name a landing page's own list is held under: its chart (`series`) or its channels; another home country's ends with its code. */
-export function pageAsk(kind: "series" | "channel", page: string, period: string, from: string, to: string, device: string, country = ""): string {
+/**
+ * The name a page's own list is held under: a landing page's chart (`series`)
+ * or channels, or — a page of All pages (GA29) — its views a day (`viewed`)
+ * and the page before each view (`before`); another home country's ends with
+ * its code.
+ */
+export function pageAsk(kind: "series" | "channel" | "viewed" | "before", page: string, period: string, from: string, to: string, device: string, country = ""): string {
   return `${kind}:${page}|${period}|${from}|${to}|${device}${country ? `|${country}` : ""}`;
 }
 
@@ -120,6 +126,8 @@ export const askGoogleAnalyticsLive = tenantAction({
     /** Channels' chart, each channel a day, for dates or a country that keep no channel days (GA35). */
     chart: v.optional(v.literal("channel")),
     page: v.optional(v.object({ ref: v.string(), path: v.string() })),
+    /** A page of All pages (GA29): its views a day, and the page or website each view came from just before. */
+    viewed: v.optional(v.object({ ref: v.string(), path: v.string() })),
   },
   returns: v.object({ ok: v.boolean(), problem: v.union(v.null(), v.literal("NOT_CONNECTED"), v.literal("GOOGLE_BUSY"), v.literal("GOOGLE_REFUSED")) }),
   handler: async (ctx, args): Promise<{ ok: boolean; problem: null | "NOT_CONNECTED" | "GOOGLE_BUSY" | "GOOGLE_REFUSED" }> => {
@@ -158,6 +166,45 @@ export const askGoogleAnalyticsLive = tenantAction({
       const channels = await askList(opened.session, found.target, "channel", [], range, only);
       if (!channels.ok) return failed(channels);
       await write(pageAsk("channel", args.page.ref, args.period, range.from, range.to, args.device, found.country), "channel", [...channels.groups.values()].flat(), channels.flags);
+      return { ok: true, problem: null };
+    }
+    if (args.viewed) {
+      // Analytics names a page as it was viewed, slash or not: asked both ways.
+      const paths = [...new Set([args.viewed.path, args.viewed.path.length > 1 ? args.viewed.path.replace(/\/+$/, "") : args.viewed.path])];
+      const name = (kind: "viewed" | "before") => pageAsk(kind, args.viewed!.ref, args.period, range.from, range.to, args.device, found.country);
+      const series = await askList(opened.session, found.target, "series", [], range, { pagePath: paths, ...(device ? { device } : {}) });
+      if (!series.ok) return failed(series);
+      await write(name("viewed"), "series", [...series.groups.values()].flat(), series.flags);
+      const before = await ask(opened.session, found.target.property!, {
+        startDate: range.from,
+        endDate: range.to,
+        dimensions: ["pageReferrer"],
+        metrics: ["screenPageViews"],
+        hostNames: found.target.addresses,
+        countries: [found.target.country],
+        ...(device ? { device } : {}),
+        only: { dimension: "pagePath", values: paths },
+      });
+      if (!before.ok) return failed(before);
+      const rows = new Map<string, ListRow>();
+      for (const answer of before.rows) {
+        const key = beforeKey(answer.keys[0] ?? "", found.target.addresses);
+        const row = rows.get(key) ?? emptyRow(key);
+        row.views += answer.values[0] ?? 0;
+        rows.set(key, row);
+      }
+      // The website's own pages by their numbers, as every list names them (§4.6): one page, one number.
+      const own = [...rows.values()].filter((row) => row.key.startsWith("page:"));
+      const refs = await encodePagesFromAction(ctx, found.target.companyWebsiteId, own.map((row) => pageAddress(found.target.origin, row.key.slice(5))));
+      const numbered = new Map<string, ListRow>();
+      for (const row of rows.values()) {
+        const at = own.indexOf(row);
+        const key = at >= 0 ? `page:${refs[at]}` : row.key;
+        const held = numbered.get(key);
+        if (held) held.views += row.views;
+        else numbered.set(key, { ...row, key });
+      }
+      await write(name("before"), "page", [...numbered.values()], { folded: before.folded, thresholded: before.thresholded, cut: before.cut });
       return { ok: true, problem: null };
     }
     if (args.chart === "channel") {

@@ -99,27 +99,34 @@ export function AnalyticsChart({ days, host, from, to, currency, exportName }: {
  * or month, as the chart steps — with a conversion. Steps by day, week or
  * month as chosen at the top.
  */
-export function VisitsChart({ days, host, from, to, exportName }: {
+export function VisitsChart({ days, host, from, to, exportName, viewsOnly = false }: {
   days: readonly ChartDay[];
   host: string;
   from: string | null;
   to: string | null;
   exportName: string;
+  /**
+   * A page's own screen from All pages (§18.2 board 21): its views alone —
+   * a visit is the whole website's, not one page's — asked of Google when
+   * the screen opens.
+   */
+  viewsOnly?: boolean;
 }) {
   const t = useTranslations("googleAnalytics.chart");
   const tf = useTranslations("googleAnalytics.filters");
   const [step] = useStep();
   const [period] = usePeriod();
-  const series: SiteSeries[] = [
-    { key: "views", name: t("views"), colour: CHART_SERIES_ORANGE, marks: "converted" },
+  const views: SiteSeries = { key: "views", name: t("views"), colour: CHART_SERIES_ORANGE, marks: "converted" };
+  const series: SiteSeries[] = viewsOnly ? [views] : [
+    views,
     { key: "visits", name: t("visits"), colour: CHART_SERIES_BLUE },
     { key: "engaged", name: t("engaged"), colour: CHART_SERIES_VIOLET },
   ];
   const data = stepped(days, step).map((row): Record<string, unknown> => ({ ...row, converted: Number(row.conversions) > 0 }));
   return (
     <SearchConsoleChartCard
-      title={t(`viewsTitle.${step}`)}
-      hint={t("visitsHint", { period: tf(`periods.${period}`), step })}
+      title={t(viewsOnly ? `viewsOnlyTitle.${step}` : `viewsTitle.${step}`)}
+      hint={t(viewsOnly ? "viewsOnlyHint" : "visitsHint", { period: tf(`periods.${period}`), step })}
       exportName={exportName}
       csv={() => toCsv(["day", ...series.map((entry) => entry.name), t("conversions")], data.map((row) => [String(row.day), ...series.map((entry) => row[entry.key] as number), row.conversions as number]))}
       host={host}

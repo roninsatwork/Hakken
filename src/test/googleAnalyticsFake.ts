@@ -28,6 +28,8 @@ export type Visit = {
   country?: string;
   /** The page's title: "Title of <page>" unless a test says otherwise. */
   title?: string;
+  /** The page viewed just before (`pageReferrer`): none unless a test says otherwise. */
+  referrer?: string;
   sessions: number;
   engaged: number;
   seconds: number;
@@ -47,6 +49,7 @@ const FIELD: Record<string, (visit: Visit) => string> = {
   hostName: (visit) => visit.host ?? "www.acme-shop.test",
   countryId: (visit) => visit.country ?? "GB",
   pageTitle: (visit) => visit.title ?? `Title of ${visit.page}`,
+  pageReferrer: (visit) => visit.referrer ?? "",
 };
 
 /** The figures a log line carries, in the order asked before the second round. */

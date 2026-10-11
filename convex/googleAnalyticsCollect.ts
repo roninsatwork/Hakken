@@ -269,7 +269,7 @@ export async function askList(
   list: AnalyticsList,
   lead: readonly ("date" | "deviceCategory")[],
   range: { from: string; to: string },
-  only: { device?: string; landingPage?: string[] } = {},
+  only: { device?: string; landingPage?: string[]; pagePath?: string[] } = {},
 ): Promise<Asked> {
   const dimensions = [...lead, ...LIST_DIMENSIONS[list]];
   const base = {
@@ -278,7 +278,8 @@ export async function askList(
     hostNames: target.addresses,
     countries: [target.country],
     ...(only.device ? { device: only.device } : {}),
-    ...(only.landingPage !== undefined ? { only: { dimension: "landingPage", values: only.landingPage } } : {}),
+    ...(only.landingPage !== undefined ? { only: { dimension: "landingPage", values: only.landingPage } }
+      : only.pagePath !== undefined ? { only: { dimension: "pagePath", values: only.pagePath } } : {}),
   };
   const main = await ask(session, target.property!, { ...base, dimensions, metrics: [...MAIN_METRICS] });
   if (!main.ok) return main;

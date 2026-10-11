@@ -13,9 +13,11 @@ import {
   conversionsSees,
   landingSees,
   overviewSees,
+  pageSees,
   pathOfAddress,
   trackingHealthSees,
   websitesSees,
+  type BeforeFacts,
   type ListRowFacts,
   type WebsiteFacts,
 } from "./analytics";
@@ -324,7 +326,7 @@ describe("8 · All pages", () => {
         { code: "best", text: "https://ronins.co.uk/ai-agency/", a: 4, b: 318 },
         { code: "idle", text: "https://ronins.co.uk/hub/kapferer-brand-identity-prism/", a: 417 },
       ],
-      steps: [{ code: "copy", text: "https://ronins.co.uk/ai-agency/", more: "https://ronins.co.uk/hub/kapferer-brand-identity-prism/", link: "seePage", to: { segment: "landing-pages/page", filters: { key: "~2" } } }],
+      steps: [{ code: "copy", text: "https://ronins.co.uk/ai-agency/", more: "https://ronins.co.uk/hub/kapferer-brand-identity-prism/", link: "seePage", to: { segment: "all-pages/page", filters: { key: "~2" } } }],
     });
     const top = allPagesSees([...pages, row("~3", { views: 900 })], true);
     expect(top.says[2]).toEqual({ code: "idleMostViewed", text: "~3", a: 900 });
@@ -333,6 +335,46 @@ describe("8 · All pages", () => {
     const notCounting = allPagesSees(pages, false);
     expect(notCounting.steps.map((step) => step.code)).toEqual(["chooseWhatCounts"]);
     worded("allPages", box, top, none, notCounting, allPagesSees([], true));
+  });
+});
+
+describe("21 · A page's own screen", () => {
+  // Ronins' /ai-agency/ as the drawing reads it (§18.2 board 21).
+  const before: BeforeFacts[] = [
+    { kind: "site", key: "google.com", name: "Google", views: 118 },
+    { kind: "page", key: "~0", name: "https://ronins.co.uk/", views: 74 },
+    { kind: "none", key: "none", name: "", views: 41 },
+    { kind: "site", key: "chatgpt.com", name: "ChatGPT", views: 22 },
+    { kind: "page", key: "~4", name: "https://ronins.co.uk/about-us/", views: 19 },
+    { kind: "site", key: "bing.com", name: "Bing", views: 9 },
+  ];
+  const isAssistant = (name: string) => name === "ChatGPT";
+  const total = 118 + 74 + 41 + 22 + 19 + 9;
+
+  test("its two biggest sources; views with no page before; an assistant; keep the link, check the assistant", () => {
+    const box = pageSees(before, "s1", isAssistant, "~9");
+    expect(box).toEqual({
+      says: [
+        { code: "twoSources", text: "Google", a: 118 / total, more: "~0", b: 74 / total },
+        { code: "assistant", text: "ChatGPT", a: 22 },
+      ],
+      steps: [
+        { code: "keepLink", text: "~0", link: "seePage", to: { segment: "all-pages/page", filters: { key: "~0" } } },
+        { code: "checkAssistant", text: "ChatGPT", link: "aiAnswers", to: { url: "/app/sites/s1/ai/answers" } },
+      ],
+    });
+    // A fifth or more with no page before is said; one source alone; none at all.
+    const typed = pageSees([{ kind: "page", key: "~0", name: "https://ronins.co.uk/", views: 30 }, { kind: "none", key: "none", name: "", views: 10 }], "s1", isAssistant, "~9");
+    expect(typed.says).toEqual([{ code: "oneSource", text: "~0", a: 0.75 }, { code: "noneBefore", a: 0.25 }]);
+    const nothing = pageSees([{ kind: "none", key: "none", name: "", views: 5 }], "s1", isAssistant, "~9");
+    expect(nothing).toEqual({ says: [{ code: "noSources" }], steps: [] });
+    const empty = pageSees([], "s1", isAssistant, "~9");
+    // The page reloaded is not a source of its own: never the link to keep.
+    const reloaded = pageSees([{ kind: "page", key: "~9", name: "https://ronins.co.uk/", views: 50 }, ...before], "s1", isAssistant, "~9");
+    expect(reloaded.says[0]).toMatchObject({ code: "twoSources", text: "Google", more: "~0" });
+    expect(reloaded.steps[0]).toMatchObject({ code: "keepLink", text: "~0" });
+    expect(empty).toEqual({ says: [{ code: "none" }], steps: [] });
+    worded("page", box, typed, nothing, empty, reloaded);
   });
 });
 

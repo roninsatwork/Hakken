@@ -9843,6 +9843,7 @@
       "sources": "{count, plural, =1 {# source} other {# sources}}",
       "landingPages": "{count, plural, =1 {# landing page} other {# landing pages}}",
       "conversionKinds": "{count, plural, =1 {# kind of conversion} other {# kinds of conversion}}",
+      "pagesAndWebsites": "{count, plural, one {# page or website} other {# pages and websites}}",
       "stories": "{count, plural, =1 {# story} other {# stories}}",
       "storiesSoFar": "{count, plural, other {#+ stories}}",
       "articlesAndStories": "{count, plural, =1 {# article or story} other {# articles and stories}}",
@@ -15305,7 +15306,13 @@
         }
       },
       "conversionsTitle": "Conversions over time",
-      "conversionsHint": "One line for each kind of conversion, on one scale. Tick Value to add the money on a scale of its own."
+      "conversionsHint": "One line for each kind of conversion, on one scale. Tick Value to add the money on a scale of its own.",
+      "viewsOnlyTitle": {
+        "day": "Views a day",
+        "week": "Views a week",
+        "month": "Views a month"
+      },
+      "viewsOnlyHint": "{period}. Asked of Google when this screen opens, and kept until the next collection. A dot marks {step, select, day {a day} week {a week} other {a month}} with a conversion."
     },
     "figures": {
       "nothingBefore": "Nothing to compare with yet",
@@ -15538,6 +15545,36 @@
       "description": "Every page viewed: its views, the time spent on it, and the conversions made on that page.",
       "findPage": "Find a page…",
       "empty": "No pages viewed in these dates."
+    },
+    "page": {
+      "back": "All pages",
+      "description": "A page on {host}. Every figure here is for views of this page.",
+      "descriptionInGroup": "A page on {host}, in its page group {group}. Every figure here is for views of this page.",
+      "descriptionTitled": "“{title}”, a page on {host}. Every figure here is for views of this page.",
+      "descriptionInGroupTitled": "“{title}”, a page on {host}, in its page group {group}. Every figure here is for views of this page.",
+      "openPage": "Open the page",
+      "notFound": "This page isn't one of the website's.",
+      "noViews": "This page wasn't viewed in the {period}.",
+      "views": "Views",
+      "people": "People",
+      "viewsEach": "{views} views each",
+      "time": "Time",
+      "timeLine": "Engaged, a visit",
+      "conversions": "Conversions made here",
+      "askFailed": "Google couldn't answer for this page's views a day and the pages before it just now. Open the page again in a moment.",
+      "beforeTitle": "Where visitors were just before",
+      "barsHint": "The {count} biggest, by views.",
+      "beforeDescription": "The page or website each view of {page} came from, by views.",
+      "findBefore": "Find a page or website…",
+      "download": "Download CSV",
+      "pageBefore": "Page before",
+      "address": "Address",
+      "share": "Share",
+      "asking": "Asking Google…",
+      "noMatch": "Nothing matches that search.",
+      "noBefore": "No views in these dates.",
+      "noPageBefore": "No page before",
+      "noPageBeforeLine": "Typed in, a bookmark or an app"
     },
     "conversions": {
       "title": "Conversions",
@@ -15876,6 +15913,16 @@
         "idle": "{text} has {a} views and made none.",
         "copy": "Copy the next step that works on {text} onto {more}.",
         "chooseWhatCounts": "Choose what counts as a conversion."
+      },
+      "page": {
+        "none": "This page wasn't viewed in these dates.",
+        "noSources": "Every view of this page had no page before: people typed the address, used a bookmark or came from an app.",
+        "twoSources": "{text} sent {aRate} of this page's views, and {more} {bRate}.",
+        "oneSource": "{text} sent {aRate} of this page's views.",
+        "noneBefore": "{aRate} of its views had no page before: people typed the address, used a bookmark or came from an app.",
+        "assistant": "{text} sent {count, plural, =1 {one view} other {# views}}: an AI assistant is pointing people here.",
+        "keepLink": "Keep the link to this page on {text} where people see it: it sends the most views of the website's own pages.",
+        "checkAssistant": "Check what {text} says about this page, so the people it sends find what it promised."
       },
       "conversions": {
         "nothingCounted": "The visits are all here, {a} in these dates, but with nothing counted nobody can say which pages or channels make money.",

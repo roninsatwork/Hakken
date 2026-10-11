@@ -10,6 +10,10 @@ import { keptCountry } from "./googleAnalyticsCountries";
 import { titlesOf } from "./pageTitles";
 import { pageAsk } from "./googleAnalyticsLive";
 import { analyticsPeriodValidator } from "./googleAnalyticsSchema";
+import { siteNameOf, splitBeforeKey } from "./googleAnalyticsLists";
+import { assistantOf } from "./utils/aiAssistants";
+import { seenValidator } from "./utils/hakkenSees";
+import { pageSees, type BeforeFacts } from "./utils/sees/analytics";
 import {
   blank,
   connectionOf,
@@ -18,6 +22,7 @@ import {
   displayChannel,
   figuresOf,
   grouped,
+  namedSeen,
   readFor,
   readLive,
   readSlot,
@@ -101,6 +106,96 @@ export const analyticsLandingPage = tenantQuery({
       channels: grouped(channels?.rows ?? [], (row) => displayChannel(row.key))
         .map((row) => shown(row, null, counted, false))
         .sort((left, right) => right.value - left.value || right.visits - left.visits),
+    };
+  },
+});
+
+/** A page or website a page's views came from just before (GA29), as its screen shows it. */
+const beforeRowValidator = v.object({
+  kind: v.union(v.literal("page"), v.literal("site"), v.literal("none")),
+  /** The website's page by its number, another website by its address, or `none`. */
+  key: v.string(),
+  /** The page's address, or the other website's name as people know it (Google, ChatGPT); empty for none. */
+  label: v.string(),
+  title: v.optional(v.string()),
+  views: v.number(),
+  /** Its views over the page's, 0–1. */
+  share: v.number(),
+});
+
+/**
+ * One page of All pages (GA29; §18.2 board 21): its figures against the span
+ * before, its views a day, and the page or website each view came from just
+ * before — those two asked of Google when the screen opens and held until
+ * the next collection (`googleAnalyticsLive.askGoogleAnalyticsLive`, `viewed`);
+ * `live` until they are.
+ */
+export const analyticsPage = tenantQuery({
+  args: { siteId: v.id("companyWebsites"), page: v.string(), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) },
+  returns: v.union(v.null(), v.object({
+    address: v.string(),
+    title: v.union(v.string(), v.null()),
+    /** The path Analytics names it by, for asking Google. */
+    path: v.string(),
+    group: v.union(v.string(), v.null()),
+    row: v.union(shownRowValidator, v.null()),
+    /** Its views in the span before; null when there is none to compare. */
+    viewsBefore: v.union(v.number(), v.null()),
+    live: v.boolean(),
+    points: v.array(v.object({ day: v.string(), visits: v.number(), engaged: v.number(), views: v.number(), conversions: v.number(), value: v.number() })),
+    before: v.array(beforeRowValidator),
+    seen: seenValidator,
+  })),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    const holdId = site.hold._id;
+    const country = await keptCountry(ctx, site.hold, args.country);
+    const connection = await connectionOf(ctx, holdId);
+    if (!connection?.newestDay) return null;
+    const counted = countedOf(connection);
+    const [address] = await decodePages(ctx, holdId, [args.page]);
+    const path = address.replace(/^https?:\/\/[^/]+/, "") || "/";
+    const now = await readFor(ctx, holdId, "page", args.period, "NOW", args.device, undefined, country);
+    const before = await readFor(ctx, holdId, "page", args.period, "BEFORE", args.device, undefined, country);
+    const own = now && now !== "LIVE" ? now.rows.find((row) => row.key === args.page) ?? null : null;
+    const was = before && before !== "LIVE" ? before.rows.find((row) => row.key === args.page) ?? null : null;
+    const kinds = await readPageKinds(ctx, holdId, { pages: [address] });
+    const kind = kinds?.kindOf(address) ?? null;
+    const every = now && now !== "LIVE" ? now : await readSlot(ctx, holdId, slotKey("page", args.period, "NOW", "", country));
+    const from = every?.from ?? "";
+    const to = every?.to ?? "";
+    const viewed = await readLive(ctx, holdId, pageAsk("viewed", args.page, args.period, from, to, args.device, country));
+    const came = await readLive(ctx, holdId, pageAsk("before", args.page, args.period, from, to, args.device, country));
+    // The website's own pages named by their addresses and titles; other websites as people know them.
+    const split = (came?.rows ?? []).map((row) => ({ ...splitBeforeKey(row.key), views: row.views }));
+    const refs = split.filter((row) => row.kind === "page").map((row) => row.value);
+    const named = refs.length > 0 ? await decodePages(ctx, holdId, refs) : [];
+    const addressOf = new Map(refs.map((ref, at) => [ref, named[at]]));
+    const titles = await titlesOf(ctx, holdId, [address, ...named]);
+    const total = split.reduce((sum, row) => sum + row.views, 0);
+    const rows = split
+      .filter((row) => row.views > 0)
+      .map((row) => {
+        const label = row.kind === "page" ? addressOf.get(row.value) ?? row.value : row.kind === "site" ? siteNameOf(row.value, assistantOf) : "";
+        const title = row.kind === "page" ? titles.get(label) : undefined;
+        return { kind: row.kind, key: row.kind === "none" ? "none" : row.value, label, ...(title ? { title } : {}), views: row.views, share: total > 0 ? row.views / total : 0 };
+      })
+      .sort((left, right) => right.views - left.views);
+    const facts: BeforeFacts[] = rows.map((row) => ({ kind: row.kind, key: row.key, name: row.label, views: row.views }));
+    return {
+      address,
+      title: titles.get(address) ?? null,
+      path,
+      group: kind && kind !== NOT_SORTED_KIND ? kinds?.nameOf(kind) ?? null : null,
+      row: own ? shown(own, was, counted, before !== null && before !== "LIVE") : null,
+      viewsBefore: before && before !== "LIVE" ? was?.views ?? 0 : null,
+      live: !viewed || !came,
+      points: (viewed?.rows ?? []).map((row) => {
+        const { conversions, value } = conversionsOf(row, counted);
+        return { day: row.key, visits: row.visits, engaged: row.engaged, views: row.views, conversions, value };
+      }),
+      before: rows,
+      seen: viewed && came ? await namedSeen(ctx, holdId, pageSees(facts, args.siteId, (name) => assistantOf(name) !== null, args.page)) : { says: [], steps: [] },
     };
   },
 });

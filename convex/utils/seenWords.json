@@ -933,6 +933,16 @@
         "copy": "Copy the next step that works on {text} onto {more}.",
         "chooseWhatCounts": "Choose what counts as a conversion."
       },
+      "page": {
+        "none": "This page wasn't viewed in these dates.",
+        "noSources": "Every view of this page had no page before: people typed the address, used a bookmark or came from an app.",
+        "twoSources": "{text} sent {aRate} of this page's views, and {more} {bRate}.",
+        "oneSource": "{text} sent {aRate} of this page's views.",
+        "noneBefore": "{aRate} of its views had no page before: people typed the address, used a bookmark or came from an app.",
+        "assistant": "{text} sent {count, plural, =1 {one view} other {# views}}: an AI assistant is pointing people here.",
+        "keepLink": "Keep the link to this page on {text} where people see it: it sends the most views of the website's own pages.",
+        "checkAssistant": "Check what {text} says about this page, so the people it sends find what it promised."
+      },
       "conversions": {
         "nothingCounted": "The visits are all here, {a} in these dates, but with nothing counted nobody can say which pages or channels make money.",
         "fired": "Your property does record {event}: it happened {count, plural, =1 {once} other {# times}} in the same dates.",
@@ -2149,6 +2159,16 @@
         "idle": "{text} ha {a} visualizzazioni e non ne ha fatta nessuna.",
         "copy": "Copia il passo successivo che funziona su {text} anche su {more}.",
         "chooseWhatCounts": "Scegli cosa conta come conversione."
+      },
+      "page": {
+        "none": "Questa pagina non è stata vista in queste date.",
+        "noSources": "Nessuna visualizzazione di questa pagina aveva una pagina precedente: le persone hanno digitato l'indirizzo, usato un preferito o sono arrivate da un'app.",
+        "twoSources": "{text} ha portato il {aRate} delle visualizzazioni di questa pagina, e {more} il {bRate}.",
+        "oneSource": "{text} ha portato il {aRate} delle visualizzazioni di questa pagina.",
+        "noneBefore": "Il {aRate} delle sue visualizzazioni non aveva una pagina precedente: le persone hanno digitato l'indirizzo, usato un preferito o sono arrivate da un'app.",
+        "assistant": "{text} ha portato {count, plural, =1 {una visualizzazione} other {# visualizzazioni}}: un assistente AI indica questa pagina alle persone.",
+        "keepLink": "Tieni il link a questa pagina su {text} dove le persone lo vedono: porta più visualizzazioni di ogni altra pagina del sito.",
+        "checkAssistant": "Controlla cosa dice {text} di questa pagina, così chi arriva trova quello che ha promesso."
       },
       "conversions": {
         "nothingCounted": "Le visite ci sono tutte, {a} in queste date, ma senza niente di contato nessuno può dire quali pagine o canali fanno guadagnare.",

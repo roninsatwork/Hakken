@@ -281,3 +281,55 @@ export function slotKey(list: AnalyticsList, period: AnalyticsPeriod, which: Ana
 export function countryOfKey(key: string): string {
   return key.split("|")[4] ?? "";
 }
+
+// ---------------------------------------------------------------------------
+// The page before (google-analytics-plan.md GA29, §18.6.4)
+// ---------------------------------------------------------------------------
+
+/** What a view came from: a page of the website, another website, or nothing Google could name. */
+export type BeforeKind = "page" | "site" | "none";
+
+/** Websites named as people know them — search engines, social networks, chat — beside the AI assistants (`assistantOf`). */
+const SEARCH_ENGINES: ReadonlyArray<[string, string]> = [
+  ["google.", "Google"], ["bing.com", "Bing"], ["duckduckgo.com", "DuckDuckGo"], ["yahoo.", "Yahoo"], ["ecosia.org", "Ecosia"],
+  ["baidu.com", "Baidu"], ["yandex.", "Yandex"], ["linkedin.com", "LinkedIn"], ["lnkd.in", "LinkedIn"], ["facebook.com", "Facebook"],
+  ["instagram.com", "Instagram"], ["x.com", "X"], ["t.co", "X"], ["youtube.com", "YouTube"], ["reddit.com", "Reddit"],
+  // A link opened from a Teams chat comes from Teams' own address (Ronins, 2026-10-11).
+  ["teams.public.onecdn.static.microsoft", "Microsoft Teams"], ["teams.microsoft.com", "Microsoft Teams"], ["teams.live.com", "Microsoft Teams"],
+];
+
+/** A website's name as people know it — Google, ChatGPT, LinkedIn — else its own address, `www.` left off. */
+export function siteNameOf(host: string, assistantOf: (source: string) => string | null): string {
+  const bare = host.toLowerCase().replace(/^www\./, "");
+  const assistant = assistantOf(bare);
+  if (assistant) return assistant;
+  const known = SEARCH_ENGINES.find(([stem]) => (stem.endsWith(".") ? bare.startsWith(stem) || bare.includes(`.${stem}`) : bare === stem || bare.endsWith(`.${stem}`)));
+  return known ? known[1] : bare;
+}
+
+/**
+ * A view's page before (`pageReferrer`) as one key: `page:<path>` for a page
+ * of the website — its own addresses, `www.` or not; the live ask numbers it
+ * (`page:~…`) — `site:<host>` for another website, and `none` when Google
+ * names nothing: typed in, a bookmark, an app.
+ */
+export function beforeKey(referrer: string, addresses: readonly string[]): string {
+  const value = referrer.trim();
+  if (!value || value === "(not set)" || value === "(direct)") return "none";
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    return "none";
+  }
+  const host = url.hostname.toLowerCase();
+  const own = addresses.some((address) => address.toLowerCase().replace(/^www\./, "") === host.replace(/^www\./, ""));
+  return own ? `page:${url.pathname || "/"}` : `site:${host.replace(/^www\./, "")}`;
+}
+
+/** A key's kind and what follows it. */
+export function splitBeforeKey(key: string): { kind: BeforeKind; value: string } {
+  if (key.startsWith("page:")) return { kind: "page", value: key.slice(5) };
+  if (key.startsWith("site:")) return { kind: "site", value: key.slice(5) };
+  return { kind: "none", value: "" };
+}

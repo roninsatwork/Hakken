@@ -9843,6 +9843,7 @@
       "sources": "{count, plural, =1 {# fonte} other {# fonti}}",
       "landingPages": "{count, plural, =1 {# pagina di destinazione} other {# pagine di destinazione}}",
       "conversionKinds": "{count, plural, =1 {# tipo di conversione} other {# tipi di conversione}}",
+      "pagesAndWebsites": "{count, plural, one {# pagina o sito} other {# pagine e siti}}",
       "stories": "{count, plural, =1 {# storia} other {# storie}}",
       "storiesSoFar": "{count, plural, other {#+ storie}}",
       "articlesAndStories": "{count, plural, =1 {# articolo o storia} other {# articoli e storie}}",
@@ -15305,7 +15306,13 @@
         }
       },
       "conversionsTitle": "Conversioni nel tempo",
-      "conversionsHint": "Una linea per ogni tipo di conversione, su una sola scala. Spunta Valore per aggiungere il denaro su una scala sua."
+      "conversionsHint": "Una linea per ogni tipo di conversione, su una sola scala. Spunta Valore per aggiungere il denaro su una scala sua.",
+      "viewsOnlyTitle": {
+        "day": "Visualizzazioni al giorno",
+        "week": "Visualizzazioni a settimana",
+        "month": "Visualizzazioni al mese"
+      },
+      "viewsOnlyHint": "{period}. Chiesto a Google quando si apre questa schermata, e tenuto fino alla prossima raccolta. Un punto segna {step, select, day {un giorno} week {una settimana} other {un mese}} con una conversione."
     },
     "figures": {
       "nothingBefore": "Ancora niente con cui confrontare",
@@ -15538,6 +15545,36 @@
       "description": "Ogni pagina vista: le sue visualizzazioni, il tempo passato su di essa e le conversioni fatte su quella pagina.",
       "findPage": "Trova una pagina…",
       "empty": "Nessuna pagina vista in queste date."
+    },
+    "page": {
+      "back": "Tutte le pagine",
+      "description": "Una pagina di {host}. Ogni dato qui riguarda le visualizzazioni di questa pagina.",
+      "descriptionInGroup": "Una pagina di {host}, nel gruppo di pagine {group}. Ogni dato qui riguarda le visualizzazioni di questa pagina.",
+      "descriptionTitled": "“{title}”, una pagina di {host}. Ogni dato qui riguarda le visualizzazioni di questa pagina.",
+      "descriptionInGroupTitled": "“{title}”, una pagina di {host}, nel gruppo di pagine {group}. Ogni dato qui riguarda le visualizzazioni di questa pagina.",
+      "openPage": "Apri la pagina",
+      "notFound": "Questa pagina non è una del sito.",
+      "noViews": "Questa pagina non è stata vista negli {period}.",
+      "views": "Visualizzazioni",
+      "people": "Persone",
+      "viewsEach": "{views} visualizzazioni a testa",
+      "time": "Tempo",
+      "timeLine": "Di coinvolgimento, a visita",
+      "conversions": "Conversioni fatte qui",
+      "askFailed": "Google non ha risposto ora per le visualizzazioni al giorno di questa pagina e le pagine viste prima. Riapri la pagina tra poco.",
+      "beforeTitle": "Dove erano i visitatori subito prima",
+      "barsHint": "I {count} più grandi, per visualizzazioni.",
+      "beforeDescription": "La pagina o il sito da cui è arrivata ogni visualizzazione di {page}, per visualizzazioni.",
+      "findBefore": "Trova una pagina o un sito…",
+      "download": "Scarica CSV",
+      "pageBefore": "Pagina precedente",
+      "address": "Indirizzo",
+      "share": "Quota",
+      "asking": "Chiediamo a Google…",
+      "noMatch": "Nessun risultato per questa ricerca.",
+      "noBefore": "Nessuna visualizzazione in queste date.",
+      "noPageBefore": "Nessuna pagina precedente",
+      "noPageBeforeLine": "Indirizzo digitato, un preferito o un'app"
     },
     "conversions": {
       "title": "Conversioni",
@@ -15876,6 +15913,16 @@
         "idle": "{text} ha {a} visualizzazioni e non ne ha fatta nessuna.",
         "copy": "Copia il passo successivo che funziona su {text} anche su {more}.",
         "chooseWhatCounts": "Scegli cosa conta come conversione."
+      },
+      "page": {
+        "none": "Questa pagina non è stata vista in queste date.",
+        "noSources": "Nessuna visualizzazione di questa pagina aveva una pagina precedente: le persone hanno digitato l'indirizzo, usato un preferito o sono arrivate da un'app.",
+        "twoSources": "{text} ha portato il {aRate} delle visualizzazioni di questa pagina, e {more} il {bRate}.",
+        "oneSource": "{text} ha portato il {aRate} delle visualizzazioni di questa pagina.",
+        "noneBefore": "Il {aRate} delle sue visualizzazioni non aveva una pagina precedente: le persone hanno digitato l'indirizzo, usato un preferito o sono arrivate da un'app.",
+        "assistant": "{text} ha portato {count, plural, =1 {una visualizzazione} other {# visualizzazioni}}: un assistente AI indica questa pagina alle persone.",
+        "keepLink": "Tieni il link a questa pagina su {text} dove le persone lo vedono: porta più visualizzazioni di ogni altra pagina del sito.",
+        "checkAssistant": "Controlla cosa dice {text} di questa pagina, così chi arriva trova quello che ha promesso."
       },
       "conversions": {
         "nothingCounted": "Le visite ci sono tutte, {a} in queste date, ma senza niente di contato nessuno può dire quali pagine o canali fanno guadagnare.",

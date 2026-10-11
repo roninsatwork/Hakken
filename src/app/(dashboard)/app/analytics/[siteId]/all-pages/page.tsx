@@ -12,7 +12,7 @@ import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus } from "../../
  * viewed — its views, the people who saw it, the time engaged on it, the
  * conversions made on that page with their value beside them (§10, Q4) and
  * the change — opening on the most viewed: page views before money (GA26).
- * Under What Hakken sees. Each opens the same page screen.
+ * Under What Hakken sees. Each opens its own screen (GA29).
  */
 export default function AnalyticsAllPagesPage() {
   const t = useTranslations("googleAnalytics.allPages");
@@ -33,7 +33,7 @@ export default function AnalyticsAllPagesPage() {
       noun="pages"
       opening="views"
       searchPlaceholder={t("findPage")}
-      rowHref={(row) => (row.key.startsWith("~") ? hrefFor("landing-pages/page", { key: row.key }) : null)}
+      rowHref={(row) => (row.key.startsWith("~") ? hrefFor("all-pages/page", { key: row.key }) : null)}
       emptyLabel={t("empty")}
     />
   );
