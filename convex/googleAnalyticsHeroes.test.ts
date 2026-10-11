@@ -21,7 +21,7 @@ const EVENTS = ["generate_lead"];
 
 /** An Analytics row: visits, engaged visits and form fills at £20 each (set in Hakken). */
 const row = (key: string, visits: number, engaged: number, leads: number): ListRow => ({
-  key, visits, engaged, seconds: visits * 30, views: visits, purchases: 0, revenue: 0,
+  key, visits, engaged, seconds: visits * 30, views: visits, purchases: 0, revenue: 0, people: 0, newPeople: 0, length: 0,
   counts: new Map([["generate_lead", leads]]), values: new Map([["generate_lead", 0]]),
 });
 

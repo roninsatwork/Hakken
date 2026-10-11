@@ -80,6 +80,8 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
   const recordHref = useRecordHref(siteId);
   const tracking = useSearchConsoleTracking(siteId);
   const isTracked = useQuery(api.searchConsoleTracking.searchConsoleIsTracked, key ? { siteId, kind: dimension, key } : "skip");
+  // A page's title, kept once on the website's page list (google-analytics-plan.md GA27).
+  const pageTitle = useQuery(api.pageTitles.pageTitle, key && dimension === "page" ? { siteId, page: key } : "skip");
   const ready = Boolean(status && hasFigures(status) && key);
   // The country chosen narrows the days and the devices; the splits' countries are every country still.
   const ask = { siteId, searchType: kind, dimension, key, from: range.from, to: range.to, ...countryArg(country) };
@@ -114,7 +116,7 @@ export function SearchConsoleRecordScreen({ dimension }: { dimension: "query" | 
         back={back}
         icon={dimension === "query" ? <Search className="h-5 w-5 text-brand" /> : <FileText className="h-5 w-5 text-brand" />}
         title={title}
-        description={t(dimension === "query" ? "record.keywordDescription" : "record.pageDescription")}
+        description={dimension === "query" ? t("record.keywordDescription") : pageTitle ? t("record.pageDescriptionTitled", { title: pageTitle }) : t("record.pageDescription")}
         action={
           <div className="flex flex-wrap items-center gap-4">
             {dimension === "page" && /^https?:\/\//.test(key) ? (

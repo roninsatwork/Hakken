@@ -49,6 +49,7 @@ import { GOOGLE_DIMENSIONS, LISTS_OF } from "./searchConsoleApi";
 import { EXPORT_FIELDS, exportFileName, exportValue } from "./utils/searchConsoleExport";
 import { bySide, fromGoogle, positionOf, type Row as PackedRow } from "./utils/searchConsolePacks";
 import { NOT_SORTED_KIND, pageKindsFrom, type PageKinds, type PageKindSetup } from "./utils/pageKinds";
+import { withTitles } from "./pageTitles";
 
 /**
  * What the Search Console lists read (docs/plans/active/search-console-plan.md
@@ -121,6 +122,7 @@ const rowValidator = v.object({
   nextShare: nullable(v.number()),
   verdict: v.union(v.literal("high"), v.literal("low"), v.literal("close"), v.null()),
   gap: nullable(v.number()),
+  title: v.optional(v.string()), // A page's title, from the website's page list (google-analytics-plan.md GA27): only on the rows shown.
 });
 
 // The headings a list orders by, and its order (`searchConsoleSorts.ts`).
@@ -422,10 +424,11 @@ export const searchConsoleListPage = tenantQuery({
     const site = await requireMySite(ctx, args.siteId);
     const list = await readList(ctx, site.hold._id, args);
     const page = pageOfList(list.rows, args.page, args.rows, list.cut);
+    // Only the page's rows named: the rest stay tokens of the book (core-data-normalisation-plan.md §5.3); a page's title (GA27) beside it.
+    const named: Array<Awaited<ReturnType<typeof namedRows>>[number] & { title?: string }> = await namedRows(list, page.rows);
     return {
       ...page,
-      // Only the page's rows named: the rest stay tokens of the book (core-data-normalisation-plan.md §5.3).
-      rows: await namedRows(list, page.rows),
+      rows: args.dimension === "page" ? await withTitles(ctx, site.hold._id, named) : named,
       preparing: list.preparing,
       ...(list.noSearches ? { noSearches: true } : {}),
       summary: list.summary,

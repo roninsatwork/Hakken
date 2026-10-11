@@ -1286,6 +1286,24 @@ own screens, Heroes and attention, and Search Console's pages lists and a
 page's own screen. Search Console sends no titles; until Analytics is
 connected, those screens show the address alone.
 
+*Built 2026-10-11 (Phase 7), with §2 above.* Every list asks
+`totalUsers`, `newUsers` and `averageSessionDuration` (kept as the seconds
+visits lasted, so it adds up); the website's totals for every device are
+asked whole beside the by-device ask, since people cannot be added up
+(`collectPeriod`). The small lists' periods were already asked ready-made,
+not added from days, so only the every-device people needed that. Bounce
+rate, pages a visit and visit length are worked out when read. Titles are
+asked into `googleAnalyticsTitles` by page number (`googleAnalyticsTitles.ts`)
+and copied by the page list's rebuild onto the pages it already has — a
+title adds no page — and read for the rows on screen by `pageTitles.ts`
+(`titlesOf`, `withTitles`, and `pageTitle` for Search Console's page screen).
+A website with no title yet asks the weekly lists at its next run, whatever
+the week, so the first run after this shipped filled the 90 days and 12
+months with people, and the titles. Overview's figures, Landing pages'
+columns and All pages' are as drawn (boards 13, 18, 20) and their look tests
+updated; Search Console's Pages and Tracked pages share one title cell
+(`PageNameCell`).
+
 **4. The page before.** When a page's own screen opens, Google is asked for
 `pageReferrer` by `pagePath` for that page, and for its views a day; both
 held until the next collection. A referrer on the website becomes the

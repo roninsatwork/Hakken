@@ -7,6 +7,7 @@ import { NOT_SORTED_KIND } from "./utils/pageKinds";
 import { PURCHASE_EVENT } from "./utils/analyticsEvents";
 import { slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
+import { titlesOf } from "./pageTitles";
 import { pageAsk } from "./googleAnalyticsLive";
 import { analyticsPeriodValidator } from "./googleAnalyticsSchema";
 import {
@@ -42,6 +43,8 @@ export const analyticsLandingPage = tenantQuery({
   args: { siteId: v.id("companyWebsites"), page: v.string(), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) },
   returns: v.union(v.null(), v.object({
     address: v.string(),
+    /** Its title, from the website's page list (GA27); null without one. */
+    title: v.union(v.string(), v.null()),
     /** The path Analytics names it by, for asking Google. */
     path: v.string(),
     group: v.union(v.string(), v.null()),
@@ -74,8 +77,10 @@ export const analyticsLandingPage = tenantQuery({
     const to = every?.to ?? "";
     const series = await readLive(ctx, holdId, pageAsk("series", args.page, args.period, from, to, args.device, country));
     const channels = await readLive(ctx, holdId, pageAsk("channel", args.page, args.period, from, to, args.device, country));
+    const titles = await titlesOf(ctx, holdId, [address]);
     return {
       address,
+      title: titles.get(address) ?? null,
       path,
       group: kind && kind !== NOT_SORTED_KIND ? kinds?.nameOf(kind) ?? null : null,
       row: own ? shown(own, was, counted, before !== null && before !== "LIVE") : null,

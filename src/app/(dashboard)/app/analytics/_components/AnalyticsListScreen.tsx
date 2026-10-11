@@ -17,8 +17,9 @@ import { toCsv } from "../../sites/_components/siteFormat";
 import { useSiteListPage } from "../../sites/_components/useSitePagedTable";
 import { useSiteSearch } from "../../sites/_components/useSiteParam";
 import { useSiteSort } from "../../sites/_components/useSiteSort";
+import { CUT_COLUMN } from "../../sites/_components/SiteCells";
 import { ChangeCell, ConversionsCell, ConversionsHereCell, FigureCell, MoneyCell, PageLink, TextFigure } from "./AnalyticsCells";
-import { formatPercent, formatTime } from "./analyticsFormat";
+import { formatPercent, formatPerVisit, formatTime } from "./analyticsFormat";
 import { useAnalyticsArgs, useAnalyticsSiteId, useAnalyticsStatus, useDevice, usePeriod } from "./useAnalytics";
 import { AnalyticsGate } from "./AnalyticsNotices";
 import { DetailHeader, PageHeader } from "@/src/ui/components/screens/PageHeader";
@@ -26,30 +27,37 @@ import { DetailHeader, PageHeader } from "@/src/ui/components/screens/PageHeader
 export type ListPageAnswer = FunctionReturnType<typeof api.googleAnalyticsReads.analyticsListPage>;
 export type ShownRow = ListPageAnswer["rows"][number];
 export type ListKind = "channel" | "source" | "landing" | "groups" | "page";
-type Column = "name" | "visits" | "engaged" | "time" | "views" | "conversions" | "value" | "change";
+type Column = "name" | "visits" | "engaged" | "bounce" | "pages" | "people" | "time" | "views" | "conversions" | "value" | "change";
 
 /**
- * Each list's columns, as drawn (§11, §15): every table fits the page at 1440
- * and 1366 pixels. All pages shows the conversions made on a page with their
- * value beside them ("4 · £80"), and the change, rather than a Value column.
+ * Each list's columns, as drawn (§11, §15; the second round, §18.2 boards 18
+ * and 20): every table fits the page at 1440 and 1366 pixels. Landing pages
+ * shows bounce rate and pages a visit, leaving value to Conversions and each
+ * page's own screen (GA26); All pages shows the people who saw each page, and
+ * the conversions made there with their value beside them ("4 · £80").
  */
 const COLUMNS: Record<ListKind, readonly Column[]> = {
   channel: ["name", "visits", "engaged", "conversions", "value", "change"],
   source: ["name", "visits", "engaged", "conversions", "value", "change"],
-  landing: ["name", "visits", "engaged", "time", "conversions", "value", "change"],
-  groups: ["name", "visits", "engaged", "time", "conversions", "value", "change"],
-  page: ["name", "views", "time", "conversions", "change"],
+  landing: ["name", "visits", "bounce", "pages", "time", "conversions", "change"],
+  groups: ["name", "visits", "bounce", "pages", "time", "conversions", "change"],
+  page: ["name", "views", "people", "time", "conversions", "change"],
 };
 
-/** Each list's download: its columns, and All pages' value as a column of its own. */
-const CSV_COLUMNS: Record<ListKind, readonly Column[]> = { ...COLUMNS, page: ["name", "views", "time", "conversions", "value", "change"] };
+/** Each list's download: its columns, with the value — and on the page lists engagement too — as columns of their own. */
+const CSV_COLUMNS: Record<ListKind, readonly Column[]> = {
+  ...COLUMNS,
+  landing: ["name", "visits", "engaged", "bounce", "pages", "time", "conversions", "value", "change"],
+  groups: ["name", "visits", "engaged", "bounce", "pages", "time", "conversions", "value", "change"],
+  page: ["name", "views", "people", "time", "conversions", "value", "change"],
+};
 
 /** The lists whose conversion rate sits beside the count on one line ("4 · 2.8%"), as Landing pages are drawn (§15). */
 const ONE_LINE: ReadonlySet<ListKind> = new Set(["landing", "groups"]);
 
 /** Which way each heading's first press runs: the most first, names A to Z. */
 const FIRSTS = {
-  name: "asc", visits: "desc", engaged: "desc", time: "desc", views: "desc", conversions: "desc", value: "desc", change: "desc",
+  name: "asc", visits: "desc", engaged: "desc", bounce: "asc", pages: "desc", people: "desc", time: "desc", views: "desc", conversions: "desc", value: "desc", change: "desc",
 } as const;
 
 /**
@@ -176,8 +184,10 @@ function columnOf(
         key: "name",
         header: t(`columns.${list === "channel" ? "channel" : list === "source" ? "source" : list === "groups" ? "group" : "page"}`),
         sortable: true,
+        // A page's title and address cut to a line each in their share of the table, as Sites' words are (CUT_COLUMN).
+        ...(list === "landing" || list === "page" ? { className: CUT_COLUMN.first } : {}),
         cell: (row) => list === "landing" || list === "page"
-          ? <PageLink address={row.label} href={rowHref ? rowHref(row) : null} />
+          ? <PageLink address={row.label} href={rowHref ? rowHref(row) : null} title={row.title} />
           : list === "groups"
             ? (
               <span className="flex flex-col leading-tight">
@@ -193,6 +203,12 @@ function columnOf(
       return { key: "views", header: t("columns.views"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.views} /> };
     case "engaged":
       return { key: "engaged", header: <span title={t("columns.engagedTitle")}>{t("columns.engaged")}</span>, align: "right", sortable: true, cell: (row) => <TextFigure text={formatPercent(row.engagementRate)} /> };
+    case "bounce":
+      return { key: "bounce", header: <span title={t("columns.bounceTitle")}>{t("columns.bounce")}</span>, align: "right", sortable: true, cell: (row) => <TextFigure text={formatPercent(row.bounceRate)} /> };
+    case "pages":
+      return { key: "pages", header: <span title={t("columns.pagesTitle")}>{t("columns.pages")}</span>, align: "right", sortable: true, cell: (row) => <TextFigure text={formatPerVisit(row.pagesPerVisit)} /> };
+    case "people":
+      return { key: "people", header: <span title={t("columns.peopleTitle")}>{t("columns.people")}</span>, align: "right", sortable: true, cell: (row) => <FigureCell value={row.people} /> };
     case "time":
       return { key: "time", header: <span title={t("columns.timeTitle")}>{t("columns.time")}</span>, align: "right", sortable: true, cell: (row) => <TextFigure text={formatTime(row.timePerVisit)} /> };
     case "conversions":
@@ -273,6 +289,9 @@ function csvValue(row: ShownRow, column: Column): string | number | null {
     case "visits": return row.visits;
     case "views": return row.views;
     case "engaged": return row.engagementRate === null ? null : Math.round(row.engagementRate * 1000) / 10;
+    case "bounce": return row.bounceRate === null ? null : Math.round(row.bounceRate * 1000) / 10;
+    case "pages": return row.pagesPerVisit === null ? null : Math.round(row.pagesPerVisit * 10) / 10;
+    case "people": return row.people;
     case "time": return row.timePerVisit === null ? null : Math.round(row.timePerVisit);
     case "conversions": return row.conversions;
     case "value": return row.value / 100;

@@ -26,6 +26,8 @@ export type Visit = {
   host?: string;
   /** Google's two-letter `countryId`: the United Kingdom unless a test says otherwise. */
   country?: string;
+  /** The page's title: "Title of <page>" unless a test says otherwise. */
+  title?: string;
   sessions: number;
   engaged: number;
   seconds: number;
@@ -44,7 +46,11 @@ const FIELD: Record<string, (visit: Visit) => string> = {
   pagePath: (visit) => visit.page,
   hostName: (visit) => visit.host ?? "www.acme-shop.test",
   countryId: (visit) => visit.country ?? "GB",
+  pageTitle: (visit) => visit.title ?? `Title of ${visit.page}`,
 };
+
+/** The figures a log line carries, in the order asked before the second round. */
+const BASE_METRICS = ["sessions", "engagedSessions", "userEngagementDuration", "screenPageViews", "ecommercePurchases", "purchaseRevenue"];
 
 export type Google = { visits: Visit[]; reportStatus?: number; calls: { url: string; body: string }[] };
 
@@ -93,9 +99,18 @@ export function fakeGoogle(visits: Visit[]): Google {
           sums.set(keys.join("|"), sum);
         }
       }
+      // People, as Google counts them, from each row's own visits taken whole: a group of rows has fewer people than its
+      // rows' people added up, so a test can tell a whole ask from one added up (google-analytics-plan.md §18.6.2).
+      const metricOf = (name: string, values: number[]): number => {
+        const [sessions] = values;
+        if (name === "totalUsers") return Math.ceil(Math.sqrt(sessions) * 10);
+        if (name === "newUsers") return Math.floor(Math.sqrt(sessions) * 7);
+        if (name === "averageSessionDuration") return sessions > 0 ? 75 : 0;
+        return values[BASE_METRICS.indexOf(name)] ?? 0;
+      };
       const rows = [...sums.values()].map((sum) => ({
         dimensionValues: sum.keys.map((value) => ({ value })),
-        metricValues: sum.values.map((value) => ({ value: String(value) })),
+        metricValues: (byEvent ? sum.values : ask.metrics.map((metric) => metricOf(metric.name, sum.values))).map((value) => ({ value: String(value) })),
       }));
       return Response.json({ rows, rowCount: rows.length, metadata: {} });
     }

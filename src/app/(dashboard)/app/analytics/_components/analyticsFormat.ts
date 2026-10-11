@@ -36,6 +36,12 @@ export function formatPercent(share: number | null | undefined): string {
   return `${(share * 100).toFixed(1)}%`;
 }
 
+/** A figure a visit — pages a visit — to one decimal ("2.4"), or a dash without visits. */
+export function formatPerVisit(value: number | null | undefined): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return "–";
+  return value.toFixed(1);
+}
+
 /** Seconds engaged a visit as "1m 05s". */
 export function formatTime(seconds: number | null | undefined): string {
   if (seconds === null || seconds === undefined || Number.isNaN(seconds)) return "–";

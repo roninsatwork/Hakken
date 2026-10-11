@@ -309,6 +309,7 @@ export const KEEP_RULES: Record<TableNames, KeepRule> = {
   googleAnalyticsPeriodSlots: LATEST,
   googleAnalyticsPeriods: LATEST,
   googleAnalyticsLive: cleared("at the next collection", "googleAnalyticsCollect/dropLive"),
+  googleAnalyticsTitles: cleared("a page not seen in the week's ask", "googleAnalyticsTitles/dropOldTitles"),
 
   // ── Search Console ────────────────────────────────────────────────────────
   searchConsoleConnections: RECORD,

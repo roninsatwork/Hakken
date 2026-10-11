@@ -171,6 +171,12 @@ export type CollectTarget = {
   country: string;
   /** The website's other home countries, kept as ready-made lists (§18.6.1), by Search Console's code (`fra`). */
   others: string[];
+  /**
+   * No page title kept yet (§18.6.3): the run asks the weekly lists with the
+   * titles whatever the week — every website the first time the second
+   * round's figures are collected, and a new one at once.
+   */
+  untitled: boolean;
 };
 
 /** Google Analytics' two-letter `countryId` for Search Console's code: `gbr` → `GB`. */
@@ -201,6 +207,7 @@ export const collectTarget = internalQuery({
       weeklyPeriodsAt: connection.weeklyPeriodsAt,
       country: countryIdOf(hold ? mainConsoleCountry(hold) : "gbr"),
       others: hold && !isTrackedHold(hold) ? await countriesKeptReady(ctx, hold) : [],
+      untitled: (await ctx.db.query("googleAnalyticsTitles").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId)).first()) === null,
     };
   },
 });
@@ -225,7 +232,7 @@ export async function openSession(
 }
 
 /** One report, renewing the token once if it has just expired and waiting a little when Google is busy. */
-async function ask(session: Session, property: string, report: ReportAsk): Promise<({ ok: true } & Report) | GoogleFailure> {
+export async function ask(session: Session, property: string, report: ReportAsk): Promise<({ ok: true } & Report) | GoogleFailure> {
   let renewed = false;
   for (let wait = 0; ;) {
     const answer = await runReport(session.accessToken, property, report);
@@ -335,7 +342,7 @@ export async function numberPages(ctx: ActionCtx, target: CollectTarget, rows: L
       merged.set(key, { ...row, key });
       return;
     }
-    for (const field of ["visits", "engaged", "seconds", "views", "purchases", "revenue"] as const) held[field] += row[field];
+    for (const field of ["visits", "engaged", "seconds", "views", "purchases", "revenue", "people", "newPeople", "length"] as const) held[field] += row[field];
     for (const [event, count] of row.counts) held.counts.set(event, (held.counts.get(event) ?? 0) + count);
     for (const [event, value] of row.values) held.values.set(event, (held.values.get(event) ?? 0) + value);
   });
@@ -458,6 +465,7 @@ export const writeDay = internalMutation({
 function samePart(held: PackedPart, fresh: PackedPart): boolean {
   return held.visits === fresh.visits && held.engaged === fresh.engaged && held.seconds === fresh.seconds && held.views === fresh.views
     && held.purchases === fresh.purchases && held.revenue === fresh.revenue
+    && held.people === fresh.people && held.newPeople === fresh.newPeople && held.length === fresh.length
     && JSON.stringify(held.keys) === JSON.stringify(fresh.keys) && JSON.stringify(held.events) === JSON.stringify(fresh.events)
     && JSON.stringify(held.counts) === JSON.stringify(fresh.counts) && JSON.stringify(held.values) === JSON.stringify(fresh.values);
 }
@@ -600,6 +608,12 @@ export async function collectPeriod(
   if (!asked.ok) return failed(session, asked);
   const devices = new Map<string, ListRow[]>();
   for (const [group, rows] of asked.groups) devices.set(lead.length > 0 ? groupKeys(group)[0] : EVERY_DEVICE, rows);
+  // People cannot be added up across devices (§18.6.2): the website's totals for every device are asked whole.
+  if (job.list === "total" && lead.length > 0) {
+    const whole = await askList(session, asking, "total", [], range);
+    if (!whole.ok) return failed(session, whole);
+    devices.set(EVERY_DEVICE, [...whole.groups.values()].flat());
+  }
   if (!devices.has(EVERY_DEVICE)) devices.set(EVERY_DEVICE, []);
   const keys = [...devices.keys()].map((device) => slotKey(job.list, job.period, job.which, device, country));
   const slots: Record<string, { slot: number; hash: string; from: string; to: string }> =
@@ -690,15 +704,17 @@ export const dropLive = internalMutation({
 /** Records removed a call when a website's figures go. */
 const CLEAR_PER_CALL = 200;
 
-/** Some of a website's figures gone — its days, ready-made lists and live lists; true when none is left. */
+/** Some of a website's figures gone — its days, ready-made lists, live lists and page titles; true when none is left. */
 async function clearSome(ctx: MutationCtx, companyWebsiteId: Id<"companyWebsites">): Promise<boolean> {
   let done = true;
   const days = await ctx.db.query("googleAnalyticsDays").withIndex("by_hold_list_day_device", (q) => q.eq("companyWebsiteId", companyWebsiteId)).take(CLEAR_PER_CALL);
   const periods = await ctx.db.query("googleAnalyticsPeriods").withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", companyWebsiteId)).take(PARTS_PER_DELETE);
   const slots = await ctx.db.query("googleAnalyticsPeriodSlots").withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", companyWebsiteId)).take(CLEAR_PER_CALL);
   const live = await ctx.db.query("googleAnalyticsLive").withIndex("by_hold_ask_part", (q) => q.eq("companyWebsiteId", companyWebsiteId)).take(CLEAR_PER_CALL);
-  for (const row of [...days, ...periods, ...slots, ...live]) await ctx.db.delete(row._id);
-  if (days.length === CLEAR_PER_CALL || periods.length === PARTS_PER_DELETE || slots.length === CLEAR_PER_CALL || live.length === CLEAR_PER_CALL) done = false;
+  const titles = await ctx.db.query("googleAnalyticsTitles").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", companyWebsiteId)).take(CLEAR_PER_CALL);
+  for (const row of [...days, ...periods, ...slots, ...live, ...titles]) await ctx.db.delete(row._id);
+  if (days.length === CLEAR_PER_CALL || periods.length === PARTS_PER_DELETE || slots.length === CLEAR_PER_CALL || live.length === CLEAR_PER_CALL
+    || titles.length === CLEAR_PER_CALL) done = false;
   return done;
 }
 

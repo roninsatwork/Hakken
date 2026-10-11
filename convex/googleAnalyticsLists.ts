@@ -16,8 +16,15 @@ import { PART_ROWS, packNumbers, unpackNumbers } from "./utils/searchConsolePack
  * count or a sum, so the parts add up to the whole exactly.
  */
 
-/** The figures asked for every list's rows, in the order they are kept. */
-export const MAIN_METRICS = ["sessions", "engagedSessions", "userEngagementDuration", "screenPageViews", "ecommercePurchases", "purchaseRevenue"] as const;
+/**
+ * The figures asked for every list's rows, in the order they are kept: the
+ * second round adds people, new people and how long visits lasted
+ * (google-analytics-plan.md GA24, GA25, §18.6.2). Ten at most an ask.
+ */
+export const MAIN_METRICS = [
+  "sessions", "engagedSessions", "userEngagementDuration", "screenPageViews", "ecommercePurchases", "purchaseRevenue",
+  "totalUsers", "newUsers", "averageSessionDuration",
+] as const;
 
 /** The figures asked for each key event of a row: how many, and the value Analytics gave them. */
 export const EVENT_METRICS = ["keyEvents", "eventValue"] as const;
@@ -69,13 +76,23 @@ export type ListRow = {
   views: number;
   purchases: number;
   revenue: number;
+  /**
+   * People (`totalUsers`) and new people (`newUsers`). People cannot be added
+   * up across days, devices or rows — one person on two devices is one person
+   * — so only a row Google counted whole is right; every device's are asked
+   * whole for the totals (§18.6.2).
+   */
+  people: number;
+  newPeople: number;
+  /** How long the visits lasted, in seconds all told: the average × visits, so it adds up. */
+  length: number;
   /** Each key event's count and value (in hundredths), by the event's name. */
   counts: Map<string, number>;
   values: Map<string, number>;
 };
 
-function emptyRow(key: string): ListRow {
-  return { key, visits: 0, engaged: 0, seconds: 0, views: 0, purchases: 0, revenue: 0, counts: new Map(), values: new Map() };
+export function emptyRow(key: string): ListRow {
+  return { key, visits: 0, engaged: 0, seconds: 0, views: 0, purchases: 0, revenue: 0, people: 0, newPeople: 0, length: 0, counts: new Map(), values: new Map() };
 }
 
 const hundredths = (value: number) => Math.round(value * 100);
@@ -127,6 +144,9 @@ export function joinAsks(
       target.views += row.values[3] ?? 0;
       target.purchases += row.values[4] ?? 0;
       target.revenue += hundredths(row.values[5] ?? 0);
+      target.people += row.values[6] ?? 0;
+      target.newPeople += row.values[7] ?? 0;
+      target.length += Math.round((row.values[8] ?? 0) * (row.values[0] ?? 0));
     }
   }
   for (const row of events) {
@@ -156,6 +176,10 @@ export type PackedPart = {
   views: string;
   purchases: string;
   revenue: string;
+  /** People, new people and visit seconds; missing on a part kept before the second round. */
+  people?: string;
+  newPeople?: string;
+  length?: string;
   events: string[];
   counts: string[];
   values: string[];
@@ -182,6 +206,9 @@ export function packList(list: AnalyticsList, rows: readonly ListRow[], events: 
       views: packNumbers(slice.map((row) => row.views)),
       purchases: packNumbers(slice.map((row) => row.purchases)),
       revenue: packNumbers(slice.map((row) => row.revenue)),
+      people: packNumbers(slice.map((row) => row.people)),
+      newPeople: packNumbers(slice.map((row) => row.newPeople)),
+      length: packNumbers(slice.map((row) => row.length)),
       events: [...events],
       counts: events.map((event) => packNumbers(slice.map((row) => row.counts.get(event) ?? 0))),
       values: events.map((event) => packNumbers(slice.map((row) => row.values.get(event) ?? 0))),
@@ -198,6 +225,9 @@ export function unpackPart(part: PackedPart): ListRow[] {
   const views = unpackNumbers(part.views);
   const purchases = unpackNumbers(part.purchases);
   const revenue = unpackNumbers(part.revenue);
+  const people = part.people ? unpackNumbers(part.people) : [];
+  const newPeople = part.newPeople ? unpackNumbers(part.newPeople) : [];
+  const length = part.length ? unpackNumbers(part.length) : [];
   const counts = part.counts.map((column) => unpackNumbers(column));
   const values = part.values.map((column) => unpackNumbers(column));
   return part.keys.map((key, index) => ({
@@ -208,6 +238,9 @@ export function unpackPart(part: PackedPart): ListRow[] {
     views: views[index] ?? 0,
     purchases: purchases[index] ?? 0,
     revenue: revenue[index] ?? 0,
+    people: people[index] ?? 0,
+    newPeople: newPeople[index] ?? 0,
+    length: length[index] ?? 0,
     counts: new Map(part.events.map((event, at) => [event, counts[at][index] ?? 0])),
     values: new Map(part.events.map((event, at) => [event, values[at][index] ?? 0])),
   }));

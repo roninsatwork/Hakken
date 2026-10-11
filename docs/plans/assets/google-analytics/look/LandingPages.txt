@@ -6,7 +6,7 @@ settings-card: What Hakken sees
 search: Find a page…
 filter: Page group
 choice: Show: Pages | Page groups
-table: Page | Visits | Engaged | Time | Conversions | Value | Change
+table: Page | Visits | Bounce | Pages | Time | Conversions | Change
   table-bar
     download: Download CSV
   table-footer

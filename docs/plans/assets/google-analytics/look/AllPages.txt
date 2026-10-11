@@ -4,7 +4,7 @@
 page-header: All pages
 settings-card: What Hakken sees
 search: Find a page…
-table: Page | Views | Time | Conversions made here | Change
+table: Page | Views | People | Time | Conversions made here | Change
   table-bar
     download: Download CSV
   table-footer

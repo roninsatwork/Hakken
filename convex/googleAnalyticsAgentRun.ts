@@ -6,6 +6,7 @@ import { failureSummary, lastMoved, ROLE_RUN_LIVE_MS } from "./roleRuns";
 import { shiftDay } from "./searchConsoleDays";
 import { siteAddresses } from "./googleAnalyticsApi";
 import { prepareAnalyticsCountry } from "./googleAnalyticsCountries";
+import { collectTitles } from "./googleAnalyticsTitles";
 import { count, days, finishRun } from "./searchConsoleAgentRun";
 import {
   DAYS_PER_STEP,
@@ -334,12 +335,25 @@ export const collectSiteStep = internalAction({
           });
           to = stepFrom > args.from ? shiftDay(stepFrom, -1) : null;
           if (to === null) {
-            weekly = dueJobs({ weeklyPeriodsAt: target.weeklyPeriodsAt }, Date.now()).some((job) => job.period === "90");
+            weekly = target.untitled || dueJobs({ weeklyPeriodsAt: target.weeklyPeriodsAt }, Date.now()).some((job) => job.period === "90");
             jobs = jobsFor(weekly, target.others);
           }
           continue;
         }
         if (jobAt >= jobs.length) {
+          // With the weekly lists, each page's title (§18.6.3): a title Google could not give waits for next week.
+          if (weekly) {
+            const titles = await collectTitles(ctx, open, args.connectionId, target, args.top);
+            await ctx.runMutation(internal.roleRuns.logRunLine, {
+              runId: args.runId,
+              companyId: args.companyId,
+              heading: "Page titles",
+              detail: titles.ok
+                ? `${count(titles.titled)} pages' titles, each as Google Analytics saw it most over the last 90 days.`
+                : `Google couldn't give the pages' titles this week, so last week's stay: ${titles.reason}`,
+              failed: !titles.ok,
+            });
+          }
           // With the weekly lists, every address's visits, for tracking health's strangers check (§6, check 8).
           const hosts = weekly ? await siteAddresses(open.accessToken, args.property, target.addresses[0] ?? args.host, args.top) : null;
           await ctx.runMutation(internal.googleAnalyticsCollect.finishCollection, {

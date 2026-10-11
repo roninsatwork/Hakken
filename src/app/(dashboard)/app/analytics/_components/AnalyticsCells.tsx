@@ -74,8 +74,27 @@ export function ChangeCell({ change }: { change: number | null }) {
 }
 
 /** A page's address as a link to its own screen (GA22): the path, the whole address on hover. */
-export function PageLink({ address, href }: { address: string; href: string | null }) {
+export function PageLink({ address, href, title }: {
+  address: string;
+  href: string | null;
+  /**
+   * The page's title (GA27, §18.2 boards 18 and 20): given, it is the row's
+   * name over its address — Sites' page cell, its two lines each cut to one
+   * with "…" and whole on hover, the address the link.
+   */
+  title?: string;
+}) {
   const path = pathOf(address);
+  if (title) {
+    return (
+      <span className="flex min-w-0 flex-col">
+        <span className="block truncate text-[13px] text-foreground" title={title}>{title}</span>
+        {href ? (
+          <Link href={href} className="block truncate text-[12px] text-info hover:underline" title={address} onClick={(event) => event.stopPropagation()}>{path}</Link>
+        ) : <span className="block truncate text-[12px] text-secondary" title={address}>{path}</span>}
+      </span>
+    );
+  }
   if (!href) return <span className="break-all text-[13px] text-foreground" title={address}>{path}</span>;
   return (
     <Link href={href} className="break-all text-[13px] text-info hover:underline" title={address} onClick={(event) => event.stopPropagation()}>

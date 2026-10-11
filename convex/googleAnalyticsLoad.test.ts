@@ -35,6 +35,9 @@ const rowsOf = (count: number, shift: number): ListRow[] => Array.from({ length:
   revenue: index % 50 === 0 ? 4_999 : 0,
   counts: new Map(EVENTS.map((event, at) => [event, (index + at) % 30 === 0 ? 1 : 0])),
   values: new Map(EVENTS.map((event) => [event, 0])),
+  people: 0,
+  newPeople: 0,
+  length: 0,
 }));
 
 async function bigWebsite() {

@@ -55,6 +55,7 @@ export default function AnalyticsLandingPagesPage() {
       list={byGroups ? "groups" : "landing"}
       {...(!byGroups && group !== ANY_GROUP ? { group } : {})}
       noun={byGroups ? "groups" : "landingPages"}
+      opening="visits"
       searchPlaceholder={byGroups ? t("findGroup") : t("findPage")}
       rowHref={byGroups ? undefined : (row) => (row.key.startsWith("~") ? hrefFor("landing-pages/page", { key: row.key }) : null)}
       filters={filters}

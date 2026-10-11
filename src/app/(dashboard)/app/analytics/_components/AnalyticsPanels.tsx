@@ -38,7 +38,7 @@ export function AnalyticsPanel({ title, description, seeAll, controls, children 
   );
 }
 
-type TopRow = { key: string; label: string; visits: number; conversions: number; value: number; purchases: number; revenue: number };
+type TopRow = { key: string; label: string; visits: number; conversions: number; value: number; purchases: number; revenue: number; title?: string };
 
 /** The first five of a list by value: a channel's name, or a page's path linking to its own screen. */
 export function TopList({ rows, kind, currency, pageHref, channelHref, showVisits = true, sales = false, empty }: {
@@ -58,7 +58,7 @@ export function TopList({ rows, kind, currency, pageHref, channelHref, showVisit
       {
         key: "name",
         header: kind === "channel" ? t("columns.channel") : t("columns.page"),
-        cell: (row) => (kind === "page" ? <PageLink address={row.label} href={pageHref ? pageHref(row) : null} /> : <span className="text-[13px] text-foreground">{row.label}</span>),
+        cell: (row) => (kind === "page" ? <PageLink address={row.label} href={pageHref ? pageHref(row) : null} title={row.title} /> : <span className="text-[13px] text-foreground">{row.label}</span>),
       },
       { key: "purchases", header: t("columns.purchases"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.purchases)}</span> },
       { key: "revenue", header: t("columns.revenue"), align: "right", cell: (row) => <span className="font-mono text-[12px] text-secondary">{formatMoney(row.revenue, currency)}</span> },
@@ -71,7 +71,7 @@ export function TopList({ rows, kind, currency, pageHref, channelHref, showVisit
       key: "name",
       header: kind === "channel" ? t("columns.channel") : t("columns.page"),
       cell: (row) => (kind === "page"
-        ? <PageLink address={row.label} href={pageHref ? pageHref(row) : null} />
+        ? <PageLink address={row.label} href={pageHref ? pageHref(row) : null} title={row.title} />
         : channelHref ? <Link href={channelHref(row)} className="text-[13px] text-foreground hover:text-info">{row.label}</Link> : <span className="text-[13px] text-foreground">{row.label}</span>),
     },
     ...(showVisits ? [{ key: "visits", header: t("columns.visits"), align: "right" as const, cell: (row: TopRow) => <span className="font-mono text-[12px] text-foreground">{formatNumber(row.visits)}</span> }] : []),

@@ -2,6 +2,7 @@ import { v, type Infer } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
+import { titlesOf } from "./pageTitles";
 import { requireMySite } from "./siteAccess";
 import { decodePages, isPageRef } from "./holdPageRefs";
 import { readPeriodUnnamed } from "./searchConsolePeriodReads";
@@ -376,6 +377,8 @@ const heroRowValidator = v.object({
   /** Analytics' number for it and Search Console's address, for its own view to read it alone. */
   ref: v.union(v.string(), v.null()),
   console: v.union(v.string(), v.null()),
+  /** Its title, from the website's page list (GA27): only on the rows shown. */
+  title: v.optional(v.string()),
 });
 type HeroRow = Infer<typeof heroRowValidator>;
 
@@ -459,6 +462,11 @@ export const analyticsHeroes = tenantQuery({
     const found = matches ? listed.filter((row) => matches(row.page)) : listed;
     found.sort(listOrder(SORTS, args.sort ?? "worth", args.direction, (row) => row.page));
     const shown = pageOfList(found, args.page, args.rows);
+    const titles = await titlesOf(ctx, site.hold._id, shown.rows.map((row) => journey.facts.get(row.page)?.address ?? ""));
+    const titled = shown.rows.map((row) => {
+      const title = titles.get(journey.facts.get(row.page)?.address ?? "");
+      return title ? { ...row, title } : row;
+    });
     const stages = stagesOf(journey);
     const totalGain = Math.round(journey.pages.reduce((sum, page) => sum + (worthOn(page, "all") ?? 0), 0));
     const tabs = tabCounts(journey.pages);
@@ -471,7 +479,7 @@ export const analyticsHeroes = tenantQuery({
       stages,
       totalGain,
       tabs,
-      rows: shown.rows,
+      rows: titled,
       total: shown.total,
       page: shown.page,
       pages: shown.pages,

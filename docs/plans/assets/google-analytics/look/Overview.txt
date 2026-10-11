@@ -5,9 +5,13 @@ page-header: Overview
 settings-card: What Hakken sees
 figures
   figure: Visits
+  figure: Page views
+  figure: People
   figure: Engaged visits
+  figure: Visit length
+  figure: Pages a visit
+  figure: Bounce rate
   figure: Conversions →
-  figure: Value →
 chart-card: Visits a day
 chart-card: What changed most
 compact-list: Page or channel | Kind | Conversions | Value

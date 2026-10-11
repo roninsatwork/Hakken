@@ -86,3 +86,32 @@ describe("visits", () => {
     expect(pages.map((row) => [row.visited, row.visits])).toEqual([[false, 0], [false, 0]]);
   });
 });
+
+/**
+ * Each page's title, as Google Analytics saw it most (google-analytics-plan.md
+ * GA27, §18.6.3): kept once on the page's row, folded to its page as every
+ * source is, naming the pages the other sources found and adding none.
+ */
+describe("titles", () => {
+  test("name the pages found, folded as every source is; a title adds no page of its own", () => {
+    const { pages } = joinHoldPages({
+      host: "ronins.co.uk",
+      sitemap: [{ page: "/ai-agency/", file: "page-sitemap.xml" }, { page: "/hub/bad-websites/", file: "content-hub-sitemap.xml" }],
+      sitemapLimit: 100,
+      crawled: [],
+      ranked: [],
+      shown: null,
+      visited: null,
+      titled: [
+        { key: "https://www.ronins.co.uk/AI-Agency/", title: "AI Agency | Agent Automation Company | London And Surrey" },
+        { key: "https://www.ronins.co.uk/only-titled/", title: "A page no other source found" },
+        { key: "https://blog.ronins.co.uk/hub/bad-websites/", title: "Another website's page" },
+      ],
+      judged: [],
+    });
+    expect(pages.map((row) => [row.page, row.title])).toEqual([
+      ["/ai-agency/", "AI Agency | Agent Automation Company | London And Surrey"],
+      ["/hub/bad-websites/", null],
+    ]);
+  });
+});

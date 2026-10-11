@@ -85,7 +85,7 @@ function OverviewBody({ status }: { status: AnalyticsStatus }) {
                 key: "name",
                 header: t("pageOrChannel"),
                 cell: (row) => (row.kind === "landing"
-                  ? <PageLink address={row.label} href={pageHref(row)} />
+                  ? <PageLink address={row.label} href={pageHref(row)} title={row.title} />
                   : <Link href={hrefFor("channels/channel", { key: row.label })} className="text-[13px] text-foreground hover:text-info">{row.label}</Link>),
               },
               { key: "kind", header: t("kind"), cell: (row) => <span className="text-[12.5px] text-secondary">{t(`kinds.${row.kind}`)}</span> },

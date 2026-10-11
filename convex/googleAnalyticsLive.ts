@@ -58,6 +58,7 @@ export const liveTarget = internalQuery({
       weeklyPeriodsAt: connection.weeklyPeriodsAt,
       country: countryIdOf(country || mainConsoleCountry(hold)),
       others: [],
+      untitled: false,
     };
     return { connectionId: connection._id, target, from: slot.from, to: slot.to, country };
   },

@@ -2,12 +2,12 @@
 
 import { FileText } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { CUT_COLUMN, RecordLinkCell } from "../../../sites/_components/SiteCells";
+import { CUT_COLUMN } from "../../../sites/_components/SiteCells";
 import { formatNumber } from "../../../sites/_components/siteFormat";
 import { SearchConsoleSiteFigures } from "../../_components/SearchConsoleFigures";
 import { SearchConsoleListScreen } from "../../_components/SearchConsoleListTable";
 import { pageLabel, useRecordHref } from "../../_components/searchConsoleRecords";
-import { TrackedCount, figureColumns, trackColumn, useSearchConsoleList, useSearchConsoleTracking, type ChipId } from "../../_components/SearchConsoleTables";
+import { type ChipId, figureColumns, PageNameCell, trackColumn, TrackedCount, useSearchConsoleList, useSearchConsoleTracking } from "../../_components/SearchConsoleTables";
 import { SearchConsoleSees } from "../../_components/SearchConsoleSees";
 import { pagesSees } from "@/convex/utils/sees/searchConsoleScreens";
 
@@ -65,7 +65,7 @@ export default function SearchConsolePagesPage() {
             header: t("table.page"),
             sortable: true,
             className: CUT_COLUMN.first,
-            cell: (row) => <RecordLinkCell cut href={recordHref("pages/page", row.key)}>{pageLabel(row.key, host)}</RecordLinkCell>,
+            cell: (row) => <PageNameCell title={row.title} label={pageLabel(row.key, host)} href={recordHref("pages/page", row.key)} />,
           },
           ...figureColumns(t, ["clicks", "impressions", "ctr", "position"]),
           { key: "count", header: t("table.keywords"), align: "right", sortable: true, cell: (row) => <span className="font-mono text-[12px] text-secondary">{row.count === null ? "–" : formatNumber(row.count)}</span> },

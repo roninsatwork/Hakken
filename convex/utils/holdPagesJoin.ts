@@ -37,6 +37,8 @@ export type PageSources = {
   shown: ReadonlyArray<{ key: string; clicks: number }> | null;
   /** Google Analytics' landing pages for the last 90 days, by address, or null when the company has not connected it. */
   visited: ReadonlyArray<{ key: string; visits: number }> | null;
+  /** Each page's title as Google Analytics saw it most (GA27), by address; null when the company has not connected it. */
+  titled?: ReadonlyArray<{ key: string; title: string }> | null;
   /** Kinds judged for the website's pages (`sitePageTypes`). */
   judged: ReadonlyArray<{ page: string; pageType: string }>;
 };
@@ -50,6 +52,8 @@ export type JoinedPage = {
   /** A page a visit landed on in Google Analytics' last 90 days, and how many visits landed there. */
   visited: boolean;
   visits: number;
+  /** Its title, as Google Analytics saw it most; null without one. */
+  title: string | null;
   ranks: boolean;
   /** Hakken's own kind of page: by its address, else as judged, else "UNJUDGED". */
   pageType: string;
@@ -146,7 +150,7 @@ export function joinHoldPages(sources: PageSources): { pages: JoinedPage[]; coun
   const entry = (page: string): JoinedPage => {
     let held = byPage.get(page);
     if (!held) {
-      held = { page, sitemapFile: null, crawled: false, shown: false, clicks: 0, visited: false, visits: 0, ranks: false, pageType: "UNJUDGED" };
+      held = { page, sitemapFile: null, crawled: false, shown: false, clicks: 0, visited: false, visits: 0, title: null, ranks: false, pageType: "UNJUDGED" };
       byPage.set(page, held);
     }
     return held;
@@ -192,6 +196,12 @@ export function joinHoldPages(sources: PageSources): { pages: JoinedPage[]; coun
     if (!held) continue;
     held.visited = true;
     held.visits += row.visits;
+  }
+  // A title names a page the other sources found; it adds none of its own.
+  for (const row of sources.titled ?? []) {
+    if (!onWebsite(row.key, sources.host) || !isWebPage(row.key)) continue;
+    const held = byPage.get(normalisePage(row.key));
+    if (held && held.title === null) held.title = row.title;
   }
 
   const judged = new Map(sources.judged.map((row) => [normalisePage(row.page), row.pageType]));

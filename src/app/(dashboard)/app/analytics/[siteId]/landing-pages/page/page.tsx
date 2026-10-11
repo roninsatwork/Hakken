@@ -61,7 +61,9 @@ function LandingPageBody({ status }: { status: AnalyticsStatus }) {
         back={{ label: t("back"), href: hrefFor("landing-pages") }}
         icon={<LogIn className="h-5 w-5 text-brand" />}
         title={answer ? pathOf(address) : "…"}
-        description={answer ? (answer.group ? t("descriptionInGroup", { host: status.host, group: answer.group }) : t("description", { host: status.host })) : undefined}
+        description={answer ? (answer.title
+          ? (answer.group ? t("descriptionInGroupTitled", { title: answer.title, host: status.host, group: answer.group }) : t("descriptionTitled", { title: answer.title, host: status.host }))
+          : (answer.group ? t("descriptionInGroup", { host: status.host, group: answer.group }) : t("description", { host: status.host }))) : undefined}
         pills={found?.hero ? <StatusLabel tone="success">{th("kinds.hero")}</StatusLabel> : undefined}
         action={/^https?:\/\//.test(address) ? (
           <a href={address} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[12px] text-secondary hover:text-info">

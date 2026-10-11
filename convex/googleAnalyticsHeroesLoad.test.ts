@@ -48,6 +48,9 @@ const landingRows = (count: number, shift: number): ListRow[] => Array.from({ le
   // About one visit in 70 converts, as Ronins' 1.45%: the pages with value are the busier ones.
   counts: new Map([["generate_lead", Math.floor(visitsAt(index) / 70)]]),
   values: new Map([["generate_lead", 0]]),
+  people: 0,
+  newPeople: 0,
+  length: 0,
 }));
 
 async function bigWebsite() {

@@ -112,7 +112,7 @@ describe("home countries", () => {
 
     const asks = google.calls.filter((call) => call.url.endsWith(":runReport"))
       .map((call) => JSON.parse(call.body) as { dimensions: { name: string }[]; dimensionFilter?: unknown })
-      .filter((ask) => ask.dimensions[0].name !== "hostName");
+      .filter((ask) => ask.dimensions[0]?.name !== "hostName");
     expect(asks.length).toBeGreaterThan(0);
     expect(asks.every((ask) => JSON.stringify(ask.dimensionFilter).includes('"fieldName":"countryId","inListFilter":{"values":["GB"]'))).toBe(true);
     expect(await visitsIn(t, siteId, "total|30|NOW|")).toBe(30 * UK_A_DAY);

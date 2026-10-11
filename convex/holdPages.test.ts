@@ -158,7 +158,7 @@ async function landing90(ctx: Pick<MutationCtx, "db">, holdId: Id<"companyWebsit
   const numbers = await numbersOf(ctx, holdId, named);
   const refs = new Map(named.map((address, at) => [address, `~${numbers[at].toString(36)}`]));
   const rows: ListRow[] = landed.map(([address, visits]) => ({
-    key: refs.get(address) ?? "(not set)", visits, engaged: 0, seconds: 0, views: visits, purchases: 0, revenue: 0, counts: new Map(), values: new Map(),
+    key: refs.get(address) ?? "(not set)", visits, engaged: 0, seconds: 0, views: visits, purchases: 0, revenue: 0, people: 0, newPeople: 0, length: 0, counts: new Map(), values: new Map(),
   }));
   for (const old of await ctx.db.query("googleAnalyticsPeriods").withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", holdId).eq("key", key)).collect()) {
     await ctx.db.delete(old._id);
@@ -371,6 +371,33 @@ describe("visits", () => {
     expect(rows).toHaveLength(9);
     // Your pages reads as before: no visits on its list yet.
     expect((await list(owner.member, owner.holdId)).summary).toMatchObject({ pages: 9, shown: 5 });
+  });
+
+  test("each page's title, as Analytics saw it most, sits on its row; a title adds no page", async () => {
+    const t = harness();
+    const owner = await company(t, "Ronins");
+    await collected(t, owner.websiteId);
+    await console90(t, owner, SHOWN);
+    await analytics(t, owner);
+    await t.run(async (ctx) => {
+      await landing90(ctx, owner.holdId, LANDED);
+      // The week's titles, by the hold's page numbers (google-analytics-plan.md GA27).
+      const titled: Array<[string, string]> = [
+        [www("/ai-agency/"), "AI Agency | Agent Automation Company | London And Surrey"],
+        [www("/only-titled/"), "A page no other source found"],
+      ];
+      const numbers = await numbersOf(ctx, owner.holdId, titled.map(([address]) => address));
+      for (const [at, [, title]] of titled.entries()) {
+        await ctx.db.insert("googleAnalyticsTitles", { companyWebsiteId: owner.holdId, page: `~${numbers[at].toString(36)}`, title, views: 10, askedAt: 1 });
+      }
+    });
+    await t.action(internal.holdPages.rebuildHoldPages, { holdId: owner.holdId });
+
+    const rows = await holdRows(t, owner.holdId);
+    expect(rows.find((one) => one.page === "/ai-agency/")?.title).toBe("AI Agency | Agent Automation Company | London And Surrey");
+    expect(rows.find((one) => one.page === "/journal/")?.title).toBeUndefined();
+    expect(rows.some((one) => one.page === "/only-titled/")).toBe(false);
+    expect(rows).toHaveLength(9);
   });
 
   test("without Google Analytics connected with figures, no page was visited", async () => {

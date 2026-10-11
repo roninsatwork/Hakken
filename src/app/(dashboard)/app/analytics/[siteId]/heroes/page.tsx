@@ -29,6 +29,8 @@ import { formatRate } from "../../_components/PageStages";
 import { HERO_TONES, worthWords } from "../../_components/heroWords";
 import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, type AnalyticsStatus } from "../../_components/useAnalytics";
 import { HERO_KINDS, type HeroKind } from "@/convex/utils/heroes";
+import { PageLink } from "../../_components/AnalyticsCells";
+import { CUT_COLUMN } from "../../../sites/_components/SiteCells";
 
 type Heroes = FunctionReturnType<typeof api.googleAnalyticsHeroes.analyticsHeroes>;
 type HeroRow = Heroes["rows"][number];
@@ -88,11 +90,9 @@ function HeroesBody({ status }: { status: AnalyticsStatus }) {
       key: "name",
       header: t("columns.page"),
       sortable: true,
-      cell: (row) => (
-        <Link href={pageHref(row)} className="break-all text-[13px] text-info hover:underline" onClick={(event) => event.stopPropagation()}>
-          {row.page}
-        </Link>
-      ),
+      // Its title over its address (GA27), each cut to a line in its share of the table, as Sites' words are.
+      className: CUT_COLUMN.first,
+      cell: (row) => <PageLink address={row.page} href={pageHref(row)} title={row.title} />,
     },
     {
       key: "what",

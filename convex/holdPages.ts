@@ -339,6 +339,29 @@ export const landingVisits = internalQuery({
   },
 });
 
+/** Titles read a call: each a short string. */
+const TITLES_PER_READ = 500;
+
+/** A page of the company's own Google Analytics' page titles (GA27, §18.6.3), by page number. */
+export const titlesPage = internalQuery({
+  args: { holdId: v.id("companyWebsites"), cursor: cursorArg },
+  returns: pageOf(v.object({ key: v.string(), title: v.string() })),
+  handler: async (ctx, args) => {
+    const result = await ctx.db
+      .query("googleAnalyticsTitles")
+      .withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", args.holdId))
+      .paginate({ cursor: args.cursor, numItems: TITLES_PER_READ });
+    return { rows: result.page.map((row) => ({ key: row.page, title: row.title })), cursor: result.continueCursor, isDone: result.isDone };
+  },
+});
+
+/** Every page title, by address: the page numbers read back with the hold's numbering. */
+async function allTitles(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promise<Array<{ key: string; title: string }>> {
+  const rows = await readAll((cursor) => ctx.runQuery(internal.holdPages.titlesPage, { holdId, cursor }));
+  const addresses = decodeWith(await addressesOf(ctx, holdId), rows.map((row) => row.key));
+  return rows.map((row, at) => ({ key: addresses[at], title: row.title }));
+}
+
 type LandingPart = { moved: true } | { slot: number; rows: Array<{ key: string; visits: number }>; next: number | null } | null;
 
 /**
@@ -381,6 +404,7 @@ const holdRowValidator = v.object({
   /** Absent on a row not rewritten since visits were added: none. */
   visited: v.optional(v.boolean()),
   visits: v.optional(v.number()),
+  title: v.optional(v.string()),
   ranks: v.boolean(),
   pageType: v.optional(v.string()),
 });
@@ -404,6 +428,7 @@ export const holdPagesPage = internalQuery({
         clicks: row.clicks,
         ...(row.visited !== undefined ? { visited: row.visited } : {}),
         ...(row.visits !== undefined ? { visits: row.visits } : {}),
+        ...(row.title !== undefined ? { title: row.title } : {}),
         ranks: row.ranks,
         ...(row.pageType !== undefined ? { pageType: row.pageType } : {}),
       })),
@@ -422,6 +447,7 @@ const writeRowValidator = v.object({
   clicks: v.number(),
   visited: v.boolean(),
   visits: v.number(),
+  title: v.optional(v.string()),
   ranks: v.boolean(),
   pageType: v.string(),
 });
@@ -496,6 +522,7 @@ function unchanged(old: HoldRow, row: JoinedPage): boolean {
     && old.clicks === row.clicks
     && (old.visited ?? false) === row.visited
     && (old.visits ?? 0) === row.visits
+    && (old.title ?? null) === row.title
     && old.ranks === row.ranks
     && (old.pageType ?? "UNJUDGED") === row.pageType;
 }
@@ -541,7 +568,8 @@ async function rebuildNow(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promis
   const judged = await readAll((cursor) => ctx.runQuery(internal.holdPages.judgedTypesPage, { websiteId, cursor }));
   const shown = head.console.connected ? await allConsolePages(ctx, holdId, head.host) : null;
   const visited = head.analytics ? await allLandingVisits(ctx, holdId) : null;
-  const joined = joinHoldPages({ host: head.host, sitemap, sitemapLimit: head.limit, crawled, ranked, shown, visited, judged });
+  const titled = head.analytics ? await allTitles(ctx, holdId) : null;
+  const joined = joinHoldPages({ host: head.host, sitemap, sitemapLimit: head.limit, crawled, ranked, shown, visited, titled, judged });
 
   // Only what changed is written: the rest of the rows stay as they are.
   const existing = await readAll((cursor) => ctx.runQuery(internal.holdPages.holdPagesPage, { holdId, cursor }));
@@ -567,6 +595,7 @@ async function rebuildNow(ctx: ActionCtx, holdId: Id<"companyWebsites">): Promis
       clicks: row.clicks,
       visited: row.visited,
       visits: row.visits,
+      ...(row.title !== null ? { title: row.title } : {}),
       ranks: row.ranks,
       pageType: row.pageType,
     });

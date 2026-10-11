@@ -12,9 +12,10 @@ import { listOrder, listPageArgs, pageOfList, sortDirectionArg, type ListSorts }
 import { wordStartMatcher } from "./utils/wordStarts";
 import { assistantOf, channelOf } from "./utils/aiAssistants";
 import { PURCHASE_EVENT } from "./utils/analyticsEvents";
-import { splitChannelKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
+import { emptyRow, splitChannelKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
+import { titlesOf, withTitles } from "./pageTitles";
 import { LIVE_PARTS } from "./googleAnalyticsLive";
 import { shiftDay } from "./searchConsoleDays";
 import { analyticsPeriodValidator, type AnalyticsList, type AnalyticsPeriod, type AnalyticsWhich } from "./googleAnalyticsSchema";
@@ -86,7 +87,12 @@ export function conversionsOf(row: ListRow, counted: readonly Counted[]): { conv
   return { conversions, value, unvalued };
 }
 
-/** Rows added into one: a channel from its sources, a page group from its pages. */
+/**
+ * Rows added into one: a channel from its sources, a page group from its
+ * pages. People add up only roughly across rows — one person may come by two
+ * sources — so a screen shows people only where Google counted the row whole
+ * (§18.6.2).
+ */
 function addInto(target: ListRow, row: ListRow) {
   target.visits += row.visits;
   target.engaged += row.engaged;
@@ -94,12 +100,15 @@ function addInto(target: ListRow, row: ListRow) {
   target.views += row.views;
   target.purchases += row.purchases;
   target.revenue += row.revenue;
+  target.people += row.people;
+  target.newPeople += row.newPeople;
+  target.length += row.length;
   for (const [event, count] of row.counts) target.counts.set(event, (target.counts.get(event) ?? 0) + count);
   for (const [event, value] of row.values) target.values.set(event, (target.values.get(event) ?? 0) + value);
 }
 
 export function blank(key: string): ListRow {
-  return { key, visits: 0, engaged: 0, seconds: 0, views: 0, purchases: 0, revenue: 0, counts: new Map(), values: new Map() };
+  return emptyRow(key);
 }
 
 export function grouped(rows: readonly ListRow[], keyOf: (row: ListRow) => string | null): ListRow[] {
@@ -210,6 +219,15 @@ export const shownRowValidator = v.object({
   /** Seconds engaged a visit; null without visits. */
   timePerVisit: v.union(v.number(), v.null()),
   views: v.number(),
+  /** People and new people, as Google counted the row (§18.6.2). */
+  people: v.number(),
+  newPeople: v.number(),
+  /** Visits that didn't engage over visits, 0–1: the engagement rate turned round; null without visits. */
+  bounceRate: v.union(v.number(), v.null()),
+  /** Views over visits; null without visits. */
+  pagesPerVisit: v.union(v.number(), v.null()),
+  /** Seconds a visit lasted, start to end; null without visits. */
+  lengthPerVisit: v.union(v.number(), v.null()),
   conversions: v.number(),
   /** Conversions over visits, 0–1; null without visits. */
   conversionRate: v.union(v.number(), v.null()),
@@ -226,6 +244,8 @@ export const shownRowValidator = v.object({
   valueBefore: v.union(v.number(), v.null()),
   /** A page group's pages: how many it holds. */
   members: v.optional(v.number()),
+  /** A page's title, from the website's page list (GA27): only on the rows a screen shows. */
+  title: v.optional(v.string()),
 });
 export type ShownRow = Infer<typeof shownRowValidator>;
 
@@ -239,6 +259,11 @@ export function shown(row: ListRow, before: ListRow | null | undefined, counted:
     engagementRate: row.visits > 0 ? row.engaged / row.visits : null,
     timePerVisit: row.visits > 0 ? row.seconds / row.visits : null,
     views: row.views,
+    people: row.people,
+    newPeople: row.newPeople,
+    bounceRate: row.visits > 0 ? 1 - row.engaged / row.visits : null,
+    pagesPerVisit: row.visits > 0 ? row.views / row.visits : null,
+    lengthPerVisit: row.visits > 0 ? row.length / row.visits : null,
     conversions,
     conversionRate: row.visits > 0 ? conversions / row.visits : null,
     fewVisits: row.visits < FEW_VISITS,
@@ -251,10 +276,15 @@ export function shown(row: ListRow, before: ListRow | null | undefined, counted:
   };
 }
 
-const SORTS: ListSorts<ShownRow, "name" | "visits" | "engaged" | "time" | "views" | "conversions" | "rate" | "value" | "change"> = {
+const SORTS: ListSorts<ShownRow, "name" | "visits" | "engaged" | "bounce" | "pages" | "people" | "length" | "time" | "views" | "conversions" | "rate" | "value" | "change"> = {
   name: { value: (row) => row.label, first: "asc" },
   visits: { value: (row) => row.visits, first: "desc" },
   engaged: { value: (row) => row.engagementRate, first: "desc" },
+  // The fewest bouncing first: the best first, as every Sites table sorts (sortOrder.ts).
+  bounce: { value: (row) => row.bounceRate, first: "asc" },
+  pages: { value: (row) => row.pagesPerVisit, first: "desc" },
+  people: { value: (row) => row.people, first: "desc" },
+  length: { value: (row) => row.lengthPerVisit, first: "desc" },
   time: { value: (row) => row.timePerVisit, first: "desc" },
   views: { value: (row) => row.views, first: "desc" },
   conversions: { value: (row) => row.conversions, first: "desc" },
@@ -262,6 +292,11 @@ const SORTS: ListSorts<ShownRow, "name" | "visits" | "engaged" | "time" | "views
   value: { value: (row) => row.value, first: "desc" },
   change: { value: (row) => row.change, first: "desc" },
 };
+/** The order a list opens in (GA26): All pages by views, Landing pages and page groups by visits, the channels by value. */
+export function openingSort(list: ListKind): keyof typeof SORTS {
+  return list === "page" ? "views" : list === "landing" || list === "groups" ? "visits" : "value";
+}
+
 export const sortValidator = v.union(...(Object.keys(SORTS) as (keyof typeof SORTS)[]).map((key) => v.literal(key)));
 
 // ---------------------------------------------------------------------------
@@ -428,7 +463,8 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
     : null;
   const matches = wordStartMatcher(args.q);
   if (matches) out = out.filter((row) => matches(row.label));
-  out.sort(listOrder(SORTS, args.sort ?? (args.list === "page" && counted.length > 0 ? "conversions" : "value"), args.direction, (row) => row.label));
+  // Page views before money (GA26): All pages opens by views, Landing pages by visits; the channels by value.
+  out.sort(listOrder(SORTS, args.sort ?? openingSort(args.list), args.direction, (row) => row.label));
   return {
     rows: out,
     live: false,
@@ -447,13 +483,13 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
   };
 }
 
-/** The page addresses of the rows a screen shows, read only for them. */
+/** The page addresses of the rows a screen shows, and their titles (GA27), read only for them. */
 async function nameRows(ctx: Reader, holdId: Id<"companyWebsites">, rows: ShownRow[]): Promise<ShownRow[]> {
   const refs = rows.filter((row) => isPageRef(row.label));
-  if (refs.length === 0) return rows;
-  const named = await decodePages(ctx, holdId, refs.map((row) => row.label));
+  const named = refs.length > 0 ? await decodePages(ctx, holdId, refs.map((row) => row.label)) : [];
   const byRef = new Map(refs.map((row, index) => [row.label, named[index]]));
-  return rows.map((row) => (byRef.has(row.label) ? { ...row, label: byRef.get(row.label)! } : row));
+  const labelled = rows.map((row) => (byRef.has(row.label) ? { ...row, label: byRef.get(row.label)! } : row));
+  return await withTitles(ctx, holdId, labelled, (row) => row.label);
 }
 
 /**
@@ -619,6 +655,11 @@ export const analyticsTopList = tenantQuery({
 const figureValidator = v.object({
   visits: v.number(),
   engaged: v.number(),
+  /** Page views, people, new people and the seconds visits lasted (GA24–GA26, §18.6.2). */
+  views: v.number(),
+  people: v.number(),
+  newPeople: v.number(),
+  length: v.number(),
   conversions: v.number(),
   value: v.number(),
   purchases: v.number(),
@@ -631,10 +672,13 @@ export function figuresOf(rows: readonly ListRow[], counted: readonly Counted[])
   const total = blank("");
   for (const row of rows) addInto(total, row);
   const { conversions, value, unvalued } = conversionsOf(total, counted);
-  return { visits: total.visits, engaged: total.engaged, conversions, value, purchases: total.purchases, revenue: total.revenue, unvalued };
+  return {
+    visits: total.visits, engaged: total.engaged, views: total.views, people: total.people, newPeople: total.newPeople, length: total.length,
+    conversions, value, purchases: total.purchases, revenue: total.revenue, unvalued,
+  };
 }
 
-type Moved = { kind: "landing" | "channel"; key: string; label: string; conversions: number; value: number; conversionsNow: number };
+type Moved = { kind: "landing" | "channel"; key: string; label: string; conversions: number; value: number; conversionsNow: number; title?: string };
 
 /**
  * Overview's figures (§5): visits, engaged visits, conversions and value,
@@ -658,6 +702,8 @@ export const analyticsOverview = tenantQuery({
       conversions: v.number(),
       value: v.number(),
       conversionsNow: v.number(),
+      /** A page's title (GA27). */
+      title: v.optional(v.string()),
     })),
     /** Landing pages for one device are asked live: what changed most then holds channels only until they are. */
     landingLive: v.boolean(),
@@ -702,13 +748,17 @@ export const analyticsOverview = tenantQuery({
     moved.sort((left, right) => Math.abs(right.value) - Math.abs(left.value) || Math.abs(right.conversions) - Math.abs(left.conversions) || left.label.localeCompare(right.label));
     const top = moved.slice(0, TOP_ROWS);
     const named = await decodePages(ctx, holdId, top.map((row) => row.label));
+    const titles = await titlesOf(ctx, holdId, top.map((row, index) => (row.kind === "landing" ? named[index] : "")));
     return {
       preparing: false,
       from: now.from,
       to: now.to,
       now: figuresOf(now.rows, counted),
       before: before ? figuresOf(before.rows, counted) : null,
-      changedMost: top.map((row, index) => ({ ...row, label: row.kind === "landing" ? named[index] : row.label })),
+      changedMost: top.map((row, index) => {
+        const title = row.kind === "landing" ? titles.get(named[index]) : undefined;
+        return { ...row, label: row.kind === "landing" ? named[index] : row.label, ...(title ? { title } : {}) };
+      }),
       landingLive: landing.live,
       counting: counted.length > 0,
       searchConsole: await searchConsoleMonth(ctx, holdId),

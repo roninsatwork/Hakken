@@ -160,7 +160,7 @@ describe("collecting a website's Google Analytics", () => {
     // Each report was for the website's own address — but the weekly one of every address, for tracking health.
     const asks = google.calls.filter((call) => call.url.endsWith(":runReport"))
       .map((call) => JSON.parse(call.body) as { dimensions: { name: string }[]; dimensionFilter?: unknown })
-      .filter((ask) => ask.dimensions[0].name !== "hostName");
+      .filter((ask) => ask.dimensions[0]?.name !== "hostName");
     expect(asks.every((ask) => JSON.stringify(ask.dimensionFilter).includes("www.acme-shop.test"))).toBe(true);
     // Tracking health ran on the first collection: the other address is a stranger.
     expect((await connectionOf(t, connectionId))?.health?.checks.find((check) => check.check === "STRANGERS")).toMatchObject({ passing: false, names: ["staging.acme-shop.test"], count: 1500 });
@@ -215,7 +215,7 @@ describe("collecting a website's Google Analytics", () => {
     const dayAsks = google.calls.slice(asked)
       .filter((call) => call.url.endsWith(":runReport"))
       .map((call) => JSON.parse(call.body) as { dateRanges: { startDate: string; endDate: string }[]; dimensions: { name: string }[] })
-      .filter((ask) => ask.dimensions[0].name === "date");
+      .filter((ask) => ask.dimensions[0]?.name === "date");
     expect(dayAsks.map((ask) => ask.dateRanges[0])).toEqual(Array(4).fill({ startDate: "2026-10-07", endDate: "2026-10-09" }));
     // The weekly lists were not asked again within the week.
     expect((await periodRows(t, siteId, "landing|90|NOW|"))!.slot).toEqual(before);

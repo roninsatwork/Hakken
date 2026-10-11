@@ -114,6 +114,10 @@ export const analyticsPackedRows = {
   purchases: v.string(),
   /** Purchase revenue, in hundredths of the property's currency. */
   revenue: v.string(),
+  /** People, new people and the seconds visits lasted (§18.6.2); missing on a part kept before the second round. */
+  people: v.optional(v.string()),
+  newPeople: v.optional(v.string()),
+  length: v.optional(v.string()),
   events: v.array(v.string()),
   /** One packed column per event in `events`. */
   counts: v.array(v.string()),
@@ -289,4 +293,17 @@ export const googleAnalyticsTables = {
     ...leftOut,
     askedAt: v.number(),
   }).index("by_hold_ask_part", ["companyWebsiteId", "ask", "part"]),
+  /**
+   * Each page's title, as Google Analytics saw it most over the last 90 days
+   * (GA27, §18.6.3), by the hold's page number: asked weekly, and copied onto
+   * the website's one page list (`holdPages.title`) by its rebuild, which
+   * every screen reads. `askedAt` names the week's ask; older ones go.
+   */
+  googleAnalyticsTitles: defineTable({
+    companyWebsiteId: v.id("companyWebsites"),
+    page: v.string(),
+    title: v.string(),
+    views: v.number(),
+    askedAt: v.number(),
+  }).index("by_hold_page", ["companyWebsiteId", "page"]),
 };

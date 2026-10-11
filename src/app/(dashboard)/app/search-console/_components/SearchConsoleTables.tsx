@@ -37,6 +37,7 @@ import {
   useSearchConsoleStatus,
 } from "./useSearchConsole";
 import { NoFigure } from "@/src/ui/components/screens/NoFigure";
+import { RecordLinkCell } from "../../sites/_components/SiteCells";
 
 /**
  * What every Search Console table shares (search-console-plan.md §13.1,
@@ -595,5 +596,21 @@ export function SearchConsoleDownload({ ask, headers, fields }: {
         if (outcome.data.cut !== null) showToast(t("downloadCut", { rows: formatNumber(outcome.data.rows) }), "info");
       }}
     />
+  );
+}
+
+/**
+ * A page in a Search Console list: its address as a link to its own screen,
+ * and — once Google Analytics has seen it — its title over it
+ * (google-analytics-plan.md GA27), each cut to one line, whole on hover. In
+ * the list's first column, `CUT_COLUMN.first`.
+ */
+export function PageNameCell({ title, label, href }: { title?: string; label: string; href: string }) {
+  if (!title) return <RecordLinkCell cut href={href}>{label}</RecordLinkCell>;
+  return (
+    <span className="flex min-w-0 flex-col">
+      <span className="block truncate text-[13px] text-foreground" title={title}>{title}</span>
+      <RecordLinkCell cut href={href} className="text-[12px] text-info">{label}</RecordLinkCell>
+    </span>
   );
 }
