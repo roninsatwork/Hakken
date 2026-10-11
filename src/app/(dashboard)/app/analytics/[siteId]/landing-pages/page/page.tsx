@@ -17,6 +17,7 @@ import { useLiveAsk } from "../../../_components/AnalyticsListScreen";
 import { PageStages } from "../../../_components/PageStages";
 import { pathOf } from "../../../_components/analyticsFormat";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod, type AnalyticsStatus } from "../../../_components/useAnalytics";
+import { AnalyticsChart } from "../../../_components/AnalyticsChart";
 
 /**
  * A landing page's own screen (GA22; §11 board 15, redrawn as §15 screen 7):
@@ -90,6 +91,10 @@ function LandingPageBody({ status }: { status: AnalyticsStatus }) {
       ) : null}
 
       {answer?.live && asking === "FAILED" ? <Notice tone="warning">{t("askFailed")}</Notice> : null}
+      {/* Its chart, agreed on 9 Oct and back (GA35): asked of Google with its channels when the screen opens. */}
+      {answer && !answer.live ? (
+        <AnalyticsChart days={answer.points} host={status.host} from={null} to={null} currency={currency} exportName="google-analytics-landing-page" />
+      ) : null}
       <AnalyticsPanel title={t("channelsTitle")} description={t("channelsDescription")}>
         <TopList rows={answer?.channels} kind="channel" currency={currency} channelHref={(channel) => hrefFor("channels/channel", { key: channel.label })} empty={answer?.live ? t("asking") : t("noChannels")} />
       </AnalyticsPanel>

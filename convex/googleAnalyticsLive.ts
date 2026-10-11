@@ -11,6 +11,7 @@ import { askList, numberPages, openSession, siteOrigin, slotKey, type CollectTar
 import { packList, type ListRow } from "./googleAnalyticsLists";
 import { analyticsPackedRows, analyticsPeriodValidator } from "./googleAnalyticsSchema";
 import { liveAsk } from "./googleAnalyticsReads";
+import { DAY_JOIN, channelSeriesAsk } from "./googleAnalyticsChartReads";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { countryIdOf } from "./googleAnalyticsCollect";
 
@@ -116,6 +117,8 @@ export const askGoogleAnalyticsLive = tenantAction({
     /** A home country other than the main one (`fra`); left out for the main one (§18.6.1). */
     country: v.optional(v.string()),
     pages: v.optional(v.union(v.literal("landing"), v.literal("page"))),
+    /** Channels' chart, each channel a day, for dates or a country that keep no channel days (GA35). */
+    chart: v.optional(v.literal("channel")),
     page: v.optional(v.object({ ref: v.string(), path: v.string() })),
   },
   returns: v.object({ ok: v.boolean(), problem: v.union(v.null(), v.literal("NOT_CONNECTED"), v.literal("GOOGLE_BUSY"), v.literal("GOOGLE_REFUSED")) }),
@@ -155,6 +158,14 @@ export const askGoogleAnalyticsLive = tenantAction({
       const channels = await askList(opened.session, found.target, "channel", [], range, only);
       if (!channels.ok) return failed(channels);
       await write(pageAsk("channel", args.page.ref, args.period, range.from, range.to, args.device, found.country), "channel", [...channels.groups.values()].flat(), channels.flags);
+      return { ok: true, problem: null };
+    }
+    if (args.chart === "channel") {
+      const asked = await askList(opened.session, found.target, "channel", ["date"], range, device ? { device } : {});
+      if (!asked.ok) return failed(asked);
+      // Each row keyed by its day and its channel and source, so one held list draws every line.
+      const rows = [...asked.groups.entries()].flatMap(([day, dayRows]) => dayRows.map((row) => ({ ...row, key: `${day}${DAY_JOIN}${row.key}` })));
+      await write(channelSeriesAsk(args.period, range.from, range.to, args.device, found.country), "channel", rows, asked.flags);
       return { ok: true, problem: null };
     }
     throw appError("INVALID_INPUT", "Say which list to ask for.");

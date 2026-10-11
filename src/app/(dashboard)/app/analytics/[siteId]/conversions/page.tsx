@@ -20,6 +20,7 @@ import { AnalyticsSees, eventList } from "../../_components/AnalyticsSees";
 import { changeOf, formatMoney, formatPercent } from "../../_components/analyticsFormat";
 import { useEventName } from "../../_components/useEventName";
 import { useAnalyticsArgs, useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod, type AnalyticsStatus } from "../../_components/useAnalytics";
+import { ConversionsChart, ListTopBars } from "../../_components/AnalyticsChart";
 
 /** Where the conversions came from: their landing pages, or their channels (§15, screen 9). */
 const SOURCES = ["landing", "channel"] as const;
@@ -72,6 +73,7 @@ function ConversionsBody({ status }: { status: AnalyticsStatus }) {
   const locale = useLocale();
   const { platformName } = useSystemSettings();
   const answer = useQuery(api.googleAnalyticsReads.analyticsConversions, args);
+  const chart = useQuery(api.googleAnalyticsChartReads.analyticsChart, args);
   const [source, setSource] = useSiteParam<Source>("from", "landing", SOURCES);
   const where = useQuery(api.googleAnalyticsReads.analyticsTopList, { ...args, list: source });
   const currency = status.connection?.currency ?? null;
@@ -140,6 +142,18 @@ function ConversionsBody({ status }: { status: AnalyticsStatus }) {
           </FigureRow>
         )
       ) : <div className="h-24 animate-pulse rounded-2xl bg-sidebar/30" aria-busy="true" />}
+
+      {/* Its chart, agreed on 9 Oct and back (GA35): each kind of conversion a line, value ticked on its own scale. */}
+      <ConversionsChart
+        days={chart?.points ?? []}
+        events={chart?.events ?? []}
+        names={nameOf}
+        host={status.host}
+        from={answer?.from ?? null}
+        to={answer?.to ?? null}
+        currency={currency}
+      />
+      <ListTopBars list="landing" sort="conversions" bars="conversions" />
 
       <AnalyticsPanel
         title={t("whatCountsTitle")}

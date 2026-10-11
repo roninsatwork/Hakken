@@ -139,7 +139,7 @@ describe("home countries", () => {
     // A country the website does not keep reads as the main one, as Search Console's do.
     expect((await admin.query(api.googleAnalyticsReads.analyticsOverview, { ...args, country: "deu" })).now?.visits).toBe(30 * UK_A_DAY);
     // Its chart is the ready-made one: it keeps no days.
-    const chart = await admin.query(api.googleAnalyticsReads.analyticsChart, { ...args, country: "fra" });
+    const chart = await admin.query(api.googleAnalyticsChartReads.analyticsChart, { ...args, country: "fra" });
     expect(chart.points).toHaveLength(30);
     expect(chart.points.every((point) => point.visits === 3)).toBe(true);
     const channels = await admin.query(api.googleAnalyticsReads.analyticsListPage, { ...args, list: "channel", country: "fra", page: 1, rows: 25 });

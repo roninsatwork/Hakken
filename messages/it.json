@@ -15262,7 +15262,50 @@
         "week": "Visite a settimana",
         "month": "Visite al mese"
       },
-      "visitsHint": "{period}. Un punto segna {step, select, day {un giorno} week {una settimana} other {un mese}} con una conversione."
+      "visitsHint": "{period}. Un punto segna {step, select, day {un giorno} week {una settimana} other {un mese}} con una conversione.",
+      "views": "Pagine viste",
+      "viewsTitle": {
+        "day": "Pagine viste e visite al giorno",
+        "week": "Pagine viste e visite a settimana",
+        "month": "Pagine viste e visite al mese"
+      },
+      "channelsTitle": {
+        "day": "Visite al giorno per canale",
+        "week": "Visite a settimana per canale",
+        "month": "Visite al mese per canale"
+      },
+      "channelsHint": "{period}. I quattro canali più visitati una linea ciascuno, gli altri insieme.",
+      "noChannel": "(non impostato)",
+      "everythingElse": "Tutto il resto",
+      "bars": {
+        "channels": {
+          "title": "Da dove arrivano le visite",
+          "hint": "{period}: visite per canale.",
+          "measure": "Visite"
+        },
+        "landing": {
+          "title": "Visite per pagina di destinazione",
+          "hint": "{period}: le dieci pagine di destinazione con più visite.",
+          "measure": "Visite"
+        },
+        "allPages": {
+          "title": "Pagine più viste",
+          "hint": "{period}: le dieci pagine più viste.",
+          "measure": "Visualizzazioni"
+        },
+        "conversions": {
+          "title": "Conversioni per pagina di destinazione",
+          "hint": "{period}: dove sono iniziate le visite che hanno convertito.",
+          "measure": "Conversioni"
+        },
+        "channelsList": {
+          "title": "Visite per canale",
+          "hint": "{period}: visite per canale.",
+          "measure": "Visite"
+        }
+      },
+      "conversionsTitle": "Conversioni nel tempo",
+      "conversionsHint": "Una linea per ogni tipo di conversione, su una sola scala. Spunta Valore per aggiungere il denaro su una scala sua."
     },
     "figures": {
       "nothingBefore": "Ancora niente con cui confrontare",

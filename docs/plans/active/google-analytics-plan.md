@@ -1304,6 +1304,23 @@ columns and All pages' are as drawn (boards 13, 18, 20) and their look tests
 updated; Search Console's Pages and Tracked pages share one title cell
 (`PageNameCell`).
 
+*Charts, built 2026-10-11 (Phase 8, GA35).* Overview: page views, visits and
+engaged visits a day, a dot on each day with a conversion, and the channels'
+visits as bars. Channels: the four busiest channels a line each, the rest
+one line — from the days kept for the main country's 7 and 30 days, else
+asked of Google when the screen opens and held (`analyticsChannelChart`,
+`askGoogleAnalyticsLive` with `chart: "channel"`) — and visits by channel as
+bars. Landing pages and All pages: the top ten by visits and by views as
+bars (`analyticsTopList` with `count`). The two charts agreed on 9 Oct and
+left off on 10 Oct are back as they were built: Conversions' "Conversions
+over time" (each kind a line, Value ticked on its own scale), restored from
+git, with conversions by landing page as bars; and a landing page's own
+chart, from the asks its screen already made. One difference from §18.2:
+**Sites' bar chart is used from Sites' folder**, as Analytics' line chart
+already was, rather than moved — one chart, no copy, a 600-line move saved.
+The chart reads moved to `googleAnalyticsChartReads.ts` to keep the reads
+module inside its size.
+
 **4. The page before.** When a page's own screen opens, Google is asked for
 `pageReferrer` by `pagePath` for that page, and for its views a day; both
 held until the next collection. A referrer on the website becomes the

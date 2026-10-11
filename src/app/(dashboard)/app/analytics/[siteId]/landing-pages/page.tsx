@@ -9,6 +9,7 @@ import { SiteViewSwitch } from "../../../sites/_components/SiteViewSwitch";
 import { useSiteParam } from "../../../sites/_components/useSiteParam";
 import { AnalyticsListScreen } from "../../_components/AnalyticsListScreen";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
+import { ListTopBars } from "../../_components/AnalyticsChart";
 import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod } from "../../_components/useAnalytics";
 
 const VIEWS = ["pages", "groups"] as const;
@@ -51,7 +52,12 @@ export default function AnalyticsLandingPagesPage() {
     <AnalyticsListScreen
       key={byGroups ? "groups" : "pages"}
       header={{ icon: <LogIn className="h-5 w-5 text-brand" />, title: t("title"), description: t("description", { before: tf(`before.${period}`) }) }}
-      head={(answer) => <AnalyticsSees screen="landing" seen={answer?.seen} currency={currency} />}
+      head={(answer) => (
+        <>
+          <AnalyticsSees screen="landing" seen={answer?.seen} currency={currency} />
+          <ListTopBars list="landing" sort="visits" bars="landing" />
+        </>
+      )}
       list={byGroups ? "groups" : "landing"}
       {...(!byGroups && group !== ANY_GROUP ? { group } : {})}
       noun={byGroups ? "groups" : "landingPages"}

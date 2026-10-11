@@ -4,6 +4,7 @@ import { Files } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { AnalyticsListScreen } from "../../_components/AnalyticsListScreen";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
+import { ListTopBars } from "../../_components/AnalyticsChart";
 import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus } from "../../_components/useAnalytics";
 
 /**
@@ -22,7 +23,12 @@ export default function AnalyticsAllPagesPage() {
   return (
     <AnalyticsListScreen
       header={{ icon: <Files className="h-5 w-5 text-brand" />, title: t("title"), description: t("description") }}
-      head={(answer) => <AnalyticsSees screen="allPages" seen={answer?.seen} currency={currency} />}
+      head={(answer) => (
+        <>
+          <AnalyticsSees screen="allPages" seen={answer?.seen} currency={currency} />
+          <ListTopBars list="page" sort="views" bars="allPages" />
+        </>
+      )}
       list="page"
       noun="pages"
       opening="views"

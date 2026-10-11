@@ -81,7 +81,7 @@ describe("Google Analytics' approved looks", () => {
     answer({
       "googleAnalyticsConnect:googleAnalyticsStatus": STATUS,
       "googleAnalyticsReads:analyticsOverview": OVERVIEW,
-      "googleAnalyticsReads:analyticsChart": CHART,
+      "googleAnalyticsChartReads:analyticsChart": CHART,
     });
     const { container } = render(<AnalyticsOverviewPage />);
     await screen.findByText("2,412");

@@ -11,7 +11,7 @@ import { CompactList } from "@/src/ui/components/screens/CompactList";
 import { Change } from "@/src/ui/components/screens/Change";
 import { AnalyticsGate, countsAnything } from "../_components/AnalyticsNotices";
 import { AnalyticsFigures } from "../_components/AnalyticsFigures";
-import { VisitsChart } from "../_components/AnalyticsChart";
+import { TopBars, VisitsChart } from "../_components/AnalyticsChart";
 import { AnalyticsPanel } from "../_components/AnalyticsPanels";
 import { AnalyticsSees } from "../_components/AnalyticsSees";
 import { PageLink } from "../_components/AnalyticsCells";
@@ -46,11 +46,12 @@ export default function AnalyticsOverviewPage() {
 function OverviewBody({ status }: { status: AnalyticsStatus }) {
   const t = useTranslations("googleAnalytics.overview");
   const tf = useTranslations("googleAnalytics.filters");
+  const tc = useTranslations("googleAnalytics.chart");
   const args = useAnalyticsArgs();
   const [period] = usePeriod();
   const hrefFor = useAnalyticsHref(args.siteId);
   const overview = useQuery(api.googleAnalyticsReads.analyticsOverview, args);
-  const chart = useQuery(api.googleAnalyticsReads.analyticsChart, args);
+  const chart = useQuery(api.googleAnalyticsChartReads.analyticsChart, args);
   const currency = status.connection?.currency ?? null;
   const counting = countsAnything(status);
   const pageHref = (row: { key: string }) => (row.key.startsWith("~") ? hrefFor("landing-pages/page", { key: row.key }) : null);
@@ -72,6 +73,17 @@ function OverviewBody({ status }: { status: AnalyticsStatus }) {
         from={overview?.from ?? null}
         to={overview?.to ?? null}
         exportName="google-analytics-overview"
+      />
+
+      <TopBars
+        title={tc("bars.channels.title")}
+        hint={tc("bars.channels.hint", { period: tf(`periods.${period}`) })}
+        measure={tc("bars.channels.measure")}
+        rows={overview?.channelVisits?.map((row) => ({ label: row.label, value: row.visits }))}
+        exportName="google-analytics-channels"
+        host={status.host}
+        from={overview?.from ?? null}
+        to={overview?.to ?? null}
       />
 
       {counting ? (

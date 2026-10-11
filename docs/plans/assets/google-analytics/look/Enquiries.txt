@@ -8,6 +8,9 @@ figures
   figure: Value
   figure: Conversion rate
   figure: Kinds that happened
+chart-card: Conversions over time
+  checkbox: Value (£)
+chart-card: Conversions by landing page
 chart-card: What counts
 compact-list: Event | How many | Value | Change
 chart-card: Where they came from

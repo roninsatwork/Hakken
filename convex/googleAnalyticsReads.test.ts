@@ -112,7 +112,7 @@ describe("Overview", () => {
   test("the chart: a day a point from the days kept, for the 30 days", async () => {
     const t = harness();
     const { siteId, user } = await collected(t, growing());
-    const chart = await user.query(api.googleAnalyticsReads.analyticsChart, { siteId, period: "30", device: "" });
+    const chart = await user.query(api.googleAnalyticsChartReads.analyticsChart, { siteId, period: "30", device: "" });
     expect(chart.points).toHaveLength(30);
     expect(chart.events).toEqual(["generate_lead", "click_tel", "sign_up"]);
     expect(chart.points.at(-1)).toMatchObject({ day: NEWEST, visits: 33, conversions: 5, events: [2, 2, 1] });

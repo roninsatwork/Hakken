@@ -15262,7 +15262,50 @@
         "week": "Visits a week",
         "month": "Visits a month"
       },
-      "visitsHint": "{period}. A dot marks {step, select, day {a day} week {a week} other {a month}} with a conversion."
+      "visitsHint": "{period}. A dot marks {step, select, day {a day} week {a week} other {a month}} with a conversion.",
+      "views": "Page views",
+      "viewsTitle": {
+        "day": "Page views and visits a day",
+        "week": "Page views and visits a week",
+        "month": "Page views and visits a month"
+      },
+      "channelsTitle": {
+        "day": "Visits a day by channel",
+        "week": "Visits a week by channel",
+        "month": "Visits a month by channel"
+      },
+      "channelsHint": "{period}. The four busiest channels a line each, the rest as one.",
+      "noChannel": "(not set)",
+      "everythingElse": "Everything else",
+      "bars": {
+        "channels": {
+          "title": "Where visits came from",
+          "hint": "{period}: visits by channel.",
+          "measure": "Visits"
+        },
+        "landing": {
+          "title": "Visits by landing page",
+          "hint": "{period}: the ten landing pages with the most visits.",
+          "measure": "Visits"
+        },
+        "allPages": {
+          "title": "Most viewed pages",
+          "hint": "{period}: the ten pages viewed most.",
+          "measure": "Views"
+        },
+        "conversions": {
+          "title": "Conversions by landing page",
+          "hint": "{period}: where the visits that converted started.",
+          "measure": "Conversions"
+        },
+        "channelsList": {
+          "title": "Visits by channel",
+          "hint": "{period}: visits by channel.",
+          "measure": "Visits"
+        }
+      },
+      "conversionsTitle": "Conversions over time",
+      "conversionsHint": "One line for each kind of conversion, on one scale. Tick Value to add the money on a scale of its own."
     },
     "figures": {
       "nothingBefore": "Nothing to compare with yet",

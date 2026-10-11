@@ -210,6 +210,7 @@ import type * as followChannels from "../followChannels.js";
 import type * as googleAgentProvider from "../googleAgentProvider.js";
 import type * as googleAnalyticsAgentRun from "../googleAnalyticsAgentRun.js";
 import type * as googleAnalyticsApi from "../googleAnalyticsApi.js";
+import type * as googleAnalyticsChartReads from "../googleAnalyticsChartReads.js";
 import type * as googleAnalyticsCollect from "../googleAnalyticsCollect.js";
 import type * as googleAnalyticsConnect from "../googleAnalyticsConnect.js";
 import type * as googleAnalyticsCountries from "../googleAnalyticsCountries.js";
@@ -996,6 +997,7 @@ declare const fullApi: ApiFromModules<{
   googleAgentProvider: typeof googleAgentProvider;
   googleAnalyticsAgentRun: typeof googleAnalyticsAgentRun;
   googleAnalyticsApi: typeof googleAnalyticsApi;
+  googleAnalyticsChartReads: typeof googleAnalyticsChartReads;
   googleAnalyticsCollect: typeof googleAnalyticsCollect;
   googleAnalyticsConnect: typeof googleAnalyticsConnect;
   googleAnalyticsCountries: typeof googleAnalyticsCountries;

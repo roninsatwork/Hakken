@@ -17,7 +17,6 @@ import { slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { titlesOf, withTitles } from "./pageTitles";
 import { LIVE_PARTS } from "./googleAnalyticsLive";
-import { shiftDay } from "./searchConsoleDays";
 import { analyticsPeriodValidator, type AnalyticsList, type AnalyticsPeriod, type AnalyticsWhich } from "./googleAnalyticsSchema";
 import { searchConsoleMonth, searchConsoleMonthValidator } from "./googleAnalyticsConnect";
 import { seeing, seen, seenValidator, type Seen, type SeenPhrase } from "./utils/hakkenSees";
@@ -626,15 +625,22 @@ export const analyticsListAll = tenantQuery({
   },
 });
 
-/** The first few rows of a list, by value, and how many it holds: Overview's and Conversions' short lists (§10, Q14). */
+/** Rows a top list may ask for: a chart's ten bars at most. */
+const MOST_TOP_ROWS = 10;
+
+/**
+ * The first few rows of a list, in its order, and how many it holds:
+ * Overview's and Conversions' short lists (§10, Q14), and the top-ten bars
+ * above a list (GA35) — `count` of them, five unless asked.
+ */
 export const analyticsTopList = tenantQuery({
-  args: listArgs,
+  args: { ...listArgs, count: v.optional(v.number()) },
   returns: v.object({ rows: v.array(shownRowValidator), total: v.number(), ...answerValidator }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
     const list = await readAnalyticsList(ctx, site.hold._id, { ...args, country: await keptCountry(ctx, site.hold, args.country) });
     return {
-      rows: await nameRows(ctx, site.hold._id, list.rows.slice(0, TOP_ROWS)),
+      rows: await nameRows(ctx, site.hold._id, list.rows.slice(0, Math.max(1, Math.min(MOST_TOP_ROWS, Math.floor(args.count ?? TOP_ROWS))))),
       total: list.rows.length,
       live: list.live,
       preparing: list.preparing,
@@ -707,6 +713,8 @@ export const analyticsOverview = tenantQuery({
     })),
     /** Landing pages for one device are asked live: what changed most then holds channels only until they are. */
     landingLive: v.boolean(),
+    /** Each channel's visits, the most first: Overview's "Where visits came from" (GA35, §18.2 board 13). */
+    channelVisits: v.array(v.object({ label: v.string(), visits: v.number() })),
     /** Whether anything counts as a conversion. */
     counting: v.boolean(),
     /** Search Console's last 30 days, when it is connected: how often Google shows the pages, and how often they are clicked. */
@@ -726,6 +734,7 @@ export const analyticsOverview = tenantQuery({
       before: null,
       changedMost: [] as Moved[],
       landingLive: false,
+      channelVisits: [] as Array<{ label: string; visits: number }>,
       counting: false,
       searchConsole: null,
     };
@@ -760,65 +769,11 @@ export const analyticsOverview = tenantQuery({
         return { ...row, label: row.kind === "landing" ? named[index] : row.label, ...(title ? { title } : {}) };
       }),
       landingLive: landing.live,
+      channelVisits: [...channels.rows].sort((left, right) => right.visits - left.visits).map((row) => ({ label: row.label, visits: row.visits })),
       counting: counted.length > 0,
       searchConsole: await searchConsoleMonth(ctx, holdId),
     };
   }, overviewSees),
-});
-
-// ---------------------------------------------------------------------------
-// The chart
-// ---------------------------------------------------------------------------
-
-/** Days a chart reads from the days kept; longer spans read the long charts asked of Google weekly. */
-const DAYS_CHARTED = 30;
-/** Its records: a part a day, with room to spare. */
-const CHART_RECORDS_READ = 100;
-
-/**
- * The website's figures a day at a time over the span chosen, for one device
- * or every device: from the days kept (§4.3) for up to 30 days, from the long
- * chart asked of Google ready-made for the 90 days and 12 months. Each counted
- * event's own line comes with it, for Conversions' chart.
- */
-export const analyticsChart = tenantQuery({
-  args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) },
-  returns: v.object({
-    points: v.array(v.object({
-      day: v.string(),
-      visits: v.number(),
-      engaged: v.number(),
-      conversions: v.number(),
-      value: v.number(),
-      events: v.array(v.number()),
-    })),
-    /** The counted events, in the order of each point's `events`. */
-    events: v.array(v.string()),
-  }),
-  handler: async (ctx, args) => {
-    const site = await requireMySite(ctx, args.siteId);
-    const holdId = site.hold._id;
-    const country = await keptCountry(ctx, site.hold, args.country);
-    const connection = await connectionOf(ctx, holdId);
-    const counted = connection ? countedOf(connection) : [];
-    const events = counted.map((event) => event.eventName);
-    if (!connection?.newestDay) return { points: [], events };
-    const point = (day: string, row: ListRow) => {
-      const { conversions, value } = conversionsOf(row, counted);
-      return { day, visits: row.visits, engaged: row.engaged, conversions, value, events: events.map((event) => row.counts.get(event) ?? 0) };
-    };
-    // Another home country keeps no days: its short charts are ready-made too (§18.6.1).
-    if (Number(args.period) <= DAYS_CHARTED && country === "") {
-      const first = shiftDay(connection.newestDay, -(Number(args.period) - 1));
-      const parts = await ctx.db
-        .query("googleAnalyticsDays")
-        .withIndex("by_hold_list_device_day", (q) => q.eq("companyWebsiteId", holdId).eq("list", "total").eq("device", args.device).gte("day", first))
-        .take(CHART_RECORDS_READ);
-      return { points: parts.map((part) => point(part.day, unpackPart(part as PackedPart)[0] ?? blank(""))), events };
-    }
-    const series = await readSlot(ctx, holdId, slotKey("series", args.period, "NOW", args.device, country));
-    return { points: (series?.rows ?? []).map((row) => point(row.key, row)), events };
-  },
 });
 
 // ---------------------------------------------------------------------------

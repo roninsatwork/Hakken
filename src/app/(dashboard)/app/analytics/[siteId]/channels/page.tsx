@@ -4,6 +4,7 @@ import { Waypoints } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { AnalyticsListScreen } from "../../_components/AnalyticsListScreen";
 import { AnalyticsSees } from "../../_components/AnalyticsSees";
+import { ChannelsDailyChart, ListTopBars } from "../../_components/AnalyticsChart";
 import { useAnalyticsHref, useAnalyticsSiteId, useAnalyticsStatus, usePeriod } from "../../_components/useAnalytics";
 
 /**
@@ -22,7 +23,13 @@ export default function AnalyticsChannelsPage() {
   return (
     <AnalyticsListScreen
       header={{ icon: <Waypoints className="h-5 w-5 text-brand" />, title: t("title"), description: t("description", { before: tf(`before.${period}`) }) }}
-      head={(answer) => <AnalyticsSees screen="channels" seen={answer?.seen} currency={currency} />}
+      head={(answer) => (
+        <>
+          <AnalyticsSees screen="channels" seen={answer?.seen} currency={currency} />
+          <ChannelsDailyChart />
+          <ListTopBars list="channel" sort="visits" bars="channelsList" />
+        </>
+      )}
       list="channel"
       noun="channels"
       searchPlaceholder={t("searchPlaceholder")}

@@ -10,5 +10,10 @@ figures
   figure: Clicked
   figure: Visits
   figure: Conversions
+chart-card: Visits and conversions over time
+  checkbox: Visits
+  checkbox: Engaged visits
+  checkbox: Conversions
+  checkbox: Value (£)
 chart-card: Where its visits came from
 compact-list: Channel | Visits | Conversions | Value

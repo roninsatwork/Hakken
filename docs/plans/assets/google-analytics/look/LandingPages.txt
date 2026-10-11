@@ -3,6 +3,7 @@
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Landing pages
 settings-card: What Hakken sees
+chart-card: Visits by landing page
 search: Find a page…
 filter: Page group
 choice: Show: Pages | Page groups

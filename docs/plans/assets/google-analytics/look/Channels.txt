@@ -3,6 +3,8 @@
 # Change it only after Anthony approves a redrawn look: design-drift-plan D4.
 page-header: Channels
 settings-card: What Hakken sees
+chart-card: Visits a day by channel
+chart-card: Visits by channel
 search: Find a channel…
 table: Channel | Visits | Engaged | Conversions | Value | Change
   table-bar

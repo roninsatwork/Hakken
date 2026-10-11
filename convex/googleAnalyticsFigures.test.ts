@@ -140,4 +140,36 @@ describe("the second round's figures", () => {
       ["https://www.acme-shop.test/contact/", null],
     ]);
   });
+
+  test("charts: page views a day, each channel a day from the days kept or asked of Google, and a list's top ten", async () => {
+    const t = harness();
+    const { siteId, admin } = await connected(t);
+    fakeGoogle(history(70));
+    await save(admin, siteId);
+    await finishScheduled(t);
+    const args = { siteId, period: "30" as const, device: "" };
+
+    const chart = await admin.query(api.googleAnalyticsChartReads.analyticsChart, args);
+    expect(chart.points).toHaveLength(30);
+    expect(chart.points.every((point) => point.views === 32 && point.visits === 16)).toBe(true);
+
+    // Thirty days: from the days kept, the busiest channel first.
+    const daily = await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, args);
+    expect(daily).toMatchObject({ live: false, channels: ["Organic Search", "AI assistants", "Direct"], rest: false });
+    expect(daily.points).toHaveLength(30);
+    expect(daily.points[0].visits).toEqual([10, 4, 2]);
+
+    // Ninety days keep no channel days: asked of Google once, then read from what it held.
+    const long = { ...args, period: "90" as const };
+    expect((await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, long)).live).toBe(true);
+    expect(await admin.action(api.googleAnalyticsLive.askGoogleAnalyticsLive, { ...long, chart: "channel" })).toEqual({ ok: true, problem: null });
+    const asked = await admin.query(api.googleAnalyticsChartReads.analyticsChannelChart, long);
+    expect(asked).toMatchObject({ live: false, channels: ["Organic Search", "AI assistants", "Direct"] });
+    expect(asked.points).toHaveLength(70);
+
+    const top = await admin.query(api.googleAnalyticsReads.analyticsTopList, { ...args, list: "page", sort: "views", direction: "desc", count: 2 });
+    expect(top.rows.map((row) => [row.label, row.views])).toEqual([["https://www.acme-shop.test/", 600], ["https://www.acme-shop.test/ai-agency/", 270]]);
+    expect(top.total).toBe(3);
+  });
 });
+

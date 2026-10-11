@@ -12,6 +12,7 @@ figures
   figure: Pages a visit
   figure: Bounce rate
   figure: Conversions →
-chart-card: Visits a day
+chart-card: Page views and visits a day
+chart-card: Where visits came from
 chart-card: What changed most
 compact-list: Page or channel | Kind | Conversions | Value
