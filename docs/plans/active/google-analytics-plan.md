@@ -6,7 +6,12 @@ website connected and collecting, its Collector Agent and daily schedule
 created. Phase 5 (§13–§16) built the same evening (Anthony: "1 yes"), in
 local commits on dev, not pushed (§17), with Analytics' visits beside Search
 Console's clicks (§12); Q12 built and held for Anthony (§17). Every decision agreed (§1), every question
-answered (§10) and the screens agreed and locked (§11), all on 2026-10-09.**
+answered (§10) and the screens agreed and locked (§11), all on 2026-10-09.
+A second round (§18) drawn and agreed 2026-10-11 (Anthony: "ok tis is
+good"), not built: people, visit length, bounce rate, pages a visit, page
+views first, page titles, campaigns, the page before, every event, home
+countries only, products, visitors, live, and charts on every screen — ten
+phases, about twenty-two and a half days.**
 Change a decision here, with a date, before building anything that
 disagrees with it. Progress: §8.
 
@@ -44,13 +49,13 @@ Search Console later (§4.3), but no Search Console figure appears here.
 | GA4 | The pages | Overview, Channels, Landing pages, All pages, Conversions (§5; named by GA19), plus the connection and tracking health pages. | Agreed, 2026-10-09 (all four offered, and All pages added) |
 | GA5 | What counts as an enquiry or a sale | The client ticks them: Hakken lists the website's key events, pre-ticks the likely ones (a form sent, a call clicked, a purchase), and the client confirms. A scroll or a video play is never counted by accident. | Agreed, 2026-10-09 (the recommendation) |
 | GA6 | A value set in Hakken | Per ticked event (a form sent £250, a call £150), applied to all history: past months show £ at once, and changing it re-prices the past too. | Agreed, 2026-10-09 (the recommendation) |
-| GA7 | Shops | Enquiries and shop revenue: purchases and revenue per page and channel from Analytics' purchase events. No per-product detail. | Agreed, 2026-10-09 (the recommendation) |
+| GA7 | Shops | Enquiries and shop revenue: purchases and revenue per page and channel from Analytics' purchase events. No per-product detail. | Agreed, 2026-10-09 (the recommendation); changed 2026-10-11 by GA32: products added |
 | GA8 | Who sees £ | Everyone in the company who can see the website, as Search Console. | Agreed, 2026-10-09 (the recommendation) |
 | GA9 | History | As Search Console (GA16): the last 90 days on the first collection, days kept 60, longer periods asked of Google each week (§4). Anthony first chose "16 months"; that option said it matched Search Console, which was out of date — Search Console has kept days 60 and fetched 90 since 2026-10-07 ([keep-less-history-plan.md](keep-less-history-plan.md), part 3). | Settled by GA16, 2026-10-09. Year-on-year: §10, Q2 |
 | GA10 | Visitors from AI assistants | Their own channel, "AI assistants", with each assistant listed under it (ChatGPT, Perplexity, Gemini, Copilot, Claude and others). | Agreed, 2026-10-09 (the recommendation). How: §4.4 |
 | GA11 | A tracking health check | When a website connects, and every week (§6). | Agreed, 2026-10-09 (the recommendation) |
 | GA12 | How a tracking problem is told | On the Analytics pages, and in the bell — to the platform's super admins only, never a company's own admins: they are system alerts. The connected notice too. | Agreed, 2026-10-09 (the recommendation, then to the company's admins); changed 2026-10-10 (Anthony: "These are system alerts not company alerts they need to only go to sys admins") |
-| GA13 | Filters | Dates and device (mobile, desktop, tablet) on every page. No country filter. | Agreed, 2026-10-09 (the recommendation) |
+| GA13 | Filters | Dates and device (mobile, desktop, tablet) on every page. No country filter. | Agreed, 2026-10-09 (the recommendation); changed 2026-10-11 by GA31: the website's home countries only, with a country choice |
 | GA14 | Credits | Free in every plan, as Search Console: Google charges nothing for the data. | Agreed, 2026-10-09 (the recommendation) |
 | GA15 | Landing pages by page group | A switch between each page and the website's own page groups ([page-groups-plan.md](page-groups-plan.md)). A website with no groups shows pages only. | Agreed, 2026-10-09 (the recommendation) |
 | GA16 | Everything not asked | Search Console's conventions: who connects, the collector agent, settling, storage, disconnecting, the tables, owned websites only (§3–§5). | Agreed, 2026-10-09: "yes peaes follow the convestios of search console" |
@@ -59,8 +64,20 @@ Search Console later (§4.3), but no Search Console figure appears here.
 | GA19 | What they are called | "Conversions" everywhere on screen — the menu, the page, the columns, the rates — and a conversion's own name wherever one is meant ("Contact form sent", "Purchase"). Never "Enquiries" or "Sales" as the general word: a client may sell products or services, and not every conversion is an enquiry. | Agreed, 2026-10-09: "We need ot rname enquiries otr conversions across the wole p;arorm or use the conversion name where appropriate … Clietns could nbe proiducts or sevives and not every conversion will be an equiiry". Drawn the same day |
 | GA20 | Devices and storage | Kept by device: only the small lists — the totals, the channels, and conversions by channel. The page lists (landing pages, all pages, conversions by landing page) are kept once, for every device; a device chosen on one is asked of Google there and then. Every page keeps its device filter (GA13). Estimated on 2026-10-09: keeping every list by device would take a shop the size of morehandles.co.uk from about 8 MB to about 25 MB, the size of its whole Search Console store; this keeps it near 8 MB. Measured in Phase 2. | Agreed, 2026-10-09: "ok agree" (on the canvas, asked "is this a big data store burden") |
 | GA21 | The agent that collects | A new agent in Admin → Agents, "Google Analytics: Collector Agent", given a new role, "Google Analytics Collector", and a schedule of its own, "Google Analytics: Data Collection Scheduler", daily at 04:00 local (03:00 UTC) — the same time as Search Console's. Built as the Search Console: Collector Agent is (§4.1). | Agreed, 2026-10-09: "can we get them the same time as search console — i think we need to create a new agent for this in the agents section and give it a role of google analytics … I think we should call it "Google Analytics: Collector Agent" … and we need to create a schedule for it too" |
-| GA22 | The screens, after review | Six changes: Overview leads with what changed most, and every table opens sorted by value; every landing page opens its own screen and every channel its sources; one matching property is shown for a yes, and the address step only when a property has several; the states people meet first are drawn; Tracking health shows its failing checks first; a conversion rate from fewer than 100 visits is greyed. | Agreed, 2026-10-09: "yes i agree with this" … "all of it", on the canvas review. The 100 visits, the five rows of what changed most and Tracking health's 5% unknown were confirmed the same day (§10, Q13) |
+| GA22 | The screens, after review | Six changes: Overview leads with what changed most, and every table opens sorted by value; every landing page opens its own screen and every channel its sources; one matching property is shown for a yes, and the address step only when a property has several; the states people meet first are drawn; Tracking health shows its failing checks first; a conversion rate from fewer than 100 visits is greyed. | Agreed, 2026-10-09: "yes i agree with this" … "all of it", on the canvas review. The 100 visits, the five rows of what changed most and Tracking health's 5% unknown were confirmed the same day (§10, Q13). "Every table opens sorted by value" changed 2026-10-11 by GA26: Landing pages opens by visits, All pages by views |
 | GA23 | Storage, speed and spend | Six changes under the surface, none to the screens: (1) the page lists are kept only as ready-made periods asked of Google, with days kept only for the small lists that draw the charts; (2) conversions are stored as columns of the list they belong to, never as a second list of the same pages; (3) the last two days are collected again, not four; (4) only what changed is written; (5) a list asked live is held until the next collection; (6) every screen has a reading-budget test at five times morehandles.co.uk, and storage is measured on Ronins and morehandles.co.uk before any client connects. (§4.1–§4.3) | Agreed, 2026-10-09: "Yes please", asked "Is this plan fully optimise for storage speed and spend" |
+| GA24 | People | How many people, beside the visits they made, and how many were new or returning (§18). | Agreed, 2026-10-11: "Peopel and visits", then the screens: "ok tis is good" |
+| GA25 | How visits went | Visit length, bounce rate and pages a visit, beside time engaged (§18). | Agreed, 2026-10-11: "we need visiti legnth bounce rate and paged per visit" |
+| GA26 | Page views first, money second | Overview leads with visits, page views, people and engaged visits; value becomes a line under Conversions. Landing pages opens sorted by visits, All pages by views; Landing pages swaps Engaged for Bounce and leaves Value to Conversions and each page's own screen (§18). Changes GA22's "every table opens sorted by value". | Agreed, 2026-10-11: "i think we have too mch focus on money on the screens … googel analytuics gives us page views as people move arpidn the site … Wre cant forgetthis" |
+| GA27 | Page titles | Each page's title over its address in the page tables (§18). | Agreed, 2026-10-11: "we need campaing and page titels" |
+| GA28 | Campaigns | Its own page: visits from tagged links by campaign, and the ad keywords behind them (§18). | Agreed, 2026-10-11 (as GA27) |
+| GA29 | The page before | Every page in All pages opens its own screen, showing the page or website each view came from (§18). | Agreed, 2026-10-11: "we ned the page before" |
+| GA30 | Every event | An Events page with every event Google Analytics records, not only conversions, and each event's own screen (§18). | Agreed, 2026-10-11: "we need all events" |
+| GA31 | Home countries only | Every figure is the website's home countries', as Search Console's; a country choice on every page lists them (§18). Changes GA13. | Agreed, 2026-10-11: "we shoud onyl be selctign oujr home countries". The other home countries asked when chosen, not kept: §18, Q17, agreed the same day |
+| GA32 | Products | A Products page for a website with a shop: each product, and how far shoppers got (§18). Changes GA7. | Agreed, 2026-10-11: "we ned proiduct dara" |
+| GA33 | Visitors | A Visitors page: new or returning, browsers, operating systems, and age, gender and interests where Google signals is on (§18). | Agreed, 2026-10-11: "we need demographisc data", after "why do i see nothignb abotu browsers" |
+| GA34 | Live | A Live page: who is on the website now and the last 30 minutes, asked of Google once a minute only while the page is open and in front, never stored (§18). | Agreed, 2026-10-11: "WE EED RALTIME DATA"; asked "when the pge is not open it does not poll at all right" — right, it does not |
+| GA35 | Charts | Every screen with figures has charts: over time where Hakken keeps days or asks Google when a screen opens, and bars for comparing pages, channels, browsers and events. The charts agreed on 9 Oct for a landing page's screen and Conversions, left off on 10 Oct without Anthony asking (§15), come back (§18). | Agreed, 2026-10-11: "thre is distinct lack of graphs and charts across the page" … "how many tijme do you want me to ask for more charrts and grahsp" |
 
 ## 2. How Google Analytics integration works
 
@@ -484,10 +501,13 @@ No one else can: it is his Google account.
 | | What Hakken sees on sixteen screens, from the shared part (§14) | Two and a half days |
 | | The locked screens changed as the canvas draws them (§15), each only once agreed | One and a half days |
 | | The three things found while drawing (§16) | Half a day |
+| — | The second round's drawings (§18.2), agreed 2026-10-11 | Half a day — done |
+| 6–15 | Added 2026-10-11, the second round, phase by phase in §18.5 | Twenty-two and a half days |
 
 About fourteen and a half days of building after Phase 0 and the drawings;
 about fifteen and a half with them (two and a half more since GA18, §4.6,
-and a day and a half since GA22). With Phase 5, about twenty-four.
+and a day and a half since GA22). With Phase 5, about twenty-four. With the
+second round (§18), about forty-seven and a half.
 
 Every phase ends with its tests, Google faked as for Search Console (the
 sign-in, a missing scope, renewal, revocation, paging, quotas, "(other)" and
@@ -507,6 +527,10 @@ Search Console's clicks; Q12, about three days, built and held for
 Anthony's word. Everything but Q12 is built: about 24½ of 24½ days; with
 Q12, about 89% is on dev.** What was built, and
 where the build differs from the words above, is §12.
+
+**Progress, 2026-10-11: the second round (§18) drawn, agreed and planned;
+none of its ten phases built — 0 of twenty-two and a half days. Both rounds:
+about twenty-five of forty-seven and a half days, about 53%.**
 
 ## 9. Risks
 
@@ -903,9 +927,9 @@ the 19 screens"), and the build started the same evening (Anthony: "1 yes").
 | 4 | Channels | What Hakken sees added |
 | 5 | A channel's own screen (AI assistants) | What Hakken sees added, and four figures above its list: visits, engagement rate against the whole website's, conversions, value |
 | 6 | Landing pages | What Hakken sees added; one line a row, the conversion rate beside the count ("4 · 2.8%") rather than under it |
-| 7 | A landing page's own screen | What Hakken sees added. Its figures become the four stages from Google to money (Shown in Google, Clicked, Visits, Conversions), joining Search Console as §13 does. Left off: its chart and What its visits converted into |
+| 7 | A landing page's own screen | What Hakken sees added. Its figures become the four stages from Google to money (Shown in Google, Clicked, Visits, Conversions), joining Search Console as §13 does. Left off: its chart and What its visits converted into. (Corrected 2026-10-11: the drawing agent left the chart off; Anthony never asked for it — "i nver asekd for any charts to be removed". Back by GA35, §18) |
 | 8 | All pages | What Hakken sees added; conversions made here with their value beside them |
-| 9 | Conversions | What Hakken sees added. Four figures: conversions, value, conversion rate, kinds that happened ("1 of 4"). Then What counts, each kind with how many, value and change. Then Where they came from, one table switching between landing pages and channels. Left off: the chart |
+| 9 | Conversions | What Hakken sees added. Four figures: conversions, value, conversion rate, kinds that happened ("1 of 4"). Then What counts, each kind with how many, value and change. Then Where they came from, one table switching between landing pages and channels. Left off: the chart. (Corrected 2026-10-11: the drawing agent's choice, not Anthony's; back by GA35, §18) |
 | 10 | Tracking health | What Hakken sees added; otherwise as built |
 | 11 | Connection | What Hakken sees added; otherwise as built |
 | 12 | Not connected yet | What Hakken sees added (when Search Console is connected) |
@@ -1043,6 +1067,155 @@ reads up to 4.9 MiB at five times morehandles.co.uk, where it read one row.
 Nothing on dev changed. Analytics' visits beside Search Console's clicks
 (§4.6) is built without it.
 
+## 18. The second round — drawn and agreed 2026-10-11
+
+Anthony, 2026-10-11: "inteh google analytics section why do i see nothignb
+abotu browsers adn dwell time on the page … is this because teh data source
+does not supply it … if it does supply what else are we missing ?" Read in
+the code the same day: time engaged (`userEngagementDuration`) was collected
+and shown, but only as the Time column of Landing pages, page groups and All
+pages; browsers were never asked of Google. What Google offers and Hakken did
+not take was listed for him, and he chose it all (GA24–GA34). Two more came
+from the canvas: page views before money (GA26) and charts on every screen
+(GA35). Agreed: "ok tis is good can you weite them up onot a plan adn let me
+know the pases".
+
+### 18.1 What Google gives, by name
+
+Confirmed against Google's Data API and Realtime API schema pages on
+2026-10-11; each is checked on Ronins' property with `getMetadata` at the
+start of its phase, as Phase 0 did (§7).
+
+| On screen | Google's name | Asked |
+|---|---|---|
+| People; new and returning | `totalUsers`, `newUsers`; `newVsReturning` | With every list's figures. People cannot be added up across days or devices (one person on Monday and Tuesday is one person in the week), so the small lists' periods ask for people ready-made too, not added from days (§4.3) |
+| Visit length | `averageSessionDuration` | Kept as the seconds of all visits (the average × visits), so it adds up |
+| Bounce rate; pages a visit | — | Worked out: 1 − engaged visits ÷ visits (Google's `bounceRate` is the same); views ÷ visits |
+| Page title | `pageTitle` by `pagePath` | Weekly; the most-viewed title of each page kept once with the hold's page numbers (§4.6) |
+| Campaign, source / medium, ad keyword | `sessionCampaignName`, `sessionSource`, `sessionMedium`, `sessionManualTerm` | Ready-made periods. Ad keywords go into the hold's one keyword store (GA18) |
+| The page before | `pageReferrer` by `pagePath` | When a page's own screen opens |
+| Every event | `eventName` with `eventCount`, `totalUsers` | Ready-made periods, and by day for the chart |
+| An event's detail | `linkUrl`, `outbound`, `fileName`, `searchTerm`, `percentScrolled`, `videoTitle` | When an event's own screen opens |
+| Home countries | `countryId` (two letters), mapped onto Search Console's codes (`GB` = `gbr`) in the one list of codes (§4.6) | A filter on every ask |
+| Products; the shop's steps | `itemName`, `itemCategory`; `itemsViewed`, `itemsAddedToCart`, `itemsPurchased`, `itemRevenue`; `eventCount` of `view_item`, `add_to_cart`, `begin_checkout`, `purchase` | Ready-made periods; the steps by day. Google never mixes product figures with visit figures in one ask |
+| Browsers, systems | `browser`, `operatingSystem` | Ready-made periods |
+| Age, gender, interests | `userAgeBracket`, `userGender`, `brandingInterest` | Only where the property has Google signals on; asked on their own, so Google's hiding of small groups never touches the other figures |
+| Live | Realtime API: `activeUsers`, `screenPageViews`, `eventCount`, `keyEvents` by `minutesAgo`, `unifiedScreenName`, `city`, `deviceCategory`, `eventName`, filtered by `countryId` | Once a minute while the Live page is open and in front; never stored |
+
+Still not given (§2.4 stands): search words, which AI question, Google's own
+AI answers apart, robots, and people who refuse cookies. And: the page a
+visitor went to next (only the page before), and, in live figures, a page's
+address (only its title) and where a visitor came from.
+
+### 18.2 The screens
+
+The canvas "Google Analytics — now and proposed"
+(https://claude.ai/artifact/K5H7fnyQrT38XhzE9aQMpn): the top row is the
+twelve screens as built, copied from the running app with Ronins' figures;
+the bottom row is this round, thirteen screens. A picture of each, and its
+board, in `docs/plans/assets/google-analytics/round-2/`, numbered as on the
+canvas.
+
+| # | Screen | This round | Picture |
+|---|---|---|---|
+| 13 | Overview | Visits, page views, people and engaged visits first; then visit length, pages a visit, bounce rate, and conversions with their value under them. Chart: page views, visits and engaged visits a day, a dot on each day with a conversion and Google's updates marked. Visits by channel as bars | `13-overview.png` |
+| 14 | Live | New. On the website now, people, views and conversions in the last 30 minutes; people each minute; pages (by title), places, devices and events; where they are as bars. No dates or chart step | `14-live.png` |
+| 15 | Visitors | New. People, new, returning, visits a person; new and returning a day; one table switching between new or returning, browsers, operating systems, age, gender and interests, with its bars; a note when Google signals is off | `15-visitors.png` |
+| 16 | Channels | Each channel's visits a day; visits by channel as bars | `16-channels.png` |
+| 17 | Campaigns | New. Visits from tagged links a day; by campaign as bars; the table switching between campaigns and ad keywords | `17-campaigns.png` |
+| 18 | Landing pages | Each page's title over its address; Visits, Bounce, Pages, Time, Conversions, Change; opens by visits; the top ten as bars | `18-landing-pages.png` |
+| 19 | A landing page's own screen | Its visits a day, the chart agreed on 9 Oct | `19-a-landing-page.png` |
+| 20 | All pages | Titles; People beside Views; opens by views; every row opens the page's own screen; the top ten as bars | `20-all-pages.png` |
+| 21 | A page's own screen | New. Views, people, time, conversions made there; views a day; where visitors were just before, as bars and a table: the website's pages by title and address, other websites by name, "No page before" | `21-a-page.png` |
+| 22 | Events | New. Every event by its own name and Google's ("Page viewed · page_view"), times, people, whether it counts as a conversion, change; a Kind filter; scrolls and link clicks a day; times each event happened as bars | `22-events.png` |
+| 23 | An event's own screen | New. Its figures and times a day; what it was about — the links clicked, the files, the words searched, how far people scrolled, the videos — switching to the pages it happened on | `23-an-event.png` |
+| 24 | Conversions | Conversions a day, the chart agreed on 9 Oct; conversions by landing page as bars | `24-conversions.png` |
+| 25 | Products | New, only for a website with shop events. The shop's four steps as figures and bars, products bought a day, and each product's looks, basket, bought, revenue and change, with a Category filter. Drawn on a sample shop | `25-products-a-shop.png` |
+
+On every page: a Country choice beside device and dates — Search Console's
+dropdown, listing the website's home countries (Ronins': the United
+Kingdom). What Hakken sees on every new screen, from the shared rules (one
+voice). Every table is the standard one, search row first. No new parts, two
+extended: Sites' page cell gains a title line over the address (one line
+each, cut with "…", whole on hover — Sites' rule for long words), and Sites'
+bar chart (`SiteBarChart`) moves to the shared charts folder so Analytics
+draws the same bars, not a copy.
+
+The canvas's figures are Ronins' real ones wherever Hakken held them (visits
+and engaged visits a day, the channels, visits, views, engagement, time and
+conversions by page, page titles read from ronins.co.uk); the rest — people,
+visit length, browsers, events, campaigns, the page before, live visitors —
+are made up to show the layout.
+
+### 18.3 Collecting and storage
+
+| What | Kept | Google asks |
+|---|---|---|
+| Home countries | A filter on every ask. The main home country's figures kept as now; another home country asked when chosen and held until the next collection, as a device is (GA20; Q17). The figures held so far are cleared and collected again, as Search Console's were on 2026-10-06 | None more |
+| People, visit length | Two more figures on every list; people asked ready-made for the small lists' periods | About eight more a day |
+| Bounce rate, pages a visit | Worked out | None |
+| Page titles | Once a page, with the hold's page numbers | One a week |
+| Campaigns, ad keywords | Ready-made periods, every device | About four a day, and the weekly periods |
+| Every event | Ready-made periods; by day for its chart; every device | About five a day |
+| Visitors' lists | Ready-made periods, every device; age, gender and interests asked apart; new and returning by day | About eight a day, and the weekly periods |
+| Products, the shop's steps | Ready-made periods, every device; the steps by day | About five a day, shops only |
+| The page before; an event's detail; a page's or an event's days | Asked when the screen opens, held until the next collection (GA23) | Only when opened |
+| Live | Never stored | Once a minute, only while the page is open and in front; nothing when it is closed or behind another tab |
+
+About twenty small asks a day now and about sixty-five with this round, far
+inside Google's free limits (§2.5). Ronins holds about 0.4 MB of Analytics;
+the new lists are short, so a website like Ronins gains little, and a big
+shop most, its products kept as the page lists are. Measured on Ronins in
+Phase 15 before any client connects (GA23). Only what changed is written;
+live figures cost a function call a minute while someone watches, and no
+storage.
+
+### 18.4 Questions
+
+- **Q17 — The other home countries. Answered 2026-10-11 (Anthony: "yes").**
+  The main home country kept, any other asked of Google when chosen and held
+  until the next collection, so storage does not grow with each country, and
+  Reports can join Search Console and Analytics country by country. The
+  other way kept every home country ready, up to three times the storage.
+- **Q18 — Google signals on ronins.co.uk. Answered 2026-10-11 (Anthony: "i
+  dotn know lets build it and see").** Phase 12 builds age, gender and
+  interests as drawn and asks Ronins' property for them; what comes back is
+  written into §18 when the phase ends — figures, groups Google hid, or
+  nothing because Google signals is off. Off, the Visitors page says those
+  three are empty; switching it on is a setting in Google Analytics (Admin →
+  Data collection) with cookie-consent questions of its own, and Anthony's
+  call.
+- **Q19 — A real shop. Answered 2026-10-11 (Anthony: "agree").** None is
+  connected (Anthony, 2026-10-10, on morehandles.co.uk: "no I don't want to
+  cement yet"). Phase 13 is built and tested with Google faked, and checked
+  on a real shop when one connects.
+
+### 18.5 Phases and days
+
+| Phase | What | Days |
+|---|---|---|
+| 6 | Home countries: every ask filtered, the codes mapped onto Search Console's, the Country choice on every page, another home country asked and held, the figures held so far collected again | One and a half |
+| 7 | The new figures and changed lists: people, new and returning, visit length, bounce rate, pages a visit; page titles; Overview reordered, page views first; Landing pages and All pages as drawn; the CSV downloads | Three |
+| 8 | Charts on the screens that exist: the bar chart shared; Overview's, Channels', Conversions' and a landing page's charts; the top-ten bars | Two |
+| 9 | A page's own screen and the page before | Two and a half |
+| 10 | Events and an event's own screen, with every Google event named in English and Italian | Three |
+| 11 | Campaigns and ad keywords | One and a half |
+| 12 | Visitors: new or returning, browsers, systems, age, gender, interests | Two and a half |
+| 13 | Products, for websites with a shop | Three |
+| 14 | Live | Two |
+| 15 | Measured and checked: storage on Ronins, a reading-budget test for every new screen at five times morehandles.co.uk, look tests against the pictures, Ronins checked in Chrome, the full gate | One and a half |
+
+**About twenty-two and a half days of building**; the drawings, half a day,
+are done. Every phase brings its What Hakken sees, its words in English and
+Italian, and tests with Google faked, and ends with the gate. Phase 6 goes
+first, since it changes every figure and collects again, then 7 and 8 on the
+screens that exist; the new pages may come in any order.
+
+More than the twelve to fourteen days first estimated in chat: that
+estimate had no charts (two days), no page's or event's own screen (about
+two), no What Hakken sees for six new screens (about two), and no measuring
+and look tests (one and a half).
+
 ## Change log
 
 - 2026-10-09 — Plan written from the brainstorm the same day: seventeen
@@ -1129,3 +1302,17 @@ Nothing on dev changed. Analytics' visits beside Search Console's clicks
   Q12 built on its own branch and held: it saves about 0.3 to 0.5 MB, not
   1.3, and a page's own screen on a website with a sitemap-file line would
   read up to 4.9 MiB.
+- 2026-10-11 — The second round (§18). Asked why browsers and dwell time
+  were missing: time engaged was collected and shown as Time, browsers never
+  asked. Anthony chose everything else Google offers (GA24–GA34), then page
+  views before money (GA26) and charts on every screen (GA35). Drawn on the
+  canvas "Google Analytics — now and proposed" beside the screens as built,
+  and agreed ("ok tis is good"); pictures in
+  `docs/plans/assets/google-analytics/round-2/`. GA7, GA13 and GA22 changed.
+  §15's two charts "left off" corrected: the drawing agent's choice, never
+  Anthony's ("i nver asekd for any charts to be removed"). Ten phases, about
+  twenty-two and a half days (§18.5); Q17 to Q19 open. Not built.
+- 2026-10-11 — Q17 answered (the other home countries asked when chosen,
+  not kept) and Q19 agreed (Products built with Google faked until a shop
+  connects). Q18 answered: build age, gender and interests and see what
+  Ronins' property returns (Anthony: "lets build it and see").
