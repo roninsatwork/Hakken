@@ -30,6 +30,10 @@ export type Visit = {
   title?: string;
   /** The page viewed just before (`pageReferrer`): none unless a test says otherwise. */
   referrer?: string;
+  /** A tagged link's campaign, medium and words (`utm_campaign`, `utm_medium`, `utm_term`): none unless a test says otherwise. */
+  campaign?: string;
+  medium?: string;
+  term?: string;
   /**
    * What the line's events were about (§18.6.5): the link a click followed,
    * the file downloaded, the words searched, how far a scroll went, the video.
@@ -56,6 +60,9 @@ const FIELD: Record<string, (visit: Visit) => string> = {
   countryId: (visit) => visit.country ?? "GB",
   pageTitle: (visit) => visit.title ?? `Title of ${visit.page}`,
   pageReferrer: (visit) => visit.referrer ?? "",
+  sessionCampaignName: (visit) => visit.campaign ?? (visit.channel === "Direct" ? "(direct)" : "(organic)"),
+  sessionMedium: (visit) => visit.medium ?? "(none)",
+  sessionManualTerm: (visit) => visit.term ?? "(not set)",
   linkUrl: (visit) => visit.about?.linkUrl ?? "(not set)",
   fileName: (visit) => visit.about?.fileName ?? "(not set)",
   searchTerm: (visit) => visit.about?.searchTerm ?? "(not set)",

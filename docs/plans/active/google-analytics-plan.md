@@ -530,10 +530,10 @@ Q12, about 89% is on dev.** What was built, and
 where the build differs from the words above, is §12.
 
 **Progress, 2026-10-11: the second round (§18) drawn, agreed and planned,
-with how it is built (§18.6) and its What Hakken sees (§18.7). Phases 6 to 10
-built on dev, each committed and none pushed — fourteen of twenty-six and a
-half days, about 53%; twelve and a half left. Both rounds: about thirty-nine
-and a half of fifty-two days, about 76%.**
+with how it is built (§18.6) and its What Hakken sees (§18.7). Phases 6 to 11
+built on dev, each committed and none pushed — fifteen and a half of
+twenty-six and a half days, about 58%; eleven left. Both rounds: about
+forty-one of fifty-two days, about 79%.**
 
 ## 9. Risks
 
@@ -1373,10 +1373,11 @@ titles do, so the longer periods never wait a week. Three names changed to
 the drawing's — "Scrolled to the bottom", "Engaged with a page", "Clicked a
 link to another website" — on Choose what counts too (its look test
 updated). Links show as people read them (`linkedin.com/company/…`), the
-whole address kept for the link. **Not built: the fourth figure on an
-event's screen, "Conversions after it"** — Google cannot join an event to
-conversions in the same visit; asked of Anthony on 11 Oct whether to count
-the people who converted after it instead (Google's funnel report).
+whole address kept for the link. **The fourth figure on an event's
+screen, "Conversions after it", changed** — Google cannot join an event to
+conversions in the same visit, so it counts the people who did the event and
+converted after it, from Google's funnel report (Anthony, 2026-10-11: "Yes
+agree use the people"); built after Phase 11.
 Measured on Ronins: twelve events in 30 days; the 12 months' each-event-a-day
 list is two stored parts.
 
@@ -1395,6 +1396,24 @@ shop's four steps are read from the `event` list (`view_item`,
 website is a shop when any of those four happened in the last 90 days: the
 collector notes it (`shop`) each day, the Products page appears by itself,
 and nothing is set in admin (Anthony: "you recommend").
+
+*Built 2026-10-11 (Phase 11, GA28).* Campaigns, as board 17 draws it: What
+Hakken sees, the visits from tagged links a day, visits by campaign as bars,
+and one table switching between the campaigns — each with the source and
+medium its link carried — and the ad keywords; the visits from no tagged link
+said beside the table, never listed. Three ready-made lists, every device:
+`campaign`, `adKeyword` and `campaignSeries` (each campaign a day); Google's
+"(not set)", "(direct)", "(organic)" and the like kept as one untagged row, so
+a website that tags nothing keeps one row a day. One device asked of Google
+when the screen opens. The lists use the standard list screen and reads, and
+a list's rows as kept and shown moved to `googleAnalyticsRows.ts` to keep the
+reads module inside its size. **One difference from §4.6: ad keywords are
+kept as their list's own row names, not in Search Console's keyword books.**
+The books hold a month of Search Console's daily lines and go with them, so a
+12-month list pointing into them would lose its words within a month; no
+second keyword table is made. Ronins: 34 of 4,517 visits in 12 months came
+from tagged links, 32 of them ReviveOldPost's LinkedIn shares, none
+converting.
 
 **7. Live.** The Realtime API (`runRealtimeReport`), asked by the Live page
 itself through one action that returns the answer and stores nothing. The

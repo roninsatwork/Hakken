@@ -27,6 +27,8 @@ export const ANALYTICS_PAGES = [
   // Each landing page from Google's results to its money (§13), after Overview.
   { id: "heroes", segment: "heroes", group: "figures" },
   { id: "channels", segment: "channels", group: "figures" },
+  // Visits from tagged links (GA28).
+  { id: "campaigns", segment: "campaigns", group: "figures" },
   { id: "landingPages", segment: "landing-pages", group: "figures" },
   { id: "allPages", segment: "all-pages", group: "figures" },
   // Every event the website recorded (GA30).

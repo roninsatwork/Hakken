@@ -53,6 +53,9 @@ export const LIST_DIMENSIONS: Record<AnalyticsList, readonly string[]> = {
   series: ["date"],
   event: ["eventName"],
   eventSeries: ["date", "eventName"],
+  campaign: ["sessionCampaignName", "sessionSource", "sessionMedium"],
+  adKeyword: ["sessionManualTerm"],
+  campaignSeries: ["date", "sessionCampaignName"],
 };
 
 /** Whether a list is kept by device (GA20): the small ones and the long charts; the page lists only for every device. */
@@ -65,7 +68,22 @@ export const KEPT_BY_DEVICE: Record<AnalyticsList, boolean> = {
   // Every device only: a device chosen asks Google when the screen opens, as the page lists do.
   event: false,
   eventSeries: false,
+  campaign: false,
+  adKeyword: false,
+  campaignSeries: false,
 };
+
+/**
+ * Visits from no tagged link (§18.6.6): Google names their campaign
+ * `(not set)`, `(direct)`, `(organic)`, `(referral)` and the like. Kept as one
+ * row, so a website that tags nothing keeps one row a day, not one a channel.
+ */
+export const UNTAGGED = "(not set)";
+
+/** Whether a campaign, or a tagged link's words, is Google's word for none. */
+export function isUntagged(name: string): boolean {
+  return !name.trim() || /^\(.*\)$/.test(name.trim());
+}
 
 /** Every device, as a kept record names it. */
 export const EVERY_DEVICE = "";
@@ -124,6 +142,10 @@ function rowKey(list: AnalyticsList, keys: readonly string[]): string {
   if (list === "channel") return channelKey(keys[0] ?? "", keys[1] ?? "");
   if (list === "series") return dayOf(keys[0] ?? "");
   if (list === "eventSeries") return `${dayOf(keys[0] ?? "")}${DAY_JOIN}${keys[1] ?? ""}`;
+  if (list === "campaignSeries") return `${dayOf(keys[0] ?? "")}${DAY_JOIN}${isUntagged(keys[1] ?? "") ? UNTAGGED : keys[1]}`;
+  // A campaign with where its link was: "linkedin.com / social"; every untagged visit as one row.
+  if (list === "campaign") return isUntagged(keys[0] ?? "") ? UNTAGGED : channelKey(keys[0] ?? "", `${keys[1] ?? ""} / ${keys[2] ?? ""}`);
+  if (list === "adKeyword") return isUntagged(keys[0] ?? "") ? UNTAGGED : keys[0] ?? "";
   return keys[0] ?? "";
 }
 
@@ -226,7 +248,7 @@ export type PackedPart = {
  * or not.
  */
 export function packList(list: AnalyticsList, rows: readonly ListRow[], events: readonly string[]): PackedPart[] {
-  const sorted = list === "series" || list === "eventSeries"
+  const sorted = list === "series" || list === "eventSeries" || list === "campaignSeries"
     ? [...rows].sort((left, right) => left.key.localeCompare(right.key))
     : [...rows].sort((left, right) => (list === "page" ? right.views - left.views : list === "event" ? (right.times ?? 0) - (left.times ?? 0) : right.visits - left.visits) || left.key.localeCompare(right.key));
   const timed = rows.some((row) => row.times !== undefined);

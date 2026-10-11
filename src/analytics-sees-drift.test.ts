@@ -37,6 +37,7 @@ const ANALYTICS_SCREENS = [
   `${ANALYTICS}/[siteId]/all-pages/page/page.tsx`, // 21 · A page's own screen (second round, §18.2)
   `${ANALYTICS}/[siteId]/events/page.tsx`, // 22 · Events
   `${ANALYTICS}/[siteId]/events/event/page.tsx`, // 23 · An event's own screen
+  `${ANALYTICS}/[siteId]/campaigns/page.tsx`, // 17 · Campaigns
   `${ANALYTICS}/[siteId]/conversions/page.tsx`, // 9 · Conversions, and 16 · Nothing counted yet
   `${ANALYTICS}/[siteId]/tracking-health/page.tsx`, // 10 · Tracking health
   `${ANALYTICS}/[siteId]/connection/page.tsx`, // 11 · Connection, and 14 · Choose what counts

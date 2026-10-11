@@ -9848,6 +9848,7 @@
       "files": "{count, plural, =1 {# file} other {# files}}",
       "videos": "{count, plural, =1 {# video} other {# videos}}",
       "depths": "{count, plural, =1 {# depth} other {# depths}}",
+      "campaigns": "{count, plural, =1 {# campaign} other {# campaigns}}",
       "stories": "{count, plural, =1 {# story} other {# stories}}",
       "storiesSoFar": "{count, plural, other {#+ stories}}",
       "articlesAndStories": "{count, plural, =1 {# article or story} other {# articles and stories}}",
@@ -14944,6 +14945,7 @@
       "overview": "Overview",
       "heroes": "Heroes and attention",
       "channels": "Channels",
+      "campaigns": "Campaigns",
       "landingPages": "Landing pages",
       "allPages": "All pages",
       "events": "Events",
@@ -15253,7 +15255,9 @@
         "changeTitle": "Visits against the span before",
         "purchases": "Purchases",
         "revenue": "Revenue",
-        "averageOrder": "Average order"
+        "averageOrder": "Average order",
+        "campaign": "Campaign",
+        "adKeyword": "Ad keyword"
       },
       "notSorted": "Not sorted",
       "pagesCount": "{count, plural, =1 {1 page} other {# pages}}",
@@ -15271,9 +15275,12 @@
         "time": "Seconds engaged a visit",
         "conversions": "Conversions",
         "value": "Value ({currency})",
-        "change": "Change in visits (%)"
+        "change": "Change in visits (%)",
+        "source": "Source / medium"
       },
-      "downloadFailed": "Couldn't prepare the download. Try again."
+      "downloadFailed": "Couldn't prepare the download. Try again.",
+      "untagged": "{count, plural, =1 {one visit had} other {# visits had}} no campaign tag",
+      "askingBodyCampaigns": "Campaign lists by device are not kept, so {platformName} asks Google when you choose one. The campaigns are listed already; their {device} figures arrive in a few seconds."
     },
     "chart": {
       "title": "Visits and conversions over time",
@@ -15328,6 +15335,11 @@
           "title": "Visits by channel",
           "hint": "{period}: visits by channel.",
           "measure": "Visits"
+        },
+        "campaigns": {
+          "title": "Visits by campaign",
+          "hint": "{period}.",
+          "measure": "Visits"
         }
       },
       "conversionsTitle": "Conversions over time",
@@ -15337,7 +15349,13 @@
         "week": "Views a week",
         "month": "Views a month"
       },
-      "viewsOnlyHint": "{period}. Asked of Google when this screen opens, and kept until the next collection. A dot marks {step, select, day {a day} week {a week} other {a month}} with a conversion."
+      "viewsOnlyHint": "{period}. Asked of Google when this screen opens, and kept until the next collection. A dot marks {step, select, day {a day} week {a week} other {a month}} with a conversion.",
+      "campaignsTitle": {
+        "day": "Visits from tagged links a day",
+        "week": "Visits from tagged links a week",
+        "month": "Visits from tagged links a month"
+      },
+      "campaignsHint": "{period}."
     },
     "figures": {
       "nothingBefore": "Nothing to compare with yet",
@@ -15549,6 +15567,19 @@
         "noneBefore": "None in {before}",
         "noConversions": "No conversions yet"
       }
+    },
+    "campaigns": {
+      "title": "Campaigns",
+      "description": "Visits from links you tagged for a campaign — an email, an ad, a social post — and what they went on to do. Change is the visits against {before}.",
+      "findCampaign": "Find a campaign…",
+      "findKeyword": "Find a keyword…",
+      "showing": "Showing",
+      "views": {
+        "campaign": "Campaigns",
+        "adKeyword": "Ad keywords"
+      },
+      "empty": "No visits came from a tagged link in these dates.",
+      "emptyKeywords": "No tagged link carried words in these dates."
     },
     "landing": {
       "title": "Landing pages",
@@ -16012,6 +16043,16 @@
         "noneConverted": "None of them converted.",
         "nextStep": "See which pages {text} sends people to, and give each one a clear next step.",
         "checkAnswers": "Check what {text} says about your services, so the visitors it sends find what it promised."
+      },
+      "campaigns": {
+        "none": "No visits came from a tagged link in these dates: all {a} had no campaign tag.",
+        "fewTagged": "Only {a} of the {b} visits came from a link you tagged. The other {c} had no campaign tag, so most of your marketing can't be told apart here.",
+        "tagged": "{count, plural, =1 {One visit} other {# visits}} came from links you tagged: {bRate} of all visits.",
+        "best": "{text} converted most: {count, plural, =1 {once} other {# times}}.",
+        "noneConverted": "None of the visits from tagged links converted.",
+        "quiet": "{text} brought {a} visits and no conversion.",
+        "tagLinks": "Tag the links in your emails, ads and posts, so each campaign shows here.",
+        "seeLanding": "See where {text}'s visitors landed, and give that page a clear next step."
       },
       "landing": {
         "none": "No landing pages in these dates.",

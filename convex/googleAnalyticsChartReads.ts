@@ -4,9 +4,9 @@ import { requireMySite } from "./siteAccess";
 import { shiftDay } from "./searchConsoleDays";
 import { slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
-import { DAY_JOIN, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
+import { DAY_JOIN, UNTAGGED, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { analyticsPeriodValidator } from "./googleAnalyticsSchema";
-import { blank, connectionOf, conversionsOf, countedOf, displayChannel, readLive, readSlot } from "./googleAnalyticsReads";
+import { blank, connectionOf, conversionsOf, countedOf, displayChannel, readFor, readLive, readSlot } from "./googleAnalyticsReads";
 
 /**
  * What the Google Analytics charts read (docs/plans/active/google-analytics-plan.md
@@ -143,5 +143,34 @@ export const analyticsChannelChart = tenantQuery({
         return { day, visits: rest ? [...own, others] : own };
       }),
     };
+  },
+});
+
+/**
+ * Campaigns' chart (GA28; §18.2 board 17): the visits from tagged links a
+ * day, every campaign added up — from each campaign a day, kept ready-made
+ * for every period (§18.6.6); one device's asked of Google when the screen
+ * opens (`askGoogleAnalyticsLive`, `pages: "campaignSeries"`) — `live` until
+ * it has been. Every day of the period is drawn, a day with none as none.
+ */
+export const analyticsCampaignChart = tenantQuery({
+  args: { siteId: v.id("companyWebsites"), period: analyticsPeriodValidator, device: v.string(), country: v.optional(v.string()) },
+  returns: v.object({ live: v.boolean(), points: v.array(v.object({ day: v.string(), visits: v.number() })) }),
+  handler: async (ctx, args) => {
+    const site = await requireMySite(ctx, args.siteId);
+    const holdId = site.hold._id;
+    const country = await keptCountry(ctx, site.hold, args.country);
+    const series = await readFor(ctx, holdId, "campaignSeries", args.period, "NOW", args.device, undefined, country);
+    if (series === "LIVE") return { live: true, points: [] };
+    if (!series) return { live: false, points: [] };
+    const byDay = new Map<string, number>();
+    for (const row of series.rows) {
+      const at = row.key.indexOf(DAY_JOIN);
+      if (at < 0 || row.key.slice(at + DAY_JOIN.length) === UNTAGGED) continue;
+      byDay.set(row.key.slice(0, at), (byDay.get(row.key.slice(0, at)) ?? 0) + row.visits);
+    }
+    const points: Array<{ day: string; visits: number }> = [];
+    for (let day = series.from; day && day <= series.to; day = shiftDay(day, 1)) points.push({ day, visits: byDay.get(day) ?? 0 });
+    return { live: false, points };
   },
 });

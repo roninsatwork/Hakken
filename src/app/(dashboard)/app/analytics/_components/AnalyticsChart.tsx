@@ -284,9 +284,9 @@ export function ChannelsChart({ channels, rest, points, host, from, to, exportNa
  * Conversions' landing pages.
  */
 export function ListTopBars({ list, sort, bars }: {
-  list: "channel" | "landing" | "page";
+  list: "channel" | "landing" | "page" | "campaign";
   sort: "visits" | "views" | "conversions";
-  bars: "channels" | "channelsList" | "landing" | "allPages" | "conversions";
+  bars: "channels" | "channelsList" | "landing" | "allPages" | "conversions" | "campaigns";
 }) {
   const t = useTranslations("googleAnalytics.chart");
   const tf = useTranslations("googleAnalytics.filters");
@@ -323,6 +323,31 @@ export function ChannelsDailyChart() {
       from={null}
       to={null}
       exportName="google-analytics-channels-daily"
+    />
+  );
+}
+
+/**
+ * Campaigns' chart (GA28; §18.2 board 17): the visits from tagged links a
+ * day, read for itself — ready-made, or one device's asked of Google once.
+ */
+export function CampaignsDailyChart() {
+  const t = useTranslations("googleAnalytics.chart");
+  const tf = useTranslations("googleAnalytics.filters");
+  const args = useAnalyticsArgs();
+  const status = useAnalyticsStatus();
+  const chart = useQuery(api.googleAnalyticsChartReads.analyticsCampaignChart, status?.connection?.newestDay ? args : "skip");
+  useLiveAsk(chart?.live ? { siteId: args.siteId, period: args.period, device: args.device, country: args.country, pages: "campaignSeries" } : null);
+  return (
+    <ChannelsChart
+      channels={[t("visits")]}
+      rest={false}
+      points={(chart?.points ?? []).map((point) => ({ day: point.day, visits: [point.visits] }))}
+      host={status?.host ?? ""}
+      from={null}
+      to={null}
+      exportName="google-analytics-campaigns-daily"
+      title={{ ...t.raw("campaignsTitle") as { day: string; week: string; month: string }, hint: t("campaignsHint", { period: tf(`periods.${args.period}`) }) }}
     />
   );
 }

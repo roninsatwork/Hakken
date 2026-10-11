@@ -26,8 +26,8 @@ import { DetailHeader, PageHeader } from "@/src/ui/components/screens/PageHeader
 
 export type ListPageAnswer = FunctionReturnType<typeof api.googleAnalyticsReads.analyticsListPage>;
 export type ShownRow = ListPageAnswer["rows"][number];
-export type ListKind = "channel" | "source" | "landing" | "groups" | "page";
-type Column = "name" | "visits" | "engaged" | "bounce" | "pages" | "people" | "time" | "views" | "conversions" | "value" | "change";
+export type ListKind = "channel" | "source" | "landing" | "groups" | "page" | "campaign" | "adKeyword";
+type Column = "name" | "source" | "visits" | "engaged" | "bounce" | "pages" | "people" | "time" | "views" | "conversions" | "value" | "change";
 
 /**
  * Each list's columns, as drawn (§11, §15; the second round, §18.2 boards 18
@@ -42,6 +42,9 @@ const COLUMNS: Record<ListKind, readonly Column[]> = {
   landing: ["name", "visits", "bounce", "pages", "time", "conversions", "change"],
   groups: ["name", "visits", "bounce", "pages", "time", "conversions", "change"],
   page: ["name", "views", "people", "time", "conversions", "change"],
+  // Campaigns (§18.2 board 17): each campaign with where its link was, and the words tagged links carry.
+  campaign: ["name", "source", "visits", "engaged", "conversions", "value", "change"],
+  adKeyword: ["name", "visits", "engaged", "conversions", "value", "change"],
 };
 
 /** Each list's download: its columns, with the value — and on the page lists engagement too — as columns of their own. */
@@ -103,7 +106,7 @@ function AnalyticsTable({ list, channel, group, noun, searchPlaceholder, rowHref
   searchPlaceholder: string;
   rowHref?: (row: ShownRow) => string | null;
   filters?: ReactNode;
-  opening?: Column;
+  opening?: keyof typeof FIRSTS;
   emptyLabel: string;
 }) {
   const t = useTranslations("googleAnalytics.table");
@@ -129,11 +132,18 @@ function AnalyticsTable({ list, channel, group, noun, searchPlaceholder, rowHref
   const live = paged.result?.live === true;
   // A page list for one device is asked of Google once; its every device list is shown meanwhile.
   const everyDevice = useSiteListPage(api.googleAnalyticsReads.analyticsListPage, live ? { ...base, device: "" } : "skip");
-  const asking = useLiveAsk(live && (list === "landing" || list === "page" || list === "groups") ? { siteId: args.siteId, period: args.period, device: args.device, country: args.country, pages: list === "page" ? "page" : "landing" } : null);
+  const asking = useLiveAsk(live && list !== "channel" && list !== "source"
+    ? { siteId: args.siteId, period: args.period, device: args.device, country: args.country, pages: list === "groups" ? "landing" : list }
+    : null);
+  const campaigns = list === "campaign" || list === "adKeyword";
   const shown = live ? everyDevice : paged;
   const currency = status?.connection?.currency ?? null;
   const columns = COLUMNS[list].map((column) => columnOf(column, list, currency, rowHref, t));
-  const bar = [tf(`periods.${period}`), tf(`devices.${device}`).toLowerCase(), live ? t("asking") : t("greyed")].join(" · ");
+  // Campaigns say the visits from no tagged link beside the list (§18.2 board 17).
+  const untagged = shown.result?.untagged ?? null;
+  const bar = [
+    tf(`periods.${period}`), tf(`devices.${device}`).toLowerCase(), live ? t("asking") : untagged !== null ? t("untagged", { count: untagged }) : t("greyed"),
+  ].join(" · ");
 
   return (
     <div className="flex flex-col gap-4">
@@ -141,7 +151,7 @@ function AnalyticsTable({ list, channel, group, noun, searchPlaceholder, rowHref
       {live ? (
         <Notice>
           <span className="block font-medium text-foreground">{asking === "FAILED" ? t("askFailedTitle") : t("askingTitle", { device: tf(`devices.${device}`).toLowerCase() })}</span>
-          <span className="block">{asking === "FAILED" ? t("askFailedBody") : t("askingBody", { device: tf(`devices.${device}`).toLowerCase(), platformName })}</span>
+          <span className="block">{asking === "FAILED" ? t("askFailedBody") : t(campaigns ? "askingBodyCampaigns" : "askingBody", { device: tf(`devices.${device}`).toLowerCase(), platformName })}</span>
         </Notice>
       ) : null}
       <DataTable
@@ -182,7 +192,7 @@ function columnOf(
     case "name":
       return {
         key: "name",
-        header: t(`columns.${list === "channel" ? "channel" : list === "source" ? "source" : list === "groups" ? "group" : "page"}`),
+        header: t(`columns.${list === "channel" ? "channel" : list === "source" ? "source" : list === "groups" ? "group" : list === "campaign" ? "campaign" : list === "adKeyword" ? "adKeyword" : "page"}`),
         sortable: true,
         // A page's title and address cut to a line each in their share of the table, as Sites' words are (CUT_COLUMN).
         ...(list === "landing" || list === "page" ? { className: CUT_COLUMN.first } : {}),
@@ -197,6 +207,8 @@ function columnOf(
             )
             : <span className="text-[13px] text-foreground">{row.label === "" ? t("noSource") : row.label}</span>,
       };
+    case "source":
+      return { key: "source", header: t("columns.source"), cell: (row) => <span className="text-[12px] text-secondary">{row.source ?? ""}</span> };
     case "visits":
       return { key: "visits", header: t("columns.visits"), align: "right", sortable: true, cell: (row) => <FigureCell value={row.visits} /> };
     case "views":
@@ -233,7 +245,7 @@ function columnOf(
  * first needs it, never again for the same ask. "FAILED" when Google could not
  * answer; the screen keeps what it has.
  */
-export function useLiveAsk(ask: { siteId: string; period: string; device: string; country?: string; pages?: "landing" | "page" | "event" | "eventSeries"; page?: { ref: string; path: string }; viewed?: { ref: string; path: string }; event?: string; chart?: "channel" } | null): "ASKING" | "FAILED" | "IDLE" {
+export function useLiveAsk(ask: { siteId: string; period: string; device: string; country?: string; pages?: "landing" | "page" | "event" | "eventSeries" | "campaign" | "adKeyword" | "campaignSeries"; page?: { ref: string; path: string }; viewed?: { ref: string; path: string }; event?: string; chart?: "channel" } | null): "ASKING" | "FAILED" | "IDLE" {
   const t = useTranslations("googleAnalytics.table");
   const askLive = useAction(api.googleAnalyticsLive.askGoogleAnalyticsLive);
   const { run } = useAdminAction({ scope: "google-analytics-live" });
@@ -287,6 +299,7 @@ function csvValue(row: ShownRow, column: Column): string | number | null {
   switch (column) {
     case "name": return row.label;
     case "visits": return row.visits;
+    case "source": return row.source ?? "";
     case "views": return row.views;
     case "engaged": return row.engagementRate === null ? null : Math.round(row.engagementRate * 1000) / 10;
     case "bounce": return row.bounceRate === null ? null : Math.round(row.bounceRate * 1000) / 10;

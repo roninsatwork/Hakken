@@ -894,6 +894,16 @@
         "nextStep": "See which pages {text} sends people to, and give each one a clear next step.",
         "checkAnswers": "Check what {text} says about your services, so the visitors it sends find what it promised."
       },
+      "campaigns": {
+        "none": "No visits came from a tagged link in these dates: all {a} had no campaign tag.",
+        "fewTagged": "Only {a} of the {b} visits came from a link you tagged. The other {c} had no campaign tag, so most of your marketing can't be told apart here.",
+        "tagged": "{count, plural, =1 {One visit} other {# visits}} came from links you tagged: {bRate} of all visits.",
+        "best": "{text} converted most: {count, plural, =1 {once} other {# times}}.",
+        "noneConverted": "None of the visits from tagged links converted.",
+        "quiet": "{text} brought {a} visits and no conversion.",
+        "tagLinks": "Tag the links in your emails, ads and posts, so each campaign shows here.",
+        "seeLanding": "See where {text}'s visitors landed, and give that page a clear next step."
+      },
       "landing": {
         "none": "No landing pages in these dates.",
         "leakTop": "{text} brings the most visits, {a}, but no conversions.",
@@ -2149,6 +2159,16 @@
         "noneConverted": "Nessuno di loro ha convertito.",
         "nextStep": "Guarda verso quali pagine {text} manda le persone, e dai a ciascuna un passo successivo chiaro.",
         "checkAnswers": "Controlla cosa dice {text} dei tuoi servizi, così i visitatori che manda trovano ciò che ha promesso."
+      },
+      "campaigns": {
+        "none": "Nessuna visita è arrivata da un link contrassegnato in queste date: tutte le {a} erano senza contrassegno di campagna.",
+        "fewTagged": "Solo {a} delle {b} visite sono arrivate da un link che hai contrassegnato. Le altre {c} non avevano un contrassegno di campagna, quindi qui la maggior parte del tuo marketing non si distingue.",
+        "tagged": "{count, plural, =1 {Una visita è arrivata} other {# visite sono arrivate}} da link che hai contrassegnato: il {bRate} di tutte le visite.",
+        "best": "{text} ha portato più conversioni: {count, plural, =1 {una} other {#}}.",
+        "noneConverted": "Nessuna delle visite da link contrassegnati ha portato una conversione.",
+        "quiet": "{text} ha portato {a} visite e nessuna conversione.",
+        "tagLinks": "Contrassegna i link nelle tue email, negli annunci e nei post, così ogni campagna compare qui.",
+        "seeLanding": "Guarda dove sono arrivati i visitatori di {text} e dai a quella pagina un passo successivo chiaro."
       },
       "landing": {
         "none": "Nessuna pagina di destinazione in queste date.",

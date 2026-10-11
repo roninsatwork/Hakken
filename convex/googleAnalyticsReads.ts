@@ -1,6 +1,6 @@
 import { v, type Infer } from "convex/values";
 import type { QueryCtx } from "./_generated/server";
-import type { Doc, Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
 import { tenantQuery } from "./tenantFunctions";
 import { companyHolds, requireMySite } from "./siteAccess";
 import { websiteIconUrl } from "./websiteIcons";
@@ -12,14 +12,29 @@ import { listOrder, listPageArgs, pageOfList, sortDirectionArg, type ListSorts }
 import { wordStartMatcher } from "./utils/wordStarts";
 import { assistantOf, channelOf } from "./utils/aiAssistants";
 import { PURCHASE_EVENT } from "./utils/analyticsEvents";
-import { KEPT_BY_DEVICE, emptyRow, splitChannelKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
+import { UNTAGGED, splitChannelKey, type ListRow } from "./googleAnalyticsLists";
+import { campaignsSees } from "./utils/sees/analyticsCampaigns";
 import { slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { titlesOf, withTitles } from "./pageTitles";
-import { LIVE_PARTS } from "./googleAnalyticsLive";
-import { analyticsPeriodValidator, type AnalyticsList, type AnalyticsPeriod, type AnalyticsWhich } from "./googleAnalyticsSchema";
+import { analyticsPeriodValidator, type AnalyticsList, type AnalyticsPeriod } from "./googleAnalyticsSchema";
 import { searchConsoleMonth, searchConsoleMonthValidator } from "./googleAnalyticsConnect";
 import { seeing, seen, seenValidator, type Seen, type SeenPhrase } from "./utils/hakkenSees";
+import {
+  addInto,
+  blank,
+  connectionOf,
+  conversionsOf,
+  countedOf,
+  grouped,
+  readFor,
+  readSlot,
+  shown,
+  shownRowValidator,
+  type Counted,
+  type Held,
+  type ShownRow,
+} from "./googleAnalyticsRows";
 import {
   allPagesSees,
   channelSees,
@@ -47,241 +62,31 @@ import {
  * the screen to grey (GA22).
  */
 
-/** Visits under which a conversion rate is too few to trust (GA22, §10 Q13). */
-export const FEW_VISITS = 100;
-
 /** Rows in "What changed most" (GA22, §10 Q13) and each top list on Overview. */
 export const TOP_ROWS = 5;
 
 type Reader = { db: QueryCtx["db"] };
 
-// ---------------------------------------------------------------------------
-// Conversions and value, worked out when read
-// ---------------------------------------------------------------------------
-
-type Counted = { eventName: string; fromAnalytics: boolean; hakken: number | null };
-
-/** The events the company counts, and where each one's value comes from. */
-export function countedOf(connection: Doc<"googleAnalyticsConnections">): Counted[] {
-  return (connection.events ?? []).filter((event) => event.counted).map((event) => ({
-    eventName: event.eventName,
-    fromAnalytics: event.analyticsValue !== null,
-    hakken: event.hakkenValue,
-  }));
-}
-
-/** A row's conversions and their value in hundredths; a purchase is worth its revenue. */
-export function conversionsOf(row: ListRow, counted: readonly Counted[]): { conversions: number; value: number; unvalued: number } {
-  let conversions = 0;
-  let value = 0;
-  let unvalued = 0;
-  for (const event of counted) {
-    const count = row.counts.get(event.eventName) ?? 0;
-    conversions += count;
-    if (event.eventName === PURCHASE_EVENT) value += row.revenue;
-    else if (event.fromAnalytics) value += row.values.get(event.eventName) ?? 0;
-    else if (event.hakken !== null) value += Math.round(count * event.hakken * 100);
-    else unvalued += count;
-  }
-  return { conversions, value, unvalued };
-}
-
-/**
- * Rows added into one: a channel from its sources, a page group from its
- * pages. People add up only roughly across rows — one person may come by two
- * sources — so a screen shows people only where Google counted the row whole
- * (§18.6.2).
- */
-function addInto(target: ListRow, row: ListRow) {
-  target.visits += row.visits;
-  target.engaged += row.engaged;
-  target.seconds += row.seconds;
-  target.views += row.views;
-  target.purchases += row.purchases;
-  target.revenue += row.revenue;
-  target.people += row.people;
-  target.newPeople += row.newPeople;
-  target.length += row.length;
-  for (const [event, count] of row.counts) target.counts.set(event, (target.counts.get(event) ?? 0) + count);
-  for (const [event, value] of row.values) target.values.set(event, (target.values.get(event) ?? 0) + value);
-}
-
-export function blank(key: string): ListRow {
-  return emptyRow(key);
-}
-
-export function grouped(rows: readonly ListRow[], keyOf: (row: ListRow) => string | null): ListRow[] {
-  const groups = new Map<string, ListRow>();
-  for (const row of rows) {
-    const key = keyOf(row);
-    if (key === null) continue;
-    const group = groups.get(key) ?? blank(key);
-    addInto(group, row);
-    groups.set(key, group);
-  }
-  return [...groups.values()];
-}
-
-// ---------------------------------------------------------------------------
-// Reading a ready-made list
-// ---------------------------------------------------------------------------
-
-export async function connectionOf(ctx: Reader, holdId: Id<"companyWebsites">) {
-  return await ctx.db
-    .query("googleAnalyticsConnections")
-    .withIndex("by_hold", (q) => q.eq("companyWebsiteId", holdId))
-    .first();
-}
-
-export type Held = { rows: ListRow[]; from: string; to: string; folded: boolean; thresholded: boolean; cut: boolean };
-
-/** A ready-made list, every part of the build screens read, at one moment. */
-export async function readSlot(ctx: Reader, holdId: Id<"companyWebsites">, key: string): Promise<Held | null> {
-  const slot = await ctx.db
-    .query("googleAnalyticsPeriodSlots")
-    .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", holdId).eq("key", key))
-    .first();
-  if (!slot) return null;
-  const parts = await ctx.db
-    .query("googleAnalyticsPeriods")
-    .withIndex("by_hold_key_slot_part", (q) => q.eq("companyWebsiteId", holdId).eq("key", key).eq("slot", slot.slot))
-    .take(slot.parts);
-  return {
-    rows: parts.flatMap((part) => unpackPart(part as PackedPart)),
-    from: slot.from,
-    to: slot.to,
-    folded: slot.folded === true,
-    thresholded: slot.thresholded === true,
-    cut: slot.cut === true,
-  };
-}
-
-/** A list a screen asked of Google live and is held until the next collection (GA20, GA23). */
-export async function readLive(ctx: Reader, holdId: Id<"companyWebsites">, ask: string): Promise<Held | null> {
-  const parts = await ctx.db
-    .query("googleAnalyticsLive")
-    .withIndex("by_hold_ask_part", (q) => q.eq("companyWebsiteId", holdId).eq("ask", ask))
-    .take(LIVE_PARTS);
-  if (parts.length === 0 || parts.length < parts[0].parts) return null;
-  const [from, to] = ask.split("|").slice(2, 4);
-  return {
-    rows: parts.flatMap((part) => unpackPart(part as PackedPart)),
-    from: from ?? "",
-    to: to ?? "",
-    folded: parts.some((part) => part.folded === true),
-    thresholded: parts.some((part) => part.thresholded === true),
-    cut: parts.some((part) => part.cut === true),
-  };
-}
-
-/** The lists kept only for every device, asked of Google for one device when a screen opens: the pages and the events. */
-export type LiveList = "landing" | "page" | "event" | "eventSeries";
-
-function isLiveList(list: AnalyticsList): list is LiveList {
-  return !KEPT_BY_DEVICE[list];
-}
-
-/** The name a live ask of a page list for one device is held under: another home country's ends with its code (§18.6.1). */
-export function liveAsk(list: LiveList, period: AnalyticsPeriod, from: string, to: string, device: string, country = ""): string {
-  return `${list}|${period}|${from}|${to}|${device}${country ? `|${country}` : ""}`;
-}
-
-/**
- * A list for the dates and device chosen: ready-made, or — a page or event
- * list for one device (GA20, §18.6.5) — asked live, `live` until it has been.
- */
-export async function readFor(
-  ctx: Reader,
-  holdId: Id<"companyWebsites">,
-  list: AnalyticsList,
-  period: AnalyticsPeriod,
-  which: AnalyticsWhich,
-  device: string,
-  /** Given, keeps the every device list read on the way, for What Hakken sees to weigh a device against. */
-  keep?: { every: Held | null },
-  /** The home country, as its lists are named: empty for the main one (§18.6.1). */
-  country = "",
-): Promise<Held | "LIVE" | null> {
-  // The lists kept only for every device: one device is asked of Google when the screen opens.
-  if (isLiveList(list) && device !== "") {
-    const every = await readSlot(ctx, holdId, slotKey(list, period, which, "", country));
-    if (keep) keep.every = every;
-    if (!every) return null;
-    return (await readLive(ctx, holdId, liveAsk(list, period, every.from, every.to, device, country))) ?? "LIVE";
-  }
-  return await readSlot(ctx, holdId, slotKey(list, period, which, device, country));
-}
-
-// ---------------------------------------------------------------------------
-// A row as the screens show it
-// ---------------------------------------------------------------------------
-
-export const shownRowValidator = v.object({
-  key: v.string(),
-  /** The channel, source or page group's name, or the page's address. */
-  label: v.string(),
-  visits: v.number(),
-  /** Engaged visits over visits, 0–1; null without visits. */
-  engagementRate: v.union(v.number(), v.null()),
-  /** Seconds engaged a visit; null without visits. */
-  timePerVisit: v.union(v.number(), v.null()),
-  views: v.number(),
-  /** People and new people, as Google counted the row (§18.6.2). */
-  people: v.number(),
-  newPeople: v.number(),
-  /** Visits that didn't engage over visits, 0–1: the engagement rate turned round; null without visits. */
-  bounceRate: v.union(v.number(), v.null()),
-  /** Views over visits; null without visits. */
-  pagesPerVisit: v.union(v.number(), v.null()),
-  /** Seconds a visit lasted, start to end; null without visits. */
-  lengthPerVisit: v.union(v.number(), v.null()),
-  conversions: v.number(),
-  /** Conversions over visits, 0–1; null without visits. */
-  conversionRate: v.union(v.number(), v.null()),
-  /** Under 100 visits: the rate is greyed (GA22). */
-  fewVisits: v.boolean(),
-  /** In hundredths of the property's currency. */
-  value: v.number(),
-  purchases: v.number(),
-  revenue: v.number(),
-  /** Visits against the span before, as a fraction; null when there is none to compare. */
-  change: v.union(v.number(), v.null()),
-  /** Conversions and value against the span before, for "What changed most". */
-  conversionsBefore: v.union(v.number(), v.null()),
-  valueBefore: v.union(v.number(), v.null()),
-  /** A page group's pages: how many it holds. */
-  members: v.optional(v.number()),
-  /** A page's title, from the website's page list (GA27): only on the rows a screen shows. */
-  title: v.optional(v.string()),
-});
-export type ShownRow = Infer<typeof shownRowValidator>;
-
-export function shown(row: ListRow, before: ListRow | null | undefined, counted: readonly Counted[], hadBefore: boolean): ShownRow {
-  const { conversions, value } = conversionsOf(row, counted);
-  const was = before ? conversionsOf(before, counted) : null;
-  return {
-    key: row.key,
-    label: row.key,
-    visits: row.visits,
-    engagementRate: row.visits > 0 ? row.engaged / row.visits : null,
-    timePerVisit: row.visits > 0 ? row.seconds / row.visits : null,
-    views: row.views,
-    people: row.people,
-    newPeople: row.newPeople,
-    bounceRate: row.visits > 0 ? 1 - row.engaged / row.visits : null,
-    pagesPerVisit: row.visits > 0 ? row.views / row.visits : null,
-    lengthPerVisit: row.visits > 0 ? row.length / row.visits : null,
-    conversions,
-    conversionRate: row.visits > 0 ? conversions / row.visits : null,
-    fewVisits: row.visits < FEW_VISITS,
-    value,
-    purchases: row.purchases,
-    revenue: row.revenue,
-    change: hadBefore ? (before && before.visits > 0 ? (row.visits - before.visits) / before.visits : null) : null,
-    conversionsBefore: hadBefore ? (was?.conversions ?? 0) : null,
-    valueBefore: hadBefore ? (was?.value ?? 0) : null,
-  };
-}
+// A list's rows as kept and as shown are `googleAnalyticsRows.ts`'s, kept apart for this module's size; named here
+// too, as every screen's reads import them from here.
+export {
+  FEW_VISITS,
+  blank,
+  connectionOf,
+  conversionsOf,
+  countedOf,
+  grouped,
+  liveAsk,
+  readFor,
+  readLive,
+  readSlot,
+  shown,
+  shownRowValidator,
+  type Counted,
+  type Held,
+  type LiveList,
+  type ShownRow,
+} from "./googleAnalyticsRows";
 
 const SORTS: ListSorts<ShownRow, "name" | "visits" | "engaged" | "bounce" | "pages" | "people" | "length" | "time" | "views" | "conversions" | "rate" | "value" | "change"> = {
   name: { value: (row) => row.label, first: "asc" },
@@ -301,7 +106,7 @@ const SORTS: ListSorts<ShownRow, "name" | "visits" | "engaged" | "bounce" | "pag
 };
 /** The order a list opens in (GA26): All pages by views, Landing pages and page groups by visits, the channels by value. */
 export function openingSort(list: ListKind): keyof typeof SORTS {
-  return list === "page" ? "views" : list === "landing" || list === "groups" ? "visits" : "value";
+  return list === "page" ? "views" : list === "landing" || list === "groups" || list === "campaign" || list === "adKeyword" ? "visits" : "value";
 }
 
 export const sortValidator = v.union(...(Object.keys(SORTS) as (keyof typeof SORTS)[]).map((key) => v.literal(key)));
@@ -319,6 +124,9 @@ export const listKindValidator = v.union(
   /** The landing pages added up into the website's page groups (GA15). */
   v.literal("groups"),
   v.literal("page"),
+  /** Visits from tagged links, by campaign and where the link was; and by the words a link carries (§18.6.6). */
+  v.literal("campaign"),
+  v.literal("adKeyword"),
 );
 export type ListKind = Infer<typeof listKindValidator>;
 
@@ -377,13 +185,15 @@ export type ListAnswer = {
   site: { visits: number; engaged: number } | null;
   /** Whether anything counts as a conversion. */
   counting: boolean;
+  /** Campaigns: the visits from no tagged link, left out of the list (§18.6.6); null on any other list. */
+  untagged: number | null;
 };
 
 type Figures = ReturnType<typeof figuresOf>;
 
 const EMPTY: Omit<ListAnswer, "live" | "preparing"> = {
   rows: [], from: null, to: null, folded: false, thresholded: false, cut: false, groups: null,
-  every: [], everyDevice: null, totals: null, site: null, counting: false,
+  every: [], everyDevice: null, totals: null, site: null, counting: false, untagged: null,
 };
 
 /** The display channel of a kept channel row. */
@@ -409,7 +219,9 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
   if (!connection?.newestDay) return { ...EMPTY, live: false, preparing: connection?.status === "CONNECTED" };
   const counted = countedOf(connection).filter((event) => !args.eventName || event.eventName === args.eventName);
   const counting = countedOf(connection).length > 0;
-  const base: AnalyticsList = args.list === "channel" || args.list === "source" ? "channel" : args.list === "page" ? "page" : "landing";
+  const tagged = args.list === "campaign" || args.list === "adKeyword";
+  const base: AnalyticsList = tagged ? args.list as "campaign" | "adKeyword"
+    : args.list === "channel" || args.list === "source" ? "channel" : args.list === "page" ? "page" : "landing";
   const kept: { every: Held | null } = { every: null };
   const now = await readFor(ctx, holdId, base, args.period, "NOW", args.device, kept, args.country);
   if (now === "LIVE") return { ...EMPTY, live: true, preparing: false, counting };
@@ -420,6 +232,12 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
 
   let rows: ListRow[] = now.rows;
   let earlier: ListRow[] | null = beforeRows;
+  // The visits from no tagged link are said beside the campaigns, never listed among them.
+  const untagged = tagged ? rows.find((row) => row.key === UNTAGGED)?.visits ?? 0 : null;
+  if (tagged) {
+    rows = rows.filter((row) => row.key !== UNTAGGED);
+    earlier = earlier ? earlier.filter((row) => row.key !== UNTAGGED) : null;
+  }
   if (args.list === "channel") {
     rows = grouped(rows, (row) => displayChannel(row.key));
     earlier = earlier ? grouped(earlier, (row) => displayChannel(row.key)) : null;
@@ -462,6 +280,11 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
       row.label = row.key === NOT_SORTED_KIND ? NOT_SORTED_KIND : kinds?.nameOf(row.key) ?? row.key;
       row.members = members.get(row.key) ?? 0;
     } else if (pageList) row.label = addresses.get(row.key) ?? row.key;
+    else if (args.list === "campaign") {
+      const { channel: campaign, source } = splitChannelKey(row.key);
+      row.label = campaign;
+      row.source = source;
+    }
   }
   const every = out;
   // One device's landing pages are weighed against every device's, read on the way (GA20).
@@ -487,6 +310,7 @@ export async function readAnalyticsList(ctx: Reader, holdId: Id<"companyWebsites
     totals: { now: figuresOf(rows, counted), before: earlier ? figuresOf(earlier, counted) : null },
     site: { visits: site.visits, engaged: site.engaged },
     counting,
+    untagged,
   };
 }
 
@@ -550,6 +374,7 @@ export async function listSeen(
   const box = args.list === "channel" ? channelsSees(list.every)
     : args.list === "source" ? channelSees(args.channel ?? "", list.every, channelFigures(list), site.siteId)
       : args.list === "page" ? allPagesSees(list.every, list.counting)
+        : args.list === "campaign" || args.list === "adKeyword" ? campaignsSees(list.every, list.untagged ?? 0)
         : landingSees(list.every, { groups: args.list === "groups", device: args.device, everyDevice: list.everyDevice });
   return await namedSeen(ctx, site.holdId, box);
 }
@@ -596,6 +421,8 @@ export const analyticsListPage = tenantQuery({
     seen: seenValidator,
     /** A channel's own screen: its figures, against the span before and the whole website's engagement. */
     figures: v.union(v.null(), channelFiguresValidator),
+    /** Campaigns: the visits from no tagged link (§18.6.6). */
+    untagged: v.union(v.number(), v.null()),
   }),
   handler: async (ctx, args) => {
     const site = await requireMySite(ctx, args.siteId);
@@ -618,6 +445,7 @@ export const analyticsListPage = tenantQuery({
       groups: list.groups,
       seen: await listSeen(ctx, { holdId: site.hold._id, siteId: args.siteId }, args, list),
       figures: args.list === "source" && !list.live && !list.preparing ? channelFigures(list) : null,
+      untagged: list.untagged,
     };
   },
 });

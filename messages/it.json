@@ -9848,6 +9848,7 @@
       "files": "{count, plural, =1 {# file} other {# file}}",
       "videos": "{count, plural, =1 {# video} other {# video}}",
       "depths": "{count, plural, =1 {# profondità} other {# profondità}}",
+      "campaigns": "{count, plural, =1 {# campagna} other {# campagne}}",
       "stories": "{count, plural, =1 {# storia} other {# storie}}",
       "storiesSoFar": "{count, plural, other {#+ storie}}",
       "articlesAndStories": "{count, plural, =1 {# articolo o storia} other {# articoli e storie}}",
@@ -14944,6 +14945,7 @@
       "overview": "Panoramica",
       "heroes": "Eroi e attenzione",
       "channels": "Canali",
+      "campaigns": "Campagne",
       "landingPages": "Pagine di destinazione",
       "allPages": "Tutte le pagine",
       "events": "Eventi",
@@ -15253,7 +15255,9 @@
         "changeTitle": "Visite rispetto al periodo precedente",
         "purchases": "Acquisti",
         "revenue": "Ricavi",
-        "averageOrder": "Ordine medio"
+        "averageOrder": "Ordine medio",
+        "campaign": "Campagna",
+        "adKeyword": "Parola chiave"
       },
       "notSorted": "Non classificate",
       "pagesCount": "{count, plural, =1 {1 pagina} other {# pagine}}",
@@ -15271,9 +15275,12 @@
         "time": "Secondi di coinvolgimento per visita",
         "conversions": "Conversioni",
         "value": "Valore ({currency})",
-        "change": "Variazione delle visite (%)"
+        "change": "Variazione delle visite (%)",
+        "source": "Sorgente / mezzo"
       },
-      "downloadFailed": "Impossibile preparare il download. Riprova."
+      "downloadFailed": "Impossibile preparare il download. Riprova.",
+      "untagged": "{count, plural, =1 {una visita non aveva} other {# visite non avevano}} un contrassegno di campagna",
+      "askingBodyCampaigns": "Gli elenchi delle campagne per dispositivo non sono conservati, quindi {platformName} li chiede a Google quando ne scegli uno. Le campagne sono già elencate; i dati per {device} arrivano in pochi secondi."
     },
     "chart": {
       "title": "Visite e conversioni nel tempo",
@@ -15328,6 +15335,11 @@
           "title": "Visite per canale",
           "hint": "{period}: visite per canale.",
           "measure": "Visite"
+        },
+        "campaigns": {
+          "title": "Visite per campagna",
+          "hint": "{period}.",
+          "measure": "Visite"
         }
       },
       "conversionsTitle": "Conversioni nel tempo",
@@ -15337,7 +15349,13 @@
         "week": "Visualizzazioni a settimana",
         "month": "Visualizzazioni al mese"
       },
-      "viewsOnlyHint": "{period}. Chiesto a Google quando si apre questa schermata, e tenuto fino alla prossima raccolta. Un punto segna {step, select, day {un giorno} week {una settimana} other {un mese}} con una conversione."
+      "viewsOnlyHint": "{period}. Chiesto a Google quando si apre questa schermata, e tenuto fino alla prossima raccolta. Un punto segna {step, select, day {un giorno} week {una settimana} other {un mese}} con una conversione.",
+      "campaignsTitle": {
+        "day": "Visite da link contrassegnati al giorno",
+        "week": "Visite da link contrassegnati a settimana",
+        "month": "Visite da link contrassegnati al mese"
+      },
+      "campaignsHint": "{period}."
     },
     "figures": {
       "nothingBefore": "Ancora niente con cui confrontare",
@@ -15549,6 +15567,19 @@
         "noneBefore": "Nessuna neanche {before}",
         "noConversions": "Ancora nessuna conversione"
       }
+    },
+    "campaigns": {
+      "title": "Campagne",
+      "description": "Le visite dai link che hai contrassegnato per una campagna — un'email, un annuncio, un post — e cosa hanno fatto dopo. La variazione è sulle visite rispetto a {before}.",
+      "findCampaign": "Trova una campagna…",
+      "findKeyword": "Trova una parola chiave…",
+      "showing": "Mostra",
+      "views": {
+        "campaign": "Campagne",
+        "adKeyword": "Parole chiave degli annunci"
+      },
+      "empty": "Nessuna visita da un link contrassegnato in queste date.",
+      "emptyKeywords": "Nessun link contrassegnato aveva parole in queste date."
     },
     "landing": {
       "title": "Pagine di destinazione",
@@ -16012,6 +16043,16 @@
         "noneConverted": "Nessuno di loro ha convertito.",
         "nextStep": "Guarda verso quali pagine {text} manda le persone, e dai a ciascuna un passo successivo chiaro.",
         "checkAnswers": "Controlla cosa dice {text} dei tuoi servizi, così i visitatori che manda trovano ciò che ha promesso."
+      },
+      "campaigns": {
+        "none": "Nessuna visita è arrivata da un link contrassegnato in queste date: tutte le {a} erano senza contrassegno di campagna.",
+        "fewTagged": "Solo {a} delle {b} visite sono arrivate da un link che hai contrassegnato. Le altre {c} non avevano un contrassegno di campagna, quindi qui la maggior parte del tuo marketing non si distingue.",
+        "tagged": "{count, plural, =1 {Una visita è arrivata} other {# visite sono arrivate}} da link che hai contrassegnato: il {bRate} di tutte le visite.",
+        "best": "{text} ha portato più conversioni: {count, plural, =1 {una} other {#}}.",
+        "noneConverted": "Nessuna delle visite da link contrassegnati ha portato una conversione.",
+        "quiet": "{text} ha portato {a} visite e nessuna conversione.",
+        "tagLinks": "Contrassegna i link nelle tue email, negli annunci e nei post, così ogni campagna compare qui.",
+        "seeLanding": "Guarda dove sono arrivati i visitatori di {text} e dai a quella pagina un passo successivo chiaro."
       },
       "landing": {
         "none": "Nessuna pagina di destinazione in queste date.",

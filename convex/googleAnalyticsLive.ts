@@ -134,8 +134,11 @@ export const askGoogleAnalyticsLive = tenantAction({
     device: v.string(),
     /** A home country other than the main one (`fra`); left out for the main one (§18.6.1). */
     country: v.optional(v.string()),
-    /** A list kept only for every device, for the one device chosen: the pages, and the events (§18.6.5). */
-    pages: v.optional(v.union(v.literal("landing"), v.literal("page"), v.literal("event"), v.literal("eventSeries"))),
+    /** A list kept only for every device, for the one device chosen: the pages, the events and the campaigns (§18.6.5, §18.6.6). */
+    pages: v.optional(v.union(
+      v.literal("landing"), v.literal("page"), v.literal("event"), v.literal("eventSeries"),
+      v.literal("campaign"), v.literal("adKeyword"), v.literal("campaignSeries"),
+    )),
     /** Channels' chart, each channel a day, for dates or a country that keep no channel days (GA35). */
     chart: v.optional(v.literal("channel")),
     page: v.optional(v.object({ ref: v.string(), path: v.string() })),

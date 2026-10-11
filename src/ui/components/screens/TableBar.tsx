@@ -39,6 +39,8 @@ export type TableNoun =
   | "pagesAndWebsites"
   // Events and an event's own screen (§18.2 boards 22, 23): the events, and the files, videos and depths they were about.
   | "events" | "files" | "videos" | "depths"
+  // Campaigns (§18.2 board 17).
+  | "campaigns"
   // Admin → Content → News (content-people-knowledge-plan.md, board 4): it pages by cursor, so "so far" until the last page is in.
   | "stories" | "storiesSoFar"
   // Admin → Content → Analytics (content-people-knowledge-plan.md, boards 8, 9, 11, 12).

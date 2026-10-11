@@ -124,9 +124,13 @@ export type PeriodJob = { list: AnalyticsList; period: AnalyticsPeriod; which: A
 
 /**
  * All pages before landing pages: a landing page finds its address, slash and
- * all, already numbered (`numberPages`). Every event beside them (§18.6.5).
+ * all, already numbered (`numberPages`). Every event beside them (§18.6.5),
+ * and the campaigns and the words their links carry (§18.6.6).
  */
-const PAGE_LISTS: readonly AnalyticsList[] = ["total", "channel", "page", "landing", "event"];
+const PAGE_LISTS: readonly AnalyticsList[] = ["total", "channel", "page", "landing", "event", "campaign", "adKeyword"];
+
+/** The lists kept as each period a day for its chart, every device: each event, and each campaign. */
+const DAY_LISTS: readonly AnalyticsList[] = ["eventSeries", "campaignSeries"];
 
 /**
  * The ready-made lists a run asks for: the 7 and 30 days every run, and the
@@ -143,14 +147,14 @@ export function dueJobs(connection: Pick<Doc<"googleAnalyticsConnections">, "wee
       for (const which of ["NOW", "BEFORE"] as const) for (const list of PAGE_LISTS) jobs.push({ list, period, which, ...of });
       // Another home country keeps no days: its short charts are ready-made too (§18.6.1).
       if (country) jobs.push({ list: "series", period, which: "NOW", ...of });
-      // Each event a day keeps no days of its own: ready-made for every period's chart (§18.6.5).
-      jobs.push({ list: "eventSeries", period, which: "NOW", ...of });
+      // Each event and each campaign a day keep no days of their own: ready-made for every period's chart (§18.6.5, §18.6.6).
+      for (const list of DAY_LISTS) jobs.push({ list, period, which: "NOW", ...of });
     }
     if (weekly) {
       for (const period of ["90", "365"] as const) {
         for (const which of ["NOW", "BEFORE", "YEAR"] as const) for (const list of PAGE_LISTS) jobs.push({ list, period, which, ...of });
         jobs.push({ list: "series", period, which: "NOW", ...of });
-        jobs.push({ list: "eventSeries", period, which: "NOW", ...of });
+        for (const list of DAY_LISTS) jobs.push({ list, period, which: "NOW", ...of });
       }
     }
   }
@@ -185,7 +189,11 @@ export type CollectTarget = {
    * round's figures are collected, and a new one at once.
    */
   untitled: boolean;
-  /** No list of every event kept yet (§18.6.5): the weekly lists are asked at once too, so Events' longer periods never wait a week. */
+  /**
+   * No list of every event or campaign kept yet (§18.6.5, §18.6.6) — the
+   * campaigns came after the events, so their list says for both: the weekly
+   * lists are asked at once too, so the longer periods never wait a week.
+   */
   eventless: boolean;
 };
 
@@ -220,7 +228,7 @@ export const collectTarget = internalQuery({
       untitled: (await ctx.db.query("googleAnalyticsTitles").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId)).first()) === null,
       eventless: (await ctx.db
         .query("googleAnalyticsPeriodSlots")
-        .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("key", slotKey("event", "365", "NOW", "")))
+        .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("key", slotKey("campaign", "365", "NOW", "")))
         .first()) === null,
     };
   },

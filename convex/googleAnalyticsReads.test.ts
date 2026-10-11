@@ -319,6 +319,41 @@ describe("Events and an event's own screen (GA30)", () => {
   });
 });
 
+describe("Campaigns (GA28)", () => {
+  test("the visits from tagged links by campaign and by their words, the untagged said beside them, and a day at a time", async () => {
+    const t = harness();
+    // A LinkedIn campaign's visit a day for the last 30 days, its links carrying "ai agency".
+    const tagged = Array.from({ length: 30 }, (_, at): Visit => ({
+      date: shiftDay(NEWEST, -at), device: "mobile", channel: "Organic Social", source: "linkedin.com", landing: "/ai-agency/", page: "/ai-agency/",
+      campaign: "ai-agents-launch", medium: "social", term: "ai agency", sessions: 1, engaged: 1, seconds: 20, views: 1,
+    }));
+    const { siteId, user } = await collected(t, [...growing(), ...tagged]);
+    const args = { siteId, ...listArgs };
+    const campaigns = await user.query(api.googleAnalyticsReads.analyticsListPage, { ...args, list: "campaign" });
+    expect(campaigns.rows.map((row) => [row.label, row.source, row.visits])).toEqual([["ai-agents-launch", "linkedin.com / social", 30]]);
+    // The plain days' 32 visits and the assistant's one, a day: none tagged.
+    expect(campaigns.untagged).toBe(30 * 33);
+    expect(campaigns.seen).toEqual({
+      says: [{ code: "fewTagged", a: 30, b: 30 * 34, c: 30 * 33 }, { code: "noneConverted" }, { code: "quiet", text: "ai-agents-launch", a: 30 }],
+      steps: [
+        { code: "tagLinks", link: "channels", to: { segment: "channels" } },
+        { code: "seeLanding", text: "ai-agents-launch", link: "landingPages", to: { segment: "landing-pages" } },
+      ],
+    });
+    const words = await user.query(api.googleAnalyticsReads.analyticsListPage, { ...args, list: "adKeyword" });
+    expect(words.rows.map((row) => [row.label, row.visits])).toEqual([["ai agency", 30]]);
+    const chart = await user.query(api.googleAnalyticsChartReads.analyticsCampaignChart, { siteId, period: "30", device: "" });
+    expect(chart.points).toHaveLength(30);
+    expect(chart.points.every((point) => point.visits === 1)).toBe(true);
+    // One device's campaigns are asked of Google when the screen opens.
+    const phones = { ...args, list: "campaign" as const, device: "desktop" };
+    expect((await user.query(api.googleAnalyticsReads.analyticsListPage, phones)).live).toBe(true);
+    await user.action(api.googleAnalyticsLive.askGoogleAnalyticsLive, { siteId, period: "30", device: "desktop", pages: "campaign" });
+    const desktop = await user.query(api.googleAnalyticsReads.analyticsListPage, phones);
+    expect(desktop).toMatchObject({ live: false, rows: [] });
+  });
+});
+
 describe("What Hakken sees, from what each screen already reads (§14)", () => {
   /** Search Console connected for the website, with its last 30 days held: 100 clicks from 20,000 showings. */
   async function withSearchConsole(t: Harness, siteId: Id<"companyWebsites">) {

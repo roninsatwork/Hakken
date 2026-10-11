@@ -123,9 +123,10 @@ describe("which days and lists a run asks for", () => {
     expect(periodRange("30", "BEFORE", NEWEST)).toEqual({ from: "2026-08-10", to: "2026-09-08" });
     // A year before is 52 weeks before, so each day falls on the same weekday.
     expect(periodRange("90", "YEAR", NEWEST)).toEqual({ from: "2025-07-12", to: "2025-10-09" });
-    // Five lists each — every event among them — and each event a day for every period's chart (§18.6.5).
-    expect(dueJobs({ weeklyPeriodsAt: undefined }, NOW)).toHaveLength(2 * (2 * 5 + 1) + 2 * (3 * 5 + 2));
-    expect(dueJobs({ weeklyPeriodsAt: NOW - 24 * 60 * 60 * 1000 }, NOW)).toHaveLength(2 * (2 * 5 + 1));
+    // Seven lists each — every event, the campaigns and their words among them — and each event and each campaign a
+    // day for every period's chart (§18.6.5, §18.6.6).
+    expect(dueJobs({ weeklyPeriodsAt: undefined }, NOW)).toHaveLength(2 * (2 * 7 + 2) + 2 * (3 * 7 + 3));
+    expect(dueJobs({ weeklyPeriodsAt: NOW - 24 * 60 * 60 * 1000 }, NOW)).toHaveLength(2 * (2 * 7 + 2));
   });
 });
 
@@ -215,9 +216,9 @@ describe("collecting a website's Google Analytics", () => {
     // Three days asked, by device: two asks each for totals and channels.
     const dayAsks = google.calls.slice(asked)
       .filter((call) => call.url.endsWith(":runReport"))
-      .map((call) => JSON.parse(call.body) as { dateRanges: { startDate: string; endDate: string }[]; dimensions: { name: string }[]; metrics: { name: string }[] })
-      // Each event a day is a ready-made list, not a day kept.
-      .filter((ask) => ask.dimensions[0]?.name === "date" && !ask.metrics.some((metric) => metric.name === "eventCount"));
+      .map((call) => JSON.parse(call.body) as { dateRanges: { startDate: string; endDate: string }[]; dimensions: { name: string }[] })
+      // The days kept, by device; each event and each campaign a day are ready-made lists, not days kept.
+      .filter((ask) => ask.dimensions[0]?.name === "date" && ask.dimensions[1]?.name === "deviceCategory");
     expect(dayAsks.map((ask) => ask.dateRanges[0])).toEqual(Array(4).fill({ startDate: "2026-10-07", endDate: "2026-10-09" }));
     // The weekly lists were not asked again within the week.
     expect((await periodRows(t, siteId, "landing|90|NOW|"))!.slot).toEqual(before);
