@@ -237,6 +237,14 @@ chart palette: a new part, approved with the drawings on 2026-10-11 and
 added to the drawing kit when built. The PDF is made when it is downloaded or
 sent, from the frozen report; no PDF file is stored.
 
+**To revisit (Anthony, 2026-10-11: "We will revisit the pdf creation process
+after you build this").** Built first as agreed the same evening: a small
+library (`@react-pdf/renderer`) draws the PDF in the browser when Download is
+pressed, from the frozen report — download only, never emailed ("please don't
+email it anywhere, we just want it downloadable at the moment"). Once the
+build is done, how the PDF is made is reviewed with Anthony before it is
+taken further.
+
 ### 4.3 In Admin
 
 - **Insights → Patterns:** every pattern, where it fired, how often it proved
@@ -614,7 +622,7 @@ first; section screens are drawn from the running app.
 | 3 | **The Editor** (I21, I29): every figure re-read from its source through the screens' own reads (I45), like-with-like checks, claims against evidence, real change against noise; the enquiry check (I42) before any finding about enquiries goes out. | Findings that passed, the ones sent back, and whether ronins.co.uk's enquiries can be trusted | 6.5 |
 | 4 | **Market specialist and Leaderboards.** All leagues, nine league pages, the rank strip; Visibility's Competitors gains rival moves and a rival's page. | Insights in the menu, opening on the leaderboards | 5 |
 | 5 | **Overview.** Executive summary, This week, Your month, Strategy with service pages, Reports (two-year keep). | The executive summary, the weekly brief and the monthly report | 6 |
-| 6 | **Report Writer and the PDFs.** The board report and monthly report as PDFs in the approved print look. No email in alpha (I17). | The five-page board report and the monthly report as downloads | 4 |
+| 6 | **Report Writer and the PDFs.** The board report and monthly report as PDFs in the approved print look. No email in alpha (I17). How the PDF is made is revisited with Anthony after the build (§4.2). | The five-page board report and the monthly report as downloads | 4 |
 | 7 | **Findings, Track record and the change log** (I25), with each tagged link's visits and enquiries (I39). | Every finding with its evidence; what changed, when, and what happened | 5.5 |
 | 7b | **Learnings** (I30): each change's result kept as a learning for the website and, as totals, across companies; specialists read them when they advise; "businesses like yours" switches on once enough companies are alike. | What worked, and how often it works elsewhere | 3 |
 | 8 | **Technical SEO specialist.** Visibility's audit gains speed, structured data and internal links; Search Console gains Indexing. | Real speed and indexing, in their sections | 5 |
