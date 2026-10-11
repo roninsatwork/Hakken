@@ -227,8 +227,10 @@ const CHANNEL_COLOURS = [CHART_SERIES_ORANGE, CHART_SERIES_BLUE, CHART_SERIES_VI
 /**
  * Channels' chart (GA35; §18.2 board 16): each of the four busiest channels'
  * visits a day, the rest one line, stepped by day, week or month as chosen.
+ * Events' charts are drawn by it too (§18.2 boards 22 and 23): scrolls and
+ * link clicks, or one event's times, a line each, under their own `title`.
  */
-export function ChannelsChart({ channels, rest, points, host, from, to, exportName }: {
+export function ChannelsChart({ channels, rest, points, host, from, to, exportName, title }: {
   channels: readonly string[];
   rest: boolean;
   points: ReadonlyArray<{ day: string; visits: readonly number[] }>;
@@ -236,6 +238,8 @@ export function ChannelsChart({ channels, rest, points, host, from, to, exportNa
   from: string | null;
   to: string | null;
   exportName: string;
+  /** Another chart's title and hint, each step's own title among them: Events'. */
+  title?: { day: string; week: string; month: string; hint: string };
 }) {
   const t = useTranslations("googleAnalytics.chart");
   const tf = useTranslations("googleAnalytics.filters");
@@ -260,8 +264,8 @@ export function ChannelsChart({ channels, rest, points, host, from, to, exportNa
   ));
   return (
     <SearchConsoleChartCard
-      title={t(`channelsTitle.${step}`)}
-      hint={t("channelsHint", { period: tf(`periods.${period}`) })}
+      title={title ? title[step] : t(`channelsTitle.${step}`)}
+      hint={title ? title.hint : t("channelsHint", { period: tf(`periods.${period}`) })}
       exportName={exportName}
       csv={() => toCsv(["day", ...series.map((entry) => entry.name)], data.map((row) => [String(row.day), ...series.map((entry) => (row as Record<string, unknown>)[entry.key] as number)]))}
       host={host}

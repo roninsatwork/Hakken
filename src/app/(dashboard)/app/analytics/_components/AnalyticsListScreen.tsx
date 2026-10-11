@@ -233,7 +233,7 @@ function columnOf(
  * first needs it, never again for the same ask. "FAILED" when Google could not
  * answer; the screen keeps what it has.
  */
-export function useLiveAsk(ask: { siteId: string; period: string; device: string; country?: string; pages?: "landing" | "page"; page?: { ref: string; path: string }; viewed?: { ref: string; path: string }; chart?: "channel" } | null): "ASKING" | "FAILED" | "IDLE" {
+export function useLiveAsk(ask: { siteId: string; period: string; device: string; country?: string; pages?: "landing" | "page" | "event" | "eventSeries"; page?: { ref: string; path: string }; viewed?: { ref: string; path: string }; event?: string; chart?: "channel" } | null): "ASKING" | "FAILED" | "IDLE" {
   const t = useTranslations("googleAnalytics.table");
   const askLive = useAction(api.googleAnalyticsLive.askGoogleAnalyticsLive);
   const { run } = useAdminAction({ scope: "google-analytics-live" });

@@ -12,7 +12,7 @@ import { listOrder, listPageArgs, pageOfList, sortDirectionArg, type ListSorts }
 import { wordStartMatcher } from "./utils/wordStarts";
 import { assistantOf, channelOf } from "./utils/aiAssistants";
 import { PURCHASE_EVENT } from "./utils/analyticsEvents";
-import { emptyRow, splitChannelKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
+import { KEPT_BY_DEVICE, emptyRow, splitChannelKey, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
 import { titlesOf, withTitles } from "./pageTitles";
@@ -174,14 +174,21 @@ export async function readLive(ctx: Reader, holdId: Id<"companyWebsites">, ask: 
   };
 }
 
+/** The lists kept only for every device, asked of Google for one device when a screen opens: the pages and the events. */
+export type LiveList = "landing" | "page" | "event" | "eventSeries";
+
+function isLiveList(list: AnalyticsList): list is LiveList {
+  return !KEPT_BY_DEVICE[list];
+}
+
 /** The name a live ask of a page list for one device is held under: another home country's ends with its code (§18.6.1). */
-export function liveAsk(list: "landing" | "page", period: AnalyticsPeriod, from: string, to: string, device: string, country = ""): string {
+export function liveAsk(list: LiveList, period: AnalyticsPeriod, from: string, to: string, device: string, country = ""): string {
   return `${list}|${period}|${from}|${to}|${device}${country ? `|${country}` : ""}`;
 }
 
 /**
- * A list for the dates and device chosen: ready-made, or — a page list for
- * one device (GA20) — asked live, `live` until it has been.
+ * A list for the dates and device chosen: ready-made, or — a page or event
+ * list for one device (GA20, §18.6.5) — asked live, `live` until it has been.
  */
 export async function readFor(
   ctx: Reader,
@@ -195,7 +202,8 @@ export async function readFor(
   /** The home country, as its lists are named: empty for the main one (§18.6.1). */
   country = "",
 ): Promise<Held | "LIVE" | null> {
-  if ((list === "landing" || list === "page") && device !== "") {
+  // The lists kept only for every device: one device is asked of Google when the screen opens.
+  if (isLiveList(list) && device !== "") {
     const every = await readSlot(ctx, holdId, slotKey(list, period, which, "", country));
     if (keep) keep.every = every;
     if (!every) return null;

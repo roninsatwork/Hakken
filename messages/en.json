@@ -9844,6 +9844,10 @@
       "landingPages": "{count, plural, =1 {# landing page} other {# landing pages}}",
       "conversionKinds": "{count, plural, =1 {# kind of conversion} other {# kinds of conversion}}",
       "pagesAndWebsites": "{count, plural, one {# page or website} other {# pages and websites}}",
+      "events": "{count, plural, =1 {# event} other {# events}}",
+      "files": "{count, plural, =1 {# file} other {# files}}",
+      "videos": "{count, plural, =1 {# video} other {# videos}}",
+      "depths": "{count, plural, =1 {# depth} other {# depths}}",
       "stories": "{count, plural, =1 {# story} other {# stories}}",
       "storiesSoFar": "{count, plural, other {#+ stories}}",
       "articlesAndStories": "{count, plural, =1 {# article or story} other {# articles and stories}}",
@@ -14942,6 +14946,7 @@
       "channels": "Channels",
       "landingPages": "Landing pages",
       "allPages": "All pages",
+      "events": "Events",
       "conversions": "Conversions",
       "trackingHealth": "Tracking health",
       "connection": "Connection"
@@ -15005,7 +15010,7 @@
       "callback_request": "Call back asked for",
       "sign_up": "Newsletter sign-up",
       "file_download": "File downloaded",
-      "scroll": "Scrolled to the end",
+      "scroll": "Scrolled to the bottom",
       "page_view": "Page viewed",
       "video_start": "Video started",
       "video_progress": "Video watched part-way",
@@ -15018,8 +15023,28 @@
       "view_search_results": "Searched the website",
       "first_visit": "First visit",
       "session_start": "Visit started",
-      "user_engagement": "Engaged",
-      "click": "Link clicked"
+      "user_engagement": "Engaged with a page",
+      "click": "Clicked a link to another website",
+      "first_open": "App opened for the first time",
+      "screen_view": "App screen viewed",
+      "form_start": "Form started",
+      "view_item_list": "Product list viewed",
+      "select_item": "Product chosen from a list",
+      "add_to_wishlist": "Added to wish list",
+      "remove_from_cart": "Removed from basket",
+      "view_cart": "Basket viewed",
+      "add_shipping_info": "Delivery details added",
+      "add_payment_info": "Payment details added",
+      "refund": "Refund",
+      "view_promotion": "Promotion seen",
+      "select_promotion": "Promotion chosen",
+      "share": "Shared",
+      "select_content": "Content chosen",
+      "qualify_lead": "Lead qualified",
+      "disqualify_lead": "Lead turned down",
+      "working_lead": "Lead being worked on",
+      "close_convert_lead": "Lead won",
+      "close_unconvert_lead": "Lead lost"
     },
     "status": {
       "NOT_CONNECTED": "Not connected",
@@ -15576,6 +15601,119 @@
       "noPageBefore": "No page before",
       "noPageBeforeLine": "Typed in, a bookmark or an app"
     },
+    "eventList": {
+      "title": "Events",
+      "description": "Everything Google Analytics recorded people doing on the website, not only the conversions. Change is the count against {before}.",
+      "chartTitle": {
+        "day": "Scrolls and link clicks a day",
+        "week": "Scrolls and link clicks a week",
+        "month": "Scrolls and link clicks a month"
+      },
+      "chartHint": "{period}: people reaching the bottom of a page, and leaving for another website.",
+      "barsTitle": "Times each event happened",
+      "barsHint": "{period}.",
+      "times": "Times",
+      "findEvent": "Find an event…",
+      "kindFilter": "Kind",
+      "everyKind": "Every kind",
+      "kinds": {
+        "conversion": "Conversions",
+        "automatic": "Visits and pages",
+        "measured": "Clicks, scrolls, downloads and videos",
+        "shop": "Shop",
+        "own": "The website's own"
+      },
+      "columns": {
+        "event": "Event",
+        "times": "Times",
+        "people": "People",
+        "conversion": "Conversion",
+        "change": "Change",
+        "changeTitle": "Times against the span before"
+      },
+      "counts": "Counts",
+      "download": "Download CSV",
+      "csv": {
+        "event": "Event",
+        "google": "Google's name",
+        "times": "Times",
+        "people": "People",
+        "visits": "Visits with one",
+        "counts": "Counts as a conversion",
+        "yes": "Yes",
+        "no": "No",
+        "change": "Change (%)"
+      },
+      "empty": "No events in these dates.",
+      "noMatch": "Nothing matches that search.",
+      "preparing": "Every event comes in with the next collection, within a day.",
+      "asking": "Asking Google…",
+      "askFailed": "Google couldn't answer for this device just now. Choose it again in a moment."
+    },
+    "eventScreen": {
+      "back": "Events",
+      "description": "Google Analytics' {google} event. Every figure here is for this event.",
+      "descriptionWhat": "Google Analytics' {google} event: {what}. Every figure here is for this event.",
+      "what": {
+        "click": "someone followed a link off {host}",
+        "file_download": "someone downloaded a file",
+        "view_search_results": "someone searched the website",
+        "scroll": "someone reached the bottom of a page",
+        "video_start": "someone started a video",
+        "video_progress": "someone watched part of a video",
+        "video_complete": "someone watched a video to the end",
+        "page_view": "someone viewed a page",
+        "session_start": "a visit began",
+        "first_visit": "someone visited for the first time",
+        "user_engagement": "someone stayed on a page with it in front of them",
+        "form_start": "someone started filling in a form",
+        "form_submit": "someone sent a form"
+      },
+      "countsAsConversion": "Counts as a conversion",
+      "times": "Times",
+      "people": "People",
+      "peopleShare": "{rate} of people",
+      "visits": "Visits with one",
+      "visitsShare": "{rate} of visits",
+      "chartTitle": {
+        "day": "Times a day",
+        "week": "Times a week",
+        "month": "Times a month"
+      },
+      "chartHint": "{period}.",
+      "barsHint": "{period}.",
+      "about": {
+        "linkUrl": "Links clicked",
+        "fileName": "Files downloaded",
+        "searchTerm": "Words searched",
+        "percentScrolled": "How far people scrolled",
+        "videoTitle": "Videos",
+        "pages": "Pages it happened on"
+      },
+      "find": {
+        "linkUrl": "Find a link…",
+        "fileName": "Find a file…",
+        "searchTerm": "Find a search…",
+        "percentScrolled": "Find a depth…",
+        "videoTitle": "Find a video…",
+        "pages": "Find a page…"
+      },
+      "column": {
+        "linkUrl": "Link clicked",
+        "fileName": "File",
+        "searchTerm": "Words searched",
+        "percentScrolled": "How far",
+        "videoTitle": "Video",
+        "pages": "Page"
+      },
+      "scrolled": "{percent}% of the page",
+      "showing": "Showing",
+      "download": "Download CSV",
+      "asking": "Asking Google…",
+      "askFailed": "Google couldn't answer for this event just now. Open it again in a moment.",
+      "empty": "Nothing in these dates.",
+      "noMatch": "Nothing matches that search."
+    },
     "conversions": {
       "title": "Conversions",
       "description": "Each thing this website counts as a conversion, over time and with its value, and where the visits that made them came from.",
@@ -15924,6 +16062,32 @@
         "keepLink": "Keep the link to this page on {text} where people see it: it sends the most views of the website's own pages.",
         "checkAssistant": "Check what {text} says about this page, so the people it sends find what it promised."
       },
+      "events": {
+        "none": "Google Analytics recorded no events in these dates.",
+        "neverFired": "{event} {count, plural, =1 {counts as a conversion but never happened} other {count as conversions but never happened}} in these dates.",
+        "reachedBottom": "{aRate} of page views reached the bottom of the page: {countB, plural, =1 {one scroll} other {# scrolls}}.",
+        "clicksAway": "{count, plural, =1 {One click} other {# clicks}} took people to another website, in {bRate} of visits.",
+        "searched": "People searched the website {count, plural, =1 {once} other {# times}}.",
+        "tryConversions": "Try {event} yourself, and check Google Analytics records {count, plural, =1 {it} other {them}}.",
+        "seeLinks": "See which links take people off the website.",
+        "seeSearches": "See what people searched for."
+      },
+      "event": {
+        "neverHappened": "{event} didn't happen in these dates.",
+        "timesNew": "{event} happened {count, plural, =1 {once} other {# times}}, by {countB, plural, =1 {one person} other {# people}}.",
+        "times": {
+          "up": "{event} happened {count, plural, =1 {once} other {# times}}, by {countB, plural, =1 {one person} other {# people}}: up from {c}.",
+          "down": "{event} happened {count, plural, =1 {once} other {# times}}, by {countB, plural, =1 {one person} other {# people}}: down from {c}.",
+          "same": "{event} happened {count, plural, =1 {once} other {# times}}, by {countB, plural, =1 {one person} other {# people}}: as many as before."
+        },
+        "reached": "That is {aRate} of the website's {b} page views reaching the bottom of the page.",
+        "topLink": "{text} was clicked most: {count, plural, =1 {once} other {# times}}, {bRate} of the clicks.",
+        "topSearch": "“{text}” was searched for most: {count, plural, =1 {once} other {# times}}.",
+        "topFile": "{text} was downloaded most: {count, plural, =1 {once} other {# times}}.",
+        "topVideo": "“{text}” was played most: {count, plural, =1 {once} other {# times}}.",
+        "newTab": "Open links to other websites in a new tab, so people keep your page.",
+        "answerSearch": "Make sure a page answers “{text}”, and is easy to find from the menu."
+      },
       "conversions": {
         "nothingCounted": "The visits are all here, {a} in these dates, but with nothing counted nobody can say which pages or channels make money.",
         "fired": "Your property does record {event}: it happened {count, plural, =1 {once} other {# times}} in the same dates.",
@@ -16016,7 +16180,10 @@
         "aiAnswers": "AI answers in Visibility",
         "unsortedPages": "The unsorted pages",
         "referrals": "Referral",
-        "addGoogleAnalytics": "Add Google Analytics"
+        "addGoogleAnalytics": "Add Google Analytics",
+        "linksClicked": "Links clicked",
+        "wordsSearched": "Words searched",
+        "allPages": "All pages"
       }
     }
   },

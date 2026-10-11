@@ -335,7 +335,7 @@ export const collectSiteStep = internalAction({
           });
           to = stepFrom > args.from ? shiftDay(stepFrom, -1) : null;
           if (to === null) {
-            weekly = target.untitled || dueJobs({ weeklyPeriodsAt: target.weeklyPeriodsAt }, Date.now()).some((job) => job.period === "90");
+            weekly = target.untitled || target.eventless || dueJobs({ weeklyPeriodsAt: target.weeklyPeriodsAt }, Date.now()).some((job) => job.period === "90");
             jobs = jobsFor(weekly, target.others);
           }
           continue;

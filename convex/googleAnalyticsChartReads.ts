@@ -4,7 +4,7 @@ import { requireMySite } from "./siteAccess";
 import { shiftDay } from "./searchConsoleDays";
 import { slotKey } from "./googleAnalyticsCollect";
 import { keptCountry } from "./googleAnalyticsCountries";
-import { unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
+import { DAY_JOIN, unpackPart, type ListRow, type PackedPart } from "./googleAnalyticsLists";
 import { analyticsPeriodValidator } from "./googleAnalyticsSchema";
 import { blank, connectionOf, conversionsOf, countedOf, displayChannel, readLive, readSlot } from "./googleAnalyticsReads";
 
@@ -76,8 +76,8 @@ export function channelSeriesAsk(period: string, from: string, to: string, devic
   return `channelSeries|${period}|${from}|${to}|${device}${country ? `|${country}` : ""}`;
 }
 
-/** A day and a channel's key, as one key of a live channel chart's rows. */
-export const DAY_JOIN = "\u001e";
+/** A day and a channel's key, as one key of a live channel chart's rows (`googleAnalyticsLists.ts`). */
+export { DAY_JOIN };
 
 /**
  * Each channel's visits a day (GA35; §18.2 board 16): the four channels with

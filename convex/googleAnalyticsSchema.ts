@@ -74,9 +74,11 @@ export const countedEventValidator = v.object({
  * for the charts — and its landing pages and all its pages, the two big ones,
  * kept only as ready-made periods for every device. `series` is the totals by
  * day over a long period (90 days, 12 months), asked of Google ready-made for
- * the charts the days kept do not reach.
+ * the charts the days kept do not reach. `event` is every event the website
+ * recorded and `eventSeries` each of them a day, for Events and an event's
+ * own screen (google-analytics-plan.md GA30, §18.6.5): every device.
  */
-export const ANALYTICS_LISTS = ["total", "channel", "landing", "page", "series"] as const;
+export const ANALYTICS_LISTS = ["total", "channel", "landing", "page", "series", "event", "eventSeries"] as const;
 export type AnalyticsList = (typeof ANALYTICS_LISTS)[number];
 export const analyticsListValidator = v.union(
   v.literal("total"),
@@ -84,6 +86,8 @@ export const analyticsListValidator = v.union(
   v.literal("landing"),
   v.literal("page"),
   v.literal("series"),
+  v.literal("event"),
+  v.literal("eventSeries"),
 );
 
 /** The ready-made periods (§4.3): days, ending on the newest day held. */
@@ -118,6 +122,8 @@ export const analyticsPackedRows = {
   people: v.optional(v.string()),
   newPeople: v.optional(v.string()),
   length: v.optional(v.string()),
+  /** An event's times (`eventCount`): only an event list's parts (§18.6.5). */
+  times: v.optional(v.string()),
   events: v.array(v.string()),
   /** One packed column per event in `events`. */
   counts: v.array(v.string()),

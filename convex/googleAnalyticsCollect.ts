@@ -14,6 +14,7 @@ import { startFirstCollection } from "./googleAnalyticsAgentRun";
 import { runReport, type ReportAsk, type Report } from "./googleAnalyticsApi";
 import type { GoogleFailure } from "./googleApi";
 import {
+  EVENT_LIST_METRICS,
   EVENT_METRICS,
   EVERY_DEVICE,
   KEPT_BY_DEVICE,
@@ -21,6 +22,7 @@ import {
   MAIN_METRICS,
   fingerprint,
   groupKeys,
+  isEventList,
   joinAsks,
   packList,
   pageAddress,
@@ -120,8 +122,11 @@ export { slotKey };
 /** A ready-made list to ask: for the main home country, or — `country`, its code — for another home country (§18.6.1). */
 export type PeriodJob = { list: AnalyticsList; period: AnalyticsPeriod; which: AnalyticsWhich; country?: string };
 
-/** All pages before landing pages: a landing page finds its address, slash and all, already numbered (`numberPages`). */
-const PAGE_LISTS: readonly AnalyticsList[] = ["total", "channel", "page", "landing"];
+/**
+ * All pages before landing pages: a landing page finds its address, slash and
+ * all, already numbered (`numberPages`). Every event beside them (§18.6.5).
+ */
+const PAGE_LISTS: readonly AnalyticsList[] = ["total", "channel", "page", "landing", "event"];
 
 /**
  * The ready-made lists a run asks for: the 7 and 30 days every run, and the
@@ -138,11 +143,14 @@ export function dueJobs(connection: Pick<Doc<"googleAnalyticsConnections">, "wee
       for (const which of ["NOW", "BEFORE"] as const) for (const list of PAGE_LISTS) jobs.push({ list, period, which, ...of });
       // Another home country keeps no days: its short charts are ready-made too (§18.6.1).
       if (country) jobs.push({ list: "series", period, which: "NOW", ...of });
+      // Each event a day keeps no days of its own: ready-made for every period's chart (§18.6.5).
+      jobs.push({ list: "eventSeries", period, which: "NOW", ...of });
     }
     if (weekly) {
       for (const period of ["90", "365"] as const) {
         for (const which of ["NOW", "BEFORE", "YEAR"] as const) for (const list of PAGE_LISTS) jobs.push({ list, period, which, ...of });
         jobs.push({ list: "series", period, which: "NOW", ...of });
+        jobs.push({ list: "eventSeries", period, which: "NOW", ...of });
       }
     }
   }
@@ -177,6 +185,8 @@ export type CollectTarget = {
    * round's figures are collected, and a new one at once.
    */
   untitled: boolean;
+  /** No list of every event kept yet (§18.6.5): the weekly lists are asked at once too, so Events' longer periods never wait a week. */
+  eventless: boolean;
 };
 
 /** Google Analytics' two-letter `countryId` for Search Console's code: `gbr` → `GB`. */
@@ -208,6 +218,10 @@ export const collectTarget = internalQuery({
       country: countryIdOf(hold ? mainConsoleCountry(hold) : "gbr"),
       others: hold && !isTrackedHold(hold) ? await countriesKeptReady(ctx, hold) : [],
       untitled: (await ctx.db.query("googleAnalyticsTitles").withIndex("by_hold_page", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId)).first()) === null,
+      eventless: (await ctx.db
+        .query("googleAnalyticsPeriodSlots")
+        .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("key", slotKey("event", "365", "NOW", "")))
+        .first()) === null,
     };
   },
 });
@@ -281,10 +295,11 @@ export async function askList(
     ...(only.landingPage !== undefined ? { only: { dimension: "landingPage", values: only.landingPage } }
       : only.pagePath !== undefined ? { only: { dimension: "pagePath", values: only.pagePath } } : {}),
   };
-  const main = await ask(session, target.property!, { ...base, dimensions, metrics: [...MAIN_METRICS] });
+  const main = await ask(session, target.property!, { ...base, dimensions, metrics: [...(isEventList(list) ? EVENT_LIST_METRICS : MAIN_METRICS)] });
   if (!main.ok) return main;
   let events: ({ ok: true } & Report) | null = null;
-  if (target.events.length > 0) {
+  // An event list counts every event itself: no key events to join (§18.6.5).
+  if (target.events.length > 0 && !isEventList(list)) {
     const answer = await ask(session, target.property!, {
       ...base,
       dimensions: [...dimensions, "eventName"],
@@ -344,6 +359,7 @@ export async function numberPages(ctx: ActionCtx, target: CollectTarget, rows: L
       return;
     }
     for (const field of ["visits", "engaged", "seconds", "views", "purchases", "revenue", "people", "newPeople", "length"] as const) held[field] += row[field];
+    if (row.times !== undefined) held.times = (held.times ?? 0) + row.times;
     for (const [event, count] of row.counts) held.counts.set(event, (held.counts.get(event) ?? 0) + count);
     for (const [event, value] of row.values) held.values.set(event, (held.values.get(event) ?? 0) + value);
   });

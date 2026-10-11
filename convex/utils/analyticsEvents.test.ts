@@ -1,7 +1,17 @@
 import { describe, expect, test } from "vitest";
 import en from "@/messages/en.json";
 import it from "@/messages/it.json";
-import { LIKELY_CONVERSIONS, NEVER_TICKED, tickedAtFirst } from "./analyticsEvents";
+import {
+  AUTOMATIC_EVENTS,
+  EVENT_DETAIL,
+  LIKELY_CONVERSIONS,
+  MEASURED_EVENTS,
+  NEVER_TICKED,
+  RECOMMENDED_EVENTS,
+  SHOP_EVENTS,
+  eventKind,
+  tickedAtFirst,
+} from "./analyticsEvents";
 
 /**
  * Which key events Hakken ticks as conversions when a website first connects
@@ -26,5 +36,25 @@ describe("the events ticked at first", () => {
       const names = messages.googleAnalytics.events as Record<string, string>;
       expect([...LIKELY_CONVERSIONS].filter((name) => !names[name])).toEqual([]);
     }
+  });
+});
+
+describe("every event Google records (GA30)", () => {
+  test("each of Google's own events has its name in English and Italian", () => {
+    const google = [...AUTOMATIC_EVENTS, ...MEASURED_EVENTS, ...SHOP_EVENTS, ...RECOMMENDED_EVENTS];
+    for (const messages of [en, it]) {
+      const names = messages.googleAnalytics.events as Record<string, string>;
+      expect(google.filter((name) => !names[name])).toEqual([]);
+    }
+  });
+
+  test("an event's kind: a conversion when it counts, else who records it", () => {
+    expect(eventKind("form_submission", true)).toBe("conversion");
+    expect(eventKind("page_view", false)).toBe("automatic");
+    expect(eventKind("scroll", false)).toBe("measured");
+    expect(eventKind("add_to_cart", false)).toBe("shop");
+    expect(eventKind("brochure_request", false)).toBe("own");
+    // What each event was about is asked only for Google's own.
+    expect(Object.keys(EVENT_DETAIL).every((name) => MEASURED_EVENTS.has(name))).toBe(true);
   });
 });

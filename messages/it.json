@@ -9844,6 +9844,10 @@
       "landingPages": "{count, plural, =1 {# pagina di destinazione} other {# pagine di destinazione}}",
       "conversionKinds": "{count, plural, =1 {# tipo di conversione} other {# tipi di conversione}}",
       "pagesAndWebsites": "{count, plural, one {# pagina o sito} other {# pagine e siti}}",
+      "events": "{count, plural, =1 {# evento} other {# eventi}}",
+      "files": "{count, plural, =1 {# file} other {# file}}",
+      "videos": "{count, plural, =1 {# video} other {# video}}",
+      "depths": "{count, plural, =1 {# profondità} other {# profondità}}",
       "stories": "{count, plural, =1 {# storia} other {# storie}}",
       "storiesSoFar": "{count, plural, other {#+ storie}}",
       "articlesAndStories": "{count, plural, =1 {# articolo o storia} other {# articoli e storie}}",
@@ -14942,6 +14946,7 @@
       "channels": "Canali",
       "landingPages": "Pagine di destinazione",
       "allPages": "Tutte le pagine",
+      "events": "Eventi",
       "conversions": "Conversioni",
       "trackingHealth": "Salute del tracciamento",
       "connection": "Connessione"
@@ -15018,8 +15023,28 @@
       "view_search_results": "Ricerca nel sito",
       "first_visit": "Prima visita",
       "session_start": "Visita iniziata",
-      "user_engagement": "Coinvolgimento",
-      "click": "Link cliccato"
+      "user_engagement": "Interazione con una pagina",
+      "click": "Clic su un link a un altro sito",
+      "first_open": "App aperta per la prima volta",
+      "screen_view": "Schermata dell'app vista",
+      "form_start": "Modulo iniziato",
+      "view_item_list": "Elenco prodotti visto",
+      "select_item": "Prodotto scelto da un elenco",
+      "add_to_wishlist": "Aggiunto alla lista dei desideri",
+      "remove_from_cart": "Rimosso dal carrello",
+      "view_cart": "Carrello visto",
+      "add_shipping_info": "Dati di spedizione aggiunti",
+      "add_payment_info": "Dati di pagamento aggiunti",
+      "refund": "Rimborso",
+      "view_promotion": "Promozione vista",
+      "select_promotion": "Promozione scelta",
+      "share": "Condiviso",
+      "select_content": "Contenuto scelto",
+      "qualify_lead": "Contatto qualificato",
+      "disqualify_lead": "Contatto scartato",
+      "working_lead": "Contatto in lavorazione",
+      "close_convert_lead": "Contatto acquisito",
+      "close_unconvert_lead": "Contatto perso"
     },
     "status": {
       "NOT_CONNECTED": "Non connesso",
@@ -15576,6 +15601,119 @@
       "noPageBefore": "Nessuna pagina precedente",
       "noPageBeforeLine": "Indirizzo digitato, un preferito o un'app"
     },
+    "eventList": {
+      "title": "Eventi",
+      "description": "Tutto ciò che Google Analytics ha registrato fare dalle persone sul sito, non solo le conversioni. La variazione è il conteggio rispetto a {before}.",
+      "chartTitle": {
+        "day": "Scorrimenti e clic sui link al giorno",
+        "week": "Scorrimenti e clic sui link a settimana",
+        "month": "Scorrimenti e clic sui link al mese"
+      },
+      "chartHint": "{period}: le persone che arrivano in fondo a una pagina e quelle che vanno su un altro sito.",
+      "barsTitle": "Quante volte è avvenuto ogni evento",
+      "barsHint": "{period}.",
+      "times": "Volte",
+      "findEvent": "Trova un evento…",
+      "kindFilter": "Tipo",
+      "everyKind": "Ogni tipo",
+      "kinds": {
+        "conversion": "Conversioni",
+        "automatic": "Visite e pagine",
+        "measured": "Clic, scorrimenti, download e video",
+        "shop": "Negozio",
+        "own": "Propri del sito"
+      },
+      "columns": {
+        "event": "Evento",
+        "times": "Volte",
+        "people": "Persone",
+        "conversion": "Conversione",
+        "change": "Variazione",
+        "changeTitle": "Volte rispetto al periodo precedente"
+      },
+      "counts": "Conta",
+      "download": "Scarica CSV",
+      "csv": {
+        "event": "Evento",
+        "google": "Nome di Google",
+        "times": "Volte",
+        "people": "Persone",
+        "visits": "Visite con l'evento",
+        "counts": "Conta come conversione",
+        "yes": "Sì",
+        "no": "No",
+        "change": "Variazione (%)"
+      },
+      "empty": "Nessun evento in queste date.",
+      "noMatch": "Nessun risultato per questa ricerca.",
+      "preparing": "Ogni evento arriva con la prossima raccolta, entro un giorno.",
+      "asking": "Chiediamo a Google…",
+      "askFailed": "Google non ha risposto ora per questo dispositivo. Sceglilo di nuovo tra poco."
+    },
+    "eventScreen": {
+      "back": "Eventi",
+      "description": "L'evento {google} di Google Analytics. Ogni dato qui riguarda questo evento.",
+      "descriptionWhat": "L'evento {google} di Google Analytics: {what}. Ogni dato qui riguarda questo evento.",
+      "what": {
+        "click": "qualcuno ha seguito un link che porta fuori da {host}",
+        "file_download": "qualcuno ha scaricato un file",
+        "view_search_results": "qualcuno ha cercato nel sito",
+        "scroll": "qualcuno è arrivato in fondo a una pagina",
+        "video_start": "qualcuno ha avviato un video",
+        "video_progress": "qualcuno ha guardato parte di un video",
+        "video_complete": "qualcuno ha guardato un video fino alla fine",
+        "page_view": "qualcuno ha visto una pagina",
+        "session_start": "è iniziata una visita",
+        "first_visit": "qualcuno ha visitato il sito per la prima volta",
+        "user_engagement": "qualcuno è rimasto su una pagina tenendola in primo piano",
+        "form_start": "qualcuno ha iniziato a compilare un modulo",
+        "form_submit": "qualcuno ha inviato un modulo"
+      },
+      "countsAsConversion": "Conta come conversione",
+      "times": "Volte",
+      "people": "Persone",
+      "peopleShare": "{rate} delle persone",
+      "visits": "Visite con l'evento",
+      "visitsShare": "{rate} delle visite",
+      "chartTitle": {
+        "day": "Volte al giorno",
+        "week": "Volte a settimana",
+        "month": "Volte al mese"
+      },
+      "chartHint": "{period}.",
+      "barsHint": "{period}.",
+      "about": {
+        "linkUrl": "Link cliccati",
+        "fileName": "File scaricati",
+        "searchTerm": "Parole cercate",
+        "percentScrolled": "Fin dove hanno scorso",
+        "videoTitle": "Video",
+        "pages": "Pagine in cui è avvenuto"
+      },
+      "find": {
+        "linkUrl": "Trova un link…",
+        "fileName": "Trova un file…",
+        "searchTerm": "Trova una ricerca…",
+        "percentScrolled": "Trova una profondità…",
+        "videoTitle": "Trova un video…",
+        "pages": "Trova una pagina…"
+      },
+      "column": {
+        "linkUrl": "Link cliccato",
+        "fileName": "File",
+        "searchTerm": "Parole cercate",
+        "percentScrolled": "Fin dove",
+        "videoTitle": "Video",
+        "pages": "Pagina"
+      },
+      "scrolled": "{percent}% della pagina",
+      "showing": "Mostra",
+      "download": "Scarica CSV",
+      "asking": "Chiediamo a Google…",
+      "askFailed": "Google non ha risposto ora per questo evento. Riaprilo tra poco.",
+      "empty": "Niente in queste date.",
+      "noMatch": "Nessun risultato per questa ricerca."
+    },
     "conversions": {
       "title": "Conversioni",
       "description": "Ogni cosa che questo sito conta come conversione, nel tempo e con il suo valore, e da dove sono arrivate le visite che le hanno fatte.",
@@ -15924,6 +16062,32 @@
         "keepLink": "Tieni il link a questa pagina su {text} dove le persone lo vedono: porta più visualizzazioni di ogni altra pagina del sito.",
         "checkAssistant": "Controlla cosa dice {text} di questa pagina, così chi arriva trova quello che ha promesso."
       },
+      "events": {
+        "none": "Google Analytics non ha registrato eventi in queste date.",
+        "neverFired": "{event} {count, plural, =1 {conta come conversione ma non è mai avvenuto} other {contano come conversioni ma non sono mai avvenuti}} in queste date.",
+        "reachedBottom": "Il {aRate} delle pagine viste è arrivato in fondo alla pagina: {countB, plural, =1 {uno scorrimento} other {# scorrimenti}}.",
+        "clicksAway": "{count, plural, =1 {Un clic ha} other {# clic hanno}} portato le persone su un altro sito, nel {bRate} delle visite.",
+        "searched": "Le persone hanno cercato nel sito {count, plural, =1 {una volta} other {# volte}}.",
+        "tryConversions": "Prova tu {event} e verifica che Google Analytics {count, plural, =1 {lo registri} other {li registri}}.",
+        "seeLinks": "Guarda quali link portano le persone fuori dal sito.",
+        "seeSearches": "Guarda cosa hanno cercato le persone."
+      },
+      "event": {
+        "neverHappened": "{event} non è avvenuto in queste date.",
+        "timesNew": "{event} è avvenuto {count, plural, =1 {una volta} other {# volte}}, da {countB, plural, =1 {una persona} other {# persone}}.",
+        "times": {
+          "up": "{event} è avvenuto {count, plural, =1 {una volta} other {# volte}}, da {countB, plural, =1 {una persona} other {# persone}}: in crescita da {c}.",
+          "down": "{event} è avvenuto {count, plural, =1 {una volta} other {# volte}}, da {countB, plural, =1 {una persona} other {# persone}}: in calo da {c}.",
+          "same": "{event} è avvenuto {count, plural, =1 {una volta} other {# volte}}, da {countB, plural, =1 {una persona} other {# persone}}: come prima."
+        },
+        "reached": "È il {aRate} delle {b} pagine viste del sito che arriva in fondo alla pagina.",
+        "topLink": "{text} è il link cliccato di più: {count, plural, =1 {una volta} other {# volte}}, il {bRate} dei clic.",
+        "topSearch": "“{text}” è la ricerca più fatta: {count, plural, =1 {una volta} other {# volte}}.",
+        "topFile": "{text} è il file scaricato di più: {count, plural, =1 {una volta} other {# volte}}.",
+        "topVideo": "“{text}” è il video avviato di più: {count, plural, =1 {una volta} other {# volte}}.",
+        "newTab": "Apri i link ad altri siti in una nuova scheda, così le persone restano sulla tua pagina.",
+        "answerSearch": "Assicurati che una pagina risponda a “{text}” e sia facile da trovare dal menu."
+      },
       "conversions": {
         "nothingCounted": "Le visite ci sono tutte, {a} in queste date, ma senza niente di contato nessuno può dire quali pagine o canali fanno guadagnare.",
         "fired": "La tua proprietà registra {event}: è successo {count, plural, =1 {una volta} other {# volte}} nelle stesse date.",
@@ -16016,7 +16180,10 @@
         "aiAnswers": "Risposte AI in Visibilità",
         "unsortedPages": "Le pagine non ordinate",
         "referrals": "Referral",
-        "addGoogleAnalytics": "Aggiungi Google Analytics"
+        "addGoogleAnalytics": "Aggiungi Google Analytics",
+        "linksClicked": "Link cliccati",
+        "wordsSearched": "Parole cercate",
+        "allPages": "Tutte le pagine"
       }
     }
   },

@@ -260,6 +260,65 @@ describe("a page's own screen from All pages (GA29)", () => {
   });
 });
 
+describe("Events and an event's own screen (GA30)", () => {
+  /** The last 30 days' scrolls and clicks off the website, on the home page: five scrolls and two clicks a day, in one visit. */
+  function clicks(): Visit[] {
+    return Array.from({ length: 30 }, (_, at): Visit => ({
+      date: shiftDay(NEWEST, -at), device: "desktop", channel: "Organic Search", source: "google", landing: "/", page: "/",
+      sessions: 1, engaged: 1, seconds: 10, views: 1, events: { scroll: [5, 0], click: [2, 0] },
+      about: { linkUrl: "https://www.linkedin.com/company/acme", percentScrolled: "90" },
+    }));
+  }
+
+  test("every event against the span before, what counts among them, scrolls and link clicks a day", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, [...growing(), ...clicks()]);
+    const args = { siteId, period: "30" as const, device: "" };
+    const events = (await user.query(api.googleAnalyticsEventReads.analyticsEvents, args))!;
+    expect(events).toMatchObject({ preparing: false, live: false });
+    const row = (name: string) => events.rows.find((one) => one.eventName === name);
+    expect(row("page_view")).toMatchObject({ kind: "automatic", counted: false, times: 30 * 67, timesBefore: 30 * 32 });
+    expect(row("generate_lead")).toMatchObject({ kind: "conversion", counted: true, times: 60, timesBefore: 30 });
+    expect(row("sign_up")).toMatchObject({ counted: true, times: 30, timesBefore: 0 });
+    expect(row("scroll")).toMatchObject({ kind: "measured", times: 150, visits: 30 });
+    expect(events.rows[0].eventName).toBe("page_view");
+    expect(events.points).toHaveLength(30);
+    expect(events.points.reduce((sum, point) => sum + point.scroll, 0)).toBe(150);
+    expect(events.points.reduce((sum, point) => sum + point.click, 0)).toBe(60);
+    expect(events.seen.says).toEqual([{ code: "reachedBottom", a: 150 / (30 * 67), b: 150 }]);
+
+    // One device is asked of Google when the screen opens.
+    const mobile = { ...args, device: "mobile" };
+    expect((await user.query(api.googleAnalyticsEventReads.analyticsEvents, mobile))?.live).toBe(true);
+    await user.action(api.googleAnalyticsLive.askGoogleAnalyticsLive, { ...mobile, pages: "event" });
+    await user.action(api.googleAnalyticsLive.askGoogleAnalyticsLive, { ...mobile, pages: "eventSeries" });
+    const phones = (await user.query(api.googleAnalyticsEventReads.analyticsEvents, mobile))!;
+    expect(phones.live).toBe(false);
+    expect(phones.rows.find((one) => one.eventName === "scroll")).toBeUndefined();
+    expect(phones.rows.find((one) => one.eventName === "generate_lead")?.times).toBe(60);
+  });
+
+  test("an event's figures, its times a day, and what it was about and its pages, asked of Google when it opens", async () => {
+    const t = harness();
+    const { siteId, user } = await collected(t, [...growing(), ...clicks()]);
+    const args = { siteId, event: "click", period: "30" as const, device: "" };
+    const first = (await user.query(api.googleAnalyticsEventReads.analyticsEvent, args))!;
+    expect(first).toMatchObject({ kind: "measured", counted: false, detail: "linkUrl", live: true, about: [], pages: [] });
+    expect(first.figures).toMatchObject({ times: 60, timesBefore: 0, visits: 30, visitsShare: 30 / (30 * 34) });
+    expect(first.points.reduce((sum, point) => sum + point.times, 0)).toBe(60);
+
+    await user.action(api.googleAnalyticsLive.askGoogleAnalyticsLive, { siteId, period: "30", device: "", event: "click" });
+    const opened = (await user.query(api.googleAnalyticsEventReads.analyticsEvent, args))!;
+    expect(opened.live).toBe(false);
+    expect(opened.about).toEqual([{ key: "https://www.linkedin.com/company/acme", label: "linkedin.com/company/acme", times: 60, people: 30, change: null }]);
+    expect(opened.pages).toMatchObject([{ label: "https://www.acme-shop.test/", times: 60 }]);
+    expect(opened.seen).toEqual({
+      says: [{ code: "timesNew", text: "click", a: 60, b: 30 }, { code: "topLink", text: "linkedin.com/company/acme", a: 60, b: 1 }],
+      steps: [{ code: "newTab", link: "allPages", to: { segment: "all-pages" } }],
+    });
+  });
+});
+
 describe("What Hakken sees, from what each screen already reads (§14)", () => {
   /** Search Console connected for the website, with its last 30 days held: 100 clicks from 20,000 showings. */
   async function withSearchConsole(t: Harness, siteId: Id<"companyWebsites">) {

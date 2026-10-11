@@ -30,6 +30,12 @@ export type Visit = {
   title?: string;
   /** The page viewed just before (`pageReferrer`): none unless a test says otherwise. */
   referrer?: string;
+  /**
+   * What the line's events were about (§18.6.5): the link a click followed,
+   * the file downloaded, the words searched, how far a scroll went, the video.
+   * Each of the line's events carries it.
+   */
+  about?: Partial<Record<"linkUrl" | "fileName" | "searchTerm" | "percentScrolled" | "videoTitle", string>>;
   sessions: number;
   engaged: number;
   seconds: number;
@@ -50,6 +56,11 @@ const FIELD: Record<string, (visit: Visit) => string> = {
   countryId: (visit) => visit.country ?? "GB",
   pageTitle: (visit) => visit.title ?? `Title of ${visit.page}`,
   pageReferrer: (visit) => visit.referrer ?? "",
+  linkUrl: (visit) => visit.about?.linkUrl ?? "(not set)",
+  fileName: (visit) => visit.about?.fileName ?? "(not set)",
+  searchTerm: (visit) => visit.about?.searchTerm ?? "(not set)",
+  percentScrolled: (visit) => visit.about?.percentScrolled ?? "(not set)",
+  videoTitle: (visit) => visit.about?.videoTitle ?? "(not set)",
 };
 
 /** The figures a log line carries, in the order asked before the second round. */
@@ -87,13 +98,24 @@ export function fakeGoogle(visits: Visit[]): Google {
       if (ask.offset > 0) return Response.json({ rows: [], rowCount: 0 });
       const { startDate, endDate } = ask.dateRanges[0];
       const names = ask.dimensions.map((dimension) => dimension.name);
-      const byEvent = names.includes("eventName");
+      const metrics = ask.metrics.map((metric) => metric.name);
+      // Every event, as Events asks (§18.6.5): times, people and visits — a line's page views and visit starts among them.
+      const everyEvent = metrics.includes("eventCount");
+      const byEvent = names.includes("eventName") || everyEvent;
       const sums = new Map<string, { keys: string[]; values: number[] }>();
       for (const visit of google.visits) {
         if (visit.date < startDate || visit.date > endDate) continue;
-        const lines: Array<{ eventName?: string; values: number[] }> = byEvent
-          ? Object.entries(visit.events ?? {}).map(([eventName, [count, value]]) => ({ eventName, values: [count, value] }))
-          : [{ values: [visit.sessions, visit.engaged, visit.seconds, visit.views, visit.purchases ?? 0, visit.revenue ?? 0] }];
+        const happened: Array<[string, number]> = everyEvent
+          ? [["page_view", visit.views], ["session_start", visit.sessions], ...Object.entries(visit.events ?? {}).map(([eventName, [count]]) => [eventName, count] as [string, number])]
+          : [];
+        const lines: Array<{ eventName?: string; values: number[] }> = everyEvent
+          ? happened.filter(([, count]) => count > 0).map(([eventName, count]) => ({
+            eventName,
+            values: metrics.map((metric) => (metric === "eventCount" ? count : metric === "totalUsers" ? Math.ceil(count / 2) : metric === "sessions" ? Math.min(count, visit.sessions) : 0)),
+          }))
+          : byEvent
+            ? Object.entries(visit.events ?? {}).map(([eventName, [count, value]]) => ({ eventName, values: [count, value] }))
+            : [{ values: [visit.sessions, visit.engaged, visit.seconds, visit.views, visit.purchases ?? 0, visit.revenue ?? 0] }];
         for (const line of lines) {
           if (!passes(visit, ask.dimensionFilter, line.eventName)) continue;
           const keys = names.map((name) => (name === "eventName" ? line.eventName! : FIELD[name](visit)));

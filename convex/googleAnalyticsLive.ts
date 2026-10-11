@@ -10,7 +10,9 @@ import { appError } from "./utils/appError";
 import { ask, askList, numberPages, openSession, siteOrigin, slotKey, type CollectTarget } from "./googleAnalyticsCollect";
 import { beforeKey, emptyRow, packList, pageAddress, type ListRow } from "./googleAnalyticsLists";
 import { encodePagesFromAction } from "./holdPageRefs";
-import { analyticsPackedRows, analyticsPeriodValidator } from "./googleAnalyticsSchema";
+import { shiftDay } from "./searchConsoleDays";
+import { EVENT_DETAIL } from "./utils/analyticsEvents";
+import { analyticsPackedRows, analyticsPeriodValidator, type AnalyticsList } from "./googleAnalyticsSchema";
 import { liveAsk } from "./googleAnalyticsReads";
 import { DAY_JOIN, channelSeriesAsk } from "./googleAnalyticsChartReads";
 import { keptCountry } from "./googleAnalyticsCountries";
@@ -61,6 +63,7 @@ export const liveTarget = internalQuery({
       country: countryIdOf(country || mainConsoleCountry(hold)),
       others: [],
       untitled: false,
+      eventless: false,
     };
     return { connectionId: connection._id, target, from: slot.from, to: slot.to, country };
   },
@@ -110,6 +113,15 @@ export function pageAsk(kind: "series" | "channel" | "viewed" | "before", page: 
 }
 
 /**
+ * The name an event's own lists are held under (§18.6.5): what it was about
+ * (`detail`) and the pages it happened on (`pages`), for the dates chosen and
+ * the span before them — both named by the dates chosen.
+ */
+export function eventAsk(kind: "detail" | "pages", which: "NOW" | "BEFORE", event: string, period: string, from: string, to: string, device: string, country = ""): string {
+  return `${kind}${which === "BEFORE" ? "Before" : ""}:${event}|${period}|${from}|${to}|${device}${country ? `|${country}` : ""}`;
+}
+
+/**
  * Ask Google for a list a screen needs (GA20, GA22): a page list for one
  * device (`pages`), or one landing page's chart and channels (`page`, its
  * path as Analytics names it, and its page number for the name it is held
@@ -122,12 +134,15 @@ export const askGoogleAnalyticsLive = tenantAction({
     device: v.string(),
     /** A home country other than the main one (`fra`); left out for the main one (§18.6.1). */
     country: v.optional(v.string()),
-    pages: v.optional(v.union(v.literal("landing"), v.literal("page"))),
+    /** A list kept only for every device, for the one device chosen: the pages, and the events (§18.6.5). */
+    pages: v.optional(v.union(v.literal("landing"), v.literal("page"), v.literal("event"), v.literal("eventSeries"))),
     /** Channels' chart, each channel a day, for dates or a country that keep no channel days (GA35). */
     chart: v.optional(v.literal("channel")),
     page: v.optional(v.object({ ref: v.string(), path: v.string() })),
     /** A page of All pages (GA29): its views a day, and the page or website each view came from just before. */
     viewed: v.optional(v.object({ ref: v.string(), path: v.string() })),
+    /** An event's own screen (GA30): what it was about, by its kind, and the pages it happened on, against the span before. */
+    event: v.optional(v.string()),
   },
   returns: v.object({ ok: v.boolean(), problem: v.union(v.null(), v.literal("NOT_CONNECTED"), v.literal("GOOGLE_BUSY"), v.literal("GOOGLE_REFUSED")) }),
   handler: async (ctx, args): Promise<{ ok: boolean; problem: null | "NOT_CONNECTED" | "GOOGLE_BUSY" | "GOOGLE_REFUSED" }> => {
@@ -139,7 +154,7 @@ export const askGoogleAnalyticsLive = tenantAction({
     if (!opened.ok) return { ok: false, problem: opened.problem === "GOOGLE_BUSY" ? "GOOGLE_BUSY" : "NOT_CONNECTED" };
     const range = { from: found.from, to: found.to };
     const device = args.device || undefined;
-    const write = async (ask: string, list: "landing" | "page" | "series" | "channel", rows: ListRow[], flags: { folded: boolean; thresholded: boolean; cut: boolean }) => {
+    const write = async (ask: string, list: AnalyticsList, rows: ListRow[], flags: { folded: boolean; thresholded: boolean; cut: boolean }) => {
       await ctx.runMutation(internal.googleAnalyticsLive.putLive, {
         companyWebsiteId: found.target.companyWebsiteId, ask, parts: packList(list, rows, found.target.events), ...flags,
       });
@@ -152,7 +167,8 @@ export const askGoogleAnalyticsLive = tenantAction({
       if (!device) throw appError("INVALID_INPUT", "A page list is asked live only for one device.");
       const asked = await askList(opened.session, found.target, args.pages, [], range, { device });
       if (!asked.ok) return failed(asked);
-      const rows = await numberPages(ctx, found.target, [...asked.groups.values()].flat(), args.pages);
+      const answered = [...asked.groups.values()].flat();
+      const rows = args.pages === "landing" || args.pages === "page" ? await numberPages(ctx, found.target, answered, args.pages) : answered;
       await write(liveAsk(args.pages, args.period, range.from, range.to, args.device, found.country), args.pages, rows, asked.flags);
       return { ok: true, problem: null };
     }
@@ -205,6 +221,35 @@ export const askGoogleAnalyticsLive = tenantAction({
         else numbered.set(key, { ...row, key });
       }
       await write(name("before"), "page", [...numbered.values()], { folded: before.folded, thresholded: before.thresholded, cut: before.cut });
+      return { ok: true, problem: null };
+    }
+    if (args.event) {
+      const event = args.event;
+      const days = Number(args.period);
+      const before = { from: shiftDay(range.from, -days), to: shiftDay(range.to, -days) };
+      // What it was about only for Google's own events that carry it; the pages it happened on for every event.
+      const detail = EVENT_DETAIL[event];
+      const asks: Array<["detail" | "pages", string]> = [...(detail ? [["detail", detail] as ["detail", string]] : []), ["pages", "pagePath"]];
+      for (const [kind, dimension] of asks) {
+        for (const [which, dates] of [["NOW", range], ["BEFORE", before]] as const) {
+          const answer = await ask(opened.session, found.target.property!, {
+            startDate: dates.from,
+            endDate: dates.to,
+            dimensions: [dimension],
+            metrics: ["eventCount", "totalUsers"],
+            hostNames: found.target.addresses,
+            countries: [found.target.country],
+            eventNames: [event],
+            ...(device ? { device } : {}),
+          });
+          if (!answer.ok) return failed(answer);
+          const rows = answer.rows.map((row) => ({ ...emptyRow(row.keys[0] ?? ""), times: row.values[0] ?? 0, people: row.values[1] ?? 0 }));
+          const kept = kind === "pages" ? await numberPages(ctx, found.target, rows, "page") : rows;
+          await write(eventAsk(kind, which, event, args.period, range.from, range.to, args.device, found.country), "event", kept, {
+            folded: answer.folded, thresholded: answer.thresholded, cut: answer.cut,
+          });
+        }
+      }
       return { ok: true, problem: null };
     }
     if (args.chart === "channel") {

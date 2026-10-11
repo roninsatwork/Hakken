@@ -214,6 +214,7 @@ import type * as googleAnalyticsChartReads from "../googleAnalyticsChartReads.js
 import type * as googleAnalyticsCollect from "../googleAnalyticsCollect.js";
 import type * as googleAnalyticsConnect from "../googleAnalyticsConnect.js";
 import type * as googleAnalyticsCountries from "../googleAnalyticsCountries.js";
+import type * as googleAnalyticsEventReads from "../googleAnalyticsEventReads.js";
 import type * as googleAnalyticsHealth from "../googleAnalyticsHealth.js";
 import type * as googleAnalyticsHeroes from "../googleAnalyticsHeroes.js";
 import type * as googleAnalyticsLists from "../googleAnalyticsLists.js";
@@ -670,6 +671,7 @@ import type * as utils_searchConsoleVolatility from "../utils/searchConsoleVolat
 import type * as utils_security from "../utils/security.js";
 import type * as utils_sees_aiAnswers from "../utils/sees/aiAnswers.js";
 import type * as utils_sees_analytics from "../utils/sees/analytics.js";
+import type * as utils_sees_analyticsEvents from "../utils/sees/analyticsEvents.js";
 import type * as utils_sees_analyticsHeroes from "../utils/sees/analyticsHeroes.js";
 import type * as utils_sees_backlinks from "../utils/sees/backlinks.js";
 import type * as utils_sees_competitors from "../utils/sees/competitors.js";
@@ -1001,6 +1003,7 @@ declare const fullApi: ApiFromModules<{
   googleAnalyticsCollect: typeof googleAnalyticsCollect;
   googleAnalyticsConnect: typeof googleAnalyticsConnect;
   googleAnalyticsCountries: typeof googleAnalyticsCountries;
+  googleAnalyticsEventReads: typeof googleAnalyticsEventReads;
   googleAnalyticsHealth: typeof googleAnalyticsHealth;
   googleAnalyticsHeroes: typeof googleAnalyticsHeroes;
   googleAnalyticsLists: typeof googleAnalyticsLists;
@@ -1457,6 +1460,7 @@ declare const fullApi: ApiFromModules<{
   "utils/security": typeof utils_security;
   "utils/sees/aiAnswers": typeof utils_sees_aiAnswers;
   "utils/sees/analytics": typeof utils_sees_analytics;
+  "utils/sees/analyticsEvents": typeof utils_sees_analyticsEvents;
   "utils/sees/analyticsHeroes": typeof utils_sees_analyticsHeroes;
   "utils/sees/backlinks": typeof utils_sees_backlinks;
   "utils/sees/competitors": typeof utils_sees_competitors;

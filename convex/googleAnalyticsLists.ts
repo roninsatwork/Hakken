@@ -29,6 +29,21 @@ export const MAIN_METRICS = [
 /** The figures asked for each key event of a row: how many, and the value Analytics gave them. */
 export const EVENT_METRICS = ["keyEvents", "eventValue"] as const;
 
+/**
+ * The figures asked for an event list's rows (§18.6.5): how many times it
+ * happened, by how many people, and in how many visits — kept as `times`,
+ * `people` and `visits`.
+ */
+export const EVENT_LIST_METRICS = ["eventCount", "totalUsers", "sessions"] as const;
+
+/** The lists of events: one ask each, with their own figures, never joined to the key events. */
+export function isEventList(list: AnalyticsList): list is "event" | "eventSeries" {
+  return list === "event" || list === "eventSeries";
+}
+
+/** A day and what happened on it, as one key: a channel or an event each day (GA35, §18.6.5). */
+export const DAY_JOIN = "\u001e";
+
 /** Each list's own split (§2.3). */
 export const LIST_DIMENSIONS: Record<AnalyticsList, readonly string[]> = {
   total: [],
@@ -36,6 +51,8 @@ export const LIST_DIMENSIONS: Record<AnalyticsList, readonly string[]> = {
   landing: ["landingPage"],
   page: ["pagePath"],
   series: ["date"],
+  event: ["eventName"],
+  eventSeries: ["date", "eventName"],
 };
 
 /** Whether a list is kept by device (GA20): the small ones and the long charts; the page lists only for every device. */
@@ -45,6 +62,9 @@ export const KEPT_BY_DEVICE: Record<AnalyticsList, boolean> = {
   series: true,
   landing: false,
   page: false,
+  // Every device only: a device chosen asks Google when the screen opens, as the page lists do.
+  event: false,
+  eventSeries: false,
 };
 
 /** Every device, as a kept record names it. */
@@ -86,6 +106,8 @@ export type ListRow = {
   newPeople: number;
   /** How long the visits lasted, in seconds all told: the average × visits, so it adds up. */
   length: number;
+  /** An event's times (`eventCount`): only an event list's rows carry it, beside its people and its visits (§18.6.5). */
+  times?: number;
   /** Each key event's count and value (in hundredths), by the event's name. */
   counts: Map<string, number>;
   values: Map<string, number>;
@@ -101,6 +123,7 @@ function rowKey(list: AnalyticsList, keys: readonly string[]): string {
   if (list === "total") return "";
   if (list === "channel") return channelKey(keys[0] ?? "", keys[1] ?? "");
   if (list === "series") return dayOf(keys[0] ?? "");
+  if (list === "eventSeries") return `${dayOf(keys[0] ?? "")}${DAY_JOIN}${keys[1] ?? ""}`;
   return keys[0] ?? "";
 }
 
@@ -137,6 +160,15 @@ export function joinAsks(
     return [rowOf(leadKeys, key), rowOf(every, key)];
   };
   for (const row of main) {
+    if (isEventList(list)) {
+      // Times, people and visits with one (`EVENT_LIST_METRICS`).
+      for (const target of targets(row.keys)) {
+        target.times = (target.times ?? 0) + (row.values[0] ?? 0);
+        target.people += row.values[1] ?? 0;
+        target.visits += row.values[2] ?? 0;
+      }
+      continue;
+    }
     for (const target of targets(row.keys)) {
       target.visits += row.values[0] ?? 0;
       target.engaged += row.values[1] ?? 0;
@@ -180,6 +212,8 @@ export type PackedPart = {
   people?: string;
   newPeople?: string;
   length?: string;
+  /** An event's times: only an event list's parts. */
+  times?: string;
   events: string[];
   counts: string[];
   values: string[];
@@ -192,9 +226,10 @@ export type PackedPart = {
  * or not.
  */
 export function packList(list: AnalyticsList, rows: readonly ListRow[], events: readonly string[]): PackedPart[] {
-  const sorted = list === "series"
+  const sorted = list === "series" || list === "eventSeries"
     ? [...rows].sort((left, right) => left.key.localeCompare(right.key))
-    : [...rows].sort((left, right) => (list === "page" ? right.views - left.views : right.visits - left.visits) || left.key.localeCompare(right.key));
+    : [...rows].sort((left, right) => (list === "page" ? right.views - left.views : list === "event" ? (right.times ?? 0) - (left.times ?? 0) : right.visits - left.visits) || left.key.localeCompare(right.key));
+  const timed = rows.some((row) => row.times !== undefined);
   const parts: PackedPart[] = [];
   for (let start = 0; start < Math.max(sorted.length, 1); start += PART_ROWS) {
     const slice = sorted.slice(start, start + PART_ROWS);
@@ -209,6 +244,7 @@ export function packList(list: AnalyticsList, rows: readonly ListRow[], events: 
       people: packNumbers(slice.map((row) => row.people)),
       newPeople: packNumbers(slice.map((row) => row.newPeople)),
       length: packNumbers(slice.map((row) => row.length)),
+      ...(timed ? { times: packNumbers(slice.map((row) => row.times ?? 0)) } : {}),
       events: [...events],
       counts: events.map((event) => packNumbers(slice.map((row) => row.counts.get(event) ?? 0))),
       values: events.map((event) => packNumbers(slice.map((row) => row.values.get(event) ?? 0))),
@@ -228,6 +264,7 @@ export function unpackPart(part: PackedPart): ListRow[] {
   const people = part.people ? unpackNumbers(part.people) : [];
   const newPeople = part.newPeople ? unpackNumbers(part.newPeople) : [];
   const length = part.length ? unpackNumbers(part.length) : [];
+  const times = part.times ? unpackNumbers(part.times) : null;
   const counts = part.counts.map((column) => unpackNumbers(column));
   const values = part.values.map((column) => unpackNumbers(column));
   return part.keys.map((key, index) => ({
@@ -241,6 +278,7 @@ export function unpackPart(part: PackedPart): ListRow[] {
     people: people[index] ?? 0,
     newPeople: newPeople[index] ?? 0,
     length: length[index] ?? 0,
+    ...(times ? { times: times[index] ?? 0 } : {}),
     counts: new Map(part.events.map((event, at) => [event, counts[at][index] ?? 0])),
     values: new Map(part.events.map((event, at) => [event, values[at][index] ?? 0])),
   }));

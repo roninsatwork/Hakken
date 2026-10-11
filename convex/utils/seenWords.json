@@ -943,6 +943,32 @@
         "keepLink": "Keep the link to this page on {text} where people see it: it sends the most views of the website's own pages.",
         "checkAssistant": "Check what {text} says about this page, so the people it sends find what it promised."
       },
+      "events": {
+        "none": "Google Analytics recorded no events in these dates.",
+        "neverFired": "{event} {count, plural, =1 {counts as a conversion but never happened} other {count as conversions but never happened}} in these dates.",
+        "reachedBottom": "{aRate} of page views reached the bottom of the page: {countB, plural, =1 {one scroll} other {# scrolls}}.",
+        "clicksAway": "{count, plural, =1 {One click} other {# clicks}} took people to another website, in {bRate} of visits.",
+        "searched": "People searched the website {count, plural, =1 {once} other {# times}}.",
+        "tryConversions": "Try {event} yourself, and check Google Analytics records {count, plural, =1 {it} other {them}}.",
+        "seeLinks": "See which links take people off the website.",
+        "seeSearches": "See what people searched for."
+      },
+      "event": {
+        "neverHappened": "{event} didn't happen in these dates.",
+        "timesNew": "{event} happened {count, plural, =1 {once} other {# times}}, by {countB, plural, =1 {one person} other {# people}}.",
+        "times": {
+          "up": "{event} happened {count, plural, =1 {once} other {# times}}, by {countB, plural, =1 {one person} other {# people}}: up from {c}.",
+          "down": "{event} happened {count, plural, =1 {once} other {# times}}, by {countB, plural, =1 {one person} other {# people}}: down from {c}.",
+          "same": "{event} happened {count, plural, =1 {once} other {# times}}, by {countB, plural, =1 {one person} other {# people}}: as many as before."
+        },
+        "reached": "That is {aRate} of the website's {b} page views reaching the bottom of the page.",
+        "topLink": "{text} was clicked most: {count, plural, =1 {once} other {# times}}, {bRate} of the clicks.",
+        "topSearch": "“{text}” was searched for most: {count, plural, =1 {once} other {# times}}.",
+        "topFile": "{text} was downloaded most: {count, plural, =1 {once} other {# times}}.",
+        "topVideo": "“{text}” was played most: {count, plural, =1 {once} other {# times}}.",
+        "newTab": "Open links to other websites in a new tab, so people keep your page.",
+        "answerSearch": "Make sure a page answers “{text}”, and is easy to find from the menu."
+      },
       "conversions": {
         "nothingCounted": "The visits are all here, {a} in these dates, but with nothing counted nobody can say which pages or channels make money.",
         "fired": "Your property does record {event}: it happened {count, plural, =1 {once} other {# times}} in the same dates.",
@@ -1035,7 +1061,10 @@
         "aiAnswers": "AI answers in Visibility",
         "unsortedPages": "The unsorted pages",
         "referrals": "Referral",
-        "addGoogleAnalytics": "Add Google Analytics"
+        "addGoogleAnalytics": "Add Google Analytics",
+        "linksClicked": "Links clicked",
+        "wordsSearched": "Words searched",
+        "allPages": "All pages"
       }
     },
     "searchConsole.seen": {
@@ -2170,6 +2199,32 @@
         "keepLink": "Tieni il link a questa pagina su {text} dove le persone lo vedono: porta più visualizzazioni di ogni altra pagina del sito.",
         "checkAssistant": "Controlla cosa dice {text} di questa pagina, così chi arriva trova quello che ha promesso."
       },
+      "events": {
+        "none": "Google Analytics non ha registrato eventi in queste date.",
+        "neverFired": "{event} {count, plural, =1 {conta come conversione ma non è mai avvenuto} other {contano come conversioni ma non sono mai avvenuti}} in queste date.",
+        "reachedBottom": "Il {aRate} delle pagine viste è arrivato in fondo alla pagina: {countB, plural, =1 {uno scorrimento} other {# scorrimenti}}.",
+        "clicksAway": "{count, plural, =1 {Un clic ha} other {# clic hanno}} portato le persone su un altro sito, nel {bRate} delle visite.",
+        "searched": "Le persone hanno cercato nel sito {count, plural, =1 {una volta} other {# volte}}.",
+        "tryConversions": "Prova tu {event} e verifica che Google Analytics {count, plural, =1 {lo registri} other {li registri}}.",
+        "seeLinks": "Guarda quali link portano le persone fuori dal sito.",
+        "seeSearches": "Guarda cosa hanno cercato le persone."
+      },
+      "event": {
+        "neverHappened": "{event} non è avvenuto in queste date.",
+        "timesNew": "{event} è avvenuto {count, plural, =1 {una volta} other {# volte}}, da {countB, plural, =1 {una persona} other {# persone}}.",
+        "times": {
+          "up": "{event} è avvenuto {count, plural, =1 {una volta} other {# volte}}, da {countB, plural, =1 {una persona} other {# persone}}: in crescita da {c}.",
+          "down": "{event} è avvenuto {count, plural, =1 {una volta} other {# volte}}, da {countB, plural, =1 {una persona} other {# persone}}: in calo da {c}.",
+          "same": "{event} è avvenuto {count, plural, =1 {una volta} other {# volte}}, da {countB, plural, =1 {una persona} other {# persone}}: come prima."
+        },
+        "reached": "È il {aRate} delle {b} pagine viste del sito che arriva in fondo alla pagina.",
+        "topLink": "{text} è il link cliccato di più: {count, plural, =1 {una volta} other {# volte}}, il {bRate} dei clic.",
+        "topSearch": "“{text}” è la ricerca più fatta: {count, plural, =1 {una volta} other {# volte}}.",
+        "topFile": "{text} è il file scaricato di più: {count, plural, =1 {una volta} other {# volte}}.",
+        "topVideo": "“{text}” è il video avviato di più: {count, plural, =1 {una volta} other {# volte}}.",
+        "newTab": "Apri i link ad altri siti in una nuova scheda, così le persone restano sulla tua pagina.",
+        "answerSearch": "Assicurati che una pagina risponda a “{text}” e sia facile da trovare dal menu."
+      },
       "conversions": {
         "nothingCounted": "Le visite ci sono tutte, {a} in queste date, ma senza niente di contato nessuno può dire quali pagine o canali fanno guadagnare.",
         "fired": "La tua proprietà registra {event}: è successo {count, plural, =1 {una volta} other {# volte}} nelle stesse date.",
@@ -2262,7 +2317,10 @@
         "aiAnswers": "Risposte AI in Visibilità",
         "unsortedPages": "Le pagine non ordinate",
         "referrals": "Referral",
-        "addGoogleAnalytics": "Aggiungi Google Analytics"
+        "addGoogleAnalytics": "Aggiungi Google Analytics",
+        "linksClicked": "Link cliccati",
+        "wordsSearched": "Parole cercate",
+        "allPages": "Tutte le pagine"
       }
     },
     "searchConsole.seen": {

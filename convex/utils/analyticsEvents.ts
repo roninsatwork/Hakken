@@ -108,3 +108,56 @@ export function tickedAtFirst(eventName: string): boolean {
 
 /** The event that is a shop's sale: its purchases and revenue come from Analytics' own figures (GA7). */
 export const PURCHASE_EVENT = "purchase";
+
+/**
+ * Google's own events (google-analytics-plan.md GA30, §18.6.5), by who
+ * records them: Google itself on every website, its enhanced measurement, and
+ * a shop's steps. Each has its name in every language beside the likely
+ * conversions (`googleAnalytics.events`); an event Hakken does not know — the
+ * website's own — shows Google's name.
+ */
+export const AUTOMATIC_EVENTS: ReadonlySet<string> = new Set([
+  "page_view", "session_start", "first_visit", "user_engagement", "first_open", "screen_view",
+]);
+export const MEASURED_EVENTS: ReadonlySet<string> = new Set([
+  "scroll", "click", "view_search_results", "file_download", "form_start", "form_submit",
+  "video_start", "video_progress", "video_complete",
+]);
+export const SHOP_EVENTS: ReadonlySet<string> = new Set([
+  "view_item_list", "select_item", "view_item", "add_to_wishlist", "add_to_cart", "remove_from_cart", "view_cart",
+  "begin_checkout", "add_shipping_info", "add_payment_info", "purchase", "refund", "view_promotion", "select_promotion",
+]);
+/** Google's other recommended events: sent by the website's own tag, named all the same. */
+export const RECOMMENDED_EVENTS: ReadonlySet<string> = new Set([
+  "login", "sign_up", "search", "share", "select_content",
+  "qualify_lead", "disqualify_lead", "working_lead", "close_convert_lead", "close_unconvert_lead",
+]);
+
+/** Events' kinds, as the Kind filter lists them: what counts first, then Google's, then the website's own. */
+export const EVENT_KINDS = ["conversion", "automatic", "measured", "shop", "own"] as const;
+export type EventKind = (typeof EVENT_KINDS)[number];
+
+/** An event's kind: a conversion when it counts, else who records it. */
+export function eventKind(eventName: string, counted: boolean): EventKind {
+  if (counted) return "conversion";
+  if (AUTOMATIC_EVENTS.has(eventName)) return "automatic";
+  if (MEASURED_EVENTS.has(eventName)) return "measured";
+  if (SHOP_EVENTS.has(eventName)) return "shop";
+  return "own";
+}
+
+/**
+ * What an event was about, by Google's own name for it (§18.6.5): the link a
+ * click followed, the file downloaded, the words searched, how far people
+ * scrolled, the video. Any other event has only the pages it happened on.
+ */
+export const EVENT_DETAIL: Readonly<Record<string, "linkUrl" | "fileName" | "searchTerm" | "percentScrolled" | "videoTitle">> = {
+  click: "linkUrl",
+  file_download: "fileName",
+  view_search_results: "searchTerm",
+  scroll: "percentScrolled",
+  video_start: "videoTitle",
+  video_progress: "videoTitle",
+  video_complete: "videoTitle",
+};
+export type EventDetail = (typeof EVENT_DETAIL)[string];

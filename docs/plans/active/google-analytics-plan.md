@@ -530,10 +530,10 @@ Q12, about 89% is on dev.** What was built, and
 where the build differs from the words above, is §12.
 
 **Progress, 2026-10-11: the second round (§18) drawn, agreed and planned,
-with how it is built (§18.6) and its What Hakken sees (§18.7). Phases 6 to 9
-built on dev, each committed and none pushed — eleven of twenty-six and a
-half days, about 42%; fifteen and a half left. Both rounds: about thirty-six
-and a half of fifty-two days, about 70%.**
+with how it is built (§18.6) and its What Hakken sees (§18.7). Phases 6 to 10
+built on dev, each committed and none pushed — fourteen of twenty-six and a
+half days, about 53%; twelve and a half left. Both rounds: about thirty-nine
+and a half of fifty-two days, about 76%.**
 
 ## 9. Risks
 
@@ -1354,6 +1354,31 @@ it opens, for what that event was about, by its kind: `click` → `linkUrl`
 `searchTerm`, `scroll` → `percentScrolled`, `video_start`,
 `video_progress`, `video_complete` → `videoTitle`; any event → the pages it
 happened on (`pagePath`). Held until the next collection.
+
+*Built 2026-10-11 (Phase 10, GA30).* Events and an event's own screen, as
+boards 22 and 23 draw them. Two new ready-made lists in the same packed
+tables, every device: `event` (each event's times, people and visits with
+one — `eventCount`, `totalUsers`, `sessions`, kept as a `times` column beside
+`people` and `visits`) for each period, the span before and the year before,
+and `eventSeries` (each event a day) for every period's chart. One device is
+asked of Google when the screen opens, as the page lists are. An event's own
+screen asks, when it opens, what it was about and the pages it happened on,
+each for the dates and the span before (`askGoogleAnalyticsLive`, `event`).
+Reads in `googleAnalyticsEventReads.ts`, rules in `utils/sees/analyticsEvents.ts`.
+Google's own events are named in English and Italian and sorted into kinds
+for the Kind filter (`utils/analyticsEvents.ts`): conversions, visits and
+pages, clicks-scrolls-downloads-videos, shop, and the website's own. A
+website with no event list yet asks the weekly lists at its next run, as
+titles do, so the longer periods never wait a week. Three names changed to
+the drawing's — "Scrolled to the bottom", "Engaged with a page", "Clicked a
+link to another website" — on Choose what counts too (its look test
+updated). Links show as people read them (`linkedin.com/company/…`), the
+whole address kept for the link. **Not built: the fourth figure on an
+event's screen, "Conversions after it"** — Google cannot join an event to
+conversions in the same visit; asked of Anthony on 11 Oct whether to count
+the people who converted after it instead (Google's funnel report).
+Measured on Ronins: twelve events in 30 days; the 12 months' each-event-a-day
+list is two stored parts.
 
 **6. Campaigns, Visitors, Products.** New ready-made lists, every device:
 `campaign` (campaign, source, medium), `adKeyword` (`sessionManualTerm`,

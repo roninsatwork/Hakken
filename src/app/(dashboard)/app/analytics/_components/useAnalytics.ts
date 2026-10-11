@@ -29,6 +29,8 @@ export const ANALYTICS_PAGES = [
   { id: "channels", segment: "channels", group: "figures" },
   { id: "landingPages", segment: "landing-pages", group: "figures" },
   { id: "allPages", segment: "all-pages", group: "figures" },
+  // Every event the website recorded (GA30).
+  { id: "events", segment: "events", group: "figures" },
   { id: "conversions", segment: "conversions", group: "figures" },
   { id: "trackingHealth", segment: "tracking-health", group: "settings" },
   { id: "connection", segment: "connection", group: "settings" },
