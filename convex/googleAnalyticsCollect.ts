@@ -23,6 +23,7 @@ import {
   ITEM_METRICS,
   SHOP_STEPS,
   VISITOR_LISTS,
+  channelKey,
   fingerprint,
   groupKeys,
   isEventList,
@@ -31,6 +32,7 @@ import {
   packList,
   pageAddress,
   slotKey,
+  splitChannelKey,
   type ListRow,
   type PackedPart,
 } from "./googleAnalyticsLists";
@@ -131,7 +133,11 @@ export type PeriodJob = { list: AnalyticsList; period: AnalyticsPeriod; which: A
  * all, already numbered (`numberPages`). Every event beside them (§18.6.5),
  * the campaigns and the words their links carry, and Visitors' lists (§18.6.6).
  */
-const PAGE_LISTS: readonly AnalyticsList[] = ["total", "channel", "page", "landing", "event", "campaign", "adKeyword", ...VISITOR_LISTS];
+const PAGE_LISTS: readonly AnalyticsList[] = [
+  "total", "channel", "page", "landing", "event", "campaign", "adKeyword", ...VISITOR_LISTS,
+  // Insights' two (insights-analyst-plan.md I35, §8): the channel that first brought each person, and each landing page by channel.
+  "firstChannel", "landingChannel",
+];
 
 /** The lists kept as each period a day for its chart, every device: each event, each campaign, new and returning people. */
 const DAY_LISTS: readonly AnalyticsList[] = ["eventSeries", "campaignSeries", "visitorSeries"];
@@ -248,7 +254,12 @@ export const collectTarget = internalQuery({
       eventless: (await ctx.db
         .query("googleAnalyticsPeriodSlots")
         .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("key", slotKey(connection.shop ? "product" : "interest", "365", "NOW", "")))
-        .first()) === null,
+        .first()) === null
+        // Insights' two lists (insights-analyst-plan.md I35, §8) asked at once too, rather than a week later.
+        || (await ctx.db
+          .query("googleAnalyticsPeriodSlots")
+          .withIndex("by_hold_key", (q) => q.eq("companyWebsiteId", connection.companyWebsiteId).eq("key", slotKey("firstChannel", "365", "NOW", "")))
+          .first()) === null,
     };
   },
 });
@@ -386,14 +397,17 @@ export function siteOrigin(addresses: readonly string[], host: string): string {
  * it: a landing page is given the slashed address when the website holds that
  * one and not its own, so one page has one number.
  */
-export async function numberPages(ctx: ActionCtx, target: CollectTarget, rows: ListRow[], list: "landing" | "page"): Promise<ListRow[]> {
+export async function numberPages(ctx: ActionCtx, target: CollectTarget, rows: ListRow[], list: "landing" | "page" | "landingChannel"): Promise<ListRow[]> {
   const known = (await addressesOf(ctx, target.companyWebsiteId)).numbers;
+  const landing = list !== "page";
   const addressOf = (path: string) => {
     const address = pageAddress(target.origin, path);
-    if (list !== "landing" || address === "(not set)" || address.endsWith("/") || known.has(address)) return address;
+    if (!landing || address === "(not set)" || address.endsWith("/") || known.has(address)) return address;
     return known.has(`${address}/`) ? `${address}/` : address;
   };
-  const addresses = rows.map((row) => addressOf(row.key));
+  // A landing page by channel keeps its channel beside the page's number (Insights, §8).
+  const parts = rows.map((row) => (list === "landingChannel" ? splitChannelKey(row.key) : { channel: "", source: "" }));
+  const addresses = rows.map((row, index) => addressOf(list === "landingChannel" ? parts[index].channel : row.key));
   const numbered = await encodePagesFromAction(ctx, target.companyWebsiteId, addresses.filter((address) => address !== "(not set)"));
   const refs = new Map<string, string>();
   let at = 0;
@@ -401,7 +415,8 @@ export async function numberPages(ctx: ActionCtx, target: CollectTarget, rows: L
   // Two paths that are one address once cleaned are one row.
   const merged = new Map<string, ListRow>();
   rows.forEach((row, index) => {
-    const key = refs.get(addresses[index]) ?? "(not set)";
+    const page = refs.get(addresses[index]) ?? "(not set)";
+    const key = list === "landingChannel" ? channelKey(page, parts[index].source) : page;
     const held = merged.get(key);
     if (!held) {
       merged.set(key, { ...row, key });
@@ -692,7 +707,9 @@ export async function collectPeriod(
     await ctx.runQuery(internal.googleAnalyticsCollect.slotsOf, { companyWebsiteId: target.companyWebsiteId, keys });
   let rows = 0;
   for (const [device, deviceRows] of devices) {
-    const listRows = job.list === "landing" || job.list === "page" ? await numberPages(ctx, target, deviceRows, job.list) : deviceRows;
+    const listRows = job.list === "landing" || job.list === "page" || job.list === "landingChannel"
+      ? await numberPages(ctx, target, deviceRows, job.list)
+      : deviceRows;
     rows += listRows.length;
     const parts = packList(job.list, listRows, target.events);
     const key = slotKey(job.list, job.period, job.which, device, country);

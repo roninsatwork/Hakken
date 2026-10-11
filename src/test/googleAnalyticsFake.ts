@@ -39,6 +39,8 @@ export type Visit = {
   age?: string;
   gender?: string;
   interest?: string;
+  /** The channel that first brought the visitor (`firstUserDefaultChannelGroup`, Insights I35): the visit's own unless a test says otherwise. */
+  firstChannel?: string;
   /** A tagged link's campaign, medium and words (`utm_campaign`, `utm_medium`, `utm_term`): none unless a test says otherwise. */
   campaign?: string;
   medium?: string;
@@ -62,6 +64,7 @@ const FIELD: Record<string, (visit: Visit) => string> = {
   date: (visit) => visit.date.replaceAll("-", ""),
   deviceCategory: (visit) => visit.device,
   sessionDefaultChannelGroup: (visit) => visit.channel,
+  firstUserDefaultChannelGroup: (visit) => visit.firstChannel ?? visit.channel,
   sessionSource: (visit) => visit.source,
   landingPage: (visit) => visit.landing,
   pagePath: (visit) => visit.page,

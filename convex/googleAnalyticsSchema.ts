@@ -85,11 +85,16 @@ export const countedEventValidator = v.object({
  * for Visitors (GA24, §18.6.6): every device. A shop's `product` list — each
  * product's looks, baskets, sales and revenue — and `productSeries`, the
  * products bought a day, for Products (GA34, §18.6.6): every device, only for
- * a website that is a shop.
+ * a website that is a shop. For Insights (insights-analyst-plan.md I35, §8):
+ * `firstChannel`, each channel by the people it first brought, with what they
+ * went on to convert — so an AI assistant that introduced a buyer who came
+ * back by name gets the credit — and `landingChannel`, each landing page by
+ * the channel of its visits, so a page's conversions from Google are known.
  */
 export const ANALYTICS_LISTS = [
   "total", "channel", "landing", "page", "series", "event", "eventSeries", "campaign", "adKeyword", "campaignSeries",
   "visitorType", "browser", "system", "age", "gender", "interest", "visitorSeries", "product", "productSeries",
+  "firstChannel", "landingChannel",
 ] as const;
 export type AnalyticsList = (typeof ANALYTICS_LISTS)[number];
 export const analyticsListValidator = v.union(
@@ -112,6 +117,8 @@ export const analyticsListValidator = v.union(
   v.literal("visitorSeries"),
   v.literal("product"),
   v.literal("productSeries"),
+  v.literal("firstChannel"),
+  v.literal("landingChannel"),
 );
 
 /** The ready-made periods (§4.3): days, ending on the newest day held. */

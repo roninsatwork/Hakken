@@ -81,6 +81,8 @@ export const LIST_DIMENSIONS: Record<AnalyticsList, readonly string[]> = {
   visitorSeries: ["date", "newVsReturning"],
   product: ["itemName", "itemCategory"],
   productSeries: ["date"],
+  firstChannel: ["firstUserDefaultChannelGroup"],
+  landingChannel: ["landingPage", "sessionDefaultChannelGroup"],
 };
 
 /** Whether a list is kept by device (GA20): the small ones and the long charts; the page lists only for every device. */
@@ -105,6 +107,8 @@ export const KEPT_BY_DEVICE: Record<AnalyticsList, boolean> = {
   visitorSeries: false,
   product: false,
   productSeries: false,
+  firstChannel: false,
+  landingChannel: false,
 };
 
 /** Visitors' lists (§18.6.6), in the order the screen's switch offers them. */
@@ -193,6 +197,8 @@ function rowKey(list: AnalyticsList, keys: readonly string[]): string {
   if (list === "productSeries") return dayOf(keys[0] ?? "");
   // A product with its category: one name can sit in two.
   if (list === "product") return channelKey(keys[0] ?? "", keys[1] ?? "");
+  // A landing page with the channel of its visits (Insights, §8): the page numbered as Landing pages' are.
+  if (list === "landingChannel") return channelKey(keys[0] ?? "", keys[1] ?? "");
   return keys[0] ?? "";
 }
 
